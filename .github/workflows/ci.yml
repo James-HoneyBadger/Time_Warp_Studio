@@ -23,18 +23,24 @@ jobs:
 
     - name: Cache dependencies
       uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: Time_Warp_Rust
 
     - name: Check formatting
       run: cargo fmt --all -- --check
+      working-directory: ./Time_Warp_Rust
 
     - name: Run clippy
       run: cargo clippy -- -D warnings --allow dead_code --allow unused_variables --allow unused_imports --allow clippy::ifs_same_cond --allow clippy::single_match --allow clippy::manual_strip --allow clippy::needless_return --allow clippy::only_used_in_recursion --allow clippy::manual_flatten --allow clippy::collapsible_if --allow clippy::useless_format --allow clippy::manual_map --allow clippy::while_let_on_iterator --allow clippy::redundant_pattern_matching --allow clippy::is_digit_ascii_radix
+      working-directory: ./Time_Warp_Rust
 
     - name: Build
       run: cargo build --verbose
+      working-directory: ./Time_Warp_Rust
 
     - name: Run tests
       run: cargo test --verbose
+      working-directory: ./Time_Warp_Rust
 
   lint:
     runs-on: ubuntu-latest
