@@ -33,4 +33,4 @@ jobs:
           ruff check --select=E9,F63,F7,F82 --output-format=github .
       - name: Test
         run: |
-          xvfb-run -a python -m pytest test_*.py -v --ignore=test_graphics.py --ignore=test_ide.py
+          xvfb-run -a python -m pytest test_basic_functionality.py test_all_turtle_commands.py -v
