@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "time-warp-ide"
+version = "2.0.0"
+authors = [
+    {name = "James Temple", email = "james@honey-badger.org"},
+]
+description = "Educational TempleCode programming environment (unified BASIC, PILOT, Logo)"
+readme = "README.md"
+license = {file = "LICENSE"}
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Education",
+    "Topic :: Education",
+    "Topic :: Software Development :: Interpreters",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+]
+keywords = ["education", "programming", "templecode", "pilot", "basic", "logo", "turtle-graphics", "interpreter"]
+
+[project.optional-dependencies]
+gui = ["PySide6>=6.5.0"]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+all = [
+    "PySide6>=6.5.0",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/James-HoneyBadger/Time_Warp"
+"Bug Tracker" = "https://github.com/James-HoneyBadger/Time_Warp/issues"
+"Documentation" = "https://github.com/James-HoneyBadger/Time_Warp/tree/main/Time_Warp_Python"
+"Source Code" = "https://github.com/James-HoneyBadger/Time_Warp"
+
+[project.scripts]
+time-warp = "time_warp.cli:main"
+
+[tool.setuptools.packages.find]
+exclude = ["tests", "tests.*"]
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+python_files = ["test_*.py"]
+addopts = "-v"
+
+[tool.black]
+line-length = 88
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
