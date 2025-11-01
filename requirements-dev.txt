@@ -1,0 +1,12 @@
+# Development requirements for Time Warp IDE
+# This file is for legacy CI compatibility
+
+# Basic testing framework
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Linting and formatting
+ruff>=0.1.0
+
+# Basic dependencies that might be needed
+# (Most functionality is pure Python stdlib)
