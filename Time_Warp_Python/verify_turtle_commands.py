@@ -4,6 +4,7 @@
 from time_warp.core.interpreter import Interpreter
 from time_warp.graphics.turtle_state import TurtleState
 
+
 def test_command(name, code, expected_lines=None, check_fn=None):
     """Test a single command or set of commands."""
     print(f"Testing {name}...", end=" ")
@@ -12,14 +13,16 @@ def test_command(name, code, expected_lines=None, check_fn=None):
     interp.load_program(code)
     try:
         out = interp.execute(turtle)
-        errors = [line for line in out if '❌' in line]
+        errors = [line for line in out if "❌" in line]
         if errors:
             print(f"❌ FAILED")
             for e in errors:
                 print(f"  {e}")
             return False
         if expected_lines is not None and len(turtle.lines) != expected_lines:
-            print(f"❌ FAILED: expected {expected_lines} lines, got {len(turtle.lines)}")
+            print(
+                f"❌ FAILED: expected {expected_lines} lines, got {len(turtle.lines)}"
+            )
             return False
         if check_fn and not check_fn(turtle):
             print(f"❌ FAILED: check function failed")
@@ -30,16 +33,19 @@ def test_command(name, code, expected_lines=None, check_fn=None):
         print(f"❌ EXCEPTION: {e}")
         return False
 
-print("=" * 60)
-print("TURTLE GRAPHICS COMMAND VERIFICATION")
-print("=" * 60)
-print()
 
-passed = 0
-failed = 0
+def main():
+    """Run the turtle graphics command verification."""
+    print("=" * 60)
+    print("TURTLE GRAPHICS COMMAND VERIFICATION")
+    print("=" * 60)
+    print()
 
-# Basic movement commands
-if test_command("FORWARD", "FORWARD 100", expected_lines=1):
+    passed = 0
+    failed = 0
+
+    # Basic movement commands
+    if test_command("FORWARD", "FORWARD 100", expected_lines=1):
     passed += 1
 else:
     failed += 1
@@ -92,12 +98,18 @@ else:
     failed += 1
 
 # Pen control
-if test_command("PENUP/PENDOWN", "FORWARD 50\nPENUP\nFORWARD 50\nPENDOWN\nFORWARD 50", expected_lines=2):
+if test_command(
+    "PENUP/PENDOWN",
+    "FORWARD 50\nPENUP\nFORWARD 50\nPENDOWN\nFORWARD 50",
+    expected_lines=2,
+):
     passed += 1
 else:
     failed += 1
 
-if test_command("PU/PD (aliases)", "FORWARD 50\nPU\nFORWARD 50\nPD\nFORWARD 50", expected_lines=2):
+if test_command(
+    "PU/PD (aliases)", "FORWARD 50\nPU\nFORWARD 50\nPD\nFORWARD 50", expected_lines=2
+):
     passed += 1
 else:
     failed += 1
@@ -135,97 +147,119 @@ else:
     failed += 1
 
 # Color commands - named colors
-if test_command("SETCOLOR blue", 
+if test_command(
+    "SETCOLOR blue",
     "SETCOLOR blue\nFORWARD 50",
-    check_fn=lambda t: t.lines and t.lines[0].color == (0, 0, 255)):
+    check_fn=lambda t: t.lines and t.lines[0].color == (0, 0, 255),
+):
     passed += 1
 else:
     failed += 1
 
-if test_command("SETCOLOR red", 
+if test_command(
+    "SETCOLOR red",
     "SETCOLOR red\nFORWARD 50",
-    check_fn=lambda t: t.lines and t.lines[0].color == (255, 0, 0)):
+    check_fn=lambda t: t.lines and t.lines[0].color == (255, 0, 0),
+):
     passed += 1
 else:
     failed += 1
 
-if test_command("SETCOLOR green", 
+if test_command(
+    "SETCOLOR green",
     "SETCOLOR green\nFORWARD 50",
-    check_fn=lambda t: t.lines and t.lines[0].color == (0, 255, 0)):
+    check_fn=lambda t: t.lines and t.lines[0].color == (0, 255, 0),
+):
     passed += 1
 else:
     failed += 1
 
 # Color commands - hex
-if test_command("SETCOLOR #FF69B4", 
+if test_command(
+    "SETCOLOR #FF69B4",
     "SETCOLOR #FF69B4\nFORWARD 50",
-    check_fn=lambda t: t.lines and t.lines[0].color == (255, 105, 180)):
+    check_fn=lambda t: t.lines and t.lines[0].color == (255, 105, 180),
+):
     passed += 1
 else:
     failed += 1
 
 # Color commands - RGB
-if test_command("SETCOLOR RGB", 
+if test_command(
+    "SETCOLOR RGB",
     "SETCOLOR 128 64 200\nFORWARD 50",
-    check_fn=lambda t: t.lines and t.lines[0].color == (128, 64, 200)):
+    check_fn=lambda t: t.lines and t.lines[0].color == (128, 64, 200),
+):
     passed += 1
 else:
     failed += 1
 
-if test_command("SETPENCOLOR", 
+if test_command(
+    "SETPENCOLOR",
     "SETPENCOLOR 200 100 50\nFORWARD 50",
-    check_fn=lambda t: t.lines and t.lines[0].color == (200, 100, 50)):
+    check_fn=lambda t: t.lines and t.lines[0].color == (200, 100, 50),
+):
     passed += 1
 else:
     failed += 1
 
-if test_command("SETPC (alias)", 
+if test_command(
+    "SETPC (alias)",
     "SETPC 50 150 250\nFORWARD 50",
-    check_fn=lambda t: t.lines and t.lines[0].color == (50, 150, 250)):
+    check_fn=lambda t: t.lines and t.lines[0].color == (50, 150, 250),
+):
     passed += 1
 else:
     failed += 1
 
 # Pen width
-if test_command("PENWIDTH", 
+if test_command(
+    "PENWIDTH",
     "PENWIDTH 10\nFORWARD 50",
-    check_fn=lambda t: t.lines and t.lines[0].width == 10):
+    check_fn=lambda t: t.lines and t.lines[0].width == 10,
+):
     passed += 1
 else:
     failed += 1
 
-if test_command("SETPENWIDTH", 
+if test_command(
+    "SETPENWIDTH",
     "SETPENWIDTH 5\nFORWARD 50",
-    check_fn=lambda t: t.lines and t.lines[0].width == 5):
+    check_fn=lambda t: t.lines and t.lines[0].width == 5,
+):
     passed += 1
 else:
     failed += 1
 
-if test_command("SETPW (alias)", 
+if test_command(
+    "SETPW (alias)",
     "SETPW 8\nFORWARD 50",
-    check_fn=lambda t: t.lines and t.lines[0].width == 8):
+    check_fn=lambda t: t.lines and t.lines[0].width == 8,
+):
     passed += 1
 else:
     failed += 1
 
-if test_command("SETPENSIZE (alias)", 
+if test_command(
+    "SETPENSIZE (alias)",
     "SETPENSIZE 12\nFORWARD 50",
-    check_fn=lambda t: t.lines and t.lines[0].width == 12):
+    check_fn=lambda t: t.lines and t.lines[0].width == 12,
+):
     passed += 1
 else:
     failed += 1
 
 # Background color
-if test_command("SETBGCOLOR", 
-    "SETBGCOLOR 10 20 30",
-    check_fn=lambda t: t.bg_color == (10, 20, 30)):
+if test_command(
+    "SETBGCOLOR", "SETBGCOLOR 10 20 30", check_fn=lambda t: t.bg_color == (10, 20, 30)
+):
     passed += 1
 else:
     failed += 1
 
-if test_command("SETBG (alias)", 
-    "SETBG 50 100 150",
-    check_fn=lambda t: t.bg_color == (50, 100, 150)):
+if test_command(
+    "SETBG (alias)", "SETBG 50 100 150", check_fn=lambda t: t.bg_color == (50, 100, 150)
+):
     passed += 1
 else:
     failed += 1
@@ -247,44 +281,37 @@ else:
     failed += 1
 
 # Turtle visibility
-if test_command("HIDETURTLE", 
-    "HIDETURTLE",
-    check_fn=lambda t: not t.visible):
+if test_command("HIDETURTLE", "HIDETURTLE", check_fn=lambda t: not t.visible):
     passed += 1
 else:
     failed += 1
 
-if test_command("HT (alias)", 
-    "HT",
-    check_fn=lambda t: not t.visible):
+if test_command("HT (alias)", "HT", check_fn=lambda t: not t.visible):
     passed += 1
 else:
     failed += 1
 
-if test_command("SHOWTURTLE", 
-    "HIDETURTLE\nSHOWTURTLE",
-    check_fn=lambda t: t.visible):
+if test_command("SHOWTURTLE", "HIDETURTLE\nSHOWTURTLE", check_fn=lambda t: t.visible):
     passed += 1
 else:
     failed += 1
 
-if test_command("ST (alias)", 
-    "HT\nST",
-    check_fn=lambda t: t.visible):
+if test_command("ST (alias)", "HT\nST", check_fn=lambda t: t.visible):
     passed += 1
 else:
     failed += 1
 
 # REPEAT command
-if test_command("REPEAT single-line", 
-    "REPEAT 4 [FORWARD 50 RIGHT 90]",
-    expected_lines=4):
+if test_command(
+    "REPEAT single-line", "REPEAT 4 [FORWARD 50 RIGHT 90]", expected_lines=4
+):
     passed += 1
 else:
     failed += 1
 
 # User's reported issue
-if test_command("User's code (SETCOLOR blue + PENWIDTH)", 
+if test_command(
+    "User's code (SETCOLOR blue + PENWIDTH)",
     """SETCOLOR blue
 PENWIDTH 10
 REPEAT 36 [
@@ -293,15 +320,22 @@ REPEAT 36 [
   RIGHT 10
 ]""",
     expected_lines=72,  # 36 * 2 lines (forward + back)
-    check_fn=lambda t: t.lines and t.lines[0].color == (0, 0, 255) and t.lines[0].width == 10):
+    check_fn=lambda t: t.lines
+    and t.lines[0].color == (0, 0, 255)
+    and t.lines[0].width == 10,
+):
     passed += 1
 else:
     failed += 1
 
-print()
-print("=" * 60)
-print(f"RESULTS: {passed} passed, {failed} failed")
-print("=" * 60)
+    print()
+    print("=" * 60)
+    print(f"RESULTS: {passed} passed, {failed} failed")
+    print("=" * 60)
 
-if failed > 0:
-    exit(1)
+    if failed > 0:
+        exit(1)
+
+
+if __name__ == "__main__":
+    main()
