@@ -1,6 +1,6 @@
-use eframe::egui;
 use crate::app::TimeWarpApp;
 use crate::ui::themes::Theme;
+use eframe::egui;
 
 pub fn render(app: &mut TimeWarpApp, ctx: &egui::Context) {
     egui::TopBottomPanel::top("menu_bar").show(ctx, |ui| {
@@ -28,7 +28,7 @@ pub fn render(app: &mut TimeWarpApp, ctx: &egui::Context) {
                     std::process::exit(0);
                 }
             });
-            
+
             // Edit menu
             ui.menu_button("Edit", |ui| {
                 if ui.button("↶ Undo").clicked() {
@@ -45,7 +45,7 @@ pub fn render(app: &mut TimeWarpApp, ctx: &egui::Context) {
                     ui.close_menu();
                 }
             });
-            
+
             // Run menu
             ui.menu_button("Run", |ui| {
                 if ui.button("▶️  Run Program").clicked() {
@@ -61,12 +61,15 @@ pub fn render(app: &mut TimeWarpApp, ctx: &egui::Context) {
                     ui.close_menu();
                 }
             });
-            
+
             // View menu
             ui.menu_button("View", |ui| {
                 ui.menu_button("🎨 Theme", |ui| {
                     for theme in Theme::all() {
-                        if ui.selectable_label(app.current_theme == theme, theme.name()).clicked() {
+                        if ui
+                            .selectable_label(app.current_theme == theme, theme.name())
+                            .clicked()
+                        {
                             app.current_theme = theme;
                             ui.close_menu();
                         }
@@ -82,7 +85,7 @@ pub fn render(app: &mut TimeWarpApp, ctx: &egui::Context) {
                     ui.close_menu();
                 }
             });
-            
+
             // Help menu
             ui.menu_button("Help", |ui| {
                 if ui.button("📖 Documentation").clicked() {
@@ -162,22 +165,22 @@ fn redo(app: &mut TimeWarpApp) {
 fn run_program(app: &mut TimeWarpApp) {
     app.is_executing = true;
     let code = app.current_code();
-    
+
     // Clear previous output and graphics
     app.interpreter.output.clear();
     app.turtle_state.clear();
-    
+
     // Transfer any pending key press to interpreter for INKEY$
     if app.last_key_pressed.is_some() {
         app.interpreter.last_key_pressed = app.last_key_pressed.take();
     }
-    
+
     if let Err(e) = app.interpreter.load_program(&code) {
         app.error_message = Some(format!("Failed to load program: {}", e));
         app.is_executing = false;
         return;
     }
-    
+
     match app.interpreter.execute(&mut app.turtle_state) {
         Ok(_output) => {
             app.active_tab = 1; // Switch to output tab
@@ -186,7 +189,6 @@ fn run_program(app: &mut TimeWarpApp) {
             app.error_message = Some(format!("Execution error: {}", e));
         }
     }
-
 
     // If execution is waiting for input, keep executing flag set so UI can resume
     if app.interpreter.pending_input.is_none() {
@@ -200,12 +202,12 @@ fn step_program(app: &mut TimeWarpApp) {
     // Enable step mode and execute one line
     app.step_mode = true;
     app.debug_mode = true;
-    
+
     if !app.is_executing {
         // Start execution in step mode
         app.is_executing = true;
         let code = app.current_code();
-        
+
         match app.interpreter.load_program(&code) {
             Ok(_) => {
                 // Execute just one line
@@ -269,4 +271,3 @@ fn save_canvas_as_png(app: &mut TimeWarpApp) {
         }
     }
 }
-

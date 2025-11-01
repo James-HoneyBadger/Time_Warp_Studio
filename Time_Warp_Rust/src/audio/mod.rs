@@ -1,9 +1,9 @@
 //! Audio system for Time Warp IDE
 //! Supports sound playback and BASIC-style music strings
 
+use anyhow::Result;
 use std::collections::HashMap;
 use std::path::PathBuf;
-use anyhow::Result;
 
 #[cfg(feature = "audio")]
 use rodio::{Decoder, OutputStream, Sink};
@@ -30,7 +30,7 @@ impl AudioMixer {
                 }
             }
         }
-        
+
         Self {
             #[cfg(feature = "audio")]
             _stream: None,
@@ -39,11 +39,11 @@ impl AudioMixer {
             sounds: HashMap::new(),
         }
     }
-    
+
     pub fn register_sound(&mut self, name: String, path: PathBuf) {
         self.sounds.insert(name, path);
     }
-    
+
     pub fn play_sound(&self, name: &str) -> Result<()> {
         #[cfg(feature = "audio")]
         {
@@ -55,20 +55,20 @@ impl AudioMixer {
                 }
             }
         }
-        
+
         #[cfg(not(feature = "audio"))]
         {
             let _ = (name,);
             print!("\x07");
         }
-        
+
         Ok(())
     }
-    
+
     pub fn beep(&self) {
         print!("\x07");
     }
-    
+
     pub fn play_music_string(&self, music: &str) -> Result<()> {
         for _note in music.split_whitespace() {
             self.beep();

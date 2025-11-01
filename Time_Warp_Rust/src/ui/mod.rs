@@ -1,10 +1,10 @@
-pub mod themes;
-pub mod menubar;
-pub mod statusbar;
-pub mod editor;
-pub mod output;
 pub mod canvas;
-pub mod screen;
 pub mod debugger;
+pub mod editor;
 pub mod explorer;
 pub mod help;
+pub mod menubar;
+pub mod output;
+pub mod screen;
+pub mod statusbar;
+pub mod themes;

@@ -1,18 +1,17 @@
-/// Integration tests for Time Warp IDE
-/// 
-/// Tests high-level workflows: program loading, execution, UI state
-
-use time_warp_unified::interpreter::Interpreter;
 use time_warp_unified::graphics::TurtleState;
+/// Integration tests for Time Warp IDE
+///
+/// Tests high-level workflows: program loading, execution, UI state
+use time_warp_unified::interpreter::Interpreter;
 
 #[test]
 fn test_pilot_hello_world() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::default();
-    
+
     let program = "T:Hello, World!\nE:";
     interp.load_program(program).unwrap();
-    
+
     let output = interp.execute(&mut turtle).unwrap();
     assert_eq!(output.len(), 1);
     assert_eq!(output[0], "Hello, World!");
@@ -22,19 +21,20 @@ fn test_pilot_hello_world() {
 fn test_basic_for_loop() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::default();
-    
+
     let program = r#"
 10 FOR I = 1 TO 3
 20 PRINT I
 30 NEXT I
 40 END
 "#;
-    
+
     interp.load_program(program).unwrap();
     let output = interp.execute(&mut turtle).unwrap();
-    
+
     // Should print 1, 2, 3 (check content, not count - may have extra lines)
-    let numbers: Vec<&str> = output.iter()
+    let numbers: Vec<&str> = output
+        .iter()
         .map(|s| s.trim())
         .filter(|s| s.parse::<i32>().is_ok())
         .collect();
@@ -45,33 +45,37 @@ fn test_basic_for_loop() {
 fn test_logo_turtle_forward() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::default();
-    
+
     let program = "FORWARD 100\nFORWARD 50";
     interp.load_program(program).unwrap();
-    
+
     interp.execute(&mut turtle).unwrap();
-    
+
     // Turtle should have moved 150 units north (0 degrees = up)
     // Note: Logo might use different angle convention, check actual movement
     let distance_moved = (turtle.x * turtle.x + turtle.y * turtle.y).sqrt();
-    assert!(distance_moved > 140.0, "Turtle moved {} units", distance_moved);
+    assert!(
+        distance_moved > 140.0,
+        "Turtle moved {} units",
+        distance_moved
+    );
 }
 
 #[test]
 fn test_pilot_variables_and_interpolation() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::default();
-    
+
     let program = r#"
 U:NAME=Alice
 U:AGE=25
 T:Name: *NAME*, Age: *AGE*
 E:
 "#;
-    
+
     interp.load_program(program).unwrap();
     let output = interp.execute(&mut turtle).unwrap();
-    
+
     assert_eq!(output.len(), 1);
     assert!(output[0].contains("Alice"));
     assert!(output[0].contains("25"));
@@ -81,7 +85,7 @@ E:
 fn test_basic_if_then_goto() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::default();
-    
+
     let program = r#"
 10 LET X = 5
 20 IF X > 3 THEN 40
@@ -89,12 +93,13 @@ fn test_basic_if_then_goto() {
 40 PRINT "Success"
 50 END
 "#;
-    
+
     interp.load_program(program).unwrap();
     let output = interp.execute(&mut turtle).unwrap();
-    
+
     // IF X > 3 should jump to line 40, printing only "Success"
-    let clean_output: Vec<String> = output.iter()
+    let clean_output: Vec<String> = output
+        .iter()
         .filter(|s| !s.trim().is_empty() && !s.starts_with('❌'))
         .map(|s| s.to_string())
         .collect();
@@ -105,12 +110,12 @@ fn test_basic_if_then_goto() {
 fn test_logo_repeat_square() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::default();
-    
+
     let program = "REPEAT 4 [FORWARD 50 RIGHT 90]";
     interp.load_program(program).unwrap();
-    
+
     interp.execute(&mut turtle).unwrap();
-    
+
     // After 4 sides with 90 degree turns, turtle should be back near start
     // Square: 4 sides of 50 units each
     assert!((turtle.x.abs()) < 5.0, "Turtle x={}", turtle.x);
@@ -121,7 +126,7 @@ fn test_logo_repeat_square() {
 fn test_basic_gosub_return() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::default();
-    
+
     let program = r#"
 10 PRINT "Start"
 20 GOSUB 50
@@ -130,12 +135,13 @@ fn test_basic_gosub_return() {
 50 PRINT "Subroutine"
 60 RETURN
 "#;
-    
+
     interp.load_program(program).unwrap();
     let output = interp.execute(&mut turtle).unwrap();
-    
+
     // Check execution order: Start, Subroutine, End
-    let relevant: Vec<&str> = output.iter()
+    let relevant: Vec<&str> = output
+        .iter()
         .map(|s| s.trim())
         .filter(|s| !s.is_empty() && !s.starts_with('❌'))
         .collect();
@@ -149,7 +155,7 @@ fn test_basic_gosub_return() {
 fn test_pilot_conditional_yes_no() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::default();
-    
+
     let program = r#"
 U:X=10
 C:X>5
@@ -159,10 +165,10 @@ N:
 T:X is not greater than 5
 E:
 "#;
-    
+
     interp.load_program(program).unwrap();
     let output = interp.execute(&mut turtle).unwrap();
-    
+
     assert_eq!(output.len(), 1);
     assert_eq!(output[0], "X is greater than 5");
 }
@@ -171,7 +177,7 @@ E:
 fn test_mixed_language_detection() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::default();
-    
+
     // Mix PILOT, BASIC, and Logo commands
     let program = r#"
 T:Starting
@@ -179,10 +185,10 @@ PRINT "BASIC says hello"
 FORWARD 10
 T:Done
 "#;
-    
+
     interp.load_program(program).unwrap();
     let output = interp.execute(&mut turtle).unwrap();
-    
+
     assert_eq!(output.len(), 3);
     assert_eq!(output[0], "Starting");
     assert_eq!(output[1], "BASIC says hello");
@@ -193,15 +199,15 @@ T:Done
 fn test_execution_timeout_protection() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::default();
-    
+
     // Infinite loop should be caught by max_iterations (100k)
     let program = r#"
 10 GOTO 10
 "#;
-    
+
     interp.load_program(program).unwrap();
     let result = interp.execute(&mut turtle);
-    
+
     // Should complete with warning, not hang
     assert!(result.is_ok());
 }
@@ -210,7 +216,7 @@ fn test_execution_timeout_protection() {
 fn test_error_recovery() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::default();
-    
+
     // Invalid GOTO target should not crash
     let program = r#"
 10 PRINT "Before"
@@ -218,10 +224,10 @@ fn test_error_recovery() {
 30 PRINT "After"
 40 END
 "#;
-    
+
     interp.load_program(program).unwrap();
     let output = interp.execute(&mut turtle).unwrap();
-    
+
     // Should print "Before" and error message, then continue
     assert!(output.len() >= 1);
     assert_eq!(output[0], "Before");
@@ -315,7 +321,7 @@ fn test_wait_for_input_and_resume_without_callback() {
 fn test_logo_procedures() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::new();
-    
+
     let code = r#"
 TO SQUARE
 FORWARD 50
@@ -329,13 +335,13 @@ RIGHT 90
 END
 SQUARE
 "#;
-    
+
     interp.load_program(code).unwrap();
     let _output = interp.execute(&mut turtle).unwrap();
-    
+
     // Check that procedure was stored
     assert!(interp.logo_procedures.contains_key("SQUARE"));
-    
+
     // Verify lines were drawn (should be 4 lines for square)
     assert_eq!(turtle.lines.len(), 4);
 }
@@ -344,17 +350,17 @@ SQUARE
 fn test_logo_named_colors() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::new();
-    
+
     let code = r#"
 SETCOLOR RED
 FORWARD 10
 SETCOLOR BLUE
 FORWARD 10
 "#;
-    
+
     interp.load_program(code).unwrap();
     let _output = interp.execute(&mut turtle).unwrap();
-    
+
     // Verify colors changed (first line red, second blue)
     assert_eq!(turtle.lines.len(), 2);
     use eframe::egui;
@@ -366,17 +372,17 @@ FORWARD 10
 fn test_logo_hex_colors() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::new();
-    
+
     let code = r#"
 SETCOLOR #FF0000
 FORWARD 10
 SETCOLOR #00F
 FORWARD 10
 "#;
-    
+
     interp.load_program(code).unwrap();
     let _output = interp.execute(&mut turtle).unwrap();
-    
+
     // Verify hex colors parsed correctly
     assert_eq!(turtle.lines.len(), 2);
     use eframe::egui;
@@ -388,15 +394,15 @@ FORWARD 10
 fn test_basic_line_command() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::new();
-    
+
     let code = r#"
 LINE 0, 0, 50, 50
 LINE 50, 50, 100, 0
 "#;
-    
+
     interp.load_program(code).unwrap();
     let _output = interp.execute(&mut turtle).unwrap();
-    
+
     // Should have 2 lines drawn
     assert_eq!(turtle.lines.len(), 2);
 }
@@ -405,14 +411,14 @@ LINE 50, 50, 100, 0
 fn test_basic_circle_command() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::new();
-    
+
     let code = r#"
 CIRCLE 0, 0, 50
 "#;
-    
+
     interp.load_program(code).unwrap();
     let _output = interp.execute(&mut turtle).unwrap();
-    
+
     // Circle approximated with 36 segments
     assert_eq!(turtle.lines.len(), 36);
 }
@@ -421,14 +427,14 @@ CIRCLE 0, 0, 50
 fn test_logo_nested_repeat() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::new();
-    
+
     let code = r#"
 REPEAT 2 [REPEAT 2 [FORWARD 10 RIGHT 90]]
 "#;
-    
+
     interp.load_program(code).unwrap();
     let _output = interp.execute(&mut turtle).unwrap();
-    
+
     // 2 outer * 2 inner * 1 line each = 4 lines
     assert_eq!(turtle.lines.len(), 4);
 }
@@ -437,21 +443,21 @@ REPEAT 2 [REPEAT 2 [FORWARD 10 RIGHT 90]]
 fn test_basic_inkey_with_callback() {
     let mut interp = Interpreter::new();
     let mut turtle = TurtleState::new();
-    
+
     // Set up callback to simulate key presses
     use std::cell::RefCell;
     use std::rc::Rc;
-    
+
     let key_sequence = Rc::new(RefCell::new(vec!["a", "b", ""]));
     let index = Rc::new(RefCell::new(0));
-    
+
     let seq_clone = key_sequence.clone();
     let idx_clone = index.clone();
-    
+
     interp.inkey_callback = Some(Box::new(move || {
         let mut idx = idx_clone.borrow_mut();
         let seq = seq_clone.borrow();
-        
+
         if *idx < seq.len() {
             let result = if seq[*idx].is_empty() {
                 None
@@ -464,7 +470,7 @@ fn test_basic_inkey_with_callback() {
             None
         }
     }));
-    
+
     let code = r#"
 10 LET K$ = INKEY$
 20 PRINT K$
@@ -473,12 +479,11 @@ fn test_basic_inkey_with_callback() {
 50 LET K$ = INKEY$
 60 PRINT K$
 "#;
-    
+
     interp.load_program(code).unwrap();
     let output = interp.execute(&mut turtle).unwrap();
-    
+
     // Should print "a", "b", ""
     assert!(output.iter().any(|s| s.contains("a")));
     assert!(output.iter().any(|s| s.contains("b")));
 }
-

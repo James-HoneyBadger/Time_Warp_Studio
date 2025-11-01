@@ -1,10 +1,10 @@
-use eframe::egui;
 use crate::app::TimeWarpApp;
+use eframe::egui;
 
 pub fn render(_app: &TimeWarpApp, ui: &mut egui::Ui) {
     ui.heading("Time Warp IDE - Help");
     ui.separator();
-    
+
     egui::ScrollArea::vertical().show(ui, |ui| {
         ui.heading("Quick Start");
         ui.label("Time Warp supports three educational programming languages:");
@@ -13,7 +13,7 @@ pub fn render(_app: &TimeWarpApp, ui: &mut egui::Ui) {
         ui.label("When a program requests input (BASIC INPUT or PILOT A:), the IDE shows an 📝 prompt in the Output tab.");
         ui.label("Type your response and press Enter or click Submit to resume execution. The value is stored as a number if possible, otherwise as text.");
         ui.add_space(10.0);
-        
+
         ui.heading("PILOT Language");
         ui.label("T:text - Display text");
         ui.label("A:var - Accept input");
@@ -26,7 +26,7 @@ pub fn render(_app: &TimeWarpApp, ui: &mut egui::Ui) {
         ui.label("E: - End program");
         ui.label("SCREEN mode[, w, h] - Set screen (BASIC-style command; Logo follows selected mode)");
         ui.add_space(10.0);
-        
+
         ui.heading("BASIC Language");
         ui.label("PRINT \"text\" - Display text");
         ui.label("INPUT var - Get user input (blocking)");
@@ -44,7 +44,7 @@ pub fn render(_app: &TimeWarpApp, ui: &mut egui::Ui) {
         ui.label("RETURN - Return from subroutine");
         ui.label("END - End program");
         ui.add_space(10.0);
-        
+
         ui.heading("Logo Language");
         ui.label("FORWARD n - Move turtle forward");
         ui.label("BACK n - Move turtle backward");
@@ -57,7 +57,7 @@ pub fn render(_app: &TimeWarpApp, ui: &mut egui::Ui) {
         ui.label("SETXY x y - Set position");
         ui.label("REPEAT n [commands] - Repeat commands");
         ui.add_space(10.0);
-        
+
         ui.heading("Example Programs");
         ui.label("See the examples/ directory for 32 sample programs in each language.");
         ui.label("PILOT: pilot_quiz.pilot, pilot_adventure.pilot, pilot_dragon_adventure.pilot, ...");

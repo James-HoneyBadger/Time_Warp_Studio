@@ -26,7 +26,7 @@ impl Theme {
             Theme::SolarizedDark,
         ]
     }
-    
+
     pub fn name(&self) -> &str {
         match self {
             Theme::AmberPhosphor => "Amber Phosphor",
@@ -39,7 +39,7 @@ impl Theme {
             Theme::SolarizedDark => "Solarized Dark",
         }
     }
-    
+
     pub fn background(&self) -> egui::Color32 {
         match self {
             Theme::AmberPhosphor => egui::Color32::from_rgb(25, 20, 12),
@@ -52,7 +52,7 @@ impl Theme {
             Theme::SolarizedDark => egui::Color32::from_rgb(0, 43, 54),
         }
     }
-    
+
     pub fn text(&self) -> egui::Color32 {
         match self {
             Theme::AmberPhosphor => egui::Color32::from_rgb(255, 176, 0),
@@ -65,7 +65,7 @@ impl Theme {
             Theme::SolarizedDark => egui::Color32::from_rgb(131, 148, 150),
         }
     }
-    
+
     pub fn accent(&self) -> egui::Color32 {
         match self {
             Theme::AmberPhosphor => egui::Color32::from_rgb(255, 200, 100),
@@ -78,7 +78,7 @@ impl Theme {
             Theme::SolarizedDark => egui::Color32::from_rgb(38, 139, 210),
         }
     }
-    
+
     pub fn panel(&self) -> egui::Color32 {
         match self {
             Theme::AmberPhosphor => egui::Color32::from_rgb(30, 25, 15),
@@ -91,16 +91,16 @@ impl Theme {
             Theme::SolarizedDark => egui::Color32::from_rgb(7, 54, 66),
         }
     }
-    
+
     pub fn apply(&self, ctx: &egui::Context) {
         let mut style = (*ctx.style()).clone();
-        
+
         style.visuals.override_text_color = Some(self.text());
         style.visuals.extreme_bg_color = self.background();
         style.visuals.faint_bg_color = self.panel();
         style.visuals.selection.bg_fill = self.accent().linear_multiply(0.3);
         style.visuals.selection.stroke = egui::Stroke::new(1.0, self.accent());
-        
+
         ctx.set_style(style);
     }
 }

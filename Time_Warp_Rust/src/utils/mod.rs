@@ -1,7 +1,7 @@
 // Utility modules
+pub mod async_exec;
 pub mod error;
 pub mod expr_eval;
-pub mod async_exec;
 
 // Re-export commonly used types
 pub use expr_eval::ExpressionEvaluator;

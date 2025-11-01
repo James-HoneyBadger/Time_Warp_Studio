@@ -1,9 +1,13 @@
-use anyhow::Result;
-use crate::interpreter::{Interpreter, ExecutionResult};
 use crate::graphics::TurtleState;
 use crate::interpreter::ScreenMode;
+use crate::interpreter::{ExecutionResult, Interpreter};
+use anyhow::Result;
 
-pub fn execute(interp: &mut Interpreter, command: &str, turtle: &mut TurtleState) -> Result<ExecutionResult> {
+pub fn execute(
+    interp: &mut Interpreter,
+    command: &str,
+    turtle: &mut TurtleState,
+) -> Result<ExecutionResult> {
     let trimmed = command.trim();
     if trimmed.is_empty() {
         return Ok(ExecutionResult::Continue);
@@ -13,7 +17,7 @@ pub fn execute(interp: &mut Interpreter, command: &str, turtle: &mut TurtleState
     let keyword = it.next().unwrap_or("");
     let args = it.next().unwrap_or("");
     let kw = keyword.to_uppercase();
-    
+
     match kw.as_str() {
         "PRINT" => execute_print(interp, args),
         "LET" => execute_let(interp, args),
@@ -42,7 +46,11 @@ pub fn execute(interp: &mut Interpreter, command: &str, turtle: &mut TurtleState
     }
 }
 
-fn execute_screen(interp: &mut Interpreter, args: &str, turtle: &mut TurtleState) -> Result<ExecutionResult> {
+fn execute_screen(
+    interp: &mut Interpreter,
+    args: &str,
+    turtle: &mut TurtleState,
+) -> Result<ExecutionResult> {
     // SCREEN mode[, w, h]
     let parts: Vec<&str> = args.split(',').map(|s| s.trim()).collect();
     if parts.is_empty() || parts[0].is_empty() {
@@ -54,8 +62,16 @@ fn execute_screen(interp: &mut Interpreter, args: &str, turtle: &mut TurtleState
     match mode_val {
         0 => {
             // Text mode
-            let cols = if parts.len() > 1 { interp.evaluate_expression(parts[1]).unwrap_or(80.0) as u32 } else { 80 };
-            let rows = if parts.len() > 2 { interp.evaluate_expression(parts[2]).unwrap_or(25.0) as u32 } else { 25 };
+            let cols = if parts.len() > 1 {
+                interp.evaluate_expression(parts[1]).unwrap_or(80.0) as u32
+            } else {
+                80
+            };
+            let rows = if parts.len() > 2 {
+                interp.evaluate_expression(parts[2]).unwrap_or(25.0) as u32
+            } else {
+                25
+            };
             interp.screen_mode = ScreenMode::Text { cols, rows };
             // Map text grid to pixel canvas for consistency
             let char_w = 10.0f32; // approximate monospace width
@@ -68,9 +84,16 @@ fn execute_screen(interp: &mut Interpreter, args: &str, turtle: &mut TurtleState
             // Graphics default 640x480 unless overridden
             let mut w = 640u32;
             let mut h = 480u32;
-            if parts.len() > 1 { w = interp.evaluate_expression(parts[1]).unwrap_or(w as f64) as u32; }
-            if parts.len() > 2 { h = interp.evaluate_expression(parts[2]).unwrap_or(h as f64) as u32; }
-            interp.screen_mode = ScreenMode::Graphics { width: w, height: h };
+            if parts.len() > 1 {
+                w = interp.evaluate_expression(parts[1]).unwrap_or(w as f64) as u32;
+            }
+            if parts.len() > 2 {
+                h = interp.evaluate_expression(parts[2]).unwrap_or(h as f64) as u32;
+            }
+            interp.screen_mode = ScreenMode::Graphics {
+                width: w,
+                height: h,
+            };
             turtle.canvas_width = w as f32;
             turtle.canvas_height = h as f32;
             made_change = true;
@@ -79,9 +102,16 @@ fn execute_screen(interp: &mut Interpreter, args: &str, turtle: &mut TurtleState
             // Graphics default 1024x768 unless overridden
             let mut w = 1024u32;
             let mut h = 768u32;
-            if parts.len() > 1 { w = interp.evaluate_expression(parts[1]).unwrap_or(w as f64) as u32; }
-            if parts.len() > 2 { h = interp.evaluate_expression(parts[2]).unwrap_or(h as f64) as u32; }
-            interp.screen_mode = ScreenMode::Graphics { width: w, height: h };
+            if parts.len() > 1 {
+                w = interp.evaluate_expression(parts[1]).unwrap_or(w as f64) as u32;
+            }
+            if parts.len() > 2 {
+                h = interp.evaluate_expression(parts[2]).unwrap_or(h as f64) as u32;
+            }
+            interp.screen_mode = ScreenMode::Graphics {
+                width: w,
+                height: h,
+            };
             turtle.canvas_width = w as f32;
             turtle.canvas_height = h as f32;
             made_change = true;
@@ -104,17 +134,22 @@ fn execute_print(interp: &mut Interpreter, args: &str) -> Result<ExecutionResult
     let mut in_quotes = false;
     for ch in args.chars() {
         match ch {
-            '"' => { in_quotes = !in_quotes; current.push(ch); }
-            ',' if !in_quotes => { 
+            '"' => {
+                in_quotes = !in_quotes;
+                current.push(ch);
+            }
+            ',' if !in_quotes => {
                 if !current.trim().is_empty() {
-                    parts.push(current.trim().to_string()); 
+                    parts.push(current.trim().to_string());
                 }
-                current.clear(); 
+                current.clear();
             }
             _ => current.push(ch),
         }
     }
-    if !current.trim().is_empty() { parts.push(current.trim().to_string()); }
+    if !current.trim().is_empty() {
+        parts.push(current.trim().to_string());
+    }
 
     if parts.is_empty() {
         interp.log_output(String::new());
@@ -127,7 +162,7 @@ fn execute_print(interp: &mut Interpreter, args: &str) -> Result<ExecutionResult
         let item_trim = item.trim();
         if item_trim.starts_with('"') && item_trim.ends_with('"') && item_trim.len() >= 2 {
             // String literal - avoid allocation by using slice
-            out_items.push(item_trim[1..item_trim.len()-1].to_string());
+            out_items.push(item_trim[1..item_trim.len() - 1].to_string());
         } else if item_trim.to_uppercase() == "INKEY$" {
             // Special handling for INKEY$
             out_items.push(interp.get_inkey());
@@ -157,14 +192,14 @@ fn execute_let(interp: &mut Interpreter, assignment: &str) -> Result<ExecutionRe
     if let Some(pos) = assignment.find('=') {
         let var_name = assignment[..pos].trim().to_string();
         let expr = assignment[pos + 1..].trim();
-        
+
         // Special handling for INKEY$
         if expr.trim().to_uppercase() == "INKEY$" {
             let key = interp.get_inkey();
             interp.string_variables.insert(var_name, key);
             return Ok(ExecutionResult::Continue);
         }
-        
+
         match interp.evaluate_expression(expr) {
             Ok(value) => {
                 interp.variables.insert(var_name, value);
@@ -172,7 +207,7 @@ fn execute_let(interp: &mut Interpreter, assignment: &str) -> Result<ExecutionRe
             Err(_) => {
                 // Treat as string literal or raw text
                 let val = if expr.starts_with('"') && expr.ends_with('"') && expr.len() >= 2 {
-                    expr[1..expr.len()-1].to_string()
+                    expr[1..expr.len() - 1].to_string()
                 } else {
                     expr.to_string()
                 };
@@ -180,7 +215,7 @@ fn execute_let(interp: &mut Interpreter, assignment: &str) -> Result<ExecutionRe
             }
         }
     }
-    
+
     Ok(ExecutionResult::Continue)
 }
 
@@ -192,8 +227,14 @@ fn execute_input(interp: &mut Interpreter, var: &str) -> Result<ExecutionResult>
     if interp.input_callback.is_some() {
         let input_value = interp.request_input(&prompt);
         match input_value.trim().parse::<f64>() {
-            Ok(num) => { interp.variables.insert(var_name.clone(), num); }
-            Err(_) => { interp.string_variables.insert(var_name.clone(), input_value); }
+            Ok(num) => {
+                interp.variables.insert(var_name.clone(), num);
+            }
+            Err(_) => {
+                interp
+                    .string_variables
+                    .insert(var_name.clone(), input_value);
+            }
         }
         return Ok(ExecutionResult::Continue);
     }
@@ -214,7 +255,11 @@ fn execute_goto(interp: &mut Interpreter, line_num: &str) -> Result<ExecutionRes
     Ok(ExecutionResult::Continue)
 }
 
-fn execute_if(interp: &mut Interpreter, condition: &str, turtle: &mut TurtleState) -> Result<ExecutionResult> {
+fn execute_if(
+    interp: &mut Interpreter,
+    condition: &str,
+    turtle: &mut TurtleState,
+) -> Result<ExecutionResult> {
     // IF <expr> THEN <command or line>
     let cond_upper = condition.to_uppercase();
     if let Some(pos) = cond_upper.find("THEN") {
@@ -222,7 +267,12 @@ fn execute_if(interp: &mut Interpreter, condition: &str, turtle: &mut TurtleStat
         let then_str = condition[pos + 4..].trim();
         let truthy = interp.evaluate_expression(cond_str).unwrap_or(0.0) != 0.0;
         if truthy {
-            if then_str.chars().next().map(|c| c.is_ascii_digit()).unwrap_or(false) {
+            if then_str
+                .chars()
+                .next()
+                .map(|c| c.is_ascii_digit())
+                .unwrap_or(false)
+            {
                 // THEN <line>
                 return execute_goto(interp, then_str);
             } else {
@@ -239,14 +289,18 @@ fn execute_if(interp: &mut Interpreter, condition: &str, turtle: &mut TurtleStat
 fn execute_for(interp: &mut Interpreter, params: &str) -> Result<ExecutionResult> {
     // FOR var = start TO end [STEP step]
     let params_upper = params.to_uppercase();
-    
+
     // Find '=' and 'TO'
-    let eq_pos = params.find('=').ok_or_else(|| anyhow::anyhow!("FOR missing '='"))?;
-    let to_pos = params_upper.find(" TO ").ok_or_else(|| anyhow::anyhow!("FOR missing TO"))?;
-    
+    let eq_pos = params
+        .find('=')
+        .ok_or_else(|| anyhow::anyhow!("FOR missing '='"))?;
+    let to_pos = params_upper
+        .find(" TO ")
+        .ok_or_else(|| anyhow::anyhow!("FOR missing TO"))?;
+
     let var_name = params[..eq_pos].trim().to_string();
     let start_expr = params[eq_pos + 1..to_pos].trim();
-    
+
     // Check for STEP
     let (end_expr, step_val) = if let Some(step_pos) = params_upper.find(" STEP ") {
         let end = params[to_pos + 4..step_pos].trim();
@@ -255,13 +309,13 @@ fn execute_for(interp: &mut Interpreter, params: &str) -> Result<ExecutionResult
     } else {
         (params[to_pos + 4..].trim(), 1.0)
     };
-    
+
     let start = interp.evaluate_expression(start_expr)?;
     let end = interp.evaluate_expression(end_expr)?;
-    
+
     // Initialize loop variable
     interp.variables.insert(var_name.clone(), start);
-    
+
     // Push FOR context onto stack
     interp.for_stack.push(crate::interpreter::ForContext {
         var_name,
@@ -269,31 +323,35 @@ fn execute_for(interp: &mut Interpreter, params: &str) -> Result<ExecutionResult
         step: step_val,
         for_line: interp.current_line,
     });
-    
+
     Ok(ExecutionResult::Continue)
 }
 
 fn execute_next(interp: &mut Interpreter, var: &str) -> Result<ExecutionResult> {
     // NEXT var
     let var_name = var.trim();
-    
+
     if let Some(ctx) = interp.for_stack.last() {
         // Verify variable name matches
         if !var_name.is_empty() && ctx.var_name != var_name {
-            return Err(anyhow::anyhow!("NEXT {} does not match FOR {}", var_name, ctx.var_name));
+            return Err(anyhow::anyhow!(
+                "NEXT {} does not match FOR {}",
+                var_name,
+                ctx.var_name
+            ));
         }
-        
+
         // Get current value
         let current = interp.variables.get(&ctx.var_name).copied().unwrap_or(0.0);
         let new_val = current + ctx.step;
-        
+
         // Check if loop should continue
         let should_continue = if ctx.step >= 0.0 {
             new_val <= ctx.end_value
         } else {
             new_val >= ctx.end_value
         };
-        
+
         if should_continue {
             interp.variables.insert(ctx.var_name.clone(), new_val);
             let for_line = ctx.for_line;
@@ -305,7 +363,7 @@ fn execute_next(interp: &mut Interpreter, var: &str) -> Result<ExecutionResult> 
     } else {
         return Err(anyhow::anyhow!("NEXT without FOR"));
     }
-    
+
     Ok(ExecutionResult::Continue)
 }
 
@@ -336,7 +394,11 @@ fn find_line_index(interp: &Interpreter, num: usize) -> Option<usize> {
     interp.line_number_map.get(&num).copied()
 }
 
-fn execute_line(interp: &mut Interpreter, args: &str, turtle: &mut TurtleState) -> Result<ExecutionResult> {
+fn execute_line(
+    interp: &mut Interpreter,
+    args: &str,
+    turtle: &mut TurtleState,
+) -> Result<ExecutionResult> {
     // LINE x1, y1, x2, y2
     let parts: Vec<&str> = args.split(',').map(|s| s.trim()).collect();
     if parts.len() >= 4 {
@@ -344,7 +406,7 @@ fn execute_line(interp: &mut Interpreter, args: &str, turtle: &mut TurtleState) 
         let y1 = interp.evaluate_expression(parts[1])? as f32;
         let x2 = interp.evaluate_expression(parts[2])? as f32;
         let y2 = interp.evaluate_expression(parts[3])? as f32;
-        
+
         // Draw line by moving turtle with pen down
         let old_pen = turtle.pen_down;
         turtle.pen_down = false;
@@ -356,34 +418,38 @@ fn execute_line(interp: &mut Interpreter, args: &str, turtle: &mut TurtleState) 
     Ok(ExecutionResult::Continue)
 }
 
-fn execute_circle(interp: &mut Interpreter, args: &str, turtle: &mut TurtleState) -> Result<ExecutionResult> {
+fn execute_circle(
+    interp: &mut Interpreter,
+    args: &str,
+    turtle: &mut TurtleState,
+) -> Result<ExecutionResult> {
     // CIRCLE x, y, radius
     let parts: Vec<&str> = args.split(',').map(|s| s.trim()).collect();
     if parts.len() >= 3 {
         let cx = interp.evaluate_expression(parts[0])? as f32;
         let cy = interp.evaluate_expression(parts[1])? as f32;
         let r = interp.evaluate_expression(parts[2])? as f32;
-        
+
         // Approximate circle with line segments
         let old_pen = turtle.pen_down;
         turtle.pen_down = false;
-        
+
         let segments = 36;
         let angle_step = 360.0 / segments as f32;
-        
+
         // Start at top of circle
         let start_x = cx;
         let start_y = cy + r;
         turtle.goto(start_x, start_y);
         turtle.pen_down = true;
-        
+
         for i in 1..=segments {
             let angle = (i as f32 * angle_step).to_radians();
             let x = cx + r * angle.sin();
             let y = cy + r * angle.cos();
             turtle.goto(x, y);
         }
-        
+
         turtle.pen_down = old_pen;
     }
     Ok(ExecutionResult::Continue)

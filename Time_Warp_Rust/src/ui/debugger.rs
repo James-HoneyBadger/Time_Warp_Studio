@@ -1,10 +1,10 @@
-use eframe::egui;
 use crate::app::TimeWarpApp;
+use eframe::egui;
 
 pub fn render(_app: &TimeWarpApp, ui: &mut egui::Ui) {
     ui.heading("Debugger");
     ui.separator();
-    
+
     ui.label("Debugger features coming soon:");
     ui.label("• Breakpoints");
     ui.label("• Step execution");

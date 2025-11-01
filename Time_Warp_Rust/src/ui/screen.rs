@@ -1,6 +1,6 @@
-use eframe::egui;
 use crate::app::TimeWarpApp;
 use crate::interpreter::ScreenMode;
+use eframe::egui;
 
 /// Unified screen renderer: draws text and graphics in a single canvas based on current SCREEN mode
 pub fn render(app: &mut TimeWarpApp, ui: &mut egui::Ui) {
@@ -20,8 +20,12 @@ pub fn render(app: &mut TimeWarpApp, ui: &mut egui::Ui) {
 
     // Background
     match app.interpreter.screen_mode {
-        ScreenMode::Graphics { .. } => { painter.rect_filled(response.rect, 0.0, app.turtle_state.bg_color); }
-        ScreenMode::Text { .. } => { painter.rect_filled(response.rect, 0.0, app.current_theme.background()); }
+        ScreenMode::Graphics { .. } => {
+            painter.rect_filled(response.rect, 0.0, app.turtle_state.bg_color);
+        }
+        ScreenMode::Text { .. } => {
+            painter.rect_filled(response.rect, 0.0, app.current_theme.background());
+        }
     }
 
     // Draw content based on mode
@@ -30,7 +34,10 @@ pub fn render(app: &mut TimeWarpApp, ui: &mut egui::Ui) {
             // World rect centered at (0,0) with size canvas_width x canvas_height
             let world = egui::Rect::from_center_size(
                 egui::pos2(0.0, 0.0),
-                egui::vec2(app.turtle_state.canvas_width, app.turtle_state.canvas_height),
+                egui::vec2(
+                    app.turtle_state.canvas_width,
+                    app.turtle_state.canvas_height,
+                ),
             );
             let to_screen = egui::emath::RectTransform::from_to(world, response.rect);
 
@@ -47,7 +54,10 @@ pub fn render(app: &mut TimeWarpApp, ui: &mut egui::Ui) {
                 painter.circle_filled(pos, size, app.current_theme.accent());
                 let angle = app.turtle_state.heading.to_radians();
                 let dir = egui::vec2(angle.sin(), -angle.cos()) * size * 1.5;
-                painter.line_segment([pos, pos + dir], egui::Stroke::new(2.0, app.current_theme.text()));
+                painter.line_segment(
+                    [pos, pos + dir],
+                    egui::Stroke::new(2.0, app.current_theme.text()),
+                );
             }
             // Optional overlay recent text output (last 10 lines)
             if app.show_overlay_text {
@@ -84,7 +94,9 @@ pub fn render(app: &mut TimeWarpApp, ui: &mut egui::Ui) {
                     app.current_theme.text(),
                 );
                 y += ui.text_style_height(&egui::TextStyle::Monospace);
-                if y > response.rect.bottom() - margin { break; }
+                if y > response.rect.bottom() - margin {
+                    break;
+                }
             }
         }
     }

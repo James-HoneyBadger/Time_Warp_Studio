@@ -1,5 +1,5 @@
-use eframe::egui;
 use crate::app::TimeWarpApp;
+use eframe::egui;
 
 pub fn render(app: &mut TimeWarpApp, ui: &mut egui::Ui) {
     // Unified output screen (text + graphics)
@@ -23,13 +23,13 @@ pub fn render(app: &mut TimeWarpApp, ui: &mut egui::Ui) {
                 let response = ui.add(
                     egui::TextEdit::singleline(&mut app.input_buffer)
                         .hint_text("Type here and press Enter")
-                        .desired_width(300.0)
+                        .desired_width(300.0),
                 );
-                
+
                 // Check for Enter key press directly
                 let enter_pressed = ui.input(|i| i.key_pressed(egui::Key::Enter));
                 let should_submit = enter_pressed && response.has_focus();
-                
+
                 ui.horizontal(|ui| {
                     if ui.button("Submit").clicked() || should_submit {
                         let value = app.input_buffer.clone();
@@ -67,4 +67,3 @@ pub fn render(app: &mut TimeWarpApp, ui: &mut egui::Ui) {
             });
     }
 }
- 

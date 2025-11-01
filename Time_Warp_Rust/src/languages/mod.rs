@@ -1,6 +1,6 @@
-pub mod pilot;
 pub mod basic;
 pub mod logo;
+pub mod pilot;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Language {
@@ -22,7 +22,7 @@ impl Language {
             _ => Language::Pilot,
         }
     }
-    
+
     pub fn name(&self) -> &str {
         match self {
             Language::TempleCode => "TempleCode",

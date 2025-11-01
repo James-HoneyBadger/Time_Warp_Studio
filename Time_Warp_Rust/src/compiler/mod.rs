@@ -5,26 +5,26 @@ use std::path::Path;
 use std::process::Command;
 
 /// Experimental TempleCode-to-C compiler (transpiler + system compiler invoker)
-/// 
+///
 /// Transpiles TempleCode programs to C and invokes the system compiler (cc, gcc, or clang)
 /// to produce standalone executables. Supports text-mode BASIC and PILOT subset.
-/// 
+///
 /// # Supported Features
 /// - **BASIC**: PRINT, LET, INPUT, IF...THEN, GOTO, END, REM
 /// - **PILOT**: T: (text output), A: (accept input)
 /// - **Logo**: Commands converted to C comments (execution not yet supported)
-/// 
+///
 /// # Variable Mapping
 /// - Numeric variables → `double V_<name>`
 /// - String variables → `char S_<name>[256]`
 /// - Expressions passed to C with minimal transformation
 /// - Operators: `+`, `-`, `*`, `/`, `%`, `^` (maps to `pow()`)
 /// - Comparisons: `<>` → `!=`, `=` → `==`
-/// 
+///
 /// # Compilation Process
 /// 1. `compile_to_c()`: TempleCode → C source string
 /// 2. `compile_to_executable()`: Write temp file → invoke system cc → produce binary
-/// 
+///
 /// # Example
 /// ```ignore
 /// let compiler = TempleCodeCompiler::new();
@@ -32,7 +32,7 @@ use std::process::Command;
 /// let exe_path = compiler.compile_to_executable(&c_code, "hello")?;
 /// // Run: ./hello
 /// ```
-/// 
+///
 /// # Architecture Notes
 /// - Labels generated as `line_<number>:` for GOTO/GOSUB targets
 /// - INPUT prompts embedded as string literals
@@ -41,7 +41,9 @@ use std::process::Command;
 pub struct TempleCodeCompiler;
 
 impl TempleCodeCompiler {
-    pub fn new() -> Self { Self }
+    pub fn new() -> Self {
+        Self
+    }
 
     /// Compile TempleCode source into C code (as a String)
     pub fn compile_to_c(&self, source: &str) -> Result<String> {
@@ -51,9 +53,13 @@ impl TempleCodeCompiler {
 
         for raw in source.lines() {
             let line = raw.trim_end();
-            if line.is_empty() { continue; }
+            if line.is_empty() {
+                continue;
+            }
             let (num, cmd) = Self::split_line_number(line);
-            if let Some(n) = num { labels.insert(n); }
+            if let Some(n) = num {
+                labels.insert(n);
+            }
             line_map.push((num, cmd.to_string()));
         }
 
@@ -81,41 +87,57 @@ impl TempleCodeCompiler {
         }
 
         // Emit C prolog
-        c.push_str("#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <math.h>\n\n");
+        c.push_str(
+            "#include <stdio.h>\n#include <stdlib.h>\n#include <string.h>\n#include <math.h>\n\n",
+        );
         c.push_str("static void read_line(char* buf, size_t n){ if(!fgets(buf,n,stdin)){buf[0]='\\0';} size_t l=strlen(buf); if(l>0 && buf[l-1]=='\\n'){buf[l-1]='\\0';}}\n\n");
         c.push_str("int main(){\n");
 
         // Declare variables
         if !vars.is_empty() {
             c.push_str("  /* numeric variables */\n");
-            for v in &vars { c.push_str(&format!("  double V_{} = 0.0;\n", v)); }
+            for v in &vars {
+                c.push_str(&format!("  double V_{} = 0.0;\n", v));
+            }
         }
         if !str_vars.is_empty() {
             c.push_str("  /* string buffers */\n");
-            for v in &str_vars { c.push_str(&format!("  char S_{}[256] = {{0}};\n", v)); }
+            for v in &str_vars {
+                c.push_str(&format!("  char S_{}[256] = {{0}};\n", v));
+            }
         }
         c.push_str("  char INPUT_BUF[256];\n\n");
 
         // Generate code per line
         for (num, cmd) in &line_map {
-            if let Some(n) = num { c.push_str(&format!("line_{}:;\n", n)); }
+            if let Some(n) = num {
+                c.push_str(&format!("line_{}:;\n", n));
+            }
             let up = cmd.trim().to_uppercase();
-            if up.is_empty() { continue; }
+            if up.is_empty() {
+                continue;
+            }
 
             // TempleCode detection (BASIC/PILOT/Logo merged)
-            if up.starts_with("REM ") || up == "REM" { 
+            if up.starts_with("REM ") || up == "REM" {
                 // Emit as C comment
                 let comment_text = if up == "REM" { "" } else { &cmd[4..] };
-                c.push_str(&format!("  /* {} */\n", comment_text.replace("/*", "/ *").replace("*/", "* /")));
-                continue; 
+                c.push_str(&format!(
+                    "  /* {} */\n",
+                    comment_text.replace("/*", "/ *").replace("*/", "* /")
+                ));
+                continue;
             }
 
             if up.starts_with("PRINT ") {
                 c.push_str(&Self::emit_print(&cmd[6..], &vars)?);
-            } else if up == "PRINT" { c.push_str("  puts(\"\");\n"); }
-            else if up.starts_with("LET ") {
+            } else if up == "PRINT" {
+                c.push_str("  puts(\"\");\n");
+            } else if up.starts_with("LET ") {
                 let rest = &cmd[4..];
-                let (lhs, rhs) = rest.split_once('=').ok_or_else(|| anyhow!("Invalid LET syntax"))?;
+                let (lhs, rhs) = rest
+                    .split_once('=')
+                    .ok_or_else(|| anyhow!("Invalid LET syntax"))?;
                 let v = Self::normalize_var(lhs.trim());
                 let expr = Self::expr_to_c(rhs.trim(), &vars)?;
                 c.push_str(&format!("  V_{} = {};\n", v, expr));
@@ -125,18 +147,27 @@ impl TempleCodeCompiler {
                     // INPUT "Prompt", VAR
                     if let Some(end) = stripped.find('"') {
                         let prompt = &stripped[..end];
-                        let after = stripped[end+1..].trim();
+                        let after = stripped[end + 1..].trim();
                         let after = after.strip_prefix(',').unwrap_or(after).trim();
                         if !after.is_empty() {
                             let v = Self::normalize_var(after);
                             let esc = Self::escape_c_string(prompt);
-                            c.push_str(&format!("  fputs(\"{} \", stdout); fflush(stdout);\n", esc));
+                            c.push_str(&format!(
+                                "  fputs(\"{} \", stdout); fflush(stdout);\n",
+                                esc
+                            ));
                             c.push_str(&Self::emit_read_into(&v));
                         } else {
-                            c.push_str(&format!("  /* Invalid INPUT syntax: {} */\n", rest.replace("/*","/ *")));
+                            c.push_str(&format!(
+                                "  /* Invalid INPUT syntax: {} */\n",
+                                rest.replace("/*", "/ *")
+                            ));
                         }
                     } else {
-                        c.push_str(&format!("  /* Invalid INPUT prompt: {} */\n", rest.replace("/*","/ *")));
+                        c.push_str(&format!(
+                            "  /* Invalid INPUT prompt: {} */\n",
+                            rest.replace("/*", "/ *")
+                        ));
                     }
                 } else {
                     let v = Self::normalize_var(rest);
@@ -145,7 +176,9 @@ impl TempleCodeCompiler {
             } else if up.starts_with("IF ") {
                 // Very limited: IF <cond> THEN <line|PRINT ...>
                 let cond_then = &cmd[3..];
-                let (cond_part, then_part) = cond_then.split_once("THEN").ok_or_else(|| anyhow!("Invalid IF syntax"))?;
+                let (cond_part, then_part) = cond_then
+                    .split_once("THEN")
+                    .ok_or_else(|| anyhow!("Invalid IF syntax"))?;
                 let cond_upper = cond_part.to_uppercase();
                 let cond_c = Self::cond_to_c(cond_upper.trim(), &vars)?;
                 let then_src = then_part.trim(); // original case
@@ -157,12 +190,20 @@ impl TempleCodeCompiler {
                     c.push_str("  }\n");
                 } else {
                     // Fallback: ignore
-                    c.push_str(&format!("  /* IF THEN unhandled: {} */\n", then_src.replace("/*","/ *")));
+                    c.push_str(&format!(
+                        "  /* IF THEN unhandled: {} */\n",
+                        then_src.replace("/*", "/ *")
+                    ));
                 }
             } else if up.starts_with("GOTO ") {
-                let target = cmd[5..].trim().parse::<usize>().map_err(|_| anyhow!("Invalid GOTO target"))?;
+                let target = cmd[5..]
+                    .trim()
+                    .parse::<usize>()
+                    .map_err(|_| anyhow!("Invalid GOTO target"))?;
                 c.push_str(&format!("  goto line_{};\n", target));
-            } else if up == "END" { c.push_str("  return 0;\n"); }
+            } else if up == "END" {
+                c.push_str("  return 0;\n");
+            }
             // PILOT
             else if up.starts_with("T:") {
                 let text = cmd[2..].trim();
@@ -174,7 +215,10 @@ impl TempleCodeCompiler {
             }
             // Logo (ignored for now)
             else {
-                c.push_str(&format!("  /* Unhandled or Logo command: {} */\n", up.replace("/*","/ *")));
+                c.push_str(&format!(
+                    "  /* Unhandled or Logo command: {} */\n",
+                    up.replace("/*", "/ *")
+                ));
             }
         }
 
@@ -202,9 +246,15 @@ impl TempleCodeCompiler {
                 .arg(&c_path)
                 .status();
             match status {
-                Ok(s) if s.success() => { return Ok(()); }
-                Ok(s) => { last_err = Some(anyhow!("{} exited with status {}", cc, s)); }
-                Err(e) => { last_err = Some(anyhow!("failed to invoke {}: {}", cc, e)); }
+                Ok(s) if s.success() => {
+                    return Ok(());
+                }
+                Ok(s) => {
+                    last_err = Some(anyhow!("{} exited with status {}", cc, s));
+                }
+                Err(e) => {
+                    last_err = Some(anyhow!("failed to invoke {}: {}", cc, e));
+                }
             }
         }
         Err(last_err.unwrap_or_else(|| anyhow!("no C compiler found")))
@@ -223,7 +273,13 @@ impl TempleCodeCompiler {
 
     fn normalize_var(name: &str) -> String {
         name.chars()
-            .map(|c| if c.is_ascii_alphanumeric() { c.to_ascii_uppercase() } else { '_' })
+            .map(|c| {
+                if c.is_ascii_alphanumeric() {
+                    c.to_ascii_uppercase()
+                } else {
+                    '_'
+                }
+            })
             .collect()
     }
 
@@ -262,8 +318,11 @@ impl TempleCodeCompiler {
             let c = chars[i];
             if c.is_ascii_alphabetic() {
                 // read identifier
-                let start = i; let mut j = i+1;
-                while j < chars.len() && (chars[j].is_ascii_alphanumeric() || chars[j]=='_') { j+=1; }
+                let start = i;
+                let mut j = i + 1;
+                while j < chars.len() && (chars[j].is_ascii_alphanumeric() || chars[j] == '_') {
+                    j += 1;
+                }
                 let ident: String = chars[start..j].iter().collect();
                 let norm = Self::normalize_var(&ident);
                 if vars.contains(&norm) {
@@ -297,8 +356,8 @@ impl TempleCodeCompiler {
         // Support BASIC-style operators and ensure proper C comparisons
         // 1) Convert "<>" to "!="
         // 2) Duplicate bare '=' to '==' but leave '>=', '<=', '!=', and existing '==' intact
-    let s = cond.replace("<>", "!=");
-    let mut out = String::new();
+        let s = cond.replace("<>", "!=");
+        let mut out = String::new();
         let mut prev: Option<char> = None;
         let mut iter = s.chars().peekable();
         while let Some(ch) = iter.next() {
@@ -324,33 +383,50 @@ impl TempleCodeCompiler {
     fn emit_print(arglist: &str, vars: &BTreeSet<String>) -> Result<String> {
         // Support: quoted strings and variable names separated by commas
         let mut code = String::new();
-    let rest = arglist.trim();
-        if rest.is_empty() { code.push_str("  puts(\"\");\n"); return Ok(code); }
+        let rest = arglist.trim();
+        if rest.is_empty() {
+            code.push_str("  puts(\"\");\n");
+            return Ok(code);
+        }
         // Split by commas not inside quotes (simple scan)
         let mut parts: Vec<String> = Vec::new();
         let mut buf = String::new();
         let mut in_str = false;
         for ch in rest.chars() {
             match ch {
-                '"' => { in_str = !in_str; buf.push(ch); },
-                ',' if !in_str => { parts.push(buf.trim().to_string()); buf.clear(); },
+                '"' => {
+                    in_str = !in_str;
+                    buf.push(ch);
+                }
+                ',' if !in_str => {
+                    parts.push(buf.trim().to_string());
+                    buf.clear();
+                }
                 _ => buf.push(ch),
             }
         }
-        if !buf.trim().is_empty() { parts.push(buf.trim().to_string()); }
+        if !buf.trim().is_empty() {
+            parts.push(buf.trim().to_string());
+        }
         for p in parts {
             let ptrim = p.trim();
             if ptrim.starts_with('"') && ptrim.ends_with('"') {
-                let inner = &ptrim[1..ptrim.len()-1];
-                code.push_str(&format!("  fputs(\"{}\", stdout);\n", Self::escape_c_string(inner)));
+                let inner = &ptrim[1..ptrim.len() - 1];
+                code.push_str(&format!(
+                    "  fputs(\"{}\", stdout);\n",
+                    Self::escape_c_string(inner)
+                ));
             } else {
                 // Numeric literal?
                 if let Ok(n) = ptrim.parse::<f64>() {
                     code.push_str(&format!("  printf(\"%g\", {});\n", n));
                 } else {
                     let v = Self::normalize_var(ptrim);
-                    if vars.contains(&v) { code.push_str(&format!("  printf(\"%g\", V_{});\n", v)); }
-                    else { code.push_str(&format!("  /* Unknown token in PRINT: {} */\n", ptrim)); }
+                    if vars.contains(&v) {
+                        code.push_str(&format!("  printf(\"%g\", V_{});\n", v));
+                    } else {
+                        code.push_str(&format!("  /* Unknown token in PRINT: {} */\n", ptrim));
+                    }
                 }
             }
         }
