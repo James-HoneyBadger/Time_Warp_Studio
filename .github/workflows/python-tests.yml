@@ -9,6 +9,9 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: Time_Warp_Python
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,12 +20,11 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          pip install pytest pytest-cov ruff
       - name: Lint (ruff)
         run: |
-          pip install ruff
           ruff --version
-          ruff .
+          ruff check --output-format=github .
       - name: Test
         run: |
-          pytest -q
+          python -m pytest test_*.py -v
