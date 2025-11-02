@@ -252,12 +252,23 @@ dosbox -conf dosbox-timewarp.conf
 git clone https://github.com/James-HoneyBadger/Time_Warp.git
 cd Time_Warp
 
-# Use the universal launcher
-./run.sh                    # Interactive menu to choose implementation
-./run.sh python             # Launch Python implementation
+# Option 1: Install to your system (recommended)
+./install-user.sh           # User installation (no sudo needed)
+timewarp                    # Launch Time Warp IDE
+
+# Option 2: System-wide installation
+sudo ./install.sh           # Install for all users
+timewarp                    # Launch from anywhere
+
+# Option 3: Run without installing
+./run.sh python             # Launch Python implementation directly
 ./run.sh rust --release     # Launch Rust implementation (optimized)
 ./run.sh web               # Start web server and open browser
 ```
+
+**Installation Guides:**
+- **Linux**: See [ARCH_INSTALL.md](ARCH_INSTALL.md) or [DEBIAN_INSTALL.md](DEBIAN_INSTALL.md)
+- **After Install**: Check [YOUR_INSTALLATION.md](YOUR_INSTALLATION.md) for quick reference
 
 ### 🎓 For Educators
 1. **Start with Web Implementation** - No installation required, works on any classroom computer
