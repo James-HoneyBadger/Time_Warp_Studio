@@ -1,0 +1,28 @@
+REM Rainbow Spiral - color-cycling spiral using sine-based RGB
+CLS
+
+REM Center of the canvas (Time Warp uses 500x400 by default)
+LET cx = 250
+LET cy = 200
+
+REM Start in the center
+PU
+SETXY cx cy
+PD
+
+LET turns = 240
+LET step_len = 2
+LET angle = 0
+
+FOR i = 0 TO turns
+  LET t = i * 0.20
+  REM Sine-wave rainbow: shift phases by 120 degrees
+  LET r = int(127 + 127 * sin(t))
+  LET g = int(127 + 127 * sin(t + 2 * pi / 3))
+  LET b = int(127 + 127 * sin(t + 4 * pi / 3))
+  COLOR r g b
+
+  FD step_len + i * 0.3
+  RT 89
+  SLEEP 0.01
+NEXT

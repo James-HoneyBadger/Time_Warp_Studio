@@ -1,0 +1,15 @@
+REM Test factorial without recursion first
+PRINT "Test factorial base case"
+
+PROC factorial n
+  PRINT "In factorial with n = " + str(n)
+  IF n <= 1 THEN RETURN 1
+  PRINT "After IF, should not reach here if n <= 1"
+  RETURN 999
+ENDPROC
+
+CALL factorial 1 INTO result
+PRINT "Result: " + str(result)
+
+CALL factorial 0 INTO result
+PRINT "Result: " + str(result)

@@ -1,0 +1,30 @@
+[package]
+name = "time_warp_windows"
+version = "3.0.0"
+edition = "2021"
+
+[dependencies]
+# Core dependencies for the Windows IDE
+eframe = "0.26"
+egui = "0.26"
+rfd = "0.14"
+tempfile = "3"
+evalexpr = "11"
+rand = "0.8"
+image = "0.24"
+
+# Path dependency to the shared engine
+time_warp_rust = { path = "../Rust" }
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+strip = true
+
+[profile.dev]
+opt-level = 0
+
+[[bin]]
+name = "time_warp_windows"
+path = "src/main.rs"

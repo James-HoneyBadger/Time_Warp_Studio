@@ -1,0 +1,29 @@
+REM Fireworks - random starbursts with colorful lines
+CLS
+
+LET bursts = 30
+REM Use 'i' as the burst index so blue component 'b' doesn't override it
+FOR i = 1 TO bursts
+  LET cx = randint(80, 420)
+  LET cy = randint(80, 320)
+  LET rays = randint(32, 64)
+  LET radius = randint(80, 180)
+
+  REM One color per burst
+  LET r = randint(64, 255)
+  LET g = randint(64, 255)
+  LET b = randint(64, 255)
+  COLOR r g b
+
+  FOR k = 0 TO rays
+    LET t = 2 * pi * k / rays
+    PU
+    SETXY cx cy
+    PD
+    REM Remove spaces in expressions so SETXY sees two arguments
+    SETXY cx+radius*cos(t) cy-radius*sin(t)
+  NEXT
+
+  REM Trails on: do not clear between bursts; brief pause only
+  SLEEP 0.20
+NEXT

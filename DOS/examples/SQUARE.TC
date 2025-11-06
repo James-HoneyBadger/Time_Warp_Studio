@@ -1,0 +1,8 @@
+REM Draw a square in DOS
+PRINT "Square demo"
+COLOR 0 200 255
+REPEAT 4
+  FD 80
+  RT 90
+ENDREPEAT
+PRINT "Done"

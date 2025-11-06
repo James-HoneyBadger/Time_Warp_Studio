@@ -1,0 +1,6 @@
+REM Hello TempleCode example
+PRINT "Hello from TempleCode!"
+LET x = 5
+PRINT x * 2
+INPUT name "Your name? "
+PRINT "Hi, " + name

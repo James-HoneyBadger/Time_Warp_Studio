@@ -1,0 +1,7 @@
+REM Draw a square
+COLOR 0, 200, 255
+REPEAT 4
+  FD 120
+  RT 90
+ENDREPEAT
+PRINT "Done"

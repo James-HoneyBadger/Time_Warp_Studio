@@ -1,0 +1,45 @@
+REM Bouncing Square - simple animation with color cycling
+CLS
+
+PROC draw_square x y s
+  PU
+  SETXY x y
+  PD
+  REPEAT 4
+    FD s
+    RT 90
+  ENDREPEAT
+ENDPROC
+
+LET x = 100
+LET y = 120
+LET vx = 3
+LET vy = 2
+LET s = 60
+
+REM Canvas bounds (Time Warp defaults: 500x400)
+LET W = 500
+LET H = 400
+
+FOR frame = 1 TO 800
+  CLS
+
+  REM Color cycle based on frame
+  LET t = frame * 0.12
+  LET rr = int(127 + 127 * sin(t))
+  LET gg = int(127 + 127 * sin(t + 2 * pi / 3))
+  LET bb = int(127 + 127 * sin(t + 4 * pi / 3))
+  COLOR rr gg bb
+
+  CALL draw_square x, y, s
+
+  LET x = x + vx
+  LET y = y + vy
+
+  IF x <= 0 THEN LET vx = abs(vx)
+  IF x + s >= W THEN LET vx = -abs(vx)
+  IF y <= 0 THEN LET vy = abs(vy)
+  IF y + s >= H THEN LET vy = -abs(vy)
+
+  SLEEP 0.01
+NEXT

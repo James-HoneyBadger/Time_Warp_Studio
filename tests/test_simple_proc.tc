@@ -1,0 +1,10 @@
+REM Simple procedure test
+PRINT "Starting test"
+
+PROC greet name
+  PRINT "Hello, " + name + "!"
+ENDPROC
+
+PRINT "Calling greet"
+CALL greet "World"
+PRINT "Done"

@@ -1,0 +1,11 @@
+REM MySQL demo for Rust build
+REM Note: Requires building with --features mysql and a reachable MySQL server
+REM This script will print a stub message if mysql feature is not enabled.
+
+PRINT "Attempting DB demo..."
+DBCONNECT "mysql://user:password@localhost:3306/test"
+DBEXEC "CREATE TEMPORARY TABLE IF NOT EXISTS demo (id INT PRIMARY KEY, name VARCHAR(50))"
+DBEXEC "INSERT INTO demo (id, name) VALUES (1, 'alpha') ON DUPLICATE KEY UPDATE name='alpha'"
+DBQUERY "SELECT id, name FROM demo"
+DBDISCONNECT
+PRINT "DB demo completed"

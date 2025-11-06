@@ -1,0 +1,6 @@
+REM Turtle square example
+CLS
+REPEAT 4
+  FD 100
+  LT 90
+ENDREPEAT

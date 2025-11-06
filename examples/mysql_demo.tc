@@ -1,0 +1,32 @@
+REM MySQL Demo - requires mysql-connector-python installed
+REM Adjust connection info below before running.
+CLS
+
+LET host = "localhost"
+LET user = "root"
+LET password = ""
+LET dbname = "test"
+LET port = 3306
+
+REM Connect using a named handle 'main'
+DBCONNECT main, host, user, password, dbname, port
+
+REM Ensure a demo table exists
+DBEXEC main, "CREATE TABLE IF NOT EXISTS demo (id INT PRIMARY KEY, name VARCHAR(50))"
+
+REM Upsert a couple rows using parameters
+DBEXECPARAM main, "INSERT INTO demo (id, name) VALUES (%s, %s) ON DUPLICATE KEY UPDATE name=VALUES(name)", [1, "Alice"]
+DBEXECPARAM main, "INSERT INTO demo (id, name) VALUES (%s, %s) ON DUPLICATE KEY UPDATE name=VALUES(name)", [2, "Bob"]
+
+REM Parameterized query with INTO
+LET min_id = 1
+DBQUERYPARAM main, "SELECT id, name FROM demo WHERE id >= %s ORDER BY id", [min_id] INTO rows
+PRINT "Rows: " + str(rows)
+
+REM Extract a single value (COUNT(*)) into a variable
+DBQUERY main, "SELECT COUNT(*) AS cnt FROM demo" INTO crows
+LET cnt = crows[0]["cnt"]
+PRINT "Row count = " + str(cnt)
+
+REM Disconnect
+DBDISCONNECT main

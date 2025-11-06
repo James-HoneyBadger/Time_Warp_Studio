@@ -1,0 +1,31 @@
+REM PROC/CALL with parameters demo
+CLS
+COLOR 0 255 255
+
+REM Define a procedure with parameters: x, y, size, turns
+PROC draw_poly x, y, size, turns
+  SETXY x y
+  PD
+  LET a = 360 / turns
+  REPEAT turns
+    FD size
+    RT a
+  ENDREPEAT
+  PU
+ENDPROC
+
+REM Use variables and trig in a loop
+LET cx = 250
+LET cy = 200
+LET r = 120
+LET steps = 12
+LET i = 0
+REPEAT steps
+  LET ang = (i * 360 / steps)
+  LET px = cx + r * cos(ang * pi / 180)
+  LET py = cy + r * sin(ang * pi / 180)
+  CALL draw_poly px, py, 20 + randint(5,25), 3 + (i % 5)
+  LET i = i + 1
+ENDREPEAT
+
+PRINT "Done: proc_params"

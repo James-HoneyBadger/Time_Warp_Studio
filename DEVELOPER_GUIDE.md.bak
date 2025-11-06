@@ -1,0 +1,265 @@
+# TempleCode Developer Guide
+
+This guide is for contributors who want to understand, extend, and maintain TempleCode (the interpreter) and Time Warp (the GUI IDE).
+
+- Language runtime: Python 3.10+
+- GUI: Tk/Tkinter
+- Style: PEP 8, short readable functions, helpful error messages
+- Platforms: Linux/macOS/Windows (GUI requires Tk)
+
+## Repository layout
+
+```text
+/home/james/Temple_Code/
+├─ templecode/
+│  ├─ __init__.py            # public exports
+│  └─ interpreter.py         # interpreter core
+├─ time.warp/
+│  └─ app.py                 # Time Warp GUI
+├─ examples/
+│  ├─ hello.tc               # I/O and arithmetic demo
+│  └─ turtle_square.tc       # simple turtle drawing
+├─ run_templecode.py         # CLI runner
+├─ README.md                 # project overview & cheatsheet
+└─ DEVELOPER_GUIDE.md        # this file
+```
+
+## High-level architecture
+
+TempleCode is an interpreter with pluggable I/O and drawing backends. Time Warp is a Tkinter GUI that hosts an editor, a turtle canvas, and a console wired into the interpreter.
+
+- templecode.interpreter.TempleInterpreter
+  - Loads a program, parses labels, and executes line-by-line.
+  - Maintains variables, label map, program counter (pc), and loop stacks.
+  - Uses a safe AST-based expression evaluator (no Python `eval`).
+  - Talks to two abstractions:
+    - IOBase (write/read)
+    - TurtleAPI (forward/left/right/pen state/clear/setxy/color)
+- time.warp.app
+  - TextIO implements IOBase over a Tk Text widget + modal input dialog.
+  - CanvasTurtle implements TurtleAPI over a Tk Canvas.
+  - Runs the interpreter on a background thread; all Tk calls are marshaled to the UI thread.
+
+### Data flow
+
+- GUI (Time Warp) constructs TextIO and CanvasTurtle and injects them into TempleInterpreter.
+- Interpreter executes statements and calls IO/Turtle methods.
+- TextIO and CanvasTurtle schedule UI work on Tk’s main thread using `after(0, ...)` and block until done.
+
+## Language runtime internals
+
+Key types in `templecode/interpreter.py`:
+
+- IOBase, ConsoleIO – I/O abstraction used by CLI/GUI
+- TurtleAPI, NullTurtle – drawing abstraction (GUI provides CanvasTurtle)
+- SafeEval + eval_expr – safe expression evaluation using Python AST with a whitelisted node/func set
+- ForLoop, WhileLoop, RepeatLoop – loop bookkeeping
+- TempleInterpreter – the interpreter
+
+### Program loading and labels
+
+- `load_program(code: str)` splits the input into lines, keeps comments/blank lines (they no-op), and builds a label map.
+- Labels support two forms:
+  - Numeric BASIC-style line numbers: `10 PRINT "Hi"`
+  - Named labels: `start:` at the beginning of a line
+- During load, numeric or named labels are recorded with the current line index.
+
+### Tokenization and statement dispatch
+
+- `_tokenize(line)` splits a line into tokens while preserving string literals and symbols (`=`, `:`, `,`).
+- `_exec_line(raw_line)` handles statements in a case-insensitive manner for keywords (variables are case-sensitive):
+  - I/O: `PRINT`/`TYPE`, `INPUT`/`ACCEPT`
+  - Variables: `LET x = ...` or `x = ...`
+  - Control: `IF ... THEN ...`, `GOTO`/`JUMP`, `SLEEP` (cooperative), labels
+  - Loops: `FOR/NEXT`, `WHILE/ENDWHILE`, `REPEAT/ENDREPEAT`
+  - Turtle: `FD/FORWARD`, `LT/LEFT`, `RT/RIGHT`, `PU/PENUP`, `PD/PENDOWN`, `CLS/CLEAR`, `SETXY`, `COLOR`
+- Bare expressions are allowed (evaluated then discarded) to simplify interactive experimentation.
+
+### Expression evaluation
+
+- `eval_expr(expr, variables)` parses with `ast.parse(..., mode="eval")`, walks the AST with a restricted set of node types and operators, and then evaluates via a small interpreter.
+- Allowed functions include common `math` functions plus `abs`, `min`, `max`, `int`, `float`, `str`.
+- Strings, numbers, tuples/lists, indexing/slicing, arithmetic, boolean ops, comparisons, ternary if-expr are supported.
+
+### Loops and jumps
+
+- `FOR/NEXT` uses a stack of `ForLoop` frames; on `NEXT`, the counter is updated and pc is rewound to the `FOR` line index as long as the bound is not exceeded (supports negative `STEP`).
+- `WHILE/ENDWHILE` tracks a condition string and a start line; on `ENDWHILE`, condition is re-evaluated.
+- `REPEAT/ENDREPEAT` counts down a `remaining` value and loops until zero.
+- `GOTO/JUMP` updates the program counter to a recorded label index.
+
+### INPUT handling
+
+- `INPUT name "Your name? "` reads a string from IOBase.read.
+- In the GUI, the prompt is written to the console, a modal dialog is shown, and the entered value is echoed back into the console (so you see `Your name? james`).
+- `_coerce_input` tries `int` then `float` conversions; otherwise returns the raw string.
+
+## GUI implementation (Time Warp)
+
+File: `time.warp/app.py`
+
+- Editor: Tk Text (monospaced `TkFixedFont`), left panel
+- Canvas: Tk Canvas inside `ttk.LabelFrame("Canvas")`, right top
+- Console: Tk Text inside `ttk.LabelFrame("Console")` with vertical scrollbar
+- Toolbar: New/Open/Save/Run/Stop + Load examples
+
+### Threading model
+
+- Interpreter runs on a background `threading.Thread` so the UI remains responsive.
+- A `threading.Event` (`stop_event`) is passed into the interpreter; long sleeps check the flag.
+- All Tk calls are marshaled to the UI thread:
+  - TextIO.write/read use `root.after(0, ...)` and a `threading.Event` to block the worker until UI work completes.
+  - CanvasTurtle drawing and clear use `canvas.after(0, ...)` similarly.
+- This prevents common Tkinter errors when widgets are manipulated from non-UI threads.
+
+## Adding new language features
+
+Here’s the typical workflow to add a statement or capability:
+
+1. Decide the syntax and reserved words (keep keywords case-insensitive).
+2. Update `_exec_line` dispatch in `TempleInterpreter`:
+   - Parse arguments with `_tokenize`, `_split_args`, and `_rest_of_line` helpers.
+   - Evaluate expressions with `self._eval(expr)`.
+   - Update state (`self.variables`, `self.pc`, stacks) or call backends (`self.io`, `self.turtle`).
+3. Extend the safe evaluator if needed:
+   - Add AST nodes to `SafeEval.ALLOWED_NODES` and implement in `_eval_ast`.
+   - Add functions to `_ALLOWED_FUNCS` carefully (must be pure/safe).
+4. Add example usage in `examples/` and mention it in `README.md`.
+5. Update Time Warp to expose the feature if there’s a UI change.
+
+### Example: adding `RANDOM()`
+
+- Add `import random` and whitelist `random.random` as `rand` (or `random`) in `_ALLOWED_FUNCS`.
+- In programs: `LET r = rand()`
+
+### Example: adding `TO ... END` procedures (future)
+
+- Extend loader to recognize `TO name ... END` blocks and store a map of procedure name -> (start,end).
+- Implement `CALL name [args]` and a call stack to save/restore `pc`/locals.
+
+## Extending turtle graphics
+
+- Add a method to `TurtleAPI` and implement it in `CanvasTurtle`.
+- Expose a new keyword in `_exec_line` to call the turtle method.
+- Keep drawing operations marshaled to the UI thread.
+
+## Error handling philosophy
+
+- Prefer clear `ValueError` messages that show the offending line or construct.
+- Reject unsafe expressions early in `SafeEval.visit`.
+- Guard mismatched loop terminators (e.g., `NEXT` without `FOR`).
+
+## Build, run, and debug
+
+### Quick commands (bash)
+
+```bash
+# CLI: run a program
+python run_templecode.py examples/hello.tc
+
+# GUI: Time Warp
+python -m time.warp.app
+```
+
+If Tk is missing: `sudo apt-get install python3-tk` (Debian/Ubuntu).
+
+### Developer workflow (venv, lint, type-check, test)
+
+The project has no strict tooling dependencies, but the following setup is recommended.
+
+```bash
+# 1) Create a virtual environment (Python 3.10+)
+python -m venv .venv
+source .venv/bin/activate  # Linux/macOS
+
+# 2) Optional dev tools
+pip install ruff mypy pytest
+
+# 3) Lint (ruff)
+ruff check .
+
+# 4) Type check (mypy)
+mypy templecode time.warp
+
+# 5) Run tests (pytest) — if you add tests/
+pytest -q
+
+# 6) Formatting (optional)
+ruff format .
+```
+
+### Debug tips
+
+- Add temporary `PRINT` statements in TempleCode programs to trace values.
+- Use Python logging/prints in the interpreter around `_exec_line` during development.
+- To inspect labels/pc, set breakpoints or add a debug command in `_exec_line`.
+
+## Coding style and quality
+
+- Follow PEP 8; keep lines under 88 chars where practical.
+- Keep functions concise; prefer small helpers.
+- Avoid broad `except:`; raise meaningful exceptions.
+- Expression safety: only expand `_ALLOWED_FUNCS` with pure, deterministic helpers.
+
+### Linting and type hints
+
+- The codebase uses standard type hints (PEP 484). Tools like `mypy` and `ruff`/`flake8` are recommended but not required by the repo.
+- If you add them, prefer per-file incremental adoption.
+
+## Testing (recommended)
+
+There is no test suite yet. If you add tests, a good structure is:
+
+- Unit tests for expression evaluation (happy path + invalid syntax + disallowed nodes)
+- Statement execution tests for I/O-free logic (e.g., assignments, IF/GOTO, loops)
+- Turtle commands can be tested via a fake TurtleAPI that records calls.
+
+Example `pytest` sketch:
+
+```python
+# tests/test_eval.py
+from templecode.interpreter import eval_expr
+
+def test_math():
+    assert eval_expr("1+2*3", {}) == 7
+
+def test_bool():
+    assert eval_expr("(1<2) and (3>2)", {}) is True
+```
+
+## Packaging and distribution (optional)
+
+- Convert `run_templecode.py` into a console script via `setuptools` entry points.
+- Add a `pyproject.toml` with metadata and dependencies (Tk is provided by OS).
+- Split `time.warp` into its own module if desired.
+
+## Known limitations
+
+- No user-defined procedures or functions yet.
+- No file I/O; I/O is limited to the console.
+- Expression evaluator is a safe subset of Python expressions—no list/dict comprehensions, no attribute access.
+
+## Contributing
+
+- Open an issue describing the change you propose.
+- Keep changes focused and accompany them with examples and, if possible, tests.
+- Ensure GUI code remains thread-safe: marshal all Tk calls to the UI thread via `after`.
+
+## Appendix: Interpreter “contract”
+
+Inputs:
+
+- Source text (UTF-8), injected IOBase and TurtleAPI instances, optional stop flag
+
+Outputs:
+
+- Side effects through IOBase.write and TurtleAPI operations; variable state accessible via `interpreter.variables`
+
+Error modes:
+
+- `ValueError` on unknown statements, bad syntax, missing labels, loop mismatches
+- Safe evaluator raises on disallowed AST nodes or unknown names
+
+Success criteria:
+
+- Deterministic execution for equal programs/inputs; GUI remains responsive; no direct Tk calls from worker threads

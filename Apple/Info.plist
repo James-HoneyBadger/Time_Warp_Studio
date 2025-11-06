@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>CFBundleName</key>
+        <string>Time Warp</string>
+        <key>CFBundleDisplayName</key>
+        <string>Time Warp</string>
+        <key>CFBundleIdentifier</key>
+        <string>com.templeland.ide</string>
+        <key>CFBundleVersion</key>
+        <string>1.0.0</string>
+        <key>CFBundleExecutable</key>
+        <string>time_warp_apple</string>
+        <key>CFBundlePackageType</key>
+        <string>APPL</string>
+        <key>CFBundleIconFile</key>
+        <string>TimeWarp.icns</string>
+        <key>NSHighResolutionCapable</key>
+        <true/>
+        <key>LSMinimumSystemVersion</key>
+        <string>10.13</string>
+    </dict>
+</plist>

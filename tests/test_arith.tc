@@ -1,0 +1,15 @@
+PRINT "Test arithmetic"
+LET x = 5
+PRINT "x = " + str(x)
+LET y = x - 1
+PRINT "y = " + str(y)
+
+PROC test n
+  PRINT "n = " + str(n)
+  LET m = n - 1
+  PRINT "m = " + str(m)
+  RETURN m
+ENDPROC
+
+CALL test 10 INTO result
+PRINT "result = " + str(result)

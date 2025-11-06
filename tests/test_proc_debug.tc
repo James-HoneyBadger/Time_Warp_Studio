@@ -1,0 +1,28 @@
+REM Procedure demonstration
+PRINT "Test 1: Calling greet"
+
+PROC greet name
+  PRINT "Hello, " + name + "!"
+ENDPROC
+
+CALL greet "World"
+PRINT "Test 2: Calling square"
+
+PROC square n
+  RETURN n * n
+ENDPROC
+
+CALL square 7 INTO result
+PRINT "7 squared = " + str(result)
+PRINT "Test 3: Calling factorial"
+
+PROC factorial n
+  IF n <= 1 THEN RETURN 1
+  LET prev = 0
+  CALL factorial n - 1 INTO prev
+  RETURN n * prev
+ENDPROC
+
+CALL factorial 5 INTO fact
+PRINT "5! = " + str(fact)
+PRINT "All tests complete"

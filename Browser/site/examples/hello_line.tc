@@ -1,0 +1,6 @@
+REM Hello + Line example
+PRINT "Hello Temple Land Web"
+COLOR 255, 255, 0
+FD 50
+RT 90
+FD 50

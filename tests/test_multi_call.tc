@@ -1,0 +1,10 @@
+PRINT "Before first call"
+PROC test n
+  RETURN n * 2
+ENDPROC
+
+CALL test 5 INTO x
+PRINT "x = " + str(x)
+CALL test 10 INTO y
+PRINT "y = " + str(y)
+PRINT "Done"

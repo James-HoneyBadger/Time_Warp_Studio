@@ -1,0 +1,7 @@
+PRINT "Line 1"
+PROC test n
+  PRINT "In proc"
+ENDPROC
+PRINT "Line after ENDPROC"
+CALL test 5
+PRINT "Line after CALL"

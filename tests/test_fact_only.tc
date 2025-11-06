@@ -1,0 +1,12 @@
+PRINT "Testing factorial"
+
+PROC factorial n
+  IF n <= 1 THEN RETURN 1
+  LET prev = 0
+  CALL factorial n - 1 INTO prev
+  RETURN n * prev
+ENDPROC
+
+PRINT "Calling factorial(3)"
+CALL factorial 3 INTO fact
+PRINT "3! = " + str(fact)
