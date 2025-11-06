@@ -826,9 +826,7 @@ class TimeWarpApp(ttk.Frame):
             except tk.TclError:
                 pass
         # Persist preference and update state badge
-        self.settings["show_line_numbers"] = bool(
-            self.show_line_numbers_var.get()
-        )
+        self.settings["show_line_numbers"] = bool(self.show_line_numbers_var.get())
         self._save_settings()
         self._update_state_badge()
 
@@ -1245,9 +1243,7 @@ class TimeWarpApp(ttk.Frame):
                     interp.run(code)
 
                     def _mark_mysql_ok2() -> None:
-                        self.status_label.configure(
-                            text="MySQL connection OK"
-                        )
+                        self.status_label.configure(text="MySQL connection OK")
 
                     self.root.after(0, _mark_mysql_ok2)
                 except (
@@ -1263,9 +1259,7 @@ class TimeWarpApp(ttk.Frame):
                     io.write(f"MySQL connection failed: {err_msg}\n")
 
                     def _mark_mysql_fail2() -> None:
-                        self.status_label.configure(
-                            text="MySQL connection failed"
-                        )
+                        self.status_label.configure(text="MySQL connection failed")
 
                     self.root.after(0, _mark_mysql_fail2)
 
