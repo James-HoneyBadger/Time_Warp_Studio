@@ -1736,6 +1736,7 @@ class TimeWarpApp(ttk.Frame):
 
 
 def main() -> None:
+    """Start the Tk application and run the Time Warp IDE main loop."""
     root = tk.Tk()
     app = TimeWarpApp(root)
     app.mainloop()

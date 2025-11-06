@@ -1,8 +1,28 @@
 #!/usr/bin/env python3
-from templecode import TempleInterpreter
+"""Small debug runner for TempleInterpreter procedures.
+
+Loads a short TempleCode program, prints interpreter metadata, and runs it.
+"""
+
+from __future__ import annotations
+
+import os
+import sys
+
+# Ensure the app shim package (Python/time_warp/templecode) is importable
+_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
+_APP_PKG = os.path.join(_ROOT, "Python", "time_warp")
+if _APP_PKG not in sys.path:
+    sys.path.insert(0, _APP_PKG)
+
+import importlib
+
+templecode = importlib.import_module("templecode")
+TempleInterpreter = templecode.TempleInterpreter  # type: ignore[attr-defined]
 
 
 def main() -> int:
+    """Run a tiny program through the interpreter and print details."""
     code = """PRINT "Line 1"
 PROC test n
   PRINT "In proc"
