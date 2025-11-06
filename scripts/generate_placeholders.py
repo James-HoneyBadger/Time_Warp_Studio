@@ -1,19 +1,15 @@
 #!/usr/bin/env python3
-"""
-Generate placeholder icon PNGs (icon.iconset) and Fastlane screenshot placeholders.
+"""Generate placeholder icons and screenshots for macOS packaging.
+
 Requires: Pillow (pip install Pillow)
-Usage: python3 scripts/generate_placeholders.py
-Generates:
- - packaging/macos/icon.iconset/*.png
- - packaging/macos/resources/app.icns (via make_icns.sh if you run it)
- - fastlane/metadata/en-US/screenshots/*.png
+Run: python3 scripts/generate_placeholders.py
 """
-import os
+
 from pathlib import Path
 
 try:
     from PIL import Image, ImageDraw, ImageFont
-except Exception as exc:
+except Exception:
     print("Pillow not installed. Install with: pip install Pillow")
     raise
 
@@ -26,7 +22,7 @@ iconset_dir.mkdir(parents=True, exist_ok=True)
 res_dir.mkdir(parents=True, exist_ok=True)
 shots_dir.mkdir(parents=True, exist_ok=True)
 
-# sizes for icon.iconset
+# Icon sizes and names for icon.iconset
 sizes = [
     (16, "icon_16x16.png"),
     (32, "icon_16x16@2x.png"),
@@ -44,18 +40,15 @@ print(f"Generating icon PNGs in {iconset_dir}")
 for size, name in sizes:
     img = Image.new("RGBA", (size, size), (30, 144, 255, 255))
     draw = ImageDraw.Draw(img)
-    # draw simple text (first letter)
     text = "T"
     try:
-        font = ImageFont.truetype(
-            "/System/Library/Fonts/Helvetica.ttc", int(size * 0.6)
-        )
+        font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", int(size * 0.6))
     except Exception:
         font = ImageFont.load_default()
+
     w, h = draw.textsize(text, font=font)
-    draw.text(
-        ((size - w) / 2, (size - h) / 2), text, font=font, fill=(255, 255, 255, 255)
-    )
+    draw.text(((size - w) / 2, (size - h) / 2), text, font=font,
+              fill=(255, 255, 255, 255))
     img.save(iconset_dir / name, format="PNG")
 
 print(f"Generating placeholder screenshots in {shots_dir}")
@@ -68,11 +61,12 @@ for i in range(1, 4):
         font = ImageFont.truetype("/System/Library/Fonts/Helvetica.ttc", 48)
     except Exception:
         font = ImageFont.load_default()
+
     tw, th = draw.textsize(title, font=font)
-    draw.text(((w - tw) / 2, (h - th) / 2), title, font=font, fill=(255, 255, 255))
+    draw.text(((w - tw) / 2, (h - th) / 2), title, font=font,
+              fill=(255, 255, 255))
     out_path = shots_dir / f"screenshot_{i}.png"
     img.save(out_path, format="PNG")
 
-print(
-    "Done. Run: ./scripts/make_icns.sh packaging/macos/icon.iconset packaging/macos/resources/app.icns"
-)
+print("Done. Run: ./scripts/make_icns.sh packaging/macos/icon.iconset "
+      "packaging/macos/resources/app.icns")
