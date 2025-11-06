@@ -80,11 +80,13 @@ jobs:
 
     - name: Build and package (Fastlane)
       env:
-        APP_NAME: ${{ inputs.app_name || 'Time Warp' }}
-        EXECUTABLE_NAME: ${{ inputs.executable_name || 'time-warp' }}
-        BUNDLE_ID: ${{ inputs.bundle_id || 'org.honeybadger.timewarp' }}
-        VERSION: ${{ inputs.version || '0.0.1' }}
-        BUILD_VERSION: ${{ inputs.build_version || '1' }}
+        # use the workflow inputs (they have defaults above)
+        APP_NAME: ${{ inputs.app_name }}
+        EXECUTABLE_NAME: ${{ inputs.executable_name }}
+        BUNDLE_ID: ${{ inputs.bundle_id }}
+        VERSION: ${{ inputs.version }}
+        BUILD_VERSION: ${{ inputs.build_version }}
+        # secrets (must be configured in repository settings)
         SIGN_IDENTITY: ${{ secrets.SIGN_IDENTITY }}
         INSTALLER_IDENTITY: ${{ secrets.INSTALLER_IDENTITY }}
         APP_STORE_CONNECT_API_KEY_JSON: ${{ secrets.APP_STORE_CONNECT_API_KEY_JSON }}
