@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <!-- App Sandbox is required for Mac App Store -->
+        <key>com.apple.security.app-sandbox</key>
+        <true/>
+
+        <!-- Allow outgoing network connections if your app needs them -->
+        <key>com.apple.security.network.client</key>
+        <true/>
+
+        <!-- If your app needs file access, prefer user-selected file access (open/save panels) -->
+        <!-- <key>com.apple.security.files.user-selected.read-write</key>
+  <true/> -->
+
+        <!-- Add other entitlements as needed (iCloud, file-provider, camera/microphone, etc.) -->
+    </dict>
+</plist>

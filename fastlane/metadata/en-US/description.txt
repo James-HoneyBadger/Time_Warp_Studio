@@ -1,0 +1,8 @@
+Time Warp IDE — an educational programming environment combining BASIC, PILOT, and Logo with integrated turtle graphics, IoT/robotics demos, and playful learning tools.
+
+Features:
+- Multi-language editor and runner
+- Turtle graphics and simple game APIs
+- Example projects and tutorials
+
+(Replace this placeholder with your marketing description and full feature list.)

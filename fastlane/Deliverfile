@@ -1,0 +1,7 @@
+# Deliverfile - minimal deliver configuration for macOS pkg upload
+app_identifier "org.honeybadger.timewarp"
+username ENV['FASTLANE_USER'] || 'your@apple.id'
+api_key_path ENV['APP_STORE_CONNECT_API_KEY_JSON_PATH']
+skip_screenshots true
+skip_metadata true
+submit_for_review false

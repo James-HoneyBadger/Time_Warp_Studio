@@ -1,0 +1,36 @@
+default_platform(:mac)
+
+platform :mac do
+  desc "Build, sign, package and upload macOS app to App Store Connect"
+  lane :release_mac do |options|
+    ENV['APP_NAME'] ||= options[:app_name] || 'Time Warp'
+    ENV['EXECUTABLE_NAME'] ||= options[:executable_name] || 'time-warp'
+    ENV['BUNDLE_ID'] ||= options[:bundle_id] || 'org.honeybadger.timewarp'
+    ENV['VERSION'] ||= options[:version] || '0.0.1'
+    ENV['BUILD_VERSION'] ||= options[:build_version] || '1'
+
+    # Build and sign the app using the repository script (expects signing identities in keychain)
+    sh "bash scripts/build_macos_app.sh"
+
+    # Locate the produced pkg
+    pkg = Dir["dist/*.pkg"].last
+    if pkg.nil?
+      UI.user_error!("No pkg found in dist/. Ensure build script produced a signed pkg.")
+    end
+
+    UI.message("Uploading #{pkg} to App Store Connect (via deliver)")
+
+    app_store_connect_api_key = lane_context[SharedValues::APP_STORE_CONNECT_API_KEY_JSON] || ENV['APP_STORE_CONNECT_API_KEY_JSON_PATH']
+    if app_store_connect_api_key.nil?
+      UI.important("No App Store Connect API key JSON path found in ENV['APP_STORE_CONNECT_API_KEY_JSON_PATH'] or lane context. Set a GitHub secret and the fastlane action will pick it up.")
+    end
+
+    deliver(
+      ipa: pkg, # deliver supports pkg for macOS
+      api_key_path: ENV['APP_STORE_CONNECT_API_KEY_JSON_PATH'],
+      skip_metadata: true,
+      skip_screenshots: true,
+      force: true
+    )
+  end
+end

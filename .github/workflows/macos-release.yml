@@ -1,0 +1,105 @@
+name: macOS Release (App Store)
+
+on:
+  workflow_dispatch:
+    inputs:
+      app_name:
+        description: 'Human-friendly app name'
+        required: false
+        default: 'Time Warp'
+      executable_name:
+        description: 'Name of the executable binary'
+        required: false
+        default: 'time-warp'
+      bundle_id:
+        description: 'App bundle identifier'
+        required: false
+        default: 'org.honeybadger.timewarp'
+      version:
+        description: 'CFBundleShortVersionString'
+        required: false
+        default: '0.0.1'
+      build_version:
+        description: 'CFBundleVersion'
+        required: false
+        default: '1'
+
+jobs:
+  build-and-upload:
+    name: Build, sign, package and upload to App Store Connect
+    runs-on: macos-latest
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Install Rust toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        components: clippy
+        override: true
+
+    - name: Install dependencies
+      run: |
+        sudo xcode-select --switch /Applications/Xcode.app || true
+        brew update || true
+        brew install coreutils || true
+
+    - name: Set up Node / Ruby for fastlane
+      run: |
+        brew install ruby || true
+        gem install bundler || true
+        bundle install || true
+      working-directory: .
+
+    - name: Import signing certificate (APP_SIGNING_P12)
+      if: ${{ secrets.APP_SIGNING_P12 }}
+      env:
+        APP_SIGNING_P12: ${{ secrets.APP_SIGNING_P12 }}
+        P12_PASS: ${{ secrets.APP_SIGNING_P12_PASSWORD }}
+      run: |
+        echo "$APP_SIGNING_P12" | base64 --decode > /tmp/app_sign.p12
+        security create-keychain -p actions build.keychain
+        security import /tmp/app_sign.p12 -k ~/Library/Keychains/build.keychain -P "$P12_PASS" -T /usr/bin/codesign || true
+        security list-keychains -s ~/Library/Keychains/build.keychain
+        security default-keychain -s ~/Library/Keychains/build.keychain
+        security unlock-keychain -p actions ~/Library/Keychains/build.keychain
+
+    - name: Import installer certificate (INSTALLER_P12)
+      if: ${{ secrets.INSTALLER_P12 }}
+      env:
+        INSTALLER_P12: ${{ secrets.INSTALLER_P12 }}
+        P12_PASS: ${{ secrets.INSTALLER_P12_PASSWORD }}
+      run: |
+        echo "$INSTALLER_P12" | base64 --decode > /tmp/installer.p12
+        security import /tmp/installer.p12 -k ~/Library/Keychains/build.keychain -P "$P12_PASS" -T /usr/bin/productbuild || true
+
+    - name: Install fastlane
+      run: |
+        gem install fastlane -v 2.210.0
+
+    - name: Build and package (Fastlane)
+      env:
+        APP_NAME: ${{ inputs.app_name || 'Time Warp' }}
+        EXECUTABLE_NAME: ${{ inputs.executable_name || 'time-warp' }}
+        BUNDLE_ID: ${{ inputs.bundle_id || 'org.honeybadger.timewarp' }}
+        VERSION: ${{ inputs.version || '0.0.1' }}
+        BUILD_VERSION: ${{ inputs.build_version || '1' }}
+        SIGN_IDENTITY: ${{ secrets.SIGN_IDENTITY }}
+        INSTALLER_IDENTITY: ${{ secrets.INSTALLER_IDENTITY }}
+        APP_STORE_CONNECT_API_KEY_JSON: ${{ secrets.APP_STORE_CONNECT_API_KEY_JSON }}
+        APP_STORE_CONNECT_KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+        APP_STORE_CONNECT_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+      run: |
+        # write api key JSON to file for fastlane
+        if [ -n "$APP_STORE_CONNECT_API_KEY_JSON" ]; then
+          echo "$APP_STORE_CONNECT_API_KEY_JSON" > /tmp/asc_key.json
+          export APP_STORE_CONNECT_API_KEY_JSON_PATH=/tmp/asc_key.json
+        fi
+
+        bundle exec fastlane mac release_mac
+
+    - name: Cleanup keychain
+      if: ${{ secrets.APP_SIGNING_P12 }}
+      run: |
+        security delete-keychain ~/Library/Keychains/build.keychain || true

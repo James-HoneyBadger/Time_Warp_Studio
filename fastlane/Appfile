@@ -1,0 +1,4 @@
+app_identifier("org.honeybadger.timewarp") # The bundle identifier
+apple_id("YOUR_APPLE_ID@example.com") # Your Apple ID (used by fastlane)
+team_id("YOUR_TEAM_ID") # Apple Dev Team ID
+itc_team_name("")
