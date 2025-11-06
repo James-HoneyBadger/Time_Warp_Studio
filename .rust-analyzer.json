@@ -1,0 +1,15 @@
+{
+    "linkedProjects": [
+        "Time_Warp_Rust/Cargo.toml"
+    ],
+    "files": {
+        "excludeDirs": [
+            "legacy",
+            ".venv",
+            "Python",
+            "docs",
+            "examples",
+            "scripts"
+        ]
+    }
+}
