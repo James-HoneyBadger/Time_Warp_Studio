@@ -1,0 +1,46 @@
+T:Welcome to the Time Warp Quiz Competition!
+T:Answer correctly to win points.
+U:SCORE=0
+
+L:Q1
+T:Question 1: What is 2+2?
+A:ANS
+M:4
+Y:
+U:SCORE=*SCORE*+10
+T:✓ Correct! Score: *SCORE*
+N:
+T:✗ Wrong. The answer was 4.
+
+L:Q2
+T:Question 2: Who wrote Hamlet?
+A:ANS
+M:SHAKESPEARE
+Y:
+U:SCORE=*SCORE*+10
+T:✓ Correct! Score: *SCORE*
+N:
+T:✗ Wrong. The answer was Shakespeare.
+
+L:Q3
+T:Question 3: What is the capital of France?
+A:ANS
+M:PARIS
+Y:
+U:SCORE=*SCORE*+10
+T:✓ Correct! Score: *SCORE*
+N:
+T:✗ Wrong. The answer was Paris.
+
+L:END_QUIZ
+T:Final Score: *SCORE* out of 30
+C:SCORE>20
+Y:
+T:🏆 Excellent!
+N:
+C:SCORE>10
+Y:
+T:👍 Good job!
+N:
+T:Keep practicing!
+E:

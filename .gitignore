@@ -19,3 +19,10 @@ __pycache__/
 
 # Pytest cache
 .pytest_cache/
+
+# Rust build artifacts
+**/target/
+**/*.rlib
+**/*.rmeta
+**/*.d
+Cargo.lock

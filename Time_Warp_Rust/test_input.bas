@@ -1,0 +1,4 @@
+10 PRINT "Testing INPUT"
+20 INPUT NAME
+30 PRINT "You entered:", NAME
+40 END

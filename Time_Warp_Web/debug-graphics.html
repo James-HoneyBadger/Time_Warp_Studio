@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Graphics Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        #container {
+            border: 2px solid red;
+            width: 500px;
+            height: 500px;
+            margin: 20px 0;
+        }
+
+        canvas {
+            border: 1px solid blue;
+            background: white;
+        }
+
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Graphics Debug Test</h1>
+
+    <button onclick="showTab()">Show Graphics Tab</button>
+    <button onclick="testGraphics()">Test Graphics</button>
+    <button onclick="checkDimensions()">Check Dimensions</button>
+
+    <div id="output"></div>
+
+    <div id="container">
+        <div id="graphics-tab" class="tab-pane">
+            <canvas id="graphicsCanvas" width="400" height="400"></canvas>
+        </div>
+    </div>
+
+    <script src="js/graphics.js"></script>
+    <script>
+        let ui = null;
+        let graphics = null;
+
+        function log(msg) {
+            document.getElementById('output').innerHTML += msg + '<br>';
+            console.log(msg);
+        }
+
+        function showTab() {
+            log('Showing graphics tab...');
+            document.getElementById('graphics-tab').classList.add('active');
+
+            const canvas = document.getElementById('graphicsCanvas');
+            log('Canvas element: ' + !!canvas);
+            log('Canvas dimensions: ' + canvas.width + 'x' + canvas.height);
+
+            const rect = canvas.getBoundingClientRect();
+            log('Canvas rect: ' + rect.width + 'x' + rect.height);
+
+            // Initialize graphics
+            if (!graphics) {
+                log('Creating TurtleGraphics...');
+                try {
+                    graphics = new TurtleGraphics(canvas);
+                    log('TurtleGraphics created successfully');
+                } catch (error) {
+                    log('Error creating TurtleGraphics: ' + error.message);
+                }
+            }
+        }
+
+        function testGraphics() {
+            log('Testing graphics...');
+            if (!graphics) {
+                log('No graphics object!');
+                return;
+            }
+
+            try {
+                log('Drawing test shapes...');
+                graphics.clearScreen();
+                graphics.forward(50);
+                graphics.right(90);
+                graphics.forward(50);
+                graphics.right(90);
+                graphics.forward(50);
+                graphics.right(90);
+                graphics.forward(50);
+                log('Test complete');
+            } catch (error) {
+                log('Error testing graphics: ' + error.message);
+            }
+        }
+
+        function checkDimensions() {
+            const canvas = document.getElementById('graphicsCanvas');
+            const rect = canvas.getBoundingClientRect();
+            log('Current canvas rect: ' + rect.width + 'x' + rect.height);
+            log('Canvas width/height: ' + canvas.width + 'x' + canvas.height);
+            log('Canvas style: ' + canvas.style.width + 'x' + canvas.style.height);
+
+            if (graphics) {
+                log('Graphics dimensions: ' + graphics.width + 'x' + graphics.height);
+                log('Turtle position: (' + graphics.x + ', ' + graphics.y + ')');
+            }
+        }
+
+        // Auto-initialize when page loads
+        window.addEventListener('load', () => {
+            log('Page loaded, initializing...');
+            showTab();
+        });
+    </script>
+</body>
+
+</html>

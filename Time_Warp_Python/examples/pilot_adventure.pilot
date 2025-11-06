@@ -1,0 +1,124 @@
+T:Welcome to Mini-Quest!
+T:Type commands like GO NORTH, TAKE KEY, OPEN DOOR.
+L:START
+U:ROOM=1
+J:LOOK
+
+L:LOOP
+T:What now?
+A:CMD
+U:CMDU=*CMD*
+M:LOOK
+Y:
+J:LOOK
+N:
+M:INVENTORY
+Y:
+J:INV
+N:
+M:GO NORTH
+Y:
+J:GO_N
+N:
+M:GO SOUTH
+Y:
+J:GO_S
+N:
+M:TAKE KEY
+Y:
+J:TAKE_KEY
+N:
+M:OPEN DOOR
+Y:
+J:OPEN_DOOR
+N:
+T:I don't understand.
+J:LOOP
+
+L:LOOK
+C:ROOM=1
+Y:
+T:You are in a small room. A DOOR leads NORTH.
+N:
+C:ROOM=2
+Y:
+T:You are in a hallway. There is a locked DOOR to the NORTH.
+N:
+C:ROOM=3
+Y:
+T:You are in the treasure room. Piles of gold glitter around you.
+N:
+J:LOOP
+
+L:INV
+C:KEY=1
+Y:
+T:You have a KEY.
+N:
+T:You are empty-handed.
+J:LOOP
+
+L:GO_N
+C:ROOM=1
+Y:
+U:ROOM=2
+J:LOOK
+N:
+C:ROOM=2
+Y:
+C:DOOROPEN=1
+Y:
+U:ROOM=3
+J:LOOK
+N:
+T:The door is locked.
+J:LOOP
+N:
+T:You can't go that way.
+J:LOOP
+
+L:GO_S
+C:ROOM=2
+Y:
+U:ROOM=1
+J:LOOK
+N:
+C:ROOM=3
+Y:
+U:ROOM=2
+J:LOOK
+N:
+T:You can't go that way.
+J:LOOP
+
+L:TAKE_KEY
+C:ROOM=1
+Y:
+C:KEY=1
+Y:
+T:You already have the key.
+J:LOOP
+N:
+U:KEY=1
+T:You take the KEY.
+J:LOOP
+N:
+T:There is no key here.
+J:LOOP
+
+L:OPEN_DOOR
+C:ROOM=2
+Y:
+C:KEY=1
+Y:
+U:DOOROPEN=1
+T:You unlock and open the door.
+J:LOOP
+N:
+T:You need a key.
+J:LOOP
+N:
+T:There is no door to open here.
+J:LOOP
+
+E:

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Graphics Test</title>
+    <style>
+        body {
+            margin: 20px;
+        }
+
+        canvas {
+            border: 2px solid blue;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>Simple Graphics Test</h1>
+    <canvas id="testCanvas" width="400" height="400"></canvas>
+    <br><br>
+    <button onclick="testGraphics()">Test Graphics</button>
+    <button onclick="testInterpreter()">Test Interpreter + Graphics</button>
+
+    <div id="output"></div>
+
+    <script src="js/graphics.js"></script>
+    <script src="js/interpreter.js"></script>
+
+    <script>
+        function log(msg) {
+            document.getElementById('output').innerHTML += msg + '<br>';
+            console.log(msg);
+        }
+
+        let graphics = null;
+        let interpreter = null;
+
+        function testGraphics() {
+            log('Testing TurtleGraphics directly...');
+            const canvas = document.getElementById('testCanvas');
+
+            try {
+                graphics = new TurtleGraphics(canvas);
+                log('TurtleGraphics created successfully');
+
+                log('Drawing test pattern...');
+                graphics.clearScreen();
+                graphics.forward(100);
+                graphics.right(90);
+                graphics.forward(100);
+                graphics.right(90);
+                graphics.forward(100);
+                graphics.right(90);
+                graphics.forward(100);
+
+                log('Test pattern completed');
+            } catch (error) {
+                log('Error: ' + error.message);
+            }
+        }
+
+        function testInterpreter() {
+            log('Testing interpreter with graphics...');
+
+            try {
+                if (!graphics) {
+                    graphics = new TurtleGraphics(document.getElementById('testCanvas'));
+                }
+
+                interpreter = new TimeWarpInterpreter();
+                interpreter.setGraphics(graphics);
+
+                const program = `CLEARSCREEN
+FORWARD 50
+RIGHT 90
+FORWARD 50
+RIGHT 90
+FORWARD 50
+RIGHT 90
+FORWARD 50`;
+
+                log('Running program: ' + program);
+                interpreter.executeProgram(program);
+
+            } catch (error) {
+                log('Error: ' + error.message);
+            }
+        }
+    </script>
+</body>
+
+</html>

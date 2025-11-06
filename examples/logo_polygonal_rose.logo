@@ -1,0 +1,15 @@
+; Logo Procedural Art: Polygonal Rose
+TO POLY :N :ANGLE
+  REPEAT :N [
+    FORWARD 100
+    RIGHT :ANGLE
+  ]
+END
+
+CLEARSCREEN
+SETCOLOR PINK
+PENWIDTH 2
+REPEAT 36 [
+  POLY 5 144
+  RIGHT 10
+]

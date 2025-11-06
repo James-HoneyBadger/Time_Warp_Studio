@@ -1,0 +1,17 @@
+T:Welcome to the Color Quiz!
+T:What is your favorite color?
+A:COLOR
+M:RED
+Y:
+T:❤️ Red is bold!
+N:
+M:BLUE
+Y:
+T:💙 Blue is calm!
+N:
+M:GREEN
+Y:
+T:💚 Green is fresh!
+N:
+T:Nice choice: *COLOR*
+E:

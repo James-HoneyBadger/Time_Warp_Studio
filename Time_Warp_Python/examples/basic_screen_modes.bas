@@ -1,0 +1,12 @@
+10 REM SCREEN modes demo
+20 SCREEN 0, 80, 25
+30 PRINT "Text mode 80x25"
+40 FOR I = 1 TO 3: PRINT "Line ", I: NEXT I
+50 SCREEN 1, 640, 480
+60 PRINT "Now in graphics mode 640x480"
+70 LINE -100, -100, 100, 100
+80 CIRCLE 0, 0, 120
+90 SCREEN 2
+100 PRINT "Switched to 1024x768 graphics"
+110 CIRCLE 200, 150, 80
+120 END

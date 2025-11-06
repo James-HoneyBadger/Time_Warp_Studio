@@ -1,0 +1,22 @@
+# Time Warp IDE - Python Port Requirements
+
+# No runtime dependencies for core functionality
+# (Pure Python implementation using only stdlib)
+
+# Optional: GUI framework (choose one)
+# PySide6>=6.5.0  # Recommended: Modern Qt6-based GUI
+# tkinter is included in Python stdlib
+
+# Development dependencies
+# Uncomment to install:
+# pytest>=7.0.0
+# pytest-cov>=4.0.0
+# black>=23.0.0
+# flake8>=6.0.0
+# mypy>=1.0.0
+
+# Installation:
+# pip install -e .              # Core only
+# pip install -e ".[gui]"       # With PySide6
+# pip install -e ".[dev]"       # Development tools
+# pip install -e ".[all]"       # Everything

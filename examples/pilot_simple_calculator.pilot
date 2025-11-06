@@ -1,0 +1,17 @@
+T:Welcome to the Simple Calculator!
+T:
+T:Enter first number:
+A:NUM1
+T:Enter second number:
+A:NUM2
+U:SUM=NUM1+NUM2
+U:DIFF=NUM1-NUM2
+U:PROD=NUM1*NUM2
+U:QUOT=NUM1/NUM2
+T:
+T:Results for *NUM1* and *NUM2*:
+T:Sum: *SUM*
+T:Difference: *DIFF*
+T:Product: *PROD*
+T:Quotient: *QUOT*
+E:

@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Warp - Minimal Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f1aeb5;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        #output {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            border-radius: 5px;
+            min-height: 200px;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        textarea {
+            width: 100%;
+            height: 150px;
+            font-family: monospace;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            resize: vertical;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>⏰ Time Warp - Minimal Test Version</h1>
+        <div class="info">
+            <strong>Purpose:</strong> This minimal version tests core functionality without complex initialization.
+        </div>
+
+        <div id="status">Loading...</div>
+
+        <h2>📝 Program Editor</h2>
+        <textarea id="codeEditor" placeholder="Enter your PILOT, BASIC, or Logo program here...">T:Welcome to Time Warp!
+A:name
+T:Hello *name*!
+R:5 * 10 -> result
+T:5 times 10 equals *result*
+E:</textarea>
+
+        <div>
+            <button onclick="runProgram()">▶️ Run Program</button>
+            <button onclick="clearOutput()">🗑️ Clear Output</button>
+            <button onclick="loadDemo()">📚 Load Demo</button>
+        </div>
+
+        <h2>📺 Output</h2>
+        <div id="output"></div>
+
+        <div id="errorContainer"></div>
+    </div>
+
+    <script>
+        // Simple interpreter for basic testing
+        class MinimalInterpreter {
+            constructor() {
+                this.variables = {};
+                this.output = [];
+                this.programLines = [];
+                this.currentLine = 0;
+            }
+
+            execute(program) {
+                this.output = [];
+                this.variables = {};
+                this.programLines = program.split('\n').filter(line => line.trim());
+                this.currentLine = 0;
+
+                try {
+                    while (this.currentLine < this.programLines.length) {
+                        const line = this.programLines[this.currentLine].trim();
+                        if (line && !line.startsWith('#')) {
+                            this.executeLine(line);
+                        }
+                        this.currentLine++;
+                    }
+                    return this.output.join('\n');
+                } catch (error) {
+                    return 'Error: ' + error.message;
+                }
+            }
+
+            executeLine(line) {
+                // PILOT commands
+                if (line.startsWith('T:')) {
+                    const text = line.substring(2);
+                    this.output.push(this.interpolateText(text));
+                } else if (line.startsWith('A:')) {
+                    const varName = line.substring(2).trim();
+                    const value = prompt(`Enter value for ${varName}:`);
+                    this.variables[varName] = value || '';
+                } else if (line.startsWith('R:')) {
+                    const expr = line.substring(2).trim();
+                    const parts = expr.split('->');
+                    if (parts.length === 2) {
+                        const value = this.evaluateExpression(parts[0].trim());
+                        const varName = parts[1].trim();
+                        this.variables[varName] = value;
+                    }
+                } else if (line.startsWith('E:')) {
+                    return; // End program
+                }
+                // BASIC commands
+                else if (line.toUpperCase().startsWith('PRINT')) {
+                    const text = line.substring(5).trim();
+                    this.output.push(this.interpolateText(text));
+                } else if (line.toUpperCase().startsWith('LET')) {
+                    const expr = line.substring(3).trim();
+                    const parts = expr.split('=');
+                    if (parts.length === 2) {
+                        const varName = parts[0].trim();
+                        const value = this.evaluateExpression(parts[1].trim());
+                        this.variables[varName] = value;
+                    }
+                }
+                // Logo commands
+                else if (line.toUpperCase().startsWith('FORWARD')) {
+                    const distance = line.substring(7).trim();
+                    this.output.push(`Moving forward ${distance} units`);
+                } else if (line.toUpperCase().startsWith('RIGHT')) {
+                    const angle = line.substring(5).trim();
+                    this.output.push(`Turning right ${angle} degrees`);
+                }
+            }
+
+            interpolateText(text) {
+                return text.replace(/\*(\w+)\*/g, (match, varName) => {
+                    return this.variables[varName] || match;
+                });
+            }
+
+            evaluateExpression(expr) {
+                try {
+                    // Simple expression evaluation - replace variables
+                    let processed = expr;
+                    for (const [name, value] of Object.entries(this.variables)) {
+                        const regex = new RegExp('\\*' + name + '\\*', 'g');
+                        processed = processed.replace(regex, value);
+                    }
+
+                    // Basic math evaluation (safe subset)
+                    if (/^[\d\s+\-*/().]+$/.test(processed)) {
+                        return eval(processed);
+                    }
+
+                    return processed;
+                } catch (error) {
+                    return expr;
+                }
+            }
+        }
+
+        // Initialize
+        const interpreter = new MinimalInterpreter();
+        const outputEl = document.getElementById('output');
+        const codeEditor = document.getElementById('codeEditor');
+        const statusEl = document.getElementById('status');
+        const errorContainer = document.getElementById('errorContainer');
+
+        function showStatus(message, type = 'info') {
+            statusEl.innerHTML = `<div class="${type}">${message}</div>`;
+        }
+
+        function showError(message) {
+            errorContainer.innerHTML = `<div class="error"><strong>Error:</strong> ${message}</div>`;
+        }
+
+        function clearError() {
+            errorContainer.innerHTML = '';
+        }
+
+        function runProgram() {
+            clearError();
+            const code = codeEditor.value.trim();
+
+            if (!code) {
+                showError('Please enter a program to run.');
+                return;
+            }
+
+            showStatus('Running program...', 'info');
+
+            try {
+                const result = interpreter.execute(code);
+                outputEl.textContent = result;
+                showStatus('Program completed successfully.', 'success');
+            } catch (error) {
+                showError('Failed to run program: ' + error.message);
+                showStatus('Program failed.', 'error');
+            }
+        }
+
+        function clearOutput() {
+            outputEl.textContent = '';
+            clearError();
+            showStatus('Output cleared.', 'info');
+        }
+
+        function loadDemo() {
+            codeEditor.value = `# Time Warp Demo Program
+T:Welcome to Time Warp!
+T:This program demonstrates PILOT commands.
+A:name
+T:Hello *name*!
+
+# Calculate something
+R:10 * 5 -> result
+T:10 times 5 equals *result*
+
+# BASIC style
+PRINT "This is a BASIC print statement"
+LET X = 42
+PRINT "X equals *X*"
+
+# Logo style
+FORWARD 100
+RIGHT 90
+
+T:Program completed!
+E:`;
+            showStatus('Demo program loaded.', 'success');
+        }
+
+        // Test initialization
+        try {
+            showStatus('Time Warp Minimal Test initialized successfully!', 'success');
+            console.log('Minimal Time Warp initialized');
+        } catch (error) {
+            showError('Initialization failed: ' + error.message);
+            console.error('Initialization error:', error);
+        }
+    </script>
+</body>
+
+</html>

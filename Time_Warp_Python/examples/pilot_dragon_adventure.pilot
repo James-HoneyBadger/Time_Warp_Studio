@@ -1,0 +1,229 @@
+T:=== DRAGON'S LAIR ADVENTURE ===
+T:You stand before a dark cave. A dragon guards treasure inside.
+T:Type: LOOK, GO, TAKE, USE, INVENTORY, ATTACK, or QUIT
+
+U:ROOM=1
+U:HASKEY=0
+U:HASSWORD=0
+U:DRAGONALIVE=1
+U:HP=20
+U:DRAGONHP=15
+
+L:LOOP
+T: 
+T:HP: *HP* | Location: Room *ROOM*
+A:CMD
+
+M:LOOK
+Y:
+J:LOOK
+
+M:INVENTORY
+Y:
+J:INV
+
+M:GO NORTH
+Y:
+J:GO_N
+
+M:GO SOUTH
+Y:
+J:GO_S
+
+M:GO EAST
+Y:
+J:GO_E
+
+M:GO WEST
+Y:
+J:GO_W
+
+M:TAKE
+Y:
+J:TAKE
+
+M:USE
+Y:
+J:USE_ITEM
+
+M:ATTACK
+Y:
+J:ATTACK
+
+M:QUIT
+Y:
+T:Thanks for playing!
+E:
+
+T:Unknown command.
+J:LOOP
+
+L:LOOK
+C:ROOM=1
+Y:
+T:You are in the cave entrance. Paths lead NORTH and EAST.
+J:LOOP
+N:
+C:ROOM=2
+Y:
+T:A dark corridor. Exits SOUTH and NORTH. You see a KEY on the ground.
+J:LOOP
+N:
+C:ROOM=3
+Y:
+T:An armory. A rusty SWORD hangs on the wall. Exit SOUTH.
+J:LOOP
+N:
+C:ROOM=4
+Y:
+C:DRAGONALIVE=1
+Y:
+T:The dragon lair! A fierce dragon blocks the treasure chest. Exit WEST.
+J:LOOP
+N:
+T:The dragon lies defeated. A treasure chest gleams. Exit WEST.
+J:LOOP
+
+L:INV
+T:Inventory:
+C:HASKEY=1
+Y:
+T:- Key
+C:HASSWORD=1
+Y:
+T:- Sword
+J:LOOP
+
+L:GO_N
+C:ROOM=1
+Y:
+U:ROOM=2
+J:LOOK
+N:
+C:ROOM=2
+Y:
+U:ROOM=3
+J:LOOK
+N:
+T:You can't go that way.
+J:LOOP
+
+L:GO_S
+C:ROOM=2
+Y:
+U:ROOM=1
+J:LOOK
+N:
+C:ROOM=3
+Y:
+U:ROOM=2
+J:LOOK
+N:
+T:You can't go that way.
+J:LOOP
+
+L:GO_E
+C:ROOM=1
+Y:
+U:ROOM=4
+J:LOOK
+N:
+T:You can't go that way.
+J:LOOP
+
+L:GO_W
+C:ROOM=4
+Y:
+U:ROOM=1
+J:LOOK
+N:
+T:You can't go that way.
+J:LOOP
+
+L:TAKE
+C:ROOM=2
+Y:
+C:HASKEY=1
+Y:
+T:You already have the key.
+J:LOOP
+N:
+U:HASKEY=1
+T:You take the KEY.
+J:LOOP
+N:
+C:ROOM=3
+Y:
+C:HASSWORD=1
+Y:
+T:You already have the sword.
+J:LOOP
+N:
+U:HASSWORD=1
+T:You take the SWORD.
+J:LOOP
+N:
+T:Nothing to take here.
+J:LOOP
+
+L:USE_ITEM
+C:ROOM=4
+Y:
+C:DRAGONALIVE=0
+Y:
+C:HASKEY=1
+Y:
+T:You unlock the treasure chest with the KEY!
+T:🏆 You WIN! Gold coins spill out!
+E:
+N:
+T:You need the KEY to unlock the chest.
+J:LOOP
+N:
+T:Defeat the dragon first.
+J:LOOP
+N:
+T:Nothing to use here.
+J:LOOP
+
+L:ATTACK
+C:ROOM=4
+Y:
+C:DRAGONALIVE=1
+Y:
+C:HASSWORD=1
+Y:
+T:You swing the SWORD at the dragon!
+U:DRAGONHP=*DRAGONHP*-5
+C:DRAGONHP<=0
+Y:
+U:DRAGONALIVE=0
+T:The dragon collapses! Victory!
+J:LOOP
+N:
+T:The dragon breathes fire! (-3 HP)
+U:HP=*HP*-3
+C:HP<=0
+Y:
+T:You have been defeated. GAME OVER.
+E:
+N:
+J:LOOP
+N:
+T:You have no weapon!
+T:The dragon attacks! (-5 HP)
+U:HP=*HP*-5
+C:HP<=0
+Y:
+T:You have been defeated. GAME OVER.
+E:
+N:
+J:LOOP
+N:
+T:The dragon is already dead.
+J:LOOP
+N:
+T:Nothing to attack here.
+J:LOOP
+
+E:

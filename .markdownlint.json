@@ -1,0 +1,10 @@
+{
+    "line_length": false,
+    "fenced-code-language": {
+        "language_only": true
+    },
+    "no-duplicate-heading": {
+        "siblings_only": true
+    },
+    "link-fragments": false
+}

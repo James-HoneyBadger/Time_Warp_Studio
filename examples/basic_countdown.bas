@@ -1,0 +1,9 @@
+10 PRINT "Countdown Timer"
+20 PRINT "Enter seconds to count down:"
+30 INPUT SECONDS
+40 IF SECONDS <= 0 THEN 100
+50 PRINT SECONDS
+60 LET SECONDS = SECONDS - 1
+70 GOTO 40
+100 PRINT "Blast off!"
+110 END

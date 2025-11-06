@@ -1,0 +1,8 @@
+SCREEN 0, 80, 25
+T:Welcome to text mode 80x25
+T:Switching to graphics...
+SCREEN 1, 640, 480
+T:Drawing in graphics mode
+SCREEN 2
+T:Now in 1024x768 graphics mode
+E:

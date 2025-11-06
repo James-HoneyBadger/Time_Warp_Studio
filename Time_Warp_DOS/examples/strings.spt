@@ -1,0 +1,11 @@
+10 REM String variable example
+20 CLS
+30 PRINT "Enter your name:"
+40 INPUT N$
+50 PRINT "Hello, ";
+60 PRINT N$
+70 PRINT ""
+80 LET A$ = "Time Warp"
+90 PRINT "Welcome to ";
+100 PRINT A$
+110 END

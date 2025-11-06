@@ -1,0 +1,7 @@
+T:Welcome to Time Warp PILOT!
+C:X = 5 + 3
+T:The answer is *X*
+C:Y = X * 2
+U:Y
+T:Thank you for trying Time Warp!
+E:

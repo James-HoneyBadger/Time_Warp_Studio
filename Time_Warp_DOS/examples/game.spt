@@ -1,0 +1,14 @@
+10 REM Number guessing game
+20 CLS
+30 LET T = 42
+40 LET G = 0
+50 PRINT "Guess the number (1-100):"
+60 INPUT G
+70 IF G = T THEN 130
+80 IF G < T THEN 100
+90 PRINT "Too high!"
+95 GOTO 60
+100 PRINT "Too low!"
+110 GOTO 60
+130 PRINT "Correct! You win!"
+140 END

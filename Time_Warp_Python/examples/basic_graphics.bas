@@ -1,0 +1,8 @@
+10 PRINT "Drawing basic shapes..."
+20 LINE -100, -50, 100, -50
+30 LINE 100, -50, 100, 50
+40 LINE 100, 50, -100, 50
+50 LINE -100, 50, -100, -50
+60 CIRCLE 0, 0, 40
+70 PRINT "Done"
+80 END

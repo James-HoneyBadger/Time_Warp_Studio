@@ -1,0 +1,7 @@
+* text=auto eol=lf
+
+# Treat docs as text
+docs/** linguist-generated=false
+
+# Normalize shell scripts
+*.sh text eol=lf

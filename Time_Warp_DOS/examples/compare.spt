@@ -1,0 +1,15 @@
+10 REM Comparison operators
+20 CLS
+30 PRINT "Enter a number:"
+40 INPUT A
+50 IF A < 10 THEN 100
+60 IF A = 10 THEN 120
+70 IF A > 10 THEN 140
+80 GOTO 160
+100 PRINT "Less than 10"
+110 GOTO 160
+120 PRINT "Equal to 10"
+130 GOTO 160
+140 PRINT "Greater than 10"
+150 GOTO 160
+160 END

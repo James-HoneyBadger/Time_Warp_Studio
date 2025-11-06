@@ -1,0 +1,31 @@
+REM TempleCode Demo - Unified BASIC + PILOT + Logo
+REM This demonstrates the TempleCode language combining all three
+
+10 T:Welcome to TempleCode!
+20 T:This language unifies BASIC, PILOT, and Logo
+30 PRINT ""
+40 PRINT "Let's do some math:"
+50 LET X = 10
+60 LET Y = 5
+70 PRINT "X =", X
+80 PRINT "Y =", Y
+90 LET SUM = X + Y
+100 PRINT "X + Y =", SUM
+110 PRINT ""
+120 T:Now let's try a conditional...
+130 IF X > Y THEN PRINT "X is greater than Y"
+140 IF Y > X THEN PRINT "Y is greater than X"
+150 PRINT ""
+160 T:Enter your name:
+170 A:NAME
+180 T:Nice to meet you!
+190 PRINT ""
+200 PRINT "Counting down from 5..."
+210 LET I = 5
+220 IF I < 1 THEN GOTO 270
+230 PRINT I
+240 LET I = I - 1
+250 GOTO 220
+260 REM Loop back
+270 PRINT "Blast off!"
+280 END

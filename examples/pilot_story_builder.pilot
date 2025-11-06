@@ -1,0 +1,21 @@
+T:Welcome to the Story Builder!
+T:
+T:What is the hero's name?
+A:HERO
+T:What magical item do they find?
+A:ITEM
+T:What monster do they face?
+A:MONSTER
+T:
+T:Once upon a time, *HERO* was walking through a dark forest.
+T:Suddenly, they discovered a magical *ITEM*!
+T:With the power of the *ITEM*, *HERO* prepared to face the dreaded *MONSTER*.
+T:
+T:Will *HERO* win? Type YES or NO:
+A:WIN
+M:YES
+Y:
+T:*HERO* used the *ITEM* and defeated the *MONSTER*! Victory!
+N:
+T:The *MONSTER* was too powerful. But *HERO* will return another day!
+E:

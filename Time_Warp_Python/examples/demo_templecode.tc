@@ -1,0 +1,29 @@
+REM TempleCode Demo - Unified Language
+REM Freely mix BASIC, PILOT, and Logo commands!
+
+T:Welcome to TempleCode!
+T:This demonstrates the unified language.
+T:
+
+REM BASIC-style variables and logic
+LET NAME = "Student"
+PRINT "Hello", NAME
+
+REM PILOT-style text output
+T:PILOT says: Programming is fun!
+
+REM Logo turtle graphics  
+FORWARD 100
+RIGHT 90
+FORWARD 100
+RIGHT 90
+FORWARD 100
+RIGHT 90
+FORWARD 100
+
+REM Back to BASIC
+PRINT "Drew a square with Logo!"
+
+T:
+T:All three languages work together seamlessly.
+T:That's the power of TempleCode!

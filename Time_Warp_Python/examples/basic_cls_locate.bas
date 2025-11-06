@@ -1,0 +1,10 @@
+10 REM CLS and LOCATE demo
+20 SCREEN 0, 80, 25
+30 CLS
+40 LOCATE 5, 20
+50 PRINT "Hello from row 5, col 20"
+60 LOCATE 10, 30
+70 PRINT "Moving to row 10, col 30"
+80 LOCATE 15, 10
+90 PRINT "And row 15, col 10"
+100 END
