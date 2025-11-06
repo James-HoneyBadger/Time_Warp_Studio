@@ -1,0 +1,8 @@
+[flake8]
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    legacy,
+    Time_Warp_*,
+max-line-length = 79

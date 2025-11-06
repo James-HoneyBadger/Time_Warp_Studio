@@ -1,0 +1,16 @@
+[MASTER]
+ignore=.venv,legacy,Time_Warp_*
+
+[FORMAT]
+max-line-length=79
+
+[MESSAGES CONTROL]
+disable=
+    too-many-lines,
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring
+
+[TYPECHECK]
+# Allow dynamic shim imports
+extension-pkg-whitelist=
