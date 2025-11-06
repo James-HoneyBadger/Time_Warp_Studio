@@ -26,3 +26,7 @@ __pycache__/
 **/*.rmeta
 **/*.d
 Cargo.lock
+
+# Archives
+*.tar.gz
+*.zip

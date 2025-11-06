@@ -4,12 +4,12 @@ TempleCode is a small, interpreted, general‑purpose language that blends appro
 
 ## Version 3.0.0 - Platforms
 
-- **Python** - Tkinter GUI IDE (`Python/`)
-- **Rust** - Cross-platform eframe/egui IDE (`Rust/`)
-- **Windows** - Native Windows desktop app (`Windows/`)
-- **Apple** - Native macOS `.app` bundle (`Apple/`)
-- **DOS** - DJGPP/Mode 13h VGA implementation (`DOS/`)
-- **Browser** - WebAssembly/JavaScript version (`Browser/`)
+- **Python** - Tkinter GUI IDE (`Time_Warp_Python/`)
+- **Rust** - Cross-platform eframe/egui IDE (`Time_Warp_Rust/`)
+- **Windows** - Windows launchers and helpers (`Time_Warp_Windows/`)
+- **Apple** - macOS launchers and docs (`Time_Warp_Apple/`)
+- **DOS** - DJGPP/Mode 13h VGA implementation (`Time_Warp_DOS/`)
+- **Browser** - WebAssembly/JavaScript version (`Time_Warp_Web/`)
 
 ## Highlights
 
@@ -30,14 +30,13 @@ python scripts/run_templecode.py examples/hello.tc
 - Launch Time Warp GUI (Python):
 
 ```bash
-cd Python
-make run
+python Time_Warp_Python/run_time_warp.py
 ```
 
 - Launch Time Warp GUI (Rust):
 
 ```bash
-cd Rust
+cd Time_Warp_Rust
 cargo run --release
 ```
 
@@ -92,12 +91,16 @@ PD
 
 ## Project layout
 
-- `templecode/` – TempleCode interpreter package
-- `time.warp/` – Time Warp GUI package (launch with `python -m time.warp.app`)
-- `examples/` – Sample TempleCode programs (.tc)
-- `tests/` – Additional TempleCode scripts used as simple tests (moved from project root)
+- `Time_Warp_Python/` – Python IDE and interpreter
+- `Time_Warp_Rust/` – Rust IDE (eframe/egui)
+- `Time_Warp_Web/` – WebAssembly demo and HTML test pages
+- `Time_Warp_Windows/` – Windows launch scripts and docs
+- `Time_Warp_Apple/` – macOS launch scripts and docs
+- `Time_Warp_DOS/` – DOS DJGPP implementation and samples
+- `examples/` – Cross-language sample programs
+- `docs/` – Guides, references, and installation docs
 - `scripts/` – Utility scripts (CLI runner, debug helpers)
-- `Rust/` – Experimental Rust GUI (eframe/egui) for Time Warp
+- `legacy/` – Archived older platform folders and experimental code
 
 ## Minimum requirements
 
