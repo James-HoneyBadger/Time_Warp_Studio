@@ -826,7 +826,9 @@ class TimeWarpApp(ttk.Frame):
             except tk.TclError:
                 pass
         # Persist preference and update state badge
-        self.settings["show_line_numbers"] = bool(self.show_line_numbers_var.get())
+        self.settings["show_line_numbers"] = bool(
+            self.show_line_numbers_var.get()
+        )
         self._save_settings()
         self._update_state_badge()
 
