@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow
 name: macOS Release (App Store)
 
 on:
@@ -53,11 +54,16 @@ jobs:
       working-directory: .
 
     - name: Import signing certificate (APP_SIGNING_P12)
-      if: ${{ secrets.APP_SIGNING_P12 }}
       env:
         APP_SIGNING_P12: ${{ secrets.APP_SIGNING_P12 }}
         P12_PASS: ${{ secrets.APP_SIGNING_P12_PASSWORD }}
       run: |
+        # Skip if the secret is not provided
+        if [ -z "$APP_SIGNING_P12" ]; then
+          echo "APP_SIGNING_P12 not set; skipping app signing certificate import"
+          exit 0
+        fi
+
         echo "$APP_SIGNING_P12" | base64 --decode > /tmp/app_sign.p12
         security create-keychain -p actions build.keychain
         security import /tmp/app_sign.p12 -k ~/Library/Keychains/build.keychain -P "$P12_PASS" -T /usr/bin/codesign || true
@@ -66,11 +72,16 @@ jobs:
         security unlock-keychain -p actions ~/Library/Keychains/build.keychain
 
     - name: Import installer certificate (INSTALLER_P12)
-      if: ${{ secrets.INSTALLER_P12 }}
       env:
         INSTALLER_P12: ${{ secrets.INSTALLER_P12 }}
         P12_PASS: ${{ secrets.INSTALLER_P12_PASSWORD }}
       run: |
+        # Skip if the secret is not provided
+        if [ -z "$INSTALLER_P12" ]; then
+          echo "INSTALLER_P12 not set; skipping installer certificate import"
+          exit 0
+        fi
+
         echo "$INSTALLER_P12" | base64 --decode > /tmp/installer.p12
         security import /tmp/installer.p12 -k ~/Library/Keychains/build.keychain -P "$P12_PASS" -T /usr/bin/productbuild || true
 
@@ -102,6 +113,13 @@ jobs:
         bundle exec fastlane mac release_mac
 
     - name: Cleanup keychain
-      if: ${{ secrets.APP_SIGNING_P12 }}
+      env:
+        APP_SIGNING_P12: ${{ secrets.APP_SIGNING_P12 }}
       run: |
+        # Only delete the temporary keychain if we created it
+        if [ -z "$APP_SIGNING_P12" ]; then
+          echo "APP_SIGNING_P12 not set; nothing to cleanup"
+          exit 0
+        fi
+
         security delete-keychain ~/Library/Keychains/build.keychain || true
