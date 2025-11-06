@@ -6,6 +6,7 @@ Loads a short TempleCode program, prints interpreter metadata, and runs it.
 
 from __future__ import annotations
 
+import importlib
 import os
 import sys
 
@@ -14,8 +15,6 @@ _ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir))
 _APP_PKG = os.path.join(_ROOT, "Python", "time_warp")
 if _APP_PKG not in sys.path:
     sys.path.insert(0, _APP_PKG)
-
-import importlib
 
 templecode = importlib.import_module("templecode")
 TempleInterpreter = templecode.TempleInterpreter  # type: ignore[attr-defined]
