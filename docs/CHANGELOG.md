@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [2.0.0] - 2025-10-28
 
+## [3.0.0] - 2025-11-06
+
+### Release preparation
+
+This entry prepares the repository for the 3.0.0 release. Changes in this release include:
+
+### Changed
+
+- Bumped Rust crate version to 3.0.0
+- Updated Fastlane defaults and GitHub Actions macOS release workflow to use version 3.0.0
+- Documentation and packaging improvements to support a macOS App Store release
+
+### Notes
+
+- A set of repository secrets (signing certificates and App Store Connect API key) must be configured before the macOS release workflow can produce a signed, notarized package and upload it to App Store Connect. See `.github/SETUP_SECRETS_AND_TRIGGER.md` for instructions.
+
 ### Major Release - Feature Complete Implementation
 
 This release represents the complete, production-ready Time Warp IDE with full feature parity between Python and Rust implementations.
@@ -14,6 +30,7 @@ This release represents the complete, production-ready Time Warp IDE with full f
 ### Added
 
 #### Core Language Features
+
 - **TempleCode Unified Language**: Seamlessly mix BASIC, PILOT, and Logo in single programs
 - **Logo Procedures**: User-defined procedures with parameters (`TO name :param ... END`)
 - **Multi-line REPEAT Blocks**: Support for nested and top-level multi-line loops
@@ -23,6 +40,7 @@ This release represents the complete, production-ready Time Warp IDE with full f
 - **50+ Turtle Commands**: Complete turtle graphics system verified and tested
 
 #### Python Implementation
+
 - **PySide6 Desktop IDE**: Modern Qt6-based GUI with full feature set
 - **8 Color Themes**: Dracula, Monokai, Solarized Dark/Light, Ocean, Spring, Sunset, Candy, Forest
 - **Recent Files Menu**: Track last 10 opened files
@@ -38,6 +56,7 @@ This release represents the complete, production-ready Time Warp IDE with full f
 - **Security Limits**: 100K iteration limit, 10-second timeout
 
 #### Rust Implementation
+
 - **egui Native GUI**: High-performance native interface
 - **Async Execution**: tokio-based non-blocking program execution
 - **PNG Export**: Save turtle graphics canvas as PNG images
@@ -49,6 +68,7 @@ This release represents the complete, production-ready Time Warp IDE with full f
 - **Theme System**: 8 color themes matching Python version
 
 #### Documentation
+
 - **Comprehensive Docs**: 76+ markdown files covering all aspects
 - **User Guide**: Unified guide for both Python and Rust implementations
 - **Quick Reference**: Complete command reference for all languages
@@ -61,6 +81,7 @@ This release represents the complete, production-ready Time Warp IDE with full f
 - **Architecture Docs**: System design and implementation details
 
 #### Examples
+
 - **33 Example Programs**: Organized by language and difficulty
   - 15 Logo programs (graphics, fractals, patterns)
   - 10 BASIC programs (games, utilities, demos)
@@ -69,6 +90,7 @@ This release represents the complete, production-ready Time Warp IDE with full f
 - **Categorized by Difficulty**: Beginner, Intermediate, Advanced
 
 #### Developer Experience
+
 - **Root Launcher**: `./run.sh python` or `./run.sh rust` to launch from repo root
 - **CLI Support**: Run programs from command line (Python)
 - **Test Suite**: 5 Python test scripts, 22 Rust integration tests
@@ -128,6 +150,7 @@ This release represents the complete, production-ready Time Warp IDE with full f
 ### Python vs Rust Feature Parity
 
 Both implementations now have complete feature parity:
+
 - ✅ All 50+ turtle graphics commands
 - ✅ Logo procedures with parameters
 - ✅ Multi-line REPEAT blocks
@@ -149,6 +172,7 @@ Both implementations now have complete feature parity:
 ### Upgrade Guide
 
 **From 1.x to 2.0:**
+
 1. No breaking changes - all 1.x programs run unchanged
 2. New features available immediately
 3. Update imports if using Python API directly
@@ -157,18 +181,21 @@ Both implementations now have complete feature parity:
 ### Installation
 
 **Python:**
+
 ```bash
 pip install PySide6 pillow
 python Time_Warp_Python/time_warp_ide.py
 ```
 
 **Rust:**
+
 ```bash
 cd Time_Warp_Rust
 cargo run --release
 ```
 
 **Quick Launch (from root):**
+
 ```bash
 ./run.sh python    # Launch Python IDE
 ./run.sh rust      # Launch Rust IDE
@@ -188,4 +215,4 @@ cargo run --release
 
 ---
 
-**Full Changelog**: https://github.com/James-HoneyBadger/Time_Warp/compare/v1.0.0...v2.0.0
+**Full Changelog**: <https://github.com/James-HoneyBadger/Time_Warp/compare/v1.0.0...v2.0.0>

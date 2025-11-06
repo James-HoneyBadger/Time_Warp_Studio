@@ -19,7 +19,7 @@ on:
       version:
         description: 'CFBundleShortVersionString'
         required: false
-        default: '0.0.1'
+        default: '3.0.0'
       build_version:
         description: 'CFBundleVersion'
         required: false

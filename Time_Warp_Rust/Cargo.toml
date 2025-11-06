@@ -1,6 +1,6 @@
 [package]
 name = "time_warp_unified"
-version = "2.1.0"
+version = "3.0.0"
 edition = "2021"
 authors = ["James-HoneyBadger"]
 description = "Time Warp IDE - Unified educational programming environment with PILOT, BASIC, and Logo"

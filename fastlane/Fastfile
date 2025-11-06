@@ -6,8 +6,8 @@ platform :mac do
     ENV['APP_NAME'] ||= options[:app_name] || 'Time Warp'
     ENV['EXECUTABLE_NAME'] ||= options[:executable_name] || 'time-warp'
     ENV['BUNDLE_ID'] ||= options[:bundle_id] || 'org.honeybadger.timewarp'
-    ENV['VERSION'] ||= options[:version] || '0.0.1'
-    ENV['BUILD_VERSION'] ||= options[:build_version] || '1'
+  ENV['VERSION'] ||= options[:version] || '3.0.0'
+  ENV['BUILD_VERSION'] ||= options[:build_version] || '1'
 
     # Build and sign the app using the repository script (expects signing identities in keychain)
     sh "bash scripts/build_macos_app.sh"
