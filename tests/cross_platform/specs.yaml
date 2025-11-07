@@ -1,0 +1,48 @@
+# Minimal cross-platform tests (using Go CLI as runner)
+
+- id: basic_print
+  language: BASIC
+  program: |
+    10 PRINT "HELLO"
+    20 END
+  expect:
+    output: |
+      HELLO
+
+- id: basic_if_goto
+  language: BASIC
+  program: |
+    10 LET X = 1
+    20 IF X THEN 40
+    30 PRINT "NOPE"
+    40 PRINT X + 2
+    50 END
+  expect:
+    output: |
+      3
+
+- id: logo_square
+  language: Logo
+  program: |
+    CS
+    FD 100 RT 90
+    FD 100 RT 90
+    FD 100 RT 90
+    FD 100
+  expect:
+    output: |
+      
+    pointsMin: 5
+
+- id: pilot_jump
+  language: PILOT
+  program: |
+    L:START
+    T:READY
+    J:END
+    T:MISS
+    L:END
+    R:
+  expect:
+    output: |
+      READY
