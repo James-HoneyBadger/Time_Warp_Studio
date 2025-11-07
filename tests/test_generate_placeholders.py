@@ -7,27 +7,35 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
+# Silence pylint for protected-access checks in these unit tests
+# pylint: disable=protected-access
 import scripts.generate_placeholders as gp  # noqa: E402
 
 
 def test_parse_color_hex_rgb():
-    assert gp._parse_color("#1e90ff") == (30, 144, 255)
-    assert gp._parse_color("#1e90ff", with_alpha=True) == (30, 144, 255, 255)
+    # Accessing protected helper by design in tests
+    assert gp._parse_color("#1e90ff") == (30, 144, 255)  # noqa: W0212
+    assert gp._parse_color("#1e90ff", with_alpha=True) == (
+        30,
+        144,
+        255,
+        255,
+    )  # noqa: W0212
 
 
 def test_parse_color_csv_rgba():
-    assert gp._parse_color("30,144,255") == (30, 144, 255)
+    assert gp._parse_color("30,144,255") == (30, 144, 255)  # noqa: W0212
     assert gp._parse_color("30,144,255,200", with_alpha=True) == (
         30,
         144,
         255,
         200,
-    )
+    )  # noqa: W0212
 
 
 def test_parse_sizes_csv():
-    assert gp._parse_sizes_csv(None) == [16, 32, 128, 256, 512]
-    assert gp._parse_sizes_csv("16, 32,128") == [16, 32, 128]
+    assert gp._parse_sizes_csv(None) == [16, 32, 128, 256, 512]  # noqa: W0212
+    assert gp._parse_sizes_csv("16, 32,128") == [16, 32, 128]  # noqa: W0212
 
 
 def test_script_help_runs():
@@ -37,7 +45,9 @@ def test_script_help_runs():
         str(ROOT / "scripts" / "generate_placeholders.py"),
         "--help",
     ]
-    result = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True)
+    result = subprocess.run(
+        cmd, cwd=str(ROOT), capture_output=True, text=True, check=True
+    )
     assert result.returncode == 0
     assert "Generate placeholder icons and screenshots" in result.stdout
 
@@ -52,7 +62,9 @@ def test_dry_run_creates_no_files(tmp_path: Path):
         "--icons-only",
         "--dry-run",
     ]
-    result = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True)
+    result = subprocess.run(
+        cmd, cwd=str(ROOT), capture_output=True, text=True, check=True
+    )
     assert result.returncode == 0
     # No directories/files created in dry-run
     assert not out_dir.exists()
@@ -68,7 +80,9 @@ def test_dry_run_creates_no_files(tmp_path: Path):
         "--screenshots-only",
         "--dry-run",
     ]
-    result = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True)
+    result = subprocess.run(
+        cmd, cwd=str(ROOT), capture_output=True, text=True, check=True
+    )
     assert result.returncode == 0
     assert not out_dir.exists()
     assert "[dry-run] screenshot_1.png" in result.stdout

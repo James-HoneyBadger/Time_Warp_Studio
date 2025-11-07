@@ -224,31 +224,65 @@ static void cmd_input(const char *args)
     }
 }
 
-/* Logo turtle graphics */
-static void logo_forward(int distance)
+/* Decide if loop should run at all */
+int shouldEnter = (stepVal > 0) ? (startVal <= endVal) : (startVal >= endVal);
+if (!shouldEnter)
 {
-#ifdef USE_INTUITION
-    if (tw_window && tw_rp)
+    /* Skip forward to matching NEXT (with same var or first NEXT) */
+    int found = 0;
+    for (int si = pc + 1; si < line_count; si++)
     {
-        double rad = logo_angle * M_PI / 180.0;
-        int newX = logo_x + (int)(distance * sin(rad));
-        int newY = logo_y - (int)(distance * cos(rad));
-
-        if (logo_pen_down)
+        char tmpLine[MAX_LINE_LEN];
+        strncpy(tmpLine, program[si].text, MAX_LINE_LEN - 1);
+        tmpLine[MAX_LINE_LEN - 1] = 0;
+        trim(tmpLine);
+        strtoupper(tmpLine);
+        if (strncmp(tmpLine, "NEXT", 4) == 0)
         {
-            SetAPen(tw_rp, logo_pen_color);
-            Move(tw_rp, logo_x, logo_y);
-            Draw(tw_rp, newX, newY);
+            char *pv = tmpLine + 4;
+            while (*pv && isspace((unsigned char)*pv))
+                pv++;
+            char vch = *pv;
+            if (vch == 0 || vch == var)
+            {
+                pc = si; /* pc++ at end will move past NEXT */
+                found = 1;
+                break;
+            }
         }
-
-        logo_x = newX;
-        logo_y = newY;
     }
+    if (!found)
+    {
+        /* No NEXT found: end program */
+        pc = line_count; /* exit loop */
+    }
+}
+else
+{
+    set_var(var, startVal);
+    for_stack[for_depth].var = var;
+    for_stack[for_depth].target = endVal;
+    for_stack[for_depth].step = stepVal;
+    for_stack[for_depth].loop_line = pc + 1;
+    for_depth++;
+    int newX = logo_x + (int)(distance * sin(rad));
+    int newY = logo_y - (int)(distance * cos(rad));
+
+    if (logo_pen_down)
+    {
+        SetAPen(tw_rp, logo_pen_color);
+        Move(tw_rp, logo_x, logo_y);
+        Draw(tw_rp, newX, newY);
+    }
+
+    logo_x = newX;
+    logo_y = newY;
+}
 #else
-    printf("🐢 FORWARD %d\n", distance);
-    double rad = logo_angle * M_PI / 180.0;
-    logo_x += (int)(distance * sin(rad));
-    logo_y -= (int)(distance * cos(rad));
+printf("🐢 FORWARD %d\n", distance);
+double rad = logo_angle * M_PI / 180.0;
+logo_x += (int)(distance * sin(rad));
+logo_y -= (int)(distance * cos(rad));
 #endif
 }
 

@@ -270,10 +270,71 @@ BOOL BasicInterpreter_Execute(const char *code, HWND hwndConsole,
                 strncpy(varName, p, vnLen);
                 varName[vnLen] = 0;
                 /* Trim spaces at end of varName */
-                for (int ti = vnLen - 1; ti >= 0 && (varName[ti] == ' ' || varName[ti] == '\t'); ti--)
-                    varName[ti] = 0;
+                /* Decide if loop body should run initially */
+                int shouldEnter = (stepVal > 0) ? (startVal <= endVal) : (startVal >= endVal);
+                if (!shouldEnter)
+                {
+                    /* Skip to matching NEXT varName (or first NEXT) */
+                    int found = 0;
+                    for (int si = g_currentLine + 1; si < g_totalLines; si++)
+                    {
+                        char *scan = lines[si];
+                        while (*scan == ' ' || *scan == '\t')
+                            scan++;
+                        if (*scan >= '0' && *scan <= '9')
+                        {
+                            while (*scan >= '0' && *scan <= '9')
+                                scan++;
+                            while (*scan == ' ' || *scan == '\t')
+                                scan++;
+                        }
+                        char kw2[32] = {0};
+                        int k2 = 0;
+                        while (*scan && *scan != ' ' && *scan != '\t' && k2 < 31)
+                            kw2[k2++] = toupper((unsigned char)*scan++);
+                        kw2[k2] = 0;
+                        while (*scan == ' ' || *scan == '\t')
+                            scan++;
+                        if (strcmp(kw2, "NEXT") == 0)
+                        {
+                            char nextVar[32] = {0};
+                            int nv = 0;
+                            while (*scan && *scan != ' ' && *scan != '\t' && nv < 31)
+                                nextVar[nv++] = *scan++;
+                            nextVar[nv] = 0;
+                            if (nextVar[0] == 0 || stricmp(nextVar, varName) == 0)
+                            {
+                                g_currentLine = si + 1; /* continue after NEXT */
+                                found = 1;
+                                break;
+                            }
+                        }
+                    }
+                    if (!found)
+                    {
+                        g_currentLine++;
+                    }
+                }
+                else
+                {
+                    set_var(varName, startVal);
+                    if (g_forStackPtr < 32)
+                    {
+                        g_forStack[g_forStackPtr].endVal = endVal;
+                        g_forStack[g_forStackPtr].step = stepVal;
+                        strncpy(g_forStack[g_forStackPtr].var, varName, 31);
+                        g_forStack[g_forStackPtr].var[31] = 0;
+                        /* Next line after FOR is loop start */
+                        g_forStack[g_forStackPtr].loopStartIndex = g_currentLine + 1;
+                        g_forStackPtr++;
+                    }
+                    g_currentLine++;
+                }
+                goto os2_for_done;
+                varName[ti] = 0;
                 char *toPtr = strstr(eq + 1, "TO");
                 if (toPtr)
+                os2_for_done:;
                 {
                     char startBuf[64] = {0};
                     int startLen = (int)(toPtr - (eq + 1));

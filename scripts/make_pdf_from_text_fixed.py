@@ -1,85 +1,24 @@
 #!/usr/bin/env python3
-"""Create a very small multi-line PDF from a plain text file.
-No external dependencies. Usage:
+"""Create a very small multi-line PDF from a plain text file using pdf_utils.
+Usage:
 
     python3 scripts/make_pdf_from_text_fixed.py input.txt output.pdf
 """
 from pathlib import Path
 import sys
 
+# Add parent to path for scripts.pdf_utils import
+if __name__ == "__main__":
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-def escape_pdf_text(s: str) -> str:
-    return s.replace("\\", "\\\\").replace("(", "\\(").replace(")", "\\)")
-
-
-def make_pdf(lines, out_path: Path):
-    # Simple single-page PDF (Letter 612x792)
-    width = 612
-    height = 792
-    x = 72
-    y_start = 720
-    leading = 14
-
-    content_lines = ["BT", "/F1 12 Tf"]
-    y = y_start
-    for i, ln in enumerate(lines):
-        esc = escape_pdf_text(ln.rstrip())
-        if i == 0:
-            content_lines.append(f"{x} {y} Td ({esc}) Tj")
-        else:
-            content_lines.append(f"0 -{leading} Td ({esc}) Tj")
-    content_lines.append("ET")
-    content_stream = "\n".join(content_lines) + "\n"
-    stream_bytes = content_stream.encode("utf-8")
-
-    objects = []
-    objects.append(b"<< /Type /Catalog /Pages 2 0 R >>")
-    objects.append(b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>")
-    page_obj = (
-        "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 %d %d] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>"
-        % (width, height)
-    )
-    objects.append(page_obj.encode("utf-8"))
-    objects.append(b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>")
-
-    stream_obj = b"<< /Length " + str(len(stream_bytes)).encode("utf-8")
-    stream_obj += b" >>\nstream\n"
-    stream_obj += stream_bytes
-    stream_obj += b"endstream"
-    objects.append(stream_obj)
-
-    out = bytearray()
-    out.extend(b"%PDF-1.4\n%\xe2\xe3\xcf\xd3\n")
-    offsets = []
-    for i, obj in enumerate(objects, start=1):
-        offsets.append(len(out))
-        out.extend(f"{i} 0 obj\n".encode("utf-8"))
-        out.extend(obj)
-        out.extend(b"\nendobj\n")
-
-    xref_offset = len(out)
-    out.extend(b"xref\n")
-    out.extend(f"0 {len(objects)+1}\n".encode("utf-8"))
-    out.extend(b"0000000000 65535 f \n")
-    for off in offsets:
-        out.extend(f"{off:010d} 00000 n \n".encode("utf-8"))
-
-    out.extend(b"trailer\n")
-    out.extend(b"<<\n")
-    out.extend(f"/Size {len(objects)+1}\n".encode("utf-8"))
-    out.extend(b"/Root 1 0 R\n")
-    out.extend(b">>\n")
-    out.extend(b"startxref\n")
-    out.extend(f"{xref_offset}\n".encode("utf-8"))
-    out.extend(b"%%EOF\n")
-
-    out_path.write_bytes(bytes(out))
+from scripts.pdf_utils import write_pdf
 
 
-def main():
+def main() -> None:
     if len(sys.argv) != 3:
         print(
-            "Usage: python3 scripts/make_pdf_from_text_fixed.py <input.txt> <output.pdf>"
+            "Usage: python3 scripts/make_pdf_from_text_fixed.py "
+            "<input.txt> <output.pdf>"
         )
         sys.exit(2)
     input_path = Path(sys.argv[1])
@@ -88,8 +27,8 @@ def main():
         print("Input file not found:", input_path)
         sys.exit(2)
     lines = input_path.read_text(encoding="utf-8").splitlines()
-    make_pdf(lines, out_path)
-    print("Wrote PDF:", out_path)
+    write_pdf(lines, out_path)
+    print(f"Wrote PDF: {out_path}")
 
 
 if __name__ == "__main__":
