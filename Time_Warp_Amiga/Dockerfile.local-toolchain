@@ -13,9 +13,9 @@ FROM deps-only AS toolchain
 
 ENV PATH="/opt/amiga/bin:/opt/amiga-gcc/bin:${PATH}"
 
-# Build Bebbo's Amiga GCC toolchain from source inside the container.
+# Build Amiga GCC toolchain from source inside the container.
 # First build can take a while. Requires outbound access to GitHub.
-RUN git clone --depth 1 https://github.com/bebbo/amiga-gcc /opt/amiga-gcc \
+RUN git clone --depth 1 https://github.com/jeffv03/amiga-gcc /opt/amiga-gcc \
     && make -C /opt/amiga-gcc -j"$(nproc)" update \
     && make -C /opt/amiga-gcc -j"$(nproc)" all \
     || (echo "Toolchain build failed" >&2; exit 1)

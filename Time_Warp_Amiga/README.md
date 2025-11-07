@@ -58,7 +58,7 @@ No-network fallback (mount host toolchain):
 
 ```bash
 # 1) Clone toolchain on the host (using your network config/credentials)
-git clone https://github.com/bebbo/amiga-gcc "$HOME/amiga-gcc"
+git clone https://github.com/jeffv03/amiga-gcc "$HOME/amiga-gcc"
 
 # 2) Build deps-only image, mount the host toolchain, and compile
 cd Time_Warp_Amiga
