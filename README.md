@@ -152,6 +152,48 @@ make test
 make clean
 ```
 
+## Placeholder assets generator
+
+Utility to generate placeholder icons (.iconset) and screenshots for packaging.
+
+- Script: `scripts/generate_placeholders.py`
+- Requires: Pillow (`pip install Pillow`)
+
+Quick usage:
+
+```bash
+python scripts/generate_placeholders.py --help
+```
+
+Common examples:
+
+```bash
+# Icons only, default sizes, preview only (no files created)
+python scripts/generate_placeholders.py --icons-only --dry-run --out-dir ./build/placeholders
+
+# Icons only with custom glyph, background and sizes
+python scripts/generate_placeholders.py --icons-only \
+  --text TW --bg-color "#1e90ff" --fg-color "#ffffff" --sizes 16,32,128,256,512 \
+  --out-dir ./build/placeholders
+
+# Screenshots only, 1600x1000, custom title prefix
+python scripts/generate_placeholders.py --screenshots-only \
+  --screenshot-size 1600x1000 --text "Temple Code — Shot" \
+  --out-dir ./build/placeholders
+```
+
+Flags of interest:
+
+- `--icons-only` | `--screenshots-only` – choose what to generate
+- `--out-dir PATH` – base output (icons → OUT/icon.iconset, screenshots → OUT/screenshots)
+- `--text TEXT` – shared text; icon glyph uses the first character
+- `--font PATH` – custom `.ttf`/`.ttc` font
+- `--bg-color`, `--fg-color` – `#RRGGBB` or `R,G,B[,A]`
+- `--sizes` – comma-separated base sizes; generates @1x and @2x icon files
+- `--screenshot-size WxH` – dimensions for screenshots (default 1280x800)
+- `--verbose` – extra logging
+- `--dry-run` – print planned outputs without writing files
+
 ## License
 
 This example project is provided for learning and experimentation. Use at your own discretion.
