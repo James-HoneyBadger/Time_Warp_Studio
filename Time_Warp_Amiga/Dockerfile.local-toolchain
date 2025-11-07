@@ -1,0 +1,26 @@
+FROM debian:bookworm-slim AS deps-only
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    TZ=UTC
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential git ca-certificates \
+    bison flex libgmp-dev libmpfr-dev libmpc-dev zlib1g-dev texinfo \
+    python3 wget curl patch xz-utils file make cmake pkg-config \
+    && rm -rf /var/lib/apt/lists/*
+
+FROM deps-only AS toolchain
+
+ENV PATH="/opt/amiga/bin:/opt/amiga-gcc/bin:${PATH}"
+
+# Build Bebbo's Amiga GCC toolchain from source inside the container.
+# First build can take a while. Requires outbound access to GitHub.
+RUN git clone --depth 1 https://github.com/bebbo/amiga-gcc /opt/amiga-gcc \
+    && make -C /opt/amiga-gcc -j"$(nproc)" update \
+    && make -C /opt/amiga-gcc -j"$(nproc)" all \
+    || (echo "Toolchain build failed" >&2; exit 1)
+
+WORKDIR /src
+
+# Default command: print toolchain version to prove availability
+CMD ["bash", "-lc", "m68k-amigaos-gcc --version && echo 'Toolchain ready' "]

@@ -44,6 +44,29 @@ docker login ghcr.io
 # Use a GitHub personal access token with read:packages
 ```
 
+Fallback: build a local toolchain image (slower, no GHCR required):
+
+```bash
+cd Time_Warp_Amiga
+make amiga-docker-local
+# first build can take 20–40 minutes depending on your machine
+```
+
+This builds Bebbo's toolchain from source inside a Docker image based on Debian, then compiles the project with it. Subsequent runs will be much faster thanks to cached layers.
+
+No-network fallback (mount host toolchain):
+
+```bash
+# 1) Clone toolchain on the host (using your network config/credentials)
+git clone https://github.com/bebbo/amiga-gcc "$HOME/amiga-gcc"
+
+# 2) Build deps-only image, mount the host toolchain, and compile
+cd Time_Warp_Amiga
+make amiga-docker-mount-toolchain TOOLCHAIN_DIR="$HOME/amiga-gcc"
+```
+
+The first run builds the toolchain inside the container using the host checkout (no network inside the container). Once it completes, `./timewarp_amiga` is produced in this folder.
+
 ## Run
 
 Single command:
