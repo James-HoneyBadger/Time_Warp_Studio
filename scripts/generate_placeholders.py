@@ -118,6 +118,7 @@ def generate_icons(
     out_dir: Optional[Path] = None,
     font_path: Optional[Path] = None,
     verbose: bool = False,
+    dry_run: bool = False,
 ) -> None:
     """Generate icon PNGs inside packaging/macos/icon.iconset."""
     iconset_dir = (
@@ -125,7 +126,8 @@ def generate_icons(
         if out_dir
         else root / "packaging" / "macos" / "icon.iconset"
     )
-    iconset_dir.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        iconset_dir.mkdir(parents=True, exist_ok=True)
 
     base_sizes = list(sizes) if sizes is not None else [16, 32, 128, 256, 512]
     entries: list[tuple[int, str]] = []
@@ -136,11 +138,15 @@ def generate_icons(
     glyph = (glyph_text or "T")[0]
     if verbose:
         print(
-            f"Generating icon PNGs in {iconset_dir} (glyph='{glyph}', sizes={base_sizes})"
+            "Generating icon PNGs in "
+            f"{iconset_dir} (glyph='{glyph}', sizes={base_sizes})"
         )
     else:
         print(f"Generating icon PNGs in {iconset_dir}")
     for size, name in entries:
+        if dry_run:
+            print(f"[dry-run] icon {name} {size}x{size}")
+            continue
         img = Image.new("RGBA", (size, size), bg_rgba)
         draw = ImageDraw.Draw(img)
         font = _load_font(int(size * 0.6), font_path)
@@ -166,6 +172,7 @@ def generate_screenshots(
     bg_rgb: Tuple[int, int, int] = (40, 60, 100),
     fg_rgb: Tuple[int, int, int] = (255, 255, 255),
     verbose: bool = False,
+    dry_run: bool = False,
 ) -> None:
     """Generate placeholder screenshots into fastlane metadata folder."""
     shots_dir = (
@@ -173,15 +180,20 @@ def generate_screenshots(
         if out_dir
         else root / "fastlane" / "metadata" / "en-US" / "screenshots"
     )
-    shots_dir.mkdir(parents=True, exist_ok=True)
+    if not dry_run:
+        shots_dir.mkdir(parents=True, exist_ok=True)
     if verbose:
         print(
-            f"Generating {count} placeholder screenshot(s) in {shots_dir} size={size}"
+            f"Generating {count} placeholder screenshot(s) in "
+            f"{shots_dir} size={size}"
         )
     else:
         print(f"Generating placeholder screenshots in {shots_dir}")
     for i in range(1, count + 1):
         width, height = size
+        if dry_run:
+            print(f"[dry-run] screenshot_{i}.png {width}x{height}")
+            continue
         img = Image.new(
             "RGB",
             (width, height),
@@ -300,6 +312,11 @@ def _parse_args() -> argparse.Namespace:
         action="store_true",
         help="Enable verbose logging",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Preview outputs without creating directories or files",
+    )
     return parser.parse_args()
 
 
@@ -349,6 +366,7 @@ def main() -> None:
             out_dir=args.out_dir,
             font_path=args.font,
             verbose=args.verbose,
+            dry_run=args.dry_run,
         )
     if do_screens:
         generate_screenshots(
@@ -361,6 +379,7 @@ def main() -> None:
             bg_rgb=ss_bg,  # type: ignore[arg-type]
             fg_rgb=ss_fg,  # type: ignore[arg-type]
             verbose=args.verbose,
+            dry_run=args.dry_run,
         )
 
     print(

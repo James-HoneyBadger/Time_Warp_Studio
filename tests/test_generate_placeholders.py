@@ -40,3 +40,35 @@ def test_script_help_runs():
     result = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True)
     assert result.returncode == 0
     assert "Generate placeholder icons and screenshots" in result.stdout
+
+
+def test_dry_run_creates_no_files(tmp_path: Path):
+    out_dir = tmp_path / "out"
+    cmd = [
+        sys.executable,
+        str(ROOT / "scripts" / "generate_placeholders.py"),
+        "--out-dir",
+        str(out_dir),
+        "--icons-only",
+        "--dry-run",
+    ]
+    result = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True)
+    assert result.returncode == 0
+    # No directories/files created in dry-run
+    assert not out_dir.exists()
+    # Output should mention dry-run lines
+    assert "[dry-run] icon" in result.stdout
+
+    # Now screenshots dry-run
+    cmd = [
+        sys.executable,
+        str(ROOT / "scripts" / "generate_placeholders.py"),
+        "--out-dir",
+        str(out_dir),
+        "--screenshots-only",
+        "--dry-run",
+    ]
+    result = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True)
+    assert result.returncode == 0
+    assert not out_dir.exists()
+    assert "[dry-run] screenshot_1.png" in result.stdout
