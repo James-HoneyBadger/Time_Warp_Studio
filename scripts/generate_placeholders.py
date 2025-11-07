@@ -14,7 +14,7 @@ CLI options:
 
 from pathlib import Path
 import argparse
-from typing import Iterable, Optional, Tuple
+from typing import Iterable, Optional, Tuple, Any
 
 try:
     from PIL import Image, ImageDraw, ImageFont
@@ -28,28 +28,42 @@ def _measure_text(
     text: str,
     font: "ImageFont.FreeTypeFont | ImageFont.ImageFont",
 ) -> tuple[int, int]:
-    """Measure text width/height with a preferred API and safe fallbacks."""
-    # Pillow provides multiple APIs over time; try the most robust ones first.
-    # 1) font.getbbox (newer Pillow)
-    try:
-        x0, y0, x1, y1 = font.getbbox(text)  # type: ignore[attr-defined]
-        return int(x1 - x0), int(y1 - y0)
-    except AttributeError:
-        pass
-    # 2) draw.textbbox (newer Pillow)
-    try:
-        x0, y0, x1, y1 = draw.textbbox(
-            (0, 0), text, font=font
-        )  # type: ignore[attr-defined]
-        return int(x1 - x0), int(y1 - y0)
-    except AttributeError:
-        pass
-    # 3) font.getsize (older Pillow)
-    try:
-        return font.getsize(text)  # type: ignore[attr-defined]
-    except AttributeError:
-        # Final fallback: approximate using character count
-        return max(8, len(text) * 8), 16
+    """Measure text with Pillow APIs; avoid union attribute mypy warnings.
+
+    Order of attempts:
+    1. draw.textbbox (preferred; available in newer Pillow)
+    2. font.getbbox (older/newer font metric API)
+    3. getattr(font, "getsize") if present
+    4. Fallback heuristic width = 8 * len(text), height = 16
+    """
+    # textbbox
+    if hasattr(draw, "textbbox"):
+        try:
+            # textbbox returns (x0,y0,x1,y1)
+            x0, y0, x1, y1 = draw.textbbox((0, 0), text, font=font)
+            return int(x1 - x0), int(y1 - y0)
+        except (AttributeError, TypeError, ValueError):  # pragma: no cover
+            pass
+    # font.getbbox
+    if hasattr(font, "getbbox"):
+        try:
+            x0, y0, x1, y1 = font.getbbox(text)
+            return int(x1 - x0), int(y1 - y0)
+        except (AttributeError, TypeError, ValueError):  # pragma: no cover
+            pass
+    # font.getsize
+    gs: Any = getattr(font, "getsize", None)
+    if callable(gs):  # type: ignore[call-arg]
+        try:
+            size_tuple = gs(text)
+            # Older Pillow returns a 2-tuple
+            if isinstance(size_tuple, (tuple, list)) and len(size_tuple) >= 2:
+                w, h = size_tuple[0], size_tuple[1]
+                return int(w), int(h)
+        except (TypeError, ValueError):  # pragma: no cover
+            pass
+    # heuristic fallback
+    return max(8, len(text) * 8), 16
 
 
 def _parse_color(
@@ -150,7 +164,6 @@ def generate_icons(
         img = Image.new("RGBA", (size, size), bg_rgba)
         draw = ImageDraw.Draw(img)
         font = _load_font(int(size * 0.6), font_path)
-
         w, h = _measure_text(draw, glyph, font)
         draw.text(
             ((size - w) / 2, (size - h) / 2),
@@ -273,9 +286,7 @@ def _parse_args() -> argparse.Namespace:
         "--title-prefix",
         type=str,
         default="Time Warp — Screenshot",
-        help=(
-            "Prefix text used for screenshots (default: 'Time Warp — " "Screenshot')"
-        ),
+        help="Prefix text for screenshots (default: 'Time Warp — Screenshot')",
     )
     parser.add_argument(
         "--font",

@@ -106,6 +106,234 @@ func (e *Executor) Execute(command string) (string, error) {
 	}
 }
 
+// RunProgram executes a multi-line BASIC program with optional line numbers
+// and control flow (GOTO, IF ... THEN <line>, FOR/NEXT, GOSUB/RETURN).
+// It returns the concatenated output with emoji prefixes per project convention.
+func (e *Executor) RunProgram(program string) string {
+	// reset state
+	e.variables = make(map[string]float64)
+	e.gosubStack = e.gosubStack[:0]
+	e.forStack = e.forStack[:0]
+	e.lineNumbers = make(map[int]int)
+	e.lines = make([]string, 0, 256)
+	e.currentLine = 0
+
+	type line struct {
+		num  int
+		hasN bool
+		text string
+	}
+	parsed := make([]line, 0, 256)
+	// parse lines and map numbers
+	for _, raw := range strings.Split(strings.ReplaceAll(program, "\r", ""), "\n") {
+		t := strings.TrimSpace(raw)
+		if t == "" {
+			continue
+		}
+		// check for leading number
+		n := -1
+		has := false
+		sp := strings.SplitN(t, " ", 2)
+		if len(sp) > 0 {
+			if v, err := strconv.Atoi(sp[0]); err == nil {
+				n = v
+				has = true
+				if len(sp) > 1 {
+					t = strings.TrimSpace(sp[1])
+				} else {
+					t = ""
+				}
+			}
+		}
+		idx := len(parsed)
+		if has {
+			e.lineNumbers[n] = idx
+		}
+		parsed = append(parsed, line{num: n, hasN: has, text: t})
+	}
+
+	// program counter loop
+	out := &strings.Builder{}
+	pc := 0
+	steps := 0
+	maxSteps := 20000
+
+	getIndex := func(target int) (int, bool) {
+		idx, ok := e.lineNumbers[target]
+		return idx, ok
+	}
+
+	for pc >= 0 && pc < len(parsed) && steps < maxSteps {
+		steps++
+		cmd := strings.TrimSpace(parsed[pc].text)
+		up := strings.ToUpper(cmd)
+		if cmd == "" || strings.HasPrefix(up, "REM") {
+			pc++
+			continue
+		}
+		switch {
+		case up == "END":
+			// terminate
+			return out.String()
+		case up == "CLS":
+			// clear screen: no textual output in batch mode
+			pc++
+		case strings.HasPrefix(up, "PRINT"):
+			o := e.executePrint(strings.TrimSpace(cmd[5:]))
+			out.WriteString(o)
+			pc++
+		case strings.HasPrefix(up, "LET ") || strings.Contains(cmd, "="):
+			// assignment with/without LET
+			assign := cmd
+			if strings.HasPrefix(up, "LET ") {
+				assign = strings.TrimSpace(cmd[4:])
+			}
+			out.WriteString(e.executeLet(assign))
+			pc++
+		case strings.HasPrefix(up, "INPUT "):
+			out.WriteString(e.executeInput(strings.TrimSpace(cmd[6:])))
+			pc++
+		case strings.HasPrefix(up, "GOTO "):
+			arg := strings.TrimSpace(cmd[4:])
+			ln, err := strconv.Atoi(arg)
+			if err != nil {
+				out.WriteString("❌ GOTO requires line number\n")
+				pc++
+				break
+			}
+			if idx, ok := getIndex(ln); ok {
+				pc = idx
+			} else {
+				out.WriteString("❌ Unknown line\n")
+				pc++
+			}
+		case strings.HasPrefix(up, "IF "):
+			// IF <cond> THEN <line>
+			thenIdx := strings.Index(strings.ToUpper(cmd), "THEN")
+			if thenIdx < 0 {
+				out.WriteString("❌ IF requires THEN\n")
+				pc++
+				break
+			}
+			condStr := strings.TrimSpace(cmd[3:thenIdx])
+			tgt := strings.TrimSpace(cmd[thenIdx+4:])
+			cond := e.evalNumeric(condStr) != 0
+			if cond {
+				if ln, err := strconv.Atoi(tgt); err == nil {
+					if idx, ok := getIndex(ln); ok {
+						pc = idx
+						break
+					}
+				}
+			}
+			pc++
+		case strings.HasPrefix(up, "FOR "):
+			rest := strings.TrimSpace(cmd[4:])
+			// var = start TO end [STEP step]
+			eqIdx := strings.Index(rest, "=")
+			if eqIdx < 0 {
+				out.WriteString("❌ FOR requires var = start TO end\n")
+				pc++
+				break
+			}
+			vname := strings.TrimSpace(rest[:eqIdx])
+			afterEq := strings.TrimSpace(rest[eqIdx+1:])
+			toIdx := strings.Index(strings.ToUpper(afterEq), "TO")
+			if toIdx < 0 {
+				out.WriteString("❌ FOR requires TO\n")
+				pc++
+				break
+			}
+			startStr := strings.TrimSpace(afterEq[:toIdx])
+			afterTo := strings.TrimSpace(afterEq[toIdx+2:])
+			stepVal := 1.0
+			endStr := afterTo
+			if stIdx := strings.Index(strings.ToUpper(afterTo), "STEP"); stIdx >= 0 {
+				endStr = strings.TrimSpace(afterTo[:stIdx])
+				stepStr := strings.TrimSpace(afterTo[stIdx+4:])
+				stepVal = e.evalNumeric(stepStr)
+			}
+			startVal := e.evalNumeric(startStr)
+			endVal := e.evalNumeric(endStr)
+			e.variables[vname] = startVal
+			// remember next line as loop start
+			e.forStack = append(e.forStack, forContext{
+				variable:  vname,
+				endVal:    endVal,
+				step:      stepVal,
+				startLine: pc + 1,
+			})
+			// no output for FOR control line
+			pc++
+		case strings.HasPrefix(up, "NEXT"):
+			if len(e.forStack) == 0 {
+				out.WriteString("❌ NEXT without FOR\n")
+				pc++
+				break
+			}
+			ctx := e.forStack[len(e.forStack)-1]
+			// optional variable name check
+			parts := strings.Fields(cmd)
+			if len(parts) > 1 && !strings.EqualFold(parts[1], ctx.variable) {
+				out.WriteString("❌ NEXT wrong variable\n")
+				pc++
+				break
+			}
+			cur := e.variables[ctx.variable] + ctx.step
+			e.variables[ctx.variable] = cur
+			cont := (ctx.step >= 0 && cur <= ctx.endVal) || (ctx.step < 0 && cur >= ctx.endVal)
+			if cont {
+				pc = ctx.startLine
+			} else {
+				e.forStack = e.forStack[:len(e.forStack)-1]
+				// loop complete; no output
+				pc++
+			}
+		case strings.HasPrefix(up, "GOSUB "):
+			arg := strings.TrimSpace(cmd[6:])
+			ln, err := strconv.Atoi(arg)
+			if err != nil {
+				out.WriteString("❌ GOSUB requires line number\n")
+				pc++
+				break
+			}
+			e.gosubStack = append(e.gosubStack, pc+1)
+			if idx, ok := getIndex(ln); ok {
+				pc = idx
+			} else {
+				out.WriteString("❌ Unknown line\n")
+				pc++
+			}
+		case up == "RETURN":
+			if len(e.gosubStack) == 0 {
+				out.WriteString("❌ RETURN without GOSUB\n")
+				pc++
+				break
+			}
+			ret := e.gosubStack[len(e.gosubStack)-1]
+			e.gosubStack = e.gosubStack[:len(e.gosubStack)-1]
+			pc = ret
+		case strings.HasPrefix(up, "LINE "):
+			out.WriteString("📏 LINE " + strings.TrimSpace(cmd[4:]) + "\n")
+			pc++
+		case strings.HasPrefix(up, "CIRCLE "):
+			out.WriteString("⭕ CIRCLE " + strings.TrimSpace(cmd[6:]) + "\n")
+			pc++
+		case strings.HasPrefix(up, "LOCATE "):
+			out.WriteString("📍 LOCATE " + strings.TrimSpace(cmd[6:]) + "\n")
+			pc++
+		default:
+			// unknown falls back to expression or ignore
+			out.WriteString(fmt.Sprintf("❌ BASIC: unknown command '%s'\n", up))
+			pc++
+		}
+	}
+	if steps >= maxSteps {
+		out.WriteString("❌ Stopped: too many steps\n")
+	}
+	return out.String()
+}
+
 func (e *Executor) executePrint(args string) string {
 	if args == "" {
 		return "\n"

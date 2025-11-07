@@ -3,15 +3,34 @@ package main
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 
 	"github.com/James-HoneyBadger/Time_Warp/Time_Warp_Go/pkg/timewarp"
+	basexec "github.com/James-HoneyBadger/Time_Warp/Time_Warp_Go/pkg/timewarp/executors/basic"
 )
 
 // Simple CLI entry point for the Go version of Time Warp.
 // Reads commands from stdin and prints interpreter output.
 func main() {
+	// Batch mode: `timewarp --batch BASIC` reads program from stdin and executes
+	if len(os.Args) >= 3 && (os.Args[1] == "--batch" || os.Args[1] == "-b") {
+		lang := strings.ToUpper(os.Args[2])
+		data, _ := io.ReadAll(os.Stdin)
+		program := string(data)
+		switch lang {
+		case "BASIC":
+			exec := basexec.New()
+			out := exec.RunProgram(program)
+			fmt.Print(out)
+			return
+		default:
+			fmt.Printf("❌ Batch mode unsupported for %s\n", lang)
+			return
+		}
+	}
+
 	interp := timewarp.NewInterpreter()
 
 	if len(os.Args) > 1 {

@@ -63,9 +63,7 @@ func (e *Executor) Execute(command string) (string, error) {
 		args = strings.Join(parts[1:], " ")
 	}
 
-	valAfter := func(prefix string) string {
-		return strings.TrimSpace(c[len(prefix):])
-	}
+	// removed unused helper valAfter from earlier version
 	parseNum := func(s string) (float64, bool) {
 		fields := strings.Fields(s)
 		if len(fields) == 0 {
@@ -77,18 +75,15 @@ func (e *Executor) Execute(command string) (string, error) {
 
 	switch cmd {
 	case "FORWARD", "FD":
-		arg := valAfter strings.TrimPrefix(c, parts[0])
+		arg := strings.TrimSpace(c[len(parts[0]):])
 		if n, ok := parseNum(arg); ok {
 			rad := e.turtleAngle * math.Pi / 180.0
 			newX := e.turtleX + n*math.Cos(rad)
 			newY := e.turtleY + n*math.Sin(rad)
-			if e.penDown {
-				return fmt.Sprintf("🐢 FORWARD %.2f (%.2f,%.2f → %.2f,%.2f)\n", 
-					n, e.turtleX, e.turtleY, newX, newY), nil
-			}
+			out := fmt.Sprintf("🐢 FORWARD %.2f (%.2f,%.2f → %.2f,%.2f)\n", n, e.turtleX, e.turtleY, newX, newY)
 			e.turtleX = newX
 			e.turtleY = newY
-			return fmt.Sprintf("🐢 FORWARD %.2f (pen up)\n", n), nil
+			return out, nil
 		}
 		return "🐢 FORWARD (no distance)\n", nil
 
@@ -98,13 +93,10 @@ func (e *Executor) Execute(command string) (string, error) {
 			rad := e.turtleAngle * math.Pi / 180.0
 			newX := e.turtleX - n*math.Cos(rad)
 			newY := e.turtleY - n*math.Sin(rad)
-			if e.penDown {
-				return fmt.Sprintf("🐢 BACK %.2f (%.2f,%.2f → %.2f,%.2f)\n", 
-					n, e.turtleX, e.turtleY, newX, newY), nil
-			}
+			out := fmt.Sprintf("🐢 BACK %.2f (%.2f,%.2f → %.2f,%.2f)\n", n, e.turtleX, e.turtleY, newX, newY)
 			e.turtleX = newX
 			e.turtleY = newY
-			return fmt.Sprintf("🐢 BACK %.2f (pen up)\n", n), nil
+			return out, nil
 		}
 		return "🐢 BACK (no distance)\n", nil
 
@@ -148,9 +140,9 @@ func (e *Executor) Execute(command string) (string, error) {
 	case "SETXY":
 		nums := strings.Fields(args)
 		if len(nums) >= 2 {
-			x, okX := strconv.ParseFloat(nums[0], 64)
-			y, okY := strconv.ParseFloat(nums[1], 64)
-			if okX == nil && okY == nil {
+			x, errX := strconv.ParseFloat(nums[0], 64)
+			y, errY := strconv.ParseFloat(nums[1], 64)
+			if errX == nil && errY == nil {
 				oldX, oldY := e.turtleX, e.turtleY
 				e.turtleX = x
 				e.turtleY = y
@@ -186,37 +178,22 @@ func (e *Executor) Execute(command string) (string, error) {
 
 	case "HIDETURTLE", "HT":
 		e.turtleHidden = true
-		return "� HIDETURTLE\n", nil
+		return "🐢 HIDETURTLE\n", nil
 
 	case "SHOWTURTLE", "ST":
 		e.turtleHidden = false
 		return "🐢 SHOWTURTLE\n", nil
 
 	case "TO":
-		// Procedure definition - would need multi-line support
-		return "📝 TO (procedure definition - needs multi-line support)\n", nil
+		return "📝 TO (procedure def unsupported in Go stub)\n", nil
 
 	case "END":
 		return "✅ END\n", nil
 
 	case "REPEAT":
-		// REPEAT n [...] - needs parser support
-		return "🔄 REPEAT (needs parser support)\n", nil
+		return "🔄 REPEAT (unsupported in Go stub)\n", nil
 
 	default:
 		return fmt.Sprintf("❌ Logo: unknown command '%s'\n", cmd), nil
 	}
-}
-
-		return "🐢 RIGHT (no angle)\n", nil
-
-	case strings.HasPrefix(up, "LEFT "):
-		arg := valAfter("LEFT ")
-		if n, ok := parseNum(arg); ok {
-			return fmt.Sprintf("🐢 LEFT %.2f°\n", n), nil
-		}
-		return "🐢 LEFT (no angle)\n", nil
-	}
-
-	return "❌ LOGO: unsupported command\n", nil
 }

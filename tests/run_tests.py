@@ -79,12 +79,8 @@ def run_go_program(
         text=True,
     )
     out_chunks: list[str] = []
-    for line in program.strip().split("\n"):
-        assert proc.stdin is not None
-        proc.stdin.write(line + "\n")
-    if proc.stdin:
-        proc.stdin.close()
-    stdout, stderr = proc.communicate()
+    # Feed lines via communicate to avoid flush errors if build fails early
+    stdout, stderr = proc.communicate(input=program)
     if stderr:
         out_chunks.append(stderr)
     out_chunks.append(stdout)
@@ -157,15 +153,11 @@ def main() -> int:
             print(f"{Colors.Y}SKIP{Colors.X} {cid} (go build unavailable)")
             skipped += 1
             continue
-        # Temporary: skip BASIC control-flow cases until Go runner supports
-        # multi-line programs with line numbers and flow.
-        if lang == "BASIC" and any(
-            k in prog for k in ["\nFOR ", "\nGOSUB ", "\nNEXT", "\nRETURN"]
-        ):  # coarse check
-            print(f"{Colors.Y}SKIP{Colors.X} {cid} " "(Go BASIC lacks program flow)")
-            skipped += 1
-            continue
-        actual_out, _pts = run_go_program(lang, prog)
+        if lang == "BASIC":
+            actual_out = run_basic_batch(prog)
+            _pts: list[tuple[float, float]] = []
+        else:
+            actual_out, _pts = run_go_program(lang, prog)
         ok, diff = compare_text(expect_out, actual_out)
         if ok:
             print(f"{Colors.G}PASS{Colors.X} {cid}")
@@ -187,6 +179,28 @@ def main() -> int:
     )
     print(summary)
     return 0 if failed == 0 else 1
+
+
+def run_basic_batch(program: str) -> str:
+    """Execute a multi-line BASIC program using Go CLI batch mode."""
+    if shutil.which("go") is None:
+        return ""
+    try:
+        proc = subprocess.Popen(
+            ["go", "run", "./cmd/timewarp", "--batch", "BASIC"],
+            cwd=os.path.join(ROOT, "Time_Warp_Go"),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except (OSError, FileNotFoundError) as e:
+        return f"❌ spawn failed: {e}\n"
+    assert proc.stdin is not None
+    # Use communicate(input=...) to avoid flush errors on closed stdin
+    stdout, stderr = proc.communicate(input=program)
+    raw = stderr + stdout
+    return normalize_output(raw)
 
 
 if __name__ == "__main__":
