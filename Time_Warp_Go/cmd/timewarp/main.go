@@ -9,6 +9,7 @@ import (
 
 	"github.com/James-HoneyBadger/Time_Warp/Time_Warp_Go/pkg/timewarp"
 	basexec "github.com/James-HoneyBadger/Time_Warp/Time_Warp_Go/pkg/timewarp/executors/basic"
+	pilotexec "github.com/James-HoneyBadger/Time_Warp/Time_Warp_Go/pkg/timewarp/executors/pilot"
 )
 
 // Simple CLI entry point for the Go version of Time Warp.
@@ -22,6 +23,11 @@ func main() {
 		switch lang {
 		case "BASIC":
 			exec := basexec.New()
+			out := exec.RunProgram(program)
+			fmt.Print(out)
+			return
+		case "PILOT":
+			exec := pilotexec.New()
 			out := exec.RunProgram(program)
 			fmt.Print(out)
 			return

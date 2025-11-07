@@ -182,7 +182,7 @@ func (e *Executor) RunProgram(program string) string {
 			o := e.executePrint(strings.TrimSpace(cmd[5:]))
 			out.WriteString(o)
 			pc++
-		case strings.HasPrefix(up, "LET ") || strings.Contains(cmd, "="):
+		case strings.HasPrefix(up, "LET ") || (strings.Contains(cmd, "=") && !strings.HasPrefix(up, "FOR ") && !strings.HasPrefix(up, "IF ")):
 			// assignment with/without LET
 			assign := cmd
 			if strings.HasPrefix(up, "LET ") {
@@ -275,7 +275,7 @@ func (e *Executor) RunProgram(program string) string {
 				pc++
 				break
 			}
-			// Increment variable before loop check
+			// Increment variable, then check bounds (QBASIC semantics)
 			e.variables[ctx.variable] += ctx.step
 			cur := e.variables[ctx.variable]
 			cont := (ctx.step >= 0 && cur <= ctx.endVal) || (ctx.step < 0 && cur >= ctx.endVal)

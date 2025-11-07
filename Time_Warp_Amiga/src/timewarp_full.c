@@ -311,6 +311,128 @@ static void run_basic_program(void)
         {
             cmd_print(line + 6);
         }
+        else if (strncmp(line, "FOR ", 4) == 0)
+        {
+            /* Syntax: FOR X = start TO end [STEP step] */
+            if (for_depth < MAX_FOR_DEPTH)
+            {
+                char *p = line + 4;
+                while (*p && isspace((unsigned char)*p))
+                    p++;
+                char var = *p;
+                if (is_var(var))
+                {
+                    char *eq = strchr(p, '=');
+                    if (eq)
+                    {
+                        /* Parse start */
+                        int startVal = 0;
+                        char tmp[128];
+                        memset(tmp, 0, sizeof(tmp));
+                        {
+                            const char *from = eq + 1;
+                            const char *toKw = strstr(from, "TO");
+                            if (toKw)
+                            {
+                                int n = (int)(toKw - from);
+                                if (n > (int)sizeof(tmp) - 1)
+                                    n = (int)sizeof(tmp) - 1;
+                                strncpy(tmp, from, n);
+                                tmp[n] = 0;
+                                startVal = eval_expr(tmp);
+                                /* Parse end */
+                                int endVal = 0;
+                                int stepVal = 1;
+                                const char *endFrom = toKw + 2;
+                                const char *stepKw = strstr(endFrom, "STEP");
+                                if (stepKw)
+                                {
+                                    int en = (int)(stepKw - endFrom);
+                                    if (en > (int)sizeof(tmp) - 1)
+                                        en = (int)sizeof(tmp) - 1;
+                                    strncpy(tmp, endFrom, en);
+                                    tmp[en] = 0;
+                                    endVal = eval_expr(tmp);
+                                    /* step */
+                                    memset(tmp, 0, sizeof(tmp));
+                                    strncpy(tmp, stepKw + 4, sizeof(tmp) - 1);
+                                    stepVal = eval_expr(tmp);
+                                    if (stepVal == 0)
+                                        stepVal = 1;
+                                }
+                                else
+                                {
+                                    strncpy(tmp, endFrom, sizeof(tmp) - 1);
+                                    tmp[sizeof(tmp) - 1] = 0;
+                                    endVal = eval_expr(tmp);
+                                }
+
+                                /* Initialize and push frame */
+                                set_var(var, startVal);
+                                for_stack[for_depth].var = var;
+                                for_stack[for_depth].target = endVal;
+                                for_stack[for_depth].step = stepVal;
+                                for_stack[for_depth].loop_line = pc + 1;
+                                for_depth++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        else if (strncmp(line, "NEXT", 4) == 0)
+        {
+            /* Syntax: NEXT X */
+            char *p = line + 4;
+            while (*p && isspace((unsigned char)*p))
+                p++;
+            char var = *p;
+            if (!is_var(var) && for_depth > 0)
+            {
+                var = for_stack[for_depth - 1].var; /* default to top */
+            }
+            if (is_var(var))
+            {
+                /* Find matching frame from top */
+                int idx = -1;
+                for (int i = for_depth - 1; i >= 0; i--)
+                {
+                    if (for_stack[i].var == var)
+                    {
+                        idx = i;
+                        break;
+                    }
+                }
+                if (idx >= 0)
+                {
+                    int cur = get_var_value(var);
+                    int step = for_stack[idx].step;
+                    int target = for_stack[idx].target;
+                    cur += step;
+                    set_var(var, cur);
+                    int cont = 0;
+                    if (step > 0)
+                    {
+                        if (cur <= target)
+                            cont = 1;
+                    }
+                    else
+                    {
+                        if (cur >= target)
+                            cont = 1;
+                    }
+                    if (cont)
+                    {
+                        pc = for_stack[idx].loop_line - 1; /* -1 because we'll pc++ at end */
+                    }
+                    else
+                    {
+                        if (idx == for_depth - 1)
+                            for_depth--;
+                    }
+                }
+            }
+        }
         else if (strncmp(line, "LET ", 4) == 0)
         {
             cmd_let(line + 4);

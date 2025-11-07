@@ -84,14 +84,14 @@ func (e *Executor) Execute(command string) (string, error) {
 	case "Y":
 		// Yes - execute if last condition/match true
 		if e.conditionResult || e.matchFlag {
-			return fmt.Sprintf("✅ YES condition met\n"), nil
+			return "✅ YES condition met\n", nil
 		}
 		return "", nil
 
 	case "N":
 		// No - execute if last condition/match false
 		if !e.conditionResult && !e.matchFlag {
-			return fmt.Sprintf("✅ NO condition met\n"), nil
+			return "✅ NO condition met\n", nil
 		}
 		return "", nil
 
@@ -127,6 +127,119 @@ func (e *Executor) Execute(command string) (string, error) {
 	default:
 		return fmt.Sprintf("❌ PILOT: unknown command '%s:'\n", cmdType), nil
 	}
+}
+
+// RunProgram executes a multi-line PILOT program with label resolution and jumps
+func (e *Executor) RunProgram(program string) string {
+	// Reset state
+	e.variables = make(map[string]string)
+	e.labels = make(map[string]int)
+	e.lastInput = ""
+	e.matchFlag = false
+	e.conditionResult = false
+
+	lines := strings.Split(strings.ReplaceAll(program, "\r", ""), "\n")
+	parsed := make([]string, 0, len(lines))
+
+	// First pass: collect lines and labels
+	for _, raw := range lines {
+		t := strings.TrimSpace(raw)
+		if t == "" {
+			continue
+		}
+		parsed = append(parsed, t)
+
+		// Check for label definition
+		if len(t) >= 2 && t[1] == ':' && strings.ToUpper(string(t[0])) == "L" {
+			label := strings.TrimSpace(t[2:])
+			e.labels[label] = len(parsed) - 1
+		}
+	}
+
+	// Second pass: execute
+	out := &strings.Builder{}
+	pc := 0
+	steps := 0
+	maxSteps := 10000
+
+	for pc >= 0 && pc < len(parsed) && steps < maxSteps {
+		steps++
+		cmd := parsed[pc]
+
+		if len(cmd) < 2 || cmd[1] != ':' {
+			pc++
+			continue
+		}
+
+		cmdType := strings.ToUpper(string(cmd[0]))
+		content := strings.TrimSpace(cmd[2:])
+
+		switch cmdType {
+		case "T":
+			text := e.interpolateVars(content)
+			out.WriteString(text + "\n")
+			pc++
+		case "A":
+			// Accept input (stub: set to empty)
+			e.variables[content] = ""
+			e.lastInput = ""
+			pc++
+		case "U":
+			// Use/assign
+			if strings.Contains(content, "=") {
+				parts := strings.SplitN(content, "=", 2)
+				varName := strings.TrimSpace(parts[0])
+				value := strings.TrimSpace(parts[1])
+				e.variables[varName] = e.evaluateExpression(value)
+			}
+			pc++
+		case "C":
+			e.conditionResult = e.evaluateCondition(content)
+			pc++
+		case "Y":
+			// Execute next statement if condition/match true
+			if e.conditionResult || e.matchFlag {
+				pc++
+			} else {
+				pc += 2 // skip next
+			}
+		case "N":
+			// Execute next statement if condition/match false
+			if !e.conditionResult && !e.matchFlag {
+				pc++
+			} else {
+				pc += 2 // skip next
+			}
+		case "M":
+			e.matchFlag = e.matchPattern(content, e.lastInput)
+			pc++
+		case "J":
+			// Jump to label
+			label := content
+			if lineNum, ok := e.labels[label]; ok {
+				pc = lineNum
+			} else {
+				out.WriteString(fmt.Sprintf("❌ Label '%s' not found\n", label))
+				pc++
+			}
+		case "L":
+			// Label definition (no-op in execution)
+			pc++
+		case "E":
+			// End program
+			return out.String()
+		case "R":
+			// Comment
+			pc++
+		default:
+			pc++
+		}
+	}
+
+	if steps >= maxSteps {
+		out.WriteString("❌ Stopped: too many steps\n")
+	}
+	return out.String()
 }
 
 // Interpolate variables in text (*VAR* syntax)

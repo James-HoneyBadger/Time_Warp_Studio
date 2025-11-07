@@ -28,6 +28,16 @@ static int g_totalLines = 0;
 static int g_lineNumbers[2048];
 static int g_gosubStack[64];
 static int g_gosubStackPtr = 0;
+/* FOR/NEXT support */
+typedef struct
+{
+    char var[32];
+    double endVal;
+    double step;
+    int loopStartIndex; /* index of first line inside loop */
+} ForFrame;
+static ForFrame g_forStack[32];
+static int g_forStackPtr = 0;
 
 BOOL BasicInterpreter_Init(void)
 {
@@ -36,6 +46,7 @@ BOOL BasicInterpreter_Init(void)
     g_currentLine = 0;
     g_totalLines = 0;
     g_gosubStackPtr = 0;
+    g_forStackPtr = 0;
     return TRUE;
 }
 
@@ -201,14 +212,23 @@ BOOL BasicInterpreter_Execute(const char *code, HWND hwndConsole,
         g_totalLines++;
     }
 
-    /* Execute line by line */
+    /* Build random-access line array */
+    char *lines[2048] = {0};
+    int idx = 0;
     line = strtok(text, "\n");
+    while (line && idx < 2048)
+    {
+        lines[idx++] = line;
+        line = strtok(NULL, "\n");
+    }
+
+    /* Execute line by line using g_currentLine as PC */
     g_currentLine = 0;
 
-    while (line && g_running && g_currentLine < g_totalLines)
+    while (g_running && g_currentLine < g_totalLines)
     {
-        /* Skip line number if present */
-        char *cmd = line;
+        /* Fetch current line */
+        char *cmd = lines[g_currentLine];
         while (*cmd == ' ' || *cmd == '\t')
             cmd++;
         if (*cmd >= '0' && *cmd <= '9')
@@ -236,6 +256,108 @@ BOOL BasicInterpreter_Execute(const char *code, HWND hwndConsole,
         {
             Basic_Print(p);
             g_currentLine++;
+        }
+        else if (stricmp(kw, "FOR") == 0)
+        {
+            /* FOR var = start TO end [STEP step] */
+            char varName[32] = {0};
+            char *eq = strchr(p, '=');
+            if (eq)
+            {
+                int vnLen = (int)(eq - p);
+                if (vnLen > 31)
+                    vnLen = 31;
+                strncpy(varName, p, vnLen);
+                varName[vnLen] = 0;
+                /* Trim spaces at end of varName */
+                for (int ti = vnLen - 1; ti >= 0 && (varName[ti] == ' ' || varName[ti] == '\t'); ti--)
+                    varName[ti] = 0;
+                char *toPtr = strstr(eq + 1, "TO");
+                if (toPtr)
+                {
+                    char startBuf[64] = {0};
+                    int startLen = (int)(toPtr - (eq + 1));
+                    if (startLen > 63)
+                        startLen = 63;
+                    strncpy(startBuf, eq + 1, startLen);
+                    startBuf[startLen] = 0;
+                    double startVal = eval_expr(startBuf);
+                    char *stepPtr = strstr(toPtr + 2, "STEP");
+                    double endVal = 0.0;
+                    double stepVal = 1.0;
+                    if (stepPtr)
+                    {
+                        char endBuf[64] = {0};
+                        int endLen = (int)(stepPtr - (toPtr + 2));
+                        if (endLen > 63)
+                            endLen = 63;
+                        strncpy(endBuf, toPtr + 2, endLen);
+                        endBuf[endLen] = 0;
+                        endVal = eval_expr(endBuf);
+                        stepVal = eval_expr(stepPtr + 4);
+                        if (stepVal == 0.0)
+                            stepVal = 1.0; /* avoid infinite */
+                    }
+                    else
+                    {
+                        endVal = eval_expr(toPtr + 2);
+                    }
+                    set_var(varName, startVal);
+                    if (g_forStackPtr < 32)
+                    {
+                        g_forStack[g_forStackPtr].endVal = endVal;
+                        g_forStack[g_forStackPtr].step = stepVal;
+                        strncpy(g_forStack[g_forStackPtr].var, varName, 31);
+                        g_forStack[g_forStackPtr].var[31] = 0;
+                        /* Next line after FOR is loop start */
+                        g_forStack[g_forStackPtr].loopStartIndex = g_currentLine + 1;
+                        g_forStackPtr++;
+                    }
+                }
+            }
+            g_currentLine++;
+        }
+        else if (stricmp(kw, "NEXT") == 0)
+        {
+            /* NEXT var */
+            char varName[32] = {0};
+            strncpy(varName, p, 31);
+            varName[31] = 0;
+            for (int i = g_forStackPtr - 1; i >= 0; i--)
+            {
+                if (stricmp(g_forStack[i].var, varName) == 0)
+                {
+                    double cur = get_var(varName);
+                    cur += g_forStack[i].step;
+                    set_var(varName, cur);
+                    int continueLoop = 0;
+                    if (g_forStack[i].step > 0)
+                    {
+                        if (cur <= g_forStack[i].endVal)
+                            continueLoop = 1;
+                    }
+                    else
+                    {
+                        if (cur >= g_forStack[i].endVal)
+                            continueLoop = 1;
+                    }
+                    if (continueLoop)
+                    {
+                        g_currentLine = g_forStack[i].loopStartIndex;
+                    }
+                    else
+                    {
+                        /* Pop */
+                        if (i == g_forStackPtr - 1)
+                            g_forStackPtr--;
+                        g_currentLine++;
+                    }
+                    goto os2_next_done;
+                }
+            }
+            /* If not found just advance */
+            g_currentLine++;
+        os2_next_done:;
         }
         else if (stricmp(kw, "LET") == 0)
         {
@@ -348,10 +470,7 @@ BOOL BasicInterpreter_Execute(const char *code, HWND hwndConsole,
             g_currentLine++;
         }
 
-        /* Get next line for sequential execution */
-        if (g_currentLine >= g_totalLines)
-            break;
-        line = strtok(NULL, "\n");
+        /* Next iteration continues with updated g_currentLine */
     }
 
     free(text);

@@ -101,18 +101,18 @@ def normalize_output(raw: str) -> str:
         if t.startswith("ℹ️") or t.startswith(">"):
             # Drop banner / prompt
             continue
-        # Remove common success prefix
+        # Remove common emoji prefixes completely for graphics commands
+        if t and t[0] in {"🚀", "🔄", "🔙", "📝", "🎨", "🐢", "✏️", "⭕", "📏", "📍"}:
+            # Skip emoji-only lines (turtle graphics movements)
+            continue
+        # Remove success prefix from remaining lines
         if t.startswith("✅ "):
             t = t[2:].strip()
             t = t.lstrip()
-        # Remove other emoji prefixes
-        if t and t[0] in {"🚀", "🔄", "🔙", "📝", "🎨"}:
-            # Split after first space
-            parts = t.split(" ", 1)
-            if len(parts) == 2:
-                t = parts[1]
         lines.append(t)
-    return "\n".join(lines) + ("\n" if lines else "")
+    if not lines:
+        return ""
+    return "\n".join(lines) + "\n"
 
 
 def compare_text(expected: str, actual: str) -> tuple[bool, str]:
@@ -121,6 +121,9 @@ def compare_text(expected: str, actual: str) -> tuple[bool, str]:
     if expected and not expected.endswith("\n"):
         exp += "\n"
     act = actual.replace("\r", "")
+    # Handle truly empty output
+    if not exp.strip() and not act.strip():
+        return True, ""
     # Normalize trailing newlines
     act = act if act.endswith("\n") else act + "\n"
     if exp == act:
@@ -157,6 +160,9 @@ def main() -> int:
         if lang == "BASIC":
             actual_out = run_basic_batch(prog)
             _pts: list[tuple[float, float]] = []
+        elif lang == "PILOT":
+            actual_out = run_pilot_batch(prog)
+            _pts = []
         else:
             actual_out, _pts = run_go_program(lang, prog)
         ok, diff = compare_text(expect_out, actual_out)
@@ -199,6 +205,27 @@ def run_basic_batch(program: str) -> str:
         return f"❌ spawn failed: {e}\n"
     assert proc.stdin is not None
     # Use communicate(input=...) to avoid flush errors on closed stdin
+    stdout, stderr = proc.communicate(input=program)
+    raw = stderr + stdout
+    return normalize_output(raw)
+
+
+def run_pilot_batch(program: str) -> str:
+    """Execute a multi-line PILOT program using Go CLI batch mode."""
+    if shutil.which("go") is None:
+        return ""
+    try:
+        proc = subprocess.Popen(
+            ["go", "run", "./cmd/timewarp", "--batch", "PILOT"],
+            cwd=os.path.join(ROOT, "Time_Warp_Go"),
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+    except (OSError, FileNotFoundError) as e:
+        return f"❌ spawn failed: {e}\n"
+    assert proc.stdin is not None
     stdout, stderr = proc.communicate(input=program)
     raw = stderr + stdout
     return normalize_output(raw)
