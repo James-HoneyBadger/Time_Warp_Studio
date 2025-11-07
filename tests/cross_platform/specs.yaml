@@ -46,3 +46,29 @@
   expect:
     output: |
       READY
+
+- id: basic_for_next
+  language: BASIC
+  program: |
+    10 FOR I = 1 TO 3
+    20 PRINT I
+    30 NEXT I
+    40 END
+  expect:
+    output: |
+      1
+      2
+      3
+
+- id: basic_gosub_return
+  language: BASIC
+  program: |
+    10 GOSUB 100
+    20 PRINT "MAIN"
+    30 END
+    100 PRINT "SUB"
+    110 RETURN
+  expect:
+    output: |
+      SUB
+      MAIN

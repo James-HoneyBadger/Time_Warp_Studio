@@ -41,6 +41,9 @@ namespace TimeWarp.Wpf
                 if (up.Length == 0 || up.StartsWith("REM")) { pc++; continue; }
                 if (up == "END") break;
                 if (up == "CLS") { outBuf.Clear(); pc++; continue; }
+                if (up.StartsWith("LINE ")) { outBuf.AppendLine($"📏 LINE {cmd.Substring(4).Trim()}"); pc++; continue; }
+                if (up.StartsWith("CIRCLE ")) { outBuf.AppendLine($"⭕ CIRCLE {cmd.Substring(6).Trim()}"); pc++; continue; }
+                if (up.StartsWith("LOCATE ")) { outBuf.AppendLine($"📍 LOCATE {cmd.Substring(6).Trim()}"); pc++; continue; }
                 if (up.StartsWith("INPUT ")) {
                     var name = cmd.Substring(6).Trim().ToUpperInvariant();
                     _vars[name] = 0; outBuf.AppendLine($"📝 {name}? => 0"); pc++; continue;
@@ -131,13 +134,125 @@ namespace TimeWarp.Wpf
 
         private double EvalExpr(string expr)
         {
-            // trivial evaluator: variables or double; extend later with shunting-yard
-            if (_vars.TryGetValue(expr.Trim().ToUpperInvariant(), out var vv)) return vv;
-            if (double.TryParse(expr, NumberStyles.Float, CultureInfo.InvariantCulture, out var d)) return d;
-            // simple + support
-            var parts = expr.Split('+');
-            double sum = 0; foreach (var p in parts) sum += EvalExpr(p);
-            return sum;
+            // Shunting-yard based evaluator supporting + - * / ^ parentheses and variables.
+            // Unary minus handled during tokenization.
+            var tokens = Tokenize(expr);
+            var output = new Stack<double>();
+            var ops = new Stack<string>();
+            double Apply(string op, double b, double a)
+            {
+                return op switch
+                {
+                    "+" => a + b,
+                    "-" => a - b,
+                    "*" => a * b,
+                    "/" => b == 0 ? 0 : a / b,
+                    "^" => Math.Pow(a, b),
+                    _ => 0
+                };
+            }
+
+            int Prec(string op) => op switch { "^" => 4, "*" or "/" => 3, "+" or "-" => 2, _ => 0 };
+            bool RightAssoc(string op) => op == "^";
+
+            foreach (var t in tokens)
+            {
+                if (t.kind == TkKind.Number)
+                {
+                    output.Push(t.value);
+                }
+                else if (t.kind == TkKind.Variable)
+                {
+                    _vars.TryGetValue(t.text.ToUpperInvariant(), out var v);
+                    output.Push(v);
+                }
+                else if (t.kind == TkKind.Operator)
+                {
+                    while (ops.Count > 0 && ops.Peek() != "(" &&
+                          (Prec(ops.Peek()) > Prec(t.text) || (Prec(ops.Peek()) == Prec(t.text) && !RightAssoc(t.text))) )
+                    {
+                        var op = ops.Pop();
+                        if (output.Count < 2) { output.Push(0); break; }
+                        var b = output.Pop(); var a = output.Pop();
+                        output.Push(Apply(op, b, a));
+                    }
+                    ops.Push(t.text);
+                }
+                else if (t.kind == TkKind.LParen)
+                {
+                    ops.Push("(");
+                }
+                else if (t.kind == TkKind.RParen)
+                {
+                    while (ops.Count > 0 && ops.Peek() != "(")
+                    {
+                        var op = ops.Pop();
+                        if (output.Count < 2) { output.Push(0); break; }
+                        var b = output.Pop(); var a = output.Pop();
+                        output.Push(Apply(op, b, a));
+                    }
+                    if (ops.Count > 0 && ops.Peek() == "(") ops.Pop();
+                }
+            }
+            while (ops.Count > 0)
+            {
+                var op = ops.Pop();
+                if (op == "(") continue;
+                if (output.Count < 2) { output.Push(0); break; }
+                var b = output.Pop(); var a = output.Pop();
+                output.Push(Apply(op, b, a));
+            }
+            return output.Count > 0 ? output.Peek() : 0;
+        }
+
+        private enum TkKind { Number, Variable, Operator, LParen, RParen }
+        private record struct Token(TkKind kind, string text, double value = 0);
+
+        private IEnumerable<Token> Tokenize(string expr)
+        {
+            var s = expr.Trim();
+            int i = 0; bool lastWasOpOrLParen = true; // for unary minus
+            while (i < s.Length)
+            {
+                char c = s[i];
+                if (char.IsWhiteSpace(c)) { i++; continue; }
+                if (char.IsDigit(c) || c == '.')
+                {
+                    int start = i; i++;
+                    while (i < s.Length && (char.IsDigit(s[i]) || s[i] == '.')) i++;
+                    var numStr = s.Substring(start, i - start);
+                    if (!double.TryParse(numStr, NumberStyles.Float, CultureInfo.InvariantCulture, out var val)) val = 0;
+                    yield return new Token(TkKind.Number, numStr, val);
+                    lastWasOpOrLParen = false;
+                    continue;
+                }
+                if (char.IsLetter(c))
+                {
+                    int start = i; i++;
+                    while (i < s.Length && (char.IsLetterOrDigit(s[i]) || s[i] == '_')) i++;
+                    var name = s.Substring(start, i - start);
+                    yield return new Token(TkKind.Variable, name);
+                    lastWasOpOrLParen = false;
+                    continue;
+                }
+                if (c is '+' or '*' or '/' or '^')
+                {
+                    yield return new Token(TkKind.Operator, c.ToString()); i++; lastWasOpOrLParen = true; continue;
+                }
+                if (c == '-')
+                {
+                    if (lastWasOpOrLParen) // unary minus
+                    {
+                        // treat as 0 - expr: push 0 then operator
+                        yield return new Token(TkKind.Number, "0", 0);
+                    }
+                    yield return new Token(TkKind.Operator, "-"); i++; lastWasOpOrLParen = true; continue;
+                }
+                if (c == '(') { yield return new Token(TkKind.LParen, "("); i++; lastWasOpOrLParen = true; continue; }
+                if (c == ')') { yield return new Token(TkKind.RParen, ")"); i++; lastWasOpOrLParen = false; continue; }
+                // Unknown char: skip
+                i++;
+            }
         }
     }
 }
