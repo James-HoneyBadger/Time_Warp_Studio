@@ -47,7 +47,7 @@ def ensure_go_built() -> bool:
 
 def load_specs():
     try:
-        import importlib
+        import importlib  # pylint: disable=import-outside-toplevel
 
         yaml = importlib.import_module("yaml")  # type: ignore
     except ModuleNotFoundError:

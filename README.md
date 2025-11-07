@@ -4,6 +4,7 @@ TempleCode is a small, interpreted, general‑purpose language that blends appro
 
 ## Version 3.0.0 - Platforms
 
+- **Go** - Fast CLI interpreter with batch mode (`Time_Warp_Go/`)
 - **Python** - Tkinter GUI IDE (`Time_Warp_Python/`)
 - **Rust** - Cross-platform eframe/egui IDE (`Time_Warp_Rust/`)
 - **Windows** - Windows launchers and helpers (`Time_Warp_Windows/`)
@@ -21,7 +22,15 @@ TempleCode is a small, interpreted, general‑purpose language that blends appro
 
 ## Quick start
 
-- Run from CLI:
+- Run from CLI (Go - fastest):
+
+```bash
+cd Time_Warp_Go
+go build ./cmd/timewarp
+echo "10 PRINT \"Hello World\"" | ./timewarp --batch BASIC
+```
+
+- Run from CLI (Python):
 
 ```bash
 python scripts/run_templecode.py examples/hello.tc

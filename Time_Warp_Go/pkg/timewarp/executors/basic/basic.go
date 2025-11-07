@@ -429,7 +429,7 @@ func (e *Executor) executeFor(args string) string {
 	return fmt.Sprintf("🔄 FOR %s = %g TO %g STEP %g\n", varName, startVal, endVal, stepVal)
 }
 
-func (e *Executor) executeNext(args string) string {
+func (e *Executor) executeNext(_ string) string {
 	if len(e.forStack) == 0 {
 		return "❌ NEXT without FOR\n"
 	}

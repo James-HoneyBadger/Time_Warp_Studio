@@ -7,8 +7,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-# Silence pylint for protected-access checks in these unit tests
-# pylint: disable=protected-access
+# pylint: disable=wrong-import-position,protected-access
 import scripts.generate_placeholders as gp  # noqa: E402
 
 
