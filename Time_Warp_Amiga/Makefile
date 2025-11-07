@@ -2,34 +2,53 @@
 # Build host-native (for quick testing) or m68k Amiga binary if toolchain is available.
 
 APP := timewarp_amiga
+FULL_APP := timewarp_full
+GUI_APP := timewarp_gui
 SRC := src/main.c src/interpreter.c
+FULL_SRC := src/timewarp_full.c
 INC := -Isrc
 
 # Default to host build with gcc
 CC_HOST ?= gcc
 CFLAGS_HOST ?= -O2 -std=c11 -Wall -Wextra -pedantic $(INC)
-LDFLAGS_HOST ?=
+LDFLAGS_HOST ?= -lm
 
 # Amiga cross (requires m68k-amigaos-gcc on PATH)
 CC_AMIGA ?= m68k-amigaos-gcc
-CFLAGS_AMIGA ?= -O2 -std=c11 -Wall -Wextra -pedantic $(INC)
-LDFLAGS_AMIGA ?=
+CFLAGS_AMIGA ?= -O2 -std=c11 -Wall -Wextra -pedantic $(INC) -noixemul
+LDFLAGS_AMIGA ?= -lm
 
 # Dockerized cross-build using bebbo's toolchain image
 DOCKER_IMAGE ?= ghcr.io/bebbo/amiga-gcc:latest
 LOCAL_IMAGE ?= timewarp/amiga-toolchain:local
 
-.PHONY: all host amiga amiga-docker amiga-docker-local amiga-docker-mount-toolchain clean
+.PHONY: all host amiga full gui amiga-docker amiga-docker-local amiga-docker-mount-toolchain clean
 
-all: host
+all: host full
 
 host: $(SRC)
 	$(CC_HOST) $(CFLAGS_HOST) -o $(APP) $(SRC) $(LDFLAGS_HOST)
 	@echo "Built ./$(APP) (host)"
 
+full: $(FULL_SRC)
+	$(CC_HOST) $(CFLAGS_HOST) -o $(FULL_APP) $(FULL_SRC) $(LDFLAGS_HOST)
+	@echo "Built ./$(FULL_APP) (host - all languages)"
+
+gui: $(FULL_SRC)
+	$(CC_HOST) $(CFLAGS_HOST) -DUSE_INTUITION -o $(GUI_APP) $(FULL_SRC) $(LDFLAGS_HOST)
+	@echo "Built ./$(GUI_APP) (host - with GUI support)"
+
 amiga: $(SRC)
 	$(CC_AMIGA) $(CFLAGS_AMIGA) -o $(APP) $(SRC) $(LDFLAGS_AMIGA)
 	@echo "Built ./$(APP) (Amiga m68k)"
+
+amiga-full: $(FULL_SRC)
+	$(CC_AMIGA) $(CFLAGS_AMIGA) -o $(FULL_APP) $(FULL_SRC) $(LDFLAGS_AMIGA)
+	@echo "Built ./$(FULL_APP) (Amiga m68k - all languages)"
+
+amiga-gui: $(FULL_SRC)
+	$(CC_AMIGA) $(CFLAGS_AMIGA) -DUSE_INTUITION -o $(GUI_APP) $(FULL_SRC) $(LDFLAGS_AMIGA)
+	@echo "Built ./$(GUI_APP) (Amiga m68k - with Intuition GUI)"
 
 # Build using Docker (no local toolchain required)
 amiga-docker:

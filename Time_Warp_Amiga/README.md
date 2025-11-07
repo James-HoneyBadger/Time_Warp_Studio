@@ -1,13 +1,20 @@
 # Time Warp (Amiga)
 
-Experimental Amiga port of Time Warp — a tiny, console-based interpreter skeleton.
+Complete Amiga port of Time Warp with full BASIC/Logo/PILOT interpreters.
 
-Status: minimal REPL and single-command mode with a small command set:
+**Features:**
 
-- BASIC-like: `PRINT <text>`, `ECHO <text>` → `✅ <text>`
-- Logo-like: `FORWARD|FD <n>`, `RIGHT <deg>`, `LEFT <deg>` → `🐢 ...`
-- PILOT-like: `T:<text>`, `A:<text>` → `ℹ️ ...` / `📝 ...`
-- `QUIT`/`EXIT` to leave REPL
+- **BASIC**: PRINT, LET, INPUT, GOTO, GOSUB/RETURN, IF...THEN, FOR...NEXT, END
+- **Logo**: FORWARD/FD, BACK/BK, RIGHT/RT, LEFT/LT, PENUP/PU, PENDOWN/PD, HOME, CS
+- **PILOT**: T:, A:, M:, Y:, N:, J:, E: with labels and pattern matching
+- Optional Intuition GUI with graphics.library for turtle graphics
+- Console mode for text-only systems
+
+**Versions:**
+
+- `timewarp_amiga` - Original minimal REPL skeleton
+- `timewarp_full` - Complete console version with all three languages
+- `timewarp_gui` - Full version with Intuition graphics window
 
 ## Build
 

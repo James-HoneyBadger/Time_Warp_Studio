@@ -1,0 +1,31 @@
+1 MENU
+BEGIN
+    POPUP "&File"
+    BEGIN
+        MENUITEM "&Open...", 2001
+        MENUITEM SEPARATOR
+        MENUITEM "E&xit", 2002
+    END
+    POPUP "&Run"
+    BEGIN
+        MENUITEM "&Run", 2101
+        MENUITEM "&Stop", 2102
+    END
+    POPUP "&Language"
+    BEGIN
+        MENUITEM "&BASIC", 2201
+        MENUITEM "&LOGO", 2202
+        MENUITEM "&PILOT", 2203
+    END
+END
+
+1 ACCELTABLE
+BEGIN
+    VK_F5,    2101,     VIRTUALKEY, NOINVERT
+    VK_ESC,   2102,     VIRTUALKEY, NOINVERT
+END
+
+1 STRINGTABLE
+BEGIN
+    1, "Time Warp OS/2"
+END
