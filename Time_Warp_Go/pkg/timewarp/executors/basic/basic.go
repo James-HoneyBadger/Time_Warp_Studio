@@ -255,38 +255,34 @@ func (e *Executor) RunProgram(program string) string {
 			}
 			startVal := e.evalNumeric(startStr)
 			endVal := e.evalNumeric(endStr)
+			// Set variable to startVal so PRINT uses correct value
 			e.variables[vname] = startVal
-			// remember next line as loop start
 			e.forStack = append(e.forStack, forContext{
 				variable:  vname,
 				endVal:    endVal,
 				step:      stepVal,
 				startLine: pc + 1,
 			})
-			// no output for FOR control line
 			pc++
 		case strings.HasPrefix(up, "NEXT"):
 			if len(e.forStack) == 0 {
-				out.WriteString("❌ NEXT without FOR\n")
 				pc++
 				break
 			}
 			ctx := e.forStack[len(e.forStack)-1]
-			// optional variable name check
 			parts := strings.Fields(cmd)
 			if len(parts) > 1 && !strings.EqualFold(parts[1], ctx.variable) {
-				out.WriteString("❌ NEXT wrong variable\n")
 				pc++
 				break
 			}
-			cur := e.variables[ctx.variable] + ctx.step
-			e.variables[ctx.variable] = cur
+			// Increment variable before loop check
+			e.variables[ctx.variable] += ctx.step
+			cur := e.variables[ctx.variable]
 			cont := (ctx.step >= 0 && cur <= ctx.endVal) || (ctx.step < 0 && cur >= ctx.endVal)
 			if cont {
 				pc = ctx.startLine
 			} else {
 				e.forStack = e.forStack[:len(e.forStack)-1]
-				// loop complete; no output
 				pc++
 			}
 		case strings.HasPrefix(up, "GOSUB "):
@@ -340,7 +336,7 @@ func (e *Executor) executePrint(args string) string {
 	}
 	// Simple variable interpolation and expression eval
 	result := e.evaluateExpression(args)
-	return fmt.Sprintf("✅ %s\n", result)
+	return fmt.Sprintf("%s\n", result)
 }
 
 func (e *Executor) executeLet(args string) string {

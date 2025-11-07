@@ -116,7 +116,8 @@ def normalize_output(raw: str) -> str:
 
 
 def compare_text(expected: str, actual: str) -> tuple[bool, str]:
-    exp = expected.replace("\r", "").strip()
+    # Preserve expected newlines; don't strip trailing newline from YAML block
+    exp = expected.replace("\r", "")
     if expected and not expected.endswith("\n"):
         exp += "\n"
     act = actual.replace("\r", "")
