@@ -836,18 +836,24 @@ func (g *timeWarpGUI) performTurtleExport(width, height int, bg color.RGBA, draw
 			}
 		}
 	}
-	// draw lines with clamped width
+	// draw lines with improved scaling & clamps (relative + absolute)
 	for _, ln := range g.turtleCanvas.lines {
 		x1 := int(ln.x1 * scaleX)
 		y1 := int(ln.y1 * scaleY)
 		x2 := int(ln.x2 * scaleX)
 		y2 := int(ln.y2 * scaleY)
-		sw := int(math.Round(ln.width * wScale))
+		base := ln.width
+		// heuristic: scale but dampen growth, keep relative to base
+		sw := int(math.Round(base * wScale * 0.75))
 		if sw < 1 {
 			sw = 1
 		}
-		if sw > 20 {
-			sw = 20
+		maxRel := int(base) + 12
+		if sw > maxRel {
+			sw = maxRel
+		}
+		if sw > 24 {
+			sw = 24
 		}
 		drawLine(x1, y1, x2, y2, color.RGBA{ln.r, ln.g, ln.b, 255}, sw)
 	}
