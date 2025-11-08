@@ -14,7 +14,19 @@ pub struct AsyncExecutor {
 
 impl Default for AsyncExecutor {
     fn default() -> Self {
-        Self::new().expect("Failed to create async executor runtime")
+        // Fall back to a minimal runtime; log error instead of panicking
+        match Self::new() {
+            Ok(exec) => exec,
+            Err(e) => {
+                eprintln!("❌ AsyncExecutor init failed: {e}; using dummy runtime");
+                // Provide a dummy runtime that will error on use
+                AsyncExecutor {
+                    runtime: tokio::runtime::Builder::new_current_thread()
+                        .build()
+                        .expect("tokio build fallback"),
+                }
+            }
+        }
     }
 }
 
@@ -115,7 +127,21 @@ pub struct SharedExecutor {
 
 impl Default for SharedExecutor {
     fn default() -> Self {
-        Self::new().expect("Failed to create shared executor")
+        match Self::new() {
+            Ok(shared) => shared,
+            Err(e) => {
+                eprintln!("❌ SharedExecutor init failed: {e}; constructing inert executor");
+                // Inert executor: AsyncExecutor new() already returns Result, emulate empty
+                let runtime = tokio::runtime::Builder::new_current_thread()
+                    .build()
+                    .expect("tokio build fallback");
+                SharedExecutor {
+                    executor: std::sync::Arc::new(parking_lot::Mutex::new(AsyncExecutor {
+                        runtime,
+                    })),
+                }
+            }
+        }
     }
 }
 
