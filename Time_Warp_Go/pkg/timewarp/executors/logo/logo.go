@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 package logo
 
 import (
@@ -29,6 +30,8 @@ type Executor struct {
 	penColor     [3]int
 	penWidth     int
 	turtleHidden bool
+
+	events []TurtleEvent
 }
 
 func New() *Executor {
@@ -42,7 +45,48 @@ func New() *Executor {
 		penColor:     [3]int{0, 0, 0},
 		penWidth:     1,
 		turtleHidden: false,
+		events:       nil,
 	}
+}
+
+// TurtleEventType enumerates turtle event kinds for structured rendering.
+type TurtleEventType string
+
+const (
+	EventMove       TurtleEventType = "move"        // linear move; may draw
+	EventPen                        = "pen"         // pen up/down
+	EventHome                       = "home"        // go to origin, reset heading
+	EventClear                      = "clear"       // clear screen and home
+	EventSetHeading                 = "set_heading" // set absolute heading
+	EventSetXY                      = "set_xy"      // teleport without drawing
+	EventSetColor                   = "set_color"   // set pen color
+	EventSetWidth                   = "set_width"   // set pen width
+	EventShowHide                   = "show_hide"   // toggle visibility
+)
+
+// TurtleEvent is emitted for each Logo action to aid GUI rendering.
+type TurtleEvent struct {
+	Type   TurtleEventType
+	FromX  float64
+	FromY  float64
+	ToX    float64
+	ToY    float64
+	Draw   bool
+	Color  [3]int
+	Width  int
+	Down   bool // for EventPen
+	Angle  float64
+	Hidden bool
+}
+
+// ClearEvents drops any pending events (call before a new run if desired).
+func (e *Executor) ClearEvents() { e.events = nil }
+
+// PopEvents returns pending events and clears the buffer.
+func (e *Executor) PopEvents() []TurtleEvent {
+	ev := e.events
+	e.events = nil
+	return ev
 }
 
 func (e *Executor) Execute(command string) (string, error) {
@@ -81,6 +125,13 @@ func (e *Executor) Execute(command string) (string, error) {
 			newX := e.turtleX + n*math.Cos(rad)
 			newY := e.turtleY + n*math.Sin(rad)
 			out := fmt.Sprintf("🐢 FORWARD %.2f (%.2f,%.2f → %.2f,%.2f)\n", n, e.turtleX, e.turtleY, newX, newY)
+			// event
+			e.events = append(e.events, TurtleEvent{
+				Type:  EventMove,
+				FromX: e.turtleX, FromY: e.turtleY, ToX: newX, ToY: newY,
+				Draw: e.penDown, Color: e.penColor, Width: e.penWidth,
+				Angle: e.turtleAngle,
+			})
 			e.turtleX = newX
 			e.turtleY = newY
 			return out, nil
@@ -94,6 +145,12 @@ func (e *Executor) Execute(command string) (string, error) {
 			newX := e.turtleX - n*math.Cos(rad)
 			newY := e.turtleY - n*math.Sin(rad)
 			out := fmt.Sprintf("🐢 BACK %.2f (%.2f,%.2f → %.2f,%.2f)\n", n, e.turtleX, e.turtleY, newX, newY)
+			e.events = append(e.events, TurtleEvent{
+				Type:  EventMove,
+				FromX: e.turtleX, FromY: e.turtleY, ToX: newX, ToY: newY,
+				Draw: e.penDown, Color: e.penColor, Width: e.penWidth,
+				Angle: e.turtleAngle,
+			})
 			e.turtleX = newX
 			e.turtleY = newY
 			return out, nil
@@ -104,7 +161,9 @@ func (e *Executor) Execute(command string) (string, error) {
 		arg := strings.TrimSpace(c[len(parts[0]):])
 		if n, ok := parseNum(arg); ok {
 			e.turtleAngle = math.Mod(e.turtleAngle+n, 360)
-			return fmt.Sprintf("🐢 RIGHT %.2f° (heading: %.2f°)\n", n, e.turtleAngle), nil
+			out := fmt.Sprintf("🐢 RIGHT %.2f° (heading: %.2f°)\n", n, e.turtleAngle)
+			e.events = append(e.events, TurtleEvent{Type: EventSetHeading, Angle: e.turtleAngle})
+			return out, nil
 		}
 		return "🐢 RIGHT (no angle)\n", nil
 
@@ -112,22 +171,27 @@ func (e *Executor) Execute(command string) (string, error) {
 		arg := strings.TrimSpace(c[len(parts[0]):])
 		if n, ok := parseNum(arg); ok {
 			e.turtleAngle = math.Mod(e.turtleAngle-n+360, 360)
-			return fmt.Sprintf("🐢 LEFT %.2f° (heading: %.2f°)\n", n, e.turtleAngle), nil
+			out := fmt.Sprintf("🐢 LEFT %.2f° (heading: %.2f°)\n", n, e.turtleAngle)
+			e.events = append(e.events, TurtleEvent{Type: EventSetHeading, Angle: e.turtleAngle})
+			return out, nil
 		}
 		return "🐢 LEFT (no angle)\n", nil
 
 	case "PENUP", "PU":
 		e.penDown = false
+		e.events = append(e.events, TurtleEvent{Type: EventPen, Down: false})
 		return "🐢 PENUP\n", nil
 
 	case "PENDOWN", "PD":
 		e.penDown = true
+		e.events = append(e.events, TurtleEvent{Type: EventPen, Down: true})
 		return "🐢 PENDOWN\n", nil
 
 	case "HOME":
 		e.turtleX = 0
 		e.turtleY = 0
 		e.turtleAngle = 0
+		e.events = append(e.events, TurtleEvent{Type: EventHome})
 		return "🐢 HOME (0,0) heading 0°\n", nil
 
 	case "CLEARSCREEN", "CS", "CLEAR":
@@ -135,6 +199,7 @@ func (e *Executor) Execute(command string) (string, error) {
 		e.turtleY = 0
 		e.turtleAngle = 0
 		e.penDown = true
+		e.events = append(e.events, TurtleEvent{Type: EventClear})
 		return "🎨 Screen cleared, turtle home\n", nil
 
 	case "SETXY":
@@ -146,6 +211,7 @@ func (e *Executor) Execute(command string) (string, error) {
 				oldX, oldY := e.turtleX, e.turtleY
 				e.turtleX = x
 				e.turtleY = y
+				e.events = append(e.events, TurtleEvent{Type: EventSetXY, FromX: oldX, FromY: oldY, ToX: x, ToY: y})
 				return fmt.Sprintf("🐢 SETXY %.2f %.2f (from %.2f,%.2f)\n", x, y, oldX, oldY), nil
 			}
 		}
@@ -154,6 +220,7 @@ func (e *Executor) Execute(command string) (string, error) {
 	case "SETHEADING", "SETH":
 		if n, ok := parseNum(args); ok {
 			e.turtleAngle = math.Mod(n, 360)
+			e.events = append(e.events, TurtleEvent{Type: EventSetHeading, Angle: e.turtleAngle})
 			return fmt.Sprintf("🐢 SETHEADING %.2f°\n", e.turtleAngle), nil
 		}
 		return "❌ SETHEADING requires angle\n", nil
@@ -165,6 +232,7 @@ func (e *Executor) Execute(command string) (string, error) {
 			g, _ := strconv.Atoi(nums[1])
 			b, _ := strconv.Atoi(nums[2])
 			e.penColor = [3]int{r, g, b}
+			e.events = append(e.events, TurtleEvent{Type: EventSetColor, Color: e.penColor})
 			return fmt.Sprintf("🎨 SETCOLOR %d %d %d\n", r, g, b), nil
 		}
 		return "❌ SETCOLOR requires r g b values\n", nil
@@ -172,16 +240,19 @@ func (e *Executor) Execute(command string) (string, error) {
 	case "PENWIDTH", "SETPENWIDTH", "SETPW", "SETPENSIZE":
 		if n, ok := parseNum(args); ok {
 			e.penWidth = int(n)
+			e.events = append(e.events, TurtleEvent{Type: EventSetWidth, Width: e.penWidth})
 			return fmt.Sprintf("✏️  PENWIDTH %d\n", e.penWidth), nil
 		}
 		return "❌ PENWIDTH requires width value\n", nil
 
 	case "HIDETURTLE", "HT":
 		e.turtleHidden = true
+		e.events = append(e.events, TurtleEvent{Type: EventShowHide, Hidden: true})
 		return "🐢 HIDETURTLE\n", nil
 
 	case "SHOWTURTLE", "ST":
 		e.turtleHidden = false
+		e.events = append(e.events, TurtleEvent{Type: EventShowHide, Hidden: false})
 		return "🐢 SHOWTURTLE\n", nil
 
 	case "TO":
@@ -197,3 +268,18 @@ func (e *Executor) Execute(command string) (string, error) {
 		return fmt.Sprintf("❌ Logo: unknown command '%s'\n", cmd), nil
 	}
 }
+
+// GetTurtleState returns current turtle position and state for rendering
+func (e *Executor) GetTurtleState() (x, y, angle float64, penDown bool, color [3]int, width int, hidden bool) {
+	return e.turtleX, e.turtleY, e.turtleAngle, e.penDown, e.penColor, e.penWidth, e.turtleHidden
+}
+
+// GetTurtleLines returns lines drawn (for canvas rendering)
+type TurtleLine struct {
+	X1, Y1, X2, Y2 float64
+	Color          [3]int
+	Width          int
+}
+
+// Note: To implement full turtle graphics visualization, we'd need to track
+// all drawing operations. For now, this provides state access.

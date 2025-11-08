@@ -4,8 +4,8 @@ TempleCode is a small, interpreted, general‑purpose language that blends appro
 
 ## Version 3.0.0 - Platforms
 
-- **Go** - Fast CLI interpreter with batch mode (`Time_Warp_Go/`)
-- **Python** - Tkinter GUI IDE (`Time_Warp_Python/`)
+- **Go** - Fast CLI interpreter + Fyne GUI (`Time_Warp_Go/`)
+- **Python** - PySide6 GUI IDE (`Time_Warp_Python/`)
 - **Rust** - Cross-platform eframe/egui IDE (`Time_Warp_Rust/`)
 - **Windows** - Windows launchers and helpers (`Time_Warp_Windows/`)
 - **Apple** - macOS launchers and docs (`Time_Warp_Apple/`)
@@ -49,7 +49,7 @@ cd Time_Warp_Rust
 cargo run --release
 ```
 
-If Tkinter isn’t available on your system, install `python3-tk` via your OS package manager (e.g., `sudo apt-get install python3-tk`).
+If PySide6 isn’t available on your system, install system Qt deps or use the bundled virtual environment.
 
 ## Language cheatsheet
 
@@ -92,6 +92,13 @@ PU
 SETXY 0 0
 PD
 ```
+
+## Licensing
+
+Primary license: MIT (see `LICENSE`).
+Historical/secondary: Apache 2.0 retained in `LICENSES/Apache-2.0.txt`.
+
+SPDX headers: `// SPDX-License-Identifier: MIT` in active source files.
 
 ## Examples
 

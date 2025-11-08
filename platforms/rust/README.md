@@ -1,7 +1,26 @@
 # Time Warp — Rust (canonical)
 
-Canonical home (planned) for the Rust egui IDE. The active project currently lives at `../../Time_Warp_Rust/`.
+**Canonical location:** `../../Time_Warp_Rust/`
 
-Status: Primary implementation.
+**Status:** Primary implementation (egui cross-platform GUI)
 
-Migration plan: See `../../ARCHITECTURE_OVERVIEW.md`.
+## Quick Start
+
+```bash
+cd ../../Time_Warp_Rust
+cargo run --release
+```
+
+## Features
+
+- egui/eframe cross-platform GUI
+- BASIC, PILOT, and Logo language support
+- Turtle graphics with canvas
+- 80+ passing tests
+- Native performance
+
+## Migration Status
+
+Active development in `Time_Warp_Rust/` at repository root.
+
+See `../../ARCHITECTURE_OVERVIEW.md` for migration timeline.

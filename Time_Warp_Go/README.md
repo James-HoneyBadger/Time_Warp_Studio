@@ -1,22 +1,24 @@
 # Time Warp (Go)
 
-Experimental Go port for Time Warp IDE — a minimal console-based interpreter skeleton.
+Go edition of Time Warp IDE — includes a CLI interpreter and a Fyne GUI with turtle graphics.
 
-Status: early scaffold with tiny command set:
+Status: functional with a growing command set:
 
-- BASIC-like: `PRINT <text>`, `ECHO <text>` -> `✅ <text>`
-- Logo-like: `FORWARD|FD <n>`, `RIGHT <deg>`, `LEFT <deg>` -> `🐢 ...`
-- PILOT-like: `T:<text>`, `A:<text>` -> `ℹ️` / `📝`
+- BASIC-like: `PRINT <text>`, `LET x = 1`, `FOR/NEXT`, `IF/THEN`, assignments
+- Logo-like: `FORWARD|FD <n>`, `BACK|BK <n>`, `RIGHT/LEFT <deg>`, `SETXY x y`, `SETHEADING <deg>`, `PENUP/PENDOWN`, `CLEAR/CS`, `SETCOLOR r g b`, `PENWIDTH n`
+- PILOT-like: `T:<text>`, `A:<var>`, plus basic flow helpers
 
 ## Build and run
 
 ```bash
 cd Time_Warp_Go
-# Run with a single command
+# CLI
 go run ./cmd/timewarp ECHO Hello
+go run ./cmd/timewarp "PRINT \"Hello from BASIC\""
 
-# Or interactive mode
-go run ./cmd/timewarp
+# GUI
+go build ./cmd/timewarp-gui
+./timewarp-gui
 ```
 
 ## Tests
@@ -26,7 +28,17 @@ cd Time_Warp_Go
 go test ./...
 ```
 
+### Benchmarks
+
+We include a couple of micro-benchmarks for the interpreter:
+
+```bash
+go test -run TestNonExistent -bench . -benchmem ./pkg/timewarp
+```
+
+This runs without executing regular tests and reports allocations.
+
 ## Notes
 
-- This Go version follows the project convention: executors return text with emoji prefixes; no UI state is stored in executors.
-- Intended as a learning scaffold. The Rust implementation remains the primary officially supported version.
+- Executors return text with emoji prefixes; the GUI is stateless relative to executors.
+- Logo turtle rendering now emits structured turtle events used by the GUI (with text parsing fallback for compatibility).

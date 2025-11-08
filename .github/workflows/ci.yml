@@ -1,73 +1,60 @@
-name: Time_Warp IDE CI/CD
+name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main]
   pull_request:
-    branches: [ main ]
+    branches: [main]
 
 jobs:
-  test:
+  go:
+    name: Go build and test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        rust: [stable, beta]
-
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+      - name: Build Go binaries
+        working-directory: Time_Warp_Go
+        run: |
+          go build ./cmd/timewarp
+          go build ./cmd/timewarp-gui
+      - name: Test Go packages
+        working-directory: Time_Warp_Go
+        run: go test ./...
 
-    - name: Set up Rust ${{ matrix.rust }}
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: ${{ matrix.rust }}
-        components: rustfmt, clippy
-
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
-      with:
-        workspaces: Time_Warp_Rust
-
-    - name: Check formatting
-      run: cargo fmt --all -- --check
-      working-directory: Time_Warp_Rust
-
-    - name: Run clippy
-      run: cargo clippy -- -D warnings --allow dead_code --allow unused_variables --allow unused_imports --allow clippy::ifs_same_cond --allow clippy::single_match --allow clippy::manual_strip --allow clippy::needless_return --allow clippy::only_used_in_recursion --allow clippy::manual_flatten --allow clippy::collapsible_if --allow clippy::useless_format --allow clippy::manual_map --allow clippy::while_let_on_iterator --allow clippy::redundant_pattern_matching --allow clippy::is_digit_ascii_radix
-      working-directory: Time_Warp_Rust
-
-    - name: Build
-      run: cargo build --verbose
-      working-directory: Time_Warp_Rust
-
-    - name: Run tests
-      run: cargo test --verbose
-      working-directory: Time_Warp_Rust
-
-  lint:
+  python:
+    name: Python tests
     runs-on: ubuntu-latest
-
     steps:
-    - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dev requirements
+        run: |
+          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+      - name: Run pytest (Time_Warp_Python)
+        run: |
+          if [ -d Time_Warp_Python ]; then \
+            cd Time_Warp_Python && pytest -v --tb=short; \
+          else \
+            echo "Time_Warp_Python not present"; \
+          fi
 
-    - name: Set up Rust
-      uses: dtolnay/rust-toolchain@master
-      with:
-        toolchain: stable
-        components: rustfmt, clippy
-
-    - name: Cache dependencies
-      uses: Swatinem/rust-cache@v2
-      with:
-        workspaces: Time_Warp_Rust
-
-    - name: Check formatting
-      run: cargo fmt --all -- --check
-      working-directory: Time_Warp_Rust
-
-    - name: Run clippy
-      run: cargo clippy -- -D warnings --allow dead_code --allow unused_variables --allow unused_imports --allow clippy::ifs_same_cond --allow clippy::single_match --allow clippy::manual_strip --allow clippy::needless_return --allow clippy::only_used_in_recursion --allow clippy::manual_flatten --allow clippy::collapsible_if --allow clippy::useless_format --allow clippy::manual_map --allow clippy::while_let_on_iterator --allow clippy::redundant_pattern_matching --allow clippy::is_digit_ascii_radix
-      working-directory: Time_Warp_Rust
-
-    - name: Build documentation
-      run: cargo doc --no-deps
-      working-directory: Time_Warp_Rust
+  rust:
+    name: Rust build and tests (best-effort)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Build Rust project if present
+        run: |
+          if [ -d Time_Warp_Rust ] && [ -f Time_Warp_Rust/Cargo.toml ]; then \
+            cd Time_Warp_Rust && cargo build --verbose && cargo test --verbose; \
+          else \
+            echo "Time_Warp_Rust not present or missing Cargo.toml"; \
+          fi

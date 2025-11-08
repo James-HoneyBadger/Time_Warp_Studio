@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: MIT
 package timewarp
 
 import (
@@ -40,6 +41,10 @@ func NewInterpreter() *Interpreter {
 	}
 }
 
+// Logo returns the Logo executor for accessing structured turtle events/state.
+// This preserves the text-output contract while allowing UIs to consume events.
+func (i *Interpreter) Logo() *logo.Executor { return i.logoExec }
+
 // Execute parses a single command and returns the output string.
 // Errors are embedded in the returned string with the ❌ prefix.
 func (i *Interpreter) Execute(command string) string {
@@ -48,10 +53,27 @@ func (i *Interpreter) Execute(command string) string {
 		return ""
 	}
 
+	// If multi-line input, assume BASIC program and execute via RunProgram
+	if strings.Contains(cmd, "\n") || strings.Contains(cmd, "\r") {
+		// Treat as BASIC multi-line program; append END if missing to terminate
+		program := cmd
+		upProg := strings.ToUpper(strings.TrimSpace(program))
+		if !strings.Contains(upProg, "END") {
+			program += "\nEND"
+		}
+		out := i.basicExec.RunProgram(program)
+		if out == "" {
+			return "✅ Program finished\n"
+		}
+		return out
+	}
+
 	upper := strings.ToUpper(cmd)
 	switch {
 	// Basic-like commands
-	case strings.HasPrefix(upper, "PRINT ") || strings.HasPrefix(upper, "ECHO "):
+	case strings.HasPrefix(upper, "PRINT ") || strings.HasPrefix(upper, "ECHO ") ||
+		strings.HasPrefix(upper, "LET ") ||
+		(strings.Contains(cmd, "=") && !strings.HasPrefix(upper, "IF ") && !strings.HasPrefix(upper, "FOR ")):
 		out, err := i.basicExec.Execute(cmd)
 		if err != nil {
 			return fmt.Sprintf("❌ %v\n", err)
@@ -59,7 +81,16 @@ func (i *Interpreter) Execute(command string) string {
 		return out
 
 	// Logo-like commands
-	case strings.HasPrefix(upper, "FORWARD ") || strings.HasPrefix(upper, "FD ") || strings.HasPrefix(upper, "RIGHT ") || strings.HasPrefix(upper, "LEFT "):
+	case strings.HasPrefix(upper, "FORWARD ") || strings.HasPrefix(upper, "FD ") ||
+		strings.HasPrefix(upper, "BACK ") || strings.HasPrefix(upper, "BK ") || strings.HasPrefix(upper, "BACKWARD ") ||
+		strings.HasPrefix(upper, "RIGHT ") || strings.HasPrefix(upper, "RT ") ||
+		strings.HasPrefix(upper, "LEFT ") || strings.HasPrefix(upper, "LT ") ||
+		upper == "HOME" || upper == "CLEARSCREEN" || upper == "CS" || upper == "CLEAR" ||
+		strings.HasPrefix(upper, "SETXY ") || strings.HasPrefix(upper, "SETHEADING ") || strings.HasPrefix(upper, "SETH ") ||
+		strings.HasPrefix(upper, "SETCOLOR ") || strings.HasPrefix(upper, "SETPENCOLOR ") || strings.HasPrefix(upper, "SETPC ") ||
+		strings.HasPrefix(upper, "PENWIDTH ") || strings.HasPrefix(upper, "SETPENWIDTH ") || strings.HasPrefix(upper, "SETPW ") || strings.HasPrefix(upper, "SETPENSIZE ") ||
+		upper == "PENUP" || upper == "PU" || upper == "PENDOWN" || upper == "PD" ||
+		upper == "HIDETURTLE" || upper == "HT" || upper == "SHOWTURTLE" || upper == "ST":
 		out, err := i.logoExec.Execute(cmd)
 		if err != nil {
 			return fmt.Sprintf("❌ %v\n", err)
@@ -77,7 +108,7 @@ func (i *Interpreter) Execute(command string) string {
 
 	// Misc convenience commands
 	if upper == "HELP" {
-		return "ℹ️  Commands: PRINT/ECHO <text>, FORWARD/FD <n>, RIGHT/LEFT <deg>, T:/A: <text>\n"
+		return "ℹ️  Commands: PRINT/ECHO <text>, LET x = 1, FOR/NEXT, IF/THEN, GOTO, T:/A: <text>, LOGO: FD/BK/LT/RT/HOME/PU/PD/CS/SETXY/SETH/SETCOLOR/PENWIDTH\n"
 	}
 	if upper == "RUN" {
 		return "🚀 Running (stub)\n"
