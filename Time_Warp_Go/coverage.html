@@ -1,0 +1,678 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>basic: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/James-HoneyBadger/Time_Warp/Time_Warp_Go/pkg/timewarp/executors/basic/basic.go (80.5%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package basic
+
+import (
+        "fmt"
+        "math"
+        "strconv"
+        "strings"
+)
+
+// Executor handles comprehensive BASIC commands matching Rust reference.
+// Supported:
+//   - PRINT &lt;expr|text&gt;
+//   - LET var = expr
+//   - INPUT var
+//   - GOTO line
+//   - IF condition THEN action
+//   - FOR var = start TO end [STEP step]
+//   - NEXT var
+//   - GOSUB line
+//   - RETURN
+//   - REM comment
+//   - END
+//   - CLS
+//   - LINE x1,y1,x2,y2
+//   - CIRCLE x,y,r
+//   - LOCATE row,col
+
+type Executor struct {
+        variables   map[string]float64
+        gosubStack  []int
+        forStack    []forContext
+        lineNumbers map[int]int // line number -&gt; index
+        lines       []string
+        currentLine int
+}
+
+type forContext struct {
+        variable  string
+        endVal    float64
+        step      float64
+        startLine int
+}
+
+func New() *Executor <span class="cov8" title="1">{
+        return &amp;Executor{
+                variables:   make(map[string]float64),
+                gosubStack:  make([]int, 0, 64),
+                forStack:    make([]forContext, 0, 16),
+                lineNumbers: make(map[int]int),
+        }
+}</span>
+
+func (e *Executor) Execute(command string) (string, error) <span class="cov8" title="1">{
+        c := strings.TrimSpace(command)
+        if c == "" </span><span class="cov8" title="1">{
+                return "", nil
+        }</span>
+
+        // Parse command keyword
+        <span class="cov8" title="1">parts := strings.SplitN(c, " ", 2)
+        keyword := strings.ToUpper(parts[0])
+        args := ""
+        if len(parts) &gt; 1 </span><span class="cov8" title="1">{
+                args = parts[1]
+        }</span>
+
+        <span class="cov8" title="1">switch keyword </span>{
+        case "PRINT":<span class="cov8" title="1">
+                return e.executePrint(args), nil</span>
+        case "LET":<span class="cov8" title="1">
+                return e.executeLet(args), nil</span>
+        case "INPUT":<span class="cov8" title="1">
+                return e.executeInput(args), nil</span>
+        case "GOTO":<span class="cov8" title="1">
+                return e.executeGoto(args), nil</span>
+        case "IF":<span class="cov8" title="1">
+                return e.executeIf(c), nil</span>
+        case "FOR":<span class="cov8" title="1">
+                return e.executeFor(args), nil</span>
+        case "NEXT":<span class="cov8" title="1">
+                return e.executeNext(args), nil</span>
+        case "GOSUB":<span class="cov8" title="1">
+                return e.executeGosub(args), nil</span>
+        case "RETURN":<span class="cov8" title="1">
+                return e.executeReturn(), nil</span>
+        case "REM", "//", "#":<span class="cov0" title="0">
+                return "", nil</span>
+        case "END":<span class="cov0" title="0">
+                return "✅ Program ended\n", nil</span>
+        case "CLS":<span class="cov8" title="1">
+                return "🎨 Screen cleared\n", nil</span>
+        case "LINE":<span class="cov8" title="1">
+                return e.executeLine(args), nil</span>
+        case "CIRCLE":<span class="cov8" title="1">
+                return e.executeCircle(args), nil</span>
+        case "LOCATE":<span class="cov8" title="1">
+                return e.executeLocate(args), nil</span>
+        case "ECHO":<span class="cov0" title="0">
+                return "✅ " + strings.TrimSpace(args) + "\n", nil</span>
+        default:<span class="cov8" title="1">
+                // Try variable assignment without LET
+                if strings.Contains(c, "=") &amp;&amp; !strings.Contains(keyword, "=") </span><span class="cov8" title="1">{
+                        return e.executeLet(c), nil
+                }</span>
+                <span class="cov8" title="1">return fmt.Sprintf("❌ BASIC: unknown command '%s'\n", keyword), nil</span>
+        }
+}
+
+// RunProgram executes a multi-line BASIC program with optional line numbers
+// and control flow (GOTO, IF ... THEN &lt;line&gt;, FOR/NEXT, GOSUB/RETURN).
+// It returns the concatenated output with emoji prefixes per project convention.
+func (e *Executor) RunProgram(program string) string <span class="cov8" title="1">{
+        // reset state
+        e.variables = make(map[string]float64)
+        e.gosubStack = e.gosubStack[:0]
+        e.forStack = e.forStack[:0]
+        e.lineNumbers = make(map[int]int)
+        e.lines = make([]string, 0, 256)
+        e.currentLine = 0
+
+        type line struct {
+                num  int
+                hasN bool
+                text string
+        }
+        parsed := make([]line, 0, 256)
+        // parse lines and map numbers
+        for _, raw := range strings.Split(strings.ReplaceAll(program, "\r", ""), "\n") </span><span class="cov8" title="1">{
+                t := strings.TrimSpace(raw)
+                if t == "" </span><span class="cov8" title="1">{
+                        continue</span>
+                }
+                // check for leading number
+                <span class="cov8" title="1">n := -1
+                has := false
+                sp := strings.SplitN(t, " ", 2)
+                if len(sp) &gt; 0 </span><span class="cov8" title="1">{
+                        if v, err := strconv.Atoi(sp[0]); err == nil </span><span class="cov8" title="1">{
+                                n = v
+                                has = true
+                                if len(sp) &gt; 1 </span><span class="cov8" title="1">{
+                                        t = strings.TrimSpace(sp[1])
+                                }</span> else<span class="cov0" title="0"> {
+                                        t = ""
+                                }</span>
+                        }
+                }
+                <span class="cov8" title="1">idx := len(parsed)
+                if has </span><span class="cov8" title="1">{
+                        e.lineNumbers[n] = idx
+                }</span>
+                <span class="cov8" title="1">parsed = append(parsed, line{num: n, hasN: has, text: t})</span>
+        }
+
+        // program counter loop
+        <span class="cov8" title="1">out := &amp;strings.Builder{}
+        pc := 0
+        steps := 0
+        maxSteps := 20000
+
+        getIndex := func(target int) (int, bool) </span><span class="cov8" title="1">{
+                idx, ok := e.lineNumbers[target]
+                return idx, ok
+        }</span>
+
+        <span class="cov8" title="1">for pc &gt;= 0 &amp;&amp; pc &lt; len(parsed) &amp;&amp; steps &lt; maxSteps </span><span class="cov8" title="1">{
+                steps++
+                cmd := strings.TrimSpace(parsed[pc].text)
+                up := strings.ToUpper(cmd)
+                if cmd == "" || strings.HasPrefix(up, "REM") </span><span class="cov8" title="1">{
+                        pc++
+                        continue</span>
+                }
+                <span class="cov8" title="1">switch </span>{
+                case up == "END":<span class="cov8" title="1">
+                        // terminate
+                        return out.String()</span>
+                case up == "CLS":<span class="cov0" title="0">
+                        // clear screen: no textual output in batch mode
+                        pc++</span>
+                case strings.HasPrefix(up, "PRINT"):<span class="cov8" title="1">
+                        o := e.executePrint(strings.TrimSpace(cmd[5:]))
+                        out.WriteString(o)
+                        pc++</span>
+                case strings.HasPrefix(up, "LET ") || (strings.Contains(cmd, "=") &amp;&amp; !strings.HasPrefix(up, "FOR ") &amp;&amp; !strings.HasPrefix(up, "IF ")):<span class="cov8" title="1">
+                        // assignment with/without LET
+                        assign := cmd
+                        if strings.HasPrefix(up, "LET ") </span><span class="cov8" title="1">{
+                                assign = strings.TrimSpace(cmd[4:])
+                        }</span>
+                        <span class="cov8" title="1">out.WriteString(e.executeLet(assign))
+                        pc++</span>
+                case strings.HasPrefix(up, "INPUT "):<span class="cov0" title="0">
+                        out.WriteString(e.executeInput(strings.TrimSpace(cmd[6:])))
+                        pc++</span>
+                case strings.HasPrefix(up, "GOTO "):<span class="cov8" title="1">
+                        arg := strings.TrimSpace(cmd[4:])
+                        ln, err := strconv.Atoi(arg)
+                        if err != nil </span><span class="cov0" title="0">{
+                                out.WriteString("❌ GOTO requires line number\n")
+                                pc++
+                                break</span>
+                        }
+                        <span class="cov8" title="1">if idx, ok := getIndex(ln); ok </span><span class="cov8" title="1">{
+                                pc = idx
+                        }</span> else<span class="cov8" title="1"> {
+                                out.WriteString("❌ Unknown line\n")
+                                pc++
+                        }</span>
+                case strings.HasPrefix(up, "IF "):<span class="cov8" title="1">
+                        // IF &lt;cond&gt; THEN &lt;line&gt;
+                        thenIdx := strings.Index(strings.ToUpper(cmd), "THEN")
+                        if thenIdx &lt; 0 </span><span class="cov0" title="0">{
+                                out.WriteString("❌ IF requires THEN\n")
+                                pc++
+                                break</span>
+                        }
+                        <span class="cov8" title="1">condStr := strings.TrimSpace(cmd[3:thenIdx])
+                        tgt := strings.TrimSpace(cmd[thenIdx+4:])
+                        cond := e.evalNumeric(condStr) != 0
+                        if cond </span><span class="cov0" title="0">{
+                                if ln, err := strconv.Atoi(tgt); err == nil </span><span class="cov0" title="0">{
+                                        if idx, ok := getIndex(ln); ok </span><span class="cov0" title="0">{
+                                                pc = idx
+                                                break</span>
+                                        }
+                                }
+                        }
+                        <span class="cov8" title="1">pc++</span>
+                case strings.HasPrefix(up, "FOR "):<span class="cov8" title="1">
+                        rest := strings.TrimSpace(cmd[4:])
+                        // var = start TO end [STEP step]
+                        eqIdx := strings.Index(rest, "=")
+                        if eqIdx &lt; 0 </span><span class="cov0" title="0">{
+                                out.WriteString("❌ FOR requires var = start TO end\n")
+                                pc++
+                                break</span>
+                        }
+                        <span class="cov8" title="1">vname := strings.TrimSpace(rest[:eqIdx])
+                        afterEq := strings.TrimSpace(rest[eqIdx+1:])
+                        toIdx := strings.Index(strings.ToUpper(afterEq), "TO")
+                        if toIdx &lt; 0 </span><span class="cov0" title="0">{
+                                out.WriteString("❌ FOR requires TO\n")
+                                pc++
+                                break</span>
+                        }
+                        <span class="cov8" title="1">startStr := strings.TrimSpace(afterEq[:toIdx])
+                        afterTo := strings.TrimSpace(afterEq[toIdx+2:])
+                        stepVal := 1.0
+                        endStr := afterTo
+                        if stIdx := strings.Index(strings.ToUpper(afterTo), "STEP"); stIdx &gt;= 0 </span><span class="cov8" title="1">{
+                                endStr = strings.TrimSpace(afterTo[:stIdx])
+                                stepStr := strings.TrimSpace(afterTo[stIdx+4:])
+                                stepVal = e.evalNumeric(stepStr)
+                        }</span>
+                        <span class="cov8" title="1">startVal := e.evalNumeric(startStr)
+                        endVal := e.evalNumeric(endStr)
+                        // Set variable to startVal so PRINT uses correct value
+                        e.variables[vname] = startVal
+                        e.forStack = append(e.forStack, forContext{
+                                variable:  vname,
+                                endVal:    endVal,
+                                step:      stepVal,
+                                startLine: pc + 1,
+                        })
+                        pc++</span>
+                case strings.HasPrefix(up, "NEXT"):<span class="cov8" title="1">
+                        if len(e.forStack) == 0 </span><span class="cov0" title="0">{
+                                pc++
+                                break</span>
+                        }
+                        <span class="cov8" title="1">ctx := e.forStack[len(e.forStack)-1]
+                        parts := strings.Fields(cmd)
+                        if len(parts) &gt; 1 &amp;&amp; !strings.EqualFold(parts[1], ctx.variable) </span><span class="cov0" title="0">{
+                                pc++
+                                break</span>
+                        }
+                        // Increment variable, then check bounds (QBASIC semantics)
+                        <span class="cov8" title="1">e.variables[ctx.variable] += ctx.step
+                        cur := e.variables[ctx.variable]
+                        cont := (ctx.step &gt;= 0 &amp;&amp; cur &lt;= ctx.endVal) || (ctx.step &lt; 0 &amp;&amp; cur &gt;= ctx.endVal)
+                        if cont </span><span class="cov8" title="1">{
+                                pc = ctx.startLine
+                        }</span> else<span class="cov8" title="1"> {
+                                e.forStack = e.forStack[:len(e.forStack)-1]
+                                pc++
+                        }</span>
+                case strings.HasPrefix(up, "GOSUB "):<span class="cov8" title="1">
+                        arg := strings.TrimSpace(cmd[6:])
+                        ln, err := strconv.Atoi(arg)
+                        if err != nil </span><span class="cov0" title="0">{
+                                out.WriteString("❌ GOSUB requires line number\n")
+                                pc++
+                                break</span>
+                        }
+                        <span class="cov8" title="1">e.gosubStack = append(e.gosubStack, pc+1)
+                        if idx, ok := getIndex(ln); ok </span><span class="cov8" title="1">{
+                                pc = idx
+                        }</span> else<span class="cov0" title="0"> {
+                                out.WriteString("❌ Unknown line\n")
+                                pc++
+                        }</span>
+                case up == "RETURN":<span class="cov8" title="1">
+                        if len(e.gosubStack) == 0 </span><span class="cov0" title="0">{
+                                out.WriteString("❌ RETURN without GOSUB\n")
+                                pc++
+                                break</span>
+                        }
+                        <span class="cov8" title="1">ret := e.gosubStack[len(e.gosubStack)-1]
+                        e.gosubStack = e.gosubStack[:len(e.gosubStack)-1]
+                        pc = ret</span>
+                case strings.HasPrefix(up, "LINE "):<span class="cov0" title="0">
+                        out.WriteString("📏 LINE " + strings.TrimSpace(cmd[4:]) + "\n")
+                        pc++</span>
+                case strings.HasPrefix(up, "CIRCLE "):<span class="cov0" title="0">
+                        out.WriteString("⭕ CIRCLE " + strings.TrimSpace(cmd[6:]) + "\n")
+                        pc++</span>
+                case strings.HasPrefix(up, "LOCATE "):<span class="cov0" title="0">
+                        out.WriteString("📍 LOCATE " + strings.TrimSpace(cmd[6:]) + "\n")
+                        pc++</span>
+                default:<span class="cov0" title="0">
+                        // unknown falls back to expression or ignore
+                        out.WriteString(fmt.Sprintf("❌ BASIC: unknown command '%s'\n", up))
+                        pc++</span>
+                }
+        }
+        <span class="cov8" title="1">if steps &gt;= maxSteps </span><span class="cov8" title="1">{
+                out.WriteString("❌ Stopped: too many steps\n")
+        }</span>
+        <span class="cov8" title="1">return out.String()</span>
+}
+
+func (e *Executor) executePrint(args string) string <span class="cov8" title="1">{
+        if args == "" </span><span class="cov8" title="1">{
+                return "\n"
+        }</span>
+        // Simple variable interpolation and expression eval
+        <span class="cov8" title="1">result := e.evaluateExpression(args)
+        return fmt.Sprintf("%s\n", result)</span>
+}
+
+func (e *Executor) executeLet(args string) string <span class="cov8" title="1">{
+        parts := strings.SplitN(args, "=", 2)
+        if len(parts) != 2 </span><span class="cov8" title="1">{
+                return "❌ LET requires format: var = expression\n"
+        }</span>
+        <span class="cov8" title="1">varName := strings.TrimSpace(parts[0])
+        exprStr := strings.TrimSpace(parts[1])
+
+        // Evaluate expression
+        value := e.evalNumeric(exprStr)
+        e.variables[varName] = value
+        return ""</span>
+}
+
+func (e *Executor) executeInput(args string) string <span class="cov8" title="1">{
+        varName := strings.TrimSpace(args)
+        // In real implementation, would trigger input prompt
+        // For now, set to 0 as placeholder
+        e.variables[varName] = 0.0
+        return fmt.Sprintf("📝 INPUT %s (set to 0 - needs input integration)\n", varName)
+}</span>
+
+func (e *Executor) executeGoto(args string) string <span class="cov8" title="1">{
+        lineNum, err := strconv.Atoi(strings.TrimSpace(args))
+        if err != nil </span><span class="cov0" title="0">{
+                return "❌ GOTO requires line number\n"
+        }</span>
+        // In real implementation, would jump to line
+        <span class="cov8" title="1">return fmt.Sprintf("🚀 GOTO %d\n", lineNum)</span>
+}
+
+func (e *Executor) executeIf(full string) string <span class="cov8" title="1">{
+        upper := strings.ToUpper(full)
+        thenIdx := strings.Index(upper, "THEN")
+        if thenIdx == -1 </span><span class="cov8" title="1">{
+                return "❌ IF requires THEN\n"
+        }</span>
+
+        <span class="cov8" title="1">condStr := strings.TrimSpace(full[3:thenIdx])
+        action := strings.TrimSpace(full[thenIdx+4:])
+
+        // Evaluate condition (simple numeric check)
+        cond := e.evalNumeric(condStr)
+        if cond != 0 </span><span class="cov8" title="1">{
+                return fmt.Sprintf("✅ IF %s THEN %s (condition true)\n", condStr, action)
+        }</span>
+        <span class="cov8" title="1">return ""</span>
+}
+
+func (e *Executor) executeFor(args string) string <span class="cov8" title="1">{
+        // FOR var = start TO end [STEP step]
+        upper := strings.ToUpper(args)
+        toIdx := strings.Index(upper, "TO")
+        if toIdx == -1 </span><span class="cov8" title="1">{
+                return "❌ FOR requires TO\n"
+        }</span>
+
+        <span class="cov8" title="1">assignment := strings.TrimSpace(args[:toIdx])
+        rest := strings.TrimSpace(args[toIdx+2:])
+
+        parts := strings.SplitN(assignment, "=", 2)
+        if len(parts) != 2 </span><span class="cov8" title="1">{
+                return "❌ FOR requires var = value\n"
+        }</span>
+
+        <span class="cov8" title="1">varName := strings.TrimSpace(parts[0])
+        startVal := e.evalNumeric(strings.TrimSpace(parts[1]))
+
+        stepVal := 1.0
+        endPart := rest
+        if stepIdx := strings.Index(strings.ToUpper(rest), "STEP"); stepIdx != -1 </span><span class="cov0" title="0">{
+                endPart = strings.TrimSpace(rest[:stepIdx])
+                stepStr := strings.TrimSpace(rest[stepIdx+4:])
+                stepVal = e.evalNumeric(stepStr)
+        }</span>
+
+        <span class="cov8" title="1">endVal := e.evalNumeric(endPart)
+
+        e.variables[varName] = startVal
+        ctx := forContext{
+                variable:  varName,
+                endVal:    endVal,
+                step:      stepVal,
+                startLine: e.currentLine,
+        }
+        e.forStack = append(e.forStack, ctx)
+
+        return fmt.Sprintf("🔄 FOR %s = %g TO %g STEP %g\n", varName, startVal, endVal, stepVal)</span>
+}
+
+func (e *Executor) executeNext(_ string) string <span class="cov8" title="1">{
+        if len(e.forStack) == 0 </span><span class="cov8" title="1">{
+                return "❌ NEXT without FOR\n"
+        }</span>
+
+        <span class="cov8" title="1">ctx := e.forStack[len(e.forStack)-1]
+        currentVal := e.variables[ctx.variable]
+        currentVal += ctx.step
+        e.variables[ctx.variable] = currentVal
+
+        done := false
+        if ctx.step &gt; 0 </span><span class="cov8" title="1">{
+                done = currentVal &gt; ctx.endVal
+        }</span> else<span class="cov0" title="0"> {
+                done = currentVal &lt; ctx.endVal
+        }</span>
+
+        <span class="cov8" title="1">if done </span><span class="cov0" title="0">{
+                e.forStack = e.forStack[:len(e.forStack)-1]
+                return fmt.Sprintf("✅ NEXT %s (loop complete)\n", ctx.variable)
+        }</span>
+
+        <span class="cov8" title="1">return fmt.Sprintf("🔄 NEXT %s = %g\n", ctx.variable, currentVal)</span>
+}
+
+func (e *Executor) executeGosub(args string) string <span class="cov8" title="1">{
+        lineNum, err := strconv.Atoi(strings.TrimSpace(args))
+        if err != nil </span><span class="cov0" title="0">{
+                return "❌ GOSUB requires line number\n"
+        }</span>
+        <span class="cov8" title="1">e.gosubStack = append(e.gosubStack, e.currentLine+1)
+        return fmt.Sprintf("🚀 GOSUB %d\n", lineNum)</span>
+}
+
+func (e *Executor) executeReturn() string <span class="cov8" title="1">{
+        if len(e.gosubStack) == 0 </span><span class="cov8" title="1">{
+                return "❌ RETURN without GOSUB\n"
+        }</span>
+        <span class="cov8" title="1">returnLine := e.gosubStack[len(e.gosubStack)-1]
+        e.gosubStack = e.gosubStack[:len(e.gosubStack)-1]
+        return fmt.Sprintf("🔙 RETURN to line %d\n", returnLine)</span>
+}
+
+func (e *Executor) executeLine(args string) string <span class="cov8" title="1">{
+        // LINE x1,y1,x2,y2
+        parts := strings.Split(args, ",")
+        if len(parts) != 4 </span><span class="cov8" title="1">{
+                return "❌ LINE requires x1,y1,x2,y2\n"
+        }</span>
+        <span class="cov8" title="1">return fmt.Sprintf("📏 LINE %s,%s,%s,%s\n",
+                strings.TrimSpace(parts[0]),
+                strings.TrimSpace(parts[1]),
+                strings.TrimSpace(parts[2]),
+                strings.TrimSpace(parts[3]))</span>
+}
+
+func (e *Executor) executeCircle(args string) string <span class="cov8" title="1">{
+        // CIRCLE x,y,r
+        parts := strings.Split(args, ",")
+        if len(parts) != 3 </span><span class="cov8" title="1">{
+                return "❌ CIRCLE requires x,y,r\n"
+        }</span>
+        <span class="cov8" title="1">return fmt.Sprintf("⭕ CIRCLE %s,%s,%s\n",
+                strings.TrimSpace(parts[0]),
+                strings.TrimSpace(parts[1]),
+                strings.TrimSpace(parts[2]))</span>
+}
+
+func (e *Executor) executeLocate(args string) string <span class="cov8" title="1">{
+        // LOCATE row,col
+        parts := strings.Split(args, ",")
+        if len(parts) != 2 </span><span class="cov8" title="1">{
+                return "❌ LOCATE requires row,col\n"
+        }</span>
+        <span class="cov8" title="1">return fmt.Sprintf("📍 LOCATE %s,%s\n",
+                strings.TrimSpace(parts[0]),
+                strings.TrimSpace(parts[1]))</span>
+}
+
+// Simple expression evaluator
+func (e *Executor) evaluateExpression(expr string) string <span class="cov8" title="1">{
+        expr = strings.TrimSpace(expr)
+
+        // Check if it's a string literal
+        if strings.HasPrefix(expr, "\"") &amp;&amp; strings.HasSuffix(expr, "\"") </span><span class="cov8" title="1">{
+                return expr[1 : len(expr)-1]
+        }</span>
+
+        // Try to evaluate as numeric
+        <span class="cov8" title="1">val := e.evalNumeric(expr)
+        return fmt.Sprintf("%g", val)</span>
+}
+
+func (e *Executor) evalNumeric(expr string) float64 <span class="cov8" title="1">{
+        expr = strings.TrimSpace(expr)
+
+        // Check for variable
+        if val, ok := e.variables[expr]; ok </span><span class="cov8" title="1">{
+                return val
+        }</span>
+
+        // Try parse as number
+        <span class="cov8" title="1">if val, err := strconv.ParseFloat(expr, 64); err == nil </span><span class="cov8" title="1">{
+                return val
+        }</span>
+
+        // Simple operator support (left-to-right, no precedence)
+        <span class="cov8" title="1">if strings.Contains(expr, "+") </span><span class="cov8" title="1">{
+                parts := strings.SplitN(expr, "+", 2)
+                return e.evalNumeric(parts[0]) + e.evalNumeric(parts[1])
+        }</span>
+        <span class="cov8" title="1">if strings.Contains(expr, "-") &amp;&amp; !strings.HasPrefix(expr, "-") </span><span class="cov8" title="1">{
+                parts := strings.SplitN(expr, "-", 2)
+                return e.evalNumeric(parts[0]) - e.evalNumeric(parts[1])
+        }</span>
+        <span class="cov8" title="1">if strings.Contains(expr, "*") </span><span class="cov8" title="1">{
+                parts := strings.SplitN(expr, "*", 2)
+                return e.evalNumeric(parts[0]) * e.evalNumeric(parts[1])
+        }</span>
+        <span class="cov8" title="1">if strings.Contains(expr, "/") </span><span class="cov8" title="1">{
+                parts := strings.SplitN(expr, "/", 2)
+                divisor := e.evalNumeric(parts[1])
+                if divisor == 0 </span><span class="cov0" title="0">{
+                        return 0
+                }</span>
+                <span class="cov8" title="1">return e.evalNumeric(parts[0]) / divisor</span>
+        }
+
+        // Built-in functions
+        <span class="cov8" title="1">if strings.HasPrefix(expr, "ABS(") &amp;&amp; strings.HasSuffix(expr, ")") </span><span class="cov0" title="0">{
+                inner := expr[4 : len(expr)-1]
+                return math.Abs(e.evalNumeric(inner))
+        }</span>
+        <span class="cov8" title="1">if strings.HasPrefix(expr, "INT(") &amp;&amp; strings.HasSuffix(expr, ")") </span><span class="cov0" title="0">{
+                inner := expr[4 : len(expr)-1]
+                return math.Floor(e.evalNumeric(inner))
+        }</span>
+        <span class="cov8" title="1">if strings.HasPrefix(expr, "SQR(") &amp;&amp; strings.HasSuffix(expr, ")") </span><span class="cov0" title="0">{
+                inner := expr[4 : len(expr)-1]
+                return math.Sqrt(e.evalNumeric(inner))
+        }</span>
+
+        <span class="cov8" title="1">return 0.0</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
