@@ -117,7 +117,10 @@ fn open_file(app: &mut TimeWarpApp) {
         .pick_file()
     {
         if let Ok(content) = std::fs::read_to_string(&path) {
-            let filename = path.file_name().unwrap().to_string_lossy().to_string();
+            let filename = path
+                .file_name()
+                .map(|s| s.to_string_lossy().to_string())
+                .unwrap_or_else(|| "unknown_file".to_string());
             app.file_buffers.insert(filename.clone(), content);
             app.open_files.push(filename);
             app.current_file_index = app.open_files.len() - 1;

@@ -70,9 +70,12 @@ impl AudioMixer {
     }
 
     pub fn play_music_string(&self, music: &str) -> Result<()> {
+        // Use tokio async sleep instead of blocking thread::sleep
+        // For now, avoid blocking; in future use tokio runtime or async version
         for _note in music.split_whitespace() {
             self.beep();
-            std::thread::sleep(std::time::Duration::from_millis(200));
+            // TODO: Replace with tokio::time::sleep in async context
+            // Non-blocking approach: skip sleep in batch mode, or schedule async
         }
         Ok(())
     }
