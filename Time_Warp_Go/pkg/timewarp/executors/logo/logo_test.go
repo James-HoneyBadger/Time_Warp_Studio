@@ -76,6 +76,9 @@ func TestExecutor_LeftRight(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute(RT) error = %v", err)
 	}
+	if !strings.Contains(result, "RIGHT") {
+		t.Errorf("RIGHT output missing: %q", result)
+	}
 	if e.turtleAngle == currentAngle {
 		t.Errorf("RIGHT did not change angle: still %v", currentAngle)
 	}
@@ -106,6 +109,9 @@ func TestExecutor_PenUpDown(t *testing.T) {
 	result, err = e.Execute("PD")
 	if err != nil {
 		t.Fatalf("Execute(PD) error = %v", err)
+	}
+	if !strings.Contains(result, "PENDOWN") {
+		t.Errorf("PENDOWN output missing: %q", result)
 	}
 	if !e.penDown {
 		t.Error("PENDOWN should set penDown to true")
@@ -195,6 +201,9 @@ func TestExecutor_SetHeading(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute(SETH) error = %v", err)
 	}
+	if !strings.Contains(result, "SETHEADING") && !strings.Contains(result, "SETH") {
+		t.Errorf("SETH output missing: %q", result)
+	}
 	if e.turtleAngle != 90 {
 		t.Errorf("SETH should set angle to 90, got %v", e.turtleAngle)
 	}
@@ -259,6 +268,9 @@ func TestExecutor_HideShowTurtle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Execute(ST) error = %v", err)
 	}
+	if !strings.Contains(result, "SHOWTURTLE") {
+		t.Errorf("SHOWTURTLE output missing: %q", result)
+	}
 	if e.turtleHidden {
 		t.Error("SHOWTURTLE should set turtleHidden to false")
 	}
@@ -286,6 +298,93 @@ func TestExecutor_UnknownCommand(t *testing.T) {
 	}
 	if !strings.Contains(result, "❌") {
 		t.Errorf("Unknown command should return error message with ❌: %q", result)
+	}
+}
+
+// TestExecutor_ErrorPaths covers missing arguments for movement and angle commands
+func TestExecutor_ErrorPaths(t *testing.T) {
+	e := New()
+	cases := []string{"FORWARD", "BACK", "LEFT", "RIGHT"}
+	for _, c := range cases {
+		out, err := e.Execute(c)
+		if err != nil {
+			t.Fatalf("%s unexpected error: %v", c, err)
+		}
+		if !strings.Contains(out, "no") && !strings.Contains(out, "(no") {
+			t.Errorf("%s missing 'no' indicator: %q", c, out)
+		}
+	}
+}
+
+// TestExecutor_SetXYInvalid tests invalid SETXY argument handling
+func TestExecutor_SetXYInvalid(t *testing.T) {
+	e := New()
+	out, err := e.Execute("SETXY 100")
+	if err != nil {
+		t.Fatalf("SETXY invalid unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "requires") {
+		t.Errorf("SETXY invalid should show requires message: %q", out)
+	}
+}
+
+// TestExecutor_SetHeadingInvalid tests invalid SETHEADING argument handling
+func TestExecutor_SetHeadingInvalid(t *testing.T) {
+	e := New()
+	out, err := e.Execute("SETHEADING")
+	if err != nil {
+		t.Fatalf("SETHEADING invalid unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "requires angle") {
+		t.Errorf("SETHEADING invalid should show requires angle: %q", out)
+	}
+}
+
+// TestExecutor_SetColorInvalid tests invalid SETCOLOR argument handling
+func TestExecutor_SetColorInvalid(t *testing.T) {
+	e := New()
+	out, err := e.Execute("SETCOLOR 10 20")
+	if err != nil {
+		t.Fatalf("SETCOLOR invalid unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "requires r g b") {
+		t.Errorf("SETCOLOR invalid should show requires rgb: %q", out)
+	}
+}
+
+// TestExecutor_PenWidthInvalid tests invalid PENWIDTH argument handling
+func TestExecutor_PenWidthInvalid(t *testing.T) {
+	e := New()
+	out, err := e.Execute("PENWIDTH")
+	if err != nil {
+		t.Fatalf("PENWIDTH invalid unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "requires width") {
+		t.Errorf("PENWIDTH invalid should show requires width: %q", out)
+	}
+}
+
+// TestExecutor_ToStub tests TO procedure stub branch
+func TestExecutor_ToStub(t *testing.T) {
+	e := New()
+	out, err := e.Execute("TO FOO :X :Y")
+	if err != nil {
+		t.Fatalf("TO stub unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "procedure") {
+		t.Errorf("TO stub should indicate unsupported: %q", out)
+	}
+}
+
+// TestExecutor_End tests END branch
+func TestExecutor_End(t *testing.T) {
+	e := New()
+	out, err := e.Execute("END")
+	if err != nil {
+		t.Fatalf("END unexpected error: %v", err)
+	}
+	if !strings.Contains(out, "✅ END") {
+		t.Errorf("END did not produce expected message: %q", out)
 	}
 }
 
