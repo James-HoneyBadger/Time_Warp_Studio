@@ -1,0 +1,462 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>pilot: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/James-HoneyBadger/Time_Warp/Time_Warp_Go/pkg/timewarp/executors/pilot/pilot.go (93.3%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package pilot
+
+import (
+        "fmt"
+        "regexp"
+        "strconv"
+        "strings"
+)
+
+// Executor handles comprehensive PILOT commands matching Rust reference.
+// Supported:
+//   - T:&lt;text&gt;  (type/display text)
+//   - A:&lt;var&gt;   (accept input to variable)
+//   - U:&lt;var=expr&gt; (use/assign variable)
+//   - C:&lt;condition&gt; (compute/test condition)
+//   - Y:&lt;condition&gt; (yes - execute if last condition true)
+//   - N:&lt;condition&gt; (no - execute if last condition false)
+//   - M:&lt;pattern&gt; (match pattern in last input)
+//   - J:&lt;label&gt; (jump to label)
+//   - L:&lt;label&gt; (define label)
+//   - E: (end program)
+//   - R:&lt;text&gt; (remark/comment)
+
+type Executor struct {
+        variables       map[string]string
+        labels          map[string]int
+        lastInput       string
+        matchFlag       bool
+        conditionResult bool
+        currentLine     int
+}
+
+func New() *Executor <span class="cov8" title="1">{
+        return &amp;Executor{
+                variables:       make(map[string]string),
+                labels:          make(map[string]int),
+                matchFlag:       false,
+                conditionResult: false,
+        }
+}</span>
+
+func (e *Executor) Execute(command string) (string, error) <span class="cov8" title="1">{
+        c := strings.TrimSpace(command)
+        if len(c) &lt; 2 || c[1] != ':' </span><span class="cov8" title="1">{
+                return "", nil
+        }</span>
+
+        <span class="cov8" title="1">cmdType := strings.ToUpper(string(c[0]))
+        content := strings.TrimSpace(c[2:])
+
+        switch cmdType </span>{
+        case "T":<span class="cov8" title="1">
+                // Type/display text with variable interpolation
+                text := e.interpolateVars(content)
+                return fmt.Sprintf("ℹ️  %s\n", text), nil</span>
+
+        case "A":<span class="cov8" title="1">
+                // Accept input to variable
+                varName := content
+                // In real implementation, would trigger input prompt
+                e.variables[varName] = ""
+                e.lastInput = ""
+                return fmt.Sprintf("📝 INPUT to %s\n", varName), nil</span>
+
+        case "U":<span class="cov8" title="1">
+                // Use/assign variable
+                if strings.Contains(content, "=") </span><span class="cov8" title="1">{
+                        parts := strings.SplitN(content, "=", 2)
+                        varName := strings.TrimSpace(parts[0])
+                        value := strings.TrimSpace(parts[1])
+                        e.variables[varName] = e.evaluateExpression(value)
+                        return "", nil
+                }</span>
+                // Just print variable value
+                <span class="cov8" title="1">varName := content
+                val := e.variables[varName]
+                return fmt.Sprintf("ℹ️  %s = %s\n", varName, val), nil</span>
+
+        case "C":<span class="cov8" title="1">
+                // Compute/test condition
+                e.conditionResult = e.evaluateCondition(content)
+                return "", nil</span>
+
+        case "Y":<span class="cov8" title="1">
+                // Yes - execute if last condition/match true
+                if e.conditionResult || e.matchFlag </span><span class="cov8" title="1">{
+                        return "✅ YES condition met\n", nil
+                }</span>
+                <span class="cov8" title="1">return "", nil</span>
+
+        case "N":<span class="cov8" title="1">
+                // No - execute if last condition/match false
+                if !e.conditionResult &amp;&amp; !e.matchFlag </span><span class="cov8" title="1">{
+                        return "✅ NO condition met\n", nil
+                }</span>
+                <span class="cov8" title="1">return "", nil</span>
+
+        case "M":<span class="cov8" title="1">
+                // Match pattern in last input
+                pattern := content
+                e.matchFlag = e.matchPattern(pattern, e.lastInput)
+                return "", nil</span>
+
+        case "J":<span class="cov8" title="1">
+                // Jump to label
+                label := content
+                if lineNum, ok := e.labels[label]; ok </span><span class="cov0" title="0">{
+                        e.currentLine = lineNum
+                        return fmt.Sprintf("🚀 JUMP to %s (line %d)\n", label, lineNum), nil
+                }</span>
+                <span class="cov8" title="1">return fmt.Sprintf("❌ Label '%s' not found\n", label), nil</span>
+
+        case "L":<span class="cov0" title="0">
+                // Define label
+                label := content
+                e.labels[label] = e.currentLine
+                return "", nil</span>
+
+        case "E":<span class="cov8" title="1">
+                // End program
+                return "✅ Program ended\n", nil</span>
+
+        case "R":<span class="cov8" title="1">
+                // Remark/comment
+                return "", nil</span>
+
+        default:<span class="cov8" title="1">
+                return fmt.Sprintf("❌ PILOT: unknown command '%s:'\n", cmdType), nil</span>
+        }
+}
+
+// RunProgram executes a multi-line PILOT program with label resolution and jumps
+func (e *Executor) RunProgram(program string) string <span class="cov8" title="1">{
+        // Reset state
+        e.variables = make(map[string]string)
+        e.labels = make(map[string]int)
+        e.lastInput = ""
+        e.matchFlag = false
+        e.conditionResult = false
+
+        lines := strings.Split(strings.ReplaceAll(program, "\r", ""), "\n")
+        parsed := make([]string, 0, len(lines))
+
+        // First pass: collect lines and labels
+        for _, raw := range lines </span><span class="cov8" title="1">{
+                t := strings.TrimSpace(raw)
+                if t == "" </span><span class="cov8" title="1">{
+                        continue</span>
+                }
+                <span class="cov8" title="1">parsed = append(parsed, t)
+
+                // Check for label definition
+                if len(t) &gt;= 2 &amp;&amp; t[1] == ':' &amp;&amp; strings.ToUpper(string(t[0])) == "L" </span><span class="cov8" title="1">{
+                        label := strings.TrimSpace(t[2:])
+                        e.labels[label] = len(parsed) - 1
+                }</span>
+        }
+
+        // Second pass: execute
+        <span class="cov8" title="1">out := &amp;strings.Builder{}
+        pc := 0
+        steps := 0
+        maxSteps := 10000
+
+        for pc &gt;= 0 &amp;&amp; pc &lt; len(parsed) &amp;&amp; steps &lt; maxSteps </span><span class="cov8" title="1">{
+                steps++
+                cmd := parsed[pc]
+
+                if len(cmd) &lt; 2 || cmd[1] != ':' </span><span class="cov8" title="1">{
+                        pc++
+                        continue</span>
+                }
+
+                <span class="cov8" title="1">cmdType := strings.ToUpper(string(cmd[0]))
+                content := strings.TrimSpace(cmd[2:])
+
+                switch cmdType </span>{
+                case "T":<span class="cov8" title="1">
+                        text := e.interpolateVars(content)
+                        out.WriteString(text + "\n")
+                        pc++</span>
+                case "A":<span class="cov0" title="0">
+                        // Accept input (stub: set to empty)
+                        e.variables[content] = ""
+                        e.lastInput = ""
+                        pc++</span>
+                case "U":<span class="cov8" title="1">
+                        // Use/assign
+                        if strings.Contains(content, "=") </span><span class="cov8" title="1">{
+                                parts := strings.SplitN(content, "=", 2)
+                                varName := strings.TrimSpace(parts[0])
+                                value := strings.TrimSpace(parts[1])
+                                e.variables[varName] = e.evaluateExpression(value)
+                        }</span>
+                        <span class="cov8" title="1">pc++</span>
+                case "C":<span class="cov8" title="1">
+                        e.conditionResult = e.evaluateCondition(content)
+                        pc++</span>
+                case "Y":<span class="cov8" title="1">
+                        // Execute next statement if condition/match true
+                        if e.conditionResult || e.matchFlag </span><span class="cov8" title="1">{
+                                pc++
+                        }</span> else<span class="cov8" title="1"> {
+                                pc += 2 // skip next
+                        }</span>
+                case "N":<span class="cov8" title="1">
+                        // Execute next statement if condition/match false
+                        if !e.conditionResult &amp;&amp; !e.matchFlag </span><span class="cov0" title="0">{
+                                pc++
+                        }</span> else<span class="cov8" title="1"> {
+                                pc += 2 // skip next
+                        }</span>
+                case "M":<span class="cov8" title="1">
+                        e.matchFlag = e.matchPattern(content, e.lastInput)
+                        pc++</span>
+                case "J":<span class="cov8" title="1">
+                        // Jump to label
+                        label := content
+                        if lineNum, ok := e.labels[label]; ok </span><span class="cov8" title="1">{
+                                pc = lineNum
+                        }</span> else<span class="cov8" title="1"> {
+                                out.WriteString(fmt.Sprintf("❌ Label '%s' not found\n", label))
+                                pc++
+                        }</span>
+                case "L":<span class="cov8" title="1">
+                        // Label definition (no-op in execution)
+                        pc++</span>
+                case "E":<span class="cov8" title="1">
+                        // End program
+                        return out.String()</span>
+                case "R":<span class="cov8" title="1">
+                        // Comment
+                        pc++</span>
+                default:<span class="cov0" title="0">
+                        pc++</span>
+                }
+        }
+
+        <span class="cov8" title="1">if steps &gt;= maxSteps </span><span class="cov8" title="1">{
+                out.WriteString("❌ Stopped: too many steps\n")
+        }</span>
+        <span class="cov8" title="1">return out.String()</span>
+}
+
+// Interpolate variables in text (*VAR* syntax)
+func (e *Executor) interpolateVars(text string) string <span class="cov8" title="1">{
+        re := regexp.MustCompile(`\*(\w+)\*`)
+        return re.ReplaceAllStringFunc(text, func(match string) string </span><span class="cov8" title="1">{
+                varName := match[1 : len(match)-1]
+                if val, ok := e.variables[varName]; ok </span><span class="cov8" title="1">{
+                        return val
+                }</span>
+                <span class="cov8" title="1">return match</span>
+        })
+}
+
+// Evaluate simple expressions (numeric or string)
+func (e *Executor) evaluateExpression(expr string) string <span class="cov8" title="1">{
+        expr = strings.TrimSpace(expr)
+
+        // Try numeric expression
+        if val, err := strconv.ParseFloat(expr, 64); err == nil </span><span class="cov8" title="1">{
+                return fmt.Sprintf("%g", val)
+        }</span>
+
+        // Simple arithmetic
+        <span class="cov8" title="1">if strings.Contains(expr, "+") </span><span class="cov8" title="1">{
+                parts := strings.SplitN(expr, "+", 2)
+                left, _ := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+                right, _ := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+                return fmt.Sprintf("%g", left+right)
+        }</span>
+        <span class="cov8" title="1">if strings.Contains(expr, "-") </span><span class="cov8" title="1">{
+                parts := strings.SplitN(expr, "-", 2)
+                left, _ := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+                right, _ := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+                return fmt.Sprintf("%g", left-right)
+        }</span>
+        <span class="cov8" title="1">if strings.Contains(expr, "*") </span><span class="cov8" title="1">{
+                parts := strings.SplitN(expr, "*", 2)
+                left, _ := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+                right, _ := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+                return fmt.Sprintf("%g", left*right)
+        }</span>
+        <span class="cov8" title="1">if strings.Contains(expr, "/") </span><span class="cov8" title="1">{
+                parts := strings.SplitN(expr, "/", 2)
+                left, _ := strconv.ParseFloat(strings.TrimSpace(parts[0]), 64)
+                right, _ := strconv.ParseFloat(strings.TrimSpace(parts[1]), 64)
+                if right != 0 </span><span class="cov8" title="1">{
+                        return fmt.Sprintf("%g", left/right)
+                }</span>
+        }
+
+        // Check if it's a variable reference
+        <span class="cov8" title="1">if val, ok := e.variables[expr]; ok </span><span class="cov8" title="1">{
+                return val
+        }</span>
+
+        // Return as-is (string literal)
+        <span class="cov8" title="1">return strings.Trim(expr, "\"")</span>
+}
+
+// Evaluate condition (supports =, &gt;, &lt;, &gt;=, &lt;=, &lt;&gt;)
+func (e *Executor) evaluateCondition(condition string) bool <span class="cov8" title="1">{
+        condition = strings.TrimSpace(condition)
+
+        // Check for operators
+        operators := []string{"&gt;=", "&lt;=", "&lt;&gt;", "=", "&gt;", "&lt;"}
+        for _, op := range operators </span><span class="cov8" title="1">{
+                if strings.Contains(condition, op) </span><span class="cov8" title="1">{
+                        parts := strings.SplitN(condition, op, 2)
+                        left := e.evaluateExpression(strings.TrimSpace(parts[0]))
+                        right := e.evaluateExpression(strings.TrimSpace(parts[1]))
+
+                        // Try numeric comparison
+                        leftNum, leftErr := strconv.ParseFloat(left, 64)
+                        rightNum, rightErr := strconv.ParseFloat(right, 64)
+
+                        if leftErr == nil &amp;&amp; rightErr == nil </span><span class="cov8" title="1">{
+                                switch op </span>{
+                                case "=":<span class="cov8" title="1">
+                                        return leftNum == rightNum</span>
+                                case "&gt;":<span class="cov8" title="1">
+                                        return leftNum &gt; rightNum</span>
+                                case "&lt;":<span class="cov8" title="1">
+                                        return leftNum &lt; rightNum</span>
+                                case "&gt;=":<span class="cov8" title="1">
+                                        return leftNum &gt;= rightNum</span>
+                                case "&lt;=":<span class="cov8" title="1">
+                                        return leftNum &lt;= rightNum</span>
+                                case "&lt;&gt;":<span class="cov8" title="1">
+                                        return leftNum != rightNum</span>
+                                }
+                        } else<span class="cov8" title="1"> {
+                                // String comparison
+                                switch op </span>{
+                                case "=":<span class="cov8" title="1">
+                                        return left == right</span>
+                                case "&lt;&gt;":<span class="cov8" title="1">
+                                        return left != right</span>
+                                }
+                        }
+                }
+        }
+
+        <span class="cov0" title="0">return false</span>
+}
+
+// Match pattern against text (supports wildcards)
+func (e *Executor) matchPattern(pattern, text string) bool <span class="cov8" title="1">{
+        pattern = strings.ToLower(strings.TrimSpace(pattern))
+        text = strings.ToLower(strings.TrimSpace(text))
+
+        // Convert simple wildcard pattern to regex
+        // * matches anything
+        regexPattern := "^" + strings.ReplaceAll(regexp.QuoteMeta(pattern), "\\*", ".*") + "$"
+        matched, _ := regexp.MatchString(regexPattern, text)
+        return matched
+}</span>
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

@@ -515,3 +515,109 @@ E:
 		t.Errorf("Expected missing label error in program, got %q", out)
 	}
 }
+
+// TestExecutor_RunProgram_Y_Skip verifies Y: skips the next line when the condition is false
+func TestExecutor_RunProgram_Y_Skip(t *testing.T) {
+	e := New()
+	program := `
+U:X=1
+C:X>5
+Y:
+T:SHOULD_NOT_PRINT
+T:SHOULD_PRINT
+E:
+`
+	out := e.RunProgram(program)
+	if strings.Contains(out, "SHOULD_NOT_PRINT") {
+		t.Errorf("Y: should skip next when condition false; got %q", out)
+	}
+	if !strings.Contains(out, "SHOULD_PRINT") {
+		t.Errorf("Expected 'SHOULD_PRINT' in output; got %q", out)
+	}
+}
+
+// TestExecutor_RunProgram_N_Skip verifies N: skips the next line when the condition is true
+func TestExecutor_RunProgram_N_Skip(t *testing.T) {
+	e := New()
+	program := `
+U:X=10
+C:X>=10
+N:
+T:SHOULD_NOT_PRINT
+T:SHOULD_PRINT
+E:
+`
+	out := e.RunProgram(program)
+	if strings.Contains(out, "SHOULD_NOT_PRINT") {
+		t.Errorf("N: should skip next when condition true; got %q", out)
+	}
+	if !strings.Contains(out, "SHOULD_PRINT") {
+		t.Errorf("Expected 'SHOULD_PRINT' in output; got %q", out)
+	}
+}
+
+// TestExecutor_RunProgram_Match_Y_OR tests Y: executing based on matchFlag via M:
+func TestExecutor_RunProgram_Match_Y_OR(t *testing.T) {
+	e := New()
+	program := `
+M:hello
+Y:
+T:NO_MATCH
+M:*
+Y:
+T:MATCHED
+E:
+`
+	out := e.RunProgram(program)
+	if strings.Contains(out, "NO_MATCH") {
+		t.Errorf("First Y should not execute when M:hello doesn't match empty input; got %q", out)
+	}
+	if !strings.Contains(out, "MATCHED") {
+		t.Errorf("Second Y should execute when M:* matches; got %q", out)
+	}
+}
+
+// TestExecutor_Interpolate_MissingVar ensures unknown variables remain as *VAR*
+func TestExecutor_Interpolate_MissingVar(t *testing.T) {
+	e := New()
+	out, err := e.Execute("T:*MISSING*")
+	if err != nil {
+		t.Fatalf("T:*MISSING* error: %v", err)
+	}
+	if !strings.Contains(out, "*MISSING*") {
+		t.Errorf("Expected literal *MISSING* preserved, got %q", out)
+	}
+}
+
+// TestExecutor_Execute_EmptyWhitespace ensures empty/whitespace commands return empty output
+func TestExecutor_Execute_EmptyWhitespace(t *testing.T) {
+	e := New()
+	out, err := e.Execute("")
+	if err != nil {
+		t.Fatalf("empty command error: %v", err)
+	}
+	if out != "" {
+		t.Errorf("empty command should return empty output, got %q", out)
+	}
+	out, err = e.Execute("   \t  ")
+	if err != nil {
+		t.Fatalf("whitespace command error: %v", err)
+	}
+	if out != "" {
+		t.Errorf("whitespace command should return empty output, got %q", out)
+	}
+}
+
+// TestExecutor_RunProgram_SkipUnknownLine ensures bare lines without colon are skipped
+func TestExecutor_RunProgram_SkipUnknownLine(t *testing.T) {
+	e := New()
+	program := `
+FOO
+T:AFTER
+E:
+`
+	out := e.RunProgram(program)
+	if !strings.Contains(out, "AFTER") {
+		t.Errorf("Expected AFTER in output; got %q", out)
+	}
+}
