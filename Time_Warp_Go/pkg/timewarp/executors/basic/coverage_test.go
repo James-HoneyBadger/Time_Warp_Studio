@@ -562,3 +562,327 @@ func TestExecutor_RunProgramRemAndEmpty(t *testing.T) {
 		t.Errorf("Program with REM should work: %q", result)
 	}
 }
+
+// TestExecutor_SingleCommandGotoError covers executeGoto error path
+func TestExecutor_SingleCommandGotoError(t *testing.T) {
+	e := New()
+	result, err := e.Execute("GOTO ABC")
+	if err != nil {
+		t.Fatalf("Execute(GOTO ABC) unexpected error: %v", err)
+	}
+	if !strings.Contains(result, "❌") {
+		t.Errorf("GOTO with non-numeric should error: %q", result)
+	}
+}
+
+// TestExecutor_ExecuteUnknownAssignment tests implicit LET via assignment branch
+func TestExecutor_ExecuteUnknownAssignment(t *testing.T) {
+	e := New()
+	out, err := e.Execute("X = 123")
+	if err != nil {
+		t.Fatalf("Execute implicit assignment error: %v", err)
+	}
+	if out != "" || e.variables["X"] != 123 {
+		t.Errorf("Implicit assignment failed: out=%q X=%v", out, e.variables["X"])
+	}
+}
+
+// TestExecutor_ExecuteUnknownCommand tests default unknown command branch
+func TestExecutor_ExecuteUnknownCommand(t *testing.T) {
+	e := New()
+	out, err := e.Execute("ZZZ")
+	if err != nil {
+		t.Fatalf("Execute unknown command error: %v", err)
+	}
+	if !strings.Contains(out, "unknown command") {
+		t.Errorf("Expected unknown command message: %q", out)
+	}
+}
+
+// TestExecutor_ExecuteReturnEmptyStack tests RETURN with empty gosub stack in single-command mode
+func TestExecutor_ExecuteReturnEmptyStack(t *testing.T) {
+	e := New()
+	out, err := e.Execute("RETURN")
+	if err != nil {
+		t.Fatalf("Execute RETURN error: %v", err)
+	}
+	if !strings.Contains(out, "❌") {
+		t.Errorf("Expected error for empty RETURN: %q", out)
+	}
+}
+
+// TestExecutor_ExecuteEnd tests END command output
+func TestExecutor_ExecuteEnd(t *testing.T) {
+	e := New()
+	out, _ := e.Execute("END")
+	if !strings.Contains(out, "Program ended") {
+		t.Errorf("END did not produce termination message: %q", out)
+	}
+}
+
+// TestExecutor_ExecuteCls tests CLS command output
+func TestExecutor_ExecuteCls(t *testing.T) {
+	e := New()
+	out, _ := e.Execute("CLS")
+	if !strings.Contains(out, "Screen cleared") {
+		t.Errorf("CLS did not produce clear message: %q", out)
+	}
+}
+
+// TestExecutor_ExecuteEcho covers ECHO branch
+func TestExecutor_ExecuteEcho(t *testing.T) {
+	e := New()
+	out, _ := e.Execute("ECHO hello world")
+	if !strings.Contains(out, "✅ hello world") {
+		t.Errorf("ECHO did not echo message: %q", out)
+	}
+}
+
+// TestExecutor_ExecuteLetWithoutSpaces covers implicit LET with spaces
+func TestExecutor_ExecuteLetWithoutSpaces(t *testing.T) {
+	e := New()
+	out, _ := e.Execute("  A   =   5  ")
+	if out != "" || e.variables["A"] != 5 {
+		t.Errorf("Implicit LET with spaces failed: out=%q A=%v", out, e.variables["A"])
+	}
+}
+
+// TestExecutor_RunProgramGotoNegativeUnknown covers GOTO to negative/unknown
+func TestExecutor_RunProgramGotoNegativeUnknown(t *testing.T) {
+	e := New()
+	program := `
+10 GOTO -1
+20 PRINT "AFTER"
+30 END
+`
+	out := e.RunProgram(program)
+	if !strings.Contains(out, "Unknown line") {
+		t.Errorf("GOTO negative should be unknown: %q", out)
+	}
+}
+
+// TestExecutor_RunProgramForParseErrors covers FOR parse error branches
+func TestExecutor_RunProgramForParseErrors(t *testing.T) {
+	e := New()
+	programMissingTo := `
+10 FOR I = 1 5
+20 PRINT "X"
+30 END
+`
+	r1 := e.RunProgram(programMissingTo)
+	if !strings.Contains(r1, "FOR requires TO") {
+		t.Errorf("Missing TO not detected: %q", r1)
+	}
+
+	e2 := New()
+	programMissingEquals := `
+10 FOR I 1 TO 5
+20 PRINT "X"
+30 END
+`
+	r2 := e2.RunProgram(programMissingEquals)
+	if !strings.Contains(r2, "FOR requires var = start TO end") {
+		t.Errorf("Missing '=' not detected: %q", r2)
+	}
+}
+
+// TestExecutor_ExecuteForWithStep covers executeFor STEP parsing branch
+func TestExecutor_ExecuteForWithStep(t *testing.T) {
+	e := New()
+	out, err := e.Execute("FOR J = 5 TO 1 STEP -2")
+	if err != nil {
+		t.Fatalf("Execute FOR with STEP error: %v", err)
+	}
+	if !strings.Contains(out, "🔄 FOR J = 5") || !strings.Contains(out, "STEP -2") {
+		t.Errorf("FOR with STEP not parsed correctly: %q", out)
+	}
+}
+
+// TestExecutor_RunProgramGosubUnknown covers unknown line after GOSUB
+func TestExecutor_RunProgramGosubUnknown(t *testing.T) {
+	e := New()
+	program := `
+10 GOSUB 9999
+20 PRINT "AFTER"
+30 END
+`
+	out := e.RunProgram(program)
+	if !strings.Contains(out, "Unknown line") {
+		t.Errorf("Expected unknown line error for GOSUB: %q", out)
+	}
+}
+
+// TestExecutor_RunProgramReturnWithoutGosub covers RETURN error inside program
+func TestExecutor_RunProgramReturnWithoutGosub(t *testing.T) {
+	e := New()
+	program := `
+10 RETURN
+20 PRINT "AFTER"
+30 END
+`
+	out := e.RunProgram(program)
+	if !strings.Contains(out, "RETURN without GOSUB") {
+		t.Errorf("RETURN without GOSUB not reported: %q", out)
+	}
+}
+
+// TestExecutor_RunProgramGraphics covers LINE, CIRCLE, LOCATE branches
+func TestExecutor_RunProgramGraphics(t *testing.T) {
+	e := New()
+	program := `
+10 LINE 1,2,3,4
+20 CIRCLE 10,10,5
+30 LOCATE 5,7
+40 END
+`
+	out := e.RunProgram(program)
+	if !strings.Contains(out, "LINE 1,2,3,4") || !strings.Contains(out, "CIRCLE 10,10,5") || !strings.Contains(out, "LOCATE 5,7") {
+		t.Errorf("Graphics commands missing in output: %q", out)
+	}
+}
+
+// TestExecutor_ExecuteRem covers REM comment branch in single-command mode
+func TestExecutor_ExecuteRem(t *testing.T) {
+	e := New()
+	out, err := e.Execute("REM this is a comment")
+	if err != nil {
+		t.Fatalf("Execute REM error: %v", err)
+	}
+	if out != "" {
+		t.Errorf("REM should produce no output: %q", out)
+	}
+}
+
+// TestExecutor_RunProgramIfInvalidTarget covers IF with non-existent numeric target
+func TestExecutor_RunProgramIfInvalidTarget(t *testing.T) {
+	e := New()
+	program := `
+10 LET X = 1
+20 IF X THEN 9999
+30 PRINT "AFTER"
+40 END
+`
+	out := e.RunProgram(program)
+	// Should not jump; should print AFTER
+	if !strings.Contains(out, "AFTER") {
+		t.Errorf("IF invalid target should continue: %q", out)
+	}
+}
+
+// TestExecutor_SingleCommandGosubError covers executeGosub error path
+func TestExecutor_SingleCommandGosubError(t *testing.T) {
+	e := New()
+	result, err := e.Execute("GOSUB xyz")
+	if err != nil {
+		t.Fatalf("Execute(GOSUB xyz) unexpected error: %v", err)
+	}
+	if !strings.Contains(result, "❌") {
+		t.Errorf("GOSUB with non-numeric should error: %q", result)
+	}
+}
+
+// TestExecutor_NextCompletion tests NEXT loop completion (✅ branch)
+func TestExecutor_NextCompletion(t *testing.T) {
+	e := New()
+	e.forStack = append(e.forStack, forContext{variable: "I", endVal: 5, step: 1, startLine: 0})
+	e.variables["I"] = 5 // already at end, NEXT should immediately complete
+	result, err := e.Execute("NEXT I")
+	if err != nil {
+		t.Fatalf("Execute(NEXT I) error: %v", err)
+	}
+	if !strings.Contains(result, "✅") {
+		t.Errorf("Expected loop completion ✅: %q", result)
+	}
+}
+
+// TestExecutor_NextNegativeStepCompletion tests negative step completion branch
+func TestExecutor_NextNegativeStepCompletion(t *testing.T) {
+	e := New()
+	// Loop I = 0 TO -5 STEP -1 ; set current at -5 so next decrements past end
+	e.forStack = append(e.forStack, forContext{variable: "I", endVal: -5, step: -1, startLine: 0})
+	e.variables["I"] = -5
+	result, err := e.Execute("NEXT I")
+	if err != nil {
+		t.Fatalf("Execute(NEXT I) error: %v", err)
+	}
+	if !strings.Contains(result, "✅") {
+		t.Errorf("Expected negative step completion ✅: %q", result)
+	}
+}
+
+// TestExecutor_EvalNumericAdvanced covers ABS/INT/SQR/div by zero/negative
+func TestExecutor_EvalNumericAdvanced(t *testing.T) {
+	e := New()
+	e.variables["NEG"] = -7
+	cases := []struct {
+		expr string
+		want float64
+	}{
+		{"ABS(5)", 5},
+		{"INT(3.9)", 3},
+		{"SQR(9)", 3},
+		{"NEG", -7},
+		{"10/0", 0}, // division by zero returns 0 per implementation
+	}
+	for _, c := range cases {
+		got := e.evalNumeric(c.expr)
+		if got != c.want {
+			t.Errorf("evalNumeric(%s)=%v want %v", c.expr, got, c.want)
+		}
+	}
+}
+
+// TestExecutor_RunProgramUnknownCommand covers default unknown branch
+func TestExecutor_RunProgramUnknownCommand(t *testing.T) {
+	e := New()
+	program := `
+10 FOO 123
+20 END
+`
+	result := e.RunProgram(program)
+	if !strings.Contains(result, "unknown command") {
+		t.Errorf("Unknown command branch not hit: %q", result)
+	}
+}
+
+// TestExecutor_RunProgramLineOnly covers lines with just a number
+func TestExecutor_RunProgramLineOnly(t *testing.T) {
+	e := New()
+	program := `
+10
+20 PRINT "OK"
+30
+40 END
+`
+	result := e.RunProgram(program)
+	if !strings.Contains(result, "OK") {
+		t.Errorf("Line-only program should still run PRINT: %q", result)
+	}
+}
+
+// TestExecutor_RunProgramMaxSteps asserts infinite loop guard message
+func TestExecutor_RunProgramMaxSteps(t *testing.T) {
+	e := New()
+	program := `
+10 GOTO 10
+`
+	result := e.RunProgram(program)
+	if !strings.Contains(result, "too many steps") {
+		t.Errorf("Expected max steps guard message: %q", result)
+	}
+}
+
+// TestExecutor_RunProgramMismatchedNext covers NEXT with wrong variable name (ignored)
+func TestExecutor_RunProgramMismatchedNext(t *testing.T) {
+	e := New()
+	program := `
+10 FOR I = 1 TO 2
+20 NEXT J
+30 PRINT "OK"
+40 END
+`
+	result := e.RunProgram(program)
+	if !strings.Contains(result, "OK") {
+		t.Errorf("Mismatched NEXT should be ignored and program continue: %q", result)
+	}
+}

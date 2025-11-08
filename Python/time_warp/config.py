@@ -59,12 +59,16 @@ def load_settings() -> Dict[str, Any]:
     return settings
 
 
-def save_settings(settings: Dict[str, Any], geometry: Optional[str] = None) -> None:
+def save_settings(
+    settings: Dict[str, Any],
+    geometry: Optional[str] = None,
+) -> None:
     """Save settings to config file.
 
     Args:
         settings: Dictionary of settings to save
-        geometry: Optional window geometry string (e.g., "800x600+100+50")
+        geometry: Optional window geometry string
+            (e.g., "800x600+100+50")
     """
     data = dict(settings)
     if geometry:
