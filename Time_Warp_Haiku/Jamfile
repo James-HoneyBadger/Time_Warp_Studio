@@ -1,0 +1,47 @@
+# Jamfile for Time Warp IDE - Haiku Edition
+# Build configuration for Haiku OS
+
+SubDir TOP ;
+
+# Application settings
+APPNAME = Time_Warp_Haiku ;
+SRCS = 
+	src/main.cpp
+	src/TimeWarpApp.cpp
+	src/TimeWarpWindow.cpp
+	src/EditorView.cpp
+	src/OutputView.cpp
+	src/TurtleView.cpp
+	src/interpreters/BasicInterpreter.cpp
+	;
+
+# Resource file
+RSRCS = Time_Warp_Haiku.rdef ;
+
+# Libraries
+LINKLIBS = be stdc++ ;
+
+# Compiler flags
+C++FLAGS += -std=c++17 -Wall -Wextra ;
+
+# Debug/Release
+if $(OSPLAT) = X86 {
+	C++FLAGS += -O2 ;
+} else {
+	C++FLAGS += -g ;
+}
+
+# Include paths
+HDRS += headers headers/interpreters ;
+
+# Build the application
+Application $(APPNAME) : $(SRCS) ;
+
+# Link libraries
+LinkAgainst $(APPNAME) : $(LINKLIBS) ;
+
+# Add resources
+AddResources $(APPNAME) : $(RSRCS) ;
+
+# Set application signature and MIME type
+MimeSet $(APPNAME) ;
