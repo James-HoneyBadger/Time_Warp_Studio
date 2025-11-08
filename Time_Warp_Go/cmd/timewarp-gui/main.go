@@ -712,32 +712,52 @@ func (g *timeWarpGUI) show() {
 
 // exportTurtleImageDialog prompts for export options then saves PNG.
 func (g *timeWarpGUI) exportTurtleImageDialog() {
-	if g.turtleCanvas == nil { return }
-	wField := widget.NewEntry(); wField.SetText("800")
-	hField := widget.NewEntry(); hField.SetText("800")
-	preset := widget.NewSelect([]string{"Custom","400x400","800x800","1024x1024","1600x1600"}, func(s string){
+	if g.turtleCanvas == nil {
+		return
+	}
+	wField := widget.NewEntry()
+	wField.SetText("800")
+	hField := widget.NewEntry()
+	hField.SetText("800")
+	preset := widget.NewSelect([]string{"Custom", "400x400", "800x800", "1024x1024", "1600x1600"}, func(s string) {
 		switch s {
-		case "400x400": wField.SetText("400"); hField.SetText("400")
-		case "800x800": wField.SetText("800"); hField.SetText("800")
-		case "1024x1024": wField.SetText("1024"); hField.SetText("1024")
-		case "1600x1600": wField.SetText("1600"); hField.SetText("1600")
+		case "400x400":
+			wField.SetText("400")
+			hField.SetText("400")
+		case "800x800":
+			wField.SetText("800")
+			hField.SetText("800")
+		case "1024x1024":
+			wField.SetText("1024")
+			hField.SetText("1024")
+		case "1600x1600":
+			wField.SetText("1600")
+			hField.SetText("1600")
 		}
 	})
 	preset.SetSelected("Custom")
 	transparent := widget.NewCheck("Transparent background", nil)
-	selectedBg := color.RGBA{255,255,255,255}
-	bgButton := widget.NewButton("Background color (#FFFFFF)", func(){
-		cp := dialog.NewColorPicker("Pick background color", "Choose a color", func(c color.Color){
+	selectedBg := color.RGBA{255, 255, 255, 255}
+	bgButton := widget.NewButton("Background color (#FFFFFF)", nil)
+	bgButton.OnTapped = func() {
+		cp := dialog.NewColorPicker("Pick background color", "Choose a color", func(c color.Color) {
 			n := color.NRGBAModel.Convert(c).(color.NRGBA)
 			selectedBg = color.RGBA{n.R, n.G, n.B, 255}
-			bgButton.SetText(fmt.Sprintf("Background color (%s)", formatHex(selectedBg)))
+			bgButton.SetText(fmt.Sprintf("Background color (%s)", hexColorString(selectedBg)))
 		}, g.window)
 		cp.Advanced = true
 		cp.Show()
-	})
+	}
 	bgButton.Enable()
-	transparent.OnChanged = func(b bool){ if b { bgButton.Disable() } else { bgButton.Enable() } }
-	includeTurtle := widget.NewCheck("Include turtle indicator", nil); includeTurtle.SetChecked(true)
+	transparent.OnChanged = func(b bool) {
+		if b {
+			bgButton.Disable()
+		} else {
+			bgButton.Enable()
+		}
+	}
+	includeTurtle := widget.NewCheck("Include turtle indicator", nil)
+	includeTurtle.SetChecked(true)
 	items := []*widget.FormItem{
 		{Text: "Preset", Widget: preset},
 		{Text: "Width", Widget: wField},
@@ -747,7 +767,9 @@ func (g *timeWarpGUI) exportTurtleImageDialog() {
 		{Text: "", Widget: includeTurtle},
 	}
 	dialog.ShowForm("Export Turtle Image", "Export", "Cancel", items, func(ok bool) {
-		if !ok { return }
+		if !ok {
+			return
+		}
 		const maxSize = 8192
 		wVal, wErr := strconv.Atoi(strings.TrimSpace(wField.Text))
 		hVal, hErr := strconv.Atoi(strings.TrimSpace(hField.Text))
@@ -757,7 +779,11 @@ func (g *timeWarpGUI) exportTurtleImageDialog() {
 			return
 		}
 		var bg color.RGBA
-		if transparent.Checked { bg = color.RGBA{0,0,0,0} } else { bg = selectedBg }
+		if transparent.Checked {
+			bg = color.RGBA{0, 0, 0, 0}
+		} else {
+			bg = selectedBg
+		}
 		g.performTurtleExport(wVal, hVal, bg, includeTurtle.Checked)
 	}, g.window)
 }
@@ -765,47 +791,116 @@ func (g *timeWarpGUI) exportTurtleImageDialog() {
 // performTurtleExport generates PNG with options and file save dialog.
 func (g *timeWarpGUI) performTurtleExport(width, height int, bg color.RGBA, drawTurtle bool) {
 	img := image.NewRGBA(image.Rect(0, 0, width, height))
-	for y := 0; y < height; y++ { for x := 0; x < width; x++ { img.Set(x, y, bg) } }
+	for y := 0; y < height; y++ {
+		for x := 0; x < width; x++ {
+			img.Set(x, y, bg)
+		}
+	}
 	scaleX := float64(width) / 400.0
 	scaleY := float64(height) / 400.0
 	wScale := (scaleX + scaleY) / 2.0
 	drawLine := func(x1, y1, x2, y2 int, col color.RGBA, w int) {
 		dx := int(math.Abs(float64(x2 - x1)))
 		dy := -int(math.Abs(float64(y2 - y1)))
-		sx := -1; if x1 < x2 { sx = 1 }
-		sy := -1; if y1 < y2 { sy = 1 }
-		err := dx + dy; x, y := x1, y1
+		sx := -1
+		if x1 < x2 {
+			sx = 1
+		}
+		sy := -1
+		if y1 < y2 {
+			sy = 1
+		}
+		err := dx + dy
+		x, y := x1, y1
 		for {
-			for oy := -w/2; oy <= w/2; oy++ { for ox := -w/2; ox <= w/2; ox++ { px := x+ox; py := y+oy; if px>=0 && px<width && py>=0 && py<height { img.Set(px,py,col) } } }
-			if x == x2 && y == y2 { break }
-			e2 := 2*err; if e2 >= dy { err += dy; x += sx }; if e2 <= dx { err += dx; y += sy }
+			for oy := -w / 2; oy <= w/2; oy++ {
+				for ox := -w / 2; ox <= w/2; ox++ {
+					px := x + ox
+					py := y + oy
+					if px >= 0 && px < width && py >= 0 && py < height {
+						img.Set(px, py, col)
+					}
+				}
+			}
+			if x == x2 && y == y2 {
+				break
+			}
+			e2 := 2 * err
+			if e2 >= dy {
+				err += dy
+				x += sx
+			}
+			if e2 <= dx {
+				err += dx
+				y += sy
+			}
 		}
 	}
 	// draw lines with clamped width
 	for _, ln := range g.turtleCanvas.lines {
-		x1 := int(ln.x1 * scaleX); y1 := int(ln.y1 * scaleY); x2 := int(ln.x2 * scaleX); y2 := int(ln.y2 * scaleY)
-		sw := int(math.Round(ln.width * wScale)); if sw < 1 { sw = 1 }; if sw > 20 { sw = 20 }
+		x1 := int(ln.x1 * scaleX)
+		y1 := int(ln.y1 * scaleY)
+		x2 := int(ln.x2 * scaleX)
+		y2 := int(ln.y2 * scaleY)
+		sw := int(math.Round(ln.width * wScale))
+		if sw < 1 {
+			sw = 1
+		}
+		if sw > 20 {
+			sw = 20
+		}
 		drawLine(x1, y1, x2, y2, color.RGBA{ln.r, ln.g, ln.b, 255}, sw)
 	}
 	// optional turtle indicator
 	if drawTurtle && !g.turtleHidden {
-		tx := int(g.turtleCanvas.x * scaleX); ty := int(g.turtleCanvas.y * scaleY)
-		radius := int(math.Round(8 * wScale)); if radius < 3 { radius = 3 }
-		for ay := -radius; ay <= radius; ay++ { for ax := -radius; ax <= radius; ax++ { if ax*ax+ay*ay <= radius*radius { px:=tx+ax; py:=ty+ay; if px>=0 && px<width && py>=0 && py<height { img.Set(px,py,color.RGBA{255,0,0,220}) } } } }
+		tx := int(g.turtleCanvas.x * scaleX)
+		ty := int(g.turtleCanvas.y * scaleY)
+		radius := int(math.Round(8 * wScale))
+		if radius < 3 {
+			radius = 3
+		}
+		for ay := -radius; ay <= radius; ay++ {
+			for ax := -radius; ax <= radius; ax++ {
+				if ax*ax+ay*ay <= radius*radius {
+					px := tx + ax
+					py := ty + ay
+					if px >= 0 && px < width && py >= 0 && py < height {
+						img.Set(px, py, color.RGBA{255, 0, 0, 220})
+					}
+				}
+			}
+		}
 		angleRad := (g.turtleCanvas.angle - 90) * math.Pi / 180
-		lx := tx + int(math.Cos(angleRad)*float64(radius)); ly := ty + int(math.Sin(angleRad)*float64(radius))
-		headW := int(math.Round(wScale)); if headW < 1 { headW = 1 }; if headW > 6 { headW = 6 }
+		lx := tx + int(math.Cos(angleRad)*float64(radius))
+		ly := ty + int(math.Sin(angleRad)*float64(radius))
+		headW := int(math.Round(wScale))
+		if headW < 1 {
+			headW = 1
+		}
+		if headW > 6 {
+			headW = 6
+		}
 		drawLine(tx, ty, lx, ly, color.RGBA{255, 0, 0, 255}, headW)
 	}
 	dialog.ShowFileSave(func(writer fyne.URIWriteCloser, err error) {
-		if err != nil || writer == nil { return }
-		defer writer.Close(); if err := png.Encode(writer, img); err != nil { dialog.ShowError(err, g.window); return }
+		if err != nil || writer == nil {
+			return
+		}
+		defer writer.Close()
+		if err := png.Encode(writer, img); err != nil {
+			dialog.ShowError(err, g.window)
+			return
+		}
 		g.updateStatus(fmt.Sprintf("Exported %dx%d turtle image: %s", width, height, writer.URI().Name()))
 	}, g.window)
 	go func() {
 		name := fmt.Sprintf("turtle_%s_%dx%d.png", time.Now().Format("20060102_150405"), width, height)
 		uri := storage.NewFileURI("/tmp/" + name)
-		w, err := storage.Writer(uri); if err == nil { _ = png.Encode(w, img); w.Close() }
+		w, err := storage.Writer(uri)
+		if err == nil {
+			_ = png.Encode(w, img)
+			w.Close()
+		}
 	}()
 }
 
@@ -823,4 +918,9 @@ func parseHexColor(s string) (color.RGBA, error) {
 		}
 	}
 	return c, fmt.Errorf("invalid hex color")
+}
+
+// hexColorString returns #RRGGBB for a color.RGBA (ignores alpha)
+func hexColorString(c color.RGBA) string {
+	return fmt.Sprintf("#%02X%02X%02X", c.R, c.G, c.B)
 }
