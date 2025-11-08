@@ -334,3 +334,184 @@ E:
 		t.Errorf("Comments should not appear in output: %q", result)
 	}
 }
+
+// --- New tests to improve coverage for expressions, conditions, and edge cases ---
+
+// TestExecutor_EvaluateExpression_Arithmetic covers +, -, *, / and divide-by-zero behavior
+func TestExecutor_EvaluateExpression_Arithmetic(t *testing.T) {
+	e := New()
+
+	// Addition
+	if _, err := e.Execute("U:A=2+3"); err != nil {
+		t.Fatalf("U:A=2+3 error: %v", err)
+	}
+	if e.variables["A"] != "5" {
+		t.Errorf("A expected 5, got %q", e.variables["A"])
+	}
+
+	// Subtraction
+	if _, err := e.Execute("U:B=10-4"); err != nil {
+		t.Fatalf("U:B=10-4 error: %v", err)
+	}
+	if e.variables["B"] != "6" {
+		t.Errorf("B expected 6, got %q", e.variables["B"])
+	}
+
+	// Multiplication
+	if _, err := e.Execute("U:C=3*7"); err != nil {
+		t.Fatalf("U:C=3*7 error: %v", err)
+	}
+	if e.variables["C"] != "21" {
+		t.Errorf("C expected 21, got %q", e.variables["C"])
+	}
+
+	// Division
+	if _, err := e.Execute("U:D=8/2"); err != nil {
+		t.Fatalf("U:D=8/2 error: %v", err)
+	}
+	if e.variables["D"] != "4" {
+		t.Errorf("D expected 4, got %q", e.variables["D"])
+	}
+
+	// Divide by zero: current behavior keeps literal expression string
+	if _, err := e.Execute("U:E=5/0"); err != nil {
+		t.Fatalf("U:E=5/0 error: %v", err)
+	}
+	if e.variables["E"] != "5/0" {
+		t.Errorf("E expected literal '5/0' on divide-by-zero, got %q", e.variables["E"])
+	}
+}
+
+// TestExecutor_EvaluateExpression_VariablesAndStrings covers variable reference and string literal
+func TestExecutor_EvaluateExpression_VariablesAndStrings(t *testing.T) {
+	e := New()
+	e.variables["NAME"] = "Zoe"
+
+	// Variable reference
+	if _, err := e.Execute("U:PERSON=NAME"); err != nil {
+		t.Fatalf("U:PERSON=NAME error: %v", err)
+	}
+	if e.variables["PERSON"] != "Zoe" {
+		t.Errorf("PERSON expected Zoe, got %q", e.variables["PERSON"])
+	}
+
+	// String literal (quotes trimmed)
+	if _, err := e.Execute("U:GREET=\"Hi\""); err != nil {
+		t.Fatalf("U:GREET=\"Hi\" error: %v", err)
+	}
+	if e.variables["GREET"] != "Hi" {
+		t.Errorf("GREET expected Hi, got %q", e.variables["GREET"])
+	}
+}
+
+// TestExecutor_EvaluateCondition_AllOperators covers numeric and string comparisons
+func TestExecutor_EvaluateCondition_AllOperators(t *testing.T) {
+	e := New()
+
+	// Numeric true cases
+	for _, cond := range []string{"2=2", "3>2", "2<3", "3>=3", "2<=3", "2<>3"} {
+		if _, err := e.Execute("C:" + cond); err != nil {
+			t.Fatalf("C:%s error: %v", cond, err)
+		}
+		if !e.conditionResult {
+			t.Errorf("Condition should be true: %s", cond)
+		}
+	}
+
+	// Numeric false cases
+	for _, cond := range []string{"2=3", "2>3", "3<2", "2>=3", "3<=2", "2<>2"} {
+		if _, err := e.Execute("C:" + cond); err != nil {
+			t.Fatalf("C:%s error: %v", cond, err)
+		}
+		if e.conditionResult {
+			t.Errorf("Condition should be false: %s", cond)
+		}
+	}
+
+	// String equality and inequality
+	if _, err := e.Execute("C:\"A\"=\"A\""); err != nil {
+		t.Fatalf("C:\"A\"=\"A\" error: %v", err)
+	}
+	if !e.conditionResult {
+		t.Error("String equality should be true")
+	}
+	if _, err := e.Execute("C:\"A\"<>\"B\""); err != nil {
+		t.Fatalf("C:\"A\"<>\"B\" error: %v", err)
+	}
+	if !e.conditionResult {
+		t.Error("String inequality should be true")
+	}
+}
+
+// TestExecutor_Use_PrintVariable covers printing variable without assignment via U:
+func TestExecutor_Use_PrintVariable(t *testing.T) {
+	e := New()
+	e.variables["SCORE"] = "42"
+	out, err := e.Execute("U:SCORE")
+	if err != nil {
+		t.Fatalf("U:SCORE error: %v", err)
+	}
+	if !strings.Contains(out, "SCORE = 42") {
+		t.Errorf("Expected 'SCORE = 42' in output, got %q", out)
+	}
+}
+
+// TestExecutor_YN_WithMatchFlag validates Y and N behavior when matchFlag is true
+func TestExecutor_YN_WithMatchFlag(t *testing.T) {
+	e := New()
+	e.matchFlag = true
+
+	out, err := e.Execute("Y:T:matched")
+	if err != nil {
+		t.Fatalf("Y: error: %v", err)
+	}
+	if !strings.Contains(out, "YES") {
+		t.Errorf("Y: expected YES when matchFlag=true, got %q", out)
+	}
+
+	out, err = e.Execute("N:T:not matched")
+	if err != nil {
+		t.Fatalf("N: error: %v", err)
+	}
+	if out != "" {
+		t.Errorf("N: expected empty when matchFlag=true, got %q", out)
+	}
+}
+
+// TestExecutor_JumpMissingLabel tests Execute path for missing label jump
+func TestExecutor_JumpMissingLabel(t *testing.T) {
+	e := New()
+	out, err := e.Execute("J:NO_LABEL")
+	if err != nil {
+		t.Fatalf("J:NO_LABEL error: %v", err)
+	}
+	if !strings.Contains(out, "Label 'NO_LABEL' not found") {
+		t.Errorf("Expected missing label message, got %q", out)
+	}
+}
+
+// TestExecutor_RunProgram_InfiniteLoop triggers the maxSteps guard
+func TestExecutor_RunProgram_InfiniteLoop(t *testing.T) {
+	e := New()
+	program := `
+L:LOOP
+J:LOOP
+`
+	out := e.RunProgram(program)
+	if !strings.Contains(out, "too many steps") {
+		t.Errorf("Expected too many steps guard, got %q", out)
+	}
+}
+
+// TestExecutor_RunProgram_MissingLabel checks J: missing label within program
+func TestExecutor_RunProgram_MissingLabel(t *testing.T) {
+	e := New()
+	program := `
+J:UNKNOWN
+E:
+`
+	out := e.RunProgram(program)
+	if !strings.Contains(out, "Label 'UNKNOWN' not found") {
+		t.Errorf("Expected missing label error in program, got %q", out)
+	}
+}

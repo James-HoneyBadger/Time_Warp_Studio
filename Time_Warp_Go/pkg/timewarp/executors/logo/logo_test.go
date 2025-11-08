@@ -33,6 +33,16 @@ func TestExecutor_Forward(t *testing.T) {
 			}
 		})
 	}
+
+	// Test FD no-arg
+	e := New()
+	out, err := e.Execute("FD")
+	if err != nil {
+		t.Fatalf("FD no-arg error: %v", err)
+	}
+	if !strings.Contains(out, "no distance") {
+		t.Errorf("FD no-arg should indicate no distance: %q", out)
+	}
 }
 
 // TestExecutor_Back tests BACK/BK command
@@ -414,5 +424,86 @@ func TestExecutor_ComplexSequence(t *testing.T) {
 	// Verify final position is not origin
 	if e.turtleX == 0 && e.turtleY == 0 {
 		t.Error("After complex sequence, turtle should not be at origin")
+	}
+}
+
+// TestExecutor_BackwardAlias tests BACKWARD as alias for BACK
+func TestExecutor_BackwardAlias(t *testing.T) {
+	e := New()
+	out, err := e.Execute("BACKWARD 30")
+	if err != nil {
+		t.Fatalf("BACKWARD error: %v", err)
+	}
+	if !strings.Contains(out, "BACK") {
+		t.Errorf("BACKWARD should output BACK: %q", out)
+	}
+}
+
+// TestExecutor_BKNoArg tests BK with no distance argument
+func TestExecutor_BKNoArg(t *testing.T) {
+	e := New()
+	out, err := e.Execute("BK")
+	if err != nil {
+		t.Fatalf("BK no-arg error: %v", err)
+	}
+	if !strings.Contains(out, "no distance") {
+		t.Errorf("BK no-arg should indicate no distance: %q", out)
+	}
+}
+
+// TestExecutor_ClearAlias tests CLEAR as alias for CLEARSCREEN
+func TestExecutor_ClearAlias(t *testing.T) {
+	e := New()
+	out, err := e.Execute("CLEAR")
+	if err != nil {
+		t.Fatalf("CLEAR error: %v", err)
+	}
+	if !strings.Contains(out, "Screen cleared") {
+		t.Errorf("CLEAR should clear screen: %q", out)
+	}
+}
+
+// TestExecutor_SetColorAliases tests SETPENCOLOR, SETPC aliases
+func TestExecutor_SetColorAliases(t *testing.T) {
+	e := New()
+	cases := []string{"SETPENCOLOR 100 200 50", "SETPC 10 20 30"}
+	for _, c := range cases {
+		out, err := e.Execute(c)
+		if err != nil {
+			t.Fatalf("%s error: %v", c, err)
+		}
+		if !strings.Contains(out, "SETCOLOR") {
+			t.Errorf("%s should output SETCOLOR: %q", c, out)
+		}
+	}
+}
+
+// TestExecutor_PenWidthAliases tests SETPENWIDTH, SETPW, SETPENSIZE aliases
+func TestExecutor_PenWidthAliases(t *testing.T) {
+	e := New()
+	cases := []string{"SETPENWIDTH 3", "SETPW 4", "SETPENSIZE 5"}
+	for _, c := range cases {
+		out, err := e.Execute(c)
+		if err != nil {
+			t.Fatalf("%s error: %v", c, err)
+		}
+		if !strings.Contains(out, "PENWIDTH") {
+			t.Errorf("%s should output PENWIDTH: %q", c, out)
+		}
+	}
+}
+
+// TestExecutor_HTNoArg tests HIDETURTLE short form HT with no arguments
+func TestExecutor_HTNoArg(t *testing.T) {
+	e := New()
+	out, err := e.Execute("HT")
+	if err != nil {
+		t.Fatalf("HT error: %v", err)
+	}
+	if !strings.Contains(out, "HIDETURTLE") {
+		t.Errorf("HT should output HIDETURTLE: %q", out)
+	}
+	if !e.turtleHidden {
+		t.Error("HT should set turtleHidden to true")
 	}
 }

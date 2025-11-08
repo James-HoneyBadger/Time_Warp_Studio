@@ -1,0 +1,302 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>logo: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/James-HoneyBadger/Time_Warp/Time_Warp_Go/pkg/timewarp/executors/logo/logo.go (97.9%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">not covered</span>
+				<span class="cov8">covered</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package logo
+
+import (
+        "fmt"
+        "math"
+        "strconv"
+        "strings"
+)
+
+// Executor handles comprehensive Logo turtle graphics commands.
+// Supported:
+//   - FORWARD/FD &lt;n&gt;, BACK/BK &lt;n&gt;
+//   - LEFT/LT &lt;deg&gt;, RIGHT/RT &lt;deg&gt;
+//   - PENUP/PU, PENDOWN/PD
+//   - HOME, CLEARSCREEN/CS
+//   - SETXY x y, SETHEADING/SETH &lt;deg&gt;
+//   - SETCOLOR r g b, PENWIDTH &lt;n&gt;
+//   - HIDETURTLE/HT, SHOWTURTLE/ST
+//   - TO name...END (procedures)
+//   - REPEAT n [...]
+
+type Executor struct {
+        procedures   map[string]string
+        variables    map[string]float64
+        turtleX      float64
+        turtleY      float64
+        turtleAngle  float64
+        penDown      bool
+        penColor     [3]int
+        penWidth     int
+        turtleHidden bool
+}
+
+func New() *Executor <span class="cov8" title="1">{
+        return &amp;Executor{
+                procedures:   make(map[string]string),
+                variables:    make(map[string]float64),
+                turtleX:      0,
+                turtleY:      0,
+                turtleAngle:  0,
+                penDown:      true,
+                penColor:     [3]int{0, 0, 0},
+                penWidth:     1,
+                turtleHidden: false,
+        }
+}</span>
+
+func (e *Executor) Execute(command string) (string, error) <span class="cov8" title="1">{
+        c := strings.TrimSpace(command)
+        if c == "" </span><span class="cov0" title="0">{
+                return "", nil
+        }</span>
+
+        <span class="cov8" title="1">up := strings.ToUpper(c)
+        parts := strings.Fields(up)
+        if len(parts) == 0 </span><span class="cov0" title="0">{
+                return "", nil
+        }</span>
+
+        <span class="cov8" title="1">cmd := parts[0]
+        args := ""
+        if len(parts) &gt; 1 </span><span class="cov8" title="1">{
+                args = strings.Join(parts[1:], " ")
+        }</span>
+
+        // removed unused helper valAfter from earlier version
+        <span class="cov8" title="1">parseNum := func(s string) (float64, bool) </span><span class="cov8" title="1">{
+                fields := strings.Fields(s)
+                if len(fields) == 0 </span><span class="cov8" title="1">{
+                        return 0, false
+                }</span>
+                <span class="cov8" title="1">n, err := strconv.ParseFloat(fields[0], 64)
+                return n, err == nil</span>
+        }
+
+        <span class="cov8" title="1">switch cmd </span>{
+        case "FORWARD", "FD":<span class="cov8" title="1">
+                arg := strings.TrimSpace(c[len(parts[0]):])
+                if n, ok := parseNum(arg); ok </span><span class="cov8" title="1">{
+                        rad := e.turtleAngle * math.Pi / 180.0
+                        newX := e.turtleX + n*math.Cos(rad)
+                        newY := e.turtleY + n*math.Sin(rad)
+                        out := fmt.Sprintf("🐢 FORWARD %.2f (%.2f,%.2f → %.2f,%.2f)\n", n, e.turtleX, e.turtleY, newX, newY)
+                        e.turtleX = newX
+                        e.turtleY = newY
+                        return out, nil
+                }</span>
+                <span class="cov8" title="1">return "🐢 FORWARD (no distance)\n", nil</span>
+
+        case "BACK", "BK", "BACKWARD":<span class="cov8" title="1">
+                arg := strings.TrimSpace(c[len(parts[0]):])
+                if n, ok := parseNum(arg); ok </span><span class="cov8" title="1">{
+                        rad := e.turtleAngle * math.Pi / 180.0
+                        newX := e.turtleX - n*math.Cos(rad)
+                        newY := e.turtleY - n*math.Sin(rad)
+                        out := fmt.Sprintf("🐢 BACK %.2f (%.2f,%.2f → %.2f,%.2f)\n", n, e.turtleX, e.turtleY, newX, newY)
+                        e.turtleX = newX
+                        e.turtleY = newY
+                        return out, nil
+                }</span>
+                <span class="cov8" title="1">return "🐢 BACK (no distance)\n", nil</span>
+
+        case "RIGHT", "RT":<span class="cov8" title="1">
+                arg := strings.TrimSpace(c[len(parts[0]):])
+                if n, ok := parseNum(arg); ok </span><span class="cov8" title="1">{
+                        e.turtleAngle = math.Mod(e.turtleAngle+n, 360)
+                        return fmt.Sprintf("🐢 RIGHT %.2f° (heading: %.2f°)\n", n, e.turtleAngle), nil
+                }</span>
+                <span class="cov8" title="1">return "🐢 RIGHT (no angle)\n", nil</span>
+
+        case "LEFT", "LT":<span class="cov8" title="1">
+                arg := strings.TrimSpace(c[len(parts[0]):])
+                if n, ok := parseNum(arg); ok </span><span class="cov8" title="1">{
+                        e.turtleAngle = math.Mod(e.turtleAngle-n+360, 360)
+                        return fmt.Sprintf("🐢 LEFT %.2f° (heading: %.2f°)\n", n, e.turtleAngle), nil
+                }</span>
+                <span class="cov8" title="1">return "🐢 LEFT (no angle)\n", nil</span>
+
+        case "PENUP", "PU":<span class="cov8" title="1">
+                e.penDown = false
+                return "🐢 PENUP\n", nil</span>
+
+        case "PENDOWN", "PD":<span class="cov8" title="1">
+                e.penDown = true
+                return "🐢 PENDOWN\n", nil</span>
+
+        case "HOME":<span class="cov8" title="1">
+                e.turtleX = 0
+                e.turtleY = 0
+                e.turtleAngle = 0
+                return "🐢 HOME (0,0) heading 0°\n", nil</span>
+
+        case "CLEARSCREEN", "CS", "CLEAR":<span class="cov8" title="1">
+                e.turtleX = 0
+                e.turtleY = 0
+                e.turtleAngle = 0
+                e.penDown = true
+                return "🎨 Screen cleared, turtle home\n", nil</span>
+
+        case "SETXY":<span class="cov8" title="1">
+                nums := strings.Fields(args)
+                if len(nums) &gt;= 2 </span><span class="cov8" title="1">{
+                        x, errX := strconv.ParseFloat(nums[0], 64)
+                        y, errY := strconv.ParseFloat(nums[1], 64)
+                        if errX == nil &amp;&amp; errY == nil </span><span class="cov8" title="1">{
+                                oldX, oldY := e.turtleX, e.turtleY
+                                e.turtleX = x
+                                e.turtleY = y
+                                return fmt.Sprintf("🐢 SETXY %.2f %.2f (from %.2f,%.2f)\n", x, y, oldX, oldY), nil
+                        }</span>
+                }
+                <span class="cov8" title="1">return "❌ SETXY requires x y coordinates\n", nil</span>
+
+        case "SETHEADING", "SETH":<span class="cov8" title="1">
+                if n, ok := parseNum(args); ok </span><span class="cov8" title="1">{
+                        e.turtleAngle = math.Mod(n, 360)
+                        return fmt.Sprintf("🐢 SETHEADING %.2f°\n", e.turtleAngle), nil
+                }</span>
+                <span class="cov8" title="1">return "❌ SETHEADING requires angle\n", nil</span>
+
+        case "SETCOLOR", "SETPENCOLOR", "SETPC":<span class="cov8" title="1">
+                nums := strings.Fields(args)
+                if len(nums) &gt;= 3 </span><span class="cov8" title="1">{
+                        r, _ := strconv.Atoi(nums[0])
+                        g, _ := strconv.Atoi(nums[1])
+                        b, _ := strconv.Atoi(nums[2])
+                        e.penColor = [3]int{r, g, b}
+                        return fmt.Sprintf("🎨 SETCOLOR %d %d %d\n", r, g, b), nil
+                }</span>
+                <span class="cov8" title="1">return "❌ SETCOLOR requires r g b values\n", nil</span>
+
+        case "PENWIDTH", "SETPENWIDTH", "SETPW", "SETPENSIZE":<span class="cov8" title="1">
+                if n, ok := parseNum(args); ok </span><span class="cov8" title="1">{
+                        e.penWidth = int(n)
+                        return fmt.Sprintf("✏️  PENWIDTH %d\n", e.penWidth), nil
+                }</span>
+                <span class="cov8" title="1">return "❌ PENWIDTH requires width value\n", nil</span>
+
+        case "HIDETURTLE", "HT":<span class="cov8" title="1">
+                e.turtleHidden = true
+                return "🐢 HIDETURTLE\n", nil</span>
+
+        case "SHOWTURTLE", "ST":<span class="cov8" title="1">
+                e.turtleHidden = false
+                return "🐢 SHOWTURTLE\n", nil</span>
+
+        case "TO":<span class="cov8" title="1">
+                return "📝 TO (procedure def unsupported in Go stub)\n", nil</span>
+
+        case "END":<span class="cov8" title="1">
+                return "✅ END\n", nil</span>
+
+        case "REPEAT":<span class="cov8" title="1">
+                return "🔄 REPEAT (unsupported in Go stub)\n", nil</span>
+
+        default:<span class="cov8" title="1">
+                return fmt.Sprintf("❌ Logo: unknown command '%s'\n", cmd), nil</span>
+        }
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>
