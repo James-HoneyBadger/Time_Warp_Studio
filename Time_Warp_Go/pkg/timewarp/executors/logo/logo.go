@@ -316,7 +316,9 @@ func (e *Executor) Execute(command string) (string, error) {
 					i++
 				}
 				line := strings.TrimSpace(strings.Join(append([]string{name}, args...), " "))
-				if line == "" { continue }
+				if line == "" {
+					continue
+				}
 				out, _ := e.Execute(line)
 				b.WriteString(out)
 			}

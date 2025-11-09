@@ -26,5 +26,7 @@ func TestRepeatBadSyntax(t *testing.T) {
 func TestRepeatZero(t *testing.T) {
 	e := New()
 	out, _ := e.Execute("REPEAT 0 [ FD 10 ]")
-	if out == "" { t.Fatalf("expected banner output for REPEAT 0, got empty") }
+	if out == "" {
+		t.Fatalf("expected banner output for REPEAT 0, got empty")
+	}
 }
