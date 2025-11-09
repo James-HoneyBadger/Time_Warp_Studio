@@ -842,19 +842,7 @@ func (g *timeWarpGUI) performTurtleExport(width, height int, bg color.RGBA, draw
 		y1 := int(ln.y1 * scaleY)
 		x2 := int(ln.x2 * scaleX)
 		y2 := int(ln.y2 * scaleY)
-		base := ln.width
-		// heuristic: scale but dampen growth, keep relative to base
-		sw := int(math.Round(base * wScale * 0.75))
-		if sw < 1 {
-			sw = 1
-		}
-		maxRel := int(base) + 12
-		if sw > maxRel {
-			sw = maxRel
-		}
-		if sw > 24 {
-			sw = 24
-		}
+		sw := scaledPenWidth(ln.width, scaleX, scaleY)
 		drawLine(x1, y1, x2, y2, color.RGBA{ln.r, ln.g, ln.b, 255}, sw)
 	}
 	// optional turtle indicator
@@ -910,23 +898,27 @@ func (g *timeWarpGUI) performTurtleExport(width, height int, bg color.RGBA, draw
 	}()
 }
 
-// parseHexColor parses #RRGGBB into color.RGBA (opaque)
-func parseHexColor(s string) (color.RGBA, error) {
-	s = strings.TrimSpace(s)
-	var c color.RGBA
-	if len(s) == 7 && strings.HasPrefix(s, "#") {
-		r, rErr := strconv.ParseUint(s[1:3], 16, 8)
-		g, gErr := strconv.ParseUint(s[3:5], 16, 8)
-		b, bErr := strconv.ParseUint(s[5:7], 16, 8)
-		if rErr == nil && gErr == nil && bErr == nil {
-			c = color.RGBA{uint8(r), uint8(g), uint8(b), 255}
-			return c, nil
-		}
-	}
-	return c, fmt.Errorf("invalid hex color")
-}
+// removed parseHexColor (no longer needed after switching to color picker)
 
 // hexColorString returns #RRGGBB for a color.RGBA (ignores alpha)
 func hexColorString(c color.RGBA) string {
 	return fmt.Sprintf("#%02X%02X%02X", c.R, c.G, c.B)
+}
+
+// scaledPenWidth computes a visually consistent stroke width for exported images.
+// It scales with the average of X/Y scale, dampens growth, and applies relative/absolute clamps.
+func scaledPenWidth(base float64, scaleX, scaleY float64) int {
+	wScale := (scaleX + scaleY) / 2.0
+	sw := int(math.Round(base * wScale * 0.75))
+	if sw < 1 {
+		sw = 1
+	}
+	maxRel := int(base) + 12
+	if sw > maxRel {
+		sw = maxRel
+	}
+	if sw > 24 {
+		sw = 24
+	}
+	return sw
 }

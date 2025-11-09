@@ -262,7 +262,72 @@ func (e *Executor) Execute(command string) (string, error) {
 		return "✅ END\n", nil
 
 	case "REPEAT":
-		return "🔄 REPEAT (unsupported in Go stub)\n", nil
+		// Syntax: REPEAT n [ commands ]
+		left := strings.Index(up, "[")
+		right := strings.LastIndex(up, "]")
+		if left == -1 || right == -1 || right <= left {
+			return "❌ REPEAT syntax: REPEAT n [ commands ]\n", nil
+		}
+		countStr := strings.TrimSpace(up[len("REPEAT"):left])
+		iters, err := strconv.Atoi(strings.Fields(countStr)[0])
+		if err != nil || iters < 0 {
+			return "❌ REPEAT requires a non-negative count\n", nil
+		}
+		inner := strings.TrimSpace(command[left+1 : right])
+		if inner == "" {
+			return "❌ REPEAT missing command block\n", nil
+		}
+		// naive tokenizer; nested REPEAT inside block is not supported in this pass
+		toks := strings.Fields(inner)
+		expectedArgs := func(name string) int {
+			switch name {
+			case "FORWARD", "FD", "BACK", "BK", "BACKWARD":
+				return 1
+			case "RIGHT", "RT", "LEFT", "LT":
+				return 1
+			case "SETXY":
+				return 2
+			case "SETHEADING", "SETH":
+				return 1
+			case "SETCOLOR", "SETPENCOLOR", "SETPC":
+				return 3
+			case "PENWIDTH", "SETPENWIDTH", "SETPW", "SETPENSIZE":
+				return 1
+			case "PENUP", "PU", "PENDOWN", "PD", "HOME", "CLEARSCREEN", "CS", "CLEAR", "HIDETURTLE", "HT", "SHOWTURTLE", "ST":
+				return 0
+			default:
+				return 0
+			}
+		}
+		runOnce := func() string {
+			var b strings.Builder
+			for i := 0; i < len(toks); {
+				name := strings.ToUpper(toks[i])
+				if name == "REPEAT" {
+					b.WriteString("❌ Nested REPEAT not supported\n")
+					i++
+					continue
+				}
+				i++
+				argc := expectedArgs(name)
+				args := []string{}
+				for j := 0; j < argc && i < len(toks); j++ {
+					args = append(args, toks[i])
+					i++
+				}
+				line := strings.TrimSpace(strings.Join(append([]string{name}, args...), " "))
+				if line == "" { continue }
+				out, _ := e.Execute(line)
+				b.WriteString(out)
+			}
+			return b.String()
+		}
+		var out strings.Builder
+		out.WriteString(fmt.Sprintf("🔄 REPEAT %d [ %s ]\n", iters, inner))
+		for i := 0; i < iters; i++ {
+			out.WriteString(runOnce())
+		}
+		return out.String(), nil
 
 	default:
 		return fmt.Sprintf("❌ Logo: unknown command '%s'\n", cmd), nil

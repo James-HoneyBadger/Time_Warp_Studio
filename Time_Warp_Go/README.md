@@ -21,6 +21,22 @@ go build ./cmd/timewarp-gui
 ./timewarp-gui
 ```
 
+### Turtle export
+
+From the GUI, use File → Export Turtle Image… to save a PNG of the current canvas.
+
+Options in the dialog:
+
+- Preset sizes: 400×400, 800×800, 1024×1024, 1600×1600 (or enter custom width/height, 1–8192)
+- Transparent background toggle (disables color selection when enabled)
+- Background color picker (#RRGGBB displayed on the button)
+- Include turtle indicator (draws the turtle circle + heading line)
+
+Rendering details:
+
+- Lines and pen widths are scaled to the chosen size with dampening and clamps to keep visuals consistent.
+- A timestamped copy is also written to /tmp for convenience.
+
 ## Tests
 
 ```bash

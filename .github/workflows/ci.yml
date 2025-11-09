@@ -22,7 +22,9 @@ jobs:
           go build ./cmd/timewarp-gui
       - name: Test Go packages
         working-directory: Time_Warp_Go
-        run: go test ./...
+        run: |
+          go vet ./...
+          go test ./...
 
   python:
     name: Python tests
