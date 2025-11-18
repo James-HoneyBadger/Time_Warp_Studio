@@ -27,16 +27,16 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 | Document | Purpose | Reading Time |
 |----------|---------|--------------|
 | [README](../README.md) | Project overview and quick start | 5 min |
-| [Installation Guide](INSTALLATION_GUIDE.md) | Complete installation instructions | 15 min |
-| [User Guide](USER_GUIDE.md) | How to use Time Warp IDE | 30 min |
-| [Programming Guide](PROGRAMMING_GUIDE.md) | TempleCode language reference | 45 min |
+| [Installation Guide](installation/INSTALLATION_GUIDE.md) | Complete installation instructions | 15 min |
+| [User Guide](user/USER_GUIDE.md) | How to use Time Warp IDE | 30 min |
+| [Programming Guide](user/PROGRAMMING_GUIDE.md) | TempleCode language reference | 45 min |
 
 ### New User Path
 
 1. **Start here:** [README](../README.md) - Understand what Time Warp IDE is
-2. **Install:** [Installation Guide](INSTALLATION_GUIDE.md) - Get it running
-3. **Learn basics:** [User Guide](USER_GUIDE.md) - Use the IDE
-4. **Write code:** [Programming Guide](PROGRAMMING_GUIDE.md) - Learn TempleCode
+2. **Install:** [Installation Guide](installation/INSTALLATION_GUIDE.md) - Get it running
+3. **Learn basics:** [User Guide](user/USER_GUIDE.md) - Use the IDE
+4. **Write code:** [Programming Guide](user/PROGRAMMING_GUIDE.md) - Learn TempleCode
 
 ---
 
@@ -46,31 +46,31 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 
 | Document | Level | Description |
 |----------|-------|-------------|
-| [Student Lesson Book](STUDENT_LESSON_BOOK.md) | Beginner | 24 progressive lessons from basics to advanced |
-| [Programming Guide](PROGRAMMING_GUIDE.md) | All | Complete language reference |
-| [User Guide](USER_GUIDE.md) | Beginner | IDE usage guide |
+| [Student Lesson Book](user/STUDENT_LESSON_BOOK.md) | Beginner | 24 progressive lessons from basics to advanced |
+| [Programming Guide](user/PROGRAMMING_GUIDE.md) | All | Complete language reference |
+| [User Guide](user/USER_GUIDE.md) | Beginner | IDE usage guide |
 | [Programming Challenges](../Time_Warp_Rust/docs/PROGRAMMING_CHALLENGES.md) | Intermediate | Practice projects |
 
 ### Learning Path
 
 **Level 1: Absolute Beginner**
-1. [User Guide](USER_GUIDE.md) - Quick Start section
-2. [Student Lesson Book](STUDENT_LESSON_BOOK.md) - Lessons 1-5
+1. [User Guide](user/USER_GUIDE.md) - Quick Start section
+2. [Student Lesson Book](user/STUDENT_LESSON_BOOK.md) - Lessons 1-5
 3. Examples: `examples/hello.tc`, `examples/basic_guess.bas`
 
 **Level 2: Basic Programming**
-1. [Student Lesson Book](STUDENT_LESSON_BOOK.md) - Lessons 6-12
-2. [Programming Guide](PROGRAMMING_GUIDE.md) - Basic Commands
+1. [Student Lesson Book](user/STUDENT_LESSON_BOOK.md) - Lessons 6-12
+2. [Programming Guide](user/PROGRAMMING_GUIDE.md) - Basic Commands
 3. Examples: `examples/basic_countdown.bas`, `examples/pilot_quiz.pilot`
 
 **Level 3: Intermediate Skills**
-1. [Student Lesson Book](STUDENT_LESSON_BOOK.md) - Lessons 13-18
-2. [Programming Guide](PROGRAMMING_GUIDE.md) - Loops and Graphics
+1. [Student Lesson Book](user/STUDENT_LESSON_BOOK.md) - Lessons 13-18
+2. [Programming Guide](user/PROGRAMMING_GUIDE.md) - Loops and Graphics
 3. Examples: `examples/logo_spiral.logo`, `examples/basic_graphics.bas`
 
 **Level 4: Advanced Topics**
-1. [Student Lesson Book](STUDENT_LESSON_BOOK.md) - Lessons 19-24
-2. [Programming Guide](PROGRAMMING_GUIDE.md) - Procedures and Advanced Features
+1. [Student Lesson Book](user/STUDENT_LESSON_BOOK.md) - Lessons 19-24
+2. [Programming Guide](user/PROGRAMMING_GUIDE.md) - Procedures and Advanced Features
 3. Examples: `examples/logo_koch_snowflake.logo`, `examples/pilot_dragon_adventure.pilot`
 
 ---
@@ -81,29 +81,29 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 
 | Document | Purpose | Content |
 |----------|---------|---------|
-| [Teacher Guide](TEACHER_GUIDE.md) | Complete curriculum framework | Lesson plans, assessments, classroom management |
-| [Student Lesson Book](STUDENT_LESSON_BOOK.md) | Student handout materials | 24 lessons with exercises |
-| [Installation Guide](INSTALLATION_GUIDE.md) | Classroom deployment | Setup for schools |
+| [Teacher Guide](user/TEACHER_GUIDE.md) | Complete curriculum framework | Lesson plans, assessments, classroom management |
+| [Student Lesson Book](user/STUDENT_LESSON_BOOK.md) | Student handout materials | 24 lessons with exercises |
+| [Installation Guide](installation/INSTALLATION_GUIDE.md) | Classroom deployment | Setup for schools |
 | [Programming Challenges](../Time_Warp_Rust/docs/PROGRAMMING_CHALLENGES.md) | Assessment tools | Projects for evaluation |
 
 ### Curriculum Planning
 
 **Semester Course (16 weeks):**
-1. Weeks 1-4: [Student Lesson Book](STUDENT_LESSON_BOOK.md) - Basics (Lessons 1-8)
-2. Weeks 5-8: [Student Lesson Book](STUDENT_LESSON_BOOK.md) - Intermediate (Lessons 9-16)
-3. Weeks 9-12: [Student Lesson Book](STUDENT_LESSON_BOOK.md) - Advanced (Lessons 17-24)
+1. Weeks 1-4: [Student Lesson Book](user/STUDENT_LESSON_BOOK.md) - Basics (Lessons 1-8)
+2. Weeks 5-8: [Student Lesson Book](user/STUDENT_LESSON_BOOK.md) - Intermediate (Lessons 9-16)
+3. Weeks 9-12: [Student Lesson Book](user/STUDENT_LESSON_BOOK.md) - Advanced (Lessons 17-24)
 4. Weeks 13-16: Final projects and presentations
 
 **One-Week Workshop:**
-1. Day 1: Introduction and Setup - [User Guide](USER_GUIDE.md)
-2. Day 2-3: Basic Programming - [Student Lesson Book](STUDENT_LESSON_BOOK.md) (Lessons 1-8)
-3. Day 4: Turtle Graphics - [Programming Guide](PROGRAMMING_GUIDE.md) (Logo section)
+1. Day 1: Introduction and Setup - [User Guide](user/USER_GUIDE.md)
+2. Day 2-3: Basic Programming - [Student Lesson Book](user/STUDENT_LESSON_BOOK.md) (Lessons 1-8)
+3. Day 4: Turtle Graphics - [Programming Guide](user/PROGRAMMING_GUIDE.md) (Logo section)
 4. Day 5: Final Project - [Programming Challenges](../Time_Warp_Rust/docs/PROGRAMMING_CHALLENGES.md)
 
 ### Assessment Resources
 
-- **Lesson Plans:** [Teacher Guide](TEACHER_GUIDE.md) - Detailed lesson structures
-- **Rubrics:** [Teacher Guide](TEACHER_GUIDE.md) - Assessment criteria
+- **Lesson Plans:** [Teacher Guide](user/TEACHER_GUIDE.md) - Detailed lesson structures
+- **Rubrics:** [Teacher Guide](user/TEACHER_GUIDE.md) - Assessment criteria
 - **Projects:** [Programming Challenges](../Time_Warp_Rust/docs/PROGRAMMING_CHALLENGES.md) - Graded exercises
 - **Examples:** `examples/` directory - Working solutions
 
@@ -115,28 +115,28 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 
 | Document | Purpose | Audience |
 |----------|---------|----------|
-| [Developer Guide](../DEVELOPER_GUIDE.md) | Development overview | Contributors |
-| [Architecture Overview](../ARCHITECTURE_OVERVIEW.md) | System design | Technical contributors |
-| [Developer Reference](DEVELOPER_REFERENCE.md) | API documentation | Core developers |
-| [Technical Reference](TECHNICAL_REFERENCE.md) | Specifications | Advanced developers |
-| [Contributing Guide](CONTRIBUTING.md) | Contribution workflow | All contributors |
+| [Developer Guide](development/DEVELOPER_GUIDE.md) | Development overview | Contributors |
+| [Architecture Overview](architecture/ARCHITECTURE_OVERVIEW.md) | System design | Technical contributors |
+| [Developer Reference](development/DEVELOPER_REFERENCE.md) | API documentation | Core developers |
+| [Technical Reference](development/TECHNICAL_REFERENCE.md) | Specifications | Advanced developers |
+| [Contributing Guide](development/CONTRIBUTING.md) | Contribution workflow | All contributors |
 
 ### Development Workflow
 
 **Getting Started:**
-1. [Developer Guide](../DEVELOPER_GUIDE.md) - Setup environment
-2. [Architecture Overview](../ARCHITECTURE_OVERVIEW.md) - Understand design
-3. [Contributing Guide](CONTRIBUTING.md) - Contribution process
+1. [Developer Guide](development/DEVELOPER_GUIDE.md) - Setup environment
+2. [Architecture Overview](architecture/ARCHITECTURE_OVERVIEW.md) - Understand design
+3. [Contributing Guide](development/CONTRIBUTING.md) - Contribution process
 
 **Working on Features:**
-1. [Developer Reference](DEVELOPER_REFERENCE.md) - API usage
-2. [Technical Reference](TECHNICAL_REFERENCE.md) - Specifications
-3. [Documentation Style Guide](../DOCUMENTATION_STYLE_GUIDE.md) - Doc standards
+1. [Developer Reference](development/DEVELOPER_REFERENCE.md) - API usage
+2. [Technical Reference](development/TECHNICAL_REFERENCE.md) - Specifications
+3. [Documentation Style Guide](development/DOCUMENTATION_STYLE_GUIDE.md) - Doc standards
 
 **Testing and Releasing:**
-1. [Developer Guide](../DEVELOPER_GUIDE.md) - Testing section
-2. [Developer Guide](../DEVELOPER_GUIDE.md) - Release process
-3. [Changelog](CHANGELOG.md) - Version history
+1. [Developer Guide](development/DEVELOPER_GUIDE.md) - Testing section
+2. [Developer Guide](development/DEVELOPER_GUIDE.md) - Release process
+3. [Changelog](misc/CHANGELOG.md) - Version history
 
 ### Platform-Specific Development
 
@@ -156,16 +156,16 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 
 | Document | Focus | Detail Level |
 |----------|-------|--------------|
-| [Architecture Overview](../ARCHITECTURE_OVERVIEW.md) | System design | High-level |
-| [Technical Reference](TECHNICAL_REFERENCE.md) | Implementation details | Deep |
-| [Developer Reference](DEVELOPER_REFERENCE.md) | API documentation | Comprehensive |
-| [Documentation Style Guide](../DOCUMENTATION_STYLE_GUIDE.md) | Documentation standards | Reference |
+| [Architecture Overview](architecture/ARCHITECTURE_OVERVIEW.md) | System design | High-level |
+| [Technical Reference](development/TECHNICAL_REFERENCE.md) | Implementation details | Deep |
+| [Developer Reference](development/DEVELOPER_REFERENCE.md) | API documentation | Comprehensive |
+| [Documentation Style Guide](development/DOCUMENTATION_STYLE_GUIDE.md) | Documentation standards | Reference |
 
 ### Language Specifications
 
 | Document | Content | Audience |
 |----------|---------|----------|
-| [Programming Guide](PROGRAMMING_GUIDE.md) | User-facing language docs | Users |
+| [Programming Guide](user/PROGRAMMING_GUIDE.md) | User-facing language docs | Users |
 | [core-spec/language.md](../core-spec/language.md) | Formal language specification | Implementers |
 | [core-spec/turtle.md](../core-spec/turtle.md) | Turtle graphics specification | Implementers |
 
@@ -208,9 +208,9 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 
 | Document | Purpose |
 |----------|---------|
-| [Contributing](CONTRIBUTING.md) | How to contribute |
+| [Contributing](development/CONTRIBUTING.md) | How to contribute |
 | [Code of Conduct](../CODE_OF_CONDUCT.md) | Community guidelines |
-| [Security](SECURITY.md) | Security policy |
+| [Security](misc/SECURITY.md) | Security policy |
 | [License](../LICENSE) | MIT License text |
 | [Licensing Info](LICENSING.md) | License details and FAQ |
 
@@ -218,9 +218,9 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 
 | Document | Content |
 |----------|---------|
-| [Changelog](CHANGELOG.md) | Version history |
-| [Release Notes](RELEASE_NOTES.md) | Release information |
-| [Documentation Refactoring Summary](../DOCUMENTATION_REFACTORING_SUMMARY.md) | Recent doc updates |
+| [Changelog](misc/CHANGELOG.md) | Version history |
+| [Release Notes](../RELEASE_NOTES.md) | Release information |
+| [Documentation Refactoring Summary](misc/DOCUMENTATION_REFACTORING_SUMMARY.md) | Recent doc updates |
 
 ---
 
@@ -230,9 +230,9 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 
 | Platform | Document | Special Notes |
 |----------|----------|---------------|
-| **General** | [Installation Guide](INSTALLATION_GUIDE.md) | All platforms |
-| **Arch Linux** | [ARCH_INSTALL.md](../ARCH_INSTALL.md) | AUR packages |
-| **Debian/Ubuntu** | [DEBIAN_INSTALL.md](../DEBIAN_INSTALL.md) | .deb packages |
+| **General** | [Installation Guide](installation/INSTALLATION_GUIDE.md) | All platforms |
+| **Arch Linux** | [Arch Install](installation/ARCH_INSTALL.md) | AUR packages |
+| **Debian/Ubuntu** | [Debian Install](installation/DEBIAN_INSTALL.md) | .deb packages |
 | **Windows** | [Time_Warp_Windows/README.md](../Time_Warp_Windows/README.md) | MSI installer |
 | **macOS** | [Time_Warp_Apple/README.md](../Time_Warp_Apple/README.md) | .app bundle |
 
@@ -242,7 +242,7 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 
 ### Advanced Features
 
-- **IoT Integration:** See [Technical Reference](TECHNICAL_REFERENCE.md) - IoT section
+- **IoT Integration:** See [Technical Reference](development/TECHNICAL_REFERENCE.md) - IoT section
 - **Game Development:** See [Time_Warp_Rust/docs/](../Time_Warp_Rust/docs/)
 - **Machine Learning:** Planned for future release
 
@@ -258,39 +258,39 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 
 ### "I want to learn programming"
 
-→ [Student Lesson Book](STUDENT_LESSON_BOOK.md)  
-→ [User Guide](USER_GUIDE.md)  
+→ [Student Lesson Book](user/STUDENT_LESSON_BOOK.md)  
+→ [User Guide](user/USER_GUIDE.md)  
 → [Examples](../examples/)
 
 ### "I want to teach programming"
 
-→ [Teacher Guide](TEACHER_GUIDE.md)  
-→ [Installation Guide](INSTALLATION_GUIDE.md)  
-→ [Student Lesson Book](STUDENT_LESSON_BOOK.md)
+→ [Teacher Guide](user/TEACHER_GUIDE.md)  
+→ [Installation Guide](installation/INSTALLATION_GUIDE.md)  
+→ [Student Lesson Book](user/STUDENT_LESSON_BOOK.md)
 
 ### "I want to contribute code"
 
-→ [Contributing Guide](CONTRIBUTING.md)  
-→ [Developer Guide](../DEVELOPER_GUIDE.md)  
-→ [Architecture Overview](../ARCHITECTURE_OVERVIEW.md)
+→ [Contributing Guide](development/CONTRIBUTING.md)  
+→ [Developer Guide](development/DEVELOPER_GUIDE.md)  
+→ [Architecture Overview](architecture/ARCHITECTURE_OVERVIEW.md)
 
 ### "I want to understand the system"
 
-→ [Architecture Overview](../ARCHITECTURE_OVERVIEW.md)  
-→ [Technical Reference](TECHNICAL_REFERENCE.md)  
-→ [Developer Reference](DEVELOPER_REFERENCE.md)
+→ [Architecture Overview](architecture/ARCHITECTURE_OVERVIEW.md)  
+→ [Technical Reference](development/TECHNICAL_REFERENCE.md)  
+→ [Developer Reference](development/DEVELOPER_REFERENCE.md)
 
 ### "I want to deploy in my organization"
 
-→ [Installation Guide](INSTALLATION_GUIDE.md)  
+→ [Installation Guide](installation/INSTALLATION_GUIDE.md)  
 → Platform-specific READMEs  
-→ [Technical Reference](TECHNICAL_REFERENCE.md)
+→ [Technical Reference](development/TECHNICAL_REFERENCE.md)
 
 ---
 
 ## Documentation Format
 
-All documentation follows the [Documentation Style Guide](../DOCUMENTATION_STYLE_GUIDE.md):
+All documentation follows the [Documentation Style Guide](development/DOCUMENTATION_STYLE_GUIDE.md):
 
 - **Markdown format** for all docs
 - **Consistent structure** across documents
