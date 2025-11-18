@@ -1,308 +1,385 @@
-# 📚 Time Warp IDE - Documentation Index
+# Documentation Index
 
-**🎯 Complete Educational Platform Documentation Directory**
+**Time Warp IDE - Complete Documentation Directory**
 
-Welcome to the comprehensive documentation system for Time Warp IDE - a unified educational programming platform supporting six distinct implementations and complete pedagogical frameworks.
-
----
-
-## 🗺️ **Documentation Navigation Map**
-
-### 🎓 **Start Here - New Users & Educators**
-
-| Document | Audience | Purpose | Reading Time |
-|----------|----------|---------|--------------|
-| **[📖 README.md](../README.md)** | Everyone | Platform overview and quick start | 5 minutes |
-| **[🎯 User Guide](USER_GUIDE.md)** | End Users | Complete usage manual for all platforms | 30 minutes |
-| **[🚀 Installation Guide](INSTALLATION_GUIDE.md)** | IT/Setup | Detailed deployment procedures | 45 minutes |
-
-### 👨‍🏫 **Educational Resources**
-
-| Document | Audience | Purpose | Content Focus |
-|----------|----------|---------|---------------|
-| **[🍎 Teacher Guide & Curriculum](TEACHER_GUIDE.md)** | Educators | Complete teaching framework | Lesson plans, assessments, classroom management |
-| **[📚 Student Lesson Book](STUDENT_LESSON_BOOK.md)** | Students | Progressive learning materials | 24 lessons across 5 skill levels |
-| **[🏗️ Contributing Guide](CONTRIBUTING.md)** | Community | Contribution framework | Development, documentation, community guidelines |
-
-### 🔧 **Technical Documentation**
-
-| Document | Audience | Purpose | Technical Depth |
-|----------|----------|---------|-----------------|
-| **[⚙️ Technical Reference](TECHNICAL_REFERENCE.md)** | Developers | Architecture and APIs | Deep technical specifications |
-| **[🚀 Rust README](../Time_Warp_Rust/README.md)** | Rust Developers | Native performance implementation | Performance-focused deployment |
-| **[🐍 Python README](../Time_Warp_Python/README.md)** | Python Developers | Educational accessibility focus | Cross-platform compatibility |
-| **[🌐 Web README](../Time_Warp_Web/README.md)** | Web Developers | Browser-based deployment | Zero-install progressive web app |
-| **[💾 DOS README](../Time_Warp_DOS/README.md)** | Retro Computing | Vintage hardware compatibility | Historical computing education |
-| **[🪟 Windows README](../Time_Warp_Windows/README.md)** | IT Administrators | Enterprise deployment | MSI packages, Active Directory |
-| **[🍎 Apple README](../Time_Warp_Apple/README.md)** | Apple Developers | iOS/macOS Universal App | Apple ecosystem integration |
+**Last Updated:** November 18, 2025  
+**Version:** 3.0.0
 
 ---
 
-## 🎯 **Documentation by Use Case**
+## Welcome
 
-### **🏫 Setting Up a Classroom**
+Welcome to the Time Warp IDE documentation system. This index provides a comprehensive guide to all available documentation, organized by audience and purpose.
 
-**Step-by-Step Classroom Deployment:**
-
-1. **[📋 Choose Your Platform](INSTALLATION_GUIDE.md#-quick-installation-matrix)** - Review the installation matrix to select the best implementation for your environment
-2. **[🚀 Deploy Software](INSTALLATION_GUIDE.md)** - Follow platform-specific installation procedures with troubleshooting support
-3. **[👨‍🏫 Plan Curriculum](TEACHER_GUIDE.md)** - Access complete lesson plans, assessment rubrics, and classroom management strategies  
-4. **[📚 Student Resources](STUDENT_LESSON_BOOK.md)** - Provide students with progressive learning materials and hands-on projects
-5. **[🎯 Daily Usage](USER_GUIDE.md)** - Reference guide for ongoing classroom instruction and student support
-
-**Recommended Reading Order for Educators:**
-```
-Teacher Guide → Installation Guide → User Guide → Student Lesson Book
-```
-
-### **🎓 Learning Programming**
-
-**Student Learning Path:**
-
-1. **[🎯 Get Started](USER_GUIDE.md#-quick-start-for-students)** - Basic interface orientation and first program
-2. **[📚 Structured Learning](STUDENT_LESSON_BOOK.md)** - Progress through 24 lessons across 5 skill levels
-3. **[🔍 Reference Materials](TECHNICAL_REFERENCE.md#-templecode-language-specification)** - Command references and advanced features
-4. **[🏗️ Contribute Back](CONTRIBUTING.md)** - Share programs and improvements with the community
-
-**Self-Paced Learning Order:**
-```
-User Guide (Quick Start) → Student Lesson Book → Technical Reference → Contributing Guide
-```
-
-### **💻 Software Development**
-
-**Developer Contribution Path:**
-
-1. **[⚙️ Architecture Overview](TECHNICAL_REFERENCE.md)** - Understand system design and implementation patterns
-2. **[🚀 Choose Implementation](../README.md#-implementation-comparison)** - Select the platform that matches your development goals
-3. **[🔧 Setup Environment](INSTALLATION_GUIDE.md)** - Development environment configuration and build procedures
-4. **[🏗️ Contribution Guidelines](CONTRIBUTING.md)** - Code standards, testing, and submission processes
-
-**Development Order:**
-```
-Technical Reference → Platform README → Installation Guide → Contributing Guide
-```
-
-### **🏢 Enterprise Deployment**
-
-**IT Administrator Workflow:**
-
-1. **[📊 Platform Selection](../README.md#-implementation-comparison)** - Evaluate implementations for organizational requirements
-2. **[🏢 Enterprise Deployment](INSTALLATION_GUIDE.md#-windows-implementation---enterprise-deployment)** - MSI packages, Group Policy, and network configuration
-3. **[👥 User Management](USER_GUIDE.md#multi-user-environments)** - Profile management and resource allocation
-4. **[📈 Monitoring & Support](TECHNICAL_REFERENCE.md#-monitoring-and-maintenance)** - Performance tracking and troubleshooting procedures
-
-**Enterprise Order:**
-```
-README → Installation Guide → Technical Reference → User Guide
-```
+**Quick Links:**
+- 🚀 [Getting Started](#getting-started)
+- 📚 [For Students](#for-students)
+- 👨‍🏫 [For Educators](#for-educators)
+- 💻 [For Developers](#for-developers)
+- 🔧 [Technical Documentation](#technical-documentation)
 
 ---
 
-## 📊 **Documentation Statistics**
+## Getting Started
 
-### **📈 Content Metrics**
+### Essential Documentation
 
-| Document | Lines | Words (Est.) | Content Type | Last Updated |
-|----------|-------|--------------|--------------|--------------|
-| **README.md** | 400+ | 3,000+ | Overview & Navigation | Oct 2025 |
-| **User Guide** | 750+ | 6,000+ | Comprehensive Manual | Oct 2025 |
-| **Technical Reference** | 1,500+ | 12,000+ | Developer Documentation | Oct 2025 |
-| **Teacher Guide** | 1,000+ | 8,000+ | Educational Curriculum | Oct 2025 |
-| **Student Lesson Book** | 1,400+ | 11,000+ | Learning Materials | Oct 2025 |
-| **Installation Guide** | 1,500+ | 12,000+ | Deployment Manual | Oct 2025 |
-| **Contributing Guide** | 300+ | 2,400+ | Community Framework | Oct 2025 |
-| **Implementation READMEs** | 1,500+ | 12,000+ | Platform-Specific Docs | Oct 2025 |
-| **Total Documentation** | **8,350+** | **66,400+** | **Complete System** | **Oct 2025** |
+| Document | Purpose | Reading Time |
+|----------|---------|--------------|
+| [README](../README.md) | Project overview and quick start | 5 min |
+| [Installation Guide](INSTALLATION_GUIDE.md) | Complete installation instructions | 15 min |
+| [User Guide](USER_GUIDE.md) | How to use Time Warp IDE | 30 min |
+| [Programming Guide](PROGRAMMING_GUIDE.md) | TempleCode language reference | 45 min |
 
-### **🎯 Audience Coverage**
+### New User Path
 
-- **👨‍🎓 Students**: Student Lesson Book (1,400 lines) + User Guide portions
-- **👨‍🏫 Educators**: Teacher Guide (1,000 lines) + Educational sections across all docs  
-- **💻 Developers**: Technical Reference (1,500 lines) + Platform READMEs (1,500 lines)
-- **🏢 IT Administrators**: Installation Guide (1,500 lines) + Enterprise sections
-- **🌍 General Public**: README (400 lines) + Contributing Guide (300 lines)
-
-### **🚀 Platform Coverage**
-
-Each of the **6 implementations** has dedicated documentation:
-- **🚀 Rust**: Native performance, advanced users, cross-platform binary
-- **🐍 Python**: Educational accessibility, universal compatibility, source code learning
-- **🌐 Web**: Zero-install access, Chromebooks, mobile devices, progressive web app
-- **💾 DOS**: Retro computing, computer history, constraint-based learning
-- **🪟 Windows**: Enterprise deployment, Active Directory, district-wide rollouts
-- **🍎 Apple**: iOS/macOS Universal App, Apple Pencil, educational ecosystem integration
+1. **Start here:** [README](../README.md) - Understand what Time Warp IDE is
+2. **Install:** [Installation Guide](INSTALLATION_GUIDE.md) - Get it running
+3. **Learn basics:** [User Guide](USER_GUIDE.md) - Use the IDE
+4. **Write code:** [Programming Guide](PROGRAMMING_GUIDE.md) - Learn TempleCode
 
 ---
 
-## 🔗 **Cross-Reference Matrix**
+## For Students
 
-### **📚 Document Interconnections**
+### Learning Resources
 
-The Time Warp documentation system uses extensive cross-referencing to create a cohesive knowledge base:
+| Document | Level | Description |
+|----------|-------|-------------|
+| [Student Lesson Book](STUDENT_LESSON_BOOK.md) | Beginner | 24 progressive lessons from basics to advanced |
+| [Programming Guide](PROGRAMMING_GUIDE.md) | All | Complete language reference |
+| [User Guide](USER_GUIDE.md) | Beginner | IDE usage guide |
+| [Programming Challenges](../Time_Warp_Rust/docs/PROGRAMMING_CHALLENGES.md) | Intermediate | Practice projects |
 
-#### **Primary Navigation Paths**
-```
-README.md
-├── User Guide (day-to-day usage)
-├── Installation Guide (setup procedures)  
-├── Teacher Guide (educational framework)
-└── Technical Reference (development)
+### Learning Path
 
-User Guide
-├── Student Lesson Book (learning materials)
-├── Platform READMEs (implementation-specific)
-└── Installation Guide (setup assistance)
+**Level 1: Absolute Beginner**
+1. [User Guide](USER_GUIDE.md) - Quick Start section
+2. [Student Lesson Book](STUDENT_LESSON_BOOK.md) - Lessons 1-5
+3. Examples: `examples/hello.tc`, `examples/basic_guess.bas`
 
-Teacher Guide  
-├── Student Lesson Book (curriculum content)
-├── User Guide (classroom instruction)
-└── Technical Reference (advanced topics)
+**Level 2: Basic Programming**
+1. [Student Lesson Book](STUDENT_LESSON_BOOK.md) - Lessons 6-12
+2. [Programming Guide](PROGRAMMING_GUIDE.md) - Basic Commands
+3. Examples: `examples/basic_countdown.bas`, `examples/pilot_quiz.pilot`
 
-Technical Reference
-├── Contributing Guide (development process)
-├── Platform READMEs (implementation details)
-└── Installation Guide (build procedures)
-```
+**Level 3: Intermediate Skills**
+1. [Student Lesson Book](STUDENT_LESSON_BOOK.md) - Lessons 13-18
+2. [Programming Guide](PROGRAMMING_GUIDE.md) - Loops and Graphics
+3. Examples: `examples/logo_spiral.logo`, `examples/basic_graphics.bas`
 
-#### **Bi-Directional References**
-- **User Guide** ↔ **Student Lesson Book**: Learning progression and reference materials
-- **Teacher Guide** ↔ **Technical Reference**: Educational theory and implementation details
-- **Installation Guide** ↔ **Platform READMEs**: Deployment procedures and platform specifics
-- **Contributing Guide** ↔ **Technical Reference**: Development process and architecture understanding
-
-### **🎯 Reference Validation Status**
-
-✅ **All cross-references verified and functional**
-✅ **Consistent section linking across documents**  
-✅ **Platform-specific documentation integrated**
-✅ **Educational progression paths clearly defined**
-✅ **Technical depth appropriate for each audience**
+**Level 4: Advanced Topics**
+1. [Student Lesson Book](STUDENT_LESSON_BOOK.md) - Lessons 19-24
+2. [Programming Guide](PROGRAMMING_GUIDE.md) - Procedures and Advanced Features
+3. Examples: `examples/logo_koch_snowflake.logo`, `examples/pilot_dragon_adventure.pilot`
 
 ---
 
-## 🛠️ **Documentation Maintenance**
+## For Educators
 
-### **📅 Update Schedule**
+### Teaching Resources
 
-| Component | Update Frequency | Responsibility | Trigger Events |
-|-----------|------------------|----------------|----------------|
-| **Platform READMEs** | Per Release | Implementation Teams | New features, API changes |
-| **User Guide** | Monthly | Community + Core Team | User feedback, feature additions |
-| **Installation Guide** | Per Release | DevOps + Core Team | Deployment improvements, new platforms |
-| **Student Lesson Book** | Quarterly | Education Team | Curriculum refinements, pedagogy updates |
-| **Teacher Guide** | Semester | Education Specialists | Assessment improvements, classroom feedback |
-| **Technical Reference** | Per Release | Core Development Team | Architecture changes, API updates |
+| Document | Purpose | Content |
+|----------|---------|---------|
+| [Teacher Guide](TEACHER_GUIDE.md) | Complete curriculum framework | Lesson plans, assessments, classroom management |
+| [Student Lesson Book](STUDENT_LESSON_BOOK.md) | Student handout materials | 24 lessons with exercises |
+| [Installation Guide](INSTALLATION_GUIDE.md) | Classroom deployment | Setup for schools |
+| [Programming Challenges](../Time_Warp_Rust/docs/PROGRAMMING_CHALLENGES.md) | Assessment tools | Projects for evaluation |
 
-### **🔍 Quality Assurance Process**
+### Curriculum Planning
 
-#### **Documentation Review Checklist**
-- [ ] **Consistency**: Unified branding, emoji usage, and formatting
-- [ ] **Accuracy**: Technical details verified against implementation
-- [ ] **Completeness**: All audience needs addressed with appropriate depth
-- [ ] **Cross-References**: Links functional and contextually relevant  
-- [ ] **Accessibility**: Screen reader friendly, clear navigation structure
-- [ ] **Educational Value**: Learning objectives met with practical examples
+**Semester Course (16 weeks):**
+1. Weeks 1-4: [Student Lesson Book](STUDENT_LESSON_BOOK.md) - Basics (Lessons 1-8)
+2. Weeks 5-8: [Student Lesson Book](STUDENT_LESSON_BOOK.md) - Intermediate (Lessons 9-16)
+3. Weeks 9-12: [Student Lesson Book](STUDENT_LESSON_BOOK.md) - Advanced (Lessons 17-24)
+4. Weeks 13-16: Final projects and presentations
 
-#### **Community Contribution Integration**
-- **Issue Tracking**: Documentation bugs and improvement requests via GitHub Issues
-- **Pull Request Process**: Community improvements follow [Contributing Guide](CONTRIBUTING.md) standards
-- **Educational Feedback**: Teacher and student input incorporated into curriculum materials
-- **Translation Support**: Framework established for multi-language documentation
+**One-Week Workshop:**
+1. Day 1: Introduction and Setup - [User Guide](USER_GUIDE.md)
+2. Day 2-3: Basic Programming - [Student Lesson Book](STUDENT_LESSON_BOOK.md) (Lessons 1-8)
+3. Day 4: Turtle Graphics - [Programming Guide](PROGRAMMING_GUIDE.md) (Logo section)
+4. Day 5: Final Project - [Programming Challenges](../Time_Warp_Rust/docs/PROGRAMMING_CHALLENGES.md)
 
-### **🌍 Localization Framework**
+### Assessment Resources
 
-The documentation system is designed for future internationalization:
-
-#### **Localization-Ready Structure**
-```
-docs/
-├── en/              # English (primary)
-├── es/              # Spanish (planned)
-├── fr/              # French (planned) 
-└── zh/              # Chinese (planned)
-```
-
-#### **Translation Priorities**
-1. **Student Lesson Book** - Highest priority for educational access
-2. **User Guide** - Essential for global classroom adoption
-3. **Installation Guide** - Critical for international deployments
-4. **Teacher Guide** - Important for educational framework transfer
+- **Lesson Plans:** [Teacher Guide](TEACHER_GUIDE.md) - Detailed lesson structures
+- **Rubrics:** [Teacher Guide](TEACHER_GUIDE.md) - Assessment criteria
+- **Projects:** [Programming Challenges](../Time_Warp_Rust/docs/PROGRAMMING_CHALLENGES.md) - Graded exercises
+- **Examples:** `examples/` directory - Working solutions
 
 ---
 
-## 🎉 **Documentation Achievement Summary**
+## For Developers
 
-### **🏆 Completion Metrics**
+### Development Documentation
 
-**✅ 100% Documentation Coverage Achieved**
+| Document | Purpose | Audience |
+|----------|---------|----------|
+| [Developer Guide](../DEVELOPER_GUIDE.md) | Development overview | Contributors |
+| [Architecture Overview](../ARCHITECTURE_OVERVIEW.md) | System design | Technical contributors |
+| [Developer Reference](DEVELOPER_REFERENCE.md) | API documentation | Core developers |
+| [Technical Reference](TECHNICAL_REFERENCE.md) | Specifications | Advanced developers |
+| [Contributing Guide](CONTRIBUTING.md) | Contribution workflow | All contributors |
 
-- **8 Major Documents**: All core documentation components completed
-- **6 Platform Implementations**: Each with dedicated, comprehensive documentation  
-- **66,400+ Words**: Professional-grade educational technology documentation
-- **Unified Branding**: Consistent emoji indicators, formatting, and cross-references
-- **Educational Excellence**: Complete curriculum framework from beginner to advanced
+### Development Workflow
 
-### **🎯 Quality Benchmarks Met**
+**Getting Started:**
+1. [Developer Guide](../DEVELOPER_GUIDE.md) - Setup environment
+2. [Architecture Overview](../ARCHITECTURE_OVERVIEW.md) - Understand design
+3. [Contributing Guide](CONTRIBUTING.md) - Contribution process
 
-#### **Educational Standards**
-- **✅ Progressive Learning**: 24 structured lessons across 5 skill levels
-- **✅ Assessment Integration**: Rubrics, evaluation criteria, and learning outcomes
-- **✅ Accessibility**: Screen reader support, multiple learning modalities
-- **✅ Differentiated Instruction**: Multiple implementation approaches for diverse needs
+**Working on Features:**
+1. [Developer Reference](DEVELOPER_REFERENCE.md) - API usage
+2. [Technical Reference](TECHNICAL_REFERENCE.md) - Specifications
+3. [Documentation Style Guide](../DOCUMENTATION_STYLE_GUIDE.md) - Doc standards
 
-#### **Technical Excellence**  
-- **✅ Enterprise Deployment**: MSI packages, Group Policy, automated scripts
-- **✅ Developer Experience**: Complete API documentation, architecture guides
-- **✅ Cross-Platform Support**: Universal compatibility across 6 major platforms
-- **✅ Performance Optimization**: Platform-specific tuning and troubleshooting
+**Testing and Releasing:**
+1. [Developer Guide](../DEVELOPER_GUIDE.md) - Testing section
+2. [Developer Guide](../DEVELOPER_GUIDE.md) - Release process
+3. [Changelog](CHANGELOG.md) - Version history
 
-#### **Community Framework**
-- **✅ Contribution Guidelines**: Clear standards for community participation  
-- **✅ Issue Management**: Structured feedback and improvement processes
-- **✅ Educational Outreach**: Teacher and student resource accessibility
-- **✅ Open Source Excellence**: Transparent development and documentation practices
+### Platform-Specific Development
 
----
-
-## 🔮 **Future Documentation Roadmap**
-
-### **📈 Planned Enhancements**
-
-#### **Short-Term (Next Quarter)**
-- **🎥 Video Tutorials**: Screencasts for installation and basic usage
-- **📱 Mobile Documentation**: Responsive design optimization for phone/tablet reading
-- **🔍 Search Integration**: Full-text search across all documentation
-- **📊 Usage Analytics**: Track documentation effectiveness and user pathways
-
-#### **Medium-Term (Next Semester)**  
-- **🌍 Internationalization**: Spanish and French translations for global classrooms
-- **🎮 Interactive Tutorials**: In-browser coding exercises and guided walkthroughs
-- **📚 Curriculum Expansion**: Advanced topics, computer science theory integration
-- **🏢 Enterprise Features**: Additional deployment scenarios and management tools
-
-#### **Long-Term (Next Year)**
-- **🤖 AI-Powered Help**: Intelligent documentation assistance and code suggestions
-- **🎓 Certification Program**: Formal teacher training and student achievement recognition
-- **📈 Advanced Analytics**: Learning outcome tracking and educational effectiveness measurement
-- **🌐 Community Platform**: Integrated forums, project sharing, and collaborative learning
+| Platform | README | Additional Docs |
+|----------|--------|-----------------|
+| **Rust** (Primary) | [Time_Warp_Rust/README.md](../Time_Warp_Rust/README.md) | [Architecture](../Time_Warp_Rust/ARCHITECTURE.md), [API Reference](../Time_Warp_Rust/docs/API_REFERENCE.md) |
+| **Python** | [Time_Warp_Python/README.md](../Time_Warp_Python/README.md) | [Quickstart](../Time_Warp_Python/QUICKSTART.md) |
+| **Go** | [Time_Warp_Go/README.md](../Time_Warp_Go/README.md) | CLI documentation |
+| **Web** | [Time_Warp_Web/README.md](../Time_Warp_Web/README.md) | Build instructions |
+| **DOS** | [Time_Warp_DOS/README.md](../Time_Warp_DOS/README.md) | Build guide |
 
 ---
 
-<div align="center">
+## Technical Documentation
 
-**📚 Time Warp IDE - Complete Documentation System**
+### Architecture and Design
 
-*66,400+ words of educational excellence across 8 major documents*
+| Document | Focus | Detail Level |
+|----------|-------|--------------|
+| [Architecture Overview](../ARCHITECTURE_OVERVIEW.md) | System design | High-level |
+| [Technical Reference](TECHNICAL_REFERENCE.md) | Implementation details | Deep |
+| [Developer Reference](DEVELOPER_REFERENCE.md) | API documentation | Comprehensive |
+| [Documentation Style Guide](../DOCUMENTATION_STYLE_GUIDE.md) | Documentation standards | Reference |
 
-🎓 **Student-Centered** • 👨‍🏫 **Teacher-Friendly** • 💻 **Developer-Ready** • 🏢 **Enterprise-Grade**
+### Language Specifications
 
-**From first installation to advanced contribution - every journey supported**
+| Document | Content | Audience |
+|----------|---------|----------|
+| [Programming Guide](PROGRAMMING_GUIDE.md) | User-facing language docs | Users |
+| [core-spec/language.md](../core-spec/language.md) | Formal language specification | Implementers |
+| [core-spec/turtle.md](../core-spec/turtle.md) | Turtle graphics specification | Implementers |
 
-Made with ❤️ for educational technology and lifelong learning
+### Implementation Documentation
+
+**Rust Implementation (Primary):**
+- [README](../Time_Warp_Rust/README.md) - Overview and quick start
+- [Architecture](../Time_Warp_Rust/ARCHITECTURE.md) - Implementation architecture
+- [Developer Reference](../Time_Warp_Rust/docs/DEVELOPER_REFERENCE.md) - API details
+- [Test Results](../Time_Warp_Rust/TEST_RESULTS.md) - Quality metrics
+
+**Other Implementations:**
+- See platform-specific READMEs in respective directories
 
 ---
 
-*Last Updated: October 31, 2025 | Documentation Version: 3.0.0*
+## Reference Documentation
 
-</div>
+### Quick References
+
+| Document | Purpose |
+|----------|---------|
+| [Quick Reference](../Time_Warp_Rust/docs/QUICK_REFERENCE.md) | Command cheat sheet |
+| [API Reference](../Time_Warp_Rust/docs/API_REFERENCE.md) | Function reference |
+| [Parsing Reference](../Time_Warp_Rust/docs/PARSING_REFERENCE.md) | Parser details |
+
+### Examples
+
+| Location | Content | Level |
+|----------|---------|-------|
+| [examples/](../examples/) | 30+ complete programs | All |
+| [examples/README.md](../examples/README.md) | Example index | Reference |
+| Platform examples | Platform-specific samples | Varied |
+
+---
+
+## Project Management
+
+### Community Documentation
+
+| Document | Purpose |
+|----------|---------|
+| [Contributing](CONTRIBUTING.md) | How to contribute |
+| [Code of Conduct](../CODE_OF_CONDUCT.md) | Community guidelines |
+| [Security](SECURITY.md) | Security policy |
+| [License](../LICENSE) | MIT License text |
+| [Licensing Info](LICENSING.md) | License details and FAQ |
+
+### Project Information
+
+| Document | Content |
+|----------|---------|
+| [Changelog](CHANGELOG.md) | Version history |
+| [Release Notes](RELEASE_NOTES.md) | Release information |
+| [Documentation Refactoring Summary](../DOCUMENTATION_REFACTORING_SUMMARY.md) | Recent doc updates |
+
+---
+
+## Installation Documentation
+
+### Platform-Specific Guides
+
+| Platform | Document | Special Notes |
+|----------|----------|---------------|
+| **General** | [Installation Guide](INSTALLATION_GUIDE.md) | All platforms |
+| **Arch Linux** | [ARCH_INSTALL.md](../ARCH_INSTALL.md) | AUR packages |
+| **Debian/Ubuntu** | [DEBIAN_INSTALL.md](../DEBIAN_INSTALL.md) | .deb packages |
+| **Windows** | [Time_Warp_Windows/README.md](../Time_Warp_Windows/README.md) | MSI installer |
+| **macOS** | [Time_Warp_Apple/README.md](../Time_Warp_Apple/README.md) | .app bundle |
+
+---
+
+## Special Topics
+
+### Advanced Features
+
+- **IoT Integration:** See [Technical Reference](TECHNICAL_REFERENCE.md) - IoT section
+- **Game Development:** See [Time_Warp_Rust/docs/](../Time_Warp_Rust/docs/)
+- **Machine Learning:** Planned for future release
+
+### Legacy Documentation
+
+- **Python Implementation:** [Time_Warp_Python/](../Time_Warp_Python/) - Educational reference
+- **DOS Implementation:** [Time_Warp_DOS/](../Time_Warp_DOS/) - Retro computing
+- **Migration Guides:** Various `MIGRATION.md` files in platform directories
+
+---
+
+## Documentation by Use Case
+
+### "I want to learn programming"
+
+→ [Student Lesson Book](STUDENT_LESSON_BOOK.md)  
+→ [User Guide](USER_GUIDE.md)  
+→ [Examples](../examples/)
+
+### "I want to teach programming"
+
+→ [Teacher Guide](TEACHER_GUIDE.md)  
+→ [Installation Guide](INSTALLATION_GUIDE.md)  
+→ [Student Lesson Book](STUDENT_LESSON_BOOK.md)
+
+### "I want to contribute code"
+
+→ [Contributing Guide](CONTRIBUTING.md)  
+→ [Developer Guide](../DEVELOPER_GUIDE.md)  
+→ [Architecture Overview](../ARCHITECTURE_OVERVIEW.md)
+
+### "I want to understand the system"
+
+→ [Architecture Overview](../ARCHITECTURE_OVERVIEW.md)  
+→ [Technical Reference](TECHNICAL_REFERENCE.md)  
+→ [Developer Reference](DEVELOPER_REFERENCE.md)
+
+### "I want to deploy in my organization"
+
+→ [Installation Guide](INSTALLATION_GUIDE.md)  
+→ Platform-specific READMEs  
+→ [Technical Reference](TECHNICAL_REFERENCE.md)
+
+---
+
+## Documentation Format
+
+All documentation follows the [Documentation Style Guide](../DOCUMENTATION_STYLE_GUIDE.md):
+
+- **Markdown format** for all docs
+- **Consistent structure** across documents
+- **Standard emoji usage** for visual clarity
+- **SPDX license identifiers** in source files
+- **Version references** consistently applied
+
+---
+
+## How to Use This Index
+
+### Finding Documentation
+
+1. **By Audience:** See sections above (Students, Educators, Developers)
+2. **By Topic:** Use search (Ctrl+F) in this document
+3. **By Purpose:** Check "Documentation by Use Case" section
+4. **By Platform:** See platform-specific sections
+
+### Reading Order
+
+**For Complete Understanding:**
+1. README → Overview
+2. Installation Guide → Setup
+3. User Guide → Usage
+4. Programming Guide → Language
+5. Your audience-specific documents
+
+**For Quick Start:**
+1. README → Quick Start section
+2. Installation Guide → Platform section
+3. User Guide → First Program
+4. Examples → Run a sample
+
+---
+
+## Contributing to Documentation
+
+See [Contributing Guide](CONTRIBUTING.md) and [Documentation Style Guide](../DOCUMENTATION_STYLE_GUIDE.md).
+
+**Key Points:**
+- Follow the style guide
+- Update this index when adding docs
+- Include metadata (audience, date)
+- Cross-reference related documents
+- Test all code examples
+
+---
+
+## Documentation Maintenance
+
+This documentation is actively maintained:
+
+- **Last Major Update:** November 18, 2025
+- **Next Review:** Next major release
+- **Maintainer:** James Temple <james@honey-badger.org>
+
+**Report Issues:**
+- Documentation bugs: GitHub Issues
+- Suggestions: Email maintainer
+- Corrections: Pull requests welcome
+
+---
+
+## Additional Resources
+
+### External References
+
+- **Rust Language:** [rust-lang.org](https://www.rust-lang.org/)
+- **Python:** [python.org](https://www.python.org/)
+- **egui Documentation:** [docs.rs/egui/](https://docs.rs/egui/)
+- **Original Languages:**
+  - BASIC: [en.wikipedia.org/wiki/BASIC](https://en.wikipedia.org/wiki/BASIC)
+  - PILOT: [en.wikipedia.org/wiki/PILOT](https://en.wikipedia.org/wiki/PILOT)
+  - Logo: [en.wikipedia.org/wiki/Logo_(programming_language)](https://en.wikipedia.org/wiki/Logo_(programming_language))
+
+### Community
+
+- **GitHub:** [github.com/James-HoneyBadger/Time_Warp](https://github.com/James-HoneyBadger/Time_Warp)
+- **Email:** James Temple <james@honey-badger.org>
+
+---
+
+## Document History
+
+| Date | Version | Changes |
+|------|---------|---------|
+| 2025-11-18 | 3.0.0 | Complete refactoring for consistency |
+| 2025-10-27 | 2.0.0 | Initial comprehensive index |
+
+---
+
+**Happy Learning and Coding! 🚀**
