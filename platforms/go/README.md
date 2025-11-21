@@ -1,37 +1,60 @@
-# Time Warp — Go (canonical)
+# Time Warp (Go)
 
-**Canonical location:** `../../Time_Warp_Go/`
+Go edition of Time Warp IDE — includes a CLI interpreter and a Fyne GUI with turtle graphics.
 
-**Status:** Active (CLI + new Fyne GUI)
+Status: functional with a growing command set:
 
-## Quick Start
+- BASIC-like: `PRINT <text>`, `LET x = 1`, `FOR/NEXT`, `IF/THEN`, assignments
+- Logo-like: `FORWARD|FD <n>`, `BACK|BK <n>`, `RIGHT/LEFT <deg>`, `SETXY x y`, `SETHEADING <deg>`, `PENUP/PENDOWN`, `CLEAR/CS`, `SETCOLOR r g b`, `PENWIDTH n`
+- PILOT-like: `T:<text>`, `A:<var>`, plus basic flow helpers
 
-### CLI Version
-
-```bash
-cd ../../Time_Warp_Go
-go build ./cmd/timewarp
-echo "PRINT \"Hello World\"" | ./timewarp --batch BASIC
-```
-
-### GUI Version (New!)
+## Build and run
 
 ```bash
-cd ../../Time_Warp_Go
-go build -o timewarp-gui ./cmd/timewarp-gui
+cd Time_Warp_Go
+# CLI
+go run ./cmd/timewarp ECHO Hello
+go run ./cmd/timewarp "PRINT \"Hello from BASIC\""
+
+# GUI
+go build ./cmd/timewarp-gui
 ./timewarp-gui
 ```
 
-## Features
+### Turtle export
 
-- Fast CLI interpreter (99%+ test coverage)
-- New Fyne-based GUI (v2.7.0)
-- BASIC, PILOT, and Logo executors
-- Batch processing mode
-- Cross-platform support
+From the GUI, use File → Export Turtle Image… to save a PNG of the current canvas.
 
-## Migration Status
+Options in the dialog:
 
-Active development in `Time_Warp_Go/` at repository root.
+- Preset sizes: 400×400, 800×800, 1024×1024, 1600×1600 (or enter custom width/height, 1–8192)
+- Transparent background toggle (disables color selection when enabled)
+- Background color picker (#RRGGBB displayed on the button)
+- Include turtle indicator (draws the turtle circle + heading line)
 
-See `../../ARCHITECTURE_OVERVIEW.md` for migration timeline.
+Rendering details:
+
+- Lines and pen widths are scaled to the chosen size with dampening and clamps to keep visuals consistent.
+- A timestamped copy is also written to /tmp for convenience.
+
+## Tests
+
+```bash
+cd Time_Warp_Go
+go test ./...
+```
+
+### Benchmarks
+
+We include a couple of micro-benchmarks for the interpreter:
+
+```bash
+go test -run TestNonExistent -bench . -benchmem ./pkg/timewarp
+```
+
+This runs without executing regular tests and reports allocations.
+
+## Notes
+
+- Executors return text with emoji prefixes; the GUI is stateless relative to executors.
+- Logo turtle rendering now emits structured turtle events used by the GUI (with text parsing fallback for compatibility).

@@ -4,7 +4,7 @@
 SubDir TOP ;
 
 # Application settings
-APPNAME = Time_Warp_Haiku ;
+APPNAME = TimeWarpHaiku ;
 SRCS = 
 	src/main.cpp
 	src/TimeWarpApp.cpp
@@ -16,7 +16,7 @@ SRCS =
 	;
 
 # Resource file
-RSRCS = Time_Warp_Haiku.rdef ;
+RSRCS = TimeWarpHaiku.rdef ;
 
 # Libraries
 LINKLIBS = be stdc++ ;
