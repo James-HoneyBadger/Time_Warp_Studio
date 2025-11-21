@@ -77,8 +77,60 @@ def execute_logo(
         return _logo_to(interpreter, command)
     if cmd_name == "END":
         return _logo_end_procedure(interpreter)
+    if cmd_name == "MAKE":
+        return _logo_make(interpreter, args)
+    if cmd_name == "THING":
+        return _logo_thing(interpreter, args)
     if cmd_name == "PRINT":
-        return _logo_print(interpreter, " ".join(args))
+        return _logo_print(interpreter, args)
+    if cmd_name == "SHOW":
+        return _logo_show(interpreter, args)
+    if cmd_name == "TYPE":
+        return _logo_type(interpreter, args)
+    # Data structure operations
+    if cmd_name == "WORD":
+        return _logo_word(interpreter, args)
+    if cmd_name == "LIST":
+        return _logo_list(interpreter, args)
+    if cmd_name == "SENTENCE":
+        return _logo_sentence(interpreter, args)
+    if cmd_name == "FIRST":
+        return _logo_first(interpreter, args)
+    if cmd_name == "LAST":
+        return _logo_last(interpreter, args)
+    if cmd_name == "BUTFIRST":
+        return _logo_butfirst(interpreter, args)
+    if cmd_name == "BUTLAST":
+        return _logo_butlast(interpreter, args)
+    if cmd_name == "ITEM":
+        return _logo_item(interpreter, args)
+    if cmd_name == "COUNT":
+        return _logo_count(interpreter, args)
+    # Arithmetic operations
+    if cmd_name in ["SUM", "+"]:
+        return _logo_sum(interpreter, args)
+    if cmd_name in ["DIFFERENCE", "-"]:
+        return _logo_difference(interpreter, args)
+    if cmd_name in ["PRODUCT", "*"]:
+        return _logo_product(interpreter, args)
+    if cmd_name in ["QUOTIENT", "/"]:
+        return _logo_quotient(interpreter, args)
+    if cmd_name == "RANDOM":
+        return _logo_random(interpreter, args)
+    # Control structures
+    if cmd_name == "IFELSE":
+        return _logo_ifelse(interpreter, turtle, cmd)
+    if cmd_name == "FOREVER":
+        return _logo_forever(interpreter, turtle, command)
+    if cmd_name == "REPCOUNT":
+        return _logo_repcount(interpreter)
+    # Graphics enhancements
+    if cmd_name == "ARC":
+        return _logo_arc(interpreter, turtle, args)
+    if cmd_name == "FILLED":
+        return _logo_filled(interpreter, turtle, command)
+    if cmd_name == "LABEL":
+        return _logo_label(interpreter, args)
     return f"❌ Unknown Logo command: {cmd_name}\n"
 
 
@@ -373,7 +425,7 @@ def _logo_if(
     return ""
 
 
-def _logo_stop(interpreter: "Interpreter") -> str:
+def _logo_stop(_interpreter: "Interpreter") -> str:
     # STOP command - return special marker to indicate procedure should stop
     return "STOP_PROCEDURE"
 
@@ -410,7 +462,7 @@ def _logo_to(
     return ""
 
 
-def _logo_end_procedure(interpreter: "Interpreter") -> str:
+def _logo_end_procedure(_interpreter: "Interpreter") -> str:
     # END marks end of procedure definition
     return ""
 
@@ -505,3 +557,476 @@ def _logo_print(interpreter: "Interpreter", args: str) -> str:
     # Simple print for Logo
     interpreter.output.append(args)
     return args + "\n"
+
+
+# Variable and data operations
+def _logo_make(interpreter: "Interpreter", args: List[str]) -> str:
+    """MAKE variable value - Set a variable to a value"""
+    if len(args) < 2:
+        return "❌ MAKE requires variable name and value\n"
+    var_name = args[0].strip('"')  # Remove quotes if present
+    value_expr = " ".join(args[1:])
+
+    # Try to evaluate as number first
+    try:
+        value = interpreter.evaluate_expression(value_expr)
+        interpreter.variables[var_name.upper()] = value
+        return ""
+    except (ValueError, TypeError):
+        # If not a number, treat as string or list
+        if value_expr.startswith('"') and value_expr.endswith('"'):
+            # Quoted string
+            interpreter.string_variables[var_name.upper()] = value_expr[1:-1]
+        elif value_expr.startswith("[") and value_expr.endswith("]"):
+            # List
+            list_content = value_expr[1:-1].strip()
+            if list_content:
+                items = [item.strip() for item in list_content.split()]
+                interpreter.logo_lists[var_name.upper()] = items
+            else:
+                interpreter.logo_lists[var_name.upper()] = []
+        else:
+            # Default to string
+            interpreter.string_variables[var_name.upper()] = value_expr
+    return ""
+
+
+def _logo_thing(interpreter: "Interpreter", args: List[str]) -> str:
+    """THING variable - Get the value of a variable"""
+    if not args:
+        return "❌ THING requires variable name\n"
+    var_name = args[0].strip('"').upper()
+
+    if var_name in interpreter.variables:
+        return str(interpreter.variables[var_name])
+    elif var_name in interpreter.string_variables:
+        return interpreter.string_variables[var_name]
+    elif var_name in interpreter.logo_lists:
+        return str(interpreter.logo_lists[var_name])
+    elif var_name in interpreter.logo_arrays:
+        return str(interpreter.logo_arrays[var_name])
+    else:
+        return f"❌ Variable {var_name} not found\n"
+
+
+def _logo_show(interpreter: "Interpreter", args: List[str]) -> str:
+    """SHOW value - Display value with brackets around lists"""
+    if not args:
+        return "❌ SHOW requires value\n"
+    value = " ".join(args)
+    interpreter.output.append(value)
+    return value + "\n"
+
+
+def _logo_type(interpreter: "Interpreter", args: List[str]) -> str:
+    """TYPE value - Display value without newline"""
+    if not args:
+        return "❌ TYPE requires value\n"
+    value = " ".join(args)
+    interpreter.output.append(value)
+    return value
+
+
+# Data structure operations
+def _logo_word(interpreter: "Interpreter", args: List[str]) -> str:
+    """WORD word1 word2 - Concatenate words"""
+    if len(args) < 2:
+        return "❌ WORD requires at least two arguments\n"
+    result = ""
+    for arg in args:
+        # Evaluate each argument
+        try:
+            val = interpreter.evaluate_expression(arg)
+            result += str(int(val)) if val == int(val) else str(val)
+        except (ValueError, TypeError):
+            result += arg.strip('"')
+    return result
+
+
+def _logo_list(interpreter: "Interpreter", args: List[str]) -> str:
+    """LIST item1 item2 - Create a list from items"""
+    result = []
+    for arg in args:
+        try:
+            val = interpreter.evaluate_expression(arg)
+            result.append(val)
+        except (ValueError, TypeError):
+            result.append(arg.strip('"'))
+    interpreter.logo_lists["_TEMP_LIST"] = result
+    return str(result)
+
+
+def _logo_sentence(interpreter: "Interpreter", args: List[str]) -> str:
+    """SENTENCE list1 list2 - Combine lists or create from items"""
+    result = []
+    for arg in args:
+        if arg.startswith("[") and arg.endswith("]"):
+            # It's a list
+            list_content = arg[1:-1].strip()
+            if list_content:
+                items = [item.strip() for item in list_content.split()]
+                result.extend(items)
+        else:
+            try:
+                val = interpreter.evaluate_expression(arg)
+                result.append(str(val))
+            except (ValueError, TypeError):
+                result.append(arg.strip('"'))
+    return str(result)
+
+
+def _logo_first(interpreter: "Interpreter", args: List[str]) -> str:
+    """FIRST list/word - Get first item or character"""
+    if not args:
+        return "❌ FIRST requires argument\n"
+    arg = args[0]
+
+    if arg.startswith("[") and arg.endswith("]"):
+        # List
+        list_content = arg[1:-1].strip()
+        if list_content:
+            items = [item.strip() for item in list_content.split()]
+            return items[0] if items else ""
+        return ""
+    else:
+        # Word or variable
+        try:
+            val = interpreter.evaluate_expression(arg)
+            return str(val)[0] if str(val) else ""
+        except (ValueError, TypeError):
+            word = arg.strip('"')
+            return word[0] if word else ""
+
+
+def _logo_last(interpreter: "Interpreter", args: List[str]) -> str:
+    """LAST list/word - Get last item or character"""
+    if not args:
+        return "❌ LAST requires argument\n"
+    arg = args[0]
+
+    if arg.startswith("[") and arg.endswith("]"):
+        # List
+        list_content = arg[1:-1].strip()
+        if list_content:
+            items = [item.strip() for item in list_content.split()]
+            return items[-1] if items else ""
+        return ""
+    else:
+        # Word or variable
+        try:
+            val = interpreter.evaluate_expression(arg)
+            s = str(val)
+            return s[-1] if s else ""
+        except (ValueError, TypeError):
+            word = arg.strip('"')
+            return word[-1] if word else ""
+
+
+def _logo_butfirst(interpreter: "Interpreter", args: List[str]) -> str:
+    """BUTFIRST list/word - Remove first item or character"""
+    if not args:
+        return "❌ BUTFIRST requires argument\n"
+    arg = args[0]
+
+    if arg.startswith("[") and arg.endswith("]"):
+        # List
+        list_content = arg[1:-1].strip()
+        if list_content:
+            items = [item.strip() for item in list_content.split()]
+            return str(items[1:]) if len(items) > 1 else "[]"
+        return "[]"
+    else:
+        # Word or variable
+        try:
+            val = interpreter.evaluate_expression(arg)
+            s = str(val)
+            return s[1:] if len(s) > 1 else ""
+        except (ValueError, TypeError):
+            word = arg.strip('"')
+            return word[1:] if len(word) > 1 else ""
+
+
+def _logo_butlast(interpreter: "Interpreter", args: List[str]) -> str:
+    """BUTLAST list/word - Remove last item or character"""
+    if not args:
+        return "❌ BUTLAST requires argument\n"
+    arg = args[0]
+
+    if arg.startswith("[") and arg.endswith("]"):
+        # List
+        list_content = arg[1:-1].strip()
+        if list_content:
+            items = [item.strip() for item in list_content.split()]
+            return str(items[:-1]) if len(items) > 1 else "[]"
+        return "[]"
+    else:
+        # Word or variable
+        try:
+            val = interpreter.evaluate_expression(arg)
+            s = str(val)
+            return s[:-1] if len(s) > 1 else ""
+        except (ValueError, TypeError):
+            word = arg.strip('"')
+            return word[:-1] if len(word) > 1 else ""
+
+
+def _logo_item(interpreter: "Interpreter", args: List[str]) -> str:
+    """ITEM index thing - Get item at index from list/word"""
+    if len(args) < 2:
+        return "❌ ITEM requires index and thing\n"
+
+    try:
+        index = int(interpreter.evaluate_expression(args[0])) - 1  # 1-indexed
+    except (ValueError, TypeError):
+        return "❌ Invalid index\n"
+
+    thing = args[1]
+
+    if thing.startswith("[") and thing.endswith("]"):
+        # List
+        list_content = thing[1:-1].strip()
+        if list_content:
+            items = [item.strip() for item in list_content.split()]
+            if 0 <= index < len(items):
+                return items[index]
+        return ""
+    else:
+        # Word
+        try:
+            val = interpreter.evaluate_expression(thing)
+            s = str(val)
+            if 0 <= index < len(s):
+                return s[index]
+        except (ValueError, TypeError):
+            word = thing.strip('"')
+            if 0 <= index < len(word):
+                return word[index]
+        return ""
+
+
+def _logo_count(interpreter: "Interpreter", args: List[str]) -> str:
+    """COUNT thing - Get length of list or word"""
+    if not args:
+        return "❌ COUNT requires argument\n"
+    arg = args[0]
+
+    if arg.startswith("[") and arg.endswith("]"):
+        # List
+        list_content = arg[1:-1].strip()
+        if list_content:
+            items = [item.strip() for item in list_content.split()]
+            return str(len(items))
+        return "0"
+    else:
+        # Word or variable
+        try:
+            val = interpreter.evaluate_expression(arg)
+            return str(len(str(val)))
+        except (ValueError, TypeError):
+            word = arg.strip('"')
+            return str(len(word))
+
+
+# Arithmetic operations
+def _logo_sum(interpreter: "Interpreter", args: List[str]) -> str:
+    """SUM num1 num2 - Add numbers"""
+    if len(args) < 2:
+        return "❌ SUM requires two numbers\n"
+    try:
+        num1 = interpreter.evaluate_expression(args[0])
+        num2 = interpreter.evaluate_expression(args[1])
+        return str(num1 + num2)
+    except (ValueError, TypeError):
+        return "❌ Invalid numbers for SUM\n"
+
+
+def _logo_difference(interpreter: "Interpreter", args: List[str]) -> str:
+    """DIFFERENCE num1 num2 - Subtract numbers"""
+    if len(args) < 2:
+        return "❌ DIFFERENCE requires two numbers\n"
+    try:
+        num1 = interpreter.evaluate_expression(args[0])
+        num2 = interpreter.evaluate_expression(args[1])
+        return str(num1 - num2)
+    except (ValueError, TypeError):
+        return "❌ Invalid numbers for DIFFERENCE\n"
+
+
+def _logo_product(interpreter: "Interpreter", args: List[str]) -> str:
+    """PRODUCT num1 num2 - Multiply numbers"""
+    if len(args) < 2:
+        return "❌ PRODUCT requires two numbers\n"
+    try:
+        num1 = interpreter.evaluate_expression(args[0])
+        num2 = interpreter.evaluate_expression(args[1])
+        return str(num1 * num2)
+    except (ValueError, TypeError):
+        return "❌ Invalid numbers for PRODUCT\n"
+
+
+def _logo_quotient(interpreter: "Interpreter", args: List[str]) -> str:
+    """QUOTIENT num1 num2 - Divide numbers"""
+    if len(args) < 2:
+        return "❌ QUOTIENT requires two numbers\n"
+    try:
+        num1 = interpreter.evaluate_expression(args[0])
+        num2 = interpreter.evaluate_expression(args[1])
+        if num2 == 0:
+            return "❌ Division by zero\n"
+        return str(num1 / num2)
+    except (ValueError, TypeError):
+        return "❌ Invalid numbers for QUOTIENT\n"
+
+
+def _logo_random(interpreter: "Interpreter", args: List[str]) -> str:
+    """RANDOM limit - Generate random number"""
+    import random
+
+    if not args:
+        return "❌ RANDOM requires limit\n"
+    try:
+        limit = int(interpreter.evaluate_expression(args[0]))
+        return str(random.randint(0, limit - 1))
+    except (ValueError, TypeError):
+        return "❌ Invalid limit for RANDOM\n"
+
+
+# Control structures
+def _logo_ifelse(
+    interpreter: "Interpreter", turtle: "TurtleState", command: str
+) -> str:
+    """IFELSE condition [true_commands] [false_commands]"""
+    # Simple parsing: find condition, then two bracketed blocks
+    upper_cmd = command.upper()
+    ifelse_pos = upper_cmd.find("IFELSE ")
+    if ifelse_pos == -1:
+        return "❌ Invalid IFELSE command\n"
+
+    # Extract condition
+    after_ifelse = command[ifelse_pos + 7 :].strip()
+    first_bracket = after_ifelse.find("[")
+    if first_bracket == -1:
+        return "❌ IFELSE requires condition and command blocks\n"
+
+    condition_str = after_ifelse[:first_bracket].strip()
+    remaining = after_ifelse[first_bracket:]
+
+    try:
+        condition = interpreter.evaluate_expression(condition_str)
+    except (ValueError, TypeError):
+        return f"❌ Invalid IFELSE condition: {condition_str}\n"
+
+    # Find the two command blocks
+    # First block: from first [ to first matching ]
+    # Second block: from second [ to second matching ]
+    bracket_count = 0
+    first_start = -1
+    first_end = -1
+    second_start = -1
+    second_end = -1
+    bracket_num = 0
+
+    for i, char in enumerate(remaining):
+        if char == "[":
+            bracket_count += 1
+            bracket_num += 1
+            if bracket_num == 1 and first_start == -1:
+                first_start = i + 1
+            elif bracket_num == 2 and second_start == -1:
+                second_start = i + 1
+        elif char == "]":
+            bracket_count -= 1
+            if bracket_count == 0:
+                if first_end == -1:
+                    first_end = i
+                elif second_end == -1:
+                    second_end = i
+                    break
+
+    if first_start == -1 or first_end == -1 or second_start == -1 or second_end == -1:
+        return "❌ IFELSE malformed command blocks\n"
+
+    true_commands = remaining[first_start:first_end].strip()
+    false_commands = remaining[second_start:second_end].strip()
+
+    # Execute appropriate commands
+    commands_to_run = true_commands if condition != 0 else false_commands
+    if commands_to_run:
+        return execute_logo(interpreter, commands_to_run, turtle)
+    return ""
+
+
+def _logo_forever(
+    interpreter: "Interpreter", turtle: "TurtleState", command: str
+) -> str:
+    """FOREVER [commands] - Repeat commands forever"""
+    parts = command.upper().split("[", 1)
+    if len(parts) < 2:
+        return "❌ FOREVER requires [commands]\n"
+
+    body = "[" + parts[1]
+    if "[" not in body or "]" not in body:
+        return "❌ FOREVER requires [commands]\n"
+
+    start = body.find("[") + 1
+    end = body.rfind("]")
+    if start >= end:
+        return "❌ FOREVER commands malformed\n"
+
+    commands_text = body[start:end].strip()
+    # For now, just execute once to avoid infinite loops
+    return execute_logo(interpreter, commands_text, turtle)
+
+
+def _logo_repcount(_interpreter: "Interpreter") -> str:
+    """REPCOUNT - Get current repeat iteration (simplified)"""
+    return "1"
+
+
+# Graphics enhancements
+def _logo_arc(
+    interpreter: "Interpreter", turtle: "TurtleState", args: List[str]
+) -> str:
+    """ARC angle radius - Draw an arc"""
+    if len(args) < 2:
+        return "❌ ARC requires angle and radius\n"
+    try:
+        angle = interpreter.evaluate_expression(args[0])
+        radius = interpreter.evaluate_expression(args[1])
+        turtle.circle(radius, angle)
+        return ""
+    except (ValueError, TypeError):
+        return "❌ Invalid parameters for ARC\n"
+
+
+def _logo_filled(
+    interpreter: "Interpreter", turtle: "TurtleState", command: str
+) -> str:
+    """FILLED color [commands] - Fill area with color"""
+    parts = command.upper().split("[", 1)
+    if len(parts) < 2:
+        return "❌ FILLED requires color and [commands]\n"
+
+    body = "[" + parts[1]
+
+    # For now, just execute the commands without filling
+    if "[" not in body or "]" not in body:
+        return "❌ FILLED requires [commands]\n"
+
+    start = body.find("[") + 1
+    end = body.rfind("]")
+    if start >= end:
+        return "❌ FILLED commands malformed\n"
+
+    commands_text = body[start:end].strip()
+    return execute_logo(interpreter, commands_text, turtle)
+
+
+def _logo_label(interpreter: "Interpreter", args: List[str]) -> str:
+    """LABEL text - Draw text at turtle position"""
+    if not args:
+        return "❌ LABEL requires text\n"
+    text = " ".join(args).strip('"')
+    # For now, just print to output
+    interpreter.output.append(text)
+    return text + "\n"

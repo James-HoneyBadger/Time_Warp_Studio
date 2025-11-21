@@ -128,6 +128,10 @@ class Interpreter:
         # Core state
         self.variables: Dict[str, float] = {}
         self.string_variables: Dict[str, str] = {}
+        # Logo data types
+        self.logo_lists: Dict[str, List] = {}  # Logo lists
+        self.logo_arrays: Dict[str, List] = {}  # Logo arrays (1-indexed)
+        self.property_lists: Dict[str, Dict[str, object]] = {}  # Properties
         self.output: List[str] = []
 
         # Program state
@@ -146,6 +150,8 @@ class Interpreter:
         self.last_match_succeeded: bool = False  # For PILOT M:/Y:/N: commands
         self.stored_condition: Optional[bool] = None
         self.running: bool = True  # Program execution flag
+        self.subroutine_stack: List[int] = []  # For PILOT S:/R: commands
+        self.open_files: Dict[str, object] = {}  # For PILOT F: commands
 
         # I/O handling
         self.input_callback: Optional[Callable[[str], str]] = None
@@ -173,6 +179,9 @@ class Interpreter:
         """Reset interpreter state"""
         self.variables.clear()
         self.string_variables.clear()
+        self.logo_lists.clear()
+        self.logo_arrays.clear()
+        self.property_lists.clear()
         self.output.clear()
         self.text_lines.clear()
         self.program_lines.clear()
@@ -318,7 +327,7 @@ class Interpreter:
 
             iterations += 1
 
-            line_num, command = self.program_lines[self.current_line]
+            _, command = self.program_lines[self.current_line]
 
             if not command.strip():
                 self.current_line += 1
@@ -387,7 +396,8 @@ class Interpreter:
             raise ValueError(f"Unsupported language: {self.language}")
 
         self.log_output(output)
-        return output  # Note: _determine_command_type removed - now using language-specific executors.
+        return output  # Note: _determine_command_type removed - now using
+        # language-specific executors.
 
     def _parse_line(self, line: str) -> Tuple[Optional[int], str]:
         """Parse line number if present, return (line_num, command)"""

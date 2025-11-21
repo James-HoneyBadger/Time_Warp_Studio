@@ -97,7 +97,8 @@ For answers to common questions about this code of conduct, see https://www.cont
 
 For questions or concerns about this Code of Conduct, please contact:
 
-**James Temple**  
+**James Temple**
+Honey Badger Universe
 Email: james@honey-badger.org  
 Project: Time Warp IDE  
 GitHub: https://github.com/James-HoneyBadger/Time_Warp

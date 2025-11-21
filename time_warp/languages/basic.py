@@ -216,7 +216,7 @@ def _basic_for(interpreter: "Interpreter", args: str) -> str:
     return ""
 
 
-def _basic_next(interpreter: "Interpreter", args: str) -> str:
+def _basic_next(interpreter: "Interpreter", _args: str) -> str:
     if not interpreter.for_stack:
         return "❌ NEXT without FOR\n"
     context = interpreter.for_stack[-1]
@@ -274,7 +274,7 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
                 rows = int(parts[2].strip())
                 interpreter.screen_mode.cols = cols
                 interpreter.screen_mode.rows = rows
-            cols, rows = interpreter.screen_mode.cols, interpreter.screen_mode.rows
+            cols, rows = (interpreter.screen_mode.cols, interpreter.screen_mode.rows)
             return f"🎨 Text mode ({cols}x{rows})\n"
         elif mode == 1:  # Graphics mode
             interpreter.screen_mode = ScreenMode.GRAPHICS
@@ -283,7 +283,7 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
                 height = int(parts[2].strip())
                 interpreter.screen_mode.width = width
                 interpreter.screen_mode.height = height
-            w, h = interpreter.screen_mode.width, interpreter.screen_mode.height
+            w, h = (interpreter.screen_mode.width, interpreter.screen_mode.height)
             return f"🎨 Graphics mode ({w}x{h})\n"
         elif mode == 2:  # High-res graphics
             interpreter.screen_mode = ScreenMode.GRAPHICS
@@ -310,7 +310,7 @@ def _basic_locate(interpreter: "Interpreter", args: str) -> str:
     return ""
 
 
-def _basic_line(i: "Interpreter", args: str, t: "TurtleState") -> str:
+def _basic_line(_interpreter: "Interpreter", args: str, t: "TurtleState") -> str:
     """Draw line in BASIC graphics. Syntax: LINE x1,y1,x2,y2"""
     parts = args.split(",")
     if len(parts) != 4:
