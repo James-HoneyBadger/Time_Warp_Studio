@@ -48,6 +48,7 @@ def generate_pdf(
 
     Returns PDF bytes. Caller can write to a file.
     """
+    # pylint: disable=too-many-arguments,too-many-locals
     # Prepare pages (list of line chunks)
     page_chunks = _chunk_lines(lines, top_baseline, bottom_margin, leading)
     page_count = len(page_chunks)

@@ -184,13 +184,13 @@ Both implementations now have complete feature parity:
 
 ```bash
 pip install PySide6 pillow
-python Time_Warp_Python/time_warp_ide.py
+python platforms/python/time_warp_ide.py
 ```
 
 **Rust:**
 
 ```bash
-cd Time_Warp_Rust
+cd platforms/rust
 cargo run --release
 ```
 
@@ -209,9 +209,9 @@ cargo run --release
 
 - [GitHub Repository](https://github.com/James-HoneyBadger/Time_Warp)
 - [User Guide](USER_GUIDE.md)
-- [Python README](Time_Warp_Python/README.md)
-- [Rust README](Time_Warp_Rust/README.md)
-- [Documentation](Time_Warp_Rust/docs/)
+- [Python README](platforms/python/README.md)
+- [Rust README](platforms/rust/README.md)
+- [Documentation](platforms/rust/docs/)
 
 ---
 

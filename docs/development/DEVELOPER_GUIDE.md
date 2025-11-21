@@ -129,27 +129,18 @@ pub trait LanguageExecutor {
 
 ```
 Time_Warp/
-├── Time_Warp_Rust/          # Primary implementation
-│   ├── src/
-│   │   ├── main.rs          # Entry point
-│   │   ├── app.rs           # Main application state
-│   │   ├── interpreter/     # Language executors
-│   │   ├── graphics/        # Turtle graphics engine
-│   │   ├── ui/              # UI components
-│   │   └── utils/           # Utilities
-│   ├── Cargo.toml           # Dependencies
-│   └── tests/               # Unit tests
-│
-├── Time_Warp_Python/        # Python implementation
-│   ├── core/
-│   │   ├── interpreter.py   # Main interpreter
-│   │   └── interpreters/    # Language modules
-│   ├── ui/                  # PySide6 UI
-│   └── tests/               # Python tests
-│
-├── Time_Warp_Go/            # Go implementation
-├── Time_Warp_Web/           # WebAssembly version
-├── Time_Warp_DOS/           # DOS/retro version
+├── platforms/
+│   ├── rust/                # Primary implementation
+│   │   ├── src/
+│   │   ├── Cargo.toml
+│   │   └── tests/
+│   ├── python/              # Python implementation
+│   │   ├── core/
+│   │   ├── ui/
+│   │   └── tests/
+│   ├── go/                  # Go implementation
+│   ├── web/                 # WebAssembly version
+│   └── dos/                 # DOS/retro version
 ├── docs/                    # Documentation
 ├── examples/                # Sample programs
 ├── core-spec/               # Language specification
@@ -172,7 +163,7 @@ Time_Warp/
 ```bash
 # Clone repository
 git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp/Time_Warp_Rust
+cd Time_Warp/platforms/rust
 
 # Build debug version
 cargo build
@@ -201,7 +192,7 @@ cargo build --release
 **Setup:**
 
 ```bash
-cd Time_Warp/Time_Warp_Python
+cd Time_Warp/platforms/python
 
 # Create virtual environment
 python -m venv venv
@@ -225,7 +216,7 @@ python run_time_warp.py
 **Setup:**
 
 ```bash
-cd Time_Warp/Time_Warp_Go
+cd Time_Warp/platforms/go
 
 # Build
 go build ./cmd/timewarp
@@ -243,7 +234,7 @@ go test ./...
 
 ### Rust Implementation (Primary)
 
-**Location:** `Time_Warp_Rust/`
+**Location:** `platforms/rust/`
 
 **Architecture:**
 - **UI Framework:** egui/eframe
@@ -267,7 +258,7 @@ cargo build --release
 
 ### Python Implementation
 
-**Location:** `Time_Warp_Python/`
+**Location:** `platforms/python/`
 
 **Architecture:**
 - **UI Framework:** PySide6
@@ -288,7 +279,7 @@ python run_time_warp.py
 
 ### Go Implementation
 
-**Location:** `Time_Warp_Go/`
+**Location:** `platforms/go/`
 
 **Features:**
 - Fast CLI interpreter
@@ -307,7 +298,7 @@ echo "PRINT 'Hello'" | ./timewarp --batch BASIC
 
 ### Web Implementation
 
-**Location:** `Time_Warp_Web/`
+**Location:** `platforms/web/`
 
 **Technologies:**
 - WebAssembly (compiled from Rust)
@@ -317,13 +308,13 @@ echo "PRINT 'Hello'" | ./timewarp --batch BASIC
 **Building:**
 
 ```bash
-cd Time_Warp_Web
-# See Time_Warp_Web/README.md for details
+cd platforms/web
+# See platforms/web/README.md for details
 ```
 
 ### DOS Implementation
 
-**Location:** `Time_Warp_DOS/`
+**Location:** `platforms/dos/`
 
 **Features:**
 - DJGPP C implementation
@@ -334,7 +325,7 @@ cd Time_Warp_Web
 
 ```bash
 # Requires DJGPP toolchain
-cd Time_Warp_DOS
+cd platforms/dos
 # See BUILD.md for details
 ```
 
@@ -644,8 +635,8 @@ We follow [Semantic Versioning](https://semver.org/):
 ### Release Checklist
 
 1. **Update Version Numbers:**
-   - `Time_Warp_Rust/Cargo.toml`
-   - `Time_Warp_Python/version.py`
+    - `platforms/rust/Cargo.toml`
+    - `platforms/python/version.py`
    - `README.md` badge
    - Documentation references
 
@@ -657,10 +648,10 @@ We follow [Semantic Versioning](https://semver.org/):
 3. **Run Full Test Suite:**
    ```bash
    # Rust
-   cd Time_Warp_Rust && cargo test --release
+    cd platforms/rust && cargo test --release
    
    # Python
-   cd Time_Warp_Python && pytest --cov=core
+    cd platforms/python && pytest --cov=core
    ```
 
 4. **Build Release Artifacts:**

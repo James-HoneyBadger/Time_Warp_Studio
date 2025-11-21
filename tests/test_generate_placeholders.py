@@ -1,3 +1,5 @@
+# pylint: disable=duplicate-code
+
 import sys
 import subprocess
 from pathlib import Path
@@ -7,7 +9,7 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-# pylint: disable=wrong-import-position,protected-access
+# pylint: disable=wrong-import-position,protected-access,duplicate-code
 import scripts.generate_placeholders as gp  # noqa: E402
 
 

@@ -85,15 +85,15 @@ Time_Warp/
 │   ├── basic_*.bas                BASIC programs
 │   └── demo.tc                    TempleCode mixed program
 │
-├── Time_Warp_Python/              Python implementation
-│   ├── time_warp_ide.py           GUI launcher
-│   ├── time_warp/                 Source code
-│   └── README.md                  Python-specific docs
-│
-└── Time_Warp_Rust/                Rust implementation
-    ├── src/                       Source code
-    ├── Cargo.toml                 Rust configuration
-    └── README.md                  Rust-specific docs
+├── platforms/
+│   ├── python/                    Python implementation
+│   │   ├── time_warp_ide.py       GUI launcher
+│   │   ├── time_warp/             Source code
+│   │   └── README.md              Python-specific docs
+│   └── rust/                      Rust implementation
+│       ├── src/                   Source code
+│       ├── Cargo.toml             Rust configuration
+│       └── README.md              Rust-specific docs
 ```
 
 ---

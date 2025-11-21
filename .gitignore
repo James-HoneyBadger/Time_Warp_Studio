@@ -30,3 +30,6 @@ Cargo.lock
 # Archives
 *.tar.gz
 *.zip
+# Development tools and binaries
+tools/swiftly
+tools/Temple_Code.sln

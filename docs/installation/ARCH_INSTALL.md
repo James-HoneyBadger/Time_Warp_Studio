@@ -262,7 +262,7 @@ rustup update stable
 sudo pacman -S base-devel fontconfig
 
 # Rebuild
-cd ~/.local/share/timewarp/Time_Warp_Rust
+cd ~/.local/share/timewarp/platforms/rust
 cargo clean
 cargo build --release
 ```
@@ -359,11 +359,11 @@ sudo ./install.sh --uninstall
 
 ```bash
 # Rust
-cd ~/Time_Warp/Time_Warp_Rust
+cd ~/Time_Warp/platforms/rust
 cargo clean
 
 # Python cache
-cd ~/Time_Warp/Time_Warp_Python
+cd ~/Time_Warp/platforms/python
 find . -type d -name __pycache__ -exec rm -rf {} +
 find . -type f -name "*.pyc" -delete
 ```

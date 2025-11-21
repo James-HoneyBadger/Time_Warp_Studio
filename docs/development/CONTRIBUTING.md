@@ -75,7 +75,7 @@ Violations should be reported to james@honey-badger.org.
 ```bash
 # Clone repository
 git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp/Time_Warp_Python
+cd Time_Warp/platforms/python
 
 # Create virtual environment
 python3 -m venv venv
@@ -96,7 +96,7 @@ pytest tests/ -v
 
 ```bash
 # Clone repository
-cd Time_Warp/Time_Warp_Rust
+cd Time_Warp/platforms/rust
 
 # Build and run
 cargo run
@@ -116,26 +116,17 @@ cargo fmt --check
 
 ```
 Time_Warp/
-├── Time_Warp_Python/       # Python implementation
-│   ├── time_warp/          # Main package
-│   │   ├── core/           # Interpreter engine
-│   │   ├── languages/      # TempleCode executor
-│   │   ├── graphics/       # Turtle graphics
-│   │   ├── ui/             # PySide6 UI
-│   │   └── utils/          # Utilities
-│   ├── tests/              # Test suite
-│   ├── examples/           # Example programs
-│   └── docs/               # Documentation
-│
-├── Time_Warp_Rust/         # Rust implementation
-│   ├── src/                # Source code
-│   │   ├── interpreter/    # Core interpreter
-│   │   ├── languages/      # Language modules
-│   │   ├── graphics/       # Turtle & canvas
-│   │   ├── ui/             # egui UI
-│   │   └── compiler/       # TempleCode compiler
-│   ├── tests/              # Rust tests
-│   └── docs/               # Documentation
+├── platforms/
+│   ├── python/             # Python implementation
+│   │   ├── time_warp/      # Main package
+│   │   ├── tests/          # Test suite
+│   │   ├── examples/       # Example programs
+│   │   └── docs/           # Documentation
+│   ├── rust/               # Rust implementation
+│   │   ├── src/            # Source code
+│   │   ├── tests/          # Rust tests
+│   │   └── docs/           # Documentation
+│   └── ...                 # Additional platform ports
 │
 ├── examples/               # Shared examples (33)
 ├── docs/                   # Project-wide docs

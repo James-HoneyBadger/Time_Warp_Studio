@@ -53,30 +53,24 @@ test_file() {
 # Test PATH
 echo -e "${BLUE}=== PATH Configuration ===${NC}"
 test_command "timewarp" "timewarp command"
-test_command "timewarp-python" "timewarp-python command"
-test_command "timewarp-rust" "timewarp-rust command"
 echo ""
 
 # Test files
 echo -e "${BLUE}=== Installation Files ===${NC}"
 test_file "$HOME/.local/share/timewarp" "Installation directory"
 test_file "$HOME/.local/share/timewarp/examples" "Examples directory"
-test_file "$HOME/.local/share/timewarp/Time_Warp_Python" "Python implementation"
-test_file "$HOME/.local/share/timewarp/Time_Warp_Rust" "Rust implementation"
+test_file "$HOME/.local/share/timewarp/time_warp" "Python implementation"
 test_file "$HOME/.local/share/timewarp/venv" "Python virtual environment"
 echo ""
 
 # Test executables
 echo -e "${BLUE}=== Executables ===${NC}"
-test_file "$HOME/.local/bin/timewarp" "Default launcher"
-test_file "$HOME/.local/bin/timewarp-python" "Python launcher"
-test_file "$HOME/.local/bin/timewarp-rust" "Rust launcher"
+test_file "$HOME/.local/bin/timewarp" "Launcher"
 echo ""
 
 # Test desktop integration
 echo -e "${BLUE}=== Desktop Integration ===${NC}"
-test_file "$HOME/.local/share/applications/timewarp-python.desktop" "Python desktop entry"
-test_file "$HOME/.local/share/applications/timewarp-rust.desktop" "Rust desktop entry"
+test_file "$HOME/.local/share/applications/timewarp.desktop" "Desktop entry"
 test_file "$HOME/.local/share/icons/hicolor/48x48/apps/timewarp.png" "Icon (48x48)"
 test_file "$HOME/.local/share/icons/hicolor/256x256/apps/timewarp.png" "Icon (256x256)"
 echo ""
@@ -123,19 +117,6 @@ if [ -f "$HOME/.local/share/timewarp/venv/bin/python" ]; then
     fi
 else
     echo -e "${RED}✗${NC} Python virtual environment not found"
-    ((ERRORS++))
-fi
-echo ""
-
-# Test Rust version
-echo -e "${BLUE}=== Rust Build ===${NC}"
-RUST_BIN="$HOME/.local/share/timewarp/Time_Warp_Rust/target/release/time-warp"
-if [ -f "$RUST_BIN" ]; then
-    echo -e "${GREEN}✓${NC} Rust binary built"
-    RUST_SIZE=$(du -h "$RUST_BIN" | cut -f1)
-    echo "Binary size: $RUST_SIZE"
-else
-    echo -e "${RED}✗${NC} Rust binary not found"
     ((ERRORS++))
 fi
 echo ""

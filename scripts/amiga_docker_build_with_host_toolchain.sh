@@ -4,9 +4,9 @@ set -euo pipefail
 # Build using a deps-only Docker image while mounting a host-cloned amiga-gcc toolchain.
 # This avoids network access inside the container.
 # Usage:
-#   TOOLCHAIN_DIR="$HOME/amiga-gcc" ./scripts/amiga_docker_build_with_host_toolchain.sh [Time_Warp_Amiga path]
+#   TOOLCHAIN_DIR="$HOME/amiga-gcc" ./scripts/amiga_docker_build_with_host_toolchain.sh [platforms/amiga path]
 
-DIR="${1:-$(cd "$(dirname "$0")/.." && pwd)/Time_Warp_Amiga}"
+DIR="${1:-$(cd "$(dirname "$0")/.." && pwd)/platforms/amiga}"
 TOOLCHAIN_DIR="${TOOLCHAIN_DIR:-}"
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -20,7 +20,7 @@ if [[ -z "$TOOLCHAIN_DIR" ]]; then
 fi
 
 if [[ ! -d "$DIR" || ! -f "$DIR/Makefile" ]]; then
-  echo "❌ Could not find Time_Warp_Amiga directory at: $DIR" >&2
+  echo "❌ Could not find platforms/amiga directory at: $DIR" >&2
   exit 2
 fi
 

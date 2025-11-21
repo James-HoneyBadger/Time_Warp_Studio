@@ -3,9 +3,9 @@ set -euo pipefail
 
 # Build a local Docker image with the Amiga toolchain from source and compile the project.
 # Useful when GHCR pull is denied or unavailable.
-# Usage: ./scripts/amiga_docker_build_local.sh [Time_Warp_Amiga path]
+# Usage: ./scripts/amiga_docker_build_local.sh [platforms/amiga path]
 
-DIR="${1:-$(cd "$(dirname "$0")/.." && pwd)/Time_Warp_Amiga}"
+DIR="${1:-$(cd "$(dirname "$0")/.." && pwd)/platforms/amiga}"
 IMG="${LOCAL_IMAGE:-timewarp/amiga-toolchain:local}"
 
 if ! command -v docker >/dev/null 2>&1; then
@@ -14,7 +14,7 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 
 if [[ ! -d "$DIR" || ! -f "$DIR/Makefile" ]]; then
-  echo "❌ Could not find Time_Warp_Amiga directory at: $DIR" >&2
+  echo "❌ Could not find platforms/amiga directory at: $DIR" >&2
   exit 2
 fi
 

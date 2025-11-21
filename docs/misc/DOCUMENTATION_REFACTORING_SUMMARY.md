@@ -99,7 +99,7 @@ This document summarizes the comprehensive refactoring of all Time Warp IDE docu
 
 ### Platform-Specific
 
-5. **`Time_Warp_Rust/README.md`**
+5. **`platforms/rust/README.md`**
    - Primary implementation documentation
    - Quick start and installation
    - Complete feature list
@@ -109,7 +109,7 @@ This document summarizes the comprehensive refactoring of all Time Warp IDE docu
    - Performance benchmarks
    - Troubleshooting section
 
-6. **`Time_Warp_Rust/src/main.rs`**
+6. **`platforms/rust/src/main.rs`**
    - SPDX license header added
    - Copyright notice added
    - Module documentation added
@@ -127,7 +127,7 @@ README.md.backup
 DEVELOPER_GUIDE.md.backup
 ARCHITECTURE_OVERVIEW.md.backup
 docs/LICENSING.md.backup
-Time_Warp_Rust/README.md.backup
+platforms/rust/README.md.backup
 ```
 
 These can be safely removed after verification, or kept for reference.
@@ -162,12 +162,13 @@ Time_Warp/
 │   ├── SECURITY.md                    # Security policy
 │   └── CHANGELOG.md                   # Version history
 │
-├── Time_Warp_Rust/                    # Primary implementation
-│   ├── README.md                      # Platform documentation (UPDATED)
-│   ├── CONTRIBUTING.md                # Platform-specific contribution
-│   ├── ARCHITECTURE.md                # Implementation architecture
-│   ├── CHANGELOG.md                   # Platform changelog
-│   └── docs/                          # Platform-specific docs
+├── platforms/                         # Platform implementations
+│   ├── rust/                          # Primary implementation
+│   │   ├── README.md                  # Platform documentation (UPDATED)
+│   │   ├── CONTRIBUTING.md            # Platform-specific contribution
+│   │   ├── ARCHITECTURE.md            # Implementation architecture
+│   │   ├── CHANGELOG.md               # Platform changelog
+│   │   └── docs/                      # Platform-specific docs
 │
 ├── examples/                          # Example programs
 │   └── README.md                      # Examples documentation
@@ -345,7 +346,7 @@ fn main() -> Result<()> {
 
 **Improved linking:**
 - Relative paths for internal docs: `[Guide](docs/USER_GUIDE.md)`
-- Proper README references: `[Platform README](Time_Warp_Rust/README.md)`
+- Proper README references: `[Platform README](platforms/rust/README.md)`
 - Consistent "See also" sections
 - Bidirectional references (parent ↔ child docs)
 
@@ -389,10 +390,10 @@ fn main() -> Result<()> {
 ### Short Term (Complete remaining docs)
 
 1. **Update remaining platform READMEs:**
-   - `Time_Warp_Python/README.md`
-   - `Time_Warp_Go/README.md`
-   - `Time_Warp_Web/README.md`
-   - `Time_Warp_DOS/README.md`
+   - `platforms/python/README.md`
+   - `platforms/go/README.md`
+   - `platforms/web/README.md`
+   - `platforms/dos/README.md`
    - Platform-specific Windows, Apple, etc.
 
 2. **Update educational documentation:**

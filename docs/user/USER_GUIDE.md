@@ -1,108 +1,211 @@
-# TempleCode User Guide
+# Time Warp IDE User Guide
 
-## Running Time Warp
+Time Warp IDE is an educational programming environment that supports three classic languages: BASIC, PILOT, and Logo. It provides both a graphical IDE and an interactive REPL for learning and experimentation.
 
-- Start: `/home/james/Temple_Code/.venv/bin/python -m time.warp.app`
-- Editor: write TempleCode, press F5 to run; Esc to stop.
-- Console: shows PRINT output and prompts for INPUT.
-- Canvas: turtle drawings.
-- Examples: Use the Examples menu to load sample programs.
+## Getting Started
 
-## Core commands
+### Launching the IDE
 
-- PRINT expr; TYPE expr (alias)
-- INPUT var [prompt]; ACCEPT var [prompt] (alias)
-- LET var = expr; or `var = expr`
-- SLEEP seconds; REM comment; `# comment`
+**Python Implementation (Primary):**
+```bash
+# From the project directory
+./run.sh          # Launch the graphical IDE
+./run.sh ide      # Same as above
+./run.sh repl     # Launch the interactive REPL
+```
 
-## Control flow
+**System Installation:**
+If installed system-wide, simply run:
+```bash
+timewarp           # Launch the IDE
+timewarp-repl      # Launch the REPL (if available)
+```
 
-- IF cond THEN statement [ELSE statement]
-- FOR var = start TO end [STEP step]; NEXT
-- WHILE cond; ENDWHILE
-- REPEAT n; ENDREPEAT
-- GOTO label; labels: `10 PRINT ...` or `start:`
+### Interface Overview
 
-## Procedures
+- **Code Editor**: Write and edit programs in BASIC (.bas), PILOT (.pilot), or Logo (.logo)
+- **Output Panel**: View program execution results and error messages
+- **Graphics Canvas**: Display turtle graphics and visual output
+- **REPL**: Interactive command-line interface for immediate execution
 
-- PROC name [param1 param2 ...]; ENDPROC
-- CALL name [arg1, arg2, ...] [INTO resultVar]
-- RETURN [expr]
+## Supported Languages
 
-Notes:
+### BASIC
 
-- PROC params are space-separated
-- CALL args must be comma-separated
+BASIC (Beginner's All-purpose Symbolic Instruction Code) is a simple, line-numbered language perfect for beginners.
 
-## Turtle graphics
+**File Extension:** `.bas`
 
-- FD n, LT a, RT a, PU, PD, CLS, SETXY x, y, COLOR r g b
-- PENWIDTH w, FILLCOLOR r g b, BACKGROUND r g b
-- RECT x, y, w, h [FILL]
-- CIRCLE x, y, r [FILL]
-- TEXT x, y, message
-- HOME, SETHEADING a
+**Basic Syntax:**
+```basic
+10 PRINT "Hello, World!"
+20 LET X = 5
+30 PRINT "X = "; X
+40 END
+```
 
-## Files and data
+**Key Commands:**
+- `PRINT` - Display text or variables
+- `LET` - Assign values to variables
+- `INPUT` - Get user input
+- `IF...THEN...ELSE` - Conditional execution
+- `FOR...NEXT` - Loops
+- `GOTO` - Jump to line numbers
+- `END` - End program
 
-- READFILE var, path; WRITEFILE path, expr; APPENDFILE path, expr
-- CSVREAD var, path; CSVWRITE path, rows
-- READJSON var, path; WRITEJSON path, data
-- DIRLIST var, path; EXISTS var, path
+### PILOT
 
-## Database (MySQL)
+PILOT (Programmed Inquiry, Learning Or Teaching) is designed for educational applications and interactive lessons.
 
-TempleCode can talk to MySQL using simple statements. Install the driver first:
+**File Extension:** `.pilot`
+
+**Basic Syntax:**
+```pilot
+T: Welcome to PILOT!
+A: What is your name?
+T: Hello, #ANS! Nice to meet you.
+J: *
+```
+
+**Key Commands:**
+- `T:` - Type (display) text
+- `A:` - Accept (input) from user
+- `M:` - Match user input against patterns
+- `J:` - Jump to another section
+- `U:` - Use (call) a subroutine
+- `E:` - End program
+
+### Logo
+
+Logo is famous for its turtle graphics and is great for teaching geometry and programming concepts.
+
+**File Extension:** `.logo`
+
+**Basic Syntax:**
+```logo
+FORWARD 100
+RIGHT 90
+FORWARD 100
+RIGHT 90
+FORWARD 100
+RIGHT 90
+FORWARD 100
+```
+
+**Key Commands:**
+- `FORWARD` / `FD` - Move turtle forward
+- `BACK` / `BK` - Move turtle backward
+- `RIGHT` / `RT` - Turn turtle right
+- `LEFT` / `LT` - Turn turtle left
+- `PENUP` / `PU` - Lift pen (stop drawing)
+- `PENDOWN` / `PD` - Lower pen (start drawing)
+- `REPEAT` - Repeat commands
+- `TO` / `END` - Define procedures
+
+## Using the IDE
+
+### Loading and Running Programs
+
+1. **File Menu**: Use "Open" to load .bas, .pilot, or .logo files
+2. **Examples Menu**: Browse included sample programs
+3. **Run Button**: Execute the current program
+4. **Stop Button**: Halt execution
+
+### Language Detection
+
+The IDE automatically detects the language based on file extension:
+- `.bas` → BASIC
+- `.pilot` → PILOT
+- `.logo` → Logo
+
+### Graphics and Turtle Commands
+
+All three languages support turtle graphics commands for drawing:
+
+**Movement:**
+- `FORWARD n` / `FD n` - Move forward n units
+- `BACK n` / `BK n` - Move backward n units
+- `RIGHT angle` / `RT angle` - Turn right by angle degrees
+- `LEFT angle` / `LT angle` - Turn left by angle degrees
+
+**Pen Control:**
+- `PENUP` / `PU` - Stop drawing
+- `PENDOWN` / `PD` - Start drawing
+- `PENCOLOR r g b` - Set pen color (RGB 0-255)
+- `PENWIDTH width` - Set pen thickness
+
+**Drawing Shapes:**
+- `CIRCLE x y radius` - Draw a circle
+- `RECT x y width height` - Draw a rectangle
+- `SETXY x y` - Move to specific coordinates
+
+**Display:**
+- `CLS` - Clear the screen
+- `HOME` - Return turtle to center
+- `HIDETURTLE` / `SHOWTURTLE` - Hide/show turtle icon
+
+## Using the REPL
+
+The REPL (Read-Eval-Print Loop) allows interactive execution:
 
 ```bash
-pip install mysql-connector-python
+$ ./run.sh repl
+Time Warp REPL
+> 10 PRINT "Hello!"
+Hello!
+> RUN
+> FORWARD 50
+> RIGHT 90
+> FORWARD 50
+>
 ```
 
-Commands:
+- Type commands and press Enter to execute them immediately
+- Use `RUN` to execute multi-line programs
+- Use `CLEAR` to reset the environment
+- Use `EXIT` or `QUIT` to exit
 
-- DBCONNECT name, host, user, password, database[, port]
-- DBDISCONNECT name
-- DBEXEC name, sql
-- DBEXECPARAM name, sql, params
-- DBQUERY name, sql [INTO var]
-- DBQUERYPARAM name, sql, params [INTO var]
+## Examples
 
-Notes:
+The IDE includes many example programs in the `examples/` directory:
 
-- Use `%s` placeholders in SQL and supply params as a list, e.g. `[42, "Alice"]`.
-- `DBQUERY`/`DBQUERYPARAM` return a list of rows. If the driver reports column names, each row is a dict.
-- Use `INTO resultVar` to capture query results.
+- `basic_*.bas` - BASIC programming examples
+- `pilot_*.pilot` - PILOT lesson examples
+- `logo_*.logo` - Logo graphics examples
+- `*_demo.tc` - Mixed language demonstrations
 
-Example:
+## Tips for Learning
 
-```text
-REM See examples/mysql_demo.tc for a full script
-DBCONNECT main, host, user, password, dbname, 3306
-DBEXEC main, "CREATE TABLE IF NOT EXISTS demo (id INT PRIMARY KEY, name VARCHAR(50))"
-DBEXECPARAM main, "INSERT INTO demo (id, name) VALUES (%s, %s)", [1, "Alice"]
-DBQUERYPARAM main, "SELECT id, name FROM demo WHERE id >= %s", [1] INTO rows
-PRINT "Rows: " + str(rows)
-DBDISCONNECT main
-```
+1. **Start with Logo**: The turtle graphics make programming visual and fun
+2. **Try PILOT for Lessons**: Great for creating interactive educational content
+3. **Use BASIC for Logic**: Learn fundamental programming concepts
+4. **Experiment in REPL**: Test commands interactively before writing full programs
+5. **Study Examples**: Each example demonstrates specific language features
 
-## Debugging
+## Troubleshooting
 
-- TRACE ON/OFF — echo lines before execution
-- DUMPVARS — print all variables (merged scopes)
-- PAUSE [prompt] — wait for Enter
-- ASSERT expr[, message] — fail if condition is false
+**Program won't run:**
+- Check file extension matches the language (.bas, .pilot, .logo)
+- Look for syntax errors in the output panel
+- Ensure all commands are properly formatted
 
-## Expressions and functions
+**Graphics not showing:**
+- Make sure you're using turtle graphics commands
+- Check that the canvas panel is visible
+- Try `CLS` to clear and reset the display
 
-- Math: sin cos tan asin acos atan sqrt log log10 floor ceil fabs pow pi e tau degrees radians
-- Core: abs min max len int float str round
-- Strings/lists: upper lower substr find replace split join
-- Random/time: rand randint now date time
-- Aggregates: sum avg
+**REPL not responding:**
+- Press Ctrl+C to interrupt long-running commands
+- Use `CLEAR` to reset the environment
+- Check for syntax errors in your input
 
-## Tips
+## Advanced Features
 
-- Use commas for CALL and shape commands (e.g., `RECT x, y, w, h`)
-- For SETXY with expressions, commas avoid ambiguity: `SETXY cx + dx, cy - dy`
-- Use RUN menu > Trace Execution for quick debugging.
-- The Examples menu includes a MySQL Demo you can adapt to your database.
+- **File I/O**: Read and write text files
+- **Math Functions**: sin, cos, tan, sqrt, etc.
+- **String Operations**: concatenation, substring, search
+- **Lists and Arrays**: store multiple values
+- **Procedures**: define reusable code blocks
+- **Error Handling**: graceful handling of runtime errors
+
+For more advanced features, see the Programming Guide and example programs.

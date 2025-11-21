@@ -135,6 +135,7 @@ def generate_icons(
     dry_run: bool = False,
 ) -> None:
     """Generate icon PNGs inside packaging/macos/icon.iconset."""
+    # pylint: disable=too-many-arguments,too-many-locals
     iconset_dir = (
         (out_dir / "icon.iconset")
         if out_dir
@@ -188,6 +189,7 @@ def generate_screenshots(
     dry_run: bool = False,
 ) -> None:
     """Generate placeholder screenshots into fastlane metadata folder."""
+    # pylint: disable=too-many-arguments,too-many-locals
     shots_dir = (
         (out_dir / "screenshots")
         if out_dir
@@ -332,6 +334,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    # pylint: disable=too-many-locals
     args = _parse_args()
     root = args.root or Path(__file__).resolve().parents[1]
     # Ensure resource directories exist

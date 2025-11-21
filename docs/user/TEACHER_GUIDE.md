@@ -232,7 +232,7 @@ cd /opt/timewarp
 
 # Clone repository
 git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp/Time_Warp_Python
+cd Time_Warp/platforms/python
 
 # Install system-wide
 sudo pip3 install -r requirements.txt

@@ -6,8 +6,6 @@
 # Usage:
 #   sudo ./install.sh                    # Install system-wide
 #   sudo ./install.sh --uninstall        # Remove installation
-#   sudo ./install.sh --python-only      # Python implementation only
-#   sudo ./install.sh --rust-only        # Rust implementation only
 #
 
 set -euo pipefail
@@ -30,31 +28,12 @@ DOC_DIR="/usr/share/doc/timewarp"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Installation options
-INSTALL_PYTHON=true
-INSTALL_RUST=true
 UNINSTALL=false
-
-# Parse command-line arguments
-for arg in "$@"; do
-    case $arg in
-        --python-only)
-            INSTALL_PYTHON=true
-            INSTALL_RUST=false
-            ;;
-        --rust-only)
-            INSTALL_PYTHON=false
-            INSTALL_RUST=true
-            ;;
-        --uninstall)
-            UNINSTALL=true
-            ;;
         --help|-h)
             echo "Time Warp IDE Installation Script"
             echo ""
             echo "Usage:"
-            echo "  sudo ./install.sh                 Install both Python and Rust implementations"
-            echo "  sudo ./install.sh --python-only   Install Python implementation only"
-            echo "  sudo ./install.sh --rust-only     Install Rust implementation only"
+            echo "  sudo ./install.sh                 Install Time Warp IDE system-wide"
             echo "  sudo ./install.sh --uninstall     Remove Time Warp IDE"
             echo "  sudo ./install.sh --help          Show this help message"
             exit 0
@@ -174,7 +153,7 @@ build_rust() {
         exit 1
     fi
     
-    cd "$SCRIPT_DIR/Time_Warp_Rust"
+    cd "$SCRIPT_DIR/platforms/rust"
     cargo build --release --quiet
     print_success "Rust implementation built"
 }
@@ -223,86 +202,41 @@ EOF
     fi
 }
 
-# Create desktop entry for Python version
-create_python_desktop() {
-    print_info "Creating Python desktop entry..."
+# Create desktop entry for Time Warp IDE
+create_desktop() {
+    print_info "Creating desktop entry..."
     
-    cat > "$DESKTOP_DIR/timewarp-python.desktop" << EOF
+    cat > "$DESKTOP_DIR/timewarp.desktop" << EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Time Warp IDE (Python)
+Name=Time Warp IDE
 GenericName=Educational Programming Environment
-Comment=TempleCode IDE - Python Implementation
-Exec=$BIN_DIR/timewarp-python %F
+Comment=Multi-language programming environment for BASIC, PILOT, and Logo
+Exec=$BIN_DIR/timewarp %F
 Icon=timewarp
 Terminal=false
 Categories=Development;Education;IDE;
-MimeType=text/x-pilot;text/x-basic;text/x-logo;text/x-templecode;
-Keywords=programming;education;basic;pilot;logo;templecode;turtle;
+MimeType=text/x-pilot;text/x-basic;text/x-logo;
+Keywords=programming;education;basic;pilot;logo;turtle;
 StartupNotify=true
 EOF
     
-    chmod 644 "$DESKTOP_DIR/timewarp-python.desktop"
-    print_success "Python desktop entry created"
-}
-
-# Create desktop entry for Rust version
-create_rust_desktop() {
-    print_info "Creating Rust desktop entry..."
-    
-    cat > "$DESKTOP_DIR/timewarp-rust.desktop" << EOF
-[Desktop Entry]
-Version=1.0
-Type=Application
-Name=Time Warp IDE (Rust)
-GenericName=Educational Programming Environment
-Comment=TempleCode IDE - Rust Implementation (High Performance)
-Exec=$BIN_DIR/timewarp-rust %F
-Icon=timewarp
-Terminal=false
-Categories=Development;Education;IDE;
-MimeType=text/x-pilot;text/x-basic;text/x-logo;text/x-templecode;
-Keywords=programming;education;basic;pilot;logo;templecode;turtle;
-StartupNotify=true
-EOF
-    
-    chmod 644 "$DESKTOP_DIR/timewarp-rust.desktop"
-    print_success "Rust desktop entry created"
+    chmod 644 "$DESKTOP_DIR/timewarp.desktop"
+    print_success "Desktop entry created"
 }
 
 # Create launcher scripts
 create_launchers() {
     print_info "Creating launcher scripts..."
     
-    if $INSTALL_PYTHON; then
-        cat > "$BIN_DIR/timewarp-python" << EOF
+    cat > "$BIN_DIR/timewarp" << EOF
 #!/bin/bash
-# Time Warp IDE - Python launcher
-exec "$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/Time_Warp_Python/time_warp_ide.py" "\$@"
+# Time Warp IDE launcher
+exec "$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/time_warp_ide.py" "\$@"
 EOF
-        chmod 755 "$BIN_DIR/timewarp-python"
-        print_success "Python launcher created"
-    fi
-    
-    if $INSTALL_RUST; then
-        cat > "$BIN_DIR/timewarp-rust" << EOF
-#!/bin/bash
-# Time Warp IDE - Rust launcher
-exec "$INSTALL_DIR/Time_Warp_Rust/target/release/time-warp" "\$@"
-EOF
-        chmod 755 "$BIN_DIR/timewarp-rust"
-        print_success "Rust launcher created"
-    fi
-    
-    # Create default launcher (points to Python or Rust based on what's installed)
-    if $INSTALL_PYTHON; then
-        ln -sf "$BIN_DIR/timewarp-python" "$BIN_DIR/timewarp"
-        print_info "Default launcher points to Python version"
-    elif $INSTALL_RUST; then
-        ln -sf "$BIN_DIR/timewarp-rust" "$BIN_DIR/timewarp"
-        print_info "Default launcher points to Rust version"
-    fi
+    chmod 755 "$BIN_DIR/timewarp"
+    print_success "Launcher created"
 }
 
 # Copy files to installation directory
@@ -312,21 +246,12 @@ install_files() {
     # Create installation directory
     mkdir -p "$INSTALL_DIR"
     
-    # Copy Python implementation
-    if $INSTALL_PYTHON; then
-        print_info "Installing Python implementation..."
-        cp -r "$SCRIPT_DIR/Time_Warp_Python" "$INSTALL_DIR/"
-        cp -r "$SCRIPT_DIR/examples" "$INSTALL_DIR/"
-    fi
-    
-    # Copy Rust implementation
-    if $INSTALL_RUST; then
-        print_info "Installing Rust implementation..."
-        cp -r "$SCRIPT_DIR/Time_Warp_Rust" "$INSTALL_DIR/"
-        if [ ! -d "$INSTALL_DIR/examples" ]; then
-            cp -r "$SCRIPT_DIR/examples" "$INSTALL_DIR/"
-        fi
-    fi
+    # Copy Python implementation (now at root level)
+    print_info "Installing Python implementation..."
+    cp -r "$SCRIPT_DIR/time_warp" "$INSTALL_DIR/"
+    cp -r "$SCRIPT_DIR/run_time_warp.py" "$INSTALL_DIR/"
+    cp -r "$SCRIPT_DIR/time_warp_ide.py" "$INSTALL_DIR/"
+    cp -r "$SCRIPT_DIR/examples" "$INSTALL_DIR/"
     
     # Copy documentation
     print_info "Installing documentation..."
@@ -345,23 +270,12 @@ install_files() {
 install() {
     print_header "Installing Time Warp IDE v2.1.0"
     
-    print_info "Installation options:"
-    echo "  - Python implementation: $INSTALL_PYTHON"
-    echo "  - Rust implementation: $INSTALL_RUST"
-    echo "  - Install directory: $INSTALL_DIR"
+    print_info "Installation directory: $INSTALL_DIR"
     echo ""
     
     # Install Python version
-    if $INSTALL_PYTHON; then
-        print_header "Python Implementation Setup"
-        install_python_deps
-    fi
-    
-    # Build Rust version
-    if $INSTALL_RUST; then
-        print_header "Rust Implementation Build"
-        build_rust
-    fi
+    print_header "Python Implementation Setup"
+    install_python_deps
     
     # Copy files
     print_header "Installing Files"
@@ -372,13 +286,7 @@ install() {
     create_icon
     
     # Create desktop entries
-    if $INSTALL_PYTHON; then
-        create_python_desktop
-    fi
-    
-    if $INSTALL_RUST; then
-        create_rust_desktop
-    fi
+    create_desktop
     
     # Create launchers
     create_launchers
@@ -399,30 +307,14 @@ install() {
     echo -e "${GREEN}Time Warp IDE has been successfully installed!${NC}"
     echo ""
     echo "Launch methods:"
-    
-    if $INSTALL_PYTHON; then
-        echo "  • Command line (Python): ${BLUE}timewarp-python${NC}"
-        echo "  • Desktop menu: Look for 'Time Warp IDE (Python)' in Education or Development"
-    fi
-    
-    if $INSTALL_RUST; then
-        echo "  • Command line (Rust): ${BLUE}timewarp-rust${NC}"
-        echo "  • Desktop menu: Look for 'Time Warp IDE (Rust)' in Education or Development"
-    fi
-    
-    echo "  • Default launcher: ${BLUE}timewarp${NC}"
+    echo "  • Command line: ${BLUE}timewarp${NC}"
+    echo "  • Desktop menu: Look for 'Time Warp IDE' in Education or Development"
     echo ""
     echo "Documentation: $DOC_DIR"
     echo "Examples: $INSTALL_DIR/examples"
     echo ""
     echo "Quick test:"
-    
-    if $INSTALL_PYTHON; then
-        echo "  ${BLUE}timewarp-python $INSTALL_DIR/examples/logo_star.logo${NC}"
-    elif $INSTALL_RUST; then
-        echo "  ${BLUE}timewarp-rust $INSTALL_DIR/examples/logo_star.logo${NC}"
-    fi
-    
+    echo "  ${BLUE}timewarp $INSTALL_DIR/examples/logo_star.logo${NC}"
     echo ""
     print_info "To uninstall: sudo $0 --uninstall"
 }

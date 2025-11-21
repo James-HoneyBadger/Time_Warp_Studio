@@ -28,7 +28,7 @@ Created/Updated comprehensive documentation:
 
 ### 3. Folder Organization
 
-- ✅ Moved 6 outdated Python status docs to `Time_Warp_Python/archive/`:
+- ✅ Moved 6 outdated Python status docs to `platforms/python/archive/`:
   - PYTHON_PORT_STATUS.md
   - GUI_IMPLEMENTATION_STATUS.md
   - PROJECT_COMPLETE.md
@@ -89,7 +89,7 @@ Time_Warp/                          # ← Repository root
 │   ├── copilot-instructions.md     # AI coding guidelines
 │   └── RELEASE_CHECKLIST.md        # Release checklist ✨ NEW
 │
-├── Time_Warp_Python/               # Python implementation
+├── platforms/python/               # Python implementation
 │   ├── time_warp/                  # Main package
 │   │   ├── core/                   # Interpreter engine
 │   │   ├── languages/              # TempleCode executor
@@ -107,7 +107,7 @@ Time_Warp/                          # ← Repository root
 │   ├── QUICKSTART.md               # Quick start guide
 │   └── DESKTOP_QUICKSTART.md       # IDE guide
 │
-├── Time_Warp_Rust/                 # Rust implementation
+├── platforms/rust/                 # Rust implementation
 │   ├── src/                        # Source code
 │   │   ├── interpreter/            # Core interpreter
 │   │   ├── languages/              # Language modules
@@ -238,11 +238,11 @@ Time_Warp/                          # ← Repository root
 
 ```bash
 # Python tests
-cd Time_Warp_Python
+cd platforms/python
 pytest tests/ -v --cov=time_warp
 
 # Rust tests
-cd Time_Warp_Rust
+cd platforms/rust
 cargo test --all-features
 
 # Manual testing
@@ -254,11 +254,11 @@ cargo test --all-features
 
 ```bash
 # Python source distribution
-cd Time_Warp_Python
+cd platforms/python
 python setup.py sdist
 
 # Rust release binary
-cd Time_Warp_Rust
+cd platforms/rust
 cargo build --release
 tar -czf time-warp-v2.0.0-linux-x86_64.tar.gz -C target/release time-warp
 ```

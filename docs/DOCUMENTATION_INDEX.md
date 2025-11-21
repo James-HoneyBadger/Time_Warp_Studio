@@ -49,7 +49,7 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 | [Student Lesson Book](user/STUDENT_LESSON_BOOK.md) | Beginner | 24 progressive lessons from basics to advanced |
 | [Programming Guide](user/PROGRAMMING_GUIDE.md) | All | Complete language reference |
 | [User Guide](user/USER_GUIDE.md) | Beginner | IDE usage guide |
-| [Programming Challenges](../Time_Warp_Rust/docs/PROGRAMMING_CHALLENGES.md) | Intermediate | Practice projects |
+| [Programming Challenges](../platforms/rust/docs/PROGRAMMING_CHALLENGES.md) | Intermediate | Practice projects |
 
 ### Learning Path
 
@@ -84,7 +84,7 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 | [Teacher Guide](user/TEACHER_GUIDE.md) | Complete curriculum framework | Lesson plans, assessments, classroom management |
 | [Student Lesson Book](user/STUDENT_LESSON_BOOK.md) | Student handout materials | 24 lessons with exercises |
 | [Installation Guide](installation/INSTALLATION_GUIDE.md) | Classroom deployment | Setup for schools |
-| [Programming Challenges](../Time_Warp_Rust/docs/PROGRAMMING_CHALLENGES.md) | Assessment tools | Projects for evaluation |
+| [Programming Challenges](../platforms/rust/docs/PROGRAMMING_CHALLENGES.md) | Assessment tools | Projects for evaluation |
 
 ### Curriculum Planning
 
@@ -98,13 +98,13 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 1. Day 1: Introduction and Setup - [User Guide](user/USER_GUIDE.md)
 2. Day 2-3: Basic Programming - [Student Lesson Book](user/STUDENT_LESSON_BOOK.md) (Lessons 1-8)
 3. Day 4: Turtle Graphics - [Programming Guide](user/PROGRAMMING_GUIDE.md) (Logo section)
-4. Day 5: Final Project - [Programming Challenges](../Time_Warp_Rust/docs/PROGRAMMING_CHALLENGES.md)
+4. Day 5: Final Project - [Programming Challenges](../platforms/rust/docs/PROGRAMMING_CHALLENGES.md)
 
 ### Assessment Resources
 
 - **Lesson Plans:** [Teacher Guide](user/TEACHER_GUIDE.md) - Detailed lesson structures
 - **Rubrics:** [Teacher Guide](user/TEACHER_GUIDE.md) - Assessment criteria
-- **Projects:** [Programming Challenges](../Time_Warp_Rust/docs/PROGRAMMING_CHALLENGES.md) - Graded exercises
+- **Projects:** [Programming Challenges](../platforms/rust/docs/PROGRAMMING_CHALLENGES.md) - Graded exercises
 - **Examples:** `examples/` directory - Working solutions
 
 ---
@@ -142,11 +142,11 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 
 | Platform | README | Additional Docs |
 |----------|--------|-----------------|
-| **Rust** (Primary) | [Time_Warp_Rust/README.md](../Time_Warp_Rust/README.md) | [Architecture](../Time_Warp_Rust/ARCHITECTURE.md), [API Reference](../Time_Warp_Rust/docs/API_REFERENCE.md) |
-| **Python** | [Time_Warp_Python/README.md](../Time_Warp_Python/README.md) | [Quickstart](../Time_Warp_Python/QUICKSTART.md) |
-| **Go** | [Time_Warp_Go/README.md](../Time_Warp_Go/README.md) | CLI documentation |
-| **Web** | [Time_Warp_Web/README.md](../Time_Warp_Web/README.md) | Build instructions |
-| **DOS** | [Time_Warp_DOS/README.md](../Time_Warp_DOS/README.md) | Build guide |
+| **Rust** (Primary) | [platforms/rust/README.md](../platforms/rust/README.md) | [Architecture](../platforms/rust/ARCHITECTURE.md), [API Reference](../platforms/rust/docs/API_REFERENCE.md) |
+| **Python** | [platforms/python/README.md](../platforms/python/README.md) | [Quickstart](../platforms/python/QUICKSTART.md) |
+| **Go** | [platforms/go/README.md](../platforms/go/README.md) | CLI documentation |
+| **Web** | [platforms/web/README.md](../platforms/web/README.md) | Build instructions |
+| **DOS** | [platforms/dos/README.md](../platforms/dos/README.md) | Build guide |
 
 ---
 
@@ -172,10 +172,10 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 ### Implementation Documentation
 
 **Rust Implementation (Primary):**
-- [README](../Time_Warp_Rust/README.md) - Overview and quick start
-- [Architecture](../Time_Warp_Rust/ARCHITECTURE.md) - Implementation architecture
-- [Developer Reference](../Time_Warp_Rust/docs/DEVELOPER_REFERENCE.md) - API details
-- [Test Results](../Time_Warp_Rust/TEST_RESULTS.md) - Quality metrics
+- [README](../platforms/rust/README.md) - Overview and quick start
+- [Architecture](../platforms/rust/ARCHITECTURE.md) - Implementation architecture
+- [Developer Reference](../platforms/rust/docs/DEVELOPER_REFERENCE.md) - API details
+- [Test Results](../platforms/rust/TEST_RESULTS.md) - Quality metrics
 
 **Other Implementations:**
 - See platform-specific READMEs in respective directories
@@ -188,9 +188,9 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 
 | Document | Purpose |
 |----------|---------|
-| [Quick Reference](../Time_Warp_Rust/docs/QUICK_REFERENCE.md) | Command cheat sheet |
-| [API Reference](../Time_Warp_Rust/docs/API_REFERENCE.md) | Function reference |
-| [Parsing Reference](../Time_Warp_Rust/docs/PARSING_REFERENCE.md) | Parser details |
+| [Quick Reference](../platforms/rust/docs/QUICK_REFERENCE.md) | Command cheat sheet |
+| [API Reference](../platforms/rust/docs/API_REFERENCE.md) | Function reference |
+| [Parsing Reference](../platforms/rust/docs/PARSING_REFERENCE.md) | Parser details |
 
 ### Examples
 
@@ -233,8 +233,8 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 | **General** | [Installation Guide](installation/INSTALLATION_GUIDE.md) | All platforms |
 | **Arch Linux** | [Arch Install](installation/ARCH_INSTALL.md) | AUR packages |
 | **Debian/Ubuntu** | [Debian Install](installation/DEBIAN_INSTALL.md) | .deb packages |
-| **Windows** | [Time_Warp_Windows/README.md](../Time_Warp_Windows/README.md) | MSI installer |
-| **macOS** | [Time_Warp_Apple/README.md](../Time_Warp_Apple/README.md) | .app bundle |
+| **Windows** | [platforms/windows/README.md](../platforms/windows/README.md) | MSI installer |
+| **macOS** | [platforms/apple/README.md](../platforms/apple/README.md) | .app bundle |
 
 ---
 
@@ -243,13 +243,13 @@ Welcome to the Time Warp IDE documentation system. This index provides a compreh
 ### Advanced Features
 
 - **IoT Integration:** See [Technical Reference](development/TECHNICAL_REFERENCE.md) - IoT section
-- **Game Development:** See [Time_Warp_Rust/docs/](../Time_Warp_Rust/docs/)
+- **Game Development:** See [platforms/rust/docs/](../platforms/rust/docs/)
 - **Machine Learning:** Planned for future release
 
 ### Legacy Documentation
 
-- **Python Implementation:** [Time_Warp_Python/](../Time_Warp_Python/) - Educational reference
-- **DOS Implementation:** [Time_Warp_DOS/](../Time_Warp_DOS/) - Retro computing
+- **Python Implementation:** [platforms/python/](../platforms/python/) - Educational reference
+- **DOS Implementation:** [platforms/dos/](../platforms/dos/) - Retro computing
 - **Migration Guides:** Various `MIGRATION.md` files in platform directories
 
 ---

@@ -226,10 +226,10 @@ cd ~/Time_Warp
 
 ```bash
 # Python cache
-find ~/.local/share/timewarp/Time_Warp_Python -name __pycache__ -exec rm -rf {} +
+find ~/.local/share/timewarp/platforms/python -name __pycache__ -exec rm -rf {} +
 
 # Rust rebuild
-cd ~/.local/share/timewarp/Time_Warp_Rust
+cd ~/.local/share/timewarp/platforms/rust
 cargo clean
 cargo build --release
 ```

@@ -14,11 +14,11 @@ import sys
 
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
-GO_CLI = os.path.join(ROOT, "Time_Warp_Go", "cmd", "timewarp")
+GO_CLI = os.path.join(ROOT, "platforms", "go", "cmd", "timewarp")
 SPECS = os.path.join(ROOT, "tests", "cross_platform", "specs.yaml")
 
 
-class Colors:
+class Colors:  # pylint: disable=too-few-public-methods
     G = "\x1b[32m"
     R = "\x1b[31m"
     Y = "\x1b[33m"
@@ -37,7 +37,7 @@ def ensure_go_built() -> bool:
         try:
             subprocess.check_call(
                 ["go", "build", "./..."],
-                cwd=os.path.join(ROOT, "Time_Warp_Go"),
+                cwd=os.path.join(ROOT, "platforms", "go"),
             )
         except subprocess.CalledProcessError as e:
             print(f"{Colors.R}FAIL{Colors.X} go build failed: {e}")
@@ -70,20 +70,20 @@ def run_go_program(
     treats each line independently. TODO: replace with batch execution
     once Go executor adds multi-line parsing per language.
     """
-    proc = subprocess.Popen(
+    with subprocess.Popen(
         ["go", "run", "./cmd/timewarp"],
-        cwd=os.path.join(ROOT, "Time_Warp_Go"),
+        cwd=os.path.join(ROOT, "platforms", "go"),
         stdout=subprocess.PIPE,
         stdin=subprocess.PIPE,
         stderr=subprocess.PIPE,
         text=True,
-    )
-    out_chunks: list[str] = []
-    # Feed lines via communicate to avoid flush errors if build fails early
-    stdout, stderr = proc.communicate(input=program)
-    if stderr:
-        out_chunks.append(stderr)
-    out_chunks.append(stdout)
+    ) as proc:
+        out_chunks: list[str] = []
+        # Feed lines via communicate to avoid flush errors if build fails early
+        stdout, stderr = proc.communicate(input=program)
+        if stderr:
+            out_chunks.append(stderr)
+        out_chunks.append(stdout)
     raw = "".join(out_chunks)
     return normalize_output(raw), []
 
@@ -138,6 +138,7 @@ def compare_text(expected: str, actual: str) -> tuple[bool, str]:
 
 
 def main() -> int:
+    # pylint: disable=too-many-locals,too-many-branches
     if not os.path.exists(SPECS):
         print("Spec file missing; abort")
         return 2
@@ -193,19 +194,19 @@ def run_basic_batch(program: str) -> str:
     if shutil.which("go") is None:
         return ""
     try:
-        proc = subprocess.Popen(
+        with subprocess.Popen(
             ["go", "run", "./cmd/timewarp", "--batch", "BASIC"],
-            cwd=os.path.join(ROOT, "Time_Warp_Go"),
+            cwd=os.path.join(ROOT, "platforms", "go"),
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-        )
+        ) as proc:
+            assert proc.stdin is not None
+            # Use communicate(input=...) to avoid flush errors on closed stdin
+            stdout, stderr = proc.communicate(input=program)
     except (OSError, FileNotFoundError) as e:
         return f"❌ spawn failed: {e}\n"
-    assert proc.stdin is not None
-    # Use communicate(input=...) to avoid flush errors on closed stdin
-    stdout, stderr = proc.communicate(input=program)
     raw = stderr + stdout
     return normalize_output(raw)
 
@@ -215,18 +216,18 @@ def run_pilot_batch(program: str) -> str:
     if shutil.which("go") is None:
         return ""
     try:
-        proc = subprocess.Popen(
+        with subprocess.Popen(
             ["go", "run", "./cmd/timewarp", "--batch", "PILOT"],
-            cwd=os.path.join(ROOT, "Time_Warp_Go"),
+            cwd=os.path.join(ROOT, "platforms", "go"),
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-        )
+        ) as proc:
+            assert proc.stdin is not None
+            stdout, stderr = proc.communicate(input=program)
     except (OSError, FileNotFoundError) as e:
         return f"❌ spawn failed: {e}\n"
-    assert proc.stdin is not None
-    stdout, stderr = proc.communicate(input=program)
     raw = stderr + stdout
     return normalize_output(raw)
 

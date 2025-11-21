@@ -318,7 +318,7 @@ time_warp_unified/
 **Architecture:**
 
 ```
-Time_Warp_Python/
+platforms/python/
 ├── run_time_warp.py      # Entry point
 ├── core/
 │   ├── interpreter.py    # Main interpreter (1500+ lines)
@@ -632,7 +632,7 @@ Time Warp IDE's architecture is designed for educational use with a focus on saf
 For implementation details, see:
 - [Developer Guide](DEVELOPER_GUIDE.md)
 - [Technical Reference](docs/TECHNICAL_REFERENCE.md)
-- [Platform READMEs](Time_Warp_Rust/README.md)
+- [Platform READMEs](../platforms/rust/README.md)
 
 ---
 

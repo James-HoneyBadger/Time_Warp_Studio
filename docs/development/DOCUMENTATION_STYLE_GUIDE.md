@@ -23,7 +23,7 @@ This guide ensures consistency across all documentation, READMEs, guides, and co
 
 ### Current Version
 - **Version:** 3.0.0
-- **Primary Implementation:** Rust (Time_Warp_Rust/)
+- **Primary Implementation:** Rust (platforms/rust/)
 - **License:** MIT
 - **Maintainer:** James Temple <james@honey-badger.org>
 
@@ -368,8 +368,8 @@ Use for structured data comparison:
 
 ### Platform Directories
 
-- **Pattern:** `Time_Warp_[Platform]/`
-- **Examples:** `Time_Warp_Rust/`, `Time_Warp_Python/`, `Time_Warp_DOS/`
+- **Pattern:** `platforms/<platform>/`
+- **Examples:** `platforms/rust/`, `platforms/python/`, `platforms/dos/`
 
 ---
 

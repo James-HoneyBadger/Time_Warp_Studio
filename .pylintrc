@@ -1,5 +1,5 @@
 [MASTER]
-ignore=.venv,legacy,Time_Warp_*
+ignore=.venv,legacy,Time_Warp_*,Time_Warp_Python,Python
 
 [FORMAT]
 max-line-length=79
@@ -9,7 +9,8 @@ disable=
     too-many-lines,
     missing-module-docstring,
     missing-class-docstring,
-    missing-function-docstring
+    missing-function-docstring,
+    duplicate-code
 
 [TYPECHECK]
 # Allow dynamic shim imports

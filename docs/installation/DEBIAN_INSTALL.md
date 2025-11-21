@@ -161,7 +161,7 @@ For development or custom setups:
 #### Python Version
 
 ```bash
-cd Time_Warp_Python
+cd platforms/python
 
 # Create virtual environment
 python3 -m venv venv
@@ -177,7 +177,7 @@ python time_warp_ide.py
 #### Rust Version
 
 ```bash
-cd Time_Warp_Rust
+cd platforms/rust
 
 # Build release version
 cargo build --release
@@ -279,7 +279,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 source $HOME/.cargo/env
 
 # Rebuild Time Warp
-cd ~/.local/share/timewarp/Time_Warp_Rust
+cd ~/.local/share/timewarp/platforms/rust
 cargo build --release
 ```
 
@@ -407,11 +407,11 @@ sudo rm -rf /usr/share/doc/timewarp
 
 ```bash
 # Remove Rust build cache
-cd Time_Warp_Rust
+cd platforms/rust
 cargo clean
 
 # Remove Python cache
-cd Time_Warp_Python
+cd platforms/python
 find . -type d -name __pycache__ -exec rm -rf {} +
 find . -type f -name "*.pyc" -delete
 ```

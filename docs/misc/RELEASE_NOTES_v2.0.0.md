@@ -19,7 +19,7 @@ Time Warp IDE 2.0.0 represents the culmination of extensive development effort, 
 pip install PySide6 pillow
 
 # Launch IDE
-cd Time_Warp_Python
+cd platforms/python
 python time_warp_ide.py
 
 # Or use root launcher
@@ -30,7 +30,7 @@ python time_warp_ide.py
 
 ```bash
 # Build and run
-cd Time_Warp_Rust
+cd platforms/rust
 cargo run --release
 
 # Or use root launcher
@@ -237,10 +237,10 @@ MIT License - see [LICENSE](LICENSE) file for details.
 ## 🔗 Links
 
 - [User Guide](USER_GUIDE.md)
-- [Python README](Time_Warp_Python/README.md)
-- [Rust README](Time_Warp_Rust/README.md)
-- [Quick Reference](Time_Warp_Rust/docs/QUICK_REFERENCE.md)
-- [Turtle Graphics Reference](Time_Warp_Python/docs/TURTLE_GRAPHICS_REFERENCE.md)
+- [Python README](platforms/python/README.md)
+- [Rust README](platforms/rust/README.md)
+- [Quick Reference](platforms/rust/docs/QUICK_REFERENCE.md)
+- [Turtle Graphics Reference](platforms/python/docs/TURTLE_GRAPHICS_REFERENCE.md)
 - [CHANGELOG](CHANGELOG.md)
 - [CONTRIBUTING](CONTRIBUTING.md)
 - [CODE_OF_CONDUCT](CODE_OF_CONDUCT.md)

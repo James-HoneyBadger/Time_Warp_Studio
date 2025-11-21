@@ -2,7 +2,7 @@
 
 This folder contains a lightweight, Python-based test harness to verify BASIC/Logo/PILOT behavior across available platform implementations.
 
-- Uses the Go CLI in `Time_Warp_Go/cmd/timewarp` as the reference executable (runnable on Linux).
+- Uses the Go CLI in `platforms/go/cmd/timewarp` as the reference executable (runnable on Linux).
 - Defines language-agnostic test cases in YAML.
 - Produces a concise report (PASS/FAIL/SKIP) with diffs on mismatch.
 

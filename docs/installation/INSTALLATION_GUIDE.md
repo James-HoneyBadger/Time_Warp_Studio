@@ -1,8 +1,8 @@
 # 🚀 Time Warp IDE - Installation Guide
 
-**Complete Platform-Specific Installation & Deployment Manual**
+**Python-Based Multi-Language Programming Environment**
 
-This comprehensive guide covers installation procedures, system requirements, troubleshooting, and deployment strategies for all Time Warp IDE implementations across different platforms and educational environments.
+This guide covers installation and deployment of Time Warp IDE, a Python-based educational programming environment supporting BASIC, PILOT, and Logo languages with integrated turtle graphics.
 
 ---
 
@@ -10,130 +10,58 @@ This comprehensive guide covers installation procedures, system requirements, tr
 
 | Platform | Best For | Installation Time | Difficulty | Network Required |
 |----------|----------|------------------|------------|------------------|
-| 🌐 **Web** | Chromebooks, Quick Start | **Instant** | ⭐ Beginner | Initial only |
-| 🐍 **Python** | Schools, Raspberry Pi | **2-5 minutes** | ⭐⭐ Easy | Yes |
-| 🚀 **Rust** | Performance, Advanced | **5-15 minutes** | ⭐⭐⭐ Moderate | Build: Yes, Run: No |
-| 🪟 **Windows** | Enterprise, IT Deployment | **10-30 minutes** | ⭐⭐⭐ Moderate | Yes |
-| 💾 **DOS** | Retro Computing, History | **5-10 minutes** | ⭐⭐⭐⭐ Advanced | No |
-| 🍎 **Apple** | iPad/Mac Classrooms | **5-10 minutes** | ⭐⭐ Easy | App Store: Yes |
+| 🐍 **Python (Primary)** | Schools, Homes, All Platforms | **2-5 minutes** | ⭐ Beginner | Yes (initial install) |
+| 🌐 **Web (Experimental)** | Chromebooks, Quick Demos | **Instant** | ⭐ Beginner | Initial only |
+| 🚀 **Rust (Experimental)** | Performance Testing | **5-15 minutes** | ⭐⭐⭐ Moderate | Build: Yes, Run: No |
+| 🪟 **Windows (Experimental)** | Legacy Windows Systems | **10-30 minutes** | ⭐⭐⭐ Moderate | Yes |
+| 💾 **DOS (Experimental)** | Retro Computing | **5-10 minutes** | ⭐⭐⭐⭐ Advanced | No |
+| 🍎 **Apple (Experimental)** | Legacy Mac Systems | **5-10 minutes** | ⭐⭐ Easy | App Store: Yes |
 
 ---
 
-## 🌐 Web Implementation - Zero Install
+## 🐍 Python Implementation - Primary & Recommended
 
 ### **🎯 Perfect For**
-- Chromebook classrooms and 1:1 device programs
-- Quick demonstrations and immediate access
-- Remote learning and mobile devices
-- Environments with restricted software installation
+- Educational institutions and classrooms
+- Home learning and personal projects
+- Cross-platform compatibility (Windows, macOS, Linux)
+- Raspberry Pi and maker spaces
+- Environments where students can explore programming concepts
 
-### **⚡ Instant Access Methods**
+### **⚡ Quick Start Installation**
 
-#### **Method 1: Direct Browser Access**
+#### **Method 1: Direct from Source (Recommended)**
 ```bash
-# Simply open in any modern browser:
-https://timewarp.edu/ide
-# Or local deployment:
-file:///path/to/Time_Warp_Web/index.html
+# Clone or download the repository
+git clone https://github.com/your-org/time-warp-ide.git
+cd time-warp-ide
+
+# Run the launcher
+./run.sh          # Launch the graphical IDE
+./run.sh repl     # Launch the interactive REPL
 ```
 
-#### **Method 2: Offline Progressive Web App**
-1. **Visit the web app** in Chrome, Safari, or Edge
-2. **Install PWA** - Click browser's "Install" prompt or "Add to Home Screen"
-3. **Works Offline** - All features available without internet after first visit
-4. **Auto-Updates** - Automatically receives new features when online
-
-#### **Method 3: School Network Deployment**
+#### **Method 2: System-Wide Installation**
 ```bash
-# Deploy to school web server
-sudo cp -r Time_Warp_Web/* /var/www/html/timewarp/
-# Configure NGINX or Apache virtual host
-# Students access via: http://school-server/timewarp/
+# For Debian/Ubuntu systems
+sudo ./install.sh
+
+# For user-only installation (no root required)
+./install-user.sh
+
+# Then launch
+timewarp           # Graphical IDE
+timewarp-repl      # Interactive REPL (if available)
 ```
 
-### **📱 Mobile & Tablet Optimization**
-
-#### **iPad/Tablet Setup**
-- **Safari/Chrome**: Full desktop-like experience with touch gestures
-- **Split View**: Code editor on left, canvas on right
-- **Touch Controls**: Pinch-to-zoom, swipe navigation
-- **Virtual Keyboard**: Auto-complete and symbol shortcuts
-
-#### **Phone Optimization**  
-- **Portrait Mode**: Stacked interface with swipe between code/canvas
-- **Landscape Mode**: Side-by-side layout like desktop
-- **Touch Gestures**: Tap to edit, swipe to navigate sections
-- **Responsive Design**: Adapts to all screen sizes automatically
-
-### **🔧 Browser Requirements & Compatibility**
-
-| Browser | Version | Support Level | Notes |
-|---------|---------|---------------|--------|
-| **Chrome** | 80+ | ✅ Full | Recommended, best performance |
-| **Safari** | 13+ | ✅ Full | Excellent on iOS/macOS |
-| **Firefox** | 75+ | ✅ Full | Great cross-platform choice |
-| **Edge** | 80+ | ✅ Full | Windows integration |
-| **Opera** | 70+ | ⚠️ Mostly | Some advanced features limited |
-
-### **🎓 Educational Deployment Strategies**
-
-#### **Chromebook Classroom Setup**
-```javascript
-// Add to Chrome management console for district deployment
-{
-  "homepage": "https://school.edu/timewarp",
-  "managed_bookmarks": [
-    {"name": "Time Warp IDE", "url": "https://school.edu/timewarp"}
-  ],
-  "force_installed_apps": ["timewarp-pwa-id"]
-}
+#### **Method 3: Python Package Installation (Future)**
+```bash
+# When available as PyPI package
+pip install time-warp-ide
+timewarp
 ```
 
-#### **Shared Computer Configuration**
-- **Kiosk Mode**: Lock browsers to Time Warp URL for dedicated programming stations
-- **User Isolation**: LocalStorage keeps student work separate per login
-- **Reset Scripts**: Clear sessions between users with admin shortcuts
-- **Network Policies**: Allow Time Warp domain while restricting others
-
-### **❌ Troubleshooting Web Version**
-
-#### **Performance Issues**
-```javascript
-// Check browser performance
-console.log("Available Memory:", navigator.deviceMemory);
-console.log("CPU Cores:", navigator.hardwareConcurrency);
-// Reduce graphics quality if hardware is limited
-```
-
-#### **Storage Problems** 
-```javascript
-// Check LocalStorage availability
-try {
-  localStorage.setItem('test', 'data');
-  localStorage.removeItem('test');
-  console.log('LocalStorage: Available');
-} catch(e) {
-  console.log('LocalStorage: Blocked - check browser settings');
-}
-```
-
-#### **Common Issues & Solutions**
-- **Programs Don't Save**: Check if cookies/localStorage enabled
-- **Graphics Don't Display**: Ensure Canvas support, update browser  
-- **Slow Performance**: Close other tabs, check available RAM
-- **Touch Issues**: Enable touch events in browser developer settings
-
----
-
-## 🐍 Python Implementation - Universal Access
-
-### **🎯 Perfect For**
-- Educational institutions with diverse hardware
-- Raspberry Pi and maker spaces  
-- Cross-platform compatibility requirements
-- Environments where students can explore source code
-
-### **⚙️ System Requirements**
+### **📋 System Requirements**
 
 #### **Minimum Requirements**
 - **Python**: 3.8 or newer (3.10+ recommended)
@@ -168,7 +96,7 @@ timewarp-ide
 ```bash
 # Clone and install in development mode
 git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp/Time_Warp_Python
+cd Time_Warp/platforms/python
 
 # Create virtual environment (recommended)
 python3 -m venv venv
@@ -254,7 +182,7 @@ sudo reboot
 # Install to shared location accessible by all students
 sudo mkdir -p /opt/timewarp
 sudo git clone https://github.com/James-HoneyBadger/Time_Warp.git /opt/timewarp
-cd /opt/timewarp/Time_Warp_Python
+cd /opt/timewarp/platforms/python
 
 # Install system-wide
 sudo pip3 install -e .
@@ -262,7 +190,7 @@ sudo pip3 install -e .
 # Create launcher script
 sudo tee /usr/local/bin/timewarp << 'EOF'
 #!/bin/bash
-cd /opt/timewarp/Time_Warp_Python
+cd /opt/timewarp/platforms/python
 python3 time_warp_ide.py "$@"
 EOF
 sudo chmod +x /usr/local/bin/timewarp
@@ -395,7 +323,7 @@ cargo install --git https://github.com/James-HoneyBadger/Time_Warp.git --bin tim
 ```bash
 # Clone repository
 git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp/Time_Warp_Rust
+cd Time_Warp/platforms/rust
 
 # Build debug version (faster compile)
 cargo build
@@ -818,7 +746,7 @@ sudo pacman -S dosbox
 # Create dosbox.conf configuration
 [autoexec]
 # Mount Time Warp directory
-mount c: /path/to/Time_Warp_DOS
+mount c: /path/to/platforms/dos
 c:
 cd \
 # Auto-launch Time Warp
@@ -835,7 +763,7 @@ mcopy examples\*.spt a:
 # Or create bootable DOS disk with FreeDOS
 dd if=freedos.img of=/dev/sdb bs=1M
 mount /dev/sdb1 /mnt/dos
-cp Time_Warp_DOS/* /mnt/dos/
+cp platforms/dos/* /mnt/dos/
 umount /mnt/dos
 ```
 
@@ -844,11 +772,11 @@ umount /mnt/dos
 # Using OpenWatcom on Windows
 set WATCOM=C:\WATCOM
 set PATH=%WATCOM%\BINNT;%PATH%
-cd Time_Warp_DOS\build
+cd platforms\dos\build
 wcl386 -fe=timewarp.exe ..\src\timewarp.c
 
 # Using DJGPP in DOS/DOSBox
-cd Time_Warp_DOS\build  
+cd platforms\dos\build  
 gcc -o timewarp.exe ..\src\timewarp.c
 ```
 
@@ -1118,7 +1046,7 @@ mas install 123456789  # Requires mas-cli: brew install mas
 ```bash
 # Build from source (requires Apple Developer account)
 git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp/Time_Warp_Apple
+cd Time_Warp/platforms/apple
 open TimeWarp.xcworkspace
 
 # Configure signing in Xcode

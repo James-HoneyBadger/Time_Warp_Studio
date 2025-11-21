@@ -56,9 +56,9 @@ This document outlines the comprehensive documentation rewrite for Time Warp IDE
 
 ### 📁 **Implementation-Specific Documentation**
 
-Each `Time_Warp_*/` directory will have its own comprehensive documentation:
+Each `platforms/<platform>/` directory will have its own comprehensive documentation:
 
-#### 🦀 **Rust Implementation** (`Time_Warp_Rust/docs/`)
+#### 🦀 **Rust Implementation** (`platforms/rust/docs/`)
 - `README.md` - Rust-specific overview and features
 - `USER_GUIDE.md` - Rust implementation user manual
 - `DEVELOPER_GUIDE.md` - Rust development setup and architecture
@@ -66,7 +66,7 @@ Each `Time_Warp_*/` directory will have its own comprehensive documentation:
 - `PERFORMANCE.md` - Rust-specific optimization techniques
 - `API_REFERENCE.md` - Rust API and crate documentation
 
-#### 🐍 **Python Implementation** (`Time_Warp_Python/docs/`)
+#### 🐍 **Python Implementation** (`platforms/python/docs/`)
 - `README.md` - Python-specific overview and educational focus
 - `USER_GUIDE.md` - Python implementation user manual
 - `QUICKSTART.md` - Fast setup for educators and students
@@ -74,7 +74,7 @@ Each `Time_Warp_*/` directory will have its own comprehensive documentation:
 - `TESTING.md` - Python test suite and quality assurance
 - `CURRICULUM.md` - Educational materials and lesson plans
 
-#### 🌐 **Web Implementation** (`Time_Warp_Web/docs/`)
+#### 🌐 **Web Implementation** (`platforms/web/docs/`)
 - `README.md` - Web implementation overview and browser compatibility
 - `USER_GUIDE.md` - Browser-based IDE usage guide
 - `DEPLOYMENT.md` - Hosting and classroom deployment guide
@@ -82,21 +82,21 @@ Each `Time_Warp_*/` directory will have its own comprehensive documentation:
 - `ACCESSIBILITY.md` - Web accessibility features and compliance
 - `INTEGRATION.md` - Embedding in learning management systems
 
-#### 💾 **DOS Implementation** (`Time_Warp_DOS/docs/`)
+#### 💾 **DOS Implementation** (`platforms/dos/docs/`)
 - `README.md` - DOS implementation and retro computing context
 - `USER_GUIDE.md` - DOS usage and historical context
 - `BUILD_GUIDE.md` - Compiling with period-appropriate tools
 - `HARDWARE.md` - Supported hardware and system requirements
 - `HISTORY.md` - Historical context and educational value
 
-#### 🪟 **Windows Implementation** (`Time_Warp_Windows/docs/`)
+#### 🪟 **Windows Implementation** (`platforms/windows/docs/`)
 - `README.md` - Windows implementation overview
 - `USER_GUIDE.md` - Windows-specific features and usage
 - `DEPLOYMENT.md` - Enterprise and educational deployment
 - `INTEGRATION.md` - Windows ecosystem integration
 - `LEGACY.md` - Support for older Windows versions
 
-#### 🍎 **Apple Implementation** (`Time_Warp_Apple/docs/`)
+#### 🍎 **Apple Implementation** (`platforms/apple/docs/`)
 - `README.md` - Apple ecosystem implementation
 - `USER_GUIDE.md` - macOS and iOS usage guide
 - `APPSTORE.md` - App Store deployment and guidelines
@@ -153,7 +153,7 @@ Each `Time_Warp_*/` directory will have its own comprehensive documentation:
 - ⏳ Document build processes and testing procedures
 
 #### Phase 5: Implementation-Specific Docs (Week 5)
-- ⏳ Complete documentation for each Time_Warp_* directory
+- ⏳ Complete documentation for each platforms/<platform> directory
 - ⏳ Create implementation-specific user guides
 - ⏳ Write deployment and integration guides
 - ⏳ Document platform-specific features

@@ -205,7 +205,7 @@ For security concerns:
 - [Contributing Guidelines](CONTRIBUTING.md)
 - [Code of Conduct](CODE_OF_CONDUCT.md)
 - [CHANGELOG](CHANGELOG.md)
-- [Architecture Documentation](Time_Warp_Rust/ARCHITECTURE.md)
+- [Architecture Documentation](platforms/rust/ARCHITECTURE.md)
 
 ---
 
