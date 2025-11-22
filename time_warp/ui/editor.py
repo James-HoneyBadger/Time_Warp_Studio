@@ -1,5 +1,6 @@
 """Code editor widget with line numbers and basic syntax highlighting."""
 
+import re
 from PySide6.QtWidgets import (
     QPlainTextEdit,
     QWidget,
@@ -20,7 +21,7 @@ from PySide6.QtGui import (
     QPalette,
     QTextDocument,
 )
-import re
+from ..core.interpreter import Language
 
 
 class LineNumberArea(QWidget):
@@ -42,8 +43,6 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
 
     def __init__(self, document, language=None):
         super().__init__(document)
-
-        from ..core.interpreter import Language
 
         if language is None:
             language = Language.BASIC
@@ -143,9 +142,9 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
         for keyword in self.keywords:
             pattern = r"\b" + re.escape(keyword) + r"\b"
             for match in re.finditer(pattern, text, re.IGNORECASE):
-                self.setFormat(
-                    match.start(), match.end() - match.start(), self.keyword_format
-                )
+                start = match.start()
+                length = match.end() - match.start()
+                self.setFormat(start, length, self.keyword_format)
 
         # Comments (REM in BASIC, R: in PILOT)
         comment_pattern = r"(^|\s)REM\b.*$|^R:.*$"
@@ -279,9 +278,9 @@ class CodeEditor(QPlainTextEdit):
         super().resizeEvent(event)
 
         cr = self.contentsRect()
-        self.line_number_area.setGeometry(
-            QRect(cr.left(), cr.top(), self.line_number_area_width(), cr.height())
-        )
+        width = self.line_number_area_width()
+        rect = QRect(cr.left(), cr.top(), width, cr.height())
+        self.line_number_area.setGeometry(rect)
 
     def line_number_area_paint_event(self, event):
         """Paint line numbers."""
@@ -293,9 +292,12 @@ class CodeEditor(QPlainTextEdit):
         painter.fillRect(event.rect(), bg_color)
 
         # Line numbers
-        block = self.firstVisibleBlock()
+        block = self.document().firstBlock()
+        geom = self.blockBoundingGeometry(block)
+        top = geom.translated(self.contentOffset()).top()
         block_number = block.blockNumber()
-        top = self.blockBoundingGeometry(block).translated(self.contentOffset()).top()
+        geom = self.blockBoundingGeometry(block)
+        top = geom.translated(self.contentOffset()).top()
         bottom = top + self.blockBoundingRect(block).height()
 
         fg_color = palette.color(QPalette.Text).darker(150)

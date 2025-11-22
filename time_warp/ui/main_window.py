@@ -1,5 +1,8 @@
 """Main window for Time Warp IDE."""
 
+from pathlib import Path
+
+# pylint: disable=no-name-in-module
 from PySide6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -14,12 +17,14 @@ from PySide6.QtWidgets import (
 )
 from PySide6.QtCore import Qt, QSettings, QTimer
 from PySide6.QtGui import QAction, QKeySequence
-from pathlib import Path
+
+# pylint: enable=no-name-in-module
 
 from .editor import CodeEditor
 from .output import OutputPanel
 from .canvas import TurtleCanvas
 from .themes import ThemeManager
+from ..core.interpreter import Language
 
 
 class MainWindow(QMainWindow):
@@ -53,7 +58,7 @@ class MainWindow(QMainWindow):
         # Ensure output starts cleared at application runtime
         try:
             self.output.clear()
-        except Exception:
+        except Exception:  # pylint: disable=broad-exception-caught
             pass
 
     def setup_ui(self):
@@ -203,7 +208,6 @@ class MainWindow(QMainWindow):
             action = QAction(theme_name, self)
             action.triggered.connect(lambda checked, t=theme_name: self.change_theme(t))
             theme_menu.addAction(action)
-
         view_menu.addSeparator()
 
         zoom_in_action = QAction("Zoom &In", self)
@@ -232,7 +236,7 @@ class MainWindow(QMainWindow):
     def create_toolbar(self):
         """Create toolbar."""
         toolbar = QToolBar("Main Toolbar")
-        toolbar.setObjectName("MainToolbar")  # Set object name to avoid Qt warning
+        toolbar.setObjectName("MainToolbar")  # Avoid Qt warning
         toolbar.setMovable(False)
         self.addToolBar(toolbar)
 
@@ -250,16 +254,14 @@ class MainWindow(QMainWindow):
         # Language selector
         toolbar.addSeparator()
         self.language_combo = QComboBox()
-        from ..core.interpreter import Language
 
         for lang in [
             Language.BASIC,
             Language.PILOT,
             Language.LOGO,
         ]:
-            self.language_combo.addItem(lang.name(), lang)
+            self.language_combo.addItem(lang.friendly_name(), lang)
         self.language_combo.currentIndexChanged.connect(self.on_language_changed)
-        toolbar.addWidget(self.language_combo)
 
     def create_statusbar(self):
         """Create status bar."""
@@ -274,7 +276,6 @@ class MainWindow(QMainWindow):
 
         self.editor.clear()
         # Set default language for new files
-        from ..core.interpreter import Language
 
         self.editor.set_language(Language.BASIC)
 
@@ -311,7 +312,6 @@ class MainWindow(QMainWindow):
             self.editor.setPlainText(content)
 
             # Set syntax highlighting based on file extension
-            from ..core.interpreter import Language
 
             ext = Path(filename).suffix
             language = Language.from_extension(ext)
@@ -330,7 +330,7 @@ class MainWindow(QMainWindow):
             self.add_recent_file(filename)
             self.statusbar.showMessage(f"Loaded: {filename}")
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             QMessageBox.critical(
                 self, "Error Loading File", f"Could not load file:\n{e}"
             )
@@ -370,7 +370,7 @@ class MainWindow(QMainWindow):
             self.add_recent_file(filename)
             self.statusbar.showMessage(f"Saved: {filename}")
 
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-exception-caught
             QMessageBox.critical(
                 self, "Error Saving File", f"Could not save file:\n{e}"
             )
@@ -386,7 +386,6 @@ class MainWindow(QMainWindow):
         # Detect language from current file extension
         language = None
         if self.current_file:
-            from ..core.interpreter import Language
 
             ext = Path(self.current_file).suffix
             language = Language.from_extension(ext)
@@ -401,7 +400,7 @@ class MainWindow(QMainWindow):
         # Disable run, enable stop
         self.run_action.setEnabled(False)
         self.stop_action.setEnabled(True)
-        lang_name = language.name() if language else "BASIC"
+        lang_name = language.friendly_name() if language else "BASIC"
         self.statusbar.showMessage(f"Running {lang_name} program...")
 
         # Run in background thread
@@ -423,7 +422,7 @@ class MainWindow(QMainWindow):
                 if getattr(self.canvas, "lines", None):
                     if len(self.canvas.lines) > 0:
                         self.right_tabs.setCurrentWidget(self.canvas)
-            except Exception:
+            except Exception:  # pylint: disable=broad-exception-caught
                 # Non-fatal; ignore any unexpected attribute issues
                 pass
 
@@ -518,16 +517,12 @@ class MainWindow(QMainWindow):
             for filename in recent:
                 action = QAction(Path(filename).name, self)
                 action.triggered.connect(lambda checked, f=filename: self.load_file(f))
-                self.recent_menu.addAction(action)
 
     def show_examples(self):
-        """Show examples dialog."""
         examples_dir = Path(__file__).parent.parent.parent / "examples"
 
         if not examples_dir.exists():
             QMessageBox.information(self, "Examples", "Examples directory not found.")
-            return
-
         filename, _ = QFileDialog.getOpenFileName(
             self,
             "Open Example",
@@ -572,7 +567,7 @@ class MainWindow(QMainWindow):
         self.settings.setValue("geometry", self.saveGeometry())
         self.settings.setValue("windowState", self.saveState())
 
-    def closeEvent(self, event):
+    def closeEvent(self, event):  # pylint: disable=invalid-name
         """Handle window close."""
         if self.check_save_changes():
             self.save_state()

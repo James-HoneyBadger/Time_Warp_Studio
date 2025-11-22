@@ -314,7 +314,9 @@ def main():
 
     # REPEAT command
     if test_command(
-        "REPEAT single-line", "REPEAT 4 [FORWARD 50 RIGHT 90]", expected_lines=4
+        "REPEAT single-line",
+        "REPEAT 4 [FORWARD 50 RIGHT 90]",
+        expected_lines=4,
     ):
         passed += 1
     else:

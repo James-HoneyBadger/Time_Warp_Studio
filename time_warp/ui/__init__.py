@@ -6,4 +6,6 @@ from .output import OutputPanel
 from .canvas import TurtleCanvas
 from .themes import ThemeManager
 
-__all__ = ['MainWindow', 'CodeEditor', 'OutputPanel', 'TurtleCanvas', 'ThemeManager']
+__all__ = [
+    'MainWindow', 'CodeEditor', 'OutputPanel', 'TurtleCanvas', 'ThemeManager',
+]

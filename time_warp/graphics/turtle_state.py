@@ -8,6 +8,21 @@ from typing import List, Tuple
 from dataclasses import dataclass
 
 
+# Color name to RGB mapping
+COLOR_NAMES = {
+    "BLACK": (0, 0, 0),
+    "WHITE": (255, 255, 255),
+    "RED": (255, 0, 0),
+    "GREEN": (0, 255, 0),
+    "BLUE": (0, 0, 255),
+    "YELLOW": (255, 255, 0),
+    "CYAN": (0, 255, 255),
+    "MAGENTA": (255, 0, 255),
+    "GRAY": (128, 128, 128),
+    "GREY": (128, 128, 128),
+}
+
+
 @dataclass
 class TurtleLine:
     """
@@ -25,7 +40,7 @@ class TurtleLine:
     width: float
 
 
-class TurtleState:
+class TurtleState:  # pylint: disable=too-many-instance-attributes
     """
     Turtle graphics state for Logo-style drawing
 
@@ -63,7 +78,14 @@ class TurtleState:
 
         if self.pen_down:
             self.lines.append(
-                TurtleLine(old_x, old_y, self.x, self.y, self.pen_color, self.pen_width)
+                TurtleLine(
+                    old_x,
+                    old_y,
+                    self.x,
+                    self.y,
+                    self.pen_color,
+                    self.pen_width,
+                )
             )
 
     def back(self, distance: float):
@@ -84,10 +106,25 @@ class TurtleState:
         """Move to absolute position, drawing if pen down"""
         if self.pen_down:
             self.lines.append(
-                TurtleLine(self.x, self.y, x, y, self.pen_color, self.pen_width)
+                TurtleLine(
+                    self.x,
+                    self.y,
+                    x,
+                    y,
+                    self.pen_color,
+                    self.pen_width,
+                )
             )
         self.x = x
         self.y = y
+
+    def setx(self, x: float):
+        """Set X coordinate, drawing if pen down"""
+        self.goto(x, self.y)
+
+    def sety(self, y: float):
+        """Set Y coordinate, drawing if pen down"""
+        self.goto(self.x, y)
 
     def home(self):
         """Return to center (0,0) and reset heading"""
@@ -121,6 +158,30 @@ class TurtleState:
         """Set pen color (RGB 0-255)"""
         self.pen_color = (r, g, b)
 
+    def pencolor(self, color):
+        """Set pen color by name, hex, or RGB tuple"""
+        if isinstance(color, str):
+            color = color.upper()
+            if color in COLOR_NAMES:
+                self.pen_color = COLOR_NAMES[color]
+            elif color.startswith("#") and len(color) == 7:
+                # Hex color like #FF0000
+                r = int(color[1:3], 16)
+                g = int(color[3:5], 16)
+                b = int(color[5:7], 16)
+                self.pen_color = (r, g, b)
+            else:
+                # Try to parse as RGB values separated by spaces
+                parts = color.split()
+                if len(parts) == 3:
+                    try:
+                        r, g, b = map(int, parts)
+                        self.pen_color = (r, g, b)
+                    except ValueError:
+                        pass  # Keep current color
+        elif isinstance(color, tuple) and len(color) == 3:
+            self.pen_color = color
+
     def setpenwidth(self, width: float):
         """Set pen width"""
         self.pen_width = width
@@ -136,6 +197,10 @@ class TurtleState:
     def hideturtle(self):
         """Hide turtle cursor"""
         self.visible = False
+
+    def showturtle(self):
+        """Show turtle cursor"""
+        self.visible = True
 
     def circle(self, radius: float, extent: float = 360.0):
         """Draw a circle or arc with given radius and extent"""

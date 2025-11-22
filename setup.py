@@ -95,7 +95,8 @@ setup(
         "Programming Language :: Python :: 3.12",
         "Operating System :: OS Independent",
     ],
-    keywords=("education programming pilot basic logo " "turtle-graphics interpreter"),
+    keywords=("education programming pilot basic logo "
+              "turtle-graphics interpreter"),
     include_package_data=True,
     zip_safe=False,
 )

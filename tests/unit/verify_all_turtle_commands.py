@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Comprehensive test of all turtle graphics commands."""
 
-from time_warp.core.interpreter import Interpreter
+from time_warp.core.interpreter import Interpreter, Language
 from time_warp.graphics.turtle_state import TurtleState
 
 
@@ -10,26 +10,27 @@ def test_command(name, code, expected_lines=None, check_fn=None):
     print(f"Testing {name}...", end=" ")
     interp = Interpreter()
     turtle = TurtleState()
-    interp.load_program(code)
+    interp.load_program(code, language=Language.LOGO)
     try:
         out = interp.execute(turtle)
         errors = [line for line in out if "❌" in line]
         if errors:
-            print(f"❌ FAILED")
+            print("❌ FAILED")
             for e in errors:
                 print(f"  {e}")
             return False
         if expected_lines is not None and len(turtle.lines) != expected_lines:
             print(
-                f"❌ FAILED: expected {expected_lines} lines, got {len(turtle.lines)}"
+                f"❌ FAILED: expected {expected_lines} lines, "
+                f"got {len(turtle.lines)}"
             )
             return False
         if check_fn and not check_fn(turtle):
-            print(f"❌ FAILED: check function failed")
+            print("❌ FAILED: check function failed")
             return False
         print("✅ PASSED")
         return True
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         print(f"❌ EXCEPTION: {e}")
         return False
 
@@ -313,7 +314,9 @@ def main():
 
     # REPEAT command
     if test_command(
-        "REPEAT single-line", "REPEAT 4 [FORWARD 50 RIGHT 90]", expected_lines=4
+        "REPEAT single-line",
+        "REPEAT 4 [FORWARD 50 RIGHT 90]",
+        expected_lines=4,
     ):
         passed += 1
     else:
@@ -324,11 +327,7 @@ def main():
         "User's code (SETCOLOR blue + PENWIDTH)",
         """SETCOLOR blue
 PENWIDTH 10
-REPEAT 36 [
-  FORWARD 120
-  BACK 120
-  RIGHT 10
-]""",
+REPEAT 36 [FORWARD 120 BACK 120 RIGHT 10]""",
         expected_lines=72,  # 36 * 2 lines (forward + back)
         check_fn=lambda t: t.lines
         and t.lines[0].color == (0, 0, 255)

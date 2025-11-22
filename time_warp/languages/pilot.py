@@ -5,6 +5,7 @@ Handles PILOT-specific commands and syntax.
 
 from typing import TYPE_CHECKING
 import re
+import time
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -77,7 +78,16 @@ def execute_pilot(
         except (ValueError, TypeError) as e:
             return f"❌ Error in C: {e}\n"
         return ""
+    elif cmd_type == "J":
+        label = rest.strip()
+        if label:
+            interpreter.jump_to_label(label)
+        return ""
     elif cmd_type == "U":
+        if "=" in rest:
+            # Treat as Compute (alias for C:)
+            return execute_pilot(interpreter, "C:" + rest, turtle)
+
         var_name = rest.strip()
         if not var_name:
             return "❌ U: requires variable name\n"
@@ -131,7 +141,6 @@ def execute_pilot(
         # D: Delay/timer
         try:
             delay = float(rest.strip())
-            import time
 
             time.sleep(min(delay, 10.0))  # Max 10 second delay
         except ValueError:
@@ -141,8 +150,6 @@ def execute_pilot(
         return ""
     elif cmd_type == "E":
         interpreter.running = False
-        return ""
-    elif cmd_type == "R":
         return ""
     else:
         return f"❌ Unknown PILOT command: {cmd_type}:\n"
@@ -161,7 +168,7 @@ def _pilot_graphics_command(
     cmd = parts[0].upper()
     args = parts[1:]
 
-    if cmd == "FORWARD" or cmd == "FD":
+    if cmd in ("FORWARD", "FD"):
         if not args:
             return "❌ G: FORWARD requires distance\n"
         try:
@@ -169,7 +176,7 @@ def _pilot_graphics_command(
             turtle.forward(distance)
         except (ValueError, TypeError):
             return "❌ G: Invalid distance\n"
-    elif cmd == "BACK" or cmd == "BK":
+    elif cmd in ("BACK", "BK"):
         if not args:
             return "❌ G: BACK requires distance\n"
         try:
@@ -177,7 +184,7 @@ def _pilot_graphics_command(
             turtle.back(distance)
         except (ValueError, TypeError):
             return "❌ G: Invalid distance\n"
-    elif cmd == "LEFT" or cmd == "LT":
+    elif cmd in ("LEFT", "LT"):
         if not args:
             return "❌ G: LEFT requires angle\n"
         try:
@@ -185,7 +192,7 @@ def _pilot_graphics_command(
             turtle.left(angle)
         except (ValueError, TypeError):
             return "❌ G: Invalid angle\n"
-    elif cmd == "RIGHT" or cmd == "RT":
+    elif cmd in ("RIGHT", "RT"):
         if not args:
             return "❌ G: RIGHT requires angle\n"
         try:
@@ -193,13 +200,13 @@ def _pilot_graphics_command(
             turtle.right(angle)
         except (ValueError, TypeError):
             return "❌ G: Invalid angle\n"
-    elif cmd == "PENUP" or cmd == "PU":
+    elif cmd in ("PENUP", "PU"):
         turtle.penup()
-    elif cmd == "PENDOWN" or cmd == "PD":
+    elif cmd in ("PENDOWN", "PD"):
         turtle.pendown()
     elif cmd == "HOME":
         turtle.home()
-    elif cmd == "CLEAR" or cmd == "CS":
+    elif cmd in ("CLEAR", "CS"):
         turtle.clear()
     elif cmd == "SETXY":
         if len(args) < 2:
@@ -240,12 +247,24 @@ def _pilot_file_command(interpreter: "Interpreter", command: str) -> str:
         filename = args[0]
         mode = args[1].upper()
         try:
-            if mode == "READ" or mode == "R":
-                interpreter.open_files[filename] = open(filename, "r", encoding="utf-8")
-            elif mode == "WRITE" or mode == "W":
-                interpreter.open_files[filename] = open(filename, "w", encoding="utf-8")
-            elif mode == "APPEND" or mode == "A":
-                interpreter.open_files[filename] = open(filename, "a", encoding="utf-8")
+            if mode in ("READ", "R"):
+                interpreter.open_files[filename] = open(
+                    filename,
+                    "r",
+                    encoding="utf-8",
+                )
+            elif mode in ("WRITE", "W"):
+                interpreter.open_files[filename] = open(
+                    filename,
+                    "w",
+                    encoding="utf-8",
+                )
+            elif mode in ("APPEND", "A"):
+                interpreter.open_files[filename] = open(
+                    filename,
+                    "a",
+                    encoding="utf-8",
+                )
             else:
                 return f"❌ F: Unknown file mode: {mode}\n"
         except (IOError, OSError) as e:

@@ -9,6 +9,13 @@ from enum import Enum, auto
 from typing import Optional, List, Dict, Tuple, Callable, TYPE_CHECKING
 from dataclasses import dataclass
 
+from ..utils.error_hints import check_syntax_mistakes, suggest_command
+
+# Import language executors
+from ..languages.basic import execute_basic
+from ..languages.pilot import execute_pilot
+from ..languages.logo import execute_logo
+
 
 class ExecutionResult(Enum):
     """Control flow result from executing a command"""
@@ -63,12 +70,13 @@ class Language(Enum):
         else:  # Default to BASIC for unknown extensions
             return cls.BASIC
 
-    def name(self) -> str:
+    def friendly_name(self) -> str:
+        """Human-friendly display name for language."""
         if self == Language.BASIC:
             return "BASIC"
-        elif self == Language.PILOT:
+        if self == Language.PILOT:
             return "PILOT"
-        elif self == Language.LOGO:
+        if self == Language.LOGO:
             return "Logo"
         return "Unknown"
 
@@ -132,6 +140,7 @@ class Interpreter:
         self.logo_lists: Dict[str, List] = {}  # Logo lists
         self.logo_arrays: Dict[str, List] = {}  # Logo arrays (1-indexed)
         self.property_lists: Dict[str, Dict[str, object]] = {}  # Properties
+        self.logo_procedures: Dict[str, List[str]] = {}  # Logo procedures
         self.output: List[str] = []
 
         # Program state
@@ -155,6 +164,7 @@ class Interpreter:
 
         # I/O handling
         self.input_callback: Optional[Callable[[str], str]] = None
+        self.output_callback: Optional[Callable[[str], None]] = None
         self.last_input: str = ""
         self.pending_input: Optional[InputRequest] = None
         self.pending_resume_line: Optional[int] = None
@@ -163,14 +173,19 @@ class Interpreter:
         self.inkey_callback: Optional[Callable[[], Optional[str]]] = None
         self.last_key_pressed: Optional[str] = None
 
-        # Logo/TempleCode procedures (user-defined)
-        self.logo_procedures: Dict[str, object] = {}
-
         # Screen state
         self.screen_mode = ScreenMode.GRAPHICS
         self.text_lines: List[str] = []
         self.cursor_row: int = 0
         self.cursor_col: int = 0
+
+        # BASIC-specific state
+        self.basic_while_stack: List[str] = []
+        self.basic_do_stack: List[Tuple[str, str]] = []
+        self.basic_select_expression: str = ""
+        self.basic_in_select: bool = False
+        self.basic_in_sub: bool = False
+        self.basic_in_function: bool = False
 
         # Language mode
         self.language = Language.BASIC
@@ -196,12 +211,23 @@ class Interpreter:
         self.cursor_row = 0
         self.cursor_col = 0
         self.logo_procedures.clear()
+        # BASIC-specific reset
+        self.basic_while_stack.clear()
+        self.basic_do_stack.clear()
+        self.basic_select_expression = ""
+        self.basic_in_select = False
+        self.basic_in_sub = False
+        self.basic_in_function = False
 
     def set_language(self, language: Language):
         """Set the active language for execution."""
         self.language = language
 
-    def load_program(self, program_text: str, language: Optional[Language] = None):
+    def load_program(
+        self,
+        program_text: str,
+        language: Optional[Language] = None,
+    ):
         """
         Parse and load program into memory
 
@@ -209,7 +235,8 @@ class Interpreter:
             program_text: Source code to parse
             language: Optional language override
 
-        Extracts line numbers, PILOT labels, and builds execution index
+        Extracts line numbers, PILOT labels, and builds
+        execution index
         """
         self.reset()
         if language:
@@ -253,9 +280,7 @@ class Interpreter:
                 proc_name = self._parse_logo_procedure(lines, i)
                 if proc_name:
                     # Skip to END
-                    while i < len(lines) and not lines[i].strip().upper().startswith(
-                        "END"
-                    ):
+                    while "END":
                         i += 1
                     if i < len(lines):  # Skip the END line
                         i += 1
@@ -266,7 +291,11 @@ class Interpreter:
             self.program_lines.append((line_num, command_str))
             i += 1
 
-    def _parse_logo_procedure(self, lines: List[str], start_idx: int) -> Optional[str]:
+    def _parse_logo_procedure(
+        self,
+        lines: List[str],
+        start_idx: int,
+    ) -> Optional[str]:
         """Parse a Logo procedure definition starting at TO"""
         line = lines[start_idx].strip()
         parts = line.upper().split()
@@ -277,9 +306,7 @@ class Interpreter:
 
         # Find END
         end_idx = start_idx + 1
-        while end_idx < len(lines) and not lines[end_idx].strip().upper().startswith(
-            "END"
-        ):
+        while "END":
             end_idx += 1
 
         if end_idx >= len(lines):
@@ -323,7 +350,6 @@ class Interpreter:
             # Security check: Timeout protection
             if time.time() - start_time > self.MAX_EXECUTION_TIME:
                 self.log_output("❌ Error: Execution timeout (10 seconds exceeded)")
-                raise RuntimeError("Execution timeout exceeded")
 
             iterations += 1
 
@@ -336,13 +362,11 @@ class Interpreter:
             # Error recovery: Continue on non-fatal errors
             try:
                 self._execute_line(command, turtle)
-            except Exception as e:
+            except Exception as e:  # pylint: disable=broad-exception-caught
                 # Enhanced error message with context and suggestions
                 error_msg = f"❌ Error at line {self.current_line + 1}: {e}"
 
                 # Check for syntax mistakes
-                from ..utils.error_hints import check_syntax_mistakes, suggest_command
-
                 syntax_error = check_syntax_mistakes(command)
                 if syntax_error:
                     error_msg += f"\n   💡 {syntax_error}"
@@ -381,16 +405,10 @@ class Interpreter:
         """
         # Dispatch to language-specific executor
         if self.language == Language.BASIC:
-            from ..languages.basic import execute_basic
-
             output = execute_basic(self, command, turtle)
         elif self.language == Language.PILOT:
-            from ..languages.pilot import execute_pilot
-
             output = execute_pilot(self, command, turtle)
         elif self.language == Language.LOGO:
-            from ..languages.logo import execute_logo
-
             output = execute_logo(self, command, turtle)
         else:
             raise ValueError(f"Unsupported language: {self.language}")
@@ -414,8 +432,10 @@ class Interpreter:
     def log_output(self, text: str):
         """Add text to output buffer (helper method)."""
         if text and text.strip():
-            # Executors already append to output list
-            pass
+            self.output.append(text)
+            if self.output_callback:
+                # pylint: disable=not-callable
+                self.output_callback(text)
 
     def evaluate_expression(self, expr: str) -> float:
         """
@@ -472,10 +492,15 @@ class Interpreter:
     def request_input(self, prompt: str) -> str:
         """Request input synchronously via callback"""
         if self.input_callback:
-            return self.input_callback(prompt)
+            return self.input_callback(prompt)  # pylint: disable=not-callable
         return ""
 
-    def start_input_request(self, prompt: str, var_name: str, is_numeric: bool = False):
+    def start_input_request(
+        self,
+        prompt: str,
+        var_name: str,
+        is_numeric: bool = False,
+    ):
         """Initiate pending input request for UI"""
         self.pending_input = InputRequest(prompt, var_name, is_numeric)
         self.pending_resume_line = self.current_line
@@ -503,7 +528,7 @@ class Interpreter:
     def get_inkey(self) -> str:
         """Get last key pressed (INKEY$ support)"""
         if self.inkey_callback:
-            key = self.inkey_callback()
+            key = self.inkey_callback()  # pylint: disable=not-callable
             return key if key else ""
 
         if self.last_key_pressed:

@@ -31,7 +31,8 @@ class Token:
 
 class ExpressionEvaluator:
     """
-    Safe expression evaluator supporting math expressions, variables, and functions
+    Safe expression evaluator supporting math expressions,
+    variables, and functions
 
     Features:
     - Operators: +, -, *, /, %, ^ (power)
@@ -62,6 +63,7 @@ class ExpressionEvaluator:
         "COSH": math.cosh,
         "TANH": math.tanh,
         "SQRT": math.sqrt,
+        "SQR": math.sqrt,  # Turbo BASIC alias
         "ABS": abs,
         "FLOOR": math.floor,
         "CEIL": math.ceil,
@@ -69,8 +71,11 @@ class ExpressionEvaluator:
         "EXP": math.exp,
         "LOG": math.log,
         "LOG10": math.log10,
-        "INT": int,
-        "RAND": lambda: random.random(),
+        "INT": math.floor,  # Truncates toward negative infinity
+        "FIX": lambda x: math.floor(x) if x >= 0 else math.ceil(x),
+        "SGN": lambda x: 1 if x > 0 else (-1 if x < 0 else 0),
+        "RAND": random.random,
+        "RND": random.random,  # Turbo BASIC alias
     }
 
     def __init__(self, variables: Optional[Dict[str, float]] = None):
@@ -149,7 +154,24 @@ class ExpressionEvaluator:
 
             # Operators
             if ch in "+-*/%^":
-                tokens.append(Token(Token.Type.OPERATOR, ch))
+                # Check if this is a unary operator
+                prev_token = tokens[-1] if tokens else None
+                is_unary = (
+                    prev_token is None  # Start of expression
+                    or prev_token.type
+                    in (
+                        Token.Type.OPERATOR,
+                        Token.Type.LEFT_PAREN,
+                        Token.Type.COMMA,
+                    )
+                    or prev_token.type == Token.Type.COMPARISON
+                )
+
+                if is_unary and ch in "+-":
+                    # Unary plus/minus
+                    tokens.append(Token(Token.Type.OPERATOR, f"u{ch}"))
+                else:
+                    tokens.append(Token(Token.Type.OPERATOR, ch))
                 i += 1
                 continue
 
@@ -191,7 +213,10 @@ class ExpressionEvaluator:
         return tokens
 
     def _to_rpn(self, tokens: List[Token]) -> List[Token]:
-        """Convert infix tokens to Reverse Polish Notation using Shunting Yard"""
+        """
+        Convert infix tokens to Reverse Polish Notation
+        using Shunting Yard algorithm
+        """
         output = []
         operator_stack = []
 
@@ -202,6 +227,8 @@ class ExpressionEvaluator:
             "/": 2,
             "%": 2,
             "^": 3,
+            "u+": 4,  # Unary plus
+            "u-": 4,  # Unary minus
             "<": 0,
             ">": 0,
             "<=": 0,
@@ -210,7 +237,7 @@ class ExpressionEvaluator:
             "!=": 0,
         }
 
-        right_associative = {"^"}
+        right_associative = {"^", "u+", "u-"}
 
         for token in tokens:
             if token.type == Token.Type.NUMBER:
@@ -222,18 +249,19 @@ class ExpressionEvaluator:
             elif token.type == Token.Type.FUNCTION:
                 operator_stack.append(token)
 
-            elif (
-                token.type == Token.Type.OPERATOR or token.type == Token.Type.COMPARISON
-            ):
+            elif token.type in (Token.Type.OPERATOR, Token.Type.COMPARISON):
                 op = token.value
                 while operator_stack:
                     top = operator_stack[-1]
                     if top.type == Token.Type.LEFT_PAREN:
                         break
 
-                    if top.type in (Token.Type.OPERATOR, Token.Type.COMPARISON):
+                    if top.type in (
+                        Token.Type.OPERATOR,
+                        Token.Type.COMPARISON,
+                    ):
                         top_op = top.value
-                        if (precedence[top_op] > precedence[op]) or (
+                        if precedence[top_op] > precedence[op] or (
                             precedence[top_op] == precedence[op]
                             and op not in right_associative
                         ):
@@ -292,46 +320,56 @@ class ExpressionEvaluator:
                     raise ValueError(f"Undefined variable: {var_name}")
                 stack.append(self.variables[var_name])
 
-            elif (
-                token.type == Token.Type.OPERATOR or token.type == Token.Type.COMPARISON
-            ):
-                if len(stack) < 2:
-                    raise ValueError("Invalid expression")
-
-                b = stack.pop()
-                a = stack.pop()
-
+            elif token.type in (Token.Type.OPERATOR, Token.Type.COMPARISON):
                 op = token.value
-                if op == "+":
-                    result = a + b
-                elif op == "-":
-                    result = a - b
-                elif op == "*":
-                    result = a * b
-                elif op == "/":
-                    if b == 0:
-                        raise ValueError("Division by zero")
-                    result = a / b
-                elif op == "%":
-                    result = a % b
-                elif op == "^":
-                    result = a**b
-                elif op == "<":
-                    result = 1.0 if a < b else 0.0
-                elif op == ">":
-                    result = 1.0 if a > b else 0.0
-                elif op == "<=":
-                    result = 1.0 if a <= b else 0.0
-                elif op == ">=":
-                    result = 1.0 if a >= b else 0.0
-                elif op == "==":
-                    result = 1.0 if abs(a - b) < 1e-10 else 0.0
-                elif op == "!=":
-                    result = 1.0 if abs(a - b) >= 1e-10 else 0.0
-                else:
-                    raise ValueError(f"Unknown operator: {op}")
 
-                stack.append(result)
+                # Handle unary operators
+                if op in ("u+", "u-"):
+                    if len(stack) < 1:
+                        raise ValueError("Invalid expression")
+                    a = stack.pop()
+                    if op == "u-":
+                        result = -a
+                    else:  # u+
+                        result = a
+                    stack.append(result)
+                else:
+                    # Binary operators
+                    if len(stack) < 2:
+                        raise ValueError("Invalid expression")
+                    b = stack.pop()
+                    a = stack.pop()
+
+                    if op == "+":
+                        result = a + b
+                    elif op == "-":
+                        result = a - b
+                    elif op == "*":
+                        result = a * b
+                    elif op == "/":
+                        if b == 0:
+                            raise ValueError("Division by zero")
+                        result = a / b
+                    elif op == "%":
+                        result = a % b
+                    elif op == "^":
+                        result = a**b
+                    elif op == "<":
+                        result = 1.0 if a < b else 0.0
+                    elif op == ">":
+                        result = 1.0 if a > b else 0.0
+                    elif op == "<=":
+                        result = 1.0 if a <= b else 0.0
+                    elif op == ">=":
+                        result = 1.0 if a >= b else 0.0
+                    elif op == "==":
+                        result = 1.0 if abs(a - b) < 1e-10 else 0.0
+                    elif op == "!=":
+                        result = 1.0 if abs(a - b) >= 1e-10 else 0.0
+                    else:
+                        raise ValueError(f"Unknown operator: {op}")
+
+                    stack.append(result)
 
             elif token.type == Token.Type.FUNCTION:
                 func_name = token.value
@@ -353,7 +391,10 @@ class ExpressionEvaluator:
                     else:  # POW
                         result = a**b
                     stack.append(result)
-                elif func_name == "RAND":
+                elif func_name in ("RAND", "RND"):
+                    # Optional arg for BASIC compatibility
+                    if stack and isinstance(stack[-1], (int, float)):
+                        stack.pop()
                     stack.append(func())
                 else:
                     if len(stack) < 1:

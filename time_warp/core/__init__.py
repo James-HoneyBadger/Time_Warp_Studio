@@ -1,6 +1,13 @@
 """Core module initialization"""
 
-from .interpreter import Interpreter, ExecutionResult, Language, ScreenMode, ForContext, InputRequest
+from .interpreter import (
+    Interpreter,
+    ExecutionResult,
+    Language,
+    ScreenMode,
+    ForContext,
+    InputRequest,
+)
 
 __all__ = [
     "Interpreter",

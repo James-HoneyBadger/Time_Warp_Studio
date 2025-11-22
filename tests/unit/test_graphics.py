@@ -2,50 +2,59 @@
 """Test graphics canvas display."""
 
 import sys
-from PySide6.QtWidgets import QApplication
-from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QApplication  # pylint: disable=no-name-in-module
 from time_warp.ui import MainWindow
+
 
 def test_graphics():
     """Test graphics display with various patterns."""
-    
+
     # Create app and window
-    app = QApplication(sys.argv)
+    QApplication(sys.argv)  # Initialize QApplication for Qt
     window = MainWindow()
-    
+
     # Test programs
     test_programs = [
-        ("Square", """FORWARD 100
+        (
+            "Square",
+            """FORWARD 100
 RIGHT 90
 FORWARD 100
 RIGHT 90
 FORWARD 100
 RIGHT 90
 FORWARD 100
-RIGHT 90"""),
-        
-        ("Triangle", """FORWARD 150
+RIGHT 90""",
+        ),
+        (
+            "Triangle",
+            """FORWARD 150
 RIGHT 120
 FORWARD 150
 RIGHT 120
 FORWARD 150
-RIGHT 120"""),
-        
-        ("Star", """REPEAT 5 [
+RIGHT 120""",
+        ),
+        (
+            "Star",
+            """REPEAT 5 [
   FORWARD 200
   RIGHT 144
-]"""),
-        
-        ("Spiral", """REPEAT 36 [
+]""",
+        ),
+        (
+            "Spiral",
+            """REPEAT 36 [
   FORWARD 100
   RIGHT 10
-]""")
+]""",
+        ),
     ]
-    
+
     print("Graphics Canvas Test")
     print("=" * 60)
     print()
-    
+
     # Load the first test program
     name, program = test_programs[0]
     window.editor.setPlainText(program)
@@ -66,11 +75,12 @@ RIGHT 120"""),
     print("TIP: The Y-axis is now flipped correctly!")
     print("     (0,0) is at center, Y goes UP (standard math/Logo)")
     print()
-    
+
     window.show()
     window.resize(1200, 800)
-    
-    return app.exec()
 
-if __name__ == '__main__':
+    # For pytest, just check window creation, don't run event loop
+
+
+if __name__ == "__main__":
     sys.exit(test_graphics())

@@ -34,7 +34,7 @@ try:
     import PySide6  # type: ignore[import]
 
     # type: ignore[import]
-    from PySide6.QtWidgets import QApplication  # noqa: F401
+    # from PySide6.QtWidgets import QApplication
 
     print(f"   ✅ PySide6 version {PySide6.__version__}")
 except Exception as e:

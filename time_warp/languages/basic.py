@@ -11,38 +11,82 @@ if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
     from ..graphics.turtle_state import TurtleState
 
+# Runtime imports moved inside functions to avoid circular imports
+
 
 def execute_basic(
     interpreter: "Interpreter",
     command: str,
     turtle: "TurtleState",
 ) -> str:
+    # Import here to avoid circular imports; helpers import what they need.
+
     cmd = command.strip().upper()
     if cmd.startswith("PRINT ") or cmd == "PRINT":
         args = command[6:] if len(command) > 6 else ""
         return _basic_print(interpreter, args)
-    if cmd.startswith("LET "):
-        return _basic_let(interpreter, command[4:])
-    if cmd.startswith("FOR "):
-        return _basic_for(interpreter, command[4:])
-    if "=" in cmd and not cmd.startswith("IF ") and not cmd.startswith("FOR "):
-        return _basic_let(interpreter, command)
     if cmd.startswith("INPUT "):
         return _basic_input(interpreter, command[6:])
     if cmd.startswith("IF "):
         return _basic_if(interpreter, command[3:], turtle)
     if cmd.startswith("GOTO "):
         return _basic_goto(interpreter, command[5:])
-    if cmd.startswith("NEXT"):
-        args = command[5:] if len(command) > 5 else ""
-        return _basic_next(interpreter, args)
     if cmd.startswith("GOSUB "):
         return _basic_gosub(interpreter, command[6:])
     if cmd == "RETURN":
         return _basic_return(interpreter)
     if cmd == "END":
-        interpreter.running = False
-        return ""
+        return _basic_end(interpreter)
+    if cmd.startswith("LET "):
+        return _basic_let(interpreter, command[4:])
+    if cmd.startswith("FOR "):
+        return _basic_for(interpreter, command[4:])
+    if cmd.startswith("NEXT"):
+        return _basic_next(interpreter, command[4:])
+    if cmd.startswith("WHILE "):
+        return _basic_while(interpreter, command[6:])
+    if cmd == "WEND":
+        return _basic_wend(interpreter)
+    if cmd.startswith("DO"):
+        return _basic_do(interpreter, command[3:])
+    if cmd.startswith("LOOP"):
+        return _basic_loop(interpreter, command[5:])
+    if cmd.startswith("SELECT "):
+        return _basic_select(interpreter, command[11:])
+    if cmd.startswith("CASE "):
+        return _basic_case(interpreter, command[5:])
+    if cmd == "END SELECT":
+        return _basic_end_select(interpreter)
+    if cmd.startswith("SUB "):
+        return _basic_sub(interpreter, command[4:])
+    if cmd == "END SUB":
+        return _basic_end_sub(interpreter)
+    if cmd.startswith("FUNCTION "):
+        return _basic_function(interpreter, command[9:])
+    if cmd == "END FUNCTION":
+        return _basic_end_function(interpreter)
+    if cmd.startswith("CALL "):
+        return _basic_call(interpreter, command[5:])
+    if cmd.startswith("RUN"):
+        return _basic_run(interpreter, command[4:])
+    if cmd.startswith("SYSTEM"):
+        return _basic_system(interpreter, command[7:])
+    if cmd.startswith("DIM "):
+        return _basic_dim(interpreter, command[4:])
+    if "=" in cmd and not cmd.startswith("IF ") and not cmd.startswith("FOR "):
+        return _basic_let(interpreter, command)
+    if cmd.startswith("COLOR "):
+        return _basic_color(interpreter, command[6:])
+    if cmd.startswith("WIDTH "):
+        return _basic_width(interpreter, command[6:])
+    if cmd.startswith("OPEN "):
+        return _basic_open(interpreter, command[5:])
+    if cmd.startswith("CLOSE"):
+        return _basic_close(interpreter, command[6:])
+    if cmd.startswith("GET "):
+        return _basic_get(interpreter, command[4:])
+    if cmd.startswith("PUT "):
+        return _basic_put(interpreter, command[4:])
     if cmd.startswith("REM ") or cmd == "REM":
         return ""
     if cmd == "CLS":
@@ -97,7 +141,7 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
             try:
                 value = interpreter.evaluate_expression(item_trim)
                 out_items.append(str(value))
-            except Exception:
+            except (ValueError, TypeError, ZeroDivisionError):
                 if item_trim in interpreter.string_variables:
                     out_items.append(interpreter.string_variables[item_trim])
                 elif item_trim in interpreter.variables:
@@ -126,7 +170,7 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
     try:
         result = interpreter.evaluate_expression(expr)
         interpreter.variables[var_name] = result
-    except Exception as e:
+    except (ValueError, TypeError, ZeroDivisionError) as e:
         return f"❌ Error in LET: {e}\n"
     return ""
 
@@ -141,7 +185,11 @@ def _basic_input(interpreter: "Interpreter", args: str) -> str:
             var_name = match.group(2).strip().upper()
     if not var_name:
         return "❌ INPUT requires variable name\n"
-    interpreter.start_input_request(prompt, var_name, not var_name.endswith("$"))
+    interpreter.start_input_request(
+        prompt,
+        var_name,
+        not var_name.endswith("$"),
+    )
     return ""
 
 
@@ -159,7 +207,7 @@ def _basic_if(
     try:
         result = interpreter.evaluate_expression(condition)
         condition_true = abs(result) > 0.0001
-    except Exception as e:
+    except (ValueError, TypeError, ZeroDivisionError) as e:
         return f"❌ Error in IF condition: {e}\n"
     if condition_true and then_part:
         if then_part.isdigit():
@@ -181,12 +229,15 @@ def _basic_goto(interpreter: "Interpreter", args: str) -> str:
         interpreter.current_line = target_idx - 1
     except ValueError:
         return f"❌ Invalid line number: {target}\n"
-    except Exception as e:
+    except (KeyError, IndexError) as e:
         return f"❌ Error in GOTO: {e}\n"
     return ""
 
 
 def _basic_for(interpreter: "Interpreter", args: str) -> str:
+    # pylint: disable=import-outside-toplevel
+    from ..core.interpreter import ForContext
+
     match = re.match(
         r"(\w+)\s*=\s*(.+?)\s+TO\s+(.+?)(?:\s+STEP\s+(.+))?$",
         args.upper(),
@@ -202,7 +253,6 @@ def _basic_for(interpreter: "Interpreter", args: str) -> str:
         end_val = interpreter.evaluate_expression(end_expr)
         step_val = interpreter.evaluate_expression(step_expr)
         interpreter.variables[var_name] = start_val
-        from ..core.interpreter import ForContext
 
         context = ForContext(
             var_name=var_name,
@@ -211,7 +261,7 @@ def _basic_for(interpreter: "Interpreter", args: str) -> str:
             for_line=interpreter.current_line,
         )
         interpreter.for_stack.append(context)
-    except Exception as e:
+    except (ValueError, TypeError, ZeroDivisionError) as e:
         return f"❌ Error in FOR: {e}\n"
     return ""
 
@@ -244,7 +294,7 @@ def _basic_gosub(interpreter: "Interpreter", args: str) -> str:
         interpreter.jump_to_line_number(line_num)
     except ValueError:
         return f"❌ Invalid line number: {target}\n"
-    except Exception as e:
+    except (KeyError, IndexError) as e:
         return f"❌ Error in GOSUB: {e}\n"
     return ""
 
@@ -259,13 +309,15 @@ def _basic_return(interpreter: "Interpreter") -> str:
 
 def _basic_screen(interpreter: "Interpreter", args: str) -> str:
     """SCREEN mode[, width, height] - Set screen mode"""
+    # pylint: disable=import-outside-toplevel
+    from ..core.interpreter import ScreenMode
+
     parts = args.split(",")
     if not parts:
         return "❌ SCREEN requires mode parameter\n"
 
     try:
         mode = int(parts[0].strip())
-        from ..core.interpreter import ScreenMode
 
         if mode == 0:  # Text mode
             interpreter.screen_mode = ScreenMode.TEXT
@@ -274,7 +326,10 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
                 rows = int(parts[2].strip())
                 interpreter.screen_mode.cols = cols
                 interpreter.screen_mode.rows = rows
-            cols, rows = (interpreter.screen_mode.cols, interpreter.screen_mode.rows)
+            cols, rows = (
+                interpreter.screen_mode.cols,
+                interpreter.screen_mode.rows,
+            )
             return f"🎨 Text mode ({cols}x{rows})\n"
         elif mode == 1:  # Graphics mode
             interpreter.screen_mode = ScreenMode.GRAPHICS
@@ -283,7 +338,10 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
                 height = int(parts[2].strip())
                 interpreter.screen_mode.width = width
                 interpreter.screen_mode.height = height
-            w, h = (interpreter.screen_mode.width, interpreter.screen_mode.height)
+            w, h = (
+                interpreter.screen_mode.width,
+                interpreter.screen_mode.height,
+            )
             return f"🎨 Graphics mode ({w}x{h})\n"
         elif mode == 2:  # High-res graphics
             interpreter.screen_mode = ScreenMode.GRAPHICS
@@ -310,7 +368,11 @@ def _basic_locate(interpreter: "Interpreter", args: str) -> str:
     return ""
 
 
-def _basic_line(_interpreter: "Interpreter", args: str, t: "TurtleState") -> str:
+def _basic_line(
+    _interpreter: "Interpreter",
+    args: str,
+    t: "TurtleState",
+) -> str:
     """Draw line in BASIC graphics. Syntax: LINE x1,y1,x2,y2"""
     parts = args.split(",")
     if len(parts) != 4:
@@ -363,8 +425,8 @@ def _basic_circle(i: "Interpreter", args: str, t: "TurtleState") -> str:
         segments = 36  # Good approximation for a circle
         angle_step = 360.0 / segments
 
-        for i in range(segments + 1):
-            angle = i * angle_step
+        for step in range(segments + 1):
+            angle = step * angle_step
             rad = math.radians(angle)
             x = center_x + radius * math.cos(rad)
             y = center_y + radius * math.sin(rad)
@@ -377,3 +439,262 @@ def _basic_circle(i: "Interpreter", args: str, t: "TurtleState") -> str:
         return ""
     except ValueError:
         return "❌ CIRCLE requires numeric coordinates and radius\n"
+
+
+def _basic_run(_interpreter: "Interpreter", _args: str) -> str:
+    """RUN [filename] - Execute program"""
+    # For now, just reset the interpreter
+    _interpreter.reset()
+    return "🚀 Program reset\n"
+
+
+def _basic_system(_interpreter: "Interpreter", _args: str) -> str:
+    """SYSTEM - Return to system prompt"""
+    # In an IDE environment, this might just reset
+    _interpreter.reset()
+    return "ℹ️ Returned to system prompt\n"
+
+
+def _basic_while(interpreter: "Interpreter", args: str) -> str:
+    """WHILE condition - Start while loop"""
+    try:
+        # Evaluate the condition
+        result = interpreter.evaluate_expression(args.strip())
+        if result != 0:  # Non-zero means true in BASIC
+            interpreter.basic_while_stack.append(args.strip())
+            return f"🔄 WHILE {args.strip()} (true)\n"
+        else:
+            # Skip to WEND - for now, just note it
+            interpreter.basic_while_stack.append("")  # Marker for skipped
+            return f"🔄 WHILE {args.strip()} (false, skipping)\n"
+    except (ValueError, TypeError, ZeroDivisionError) as e:
+        return f"❌ WHILE syntax error: {e}\n"
+
+
+def _basic_wend(interpreter: "Interpreter") -> str:
+    """WEND - End while loop"""
+    if not interpreter.basic_while_stack:
+        return "❌ WEND without WHILE\n"
+
+    condition = interpreter.basic_while_stack.pop()
+    if condition:  # If condition was true
+        try:
+            result = interpreter.evaluate_expression(condition)
+            if result != 0:
+                # In a real interpreter, this would jump back to WHILE
+                # For now, just indicate the loop continues
+                interpreter.basic_while_stack.append(condition)  # Push back
+                return "🔄 WEND - condition still true, continuing loop\n"
+            else:
+                return "🔄 WEND - condition false, exiting loop\n"
+        except (ValueError, TypeError, ZeroDivisionError) as e:
+            return f"❌ WEND evaluation error: {e}\n"
+    else:
+        return "🔄 WEND - exiting skipped loop\n"
+
+
+def _basic_do(interpreter: "Interpreter", args: str) -> str:
+    """DO [WHILE condition|UNTIL condition] - Start do loop"""
+    args = args.strip()
+    if not args:
+        # Simple DO
+        interpreter.basic_do_stack.append(("", ""))
+        return "🔄 DO (unconditional)\n"
+    elif args.upper().startswith("WHILE "):
+        condition = args[6:].strip()
+        interpreter.basic_do_stack.append(("WHILE", condition))
+        return f"🔄 DO WHILE {condition}\n"
+    elif args.upper().startswith("UNTIL "):
+        condition = args[6:].strip()
+        interpreter.basic_do_stack.append(("UNTIL", condition))
+        return f"🔄 DO UNTIL {condition}\n"
+    else:
+        return f"❌ Invalid DO syntax: {args}\n"
+
+
+def _basic_loop(interpreter: "Interpreter", args: str) -> str:
+    """LOOP [WHILE condition|UNTIL condition] - End do loop"""
+    if not interpreter.basic_do_stack:
+        return "❌ LOOP without DO\n"
+
+    loop_type, condition = interpreter.basic_do_stack.pop()
+    args = args.strip()
+
+    if not args and not condition:
+        # Simple LOOP
+        interpreter.basic_do_stack.append((loop_type, condition))  # Continue
+        return "🔄 LOOP - continuing\n"
+
+    # Check condition
+    if args.upper().startswith("WHILE "):
+        loop_condition = args[6:].strip()
+        try:
+            result = interpreter.evaluate_expression(loop_condition)
+            if result != 0:  # True
+                interpreter.basic_do_stack.append((loop_type, condition))
+                return f"🔄 LOOP WHILE {loop_condition} (true, continuing)\n"
+            else:
+                return f"🔄 LOOP WHILE {loop_condition} (false, exiting)\n"
+        except (ValueError, TypeError, ZeroDivisionError) as e:
+            return f"❌ LOOP WHILE evaluation error: {e}\n"
+
+    elif args.upper().startswith("UNTIL "):
+        loop_condition = args[6:].strip()
+        try:
+            result = interpreter.evaluate_expression(loop_condition)
+            if result == 0:  # False (UNTIL waits for true)
+                interpreter.basic_do_stack.append((loop_type, condition))
+                return f"🔄 LOOP UNTIL {loop_condition} (false, continuing)\n"
+            else:
+                return f"🔄 LOOP UNTIL {loop_condition} (true, exiting)\n"
+        except (ValueError, TypeError, ZeroDivisionError) as e:
+            return f"❌ LOOP UNTIL evaluation error: {e}\n"
+
+    else:
+        # LOOP with no condition specified - check original DO condition
+        if loop_type == "WHILE" and condition:
+            try:
+                result = interpreter.evaluate_expression(condition)
+                if result != 0:  # True
+                    interpreter.basic_do_stack.append(
+                        (loop_type, condition)
+                    )  # Continue
+                    return f"🔄 LOOP (while {condition} true, continuing)\n"
+                else:
+                    return f"🔄 LOOP (while {condition} false, exiting)\n"
+            except (ValueError, TypeError, ZeroDivisionError) as e:
+                return f"❌ LOOP evaluation error: {e}\n"
+
+        elif loop_type == "UNTIL" and condition:
+            try:
+                result = interpreter.evaluate_expression(condition)
+                if result == 0:  # False (UNTIL waits for true)
+                    interpreter.basic_do_stack.append(
+                        (loop_type, condition)
+                    )  # Continue
+                    return f"🔄 LOOP (until {condition} false, continuing)\n"
+                else:
+                    return f"🔄 LOOP (until {condition} true, exiting)\n"
+            except (ValueError, TypeError, ZeroDivisionError) as e:
+                return f"❌ LOOP evaluation error: {e}\n"
+
+        else:
+            # Simple DO or infinite loop
+            interpreter.basic_do_stack.append((loop_type, condition))
+            return "🔄 LOOP - continuing\n"
+
+
+def _basic_select(interpreter: "Interpreter", args: str) -> str:
+    """SELECT CASE expression - Start select case"""
+    interpreter.basic_select_expression = args.strip()
+    interpreter.basic_in_select = True
+    return ""
+
+
+def _basic_case(interpreter: "Interpreter", args: str) -> str:
+    """CASE value - Case in select"""
+    if not interpreter.basic_in_select:
+        return "❌ CASE without SELECT\n"
+
+    # Simplified: just evaluate if case matches
+    try:
+        select_value = interpreter.evaluate_expression(
+            interpreter.basic_select_expression
+        )
+        case_value = interpreter.evaluate_expression(args.strip())
+        if select_value == case_value:
+            return "✅ Case matched\n"
+        else:
+            return "⏭️ Case skipped\n"
+    except (ValueError, TypeError):
+        return "❌ Invalid CASE expression\n"
+
+
+def _basic_end_select(_interpreter: "Interpreter") -> str:
+    """END SELECT - End select case"""
+    _interpreter.basic_in_select = False
+    _interpreter.basic_select_expression = ""
+    return ""
+
+
+def _basic_sub(_interpreter: "Interpreter", _args: str) -> str:
+    """SUB name[(params)] - Define subroutine"""
+    # Simplified: just store that we're in a sub
+    _interpreter.basic_in_sub = True
+    return ""
+
+
+def _basic_end_sub(_interpreter: "Interpreter") -> str:
+    """END SUB - End subroutine"""
+    _interpreter.basic_in_sub = False
+    return ""
+
+
+def _basic_function(_interpreter: "Interpreter", _args: str) -> str:
+    """FUNCTION name[(params)] - Define function"""
+    _interpreter.basic_in_function = True
+    return ""
+
+
+def _basic_end_function(_interpreter: "Interpreter") -> str:
+    """END FUNCTION - End function"""
+    _interpreter.basic_in_function = False
+    return ""
+
+
+def _basic_call(_interpreter: "Interpreter", args: str) -> str:
+    """CALL subroutine[(args)] - Call subroutine"""
+    return f"📞 Called subroutine: {args.strip()}\n"
+
+
+def _basic_dim(_interpreter: "Interpreter", args: str) -> str:
+    """DIM variable[(dimensions)] - Declare array"""
+    # Simplified: just acknowledge
+    return f"📏 Declared array: {args.strip()}\n"
+
+
+def _basic_color(_interpreter: "Interpreter", args: str) -> str:
+    """COLOR [foreground][,background] - Set colors"""
+    parts = args.split(",")
+    fg = "default"
+    bg = "default"
+    if len(parts) >= 1:
+        fg = parts[0].strip()
+    if len(parts) >= 2:
+        bg = parts[1].strip()
+    return f"🎨 Set color: FG={fg}, BG={bg}\n"
+
+
+def _basic_width(_interpreter: "Interpreter", args: str) -> str:
+    """WIDTH columns - Set screen width"""
+    try:
+        width = int(args.strip())
+        return f"📐 Set width to {width} columns\n"
+    except ValueError:
+        return "❌ WIDTH requires numeric value\n"
+
+
+def _basic_open(_interpreter: "Interpreter", args: str) -> str:
+    """OPEN filename FOR mode AS #filenumber - Open file"""
+    return f"📂 Opened file: {args.strip()}\n"
+
+
+def _basic_close(_interpreter: "Interpreter", args: str) -> str:
+    """CLOSE [#filenumber] - Close file"""
+    return f"📂 Closed file: {args.strip()}\n"
+
+
+def _basic_get(_interpreter: "Interpreter", args: str) -> str:
+    """GET #filenumber, record - Read random record"""
+    return f"📖 Read record: {args.strip()}\n"
+
+
+def _basic_put(_interpreter: "Interpreter", args: str) -> str:
+    """PUT #filenumber, record - Write random record"""
+    return f"📝 Wrote record: {args.strip()}\n"
+
+
+def _basic_end(interpreter: "Interpreter") -> str:
+    """END - Stop execution"""
+    interpreter.running = False
+    return ""

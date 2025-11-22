@@ -5,10 +5,25 @@ Handles Logo-specific commands and syntax.
 
 from typing import TYPE_CHECKING, List
 import re
+import random
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
     from ..graphics.turtle_state import TurtleState
+
+# Color name to RGB mapping
+COLOR_NAMES = {
+    "BLACK": (0, 0, 0),
+    "WHITE": (255, 255, 255),
+    "RED": (255, 0, 0),
+    "GREEN": (0, 255, 0),
+    "BLUE": (0, 0, 255),
+    "YELLOW": (255, 255, 0),
+    "CYAN": (0, 255, 255),
+    "MAGENTA": (255, 0, 255),
+    "GRAY": (128, 128, 128),
+    "GREY": (128, 128, 128),
+}
 
 
 def execute_logo(
@@ -140,7 +155,7 @@ def _logo_eval_arg(interpreter: "Interpreter", arg: str) -> float:
             var_name = arg[1:].upper()
             return interpreter.variables.get(var_name, 0)
         return interpreter.evaluate_expression(arg)
-    except Exception:
+    except (ValueError, TypeError, ZeroDivisionError):
         return 0.0
 
 
@@ -150,7 +165,7 @@ def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
     expr_norm = re.sub(r":([A-Za-z_][A-Za-z0-9_]*)", r"\1", expr)
     try:
         return interpreter.evaluate_expression(expr_norm)
-    except Exception:
+    except (ValueError, TypeError, ZeroDivisionError):
         return 0.0
 
 
@@ -258,34 +273,60 @@ def _logo_setpencolor(
     turtle: "TurtleState",
     args: List[str],
 ) -> str:
-    if not args:
-        return "❌ SETPENCOLOR requires color\n"
-    color = _logo_eval_arg(interpreter, args[0])
-    turtle.pencolor(color)
-    return ""
+    return _logo_setcolor(interpreter, turtle, args)
 
 
 def _logo_setcolor(
-    interpreter: "Interpreter",
+    _interpreter: "Interpreter",
     turtle: "TurtleState",
     args: List[str],
 ) -> str:
     if not args:
         return "❌ SETCOLOR requires color\n"
-    color = _logo_eval_arg(interpreter, args[0])
-    turtle.pencolor(color)
+    if len(args) == 1:
+        # Named color or hex
+        color_str = args[0].strip()
+        turtle.pencolor(color_str)
+    elif len(args) == 3:
+        # RGB values
+        try:
+            r = int(args[0])
+            g = int(args[1])
+            b = int(args[2])
+            turtle.setcolor(r, g, b)
+        except ValueError:
+            return "❌ SETCOLOR RGB values must be integers\n"
+    else:
+        return "❌ SETCOLOR requires 1 color name/hex or 3 RGB values\n"
     return ""
 
 
 def _logo_setbgcolor(
-    interpreter: "Interpreter",
+    _interpreter: "Interpreter",
     turtle: "TurtleState",
     args: List[str],
 ) -> str:
     if not args:
         return "❌ SETBGCOLOR requires color\n"
-    color = _logo_eval_arg(interpreter, args[0])
-    turtle.bgcolor(color)
+    if len(args) == 1:
+        # Named color or hex
+        color_str = args[0].strip()
+        # For bgcolor, we only support RGB for now, but could extend
+        if color_str.upper() in COLOR_NAMES:
+            turtle.setbgcolor(*COLOR_NAMES[color_str.upper()])
+        else:
+            return "❌ SETBGCOLOR only supports named colors for now\n"
+    elif len(args) == 3:
+        # RGB values
+        try:
+            r = int(args[0])
+            g = int(args[1])
+            b = int(args[2])
+            turtle.setbgcolor(r, g, b)
+        except ValueError:
+            return "❌ SETBGCOLOR RGB values must be integers\n"
+    else:
+        return "❌ SETBGCOLOR requires 1 color name or 3 RGB values\n"
     return ""
 
 
@@ -297,7 +338,7 @@ def _logo_setpenwidth(
     if not args:
         return "❌ SETPENWIDTH requires width\n"
     width = _logo_eval_arg(interpreter, args[0])
-    turtle.pensize(width)
+    turtle.setpenwidth(width)
     return ""
 
 
@@ -318,7 +359,7 @@ def _logo_repeat(
     count_str = header_words[1]
     try:
         count = int(_logo_eval_expr_str(interpreter, count_str))
-    except Exception:
+    except (ValueError, TypeError, ZeroDivisionError):
         return f"❌ Invalid REPEAT count: {count_str}\n"
     # Extract commands between [ and ]
     if "[" not in body or "]" not in body:
@@ -408,7 +449,7 @@ def _logo_if(
     condition_str = " ".join(header_words[1:])
     try:
         condition = _logo_eval_expr_str(interpreter, condition_str)
-    except Exception:
+    except (ValueError, TypeError, ZeroDivisionError):
         return f"❌ Invalid IF condition: {condition_str}\n"
     # Only execute if condition is true (non-zero)
     if condition != 0:
@@ -550,13 +591,39 @@ def _logo_call_procedure(
                 interpreter.variables.pop(var, None)
 
 
-def _logo_print(interpreter: "Interpreter", args: str) -> str:
-    if not args.strip():
+def _logo_print(interpreter: "Interpreter", args: List[str]) -> str:
+    if not args:
         interpreter.output.append("")
         return "\n"
-    # Simple print for Logo
-    interpreter.output.append(args)
-    return args + "\n"
+    # Check if this is a function call
+    func_names = [
+        "SUM",
+        "DIFFERENCE",
+        "PRODUCT",
+        "QUOTIENT",
+        "RANDOM",
+        "WORD",
+        "LIST",
+        "SENTENCE",
+        "FIRST",
+        "LAST",
+        "BUTFIRST",
+        "BUTLAST",
+        "ITEM",
+        "THING",
+    ]
+    if len(args) >= 1 and args[0].upper() in func_names:
+        # Execute the function and print result
+        result = execute_logo(interpreter, " ".join(args), None)
+        # Remove the trailing newline if present
+        if result.endswith("\n"):
+            result = result[:-1]
+        interpreter.output.append(result)
+        return result + "\n"
+    # Otherwise treat as literal
+    output = " ".join(args)
+    interpreter.output.append(output)
+    return output + "\n"
 
 
 # Variable and data operations
@@ -679,7 +746,12 @@ def _logo_first(interpreter: "Interpreter", args: List[str]) -> str:
     """FIRST list/word - Get first item or character"""
     if not args:
         return "❌ FIRST requires argument\n"
-    arg = args[0]
+
+    # Handle split bracketed arguments
+    if len(args) > 1 and args[0].startswith("[") and args[-1].endswith("]"):
+        arg = " ".join(args)
+    else:
+        arg = args[0]
 
     if arg.startswith("[") and arg.endswith("]"):
         # List
@@ -692,7 +764,7 @@ def _logo_first(interpreter: "Interpreter", args: List[str]) -> str:
         # Word or variable
         try:
             val = interpreter.evaluate_expression(arg)
-            return str(val)[0] if str(val) else ""
+            return str(val)
         except (ValueError, TypeError):
             word = arg.strip('"')
             return word[0] if word else ""
@@ -702,7 +774,12 @@ def _logo_last(interpreter: "Interpreter", args: List[str]) -> str:
     """LAST list/word - Get last item or character"""
     if not args:
         return "❌ LAST requires argument\n"
-    arg = args[0]
+
+    # Handle split bracketed arguments
+    if len(args) > 1 and args[0].startswith("[") and args[-1].endswith("]"):
+        arg = " ".join(args)
+    else:
+        arg = args[0]
 
     if arg.startswith("[") and arg.endswith("]"):
         # List
@@ -880,7 +957,6 @@ def _logo_quotient(interpreter: "Interpreter", args: List[str]) -> str:
 
 def _logo_random(interpreter: "Interpreter", args: List[str]) -> str:
     """RANDOM limit - Generate random number"""
-    import random
 
     if not args:
         return "❌ RANDOM requires limit\n"

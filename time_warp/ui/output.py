@@ -21,21 +21,24 @@ class InterpreterThread(QThread):
         self.turtle = turtle
         self.language = language
         self.should_stop = False
+        self.interp = None
 
     def run(self):
         """Run interpreter in background."""
         try:
-            interp = Interpreter()
-            interp.load_program(self.code, self.language)
+            self.interp = Interpreter()
+
+            # Setup streaming output
+            def on_output(text):
+                if not self.should_stop:
+                    self.output_ready.emit(text, "normal")
+
+            self.interp.output_callback = on_output
+
+            self.interp.load_program(self.code, self.language)
 
             # Execute with timeout protection
-            output = interp.execute(self.turtle)
-
-            # Send output
-            for line in output:
-                if self.should_stop:
-                    break
-                self.output_ready.emit(line, "normal")
+            self.interp.execute(self.turtle)
 
             if not self.should_stop:
                 self.output_ready.emit("\n✅ Execution complete", "success")
@@ -48,6 +51,8 @@ class InterpreterThread(QThread):
     def stop(self):
         """Request thread to stop."""
         self.should_stop = True
+        if self.interp:
+            self.interp.running = False
 
 
 class OutputPanel(QTextEdit):
@@ -89,7 +94,9 @@ class OutputPanel(QTextEdit):
         turtle = TurtleState()
 
         # Create and start thread
-        self.exec_thread = InterpreterThread(code, turtle, self.current_language)
+        self.exec_thread = InterpreterThread(
+            code, turtle, self.current_language
+        )
         self.exec_thread.output_ready.connect(self.on_output)
         self.exec_thread.error_occurred.connect(self.on_error)
         self.exec_thread.execution_complete.connect(
