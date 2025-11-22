@@ -25,8 +25,131 @@ COLOR_NAMES = {
     "GREY": (128, 128, 128),
 }
 
+LOGO_COMMANDS = {
+    "FORWARD",
+    "FD",
+    "BACK",
+    "BK",
+    "BACKWARD",
+    "LEFT",
+    "LT",
+    "RIGHT",
+    "RT",
+    "PENUP",
+    "PU",
+    "PENDOWN",
+    "PD",
+    "HOME",
+    "CLEARSCREEN",
+    "CS",
+    "CLEAR",
+    "HIDETURTLE",
+    "HT",
+    "SHOWTURTLE",
+    "ST",
+    "SETXY",
+    "SETX",
+    "SETY",
+    "SETHEADING",
+    "SETH",
+    "SETPENCOLOR",
+    "SETPC",
+    "SETCOLOR",
+    "SETBGCOLOR",
+    "SETBG",
+    "SETPENWIDTH",
+    "SETPW",
+    "PENWIDTH",
+    "SETPENSIZE",
+    "REPEAT",
+    "IF",
+    "IFELSE",
+    "STOP",
+    "TO",
+    "END",
+    "MAKE",
+    "THING",
+    "PRINT",
+    "SHOW",
+    "TYPE",
+    "WORD",
+    "LIST",
+    "SENTENCE",
+    "FIRST",
+    "LAST",
+    "BUTFIRST",
+    "BUTLAST",
+    "ITEM",
+    "COUNT",
+    "SUM",
+    "DIFFERENCE",
+    "PRODUCT",
+    "QUOTIENT",
+    "RANDOM",
+    "ARC",
+    "FILLED",
+    "LABEL",
+    "WAIT",
+    "BYE",
+    "OUTPUT",
+    "OP",
+    "FOREVER",
+    "REPCOUNT",
+}
+
+
+def _split_logo_commands(text: str) -> List[str]:
+    """
+    Splits a Logo command string into individual commands,
+    respecting brackets and nesting.
+    """
+    commands = []
+    current_command = []
+    bracket_depth = 0
+
+    # Tokenize: brackets, quoted strings, or other words
+    # Handle "WORD (quote at start)
+    tokens = re.findall(r'\[|\]|"[^"\s]*|[^\[\]\s]+', text)
+
+    for token in tokens:
+        if token == "[":
+            bracket_depth += 1
+            current_command.append(token)
+        elif token == "]":
+            bracket_depth -= 1
+            current_command.append(token)
+        else:
+            # If depth is 0 and token is a known command, start new command
+            # BUT only if we have a current command accumulated.
+            if bracket_depth == 0 and token.upper() in LOGO_COMMANDS:
+                if current_command:
+                    commands.append(" ".join(current_command))
+                    current_command = []
+            current_command.append(token)
+
+    if current_command:
+        commands.append(" ".join(current_command))
+
+    return commands
+
 
 def execute_logo(
+    interpreter: "Interpreter",
+    command: str,
+    turtle: "TurtleState" = None,
+) -> str:
+    """
+    Executes a Logo command string.
+    Handles multiple commands on a single line by splitting them.
+    """
+    commands = _split_logo_commands(command)
+    output = ""
+    for cmd in commands:
+        output += _execute_single_logo_command(interpreter, cmd, turtle)
+    return output
+
+
+def _execute_single_logo_command(
     interpreter: "Interpreter",
     command: str,
     turtle: "TurtleState",
@@ -350,88 +473,32 @@ def _logo_repeat(
     command: str,
 ) -> str:
     # REPEAT count [commands]
-    parts = command.upper().split("[", 1)
-    if len(parts) < 2:
+    start_bracket = command.find("[")
+    if start_bracket == -1:
         return "❌ REPEAT requires [commands]\n"
-    header = parts[0].strip()
-    body = "[" + parts[1]
+
+    header = command[:start_bracket].strip()
+    end_bracket = command.rfind("]")
+    if end_bracket == -1 or end_bracket < start_bracket:
+        return "❌ REPEAT requires [commands]\n"
+
+    body_content = command[start_bracket + 1 : end_bracket].strip()  # noqa: E203, E501
+
     header_words = header.split()
     if len(header_words) < 2:
         return "❌ REPEAT requires count\n"
+
     count_str = header_words[1]
     try:
         count = int(_logo_eval_expr_str(interpreter, count_str))
     except (ValueError, TypeError, ZeroDivisionError):
         return f"❌ Invalid REPEAT count: {count_str}\n"
-    # Extract commands between [ and ]
-    if "[" not in body or "]" not in body:
-        return "❌ REPEAT requires [commands]\n"
-    start = body.find("[") + 1
-    end = body.rfind("]")
-    if start >= end:
-        return "❌ REPEAT commands malformed\n"
-    commands_text = body[start:end].strip()
-    # Parse commands from space-separated tokens
-    tokens = commands_text.split()
-    commands = []
-    i = 0
-    while i < len(tokens):
-        cmd = tokens[i].upper()
-        i += 1
-        # Collect arguments until next command or end
-        args = []
-        while i < len(tokens) and not tokens[i].upper() in [
-            "FORWARD",
-            "FD",
-            "BACK",
-            "BK",
-            "BACKWARD",
-            "LEFT",
-            "LT",
-            "RIGHT",
-            "RT",
-            "PENUP",
-            "PU",
-            "PENDOWN",
-            "PD",
-            "HOME",
-            "CLEARSCREEN",
-            "CS",
-            "CLEAR",
-            "HIDETURTLE",
-            "HT",
-            "SHOWTURTLE",
-            "ST",
-            "SETXY",
-            "SETX",
-            "SETY",
-            "SETHEADING",
-            "SETH",
-            "SETPENCOLOR",
-            "SETPC",
-            "SETCOLOR",
-            "SETBGCOLOR",
-            "SETBG",
-            "SETPENWIDTH",
-            "SETPW",
-            "PENWIDTH",
-            "SETPENSIZE",
-            "REPEAT",
-            "TO",
-            "END",
-            "PRINT",
-        ]:
-            args.append(tokens[i])
-            i += 1
-        full_cmd = cmd + " " + " ".join(args) if args else cmd
-        commands.append(full_cmd)
+
+    output = ""
     for _ in range(count):
-        for cmd in commands:
-            if cmd:
-                result = execute_logo(interpreter, cmd, turtle)
-                if result:
-                    return result
-    return ""
+        output += execute_logo(interpreter, body_content, turtle)
+
+    return output
 
 
 def _logo_if(
@@ -440,31 +507,30 @@ def _logo_if(
     command: str,
 ) -> str:
     # IF condition [commands]
-    parts = command.upper().split("[", 1)
-    if len(parts) < 2:
+    start_bracket = command.find("[")
+    if start_bracket == -1:
         return "❌ IF requires [commands]\n"
-    header = parts[0].strip()
-    body = "[" + parts[1]
+
+    header = command[:start_bracket].strip()
+    end_bracket = command.rfind("]")
+    if end_bracket == -1 or end_bracket < start_bracket:
+        return "❌ IF requires [commands]\n"
+
+    body_content = command[start_bracket + 1 : end_bracket].strip()  # noqa: E203, E501
+
     header_words = header.split()
     if len(header_words) < 2:
         return "❌ IF requires condition\n"
+
     condition_str = header_words[1]
     try:
         condition = _logo_eval_expr_str(interpreter, condition_str)
     except (ValueError, TypeError, ZeroDivisionError):
         return f"❌ Invalid IF condition: {condition_str}\n"
+
     # Only execute if condition is true (non-zero)
     if condition != 0:
-        # Extract commands between [ and ]
-        if "[" not in body or "]" not in body:
-            return "❌ IF requires [commands]\n"
-        start = body.find("[") + 1
-        end = body.rfind("]")
-        if start >= end:
-            return "❌ IF commands malformed\n"
-        commands_text = body[start:end].strip()
-        # Execute the commands as Logo code
-        return execute_logo(interpreter, commands_text, turtle)
+        return execute_logo(interpreter, body_content, turtle)
     return ""
 
 
@@ -485,7 +551,7 @@ def _logo_to(
         return "❌ Invalid TO command\n"
 
     # Find the procedure name
-    after_to = command[to_pos + 3 :].strip()
+    after_to = command[to_pos + 3 :].strip()  # noqa: E203, E501
     name_end = after_to.find(" ")
     if name_end == -1:
         name_end = len(after_to)
@@ -974,64 +1040,73 @@ def _logo_ifelse(
     interpreter: "Interpreter", turtle: "TurtleState", command: str
 ) -> str:
     """IFELSE condition [true_commands] [false_commands]"""
-    # Simple parsing: find condition, then two bracketed blocks
-    upper_cmd = command.upper()
-    ifelse_pos = upper_cmd.find("IFELSE ")
-    if ifelse_pos == -1:
-        return "❌ Invalid IFELSE command\n"
+    # Find condition
+    # It's between IFELSE and first [
+    start_bracket1 = command.find("[")
+    if start_bracket1 == -1:
+        return "❌ IFELSE requires [true] [false] blocks\n"
 
-    # Extract condition
-    after_ifelse = command[ifelse_pos + 7 :].strip()
-    first_bracket = after_ifelse.find("[")
-    if first_bracket == -1:
-        return "❌ IFELSE requires condition and command blocks\n"
+    header = command[:start_bracket1].strip()
+    header_words = header.split()
+    if len(header_words) < 2:
+        return "❌ IFELSE requires condition\n"
 
-    condition_str = after_ifelse[:first_bracket].strip()
-    remaining = after_ifelse[first_bracket:]
+    condition_str = header_words[1]
+
+    # Find first block end
+    # We need to scan from start_bracket1 to find matching ]
+    bracket_depth = 0
+    end_bracket1 = -1
+    for i in range(start_bracket1, len(command)):
+        char = command[i]
+        if char == "[":
+            bracket_depth += 1
+        elif char == "]":
+            bracket_depth -= 1
+            if bracket_depth == 0:
+                end_bracket1 = i
+                break
+
+    if end_bracket1 == -1:
+        return "❌ IFELSE first block malformed\n"
+
+    true_block = command[start_bracket1 + 1 : end_bracket1].strip()  # noqa: E203, E501
+
+    # Find second block
+    remaining = command[end_bracket1 + 1 :]  # noqa: E203, E501
+    start_bracket2 = remaining.find("[")
+    if start_bracket2 == -1:
+        return "❌ IFELSE requires second [false] block\n"
+
+    # Adjust index to be relative to command
+    start_bracket2 += end_bracket1 + 1
+
+    bracket_depth = 0
+    end_bracket2 = -1
+    for i in range(start_bracket2, len(command)):
+        char = command[i]
+        if char == "[":
+            bracket_depth += 1
+        elif char == "]":
+            bracket_depth -= 1
+            if bracket_depth == 0:
+                end_bracket2 = i
+                break
+
+    if end_bracket2 == -1:
+        return "❌ IFELSE second block malformed\n"
+
+    false_block = command[start_bracket2 + 1 : end_bracket2].strip()  # noqa: E203, E501
 
     try:
-        condition = interpreter.evaluate_expression(condition_str)
-    except (ValueError, TypeError):
+        condition = _logo_eval_expr_str(interpreter, condition_str)
+    except (ValueError, TypeError, ZeroDivisionError):
         return f"❌ Invalid IFELSE condition: {condition_str}\n"
 
-    # Find the two command blocks
-    # First block: from first [ to first matching ]
-    # Second block: from second [ to second matching ]
-    bracket_count = 0
-    first_start = -1
-    first_end = -1
-    second_start = -1
-    second_end = -1
-    bracket_num = 0
-
-    for i, char in enumerate(remaining):
-        if char == "[":
-            bracket_count += 1
-            bracket_num += 1
-            if bracket_num == 1 and first_start == -1:
-                first_start = i + 1
-            elif bracket_num == 2 and second_start == -1:
-                second_start = i + 1
-        elif char == "]":
-            bracket_count -= 1
-            if bracket_count == 0:
-                if first_end == -1:
-                    first_end = i
-                elif second_end == -1:
-                    second_end = i
-                    break
-
-    if first_start == -1 or first_end == -1 or second_start == -1 or second_end == -1:
-        return "❌ IFELSE malformed command blocks\n"
-
-    true_commands = remaining[first_start:first_end].strip()
-    false_commands = remaining[second_start:second_end].strip()
-
-    # Execute appropriate commands
-    commands_to_run = true_commands if condition != 0 else false_commands
-    if commands_to_run:
-        return execute_logo(interpreter, commands_to_run, turtle)
-    return ""
+    if condition != 0:
+        return execute_logo(interpreter, true_block, turtle)
+    else:
+        return execute_logo(interpreter, false_block, turtle)
 
 
 def _logo_forever(

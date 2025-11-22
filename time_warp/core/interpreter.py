@@ -352,7 +352,9 @@ class Interpreter:
         ):
             # Security check: Timeout protection
             if time.time() - start_time > self.MAX_EXECUTION_TIME:
-                self.log_output("❌ Error: Execution timeout (10 seconds exceeded)")
+                self.log_output(
+                    "❌ Error: Execution timeout (10 seconds exceeded)"
+                )  # noqa: E501
 
             iterations += 1
 
@@ -481,7 +483,7 @@ class Interpreter:
         last_end = 0
 
         for match in self.VAR_INTERPOLATION_PATTERN.finditer(text):
-            result.append(text[last_end : match.start()])
+            result.append(text[last_end : match.start()])  # noqa: E203
             var_name = match.group(1)
 
             if var_name in self.variables:

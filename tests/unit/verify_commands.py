@@ -19,7 +19,10 @@ def test_pilot_commands():
     try:
         interp = Interpreter()
         turtle = TurtleState()
-        interp.load_program(language=Language.PILOT, program_text="T:Hello World\nE:")
+        interp.load_program(
+            language=Language.PILOT,
+            program_text="T:Hello World\nE:",
+        )
         output = interp.execute(turtle)
         assert "Hello World" in str(output)
         results.append(("T: (Type/Print)", "✅"))
@@ -43,7 +46,10 @@ def test_pilot_commands():
     try:
         interp = Interpreter()
         turtle = TurtleState()
-        interp.load_program(language=Language.PILOT, program_text="C:Y = 42\nU:Y\nE:")
+        interp.load_program(
+            language=Language.PILOT,
+            program_text="C:Y = 42\nU:Y\nE:",
+        )
         output = interp.execute(turtle)
         assert "42" in str(output)
         results.append(("U: (Use/Print Variable)", "✅"))
@@ -392,7 +398,10 @@ def test_logo_commands():
     try:
         interp = Interpreter()
         turtle = TurtleState()
-        interp.load_program(language=Language.LOGO, program_text="SETXY 50 100")
+        interp.load_program(
+            language=Language.LOGO,
+            program_text="SETXY 50 100",
+        )
         output = interp.execute(turtle)
         assert abs(turtle.x - 50) < 1 and abs(turtle.y - 100) < 1
         results.append(("SETXY", "✅"))
@@ -425,7 +434,10 @@ def test_logo_commands():
     try:
         interp = Interpreter()
         turtle = TurtleState()
-        interp.load_program(language=Language.LOGO, program_text="SETHEADING 180")
+        interp.load_program(
+            language=Language.LOGO,
+            program_text="SETHEADING 180",
+        )
         output = interp.execute(turtle)
         assert abs(turtle.heading - 180) < 1
         results.append(("SETHEADING/SETH", "✅"))
@@ -436,7 +448,10 @@ def test_logo_commands():
     try:
         interp = Interpreter()
         turtle = TurtleState()
-        interp.load_program(language=Language.LOGO, program_text="SETPENCOLOR 255 0 0")
+        interp.load_program(
+            language=Language.LOGO,
+            program_text="SETPENCOLOR 255 0 0",
+        )
         output = interp.execute(turtle)
         assert turtle.pen_color == (255, 0, 0)
         results.append(("SETPENCOLOR/SETPC", "✅"))
@@ -447,7 +462,10 @@ def test_logo_commands():
     try:
         interp = Interpreter()
         turtle = TurtleState()
-        interp.load_program(language=Language.LOGO, program_text="SETBGCOLOR 0 0 255")
+        interp.load_program(
+            language=Language.LOGO,
+            program_text="SETBGCOLOR 0 0 255",
+        )
         output = interp.execute(turtle)
         assert turtle.bg_color == (0, 0, 255)
         results.append(("SETBGCOLOR/SETBG", "✅"))
@@ -458,7 +476,10 @@ def test_logo_commands():
     try:
         interp = Interpreter()
         turtle = TurtleState()
-        interp.load_program(language=Language.LOGO, program_text="SETPENWIDTH 5")
+        interp.load_program(
+            language=Language.LOGO,
+            program_text="SETPENWIDTH 5",
+        )
         output = interp.execute(turtle)
         assert turtle.pen_width == 5
         results.append(("SETPENWIDTH/SETPW", "✅"))

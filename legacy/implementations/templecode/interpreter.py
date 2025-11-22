@@ -312,17 +312,17 @@ def _eval_ast(node: ast.AST, env: Dict[str, Any]) -> Any:
         left = _eval_ast(node.left, env)
         for op, comp in zip(node.ops, node.comparators):
             right = _eval_ast(comp, env)
-            if isinstance(op, ast.Eq) and not (left == right):
+            if isinstance(op, ast.Eq) and left != right:
                 return False
-            if isinstance(op, ast.NotEq) and not (left != right):
+            if isinstance(op, ast.NotEq) and left == right:
                 return False
-            if isinstance(op, ast.Lt) and not (left < right):
+            if isinstance(op, ast.Lt) and left >= right:
                 return False
-            if isinstance(op, ast.LtE) and not (left <= right):
+            if isinstance(op, ast.LtE) and left > right:
                 return False
-            if isinstance(op, ast.Gt) and not (left > right):
+            if isinstance(op, ast.Gt) and left <= right:
                 return False
-            if isinstance(op, ast.GtE) and not (left >= right):
+            if isinstance(op, ast.GtE) and left < right:
                 return False
             left = right
         return True
@@ -791,6 +791,7 @@ class TempleInterpreter:
             database = str(self._eval(parts[4]))
             port = int(float(self._eval(parts[5]))) if len(parts) == 6 else 3306
             try:
+                # pylint: disable=import-error
                 import mysql.connector as _mysql  # type: ignore
             except Exception as e:  # pragma: no cover - import error path
                 raise ValueError(

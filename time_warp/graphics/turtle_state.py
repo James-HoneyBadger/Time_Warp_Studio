@@ -71,7 +71,7 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
     def _notify_change(self):
         """Notify listeners of state change"""
         if self.on_change:
-            self.on_change()
+            self.on_change()  # pylint: disable=not-callable
 
     def forward(self, distance: float):
         """Move forward, drawing if pen is down"""

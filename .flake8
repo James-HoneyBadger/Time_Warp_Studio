@@ -5,4 +5,5 @@ exclude =
     .venv,
     legacy,
     Time_Warp_*,
-max-line-length = 79
+max-line-length = 88
+extend-ignore = E203

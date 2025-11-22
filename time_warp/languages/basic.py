@@ -257,7 +257,7 @@ def _basic_if(
         return "❌ IF requires THEN keyword\n"
     then_pos = args_upper.find(" THEN ")
     condition = args[:then_pos].strip()
-    then_part = args[then_pos + 6 :].strip()
+    then_part = args[then_pos + 6:].strip()
     try:
         result = interpreter.evaluate_expression(condition)
         condition_true = abs(result) > 0.0001
@@ -398,7 +398,7 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
             )
             return f"🎨 Graphics mode ({width}x{height})\n"
         else:
-            return "❌ Unsupported SCREEN mode: {}\n".format(mode)
+            return f"❌ Unsupported SCREEN mode: {mode}\n"
     except ValueError as e:
         return f"❌ Invalid SCREEN parameters: {e}\n"
 

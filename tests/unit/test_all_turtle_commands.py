@@ -141,7 +141,9 @@ def main():
         failed += 1
 
     # Heading
-    if test_command("SETHEADING", "SETHEADING 45\nFORWARD 50", expected_lines=1):
+    if test_command(
+        "SETHEADING", "SETHEADING 45\nFORWARD 50", expected_lines=1
+    ):
         passed += 1
     else:
         failed += 1
@@ -274,7 +276,9 @@ def main():
         failed += 1
 
     # Clear screen
-    if test_command("CLEARSCREEN", "FORWARD 50\nCLEARSCREEN", expected_lines=0):
+    if test_command(
+        "CLEARSCREEN", "FORWARD 50\nCLEARSCREEN", expected_lines=0
+    ):
         passed += 1
     else:
         failed += 1
@@ -290,7 +294,9 @@ def main():
         failed += 1
 
     # Turtle visibility
-    if test_command("HIDETURTLE", "HIDETURTLE", check_fn=lambda t: not t.visible):
+    if test_command(
+        "HIDETURTLE", "HIDETURTLE", check_fn=lambda t: not t.visible
+    ):
         passed += 1
     else:
         failed += 1

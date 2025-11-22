@@ -2,7 +2,7 @@
 ignore=.venv,legacy,Time_Warp_*,Time_Warp_Python,Python
 
 [FORMAT]
-max-line-length=79
+max-line-length=88
 
 [MESSAGES CONTROL]
 disable=
