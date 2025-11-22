@@ -280,7 +280,8 @@ class ExpressionEvaluator:
 
             elif token.type == Token.Type.RIGHT_PAREN:
                 while (
-                    operator_stack and operator_stack[-1].type != Token.Type.LEFT_PAREN
+                    operator_stack
+                    and operator_stack[-1].type != Token.Type.LEFT_PAREN
                 ):
                     output.append(operator_stack.pop())
 
@@ -290,12 +291,16 @@ class ExpressionEvaluator:
                 operator_stack.pop()  # Remove left paren
 
                 # If there's a function on stack, pop it to output
-                if operator_stack and operator_stack[-1].type == Token.Type.FUNCTION:
+                if (
+                    operator_stack
+                    and operator_stack[-1].type == Token.Type.FUNCTION
+                ):
                     output.append(operator_stack.pop())
 
             elif token.type == Token.Type.COMMA:
                 while (
-                    operator_stack and operator_stack[-1].type != Token.Type.LEFT_PAREN
+                    operator_stack
+                    and operator_stack[-1].type != Token.Type.LEFT_PAREN
                 ):
                     output.append(operator_stack.pop())
 

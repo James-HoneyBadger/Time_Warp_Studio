@@ -14,6 +14,42 @@ if TYPE_CHECKING:
 # Runtime imports moved inside functions to avoid circular imports
 
 
+def _strip_comment(args: str) -> str:
+    """Strip trailing comments from arguments."""
+    # Simple stripping of : REM and '
+    # Note: Does not handle quotes correctly (e.g. PRINT "A : REM B")
+    # For demos this is sufficient.
+    upper = args.upper()
+    if " : REM" in upper:
+        idx = upper.find(" : REM")
+        return args[:idx].strip()
+    if " :REM" in upper:
+        idx = upper.find(" :REM")
+        return args[:idx].strip()
+    # Handle ' comment
+    # if "'" in args: ... (might break strings)
+    return args
+
+
+def _split_statements(command: str) -> List[str]:
+    """Split command into statements by colon, respecting quotes."""
+    statements = []
+    current = ""
+    in_quotes = False
+    for ch in command:
+        if ch == '"':
+            in_quotes = not in_quotes
+            current += ch
+        elif ch == ":" and not in_quotes:
+            statements.append(current.strip())
+            current = ""
+        else:
+            current += ch
+    if current.strip():
+        statements.append(current.strip())
+    return statements
+
+
 def execute_basic(
     interpreter: "Interpreter",
     command: str,
@@ -21,72 +57,90 @@ def execute_basic(
 ) -> str:
     # Import here to avoid circular imports; helpers import what they need.
 
-    cmd = command.strip().upper()
+    # Strip leading/trailing whitespace from the command line
+    command = command.strip()
+
+    # Handle multi-statement lines
+    if (
+        ":" in command
+        and not command.upper().startswith("REM")
+        and not command.upper().startswith("'")
+    ):
+        statements = _split_statements(command)
+        if len(statements) > 1:
+            output = ""
+            for stmt in statements:
+                output += execute_basic(interpreter, stmt, turtle)
+            return output
+
+    cmd = command.upper()
+    if cmd.startswith("REM") or cmd.startswith("'"):
+        return ""
     if cmd.startswith("PRINT ") or cmd == "PRINT":
         args = command[6:] if len(command) > 6 else ""
-        return _basic_print(interpreter, args)
+        return _basic_print(interpreter, _strip_comment(args))
     if cmd.startswith("INPUT "):
-        return _basic_input(interpreter, command[6:])
+        return _basic_input(interpreter, _strip_comment(command[6:]))
     if cmd.startswith("IF "):
-        return _basic_if(interpreter, command[3:], turtle)
+        return _basic_if(interpreter, _strip_comment(command[3:]), turtle)
     if cmd.startswith("GOTO "):
-        return _basic_goto(interpreter, command[5:])
+        return _basic_goto(interpreter, _strip_comment(command[5:]))
     if cmd.startswith("GOSUB "):
-        return _basic_gosub(interpreter, command[6:])
+        return _basic_gosub(interpreter, _strip_comment(command[6:]))
     if cmd == "RETURN":
         return _basic_return(interpreter)
     if cmd == "END":
         return _basic_end(interpreter)
     if cmd.startswith("LET "):
-        return _basic_let(interpreter, command[4:])
+        return _basic_let(interpreter, _strip_comment(command[4:]))
     if cmd.startswith("FOR "):
-        return _basic_for(interpreter, command[4:])
+        return _basic_for(interpreter, _strip_comment(command[4:]))
     if cmd.startswith("NEXT"):
-        return _basic_next(interpreter, command[4:])
+        return _basic_next(interpreter, _strip_comment(command[4:]))
     if cmd.startswith("WHILE "):
-        return _basic_while(interpreter, command[6:])
+        return _basic_while(interpreter, _strip_comment(command[6:]))
     if cmd == "WEND":
         return _basic_wend(interpreter)
     if cmd.startswith("DO"):
-        return _basic_do(interpreter, command[3:])
+        return _basic_do(interpreter, _strip_comment(command[3:]))
     if cmd.startswith("LOOP"):
-        return _basic_loop(interpreter, command[5:])
+        return _basic_loop(interpreter, _strip_comment(command[5:]))
     if cmd.startswith("SELECT "):
-        return _basic_select(interpreter, command[11:])
+        return _basic_select(interpreter, _strip_comment(command[11:]))
     if cmd.startswith("CASE "):
-        return _basic_case(interpreter, command[5:])
+        return _basic_case(interpreter, _strip_comment(command[5:]))
     if cmd == "END SELECT":
         return _basic_end_select(interpreter)
     if cmd.startswith("SUB "):
-        return _basic_sub(interpreter, command[4:])
+        return _basic_sub(interpreter, _strip_comment(command[4:]))
     if cmd == "END SUB":
         return _basic_end_sub(interpreter)
     if cmd.startswith("FUNCTION "):
-        return _basic_function(interpreter, command[9:])
+        return _basic_function(interpreter, _strip_comment(command[9:]))
     if cmd == "END FUNCTION":
         return _basic_end_function(interpreter)
     if cmd.startswith("CALL "):
-        return _basic_call(interpreter, command[5:])
+        return _basic_call(interpreter, _strip_comment(command[5:]))
     if cmd.startswith("RUN"):
-        return _basic_run(interpreter, command[4:])
+        return _basic_run(interpreter, _strip_comment(command[4:]))
     if cmd.startswith("SYSTEM"):
-        return _basic_system(interpreter, command[7:])
+        return _basic_system(interpreter, _strip_comment(command[7:]))
     if cmd.startswith("DIM "):
-        return _basic_dim(interpreter, command[4:])
+        return _basic_dim(interpreter, _strip_comment(command[4:]))
     if "=" in cmd and not cmd.startswith("IF ") and not cmd.startswith("FOR "):
-        return _basic_let(interpreter, command)
+        return _basic_let(interpreter, _strip_comment(command))
     if cmd.startswith("COLOR "):
-        return _basic_color(interpreter, command[6:])
+        return _basic_color(interpreter, _strip_comment(command[6:]))
     if cmd.startswith("WIDTH "):
-        return _basic_width(interpreter, command[6:])
+        return _basic_width(interpreter, _strip_comment(command[6:]))
     if cmd.startswith("OPEN "):
-        return _basic_open(interpreter, command[5:])
+        return _basic_open(interpreter, _strip_comment(command[5:]))
     if cmd.startswith("CLOSE"):
-        return _basic_close(interpreter, command[6:])
+        return _basic_close(interpreter, _strip_comment(command[6:]))
     if cmd.startswith("GET "):
-        return _basic_get(interpreter, command[4:])
+        return _basic_get(interpreter, _strip_comment(command[4:]))
     if cmd.startswith("PUT "):
-        return _basic_put(interpreter, command[4:])
+        return _basic_put(interpreter, _strip_comment(command[4:]))
     if cmd.startswith("REM ") or cmd == "REM":
         return ""
     if cmd == "CLS":
@@ -94,13 +148,13 @@ def execute_basic(
         interpreter.text_lines.clear()
         return "🎨 Screen cleared\n"
     if cmd.startswith("SCREEN "):
-        return _basic_screen(interpreter, command[7:])
+        return _basic_screen(interpreter, _strip_comment(command[7:]))
     if cmd.startswith("LOCATE "):
-        return _basic_locate(interpreter, command[7:])
+        return _basic_locate(interpreter, _strip_comment(command[7:]))
     if cmd.startswith("LINE "):
-        return _basic_line(interpreter, command[5:], turtle)
+        return _basic_line(interpreter, _strip_comment(command[5:]), turtle)
     if cmd.startswith("CIRCLE "):
-        return _basic_circle(interpreter, command[7:], turtle)
+        return _basic_circle(interpreter, _strip_comment(command[7:]), turtle)
     return f"❌ Unknown BASIC command: {command}\n"
 
 
@@ -171,7 +225,7 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
         result = interpreter.evaluate_expression(expr)
         interpreter.variables[var_name] = result
     except (ValueError, TypeError, ZeroDivisionError) as e:
-        return f"❌ Error in LET: {e}\n"
+        return f"❌ Error in LET: {e} (expr: '{expr}')\n"
     return ""
 
 
@@ -338,18 +392,13 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
                 height = int(parts[2].strip())
                 interpreter.screen_mode.width = width
                 interpreter.screen_mode.height = height
-            w, h = (
+            width, height = (
                 interpreter.screen_mode.width,
                 interpreter.screen_mode.height,
             )
-            return f"🎨 Graphics mode ({w}x{h})\n"
-        elif mode == 2:  # High-res graphics
-            interpreter.screen_mode = ScreenMode.GRAPHICS
-            interpreter.screen_mode.width = 1024
-            interpreter.screen_mode.height = 768
-            return "🎨 High-res graphics mode activated (1024x768)\n"
+            return f"🎨 Graphics mode ({width}x{height})\n"
         else:
-            return f"❌ Unknown screen mode: {mode}\n"
+            return "❌ Unsupported SCREEN mode: {}\n".format(mode)
     except ValueError as e:
         return f"❌ Invalid SCREEN parameters: {e}\n"
 
@@ -359,12 +408,12 @@ def _basic_locate(interpreter: "Interpreter", args: str) -> str:
     if len(parts) < 2:
         return "❌ LOCATE requires row, col\n"
     try:
-        row = int(parts[0].strip())
-        col = int(parts[1].strip())
+        row = int(interpreter.evaluate_expression(parts[0].strip()))
+        col = int(interpreter.evaluate_expression(parts[1].strip()))
         interpreter.cursor_row = max(0, min(24, row - 1))
         interpreter.cursor_col = max(0, min(79, col - 1))
-    except ValueError:
-        return "❌ LOCATE requires numeric row and column\n"
+    except (ValueError, TypeError, ZeroDivisionError) as e:
+        return f"❌ LOCATE error: {e}\n"
     return ""
 
 
@@ -373,15 +422,46 @@ def _basic_line(
     args: str,
     t: "TurtleState",
 ) -> str:
-    """Draw line in BASIC graphics. Syntax: LINE x1,y1,x2,y2"""
-    parts = args.split(",")
-    if len(parts) != 4:
-        return "❌ LINE requires x1,y1,x2,y2 coordinates\n"
+    """Draw line in BASIC graphics. Syntax: LINE (x1,y1)-(x2,y2)"""
+    # Try QBasic syntax: (x1, y1)-(x2, y2)
+    # Regex to match (x1, y1)-(x2, y2)
+    # We use a flexible regex that handles spaces
+    match = re.match(
+        r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)\s*-\s*"
+        r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)"
+        r"(?:,\s*(.+))?",
+        args,
+    )
+
+    x1_str, y1_str, x2_str, y2_str = "", "", "", ""
+    # color_str = None  # Not used yet
+
+    if match:
+        x1_str = match.group(1)
+        y1_str = match.group(2)
+        x2_str = match.group(3)
+        y2_str = match.group(4)
+        # if match.group(5):
+        #     color_str = match.group(5)
+    else:
+        # Try standard syntax: x1, y1, x2, y2
+        parts = args.split(",")
+        if len(parts) >= 4:
+            x1_str = parts[0]
+            y1_str = parts[1]
+            x2_str = parts[2]
+            y2_str = parts[3]
+            # if len(parts) > 4:
+            #     color_str = parts[4]
+        else:
+            return "❌ LINE requires x1,y1,x2,y2 coordinates\n"
+
     try:
-        x1 = float(parts[0].strip())
-        y1 = float(parts[1].strip())
-        x2 = float(parts[2].strip())
-        y2 = float(parts[3].strip())
+        # Evaluate expressions for coordinates
+        x1 = _interpreter.evaluate_expression(x1_str)
+        y1 = _interpreter.evaluate_expression(y1_str)
+        x2 = _interpreter.evaluate_expression(x2_str)
+        y2 = _interpreter.evaluate_expression(y2_str)
 
         # Move to start position without drawing
         old_pen = t.pen_down
@@ -397,19 +477,31 @@ def _basic_line(
             t.penup()
 
         return ""
-    except ValueError:
-        return "❌ LINE requires numeric coordinates\n"
+    except (ValueError, TypeError, ZeroDivisionError) as e:
+        return f"❌ LINE error: {e} (args: '{args}')\n"
 
 
 def _basic_circle(i: "Interpreter", args: str, t: "TurtleState") -> str:
-    """Draw circle in BASIC graphics. Syntax: CIRCLE x,y,radius"""
-    parts = args.split(",")
-    if len(parts) != 3:
-        return "❌ CIRCLE requires x,y,radius\n"
+    """Draw circle in BASIC graphics. Syntax: CIRCLE (x,y),r"""
+    # Try QBasic syntax: (x, y), radius
+    match = re.match(r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)\s*,\s*(.+)", args)
+
+    x_str, y_str, r_str = "", "", ""
+
+    if match:
+        x_str, y_str, r_str = match.group(1), match.group(2), match.group(3)
+    else:
+        # Try standard syntax: x, y, radius
+        parts = args.split(",")
+        if len(parts) >= 3:
+            x_str, y_str, r_str = parts[0], parts[1], parts[2]
+        else:
+            return "❌ CIRCLE requires x,y,radius\n"
+
     try:
-        center_x = float(parts[0].strip())
-        center_y = float(parts[1].strip())
-        radius = float(parts[2].strip())
+        center_x = i.evaluate_expression(x_str)
+        center_y = i.evaluate_expression(y_str)
+        radius = i.evaluate_expression(r_str)
 
         if radius <= 0:
             return "❌ CIRCLE radius must be positive\n"
@@ -437,8 +529,8 @@ def _basic_circle(i: "Interpreter", args: str, t: "TurtleState") -> str:
             t.penup()
 
         return ""
-    except ValueError:
-        return "❌ CIRCLE requires numeric coordinates and radius\n"
+    except (ValueError, TypeError, ZeroDivisionError) as e:
+        return f"❌ CIRCLE error: {e}\n"
 
 
 def _basic_run(_interpreter: "Interpreter", _args: str) -> str:

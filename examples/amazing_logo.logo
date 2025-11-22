@@ -1,0 +1,102 @@
+; =================================================================
+;   FRACTAL GARDEN - AMAZING LOGO DEMO
+;   Showcases: Recursion, Procedures, Randomness, Turtle Graphics
+; =================================================================
+
+TO SETUP
+  CLEARSCREEN
+  SETBGCOLOR 10 10 30
+  HIDETURTLE
+  PRINT "Generating Fractal Garden..."
+  MAKE "COUNT 0
+  REPEAT 5 [ PLANT_TREE ]
+  REPEAT 8 [ PLANT_FLOWER ]
+  PRINT "Garden Complete!"
+END
+
+TO PLANT_TREE
+  PENUP
+  ; Random X position between -300 and 300
+  MAKE "X RANDOM 600
+  MAKE "X :X - 300
+  SETXY :X -200
+  PENDOWN
+  SETHEADING 0
+  SETPENCOLOR 139 69 19 ; Brown
+  SETPENWIDTH 4
+  TREE 80
+END
+
+TO TREE :SIZE
+  IF :SIZE < 5 [ STOP ]
+  
+  ; Draw branch
+  FORWARD :SIZE
+  
+  ; Left branch
+  LEFT 30
+  SETPENWIDTH :SIZE / 10
+  TREE :SIZE * 0.7
+  
+  ; Right branch
+  RIGHT 60
+  SETPENWIDTH :SIZE / 10
+  TREE :SIZE * 0.7
+  
+  ; Restore
+  LEFT 30
+  SETPENWIDTH :SIZE / 8
+  
+  ; Leaf at end of small branches
+  IF :SIZE < 15 [ DRAW_LEAF ]
+  
+  BACK :SIZE
+END
+
+TO DRAW_LEAF
+  SETPENCOLOR 0 255 0 ; Green
+  REPEAT 2 [ LEFT 45 FORWARD 5 LEFT 135 FORWARD 5 ]
+  SETPENCOLOR 139 69 19 ; Restore brown
+END
+
+TO PLANT_FLOWER
+  PENUP
+  ; Random position
+  MAKE "X RANDOM 700
+  MAKE "X :X - 350
+  MAKE "Y RANDOM 100
+  MAKE "Y :Y - 250
+  SETXY :X :Y
+  PENDOWN
+  
+  ; Random color
+  MAKE "R RANDOM 255
+  MAKE "G RANDOM 255
+  MAKE "B RANDOM 255
+  SETPENCOLOR :R :G :B
+  SETPENWIDTH 2
+  
+  FLOWER 20
+END
+
+TO FLOWER :SIZE
+  REPEAT 8 [
+    RIGHT 45
+    PETAL :SIZE
+  ]
+  ; Center
+  SETPENCOLOR 255 255 0 ; Yellow
+  REPEAT 36 [ FORWARD 2 RIGHT 10 ]
+END
+
+TO PETAL :SIZE
+  REPEAT 2 [
+    FORWARD :SIZE
+    RIGHT 60
+    FORWARD :SIZE
+    RIGHT 120
+  ]
+END
+
+; Start the demo
+SETUP

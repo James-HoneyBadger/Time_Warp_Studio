@@ -1,6 +1,6 @@
 """Output panel with interpreter execution."""
 
-from PySide6.QtWidgets import QTextEdit
+from PySide6.QtWidgets import QTextEdit, QInputDialog, QLineEdit
 from PySide6.QtCore import QThread, Signal
 from PySide6.QtGui import QTextCursor, QColor, QTextCharFormat
 
@@ -14,38 +14,46 @@ class InterpreterThread(QThread):
     output_ready = Signal(str, str)  # (text, type)
     execution_complete = Signal()
     error_occurred = Signal(str)
+    state_changed = Signal()
+    input_requested = Signal(str, bool)  # (prompt, is_numeric)
 
-    def __init__(self, code, turtle, language=None):
+    def __init__(self, code, turtle, language=None, interpreter=None):
         super().__init__()
         self.code = code
         self.turtle = turtle
         self.language = language
         self.should_stop = False
-        self.interp = None
+        self.interp = interpreter
 
     def run(self):
         """Run interpreter in background."""
         try:
-            self.interp = Interpreter()
+            if self.interp is None:
+                self.interp = Interpreter()
+                self.interp.load_program(self.code, self.language)
 
-            # Setup streaming output
+            # Setup streaming output (always reconnect signals)
             def on_output(text):
                 if not self.should_stop:
                     self.output_ready.emit(text, "normal")
 
             self.interp.output_callback = on_output
 
-            self.interp.load_program(self.code, self.language)
+            # Setup state change callback
+            self.turtle.on_change = self.state_changed.emit
 
             # Execute with timeout protection
             self.interp.execute(self.turtle)
 
-            if not self.should_stop:
+            if self.interp.pending_input:
+                req = self.interp.pending_input
+                self.input_requested.emit(req.prompt, req.is_numeric)
+            elif not self.should_stop:
                 self.output_ready.emit("\n✅ Execution complete", "success")
+                self.execution_complete.emit()
 
         except Exception as e:
             self.error_occurred.emit(str(e))
-        finally:
             self.execution_complete.emit()
 
     def stop(self):
@@ -75,6 +83,7 @@ class OutputPanel(QTextEdit):
 
         # Current language
         self.current_language = None
+        self.current_canvas = None
 
     def set_language(self, language):
         """Set the current language for execution."""
@@ -86,6 +95,8 @@ class OutputPanel(QTextEdit):
             self.append_colored("⚠️ Program already running", "warning")
             return
 
+        self.current_canvas = canvas
+
         # Clear and show header
         self.clear()
         self.append_colored("🚀 Running program...\n", "info")
@@ -94,15 +105,49 @@ class OutputPanel(QTextEdit):
         turtle = TurtleState()
 
         # Create and start thread
+        self._start_thread(code, turtle, self.current_language)
+
+    def _start_thread(self, code, turtle, language, interpreter=None):
+        """Start execution thread."""
         self.exec_thread = InterpreterThread(
-            code, turtle, self.current_language
+            code, turtle, language, interpreter
         )
         self.exec_thread.output_ready.connect(self.on_output)
         self.exec_thread.error_occurred.connect(self.on_error)
         self.exec_thread.execution_complete.connect(
-            lambda: self.on_complete(canvas, turtle)
+            lambda: self.on_complete(self.current_canvas, turtle)
         )
+        self.exec_thread.state_changed.connect(
+            lambda: self.on_state_change(turtle)
+        )
+        self.exec_thread.input_requested.connect(self.on_input_requested)
         self.exec_thread.start()
+
+    def on_state_change(self, turtle):
+        """Handle turtle state change."""
+        if self.current_canvas:
+            self.current_canvas.set_turtle_state(turtle)
+
+    def on_input_requested(self, prompt, is_numeric):
+        """Handle input request."""
+        # Get interpreter from thread before it's destroyed
+        interp = self.exec_thread.interp
+        turtle = self.exec_thread.turtle
+        code = self.exec_thread.code
+        lang = self.exec_thread.language
+
+        # Show dialog
+        text, ok = QInputDialog.getText(
+            self, "Input Required", prompt, QLineEdit.Normal, ""
+        )
+
+        if ok:
+            # Provide input
+            interp.provide_input(text)
+            # Resume execution
+            self._start_thread(code, turtle, lang, interp)
+        else:
+            self.append_colored("\n❌ Input cancelled", "error")
 
     def on_output(self, text, output_type):
         """Handle output from interpreter."""

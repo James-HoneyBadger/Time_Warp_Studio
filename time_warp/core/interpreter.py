@@ -262,6 +262,9 @@ class Interpreter:
                 if command_str.startswith("L:"):
                     label = command_str[2:].strip()
                     self.labels[label] = idx
+                elif command_str.startswith("*"):
+                    label = command_str.strip()
+                    self.labels[label] = idx
 
                 self.program_lines.append((line_num, command_str))
 
@@ -280,7 +283,7 @@ class Interpreter:
                 proc_name = self._parse_logo_procedure(lines, i)
                 if proc_name:
                     # Skip to END
-                    while "END":
+                    while i < len(lines) and lines[i].strip().upper() != "END":
                         i += 1
                     if i < len(lines):  # Skip the END line
                         i += 1
@@ -306,7 +309,7 @@ class Interpreter:
 
         # Find END
         end_idx = start_idx + 1
-        while "END":
+        while end_idx < len(lines) and lines[end_idx].strip().upper() != "END":
             end_idx += 1
 
         if end_idx >= len(lines):
@@ -384,6 +387,10 @@ class Interpreter:
 
             # Continue to next line (unless jump or end occurred)
             if not self.running:
+                break
+
+            # Check if waiting for input
+            if self.pending_input:
                 break
 
             self.current_line += 1

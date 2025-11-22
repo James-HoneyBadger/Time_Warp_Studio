@@ -32,6 +32,8 @@ def execute_logo(
     turtle: "TurtleState",
 ) -> str:
     cmd = command.strip().upper()
+    if cmd.startswith(";"):
+        return ""
     words = cmd.split()
     if not words:
         return ""
@@ -446,7 +448,7 @@ def _logo_if(
     header_words = header.split()
     if len(header_words) < 2:
         return "❌ IF requires condition\n"
-    condition_str = " ".join(header_words[1:])
+    condition_str = header_words[1]
     try:
         condition = _logo_eval_expr_str(interpreter, condition_str)
     except (ValueError, TypeError, ZeroDivisionError):

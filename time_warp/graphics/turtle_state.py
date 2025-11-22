@@ -4,7 +4,7 @@ Ported from Rust: time_warp_unified::graphics::mod.rs
 """
 
 import math
-from typing import List, Tuple
+from typing import List, Tuple, Optional, Callable
 from dataclasses import dataclass
 
 
@@ -66,6 +66,12 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
         self.lines: List[TurtleLine] = []
         self.visible: bool = True
         self.bg_color: Tuple[int, int, int] = (10, 10, 20)  # Dark background
+        self.on_change: Optional[Callable[[], None]] = None
+
+    def _notify_change(self):
+        """Notify listeners of state change"""
+        if self.on_change:
+            self.on_change()
 
     def forward(self, distance: float):
         """Move forward, drawing if pen is down"""
@@ -87,6 +93,7 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
                     self.pen_width,
                 )
             )
+        self._notify_change()
 
     def back(self, distance: float):
         """Move backward"""
@@ -96,11 +103,13 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
         """Turn left (degrees)"""
         self.heading -= angle
         self.heading = self.heading % 360.0
+        self._notify_change()
 
     def right(self, angle: float):
         """Turn right (degrees)"""
         self.heading += angle
         self.heading = self.heading % 360.0
+        self._notify_change()
 
     def goto(self, x: float, y: float):
         """Move to absolute position, drawing if pen down"""
@@ -117,6 +126,7 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
             )
         self.x = x
         self.y = y
+        self._notify_change()
 
     def setx(self, x: float):
         """Set X coordinate, drawing if pen down"""
@@ -130,10 +140,12 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
         """Return to center (0,0) and reset heading"""
         self.goto(0.0, 0.0)
         self.heading = 0.0
+        self._notify_change()
 
     def clear(self):
         """Clear all drawn lines"""
         self.lines.clear()
+        self._notify_change()
 
     def reset(self):
         """Reset turtle to initial state"""
@@ -145,18 +157,22 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
         self.pen_width = 2.0
         self.lines.clear()
         self.visible = True
+        self._notify_change()
 
     def penup(self):
         """Lift pen (stop drawing)"""
         self.pen_down = False
+        self._notify_change()
 
     def pendown(self):
         """Lower pen (start drawing)"""
         self.pen_down = True
+        self._notify_change()
 
     def setcolor(self, r: int, g: int, b: int):
         """Set pen color (RGB 0-255)"""
         self.pen_color = (r, g, b)
+        self._notify_change()
 
     def pencolor(self, color):
         """Set pen color by name, hex, or RGB tuple"""
@@ -181,26 +197,32 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
                         pass  # Keep current color
         elif isinstance(color, tuple) and len(color) == 3:
             self.pen_color = color
+        self._notify_change()
 
     def setpenwidth(self, width: float):
         """Set pen width"""
         self.pen_width = width
+        self._notify_change()
 
     def setbgcolor(self, r: int, g: int, b: int):
         """Set background color (RGB 0-255)"""
         self.bg_color = (r, g, b)
+        self._notify_change()
 
     def setheading(self, angle: float):
         """Set absolute heading (0 = up, clockwise)"""
         self.heading = angle % 360.0
+        self._notify_change()
 
     def hideturtle(self):
         """Hide turtle cursor"""
         self.visible = False
+        self._notify_change()
 
     def showturtle(self):
         """Show turtle cursor"""
         self.visible = True
+        self._notify_change()
 
     def circle(self, radius: float, extent: float = 360.0):
         """Draw a circle or arc with given radius and extent"""

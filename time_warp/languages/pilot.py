@@ -22,6 +22,8 @@ def execute_pilot(
         return ""
 
     cmd_type = cmd[0].upper()
+    if cmd_type == "*" or command.startswith("L:"):
+        return ""
     if len(cmd) < 2 or cmd[1] != ":":
         return f"❌ Invalid PILOT command: {command}\n"
 
@@ -161,7 +163,9 @@ def _pilot_graphics_command(
     turtle: "TurtleState",
 ) -> str:
     """Handle PILOT graphics commands integrated with turtle graphics."""
-    parts = command.strip().split()
+    # Normalize command: replace commas with spaces to handle "CMD x, y"
+    normalized_command = command.replace(",", " ")
+    parts = normalized_command.strip().split()
     if not parts:
         return "❌ G: requires graphics command\n"
 
@@ -226,6 +230,24 @@ def _pilot_graphics_command(
             turtle.circle(radius)
         except (ValueError, TypeError):
             return "❌ G: Invalid radius\n"
+    elif cmd == "SETBGCOLOR":
+        if len(args) < 3:
+            return "❌ G: SETBGCOLOR requires r, g, b\n"
+        try:
+            r = int(interpreter.evaluate_expression(args[0]))
+            g = int(interpreter.evaluate_expression(args[1]))
+            b = int(interpreter.evaluate_expression(args[2]))
+            turtle.setbgcolor(r, g, b)
+        except (ValueError, TypeError):
+            return "❌ G: Invalid color values\n"
+    elif cmd == "SETPENWIDTH":
+        if not args:
+            return "❌ G: SETPENWIDTH requires width\n"
+        try:
+            width = interpreter.evaluate_expression(args[0])
+            turtle.setpenwidth(width)
+        except (ValueError, TypeError):
+            return "❌ G: Invalid width\n"
     else:
         return f"❌ Unknown graphics command: {cmd}\n"
 
