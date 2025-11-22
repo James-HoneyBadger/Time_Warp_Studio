@@ -634,6 +634,50 @@ def _parse_logo_commands(body: str) -> List[str]:
     return commands
 
 
+def _consume_logo_args(args: List[str], num_params: int) -> List[str]:
+    """
+    Consume tokens from args to form num_params arguments,
+    handling infix operators and parentheses.
+    """
+    consumed_args = []
+    current_idx = 0
+    operators = {"+", "-", "*", "/", "%", "^", "=", "<", ">", "<=", ">=", "<>"}
+
+    for _ in range(num_params):
+        if current_idx >= len(args):
+            break
+
+        current_arg_tokens = []
+        balance = 0
+
+        while current_idx < len(args):
+            token = args[current_idx]
+            current_arg_tokens.append(token)
+            current_idx += 1
+
+            if token == "(":
+                balance += 1
+            elif token == ")":
+                balance -= 1
+
+            if balance == 0:
+                # Check if we should stop
+                # If current token is an operator, we must continue (e.g. "2 +")
+                if token in operators:
+                    continue
+
+                # If next token is an operator, we must continue (e.g. "2" then "+")
+                if current_idx < len(args) and args[current_idx] in operators:
+                    continue
+
+                # Otherwise, we are done with this argument
+                break
+
+        consumed_args.append(" ".join(current_arg_tokens))
+
+    return consumed_args
+
+
 def _logo_call_procedure(
     interpreter: "Interpreter",
     proc_name: str,
@@ -652,29 +696,13 @@ def _logo_call_procedure(
     old_values = {}
 
     # Map args to params
-    # Note: args contains all remaining tokens on the line.
-    # We need to consume only as many args as there are params.
-    # But wait, execute_logo splits commands.
-    # If we have "TREE 80 FORWARD 10", args passed to TREE will be ["80", "FORWARD", "10"]?
-    # No, execute_logo splits by command.
-    # But _execute_single_logo_command splits by space.
-    # If "TREE 80", args is ["80"].
-    # If "TREE 80 90", args is ["80", "90"].
-    # We need to know how many args the procedure expects.
-
     num_params = len(params)
-    if len(args) < num_params:
-        return f"❌ Procedure {proc_name} requires {num_params} inputs\n"
 
-    # Consume args
-    # If there is only 1 parameter, assume the rest of the line is the expression
-    # This fixes cases like "TREE :SIZE * 0.7" where args is [":SIZE", "*", "0.7"]
-    if num_params == 1:
-        used_args = [" ".join(args)]
-    else:
-        # For multiple params, this is still ambiguous without better parsing
-        # But we'll stick to the simple split for now
-        used_args = args[:num_params]
+    # Use smart argument consumption
+    used_args = _consume_logo_args(args, num_params)
+
+    if len(used_args) < num_params:
+        return f"❌ Procedure {proc_name} requires {num_params} inputs\n"
 
     for i, param_name in enumerate(params):
         arg_expr = used_args[i]

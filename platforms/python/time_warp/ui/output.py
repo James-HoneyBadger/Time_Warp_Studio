@@ -16,14 +16,25 @@ class InterpreterThread(QThread):
     error_occurred = Signal(str)
     state_changed = Signal()
     input_requested = Signal(str, bool)  # (prompt, is_numeric)
+    debug_paused = Signal(int, dict)  # (line, variables)
 
-    def __init__(self, code, turtle, language=None, interpreter=None):
+    def __init__(
+        self,
+        code,
+        turtle,
+        language=None,
+        interpreter=None,
+        debug_mode=False,
+        breakpoints=None,
+    ):
         super().__init__()
         self.code = code
         self.turtle = turtle
         self.language = language
         self.should_stop = False
         self.interp = interpreter
+        self.debug_mode = debug_mode
+        self.breakpoints = breakpoints or set()
 
     def run(self):
         """Run interpreter in background."""
@@ -31,6 +42,16 @@ class InterpreterThread(QThread):
             if self.interp is None:
                 self.interp = Interpreter()
                 self.interp.load_program(self.code, self.language)
+
+            # Configure debugging
+            self.interp.set_debug_mode(self.debug_mode)
+            for bp in self.breakpoints:
+                self.interp.add_breakpoint(bp)
+
+            def on_debug(line, variables):
+                self.debug_paused.emit(line, variables)
+
+            self.interp.set_debug_callback(on_debug)
 
             # Setup streaming output (always reconnect signals)
             def on_output(text):
@@ -89,7 +110,7 @@ class OutputPanel(QTextEdit):
         """Set the current language for execution."""
         self.current_language = language
 
-    def run_program(self, code, canvas):
+    def run_program(self, code, canvas, debug_mode=False, breakpoints=None):
         """Run program in background thread."""
         if self.exec_thread and self.exec_thread.isRunning():
             self.append_colored("⚠️ Program already running", "warning")
@@ -105,23 +126,45 @@ class OutputPanel(QTextEdit):
         turtle = TurtleState()
 
         # Create and start thread
-        self._start_thread(code, turtle, self.current_language)
+        self._start_thread(
+            code,
+            turtle,
+            self.current_language,
+            debug_mode=debug_mode,
+            breakpoints=breakpoints,
+        )
 
-    def _start_thread(self, code, turtle, language, interpreter=None):
+    def _start_thread(
+        self,
+        code,
+        turtle,
+        language,
+        interpreter=None,
+        debug_mode=False,
+        breakpoints=None,
+    ):
         """Start execution thread."""
         self.exec_thread = InterpreterThread(
-            code, turtle, language, interpreter
+            code, turtle, language, interpreter, debug_mode, breakpoints
         )
         self.exec_thread.output_ready.connect(self.on_output)
         self.exec_thread.error_occurred.connect(self.on_error)
         self.exec_thread.execution_complete.connect(
             lambda: self.on_complete(self.current_canvas, turtle)
         )
-        self.exec_thread.state_changed.connect(
-            lambda: self.on_state_change(turtle)
-        )
+        self.exec_thread.state_changed.connect(lambda: self.on_state_change(turtle))
         self.exec_thread.input_requested.connect(self.on_input_requested)
         self.exec_thread.start()
+
+    def resume_execution(self):
+        """Resume execution."""
+        if self.exec_thread and self.exec_thread.interp:
+            self.exec_thread.interp.resume_execution()
+
+    def step_execution(self):
+        """Step execution."""
+        if self.exec_thread and self.exec_thread.interp:
+            self.exec_thread.interp.step_execution()
 
     def on_state_change(self, turtle):
         """Handle turtle state change."""

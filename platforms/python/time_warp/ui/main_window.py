@@ -16,13 +16,14 @@ from PySide6.QtWidgets import (
     QComboBox,
 )
 from PySide6.QtCore import Qt, QSettings, QTimer
-from PySide6.QtGui import QAction, QKeySequence
+from PySide6.QtGui import QAction, QKeySequence, QTextCursor
 
 # pylint: enable=no-name-in-module
 
 from .editor import CodeEditor
 from .output import OutputPanel
 from .canvas import TurtleCanvas
+from .variable_inspector import VariableInspector
 from .themes import ThemeManager
 from ..core.interpreter import Language
 
@@ -42,6 +43,7 @@ class MainWindow(QMainWindow):
         # Current file
         self.current_file = None
         self.is_modified = False
+        self.breakpoints = set()
 
         # Setup UI
         self.setup_ui()
@@ -90,6 +92,10 @@ class MainWindow(QMainWindow):
         # Turtle canvas
         self.canvas = TurtleCanvas(self)
         self.right_tabs.addTab(self.canvas, "Graphics")
+
+        # Variable inspector
+        self.variable_inspector = VariableInspector(self)
+        self.right_tabs.addTab(self.variable_inspector, "Variables")
 
         splitter.addWidget(self.right_tabs)
 
@@ -199,6 +205,33 @@ class MainWindow(QMainWindow):
         clear_canvas_action.triggered.connect(self.canvas.clear)
         run_menu.addAction(clear_canvas_action)
 
+        # Debug menu
+        debug_menu = menubar.addMenu("&Debug")
+
+        self.debug_action = QAction("Start &Debugging", self)
+        self.debug_action.setShortcut("F10")
+        self.debug_action.triggered.connect(self.start_debug)
+        debug_menu.addAction(self.debug_action)
+
+        self.step_action = QAction("Step &Over", self)
+        self.step_action.setShortcut("F11")
+        self.step_action.setEnabled(False)
+        self.step_action.triggered.connect(self.step_debug)
+        debug_menu.addAction(self.step_action)
+
+        self.resume_action = QAction("&Resume", self)
+        self.resume_action.setShortcut("F5")
+        self.resume_action.setEnabled(False)
+        self.resume_action.triggered.connect(self.resume_debug)
+        debug_menu.addAction(self.resume_action)
+
+        debug_menu.addSeparator()
+
+        toggle_bp_action = QAction("Toggle &Breakpoint", self)
+        toggle_bp_action.setShortcut("F9")
+        toggle_bp_action.triggered.connect(self.toggle_breakpoint)
+        debug_menu.addAction(toggle_bp_action)
+
         # View menu
         view_menu = menubar.addMenu("&View")
 
@@ -248,6 +281,11 @@ class MainWindow(QMainWindow):
         toolbar.addAction("Save", self.save_file)
         toolbar.addSeparator()
         toolbar.addAction("Run (F5)", self.run_program)
+        toolbar.addAction("Debug (F10)", self.start_debug)
+        toolbar.addSeparator()
+        toolbar.addAction("Step (F11)", self.step_debug)
+        toolbar.addAction("Resume", self.resume_debug)
+        toolbar.addAction("Stop", self.stop_program)
         toolbar.addAction("Stop", self.stop_program)
         toolbar.addSeparator()
         toolbar.addAction("Clear Output", self.output.clear)
@@ -293,18 +331,22 @@ class MainWindow(QMainWindow):
         if not self.check_save_changes():
             return
 
+        last_dir = self.settings.value("last_dir", str(Path.home()))
+
         filename, _ = QFileDialog.getOpenFileName(
             self,
             "Open File",
-            str(Path.home()),
+            last_dir
             "Time Warp Files (*.pilot *.bas *.logo);;"
             "PILOT Files (*.pilot);;"
             "BASIC Files (*.bas);;"
             "Logo Files (*.logo);;"
             "All Files (*.*)",
+            options=QFileDialog.DontUseNativeDialog,
         )
 
         if filename:
+            self.settings.setValue("last_dir", str(Path(filename).parent))
             self.load_file(filename)
 
     def load_file(self, filename):
@@ -348,18 +390,22 @@ class MainWindow(QMainWindow):
 
     def save_file_as(self):
         """Save file as dialog."""
+        last_dir = self.settings.value("last_dir", str(Path.home()))
+
         filename, _ = QFileDialog.getSaveFileName(
             self,
             "Save File As",
-            str(Path.home()),
+            last_dir,
             "Time Warp Files (*.pilot *.bas *.logo);;"
             "PILOT Files (*.pilot);;"
             "BASIC Files (*.bas);;"
             "Logo Files (*.logo);;"
             "All Files (*.*)",
+            options=QFileDialog.DontUseNativeDialog,
         )
 
         if filename:
+            self.settings.setValue("last_dir", str(Path(filename).parent))
             self.save_to_file(filename)
 
     def save_to_file(self, filename):
@@ -583,3 +629,65 @@ class MainWindow(QMainWindow):
             event.accept()
         else:
             event.ignore()
+
+    def toggle_breakpoint(self):
+        """Toggle breakpoint on current line."""
+        cursor = self.editor.textCursor()
+        line = cursor.blockNumber() + 1
+
+        if line in self.breakpoints:
+            self.breakpoints.remove(line)
+            self.statusbar.showMessage(f"Breakpoint removed at line {line}")
+        else:
+            self.breakpoints.add(line)
+            self.statusbar.showMessage(f"Breakpoint added at line {line}")
+
+    def start_debug(self):
+        """Start debugging."""
+        code = self.editor.toPlainText()
+        if not code.strip():
+            return
+
+        # Detect language
+        language = None
+        if self.current_file:
+            ext = Path(self.current_file).suffix
+            language = Language.from_extension(ext)
+
+        self.output.clear()
+        self.canvas.clear()
+        self.right_tabs.setCurrentIndex(0)  # Output tab
+
+        self.run_action.setEnabled(False)
+        self.debug_action.setEnabled(False)
+        self.stop_action.setEnabled(True)
+        self.step_action.setEnabled(True)
+        self.resume_action.setEnabled(True)
+
+        self.output.run_program(
+            code, self.canvas, debug_mode=True, breakpoints=self.breakpoints
+        )
+
+        # Connect debug signal
+        self.output.exec_thread.debug_paused.connect(self.on_debug_paused)
+
+        # Re-enable run button after execution
+        QTimer.singleShot(100, self.check_execution_complete)
+
+    def on_debug_paused(self, line, variables):
+        """Handle debug pause."""
+        self.statusbar.showMessage(f"Paused at line {line}")
+        self.variable_inspector.update_variables(variables)
+        self.right_tabs.setCurrentWidget(self.variable_inspector)
+
+        # Highlight line in editor
+        cursor = QTextCursor(self.editor.document().findBlockByNumber(line - 1))
+        self.editor.setTextCursor(cursor)
+
+    def step_debug(self):
+        """Step execution."""
+        self.output.step_execution()
+
+    def resume_debug(self):
+        """Resume execution."""
+        self.output.resume_execution()

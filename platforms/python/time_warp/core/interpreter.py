@@ -5,8 +5,9 @@ Ported from Rust: time_warp_unified::interpreter::mod.rs
 
 import re
 import time
+import threading
 from enum import Enum, auto
-from typing import Optional, List, Dict, Tuple, Callable, TYPE_CHECKING
+from typing import Optional, List, Dict, Tuple, Callable, TYPE_CHECKING, Any
 from dataclasses import dataclass
 
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
@@ -196,6 +197,13 @@ class Interpreter:
         self.data_values: List[str] = []
         self.data_pointer: int = 0
 
+        # Debugging state
+        self.debug_mode: bool = False
+        self.debug_event = threading.Event()
+        self.debug_callback: Optional[Callable[[int, Dict[str, Any]], None]] = None
+        self.breakpoints: set = set()
+        self.step_mode: bool = False
+
         # Language mode
         self.language = Language.BASIC
 
@@ -221,6 +229,8 @@ class Interpreter:
         self.last_match_set = False
         self.stored_condition = None
         self.cursor_row = 0
+        self.step_mode = False
+        self.debug_event.set()  # Ensure we don't get stuck if reset while paused
         self.cursor_col = 0
         self.logo_procedures.clear()
         # BASIC-specific reset
@@ -415,6 +425,18 @@ class Interpreter:
             self.current_line < len(self.program_lines)
             and iterations < self.MAX_ITERATIONS
         ):
+            # Debugging support
+            should_break = self.debug_mode and (
+                self.step_mode or (self.current_line + 1) in self.breakpoints
+            )
+
+            if should_break:
+                if self.debug_callback:
+                    # pylint: disable=not-callable
+                    self.debug_callback(self.current_line + 1, self.get_variables())
+                self.debug_event.wait()
+                self.debug_event.clear()
+
             # Security check: Timeout protection
             if time.time() - start_time > self.MAX_EXECUTION_TIME:
                 self.log_output(
@@ -633,3 +655,46 @@ class Interpreter:
             self.current_line = self.line_number_map[line_num]
         else:
             raise ValueError(f"Line number {line_num} not found")
+
+    # Debugging methods
+    def set_debug_mode(self, enabled: bool):
+        """Enable or disable debug mode"""
+        self.debug_mode = enabled
+
+    def set_debug_callback(self, callback: Callable[[int, Dict[str, Any]], None]):
+        """Set callback for debug events"""
+        self.debug_callback = callback
+
+    def add_breakpoint(self, line: int):
+        """Add a breakpoint at the specified line"""
+        self.breakpoints.add(line)
+
+    def remove_breakpoint(self, line: int):
+        """Remove a breakpoint from the specified line"""
+        self.breakpoints.discard(line)
+
+    def clear_breakpoints(self):
+        """Clear all breakpoints"""
+        self.breakpoints.clear()
+
+    def resume_execution(self):
+        """Resume execution until next breakpoint"""
+        self.step_mode = False
+        self.debug_event.set()
+
+    def step_execution(self):
+        """Execute one line and pause"""
+        self.step_mode = True
+        self.debug_event.set()
+
+    def pause_execution(self):
+        """Pause execution at the next line"""
+        self.step_mode = True
+
+    def get_variables(self) -> Dict[str, Any]:
+        """Get all current variables for debugging"""
+        vars_dict = {}
+        vars_dict.update(self.variables)
+        vars_dict.update(self.string_variables)
+        # Add arrays and other state if needed
+        return vars_dict
