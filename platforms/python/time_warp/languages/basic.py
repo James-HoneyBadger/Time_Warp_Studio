@@ -155,6 +155,12 @@ def execute_basic(
         return _basic_line(interpreter, _strip_comment(command[5:]), turtle)
     if cmd.startswith("CIRCLE "):
         return _basic_circle(interpreter, _strip_comment(command[7:]), turtle)
+    if cmd.startswith("DATA "):
+        return ""
+    if cmd.startswith("READ "):
+        return _basic_read(interpreter, _strip_comment(command[5:]))
+    if cmd.startswith("RESTORE"):
+        return _basic_restore(interpreter, _strip_comment(command[7:]))
     return f"❌ Unknown BASIC command: {command}\n"
 
 
@@ -257,7 +263,7 @@ def _basic_if(
         return "❌ IF requires THEN keyword\n"
     then_pos = args_upper.find(" THEN ")
     condition = args[:then_pos].strip()
-    then_part = args[then_pos + 6:].strip()
+    then_part = args[then_pos + 6 :].strip()
     try:
         result = interpreter.evaluate_expression(condition)
         condition_true = abs(result) > 0.0001
@@ -739,10 +745,55 @@ def _basic_call(_interpreter: "Interpreter", args: str) -> str:
     return f"📞 Called subroutine: {args.strip()}\n"
 
 
-def _basic_dim(_interpreter: "Interpreter", args: str) -> str:
+def _basic_dim(interpreter: "Interpreter", args: str) -> str:
     """DIM variable[(dimensions)] - Declare array"""
-    # Simplified: just acknowledge
-    return f"📏 Declared array: {args.strip()}\n"
+    parts = args.split(",")
+    for part in parts:
+        part = part.strip()
+        if "(" not in part or not part.endswith(")"):
+            return f"❌ Invalid DIM syntax: {part}\n"
+
+        name_part = part[: part.find("(")].strip().upper()
+        size_part = part[part.find("(") + 1 : -1].strip()  # noqa: E203
+
+        try:
+            size = int(interpreter.evaluate_expression(size_part))
+            # Create array initialized to 0.0
+            # BASIC arrays are usually 0 to size (inclusive)
+            interpreter.arrays[name_part] = [0.0] * (size + 1)
+        except (ValueError, TypeError, ZeroDivisionError) as e:
+            return f"❌ Error in DIM {name_part}: {e}\n"
+
+    return ""
+
+
+def _basic_read(interpreter: "Interpreter", args: str) -> str:
+    """READ var1, var2... - Read from DATA"""
+    vars_list = [v.strip().upper() for v in args.split(",")]
+    for var_name in vars_list:
+        if interpreter.data_pointer >= len(interpreter.data_values):
+            return "❌ Out of DATA\n"
+
+        val_str = interpreter.data_values[interpreter.data_pointer]
+        interpreter.data_pointer += 1
+
+        try:
+            # Try to parse as number
+            val = float(val_str)
+            interpreter.variables[var_name] = val
+        except ValueError:
+            # Store as string variable if it's a string
+            # But evaluate_expression only handles floats for now.
+            # We'll store it in string_variables if it fails float conversion
+            interpreter.string_variables[var_name] = val_str
+
+    return ""
+
+
+def _basic_restore(interpreter: "Interpreter", _args: str) -> str:
+    """RESTORE [line] - Reset DATA pointer"""
+    interpreter.data_pointer = 0
+    return ""
 
 
 def _basic_color(_interpreter: "Interpreter", args: str) -> str:

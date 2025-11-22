@@ -136,11 +136,16 @@ class Interpreter:
         # Core state
         self.variables: Dict[str, float] = {}
         self.string_variables: Dict[str, str] = {}
+        self.arrays: Dict[str, List[float]] = {}  # BASIC arrays
         # Logo data types
         self.logo_lists: Dict[str, List] = {}  # Logo lists
         self.logo_arrays: Dict[str, List] = {}  # Logo arrays (1-indexed)
         self.property_lists: Dict[str, Dict[str, object]] = {}  # Properties
-        self.logo_procedures: Dict[str, List[str]] = {}  # Logo procedures
+        self.logo_procedures: Dict[str, str] = {}
+        self.logo_procedure_params: Dict[str, List[str]] = {}
+        self.logo_lists: Dict[str, List[object]] = {}
+        self.logo_arrays: Dict[str, Dict[int, object]] = {}
+        self.property_lists: Dict[str, Dict[str, object]] = {}  # Logo procedures
         self.output: List[str] = []
 
         # Program state
@@ -187,6 +192,10 @@ class Interpreter:
         self.basic_in_sub: bool = False
         self.basic_in_function: bool = False
 
+        # BASIC DATA/READ state
+        self.data_values: List[str] = []
+        self.data_pointer: int = 0
+
         # Language mode
         self.language = Language.BASIC
 
@@ -194,9 +203,12 @@ class Interpreter:
         """Reset interpreter state"""
         self.variables.clear()
         self.string_variables.clear()
+        self.arrays.clear()
         self.logo_lists.clear()
         self.logo_arrays.clear()
         self.property_lists.clear()
+        self.logo_procedures.clear()
+        self.logo_procedure_params.clear()
         self.output.clear()
         self.text_lines.clear()
         self.program_lines.clear()
@@ -218,6 +230,8 @@ class Interpreter:
         self.basic_in_select = False
         self.basic_in_sub = False
         self.basic_in_function = False
+        self.data_values.clear()
+        self.data_pointer = 0
 
     def set_language(self, language: Language):
         """Set the active language for execution."""
@@ -268,17 +282,40 @@ class Interpreter:
 
                 self.program_lines.append((line_num, command_str))
 
+            # Collect BASIC DATA values
+            if self.language == Language.BASIC:
+                for _, command_str in self.program_lines:
+                    cmd = command_str.strip().upper()
+                    if cmd.startswith("DATA "):
+                        # Parse values
+                        values = command_str[5:].split(",")
+                        for v in values:
+                            self.data_values.append(v.strip())
+
     def _parse_logo_program(self, lines: List[str]):
-        """Parse Logo program, handling TO/END procedure definitions"""
+        """
+        Parse Logo program, handling TO/END procedure definitions
+        and multi-line commands.
+        """
         i = 0
+        current_command_lines = []
+        bracket_depth = 0
+
         while i < len(lines):
             line = lines[i].strip()
             if not line:
                 i += 1
                 continue
 
-            # Check for TO command
-            if line.upper().startswith("TO "):
+            # Check for TO command (only at top level)
+            if bracket_depth == 0 and line.upper().startswith("TO "):
+                # Flush any pending command
+                if current_command_lines:
+                    full_cmd = " ".join(current_command_lines)
+                    line_num, command_str = self._parse_line(full_cmd)
+                    self.program_lines.append((line_num, command_str))
+                    current_command_lines = []
+
                 # Parse procedure definition
                 proc_name = self._parse_logo_procedure(lines, i)
                 if proc_name:
@@ -289,10 +326,31 @@ class Interpreter:
                         i += 1
                     continue
 
-            # Regular command
-            line_num, command_str = self._parse_line(line)
-            self.program_lines.append((line_num, command_str))
+            # Count brackets in this line
+            open_brackets = line.count("[")
+            close_brackets = line.count("]")
+
+            # If we are inside a comment, ignore brackets?
+            # Simple counting might be enough for now.
+
+            current_command_lines.append(line)
+            bracket_depth += open_brackets - close_brackets
+
+            if bracket_depth <= 0:
+                # Command complete
+                full_cmd = " ".join(current_command_lines)
+                line_num, command_str = self._parse_line(full_cmd)
+                self.program_lines.append((line_num, command_str))
+                current_command_lines = []
+                bracket_depth = 0
+
             i += 1
+
+        # Flush any remaining lines
+        if current_command_lines:
+            full_cmd = " ".join(current_command_lines)
+            line_num, command_str = self._parse_line(full_cmd)
+            self.program_lines.append((line_num, command_str))
 
     def _parse_logo_procedure(
         self,
@@ -307,6 +365,12 @@ class Interpreter:
 
         proc_name = parts[1]
 
+        # Parse parameters (starting with :)
+        params = []
+        for part in parts[2:]:
+            if part.startswith(":"):
+                params.append(part[1:])  # Store without colon
+
         # Find END
         end_idx = start_idx + 1
         while end_idx < len(lines) and lines[end_idx].strip().upper() != "END":
@@ -320,8 +384,9 @@ class Interpreter:
         for j in range(start_idx + 1, end_idx):
             body_lines.append(lines[j].strip())
 
-        # Store procedure body
+        # Store procedure body and params
         self.logo_procedures[proc_name] = "\n".join(body_lines)
+        self.logo_procedure_params[proc_name] = params
         return proc_name
 
     def execute(self, turtle: "TurtleState") -> List[str]:
@@ -460,7 +525,7 @@ class Interpreter:
         """
         from ..utils.expression_evaluator import ExpressionEvaluator
 
-        evaluator = ExpressionEvaluator(self.variables.copy())
+        evaluator = ExpressionEvaluator(self.variables.copy(), self.arrays.copy())
         return evaluator.evaluate(expr)
 
     def interpolate_text(self, text: str) -> str:

@@ -301,7 +301,8 @@ def _logo_forward(
 ) -> str:
     if not args:
         return "❌ FORWARD requires distance\n"
-    distance = _logo_eval_arg(interpreter, args[0])
+    dist_expr = " ".join(args)
+    distance = _logo_eval_expr_str(interpreter, dist_expr)
     turtle.forward(distance)
     return ""
 
@@ -313,7 +314,8 @@ def _logo_back(
 ) -> str:
     if not args:
         return "❌ BACK requires distance\n"
-    distance = _logo_eval_arg(interpreter, args[0])
+    dist_expr = " ".join(args)
+    distance = _logo_eval_expr_str(interpreter, dist_expr)
     turtle.back(distance)
     return ""
 
@@ -364,7 +366,8 @@ def _logo_setx(
 ) -> str:
     if not args:
         return "❌ SETX requires x coordinate\n"
-    x = _logo_eval_arg(interpreter, args[0])
+    x_expr = " ".join(args)
+    x = _logo_eval_expr_str(interpreter, x_expr)
     turtle.setx(x)
     return ""
 
@@ -376,7 +379,8 @@ def _logo_sety(
 ) -> str:
     if not args:
         return "❌ SETY requires y coordinate\n"
-    y = _logo_eval_arg(interpreter, args[0])
+    y_expr = " ".join(args)
+    y = _logo_eval_expr_str(interpreter, y_expr)
     turtle.sety(y)
     return ""
 
@@ -388,7 +392,8 @@ def _logo_setheading(
 ) -> str:
     if not args:
         return "❌ SETHEADING requires angle\n"
-    angle = _logo_eval_arg(interpreter, args[0])
+    angle_expr = " ".join(args)
+    angle = _logo_eval_expr_str(interpreter, angle_expr)
     turtle.setheading(angle)
     return ""
 
@@ -462,7 +467,8 @@ def _logo_setpenwidth(
 ) -> str:
     if not args:
         return "❌ SETPENWIDTH requires width\n"
-    width = _logo_eval_arg(interpreter, args[0])
+    width_expr = " ".join(args)
+    width = _logo_eval_expr_str(interpreter, width_expr)
     turtle.setpenwidth(width)
     return ""
 
@@ -484,11 +490,13 @@ def _logo_repeat(
 
     body_content = command[start_bracket + 1 : end_bracket].strip()  # noqa: E203, E501
 
-    header_words = header.split()
-    if len(header_words) < 2:
+    if not header.upper().startswith("REPEAT"):
+        return "❌ Invalid REPEAT command\n"
+
+    count_str = header[6:].strip()
+    if not count_str:
         return "❌ REPEAT requires count\n"
 
-    count_str = header_words[1]
     try:
         count = int(_logo_eval_expr_str(interpreter, count_str))
     except (ValueError, TypeError, ZeroDivisionError):
@@ -518,11 +526,13 @@ def _logo_if(
 
     body_content = command[start_bracket + 1 : end_bracket].strip()  # noqa: E203, E501
 
-    header_words = header.split()
-    if len(header_words) < 2:
+    if not header.upper().startswith("IF"):
+        return "❌ Invalid IF command\n"
+
+    condition_str = header[2:].strip()
+    if not condition_str:
         return "❌ IF requires condition\n"
 
-    condition_str = header_words[1]
     try:
         condition = _logo_eval_expr_str(interpreter, condition_str)
     except (ValueError, TypeError, ZeroDivisionError):
@@ -618,21 +628,42 @@ def _logo_call_procedure(
         return f"❌ Procedure {proc_name} not defined\n"
 
     proc_body = interpreter.logo_procedures[proc_name]
+    params = interpreter.logo_procedure_params.get(proc_name, [])
 
     # Handle parameters - evaluate arguments and set interpreter variables
     # Save old values to restore later
     old_values = {}
-    if args:
-        if len(args) >= 1:
-            # Evaluate the argument expression
-            size_value = _logo_eval_expr_str(interpreter, args[0])
-            old_values["SIZE"] = interpreter.variables.get("SIZE")
-            interpreter.variables["SIZE"] = size_value
-        if len(args) >= 2:
-            # Evaluate the argument expression
-            depth_value = _logo_eval_expr_str(interpreter, args[1])
-            old_values["DEPTH"] = interpreter.variables.get("DEPTH")
-            interpreter.variables["DEPTH"] = depth_value
+
+    # Map args to params
+    # Note: args contains all remaining tokens on the line.
+    # We need to consume only as many args as there are params.
+    # But wait, execute_logo splits commands.
+    # If we have "TREE 80 FORWARD 10", args passed to TREE will be ["80", "FORWARD", "10"]?
+    # No, execute_logo splits by command.
+    # But _execute_single_logo_command splits by space.
+    # If "TREE 80", args is ["80"].
+    # If "TREE 80 90", args is ["80", "90"].
+    # We need to know how many args the procedure expects.
+
+    num_params = len(params)
+    if len(args) < num_params:
+        return f"❌ Procedure {proc_name} requires {num_params} inputs\n"
+
+    # Consume args
+    used_args = args[:num_params]
+    # The remaining args are ignored here?
+    # In _execute_single_logo_command, we return the result string.
+    # If there are leftover args, they are lost?
+    # This is a limitation of the current simple parser.
+    # Ideally, we should consume args and return how many were consumed.
+    # But for now, let's assume commands are well-separated or on separate lines.
+
+    for i, param_name in enumerate(params):
+        arg_expr = used_args[i]
+        # Evaluate the argument expression
+        val = _logo_eval_expr_str(interpreter, arg_expr)
+        old_values[param_name] = interpreter.variables.get(param_name)
+        interpreter.variables[param_name] = val
 
     try:
         # Execute the procedure body, handling multi-line bracketed commands

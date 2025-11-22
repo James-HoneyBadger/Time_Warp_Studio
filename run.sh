@@ -46,4 +46,5 @@ fi
 
 # Launch the IDE
 echo "Launching Time Warp IDE..."
-exec "$PYTHON_CMD" "$DIR/time_warp_ide.py" "$@"
+export PYTHONPATH="$DIR/platforms/python"
+exec "$PYTHON_CMD" "$DIR/platforms/python/time_warp_ide.py" "$@"

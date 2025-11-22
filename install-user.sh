@@ -238,9 +238,9 @@ install_files() {
     
     # Copy Python implementation (now at root level)
     print_info "Installing Python implementation..."
-    cp -r "$SCRIPT_DIR/time_warp" "$INSTALL_DIR/"
-    cp -r "$SCRIPT_DIR/run_time_warp.py" "$INSTALL_DIR/"
-    cp -r "$SCRIPT_DIR/time_warp_ide.py" "$INSTALL_DIR/"
+    cp -r "$SCRIPT_DIR/platforms/python/time_warp" "$INSTALL_DIR/"
+    # cp -r "$SCRIPT_DIR/run_time_warp.py" "$INSTALL_DIR/"
+    cp -r "$SCRIPT_DIR/platforms/python/time_warp_ide.py" "$INSTALL_DIR/"
     cp -r "$SCRIPT_DIR/examples" "$INSTALL_DIR/"
     
     # Copy documentation

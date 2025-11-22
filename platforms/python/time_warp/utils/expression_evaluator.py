@@ -78,8 +78,13 @@ class ExpressionEvaluator:
         "RND": random.random,  # Turbo BASIC alias
     }
 
-    def __init__(self, variables: Optional[Dict[str, float]] = None):
+    def __init__(
+        self,
+        variables: Optional[Dict[str, float]] = None,
+        arrays: Optional[Dict[str, List[float]]] = None,
+    ):
         self.variables = variables or {}
+        self.arrays = arrays or {}
         self.token_cache: Dict[str, List[Token]] = {}
 
     def set_variable(self, name: str, value: float):
@@ -280,8 +285,7 @@ class ExpressionEvaluator:
 
             elif token.type == Token.Type.RIGHT_PAREN:
                 while (
-                    operator_stack
-                    and operator_stack[-1].type != Token.Type.LEFT_PAREN
+                    operator_stack and operator_stack[-1].type != Token.Type.LEFT_PAREN
                 ):
                     output.append(operator_stack.pop())
 
@@ -291,16 +295,12 @@ class ExpressionEvaluator:
                 operator_stack.pop()  # Remove left paren
 
                 # If there's a function on stack, pop it to output
-                if (
-                    operator_stack
-                    and operator_stack[-1].type == Token.Type.FUNCTION
-                ):
+                if operator_stack and operator_stack[-1].type == Token.Type.FUNCTION:
                     output.append(operator_stack.pop())
 
             elif token.type == Token.Type.COMMA:
                 while (
-                    operator_stack
-                    and operator_stack[-1].type != Token.Type.LEFT_PAREN
+                    operator_stack and operator_stack[-1].type != Token.Type.LEFT_PAREN
                 ):
                     output.append(operator_stack.pop())
 
@@ -378,6 +378,18 @@ class ExpressionEvaluator:
 
             elif token.type == Token.Type.FUNCTION:
                 func_name = token.value
+
+                # Check for array access
+                if self.arrays and func_name in self.arrays:
+                    if len(stack) < 1:
+                        raise ValueError(f"Array {func_name} requires index")
+                    index = int(stack.pop())
+                    array = self.arrays[func_name]
+                    if index < 0 or index >= len(array):
+                        raise ValueError(f"Array index out of bounds: {index}")
+                    stack.append(array[index])
+                    continue
+
                 if func_name not in self.FUNCTIONS:
                     raise ValueError(f"Unknown function: {func_name}")
 

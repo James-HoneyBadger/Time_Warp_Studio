@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Comprehensive test of all turtle graphics commands."""
 
-from time_warp.core.interpreter import Interpreter
+from time_warp.core.interpreter import Interpreter, Language
 from time_warp.graphics.turtle_state import TurtleState
 
 
@@ -10,7 +10,7 @@ def test_command(name, code, expected_lines=None, check_fn=None):
     print(f"Testing {name}...", end=" ")
     interp = Interpreter()
     turtle = TurtleState()
-    interp.load_program(code)
+    interp.load_program(code, language=Language.LOGO)
     try:
         out = interp.execute(turtle)
         errors = [line for line in out if "❌" in line]
@@ -141,9 +141,7 @@ def main():
         failed += 1
 
     # Heading
-    if test_command(
-        "SETHEADING", "SETHEADING 45\nFORWARD 50", expected_lines=1
-    ):
+    if test_command("SETHEADING", "SETHEADING 45\nFORWARD 50", expected_lines=1):
         passed += 1
     else:
         failed += 1
@@ -276,9 +274,7 @@ def main():
         failed += 1
 
     # Clear screen
-    if test_command(
-        "CLEARSCREEN", "FORWARD 50\nCLEARSCREEN", expected_lines=0
-    ):
+    if test_command("CLEARSCREEN", "FORWARD 50\nCLEARSCREEN", expected_lines=0):
         passed += 1
     else:
         failed += 1
@@ -294,9 +290,7 @@ def main():
         failed += 1
 
     # Turtle visibility
-    if test_command(
-        "HIDETURTLE", "HIDETURTLE", check_fn=lambda t: not t.visible
-    ):
+    if test_command("HIDETURTLE", "HIDETURTLE", check_fn=lambda t: not t.visible):
         passed += 1
     else:
         failed += 1
@@ -342,6 +336,26 @@ REPEAT 36 [
         check_fn=lambda t: t.lines
         and t.lines[0].color == (0, 0, 255)
         and t.lines[0].width == 10,
+    ):
+        passed += 1
+    else:
+        failed += 1
+
+    # IF command with expression
+    if test_command(
+        "IF with expression",
+        'MAKE "X 10\nIF :X > 5 [ FORWARD 50 ]',
+        expected_lines=1,
+    ):
+        passed += 1
+    else:
+        failed += 1
+
+    # IF command with expression (false)
+    if test_command(
+        "IF with expression (false)",
+        'MAKE "X 10\nIF :X < 5 [ FORWARD 50 ]',
+        expected_lines=0,
     ):
         passed += 1
     else:

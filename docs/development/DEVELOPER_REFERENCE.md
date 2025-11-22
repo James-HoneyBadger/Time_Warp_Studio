@@ -1,53 +1,84 @@
 # Developer Reference
 
-This document describes the architecture and extension points of TempleCode and Time Warp.
+This document describes the architecture and extension points of the Time Warp IDE.
 
-## Architecture
+## Architecture Overview
 
-- `templecode/interpreter.py` — TempleCode interpreter, safe expression evaluator, program model, and command execution.
-- `time.warp/app.py` — Tkinter IDE: editor, console, canvas (turtle), menus, status bar, examples, preferences.
-- `examples/` — sample TempleCode programs.
-- `run_templecode.py` — minimal CLI runner (no graphics).
+The Time Warp IDE is a multi-language educational programming environment built with Python and PySide6 (Qt). It supports multiple languages (BASIC, Logo, PILOT, TempleCode) through a unified interpreter architecture.
 
-## Key components
+### Directory Structure
 
-- SafeEval: wraps Python `ast` with a whitelist for expressions.
-- TempleInterpreter: maintains program lines, labels, procedure table, loop stacks, and call stack.
-- IOBase: pluggable I/O for console input/output.
-- TurtleAPI: pluggable turtle drawing backend; IDE provides a CanvasTurtle.
+- `platforms/python/` — Main Python implementation.
+  - `time_warp_ide.py` — Main entry point for the IDE.
+  - `time_warp/` — Core package.
+    - `core/` — Interpreter core, state management, and plugin system.
+      - `interpreter.py` — Main `TimeWarpInterpreter` class.
+    - `languages/` — Language-specific executors.
+      - `basic.py` — BASIC language implementation.
+      - `logo.py` — Logo language implementation.
+      - `pilot.py` — PILOT language implementation.
+      - `temple_code.py` — TempleCode language implementation.
+    - `ui/` — PySide6 UI components.
+      - `qt_ui.py` — Main window and UI factory.
+      - `widgets/` — Custom widgets (Canvas, Terminal, Editor).
+    - `utils/` — Utility modules (Expression evaluator, file I/O).
 
-## Extending the language
+## Key Components
 
-Add a new statement:
+### Interpreter (`core/interpreter.py`)
+The `TimeWarpInterpreter` is the central engine. It:
+- Manages execution state (variables, arrays, call stack).
+- Dispatches commands to language executors.
+- Handles control flow (loops, subroutines).
+- Manages the unified canvas and turtle graphics state.
 
-1. Define any needed turtle or I/O methods in `TurtleAPI` (optional) and implement them in the IDE's `CanvasTurtle`.
-2. Handle the new keyword in `TempleInterpreter._exec_line` (parse args with `_split_args` or `_split_on_comma`, evaluate with `_eval`).
-3. Add the keyword to the IDE highlighter in `TimeWarpApp._setup_highlighting`.
-4. Add examples and documentation.
+### Language Executors (`languages/`)
+Each language is implemented as a `LanguageExecutor` subclass. They:
+- Parse language-specific syntax.
+- Execute commands.
+- Interact with the interpreter state.
+- Return output strings with emoji prefixes for the UI.
 
-Expression functions:
+### User Interface (`ui/`)
+The UI is built with PySide6.
+- **Unified Canvas**: A custom widget that handles both turtle graphics and pixel-based drawing.
+- **Terminal**: A rich-text console for input/output.
+- **Editor**: A syntax-highlighting code editor.
 
-- Add safe helpers to `_ALLOWED_FUNCS` in `interpreter.py`.
+## Extending the Language
 
-## Debugging/tracing
+To add a new command or feature:
 
-- `TRACE ON/OFF`: Echoes each non-comment line before execution.
-- `DUMPVARS`: Prints merged variable scopes.
-- `PAUSE [prompt]`: Blocks for user input.
-- `ASSERT expr[, message]`: Raises error if expr is false.
+1.  **Identify the Language**: Determine which language (BASIC, Logo, etc.) the command belongs to.
+2.  **Implement in Executor**: Add the logic to the corresponding file in `languages/`.
+    -   Example: To add a `BEEP` command to BASIC, modify `languages/basic.py`.
+3.  **Register Command**: Ensure the command is recognized by the parser in the executor's `execute_command` method.
+4.  **Update UI (if needed)**: If the command requires UI interaction (e.g., a dialog), use the `interpreter.ui_interface`.
 
-## IDE preferences
+## Debugging
 
-Stored at `~/.time.warp/config.json`:
+-   **Console Output**: The IDE prints detailed logs to the terminal if run from a command line.
+-   **Emoji Prefixes**:
+    -   ❌ Error
+    -   ℹ️ Info
+    -   🎨 Theme Change
+    -   🚀 Execution Start
+    -   🐢 Turtle Action
 
-- theme: light|dark
-- editor_font_size: int
-- console_font_size: int
-- geometry: last window geometry string
+## Configuration
 
-Apply/update via `TimeWarpApp._apply_settings`, save via `_save_settings`.
+Preferences are stored in `~/.time_warp/config.json`:
+-   `theme`: UI theme name.
+-   `font_size`: Editor font size.
+-   `window_geometry`: Saved window position and size.
 
-## Testing tips
+## Testing
+
+Run tests using the `test_runner.py` script in the `platforms/python` directory:
+```bash
+cd platforms/python
+python test_runner.py --basic
+```
 
 - Use `run_templecode.py` for fast iteration; it reports interpreter errors without starting the GUI.
 - For graphical tests, run the IDE and use the Examples menu. Add tiny scripts for new commands.
