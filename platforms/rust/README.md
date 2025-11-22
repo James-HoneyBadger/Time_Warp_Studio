@@ -44,8 +44,8 @@ cargo build --release
 
 1. Launch Time Warp IDE
 2. Type this in the editor:
-   ```templecode
-   PRINT "Hello, TempleCode!"
+   ```basic
+   PRINT "Hello, Time Warp!"
    FOR i = 1 TO 5 STEP 1
        PRINT "Count: " + i
    NEXT i
@@ -59,7 +59,7 @@ cargo build --release
 
 ### Language Support
 
-**TempleCode** - All three classic languages in one unified syntax:
+**Unified Language** - All three classic languages in one unified syntax:
 
 **BASIC Commands:**
 - `PRINT`, `INPUT`, `LET`, `IF...THEN`
@@ -129,8 +129,8 @@ Eight built-in professional themes:
 
 ### Hello World
 
-```templecode
-REM My first TempleCode program
+```basic
+REM My first program
 PRINT "Hello, World!"
 INPUT name "What's your name?"
 PRINT "Nice to meet you, " + name + "!"

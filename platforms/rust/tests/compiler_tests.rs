@@ -1,4 +1,4 @@
-use time_warp_unified::compiler::TempleCodeCompiler;
+use time_warp_unified::compiler::Compiler;
 
 #[test]
 fn compile_to_c_basic_program() {
@@ -8,7 +8,7 @@ fn compile_to_c_basic_program() {
 30 IF X > 3 THEN PRINT "Greater"
 40 END
 "#;
-    let comp = TempleCodeCompiler::new();
+    let comp = Compiler::new();
     let c = comp.compile_to_c(src).expect("compile_to_c failed");
     assert!(c.contains("double V_X"));
     assert!(c.contains("line_10"));

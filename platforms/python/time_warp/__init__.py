@@ -1,6 +1,6 @@
 """
 Time Warp IDE - Python Implementation
-Educational TempleCode programming environment (unified BASIC, PILOT, Logo)
+Educational programming environment (unified BASIC, PILOT, Logo)
 Ported from Rust version (time-warp-unified v2.0.0)
 """
 

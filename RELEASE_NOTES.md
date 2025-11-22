@@ -127,9 +127,9 @@ This release establishes Time Warp IDE as a **world-class educational programmin
 
 ## Previous Releases
 
-### Version 2.0.0 - TempleCode Language Foundation
+### Version 2.0.0 - Language Foundation
 **Release Date**: [Previous Release]
-- Initial TempleCode language specification
+- Initial language specification
 - Basic multi-platform implementation
 - Foundation educational features
 - Community framework establishment

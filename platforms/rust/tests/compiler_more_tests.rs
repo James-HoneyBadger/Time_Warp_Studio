@@ -1,4 +1,4 @@
-use time_warp_unified::compiler::TempleCodeCompiler;
+use time_warp_unified::compiler::Compiler;
 
 #[test]
 fn compile_to_c_input_with_prompt() {
@@ -7,7 +7,7 @@ fn compile_to_c_input_with_prompt() {
 20 PRINT A
 30 END
 "#;
-    let comp = TempleCodeCompiler::new();
+    let comp = Compiler::new();
     let c = comp.compile_to_c(src).expect("compile_to_c failed");
     // Should emit prompt via fputs with the prompt string
     assert!(c.contains("fputs(\"Age? \", stdout);"));
@@ -23,7 +23,7 @@ fn compile_to_c_print_numeric_literal() {
 10 PRINT 42, " units"
 20 END
 "#;
-    let comp = TempleCodeCompiler::new();
+    let comp = Compiler::new();
     let c = comp.compile_to_c(src).expect("compile_to_c failed");
     // Should print numeric literal directly
     assert!(c.contains("printf(\"%g\", 42)"));
@@ -39,7 +39,7 @@ fn compile_to_c_rem_comments() {
 30 REM
 40 END
 "#;
-    let comp = TempleCodeCompiler::new();
+    let comp = Compiler::new();
     let c = comp.compile_to_c(src).expect("compile_to_c failed");
     // REM should be converted to C comments
     assert!(c.contains("/* This is a comment */"));

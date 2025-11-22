@@ -1,6 +1,6 @@
 # Time Warp IDE — User Guide
 
-Welcome to Time Warp IDE, a retromodern learning environment for TempleCode — a unified language combining BASIC, PILOT, and Logo with turtle graphics. This guide covers daily use of the Rust-based IDE.
+Welcome to Time Warp IDE, a retromodern learning environment combining BASIC, PILOT, and Logo with turtle graphics. This guide covers daily use of the Rust-based IDE.
 
 For help: <james@honey-badger.org>
 
@@ -24,7 +24,7 @@ cargo run
 
 Notes:
 
-- Examples are in `examples/` (TempleCode supports `.tc`, `.bas`, `.pilot`, `.logo`).
+- Examples are in `examples/` (Time Warp supports `.bas`, `.pilot`, `.logo`).
 - Turtle graphics render on the unified canvas.
 
 ## Language Reference
@@ -192,7 +192,7 @@ Getting help:
 
 - Rust stable toolchain (rustup, cargo)
 - Linux desktop environment (X11/Wayland)
-- Optional: C compiler (cc/gcc/clang) to build TempleCode to native executables
+- Optional: C compiler (cc/gcc/clang) to build programs to native executables
 - At least 50MB disk space
 
 ---

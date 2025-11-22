@@ -25,8 +25,8 @@ Central execution engine supporting PILOT, BASIC, and Logo languages.
 
 ---
 
-### `compiler::TempleCodeCompiler`
-Experimental transpiler for TempleCode → C → executable compilation.
+### `compiler::Compiler`
+Experimental transpiler for Time Warp → C → executable compilation.
 
 **Workflow:**
 1. `compile_to_c(source: &str) -> Result<String>` - Generate C code

@@ -8,7 +8,7 @@
 
 > **🎯 Part of the Time Warp Educational Platform** — See [main documentation](../docs/) for complete guides and curriculum materials.
 
-The **Web implementation** of Time Warp IDE brings TempleCode programming directly to any modern web browser. Perfect for **Chromebooks**, **1:1 device programs**, and **remote learning**, this version requires no installation and works on any device with internet access.
+The **Web implementation** of Time Warp IDE brings multi-language programming directly to any modern web browser. Perfect for **Chromebooks**, **1:1 device programs**, and **remote learning**, this version requires no installation and works on any device with internet access.
 
 ## Features
 
@@ -24,7 +24,7 @@ The **Web implementation** of Time Warp IDE brings TempleCode programming direct
 ## ✨ Features
 
 ### 🎓 **Educational Excellence**
-- **Complete TempleCode Support**: BASIC, PILOT, and Logo in one unified language
+- **Complete Language Support**: BASIC, PILOT, and Logo in one unified environment
 - **Interactive Turtle Graphics**: Full HTML5 Canvas implementation with smooth animations
 - **Professional IDE Features**: Syntax highlighting, line numbers, and error detection
 - **Mobile-Responsive Design**: Perfect for tablets and Chromebooks

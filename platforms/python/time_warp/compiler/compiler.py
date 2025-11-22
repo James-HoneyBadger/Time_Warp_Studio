@@ -1,6 +1,6 @@
-"""TempleCode compiler for Time Warp IDE.
+"""Compiler for Time Warp IDE.
 
-Compiles TempleCode programs to C and then to native executables.
+Compiles programs to C and then to native executables.
 """
 
 import os
@@ -9,10 +9,10 @@ import tempfile
 
 
 def compile_to_c(source_code: str) -> str:
-    """Compile TempleCode source to C code.
+    """Compile source to C code.
 
     Args:
-        source_code: TempleCode program source
+        source_code: Program source
 
     Returns:
         Generated C code
@@ -44,7 +44,7 @@ int main() {
 }
 """
 
-    # Parse and translate TempleCode to C
+    # Parse and translate to C
     lines = source_code.split("\n")
     c_code_lines = []
 
@@ -115,10 +115,10 @@ def _var_to_index(var_name: str) -> int:
 
 
 def _translate_expression(expr: str) -> str:
-    """Translate TempleCode expression to C expression.
+    """Translate expression to C expression.
 
     Args:
-        expr: TempleCode expression
+        expr: Expression string
 
     Returns:
         C expression
@@ -146,10 +146,10 @@ def _translate_expression(expr: str) -> str:
 def compile_to_executable(
     source_code: str, output_path: str, compiler: str = "gcc"
 ) -> bool:
-    """Compile TempleCode to native executable.
+    """Compile to native executable.
 
     Args:
-        source_code: TempleCode program source
+        source_code: Program source
         output_path: Path for output executable
         compiler: C compiler to use (gcc, clang, etc.)
 

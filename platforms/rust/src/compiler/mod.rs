@@ -4,9 +4,9 @@ use std::fs;
 use std::path::Path;
 use std::process::Command;
 
-/// Experimental TempleCode-to-C compiler (transpiler + system compiler invoker)
+/// Experimental Time Warp-to-C compiler (transpiler + system compiler invoker)
 ///
-/// Transpiles TempleCode programs to C and invokes the system compiler (cc, gcc, or clang)
+/// Transpiles Time Warp programs to C and invokes the system compiler (cc, gcc, or clang)
 /// to produce standalone executables. Supports text-mode BASIC and PILOT subset.
 ///
 /// # Supported Features
@@ -22,12 +22,12 @@ use std::process::Command;
 /// - Comparisons: `<>` → `!=`, `=` → `==`
 ///
 /// # Compilation Process
-/// 1. `compile_to_c()`: TempleCode → C source string
+/// 1. `compile_to_c()`: Source → C source string
 /// 2. `compile_to_executable()`: Write temp file → invoke system cc → produce binary
 ///
 /// # Example
 /// ```ignore
-/// let compiler = TempleCodeCompiler::new();
+/// let compiler = Compiler::new();
 /// let c_code = compiler.compile_to_c("10 PRINT \"Hello\"\n20 END")?;
 /// let exe_path = compiler.compile_to_executable(&c_code, "hello")?;
 /// // Run: ./hello
@@ -38,14 +38,14 @@ use std::process::Command;
 /// - INPUT prompts embedded as string literals
 /// - REM comments converted to `/* ... */`
 /// - System compiler detected via `cc` command (gcc/clang fallback)
-pub struct TempleCodeCompiler;
+pub struct Compiler;
 
-impl TempleCodeCompiler {
+impl Compiler {
     pub fn new() -> Self {
         Self
     }
 
-    /// Compile TempleCode source into C code (as a String)
+    /// Compile source into C code (as a String)
     pub fn compile_to_c(&self, source: &str) -> Result<String> {
         let mut c = String::new();
         let mut line_map: Vec<(Option<usize>, String)> = Vec::new();
@@ -118,7 +118,7 @@ impl TempleCodeCompiler {
                 continue;
             }
 
-            // TempleCode detection (BASIC/PILOT/Logo merged)
+            // Unified language detection (BASIC/PILOT/Logo merged)
             if up.starts_with("REM ") || up == "REM" {
                 // Emit as C comment
                 let comment_text = if up == "REM" { "" } else { &cmd[4..] };
@@ -226,12 +226,12 @@ impl TempleCodeCompiler {
         Ok(c)
     }
 
-    /// Compile TempleCode source directly to an executable using system C compiler (cc/gcc/clang)
+    /// Compile source directly to an executable using system C compiler (cc/gcc/clang)
     pub fn compile_to_executable(&self, source: &str, output_path: &Path) -> Result<()> {
         let c_src = self.compile_to_c(source)?;
         let tmp_dir = Path::new("target/tmp");
         fs::create_dir_all(tmp_dir).ok();
-        let c_path = tmp_dir.join("templecode_out.c");
+        let c_path = tmp_dir.join("timewarp_out.c");
         fs::write(&c_path, c_src)?;
 
         // Try common compilers
@@ -435,7 +435,7 @@ impl TempleCodeCompiler {
     }
 }
 
-impl Default for TempleCodeCompiler {
+impl Default for Compiler {
     fn default() -> Self {
         Self::new()
     }

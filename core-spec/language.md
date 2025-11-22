@@ -1,4 +1,4 @@
-# TempleCode Language Specification (stub)
+# Time Warp Language Specification (stub)
 
 This document will centralize the cross-platform language reference (BASIC/PILOT/Logo blend) including:
 

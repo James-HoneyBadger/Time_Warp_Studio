@@ -18,6 +18,7 @@ COLOR_NAMES = {
     "YELLOW": (255, 255, 0),
     "CYAN": (0, 255, 255),
     "MAGENTA": (255, 0, 255),
+    "PINK": (255, 192, 203),
     "GRAY": (128, 128, 128),
     "GREY": (128, 128, 128),
 }
@@ -79,8 +80,19 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
         old_x = self.x
         old_y = self.y
 
+        # In standard math/Logo coordinates (0=Up, 90=Right):
+        # x += distance * sin(heading)
+        # y += distance * cos(heading)
+        #
+        # The UI canvas (canvas.py) applies a Y-flip (scale(zoom, -zoom)).
+        # So we should use standard Cartesian coordinates here.
+        #
+        # Previous implementation used inverted Y (y -= ...), which assumed
+        # screen coordinates (Y down). But since canvas.py flips Y,
+        # we should use standard math coordinates (Y up).
+
         self.x += distance * math.sin(rad)
-        self.y -= distance * math.cos(rad)  # Y inverted in screen coords
+        self.y += distance * math.cos(rad)
 
         if self.pen_down:
             self.lines.append(

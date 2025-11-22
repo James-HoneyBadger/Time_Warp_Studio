@@ -85,7 +85,7 @@ LOGO_COMMANDS = {
     "DIFFERENCE",
     "PRODUCT",
     "QUOTIENT",
-    "RANDOM",
+    # "RANDOM",  # Removed to allow usage as argument (e.g. MAKE "X RANDOM 100)
     "ARC",
     "FILLED",
     "LABEL",
@@ -98,7 +98,7 @@ LOGO_COMMANDS = {
 }
 
 
-def _split_logo_commands(text: str) -> List[str]:
+def _split_logo_commands(text: str, interpreter: "Interpreter" = None) -> List[str]:
     """
     Splits a Logo command string into individual commands,
     respecting brackets and nesting.
@@ -109,7 +109,7 @@ def _split_logo_commands(text: str) -> List[str]:
 
     # Tokenize: brackets, quoted strings, or other words
     # Handle "WORD (quote at start)
-    tokens = re.findall(r'\[|\]|"[^"\s]*|[^\[\]\s]+', text)
+    tokens = re.findall(r'\[|\]|"[^\s]*|[^\[\]\s]+', text)
 
     for token in tokens:
         if token == "[":
@@ -121,7 +121,12 @@ def _split_logo_commands(text: str) -> List[str]:
         else:
             # If depth is 0 and token is a known command, start new command
             # BUT only if we have a current command accumulated.
-            if bracket_depth == 0 and token.upper() in LOGO_COMMANDS:
+            is_command = token.upper() in LOGO_COMMANDS
+            if not is_command and interpreter and bracket_depth == 0:
+                # Check if it's a user-defined procedure
+                is_command = token.upper() in interpreter.logo_procedures
+
+            if bracket_depth == 0 and is_command:
                 if current_command:
                     commands.append(" ".join(current_command))
                     current_command = []
@@ -142,7 +147,7 @@ def execute_logo(
     Executes a Logo command string.
     Handles multiple commands on a single line by splitting them.
     """
-    commands = _split_logo_commands(command)
+    commands = _split_logo_commands(command, interpreter)
     output = ""
     for cmd in commands:
         output += _execute_single_logo_command(interpreter, cmd, turtle)
@@ -154,8 +159,13 @@ def _execute_single_logo_command(
     command: str,
     turtle: "TurtleState",
 ) -> str:
+    # Strip comment
+    comment_idx = command.find(";")
+    if comment_idx != -1:
+        command = command[:comment_idx]
+
     cmd = command.strip().upper()
-    if cmd.startswith(";"):
+    if not cmd:
         return ""
     words = cmd.split()
     if not words:
@@ -288,6 +298,13 @@ def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
     """Evaluate a Logo expression string with :VAR names and spaces."""
     # Replace :VAR with VAR for evaluator
     expr_norm = re.sub(r":([A-Za-z_][A-Za-z0-9_]*)", r"\1", expr)
+
+    # Handle RANDOM N -> FLOOR(RND * N)
+    # Matches RANDOM followed by number or variable
+    expr_norm = re.sub(
+        r"RANDOM\s+([A-Za-z0-9_.]+)", r"FLOOR(RND * \1)", expr_norm, flags=re.IGNORECASE
+    )
+
     try:
         return interpreter.evaluate_expression(expr_norm)
     except (ValueError, TypeError, ZeroDivisionError):
@@ -407,7 +424,7 @@ def _logo_setpencolor(
 
 
 def _logo_setcolor(
-    _interpreter: "Interpreter",
+    interpreter: "Interpreter",
     turtle: "TurtleState",
     args: List[str],
 ) -> str:
@@ -415,14 +432,14 @@ def _logo_setcolor(
         return "❌ SETCOLOR requires color\n"
     if len(args) == 1:
         # Named color or hex
-        color_str = args[0].strip()
+        color_str = args[0].strip().strip('"')
         turtle.pencolor(color_str)
     elif len(args) == 3:
         # RGB values
         try:
-            r = int(args[0])
-            g = int(args[1])
-            b = int(args[2])
+            r = int(_logo_eval_arg(interpreter, args[0]))
+            g = int(_logo_eval_arg(interpreter, args[1]))
+            b = int(_logo_eval_arg(interpreter, args[2]))
             turtle.setcolor(r, g, b)
         except ValueError:
             return "❌ SETCOLOR RGB values must be integers\n"
@@ -432,7 +449,7 @@ def _logo_setcolor(
 
 
 def _logo_setbgcolor(
-    _interpreter: "Interpreter",
+    interpreter: "Interpreter",
     turtle: "TurtleState",
     args: List[str],
 ) -> str:
@@ -440,7 +457,7 @@ def _logo_setbgcolor(
         return "❌ SETBGCOLOR requires color\n"
     if len(args) == 1:
         # Named color or hex
-        color_str = args[0].strip()
+        color_str = args[0].strip().strip('"')
         # For bgcolor, we only support RGB for now, but could extend
         if color_str.upper() in COLOR_NAMES:
             turtle.setbgcolor(*COLOR_NAMES[color_str.upper()])
@@ -449,9 +466,9 @@ def _logo_setbgcolor(
     elif len(args) == 3:
         # RGB values
         try:
-            r = int(args[0])
-            g = int(args[1])
-            b = int(args[2])
+            r = int(_logo_eval_arg(interpreter, args[0]))
+            g = int(_logo_eval_arg(interpreter, args[1]))
+            b = int(_logo_eval_arg(interpreter, args[2]))
             turtle.setbgcolor(r, g, b)
         except ValueError:
             return "❌ SETBGCOLOR RGB values must be integers\n"
@@ -650,13 +667,14 @@ def _logo_call_procedure(
         return f"❌ Procedure {proc_name} requires {num_params} inputs\n"
 
     # Consume args
-    used_args = args[:num_params]
-    # The remaining args are ignored here?
-    # In _execute_single_logo_command, we return the result string.
-    # If there are leftover args, they are lost?
-    # This is a limitation of the current simple parser.
-    # Ideally, we should consume args and return how many were consumed.
-    # But for now, let's assume commands are well-separated or on separate lines.
+    # If there is only 1 parameter, assume the rest of the line is the expression
+    # This fixes cases like "TREE :SIZE * 0.7" where args is [":SIZE", "*", "0.7"]
+    if num_params == 1:
+        used_args = [" ".join(args)]
+    else:
+        # For multiple params, this is still ambiguous without better parsing
+        # But we'll stick to the simple split for now
+        used_args = args[:num_params]
 
     for i, param_name in enumerate(params):
         arg_expr = used_args[i]
@@ -669,18 +687,25 @@ def _logo_call_procedure(
         # Execute the procedure body, handling multi-line bracketed commands
         # Parse the body into complete commands
         commands = _parse_logo_commands(proc_body)
+        output = ""
 
         for cmd in commands:
             cmd = cmd.strip()
             if cmd:
+                # Pass interpreter to execute_logo to handle nested procedure calls
                 result = execute_logo(interpreter, cmd, turtle)
                 # Check if STOP was encountered
                 if "STOP_PROCEDURE" in result:
                     # Remove the STOP marker and stop execution
-                    return result.replace("STOP_PROCEDURE", "")
-                if result:
-                    return result  # Return any error
-        return ""
+                    output += result.replace("STOP_PROCEDURE", "")
+                    return output
+
+                # Check for error (simple heuristic)
+                if result.startswith("❌"):
+                    return output + result
+
+                output += result
+        return output
     finally:
         # Restore old variable values
         for var, value in old_values.items():
@@ -694,6 +719,23 @@ def _logo_print(interpreter: "Interpreter", args: List[str]) -> str:
     if not args:
         interpreter.output.append("")
         return "\n"
+
+    # Check for variable access :VAR
+    if len(args) == 1 and args[0].startswith(":"):
+        var_name = args[0][1:].upper()
+        val = None
+        if var_name in interpreter.variables:
+            val = interpreter.variables[var_name]
+        elif var_name in interpreter.string_variables:
+            val = interpreter.string_variables[var_name]
+        elif var_name in interpreter.logo_lists:
+            val = interpreter.logo_lists[var_name]
+
+        if val is not None:
+            val_str = str(val)
+            interpreter.output.append(val_str)
+            return val_str + "\n"
+
     # Check if this is a function call
     func_names = [
         "SUM",
@@ -735,7 +777,8 @@ def _logo_make(interpreter: "Interpreter", args: List[str]) -> str:
 
     # Try to evaluate as number first
     try:
-        value = interpreter.evaluate_expression(value_expr)
+        # Use _logo_eval_expr_str to handle RANDOM syntax and :VAR substitution
+        value = _logo_eval_expr_str(interpreter, value_expr)
         interpreter.variables[var_name.upper()] = value
         return ""
     except (ValueError, TypeError):

@@ -31,13 +31,13 @@ mod iot;
 use app::TimeWarpApp;
 use std::fs;
 use std::path::PathBuf;
-use time_warp_unified::compiler::TempleCodeCompiler;
+use time_warp_unified::compiler::Compiler;
 
 /// Main entry point for Time Warp IDE
 ///
 /// Supports two modes:
 /// - GUI mode: `time-warp` (default)
-/// - CLI compilation mode: `time-warp --compile input.tc [-o output]`
+/// - CLI compilation mode: `time-warp --compile input.tw [-o output]`
 fn main() -> Result<()> {
     // Initialize logging system
     tracing_subscriber::fmt::init();
@@ -56,7 +56,7 @@ fn main() -> Result<()> {
 
 /// Handle CLI compilation mode
 ///
-/// Compiles a TempleCode source file to a native executable
+/// Compiles a source file to a native executable
 fn handle_cli_compilation(args: Vec<String>) -> Result<()> {
     if args.len() < 2 {
         return Err(anyhow::anyhow!("Usage: --compile <input> [-o <output>]"));
@@ -79,7 +79,7 @@ fn handle_cli_compilation(args: Vec<String>) -> Result<()> {
         o
     });
     
-    let compiler = TempleCodeCompiler::new();
+    let compiler = Compiler::new();
     compiler.compile_to_executable(&src, &out_path)?;
     println!("✅ Built executable: {}", out_path.display());
     Ok(())

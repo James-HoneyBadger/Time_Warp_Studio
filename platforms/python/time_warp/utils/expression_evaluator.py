@@ -321,6 +321,12 @@ class ExpressionEvaluator:
 
             elif token.type == Token.Type.VARIABLE:
                 var_name = token.value
+
+                # Handle RND/RAND as dynamic variables
+                if var_name in ("RND", "RAND"):
+                    stack.append(random.random())
+                    continue
+
                 if var_name not in self.variables:
                     raise ValueError(f"Undefined variable: {var_name}")
                 stack.append(self.variables[var_name])

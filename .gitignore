@@ -32,4 +32,10 @@ Cargo.lock
 *.zip
 # Development tools and binaries
 tools/swiftly
-tools/Temple_Code.sln
+# Visual Studio
+.vs/
+*.user
+*.suo
+*.sln
+*.opensdf
+*.sdf

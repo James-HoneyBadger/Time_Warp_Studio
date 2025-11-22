@@ -1,0 +1,10 @@
+*START
+T: What is the capital of France?
+A: #CAPITAL
+M: Paris
+TY: Correct!
+JY: *END
+T: Incorrect. Try again.
+J: *START
+*END
+T: Thanks for playing!

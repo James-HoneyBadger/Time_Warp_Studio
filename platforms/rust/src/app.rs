@@ -257,7 +257,7 @@ impl eframe::App for TimeWarpApp {
                         ui.heading("Time Warp IDE");
                         ui.label(format!("Version {}", env!("CARGO_PKG_VERSION")));
                         ui.add_space(10.0);
-                        ui.label("Educational programming environment for TempleCode");
+                        ui.label("Educational programming environment");
                         ui.label("Combining BASIC, PILOT, and Logo");
                         ui.add_space(10.0);
                         ui.hyperlink_to(

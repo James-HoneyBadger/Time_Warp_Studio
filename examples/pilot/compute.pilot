@@ -1,0 +1,6 @@
+C: X = 5
+C: Y = 10
+C: Z = X + Y
+T: X is #X
+T: Y is #Y
+T: Sum is #Z

@@ -685,7 +685,7 @@ By the end of this 8-week course, students will:
 - ✅ Have a portfolio of 10+ programs
 
 **Next Steps**:
-- Advanced TempleCode course
+- Advanced Time Warp course
 - More advanced algorithms
 - Web development
 - Game design

@@ -4,8 +4,8 @@ pub mod pilot;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum Language {
-    /// Unified TempleCode language (BASIC + PILOT + Logo)
-    TempleCode,
+    /// Unified Time Warp language (BASIC + PILOT + Logo)
+    Unified,
     Pilot,
     Basic,
     Logo,
@@ -14,8 +14,8 @@ pub enum Language {
 impl Language {
     pub fn from_extension(ext: &str) -> Self {
         match ext.to_lowercase().as_str() {
-            // TempleCode unified language
-            "tc" | "temple" | "templecode" => Language::TempleCode,
+            // Unified language
+            "tw" | "timewarp" => Language::Unified,
             "pilot" | "pil" => Language::Pilot,
             "bas" | "basic" => Language::Basic,
             "logo" | "lgo" => Language::Logo,
@@ -25,7 +25,7 @@ impl Language {
 
     pub fn name(&self) -> &str {
         match self {
-            Language::TempleCode => "TempleCode",
+            Language::Unified => "Time Warp",
             Language::Pilot => "PILOT",
             Language::Basic => "BASIC",
             Language::Logo => "Logo",

@@ -17,7 +17,7 @@ The **Python implementation** of Time Warp IDE prioritizes **accessibility and e
 - **👨‍🏫 Education-First**: Designed specifically for classroom environments
 - **🔍 Readable Code**: Students can explore the implementation to learn Python
 - **📦 Lightweight**: Minimal dependencies make it perfect for restricted networks
-- **🎨 Full Feature Set**: Complete TempleCode language with turtle graphics
+- **🎨 Full Feature Set**: Complete multi-language support with turtle graphics
 
 ---
 
@@ -25,7 +25,7 @@ The **Python implementation** of Time Warp IDE prioritizes **accessibility and e
 
 ### Language Features
 
-- ✅ **Unified TempleCode**: Mix BASIC, PILOT, and Logo seamlessly
+- ✅ **Unified Environment**: Mix BASIC, PILOT, and Logo seamlessly
 - ✅ **50+ Commands**: Complete verified command set
 - ✅ **Turtle Graphics**: Full Logo compatibility with procedures
 - ✅ **Color Support**: Named colors, hex codes, and RGB values
@@ -195,10 +195,9 @@ time_warp/
 ├── core/                      # Core interpreter engine
 │   └── interpreter.py         # Main execution engine
 ├── languages/                 # Language executors
-│   ├── templecode.py          # 🌟 Unified TempleCode executor (BASIC+PILOT+Logo)
-│   ├── pilot.py               # Legacy compatibility wrapper
-│   ├── basic.py               # Legacy compatibility wrapper
-│   └── logo.py                # Legacy compatibility wrapper
+│   ├── pilot.py               # PILOT language executor
+│   ├── basic.py               # BASIC language executor
+│   └── logo.py                # Logo language executor
 ├── graphics/                  # Turtle graphics system
 │   └── turtle_state.py        # Turtle position, angle, pen state
 ├── utils/                     # Utilities
@@ -211,7 +210,7 @@ time_warp/
     └── theme_manager.py       # Theme system (8 themes)
 ```
 
-**Key Design:** TempleCode is a **unified language** - all BASIC, PILOT, and Logo commands work together in a single program. The `templecode.py` executor handles all three syntaxes seamlessly.
+**Key Design:** Time Warp is a **unified environment** - BASIC, PILOT, and Logo commands work together in a single program. The `interpreter.py` engine handles all three syntaxes seamlessly.
 
 ---
 
@@ -254,8 +253,8 @@ from time_warp.core.interpreter import Interpreter
 
 interp = Interpreter()
 
-# Execute TempleCode (unified BASIC+PILOT+Logo)
-output = interp.execute_templecode(source_code, turtle_state)
+# Execute program
+output = interp.execute(source_code, turtle_state)
 
 # Legacy methods (compatibility)
 output = interp.execute_pilot(pilot_code, turtle_state)
@@ -339,7 +338,7 @@ suggestion = hints.get_suggestion('FORWRD', ['FORWARD', 'BACKWARD'])
 | Component | Status | Completion |
 |-----------|--------|------------|
 | Core Interpreter | ✅ Complete | 100% |
-| TempleCode Executor | ✅ Complete | 100% |
+| Language Executors | ✅ Complete | 100% |
 | Turtle Graphics | ✅ Complete | 100% |
 | Logo Procedures | ✅ Complete | 100% |
 | Expression Evaluator | ✅ Complete | 100% |

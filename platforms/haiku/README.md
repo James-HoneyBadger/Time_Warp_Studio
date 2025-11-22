@@ -1,6 +1,6 @@
 # Time Warp IDE - Haiku OS Edition
 
-Educational programming environment for Haiku OS featuring TempleCode (BASIC, PILOT, Logo) with native BeOS/Haiku API integration.
+Educational programming environment for Haiku OS featuring BASIC, PILOT, and Logo with native BeOS/Haiku API integration.
 
 ## Features
 

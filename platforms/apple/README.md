@@ -9,7 +9,7 @@
 
 > **🎯 Part of the Time Warp Educational Platform** — See [main documentation](../docs/) for complete guides and curriculum materials.
 
-The **Apple implementation** of Time Warp IDE brings TempleCode programming to the **Apple ecosystem** with native macOS and iOS applications. Perfect for **iPad classrooms**, **1:1 Mac programs**, and **mobile learning initiatives** that leverage Apple's educational technology ecosystem.
+The **Apple implementation** of Time Warp IDE brings multi-language programming to the **Apple ecosystem** with native macOS and iOS applications. Perfect for **iPad classrooms**, **1:1 Mac programs**, and **mobile learning initiatives** that leverage Apple's educational technology ecosystem.
 
 ## 🎯 Why Choose the Apple Version?
 
