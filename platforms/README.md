@@ -9,8 +9,7 @@ This directory contains experimental prototype implementations of Time Warp for 
 - `dos/` – MS-DOS / DOSBox build written in portable C
 - `python/` – Primary implementation with PySide6 GUI (actively maintained)
 - `web/` – Browser-based implementation (HTML5/JS)
-- `win2000/` – Windows 2000 compatibility branch (Win32/C)
-- `windows/` – Modern Windows launcher and WPF shell
+- `win2000/` – Windows 2000 implementation (Win32/C)
 
 ## Status
 
