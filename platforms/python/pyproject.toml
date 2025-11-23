@@ -72,11 +72,11 @@ Issues = "https://github.com/James-HoneyBadger/Time_Warp/issues"
 Changelog = "https://github.com/James-HoneyBadger/Time_Warp/blob/main/docs/misc/CHANGELOG.md"
 
 [project.scripts]
-time-warp = "platforms.python.time_warp_ide:main"
+time-warp = "time_warp_ide:main"
 
 [tool.setuptools]
 package-dir = {"" = "."}
-packages = ["platforms.python"]
+packages = ["time_warp"]
 
 [tool.setuptools.package-data]
 "*" = ["*.md", "*.txt", "*.json", "examples/**/*"]
