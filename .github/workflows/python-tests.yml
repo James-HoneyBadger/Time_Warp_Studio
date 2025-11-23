@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: Time_Warp_Python
+        working-directory: platforms/python
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -33,4 +33,4 @@ jobs:
           ruff check --select=E9,F63,F7,F82 --output-format=github .
       - name: Test
         run: |
-          xvfb-run -a python -m pytest test_basic_functionality.py -v
+          xvfb-run -a pytest -v
