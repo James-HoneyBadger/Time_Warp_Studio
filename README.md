@@ -67,34 +67,32 @@ Download `TimeWarpIDE-Setup.exe` from [Releases](https://github.com/honey-badger
 
 ## 💻 Platforms
 
-Platform-specific implementations:
+Active / historical implementations now consolidated:
 
 | Platform | Location | Status | Description |
 |----------|----------|--------|-------------|
-| **Python** | [`platforms/python/`](platforms/python/) | ✅ Primary | Full-featured implementation with PySide6 |
-| **Rust** | [`platforms/rust/`](platforms/rust/) | ✅ Active | High-performance native implementation |
-| **Web** | [`platforms/web/`](platforms/web/) | 🚧 In Progress | Browser-based version |
-| **Go** | [`platforms/go/`](platforms/go/) | 🚧 Experimental | CLI and GUI in Go |
-| **Retro** | [`platforms/amiga/`](platforms/amiga/), [`platforms/win2000/`](platforms/win2000/) | 🎮 Special | Vintage system ports |
+| **Python** | `Platforms/Python/` | ✅ Primary | Full-featured PySide6 implementation (BASIC, PILOT, Logo, Pascal, Prolog, C experimental) |
+| **Browser** | `Platforms/Browser/` | 🧪 Experimental | HTML/JS interpreter prototype |
+| **DOS** | `Platforms/DOS/` | 🧪 Experimental | Text-mode educational port |
+| **Windows 2000** | `Platforms/Windows2000/` | 🧪 Historical | Vintage native Win2000 IDE build |
+
+Removed legacy platforms: Rust, Go, Amiga, Haiku, Apple, OS/2.
 
 ## 📂 Project Structure
 
 ```
 Time_Warp/
-├── platforms/          # Platform-specific implementations
-│   ├── python/        # Primary implementation (PySide6)
-│   ├── rust/          # Native implementation (egui)
-│   └── ...
-├── docs-new/          # Comprehensive documentation
-│   ├── user/          # User guides and tutorials
-│   ├── student/       # Student learning materials
-│   ├── teacher/       # Educator resources
-│   ├── installation/  # Setup guides
-│   ├── developer/     # Developer documentation
-│   └── reference/     # Technical references
-├── examples/          # Sample programs (all languages)
-├── core-spec/         # Language specifications
-└── tests/             # Cross-platform tests
+├── Platforms/         # Platform implementations (Python primary)
+│   ├── Python/        # Active PySide6 IDE & interpreters
+│   ├── Browser/       # Web prototype
+│   ├── DOS/           # Text-mode prototype
+│   └── Windows2000/   # Historical native build
+├── Docs/              # Comprehensive documentation (users, dev, install)
+├── Examples/          # Sample programs (BASIC, Logo, PILOT, etc.)
+├── Core_Spec/         # Language specifications
+├── Scripts/           # Utility and build scripts
+├── Tests/             # Test suite (pytest)
+└── Packaging/         # Packaging resources
 ```
 
 ## 🎯 Why Time Warp IDE?
@@ -103,7 +101,7 @@ Time_Warp/
 
 **Historical Perspective**: Understand how programming evolved. Learn why modern languages work the way they do by experiencing their ancestors.
 
-**Multiple Paradigms**: 
+**Multiple Paradigms**:
 - **Procedural** (BASIC, C)
 - **Educational** (PILOT)
 - **Visual** (Logo)

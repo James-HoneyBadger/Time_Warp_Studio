@@ -10,20 +10,22 @@
 
 Time Warp IDE is an educational programming environment for TempleCode — a unified language combining BASIC, PILOT, and Logo — with integrated turtle graphics, IoT/robotics capabilities, and game development features.
 
-**Current State:** Rust implementation is primary. Legacy Python variants have been removed.
+**Current State:** Python implementation (PySide6) is the sole actively maintained version. All other platform implementations (Rust, Go, Amiga, Haiku, Apple, OS/2) have been removed from the repository. Only auxiliary experimental directories (e.g. Browser, DOS, Windows2000) remain for historical reference.
 
 ## Architecture: The Big Picture
 
 ### Implementation
 
-- **Rust (egui)** — primary and official version
-  - Entry point: `src/main.rs` → App: `src/app.rs` → Interpreter: `src/interpreter/`
+- **Python (PySide6)** — primary and official version
+    - Entry point: `time_warp_ide.py` → Core: `Platforms/Python/time_warp/core/interpreter.py`
+    - Languages: BASIC, PILOT, Logo (+ Pascal, Prolog, C experimental)
+    - All UI state (editor, canvas, themes) lives outside language executors
 
 **Critical Design Decision:** Language executors are stateless command processors returning text output. All UI state (turtle canvas, output display, themes) lives in the main application, not the interpreter.
 
 ## Language Executor Pattern
 
-Each language executor in Rust handles parsing and updates interpreter state, emitting text output with emoji prefixes (❌ error, ℹ️ info, 🎨 theme, 🚀 run, 🐢 turtle).
+Each language executor in Python handles parsing and updates interpreter state, emitting text output with emoji prefixes (❌ error, ℹ️ info, 🎨 theme, 🚀 run, 🐢 turtle).
 
 ## Critical Workflows
 
