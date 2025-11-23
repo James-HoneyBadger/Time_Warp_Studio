@@ -56,6 +56,9 @@ RIGHT 45`,
 				got = interp.Execute(tt.code)
 			}
 
+			// Debug: always log what we got
+			t.Logf("Code: %q\nGot: %q", tt.code, got)
+
 			for _, want := range tt.contains {
 				if !strings.Contains(got, want) {
 					t.Errorf("Output missing expected substring:\nWant: %q\nGot: %s", want, got)

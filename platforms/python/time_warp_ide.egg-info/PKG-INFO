@@ -1,19 +1,21 @@
 Metadata-Version: 2.4
 Name: time-warp-ide
-Version: 2.1.0
-Summary: Educational programming environment (unified BASIC, PILOT, Logo)
-Home-page: https://github.com/James-HoneyBadger/Time_Warp
-Author: James Temple
+Version: 2.0.0
+Summary: Educational programming environment for BASIC, PILOT, and Logo with retro computing support
 Author-email: James Temple <james@honey-badger.org>
+Maintainer-email: James Temple <james@honey-badger.org>
+License: MIT
 Project-URL: Homepage, https://github.com/James-HoneyBadger/Time_Warp
-Project-URL: Bug Tracker, https://github.com/James-HoneyBadger/Time_Warp/issues
-Project-URL: Documentation, https://github.com/James-HoneyBadger/Time_Warp/tree/main/platforms/python
-Project-URL: Source Code, https://github.com/James-HoneyBadger/Time_Warp
-Keywords: education,programming,pilot,basic,logo,turtle-graphics,interpreter
-Classifier: Development Status :: 3 - Alpha
+Project-URL: Documentation, https://github.com/James-HoneyBadger/Time_Warp/tree/main/docs
+Project-URL: Repository, https://github.com/James-HoneyBadger/Time_Warp
+Project-URL: Issues, https://github.com/James-HoneyBadger/Time_Warp/issues
+Project-URL: Changelog, https://github.com/James-HoneyBadger/Time_Warp/blob/main/docs/misc/CHANGELOG.md
+Keywords: education,programming,pilot,basic,logo,turtle-graphics,interpreter,retro-computing,windows-2000
+Classifier: Development Status :: 4 - Beta
 Classifier: Intended Audience :: Education
 Classifier: Topic :: Education
 Classifier: Topic :: Software Development :: Interpreters
+Classifier: License :: OSI Approved :: MIT License
 Classifier: Programming Language :: Python :: 3
 Classifier: Programming Language :: Python :: 3.8
 Classifier: Programming Language :: Python :: 3.9
@@ -21,23 +23,24 @@ Classifier: Programming Language :: Python :: 3.10
 Classifier: Programming Language :: Python :: 3.11
 Classifier: Programming Language :: Python :: 3.12
 Classifier: Operating System :: OS Independent
+Classifier: Operating System :: Microsoft :: Windows
+Classifier: Operating System :: POSIX :: Linux
+Classifier: Operating System :: MacOS
 Requires-Python: >=3.8
 Description-Content-Type: text/markdown
 Provides-Extra: gui
 Requires-Dist: PySide6>=6.5.0; extra == "gui"
 Provides-Extra: dev
-Requires-Dist: pytest>=7.0.0; extra == "dev"
-Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
-Requires-Dist: black>=23.0.0; extra == "dev"
-Requires-Dist: flake8>=6.0.0; extra == "dev"
-Requires-Dist: mypy>=1.0.0; extra == "dev"
+Requires-Dist: pytest>=7.4.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
+Requires-Dist: pytest-mock>=3.11.0; extra == "dev"
+Requires-Dist: black>=23.7.0; extra == "dev"
+Requires-Dist: flake8>=6.1.0; extra == "dev"
+Requires-Dist: mypy>=1.5.0; extra == "dev"
+Requires-Dist: isort>=5.12.0; extra == "dev"
 Provides-Extra: all
 Requires-Dist: PySide6>=6.5.0; extra == "all"
-Requires-Dist: pytest>=7.0.0; extra == "all"
-Requires-Dist: pytest-cov>=4.0.0; extra == "all"
-Dynamic: author
-Dynamic: home-page
-Dynamic: requires-python
+Requires-Dist: Pillow>=10.0.0; extra == "all"
 
 # 🐍 Time Warp IDE - Python Implementation
 
