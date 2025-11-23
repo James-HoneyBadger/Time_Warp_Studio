@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Test graphics canvas display."""
+"""Test graphics canvas display.
+
+This is a manual verification script, not a pytest test module.
+"""
+
+import pytest
+pytestmark = pytest.mark.skip(reason="Manual graphics verification script (requires display); not for CI")
 
 import sys
 from PySide6.QtWidgets import QApplication  # pylint: disable=no-name-in-module
