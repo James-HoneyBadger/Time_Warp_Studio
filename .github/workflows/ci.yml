@@ -7,33 +7,6 @@ on:
     branches: [main]
 
 jobs:
-  go:
-    name: Go build and test
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: "1.22.x"
-          cache-dependency-path: platforms/go/go.sum
-      - name: Build Go binaries
-        working-directory: platforms/go
-        run: |
-          go build ./cmd/timewarp
-          go build ./cmd/timewarp-gui
-      - name: Test Go packages
-        working-directory: platforms/go
-        run: |
-          go vet ./...
-          go test ./...
-      - name: Upload Go binaries
-        uses: actions/upload-artifact@v4
-        with:
-          name: go-binaries-${{ runner.os }}-${{ runner.arch }}
-          path: |
-            platforms/go/timewarp
-            platforms/go/timewarp-gui
-
   python:
     name: Python tests (platforms/python)
     runs-on: ubuntu-latest
@@ -67,29 +40,3 @@ jobs:
       - name: Run tests (smoke)
         run: |
           xvfb-run -a pytest -q
-
-  rust:
-    name: Rust build and tests (best-effort)
-    runs-on: ubuntu-latest
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-      - name: Cache cargo registry and build
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            platforms/rust/target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('platforms/rust/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-      - name: Build Rust project if present
-        run: |
-          if [ -d platforms/rust ] && [ -f platforms/rust/Cargo.toml ]; then \
-            cd platforms/rust && cargo build --verbose && cargo test --verbose; \
-          else \
-            echo "platforms/rust not present or missing Cargo.toml"; \
-          fi

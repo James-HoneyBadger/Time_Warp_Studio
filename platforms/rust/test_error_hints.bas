@@ -1,6 +1,0 @@
-10 REM Test error hints
-20 PRITN "Hello"
-30 INPUT X
-40 IF X > 10
-50 PRINT X
-60 END
