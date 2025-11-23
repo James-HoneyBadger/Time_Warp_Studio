@@ -1,2 +1,0 @@
-# Optional dependency for MySQL features in TempleCode
-mysql-connector-python>=9.0.0
