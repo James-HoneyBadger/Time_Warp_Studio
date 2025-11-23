@@ -4,18 +4,17 @@ Version: 4.0.0
 Summary: Educational programming environment for BASIC, PILOT, and Logo with retro computing support
 Author-email: James Temple <james@honey-badger.org>
 Maintainer-email: James Temple <james@honey-badger.org>
-License: MIT
+License-Expression: MIT
 Project-URL: Homepage, https://github.com/James-HoneyBadger/Time_Warp
-Project-URL: Documentation, https://github.com/James-HoneyBadger/Time_Warp/tree/main/docs
+Project-URL: Documentation, https://github.com/James-HoneyBadger/Time_Warp/tree/main/Docs
 Project-URL: Repository, https://github.com/James-HoneyBadger/Time_Warp
 Project-URL: Issues, https://github.com/James-HoneyBadger/Time_Warp/issues
-Project-URL: Changelog, https://github.com/James-HoneyBadger/Time_Warp/blob/main/docs/misc/CHANGELOG.md
+Project-URL: Changelog, https://github.com/James-HoneyBadger/Time_Warp/blob/main/Docs/misc/RELEASE_NOTES.md
 Keywords: education,programming,pilot,basic,logo,turtle-graphics,interpreter,retro-computing,windows-2000
 Classifier: Development Status :: 4 - Beta
 Classifier: Intended Audience :: Education
 Classifier: Topic :: Education
 Classifier: Topic :: Software Development :: Interpreters
-Classifier: License :: OSI Approved :: MIT License
 Classifier: Programming Language :: Python :: 3
 Classifier: Programming Language :: Python :: 3.8
 Classifier: Programming Language :: Python :: 3.9
@@ -47,10 +46,10 @@ Requires-Dist: Pillow>=10.0.0; extra == "all"
 **🎓 Educational Programming Platform - Accessibility & Portability Focus**
 
 [![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../LICENSE)
-[![Tests: Passing](https://img.shields.io/badge/Tests-Passing-success.svg)](../docs/TECHNICAL_REFERENCE.md)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../../LICENSE)
+[![Tests: Passing](https://img.shields.io/badge/Tests-Passing-success.svg)](../../Docs/developer/00-developer-guide.md#testing)
 
-> **🎯 Part of the Time Warp Educational Platform** — See [main documentation](../docs/) for complete guides and curriculum materials.
+> **🎯 Part of the Time Warp Educational Platform** — See [main documentation](../../Docs/INDEX.md) for complete guides and curriculum materials.
 
 The **Python implementation** of Time Warp IDE prioritizes **accessibility and educational value**. With its pure-Python codebase, this version runs on any system with Python 3.8+, making it perfect for schools, coding camps, and educational environments where easy installation and cross-platform compatibility are essential.
 
@@ -116,7 +115,7 @@ The **Python implementation** of Time Warp IDE prioritizes **accessibility and e
 ```bash
 # Clone the repository
 git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp/platforms/python
+cd Time_Warp/Platforms/Python
 
 # Install dependencies
 pip install PySide6 pillow
@@ -161,7 +160,7 @@ python time_warp_ide.py
 Launch the full graphical IDE:
 
 ```bash
-cd platforms/python
+cd Platforms/Python
 python time_warp_ide.py
 ```
 
@@ -178,16 +177,16 @@ python time_warp_ide.py
 
 ```bash
 # Logo turtle graphics
-python time_warp_ide.py examples/logo_spiral_walk.logo
-python time_warp_ide.py examples/logo_koch_snowflake.logo
+python time_warp_ide.py ../../Examples/logo/spiral.logo
+python time_warp_ide.py ../../Examples/logo/square.logo
 
 # BASIC programs
-python time_warp_ide.py examples/basic_hangman.bas
-python time_warp_ide.py examples/basic_graphics.bas
+python time_warp_ide.py ../../Examples/basic/guessing_game.bas
+python time_warp_ide.py ../../Examples/basic/loops.bas
 
 # PILOT interactive tutorials
-python time_warp_ide.py examples/pilot_adventure.pilot
-python time_warp_ide.py examples/pilot_quiz_competition.pilot
+python time_warp_ide.py ../../Examples/pilot/hello.pilot
+python time_warp_ide.py ../../Examples/pilot/quiz.pilot
 ```
 
 ### Language Examples
@@ -403,25 +402,16 @@ suggestion = hints.get_suggestion('FORWRD', ['FORWARD', 'BACKWARD'])
 
 ---
 
-## 🆚 Comparison with Rust Version
+## 🖥 Platform Snapshot
 
-| Feature | Python | Rust | Notes |
-|---------|--------|------|-------|
-| PILOT interpreter | ✅ | ✅ | Feature parity |
-| BASIC interpreter | ✅ | ✅ | Feature parity |
-| Logo interpreter | ✅ | ✅ | Feature parity |
-| Logo procedures | ✅ | ✅ | TO/END with parameters |
-| Turtle graphics | ✅ | ✅ | 50+ commands |
-| Expression eval | ✅ | ✅ | Math + trig functions |
-| Error hints | ✅ | ✅ | Typo suggestions |
-| GUI | PySide6 | egui | Both functional |
-| Themes | 8 themes | 2 themes | Python has more |
-| Tests | 5 scripts | 72 tests | Rust has comprehensive suite |
-| Performance | Good | Excellent | Rust is faster |
+| Platform | Location | Status | Notes |
+|----------|----------|--------|-------|
+| Python (PySide6) | `Platforms/Python/` | ✅ Official | Primary desktop IDE with full BASIC, PILOT, and Logo support |
+| Browser (HTML/JS) | `Platforms/Browser/` | 🧪 Experimental | Prototype for future web deployment |
+| DOS (C89) | `Platforms/DOS/` | 🧪 Experimental | Retro text-mode interpreter retained for history labs |
+| Windows 2000 | `Platforms/Windows2000/` | 📜 Archived | Vintage build kept for reference only |
 
-**Recommendation**: 
-- **Python version**: Better for education, rapid prototyping, easier to modify
-- **Rust version**: Better for production, performance-critical applications
+Legacy implementations such as Rust, Go, Haiku, and others were removed during the v4.0.0 cleanup to keep maintenance focused on the supported stack.
 
 ---
 
@@ -438,20 +428,20 @@ Contributions welcome! Areas needing work:
 **Development Setup:**
 ```bash
 git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp/platforms/python
+cd Time_Warp/Platforms/Python
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
 python time_warp_ide.py
 ```
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md) for guidelines.
+See the [Developer Guide](../../Docs/developer/00-developer-guide.md) for contribution guidelines.
 
 ---
 
 ## 📜 License
 
-MIT License - see [LICENSE](../LICENSE) file in repository root.
+MIT License - see [LICENSE](../../LICENSE) file in repository root.
 
 ---
 
@@ -461,38 +451,35 @@ MIT License - see [LICENSE](../LICENSE) file in repository root.
 **Email**: james@honey-badger.org  
 **Inspiration**: Classic educational computing (Apple II, Commodore 64, Logo, PILOT)
 
----
-
-## 🔗 Links
-
-- **Main Repository**: [Time_Warp](https://github.com/James-HoneyBadger/Time_Warp)
-- **Rust Version**: [platforms/rust/](../rust/)
-- **Examples**: [examples/](examples/)
 ## 📚 Learning & Documentation
 
-### 🎓 **For Students & Beginners**
-- **[📖 Student Lesson Book](../docs/STUDENT_LESSON_BOOK.md)** — Progressive 24-lesson curriculum with hands-on projects
-- **[🎯 User Guide](../docs/USER_GUIDE.md)** — Complete installation and usage guide for all platforms  
-- **[⚡ Quick Start Examples](examples/)** — Ready-to-run programs for immediate learning
+### 🎓 For Students & Beginners
+- **[Student Workbook](../../Docs/student/00-workbook.md)** — Progressive lessons that reinforce BASIC, PILOT, and Logo fundamentals.
+- **[User Manual](../../Docs/user/00-user-manual.md)** — Guided tour of the IDE interface and workspace.
+- **[Programming Guide](../../Docs/user/01-programming-guide.md)** — Language syntax deep dive with runnable samples.
+- **[Quick Reference](../../Docs/user/02-quick-reference.md)** — Emoji legend and command cheat sheets for classroom use.
 
-### 👨‍🏫 **For Educators**  
-- **[🍎 Teacher Guide & Curriculum](../docs/TEACHER_GUIDE.md)** — Complete educational framework with lesson plans
-- **[📋 Assessment Tools](../docs/TEACHER_GUIDE.md#assessment-rubrics)** — Rubrics and evaluation strategies
-- **[🎮 Interactive Projects](../docs/STUDENT_LESSON_BOOK.md#level-4-loops-and-patterns)** — Engaging programming challenges
+### 👨‍🏫 For Educators
+- **[Teacher Overview](../../Docs/teacher/00-overview.md)** — Curriculum framing, assessments, and classroom management tips.
+- **[FAQ](../../Docs/user/03-faq.md)** — Answers to common setup and pedagogy questions you can share with students.
 
-### 🔧 **For Developers**
-- **[⚙️ Technical Reference](../docs/TECHNICAL_REFERENCE.md)** — Architecture, APIs, and implementation details
-- **[🏗️ Contributing Guide](../docs/CONTRIBUTING.md)** — How to extend and improve Time Warp
-- **[📊 Project Status](../docs/TECHNICAL_REFERENCE.md#implementation-status)** — Development progress and roadmap
+### 🔧 For Developers
+- **[Developer Guide](../../Docs/developer/00-developer-guide.md)** — Contribution workflow, testing expectations, and release process.
+- **[Installation Quickstart](../../Docs/installation/00-quickstart.md)** — Steps to configure the Python IDE on supported platforms.
+- **[Release Notes](../../Docs/misc/RELEASE_NOTES.md)** — Historical highlights and version-specific changes.
+
+### 📦 Assets & Examples
+- **Example Programs**: [`Examples/`](../../Examples/) — A curated set of TempleCode samples for lessons and demos.
+- **Browser Prototype**: [`Platforms/Browser/`](../Browser/) — Experimental HTML/JS build for future deployment.
+- **DOS Interpreter**: [`Platforms/DOS/`](../DOS/) — C89 text-mode interpreter for historical computing labs.
 
 ---
 
 ## 🔗 Links
 
 - **Main Repository**: [Time_Warp](https://github.com/James-HoneyBadger/Time_Warp)
-- **Rust Version**: [platforms/rust/](../rust/)
-- **Web Version**: [platforms/web/](../web/)
-- **Issues**: [GitHub Issues](https://github.com/James-HoneyBadger/Time_Warp/issues)
+- **Issue Tracker**: <https://github.com/James-HoneyBadger/Time_Warp/issues>
+- **Discussions**: <https://github.com/James-HoneyBadger/Time_Warp/discussions>
 
 ---
 

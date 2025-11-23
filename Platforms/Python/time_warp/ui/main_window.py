@@ -586,17 +586,19 @@ class MainWindow(QMainWindow):
             self,
             "About Time Warp IDE",
             "<h2>Time Warp IDE - Python Edition</h2>"
-            "<p>Version 4.0.0</p>"
+            "<p>Version 4.0.0 — Official PySide6 release</p>"
             "<p>Educational programming environment supporting:</p>"
             "<ul>"
             "<li>PILOT - Interactive teaching language</li>"
             "<li>BASIC - Classic BASIC with line numbers</li>"
             "<li>Logo - Turtle graphics for visual learning</li>"
             "</ul>"
-            "<p>Ported from Rust implementation</p>"
+            "<p>Powered by the unified TempleCode interpreter with optional Pascal, Prolog, and C experiments.</p>"
             "<p><b>Author:</b> James Temple</p>"
             '<p><a href="https://github.com/James-HoneyBadger/Time_Warp">'
-            "github.com/James-HoneyBadger/Time_Warp</a></p>",
+            "github.com/James-HoneyBadger/Time_Warp</a><br>"
+            '<a href="https://github.com/James-HoneyBadger/Time_Warp/tree/main/Docs">'
+            "Documentation</a></p>",
         )
 
     def restore_state(self):

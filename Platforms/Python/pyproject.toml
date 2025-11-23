@@ -8,7 +8,7 @@ version = "4.0.0"
 description = "Educational programming environment for BASIC, PILOT, and Logo with retro computing support"
 readme = "README.md"
 requires-python = ">=3.8"
-license = {text = "MIT"}
+license = "MIT"
 authors = [
     {name = "James Temple", email = "james@honey-badger.org"}
 ]
@@ -31,7 +31,6 @@ classifiers = [
     "Intended Audience :: Education",
     "Topic :: Education",
     "Topic :: Software Development :: Interpreters",
-    "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
@@ -66,10 +65,10 @@ all = [
 
 [project.urls]
 Homepage = "https://github.com/James-HoneyBadger/Time_Warp"
-Documentation = "https://github.com/James-HoneyBadger/Time_Warp/tree/main/docs"
+Documentation = "https://github.com/James-HoneyBadger/Time_Warp/tree/main/Docs"
 Repository = "https://github.com/James-HoneyBadger/Time_Warp"
 Issues = "https://github.com/James-HoneyBadger/Time_Warp/issues"
-Changelog = "https://github.com/James-HoneyBadger/Time_Warp/blob/main/docs/misc/CHANGELOG.md"
+Changelog = "https://github.com/James-HoneyBadger/Time_Warp/blob/main/Docs/misc/RELEASE_NOTES.md"
 
 [project.scripts]
 time-warp = "time_warp_ide:main"
