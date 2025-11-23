@@ -11,11 +11,15 @@ from typing import Optional, List, Dict, Tuple, Callable, TYPE_CHECKING, Any
 from dataclasses import dataclass
 
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
+from ..utils.expression_evaluator import ExpressionEvaluator
 
 # Import language executors
 from ..languages.basic import execute_basic
 from ..languages.pilot import execute_pilot
 from ..languages.logo import execute_logo
+from ..languages.c_lang_fixed import execute_c
+from ..languages.pascal import execute_pascal
+from ..languages.prolog import execute_prolog
 
 
 class ExecutionResult(Enum):
@@ -58,9 +62,13 @@ class Language(Enum):
     BASIC = auto()
     PILOT = auto()
     LOGO = auto()
+    C = auto()
+    PROLOG = auto()
+    PASCAL = auto()
 
     @classmethod
     def from_extension(cls, ext: str) -> "Language":
+        """Map file extension to Language enum."""
         ext = ext.lower()
         if ext == ".bas":
             return cls.BASIC
@@ -68,6 +76,12 @@ class Language(Enum):
             return cls.PILOT
         elif ext == ".logo":
             return cls.LOGO
+        elif ext == ".c":
+            return cls.C
+        elif ext in (".pro", ".prolog"):
+            return cls.PROLOG
+        elif ext == ".pas":
+            return cls.PASCAL
         else:  # Default to BASIC for unknown extensions
             return cls.BASIC
 
@@ -79,6 +93,12 @@ class Language(Enum):
             return "PILOT"
         if self == Language.LOGO:
             return "Logo"
+        if self == Language.C:
+            return "C"
+        if self == Language.PROLOG:
+            return "Prolog"
+        if self == Language.PASCAL:
+            return "Pascal"
         return "Unknown"
 
 
@@ -135,7 +155,13 @@ class Interpreter:
 
     def __init__(self):
         # Core state
+        # Aggregate numeric variables (base name → float) for back-compat
         self.variables: Dict[str, float] = {}
+        # Typed variable stores
+        self.int_variables: Dict[str, int] = {}
+        self.long_variables: Dict[str, int] = {}
+        self.single_variables: Dict[str, float] = {}
+        self.double_variables: Dict[str, float] = {}
         self.string_variables: Dict[str, str] = {}
         self.arrays: Dict[str, List[float]] = {}  # BASIC arrays
         # Logo data types
@@ -197,6 +223,18 @@ class Interpreter:
         self.data_values: List[str] = []
         self.data_pointer: int = 0
 
+        # Prolog-specific state
+        self.prolog_kb: Dict[str, List] = {}  # Knowledge base for Prolog facts/rules
+
+        # Pascal-specific state
+        self.pascal_procs: Dict[str, Dict[str, Any]] = {}  # Pascal procedures/functions
+        self.pascal_types: Dict[str, str] = {}  # Pascal type definitions
+        self.pascal_block_stack: List[str] = []  # Pascal block tracking
+        self.pascal_call_stack: List[Dict[str, Any]] = []  # Pascal call stack
+
+        # C-specific state
+        self.c_block_stack: List[str] = []  # C block tracking for control flow
+
         # Debugging state
         self.debug_mode: bool = False
         self.debug_event = threading.Event()
@@ -206,10 +244,16 @@ class Interpreter:
 
         # Language mode
         self.language = Language.BASIC
+        # Default type mapping
+        self._reset_type_defaults()
 
     def reset(self):
         """Reset interpreter state"""
         self.variables.clear()
+        self.int_variables.clear()
+        self.long_variables.clear()
+        self.single_variables.clear()
+        self.double_variables.clear()
         self.string_variables.clear()
         self.arrays.clear()
         self.logo_lists.clear()
@@ -230,7 +274,8 @@ class Interpreter:
         self.stored_condition = None
         self.cursor_row = 0
         self.step_mode = False
-        self.debug_event.set()  # Ensure we don't get stuck if reset while paused
+        # Ensure debugger starts in a paused-clear state; do not auto-resume
+        self.debug_event.clear()
         self.cursor_col = 0
         self.logo_procedures.clear()
         # BASIC-specific reset
@@ -242,6 +287,120 @@ class Interpreter:
         self.basic_in_function = False
         self.data_values.clear()
         self.data_pointer = 0
+        self._reset_type_defaults()
+
+    # ---------- Typed variable support ----------
+    def _reset_type_defaults(self):
+        """Initialize default type map to DOUBLE for A-Z."""
+        self.default_type_map: Dict[str, str] = {
+            chr(c): "double" for c in range(ord("A"), ord("Z") + 1)
+        }
+
+    def set_default_type_for_spec(self, type_code: str, spec: str):
+        """Set default type for letter ranges specified in spec.
+
+        spec examples: "A-Z", "A-C,H,L-P", "X", "A,B,C"
+        type_code: one of 'int','long','single','double','string'
+        """
+        if not spec:
+            return
+        for part in spec.replace(" ", "").split(","):
+            if not part:
+                continue
+            if "-" in part and len(part) >= 3:
+                start, end = part.split("-", 1)
+                if start and end:
+                    s = start[0].upper()
+                    e = end[0].upper()
+                    for c in range(ord(s), ord(e) + 1):
+                        self.default_type_map[chr(c)] = type_code
+            else:
+                ch = part[0].upper()
+                if "A" <= ch <= "Z":
+                    self.default_type_map[ch] = type_code
+
+    def _resolve_var_base_and_type(self, name: str) -> Tuple[str, str]:
+        """Return (base_name, type_code) for a variable name.
+
+        type_code in {'string','int','long','single','double'}
+        Suffix overrides defaults. Base name is uppercased without suffix.
+        """
+        n = name.strip().upper()
+        if not n:
+            return "", "double"
+        if n[-1] in ("$", "%", "&", "!", "#"):
+            base = n[:-1]
+            suf = n[-1]
+            if suf == "$":
+                return base, "string"
+            return base, {"%": "int", "&": "long", "!": "single", "#": "double"}[suf]
+        # No suffix: use default by first letter
+        initial = n[0]
+        type_code = self.default_type_map.get(initial, "double")
+        return n, type_code
+
+    def get_var_base_and_type(self, name: str) -> Tuple[str, str]:
+        """Public helper to get (base_name, type_code) for a variable name.
+
+        Provides a stable API for language executors without exposing
+        the private implementation details.
+        """
+        return self._resolve_var_base_and_type(name)
+
+    def _coerce_numeric(self, value: float, type_code: str):
+        if type_code == "int":
+            return int(float(value))
+        if type_code == "long":
+            return int(float(value))
+        if type_code in ("single", "double"):
+            return float(value)
+        return float(value)
+
+    def set_typed_variable(self, var_name: str, value: str | float):
+        """Assign a value honoring type suffix/defaults and mirror into aggregate."""
+        base, t = self._resolve_var_base_and_type(var_name)
+        if not base:
+            return
+        if t == "string":
+            self.string_variables[base + "$"] = str(value)
+            return
+        # Numeric
+        try:
+            num = float(value)
+        except Exception:  # pylint: disable=broad-exception-caught
+            num = 0.0
+        coerced = self._coerce_numeric(num, t)
+        if t == "int":
+            self.int_variables[base + "%"] = coerced
+        elif t == "long":
+            self.long_variables[base + "&"] = coerced
+        elif t == "single":
+            self.single_variables[base + "!"] = float(coerced)
+        else:
+            self.double_variables[base + "#"] = float(coerced)
+        self.variables[base] = float(coerced)
+
+    def get_numeric_value(self, var_name: str) -> Optional[float]:
+        """Get numeric value by name (with or without suffix)."""
+        base, t = self._resolve_var_base_and_type(var_name)
+        if not base:
+            return None
+        # Try exact typed key first
+        key_map = {"int": "%", "long": "&", "single": "!", "double": "#"}
+        if t in key_map:
+            key = base + key_map[t]
+            if key in self.int_variables:
+                return float(self.int_variables[key])
+            if key in self.long_variables:
+                return float(self.long_variables[key])
+            if key in self.single_variables:
+                return float(self.single_variables[key])
+            if key in self.double_variables:
+                return float(self.double_variables[key])
+        # Fallback to aggregate base
+        if base in self.variables:
+            return float(self.variables[base])
+        return None
 
     def set_language(self, language: Language):
         """Set the active language for execution."""
@@ -270,37 +429,44 @@ class Interpreter:
         self.program_lines.clear()
         self.line_number_map.clear()
 
-        # Handle Logo procedure definitions during loading
+        self._load_from_lines(lines, language or self.language)
+
+        # Collect BASIC DATA values after lines are populated
+        if self.language == Language.BASIC:
+            self._collect_basic_data_values()
+
+    def _load_from_lines(self, lines: List[str], language: Language):
+        """Populate program_lines/labels/line map from raw lines by language."""
         if language == Language.LOGO:
             self._parse_logo_program(lines)
-        else:
-            # Standard parsing for BASIC and PILOT
-            for idx, line in enumerate(lines):
-                line_num, command_str = self._parse_line(line)
+            return
+        self._parse_standard_program(lines)
 
-                # Build line number mapping for BASIC GOTO/GOSUB
-                if line_num is not None:
-                    self.line_number_map[line_num] = idx
+    def _parse_standard_program(self, lines: List[str]):
+        """Parse BASIC/PILOT/C/PASCAL/PROLOG lines and build indices."""
+        for idx, line in enumerate(lines):
+            line_num, command_str = self._parse_line(line)
 
-                # Collect PILOT labels
-                if command_str.startswith("L:"):
-                    label = command_str[2:].strip()
-                    self.labels[label] = idx
-                elif command_str.startswith("*"):
-                    label = command_str.strip()
-                    self.labels[label] = idx
+            if line_num is not None:
+                self.line_number_map[line_num] = idx
 
-                self.program_lines.append((line_num, command_str))
+            if command_str.startswith("L:"):
+                label = command_str[2:].strip()
+                self.labels[label] = idx
+            elif command_str.startswith("*"):
+                label = command_str.strip()
+                self.labels[label] = idx
 
-            # Collect BASIC DATA values
-            if self.language == Language.BASIC:
-                for _, command_str in self.program_lines:
-                    cmd = command_str.strip().upper()
-                    if cmd.startswith("DATA "):
-                        # Parse values
-                        values = command_str[5:].split(",")
-                        for v in values:
-                            self.data_values.append(v.strip())
+            self.program_lines.append((line_num, command_str))
+
+    def _collect_basic_data_values(self):
+        """Extract BASIC DATA values into data_values list."""
+        for _, command_str in self.program_lines:
+            cmd = command_str.strip().upper()
+            if cmd.startswith("DATA "):
+                values = command_str[5:].split(",")
+                for v in values:
+                    self.data_values.append(v.strip())
 
     def _parse_logo_program(self, lines: List[str]):
         """
@@ -414,80 +580,117 @@ class Interpreter:
 
         Features error recovery: continues on non-fatal errors
         """
-        # Only reset output at start of fresh run
+        # Setup runtime (fresh run detection, counters, timer)
+        iterations, start_time = self._setup_runtime()
+
+        # Execute main loop with error recovery and debugging hooks
+        iterations = self._run_and_collect(turtle, iterations, start_time)
+
+        # Finalize and emit any warnings/output
+        return self._finalize_and_emit(iterations)
+
+    def _setup_runtime(self) -> Tuple[int, float]:
+        """Prepare execution state: fresh-run output clear, counters and timer.
+
+        Returns (iterations, start_time).
+        """
         if self.current_line == 0:
             self.output.clear()
+        return 0, time.time()
 
-        iterations = 0
-        start_time = time.time()
-
+    def _run_and_collect(
+        self, turtle: "TurtleState", iterations: int, start_time: float
+    ) -> int:
+        """Run main execution loop; returns total iterations performed."""
         while (
             self.current_line < len(self.program_lines)
             and iterations < self.MAX_ITERATIONS
         ):
-            # Debugging support
-            should_break = self.debug_mode and (
-                self.step_mode or (self.current_line + 1) in self.breakpoints
-            )
+            _, current_command = self.program_lines[self.current_line]
 
-            if should_break:
-                if self.debug_callback:
-                    # pylint: disable=not-callable
-                    self.debug_callback(self.current_line + 1, self.get_variables())
-                self.debug_event.wait()
-                self.debug_event.clear()
+            logical_line_index = self._compute_logical_line_index(current_command)
 
-            # Security check: Timeout protection
-            if time.time() - start_time > self.MAX_EXECUTION_TIME:
-                self.log_output(
-                    "❌ Error: Execution timeout (10 seconds exceeded)"
-                )  # noqa: E501
+            if self._should_break(current_command, logical_line_index):
+                self._do_debug_pause(logical_line_index)
+
+            self._check_timeout(start_time)
 
             iterations += 1
 
-            _, command = self.program_lines[self.current_line]
+            command = current_command
 
             if not command.strip():
                 self.current_line += 1
                 continue
 
-            # Error recovery: Continue on non-fatal errors
-            try:
-                self._execute_line(command, turtle)
-            except Exception as e:  # pylint: disable=broad-exception-caught
-                # Enhanced error message with context and suggestions
-                error_msg = f"❌ Error at line {self.current_line + 1}: {e}"
-
-                # Check for syntax mistakes
-                syntax_error = check_syntax_mistakes(command)
-                if syntax_error:
-                    error_msg += f"\n   💡 {syntax_error}"
-
-                # Suggest command corrections
-                if "Unknown" in str(e) or "Invalid" in str(e):
-                    first_word = command.split()[0] if command.split() else ""
-                    suggestion = suggest_command(first_word)
-                    if suggestion:
-                        error_msg += f"\n   💡 Did you mean '{suggestion}'?"
-
-                self.log_output(error_msg)
+            success = self._execute_line_safely(command, turtle)
+            if not success:
                 self.current_line += 1
                 continue
 
-            # Continue to next line (unless jump or end occurred)
             if not self.running:
                 break
 
-            # Check if waiting for input
             if self.pending_input:
                 break
 
             self.current_line += 1
 
+        return iterations
+
+    def _finalize_and_emit(self, iterations: int) -> List[str]:
+        """Emit warnings if needed and return a copy of the output buffer."""
         if iterations >= self.MAX_ITERATIONS:
             self.log_output("⚠️ Warning: Maximum iterations reached")
-
         return self.output.copy()
+
+    def _compute_logical_line_index(self, current_command: str) -> Optional[int]:
+        """Return 1-based count of non-empty lines up to current_line, else None."""
+        if not current_command.strip():
+            return None
+        return sum(
+            1
+            for i in range(0, self.current_line + 1)
+            if self.program_lines[i][1].strip()
+        )
+
+    def _should_break(
+        self, current_command: str, logical_line_index: Optional[int]
+    ) -> bool:
+        if not (self.debug_mode and current_command.strip()):
+            return False
+        if self.step_mode:
+            return True
+        return logical_line_index is not None and logical_line_index in self.breakpoints
+
+    def _do_debug_pause(self, logical_line_index: Optional[int]):
+        if self.debug_callback:
+            # pylint: disable=not-callable
+            self.debug_callback(logical_line_index or 0, self.get_variables())
+        self.debug_event.wait()
+        self.debug_event.clear()
+
+    def _check_timeout(self, start_time: float):
+        if time.time() - start_time > self.MAX_EXECUTION_TIME:
+            self.log_output("❌ Error: Execution timeout (10 seconds exceeded)")
+
+    def _execute_line_safely(self, command: str, turtle: "TurtleState") -> bool:
+        """Execute a line with error recovery and suggestions. Returns success."""
+        try:
+            self._execute_line(command, turtle)
+            return True
+        except Exception as e:  # pylint: disable=broad-exception-caught
+            error_msg = f"❌ Error at line {self.current_line + 1}: {e}"
+            syntax_error = check_syntax_mistakes(command)
+            if syntax_error:
+                error_msg += f"\n   💡 {syntax_error}"
+            if "Unknown" in str(e) or "Invalid" in str(e):
+                first_word = command.split()[0] if command.split() else ""
+                suggestion = suggest_command(first_word)
+                if suggestion:
+                    error_msg += f"\n   💡 Did you mean '{suggestion}'?"
+            self.log_output(error_msg)
+            return False
 
     def _execute_line(self, command: str, turtle: "TurtleState") -> str:
         """Execute a single line and return output text.
@@ -506,6 +709,12 @@ class Interpreter:
             output = execute_pilot(self, command, turtle)
         elif self.language == Language.LOGO:
             output = execute_logo(self, command, turtle)
+        elif self.language == Language.C:
+            output = execute_c(self, command, turtle)
+        elif self.language == Language.PASCAL:
+            output = execute_pascal(self, command, turtle)
+        elif self.language == Language.PROLOG:
+            output = execute_prolog(self, command, turtle)
         else:
             raise ValueError(f"Unsupported language: {self.language}")
 
@@ -545,9 +754,20 @@ class Interpreter:
 
         Uses safe expression evaluator (no eval/exec)
         """
-        from ..utils.expression_evaluator import ExpressionEvaluator
+        # Build numeric variables from typed stores using base names
+        num_vars: Dict[str, float] = {}
+        for k, v in self.int_variables.items():
+            num_vars[k[:-1]] = float(v)
+        for k, v in self.long_variables.items():
+            num_vars[k[:-1]] = float(v)
+        for k, v in self.single_variables.items():
+            num_vars[k[:-1]] = float(v)
+        for k, v in self.double_variables.items():
+            num_vars[k[:-1]] = float(v)
+        # Back-compat overlay
+        num_vars.update(self.variables)
 
-        evaluator = ExpressionEvaluator(self.variables.copy(), self.arrays.copy())
+        evaluator = ExpressionEvaluator(num_vars, self.arrays.copy())
         return evaluator.evaluate(expr)
 
     def interpolate_text(self, text: str) -> str:
@@ -609,12 +829,8 @@ class Interpreter:
         req = self.pending_input
         self.last_input = value
 
-        # Store value in appropriate variable type
-        try:
-            num_value = float(value)
-            self.variables[req.var_name] = num_value
-        except ValueError:
-            self.string_variables[req.var_name] = value
+        # Store respecting typed variables
+        self.set_typed_variable(req.var_name, value)
 
         # Clear pending state
         self.pending_input = None
@@ -694,7 +910,13 @@ class Interpreter:
     def get_variables(self) -> Dict[str, Any]:
         """Get all current variables for debugging"""
         vars_dict = {}
-        vars_dict.update(self.variables)
+        # Include typed variables with suffixes to avoid collisions
+        vars_dict.update(self.int_variables)
+        vars_dict.update(self.long_variables)
+        vars_dict.update(self.single_variables)
+        vars_dict.update(self.double_variables)
         vars_dict.update(self.string_variables)
+        # Also include aggregate numeric (base names)
+        vars_dict.update(self.variables)
         # Add arrays and other state if needed
         return vars_dict

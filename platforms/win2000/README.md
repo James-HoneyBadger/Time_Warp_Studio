@@ -58,6 +58,17 @@ make
 
 This produces `TimeWarpIDE.exe` compatible with Windows 2000.
 
+Or use the convenience script from the repo root to build and package with demos:
+
+```bash
+./scripts/build_win2000.sh
+```
+
+This script will:
+- Generate a Windows 2000–styled `icon.ico` (if ImageMagick is available)
+- Build the executable with MinGW (NT 5.0 API level)
+- Package `TimeWarpIDE.exe` and `demos/` into `dist/win2000/TimeWarpIDE-win2000.zip`
+
 ### Cross-Compilation Flags
 
 The Makefile uses these flags for Windows 2000 compatibility:
@@ -88,6 +99,16 @@ This creates an installer with:
 - File associations for `.twb`, `.twp`, `.twl` files
 - Registry entries
 - Uninstaller
+
+### Demos (Showcase)
+
+The Windows 2000 Edition includes a `demos/` folder with OS-themed samples:
+
+- `win2000_intro.pilot` — PILOT intro flow referencing Windows 2000
+- `win2000_classic.bas` — BASIC graphics drawing concentric circles (GDI)
+- `win2000_logo.logo` — Logo turtle draws Windows 2000-style colored panes
+
+Open them via File → Open to showcase the retro environment.
 
 ## Usage
 
@@ -233,6 +254,9 @@ make test
 
 **Problem**: Application doesn't start on Windows 2000  
 **Solution**: Ensure you have the latest Windows 2000 service pack (SP4) and common controls update
+
+**Problem**: Build fails due to missing `icon.ico`  
+**Solution**: Run `./scripts/make_win2000_icon.sh` to generate a placeholder icon, or place an `icon.ico` under `platforms/win2000/resources/`
 
 **Problem**: Graphics don't display correctly  
 **Solution**: Check display settings - minimum 800x600 resolution required

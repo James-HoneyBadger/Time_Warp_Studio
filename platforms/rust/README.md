@@ -288,6 +288,14 @@ time-warp.exe
 ./time-warp
 ```
 
+**Helper Script:**
+```bash
+# From repo root
+./scripts/run_time_warp_rust.sh                 # Build (if needed) and run release
+./scripts/run_time_warp_rust.sh --debug         # Run debug build
+./scripts/run_time_warp_rust.sh --background    # Detach and log to /tmp/time-warp.log
+```
+
 **App Bundle:**
 See `packaging/macos/` for creating `.app` bundle.
 

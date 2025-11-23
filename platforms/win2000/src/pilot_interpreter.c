@@ -7,6 +7,17 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <tchar.h>
+
+#ifndef _MSC_VER
+#ifndef _tcstok_s
+#define _tcstok_s(str, delim, ctx) _tcstok(str, delim)
+#endif
+#ifndef _tcsdup
+#define _tcsdup _strdup
+#endif
+/* Do not redefine _tcsnicmp/_tstof to prevent warnings */
+#endif
 
 typedef struct {
     TCHAR name[32];

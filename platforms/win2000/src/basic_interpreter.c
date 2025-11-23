@@ -7,7 +7,19 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <tchar.h>
 #include "canvas.h"
+
+#ifndef _MSC_VER
+/* Guard fallback mappings only if not provided by toolchain */
+#ifndef _tcstok_s
+#define _tcstok_s(str, delim, ctx) _tcstok(str, delim)
+#endif
+#ifndef _tcsdup
+#define _tcsdup _strdup
+#endif
+/* _tcsnicmp and _tstof are available in MinGW, avoid redefining */
+#endif
 
 typedef struct
 {

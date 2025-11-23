@@ -7,6 +7,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
+#include <tchar.h>
 
 #define CANVAS_CLASS TEXT("TimeWarpCanvas")
 #define CANVAS_WIDTH 1024

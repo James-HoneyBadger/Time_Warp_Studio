@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <tchar.h>
 
 #define MAX_BOOKMARKS 256
 #define EDITOR_CLASS TEXT("TimeWarpEditor")

@@ -7,5 +7,9 @@ from .canvas import TurtleCanvas
 from .themes import ThemeManager
 
 __all__ = [
-    'MainWindow', 'CodeEditor', 'OutputPanel', 'TurtleCanvas', 'ThemeManager',
+    "MainWindow",
+    "CodeEditor",
+    "OutputPanel",
+    "TurtleCanvas",
+    "ThemeManager",
 ]

@@ -1,5 +1,6 @@
 """Turtle graphics canvas widget."""
 
+import math
 from PySide6.QtWidgets import QWidget
 from PySide6.QtCore import Qt, QPointF
 from PySide6.QtGui import QPainter, QPen, QColor, QWheelEvent, QMouseEvent
@@ -36,7 +37,7 @@ class TurtleCanvas(QWidget):
         self.lines = turtle.lines.copy()
         # Adopt background color from turtle state if available
         try:
-            r, g, b = getattr(turtle, 'bg_color', (40, 42, 54))
+            r, g, b = getattr(turtle, "bg_color", (40, 42, 54))
             self.bg_color = QColor(int(r), int(g), int(b))
         except Exception:
             # Fallback to default theme background
@@ -86,21 +87,14 @@ class TurtleCanvas(QWidget):
 
         # Draw turtle lines
         for line in self.lines:
-            color = QColor(
-                line.color[0],
-                line.color[1],
-                line.color[2]
-            )
+            color = QColor(line.color[0], line.color[1], line.color[2])
             pen = QPen(color, line.width)
             pen.setCapStyle(Qt.RoundCap)
             pen.setJoinStyle(Qt.RoundJoin)
             painter.setPen(pen)
 
             painter.drawLine(
-                int(line.start_x),
-                int(line.start_y),
-                int(line.end_x),
-                int(line.end_y)
+                int(line.start_x), int(line.start_y), int(line.end_x), int(line.end_y)
             )
 
         # Draw turtle cursor if present
@@ -118,7 +112,6 @@ class TurtleCanvas(QWidget):
         painter.setPen(pen)
 
         # Draw triangle pointing in heading direction
-        import math
         size = 15
 
         # Convert heading to radians (0° = up = -90° in Qt)
@@ -160,8 +153,7 @@ class TurtleCanvas(QWidget):
     def mousePressEvent(self, event: QMouseEvent):
         """Start panning."""
         if event.button() == Qt.MiddleButton or (
-            event.button() == Qt.LeftButton and
-            event.modifiers() & Qt.ControlModifier
+            event.button() == Qt.LeftButton and event.modifiers() & Qt.ControlModifier
         ):
             self.panning = True
             self.last_pan_pos = event.pos()
@@ -178,9 +170,7 @@ class TurtleCanvas(QWidget):
 
     def mouseReleaseEvent(self, event: QMouseEvent):
         """Stop panning."""
-        if event.button() == Qt.MiddleButton or (
-            event.button() == Qt.LeftButton
-        ):
+        if event.button() == Qt.MiddleButton or (event.button() == Qt.LeftButton):
             self.panning = False
             self.last_pan_pos = None
             self.setCursor(Qt.ArrowCursor)

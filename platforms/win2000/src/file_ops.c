@@ -5,6 +5,12 @@
 #include "file_ops.h"
 #include <commdlg.h>
 #include <stdio.h>
+#include <tchar.h>
+
+#ifndef _MSC_VER
+#define _tfopen fopen
+#define _tcscpy strcpy
+#endif
 
 static TCHAR g_recentFiles[10][MAX_PATH];
 static int g_recentCount = 0;

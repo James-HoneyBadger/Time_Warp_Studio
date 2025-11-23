@@ -42,8 +42,20 @@ The **Web implementation** of Time Warp IDE brings multi-language programming di
 
 1. Clone or download the Time Warp project
 2. Navigate to the `platforms/web` directory
-3. Open `index.html` in a modern web browser
-4. Start programming!
+3. Option A — open the static file directly: open `index.html` in a modern browser
+4. Option B — serve locally (recommended):
+
+```bash
+# Using Makefile (Linux/macOS)
+make serve            # serves at http://127.0.0.1:8000
+# Optional: open a browser tab
+make open
+
+# Or using npm scripts (no deps required)
+npm run serve         # serves at http://127.0.0.1:8000
+```
+
+5. Start programming!
 
 ### Online Deployment
 

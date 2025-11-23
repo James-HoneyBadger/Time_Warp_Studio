@@ -17,6 +17,7 @@ def execute_pilot(
     command: str,
     turtle: "TurtleState",
 ) -> str:
+    """Execute PILOT language command."""
     cmd = command.strip()
     if not cmd or len(cmd) < 2:
         return ""

@@ -2,7 +2,7 @@
 
 from PySide6.QtWidgets import QTextEdit, QInputDialog, QLineEdit
 from PySide6.QtCore import QThread, Signal
-from PySide6.QtGui import QTextCursor, QColor, QTextCharFormat
+from PySide6.QtGui import QTextCursor, QColor, QTextCharFormat, QFont
 
 from ..core.interpreter import Interpreter
 from ..graphics.turtle_state import TurtleState
@@ -94,8 +94,6 @@ class OutputPanel(QTextEdit):
         self.setReadOnly(True)
 
         # Font
-        from PySide6.QtGui import QFont
-
         font = QFont("Courier New", 11)
         self.setFont(font)
 

@@ -1,0 +1,19 @@
+Time Warp IDE (Rust) — Portable Package
+======================================
+
+Quick Install (User Scope)
+--------------------------
+
+1) Extract this archive:
+   tar -xzf time-warp-ide-rust-linux-*.tar.gz
+
+2) Install desktop entry + launcher:
+   cd time-warp-ide-rust-linux-*/
+   ./install-linux-desktop-rust.sh --no-build
+
+3) Launch from your applications menu (Development/Education) or run:
+   timewarp-ide-rust
+
+Uninstall
+---------
+./install-linux-desktop-rust.sh --uninstall

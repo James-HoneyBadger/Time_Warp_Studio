@@ -239,9 +239,7 @@ class MainWindow(QMainWindow):
         theme_menu = view_menu.addMenu("&Theme")
         for theme_name in self.theme_manager.get_theme_names():
             action = QAction(theme_name, self)
-            action.triggered.connect(
-                lambda checked, t=theme_name: self.change_theme(t)
-            )
+            action.triggered.connect(lambda checked, t=theme_name: self.change_theme(t))
             theme_menu.addAction(action)
         view_menu.addSeparator()
 
@@ -301,9 +299,7 @@ class MainWindow(QMainWindow):
             Language.LOGO,
         ]:
             self.language_combo.addItem(lang.friendly_name(), lang)
-        self.language_combo.currentIndexChanged.connect(
-            self.on_language_changed
-        )
+        self.language_combo.currentIndexChanged.connect(self.on_language_changed)
 
     def create_statusbar(self):
         """Create status bar."""
@@ -336,7 +332,7 @@ class MainWindow(QMainWindow):
         filename, _ = QFileDialog.getOpenFileName(
             self,
             "Open File",
-            last_dir
+            last_dir,
             "Time Warp Files (*.pilot *.bas *.logo);;"
             "PILOT Files (*.pilot);;"
             "BASIC Files (*.bas);;"
@@ -566,18 +562,14 @@ class MainWindow(QMainWindow):
         else:
             for filename in recent:
                 action = QAction(Path(filename).name, self)
-                action.triggered.connect(
-                    lambda checked, f=filename: self.load_file(f)
-                )
+                action.triggered.connect(lambda checked, f=filename: self.load_file(f))
                 self.recent_menu.addAction(action)
 
     def show_examples(self):
         examples_dir = Path(__file__).parent.parent.parent / "examples"
 
         if not examples_dir.exists():
-            QMessageBox.information(
-                self, "Examples", "Examples directory not found."
-            )
+            QMessageBox.information(self, "Examples", "Examples directory not found.")
         filename, _ = QFileDialog.getOpenFileName(
             self,
             "Open Example",
@@ -648,11 +640,7 @@ class MainWindow(QMainWindow):
         if not code.strip():
             return
 
-        # Detect language
-        language = None
-        if self.current_file:
-            ext = Path(self.current_file).suffix
-            language = Language.from_extension(ext)
+        # Detect language (not used here; rely on runtime detection elsewhere)
 
         self.output.clear()
         self.canvas.clear()

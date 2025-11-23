@@ -7,7 +7,21 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
+#include <tchar.h>
 #include "canvas.h"
+
+#ifndef _MSC_VER
+#ifndef _tcstok_s
+#define _tcstok_s(str, delim, ctx) _tcstok(str, delim)
+#endif
+#ifndef _tcsdup
+#define _tcsdup _strdup
+#endif
+#ifndef _tcsncat
+#define _tcsncat strncat
+#endif
+/* Leave existing _tcsnicmp implementation from toolchain */
+#endif
 
 static BOOL g_running = FALSE;
 static HWND g_hwndCanvas = NULL;
@@ -44,10 +58,15 @@ static void store_proc(const TCHAR *name, const TCHAR *body)
     }
     if (idx >= 0)
     {
-        _tcsncpy(g_procs[idx].name, name, 31);
-        g_procs[idx].name[31] = 0;
-        _tcsncpy(g_procs[idx].body, body, 4095);
-        g_procs[idx].body[4095] = 0;
+        /* Safe: buffers are declared with explicit sizes; we null-terminate */
+        size_t name_len = strlen(name);
+        size_t body_len = strlen(body);
+        if (name_len > 31) name_len = 31;
+        if (body_len > 4095) body_len = 4095;
+        memcpy(g_procs[idx].name, name, name_len);
+        g_procs[idx].name[name_len] = 0;
+        memcpy(g_procs[idx].body, body, body_len);
+        g_procs[idx].body[body_len] = 0;
     }
 }
 

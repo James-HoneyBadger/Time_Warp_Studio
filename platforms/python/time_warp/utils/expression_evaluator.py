@@ -150,11 +150,17 @@ class ExpressionEvaluator:
 
                 name_upper = name.upper()
 
-                # Check if it's a function (followed by '(')
+                # Optional BASIC type suffix on variables: % & ! # $
+                suffix = ""
+                if i < len(expr) and expr[i] in "%&!#$":
+                    suffix = expr[i]
+                    i += 1
+
+                # Check if it's a function (followed by '('). Functions do not use suffixes.
                 if i < len(expr) and expr[i] == "(":
                     tokens.append(Token(Token.Type.FUNCTION, name_upper))
                 else:
-                    tokens.append(Token(Token.Type.VARIABLE, name_upper))
+                    tokens.append(Token(Token.Type.VARIABLE, name_upper + suffix))
                 continue
 
             # Operators
@@ -327,9 +333,17 @@ class ExpressionEvaluator:
                     stack.append(random.random())
                     continue
 
-                if var_name not in self.variables:
+                # Support BASIC type suffixes on variable references inside expressions
+                if var_name and var_name[-1] in "%&!#$":
+                    if var_name[-1] == "$":
+                        raise ValueError("String variable in numeric expression")
+                    base = var_name[:-1]
+                else:
+                    base = var_name
+
+                if base not in self.variables:
                     raise ValueError(f"Undefined variable: {var_name}")
-                stack.append(self.variables[var_name])
+                stack.append(self.variables[base])
 
             elif token.type in (Token.Type.OPERATOR, Token.Type.COMPARISON):
                 op = token.value

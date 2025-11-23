@@ -1,5 +1,42 @@
 # Time Warp IDE - Desktop Quick Start Guide
 
+## 🪟 Windows WPF Build (Desktop App)
+
+For the Windows desktop app (WPF, net8.0-windows), use the provided PowerShell script:
+
+```powershell
+# From repo root on Windows PowerShell or PowerShell 7
+./scripts/build_windows.ps1                 # Restore + Build (Release)
+./scripts/build_windows.ps1 -Publish        # Publish single-file (win-x64)
+./scripts/build_windows.ps1 -Publish -Runtime win-arm64  # ARM64 publish
+./scripts/build_windows.ps1 -Publish -SelfContained      # Bundle runtime
+```
+
+- Build output: `platforms/windows/TimeWarp.Wpf/bin/Release/`
+- Publish output: `platforms/windows/TimeWarp.Wpf/bin/Release/net8.0-windows/<RID>/publish`
+
+On Linux/macOS you can still run `dotnet restore` for the solution by enabling Windows targeting:
+
+```bash
+DOTNET_CLI_TELEMETRY_OPTOUT=1 dotnet restore Time_Warp.sln -p:EnableWindowsTargeting=true --nologo
+```
+
+## 🐧 Linux Desktop Entry (Rust)
+
+Install a user-scope launcher and .desktop entry for the Rust build:
+
+```bash
+# From repo root
+./scripts/install-linux-desktop-rust.sh            # Build + install
+# or reuse existing build
+./scripts/install-linux-desktop-rust.sh --no-build
+
+# Uninstall
+./scripts/install-linux-desktop-rust.sh --uninstall
+```
+
+Launch from your applications menu (Development/Education) or run `timewarp-ide-rust`.
+
 ## 🚀 Installation
 
 ### 1. Install Dependencies

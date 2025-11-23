@@ -1,0 +1,16 @@
+
+[all]
+PySide6>=6.5.0
+Pillow>=10.0.0
+
+[dev]
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+black>=23.7.0
+flake8>=6.1.0
+mypy>=1.5.0
+isort>=5.12.0
+
+[gui]
+PySide6>=6.5.0

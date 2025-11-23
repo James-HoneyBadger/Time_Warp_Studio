@@ -296,10 +296,7 @@ def check_syntax_mistakes(line: str) -> Optional[str]:
     # Check for Logo REPEAT without count
     if line_upper.startswith("REPEAT "):
         parts = line[7:].strip().split()
-        if (
-            not parts
-            or not parts[0].replace(".", "").replace("-", "").isdigit()
-        ):
+        if not parts or not parts[0].replace(".", "").replace("-", "").isdigit():
             return "REPEAT missing count number"
 
     # Check for assignment without variable

@@ -55,6 +55,7 @@ def execute_basic(
     command: str,
     turtle: "TurtleState",
 ) -> str:
+    """Execute BASIC language command."""
     # Import here to avoid circular imports; helpers import what they need.
 
     # Strip leading/trailing whitespace from the command line
@@ -161,13 +162,36 @@ def execute_basic(
         return _basic_read(interpreter, _strip_comment(command[5:]))
     if cmd.startswith("RESTORE"):
         return _basic_restore(interpreter, _strip_comment(command[7:]))
+    # Type default declarations
+    if cmd.startswith("DEFINT "):
+        interpreter.set_default_type_for_spec("int", _strip_comment(command[7:]))
+        return ""
+    if cmd.startswith("DEFLNG "):
+        interpreter.set_default_type_for_spec("long", _strip_comment(command[7:]))
+        return ""
+    if cmd.startswith("DEFSNG "):
+        interpreter.set_default_type_for_spec("single", _strip_comment(command[7:]))
+        return ""
+    if cmd.startswith("DEFDBL "):
+        interpreter.set_default_type_for_spec("double", _strip_comment(command[7:]))
+        return ""
+    if cmd.startswith("DEFSTR "):
+        interpreter.set_default_type_for_spec("string", _strip_comment(command[7:]))
+        return ""
     return f"❌ Unknown BASIC command: {command}\n"
 
 
 def _basic_print(interpreter: "Interpreter", args: str) -> str:
     if not args.strip():
-        interpreter.output.append("")
         return "\n"
+
+    def _format_numeric(val: float, preferred: str | None = None) -> str:
+        # Preferred types 'int'/'long' print without decimals
+        if preferred in ("int", "long"):
+            return str(int(val))
+        # For floats, use general format to avoid trailing .0/.000
+        return "{:g}".format(val)
+
     parts: List[str] = []
     current = ""
     in_quotes = False
@@ -175,7 +199,7 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
         if ch == '"':
             in_quotes = not in_quotes
             current += ch
-        elif ch == "," and not in_quotes:
+        elif (ch == ";" or ch == ",") and not in_quotes:
             if current.strip():
                 parts.append(current.strip())
             current = ""
@@ -184,32 +208,54 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
     if current.strip():
         parts.append(current.strip())
     if not parts:
-        interpreter.output.append("")
         return "\n"
     out_items: List[str] = []
     for item in parts:
         item_trim = item.strip()
+        item_upper = item_trim.upper()
+
+        # Handle string literals
         if (
             item_trim.startswith('"')
             and item_trim.endswith('"')
             and len(item_trim) >= 2
         ):
             out_items.append(item_trim[1:-1])
-        elif item_trim.upper() == "INKEY$":
+        # Handle INKEY$ special case
+        elif item_upper == "INKEY$":
             out_items.append("")
+        # Handle string variables (end with $)
+        elif item_upper.endswith("$"):
+            if item_upper in interpreter.string_variables:
+                out_items.append(interpreter.string_variables[item_upper])
+            else:
+                out_items.append("")  # Undefined string variable is empty
+        # Handle numeric variables and expressions
         else:
-            try:
-                value = interpreter.evaluate_expression(item_trim)
-                out_items.append(str(value))
-            except (ValueError, TypeError, ZeroDivisionError):
-                if item_trim in interpreter.string_variables:
-                    out_items.append(interpreter.string_variables[item_trim])
-                elif item_trim in interpreter.variables:
-                    out_items.append(str(interpreter.variables[item_trim]))
+            # Typed numeric variable by suffix
+            if item_upper and item_upper[-1] in ("%", "&", "!", "#"):
+                val = interpreter.get_numeric_value(item_upper)
+                tmap = {"%": "int", "&": "long", "!": "single", "#": "double"}
+                preferred = tmap.get(item_upper[-1])
+                if val is None:
+                    out_items.append("")
                 else:
+                    out_items.append(_format_numeric(val, preferred))
+            # Simple base-name numeric variable
+            elif item_upper in interpreter.variables:
+                # Determine preferred type from defaults using public API
+                _base, t = interpreter.get_var_base_and_type(item_upper)
+                val = interpreter.variables[item_upper]
+                out_items.append(_format_numeric(val, t))
+            else:
+                # Try to evaluate as expression
+                try:
+                    value = interpreter.evaluate_expression(item_trim)
+                    out_items.append(_format_numeric(value))
+                except (ValueError, TypeError, ZeroDivisionError):
+                    # If evaluation fails, use interpolation as fallback
                     out_items.append(interpreter.interpolate_text(item_trim))
     result = " ".join(out_items)
-    interpreter.output.append(result)
     return result + "\n"
 
 
@@ -221,15 +267,16 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
     expr = parts[1].strip()
     if not var_name:
         return "❌ LET requires variable name\n"
+    # String assignment
     if var_name.endswith("$"):
         if expr.startswith('"') and expr.endswith('"'):
-            interpreter.string_variables[var_name] = expr[1:-1]
+            interpreter.set_typed_variable(var_name, expr[1:-1])
         else:
-            interpreter.string_variables[var_name] = str(expr)
+            interpreter.set_typed_variable(var_name, str(expr))
         return ""
     try:
         result = interpreter.evaluate_expression(expr)
-        interpreter.variables[var_name] = result
+        interpreter.set_typed_variable(var_name, result)
     except (ValueError, TypeError, ZeroDivisionError) as e:
         return f"❌ Error in LET: {e} (expr: '{expr}')\n"
     return ""
@@ -312,7 +359,7 @@ def _basic_for(interpreter: "Interpreter", args: str) -> str:
         start_val = interpreter.evaluate_expression(start_expr)
         end_val = interpreter.evaluate_expression(end_expr)
         step_val = interpreter.evaluate_expression(step_expr)
-        interpreter.variables[var_name] = start_val
+        interpreter.set_typed_variable(var_name, start_val)
 
         context = ForContext(
             var_name=var_name,
@@ -330,9 +377,9 @@ def _basic_next(interpreter: "Interpreter", _args: str) -> str:
     if not interpreter.for_stack:
         return "❌ NEXT without FOR\n"
     context = interpreter.for_stack[-1]
-    current_val = interpreter.variables.get(context.var_name, 0)
+    current_val = interpreter.get_numeric_value(context.var_name) or 0
     new_val = current_val + context.step
-    interpreter.variables[context.var_name] = new_val
+    interpreter.set_typed_variable(context.var_name, new_val)
     if context.step > 0:
         should_continue = new_val <= context.end_value
     else:
@@ -780,12 +827,10 @@ def _basic_read(interpreter: "Interpreter", args: str) -> str:
         try:
             # Try to parse as number
             val = float(val_str)
-            interpreter.variables[var_name] = val
+            interpreter.set_typed_variable(var_name, val)
         except ValueError:
             # Store as string variable if it's a string
-            # But evaluate_expression only handles floats for now.
-            # We'll store it in string_variables if it fails float conversion
-            interpreter.string_variables[var_name] = val_str
+            interpreter.set_typed_variable(var_name, val_str)
 
     return ""
 
