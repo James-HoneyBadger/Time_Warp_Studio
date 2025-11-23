@@ -694,7 +694,7 @@ FORWARD 100`;
     }
 
     loadDemoProgram() {
-        const demoProgram = `T:Welcome to Time Warp 2.1.0 Web Edition!
+        const demoProgram = `T:Welcome to Time Warp 4.0.0 Web Edition!
 T:This is a comprehensive educational IDE for programming.
 A:name
 T:Hello *name*! Let's explore the features...
@@ -1189,7 +1189,7 @@ E:`;
             overview: {
                 title: 'Time Warp Overview',
                 content: `
-<h2>Welcome to Time Warp 2.1.0</h2>
+<h2>Welcome to Time Warp 4.0.0</h2>
 <p>Time Warp is a comprehensive educational IDE supporting three programming languages:</p>
 <ul>
 <li><strong>PILOT</strong> - Simple, intuitive commands for beginners</li>

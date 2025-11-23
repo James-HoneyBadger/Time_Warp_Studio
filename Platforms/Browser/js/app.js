@@ -40,7 +40,7 @@ class TimeWarpApp {
 
     showWelcomeMessage() {
         if (this.ui) {
-            this.ui.addOutput('🌟 Time Warp 2.1.0 Web Edition Ready!', 'welcome');
+            this.ui.addOutput('🌟 Time Warp 4.0.0 Web Edition Ready!', 'welcome');
             this.ui.addOutput('📚 Try the demo program or create your own!', 'info');
             this.ui.addOutput('💡 Tip: Use Ctrl+R to run, Ctrl+N for new file, Ctrl+S to save', 'info');
         }
@@ -129,7 +129,7 @@ class TimeWarpApp {
 
 // Application configuration
 const CONFIG = {
-    version: '2.1.0',
+    version: '4.0.0',
     buildDate: '2024-01-01',
     features: {
         debugging: true,

@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: time-warp-ide
-Version: 2.0.0
+Version: 4.0.0
 Summary: Educational programming environment for BASIC, PILOT, and Logo with retro computing support
 Author-email: James Temple <james@honey-badger.org>
 Maintainer-email: James Temple <james@honey-badger.org>
@@ -377,7 +377,7 @@ suggestion = hints.get_suggestion('FORWRD', ['FORWARD', 'BACKWARD'])
 
 ## 📊 Development Status
 
-**Current Version**: 2.0.0
+**Current Version**: 4.0.0
 
 | Component | Status | Completion |
 |-----------|--------|------------|

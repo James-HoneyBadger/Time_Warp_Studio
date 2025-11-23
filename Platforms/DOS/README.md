@@ -19,7 +19,7 @@ The **DOS implementation** of Time Warp IDE delivers an authentic **retro comput
 - **💾 Single File**: Complete interpreter in one portable executable
 - **🔧 No Dependencies**: Pure C89 with no external libraries required
 
-## Features (v1.0)
+## Features (v4.0.0)
 
 - Single-file C89 interpreter (no external deps)
 - Text-mode; runs in MS-DOS, DOSBox, Windows 95/98/ME DOS prompt
@@ -287,7 +287,7 @@ See `examples/` directory:
 
 ```text
 > TIMEWARP.EXE
-Time Warp DOS v1.0 - Interactive Mode
+Time Warp DOS v4.0.0 - Interactive Mode
 Type HELP for commands, BYE to exit
 
 > 10 PRINT "Hello from DOS!"

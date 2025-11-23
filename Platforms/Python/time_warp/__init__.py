@@ -1,10 +1,10 @@
 """
 Time Warp IDE - Python Implementation
 Educational programming environment (unified BASIC, PILOT, Logo)
-Ported from Rust version (time-warp-unified v2.0.0)
+Aligned with Time Warp IDE v4.0.0 release
 """
 
-__version__ = "2.0.0"
+__version__ = "4.0.0"
 __author__ = "James-HoneyBadger"
 
 from .core.interpreter import Interpreter, ExecutionResult

@@ -1,6 +1,6 @@
 {
   "name": "time-warp-web",
-  "version": "2.1.0",
+  "version": "4.0.0",
   "private": true,
   "license": "MIT",
   "description": "Time Warp IDE - Web implementation (static HTML/JS)",

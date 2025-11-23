@@ -613,40 +613,40 @@ cargo build --release
 
 ```bash
 # Build wheel
-cd platforms/python
+cd Platforms/Python
 python -m build
 
 # Creates:
-# dist/time_warp_ide-2.1.0-py3-none-any.whl
-# dist/time_warp_ide-2.1.0.tar.gz
+# dist/time_warp_ide-4.0.0-py3-none-any.whl
+# dist/time_warp_ide-4.0.0.tar.gz
 
 # Install wheel
-pip install dist/time_warp_ide-2.1.0-py3-none-any.whl
+pip install dist/time_warp_ide-4.0.0-py3-none-any.whl
 ```
 
 ### Platform-Specific Builds
 
 **macOS App Bundle**:
 ```bash
-cd scripts
+cd Scripts
 ./build_macos_app.sh
 ```
 
 **Windows Installer**:
 ```bash
 # Requires NSIS
-cd packaging/windows
+cd Packaging/windows
 makensis installer.nsi
 ```
 
 **Linux Packages**:
 ```bash
 # Debian/Ubuntu
-cd packaging/debian
+cd Packaging/debian
 dpkg-buildpackage -us -uc
 
 # Arch Linux
-cd packaging/arch
+cd Packaging/arch
 makepkg
 ```
 
@@ -657,56 +657,55 @@ makepkg
 ### Version Numbering
 
 Follow Semantic Versioning (semver):
-- MAJOR.MINOR.PATCH (e.g., 2.1.0)
+- MAJOR.MINOR.PATCH (e.g., 4.0.0)
 - MAJOR: Breaking changes
 - MINOR: New features (backward compatible)
 - PATCH: Bug fixes
 
 ### Creating a Release
 
-1. **Update version** numbers:
-   - `platforms/rust/Cargo.toml`
-   - `platforms/python/pyproject.toml`
-   - `README.md`
+1. **Update version numbers** across source, installers, and documentation:
+    - `Platforms/Python/pyproject.toml`
+    - `Platforms/Python/time_warp/__init__.py`
+    - `Platforms/Python/time_warp/ui/main_window.py`
+    - `Platforms/Browser` (`package.json`, `index.html`, `js/app*.js`, `js/ui.js`)
+    - `Platforms/DOS/src/timewarp_dos.c`
+    - `Scripts/install.sh`, `Scripts/install-user.sh`
+    - Root `README.md` and key guides inside `Docs/`
 
-2. **Update changelog**:
-   ```markdown
-   ## [2.2.0] - 2025-02-01
-   
-   ### Added
-   - Forth language support
-   - Syntax highlighting improvements
-   
-   ### Fixed
-   - Turtle coordinate calculation bug
-   - Input dialog focus issue
-   ```
+2. **Update changelog** entry for the release:
+    ```markdown
+    ## [4.0.0] - 2025-11-22
+
+    ### Added
+    - Platform cleanup and documentation realignment
+    - Unified version branding across IDEs
+
+    ### Fixed
+    - Outdated references to legacy platforms
+    - Version display inconsistencies in installers
+    ```
 
 3. **Run full test suite**:
-   ```bash
-   cargo test --release
-   pytest platforms/python
-   ```
+    ```bash
+    python test_runner.py --comprehensive
+    ```
 
-4. **Build all platforms**:
-   ```bash
-   # Rust
-   cargo build --release
-   
-   # Python
-   cd platforms/python
-   python -m build
-   
-   # Platform packages
-   ./scripts/build_macos_app.sh
-   # etc.
-   ```
+4. **Build deliverables**:
+    ```bash
+    cd Platforms/Python
+    python -m build
+
+    # Browser assets (optional refresh)
+    npm install --prefix ../Browser
+    npm run build --prefix ../Browser
+    ```
 
 5. **Create git tag**:
-   ```bash
-   git tag -a v2.2.0 -m "Release version 2.2.0"
-   git push origin v2.2.0
-   ```
+    ```bash
+    git tag -a v4.0.0 -m "Release version 4.0.0"
+    git push origin v4.0.0
+    ```
 
 6. **GitHub Release**:
    - Go to GitHub Releases

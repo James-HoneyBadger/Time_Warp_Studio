@@ -286,5 +286,5 @@ Code examples in documentation are licensed under the same license as Time Warp 
 
 ---
 
-*Last updated: January 2025*
-*Documentation version: 2.1.0*
+*Last updated: November 2025*
+*Documentation version: 4.0.0*

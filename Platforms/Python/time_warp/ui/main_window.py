@@ -586,7 +586,7 @@ class MainWindow(QMainWindow):
             self,
             "About Time Warp IDE",
             "<h2>Time Warp IDE - Python Edition</h2>"
-            "<p>Version 2.0.0</p>"
+            "<p>Version 4.0.0</p>"
             "<p>Educational programming environment supporting:</p>"
             "<ul>"
             "<li>PILOT - Interactive teaching language</li>"

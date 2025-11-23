@@ -333,7 +333,7 @@ suggestion = hints.get_suggestion('FORWRD', ['FORWARD', 'BACKWARD'])
 
 ## 📊 Development Status
 
-**Current Version**: 2.0.0
+**Current Version**: 4.0.0
 
 | Component | Status | Completion |
 |-----------|--------|------------|

@@ -1,5 +1,37 @@
 # Time Warp IDE Release Notes
 
+## Version 4.0.0 - Unified Platform Reset
+**Release Date**: November 22, 2025
+
+### 🧭 Repository Realignment
+- Retired dormant implementations (Rust, Go, Amiga, Haiku, Apple, OS/2) to concentrate on the supported stack
+- Standardized platform directory casing (`Platforms/Python`, `Platforms/Browser`, `Platforms/DOS`, `Platforms/Windows2000`)
+- Updated project README with accurate quick start instructions, documentation paths, and platform matrix
+- Declared semantic major release **v4.0.0** to reflect post-cleanup product scope
+
+### 📚 Documentation Refresh
+- Regenerated documentation links to match the `Docs/` hierarchy and removed stale `docs-new/` references
+- Clarified curriculum coverage for BASIC, PILOT, and Logo while noting Pascal/Prolog/C as experimental
+- Documented release preparation steps in this section for Python-focused development workflows
+
+### 🐢 DOS Interpreter Verification
+- Audited `Platforms/DOS/src/timewarp_dos.c` to confirm BASIC, PILOT, and Logo command dispatch within the unified runtime loop
+- Documented PILOT label collection, BASIC control-flow handling, and Logo canvas rendering for future regression checks
+- Captured guidance for creating mixed-language samples to support historical teaching modules
+
+### 🔧 Tooling & Testing
+- Reconfirmed `python test_runner.py --basic` and `--comprehensive` as the canonical test entry points
+- Emphasized use of `core/safe_expression_evaluator.safe_eval` for arithmetic evaluation across executors
+- Maintained simulation defaults for hardware controllers pending optional dependency installation
+
+### 📦 Release Checklist
+1. Run `python test_runner.py --basic`
+2. Optionally run `python test_runner.py --comprehensive`
+3. Draft release notes referencing this section and attach updated DOS examples if available
+4. Tag `v4.0.0` and publish via GitHub Releases with binaries (if generated)
+
+---
+
 ## Version 2.1.0 - Educational Platform Transformation
 **Release Date**: October 31, 2025
 

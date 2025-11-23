@@ -268,7 +268,7 @@ install_files() {
 
 # Main installation
 install() {
-    print_header "Installing Time Warp IDE v2.1.0"
+    print_header "Installing Time Warp IDE v4.0.0"
     
     print_info "Installation directory: $INSTALL_DIR"
     echo ""

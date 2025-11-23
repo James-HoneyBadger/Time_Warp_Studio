@@ -2034,7 +2034,7 @@ static int run_program(void)
 
 static void usage(const char *argv0)
 {
-    printf("Time Warp DOS v1.0 (C89)\n");
+    printf("Time Warp DOS v4.0.0 (C89)\n");
     printf("Usage: %s [program.spt]\n", argv0);
     printf("Without arguments: starts interactive mode\n");
     printf("With file: loads and runs the program\n\n");
@@ -2051,7 +2051,7 @@ static void usage(const char *argv0)
 static void interactive_loop(void)
 {
     char buf[MAX_LINE_LEN];
-    printf("Time Warp DOS v1.0 - Interactive Mode\n");
+    printf("Time Warp DOS v4.0.0 - Interactive Mode\n");
     printf("Type HELP for commands, BYE to exit\n\n");
 
     while (1)

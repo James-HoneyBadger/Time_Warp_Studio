@@ -492,4 +492,4 @@ See [Developer Guide](../developer/00-developer-guide.md) for:
 
 ---
 
-*FAQ v2.1.0 - January 2025*
+*FAQ v4.0.0 - November 2025*
