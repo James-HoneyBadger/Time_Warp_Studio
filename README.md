@@ -2,74 +2,239 @@
 
 **The Ultimate Educational Programming Environment**
 
-Time Warp IDE is a multi-platform educational tool designed to teach programming through a unified language (**TempleCode**) that combines the best features of **BASIC**, **PILOT**, and **Logo**.
+Time Warp IDE is a comprehensive educational platform designed to teach programming through **six classic languages**: BASIC, PILOT, Logo, Pascal, Prolog, and C. Learn multiple programming paradigms in one unified environment.
 
 ## 🌟 Features
 
-- **Unified Language**: Mix BASIC control structures, PILOT pattern matching, and Logo turtle graphics in a single program.
-- **Multi-Platform**: Available in Python, Rust, Go, Web, and more.
-- **Educational Focus**: Designed for classrooms with comprehensive guides and lesson plans.
+- **Six Languages**: Master BASIC, PILOT, Logo, Pascal, Prolog, and C in one IDE
+- **Turtle Graphics**: Built-in visual programming with Logo-style graphics
+- **Educational Focus**: Designed for students and classrooms with comprehensive materials
+- **Multi-Platform**: Available for Linux, macOS, and Windows
+- **Clear Feedback**: Helpful error messages and immediate results
+- **IoT Ready**: Connect to Arduino, Raspberry Pi, and other hardware
+- **Cross-Platform**: Same experience on every operating system
 
-## 🚀 Platforms
+## 🎓 For Everyone
 
-The project is organized into platform-specific implementations:
+**Students**: Start your programming journey with easy-to-learn languages and visual feedback
+**Teachers**: Complete curriculum materials, lesson plans, and assessment tools included
+**Users**: Professional IDE with syntax highlighting, file management, and themes
+**Developers**: Open source, well-documented, and extensible architecture
 
-| Platform | Location | Status | Description |
-|----------|----------|--------|-------------|
-| **Python** | [`platforms/python/`](platforms/python/) | ✅ Complete | The primary educational implementation. Easy to install and modify. |
-| **Rust** | [`platforms/rust/`](platforms/rust/) | ✅ Reference | High-performance reference implementation using `egui`. |
-| **Web** | [`platforms/web/`](platforms/web/) | ✅ Complete | Browser-based version using HTML5 Canvas. |
-| **Go** | [`platforms/go/`](platforms/go/) | ✅ Expanded | CLI and GUI implementation in Go. |
-| **Legacy** | [`legacy/`](legacy/) | 🔒 Archived | Older implementations and experiments. |
+## 🚀 Quick Start
 
-## 📚 Documentation
-
-- **[Documentation Index](docs/DOCUMENTATION_INDEX.md)**: Start here for all guides.
-- **[Installation Guide](docs/installation/INSTALLATION_GUIDE.md)**: How to install on any system.
-- **[User Guide](docs/user/USER_GUIDE.md)**: How to use the IDE.
-- **[Programming Guide](docs/user/PROGRAMMING_GUIDE.md)**: Learn TempleCode (BASIC, PILOT, Logo).
-
-## 🛠️ Quick Start
-
-### Python Version (Recommended)
+### Linux
 
 ```bash
+# Download and run Python version
+git clone https://github.com/honey-badger-org/Time_Warp.git
+cd Time_Warp
 ./run.sh
 ```
 
-Or manually:
+### macOS
 
 ```bash
-cd platforms/python
-pip install -r requirements.txt
-python time_warp_ide.py
+# Using Homebrew
+brew install honey-badger-org/tap/time-warp-ide
+time-warp-ide
 ```
 
-### Rust Version
+### Windows
 
-```bash
-cd platforms/rust
-cargo run
-```
+Download `TimeWarpIDE-Setup.exe` from [Releases](https://github.com/honey-badger-org/Time_Warp/releases) and run the installer.
 
-Install a Linux desktop entry (user scope):
+**Full installation guide**: [Quick Start](docs-new/installation/00-quickstart.md)
 
-```bash
-./scripts/install-linux-desktop-rust.sh
-```
+## 📚 Documentation
+
+**New comprehensive documentation** in `docs-new/`:
+
+### For Students
+- **[Student Workbook](docs-new/student/00-workbook.md)** - Learn programming step-by-step
+
+### For Teachers
+- **[Teacher's Guide](docs-new/teacher/00-overview.md)** - Lesson plans, curriculum, assessments
+
+### For Users
+- **[User Manual](docs-new/user/00-user-manual.md)** - Complete guide to using Time Warp IDE
+- **[Programming Guide](docs-new/user/01-programming-guide.md)** - All six languages explained
+
+### For Developers
+- **[Developer Guide](docs-new/developer/00-developer-guide.md)** - Architecture and contributing
+
+**Start here**: [Documentation Index](docs-new/INDEX.md)
+
+## 💻 Platforms
+
+Platform-specific implementations:
+
+| Platform | Location | Status | Description |
+|----------|----------|--------|-------------|
+| **Python** | [`platforms/python/`](platforms/python/) | ✅ Primary | Full-featured implementation with PySide6 |
+| **Rust** | [`platforms/rust/`](platforms/rust/) | ✅ Active | High-performance native implementation |
+| **Web** | [`platforms/web/`](platforms/web/) | 🚧 In Progress | Browser-based version |
+| **Go** | [`platforms/go/`](platforms/go/) | 🚧 Experimental | CLI and GUI in Go |
+| **Retro** | [`platforms/amiga/`](platforms/amiga/), [`platforms/win2000/`](platforms/win2000/) | 🎮 Special | Vintage system ports |
 
 ## 📂 Project Structure
 
-- `platforms/`: Source code for all implementations.
-- `docs/`: Comprehensive documentation.
-- `examples/`: Sample programs in BASIC, PILOT, and Logo.
-- `tools/`: Development and build tools.
-- `legacy/`: Archived code.
+```
+Time_Warp/
+├── platforms/          # Platform-specific implementations
+│   ├── python/        # Primary implementation (PySide6)
+│   ├── rust/          # Native implementation (egui)
+│   └── ...
+├── docs-new/          # Comprehensive documentation
+│   ├── user/          # User guides and tutorials
+│   ├── student/       # Student learning materials
+│   ├── teacher/       # Educator resources
+│   ├── installation/  # Setup guides
+│   ├── developer/     # Developer documentation
+│   └── reference/     # Technical references
+├── examples/          # Sample programs (all languages)
+├── core-spec/         # Language specifications
+└── tests/             # Cross-platform tests
+```
+
+## 🎯 Why Time Warp IDE?
+
+**Educational Excellence**: Every feature designed with learning in mind. Clear error messages, immediate feedback, and visual programming make concepts tangible.
+
+**Historical Perspective**: Understand how programming evolved. Learn why modern languages work the way they do by experiencing their ancestors.
+
+**Multiple Paradigms**: 
+- **Procedural** (BASIC, C)
+- **Educational** (PILOT)
+- **Visual** (Logo)
+- **Structured** (Pascal)
+- **Declarative** (Prolog)
+
+**One Environment**: Switch between languages seamlessly. No need to learn different tools.
+
+## 🎨 What Can You Build?
+
+- **Interactive Games**: Guessing games, quizzes, text adventures
+- **Visual Art**: Geometric patterns, spirals, fractals with turtle graphics
+- **Educational Tools**: Math practice, vocabulary drills, tutorials
+- **Logic Puzzles**: AI concepts with Prolog
+- **System Programs**: Low-level concepts with C
+- **And more**: Your imagination is the limit!
+
+## 💡 Example: Hello World in All Six Languages
+
+**BASIC**:
+```basic
+10 PRINT "Hello, World!"
+20 END
+```
+
+**PILOT**:
+```pilot
+T:Hello, World!
+```
+
+**Logo**:
+```logo
+PRINT [Hello, World!]
+```
+
+**Pascal**:
+```pascal
+program HelloWorld;
+begin
+  writeln('Hello, World!');
+end.
+```
+
+**Prolog**:
+```prolog
+:- write('Hello, World!'), nl.
+```
+
+**C**:
+```c
+#include <stdio.h>
+int main() {
+    printf("Hello, World!\n");
+    return 0;
+}
+```
+
+## 🏫 Perfect for Education
+
+Time Warp IDE supports:
+- **CSTA K-12 Computer Science Standards**
+- **ISTE Standards for Students**
+- **Common Core Math (through programming)**
+- **21st Century Skills** (problem-solving, creativity)
+
+Includes:
+- Ready-to-use lesson plans
+- Student workbook with progressive exercises
+- Assessment rubrics and tools
+- Classroom management strategies
+- Differentiation for all skill levels
+
+## 🛠️ Development
+
+### Python Version (Primary)
+
+```bash
+cd platforms/python
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e .[dev]
+python time_warp_ide.py
+```
+
+### Rust Version (Native)
+
+```bash
+cd platforms/rust
+cargo run --release
+```
+
+### Testing
+
+```bash
+# Python
+pytest platforms/python/tests
+
+# Rust
+cargo test
+```
 
 ## 🤝 Contributing
 
-See [CONTRIBUTING.md](docs/development/CONTRIBUTING.md) for guidelines.
+We welcome contributions! See [Developer Guide](docs-new/developer/00-developer-guide.md) for:
+- Architecture overview
+- Code organization
+- Testing requirements
+- Submission guidelines
+
+**Ways to Contribute**:
+- Add new language features
+- Improve documentation
+- Create example programs
+- Report bugs
+- Suggest enhancements
+- Translate documentation
+
+## 🌐 Community
+
+- **Discussions**: [GitHub Discussions](https://github.com/honey-badger-org/Time_Warp/discussions)
+- **Issues**: [Bug Reports & Features](https://github.com/honey-badger-org/Time_Warp/issues)
+- **Releases**: [Download Latest](https://github.com/honey-badger-org/Time_Warp/releases)
 
 ## 📄 License
 
-MIT License. See [LICENSE](LICENSE) for details.
+MIT License - see [LICENSE](LICENSE) for details.
+
+Open source software created with ❤️ for education.
+
+---
+
+**Get Started**: [Installation Guide](docs-new/installation/00-quickstart.md) | [User Manual](docs-new/user/00-user-manual.md) | [Examples](examples/)
+
+*Time Warp IDE - Making programming education accessible and fun since 2024*

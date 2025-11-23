@@ -1,4 +1,0 @@
-- Initial macOS release
-- Educational IDE for TempleCode
-
-(Replace with your release notes.)
