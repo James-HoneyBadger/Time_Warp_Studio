@@ -163,7 +163,7 @@ def _printf(interpreter: "Interpreter", arglist: str) -> str:
             else:
                 try:
                     values.append(interpreter.evaluate_expression(expr))
-                except Exception:
+                except Exception:  # noqa: BLE001
                     values.append(0)
 
     out = []

@@ -39,7 +39,7 @@ class TurtleCanvas(QWidget):
         try:
             r, g, b = getattr(turtle, "bg_color", (40, 42, 54))
             self.bg_color = QColor(int(r), int(g), int(b))
-        except Exception:
+        except Exception:  # noqa: BLE001
             # Fallback to default theme background
             self.bg_color = QColor(40, 42, 54)
         self.update()
@@ -53,7 +53,7 @@ class TurtleCanvas(QWidget):
         self.offset_y = 0.0
         self.update()
 
-    def paintEvent(self, event):
+    def paintEvent(self, event):  # noqa: ARG002
         """Paint turtle graphics."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)

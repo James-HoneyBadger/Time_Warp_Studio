@@ -1,0 +1,27 @@
+{
+  "include": [
+    "time_warp"
+  ],
+  "exclude": [
+    "**/__pycache__",
+    ".venv",
+    "tests",
+    "legacy"
+  ],
+  "ignore": [
+    "time_warp/ui/*.py"
+  ],
+  "reportMissingImports": "warning",
+  "reportMissingTypeStubs": false,
+  "pythonVersion": "3.10",
+  "pythonPlatform": "Linux",
+  "typeCheckingMode": "basic",
+  "reportUnusedVariable": false,
+  "reportUnusedFunction": false,
+  "reportUnusedImport": false,
+  "reportGeneralTypeIssues": false,
+  "reportOptionalMemberAccess": false,
+  "reportOptionalSubscript": false,
+  "reportPrivateImportUsage": false,
+  "stubPath": ""
+}

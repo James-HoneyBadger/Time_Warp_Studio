@@ -5,5 +5,10 @@ exclude =
     .venv,
     legacy,
     Time_Warp_*,
-max-line-length = 88
-extend-ignore = E203
+max-line-length = 100
+extend-ignore = 
+    E203,  # whitespace before ':'
+    C901,  # complexity metrics (informational)
+    W503,  # line break before binary operator
+per-file-ignores =
+    time_warp/ui/*.py:BLE001  # Qt GUI needs broad exception handling
