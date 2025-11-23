@@ -593,7 +593,7 @@ class MainWindow(QMainWindow):
             "<li>BASIC - Classic BASIC with line numbers</li>"
             "<li>Logo - Turtle graphics for visual learning</li>"
             "</ul>"
-            "<p>Powered by the unified TempleCode interpreter with optional Pascal, Prolog, and C experiments.</p>"
+            "<p>Powered by the unified Time Warp interpreter with optional Pascal, Prolog, and C experiments.</p>"
             "<p><b>Author:</b> James Temple</p>"
             '<p><a href="https://github.com/James-HoneyBadger/Time_Warp">'
             "github.com/James-HoneyBadger/Time_Warp</a><br>"

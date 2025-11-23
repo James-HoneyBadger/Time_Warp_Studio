@@ -14,7 +14,7 @@ Use this page to jump directly to the documentation that matches your role.
 
 ## User Guides
 - [User Manual](user/00-user-manual.md) – IDE walkthrough, menus, and workspace layout.
-- [Programming Guide](user/01-programming-guide.md) – TempleCode language primer for BASIC, PILOT, Logo, Pascal, Prolog, and C experiments.
+- [Programming Guide](user/01-programming-guide.md) – Language primer covering BASIC, PILOT, Logo, plus experimental Pascal, Prolog, and C features.
 - [Quick Reference](user/02-quick-reference.md) – Emoji legend, common commands, and syntax reminders.
 - [FAQ](user/03-faq.md) – Answers to setup, language, and troubleshooting questions.
 

@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-Time Warp IDE is an educational programming environment for TempleCode — a unified language combining BASIC, PILOT, and Logo — with integrated turtle graphics, IoT/robotics capabilities, and game development features.
+Time Warp IDE is an educational programming environment that unifies BASIC, PILOT, and Logo with integrated turtle graphics, IoT/robotics capabilities, and game development features.
 
 **Current State:** Python implementation (PySide6) is the sole actively maintained version. All other platform implementations (Rust, Go, Amiga, Haiku, Apple, OS/2) have been removed from the repository. Only auxiliary experimental directories (e.g. Browser, DOS, Windows2000) remain for historical reference.
 

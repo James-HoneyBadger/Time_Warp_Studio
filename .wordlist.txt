@@ -1,4 +1,3 @@
-TempleCode
 SuperPILOT
 IDE
 PySide6

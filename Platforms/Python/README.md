@@ -426,7 +426,7 @@ MIT License - see [LICENSE](../../LICENSE) file in repository root.
 - **[Release Notes](../../Docs/misc/RELEASE_NOTES.md)** — Historical highlights and version-specific changes.
 
 ### 📦 Assets & Examples
-- **Example Programs**: [`Examples/`](../../Examples/) — A curated set of TempleCode samples for lessons and demos.
+- **Example Programs**: [`Examples/`](../../Examples/) — A curated set of BASIC, PILOT, and Logo samples for lessons and demos.
 - **Browser Prototype**: [`Platforms/Browser/`](../Browser/) — Experimental HTML/JS build for future deployment.
 - **DOS Interpreter**: [`Platforms/DOS/`](../DOS/) — C89 text-mode interpreter for historical computing labs.
 

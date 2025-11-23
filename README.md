@@ -1,6 +1,6 @@
 # Time Warp IDE
 
-Time Warp IDE is an educational programming environment for TempleCode—an integrated blend of BASIC, PILOT, and Logo with experimental Pascal, Prolog, and C support. The official implementation is a PySide6 desktop application that keeps the language executors stateless while the UI manages canvas rendering, editor state, and theming.
+Time Warp IDE is an educational programming environment that unifies BASIC, PILOT, and Logo with experimental Pascal, Prolog, and C support. The official implementation is a PySide6 desktop application that keeps the language executors stateless while the UI manages canvas rendering, editor state, and theming.
 
 **Current release:** 4.0.0 (November 22, 2025)
 
@@ -49,7 +49,7 @@ Legacy implementations (Rust, Go, Amiga, Haiku, Apple, OS/2) have been removed t
 Time_Warp/
 ├── Platforms/        # Implementations (Python primary)
 ├── Docs/             # Documentation library (index + guides)
-├── Examples/         # Sample TempleCode programs by language
+├── Examples/         # Sample programs for BASIC, PILOT, and Logo
 ├── Core_Spec/        # Language specifications and turtle docs
 ├── Scripts/          # Utility scripts for builds and packaging
 ├── Tests/            # Pytest suite and helpers
