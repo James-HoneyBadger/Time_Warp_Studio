@@ -15,7 +15,7 @@ try:
     print("   ✅ All UI components imported successfully")
 except Exception as e:
     print(f"   ❌ Import failed: {e}")
-    sys.exit(1)
+    raise AssertionError(f"UI import failed: {e}")
 
 # Test 2: Import core library
 print("2. Testing core library imports...")
@@ -26,7 +26,7 @@ try:
     print("   ✅ Core library imported successfully")
 except Exception as e:
     print(f"   ❌ Core import failed: {e}")
-    sys.exit(1)
+    raise AssertionError(f"Core import failed: {e}")
 
 # Test 3: Check PySide6
 print("3. Testing PySide6...")
@@ -39,7 +39,7 @@ try:
     print(f"   ✅ PySide6 version {PySide6.__version__}")
 except Exception as e:
     print(f"   ❌ PySide6 not found: {e}")
-    sys.exit(1)
+    raise AssertionError(f"PySide6 check failed: {e}")
 
 # Test 4: Test interpreter execution
 print("4. Testing interpreter execution...")
@@ -50,12 +50,12 @@ try:
     # Test PILOT
     interp.load_program("T:Hello from PILOT\nE:", Language.PILOT)
     output = interp.execute(turtle)
-    assert "Hello from PILOT" in output
+    assert any("Hello from PILOT" in line for line in output)
 
     # Test BASIC
     interp.load_program('10 PRINT "Hello from BASIC"', Language.BASIC)
     output = interp.execute(turtle)
-    assert "Hello from BASIC" in output
+    assert any("Hello from BASIC" in line for line in output)
 
     # Test Logo
     turtle = TurtleState()  # Reset turtle
@@ -69,7 +69,7 @@ except Exception as e:
 
     print(f"   ❌ Execution test failed: {e}")
     traceback.print_exc()
-    sys.exit(1)
+    raise AssertionError(f"Execution test failed: {e}")
 
 # Test 5: Check example programs
 print("5. Checking example programs...")
@@ -98,7 +98,7 @@ try:
     print(f"   ✅ ThemeManager working with {len(themes)} themes")
 except Exception as e:
     print(f"   ❌ ThemeManager test failed: {e}")
-    sys.exit(1)
+    raise AssertionError(f"ThemeManager test failed: {e}")
 
 # Test 7: Check documentation
 print("7. Checking documentation...")

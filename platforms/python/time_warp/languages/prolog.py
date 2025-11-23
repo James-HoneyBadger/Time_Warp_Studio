@@ -42,9 +42,13 @@ def _ensure_kb(interpreter: "Interpreter"):
     if not hasattr(interpreter, "prolog_kb"):
         # Use list to preserve insertion order for deterministic behavior
         interpreter.prolog_kb = {"facts": [], "rules": [], "cut_active": False}
-    else:
-        if "cut_active" not in interpreter.prolog_kb:
-            interpreter.prolog_kb["cut_active"] = False
+    # Ensure required keys exist even if prolog_kb was pre-initialized as an empty dict
+    if "facts" not in interpreter.prolog_kb:
+        interpreter.prolog_kb["facts"] = []
+    if "rules" not in interpreter.prolog_kb:
+        interpreter.prolog_kb["rules"] = []
+    if "cut_active" not in interpreter.prolog_kb:
+        interpreter.prolog_kb["cut_active"] = False
 
 
 def _unify(x: str, y: str, env: Dict[str, str]) -> Optional[Dict[str, str]]:

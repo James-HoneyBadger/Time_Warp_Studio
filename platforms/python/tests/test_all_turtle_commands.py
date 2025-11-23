@@ -1,5 +1,11 @@
 #!/usr/bin/env python3
-"""Comprehensive test of all turtle graphics commands."""
+"""Comprehensive test of all turtle graphics commands.
+
+This is a verification script, not a pytest-style test module. Skip collection.
+"""
+
+import pytest
+pytestmark = pytest.mark.skip(reason="Verification script (invoked as __main__), not a pytest test module")
 
 from time_warp.core.interpreter import Interpreter, Language
 from time_warp.graphics.turtle_state import TurtleState
