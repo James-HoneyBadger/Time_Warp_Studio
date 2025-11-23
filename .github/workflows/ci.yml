@@ -35,23 +35,31 @@ jobs:
             platforms/go/timewarp-gui
 
   python:
-    name: Python tests
+    name: Python tests (platforms/python)
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: platforms/python
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install dev requirements
+      - name: Install system dependencies (GUI/Xvfb)
         run: |
-          if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
-      - name: Run pytest (Time_Warp_Python)
+          sudo apt-get update
+          sudo apt-get install -y xvfb libegl1-mesa-dev libxkbcommon-x11-0 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 libxcb-render-util0 libxcb-shape0 libxcb-xfixes0 libxcb-xinerama0
+      - name: Install Python dependencies
         run: |
-          if [ -d Time_Warp_Python ]; then \
-            cd Time_Warp_Python && pytest -v --tb=short; \
-          else \
-            echo "Time_Warp_Python not present"; \
-          fi
+          python -m pip install --upgrade pip
+          pip install -e ".[gui,dev]"
+          pip install ruff
+      - name: Lint critical (ruff)
+        run: |
+          ruff check --select=E9,F63,F7,F82 --output-format=github .
+      - name: Run tests (smoke)
+        run: |
+          xvfb-run -a pytest -q
 
   rust:
     name: Rust build and tests (best-effort)
