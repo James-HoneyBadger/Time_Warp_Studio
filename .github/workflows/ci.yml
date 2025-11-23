@@ -29,7 +29,7 @@ jobs:
       - name: Upload Go binaries
         uses: actions/upload-artifact@v4
         with:
-          name: go-binaries-ubuntu
+          name: go-binaries-${{ runner.os }}-${{ runner.arch }}
           path: |
             platforms/go/timewarp
             platforms/go/timewarp-gui
@@ -45,6 +45,13 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('platforms/python/pyproject.toml', 'platforms/python/requirements*.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
       - name: Install system dependencies (GUI/Xvfb)
         run: |
           sudo apt-get update
