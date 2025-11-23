@@ -15,13 +15,14 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.22.x"
+          cache-dependency-path: platforms/go/go.sum
       - name: Build Go binaries
-        working-directory: Time_Warp_Go
+        working-directory: platforms/go
         run: |
           go build ./cmd/timewarp
           go build ./cmd/timewarp-gui
       - name: Test Go packages
-        working-directory: Time_Warp_Go
+        working-directory: platforms/go
         run: |
           go vet ./...
           go test ./...
@@ -55,8 +56,8 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
       - name: Build Rust project if present
         run: |
-          if [ -d Time_Warp_Rust ] && [ -f Time_Warp_Rust/Cargo.toml ]; then \
-            cd Time_Warp_Rust && cargo build --verbose && cargo test --verbose; \
+          if [ -d platforms/rust ] && [ -f platforms/rust/Cargo.toml ]; then \
+            cd platforms/rust && cargo build --verbose && cargo test --verbose; \
           else \
-            echo "Time_Warp_Rust not present or missing Cargo.toml"; \
+            echo "platforms/rust not present or missing Cargo.toml"; \
           fi
