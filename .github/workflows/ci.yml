@@ -26,6 +26,13 @@ jobs:
         run: |
           go vet ./...
           go test ./...
+      - name: Upload Go binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-binaries-ubuntu
+          path: |
+            platforms/go/timewarp
+            platforms/go/timewarp-gui
 
   python:
     name: Python tests
@@ -54,6 +61,16 @@ jobs:
       - uses: actions/checkout@v4
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
+      - name: Cache cargo registry and build
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            platforms/rust/target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('platforms/rust/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-
       - name: Build Rust project if present
         run: |
           if [ -d platforms/rust ] && [ -f platforms/rust/Cargo.toml ]; then \
