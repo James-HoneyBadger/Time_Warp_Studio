@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Time Warp - Diagnostic Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 5px;
+            background: white;
+            border-left: 5px solid #ccc;
+        }
+
+        .pass {
+            border-color: #28a745;
+        }
+
+        .fail {
+            border-color: #dc3545;
+        }
+
+        .info {
+            border-color: #17a2b8;
+        }
+
+        .error-box {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f1aeb5;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .code {
+            font-family: monospace;
+            background: #f8f9fa;
+            padding: 2px 5px;
+            border-radius: 3px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔧 Time Warp Web IDE - Diagnostic Test</h1>
+    <p>This page will test your browser's compatibility and diagnose any initialization issues.</p>
+
+    <div id="results"></div>
+
+    <h2>Manual Test</h2>
+    <button onclick="testTimeWarp()">Test Time Warp Components</button>
+
+    <div id="manual-results"></div>
+
+    <script>
+        const results = document.getElementById('results');
+        const manualResults = document.getElementById('manual-results');
+
+        function addResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            results.appendChild(div);
+        }
+
+        function addManualResult(message, type = 'info') {
+            const div = document.createElement('div');
+            div.className = `test-result ${type}`;
+            div.innerHTML = message;
+            manualResults.appendChild(div);
+        }
+
+        // Basic browser feature tests
+        function runBasicTests() {
+            addResult('<h3>🔍 Basic Browser Feature Tests</h3>');
+
+            // Test 1: JavaScript enabled
+            addResult('✅ JavaScript is enabled', 'pass');
+
+            // Test 2: ES6 support
+            try {
+                eval('const test = () => "ES6 works";');
+                addResult('✅ ES6 support detected', 'pass');
+            } catch (e) {
+                addResult('❌ ES6 not supported: ' + e.message, 'fail');
+            }
+
+            // Test 3: Local Storage
+            try {
+                localStorage.setItem('test', 'value');
+                localStorage.removeItem('test');
+                addResult('✅ Local Storage available', 'pass');
+            } catch (e) {
+                addResult('❌ Local Storage not available: ' + e.message, 'fail');
+            }
+
+            // Test 4: Canvas support
+            try {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                if (ctx) {
+                    addResult('✅ HTML5 Canvas supported', 'pass');
+                } else {
+                    addResult('❌ HTML5 Canvas not supported', 'fail');
+                }
+            } catch (e) {
+                addResult('❌ Canvas error: ' + e.message, 'fail');
+            }
+
+            // Test 5: Fetch API
+            if (typeof fetch !== 'undefined') {
+                addResult('✅ Fetch API available', 'pass');
+            } else {
+                addResult('❌ Fetch API not available', 'fail');
+            }
+
+            // Test 6: Browser info
+            addResult(`📱 Browser: ${navigator.userAgent}`, 'info');
+            addResult(`🌍 Protocol: ${window.location.protocol}`, 'info');
+            addResult(`📁 Origin: ${window.location.origin}`, 'info');
+        }
+
+        // Test Time Warp specific components
+        function testTimeWarp() {
+            addManualResult('<h3>🧪 Time Warp Component Tests</h3>');
+
+            // Test loading scripts
+            const scripts = [
+                'js/interpreter.js',
+                'js/graphics.js',
+                'js/ui.js',
+                'js/app.js'
+            ];
+
+            scripts.forEach(script => {
+                const scriptElement = document.createElement('script');
+                scriptElement.src = script;
+                scriptElement.onload = () => {
+                    addManualResult(`✅ Loaded: <span class="code">${script}</span>`, 'pass');
+                };
+                scriptElement.onerror = () => {
+                    addManualResult(`❌ Failed to load: <span class="code">${script}</span>`, 'fail');
+                };
+                document.head.appendChild(scriptElement);
+            });
+
+            // Test class availability after a delay
+            setTimeout(() => {
+                try {
+                    if (typeof TimeWarpInterpreter !== 'undefined') {
+                        addManualResult('✅ TimeWarpInterpreter class available', 'pass');
+                    } else {
+                        addManualResult('❌ TimeWarpInterpreter class not found', 'fail');
+                    }
+                } catch (e) {
+                    addManualResult('❌ Error checking TimeWarpInterpreter: ' + e.message, 'fail');
+                }
+
+                try {
+                    if (typeof TurtleGraphics !== 'undefined') {
+                        addManualResult('✅ TurtleGraphics class available', 'pass');
+                    } else {
+                        addManualResult('❌ TurtleGraphics class not found', 'fail');
+                    }
+                } catch (e) {
+                    addManualResult('❌ Error checking TurtleGraphics: ' + e.message, 'fail');
+                }
+
+                try {
+                    if (typeof TimeWarpUI !== 'undefined') {
+                        addManualResult('✅ TimeWarpUI class available', 'pass');
+                    } else {
+                        addManualResult('❌ TimeWarpUI class not found', 'fail');
+                    }
+                } catch (e) {
+                    addManualResult('❌ Error checking TimeWarpUI: ' + e.message, 'fail');
+                }
+
+                try {
+                    if (typeof TimeWarpApp !== 'undefined') {
+                        addManualResult('✅ TimeWarpApp class available', 'pass');
+
+                        // Try to create an instance
+                        const app = new TimeWarpApp();
+                        addManualResult('✅ TimeWarpApp instance created successfully', 'pass');
+                    } else {
+                        addManualResult('❌ TimeWarpApp class not found', 'fail');
+                    }
+                } catch (e) {
+                    addManualResult('❌ Error with TimeWarpApp: ' + e.message, 'fail');
+                }
+            }, 2000);
+        }
+
+        // Capture and display any errors
+        window.addEventListener('error', (event) => {
+            addResult(`❌ JavaScript Error: ${event.error.message}<br>
+                       File: ${event.filename}<br>
+                       Line: ${event.lineno}`, 'fail');
+        });
+
+        // Run basic tests on load
+        runBasicTests();
+    </script>
+</body>
+
+</html>

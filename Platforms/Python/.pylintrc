@@ -1,0 +1,36 @@
+[MASTER]
+ignore=.venv,legacy,Time_Warp_*,Time_Warp_Python,Python
+
+[FORMAT]
+max-line-length=88
+
+[MESSAGES CONTROL]
+disable=
+    too-many-lines,
+    missing-module-docstring,
+    missing-class-docstring,
+    missing-function-docstring,
+    duplicate-code,
+    no-name-in-module,
+    invalid-name,
+    too-few-public-methods,
+    too-many-instance-attributes,
+    broad-exception-caught,
+    no-else-return,
+    import-outside-toplevel,
+    wrong-import-order,
+    no-member,
+    too-many-locals,
+    too-many-statements,
+    too-many-branches,
+    too-many-return-statements,
+    too-many-public-methods,
+    too-many-arguments,
+    too-many-positional-arguments,
+    unused-argument,
+    arguments-out-of-order,
+    duplicate-value
+
+[TYPECHECK]
+# Allow dynamic shim imports
+extension-pkg-whitelist=PySide6

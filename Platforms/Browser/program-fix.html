@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>PILOT/Logo Mixed Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .program {
+            background: #f0f0f0;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: monospace;
+            white-space: pre-line;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔧 PILOT/Logo Mixed Language Test</h1>
+
+    <h2>❌ Your Program (BROKEN):</h2>
+    <div class="program">C:size=100
+        CLEARSCREEN
+        PENDOWN
+        SETCOLOR blue
+        FORWARD *size*</div>
+    <p><strong>Problem:</strong> "C:" is not a valid PILOT command, and you're mixing PILOT syntax with Logo commands.
+    </p>
+
+    <h2>✅ Fixed Programs:</h2>
+
+    <h3>Option 1: Pure Logo</h3>
+    <div class="program">LET size = 100
+        CLEARSCREEN
+        PENDOWN
+        SETCOLOR blue
+        FORWARD size
+        RIGHT 90
+        SETCOLOR red
+        FORWARD size
+        RIGHT 90
+        SETCOLOR green
+        FORWARD size
+        RIGHT 90
+        SETCOLOR orange
+        FORWARD size</div>
+
+    <h3>Option 2: Pure PILOT (no graphics commands)</h3>
+    <div class="program">R:100 -> size
+        T:Size is set to *size*
+        T:Graphics commands would need R: prefix for PILOT</div>
+
+    <h3>Option 3: Mixed (PILOT variables + Logo graphics)</h3>
+    <div class="program">R:100 -> size
+        R:CLEARSCREEN
+        R:PENDOWN
+        R:SETCOLOR blue
+        R:FORWARD *size*
+        R:RIGHT 90</div>
+
+    <button onclick="testPureLogo()">Test Pure Logo Version</button>
+    <button onclick="testMixed()">Test Mixed Version</button>
+
+    <div id="result" style="margin-top: 20px; padding: 10px; background: #e0f0ff;"></div>
+
+    <script>
+        function testPureLogo() {
+            document.getElementById('result').innerHTML = `
+                <h3>✅ Pure Logo Version - Copy this to IDE:</h3>
+                <textarea rows="10" cols="50" style="font-family: monospace;">LET size = 100
+CLEARSCREEN
+PENDOWN
+SETCOLOR blue
+FORWARD size
+RIGHT 90
+SETCOLOR red  
+FORWARD size
+RIGHT 90
+SETCOLOR green
+FORWARD size
+RIGHT 90
+SETCOLOR orange
+FORWARD size
+RIGHT 90</textarea>
+            `;
+        }
+
+        function testMixed() {
+            document.getElementById('result').innerHTML = `
+                <h3>✅ PILOT/Logo Mixed Version - Copy this to IDE:</h3>
+                <textarea rows="12" cols="50" style="font-family: monospace;">R:100 -> size
+T:Drawing square with size *size*
+R:CLEARSCREEN
+R:PENDOWN
+R:SETCOLOR blue
+R:FORWARD *size*
+R:RIGHT 90
+R:SETCOLOR red
+R:FORWARD *size*
+R:RIGHT 90
+R:SETCOLOR green
+R:FORWARD *size*
+R:RIGHT 90
+R:SETCOLOR orange  
+R:FORWARD *size*
+R:RIGHT 90
+T:Square completed!</textarea>
+            `;
+        }
+    </script>
+</body>
+
+</html>

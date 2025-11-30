@@ -1,0 +1,11 @@
+{
+  "name": "Sample Plugin",
+  "version": "1.0.0",
+  "description": "A sample plugin demonstrating Time Warp IDE plugin capabilities",
+  "author": "Time Warp Team",
+  "entry_point": "__init__.py",
+  "dependencies": [],
+  "permissions": ["ui_access", "file_access"],
+  "languages": ["basic", "logo"],
+  "ui_hooks": ["menu_bar", "toolbar"]
+}

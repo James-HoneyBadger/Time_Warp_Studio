@@ -1,0 +1,75 @@
+# Time Warp IDE - Complete Project Requirements
+# This is the root-level requirements file covering all Python components
+
+# ============================================================================
+# CORE PROJECT DEPENDENCIES
+# ============================================================================
+
+# GUI Framework (optional - for desktop IDE)
+PySide6>=6.5.0; python_version>='3.8'
+
+# Image Processing (for icon generation, screenshots)
+Pillow>=10.0.0
+
+# ============================================================================
+# DEVELOPMENT & TESTING
+# ============================================================================
+
+# Testing Framework
+pytest>=7.4.0
+pytest-cov>=4.1.0
+pytest-mock>=3.11.0
+pytest-asyncio>=0.21.0
+
+# Code Quality & Formatting
+black>=23.7.0
+flake8>=6.1.0
+mypy>=1.5.0
+isort>=5.12.0
+
+# Type Stubs
+types-Pillow>=10.0.0
+
+# ============================================================================
+# BUILD & PACKAGING
+# ============================================================================
+
+# Modern packaging
+setuptools>=68.0.0
+wheel>=0.41.0
+build>=0.10.0
+
+# ============================================================================
+# OPTIONAL: HARDWARE/IOT (commented by default)
+# ============================================================================
+
+# Uncomment if using Arduino integration
+# pyfirmata>=1.1.0
+
+# Uncomment if using Raspberry Pi GPIO
+# RPi.GPIO>=0.7.1; platform_machine=='armv7l' or platform_machine=='aarch64'
+
+# ============================================================================
+# OPTIONAL: MACHINE LEARNING DEMOS (commented by default)
+# ============================================================================
+
+# Uncomment for ML examples
+# scikit-learn>=1.3.0
+# numpy>=1.24.0
+
+# ============================================================================
+# DOCUMENTATION
+# ============================================================================
+
+# Uncomment for documentation generation
+# sphinx>=7.0.0
+# sphinx-rtd-theme>=1.3.0
+
+# ============================================================================
+# INSTALLATION PROFILES
+# ============================================================================
+# Install profiles:
+#   pip install -r requirements.txt          # All core dependencies
+#   pip install -e .                         # Editable install (development)
+#   pip install -e ".[dev]"                  # With dev tools
+#   pip install -e ".[all]"                  # Everything

@@ -1,0 +1,35 @@
+name: Docs
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'docs/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'docs/**'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: List Markdown docs
+        run: |
+          echo "Listing documentation files (Markdown)"
+          find docs -type f -name "*.md" | sort
+      - name: Basic docs validation
+        run: |
+          echo "Checking docs structure against repository layout..."
+          test -f docs/DOCUMENTATION_INDEX.md
+          test -d docs/architecture
+          test -d docs/development
+          test -d docs/getting-started
+          test -d docs/installation
+          test -d docs/misc
+          test -d docs/user
+          test -f docs/user/USER_GUIDE.md
+          test -f docs/user/TEACHER_GUIDE.md
+          test -f docs/user/STUDENT_LESSON_BOOK.md
+          echo "Docs structure looks good."

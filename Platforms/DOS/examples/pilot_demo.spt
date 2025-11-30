@@ -1,0 +1,14 @@
+10 L:START
+20 T:Welcome to PILOT on DOS
+30 A:N
+40 U: A = N
+50 T:You entered *A*
+60 T:Type a name:
+70 A:N$
+80 T:Hello, *N$*
+90 T:Jumping to END label next...
+100 J:END
+110 T:This line will be skipped
+120 L:END
+130 T:Goodbye!
+140 END

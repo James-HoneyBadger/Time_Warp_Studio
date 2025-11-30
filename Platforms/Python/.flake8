@@ -1,0 +1,14 @@
+[flake8]
+exclude =
+    .git,
+    __pycache__,
+    .venv,
+    legacy,
+    Time_Warp_*,
+max-line-length = 88
+extend-ignore = 
+    E203,
+    C901,
+    W503
+per-file-ignores =
+    time_warp/ui/*.py:BLE001

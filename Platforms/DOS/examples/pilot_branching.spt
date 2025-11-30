@@ -1,0 +1,14 @@
+10 L:START
+20 T:Do you like pizza? (Y/N)
+30 A:A$
+40 Y:GREAT
+50 N:OK
+60 J:START
+70 L:GREAT
+80 T:Awesome! Enjoy your slice.
+90 J:END
+100 L:OK
+110 T:No worries. Maybe next time!
+120 L:END
+130 T:Bye!
+140 END

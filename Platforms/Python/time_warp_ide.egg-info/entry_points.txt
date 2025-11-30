@@ -1,0 +1,2 @@
+[console_scripts]
+time-warp = time_warp_ide:main

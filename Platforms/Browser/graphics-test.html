@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Turtle Graphics Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+
+        .editor-section {
+            flex: 1;
+        }
+
+        .graphics-section {
+            flex: 1;
+        }
+
+        #testCanvas {
+            border: 2px solid #333;
+            background: #f9f9f9;
+        }
+
+        textarea {
+            width: 100%;
+            height: 300px;
+            font-family: monospace;
+            border: 1px solid #ddd;
+            padding: 10px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .info {
+            background: #e7f3ff;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+
+        .error {
+            background: #ffebee;
+            color: #c62828;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🐢 Turtle Graphics Test</h1>
+    <div class="info">
+        <strong>Purpose:</strong> Test turtle graphics functionality independently from the main IDE.
+    </div>
+
+    <div class="container">
+        <div class="editor-section">
+            <h3>📝 Logo Commands</h3>
+            <textarea id="logoCode" placeholder="Enter Logo commands here...">CLEARSCREEN
+PENDOWN
+FORWARD 100
+RIGHT 90
+FORWARD 100
+RIGHT 90
+FORWARD 100
+RIGHT 90
+FORWARD 100
+RIGHT 90</textarea>
+
+            <div>
+                <button onclick="runLogo()">▶️ Run Logo</button>
+                <button onclick="clearCanvas()">🗑️ Clear Canvas</button>
+                <button onclick="testBasicDrawing()">🧪 Test Basic Drawing</button>
+                <button onclick="centerTurtle()">🏠 Center Turtle</button>
+            </div>
+
+            <div id="status"></div>
+            <div id="errors"></div>
+        </div>
+
+        <div class="graphics-section">
+            <h3>🎨 Graphics Canvas</h3>
+            <canvas id="testCanvas" width="400" height="400"></canvas>
+
+            <div id="turtleInfo" style="margin-top: 10px; font-size: 12px;">
+                <div>Position: <span id="turtlePos">Loading...</span></div>
+                <div>Heading: <span id="turtleHeading">Loading...</span></div>
+                <div>Pen: <span id="turtlePen">Loading...</span></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/graphics.js"></script>
+    <script>
+        let turtle = null;
+
+        function showStatus(message, type = 'info') {
+            const statusEl = document.getElementById('status');
+            statusEl.innerHTML = `<div class="${type}" style="background: ${type === 'error' ? '#ffebee' : '#e7f3ff'}; padding: 10px; border-radius: 5px; margin: 5px 0;">${message}</div>`;
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('errors');
+            errorEl.innerHTML = `<div class="error">${message}</div>`;
+        }
+
+        function clearError() {
+            document.getElementById('errors').innerHTML = '';
+        }
+
+        function initializeTurtle() {
+            try {
+                const canvas = document.getElementById('testCanvas');
+                if (!canvas) {
+                    throw new Error('Canvas not found');
+                }
+
+                turtle = new TurtleGraphics(canvas);
+                showStatus('Turtle graphics initialized successfully!', 'success');
+                updateTurtleInfo();
+                return true;
+            } catch (error) {
+                showError('Failed to initialize turtle graphics: ' + error.message);
+                return false;
+            }
+        }
+
+        function updateTurtleInfo() {
+            if (!turtle) return;
+
+            document.getElementById('turtlePos').textContent = `(${turtle.x.toFixed(1)}, ${turtle.y.toFixed(1)})`;
+            document.getElementById('turtleHeading').textContent = `${turtle.heading}°`;
+            document.getElementById('turtlePen').textContent = turtle.isPenDown ? 'Down' : 'Up';
+        }
+
+        function runLogo() {
+            clearError();
+
+            if (!turtle) {
+                if (!initializeTurtle()) return;
+            }
+
+            const code = document.getElementById('logoCode').value.trim();
+            if (!code) {
+                showError('Please enter some Logo commands');
+                return;
+            }
+
+            showStatus('Executing Logo commands...', 'info');
+
+            try {
+                const lines = code.split('\n');
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine && !trimmedLine.startsWith('#')) {
+                        executeLogo(trimmedLine);
+                    }
+                }
+                showStatus('Logo commands executed successfully!', 'success');
+                updateTurtleInfo();
+            } catch (error) {
+                showError('Error executing Logo: ' + error.message);
+            }
+        }
+
+        function executeLogo(line) {
+            const parts = line.split(/\s+/);
+            const command = parts[0].toUpperCase();
+
+            switch (command) {
+                case 'FORWARD':
+                case 'FD':
+                    const distance = parseFloat(parts[1] || '0');
+                    turtle.forward(distance);
+                    break;
+
+                case 'BACK':
+                case 'BK':
+                    const backDist = parseFloat(parts[1] || '0');
+                    turtle.backward(backDist);
+                    break;
+
+                case 'RIGHT':
+                case 'RT':
+                    const rightAngle = parseFloat(parts[1] || '0');
+                    turtle.right(rightAngle);
+                    break;
+
+                case 'LEFT':
+                case 'LT':
+                    const leftAngle = parseFloat(parts[1] || '0');
+                    turtle.left(leftAngle);
+                    break;
+
+                case 'PENUP':
+                case 'PU':
+                    turtle.penUp();
+                    break;
+
+                case 'PENDOWN':
+                case 'PD':
+                    turtle.penDown();
+                    break;
+
+                case 'CLEARSCREEN':
+                case 'CS':
+                    turtle.clearScreen();
+                    break;
+
+                case 'HOME':
+                    turtle.home();
+                    break;
+
+                case 'SETCOLOR':
+                    const color = parts[1] || 'blue';
+                    turtle.setColor(color);
+                    break;
+
+                default:
+                    console.warn('Unknown Logo command:', command);
+            }
+        }
+
+        function clearCanvas() {
+            if (!turtle) {
+                if (!initializeTurtle()) return;
+            }
+
+            turtle.clearScreen();
+            showStatus('Canvas cleared', 'info');
+            updateTurtleInfo();
+        }
+
+        function centerTurtle() {
+            if (!turtle) {
+                if (!initializeTurtle()) return;
+            }
+
+            turtle.home();
+            showStatus('Turtle moved to center', 'info');
+            updateTurtleInfo();
+        }
+
+        function testBasicDrawing() {
+            clearError();
+
+            if (!turtle) {
+                if (!initializeTurtle()) return;
+            }
+
+            showStatus('Testing basic drawing...', 'info');
+
+            try {
+                // Clear and center
+                turtle.clearScreen();
+                turtle.home();
+
+                // Draw a test pattern
+                // Draw square
+                turtle.isPenDown = true;
+                turtle.setColor('red');
+
+                // Draw square
+                for (let i = 0; i < 4; i++) {
+                    turtle.forward(50);
+                    turtle.right(90);
+                }
+
+                // Move and draw circle approximation
+                turtle.penUp();
+                turtle.forward(100);
+                turtle.penDown();
+                turtle.setColor('blue');
+
+                for (let i = 0; i < 36; i++) {
+                    turtle.forward(5);
+                    turtle.right(10);
+                }
+
+                showStatus('Basic drawing test completed!', 'success');
+                updateTurtleInfo();
+            } catch (error) {
+                showError('Basic drawing test failed: ' + error.message);
+            }
+        }
+
+        // Initialize on page load
+        window.addEventListener('load', () => {
+            initializeTurtle();
+        });
+
+        // Global error handling
+        window.addEventListener('error', (event) => {
+            showError('JavaScript Error: ' + event.error.message);
+        });
+    </script>
+</body>
+
+</html>

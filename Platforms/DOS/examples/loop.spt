@@ -1,0 +1,9 @@
+10 REM Simple loop and input
+20 PRINT "Enter a number:" 
+30 INPUT A
+40 LET B = A * 2 + 1
+50 PRINT "Result:" 
+60 PRINT B
+70 IF B - A THEN 100
+80 GOTO 20
+100 END

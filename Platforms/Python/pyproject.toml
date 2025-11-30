@@ -1,0 +1,180 @@
+[build-system]
+requires = ["setuptools>=68.0.0", "wheel>=0.41.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "time-warp-ide"
+version = "4.0.0"
+description = "Educational programming environment for BASIC, PILOT, and Logo with retro computing support"
+readme = "README.md"
+requires-python = ">=3.8"
+license = "MIT"
+authors = [
+    {name = "James Temple", email = "james@honey-badger.org"}
+]
+maintainers = [
+    {name = "James Temple", email = "james@honey-badger.org"}
+]
+keywords = [
+    "education",
+    "programming",
+    "pilot",
+    "basic",
+    "logo",
+    "turtle-graphics",
+    "interpreter",
+    "retro-computing",
+    "windows-2000",
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Education",
+    "Topic :: Education",
+    "Topic :: Software Development :: Interpreters",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+]
+
+dependencies = []  # Core has no runtime dependencies
+
+[project.optional-dependencies]
+gui = [
+    "PySide6>=6.5.0",
+]
+dev = [
+    "pytest>=7.4.0",
+    "pytest-cov>=4.1.0",
+    "pytest-mock>=3.11.0",
+    "black>=23.7.0",
+    "flake8>=6.1.0",
+    "mypy>=1.5.0",
+    "isort>=5.12.0",
+]
+all = [
+    "PySide6>=6.5.0",
+    "Pillow>=10.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/James-HoneyBadger/Time_Warp"
+Documentation = "https://github.com/James-HoneyBadger/Time_Warp/tree/main/Docs"
+Repository = "https://github.com/James-HoneyBadger/Time_Warp"
+Issues = "https://github.com/James-HoneyBadger/Time_Warp/issues"
+Changelog = "https://github.com/James-HoneyBadger/Time_Warp/blob/main/Docs/misc/RELEASE_NOTES.md"
+
+[project.scripts]
+time-warp = "time_warp_ide:main"
+
+[tool.setuptools]
+package-dir = {"" = "."}
+packages = ["time_warp"]
+
+[tool.setuptools.package-data]
+"*" = ["*.md", "*.txt", "*.json", "examples/**/*"]
+
+# Black formatter configuration
+[tool.black]
+line-length = 88
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | legacy
+)/
+'''
+
+# isort configuration
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+skip_glob = ["legacy/*", "*.old/*"]
+
+# MyPy type checker configuration
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+check_untyped_defs = true
+disallow_untyped_decorators = false
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+follow_imports = "normal"
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+ignore_errors = true
+
+# Pytest configuration
+[tool.pytest.ini_options]
+minversion = "7.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=time_warp",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["time_warp"]
+omit = [
+    "*/tests/*",
+    "*/legacy/*",
+    "*/__pycache__/*",
+]
+
+[tool.coverage.report]
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203"]
+
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]

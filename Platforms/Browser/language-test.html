@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Language Detection Test</title>
+</head>
+
+<body>
+    <h1>Language Detection Test</h1>
+
+    <div id="output"></div>
+    <button onclick="testDetection()">Test Language Detection</button>
+
+    <script src="js/interpreter.js"></script>
+
+    <script>
+        function log(msg) {
+            document.getElementById('output').innerHTML += msg + '<br>';
+            console.log(msg);
+        }
+
+        function testDetection() {
+            const interpreter = new TimeWarpInterpreter();
+
+            const testLines = [
+                'T:Testing turtle graphics...',
+                'CLEARSCREEN',
+                'FORWARD 100',
+                'RIGHT 90',
+                'PRINT "Hello"',
+                'LET X = 5',
+                ']'
+            ];
+
+            testLines.forEach((line, i) => {
+                const detected = interpreter.detectLineLanguage(line);
+                log(`Line ${i + 1}: "${line}" -> ${detected}`);
+            });
+        }
+    </script>
+</body>
+
+</html>

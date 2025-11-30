@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>IDE DEBUG TEST</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .debug {
+            background: #f0f0f0;
+            padding: 10px;
+            margin: 10px 0;
+            border-left: 4px solid #007bff;
+        }
+
+        canvas {
+            border: 2px solid red;
+            margin: 20px 0;
+        }
+
+        button {
+            padding: 10px;
+            margin: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔧 IDE CANVAS DEBUG</h1>
+
+    <div class="debug" id="debugLog">Debug log will appear here...</div>
+
+    <button onclick="testCanvasAccess()">Test Canvas Access</button>
+    <button onclick="testTurtleInit()">Test Turtle Init</button>
+    <button onclick="testSimpleMove()">Test Simple Move</button>
+
+    <!-- EXACT SAME CANVAS AS IDE -->
+    <canvas id="graphicsCanvas" width="400" height="400"></canvas>
+
+    <script src="js/interpreter.js"></script>
+
+    <script>
+        let debugLog = document.getElementById('debugLog');
+
+        function debug(msg) {
+            console.log(msg);
+            debugLog.innerHTML += msg + '<br>';
+        }
+
+        function testCanvasAccess() {
+            debug('\n=== CANVAS ACCESS TEST ===');
+
+            const canvas = document.getElementById('graphicsCanvas');
+            debug('Canvas element: ' + !!canvas);
+            debug('Canvas width: ' + (canvas ? canvas.width : 'N/A'));
+            debug('Canvas height: ' + (canvas ? canvas.height : 'N/A'));
+            debug('Canvas context: ' + !!(canvas ? canvas.getContext('2d') : null));
+            debug('Canvas visible: ' + (canvas ? getComputedStyle(canvas).display : 'N/A'));
+        }
+
+        function testTurtleInit() {
+            debug('\n=== TURTLE INIT TEST ===');
+
+            try {
+                const canvas = document.getElementById('graphicsCanvas');
+                if (!canvas) {
+                    debug('❌ No canvas found');
+                    return;
+                }
+
+                debug('Creating WorkingTurtle...');
+                const turtle = new WorkingTurtle(canvas);
+                debug('✅ WorkingTurtle created successfully');
+
+                window.testTurtle = turtle; // Store for other tests
+
+            } catch (error) {
+                debug('❌ Turtle init failed: ' + error.message);
+                debug('Error stack: ' + error.stack);
+            }
+        }
+
+        function testSimpleMove() {
+            debug('\n=== SIMPLE MOVE TEST ===');
+
+            if (!window.testTurtle) {
+                debug('❌ No turtle available, run turtle init first');
+                return;
+            }
+
+            try {
+                debug('Testing forward movement...');
+                window.testTurtle.forward(50);
+                debug('✅ Forward movement successful');
+
+                debug('Testing right turn...');
+                window.testTurtle.right(90);
+                debug('✅ Right turn successful');
+
+                debug('Testing another forward...');
+                window.testTurtle.forward(50);
+                debug('✅ Second forward movement successful');
+
+                debug('🎉 ALL MOVE TESTS PASSED!');
+
+            } catch (error) {
+                debug('❌ Move test failed: ' + error.message);
+            }
+        }
+
+        // Auto-run canvas test on load
+        window.addEventListener('load', () => {
+            debug('🔄 Page loaded, running initial tests...');
+            testCanvasAccess();
+        });
+    </script>
+</body>
+
+</html>

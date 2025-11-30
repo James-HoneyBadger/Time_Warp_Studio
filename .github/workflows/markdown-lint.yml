@@ -1,0 +1,27 @@
+name: Lint Docs
+
+on:
+  push:
+    paths:
+      - '**/*.md'
+  pull_request:
+    paths:
+      - '**/*.md'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Lint Markdown
+        uses: github/super-linter/slim@v5
+        env:
+          VALIDATE_MARKDOWN: true
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          MARKDOWN_CONFIG_FILE: '.markdownlint.json'
+        continue-on-error: true
+      - name: Spellcheck Markdown
+        uses: rojopolis/spellcheck-github-actions@0.36.0
+        with:
+          config_path: .spellcheck.yml
+        continue-on-error: true

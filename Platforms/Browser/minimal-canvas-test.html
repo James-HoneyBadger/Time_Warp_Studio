@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>MINIMAL Canvas Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        .test {
+            margin: 10px 0;
+        }
+
+        button {
+            padding: 10px 15px;
+            margin: 5px;
+        }
+
+        canvas {
+            border: 2px solid black;
+            margin: 20px 0;
+        }
+
+        .log {
+            background: #f0f0f0;
+            padding: 10px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>🔍 MINIMAL Canvas Test</h1>
+    <p>This tests the canvas directly without ANY IDE interference.</p>
+
+    <div class="test">
+        <button onclick="testCanvasBasics()">Test Canvas Basics</button>
+        <button onclick="drawRedSquare()">Draw Red Square</button>
+        <button onclick="drawBlueCircle()">Draw Blue Circle</button>
+        <button onclick="drawGreenLine()">Draw Green Line</button>
+        <button onclick="clearCanvas()">Clear Canvas</button>
+    </div>
+
+    <!-- SAME CANVAS AS IDE -->
+    <canvas id="graphicsCanvas" width="400" height="400"></canvas>
+
+    <div class="log" id="log">Ready for minimal canvas test...</div>
+
+    <script>
+        let canvas, ctx, log;
+
+        function init() {
+            canvas = document.getElementById('graphicsCanvas');
+            ctx = canvas.getContext('2d');
+            log = document.getElementById('log');
+
+            logMsg('Canvas initialized: ' + !!canvas);
+            logMsg('Context initialized: ' + !!ctx);
+            logMsg('Canvas dimensions: ' + canvas.width + 'x' + canvas.height);
+        }
+
+        function logMsg(msg) {
+            console.log(msg);
+            log.innerHTML += msg + '<br>';
+        }
+
+        function testCanvasBasics() {
+            logMsg('\n=== CANVAS BASICS TEST ===');
+            logMsg('Canvas exists: ' + !!canvas);
+            logMsg('Canvas visible: ' + (canvas.style.display !== 'none'));
+            logMsg('Canvas width: ' + canvas.width);
+            logMsg('Canvas height: ' + canvas.height);
+            logMsg('Canvas offsetWidth: ' + canvas.offsetWidth);
+            logMsg('Canvas offsetHeight: ' + canvas.offsetHeight);
+
+            const rect = canvas.getBoundingClientRect();
+            logMsg('Canvas rect: ' + rect.width + 'x' + rect.height);
+        }
+
+        function drawRedSquare() {
+            logMsg('\n🔴 Drawing red square...');
+            ctx.fillStyle = 'red';
+            ctx.fillRect(50, 50, 100, 100);
+            logMsg('✅ Red square drawn at (50,50)');
+        }
+
+        function drawBlueCircle() {
+            logMsg('\n🔵 Drawing blue circle...');
+            ctx.fillStyle = 'blue';
+            ctx.beginPath();
+            ctx.arc(300, 100, 50, 0, 2 * Math.PI);
+            ctx.fill();
+            logMsg('✅ Blue circle drawn at (300,100)');
+        }
+
+        function drawGreenLine() {
+            logMsg('\n🟢 Drawing green line...');
+            ctx.strokeStyle = 'green';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+            ctx.moveTo(100, 200);
+            ctx.lineTo(300, 300);
+            ctx.stroke();
+            logMsg('✅ Green line drawn from (100,200) to (300,300)');
+        }
+
+        function clearCanvas() {
+            logMsg('\n🧹 Clearing canvas...');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            // Draw a light gray background to prove it's working
+            ctx.fillStyle = '#f5f5f5';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            logMsg('✅ Canvas cleared with light gray background');
+        }
+
+        // Initialize when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+
+</html>

@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Create a very small multi-line PDF from a plain text file using pdf_utils.
+Usage:
+
+    python3 scripts/make_pdf_from_text_fixed.py input.txt output.pdf
+"""
+from pathlib import Path
+import sys
+
+# Add parent to path for scripts.pdf_utils import
+if __name__ == "__main__":
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+# pylint: disable=wrong-import-position
+from scripts.pdf_utils import write_pdf
+
+
+def main() -> None:
+    if len(sys.argv) != 3:
+        print(
+            "Usage: python3 scripts/make_pdf_from_text_fixed.py "
+            "<input.txt> <output.pdf>"
+        )
+        sys.exit(2)
+    input_path = Path(sys.argv[1])
+    out_path = Path(sys.argv[2])
+    if not input_path.exists():
+        print("Input file not found:", input_path)
+        sys.exit(2)
+    lines = input_path.read_text(encoding="utf-8").splitlines()
+    write_pdf(lines, out_path)
+    print(f"Wrote PDF: {out_path}")
+
+
+if __name__ == "__main__":
+    main()
