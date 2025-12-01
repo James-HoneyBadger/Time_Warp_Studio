@@ -8,7 +8,7 @@ from pathlib import Path
 # Large UI file with many helper methods and nested classes — allow the
 # line-count threshold to be exceeded for readability and maintenance.
 # pylint: disable=too-many-lines
-from PySide6.QtCore import QSettings, Qt, QThread, QTimer, Signal
+from PySide6.QtCore import QSettings, Qt, QTimer
 from PySide6.QtGui import QAction, QKeySequence
 
 try:
@@ -49,27 +49,23 @@ from PySide6.QtWidgets import (
     QListWidget,
     QMainWindow,
     QMessageBox,
-    QMenu,
     QSplitter,
     QStatusBar,
     QTabWidget,
-    QTextEdit,
+    QTextBrowser,
     QToolBar,
     QVBoxLayout,
     QWidget,
 )
 
-from ..ai import AIProvider, AIRequest, AIRequestType, get_ai_assistant
 from ..core.interpreter import Language
 from .canvas import TurtleCanvas
 from .collaboration_client import CollaborationClient
+from .debug_panel import DebugPanel
 from .editor import CodeEditor
 from .output import ImmediateModePanel, OutputPanel
 from .themes import ThemeManager
 from .variable_inspector import VariableInspector
-
-# Import plugin system
-from ..plugins import PluginManager
 
 # pylint: enable=no-name-in-module
 
@@ -80,7 +76,7 @@ class MainWindow(QMainWindow):
     This class composes the editor area, output panel, turtle graphics
     canvas and various UI controls such as application menu and toolbar.
     It is intentionally large and stateful since it integrates multiple
-    subsystems (AI assistant, plugin manager, collaboration client) and
+    subsystems (collaboration client) and
     supports running and inspecting programs across multiple languages.
     """
 
@@ -98,16 +94,6 @@ class MainWindow(QMainWindow):
         # Theme manager
         self.theme_manager = ThemeManager()
 
-        # AI assistant
-        self.ai_assistant = get_ai_assistant()
-
-        # Plugin manager
-        plugin_dir = Path(__file__).resolve().parents[1] / "plugins"
-        self.plugin_manager = PluginManager([plugin_dir])
-        # Discover existing plugins - actual loading happens
-        # in refresh_plugins()
-        self.plugin_manager.discover_plugins()
-
         # Collaboration client
         self.collaboration_client = CollaborationClient()
         self.setup_collaboration_callbacks()
@@ -116,8 +102,6 @@ class MainWindow(QMainWindow):
         self.tab_files = {}  # tab_index -> filename
         self.tab_modified = {}  # tab_index -> bool
         self.tab_languages = {}  # tab_index -> Language
-        # Plugin actions collected for menu items
-        self.plugin_actions = []
 
         # Dialog UI elements (initialized in respective methods)
         self.server_input = None
@@ -126,9 +110,11 @@ class MainWindow(QMainWindow):
         self.session_name_input = None
         self.session_desc_input = None
 
-        # Debugging UI removed — no per-window breakpoint state
-
-        # Debugging UI removed — debug_paused connections are not used
+        # Debugging state
+        self.breakpoints = set()  # Set of (tab_index, line) tuples
+        self._is_debugging = False
+        self._is_paused = False
+        self._current_debug_line = 0
 
         # Setup UI
         self.setup_ui()
@@ -214,6 +200,8 @@ class MainWindow(QMainWindow):
         editor.set_language(language)
         editor.textChanged.connect(lambda: self.on_text_changed(editor))
         editor.cursorPositionChanged.connect(self.update_cursor_position)
+        # Connect breakpoint toggle signal
+        editor.breakpoint_toggled.connect(self._on_breakpoint_toggled)
 
         tab_index = self.editor_tabs.addTab(editor, title)
         self.editor_tabs.setCurrentIndex(tab_index)
@@ -224,6 +212,10 @@ class MainWindow(QMainWindow):
         self.tab_languages[tab_index] = language
 
         return tab_index
+
+    def _on_breakpoint_toggled(self, _line: int):
+        """Handle breakpoint toggle from editor."""
+        self._update_breakpoints_display()
 
     # -- small helpers used by menu actions (keeps lambdas short) --
     def _editor_undo(self, _checked: bool = False):
@@ -449,6 +441,11 @@ class MainWindow(QMainWindow):
         self.variable_inspector = VariableInspector(self)
         self.right_tabs.addTab(self.variable_inspector, "🔍 Variables")
 
+        # Debug panel
+        self.debug_panel = DebugPanel(self)
+        self.right_tabs.addTab(self.debug_panel, "🐛 Debug")
+        self._connect_debug_signals()
+
         splitter.addWidget(self.right_tabs)
 
         # Set initial splitter sizes (60% editor, 40% output)
@@ -546,11 +543,11 @@ class MainWindow(QMainWindow):
         )
         edit_menu.addAction(find_action)
 
-        # Run menu (no debugging items)
+        # Run menu
         run_menu = menubar.addMenu("&Run")
 
         self.run_action = QAction("&Run Program", self)
-        self.run_action.setShortcut("F5")
+        self.run_action.setShortcut("Ctrl+R")
         self.run_action.triggered.connect(self.run_program)
         run_menu.addAction(self.run_action)
 
@@ -569,6 +566,66 @@ class MainWindow(QMainWindow):
         clear_canvas_action = QAction("Clear &Canvas", self)
         clear_canvas_action.triggered.connect(self.canvas.clear)
         run_menu.addAction(clear_canvas_action)
+
+        # Debug menu
+        debug_menu = menubar.addMenu("&Debug")
+
+        self.debug_start_action = QAction("&Start Debugging", self)
+        self.debug_start_action.setShortcut("F5")
+        self.debug_start_action.triggered.connect(self.start_debug)
+        debug_menu.addAction(self.debug_start_action)
+
+        self.debug_stop_action = QAction("Stop &Debugging", self)
+        self.debug_stop_action.setShortcut("Shift+F5")
+        self.debug_stop_action.setEnabled(False)
+        self.debug_stop_action.triggered.connect(self.stop_debug)
+        debug_menu.addAction(self.debug_stop_action)
+
+        debug_menu.addSeparator()
+
+        self.debug_continue_action = QAction("&Continue", self)
+        self.debug_continue_action.setShortcut("F5")
+        self.debug_continue_action.setEnabled(False)
+        self.debug_continue_action.triggered.connect(self.debug_continue)
+        debug_menu.addAction(self.debug_continue_action)
+
+        self.debug_pause_action = QAction("&Pause", self)
+        self.debug_pause_action.setShortcut("F6")
+        self.debug_pause_action.setEnabled(False)
+        self.debug_pause_action.triggered.connect(self.debug_pause)
+        debug_menu.addAction(self.debug_pause_action)
+
+        debug_menu.addSeparator()
+
+        self.debug_step_into_action = QAction("Step &Into", self)
+        self.debug_step_into_action.setShortcut("F11")
+        self.debug_step_into_action.setEnabled(False)
+        self.debug_step_into_action.triggered.connect(self.debug_step_into)
+        debug_menu.addAction(self.debug_step_into_action)
+
+        self.debug_step_over_action = QAction("Step &Over", self)
+        self.debug_step_over_action.setShortcut("F10")
+        self.debug_step_over_action.setEnabled(False)
+        self.debug_step_over_action.triggered.connect(self.debug_step_over)
+        debug_menu.addAction(self.debug_step_over_action)
+
+        self.debug_step_out_action = QAction("Step O&ut", self)
+        self.debug_step_out_action.setShortcut("Shift+F11")
+        self.debug_step_out_action.setEnabled(False)
+        self.debug_step_out_action.triggered.connect(self.debug_step_out)
+        debug_menu.addAction(self.debug_step_out_action)
+
+        debug_menu.addSeparator()
+
+        toggle_bp_action = QAction("Toggle &Breakpoint", self)
+        toggle_bp_action.setShortcut("F9")
+        toggle_bp_action.triggered.connect(self.toggle_breakpoint_at_cursor)
+        debug_menu.addAction(toggle_bp_action)
+
+        clear_bp_action = QAction("Clear &All Breakpoints", self)
+        clear_bp_action.setShortcut("Ctrl+Shift+F9")
+        clear_bp_action.triggered.connect(self.clear_all_breakpoints)
+        debug_menu.addAction(clear_bp_action)
 
         # View menu
         view_menu = menubar.addMenu("&View")
@@ -652,86 +709,39 @@ class MainWindow(QMainWindow):
 
         # Debugging UI removed — this distribution exposes Run/Stop only.
 
-        # AI menu - Enable AI assistant features
-        ai_menu = menubar.addMenu("&AI")
-
-        # Code completion
-        ai_complete_action = QAction("Code &Completion", self)
-        ai_complete_action.setShortcut("Ctrl+Shift+C")
-        ai_complete_action.setStatusTip("Request AI code completion at cursor")
-        ai_complete_action.triggered.connect(self.ai_complete_code)
-        ai_menu.addAction(ai_complete_action)
-
-        # Error explanation
-        ai_explain_action = QAction("Explain &Error", self)
-        ai_explain_action.setShortcut("Ctrl+Shift+E")
-        ai_explain_action.setStatusTip("Get AI explanation for the last error")
-        ai_explain_action.triggered.connect(self.ai_explain_error)
-        ai_menu.addAction(ai_explain_action)
-
-        # Code review
-        ai_review_action = QAction("Code &Review", self)
-        ai_review_action.setShortcut("Ctrl+Shift+R")
-        review_status = "Request AI code review for current file"
-        ai_review_action.setStatusTip(review_status)
-        ai_review_action.triggered.connect(self.ai_review_code)
-        ai_menu.addAction(ai_review_action)
-
-        # Learning tips
-        ai_learning_action = QAction("&Learning Tips", self)
-        ai_learning_action.setShortcut("Ctrl+Shift+L")
-        ai_learning_action.setStatusTip("Get AI learning suggestions")
-        ai_learning_action.triggered.connect(self.ai_learning_tips)
-        ai_menu.addAction(ai_learning_action)
-
-        ai_menu.addSeparator()
-
-        # AI provider selection submenu
-        ai_provider_menu = ai_menu.addMenu("AI &Provider")
-
-        # Ollama provider
-        ollama_action = QAction("&Ollama (Local)", self)
-        ollama_action.setCheckable(True)
-        ollama_action.setChecked(
-            self.ai_assistant.active_provider == AIProvider.LOCAL_OLLAMA
-        )
-        ollama_action.triggered.connect(
-            lambda: self.set_ai_provider(AIProvider.LOCAL_OLLAMA)
-        )
-        ai_provider_menu.addAction(ollama_action)
-
-        # GitHub Copilot provider
-        copilot_action = QAction("&GitHub Copilot", self)
-        copilot_action.setCheckable(True)
-        active_provider = self.ai_assistant.active_provider
-        is_github_provider = active_provider == AIProvider.GITHUB_COPILOT
-        copilot_action.setChecked(is_github_provider)
-        copilot_action.triggered.connect(
-            lambda: self.set_ai_provider(AIProvider.GITHUB_COPILOT)
-        )
-        ai_provider_menu.addAction(copilot_action)
-
-        # Plugin menu - Enable plugin system
-        plugin_menu = menubar.addMenu("&Plugins")
-
-        # Refresh plugins action
-        refresh_plugins_action = QAction("&Refresh Plugins", self)
-        refresh_plugins_action.setStatusTip("Reload and discover new plugins")
-        refresh_plugins_action.triggered.connect(self.refresh_plugins)
-        plugin_menu.addAction(refresh_plugins_action)
-
-        plugin_menu.addSeparator()
-
-        # Plugin actions will be populated by refresh_plugins
-        self.plugin_actions = []
-        self.refresh_plugins()
-
         # Help menu (last menu item)
         help_menu = menubar.addMenu("&Help")
 
-        examples_action = QAction("&Example Programs...", self)
-        examples_action.triggered.connect(self.show_examples)
-        help_menu.addAction(examples_action)
+        # Documentation
+        user_manual_action = QAction("&User Manual", self)
+        user_manual_action.setShortcut("F1")
+        user_manual_action.triggered.connect(self.show_user_manual)
+        help_menu.addAction(user_manual_action)
+
+        quick_ref_action = QAction("&Quick Reference", self)
+        quick_ref_action.triggered.connect(self.show_quick_reference)
+        help_menu.addAction(quick_ref_action)
+
+        prog_guide_action = QAction("&Programming Guide", self)
+        prog_guide_action.triggered.connect(self.show_programming_guide)
+        help_menu.addAction(prog_guide_action)
+
+        help_menu.addSeparator()
+
+        # Language-specific help
+        lang_help_menu = help_menu.addMenu("&Language Help")
+
+        basic_help = QAction("BASIC Commands", self)
+        basic_help.triggered.connect(lambda: self.show_language_help("basic"))
+        lang_help_menu.addAction(basic_help)
+
+        pilot_help = QAction("PILOT Commands", self)
+        pilot_help.triggered.connect(lambda: self.show_language_help("pilot"))
+        lang_help_menu.addAction(pilot_help)
+
+        logo_help = QAction("Logo Commands", self)
+        logo_help.triggered.connect(lambda: self.show_language_help("logo"))
+        lang_help_menu.addAction(logo_help)
 
         help_menu.addSeparator()
 
@@ -789,11 +799,20 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
 
         run_btn = toolbar.addAction("🚀 Run", self.run_program)
-        run_btn.setToolTip("Run the current program (F5)")
+        run_btn.setToolTip("Run the current program (Ctrl+R)")
 
-        toolbar.addSeparator()
+        # Debug toolbar buttons
+        self.debug_btn = toolbar.addAction("🐛 Debug", self.start_debug)
+        self.debug_btn.setToolTip("Start debugging (F5)")
 
-        # Only a single Stop action is kept in the toolbar
+        self.continue_btn = toolbar.addAction("▶️ Continue", self.debug_continue)
+        self.continue_btn.setToolTip("Continue execution (F5)")
+        self.continue_btn.setEnabled(False)
+
+        self.step_btn = toolbar.addAction("↓ Step", self.debug_step_into)
+        self.step_btn.setToolTip("Step into (F11)")
+        self.step_btn.setEnabled(False)
+
         stop_btn = toolbar.addAction("⏹️ Stop", self.stop_program)
         stop_btn.setToolTip("Stop the running program (Shift+F5)")
 
@@ -1097,11 +1116,18 @@ class MainWindow(QMainWindow):
             QTimer.singleShot(100, self.check_execution_complete)
         else:
             self.run_action.setEnabled(True)
-            # debug_action removed
             self.stop_action.setEnabled(False)
-            # stepping and resume controls removed
-            # Disconnect any lingering debug pause handlers to avoid duplicates
-            # debug pause handling removed
+
+            # Clean up debug state if debugging ended
+            if self._is_debugging:
+                self._is_debugging = False
+                self._is_paused = False
+                self._update_debug_ui()
+                self.debug_panel.set_debugging(False)
+                editor = self.get_current_editor()
+                if editor:
+                    editor.clear_current_line()
+
             self.statusbar.showMessage("Execution complete")
             # If graphics were drawn, switch to Graphics tab for convenience
             try:
@@ -1152,9 +1178,23 @@ class MainWindow(QMainWindow):
     def on_variables_updated(self, variables):
         """Handle variables update from interpreter."""
         self.variable_inspector.update_variables(variables)
+        # Also update debug panel watches
+        if hasattr(self, "debug_panel"):
+            self.debug_panel.update_variables(variables)
         # Re-enable run action after execution completes
-        self.run_action.setEnabled(True)
-        self.stop_action.setEnabled(False)
+        if not self._is_debugging:
+            self.run_action.setEnabled(True)
+            self.stop_action.setEnabled(False)
+        else:
+            # If debugging finished, clean up
+            if not self.output.is_running():
+                self._is_debugging = False
+                self._is_paused = False
+                self._update_debug_ui()
+                self.debug_panel.set_debugging(False)
+                editor = self.get_current_editor()
+                if editor:
+                    editor.clear_current_line()
 
     def on_text_changed(self, editor=None):
         """Handle text changes."""
@@ -1295,21 +1335,203 @@ class MainWindow(QMainWindow):
                 action.triggered.connect(partial(self.load_file, filename))
                 self.recent_menu.addAction(action)
 
-    def show_examples(self):
-        """Show examples dialog and load selected example."""
-        examples_dir = Path(__file__).parent.parent.parent / "examples"
+    def _get_docs_path(self) -> Path:
+        """Get path to the Docs directory."""
+        # Go up from ui -> time_warp -> Python -> Platforms -> Time_Warp_Studio
+        return Path(__file__).parent.parent.parent.parent.parent / "Docs"
 
-        if not examples_dir.exists():
-            QMessageBox.information(self, "Examples", "Examples dir not found")
-        filename, _ = QFileDialog.getOpenFileName(
-            self,
-            "Open Example",
-            str(examples_dir),
-            "Time Warp Files (*.pilot *.bas *.logo);;All Files (*.*)",
+    def _show_help_dialog(self, title: str, filepath: Path):
+        """Show a help dialog with markdown content."""
+        dialog = QDialog(self)
+        dialog.setWindowTitle(title)
+        dialog.setMinimumSize(700, 500)
+        dialog.resize(800, 600)
+
+        layout = QVBoxLayout(dialog)
+
+        browser = QTextBrowser()
+        browser.setOpenExternalLinks(True)
+        browser.setStyleSheet(
+            """
+            QTextBrowser {
+                font-family: 'Segoe UI', 'DejaVu Sans', sans-serif;
+                font-size: 12pt;
+                padding: 10px;
+                background-color: palette(base);
+            }
+        """
         )
 
-        if filename:
-            self.load_file(filename)
+        if filepath.exists():
+            content = filepath.read_text(encoding="utf-8")
+            # Convert markdown to simple HTML
+            html = self._markdown_to_html(content)
+            browser.setHtml(html)
+        else:
+            browser.setPlainText(f"Documentation not found: {filepath}")
+
+        layout.addWidget(browser)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Close)
+        buttons.rejected.connect(dialog.close)
+        layout.addWidget(buttons)
+
+        dialog.exec()
+
+    def _markdown_to_html(self, md: str) -> str:
+        """Convert simple markdown to HTML."""
+        import re
+
+        lines = md.split("\n")
+        html_lines = []
+        in_code_block = False
+        in_list = False
+
+        for line in lines:
+            # Code blocks
+            if line.startswith("```"):
+                if in_code_block:
+                    html_lines.append("</pre>")
+                    in_code_block = False
+                else:
+                    html_lines.append(
+                        "<pre style='background:#2d2d2d; "
+                        "color:#f8f8f2; padding:10px; "
+                        "border-radius:4px; overflow-x:auto;'>"
+                    )
+                    in_code_block = True
+                continue
+
+            if in_code_block:
+                # Escape HTML in code blocks
+                escaped = (
+                    line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                )
+                html_lines.append(escaped)
+                continue
+
+            # Headers
+            if line.startswith("# "):
+                html_lines.append(f"<h1>{line[2:]}</h1>")
+            elif line.startswith("## "):
+                html_lines.append(f"<h2>{line[3:]}</h2>")
+            elif line.startswith("### "):
+                html_lines.append(f"<h3>{line[4:]}</h3>")
+            elif line.startswith("#### "):
+                html_lines.append(f"<h4>{line[5:]}</h4>")
+            # Horizontal rule
+            elif line.strip() == "---":
+                html_lines.append("<hr>")
+            # List items
+            elif line.strip().startswith("- ") or line.strip().startswith("* "):
+                if not in_list:
+                    html_lines.append("<ul>")
+                    in_list = True
+                item = line.strip()[2:]
+                html_lines.append(f"<li>{item}</li>")
+            else:
+                if in_list and not line.strip().startswith(("- ", "* ")):
+                    html_lines.append("</ul>")
+                    in_list = False
+                # Bold and inline code
+                processed = line
+                processed = re.sub(r"\*\*(.+?)\*\*", r"<b>\1</b>", processed)
+                code_style = (
+                    "<code style='background:#e0e0e0;"
+                    "padding:2px 4px;border-radius:3px;'>"
+                )
+                processed = re.sub(r"`(.+?)`", code_style + r"\1</code>", processed)
+                if processed.strip():
+                    html_lines.append(f"<p>{processed}</p>")
+                else:
+                    html_lines.append("<br>")
+
+        if in_list:
+            html_lines.append("</ul>")
+        if in_code_block:
+            html_lines.append("</pre>")
+
+        return "\n".join(html_lines)
+
+    def show_user_manual(self):
+        """Show the user manual."""
+        docs_path = self._get_docs_path() / "user" / "00-user-manual.md"
+        self._show_help_dialog("Time Warp IDE - User Manual", docs_path)
+
+    def show_quick_reference(self):
+        """Show quick reference guide."""
+        docs_path = self._get_docs_path() / "user" / "02-quick-reference.md"
+        self._show_help_dialog("Quick Reference Guide", docs_path)
+
+    def show_programming_guide(self):
+        """Show programming guide."""
+        docs_path = self._get_docs_path() / "user" / "01-programming-guide.md"
+        self._show_help_dialog("Programming Guide", docs_path)
+
+    def show_language_help(self, language: str):
+        """Show help for a specific language."""
+        # Extract relevant section from quick reference
+        docs_path = self._get_docs_path() / "user" / "02-quick-reference.md"
+
+        if not docs_path.exists():
+            QMessageBox.information(
+                self, "Help", f"Documentation for {language.upper()} not found."
+            )
+            return
+
+        content = docs_path.read_text(encoding="utf-8")
+
+        # Find the language section
+        lang_titles = {
+            "basic": "## BASIC Commands",
+            "pilot": "## PILOT Commands",
+            "logo": "## Logo Commands",
+        }
+
+        start_marker = lang_titles.get(language, "")
+        if not start_marker or start_marker not in content:
+            # Show full quick reference
+            self._show_help_dialog(f"{language.upper()} Help", docs_path)
+            return
+
+        # Extract just that language section
+        start_idx = content.find(start_marker)
+        # Find next ## header or end
+        next_section = content.find("\n## ", start_idx + len(start_marker))
+        if next_section == -1:
+            section = content[start_idx:]
+        else:
+            section = content[start_idx:next_section]
+
+        html = self._markdown_to_html(section)
+
+        dialog = QDialog(self)
+        dialog.setWindowTitle(f"{language.upper()} Quick Reference")
+        dialog.setMinimumSize(600, 450)
+        dialog.resize(700, 550)
+
+        layout = QVBoxLayout(dialog)
+
+        browser = QTextBrowser()
+        browser.setOpenExternalLinks(True)
+        browser.setStyleSheet(
+            """
+            QTextBrowser {
+                font-family: 'Courier New', monospace;
+                font-size: 11pt;
+                padding: 10px;
+                background-color: palette(base);
+            }
+        """
+        )
+        browser.setHtml(html)
+        layout.addWidget(browser)
+
+        buttons = QDialogButtonBox(QDialogButtonBox.Close)
+        buttons.rejected.connect(dialog.close)
+        layout.addWidget(buttons)
+
+        dialog.exec()
 
     def show_about(self):
         """Show about dialog."""
@@ -1368,290 +1590,192 @@ class MainWindow(QMainWindow):
         else:
             event.ignore()
 
-    # Breakpoint toggle removed with debugging features
+    # ---- Debugging Methods ----
 
-    # Full debugging support removed from the UI; use Run/Stop only.
-
-    # Debug pause handling removed
-
-    # Step and resume debugging removed — stepping is not supported by the
-    # UI in this build. Use stop_program() to terminate a running session.
-
-    def set_ai_provider(self, provider: AIProvider):
-        """Set the active AI provider."""
-        if self.ai_assistant.set_active_provider(provider):
-            self.statusbar.showMessage(f"AI provider set to: {provider.value}")
-        else:
-            QMessageBox.warning(
-                self,
-                "AI Provider Error",
-                f"Could not set AI provider to {provider.value}.\n"
-                "Please check your configuration and try again.",
-            )
-
-    def ai_complete_code(self):
-        """Request AI code completion."""
-        current_editor = self.get_current_editor()
-        if not current_editor:
-            return
-
-        cursor = current_editor.textCursor()
-        code_context = current_editor.toPlainText()
-        cursor_position = cursor.position()
-
-        current_info = self.get_current_tab_info()
-        language = current_info["language"]
-
-        request = AIRequest(
-            request_type=AIRequestType.CODE_COMPLETION,
-            code_context=code_context,
-            language=language.friendly_name().lower(),
-            cursor_position=cursor_position,
+    def _connect_debug_signals(self):
+        """Connect debug panel signals to main window methods."""
+        self.debug_panel.start_debug.connect(self.start_debug)
+        self.debug_panel.stop_debug.connect(self.stop_debug)
+        self.debug_panel.step_into.connect(self.debug_step_into)
+        self.debug_panel.step_over.connect(self.debug_step_over)
+        self.debug_panel.step_out.connect(self.debug_step_out)
+        self.debug_panel.continue_execution.connect(self.debug_continue)
+        self.debug_panel.pause_execution.connect(self.debug_pause)
+        self.debug_panel.goto_line.connect(self._goto_line)
+        self.debug_panel.breakpoint_panel.clear_all_requested.connect(
+            self.clear_all_breakpoints
         )
 
-        self.statusbar.showMessage("Requesting AI code completion...")
+        # Connect output panel debug signals
+        self.output.debug_paused.connect(self._on_debug_paused)
 
-        # Run AI request in background thread
-        class AIWorker(QThread):
-            """Worker thread for AI requests."""
+    def _goto_line(self, line: int):
+        """Go to a specific line in the current editor."""
+        editor = self.get_current_editor()
+        if editor:
+            editor.goto_line(line)
 
-            # Small helper thread class used only to perform the request.
-            # Keep this compact and allow single-public-method pattern.
-            # pylint: disable=too-few-public-methods
-
-            finished = Signal(str)
-
-            def __init__(self, ai_assistant, request):
-                super().__init__()
-                self.ai_assistant = ai_assistant
-                self.request = request
-
-            def run(self):
-                """Run the AI completion request and emit result."""
-                response = self.ai_assistant.generate_completion(self.request)
-                if response.success:
-                    self.finished.emit(response.content)
-                else:
-                    self.finished.emit(f"AI Error: {response.content}")
-
-        worker = AIWorker(self.ai_assistant, request)
-        worker.finished.connect(self.on_ai_completion_finished)
-        worker.start()
-
-    def on_ai_completion_finished(self, completion: str):
-        """Handle AI completion response."""
-        if completion.startswith("AI Error:"):
-            QMessageBox.warning(self, "AI Completion Error", completion)
-            self.statusbar.showMessage("AI completion failed")
-        else:
-            current_editor = self.get_current_editor()
-            if current_editor:
-                cursor = current_editor.textCursor()
-                cursor.insertText(completion)
-                self.statusbar.showMessage("AI completion inserted")
-
-    def ai_explain_error(self):
-        """Request AI error explanation."""
-        # Get error from output panel
-        error_text = self.output.get_last_error()
-        if not error_text:
-            QMessageBox.information(
-                self,
-                "No Error Found",
-                "No recent error found in the output panel.\n"
-                "Run your program first to generate an error.",
-            )
-            return
-
-        current_editor = self.get_current_editor()
-        code_context = ""
-        if current_editor:
-            code_context = current_editor.toPlainText()
-
-        current_info = self.get_current_tab_info()
-        language = current_info["language"]
-
-        request = AIRequest(
-            request_type=AIRequestType.ERROR_EXPLANATION,
-            code_context=code_context,
-            language=language.friendly_name().lower(),
-            error_message=error_text,
-        )
-
-        self.statusbar.showMessage("Requesting AI error explanation...")
-
-        # Run AI request in background thread
-        class AIWorker(QThread):
-            """Worker thread for AI error explanation."""
-
-            # Small helper thread; permit single-public-method implementation.
-            # pylint: disable=too-few-public-methods
-
-            finished = Signal(str)
-
-            def __init__(self, ai_assistant, request):
-                super().__init__()
-                self.ai_assistant = ai_assistant
-                self.request = request
-
-            def run(self):
-                """Run the AI explanation request and emit result."""
-                response = self.ai_assistant.explain_error(self.request)
-                if response.success:
-                    self.finished.emit(response.content)
-                else:
-                    self.finished.emit(f"AI Error: {response.content}")
-
-        worker = AIWorker(self.ai_assistant, request)
-        worker.finished.connect(self.on_ai_explanation_finished)
-        worker.start()
-
-    def on_ai_explanation_finished(self, explanation: str):
-        """Handle AI error explanation response."""
-        if explanation.startswith("AI Error:"):
-            msg = "AI Error Explanation Failed"
-            QMessageBox.warning(self, msg, explanation)
-            self.statusbar.showMessage("AI error explanation failed")
-        else:
-            # Show explanation in a dialog
-            dialog = QDialog(self)
-            dialog.setWindowTitle("AI Error Explanation")
-            dialog.setMinimumSize(600, 400)
-
-            layout = QVBoxLayout(dialog)
-
-            text_edit = QTextEdit()
-            text_edit.setPlainText(explanation)
-            text_edit.setReadOnly(True)
-            layout.addWidget(text_edit)
-
-            buttons = QDialogButtonBox(QDialogButtonBox.Ok)
-            buttons.accepted.connect(dialog.accept)
-            layout.addWidget(buttons)
-
-            dialog.exec()
-            self.statusbar.showMessage("AI error explanation provided")
-
-    def ai_review_code(self):
-        """Request AI code review."""
-        current_editor = self.get_current_editor()
-        if not current_editor:
-            return
-
-        code_context = current_editor.toPlainText()
-        if not code_context.strip():
-            QMessageBox.information(
-                self, "No Code to Review", "Please enter some code to review."
-            )
+    def start_debug(self):
+        """Start debugging the current program."""
+        editor = self.get_current_editor()
+        if not editor:
             return
 
         current_info = self.get_current_tab_info()
         language = current_info["language"]
 
-        request = AIRequest(
-            request_type=AIRequestType.CODE_REVIEW,
-            code_context=code_context,
-            language=language.friendly_name().lower(),
+        # Ensure output uses the current language
+        self.output.set_language(language)
+
+        # Switch to debug tab
+        self.right_tabs.setCurrentWidget(self.debug_panel)
+
+        code = editor.toPlainText()
+
+        # Get breakpoints from editor
+        breakpoints = editor.get_breakpoints()
+
+        # Update debug state
+        self._is_debugging = True
+        self._is_paused = False
+        self._update_debug_ui()
+
+        self.statusbar.showMessage("🐛 Debugging...")
+
+        # Start execution in debug mode
+        self.output.run_program(
+            code, self.canvas, debug_mode=True, breakpoints=breakpoints
         )
 
-        self.statusbar.showMessage("Requesting AI code review...")
+        # Update debug panel
+        self.debug_panel.set_debugging(True)
+        self.debug_panel.update_breakpoints(breakpoints)
 
-        # Run AI request in background thread
-        class AIWorker(QThread):
-            """Worker thread for AI code review."""
+    def stop_debug(self):
+        """Stop debugging."""
+        self.output.stop_execution()
+        self._is_debugging = False
+        self._is_paused = False
+        self._current_debug_line = 0
 
-            # Small helper thread; permit single-public-method implementation.
-            # pylint: disable=too-few-public-methods
+        # Clear current line indicator in editor
+        editor = self.get_current_editor()
+        if editor:
+            editor.clear_current_line()
 
-            finished = Signal(str)
+        self._update_debug_ui()
+        self.debug_panel.set_debugging(False)
+        self.debug_panel.set_paused(False)
+        self.statusbar.showMessage("Debugging stopped")
 
-            def __init__(self, ai_assistant, request):
-                super().__init__()
-                self.ai_assistant = ai_assistant
-                self.request = request
+    def debug_continue(self):
+        """Continue execution until next breakpoint."""
+        if self._is_debugging:
+            self._is_paused = False
+            self._update_debug_ui()
+            self.output.resume_execution()
+            self.debug_panel.set_paused(False)
+            self.statusbar.showMessage("▶ Continuing...")
 
-            def run(self):
-                """Run the AI code review request and emit result."""
-                response = self.ai_assistant.review_code(self.request)
-                if response.success:
-                    self.finished.emit(response.content)
-                else:
-                    self.finished.emit(f"AI Error: {response.content}")
+    def debug_pause(self):
+        """Pause execution."""
+        if self._is_debugging and not self._is_paused:
+            # Signal the interpreter to pause at next line
+            if self.output.exec_thread and self.output.exec_thread.interp:
+                self.output.exec_thread.interp.pause_execution()
+            self.statusbar.showMessage("⏸ Pausing...")
 
-        worker = AIWorker(self.ai_assistant, request)
-        worker.finished.connect(self.on_ai_review_finished)
-        worker.start()
+    def debug_step_into(self):
+        """Step into the next line."""
+        if self._is_debugging and self._is_paused:
+            self.output.step_execution()
+            self.statusbar.showMessage("↓ Stepping...")
 
-    def on_ai_review_finished(self, review: str):
-        """Handle AI code review response."""
-        if review.startswith("AI Error:"):
-            QMessageBox.warning(self, "AI Code Review Failed", review)
-            self.statusbar.showMessage("AI code review failed")
-        else:
-            # Show review in a dialog
-            dialog = QDialog(self)
-            dialog.setWindowTitle("AI Code Review")
-            dialog.setMinimumSize(600, 400)
+    def debug_step_over(self):
+        """Step over the current line (same as step into for now)."""
+        # In a simple interpreter, step over is the same as step into
+        self.debug_step_into()
 
-            layout = QVBoxLayout(dialog)
+    def debug_step_out(self):
+        """Step out of current subroutine (continue until return)."""
+        # For now, just continue - proper step-out would need call stack tracking
+        self.debug_continue()
 
-            text_edit = QTextEdit()
-            text_edit.setPlainText(review)
-            text_edit.setReadOnly(True)
-            layout.addWidget(text_edit)
+    def _on_debug_paused(self, line: int, variables: dict):
+        """Handle debug pause event from interpreter."""
+        self._is_paused = True
+        self._current_debug_line = line
+        self._update_debug_ui()
 
-            buttons = QDialogButtonBox(QDialogButtonBox.Ok)
-            buttons.accepted.connect(dialog.accept)
-            layout.addWidget(buttons)
+        # Update editor current line
+        editor = self.get_current_editor()
+        if editor:
+            editor.set_current_line(line)
 
-            dialog.exec()
-            self.statusbar.showMessage("AI code review completed")
+        # Update debug panel
+        self.debug_panel.set_paused(True, line)
+        self.debug_panel.update_variables(variables)
 
-    def ai_learning_tips(self):
-        """Request AI learning suggestions."""
-        current_editor = self.get_current_editor()
-        code_context = ""
-        if current_editor:
-            code_context = current_editor.toPlainText()
+        # Update variable inspector
+        self.variable_inspector.update_variables(variables)
 
-        current_info = self.get_current_tab_info()
-        language = current_info["language"]
+        # Get call stack from interpreter if available
+        if self.output.exec_thread and self.output.exec_thread.interp:
+            interp = self.output.exec_thread.interp
+            if hasattr(interp, "call_stack"):
+                self.debug_panel.update_call_stack(interp.call_stack)
 
-        request = AIRequest(
-            request_type=AIRequestType.LEARNING_SUGGESTION,
-            code_context=code_context,
-            language=language.friendly_name().lower(),
-            user_level="beginner",  # Could be made configurable
-        )
+        self.statusbar.showMessage(f"🔴 Paused at line {line}")
 
-        self.statusbar.showMessage("Requesting AI learning tips...")
+    def _update_debug_ui(self):
+        """Update debug-related UI elements."""
+        is_debugging = self._is_debugging
+        is_paused = self._is_paused
 
-        # Run AI request in background thread
-        class AIWorker(QThread):
-            """Worker thread for AI learning suggestions."""
+        # Run menu actions
+        self.run_action.setEnabled(not is_debugging)
+        self.debug_start_action.setEnabled(not is_debugging)
+        self.debug_stop_action.setEnabled(is_debugging)
+        self.debug_continue_action.setEnabled(is_paused)
+        self.debug_pause_action.setEnabled(is_debugging and not is_paused)
+        self.debug_step_into_action.setEnabled(is_paused)
+        self.debug_step_over_action.setEnabled(is_paused)
+        self.debug_step_out_action.setEnabled(is_paused)
 
-            # Small helper thread; allow single-public-method pattern.
-            # pylint: disable=too-few-public-methods
+        # Toolbar buttons
+        if hasattr(self, "debug_btn"):
+            self.debug_btn.setEnabled(not is_debugging)
+        if hasattr(self, "continue_btn"):
+            self.continue_btn.setEnabled(is_paused)
+        if hasattr(self, "step_btn"):
+            self.step_btn.setEnabled(is_paused)
 
-            finished = Signal(str)
+        self.stop_action.setEnabled(is_debugging)
 
-            def __init__(self, ai_assistant, request):
-                super().__init__()
-                self.ai_assistant = ai_assistant
-                self.request = request
+    def toggle_breakpoint_at_cursor(self):
+        """Toggle breakpoint at the current cursor line."""
+        editor = self.get_current_editor()
+        if editor:
+            cursor = editor.textCursor()
+            line = cursor.blockNumber() + 1
+            editor.toggle_breakpoint(line)
+            self._update_breakpoints_display()
 
-            def run(self):
-                """Run the AI learning request and emit result."""
-                req = self.request
-                response = self.ai_assistant.get_learning_suggestion(req)
-                if response.success:
-                    self.finished.emit(response.content)
-                else:
-                    self.finished.emit(f"AI Error: {response.content}")
+    def clear_all_breakpoints(self):
+        """Clear all breakpoints in all editors."""
+        for i in range(self.editor_tabs.count()):
+            editor = self.editor_tabs.widget(i)
+            if editor and hasattr(editor, "clear_breakpoints"):
+                editor.clear_breakpoints()
+        self._update_breakpoints_display()
+        self.statusbar.showMessage("All breakpoints cleared")
 
-        worker = AIWorker(self.ai_assistant, request)
-        worker.finished.connect(self.on_ai_learning_finished)
-        worker.start()
+    def _update_breakpoints_display(self):
+        """Update the breakpoints panel with current breakpoints."""
+        editor = self.get_current_editor()
+        if editor:
+            breakpoints = editor.get_breakpoints()
+            self.debug_panel.update_breakpoints(breakpoints)
 
     def update_cursor_position(self):
         """Update cursor position in status bar."""
@@ -1661,103 +1785,6 @@ class MainWindow(QMainWindow):
             line = cursor.blockNumber() + 1
             col = cursor.columnNumber() + 1
             self.position_label.setText(f"Ln {line}, Col {col}")
-
-    def refresh_plugins(self):  # pylint: disable=broad-except
-        """Refresh and reload plugins."""
-        try:
-            # Clear existing plugin actions
-            for action in getattr(self, "plugin_actions", []):
-                action.setParent(None)  # Remove from menu
-            self.plugin_actions = []
-
-            # Discover and load plugins
-            self.plugin_manager.discover_plugins()
-
-            # Get loaded plugins and add menu items (loaded_plugins is a dict)
-            loaded_plugins = self.plugin_manager.loaded_plugins
-
-            if not loaded_plugins:
-                # No plugins loaded
-                no_plugins_action = QAction("No plugins loaded", self)
-                no_plugins_action.setEnabled(False)
-                plugin_menu = self.menuBar().findChild(QMenu, "&Plugins")
-                if plugin_menu is not None:
-                    plugin_menu.addAction(no_plugins_action)
-                # If plugin_menu is None, just skip - menu may not be ready yet
-                self.plugin_actions.append(no_plugins_action)
-            else:
-                # Add actions for each loaded plugin
-                for plugin_name, plugin_instance in loaded_plugins.items():
-                    # Create submenu for plugin actions
-                    menu_bar = self.menuBar()
-                    plugin_menu_parent = menu_bar.findChild(QMenu, "&Plugins")
-                    plugin_menu = plugin_menu_parent.addMenu(plugin_name)
-
-                    # Add plugin actions (if any)
-                    if hasattr(plugin_instance, "get_menu_actions"):
-                        actions = plugin_instance.get_menu_actions()
-                        for action_name, action_callback in actions.items():
-                            action = QAction(action_name, self)
-                            action.triggered.connect(action_callback)
-                            plugin_menu.addAction(action)
-                            self.plugin_actions.append(action)
-
-                    # If no specific actions, add a default info action
-                    if plugin_menu.isEmpty():
-                        info_action = QAction("About this plugin", self)
-                        # Create a small callback to avoid long inline lambda
-
-                        def make_info_callback(name):
-                            def callback(_checked=False):
-                                self.show_plugin_info(name)
-
-                            return callback
-
-                        info_cb = make_info_callback(plugin_name)
-                        info_action.triggered.connect(info_cb)
-                        plugin_menu.addAction(info_action)
-                        self.plugin_actions.append(info_action)
-
-            self.statusBar().showMessage(f"Loaded {len(loaded_plugins)} plugins")
-
-        except Exception as e:  # pylint: disable=broad-except
-            # Propagate critical signals immediately
-            if isinstance(e, (KeyboardInterrupt, SystemExit)):
-                raise
-            QMessageBox.warning(
-                self, "Plugin Error", f"Failed to refresh plugins:\n{str(e)}"
-            )
-            self.statusBar().showMessage("Plugin refresh failed")
-
-    # Allow broad exception handling in this UI helper because plugin
-    # code may raise arbitrary errors that shouldn't crash the IDE.
-    # pylint: disable=broad-except
-    def show_plugin_info(self, plugin_name: str):
-        """Show information about a plugin."""
-        try:
-            plugins = self.plugin_manager.loaded_plugins
-            plugin_instance = plugins.get(plugin_name)
-            if plugin_instance:
-                info_text = f"Plugin: {plugin_name}\n\n"
-                if hasattr(plugin_instance, "get_info"):
-                    info_text += plugin_instance.get_info()
-                else:
-                    info_text += "No additional information available."
-
-                title = f"Plugin: {plugin_name}"
-                QMessageBox.information(self, title, info_text)
-            else:
-                msg = f"Plugin '{plugin_name}' is not loaded."
-                QMessageBox.warning(self, "Plugin Not Found", msg)
-        except Exception as e:  # pylint: disable=broad-except
-            # Reraise critical exceptions to avoid suppressing system-level signals
-            if isinstance(e, (KeyboardInterrupt, SystemExit)):
-                raise
-            QMessageBox.warning(
-                self,
-                "Plugin Info Error",
-                f"Could not get plugin information:\n{str(e)}",
-            )
 
     def collab_connect(self):
         """Connect to collaboration server."""

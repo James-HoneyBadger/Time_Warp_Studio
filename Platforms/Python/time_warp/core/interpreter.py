@@ -14,7 +14,6 @@ import threading
 import time
 from dataclasses import dataclass
 from enum import Enum, auto
-from pathlib import Path
 from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, TextIO
 
 # Import language executors
@@ -24,9 +23,6 @@ from ..languages.logo import execute_logo
 from ..languages.pascal import execute_pascal
 from ..languages.pilot import execute_pilot
 from ..languages.prolog import execute_prolog
-
-# Import plugin system
-from ..plugins import PluginManager
 
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
@@ -265,9 +261,6 @@ class Interpreter:
         # Default type mapping
         self._reset_type_defaults()
 
-        # Plugin system
-        self.plugin_manager: Optional[PluginManager] = None
-
     def reset(self):
         """Reset interpreter state"""
         self.variables.clear()
@@ -309,27 +302,6 @@ class Interpreter:
         self.data_values.clear()
         self.data_pointer = 0
         self._reset_type_defaults()
-
-    def initialize_plugin_system(self, plugin_dirs: List[Path]):
-        """Initialize the plugin system with specified directories"""
-        self.plugin_manager = PluginManager(plugin_dirs)
-
-        # Discover and load plugins
-        discovered_plugins = self.plugin_manager.discover_plugins()
-        print(f"🎨 Discovered {len(discovered_plugins)} plugins")
-
-        for plugin_name in discovered_plugins:
-            success = self.plugin_manager.load_plugin(plugin_name, self)
-            if success:
-                print(f"✅ Loaded plugin: {plugin_name}")
-            else:
-                print(f"❌ Failed to load plugin: {plugin_name}")
-
-    def get_loaded_plugins(self) -> List[str]:
-        """Get list of currently loaded plugins"""
-        if self.plugin_manager:
-            return self.plugin_manager.get_loaded_plugins()
-        return []
 
     # ---------- Typed variable support ----------
     def _reset_type_defaults(self):

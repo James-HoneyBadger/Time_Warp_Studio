@@ -5,6 +5,7 @@
 set -euo pipefail
 
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VENV_DIR="$DIR/Platforms/Python/.venv"
 
 usage() {
   cat <<'EOF'
@@ -18,18 +19,16 @@ Examples:
 EOF
 }
 
-# Check if Python is available
-if ! command -v python3 &> /dev/null && ! command -v python &> /dev/null; then
-  echo "Error: Python 3 is required but not found."
-  echo "Please install Python 3.8+ from https://python.org"
-  exit 1
+# Check if virtual environment exists, create if not
+if [[ ! -d "$VENV_DIR" ]]; then
+  echo "Creating virtual environment..."
+  python3 -m venv "$VENV_DIR"
+  "$VENV_DIR/bin/pip" install --upgrade pip
+  "$VENV_DIR/bin/pip" install PySide6 websockets pillow
 fi
 
-# Use python3 if available, otherwise python
-PYTHON_CMD="python3"
-if ! command -v python3 &> /dev/null; then
-  PYTHON_CMD="python"
-fi
+# Use the virtual environment's Python
+PYTHON_CMD="$VENV_DIR/bin/python"
 
 # Parse command
 if [[ $# -gt 0 ]]; then

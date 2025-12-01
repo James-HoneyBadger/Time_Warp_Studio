@@ -6,12 +6,15 @@
 
 import re
 
-from PySide6.QtCore import QRect, QSize, QStringListModel, Qt
+from PySide6.QtCore import QRect, QSize, QStringListModel, Qt, Signal
 from PySide6.QtGui import (
+    QBrush,
     QColor,
     QFont,
+    QMouseEvent,
     QPainter,
     QPalette,
+    QPen,
     QSyntaxHighlighter,
     QTextCharFormat,
     QTextCursor,
@@ -34,7 +37,7 @@ from ..core.interpreter import Language
 
 
 class LineNumberArea(QWidget):
-    """Line number area widget.
+    """Line number area widget with breakpoint support.
 
     This small helper uses Qt-style method names (sizeHint, paintEvent) which
     are required by the framework — allow those names locally.
@@ -55,6 +58,31 @@ class LineNumberArea(QWidget):
     def paintEvent(self, event):
         """Forward paint event to the parent editor for rendering."""
         self.editor.line_number_area_paint_event(event)
+
+    def mousePressEvent(self, event: QMouseEvent):
+        """Handle mouse click to toggle breakpoints."""
+        if event.button() == Qt.LeftButton:
+            # Calculate which line was clicked
+            block = self.editor.firstVisibleBlock()
+            top = (
+                self.editor.blockBoundingGeometry(block)
+                .translated(self.editor.contentOffset())
+                .top()
+            )
+
+            while block.isValid():
+                block_top = top
+                block_bottom = block_top + self.editor.blockBoundingRect(block).height()
+
+                if block_top <= event.position().y() < block_bottom:
+                    line_number = block.blockNumber() + 1
+                    self.editor.toggle_breakpoint(line_number)
+                    break
+
+                block = block.next()
+                top = block_bottom
+
+        super().mousePressEvent(event)
 
 
 class SimpleSyntaxHighlighter(QSyntaxHighlighter):
@@ -519,7 +547,7 @@ class FindDialog(QDialog):
 
 
 class CodeEditor(QPlainTextEdit):
-    """Code editor with line numbers.
+    """Code editor with line numbers and breakpoint support.
 
     This widget exposes Qt/QtWidgets API methods using camelCase names
     (e.g. keyPressEvent, resizeEvent) and maintains multiple runtime
@@ -529,8 +557,17 @@ class CodeEditor(QPlainTextEdit):
     # Qt naming and UI statefulness — disable relevant style checks.
     # pylint: disable=too-many-instance-attributes,invalid-name
 
+    # Signal emitted when breakpoint is toggled (line_number)
+    breakpoint_toggled = Signal(int)
+
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        # Breakpoints set (line numbers with breakpoints)
+        self._breakpoints = set()
+
+        # Current execution line (for debugging highlight)
+        self._current_line = 0
 
         # Line number area
         self.line_number_area = LineNumberArea(self)
@@ -586,9 +623,10 @@ class CodeEditor(QPlainTextEdit):
         self.completer.setModel(model)
 
     def line_number_area_width(self):
-        """Calculate width of line number area."""
+        """Calculate width of line number area (includes breakpoint gutter)."""
         digits = len(str(max(1, self.blockCount())))
-        space = 3 + self.fontMetrics().horizontalAdvance("9") * digits
+        # Add 20px for breakpoint markers
+        space = 20 + 3 + self.fontMetrics().horizontalAdvance("9") * digits
         return space
 
     def update_line_number_area_width(self, _):
@@ -617,7 +655,7 @@ class CodeEditor(QPlainTextEdit):
         self.line_number_area.setGeometry(rect)
 
     def line_number_area_paint_event(self, event):
-        """Paint line numbers."""
+        """Paint line numbers with breakpoint markers and current line."""
         painter = QPainter(self.line_number_area)
 
         # Background
@@ -625,7 +663,7 @@ class CodeEditor(QPlainTextEdit):
         bg_color = palette.color(QPalette.Window).darker(110)
         painter.fillRect(event.rect(), bg_color)
 
-        # Line numbers
+        # Line numbers and breakpoints
         block = self.document().firstBlock()
         geom = self.blockBoundingGeometry(block)
         top = geom.translated(self.contentOffset()).top()
@@ -635,16 +673,51 @@ class CodeEditor(QPlainTextEdit):
         bottom = top + self.blockBoundingRect(block).height()
 
         fg_color = palette.color(QPalette.Text).darker(150)
+        bp_color = QColor(255, 80, 80)  # Red for breakpoints
+        current_line_color = QColor(255, 255, 0)  # Yellow for current line
 
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
-                number = str(block_number + 1)
+                line_num = block_number + 1
+                font_height = self.fontMetrics().height()
+
+                # Draw breakpoint marker if set
+                if line_num in self._breakpoints:
+                    painter.setBrush(QBrush(bp_color))
+                    painter.setPen(QPen(bp_color.darker(120)))
+                    # Draw circle for breakpoint
+                    circle_size = min(14, font_height - 2)
+                    circle_x = 3
+                    circle_y = int(top) + (font_height - circle_size) // 2
+                    painter.drawEllipse(circle_x, circle_y, circle_size, circle_size)
+
+                # Draw current execution line indicator
+                if line_num == self._current_line:
+                    painter.setBrush(QBrush(current_line_color))
+                    painter.setPen(QPen(current_line_color.darker(120)))
+                    # Draw arrow for current line
+                    arrow_x = 4
+                    arrow_y = int(top) + font_height // 2
+                    arrow_size = 6
+                    points = [
+                        (arrow_x, arrow_y - arrow_size // 2),
+                        (arrow_x + arrow_size, arrow_y),
+                        (arrow_x, arrow_y + arrow_size // 2),
+                    ]
+                    from PySide6.QtCore import QPoint
+                    from PySide6.QtGui import QPolygon
+
+                    polygon = QPolygon([QPoint(x, y) for x, y in points])
+                    painter.drawPolygon(polygon)
+
+                # Draw line number (offset for breakpoint gutter)
+                number = str(line_num)
                 painter.setPen(fg_color)
                 painter.drawText(
-                    0,
+                    20,  # Offset for breakpoint gutter
                     int(top),
-                    self.line_number_area.width() - 5,
-                    self.fontMetrics().height(),
+                    self.line_number_area.width() - 25,
+                    font_height,
                     Qt.AlignRight,
                     number,
                 )
@@ -717,6 +790,73 @@ class CodeEditor(QPlainTextEdit):
         if size > 6:
             font.setPointSize(size - 1)
             self.setFont(font)
+
+    # ---- Breakpoint Management ----
+
+    def toggle_breakpoint(self, line: int):
+        """Toggle a breakpoint at the specified line."""
+        if line in self._breakpoints:
+            self._breakpoints.remove(line)
+        else:
+            self._breakpoints.add(line)
+        self.line_number_area.update()
+        self.breakpoint_toggled.emit(line)
+
+    def add_breakpoint(self, line: int):
+        """Add a breakpoint at the specified line."""
+        if line not in self._breakpoints:
+            self._breakpoints.add(line)
+            self.line_number_area.update()
+            self.breakpoint_toggled.emit(line)
+
+    def remove_breakpoint(self, line: int):
+        """Remove a breakpoint from the specified line."""
+        if line in self._breakpoints:
+            self._breakpoints.remove(line)
+            self.line_number_area.update()
+            self.breakpoint_toggled.emit(line)
+
+    def clear_breakpoints(self):
+        """Clear all breakpoints."""
+        self._breakpoints.clear()
+        self.line_number_area.update()
+
+    def get_breakpoints(self) -> set:
+        """Get the set of breakpoint line numbers."""
+        return self._breakpoints.copy()
+
+    def set_breakpoints(self, breakpoints: set):
+        """Set breakpoints from a set of line numbers."""
+        self._breakpoints = set(breakpoints)
+        self.line_number_area.update()
+
+    def has_breakpoint(self, line: int) -> bool:
+        """Check if a line has a breakpoint."""
+        return line in self._breakpoints
+
+    # ---- Execution Line Indicator ----
+
+    def set_current_line(self, line: int):
+        """Set the current execution line (shown with yellow arrow)."""
+        self._current_line = line
+        self.line_number_area.update()
+
+        # Scroll to make the current line visible
+        if line > 0:
+            self.goto_line(line)
+
+    def clear_current_line(self):
+        """Clear the current execution line indicator."""
+        self._current_line = 0
+        self.line_number_area.update()
+
+    def goto_line(self, line: int):
+        """Scroll to and highlight the specified line."""
+        block = self.document().findBlockByLineNumber(line - 1)
+        if block.isValid():
+            cursor = QTextCursor(block)
+            self.setTextCursor(cursor)
+            self.centerCursor()
 
     def insert_completion(self, completion):
         """Insert the selected completion."""
