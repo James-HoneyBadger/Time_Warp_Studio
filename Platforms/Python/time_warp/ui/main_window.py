@@ -64,7 +64,7 @@ from ..core.interpreter import Language
 from .canvas import TurtleCanvas
 from .collaboration_client import CollaborationClient
 from .editor import CodeEditor
-from .output import OutputPanel
+from .output import ImmediateModePanel, OutputPanel
 from .themes import ThemeManager
 from .variable_inspector import VariableInspector
 
@@ -375,7 +375,7 @@ class MainWindow(QMainWindow):
         layout = QVBoxLayout(central)
         layout.setContentsMargins(5, 5, 5, 5)
 
-        # Main splitter (horizontal)
+        # Main splitter (horizontal) - left side vs right side
         splitter = QSplitter(Qt.Horizontal)
         splitter.setStyleSheet(
             """
@@ -385,7 +385,10 @@ class MainWindow(QMainWindow):
         """
         )
 
-        # Left side: Editor tabs
+        # Left side: Vertical splitter for editor + immediate mode
+        left_splitter = QSplitter(Qt.Vertical)
+
+        # Editor tabs
         self.editor_tabs = QTabWidget()
         self.editor_tabs.setTabsClosable(True)
         self.editor_tabs.tabCloseRequested.connect(self.close_tab)
@@ -403,7 +406,16 @@ class MainWindow(QMainWindow):
         # Create initial tab
         self.new_file()
 
-        splitter.addWidget(self.editor_tabs)
+        left_splitter.addWidget(self.editor_tabs)
+
+        # Immediate mode panel (REPL) - below editor
+        self.immediate_mode = ImmediateModePanel(self)
+        left_splitter.addWidget(self.immediate_mode)
+
+        # Set left splitter sizes (85% editor, 15% immediate mode)
+        left_splitter.setSizes([550, 50])
+
+        splitter.addWidget(left_splitter)
 
         # Right side: Tabs for Output and Canvas
         self.right_tabs = QTabWidget()
@@ -421,9 +433,17 @@ class MainWindow(QMainWindow):
         self.output = OutputPanel(self)
         self.right_tabs.addTab(self.output, "📝 Output")
 
+        # Connect output panel signals
+        self.output.variables_updated.connect(self.on_variables_updated)
+
         # Turtle canvas
         self.canvas = TurtleCanvas(self)
         self.right_tabs.addTab(self.canvas, "🎨 Graphics")
+
+        # Connect immediate mode to output panel and canvas
+        self.immediate_mode.set_canvas(self.canvas)
+        self.immediate_mode.set_output_panel(self.output)
+        self.immediate_mode.variables_updated.connect(self.on_variables_updated)
 
         # Variable inspector
         self.variable_inspector = VariableInspector(self)
@@ -569,6 +589,42 @@ class MainWindow(QMainWindow):
             theme_group.addAction(theme_action)
             theme_menu.addAction(theme_action)
 
+        # Font submenu
+        font_menu = view_menu.addMenu("&Font")
+
+        # Font family submenu
+        font_family_menu = font_menu.addMenu("Font &Family")
+        self.font_family_group = QActionGroup(self)
+        self.font_family_group.setExclusive(True)
+
+        available_fonts = self.theme_manager.get_available_fonts()[:20]
+        for font_family in available_fonts:
+            font_action = QAction(font_family, self)
+            font_action.setCheckable(True)
+            is_current = font_family == self.theme_manager.current_font_family
+            font_action.setChecked(is_current)
+            font_action.triggered.connect(
+                lambda checked, family=font_family: self.change_font_family(family)
+            )
+            self.font_family_group.addAction(font_action)
+            font_family_menu.addAction(font_action)
+
+        # Font size submenu
+        font_size_menu = font_menu.addMenu("Font &Size")
+        self.font_size_group = QActionGroup(self)
+        self.font_size_group.setExclusive(True)
+
+        for size in self.theme_manager.get_font_sizes():
+            size_action = QAction(f"{size} pt", self)
+            size_action.setCheckable(True)
+            is_current = size == self.theme_manager.current_font_size
+            size_action.setChecked(is_current)
+            size_action.triggered.connect(
+                lambda checked, s=size: self.change_font_size(s)
+            )
+            self.font_size_group.addAction(size_action)
+            font_size_menu.addAction(size_action)
+
         view_menu.addSeparator()
 
         # Zoom in / out helpers
@@ -595,19 +651,6 @@ class MainWindow(QMainWindow):
         view_menu.addAction(zoom_out_action)
 
         # Debugging UI removed — this distribution exposes Run/Stop only.
-
-        # Help menu
-        help_menu = menubar.addMenu("&Help")
-
-        examples_action = QAction("&Example Programs...", self)
-        examples_action.triggered.connect(self.show_examples)
-        help_menu.addAction(examples_action)
-
-        help_menu.addSeparator()
-
-        about_action = QAction("&About Time Warp IDE", self)
-        about_action.triggered.connect(self.show_about)
-        help_menu.addAction(about_action)
 
         # AI menu - Enable AI assistant features
         ai_menu = menubar.addMenu("&AI")
@@ -650,7 +693,7 @@ class MainWindow(QMainWindow):
         ollama_action = QAction("&Ollama (Local)", self)
         ollama_action.setCheckable(True)
         ollama_action.setChecked(
-            self.ai_assistant.get_active_provider() == AIProvider.LOCAL_OLLAMA
+            self.ai_assistant.active_provider == AIProvider.LOCAL_OLLAMA
         )
         ollama_action.triggered.connect(
             lambda: self.set_ai_provider(AIProvider.LOCAL_OLLAMA)
@@ -660,7 +703,7 @@ class MainWindow(QMainWindow):
         # GitHub Copilot provider
         copilot_action = QAction("&GitHub Copilot", self)
         copilot_action.setCheckable(True)
-        active_provider = self.ai_assistant.get_active_provider()
+        active_provider = self.ai_assistant.active_provider
         is_github_provider = active_provider == AIProvider.GITHUB_COPILOT
         copilot_action.setChecked(is_github_provider)
         copilot_action.triggered.connect(
@@ -682,6 +725,19 @@ class MainWindow(QMainWindow):
         # Plugin actions will be populated by refresh_plugins
         self.plugin_actions = []
         self.refresh_plugins()
+
+        # Help menu (last menu item)
+        help_menu = menubar.addMenu("&Help")
+
+        examples_action = QAction("&Example Programs...", self)
+        examples_action.triggered.connect(self.show_examples)
+        help_menu.addAction(examples_action)
+
+        help_menu.addSeparator()
+
+        about_action = QAction("&About Time Warp IDE", self)
+        about_action.triggered.connect(self.show_about)
+        help_menu.addAction(about_action)
 
         # Collaboration features are disabled in this distribution. The
         # Collaboration menu is omitted to avoid exposing disabled
@@ -1093,6 +1149,13 @@ class MainWindow(QMainWindow):
         self.statusbar.showMessage("Stopped")
         # debug pause handling removed
 
+    def on_variables_updated(self, variables):
+        """Handle variables update from interpreter."""
+        self.variable_inspector.update_variables(variables)
+        # Re-enable run action after execution completes
+        self.run_action.setEnabled(True)
+        self.stop_action.setEnabled(False)
+
     def on_text_changed(self, editor=None):
         """Handle text changes."""
         if editor is None:
@@ -1113,6 +1176,9 @@ class MainWindow(QMainWindow):
                 current_editor.set_language(current_data)
             # Update interpreter language if needed
             self.output.set_language(current_data)
+            # Update immediate mode language
+            if hasattr(self, "immediate_mode"):
+                self.immediate_mode.set_language(current_data)
             # Update tab info
             self.set_current_tab_info(language=current_data)
             # Update status bar language label
@@ -1172,8 +1238,30 @@ class MainWindow(QMainWindow):
 
         # Save theme preference
         self.settings.setValue("theme", theme_name)
-        self.settings.setValue("theme", theme_name)
-        self.statusbar.showMessage(f"Theme changed to: {theme_name}")
+        self.statusBar().showMessage(f"Theme changed to: {theme_name}")
+
+    def change_font_family(self, font_family):
+        """Change editor font family."""
+        self.theme_manager.set_font(font_family, self.theme_manager.current_font_size)
+        self._apply_font_to_editors()
+        self.settings.setValue("font_family", font_family)
+        self.statusBar().showMessage(f"Font changed to: {font_family}")
+
+    def change_font_size(self, size):
+        """Change editor font size."""
+        self.theme_manager.set_font(self.theme_manager.current_font_family, size)
+        self._apply_font_to_editors()
+        self.settings.setValue("font_size", size)
+        self.statusBar().showMessage(f"Font size changed to: {size} pt")
+
+    def _apply_font_to_editors(self):
+        """Apply current font to all editors and output."""
+        font = self.theme_manager.get_font()
+        for i in range(self.editor_tabs.count()):
+            editor = self.editor_tabs.widget(i)
+            if editor:
+                editor.setFont(font)
+        self.output.setFont(font)
 
     def add_recent_file(self, filename):
         """Add file to recent files list."""
@@ -1255,6 +1343,17 @@ class MainWindow(QMainWindow):
         state = self.settings.value("windowState")
         if state:
             self.restoreState(state)
+
+        # Restore font settings
+        font_family = self.settings.value("font_family")
+        font_size = self.settings.value("font_size")
+        if font_family:
+            self.theme_manager.current_font_family = font_family
+        if font_size:
+            try:
+                self.theme_manager.current_font_size = int(font_size)
+            except (ValueError, TypeError):
+                pass
 
     def save_state(self):
         """Save window state to settings."""
@@ -1582,7 +1681,9 @@ class MainWindow(QMainWindow):
                 no_plugins_action = QAction("No plugins loaded", self)
                 no_plugins_action.setEnabled(False)
                 plugin_menu = self.menuBar().findChild(QMenu, "&Plugins")
-                plugin_menu.addAction(no_plugins_action)
+                if plugin_menu is not None:
+                    plugin_menu.addAction(no_plugins_action)
+                # If plugin_menu is None, just skip - menu may not be ready yet
                 self.plugin_actions.append(no_plugins_action)
             else:
                 # Add actions for each loaded plugin
@@ -1617,7 +1718,7 @@ class MainWindow(QMainWindow):
                         plugin_menu.addAction(info_action)
                         self.plugin_actions.append(info_action)
 
-            self.statusbar.showMessage(f"Loaded {len(loaded_plugins)} plugins")
+            self.statusBar().showMessage(f"Loaded {len(loaded_plugins)} plugins")
 
         except Exception as e:  # pylint: disable=broad-except
             # Propagate critical signals immediately
@@ -1626,7 +1727,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(
                 self, "Plugin Error", f"Failed to refresh plugins:\n{str(e)}"
             )
-            self.statusbar.showMessage("Plugin refresh failed")
+            self.statusBar().showMessage("Plugin refresh failed")
 
     # Allow broad exception handling in this UI helper because plugin
     # code may raise arbitrary errors that shouldn't crash the IDE.

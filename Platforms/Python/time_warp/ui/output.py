@@ -4,11 +4,19 @@
 # Disable 'no-name-in-module' here; PySide6 provides these symbols at runtime.
 # pylint: disable=no-name-in-module
 
-from PySide6.QtCore import QThread, Signal
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
-from PySide6.QtWidgets import QInputDialog, QLineEdit, QTextEdit
+from PySide6.QtWidgets import (
+    QHBoxLayout,
+    QInputDialog,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTextEdit,
+    QWidget,
+)
 
-from ..core.interpreter import Interpreter
+from ..core.interpreter import Interpreter, Language
 from ..graphics.turtle_state import TurtleState
 
 
@@ -21,6 +29,7 @@ class InterpreterThread(QThread):
     state_changed = Signal()
     input_requested = Signal(str, bool)  # (prompt, is_numeric)
     debug_paused = Signal(int, dict)  # (line, variables)
+    variables_updated = Signal(dict)  # variables dict after execution
 
     # The thread __init__ intentionally accepts several parameters for
     # configuration; silence the "too many args" checks for readability.
@@ -80,10 +89,20 @@ class InterpreterThread(QThread):
                 self.input_requested.emit(req.prompt, req.is_numeric)
             elif not self.should_stop:
                 self.output_ready.emit("\n✅ Execution complete", "success")
+                # Emit variables after execution
+                variables = self.interp.get_variables()
+                self.variables_updated.emit(variables)
                 self.execution_complete.emit()
 
         except (ValueError, RuntimeError, OSError) as e:
             self.error_occurred.emit(str(e))
+            # Still emit variables on error if interpreter exists
+            if self.interp:
+                try:
+                    variables = self.interp.get_variables()
+                    self.variables_updated.emit(variables)
+                except Exception:  # pylint: disable=broad-except
+                    pass
             self.execution_complete.emit()
 
     def stop(self):
@@ -100,6 +119,7 @@ class OutputPanel(QTextEdit):
     # interpreter thread is started (avoids a race where the thread emits a
     # pause before the UI has hooked the thread signal).
     debug_paused = Signal(int, dict)  # (line, variables)
+    variables_updated = Signal(dict)  # variables after execution
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -192,6 +212,12 @@ class OutputPanel(QTextEdit):
         except AttributeError:
             # If the thread doesn't expose debug_paused for any reason,
             # continue without breaking execution.
+            pass
+
+        # Forward variables_updated signal
+        try:
+            self.exec_thread.variables_updated.connect(self.variables_updated)
+        except AttributeError:
             pass
 
         # Start the thread after connecting signals.
@@ -365,3 +391,177 @@ class OutputPanel(QTextEdit):
     def get_last_error(self):
         """Get the last error message for AI assistance."""
         return self.last_error
+
+
+class ImmediateModePanel(QWidget):
+    """Simple command input for immediate mode execution.
+
+    Just a command line - output goes to the main Output panel.
+    """
+
+    # Signal emitted when variables change
+    variables_updated = Signal(dict)
+    # Signal to send output to the main output panel
+    output_ready = Signal(str, str)  # (text, type)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        # Persistent interpreter for immediate mode
+        self.interpreter = Interpreter()
+        self.turtle = TurtleState()
+        self.canvas = None
+        self.output_panel = None  # Reference to main output panel
+        self.current_language = Language.BASIC
+
+        # Command history
+        self.command_history = []
+        self.history_index = -1
+
+        self._setup_ui()
+
+    def _setup_ui(self):
+        """Setup the immediate mode UI - just a command input line."""
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+        layout.setSpacing(4)
+
+        # Prompt label
+        self.prompt_label = QLabel("READY>")
+        self.prompt_label.setFont(QFont("Courier New", 11))
+        self.prompt_label.setStyleSheet("color: #50fa7b; font-weight: bold;")
+        layout.addWidget(self.prompt_label)
+
+        # Command input field
+        self.command_input = QLineEdit()
+        self.command_input.setFont(QFont("Courier New", 11))
+        self.command_input.setPlaceholderText(
+            "Enter command (e.g., PRINT 10+5, LET X=100, FORWARD 50)"
+        )
+        self.command_input.returnPressed.connect(self._execute_command)
+        layout.addWidget(self.command_input)
+
+        # Execute button
+        self.exec_button = QPushButton("Run")
+        self.exec_button.clicked.connect(self._execute_command)
+        self.exec_button.setFixedWidth(50)
+        layout.addWidget(self.exec_button)
+
+        # Install event filter for command history navigation
+        self.command_input.installEventFilter(self)
+
+    def eventFilter(self, obj, event):
+        """Handle key events for command history."""
+        if obj == self.command_input and event.type() == event.Type.KeyPress:
+            if event.key() == Qt.Key_Up:
+                self._history_up()
+                return True
+            elif event.key() == Qt.Key_Down:
+                self._history_down()
+                return True
+        return super().eventFilter(obj, event)
+
+    def _history_up(self):
+        """Navigate up in command history."""
+        if self.command_history and self.history_index < len(self.command_history) - 1:
+            self.history_index += 1
+            cmd = self.command_history[-(self.history_index + 1)]
+            self.command_input.setText(cmd)
+            self.command_input.selectAll()
+
+    def _history_down(self):
+        """Navigate down in command history."""
+        if self.history_index > 0:
+            self.history_index -= 1
+            cmd = self.command_history[-(self.history_index + 1)]
+            self.command_input.setText(cmd)
+            self.command_input.selectAll()
+        elif self.history_index == 0:
+            self.history_index = -1
+            self.command_input.clear()
+
+    def set_canvas(self, canvas):
+        """Set the canvas for turtle graphics."""
+        self.canvas = canvas
+        self.turtle.on_change = self._on_turtle_change
+
+    def set_output_panel(self, output_panel):
+        """Set the output panel to send results to."""
+        self.output_panel = output_panel
+
+    def set_language(self, language):
+        """Set the current language."""
+        self.current_language = language
+        # Update prompt based on language
+        prompts = {
+            Language.BASIC: "READY>",
+            Language.PILOT: "PILOT>",
+            Language.LOGO: "LOGO>",
+        }
+        self.prompt_label.setText(prompts.get(language, "CMD>"))
+
+    def _on_turtle_change(self):
+        """Handle turtle state changes."""
+        if self.canvas:
+            self.canvas.set_turtle_state(self.turtle)
+
+    def _send_output(self, text, output_type="normal"):
+        """Send output to the main output panel."""
+        if self.output_panel:
+            self.output_panel.append_colored(text, output_type)
+        self.output_ready.emit(text, output_type)
+
+    def _execute_command(self):
+        """Execute the entered command."""
+        command = self.command_input.text().strip()
+        if not command:
+            return
+
+        # Add to history
+        if not self.command_history or self.command_history[-1] != command:
+            self.command_history.append(command)
+        self.history_index = -1
+
+        # Show command in output
+        self._send_output(f"⚡ {command}", "info")
+
+        # Capture output
+        output_lines = []
+
+        def capture_output(text):
+            output_lines.append(text)
+
+        self.interpreter.output_callback = capture_output
+
+        try:
+            # Load and execute single command
+            self.interpreter.load_program(command, self.current_language)
+            self.interpreter.execute(self.turtle)
+
+            # Show any output
+            for line in output_lines:
+                self._send_output(line, "normal")
+
+            # Update canvas if turtle was used
+            if self.canvas:
+                self.canvas.set_turtle_state(self.turtle)
+
+            # Emit variables update
+            variables = self.interpreter.get_variables()
+            self.variables_updated.emit(variables)
+
+        except Exception as e:  # pylint: disable=broad-except
+            self._send_output(f"❌ Error: {e}", "error")
+
+        # Clear input and focus
+        self.command_input.clear()
+        self.command_input.setFocus()
+
+    def clear_state(self):
+        """Clear the interpreter state (variables, etc.)."""
+        self.interpreter = Interpreter()
+        self.turtle = TurtleState()
+        if self.canvas:
+            self.turtle.on_change = self._on_turtle_change
+        self._send_output("🔄 State cleared", "info")
+        self.variables_updated.emit({})
