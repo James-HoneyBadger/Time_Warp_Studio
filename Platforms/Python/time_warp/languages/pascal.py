@@ -12,7 +12,7 @@ Supported subset:
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Tuple, Any
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -69,7 +69,7 @@ _CALL_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:\((.*)\))?\s*;\s*$")
 
 def _ensure_pascal_stack(interpreter: "Interpreter"):
     if not hasattr(interpreter, "pascal_block_stack"):
-        interpreter.pascal_block_stack: List[Dict] = []
+        interpreter.pascal_block_stack = []
 
 
 def _is_begin(line: str) -> bool:
@@ -115,7 +115,7 @@ def _find_end_for_begin(interpreter: "Interpreter", begin_idx: int) -> int:
 def _parse_case_blocks(interpreter: "Interpreter", case_idx: int):
     lines = interpreter.program_lines
     j = case_idx + 1
-    blocks = []  # (label|"__ELSE__", begin_inner, end_idx)
+    blocks: List[Tuple[str, int, int]] = []  # (label|"__ELSE__", begin_inner, end_idx)
     current_label = None
     current_begin = None
     while j < len(lines):
@@ -204,8 +204,8 @@ def _suffix_for_type(t: str) -> str:
     return "#"
 
 
-def _parse_param_list(params: str | None) -> List[Dict[str, str]]:
-    res: List[Dict[str, str]] = []
+def _parse_param_list(params: str | None) -> List[Dict[str, Any]]:
+    res: List[Dict[str, Any]] = []
     if not params:
         return res
     groups = [g.strip() for g in params.split(";") if g.strip()]
@@ -333,10 +333,10 @@ def _handle_proc_call(
             if suf == "$":
                 cur = interpreter.string_variables.get(target_key, "")
             else:
-                cur = interpreter.get_numeric_value(target_up) or 0
+                cur: Any = interpreter.get_numeric_value(target_up) or 0
             # Backup only local param if it existed
             local_existed = False
-            local_old = None
+            local_old: Any = None
             if suf == "$":
                 if var_key in interpreter.string_variables:
                     local_existed = True
@@ -357,7 +357,7 @@ def _handle_proc_call(
             aliases[var_key] = target_key
         else:
             existed = False
-            old_val = None
+            old_val: Any = None
             if suf == "$":
                 if var_key in interpreter.string_variables:
                     existed = True
@@ -374,7 +374,7 @@ def _handle_proc_call(
                     "old": old_val,
                 }
             )
-            val = "" if suf == "$" else 0
+            val: Any = "" if suf == "$" else 0
             if idx < len(args):
                 a = args[idx]
                 if suf == "$":
@@ -624,9 +624,8 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
                 except (ValueError, TypeError, ZeroDivisionError):
                     cond_v = 0
                 if cond_v:
-                    interpreter.current_line = (
-                        top.get("start", interpreter.current_line) - 1
-                    )
+                    _start = int(top.get("start") or interpreter.current_line)
+                    interpreter.current_line = _start - 1
                 else:
                     interpreter.pascal_block_stack.pop()
                     return ""
@@ -637,6 +636,9 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
             elif top.get("type") == "for":
                 # increment/decrement and re-check
                 var = top.get("var")
+                if not isinstance(var, str):
+                    interpreter.pascal_block_stack.pop()
+                    return ""
                 step = top.get("step", 1)
                 cur = interpreter.get_numeric_value(var) or 0
                 interpreter.set_typed_variable(var, cur + step)
@@ -645,9 +647,8 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
                 limit = top.get("limit", 0)
                 ok = val <= limit if step > 0 else val >= limit
                 if ok:
-                    interpreter.current_line = (
-                        top.get("start", interpreter.current_line) - 1
-                    )
+                    _start = int(top.get("start") or interpreter.current_line)
+                    interpreter.current_line = _start - 1
                 else:
                     interpreter.pascal_block_stack.pop()
             elif top.get("type") == "case":
@@ -772,13 +773,14 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
         suf = None
         if hasattr(interpreter, "pascal_types"):
             suf = interpreter.pascal_types.get(up)
+        val: Any
         try:
             if suf == "$":
                 val = _unquote(expr)
             else:
                 val = interpreter.evaluate_expression(expr)
         except (ValueError, TypeError, ZeroDivisionError):
-            val = 0
+            val = "" if suf == "$" else 0
         # Handle by-reference parameter aliasing
         var_key = up + (suf or "#")
         if hasattr(interpreter, "pascal_call_stack") and interpreter.pascal_call_stack:

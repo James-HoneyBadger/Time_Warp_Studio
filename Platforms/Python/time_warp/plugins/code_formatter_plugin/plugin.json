@@ -1,0 +1,11 @@
+{
+  "name": "Code Formatter Plugin",
+  "version": "1.0.0",
+  "description": "Provides code formatting and beautification for supported languages",
+  "author": "Time Warp Team",
+  "entry_point": "__init__.py",
+  "dependencies": [],
+  "permissions": ["editor_access", "file_access"],
+  "languages": ["basic", "logo", "pilot", "pascal"],
+  "ui_hooks": ["menu_bar", "editor_context_menu"]
+}

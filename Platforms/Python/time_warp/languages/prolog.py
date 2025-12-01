@@ -18,14 +18,17 @@ Limitations:
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
 
 
 _FACT_RE = re.compile(r"^\s*([a-z][a-z0-9_]*)\s*\(([^)]*)\)\s*\.\s*$")
-_RULE_RE = re.compile(r"^\s*([a-z][a-z0-9_]*)\s*\(([^)]*)\)\s*:-\s*(.+)\s*\.\s*$")
+_RULE_PART1 = r"^\s*([a-z][a-z0-9_]*)\s*"
+_RULE_PART2 = r"\(([^)]*)\)\s*:-\s*(.+)\s*\.\s*$"
+_RULE_PATTERN = _RULE_PART1 + _RULE_PART2
+_RULE_RE = re.compile(_RULE_PATTERN)
 _QUERY_RE = re.compile(r"^\s*\?-\s*([a-z][a-z0-9_]*)\s*\(([^)]*)\)\s*\.\s*$")
 
 
@@ -41,7 +44,8 @@ def _parse_terms(arg_str: str) -> Tuple[str, ...]:
 def _ensure_kb(interpreter: "Interpreter"):
     if not hasattr(interpreter, "prolog_kb"):
         # Use list to preserve insertion order for deterministic behavior
-        interpreter.prolog_kb = {"facts": [], "rules": [], "cut_active": False}
+        kb_dict = {"facts": [], "rules": [], "cut_active": False}
+        interpreter.prolog_kb = kb_dict  # type: ignore
     # Ensure required keys exist even if
     # prolog_kb was pre-initialized as an empty dict
     if "facts" not in interpreter.prolog_kb:
@@ -49,7 +53,7 @@ def _ensure_kb(interpreter: "Interpreter"):
     if "rules" not in interpreter.prolog_kb:
         interpreter.prolog_kb["rules"] = []
     if "cut_active" not in interpreter.prolog_kb:
-        interpreter.prolog_kb["cut_active"] = False
+        interpreter.prolog_kb["cut_active"] = False  # type: ignore
 
 
 def _unify(x: str, y: str, env: Dict[str, str]) -> Optional[Dict[str, str]]:
@@ -86,7 +90,7 @@ def _unify(x: str, y: str, env: Dict[str, str]) -> Optional[Dict[str, str]]:
 def _parse_body_goals(body: str) -> List[Tuple[str, Tuple[str, ...]]]:
     # Split by commas not inside parentheses (simple heuristic)
     goals: List[Tuple[str, Tuple[str, ...]]] = []
-    buf = []
+    buf: List[str] = []
     depth = 0
     for ch in body:
         if ch == "(":
@@ -142,7 +146,9 @@ def _split_on_cut(
 
 
 def _solve_goals_first(
-    kb, goals: List[Tuple[str, Tuple[str, ...]]], env: Dict[str, str]
+    kb: Dict[str, Any],
+    goals: List[Tuple[str, Tuple[str, ...]]],
+    env: Dict[str, str],
 ) -> List[Dict[str, str]]:
     # Like _solve_goals but returns at most the first successful environment
     if not goals:
@@ -189,7 +195,9 @@ def _bind_num(
 
 
 def _solve_goals(
-    kb, goals: List[Tuple[str, Tuple[str, ...]]], env: Dict[str, str]
+    kb: Dict[str, Any],
+    goals: List[Tuple[str, Tuple[str, ...]]],
+    env: Dict[str, str],
 ) -> List[Dict[str, str]]:
     envs_with_cut = _solve_goals_cut(kb, goals, env)
     # Filter out cut-failure sentinels
@@ -197,7 +205,9 @@ def _solve_goals(
 
 
 def _solve_goals_cut(
-    kb, goals: List[Tuple[str, Tuple[str, ...]]], env: Dict[str, str]
+    kb: Dict[str, Any],
+    goals: List[Tuple[str, Tuple[str, ...]]],
+    env: Dict[str, str],
 ) -> List[Tuple[Dict[str, str], bool]]:
     if not goals:
         return [(env, False)]
@@ -207,25 +217,25 @@ def _solve_goals_cut(
     # Built-ins
     if pred == "!":
         # Cut: mark cut active for current rule evaluation and continue
-        kb["cut_active"] = True
+        kb["cut_active"] = True  # type: ignore
         child = _solve_goals_cut(kb, rest, env)
         if not child:
             # Even if the rest fails, cut commits: signal prune to caller
             return [({"__CUTFAIL__": "1"}, True)]
         return [(e, True) for (e, _c) in child]
     if pred == "add" and len(args) == 3:
-        a, b, c = args
-        av = _num_value(a, env)
-        bv = _num_value(b, env)
-        cv = _num_value(c, env)
+        a_token, b_token, c_token = args
+        av = _num_value(a_token, env)
+        bv = _num_value(b_token, env)
+        cv = _num_value(c_token, env)
         if av is not None and bv is not None:
-            e = _bind_num(c, av + bv, env)
+            e = _bind_num(c_token, av + bv, env)
             return _solve_goals_cut(kb, rest, e) if e is not None else []
         if av is not None and cv is not None:
-            e = _bind_num(b, cv - av, env)
+            e = _bind_num(b_token, cv - av, env)
             return _solve_goals_cut(kb, rest, e) if e is not None else []
         if bv is not None and cv is not None:
-            e = _bind_num(a, cv - bv, env)
+            e = _bind_num(a_token, cv - bv, env)
             return _solve_goals_cut(kb, rest, e) if e is not None else []
         return []
     if pred == "lt" and len(args) == 2:
@@ -306,7 +316,9 @@ def _solve_goals_cut(
     return out
 
 
-def _solve(kb, pred: str, args: Tuple[str, ...]) -> List[Dict[str, str]]:
+def _solve(
+    kb: Dict[str, Any], pred: str, args: Tuple[str, ...]
+) -> List[Dict[str, str]]:
     solutions: List[Dict[str, str]] = []
     # Built-in predicates for direct queries and rule heads
     builtins = {"add", "lt", "gt", "ge", "le", "eq", "neq"}
@@ -321,29 +333,32 @@ def _solve(kb, pred: str, args: Tuple[str, ...]) -> List[Dict[str, str]]:
     for p, fact_args in kb["facts"]:
         if p != pred or len(fact_args) != len(args):
             continue
-        env: Optional[Dict[str, str]] = {}
+        fact_env: Optional[Dict[str, str]] = {}
         for a, b in zip(args, fact_args):
-            env = _unify(a, b, env) if env is not None else None
-            if env is None:
+            fact_env = _unify(a, b, fact_env) if fact_env is not None else None
+            if fact_env is None:
                 break
-        if env is not None:
-            solutions.append(env)
+        if fact_env is not None:
+            solutions.append(fact_env)
 
     # Rules (multi-goal body)
     for hp, hargs, body_goals in kb["rules"]:
         if hp != pred or len(hargs) != len(args):
             continue
-        env: Optional[Dict[str, str]] = {}
+        rule_env: Optional[Dict[str, str]] = {}
         for ha, qa in zip(hargs, args):
-            env = _unify(ha, qa, env) if env is not None else None
-            if env is None:
+            if rule_env is not None:
+                rule_env = _unify(ha, qa, rule_env)
+            else:
+                rule_env = None
+            if rule_env is None:
                 break
-        if env is None:
+        if rule_env is None:
             continue
         if _body_has_cut(body_goals):
             pre, post = _split_on_cut(body_goals)
             # Get first solution for pre-cut part only
-            first_envs = _solve_goals_first(kb, pre, env)
+            first_envs = _solve_goals_first(kb, pre, rule_env)
             if not first_envs:
                 # Cut not reached; allow other clauses
                 continue
@@ -355,10 +370,10 @@ def _solve(kb, pred: str, args: Tuple[str, ...]) -> List[Dict[str, str]]:
             break
         # Evaluate body goals sequentially without pre-binding
         # (sequential unification)
-        envs_with_cut = _solve_goals_cut(kb, body_goals, env)
+        envs_with_cut = _solve_goals_cut(kb, body_goals, rule_env)
         cut_committed = any(c for (e, c) in envs_with_cut) or kb.get(
             "cut_active", False
-        )
+        )  # type: ignore
         for e, c in envs_with_cut:
             if "__CUTFAIL__" in e:
                 continue
@@ -383,7 +398,7 @@ def execute_prolog(interpreter: "Interpreter", command: str, _turtle) -> str:
         pred, args = m.groups()
         terms = _parse_terms(args)
         # Reset cut state for each query
-        interpreter.prolog_kb["cut_active"] = False
+        interpreter.prolog_kb["cut_active"] = False  # type: ignore
         sols = _solve(interpreter.prolog_kb, pred.lower(), terms)
         if not sols:
             return "❌ false"

@@ -10,6 +10,34 @@ from pathlib import Path
 # pylint: disable=too-many-lines
 from PySide6.QtCore import QSettings, Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QAction, QKeySequence
+
+try:
+    from PySide6.QtWidgets import QActionGroup
+except (
+    ImportError,
+    ModuleNotFoundError,
+):  # pragma: no cover - Qt variant compatibility
+    # Some PySide6 builds expose QActionGroup via QtGui instead of
+    # QtWidgets; import it from the fallback location if available.
+    try:
+        from PySide6.QtGui import QActionGroup
+    except (
+        ImportError,
+        ModuleNotFoundError,
+    ):  # pragma: no cover - headless/test environments
+        # Minimal fallback for test environments without Qt installed
+        class QActionGroup:  # type: ignore  # pylint: disable=too-few-public-methods
+            """Minimal placeholder for QActionGroup used in headless/test environments.
+
+            This class mimics the presence of QActionGroup to allow tests and
+            static analyzers to import the UI module without PySide6 being
+            installed. It does not implement any functionality.
+            """
+
+            # Minimal placeholder - no methods required for test shims
+            # pylint: disable=too-few-public-methods
+
+
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -21,6 +49,7 @@ from PySide6.QtWidgets import (
     QListWidget,
     QMainWindow,
     QMessageBox,
+    QMenu,
     QSplitter,
     QStatusBar,
     QTabWidget,
@@ -39,11 +68,21 @@ from .output import OutputPanel
 from .themes import ThemeManager
 from .variable_inspector import VariableInspector
 
+# Import plugin system
+from ..plugins import PluginManager
+
 # pylint: enable=no-name-in-module
 
 
 class MainWindow(QMainWindow):
-    """Main IDE window with editor, output, and canvas."""
+    """Main IDE window with editor, output, and canvas.
+
+    This class composes the editor area, output panel, turtle graphics
+    canvas and various UI controls such as application menu and toolbar.
+    It is intentionally large and stateful since it integrates multiple
+    subsystems (AI assistant, plugin manager, collaboration client) and
+    supports running and inspecting programs across multiple languages.
+    """
 
     # This class manages a rich UI with many widgets and stateful
     # attributes; allow larger limits for instance attributes and public
@@ -62,6 +101,13 @@ class MainWindow(QMainWindow):
         # AI assistant
         self.ai_assistant = get_ai_assistant()
 
+        # Plugin manager
+        plugin_dir = Path(__file__).resolve().parents[1] / "plugins"
+        self.plugin_manager = PluginManager([plugin_dir])
+        # Discover existing plugins - actual loading happens
+        # in refresh_plugins()
+        self.plugin_manager.discover_plugins()
+
         # Collaboration client
         self.collaboration_client = CollaborationClient()
         self.setup_collaboration_callbacks()
@@ -70,6 +116,8 @@ class MainWindow(QMainWindow):
         self.tab_files = {}  # tab_index -> filename
         self.tab_modified = {}  # tab_index -> bool
         self.tab_languages = {}  # tab_index -> Language
+        # Plugin actions collected for menu items
+        self.plugin_actions = []
 
         # Dialog UI elements (initialized in respective methods)
         self.server_input = None
@@ -165,6 +213,7 @@ class MainWindow(QMainWindow):
         editor.setPlainText(content)
         editor.set_language(language)
         editor.textChanged.connect(lambda: self.on_text_changed(editor))
+        editor.cursorPositionChanged.connect(self.update_cursor_position)
 
         tab_index = self.editor_tabs.addTab(editor, title)
         self.editor_tabs.setCurrentIndex(tab_index)
@@ -218,7 +267,8 @@ class MainWindow(QMainWindow):
                     continue
                 new_tab_files[new_idx] = self.tab_files.get(i)
                 new_tab_modified[new_idx] = self.tab_modified.get(i, False)
-                new_tab_languages[new_idx] = self.tab_languages.get(i, Language.BASIC)
+                default_language = self.tab_languages.get(i, Language.BASIC)
+                new_tab_languages[new_idx] = default_language
                 new_idx += 1
 
             # Remove the tab widget
@@ -249,6 +299,11 @@ class MainWindow(QMainWindow):
             if hasattr(self, "output"):
                 self.output.set_language(language)
 
+            # Update status bar language label
+            if hasattr(self, "language_label"):
+                lang_text = f"Language: {language.friendly_name()}"
+                self.language_label.setText(lang_text)
+
             # Update title
             self.update_title()
 
@@ -272,23 +327,78 @@ class MainWindow(QMainWindow):
 
     def setup_ui(self):
         """Setup main UI layout."""
-        self.setWindowTitle("Time Warp IDE - Python Edition")
+        self.setWindowTitle("🎨 Time Warp IDE - Python Edition")
         self.setMinimumSize(1200, 800)
+
+        # Set main window style
+        self.setStyleSheet(
+            """
+            QMainWindow {
+                background-color: palette(window);
+            }
+            QTabWidget::pane {
+                border: 1px solid palette(dark);
+                border-radius: 4px;
+                background-color: palette(base);
+            }
+            QTabBar::tab {
+                background-color: palette(window);
+                color: palette(window-text);
+                padding: 8px 16px;
+                border: 1px solid palette(dark);
+                border-bottom: none;
+                border-radius: 4px 4px 0 0;
+                margin-right: 2px;
+            }
+            QTabBar::tab:selected {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+                font-weight: bold;
+            }
+            QTabBar::tab:hover {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QSplitter::handle {
+                background-color: palette(dark);
+                border: 1px solid palette(shadow);
+            }
+            QSplitter::handle:hover {
+                background-color: palette(highlight);
+            }
+        """
+        )
 
         # Central widget with splitter
         central = QWidget()
         self.setCentralWidget(central)
         layout = QVBoxLayout(central)
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(5, 5, 5, 5)
 
         # Main splitter (horizontal)
         splitter = QSplitter(Qt.Horizontal)
+        splitter.setStyleSheet(
+            """
+            QSplitter {
+                background-color: palette(window);
+            }
+        """
+        )
 
         # Left side: Editor tabs
         self.editor_tabs = QTabWidget()
         self.editor_tabs.setTabsClosable(True)
         self.editor_tabs.tabCloseRequested.connect(self.close_tab)
         self.editor_tabs.currentChanged.connect(self.on_tab_changed)
+        self.editor_tabs.setStyleSheet(
+            """
+            QTabWidget {
+                background-color: palette(base);
+                border: 1px solid palette(dark);
+                border-radius: 4px;
+            }
+        """
+        )
 
         # Create initial tab
         self.new_file()
@@ -297,18 +407,27 @@ class MainWindow(QMainWindow):
 
         # Right side: Tabs for Output and Canvas
         self.right_tabs = QTabWidget()
+        self.right_tabs.setStyleSheet(
+            """
+            QTabWidget {
+                background-color: palette(base);
+                border: 1px solid palette(dark);
+                border-radius: 4px;
+            }
+        """
+        )
 
         # Output panel
         self.output = OutputPanel(self)
-        self.right_tabs.addTab(self.output, "Output")
+        self.right_tabs.addTab(self.output, "📝 Output")
 
         # Turtle canvas
         self.canvas = TurtleCanvas(self)
-        self.right_tabs.addTab(self.canvas, "Graphics")
+        self.right_tabs.addTab(self.canvas, "🎨 Graphics")
 
         # Variable inspector
         self.variable_inspector = VariableInspector(self)
-        self.right_tabs.addTab(self.variable_inspector, "Variables")
+        self.right_tabs.addTab(self.variable_inspector, "🔍 Variables")
 
         splitter.addWidget(self.right_tabs)
 
@@ -434,6 +553,24 @@ class MainWindow(QMainWindow):
         # View menu
         view_menu = menubar.addMenu("&View")
 
+        # Theme submenu
+        theme_menu = view_menu.addMenu("&Theme")
+        theme_group = QActionGroup(self)
+        theme_group.setExclusive(True)
+
+        for theme_name in self.theme_manager.get_theme_names():
+            theme_action = QAction(theme_name, self)
+            theme_action.setCheckable(True)
+            is_current = theme_name == self.theme_manager.current_theme_name
+            theme_action.setChecked(is_current)
+            theme_action.triggered.connect(
+                lambda checked, name=theme_name: self.change_theme(name)
+            )
+            theme_group.addAction(theme_action)
+            theme_menu.addAction(theme_action)
+
+        view_menu.addSeparator()
+
         # Zoom in / out helpers
         zoom_in_action = QAction("Zoom &In", self)
         zoom_in_action.setShortcut(QKeySequence.ZoomIn)
@@ -472,9 +609,79 @@ class MainWindow(QMainWindow):
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
 
-        # AI features are disabled in this distribution. The menu and
-        # related UI actions are intentionally omitted so users will not
-        # see AI assistant functionality.
+        # AI menu - Enable AI assistant features
+        ai_menu = menubar.addMenu("&AI")
+
+        # Code completion
+        ai_complete_action = QAction("Code &Completion", self)
+        ai_complete_action.setShortcut("Ctrl+Shift+C")
+        ai_complete_action.setStatusTip("Request AI code completion at cursor")
+        ai_complete_action.triggered.connect(self.ai_complete_code)
+        ai_menu.addAction(ai_complete_action)
+
+        # Error explanation
+        ai_explain_action = QAction("Explain &Error", self)
+        ai_explain_action.setShortcut("Ctrl+Shift+E")
+        ai_explain_action.setStatusTip("Get AI explanation for the last error")
+        ai_explain_action.triggered.connect(self.ai_explain_error)
+        ai_menu.addAction(ai_explain_action)
+
+        # Code review
+        ai_review_action = QAction("Code &Review", self)
+        ai_review_action.setShortcut("Ctrl+Shift+R")
+        review_status = "Request AI code review for current file"
+        ai_review_action.setStatusTip(review_status)
+        ai_review_action.triggered.connect(self.ai_review_code)
+        ai_menu.addAction(ai_review_action)
+
+        # Learning tips
+        ai_learning_action = QAction("&Learning Tips", self)
+        ai_learning_action.setShortcut("Ctrl+Shift+L")
+        ai_learning_action.setStatusTip("Get AI learning suggestions")
+        ai_learning_action.triggered.connect(self.ai_learning_tips)
+        ai_menu.addAction(ai_learning_action)
+
+        ai_menu.addSeparator()
+
+        # AI provider selection submenu
+        ai_provider_menu = ai_menu.addMenu("AI &Provider")
+
+        # Ollama provider
+        ollama_action = QAction("&Ollama (Local)", self)
+        ollama_action.setCheckable(True)
+        ollama_action.setChecked(
+            self.ai_assistant.get_active_provider() == AIProvider.LOCAL_OLLAMA
+        )
+        ollama_action.triggered.connect(
+            lambda: self.set_ai_provider(AIProvider.LOCAL_OLLAMA)
+        )
+        ai_provider_menu.addAction(ollama_action)
+
+        # GitHub Copilot provider
+        copilot_action = QAction("&GitHub Copilot", self)
+        copilot_action.setCheckable(True)
+        active_provider = self.ai_assistant.get_active_provider()
+        is_github_provider = active_provider == AIProvider.GITHUB_COPILOT
+        copilot_action.setChecked(is_github_provider)
+        copilot_action.triggered.connect(
+            lambda: self.set_ai_provider(AIProvider.GITHUB_COPILOT)
+        )
+        ai_provider_menu.addAction(copilot_action)
+
+        # Plugin menu - Enable plugin system
+        plugin_menu = menubar.addMenu("&Plugins")
+
+        # Refresh plugins action
+        refresh_plugins_action = QAction("&Refresh Plugins", self)
+        refresh_plugins_action.setStatusTip("Reload and discover new plugins")
+        refresh_plugins_action.triggered.connect(self.refresh_plugins)
+        plugin_menu.addAction(refresh_plugins_action)
+
+        plugin_menu.addSeparator()
+
+        # Plugin actions will be populated by refresh_plugins
+        self.plugin_actions = []
+        self.refresh_plugins()
 
         # Collaboration features are disabled in this distribution. The
         # Collaboration menu is omitted to avoid exposing disabled
@@ -485,38 +692,161 @@ class MainWindow(QMainWindow):
         toolbar = QToolBar("Main Toolbar")
         toolbar.setObjectName("MainToolbar")  # Avoid Qt warning
         toolbar.setMovable(False)
+        toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        toolbar.setStyleSheet(
+            """
+            QToolBar {
+                background-color: palette(window);
+                border-bottom: 1px solid palette(dark);
+                padding: 2px;
+                spacing: 5px;
+            }
+            QToolButton {
+                background-color: transparent;
+                border: 1px solid transparent;
+                border-radius: 4px;
+                padding: 4px 8px;
+                margin: 1px;
+                color: palette(window-text);
+            }
+            QToolButton:hover {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+            }
+            QToolButton:pressed {
+                background-color: palette(dark);
+            }
+        """
+        )
         self.addToolBar(toolbar)
 
-        # Add common actions
-        toolbar.addAction("New", self.new_file)
-        toolbar.addAction("Open", self.open_file)
-        toolbar.addAction("Save", self.save_file)
-        toolbar.addSeparator()
-        toolbar.addAction("Run (F5)", self.run_program)
-        toolbar.addSeparator()
-        # Only a single Stop action is kept in the toolbar
-        toolbar.addAction("Stop", self.stop_program)
-        toolbar.addSeparator()
-        toolbar.addAction("Clear Output", self.output.clear)
-        toolbar.addAction("Clear Canvas", self.canvas.clear)
+        # Add common actions with enhanced styling
+        new_btn = toolbar.addAction("📄 New", self.new_file)
+        new_btn.setToolTip("Create a new file (Ctrl+N)")
 
-        # Language selector
+        open_btn = toolbar.addAction("📂 Open", self.open_file)
+        open_btn.setToolTip("Open an existing file (Ctrl+O)")
+
+        save_btn = toolbar.addAction("💾 Save", self.save_file)
+        save_btn.setToolTip("Save the current file (Ctrl+S)")
+
+        toolbar.addSeparator()
+
+        run_btn = toolbar.addAction("🚀 Run", self.run_program)
+        run_btn.setToolTip("Run the current program (F5)")
+
+        toolbar.addSeparator()
+
+        # Only a single Stop action is kept in the toolbar
+        stop_btn = toolbar.addAction("⏹️ Stop", self.stop_program)
+        stop_btn.setToolTip("Stop the running program (Shift+F5)")
+
+        toolbar.addSeparator()
+
+        clear_output_btn = toolbar.addAction(
+            "🗑️ Clear Output",
+            self.output.clear,
+        )
+        clear_output_btn.setToolTip("Clear the output panel")
+
+        clear_canvas_btn = toolbar.addAction(
+            "🎨 Clear Canvas",
+            self.canvas.clear,
+        )
+        clear_canvas_btn.setToolTip("Clear the graphics canvas")
+
+        # Language selector with enhanced styling
         toolbar.addSeparator()
         self.language_combo = QComboBox()
+        self.language_combo.setStyleSheet(
+            """
+            QComboBox {
+                background-color: palette(base);
+                color: palette(text);
+                border: 1px solid palette(dark);
+                border-radius: 4px;
+                padding: 2px 8px;
+                min-width: 80px;
+            }
+            QComboBox:hover {
+                border-color: palette(highlight);
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 4px solid palette(text);
+                margin-right: 8px;
+            }
+        """
+        )
 
         for lang in [
             Language.BASIC,
             Language.PILOT,
             Language.LOGO,
         ]:
-            self.language_combo.addItem(lang.friendly_name(), lang)
-        self.language_combo.currentIndexChanged.connect(self.on_language_changed)
+            self.language_combo.addItem(f"💻 {lang.friendly_name()}", lang)
+        connect_cb = self.on_language_changed
+        self.language_combo.currentIndexChanged.connect(connect_cb)
+
+        toolbar.addWidget(QLabel("Language:"))
+        toolbar.addWidget(self.language_combo)
 
     def create_statusbar(self):
         """Create status bar."""
         self.statusbar = QStatusBar()
+        self.statusbar.setStyleSheet(
+            """
+            QStatusBar {
+                background-color: palette(window);
+                border-top: 1px solid palette(dark);
+                padding: 2px;
+            }
+            QLabel {
+                color: palette(window-text);
+                padding: 2px 8px;
+                border-radius: 3px;
+            }
+        """
+        )
         self.setStatusBar(self.statusbar)
-        self.statusbar.showMessage("Ready")
+
+        # Add permanent widgets for better visual feedback
+        self.language_label = QLabel("Language: BASIC")
+        self.language_label.setStyleSheet(
+            """
+            QLabel {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+                font-weight: bold;
+                padding: 2px 6px;
+                border-radius: 3px;
+            }
+        """
+        )
+        self.statusbar.addPermanentWidget(self.language_label)
+
+        self.position_label = QLabel("Ln 1, Col 1")
+        self.position_label.setStyleSheet(
+            """
+            QLabel {
+                background-color: palette(base);
+                color: palette(text);
+                padding: 2px 6px;
+                border-radius: 3px;
+                border: 1px solid palette(dark);
+            }
+        """
+        )
+        self.statusbar.addPermanentWidget(self.position_label)
+
+        ready_msg = "🎉 Ready - Time Warp IDE loaded successfully!"
+        self.statusbar.showMessage(ready_msg)
 
     def new_file(self):
         """Create new file."""
@@ -785,6 +1115,10 @@ class MainWindow(QMainWindow):
             self.output.set_language(current_data)
             # Update tab info
             self.set_current_tab_info(language=current_data)
+            # Update status bar language label
+            if hasattr(self, "language_label"):
+                lang_text = f"Language: {current_data.friendly_name()}"
+                self.language_label.setText(lang_text)
 
     def update_title(self):
         """Update window title."""
@@ -1220,30 +1554,109 @@ class MainWindow(QMainWindow):
         worker.finished.connect(self.on_ai_learning_finished)
         worker.start()
 
-    def on_ai_learning_finished(self, tips: str):
-        """Handle AI learning tips response."""
-        if tips.startswith("AI Error:"):
-            QMessageBox.warning(self, "AI Learning Tips Failed", tips)
-            self.statusbar.showMessage("AI learning tips failed")
-        else:
-            # Show tips in a dialog
-            dialog = QDialog(self)
-            dialog.setWindowTitle("AI Learning Tips")
-            dialog.setMinimumSize(600, 400)
+    def update_cursor_position(self):
+        """Update cursor position in status bar."""
+        editor = self.get_current_editor()
+        if editor and hasattr(self, "position_label"):
+            cursor = editor.textCursor()
+            line = cursor.blockNumber() + 1
+            col = cursor.columnNumber() + 1
+            self.position_label.setText(f"Ln {line}, Col {col}")
 
-            layout = QVBoxLayout(dialog)
+    def refresh_plugins(self):  # pylint: disable=broad-except
+        """Refresh and reload plugins."""
+        try:
+            # Clear existing plugin actions
+            for action in getattr(self, "plugin_actions", []):
+                action.setParent(None)  # Remove from menu
+            self.plugin_actions = []
 
-            text_edit = QTextEdit()
-            text_edit.setPlainText(tips)
-            text_edit.setReadOnly(True)
-            layout.addWidget(text_edit)
+            # Discover and load plugins
+            self.plugin_manager.discover_plugins()
 
-            buttons = QDialogButtonBox(QDialogButtonBox.Ok)
-            buttons.accepted.connect(dialog.accept)
-            layout.addWidget(buttons)
+            # Get loaded plugins and add menu items (loaded_plugins is a dict)
+            loaded_plugins = self.plugin_manager.loaded_plugins
 
-            dialog.exec()
-            self.statusbar.showMessage("AI learning tips provided")
+            if not loaded_plugins:
+                # No plugins loaded
+                no_plugins_action = QAction("No plugins loaded", self)
+                no_plugins_action.setEnabled(False)
+                plugin_menu = self.menuBar().findChild(QMenu, "&Plugins")
+                plugin_menu.addAction(no_plugins_action)
+                self.plugin_actions.append(no_plugins_action)
+            else:
+                # Add actions for each loaded plugin
+                for plugin_name, plugin_instance in loaded_plugins.items():
+                    # Create submenu for plugin actions
+                    menu_bar = self.menuBar()
+                    plugin_menu_parent = menu_bar.findChild(QMenu, "&Plugins")
+                    plugin_menu = plugin_menu_parent.addMenu(plugin_name)
+
+                    # Add plugin actions (if any)
+                    if hasattr(plugin_instance, "get_menu_actions"):
+                        actions = plugin_instance.get_menu_actions()
+                        for action_name, action_callback in actions.items():
+                            action = QAction(action_name, self)
+                            action.triggered.connect(action_callback)
+                            plugin_menu.addAction(action)
+                            self.plugin_actions.append(action)
+
+                    # If no specific actions, add a default info action
+                    if plugin_menu.isEmpty():
+                        info_action = QAction("About this plugin", self)
+                        # Create a small callback to avoid long inline lambda
+
+                        def make_info_callback(name):
+                            def callback(_checked=False):
+                                self.show_plugin_info(name)
+
+                            return callback
+
+                        info_cb = make_info_callback(plugin_name)
+                        info_action.triggered.connect(info_cb)
+                        plugin_menu.addAction(info_action)
+                        self.plugin_actions.append(info_action)
+
+            self.statusbar.showMessage(f"Loaded {len(loaded_plugins)} plugins")
+
+        except Exception as e:  # pylint: disable=broad-except
+            # Propagate critical signals immediately
+            if isinstance(e, (KeyboardInterrupt, SystemExit)):
+                raise
+            QMessageBox.warning(
+                self, "Plugin Error", f"Failed to refresh plugins:\n{str(e)}"
+            )
+            self.statusbar.showMessage("Plugin refresh failed")
+
+    # Allow broad exception handling in this UI helper because plugin
+    # code may raise arbitrary errors that shouldn't crash the IDE.
+    # pylint: disable=broad-except
+    def show_plugin_info(self, plugin_name: str):
+        """Show information about a plugin."""
+        try:
+            plugins = self.plugin_manager.loaded_plugins
+            plugin_instance = plugins.get(plugin_name)
+            if plugin_instance:
+                info_text = f"Plugin: {plugin_name}\n\n"
+                if hasattr(plugin_instance, "get_info"):
+                    info_text += plugin_instance.get_info()
+                else:
+                    info_text += "No additional information available."
+
+                title = f"Plugin: {plugin_name}"
+                QMessageBox.information(self, title, info_text)
+            else:
+                msg = f"Plugin '{plugin_name}' is not loaded."
+                QMessageBox.warning(self, "Plugin Not Found", msg)
+        except Exception as e:  # pylint: disable=broad-except
+            # Reraise critical exceptions to avoid suppressing system-level signals
+            if isinstance(e, (KeyboardInterrupt, SystemExit)):
+                raise
+            QMessageBox.warning(
+                self,
+                "Plugin Info Error",
+                f"Could not get plugin information:\n{str(e)}",
+            )
 
     def collab_connect(self):
         """Connect to collaboration server."""
@@ -1282,7 +1695,8 @@ class MainWindow(QMainWindow):
         layout.addLayout(user_layout)
 
         # Buttons
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        flags = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        buttons = QDialogButtonBox(flags)
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
         layout.addWidget(buttons)
@@ -1330,7 +1744,8 @@ class MainWindow(QMainWindow):
         if self.collaboration_client:
             self.collaboration_client.disconnect()
             self.collab_disconnect_action.setEnabled(False)
-            self.statusbar.showMessage("Disconnected from collaboration server")
+            msg = "Disconnected from collaboration server"
+            self.statusbar.showMessage(msg)
 
     def collab_join_session(self):
         """Join a collaboration session."""
@@ -1363,7 +1778,8 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.session_list)
 
         # Buttons
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        flags = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        buttons = QDialogButtonBox(flags)
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
         layout.addWidget(buttons)
@@ -1435,7 +1851,8 @@ class MainWindow(QMainWindow):
         layout.addLayout(desc_layout)
 
         # Buttons
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        flags = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        buttons = QDialogButtonBox(flags)
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
         layout.addWidget(buttons)
@@ -1565,7 +1982,8 @@ class MainWindow(QMainWindow):
     def on_collaboration_disconnected(self):
         """Handle collaboration disconnection."""
         self.collab_disconnect_action.setEnabled(False)
-        self.statusbar.showMessage("Disconnected from collaboration server")
+        msg = "Disconnected from collaboration server"
+        self.statusbar.showMessage(msg)
 
     def on_session_joined(self, _session_id, session_name):
         """Handle joining a session."""

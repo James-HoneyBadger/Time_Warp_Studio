@@ -15,7 +15,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, TextIO
 
 # Import language executors
 from ..languages.basic import execute_basic
@@ -208,7 +208,7 @@ class Interpreter:
         self.stored_condition: Optional[bool] = None
         self.running: bool = True  # Program execution flag
         self.subroutine_stack: List[int] = []  # For PILOT S:/R: commands
-        self.open_files: Dict[str, object] = {}  # For PILOT F: commands
+        self.open_files: Dict[str, TextIO] = {}  # For PILOT F: commands
 
         # I/O handling
         self.input_callback: Optional[Callable[[str], str]] = None
@@ -245,11 +245,13 @@ class Interpreter:
         # Pascal-specific state
         self.pascal_procs: Dict[str, Dict[str, Any]] = {}  # Pascal procedures
         self.pascal_types: Dict[str, str] = {}  # Pascal type definitions
-        self.pascal_block_stack: List[str] = []  # Pascal block tracking
+        self.pascal_block_stack: List[Dict[str, Any]] = []  # Pascal block tracking
         self.pascal_call_stack: List[Dict[str, Any]] = []  # Pascal call stack
 
         # C-specific state
-        self.c_block_stack: List[str] = []  # C block tracking for control flow
+        self.c_block_stack: List[Dict[str, Any]] = (
+            []
+        )  # C block tracking for control flow
 
         # Debugging state
         self.debug_mode: bool = False
@@ -408,7 +410,7 @@ class Interpreter:
         # Numeric
         try:
             num = float(value)
-        except Exception:  # pylint: disable=broad-exception-caught
+        except (ValueError, TypeError):
             num = 0.0
         coerced = self._coerce_numeric(num, t)
         if t == "int":
@@ -742,6 +744,9 @@ class Interpreter:
             self._execute_line(command, turtle)
             return True
         except Exception as e:  # pylint: disable=broad-exception-caught
+            # Re-raise critical system signals rather than silently swallowing
+            if isinstance(e, (KeyboardInterrupt, SystemExit)):
+                raise
             error_msg = f"❌ Error at line {self.current_line + 1}: {e}"
             syntax_error = check_syntax_mistakes(command)
             if syntax_error:

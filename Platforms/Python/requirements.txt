@@ -11,6 +11,9 @@ PySide6>=6.5.0; python_version>='3.8'
 # Image Processing (for icon generation, screenshots)
 Pillow>=10.0.0
 
+# HTTP requests (for AI provider APIs)
+requests>=2.31.0
+
 # ============================================================================
 # DEVELOPMENT & TESTING
 # ============================================================================

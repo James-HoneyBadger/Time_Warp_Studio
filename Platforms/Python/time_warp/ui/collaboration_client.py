@@ -289,6 +289,9 @@ class CollaborationClient:
             loop.run_until_complete(self._connect_websocket(uri))
 
         except Exception as e:  # pylint: disable=broad-except
+            # Re-raise critical system signals to avoid hiding control events
+            if isinstance(e, (KeyboardInterrupt, SystemExit)):
+                raise
             logger.error("WebSocket client error: %s", e)
         finally:
             self.connected = False
@@ -322,6 +325,9 @@ class CollaborationClient:
         except websockets.exceptions.ConnectionClosed:
             logger.info("WebSocket connection closed")
         except Exception as e:  # pylint: disable=broad-except
+            # Re-raise critical system signals to avoid hiding control events
+            if isinstance(e, (KeyboardInterrupt, SystemExit)):
+                raise
             logger.error("WebSocket connection error: %s", e)
 
     async def _handle_message(self, data: Dict[str, Any]):

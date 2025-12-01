@@ -3,9 +3,11 @@ Logo language executor for Time Warp IDE.
 Handles Logo-specific commands and syntax.
 """
 
+# pylint: disable=too-many-lines
+
 import random
 import re
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, List, Optional, Any
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -100,7 +102,7 @@ LOGO_COMMANDS = {
 
 def _split_logo_commands(
     text: str,
-    interpreter: "Interpreter" = None,
+    interpreter: Optional["Interpreter"] = None,
 ) -> List[str]:
     """
     Splits a Logo command string into individual commands,
@@ -144,7 +146,7 @@ def _split_logo_commands(
 def execute_logo(
     interpreter: "Interpreter",
     command: str,
-    turtle: "TurtleState" = None,
+    turtle: Optional["TurtleState"] = None,
 ) -> str:
     """
     Executes a Logo command string.
@@ -160,7 +162,7 @@ def execute_logo(
 def _execute_single_logo_command(
     interpreter: "Interpreter",
     command: str,
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
 ) -> str:
     # Strip comment
     comment_idx = command.find(";")
@@ -175,6 +177,52 @@ def _execute_single_logo_command(
         return ""
     cmd_name = words[0]
     args = words[1:] if len(words) > 1 else []
+    # Commands that require a TurtleState (graphics) to be available
+    needs_turtle = {
+        "FORWARD",
+        "FD",
+        "BACK",
+        "BK",
+        "BACKWARD",
+        "LEFT",
+        "LT",
+        "RIGHT",
+        "RT",
+        "PENUP",
+        "PU",
+        "PENDOWN",
+        "PD",
+        "HOME",
+        "CLEARSCREEN",
+        "CS",
+        "CLEAR",
+        "HIDETURTLE",
+        "HT",
+        "SHOWTURTLE",
+        "ST",
+        "SETXY",
+        "SETX",
+        "SETY",
+        "SETHEADING",
+        "SETH",
+        "SETPENCOLOR",
+        "SETPC",
+        "SETCOLOR",
+        "SETBGCOLOR",
+        "SETBG",
+        "SETPENWIDTH",
+        "SETPW",
+        "PENWIDTH",
+        "SETPENSIZE",
+        "REPEAT",
+        "IF",
+        "TO",
+        "END",
+        "ARC",
+        "FILLED",
+    }
+    if turtle is None and cmd_name in needs_turtle:
+        return "❌ Graphics not available for this command"
     # User-defined procedures
     if cmd_name in interpreter.logo_procedures:
         return _logo_call_procedure(interpreter, cmd_name, args, turtle)
@@ -187,21 +235,33 @@ def _execute_single_logo_command(
     if cmd_name in ["RIGHT", "RT"]:
         return _logo_right(interpreter, turtle, args)
     if cmd_name in ["PENUP", "PU"]:
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
         turtle.penup()
         return ""
     if cmd_name in ["PENDOWN", "PD"]:
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
         turtle.pendown()
         return ""
     if cmd_name == "HOME":
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
         turtle.home()
         return ""
     if cmd_name in ["CLEARSCREEN", "CS", "CLEAR"]:
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
         turtle.clear()
         return ""
     if cmd_name in ["HIDETURTLE", "HT"]:
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
         turtle.hideturtle()
         return ""
     if cmd_name in ["SHOWTURTLE", "ST"]:
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
         turtle.showturtle()
         return ""
     if cmd_name == "SETXY":
@@ -319,111 +379,127 @@ def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
 
 def _logo_forward(
     interpreter: "Interpreter",
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
     if not args:
         return "❌ FORWARD requires distance\n"
     dist_expr = " ".join(args)
     distance = _logo_eval_expr_str(interpreter, dist_expr)
+    if turtle is None:
+        return "❌ Graphics not available for this command\n"
     turtle.forward(distance)
     return ""
 
 
 def _logo_back(
     interpreter: "Interpreter",
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
     if not args:
         return "❌ BACK requires distance\n"
     dist_expr = " ".join(args)
     distance = _logo_eval_expr_str(interpreter, dist_expr)
+    if turtle is None:
+        return "❌ Graphics not available for this command\n"
     turtle.back(distance)
     return ""
 
 
 def _logo_left(
     interpreter: "Interpreter",
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
     if not args:
         return "❌ LEFT requires angle\n"
     angle_expr = " ".join(args)
     angle = _logo_eval_expr_str(interpreter, angle_expr)
+    if turtle is None:
+        return "❌ Graphics not available for this command\n"
     turtle.left(angle)
     return ""
 
 
 def _logo_right(
     interpreter: "Interpreter",
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
     if not args:
         return "❌ RIGHT requires angle\n"
     angle_expr = " ".join(args)
     angle = _logo_eval_expr_str(interpreter, angle_expr)
+    if turtle is None:
+        return "❌ Graphics not available for this command\n"
     turtle.right(angle)
     return ""
 
 
 def _logo_setxy(
     interpreter: "Interpreter",
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
     if len(args) < 2:
         return "❌ SETXY requires x and y coordinates\n"
     x = _logo_eval_arg(interpreter, args[0])
     y = _logo_eval_arg(interpreter, args[1])
+    if turtle is None:
+        return "❌ Graphics not available for this command\n"
     turtle.goto(x, y)
     return ""
 
 
 def _logo_setx(
     interpreter: "Interpreter",
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
     if not args:
         return "❌ SETX requires x coordinate\n"
     x_expr = " ".join(args)
     x = _logo_eval_expr_str(interpreter, x_expr)
+    if turtle is None:
+        return "❌ Graphics not available for this command\n"
     turtle.setx(x)
     return ""
 
 
 def _logo_sety(
     interpreter: "Interpreter",
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
     if not args:
         return "❌ SETY requires y coordinate\n"
     y_expr = " ".join(args)
     y = _logo_eval_expr_str(interpreter, y_expr)
+    if turtle is None:
+        return "❌ Graphics not available for this command\n"
     turtle.sety(y)
     return ""
 
 
 def _logo_setheading(
     interpreter: "Interpreter",
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
     if not args:
         return "❌ SETHEADING requires angle\n"
     angle_expr = " ".join(args)
     angle = _logo_eval_expr_str(interpreter, angle_expr)
+    if turtle is None:
+        return "❌ Graphics not available for this command\n"
     turtle.setheading(angle)
     return ""
 
 
 def _logo_setpencolor(
     interpreter: "Interpreter",
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
     return _logo_setcolor(interpreter, turtle, args)
@@ -431,7 +507,7 @@ def _logo_setpencolor(
 
 def _logo_setcolor(
     interpreter: "Interpreter",
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
     if not args:
@@ -439,6 +515,8 @@ def _logo_setcolor(
     if len(args) == 1:
         # Named color or hex
         color_str = args[0].strip().strip('"')
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
         turtle.pencolor(color_str)
     elif len(args) == 3:
         # RGB values
@@ -446,6 +524,8 @@ def _logo_setcolor(
             r = int(_logo_eval_arg(interpreter, args[0]))
             g = int(_logo_eval_arg(interpreter, args[1]))
             b = int(_logo_eval_arg(interpreter, args[2]))
+            if turtle is None:
+                return "❌ Graphics not available for this command\n"
             turtle.setcolor(r, g, b)
         except ValueError:
             return "❌ SETCOLOR RGB values must be integers\n"
@@ -456,7 +536,7 @@ def _logo_setcolor(
 
 def _logo_setbgcolor(
     interpreter: "Interpreter",
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
     if not args:
@@ -466,6 +546,8 @@ def _logo_setbgcolor(
         color_str = args[0].strip().strip('"')
         # For bgcolor, we only support RGB for now, but could extend
         if color_str.upper() in COLOR_NAMES:
+            if turtle is None:
+                return "❌ Graphics not available for this command\n"
             turtle.setbgcolor(*COLOR_NAMES[color_str.upper()])
         else:
             return "❌ SETBGCOLOR only supports named colors for now\n"
@@ -475,6 +557,8 @@ def _logo_setbgcolor(
             r = int(_logo_eval_arg(interpreter, args[0]))
             g = int(_logo_eval_arg(interpreter, args[1]))
             b = int(_logo_eval_arg(interpreter, args[2]))
+            if turtle is None:
+                return "❌ Graphics not available for this command\n"
             turtle.setbgcolor(r, g, b)
         except ValueError:
             return "❌ SETBGCOLOR RGB values must be integers\n"
@@ -485,20 +569,22 @@ def _logo_setbgcolor(
 
 def _logo_setpenwidth(
     interpreter: "Interpreter",
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
     if not args:
         return "❌ SETPENWIDTH requires width\n"
     width_expr = " ".join(args)
     width = _logo_eval_expr_str(interpreter, width_expr)
+    if turtle is None:
+        return "❌ Graphics not available for this command\n"
     turtle.setpenwidth(width)
     return ""
 
 
 def _logo_repeat(
     interpreter: "Interpreter",
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
     command: str,
 ) -> str:
     # REPEAT count [commands]
@@ -534,7 +620,7 @@ def _logo_repeat(
 
 def _logo_if(
     interpreter: "Interpreter",
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
     command: str,
 ) -> str:
     # IF condition [commands]
@@ -688,7 +774,7 @@ def _logo_call_procedure(
     interpreter: "Interpreter",
     proc_name: str,
     args: List[str],
-    turtle: "TurtleState",
+    turtle: Optional["TurtleState"],
 ) -> str:
     # Call user-defined procedure
     if proc_name not in interpreter.logo_procedures:
@@ -758,7 +844,7 @@ def _logo_print(interpreter: "Interpreter", args: List[str]) -> str:
     # Check for variable access :VAR
     if len(args) == 1 and args[0].startswith(":"):
         var_name = args[0][1:].upper()
-        val = None
+        val: Any = None
         if var_name in interpreter.variables:
             val = interpreter.variables[var_name]
         elif var_name in interpreter.string_variables:
@@ -888,7 +974,7 @@ def _logo_word(interpreter: "Interpreter", args: List[str]) -> str:
 
 def _logo_list(interpreter: "Interpreter", args: List[str]) -> str:
     """LIST item1 item2 - Create a list from items"""
-    result = []
+    result: List[Any] = []
     for arg in args:
         try:
             val = interpreter.evaluate_expression(arg)
@@ -1139,7 +1225,7 @@ def _logo_random(interpreter: "Interpreter", args: List[str]) -> str:
 
 # Control structures
 def _logo_ifelse(
-    interpreter: "Interpreter", turtle: "TurtleState", command: str
+    interpreter: "Interpreter", turtle: Optional["TurtleState"], command: str
 ) -> str:
     """IFELSE condition [true_commands] [false_commands]"""
     # Find condition
@@ -1211,7 +1297,7 @@ def _logo_ifelse(
 
 
 def _logo_forever(
-    interpreter: "Interpreter", turtle: "TurtleState", command: str
+    interpreter: "Interpreter", turtle: Optional["TurtleState"], command: str
 ) -> str:
     """FOREVER [commands] - Repeat commands forever"""
     parts = command.upper().split("[", 1)
@@ -1239,7 +1325,7 @@ def _logo_repcount(_interpreter: "Interpreter") -> str:
 
 # Graphics enhancements
 def _logo_arc(
-    interpreter: "Interpreter", turtle: "TurtleState", args: List[str]
+    interpreter: "Interpreter", turtle: Optional["TurtleState"], args: List[str]
 ) -> str:
     """ARC angle radius - Draw an arc"""
     if len(args) < 2:
@@ -1247,6 +1333,8 @@ def _logo_arc(
     try:
         angle = interpreter.evaluate_expression(args[0])
         radius = interpreter.evaluate_expression(args[1])
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
         turtle.circle(radius, angle)
         return ""
     except (ValueError, TypeError):
@@ -1254,7 +1342,7 @@ def _logo_arc(
 
 
 def _logo_filled(
-    interpreter: "Interpreter", turtle: "TurtleState", command: str
+    interpreter: "Interpreter", turtle: Optional["TurtleState"], command: str
 ) -> str:
     """FILLED color [commands] - Fill area with color"""
     parts = command.upper().split("[", 1)

@@ -212,6 +212,9 @@ class PluginManager:
                     init_callable(context)  # type: ignore[call-arg]
                     # pylint: enable=not-callable
                 except Exception as err:  # pylint: disable=broad-except
+                    # Reraise system-critical signals
+                    if isinstance(err, (KeyboardInterrupt, SystemExit)):
+                        raise
                     # Non-fatal: plugin level initialization errors should
                     # not take down the IDE; report and continue.
                     print(f"Plugin {plugin_name} initialize failed: {err}")

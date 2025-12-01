@@ -18,7 +18,7 @@ Notes:
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Dict, List
+from typing import TYPE_CHECKING, Dict, List, Any
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -124,7 +124,8 @@ def _exec_c_side_effect_expr(interpreter: "Interpreter", expr: str):
             delta = 1 if (pre == "++" or post == "++") else -1
             interpreter.set_typed_variable((up + (suf or "#")), cur + delta)
             return
-    # Simple assignment
+        # Simple assignment
+        val: Any
     if "=" in s:
         left, right = s.split("=", 1)
         name = left.strip().upper()
@@ -160,7 +161,7 @@ def _printf(interpreter: "Interpreter", arglist: str) -> str:
     if not args:
         return ""
     fmt = _unquote(args[0])
-    values = []
+    values: List[Any] = []
     for expr in args[1:]:
         expr = expr.strip()
         if expr.startswith('"'):
@@ -177,7 +178,7 @@ def _printf(interpreter: "Interpreter", arglist: str) -> str:
                 except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
                     values.append(0)
 
-    out = []
+    out: List[str] = []
     vi = 0
     i = 0
     while i < len(fmt):
@@ -240,7 +241,7 @@ def _scanf(interpreter: "Interpreter", arglist: str) -> str:
 
 def _ensure_c_stack(interpreter: "Interpreter"):
     if not hasattr(interpreter, "c_block_stack"):
-        interpreter.c_block_stack: List[Dict] = []
+        interpreter.c_block_stack = []
 
 
 def _find_block_end(interpreter: "Interpreter", header_idx: int) -> int:
@@ -282,6 +283,7 @@ def _declare_variable(
     """Declare a C variable of type t with optional initializer expr."""
     up = name.upper()
     suf = _suffix_for_type(t)
+    val: Any
     if init:
         expr = init.split("=", 1)[1]
         try:
@@ -318,7 +320,7 @@ def _assign_variable(interpreter: "Interpreter", name: str, expr: str):
         else:
             val = interpreter.evaluate_expression(expr)
     except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
-        val = "" if suf == "$" else 0
+        val: Any = "" if suf == "$" else 0
     # Infer type if not declared yet
     if suf is None:
         if isinstance(val, str):
@@ -335,7 +337,7 @@ def _handle_close_brace(interpreter: "Interpreter") -> str:
     """Handle end of C blocks for while/do/if when encountering '}' or '};'."""
     if not interpreter.c_block_stack:
         return ""
-    top = interpreter.c_block_stack[-1]
+    top: Dict[str, Any] = interpreter.c_block_stack[-1]
     if top.get("end") != interpreter.current_line:
         return ""
     t = top.get("type")
@@ -401,7 +403,7 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
             interpreter.c_block_stack
             and interpreter.c_block_stack[-1].get("type") == "do"
         ):
-            top = interpreter.c_block_stack[-1]
+            top: Dict[str, Any] = interpreter.c_block_stack[-1]
             if top.get("end") == interpreter.current_line:
                 cond_expr = m.group(1).strip()
                 try:
@@ -424,7 +426,7 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
     low = cmd.lower().rstrip(";")
     if low == "break":
         for i in range(len(interpreter.c_block_stack) - 1, -1, -1):
-            fr = interpreter.c_block_stack[i]
+            fr: Dict[str, Any] = interpreter.c_block_stack[i]
             if fr.get("type") in ("while", "do"):
                 _end = fr.get("end", interpreter.current_line)
                 interpreter.current_line = _end
@@ -432,7 +434,7 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
         return ""
     if low == "continue":
         for i in range(len(interpreter.c_block_stack) - 1, -1, -1):
-            fr = interpreter.c_block_stack[i]
+            fr: Dict[str, Any] = interpreter.c_block_stack[i]
             if fr.get("type") == "while":
                 _end = fr.get("end", interpreter.current_line)
                 interpreter.current_line = _end - 1

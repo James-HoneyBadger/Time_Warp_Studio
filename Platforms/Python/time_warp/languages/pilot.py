@@ -317,7 +317,12 @@ def _pilot_file_command(interpreter: "Interpreter", command: str) -> str:
             return f"❌ F: File not open: {filename}\n"
         try:
             line = interpreter.open_files[filename].readline().strip()
-            interpreter.variables[var_name] = line
+            # Store numeric values in numeric variable store, otherwise string store
+            try:
+                v = float(line)
+                interpreter.variables[var_name] = v
+            except ValueError:
+                interpreter.string_variables[var_name] = line
         except (IOError, OSError) as e:
             return f"❌ F: Error reading file: {e}\n"
 
