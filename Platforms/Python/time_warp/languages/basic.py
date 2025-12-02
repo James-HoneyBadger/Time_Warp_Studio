@@ -210,6 +210,24 @@ def execute_basic(
         return _basic_timer_on(interpreter)
     if cmd == "TIMER OFF":
         return _basic_timer_off(interpreter)
+    # Music and speech commands
+    if cmd.startswith("PLAY "):
+        return _basic_play(interpreter, _strip_comment(command[5:]))
+    if cmd.startswith("SAY "):
+        return _basic_say(interpreter, _strip_comment(command[4:]))
+    # Shape commands
+    if cmd.startswith("SHAPE "):
+        return _basic_shape(interpreter, _strip_comment(command[6:]), turtle)
+    # Particle commands
+    if cmd.startswith("PARTICLE "):
+        return _basic_particle(interpreter, _strip_comment(command[9:]))
+    # Fractal commands
+    if cmd == "FRACTAL" or cmd.startswith("FRACTAL "):
+        args = _strip_comment(command[7:]).strip() if len(command) > 7 else ""
+        return _basic_fractal(interpreter, args, turtle)
+    # Gamepad commands
+    if cmd.startswith("JOYINIT"):
+        return _basic_joyinit(interpreter)
     return f"❌ Unknown BASIC command: {command}\n"
 
 
@@ -1089,3 +1107,240 @@ def _basic_timer_off(_interpreter: "Interpreter") -> str:
     game = get_game_state()
     game.timer.enable_interval(1, False)
     return "⏱️ Timer disabled\n"
+
+
+# ============================================================================
+# Music and Speech Commands
+# ============================================================================
+
+
+def _basic_play(_interpreter: "Interpreter", args: str) -> str:
+    """PLAY mml$ - Play music using MML notation.
+
+    Examples:
+        PLAY "CDEFGAB"           - Play a scale
+        PLAY "T120 L4 CDEFG"     - Set tempo 120, quarter notes
+        PLAY "O4 C E G >C"       - Octave 4, then up an octave
+    """
+    # pylint: disable=import-outside-toplevel
+    from ..core.music import get_music_player
+
+    # Remove quotes if present
+    mml = args.strip()
+    if mml.startswith('"') and mml.endswith('"'):
+        mml = mml[1:-1]
+
+    if not mml:
+        return "❌ PLAY requires MML string\n"
+
+    try:
+        player = get_music_player()
+        wav_data = player.parse_and_generate(mml, "square")
+
+        # Store for later playback
+        _interpreter.last_music_data = wav_data
+        return f"🎵 Playing: {mml[:30]}{'...' if len(mml) > 30 else ''}\n"
+
+    except Exception as e:  # pylint: disable=broad-except
+        return f"❌ PLAY error: {e}\n"
+
+
+def _basic_say(_interpreter: "Interpreter", args: str) -> str:
+    """SAY text$ - Speak text using text-to-speech.
+
+    Examples:
+        SAY "Hello world"
+        SAY message$
+    """
+    # pylint: disable=import-outside-toplevel
+    from ..core.speech import get_synthesizer
+
+    # Remove quotes if present
+    text = args.strip()
+    if text.startswith('"') and text.endswith('"'):
+        text = text[1:-1]
+    elif text.upper() in _interpreter.string_variables:
+        text = _interpreter.string_variables[text.upper()]
+
+    if not text:
+        return "❌ SAY requires text\n"
+
+    synth = get_synthesizer()
+    return synth.say(text)
+
+
+# ============================================================================
+# Shape Commands
+# ============================================================================
+
+
+def _basic_shape(interpreter: "Interpreter", args: str, turtle: "TurtleState") -> str:
+    """SHAPE name, size [, fill] - Draw a pre-built shape.
+
+    Shapes: POLYGON, STAR, HEART, ARROW, SPIRAL, GEAR, CROSS, DIAMOND
+    Examples:
+        SHAPE STAR, 50         - 5-pointed star, size 50
+        SHAPE POLYGON 6, 40    - Hexagon, size 40
+        SHAPE HEART, 30, 1     - Filled heart, size 30
+    """
+    # pylint: disable=import-outside-toplevel
+    from ..core.shapes import get_shape_library
+
+    parts = [p.strip() for p in args.split(",")]
+    if len(parts) < 2:
+        return "❌ SHAPE requires name and size\n"
+
+    shape_name = parts[0].upper()
+    lib = get_shape_library()
+
+    # Check for shape with parameter (e.g., "POLYGON 6")
+    shape_parts = shape_name.split()
+    param = None
+    if len(shape_parts) > 1:
+        shape_name = shape_parts[0]
+        try:
+            param = int(shape_parts[1])
+        except ValueError:
+            pass
+
+    try:
+        size = interpreter.evaluate_expression(parts[1])
+        fill = len(parts) > 2 and parts[2].strip() not in ("0", "FALSE", "")
+
+        if shape_name == "POLYGON":
+            sides = param if param else 6
+            return lib.draw_polygon(turtle, sides, size, fill)
+        elif shape_name == "STAR":
+            points = param if param else 5
+            return lib.draw_star(turtle, points, size, fill=fill)
+        elif shape_name == "HEART":
+            return lib.draw_heart(turtle, size, fill)
+        elif shape_name == "ARROW":
+            return lib.draw_arrow(turtle, size, fill=fill)
+        elif shape_name == "SPIRAL":
+            turns = param if param else 3
+            return lib.draw_spiral(turtle, turns, 5, size)
+        elif shape_name == "GEAR":
+            teeth = param if param else 12
+            return lib.draw_gear(turtle, teeth, size, fill=fill)
+        elif shape_name == "CROSS":
+            return lib.draw_cross(turtle, size, fill=fill)
+        elif shape_name == "DIAMOND":
+            return lib.draw_diamond(turtle, size, fill=fill)
+        else:
+            shapes = ", ".join(lib.list_shapes())
+            return f"❌ Unknown shape: {shape_name}. Available: {shapes}\n"
+
+    except (ValueError, TypeError) as e:
+        return f"❌ SHAPE error: {e}\n"
+
+
+# ============================================================================
+# Particle Commands
+# ============================================================================
+
+
+def _basic_particle(interpreter: "Interpreter", args: str) -> str:
+    """PARTICLE effect, x, y [, intensity] - Create particle effect.
+
+    Effects: EXPLOSION, FIRE, SMOKE, SPARKLE, RAIN, SNOW, CONFETTI, TRAIL
+    Examples:
+        PARTICLE EXPLOSION, 100, 100
+        PARTICLE FIRE, playerX, playerY
+        PARTICLE EXPLOSION, 100, 100, 2    - Double intensity
+    """
+    # pylint: disable=import-outside-toplevel
+    from ..core.particles import get_particle_system
+
+    parts = [p.strip() for p in args.split(",")]
+    if len(parts) < 3:
+        return "❌ PARTICLE requires effect, x, y\n"
+
+    effect = parts[0].upper()
+
+    try:
+        x = interpreter.evaluate_expression(parts[1])
+        y = interpreter.evaluate_expression(parts[2])
+        intensity = 1.0
+        if len(parts) > 3:
+            intensity = interpreter.evaluate_expression(parts[3])
+
+        psys = get_particle_system()
+        psys.create_effect(effect, x, y, intensity=intensity)
+
+        # Trigger one update to emit burst particles
+        psys.update(1.0)
+
+        return f"✨ Created {effect} effect at ({x}, {y})\n"
+
+    except (ValueError, TypeError) as e:
+        return f"❌ PARTICLE error: {e}\n"
+
+
+def _basic_fractal(interpreter: "Interpreter", args: str, turtle: "TurtleState") -> str:
+    """FRACTAL name [, iterations [, size]] - Draw L-System fractal.
+
+    Available fractals: KOCH, SIERPINSKI, DRAGON, PLANT, TREE, HILBERT,
+                        PEANO, GOSPER, LEVY, SQUARE, CRYSTAL, RINGS,
+                        BUSH, SEAWEED, PENROSE
+
+    Examples:
+        FRACTAL KOCH           - Koch snowflake (default 4 iterations)
+        FRACTAL DRAGON, 10     - Dragon curve with 10 iterations
+        FRACTAL PLANT, 5, 8    - Plant with 5 iterations, step size 8
+    """
+    # pylint: disable=import-outside-toplevel
+    from ..core.fractals import get_fractal_generator
+
+    parts = [p.strip() for p in args.split(",")]
+    if not parts or not parts[0]:
+        # Show available fractals
+        gen = get_fractal_generator()
+        names = ", ".join(gen.get_preset_names())
+        return f"ℹ️ Available fractals: {names}\n"
+
+    name = parts[0].upper()
+
+    try:
+        iterations = 4
+        step_size = 10.0
+
+        if len(parts) > 1:
+            iterations = int(interpreter.evaluate_expression(parts[1]))
+        if len(parts) > 2:
+            step_size = float(interpreter.evaluate_expression(parts[2]))
+
+        # Clamp iterations to prevent runaway
+        iterations = max(1, min(iterations, 12))
+
+        gen = get_fractal_generator()
+        return gen.draw_preset(turtle, name, iterations, step_size)
+
+    except (ValueError, TypeError) as e:
+        return f"❌ FRACTAL error: {e}\n"
+
+
+def _basic_joyinit(_interpreter: "Interpreter") -> str:
+    """JOYINIT - Initialize gamepad/joystick support.
+
+    After calling JOYINIT, use STICK() and STRIG() functions:
+        STICK(0) - X-axis of left stick (-1 to 1)
+        STICK(1) - Y-axis of left stick (-1 to 1)
+        STICK(2) - X-axis of right stick (-1 to 1)
+        STICK(3) - Y-axis of right stick (-1 to 1)
+        STRIG(n) - Button n state (0 or 1)
+    """
+    # pylint: disable=import-outside-toplevel
+    from ..core.gamepad import get_gamepad_manager
+
+    try:
+        manager = get_gamepad_manager()
+        if manager.available:
+            manager.start()
+            count = len(manager.gamepads)
+            if count > 0:
+                return f"🎮 Gamepad initialized ({count} device(s) found)\n"
+            return f"🎮 Gamepad system ready (backend: {manager.backend_name})\n"
+        return "❌ No gamepad backend available (install pygame or inputs)\n"
+    except (ImportError, RuntimeError) as e:
+        return f"❌ JOYINIT error: {e}\n"

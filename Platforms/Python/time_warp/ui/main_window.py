@@ -333,6 +333,75 @@ class MainWindow(QMainWindow):
             painter.drawImage(0, 0, image)
             painter.end()
 
+    def _format_code(self, _checked: bool = False):
+        """Format the current code."""
+        from ..utils.code_formatter import get_formatter
+
+        ed = self.get_current_editor()
+        if not ed:
+            return
+
+        current_idx = self.editor_tabs.currentIndex()
+        language = self.tab_languages.get(current_idx, Language.BASIC)
+        lang_name = language.name if hasattr(language, "name") else "BASIC"
+
+        code = ed.toPlainText()
+        formatter = get_formatter()
+        formatted, msg = formatter.format_and_normalize(code, lang_name)
+
+        if formatted != code:
+            # Preserve cursor position roughly
+            cursor = ed.textCursor()
+            pos = cursor.position()
+            ed.setPlainText(formatted)
+            cursor.setPosition(min(pos, len(formatted)))
+            ed.setTextCursor(cursor)
+
+        self.status_bar.showMessage(msg, 3000)
+
+    def _toggle_profiler(self, checked: bool):
+        """Toggle performance profiling."""
+        from ..utils.profiler import get_profiler
+
+        profiler = get_profiler()
+        if checked:
+            profiler.start_session()
+            self.status_bar.showMessage("⏱️ Profiling enabled", 3000)
+        else:
+            session = profiler.end_session()
+            if session:
+                self.status_bar.showMessage(
+                    f"⏱️ Profiling stopped: {session.total_lines_executed} lines",
+                    3000,
+                )
+
+    def _show_profile_report(self, _checked: bool = False):
+        """Show the performance profile report."""
+        from ..utils.profiler import get_profiler
+
+        profiler = get_profiler()
+        report = profiler.get_report()
+
+        # Show in output area
+        self.output_area.append("\n" + report)
+        self.status_bar.showMessage("📊 Profile report shown in output", 3000)
+
+    def _show_sound_effects(self, _checked: bool = False):
+        """Show available sound effects."""
+        from ..core.music import get_sound_effects
+
+        effects = get_sound_effects()
+        effect_list = effects.list_effects()
+
+        msg = "🔊 Available Sound Effects:\n"
+        msg += 'Use: PLAY "effect_name" in BASIC\n\n'
+        msg += ", ".join(effect_list)
+
+        self.output_area.append(msg)
+        self.status_bar.showMessage(
+            f"🔊 {len(effect_list)} sound effects available", 3000
+        )
+
     def close_tab(self, index):
         """Close a tab."""
         if self.check_save_changes_for_tab(index):
@@ -671,6 +740,14 @@ class MainWindow(QMainWindow):
         snippets_action.triggered.connect(self._show_snippet_dialog)
         edit_menu.addAction(snippets_action)
 
+        edit_menu.addSeparator()
+
+        # Format code
+        format_action = QAction("&Format Code", self)
+        format_action.setShortcut("Ctrl+Shift+F")
+        format_action.triggered.connect(self._format_code)
+        edit_menu.addAction(format_action)
+
         # Run menu
         run_menu = menubar.addMenu("&Run")
 
@@ -917,6 +994,27 @@ class MainWindow(QMainWindow):
         view_menu.addAction(self.cassette_action)
 
         # Debugging UI removed — this distribution exposes Run/Stop only.
+
+        # Tools menu
+        tools_menu = menubar.addMenu("&Tools")
+
+        # Performance profiler
+        self.profiler_action = QAction("&Profile Execution", self)
+        self.profiler_action.setCheckable(True)
+        self.profiler_action.setChecked(False)
+        self.profiler_action.triggered.connect(self._toggle_profiler)
+        tools_menu.addAction(self.profiler_action)
+
+        show_profile_action = QAction("Show Profile &Report", self)
+        show_profile_action.triggered.connect(self._show_profile_report)
+        tools_menu.addAction(show_profile_action)
+
+        tools_menu.addSeparator()
+
+        # Sound effects library
+        sound_effects_action = QAction("&Sound Effects Library", self)
+        sound_effects_action.triggered.connect(self._show_sound_effects)
+        tools_menu.addAction(sound_effects_action)
 
         # Help menu (last menu item)
         help_menu = menubar.addMenu("&Help")

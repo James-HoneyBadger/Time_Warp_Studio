@@ -10,7 +10,7 @@ import json
 # Mock is currently unused; keep import for potential future use
 # from unittest.mock import Mock
 
-from Platforms.Python.time_warp.plugins import (
+from time_warp.plugins import (
     PluginManager,
     PluginManifest,
 )

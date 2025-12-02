@@ -75,7 +75,10 @@ time-warp = "time_warp_ide:main"
 
 [tool.setuptools]
 package-dir = {"" = "."}
-packages = ["time_warp"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["time_warp*"]
 
 [tool.setuptools.package-data]
 "*" = ["*.md", "*.txt", "*.json", "examples/**/*"]

@@ -3,7 +3,7 @@
 from unittest.mock import patch
 
 # pylint: disable=import-error
-from Platforms.Python.time_warp.ai import (
+from time_warp.ai import (
     AIAssistant,
     AIProvider,
     AIRequest,
