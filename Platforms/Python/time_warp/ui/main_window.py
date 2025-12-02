@@ -60,10 +60,13 @@ from PySide6.QtWidgets import (
 
 from ..core.interpreter import Language
 from .canvas import TurtleCanvas
+from .cassette_animation import show_cassette_load, show_cassette_save
 from .collaboration_client import CollaborationClient
+from .crt_effect import CRTEffectOverlay
 from .debug_panel import DebugPanel
 from .editor import CodeEditor
 from .output import ImmediateModePanel, OutputPanel
+from .screen_modes import ScreenModeManager
 from .themes import ThemeManager
 from .variable_inspector import VariableInspector
 
@@ -115,6 +118,11 @@ class MainWindow(QMainWindow):
         self._is_debugging = False
         self._is_paused = False
         self._current_debug_line = 0
+
+        # Retro features
+        self.screen_mode_manager = ScreenModeManager()
+        self.crt_enabled = False
+        self.cassette_mode = True  # Fun cassette animation for save/load
 
         # Setup UI
         self.setup_ui()
@@ -242,6 +250,88 @@ class MainWindow(QMainWindow):
         ed = self.get_current_editor()
         if ed:
             ed.paste()
+
+    def _show_snippet_dialog(self, _checked: bool = False):
+        """Show the code snippets dialog."""
+        from .snippet_dialog import SnippetDialog
+
+        # Get current language
+        current_idx = self.editor_tabs.currentIndex()
+        language = self.tab_languages.get(current_idx, Language.BASIC)
+        lang_name = language.name if hasattr(language, "name") else "BASIC"
+
+        dialog = SnippetDialog(lang_name, self)
+        if dialog.exec():
+            code = dialog.get_selected_code()
+            if code:
+                ed = self.get_current_editor()
+                if ed:
+                    ed.insertPlainText(code)
+
+    def _export_to_png(self, _checked: bool = False):
+        """Export canvas graphics to PNG file."""
+        filepath, _ = QFileDialog.getSaveFileName(
+            self, "Export to PNG", "", "PNG Images (*.png);;All Files (*)"
+        )
+        if filepath:
+            if not filepath.lower().endswith(".png"):
+                filepath += ".png"
+            if self.canvas.export_to_png(filepath):
+                self.status_bar.showMessage(f"Exported to {filepath}", 3000)
+            else:
+                self.status_bar.showMessage("Export failed", 3000)
+
+    def _export_to_svg(self, _checked: bool = False):
+        """Export canvas graphics to SVG file."""
+        filepath, _ = QFileDialog.getSaveFileName(
+            self, "Export to SVG", "", "SVG Files (*.svg);;All Files (*)"
+        )
+        if filepath:
+            if not filepath.lower().endswith(".svg"):
+                filepath += ".svg"
+            if self.canvas.export_to_svg(filepath):
+                self.status_bar.showMessage(f"Exported to {filepath}", 3000)
+            else:
+                self.status_bar.showMessage("Export failed", 3000)
+
+    def _print_code(self, _checked: bool = False):
+        """Print the current code."""
+        try:
+            from PySide6.QtPrintSupport import QPrintDialog, QPrinter
+        except ImportError:
+            self.status_bar.showMessage("Print support not available", 3000)
+            return
+
+        ed = self.get_current_editor()
+        if not ed:
+            return
+
+        printer = QPrinter(QPrinter.HighResolution)
+        dialog = QPrintDialog(printer, self)
+        if dialog.exec():
+            ed.print_(printer)
+
+    def _print_graphics(self, _checked: bool = False):
+        """Print the canvas graphics."""
+        try:
+            from PySide6.QtPrintSupport import QPrintDialog, QPrinter
+            from PySide6.QtGui import QPainter
+        except ImportError:
+            self.status_bar.showMessage("Print support not available", 3000)
+            return
+
+        printer = QPrinter(QPrinter.HighResolution)
+        dialog = QPrintDialog(printer, self)
+        if dialog.exec():
+            image = self.canvas.get_print_document()
+            painter = QPainter(printer)
+            rect = painter.viewport()
+            size = image.size()
+            size.scale(rect.size(), Qt.KeepAspectRatio)
+            painter.setViewport(rect.x(), rect.y(), size.width(), size.height())
+            painter.setWindow(image.rect())
+            painter.drawImage(0, 0, image)
+            painter.end()
 
     def close_tab(self, index):
         """Close a tab."""
@@ -453,6 +543,11 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(splitter)
 
+        # CRT effect overlay (covers the entire window)
+        self.crt_overlay = CRTEffectOverlay(central)
+        self.crt_overlay.setGeometry(central.rect())
+        self.crt_overlay.hide()  # Start disabled
+
     def create_menus(self):
         """Create menu bar."""
         # This method builds many actions and submenu entries; the local
@@ -492,6 +587,31 @@ class MainWindow(QMainWindow):
         # Recent files submenu
         self.recent_menu = file_menu.addMenu("Recent Files")
         self.update_recent_files_menu()
+
+        file_menu.addSeparator()
+
+        # Export submenu
+        export_menu = file_menu.addMenu("&Export")
+
+        export_png_action = QAction("Export Graphics to &PNG...", self)
+        export_png_action.triggered.connect(self._export_to_png)
+        export_menu.addAction(export_png_action)
+
+        export_svg_action = QAction("Export Graphics to &SVG...", self)
+        export_svg_action.triggered.connect(self._export_to_svg)
+        export_menu.addAction(export_svg_action)
+
+        file_menu.addSeparator()
+
+        # Print actions
+        print_code_action = QAction("&Print Code...", self)
+        print_code_action.setShortcut("Ctrl+P")
+        print_code_action.triggered.connect(self._print_code)
+        file_menu.addAction(print_code_action)
+
+        print_graphics_action = QAction("Print &Graphics...", self)
+        print_graphics_action.triggered.connect(self._print_graphics)
+        file_menu.addAction(print_graphics_action)
 
         file_menu.addSeparator()
 
@@ -542,6 +662,14 @@ class MainWindow(QMainWindow):
             )
         )
         edit_menu.addAction(find_action)
+
+        edit_menu.addSeparator()
+
+        # Insert snippets
+        snippets_action = QAction("&Insert Snippet...", self)
+        snippets_action.setShortcut("Ctrl+Shift+I")
+        snippets_action.triggered.connect(self._show_snippet_dialog)
+        edit_menu.addAction(snippets_action)
 
         # Run menu
         run_menu = menubar.addMenu("&Run")
@@ -706,6 +834,87 @@ class MainWindow(QMainWindow):
             )
         )
         view_menu.addAction(zoom_out_action)
+
+        view_menu.addSeparator()
+
+        # === RETRO FEATURES ===
+
+        # Screen Mode submenu
+        screen_mode_menu = view_menu.addMenu("📺 &Screen Mode")
+        self.screen_mode_group = QActionGroup(self)
+        self.screen_mode_group.setExclusive(True)
+
+        # Add "Normal (Hi-Res)" option to disable retro mode
+        normal_mode_action = QAction("Normal (Hi-Res)", self)
+        normal_mode_action.setCheckable(True)
+        normal_mode_action.setChecked(True)  # Default
+        normal_mode_action.triggered.connect(self.disable_screen_mode)
+        self.screen_mode_group.addAction(normal_mode_action)
+        screen_mode_menu.addAction(normal_mode_action)
+
+        screen_mode_menu.addSeparator()
+
+        for mode in self.screen_mode_manager.get_all_modes():
+            mode_action = QAction(f"MODE {mode.mode_number}: {mode.name}", self)
+            mode_action.setCheckable(True)
+            mode_action.setChecked(False)
+            mode_action.triggered.connect(
+                lambda checked, m=mode.mode_number: self.change_screen_mode(m)
+            )
+            self.screen_mode_group.addAction(mode_action)
+            screen_mode_menu.addAction(mode_action)
+
+        view_menu.addSeparator()
+
+        # CRT Effects submenu
+        crt_menu = view_menu.addMenu("📟 CRT &Effects")
+
+        self.crt_enable_action = QAction("&Enable CRT Effects", self)
+        self.crt_enable_action.setCheckable(True)
+        self.crt_enable_action.setChecked(False)
+        self.crt_enable_action.triggered.connect(self.toggle_crt_effects)
+        crt_menu.addAction(self.crt_enable_action)
+
+        crt_menu.addSeparator()
+
+        self.scanlines_action = QAction("&Scanlines", self)
+        self.scanlines_action.setCheckable(True)
+        self.scanlines_action.setChecked(True)
+        self.scanlines_action.triggered.connect(self._update_crt_settings)
+        crt_menu.addAction(self.scanlines_action)
+
+        self.curvature_action = QAction("Screen &Curvature", self)
+        self.curvature_action.setCheckable(True)
+        self.curvature_action.setChecked(True)
+        self.curvature_action.triggered.connect(self._update_crt_settings)
+        crt_menu.addAction(self.curvature_action)
+
+        self.vignette_action = QAction("&Vignette", self)
+        self.vignette_action.setCheckable(True)
+        self.vignette_action.setChecked(True)
+        self.vignette_action.triggered.connect(self._update_crt_settings)
+        crt_menu.addAction(self.vignette_action)
+
+        self.glow_action = QAction("Phosphor &Glow", self)
+        self.glow_action.setCheckable(True)
+        self.glow_action.setChecked(True)
+        self.glow_action.triggered.connect(self._update_crt_settings)
+        crt_menu.addAction(self.glow_action)
+
+        self.flicker_action = QAction("Screen &Flicker", self)
+        self.flicker_action.setCheckable(True)
+        self.flicker_action.setChecked(False)
+        self.flicker_action.triggered.connect(self._update_crt_settings)
+        crt_menu.addAction(self.flicker_action)
+
+        view_menu.addSeparator()
+
+        # Cassette mode toggle
+        self.cassette_action = QAction("📼 &Cassette Save Animation", self)
+        self.cassette_action.setCheckable(True)
+        self.cassette_action.setChecked(True)
+        self.cassette_action.triggered.connect(self._toggle_cassette_mode)
+        view_menu.addAction(self.cassette_action)
 
         # Debugging UI removed — this distribution exposes Run/Stop only.
 
@@ -951,6 +1160,13 @@ class MainWindow(QMainWindow):
 
     def load_file(self, filename):
         """Load file into current tab."""
+        # Show cassette animation if enabled
+        if self.cassette_mode:
+            display_name = Path(filename).name
+            if not show_cassette_load(self, display_name, duration_ms=1800):
+                self.statusbar.showMessage("Load cancelled")
+                return
+
         try:
             with open(filename, "r", encoding="utf-8") as f:
                 content = f.read()
@@ -1014,6 +1230,13 @@ class MainWindow(QMainWindow):
         if not filename:
             # No filename yet — prompt save-as flow
             return self.save_tab_as(current_index)
+
+        # Show cassette animation if enabled
+        if self.cassette_mode:
+            display_name = Path(filename).name
+            if not show_cassette_save(self, display_name, duration_ms=1500):
+                self.statusbar.showMessage("Save cancelled")
+                return False
 
         # Write to the existing file
         try:
@@ -1785,6 +2008,78 @@ class MainWindow(QMainWindow):
             line = cursor.blockNumber() + 1
             col = cursor.columnNumber() + 1
             self.position_label.setText(f"Ln {line}, Col {col}")
+
+    # ---- Retro Features ----
+
+    def disable_screen_mode(self):
+        """Disable retro screen mode, return to normal hi-res rendering."""
+        self.canvas.set_screen_mode_enabled(False)
+        self.statusbar.showMessage("📺 Normal hi-res mode")
+
+    def change_screen_mode(self, mode_number: int):
+        """Change the current screen mode."""
+        mode = self.screen_mode_manager.set_mode(mode_number)
+
+        # Enable retro mode rendering on the canvas
+        self.canvas.set_screen_mode(mode)
+        self.canvas.set_screen_mode_enabled(True)
+
+        # Update status bar with mode info
+        self.statusbar.showMessage(
+            f"📺 {mode.name} - {mode.resolution_str} ({mode.colors} colors)"
+        )
+
+        # Switch to Graphics tab to show the effect
+        self.right_tabs.setCurrentWidget(self.canvas)
+
+    def toggle_crt_effects(self, enabled: bool):
+        """Toggle CRT effects on/off."""
+        self.crt_enabled = enabled
+        self.crt_overlay.set_enabled(enabled)
+        if enabled:
+            self.crt_overlay.raise_()
+            self._update_crt_settings()
+            self.statusbar.showMessage("📟 CRT effects enabled")
+        else:
+            self.statusbar.showMessage("CRT effects disabled")
+
+    def _update_crt_settings(self):
+        """Update CRT effect settings from menu checkboxes."""
+        if not hasattr(self, "crt_overlay"):
+            return
+
+        self.crt_overlay.set_scanlines(
+            self.scanlines_action.isChecked(),
+            intensity=0.15,
+            spacing=2,
+        )
+        self.crt_overlay.set_curvature(
+            self.curvature_action.isChecked(),
+            amount=0.02,
+        )
+        self.crt_overlay.set_vignette(
+            self.vignette_action.isChecked(),
+            intensity=0.3,
+        )
+        self.crt_overlay.set_glow(
+            self.glow_action.isChecked(),
+            intensity=0.1,
+        )
+        self.crt_overlay.set_flicker(self.flicker_action.isChecked())
+
+    def _toggle_cassette_mode(self, enabled: bool):
+        """Toggle cassette animation mode."""
+        self.cassette_mode = enabled
+        if enabled:
+            self.statusbar.showMessage("📼 Cassette mode enabled")
+        else:
+            self.statusbar.showMessage("📼 Cassette mode disabled")
+
+    def resizeEvent(self, event):
+        """Handle window resize - update CRT overlay."""
+        super().resizeEvent(event)
+        if hasattr(self, "crt_overlay") and self.crt_overlay.parent():
+            self.crt_overlay.setGeometry(self.crt_overlay.parent().rect())
 
     def collab_connect(self):
         """Connect to collaboration server."""

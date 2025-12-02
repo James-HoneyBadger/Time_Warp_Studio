@@ -350,6 +350,13 @@ class ExpressionEvaluator:
                     stack.append(random.random())
                     continue
 
+                # Handle TIMER - seconds since midnight
+                if var_name == "TIMER":
+                    from ..core.game_support import get_game_state
+
+                    stack.append(get_game_state().get_timer_value())
+                    continue
+
                 # Support BASIC type suffixes on variable references
                 # inside expressions
                 if var_name and var_name[-1] in "%&!#$":

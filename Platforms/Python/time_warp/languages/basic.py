@@ -195,6 +195,21 @@ def execute_basic(
             _strip_comment(command[7:]),
         )
         return ""
+    # Game support commands
+    if cmd == "BEEP":
+        return _basic_beep(interpreter)
+    if cmd.startswith("SOUND "):
+        return _basic_sound(interpreter, _strip_comment(command[6:]))
+    if cmd.startswith("SPEED "):
+        return _basic_speed(interpreter, _strip_comment(command[6:]), turtle)
+    if cmd.startswith("SPRITE "):
+        return _basic_sprite(interpreter, _strip_comment(command[7:]))
+    if cmd.startswith("ON TIMER"):
+        return _basic_on_timer(interpreter, _strip_comment(command[9:]))
+    if cmd == "TIMER ON":
+        return _basic_timer_on(interpreter)
+    if cmd == "TIMER OFF":
+        return _basic_timer_off(interpreter)
     return f"❌ Unknown BASIC command: {command}\n"
 
 
@@ -241,9 +256,24 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
             and len(item_trim) >= 2
         ):
             out_items.append(item_trim[1:-1])
-        # Handle INKEY$ special case
+        # Handle INKEY$ - get key from buffer
         elif item_upper == "INKEY$":
-            out_items.append("")
+            out_items.append(interpreter.get_inkey())
+        # Handle TIME$ - current time as HH:MM:SS
+        elif item_upper == "TIME$":
+            from ..core.game_support import get_game_state
+
+            out_items.append(get_game_state().get_time_string())
+        # Handle DATE$ - current date as MM-DD-YYYY
+        elif item_upper == "DATE$":
+            from ..core.game_support import get_game_state
+
+            out_items.append(get_game_state().get_date_string())
+        # Handle TIMER - seconds since midnight
+        elif item_upper == "TIMER":
+            from ..core.game_support import get_game_state
+
+            out_items.append(str(int(get_game_state().get_timer_value())))
         # Handle string variables (end with $)
         elif item_upper.endswith("$"):
             if item_upper in interpreter.string_variables:
@@ -285,14 +315,32 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
     parts = args.split("=", 1)
     var_name = parts[0].strip().upper()
     expr = parts[1].strip()
+    expr_upper = expr.upper()
     if not var_name:
         return "❌ LET requires variable name\n"
     # String assignment
     if var_name.endswith("$"):
         if expr.startswith('"') and expr.endswith('"'):
             interpreter.set_typed_variable(var_name, expr[1:-1])
+        # Handle special string functions
+        elif expr_upper == "INKEY$":
+            interpreter.set_typed_variable(var_name, interpreter.get_inkey())
+        elif expr_upper == "TIME$":
+            from ..core.game_support import get_game_state
+
+            interpreter.set_typed_variable(var_name, get_game_state().get_time_string())
+        elif expr_upper == "DATE$":
+            from ..core.game_support import get_game_state
+
+            interpreter.set_typed_variable(var_name, get_game_state().get_date_string())
         else:
             interpreter.set_typed_variable(var_name, str(expr))
+        return ""
+    # Handle TIMER special variable
+    if expr_upper == "TIMER":
+        from ..core.game_support import get_game_state
+
+        interpreter.set_typed_variable(var_name, get_game_state().get_timer_value())
         return ""
     try:
         result = interpreter.evaluate_expression(expr)
@@ -891,3 +939,153 @@ def _basic_end(interpreter: "Interpreter") -> str:
     """END - Stop execution"""
     interpreter.running = False
     return ""
+
+
+# ============================================================================
+# Game Support Commands
+# ============================================================================
+
+
+def _basic_beep(_interpreter: "Interpreter") -> str:
+    """BEEP - Play system beep sound."""
+    # pylint: disable=import-outside-toplevel
+    from ..core.game_support import get_game_state
+
+    game = get_game_state()
+    game.sound.beep()
+    return "🔊 BEEP\n"
+
+
+def _basic_sound(interpreter: "Interpreter", args: str) -> str:
+    """SOUND frequency, duration - Play a tone.
+
+    frequency: Hz (37-32767)
+    duration: clock ticks (18.2 ticks = 1 second)
+    """
+    # pylint: disable=import-outside-toplevel
+    from ..core.game_support import get_game_state
+
+    parts = args.split(",")
+    if len(parts) < 2:
+        return "❌ SOUND requires frequency, duration\n"
+
+    try:
+        freq = int(interpreter.evaluate_expression(parts[0].strip()))
+        duration = int(interpreter.evaluate_expression(parts[1].strip()))
+        # Convert ticks to milliseconds (18.2 ticks/sec)
+        duration_ms = int(duration * 1000 / 18.2)
+
+        game = get_game_state()
+        game.sound.play_tone(freq, duration_ms)
+        return f"🔊 SOUND {freq}Hz for {duration_ms}ms\n"
+    except (ValueError, TypeError) as e:
+        return f"❌ SOUND error: {e}\n"
+
+
+def _basic_speed(
+    _interpreter: "Interpreter",
+    args: str,
+    turtle: "TurtleState",
+) -> str:
+    """SPEED n - Set turtle animation speed (0=fastest, 10=slowest)."""
+    # pylint: disable=import-outside-toplevel
+    from ..core.game_support import get_game_state
+
+    try:
+        speed = int(args.strip())
+        speed = max(0, min(10, speed))  # Clamp to 0-10
+        game = get_game_state()
+        game.turtle_speed = speed
+
+        # Also set on turtle state if available
+        if hasattr(turtle, "animation_speed"):
+            turtle.animation_speed = speed
+
+        return f"🐢 Turtle speed set to {speed}\n"
+    except (ValueError, TypeError):
+        return "❌ SPEED requires numeric value (0-10)\n"
+
+
+def _basic_sprite(interpreter: "Interpreter", args: str) -> str:
+    """SPRITE name, x, y, width, height - Define/update a sprite for collision.
+
+    SPRITE name, x, y, width, height - Create/update sprite
+    SPRITE name, x, y - Move existing sprite
+    SPRITE name, OFF - Remove sprite
+    """
+    # pylint: disable=import-outside-toplevel
+    from ..core.game_support import get_game_state
+
+    parts = [p.strip() for p in args.split(",")]
+    if len(parts) < 2:
+        return "❌ SPRITE requires name and coordinates\n"
+
+    name = parts[0].upper()
+    game = get_game_state()
+
+    # Handle SPRITE name, OFF
+    if len(parts) == 2 and parts[1].upper() == "OFF":
+        game.collision.remove_sprite(name)
+        return f"🎮 Removed sprite: {name}\n"
+
+    try:
+        x = interpreter.evaluate_expression(parts[1])
+        y = interpreter.evaluate_expression(parts[2]) if len(parts) > 2 else 0
+
+        if len(parts) >= 5:
+            # Full definition
+            w = interpreter.evaluate_expression(parts[3])
+            h = interpreter.evaluate_expression(parts[4])
+            game.collision.register_sprite(name, x, y, w, h)
+            return f"🎮 Sprite {name} at ({x}, {y}) size {w}x{h}\n"
+        else:
+            # Update position only
+            game.collision.update_sprite(name, x, y)
+            return f"🎮 Moved sprite {name} to ({x}, {y})\n"
+    except (ValueError, TypeError, IndexError) as e:
+        return f"❌ SPRITE error: {e}\n"
+
+
+def _basic_on_timer(_interpreter: "Interpreter", args: str) -> str:
+    """ON TIMER(n) GOSUB line - Set up timer event.
+
+    n = interval in seconds
+    """
+    # pylint: disable=import-outside-toplevel
+    from ..core.game_support import get_game_state
+
+    # Parse: ON TIMER(n) GOSUB line
+    pattern = r"\((\d+(?:\.\d+)?)\)\s*GOSUB\s*(\d+)"
+    match = re.match(pattern, args.strip(), re.IGNORECASE)
+    if not match:
+        return "❌ ON TIMER requires format: ON TIMER(n) GOSUB line\n"
+
+    try:
+        interval = float(match.group(1))
+        target_line = int(match.group(2))
+
+        game = get_game_state()
+        game.timer.set_interval(1, interval, target_line, enabled=False)
+        return f"⏱️ Timer set: every {interval}s GOSUB {target_line}\n"
+    except (ValueError, TypeError) as e:
+        return f"❌ ON TIMER error: {e}\n"
+
+
+def _basic_timer_on(_interpreter: "Interpreter") -> str:
+    """TIMER ON - Enable timer events."""
+    # pylint: disable=import-outside-toplevel
+    from ..core.game_support import get_game_state
+
+    game = get_game_state()
+    game.timer.enable_interval(1, True)
+    return "⏱️ Timer enabled\n"
+
+
+def _basic_timer_off(_interpreter: "Interpreter") -> str:
+    """TIMER OFF - Disable timer events."""
+    # pylint: disable=import-outside-toplevel
+    from ..core.game_support import get_game_state
+
+    game = get_game_state()
+    game.timer.enable_interval(1, False)
+    return "⏱️ Timer disabled\n"

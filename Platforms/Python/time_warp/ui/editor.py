@@ -566,6 +566,9 @@ class CodeEditor(QPlainTextEdit):
         # Breakpoints set (line numbers with breakpoints)
         self._breakpoints = set()
 
+        # Error lines set (line numbers with errors)
+        self._error_lines = set()
+
         # Current execution line (for debugging highlight)
         self._current_line = 0
 
@@ -674,12 +677,23 @@ class CodeEditor(QPlainTextEdit):
 
         fg_color = palette.color(QPalette.Text).darker(150)
         bp_color = QColor(255, 80, 80)  # Red for breakpoints
+        error_color = QColor(255, 100, 100, 80)  # Red tint for error lines
         current_line_color = QColor(255, 255, 0)  # Yellow for current line
 
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
                 line_num = block_number + 1
                 font_height = self.fontMetrics().height()
+
+                # Draw error line background
+                if line_num in self._error_lines:
+                    painter.fillRect(
+                        0,
+                        int(top),
+                        self.line_number_area.width(),
+                        font_height,
+                        error_color,
+                    )
 
                 # Draw breakpoint marker if set
                 if line_num in self._breakpoints:
@@ -712,7 +726,11 @@ class CodeEditor(QPlainTextEdit):
 
                 # Draw line number (offset for breakpoint gutter)
                 number = str(line_num)
-                painter.setPen(fg_color)
+                # Use red text for error lines
+                if line_num in self._error_lines:
+                    painter.setPen(QColor(255, 80, 80))
+                else:
+                    painter.setPen(fg_color)
                 painter.drawText(
                     20,  # Offset for breakpoint gutter
                     int(top),
@@ -850,6 +868,54 @@ class CodeEditor(QPlainTextEdit):
         self._current_line = 0
         self.line_number_area.update()
 
+    # ---- Error Line Management ----
+
+    def set_error_line(self, line: int):
+        """Mark a line as having an error."""
+        if line not in self._error_lines:
+            self._error_lines.add(line)
+            self.line_number_area.update()
+
+    def clear_error_line(self, line: int):
+        """Remove error mark from a line."""
+        if line in self._error_lines:
+            self._error_lines.remove(line)
+            self.line_number_area.update()
+
+    def clear_error_lines(self):
+        """Clear all error line marks."""
+        self._error_lines.clear()
+        self.line_number_area.update()
+
+    def set_error_lines(self, lines: set):
+        """Set error lines from a set of line numbers."""
+        self._error_lines = set(lines)
+        self.line_number_area.update()
+
+    def get_error_lines(self) -> set:
+        """Get the set of error line numbers."""
+        return self._error_lines.copy()
+
+    def has_error(self, line: int) -> bool:
+        """Check if a line has an error."""
+        return line in self._error_lines
+
+    def mark_errors_from_output(self, output: str):
+        """Parse output for error messages and mark lines.
+
+        Looks for patterns like 'Error at line N:' in the output.
+        """
+        self._error_lines.clear()
+        # Match patterns like "line 5:" or "at line 10:"
+        pattern = r"(?:at\s+)?line\s+(\d+)"
+        for match in re.finditer(pattern, output, re.IGNORECASE):
+            try:
+                line_num = int(match.group(1))
+                self._error_lines.add(line_num)
+            except ValueError:
+                pass
+        self.line_number_area.update()
+
     def goto_line(self, line: int):
         """Scroll to and highlight the specified line."""
         block = self.document().findBlockByLineNumber(line - 1)
@@ -887,7 +953,7 @@ class CodeEditor(QPlainTextEdit):
         return self._whitespace_highlighter is not None
 
     def keyPressEvent(self, event):
-        """Handle key press events for auto-completion."""
+        """Handle key press events for auto-completion and auto-indent."""
         if self.completer.popup().isVisible():
             if event.key() in (
                 Qt.Key_Enter,
@@ -898,6 +964,11 @@ class CodeEditor(QPlainTextEdit):
             ):
                 event.ignore()
                 return
+
+        # Handle Enter/Return for auto-indent
+        if event.key() in (Qt.Key_Enter, Qt.Key_Return):
+            self._handle_auto_indent()
+            return
 
         # Call parent implementation first
         super().keyPressEvent(event)
@@ -924,3 +995,94 @@ class CodeEditor(QPlainTextEdit):
                     + popup.verticalScrollBar().sizeHint().width()
                 )
                 self.completer.complete(cr)
+
+    def _handle_auto_indent(self):
+        """Handle auto-indentation on Enter/Return key."""
+        cursor = self.textCursor()
+
+        # Get current line text
+        cursor.select(QTextCursor.LineUnderCursor)
+        current_line = cursor.selectedText()
+        cursor.clearSelection()
+
+        # Get leading whitespace from current line
+        leading_spaces = ""
+        for char in current_line:
+            if char in (" ", "\t"):
+                leading_spaces += char
+            else:
+                break
+
+        # Check if we should increase indent (line ends with block opener)
+        line_upper = current_line.strip().upper()
+
+        # BASIC indent triggers
+        increase_indent = False
+        if line_upper.startswith("FOR ") and " NEXT" not in line_upper:
+            increase_indent = True
+        elif line_upper.startswith("WHILE ") and " WEND" not in line_upper:
+            increase_indent = True
+        elif line_upper.startswith("DO"):
+            increase_indent = True
+        elif " THEN" in line_upper and not any(
+            keyword in line_upper
+            for keyword in ("GOTO", "GOSUB", "END", "PRINT", "LET")
+        ):
+            # Multi-line IF (THEN without action on same line)
+            if line_upper.endswith("THEN"):
+                increase_indent = True
+        elif line_upper.startswith("SUB "):
+            increase_indent = True
+        elif line_upper.startswith("FUNCTION "):
+            increase_indent = True
+        elif line_upper.startswith("SELECT "):
+            increase_indent = True
+        elif line_upper.startswith("CASE "):
+            increase_indent = True
+
+        # PILOT indent triggers
+        if line_upper.startswith("*") and ":" not in line_upper:
+            # Label - don't indent
+            pass
+
+        # Logo indent triggers
+        if line_upper.startswith("TO "):
+            increase_indent = True
+        elif "[" in line_upper:
+            # Count brackets to see if we should indent
+            open_count = line_upper.count("[")
+            close_count = line_upper.count("]")
+            if open_count > close_count:
+                increase_indent = True
+
+        # Check if we should decrease indent
+        decrease_indent = False
+        if line_upper in (
+            "NEXT",
+            "WEND",
+            "END",
+            "END SUB",
+            "END FUNCTION",
+            "END SELECT",
+            "LOOP",
+            "ELSE",
+            "ELSEIF",
+        ):
+            decrease_indent = True
+        elif line_upper.startswith("NEXT "):
+            decrease_indent = True
+        elif line_upper.startswith("LOOP "):
+            decrease_indent = True
+
+        # Insert newline with proper indentation
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.EndOfLine)
+
+        if increase_indent:
+            cursor.insertText("\n" + leading_spaces + "  ")
+        elif decrease_indent and len(leading_spaces) >= 2:
+            cursor.insertText("\n" + leading_spaces[:-2])
+        else:
+            cursor.insertText("\n" + leading_spaces)
+
+        self.setTextCursor(cursor)

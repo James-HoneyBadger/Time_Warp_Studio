@@ -57,7 +57,7 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
     def __init__(self) -> None:
         self.x: float = 0.0
         self.y: float = 0.0
-        self.heading: float = 0.0  # degrees, 0 = up
+        self.heading: float = 0.0  # degrees, 0 = up (north), 90 = right (east)
         self.pen_down: bool = True
         self.pen_color: Tuple[int, int, int] = (255, 255, 255)  # White
         self.pen_width: float = 2.0
@@ -148,7 +148,7 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
         self.goto(self.x, y)
 
     def home(self) -> None:
-        """Return to center (0,0) and reset heading"""
+        """Return to center (0,0) and reset heading to face up"""
         self.goto(0.0, 0.0)
         self.heading = 0.0
         self._notify_change()
