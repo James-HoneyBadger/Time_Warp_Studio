@@ -1,19 +1,24 @@
+"""
+CodeEditor widget unit tests.
+
+Tests line number area sizing, completion insertion, current line
+highlighting, and whitespace visibility toggle.
+"""
+
 import pathlib
 import sys
 
-# Ensure project package directory is importable by pytest
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1]))
 
+# pylint: disable=wrong-import-position,import-error,no-name-in-module
 from PySide6.QtCore import QSize  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-# time_warp comes from the repo tree.
-# The import may occur after sys.path manipulation in tests.
 from time_warp.ui.editor import CodeEditor  # noqa: E402
 
 
 def _ensure_app():
-    """Ensure a QApplication exists for widget tests."""
+    """Create QApplication if not already running."""
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
@@ -21,10 +26,9 @@ def _ensure_app():
 
 
 def test_line_number_area_size_hint_matches_editor_width():
+    """Line number area width matches editor calculation."""
     _ensure_app()
     editor = CodeEditor()
-
-    # width should match the value returned by code editor helper
     expected_width = editor.line_number_area_width()
     size_hint = editor.line_number_area.sizeHint()
 
@@ -34,31 +38,25 @@ def test_line_number_area_size_hint_matches_editor_width():
 
 
 def test_line_number_area_width_changes_with_more_blocks():
+    """Line number area grows wider with more lines."""
     _ensure_app()
     editor = CodeEditor()
-
     base_width = editor.line_number_area_width()
-    # Insert many lines to increase blockCount and cause width growth
     editor.setPlainText("\n".join(["line"] * 120))
     new_width = editor.line_number_area_width()
 
-    assert new_width >= base_width
-    # With many blocks, width will usually grow.
     assert new_width >= base_width + 3
 
 
 def test_insert_completion_replaces_prefix_correctly():
+    """Completion replaces typed prefix, not entire text."""
     _ensure_app()
     editor = CodeEditor()
-
-    # prepare a short prefix in the editor
     editor.setPlainText("te")
     cursor = editor.textCursor()
-    # Position the cursor at the end of document explicitly
     cursor.setPosition(len(editor.toPlainText()))
     editor.setTextCursor(cursor)
 
-    # configure completer prefix 'te' and insert completion 'testcase'
     editor.completer.setCompletionPrefix("te")
     editor.insert_completion("testcase")
 
@@ -66,6 +64,7 @@ def test_insert_completion_replaces_prefix_correctly():
 
 
 def test_highlight_current_line_toggle():
+    """Current line highlight can be enabled/disabled."""
     _ensure_app()
     editor = CodeEditor()
 
@@ -73,27 +72,24 @@ def test_highlight_current_line_toggle():
     editor.enable_highlight_current_line(True)
     assert editor.is_highlight_current_line_enabled()
 
-    # populate text and place cursor to ensure a selection is created
     editor.setPlainText("one\n two")
     c = editor.textCursor()
     c.setPosition(0)
     editor.setTextCursor(c)
-    # nudge the cursor to trigger the cursorPositionChanged signal
     c.setPosition(1)
     editor.setTextCursor(c)
     c.setPosition(0)
     editor.setTextCursor(c)
 
-    extras = editor.extraSelections()
-    assert len(extras) >= 1
+    assert len(editor.extraSelections()) >= 1
 
-    # disable and expect selections cleared
     editor.enable_highlight_current_line(False)
     assert not editor.is_highlight_current_line_enabled()
     assert editor.extraSelections() == []
 
 
 def test_show_whitespace_toggle():
+    """Whitespace visibility can be toggled."""
     _ensure_app()
     editor = CodeEditor()
 

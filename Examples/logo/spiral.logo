@@ -1,3 +1,8 @@
+; ========================================
+; Spiral - Time Warp Logo
+; Demonstrates: TO/END, recursion, :variables
+; ========================================
+
 TO SPIRAL :SIZE :ANGLE
   IF :SIZE > 200 [ STOP ]
   FORWARD :SIZE

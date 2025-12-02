@@ -1,9 +1,18 @@
+; ========================================
+; Colors - Time Warp Logo
+; Demonstrates: SETPENCOLOR, SETPENWIDTH
+; ========================================
+
 SETPENWIDTH 5
+
 SETPENCOLOR "RED"
 FORWARD 50
+
 SETPENCOLOR "GREEN"
 FORWARD 50
+
 SETPENCOLOR "BLUE"
 FORWARD 50
+
 SETPENCOLOR "PINK"
 FORWARD 50

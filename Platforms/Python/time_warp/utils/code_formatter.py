@@ -299,6 +299,7 @@ class LogoFormatter:
 class PilotFormatter:
     """Formatter for PILOT code."""
 
+    # pylint: disable=unused-argument
     def format_code(self, code: str, indent_size: int = 2) -> str:
         """Format PILOT code.
 

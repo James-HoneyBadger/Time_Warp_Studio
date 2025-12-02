@@ -419,6 +419,7 @@ class TurtleCanvas(
             True if export succeeded, False otherwise
         """
         try:
+            # pylint: disable=import-outside-toplevel
             from PySide6.QtSvg import QSvgGenerator
         except ImportError:
             return False

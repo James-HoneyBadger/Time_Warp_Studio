@@ -1,9 +1,12 @@
-10 REM Math Demonstration
-20 LET A = 10
-30 LET B = 20
-40 PRINT "A = "; A
-50 PRINT "B = "; B
-60 PRINT "A + B = "; A + B
-70 PRINT "A * B = "; A * B
-80 PRINT "SQRT(16) = "; SQRT(16)
-90 PRINT "SIN(90) = "; SIN(90)
+10 REM ========================================
+20 REM  Math Functions - Time Warp BASIC
+30 REM  Demonstrates: LET, arithmetic, SQRT, SIN
+40 REM ========================================
+50 LET A = 10
+60 LET B = 20
+70 PRINT "A = "; A
+80 PRINT "B = "; B
+90 PRINT "A + B = "; A + B
+100 PRINT "A * B = "; A * B
+110 PRINT "SQRT(16) = "; SQRT(16)
+120 PRINT "SIN(90) = "; SIN(90)

@@ -1,3 +1,8 @@
+; ========================================
+; Recursive Tree - Time Warp Logo
+; Demonstrates: Recursion, BACK, scaling
+; ========================================
+
 TO TREE :SIZE
   IF :SIZE < 5 [ STOP ]
   FORWARD :SIZE

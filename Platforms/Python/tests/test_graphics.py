@@ -1,7 +1,9 @@
 #!/usr/bin/env python3
-"""Test graphics canvas display.
+"""
+Manual turtle graphics verification script.
 
-This is a manual verification script, not a pytest test module.
+Launches the IDE with test programs for visual inspection of canvas rendering,
+zoom/pan controls, and coordinate system orientation. Not for CI automation.
 """
 
 import sys
@@ -9,89 +11,45 @@ import sys
 import pytest
 from PySide6.QtWidgets import QApplication  # pylint: disable=no-name-in-module
 
-from time_warp.ui import MainWindow  # pylint: disable=import-error
+from time_warp.ui import MainWindow  # pylint: disable=import-error,no-name-in-module
 
-pytestmark = pytest.mark.skip(
-    reason="Manual graphics verification script (requires display); not for CI"
-)
+pytestmark = pytest.mark.skip(reason="Manual graphics verification (requires display)")
+
+TEST_PROGRAMS = [
+    (
+        "Square",
+        (
+            "FORWARD 100\nRIGHT 90\nFORWARD 100\nRIGHT 90\n"
+            "FORWARD 100\nRIGHT 90\nFORWARD 100\nRIGHT 90"
+        ),
+    ),
+    (
+        "Triangle",
+        (
+            "FORWARD 150\nRIGHT 120\nFORWARD 150\nRIGHT 120\n"
+            "FORWARD 150\nRIGHT 120"
+        ),
+    ),
+    ("Star", "REPEAT 5 [\n  FORWARD 200\n  RIGHT 144\n]"),
+    ("Spiral", "REPEAT 36 [\n  FORWARD 100\n  RIGHT 10\n]"),
+]
 
 
 def test_graphics():
-    """Test graphics display with various patterns."""
-
-    # Create app and window
-    QApplication(sys.argv)  # Initialize QApplication for Qt
+    """Load IDE with sample Logo programs for visual testing."""
+    QApplication(sys.argv)
     window = MainWindow()
 
-    # Test programs
-    test_programs = [
-        (
-            "Square",
-            """FORWARD 100
-RIGHT 90
-FORWARD 100
-RIGHT 90
-FORWARD 100
-RIGHT 90
-FORWARD 100
-RIGHT 90""",
-        ),
-        (
-            "Triangle",
-            """FORWARD 150
-RIGHT 120
-FORWARD 150
-RIGHT 120
-FORWARD 150
-RIGHT 120""",
-        ),
-        (
-            "Star",
-            """REPEAT 5 [
-  FORWARD 200
-  RIGHT 144
-]""",
-        ),
-        (
-            "Spiral",
-            """REPEAT 36 [
-  FORWARD 100
-  RIGHT 10
-]""",
-        ),
-    ]
+    name, program = TEST_PROGRAMS[0]
+    editor = window.get_current_editor()
+    if editor:
+        editor.setPlainText(program)
 
-    print("Graphics Canvas Test")
-    print("=" * 60)
-    print()
-
-    # Load the first test program
-    name, program = test_programs[0]
-    current_editor = window.get_current_editor()
-    if current_editor:
-        current_editor.setPlainText(program)
     print(f"Loaded: {name}")
-    print(f"Program length: {len(program)} chars")
-    print()
-    print("INSTRUCTIONS:")
-    print("1. The IDE window should now be visible")
-    print("2. Click 'Run' (F5) to execute the program")
-    print("3. Switch to the 'Graphics' tab to see the turtle drawing")
-    print("4. Use mouse wheel to zoom in/out")
-    print("5. Middle-click or Ctrl+Click to pan")
-    print()
-    print("Available test programs:")
-    for i, (test_name, _) in enumerate(test_programs):
-        print(f"   {i+1}. {test_name}")
-    print()
-    print("TIP: The Y-axis is now flipped correctly!")
-    print("     (0,0) is at center, Y goes UP (standard math/Logo)")
-    print()
+    print("Run with F5, view Graphics tab. Scroll to zoom, Ctrl+drag to pan.")
 
     window.show()
     window.resize(1200, 800)
-
-    # For pytest, just check window creation, don't run event loop
 
 
 if __name__ == "__main__":

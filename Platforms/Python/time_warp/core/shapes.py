@@ -199,7 +199,7 @@ def generate_gear(
     for i in range(teeth):
         base_angle = i * tooth_angle
         # Each tooth has 4 points
-        for j, (offset, radius) in enumerate(
+        for _, (offset, radius) in enumerate(
             [
                 (0, inner_radius),
                 (tooth_angle * 0.2, outer_radius),

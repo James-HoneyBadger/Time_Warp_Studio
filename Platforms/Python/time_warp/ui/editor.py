@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """Code editor widget with line numbers and basic syntax highlighting."""
 
 # Static analyzers sometimes miss PySide6 platform-specific symbols. Silence
@@ -6,7 +7,7 @@
 
 import re
 
-from PySide6.QtCore import QRect, QSize, QStringListModel, Qt, Signal
+from PySide6.QtCore import QPoint, QRect, QSize, QStringListModel, Qt, Signal
 from PySide6.QtGui import (
     QBrush,
     QColor,
@@ -15,6 +16,7 @@ from PySide6.QtGui import (
     QPainter,
     QPalette,
     QPen,
+    QPolygon,
     QSyntaxHighlighter,
     QTextCharFormat,
     QTextCursor,
@@ -718,9 +720,6 @@ class CodeEditor(QPlainTextEdit):
                         (arrow_x + arrow_size, arrow_y),
                         (arrow_x, arrow_y + arrow_size // 2),
                     ]
-                    from PySide6.QtCore import QPoint
-                    from PySide6.QtGui import QPolygon
-
                     polygon = QPolygon([QPoint(x, y) for x, y in points])
                     painter.drawPolygon(polygon)
 

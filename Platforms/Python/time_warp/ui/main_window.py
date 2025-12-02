@@ -1,6 +1,7 @@
 """Main window for Time Warp IDE."""
 
 import getpass
+import re
 from functools import partial
 from pathlib import Path
 
@@ -253,6 +254,7 @@ class MainWindow(QMainWindow):
 
     def _show_snippet_dialog(self, _checked: bool = False):
         """Show the code snippets dialog."""
+        # pylint: disable=import-outside-toplevel
         from .snippet_dialog import SnippetDialog
 
         # Get current language
@@ -297,6 +299,7 @@ class MainWindow(QMainWindow):
     def _print_code(self, _checked: bool = False):
         """Print the current code."""
         try:
+            # pylint: disable=import-outside-toplevel
             from PySide6.QtPrintSupport import QPrintDialog, QPrinter
         except ImportError:
             self.status_bar.showMessage("Print support not available", 3000)
@@ -314,6 +317,7 @@ class MainWindow(QMainWindow):
     def _print_graphics(self, _checked: bool = False):
         """Print the canvas graphics."""
         try:
+            # pylint: disable=import-outside-toplevel
             from PySide6.QtPrintSupport import QPrintDialog, QPrinter
             from PySide6.QtGui import QPainter
         except ImportError:
@@ -335,6 +339,7 @@ class MainWindow(QMainWindow):
 
     def _format_code(self, _checked: bool = False):
         """Format the current code."""
+        # pylint: disable=import-outside-toplevel
         from ..utils.code_formatter import get_formatter
 
         ed = self.get_current_editor()
@@ -361,6 +366,7 @@ class MainWindow(QMainWindow):
 
     def _toggle_profiler(self, checked: bool):
         """Toggle performance profiling."""
+        # pylint: disable=import-outside-toplevel
         from ..utils.profiler import get_profiler
 
         profiler = get_profiler()
@@ -377,6 +383,7 @@ class MainWindow(QMainWindow):
 
     def _show_profile_report(self, _checked: bool = False):
         """Show the performance profile report."""
+        # pylint: disable=import-outside-toplevel
         from ..utils.profiler import get_profiler
 
         profiler = get_profiler()
@@ -388,6 +395,7 @@ class MainWindow(QMainWindow):
 
     def _show_sound_effects(self, _checked: bool = False):
         """Show available sound effects."""
+        # pylint: disable=import-outside-toplevel
         from ..core.music import get_sound_effects
 
         effects = get_sound_effects()
@@ -1701,8 +1709,6 @@ class MainWindow(QMainWindow):
 
     def _markdown_to_html(self, md: str) -> str:
         """Convert simple markdown to HTML."""
-        import re
-
         lines = md.split("\n")
         html_lines = []
         in_code_block = False
@@ -2173,7 +2179,7 @@ class MainWindow(QMainWindow):
         else:
             self.statusbar.showMessage("📼 Cassette mode disabled")
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event):  # pylint: disable=invalid-name
         """Handle window resize - update CRT overlay."""
         super().resizeEvent(event)
         if hasattr(self, "crt_overlay") and self.crt_overlay.parent():

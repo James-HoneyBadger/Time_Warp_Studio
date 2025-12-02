@@ -1,6 +1,14 @@
 """
-Gamepad/Joystick support for Time Warp IDE.
-Maps controller inputs to BASIC variables.
+Gamepad input abstraction layer with multi-backend support.
+
+Provides unified access to game controllers via pygame or inputs library,
+with automatic backend selection and graceful degradation when neither
+is available. Exposes controller state through the BASIC JOYBUTTON and
+JOYAXIS functions.
+
+Optional dependencies:
+    - pygame: Preferred backend, best cross-platform support
+    - inputs: Fallback for Linux systems without pygame
 """
 
 import threading
@@ -11,47 +19,52 @@ from typing import Callable, Dict, List, Optional
 
 @dataclass
 class GamepadState:
-    """Current state of a gamepad."""
+    """
+    Snapshot of all inputs from a single gamepad.
 
-    # Buttons (True = pressed)
+    Button fields are True when pressed. Axis fields range from -1.0 to 1.0
+    for sticks and 0.0 to 1.0 for triggers. The generic buttons/axes dicts
+    store raw values for non-standard controllers.
+    """
+
     buttons: Dict[str, bool] = field(default_factory=dict)
-
-    # Axes (-1.0 to 1.0)
     axes: Dict[str, float] = field(default_factory=dict)
 
-    # D-pad
     dpad_up: bool = False
     dpad_down: bool = False
     dpad_left: bool = False
     dpad_right: bool = False
 
-    # Common button mappings
     button_a: bool = False
     button_b: bool = False
     button_x: bool = False
     button_y: bool = False
     button_start: bool = False
     button_select: bool = False
-    button_lb: bool = False  # Left bumper
-    button_rb: bool = False  # Right bumper
+    button_lb: bool = False
+    button_rb: bool = False
 
-    # Stick axes
     left_x: float = 0.0
     left_y: float = 0.0
     right_x: float = 0.0
     right_y: float = 0.0
 
-    # Triggers (0.0 to 1.0)
     left_trigger: float = 0.0
     right_trigger: float = 0.0
 
-    # Connection status
     connected: bool = False
     name: str = ""
 
 
 class GamepadManager:
-    """Manages gamepad input detection and state."""
+    """
+    Threaded gamepad polling manager with callback support.
+
+    On initialization, attempts to load pygame, then inputs library.
+    Call start() to begin background polling at ~60Hz. Register callbacks
+    via add_callback() to receive state updates, or poll directly with
+    get_button()/get_axis() for BASIC integration.
+    """
 
     def __init__(self):
         self.gamepads: Dict[int, GamepadState] = {}
@@ -63,10 +76,10 @@ class GamepadManager:
         self._initialize_backend()
 
     def _initialize_backend(self):
-        """Initialize the best available gamepad backend."""
-        # Try pygame first (most cross-platform)
+        """Detect and initialize the best available input library."""
         try:
-            import pygame  # pylint: disable=import-outside-toplevel
+            # pylint: disable=import-outside-toplevel
+            import pygame
 
             pygame.init()
             pygame.joystick.init()
@@ -75,31 +88,30 @@ class GamepadManager:
         except (ImportError, RuntimeError):
             pass
 
-        # Try inputs library
         try:
-            import inputs  # pylint: disable=import-outside-toplevel  # noqa: F401
+            # pylint: disable=import-outside-toplevel
+            import inputs  # noqa: F401
 
-            _ = inputs.get_gamepad  # Verify module works
+            _ = inputs.get_gamepad
             self._backend = "inputs"
             return
         except ImportError:
             pass
 
-        # No backend available
         self._backend = None
 
     @property
     def available(self) -> bool:
-        """Check if gamepad support is available."""
+        """True if a gamepad backend was successfully loaded."""
         return self._backend is not None
 
     @property
     def backend_name(self) -> str:
-        """Get the name of the active backend."""
+        """Name of active backend: 'pygame', 'inputs', or 'none'."""
         return self._backend or "none"
 
     def start(self):
-        """Start polling for gamepad input."""
+        """Begin background polling thread. No-op if already running."""
         if self._running or not self.available:
             return
 
@@ -108,14 +120,14 @@ class GamepadManager:
         self._thread.start()
 
     def stop(self):
-        """Stop polling for gamepad input."""
+        """Stop polling thread and wait for clean shutdown."""
         self._running = False
         if self._thread:
             self._thread.join(timeout=1.0)
             self._thread = None
 
     def _poll_loop(self):
-        """Main polling loop for gamepad input."""
+        """Background loop dispatching to backend-specific poll method."""
         while self._running:
             try:
                 if self._backend == "pygame":
@@ -123,17 +135,17 @@ class GamepadManager:
                 elif self._backend == "inputs":
                     self._poll_inputs()
             except Exception:  # pylint: disable=broad-except
-                pass  # Ignore errors in polling
+                pass
 
-            time.sleep(0.016)  # ~60 Hz
+            time.sleep(0.016)
 
     def _poll_pygame(self):
-        """Poll gamepads using pygame."""
-        import pygame  # pylint: disable=import-outside-toplevel
+        """Read all connected joysticks via pygame."""
+        # pylint: disable=import-outside-toplevel,import-error
+        import pygame
 
         pygame.event.pump()
 
-        # Check for new/removed joysticks
         num_joysticks = pygame.joystick.get_count()
 
         for i in range(num_joysticks):
@@ -146,7 +158,6 @@ class GamepadManager:
             joy = self._pygame_joysticks[i]
             state = self.gamepads[i]
 
-            # Read axes
             num_axes = joy.get_numaxes()
             if num_axes > 0:
                 state.left_x = joy.get_axis(0)
@@ -161,7 +172,6 @@ class GamepadManager:
             if num_axes > 5:
                 state.right_trigger = (joy.get_axis(5) + 1) / 2
 
-            # Read buttons
             num_buttons = joy.get_numbuttons()
             if num_buttons > 0:
                 state.button_a = joy.get_button(0)
@@ -180,7 +190,6 @@ class GamepadManager:
             if num_buttons > 7:
                 state.button_start = joy.get_button(7)
 
-            # Read D-pad (hat)
             num_hats = joy.get_numhats()
             if num_hats > 0:
                 hat = joy.get_hat(0)
@@ -189,24 +198,22 @@ class GamepadManager:
                 state.dpad_down = hat[1] < 0
                 state.dpad_up = hat[1] > 0
 
-            # Notify callbacks
             for callback in self._callbacks:
                 callback(i, state)
 
     def _poll_inputs(self):
-        """Poll gamepads using inputs library."""
-        import inputs  # pylint: disable=import-outside-toplevel
+        """Read gamepad events via inputs library (Linux evdev)."""
+        # pylint: disable=import-outside-toplevel,import-error
+        import inputs
 
         try:
             events = inputs.get_gamepad()
             for event in events:
-                # Get or create gamepad state
                 if 0 not in self.gamepads:
                     self.gamepads[0] = GamepadState(connected=True, name="Gamepad")
 
                 state = self.gamepads[0]
 
-                # Map event codes to state
                 if event.ev_type == "Absolute":
                     if event.code == "ABS_X":
                         state.left_x = event.state / 32768.0
@@ -246,7 +253,6 @@ class GamepadManager:
                     elif event.code == "BTN_START":
                         state.button_start = pressed
 
-                # Notify callbacks
                 for callback in self._callbacks:
                     callback(0, state)
 
@@ -255,27 +261,28 @@ class GamepadManager:
                 self.gamepads[0].connected = False
 
     def get_state(self, gamepad_id: int = 0) -> Optional[GamepadState]:
-        """Get the current state of a gamepad."""
+        """Return full state snapshot for a gamepad, or None if not connected."""
         return self.gamepads.get(gamepad_id)
 
     def add_callback(self, callback: Callable[[int, GamepadState], None]):
-        """Add a callback for gamepad state changes."""
+        """Register a function to call on each poll with (gamepad_id, state)."""
         self._callbacks.append(callback)
 
     def remove_callback(self, callback: Callable[[int, GamepadState], None]):
-        """Remove a callback."""
+        """Unregister a previously added callback."""
         if callback in self._callbacks:
             self._callbacks.remove(callback)
 
     def get_connected_count(self) -> int:
-        """Get the number of connected gamepads."""
+        """Number of currently connected gamepads."""
         return sum(1 for g in self.gamepads.values() if g.connected)
 
     def get_button(self, button_name: str, gamepad_id: int = 0) -> bool:
-        """Get a button state by name.
+        """
+        Query a button by name for BASIC JOYBUTTON function.
 
-        Button names: A, B, X, Y, LB, RB, START, SELECT,
-                      DPAD_UP, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT
+        Valid names: A, B, X, Y, LB, RB, START, SELECT,
+                     DPAD_UP, DPAD_DOWN, DPAD_LEFT, DPAD_RIGHT
         """
         state = self.get_state(gamepad_id)
         if not state:
@@ -299,10 +306,12 @@ class GamepadManager:
         return button_map.get(button_name.upper(), False)
 
     def get_axis(self, axis_name: str, gamepad_id: int = 0) -> float:
-        """Get an axis value by name.
+        """
+        Query an axis by name for BASIC JOYAXIS function.
 
-        Axis names: LEFT_X, LEFT_Y, RIGHT_X, RIGHT_Y,
-                    LEFT_TRIGGER, RIGHT_TRIGGER
+        Valid names: LEFT_X, LEFT_Y, RIGHT_X, RIGHT_Y,
+                     LEFT_TRIGGER, RIGHT_TRIGGER
+        Returns 0.0 if gamepad not connected.
         """
         state = self.get_state(gamepad_id)
         if not state:
@@ -320,12 +329,11 @@ class GamepadManager:
         return axis_map.get(axis_name.upper(), 0.0)
 
 
-# Global instance
 _gamepad_manager: Optional[GamepadManager] = None
 
 
 def get_gamepad_manager() -> GamepadManager:
-    """Get the global gamepad manager instance."""
+    """Return the singleton GamepadManager instance, creating it if needed."""
     global _gamepad_manager  # pylint: disable=global-statement
     if _gamepad_manager is None:
         _gamepad_manager = GamepadManager()

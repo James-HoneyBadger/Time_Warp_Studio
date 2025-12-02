@@ -1,3 +1,8 @@
+; ========================================
+; Procedures - Time Warp Logo
+; Demonstrates: TO/END, REPEAT, PENUP/DOWN
+; ========================================
+
 TO SQUARE :SIZE
   REPEAT 4 [
     FORWARD :SIZE
@@ -5,6 +10,7 @@ TO SQUARE :SIZE
   ]
 END
 
+; Draw two squares at different positions
 SQUARE 50
 PENUP
 FORWARD 100

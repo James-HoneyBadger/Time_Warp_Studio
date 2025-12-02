@@ -1,29 +1,14 @@
 #!/usr/bin/env python3
-"""Test BASIC variable handling.
-
-This file exercises BASIC variable/INPUT/PRINT behaviour in the interpreter and
-is run from the repository root during tests. We add the in-tree package path
-so the `time_warp` package is importable when pytest collects tests.
-"""
+"""BASIC variable and INPUT statement tests."""
 
 import sys
 from pathlib import Path
 
-# Add in-tree packages path and allow protected access for tests that exercise
-# private interpreter helpers.
-# pylint: disable=protected-access
-# Tests live under Platforms/Python/tests so parents[1] is the package root.
+# pylint: disable=protected-access,wrong-import-position,import-error,no-name-in-module
 p = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(p))  # pylint: disable=wrong-import-position
+sys.path.insert(0, str(p))
 
-# Importing in-tree package happens after the sys.path adjustment above.
-# This placement is intentional for tests run from the repo root.
-# pylint: disable=wrong-import-position
-# Silence static import resolution failures from linters for in-tree imports.
-# pylint: disable=import-error
-from time_warp.core.interpreter import (  # noqa: E402
-    Interpreter,
-)
+from time_warp.core.interpreter import Interpreter  # noqa: E402
 
 # Load program used by the demo/test
 PROGRAM = """10 REM Input Demonstration

@@ -1,9 +1,8 @@
-"""Pytest conftest to ensure `time_warp` package is importable.
+"""
+Pytest configuration for Time Warp IDE test suite.
 
-This adjusts sys.path at test time so that the `Platforms/Python` directory
-is included. Some static analyzers and test runners don't include the
-project path by default which causes `Unable to import 'time_warp.*'`
-errors during linting/testing.
+Ensures the time_warp package is importable by adding the Platforms/Python
+directory to sys.path before test collection.
 """
 
 import os
@@ -11,11 +10,8 @@ import sys
 
 
 def pytest_configure():
-    """Add the `Platforms/Python` path to sys.path for tests."""
+    """Add project paths for import resolution."""
     tests_dir = os.path.dirname(__file__)
-    # Add the repo root (two levels up) so imports like
-    # `Platforms.Python.time_warp` are importable for tests that use the
-    # repository's multi-directory layout.
     repo_root = os.path.abspath(os.path.join(tests_dir, "..", "..", ".."))
     platforms_python = os.path.abspath(os.path.join(tests_dir, ".."))
     if repo_root not in sys.path:

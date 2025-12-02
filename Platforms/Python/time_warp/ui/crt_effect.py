@@ -10,6 +10,8 @@ This module provides visual effects that simulate vintage CRT monitors:
 
 # pylint: disable=no-name-in-module
 
+import random
+
 from PySide6.QtCore import QRectF, Qt, QTimer
 from PySide6.QtGui import (
     QBrush,
@@ -123,13 +125,11 @@ class CRTEffectOverlay(QWidget):
 
     def _update_flicker(self):
         """Update flicker brightness."""
-        import random
-
         # Subtle brightness variation
         self.flicker_brightness = 0.95 + random.random() * 0.1
         self.update()
 
-    def paintEvent(self, _event):
+    def paintEvent(self, _event):  # pylint: disable=invalid-name
         """Paint CRT effects."""
         if not self._enabled:
             return
@@ -273,7 +273,7 @@ class CRTEffectOverlay(QWidget):
         )
         painter.drawPath(path)
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event):  # pylint: disable=invalid-name
         """Handle resize to match parent."""
         super().resizeEvent(event)
         if self.parent():
@@ -297,7 +297,7 @@ class CRTCanvas(QWidget):
         """Enable or disable CRT effects."""
         self.crt_overlay.set_enabled(enabled)
 
-    def resizeEvent(self, event):
+    def resizeEvent(self, event):  # pylint: disable=invalid-name
         """Ensure overlay covers full widget."""
         super().resizeEvent(event)
         self.crt_overlay.setGeometry(self.rect())

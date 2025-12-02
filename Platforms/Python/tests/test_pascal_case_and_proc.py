@@ -1,20 +1,11 @@
-"""Pascal tests for case statements and nested procedures.
-
-These tests run in-tree and need the Platforms/Python package on sys.path
-so they intentionally add the in-repo package path at runtime.
-"""
+"""Pascal CASE statements and nested procedures tests."""
 
 import os
 import sys
 
-# Add platform path so tests import the in-tree package correctly.
+# pylint: disable=wrong-import-position,import-error,no-name-in-module
 sys.path.append(os.path.join(os.getcwd(), "platforms/python"))
 
-# Imports below must remain after sys.path modification so the in-repo
-# package is importable during test collection.
-# pylint: disable=wrong-import-position
-# These imports require the in-repo package; silence import-error warnings.
-# pylint: disable=import-error
 from time_warp.core.interpreter import Interpreter, Language  # noqa: E402
 from time_warp.graphics.turtle_state import TurtleState  # noqa: E402
 

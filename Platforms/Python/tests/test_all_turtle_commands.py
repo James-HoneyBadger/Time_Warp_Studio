@@ -1,30 +1,17 @@
 #!/usr/bin/env python3
-"""Comprehensive test of all turtle graphics commands.
+"""Comprehensive turtle graphics command verification script.
 
-This is a verification script, not a pytest-style test module. Skip collection.
+Manual test runner for all Logo turtle commands. Skipped by pytest.
 """
 
 import pytest
 
-# This verification script is intended to be run as a standalone tool
-# (it is skipped by pytest collection). It intentionally imports the
-# package in-tree which can trigger editor warnings about import
-# position or unresolved imports in some environments/configs.
-#
-# Keep imports at module level for readability, but suppress a few
-# linter warnings here so IDEs/linters don't raise noise for this
-# intentionally special-purpose file.
+# pylint: disable=import-error,no-name-in-module,broad-exception-caught
 from time_warp.core.interpreter import Interpreter, Language
 from time_warp.graphics.turtle_state import TurtleState
 
-# The verification script imports the in-tree package directly; in some
-# editor/CI setups this can trigger spurious import errors or warnings.
-# Disable these checks locally for this file.
-# pylint: disable=import-error,broad-exception-caught
-
-
 pytestmark = pytest.mark.skip(
-    reason=("Verification script (invoked as __main__), not a pytest " "test module")
+    reason="Manual verification script, not a pytest test module"
 )
 
 

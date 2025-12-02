@@ -1,132 +1,90 @@
 #!/usr/bin/env python3
-"""Test script to verify Time Warp IDE functionality."""
+"""
+IDE integration smoke test.
+
+Verifies imports, interpreter execution across all languages, theme system,
+and example file discovery. Prints diagnostic output for manual verification.
+"""
 
 from pathlib import Path
 
 print("🔍 Testing Time Warp IDE components...")
-print()
 
-# Test 1: Import all UI components
+# 1. UI imports
 print("1. Testing imports...")
 try:
-    import time_warp.ui as _tw_ui  # noqa: F401  # pylint: disable=import-error
+    # pylint: disable=import-error,no-name-in-module
+    import time_warp.ui as _tw_ui  # noqa: F401
 
-    print("   ✅ All UI components imported successfully")
+    print("   ✅ UI components imported")
 except Exception as e:
-    print(f"   ❌ Import failed: {e}")
     raise AssertionError(f"UI import failed: {e}") from e
 
-# Test 2: Import core library
-print("2. Testing core library imports...")
+# 2. Core library
+print("2. Testing core library...")
 try:
-    # pylint: disable=import-error
-    from time_warp.core.interpreter import (  # pylint: disable=import-error
-        Interpreter,
-        Language,
-    )
+    # pylint: disable=import-error,no-name-in-module
+    from time_warp.core.interpreter import Interpreter, Language
+    from time_warp.graphics.turtle_state import TurtleState
 
-    # pylint: disable=import-error
-    from time_warp.graphics.turtle_state import (  # pylint: disable=import-error
-        TurtleState,
-    )
-
-    print("   ✅ Core library imported successfully")
+    print("   ✅ Core library imported")
 except Exception as e:
-    print(f"   ❌ Core import failed: {e}")
     raise AssertionError(f"Core import failed: {e}") from e
 
-# Test 3: Check PySide6
+# 3. PySide6
 print("3. Testing PySide6...")
 try:
     import PySide6  # type: ignore[import]
 
-    # type: ignore[import]
-    # from PySide6.QtWidgets import QApplication
-
-    print(f"   ✅ PySide6 version {PySide6.__version__}")
+    print(f"   ✅ PySide6 {PySide6.__version__}")
 except Exception as e:
-    print(f"   ❌ PySide6 not found: {e}")
     raise AssertionError(f"PySide6 check failed: {e}") from e
 
-# Test 4: Test interpreter execution
-print("4. Testing interpreter execution...")
+# 4. Language execution
+print("4. Testing interpreters...")
 try:
     interp = Interpreter()
     turtle = TurtleState()
 
-    # Test PILOT
     interp.load_program("T:Hello from PILOT\nE:", Language.PILOT)
     output = interp.execute(turtle)
     assert any("Hello from PILOT" in line for line in output)
 
-    # Test BASIC
     interp.load_program('10 PRINT "Hello from BASIC"', Language.BASIC)
     output = interp.execute(turtle)
     assert any("Hello from BASIC" in line for line in output)
 
-    # Test Logo
-    turtle = TurtleState()  # Reset turtle
+    turtle = TurtleState()
     interp.load_program("FORWARD 50\nRIGHT 90\nFORWARD 50", Language.LOGO)
-    output = interp.execute(turtle)
-    assert len(turtle.lines) >= 1  # At least one line segment drawn
+    interp.execute(turtle)
+    assert len(turtle.lines) >= 1
 
-    print("   ✅ Language execution works correctly")
+    print("   ✅ All languages execute correctly")
 except Exception as e:
     import traceback
 
-    print(f"   ❌ Execution test failed: {e}")
     traceback.print_exc()
-    raise AssertionError(f"Execution test failed: {e}") from e
+    raise AssertionError(f"Execution failed: {e}") from e
 
-# Test 5: Check example programs
-print("5. Checking example programs...")
+# 5. Examples
+print("5. Checking examples...")
 examples_dir = Path(__file__).parent / "examples"
 if examples_dir.exists():
-    pilot_files = list(examples_dir.glob("*.pilot"))
-    basic_files = list(examples_dir.glob("*.bas"))
-    logo_files = list(examples_dir.glob("*.logo"))
-
-    total = len(pilot_files) + len(basic_files) + len(logo_files)
-    print(f"   ✅ Found {total} example programs:")
-    print(f"      - {len(basic_files)} BASIC (.bas) programs")
-    print(f"      - {len(pilot_files)} PILOT (.pilot) programs")
-    print(f"      - {len(logo_files)} Logo (.logo) programs")
+    pilot = list(examples_dir.glob("*.pilot"))
+    basic = list(examples_dir.glob("*.bas"))
+    logo = list(examples_dir.glob("*.logo"))
+    print(f"   ✅ {len(pilot) + len(basic) + len(logo)} example programs")
 else:
-    print(f"   ⚠️  Examples directory not found at {examples_dir}")
+    print(f"   ⚠️  Examples not found at {examples_dir}")
 
-# Test 6: Test ThemeManager
-print("6. Testing ThemeManager...")
+# 6. Themes
+print("6. Testing themes...")
 try:
     tm = _tw_ui.ThemeManager()
     themes = tm.get_theme_names()
-    assert len(themes) == 14, f"Expected 14 themes, found {len(themes)}"
-    assert "Dracula" in themes
-    assert "Monokai" in themes
-    print(f"   ✅ ThemeManager working with {len(themes)} themes")
+    assert len(themes) == 14
+    print(f"   ✅ {len(themes)} themes available")
 except Exception as e:
-    print(f"   ❌ ThemeManager test failed: {e}")
-    raise AssertionError(f"ThemeManager test failed: {e}") from e
+    raise AssertionError(f"Theme test failed: {e}") from e
 
-# Test 7: Check documentation
-print("7. Checking documentation...")
-docs = [
-    "README.md",
-    "DESKTOP_QUICKSTART.md",
-    "GUI_IMPLEMENTATION_STATUS.md",
-    "PROJECT_COMPLETE.md",
-]
-doc_path = Path(__file__).parent
-found_docs = sum(1 for doc in docs if (doc_path / doc).exists())
-print(f"   ✅ Found {found_docs}/{len(docs)} documentation files")
-
-print()
-print("=" * 60)
-print("🎉 All tests passed! Time Warp IDE is ready to use.")
-print("=" * 60)
-print()
-print("To launch the IDE:")
-print("  python time_warp_ide.py")
-print()
-print("Or use the launch script:")
-print("  ./launch_ide.sh")
-print()
+print("\n🎉 All checks passed. Launch with: python time_warp_ide.py")

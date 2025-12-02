@@ -352,6 +352,7 @@ class ExpressionEvaluator:
 
                 # Handle TIMER - seconds since midnight
                 if var_name == "TIMER":
+                    # pylint: disable=import-outside-toplevel
                     from ..core.game_support import get_game_state
 
                     stack.append(get_game_state().get_timer_value())

@@ -224,6 +224,7 @@ class SoundPlayer:
         except (OSError, IOError):
             pass
 
+    # pylint: disable=unused-argument
     def play_tone(self, frequency: int, duration_ms: int):
         """
         Play a tone at specified frequency for duration.
@@ -281,7 +282,7 @@ _game_state: Optional[GameState] = None
 
 def get_game_state() -> GameState:
     """Get or create the global game state instance."""
-    global _game_state
+    global _game_state  # pylint: disable=global-statement
     if _game_state is None:
         _game_state = GameState()
     return _game_state

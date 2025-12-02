@@ -450,7 +450,7 @@ class ImmediateModePanel(QWidget):
         # Install event filter for command history navigation
         self.command_input.installEventFilter(self)
 
-    def eventFilter(self, obj, event):
+    def eventFilter(self, obj, event):  # pylint: disable=invalid-name
         """Handle key events for command history."""
         if obj == self.command_input and event.type() == event.Type.KeyPress:
             if event.key() == Qt.Key_Up:

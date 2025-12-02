@@ -74,7 +74,7 @@ class CassetteWidget(QWidget):
 
         self.update()
 
-    def paintEvent(self, _event):
+    def paintEvent(self, _event):  # pylint: disable=invalid-name
         """Paint the cassette tape."""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
@@ -416,9 +416,9 @@ class CassetteDialog(QDialog):
     def _update_progress_display(self):
         """Update the ASCII progress bar."""
         filled = int(self.progress * 10)
-        bar = "█" * filled + "░" * (10 - filled)
+        progress_bar = "█" * filled + "░" * (10 - filled)
         percent = int(self.progress * 100)
-        self.progress_label.setText(f"[{bar}] {percent}%")
+        self.progress_label.setText(f"[{progress_bar}] {percent}%")
 
     def _complete(self):
         """Handle operation complete."""

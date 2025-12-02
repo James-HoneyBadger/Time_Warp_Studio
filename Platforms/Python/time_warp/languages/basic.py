@@ -1,3 +1,4 @@
+# pylint: disable=too-many-lines
 """
 BASIC language executor for Time Warp IDE.
 Handles BASIC-specific commands and syntax.
@@ -279,16 +280,19 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
             out_items.append(interpreter.get_inkey())
         # Handle TIME$ - current time as HH:MM:SS
         elif item_upper == "TIME$":
+            # pylint: disable=import-outside-toplevel
             from ..core.game_support import get_game_state
 
             out_items.append(get_game_state().get_time_string())
         # Handle DATE$ - current date as MM-DD-YYYY
         elif item_upper == "DATE$":
+            # pylint: disable=import-outside-toplevel
             from ..core.game_support import get_game_state
 
             out_items.append(get_game_state().get_date_string())
         # Handle TIMER - seconds since midnight
         elif item_upper == "TIMER":
+            # pylint: disable=import-outside-toplevel
             from ..core.game_support import get_game_state
 
             out_items.append(str(int(get_game_state().get_timer_value())))
@@ -344,10 +348,12 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
         elif expr_upper == "INKEY$":
             interpreter.set_typed_variable(var_name, interpreter.get_inkey())
         elif expr_upper == "TIME$":
+            # pylint: disable=import-outside-toplevel
             from ..core.game_support import get_game_state
 
             interpreter.set_typed_variable(var_name, get_game_state().get_time_string())
         elif expr_upper == "DATE$":
+            # pylint: disable=import-outside-toplevel
             from ..core.game_support import get_game_state
 
             interpreter.set_typed_variable(var_name, get_game_state().get_date_string())
@@ -356,6 +362,7 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
         return ""
     # Handle TIMER special variable
     if expr_upper == "TIMER":
+        # pylint: disable=import-outside-toplevel
         from ..core.game_support import get_game_state
 
         interpreter.set_typed_variable(var_name, get_game_state().get_timer_value())

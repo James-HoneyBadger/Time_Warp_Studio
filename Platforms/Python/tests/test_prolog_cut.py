@@ -1,19 +1,13 @@
-"""Tests around the Prolog CUT (!) operator semantics.
-
-These tests are placed inside the repository's test harness and need the
-local package path added so the test runner can import the package.
-"""
+"""Prolog CUT (!) operator semantics tests."""
 
 import os
 import sys
 
 import pytest
 
-# Make local package importable (tests live in Platforms/Python)
+# pylint: disable=wrong-import-position,import-error,no-name-in-module
 sys.path.append(os.path.join(os.getcwd(), "Platforms", "Python"))
 
-# Local package imports are intentionally placed after the path tweak above
-# pylint: disable=wrong-import-position,import-error
 from time_warp.core.interpreter import Interpreter, Language  # noqa: E402
 from time_warp.graphics.turtle_state import TurtleState  # noqa: E402
 
