@@ -7,16 +7,23 @@ function headers, return statements) are tolerated and that printf works.
 
 import sys
 from pathlib import Path
+import importlib
 
-# Load in-tree package
-p = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(p))
+# Load in-tree package: ensure Python implementation package is importable
+ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
 
-from time_warp.core.interpreter import Interpreter, Language  # noqa: E402
-from time_warp.graphics.turtle_state import TurtleState  # noqa: E402
+# Dynamic imports to avoid static resolver issues in linters
+core_mod = importlib.import_module("time_warp.core.interpreter")
+graphics_mod = importlib.import_module("time_warp.graphics.turtle_state")
+
+Interpreter = getattr(core_mod, "Interpreter")
+Language = getattr(core_mod, "Language")
+TurtleState = getattr(graphics_mod, "TurtleState")
 
 
 def test_c_executor_ignores_includes_and_comments():
+    """C-like inputs are tolerated; printf output appears without errors."""
     code = """
 /* Hello World - Your First C Program */
 #include <stdio.h>

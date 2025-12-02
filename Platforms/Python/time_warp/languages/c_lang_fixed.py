@@ -250,6 +250,20 @@ def _ensure_c_stack(interpreter: "Interpreter"):
         interpreter.c_block_stack = []
 
 
+def _get_block_comment_flag(interpreter: "Interpreter") -> bool:
+    """Safely read the C block-comment flag from interpreter state."""
+    return getattr(interpreter, "_in_c_block_comment", False)
+
+
+def _set_block_comment_flag(interpreter: "Interpreter", value: bool) -> None:
+    """Safely set the C block-comment flag on interpreter state."""
+    try:
+        setattr(interpreter, "_in_c_block_comment", value)
+    except AttributeError:
+        # If interpreter forbids setting arbitrary attributes, ignore gracefully
+        pass
+
+
 def _find_block_end(interpreter: "Interpreter", header_idx: int) -> int:
     lines = interpreter.program_lines
     depth = 0
@@ -316,7 +330,7 @@ def _assign_variable(interpreter: "Interpreter", name: str, expr: str):
         idx_expr = name[name.find("[") + 1 : name.rfind("]")]
         try:
             idx_val = int(interpreter.evaluate_expression(idx_expr))
-        except Exception:
+        except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
             idx_val = 0
         arr_idx = int(idx_val)
         arr_name = base.strip()
@@ -438,21 +452,21 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
     _ensure_c_stack(interpreter)
     # Track multiline block-comment state on the interpreter instance
     if not hasattr(interpreter, "_in_c_block_comment"):
-        interpreter._in_c_block_comment = False
+        _set_block_comment_flag(interpreter, False)
 
     cmd = command.strip()
 
     # If we are currently inside a /* ... */ comment block ignore until we see */
-    if interpreter._in_c_block_comment:
+    if _get_block_comment_flag(interpreter):
         if "*/" in cmd:
             # End block comment; ignore everything through this marker
-            interpreter._in_c_block_comment = False
+            _set_block_comment_flag(interpreter, False)
         return ""
 
     # Handle start (or full single-line) block comment
     if cmd.startswith("/*"):
         if "*/" not in cmd:
-            interpreter._in_c_block_comment = True
+            _set_block_comment_flag(interpreter, True)
         return ""
 
     # Ignore preprocessor directives (e.g. #include, #define)
@@ -463,7 +477,8 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
     if re.match(
         r"^\s*(?:int|void|char|float|double)\s+[A-Za-z_]\w*\s*\([^)]*\)\s*\{?$", cmd
     ):
-        # If there's an opening brace here, let the brace handling code deal with block depth
+        # If there's an opening brace here, let the brace handling code
+        # deal with block depth
         return ""
     if not cmd:
         return ""
@@ -616,7 +631,7 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
                         # ensure printed values flow into interpreter output
                         try:
                             interpreter.log_output(res)
-                        except Exception:
+                        except (AttributeError, TypeError):  # noqa: B902
                             pass
 
                 # post expression side-effects
@@ -687,21 +702,23 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
     # Handle 'return' statements gracefully: end execution if inside main
     if cmd.lower().startswith("return"):
         # try to parse return expression and ignore — treat it as program termination
-        try:
-            inner = cmd[len("return") :].strip().rstrip(";")
-            if inner:
-                # Evaluate expression (if numeric) and set variable _RETURN if needed
-                try:
-                    val = interpreter.evaluate_expression(inner)
-                    interpreter.set_typed_variable("_RETURN#", val)
-                except Exception:
-                    pass
-        except Exception:
-            pass
+        inner = cmd[len("return") :].strip().rstrip(";")
+        if inner:
+            # Evaluate expression (if numeric) and set variable _RETURN if needed
+            try:
+                val = interpreter.evaluate_expression(inner)
+                interpreter.set_typed_variable("_RETURN#", val)
+            except (
+                ValueError,
+                TypeError,
+                ZeroDivisionError,
+                AttributeError,
+            ):  # noqa: BLE001
+                pass
         # stop the interpreter as 'return' indicates program exit
         try:
             interpreter.running = False
-        except Exception:
+        except AttributeError:
             pass
         return ""
 

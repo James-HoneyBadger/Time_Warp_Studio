@@ -6,12 +6,22 @@ Usage:
 """
 import sys
 from pathlib import Path
+import importlib
 
-from time_warp.core.interpreter import Interpreter
-from time_warp.graphics.turtle_state import TurtleState
+# Ensure Python implementation package is importable when run from scripts/
+ROOT = Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT / "Platforms" / "Python"))
+
+# Dynamic import to avoid static resolver issues
+core_mod = importlib.import_module("time_warp.core.interpreter")
+graphics_mod = importlib.import_module("time_warp.graphics.turtle_state")
+
+Interpreter = getattr(core_mod, "Interpreter")
+TurtleState = getattr(graphics_mod, "TurtleState")
 
 
 def main():
+    """Run a single program file headlessly and print outputs."""
     if len(sys.argv) < 2:
         print("Usage: run_interpreter_example.py <program-file>")
         sys.exit(2)
@@ -44,9 +54,11 @@ def main():
     print(f"Position: ({turtle.x:.2f}, {turtle.y:.2f}), heading={turtle.heading:.2f}")
     print(f"Lines drawn: {len(turtle.lines)}")
     for i, l in enumerate(turtle.lines[:10]):
-        print(
-            f"  {i}: ({l.start_x:.1f},{l.start_y:.1f}) -> ({l.end_x:.1f},{l.end_y:.1f}), color={l.color}, width={l.width}"
+        msg = (
+            f"  {i}: ({l.start_x:.1f},{l.start_y:.1f}) -> "
+            f"({l.end_x:.1f},{l.end_y:.1f}), color={l.color}, width={l.width}"
         )
+        print(msg)
 
 
 if __name__ == "__main__":

@@ -14,6 +14,8 @@ relative path and a .in extension, e.g. Examples/basic/showcase.in
 """
 
 import sys
+import subprocess
+import importlib
 from pathlib import Path
 from typing import List
 
@@ -21,13 +23,31 @@ ROOT = Path(__file__).resolve().parents[3]
 EXAMPLES = ROOT / "Examples"
 SCRIPTS = Path(__file__).resolve().parent
 
+"""CI example runner module.
+
+This module adjusts `sys.path` to import the in-tree Python package and
+executes examples headlessly. Lint suppressions are used for dynamic imports.
+"""
+
+# Ensure Python implementation package is importable
 sys.path.insert(0, str(ROOT / "Platforms" / "Python"))
 
-from time_warp.core.interpreter import Interpreter, Language  # noqa: E402
-from time_warp.graphics.turtle_state import TurtleState  # noqa: E402
+
+# Import modules dynamically to avoid static resolver issues
+core_mod = importlib.import_module("time_warp.core.interpreter")
+graphics_mod = importlib.import_module("time_warp.graphics.turtle_state")
+
+Interpreter = getattr(core_mod, "Interpreter")
+Language = getattr(core_mod, "Language")
+TurtleState = getattr(graphics_mod, "TurtleState")
 
 
 def load_fixture_for(example_path: Path) -> List[str]:
+    """Load fixture lines for a given example path.
+
+    Returns a list of input lines (without trailing newlines) if a matching
+    `.in` file is found under `Examples/fixtures/`, else an empty list.
+    """
     rel = example_path.relative_to(EXAMPLES)
     fixture = ROOT / "Examples" / "fixtures" / rel.with_suffix(".in")
     if fixture.exists():
@@ -38,6 +58,11 @@ def load_fixture_for(example_path: Path) -> List[str]:
 
 
 def run_example(path: Path, inputs: List[str]):
+    """Run a single example file with optional fixture inputs.
+
+    Compiles C sources when detected; otherwise uses the Python interpreter.
+    Prints program output lines and returns the collected outputs.
+    """
     print(f"\n--- Running: {path} ---")
     # For some languages we prefer to compile and run native executables
     # (C examples are intended as compile-and-run programs rather than
@@ -45,8 +70,6 @@ def run_example(path: Path, inputs: List[str]):
     if path.suffix.lower() == ".c":
         exe = Path("/tmp") / (path.stem + "-ci-bin")
         try:
-            import subprocess
-
             subprocess.run(
                 ["gcc", str(path), "-o", str(exe)], check=True, capture_output=True
             )
@@ -61,7 +84,10 @@ def run_example(path: Path, inputs: List[str]):
             if run.stderr:
                 print(run.stderr)
             return
-        except Exception as exc:  # fallback to interpreter
+        except (
+            subprocess.CalledProcessError,
+            FileNotFoundError,
+        ) as exc:  # fallback to interpreter
             print(f"Compiler/run failed — falling back to interpreter: {exc}")
     else:
         code = path.read_text(encoding="utf-8")
@@ -75,7 +101,7 @@ def run_example(path: Path, inputs: List[str]):
     input_iter = iter(inputs)
 
     all_output = []
-    # For compiled C path we early-return above; this block runs for interpreted languages
+    # For compiled C path we early-return above; interpreted languages continue
     while True:
         outputs = interp.execute(turtle)
         for o in outputs:
@@ -91,8 +117,8 @@ def run_example(path: Path, inputs: List[str]):
                 continue
             except StopIteration:
                 print(
-                    "No more fixture input available — providing empty string to"
-                    " continue."
+                    "No more fixture input available — providing empty string to "
+                    "continue."
                 )
                 interp.provide_input("")
                 continue
@@ -105,6 +131,7 @@ def run_example(path: Path, inputs: List[str]):
 
 
 def main(argv: List[str]):
+    """Entry point: run provided files or a default CI set."""
     if len(argv) > 1:
         files = [Path(p) for p in argv[1:]]
         # normalize to the repo Examples/ area when a relative path is given
@@ -131,7 +158,7 @@ def main(argv: List[str]):
         except KeyboardInterrupt:
             print("Execution interrupted by user")
             raise
-        except Exception as exc:
+        except RuntimeError as exc:
             print(f"Error running {f}: {exc}")
 
 
