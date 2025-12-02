@@ -2,15 +2,25 @@
 ; NSIS 2.x Compatible (Windows 2000+)
 
 !define APP_NAME "Time Warp IDE"
-!define APP_VERSION "3.0.0"
+
+; Allow callers to override VERSION via: makensis -DVERSION=1.2.3
+!ifndef VERSION
+  !define VERSION "3.0.0"
+!endif
 !define APP_PUBLISHER "Time Warp IDE Project"
 !define APP_URL "https://github.com/your-repo/time-warp-ide"
 !define APP_EXE "TimeWarpIDE.exe"
 
-Name "${APP_NAME} ${APP_VERSION}"
-OutFile "TimeWarpIDE-Setup-${APP_VERSION}.exe"
+Name "${APP_NAME} ${VERSION}"
+!ifdef OUTDIR
+  ; Use forward slash when OUTDIR provided (works on Unix CI runners and Windows)
+  OutFile "${OUTDIR}/TimeWarpIDE-Setup-${VERSION}.exe"
+!else
+  OutFile "TimeWarpIDE-Setup-${VERSION}.exe"
+!endif
 InstallDir "$PROGRAMFILES\TimeWarp"
-RequestExecutionLevel admin
+; Windows 2000 doesn't support UAC. RequestExecutionLevel 'user' keeps installer compatible
+RequestExecutionLevel user
 
 Page directory
 Page instfiles
@@ -40,7 +50,7 @@ Section "Time Warp IDE"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "UninstallString" "$INSTDIR\Uninstall.exe"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayIcon" "$INSTDIR\${APP_EXE}"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "Publisher" "${APP_PUBLISHER}"
-  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayVersion" "${APP_VERSION}"
+  WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "DisplayVersion" "${VERSION}"
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "NoModify" 1
   WriteRegDWORD HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_NAME}" "NoRepair" 1
   

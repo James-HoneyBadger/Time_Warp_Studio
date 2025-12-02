@@ -29,4 +29,17 @@ void Canvas_SetTurtleAngle(HWND hwnd, int angle);
 void Canvas_GetTurtlePos(HWND hwnd, int *x, int *y);
 int Canvas_GetTurtleAngle(HWND hwnd);
 
+/* Compatibility wrappers expected by interpreters */
+void Canvas_Forward(HWND hwnd, double distance);
+void Canvas_Back(HWND hwnd, double distance);
+void Canvas_Left(HWND hwnd, double angle);
+void Canvas_Right(HWND hwnd, double angle);
+void Canvas_PenUp(HWND hwnd);
+void Canvas_PenDown(HWND hwnd);
+void Canvas_Home(HWND hwnd);
+void Canvas_SetXY(HWND hwnd, double x, double y);
+void Canvas_Circle(HWND hwnd, int radius);
+void Canvas_SetBgColor(HWND hwnd, COLORREF color);
+void Canvas_DrawTurtle(HWND hwnd, int x, int y, int heading, BOOL penDown);
+
 #endif /* CANVAS_H */

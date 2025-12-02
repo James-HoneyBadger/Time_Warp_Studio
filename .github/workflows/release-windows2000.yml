@@ -1,0 +1,52 @@
+name: Release Windows 2000 Installer
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  package-windows2000:
+    name: Build and attach Windows installer to Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends gcc-mingw-w64-i686 mingw-w64-tools nsis zip
+
+      - name: Build Windows2000 target
+        working-directory: Platforms/Windows2000
+        run: |
+          make clean || true
+          make -j$(nproc)
+
+      - name: Prepare packaging
+        run: |
+          mkdir -p Platforms/Windows2000/dist
+          cp Platforms/Windows2000/TimeWarpIDE.exe Platforms/Windows2000/dist/ || true
+          cp README.md Platforms/Windows2000/dist/ || true
+          cp LICENSE Platforms/Windows2000/dist/ || true
+
+      - name: Build NSIS installer
+        run: |
+          nsis_script=Platforms/Windows2000/installer/timewarp.nsi
+          if [ ! -f "$nsis_script" ]; then echo "Missing NSIS script" && exit 1; fi
+          makensis -DOUTDIR=Platforms/Windows2000/dist -DVERSION=${{ github.event.release.tag_name }} "$nsis_script"
+
+      - name: Create Release (attach installer)
+        id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ github.event.release.tag_name }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload installer to release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: Platforms/Windows2000/dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

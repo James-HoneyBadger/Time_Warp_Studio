@@ -1,0 +1,115 @@
+name: Build Windows 2000
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch: {}
+
+jobs:
+  cross-compile:
+    name: Cross-compile and package Windows 2000 installer (Ubuntu)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y --no-install-recommends build-essential gcc-mingw-w64-i686 mingw-w64-tools nsis zip
+
+      - name: Verify toolchain
+        run: |
+          i686-w64-mingw32-gcc --version || true
+          windres --version || true
+          makensis -version || true
+
+      - name: Build Windows2000 target (make)
+        working-directory: Platforms/Windows2000
+        run: |
+          make clean || true
+          make -j$(nproc)
+
+      - name: Prepare packaging directory
+        run: |
+          mkdir -p Platforms/Windows2000/dist
+          cp Platforms/Windows2000/TimeWarpIDE.exe Platforms/Windows2000/dist/ || true
+          cp README.md Platforms/Windows2000/dist/ || true
+          cp LICENSE Platforms/Windows2000/dist/ || true
+
+      - name: Build NSIS installer
+        run: |
+          nsis_script=Platforms/Windows2000/installer/timewarp.nsi
+          if [ ! -f "$nsis_script" ]; then
+            echo "NSIS installer script missing at $nsis_script" && exit 1
+          fi
+          makensis -V2 -DOUTDIR=Platforms/Windows2000/dist -DVERSION=1.0 "$nsis_script"
+
+      - name: Create zip of dist
+        run: |
+          cd Platforms/Windows2000/dist
+          zip -r ../../Windows2000-timewarp-dist.zip .
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: timewarp-windows2000-artifacts
+          path: |
+            Platforms/Windows2000/dist
+            Platforms/Windows2000/Windows2000-timewarp-dist.zip
+
+      - name: Create release note (dry)
+        run: |
+          echo "Windows 2000 artifacts produced: Platforms/Windows2000/dist"
+
+  windows-build:
+    name: Native Windows build + installer smoke tests
+    runs-on: windows-latest
+    needs: cross-compile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install MSYS2 (mingw32) and NSIS
+        shell: pwsh
+        run: |
+          choco install msys2 -y
+          refreshenv
+          # install mingw32 toolchain and make
+          & 'C:\tools\msys2\usr\bin\bash.exe' -lc "pacman -Sy --noconfirm mingw-w64-i686-toolchain mingw-w64-i686-make"
+          choco install nsis -y
+
+      - name: Build with MSYS2 make
+        shell: pwsh
+        run: |
+          & 'C:\tools\msys2\usr\bin\bash.exe' -lc "cd /c/Users/runner/work/Time_Warp_Studio/Time_Warp_Studio/Platforms/Windows2000 && make -j 2"
+
+      - name: Prepare artifacts (copy exe)
+        shell: pwsh
+        run: |
+          if (!(Test-Path 'Platforms\Windows2000\dist')) { New-Item -ItemType Directory -Path 'Platforms\Windows2000\dist' | Out-Null }
+          if (Test-Path 'Platforms\Windows2000\TimeWarpIDE.exe') { Copy-Item Platforms\Windows2000\TimeWarpIDE.exe Platforms\Windows2000\dist\ -Force }
+
+      - name: Build NSIS installer (Windows)
+        shell: pwsh
+        run: |
+          $nsis = 'makensis'
+          $script = 'Platforms\Windows2000\installer\timewarp.nsi'
+          if (!(Test-Path $script)) { Write-Error "NSIS script missing: $script"; exit 1 }
+          if (!(Test-Path 'Platforms\Windows2000\dist')) { New-Item -ItemType Directory -Path 'Platforms\Windows2000\dist' | Out-Null }
+          & $nsis -V2 -DOUTDIR=Platforms/Windows2000/dist -DVERSION=1.0 $script
+
+      - name: Run installer tests (silent install/uninstall)
+        shell: pwsh
+        run: |
+          $script = 'Platforms\\Windows2000\\tests\\installer_test.ps1'
+          if (Test-Path $script) { Write-Host "Running installer test: $script"; & $script } else { Write-Error "Installer test script not found: $script"; exit 1 }
+
+      - name: Upload Windows artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: timewarp-windows2000-windows-artifacts
+          path: |
+            Platforms/Windows2000/dist

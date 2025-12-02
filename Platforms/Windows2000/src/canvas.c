@@ -255,3 +255,143 @@ int Canvas_GetTurtleAngle(HWND hwnd) {
     CanvasData *data = (CanvasData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
     return data ? data->turtleAngle : 0;
 }
+
+/* ==========================================================================
+ * Compatibility wrappers (used by interpreters)
+ * These are thin helpers that operate on the internal CanvasData.
+ * ======================================================================== */
+
+void Canvas_Forward(HWND hwnd, double distance) {
+    CanvasData *data = (CanvasData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    if (!data) return;
+    double rad = data->turtleAngle * M_PI / 180.0;
+    double newX = data->turtleX + cos(rad) * distance;
+    double newY = data->turtleY - sin(rad) * distance; /* screen Y downwards */
+
+    if (data->penDown && data->hdcMem) {
+        HPEN hPen = CreatePen(PS_SOLID, data->penWidth, data->penColor);
+        HPEN hOld = (HPEN)SelectObject(data->hdcMem, hPen);
+        MoveToEx(data->hdcMem, data->turtleX, data->turtleY, NULL);
+        LineTo(data->hdcMem, (int)newX, (int)newY);
+        SelectObject(data->hdcMem, hOld);
+        DeleteObject(hPen);
+        InvalidateRect(hwnd, NULL, FALSE);
+    }
+
+    data->turtleX = (int)newX;
+    data->turtleY = (int)newY;
+}
+
+void Canvas_Back(HWND hwnd, double distance) {
+    Canvas_Forward(hwnd, -distance);
+}
+
+void Canvas_Left(HWND hwnd, double angle) {
+    CanvasData *data = (CanvasData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    if (!data) return;
+    data->turtleAngle = (data->turtleAngle + (int)angle) % 360;
+    InvalidateRect(hwnd, NULL, FALSE);
+}
+
+void Canvas_Right(HWND hwnd, double angle) {
+    CanvasData *data = (CanvasData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    if (!data) return;
+    data->turtleAngle = (data->turtleAngle - (int)angle) % 360;
+    if (data->turtleAngle < 0) data->turtleAngle += 360;
+    InvalidateRect(hwnd, NULL, FALSE);
+}
+
+void Canvas_PenUp(HWND hwnd) {
+    CanvasData *data = (CanvasData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    if (data) data->penDown = FALSE;
+}
+
+void Canvas_PenDown(HWND hwnd) {
+    CanvasData *data = (CanvasData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    if (data) data->penDown = TRUE;
+}
+
+void Canvas_Home(HWND hwnd) {
+    CanvasData *data = (CanvasData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    if (!data) return;
+    int cx = data->width / 2;
+    int cy = data->height / 2;
+    if (data->penDown && data->hdcMem) {
+        HPEN hPen = CreatePen(PS_SOLID, data->penWidth, data->penColor);
+        HPEN hOld = (HPEN)SelectObject(data->hdcMem, hPen);
+        MoveToEx(data->hdcMem, data->turtleX, data->turtleY, NULL);
+        LineTo(data->hdcMem, cx, cy);
+        SelectObject(data->hdcMem, hOld);
+        DeleteObject(hPen);
+        InvalidateRect(hwnd, NULL, FALSE);
+    }
+    data->turtleX = cx;
+    data->turtleY = cy;
+    data->turtleAngle = 90; /* Logo-style default */
+}
+
+void Canvas_SetXY(HWND hwnd, double x, double y) {
+    CanvasData *data = (CanvasData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    if (!data) return;
+    int newX = (int)round(x);
+    int newY = (int)round(y);
+    if (data->penDown && data->hdcMem) {
+        HPEN hPen = CreatePen(PS_SOLID, data->penWidth, data->penColor);
+        HPEN hOld = (HPEN)SelectObject(data->hdcMem, hPen);
+        MoveToEx(data->hdcMem, data->turtleX, data->turtleY, NULL);
+        LineTo(data->hdcMem, newX, newY);
+        SelectObject(data->hdcMem, hOld);
+        DeleteObject(hPen);
+        InvalidateRect(hwnd, NULL, FALSE);
+    }
+    data->turtleX = newX;
+    data->turtleY = newY;
+}
+
+void Canvas_Circle(HWND hwnd, int radius) {
+    CanvasData *data = (CanvasData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    if (!data) return;
+    Canvas_DrawCircle(hwnd, data->turtleX, data->turtleY, radius);
+}
+
+void Canvas_SetBgColor(HWND hwnd, COLORREF color) {
+    CanvasData *data = (CanvasData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    if (!data || !data->hdcMem) return;
+    HBRUSH hBrush = CreateSolidBrush(color);
+    RECT rc = {0, 0, data->width, data->height};
+    FillRect(data->hdcMem, &rc, hBrush);
+    DeleteObject(hBrush);
+    InvalidateRect(hwnd, NULL, TRUE);
+}
+
+void Canvas_DrawTurtle(HWND hwnd, int x, int y, int heading, BOOL penDown) {
+    CanvasData *data = (CanvasData *)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    if (!data || !data->hdcMem) return;
+
+    /* simple triangle representing the turtle */
+    POINT pts[3];
+    double rad = heading * M_PI / 180.0;
+    /* nose */
+    pts[0].x = x + (int)(12 * cos(rad));
+    pts[0].y = y - (int)(12 * sin(rad));
+    /* left */
+    pts[1].x = x - (int)(8 * cos(rad + M_PI / 2));
+    pts[1].y = y + (int)(8 * sin(rad + M_PI / 2));
+    /* right */
+    pts[2].x = x - (int)(8 * cos(rad - M_PI / 2));
+    pts[2].y = y + (int)(8 * sin(rad - M_PI / 2));
+
+    HBRUSH hBrush = CreateSolidBrush(penDown ? RGB(231, 76, 60) : RGB(149, 165, 166));
+    HBRUSH hOldB = (HBRUSH)SelectObject(data->hdcMem, hBrush);
+    HPEN hPen = CreatePen(PS_SOLID, 2, RGB(44, 62, 80));
+    HPEN hOldP = (HPEN)SelectObject(data->hdcMem, hPen);
+
+    Polygon(data->hdcMem, pts, 3);
+
+    SelectObject(data->hdcMem, hOldP);
+    SelectObject(data->hdcMem, hOldB);
+    DeleteObject(hPen);
+    DeleteObject(hBrush);
+
+    InvalidateRect(hwnd, NULL, FALSE);
+}

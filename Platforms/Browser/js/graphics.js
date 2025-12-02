@@ -494,4 +494,27 @@ class TurtleGraphics {
         this.setupCanvas();
         this.draw();
     }
+
+    // Visibility control for the turtle
+    showTurtle() {
+        this._showTurtle = true;
+        this.draw();
+    }
+
+    hideTurtle() {
+        this._showTurtle = false;
+        this.draw();
+    }
 }
+
+// Simple factory for interpreter code to create a turtle bound to the #graphicsCanvas element
+// This mirrors the Python/desktop API where a turtle instance is provided by the environment.
+window.createTurtle = function (canvasId) {
+    const id = canvasId || 'graphicsCanvas';
+    const canvas = document.getElementById(id);
+    if (!canvas) {
+        console.warn('createTurtle: canvas not found', id);
+        return null;
+    }
+    return new TurtleGraphics(canvas);
+};
