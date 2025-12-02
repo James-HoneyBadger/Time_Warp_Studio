@@ -1,6 +1,6 @@
-"""
-Focus Mode - Minimal UI toggle for distraction-free coding.
-"""
+"""Focus Mode - Minimal UI toggle for distraction-free coding."""
+
+# pylint: disable=no-name-in-module
 
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -68,6 +68,7 @@ class FocusModeManager(QObject):
 
         # Hide toolbars
         if hasattr(self.main_window, "findChildren"):
+            # pylint: disable=import-outside-toplevel
             from PySide6.QtWidgets import QToolBar
 
             toolbars = self.main_window.findChildren(QToolBar)
@@ -78,6 +79,7 @@ class FocusModeManager(QObject):
 
         # Hide dock widgets (keep only editor and output)
         if hasattr(self.main_window, "findChildren"):
+            # pylint: disable=import-outside-toplevel
             from PySide6.QtWidgets import QDockWidget
 
             docks = self.main_window.findChildren(QDockWidget)
@@ -106,6 +108,7 @@ class FocusModeManager(QObject):
 
         # Restore toolbars
         if hasattr(self.main_window, "findChildren"):
+            # pylint: disable=import-outside-toplevel
             from PySide6.QtWidgets import QToolBar
 
             toolbars = self.main_window.findChildren(QToolBar)
@@ -116,6 +119,7 @@ class FocusModeManager(QObject):
 
         # Restore dock widgets
         if hasattr(self.main_window, "findChildren"):
+            # pylint: disable=import-outside-toplevel
             from PySide6.QtWidgets import QDockWidget
 
             docks = self.main_window.findChildren(QDockWidget)
@@ -149,7 +153,7 @@ class FocusModeManager(QObject):
             level: 'silent', 'quiet', 'normal', 'verbose'
         """
         # Implementation would filter status messages based on level
-        pass  # Placeholder for future implementation
+        # Placeholder for future implementation
 
     def get_focus_mode_shortcuts(self) -> dict[str, str]:
         """Get keyboard shortcuts for focus mode."""
