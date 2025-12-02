@@ -158,8 +158,11 @@ class Interpreter:
     MAX_ITERATIONS = 100_000
     MAX_EXECUTION_TIME = 10.0  # seconds
 
-    # Variable interpolation pattern (matches *VAR*)
+    # Variable interpolation patterns
+    # *VAR* syntax (BASIC style)
     VAR_INTERPOLATION_PATTERN = re.compile(r"\*([A-Z_][A-Z0-9_]*)\*")
+    # #VAR syntax (PILOT style) - matches #VAR followed by non-alphanumeric or end
+    PILOT_VAR_PATTERN = re.compile(r"#([A-Z_][A-Z0-9_]*)", re.IGNORECASE)
 
     def __init__(self):
         # The __init__ constructs a large amount of interpreter state;
@@ -811,38 +814,54 @@ class Interpreter:
 
     def interpolate_text(self, text: str) -> str:
         """
-        Replace *VAR* with variable values
+        Replace *VAR* or #VAR with variable values
 
         Args:
-            text: String like "Hello *NAME*"
+            text: String like "Hello *NAME*" or "X is #X"
 
         Returns:
-            Interpolated string like "Hello World"
+            Interpolated string like "Hello World" or "X is 5"
 
-        Fast path: Skip regex if no asterisks present
+        Supports both BASIC (*VAR*) and PILOT (#VAR) syntax
         """
-        if "*" not in text:
-            return text
+        result = text
+
+        # Handle PILOT #VAR syntax first
+        if "#" in result:
+
+            def replace_hash_var(match):
+                var_name = match.group(1).upper()
+                if var_name in self.variables:
+                    return str(self.variables[var_name])
+                if var_name in self.string_variables:
+                    return self.string_variables[var_name]
+                return match.group(0)  # Keep original #VAR
+
+            result = self.PILOT_VAR_PATTERN.sub(replace_hash_var, result)
+
+        # Handle BASIC *VAR* syntax
+        if "*" not in result:
+            return result
 
         # Build result incrementally (O(n) vs O(n*m) for repeated replace)
-        result = []
+        parts = []
         last_end = 0
 
-        for match in self.VAR_INTERPOLATION_PATTERN.finditer(text):
-            result.append(text[last_end : match.start()])  # noqa: E203
+        for match in self.VAR_INTERPOLATION_PATTERN.finditer(result):
+            parts.append(result[last_end : match.start()])  # noqa: E203
             var_name = match.group(1)
 
             if var_name in self.variables:
-                result.append(str(self.variables[var_name]))
+                parts.append(str(self.variables[var_name]))
             elif var_name in self.string_variables:
-                result.append(self.string_variables[var_name])
+                parts.append(self.string_variables[var_name])
             else:
-                result.append(match.group(0))  # Keep original *VAR*
+                parts.append(match.group(0))  # Keep original *VAR*
 
             last_end = match.end()
 
-        result.append(text[last_end:])
-        return "".join(result)
+        parts.append(result[last_end:])
+        return "".join(parts)
 
     def request_input(self, prompt: str) -> str:
         """Request input synchronously via callback"""

@@ -17,18 +17,44 @@ def execute_pilot(
     command: str,
     turtle: "TurtleState",
 ) -> str:
-    """Execute PILOT language command."""
+    """Execute PILOT language command.
+
+    PILOT commands have the format: X: or XY: or XN: where:
+    - X is the command letter (T, A, M, C, J, etc.)
+    - Y suffix means "execute if last match succeeded"
+    - N suffix means "execute if last match failed"
+    """
     cmd = command.strip()
     if not cmd or len(cmd) < 2:
         return ""
 
-    cmd_type = cmd[0].upper()
-    if cmd_type == "*" or command.startswith("L:"):
+    # Check for label definition (*label) or L: command
+    if cmd[0] == "*" or cmd.upper().startswith("L:"):
         return ""
-    if len(cmd) < 2 or cmd[1] != ":":
+
+    # Parse command prefix - handle both X: and XY:/XN: formats
+    colon_pos = cmd.find(":")
+    if colon_pos < 1:
         return f"❌ Invalid PILOT command: {command}\n"
 
-    rest = cmd[2:].strip()
+    prefix = cmd[:colon_pos].upper()
+    rest = cmd[colon_pos + 1 :].strip()
+
+    # Extract base command and conditional suffix
+    if len(prefix) == 1:
+        cmd_type = prefix
+        condition = None
+    elif len(prefix) == 2 and prefix[1] in ("Y", "N"):
+        cmd_type = prefix[0]
+        condition = prefix[1]
+    else:
+        return f"❌ Invalid PILOT command: {command}\n"
+
+    # Check condition before executing
+    if condition == "Y" and not interpreter.last_match_succeeded:
+        return ""  # Skip - condition not met
+    if condition == "N" and interpreter.last_match_succeeded:
+        return ""  # Skip - condition not met
 
     if cmd_type == "T":
         text = interpreter.interpolate_text(rest)
@@ -46,14 +72,29 @@ def execute_pilot(
         if not pattern:
             interpreter.last_match_succeeded = False
             return ""
-        last_input = interpreter.last_input
-        regex_pattern = "^" + pattern.replace("*", ".*") + "$"
-        try:
-            interpreter.last_match_succeeded = bool(
-                re.match(regex_pattern, str(last_input), re.IGNORECASE)
-            )
-        except re.error:
-            interpreter.last_match_succeeded = False
+        last_input = str(interpreter.last_input).strip().upper()
+
+        # PILOT M: command matches against comma-separated alternatives
+        # M:YES,YEAH,YEP,Y means match if input equals any of these
+        alternatives = [p.strip().upper() for p in pattern.split(",")]
+
+        # Check each alternative - support wildcards with *
+        interpreter.last_match_succeeded = False
+        for alt in alternatives:
+            if "*" in alt:
+                # Convert wildcard pattern to regex
+                regex_pattern = "^" + alt.replace("*", ".*") + "$"
+                try:
+                    if re.match(regex_pattern, last_input, re.IGNORECASE):
+                        interpreter.last_match_succeeded = True
+                        break
+                except re.error:
+                    pass
+            else:
+                # Exact match (case-insensitive)
+                if last_input == alt:
+                    interpreter.last_match_succeeded = True
+                    break
         return ""
     if cmd_type == "Y":
         if interpreter.last_match_succeeded:

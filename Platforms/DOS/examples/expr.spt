@@ -1,6 +1,0 @@
-10 REM Parentheses and precedence
-20 LET A = 2
-30 LET B = 3
-40 PRINT (A + B) * (A + 1)
-50 PRINT A + B * A + 1
-60 END
