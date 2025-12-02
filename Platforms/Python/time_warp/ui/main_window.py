@@ -279,9 +279,9 @@ class MainWindow(QMainWindow):
             if not filepath.lower().endswith(".png"):
                 filepath += ".png"
             if self.canvas.export_to_png(filepath):
-                self.status_bar.showMessage(f"Exported to {filepath}", 3000)
+                self.statusbar.showMessage(f"Exported to {filepath}", 3000)
             else:
-                self.status_bar.showMessage("Export failed", 3000)
+                self.statusbar.showMessage("Export failed", 3000)
 
     def _export_to_svg(self, _checked: bool = False):
         """Export canvas graphics to SVG file."""
@@ -292,9 +292,9 @@ class MainWindow(QMainWindow):
             if not filepath.lower().endswith(".svg"):
                 filepath += ".svg"
             if self.canvas.export_to_svg(filepath):
-                self.status_bar.showMessage(f"Exported to {filepath}", 3000)
+                self.statusbar.showMessage(f"Exported to {filepath}", 3000)
             else:
-                self.status_bar.showMessage("Export failed", 3000)
+                self.statusbar.showMessage("Export failed", 3000)
 
     def _print_code(self, _checked: bool = False):
         """Print the current code."""
@@ -302,7 +302,7 @@ class MainWindow(QMainWindow):
             # pylint: disable=import-outside-toplevel
             from PySide6.QtPrintSupport import QPrintDialog, QPrinter
         except ImportError:
-            self.status_bar.showMessage("Print support not available", 3000)
+            self.statusbar.showMessage("Print support not available", 3000)
             return
 
         ed = self.get_current_editor()
@@ -321,7 +321,7 @@ class MainWindow(QMainWindow):
             from PySide6.QtPrintSupport import QPrintDialog, QPrinter
             from PySide6.QtGui import QPainter
         except ImportError:
-            self.status_bar.showMessage("Print support not available", 3000)
+            self.statusbar.showMessage("Print support not available", 3000)
             return
 
         printer = QPrinter(QPrinter.HighResolution)
@@ -362,7 +362,7 @@ class MainWindow(QMainWindow):
             cursor.setPosition(min(pos, len(formatted)))
             ed.setTextCursor(cursor)
 
-        self.status_bar.showMessage(msg, 3000)
+        self.statusbar.showMessage(msg, 3000)
 
     def _toggle_profiler(self, checked: bool):
         """Toggle performance profiling."""
@@ -372,11 +372,11 @@ class MainWindow(QMainWindow):
         profiler = get_profiler()
         if checked:
             profiler.start_session()
-            self.status_bar.showMessage("⏱️ Profiling enabled", 3000)
+            self.statusbar.showMessage("⏱️ Profiling enabled", 3000)
         else:
             session = profiler.end_session()
             if session:
-                self.status_bar.showMessage(
+                self.statusbar.showMessage(
                     f"⏱️ Profiling stopped: {session.total_lines_executed} lines",
                     3000,
                 )
@@ -390,8 +390,8 @@ class MainWindow(QMainWindow):
         report = profiler.get_report()
 
         # Show in output area
-        self.output_area.append("\n" + report)
-        self.status_bar.showMessage("📊 Profile report shown in output", 3000)
+        self.output.append("\n" + report)
+        self.statusbar.showMessage("📊 Profile report shown in output", 3000)
 
     def _show_sound_effects(self, _checked: bool = False):
         """Show available sound effects."""
@@ -405,8 +405,8 @@ class MainWindow(QMainWindow):
         msg += 'Use: PLAY "effect_name" in BASIC\n\n'
         msg += ", ".join(effect_list)
 
-        self.output_area.append(msg)
-        self.status_bar.showMessage(
+        self.output.append(msg)
+        self.statusbar.showMessage(
             f"🔊 {len(effect_list)} sound effects available", 3000
         )
 
