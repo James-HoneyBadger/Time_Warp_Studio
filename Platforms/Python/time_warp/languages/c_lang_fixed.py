@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import re
 from typing import TYPE_CHECKING, Dict, List, Any
+import random
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -36,7 +37,7 @@ _IF_RE = re.compile(r"^\s*if\s*\((.*)\)\s*\{?\s*$", re.IGNORECASE)
 _ELSE_RE = re.compile(r"^\s*else\s*\{?\s*$", re.IGNORECASE)
 _WHILE_RE = re.compile(r"^\s*while\s*\((.*)\)\s*\{?\s*$", re.IGNORECASE)
 _FOR_RE = re.compile(
-    r"^\s*for\s*\(([^;]*);([^;]*);([^)]*)\)\s*\{?\s*$",
+    r"^\s*for\s*\(([^;]*);([^;]*);([^)]*)\)\s*(.*)$",
     re.IGNORECASE,
 )
 _DO_RE = re.compile(r"^\s*do\s*\{?\s*$", re.IGNORECASE)
@@ -130,7 +131,11 @@ def _exec_c_side_effect_expr(interpreter: "Interpreter", expr: str):
         left, right = s.split("=", 1)
         name = left.strip().upper()
         try:
-            val = interpreter.evaluate_expression(right)
+            # normalize 'arr[index]' into 'arr(index)' for expression evaluator
+            norm = re.sub(
+                r"([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*(.*?)\s*\]", r"\1(\2)", right
+            )
+            val = interpreter.evaluate_expression(norm)
         except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
             val = 0
         suf = None
@@ -151,7 +156,8 @@ def _exec_c_side_effect_expr(interpreter: "Interpreter", expr: str):
         return
     # Fallback: evaluate expression (no side effects captured)
     try:
-        interpreter.evaluate_expression(s)
+        norm = re.sub(r"([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*(.*?)\s*\]", r"\1(\2)", s)
+        interpreter.evaluate_expression(norm)
     except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
         pass
 
@@ -302,7 +308,20 @@ def _declare_variable(
 def _assign_variable(interpreter: "Interpreter", name: str, expr: str):
     """Assign expression to an existing (or inferred) C variable name."""
     expr = expr.rstrip(";").strip()
-    up = name.upper()
+    # Handle array assignments like arr[index]
+    arr_idx = None
+    arr_name = name
+    if "[" in name and "]" in name:
+        base = name.split("[", 1)[0].strip()
+        idx_expr = name[name.find("[") + 1 : name.rfind("]")]
+        try:
+            idx_val = int(interpreter.evaluate_expression(idx_expr))
+        except Exception:
+            idx_val = 0
+        arr_idx = int(idx_val)
+        arr_name = base.strip()
+
+    up = arr_name.upper()
     suf = None
     if up + "%" in interpreter.int_variables:
         suf = "%"
@@ -314,11 +333,21 @@ def _assign_variable(interpreter: "Interpreter", name: str, expr: str):
         suf = "#"
     elif up + "$" in interpreter.string_variables:
         suf = "$"
+    # small helper: allow rand() calls embedded in expressions
+    expr_repl = expr
+    while "rand(" in expr_repl.lower():
+        # replace the first occurrence with a random int (0..32767)
+        rnum = str(random.randint(0, 32767))
+        # naive replace for 'rand()' or 'rand(arg)' occurrences
+        expr_repl = re.sub(
+            r"rand\s*\([^)]*\)", rnum, expr_repl, count=1, flags=re.IGNORECASE
+        )
+
     try:
         if suf == "$":
-            val = _unquote(expr)
+            val = _unquote(expr_repl)
         else:
-            val = interpreter.evaluate_expression(expr)
+            val = interpreter.evaluate_expression(expr_repl)
     except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
         val: Any = "" if suf == "$" else 0
     # Infer type if not declared yet
@@ -329,6 +358,22 @@ def _assign_variable(interpreter: "Interpreter", name: str, expr: str):
             suf_to_use = "#"
     else:
         suf_to_use = suf
+    # If array assignment: ensure arrays store lists and set by index
+    if arr_idx is not None:
+        a = interpreter.arrays.get(up)
+        if a is None:
+            a = []
+        # expand as necessary
+        if arr_idx < 0:
+            idx_to_use = 0
+        else:
+            idx_to_use = arr_idx
+        if idx_to_use >= len(a):
+            a.extend([0] * (idx_to_use + 1 - len(a)))
+        a[idx_to_use] = val
+        interpreter.arrays[up] = a
+        return ""
+
     interpreter.set_typed_variable(up + suf_to_use, val)
     return ""
 
@@ -391,7 +436,35 @@ def _handle_close_brace(interpreter: "Interpreter") -> str:
 def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
     """Execute a single C-like command line."""
     _ensure_c_stack(interpreter)
+    # Track multiline block-comment state on the interpreter instance
+    if not hasattr(interpreter, "_in_c_block_comment"):
+        interpreter._in_c_block_comment = False
+
     cmd = command.strip()
+
+    # If we are currently inside a /* ... */ comment block ignore until we see */
+    if interpreter._in_c_block_comment:
+        if "*/" in cmd:
+            # End block comment; ignore everything through this marker
+            interpreter._in_c_block_comment = False
+        return ""
+
+    # Handle start (or full single-line) block comment
+    if cmd.startswith("/*"):
+        if "*/" not in cmd:
+            interpreter._in_c_block_comment = True
+        return ""
+
+    # Ignore preprocessor directives (e.g. #include, #define)
+    if cmd.startswith("#"):
+        return ""
+
+    # Accept function headers like 'int main() {' as valid no-op lines
+    if re.match(
+        r"^\s*(?:int|void|char|float|double)\s+[A-Za-z_]\w*\s*\([^)]*\)\s*\{?$", cmd
+    ):
+        # If there's an opening brace here, let the brace handling code deal with block depth
+        return ""
     if not cmd:
         return ""
 
@@ -506,8 +579,51 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
     # for (init; cond; post) { ... }
     m = _FOR_RE.match(cmd)
     if m:
-        init, cond_expr, post = m.groups()
+        init, cond_expr, post, rest = m.groups()
         header_idx = interpreter.current_line
+        # Check for an inline single-statement body after the header, e.g.
+        # for (int i = 0; i < n; ++i) arr[i] = ...;
+        # rest was captured in regex (trailing statement or brace)
+        if rest and not rest.startswith("{"):
+            # Handle single-line for-loop by executing init, then looping over body
+            if init.strip():
+                # allow declarations in init: e.g. 'int i = 0'
+                d = _DECL_RE.match(init.strip())
+                if d:
+                    t, name, _init = d.groups()
+                    _declare_variable(interpreter, t, name, _init)
+                else:
+                    _exec_c_side_effect_expr(interpreter, init)
+
+            # Evaluate loop iteratively
+            while True:
+                try:
+                    cond_val = (
+                        interpreter.evaluate_expression(cond_expr.strip())
+                        if cond_expr.strip()
+                        else 0
+                    )
+                except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
+                    cond_val = 0
+                if not cond_val:
+                    break
+
+                # Execute the inline body (strip trailing semicolon)
+                body_cmd = rest.rstrip(";").strip()
+                if body_cmd:
+                    res = execute_c(interpreter, body_cmd)
+                    if res:
+                        # ensure printed values flow into interpreter output
+                        try:
+                            interpreter.log_output(res)
+                        except Exception:
+                            pass
+
+                # post expression side-effects
+                if post.strip():
+                    _exec_c_side_effect_expr(interpreter, post)
+
+            return ""
         if init.strip():
             _exec_c_side_effect_expr(interpreter, init)
         end_idx = _find_block_end(interpreter, header_idx)
@@ -564,7 +680,29 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
         return _scanf(interpreter, m.group(1))
 
     # Comments and braces
+    # Recognize C++ style line comments and braces/parentheses
     if cmd.startswith("//") or cmd in ("{", "(", ")"):
+        return ""
+
+    # Handle 'return' statements gracefully: end execution if inside main
+    if cmd.lower().startswith("return"):
+        # try to parse return expression and ignore — treat it as program termination
+        try:
+            inner = cmd[len("return") :].strip().rstrip(";")
+            if inner:
+                # Evaluate expression (if numeric) and set variable _RETURN if needed
+                try:
+                    val = interpreter.evaluate_expression(inner)
+                    interpreter.set_typed_variable("_RETURN#", val)
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        # stop the interpreter as 'return' indicates program exit
+        try:
+            interpreter.running = False
+        except Exception:
+            pass
         return ""
 
     return f"❌ Error: Unknown C command '{command.strip()}'"

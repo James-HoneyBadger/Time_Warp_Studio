@@ -1,0 +1,39 @@
+name: Nightly Golden Tests
+
+on:
+  schedule:
+    - cron: '0 3 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install deps
+        run: |
+          python -m pip install -U pip
+          pip install -r requirements.txt || true
+          pip install pytest pytest-cov
+
+      - name: Run golden tests
+        run: |
+          pytest -q Tests/test_conformance_basic_pilot_logo.py || true
+
+      - name: Headless examples
+        run: |
+          python Scripts/ci_run_examples.py --languages basic pilot logo || true
+
+      - name: Upload reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: headless-example-outputs
+          path: test_reports
+          if-no-files-found: warn

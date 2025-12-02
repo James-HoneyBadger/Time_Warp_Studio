@@ -1,0 +1,35 @@
+T: Welcome to the Time Warp PILOT showcase!
+T: This example demonstrates input, branching, variables, simple math, and looping.
+
+*start
+T: What's your name?
+A:NAME
+T: Hello, $NAME! Ready to take a short quiz? (Y/N)
+A:READY
+MY:
+  T: Great — let's begin!
+  C:score = 0
+
+  T: Question 1 — What is 5 + 7?
+  A:ans1
+  M:12
+  T: Correct!
+  C:score = score + 1
+  N:
+  T: Oops — the answer is 12.
+
+  T: Now a quick pattern test. Enter a number 1-4 for a small pattern:
+  A:pat
+  C:count = 0
+  *loop
+  T: pattern step $count
+  C:count = count + 1
+  C:cond = count < pat
+  M:cond = 1
+  J:loop
+
+  T: Quiz complete. Your score: $score
+MN:
+  T: No problem — come back when you're ready!
+
+E:
