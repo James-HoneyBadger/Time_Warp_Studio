@@ -1,10 +1,10 @@
 """
 Time Warp IDE - Python Implementation
 Educational programming environment (unified BASIC, PILOT, Logo)
-Aligned with Time Warp IDE v4.0.0 release
+Aligned with Time Warp IDE v5.0.0 release
 """
 
-__version__ = "4.0.0"
+__version__ = "5.0.0"
 __author__ = "James-HoneyBadger"
 
 from typing import Any, TYPE_CHECKING

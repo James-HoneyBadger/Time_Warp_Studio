@@ -129,7 +129,7 @@ class TimeWarpApp {
 
 // Application configuration
 const CONFIG = {
-    version: '4.0.0',
+    version: '5.0.0',
     buildDate: '2024-01-01',
     features: {
         debugging: true,

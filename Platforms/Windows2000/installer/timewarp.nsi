@@ -5,7 +5,7 @@
 
 ; Allow callers to override VERSION via: makensis -DVERSION=1.2.3
 !ifndef VERSION
-  !define VERSION "3.0.0"
+  !define VERSION "5.0.0"
 !endif
 !define APP_PUBLISHER "Time Warp IDE Project"
 !define APP_URL "https://github.com/your-repo/time-warp-ide"

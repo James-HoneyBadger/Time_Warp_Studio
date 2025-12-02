@@ -27,7 +27,7 @@ Use this page to jump directly to the documentation that matches your role.
 - [Installation Quickstart](installation/00-quickstart.md) – Python IDE setup, dependencies, and verification steps.
 
 ## Release History
-- [Release Notes](misc/RELEASE_NOTES.md) – Highlights and changelog for each version, including v4.0.0.
+- [Release Notes](misc/RELEASE_NOTES.md) – Highlights and changelog for each version, including v5.0.0.
 
 ---
 
@@ -45,4 +45,4 @@ Time Warp IDE is released under the MIT License. See [LICENSE](../LICENSE) for t
 
 ---
 
-*Maintained for Time Warp IDE v4.0.0.*
+*Maintained for Time Warp IDE v5.0.0.*

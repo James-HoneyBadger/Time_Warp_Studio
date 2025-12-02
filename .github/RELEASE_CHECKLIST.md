@@ -1,4 +1,4 @@
-# Release Checklist - Time Warp IDE v4.0.0
+# Release Checklist - Time Warp IDE v5.0.0
 
 ## Pre-Release Tasks
 
@@ -20,22 +20,22 @@
 - [ ] `python test_runner.py --comprehensive`
 - [ ] Manual smoke test of Python IDE (launch, open example, run turtle program)
 - [ ] Manual smoke test of Browser build (`Platforms/Browser/index.html`)
-- [ ] Manual smoke test of DOS interpreter (verify banner shows v4.0.0)
+- [ ] Manual smoke test of DOS interpreter (verify banner shows v5.0.0)
 
 ### Documentation
 
 - [ ] Update `Docs/misc/RELEASE_NOTES.md` with 4.0.0 entry
 - [ ] Refresh documentation footers (FAQ, quick reference, index)
-- [ ] Ensure screenshots or captions reference v4.0.0 where applicable
+- [ ] Ensure screenshots or captions reference v5.0.0 where applicable
 - [ ] Run spell check / link validation for key documents
 
 ## GitHub Preparation
 
 ### Repository
 
-- [ ] Create release branch `release/v4.0.0`
+- [ ] Create release branch `release/v5.0.0`
 - [ ] Merge final changes and ensure `main` is up to date
-- [ ] Tag commit: `git tag -a v4.0.0 -m "Time Warp IDE v4.0.0"`
+- [ ] Tag commit: `git tag -a v5.0.0 -m "Time Warp IDE v5.0.0"`
 - [ ] Push branch and tag to origin
 
 ### Release Assets
@@ -49,15 +49,15 @@
 - [ ] Collect artifacts from `Platforms/Browser` if publishing web bundle
 - [ ] Package refreshed examples (optional)
   ```bash
-  tar -czf time-warp-examples-v4.0.0.tar.gz Examples/
+  tar -czf time-warp-examples-v5.0.0.tar.gz Examples/
   ```
 
 - [ ] Generate checksums for uploaded files (optional)
 
 ### GitHub Release Page
 
-- [ ] Create new release from tag `v4.0.0`
-- [ ] Title: `Time Warp IDE v4.0.0`
+- [ ] Create new release from tag `v5.0.0`
+- [ ] Title: `Time Warp IDE v5.0.0`
 - [ ] Paste highlights from `Docs/misc/RELEASE_NOTES.md`
 - [ ] Attach wheel, source tarball, examples archive, and any supplemental assets
 - [ ] Mark release as latest and publish

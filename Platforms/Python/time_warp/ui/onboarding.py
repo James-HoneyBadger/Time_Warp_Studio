@@ -2,6 +2,8 @@
 Guided Onboarding - First-run tutorial with interactive tasks.
 """
 
+# pylint: disable=no-name-in-module
+
 from __future__ import annotations
 import json
 from pathlib import Path
@@ -23,7 +25,7 @@ if TYPE_CHECKING:
 
 
 @dataclass
-class OnboardingStep:
+class OnboardingStep:  # pylint: disable=too-few-public-methods
     """Single step in the onboarding tutorial."""
 
     step_id: str
@@ -226,10 +228,10 @@ class OnboardingDialog(QDialog):
         self.description_label.setText(step.description)
 
         # Format instructions
-        instructions_html = "<ul>"
-        for instruction in step.instructions:
-            instructions_html += f"<li>{instruction}</li>"
-        instructions_html += "</ul>"
+        instructions_items = "".join(
+            f"<li>{instruction}</li>" for instruction in step.instructions
+        )
+        instructions_html = f"<ul>{instructions_items}</ul>"
         self.instructions_text.setHtml(instructions_html)
 
         self.task_label.setText(f"✅ {step.task_description}")

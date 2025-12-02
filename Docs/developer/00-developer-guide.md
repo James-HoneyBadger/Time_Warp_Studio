@@ -698,8 +698,8 @@ Follow Semantic Versioning (semver):
 
 5. **Create git tag**:
     ```bash
-    git tag -a v4.0.0 -m "Release version 4.0.0"
-    git push origin v4.0.0
+    git tag -a v5.0.0 -m "Release version 5.0.0"
+    git push origin v5.0.0
     ```
 
 6. **GitHub Release**:

@@ -267,7 +267,7 @@ check_path() {
 
 # Main installation
 install() {
-    print_header "Installing Time Warp IDE v4.0.0 (User Mode)"
+    print_header "Installing Time Warp IDE v5.0.0 (User Mode)"
     
     print_info "Install directory: $INSTALL_DIR"
     echo ""

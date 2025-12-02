@@ -333,7 +333,7 @@ suggestion = hints.get_suggestion('FORWRD', ['FORWARD', 'BACKWARD'])
 
 ## 📊 Development Status
 
-**Current Version**: 4.0.0
+**Current Version**: 5.0.0
 
 | Component | Status | Completion |
 |-----------|--------|------------|
@@ -368,7 +368,7 @@ suggestion = hints.get_suggestion('FORWRD', ['FORWARD', 'BACKWARD'])
 | DOS (C89) | `Platforms/DOS/` | 🧪 Experimental | Retro text-mode interpreter retained for history labs |
 | Windows 2000 | `Platforms/Windows2000/` | 📜 Archived | Vintage build kept for reference only |
 
-Legacy implementations such as Rust, Go, Haiku, and others were removed during the v4.0.0 cleanup to keep maintenance focused on the supported stack.
+Legacy implementations such as Rust, Go, Haiku, and others were removed during the v5.0.0 cleanup to keep maintenance focused on the supported stack.
 
 ---
 

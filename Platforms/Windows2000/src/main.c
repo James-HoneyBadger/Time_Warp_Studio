@@ -569,7 +569,7 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
                        TEXT("Time Warp IDE for Windows 2000\n\n")
                            TEXT("Educational Programming Environment\n")
                                TEXT("Supporting BASIC, PILOT, and Logo\n\n")
-                                   TEXT("Version 3.0.0\n")
+                                   TEXT("Version 5.0.0\n")
                                        TEXT("© 2025 James Temple"),
                        TEXT("About Time Warp IDE"),
                        MB_OK | MB_ICONINFORMATION);

@@ -1,6 +1,6 @@
 ## Time Warp IDE Documentation
 
-**Version 4.0.0** – Updated November 22, 2025
+**Version 5.0.0** – Updated December 2, 2025
 
 This directory contains the canonical documentation set for the Time Warp IDE project. The content is organized by audience so students, teachers, end users, and contributors can jump straight to what they need.
 
@@ -65,7 +65,7 @@ For detailed development workflow expectations, read `Docs/developer/00-develope
 
 ---
 
-*Maintained for Time Warp IDE v4.0.0.*
+*Maintained for Time Warp IDE v5.0.0.*
 - [ ] Follow style guide
 - [ ] Include examples where appropriate
 - [ ] Link to related content
@@ -154,4 +154,4 @@ Code examples in documentation are licensed under the same license as Time Warp 
 ---
 
 *Last updated: November 2025*
-*Documentation version: 4.0.0*
+*Documentation version: 5.0.0*

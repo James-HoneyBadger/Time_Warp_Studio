@@ -341,7 +341,7 @@ window.addEventListener('unhandledrejection', (event) => {
 // Configuration and utility exports
 window.TimeWarpApp = TimeWarpApp;
 window.CONFIG = {
-    version: '4.0.0',
+    version: '5.0.0',
     buildDate: '2024-10-31',
     retryCount: 3,
     initTimeout: 10000

@@ -3,8 +3,8 @@ requires = ["setuptools>=68.0.0", "wheel>=0.41.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "time-warp-ide"
-version = "4.0.0"
+name = "time_warp_ide"
+version = "5.0.0"
 description = "Educational programming environment for BASIC, PILOT, and Logo with retro computing support"
 readme = "README.md"
 requires-python = ">=3.8"

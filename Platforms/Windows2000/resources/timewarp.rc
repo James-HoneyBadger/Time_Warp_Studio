@@ -45,12 +45,12 @@ BEGIN
         BEGIN
             VALUE "CompanyName", "Time Warp IDE Project"
             VALUE "FileDescription", "Time Warp IDE for Windows 2000"
-            VALUE "FileVersion", "3.0.0.0"
+            VALUE "FileVersion", "5.0.0.0"
             VALUE "InternalName", "TimeWarpIDE"
             VALUE "LegalCopyright", "Copyright © 2025 James Temple"
             VALUE "OriginalFilename", "TimeWarpIDE.exe"
             VALUE "ProductName", "Time Warp IDE"
-            VALUE "ProductVersion", "3.0.0.0"
+            VALUE "ProductVersion", "5.0.0.0"
         END
     END
     BLOCK "VarFileInfo"

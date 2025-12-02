@@ -519,4 +519,4 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 
 ---
 
-*Quick Reference v4.0.0 - November 2025*
+*Quick Reference v5.0.0 - December 2025*

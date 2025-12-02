@@ -348,6 +348,6 @@ Current language shown in status bar.
 
 ---
 
-**Version**: 3.0.0  
+**Version**: 5.0.0  
 **Platform**: Windows 2000+  
 **Last Updated**: 2025-01-XX
