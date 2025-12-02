@@ -7,7 +7,7 @@ from dataclasses import dataclass
 
 
 @dataclass
-class AccessibilityTheme:
+class AccessibilityTheme:  # pylint: disable=too-many-instance-attributes
     """Accessibility-focused theme configuration."""
 
     name: str
@@ -129,7 +129,7 @@ def apply_accessibility_stylesheet(theme: AccessibilityTheme) -> str:
         font-family: {theme.font_family};
         font-size: {theme.font_size}pt;
     }}
-    
+
     QTextEdit, QPlainTextEdit {{
         background-color: {theme.background};
         color: {theme.foreground};
@@ -137,7 +137,7 @@ def apply_accessibility_stylesheet(theme: AccessibilityTheme) -> str:
         selection-color: {theme.selection_fg};
         line-height: {int(theme.line_spacing * 100)}%;
     }}
-    
+
     QPushButton {{
         background-color: {theme.keyword_color};
         color: {theme.background};
@@ -146,43 +146,43 @@ def apply_accessibility_stylesheet(theme: AccessibilityTheme) -> str:
         font-size: {theme.font_size}pt;
         min-height: 36px;
     }}
-    
+
     QPushButton:hover {{
         background-color: {theme.selection_bg};
         border-color: {theme.selection_fg};
     }}
-    
+
     QPushButton:pressed {{
         background-color: {theme.foreground};
         color: {theme.background};
     }}
-    
+
     QMenuBar {{
         background-color: {theme.background};
         color: {theme.foreground};
         border-bottom: 2px solid {theme.foreground};
     }}
-    
+
     QMenuBar::item:selected {{
         background-color: {theme.selection_bg};
         color: {theme.selection_fg};
     }}
-    
+
     QMenu {{
         background-color: {theme.background};
         color: {theme.foreground};
         border: 2px solid {theme.foreground};
     }}
-    
+
     QMenu::item:selected {{
         background-color: {theme.selection_bg};
         color: {theme.selection_fg};
     }}
-    
+
     QLabel {{
         color: {theme.foreground};
     }}
-    
+
     QLineEdit {{
         background-color: {theme.background};
         color: {theme.foreground};
@@ -191,14 +191,14 @@ def apply_accessibility_stylesheet(theme: AccessibilityTheme) -> str:
         selection-background-color: {theme.selection_bg};
         selection-color: {theme.selection_fg};
     }}
-    
+
     QTreeWidget {{
         background-color: {theme.background};
         color: {theme.foreground};
         alternate-background-color: {theme.comment_color};
         border: 2px solid {theme.foreground};
     }}
-    
+
     QTreeWidget::item:selected {{
         background-color: {theme.selection_bg};
         color: {theme.selection_fg};

@@ -18,7 +18,6 @@ except ImportError:
     print("❌ PySide6 not installed. Install with: pip install PySide6")
     sys.exit(1)
 
-# Import new feature modules
 from Platforms.Python.time_warp.ui.error_explorer import ErrorExplorerWidget
 from Platforms.Python.time_warp.ui.focus_mode import FocusModeManager
 from Platforms.Python.time_warp.ui.onboarding import OnboardingManager, OnboardingDialog
