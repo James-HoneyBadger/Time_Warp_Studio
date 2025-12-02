@@ -629,8 +629,9 @@ cd Scripts
 **Windows Installer**:
 ```bash
 # Requires NSIS
-cd Packaging/windows
-makensis installer.nsi
+# The project keeps the Windows 2000 NSIS script in Platforms/Windows2000/installer/timewarp.nsi
+# Use OUTDIR and VERSION macros so CI and local packaging match:
+makensis -DOUTDIR=Platforms/Windows2000/dist -DVERSION=4.0.0 Platforms/Windows2000/installer/timewarp.nsi
 ```
 
 **Linux Packages**:
@@ -719,6 +720,14 @@ Follow Semantic Versioning (semver):
 
 ### Documentation
 - [Rust Book](https://doc.rust-lang.org/book/)
+### CI / Release Automation
+
+- Windows packaging and smoke tests are performed by two workflows listed in `.github/workflows/`:
+    - `build-windows2000.yml` — runs cross-compilation on `ubuntu-latest` (mingw-w64) and a `windows-latest` native build with NSIS and smoke tests.
+    - `release-windows2000.yml` — runs on `release` events and attaches the produced `TimeWarpIDE-Setup-<VERSION>.exe` to GitHub releases.
+
+When preparing releases, ensure the chosen tag name is passed to makensis as `-DVERSION=${{ github.event.release.tag_name }}` so the installer filename matches the tag.
+
 - [egui Documentation](https://docs.rs/egui/)
 - [PySide6 Documentation](https://doc.qt.io/qtforpython/)
 - [pytest Documentation](https://docs.pytest.org/)

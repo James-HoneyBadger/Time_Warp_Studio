@@ -8,6 +8,7 @@ Use this page to jump directly to the documentation that matches your role.
 
 ## Student Resources
 - [Student Workbook](student/00-workbook.md) – Progressive exercises that build Turtle graphics, BASIC control flow, and PILOT storytelling skills.
+- [Student Lesson Book](student/01-lesson-book.md) – Instructor-friendly lesson sequence and checkpoints mapped to the workbook.
 
 ## Teacher Resources
 - [Teacher Overview](teacher/00-overview.md) – Curriculum framing, lesson pacing, and assessment tips for classroom deployment.
@@ -20,6 +21,7 @@ Use this page to jump directly to the documentation that matches your role.
 
 ## Developer Information
 - [Developer Guide](developer/00-developer-guide.md) – Contribution workflow, testing strategy, and release process.
+- [Technical Reference](developer/01-technical-reference.md) – Architecture, public interfaces, build and packaging details.
 
 ## Installation
 - [Installation Quickstart](installation/00-quickstart.md) – Python IDE setup, dependencies, and verification steps.

@@ -69,7 +69,7 @@ All guides live in `Docs/` with an index at `Docs/INDEX.md`:
 | Python | `Platforms/Python/` | ✅ Active | PySide6 IDE, turtle graphics, language executors |
 | Browser | `Platforms/Browser/` | 🧪 Experimental | HTML/JS prototype kept for research |
 | DOS | `Platforms/DOS/` | 🧪 Experimental | C89 text-mode interpreter for historical study |
-| Windows2000 | `Platforms/Windows2000/` | 📜 Archived | Vintage native build retained for reference |
+| Windows2000 | `Platforms/Windows2000/` | ✅ Maintained | Vintage native build maintained for compatibility and installer packaging (NSIS) |
 
 Legacy implementations (Rust, Go, Amiga, Haiku, Apple, OS/2) have been removed to keep maintenance focused.
 
@@ -103,13 +103,15 @@ pytest Tests/test_core_interpreter.py -v
 
 ## Contributing
 
-Contributions are welcome. Start with `Docs/developer/DEVELOPER_GUIDE.md` for architecture, testing expectations, and submission guidelines. Example programs and documentation improvements are especially helpful for educators.
+Contributions are welcome. Start with `Docs/developer/00-developer-guide.md` for architecture, testing expectations, and submission guidelines. Example programs and documentation improvements are especially helpful for educators.
 
 ## Community & Support
 
 - Issues & enhancements: <https://github.com/James-HoneyBadger/Time_Warp/issues>
 - Discussions: <https://github.com/James-HoneyBadger/Time_Warp/discussions>
 - Releases: <https://github.com/James-HoneyBadger/Time_Warp/releases>
+
+Note: Windows installers are produced as `TimeWarpIDE-Setup-<VERSION>.exe` and attached to releases. The Windows 2000 NSIS script lives in `Platforms/Windows2000/installer/timewarp.nsi` and is invoked by CI with `-DVERSION` and `-DOUTDIR`.
 
 ## License
 

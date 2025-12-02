@@ -429,3 +429,17 @@ Happy coding!
 
 *For teachers: See the [Teacher's Guide](../teacher/00-overview.md) for classroom-specific features.*
 *For developers: See the [Technical Reference](../developer/01-technical-reference.md) for API documentation.*
+
+## Installing (Windows Installer)
+
+If you download the Windows installer from the releases page, the installer filename includes a version token. Example:
+
+- TimeWarpIDE-Setup-<VERSION>.exe — e.g. TimeWarpIDE-Setup-3.0.0.exe
+
+When installed, the application is placed under Program Files and available from the Start Menu. If you are using the Windows 2000 edition or a CI-built package, installers are produced under `Platforms/Windows2000/dist/` and include the version token embedded with `makensis` using `-DVERSION=<tag>`.
+
+If you are packaging locally using `makensis`, pass OUTDIR and VERSION to produce the same filename layout used by CI:
+
+```bash
+makensis -DOUTDIR=Platforms/Windows2000/dist -DVERSION=3.0.0 Platforms/Windows2000/installer/timewarp.nsi
+```
