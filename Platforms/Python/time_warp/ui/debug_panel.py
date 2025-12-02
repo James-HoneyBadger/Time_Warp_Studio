@@ -1,3 +1,4 @@
+# pylint: disable=too-few-public-methods
 """Debug panel with controls, watch expressions, and call stack."""
 
 # pylint: disable=no-name-in-module

@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=duplicate-code
 """Create a simple multi-line PDF from a plain text file (no external deps).
 Usage: python3 scripts/make_pdf_from_text.py <input.txt> <output.pdf>
 """
@@ -12,10 +13,11 @@ if __name__ == "__main__":
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 # pylint: disable=wrong-import-position
-from scripts.pdf_utils import write_pdf
+from Scripts.pdf_utils import write_pdf
 
 
 def main() -> None:
+    """Convert a text file to a simple PDF using `Scripts.pdf_utils`."""
     if len(sys.argv) != 3:
         print(
             "Usage: python3 scripts/make_pdf_from_text.py\n"

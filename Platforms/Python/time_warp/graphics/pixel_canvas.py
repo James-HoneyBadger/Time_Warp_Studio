@@ -2,7 +2,10 @@
 Pixel Canvas Mode - 2D grid APIs for sprite drawing, tile maps, and step animations.
 """
 
+# pylint: disable=too-many-arguments,too-many-positional-arguments,duplicate-code
+
 from __future__ import annotations
+import json
 from typing import Callable
 from dataclasses import dataclass
 
@@ -194,7 +197,6 @@ class PixelCanvas:
 
     def export_frames_as_animation(self, filename: str, delay_ms: int = 100):
         """Export frame buffer as animation data (JSON format)."""
-        import json
 
         data = {
             "width": self.width,

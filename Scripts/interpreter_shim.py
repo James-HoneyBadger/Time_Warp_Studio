@@ -31,6 +31,11 @@ def detect_language(
     path: pathlib.Path,
     override: Optional[str] = None,
 ) -> Optional[str]:
+    """Return language name based on file extension or override.
+
+    If `override` is provided, it is returned directly; otherwise we
+    map the path suffix using `EXT_TO_LANGUAGE`.
+    """
     if override:
         return override
     return EXT_TO_LANGUAGE.get(path.suffix.lower())

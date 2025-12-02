@@ -1,3 +1,9 @@
+"""Golden conformance tests for BASIC, PILOT, and Logo outputs.
+
+Loads example programs, runs them headlessly, and compares output to
+snapshots in `Tests/golden_snapshots/`.
+"""
+
 import pathlib
 import sys
 import pytest
@@ -17,11 +23,13 @@ LANGUAGES = ["basic", "pilot", "logo"]
 
 
 def load_file(path: pathlib.Path) -> str:
+    """Read and return file contents as UTF-8 string."""
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
 
 
 def normalize_output(text: str) -> str:
+    """Normalize output by trimming per-line trailing spaces and EOLs."""
     # Trim trailing whitespace per line and normalize EOLs
     lines = [line.rstrip() for line in text.splitlines()]
     result = "\n".join(lines)
@@ -30,6 +38,7 @@ def normalize_output(text: str) -> str:
 
 @pytest.mark.parametrize("language", LANGUAGES)
 def test_golden_programs(language):
+    """Run golden examples for a language and compare outputs to snapshots."""
     lang_dir = EXAMPLES_DIR / language
     assert lang_dir.exists(), f"Missing golden examples for {language}: {lang_dir}"
     ext = "bas" if language == "basic" else ("pilot" if language == "pilot" else "logo")
@@ -65,6 +74,7 @@ def test_golden_programs(language):
         )
 
 
+# pylint: disable=wrong-import-position,import-error
 from Scripts.interpreter_shim import run_program
 
 

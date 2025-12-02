@@ -1,3 +1,4 @@
+# pylint: disable=too-few-public-methods
 """Cassette tape save/load animation dialog.
 
 This module provides a fun retro animation that simulates saving

@@ -1,3 +1,4 @@
+# pylint: disable=too-few-public-methods
 """
 Guided Onboarding - First-run tutorial with interactive tasks.
 """

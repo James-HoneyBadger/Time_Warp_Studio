@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=too-few-public-methods
 """
 Build automation utility for Time Warp IDE.
 
@@ -46,11 +47,7 @@ def warning(msg: str) -> None:
     print(f"{Colors.YELLOW}⚠️  {msg}{Colors.NC}")
 
 
-def run_command(
-    cmd: List[str],
-    cwd: Optional[Path] = None,
-    check: bool = True
-) -> int:
+def run_command(cmd: List[str], cwd: Optional[Path] = None, check: bool = True) -> int:
     """Run a shell command and return exit code."""
     info(f"Running: {' '.join(cmd)}")
     result = subprocess.run(cmd, cwd=cwd, check=False)

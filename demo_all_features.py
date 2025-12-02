@@ -4,6 +4,8 @@ Time Warp IDE with all new features integrated.
 This demonstrates how to wire the new UI and creative components.
 """
 from __future__ import annotations
+
+# pylint: disable=wrong-import-position
 import sys
 from pathlib import Path
 

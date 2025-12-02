@@ -9,7 +9,7 @@ import argparse
 import hashlib
 import subprocess
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, List
 
@@ -48,7 +48,7 @@ def create_release_notes(version: str, artifacts: List[Path]) -> str:
     """Create release notes with checksums."""
     notes = f"""# Time Warp IDE v{version}
 
-Released: {datetime.utcnow().strftime('%Y-%m-%d')}
+Released: {datetime.now(timezone.utc).strftime('%Y-%m-%d')}
 
 ## Platform Builds
 

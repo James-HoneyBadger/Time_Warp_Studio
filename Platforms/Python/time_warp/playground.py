@@ -91,6 +91,7 @@ def repl_mode(language: Language):
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Parse args and run Playground mode: REPL or single snippet."""
     parser = argparse.ArgumentParser(
         description="Playground: isolated command execution for debugging"
     )

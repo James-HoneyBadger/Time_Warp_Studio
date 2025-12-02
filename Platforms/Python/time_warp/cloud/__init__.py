@@ -13,6 +13,8 @@ from typing import Any, Dict, List, Optional
 
 @dataclass
 class User:  # compatibility dataclass
+    """Lightweight user record for compatibility when cloud is disabled."""
+
     id: str
     name: str
     avatar: Optional[str] = None
@@ -20,6 +22,8 @@ class User:  # compatibility dataclass
 
 @dataclass
 class Project:  # compatibility dataclass
+    """Minimal project metadata and content stub for compatibility."""
+
     id: str
     name: str
     owner_id: str
@@ -29,6 +33,8 @@ class Project:  # compatibility dataclass
 
 @dataclass
 class Operation:  # compatibility dataclass
+    """Operational edit descriptor (no-op in disabled mode)."""
+
     id: str
     user_id: str
     type: str
@@ -37,6 +43,7 @@ class Operation:  # compatibility dataclass
 
 
 class OperationalTransform:  # compatibility placeholder
+    # pylint: disable=too-few-public-methods
     """Compatibility placeholder for an operational transform helper.
 
     This no-op implementation is kept so callers can import and call
@@ -93,14 +100,20 @@ class CloudCollaborationServer:
         self.sessions: Dict[str, CollaborationSession] = {}
 
     def start(self) -> bool:
+        """Start the server.
+
+        Returns False because collaboration is disabled in this build.
+        """
         # Collaboration disabled
         return False
 
     def stop(self) -> None:
+        """Stop the server (no-op in disabled mode)."""
         return None
 
     # Minimal introspection helpers kept for compatibility
     def get_session_info(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """Return minimal session info or None if session is missing."""
         session = self.sessions.get(session_id)
         if not session:
             return None

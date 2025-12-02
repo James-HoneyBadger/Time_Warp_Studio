@@ -1,3 +1,4 @@
+# pylint: disable=too-few-public-methods
 """
 L-System fractal generator for Time Warp IDE.
 Implements Lindenmayer systems for fractal generation.

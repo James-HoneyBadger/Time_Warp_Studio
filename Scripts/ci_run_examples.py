@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# pylint: disable=duplicate-code
 """
 CI headless runner: executes example programs and collects outputs.
 This script is a skeleton and should be wired to the interpreter APIs.
@@ -23,6 +24,7 @@ LANG_EXT = {
 
 
 def find_examples(languages: list[str]) -> list[pathlib.Path]:
+    """Return example program paths for the given languages."""
     paths: list[pathlib.Path] = []
     for lang in languages:
         lang_dir = EXAMPLES / lang
@@ -33,6 +35,7 @@ def find_examples(languages: list[str]) -> list[pathlib.Path]:
     return paths
 
 
+# pylint: disable=wrong-import-position
 from Scripts.interpreter_shim import run_program
 
 
@@ -44,6 +47,7 @@ def run_example(language: str, path: pathlib.Path, inputs: str | None) -> str:
 
 
 def main(argv: list[str]) -> int:
+    """Parse args, run all examples, and write outputs to `test_reports/`."""
     parser = argparse.ArgumentParser(description="Headless example runner")
     parser.add_argument(
         "--languages",

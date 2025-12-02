@@ -25,10 +25,7 @@ TEST_PROGRAMS = [
     ),
     (
         "Triangle",
-        (
-            "FORWARD 150\nRIGHT 120\nFORWARD 150\nRIGHT 120\n"
-            "FORWARD 150\nRIGHT 120"
-        ),
+        ("FORWARD 150\nRIGHT 120\nFORWARD 150\nRIGHT 120\n" "FORWARD 150\nRIGHT 120"),
     ),
     ("Star", "REPEAT 5 [\n  FORWARD 200\n  RIGHT 144\n]"),
     ("Spiral", "REPEAT 36 [\n  FORWARD 100\n  RIGHT 10\n]"),

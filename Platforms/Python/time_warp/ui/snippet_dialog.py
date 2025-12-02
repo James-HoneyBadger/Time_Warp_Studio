@@ -1,3 +1,4 @@
+# pylint: disable=too-few-public-methods
 """
 Snippet dialog for Time Warp IDE.
 Provides a dialog for browsing and inserting code snippets.
