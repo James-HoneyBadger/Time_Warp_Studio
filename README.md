@@ -2,7 +2,7 @@
 
 Time Warp IDE is an educational programming environment that unifies BASIC, PILOT, and Logo with experimental Pascal, Prolog, and C support. The official implementation is a PySide6 desktop application that keeps the language executors stateless while the UI manages canvas rendering, editor state, and theming.
 
-**Current release:** 5.0.0 (December 11, 2025)
+**Current release:** 5.0.1 (December 11, 2025)
 
 ## Highlights
 
