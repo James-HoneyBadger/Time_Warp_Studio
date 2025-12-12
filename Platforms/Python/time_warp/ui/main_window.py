@@ -495,6 +495,8 @@ class MainWindow(QMainWindow):
             QMainWindow {
                 background-color: palette(window);
             }
+            
+            /* Tab styling */
             QTabWidget::pane {
                 border: 1px solid palette(dark);
                 border-radius: 4px;
@@ -508,22 +510,55 @@ class MainWindow(QMainWindow):
                 border-bottom: none;
                 border-radius: 4px 4px 0 0;
                 margin-right: 2px;
+                min-height: 24px;
             }
             QTabBar::tab:selected {
                 background-color: palette(highlight);
                 color: palette(highlighted-text);
                 font-weight: bold;
             }
-            QTabBar::tab:hover {
-                background-color: palette(highlight);
-                color: palette(highlighted-text);
+            QTabBar::tab:hover:!selected {
+                background-color: rgba(0, 0, 0, 0.05);
             }
+            
+            /* Splitter styling */
             QSplitter::handle {
                 background-color: palette(dark);
                 border: 1px solid palette(shadow);
             }
             QSplitter::handle:hover {
                 background-color: palette(highlight);
+            }
+            
+            /* Button styling for all buttons */
+            QPushButton {
+                background-color: palette(button);
+                color: palette(button-text);
+                border: 2px solid palette(dark);
+                border-radius: 6px;
+                padding: 6px 14px;
+                font-weight: bold;
+                min-height: 28px;
+                min-width: 80px;
+            }
+            QPushButton:hover {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+                border: 2px solid palette(highlight);
+            }
+            QPushButton:pressed {
+                background-color: palette(dark);
+                border: 2px solid palette(highlight);
+            }
+            QPushButton:disabled {
+                color: palette(dark);
+                background-color: palette(window);
+                border: 2px solid palette(dark);
+            }
+            
+            /* Dialog button styling */
+            QDialogButtonBox QPushButton {
+                min-width: 70px;
             }
         """
         )
@@ -1072,81 +1107,107 @@ class MainWindow(QMainWindow):
         # real-time collaboration UI.
 
     def create_toolbar(self):
-        """Create toolbar."""
+        """Create toolbar with enhanced button styling."""
         toolbar = QToolBar("Main Toolbar")
         toolbar.setObjectName("MainToolbar")  # Avoid Qt warning
         toolbar.setMovable(False)
         toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        toolbar.setIconSize(toolbar.iconSize())  # Use default icon size
+        toolbar.setMinimumHeight(44)  # Make toolbar slightly taller for better button appearance
         toolbar.setStyleSheet(
             """
             QToolBar {
                 background-color: palette(window);
-                border-bottom: 1px solid palette(dark);
-                padding: 2px;
-                spacing: 5px;
+                border-bottom: 2px solid palette(highlight);
+                padding: 4px;
+                spacing: 8px;
             }
             QToolButton {
                 background-color: transparent;
                 border: 1px solid transparent;
-                border-radius: 4px;
-                padding: 4px 8px;
-                margin: 1px;
+                border-radius: 5px;
+                padding: 6px 10px;
+                margin: 2px;
                 color: palette(window-text);
+                font-weight: bold;
+                min-width: 70px;
+                min-height: 28px;
             }
             QToolButton:hover {
                 background-color: palette(highlight);
                 color: palette(highlighted-text);
+                border: 1px solid palette(highlight);
+                border-radius: 5px;
             }
             QToolButton:pressed {
                 background-color: palette(dark);
+                border: 1px solid palette(highlight);
+            }
+            QToolButton:disabled {
+                color: palette(dark);
+                background-color: transparent;
             }
         """
         )
         self.addToolBar(toolbar)
 
-        # Add common actions with enhanced styling
+        # Add common actions with enhanced styling and better organization
+        # File operations group
         new_btn = toolbar.addAction("📄 New", self.new_file)
         new_btn.setToolTip("Create a new file (Ctrl+N)")
+        new_btn.setStatusTip("Create a new editor tab")
 
         open_btn = toolbar.addAction("📂 Open", self.open_file)
         open_btn.setToolTip("Open an existing file (Ctrl+O)")
+        open_btn.setStatusTip("Open a file from disk")
 
         save_btn = toolbar.addAction("💾 Save", self.save_file)
         save_btn.setToolTip("Save the current file (Ctrl+S)")
+        save_btn.setStatusTip("Save changes to disk")
 
         toolbar.addSeparator()
 
+        # Execution controls group
         run_btn = toolbar.addAction("🚀 Run", self.run_program)
         run_btn.setToolTip("Run the current program (Ctrl+R)")
+        run_btn.setStatusTip("Execute the code in the current editor")
 
         # Debug toolbar buttons
         self.debug_btn = toolbar.addAction("🐛 Debug", self.start_debug)
         self.debug_btn.setToolTip("Start debugging (F5)")
+        self.debug_btn.setStatusTip("Start debugging with breakpoints")
 
         self.continue_btn = toolbar.addAction("▶️ Continue", self.debug_continue)
         self.continue_btn.setToolTip("Continue execution (F5)")
+        self.continue_btn.setStatusTip("Resume execution from breakpoint")
         self.continue_btn.setEnabled(False)
 
         self.step_btn = toolbar.addAction("↓ Step", self.debug_step_into)
         self.step_btn.setToolTip("Step into (F11)")
+        self.step_btn.setStatusTip("Execute one line and enter functions")
         self.step_btn.setEnabled(False)
 
         stop_btn = toolbar.addAction("⏹️ Stop", self.stop_program)
         stop_btn.setToolTip("Stop the running program (Shift+F5)")
+        stop_btn.setStatusTip("Interrupt execution")
 
         toolbar.addSeparator()
 
+        # Canvas/Output controls group
         clear_output_btn = toolbar.addAction(
-            "🗑️ Clear Output",
+            "🗑️ Clear",
             self.output.clear,
         )
         clear_output_btn.setToolTip("Clear the output panel")
+        clear_output_btn.setStatusTip("Clear all output text")
 
         clear_canvas_btn = toolbar.addAction(
-            "🎨 Clear Canvas",
+            "🎨 Canvas",
             self.canvas.clear,
         )
         clear_canvas_btn.setToolTip("Clear the graphics canvas")
+        clear_canvas_btn.setStatusTip("Clear all graphics drawings")
+
 
         # Language selector with enhanced styling
         toolbar.addSeparator()

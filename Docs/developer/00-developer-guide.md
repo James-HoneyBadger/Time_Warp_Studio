@@ -12,8 +12,7 @@ Welcome to Time Warp IDE development! This guide will help you contribute to the
 4. [Code Organization](#code-organization)
 5. [Contributing](#contributing)
 6. [Testing](#testing)
-7. [Building](#building)
-8. [Release Process](#release-process)
+7. [Release Process](#release-process)
 
 ---
 
@@ -21,121 +20,141 @@ Welcome to Time Warp IDE development! This guide will help you contribute to the
 
 ### What is Time Warp IDE?
 
-Time Warp IDE is an educational programming environment supporting six classic languages:
-- BASIC (1964)
-- PILOT (1968)
-- Logo (1967)
-- Pascal (1970)
-- Prolog (1972)
-- C (1972)
+Time Warp IDE is an educational programming environment with:
+- **Three core languages**: BASIC, PILOT, and Logo (full feature parity)
+- **Experimental languages**: Pascal, Prolog, and C (incomplete implementations)
+- **Advanced UI**: Multiple screen modes, debug tools, variable inspector, accessibility features
+- **Rich graphics**: Real-time turtle canvas with zoom/pan, colors, sprites
+- **Extended features**: Music, particles, fractals, gamepad support, collaborative editing, speech synthesis
 
 ### Design Philosophy
 
-1. **Educational First**: Every decision prioritizes learning
-2. **Multi-Paradigm**: Expose students to different programming styles
-3. **Clear Feedback**: Error messages explain, don't confuse
-4. **Visual Learning**: Built-in turtle graphics make concepts tangible
-5. **Cross-Platform**: Same experience on Linux, macOS, Windows
+1. **Educational First** – Every design choice prioritizes learning
+2. **Stateless Executors** – Language processors return text; UI manages all state
+3. **Clear Feedback** – Error messages explain what went wrong, not just "Error"
+4. **Visual Learning** – Built-in graphics make abstract concepts tangible
+5. **Safe Code** – Never use `eval()`; use `safe_eval()` for expressions
+6. **Accessibility** – Support keyboards, high contrast, and screen readers
 
 ### Technology Stack
 
-**Primary Implementation (Python)**:
-- GUI: PySide6 (Qt6 bindings)
-- Graphics: QPainter with custom canvas
-- Testing: pytest with coverage
-- Package: setuptools with pyproject.toml
+**Python Implementation** (official):
+- **GUI Framework**: PySide6 (Qt6 bindings)
+- **Graphics Engine**: QPainter with custom canvas state management
+- **Testing**: pytest with coverage
+- **Package Management**: pip with requirements.txt
 
 ---
 
 ## Architecture
 
-### High-Level Structure (Python — Active)
+### Current Implementation (Python)
 
+Time Warp IDE is a **Python (PySide6) desktop application**. All other platform implementations (Rust, Go, Amiga, Haiku, Apple, OS/2, DOS) have been removed. Historical directories (`Browser/`, `Windows2000/`) are retained for reference only.
+
+**High-Level Structure**:
 ```
 Time_Warp_Studio/
 ├── Platforms/
-│   └── Python/                    # Official, actively maintained implementation
-│       ├── time_warp_ide.py       # Entry point (PySide6)
+│   └── Python/                         # OFFICIAL IMPLEMENTATION
+│       ├── time_warp_ide.py           # Entry point
 │       └── time_warp/
-│           ├── core/              # Central interpreter and helpers
-│           │   └── interpreter.py # Main dispatch logic
-│           ├── languages/         # BASIC, PILOT, Logo (+ experimental Pascal, Prolog, C)
-│           ├── ui/                # Qt UI factory and widgets
-│           └── graphics/          # Turtle canvas integrations
-├── Docs/                          # Documentation library
-├── Examples/                      # Sample programs (BASIC, PILOT, Logo, etc.)
-├── Tests/                         # Pytest suite
-└── Core_Spec/                     # Language and turtle specifications
+│           ├── core/                  # Language interpreter & support
+│           │   ├── interpreter.py     # Main command dispatcher
+│           │   ├── game_support.py
+│           │   ├── gamepad.py
+│           │   ├── music.py
+│           │   ├── particles.py
+│           │   ├── shapes.py
+│           │   ├── speech.py
+│           │   └── fractals.py
+│           ├── languages/             # Language executors
+│           │   ├── basic.py           # BASIC interpreter ✅
+│           │   ├── pilot.py           # PILOT interpreter ✅
+│           │   ├── logo.py            # Logo interpreter ✅
+│           │   ├── pascal.py          # Pascal (experimental)
+│           │   ├── prolog.py          # Prolog (experimental)
+│           │   └── c_lang_fixed.py    # C (experimental)
+│           ├── ui/                    # Qt6 UI components
+│           │   ├── main_window.py     # Main application window & styling
+│           │   ├── editor.py          # Code editor widget
+│           │   ├── canvas.py          # Graphics canvas
+│           │   ├── output.py          # Output panel
+│           │   ├── debug_panel.py     # Debugger UI
+│           │   ├── variable_inspector.py
+│           │   ├── error_explorer.py
+│           │   ├── screen_modes.py
+│           │   ├── themes.py
+│           │   ├── focus_mode.py
+│           │   ├── crt_effect.py
+│           │   ├── cassette_animation.py
+│           │   ├── accessibility.py
+│           │   ├── collaboration_client.py
+│           │   ├── snippets.py
+│           │   ├── snippet_dialog.py
+│           │   └── onboarding.py
+│           ├── graphics/              # Turtle state management
+│           │   └── turtle_state.py
+│           ├── cloud/                 # Cloud features
+│           ├── compiler/              # Compilation support
+│           └── playground.py          # Playground environment
+├── Docs/                              # Documentation library
+├── Examples/                          # Sample programs
+├── Tests/                             # Pytest suite
+├── Core_Spec/                         # Language specifications
+└── .github/                           # GitHub Actions workflows
 ```
 
-### Design Patterns (Python)
+### Design Patterns
 
-1. **Stateless Executors**: Language interpreters do not maintain UI state; they return emoji-prefixed strings.
-2. **Command Dispatch**: `TimeWarpInterpreter.execute()` routes lines to the correct executor.
-3. **Safe Evaluation**: Use `core/safe_expression_evaluator.py::safe_eval()` for math; never use `eval()`.
-4. **Turtle via UI**: Executors emit `🐢` actions; the UI reads executor state to render.
+#### 1. Stateless Executors
+Language interpreters **do not** maintain UI state. They:
+- Accept a command/line of code
+- Return emoji-prefixed output string
+- Do NOT call UI methods, draw graphics, or modify external state
 
-### Python Components
-
-```python
-# Platforms/Python/time_warp/core/interpreter.py
-class TimeWarpInterpreter:
-    def __init__(self):
-        self.basic = BasicExecutor(self)
-        self.pilot = PilotExecutor(self)
-        self.logo = LogoExecutor(self)
-        # Optional experimental: Pascal, Prolog, C
-
-    def execute(self, code: str, language: str) -> str:
-        # Parse and route to executor
-        ...
-```
-
-**Language Executors**
-```
-Platforms/Python/time_warp/languages/
-├── basic.py          # BASIC interpreter
-├── pilot.py          # PILOT interpreter
-├── logo.py           # Logo interpreter
-├── pascal.py         # Experimental
-├── prolog.py         # Experimental
-└── c_lang_fixed.py   # Experimental
-```
-
-**UI Layer**
-```
-Platforms/Python/time_warp/ui/
-├── qt_ui.py          # Main Qt window factory
-└── ...               # Editor, output panel, canvas widgets
-```
-
-### Language Executor Pattern
-
-All executors follow this interface:
-
-```rust
-pub trait LanguageExecutor {
-    fn execute_command(&mut self, command: &str) -> Result<String, String>;
-    fn reset(&mut self);
-}
-```
-
-Or in Python:
 ```python
 class LanguageExecutor:
     def execute_command(self, command: str) -> str:
         """
-        Execute a single command or line of code.
-        Returns output string with emoji prefixes:
+        Execute a single line/command.
+        Returns emoji-prefixed string:
         - ❌ for errors
-        - ✅ for success confirmations
-        - ℹ️ for informational messages
-        - 🐢 for turtle graphics actions
+        - ✅ for success
+        - ℹ️ for info
+        - 🐢 for turtle actions
+        - 🚀 for execution events
         """
         pass
 ```
 
-**Critical Rule**: Executors return text output only. All UI updates (turtle position, canvas changes) happen in the main application, not the executor.
+#### 2. Command Dispatch
+The interpreter (in `core/interpreter.py`) routes commands to the appropriate executor:
+```python
+def execute(self, code: str, language: Language) -> str:
+    if language == Language.BASIC:
+        return self.basic_executor.execute_command(code)
+    elif language == Language.PILOT:
+        return self.pilot_executor.execute_command(code)
+    # etc.
+```
+
+#### 3. Safe Expression Evaluation
+**Never use Python's `eval()`**. Always use safe evaluation:
+```python
+from time_warp.core.safe_expression_evaluator import safe_eval
+
+# Safe: Limited grammar, audited operations
+result = safe_eval("2 + 3 * X", {"X": 5})  # Returns 17
+
+# FORBIDDEN
+result = eval("2 + 3 * X")  # Security risk!
+```
+
+#### 4. Turtle Graphics via UI
+- Executors update turtle state and emit `🐢` messages
+- **UI reads executor state** to render (doesn't receive drawing commands)
+- Canvas state lives in `TurtleState` and the UI components
 
 ---
 
@@ -143,541 +162,419 @@ class LanguageExecutor:
 
 ### Prerequisites
 
-**Python Development**:
 ```bash
 # Python 3.10+ required
 python3 --version
 
-# Create virtual environment
-python3 -m venv .venv
-source .venv/bin/activate  # Linux/macOS
-# or
-.venv\Scripts\activate  # Windows
+# Verify you're on a system with SSE4 support
+# (Some VMs lack this and will get "Illegal instruction" errors)
 ```
 
 ### Clone Repository
 
 ```bash
-git clone https://github.com/honey-badger-org/Time_Warp.git
-cd Time_Warp
+git clone https://github.com/James-HoneyBadger/Time_Warp.git
+cd Time_Warp_Studio
 ```
 
-### Python Setup
+### Python Development Environment
 
 ```bash
 cd Platforms/Python
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
-python time_warp_ide.py
+
+# Verify installation
+python time_warp_ide.py  # Should launch the IDE
 ```
 
-### IDE Configuration
+### IDE Configuration (VS Code Recommended)
 
-**VS Code** (recommended):
-```bash
-# Install Python extension
-code --install-extension ms-python.python
-
-# Open workspace (from repo root)
-code .
+```json
+// .vscode/settings.json
+{
+    "python.defaultInterpreterPath": "${workspaceFolder}/Platforms/Python/.venv/bin/python",
+    "python.linting.enabled": true,
+    "python.linting.pylintEnabled": true,
+    "python.testing.pytestEnabled": true,
+    "python.testing.pytestArgs": [
+        "Tests"
+    ]
+}
 ```
-
-**PyCharm**:
-1. Open `Time_Warp/` as project
-2. Configure Python interpreter → Use .venv
-3. Mark `platforms/python` as Sources Root
 
 ---
 
 ## Code Organization
 
-### Python Structure
+### Python Directory Structure
 
 ```
 Platforms/Python/
+├── time_warp_ide.py                 # Entry point (PySide6 application)
 ├── time_warp/
 │   ├── __init__.py
-│   ├── __main__.py          # Entry point
 │   ├── core/
-│   │   ├── interpreter.py   # Main interpreter
-│   │   ├── safe_expression_evaluator.py
-│   │   └── async_support.py
+│   │   ├── interpreter.py           # Main dispatch logic (1500+ lines)
+│   │   ├── game_support.py          # Game development helpers
+│   │   ├── gamepad.py               # Gamepad input handling
+│   │   ├── music.py                 # Music playback
+│   │   ├── particles.py             # Particle system
+│   │   ├── shapes.py                # Geometric shapes
+│   │   ├── speech.py                # Text-to-speech
+│   │   └── fractals.py              # Fractal generation
 │   ├── languages/
-│   │   ├── basic.py
-│   │   ├── pilot.py
-│   │   ├── logo.py
-│   │   ├── pascal.py
-│   │   ├── prolog.py
-│   │   └── c_lang_fixed.py
+│   │   ├── basic.py                 # BASIC executor (~700 lines)
+│   │   ├── pilot.py                 # PILOT executor (~400 lines)
+│   │   ├── logo.py                  # Logo executor (~800 lines)
+│   │   ├── pascal.py                # Pascal executor (experimental)
+│   │   ├── prolog.py                # Prolog executor (experimental)
+│   │   └── c_lang_fixed.py          # C executor (experimental)
 │   ├── ui/
-
----
-
-Note: The Python implementation is the official and only actively maintained version. Other platform implementations (Rust, Go, Amiga, Haiku, Apple, OS/2) have been removed; Browser and Windows2000 directories are retained for historical and experimental reference only.
-│   │   ├── qt_ui.py
-│   │   ├── canvas.py
-│   │   └── output.py
-│   └── tools/
-│       └── theme.py
-├── tests/                   # Unit tests
-├── pyproject.toml          # Package config
-└── setup.py                # Setup script
+│   │   ├── main_window.py           # Application main window
+│   │   ├── editor.py                # Code editor with syntax highlighting
+│   │   ├── canvas.py                # Graphics canvas
+│   │   ├── output.py                # Output/console panel
+│   │   ├── debug_panel.py           # Debug controls
+│   │   ├── variable_inspector.py    # Variable inspector dialog
+│   │   ├── error_explorer.py        # Error details view
+│   │   ├── screen_modes.py          # Screen mode switching
+│   │   ├── themes.py                # Theme management (8 built-in themes)
+│   │   ├── focus_mode.py            # Distraction-free mode
+│   │   ├── crt_effect.py            # Retro monitor effect
+│   │   ├── cassette_animation.py    # Cassette loading animation
+│   │   ├── accessibility.py         # Accessibility features
+│   │   ├── collaboration_client.py  # Multi-user editing
+│   │   ├── snippets.py              # Code snippets
+│   │   ├── snippet_dialog.py        # Snippet selector dialog
+│   │   └── onboarding.py            # First-run wizard
+│   ├── graphics/
+│   │   └── turtle_state.py          # Turtle state & graphics data
+│   ├── cloud/                       # Cloud integration
+│   ├── compiler/                    # Code compilation support
+│   └── playground.py                # Interactive playground
+├── requirements.txt                 # Python dependencies
+├── pyproject.toml                   # Package configuration
+└── setup.py                         # Installation script
 ```
 
-### Configuration Files
+### Key Files Explained
 
-**Rust**:
-- `Cargo.toml` - Dependencies and project metadata
-- `Cargo.lock` - Locked dependency versions
+**`core/interpreter.py`** (1500+ lines)
+- Central command dispatcher routing to language executors
+- Manages hardware simulation (Arduino, Raspberry Pi)
+- Handles I/O operations
+- Coordinates turtle graphics state
 
-**Python**:
-- `pyproject.toml` - Package configuration, tool settings
-- `setup.py` - Installation script
-- `config/.flake8` - Flake8 linter configuration
-- `config/.pylintrc` - Pylint configuration
+**`languages/logo.py`** (800+ lines)
+- Complete Logo interpreter with turtle graphics
+- Commands: FORWARD, BACK, RIGHT, LEFT, PENDOWN, PENUP, SETCOLOR, PENWIDTH, CLEARSCREEN, etc.
+- Sprite support and graphical output
 
-**VS Code**:
-- `.vscode/settings.json` - Workspace settings
-- `.vscode/extensions.json` - Recommended extensions
+**`languages/basic.py`** (700+ lines)
+- BASIC interpreter with variables, loops, conditionals
+- GOTO/GOSUB support for subroutines
+- INPUT/PRINT for I/O
+- Mathematical expressions via safe_eval()
+
+**`ui/main_window.py`**
+- Main application window
+- Menu bar, status bar layout
+- Tab widget coordination
+- Theme application and button styling
+
+**`ui/canvas.py`**
+- Graphics rendering using QPainter
+- Zoom/pan controls
+- Turtle rendering and animation
 
 ---
 
 ## Contributing
 
-### Getting Started
+### Before You Start
 
-1. **Fork** the repository
-2. **Clone** your fork
-3. **Create** a feature branch
-4. **Make** your changes
-5. **Test** thoroughly
-6. **Submit** a pull request
+1. **Read the philosophy** – Understand "stateless executors" and "safe evaluation"
+2. **Check existing issues** – Avoid duplicate work
+3. **Discuss big changes** – Open an issue first if you're changing core behavior
 
-### Branch Naming
+### Workflow
 
-- `feature/description` - New features
-- `fix/description` - Bug fixes
-- `docs/description` - Documentation
-- `refactor/description` - Code improvements
-- `test/description` - Test additions
+1. **Fork the repository**
+2. **Create a feature branch**:
+   ```bash
+   git checkout -b feature/my-feature
+   ```
+3. **Make changes** following the guidelines below
+4. **Write/update tests** (see Testing section)
+5. **Submit PR** with clear description
 
-Examples:
-- `feature/add-forth-language`
-- `fix/turtle-coordinate-bug`
-- `docs/update-installation-guide`
-
-### Commit Messages
-
-Follow conventional commits:
-
-```
-type(scope): description
-
-[optional body]
-
-[optional footer]
-```
-
-Types:
-- `feat`: New feature
-- `fix`: Bug fix
-- `docs`: Documentation
-- `style`: Formatting
-- `refactor`: Code restructuring
-- `test`: Test additions
-- `chore`: Maintenance
-
-Examples:
-```
-feat(logo): add SETPENSIZE command
-
-Implements variable pen thickness for turtle graphics.
-Closes #123
-
-fix(basic): handle empty INPUT correctly
-
-Previously crashed on empty input. Now treats as empty string.
-
-docs(readme): update installation instructions
-
-Add macOS Homebrew installation method.
-```
-
-### Code Style
-
-**Rust**:
-```bash
-# Format code
-cargo fmt
-
-# Lint
-cargo clippy
-
-# Both required before PR
-```
+### Code Style Guidelines
 
 **Python**:
-```bash
-# Format code
-black platforms/python
+- Follow PEP 8 (use `black` for auto-formatting)
+- Type hints for public functions
+- Docstrings for classes and public methods
+- Max line length: 100 characters
 
-# Lint
-flake8 platforms/python
-
-# Type check
-mypy platforms/python
-
-# All required before PR
+```python
+def execute_command(self, command: str) -> str:
+    """Execute a single command and return emoji-prefixed output.
+    
+    Args:
+        command: The command to execute
+        
+    Returns:
+        Emoji-prefixed output string (❌, ✅, ℹ️, 🐢, or 🚀)
+    """
+    pass
 ```
 
-**Consistent Style**:
-- Indentation: 4 spaces (Python), 4 spaces (Rust)
-- Line length: 100 characters max
-- Comments: Clear, explain why not what
-- Docstrings: All public functions/classes
+**Emoji Conventions**:
+- `❌` – Error messages
+- `✅` – Success confirmations
+- `ℹ️` – Informational messages
+- `🐢` – Turtle graphics actions
+- `🚀` – Execution/runtime events
+- `📝` – Input prompts
 
 ### Adding a New Language
 
-1. **Create executor file**:
-```rust
-// platforms/rust/src/interpreter/new_language.rs
-pub struct NewLanguageExecutor {
-    variables: HashMap<String, Value>,
-}
-
-impl LanguageExecutor for NewLanguageExecutor {
-    fn execute_command(&mut self, command: &str) -> Result<String, String> {
-        // Parse and execute
-        Ok("✅ Output\n".to_string())
-    }
-    
-    fn reset(&mut self) {
-        self.variables.clear();
-    }
-}
+1. Create `languages/my_language.py`:
+```python
+class MyLanguageExecutor:
+    def __init__(self, interpreter):
+        self.interpreter = interpreter
+        self.variables = {}
+        
+    def execute_command(self, command: str) -> str:
+        # Parse and execute
+        # Return emoji-prefixed output
+        return "✅ MyLanguage executed\n"
 ```
 
-2. **Register in interpreter**:
-```rust
-// src/interpreter/mod.rs
-pub mod new_language;
-use new_language::NewLanguageExecutor;
+2. Register in `core/interpreter.py`:
+```python
+from languages.my_language import MyLanguageExecutor
+# In __init__:
+self.my_language = MyLanguageExecutor(self)
 ```
 
-3. **Add to main app**:
-```rust
-// src/app.rs
-enum Language {
-    // existing...
-    NewLanguage,
-}
+3. Add syntax highlighting in `ui/editor.py`
 
-impl TimeWarpApp {
-    fn execute(&mut self) {
-        match self.current_language {
-            // existing...
-            Language::NewLanguage => {
-                let result = self.new_language_executor.execute_command(&self.code);
-                // handle result
-            }
-        }
-    }
-}
-```
+4. Add tests in `Tests/test_my_language.py`
 
-4. **Add tests**:
-```rust
-#[cfg(test)]
-mod tests {
-    use super::*;
-    
-    #[test]
-    fn test_basic_functionality() {
-        let mut exec = NewLanguageExecutor::new();
-        let result = exec.execute_command("TEST COMMAND");
-        assert!(result.is_ok());
-    }
-}
-```
+### Adding a UI Feature
 
-5. **Add examples**:
-```
-examples/new_language/
-├── hello_world.nlang
-├── loops.nlang
-└── procedures.nlang
-```
+1. Create component in `ui/new_component.py`
+2. Integrate into `ui/main_window.py`
+3. Apply theme colors using `QPalette` where possible
+4. Add to menu bar if user-facing
+5. Write tests in `Tests/test_ui_new_component.py`
 
-6. **Document**:
-- Add language section to `docs-new/user/01-programming-guide.md`
-- Create reference in `docs-new/reference/00-languages.md`
-- Update main README
+### Example: Adding a Button
+
+```python
+# In ui/main_window.py
+self.my_button = QPushButton("My Button")
+self.my_button.setToolTip("Helpful tooltip")
+self.my_button.clicked.connect(self.on_my_button_clicked)
+
+# Styling is applied via main stylesheet in setStyleSheet()
+```
 
 ---
 
 ## Testing
 
-### Rust Tests
-
-```bash
-# Run all tests
-cargo test
-
-# Run specific test
-cargo test test_basic_print
-
-# With output
-cargo test -- --nocapture
-
-# With coverage (requires tarpaulin)
-cargo install cargo-tarpaulin
-cargo tarpaulin --out Html
-```
-
-### Python Tests
-
-```bash
-# Run all tests
-pytest
-
-# Run specific file
-pytest tests/test_basic.py
-
-# With coverage
-pytest --cov=time_warp --cov-report=html
-
-# Verbose
-pytest -v
-
-# Stop on first failure
-pytest -x
-```
-
 ### Test Organization
 
-**Rust**:
-- Unit tests: In same file as code (bottom of file)
-- Integration tests: `platforms/rust/tests/`
-
-**Python**:
-- Unit tests: `platforms/python/tests/test_*.py`
-- Integration tests: `platforms/python/tests/*_test.py`
-
-### Writing Good Tests
-
-```rust
-#[test]
-fn test_descriptive_name() {
-    // Arrange
-    let mut executor = BasicExecutor::new();
-    let command = "PRINT \"Hello\"";
-    
-    // Act
-    let result = executor.execute_command(command);
-    
-    // Assert
-    assert!(result.is_ok());
-    assert_eq!(result.unwrap(), "Hello\n");
-}
 ```
+Tests/
+├── run_tests.py                            # Test orchestrator
+├── test_conformance_basic_pilot_logo.py   # Language conformance tests
+├── test_core_interpreter.py               # Interpreter tests
+├── test_gui_debug_integration.py          # UI integration tests
+└── golden_snapshots/                      # Expected output files
+```
+
+### Running Tests
+
+```bash
+cd Platforms/Python
+
+# Activate virtual environment
+source .venv/bin/activate
+
+# From repo root (run all tests)
+cd ../../
+python Tests/run_tests.py --comprehensive
+
+# Quick smoke test
+python Tests/run_tests.py --quick
+
+# Specific test file
+pytest Tests/test_core_interpreter.py -v
+
+# Specific test function
+pytest Tests/test_core_interpreter.py::test_basic_math -v
+
+# With coverage
+pytest Tests/ --cov=Platforms/Python/time_warp --cov-report=html
+```
+
+### Writing Tests
 
 ```python
-def test_descriptive_name():
-    """Test that PRINT outputs correct string"""
-    # Arrange
-    executor = BasicExecutor()
+import pytest
+from time_warp.core.interpreter import Interpreter, Language
+
+def test_basic_hello_world():
+    """Test BASIC PRINT statement."""
+    interp = Interpreter()
+    interp.load_program('PRINT "Hello"', Language.BASIC)
+    output = interp.execute()
+    assert "Hello" in output
+    assert "❌" not in output  # No errors
+
+def test_logo_forward():
+    """Test Logo FORWARD command."""
+    from time_warp.graphics.turtle_state import TurtleState
     
-    # Act
-    result = executor.execute_command('PRINT "Hello"')
+    turtle = TurtleState()
+    interp = Interpreter()
+    interp.load_program("FORWARD 50", Language.LOGO)
+    interp.execute(turtle)
     
-    # Assert
-    assert result == "Hello\n"
+    # Verify turtle moved
+    assert turtle.y == 50  # Moved forward 50 units
+
+def test_error_handling():
+    """Test that errors are properly reported."""
+    interp = Interpreter()
+    interp.load_program("INVALID COMMAND", Language.BASIC)
+    output = interp.execute()
+    assert output.startswith("❌")
 ```
 
-**Test Coverage Goals**:
-- Core interpreter: 90%+
-- Language executors: 85%+
-- UI code: 60%+ (harder to test)
-- Overall: 80%+
+### Test Best Practices
 
----
-
-## Building
-
-### Rust Build
-
-```bash
-# Debug build (fast compilation, slower execution)
-cargo build
-
-# Release build (optimized)
-cargo build --release
-
-# Executable location:
-# target/debug/time-warp-ide
-# target/release/time-warp-ide
-```
-
-### Python Distribution
-
-```bash
-# Build wheel
-cd Platforms/Python
-python -m build
-
-# Creates:
-# dist/time_warp_ide-4.0.0-py3-none-any.whl
-# dist/time_warp_ide-4.0.0.tar.gz
-
-# Install wheel
-pip install dist/time_warp_ide-4.0.0-py3-none-any.whl
-```
-
-### Platform-Specific Builds
-
-**macOS App Bundle**:
-```bash
-cd Scripts
-./build_macos_app.sh
-```
-
-**Windows Installer**:
-```bash
-# Requires NSIS
-# The project keeps the Windows 2000 NSIS script in Platforms/Windows2000/installer/timewarp.nsi
-# Use OUTDIR and VERSION macros so CI and local packaging match:
-makensis -DOUTDIR=Platforms/Windows2000/dist -DVERSION=4.0.0 Platforms/Windows2000/installer/timewarp.nsi
-```
-
-**Linux Packages**:
-```bash
-# Debian/Ubuntu
-cd Packaging/debian
-dpkg-buildpackage -us -uc
-
-# Arch Linux
-cd Packaging/arch
-makepkg
-```
+1. **Use fixtures** for shared state
+2. **Keep tests small** – one assertion per test when possible
+3. **Test both success and failure** cases
+4. **Use descriptive names** – `test_basic_for_loop_iterations_correctly()` not `test_loop()`
+5. **Document complex assertions** with comments
 
 ---
 
 ## Release Process
 
-### Version Numbering
+### Version Numbers
 
-Follow Semantic Versioning (semver):
-- MAJOR.MINOR.PATCH (e.g., 4.0.0)
-- MAJOR: Breaking changes
-- MINOR: New features (backward compatible)
-- PATCH: Bug fixes
+We use semantic versioning: `MAJOR.MINOR.PATCH`
+- `MAJOR` – Breaking changes or major features
+- `MINOR` – New features, backward compatible
+- `PATCH` – Bug fixes
 
-### Creating a Release
+### Release Steps
 
-1. **Update version numbers** across source, installers, and documentation:
-    - `Platforms/Python/pyproject.toml`
-    - `Platforms/Python/time_warp/__init__.py`
-    - `Platforms/Python/time_warp/ui/main_window.py`
-    - `Platforms/Browser` (`package.json`, `index.html`, `js/app*.js`, `js/ui.js`)
-    - `Platforms/DOS/src/timewarp_dos.c`
-    - `Scripts/install.sh`, `Scripts/install-user.sh`
-    - Root `README.md` and key guides inside `Docs/`
+1. **Update version**:
+   ```bash
+   # In Platforms/Python/setup.py
+   version="5.1.0"
+   ```
 
-2. **Update changelog** entry for the release:
-    ```markdown
-    ## [4.0.0] - 2025-11-22
+2. **Update changelog**:
+   - Add entry to `Docs/misc/RELEASE_NOTES.md`
+   - List major features and bug fixes
 
-    ### Added
-    - Platform cleanup and documentation realignment
-    - Unified version branding across IDEs
+3. **Run tests**:
+   ```bash
+   python Tests/run_tests.py --comprehensive
+   ```
 
-    ### Fixed
-    - Outdated references to legacy platforms
-    - Version display inconsistencies in installers
-    ```
+4. **Create git tag**:
+   ```bash
+   git tag -a v5.1.0 -m "Release version 5.1.0"
+   git push origin v5.1.0
+   ```
 
-3. **Run full test suite**:
-    ```bash
-    python test_runner.py --comprehensive
-    ```
+5. **GitHub Release**:
+   - Go to Releases → Create New Release
+   - Use tag name: `v5.1.0`
+   - Add release notes (copy from RELEASE_NOTES.md)
+   - Mark as "Latest" if appropriate
 
-4. **Build deliverables**:
-    ```bash
-    cd Platforms/Python
-    python -m build
+---
 
-    # Browser assets (optional refresh)
-    npm install --prefix ../Browser
-    npm run build --prefix ../Browser
-    ```
+## Troubleshooting
 
-5. **Create git tag**:
-    ```bash
-    git tag -a v5.0.0 -m "Release version 5.0.0"
-    git push origin v5.0.0
-    ```
+### "Illegal instruction" on Startup
 
-6. **GitHub Release**:
-   - Go to GitHub Releases
-   - Create new release from tag
-   - Upload build artifacts
-   - Copy changelog content
+**Problem**: PySide6 requires SSSE3/SSE4 CPU instructions, not available in some VMs.
 
-7. **Announce**:
-   - Update website
-   - Post in discussions
-   - Social media
-   - Email newsletter (if applicable)
+**Solution**: Run on physical hardware or modern cloud instance. Check:
+```bash
+grep -o 'sse4_1\|ssse3' /proc/cpuinfo
+```
+
+### ImportError: No module named 'PySide6'
+
+**Problem**: Dependencies not installed.
+
+**Solution**:
+```bash
+pip install -r requirements.txt
+```
+
+### Tests Fail with "AttributeError: 'module' object has no attribute"
+
+**Problem**: Stale `.pyc` files or imports from wrong version.
+
+**Solution**:
+```bash
+find . -type d -name __pycache__ -exec rm -r {} +
+pip install -e .  # Reinstall in development mode
+```
 
 ---
 
 ## Resources
 
 ### Documentation
-- [Rust Book](https://doc.rust-lang.org/book/)
-### CI / Release Automation
-
-- Windows packaging and smoke tests are performed by two workflows listed in `.github/workflows/`:
-    - `build-windows2000.yml` — runs cross-compilation on `ubuntu-latest` (mingw-w64) and a `windows-latest` native build with NSIS and smoke tests.
-    - `release-windows2000.yml` — runs on `release` events and attaches the produced `TimeWarpIDE-Setup-<VERSION>.exe` to GitHub releases.
-
-When preparing releases, ensure the chosen tag name is passed to makensis as `-DVERSION=${{ github.event.release.tag_name }}` so the installer filename matches the tag.
-
-- [egui Documentation](https://docs.rs/egui/)
-- [PySide6 Documentation](https://doc.qt.io/qtforpython/)
+- [Python Official Docs](https://docs.python.org/3/)
+- [PySide6 Documentation](https://doc.qt.io/qtforpython-6/)
 - [pytest Documentation](https://docs.pytest.org/)
 
 ### Community
-- [GitHub Discussions](https://github.com/honey-badger-org/Time_Warp/discussions)
-- [Issue Tracker](https://github.com/honey-badger-org/Time_Warp/issues)
+- [GitHub Issues](https://github.com/James-HoneyBadger/Time_Warp/issues)
+- [GitHub Discussions](https://github.com/James-HoneyBadger/Time_Warp/discussions)
 
 ### Tools
-- [Rust Playground](https://play.rust-lang.org/)
-- [Python REPL](https://www.python.org/shell/)
+- [Python REPL](https://www.python.org/)
+- [Qt Designer](https://doc.qt.io/qt-6/qtdesigner-manual.html) (optional, for UI work)
 
 ---
 
 ## Getting Help
 
 **Questions?**
-- Search [existing issues](https://github.com/honey-badger-org/Time_Warp/issues)
-- Ask in [Discussions](https://github.com/honey-badger-org/Time_Warp/discussions)
+- Search [existing issues](https://github.com/James-HoneyBadger/Time_Warp/issues)
+- Ask in [Discussions](https://github.com/James-HoneyBadger/Time_Warp/discussions)
 - Read the [FAQ](../user/03-faq.md)
 
 **Found a bug?**
 - Check if already reported
-- Create new issue with:
-  - Steps to reproduce
-  - Expected behavior
-  - Actual behavior
-  - System information
-  - Code samples
+- Create issue with steps to reproduce, expected/actual behavior, system info
 
 **Want a feature?**
-- Search existing feature requests
-- Create new issue describing:
-  - Use case
-  - Proposed solution
-  - Alternatives considered
+- Describe the use case and educational value
+- Discuss in Discussions before starting major work
 
 ---
 

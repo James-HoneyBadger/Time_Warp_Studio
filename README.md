@@ -2,55 +2,38 @@
 
 Time Warp IDE is an educational programming environment that unifies BASIC, PILOT, and Logo with experimental Pascal, Prolog, and C support. The official implementation is a PySide6 desktop application that keeps the language executors stateless while the UI manages canvas rendering, editor state, and theming.
 
-**Current release:** 5.0.0 (December 2, 2025) - Phase III-A: AI Foundation
+**Current release:** 5.0.0 (December 11, 2025)
 
 ## Highlights
 
-- **Three core languages**: BASIC, PILOT, and Logo ship with full feature parity; Pascal, Prolog, and C remain experimental inside the Python interpreter
-- **Integrated turtle graphics**: Logo commands draw on a shared canvas that is rendered by the UI and persisted across executions
-- **AI-powered assistance**: Intelligent code completion, error explanation, and learning tips powered by GitHub Copilot and local Ollama models
-- **Education-first workflows**: Emoji-prefixed output, immediate feedback loops, and a comprehensive lesson library make classroom use straightforward
-- **Hardware simulation**: Arduino and Raspberry Pi controllers default to simulation mode, enabling IoT lessons without extra hardware
-- **Cross-language examples**: Reusable demos live in `Examples/` and are referenced throughout the curriculum
+- **Three core languages**: BASIC, PILOT, and Logo with full feature parity (Pascal, Prolog, and C available experimentally)
+- **Advanced UI toolkit**: Multiple screen modes, code editor with snippets, variable inspector, debug panel, focus mode, CRT effect, and accessibility features
+- **Real-time turtle graphics**: Full-featured canvas with zoom/pan, color support, pen width control, sprite visibility, and graphical output modes
+- **Rich development environment**: Syntax highlighting, error explorer, code search/replace, snippet system, and retro cassette animations
+- **Extended capabilities**: Music playback, particle systems, fractal generation, gamepad support, collaborative editing client, and speech synthesis
+- **Educational workflow**: Emoji-prefixed output, immediate feedback, comprehensive examples, and intuitive error messages
 
-## Quick Start (Python)
-
-```bash
-git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp
-python Time_Warp_IDE.py
-```
-
-The entry point auto-installs PySide6 if necessary and checks for required CPU instructions (SSSE3/SSE4). Run `python test_runner.py --basic` for a fast smoke test or `python test_runner.py --comprehensive` for the full suite.
-
-## AI Features (Phase III)
-
-Time Warp IDE now includes AI-powered development assistance:
-
-- **Code Completion** (Ctrl+Space): Context-aware code suggestions for BASIC, PILOT, and Logo
-- **Error Explanation** (Ctrl+E): AI-powered analysis of runtime errors with detailed explanations
-- **Code Review** (Ctrl+R): Automated code review with improvement suggestions
-- **Learning Tips** (Ctrl+L): Personalized learning recommendations based on your code
-
-### AI Provider Setup
-
-The IDE supports multiple AI providers:
-
-1. **GitHub Copilot**: Set `GITHUB_TOKEN` environment variable for GitHub-hosted models
-2. **Ollama (Local)**: Install Ollama and run `ollama serve` for local AI models
-3. **Other providers**: Additional providers can be added via the plugin system
-
-Configure your preferred AI provider in the **AI → AI Provider** menu.
-
-## Quick Start (Python)
+## Quick Start
 
 ```bash
+# Clone and navigate to Python implementation
 git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp
-python Time_Warp_IDE.py
+cd Time_Warp/Platforms/Python
+
+# Create virtual environment (recommended)
+python3 -m venv .venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+
+# Install and run
+pip install -r requirements.txt
+python time_warp_ide.py
 ```
 
-The entry point auto-installs PySide6 if necessary and checks for required CPU instructions (SSSE3/SSE4). Run `python test_runner.py --basic` for a fast smoke test or `python test_runner.py --comprehensive` for the full suite.
+For quick validation:
+```bash
+cd ../../  # Back to repo root
+python Tests/run_tests.py --quick
+```
 
 ## Documentation
 
@@ -62,56 +45,179 @@ All guides live in `Docs/` with an index at `Docs/INDEX.md`:
 - `Docs/developer/` – Architecture, contributing standards, and technical references
 - `Docs/installation/` – Platform-specific setup guides and troubleshooting
 
+## Repository Layout
+
+```
+Time_Warp_Studio/
+├── Platforms/
+│   └── Python/                     # Official actively-maintained implementation
+│       ├── time_warp_ide.py       # Main entry point (PySide6)
+│       └── time_warp/
+│           ├── core/              # Interpreter and support modules
+│           │   ├── interpreter.py # Main dispatch logic
+│           │   ├── game_support.py
+│           │   ├── gamepad.py
+│           │   ├── music.py
+│           │   ├── particles.py
+│           │   ├── shapes.py
+│           │   ├── speech.py
+│           │   └── fractals.py
+│           ├── languages/         # BASIC, PILOT, Logo (+ experimental Pascal, Prolog, C)
+│           │   ├── basic.py
+│           │   ├── pilot.py
+│           │   ├── logo.py
+│           │   ├── pascal.py
+│           │   ├── prolog.py
+│           │   └── c_lang_fixed.py
+│           ├── ui/                # Qt6 UI components
+│           │   ├── main_window.py
+│           │   ├── editor.py
+│           │   ├── canvas.py
+│           │   ├── output.py
+│           │   ├── debug_panel.py
+│           │   ├── variable_inspector.py
+│           │   ├── error_explorer.py
+│           │   ├── screen_modes.py
+│           │   ├── themes.py
+│           │   ├── focus_mode.py
+│           │   ├── crt_effect.py
+│           │   ├── cassette_animation.py
+│           │   ├── accessibility.py
+│           │   ├── collaboration_client.py
+│           │   ├── snippets.py
+│           │   ├── snippet_dialog.py
+│           │   └── onboarding.py
+│           └── graphics/          # Turtle graphics state and rendering
+├── Docs/                          # Complete documentation library
+├── Examples/                      # Sample programs (BASIC, PILOT, Logo, Pascal, C, Prolog)
+├── Tests/                         # Pytest suite (unit, integration, conformance)
+├── Core_Spec/                     # Language specifications
+└── .github/                       # GitHub workflows and configurations
+```
+
 ## Platform Overview
 
 | Platform | Location | Status | Notes |
 | - | - | - | - |
-| Python | `Platforms/Python/` | ✅ Active | PySide6 IDE, turtle graphics, language executors |
-| Browser | `Platforms/Browser/` | 🧪 Experimental | HTML/JS prototype retained for research |
-| Windows2000 | `Platforms/Windows2000/` | 🧪 Historical | Vintage build scripts and artifacts kept for archival/reference |
+| Python | `Platforms/Python/` | ✅ Active | PySide6 IDE with full feature set |
+| Browser | `Platforms/Browser/` | 🧪 Experimental | HTML/JS prototype for research |
+| Windows2000 | `Platforms/Windows2000/` | 🧪 Historical | Legacy build scripts (archival) |
 
-The Python implementation is the sole actively maintained version. Other platforms (Rust, Go, Amiga, Haiku, Apple, OS/2, DOS) have been removed or archived.
+Other platforms (Rust, Go, Amiga, Haiku, Apple, OS/2, DOS) have been removed or archived.
 
-## Repository Layout
+## Features Overview
 
-```
-Time_Warp/
-├── Platforms/        # Implementations (Python primary)
-├── Docs/             # Documentation library (index + guides)
-├── Examples/         # Sample programs for BASIC, PILOT, and Logo
-├── Core_Spec/        # Language specifications and turtle docs
-├── Scripts/          # Utility scripts for builds and packaging
-├── Tests/            # Pytest suite and helpers
-└── Packaging/        # Distribution resources
-```
+### Languages
+- **BASIC**: Full interpreter with variables, loops, conditionals, subroutines, and I/O
+- **PILOT**: Structured language with acceptance, computation, and output features
+- **Logo**: Complete turtle graphics with commands for movement, drawing, color, and sprites
+- **Experimental**: Pascal, Prolog, and C implementations available but incomplete
 
-## Development Notes
+### User Interface
+- **Multiple Screen Modes**: Switch between text, graphics, single, and combined modes
+- **Code Editor**: Syntax highlighting, line numbers, code snippets, search/replace
+- **Variable Inspector**: Real-time display of program variables and values
+- **Debug Panel**: Step through execution, breakpoints, and execution history
+- **Error Explorer**: Interactive error details with suggestions
+- **Focus Mode**: Distraction-free coding environment
+- **Accessibility**: Keyboard navigation, high contrast themes, screen reader support
 
-- Use `core/safe_expression_evaluator.py::safe_eval()` for expression parsing—`eval()` is forbidden
-- Language executors return emoji-prefixed strings (`❌`, `ℹ️`, `🚀`, etc.) and never manipulate UI objects directly
-- The turtle canvas is managed by the UI; executors only update coordinates and emit draw commands
-- Optional hardware integrations remain in simulation mode unless dependencies are installed
+### Graphics & Animation
+- **Turtle Canvas**: Full 2D drawing with color, pen width, and sprite visibility
+- **Zoom & Pan**: Interactive canvas navigation
+- **Cassette Animation**: Retro loading animation effects
+- **CRT Effect**: Vintage monitor screen emulation
+- **Particle Systems**: Visual effects for educational demonstrations
+
+### Advanced Features
+- **Code Snippets**: Reusable template library for common patterns
+- **Collaborative Editing**: Real-time multi-user code editing client
+- **Music Playback**: MIDI/WAV support for multimedia projects
+- **Gamepad Support**: Controller input for interactive programs
+- **Speech Synthesis**: Text-to-speech capabilities for accessibility and games
+- **Fractal Generation**: Mathematical visualization tools
+- **Onboarding Wizard**: Interactive first-run guide
+
+## Development & Contribution
+
+### Project Philosophy
+1. **Educational First** – Every design choice prioritizes learning
+2. **Clear Feedback** – Error messages explain, never confuse
+3. **Visual Learning** – Built-in graphics make abstract concepts tangible
+4. **Stateless Executors** – Language processors return text; UI manages state
+5. **Safe Evaluation** – Use `safe_eval()` for expressions, never Python's `eval()`
+
+### Development Guidelines
+- Language executors are stateless command processors
+- All output uses emoji prefixes: ❌ (error), ✅ (success), ℹ️ (info), 🐢 (turtle), 🚀 (event)
+- Turtle graphics state lives in the UI, not the executor
+- Optional hardware integrations default to simulation mode
 
 ### Testing
 
 ```bash
-python test_runner.py --basic     # fast validation
-python test_runner.py --comprehensive
-pytest Tests/test_core_interpreter.py -v
+cd Platforms/Python
+
+# Activate virtual environment
+source .venv/bin/activate
+
+# Run quick smoke tests
+python ../../Tests/run_tests.py --quick
+
+# Run full test suite
+python ../../Tests/run_tests.py --comprehensive
+
+# Run specific test file
+pytest ../../Tests/test_conformance_basic_pilot_logo.py -v
 ```
+
+### Adding a New Language
+
+1. Create executor in `time_warp/languages/new_language.py` implementing the `LanguageExecutor` interface
+2. Register in `time_warp/core/interpreter.py`
+3. Add syntax highlighting to UI
+4. Add unit tests and example programs
+
+## System Requirements
+
+### Minimum
+- **OS**: Linux (kernel 3.10+), macOS 10.13+, Windows 7+
+- **CPU**: 1 GHz processor with SSSE3/SSE4.1 support
+- **RAM**: 256 MB
+- **Disk**: 50 MB free space
+- **Display**: 800×600 resolution
+
+### Recommended
+- **CPU**: Modern multi-core processor
+- **RAM**: 512 MB or more
+- **Disk**: 100 MB for full documentation and examples
+- **Display**: 1024×768 or higher
 
 ## Contributing
 
-Contributions are welcome. Start with `Docs/developer/00-developer-guide.md` for architecture, testing expectations, and submission guidelines. Example programs and documentation improvements are especially helpful for educators.
+Contributions are welcome! Start with:
+1. Read [Docs/developer/00-developer-guide.md](Docs/developer/00-developer-guide.md)
+2. Check [FEATURE_IMPLEMENTATION_SUMMARY.md](FEATURE_IMPLEMENTATION_SUMMARY.md)
+3. Review [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
+
+Focus areas that help most:
+- Example programs and educational materials
+- Documentation improvements
+- Bug reports with detailed reproduction steps
+- Feature suggestions with educational use cases
 
 ## Community & Support
 
-- Issues & enhancements: <https://github.com/James-HoneyBadger/Time_Warp/issues>
-- Discussions: <https://github.com/James-HoneyBadger/Time_Warp/discussions>
-- Releases: <https://github.com/James-HoneyBadger/Time_Warp/releases>
-
-Note: Windows installers are produced as `TimeWarpIDE-Setup-<VERSION>.exe` and attached to releases. The Windows 2000 NSIS script lives in `Platforms/Windows2000/installer/timewarp.nsi` and is invoked by CI with `-DVERSION` and `-DOUTDIR`.
+- **Issues & Bug Reports**: <https://github.com/James-HoneyBadger/Time_Warp/issues>
+- **Discussions & Q&A**: <https://github.com/James-HoneyBadger/Time_Warp/discussions>
+- **Releases & Downloads**: <https://github.com/James-HoneyBadger/Time_Warp/releases>
 
 ## License
 
-Time Warp IDE is released under the MIT License. See `LICENSE` for details.
+Time Warp IDE is released under the MIT License. See [LICENSE](LICENSE) for details.
+
+---
+
+**Maintained by:** James Temple  
+**Primary Contact:** james@honey-badger.org  
+**Repository:** <https://github.com/James-HoneyBadger/Time_Warp>
