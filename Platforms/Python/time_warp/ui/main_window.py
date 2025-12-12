@@ -495,7 +495,7 @@ class MainWindow(QMainWindow):
             QMainWindow {
                 background-color: palette(window);
             }
-            
+
             /* Tab styling */
             QTabWidget::pane {
                 border: 1px solid palette(dark);
@@ -520,7 +520,7 @@ class MainWindow(QMainWindow):
             QTabBar::tab:hover:!selected {
                 background-color: rgba(0, 0, 0, 0.05);
             }
-            
+
             /* Splitter styling */
             QSplitter::handle {
                 background-color: palette(dark);
@@ -529,7 +529,7 @@ class MainWindow(QMainWindow):
             QSplitter::handle:hover {
                 background-color: palette(highlight);
             }
-            
+
             /* Button styling for all buttons */
             QPushButton {
                 background-color: palette(button);
@@ -555,7 +555,7 @@ class MainWindow(QMainWindow):
                 background-color: palette(window);
                 border: 2px solid palette(dark);
             }
-            
+
             /* Dialog button styling */
             QDialogButtonBox QPushButton {
                 min-width: 70px;
@@ -633,7 +633,7 @@ class MainWindow(QMainWindow):
         # Turtle canvas
         self.canvas = TurtleCanvas(self)
         self.right_tabs.addTab(self.canvas, "🎨 Graphics")
-        
+
         # Connect output panel to tabs for auto-switching to Graphics
         self.output.set_tabs_widget(self.right_tabs)
 
@@ -1113,7 +1113,7 @@ class MainWindow(QMainWindow):
         toolbar.setMovable(False)
         toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         toolbar.setIconSize(toolbar.iconSize())  # Use default icon size
-        toolbar.setMinimumHeight(44)  # Make toolbar slightly taller for better button appearance
+        toolbar.setMinimumHeight(44)  # Toolbar height for better button appearance
         toolbar.setStyleSheet(
             """
             QToolBar {
@@ -1207,7 +1207,6 @@ class MainWindow(QMainWindow):
         )
         clear_canvas_btn.setToolTip("Clear the graphics canvas")
         clear_canvas_btn.setStatusTip("Clear all graphics drawings")
-
 
         # Language selector with enhanced styling
         toolbar.addSeparator()

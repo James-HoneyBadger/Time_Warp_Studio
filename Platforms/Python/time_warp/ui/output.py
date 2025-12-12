@@ -250,7 +250,7 @@ class OutputPanel(QTextEdit):
         """Handle turtle state change."""
         if self.current_canvas:
             self.current_canvas.set_turtle_state(turtle)
-            
+
             # Auto-switch to Graphics tab when lines are being drawn
             if turtle.lines and self.tabs_widget:
                 try:
