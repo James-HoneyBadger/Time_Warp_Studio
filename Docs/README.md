@@ -67,7 +67,7 @@ For detailed development workflow expectations, read `Docs/developer/00-develope
 
 ---
 
-*Maintained for Time Warp IDE v5.0.0.*
+*Maintained for Time Warp IDE v5.0.1.*
 - [ ] Follow style guide
 - [ ] Include examples where appropriate
 - [ ] Link to related content

@@ -494,4 +494,4 @@ See [Developer Guide](../developer/00-developer-guide.md) for:
 
 ---
 
-*FAQ v5.0.0 - December 2025*
+*FAQ v5.0.1 - December 2025*
