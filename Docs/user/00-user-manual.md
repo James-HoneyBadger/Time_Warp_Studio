@@ -1,6 +1,6 @@
 # Time Warp IDE User Manual
 
-Welcome to Time Warp IDE! This manual will help you get the most out of your programming environment.
+Welcome to Time Warp IDE! This guide will help you master the programming environment.
 
 ---
 
@@ -9,30 +9,40 @@ Welcome to Time Warp IDE! This manual will help you get the most out of your pro
 1. [Introduction](#introduction)
 2. [Getting Started](#getting-started)
 3. [The Interface](#the-interface)
-4. [Writing Your First Program](#writing-your-first-program)
-5. [Running Programs](#running-programs)
-6. [Using Turtle Graphics](#using-turtle-graphics)
-7. [Saving and Loading](#saving-and-loading)
-8. [Customizing Your Environment](#customizing-your-environment)
-9. [Tips and Tricks](#tips-and-tricks)
+4. [The Code Editor](#the-code-editor)
+5. [Writing Your First Program](#writing-your-first-program)
+6. [Running Programs](#running-programs)
+7. [Using Turtle Graphics](#using-turtle-graphics)
+8. [Advanced Features](#advanced-features)
+9. [Saving and Loading](#saving-and-loading)
+10. [Customizing Your Environment](#customizing-your-environment)
+11. [Tips and Tricks](#tips-and-tricks)
 
 ---
 
 ## Introduction
 
-Time Warp IDE is an educational programming environment centered on three core languages, with additional experimental modules:
+Time Warp IDE is an educational programming environment supporting three core languages with full feature parity, plus experimental options:
 
-- **BASIC** - Great for beginners, simple English-like commands
-- **PILOT** - Designed for teaching, emphasizes clear communication
-- **Logo** - Learn through drawing with turtle graphics
-- Experimental: **Pascal**, **Prolog**, **C** (availability varies; features may be incomplete)
+- **BASIC** – Beginner-friendly, English-like syntax for learning fundamentals
+- **PILOT** – Designed for structured teaching with clear feedback
+- **Logo** – Visual learning through turtle graphics and drawing commands
+- **Experimental**: Pascal, Prolog, C (incomplete; for advanced exploration)
 
 ### Who Should Use Time Warp IDE?
 
-- **Students** learning their first programming language
-- **Teachers** looking for an all-in-one teaching platform
+- **Students** learning programming concepts
+- **Teachers** needing an integrated classroom tool
+- **Educators** who want visual feedback and multiple paradigms
 - **Hobbyists** interested in retro computing and classic languages
-- **Developers** exploring different programming paradigms
+
+### Design Philosophy
+
+Every feature in Time Warp IDE prioritizes:
+1. **Clear Feedback** – Error messages explain what went wrong
+2. **Visual Learning** – Graphics make abstract concepts concrete
+3. **Simplicity** – No distracting UI elements or complex workflows
+4. **Accessibility** – Support for keyboard navigation and screen readers
 
 ---
 
@@ -40,25 +50,23 @@ Time Warp IDE is an educational programming environment centered on three core l
 
 ### System Requirements
 
-- **Operating System**: Linux, macOS, or Windows
-- **Memory**: 256 MB RAM minimum (512 MB recommended)
-- **Disk Space**: 50 MB for installation
-- **Display**: 1024×768 resolution or higher
+- **Operating System**: Linux, macOS, or Windows (see installation guide)
+- **Memory**: 256 MB RAM (512 MB recommended)
+- **Disk Space**: 50 MB
+- **Display**: 800×600 minimum (1024×768 recommended)
+- **Internet**: Not required (optional for cloud features)
 
-### First Launch (Python)
+### First Launch
 
-Launch via the Python application. From the repo root:
+1. Open a terminal and navigate to `Platforms/Python/`
+2. Run `python time_warp_ide.py`
+3. The IDE window opens with:
+   - Code editor on the left
+   - Graphics canvas on the right
+   - Menu bar at the top
+   - Status bar at the bottom
 
-1. `cd Platforms/Python`
-2. `python3 -m pip install -r requirements.txt`
-3. `python3 time_warp_ide.py`
-
-When you start Time Warp IDE, you'll see:
-
-1. **Menu Bar** - Access all features and settings
-2. **Code Editor** - Where you write your programs
-3. **Output Panel** - See program results and error messages
-4. **Status Bar** - Current language and system information
+You're now ready to write programs!
 
 ---
 
@@ -66,386 +74,570 @@ When you start Time Warp IDE, you'll see:
 
 ### Menu Bar
 
-**File Menu**
-- `New` - Start a fresh program
-- `Open` - Load an existing program file
-- `Save` - Save your current program
-- `Save As` - Save with a new name
-- `Recent Files` - Quick access to recent work
-- `Exit` - Close Time Warp IDE
+#### File Menu
+| Command | Shortcut | Purpose |
+|---------|----------|---------|
+| New | Ctrl+N | Start a fresh program |
+| Open | Ctrl+O | Load a saved program |
+| Save | Ctrl+S | Save current work |
+| Save As | Ctrl+Shift+S | Save with a new name |
+| Recent Files | — | Quick access to recent programs |
+| Exit | Ctrl+Q | Close the IDE |
 
-**Edit Menu**
-- `Undo` (Ctrl+Z) - Reverse last change
-- `Redo` (Ctrl+Y) - Reapply undone change
-- `Cut` (Ctrl+X) - Remove and copy selection
-- `Copy` (Ctrl+C) - Copy selection
-- `Paste` (Ctrl+V) - Insert copied text
-- `Find` (Ctrl+F) - Search in your code
-- `Replace` (Ctrl+H) - Search and replace
+#### Edit Menu
+| Command | Shortcut | Purpose |
+|---------|----------|---------|
+| Undo | Ctrl+Z | Reverse last change |
+| Redo | Ctrl+Y | Reapply undone change |
+| Cut | Ctrl+X | Remove and copy selected text |
+| Copy | Ctrl+C | Copy selected text |
+| Paste | Ctrl+V | Insert copied text |
+| Find | Ctrl+F | Search in code |
+| Replace | Ctrl+H | Search and replace text |
+| Select All | Ctrl+A | Select entire program |
 
-**Run Menu**
-- `Run Program` (F5) - Execute your code
-- `Stop` (Shift+F5) - Halt execution
-- `Clear Output` - Erase output panel
-- `Reset Turtle` - Return turtle to starting position
+#### Run Menu
+| Command | Shortcut | Purpose |
+|---------|----------|---------|
+| Run Program | F5 | Execute your code |
+| Stop | Shift+F5 | Halt execution |
+| Pause | — | Pause execution (debugging) |
+| Clear Output | — | Erase output panel |
+| Reset Turtle | — | Return turtle to center/start |
 
-**Language Menu**
-- Select BASIC, PILOT, or Logo
-- Syntax highlighting updates automatically
-- Experimental languages may appear depending on build state
+#### Language Menu
+| Option | Purpose |
+|--------|---------|
+| BASIC | Switch to BASIC language |
+| PILOT | Switch to PILOT language |
+| Logo | Switch to Logo language |
+| Pascal | Switch to Pascal (experimental) |
+| Prolog | Switch to Prolog (experimental) |
+| C | Switch to C (experimental) |
 
-**View Menu**
-- `Zoom In/Out` - Adjust editor text size
-- `Toggle Output Panel` - Show/hide results
-- `Toggle Turtle Canvas` - Show/hide graphics
-- `Full Screen` - Maximize workspace
+**Effect**: Syntax highlighting updates, editor supports language-specific features, error messages use language conventions.
 
-**Tools Menu**
-- `Options` - Customize settings
-- `Themes` - Change color schemes
-- `Font Settings` - Adjust editor appearance
-- `Keyboard Shortcuts` - View and customize hotkeys
+#### View Menu
+| Command | Purpose |
+|---------|---------|
+| Screen Mode | Switch between Text, Graphics, Single, Combined views |
+| Theme | Choose from 8 color schemes (Dracula, Monokai, Solarized, etc) |
+| Zoom In | Increase editor text size (Ctrl+) |
+| Zoom Out | Decrease editor text size (Ctrl-) |
+| Reset Zoom | Return to normal size (Ctrl+0) |
+| Toggle Output Panel | Show/hide output console |
+| Toggle Canvas | Show/hide graphics canvas |
+| Toggle Debug Panel | Show/hide execution debugger |
+| Variable Inspector | View all variables and values |
+| Error Explorer | Detailed error analysis |
+| Focus Mode | Hide non-essential UI for distraction-free coding |
+| CRT Effect | Retro monitor appearance |
 
-**Help Menu**
-- `Documentation` - Open this manual
-- `Language References` - Command guides
-- `Examples` - Sample programs
-- `About` - Version and license information
+#### Tools Menu
+| Command | Purpose |
+|---------|---------|
+| Settings | Customize IDE behavior |
+| Snippets | Insert code templates |
+| Themes | Manage and create themes |
+| Font Settings | Change editor font/size |
+| Keyboard Shortcuts | View and customize hotkeys |
+
+#### Help Menu
+| Command | Purpose |
+|---------|---------|
+| User Manual | Open this documentation |
+| Language Guide | Command reference for current language |
+| Quick Reference | Common commands and syntax |
+| Examples | Open sample programs |
+| About | Version and license information |
+
+### Status Bar
+
+Bottom of window shows:
+- **Current Language** – BASIC, PILOT, Logo, etc.
+- **Cursor Position** – Line and column number
+- **File Status** – "Unsaved Changes" indicator
+- **Execution Status** – "Running", "Stopped", etc.
 
 ### Code Editor
 
-The editor is where you write your programs. Features include:
+The left panel where you write your program:
 
-- **Syntax Highlighting** - Keywords and commands are colored for clarity
-- **Line Numbers** - Easy reference for debugging
-- **Auto-Indent** - Automatic code formatting
-- **Bracket Matching** - Highlights matching parentheses and braces
+**Features**:
+- **Syntax Highlighting** – Language keywords are colored for readability
+- **Line Numbers** – Easy reference for debugging
+- **Auto-Indentation** – Automatic formatting
+- **Bracket Matching** – Highlights matching parentheses
+- **Error Markers** – Red underlines show problems
+- **Code Snippets** – Press Ctrl+Space for template suggestions
+
+**Keyboard Shortcuts**:
+- `Ctrl+Space` – Show code suggestions
+- `Tab` – Indent line
+- `Shift+Tab` – Unindent line
+- `Ctrl+/` – Comment/uncomment line
+- `Ctrl+L` – Jump to line number
 
 ### Output Panel
 
-Shows two types of content:
+Displays program output and messages:
 
-1. **Text Output** - Program messages and print statements
-2. **Error Messages** - Clear explanations when something goes wrong
+**Content Types**:
+1. **Standard Output** – Print statements from your program
+2. **Errors** – `❌ Error message` (explanatory, not cryptic)
+3. **Info** – `ℹ️ Informational messages` (hints, confirmations)
+4. **Turtle Actions** – `🐢 Graphics operations` (drawing feedback)
+5. **Events** – `🚀 Program events` (start, stop, etc.)
 
-Error messages include:
-- Line number where the error occurred
-- Type of error (syntax, runtime, logic)
-- Suggestion for how to fix it
+**Colors** indicate message type:
+- Red text = errors
+- Blue text = information
+- Green text = success
+- Gray text = debug output
 
-### Turtle Graphics Canvas
+**Right-click menu**:
+- Copy all output
+- Clear output
+- Save to file
 
-When using Logo, this panel displays:
+### Graphics Canvas
 
-- Turtle position and heading
-- All drawings created by your program
-- Grid and coordinates (optional)
-- Color palette
+The right panel for visual output:
+
+**Features**:
+- **Turtle Rendering** – See your drawing in real-time
+- **Zoom Controls** – Scroll to zoom, Ctrl+Scroll to pan
+- **Grid** – Optional coordinate grid (View menu)
+- **Sprite** – Turtle appearance (arrow, turtle, custom image)
+- **Color Palette** – Visual guide to available colors
+
+**Right-click menu**:
+- Reset view (zoom/pan)
+- Save canvas as image
+- Clear canvas
+- Toggle grid
+
+---
+
+## The Code Editor
+
+### Language Syntax Highlighting
+
+Each language has color-coded elements:
+
+**BASIC Example**:
+```basic
+10 REM This is a comment
+20 PRINT "Hello, World!"
+30 INPUT X
+40 IF X > 5 THEN PRINT "Big"
+50 FOR I = 1 TO 10
+60   PRINT I
+70 NEXT I
+```
+
+Colors:
+- `REM` statements → Gray (comments)
+- `PRINT`, `INPUT` → Purple (keywords)
+- Strings (`"Hello"`) → Green
+- Numbers → Blue
+
+### Code Snippets
+
+Insert template code with `Ctrl+Space`:
+
+Example in BASIC:
+- `for` → FOR...NEXT loop template
+- `if` → IF...THEN...ELSE template
+- `sub` → Subroutine template
 
 ---
 
 ## Writing Your First Program
 
-Let's write a simple "Hello, World!" program in three different languages.
+### Hello World in Each Language
 
-### BASIC
-
+**BASIC**:
 ```basic
-10 PRINT "Hello, World!"
-20 END
+PRINT "Hello, World!"
 ```
 
-1. Select **BASIC** from the Language menu
-2. Type the program in the editor
-3. Press **F5** to run
-4. See "Hello, World!" in the output panel
-
-### PILOT
-
+**PILOT**:
 ```pilot
-T:Hello, World!
+ACCEPT: What is your name?
+PRINT: "Hello, " Name
 ```
 
-1. Select **PILOT** from the Language menu
-2. Type `T:Hello, World!`
-3. Press **F5**
-4. The message appears instantly!
-
-### Logo
-
+**Logo**:
 ```logo
-PRINT [Hello, World!]
+FORWARD 100
+RIGHT 90
+FORWARD 100
 ```
 
-1. Select **Logo** from the Language menu
-2. Type the command
-3. Press **F5**
-4. Output appears in the panel
+### Running Your Program
 
-### What's Happening?
+1. Type or paste code into the editor
+2. Press **F5** or click **Run → Run Program**
+3. Output appears in the Output panel
+4. (Logo) Graphics appear in the Canvas
 
-Each language has different syntax, but they all do the same thing: display a message. This is the beauty of Time Warp IDE — you can learn multiple programming approaches in one environment.
+### Responding to Input
 
-Note: Experimental languages (Pascal, Prolog, C) may not be available in all builds.
+Programs can ask for user input:
+
+**BASIC**:
+```basic
+INPUT "Enter your age: " age
+PRINT "You are " age " years old"
+```
+
+**PILOT**:
+```pilot
+ACCEPT: Enter your name
+PRINT: "Hello, " name
+```
+
+When the program runs, a dialog appears asking for input. Type your answer and press Enter.
 
 ---
 
 ## Running Programs
 
-### Basic Execution
+### Execution Modes
 
-1. **Write** your code in the editor
-2. **Press F5** or click Run → Run Program
-3. **View results** in the output panel
-4. **Fix errors** if needed and run again
+**Normal Mode**: Program runs to completion
+- Press F5 to start
+- Output appears immediately
+- Press Shift+F5 to stop a long-running program
 
-### Interactive Input
+**Debug Mode**: Step through your program line-by-line
+- Open View → Debug Panel
+- Press **Step Over** to execute one line
+- Hover over variables to see their values
+- Set breakpoints by clicking line numbers
 
-Some programs ask for user input:
+### Error Handling
 
-```basic
-10 INPUT "What is your name"; NAME$
-20 PRINT "Hello, "; NAME$
+When your program has an error:
+
+1. **Red box** highlights the problem line
+2. **Error message** explains what went wrong
+3. **Suggestion** indicates how to fix it
+
+Example error:
+```
+❌ Syntax Error on line 5:
+   Unexpected token "PRINT"
+   Did you mean: PRINTF ?
 ```
 
-When you run this:
-1. Program pauses with a prompt
-2. Type your response in the input field
-3. Press Enter
-4. Program continues with your input
+### Output Interpretation
 
-### Stopping Programs
-
-If a program runs too long or enters an infinite loop:
-
-1. **Press Shift+F5** or click Run → Stop
-2. Execution halts immediately
-3. Output shows where the program stopped
-4. Edit and try again
+Emoji prefixes show message type:
+- `❌` = Error that stopped execution
+- `✅` = Success confirmation
+- `ℹ️` = Informational message
+- `🐢` = Turtle graphics action
+- `🚀` = Execution event
 
 ---
 
 ## Using Turtle Graphics
 
-Turtle graphics let you create drawings by controlling a "turtle" that moves around the screen.
+Turtle graphics are a visual way to learn programming. The "turtle" is a small arrow on the canvas that can move, turn, and draw.
 
-### Basic Turtle Commands (Logo)
+### Basic Commands
 
+**Logo Language**:
 ```logo
-FORWARD 100      ; Move turtle forward 100 steps
-RIGHT 90         ; Turn right 90 degrees
-PENUP           ; Lift pen (don't draw)
-PENDOWN         ; Lower pen (start drawing)
+FORWARD 100      ;Move forward 100 units
+BACK 50          ;Move backward 50 units
+RIGHT 45         ;Turn right 45 degrees
+LEFT 45          ;Turn left 45 degrees
+PENDOWN          ;Start drawing
+PENUP            ;Stop drawing
+CLEARSCREEN      ;Erase all drawings
+HOME             ;Return to center
+SHOWTURTLE       ;Make turtle visible
+HIDETURTLE       ;Hide turtle
 ```
 
-### Drawing a Square
+### Changing Appearance
 
 ```logo
-REPEAT 4 [FORWARD 100 RIGHT 90]
+SETCOLOR red          ;Change pen color
+SETCOLOR #FF5733      ;Hex color
+PENWIDTH 5            ;Pen thickness
+SETSHAPE "turtle"     ;Change turtle shape
 ```
 
-This tells the turtle:
-- Repeat 4 times:
-  - Move forward 100 steps
-  - Turn right 90 degrees
+### Drawing Shapes
 
-Result: A perfect square!
-
-### Colors
-
+**Square**:
 ```logo
-SETPENCOLOR 1    ; Red
-FORWARD 100
-SETPENCOLOR 2    ; Green
-FORWARD 100
-SETPENCOLOR 3    ; Blue
-FORWARD 100
+REPEAT 4
+  FORWARD 100
+  RIGHT 90
+END
 ```
 
-### Complex Drawings
-
+**Circle** (approximation):
 ```logo
-; Draw a flower
-REPEAT 12 [FORWARD 100 RIGHT 150]
+REPEAT 360
+  FORWARD 1
+  RIGHT 1
+END
 ```
 
-Experiment with different:
-- Distances
-- Angles
-- Number of repetitions
-- Colors
+**Star**:
+```logo
+REPEAT 5
+  FORWARD 100
+  RIGHT 144
+END
+```
+
+### Canvas Controls
+
+- **Scroll** to pan around
+- **Ctrl+Scroll** to zoom in/out
+- **Right-click → Reset View** to zoom to fit
+- **View → Grid** to show coordinates
+
+---
+
+## Advanced Features
+
+### Debug Panel
+
+View → Debug Panel shows:
+- **Current Line** – Execution position
+- **Variables** – All variables and values
+- **Call Stack** – Function call history
+- **Breakpoints** – Stops where you click line numbers
+- **Step Controls** – Step into, over, or out
+
+### Variable Inspector
+
+View → Variable Inspector opens a dialog showing:
+- Variable name
+- Current value
+- Data type
+- Scope (local, global)
+
+Updates in real-time during debugging.
+
+### Error Explorer
+
+View → Error Explorer shows:
+- Detailed error analysis
+- Stack trace
+- Suggestions for fixes
+- Links to documentation
+
+### Focus Mode
+
+View → Focus Mode hides:
+- Menu bar (press Esc to show)
+- Output panel
+- Status bar
+- Canvas tabs
+
+Perfect for classroom use where students shouldn't be distracted.
+
+### Themes
+
+Choose from 8 built-in themes in View → Theme:
+- **Dracula** – Dark with purple accents
+- **Monokai** – Dark with vibrant colors
+- **Solarized Dark** – Muted dark tones
+- **Ocean** – Blue-based design
+- **Spring** – Light green nature colors
+- **Sunset** – Warm orange/red tones
+- **Candy** – Pastel bright colors
+- **Forest** – Dark green theme
+
+Themes persist across sessions (saved to `~/.Time_Warp/config.json`).
+
+### Screen Modes
+
+View → Screen Mode changes layout:
+
+| Mode | Layout | Best For |
+|------|--------|----------|
+| **Text** | Editor full width | BASIC/PILOT programs |
+| **Graphics** | Canvas full width | Logo/graphics focus |
+| **Single** | Editor left, Canvas right | Mixed programs |
+| **Combined** | Editor top, Canvas bottom | Limited screen space |
+
+### CRT Effect
+
+View → CRT Effect gives a retro monitor appearance with:
+- Scanlines
+- Color bleeding
+- Screen curvature
+- Vintage color palette
+
+Great for teaching retro computing concepts!
 
 ---
 
 ## Saving and Loading
 
-### Saving Your Work
+### Save Your Program
 
-**Method 1: Save**
-1. File → Save (or Ctrl+S)
-2. If first time, choose location and filename
-3. File extension added automatically based on language
+**File → Save** (Ctrl+S):
+- If file is new, asks for a name
+- Extensions: `.bas` (BASIC), `.plt` (PILOT), `.logo` (Logo)
+- Saves to current directory or user's Documents folder
 
-**Method 2: Save As**
-1. File → Save As
-2. Choose new location or filename
-3. Useful for creating variations
+**File → Save As** (Ctrl+Shift+S):
+- Allows choosing a new name and location
+- Useful for making copies or backups
 
-### File Extensions
+### Open a Program
 
-- `.bas` - BASIC programs
-- `.pilot` - PILOT programs
-- `.logo` - Logo programs
-- `.pas` - Pascal programs
-- `.pl` - Prolog programs
-- `.c` - C programs
+**File → Open** (Ctrl+O):
+- Browse for a `.bas`, `.plt`, or `.logo` file
+- File is loaded into the editor
+- Language is auto-detected from extension
 
-### Loading Programs
+**File → Recent Files**:
+- Quick access to recently opened programs
+- Up to 10 recent files shown
 
-**Method 1: Open**
-1. File → Open (or Ctrl+O)
-2. Browse to your file
-3. Language detected automatically
+### Supported File Types
 
-**Method 2: Recent Files**
-1. File → Recent Files
-2. Click on file name
-3. Opens immediately
-
-**Method 3: Drag and Drop**
-1. Drag file from your file manager
-2. Drop onto Time Warp IDE window
-3. File opens and language is set
+| Extension | Language | Example |
+|-----------|----------|---------|
+| `.bas` | BASIC | `program.bas` |
+| `.pilot` or `.plt` | PILOT | `lesson.plt` |
+| `.logo` | Logo | `drawing.logo` |
+| `.txt` | Text (auto-detect) | `code.txt` |
 
 ---
 
 ## Customizing Your Environment
 
-### Themes
+### Settings
 
-Change the look of your IDE:
+Tools → Settings opens a dialog with:
 
-1. Tools → Themes
-2. Choose from:
-   - **Light** - Bright, high contrast
-   - **Dark** - Easy on the eyes
-   - **Dracula** - Popular programmer theme
-   - **Solarized** - Balanced contrast
-   - **Monokai** - Vibrant colors
-   - **Ocean** - Blue tones
-   - **Forest** - Green tones
-   - **Sunset** - Warm colors
-3. Preview updates immediately
-4. Click Apply
+**Editor**:
+- Font family and size
+- Tab width (spaces or tabs)
+- Line numbers (show/hide)
+- Word wrap
+- Auto-indent
 
-### Font Settings
+**Display**:
+- Theme selection
+- Screen mode
+- Canvas grid
+- Turtle sprite style
 
-Adjust text appearance:
-
-1. Tools → Font Settings
-2. Choose font family (monospace recommended)
-3. Set font size (10-16pt typical)
-4. Enable/disable bold and italics
-
-### Editor Preferences
-
-- **Tab Size**: 2, 4, or 8 spaces
-- **Auto-Indent**: On/Off
-- **Line Wrapping**: On/Off
-- **Show Line Numbers**: On/Off
+**Behavior**:
+- Auto-save interval
+- Confirm on exit
+- Sound effects (on/off)
 
 ### Keyboard Shortcuts
 
-View and customize keyboard shortcuts:
+Tools → Keyboard Shortcuts shows all shortcuts and allows customization:
 
-1. Tools → Keyboard Shortcuts
-2. See list of all commands
-3. Click to change shortcut
-4. Reset to defaults if needed
+**Common shortcuts**:
+- F5 = Run
+- Shift+F5 = Stop
+- Ctrl+S = Save
+- Ctrl+F = Find
+- Ctrl+H = Replace
+
+Click any shortcut to change it.
 
 ---
 
 ## Tips and Tricks
 
-### Productivity Tips
+### Pro Tips
 
-1. **Use Comments** - Document your code
-   ```basic
-   10 REM This is a comment in BASIC
-   ```
-   ```logo
-   ; This is a comment in Logo
-   ```
+1. **Use Code Snippets** – Ctrl+Space suggests templates for loops, conditions, etc.
+2. **Check Variable Inspector** – View → Variable Inspector shows all values in real-time
+3. **Use Breakpoints** – Click line numbers in Debug Panel to pause execution
+4. **Save Frequently** – Ctrl+S saves your work
+5. **Test Small Parts** – Run one function/procedure at a time before combining
 
-2. **Save Frequently** - Press Ctrl+S often
+### Common Mistakes
 
-3. **Use the Examples** - Help → Examples has ready-to-run programs
+**Error: "Undefined variable X"**
+- Make sure you spelled it correctly
+- Variables are case-sensitive (X ≠ x)
+- Declare it with INPUT or LET before using
 
-4. **Experiment** - Best way to learn is by trying things
+**Error: "Syntax error"**
+- Check spelling of keywords (PRINT not PRNT)
+- Make sure quotes match ("hello" not "hello')
+- Check for missing NEXT/END statements
 
-### Debugging Tips
+**Turtle not drawing?**
+- Make sure PENDOWN is called (default in Logo)
+- Check that pen color isn't white on white background
+- Use View → Reset Canvas to clear previous drawings
 
-1. **Read Error Messages** - They usually point to the problem
-2. **Check Line Numbers** - Errors tell you where to look
-3. **Add PRINT Statements** - See what your variables contain
-4. **Start Simple** - Test small pieces before combining
-5. **Use Comments** - Temporarily disable code to isolate issues
+**Output not showing?**
+- Click the Output panel tab (View → Toggle Output Panel)
+- Check that the program actually prints something
+- Run the program (F5) to generate output
 
-### Learning Tips
+### Learning Resources
 
-1. **Start with One Language** - Master basics before exploring others
-2. **Type Examples Yourself** - Don't just copy-paste
-3. **Modify Examples** - Change numbers, add features
-4. **Build Projects** - Create something you care about
-5. **Ask Questions** - Use the community forums
+**Built-in**:
+- Help → Language Guide (command reference)
+- Help → Examples (sample programs)
+- Help → Quick Reference (cheat sheet)
 
----
+**Online**:
+- Official documentation: `Docs/user/` folder
+- Example programs: `Examples/` folder
+- Video tutorials: (see online documentation)
 
-## Common Questions
+### Classroom Tips
 
-**Q: Which language should I start with?**
-A: BASIC or PILOT are the most beginner-friendly. Logo is great if you enjoy visual/artistic programming.
+**For Teachers**:
+- Use Focus Mode to reduce distractions
+- Save a "starter template" for students to open
+- Use code snippets to give students hints
+- Set breakpoints to explain line-by-line execution
 
-**Q: Can I use Time Warp IDE for serious projects?**
-A: While designed for education, Time Warp IDE is fully functional. Many users create real applications!
-
-**Q: My program runs slowly. Why?**
-A: Graphics operations can be intensive. Try reducing complexity or disabling the turtle canvas when not needed.
-
-**Q: Can I share my programs?**
-A: Yes! Your program files are plain text. Share them by email, cloud storage, or version control systems like Git.
-
-**Q: Is there a command-line version?**
-A: Yes! See the [Developer Guide](../developer/00-developer-guide.md) for details on the CLI interpreter.
-
----
-
-## Next Steps
-
-Now that you know the basics:
-
-- Explore the **[Programming Guide](01-programming-guide.md)** for language-specific tutorials
-- Check out **[Quick Reference](02-quick-reference.md)** for command cheat sheets
-- Read the **[FAQ](03-faq.md)** for answers to common questions
-- Join the **community** to share your creations
-
-Happy coding!
+**For Students**:
+- Start with the "Hello World" example
+- Study provided examples before writing your own
+- Use the Variable Inspector to understand loops
+- Save multiple versions of your work
 
 ---
 
-*For teachers: See the [Teacher's Guide](../teacher/00-overview.md) for classroom-specific features.*
-*For developers: See the [Technical Reference](../developer/01-technical-reference.md) for API documentation.*
+## Getting Help
 
-## Installing (Windows Installer)
+### Built-in Help
 
-If you download the Windows installer from the releases page, the installer filename includes a version token. Example:
+- **Menu → Help** – Access all documentation
+- **Hover over error** – Shows explanation
+- **Status bar** – Current mode and context
 
-- TimeWarpIDE-Setup-<VERSION>.exe — e.g. TimeWarpIDE-Setup-3.0.0.exe
+### Online Resources
 
-When installed, the application is placed under Program Files and available from the Start Menu. If you are using the Windows 2000 edition or a CI-built package, installers are produced under `Platforms/Windows2000/dist/` and include the version token embedded with `makensis` using `-DVERSION=<tag>`.
+- **GitHub Issues**: Report bugs at <https://github.com/James-HoneyBadger/Time_Warp/issues>
+- **GitHub Discussions**: Ask questions at <https://github.com/James-HoneyBadger/Time_Warp/discussions>
+- **Documentation**: `Docs/` folder in the repository
 
-If you are packaging locally using `makensis`, pass OUTDIR and VERSION to produce the same filename layout used by CI:
+### FAQ Quick Links
 
-```bash
-makensis -DOUTDIR=Platforms/Windows2000/dist -DVERSION=3.0.0 Platforms/Windows2000/installer/timewarp.nsi
-```
+- **How do I write a loop?** → See examples in `Examples/`
+- **What commands does Logo support?** → Help → Language Guide
+- **How do I debug my program?** → View → Debug Panel
+- **Can I change the theme?** → View → Theme
+
+---
+
+**Ready to start coding?** Check out the [Programming Guide](01-programming-guide.md) for language-specific instruction!

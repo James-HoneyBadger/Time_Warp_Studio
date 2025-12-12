@@ -6,15 +6,15 @@ Get Time Warp IDE running on your system in minutes!
 
 ## Choose Your Operating System
 
-- **[Linux](#linux-quick-install)** - Debian, Ubuntu, Arch, and more (Python app)
-- **[macOS](#macos-quick-install)** - Apple computers (Python app)
-- **[Windows](#windows-quick-install)** - Modern Windows systems (Python app)
+- **[Linux](#linux-quick-install)** – Debian, Ubuntu, Arch, Fedora
+- **[macOS](#macos-quick-install)** – Apple computers (Intel and Apple Silicon)
+- **[Windows](#windows-quick-install)** – Windows 10/11 (7+ supported)
 
 ---
 
 ## Linux Quick Install
 
-### Debian/Ubuntu (Python)
+### Debian/Ubuntu
 
 ```bash
 # Install Python 3.10+ if needed
@@ -23,74 +23,173 @@ sudo apt install python3 python3-pip python3-venv
 
 # Clone repository
 git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp
+cd Time_Warp_Studio/Platforms/Python
 
 # Create virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 
 # Install dependencies and run
-cd Platforms/Python
 pip install -r requirements.txt
 python time_warp_ide.py
 ```
 
-### Arch Linux (Python)
+### Arch Linux
 
 ```bash
 sudo pacman -S python python-pip
 git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp/Platforms/Python
+cd Time_Warp_Studio/Platforms/Python
+python3 -m venv .venv
+source .venv/bin/activate
 pip install -r requirements.txt
 python time_warp_ide.py
 ```
 
-**Detailed guide:** [Linux Installation](01-linux.md)
+### Fedora
+
+```bash
+sudo dnf install python3 python3-pip
+git clone https://github.com/James-HoneyBadger/Time_Warp.git
+cd Time_Warp_Studio/Platforms/Python
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python time_warp_ide.py
+```
 
 ---
 
-## macOS Quick Install (Python)
+## macOS Quick Install
+
+### Intel & Apple Silicon
 
 ```bash
-/usr/bin/python3 --version
+# Verify Python 3.10+ is installed
+python3 --version
+
+# Clone repository
 git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp/Platforms/Python
-python3 -m pip install -r requirements.txt
+cd Time_Warp_Studio/Platforms/Python
+
+# Create virtual environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Install dependencies and run
+pip install -r requirements.txt
 python3 time_warp_ide.py
 ```
 
+### Using Homebrew (Optional)
+
+```bash
+# Install Python if needed
+brew install python@3.10
+
+# Then follow steps above
+```
+
 ---
 
-## Windows Quick Install (Python)
+## Windows Quick Install
+
+### Windows 10/11 (Recommended)
+
+Open PowerShell or Command Prompt and run:
 
 ```powershell
+# Verify Python 3.10+ is installed
 python --version
+
+# Clone repository
 git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp\Platforms\Python
-python -m pip install -r requirements.txt
+cd Time_Warp_Studio\Platforms\Python
+
+# Create virtual environment
+python -m venv .venv
+.venv\Scripts\activate
+
+# Install dependencies and run
+pip install -r requirements.txt
 python time_warp_ide.py
 ```
+
+### Windows 7+ (Legacy)
+
+Use the same steps above. Python 3.10+ is required.
 
 ---
 
 ## System Requirements
 
-### Minimum
-- **OS**: Linux (kernel 3.10+), macOS 10.13+, Windows 7+
-- **CPU**: 1 GHz processor with SSSE3/SSE4.1 support
+### Minimum Specifications
+
+- **Operating System**
+  - Linux: kernel 3.10+
+  - macOS: 10.13 (High Sierra) or newer
+  - Windows: Windows 7 or newer
+
+- **Processor**: 1 GHz with SSSE3/SSE4.1 support
+  - Most modern CPUs have this
+  - VMs may lack these extensions
+
 - **RAM**: 256 MB
-- **Disk**: 50 MB free space
-- **Display**: 800×600 resolution
 
-### Recommended
-- **CPU**: Modern multi-core processor
+- **Disk Space**: 50 MB free space
+
+- **Display**: 800×600 resolution (1024×768 recommended)
+
+### Recommended Specifications
+
+- **Processor**: Modern multi-core CPU (2+ GHz)
 - **RAM**: 512 MB or more
-- **Disk**: 100 MB for examples and documentation
+- **Disk**: 100 MB+ for documentation and examples
 - **Display**: 1024×768 or higher
+- **Internet**: For optional features (cloud, collaboration)
 
-### Known Issues
-- **Older CPUs**: Virtual machines may lack required CPU extensions (SSSE3, SSE4.1, SSE4.2, POPCNT)
-   - **Solution**: Run on physical hardware or use the Python application
+### Known Issues & Solutions
+
+#### "Illegal instruction" Error
+
+**Problem**: Your CPU lacks SSSE3 or SSE4 instructions.
+
+**Common Cause**: Running in a virtual machine (QEMU, VirtualBox) that doesn't expose these CPU flags.
+
+**Solution**: 
+- Run on physical hardware instead
+- Use a modern cloud VM (AWS EC2, Azure, Google Cloud)
+- Update your VM/hypervisor settings to expose CPU flags
+
+**Check CPU support**:
+```bash
+# Linux/macOS
+grep -o 'ssse3\|sse4_1' /proc/cpuinfo
+
+# Windows (PowerShell)
+Get-WmiObject Win32_Processor | Select-Object Name
+```
+
+#### "No module named 'PySide6'"
+
+**Problem**: Python dependencies not installed.
+
+**Solution**:
+```bash
+# Ensure you're in the virtual environment
+source .venv/bin/activate  # Linux/macOS
+# or
+.venv\Scripts\activate     # Windows
+
+# Reinstall dependencies
+pip install -r requirements.txt
+```
+
+#### Port Already in Use
+
+**Problem**: IDE tries to use a port that's occupied.
+
+**Solution**: Change the port in Settings → IDE Settings, or restart your system.
 
 ---
 
@@ -98,120 +197,91 @@ python time_warp_ide.py
 
 After installing, verify everything works:
 
-### Quick Test
+```bash
+# Navigate to repo root
+cd /path/to/Time_Warp_Studio
 
-1. Launch Time Warp IDE
-2. Select **BASIC** from Language menu
-3. Type:
-   ```basic
-   10 PRINT "Hello, World!"
-   20 END
-   ```
-4. Press **F5** to run
-5. See "Hello, World!" in output
+# Run quick tests
+python Tests/run_tests.py --quick
+```
 
-✅ **Success!** You're ready to program.
-
-### Turtle Graphics Test
-
-1. Select **Logo** from Language menu
-2. Type:
-   ```logo
-   REPEAT 4 [FORWARD 100 RIGHT 90]
-   ```
-3. Press **F5**
-4. See a square in the graphics canvas
-
-✅ **Graphics working!**
+Expected output:
+```
+Running quick smoke tests...
+✅ Core interpreter tests passed
+✅ Language executor tests passed
+✅ UI integration tests passed
+=====================================
+PASSED: 15 tests in 2.3s
+```
 
 ---
 
-## Troubleshooting
+## First Launch
 
-### "Command not found" (Linux/macOS)
+When you run `python time_warp_ide.py`, you'll see:
 
-**Problem**: Terminal doesn't recognize `time-warp-ide`
+1. **Main Window** – Code editor on left, canvas on right
+2. **Menu Bar** – File, Edit, Run, Language, View, Help menus
+3. **Language Selector** – Currently set to BASIC
+4. **Welcome Tab** – Getting started guide
 
-**Solutions**:
-```bash
-# Add to PATH (add to ~/.bashrc or ~/.zshrc)
-export PATH="$PATH:$HOME/.local/bin"
+### Write Your First Program
 
-# Or use full path
-/usr/local/bin/time-warp-ide
+1. **Select Language** – Click the Language menu → BASIC (or PILOT/Logo)
+2. **Write Code**:
+   ```basic
+   PRINT "Hello, World!"
+   ```
+3. **Run** – Press F5 or click Run → Run Program
+4. **See Output** – Results appear in the Output panel
 
-# Or run from install directory
-cd /opt/time-warp-ide
-./time-warp-ide
+### Try a Logo Program
+
+Switch to Logo language and run:
+```logo
+FORWARD 100
+RIGHT 90
+FORWARD 100
+RIGHT 90
+FORWARD 100
+RIGHT 90
+FORWARD 100
 ```
 
-### "Illegal instruction" Error
-
-**Problem**: CPU lacks required extensions
-
-**Solutions**:
-1. Update your system (may include CPU microcode updates)
-2. Run on physical hardware (not old VM)
-3. Use Python version instead of compiled binary
-
-### "Python not found" (Windows)
-
-**Problem**: Python not installed or not in PATH
-
-**Solutions**:
-1. Download Python from [python.org](https://www.python.org/downloads/)
-2. During installation, check "Add Python to PATH"
-3. Reinstall if needed
-
-### Permission Denied (Linux/macOS)
-
-**Problem**: File not executable
-
-**Solution**:
-```bash
-chmod +x time-warp-ide
-```
-
-### Missing Dependencies
-
-**Linux**:
-```bash
-# Debian/Ubuntu
-sudo apt install python3-pyside6 python3-pillow
-
-# Arch
-sudo pacman -S python-pyside6 python-pillow
-
-# Fedora
-sudo dnf install python3-pyside6 python3-pillow
-```
-
-**macOS**:
-```bash
-pip3 install PySide6 Pillow
-```
+The turtle will draw a square! Switch to Graphics mode (View menu) to see it.
 
 ---
 
 ## Next Steps
 
-- **New users**: Read the [User Manual](../user/00-user-manual.md)
-- **Students**: Start with the [Student Workbook](../student/00-workbook.md)
-- **Teachers**: Check the [Teacher's Guide](../teacher/00-overview.md)
-- **Developers**: See the [Developer Guide](../developer/00-developer-guide.md)
+- **Read the User Manual** – `Docs/user/00-user-manual.md`
+- **Try Examples** – Check `Examples/basic/`, `Examples/logo/`, etc.
+- **Explore Features** – Check out the View menu for debug tools, variable inspector, etc.
+- **Learn More** – Visit the documentation at `Docs/INDEX.md`
 
 ---
 
 ## Getting Help
 
-**Installation Issues?**
-- Check [Troubleshooting Guide](04-troubleshooting.md)
-- Search [existing issues](https://github.com/honey-badger-org/Time_Warp/issues)
-- Ask in [Discussions](https://github.com/honey-badger-org/Time_Warp/discussions)
+**Q: How do I use the debug panel?**  
+A: View → Debug Panel (or Debug menu) opens the execution debugger.
 
-**Found a bug?**
-- Report it: [New Issue](https://github.com/honey-badger-org/Time_Warp/issues/new)
+**Q: Can I change the theme?**  
+A: Yes! View → Theme and select from 8 built-in themes (Dracula, Monokai, etc).
+
+**Q: What screen modes are available?**  
+A: View → Screen Mode has Text, Graphics, Single, and Combined modes.
+
+**Q: How do I save my program?**  
+A: File → Save (Ctrl+S) or File → Save As (Ctrl+Shift+S).
+
+**Q: Where do I report bugs?**  
+A: GitHub Issues: <https://github.com/James-HoneyBadger/Time_Warp/issues>
+
+**Q: How do I contribute?**  
+A: Read `Docs/developer/00-developer-guide.md` for development setup and guidelines.
 
 ---
 
-*Happy coding!*
+**Still stuck?** Check the [FAQ](../user/03-faq.md) or open a GitHub Discussion!
