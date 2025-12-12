@@ -1,6 +1,8 @@
 ## Time Warp IDE Documentation
 
-**Version 5.0.0** – Updated December 2, 2025
+**Version 5.0.0** – Updated December 11, 2025
+
+Note: The Python (PySide6) implementation is the only actively maintained version. Other platforms (Browser, Windows2000) are experimental/historical. Core languages are BASIC, PILOT, and Logo; Pascal, Prolog, and C are experimental.
 
 This directory contains the canonical documentation set for the Time Warp IDE project. The content is organized by audience so students, teachers, end users, and contributors can jump straight to what they need.
 

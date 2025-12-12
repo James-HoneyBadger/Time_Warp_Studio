@@ -49,98 +49,64 @@ Time Warp IDE is an educational programming environment supporting six classic l
 
 ## Architecture
 
-### High-Level Structure
+### High-Level Structure (Python — Active)
 
 ```
-Time_Warp/
-├── platforms/
-│   ├── rust/          # Primary Rust implementation
-│   ├── python/        # Legacy Python implementation
-│   ├── web/           # WebAssembly version (future)
-│   ├── amiga/         # Retro Amiga port
-│   └── ...
-├── core-spec/         # Language specifications
-├── examples/          # Sample programs
-├── docs-new/          # Documentation (this folder)
-└── tests/             # Cross-platform integration tests
+Time_Warp_Studio/
+├── Platforms/
+│   └── Python/                    # Official, actively maintained implementation
+│       ├── time_warp_ide.py       # Entry point (PySide6)
+│       └── time_warp/
+│           ├── core/              # Central interpreter and helpers
+│           │   └── interpreter.py # Main dispatch logic
+│           ├── languages/         # BASIC, PILOT, Logo (+ experimental Pascal, Prolog, C)
+│           ├── ui/                # Qt UI factory and widgets
+│           └── graphics/          # Turtle canvas integrations
+├── Docs/                          # Documentation library
+├── Examples/                      # Sample programs (BASIC, PILOT, Logo, etc.)
+├── Tests/                         # Pytest suite
+└── Core_Spec/                     # Language and turtle specifications
 ```
 
-### Rust Implementation
+### Design Patterns (Python)
 
-**Core Components**:
+1. **Stateless Executors**: Language interpreters do not maintain UI state; they return emoji-prefixed strings.
+2. **Command Dispatch**: `TimeWarpInterpreter.execute()` routes lines to the correct executor.
+3. **Safe Evaluation**: Use `core/safe_expression_evaluator.py::safe_eval()` for math; never use `eval()`.
+4. **Turtle via UI**: Executors emit `🐢` actions; the UI reads executor state to render.
 
-```rust
-// src/main.rs - Entry point
-fn main() {
-    let options = eframe::NativeOptions::default();
-    eframe::run_native(
-        "Time Warp IDE",
-        options,
-        Box::new(|_cc| Box::new(TimeWarpApp::default())),
-    );
-}
-
-// src/app.rs - Main application state
-struct TimeWarpApp {
-    code: String,
-    output: String,
-    current_language: Language,
-    turtle_state: TurtleState,
-    // ...
-}
-
-// src/interpreter/ - Language executors
-mod basic;
-mod pilot;
-mod logo;
-mod pascal;
-mod prolog;
-mod c_lang;
-```
-
-**Key Design Patterns**:
-
-1. **Stateless Executors**: Language interpreters don't maintain UI state
-2. **Command Pattern**: Each statement is parsed and executed independently
-3. **Visitor Pattern**: AST traversal for complex languages (Pascal, C)
-4. **Observable State**: Turtle state updated via callbacks
-
-### Python Implementation
-
-**Core Components**:
+### Python Components
 
 ```python
-# platforms/python/time_warp/core/interpreter.py
+# Platforms/Python/time_warp/core/interpreter.py
 class TimeWarpInterpreter:
     def __init__(self):
         self.basic = BasicExecutor(self)
         self.pilot = PilotExecutor(self)
         self.logo = LogoExecutor(self)
-        # ...
-    
+        # Optional experimental: Pascal, Prolog, C
+
     def execute(self, code: str, language: str) -> str:
-        # Route to appropriate executor
+        # Parse and route to executor
+        ...
 ```
 
-**Language Executors**:
+**Language Executors**
 ```
-platforms/python/time_warp/
-├── languages/
-│   ├── basic.py          # BASIC interpreter
-│   ├── pilot.py          # PILOT interpreter
-│   ├── logo.py           # Logo interpreter
-│   ├── pascal.py         # Pascal interpreter
-│   ├── prolog.py         # Prolog interpreter
-│   └── c_lang_fixed.py   # C interpreter
+Platforms/Python/time_warp/languages/
+├── basic.py          # BASIC interpreter
+├── pilot.py          # PILOT interpreter
+├── logo.py           # Logo interpreter
+├── pascal.py         # Experimental
+├── prolog.py         # Experimental
+└── c_lang_fixed.py   # Experimental
 ```
 
-**UI Layer**:
+**UI Layer**
 ```
-platforms/python/time_warp/
-├── ui/
-│   ├── qt_ui.py       # Main Qt window
-│   ├── canvas.py      # Turtle graphics widget
-│   └── output.py      # Output panel with threading
+Platforms/Python/time_warp/ui/
+├── qt_ui.py          # Main Qt window factory
+└── ...               # Editor, output panel, canvas widgets
 ```
 
 ### Language Executor Pattern
@@ -177,16 +143,6 @@ class LanguageExecutor:
 
 ### Prerequisites
 
-**Rust Development**:
-```bash
-# Install Rust
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Verify
-rustc --version
-cargo --version
-```
-
 **Python Development**:
 ```bash
 # Python 3.10+ required
@@ -206,44 +162,23 @@ git clone https://github.com/honey-badger-org/Time_Warp.git
 cd Time_Warp
 ```
 
-### Rust Setup
-
-```bash
-cd platforms/rust
-
-# Build
-cargo build
-
-# Run
-cargo run
-
-# Run with release optimizations
-cargo run --release
-```
-
 ### Python Setup
 
 ```bash
-# Install development dependencies
-pip install -e "./platforms/python[dev]"
-
-# This installs:
-# - time-warp-ide (editable)
-# - pytest, pytest-cov, pytest-mock
-# - black, flake8, mypy, pylint
-# - All runtime dependencies
+cd Platforms/Python
+pip install -r requirements.txt
+python time_warp_ide.py
 ```
 
 ### IDE Configuration
 
 **VS Code** (recommended):
 ```bash
-# Install extensions
-code --install-extension rust-lang.rust-analyzer
+# Install Python extension
 code --install-extension ms-python.python
 
-# Open workspace
-code Time_Warp.code-workspace
+# Open workspace (from repo root)
+code .
 ```
 
 **PyCharm**:
@@ -255,35 +190,10 @@ code Time_Warp.code-workspace
 
 ## Code Organization
 
-### Rust Structure
-
-```
-platforms/rust/
-├── src/
-│   ├── main.rs              # Entry point
-│   ├── app.rs               # Main application
-│   ├── interpreter/
-│   │   ├── mod.rs           # Executor trait
-│   │   ├── basic.rs         # BASIC language
-│   │   ├── pilot.rs         # PILOT language
-│   │   ├── logo.rs          # Logo language
-│   │   ├── pascal.rs        # Pascal language
-│   │   ├── prolog.rs        # Prolog language
-│   │   └── c_lang.rs        # C language
-│   ├── turtle.rs            # Turtle graphics state
-│   └── ui/
-│       ├── mod.rs
-│       ├── editor.rs        # Code editor widget
-│       ├── canvas.rs        # Graphics canvas
-│       └── menu.rs          # Menu bar
-├── Cargo.toml               # Dependencies
-└── Cargo.lock
-```
-
 ### Python Structure
 
 ```
-platforms/python/
+Platforms/Python/
 ├── time_warp/
 │   ├── __init__.py
 │   ├── __main__.py          # Entry point
@@ -299,6 +209,10 @@ platforms/python/
 │   │   ├── prolog.py
 │   │   └── c_lang_fixed.py
 │   ├── ui/
+
+---
+
+Note: The Python implementation is the official and only actively maintained version. Other platform implementations (Rust, Go, Amiga, Haiku, Apple, OS/2) have been removed; Browser and Windows2000 directories are retained for historical and experimental reference only.
 │   │   ├── qt_ui.py
 │   │   ├── canvas.py
 │   │   └── output.py

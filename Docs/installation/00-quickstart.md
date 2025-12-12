@@ -6,112 +6,70 @@ Get Time Warp IDE running on your system in minutes!
 
 ## Choose Your Operating System
 
-- **[Linux](#linux-quick-install)** - Debian, Ubuntu, Arch, and more
-- **[macOS](#macos-quick-install)** - Apple computers
-- **[Windows](#windows-quick-install)** - Modern Windows systems
+- **[Linux](#linux-quick-install)** - Debian, Ubuntu, Arch, and more (Python app)
+- **[macOS](#macos-quick-install)** - Apple computers (Python app)
+- **[Windows](#windows-quick-install)** - Modern Windows systems (Python app)
 
 ---
 
 ## Linux Quick Install
 
-### Debian/Ubuntu
+### Debian/Ubuntu (Python)
 
-```bash
-# Download the latest release
-wget https://github.com/honey-badger-org/Time_Warp/releases/latest/download/time-warp-ide_amd64.deb
-
-# Install
-sudo dpkg -i time-warp-ide_amd64.deb
-sudo apt-get install -f  # Install dependencies if needed
-
-# Run
-time-warp-ide
-```
-
-**Or use Python version:**
 ```bash
 # Install Python 3.10+ if needed
 sudo apt update
 sudo apt install python3 python3-pip python3-venv
 
 # Clone repository
-git clone https://github.com/honey-badger-org/Time_Warp.git
+git clone https://github.com/James-HoneyBadger/Time_Warp.git
 cd Time_Warp
 
 # Create virtual environment
 python3 -m venv .venv
 source .venv/bin/activate
 
-# Install
-pip install -e ./platforms/python
-
-# Run
-python platforms/python/time_warp_ide.py
+# Install dependencies and run
+cd Platforms/Python
+pip install -r requirements.txt
+python time_warp_ide.py
 ```
 
-### Arch Linux
+### Arch Linux (Python)
 
 ```bash
-# Using AUR
-yay -S time-warp-ide
-
-# Or install from source
-git clone https://github.com/honey-badger-org/Time_Warp.git
-cd Time_Warp
-makepkg -si
+sudo pacman -S python python-pip
+git clone https://github.com/James-HoneyBadger/Time_Warp.git
+cd Time_Warp/Platforms/Python
+pip install -r requirements.txt
+python time_warp_ide.py
 ```
 
 **Detailed guide:** [Linux Installation](01-linux.md)
 
 ---
 
-## macOS Quick Install
-
-### Using Homebrew
+## macOS Quick Install (Python)
 
 ```bash
-# Install Homebrew if you don't have it
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-
-# Install Time Warp IDE
-brew install honey-badger-org/tap/time-warp-ide
-
-# Run
-time-warp-ide
+/usr/bin/python3 --version
+git clone https://github.com/James-HoneyBadger/Time_Warp.git
+cd Time_Warp/Platforms/Python
+python3 -m pip install -r requirements.txt
+python3 time_warp_ide.py
 ```
-
-### Downloadable App
-
-1. Download `TimeWarpIDE.dmg` from [Releases](https://github.com/honey-badger-org/Time_Warp/releases)
-2. Open the DMG file
-3. Drag Time Warp IDE to Applications folder
-4. Launch from Applications
-
-**First time:**
-- Right-click → Open (to bypass Gatekeeper)
-- Or: System Preferences → Security → Allow
-
-**Detailed guide:** [macOS Installation](02-macos.md)
 
 ---
 
-## Windows Quick Install
+## Windows Quick Install (Python)
 
-### Installer
-
-1. Download `TimeWarpIDE-Setup.exe` from [Releases](https://github.com/honey-badger-org/Time_Warp/releases)
-2. Run the installer
-3. Follow the setup wizard
-4. Launch from Start Menu
-
-### Portable Version
-
-1. Download `TimeWarpIDE-Portable.zip`
-2. Extract to any folder
-3. Run `TimeWarpIDE.exe`
-4. No installation required!
-
-**Detailed guide:** [Windows Installation](03-windows.md)
+```powershell
+python --version
+git clone https://github.com/James-HoneyBadger/Time_Warp.git
+cd Time_Warp\Platforms\Python
+python -m pip install -r requirements.txt
+python time_warp_ide.py
+```
 
 ---
 
@@ -132,8 +90,7 @@ time-warp-ide
 
 ### Known Issues
 - **Older CPUs**: Virtual machines may lack required CPU extensions (SSSE3, SSE4.1, SSE4.2, POPCNT)
-  - **Solution**: Run on physical hardware or use Python version
-- **Windows 2000/XP**: Use special retro edition in `platforms/win2000/`
+   - **Solution**: Run on physical hardware or use the Python application
 
 ---
 

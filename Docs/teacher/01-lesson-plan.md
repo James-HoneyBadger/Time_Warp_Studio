@@ -130,7 +130,7 @@ Assessment: Final project graded with a rubric (functionality, code clarity, cre
 
 ## Differentiation and Extension Activities
 
-- For advanced students: Add persistence or file I/O; create a mini web frontend for Browser platform
+- For advanced students: Add persistence or file I/O; optional: prototype a simple web frontend (historical Browser platform) without relying on non-active platforms
 - For learners needing support: Provide templates, reduce problem complexity, pair with a helper
 
 ## Classroom Management Tips

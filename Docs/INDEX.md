@@ -1,6 +1,6 @@
 # Time Warp IDE Documentation Index
 
-**Release 4.0.0** – Updated November 22, 2025
+**Release 5.0.0** – Updated December 11, 2025
 
 Use this page to jump directly to the documentation that matches your role.
 
@@ -45,4 +45,4 @@ Time Warp IDE is released under the MIT License. See [LICENSE](../LICENSE) for t
 
 ---
 
-*Maintained for Time Warp IDE v5.0.0.*
+*Maintained for Time Warp IDE v5.0.0 (Python implementation active; other platforms archived/experimental).* 

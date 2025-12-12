@@ -20,14 +20,12 @@ Welcome to Time Warp IDE! This manual will help you get the most out of your pro
 
 ## Introduction
 
-Time Warp IDE is an educational programming environment that supports six different programming languages:
+Time Warp IDE is an educational programming environment centered on three core languages, with additional experimental modules:
 
 - **BASIC** - Great for beginners, simple English-like commands
 - **PILOT** - Designed for teaching, emphasizes clear communication
 - **Logo** - Learn through drawing with turtle graphics
-- **Pascal** - Structured programming with strong typing
-- **Prolog** - Logic programming and problem-solving
-- **C** - Systems programming and low-level control
+- Experimental: **Pascal**, **Prolog**, **C** (availability varies; features may be incomplete)
 
 ### Who Should Use Time Warp IDE?
 
@@ -47,9 +45,15 @@ Time Warp IDE is an educational programming environment that supports six differ
 - **Disk Space**: 50 MB for installation
 - **Display**: 1024×768 resolution or higher
 
-### First Launch
+### First Launch (Python)
 
-When you first start Time Warp IDE, you'll see:
+Launch via the Python application. From the repo root:
+
+1. `cd Platforms/Python`
+2. `python3 -m pip install -r requirements.txt`
+3. `python3 time_warp_ide.py`
+
+When you start Time Warp IDE, you'll see:
 
 1. **Menu Bar** - Access all features and settings
 2. **Code Editor** - Where you write your programs
@@ -86,9 +90,9 @@ When you first start Time Warp IDE, you'll see:
 - `Reset Turtle` - Return turtle to starting position
 
 **Language Menu**
-- Select which programming language to use
+- Select BASIC, PILOT, or Logo
 - Syntax highlighting updates automatically
-- File extensions help detect language
+- Experimental languages may appear depending on build state
 
 **View Menu**
 - `Zoom In/Out` - Adjust editor text size
@@ -131,7 +135,7 @@ Error messages include:
 
 ### Turtle Graphics Canvas
 
-When using Logo or graphics commands in other languages, this panel displays:
+When using Logo, this panel displays:
 
 - Turtle position and heading
 - All drawings created by your program
@@ -181,6 +185,8 @@ PRINT [Hello, World!]
 ### What's Happening?
 
 Each language has different syntax, but they all do the same thing: display a message. This is the beauty of Time Warp IDE — you can learn multiple programming approaches in one environment.
+
+Note: Experimental languages (Pascal, Prolog, C) may not be available in all builds.
 
 ---
 

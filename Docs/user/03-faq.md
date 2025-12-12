@@ -8,7 +8,7 @@ Common questions and answers about Time Warp IDE.
 
 ### What is Time Warp IDE?
 
-Time Warp IDE is an educational programming environment that supports six classic programming languages: BASIC, PILOT, Logo, Pascal, Prolog, and C. It's designed to help students learn programming through multiple paradigms in one unified tool.
+Time Warp IDE is an educational programming environment with three core languages—BASIC, PILOT, and Logo—and additional experimental modules for Pascal, Prolog, and C. It helps students learn programming through multiple paradigms in one unified tool.
 
 ### Why is it called "Time Warp"?
 
@@ -23,6 +23,8 @@ Yes! Time Warp IDE is open source software released under the MIT License. It's 
 - **Linux** (Debian, Ubuntu, Arch, Fedora, and more)
 - **macOS** (10.13+)
 - **Windows** (7+, though 10+ recommended)
+
+Time Warp’s actively maintained implementation is the Python desktop app (PySide6). Other platform folders are historical/experimental.
 
 ### Do I need internet to use it?
 
@@ -50,15 +52,15 @@ Absolutely! Time Warp IDE is designed for beginners. Start with the [Student Wor
 
 ### Where do I find example programs?
 
-The `examples/` folder contains sample programs for all six languages:
+The `Examples/` folder contains sample programs for the core languages and additional examples for experimental modules:
 ```
-examples/
+Examples/
 ├── basic/
 ├── pilot/
 ├── logo/
-├── pascal/
-├── prolog/
-└── c/
+├── pascal/    (experimental)
+├── prolog/    (experimental)
+└── c/         (experimental)
 ```
 
 You can also find examples in the [Programming Guide](../user/01-programming-guide.md).

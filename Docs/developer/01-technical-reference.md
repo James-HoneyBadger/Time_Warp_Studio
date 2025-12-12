@@ -22,19 +22,19 @@ Use this document if you are extending the core, writing a new language executor
 
 ## 1. Architecture Overview
 
-Time Warp IDE is designed as a collection of stateless language executors that are orchestrated by a small runtime and a cross-platform UI. Implementations exist in multiple platforms (Rust, Python, Windows2000 (C), Browser/JS) but share these concepts:
+Time Warp IDE centers on a Python (PySide6) application that orchestrates stateless language executors and renders UI (editor, output, turtle canvas). The Python implementation is the only actively maintained version; Browser and Windows2000 folders remain for historical/experimental reference.
 
 - Executors are stateless processors: they accept commands and return string output. All UI state (turtle position, canvas) is maintained by the host application.
-- Executors return results using standard emoji-prefixed messages: ❌ (errors), ✅ (success), ℹ️ (info), 🐢 (turtle actions), 🚀 (run events) — see the language executor API below.
+- Executors return results using standard emoji-prefixed messages: ❌ (errors), ✅ (success), ℹ️ (info), 🐢 (turtle actions), 🚀 (run events).
 - A central interpreter routes source code or lines to the appropriate executor.
 
 High level layout:
 
 ```
-App UI <--> Interpreter/Runner <--> Language Executors
-              ^                  ^
-              |                  +-- BASIC, PILOT, Logo, Pascal, Prolog, C
-              +-- Canvas & IO (turtle, file/load/save)
+PySide6 UI <--> TimeWarpInterpreter <--> Language Executors
+                 ^                   ^
+                 |                   +-- BASIC, PILOT, Logo (+ experimental Pascal, Prolog, C)
+                 +-- Canvas & IO (turtle, file/load/save)
 ```
 
 ---
@@ -86,7 +86,7 @@ If adding a new executor, implement the interface above and register it with the
 
 The project includes a safe expression evaluation module used by executors to evaluate arithmetic expressions without exposing the host to arbitrary code execution.
 
-Location: `platforms/python/time_warp/core/safe_expression_evaluator.py`
+Location: `Platforms/Python/time_warp/core/safe_expression_evaluator.py`
 
 Key points:
 - Supports a small, audited grammar (numbers, variables, basic operators)
@@ -99,65 +99,33 @@ When writing an executor that evaluates user-supplied arithmetic, call into the 
 
 ## 4. Canvas / Graphics API
 
-Two important canvases are supported:
+Canvas support:
 
-- Main GUI canvas (Qt for Python, eframe painter for Rust)
-- Retro Windows 2000 canvas and Browser canvas
+- Main GUI canvas (Qt for Python) is the authoritative renderer.
+- Historical canvases in Windows2000 and Browser are retained for reference; they are not actively maintained.
 
-Windows 2000 platform (C) exposes wrapper calls used by executors. Common functions include:
-
-- Canvas_Forward(distance), Canvas_Back(distance)
-- Canvas_Left(angle), Canvas_Right(angle)
-- Canvas_SetXY(x, y), Canvas_SetBgColor(r,g,b)
-- Canvas_Circle(radius), Canvas_DrawTurtle(), Canvas_Home(), Canvas_PenUp(), Canvas_PenDown()
-
-Browser platform provides a `createTurtle()` factory in `Platforms/Browser/js/graphics.js` and `show()` / `hide()` helpers for canvas lifecycle management.
-
-Executors should emit turtle actions with the `🐢` emoji prefix; the UI picks up these messages and performs UI updates. Do not manipulate UI directly from an executor.
+Executors emit turtle actions with the `🐢` emoji prefix; the UI consumes these messages and performs updates. Executors must not manipulate UI directly.
 
 ---
 
 ## 5. Build, Packaging and Installer
 
-Modern builds use cross-platform CI to produce native installers. The Windows 2000 native installer is built with NSIS.
-
-Installer script: `Platforms/Windows2000/installer/timewarp.nsi`
-
-Key details:
-- NSIS script accepts `VERSION` and `OUTDIR` variables via `makensis -DVERSION=... -DOUTDIR=...`.
-- Output filename: `TimeWarpIDE-Setup-<VERSION>.exe`—if OUTDIR is provided, the installer is written to `${OUTDIR}/TimeWarpIDE-Setup-<VERSION>.exe`.
-- The packaged application binary (inside the installer) is `TimeWarpIDE.exe` (copied into the `dist/` directory before packaging).
-
-Local packaging example:
-```bash
-# Ensure the application binary is built and placed in Platforms/Windows2000/dist
-makensis -DOUTDIR=Platforms/Windows2000/dist -DVERSION=3.0.0 Platforms/Windows2000/installer/timewarp.nsi
-```
+Builds focus on the Python application. Windows2000 NSIS scripts exist for archival purposes and are not part of the active release pipeline.
 
 ---
 
 ## 6. CI / GitHub Actions
 
-Two workflows manage Windows builds:
-
-- `.github/workflows/build-windows2000.yml` — cross-compile on ubuntu-latest, windows-latest native build and smoke tests.
-- `.github/workflows/release-windows2000.yml` — triggered on release/publication, produces and attaches Windows installer to GitHub Release.
-
-Important notes for CI:
-- The ubuntu job uses `gcc-mingw-w64-i686` cross toolchain and `makensis` to build NSIS installers.
-- For Windows native builds the runner uses MSYS2 (mingw32) + NSIS and runs PowerShell-based smoke tests (silent install/uninstall tests).
-- CI passes `-DVERSION=${{ github.event.release.tag_name }}` or a tag-based value so the installer filename matches the release tag.
+CI currently validates the Python implementation via pytest and coverage. Historical Windows2000 workflows may be present but are not actively used.
 
 ---
 
 ## 7. Tests & QA
 
-Tests are in `Tests/` and include unit tests, integration tests, and platform-specific smoke tests.
+Tests are in `Tests/` and cover unit, integration, and GUI workflows for the Python application.
 
 Key testing strategies:
 - Python: `pytest` + coverage
-- Browser: Node.js tests and optional Puppeteer end-to-end tests (require x86_64 runners)
-- Windows 2000: PowerShell smoke tests for silent install/uninstall and basic execution
 
 Tips:
 - Keep unit tests small and deterministic

@@ -1,20 +1,14 @@
-# Experimental Platform Prototypes
+# Platforms Overview
 
-This directory contains experimental prototype implementations of Time Warp for various platforms. These are **not actively maintained** and are provided for historical reference and experimentation only.
+This directory contains platform-specific implementations for Time Warp IDE.
 
-**Note:** The primary and actively maintained implementation is now the Python version at the repository root. See the main README.md for current usage.
+Active:
+- `Python/` – PySide6 desktop application (only actively maintained implementation)
 
-## Experimental Prototypes
+Experimental / Historical:
+- `Browser/` – HTML/JS prototype retained for research
+- `Windows2000/` – Vintage build scripts/artifacts kept for archival reference
 
-- `dos/` – MS-DOS / DOSBox build written in portable C
-- `python/` – Primary implementation with PySide6 GUI (actively maintained)
-- `web/` – Browser-based implementation (HTML5/JS)
-- `win2000/` – Windows 2000 implementation (Win32/C)
-
-## Status
-
-The Python implementation is the **actively maintained** version. Other implementations are experimental prototypes and may not work correctly. They are kept for historical reference but are not recommended for actual use.
-
-## Historical Notes
-
-These directories were previously located at the repository root and named using the "Time Warp <Platform>" convention. The reorganization completed in November 2025 moved them into `platforms/` to consolidate all implementations.
+Notes:
+- The Python implementation under `Platforms/Python` is authoritative. Other folders are not recommended for production use.
+- Core languages supported: BASIC, PILOT, Logo. Experimental modules: Pascal, Prolog, C.

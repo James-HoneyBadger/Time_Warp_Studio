@@ -67,11 +67,10 @@ All guides live in `Docs/` with an index at `Docs/INDEX.md`:
 | Platform | Location | Status | Notes |
 | - | - | - | - |
 | Python | `Platforms/Python/` | ✅ Active | PySide6 IDE, turtle graphics, language executors |
-| Browser | `Platforms/Browser/` | 🧪 Experimental | HTML/JS prototype kept for research |
-| DOS | `Platforms/DOS/` | 🧪 Experimental | C89 text-mode interpreter for historical study |
-| Windows2000 | `Platforms/Windows2000/` | ✅ Maintained | Vintage native build maintained for compatibility and installer packaging (NSIS) |
+| Browser | `Platforms/Browser/` | 🧪 Experimental | HTML/JS prototype retained for research |
+| Windows2000 | `Platforms/Windows2000/` | 🧪 Historical | Vintage build scripts and artifacts kept for archival/reference |
 
-Legacy implementations (Rust, Go, Amiga, Haiku, Apple, OS/2) have been removed to keep maintenance focused.
+The Python implementation is the sole actively maintained version. Other platforms (Rust, Go, Amiga, Haiku, Apple, OS/2, DOS) have been removed or archived.
 
 ## Repository Layout
 

@@ -1,6 +1,8 @@
 # Quick Reference Guide
 
-Fast lookup for commands, syntax, and features in all six languages.
+Fast lookup for commands, syntax, and features.
+
+Core languages: BASIC, PILOT, Logo. Pascal, Prolog, and C are experimental and may not be available in all builds.
 
 ---
 
@@ -173,7 +175,7 @@ PRINT COUNT :COLORS       # 3
 
 ---
 
-## Pascal Commands
+## Pascal Commands (Experimental)
 
 ### Program Structure
 ```pascal
@@ -248,7 +250,7 @@ end;
 
 ---
 
-## Prolog Predicates
+## Prolog Predicates (Experimental)
 
 ### Facts
 ```prolog
@@ -295,7 +297,7 @@ is(X, Expression)         # X = result of Expression
 
 ---
 
-## C Commands
+## C Commands (Experimental)
 
 ### Program Structure
 ```c

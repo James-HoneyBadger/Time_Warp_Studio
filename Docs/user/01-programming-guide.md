@@ -1,6 +1,6 @@
 # Programming Guide
 
-Learn to program in all six languages supported by Time Warp IDE. Each section includes tutorials, examples, and best practices.
+Learn to program in Time Warp IDE. The core languages are BASIC, PILOT, and Logo. Pascal, Prolog, and C are available as experimental modules and may not be present or fully featured in all builds.
 
 ---
 
@@ -9,9 +9,9 @@ Learn to program in all six languages supported by Time Warp IDE. Each section i
 1. [BASIC Programming](#basic-programming)
 2. [PILOT Programming](#pilot-programming)
 3. [Logo Programming](#logo-programming)
-4. [Pascal Programming](#pascal-programming)
-5. [Prolog Programming](#prolog-programming)
-6. [C Programming](#c-programming)
+4. [Pascal Programming](#pascal-programming) (Experimental)
+5. [Prolog Programming](#prolog-programming) (Experimental)
+6. [C Programming](#c-programming) (Experimental)
 7. [Choosing a Language](#choosing-a-language)
 8. [Cross-Language Concepts](#cross-language-concepts)
 
