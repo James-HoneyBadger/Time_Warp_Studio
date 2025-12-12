@@ -140,10 +140,15 @@ class OutputPanel(QTextEdit):
 
         # Store last error for AI assistance
         self.last_error = None
+        self.tabs_widget = None  # Reference to right_tabs for switching to Graphics tab
 
     def set_language(self, language):
         """Set the current language for execution."""
         self.current_language = language
+
+    def set_tabs_widget(self, tabs):
+        """Set reference to tabs widget for auto-switching to Graphics tab."""
+        self.tabs_widget = tabs
 
     def run_program(self, code, canvas, debug_mode=False, breakpoints=None):
         """Run program in background thread."""
@@ -245,6 +250,18 @@ class OutputPanel(QTextEdit):
         """Handle turtle state change."""
         if self.current_canvas:
             self.current_canvas.set_turtle_state(turtle)
+            
+            # Auto-switch to Graphics tab when lines are being drawn
+            if turtle.lines and self.tabs_widget:
+                try:
+                    # Find the Graphics tab and switch to it
+                    for i in range(self.tabs_widget.count()):
+                        if "Graphics" in self.tabs_widget.tabText(i):
+                            self.tabs_widget.setCurrentIndex(i)
+                            break
+                except (AttributeError, RuntimeError):
+                    # tabs_widget not available or invalid, skip tab switching
+                    pass
 
     def on_input_requested(self, prompt, _is_numeric):
         """Handle input request."""

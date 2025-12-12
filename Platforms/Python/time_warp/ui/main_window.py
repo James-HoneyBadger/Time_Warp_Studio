@@ -598,6 +598,9 @@ class MainWindow(QMainWindow):
         # Turtle canvas
         self.canvas = TurtleCanvas(self)
         self.right_tabs.addTab(self.canvas, "🎨 Graphics")
+        
+        # Connect output panel to tabs for auto-switching to Graphics
+        self.output.set_tabs_widget(self.right_tabs)
 
         # Connect immediate mode to output panel and canvas
         self.immediate_mode.set_canvas(self.canvas)
