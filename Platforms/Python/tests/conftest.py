@@ -7,6 +7,7 @@ directory to sys.path before test collection.
 
 import os
 import sys
+from PySide6.QtGui import QGuiApplication
 
 
 def pytest_configure():
@@ -18,3 +19,20 @@ def pytest_configure():
         sys.path.insert(0, repo_root)
     if platforms_python not in sys.path:
         sys.path.insert(0, platforms_python)
+
+
+def pytest_sessionstart(session):
+    """Ensure a QGuiApplication exists before tests that access QFontDatabase run.
+
+    Some modules (themes, UI) query Qt font databases at import time. Creating
+    a QGuiApplication at the start of the test session prevents import-time
+    errors in headless environments when using a virtual display such as
+    Xvfb or Qt's offscreen platform.
+    """
+    try:
+        if QGuiApplication.instance() is None:
+            QGuiApplication([])
+    except Exception:
+        # If Qt is not available or cannot be initialized, allow tests to
+        # continue; GUI tests will fail appropriately.
+        pass

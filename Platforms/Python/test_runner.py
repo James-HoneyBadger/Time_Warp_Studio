@@ -33,7 +33,10 @@ def run_tests(args):
             print(f"Running {script}...")
             # Use virtual environment if it exists
             python_cmd = sys.executable
-            venv_python = os.path.join(base_dir, "venv", "bin", "python")
+            # Check for both venv and .venv directories
+            venv_python = os.path.join(base_dir, ".venv", "bin", "python")
+            if not os.path.exists(venv_python):
+                venv_python = os.path.join(base_dir, "venv", "bin", "python")
             if os.path.exists(venv_python):
                 python_cmd = venv_python
 
