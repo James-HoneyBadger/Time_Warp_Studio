@@ -398,6 +398,24 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             self.function_pattern = r"\b[a-z][a-zA-Z0-9_]*\b(?=\s*\()"
             self.variable_pattern = r"\b[A-Z_][A-Za-z0-9_]*\b"
 
+        elif language == Language.FORTH:
+            self.keywords = [
+                "DUP", "DROP", "SWAP", "OVER", "ROT",
+                "IF", "ELSE", "THEN", "DO", "LOOP",
+                "BEGIN", "UNTIL", "WHILE", "REPEAT",
+                "VARIABLE", "CONSTANT", "ALLOT", "CREATE",
+                "!", "@", ",",
+                ":", ";",
+                ".", ".S", "CR",
+                "FD", "BK", "RT", "LT", "PU", "PD", "HOME", "CLEAN", "PEN"
+            ]
+            self.comment_pattern = r"\( .*? \)|\\ .*$"
+            self.string_pattern = r'\." .*?"'
+            self.number_pattern = r"\b-?\d+\b"
+            self.operator_pattern = r"[+\-*/=<>!@]"
+            self.function_pattern = r":\s+(\S+)"
+            self.variable_pattern = r"\b[A-Z0-9_]+\b"
+
         else:
             # Default to BASIC
             self._setup_language_patterns(Language.BASIC)

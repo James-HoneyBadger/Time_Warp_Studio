@@ -67,8 +67,14 @@ class TurtleCanvas(
 
     def set_turtle_state(self, turtle):
         """Set turtle state and repaint."""
+        # DEBUG: Log state updates
+        import sys
+        print(f"[CANVAS] set_turtle_state: {len(turtle.lines)} lines", file=sys.stderr)
+        
         self.turtle = turtle
         self.lines = turtle.lines.copy()
+        print(f"[CANVAS] Copied lines: self.lines now has {len(self.lines)} lines", file=sys.stderr)
+        
         # Adopt background color from turtle state if available
         try:
             r, g, b = getattr(turtle, "bg_color", (40, 42, 54))
@@ -76,7 +82,13 @@ class TurtleCanvas(
         except (TypeError, ValueError):
             # Fallback to default theme background
             self.bg_color = QColor(40, 42, 54)
-        self.update()
+        
+        print(f"[CANVAS] Calling self.update()", file=sys.stderr)
+        # Use repaint() instead of update() to force immediate redraw
+        # update() schedules a paint event, but doesn't guarantee immediate rendering
+        # repaint() forces immediate rendering, which is more reliable for graphics
+        self.repaint()
+        print(f"[CANVAS] repaint() called", file=sys.stderr)
 
     def clear(self):
         """Clear canvas."""
@@ -85,11 +97,17 @@ class TurtleCanvas(
         self.zoom = 1.0
         self.offset_x = 0.0
         self.offset_y = 0.0
-        self.update()
+        # Use repaint() for immediate clearing
+        self.repaint()
 
     def paintEvent(self, _event):
         """Paint turtle graphics."""
         painter = QPainter(self)
+
+        # DEBUG: Log paint events
+        import sys
+        if len(self.lines) > 0:
+            print(f"[CANVAS] paintEvent: {len(self.lines)} lines, zoom={self.zoom}", file=sys.stderr)
 
         if self.screen_mode_enabled:
             self._paint_retro_mode(painter)
@@ -130,7 +148,9 @@ class TurtleCanvas(
         # Draw turtle lines
         for line in self.lines:
             color = QColor(line.color[0], line.color[1], line.color[2])
-            pen = QPen(color, line.width)
+            # Adjust pen width inversely to zoom so it stays visible at all zoom levels
+            adjusted_width = line.width / max(self.zoom, 0.1) if self.zoom != 0 else line.width
+            pen = QPen(color, adjusted_width)
             pen.setCapStyle(Qt.RoundCap)
             pen.setJoinStyle(Qt.RoundJoin)
             painter.setPen(pen)

@@ -466,6 +466,34 @@ class MainWindow(QMainWindow):
             # Update title
             self.update_title()
 
+    def on_language_changed(self, index):
+        """Handle manual language selection from combo box."""
+        if index < 0 or not hasattr(self, "language_combo"):
+            return
+
+        # Get selected language from combo data
+        language = self.language_combo.itemData(index)
+        if not language:
+            return
+
+        # Update current tab's language
+        current_index = self.editor_tabs.currentIndex()
+        if current_index >= 0:
+            self.tab_languages[current_index] = language
+            
+            # Update editor syntax highlighting
+            editor = self.editor_tabs.currentWidget()
+            if isinstance(editor, CodeEditor):
+                editor.set_language(language)
+                
+            # Update output panel context
+            if hasattr(self, "output"):
+                self.output.set_language(language)
+                
+            # Update status bar
+            if hasattr(self, "language_label"):
+                self.language_label.setText(f"Language: {language.friendly_name()}")
+
     def check_save_changes_for_tab(self, tab_index):
         """Check if tab has unsaved changes and prompt to save."""
         if self.tab_modified.get(tab_index, False):
@@ -1167,6 +1195,47 @@ class MainWindow(QMainWindow):
 
         toolbar.addSeparator()
 
+        # Language selector
+        toolbar.addWidget(QLabel(" Language: "))
+        self.language_combo = QComboBox()
+        self.language_combo.setToolTip("Select programming language for current tab")
+        self.language_combo.setStatusTip("Change the syntax highlighting and execution engine")
+        self.language_combo.setStyleSheet(
+            """
+            QComboBox {
+                background-color: palette(base);
+                color: palette(text);
+                border: 1px solid palette(dark);
+                border-radius: 4px;
+                padding: 2px 8px;
+                min-width: 80px;
+            }
+            QComboBox:hover {
+                border-color: palette(highlight);
+            }
+            QComboBox::drop-down {
+                border: none;
+                width: 20px;
+            }
+            QComboBox::down-arrow {
+                image: none;
+                border-left: 4px solid transparent;
+                border-right: 4px solid transparent;
+                border-top: 4px solid palette(text);
+                margin-right: 8px;
+            }
+        """
+        )
+        
+        # Populate combo
+        for lang in Language:
+            self.language_combo.addItem(f"💻 {lang.friendly_name()}", lang)
+            
+        self.language_combo.currentIndexChanged.connect(self.on_language_changed)
+        toolbar.addWidget(self.language_combo)
+
+        toolbar.addSeparator()
+
         # Execution controls group
         run_btn = toolbar.addAction("🚀 Run", self.run_program)
         run_btn.setToolTip("Run the current program (Ctrl+R)")
@@ -1207,48 +1276,6 @@ class MainWindow(QMainWindow):
         )
         clear_canvas_btn.setToolTip("Clear the graphics canvas")
         clear_canvas_btn.setStatusTip("Clear all graphics drawings")
-
-        # Language selector with enhanced styling
-        toolbar.addSeparator()
-        self.language_combo = QComboBox()
-        self.language_combo.setStyleSheet(
-            """
-            QComboBox {
-                background-color: palette(base);
-                color: palette(text);
-                border: 1px solid palette(dark);
-                border-radius: 4px;
-                padding: 2px 8px;
-                min-width: 80px;
-            }
-            QComboBox:hover {
-                border-color: palette(highlight);
-            }
-            QComboBox::drop-down {
-                border: none;
-                width: 20px;
-            }
-            QComboBox::down-arrow {
-                image: none;
-                border-left: 4px solid transparent;
-                border-right: 4px solid transparent;
-                border-top: 4px solid palette(text);
-                margin-right: 8px;
-            }
-        """
-        )
-
-        for lang in [
-            Language.BASIC,
-            Language.PILOT,
-            Language.LOGO,
-        ]:
-            self.language_combo.addItem(f"💻 {lang.friendly_name()}", lang)
-        connect_cb = self.on_language_changed
-        self.language_combo.currentIndexChanged.connect(connect_cb)
-
-        toolbar.addWidget(QLabel("Language:"))
-        toolbar.addWidget(self.language_combo)
 
     def create_statusbar(self):
         """Create status bar."""

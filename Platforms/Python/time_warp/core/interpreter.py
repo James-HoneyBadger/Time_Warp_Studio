@@ -23,6 +23,7 @@ from ..languages.logo import execute_logo
 from ..languages.pascal import execute_pascal
 from ..languages.pilot import execute_pilot
 from ..languages.prolog import execute_prolog
+from ..languages.forth import execute_forth
 
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
@@ -76,6 +77,7 @@ class Language(Enum):
     C = auto()
     PROLOG = auto()
     PASCAL = auto()
+    FORTH = auto()
 
     @classmethod
     def from_extension(cls, ext: str) -> "Language":
@@ -89,6 +91,9 @@ class Language(Enum):
             ".pro": cls.PROLOG,
             ".prolog": cls.PROLOG,
             ".pas": cls.PASCAL,
+            ".f": cls.FORTH,
+            ".fs": cls.FORTH,
+            ".forth": cls.FORTH,
         }
         return mapping.get(ext, cls.BASIC)
 
@@ -101,6 +106,7 @@ class Language(Enum):
             Language.C: "C",
             Language.PROLOG: "Prolog",
             Language.PASCAL: "Pascal",
+            Language.FORTH: "Forth",
         }
         return names.get(self, "Unknown")
 
@@ -634,10 +640,11 @@ class Interpreter:
         ):
             _, current_command = self.program_lines[self.current_line]
 
-            logical_idx = self._compute_logical_line_index(current_command)
+            # Use physical line number (1-based) for breakpoints and UI
+            physical_line = self.current_line + 1
 
-            if self._should_break(current_command, logical_idx):
-                self._do_debug_pause(logical_idx)
+            if self._should_break(current_command, physical_line):
+                self._do_debug_pause(physical_line)
 
             self._check_timeout(start_time)
 
@@ -670,36 +677,19 @@ class Interpreter:
             self.log_output("⚠️ Warning: Maximum iterations reached")
         return self.output.copy()
 
-    def _compute_logical_line_index(
-        self,
-        current_command: str,
-    ) -> Optional[int]:
-        """Return 1-based count of non-empty lines up to current_line.
-        Returns None for empty/blank commands.
-        """
-        if not current_command.strip():
-            return None
-        return sum(
-            1
-            for i in range(0, self.current_line + 1)
-            if self.program_lines[i][1].strip()
-        )
-
     def _should_break(
-        self, current_command: str, logical_line_index: Optional[int]
+        self, current_command: str, line_number: int
     ) -> bool:
         if not (self.debug_mode and current_command.strip()):
             return False
         if self.step_mode:
             return True
-        if logical_line_index is None:
-            return False
-        return logical_line_index in self.breakpoints
+        return line_number in self.breakpoints
 
-    def _do_debug_pause(self, logical_line_index: Optional[int]):
+    def _do_debug_pause(self, line_number: int):
         if self.debug_callback:
             # pylint: disable=not-callable
-            self.debug_callback(logical_line_index or 0, self.get_variables())
+            self.debug_callback(line_number, self.get_variables())
         self.debug_event.wait()
         self.debug_event.clear()
 
@@ -757,6 +747,8 @@ class Interpreter:
             output = execute_pascal(self, command, turtle)
         elif self.language == Language.PROLOG:
             output = execute_prolog(self, command, turtle)
+        elif self.language == Language.FORTH:
+            output = execute_forth(self, command, turtle)
         else:
             raise ValueError(f"Unsupported language: {self.language}")
 
