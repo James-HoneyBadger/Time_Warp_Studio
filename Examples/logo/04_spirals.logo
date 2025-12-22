@@ -1,0 +1,36 @@
+TO SPIRAL :SIZE :ANGLE :DECREMENT
+    REPEAT 100 [
+        FORWARD :SIZE
+        RIGHT :ANGLE
+        MAKE "SIZE :SIZE - :DECREMENT
+        IF :SIZE > 0 [ ]
+    ]
+END
+
+TO SQUARE_SPIRAL
+    PRINT [Spiral Pattern - Decreasing Squares]
+    PENUP
+    SETPOSITION [-100 100]
+    PENDOWN
+    
+    REPEAT 50 [
+        FORWARD 100
+        RIGHT 90
+        MAKE "SIZE :SIZE - 4
+    ]
+END
+
+TO SPIRAL_DEMO
+    PRINT [Drawing Various Spiral Patterns]
+    
+    PRINT [Spiral with size decrease]
+    PENUP
+    SETPOSITION [-150 0]
+    PENDOWN
+    
+    REPEAT 30 [
+        FORWARD 150
+        RIGHT 12
+        MAKE "LENGTH :LENGTH - 3
+    ]
+END

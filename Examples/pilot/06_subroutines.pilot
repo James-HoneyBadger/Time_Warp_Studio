@@ -1,0 +1,91 @@
+REMARK ================================================
+REMARK SUBROUTINES AND MODULARITY
+REMARK ================================================
+
+PRINT Welcome to the Subroutine Demo
+
+PRINT
+
+TU print_separator
+
+ACCEPT name What is your name?
+
+TU greet_user
+
+ACCEPT number Enter a number:
+
+TU show_number_info
+
+ACCEPT calc_choice What operation? (add/mult/square):
+
+MATCH $calc_choice
+    CASE add:
+        ACCEPT num2 Enter second number:
+        TU add_numbers
+    CASE mult:
+        ACCEPT num2 Enter second number:
+        TU multiply_numbers
+    CASE square:
+        TU square_number
+    DEFAULT:
+        PRINT Invalid choice
+END
+
+TU print_separator
+
+PRINT Thank you for using this program
+
+STOP
+
+REMARK ================================================
+REMARK SUBROUTINE: Print Separator Line
+REMARK ================================================
+RULE print_separator:
+    PRINT ════════════════════════════════════════
+RETURN
+
+REMARK ================================================
+REMARK SUBROUTINE: Greet User
+REMARK ================================================
+RULE greet_user:
+    PRINT Hello, $name!
+    PRINT Welcome to Time Warp IDE PILOT
+RETURN
+
+REMARK ================================================
+REMARK SUBROUTINE: Show Number Information
+REMARK ================================================
+RULE show_number_info:
+    PRINT
+    PRINT Number Information for $number:
+    COMPUTE square_val $number * $number
+    PRINT Square: $square_val
+    COMPUTE double_val $number * 2
+    PRINT Double: $double_val
+    COMPUTE half_val $number / 2
+    PRINT Half: $half_val
+RETURN
+
+REMARK ================================================
+REMARK SUBROUTINE: Add Two Numbers
+REMARK ================================================
+RULE add_numbers:
+    COMPUTE sum $number + $num2
+    PRINT $number + $num2 = $sum
+RETURN
+
+REMARK ================================================
+REMARK SUBROUTINE: Multiply Numbers
+REMARK ================================================
+RULE multiply_numbers:
+    COMPUTE product $number * $num2
+    PRINT $number * $num2 = $product
+RETURN
+
+REMARK ================================================
+REMARK SUBROUTINE: Square a Number
+REMARK ================================================
+RULE square_number:
+    COMPUTE squared $number * $number
+    PRINT $number squared = $squared
+RETURN

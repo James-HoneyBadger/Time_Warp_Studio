@@ -1,0 +1,64 @@
+REMARK ================================================
+REMARK VARIABLES AND OUTPUT
+REMARK ================================================
+
+REMARK Set some variables
+ACCEPT name User, what is your name?
+ACCEPT age What is your age?
+ACCEPT city What city are you from?
+
+PRINT
+PRINT Welcome!
+PRINT Your Information:
+PRINT ─────────────────
+PRINT Name: $name
+PRINT Age: $age
+PRINT City: $city
+PRINT
+
+REMARK Processing the data
+ACCEPT response Are you happy with this information? (yes/no)
+MATCH $response
+    CASE yes:
+        PRINT Great! Thank you for confirming.
+        PRINT
+        TU student_info
+    CASE no:
+        PRINT Let's correct the information
+        TU student_info
+END
+
+RULE student_info:
+    PRINT Restarting...
+    JUMP student_info
+STOP
+
+JUMP start_here
+RULE start_here:
+    ACCEPT confirm Start the program? (yes/no)
+    MATCH $confirm
+        CASE yes:
+            TU main_program
+        CASE no:
+            PRINT Goodbye!
+            STOP
+    END
+STOP
+
+RULE main_program:
+    ACCEPT first First number:
+    ACCEPT second Second number:
+    
+    PRINT
+    PRINT Calculations:
+    PRINT ─────────────
+    COMPUTE sum $first + $second
+    PRINT Sum: $sum
+    COMPUTE diff $first - $second
+    PRINT Difference: $diff
+    COMPUTE prod $first * $second
+    PRINT Product: $prod
+    COMPUTE quotient $first / $second
+    PRINT Quotient: $quotient
+    PRINT
+STOP

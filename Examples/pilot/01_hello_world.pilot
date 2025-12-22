@@ -1,0 +1,10 @@
+REMARK ================================================
+REMARK HELLO WORLD - Basic PILOT Program
+REMARK ================================================
+
+ACCEPT Hello
+PRINT Hello
+PRINT Welcome to Time Warp IDE PILOT
+PRINT
+PRINT Program complete.
+STOP

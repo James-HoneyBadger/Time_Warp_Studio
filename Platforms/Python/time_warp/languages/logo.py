@@ -13,6 +13,11 @@ if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
     from ..graphics.turtle_state import TurtleState
 
+# Compiled regex patterns for performance
+_VAR_PATTERN = re.compile(r":([A-Za-z_][A-Za-z0-9_]*)")
+_RANDOM_PATTERN = re.compile(r"RANDOM\s+([A-Za-z0-9_.]+)", re.IGNORECASE)
+_BRACKET_PATTERN = re.compile(r'\[|\]|"[^\s]*|[^\[\]\s]+')
+
 # Color name to RGB mapping
 COLOR_NAMES = {
     "BLACK": (0, 0, 0),
@@ -114,7 +119,7 @@ def _split_logo_commands(
 
     # Tokenize: brackets, quoted strings, or other words
     # Handle "WORD (quote at start)
-    tokens = re.findall(r'\[|\]|"[^\s]*|[^\[\]\s]+', text)
+    tokens = _BRACKET_PATTERN.findall(text)
 
     for token in tokens:
         if token == "[":
@@ -153,10 +158,10 @@ def execute_logo(
     Handles multiple commands on a single line by splitting them.
     """
     commands = _split_logo_commands(command, interpreter)
-    output = ""
+    outputs = []
     for cmd in commands:
-        output += _execute_single_logo_command(interpreter, cmd, turtle)
-    return output
+        outputs.append(_execute_single_logo_command(interpreter, cmd, turtle))
+    return "".join(outputs)
 
 
 def _execute_single_logo_command(
@@ -348,33 +353,59 @@ def _execute_single_logo_command(
 
 
 def _logo_eval_arg(interpreter: "Interpreter", arg: str) -> float:
+    """Evaluate a single Logo argument (variable reference or expression).
+    
+    Args:
+        interpreter: Interpreter instance
+        arg: Single argument string
+    
+    Returns:
+        Numeric value
+    
+    Raises:
+        ValueError: If argument cannot be evaluated
+    """
+    if arg.startswith(":"):
+        var_name = arg[1:].upper()
+        if var_name not in interpreter.variables:
+            raise ValueError(f"Undefined variable: {arg}")
+        return interpreter.variables[var_name]
+    
     try:
-        if arg.startswith(":"):
-            var_name = arg[1:].upper()
-            return interpreter.variables.get(var_name, 0)
         return interpreter.evaluate_expression(arg)
-    except (ValueError, TypeError, ZeroDivisionError):
-        return 0.0
+    except (ValueError, TypeError, ZeroDivisionError) as e:
+        raise ValueError(f"Cannot evaluate argument '{arg}': {e}") from e
 
 
 def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
-    """Evaluate a Logo expression string with :VAR names and spaces."""
+    """Evaluate a Logo expression string with :VAR names and spaces.
+    
+    Args:
+        interpreter: Interpreter instance
+        expr: Expression string (may contain :VAR references)
+    
+    Returns:
+        Numeric result of expression
+    
+    Raises:
+        ValueError: If expression cannot be evaluated
+    """
     # Replace :VAR with VAR for evaluator
-    expr_norm = re.sub(r":([A-Za-z_][A-Za-z0-9_]*)", r"\1", expr)
+    expr_norm = _VAR_PATTERN.sub(r"\1", expr)
 
     # Handle RANDOM N -> FLOOR(RND * N)
     # Matches RANDOM followed by number or variable
-    expr_norm = re.sub(
-        r"RANDOM\s+([A-Za-z0-9_.]+)",
+    expr_norm = _RANDOM_PATTERN.sub(
         r"FLOOR(RND * \1)",
         expr_norm,
-        flags=re.IGNORECASE,
     )
 
     try:
         return interpreter.evaluate_expression(expr_norm)
-    except (ValueError, TypeError, ZeroDivisionError):
-        return 0.0
+    except (ValueError, TypeError, ZeroDivisionError) as e:
+        raise ValueError(
+            f"Cannot evaluate Logo expression '{expr}': {e}"
+        ) from e
 
 
 def _logo_forward(
@@ -382,13 +413,35 @@ def _logo_forward(
     turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
-    if not args:
-        return "❌ FORWARD requires distance\n"
-    dist_expr = " ".join(args)
-    distance = _logo_eval_expr_str(interpreter, dist_expr)
-    if turtle is None:
-        return "❌ Graphics not available for this command\n"
-    turtle.forward(distance)
+    """FORWARD distance - Move turtle forward.
+    
+    Args:
+        interpreter: Interpreter instance
+        turtle: Turtle graphics state
+        args: Distance arguments
+    
+    Returns:
+        Status or error message
+    """
+    from ..utils.validators import validate_arg_count, ValidationError
+    from ..logging_config import get_logger
+    
+    logger = get_logger(__name__)
+    
+    try:
+        validate_arg_count(args, 1, "FORWARD")
+        dist_expr = " ".join(args)
+        distance = _logo_eval_expr_str(interpreter, dist_expr)
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
+        turtle.forward(distance)
+        logger.debug(f"FORWARD {distance}")
+    except ValidationError as e:
+        return f"❌ {e}\n"
+    except ValueError as e:
+        logger.error(f"FORWARD error: {e}")
+        return f"❌ {e}\n"
+    
     return ""
 
 
@@ -442,13 +495,35 @@ def _logo_setxy(
     turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
-    if len(args) < 2:
-        return "❌ SETXY requires x and y coordinates\n"
-    x = _logo_eval_arg(interpreter, args[0])
-    y = _logo_eval_arg(interpreter, args[1])
-    if turtle is None:
-        return "❌ Graphics not available for this command\n"
-    turtle.goto(x, y)
+    """SETXY x y - Set turtle absolute position.
+    
+    Args:
+        interpreter: Interpreter instance
+        turtle: Turtle graphics state
+        args: X and Y coordinate arguments
+    
+    Returns:
+        Status or error message
+    """
+    from ..utils.validators import validate_arg_count, ValidationError
+    from ..logging_config import get_logger
+    
+    logger = get_logger(__name__)
+    
+    try:
+        validate_arg_count(args, 2, "SETXY")
+        x = _logo_eval_arg(interpreter, args[0])
+        y = _logo_eval_arg(interpreter, args[1])
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
+        turtle.goto(x, y)
+        logger.debug(f"SETXY {x} {y}")
+    except ValidationError as e:
+        return f"❌ {e}\n"
+    except ValueError as e:
+        logger.error(f"SETXY error: {e}")
+        return f"❌ {e}\n"
+    
     return ""
 
 
@@ -572,13 +647,36 @@ def _logo_setpenwidth(
     turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
-    if not args:
-        return "❌ SETPENWIDTH requires width\n"
-    width_expr = " ".join(args)
-    width = _logo_eval_expr_str(interpreter, width_expr)
-    if turtle is None:
-        return "❌ Graphics not available for this command\n"
-    turtle.setpenwidth(width)
+    """SETPENWIDTH width - Set pen drawing width.
+    
+    Args:
+        interpreter: Interpreter instance
+        turtle: Turtle graphics state
+        args: Width argument
+    
+    Returns:
+        Status or error message
+    """
+    from ..utils.validators import validate_arg_count, ValidationError, validate_range
+    from ..logging_config import get_logger
+    
+    logger = get_logger(__name__)
+    
+    try:
+        validate_arg_count(args, 1, "SETPENWIDTH")
+        width_expr = " ".join(args)
+        width = _logo_eval_expr_str(interpreter, width_expr)
+        validate_range(int(width), 1, 100, "pen width")
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
+        turtle.setpenwidth(width)
+        logger.debug(f"SETPENWIDTH {width}")
+    except ValidationError as e:
+        return f"❌ {e}\n"
+    except ValueError as e:
+        logger.error(f"SETPENWIDTH error: {e}")
+        return f"❌ {e}\n"
+    
     return ""
 
 
@@ -961,15 +1059,17 @@ def _logo_word(interpreter: "Interpreter", args: List[str]) -> str:
     """WORD word1 word2 - Concatenate words"""
     if len(args) < 2:
         return "❌ WORD requires at least two arguments\n"
-    result = ""
+    
+    parts = []
     for arg in args:
         # Evaluate each argument
         try:
             val = interpreter.evaluate_expression(arg)
-            result += str(int(val)) if val == int(val) else str(val)
+            parts.append(str(int(val)) if val == int(val) else str(val))
         except (ValueError, TypeError):
-            result += arg.strip('"')
-    return result
+            parts.append(arg.strip('"'))
+    
+    return "".join(parts)
 
 
 def _logo_list(interpreter: "Interpreter", args: List[str]) -> str:

@@ -111,15 +111,27 @@ def execute_pilot(
     if cmd_type == "C":
         if "=" not in rest:
             return "❌ C: requires format: var = expression\n"
+        from ..logging_config import get_logger
+        from ..utils.validators import validate_variable_name, ValidationError
+        
+        logger = get_logger(__name__)
+        
         parts = rest.split("=", 1)
         var_name = parts[0].strip()
         expr = parts[1].strip()
+        
         if not var_name:
             return "❌ C: requires variable name\n"
+        
         try:
+            validate_variable_name(var_name, allow_suffix=True)
             result = interpreter.evaluate_expression(expr)
             interpreter.variables[var_name] = result
-        except (ValueError, TypeError) as e:
+            logger.debug(f"PILOT C: {var_name} = {result}")
+        except ValidationError as e:
+            return f"❌ {e}\n"
+        except (ValueError, TypeError, ZeroDivisionError) as e:
+            logger.error(f"PILOT C: evaluation failed: {e}")
             return f"❌ Error in C: {e}\n"
         return ""
     if cmd_type == "J":
@@ -296,7 +308,22 @@ def _pilot_graphics_command(
 
 
 def _pilot_file_command(interpreter: "Interpreter", command: str) -> str:
-    """Handle PILOT file operations."""
+    """Handle PILOT file operations (OPEN, CLOSE, READ, WRITE).
+    
+    Validates file paths and arguments before file operations.
+    
+    Args:
+        interpreter: Interpreter instance
+        command: File operation command
+    
+    Returns:
+        Status or error message
+    """
+    from ..utils.validators import validate_arg_count, validate_file_path, ValidationError, validate_variable_name
+    from ..logging_config import get_logger
+    
+    logger = get_logger(__name__)
+    
     parts = command.strip().split()
     if not parts:
         return "❌ F: requires file operation\n"
@@ -305,81 +332,112 @@ def _pilot_file_command(interpreter: "Interpreter", command: str) -> str:
     args = parts[1:]
 
     if operation == "OPEN":
-        if len(args) < 2:
-            return "❌ F: OPEN requires filename and mode\n"
-        filename = args[0]
-        mode = args[1].upper()
         try:
-            if mode in ("READ", "R"):
-                # pylint: disable=consider-using-with
-                interpreter.open_files[filename] = open(
-                    filename,
-                    "r",
-                    encoding="utf-8",
-                )
-            elif mode in ("WRITE", "W"):
-                # pylint: disable=consider-using-with
-                interpreter.open_files[filename] = open(
-                    filename,
-                    "w",
-                    encoding="utf-8",
-                )
-            elif mode in ("APPEND", "A"):
-                # pylint: disable=consider-using-with
-                interpreter.open_files[filename] = open(
-                    filename,
-                    "a",
-                    encoding="utf-8",
-                )
-            else:
-                return f"❌ F: Unknown file mode: {mode}\n"
-        except (IOError, OSError) as e:
-            return f"❌ F: Error opening file: {e}\n"
+            validate_arg_count(args, 2, f"F: {operation}")
+            filename = args[0]
+            mode = args[1].upper()
+            
+            # Validate filename is safe
+            validate_file_path(filename, base_dir=".")
+            
+            if mode not in ("READ", "R", "WRITE", "W", "APPEND", "A"):
+                return f"❌ F: OPEN requires mode R|W|A, got: {mode}\n"
+            
+            try:
+                if mode in ("READ", "R"):
+                    # pylint: disable=consider-using-with
+                    interpreter.open_files[filename] = open(
+                        filename,
+                        "r",
+                        encoding="utf-8",
+                    )
+                    logger.info(f"PILOT file OPEN read: {filename}")
+                elif mode in ("WRITE", "W"):
+                    # pylint: disable=consider-using-with
+                    interpreter.open_files[filename] = open(
+                        filename,
+                        "w",
+                        encoding="utf-8",
+                    )
+                    logger.info(f"PILOT file OPEN write: {filename}")
+                elif mode in ("APPEND", "A"):
+                    # pylint: disable=consider-using-with
+                    interpreter.open_files[filename] = open(
+                        filename,
+                        "a",
+                        encoding="utf-8",
+                    )
+                    logger.info(f"PILOT file OPEN append: {filename}")
+            except (IOError, OSError) as e:
+                logger.error(f"PILOT file open error: {e}")
+                return f"❌ F: Error opening file '{filename}': {e}\n"
+        except ValidationError as e:
+            return f"❌ {e}\n"
 
     elif operation == "CLOSE":
-        if not args:
-            return "❌ F: CLOSE requires filename\n"
-        filename = args[0]
-        if filename in interpreter.open_files:
+        try:
+            validate_arg_count(args, 1, f"F: {operation}")
+            filename = args[0]
+            
+            if filename not in interpreter.open_files:
+                return f"❌ F: File not open: {filename}\n"
+            
             try:
                 interpreter.open_files[filename].close()
                 del interpreter.open_files[filename]
+                logger.info(f"PILOT file closed: {filename}")
             except (IOError, OSError) as e:
+                logger.error(f"PILOT file close error: {e}")
                 return f"❌ F: Error closing file: {e}\n"
-        else:
-            return f"❌ F: File not open: {filename}\n"
+        except ValidationError as e:
+            return f"❌ {e}\n"
 
     elif operation == "READ":
-        if len(args) < 2:
-            return "❌ F: READ requires filename and variable\n"
-        filename = args[0]
-        var_name = args[1]
-        if filename not in interpreter.open_files:
-            return f"❌ F: File not open: {filename}\n"
         try:
-            line = interpreter.open_files[filename].readline().strip()
-            # Store numeric values in numeric variable store, otherwise string store
+            validate_arg_count(args, 2, f"F: {operation}")
+            filename = args[0]
+            var_name = args[1]
+            
+            validate_variable_name(var_name, allow_suffix=True)
+            
+            if filename not in interpreter.open_files:
+                return f"❌ F: File not open: {filename}\n"
+            
             try:
-                v = float(line)
-                interpreter.variables[var_name] = v
-            except ValueError:
-                interpreter.string_variables[var_name] = line
-        except (IOError, OSError) as e:
-            return f"❌ F: Error reading file: {e}\n"
+                line = interpreter.open_files[filename].readline().strip()
+                # Store numeric values in numeric variable store, otherwise string store
+                try:
+                    v = float(line)
+                    interpreter.variables[var_name] = v
+                except ValueError:
+                    interpreter.string_variables[var_name] = line
+                logger.debug(f"PILOT file read: {var_name} from {filename}")
+            except (IOError, OSError) as e:
+                logger.error(f"PILOT file read error: {e}")
+                return f"❌ F: Error reading file: {e}\n"
+        except ValidationError as e:
+            return f"❌ {e}\n"
 
     elif operation == "WRITE":
-        if len(args) < 2:
-            return "❌ F: WRITE requires filename and data\n"
-        filename = args[0]
-        data = " ".join(args[1:])
-        if filename not in interpreter.open_files:
-            return f"❌ F: File not open: {filename}\n"
         try:
-            interpreter.open_files[filename].write(data + "\n")
-        except (IOError, OSError) as e:
-            return f"❌ F: Error writing file: {e}\n"
+            validate_arg_count(args, 2, f"F: {operation}")
+            filename = args[0]
+            data = " ".join(args[1:])
+            
+            if filename not in interpreter.open_files:
+                return f"❌ F: File not open: {filename}\n"
+            
+            try:
+                interpreter.open_files[filename].write(data + "\n")
+                logger.debug(f"PILOT file write: {filename}")
+            except (IOError, OSError) as e:
+                logger.error(f"PILOT file write error: {e}")
+                return f"❌ F: Error writing file: {e}\n"
+        except ValidationError as e:
+            return f"❌ {e}\n"
 
     else:
+        logger.error(f"Unknown PILOT file operation: {operation}")
         return f"❌ Unknown file operation: {operation}\n"
 
     return ""

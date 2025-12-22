@@ -1,0 +1,53 @@
+TO CIRCLE :RADIUS
+    REPEAT 360 [
+        FORWARD :RADIUS
+        RIGHT 1
+    ]
+END
+
+TO CONCENTRIC_CIRCLES
+    PRINT [Concentric Circles]
+    
+    REPEAT 5 [
+        CIRCLE 30
+        PENUP
+        SETPOSITION [0 0]
+        PENDOWN
+    ]
+END
+
+TO STAR :POINTS :SIZE
+    REPEAT :POINTS [
+        FORWARD :SIZE
+        RIGHT (360 / :POINTS)
+    ]
+END
+
+TO STAR_PATTERN
+    PRINT [Star Pattern]
+    REPEAT 5 [
+        STAR 5 80
+        RIGHT 72
+    ]
+END
+
+TO FLOWER :PETALS :SIZE
+    REPEAT :PETALS [
+        FORWARD :SIZE
+        BACKWARD :SIZE
+        RIGHT (360 / :PETALS)
+    ]
+END
+
+TO FLOWER_DEMO
+    PRINT [Flower Pattern]
+    PENUP
+    SETPOSITION [-100 0]
+    PENDOWN
+    FLOWER 8 100
+    
+    PENUP
+    SETPOSITION [100 0]
+    PENDOWN
+    FLOWER 12 80
+END

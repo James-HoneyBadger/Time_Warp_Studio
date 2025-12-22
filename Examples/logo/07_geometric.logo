@@ -1,0 +1,63 @@
+TO GRID :WIDTH :HEIGHT :CELLSIZE
+    REPEAT :HEIGHT [
+        REPEAT :WIDTH [
+            FORWARD :CELLSIZE
+            RIGHT 90
+            FORWARD :CELLSIZE
+            LEFT 90
+        ]
+        PENUP
+        SETPOSITION [0 0]
+        PENDOWN
+    ]
+END
+
+TO BRICK :WIDTH :HEIGHT
+    REPEAT 2 [
+        FORWARD :WIDTH
+        RIGHT 90
+        FORWARD :HEIGHT
+        RIGHT 90
+    ]
+END
+
+TO WALL :BRICKS :ROWS :BRICKWIDTH :BRICKHEIGHT
+    REPEAT :ROWS [
+        REPEAT :BRICKS [
+            BRICK :BRICKWIDTH :BRICKHEIGHT
+            PENUP
+            FORWARD :BRICKWIDTH
+            PENDOWN
+        ]
+        PENUP
+        SETPOSITION [0 0]
+        FORWARD (* :ROWS :BRICKHEIGHT)
+        PENDOWN
+    ]
+END
+
+TO HOUSE
+    PRINT [Drawing a House]
+    
+    REM Draw main rectangle
+    REPEAT 2 [
+        FORWARD 200
+        RIGHT 90
+        FORWARD 150
+        RIGHT 90
+    ]
+    
+    REM Draw roof (triangle)
+    LEFT 30
+    FORWARD 120
+    RIGHT 120
+    FORWARD 120
+END
+
+TO GEOMETRIC_DEMO
+    PRINT [Complex Geometric Patterns]
+    PENUP
+    SETPOSITION [-200 0]
+    PENDOWN
+    GRID 5 3 50
+END

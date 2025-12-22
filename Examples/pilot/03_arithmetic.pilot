@@ -1,0 +1,63 @@
+REMARK ================================================
+REMARK ARITHMETIC AND CALCULATIONS
+REMARK ================================================
+
+PRINT ===== BASIC ARITHMETIC =====
+COMPUTE a 100
+COMPUTE b 25
+COMPUTE sum $a + $b
+COMPUTE diff $a - $b
+COMPUTE prod $a * $b
+COMPUTE quot $a / $b
+COMPUTE mod_result $a % $b
+
+PRINT A = $a
+PRINT B = $b
+PRINT A + B = $sum
+PRINT A - B = $diff
+PRINT A * B = $prod
+PRINT A / B = $quot
+PRINT A MOD B = $mod_result
+PRINT
+
+PRINT ===== OPERATOR PRECEDENCE =====
+COMPUTE result1 2 + 3 * 4
+PRINT 2 + 3 * 4 = $result1
+
+COMPUTE result2 (2 + 3) * 4
+PRINT (2 + 3) * 4 = $result2
+
+COMPUTE result3 10 - 5 - 2
+PRINT 10 - 5 - 2 = $result3
+
+COMPUTE result4 100 / 10 / 2
+PRINT 100 / 10 / 2 = $result4
+PRINT
+
+PRINT ===== COMPLEX CALCULATIONS =====
+COMPUTE radius 5
+COMPUTE pi 31416
+COMPUTE area $pi * $radius * $radius / 10000
+PRINT Circle radius: $radius
+PRINT Circle area: $area
+PRINT
+
+PRINT ===== ACCUMULATION =====
+COMPUTE counter 0
+COMPUTE total 0
+*repeat_loop
+COMPUTE counter $counter + 1
+COMPUTE total $total + $counter
+MATCH $counter
+    CASE 100:
+        JUMP end_loop
+    DEFAULT:
+        JUMP repeat_loop
+END
+
+*end_loop
+PRINT Sum of 1 to 100: $total
+PRINT
+
+PRINT Arithmetic demonstration complete
+STOP

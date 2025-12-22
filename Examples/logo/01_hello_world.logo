@@ -1,0 +1,4 @@
+TO HELLO
+    PRINT [Hello, LOGO!]
+    PRINT [Welcome to Time Warp IDE]
+END

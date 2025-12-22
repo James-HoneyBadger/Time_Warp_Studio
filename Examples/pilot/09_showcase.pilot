@@ -1,0 +1,126 @@
+REMARK ================================================
+REMARK COMPREHENSIVE SHOWCASE
+REMARK All PILOT features combined
+REMARK ================================================
+
+PRINT
+PRINT ╔═════════════════════════════════════════════╗
+PRINT ║   TIME WARP IDE - PILOT SHOWCASE PROGRAM    ║
+PRINT ║        Demonstrating All Features          ║
+PRINT ╚═════════════════════════════════════════════╝
+PRINT
+
+REMARK =====================================================
+REMARK SECTION 1: BASIC INPUT/OUTPUT
+REMARK =====================================================
+PRINT 1. BASIC INPUT AND OUTPUT
+PRINT ──────────────────────────
+ACCEPT demo_name What is your name?
+PRINT Hello, $demo_name!
+PRINT Welcome to the Time Warp IDE PILOT showcase.
+PRINT
+
+REMARK =====================================================
+REMARK SECTION 2: VARIABLES AND COMPUTATION
+REMARK =====================================================
+PRINT 2. VARIABLES AND COMPUTATION
+PRINT ──────────────────────────────
+COMPUTE x 50
+COMPUTE y 25
+COMPUTE sum $x + $y
+COMPUTE product $x * $y
+PRINT X = $x, Y = $y
+PRINT Sum: $sum
+PRINT Product: $product
+PRINT
+
+REMARK =====================================================
+REMARK SECTION 3: CONDITIONALS
+REMARK =====================================================
+PRINT 3. CONDITIONAL LOGIC
+PRINT ────────────────────
+ACCEPT test_number Enter a number:
+COMPUTE is_positive $test_number > 0
+MATCH $is_positive
+    CASE 1:
+        PRINT The number is positive
+    DEFAULT:
+        PRINT The number is not positive
+END
+PRINT
+
+REMARK =====================================================
+REMARK SECTION 4: LOOPS
+REMARK =====================================================
+PRINT 4. LOOPS AND REPETITION
+PRINT ───────────────────────
+PRINT Counting 1 to 5:
+COMPUTE loop_counter 1
+*loop_section
+MATCH $loop_counter
+    CASE 6:
+        JUMP loop_section_end
+    DEFAULT:
+        PRINT Count: $loop_counter
+        COMPUTE loop_counter $loop_counter + 1
+        JUMP loop_section
+END
+
+*loop_section_end
+PRINT
+
+REMARK =====================================================
+REMARK SECTION 5: SUBROUTINES
+REMARK =====================================================
+PRINT 5. SUBROUTINES
+PRINT ──────────────
+TU demo_subroutine
+PRINT
+
+REMARK =====================================================
+REMARK SECTION 6: COMPLEX CALCULATIONS
+REMARK =====================================================
+PRINT 6. COMPLEX CALCULATIONS
+PRINT ──────────────────────
+COMPUTE radius 5
+COMPUTE pi 31416
+COMPUTE area $pi * $radius * $radius / 10000
+PRINT Circle radius: $radius
+PRINT Calculated area: $area
+PRINT
+
+REMARK =====================================================
+REMARK SECTION 7: STRING OPERATIONS
+REMARK =====================================================
+PRINT 7. STRING OPERATIONS
+PRINT ─────────────────────
+COMPUTE greeting_text Hello
+COMPUTE world_text World
+COMPUTE full_greeting $greeting_text , $world_text !
+PRINT Message: $full_greeting
+PRINT
+
+REMARK =====================================================
+REMARK FINAL SECTION
+REMARK =====================================================
+PRINT 8. PROGRAM COMPLETION
+PRINT ────────────────────
+PRINT
+PRINT ════════════════════════════════════════════
+PRINT PILOT Showcase Complete!
+PRINT All language features demonstrated.
+PRINT Thank you for using Time Warp IDE!
+PRINT ════════════════════════════════════════════
+
+STOP
+
+REMARK ================================================
+REMARK DEMO SUBROUTINE
+REMARK ================================================
+RULE demo_subroutine:
+    PRINT This is a subroutine
+    COMPUTE sub_value 100
+    PRINT Subroutine computed: $sub_value
+    COMPUTE sub_result $sub_value / 2
+    PRINT Result: $sub_result
+RETURN

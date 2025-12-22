@@ -1,0 +1,84 @@
+REMARK ================================================
+REMARK GUESSING GAME
+REMARK ================================================
+
+PRINT
+PRINT ╔═══════════════════════════════════╗
+PRINT ║  GUESS THE NUMBER GAME - PILOT    ║
+PRINT ║  Guess the secret number 1-100    ║
+PRINT ╚═══════════════════════════════════╝
+PRINT
+
+REMARK Initialize game
+COMPUTE secret 42
+COMPUTE tries 0
+COMPUTE guessed 0
+
+*game_loop
+MATCH $guessed
+    CASE 1:
+        JUMP game_end
+    DEFAULT:
+        PRINT
+        ACCEPT guess Enter your guess (1-100):
+        COMPUTE tries $tries + 1
+        
+        MATCH $guess
+            CASE $secret:
+                PRINT
+                PRINT *** CORRECT! ***
+                PRINT You guessed the number!
+                COMPUTE guessed 1
+                JUMP game_loop
+            DEFAULT:
+                COMPUTE is_lower $guess < $secret
+                MATCH $is_lower
+                    CASE 1:
+                        PRINT Too LOW! The number is higher.
+                    DEFAULT:
+                        PRINT Too HIGH! The number is lower.
+                END
+                
+                PRINT Tries so far: $tries
+                
+                MATCH $tries
+                    CASE 10:
+                        PRINT (You've used 10 tries)
+                    CASE 15:
+                        PRINT (Maybe think of a strategy...)
+                    CASE 20:
+                        PRINT (Keep trying!)
+                    DEFAULT:
+                END
+                
+                JUMP game_loop
+        END
+END
+
+*game_end
+PRINT
+PRINT ════════════════════════════════════
+
+MATCH $tries
+    CASE 1:
+        PRINT AMAZING! First guess!
+        PRINT You are a guessing genius!
+    CASE [2-3]:
+        PRINT Excellent! Very quick!
+    CASE [4-6]:
+        PRINT Great job! Good strategy!
+    CASE [7-10]:
+        PRINT Good! Got there eventually.
+    DEFAULT:
+        PRINT Keep practicing!
+END
+
+PRINT
+PRINT Game Statistics:
+PRINT ─────────────────
+PRINT Secret Number: $secret
+PRINT Your Guesses: $tries
+PRINT
+
+PRINT Thanks for playing!
+STOP

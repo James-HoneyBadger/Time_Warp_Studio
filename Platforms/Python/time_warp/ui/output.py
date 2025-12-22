@@ -567,8 +567,14 @@ class ImmediateModePanel(QWidget):
             variables = self.interpreter.get_variables()
             self.variables_updated.emit(variables)
 
-        except Exception as e:  # pylint: disable=broad-except
+        except (SyntaxError, NameError, ValueError, TypeError, ZeroDivisionError) as e:
             self._send_output(f"❌ Error: {e}", "error")
+        except KeyboardInterrupt:
+            self._send_output("⚠️ Execution interrupted", "warning")
+        except Exception as e:  # Truly unexpected errors
+            logger = get_logger(__name__)
+            logger.exception("Unexpected error in command execution")
+            self._send_output(f"❌ Unexpected error: {e}", "error")
 
         # Clear input and focus
         self.command_input.clear()

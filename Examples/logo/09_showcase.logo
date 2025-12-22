@@ -1,0 +1,128 @@
+TO PEN_CONTROLS
+    PRINT [Pen Control Demonstration]
+    
+    PRINT [Pen Down - Drawing]
+    PENDOWN
+    FORWARD 50
+    
+    PRINT [Pen Up - Moving]
+    PENUP
+    FORWARD 50
+    
+    PRINT [Pen Down Again]
+    PENDOWN
+    FORWARD 50
+    
+    PRINT [Changing Pen Color]
+    SETPENCOLOR [255 0 0]
+    FORWARD 50
+    
+    SETPENCOLOR [0 255 0]
+    FORWARD 50
+    
+    SETPENCOLOR [0 0 255]
+    FORWARD 50
+    
+    PRINT [Changing Pen Width]
+    SETPENWIDTH 1
+    FORWARD 30
+    
+    SETPENWIDTH 3
+    FORWARD 30
+    
+    SETPENWIDTH 5
+    FORWARD 30
+END
+
+TO TURTLE_COMMANDS
+    PRINT [Turtle Movement and Positioning]
+    
+    PRINT [Positions at different coordinates]
+    PENUP
+    SETPOSITION [0 0]
+    PENDOWN
+    FORWARD 50
+    
+    PENUP
+    SETPOSITION [50 0]
+    PENDOWN
+    FORWARD 50
+    
+    PENUP
+    SETPOSITION [100 0]
+    PENDOWN
+    FORWARD 50
+    
+    PRINT [Heading changes]
+    SETHEADING 0
+    FORWARD 50
+    
+    SETHEADING 90
+    FORWARD 50
+    
+    SETHEADING 180
+    FORWARD 50
+    
+    SETHEADING 270
+    FORWARD 50
+END
+
+TO DRAWING_STYLES
+    PRINT [Various Drawing Styles]
+    
+    REM Dotted line
+    REPEAT 10 [
+        PENDOWN
+        FORWARD 10
+        PENUP
+        FORWARD 10
+    ]
+    
+    PENUP
+    RIGHT 90
+    FORWARD 100
+    LEFT 90
+    PENDOWN
+    
+    REM Dashed line
+    REPEAT 5 [
+        PENDOWN
+        FORWARD 20
+        PENUP
+        FORWARD 10
+    ]
+    
+    PENUP
+    RIGHT 90
+    FORWARD 100
+    LEFT 90
+    PENDOWN
+    
+    REM Solid line with varying width
+    SETPENWIDTH 1
+    FORWARD 30
+    SETPENWIDTH 2
+    FORWARD 30
+    SETPENWIDTH 3
+    FORWARD 30
+END
+
+TO SHOWCASE
+    PRINT [╔════════════════════════════════╗]
+    PRINT [║ TIME WARP IDE - LOGO SHOWCASE  ║]
+    PRINT [║   Complete Feature Overview     ║]
+    PRINT [╚════════════════════════════════╝]
+    PRINT []
+    
+    PEN_CONTROLS
+    PRINT []
+    
+    TURTLE_COMMANDS
+    PRINT []
+    
+    DRAWING_STYLES
+    PRINT []
+    
+    PRINT [LOGO Showcase Complete!]
+    PRINT [All features demonstrated successfully]
+END

@@ -1,0 +1,94 @@
+REMARK ================================================
+REMARK CONDITIONALS AND BRANCHING
+REMARK ================================================
+
+PRINT ===== SIMPLE CONDITIONALS =====
+ACCEPT x Enter a number:
+MATCH $x
+    CASE 0:
+        PRINT Zero is neither positive nor negative
+    DEFAULT:
+        COMPUTE check_positive $x > 0
+        MATCH $check_positive
+            CASE 1:
+                PRINT The number is positive
+            DEFAULT:
+                PRINT The number is negative
+        END
+END
+PRINT
+
+PRINT ===== IF/ELSE PATTERN =====
+ACCEPT age Enter your age:
+COMPUTE is_adult $age >= 18
+MATCH $is_adult
+    CASE 1:
+        PRINT You are an adult
+    CASE 0:
+        PRINT You are a minor
+END
+PRINT
+
+PRINT ===== GRADING EXAMPLE =====
+ACCEPT grade Enter a grade (0-100):
+MATCH $grade
+    CASE [90-100]:
+        PRINT Grade A - Excellent!
+        TU grade_a
+    CASE [80-89]:
+        PRINT Grade B - Good!
+        TU grade_b
+    CASE [70-79]:
+        PRINT Grade C - Fair
+        TU grade_c
+    DEFAULT:
+        PRINT Grade F - Needs Improvement
+        TU grade_f
+END
+
+RULE grade_a:
+    PRINT You scored in the top range
+    JUMP continue_conditional
+STOP
+
+RULE grade_b:
+    PRINT You scored well above average
+    JUMP continue_conditional
+STOP
+
+RULE grade_c:
+    PRINT You scored at average level
+    JUMP continue_conditional
+STOP
+
+RULE grade_f:
+    PRINT Please try again
+    JUMP continue_conditional
+STOP
+
+*continue_conditional
+PRINT
+
+PRINT ===== NESTED CONDITIONS =====
+ACCEPT num1 Enter first number:
+ACCEPT num2 Enter second number:
+
+COMPUTE is_num1_larger $num1 > $num2
+MATCH $is_num1_larger
+    CASE 1:
+        COMPUTE diff $num1 - $num2
+        PRINT First number is larger by $diff
+    CASE 0:
+        COMPUTE is_equal $num1 = $num2
+        MATCH $is_equal
+            CASE 1:
+                PRINT Both numbers are equal
+            DEFAULT:
+                COMPUTE diff $num2 - $num1
+                PRINT Second number is larger by $diff
+        END
+END
+PRINT
+
+PRINT Conditional logic demonstration complete
+STOP

@@ -1,0 +1,41 @@
+TO POLYGON :SIDES :SIZE
+    REPEAT :SIDES [
+        FORWARD :SIZE
+        RIGHT (360 / :SIDES)
+    ]
+END
+
+TO POLYGONS_DEMO
+    PRINT [Drawing Regular Polygons]
+    
+    PRINT [Triangle]
+    POLYGON 3 80
+    
+    PENUP
+    FORWARD 150
+    PENDOWN
+    
+    PRINT [Square]
+    POLYGON 4 80
+    
+    PENUP
+    FORWARD 150
+    PENDOWN
+    
+    PRINT [Pentagon]
+    POLYGON 5 60
+    
+    PENUP
+    FORWARD 150
+    PENDOWN
+    
+    PRINT [Hexagon]
+    POLYGON 6 50
+    
+    PENUP
+    FORWARD 150
+    PENDOWN
+    
+    PRINT [Octagon]
+    POLYGON 8 40
+END

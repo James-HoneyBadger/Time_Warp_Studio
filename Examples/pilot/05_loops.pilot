@@ -1,0 +1,104 @@
+REMARK ================================================
+REMARK LOOPS AND REPETITION
+REMARK ================================================
+
+PRINT ===== COUNT UP LOOP =====
+COMPUTE counter 1
+*count_up_loop
+MATCH $counter
+    CASE 11:
+        JUMP count_up_done
+    DEFAULT:
+        PRINT $counter
+        COMPUTE counter $counter + 1
+        JUMP count_up_loop
+END
+
+*count_up_done
+PRINT
+
+PRINT ===== COUNTDOWN =====
+COMPUTE countdown 10
+*countdown_loop
+MATCH $countdown
+    CASE 0:
+        JUMP countdown_done
+    DEFAULT:
+        PRINT Countdown: $countdown
+        COMPUTE countdown $countdown - 1
+        JUMP countdown_loop
+END
+
+*countdown_done
+PRINT Blastoff!
+PRINT
+
+PRINT ===== EVEN NUMBERS =====
+COMPUTE even 0
+*even_loop
+COMPUTE even $even + 2
+MATCH $even
+    CASE 21:
+        JUMP even_done
+    DEFAULT:
+        PRINT $even
+        JUMP even_loop
+END
+
+*even_done
+PRINT
+
+PRINT ===== MULTIPLICATION TABLE =====
+COMPUTE row 1
+*table_row_loop
+MATCH $row
+    CASE 6:
+        JUMP table_done
+    DEFAULT:
+        COMPUTE col 1
+        *table_col_loop
+        MATCH $col
+            CASE 6:
+                PRINT
+                COMPUTE row $row + 1
+                JUMP table_row_loop
+            DEFAULT:
+                COMPUTE product $row * $col
+                PRINT $product;
+                COMPUTE col $col + 1
+                JUMP table_col_loop
+        END
+END
+
+*table_done
+PRINT
+
+PRINT ===== FACTORIAL CALCULATION =====
+COMPUTE n 1
+*factorial_loop
+MATCH $n
+    CASE 7:
+        JUMP factorial_done
+    DEFAULT:
+        COMPUTE fact 1
+        COMPUTE i 1
+        *fact_inner_loop
+        MATCH $i
+            CASE $n + 1:
+                COMPUTE i $i + 1
+                JUMP fact_inner_loop
+            DEFAULT:
+                COMPUTE fact $fact * $i
+                COMPUTE i $i + 1
+                JUMP fact_inner_loop
+        END
+        PRINT $n! = $fact
+        COMPUTE n $n + 1
+        JUMP factorial_loop
+END
+
+*factorial_done
+PRINT
+
+PRINT Loop demonstration complete
+STOP

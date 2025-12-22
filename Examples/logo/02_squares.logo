@@ -1,0 +1,19 @@
+TO SQUARE :SIZE
+    REPEAT 4 [
+        FORWARD :SIZE
+        RIGHT 90
+    ]
+END
+
+TO SQUARE_DEMO
+    PRINT [Drawing Squares of Different Sizes]
+    SQUARE 50
+    PENUP
+    FORWARD 100
+    PENDOWN
+    SQUARE 100
+    PENUP
+    FORWARD 150
+    PENDOWN
+    SQUARE 150
+END

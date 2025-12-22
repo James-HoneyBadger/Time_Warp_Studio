@@ -1,0 +1,48 @@
+TO KALEIDOSCOPE :SEGMENTS :SIZE :ROTATIONS
+    REPEAT :ROTATIONS [
+        REPEAT :SEGMENTS [
+            FORWARD :SIZE
+            RIGHT (360 / :SEGMENTS)
+        ]
+        RIGHT (360 / :ROTATIONS)
+    ]
+END
+
+TO MANDALA :LAYERS :RADIUS
+    REPEAT :LAYERS [
+        REPEAT 6 [
+            FORWARD :RADIUS
+            RIGHT 60
+        ]
+        MAKE "RADIUS :RADIUS - 10
+    ]
+END
+
+TO SUNFLOWER :ANGLE
+    REPEAT 100 [
+        FORWARD 100
+        RIGHT :ANGLE
+    ]
+END
+
+TO ARTISTIC_DEMO
+    PRINT [Artistic and Mathematical Patterns]
+    
+    PRINT [Kaleidoscope]
+    PENUP
+    SETPOSITION [-150 50]
+    PENDOWN
+    KALEIDOSCOPE 6 50 6
+    
+    PRINT [Mandala]
+    PENUP
+    SETPOSITION [150 50]
+    PENDOWN
+    MANDALA 8 80
+    
+    PRINT [Sunflower]
+    PENUP
+    SETPOSITION [0 -150]
+    PENDOWN
+    SUNFLOWER 137
+END

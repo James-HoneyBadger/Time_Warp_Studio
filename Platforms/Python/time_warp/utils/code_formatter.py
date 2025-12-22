@@ -397,8 +397,13 @@ class CodeFormatter:
                 return formatted, "✅ Formatted PILOT code"
             else:
                 return code, f"❌ Unknown language: {language}"
-        except Exception as e:  # pylint: disable=broad-except
+        except ValueError as e:
             return code, f"❌ Format error: {e}"
+        except Exception as e:  # Unexpected errors
+            from .logging_config import get_logger
+            logger = get_logger(__name__)
+            logger.exception("Unexpected error in code formatting")
+            return code, f"❌ Unexpected format error: {e}"
 
     def normalize_keywords(self, code: str, language: str) -> Tuple[str, str]:
         """Normalize keyword case for the specified language.

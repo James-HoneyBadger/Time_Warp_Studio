@@ -1,0 +1,66 @@
+REMARK ================================================
+REMARK STRING OPERATIONS AND MANIPULATION
+REMARK ================================================
+
+PRINT ===== STRING CONCATENATION =====
+COMPUTE first_name Alice
+COMPUTE last_name Smith
+COMPUTE full_name $first_name $last_name
+PRINT Full Name: $full_name
+PRINT
+
+PRINT ===== STRING BUILDING =====
+COMPUTE greeting Hello
+COMPUTE noun World
+COMPUTE message $greeting , $noun !
+PRINT Message: $message
+PRINT
+
+PRINT ===== NAME PROCESSING =====
+ACCEPT user_name Enter your full name:
+PRINT You entered: $user_name
+PRINT
+
+REMARK Create email from name
+COMPUTE email_user $user_name
+COMPUTE email_domain example.com
+PRINT Email: $email_user@$email_domain
+PRINT
+
+PRINT ===== FORMAT EXAMPLES =====
+ACCEPT age Enter age:
+COMPUTE decade $age / 10
+COMPUTE decade_str Decade
+PRINT You are in your $decade\_0s
+PRINT
+
+PRINT ===== STRING MATCHING =====
+ACCEPT fruit What is your favorite fruit?
+MATCH $fruit
+    CASE apple:
+        PRINT Apples are nutritious!
+    CASE orange:
+        PRINT Oranges are citrus fruits!
+    CASE banana:
+        PRINT Bananas are yellow!
+    DEFAULT:
+        PRINT That's a nice fruit!
+END
+PRINT
+
+PRINT ===== FIELD PROCESSING =====
+ACCEPT csv_input Enter data (format: name,age,city):
+PRINT Raw input: $csv_input
+PRINT (Note: Field parsing varies by implementation)
+PRINT
+
+PRINT ===== SENTENCE BUILDING =====
+ACCEPT subject What is the subject?
+ACCEPT verb What is the verb?
+ACCEPT object What is the object?
+COMPUTE sentence $subject $verb $object .
+PRINT Your sentence: $sentence
+PRINT
+
+PRINT String operations demonstration complete
+STOP
