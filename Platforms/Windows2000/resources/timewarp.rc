@@ -1,0 +1,68 @@
+// Time Warp IDE Resource Script
+// Windows 2000 Compatible
+
+#include <windows.h>
+
+// Application Icon
+IDI_APPICON ICON "icon.ico"
+
+// Accelerator Table
+100 ACCELERATORS
+BEGIN
+    "N",      1001, VIRTKEY, CONTROL       // Ctrl+N - New
+    "O",      1002, VIRTKEY, CONTROL       // Ctrl+O - Open
+    "S",      1003, VIRTKEY, CONTROL       // Ctrl+S - Save
+    "W",      1005, VIRTKEY, CONTROL       // Ctrl+W - Close
+    "Z",      2001, VIRTKEY, CONTROL       // Ctrl+Z - Undo
+    "Y",      2002, VIRTKEY, CONTROL       // Ctrl+Y - Redo
+    "X",      2003, VIRTKEY, CONTROL       // Ctrl+X - Cut
+    "C",      2004, VIRTKEY, CONTROL       // Ctrl+C - Copy
+    "V",      2005, VIRTKEY, CONTROL       // Ctrl+V - Paste
+    "F",      2006, VIRTKEY, CONTROL       // Ctrl+F - Find
+    "H",      2007, VIRTKEY, CONTROL       // Ctrl+H - Replace
+    "G",      2008, VIRTKEY, CONTROL       // Ctrl+G - Goto
+    VK_F5,    3001, VIRTKEY               // F5 - Execute
+    VK_F5,    3002, VIRTKEY, SHIFT        // Shift+F5 - Stop
+    VK_F11,   3003, VIRTKEY               // F11 - Step
+    VK_F9,    4001, VIRTKEY               // F9 - Debug Mode
+    VK_F8,    4002, VIRTKEY               // F8 - Breakpoint
+    VK_F1,    8001, VIRTKEY               // F1 - Help
+END
+
+// Version Information
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     3,0,0,0
+PRODUCTVERSION  3,0,0,0
+FILEFLAGSMASK   0x3fL
+FILEFLAGS       0x0L
+FILEOS          VOS_NT_WINDOWS32
+FILETYPE        VFT_APP
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904b0"
+        BEGIN
+            VALUE "CompanyName", "Time Warp IDE Project"
+            VALUE "FileDescription", "Time Warp IDE for Windows 2000"
+            VALUE "FileVersion", "5.0.0.0"
+            VALUE "InternalName", "TimeWarpIDE"
+            VALUE "LegalCopyright", "Copyright © 2025 James Temple"
+            VALUE "OriginalFilename", "TimeWarpIDE.exe"
+            VALUE "ProductName", "Time Warp IDE"
+            VALUE "ProductVersion", "5.0.0.0"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1200
+    END
+END
+
+// String Table
+STRINGTABLE
+BEGIN
+    1000    "Time Warp IDE - Windows 2000 Edition"
+    1001    "Educational Programming Environment"
+    1002    "Supporting BASIC, PILOT, and Logo"
+END
