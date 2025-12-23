@@ -55,6 +55,8 @@ LOGO_COMMANDS = {
     "SHOWTURTLE",
     "ST",
     "SETXY",
+    "SETPOSITION",
+    "SETPOS",
     "SETX",
     "SETY",
     "SETHEADING",
@@ -271,6 +273,8 @@ def _execute_single_logo_command(
         return ""
     if cmd_name == "SETXY":
         return _logo_setxy(interpreter, turtle, args)
+    if cmd_name in ["SETPOSITION", "SETPOS"]:
+        return _logo_setposition(interpreter, turtle, args)
     if cmd_name == "SETX":
         return _logo_setx(interpreter, turtle, args)
     if cmd_name == "SETY":
@@ -372,7 +376,7 @@ def _logo_eval_arg(interpreter: "Interpreter", arg: str) -> float:
         return interpreter.variables[var_name]
     
     try:
-        return interpreter.evaluate_expression(arg)
+        return _logo_eval_expr_str(interpreter, arg)
     except (ValueError, TypeError, ZeroDivisionError) as e:
         raise ValueError(f"Cannot evaluate argument '{arg}': {e}") from e
 
@@ -399,6 +403,10 @@ def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
         r"FLOOR(RND * \1)",
         expr_norm,
     )
+
+    # Handle prefix multiplication (* A B ...) -> (A * B * ...)
+    # Only handles simple cases without nested parentheses
+    expr_norm = re.sub(r'\(\s*\*\s+([^()]+)\)', lambda m: '(' + ' * '.join(m.group(1).split()) + ')', expr_norm)
 
     try:
         return interpreter.evaluate_expression(expr_norm)
@@ -429,9 +437,11 @@ def _logo_forward(
     logger = get_logger(__name__)
     
     try:
-        validate_arg_count(args, 1, "FORWARD")
-        dist_expr = " ".join(args)
-        distance = _logo_eval_expr_str(interpreter, dist_expr)
+        # Consume arguments intelligently to handle expressions like (* 10 20)
+        consumed = _consume_logo_args(args, 1)
+        validate_arg_count(consumed, 1, "FORWARD")
+        
+        distance = _logo_eval_arg(interpreter, consumed[0])
         if turtle is None:
             return "❌ Graphics not available for this command\n"
         turtle.forward(distance)
@@ -450,13 +460,18 @@ def _logo_back(
     turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
-    if not args:
-        return "❌ BACK requires distance\n"
-    dist_expr = " ".join(args)
-    distance = _logo_eval_expr_str(interpreter, dist_expr)
-    if turtle is None:
-        return "❌ Graphics not available for this command\n"
-    turtle.back(distance)
+    from ..utils.validators import validate_arg_count, ValidationError
+    try:
+        consumed = _consume_logo_args(args, 1)
+        validate_arg_count(consumed, 1, "BACK")
+        distance = _logo_eval_arg(interpreter, consumed[0])
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
+        turtle.back(distance)
+    except ValidationError as e:
+        return f"❌ {e}\n"
+    except ValueError as e:
+        return f"❌ {e}\n"
     return ""
 
 
@@ -465,13 +480,18 @@ def _logo_left(
     turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
-    if not args:
-        return "❌ LEFT requires angle\n"
-    angle_expr = " ".join(args)
-    angle = _logo_eval_expr_str(interpreter, angle_expr)
-    if turtle is None:
-        return "❌ Graphics not available for this command\n"
-    turtle.left(angle)
+    from ..utils.validators import validate_arg_count, ValidationError
+    try:
+        consumed = _consume_logo_args(args, 1)
+        validate_arg_count(consumed, 1, "LEFT")
+        angle = _logo_eval_arg(interpreter, consumed[0])
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
+        turtle.left(angle)
+    except ValidationError as e:
+        return f"❌ {e}\n"
+    except ValueError as e:
+        return f"❌ {e}\n"
     return ""
 
 
@@ -480,13 +500,18 @@ def _logo_right(
     turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
-    if not args:
-        return "❌ RIGHT requires angle\n"
-    angle_expr = " ".join(args)
-    angle = _logo_eval_expr_str(interpreter, angle_expr)
-    if turtle is None:
-        return "❌ Graphics not available for this command\n"
-    turtle.right(angle)
+    from ..utils.validators import validate_arg_count, ValidationError
+    try:
+        consumed = _consume_logo_args(args, 1)
+        validate_arg_count(consumed, 1, "RIGHT")
+        angle = _logo_eval_arg(interpreter, consumed[0])
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
+        turtle.right(angle)
+    except ValidationError as e:
+        return f"❌ {e}\n"
+    except ValueError as e:
+        return f"❌ {e}\n"
     return ""
 
 
@@ -511,9 +536,10 @@ def _logo_setxy(
     logger = get_logger(__name__)
     
     try:
-        validate_arg_count(args, 2, "SETXY")
-        x = _logo_eval_arg(interpreter, args[0])
-        y = _logo_eval_arg(interpreter, args[1])
+        consumed = _consume_logo_args(args, 2)
+        validate_arg_count(consumed, 2, "SETXY")
+        x = _logo_eval_arg(interpreter, consumed[0])
+        y = _logo_eval_arg(interpreter, consumed[1])
         if turtle is None:
             return "❌ Graphics not available for this command\n"
         turtle.goto(x, y)
@@ -522,6 +548,64 @@ def _logo_setxy(
         return f"❌ {e}\n"
     except ValueError as e:
         logger.error(f"SETXY error: {e}")
+        return f"❌ {e}\n"
+    
+    return ""
+
+
+def _logo_setposition(
+    interpreter: "Interpreter",
+    turtle: Optional["TurtleState"],
+    args: List[str],
+) -> str:
+    """SETPOSITION [x y] - Set turtle absolute position from list.
+    
+    Args:
+        interpreter: Interpreter instance
+        turtle: Turtle graphics state
+        args: List argument containing X and Y
+    
+    Returns:
+        Status or error message
+    """
+    from ..utils.validators import validate_arg_count, ValidationError
+    from ..logging_config import get_logger
+    
+    logger = get_logger(__name__)
+    
+    try:
+        # Expecting one argument which is a list [x y]
+        # But the parser might have split it if it wasn't careful, 
+        # or passed it as a single string "[x y]"
+        
+        if not args:
+             return "❌ SETPOSITION requires a list argument [x y]\n"
+
+        arg = " ".join(args)
+        if arg.startswith("[") and arg.endswith("]"):
+            content = arg[1:-1].strip()
+            parts = content.split()
+            if len(parts) != 2:
+                return "❌ SETPOSITION list must contain exactly 2 numbers\n"
+            
+            x = _logo_eval_arg(interpreter, parts[0])
+            y = _logo_eval_arg(interpreter, parts[1])
+            
+            if turtle is None:
+                return "❌ Graphics not available for this command\n"
+            
+            turtle.goto(x, y)
+            logger.debug(f"SETPOSITION {x} {y}")
+        else:
+            # Maybe it was passed as two arguments? Some dialects allow SETPOS x y
+            if len(args) == 2:
+                return _logo_setxy(interpreter, turtle, args)
+            return "❌ SETPOSITION requires a list argument [x y]\n"
+
+    except ValidationError as e:
+        return f"❌ {e}\n"
+    except ValueError as e:
+        logger.error(f"SETPOSITION error: {e}")
         return f"❌ {e}\n"
     
     return ""
@@ -845,10 +929,8 @@ def _consume_logo_args(args: List[str], num_params: int) -> List[str]:
             current_arg_tokens.append(token)
             current_idx += 1
 
-            if token == "(":
-                balance += 1
-            elif token == ")":
-                balance -= 1
+            balance += token.count("(")
+            balance -= token.count(")")
 
             if balance == 0:
                 # Check if we should stop

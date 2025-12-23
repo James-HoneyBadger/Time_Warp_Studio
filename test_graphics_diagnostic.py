@@ -15,6 +15,7 @@ from Platforms.Python.time_warp.core.interpreter import Interpreter, Language
 from Platforms.Python.time_warp.graphics.turtle_state import TurtleState
 # Note: TurtleCanvas requires PySide6
 
+
 def test_graphics_pipeline():
     """Test the complete graphics pipeline."""
     
@@ -30,6 +31,7 @@ def test_graphics_pipeline():
     # Step 2: Setup callback tracking
     print("\n[2/4] Setting up callback tracking...")
     callbacks = []
+
     def track_callback():
         callbacks.append({
             'time': len(callbacks),
@@ -38,7 +40,7 @@ def test_graphics_pipeline():
         })
     
     turtle.on_change = track_callback
-    print(f"  ✅ Callback handler installed")
+    print("  ✅ Callback handler installed")
     
     # Step 3: Execute LOGO program
     print("\n[3/4] Executing LOGO program...")
@@ -51,19 +53,19 @@ FORWARD 70"""
     try:
         interp = Interpreter()
         interp.load_program(logo_code, Language.LOGO)
-        result = interp.execute(turtle)
+        interp.execute(turtle)
         
-        print(f"  ✅ Program executed successfully")
+        print("  ✅ Program executed successfully")
         print(f"     - Callbacks triggered: {len(callbacks)}")
         print(f"     - Lines generated: {len(turtle.lines)}")
         print(f"     - Final position: ({turtle.x:.1f}, {turtle.y:.1f})")
         
         if turtle.lines:
-            print(f"     - Line details:")
+            print("     - Line details:")
             for i, line in enumerate(turtle.lines[:5]):
                 print(f"       Line {i}: ({line.start_x:.1f}, {line.start_y:.1f}) -> "
                       f"({line.end_x:.1f}, {line.end_y:.1f})")
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         print(f"  ❌ Error: {e}")
         import traceback
         traceback.print_exc()
@@ -74,28 +76,32 @@ FORWARD 70"""
     
     try:
         # We can't create a real canvas without PySide6, but we can simulate the update
-        print(f"  ℹ️  Would call canvas.set_turtle_state(turtle)")
+        print("  ℹ️  Would call canvas.set_turtle_state(turtle)")
         print(f"  ℹ️  Canvas would receive {len(turtle.lines)} lines")
         
         # Simulate what canvas.set_turtle_state does
         canvas_lines_copy = turtle.lines.copy()
-        print(f"  ✅ Simulated canvas.set_turtle_state()")
+        print("  ✅ Simulated canvas.set_turtle_state()")
         print(f"     - Canvas has {len(canvas_lines_copy)} lines")
         
         # Check that lines have valid coordinates
         all_valid = True
         for i, line in enumerate(canvas_lines_copy):
-            if not (isinstance(line.start_x, (int, float)) and isinstance(line.start_y, (int, float)) and
-                   isinstance(line.end_x, (int, float)) and isinstance(line.end_y, (int, float))):
+            if not (
+                isinstance(line.start_x, (int, float))
+                and isinstance(line.start_y, (int, float))
+                and isinstance(line.end_x, (int, float))
+                and isinstance(line.end_y, (int, float))
+            ):
                 print(f"     ❌ Line {i} has invalid coordinates")
                 all_valid = False
         
         if all_valid:
-            print(f"     ✅ All line coordinates are valid")
+            print("     ✅ All line coordinates are valid")
         else:
             return False
             
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-except
         print(f"  ❌ Error: {e}")
         import traceback
         traceback.print_exc()
@@ -124,6 +130,7 @@ Coordinate System Check:
 """)
     
     return True
+
 
 if __name__ == "__main__":
     success = test_graphics_pipeline()

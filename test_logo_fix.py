@@ -1,7 +1,7 @@
 from Platforms.Python.time_warp.core.interpreter import Interpreter, Language
 
 interp = Interpreter()
-with open("Examples/logo/03_polygons.logo", "r") as f:
+with open("Examples/logo/03_polygons.logo", "r", encoding="utf-8") as f:
     code = f.read()
 
 print(f"Code length: {len(code)}")

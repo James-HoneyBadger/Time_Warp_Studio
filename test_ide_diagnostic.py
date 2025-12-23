@@ -5,7 +5,6 @@ This will help identify any import or initialization errors.
 """
 
 import sys
-import os
 from pathlib import Path
 
 project_root = Path(__file__).parent
@@ -18,17 +17,19 @@ print(f"[TEST] Project root: {project_root}")
 # Try to import the core components
 try:
     print("\n[IMPORT] Importing core interpreter...")
+    # pylint: disable=unused-import
     from Platforms.Python.time_warp.core.interpreter import Interpreter, Language
-    print("  ✅ Interpreter imported")
-except Exception as e:
+    print(f"  ✅ Interpreter imported: {Interpreter.__name__}, {Language.__name__}")
+except Exception as e:  # pylint: disable=broad-except
     print(f"  ❌ Failed: {e}")
     sys.exit(1)
 
 try:
     print("\n[IMPORT] Importing turtle graphics...")
+    # pylint: disable=unused-import
     from Platforms.Python.time_warp.graphics.turtle_state import TurtleState
-    print("  ✅ TurtleState imported")
-except Exception as e:
+    print(f"  ✅ TurtleState imported: {TurtleState.__name__}")
+except Exception as e:  # pylint: disable=broad-except
     print(f"  ❌ Failed: {e}")
     sys.exit(1)
 
@@ -37,7 +38,7 @@ try:
     from Platforms.Python.time_warp.ui.output import OutputPanel, InterpreterThread
     print("  ✅ OutputPanel imported")
     print("  ✅ InterpreterThread imported")
-except Exception as e:
+except Exception as e:  # pylint: disable=broad-except
     print(f"  ❌ Failed: {e}")
     import traceback
     traceback.print_exc()
@@ -56,19 +57,22 @@ try:
     else:
         print("  ❌ OutputPanel.debug_paused signal NOT found")
         
-except Exception as e:
+except Exception as e:  # pylint: disable=broad-except
     print(f"  ❌ Error checking signals: {e}")
 
 try:
-    print("\n[CANVAS] Checking if canvas can be imported (will fail without PySide6)...")
+    print(
+        "\n[CANVAS] Checking if canvas can be imported (will fail without PySide6)..."
+    )
+    # pylint: disable=unused-import
     from Platforms.Python.time_warp.ui.canvas import TurtleCanvas
-    print("  ✅ TurtleCanvas imported (PySide6 available)")
+    print(f"  ✅ TurtleCanvas imported (PySide6 available): {TurtleCanvas.__name__}")
 except ImportError as e:
     if "PySide6" in str(e):
-        print(f"  ℹ️  PySide6 not available (expected in test env)")
+        print("  ℹ️  PySide6 not available (expected in test env)")
     else:
         print(f"  ❌ Unexpected import error: {e}")
-except Exception as e:
+except Exception as e:  # pylint: disable=broad-except
     print(f"  ❌ Error: {e}")
 
 print("\n" + "=" * 60)

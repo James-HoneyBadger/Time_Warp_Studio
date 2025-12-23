@@ -1,11 +1,12 @@
 
 import unittest
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock
 import sys
-import os
+from pathlib import Path
 
 # Add the project root to the path so we can import the modules
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), 'Platforms/Python')))
+project_root = Path(__file__).parent / 'Platforms/Python'
+sys.path.insert(0, str(project_root.resolve()))
 print("Sys path:", sys.path)
 
 try:
@@ -21,7 +22,7 @@ from time_warp.languages.c_lang_fixed import execute_c
 from time_warp.languages.pascal import execute_pascal
 from time_warp.languages.prolog import execute_prolog
 from time_warp.languages.forth import execute_forth
-from time_warp.core.interpreter import Interpreter, Language
+
 
 class MockTurtle:
     def __init__(self):
@@ -39,6 +40,7 @@ class MockTurtle:
         self.pencolor = MagicMock()
         self.hideturtle = MagicMock()
         self.showturtle = MagicMock()
+
 
 class MockInterpreter:
     def __init__(self):
@@ -62,34 +64,42 @@ class MockInterpreter:
         self.text_lines = []
 
     def log_output(self, text: str, end: str = "\n"):
+        # pylint: disable=unused-argument
         self.output.append(text)
 
     def evaluate_expression(self, expr: str):
         # Simple mock evaluator
         try:
+            # pylint: disable=eval-used
             return eval(expr, {}, self.variables)
-        except:
+        except Exception:  # pylint: disable=broad-except
             return 0
-            
+
     def get_numeric_value(self, name: str):
         return self.variables.get(name, 0)
 
     def set_typed_variable(self, name: str, value):
         self.variables[name] = value
-        if name.endswith("%"): self.int_variables[name] = value
-        elif name.endswith("&"): self.long_variables[name] = value
-        elif name.endswith("!"): self.single_variables[name] = value
-        elif name.endswith("#"): self.double_variables[name] = value
-        elif name.endswith("$"): self.string_variables[name] = value
+        if name.endswith("%"):
+            self.int_variables[name] = value
+        elif name.endswith("&"):
+            self.long_variables[name] = value
+        elif name.endswith("!"):
+            self.single_variables[name] = value
+        elif name.endswith("#"):
+            self.double_variables[name] = value
+        elif name.endswith("$"):
+            self.string_variables[name] = value
 
     def interpolate_text(self, text: str):
-        return text # Simplified
+        return text  # Simplified
 
     def start_input_request(self, prompt, var_name, is_numeric=False):
-        pass # Mock
+        pass  # Mock
 
     def jump_to_label(self, label):
-        pass # Mock
+        pass  # Mock
+
 
 class TestLanguages(unittest.TestCase):
     def setUp(self):
@@ -108,8 +118,8 @@ class TestLanguages(unittest.TestCase):
         execute_basic(self.interpreter, 'LET X = 10', self.turtle)
         # Since we mocked evaluate_expression to use eval with self.variables,
         # we need to ensure the variable setting logic works.
-        # However, execute_basic calls _basic_let which calls interpreter.evaluate_expression
-        # and then sets the variable.
+        # However, execute_basic calls _basic_let which calls
+        # interpreter.evaluate_expression and then sets the variable.
         # Let's mock evaluate_expression to return 10
         self.interpreter.evaluate_expression = MagicMock(return_value=10)
         execute_basic(self.interpreter, 'LET X = 10', self.turtle)
@@ -121,7 +131,9 @@ class TestLanguages(unittest.TestCase):
     def test_basic_if(self):
         # IF X = 10 THEN PRINT "YES"
         self.interpreter.evaluate_expression = MagicMock(return_value=True)
-        result = execute_basic(self.interpreter, 'IF X = 10 THEN PRINT "YES"', self.turtle)
+        result = execute_basic(
+            self.interpreter, 'IF X = 10 THEN PRINT "YES"', self.turtle
+        )
         self.assertEqual(result.strip(), "YES")
 
     # --- PILOT Tests ---
@@ -134,7 +146,7 @@ class TestLanguages(unittest.TestCase):
         self.interpreter.last_input = "YES"
         execute_pilot(self.interpreter, "M: YES, NO", self.turtle)
         self.assertTrue(self.interpreter.last_match_succeeded)
-        
+
         self.interpreter.last_input = "MAYBE"
         execute_pilot(self.interpreter, "M: YES, NO", self.turtle)
         self.assertFalse(self.interpreter.last_match_succeeded)
@@ -162,7 +174,8 @@ class TestLanguages(unittest.TestCase):
         # We need to mock evaluate_expression for Logo too?
         # Logo uses its own evaluator or interpreter's?
         # Logo has _logo_evaluate_expression but it might use interpreter's.
-        # Let's check logo.py. It seems to use interpreter.evaluate_expression for some things.
+        # Let's check logo.py. It seems to use interpreter.evaluate_expression
+        # for some things.
         # But IF condition evaluation might be internal.
         # Let's skip complex IF for now, REPEAT is good enough for parsing.
         pass
@@ -182,7 +195,8 @@ class TestLanguages(unittest.TestCase):
 
     def test_c_if(self):
         # if (1) { printf("YES"); }
-        # This requires multi-line handling or block stack which is hard to mock in single line execution.
+        # This requires multi-line handling or block stack which is hard to mock
+        # in single line execution.
         # execute_c handles single lines mostly, but checks for braces.
         # If we pass a single line with braces, it might work.
         # But _exec_c_if checks for braces and might push to stack.
@@ -190,7 +204,9 @@ class TestLanguages(unittest.TestCase):
 
     # --- Pascal Tests ---
     def test_pascal_writeln(self):
-        result = execute_pascal(self.interpreter, "writeln('Hello Pascal');", self.turtle)
+        result = execute_pascal(
+            self.interpreter, "writeln('Hello Pascal');", self.turtle
+        )
         self.assertEqual(result.strip(), "Hello Pascal")
 
     def test_pascal_assignment(self):
@@ -206,11 +222,15 @@ class TestLanguages(unittest.TestCase):
     def test_prolog_fact(self):
         execute_prolog(self.interpreter, "parent(john, mary).", self.turtle)
         self.assertEqual(len(self.interpreter.prolog_kb["facts"]), 1)
-        self.assertEqual(self.interpreter.prolog_kb["facts"][0], ("parent", ("john", "mary")))
+        self.assertEqual(
+            self.interpreter.prolog_kb["facts"][0], ("parent", ("john", "mary"))
+        )
 
     def test_prolog_query(self):
         execute_prolog(self.interpreter, "parent(john, mary).", self.turtle)
-        result = execute_prolog(self.interpreter, "?- parent(john, mary).", self.turtle)
+        result = execute_prolog(
+            self.interpreter, "?- parent(john, mary).", self.turtle
+        )
         self.assertIn("true", result.lower())
 
     # --- Forth Tests ---
@@ -230,6 +250,7 @@ class TestLanguages(unittest.TestCase):
         execute_forth(self.interpreter, ": DOUBLE 2 * ;")
         execute_forth(self.interpreter, "5 DOUBLE .")
         self.assertIn("10 ", self.interpreter.output)
+
 
 if __name__ == '__main__':
     unittest.main()

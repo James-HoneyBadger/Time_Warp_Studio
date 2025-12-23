@@ -18,6 +18,7 @@ from PySide6.QtWidgets import (
 
 from ..core.interpreter import Interpreter, Language
 from ..graphics.turtle_state import TurtleState
+from ..logging_config import get_logger
 
 
 class InterpreterThread(QThread):
@@ -82,7 +83,10 @@ class InterpreterThread(QThread):
             # The wrapper lambda captures the turtle and passes it to the signal
             def on_turtle_change():
                 import sys
-                print(f"[THREAD] Turtle changed! {len(self.turtle.lines)} lines", file=sys.stderr)
+                print(
+                    f"[THREAD] Turtle changed! {len(self.turtle.lines)} lines",
+                    file=sys.stderr,
+                )
                 self.state_changed.emit()
             
             self.turtle.on_change = on_turtle_change
@@ -160,7 +164,11 @@ class OutputPanel(QTextEdit):
         """Run program in background thread."""
         # DEBUG: Log program start
         import sys
-        print(f"[OUTPUT] run_program called: canvas={canvas is not None}, code_length={len(code)}", file=sys.stderr)
+        print(
+            f"[OUTPUT] run_program called: canvas={canvas is not None}, "
+            f"code_length={len(code)}",
+            file=sys.stderr,
+        )
         
         if self.exec_thread and self.exec_thread.isRunning():
             self.append_colored("⚠️ Program already running", "warning")
@@ -175,7 +183,7 @@ class OutputPanel(QTextEdit):
 
         # Create new turtle
         turtle = TurtleState()
-        print(f"[OUTPUT] Created new turtle", file=sys.stderr)
+        print("[OUTPUT] Created new turtle", file=sys.stderr)
 
         # Create and start thread
         self._start_thread(
@@ -201,7 +209,11 @@ class OutputPanel(QTextEdit):
     ):
         """Start execution thread."""
         import sys
-        print(f"[OUTPUT] _start_thread: language={language}, turtle={turtle is not None}", file=sys.stderr)
+        print(
+            f"[OUTPUT] _start_thread: language={language}, "
+            f"turtle={turtle is not None}",
+            file=sys.stderr,
+        )
         
         self.exec_thread = InterpreterThread(
             code, turtle, language, interpreter, debug_mode, breakpoints
@@ -215,11 +227,11 @@ class OutputPanel(QTextEdit):
         # lambda expression and exceed line-length limits.
 
         def _on_state_changed():
-            print(f"[OUTPUT] _on_state_changed signal received!", file=sys.stderr)
+            print("[OUTPUT] _on_state_changed signal received!", file=sys.stderr)
             self.on_state_change(turtle)
 
         self.exec_thread.state_changed.connect(_on_state_changed)
-        print(f"[OUTPUT] Connected state_changed signal", file=sys.stderr)
+        print("[OUTPUT] Connected state_changed signal", file=sys.stderr)
         
         self.exec_thread.input_requested.connect(self.on_input_requested)
 
@@ -268,10 +280,17 @@ class OutputPanel(QTextEdit):
         """Handle turtle state change."""
         # DEBUG: Log state changes
         import sys
-        print(f"[OUTPUT] on_state_change: canvas={self.current_canvas is not None}, lines={len(turtle.lines)}", file=sys.stderr)
+        print(
+            f"[OUTPUT] on_state_change: canvas={self.current_canvas is not None}, "
+            f"lines={len(turtle.lines)}",
+            file=sys.stderr,
+        )
         
         if self.current_canvas:
-            print(f"[OUTPUT] Calling set_turtle_state with {len(turtle.lines)} lines", file=sys.stderr)
+            print(
+                f"[OUTPUT] Calling set_turtle_state with {len(turtle.lines)} lines",
+                file=sys.stderr,
+            )
             self.current_canvas.set_turtle_state(turtle)
 
             # Auto-switch to Graphics tab when lines are being drawn
@@ -280,15 +299,17 @@ class OutputPanel(QTextEdit):
                     # Find the Graphics tab and switch to it
                     for i in range(self.tabs_widget.count()):
                         if "Graphics" in self.tabs_widget.tabText(i):
-                            print(f"[OUTPUT] Switching to Graphics tab (index {i})", file=sys.stderr)
+                            print(
+                                f"[OUTPUT] Switching to Graphics tab (index {i})",
+                                file=sys.stderr,
+                            )
                             self.tabs_widget.setCurrentIndex(i)
                             break
                 except (AttributeError, RuntimeError) as e:
                     # tabs_widget not available or invalid, skip tab switching
                     print(f"[OUTPUT] Tab switching error: {e}", file=sys.stderr)
-                    pass
         else:
-            print(f"[OUTPUT] WARNING: current_canvas is None!", file=sys.stderr)
+            print("[OUTPUT] WARNING: current_canvas is None!", file=sys.stderr)
 
     def on_input_requested(self, prompt, _is_numeric):
         """Handle input request."""
@@ -598,7 +619,7 @@ class ImmediateModePanel(QWidget):
             self._send_output(f"❌ Error: {e}", "error")
         except KeyboardInterrupt:
             self._send_output("⚠️ Execution interrupted", "warning")
-        except Exception as e:  # Truly unexpected errors
+        except Exception as e:  # pylint: disable=broad-except
             logger = get_logger(__name__)
             logger.exception("Unexpected error in command execution")
             self._send_output(f"❌ Unexpected error: {e}", "error")

@@ -73,7 +73,10 @@ class TurtleCanvas(
         
         self.turtle = turtle
         self.lines = turtle.lines.copy()
-        print(f"[CANVAS] Copied lines: self.lines now has {len(self.lines)} lines", file=sys.stderr)
+        print(
+            f"[CANVAS] Copied lines: self.lines now has {len(self.lines)} lines",
+            file=sys.stderr,
+        )
         
         # Adopt background color from turtle state if available
         try:
@@ -83,12 +86,12 @@ class TurtleCanvas(
             # Fallback to default theme background
             self.bg_color = QColor(40, 42, 54)
         
-        print(f"[CANVAS] Calling self.update()", file=sys.stderr)
+        print("[CANVAS] Calling self.update()", file=sys.stderr)
         # Use repaint() instead of update() to force immediate redraw
         # update() schedules a paint event, but doesn't guarantee immediate rendering
         # repaint() forces immediate rendering, which is more reliable for graphics
         self.repaint()
-        print(f"[CANVAS] repaint() called", file=sys.stderr)
+        print("[CANVAS] repaint() called", file=sys.stderr)
 
     def clear(self):
         """Clear canvas."""
@@ -107,7 +110,10 @@ class TurtleCanvas(
         # DEBUG: Log paint events
         import sys
         if len(self.lines) > 0:
-            print(f"[CANVAS] paintEvent: {len(self.lines)} lines, zoom={self.zoom}", file=sys.stderr)
+            print(
+                f"[CANVAS] paintEvent: {len(self.lines)} lines, zoom={self.zoom}",
+                file=sys.stderr,
+            )
 
         if self.screen_mode_enabled:
             self._paint_retro_mode(painter)
@@ -116,7 +122,7 @@ class TurtleCanvas(
 
     def _paint_normal_mode(self, painter: QPainter):
         """Paint in normal high-resolution mode."""
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         # Fill background
         painter.fillRect(self.rect(), self.bg_color)
@@ -132,7 +138,7 @@ class TurtleCanvas(
 
         # Draw coordinate axes (light gray)
         pen = QPen(QColor(100, 100, 100), 1)
-        pen.setStyle(Qt.DashLine)
+        pen.setStyle(Qt.PenStyle.DashLine)
         painter.setPen(pen)
 
         # X axis
@@ -149,10 +155,12 @@ class TurtleCanvas(
         for line in self.lines:
             color = QColor(line.color[0], line.color[1], line.color[2])
             # Adjust pen width inversely to zoom so it stays visible at all zoom levels
-            adjusted_width = line.width / max(self.zoom, 0.1) if self.zoom != 0 else line.width
+            adjusted_width = (
+                line.width / max(self.zoom, 0.1) if self.zoom != 0 else line.width
+            )
             pen = QPen(color, adjusted_width)
-            pen.setCapStyle(Qt.RoundCap)
-            pen.setJoinStyle(Qt.RoundJoin)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
 
             painter.drawLine(
@@ -171,7 +179,7 @@ class TurtleCanvas(
         mode = self.screen_mode_manager.get_current_mode()
 
         # Disable antialiasing for pixelated look
-        painter.setRenderHint(QPainter.Antialiasing, False)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, False)
 
         # Fill background
         painter.fillRect(self.rect(), self.bg_color)
@@ -225,7 +233,7 @@ class TurtleCanvas(
         if mode.mode_type == ModeType.GRAPHICS:
             # Draw coordinate axes
             pen = QPen(QColor(60, 60, 60), 1)
-            pen.setStyle(Qt.DashLine)
+            pen.setStyle(Qt.PenStyle.DashLine)
             painter.setPen(pen)
 
             # Center of virtual screen
@@ -370,12 +378,13 @@ class TurtleCanvas(
 
     def mousePressEvent(self, event: QMouseEvent):
         """Start panning."""
-        if event.button() == Qt.MiddleButton or (
-            event.button() == Qt.LeftButton and event.modifiers() & Qt.ControlModifier
+        if event.button() == Qt.MouseButton.MiddleButton or (
+            event.button() == Qt.MouseButton.LeftButton
+            and event.modifiers() & Qt.KeyboardModifier.ControlModifier
         ):
             self.panning = True
             self.last_pan_pos = event.pos()
-            self.setCursor(Qt.ClosedHandCursor)
+            self.setCursor(Qt.CursorShape.ClosedHandCursor)
 
     def mouseMoveEvent(self, event: QMouseEvent):
         """Handle panning."""
@@ -388,10 +397,13 @@ class TurtleCanvas(
 
     def mouseReleaseEvent(self, event: QMouseEvent):
         """Stop panning."""
-        if event.button() == Qt.MiddleButton or event.button() == Qt.LeftButton:
+        if (
+            event.button() == Qt.MouseButton.MiddleButton
+            or event.button() == Qt.MouseButton.LeftButton
+        ):
             self.panning = False
             self.last_pan_pos = None
-            self.setCursor(Qt.ArrowCursor)
+            self.setCursor(Qt.CursorShape.ArrowCursor)
 
     def reset_view(self):
         """Reset zoom and pan."""
@@ -412,12 +424,12 @@ class TurtleCanvas(
             True if export succeeded, False otherwise
         """
         # Create image with specified size
-        image = QImage(width, height, QImage.Format_ARGB32)
+        image = QImage(width, height, QImage.Format.Format_ARGB32)
         image.fill(self.bg_color)
 
         # Create painter for the image
         painter = QPainter(image)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         # Render canvas content
         self._render_to_painter(painter, width, height)
@@ -425,7 +437,7 @@ class TurtleCanvas(
         painter.end()
 
         # Save image
-        return image.save(filepath, "PNG")
+        return image.save(filepath, b"PNG")
 
     def export_to_svg(self, filepath: str, width: int = 800, height: int = 600) -> bool:
         """Export canvas content to SVG file.
@@ -451,7 +463,7 @@ class TurtleCanvas(
         generator.setTitle("Time Warp IDE - Turtle Graphics")
 
         painter = QPainter(generator)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         # Fill background
         painter.fillRect(0, 0, width, height, self.bg_color)
@@ -481,7 +493,7 @@ class TurtleCanvas(
 
         # Draw coordinate axes
         pen = QPen(QColor(100, 100, 100), 1)
-        pen.setStyle(Qt.DashLine)
+        pen.setStyle(Qt.PenStyle.DashLine)
         painter.setPen(pen)
         painter.drawLine(-5000, 0, 5000, 0)
         painter.drawLine(0, -5000, 0, 5000)
@@ -495,8 +507,8 @@ class TurtleCanvas(
         for line in self.lines:
             color = QColor(line.color[0], line.color[1], line.color[2])
             pen = QPen(color, line.width)
-            pen.setCapStyle(Qt.RoundCap)
-            pen.setJoinStyle(Qt.RoundJoin)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
 
             painter.drawLine(

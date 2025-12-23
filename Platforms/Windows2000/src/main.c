@@ -24,6 +24,8 @@
 #include "basic_interpreter.h"
 #include "pilot_interpreter.h"
 #include "logo_interpreter.h"
+#include "pascal_interpreter.h"
+#include "forth_interpreter.h"
 #include "debugger.h"
 #include "file_ops.h"
 
@@ -43,7 +45,9 @@ typedef enum
 {
     LANG_BASIC,
     LANG_PILOT,
-    LANG_LOGO
+    LANG_LOGO,
+    LANG_PASCAL,
+    LANG_FORTH
 } LanguageType;
 
 typedef struct
@@ -89,6 +93,8 @@ static AppState g_appState = {0};
 #define IDM_LANG_BASIC 5001
 #define IDM_LANG_PILOT 5002
 #define IDM_LANG_LOGO 5003
+#define IDM_LANG_PASCAL 5004
+#define IDM_LANG_FORTH 5005
 
 #define IDM_VIEW_EDITOR 6001
 #define IDM_VIEW_CANVAS 6002
@@ -106,7 +112,9 @@ static AppState g_appState = {0};
 #define IDM_HELP_BASIC 8002
 #define IDM_HELP_PILOT 8003
 #define IDM_HELP_LOGO 8004
-#define IDM_HELP_ABOUT 8005
+#define IDM_HELP_PASCAL 8005
+#define IDM_HELP_FORTH 8006
+#define IDM_HELP_ABOUT 8007
 
 /* Toolbar button IDs */
 #define IDT_NEW 9001
@@ -221,6 +229,20 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
         return 1;
     }
 
+    if (!PascalInterpreter_Init())
+    {
+        MessageBox(g_hwndMain, TEXT("Failed to initialize Pascal interpreter"),
+                   TEXT("Error"), MB_ICONERROR | MB_OK);
+        return 1;
+    }
+
+    if (!ForthInterpreter_Init())
+    {
+        MessageBox(g_hwndMain, TEXT("Failed to initialize Forth interpreter"),
+                   TEXT("Error"), MB_ICONERROR | MB_OK);
+        return 1;
+    }
+
     /* Initialize debugger */
     if (!Debugger_Init())
     {
@@ -265,6 +287,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
     BasicInterpreter_Cleanup();
     PilotInterpreter_Cleanup();
     LogoInterpreter_Cleanup();
+    PascalInterpreter_Cleanup();
+    ForthInterpreter_Cleanup();
     Debugger_Cleanup();
     FileOps_Cleanup();
 
@@ -510,6 +534,14 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             SwitchLanguage(LANG_LOGO);
             break;
 
+        case IDM_LANG_PASCAL:
+            SwitchLanguage(LANG_PASCAL);
+            break;
+
+        case IDM_LANG_FORTH:
+            SwitchLanguage(LANG_FORTH);
+            break;
+
         /* View menu */
         case IDM_VIEW_EDITOR:
             if (!g_hwndActiveEditor || !IsWindowVisible(g_hwndActiveEditor))
@@ -568,8 +600,8 @@ LRESULT CALLBACK MainWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
             MessageBox(hwnd,
                        TEXT("Time Warp IDE for Windows 2000\n\n")
                            TEXT("Educational Programming Environment\n")
-                               TEXT("Supporting BASIC, PILOT, and Logo\n\n")
-                                   TEXT("Version 5.0.0\n")
+                               TEXT("Supporting BASIC, PILOT, Logo, Pascal, and Forth\n\n")
+                                   TEXT("Version 5.1.0\n")
                                        TEXT("© 2025 James Temple"),
                        TEXT("About Time Warp IDE"),
                        MB_OK | MB_ICONINFORMATION);
@@ -717,6 +749,8 @@ void CreateMainMenu(HWND hwnd)
     AppendMenu(hSubMenu, MF_STRING, IDM_LANG_BASIC, TEXT("&BASIC"));
     AppendMenu(hSubMenu, MF_STRING, IDM_LANG_PILOT, TEXT("&PILOT"));
     AppendMenu(hSubMenu, MF_STRING, IDM_LANG_LOGO, TEXT("&Logo"));
+    AppendMenu(hSubMenu, MF_STRING, IDM_LANG_PASCAL, TEXT("&Pascal"));
+    AppendMenu(hSubMenu, MF_STRING, IDM_LANG_FORTH, TEXT("&Forth"));
     AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hSubMenu, TEXT("&Language"));
 
     /* View menu */
@@ -745,6 +779,8 @@ void CreateMainMenu(HWND hwnd)
     AppendMenu(hSubMenu, MF_STRING, IDM_HELP_BASIC, TEXT("&BASIC Reference"));
     AppendMenu(hSubMenu, MF_STRING, IDM_HELP_PILOT, TEXT("&PILOT Reference"));
     AppendMenu(hSubMenu, MF_STRING, IDM_HELP_LOGO, TEXT("&Logo Reference"));
+    AppendMenu(hSubMenu, MF_STRING, IDM_HELP_PASCAL, TEXT("&Pascal Reference"));
+    AppendMenu(hSubMenu, MF_STRING, IDM_HELP_FORTH, TEXT("&Forth Reference"));
     AppendMenu(hSubMenu, MF_SEPARATOR, 0, NULL);
     AppendMenu(hSubMenu, MF_STRING, IDM_HELP_ABOUT, TEXT("&About Time Warp IDE"));
     AppendMenu(hMenu, MF_POPUP, (UINT_PTR)hSubMenu, TEXT("&Help"));
@@ -911,6 +947,12 @@ void UpdateUI(void)
     case LANG_LOGO:
         langName = TEXT("Logo");
         break;
+    case LANG_PASCAL:
+        langName = TEXT("Pascal");
+        break;
+    case LANG_FORTH:
+        langName = TEXT("Forth");
+        break;
     default:
         langName = TEXT("Unknown");
         break;
@@ -976,6 +1018,18 @@ void ExecuteCode(void)
                                           g_hwndActiveCanvas,
                                           g_appState.debugMode);
         break;
+
+    case LANG_PASCAL:
+        success = PascalInterpreter_Execute(code, g_hwndConsole,
+                                            g_hwndActiveCanvas,
+                                            g_appState.debugMode);
+        break;
+
+    case LANG_FORTH:
+        success = ForthInterpreter_Execute(code, g_hwndConsole,
+                                           g_hwndActiveCanvas,
+                                           g_appState.debugMode);
+        break;
     }
 
     free(code);
@@ -997,6 +1051,8 @@ void StopExecution(void)
     BasicInterpreter_Stop();
     PilotInterpreter_Stop();
     LogoInterpreter_Stop();
+    PascalInterpreter_Stop();
+    ForthInterpreter_Stop();
 
     SendMessage(g_hwndStatusBar, SB_SETTEXT, 0, (LPARAM)TEXT("🛑 Execution stopped"));
 }

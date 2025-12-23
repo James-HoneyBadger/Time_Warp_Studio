@@ -1,10 +1,10 @@
 
-from typing import List, Dict, Any, Optional, Callable
-import re
+from typing import List, Dict, Callable, TYPE_CHECKING, Optional
 
-if False:  # TYPE_CHECKING
+if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
     from ..graphics.turtle_state import TurtleState
+
 
 class ForthExecutor:
     def __init__(self, interpreter: "Interpreter"):
@@ -16,7 +16,8 @@ class ForthExecutor:
         self.new_word_name = ""
         self.new_word_definition: List[str] = []
         self.output_buffer = ""
-        
+        self.turtle: Optional["TurtleState"] = None
+
         # Initialize standard dictionary
         self._init_dictionary()
 
@@ -58,19 +59,25 @@ class ForthExecutor:
         self.dictionary["PEN"] = self._pen
 
     # --- Primitives ---
-    def _dup(self): 
-        if self.stack: self.stack.append(self.stack[-1])
-    def _drop(self): 
-        if self.stack: self.stack.pop()
+    def _dup(self):
+        if self.stack:
+            self.stack.append(self.stack[-1])
+
+    def _drop(self):
+        if self.stack:
+            self.stack.pop()
+
     def _swap(self):
         if len(self.stack) >= 2:
             a = self.stack.pop()
             b = self.stack.pop()
             self.stack.append(a)
             self.stack.append(b)
+
     def _over(self):
         if len(self.stack) >= 2:
             self.stack.append(self.stack[-2])
+
     def _rot(self):
         if len(self.stack) >= 3:
             c = self.stack.pop()
@@ -86,72 +93,111 @@ class ForthExecutor:
             self.output_buffer += f"{val} "
             
     def _dot_s(self):
-        self.output_buffer += f"<{len(self.stack)}> " + " ".join(map(str, self.stack)) + " "
+        self.output_buffer += (
+            f"<{len(self.stack)}> " + " ".join(map(str, self.stack)) + " "
+        )
         
     def _cr(self):
         self.interpreter.log_output(self.output_buffer)
         self.output_buffer = ""
 
     def _add(self):
-        if len(self.stack) >= 2: self.stack.append(self.stack.pop() + self.stack.pop())
+        if len(self.stack) >= 2:
+            self.stack.append(self.stack.pop() + self.stack.pop())
+
     def _sub(self):
         if len(self.stack) >= 2:
             b = self.stack.pop()
             a = self.stack.pop()
             self.stack.append(a - b)
+
     def _mul(self):
-        if len(self.stack) >= 2: self.stack.append(self.stack.pop() * self.stack.pop())
+        if len(self.stack) >= 2:
+            self.stack.append(self.stack.pop() * self.stack.pop())
+
     def _div(self):
         if len(self.stack) >= 2:
             b = self.stack.pop()
             a = self.stack.pop()
-            if b == 0: self.interpreter.log_output("❌ Division by zero"); self.stack.append(0)
-            else: self.stack.append(int(a / b))
+            if b == 0:
+                self.interpreter.log_output("❌ Division by zero")
+                self.stack.append(0)
+            else:
+                self.stack.append(int(a / b))
+
     def _mod(self):
         if len(self.stack) >= 2:
             b = self.stack.pop()
             a = self.stack.pop()
-            if b == 0: self.interpreter.log_output("❌ Division by zero"); self.stack.append(0)
-            else: self.stack.append(a % b)
+            if b == 0:
+                self.interpreter.log_output("❌ Division by zero")
+                self.stack.append(0)
+            else:
+                self.stack.append(a % b)
 
     def _eq(self):
-        if len(self.stack) >= 2: self.stack.append(-1 if self.stack.pop() == self.stack.pop() else 0)
+        if len(self.stack) >= 2:
+            self.stack.append(-1 if self.stack.pop() == self.stack.pop() else 0)
+
     def _lt(self):
         if len(self.stack) >= 2:
             b = self.stack.pop()
             a = self.stack.pop()
             self.stack.append(-1 if a < b else 0)
+
     def _gt(self):
         if len(self.stack) >= 2:
             b = self.stack.pop()
             a = self.stack.pop()
             self.stack.append(-1 if a > b else 0)
+
     def _and(self):
-        if len(self.stack) >= 2: self.stack.append(self.stack.pop() & self.stack.pop())
+        if len(self.stack) >= 2:
+            self.stack.append(self.stack.pop() & self.stack.pop())
+
     def _or(self):
-        if len(self.stack) >= 2: self.stack.append(self.stack.pop() | self.stack.pop())
+        if len(self.stack) >= 2:
+            self.stack.append(self.stack.pop() | self.stack.pop())
+
     def _invert(self):
-        if self.stack: self.stack.append(~self.stack.pop())
+        if self.stack:
+            self.stack.append(~self.stack.pop())
 
     # --- Graphics ---
     def _fd(self):
-        if self.stack and self.turtle: self.turtle.forward(self.stack.pop())
+        if self.stack and self.turtle:
+            self.turtle.forward(self.stack.pop())
+
     def _bk(self):
-        if self.stack and self.turtle: self.turtle.backward(self.stack.pop())
+        if self.stack and self.turtle:
+            self.turtle.backward(self.stack.pop())
+
     def _rt(self):
-        if self.stack and self.turtle: self.turtle.right(self.stack.pop())
+        if self.stack and self.turtle:
+            self.turtle.right(self.stack.pop())
+
     def _lt_turn(self):
-        if self.stack and self.turtle: self.turtle.left(self.stack.pop())
+        if self.stack and self.turtle:
+            self.turtle.left(self.stack.pop())
+
     def _pu(self):
-        if self.turtle: self.turtle.penup()
+        if self.turtle:
+            self.turtle.penup()
+
     def _pd(self):
-        if self.turtle: self.turtle.pendown()
+        if self.turtle:
+            self.turtle.pendown()
+
     def _home(self):
-        if self.turtle: self.turtle.home()
+        if self.turtle:
+            self.turtle.home()
+
     def _clean(self):
-        if self.turtle: self.turtle.clear()
+        if self.turtle:
+            self.turtle.clear()
+
     def _pen(self):
-        if self.stack and self.turtle: 
+        if self.stack and self.turtle:
             color_idx = self.stack.pop()
             # Map index to color string if needed, or pass index
             self.turtle.pencolor(color_idx)
@@ -163,10 +209,12 @@ class ForthExecutor:
             if token == ";":
                 self.compiling = False
                 # Define the new word
-                definition = list(self.new_word_definition) # Copy
+                definition = list(self.new_word_definition)  # Copy
+
                 def new_word_func():
                     for t in definition:
                         self.execute_token(t)
+
                 self.dictionary[self.new_word_name] = new_word_func
                 self.interpreter.log_output(f"Defined {self.new_word_name}")
             else:
@@ -175,7 +223,7 @@ class ForthExecutor:
 
         if token == ":":
             self.compiling = True
-            self.new_word_name = "" # Will be set by next token logic in execute_line
+            self.new_word_name = ""  # Will be set by next token logic in execute_line
             self.new_word_definition = []
             return
 
@@ -203,7 +251,6 @@ class ForthExecutor:
         self.turtle = turtle
         # Handle string literals with spaces: ." Hello World "
         # This is a quick hack; a real parser would be better
-        tokens = []
         parts = line.split()
         i = 0
         while i < len(parts):
@@ -222,17 +269,20 @@ class ForthExecutor:
             elif t == ":" and i + 1 < len(parts):
                 # Start definition
                 self.compiling = True
-                self.new_word_name = parts[i+1].upper()
+                self.new_word_name = parts[i + 1].upper()
                 self.new_word_definition = []
-                i += 1 # Skip name
+                i += 1  # Skip name
             elif self.compiling:
                 if t == ";":
                     self.compiling = False
                     # Define
                     definition = list(self.new_word_definition)
+
+                    # pylint: disable=dangerous-default-value
                     def new_word_func(d=definition):
                         for tok in d:
                             self.execute_token(tok)
+
                     self.dictionary[self.new_word_name] = new_word_func
                     self.interpreter.log_output(f"Defined {self.new_word_name}")
                 else:
@@ -240,19 +290,21 @@ class ForthExecutor:
             else:
                 self.execute_token(t)
             i += 1
-            
+
         # Flush buffer at end of line
         if self.output_buffer:
             self.interpreter.log_output(self.output_buffer)
             self.output_buffer = ""
 
+
 # Global instance for persistence across lines
 _forth_executor = None
 
+
 def execute_forth(interpreter: "Interpreter", command: str, _turtle=None) -> str:
-    global _forth_executor
+    global _forth_executor  # pylint: disable=global-statement
     if _forth_executor is None or _forth_executor.interpreter != interpreter:
         _forth_executor = ForthExecutor(interpreter)
-    
+
     _forth_executor.execute_line(command, _turtle)
     return ""

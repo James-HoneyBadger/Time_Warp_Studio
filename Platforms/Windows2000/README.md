@@ -17,6 +17,42 @@ Complete native Windows 2000 implementation of Time Warp IDE - an educational pr
 - **BASIC**: Complete interpreter with variables, arrays, loops, conditionals, functions, string operations, math functions, and file I/O
 - **PILOT**: Full implementation of all commands (T:, A:, M:, C:, etc.) with pattern matching and branching
 - **Logo**: Complete turtle graphics with procedures, recursion, variables, and list operations
+- **Pascal**: Added support for standard Pascal syntax and execution
+- **Forth**: Added support for Forth stack-based operations
+
+## Installation
+
+An installer has been generated for Windows 2000.
+
+- **Installer**: `Release/Setup.exe`
+- **Standalone Executable**: `Release/TimeWarpIDE.exe`
+
+To install on Windows 2000:
+1. Copy `Setup.exe` to your Windows 2000 machine (or VM).
+2. Run `Setup.exe`.
+3. Follow the prompts to install to `C:\Program Files\TimeWarp` (or custom location).
+
+## Virtual Machine Setup
+
+Scripts are provided in the `vm/` directory to set up and run a Windows 2000 VM using QEMU.
+
+### Prerequisites
+- QEMU (installed)
+- Windows 2000 ISO image (user must provide)
+
+### Setup
+1. Run the setup script:
+   ```bash
+   ./vm/setup_vm.sh
+   ```
+2. Provide the path to your Windows 2000 ISO when prompted.
+3. Follow the Windows 2000 installation process in the QEMU window.
+
+### Running
+After installation, run:
+```bash
+./vm/run_vm.sh
+```
 
 ### Development Features
 

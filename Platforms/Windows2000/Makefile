@@ -9,7 +9,8 @@ TARGET = TimeWarpIDE.exe
 
 SRCS = src/main.c src/editor.c src/canvas.c src/console.c \
        src/basic_interpreter.c src/pilot_interpreter.c \
-       src/logo_interpreter.c src/debugger.c src/file_ops.c
+       src/logo_interpreter.c src/pascal_interpreter.c \
+       src/forth_interpreter.c src/debugger.c src/file_ops.c
 
 OBJS = $(SRCS:.c=.o)
 RES_OBJ = resources/timewarp.res.o

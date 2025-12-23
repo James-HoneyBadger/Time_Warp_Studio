@@ -63,7 +63,7 @@ class LineNumberArea(QWidget):
 
     def mousePressEvent(self, event: QMouseEvent):
         """Handle mouse click to toggle breakpoints."""
-        if event.button() == Qt.LeftButton:
+        if event.button() == Qt.MouseButton.LeftButton:
             # Calculate which line was clicked
             block = self.editor.firstVisibleBlock()
             top = (

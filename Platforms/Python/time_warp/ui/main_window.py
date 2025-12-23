@@ -10,33 +10,7 @@ from pathlib import Path
 # line-count threshold to be exceeded for readability and maintenance.
 # pylint: disable=too-many-lines
 from PySide6.QtCore import QSettings, Qt, QTimer
-from PySide6.QtGui import QAction, QKeySequence
-
-try:
-    from PySide6.QtWidgets import QActionGroup
-except (
-    ImportError,
-    ModuleNotFoundError,
-):  # pragma: no cover - Qt variant compatibility
-    # Some PySide6 builds expose QActionGroup via QtGui instead of
-    # QtWidgets; import it from the fallback location if available.
-    try:
-        from PySide6.QtGui import QActionGroup
-    except (
-        ImportError,
-        ModuleNotFoundError,
-    ):  # pragma: no cover - headless/test environments
-        # Minimal fallback for test environments without Qt installed
-        class QActionGroup:  # type: ignore  # pylint: disable=too-few-public-methods
-            """Minimal placeholder for QActionGroup used in headless/test environments.
-
-            This class mimics the presence of QActionGroup to allow tests and
-            static analyzers to import the UI module without PySide6 being
-            installed. It does not implement any functionality.
-            """
-
-            # Minimal placeholder - no methods required for test shims
-            # pylint: disable=too-few-public-methods
+from PySide6.QtGui import QAction, QActionGroup, QKeySequence
 
 
 from PySide6.QtWidgets import (
@@ -309,7 +283,7 @@ class MainWindow(QMainWindow):
         if not ed:
             return
 
-        printer = QPrinter(QPrinter.HighResolution)
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
         dialog = QPrintDialog(printer, self)
         if dialog.exec():
             ed.print_(printer)
@@ -324,14 +298,14 @@ class MainWindow(QMainWindow):
             self.statusbar.showMessage("Print support not available", 3000)
             return
 
-        printer = QPrinter(QPrinter.HighResolution)
+        printer = QPrinter(QPrinter.PrinterMode.HighResolution)
         dialog = QPrintDialog(printer, self)
         if dialog.exec():
             image = self.canvas.get_print_document()
             painter = QPainter(printer)
             rect = painter.viewport()
             size = image.size()
-            size.scale(rect.size(), Qt.KeepAspectRatio)
+            size.scale(rect.size(), Qt.AspectRatioMode.KeepAspectRatio)
             painter.setViewport(rect.x(), rect.y(), size.width(), size.height())
             painter.setWindow(image.rect())
             painter.drawImage(0, 0, image)
@@ -466,9 +440,12 @@ class MainWindow(QMainWindow):
             # Update title
             self.update_title()
 
-    def on_language_changed(self, index):
-        """Handle manual language selection from combo box."""
-        if index < 0 or not hasattr(self, "language_combo"):
+    def on_language_changed(self, index=None):
+        """Handle language selection change."""
+        if index is None and hasattr(self, "language_combo"):
+            index = self.language_combo.currentIndex()
+
+        if index is None or index < 0 or not hasattr(self, "language_combo"):
             return
 
         # Get selected language from combo data
@@ -479,17 +456,22 @@ class MainWindow(QMainWindow):
         # Update current tab's language
         current_index = self.editor_tabs.currentIndex()
         if current_index >= 0:
-            self.tab_languages[current_index] = language
-            
             # Update editor syntax highlighting
             editor = self.editor_tabs.currentWidget()
             if isinstance(editor, CodeEditor):
                 editor.set_language(language)
-                
+
             # Update output panel context
             if hasattr(self, "output"):
                 self.output.set_language(language)
-                
+
+            # Update immediate mode language
+            if hasattr(self, "immediate_mode"):
+                self.immediate_mode.set_language(language)
+
+            # Update tab info (handles tab_languages and title update)
+            self.set_current_tab_info(language=language)
+
             # Update status bar
             if hasattr(self, "language_label"):
                 self.language_label.setText(f"Language: {language.friendly_name()}")
@@ -1199,7 +1181,9 @@ class MainWindow(QMainWindow):
         toolbar.addWidget(QLabel(" Language: "))
         self.language_combo = QComboBox()
         self.language_combo.setToolTip("Select programming language for current tab")
-        self.language_combo.setStatusTip("Change the syntax highlighting and execution engine")
+        self.language_combo.setStatusTip(
+            "Change the syntax highlighting and execution engine"
+        )
         self.language_combo.setStyleSheet(
             """
             QComboBox {
@@ -1347,7 +1331,7 @@ class MainWindow(QMainWindow):
             "BASIC Files (*.bas);;"
             "Logo Files (*.logo);;"
             "All Files (*.*)",
-            options=QFileDialog.DontUseNativeDialog,
+            options=QFileDialog.Option.DontUseNativeDialog,
         )
 
         if filename:
@@ -1495,7 +1479,7 @@ class MainWindow(QMainWindow):
             "Save File As",
             last_dir,
             "Time Warp Files (*.pilot *.bas *.logo);;All Files (*.*)",
-            options=QFileDialog.DontUseNativeDialog,
+            options=QFileDialog.Option.DontUseNativeDialog,
         )
 
         if not filename:
@@ -1625,25 +1609,6 @@ class MainWindow(QMainWindow):
                 if self.editor_tabs.widget(i) == editor:
                     self.set_current_tab_info(modified=True)
                     break
-
-    def on_language_changed(self):
-        """Handle language selection change."""
-        current_data = self.language_combo.currentData()
-        if current_data:
-            current_editor = self.get_current_editor()
-            if current_editor:
-                current_editor.set_language(current_data)
-            # Update interpreter language if needed
-            self.output.set_language(current_data)
-            # Update immediate mode language
-            if hasattr(self, "immediate_mode"):
-                self.immediate_mode.set_language(current_data)
-            # Update tab info
-            self.set_current_tab_info(language=current_data)
-            # Update status bar language label
-            if hasattr(self, "language_label"):
-                lang_text = f"Language: {current_data.friendly_name()}"
-                self.language_label.setText(lang_text)
 
     def update_title(self):
         """Update window title."""
@@ -1791,7 +1756,7 @@ class MainWindow(QMainWindow):
 
         layout.addWidget(browser)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.Close)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(dialog.close)
         layout.addWidget(buttons)
 
@@ -1944,7 +1909,7 @@ class MainWindow(QMainWindow):
         browser.setHtml(html)
         layout.addWidget(browser)
 
-        buttons = QDialogButtonBox(QDialogButtonBox.Close)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
         buttons.rejected.connect(dialog.close)
         layout.addWidget(buttons)
 
@@ -2312,7 +2277,9 @@ class MainWindow(QMainWindow):
         layout.addLayout(user_layout)
 
         # Buttons
-        flags = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        flags = (
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         buttons = QDialogButtonBox(flags)
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
@@ -2395,7 +2362,9 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.session_list)
 
         # Buttons
-        flags = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        flags = (
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         buttons = QDialogButtonBox(flags)
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
@@ -2468,7 +2437,9 @@ class MainWindow(QMainWindow):
         layout.addLayout(desc_layout)
 
         # Buttons
-        flags = QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+        flags = (
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         buttons = QDialogButtonBox(flags)
         buttons.accepted.connect(dialog.accept)
         buttons.rejected.connect(dialog.reject)
@@ -2540,7 +2511,7 @@ class MainWindow(QMainWindow):
         layout.addWidget(user_list)
 
         # Buttons
-        buttons = QDialogButtonBox(QDialogButtonBox.Ok)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
         buttons.accepted.connect(dialog.accept)
         layout.addWidget(buttons)
 
