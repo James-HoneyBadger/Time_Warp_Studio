@@ -297,6 +297,7 @@ class Interpreter:
         self.stored_condition = None
         self.cursor_row = 0
         self.step_mode = False
+        self.running = True
         # Ensure debugger starts in a paused-clear state; do not auto-resume
         self.debug_event.clear()
         self.cursor_col = 0
@@ -472,7 +473,17 @@ class Interpreter:
         if language == Language.LOGO:
             self._parse_logo_program(lines)
             return
+        if language == Language.FORTH:
+            self._parse_forth_program(lines)
+            return
         self._parse_standard_program(lines)
+
+    def _parse_forth_program(self, lines: List[str]):
+        """Parse Forth program (no line numbers)."""
+        for idx, line in enumerate(lines):
+            # Forth doesn't use line numbers, so we just store the whole line
+            # We use the index as the line number for internal tracking
+            self.program_lines.append((idx + 1, line))
 
     def _parse_standard_program(self, lines: List[str]):
         """Parse BASIC/PILOT/C/PASCAL/PROLOG lines and build indices."""
@@ -494,11 +505,14 @@ class Interpreter:
     def _collect_basic_data_values(self):
         """Extract BASIC DATA values into data_values list."""
         for _, command_str in self.program_lines:
-            cmd = command_str.strip().upper()
-            if cmd.startswith("DATA "):
-                values = command_str[5:].split(",")
+            cmd = command_str.strip()
+            if cmd.upper().startswith("DATA "):
+                values = cmd[5:].split(",")
                 for v in values:
-                    self.data_values.append(v.strip())
+                    val = v.strip()
+                    if val.startswith('"') and val.endswith('"'):
+                        val = val[1:-1]
+                    self.data_values.append(val)
 
     def _parse_logo_program(self, lines: List[str]):
         """
@@ -651,6 +665,7 @@ class Interpreter:
             iterations += 1
 
             command = current_command
+            # print(f"DEBUG: Line {self.current_line}: {command}")
 
             if not command.strip():
                 self.current_line += 1
@@ -918,7 +933,8 @@ class Interpreter:
             line_num: Line number to jump to
         """
         if line_num in self.line_number_map:
-            self.current_line = self.line_number_map[line_num]
+            # Set to index - 1 because the main loop increments current_line
+            self.current_line = self.line_number_map[line_num] - 1
         else:
             raise ValueError(f"Line number {line_num} not found")
 

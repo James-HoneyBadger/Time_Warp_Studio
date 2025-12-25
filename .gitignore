@@ -32,3 +32,18 @@ tools/swiftly
 *.sln
 *.opensdf
 *.sdf
+
+# Rust
+target/
+**/*.rs.bk
+Cargo.lock
+
+# Build artifacts
+dist/
+build/
+*.so
+*.dylib
+*.dll
+*.exe
+*.pdb
+tw

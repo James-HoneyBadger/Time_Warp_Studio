@@ -88,6 +88,7 @@ class ExpressionEvaluator:
         "SGN": lambda x: 1 if x > 0 else (-1 if x < 0 else 0),
         "RAND": random.random,
         "RND": random.random,  # Turbo BASIC alias
+        "RANDOM": lambda x: float(random.randrange(int(x))) if x > 0 else 0.0,
     }
 
     def __init__(

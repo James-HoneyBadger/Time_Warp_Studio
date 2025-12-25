@@ -12,6 +12,7 @@ class ForthExecutor:
         self.stack: List[int] = []
         self.return_stack: List[int] = []
         self.dictionary: Dict[str, Callable] = {}
+        self.memory: List[int] = []  # Linear memory for variables
         self.compiling = False
         self.new_word_name = ""
         self.new_word_definition: List[str] = []
@@ -46,6 +47,11 @@ class ForthExecutor:
         self.dictionary["AND"] = self._and
         self.dictionary["OR"] = self._or
         self.dictionary["INVERT"] = self._invert
+        
+        # Memory
+        self.dictionary["@"] = self._fetch
+        self.dictionary["!"] = self._store
+        self.dictionary["VARIABLE"] = self._variable
         
         # Graphics (Time Warp extensions)
         self.dictionary["FD"] = self._fd
@@ -163,6 +169,32 @@ class ForthExecutor:
         if self.stack:
             self.stack.append(~self.stack.pop())
 
+    # --- Memory ---
+    def _fetch(self):
+        if self.stack:
+            addr = self.stack.pop()
+            if 0 <= addr < len(self.memory):
+                self.stack.append(self.memory[addr])
+            else:
+                self.interpreter.log_output(f"❌ Invalid memory address: {addr}")
+                self.stack.append(0)
+
+    def _store(self):
+        if len(self.stack) >= 2:
+            addr = self.stack.pop()
+            val = self.stack.pop()
+            if 0 <= addr < len(self.memory):
+                self.memory[addr] = val
+            else:
+                self.interpreter.log_output(f"❌ Invalid memory address: {addr}")
+
+    def _variable(self):
+        # This is tricky because VARIABLE reads the NEXT token.
+        # But _variable is called by execute_tokens which is iterating.
+        # We need access to the token stream.
+        # For now, we'll handle VARIABLE in execute_tokens directly.
+        pass
+
     # --- Graphics ---
     def _fd(self):
         if self.stack and self.turtle:
@@ -199,97 +231,215 @@ class ForthExecutor:
     def _pen(self):
         if self.stack and self.turtle:
             color_idx = self.stack.pop()
-            # Map index to color string if needed, or pass index
             self.turtle.pencolor(color_idx)
 
-    def execute_token(self, token: str):
-        token = token.upper()
-        
-        if self.compiling:
-            if token == ";":
-                self.compiling = False
-                # Define the new word
-                definition = list(self.new_word_definition)  # Copy
-
-                def new_word_func():
-                    for t in definition:
-                        self.execute_token(t)
-
-                self.dictionary[self.new_word_name] = new_word_func
-                self.interpreter.log_output(f"Defined {self.new_word_name}")
-            else:
-                self.new_word_definition.append(token)
-            return
-
-        if token == ":":
-            self.compiling = True
-            self.new_word_name = ""  # Will be set by next token logic in execute_line
-            self.new_word_definition = []
-            return
-
-        # Check dictionary
-        if token in self.dictionary:
-            self.dictionary[token]()
-            return
-            
-        # Check number
-        try:
-            val = int(token)
-            self.stack.append(val)
-            return
-        except ValueError:
-            pass
-            
-        # Check string literal (." Hello ") - simplified
-        if token.startswith('."') and token.endswith('"'):
-            self.output_buffer += token[2:-1]
-            return
-
-        self.interpreter.log_output(f"❌ Unknown word: {token}")
-
-    def execute_line(self, line: str, turtle=None):
-        self.turtle = turtle
-        # Handle string literals with spaces: ." Hello World "
-        # This is a quick hack; a real parser would be better
-        parts = line.split()
+    def execute_tokens(self, tokens: List[str]):
         i = 0
-        while i < len(parts):
-            t = parts[i]
-            if t.upper() == '."':
-                # Start of string
-                s = ""
-                i += 1
-                while i < len(parts):
-                    if parts[i].endswith('"'):
-                        s += parts[i][:-1]
-                        break
-                    s += parts[i] + " "
-                    i += 1
-                self.output_buffer += s
-            elif t == ":" and i + 1 < len(parts):
-                # Start definition
-                self.compiling = True
-                self.new_word_name = parts[i + 1].upper()
-                self.new_word_definition = []
-                i += 1  # Skip name
-            elif self.compiling:
-                if t == ";":
+        while i < len(tokens):
+            token = tokens[i]
+            token_upper = token.upper()
+            
+            if self.compiling:
+                if token == ";":
                     self.compiling = False
-                    # Define
+                    # Define the new word
                     definition = list(self.new_word_definition)
-
-                    # pylint: disable=dangerous-default-value
+                    
                     def new_word_func(d=definition):
-                        for tok in d:
-                            self.execute_token(tok)
-
+                        self.execute_tokens(d)
+                        
                     self.dictionary[self.new_word_name] = new_word_func
                     self.interpreter.log_output(f"Defined {self.new_word_name}")
                 else:
-                    self.new_word_definition.append(t)
-            else:
-                self.execute_token(t)
+                    self.new_word_definition.append(token)
+                i += 1
+                continue
+
+            # Control Structures
+            if token_upper == "IF":
+                if not self.stack:
+                    self.interpreter.log_output("❌ Stack underflow for IF")
+                    i += 1
+                    continue
+                cond = self.stack.pop()
+                if cond == 0:
+                    # Skip to ELSE or THEN
+                    depth = 1
+                    while i + 1 < len(tokens):
+                        i += 1
+                        t = tokens[i].upper()
+                        if t == "IF": depth += 1
+                        if t == "THEN": depth -= 1
+                        if t == "ELSE" and depth == 1:
+                            # Found ELSE at same level, stop skipping and execute ELSE block
+                            break
+                        if depth == 0:
+                            # Found THEN, stop skipping
+                            break
+                # If cond != 0, just continue executing
+                i += 1
+                continue
+
+            if token_upper == "ELSE":
+                # We hit ELSE after executing the True branch. Skip to THEN.
+                depth = 1
+                while i + 1 < len(tokens):
+                    i += 1
+                    t = tokens[i].upper()
+                    if t == "IF": depth += 1
+                    if t == "THEN": depth -= 1
+                    if depth == 0: break
+                i += 1
+                continue
+
+            if token_upper == "THEN":
+                # Just a marker
+                i += 1
+                continue
+
+            if token_upper == "DO":
+                # DO ( limit start -- )
+                # We need to loop back to here.
+                # This is complex in a linear scan.
+                # Standard Forth: limit start DO ... LOOP
+                # We need to save the loop parameters and the index 'i'.
+                if len(self.stack) < 2:
+                    self.interpreter.log_output("❌ Stack underflow for DO")
+                    i += 1
+                    continue
+                start = self.stack.pop()
+                limit = self.stack.pop()
+                self.return_stack.append(limit)
+                self.return_stack.append(start)
+                self.return_stack.append(i) # Save loop start index
+                i += 1
+                continue
+
+            if token_upper == "LOOP":
+                if len(self.return_stack) < 3:
+                    self.interpreter.log_output("❌ Return stack underflow for LOOP")
+                    i += 1
+                    continue
+                
+                loop_start_idx = self.return_stack.pop()
+                index = self.return_stack.pop()
+                limit = self.return_stack.pop()
+                
+                index += 1
+                if index < limit:
+                    # Loop again
+                    self.return_stack.append(limit)
+                    self.return_stack.append(index)
+                    self.return_stack.append(loop_start_idx)
+                    i = loop_start_idx + 1 # Jump back
+                else:
+                    # Loop finished
+                    pass
+                continue
+                
+            if token_upper == "I":
+                if len(self.return_stack) >= 2:
+                    # Index is second on return stack (top is loop_start_idx if we keep it there? No, we popped it)
+                    # Wait, in DO we pushed limit, start, idx.
+                    # In LOOP we popped them.
+                    # So inside the loop, they are on the return stack.
+                    # We need to peek.
+                    # Top is loop_start_idx. Next is index.
+                    self.stack.append(self.return_stack[-2])
+                else:
+                    self.interpreter.log_output("❌ I used outside loop")
+                i += 1
+                continue
+
+            if token_upper == "VARIABLE":
+                if i + 1 < len(tokens):
+                    var_name = tokens[i+1].upper()
+                    addr = len(self.memory)
+                    self.memory.append(0)
+                    
+                    # Define word that pushes address
+                    def var_func(a=addr):
+                        self.stack.append(a)
+                        
+                    self.dictionary[var_name] = var_func
+                    self.interpreter.log_output(f"Variable {var_name} allocated at {addr}")
+                    i += 2 # Skip VARIABLE and Name
+                    continue
+                else:
+                    self.interpreter.log_output("❌ VARIABLE requires name")
+                    i += 1
+                    continue
+
+            if token_upper == ":":
+                self.compiling = True
+                if i + 1 < len(tokens):
+                    self.new_word_name = tokens[i+1].upper()
+                    self.new_word_definition = []
+                    i += 2 # Skip : and Name
+                else:
+                    self.interpreter.log_output("❌ : requires name")
+                    i += 1
+                continue
+
+            # Check dictionary
+            if token_upper in self.dictionary:
+                self.dictionary[token_upper]()
+                i += 1
+                continue
+                
+            # Check number
+            try:
+                val = int(token)
+                self.stack.append(val)
+                i += 1
+                continue
+            except ValueError:
+                pass
+                
+            # Check string literal (." Hello ")
+            if token.startswith('."') and token.endswith('"'):
+                self.output_buffer += token[2:-1]
+                i += 1
+                continue
+
+            self.interpreter.log_output(f"❌ Unknown word: {token}")
             i += 1
+
+    def execute_line(self, line: str, turtle=None):
+        self.turtle = turtle
+        
+        # Tokenizer
+        tokens = []
+        parts = line.split()
+        j = 0
+        while j < len(parts):
+            t = parts[j]
+            if t.upper() == '."':
+                # Start of string
+                s = '."'
+                j += 1
+                while j < len(parts):
+                    if parts[j].endswith('"'):
+                        s += parts[j]
+                        break
+                    s += parts[j] + " "
+                    j += 1
+                tokens.append(s)
+            elif t == "(":
+                # Comment ( ... )
+                j += 1
+                while j < len(parts):
+                    if parts[j] == ")":
+                        break
+                    j += 1
+            elif t == "\\":
+                # Comment \ ...
+                break # Ignore rest of line
+            else:
+                tokens.append(t)
+            j += 1
+
+        self.execute_tokens(tokens)
 
         # Flush buffer at end of line
         if self.output_buffer:

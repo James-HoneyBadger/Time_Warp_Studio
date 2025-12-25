@@ -35,6 +35,7 @@ _PRINTF_RE = re.compile(r"^\s*printf\s*\((.*)\)\s*;?\s*$", re.IGNORECASE)
 _SCANF_RE = re.compile(r"^\s*scanf\s*\((.*)\)\s*;?\s*$", re.IGNORECASE)
 _IF_RE = re.compile(r"^\s*if\s*\((.*)\)\s*\{?\s*$", re.IGNORECASE)
 _ELSE_RE = re.compile(r"^\s*else\s*\{?\s*$", re.IGNORECASE)
+_ELSE_ON_SAME_LINE_RE = re.compile(r".*\}\s*else\b.*", re.IGNORECASE)
 _WHILE_RE = re.compile(r"^\s*while\s*\((.*)\)\s*\{?\s*$", re.IGNORECASE)
 _FOR_RE = re.compile(
     r"^\s*for\s*\(([^;]*);([^;]*);([^)]*)\)\s*(.*)$",
@@ -97,10 +98,10 @@ def _suffix_for_type(t: str) -> str:
     return "#"
 
 
-def _exec_c_side_effect_expr(interpreter: "Interpreter", expr: str):
+def _exec_c_side_effect_expr(interpreter: "Interpreter", expr: str) -> bool:
     s = expr.strip().rstrip(";")
     if not s:
-        return
+        return False
     # Handle i++, ++i, i--, --i
     m = re.match(
         r"^\s*(\+\+|--)?\s*([A-Za-z_][A-Za-z0-9_]*)\s*(\+\+|--)?\s*$",
@@ -120,11 +121,11 @@ def _exec_c_side_effect_expr(interpreter: "Interpreter", expr: str):
             elif up + "#" in interpreter.double_variables:
                 suf = "#"
             elif up + "$" in interpreter.string_variables:
-                return
+                return False
             cur = interpreter.get_numeric_value(up) or 0
             delta = 1 if (pre == "++" or post == "++") else -1
             interpreter.set_typed_variable((up + (suf or "#")), cur + delta)
-            return
+            return True
         # Simple assignment
         val: Any
     if "=" in s:
@@ -153,13 +154,15 @@ def _exec_c_side_effect_expr(interpreter: "Interpreter", expr: str):
             interpreter.set_typed_variable(name + "$", _unquote(str(right)))
         else:
             interpreter.set_typed_variable(name + (suf or "#"), val)
-        return
+        return True
     # Fallback: evaluate expression (no side effects captured)
     try:
         norm = re.sub(r"([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*(.*?)\s*\]", r"\1(\2)", s)
         interpreter.evaluate_expression(norm)
+        return True
     except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
         pass
+    return False
 
 
 def _printf(interpreter: "Interpreter", arglist: str) -> str:
@@ -189,23 +192,53 @@ def _printf(interpreter: "Interpreter", arglist: str) -> str:
     i = 0
     while i < len(fmt):
         ch = fmt[i]
-        if ch == "%" and i + 1 < len(fmt):
-            spec = fmt[i + 1]
-            if spec in ("d", "i") and vi < len(values):
-                out.append(str(int(float(values[vi]))))
-                vi += 1
-                i += 2
+        if ch == "%":
+            # Try to match a format specifier
+            # Regex: %[-+0 #]*[0-9]*(\.[0-9]+)?[hlL]?[diuoxXfFeEgGaAcspn%]
+            # We'll use a simpler one for now: %[^a-zA-Z%]*[a-zA-Z%]
+            m = re.match(r"^%([-+0 #]*[0-9]*(\.[0-9]+)?[hlL]?[diuoxXfFeEgGaAcspn%])", fmt[i:])
+            if m:
+                spec_full = m.group(0)
+                spec_type = spec_full[-1]
+                
+                if spec_type == "%":
+                    out.append("%")
+                    i += len(spec_full)
+                    continue
+                
+                if vi < len(values):
+                    val = values[vi]
+                    vi += 1
+                    
+                    # Convert value to appropriate type for formatting
+                    try:
+                        if spec_type in "diuoxX":
+                            val = int(float(val))
+                        elif spec_type in "fFeEgGaA":
+                            val = float(val)
+                        elif spec_type in "cs":
+                            val = str(val)
+                            
+                        # Use Python's string formatting which is compatible with C's for most parts
+                        # We need to remove 'l' or 'L' length modifiers as Python doesn't use them
+                        py_spec = spec_full.replace("l", "").replace("L", "")
+                        out.append(py_spec % val)
+                    except Exception:
+                        out.append(spec_full) # Fallback
+                    
+                    i += len(spec_full)
+                    continue
+                else:
+                    # Not enough arguments
+                    out.append(spec_full)
+                    i += len(spec_full)
+                    continue
+            else:
+                # Just a %
+                out.append("%")
+                i += 1
                 continue
-            if spec in ("f", "g") and vi < len(values):
-                out.append(f"{float(values[vi]):g}")
-                vi += 1
-                i += 2
-                continue
-            if spec == "s" and vi < len(values):
-                out.append(str(values[vi]))
-                vi += 1
-                i += 2
-                continue
+
         if ch == "\\" and i + 1 < len(fmt):
             nxt = fmt[i + 1]
             if nxt == "n":
@@ -271,14 +304,16 @@ def _find_block_end(interpreter: "Interpreter", header_idx: int) -> int:
     j = header_idx
     while j < len(lines):
         s = lines[j][1]
-        opens = s.count("{")
-        closes = s.count("}")
-        if opens:
-            seen_open = True
-        depth += opens
-        depth -= closes
-        if seen_open and depth == 0:
-            return j
+        # Process character by character to handle } else { correctly
+        for char in s:
+            if char == "{":
+                seen_open = True
+                depth += 1
+            elif char == "}":
+                if seen_open:
+                    depth -= 1
+                    if depth == 0:
+                        return j
         j += 1
     return header_idx
 
@@ -444,6 +479,9 @@ def _handle_close_brace(interpreter: "Interpreter") -> str:
             interpreter.current_line = skip_to - 1
         interpreter.c_block_stack.pop()
         return ""
+    if t == "else":
+        interpreter.c_block_stack.pop()
+        return ""
     return ""
 
 
@@ -507,7 +545,7 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
                 return ""
 
     # Plain close brace(s): delegate to block handler
-    if cmd in ("}", "};"):
+    if cmd in ("}", "};") or cmd.startswith("} else"):
         return _handle_close_brace(interpreter)
 
     # break/continue
@@ -536,14 +574,18 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
         header_idx = interpreter.current_line
         end_idx = _find_block_end(interpreter, header_idx)
         lines = interpreter.program_lines
-        j = end_idx + 1
-        while j < len(lines) and not lines[j][1].strip():
-            j += 1
         else_start = None
         else_end = None
-        if j < len(lines) and _ELSE_RE.match(lines[j][1]):
-            else_end = _find_block_end(interpreter, j)
-            else_start = _first_inside_index(interpreter, j)
+        if end_idx < len(lines) and _ELSE_ON_SAME_LINE_RE.match(lines[end_idx][1]):
+            else_end = _find_block_end(interpreter, end_idx)
+            else_start = _first_inside_index(interpreter, end_idx)
+        else:
+            j = end_idx + 1
+            while j < len(lines) and not lines[j][1].strip():
+                j += 1
+            if j < len(lines) and _ELSE_RE.match(lines[j][1]):
+                else_end = _find_block_end(interpreter, j)
+                else_start = _first_inside_index(interpreter, j)
         try:
             cond_val = interpreter.evaluate_expression(cond_expr)
         except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
@@ -561,6 +603,12 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
             interpreter.current_line = start - 1
         else:
             if else_start is not None:
+                interpreter.c_block_stack.append(
+                    {
+                        "type": "else",
+                        "end": else_end,
+                    }
+                )
                 interpreter.current_line = else_start - 1
             else:
                 interpreter.current_line = end_idx
@@ -720,6 +768,10 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
             interpreter.running = False
         except AttributeError:
             pass
+        return ""
+
+    # Try to execute as a side-effect expression (e.g. i++; func();)
+    if _exec_c_side_effect_expr(interpreter, cmd):
         return ""
 
     return f"❌ Error: Unknown C command '{command.strip()}'"

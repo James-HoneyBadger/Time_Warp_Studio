@@ -1,10 +1,31 @@
 # Time Warp IDE
 
-Time Warp IDE is an educational programming environment that unifies BASIC, PILOT, and Logo with experimental Pascal, Prolog, and C support. The official implementation is a PySide6 desktop application that keeps the language executors stateless while the UI manages canvas rendering, editor state, and theming.
+Time Warp IDE is an educational programming environment that unifies BASIC, PILOT, and Logo.
+**The project is currently transitioning to a high-performance Rust implementation.**
+
+## Rust Version (New!)
+
+The new native Rust version is located in `Platforms/Rust` and provides a blazing fast, single-binary experience.
+
+To run the Rust version:
+```bash
+./tw
+```
+
+## Python Version (Legacy)
+
+The original PySide6 implementation is still available but is being superseded by the Rust version.
 
 **Current release:** 5.0.1 (December 11, 2025)
 
-## Highlights
+## Highlights (Rust Version)
+
+- **Native Performance**: Instant startup and execution.
+- **Integrated Graphics**: Real-time Turtle Graphics.
+- **Multi-Language**: BASIC, PILOT, Logo (more coming soon).
+- **Single Binary**: No Python dependencies required.
+
+## Highlights (Legacy Python)
 
 - **Three core languages**: BASIC, PILOT, and Logo with full feature parity (Pascal, Prolog, and C available experimentally)
 - **Advanced UI toolkit**: Multiple screen modes, code editor with snippets, variable inspector, debug panel, focus mode, CRT effect, and accessibility features

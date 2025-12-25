@@ -19,10 +19,20 @@ if TYPE_CHECKING:
 
 
 _VAR_RE = re.compile(
-    r"^\s*var\s+(.+):\s*(integer|longint|real|string)\s*;?\s*$",
+    r"^\s*(?:var\s+)?(.+):\s*(integer|longint|real|string)\s*;?\s*$",
     re.IGNORECASE,
 )
+_VAR_ARRAY_RE = re.compile(
+    r"^\s*(?:var\s+)?(.+):\s*array\s*\[\s*(\d+)\.\.(\d+)\s*\]\s*of\s*(integer|longint|real|string)\s*;?\s*$",
+    re.IGNORECASE,
+)
+_VAR_KEYWORD_RE = re.compile(r"^\s*var\s*$", re.IGNORECASE)
+_CONST_RE = re.compile(r"^\s*const\s*$", re.IGNORECASE)
+_CONST_DEF_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+);?\s*$", re.IGNORECASE)
+
 _ASSIGN_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:=\s*(.+);?\s*$")
+_ASSIGN_ARRAY_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\[(.+)\]\s*:=\s*(.+);?\s*$")
+
 _WRITE_RE = re.compile(
     r"^\s*(writeln|write)\s*\((.*)\)\s*;?\s*$",
     re.IGNORECASE,
@@ -31,6 +41,12 @@ _READLN_RE = re.compile(
     r"^\s*readln\s*\((.*)\)\s*;?\s*$",
     re.IGNORECASE,
 )
+_CLRSCR_RE = re.compile(r"^\s*clrscr\s*;?\s*$", re.IGNORECASE)
+_DELAY_RE = re.compile(r"^\s*delay\s*\((.+)\)\s*;?\s*$", re.IGNORECASE)
+_TEXTCOLOR_RE = re.compile(r"^\s*textcolor\s*\((.+)\)\s*;?\s*$", re.IGNORECASE)
+_GOTOXY_RE = re.compile(r"^\s*gotoxy\s*\((.+),(.+)\)\s*;?\s*$", re.IGNORECASE)
+_RANDOMIZE_RE = re.compile(r"^\s*randomize\s*;?\s*$", re.IGNORECASE)
+
 _IF_THEN_RE = re.compile(
     r"^\s*if\s+(.+)\s+then\s*;?\s*$",
     re.IGNORECASE,
@@ -89,6 +105,26 @@ def _find_begin_forward(
     while j < len(interpreter.program_lines):
         s = interpreter.program_lines[j][1]
         if not s.strip():
+            j += 1
+            continue
+        # Skip comments
+        if s.strip().startswith("//") or s.strip().startswith("{") or s.strip().startswith("(*"):
+            j += 1
+            continue
+        # Skip variable declarations
+        if _VAR_KEYWORD_RE.match(s):
+            j += 1
+            continue
+        if _VAR_RE.match(s):
+            j += 1
+            continue
+        if _VAR_ARRAY_RE.match(s):
+            j += 1
+            continue
+        if _CONST_RE.match(s):
+            j += 1
+            continue
+        if _CONST_DEF_RE.match(s):
             j += 1
             continue
         if _is_begin(s):
@@ -390,7 +426,7 @@ def _handle_proc_call(
         interpreter.pascal_call_stack = []
     interpreter.pascal_call_stack.append(
         {
-            "return_to": interpreter.current_line,
+            "return_to": interpreter.current_line + 1,
             "end": info["end"],
             "backups": backups,
             "aliases": aliases,
@@ -662,6 +698,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
     # of a called proc, return
     if hasattr(interpreter, "pascal_call_stack") and interpreter.pascal_call_stack:
         frame = interpreter.pascal_call_stack[-1]
+        print(f"DEBUG: Check return. Line={interpreter.current_line}, End={frame.get('end')}")
         if interpreter.current_line == frame.get("end"):
             backups = frame.get("backups") or []
             # Skip restoring values for by-ref parameters
@@ -751,6 +788,96 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
         name, expr_start, dirw, expr_end = m.groups()
         return _handle_for(interpreter, name, expr_start, dirw, expr_end)
 
+    if _VAR_KEYWORD_RE.match(cmd):
+        return ""
+
+    # CRT / System Commands
+    if _CLRSCR_RE.match(cmd):
+        interpreter.output.append("CLS")
+        return ""
+    
+    if _RANDOMIZE_RE.match(cmd):
+        import random
+        random.seed()
+        return ""
+        
+    m = _DELAY_RE.match(cmd)
+    if m:
+        try:
+            ms = int(interpreter.evaluate_expression(m.group(1)))
+            import time
+            time.sleep(ms / 1000.0)
+        except:
+            pass
+        return ""
+
+    # Array Declaration
+    m = _VAR_ARRAY_RE.match(cmd)
+    if m:
+        names, start_idx, end_idx, t = m.groups()
+        start_idx = int(start_idx)
+        end_idx = int(end_idx)
+        size = end_idx + 1
+        if size <= 0:
+            return "❌ Error: Invalid array size"
+        
+        suf = _suffix_for_type(t)
+        default_val = 0.0
+        
+        for raw in names.split(","):
+            name = raw.strip().upper()
+            interpreter.arrays[name] = [default_val] * size
+        return ""
+
+    # Const Declaration
+    if _CONST_RE.match(cmd):
+        return ""
+        
+    m = _CONST_DEF_RE.match(cmd)
+    if m:
+        name, val_str = m.groups()
+        name = name.upper()
+        val_str = val_str.rstrip(";").strip()
+        try:
+            if val_str.startswith("'") or val_str.startswith('"'):
+                val = _unquote(val_str)
+                interpreter.string_variables[name + "$"] = val
+            else:
+                val = float(val_str)
+                interpreter.variables[name] = val
+        except:
+            pass
+        return ""
+
+    # Array Assignment
+    m = _ASSIGN_ARRAY_RE.match(cmd)
+    if m:
+        name, idx_expr, val_expr = m.groups()
+        name = name.upper()
+        idx_expr = idx_expr.replace("[", "(").replace("]", ")")
+        try:
+            idx = int(interpreter.evaluate_expression(idx_expr))
+        except:
+            return "❌ Error: Invalid array index"
+            
+        val_expr = val_expr.rstrip(";").strip()
+        val_expr = val_expr.replace("[", "(").replace("]", ")")
+        
+        if name not in interpreter.arrays:
+             return "❌ Error: Array not declared"
+             
+        arr = interpreter.arrays[name]
+        if idx < 0 or idx >= len(arr):
+             return "❌ Error: Array index out of bounds"
+             
+        try:
+            val = interpreter.evaluate_expression(val_expr)
+        except:
+            val = 0.0
+            
+        arr[idx] = val
+        return ""
+
     m = _VAR_RE.match(cmd)
     if m:
         names, t = m.groups()
@@ -769,6 +896,8 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
     if m:
         name, expr = m.groups()
         expr = expr.rstrip(";").strip()
+        # Replace [] with () for array access in expression
+        expr = expr.replace("[", "(").replace("]", ")")
         up = name.upper()
         suf = None
         if hasattr(interpreter, "pascal_types"):
@@ -823,7 +952,8 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
                     out_parts.append(f"{interpreter.variables[up]:g}")
                 else:
                     try:
-                        _val = interpreter.evaluate_expression(a)
+                        expr_fixed = a.replace("[", "(").replace("]", ")")
+                        _val = interpreter.evaluate_expression(expr_fixed)
                         out_parts.append(f"{_val:g}")
                     except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
                         out_parts.append("0")

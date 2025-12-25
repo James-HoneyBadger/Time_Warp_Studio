@@ -74,27 +74,28 @@ LOGO_COMMANDS = {
     "IF",
     "IFELSE",
     "STOP",
+    "OUTPUT",
     "TO",
     "END",
     "MAKE",
-    "THING",
+    # "THING", # Reporter
     "PRINT",
     "SHOW",
     "TYPE",
-    "WORD",
-    "LIST",
-    "SENTENCE",
-    "FIRST",
-    "LAST",
-    "BUTFIRST",
-    "BUTLAST",
-    "ITEM",
-    "COUNT",
-    "SUM",
-    "DIFFERENCE",
-    "PRODUCT",
-    "QUOTIENT",
-    # "RANDOM",  # Removed to allow usage as argument (e.g. MAKE "X RANDOM 100)
+    # "WORD", # Reporter
+    # "LIST", # Reporter
+    # "SENTENCE", # Reporter
+    # "FIRST", # Reporter
+    # "LAST", # Reporter
+    # "BUTFIRST", # Reporter
+    # "BUTLAST", # Reporter
+    # "ITEM", # Reporter
+    # "COUNT", # Reporter
+    # "SUM", # Reporter
+    # "DIFFERENCE", # Reporter
+    # "PRODUCT", # Reporter
+    # "QUOTIENT", # Reporter
+    # "RANDOM",  # Reporter
     "ARC",
     "FILLED",
     "LABEL",
@@ -103,7 +104,7 @@ LOGO_COMMANDS = {
     "OUTPUT",
     "OP",
     "FOREVER",
-    "REPCOUNT",
+    # "REPCOUNT", # Reporter
 }
 
 
@@ -118,6 +119,7 @@ def _split_logo_commands(
     commands = []
     current_command = []
     bracket_depth = 0
+    in_to_block = False
 
     # Tokenize: brackets, quoted strings, or other words
     # Handle "WORD (quote at start)
@@ -133,6 +135,25 @@ def _split_logo_commands(
         else:
             # If depth is 0 and token is a known command, start new command
             # BUT only if we have a current command accumulated.
+            
+            # Special handling for TO ... END blocks
+            if bracket_depth == 0:
+                if token.upper() == "TO":
+                    if current_command and not in_to_block:
+                        commands.append(" ".join(current_command))
+                        current_command = []
+                    in_to_block = True
+                elif token.upper() == "END" and in_to_block:
+                    current_command.append(token)
+                    commands.append(" ".join(current_command))
+                    current_command = []
+                    in_to_block = False
+                    continue
+
+            if in_to_block:
+                current_command.append(token)
+                continue
+
             is_command = token.upper() in LOGO_COMMANDS
             if not is_command and interpreter and bracket_depth == 0:
                 # Check if it's a user-defined procedure
@@ -162,7 +183,10 @@ def execute_logo(
     commands = _split_logo_commands(command, interpreter)
     outputs = []
     for cmd in commands:
-        outputs.append(_execute_single_logo_command(interpreter, cmd, turtle))
+        result = _execute_single_logo_command(interpreter, cmd, turtle)
+        outputs.append(result)
+        if "STOP_PROCEDURE" in result:
+            break
     return "".join(outputs)
 
 
@@ -183,6 +207,7 @@ def _execute_single_logo_command(
     if not words:
         return ""
     cmd_name = words[0]
+    print(f"DEBUG: Executing {cmd_name} with args {words[1:]}")
     args = words[1:] if len(words) > 1 else []
     # Commands that require a TurtleState (graphics) to be available
     needs_turtle = {
@@ -295,6 +320,8 @@ def _execute_single_logo_command(
         return _logo_if(interpreter, turtle, command)
     if cmd_name == "STOP":
         return _logo_stop(interpreter)
+    if cmd_name == "OUTPUT":
+        return _logo_output(interpreter, args)
     if cmd_name == "TO":
         return _logo_to(interpreter, command)
     if cmd_name == "END":
@@ -381,6 +408,54 @@ def _logo_eval_arg(interpreter: "Interpreter", arg: str) -> float:
         raise ValueError(f"Cannot evaluate argument '{arg}': {e}") from e
 
 
+def _handle_prefix_mult(expr: str) -> str:
+    """
+    Handle (* A B C) -> (A * B * C)
+    Iterative implementation to avoid regex recursion limits.
+    """
+    result = []
+    i = 0
+    n = len(expr)
+    while i < n:
+        if expr[i] == '(':
+            # Check for (*
+            j = i + 1
+            while j < n and expr[j].isspace():
+                j += 1
+            
+            if j < n and expr[j] == '*':
+                # Found (*
+                # Check if there are nested parens before the closing )
+                k = j + 1
+                # Skip whitespace after *
+                while k < n and expr[k].isspace():
+                    k += 1
+                
+                # Scan for )
+                content_start = k
+                has_nested = False
+                while k < n:
+                    if expr[k] == '(':
+                        has_nested = True
+                        break
+                    if expr[k] == ')':
+                        break
+                    k += 1
+                
+                if k < n and expr[k] == ')' and not has_nested:
+                    # Found simple (* ... )
+                    content = expr[content_start:k]
+                    parts = content.split()
+                    new_content = ' * '.join(parts)
+                    result.append(f"({new_content})")
+                    i = k + 1
+                    continue
+        
+        result.append(expr[i])
+        i += 1
+    return "".join(result)
+
+
 def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
     """Evaluate a Logo expression string with :VAR names and spaces.
     
@@ -406,7 +481,15 @@ def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
 
     # Handle prefix multiplication (* A B ...) -> (A * B * ...)
     # Only handles simple cases without nested parentheses
-    expr_norm = re.sub(r'\(\s*\*\s+([^()]+)\)', lambda m: '(' + ' * '.join(m.group(1).split()) + ')', expr_norm)
+    expr_norm = _handle_prefix_mult(expr_norm)
+    
+    # Replace = with == for Python eval, but protect >=, <=, !=
+    # First replace >= with __GE__, <= with __LE__, <> with __NE__
+    expr_norm = expr_norm.replace(">=", "__GE__").replace("<=", "__LE__").replace("<>", "__NE__")
+    # Replace = with ==
+    expr_norm = expr_norm.replace("=", "==")
+    # Restore
+    expr_norm = expr_norm.replace("__GE__", ">=").replace("__LE__", "<=").replace("__NE__", "!=")
 
     try:
         return interpreter.evaluate_expression(expr_norm)
@@ -449,6 +532,7 @@ def _logo_forward(
     except ValidationError as e:
         return f"❌ {e}\n"
     except ValueError as e:
+        print(f"DEBUG: FORWARD error: {e}")
         logger.error(f"FORWARD error: {e}")
         return f"❌ {e}\n"
     
@@ -826,6 +910,7 @@ def _logo_if(
 
     try:
         condition = _logo_eval_expr_str(interpreter, condition_str)
+        # print(f"DEBUG: IF condition '{condition_str}' -> {condition}")
     except (ValueError, TypeError, ZeroDivisionError):
         return f"❌ Invalid IF condition: {condition_str}\n"
 
@@ -840,6 +925,23 @@ def _logo_stop(_interpreter: "Interpreter") -> str:
     return "STOP_PROCEDURE"
 
 
+def _logo_output(interpreter: "Interpreter", args: List[str]) -> str:
+    """OUTPUT value - Return value from procedure"""
+    if not args:
+        return "❌ OUTPUT requires value\n"
+    
+    try:
+        # Evaluate the return value
+        # We need to consume all remaining args as the expression
+        expr = " ".join(args)
+        val = _logo_eval_expr_str(interpreter, expr)
+        # Return value followed by STOP marker
+        # The caller (_logo_call_procedure) will strip the marker
+        return f"{val}STOP_PROCEDURE"
+    except (ValueError, TypeError) as e:
+        return f"❌ Invalid OUTPUT value: {e}\n"
+
+
 def _logo_to(
     interpreter: "Interpreter",
     command: str,
@@ -849,25 +951,49 @@ def _logo_to(
     upper_cmd = command.upper()
     to_pos = upper_cmd.find("TO ")
     if to_pos == -1:
-        return "❌ Invalid TO command\n"
+        if upper_cmd.startswith("TO "):
+            to_pos = 0
+        else:
+            return "❌ Invalid TO command\n"
 
-    # Find the procedure name
-    after_to = command[to_pos + 3 :].strip()
-    name_end = after_to.find(" ")
-    if name_end == -1:
-        name_end = len(after_to)
-    proc_name = after_to[:name_end].strip()
-
-    # Find END to extract body
     end_pos = upper_cmd.find(" END")
     if end_pos == -1:
         return "❌ TO requires END\n"
 
-    # Extract body (everything between procedure name and END)
-    body_start = to_pos + 3 + name_end
-    body = command[body_start:end_pos].strip()
+    # Get the content between TO and END
+    content = command[to_pos:end_pos].strip()
+    
+    lines = content.split("\n")
+    header = lines[0].strip()
+    
+    header_parts = header.split()
+    if len(header_parts) < 2:
+        return "❌ Invalid TO command\n"
+        
+    proc_name = header_parts[1].upper()
+    params = []
+    
+    # Handle single-line vs multi-line
+    if len(lines) > 1:
+        # Multi-line: TO NAME :ARGS \n BODY
+        for part in header_parts[2:]:
+            if part.startswith(":"):
+                params.append(part[1:].upper())
+        body = "\n".join(lines[1:])
+    else:
+        # Single-line: TO NAME :ARGS BODY
+        body_parts = []
+        in_params = True
+        for i in range(2, len(header_parts)):
+            part = header_parts[i]
+            if in_params and part.startswith(":"):
+                params.append(part[1:].upper())
+            else:
+                in_params = False
+                body_parts.append(part)
+        body = " ".join(body_parts)
 
-    # Store just the procedure body
+    interpreter.logo_procedure_params[proc_name] = params
     interpreter.logo_procedures[proc_name] = body
     return ""
 
@@ -969,6 +1095,10 @@ def _logo_call_procedure(
 
     # Map args to params
     num_params = len(params)
+    
+    # DEBUG
+    depth = interpreter.variables.get("__RECURSION_DEPTH__", 0)
+    interpreter.variables["__RECURSION_DEPTH__"] = depth + 1
 
     # Use smart argument consumption
     used_args = _consume_logo_args(args, num_params)
@@ -1191,11 +1321,21 @@ def _logo_first(interpreter: "Interpreter", args: List[str]) -> str:
     if not args:
         return "❌ FIRST requires argument\n"
 
-    # Handle split bracketed arguments
-    if len(args) > 1 and args[0].startswith("[") and args[-1].endswith("]"):
-        arg = " ".join(args)
-    else:
-        arg = args[0]
+    consumed = _consume_logo_args(args, 1)
+    arg = consumed[0]
+
+    # Check if arg is a variable reference :VAR
+    if arg.startswith(":"):
+        var_name = arg[1:].upper()
+        if var_name in interpreter.logo_lists:
+            items = interpreter.logo_lists[var_name]
+            return items[0] if items else ""
+        if var_name in interpreter.string_variables:
+            s = interpreter.string_variables[var_name]
+            return s[0] if s else ""
+        if var_name in interpreter.variables:
+            val = interpreter.variables[var_name]
+            return str(val)[0] if str(val) else ""
 
     if arg.startswith("[") and arg.endswith("]"):
         # List
@@ -1218,11 +1358,21 @@ def _logo_last(interpreter: "Interpreter", args: List[str]) -> str:
     if not args:
         return "❌ LAST requires argument\n"
 
-    # Handle split bracketed arguments
-    if len(args) > 1 and args[0].startswith("[") and args[-1].endswith("]"):
-        arg = " ".join(args)
-    else:
-        arg = args[0]
+    consumed = _consume_logo_args(args, 1)
+    arg = consumed[0]
+
+    # Check if arg is a variable reference :VAR
+    if arg.startswith(":"):
+        var_name = arg[1:].upper()
+        if var_name in interpreter.logo_lists:
+            items = interpreter.logo_lists[var_name]
+            return items[-1] if items else ""
+        if var_name in interpreter.string_variables:
+            s = interpreter.string_variables[var_name]
+            return s[-1] if s else ""
+        if var_name in interpreter.variables:
+            val = interpreter.variables[var_name]
+            return str(val)[-1] if str(val) else ""
 
     if arg.startswith("[") and arg.endswith("]"):
         # List
@@ -1245,7 +1395,23 @@ def _logo_butfirst(interpreter: "Interpreter", args: List[str]) -> str:
     """BUTFIRST list/word - Remove first item or character"""
     if not args:
         return "❌ BUTFIRST requires argument\n"
-    arg = args[0]
+    
+    consumed = _consume_logo_args(args, 1)
+    arg = consumed[0]
+
+    # Check if arg is a variable reference :VAR
+    if arg.startswith(":"):
+        var_name = arg[1:].upper()
+        if var_name in interpreter.logo_lists:
+            items = interpreter.logo_lists[var_name]
+            return str(items[1:]) if len(items) > 1 else "[]"
+        if var_name in interpreter.string_variables:
+            s = interpreter.string_variables[var_name]
+            return s[1:] if len(s) > 1 else ""
+        if var_name in interpreter.variables:
+            val = interpreter.variables[var_name]
+            s = str(val)
+            return s[1:] if len(s) > 1 else ""
 
     if arg.startswith("[") and arg.endswith("]"):
         # List
@@ -1268,7 +1434,23 @@ def _logo_butlast(interpreter: "Interpreter", args: List[str]) -> str:
     """BUTLAST list/word - Remove last item or character"""
     if not args:
         return "❌ BUTLAST requires argument\n"
-    arg = args[0]
+    
+    consumed = _consume_logo_args(args, 1)
+    arg = consumed[0]
+
+    # Check if arg is a variable reference :VAR
+    if arg.startswith(":"):
+        var_name = arg[1:].upper()
+        if var_name in interpreter.logo_lists:
+            items = interpreter.logo_lists[var_name]
+            return str(items[:-1]) if len(items) > 1 else "[]"
+        if var_name in interpreter.string_variables:
+            s = interpreter.string_variables[var_name]
+            return s[:-1] if len(s) > 1 else ""
+        if var_name in interpreter.variables:
+            val = interpreter.variables[var_name]
+            s = str(val)
+            return s[:-1] if len(s) > 1 else ""
 
     if arg.startswith("[") and arg.endswith("]"):
         # List
@@ -1292,12 +1474,36 @@ def _logo_item(interpreter: "Interpreter", args: List[str]) -> str:
     if len(args) < 2:
         return "❌ ITEM requires index and thing\n"
 
+    consumed = _consume_logo_args(args, 2)
+    if len(consumed) < 2:
+        return "❌ ITEM requires index and thing\n"
+
     try:
-        index = int(interpreter.evaluate_expression(args[0])) - 1  # 1-indexed
+        index = int(interpreter.evaluate_expression(consumed[0])) - 1  # 1-indexed
     except (ValueError, TypeError):
         return "❌ Invalid index\n"
 
-    thing = args[1]
+    thing = consumed[1]
+
+    # Check if thing is a variable reference :VAR
+    if thing.startswith(":"):
+        var_name = thing[1:].upper()
+        if var_name in interpreter.logo_lists:
+            items = interpreter.logo_lists[var_name]
+            if 0 <= index < len(items):
+                return items[index]
+            return ""
+        if var_name in interpreter.string_variables:
+            s = interpreter.string_variables[var_name]
+            if 0 <= index < len(s):
+                return s[index]
+            return ""
+        if var_name in interpreter.variables:
+            val = interpreter.variables[var_name]
+            s = str(val)
+            if 0 <= index < len(s):
+                return s[index]
+            return ""
 
     if thing.startswith("[") and thing.endswith("]"):
         # List

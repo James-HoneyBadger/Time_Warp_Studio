@@ -62,8 +62,6 @@ def execute_pilot(
         return text + "\n"
     if cmd_type == "A":
         var_name = rest.strip()
-        if not var_name:
-            return "❌ A: requires variable name\n"
         # Start async input request
         interpreter.start_input_request("? ", var_name, is_numeric=False)
         return ""
@@ -83,7 +81,9 @@ def execute_pilot(
         for alt in alternatives:
             if "*" in alt:
                 # Convert wildcard pattern to regex
-                regex_pattern = "^" + alt.replace("*", ".*") + "$"
+                # Escape special regex chars first, then replace escaped * with .*
+                escaped_alt = re.escape(alt)
+                regex_pattern = "^" + escaped_alt.replace(r"\*", ".*") + "$"
                 try:
                     if re.match(regex_pattern, last_input, re.IGNORECASE):
                         interpreter.last_match_succeeded = True
@@ -216,44 +216,47 @@ def _pilot_graphics_command(
     turtle: "TurtleState",
 ) -> str:
     """Handle PILOT graphics commands integrated with turtle graphics."""
-    # Normalize command: replace commas with spaces to handle "CMD x, y"
-    normalized_command = command.replace(",", " ")
-    parts = normalized_command.strip().split()
+    # Split command and arguments
+    parts = command.strip().split(maxsplit=1)
     if not parts:
         return "❌ G: requires graphics command\n"
 
     cmd = parts[0].upper()
-    args = parts[1:]
+    arg_str = parts[1] if len(parts) > 1 else ""
+
+    # Helper to evaluate single argument
+    def eval_arg(s):
+        return interpreter.evaluate_expression(s)
 
     if cmd in ("FORWARD", "FD"):
-        if not args:
+        if not arg_str:
             return "❌ G: FORWARD requires distance\n"
         try:
-            distance = interpreter.evaluate_expression(args[0])
+            distance = eval_arg(arg_str)
             turtle.forward(distance)
         except (ValueError, TypeError):
             return "❌ G: Invalid distance\n"
     elif cmd in ("BACK", "BK"):
-        if not args:
+        if not arg_str:
             return "❌ G: BACK requires distance\n"
         try:
-            distance = interpreter.evaluate_expression(args[0])
+            distance = eval_arg(arg_str)
             turtle.back(distance)
         except (ValueError, TypeError):
             return "❌ G: Invalid distance\n"
     elif cmd in ("LEFT", "LT"):
-        if not args:
+        if not arg_str:
             return "❌ G: LEFT requires angle\n"
         try:
-            angle = interpreter.evaluate_expression(args[0])
+            angle = eval_arg(arg_str)
             turtle.left(angle)
         except (ValueError, TypeError):
             return "❌ G: Invalid angle\n"
     elif cmd in ("RIGHT", "RT"):
-        if not args:
+        if not arg_str:
             return "❌ G: RIGHT requires angle\n"
         try:
-            angle = interpreter.evaluate_expression(args[0])
+            angle = eval_arg(arg_str)
             turtle.right(angle)
         except (ValueError, TypeError):
             return "❌ G: Invalid angle\n"
@@ -266,38 +269,47 @@ def _pilot_graphics_command(
     elif cmd in ("CLEAR", "CS"):
         turtle.clear()
     elif cmd == "SETXY":
+        if "," in arg_str:
+            args = arg_str.split(",")
+        else:
+            args = arg_str.split()
+        
         if len(args) < 2:
             return "❌ G: SETXY requires x,y coordinates\n"
         try:
-            x = interpreter.evaluate_expression(args[0])
-            y = interpreter.evaluate_expression(args[1])
+            x = eval_arg(args[0])
+            y = eval_arg(args[1])
             turtle.goto(x, y)
         except (ValueError, TypeError):
             return "❌ G: Invalid coordinates\n"
     elif cmd == "CIRCLE":
-        if not args:
+        if not arg_str:
             return "❌ G: CIRCLE requires radius\n"
         try:
-            radius = interpreter.evaluate_expression(args[0])
-            # Draw circle using turtle graphics
+            radius = eval_arg(arg_str)
             turtle.circle(radius)
         except (ValueError, TypeError):
             return "❌ G: Invalid radius\n"
     elif cmd == "SETBGCOLOR":
+        if "," in arg_str:
+            args = arg_str.split(",")
+        else:
+            args = arg_str.split()
+            
         if len(args) < 3:
             return "❌ G: SETBGCOLOR requires r, g, b\n"
         try:
-            r = int(interpreter.evaluate_expression(args[0]))
-            g = int(interpreter.evaluate_expression(args[1]))
-            b = int(interpreter.evaluate_expression(args[2]))
+            r = int(eval_arg(args[0]))
+            g = int(eval_arg(args[1]))
+            b = int(eval_arg(args[2]))
             turtle.setbgcolor(r, g, b)
         except (ValueError, TypeError):
             return "❌ G: Invalid color values\n"
     elif cmd == "SETPENWIDTH":
-        if not args:
+        if not arg_str:
             return "❌ G: SETPENWIDTH requires width\n"
         try:
-            width = interpreter.evaluate_expression(args[0])
+            width = eval_arg(arg_str)
             turtle.setpenwidth(width)
         except (ValueError, TypeError):
             return "❌ G: Invalid width\n"

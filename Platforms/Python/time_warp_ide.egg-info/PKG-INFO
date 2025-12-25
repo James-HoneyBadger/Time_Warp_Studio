@@ -1,17 +1,17 @@
 Metadata-Version: 2.4
-Name: time-warp-ide
-Version: 4.0.0
-Summary: Educational programming environment for BASIC, PILOT, and Logo with retro computing support
+Name: time_warp_ide
+Version: 1.0.0
+Summary: Educational programming environment for BASIC, PILOT, Logo, Pascal, and Prolog
 Author-email: James Temple <james@honey-badger.org>
 Maintainer-email: James Temple <james@honey-badger.org>
-License-Expression: MIT
+License: MIT
 Project-URL: Homepage, https://github.com/James-HoneyBadger/Time_Warp
 Project-URL: Documentation, https://github.com/James-HoneyBadger/Time_Warp/tree/main/Docs
 Project-URL: Repository, https://github.com/James-HoneyBadger/Time_Warp
 Project-URL: Issues, https://github.com/James-HoneyBadger/Time_Warp/issues
 Project-URL: Changelog, https://github.com/James-HoneyBadger/Time_Warp/blob/main/Docs/misc/RELEASE_NOTES.md
-Keywords: education,programming,pilot,basic,logo,turtle-graphics,interpreter,retro-computing,windows-2000
-Classifier: Development Status :: 4 - Beta
+Keywords: education,programming,pilot,basic,logo,pascal,prolog,turtle-graphics,interpreter,retro-computing
+Classifier: Development Status :: 5 - Production/Stable
 Classifier: Intended Audience :: Education
 Classifier: Topic :: Education
 Classifier: Topic :: Software Development :: Interpreters
@@ -27,8 +27,9 @@ Classifier: Operating System :: POSIX :: Linux
 Classifier: Operating System :: MacOS
 Requires-Python: >=3.8
 Description-Content-Type: text/markdown
-Provides-Extra: gui
-Requires-Dist: PySide6>=6.5.0; extra == "gui"
+Requires-Dist: PySide6>=6.5.0
+Requires-Dist: Pillow>=10.0.0
+Requires-Dist: requests>=2.31.0
 Provides-Extra: dev
 Requires-Dist: pytest>=7.4.0; extra == "dev"
 Requires-Dist: pytest-cov>=4.1.0; extra == "dev"
@@ -376,7 +377,7 @@ suggestion = hints.get_suggestion('FORWRD', ['FORWARD', 'BACKWARD'])
 
 ## 📊 Development Status
 
-**Current Version**: 4.0.0
+**Current Version**: 5.0.0
 
 | Component | Status | Completion |
 |-----------|--------|------------|
@@ -411,7 +412,7 @@ suggestion = hints.get_suggestion('FORWRD', ['FORWARD', 'BACKWARD'])
 | DOS (C89) | `Platforms/DOS/` | 🧪 Experimental | Retro text-mode interpreter retained for history labs |
 | Windows 2000 | `Platforms/Windows2000/` | 📜 Archived | Vintage build kept for reference only |
 
-Legacy implementations such as Rust, Go, Haiku, and others were removed during the v4.0.0 cleanup to keep maintenance focused on the supported stack.
+Legacy implementations such as Rust, Go, Haiku, and others were removed during the v5.0.0 cleanup to keep maintenance focused on the supported stack.
 
 ---
 

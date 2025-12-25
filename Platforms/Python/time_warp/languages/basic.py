@@ -113,6 +113,7 @@ def execute_basic(
             return "".join(outputs)
 
     cmd = command.upper()
+    # print(f"DEBUG: EXEC {cmd}")
     if cmd.startswith("REM") or cmd.startswith("'"):
         return ""
     if cmd.startswith("PRINT ") or cmd == "PRINT":
@@ -285,6 +286,8 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
     if not args.strip():
         return "\n"
 
+    suppress_newline = args.strip().endswith(";") or args.strip().endswith(",")
+
     def _format_numeric(val: float, preferred: str | None = None) -> str:
         # Preferred types 'int'/'long' print without decimals
         if preferred in ("int", "long"):
@@ -403,7 +406,7 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
                     # If evaluation fails, use interpolation as fallback
                     out_items.append(interpreter.interpolate_text(item_trim))
     result = " ".join(out_items)
-    return result + "\n"
+    return result if suppress_newline else result + "\n"
 
 
 def _basic_let(interpreter: "Interpreter", args: str) -> str:
@@ -431,6 +434,23 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
     
     if not var_name:
         return "❌ LET requires variable name\n"
+
+    # Check for array assignment: VAR(INDEX) = EXPR
+    if "(" in var_name and var_name.endswith(")"):
+        array_name = var_name.split("(", 1)[0]
+        index_expr = var_name.split("(", 1)[1][:-1]
+        try:
+            idx = int(interpreter.evaluate_expression(index_expr))
+            val = interpreter.evaluate_expression(expr)
+            if array_name in interpreter.arrays:
+                arr = interpreter.arrays[array_name]
+                if 0 <= idx < len(arr):
+                    arr[idx] = val
+                    return ""
+                return f"❌ Array index out of bounds: {idx}\n"
+            return f"❌ Array not defined: {array_name}\n"
+        except (ValueError, TypeError) as e:
+            return f"❌ Invalid array index or value: {e}\n"
     
     try:
         validate_variable_name(var_name, allow_suffix=True)
@@ -452,8 +472,8 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
                 from ..core.game_support import get_game_state
 
                 interpreter.set_typed_variable(var_name, get_game_state().get_date_string())
-            # Handle string functions (LEN, LEFT, RIGHT, MID, INSTR, UPPER, LOWER, TRIM, STR, VAL)
-            elif any(expr_upper.startswith(func) for func in ["LEN(", "LEFT(", "RIGHT(", "MID(", "INSTR(", "UPPER(", "LOWER(", "TRIM(", "STR(", "VAL("]):
+            else:
+                # Try to evaluate as string expression
                 string_eval = StringExpressionEvaluator(
                     string_variables=interpreter.string_variables,
                     numeric_variables=interpreter.variables
@@ -461,11 +481,9 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
                 try:
                     result = string_eval.evaluate(expr)
                     interpreter.set_typed_variable(var_name, str(result))
-                except (ValueError, TypeError) as e:
-                    logger.error(f"String function evaluation error: {e}")
-                    return f"❌ Error in string function: {e}\n"
-            else:
-                interpreter.set_typed_variable(var_name, str(expr))
+                except (ValueError, TypeError):
+                    # Fallback to literal string if evaluation fails
+                    interpreter.set_typed_variable(var_name, str(expr))
             logger.debug(f"LET {var_name} = {expr}")
             return ""
         
@@ -658,6 +676,7 @@ def _basic_gosub(interpreter: "Interpreter", args: str) -> str:
     try:
         line_num = validate_numeric(target, param_name="line number")
         interpreter.gosub_stack.append(interpreter.current_line)
+        # print(f"DEBUG: GOSUB pushing {interpreter.current_line}, jumping to {line_num}")
         interpreter.jump_to_line_number(int(line_num))
         logger.debug(f"GOSUB to line {int(line_num)}")
     except ValidationError as e:
@@ -685,7 +704,7 @@ def _basic_return(interpreter: "Interpreter") -> str:
     
     try:
         return_line = interpreter.gosub_stack.pop()
-        interpreter.current_line = return_line + 1
+        interpreter.current_line = return_line
         logger.debug(f"RETURN to line {return_line + 1}")
     except IndexError as e:
         logger.error(f"RETURN failed: {e}")
@@ -944,17 +963,38 @@ def _basic_system(_interpreter: "Interpreter", _args: str) -> str:
     return "ℹ️ Returned to system prompt\n"
 
 
+def _find_matching_wend(interpreter: "Interpreter", start_idx: int) -> int:
+    """Find index of matching WEND for WHILE at start_idx."""
+    depth = 0
+    for i in range(start_idx + 1, len(interpreter.program_lines)):
+        cmd = interpreter.program_lines[i][1].strip().upper()
+        if cmd.startswith("WHILE "):
+            depth += 1
+        elif cmd == "WEND":
+            if depth == 0:
+                return i
+            depth -= 1
+    return -1
+
+
 def _basic_while(interpreter: "Interpreter", args: str) -> str:
     """WHILE condition - Start while loop"""
     try:
         # Evaluate the condition
         result = interpreter.evaluate_expression(args.strip())
         if result != 0:  # Non-zero means true in BASIC
-            interpreter.basic_while_stack.append(args.strip())
-            return f"🔄 WHILE {args.strip()} (true)\n"
-        # Skip to WEND - for now, just note it
-        interpreter.basic_while_stack.append("")  # Marker for skipped
-        return f"🔄 WHILE {args.strip()} (false, skipping)\n"
+            # Push current line index to stack
+            interpreter.basic_while_stack.append(interpreter.current_line)
+            return ""
+        
+        # Condition false: skip to WEND
+        wend_idx = _find_matching_wend(interpreter, interpreter.current_line)
+        if wend_idx == -1:
+            return "❌ WHILE without WEND\n"
+        
+        # Jump to WEND (loop will increment to WEND+1)
+        interpreter.current_line = wend_idx
+        return ""
     except (ValueError, TypeError, ZeroDivisionError) as e:
         return f"❌ WHILE syntax error: {e}\n"
 
@@ -964,100 +1004,93 @@ def _basic_wend(interpreter: "Interpreter") -> str:
     if not interpreter.basic_while_stack:
         return "❌ WEND without WHILE\n"
 
-    condition = interpreter.basic_while_stack.pop()
-    if condition:  # If condition was true
-        try:
-            result = interpreter.evaluate_expression(condition)
-            if result != 0:
-                # In a real interpreter, this would jump back to WHILE
-                # For now, just indicate the loop continues
-                interpreter.basic_while_stack.append(condition)  # Push back
-                return "🔄 WEND - condition still true, continuing loop\n"
-            return "🔄 WEND - condition false, exiting loop\n"
-        except (ValueError, TypeError, ZeroDivisionError) as e:
-            return f"❌ WEND evaluation error: {e}\n"
-    else:
-        return "🔄 WEND - exiting skipped loop\n"
+    while_idx = interpreter.basic_while_stack.pop()
+    # Jump back to WHILE (loop will increment to WHILE+1? No, we want to re-execute WHILE)
+    # So set to while_idx - 1
+    interpreter.current_line = while_idx - 1
+    return ""
+
+
+def _find_matching_loop(interpreter: "Interpreter", start_idx: int) -> int:
+    """Find index of matching LOOP for DO at start_idx."""
+    depth = 0
+    for i in range(start_idx + 1, len(interpreter.program_lines)):
+        cmd = interpreter.program_lines[i][1].strip().upper()
+        if cmd.startswith("DO"):
+            depth += 1
+        elif cmd.startswith("LOOP"):
+            if depth == 0:
+                return i
+            depth -= 1
+    return -1
 
 
 def _basic_do(interpreter: "Interpreter", args: str) -> str:
-    """DO [WHILE condition|UNTIL condition] - Start do loop"""
-    args = args.strip()
-    if not args:
-        # Simple DO
-        interpreter.basic_do_stack.append(("", ""))
-        return "🔄 DO (unconditional)\n"
-    if args.upper().startswith("WHILE "):
-        condition = args[6:].strip()
-        interpreter.basic_do_stack.append(("WHILE", condition))
-        return f"🔄 DO WHILE {condition}\n"
-    if args.upper().startswith("UNTIL "):
-        condition = args[6:].strip()
-        interpreter.basic_do_stack.append(("UNTIL", condition))
-        return f"🔄 DO UNTIL {condition}\n"
-    return f"❌ Invalid DO syntax: {args}\n"
+    """DO [WHILE/UNTIL cond] - Start do loop"""
+    # Handle DO WHILE/UNTIL condition if present
+    args = args.strip().upper()
+    should_run = True
+    
+    if args.startswith("WHILE "):
+        cond = args[6:].strip()
+        try:
+            val = interpreter.evaluate_expression(cond)
+            should_run = (val != 0)
+        except (ValueError, TypeError):
+            return "❌ Invalid DO WHILE condition\n"
+    elif args.startswith("UNTIL "):
+        cond = args[6:].strip()
+        try:
+            val = interpreter.evaluate_expression(cond)
+            should_run = (val == 0)
+        except (ValueError, TypeError):
+            return "❌ Invalid DO UNTIL condition\n"
+            
+    if should_run:
+        interpreter.basic_do_stack.append((interpreter.current_line, "DO"))
+        return ""
+    
+    # Skip to LOOP
+    loop_idx = _find_matching_loop(interpreter, interpreter.current_line)
+    if loop_idx == -1:
+        return "❌ DO without LOOP\n"
+    interpreter.current_line = loop_idx
+    return ""
 
 
 def _basic_loop(interpreter: "Interpreter", args: str) -> str:
-    """LOOP [WHILE condition|UNTIL condition] - End do loop"""
+    """LOOP [WHILE/UNTIL cond] - End do loop"""
     if not interpreter.basic_do_stack:
         return "❌ LOOP without DO\n"
-
-    loop_type, condition = interpreter.basic_do_stack.pop()
-    args = args.strip()
-
-    if not args and not condition:
-        # Simple LOOP
-        interpreter.basic_do_stack.append((loop_type, condition))  # Continue
-        return "🔄 LOOP - continuing\n"
-
-    # Check condition
-    if args.upper().startswith("WHILE "):
-        loop_condition = args[6:].strip()
+        
+    do_idx, _ = interpreter.basic_do_stack.pop()
+    
+    # Check exit condition
+    args = args.strip().upper()
+    should_loop = True
+    
+    if args.startswith("WHILE "):
+        cond = args[6:].strip()
         try:
-            result = interpreter.evaluate_expression(loop_condition)
-            if result != 0:  # True
-                interpreter.basic_do_stack.append((loop_type, condition))
-                return f"🔄 LOOP WHILE {loop_condition} (true, continuing)\n"
-            return f"🔄 LOOP WHILE {loop_condition} (false, exiting)\n"
-        except (ValueError, TypeError, ZeroDivisionError) as e:
-            return f"❌ LOOP WHILE evaluation error: {e}\n"
-
-    if args.upper().startswith("UNTIL "):
-        loop_condition = args[6:].strip()
+            val = interpreter.evaluate_expression(cond)
+            should_loop = (val != 0)
+        except (ValueError, TypeError):
+            return "❌ Invalid LOOP WHILE condition\n"
+    elif args.startswith("UNTIL "):
+        cond = args[6:].strip()
         try:
-            result = interpreter.evaluate_expression(loop_condition)
-            if result == 0:  # False (UNTIL waits for true)
-                interpreter.basic_do_stack.append((loop_type, condition))
-                return f"🔄 LOOP UNTIL {loop_condition} (false, continuing)\n"
-            return f"🔄 LOOP UNTIL {loop_condition} (true, exiting)\n"
-        except (ValueError, TypeError, ZeroDivisionError) as e:
-            return f"❌ LOOP UNTIL evaluation error: {e}\n"
-
-    # LOOP with no condition specified - check original DO condition
-    if loop_type == "WHILE" and condition:
-        try:
-            result = interpreter.evaluate_expression(condition)
-            if result != 0:  # True
-                interpreter.basic_do_stack.append((loop_type, condition))  # Continue
-                return f"🔄 LOOP (while {condition} true, continuing)\n"
-            return f"🔄 LOOP (while {condition} false, exiting)\n"
-        except (ValueError, TypeError, ZeroDivisionError) as e:
-            return f"❌ LOOP evaluation error: {e}\n"
-
-    if loop_type == "UNTIL" and condition:
-        try:
-            result = interpreter.evaluate_expression(condition)
-            if result == 0:  # False (UNTIL waits for true)
-                interpreter.basic_do_stack.append((loop_type, condition))  # Continue
-                return f"🔄 LOOP (until {condition} false, continuing)\n"
-            return f"🔄 LOOP (until {condition} true, exiting)\n"
-        except (ValueError, TypeError, ZeroDivisionError) as e:
-            return f"❌ LOOP evaluation error: {e}\n"
-
-    # Simple DO or infinite loop
-    interpreter.basic_do_stack.append((loop_type, condition))
-    return "🔄 LOOP - continuing\n"
+            val = interpreter.evaluate_expression(cond)
+            should_loop = (val == 0)  # Loop until true (so loop while false)
+        except (ValueError, TypeError):
+            return "❌ Invalid LOOP UNTIL condition\n"
+            
+    if should_loop:
+        # Jump back to DO (re-execute DO check if any)
+        interpreter.current_line = do_idx - 1
+        # Push back stack item since we are looping
+        interpreter.basic_do_stack.append((do_idx, "DO"))
+        
+    return ""
 
 
 def _basic_select(interpreter: "Interpreter", args: str) -> str:
@@ -1197,6 +1230,8 @@ def _basic_read(interpreter: "Interpreter", args: str) -> str:
 
         val_str = interpreter.data_values[interpreter.data_pointer]
         interpreter.data_pointer += 1
+        
+        # print(f"DEBUG: READ {var_name} = {val_str}")
 
         try:
             # Try to parse as number
