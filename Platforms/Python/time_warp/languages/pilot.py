@@ -305,6 +305,21 @@ def _pilot_graphics_command(
             turtle.setbgcolor(r, g, b)
         except (ValueError, TypeError):
             return "❌ G: Invalid color values\n"
+    elif cmd == "SETPENCOLOR":
+        if "," in arg_str:
+            args = arg_str.split(",")
+        else:
+            args = arg_str.split()
+            
+        if len(args) < 3:
+            return "❌ G: SETPENCOLOR requires r, g, b\n"
+        try:
+            r = int(eval_arg(args[0]))
+            g = int(eval_arg(args[1]))
+            b = int(eval_arg(args[2]))
+            turtle.setcolor(r, g, b)
+        except (ValueError, TypeError):
+            return "❌ G: Invalid color values\n"
     elif cmd == "SETPENWIDTH":
         if not arg_str:
             return "❌ G: SETPENWIDTH requires width\n"

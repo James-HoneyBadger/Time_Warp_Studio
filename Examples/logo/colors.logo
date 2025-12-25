@@ -1,10 +1,18 @@
 ; ========================================
-; Colors - Time Warp Logo
-; Demonstrates: SETPENCOLOR, SETPENWIDTH
+; COLOR AND PEN CONTROL
 ; ========================================
+; Demonstrates: SETPENCOLOR command
+;               SETPENWIDTH command
+;               Color names (RED, GREEN, BLUE, etc.)
+;               RGB color values
+;
 
+PRINT [Demonstrating Color and Pen Control]
+
+; Set pen width before drawing
 SETPENWIDTH 5
 
+; Named colors - simple and clear
 SETPENCOLOR "RED"
 FORWARD 50
 
@@ -14,5 +22,22 @@ FORWARD 50
 SETPENCOLOR "BLUE"
 FORWARD 50
 
-SETPENCOLOR "PINK"
+; More named colors
+SETPENCOLOR "YELLOW"
 FORWARD 50
+
+SETPENCOLOR "CYAN"
+FORWARD 50
+
+; Adjust pen width
+SETPENWIDTH 3
+SETPENCOLOR "MAGENTA"
+FORWARD 40
+
+; Even thinner pen
+SETPENWIDTH 1
+SETPENCOLOR "WHITE"
+FORWARD 30
+
+PRINT [Color demonstration complete!]
+                                                         

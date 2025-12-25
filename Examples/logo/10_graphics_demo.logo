@@ -1,0 +1,97 @@
+; ========================================
+; COMPREHENSIVE GRAPHICS DEMO
+; ========================================
+; Demonstrates: All basic graphics commands
+;               Pen up/down
+;               Movement and positioning
+;               Color control
+;               Procedure composition
+;
+
+; Draw a rectangle with specific dimensions
+TO RECTANGLE :WIDTH :HEIGHT
+    REPEAT 2 [
+        FORWARD :WIDTH
+        RIGHT 90
+        FORWARD :HEIGHT
+        RIGHT 90
+    ]
+END
+
+; Draw a triangle
+TO TRIANGLE :SIZE
+    REPEAT 3 [
+        FORWARD :SIZE
+        RIGHT 120
+    ]
+END
+
+; Draw a star pattern
+TO STAR :SIZE :POINTS
+    REPEAT :POINTS [
+        FORWARD :SIZE
+        RIGHT (360 / :POINTS)
+    ]
+END
+
+; Draw a grid of shapes
+TO GRID_DEMO
+    PRINT [Drawing a grid of shapes]
+    
+    ; Start position
+    HOME
+    
+    ; Row 1: Rectangles
+    SETPENCOLOR "RED"
+    SETPENWIDTH 3
+    RECTANGLE 40 30
+    
+    PENUP
+    FORWARD 80
+    PENDOWN
+    
+    SETPENCOLOR "GREEN"
+    RECTANGLE 50 40
+    
+    ; Row 2: Triangles
+    PENUP
+    HOME
+    RIGHT 180
+    FORWARD 100
+    LEFT 90
+    PENDOWN
+    
+    SETPENCOLOR "BLUE"
+    SETPENWIDTH 2
+    TRIANGLE 40
+    
+    PENUP
+    FORWARD 80
+    PENDOWN
+    
+    SETPENCOLOR "YELLOW"
+    TRIANGLE 50
+    
+    ; Row 3: Stars
+    PENUP
+    HOME
+    RIGHT 90
+    FORWARD 100
+    LEFT 90
+    PENDOWN
+    
+    SETPENCOLOR "CYAN"
+    SETPENWIDTH 2
+    STAR 30 5
+    
+    PENUP
+    FORWARD 100
+    PENDOWN
+    
+    SETPENCOLOR "MAGENTA"
+    STAR 35 6
+END
+
+; Run the demo
+GRID_DEMO
+PRINT [Graphics demo complete!]

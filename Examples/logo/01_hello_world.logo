@@ -1,6 +1,17 @@
-TO HELLO
+                                                                                                                                                                                                                                                                                                           ; ========================================
+; HELLO WORLD - Logo First Program
+; ========================================
+; Demonstrates: PRINT command and procedures
+; 
+
+TO GREET
     PRINT [Hello, LOGO!]
     PRINT [Welcome to Time Warp IDE]
 END
 
-HELLO
+; Call the procedure
+GREET
+
+; More output
+PRINT [Graphics is ready to draw!]
+                                                                                                                                             

@@ -23,11 +23,28 @@ __pycache__/
 # Archives
 *.tar.gz
 *.zip
+
 # Development tools and binaries
 tools/swiftly
+
 # Visual Studio
 .vs/
 *.user
+
+# Rust build artifacts
+target/
+Cargo.lock
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# IDE
+.idea/
+*.swp
+*.swo
+*~
 *.suo
 *.sln
 *.opensdf

@@ -14,28 +14,31 @@
 140 
 150 PRINT ""
 160 PRINT "===== INPUT DEMONSTRATION ====="
-170 PRINT "Enter your name (default: Programmer):"
+170 PRINT "Enter your name (or press Enter for 'Friend'):"
 180 INPUT NAME$
-190 IF NAME$ = "" THEN NAME$ = "Programmer"
-200 
-210 PRINT "Hello, " + NAME$ + "!"
-220 
-230 PRINT "Enter a number (default: 10):"
+190 IF NAME$ = "" THEN NAME$ = "Friend"
+200 PRINT "Hello, " + NAME$ + "!"
+210 
+220 PRINT ""
+230 PRINT "Enter a number (1-10):"
 240 INPUT NUM
-250 IF NUM = 0 THEN NUM = 10
-260 
-270 PRINT "You entered: " + STR$(NUM)
-280 PRINT "Doubled: " + STR$(NUM * 2)
-290 
-300 PRINT ""
-310 PRINT "===== FORMATTED TABLE ====="
-320 PRINT "NUM  | SQUARE | CUBE  | SQRT"
-330 PRINT "-----+--------+-------+-----"
-340 FOR I = 1 TO 10
-350     LET SQ = I * I
-360     LET CU = I * I * I
-370     LET RT = INT(SQR(I) * 10) / 10
-371     PRINT STR$(I) + "    | " + STR$(SQ) + "    | " + STR$(CU) + "    | " + STR$(RT)
-380 NEXT I
-390 
-400 END
+250 
+260 PRINT ""
+270 PRINT "===== SIMPLE CALCULATIONS ====="
+280 PRINT "Number: " + STR$(NUM)
+290 PRINT "Squared: " + STR$(NUM * NUM)
+300 PRINT "Cubed: " + STR$(NUM * NUM * NUM)
+310 
+320 PRINT ""
+330 PRINT "===== FORMATTED TABLE ====="
+340 PRINT "NUM  | SQUARE | CUBE"
+350 PRINT "-----+--------+------"
+360 FOR I = 1 TO 5
+370     LET SQ = I * I
+380     LET CU = I * I * I
+390     PRINT STR$(I) + "    | " + STR$(SQ) + "    | " + STR$(CU)
+400 NEXT I
+410 
+420 PRINT ""
+430 PRINT "End of program"
+440 END

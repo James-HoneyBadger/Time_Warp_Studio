@@ -1,244 +1,236 @@
 # Time Warp IDE
 
-Time Warp IDE is an educational programming environment that unifies BASIC, PILOT, and Logo.
-**The project is currently transitioning to a high-performance Rust implementation.**
+**An educational programming environment for learning multiple languages with integrated turtle graphics and game development.**
 
-## Rust Version (New!)
+Time Warp IDE is a retro-inspired, modern IDE designed to teach programming concepts across multiple languages: **BASIC**, **PILOT**, **Logo**, **Pascal**, **Prolog**, **Forth**, and **C**. It features real-time graphics, immediate-mode REPL, comprehensive examples, and an intuitive interface.
 
-The new native Rust version is located in `Platforms/Rust` and provides a blazing fast, single-binary experience.
+## Quick Links
 
-To run the Rust version:
-```bash
-./tw
+- **[User Guide](docs/user-guide/README.md)** - Getting started, basic usage, features
+- **[Programming Tutorials](docs/tutorials/README.md)** - Language-specific tutorials
+- **[Technical Reference](docs/technical/README.md)** - Architecture, API, advanced topics
+- **[Quick Start](QUICKSTART.md)** - Launch in 60 seconds
+- **[Code of Conduct](CODE_OF_CONDUCT.md)** - Community standards and reporting
+
+## What You Can Do
+
+### 🎨 Create Graphics
+```logo
+REPEAT 4 [FORWARD 100 RIGHT 90]  ; Draw a square
 ```
 
-## Python Version (Legacy)
+### 🔢 Learn Programming Fundamentals
+```basic
+PRINT "What's your name?"
+INPUT NAME$
+PRINT "Hello, " + NAME$ + "!"
+```
 
-The original PySide6 implementation is still available but is being superseded by the Rust version.
+### 🤖 Build Interactive Programs
+```pilot
+MATCH: ACCEPT X
+  C: "STOP" → JUMP END
+  C: ELSE → PRINT "Continue"
+  J: MATCH
+END:
+```
 
-**Current release:** 5.0.1 (December 11, 2025)
+### 🎮 Develop Games
+```forth
+: DRAW-PLAYER PEN-DOWN 10 FORWARD PEN-UP ;
+: GAME CLEAR 0 MOVE-X ! DRAW-PLAYER ;
+```
 
-## Highlights (Rust Version)
+## Key Features
 
-- **Native Performance**: Instant startup and execution.
-- **Integrated Graphics**: Real-time Turtle Graphics.
-- **Multi-Language**: BASIC, PILOT, Logo (more coming soon).
-- **Single Binary**: No Python dependencies required.
+| Feature | Python ✅ | Rust ⚠️ |
+|---------|-----------|---------|
+| **7 Programming Languages** | Full | Partial |
+| **Turtle Graphics** | Full featured | Basic |
+| **Code Editor** | Tabs, snippets, themes | Basic |
+| **Immediate Mode (REPL)** | Yes | Yes |
+| **Variable Inspector** | Yes | No |
+| **Debugging Tools** | Breakpoints, debug panel | No |
+| **Graphics Modes** | Multiple | Single |
+| **Themes** | 23 themes | 4 themes |
+| **Educational Examples** | 50+ examples | Limited |
+| **Performance** | Good | Excellent |
 
-## Highlights (Legacy Python)
+## Getting Started
 
-- **Three core languages**: BASIC, PILOT, and Logo with full feature parity (Pascal, Prolog, and C available experimentally)
-- **Advanced UI toolkit**: Multiple screen modes, code editor with snippets, variable inspector, debug panel, focus mode, CRT effect, and accessibility features
-- **Real-time turtle graphics**: Full-featured canvas with zoom/pan, color support, pen width control, sprite visibility, and graphical output modes
-- **Rich development environment**: Syntax highlighting, error explorer, code search/replace, snippet system, and retro cassette animations
-- **Extended capabilities**: Music playback, particle systems, fractal generation, gamepad support, collaborative editing client, and speech synthesis
-- **Educational workflow**: Emoji-prefixed output, immediate feedback, comprehensive examples, and intuitive error messages
+### Installation & Launch (Python - Recommended)
 
-## Quick Start
+**Easiest Way - Automated Launch Script:**
 
 ```bash
-# Clone and navigate to Python implementation
-git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp/Platforms/Python
+# Clone and enter repository
+git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
+cd Time_Warp_Studio
 
-# Create virtual environment (recommended)
+# Linux/macOS
+./launch_ide.sh
+
+# Windows
+launch_ide.bat
+```
+
+The script automatically:
+- Creates a virtual environment
+- Installs all dependencies
+- Launches the IDE
+
+**Manual Setup (Alternative):**
+
+```bash
+cd Platforms/Python
 python3 -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install and run
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 python time_warp_ide.py
 ```
 
-For quick validation:
-```bash
-cd ../../  # Back to repo root
-python Tests/run_tests.py --quick
+See [LAUNCHING.md](LAUNCHING.md) for detailed instructions and troubleshooting.
+
+### Quick Examples
+
+**1. Hello World in BASIC**
+```basic
+PRINT "Hello, World!"
 ```
 
-## Documentation
+**2. Draw a Circle in Logo**
+```logo
+REPEAT 360 [FORWARD 1 RIGHT 1]
+```
 
-All guides live in `Docs/` with an index at `Docs/INDEX.md`:
+**3. Guessing Game in PILOT**
+```pilot
+ACCEPT X(N)
+MATCH: ACCEPT Y(N)
+  C: Y = X → PRINT "Correct!"
+  C: ELSE → JUMP ACCEPT
+JUMP ACCEPT
+```
 
-- `Docs/student/` – Student lesson book with progressive projects
-- `Docs/teacher/` – Curriculum plans, assessments, and classroom strategies
-- `Docs/user/` – User manual and programming guide
-- `Docs/developer/` – Architecture, contributing standards, and technical references
-- `Docs/installation/` – Platform-specific setup guides and troubleshooting
-
-## Repository Layout
+## Project Structure
 
 ```
 Time_Warp_Studio/
 ├── Platforms/
-│   └── Python/                     # Official actively-maintained implementation
-│       ├── time_warp_ide.py       # Main entry point (PySide6)
-│       └── time_warp/
-│           ├── core/              # Interpreter and support modules
-│           │   ├── interpreter.py # Main dispatch logic
-│           │   ├── game_support.py
-│           │   ├── gamepad.py
-│           │   ├── music.py
-│           │   ├── particles.py
-│           │   ├── shapes.py
-│           │   ├── speech.py
-│           │   └── fractals.py
-│           ├── languages/         # BASIC, PILOT, Logo (+ experimental Pascal, Prolog, C)
-│           │   ├── basic.py
-│           │   ├── pilot.py
-│           │   ├── logo.py
-│           │   ├── pascal.py
-│           │   ├── prolog.py
-│           │   └── c_lang_fixed.py
-│           ├── ui/                # Qt6 UI components
-│           │   ├── main_window.py
-│           │   ├── editor.py
-│           │   ├── canvas.py
-│           │   ├── output.py
-│           │   ├── debug_panel.py
-│           │   ├── variable_inspector.py
-│           │   ├── error_explorer.py
-│           │   ├── screen_modes.py
-│           │   ├── themes.py
-│           │   ├── focus_mode.py
-│           │   ├── crt_effect.py
-│           │   ├── cassette_animation.py
-│           │   ├── accessibility.py
-│           │   ├── collaboration_client.py
-│           │   ├── snippets.py
-│           │   ├── snippet_dialog.py
-│           │   └── onboarding.py
-│           └── graphics/          # Turtle graphics state and rendering
-├── Docs/                          # Complete documentation library
-├── Examples/                      # Sample programs (BASIC, PILOT, Logo, Pascal, C, Prolog)
-├── Tests/                         # Pytest suite (unit, integration, conformance)
-├── Core_Spec/                     # Language specifications
-└── .github/                       # GitHub workflows and configurations
+│   ├── Python/          ← Main implementation (PySide6)
+│   └── Rust/            ← Experimental (early stage)
+├── Examples/            ← 50+ sample programs
+├── docs/                ← Comprehensive documentation
+├── Scripts/             ← Build and utility scripts
+└── README.md            ← This file
 ```
 
-## Platform Overview
+See [STRUCTURE.md](STRUCTURE.md) for detailed breakdown.
 
-| Platform | Location | Status | Notes |
-| - | - | - | - |
-| Python | `Platforms/Python/` | ✅ Active | PySide6 IDE with full feature set |
-| Browser | `Platforms/Browser/` | 🧪 Experimental | HTML/JS prototype for research |
-| Windows2000 | `Platforms/Windows2000/` | 🧪 Historical | Legacy build scripts (archival) |
+## Documentation Structure
 
-Other platforms (Rust, Go, Amiga, Haiku, Apple, OS/2, DOS) have been removed or archived.
+**For Users:**
+- [User Guide](docs/user-guide/README.md) - IDE features, menus, panels
+- [Tutorials](docs/tutorials/README.md) - Learn each language
+- [Examples](Examples/) - Ready-to-run sample programs
 
-## Features Overview
+**For Developers:**
+- [Technical Reference](docs/technical/README.md) - Architecture, components
+- [Building Guide](INSTALL_NATIVE.md) - Native builds, Rust port
+- [API Documentation](docs/technical/api.md) - Interpreter interfaces
 
-### Languages
-- **BASIC**: Full interpreter with variables, loops, conditionals, subroutines, and I/O
-- **PILOT**: Structured language with acceptance, computation, and output features
-- **Logo**: Complete turtle graphics with commands for movement, drawing, color, and sprites
-- **Experimental**: Pascal, Prolog, and C implementations available but incomplete
+## Supported Languages
 
-### User Interface
-- **Multiple Screen Modes**: Switch between text, graphics, single, and combined modes
-- **Code Editor**: Syntax highlighting, line numbers, code snippets, search/replace
-- **Variable Inspector**: Real-time display of program variables and values
-- **Debug Panel**: Step through execution, breakpoints, and execution history
-- **Error Explorer**: Interactive error details with suggestions
-- **Focus Mode**: Distraction-free coding environment
-- **Accessibility**: Keyboard navigation, high contrast themes, screen reader support
+| Language | Status | Features | Examples |
+|----------|--------|----------|----------|
+| **BASIC** | ✅ Full | Variables, loops, functions | 11 examples |
+| **PILOT** | ✅ Full | Pattern matching, branching | 9 examples |
+| **Logo** | ✅ Full | Turtle graphics, recursion | 9 examples |
+| **Pascal** | ✅ Experimental | Procedures, arrays | 9 examples |
+| **Prolog** | ✅ Experimental | Logic, rules, facts | 5 examples |
+| **Forth** | ✅ Experimental | Stack-based, extensible | 5 examples |
+| **C** | ✅ Experimental | Functions, arrays | 8 examples |
 
-### Graphics & Animation
-- **Turtle Canvas**: Full 2D drawing with color, pen width, and sprite visibility
-- **Zoom & Pan**: Interactive canvas navigation
-- **Cassette Animation**: Retro loading animation effects
-- **CRT Effect**: Vintage monitor screen emulation
-- **Particle Systems**: Visual effects for educational demonstrations
+## Requirements
+
+**Python Version (Recommended)**
+- Python 3.8+
+- PySide6
+- Pillow
+- (Optional: pyfirmata, RPi.GPIO for hardware)
+
+**Rust Version (Experimental)**
+- Rust 1.70+
+- egui 0.24
+- Single binary, no dependencies
+
+## IDE Features
+
+### Editor & Environment
+- 📝 **Code Editor** with syntax highlighting and code snippets
+- 🎨 **Graphics Canvas** with real-time rendering
+- 🔧 **Immediate Mode** (REPL) for quick testing
+- 📊 **Variable Inspector** to track program state
+- 🎯 **Debug Panel** with breakpoints and step execution
+- 🌈 **8 Themes** including Dracula, Monokai, Solarized
 
 ### Advanced Features
-- **Code Snippets**: Reusable template library for common patterns
-- **Collaborative Editing**: Real-time multi-user code editing client
-- **Music Playback**: MIDI/WAV support for multimedia projects
-- **Gamepad Support**: Controller input for interactive programs
-- **Speech Synthesis**: Text-to-speech capabilities for accessibility and games
-- **Fractal Generation**: Mathematical visualization tools
-- **Onboarding Wizard**: Interactive first-run guide
+- 🎵 **Sound Effects** and music playback
+- 📱 **Gamepad Support** for interactive programs
+- 🔍 **Error Explorer** with detailed messages
+- 💾 **File Management** with recent files
+- 🎨 **Graphical Output Modes** for different screen styles
 
-## Development & Contribution
+### Programming Capabilities
+- **7 Languages** in one environment
+- **Turtle Graphics** with full color support
+- **Recursive Functions** and advanced language features
+- **File I/O** operations
+- **Hardware Integration** (Raspberry Pi, Arduino)
+- **Immediate Execution** with REPL
+- **Comprehensive Error Messages** with emoji prefixes
 
-### Project Philosophy
-1. **Educational First** – Every design choice prioritizes learning
-2. **Clear Feedback** – Error messages explain, never confuse
-3. **Visual Learning** – Built-in graphics make abstract concepts tangible
-4. **Stateless Executors** – Language processors return text; UI manages state
-5. **Safe Evaluation** – Use `safe_eval()` for expressions, never Python's `eval()`
+## Learning Path
 
-### Development Guidelines
-- Language executors are stateless command processors
-- All output uses emoji prefixes: ❌ (error), ✅ (success), ℹ️ (info), 🐢 (turtle), 🚀 (event)
-- Turtle graphics state lives in the UI, not the executor
-- Optional hardware integrations default to simulation mode
+1. **Start with Logo** - Visual, immediate feedback
+2. **Move to BASIC** - Familiar, structured language
+3. **Explore PILOT** - Pattern matching, AI concepts
+4. **Experiment with others** - Pascal, Prolog, Forth, C
 
-### Testing
+See [Tutorials](docs/tutorials/README.md) for language-specific learning guides.
 
-```bash
-cd Platforms/Python
+## Examples
 
-# Activate virtual environment
-source .venv/bin/activate
+The `Examples/` directory contains 50+ ready-to-run programs demonstrating each language. Open any file in the IDE and click Run:
 
-# Run quick smoke tests
-python ../../Tests/run_tests.py --quick
-
-# Run full test suite
-python ../../Tests/run_tests.py --comprehensive
-
-# Run specific test file
-pytest ../../Tests/test_conformance_basic_pilot_logo.py -v
-```
-
-### Adding a New Language
-
-1. Create executor in `time_warp/languages/new_language.py` implementing the `LanguageExecutor` interface
-2. Register in `time_warp/core/interpreter.py`
-3. Add syntax highlighting to UI
-4. Add unit tests and example programs
-
-## System Requirements
-
-### Minimum
-- **OS**: Linux (kernel 3.10+), macOS 10.13+, Windows 7+
-- **CPU**: 1 GHz processor with SSSE3/SSE4.1 support
-- **RAM**: 256 MB
-- **Disk**: 50 MB free space
-- **Display**: 800×600 resolution
-
-### Recommended
-- **CPU**: Modern multi-core processor
-- **RAM**: 512 MB or more
-- **Disk**: 100 MB for full documentation and examples
-- **Display**: 1024×768 or higher
+- **Basic**: Hello world, loops, arrays, games
+- **Logo**: Shapes, patterns, fractals, recursion
+- **PILOT**: Quiz games, pattern matching, interactive programs
+- Plus examples for Pascal, Prolog, Forth, and C
 
 ## Contributing
 
-Contributions are welcome! Start with:
-1. Read [Docs/developer/00-developer-guide.md](Docs/developer/00-developer-guide.md)
-2. Check [FEATURE_IMPLEMENTATION_SUMMARY.md](FEATURE_IMPLEMENTATION_SUMMARY.md)
-3. Review [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)
-
-Focus areas that help most:
-- Example programs and educational materials
-- Documentation improvements
-- Bug reports with detailed reproduction steps
-- Feature suggestions with educational use cases
-
-## Community & Support
-
-- **Issues & Bug Reports**: <https://github.com/James-HoneyBadger/Time_Warp/issues>
-- **Discussions & Q&A**: <https://github.com/James-HoneyBadger/Time_Warp/discussions>
-- **Releases & Downloads**: <https://github.com/James-HoneyBadger/Time_Warp/releases>
+Contributions are welcome! Check the [Technical Reference](docs/technical/README.md) for architecture details and development guidelines.
 
 ## License
 
-Time Warp IDE is released under the MIT License. See [LICENSE](LICENSE) for details.
+See [LICENSE](LICENSE) file.
+
+## Version History
+
+**5.0.1** (December 2025)
+- Stabilized Python implementation
+- Experimental Rust port available
+- 50+ examples for all languages
+- 8 themes, full IDE features
+
+## Support & Resources
+
+- 📚 [Full Documentation](docs/)
+- 💬 [Examples](Examples/)
+- 🔧 [Technical Guide](docs/technical/)
+- 🎓 [Tutorials](docs/tutorials/)
 
 ---
 
-**Maintained by:** James Temple  
-**Primary Contact:** james@honey-badger.org  
-**Repository:** <https://github.com/James-HoneyBadger/Time_Warp>
+**Time Warp IDE** - Where retro programming meets modern design.

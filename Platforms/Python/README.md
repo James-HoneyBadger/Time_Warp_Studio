@@ -40,7 +40,7 @@ The **Python implementation** of Time Warp IDE prioritizes **accessibility and e
 - 🎨 **Modern PySide6 UI**: Professional desktop interface
 - 🐢 **Interactive Canvas**: Zoom/pan turtle graphics with coordinate axes
 - 📝 **Code Editor**: Syntax highlighting and line numbers
-- 🎨 **8 Themes**: Dracula, Monokai, Solarized Dark, Ocean, Spring, Sunset, Candy, Forest
+- 🎨 **23 Themes**: Dark, Light, Dracula, Monokai, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized Dark/Light, Ocean, Spring, retro (CGA, C64, Apple II, DOS Blue, ZX Spectrum), and more
 - 📁 **File Management**: Open/save with recent files history
 - ▶️ **Execution Controls**: Run (F5), Stop (Shift+F5), Clear
 - 📊 **Output Panel**: Colored text with emoji indicators
@@ -126,7 +126,7 @@ python time_warp_ide.py
 - 🐢 Interactive turtle graphics canvas with zoom/pan
 - 📊 Multi-tab output panel (Text + Graphics)
 - 💾 File operations with recent files menu
-- 🌈 8 beautiful color themes (Dracula, Monokai, Solarized Dark, Ocean, Spring, Sunset, Candy, Forest)
+- 🌈 23 beautiful color themes (dark, light, retro, modern with syntax highlighting for all)
 - ⚡ Run/Stop execution with real-time feedback
 - 🎯 Auto-switch to Graphics tab when drawing
 
@@ -207,7 +207,7 @@ time_warp/
     ├── main_window.py         # PySide6 main window
     ├── canvas.py              # Turtle graphics canvas
     ├── code_editor.py         # Syntax-aware editor
-    └── theme_manager.py       # Theme system (8 themes)
+    └── theme_manager.py       # Theme system (23 themes)
 ```
 
 **Key Design:** Time Warp is a **unified environment** - BASIC, PILOT, and Logo commands work together in a single program. The `interpreter.py` engine handles all three syntaxes seamlessly.

@@ -1,14 +1,16 @@
 {
-  Hello World - Basic Program Structure
+  HELLO WORLD - Pascal First Program
   
   This program demonstrates:
-  - Program and End keywords
-  - WriteLn for output
+  - Program declaration and structure
+  - Main Begin...End block
+  - WriteLn for console output
   - Comments with braces
 }
 
 Program HelloWorld;
 Begin
   WriteLn('Hello, World!');
-  WriteLn('Welcome to Pascal programming!');
+  WriteLn('Welcome to Time Warp IDE Pascal');
+  WriteLn('This is a simple Pascal program.');
 End.

@@ -1,8 +1,10 @@
 /*
- * Hello World - Your First C Program
+ * HELLO WORLD - Your First C Program
  * 
  * This program demonstrates:
- * - Basic program structure
+ * - Standard C program structure
+ * - Including the stdio library
+ * - The main function
  * - Output with printf()
  * - Return value from main()
  */
@@ -12,5 +14,6 @@
 int main() {
     printf("Hello, World!\n");
     printf("Welcome to C programming!\n");
+    printf("Time Warp IDE supports C language.\n");
     return 0;
 }

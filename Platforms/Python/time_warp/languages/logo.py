@@ -207,7 +207,6 @@ def _execute_single_logo_command(
     if not words:
         return ""
     cmd_name = words[0]
-    print(f"DEBUG: Executing {cmd_name} with args {words[1:]}")
     args = words[1:] if len(words) > 1 else []
     # Commands that require a TurtleState (graphics) to be available
     needs_turtle = {

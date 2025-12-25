@@ -1,3 +1,11 @@
+; ========================================
+; DRAWING SQUARES
+; ========================================
+; Demonstrates: Procedures with parameters
+;               REPEAT loops
+;               Basic movement commands
+;
+
 TO SQUARE :SIZE
     REPEAT 4 [
         FORWARD :SIZE
@@ -7,15 +15,21 @@ END
 
 TO SQUARE_DEMO
     PRINT [Drawing Squares of Different Sizes]
+    
     SQUARE 50
     PENUP
     FORWARD 100
     PENDOWN
+    
     SQUARE 100
     PENUP
+    RIGHT 90
     FORWARD 150
+    LEFT 90
     PENDOWN
+    
     SQUARE 150
 END
 
+; Run the demo
 SQUARE_DEMO

@@ -1,10 +1,16 @@
 REMARK ================================================
 REMARK HELLO WORLD - Basic PILOT Program
 REMARK ================================================
+REMARK
+REMARK This is a simple PILOT program demonstrating
+REMARK basic input/output and program structure.
+REMARK
 
-ACCEPT Hello
-PRINT Hello
 PRINT Welcome to Time Warp IDE PILOT
+PRINT
+ACCEPT USER_NAME What is your name?
+PRINT Hello, $USER_NAME!
+PRINT This is your first PILOT program.
 PRINT
 PRINT Program complete.
 STOP
