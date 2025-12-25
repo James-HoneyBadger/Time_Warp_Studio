@@ -306,7 +306,9 @@ class MainWindow(QMainWindow):
             rect = painter.viewport()
             size = image.size()
             size.scale(rect.size(), Qt.AspectRatioMode.KeepAspectRatio)
-            painter.setViewport(rect.x(), rect.y(), size.width(), size.height())
+            painter.setViewport(
+                rect.x(), rect.y(), size.width(), size.height()
+            )
             painter.setWindow(image.rect())
             painter.drawImage(0, 0, image)
             painter.end()
@@ -350,10 +352,11 @@ class MainWindow(QMainWindow):
         else:
             session = profiler.end_session()
             if session:
-                self.statusbar.showMessage(
-                    f"⏱️ Profiling stopped: {session.total_lines_executed} lines",
-                    3000,
+                msg = (
+                    f"⏱️ Profiling stopped: "
+                    f"{session.total_lines_executed} lines"
                 )
+                self.statusbar.showMessage(msg, 3000)
 
     def _show_profile_report(self, _checked: bool = False):
         """Show the performance profile report."""
@@ -474,7 +477,9 @@ class MainWindow(QMainWindow):
 
             # Update status bar
             if hasattr(self, "language_label"):
-                self.language_label.setText(f"Language: {language.friendly_name()}")
+                lang_name = language.friendly_name()
+                msg = f"Language: {lang_name}"
+                self.language_label.setText(msg)
 
     def check_save_changes_for_tab(self, tab_index):
         """Check if tab has unsaved changes and prompt to save."""
@@ -650,7 +655,9 @@ class MainWindow(QMainWindow):
         # Connect immediate mode to output panel and canvas
         self.immediate_mode.set_canvas(self.canvas)
         self.immediate_mode.set_output_panel(self.output)
-        self.immediate_mode.variables_updated.connect(self.on_variables_updated)
+        self.immediate_mode.variables_updated.connect(
+            self.on_variables_updated
+        )
 
         # Variable inspector
         self.variable_inspector = VariableInspector(self)
@@ -922,7 +929,9 @@ class MainWindow(QMainWindow):
             is_current = font_family == self.theme_manager.current_font_family
             font_action.setChecked(is_current)
             font_action.triggered.connect(
-                lambda checked, family=font_family: self.change_font_family(family)
+                lambda checked, family=font_family: (
+                    self.change_font_family(family)
+                )
             )
             self.font_family_group.addAction(font_action)
             font_family_menu.addAction(font_action)
@@ -988,7 +997,9 @@ class MainWindow(QMainWindow):
         screen_mode_menu.addSeparator()
 
         for mode in self.screen_mode_manager.get_all_modes():
-            mode_action = QAction(f"MODE {mode.mode_number}: {mode.name}", self)
+            mode_action = QAction(
+                f"MODE {mode.mode_number}: {mode.name}", self
+            )
             mode_action.setCheckable(True)
             mode_action.setChecked(False)
             mode_action.triggered.connect(
@@ -1123,7 +1134,8 @@ class MainWindow(QMainWindow):
         toolbar.setMovable(False)
         toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
         toolbar.setIconSize(toolbar.iconSize())  # Use default icon size
-        toolbar.setMinimumHeight(44)  # Toolbar height for better button appearance
+        # Toolbar height for better button appearance
+        toolbar.setMinimumHeight(44)
         toolbar.setStyleSheet(
             """
             QToolBar {
@@ -1180,7 +1192,8 @@ class MainWindow(QMainWindow):
         # Language selector
         toolbar.addWidget(QLabel(" Language: "))
         self.language_combo = QComboBox()
-        self.language_combo.setToolTip("Select programming language for current tab")
+        tooltip_text = "Select programming language for current tab"
+        self.language_combo.setToolTip(tooltip_text)
         self.language_combo.setStatusTip(
             "Change the syntax highlighting and execution engine"
         )
@@ -1210,12 +1223,14 @@ class MainWindow(QMainWindow):
             }
         """
         )
-        
+
         # Populate combo
         for lang in Language:
             self.language_combo.addItem(f"💻 {lang.friendly_name()}", lang)
-            
-        self.language_combo.currentIndexChanged.connect(self.on_language_changed)
+
+        self.language_combo.currentIndexChanged.connect(
+            self.on_language_changed
+        )
         toolbar.addWidget(self.language_combo)
 
         toolbar.addSeparator()
@@ -1230,7 +1245,9 @@ class MainWindow(QMainWindow):
         self.debug_btn.setToolTip("Start debugging (F5)")
         self.debug_btn.setStatusTip("Start debugging with breakpoints")
 
-        self.continue_btn = toolbar.addAction("▶️ Continue", self.debug_continue)
+        self.continue_btn = toolbar.addAction(
+            "▶️ Continue", self.debug_continue
+        )
         self.continue_btn.setToolTip("Continue execution (F5)")
         self.continue_btn.setStatusTip("Resume execution from breakpoint")
         self.continue_btn.setEnabled(False)
@@ -1666,14 +1683,16 @@ class MainWindow(QMainWindow):
 
     def change_font_family(self, font_family):
         """Change editor font family."""
-        self.theme_manager.set_font(font_family, self.theme_manager.current_font_size)
+        size = self.theme_manager.current_font_size
+        self.theme_manager.set_font(font_family, size)
         self._apply_font_to_editors()
         self.settings.setValue("font_family", font_family)
         self.statusBar().showMessage(f"Font changed to: {font_family}")
 
     def change_font_size(self, size):
         """Change editor font size."""
-        self.theme_manager.set_font(self.theme_manager.current_font_family, size)
+        family = self.theme_manager.current_font_family
+        self.theme_manager.set_font(family, size)
         self._apply_font_to_editors()
         self.settings.setValue("font_size", size)
         self.statusBar().showMessage(f"Font size changed to: {size} pt")
@@ -1786,10 +1805,12 @@ class MainWindow(QMainWindow):
 
             if in_code_block:
                 # Escape HTML in code blocks
-                escaped = (
-                    line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                line = (
+                    line.replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
                 )
-                html_lines.append(escaped)
+                html_lines.append(line)
                 continue
 
             # Headers
@@ -1805,7 +1826,8 @@ class MainWindow(QMainWindow):
             elif line.strip() == "---":
                 html_lines.append("<hr>")
             # List items
-            elif line.strip().startswith("- ") or line.strip().startswith("* "):
+            if (line.strip().startswith("- ") or
+                    line.strip().startswith("* ")):
                 if not in_list:
                     html_lines.append("<ul>")
                     in_list = True
@@ -1822,7 +1844,9 @@ class MainWindow(QMainWindow):
                     "<code style='background:#e0e0e0;"
                     "padding:2px 4px;border-radius:3px;'>"
                 )
-                processed = re.sub(r"`(.+?)`", code_style + r"\1</code>", processed)
+                pattern = r"`(.+?)`"
+                replacement = code_style + r"\1</code>"
+                processed = re.sub(pattern, replacement, processed)
                 if processed.strip():
                     html_lines.append(f"<p>{processed}</p>")
                 else:
@@ -1856,9 +1880,8 @@ class MainWindow(QMainWindow):
         docs_path = self._get_docs_path() / "user" / "02-quick-reference.md"
 
         if not docs_path.exists():
-            QMessageBox.information(
-                self, "Help", f"Documentation for {language.upper()} not found."
-            )
+            msg = f"Documentation for {language.upper()} not found."
+            QMessageBox.information(self, "Help", msg)
             return
 
         content = docs_path.read_text(encoding="utf-8")
@@ -2080,7 +2103,8 @@ class MainWindow(QMainWindow):
 
     def debug_step_out(self):
         """Step out of current subroutine (continue until return)."""
-        # For now, just continue - proper step-out would need call stack tracking
+        # For now, just continue - proper step-out would need call
+        # stack tracking
         self.debug_continue()
 
     def _on_debug_paused(self, line: int, variables: dict):
@@ -2278,7 +2302,8 @@ class MainWindow(QMainWindow):
 
         # Buttons
         flags = (
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
         )
         buttons = QDialogButtonBox(flags)
         buttons.accepted.connect(dialog.accept)
@@ -2363,7 +2388,8 @@ class MainWindow(QMainWindow):
 
         # Buttons
         flags = (
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
         )
         buttons = QDialogButtonBox(flags)
         buttons.accepted.connect(dialog.accept)
@@ -2438,7 +2464,8 @@ class MainWindow(QMainWindow):
 
         # Buttons
         flags = (
-            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok
+            | QDialogButtonBox.StandardButton.Cancel
         )
         buttons = QDialogButtonBox(flags)
         buttons.accepted.connect(dialog.accept)
