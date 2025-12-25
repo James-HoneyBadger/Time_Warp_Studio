@@ -496,7 +496,7 @@ class MainWindow(QMainWindow):
 
     def setup_ui(self):
         """Setup main UI layout."""
-        self.setWindowTitle("🎨 Time Warp IDE - Python Edition")
+        self.setWindowTitle("🎨 Time Warp IDE v5.1.0 - Python Edition")
         self.setMinimumSize(1200, 800)
 
         # Set main window style
@@ -1612,7 +1612,7 @@ class MainWindow(QMainWindow):
 
     def update_title(self):
         """Update window title."""
-        title = "Time Warp IDE"
+        title = "Time Warp IDE v5.1.0"
 
         current_info = self.get_current_tab_info()
         if current_info["file"]:
@@ -1921,7 +1921,7 @@ class MainWindow(QMainWindow):
             self,
             "About Time Warp IDE",
             "<h2>Time Warp IDE - Python Edition</h2>"
-            "<p>Version 5.0.0 — Official PySide6 release</p>"
+            "<p>Version 5.1.0 — Official PySide6 release</p>"
             "<p>Educational programming environment supporting:</p>"
             "<ul>"
             "<li>PILOT - Interactive teaching language</li>"

@@ -36,7 +36,7 @@ class TWEditorWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("TW Editor - Time Warp Studio")
+        self.setWindowTitle("TW Editor v5.1.0 - Time Warp Studio")
         self.resize(1024, 768)
         
         # Current file path
@@ -158,7 +158,7 @@ class TWEditorWindow(QMainWindow):
         if self.maybe_save():
             self.editor.clear()
             self.current_file = None
-            self.setWindowTitle("Untitled - TW Editor")
+            self.setWindowTitle("Untitled - TW Editor v5.1.0")
             self.status_bar.showMessage("New file created")
 
     def open_file(self):
@@ -176,7 +176,7 @@ class TWEditorWindow(QMainWindow):
             text = path.read_text(encoding='utf-8')
             self.editor.setPlainText(text)
             self.current_file = file_path
-            self.setWindowTitle(f"{path.name} - TW Editor")
+            self.setWindowTitle(f"{path.name} - TW Editor v5.1.0")
             self.status_bar.showMessage(f"Loaded {file_path}")
             
             # Auto-detect language
@@ -211,7 +211,7 @@ class TWEditorWindow(QMainWindow):
             path = Path(file_path)
             path.write_text(self.editor.toPlainText(), encoding='utf-8')
             self.current_file = file_path
-            self.setWindowTitle(f"{path.name} - TW Editor")
+            self.setWindowTitle(f"{path.name} - TW Editor v5.1.0")
             self.editor.document().setModified(False)
             self.status_bar.showMessage(f"Saved {file_path}")
             

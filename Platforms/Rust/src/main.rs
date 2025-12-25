@@ -22,12 +22,12 @@ fn main() -> eframe::Result<()> {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_inner_size([1024.0, 768.0])
-            .with_title("Time Warp Studio"),
+            .with_title("Time Warp Studio v5.1.0"),
         ..Default::default()
     };
 
     eframe::run_native(
-        "Time Warp Studio",
+        "Time Warp Studio v5.1.0",
         options,
         Box::new(|cc| Ok(Box::new(app::TimeWarpApp::new(cc)))),
     )
