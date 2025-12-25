@@ -9,9 +9,18 @@ import random
 import re
 from typing import TYPE_CHECKING, List, Optional, Any
 
+from ..utils.validators import (
+    validate_arg_count,
+    ValidationError,
+    validate_range,
+)
+from ..logging_config import get_logger
+
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
     from ..graphics.turtle_state import TurtleState
+
+logger = get_logger(__name__)
 
 # Compiled regex patterns for performance
 _VAR_PATTERN = re.compile(r":([A-Za-z_][A-Za-z0-9_]*)")
@@ -82,26 +91,11 @@ LOGO_COMMANDS = {
     "PRINT",
     "SHOW",
     "TYPE",
-    # "WORD", # Reporter
-    # "LIST", # Reporter
-    # "SENTENCE", # Reporter
-    # "FIRST", # Reporter
-    # "LAST", # Reporter
-    # "BUTFIRST", # Reporter
-    # "BUTLAST", # Reporter
-    # "ITEM", # Reporter
-    # "COUNT", # Reporter
-    # "SUM", # Reporter
-    # "DIFFERENCE", # Reporter
-    # "PRODUCT", # Reporter
-    # "QUOTIENT", # Reporter
-    # "RANDOM",  # Reporter
     "ARC",
     "FILLED",
     "LABEL",
     "WAIT",
     "BYE",
-    "OUTPUT",
     "OP",
     "FOREVER",
     # "REPCOUNT", # Reporter
@@ -135,7 +129,7 @@ def _split_logo_commands(
         else:
             # If depth is 0 and token is a known command, start new command
             # BUT only if we have a current command accumulated.
-            
+
             # Special handling for TO ... END blocks
             if bracket_depth == 0:
                 if token.upper() == "TO":
@@ -384,14 +378,14 @@ def _execute_single_logo_command(
 
 def _logo_eval_arg(interpreter: "Interpreter", arg: str) -> float:
     """Evaluate a single Logo argument (variable reference or expression).
-    
+
     Args:
         interpreter: Interpreter instance
         arg: Single argument string
-    
+
     Returns:
         Numeric value
-    
+
     Raises:
         ValueError: If argument cannot be evaluated
     """
@@ -400,7 +394,7 @@ def _logo_eval_arg(interpreter: "Interpreter", arg: str) -> float:
         if var_name not in interpreter.variables:
             raise ValueError(f"Undefined variable: {arg}")
         return interpreter.variables[var_name]
-    
+
     try:
         return _logo_eval_expr_str(interpreter, arg)
     except (ValueError, TypeError, ZeroDivisionError) as e:
@@ -416,40 +410,40 @@ def _handle_prefix_mult(expr: str) -> str:
     i = 0
     n = len(expr)
     while i < n:
-        if expr[i] == '(':
+        if expr[i] == "(":
             # Check for (*
             j = i + 1
             while j < n and expr[j].isspace():
                 j += 1
-            
-            if j < n and expr[j] == '*':
+
+            if j < n and expr[j] == "*":
                 # Found (*
                 # Check if there are nested parens before the closing )
                 k = j + 1
                 # Skip whitespace after *
                 while k < n and expr[k].isspace():
                     k += 1
-                
+
                 # Scan for )
                 content_start = k
                 has_nested = False
                 while k < n:
-                    if expr[k] == '(':
+                    if expr[k] == "(":
                         has_nested = True
                         break
-                    if expr[k] == ')':
+                    if expr[k] == ")":
                         break
                     k += 1
-                
-                if k < n and expr[k] == ')' and not has_nested:
+
+                if k < n and expr[k] == ")" and not has_nested:
                     # Found simple (* ... )
                     content = expr[content_start:k]
                     parts = content.split()
-                    new_content = ' * '.join(parts)
+                    new_content = " * ".join(parts)
                     result.append(f"({new_content})")
                     i = k + 1
                     continue
-        
+
         result.append(expr[i])
         i += 1
     return "".join(result)
@@ -457,14 +451,14 @@ def _handle_prefix_mult(expr: str) -> str:
 
 def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
     """Evaluate a Logo expression string with :VAR names and spaces.
-    
+
     Args:
         interpreter: Interpreter instance
         expr: Expression string (may contain :VAR references)
-    
+
     Returns:
         Numeric result of expression
-    
+
     Raises:
         ValueError: If expression cannot be evaluated
     """
@@ -481,14 +475,22 @@ def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
     # Handle prefix multiplication (* A B ...) -> (A * B * ...)
     # Only handles simple cases without nested parentheses
     expr_norm = _handle_prefix_mult(expr_norm)
-    
+
     # Replace = with == for Python eval, but protect >=, <=, !=
     # First replace >= with __GE__, <= with __LE__, <> with __NE__
-    expr_norm = expr_norm.replace(">=", "__GE__").replace("<=", "__LE__").replace("<>", "__NE__")
+    expr_norm = (
+        expr_norm.replace(">=", "__GE__")
+        .replace("<=", "__LE__")
+        .replace("<>", "__NE__")
+    )
     # Replace = with ==
     expr_norm = expr_norm.replace("=", "==")
     # Restore
-    expr_norm = expr_norm.replace("__GE__", ">=").replace("__LE__", "<=").replace("__NE__", "!=")
+    expr_norm = (
+        expr_norm.replace("__GE__", ">=")
+        .replace("__LE__", "<=")
+        .replace("__NE__", "!=")
+    )
 
     try:
         return interpreter.evaluate_expression(expr_norm)
@@ -504,37 +506,32 @@ def _logo_forward(
     args: List[str],
 ) -> str:
     """FORWARD distance - Move turtle forward.
-    
+
     Args:
         interpreter: Interpreter instance
         turtle: Turtle graphics state
         args: Distance arguments
-    
+
     Returns:
         Status or error message
     """
-    from ..utils.validators import validate_arg_count, ValidationError
-    from ..logging_config import get_logger
-    
-    logger = get_logger(__name__)
-    
     try:
         # Consume arguments intelligently to handle expressions like (* 10 20)
         consumed = _consume_logo_args(args, 1)
         validate_arg_count(consumed, 1, "FORWARD")
-        
+
         distance = _logo_eval_arg(interpreter, consumed[0])
         if turtle is None:
             return "❌ Graphics not available for this command\n"
         turtle.forward(distance)
-        logger.debug(f"FORWARD {distance}")
+        logger.debug("FORWARD %s", distance)
     except ValidationError as e:
         return f"❌ {e}\n"
     except ValueError as e:
         print(f"DEBUG: FORWARD error: {e}")
-        logger.error(f"FORWARD error: {e}")
+        logger.error("FORWARD error: %s", e)
         return f"❌ {e}\n"
-    
+
     return ""
 
 
@@ -543,7 +540,6 @@ def _logo_back(
     turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
-    from ..utils.validators import validate_arg_count, ValidationError
     try:
         consumed = _consume_logo_args(args, 1)
         validate_arg_count(consumed, 1, "BACK")
@@ -563,7 +559,6 @@ def _logo_left(
     turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
-    from ..utils.validators import validate_arg_count, ValidationError
     try:
         consumed = _consume_logo_args(args, 1)
         validate_arg_count(consumed, 1, "LEFT")
@@ -583,7 +578,6 @@ def _logo_right(
     turtle: Optional["TurtleState"],
     args: List[str],
 ) -> str:
-    from ..utils.validators import validate_arg_count, ValidationError
     try:
         consumed = _consume_logo_args(args, 1)
         validate_arg_count(consumed, 1, "RIGHT")
@@ -604,20 +598,15 @@ def _logo_setxy(
     args: List[str],
 ) -> str:
     """SETXY x y - Set turtle absolute position.
-    
+
     Args:
         interpreter: Interpreter instance
         turtle: Turtle graphics state
         args: X and Y coordinate arguments
-    
+
     Returns:
         Status or error message
     """
-    from ..utils.validators import validate_arg_count, ValidationError
-    from ..logging_config import get_logger
-    
-    logger = get_logger(__name__)
-    
     try:
         consumed = _consume_logo_args(args, 2)
         validate_arg_count(consumed, 2, "SETXY")
@@ -626,13 +615,13 @@ def _logo_setxy(
         if turtle is None:
             return "❌ Graphics not available for this command\n"
         turtle.goto(x, y)
-        logger.debug(f"SETXY {x} {y}")
+        logger.debug("SETXY %s %s", x, y)
     except ValidationError as e:
         return f"❌ {e}\n"
     except ValueError as e:
-        logger.error(f"SETXY error: {e}")
+        logger.error("SETXY error: %s", e)
         return f"❌ {e}\n"
-    
+
     return ""
 
 
@@ -642,45 +631,43 @@ def _logo_setposition(
     args: List[str],
 ) -> str:
     """SETPOSITION [x y] - Set turtle absolute position from list.
-    
+
     Args:
         interpreter: Interpreter instance
         turtle: Turtle graphics state
         args: List argument containing X and Y
-    
+
     Returns:
         Status or error message
     """
-    from ..utils.validators import validate_arg_count, ValidationError
-    from ..logging_config import get_logger
-    
-    logger = get_logger(__name__)
-    
     try:
         # Expecting one argument which is a list [x y]
-        # But the parser might have split it if it wasn't careful, 
+        # But the parser might have split it if it wasn't careful,
         # or passed it as a single string "[x y]"
-        
+
         if not args:
-             return "❌ SETPOSITION requires a list argument [x y]\n"
+            return "❌ SETPOSITION requires a list argument [x y]\n"
 
         arg = " ".join(args)
         if arg.startswith("[") and arg.endswith("]"):
             content = arg[1:-1].strip()
             parts = content.split()
             if len(parts) != 2:
-                return "❌ SETPOSITION list must contain exactly 2 numbers\n"
-            
+                return (
+                    "❌ SETPOSITION list must contain exactly 2 numbers\n"
+                )
+
             x = _logo_eval_arg(interpreter, parts[0])
             y = _logo_eval_arg(interpreter, parts[1])
-            
+
             if turtle is None:
                 return "❌ Graphics not available for this command\n"
-            
+
             turtle.goto(x, y)
-            logger.debug(f"SETPOSITION {x} {y}")
+            logger.debug("SETPOSITION %s %s", x, y)
         else:
-            # Maybe it was passed as two arguments? Some dialects allow SETPOS x y
+            # Maybe it was passed as two arguments?
+            # Some dialects allow SETPOS x y
             if len(args) == 2:
                 return _logo_setxy(interpreter, turtle, args)
             return "❌ SETPOSITION requires a list argument [x y]\n"
@@ -688,9 +675,9 @@ def _logo_setposition(
     except ValidationError as e:
         return f"❌ {e}\n"
     except ValueError as e:
-        logger.error(f"SETPOSITION error: {e}")
+        logger.error("SETPOSITION error: %s", e)
         return f"❌ {e}\n"
-    
+
     return ""
 
 
@@ -815,20 +802,15 @@ def _logo_setpenwidth(
     args: List[str],
 ) -> str:
     """SETPENWIDTH width - Set pen drawing width.
-    
+
     Args:
         interpreter: Interpreter instance
         turtle: Turtle graphics state
         args: Width argument
-    
+
     Returns:
         Status or error message
     """
-    from ..utils.validators import validate_arg_count, ValidationError, validate_range
-    from ..logging_config import get_logger
-    
-    logger = get_logger(__name__)
-    
     try:
         validate_arg_count(args, 1, "SETPENWIDTH")
         width_expr = " ".join(args)
@@ -837,13 +819,13 @@ def _logo_setpenwidth(
         if turtle is None:
             return "❌ Graphics not available for this command\n"
         turtle.setpenwidth(width)
-        logger.debug(f"SETPENWIDTH {width}")
+        logger.debug("SETPENWIDTH %s", width)
     except ValidationError as e:
         return f"❌ {e}\n"
     except ValueError as e:
-        logger.error(f"SETPENWIDTH error: {e}")
+        logger.error("SETPENWIDTH error: %s", e)
         return f"❌ {e}\n"
-    
+
     return ""
 
 
@@ -862,7 +844,7 @@ def _logo_repeat(
     if end_bracket == -1 or end_bracket < start_bracket:
         return "❌ REPEAT requires [commands]\n"
 
-    body_content = command[start_bracket + 1 : end_bracket].strip()
+    body_content = command[start_bracket + 1:end_bracket].strip()
 
     if not header.upper().startswith("REPEAT"):
         return "❌ Invalid REPEAT command\n"
@@ -898,7 +880,7 @@ def _logo_if(
     if end_bracket == -1 or end_bracket < start_bracket:
         return "❌ IF requires [commands]\n"
 
-    body_content = command[start_bracket + 1 : end_bracket].strip()
+    body_content = command[start_bracket + 1:end_bracket].strip()
 
     if not header.upper().startswith("IF"):
         return "❌ Invalid IF command\n"
@@ -928,7 +910,7 @@ def _logo_output(interpreter: "Interpreter", args: List[str]) -> str:
     """OUTPUT value - Return value from procedure"""
     if not args:
         return "❌ OUTPUT requires value\n"
-    
+
     try:
         # Evaluate the return value
         # We need to consume all remaining args as the expression
@@ -961,17 +943,17 @@ def _logo_to(
 
     # Get the content between TO and END
     content = command[to_pos:end_pos].strip()
-    
+
     lines = content.split("\n")
     header = lines[0].strip()
-    
+
     header_parts = header.split()
     if len(header_parts) < 2:
         return "❌ Invalid TO command\n"
-        
+
     proc_name = header_parts[1].upper()
     params = []
-    
+
     # Handle single-line vs multi-line
     if len(lines) > 1:
         # Multi-line: TO NAME :ARGS \n BODY
@@ -1094,7 +1076,7 @@ def _logo_call_procedure(
 
     # Map args to params
     num_params = len(params)
-    
+
     # DEBUG
     depth = interpreter.variables.get("__RECURSION_DEPTH__", 0)
     interpreter.variables["__RECURSION_DEPTH__"] = depth + 1
@@ -1270,7 +1252,7 @@ def _logo_word(interpreter: "Interpreter", args: List[str]) -> str:
     """WORD word1 word2 - Concatenate words"""
     if len(args) < 2:
         return "❌ WORD requires at least two arguments\n"
-    
+
     parts = []
     for arg in args:
         # Evaluate each argument
@@ -1279,7 +1261,7 @@ def _logo_word(interpreter: "Interpreter", args: List[str]) -> str:
             parts.append(str(int(val)) if val == int(val) else str(val))
         except (ValueError, TypeError):
             parts.append(arg.strip('"'))
-    
+
     return "".join(parts)
 
 
@@ -1394,7 +1376,7 @@ def _logo_butfirst(interpreter: "Interpreter", args: List[str]) -> str:
     """BUTFIRST list/word - Remove first item or character"""
     if not args:
         return "❌ BUTFIRST requires argument\n"
-    
+
     consumed = _consume_logo_args(args, 1)
     arg = consumed[0]
 
@@ -1433,7 +1415,7 @@ def _logo_butlast(interpreter: "Interpreter", args: List[str]) -> str:
     """BUTLAST list/word - Remove last item or character"""
     if not args:
         return "❌ BUTLAST requires argument\n"
-    
+
     consumed = _consume_logo_args(args, 1)
     arg = consumed[0]
 
@@ -1478,7 +1460,9 @@ def _logo_item(interpreter: "Interpreter", args: List[str]) -> str:
         return "❌ ITEM requires index and thing\n"
 
     try:
-        index = int(interpreter.evaluate_expression(consumed[0])) - 1  # 1-indexed
+        index = (
+            int(interpreter.evaluate_expression(consumed[0])) - 1
+        )  # 1-indexed
     except (ValueError, TypeError):
         return "❌ Invalid index\n"
 
@@ -1645,10 +1629,10 @@ def _logo_ifelse(
     if end_bracket1 == -1:
         return "❌ IFELSE first block malformed\n"
 
-    true_block = command[start_bracket1 + 1 : end_bracket1].strip()
+    true_block = command[start_bracket1 + 1:end_bracket1].strip()
 
     # Find second block
-    remaining = command[end_bracket1 + 1 :]
+    remaining = command[end_bracket1 + 1:]
     start_bracket2 = remaining.find("[")
     if start_bracket2 == -1:
         return "❌ IFELSE requires second [false] block\n"
@@ -1671,7 +1655,7 @@ def _logo_ifelse(
     if end_bracket2 == -1:
         return "❌ IFELSE second block malformed\n"
 
-    false_block = command[start_bracket2 + 1 : end_bracket2].strip()
+    false_block = command[start_bracket2 + 1:end_bracket2].strip()
 
     try:
         condition = _logo_eval_expr_str(interpreter, condition_str)
@@ -1712,7 +1696,9 @@ def _logo_repcount(_interpreter: "Interpreter") -> str:
 
 # Graphics enhancements
 def _logo_arc(
-    interpreter: "Interpreter", turtle: Optional["TurtleState"], args: List[str]
+    interpreter: "Interpreter",
+    turtle: Optional["TurtleState"],
+    args: List[str],
 ) -> str:
     """ARC angle radius - Draw an arc"""
     if len(args) < 2:

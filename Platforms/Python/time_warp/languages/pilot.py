@@ -7,9 +7,19 @@ import re
 import time
 from typing import TYPE_CHECKING
 
+from ..utils.validators import (
+    validate_arg_count,
+    validate_file_path,
+    validate_variable_name,
+    ValidationError,
+)
+from ..logging_config import get_logger
+
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
     from ..graphics.turtle_state import TurtleState
+
+logger = get_logger(__name__)
 
 
 def execute_pilot(
@@ -38,7 +48,7 @@ def execute_pilot(
         return f"❌ Invalid PILOT command: {command}\n"
 
     prefix = cmd[:colon_pos].upper()
-    rest = cmd[colon_pos + 1 :].strip()
+    rest = cmd[colon_pos + 1:].strip()
 
     # Extract base command and conditional suffix
     if len(prefix) == 1:
@@ -81,7 +91,7 @@ def execute_pilot(
         for alt in alternatives:
             if "*" in alt:
                 # Convert wildcard pattern to regex
-                # Escape special regex chars first, then replace escaped * with .*
+                # Escape special regex chars, then replace escaped * with .*
                 escaped_alt = re.escape(alt)
                 regex_pattern = "^" + escaped_alt.replace(r"\*", ".*") + "$"
                 try:
@@ -101,37 +111,29 @@ def execute_pilot(
             label = rest.strip()
             if label:
                 interpreter.jump_to_label(label)
-        return ""
-    if cmd_type == "N":
-        if not interpreter.last_match_succeeded:
-            label = rest.strip()
             if label:
                 interpreter.jump_to_label(label)
         return ""
     if cmd_type == "C":
         if "=" not in rest:
             return "❌ C: requires format: var = expression\n"
-        from ..logging_config import get_logger
-        from ..utils.validators import validate_variable_name, ValidationError
-        
-        logger = get_logger(__name__)
-        
+
         parts = rest.split("=", 1)
         var_name = parts[0].strip()
         expr = parts[1].strip()
-        
+
         if not var_name:
             return "❌ C: requires variable name\n"
-        
+
         try:
             validate_variable_name(var_name, allow_suffix=True)
             result = interpreter.evaluate_expression(expr)
             interpreter.variables[var_name] = result
-            logger.debug(f"PILOT C: {var_name} = {result}")
+            logger.debug("PILOT C: %s = %s", var_name, result)
         except ValidationError as e:
             return f"❌ {e}\n"
         except (ValueError, TypeError, ZeroDivisionError) as e:
-            logger.error(f"PILOT C: evaluation failed: {e}")
+            logger.error("PILOT C: evaluation failed: %s", e)
             return f"❌ Error in C: {e}\n"
         return ""
     if cmd_type == "J":
@@ -273,7 +275,7 @@ def _pilot_graphics_command(
             args = arg_str.split(",")
         else:
             args = arg_str.split()
-        
+
         if len(args) < 2:
             return "❌ G: SETXY requires x,y coordinates\n"
         try:
@@ -295,7 +297,7 @@ def _pilot_graphics_command(
             args = arg_str.split(",")
         else:
             args = arg_str.split()
-            
+
         if len(args) < 3:
             return "❌ G: SETBGCOLOR requires r, g, b\n"
         try:
@@ -310,7 +312,7 @@ def _pilot_graphics_command(
             args = arg_str.split(",")
         else:
             args = arg_str.split()
-            
+
         if len(args) < 3:
             return "❌ G: SETPENCOLOR requires r, g, b\n"
         try:
@@ -336,21 +338,10 @@ def _pilot_graphics_command(
 
 def _pilot_file_command(interpreter: "Interpreter", command: str) -> str:
     """Handle PILOT file operations (OPEN, CLOSE, READ, WRITE).
-    
-    Validates file paths and arguments before file operations.
-    
-    Args:
-        interpreter: Interpreter instance
-        command: File operation command
-    
+
     Returns:
         Status or error message
     """
-    from ..utils.validators import validate_arg_count, validate_file_path, ValidationError, validate_variable_name
-    from ..logging_config import get_logger
-    
-    logger = get_logger(__name__)
-    
     parts = command.strip().split()
     if not parts:
         return "❌ F: requires file operation\n"
@@ -363,13 +354,13 @@ def _pilot_file_command(interpreter: "Interpreter", command: str) -> str:
             validate_arg_count(args, 2, f"F: {operation}")
             filename = args[0]
             mode = args[1].upper()
-            
+
             # Validate filename is safe
             validate_file_path(filename, base_dir=".")
-            
+
             if mode not in ("READ", "R", "WRITE", "W", "APPEND", "A"):
                 return f"❌ F: OPEN requires mode R|W|A, got: {mode}\n"
-            
+
             try:
                 if mode in ("READ", "R"):
                     # pylint: disable=consider-using-with
@@ -378,7 +369,7 @@ def _pilot_file_command(interpreter: "Interpreter", command: str) -> str:
                         "r",
                         encoding="utf-8",
                     )
-                    logger.info(f"PILOT file OPEN read: {filename}")
+                    logger.info("PILOT file OPEN read: %s", filename)
                 elif mode in ("WRITE", "W"):
                     # pylint: disable=consider-using-with
                     interpreter.open_files[filename] = open(
@@ -386,7 +377,7 @@ def _pilot_file_command(interpreter: "Interpreter", command: str) -> str:
                         "w",
                         encoding="utf-8",
                     )
-                    logger.info(f"PILOT file OPEN write: {filename}")
+                    logger.info("PILOT file OPEN write: %s", filename)
                 elif mode in ("APPEND", "A"):
                     # pylint: disable=consider-using-with
                     interpreter.open_files[filename] = open(
@@ -394,9 +385,9 @@ def _pilot_file_command(interpreter: "Interpreter", command: str) -> str:
                         "a",
                         encoding="utf-8",
                     )
-                    logger.info(f"PILOT file OPEN append: {filename}")
+                    logger.info("PILOT file OPEN append: %s", filename)
             except (IOError, OSError) as e:
-                logger.error(f"PILOT file open error: {e}")
+                logger.error("PILOT file open error: %s", e)
                 return f"❌ F: Error opening file '{filename}': {e}\n"
         except ValidationError as e:
             return f"❌ {e}\n"
@@ -405,16 +396,16 @@ def _pilot_file_command(interpreter: "Interpreter", command: str) -> str:
         try:
             validate_arg_count(args, 1, f"F: {operation}")
             filename = args[0]
-            
+
             if filename not in interpreter.open_files:
                 return f"❌ F: File not open: {filename}\n"
-            
+
             try:
                 interpreter.open_files[filename].close()
                 del interpreter.open_files[filename]
-                logger.info(f"PILOT file closed: {filename}")
+                logger.info("PILOT file closed: %s", filename)
             except (IOError, OSError) as e:
-                logger.error(f"PILOT file close error: {e}")
+                logger.error("PILOT file close error: %s", e)
                 return f"❌ F: Error closing file: {e}\n"
         except ValidationError as e:
             return f"❌ {e}\n"
@@ -424,23 +415,24 @@ def _pilot_file_command(interpreter: "Interpreter", command: str) -> str:
             validate_arg_count(args, 2, f"F: {operation}")
             filename = args[0]
             var_name = args[1]
-            
+
             validate_variable_name(var_name, allow_suffix=True)
-            
+
             if filename not in interpreter.open_files:
                 return f"❌ F: File not open: {filename}\n"
-            
+
             try:
-                line = interpreter.open_files[filename].readline().strip()
-                # Store numeric values in numeric variable store, otherwise string store
+                file_obj = interpreter.open_files[filename]
+                line = file_obj.readline().strip()
+                # Store numeric values in numeric variable store
                 try:
                     v = float(line)
                     interpreter.variables[var_name] = v
                 except ValueError:
                     interpreter.string_variables[var_name] = line
-                logger.debug(f"PILOT file read: {var_name} from {filename}")
+                logger.debug("PILOT file read: %s from %s", var_name, filename)
             except (IOError, OSError) as e:
-                logger.error(f"PILOT file read error: {e}")
+                logger.error("PILOT file read error: %s", e)
                 return f"❌ F: Error reading file: {e}\n"
         except ValidationError as e:
             return f"❌ {e}\n"
@@ -450,21 +442,21 @@ def _pilot_file_command(interpreter: "Interpreter", command: str) -> str:
             validate_arg_count(args, 2, f"F: {operation}")
             filename = args[0]
             data = " ".join(args[1:])
-            
+
             if filename not in interpreter.open_files:
                 return f"❌ F: File not open: {filename}\n"
-            
+
             try:
                 interpreter.open_files[filename].write(data + "\n")
-                logger.debug(f"PILOT file write: {filename}")
+                logger.debug("PILOT file write: %s", filename)
             except (IOError, OSError) as e:
-                logger.error(f"PILOT file write error: {e}")
+                logger.error("PILOT file write error: %s", e)
                 return f"❌ F: Error writing file: {e}\n"
         except ValidationError as e:
             return f"❌ {e}\n"
 
     else:
-        logger.error(f"Unknown PILOT file operation: {operation}")
+        logger.error("Unknown PILOT file operation: %s", operation)
         return f"❌ Unknown file operation: {operation}\n"
 
     return ""
