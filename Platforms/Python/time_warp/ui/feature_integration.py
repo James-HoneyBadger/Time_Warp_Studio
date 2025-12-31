@@ -1,20 +1,14 @@
 """Feature integration module for Time Warp IDE.
 
-This module handles integration of the 14 feature panels into the main IDE window,
-creating a feature menu system, and managing signals/callbacks for all features.
+This module handles integration of the 14 feature panels into the IDE window,
+creating a feature menu system, and managing signals/callbacks for features.
 """
 
 from typing import Dict, Optional
 
-from PySide6.QtCore import Qt, QTimer
-from PySide6.QtGui import QAction, QActionGroup, QIcon
-from PySide6.QtWidgets import (
-    QDockWidget,
-    QMessageBox,
-    QTabWidget,
-    QVBoxLayout,
-    QWidget,
-)
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QAction
+from PySide6.QtWidgets import QDockWidget, QWidget
 
 from .feature_panels import (
     AccessibilityPanel,
@@ -182,7 +176,7 @@ class FeatureIntegrationManager:
         """Create instances of all feature panels."""
         all_features = self.PHASE_1_FEATURES + self.PHASE_2_FEATURES
 
-        for feature_name, feature_id, panel_class, description in all_features:
+        for feature_name, feature_id, panel_class, _ in all_features:
             if panel_class is None:
                 continue  # Skip features without UI panels
 
@@ -198,7 +192,8 @@ class FeatureIntegrationManager:
                 self.feature_panels[feature_id] = panel
 
                 # Create dock widget for panel
-                dock = QDockWidget(f"🎯 {feature_name}", self.main_window)
+                dock = QDockWidget(f"🎯 {feature_name}",
+                                   self.main_window)
                 dock.setWidget(panel)
                 dock.setObjectName(feature_id)
                 dock.setAllowedAreas(
@@ -209,9 +204,10 @@ class FeatureIntegrationManager:
                 dock.setVisible(False)  # Hidden by default
 
                 self.dock_widgets[feature_id] = dock
-                self.main_window.addDockWidget(Qt.RightDockWidgetArea, dock)
+                self.main_window.addDockWidget(
+                    Qt.RightDockWidgetArea, dock)
 
-            except Exception as e:
+            except (TypeError, ValueError) as e:
                 print(f"❌ Error creating {feature_name} panel: {e}")
                 # Create placeholder widget even if panel fails
                 placeholder = QWidget()
@@ -229,14 +225,11 @@ class FeatureIntegrationManager:
         """Create Features menu in menu bar."""
         menubar = self.main_window.menuBar()
 
-        # Find insertion point (after View menu, before Help if exists)
-        view_menu = None
+        # Find insertion point (before Help if exists)
         help_menu = None
 
         for action in menubar.actions():
-            if action.text() == "&View":
-                view_menu = action.menu()
-            elif action.text() == "&Help":
+            if action.text() == "&Help":
                 help_menu = action
 
         # Create Features menu
@@ -347,71 +340,67 @@ class FeatureIntegrationManager:
         """Hide all feature panels."""
         for feature_id in self.dock_widgets:
             self.toggle_feature_panel(feature_id, visible=False)
-        self.main_window.statusbar.showMessage("✗ All features hidden", 2000)
+        msg = "✗ All features hidden"
+        self.main_window.statusbar.showMessage(msg, 2000)
 
     def _connect_feature_signals(self):
-        """Connect feature panel signals to IDE status bar and other components."""
+        """Connect feature panel signals to IDE status bar and other."""
         for feature_id, panel in self.feature_panels.items():
             # Connect status_changed signal if available
             if hasattr(panel, "status_changed"):
                 panel.status_changed.connect(
-                    lambda status, fid=feature_id: self._on_feature_status_changed(
-                        fid, status
-                    )
+                    lambda status, fid=feature_id:
+                    self._on_feature_status_changed(fid, status)
                 )
 
             # Connect operation signals if available
             if hasattr(panel, "operation_started"):
                 panel.operation_started.connect(
-                    lambda op, fid=feature_id: self._on_operation_started(
-                        fid, op
-                    )
+                    lambda op, fid=feature_id:
+                    self._on_operation_started(fid, op)
                 )
 
             if hasattr(panel, "operation_completed"):
                 panel.operation_completed.connect(
-                    lambda result, fid=feature_id: self._on_operation_completed(
-                        fid, result
-                    )
+                    lambda result, fid=feature_id:
+                    self._on_operation_completed(fid, result)
                 )
 
-    def _on_feature_status_changed(self, feature_id: str, status: str):
+    def _on_feature_status_changed(self, _: str, status: str):
         """Handle feature status change.
 
         Args:
-            feature_id: ID of the feature
+            _: ID of the feature (unused)
             status: Status message from the feature
         """
         # Display status in IDE status bar
         self.main_window.statusbar.showMessage(status, 3000)
 
-    def _on_operation_started(self, feature_id: str, operation: str):
+    def _on_operation_started(self, _: str, operation: str):
         """Handle feature operation start.
 
         Args:
-            feature_id: ID of the feature
+            _: ID of the feature (unused)
             operation: Name of the operation
         """
-        self.main_window.statusbar.showMessage(
-            f"🚀 {operation} started...", 2000
-        )
+        msg = f"🚀 {operation} started..."
+        self.main_window.statusbar.showMessage(msg, 2000)
 
-    def _on_operation_completed(self, feature_id: str, result: dict):
+    def _on_operation_completed(self, _: str, result: dict):
         """Handle feature operation completion.
 
         Args:
-            feature_id: ID of the feature
-            result: Operation result (may contain success/error info)
+            _: ID of the feature (unused)
+            result: Operation result (may contain success/error)
         """
         if result.get("success", True):
             self.main_window.statusbar.showMessage(
-                f"✅ Operation completed", 2000
+                "✅ Operation completed", 2000
             )
         else:
             error = result.get("error", "Unknown error")
-            self.main_window.statusbar.showMessage(
-                f"❌ Operation failed: {error}", 3000
-            )
+            msg = f"❌ Operation failed: {error}"
+            self.main_window.statusbar.showMessage(msg, 3000)
 
     def get_feature_panel(self, feature_id: str) -> Optional[QWidget]:
         """Get a feature panel by ID.

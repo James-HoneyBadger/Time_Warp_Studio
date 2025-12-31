@@ -110,6 +110,12 @@ jobs:
             export APP_STORE_CONNECT_API_KEY_JSON_PATH=/tmp/asc_key.json
           fi
 
+          # Skip fastlane if required secrets are missing
+          if [ -z "$INSTALLER_IDENTITY" ] || [ -z "$SIGN_IDENTITY" ]; then
+            echo "INSTALLER_IDENTITY or SIGN_IDENTITY not set; skipping fastlane build"
+            exit 0
+          fi
+
           bundle exec fastlane mac release_mac
 
       - name: Cleanup keychain

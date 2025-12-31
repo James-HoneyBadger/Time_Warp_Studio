@@ -1871,7 +1871,8 @@ class MainWindow(QMainWindow):
         }
 
         if language not in lang_docs:
-            QMessageBox.information(self, "Help", f"No documentation for {language.upper()}")
+            msg = f"No documentation for {language.upper()}"
+            QMessageBox.information(self, "Help", msg)
             return
 
         title, doc_path = lang_docs[language]

@@ -248,7 +248,8 @@ class TWEditorWindow(QMainWindow):
                 pass  # Keep current language if unknown
 
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Could not open file: {e}")
+            msg = f"Could not open file: {e}"
+            QMessageBox.warning(self, "Error", msg)
 
     def save_file(self):
         """Save current file."""
@@ -289,7 +290,8 @@ class TWEditorWindow(QMainWindow):
 
             return True
         except Exception as e:
-            QMessageBox.warning(self, "Error", f"Could not save file: {e}")
+            msg = f"Could not save file: {e}"
+            QMessageBox.warning(self, "Error", msg)
             return False
 
     def maybe_save(self):
