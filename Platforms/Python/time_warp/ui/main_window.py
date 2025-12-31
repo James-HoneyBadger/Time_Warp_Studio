@@ -44,6 +44,7 @@ from .output import ImmediateModePanel, OutputPanel
 from .screen_modes import ScreenModeManager
 from .themes import ThemeManager
 from .variable_inspector import VariableInspector
+from .feature_integration import FeatureIntegrationManager
 
 # pylint: enable=no-name-in-module
 
@@ -99,11 +100,17 @@ class MainWindow(QMainWindow):
         self.crt_enabled = False
         self.cassette_mode = True  # Fun cassette animation for save/load
 
+        # Feature integration manager
+        self.feature_manager = FeatureIntegrationManager(self)
+
         # Setup UI
         self.setup_ui()
         self.create_menus()
         self.create_toolbar()
         self.create_statusbar()
+
+        # Setup feature panels and integration
+        self.feature_manager.setup_features()
 
         # Restore previous state
         self.restore_state()

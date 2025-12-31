@@ -1,7 +1,7 @@
 """Hardware simulation dashboard for IoT/robotics development."""
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Callable, Any
+from typing import Dict, List, Optional, Callable, Any, Tuple
 from enum import Enum
 import time
 import json

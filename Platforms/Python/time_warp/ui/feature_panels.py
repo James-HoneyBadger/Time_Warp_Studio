@@ -21,18 +21,19 @@ from PySide6.QtWidgets import (
 )
 
 from ..core.syntax_validator import SyntaxValidator
-from ..core.project_templates import ProjectTemplates
-from ..core.debugger import Debugger
-from ..core.language_comparator import LanguageComparator
+from ..core.project_templates import TemplateLibrary
+from ..core.debugger import CodeDebugger
+from ..core.language_comparator import MultiLanguageComparator
 from ..core.asset_library import AssetLibrary
-from ..core.collaboration import CollaborationServer
+from ..core.collaboration import CollaborativeMessage
 from ..core.performance_profiler import PerformanceProfiler
-from ..core.execution_replay import ExecutionReplayer
+from ..core.execution_replay import ExecutionReplayPlayer
 from ..core.hardware_simulator import HardwareSimulator
 from ..core.ai_assistant import LocalAIAssistant
 from ..core.executable_exporter import ExecutableExporter
-from ..core.learning_analytics import LearningAnalytics
+from ..core.learning_analytics import ConceptMastery
 from ..core.accessibility import AccessibilityManager
+from ..core.peer_review import CodeReviewSession
 from ..core.peer_review import CodeReviewSession
 
 

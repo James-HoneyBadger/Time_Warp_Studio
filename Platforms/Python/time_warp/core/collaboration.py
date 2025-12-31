@@ -1,7 +1,7 @@
 """Local collaborative programming sessions (LAN pair programming)."""
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Callable, Set
+from typing import Dict, List, Optional, Callable, Set, Tuple
 from enum import Enum
 import json
 import socket
