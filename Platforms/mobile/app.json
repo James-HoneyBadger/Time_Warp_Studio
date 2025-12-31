@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "Time Warp IDE",
+    "slug": "time-warp-ide",
+    "version": "1.0.0",
+    "scheme": "timewarpide",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#1a1a2e"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTabletOnly": false,
+      "bundleIdentifier": "com.timewarp.ide",
+      "build": {
+        "runsOnSimulator": true
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#1a1a2e"
+      },
+      "package": "com.timewarp.ide",
+      "permissions": [
+        "READ_EXTERNAL_STORAGE",
+        "WRITE_EXTERNAL_STORAGE",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro"
+    },
+    "plugins": [
+      [
+        "expo-file-system"
+      ],
+      [
+        "@react-native-async-storage/async-storage"
+      ],
+      [
+        "expo-av"
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "timewarp-ide"
+      },
+      "api": {
+        "baseUrl": "https://api.timewarp.local:8000/api/v1",
+        "timeout": 30000
+      }
+    }
+  }
+}
