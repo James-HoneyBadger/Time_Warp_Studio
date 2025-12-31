@@ -1,454 +1,439 @@
-# PILOT Tutorial
+# PILOT Language Tutorial
 
-**PILOT** (Programmed Inquiry, Learning, Or Teaching) is a pattern-matching language designed for creating educational programs and interactive learning systems.
+PILOT (Programmed Inquiry Learning Or Teaching) is an interactive teaching language designed for educational environments. It excels at creating interactive learning experiences with branching logic and user engagement.
 
-## Getting Started
+## Quick Start
 
-### Hello, World! 👋
+PILOT uses a simple command structure:
 
 ```pilot
-T: Hello, World!
+T: Welcome to PILOT!
+A: What is your name?
+A:N
+T: Hello %N$!
 ```
 
-**Output:**
-```
-Hello, World!
-```
-
-`T:` means "Type" (print text)
+- `T:` = Type (output) text
+- `A:` = Accept (input) text
+- `A:N` = Accept and assign to variable N
+- `%variable$` = Insert variable value
 
 ## Basic Commands
 
-### Printing Output (T: - TYPE)
+### Output: T (Type)
+
+Output text to the screen:
 
 ```pilot
-T: Welcome to PILOT
-T: This is line 1
-T: This is line 2
+T: This is output text
+T: PILOT is simple and fun!
 ```
 
-**Output:**
-```
-Welcome to PILOT
-This is line 1
-This is line 2
-```
-
-### Accepting Input (A: - ACCEPT)
+Multiple lines:
 
 ```pilot
-A: What is your name?$
-T: Hello, $!
+T: Line 1
+T: Line 2
+T: Line 3
 ```
 
-The `$` variable stores the user's input.
+### Input: A (Accept)
 
-**Multiple prompts:**
-```pilot
-A: First name:$F
-A: Last name:$L
-T: Hello, $F $L
-```
-
-- `$F` stores first answer
-- `$L` stores last answer
-- `$` alone stores most recent answer
-
-## Variables and Counting
-
-### Simple Variables
+Get user input:
 
 ```pilot
-M: *X = 5
-T: X is *X
+A: Enter your name
 ```
 
-`M:` means "Mark" (set a variable)
-`*X` means the value of variable X
-
-**Output:**
-```
-X is 5
-```
-
-### Arithmetic
+Store input in a variable (single letter, A-Z):
 
 ```pilot
-M: *COUNT = 0
-M: *COUNT = *COUNT + 1
-M: *COUNT = *COUNT + 1
-T: Count is *COUNT
+A: What is your age?
+A:X
 ```
 
-**Output:**
-```
-Count is 2
-```
-
-### Common Operations
-
-```pilot
-M: *X = 10
-M: *Y = *X + 5      ; Addition
-M: *Z = *X - 3      ; Subtraction
-M: *W = *X * 2      ; Multiplication
-M: *V = *X / 2      ; Division
-```
-
-## Pattern Matching (C: - COMPARE)
-
-PILOT's signature feature - match what user types:
-
-```pilot
-A: Is the sky blue?$
-C: *$ = blue
-Y: Yes, the sky is blue!
-N: That's not quite right...
-```
-
-- `C:` = Compare (pattern match)
-- `Y:` = If match succeeds (Yes)
-- `N:` = If match fails (No)
-
-### Matching Examples
-
-**Exact match:**
-```pilot
-A: What is 2+2?$
-C: *$ = 4
-Y: Correct!
-N: Try again
-```
-
-**Pattern with wildcard:**
-```pilot
-A: Name a color:$
-C: *$ = red
-Y: Red is a nice color
-N: That's a different color
-```
-
-**Matching numbers:**
-```pilot
-A: Enter a number:$
-C: *$ = 5
-Y: You picked 5
-N: That wasn't 5
-```
-
-## Conditionals
-
-### Branching with J: (JUMP)
-
-```pilot
-T: Pick a number 1-3
-A: Your choice:$
-C: *$ = 1
-J: ONE
-C: *$ = 2
-J: TWO
-C: *$ = 3
-J: THREE
-J: INVALID
-
-*ONE
-T: You picked ONE!
-J: END
-
-*TWO
-T: You picked TWO!
-J: END
-
-*THREE
-T: You picked THREE!
-J: END
-
-*INVALID
-T: Invalid choice!
-
-*END
-T: Thank you!
-```
-
-- `*LABEL` = Mark a location
-- `J: LABEL` = Jump to that location
-
-### Conditional with Numeric Comparison
-
-```pilot
-A: Enter your age:$
-M: *AGE = *$
-C: *AGE >= 18
-Y: You are an adult
-N: You are a minor
-```
-
-## Loops
-
-### Counting Loop
-
-```pilot
-M: *I = 1
-*LOOP
-C: *I <= 5
-Y: *
-N: J: END
-
-T: I is *I
-M: *I = *I + 1
-J: LOOP
-
-*END
-T: Finished!
-```
-
-**Output:**
-```
-I is 1
-I is 2
-I is 3
-I is 4
-I is 5
-Finished!
-```
-
-### Repeating Until Match
-
-```pilot
-*GUESS
-A: Guess my number:$
-C: *$ = 7
-Y: That's it!
-N: Try again
-N: J: GUESS
-```
-
-This repeats until user enters 7.
-
-## Interactive Quiz
-
-```pilot
-T: GENERAL KNOWLEDGE QUIZ
-T: ---
-
-M: *SCORE = 0
-
-T: Q1: What is the capital of France?
-A: Your answer:$
-C: *$ = paris
-Y: Correct!
-M: *SCORE = *SCORE + 1
-N: The answer is Paris
-N:
-T: Q2: What planet is closest to the sun?
-A: Your answer:$
-C: *$ = mercury
-Y: Correct!
-M: *SCORE = *SCORE + 1
-N: The answer is Mercury
-N:
-T: ---
-T: Your score: *SCORE / 2
-```
-
-## String Operations
-
-### Concatenation
-
-```pilot
-A: First name:$F
-A: Last name:$L
-M: *FULL = *F * *L
-T: Full name: *FULL
-```
-
-**Output:**
-```
-Full name: JohnDoe
-```
-
-### String Matching
-
-```pilot
-A: Do you like pizza? (yes/no)$
-C: *$ = yes
-Y: Great! Pizza is delicious
-N: Pizza is pretty tasty though
-```
-
-## Common Commands Reference
-
-### Output
-| Command | Format | Purpose |
-|---------|--------|---------|
-| `T:` | `T: text` | Type (print) text |
-| `T:` | `T: Value is *X` | Print with variable |
-
-### Input
-| Command | Format | Purpose |
-|---------|--------|---------|
-| `A:` | `A: Prompt$` | Accept input into `$` |
-| `A:` | `A: Prompt$VAR` | Accept into `$VAR` |
+The input is now stored in variable X.
 
 ### Variables
-| Command | Format | Purpose |
-|---------|--------|---------|
-| `M:` | `M: *X = 5` | Mark (set variable) |
-| `M:` | `M: *X = *Y + 3` | Arithmetic |
 
-### Control
-| Command | Format | Purpose |
-|---------|--------|---------|
-| `C:` | `C: *$ = answer` | Compare (match) |
-| `Y:` | `Y: success action` | If match succeeds |
-| `N:` | `N: failure action` | If match fails |
-| `J:` | `J: LABEL` | Jump to label |
-| `*LABEL` | `*LABELNAME` | Define jump target |
-
-### Special
-| Command | Format | Purpose |
-|---------|--------|---------|
-| `;` | `T: text ; comment` | Comment |
-| `E:` | `E:` | End program |
-
-## Complete Example: Number Guessing Game
+Variables in PILOT are single letters (A-Z). Reference them with `%X$`:
 
 ```pilot
-T: Welcome to Number Guessing!
-T: I'm thinking of a number 1-10
-M: *SECRET = 7
-M: *TRIES = 0
+A: What is your name?
+A:N
+T: Your name is %N$
+```
 
-*GUESS
-T:
-A: Your guess:$
-M: *GUESS = *$
-M: *TRIES = *TRIES + 1
+Variables are case-sensitive. Each letter represents a different variable.
 
-C: *GUESS = *SECRET
-Y: J: WIN
+### Conditional Branching
 
-C: *GUESS < *SECRET
-Y: T: Too low! Try again
-Y: J: GUESS
+PILOT supports conditional statements using `*`:
 
-T: Too high! Try again
+```pilot
+A: Are you a student? (Y/N)
+A:S
+
+*S: Y
+T: Great! You're a student.
+
+*S: N
+T: Welcome! You're not a student.
+
+*S: *
+T: Please answer Y or N.
+```
+
+The `*` operator checks if a variable equals a value:
+- `*X: value` - If X equals value, continue
+- `*X: *` - If X is anything else (wildcard)
+
+### Jumps: J (Jump)
+
+Jump to a label:
+
+```pilot
+J: ENDGAME
+```
+
+Define labels with parentheses:
+
+```pilot
+(ENDGAME)
+T: Game Over!
+```
+
+Jump with conditions:
+
+```pilot
+A: Continue? (Y/N)
+A:C
+
+*C: Y
+J: START
+
+*C: N
+J: END
+```
+
+### Loops: E (End)
+
+The `E:` command ends the current block. Use with conditions:
+
+```pilot
+(LOOP)
+A: Enter a number or 'QUIT' to exit
+A:I
+
+*I: QUIT
+J: END
+
+T: You entered %I$
+J: LOOP
+
+(END)
+T: Goodbye!
+```
+
+## Complete Example Programs
+
+### Interactive Quiz
+
+```pilot
+T: Welcome to the PILOT Quiz!
+T: 
+T: Question 1: What is 2+2?
+A:Q1
+
+*Q1: 4
+T: Correct!
+J: Q2
+
+*Q1: *
+T: Sorry, that's incorrect. The answer is 4.
+
+(Q2)
+T: Question 2: What is the capital of France?
+A:Q2
+
+*Q2: Paris
+T: Correct!
+J: SCORE
+
+*Q2: *
+T: Sorry, the answer is Paris.
+
+(SCORE)
+T: Thanks for taking the quiz!
+```
+
+### Number Guessing Game
+
+```pilot
+T: I'm thinking of a number between 1 and 100.
+T: Can you guess what it is?
+
+(GUESS)
+T: 
+A: Enter your guess:
+A:G
+
+*G: 42
+T: You got it! The answer was 42!
+J: END
+
+*G: *
+T: Try again. Guess another number.
 J: GUESS
 
-*WIN
-T: You got it!
-T: It took you *TRIES tries
-T: The number was *SECRET
+(END)
+T: Thanks for playing!
 ```
 
-## Complete Example: Quiz Game
+### Personal Information Collector
 
 ```pilot
-T: === CAPITALS QUIZ ===
+T: Welcome! Let's collect your information.
 T:
-M: *CORRECT = 0
-M: *TOTAL = 0
+A: What is your first name?
+A:F
 
-T: Question 1: What is the capital of France?
-A: Your answer:$
-M: *TOTAL = *TOTAL + 1
-C: *$ = paris
-Y: T: Correct!
-Y: M: *CORRECT = *CORRECT + 1
-N: T: Incorrect. The answer is Paris
+A: What is your last name?
+A:L
 
-T:
-T: Question 2: What is the capital of Japan?
-A: Your answer:$
-M: *TOTAL = *TOTAL + 1
-C: *$ = tokyo
-Y: T: Correct!
-Y: M: *CORRECT = *CORRECT + 1
-N: T: Incorrect. The answer is Tokyo
+A: How old are you?
+A:A
+
+A: What is your favorite color?
+A:C
 
 T:
-T: === RESULTS ===
-T: You got *CORRECT out of *TOTAL correct
-M: *PERCENT = *CORRECT * 100 / *TOTAL
-T: That's *PERCENT percent!
+T: Summary of Information:
+T: Name: %F$ %L$
+T: Age: %A$
+T: Favorite Color: %C$
+
+A: Is this information correct? (Y/N)
+A:OK
+
+*OK: Y
+T: Thank you! Information saved.
+J: END
+
+*OK: N
+J: WELCOME
+
+*OK: *
+T: Please answer Y or N.
+J: WELCOME
+
+(END)
+T: Goodbye, %F$!
 ```
 
-## Complete Example: Menu System
+### Menu System
 
 ```pilot
-*START
-T: MAIN MENU
-T: 1) Start Game
-T: 2) Instructions
-T: 3) Quit
-A: Choose option:$
-C: *$ = 1
+(MENU)
+T: ===== Main Menu =====
+T: A) View Profile
+T: B) Change Settings
+T: C) Play Game
+T: D) Exit
+
+A: Choose an option:
+A:M
+
+*M: A
+J: PROFILE
+
+*M: B
+J: SETTINGS
+
+*M: C
 J: GAME
-C: *$ = 2
-J: INSTRUCTIONS
-C: *$ = 3
-J: QUIT
-T: Invalid choice!
-J: START
 
-*INSTRUCTIONS
-T:
-T: This is a learning game
-T: Answer the questions correctly
-T: Try to get 100%!
-T:
-J: START
+*M: D
+J: EXIT
 
-*GAME
-T:
-T: Question 1: What is 2+2?
-A: Answer:$
-C: *$ = 4
-Y: T: Correct!
-N: T: Incorrect!
-T:
-J: START
+*M: *
+T: Invalid option. Please try again.
+J: MENU
 
-*QUIT
-T: Goodbye!
-E:
+(PROFILE)
+T: Your Profile Information
+A: What is your name?
+A:N
+T: Hello, %N$!
+J: MENU
+
+(SETTINGS)
+T: Settings page
+T: (Not implemented yet)
+J: MENU
+
+(GAME)
+T: Game page
+T: (Not implemented yet)
+J: MENU
+
+(EXIT)
+T: Thank you for using this program!
 ```
 
-## Tips for Learning PILOT
+## Tips and Best Practices
 
-1. **Start with T: and A:** - Print and input are key
-2. **Use pattern matching** - C: is PILOT's special feature
-3. **Practice jumps** - J: and labels organize flow
-4. **Track score** - Variables and marking are useful
-5. **Build interactivity** - PILOT excels at dialogues
+1. **Variable Names**: Use meaningful letters (N for Name, A for Age, etc.)
 
-## Common Mistakes
+2. **User-Friendly**: Always provide clear prompts:
+   ```pilot
+   A: Enter your answer: 
+   A:X
+   ```
 
-| Mistake | Problem | Fix |
-|---------|---------|-----|
-| Forgetting `$` | Variable not initialized | `A: Prompt$` |
-| Wrong variable name | Variable undefined | `M: *CORRECT = 0` |
-| Bad label name | Jump fails silently | Check label spelling |
-| No `:` after command | Syntax error | `T: text` not `T text` |
-| Infinite loop | Program hangs | Use exit condition with `E:` |
+3. **Input Validation**: Check user input and prompt for retry:
+   ```pilot
+   (RETRY)
+   A: Please enter Y or N:
+   A:R
+   *R: Y
+   *R: N
+   *R: *
+   T: Invalid response. Try again.
+   J: RETRY
+   ```
 
-## Comparison to BASIC
+4. **Comments**: While PILOT doesn't have built-in comments, you can label sections:
+   ```pilot
+   (SECTION_START)
+   T: This section handles...
+   ```
 
-| Feature | BASIC | PILOT |
-|---------|-------|-------|
-| Output | `PRINT` | `T:` |
-| Input | `INPUT X` | `A: prompt$X` |
-| Conditionals | `IF/THEN/ELSE` | `C: /Y:/N:` |
-| Loops | `FOR`, `WHILE` | Labels + `J:` |
-| Strength | General math | Educational dialogues |
+5. **Readability**: Use consistent indentation and spacing in your code
+
+## Common Patterns
+
+### Looping Until Valid Input
+
+```pilot
+(GETINPUT)
+A: Enter Y or N:
+A:X
+
+*X: Y
+*X: N
+*X: *
+T: Invalid! Try again.
+J: GETINPUT
+```
+
+### Counting
+
+Since PILOT variables are single letters, counting is limited:
+
+```pilot
+A: Count from 1 to 3
+A:C
+
+*C: 1
+T: One
+*C: 2
+T: Two
+*C: 3
+T: Three
+*C: *
+T: Invalid number
+```
+
+### Nested Conditions
+
+```pilot
+A: Are you a student?
+A:S
+
+*S: Y
+A: What grade are you in?
+A:G
+
+*G: 1
+T: First grade!
+
+*G: 2
+T: Second grade!
+
+*G: *
+T: Other grade.
+
+*S: N
+T: You're not a student.
+```
+
+## Limitations and Workarounds
+
+1. **Single-Letter Variables**: PILOT only supports A-Z variables (26 total)
+2. **No Arithmetic**: PILOT cannot perform math operations
+3. **No Loops with Counter**: Use jump-based loops instead
+
+## Troubleshooting
+
+**Issue**: "Label not found" error
+- **Solution**: Check that labels are spelled correctly and defined with parentheses: `(LABEL)`
+
+**Issue**: Infinite loop
+- **Solution**: Make sure your jumps eventually reach a break point or end
+
+**Issue**: Variables not retaining values
+- **Solution**: Remember variable names are case-sensitive. Use the same letter consistently.
+
+**Issue**: Input not being stored
+- **Solution**: Use `A:X` format to assign input to variable X. Just `A:` won't store the value.
+
+## Advanced Techniques
+
+### State Machine Pattern
+
+```pilot
+(STATE_MENU)
+T: In menu
+A: Next?
+A:I
+*I: 1
+J: STATE_GAME
+*I: 0
+J: STATE_END
+
+(STATE_GAME)
+T: In game
+A: Next?
+A:I
+*I: 1
+J: STATE_MENU
+*I: 0
+J: STATE_END
+
+(STATE_END)
+T: Ending
+```
+
+## Running PILOT Programs in Time Warp IDE
+
+1. Create a `.pilot` file with your program
+2. Select PILOT from the language dropdown
+3. Paste your code or load the file
+4. Click Run or press Ctrl+R
+5. Interact with the program in the Output panel
+
+## Learning Resources
+
+- **Practice**: Start with the quiz example above
+- **Experiment**: Modify examples to understand each command
+- **Build**: Create your own interactive lesson or game
+- **Test**: Always test user input validation
 
 ## Next Steps
 
-1. ✅ Complete tutorials above
-2. 📂 Try examples from `Examples/pilot/`
-3. 🎮 Build an interactive quiz
-4. 🧠 Create a learning program
+- Learn [Logo for turtle graphics](logo.md)
+- Explore [BASIC for math and algorithms](basic.md)
+- Check out [example programs](../Examples/) in the repository
 
----
-
-Happy learning! 📚
+Happy PILOT programming!

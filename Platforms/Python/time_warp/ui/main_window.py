@@ -506,7 +506,7 @@ class MainWindow(QMainWindow):
 
     def setup_ui(self):
         """Setup main UI layout."""
-        self.setWindowTitle("🎨 Time Warp IDE v5.1.0 - Python Edition")
+        self.setWindowTitle("🎨 Time Warp IDE v6.0.0 - Python Edition")
         self.setMinimumSize(1200, 800)
 
         # Set main window style
@@ -1067,27 +1067,6 @@ class MainWindow(QMainWindow):
 
         # Debugging UI removed — this distribution exposes Run/Stop only.
 
-        # Tools menu
-        tools_menu = menubar.addMenu("&Tools")
-
-        # Performance profiler
-        self.profiler_action = QAction("&Profile Execution", self)
-        self.profiler_action.setCheckable(True)
-        self.profiler_action.setChecked(False)
-        self.profiler_action.triggered.connect(self._toggle_profiler)
-        tools_menu.addAction(self.profiler_action)
-
-        show_profile_action = QAction("Show Profile &Report", self)
-        show_profile_action.triggered.connect(self._show_profile_report)
-        tools_menu.addAction(show_profile_action)
-
-        tools_menu.addSeparator()
-
-        # Sound effects library
-        sound_effects_action = QAction("&Sound Effects Library", self)
-        sound_effects_action.triggered.connect(self._show_sound_effects)
-        tools_menu.addAction(sound_effects_action)
-
         # Help menu (last menu item)
         help_menu = menubar.addMenu("&Help")
 
@@ -1104,6 +1083,10 @@ class MainWindow(QMainWindow):
         prog_guide_action = QAction("&Programming Guide", self)
         prog_guide_action.triggered.connect(self.show_programming_guide)
         help_menu.addAction(prog_guide_action)
+
+        doc_index_action = QAction("Documentation &Index", self)
+        doc_index_action.triggered.connect(self.show_doc_index)
+        help_menu.addAction(doc_index_action)
 
         help_menu.addSeparator()
 
@@ -1634,7 +1617,7 @@ class MainWindow(QMainWindow):
 
     def update_title(self):
         """Update window title."""
-        title = "Time Warp IDE v5.1.0"
+        title = "Time Warp IDE v6.0.0"
 
         current_info = self.get_current_tab_info()
         if current_info["file"]:
@@ -1744,9 +1727,9 @@ class MainWindow(QMainWindow):
                 self.recent_menu.addAction(action)
 
     def _get_docs_path(self) -> Path:
-        """Get path to the Docs directory."""
+        """Get path to the docs directory."""
         # Go up from ui -> time_warp -> Python -> Platforms -> Time_Warp_Studio
-        return Path(__file__).parent.parent.parent.parent.parent / "Docs"
+        return Path(__file__).parent.parent.parent.parent.parent / "docs"
 
     def _show_help_dialog(self, title: str, filepath: Path):
         """Show a help dialog with markdown content."""
@@ -1865,82 +1848,46 @@ class MainWindow(QMainWindow):
 
     def show_user_manual(self):
         """Show the user manual."""
-        docs_path = self._get_docs_path() / "user" / "00-user-manual.md"
-        self._show_help_dialog("Time Warp IDE - User Manual", docs_path)
+        docs_path = self._get_docs_path() / "guides" / "01-getting-started.md"
+        self._show_help_dialog("Getting Started with Time Warp IDE", docs_path)
 
     def show_quick_reference(self):
         """Show quick reference guide."""
-        docs_path = self._get_docs_path() / "user" / "02-quick-reference.md"
-        self._show_help_dialog("Quick Reference Guide", docs_path)
+        docs_path = self._get_docs_path() / "guides" / "02-ide-basics.md"
+        self._show_help_dialog("IDE Basics", docs_path)
 
     def show_programming_guide(self):
         """Show programming guide."""
-        docs_path = self._get_docs_path() / "user" / "01-programming-guide.md"
-        self._show_help_dialog("Programming Guide", docs_path)
+        docs_path = self._get_docs_path() / "reference" / "faq.md"
+        self._show_help_dialog("FAQ - Frequently Asked Questions", docs_path)
 
     def show_language_help(self, language: str):
         """Show help for a specific language."""
-        # Extract relevant section from quick reference
-        docs_path = self._get_docs_path() / "user" / "02-quick-reference.md"
+        # Language doc mappings
+        lang_docs = {
+            "basic": ("BASIC Programming Tutorial", "tutorials/basic.md"),
+            "pilot": ("PILOT Language Guide", "tutorials/pilot.md"),
+            "logo": ("Logo Programming & Turtle Graphics", "tutorials/logo.md"),
+        }
+
+        if language not in lang_docs:
+            QMessageBox.information(self, "Help", f"No documentation for {language.upper()}")
+            return
+
+        title, doc_path = lang_docs[language]
+        docs_path = self._get_docs_path() / doc_path
 
         if not docs_path.exists():
-            msg = f"Documentation for {language.upper()} not found."
+            msg = f"Documentation file not found: {doc_path}"
             QMessageBox.information(self, "Help", msg)
             return
 
-        content = docs_path.read_text(encoding="utf-8")
+        self._show_help_dialog(title, docs_path)
 
-        # Find the language section
-        lang_titles = {
-            "basic": "## BASIC Commands",
-            "pilot": "## PILOT Commands",
-            "logo": "## Logo Commands",
-        }
-
-        start_marker = lang_titles.get(language, "")
-        if not start_marker or start_marker not in content:
-            # Show full quick reference
-            self._show_help_dialog(f"{language.upper()} Help", docs_path)
-            return
-
-        # Extract just that language section
-        start_idx = content.find(start_marker)
-        # Find next ## header or end
-        next_section = content.find("\n## ", start_idx + len(start_marker))
-        if next_section == -1:
-            section = content[start_idx:]
-        else:
-            section = content[start_idx:next_section]
-
-        html = self._markdown_to_html(section)
-
-        dialog = QDialog(self)
-        dialog.setWindowTitle(f"{language.upper()} Quick Reference")
-        dialog.setMinimumSize(600, 450)
-        dialog.resize(700, 550)
-
-        layout = QVBoxLayout(dialog)
-
-        browser = QTextBrowser()
-        browser.setOpenExternalLinks(True)
-        browser.setStyleSheet(
-            """
-            QTextBrowser {
-                font-family: 'Courier New', monospace;
-                font-size: 11pt;
-                padding: 10px;
-                background-color: palette(base);
-            }
-        """
-        )
-        browser.setHtml(html)
-        layout.addWidget(browser)
-
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
-        buttons.rejected.connect(dialog.close)
-        layout.addWidget(buttons)
-
-        dialog.exec()
+    def show_doc_index(self):
+        """Show documentation index."""
+        docs_path = self._get_docs_path() / "INDEX.md"
+        self._show_help_dialog("Documentation Index", docs_path)
 
     def show_about(self):
         """Show about dialog."""
@@ -1948,7 +1895,7 @@ class MainWindow(QMainWindow):
             self,
             "About Time Warp IDE",
             "<h2>Time Warp IDE - Python Edition</h2>"
-            "<p>Version 5.1.0 — Official PySide6 release</p>"
+            "<p>Version 6.0.0 — Modern PySide6 Release</p>"
             "<p>Educational programming environment supporting:</p>"
             "<ul>"
             "<li>PILOT - Interactive teaching language</li>"

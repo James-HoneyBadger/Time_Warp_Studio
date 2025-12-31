@@ -1,415 +1,413 @@
-# Prolog Tutorial
+# Prolog Programming with Time Warp IDE
 
-**Prolog** (Logic Programming) is a fundamentally different language based on logic and pattern matching. Instead of telling the computer *how* to do something, you tell it *what* is true.
+Prolog is a unique logic programming language based on first-order logic. Time Warp IDE provides experimental Prolog support for exploring declarative, rule-based programming.
 
-## Getting Started
+## Quick Start
 
-### Hello, World! 👋
-
-```prolog
-?- write('Hello, World!'), nl.
-```
-
-**Output:**
-```
-Hello, World!
-true.
-```
-
-`?-` means "query" (ask a question)
-`write()` prints text
-`nl` adds newline
-`.` ends the query
-
-## Facts and Queries
-
-### Simple Facts
+A simple Prolog program:
 
 ```prolog
-% Facts
-parent(tom, bob).
-parent(tom, liz).
-parent(bob, ann).
-parent(bob, pat).
-parent(pat, jim).
-```
-
-`%` starts a comment
-
-### Querying Facts
-
-```prolog
-?- parent(tom, bob).
-```
-
-**Output:**
-```
-true.
-```
-
-The query succeeds because `parent(tom, bob)` is a fact.
-
-```prolog
-?- parent(tom, ann).
-```
-
-**Output:**
-```
-false.
-```
-
-### Multiple Solutions
-
-```prolog
-?- parent(tom, X).
-```
-
-**Output:**
-```
-X = bob ;
-X = liz.
-```
-
-Prolog finds all values of X where `parent(tom, X)` is true.
-
-## Rules
-
-Rules define relationships:
-
-```prolog
-% Facts
 parent(tom, bob).
 parent(bob, ann).
 
-% Rule: X is a grandparent of Z if X is parent of Y and Y is parent of Z
-grandparent(X, Z) :- parent(X, Y), parent(Y, Z).
-```
-
-`:-` means "if"
-`,` means "and"
-
-### Querying Rules
-
-```prolog
-?- grandparent(tom, ann).
-```
-
-**Output:**
-```
-true.
-```
-
-Because `parent(tom, bob)` AND `parent(bob, ann)`.
-
-### Ancestor Rule
-
-```prolog
 ancestor(X, Y) :- parent(X, Y).
 ancestor(X, Y) :- parent(X, Z), ancestor(Z, Y).
+
+?- ancestor(tom, ann).
 ```
 
-This recursive rule says:
-1. X is an ancestor of Y if X is a parent of Y, OR
-2. X is an ancestor of Y if X is a parent of Z and Z is an ancestor of Y
+This queries whether tom is an ancestor of ann.
 
-## Arithmetic
+## Basic Concepts
+
+### Facts
+
+Facts are statements about the world:
+
+```prolog
+parent(tom, bob).
+parent(bob, ann).
+parent(bob, pat).
+
+student(alice).
+student(bob).
+student(charlie).
+```
+
+### Rules
+
+Rules define relationships using `:- ` (if):
+
+```prolog
+grandparent(X, Z) :- parent(X, Y), parent(Y, Z).
+sibling(X, Y) :- parent(Z, X), parent(Z, Y), X \= Y.
+```
+
+### Queries
+
+Ask questions using `?-`:
+
+```prolog
+?- parent(tom, bob).        % Is tom a parent of bob?
+?- parent(tom, X).          % Who are tom's children?
+?- parent(X, bob).          % Who is bob's parent?
+?- grandparent(tom, X).     % Who is tom's grandchild?
+```
+
+## Unification and Variables
+
+Variables start with uppercase letters:
+
+```prolog
+% Find all children of tom
+?- parent(tom, X).
+X = bob;
+X = alice;
+...
+
+% Find all parent-child pairs
+?- parent(X, Y).
+X = tom, Y = bob;
+X = tom, Y = alice;
+...
+
+% Multiple conditions (conjunction - AND)
+?- parent(tom, X), student(X).
+```
+
+## Common Predicates
 
 ### Comparison
 
 ```prolog
-?- 5 > 3.
-true.
+% Unification
+X = Y           % Are X and Y the same?
+X \= Y          % Are X and Y different?
 
-?- 10 < 5.
-false.
-
-?- X = 5.
-X = 5.
+% Arithmetic comparison
+X =:= Y         % Are values equal?
+X =\= Y         % Are values different?
+X < Y           % Is X less than Y?
+X > Y           % Is X greater than Y?
+X =< Y          % Is X less than or equal to Y?
+X >= Y          % Is X greater than or equal to Y?
 ```
-
-### Arithmetic Operations
-
-```prolog
-?- X is 2 + 3.
-X = 5.
-
-?- X is 10 - 4.
-X = 6.
-
-?- X is 3 * 4.
-X = 12.
-
-?- X is 20 / 4.
-X = 5.
-```
-
-The `is` operator evaluates arithmetic.
-
-### Using in Facts
-
-```prolog
-age(john, 25).
-age(alice, 30).
-age(bob, 20).
-
-adult(X) :- age(X, Age), Age >= 18.
-
-?- adult(john).
-true.
-```
-
-## Lists
-
-### Basic List Syntax
-
-```prolog
-?- L = [1, 2, 3].
-L = [1, 2, 3].
-
-?- L = [1, [2, 3], 4].
-L = [1, [2, 3], 4].
-
-?- L = [a | Rest].
-L = [a|Rest].  (Rest is unbound)
-```
-
-`[H | T]` means head and tail: H is first element, T is rest
 
 ### List Operations
 
 ```prolog
-append([], L, L).
-append([H|T], L, [H|R]) :- append(T, L, R).
+% List matching
+[H|T] = [1, 2, 3].     % H=1, T=[2,3]
 
-?- append([1,2], [3,4], X).
-X = [1,2,3,4].
+% Membership
+member(X, [1, 2, 3]).  % Is X a member?
 
-?- append([a], [b,c], X).
-X = [a,b,c].
+% Append
+append([1, 2], [3, 4], L).  % L = [1, 2, 3, 4]
+
+% Length
+length([1, 2, 3], N).   % N = 3
 ```
 
-### Member Predicate
+## Complete Example Programs
+
+### Family Relationships
 
 ```prolog
-member(X, [X|_]).
-member(X, [_|T]) :- member(X, T).
-
-?- member(2, [1,2,3]).
-true.
-
-?- member(X, [a,b,c]).
-X = a ;
-X = b ;
-X = c.
-```
-
-## Complete Example: Family Tree
-
-```prolog
-% Male and female facts
-male(tom).
-male(bob).
-male(jim).
-male(pat).
-
-female(liz).
-female(ann).
-female(sue).
-
-% Parent facts
+% Facts about parents
 parent(tom, bob).
 parent(tom, liz).
 parent(bob, ann).
 parent(bob, pat).
 parent(pat, jim).
-parent(pat, sue).
 
-% Rules
-father(X, Y) :- male(X), parent(X, Y).
-mother(X, Y) :- female(X), parent(X, Y).
+% Rules about relationships
+grandparent(X, Z) :- parent(X, Y), parent(Y, Z).
 
-grandparent(X, Y) :- parent(X, Z), parent(Z, Y).
-grandfather(X, Y) :- male(X), grandparent(X, Y).
-grandmother(X, Y) :- female(X), grandparent(X, Y).
+greatgrandparent(X, Z) :- parent(X, Y), grandparent(Y, Z).
 
 sibling(X, Y) :- parent(Z, X), parent(Z, Y), X \= Y.
 
 ancestor(X, Y) :- parent(X, Y).
 ancestor(X, Y) :- parent(X, Z), ancestor(Z, Y).
 
-% Queries
-?- father(tom, X).
-?- grandfather(tom, X).
-?- ancestor(tom, X).
-?- sibling(pat, X).
+% Queries:
+% ?- parent(tom, X).           % Who are tom's children?
+% ?- grandparent(tom, X).      % Who are tom's grandchildren?
+% ?- ancestor(tom, X).         % All descendants of tom?
+% ?- sibling(bob, X).          % Who are bob's siblings?
 ```
 
-## Complete Example: List Operations
+### Math and Logic
 
 ```prolog
-% Check if list is empty
-empty([]).
+% Factorial
+factorial(0, 1).
+factorial(N, F) :- N > 0, N1 is N - 1, factorial(N1, F1), F is N * F1.
 
-% Get length of list
-length([], 0).
-length([_|T], N) :- length(T, N1), N is N1 + 1.
-
-% Reverse a list
-reverse([], []).
-reverse([H|T], R) :- reverse(T, RevT), append(RevT, [H], R).
-
-% Find maximum in list
-max([X], X).
-max([H|T], M) :- max(T, M1), (H > M1 -> M = H ; M = M1).
-
-% Find minimum in list
-min([X], X).
-min([H|T], M) :- min(T, M1), (H < M1 -> M = H ; M = M1).
+% Fibonacci
+fib(0, 0).
+fib(1, 1).
+fib(N, F) :- N > 1, N1 is N - 1, N2 is N - 2, fib(N1, F1), fib(N2, F2), F is F1 + F2.
 
 % Sum of list
-sum([], 0).
-sum([H|T], S) :- sum(T, S1), S is H + S1.
+sum_list([], 0).
+sum_list([H|T], Sum) :- sum_list(T, TSum), Sum is H + TSum.
 
-% Queries
-?- length([1,2,3,4], N).
-N = 4.
+% Maximum of list
+max_list([X], X).
+max_list([H|T], Max) :- max_list(T, MaxT), (H > MaxT -> Max = H ; Max = MaxT).
 
-?- reverse([1,2,3], R).
-R = [3,2,1].
-
-?- sum([1,2,3,4,5], S).
-S = 15.
+% Queries:
+% ?- factorial(5, F).          % Calculate 5!
+% ?- fib(10, F).               % Calculate Fibonacci(10)
+% ?- sum_list([1,2,3,4,5], S). % Sum a list
+% ?- max_list([3,1,4,1,5], M). % Find maximum
 ```
 
-## Control Flow
-
-### Cut (!)
+### List Processing
 
 ```prolog
-max(X, Y, X) :- X >= Y, !.
-max(X, Y, Y).
+% Reverse a list
+reverse([], []).
+reverse([H|T], R) :- reverse(T, RT), append(RT, [H], R).
 
-?- max(5, 3, M).
-M = 5.
+% Sort (simple version)
+sorted([]).
+sorted([_]).
+sorted([X, Y|T]) :- X =< Y, sorted([Y|T]).
+
+% Find minimum
+min([X], X).
+min([H|T], Min) :- min(T, MinT), (H < MinT -> Min = H ; Min = MinT).
+
+% Count occurrences
+count([], _, 0).
+count([H|T], H, N) :- !, count(T, H, N1), N is N1 + 1.
+count([_|T], X, N) :- count(T, X, N).
+
+% Queries:
+% ?- reverse([1,2,3], R).                 % Reverse a list
+% ?- sorted([1,2,3,4]).                   % Check if sorted
+% ?- min([5,2,8,1,9], M).                 % Find minimum
+% ?- count([a,b,a,c,a], a, N).            % Count 'a' occurrences
 ```
 
-The `!` (cut) prevents backtracking.
-
-### Conditional (->)
+### Knowledge Base: Animals
 
 ```prolog
-sign(X, positive) :- X > 0, !.
-sign(X, negative) :- X < 0, !.
-sign(0, zero).
+% Facts about animals
+animal(dog).
+animal(cat).
+animal(bird).
+animal(fish).
 
-% Or using conditional:
-sign2(X, S) :- (X > 0 -> S = positive ; X < 0 -> S = negative ; S = zero).
+% Properties
+mammal(dog).
+mammal(cat).
+mammal(whale).
 
-?- sign(5, S).
-S = positive.
+carnivore(dog).
+carnivore(cat).
+carnivore(lion).
+
+can_fly(bird).
+can_fly(eagle).
+can_fly(bat).
+
+% Rules
+is_pet(dog).
+is_pet(cat).
+is_pet(bird).
+
+endangered(panda).
+endangered(tiger).
+endangered(whale).
+
+% Complex rules
+safe_pet(X) :- is_pet(X), \+ dangerous(X).
+
+dangerous(lion).
+dangerous(snake).
+dangerous(tiger).
+
+% Queries:
+% ?- mammal(X).               % What mammals do we know?
+% ?- can_fly(X).              % What can fly?
+% ?- is_pet(X).               % What are pets?
+% ?- carnivore(X), is_pet(X). % Carnivorous pets?
 ```
+
+### Simple Expert System
+
+```prolog
+% Medical diagnosis example
+symptom(person1, fever).
+symptom(person1, cough).
+symptom(person1, headache).
+
+symptom(person2, fever).
+symptom(person2, aches).
+
+% Diagnoses
+diagnosis(cold) :- symptom(X, fever), symptom(X, cough).
+diagnosis(flu) :- symptom(X, fever), symptom(X, aches).
+
+% Rules for recommendation
+recommend(rest) :- diagnosis(cold).
+recommend(rest) :- diagnosis(flu).
+recommend(doctor) :- diagnosis(meningitis).
+
+% Queries:
+% ?- diagnosis(X).    % What diagnoses match?
+% ?- recommend(X).    % What do we recommend?
+```
+
+## Important Predicates
+
+### Arithmetic
+
+```prolog
+is/2          % Evaluate arithmetic: X is 2 + 3
+=:=/2         % Arithmetic equality: 2 + 3 =:= 5
+=\=/2         % Arithmetic inequality
+</2, >/2      % Comparison
+=</2, >=/2    % Comparison with equals
+```
+
+### Control
+
+```prolog
+true          % Always succeeds
+fail          % Always fails
+!/0           % Cut (prevent backtracking)
+->/2 ; /2     % If-then-else: (condition -> true_part ; false_part)
+```
+
+### List Operations
+
+```prolog
+append/3      % Append lists
+member/2      % Check membership
+length/2      % List length
+reverse/2     % Reverse a list
+sort/2        % Sort a list
+nth0/3        % Get nth element (0-indexed)
+nth1/3        % Get nth element (1-indexed)
+```
+
+## Tips and Best Practices
+
+1. **Start with facts**: Build a solid knowledge base
+2. **Use clear names**: `parent(X, Y)` is better than `p(X, Y)`
+3. **Test queries**: Verify your rules work
+4. **Use comments**: Explain complex rules
+5. **Think recursively**: Prolog naturally handles recursive definitions
 
 ## Common Patterns
 
-### NOT Operator
+### Pattern Matching
 
 ```prolog
-not_parent(X, Y) :- \+ parent(X, Y).
-
-?- not_parent(alice, bob).
-true.
+process([]).                          % Base case
+process([H|T]) :- process_one(H), process(T).  % Recursive case
 ```
 
-`\+` means "NOT"
-
-### Negation as Failure
+### Recursive List Processing
 
 ```prolog
-single(X) :- \+ parent(_, X).
+% Sum
+sum([], 0).
+sum([H|T], S) :- sum(T, ST), S is H + ST.
 
-?- single(X).  (finds people with no parents)
+% Map (apply rule to each)
+map([], []).
+map([H|T], [R|RT]) :- process(H, R), map(T, RT).
 ```
 
-### Iteration Over List
+### Backtracking
 
 ```prolog
-process_list([]).
-process_list([H|T]) :-
-  write(H), nl,
-  process_list(T).
+choice(a).
+choice(b).
+choice(c).
 
-?- process_list([1,2,3]).
-1
-2
-3
-true.
+% Prolog automatically backtracks through all choices
+?- choice(X).
 ```
 
-## Common Commands Reference
+## Debugging Tips
 
-### Basic
-| Term | Meaning | Example |
-|------|---------|---------|
-| `:-` | "if" or "rule" | `rule :- fact.` |
-| `,` | "and" | `fact1, fact2` |
-| `;` | "or" | `option1 ; option2` |
-| `.` | ends clause | `fact.` |
-| `%` | comment | `% This is a comment` |
+```prolog
+% Use trace to see execution
+% ?- trace.
 
-### Operators
-| Operator | Meaning | Example |
-|----------|---------|---------|
-| `=` | unify | `X = 5` |
-| `is` | evaluate | `X is 2 + 3` |
-| `>`, `<` | comparison | `X > 5` |
-| `>=`, `=<` | comparison | `X >= 5` |
-| `\=` | not unifiable | `X \= 5` |
-| `\+` | not provable | `\+ fact` |
+% Use write to debug
+debug_rule(X) :- 
+    write('Checking: '), write(X), nl,
+    process(X),
+    write('Success: '), write(X), nl.
 
-### List Operators
-| Pattern | Meaning | Example |
-|---------|---------|---------|
-| `[]` | empty list | `L = []` |
-| `[H\|T]` | head/tail | `L = [1\|[2,3]]` |
-| `[H\|T]` | match first | `member(X, [1\|Rest])` |
+% Write output
+nl                % Newline
+write(Term)       % Write term
+writeln(Term)     % Write term with newline
+tab(N)            % Write N spaces
+```
 
-## Tips for Learning Prolog
+## Learning Path
 
-1. **Think declaratively** - State what is true, not how to compute
-2. **Build facts first** - Start with data
-3. **Write simple rules** - Build complexity gradually
-4. **Test queries** - Ask specific questions
-5. **Use recursion** - Process lists recursively
-6. **Debug with trace** - Use tracing to understand execution
+1. **Start**: Create simple facts and queries
+2. **Basic Rules**: Write predicates with one condition
+3. **Multiple Conditions**: Use conjunctions (,)
+4. **Recursion**: Define recursive rules
+5. **Advanced**: List processing, backtracking, cuts
 
-## Common Mistakes
+## Limitations
 
-| Mistake | Problem | Fix |
-|---------|---------|-----|
-| `parent(tom, bob)` as query | Asks is it true | Use `?-` for query |
-| `:-` in queries | Rule in wrong place | Only use in clauses |
-| Variable starts lowercase | Not a variable | Variables start UPPERCASE |
-| Forgetting `is` | Math not evaluated | `X is 2 + 3` not `X = 2 + 3` |
-| Infinite recursion | Stack overflow | Check base case |
+- **No mutable state**: Variables can't change
+- **No loops**: Use recursion instead
+- **Performance**: Can be slow with deep recursion
+- **Limited I/O**: Simple read/write operations
 
-## Prolog vs Other Languages
+## Common Mistakes to Avoid
 
-| Feature | Prolog | BASIC/Pascal |
-|---------|--------|-------------|
-| Paradigm | Logic | Imperative |
-| How | Declare relations | Give instructions |
-| Queries | Pattern matching | Function calls |
-| Lists | Native | Arrays |
-| Recursion | Essential | Optional |
+```prolog
+% ❌ Wrong: Variables must be uppercase
+parent(tom, bob).
+?- parent(tom, X).  % X works
+?- parent(tom, x).  % x is a constant, not a variable!
+
+% ✅ Right: Use uppercase for variables
+?- parent(tom, Child).
+
+% ❌ Wrong: Forgetting the rule structure
+grandparent(X, Z) parent(X, Y), parent(Y, Z).  % Error!
+
+% ✅ Right: Use :- for rules
+grandparent(X, Z) :- parent(X, Y), parent(Y, Z).
+
+% ❌ Wrong: Not providing all needed facts
+?- parent(unknown, bob).  % Fails - unknown person unknown
+
+% ✅ Right: Add the fact first
+parent(unknown, bob).
+?- parent(unknown, bob).  % Now succeeds
+```
+
+## Running Prolog Programs in Time Warp IDE
+
+1. Create a `.pl` or `.pro` file with your program
+2. Select "Prolog" from the language dropdown
+3. Paste your code or load the file
+4. Type queries in the format `?- query.`
+5. Press Enter to execute
 
 ## Next Steps
 
-1. ✅ Learn facts and rules
-2. ✅ Practice queries
-3. ✅ Build family tree program
-4. ✅ Process lists recursively
-5. 📂 Try examples from `Examples/prolog/`
+- Learn [Logic programming concepts](../reference/builtins.md)
+- Explore [Expert systems and knowledge bases]
+- Try [Python for general programming](python.md)
+- Learn [BASIC for procedural programming](basic.md)
 
----
-
-Happy logic programming! 🧠
+Happy Prolog programming!

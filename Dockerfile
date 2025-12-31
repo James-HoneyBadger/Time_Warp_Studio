@@ -29,7 +29,7 @@ RUN python -m py_compile core/*.py handlers/*.py || true
 # Stage 4: Production runtime
 FROM python:3.11-slim
 LABEL maintainer="Time Warp Studio <james@honey-badger.org>"
-LABEL version="5.1.0"
+LABEL version="6.0.0"
 LABEL description="Time Warp IDE - Educational Multi-Language Programming Environment"
 
 # Install runtime dependencies

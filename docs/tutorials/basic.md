@@ -1,166 +1,214 @@
-# BASIC Tutorial
+# BASIC Programming Tutorial
 
-**BASIC** (Beginner's All-purpose Symbolic Instruction Code) is one of the most popular languages for learning programming fundamentals.
+Learn BASIC programming language in Time Warp IDE. BASIC is a beginner-friendly language perfect for learning programming fundamentals.
+
+---
+
+## Introduction to BASIC
+
+BASIC stands for **B**eginner's **A**ll-purpose **S**ymbolic **I**nstruction **C**ode. It was designed to teach programming concepts in simple, readable syntax.
+
+### Why BASIC?
+
+- ✅ Easy to learn and read
+- ✅ Clear, explicit syntax
+- ✅ Perfect for beginners
+- ✅ Great for teaching algorithms
+- ✅ Fun to experiment with
+
+---
 
 ## Getting Started
 
-### Hello, World! 👋
+### Your First Program
 
 ```basic
 PRINT "Hello, World!"
 ```
+
+**Run it:**
+1. Select BASIC from language dropdown
+2. Type the code above
+3. Press Ctrl+R or click Run
 
 **Output:**
 ```
 Hello, World!
 ```
 
-## Variables
-
-Variables store values:
+### Simple Math
 
 ```basic
-X = 5
-Y = 10
-PRINT X + Y
+PRINT 2 + 3
+PRINT 10 - 4
+PRINT 5 * 6
+PRINT 20 / 4
+```
+
+**Output:**
+```
+5
+6
+30
+5
+```
+
+---
+
+## Variables
+
+Variables store data for your program.
+
+### Declaring Variables
+
+```basic
+LET X = 5
+LET NAME$ = "Alice"
+LET PRICE = 19.99
+```
+
+**Rules:**
+- Variable names start with letter
+- Can contain letters, numbers, underscore
+- String variables end with `$`
+- Use `LET` keyword (optional in many BASIC versions)
+
+### Using Variables
+
+```basic
+LET AGE = 25
+PRINT "My age is "; AGE
+PRINT AGE + 10
+```
+
+**Output:**
+```
+My age is 25
+35
+```
+
+### String Variables
+
+```basic
+LET FIRST$ = "John"
+LET LAST$ = "Doe"
+PRINT FIRST$; " "; LAST$
+```
+
+**Output:**
+```
+John Doe
+```
+
+---
+
+## Input & Output
+
+### PRINT Statement
+
+Print text and numbers:
+
+```basic
+PRINT "Hello"
+PRINT 42
+PRINT "Age:"; 25
+```
+
+**Using semicolon (;):** Continues on same line
+**Using comma (,):** Adds space
+
+### INPUT Statement
+
+Get data from user:
+
+```basic
+INPUT "What is your name? "; NAME$
+PRINT "Hello, "; NAME$
+```
+
+When run, you'll be prompted to enter your name.
+
+### Complete Input/Output Program
+
+```basic
+INPUT "Enter your name: "; NAME$
+INPUT "Enter your age: "; AGE
+LET YEAR = 2025 - AGE
+PRINT "Hello "; NAME$; "!"
+PRINT "You were born around "; YEAR
+```
+
+---
+
+## Arithmetic Operations
+
+```basic
+PRINT 10 + 5      ' Addition
+PRINT 10 - 5      ' Subtraction
+PRINT 10 * 5      ' Multiplication
+PRINT 10 / 5      ' Division
+PRINT 10 ^ 2      ' Exponentiation (power)
+PRINT 10 MOD 3    ' Modulo (remainder)
 ```
 
 **Output:**
 ```
 15
+5
+50
+2
+100
+1
 ```
 
-### Variable Types
+---
 
-**Numbers:**
-```basic
-AGE = 25
-PRICE = 19.99
-PRINT PRICE
-```
+## Conditions & IF Statements
 
-**Strings (text):**
-```basic
-NAME$ = "Alice"
-MESSAGE$ = "Hello, " + NAME$
-PRINT MESSAGE$
-```
-
-Note: String variables end with `$`
-
-### Naming Rules
-
-- Must start with letter
-- Can contain letters, numbers, underscore
-- Case doesn't matter (X = x)
-
-## Input and Output
-
-### Printing
-
-```basic
-PRINT "Hello"
-PRINT 10
-PRINT 3 + 4
-```
-
-### Input from User
-
-```basic
-PRINT "What's your name?"
-INPUT NAME$
-PRINT "Hello, " + NAME$
-```
-
-The program waits for user to type something and press Enter.
-
-**Multiple inputs:**
-```basic
-PRINT "Enter two numbers:"
-INPUT A
-INPUT B
-PRINT "Sum is " A + B
-```
-
-## Math Operations
-
-```basic
-PRINT 5 + 3         ; Addition
-PRINT 10 - 4        ; Subtraction
-PRINT 3 * 4         ; Multiplication
-PRINT 10 / 2        ; Division
-PRINT 2 ^ 3         ; Power (2 to the 3rd = 8)
-PRINT 10 MOD 3      ; Remainder (1)
-```
-
-## Strings
-
-### String Operations
-
-```basic
-FIRST$ = "Hello"
-SECOND$ = "World"
-RESULT$ = FIRST$ + " " + SECOND$
-PRINT RESULT$
-```
-
-**Output:**
-```
-Hello World
-```
-
-### String Functions
-
-```basic
-TEXT$ = "HELLO"
-PRINT LEN(TEXT$)           ; Length = 5
-PRINT LOWER$(TEXT$)        ; hello
-PRINT UPPER$("hello")      ; HELLO
-PRINT MID$(TEXT$, 1, 3)    ; HEL (start at 1, take 3 chars)
-```
-
-## Conditionals (IF/THEN/ELSE)
+Make decisions in your program:
 
 ### Simple IF
 
 ```basic
-PRINT "Enter a number:"
-INPUT X
-IF X > 10 THEN PRINT "Big number!"
+LET AGE = 18
+IF AGE >= 18 THEN PRINT "You are an adult"
 ```
 
-### IF/ELSE
+### IF-ELSE
 
 ```basic
-PRINT "Enter age:"
-INPUT AGE
-IF AGE >= 18 THEN
-  PRINT "You're an adult"
+LET SCORE = 75
+IF SCORE >= 60 THEN
+  PRINT "You passed!"
 ELSE
-  PRINT "You're a minor"
+  PRINT "You failed!"
 END IF
 ```
 
 ### Comparison Operators
 
-```basic
-IF X = 5 THEN ...       ; Equal
-IF X <> 5 THEN ...      ; Not equal
-IF X > 5 THEN ...       ; Greater than
-IF X < 5 THEN ...       ; Less than
-IF X >= 5 THEN ...      ; Greater or equal
-IF X <= 5 THEN ...      ; Less or equal
-```
+| Operator | Meaning |
+|----------|---------|
+| = | Equal to |
+| <> | Not equal to |
+| < | Less than |
+| > | Greater than |
+| <= | Less than or equal |
+| >= | Greater than or equal |
 
 ### Logical Operators
 
 ```basic
-IF X > 5 AND Y < 10 THEN ...     ; Both true
-IF X > 5 OR Y < 10 THEN ...      ; Either true
-IF NOT (X = 5) THEN ...          ; Not true
+IF AGE >= 18 AND AGE <= 65 THEN PRINT "Working age"
+IF STATUS$ = "student" OR STATUS$ = "teacher" THEN PRINT "School person"
+IF NOT ACTIVE THEN PRINT "Not active"
 ```
 
+---
+
 ## Loops
+
+Repeat code multiple times:
 
 ### FOR Loop
 
@@ -179,263 +227,217 @@ NEXT I
 5
 ```
 
-**Counting backwards:**
-```basic
-FOR I = 10 DOWN TO 1
-  PRINT I
-NEXT I
-```
+### FOR Loop with Step
 
-**With step:**
 ```basic
 FOR I = 0 TO 10 STEP 2
   PRINT I
 NEXT I
 ```
 
-Output: 0, 2, 4, 6, 8, 10
+**Output:**
+```
+0
+2
+4
+6
+8
+10
+```
 
 ### WHILE Loop
 
 ```basic
-X = 1
+LET X = 1
 WHILE X <= 5
   PRINT X
-  X = X + 1
+  LET X = X + 1
 WEND
-```
-
-Execute while condition is true.
-
-### DO/UNTIL Loop
-
-```basic
-X = 1
-DO
-  PRINT X
-  X = X + 1
-UNTIL X > 5
-```
-
-## Arrays
-
-Store multiple values:
-
-```basic
-DIM GRADES(5)
-GRADES(1) = 90
-GRADES(2) = 85
-GRADES(3) = 92
-GRADES(4) = 88
-GRADES(5) = 95
-
-PRINT GRADES(1)
 ```
 
 **Output:**
 ```
-90
+1
+2
+3
+4
+5
 ```
 
-### Arrays with LOOP
+---
+
+## Arrays
+
+Store multiple values in one variable:
+
+### Creating Arrays
 
 ```basic
-DIM NUMBERS(10)
+DIM NUMBERS(5)
+DIM NAMES$(3)
+```
 
-FOR I = 1 TO 10
-  NUMBERS(I) = I * 10
-NEXT I
+**Note:** Array indices usually start at 0 or 1 (depends on BASIC version)
 
-FOR I = 1 TO 10
+### Using Arrays
+
+```basic
+DIM NUMBERS(5)
+LET NUMBERS(1) = 10
+LET NUMBERS(2) = 20
+LET NUMBERS(3) = 30
+
+FOR I = 1 TO 3
   PRINT NUMBERS(I)
 NEXT I
 ```
 
-## Functions (Subroutines)
-
-Create reusable code blocks:
-
-```basic
-SUB GREET(NAME$)
-  PRINT "Hello, " + NAME$
-  PRINT "Nice to meet you!"
-END SUB
-
-GREET "Alice"
-GREET "Bob"
-```
-
-**With return value:**
-
-```basic
-FUNCTION ADD(A, B)
-  RETURN A + B
-END FUNCTION
-
-RESULT = ADD(3, 5)
-PRINT RESULT
-```
-
 **Output:**
 ```
-8
+10
+20
+30
 ```
-
-## Comments
-
-Explain your code:
-
-```basic
-REM This is a comment
-PRINT "Hello"  ! This is also a comment
-```
-
-## Complete Example: Guessing Game
-
-```basic
-REM Guessing Game
-SECRET = INT(RND * 100) + 1
-GUESS = 0
-TRIES = 0
-
-PRINT "Welcome to the Guessing Game!"
-PRINT "I'm thinking of a number 1-100"
-
-WHILE GUESS <> SECRET
-  PRINT "Take a guess:"
-  INPUT GUESS
-  TRIES = TRIES + 1
-  
-  IF GUESS = SECRET THEN
-    PRINT "You got it in " TRIES " tries!"
-  ELSE IF GUESS < SECRET THEN
-    PRINT "Too low, try again"
-  ELSE
-    PRINT "Too high, try again"
-  END IF
-WEND
-```
-
-## Common Commands Reference
-
-### Output
-| Command | Example | What it does |
-|---------|---------|--------------|
-| `PRINT` | `PRINT "Hi"` | Display text or value |
-| `PRINT` | `PRINT A, B` | Display multiple values |
-
-### Input
-| Command | Example | What it does |
-|---------|---------|--------------|
-| `INPUT` | `INPUT X` | Get number from user |
-| `INPUT` | `INPUT NAME$` | Get text from user |
-
-### Variables
-| Command | Example | What it does |
-|---------|---------|--------------|
-| `DIM` | `DIM ARR(10)` | Create array |
-| `LET` | `LET X = 5` | Assign value |
-
-### Control
-| Command | Example | What it does |
-|---------|---------|--------------|
-| `IF/THEN` | `IF X > 5 THEN ...` | Conditional |
-| `FOR/NEXT` | `FOR I = 1 TO 10 ...` | Loop N times |
-| `WHILE/WEND` | `WHILE X < 10 ...` | Loop while true |
-| `DO/UNTIL` | `DO ... UNTIL X=5` | Loop until true |
-
-### Functions
-| Command | Example | What it does |
-|---------|---------|--------------|
-| `SUB` | `SUB GREET(N$) ... END SUB` | Create subroutine |
-| `FUNCTION` | `FUNCTION ADD(A,B) RETURN ...` | Create function |
-
-### Math
-| Function | Example | Result |
-|----------|---------|--------|
-| `ABS` | `ABS(-5)` | 5 |
-| `INT` | `INT(3.7)` | 3 |
-| `SQR` | `SQR(16)` | 4 |
-| `RND` | `RND` | Random 0-1 |
-| `SIN`, `COS`, `TAN` | `SIN(90)` | Trigonometry |
-
-### String
-| Function | Example | Result |
-|----------|---------|--------|
-| `LEN` | `LEN("Hi")` | 2 |
-| `UPPER$` | `UPPER$("hi")` | "HI" |
-| `LOWER$` | `LOWER$("HI")` | "hi" |
-| `LEFT$` | `LEFT$("Hello", 2)` | "He" |
-| `RIGHT$` | `RIGHT$("Hello", 2)` | "lo" |
-| `MID$` | `MID$("Hello", 2, 3)` | "ell" |
-
-## Practice Programs
-
-### Program 1: Addition Calculator
-
-```basic
-PRINT "Enter first number:"
-INPUT A
-PRINT "Enter second number:"
-INPUT B
-SUM = A + B
-PRINT "The sum is " SUM
-```
-
-### Program 2: Times Table
-
-```basic
-PRINT "Times table for what number?"
-INPUT N
-
-FOR I = 1 TO 12
-  PRINT N " x " I " = " (N * I)
-NEXT I
-```
-
-### Program 3: Average Calculator
-
-```basic
-DIM SCORES(5)
-SUM = 0
-
-FOR I = 1 TO 5
-  PRINT "Enter score " I ":"
-  INPUT SCORES(I)
-  SUM = SUM + SCORES(I)
-NEXT I
-
-AVERAGE = SUM / 5
-PRINT "Average: " AVERAGE
-```
-
-## Tips for Learning BASIC
-
-1. **Start simple** - Just PRINT and INPUT first
-2. **Use variables** - Store values for reuse
-3. **Test conditionals** - IF/THEN are powerful
-4. **Build loops** - Automate repetition
-5. **Create functions** - Reuse code blocks
-6. **Comment code** - Explain what you're doing
-7. **Add graphics** - Combine with Logo commands
-
-## Common Mistakes
-
-| Mistake | Problem | Fix |
-|---------|---------|-----|
-| `IF X = 5` | Missing THEN | `IF X = 5 THEN ...` |
-| `FOR I = 1 10` | Missing TO | `FOR I = 1 TO 10` |
-| `X$ = 5` | Type mismatch | `X$ = "5"` (use quotes) |
-| Missing `END IF` | Syntax error | Add `END IF` |
-| Wrong quote type | Syntax error | Use `"` not other quotes |
-
-## Next Steps
-
-1. ✅ Complete tutorials above
-2. 📂 Try examples from `Examples/basic/`
-3. 🎮 Build a simple game
-4. 🔗 Combine with Logo for graphics
 
 ---
 
-Happy coding! 💻
+## Subroutines
+
+Group code into reusable pieces:
+
+### Defining Subroutines
+
+```basic
+GOSUB GreetUser
+END
+
+GreetUser:
+  PRINT "Welcome!"
+  INPUT "Your name: "; NAME$
+  PRINT "Hello, "; NAME$
+  RETURN
+```
+
+**How it works:**
+1. Program runs from top
+2. GOSUB calls the subroutine
+3. Code after colon (GreetUser:) runs
+4. RETURN sends control back
+5. Program continues after GOSUB
+
+---
+
+## Complete Example Programs
+
+### Program 1: Multiplication Table
+
+```basic
+INPUT "Which table? "; TABLE
+FOR I = 1 TO 10
+  LET PRODUCT = TABLE * I
+  PRINT TABLE; " x "; I; " = "; PRODUCT
+NEXT I
+```
+
+### Program 2: Simple Game
+
+```basic
+LET SECRET = 5
+INPUT "Guess a number (1-10): "; GUESS
+IF GUESS = SECRET THEN
+  PRINT "Correct!"
+ELSE IF GUESS < SECRET THEN
+  PRINT "Too low!"
+ELSE
+  PRINT "Too high!"
+END IF
+```
+
+### Program 3: Sum and Average
+
+```basic
+INPUT "How many numbers? "; COUNT
+DIM NUMBERS(COUNT)
+LET SUM = 0
+
+FOR I = 1 TO COUNT
+  PRINT "Enter number "; I; ": ";
+  INPUT NUMBERS(I)
+  LET SUM = SUM + NUMBERS(I)
+NEXT I
+
+LET AVG = SUM / COUNT
+PRINT "Sum: "; SUM
+PRINT "Average: "; AVG
+```
+
+---
+
+## Common Functions
+
+```basic
+ABS(-5)        ' Absolute value: 5
+INT(3.7)       ' Integer part: 3
+SQR(9)         ' Square root: 3
+SIN(0)         ' Sine function
+COS(0)         ' Cosine function
+RND(1)         ' Random 0-1
+```
+
+---
+
+## Comments
+
+Add notes to your code:
+
+```basic
+' This is a comment
+PRINT "Hello"  ' End-of-line comment
+```
+
+Comments start with apostrophe (') and go to end of line.
+
+---
+
+## Tips for Writing BASIC
+
+1. **Use clear variable names** - Use `TOTAL` instead of `T`
+2. **Add comments** - Explain what your code does
+3. **Test often** - Run after every few lines
+4. **Start simple** - Build up complexity gradually
+5. **Use indentation** - Easier to read nested code
+6. **Initialize variables** - Set variables before using
+
+---
+
+## Debugging Tips
+
+**Program won't run?**
+- Check for typos in keywords
+- Ensure all IF has THEN
+- Match all FOR with NEXT
+- Check parentheses are balanced
+
+**Wrong output?**
+- Use PRINT to check variable values
+- Trace through logic step by step
+- Try with simple test data first
+
+**Program seems stuck?**
+- Check loop conditions
+- Make sure loop variable changes
+- Look for infinite WHILE loops
+
+---
+
+## Next Steps
+
+- Try the example programs above
+- Modify them slightly
+- Create your own programs
+- Explore [Logo](logo.md) for graphics
+- Learn [Python](python.md) for modern programming
+
+---
+
+**Happy BASIC programming!** 🎉

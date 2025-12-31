@@ -1,10 +1,10 @@
-# C Tutorial
+# C Programming with Time Warp IDE
 
-**C** is a powerful, efficient language that teaches you how computers actually work. It's the foundation for many modern languages and systems software.
+C is a powerful, fundamental programming language. Time Warp IDE provides experimental C support for those who want to explore systems programming concepts.
 
-## Getting Started
+## Quick Start
 
-### Hello, World! 👋
+A simple C program:
 
 ```c
 #include <stdio.h>
@@ -15,510 +15,483 @@ int main() {
 }
 ```
 
-**Output:**
-```
-Hello, World!
-```
+Run this:
+1. Select "C" from the language dropdown
+2. Paste the code
+3. Click Run (Ctrl+R)
 
-Key elements:
-- `#include <stdio.h>` - Include input/output library
-- `int main()` - Main function (where program starts)
-- `printf()` - Print formatted text
-- `return 0;` - Exit successfully
-- `{ }` - Code block
-- `;` - End statement
+## Basic Syntax
 
-## Variables and Types
+### Structure
 
-### Basic Data Types
+Every C program needs a `main()` function:
 
 ```c
-int AGE = 25;           // Whole number (-2^31 to 2^31-1)
-float PI = 3.14159;     // Decimal (6 digits precision)
-double PRICE = 19.99;   // Decimal (15 digits precision)
-char GRADE = 'A';       // Single character
-char NAME[] = "Alice";  // String (array of chars)
-```
-
-### Type Modifiers
-
-```c
-unsigned int POSITIVE = 100;    // Only positive (0 to 2^32-1)
-short X = 10;                   // Smaller integer
-long BIG = 1000000;             // Larger integer
-const int MAX = 100;            // Cannot change
-```
-
-### Declaring Multiple Variables
-
-```c
-int X = 5, Y = 10, Z = 15;
-float A, B, C;
-A = 1.5;
-```
-
-## Input and Output
-
-### Printing (printf)
-
-```c
-printf("Hello\n");              // Basic print
-printf("Number: %d\n", 42);     // Integer
-printf("Float: %.2f\n", 3.14);  // 2 decimal places
-printf("Text: %s\n", "Hi");     // String
-printf("Char: %c\n", 'X');      // Character
-```
-
-**Format specifiers:**
-- `%d` - Integer
-- `%f` - Float/Double
-- `%.2f` - Float with 2 decimals
-- `%s` - String
-- `%c` - Character
-- `%x` - Hexadecimal
-- `%%` - Literal percent sign
-
-### Reading Input (scanf)
-
-```c
-int X;
-printf("Enter a number: ");
-scanf("%d", &X);        // Note the & for integer
-printf("You entered: %d\n", X);
-
-float F;
-scanf("%f", &F);        // Float
-
-char NAME[50];
-scanf("%s", NAME);      // String (no & needed)
-```
-
-## Math Operations
-
-```c
-#include <math.h>
-
-int A = 10, B = 3;
-printf("Sum: %d\n", A + B);           // 13
-printf("Difference: %d\n", A - B);    // 7
-printf("Product: %d\n", A * B);       // 30
-printf("Division: %d\n", A / B);      // 3 (integer division)
-printf("Remainder: %d\n", A % B);     // 1
-
-printf("Power: %.0f\n", pow(2, 3));   // 8.0
-printf("Square root: %.2f\n", sqrt(16.0));  // 4.00
-printf("Absolute: %d\n", abs(-5));    // 5
-```
-
-## Strings
-
-### String Basics
-
-```c
-#include <string.h>
-
-char STR1[] = "Hello";
-char STR2[] = "World";
-
-printf("String: %s\n", STR1);
-
-// String length
-printf("Length: %lu\n", strlen(STR1));  // 5
-
-// Copy string
-char COPY[50];
-strcpy(COPY, STR1);
-printf("Copy: %s\n", COPY);  // Hello
-
-// Concatenate
-strcat(STR1, " ");
-strcat(STR1, STR2);
-printf("Combined: %s\n", STR1);  // Hello World
-```
-
-### Character by Character
-
-```c
-char TEXT[] = "ABC";
-int I;
-
-for (I = 0; I < 3; I++) {
-    printf("Char %d: %c\n", I, TEXT[I]);
-}
-```
-
-**Output:**
-```
-Char 0: A
-Char 1: B
-Char 2: C
-```
-
-## Conditionals
-
-### IF/ELSE
-
-```c
-int X = 10;
-
-if (X > 5) {
-    printf("X is greater than 5\n");
-} else if (X == 5) {
-    printf("X equals 5\n");
-} else {
-    printf("X is less than 5\n");
-}
-```
-
-### Comparison Operators
-
-```c
-if (X == 5) ...     // Equal
-if (X != 5) ...     // Not equal
-if (X > 5) ...      // Greater
-if (X < 5) ...      // Less
-if (X >= 5) ...     // Greater or equal
-if (X <= 5) ...     // Less or equal
-```
-
-### Logical Operators
-
-```c
-if (X > 5 && Y < 10) ...   // AND (both true)
-if (X > 5 || Y < 10) ...   // OR (either true)
-if (!(X == 5)) ...         // NOT
-```
-
-### Switch Statement
-
-```c
-int CHOICE;
-scanf("%d", &CHOICE);
-
-switch (CHOICE) {
-    case 1:
-        printf("You chose 1\n");
-        break;
-    case 2:
-        printf("You chose 2\n");
-        break;
-    default:
-        printf("Invalid choice\n");
-}
-```
-
-## Loops
-
-### FOR Loop
-
-```c
-int I;
-for (I = 1; I <= 5; I++) {
-    printf("I = %d\n", I);
-}
-```
-
-**Output:**
-```
-I = 1
-I = 2
-I = 3
-I = 4
-I = 5
-```
-
-**Counting backwards:**
-```c
-for (I = 5; I >= 1; I--) {
-    printf("%d\n", I);
-}
-```
-
-### WHILE Loop
-
-```c
-int X = 1;
-while (X <= 5) {
-    printf("X = %d\n", X);
-    X++;
-}
-```
-
-### DO-WHILE Loop
-
-```c
-int X = 1;
-do {
-    printf("X = %d\n", X);
-    X++;
-} while (X <= 5);
-```
-
-Executes at least once.
-
-## Arrays
-
-### Single Dimension Array
-
-```c
-int NUMBERS[5] = {10, 20, 30, 40, 50};
-printf("Element 0: %d\n", NUMBERS[0]);  // 10
-printf("Element 2: %d\n", NUMBERS[2]);  // 30
-
-// Modify
-NUMBERS[1] = 25;
-printf("Modified: %d\n", NUMBERS[1]);   // 25
-```
-
-### Array with Loop
-
-```c
-int ARR[5] = {5, 10, 15, 20, 25};
-int I;
-
-for (I = 0; I < 5; I++) {
-    printf("ARR[%d] = %d\n", I, ARR[I]);
-}
-```
-
-### 2D Array
-
-```c
-int MATRIX[3][3] = {
-    {1, 2, 3},
-    {4, 5, 6},
-    {7, 8, 9}
-};
-
-printf("Element [1][2]: %d\n", MATRIX[1][2]);  // 6
-```
-
-## Functions
-
-### Defining Functions
-
-```c
-int ADD(int A, int B) {
-    return A + B;
-}
+#include <stdio.h>
 
 int main() {
-    int RESULT = ADD(3, 5);
-    printf("Sum: %d\n", RESULT);
+    // Your code here
     return 0;
 }
 ```
 
-### Function with No Return
+### Headers and Libraries
 
 ```c
-void GREET(char NAME[]) {
-    printf("Hello, %s!\n", NAME);
-}
-
-int main() {
-    GREET("Alice");
-    return 0;
-}
+#include <stdio.h>   // Standard I/O (printf, scanf)
+#include <stdlib.h>  // Standard library (malloc, free)
+#include <math.h>    // Math functions (sin, cos, sqrt)
+#include <string.h>  // String functions (strlen, strcpy)
 ```
 
-### Multiple Parameters
-
-```c
-int MULTIPLY(int A, int B, int C) {
-    return A * B * C;
-}
-
-int main() {
-    printf("Product: %d\n", MULTIPLY(2, 3, 4));  // 24
-    return 0;
-}
-```
-
-### Recursive Functions
-
-```c
-int FACTORIAL(int N) {
-    if (N <= 1)
-        return 1;
-    else
-        return N * FACTORIAL(N - 1);
-}
-
-int main() {
-    printf("5! = %d\n", FACTORIAL(5));  // 120
-    return 0;
-}
-```
-
-## Pointers
-
-### Pointer Basics
-
-```c
-int X = 5;
-int *PTR;           // Declare pointer
-PTR = &X;           // Get address of X
-
-printf("Value: %d\n", X);        // 5
-printf("Pointer value: %d\n", *PTR);  // 5 (dereference)
-printf("Address: %p\n", PTR);    // 0x... (address)
-```
-
-`&` = "address of"
-`*` = "dereference" or "pointer to"
-
-### Pointers with Functions
-
-```c
-void INCREMENT(int *NUM) {
-    *NUM = *NUM + 1;
-}
-
-int main() {
-    int X = 5;
-    INCREMENT(&X);
-    printf("X = %d\n", X);  // 6
-    return 0;
-}
-```
-
-## Comments
+### Comments
 
 ```c
 // Single line comment
 
-/* Block comment
-   that spans
-   multiple lines */
-
-int X = 5;  // Inline comment
+/*
+ * Multi-line comment
+ * can span multiple lines
+ */
 ```
 
-## Complete Example: Grade Calculator
+### Variables and Data Types
+
+```c
+int age = 25;           // Integer
+float height = 5.9;     // Floating point
+double pi = 3.14159;    // Double precision
+char initial = 'A';     // Single character
+```
+
+### Output: printf()
 
 ```c
 #include <stdio.h>
 
 int main() {
-    float SCORE1, SCORE2, SCORE3, AVERAGE;
-    char GRADE;
+    printf("Hello, World!\n");
     
-    printf("Enter three scores: ");
-    scanf("%f %f %f", &SCORE1, &SCORE2, &SCORE3);
+    int age = 25;
+    printf("Age: %d\n", age);
     
-    AVERAGE = (SCORE1 + SCORE2 + SCORE3) / 3;
+    float height = 5.9;
+    printf("Height: %.1f\n", height);
     
-    if (AVERAGE >= 90)
-        GRADE = 'A';
-    else if (AVERAGE >= 80)
-        GRADE = 'B';
-    else if (AVERAGE >= 70)
-        GRADE = 'C';
-    else
-        GRADE = 'F';
-    
-    printf("Average: %.2f\n", AVERAGE);
-    printf("Grade: %c\n", GRADE);
+    char name[] = "Alice";
+    printf("Name: %s\n", name);
     
     return 0;
 }
 ```
 
-## Complete Example: Prime Checker
+**Format Specifiers:**
+- `%d` - integer
+- `%f` - float/double
+- `%.2f` - float with 2 decimal places
+- `%s` - string
+- `%c` - character
+- `%x` - hexadecimal
+
+### Input: scanf()
 
 ```c
 #include <stdio.h>
 
-int IS_PRIME(int N) {
-    if (N <= 1) return 0;
-    if (N <= 3) return 1;
+int main() {
+    int age;
+    printf("Enter your age: ");
+    scanf("%d", &age);
+    printf("You are %d years old\n", age);
     
-    int I;
-    for (I = 2; I * I <= N; I++) {
-        if (N % I == 0)
-            return 0;
+    float height;
+    printf("Enter your height: ");
+    scanf("%f", &height);
+    printf("Your height is %.1f\n", height);
+    
+    return 0;
+}
+```
+
+**Important**: Use `&` before variable name in scanf()
+
+## Operators
+
+### Arithmetic
+
+```c
+int a = 10, b = 3;
+
+int sum = a + b;       // 13
+int diff = a - b;      // 7
+int product = a * b;   // 30
+int quotient = a / b;  // 3
+int remainder = a % b; // 1
+```
+
+### Comparison
+
+```c
+int x = 10;
+
+if (x == 10)  printf("Equal\n");
+if (x != 5)   printf("Not equal\n");
+if (x > 5)    printf("Greater than\n");
+if (x < 20)   printf("Less than\n");
+if (x >= 10)  printf("Greater or equal\n");
+if (x <= 15)  printf("Less or equal\n");
+```
+
+### Logical
+
+```c
+int age = 25;
+int is_student = 1;  // 1 = true, 0 = false
+
+if (age >= 18 && is_student) {
+    printf("Adult student\n");
+}
+
+if (age < 18 || is_student) {
+    printf("Young or student\n");
+}
+
+if (!is_student) {
+    printf("Not a student\n");
+}
+```
+
+## Control Flow
+
+### if/else
+
+```c
+#include <stdio.h>
+
+int main() {
+    int score = 85;
+    
+    if (score >= 90) {
+        printf("Grade: A\n");
+    } else if (score >= 80) {
+        printf("Grade: B\n");
+    } else if (score >= 70) {
+        printf("Grade: C\n");
+    } else {
+        printf("Grade: F\n");
+    }
+    
+    return 0;
+}
+```
+
+### switch Statement
+
+```c
+#include <stdio.h>
+
+int main() {
+    int choice = 2;
+    
+    switch (choice) {
+        case 1:
+            printf("Option 1\n");
+            break;
+        case 2:
+            printf("Option 2\n");
+            break;
+        case 3:
+            printf("Option 3\n");
+            break;
+        default:
+            printf("Invalid option\n");
+    }
+    
+    return 0;
+}
+```
+
+### Loops
+
+**for loop:**
+
+```c
+for (int i = 0; i < 5; i++) {
+    printf("Number: %d\n", i);
+}
+```
+
+**while loop:**
+
+```c
+int count = 0;
+while (count < 5) {
+    printf("Count: %d\n", count);
+    count++;
+}
+```
+
+**do-while loop:**
+
+```c
+int count = 0;
+do {
+    printf("Count: %d\n", count);
+    count++;
+} while (count < 5);
+```
+
+## Functions
+
+### Basic Function
+
+```c
+#include <stdio.h>
+
+void greet() {
+    printf("Hello!\n");
+}
+
+int main() {
+    greet();
+    return 0;
+}
+```
+
+### Function with Parameters
+
+```c
+#include <stdio.h>
+
+void greet(char name[]) {
+    printf("Hello, %s!\n", name);
+}
+
+int main() {
+    greet("Alice");
+    greet("Bob");
+    return 0;
+}
+```
+
+### Function with Return Value
+
+```c
+#include <stdio.h>
+
+int add(int a, int b) {
+    return a + b;
+}
+
+int main() {
+    int result = add(3, 5);
+    printf("Result: %d\n", result);
+    return 0;
+}
+```
+
+## Arrays
+
+### Arrays Basics
+
+```c
+#include <stdio.h>
+
+int main() {
+    int numbers[5] = {1, 2, 3, 4, 5};
+    
+    printf("First: %d\n", numbers[0]);
+    printf("Last: %d\n", numbers[4]);
+    
+    // Loop through array
+    for (int i = 0; i < 5; i++) {
+        printf("numbers[%d] = %d\n", i, numbers[i]);
+    }
+    
+    return 0;
+}
+```
+
+### String Arrays
+
+```c
+#include <stdio.h>
+#include <string.h>
+
+int main() {
+    char name[50];
+    
+    printf("Enter your name: ");
+    scanf("%49s", name);
+    
+    printf("Hello, %s!\n", name);
+    printf("Length: %lu\n", strlen(name));
+    
+    return 0;
+}
+```
+
+## Complete Example Programs
+
+### Simple Calculator
+
+```c
+#include <stdio.h>
+
+int main() {
+    float a, b;
+    char operator;
+    
+    printf("=== Simple Calculator ===\n");
+    printf("Enter first number: ");
+    scanf("%f", &a);
+    
+    printf("Enter operator (+, -, *, /): ");
+    scanf(" %c", &operator);
+    
+    printf("Enter second number: ");
+    scanf("%f", &b);
+    
+    float result;
+    switch (operator) {
+        case '+':
+            result = a + b;
+            break;
+        case '-':
+            result = a - b;
+            break;
+        case '*':
+            result = a * b;
+            break;
+        case '/':
+            if (b != 0) {
+                result = a / b;
+            } else {
+                printf("Cannot divide by zero\n");
+                return 1;
+            }
+            break;
+        default:
+            printf("Invalid operator\n");
+            return 1;
+    }
+    
+    printf("Result: %.2f\n", result);
+    return 0;
+}
+```
+
+### Fibonacci Sequence
+
+```c
+#include <stdio.h>
+
+int main() {
+    int n;
+    printf("How many Fibonacci numbers? ");
+    scanf("%d", &n);
+    
+    int a = 0, b = 1;
+    printf("Fibonacci sequence:\n");
+    
+    for (int i = 0; i < n; i++) {
+        printf("%d ", a);
+        int temp = a + b;
+        a = b;
+        b = temp;
+    }
+    printf("\n");
+    
+    return 0;
+}
+```
+
+### Prime Number Checker
+
+```c
+#include <stdio.h>
+
+int is_prime(int num) {
+    if (num < 2) return 0;
+    
+    for (int i = 2; i * i <= num; i++) {
+        if (num % i == 0) return 0;
     }
     return 1;
 }
 
 int main() {
-    int NUM;
+    int n;
+    printf("Enter a number: ");
+    scanf("%d", &n);
     
-    printf("Check if prime: ");
-    scanf("%d", &NUM);
-    
-    if (IS_PRIME(NUM))
-        printf("%d is prime\n", NUM);
-    else
-        printf("%d is not prime\n", NUM);
+    if (is_prime(n)) {
+        printf("%d is prime\n", n);
+    } else {
+        printf("%d is not prime\n", n);
+    }
     
     return 0;
 }
 ```
 
-## Common Commands Reference
+## Tips and Best Practices
 
-### I/O
-| Command | Purpose |
-|---------|---------|
-| `printf()` | Print formatted output |
-| `scanf()` | Read formatted input |
-| `getchar()` | Read single character |
-| `putchar()` | Print single character |
+1. **Always initialize variables**: `int x = 0;`
+2. **Check array bounds**: Don't access outside array size
+3. **Free allocated memory**: Use `free()` after `malloc()`
+4. **Use meaningful variable names**: `age` not `a`
+5. **Add comments**: Explain complex logic
 
-### Math
-| Function | Purpose |
-|----------|---------|
-| `abs()` | Absolute value |
-| `sqrt()` | Square root |
-| `pow()` | Power |
-| `sin()`, `cos()` | Trigonometry |
-| `rand()` | Random number |
+## Common Mistakes to Avoid
 
-### String
-| Function | Purpose |
-|----------|---------|
-| `strlen()` | String length |
-| `strcpy()` | Copy string |
-| `strcat()` | Concatenate strings |
-| `strcmp()` | Compare strings |
-
-### Type Conversion
 ```c
-int X = 5;
-float F = (float) X / 2;    // Cast to float
-char C = (char) 65;         // 'A'
+// ❌ Wrong: Forgetting &
+int age;
+scanf("%d", age);  // Error!
+
+// ✅ Right: Use &
+scanf("%d", &age);
+
+// ❌ Wrong: Array out of bounds
+int arr[5] = {1, 2, 3};
+printf("%d\n", arr[10]);  // Undefined behavior!
+
+// ✅ Right: Check bounds
+if (i < 5) {
+    printf("%d\n", arr[i]);
+}
+
+// ❌ Wrong: Memory leak
+int *ptr = malloc(100);
+// ... forgot to free()
+
+// ✅ Right: Free memory
+int *ptr = malloc(100);
+// Use ptr
+free(ptr);
 ```
 
-## Tips for Learning C
+## Learning Resources
 
-1. **Include headers** - `#include` what you need
-2. **Understand pointers** - They're powerful but tricky
-3. **Check array bounds** - C doesn't check for you
-4. **Use meaningful names** - Code is for humans too
-5. **Test incrementally** - Build and test step by step
-6. **Read compiler errors** - They point to real problems
+- **GCC Compiler**: Time Warp uses standard C compilation
+- **Practice**: Start with simple I/O programs
+- **Debug**: Use printf() to debug values
+- **Experiment**: Modify examples to understand concepts
 
-## Common Mistakes
+## Running C Programs in Time Warp IDE
 
-| Mistake | Problem | Fix |
-|---------|---------|-----|
-| `if (X = 5)` | Assignment, not comparison | Use `==` for comparison |
-| Missing `return 0;` | Not following convention | Always return from main |
-| `char STR[50]` without length | Might overflow | Count characters |
-| Missing `&` with scanf | Compiler error | Use `&` for non-strings |
-| Array out of bounds | Undefined behavior | Check loop condition |
+1. Create a `.c` file with your program
+2. Select "C" from the language dropdown
+3. Paste your code or load the file
+4. Click Run or press Ctrl+R
+5. Interact with the program in the Output panel
 
 ## Next Steps
 
-1. ✅ Learn variables and types
-2. ✅ Master loops and conditionals
-3. ✅ Build functions
-4. ✅ Understand pointers
-5. 📂 Try examples from `Examples/c/`
-6. 🏗️ Build a complete program
+- Learn [BASIC for classic programming](basic.md)
+- Explore [Python for general programming](python.md)
+- Try [Pascal for structured programming](pascal.md)
+- Learn [Logo for turtle graphics](logo.md)
 
----
-
-Happy C coding! 💻
+Happy C programming!

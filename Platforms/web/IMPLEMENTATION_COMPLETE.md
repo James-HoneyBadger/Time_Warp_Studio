@@ -73,7 +73,7 @@ The Time Warp Web IDE is a complete browser-based programming environment built 
 
 ### ✅ Code Editor
 - Monaco Editor integration with syntax highlighting
-- 8 language support (BASIC, PILOT, Logo, Python, Rust, C, Pascal, Prolog)
+- 7 language support (BASIC, PILOT, Logo, Python, C, Pascal, Prolog)
 - Adjustable font size (10-24px)
 - Line numbers and word wrap
 - Code navigation and folding
@@ -278,11 +278,10 @@ docker-compose up
 - Architecture diagrams
 
 ### Phase 5: WASM Interpreter
-- Rust-based interpreter
-- WebAssembly compilation
-- Offline execution
-- Better performance
-- Advanced debugging
+- WebAssembly-based interpreter
+- Offline execution support
+- Performance optimization
+- Advanced debugging capabilities
 
 ---
 
@@ -292,7 +291,7 @@ docker-compose up
 
 The web IDE provides:
 - ✅ Complete code editing with Monaco Editor
-- ✅ Multi-language support (BASIC, PILOT, Logo, Python, Rust, C, Pascal, Prolog)
+- ✅ Multi-language support (BASIC, PILOT, Logo, Python, C, Pascal, Prolog)
 - ✅ Full project management with file organization
 - ✅ User authentication and session management
 - ✅ Cloud synchronization with conflict resolution

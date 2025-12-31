@@ -6,7 +6,6 @@ const languageMap = {
   PILOT: 'text',
   Logo: 'text',
   Python: 'python',
-  Rust: 'rust',
   C: 'c',
   Pascal: 'pascal',
   Prolog: 'text',

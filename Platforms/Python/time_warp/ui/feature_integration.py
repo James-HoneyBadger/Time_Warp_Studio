@@ -175,9 +175,6 @@ class FeatureIntegrationManager:
         # Create all feature panels
         self._create_feature_panels()
 
-        # Create feature menu
-        self._create_features_menu()
-
         # Connect feature status signals to IDE
         self._connect_feature_signals()
 

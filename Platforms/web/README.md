@@ -43,7 +43,6 @@ web/
 │   │   ├── formatters.js
 │   │   └── validators.js
 │   └── wasm/                # WebAssembly modules
-│       ├── interpreter/     # Rust interpreter
 │       └── build/           # Compiled WASM
 ├── public/                  # Static assets
 ├── index.html              # HTML template
@@ -95,7 +94,7 @@ web/
 - **Build Tool**: Vite
 - **State Management**: Zustand
 - **Styling**: Tailwind CSS
-- **WASM**: Rust (wasm-bindgen)
+- **WASM**: WebAssembly modules
 - **Code Editor**: Monaco Editor / CodeMirror
 - **HTTP Client**: Axios
 - **Storage**: IndexedDB + LocalStorage
@@ -133,12 +132,12 @@ npm run format
 
 ## WebAssembly Integration
 
-The interpreter is compiled from Rust to WebAssembly for performance:
+WebAssembly modules support for improved performance:
 
 ```bash
-# Build WASM (requires Rust)
-cd src/wasm/interpreter
-wasm-pack build --target web
+# Build/compile WASM modules
+cd src/wasm
+npm run build
 ```
 
 The WASM module provides:

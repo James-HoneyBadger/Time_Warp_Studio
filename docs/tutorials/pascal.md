@@ -1,565 +1,489 @@
-# Pascal Tutorial
+# Pascal Programming with Time Warp IDE
 
-**Pascal** is a structured programming language that emphasizes readable, clean code. It's excellent for learning proper programming practices and has strong typing.
+Pascal is a structured programming language known for emphasizing clarity and structure. Time Warp IDE provides experimental Pascal support for learning procedural programming concepts.
 
-## Getting Started
+## Quick Start
 
-### Hello, World! 👋
+A simple Pascal program:
 
 ```pascal
-PROGRAM HelloWorld;
-BEGIN
+program HelloWorld;
+begin
   WriteLn('Hello, World!');
-END.
+end.
 ```
 
-**Output:**
-```
-Hello, World!
-```
+Run this:
+1. Select "Pascal" from the language dropdown
+2. Paste the code
+3. Click Run (Ctrl+R)
 
-Key features:
-- `PROGRAM name;` - Declares program
-- `BEGIN...END.` - Main block (note the `.` at end)
-- `WriteLn` - Prints with newline
+## Basic Syntax
 
-## Variables
-
-### Declaring Variables
+### Program Structure
 
 ```pascal
-PROGRAM Variables;
-VAR
-  X: Integer;
-  PI: Real;
-  NAME: String;
-BEGIN
-  X := 5;
-  PI := 3.14159;
-  NAME := 'Alice';
-  WriteLn('X is ', X);
-END.
+program ProgramName;
+
+var
+  { Variable declarations }
+
+begin
+  { Program statements }
+end.
 ```
 
-`VAR` section declares all variables before using them.
-
-### Data Types
+### Comments
 
 ```pascal
-VAR
-  AGE: Integer;        { Whole numbers }
-  PRICE: Real;         { Decimal numbers }
-  NAME: String;        { Text }
-  ACTIVE: Boolean;     { True or False }
-  GRADE: Char;         { Single character }
-BEGIN
-  AGE := 25;
-  PRICE := 19.99;
-  NAME := 'John';
-  ACTIVE := True;
-  GRADE := 'A';
-  
-  WriteLn('Age: ', AGE);
-  WriteLn('Price: ', PRICE:0:2);  { Format to 2 decimals }
-END.
+{ This is a comment }
+(* This is also a comment *)
 ```
 
-### Variable Naming
-
-- Must start with letter
-- Can have letters, numbers, underscore
-- Case doesn't matter
-- Cannot use reserved words (Program, Begin, etc.)
-
-## Input and Output
-
-### Writing Output
+### Variables and Data Types
 
 ```pascal
-BEGIN
-  WriteLn('Hello');              { Print with newline }
-  WriteLn('Line 1');
-  WriteLn('Line 2');
-  
-  Write('No newline');           { Print without newline }
-  WriteLn(' - on same line');
-END.
+var
+  age: Integer;
+  height: Real;
+  initial: Char;
+  is_student: Boolean;
+  name: String;
 ```
 
-**Output:**
-```
-Hello
-Line 1
-Line 2
-No newline - on same line
-```
+**Data Types:**
+- `Integer` - Whole numbers
+- `Real` - Decimal numbers
+- `Char` - Single character
+- `String` - Text
+- `Boolean` - True/False
 
-### Reading Input
+### Output: WriteLn
 
 ```pascal
-PROGRAM InputExample;
-VAR
-  NAME: String;
-  AGE: Integer;
-BEGIN
+program OutputDemo;
+begin
+  WriteLn('Hello, World!');
+  WriteLn('Age: ', 25);
+  WriteLn('Height: ', 5.9:3:1);  { value:width:decimals }
+end.
+```
+
+### Input: ReadLn
+
+```pascal
+program InputDemo;
+var
+  name: String;
+  age: Integer;
+begin
   Write('Enter your name: ');
-  ReadLn(NAME);
-  
+  ReadLn(name);
   Write('Enter your age: ');
-  ReadLn(AGE);
+  ReadLn(age);
+  WriteLn('Hello, ', name, ' (age ', age, ')');
+end.
+```
+
+## Operators
+
+### Arithmetic
+
+```pascal
+var
+  a, b, sum, diff, product, quotient: Integer;
+begin
+  a := 10;
+  b := 3;
   
-  WriteLn('Hello ', NAME, ', age ', AGE);
-END.
+  sum := a + b;        { 13 }
+  diff := a - b;       { 7 }
+  product := a * b;    { 30 }
+  quotient := a div b; { 3 (integer division) }
+end.
 ```
 
-Program waits for user input and presses Enter.
+**Note:** Use `:=` for assignment (not `=`)
 
-## Math Operations
+### Comparison
 
 ```pascal
-PROGRAM Math;
-VAR
-  X, Y, RESULT: Integer;
-BEGIN
-  X := 10;
-  Y := 3;
-  
-  RESULT := X + Y;        WriteLn('Sum: ', RESULT);
-  RESULT := X - Y;        WriteLn('Difference: ', RESULT);
-  RESULT := X * Y;        WriteLn('Product: ', RESULT);
-  RESULT := X DIV Y;      WriteLn('Integer Division: ', RESULT);
-  RESULT := X MOD Y;      WriteLn('Remainder: ', RESULT);
-END.
+if x = 10 then WriteLn('Equal');
+if x <> 5 then WriteLn('Not equal');
+if x > 5 then WriteLn('Greater');
+if x < 20 then WriteLn('Less');
+if x >= 10 then WriteLn('Greater or equal');
+if x <= 15 then WriteLn('Less or equal');
 ```
 
-**Output:**
-```
-Sum: 13
-Difference: 7
-Product: 30
-Integer Division: 3
-Remainder: 1
-```
-
-### Math Functions
+### Logical
 
 ```pascal
-BEGIN
-  WriteLn('Absolute value: ', Abs(-5));      { 5 }
-  WriteLn('Square: ', Sqr(4));               { 16 }
-  WriteLn('Square root: ', Sqrt(16):0:0);    { 4 }
-  WriteLn('Power: ', Exp(2*Ln(3)):0:0);      { 3^2 = 9 }
-END.
+if (age >= 18) and (is_student) then
+  WriteLn('Adult student');
+
+if (age < 18) or (is_student) then
+  WriteLn('Young or student');
+
+if not (is_student) then
+  WriteLn('Not a student');
 ```
 
-## Strings
+## Control Flow
 
-### String Operations
+### if/else
 
 ```pascal
-PROGRAM Strings;
-VAR
-  FIRST, LAST, FULL: String;
-BEGIN
-  FIRST := 'John';
-  LAST := 'Doe';
-  FULL := FIRST + ' ' + LAST;
-  WriteLn(FULL);
-END.
-```
-
-**Output:**
-```
-John Doe
-```
-
-### String Functions
-
-```pascal
-VAR
-  TEXT: String;
-BEGIN
-  TEXT := 'Hello';
-  
-  WriteLn('Length: ', Length(TEXT));         { 5 }
-  WriteLn('Uppercase: ', UpCase(TEXT[1]));   { H }
-  WriteLn('Char 1: ', TEXT[1]);              { H }
-END.
-```
-
-## Conditionals (IF/THEN/ELSE)
-
-### Simple IF
-
-```pascal
-VAR
-  X: Integer;
-BEGIN
-  X := 15;
-  
-  IF X > 10 THEN
-    WriteLn('X is greater than 10');
-END.
-```
-
-### IF/ELSE
-
-```pascal
-VAR
-  AGE: Integer;
-BEGIN
-  Write('Enter age: ');
-  ReadLn(AGE);
-  
-  IF AGE >= 18 THEN
-    WriteLn('You are an adult')
-  ELSE
-    WriteLn('You are a minor');
-END.
-```
-
-### IF/ELSE IF/ELSE
-
-```pascal
-PROGRAM Grade;
-VAR
-  SCORE: Integer;
-BEGIN
+program GradeCalculator;
+var
+  score: Integer;
+begin
   Write('Enter score: ');
-  ReadLn(SCORE);
+  ReadLn(score);
   
-  IF SCORE >= 90 THEN
+  if score >= 90 then
     WriteLn('Grade: A')
-  ELSE IF SCORE >= 80 THEN
+  else if score >= 80 then
     WriteLn('Grade: B')
-  ELSE IF SCORE >= 70 THEN
+  else if score >= 70 then
     WriteLn('Grade: C')
-  ELSE IF SCORE >= 60 THEN
-    WriteLn('Grade: D')
-  ELSE
+  else
     WriteLn('Grade: F');
-END.
+end.
 ```
 
-### Comparison Operators
+### case Statement
 
 ```pascal
-IF X = 5 THEN ...        { Equal }
-IF X <> 5 THEN ...       { Not equal }
-IF X > 5 THEN ...        { Greater than }
-IF X < 5 THEN ...        { Less than }
-IF X >= 5 THEN ...       { Greater or equal }
-IF X <= 5 THEN ...       { Less or equal }
+program CaseExample;
+var
+  choice: Integer;
+begin
+  Write('Choose (1-3): ');
+  ReadLn(choice);
+  
+  case choice of
+    1: WriteLn('Option 1');
+    2: WriteLn('Option 2');
+    3: WriteLn('Option 3');
+    else WriteLn('Invalid option');
+  end;
+end.
 ```
 
-### Logical Operators
+### Loops
+
+**for loop:**
 
 ```pascal
-IF (X > 5) AND (Y < 10) THEN ...   { Both true }
-IF (X > 5) OR (Y < 10) THEN ...    { Either true }
-IF NOT (X = 5) THEN ...            { Not true }
-```
-
-## Loops
-
-### FOR Loop
-
-```pascal
-PROGRAM Loops;
-VAR
-  I: Integer;
-BEGIN
-  FOR I := 1 TO 5 DO
-    WriteLn('I = ', I);
-END.
-```
-
-**Output:**
-```
-I = 1
-I = 2
-I = 3
-I = 4
-I = 5
+var
+  i: Integer;
+begin
+  for i := 1 to 5 do
+    WriteLn('Number: ', i);
+end.
 ```
 
 **Counting backwards:**
-```pascal
-FOR I := 10 DOWNTO 1 DO
-  WriteLn(I);
-```
-
-### WHILE Loop
 
 ```pascal
-VAR
-  X: Integer;
-BEGIN
-  X := 1;
-  WHILE X <= 5 DO
-  BEGIN
-    WriteLn('X = ', X);
-    X := X + 1
-  END
-END.
+for i := 5 downto 1 do
+  WriteLn('Countdown: ', i);
 ```
 
-### REPEAT/UNTIL Loop
+**while loop:**
 
 ```pascal
-VAR
-  X: Integer;
-BEGIN
-  X := 1;
-  REPEAT
-    WriteLn('X = ', X);
-    X := X + 1
-  UNTIL X > 5
-END.
+var
+  count: Integer;
+begin
+  count := 0;
+  while count < 5 do
+  begin
+    WriteLn('Count: ', count);
+    count := count + 1;
+  end;
+end.
 ```
 
-Executes at least once before checking condition.
-
-## Arrays
-
-### Single Dimension Array
+**repeat...until loop:**
 
 ```pascal
-PROGRAM Arrays;
-VAR
-  NUMBERS: ARRAY [1..5] OF Integer;
-  I: Integer;
-BEGIN
-  { Fill array }
-  FOR I := 1 TO 5 DO
-    NUMBERS[I] := I * 10;
-  
-  { Print array }
-  FOR I := 1 TO 5 DO
-    WriteLn('NUMBERS[', I, '] = ', NUMBERS[I]);
-END.
+var
+  count: Integer;
+begin
+  count := 0;
+  repeat
+    WriteLn('Count: ', count);
+    count := count + 1;
+  until count >= 5;
+end.
 ```
 
-**Output:**
-```
-NUMBERS[1] = 10
-NUMBERS[2] = 20
-NUMBERS[3] = 30
-NUMBERS[4] = 40
-NUMBERS[5] = 50
-```
+## Procedures and Functions
 
-### Two Dimensional Array
+### Procedure
 
 ```pascal
-VAR
-  MATRIX: ARRAY [1..3, 1..3] OF Integer;
-  I, J: Integer;
-BEGIN
-  FOR I := 1 TO 3 DO
-    FOR J := 1 TO 3 DO
-      MATRIX[I, J] := I * J;
-END.
+procedure Greet(name: String);
+begin
+  WriteLn('Hello, ', name, '!');
+end;
+
+begin
+  Greet('Alice');
+  Greet('Bob');
+end.
 ```
 
-## Procedures
-
-Create reusable blocks of code:
+### Function
 
 ```pascal
-PROGRAM Procedures;
+function Add(a, b: Integer): Integer;
+begin
+  Add := a + b;
+end;
 
-PROCEDURE GREET(NAME: String);
-BEGIN
-  WriteLn('Hello, ', NAME);
-  WriteLn('Welcome to Pascal');
-END;
-
-BEGIN
-  GREET('Alice');
-  GREET('Bob');
-END.
-```
-
-**Output:**
-```
-Hello, Alice
-Welcome to Pascal
-Hello, Bob
-Welcome to Pascal
+var
+  result: Integer;
+begin
+  result := Add(3, 5);
+  WriteLn('Result: ', result);
+end.
 ```
 
 ### Procedures with Multiple Parameters
 
 ```pascal
-PROCEDURE MULTIPLY(A, B: Integer);
-VAR
-  RESULT: Integer;
-BEGIN
-  RESULT := A * B;
-  WriteLn(A, ' * ', B, ' = ', RESULT);
-END;
+procedure PrintInfo(name: String; age: Integer; city: String);
+begin
+  WriteLn('Name: ', name);
+  WriteLn('Age: ', age);
+  WriteLn('City: ', city);
+end;
 
-BEGIN
-  MULTIPLY(3, 4);
-  MULTIPLY(5, 6);
-END.
+begin
+  PrintInfo('Alice', 25, 'New York');
+end.
 ```
 
-## Functions
+## Arrays
 
-Functions return values:
+### One-Dimensional Array
 
 ```pascal
-PROGRAM Functions;
-
-FUNCTION ADD(A, B: Integer): Integer;
-BEGIN
-  ADD := A + B
-END;
-
-FUNCTION GREET(NAME: String): String;
-BEGIN
-  GREET := 'Hello, ' + NAME
-END;
-
-BEGIN
-  WriteLn(ADD(3, 5));        { 8 }
-  WriteLn(GREET('Alice'));   { Hello, Alice }
-END.
+var
+  numbers: array[1..5] of Integer;
+  i: Integer;
+begin
+  numbers[1] := 10;
+  numbers[2] := 20;
+  numbers[3] := 30;
+  
+  for i := 1 to 5 do
+    WriteLn('numbers[', i, '] = ', numbers[i]);
+end.
 ```
 
-### Recursive Functions
+### String Array
 
 ```pascal
-FUNCTION FACTORIAL(N: Integer): Integer;
-BEGIN
-  IF N <= 1 THEN
-    FACTORIAL := 1
-  ELSE
-    FACTORIAL := N * FACTORIAL(N - 1)
-END;
-
-BEGIN
-  WriteLn('5! = ', FACTORIAL(5));  { 120 }
-END.
+var
+  names: array[1..3] of String;
+  i: Integer;
+begin
+  names[1] := 'Alice';
+  names[2] := 'Bob';
+  names[3] := 'Charlie';
+  
+  for i := 1 to 3 do
+    WriteLn('Name: ', names[i]);
+end.
 ```
 
-## Comments
+## Complete Example Programs
 
-Document your code:
+### Simple Calculator
 
 ```pascal
-PROGRAM Comments;
-{ This is a block comment
-  It can span multiple lines }
-BEGIN
-  WriteLn('Hello');  { This is an inline comment }
-  { Another comment }
-END.
+program Calculator;
+var
+  a, b: Real;
+  op: Char;
+  result: Real;
+begin
+  WriteLn('=== Simple Calculator ===');
+  Write('Enter first number: ');
+  ReadLn(a);
+  Write('Enter operator (+, -, *, /): ');
+  ReadLn(op);
+  Write('Enter second number: ');
+  ReadLn(b);
+  
+  case op of
+    '+': result := a + b;
+    '-': result := a - b;
+    '*': result := a * b;
+    '/': begin
+           if b <> 0 then
+             result := a / b
+           else
+           begin
+             WriteLn('Error: Division by zero');
+             exit;
+           end;
+         end;
+    else WriteLn('Invalid operator');
+  end;
+  
+  WriteLn('Result: ', result:5:2);
+end.
 ```
 
-## Complete Example: Grade Calculator
+### Number Guessing Game
 
 ```pascal
-PROGRAM GradeCalc;
-VAR
-  SCORE1, SCORE2, SCORE3, AVERAGE: Real;
-  GRADE: Char;
-
-FUNCTION GetGrade(AVG: Real): Char;
-BEGIN
-  IF AVG >= 90 THEN GetGrade := 'A'
-  ELSE IF AVG >= 80 THEN GetGrade := 'B'
-  ELSE IF AVG >= 70 THEN GetGrade := 'C'
-  ELSE IF AVG >= 60 THEN GetGrade := 'D'
-  ELSE GetGrade := 'F'
-END;
-
-BEGIN
-  WriteLn('Enter three test scores:');
+program GuessingGame;
+var
+  secret, guess, attempts: Integer;
+begin
+  WriteLn('=== Guessing Game ===');
+  secret := 42;
+  attempts := 0;
   
-  Write('Score 1: ');
-  ReadLn(SCORE1);
-  
-  Write('Score 2: ');
-  ReadLn(SCORE2);
-  
-  Write('Score 3: ');
-  ReadLn(SCORE3);
-  
-  AVERAGE := (SCORE1 + SCORE2 + SCORE3) / 3;
-  GRADE := GetGrade(AVERAGE);
-  
-  WriteLn('');
-  WriteLn('Average: ', AVERAGE:0:2);
-  WriteLn('Grade: ', GRADE);
-END.
+  repeat
+    Write('Guess the number (1-100): ');
+    ReadLn(guess);
+    attempts := attempts + 1;
+    
+    if guess < secret then
+      WriteLn('Too low!')
+    else if guess > secret then
+      WriteLn('Too high!')
+    else
+    begin
+      WriteLn('Correct! You guessed it in ', attempts, ' attempts!');
+      break;
+    end;
+  until guess = secret;
+end.
 ```
 
-## Pascal vs BASIC
+### Multiplication Table
 
-| Feature | BASIC | Pascal |
-|---------|-------|--------|
-| Variables | No declaration | `VAR` section |
-| Types | Weak typing | Strong typing |
-| Functions | Simple | Rich structures |
-| Readability | Medium | High |
-| Structure | Loose | Organized |
+```pascal
+program MultiplicationTable;
+var
+  n, i, j: Integer;
+begin
+  WriteLn('=== Multiplication Table ===');
+  Write('Enter table size: ');
+  ReadLn(n);
+  WriteLn;
+  
+  for i := 1 to n do
+  begin
+    for j := 1 to n do
+      Write(i*j:4, ' ');
+    WriteLn;
+  end;
+end.
+```
 
-## Common Commands Reference
+### Sum and Average
 
-### Output
-| Command | Example | Purpose |
-|---------|---------|---------|
-| `WriteLn` | `WriteLn('Hi')` | Print with newline |
-| `Write` | `Write('Hi')` | Print without newline |
+```pascal
+program SumAverage;
+var
+  numbers: array[1..10] of Integer;
+  sum, count, i: Integer;
+  average: Real;
+begin
+  WriteLn('=== Sum and Average ===');
+  Write('How many numbers? ');
+  ReadLn(count);
+  
+  for i := 1 to count do
+  begin
+    Write('Enter number ', i, ': ');
+    ReadLn(numbers[i]);
+  end;
+  
+  sum := 0;
+  for i := 1 to count do
+    sum := sum + numbers[i];
+  
+  average := sum / count;
+  WriteLn;
+  WriteLn('Sum: ', sum);
+  WriteLn('Average: ', average:5:2);
+end.
+```
 
-### Input
-| Command | Example | Purpose |
-|---------|---------|---------|
-| `ReadLn` | `ReadLn(X)` | Read number or string |
+## Tips and Best Practices
 
-### Control
-| Command | Example | Purpose |
-|---------|---------|---------|
-| `IF/THEN/ELSE` | `IF X > 5 THEN ...` | Conditional |
-| `FOR/DO` | `FOR I := 1 TO 10 DO ...` | Loop N times |
-| `WHILE/DO` | `WHILE X < 10 DO ...` | Loop while true |
-| `REPEAT/UNTIL` | `REPEAT ... UNTIL X=5` | Loop until true |
+1. **Use descriptive names**: `age` is better than `a`
+2. **Comment complex logic**: Explain how it works
+3. **Break code into procedures**: Keep procedures small
+4. **Test thoroughly**: Try edge cases
+5. **Use proper spacing**: Make code readable
 
-### Functions
-| Command | Example | Purpose |
-|---------|---------|---------|
-| `PROCEDURE` | `PROCEDURE NAME;...END;` | Subroutine |
-| `FUNCTION` | `FUNCTION NAME:Type;...END;` | Function with return |
+## Common Mistakes to Avoid
 
-## Tips for Learning Pascal
+```pascal
+{ ❌ Wrong: Using = for assignment }
+age = 25;
 
-1. **Declare first** - Always use `VAR` section
-2. **Use types** - Be explicit about data types
-3. **Structure code** - Use procedures and functions
-4. **Test types** - Pascal catches type errors
-5. **Use comments** - Document your code
-6. **Be precise** - Pascal enforces structure
+{ ✅ Right: Use := for assignment }
+age := 25;
 
-## Common Mistakes
+{ ❌ Wrong: Forgetting semicolon }
+WriteLn('Hello')
+WriteLn('World');
 
-| Mistake | Problem | Fix |
-|---------|---------|-----|
-| `X = 5` | Wrong operator | `X := 5` |
-| Missing `;` | Syntax error | Add `;` between statements |
-| No `VAR` | Variable undefined | Declare in `VAR` section |
-| Missing `END` | Block not closed | Add `END` |
-| Wrong type | Type mismatch | Declare correct type |
+{ ✅ Right: Semicolons between statements }
+WriteLn('Hello');
+WriteLn('World');
+
+{ ❌ Wrong: Array indices out of bounds }
+var numbers: array[1..5] of Integer;
+numbers[10] := 5;  { Error! }
+
+{ ✅ Right: Stay within bounds }
+numbers[5] := 5;
+```
+
+## Pascal vs. Other Languages
+
+| Feature | Pascal | C | Python |
+|---------|--------|---|--------|
+| Assignment | `:=` | `=` | `=` |
+| Output | `WriteLn` | `printf` | `print` |
+| Input | `ReadLn` | `scanf` | `input` |
+| Comments | `{ }` or `(* *)` | `/* */` or `//` | `#` or `""" """` |
+| Procedures | `procedure` | `void function` | `def` |
+| Functions | `function` | `return_type function` | `def` |
+
+## Learning Resources
+
+- **Start Simple**: Begin with I/O programs
+- **Use Comments**: Document your learning process
+- **Debug**: Add WriteLn statements to check values
+- **Experiment**: Modify examples to understand concepts
+
+## Running Pascal Programs in Time Warp IDE
+
+1. Create a `.pas` file with your program
+2. Select "Pascal" from the language dropdown
+3. Paste your code or load the file
+4. Click Run or press Ctrl+R
+5. Interact with the program in the Output panel
 
 ## Next Steps
 
-1. ✅ Complete tutorials above
-2. 📂 Try examples from `Examples/pascal/`
-3. 🔧 Build a calculator program
-4. 📊 Create a data analysis tool
+- Learn [C for systems programming](c.md)
+- Explore [Python for general programming](python.md)
+- Try [BASIC for classic programming](basic.md)
+- Learn [Logo for turtle graphics](logo.md)
 
----
-
-Happy coding! 💻
+Happy Pascal programming!

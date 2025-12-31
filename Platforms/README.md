@@ -7,7 +7,6 @@ Active:
 
 Experimental / Historical:
 - `Browser/` – HTML/JS prototype retained for research
-- `Windows2000/` – Vintage build scripts/artifacts kept for archival reference
 
 Notes:
 - The Python implementation under `Platforms/Python` is authoritative. Other folders are not recommended for production use.

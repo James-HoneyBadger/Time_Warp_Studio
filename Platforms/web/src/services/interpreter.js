@@ -5,7 +5,7 @@ let wasmModule = null
 // Initialize WASM module
 export async function initializeWasm() {
   try {
-    // This will be populated when Rust module is compiled
+    // This will be populated when WASM module is compiled
     // For now, return dummy function
     return {
       execute: (code, language) => `✅ Execution complete\n`,

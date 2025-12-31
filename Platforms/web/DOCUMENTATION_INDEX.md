@@ -341,8 +341,8 @@ This is your complete guide to the Time Warp Web IDE - a professional, productio
 - Architecture diagrams
 
 ### Phase 5: WASM Interpreter
-- Rust-based interpreter
-- WebAssembly compilation
+- WebAssembly-based interpreter
+- Offline execution support
 - Offline execution
 - Advanced features
 

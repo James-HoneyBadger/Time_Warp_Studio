@@ -366,9 +366,8 @@ suggestion = hints.get_suggestion('FORWRD', ['FORWARD', 'BACKWARD'])
 | Python (PySide6) | `Platforms/Python/` | ✅ Official | Primary desktop IDE with full BASIC, PILOT, and Logo support |
 | Browser (HTML/JS) | `Platforms/Browser/` | 🧪 Experimental | Prototype for future web deployment |
 | DOS (C89) | `Platforms/DOS/` | 🧪 Experimental | Retro text-mode interpreter retained for history labs |
-| Windows 2000 | `Platforms/Windows2000/` | 📜 Archived | Vintage build kept for reference only |
 
-Legacy implementations such as Rust, Go, Haiku, and others were removed during the v5.1.0 cleanup to keep maintenance focused on the supported stack.
+Legacy implementations such as Go, Haiku, and others were removed during the v5.1.0 cleanup to keep maintenance focused on the supported stack.
 
 ---
 
@@ -376,7 +375,7 @@ Legacy implementations such as Rust, Go, Haiku, and others were removed during t
 
 Contributions welcome! Areas needing work:
 
-1. **Test Coverage** - Port comprehensive test suite from Rust version
+1. **Test Coverage** - Expand comprehensive test suite
 2. **Documentation** - Complete API docs and tutorials
 3. **Performance** - Optimize interpreter hot paths
 4. **BASIC Extensions** - Add DIM, DATA, READ commands

@@ -33,12 +33,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
+      - name: Setup Python
+        uses: actions/setup-python@v4
         with:
-          toolchain: stable
-          components: clippy
-          override: true
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |

@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=Time Warp IDE
-Comment=Educational Programming Environment
-Exec=time-warp-ide
-Icon=time-warp-ide
-Terminal=false
-Type=Application
-Categories=Development;Education;
-StartupWMClass=Time Warp IDE

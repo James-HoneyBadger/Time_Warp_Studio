@@ -60,7 +60,7 @@ Infrastructure ................. 3 files
 A full-featured, browser-based programming environment with:
 
 - ✅ **Monaco Editor Integration** - Professional code editor with syntax highlighting
-- ✅ **Multi-Language Support** - BASIC, PILOT, Logo, Python, Rust, C, Pascal, Prolog
+- ✅ **Multi-Language Support** - BASIC, PILOT, Logo, Python, C, Pascal, Prolog
 - ✅ **Project Management** - Create, organize, and manage projects and files
 - ✅ **Code Execution** - Run code and display output with error handling
 - ✅ **User Authentication** - Login/logout with JWT tokens
@@ -376,10 +376,9 @@ All four components of Phase 4 are implemented:
 - Architecture diagrams
 
 ### Phase 5: WASM Interpreter
-- Rust-based interpreter
-- WebAssembly compilation
-- Offline execution
-- Advanced debugging
+- WebAssembly-based interpreter
+- Offline execution support
+- Advanced debugging capabilities
 
 ---
 

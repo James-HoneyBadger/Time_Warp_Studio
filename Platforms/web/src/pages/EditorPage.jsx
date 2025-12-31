@@ -16,7 +16,7 @@ export default function EditorPage() {
   const [output, setOutput] = useState('')
   const [isRunning, setIsRunning] = useState(false)
 
-  const languages = ['BASIC', 'PILOT', 'Logo', 'Python', 'Rust', 'C', 'Pascal', 'Prolog']
+  const languages = ['BASIC', 'PILOT', 'Logo', 'Python', 'C', 'Pascal', 'Prolog']
 
   const handleRun = async () => {
     setIsRunning(true)
