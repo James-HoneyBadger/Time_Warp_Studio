@@ -1,8 +1,8 @@
-# Time Warp IDE
+# Time Warp IDE - v6.0.0
 
-**An educational programming environment for learning multiple languages with integrated turtle graphics and game development.**
+**Advanced educational programming environment with real-time collaboration, extensible plugins, and comprehensive language support.**
 
-Time Warp IDE is a retro-inspired, modern IDE designed to teach programming concepts across multiple languages: **BASIC**, **PILOT**, **Logo**, **Pascal**, **Prolog**, **Forth**, and **C**. It features real-time graphics, immediate-mode REPL, comprehensive examples, and an intuitive interface.
+Time Warp IDE is a production-ready educational platform for learning programming across 9 languages: **BASIC**, **PILOT**, **Logo**, **Pascal**, **Prolog**, **Forth**, **C**, **Ruby**, and **JavaScript**. Built with real-time collaboration, advanced refactoring tools, comprehensive analytics, and a plugin system for extensibility.
 
 ## Quick Links
 

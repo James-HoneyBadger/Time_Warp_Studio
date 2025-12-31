@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  web:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - VITE_API_URL=http://api:8000/api
+      - VITE_APP_NAME=Time Warp IDE
+      - VITE_APP_VERSION=6.0.0
+    depends_on:
+      - api
+    networks:
+      - time-warp
+
+  api:
+    image: python:3.11-slim
+    working_dir: /app
+    command: python -m uvicorn main:app --host 0.0.0.0 --port 8000
+    volumes:
+      - ../Python/api:/app
+    ports:
+      - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/time_warp
+      - JWT_SECRET=your-secret-key-here
+    depends_on:
+      - db
+    networks:
+      - time-warp
+
+  db:
+    image: postgres:15-alpine
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=time_warp
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    networks:
+      - time-warp
+
+volumes:
+  db_data:
+
+networks:
+  time-warp:
+    driver: bridge

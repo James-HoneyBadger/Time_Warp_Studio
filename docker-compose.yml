@@ -1,0 +1,182 @@
+version: '3.9'
+
+services:
+  # PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    container_name: timewarp-db
+    environment:
+      POSTGRES_USER: timewarp
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-timewarp-dev-password}
+      POSTGRES_DB: timewarp
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=en_US.UTF-8"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/01-init.sql
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U timewarp -d timewarp"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - timewarp-network
+    restart: unless-stopped
+
+  # Redis Cache
+  cache:
+    image: redis:7-alpine
+    container_name: timewarp-cache
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-timewarp-redis-password}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - timewarp-network
+    restart: unless-stopped
+
+  # Backend API
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: timewarp-api
+    environment:
+      PYTHONUNBUFFERED: 1
+      PYTHONDONTWRITEBYTECODE: 1
+      DATABASE_URL: postgresql://timewarp:${DB_PASSWORD:-timewarp-dev-password}@db:5432/timewarp
+      REDIS_URL: redis://:${REDIS_PASSWORD:-timewarp-redis-password}@cache:6379/0
+      SECRET_KEY: ${SECRET_KEY:-your-secret-key-here-change-in-production}
+      DEBUG: ${DEBUG:-false}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://localhost:5173}
+      PORT: 8000
+      WORKERS: 4
+      ENVIRONMENT: ${ENVIRONMENT:-development}
+    depends_on:
+      db:
+        condition: service_healthy
+      cache:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+      - "8080:8080"
+    volumes:
+      - ./Platforms/Python/core:/app/backend/core
+      - ./Platforms/Python/handlers:/app/backend/handlers
+      - timewarp_logs:/var/log/timewarp
+      - timewarp_uploads:/app/uploads
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    networks:
+      - timewarp-network
+    restart: unless-stopped
+
+  # Frontend (Development only, use Nginx in production)
+  frontend:
+    image: node:20-alpine
+    container_name: timewarp-frontend-dev
+    working_dir: /app
+    command: npm run dev -- --host
+    environment:
+      VITE_API_URL: http://localhost:8000
+      VITE_WS_URL: ws://localhost:8000/ws
+    volumes:
+      - ./Platforms/web:/app
+      - /app/node_modules
+    ports:
+      - "5173:5173"
+    depends_on:
+      - api
+    networks:
+      - timewarp-network
+    restart: unless-stopped
+    profiles:
+      - dev
+
+  # Nginx Reverse Proxy (Production)
+  nginx:
+    image: nginx:alpine
+    container_name: timewarp-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/ssl:/etc/nginx/ssl:ro
+      - timewarp_logs:/var/log/nginx
+    depends_on:
+      - api
+    networks:
+      - timewarp-network
+    restart: unless-stopped
+    profiles:
+      - prod
+
+  # Monitoring: Prometheus (Optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: timewarp-prometheus
+    volumes:
+      - ./docker/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    ports:
+      - "9090:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=30d'
+    networks:
+      - timewarp-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+  # Monitoring: Grafana (Optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: timewarp-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: 'grafana-piechart-panel'
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./docker/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yml:ro
+      - ./docker/grafana-dashboards.yml:/etc/grafana/provisioning/dashboards/dashboards.yml:ro
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+    networks:
+      - timewarp-network
+    restart: unless-stopped
+    profiles:
+      - monitoring
+
+networks:
+  timewarp-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  timewarp_logs:
+    driver: local
+  timewarp_uploads:
+    driver: local

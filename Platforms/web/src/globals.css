@@ -1,0 +1,155 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Color Palette */
+:root {
+  --color-primary: #3b82f6;
+  --color-secondary: #8b5cf6;
+  --color-info: #06b6d4;
+  --color-success: #10b981;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+
+  --color-dark-bg: #1e1e2e;
+  --color-surface: #2d2d3d;
+  --color-border: #44444d;
+  --color-text: #e0e0e0;
+  --color-text-secondary: #a0a0a0;
+}
+
+/* Base Styles */
+* {
+  @apply transition-colors;
+}
+
+html,
+body {
+  @apply bg-dark-bg text-text overflow-hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+    sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Scrollbar Styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* Input Styling */
+input,
+textarea,
+select {
+  @apply bg-dark-bg text-text border border-border rounded focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary;
+}
+
+input[type='range'] {
+  @apply cursor-pointer;
+}
+
+/* Button Styling */
+button {
+  @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-dark-bg;
+}
+
+/* Code Block Styling */
+code {
+  @apply font-mono text-sm;
+}
+
+pre {
+  @apply bg-surface rounded p-4 overflow-auto;
+}
+
+/* Utility Classes */
+.truncate-text {
+  @apply overflow-hidden text-overflow-ellipsis whitespace-nowrap;
+}
+
+.text-primary {
+  @apply text-blue-500;
+}
+
+.text-secondary {
+  @apply text-purple-500;
+}
+
+.text-info {
+  @apply text-cyan-500;
+}
+
+.text-success {
+  @apply text-green-500;
+}
+
+.text-warning {
+  @apply text-amber-500;
+}
+
+.text-error {
+  @apply text-red-500;
+}
+
+/* Dark Mode Overrides */
+.dark {
+  color-scheme: dark;
+}
+
+/* Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-10px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slide-in {
+  animation: slideIn 0.3s ease-in-out;
+}
+
+/* Monaco Editor Overrides */
+.monaco-editor {
+  background-color: var(--color-dark-bg);
+  color: var(--color-text);
+}
+
+.monaco-editor .monaco-editor-background {
+  background-color: var(--color-dark-bg);
+}
+
+.monaco-editor .bracket-match {
+  background-color: var(--color-border);
+}

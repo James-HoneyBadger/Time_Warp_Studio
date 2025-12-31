@@ -1,0 +1,395 @@
+name: Time Warp Studio CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, release/** ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 2 * * *'  # Nightly builds
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
+jobs:
+  # ===== LINT & CODE QUALITY =====
+  
+  lint-backend:
+    runs-on: ubuntu-latest
+    name: Lint Python Backend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install black flake8 mypy pylint
+          pip install -r Platforms/Python/requirements.txt
+      
+      - name: Run Black formatter check
+        run: black --check Platforms/Python/
+      
+      - name: Run Flake8 linter
+        run: flake8 Platforms/Python/ --max-line-length=120 --count --statistics
+      
+      - name: Run MyPy type checker
+        run: mypy Platforms/Python/ --ignore-missing-imports
+      
+      - name: Run Pylint
+        run: pylint Platforms/Python/ --disable=C0111 || true
+
+  lint-frontend:
+    runs-on: ubuntu-latest
+    name: Lint TypeScript Frontend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'Platforms/web/package-lock.json'
+      
+      - name: Install dependencies
+        working-directory: Platforms/web
+        run: npm ci
+      
+      - name: Run ESLint
+        working-directory: Platforms/web
+        run: npm run lint
+      
+      - name: Run Prettier check
+        working-directory: Platforms/web
+        run: npm run format:check
+
+  # ===== TESTING =====
+  
+  test-backend:
+    runs-on: ubuntu-latest
+    name: Test Python Backend
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpass
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          pip install -r Platforms/Python/requirements.txt
+          pip install pytest pytest-cov pytest-asyncio
+      
+      - name: Run pytest with coverage
+        working-directory: Platforms/Python
+        env:
+          DATABASE_URL: postgresql://testuser:testpass@localhost:5432/testdb
+          REDIS_URL: redis://localhost:6379/0
+        run: |
+          pytest tests/ -v --cov=core --cov=handlers \
+            --cov-report=xml --cov-report=html \
+            --junit-xml=test-results.xml
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./Platforms/Python/coverage.xml
+          flags: backend
+          fail_ci_if_error: false
+      
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: backend-test-results
+          path: Platforms/Python/test-results.xml
+
+  test-frontend:
+    runs-on: ubuntu-latest
+    name: Test TypeScript Frontend
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'Platforms/web/package-lock.json'
+      
+      - name: Install dependencies
+        working-directory: Platforms/web
+        run: npm ci
+      
+      - name: Run Jest tests with coverage
+        working-directory: Platforms/web
+        run: npm run test -- --coverage --passWithNoTests
+      
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./Platforms/web/coverage/coverage-final.json
+          flags: frontend
+          fail_ci_if_error: false
+
+  # ===== BUILD =====
+  
+  build-docker:
+    runs-on: ubuntu-latest
+    name: Build Docker Image
+    needs: [ lint-backend, lint-frontend, test-backend, test-frontend ]
+    permissions:
+      contents: read
+      packages: write
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix={{branch}}-
+            type=raw,value=latest,enable={{is_default_branch}}
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ===== SECURITY =====
+  
+  security-scan:
+    runs-on: ubuntu-latest
+    name: Security Scanning
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+      
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: 'trivy-results.sarif'
+      
+      - name: Run Snyk security scan
+        uses: snyk/actions/python-3.11@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high --fail-on=all || true
+
+  dependency-check:
+    runs-on: ubuntu-latest
+    name: Dependency Security Check
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Check Python dependencies
+        run: |
+          pip install safety
+          safety check -r Platforms/Python/requirements.txt --json || true
+      
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'Platforms/web/package-lock.json'
+      
+      - name: Check npm vulnerabilities
+        working-directory: Platforms/web
+        run: npm audit --audit-level=high || true
+
+  # ===== DEPLOYMENT =====
+  
+  deploy-staging:
+    runs-on: ubuntu-latest
+    name: Deploy to Staging
+    needs: [ build-docker, security-scan ]
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    environment:
+      name: staging
+      url: https://staging.timewarp.local
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Staging
+        env:
+          DEPLOY_KEY: ${{ secrets.STAGING_DEPLOY_KEY }}
+          DEPLOY_HOST: ${{ secrets.STAGING_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.STAGING_DEPLOY_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+          
+          ssh $DEPLOY_USER@$DEPLOY_HOST \
+            "cd /opt/timewarp && \
+             git pull origin develop && \
+             docker-compose -f docker-compose.yml up -d"
+
+  deploy-production:
+    runs-on: ubuntu-latest
+    name: Deploy to Production
+    needs: [ build-docker, security-scan ]
+    if: startsWith(github.ref, 'refs/tags/v') && github.event_name == 'push'
+    environment:
+      name: production
+      url: https://timewarp.io
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Deploy to Production
+        env:
+          DEPLOY_KEY: ${{ secrets.PROD_DEPLOY_KEY }}
+          DEPLOY_HOST: ${{ secrets.PROD_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.PROD_DEPLOY_USER }}
+        run: |
+          mkdir -p ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H $DEPLOY_HOST >> ~/.ssh/known_hosts
+          
+          ssh $DEPLOY_USER@$DEPLOY_HOST \
+            "cd /opt/timewarp && \
+             git fetch origin && \
+             git checkout ${{ github.ref_name }} && \
+             docker-compose -f docker-compose.prod.yml up -d && \
+             docker-compose -f docker-compose.prod.yml run api \
+               python manage.py migrate"
+      
+      - name: Health check
+        run: |
+          for i in {1..30}; do
+            if curl -f https://timewarp.io/health; then
+              echo "Deployment successful!"
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Deployment failed!"
+          exit 1
+      
+      - name: Notify Slack
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'Production deployment for ${{ github.ref_name }}'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+  # ===== DOCUMENTATION =====
+  
+  publish-docs:
+    runs-on: ubuntu-latest
+    name: Publish Documentation
+    needs: [ test-backend, test-frontend ]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Generate API documentation
+        run: |
+          mkdir -p docs/generated
+          cd Platforms/Python
+          python -m pdoc --html --output-directory ../../docs/generated core handlers
+      
+      - name: Generate TypeScript documentation
+        working-directory: Platforms/web
+        run: npm run docs
+      
+      - name: Deploy docs to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs
+          cname: docs.timewarp.io
+
+  # ===== STATUS CHECK =====
+  
+  build-status:
+    runs-on: ubuntu-latest
+    name: Build Status Check
+    needs: [ lint-backend, lint-frontend, test-backend, test-frontend, build-docker ]
+    if: always()
+    steps:
+      - name: Check build status
+        run: |
+          if [ "${{ needs.lint-backend.result }}" != "success" ] || \
+             [ "${{ needs.lint-frontend.result }}" != "success" ] || \
+             [ "${{ needs.test-backend.result }}" != "success" ] || \
+             [ "${{ needs.test-frontend.result }}" != "success" ] || \
+             [ "${{ needs.build-docker.result }}" != "success" ]; then
+            echo "Build failed!"
+            exit 1
+          fi
+          echo "Build passed!"

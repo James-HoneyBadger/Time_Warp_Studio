@@ -2,41 +2,49 @@ TO TREE :SIZE :ANGLE
     IF :SIZE < 5 [ STOP ]
     
     FORWARD :SIZE
-    RIGHT :ANGLE
+    LEFT :ANGLE
     TREE (:SIZE * 0.7) :ANGLE
-    LEFT (:ANGLE * 2)
+    RIGHT (:ANGLE * 2)
     TREE (:SIZE * 0.7) :ANGLE
-    RIGHT :ANGLE
+    LEFT :ANGLE
     BACKWARD :SIZE
 END
 
 TO SIMPLE_TREE
     PRINT [Drawing a Recursive Tree]
     PENUP
-    SETPOSITION [0 -150]
+    SETPOSITION [0 -200]
     PENDOWN
     SETHEADING 90
-    TREE 100 30
+    TREE 120 25
 END
 
 TO FOREST
-    PRINT [Drawing Multiple Trees]
+    PRINT [Drawing Multiple Trees in a Forest]
     
     PENUP
-    SETPOSITION [-200 -150]
+    SETPOSITION [-250 -200]
     SETHEADING 90
     PENDOWN
-    TREE 60 25
+    TREE 80 20
     
     PENUP
-    SETPOSITION [0 -150]
+    SETPOSITION [-100 -200]
+    SETHEADING 90
     PENDOWN
-    TREE 80 30
+    TREE 100 25
     
     PENUP
-    SETPOSITION [200 -150]
+    SETPOSITION [50 -200]
+    SETHEADING 90
     PENDOWN
-    TREE 70 28
+    TREE 90 22
+    
+    PENUP
+    SETPOSITION [200 -200]
+    SETHEADING 90
+    PENDOWN
+    TREE 85 24
 END
 
 FOREST
