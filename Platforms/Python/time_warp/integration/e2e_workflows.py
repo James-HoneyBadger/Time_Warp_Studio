@@ -10,14 +10,15 @@ Demonstrates complete user journeys for:
 """
 
 import logging
-from typing import Optional
 from dataclasses import dataclass
+from typing import Optional
 
 # ===== WORKFLOW 1: MARKETPLACE DISCOVERY & INSTALLATION =====
 
+
 class MarketplaceWorkflowExample:
     """Complete marketplace workflow from search to installation"""
-    
+
     @staticmethod
     def workflow():
         """
@@ -32,7 +33,7 @@ class MarketplaceWorkflowExample:
         8. User reloads IDE
         9. New plugin features available in IDE
         """
-        
+
         print("""
 =================================================================
 WORKFLOW 1: MARKETPLACE DISCOVERY & INSTALLATION
@@ -88,9 +89,10 @@ Expected Outcome:
 
 # ===== WORKFLOW 2: INTERACTIVE DEBUGGING =====
 
+
 class DebuggerWorkflowExample:
     """Complete debugging session workflow"""
-    
+
     @staticmethod
     def workflow():
         """
@@ -104,7 +106,7 @@ class DebuggerWorkflowExample:
         7. User identifies root cause
         8. User fixes bug and re-runs
         """
-        
+
         print("""
 =================================================================
 WORKFLOW 2: INTERACTIVE DEBUGGING SESSION
@@ -122,7 +124,7 @@ Step 1: User opens program with bug
     80   ELSE
     90     PRINT "Wrong!"
     100 END WHILE
-  
+
   Bug: Loop doesn't check input type, crashes on non-numeric
 
 Step 2: User sets breakpoints
@@ -156,12 +158,12 @@ Step 6: User steps through code
   ✓ User clicks "Step Over" to skip details
   ✓ Execution advances to line 60
   ✓ Watch shows guess = <user input>
-  
+
 Step 7: Continue stepping
   ✓ Line 60: IF check
   ✓ Enters comparison logic
   ✓ Line 90: Print "Wrong!"
-  
+
 Step 8: Identify bug
   ✓ Input "abc" (non-numeric)
   ✓ System crashes before reaching breakpoint
@@ -184,9 +186,10 @@ Expected Outcome:
 
 # ===== WORKFLOW 3: AI-ASSISTED DEVELOPMENT =====
 
+
 class AIWorkflowExample:
     """Complete AI-assisted code development workflow"""
-    
+
     @staticmethod
     def workflow():
         """
@@ -200,7 +203,7 @@ class AIWorkflowExample:
         7. AI suggests code review improvements
         8. User optimizes based on AI recommendations
         """
-        
+
         print("""
 =================================================================
 WORKFLOW 3: AI-ASSISTED CODE DEVELOPMENT
@@ -210,7 +213,7 @@ Step 1: User starts writing function
   Code:
     FUNCTION CalculateFactorial(n)
     ...
-  
+
   Cursor after "Function CalculateFactorial(n)"
 
 Step 2: IDE shows code completions
@@ -220,7 +223,7 @@ Step 2: IDE shows code completions
      2. LET result = 1
         FOR i = 1 TO n...
      3. IF n = 0 OR n = 1 THEN...
-  
+
   Each suggestion shows code snippet preview
 
 Step 3: User selects best completion
@@ -237,11 +240,11 @@ Step 4: AI detects potential bugs
      ⚠️ Line 5: Potential infinite recursion
         Severity: HIGH
         Fix: Add recursion depth check
-     
+
      ⚠️ Line 3: Missing input validation
         Severity: MEDIUM
         Fix: Validate n is non-negative integer
-  
+
   Each bug shows line number and suggested fix
 
 Step 5: User reviews and accepts fixes
@@ -257,14 +260,14 @@ Step 6: AI suggests code review improvements
      Performance: Recursive approach could be slower
      Maintainability: Add documentation comment
      Security: Input validated ✓
-  
+
   Each insight is clickable for more details
 
 Step 7: User implements improvements
   ✓ Adds documentation comment:
      REM Calculates factorial of n using recursion
      REM Efficient for n < 10, use iterative for larger values
-  
+
   ✓ Optimizes to iterative if needed:
      LET result = 1
      FOR i = 2 TO n
@@ -286,9 +289,10 @@ Expected Outcome:
 
 # ===== WORKFLOW 4: LEARNING PATH PROGRESSION =====
 
+
 class LearningWorkflowExample:
     """Learning path progression workflow"""
-    
+
     @staticmethod
     def workflow():
         """
@@ -301,7 +305,7 @@ class LearningWorkflowExample:
         6. Progresses through curriculum
         7. AI tracks learning and adjusts difficulty
         """
-        
+
         print("""
 =================================================================
 WORKFLOW 4: LEARNING PATH PROGRESSION
@@ -324,7 +328,7 @@ Step 2: Start first lesson
 Step 3: Complete lesson activity
   Code:
     PRINT "Hello, World!"
-  
+
   ✓ User runs code
   ✓ AI analyzes solution
   ✓ Lesson complete! ✓
@@ -334,7 +338,7 @@ Step 4: Get performance feedback
      Execution time: 0.05s (excellent)
      Code efficiency: ⭐⭐⭐⭐⭐ (5/5 stars)
      Style: ⭐⭐⭐⭐ (4/5 - could add comment)
-  
+
   ✓ Suggested improvement:
      Add a comment: REM Prints greeting
 
@@ -342,12 +346,12 @@ Step 5: Continue to next lesson
   ✓ Lesson 2: Variables and Types
   ✓ Learn about LET, different data types
   ✓ Practice: Store and display variables
-  
+
   Code:
     LET name = "Alice"
     LET age = 25
     PRINT name, age
-  
+
   ✓ User runs and gets feedback
   ✓ Quiz: "What type is 'age'?" → Integer
   ✓ Lesson complete!
@@ -378,9 +382,10 @@ Expected Outcome:
 
 # ===== WORKFLOW 5: CODE OPTIMIZATION =====
 
+
 class OptimizationWorkflowExample:
     """Code optimization workflow"""
-    
+
     @staticmethod
     def workflow():
         """
@@ -392,7 +397,7 @@ class OptimizationWorkflowExample:
         5. Applies improvements
         6. Measures performance gains
         """
-        
+
         print("""
 =================================================================
 WORKFLOW 5: CODE OPTIMIZATION & PERFORMANCE
@@ -403,7 +408,7 @@ Step 1: User has working program
     FOR i = 1 TO 10000
       LET x = SQRT(i) * SIN(i) * COS(i)
     NEXT i
-    
+
   Execution time: 2.5 seconds
   User requests optimization
 
@@ -418,12 +423,12 @@ Step 3: Review optimization suggestions
      Issue: Computing all three trig functions each iteration
      Suggested: Pre-calculate or use approximations
      Expected improvement: 30-40% faster
-  
+
   ✓ Suggestion 2 - Use array instead of recalculation:
      Current: Computing values in loop
      Suggested: Use lookup table
      Expected improvement: 50-60% faster
-  
+
   ✓ Suggestion 3 - Parallel processing:
      Current: Sequential loop
      Suggested: Split into chunks for parallel execution
@@ -436,12 +441,12 @@ Step 4: User applies suggestions
     FOR i = 1 TO 10000
       LET lookuptable[i] = SQRT(i) * SIN(i) * COS(i)
     NEXT i
-    
+
     REM Use lookup table
     FOR i = 1 TO 10000
       LET x = lookuptable[i]
     NEXT i
-  
+
   ✓ New execution time: 0.5 seconds
   ✓ Speedup: 5x faster! 🚀
 
@@ -452,7 +457,7 @@ Step 5: Performance monitoring
      Old: 2500ms
      New: 500ms
      Improvement: 80% ✓
-  
+
   ✓ Memory usage: Slight increase (lookup table)
   ✓ Overall: Excellent optimization
 
@@ -461,9 +466,9 @@ Step 6: Further analysis
      Efficiency: ⭐⭐⭐⭐⭐ (5/5)
      Readability: ⭐⭐⭐⭐ (4/5)
      Maintainability: ⭐⭐⭐ (3/5)
-  
+
   Suggestion: Add comments explaining lookup table approach
-  
+
   Updated code with comments:
     REM Optimization: Pre-calculate expensive computations
     REM Tradeoff: Uses more memory, saves computation time
@@ -479,9 +484,10 @@ Expected Outcome:
 
 # ===== WORKFLOW 6: BETA FEEDBACK & TESTING =====
 
-class BetaTesting WorkflowExample:
+
+class BetaTestingWorkflowExample:
     """Beta testing and feedback collection workflow"""
-    
+
     @staticmethod
     def workflow():
         """
@@ -493,7 +499,7 @@ class BetaTesting WorkflowExample:
         5. Developers analyze and prioritize
         6. Feature improved based on feedback
         """
-        
+
         print("""
 =================================================================
 WORKFLOW 6: BETA TESTING & FEEDBACK COLLECTION
@@ -535,7 +541,7 @@ Step 4: Tracking in beta system
      Feature: 1 (medium priority)
      User: beta_tester_42
      Session: session_2024_0847
-  
+
   ✓ Analytics updated:
      Total bugs: 847
      Critical: 23
@@ -547,7 +553,7 @@ Step 5: Developer review
      New reports this session: 23
      Critical bugs: 3 (requires immediate attention)
      Most requested feature: Plugin dependency display
-  
+
   ✓ Developer analyzes BUG-2024-0847:
      Root cause: Missing runtime library
      Fix: Add dependency resolution
@@ -559,7 +565,7 @@ Step 6: Improved release
   ✓ Adds dependency checker before install
   ✓ Shows required plugins before installation
   ✓ New version released to beta testers
-  
+
   ✓ Beta tester gets notification
   ✓ Tests improved version
   ✓ Submits feedback: "Bug fixed! ✓ Works perfectly now!"
@@ -572,7 +578,7 @@ Step 7: Analytics and iteration
        - Marketplace: 78%
        - Debugger: 65%
        - AI: 82%
-  
+
   ✓ A/B testing shows:
      Variant A (old UI): 4.1/5
      Variant B (new UI): 4.6/5
@@ -589,29 +595,30 @@ Expected Outcome:
 
 # ===== MAIN WORKFLOW RUNNER =====
 
+
 def run_all_workflows():
     """Display all workflow examples"""
-    
-    print("\n" + "="*65)
+
+    print("\n" + "=" * 65)
     print("TIME WARP IDE - PHASE VII-X WORKFLOW EXAMPLES")
-    print("="*65)
-    
+    print("=" * 65)
+
     workflows = [
         MarketplaceWorkflowExample,
         DebuggerWorkflowExample,
         AIWorkflowExample,
         LearningWorkflowExample,
         OptimizationWorkflowExample,
-        BetaTesting WorkflowExample
+        BetaTestingWorkflowExample
     ]
-    
+
     for workflow_class in workflows:
         workflow_class.workflow()
         print("\n")
-    
-    print("="*65)
+
+    print("=" * 65)
     print("WORKFLOW EXAMPLES COMPLETE")
-    print("="*65)
+    print("=" * 65)
     print("""
 All Phase VII-X features demonstrated in real-world scenarios:
 
@@ -643,6 +650,7 @@ Next Steps:
   4. Collect beta feedback
   5. Iterate based on user input
     """)
+
 
 if __name__ == "__main__":
     run_all_workflows()

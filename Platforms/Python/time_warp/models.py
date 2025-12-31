@@ -5,16 +5,17 @@ Defines schema for rooms, messages, operations, and user presence
 
 from datetime import datetime
 from typing import Optional
+
 from sqlalchemy import (
-    Column,
-    String,
-    Integer,
-    Text,
-    DateTime,
-    Boolean,
-    ForeignKey,
     JSON,
+    Boolean,
+    Column,
+    DateTime,
+    ForeignKey,
     Index,
+    Integer,
+    String,
+    Text,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
@@ -34,10 +35,14 @@ class Room(Base):
     is_private = Column(Boolean, default=False)
     max_users = Column(Integer, default=100)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_at = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     # Relationships
-    messages = relationship("Message", back_populates="room", cascade="all, delete-orphan")
+    messages = relationship(
+        "Message", back_populates="room", cascade="all, delete-orphan"
+    )
     operations = relationship(
         "Operation", back_populates="room", cascade="all, delete-orphan"
     )
@@ -65,14 +70,18 @@ class RoomMember(Base):
     __table_args__ = (Index("idx_room_user", "room_id", "user_id"),)
 
     id = Column(String(255), primary_key=True, index=True)
-    room_id = Column(String(255), ForeignKey("rooms.id"), nullable=False, index=True)
+    room_id = Column(
+        String(255), ForeignKey("rooms.id"), nullable=False, index=True
+    )
     user_id = Column(String(255), nullable=False, index=True)
     user_name = Column(String(255), nullable=False)
     user_email = Column(String(255), nullable=True)
     user_color = Column(String(7), default="#3B82F6")
     role = Column(String(50), default="member")  # admin, member, viewer
     joined_at = Column(DateTime, default=datetime.utcnow)
-    last_seen = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_seen = Column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
     is_active = Column(Boolean, default=True)
 
     # Relationships
@@ -89,7 +98,9 @@ class Operation(Base):
     )
 
     id = Column(String(255), primary_key=True, index=True)
-    room_id = Column(String(255), ForeignKey("rooms.id"), nullable=False, index=True)
+    room_id = Column(
+        String(255), ForeignKey("rooms.id"), nullable=False, index=True
+    )
     user_id = Column(String(255), nullable=False, index=True)
     operation_type = Column(String(50), nullable=False)  # insert, delete
     position = Column(Integer, nullable=False)
@@ -124,7 +135,9 @@ class Message(Base):
     )
 
     id = Column(String(255), primary_key=True, index=True)
-    room_id = Column(String(255), ForeignKey("rooms.id"), nullable=False, index=True)
+    room_id = Column(
+        String(255), ForeignKey("rooms.id"), nullable=False, index=True
+    )
     user_id = Column(String(255), nullable=False, index=True)
     username = Column(String(255), nullable=False)
     content = Column(Text, nullable=False)
@@ -157,7 +170,9 @@ class DocumentSnapshot(Base):
     __tablename__ = "document_snapshots"
 
     id = Column(String(255), primary_key=True, index=True)
-    room_id = Column(String(255), ForeignKey("rooms.id"), nullable=False, index=True)
+    room_id = Column(
+        String(255), ForeignKey("rooms.id"), nullable=False, index=True
+    )
     content = Column(Text, nullable=False)
     version = Column(Integer, nullable=False)
     size_bytes = Column(Integer, nullable=False)
@@ -179,13 +194,19 @@ class ConflictResolution(Base):
     __tablename__ = "conflict_resolutions"
 
     id = Column(String(255), primary_key=True, index=True)
-    room_id = Column(String(255), ForeignKey("rooms.id"), nullable=False, index=True)
+    room_id = Column(
+        String(255), ForeignKey("rooms.id"), nullable=False, index=True
+    )
     operation_id_1 = Column(String(255), nullable=False)
     operation_id_2 = Column(String(255), nullable=False)
     user_id_1 = Column(String(255), nullable=False)
     user_id_2 = Column(String(255), nullable=False)
-    conflict_type = Column(String(50), nullable=False)  # insert-insert, delete-delete, etc
-    resolution_strategy = Column(String(50), nullable=False)  # timestamp, user_id, etc
+    conflict_type = Column(
+        String(50), nullable=False
+    )  # insert-insert, delete-delete, etc
+    resolution_strategy = Column(
+        String(50), nullable=False
+    )  # timestamp, user_id, etc
     resolved_at = Column(DateTime, default=datetime.utcnow)
 
     def to_dict(self):

@@ -3,13 +3,11 @@ WebSocket Manager for Real-time Collaboration
 Handles connections, rooms, and message broadcasting
 """
 
-import json
-import uuid
 import logging
 from datetime import datetime
-from typing import Dict, List, Callable, Any
+from typing import Any, Callable, Dict, List
+
 from fastapi import WebSocket
-import asyncio
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +35,10 @@ class ConnectionManager:
         self.max_history = 100
 
     async def connect(
-        self, connection_id: str, websocket: WebSocket, user_data: Dict[str, Any]
+        self,
+        connection_id: str,
+        websocket: WebSocket,
+        user_data: Dict[str, Any],
     ):
         """Register a new connection"""
         await websocket.accept()
@@ -58,7 +59,9 @@ class ConnectionManager:
                     if not members:
                         self.rooms.pop(room_id)
 
-            logger.info(f"User {user_data.get('name')} disconnected: {connection_id}")
+            logger.info(
+                f"User {user_data.get('name')} disconnected: {connection_id}"
+            )
 
     async def join_room(self, connection_id: str, room_id: str):
         """Add connection to a room"""
@@ -131,7 +134,9 @@ class ConnectionManager:
 
         logger.info(f"Connection {connection_id} left room {room_id}")
 
-    async def send_to_connection(self, connection_id: str, message: Dict[str, Any]):
+    async def send_to_connection(
+        self, connection_id: str, message: Dict[str, Any]
+    ):
         """Send message to specific connection"""
         if connection_id in self.active_connections:
             try:
@@ -209,4 +214,8 @@ class ConnectionManager:
 
     def get_user_rooms(self, connection_id: str) -> List[str]:
         """Get all rooms a user is in"""
-        return [room_id for room_id, members in self.rooms.items() if connection_id in members]
+        return [
+            room_id
+            for room_id, members in self.rooms.items()
+            if connection_id in members
+        ]

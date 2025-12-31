@@ -49,7 +49,7 @@ def _parse_terms(arg_str: str) -> Tuple[str, ...]:
             depth += 1
         elif ch in ")]":
             depth = max(0, depth - 1)
-        
+
         if ch == "," and depth == 0:
             parts.append("".join(buf).strip())
             buf = []
@@ -86,12 +86,12 @@ def _ensure_kb(interpreter: "Interpreter"):
 def _split_list_head_tail(term: str) -> Tuple[str, str]:
     # Assumes term is [...] and not []
     content = term[1:-1].strip()
-    
+
     # Check for pipe | or comma ,
     depth = 0
     pipe_idx = -1
     comma_idx = -1
-    
+
     for i, ch in enumerate(content):
         if ch in "([":
             depth += 1
@@ -104,20 +104,20 @@ def _split_list_head_tail(term: str) -> Tuple[str, str]:
                 comma_idx = i
                 # If we found a comma, it's a standard list element separator
                 # We prioritize comma for splitting head.
-                break 
-    
+                break
+
     # If we found a comma, that's the split for Head, Rest
     if comma_idx != -1:
         head = content[:comma_idx].strip()
-        tail_content = content[comma_idx+1:].strip()
+        tail_content = content[comma_idx + 1 :].strip()
         return head, "[" + tail_content + "]"
-        
+
     # If no comma, but pipe
     if pipe_idx != -1:
         head = content[:pipe_idx].strip()
-        tail = content[pipe_idx+1:].strip()
+        tail = content[pipe_idx + 1 :].strip()
         return head, tail
-        
+
     # Neither comma nor pipe -> single element list
     return content, "[]"
 
@@ -125,7 +125,7 @@ def _split_list_head_tail(term: str) -> Tuple[str, str]:
 def _unify(x: str, y: str, env: Dict[str, str]) -> Optional[Dict[str, str]]:
     x = x.strip()
     y = y.strip()
-    
+
     # Anonymous variable optimization
     if x == "_" or y == "_":
         return env
@@ -146,27 +146,32 @@ def _unify(x: str, y: str, env: Dict[str, str]) -> Optional[Dict[str, str]]:
         # Bind one to the other?
         # In this simple interpreter, we avoid var-var binding chains if possible
         # But for correctness we should probably bind them.
-        # For now, let's just leave them free as per original code, 
+        # For now, let's just leave them free as per original code,
         # but original code had a bug where it returned env if x!=y without binding.
         # If I have f(X, Y) and unify with f(A, A). X=A, Y=A. So X=Y.
         # If I have f(X, Y) and unify with f(A, B). X=A, Y=B.
         # If I have f(X, X) and unify with f(A, B). X=A, X=B -> A=B.
-        
+
         # Let's stick to simple binding:
         e = env.copy()
         e[x] = y
         return e
-    
+
     # List Unification
-    if x.startswith("[") and x.endswith("]") and y.startswith("[") and y.endswith("]"):
+    if (
+        x.startswith("[")
+        and x.endswith("]")
+        and y.startswith("[")
+        and y.endswith("]")
+    ):
         if x == "[]" and y == "[]":
             return env
         if x == "[]" or y == "[]":
             return None
-            
+
         xh, xt = _split_list_head_tail(x)
         yh, yt = _split_list_head_tail(y)
-        
+
         env = _unify(xh, yh, env)
         if env is None:
             return None
@@ -229,7 +234,7 @@ def _parse_single_goal(text: str) -> Tuple[str, Tuple[str, ...]]:
     t = text.strip()
     if t == "!":
         return ("!", tuple())
-    
+
     # Handle infix 'is'
     # Pattern: Term is Expression
     # Term can be a Variable or a Number/Atom
@@ -244,27 +249,27 @@ def _parse_single_goal(text: str) -> Tuple[str, Tuple[str, ...]]:
 
     # Handle infix comparison operators: <, >, <=, >=, =
     # Order matters: check >= and <= before > and <
-    
+
     # >=
     ge_match = re.match(r"^([a-zA-Z0-9_]+)\s*>=\s*([a-zA-Z0-9_]+)$", t)
     if ge_match:
         return ("ge", (ge_match.group(1), ge_match.group(2)))
-        
+
     # <=
     le_match = re.match(r"^([a-zA-Z0-9_]+)\s*<=\s*([a-zA-Z0-9_]+)$", t)
     if le_match:
         return ("le", (le_match.group(1), le_match.group(2)))
-        
+
     # >
     gt_match = re.match(r"^([a-zA-Z0-9_]+)\s*>\s*([a-zA-Z0-9_]+)$", t)
     if gt_match:
         return ("gt", (gt_match.group(1), gt_match.group(2)))
-        
+
     # <
     lt_match = re.match(r"^([a-zA-Z0-9_]+)\s*<\s*([a-zA-Z0-9_]+)$", t)
     if lt_match:
         return ("lt", (lt_match.group(1), lt_match.group(2)))
-        
+
     # = (unification)
     eq_match = re.match(r"^([a-zA-Z0-9_]+)\s*=\s*([a-zA-Z0-9_]+)$", t)
     if eq_match:
@@ -331,10 +336,11 @@ def _num_value(token: str, env: Dict[str, str]) -> Optional[float]:
         target = token
         seen = set()
         while target in env and _is_var(env[target]):
-            if target in seen: return None
+            if target in seen:
+                return None
             seen.add(target)
             target = env[target]
-            
+
         if target in env and re.fullmatch(r"-?\d+(?:\.\d+)?", env[target]):
             return float(env[target])
         return None
@@ -350,10 +356,11 @@ def _bind_num(
         target = token
         seen = set()
         while target in env and _is_var(env[target]):
-            if target in seen: return None
+            if target in seen:
+                return None
             seen.add(target)
             target = env[target]
-            
+
         e = env.copy()
         # Store as integer if whole
         if abs(value - int(value)) < 1e-9:
@@ -382,10 +389,10 @@ def _eval_math(expr: str, env: Dict[str, str]) -> Optional[float]:
     # Replace variables with values
     # Sort keys by length descending to avoid partial replacements
     sorted_vars = sorted(env.keys(), key=len, reverse=True)
-    
+
     # Tokenize to avoid replacing substrings of other words
     # Simple approach: split by non-alphanumeric
-    
+
     # Better approach: use regex to find variables
     def replace_var(match):
         var_name = match.group(0)
@@ -397,10 +404,10 @@ def _eval_math(expr: str, env: Dict[str, str]) -> Optional[float]:
 
     # Replace variables that look like Prolog vars (Capitalized)
     expr_sub = re.sub(r"\b[A-Z][a-zA-Z0-9_]*\b", replace_var, expr)
-    
+
     # Handle 'mod' operator (python uses %)
     expr_sub = re.sub(r"\bmod\b", "%", expr_sub)
-    
+
     try:
         # Safe evaluation: only allow numbers and operators
         if not re.match(r"^[\d\s+\-*/%().]+$", expr_sub):
@@ -414,16 +421,17 @@ def _substitute_term(term: str, env: Dict[str, str]) -> str:
     # Handle simple case first
     if term in env:
         val = env[term]
-        if val == term: return val
+        if val == term:
+            return val
         return _substitute_term(val, env)
-        
+
     # If term has no variables, return as is
-    if not any(c.isupper() or c == '_' for c in term):
+    if not any(c.isupper() or c == "_" for c in term):
         return term
 
     # Find all potential variables
     # We use a tokenizing approach to be safer
-    tokens = re.split(r'([a-zA-Z0-9_]+)', term)
+    tokens = re.split(r"([a-zA-Z0-9_]+)", term)
     result = []
     for token in tokens:
         if _is_var(token) and token != "_":
@@ -538,7 +546,7 @@ def _solve_goals_cut(
             if val.startswith('"') and val.endswith('"'):
                 val = val[1:-1]
             text_parts.append(str(val))
-        
+
         if interpreter:
             # We don't have a direct "write without newline" on interpreter output list
             # But we can append to the last line if it exists?
@@ -548,7 +556,7 @@ def _solve_goals_cut(
             # Since our UI displays lines, 'write' might be tricky.
             # Let's assume we just append to output list for now.
             # Or better: use a temporary buffer in kb?
-            # Let's just append to output list as a new line for simplicity, 
+            # Let's just append to output list as a new line for simplicity,
             # or try to merge with previous if it didn't end with newline?
             # The interpreter output is List[str].
             # Let's just append.
@@ -570,13 +578,13 @@ def _solve_goals_cut(
         if interpreter:
             interpreter.output.append("")
         return _solve_goals_cut(kb, rest, env)
-        
+
     if pred == "concat" and len(args) == 3:
         s1, s2, s3 = args
         v1 = _substitute_term(s1, env)
         v2 = _substitute_term(s2, env)
         v3 = _substitute_term(s3, env)
-        
+
         # Mode: concat(in, in, out)
         if not _is_var(v1) and not _is_var(v2):
             # Strip quotes
@@ -590,10 +598,10 @@ def _solve_goals_cut(
 
     # Regular predicate: resolve all matches and respect cut propagation
     prune_here = False
-    
+
     # Substitute args with current env
     subbed_args = tuple(_substitute_term(a, env) for a in args)
-    
+
     for env1 in _solve(kb, pred, subbed_args):
         merged = env.copy()
         merged.update(env1)
@@ -623,9 +631,12 @@ def _solve_goals_cut(
 def _rename_vars_in_term(term: str, suffix: str) -> str:
     def replace(match):
         v = match.group(0)
-        if v == "_": return "_"
+        if v == "_":
+            return "_"
         return v + "_" + suffix
+
     return re.sub(r"\b[A-Z][a-zA-Z0-9_]*\b", replace, term)
+
 
 def _rename_vars_in_rule(hargs, body_goals, suffix):
     new_hargs = tuple(_rename_vars_in_term(a, suffix) for a in hargs)
@@ -665,13 +676,16 @@ def _solve(
     for hp, hargs, body_goals in kb["rules"]:
         if hp != pred or len(hargs) != len(args):
             continue
-            
+
         # Rename variables to avoid collision in recursion
-        if "var_counter" not in kb: kb["var_counter"] = 0
+        if "var_counter" not in kb:
+            kb["var_counter"] = 0
         kb["var_counter"] += 1
         suffix = str(kb["var_counter"])
-        hargs_renamed, body_goals_renamed = _rename_vars_in_rule(hargs, body_goals, suffix)
-        
+        hargs_renamed, body_goals_renamed = _rename_vars_in_rule(
+            hargs, body_goals, suffix
+        )
+
         rule_env: Optional[Dict[str, str]] = {}
         for ha, qa in zip(hargs_renamed, args):
             if rule_env is not None:
@@ -723,7 +737,7 @@ def execute_prolog(interpreter: "Interpreter", command: str, _turtle) -> str:
         return ""
 
     _ensure_kb(interpreter)
-    
+
     # Section handling
     upper_cmd = raw_cmd.upper()
     if upper_cmd in ("DOMAINS", "PREDICATES", "CLAUSES", "GOAL"):
@@ -748,10 +762,12 @@ def execute_prolog(interpreter: "Interpreter", command: str, _turtle) -> str:
 
     # Clear buffer for next command
     interpreter.prolog_kb["buffer"] = ""
-    cmd = full_cmd[:-1].strip() # Remove trailing dot
+    cmd = full_cmd[:-1].strip()  # Remove trailing dot
 
     # Pre-processing for infix operators
-    cmd = re.sub(r"([a-zA-Z0-9_]+)\s*\\=\s*([a-zA-Z0-9_]+)", r"neq(\1, \2)", cmd)
+    cmd = re.sub(
+        r"([a-zA-Z0-9_]+)\s*\\=\s*([a-zA-Z0-9_]+)", r"neq(\1, \2)", cmd
+    )
 
     # GOAL section execution
     if section == "GOAL":
@@ -759,19 +775,22 @@ def execute_prolog(interpreter: "Interpreter", command: str, _turtle) -> str:
         goals = _parse_body_goals(cmd)
         interpreter.prolog_kb["cut_active"] = False
         sols = _solve_goals(interpreter.prolog_kb, goals, {})
-        
+
         # In Turbo Prolog, GOAL usually just runs and prints output via write/writeln
         # But if there are variables, we might want to show them?
         # Turbo Prolog usually doesn't show bindings for the GOAL section unless explicitly printed.
-        # But for compatibility with our interactive shell, let's show bindings if any.
-        
+        # But for compatibility with our interactive shell, let's show bindings
+        # if any.
+
         if not sols:
             return "❌ false"
-            
-        var_names = sorted(list(set(re.findall(r"\b[A-Z][a-zA-Z0-9_]*\b", cmd))))
+
+        var_names = sorted(
+            list(set(re.findall(r"\b[A-Z][a-zA-Z0-9_]*\b", cmd)))
+        )
         if not var_names:
             return "✅ true"
-            
+
         lines: List[str] = []
         for env in sols:
             assigns = []
@@ -789,14 +808,16 @@ def execute_prolog(interpreter: "Interpreter", command: str, _turtle) -> str:
         goals = _parse_body_goals(body)
         interpreter.prolog_kb["cut_active"] = False
         sols = _solve_goals(interpreter.prolog_kb, goals, {})
-        
+
         if not sols:
             return "❌ false"
-            
-        var_names = sorted(list(set(re.findall(r"\b[A-Z][a-zA-Z0-9_]*\b", body))))
+
+        var_names = sorted(
+            list(set(re.findall(r"\b[A-Z][a-zA-Z0-9_]*\b", body)))
+        )
         if not var_names:
             return "✅ true"
-            
+
         lines: List[str] = []
         for env in sols:
             assigns = []
@@ -814,9 +835,9 @@ def execute_prolog(interpreter: "Interpreter", command: str, _turtle) -> str:
     # We need to put the dot back for the regexes if they expect it?
     # The original regexes expected the dot.
     # Let's adjust the regexes or put the dot back.
-    
+
     cmd_with_dot = cmd + "."
-    
+
     m = _RULE_RE.match(cmd_with_dot)
     if m:
         hp, hargs, body = m.groups()

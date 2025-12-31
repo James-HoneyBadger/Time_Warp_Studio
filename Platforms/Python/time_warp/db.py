@@ -4,15 +4,14 @@ Handles SQLAlchemy setup and database connection pooling
 """
 
 import logging
+import os
 from typing import Generator
-from sqlalchemy import create_engine, event
+
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
-    create_async_engine,
     async_sessionmaker,
+    create_async_engine,
 )
-from sqlalchemy.pool import NullPool, QueuePool
-import os
 
 logger = logging.getLogger(__name__)
 

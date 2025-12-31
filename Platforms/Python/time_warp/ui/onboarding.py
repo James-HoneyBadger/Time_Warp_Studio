@@ -6,20 +6,22 @@ Guided Onboarding - First-run tutorial with interactive tasks.
 # pylint: disable=no-name-in-module
 
 from __future__ import annotations
+
 import json
-from pathlib import Path
 from dataclasses import dataclass
+from pathlib import Path
 from typing import TYPE_CHECKING
+
+from PySide6.QtCore import Signal
 from PySide6.QtWidgets import (
+    QCheckBox,
     QDialog,
-    QVBoxLayout,
     QHBoxLayout,
     QLabel,
     QPushButton,
     QTextEdit,
-    QCheckBox,
+    QVBoxLayout,
 )
-from PySide6.QtCore import Signal
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QMainWindow
@@ -255,7 +257,9 @@ class OnboardingDialog(QDialog):
     def _next_step(self):
         """Move to next step."""
         if self.current_step_index < len(self.steps) - 1:
-            self.step_completed.emit(self.steps[self.current_step_index].step_id)
+            self.step_completed.emit(
+                self.steps[self.current_step_index].step_id
+            )
             self.current_step_index += 1
             self._show_current_step()
 
@@ -303,7 +307,9 @@ class OnboardingManager:
                 with open(self.config_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     self.completed_steps = set(data.get("completed_steps", []))
-                    self.tutorial_completed = data.get("tutorial_completed", False)
+                    self.tutorial_completed = data.get(
+                        "tutorial_completed", False
+                    )
                     self.skip_onboarding = data.get("skip_onboarding", False)
             except (json.JSONDecodeError, OSError):
                 pass

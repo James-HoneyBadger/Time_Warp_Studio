@@ -4,10 +4,10 @@ Handles conflict-free concurrent edits across multiple clients
 """
 
 import logging
-from typing import List, Dict, Any, Tuple
+import uuid
 from dataclasses import dataclass
 from datetime import datetime
-import uuid
+from typing import Any, Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -72,7 +72,9 @@ class OperationalTransform:
                 )
             elif op.type == "delete":
                 end_pos = op.position + len(op.content)
-                self.content = self.content[: op.position] + self.content[end_pos :]
+                self.content = (
+                    self.content[: op.position] + self.content[end_pos:]
+                )
 
             self.version += 1
             op.version = self.version
@@ -116,7 +118,9 @@ class OperationalTransform:
         elif op_a.type == "insert" and op_b.type == "delete":
             if op_b.position < op_a.position:
                 # Deletion before insertion
-                op_a.position -= min(len(op_b.content), op_a.position - op_b.position)
+                op_a.position -= min(
+                    len(op_b.content), op_a.position - op_b.position
+                )
             elif (
                 op_b.position >= op_a.position
                 and op_b.position < op_a.position + len(op_a.content)
@@ -133,13 +137,17 @@ class OperationalTransform:
                 # Insertion within deletion range
                 op_a.content = (
                     op_a.content[: op_b.position - op_a.position]
-                    + op_a.content[op_b.position - op_a.position + len(op_b.content) :]
+                    + op_a.content[
+                        op_b.position - op_a.position + len(op_b.content) :
+                    ]
                 )
 
         # Delete vs Delete
         elif op_a.type == "delete" and op_b.type == "delete":
             if op_b.position < op_a.position:
-                op_a.position -= min(len(op_b.content), op_a.position - op_b.position)
+                op_a.position -= min(
+                    len(op_b.content), op_a.position - op_b.position
+                )
 
         return op_a
 

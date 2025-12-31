@@ -3,16 +3,18 @@ Integration tests for Phase 4.5 Multiplayer Features
 Tests WebSocket communication, OT algorithm, presence tracking, and chat
 """
 
-import pytest
 import asyncio
-from unittest.mock import Mock, AsyncMock, patch
 import json
+from unittest.mock import AsyncMock, Mock, patch
+
+import pytest
+
+from time_warp.core.chat_service import ChatService
+from time_warp.core.collaboration_engine import Operation, OperationalTransform
+from time_warp.core.presence_service import PresenceService
 
 # Test imports (would be actual imports in real project)
 from time_warp.core.websocket_manager import ConnectionManager
-from time_warp.core.collaboration_engine import OperationalTransform, Operation
-from time_warp.core.presence_service import PresenceService
-from time_warp.core.chat_service import ChatService
 
 
 class TestWebSocketManager:
@@ -250,7 +252,10 @@ class TestChatService:
         success = service.edit_message("room1", message_id, "Hello world!")
 
         assert success is True
-        assert service.message_index["room1"][message_id].content == "Hello world!"
+        assert (
+            service.message_index["room1"][message_id].content
+            == "Hello world!"
+        )
 
     def test_delete_message(self):
         """Test deleting a message"""
@@ -355,7 +360,9 @@ class TestMultiUserCollaboration:
         ot = OperationalTransform()
 
         # Users chat
-        msg1 = chat.add_message("room1", "user1", "Alice", "Let's add a feature")
+        msg1 = chat.add_message(
+            "room1", "user1", "Alice", "Let's add a feature"
+        )
         msg2 = chat.add_message("room1", "user2", "Bob", "Sure!")
 
         # Users edit code

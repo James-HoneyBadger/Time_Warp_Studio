@@ -106,7 +106,10 @@ class BasicFormatter:
                 indent_level += 1
 
             # Handle CASE which dedents then indents
-            if upper_content.startswith("CASE ") and upper_content != "CASE ELSE":
+            if (
+                upper_content.startswith("CASE ")
+                and upper_content != "CASE ELSE"
+            ):
                 # Already dedented above, now indent for case body
                 indent_level += 1
 
@@ -401,6 +404,7 @@ class CodeFormatter:
             return code, f"❌ Format error: {e}"
         except Exception as e:  # Unexpected errors
             from .logging_config import get_logger
+
             logger = get_logger(__name__)
             logger.exception("Unexpected error in code formatting")
             return code, f"❌ Unexpected format error: {e}"

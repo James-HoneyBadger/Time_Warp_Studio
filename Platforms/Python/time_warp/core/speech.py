@@ -60,8 +60,8 @@ class SpeechSynthesizer:
 
         # Try macOS say command
         try:
-            import subprocess  # pylint: disable=import-outside-toplevel
             import platform  # pylint: disable=import-outside-toplevel
+            import subprocess  # pylint: disable=import-outside-toplevel
 
             if platform.system() == "Darwin":
                 result = subprocess.run(

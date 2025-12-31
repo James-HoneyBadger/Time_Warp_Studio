@@ -5,9 +5,10 @@ Pixel Canvas Mode - 2D grid APIs for sprite drawing, tile maps, and step animati
 # pylint: disable=too-many-arguments,too-many-positional-arguments,duplicate-code
 
 from __future__ import annotations
+
 import json
-from typing import Callable
 from dataclasses import dataclass
+from typing import Callable
 
 
 @dataclass
@@ -35,7 +36,9 @@ class PixelCanvas:
 
     def clear(self, color: str = "."):
         """Clear canvas to background color."""
-        self.grid = [[color for _ in range(self.width)] for _ in range(self.height)]
+        self.grid = [
+            [color for _ in range(self.width)] for _ in range(self.height)
+        ]
 
     def set_pixel(self, x: int, y: int, color: str):
         """Set individual pixel."""
@@ -73,7 +76,13 @@ class PixelCanvas:
                 y += sy
 
     def draw_rect(
-        self, x: int, y: int, width: int, height: int, color: str, filled: bool = False
+        self,
+        x: int,
+        y: int,
+        width: int,
+        height: int,
+        color: str,
+        filled: bool = False,
     ):
         """Draw rectangle."""
         if filled:

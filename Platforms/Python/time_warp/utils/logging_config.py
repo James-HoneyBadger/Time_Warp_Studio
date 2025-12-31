@@ -9,8 +9,7 @@ import logging.handlers
 import os
 import sys
 from pathlib import Path
-from typing import Optional, Literal
-
+from typing import Literal, Optional
 
 # Profile types for different execution contexts
 ProfileType = Literal["production", "development", "testing", "ci"]
@@ -28,10 +27,10 @@ def _ensure_log_dir() -> Path:
 
 def get_logger(name: str) -> logging.Logger:
     """Get or create a logger with the given name.
-    
+
     Args:
         name: Logger name (typically __name__)
-    
+
     Returns:
         Configured logger instance
     """
@@ -50,10 +49,10 @@ def setup_logging(
     backup_count: int = 5,
 ) -> logging.Logger:
     """Configure logging for Time Warp IDE.
-    
+
     Sets up both console and file logging with appropriate levels
     and formats based on the execution profile.
-    
+
     Args:
         level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
         profile: Execution profile (production, development, testing, ci)
@@ -61,10 +60,10 @@ def setup_logging(
         console_output: Whether to output to console
         max_bytes: Max file size before rotation (default 10MB)
         backup_count: Number of backup files to keep
-    
+
     Returns:
         Root logger instance
-    
+
     Example:
         >>> setup_logging("DEBUG", profile="development")
         >>> logger = get_logger(__name__)
@@ -73,14 +72,14 @@ def setup_logging(
     # Get or create root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
-    
+
     # Clear existing handlers
     root_logger.handlers = []
-    
+
     # Determine log file path
     if log_file is None:
         log_file = str(_ensure_log_dir() / "ide.log")
-    
+
     # Create formatters for different profiles
     if profile == "development":
         fmt = "%(asctime)s - %(name)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s"
@@ -94,16 +93,16 @@ def setup_logging(
     else:  # production
         fmt = "%(asctime)s - %(levelname)s - %(name)s - %(message)s"
         date_fmt = "%Y-%m-%d %H:%M:%S"
-    
+
     formatter = logging.Formatter(fmt, datefmt=date_fmt)
-    
+
     # Add console handler if requested
     if console_output:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setLevel(level)
         console_handler.setFormatter(formatter)
         root_logger.addHandler(console_handler)
-    
+
     # Add file handler (always, except in testing)
     if profile != "testing":
         file_handler = logging.handlers.RotatingFileHandler(
@@ -114,7 +113,7 @@ def setup_logging(
         file_handler.setLevel(level)
         file_handler.setFormatter(formatter)
         root_logger.addHandler(file_handler)
-    
+
     return root_logger
 
 
@@ -123,28 +122,38 @@ def configure_for_production(log_file: Optional[str] = None) -> logging.Logger:
     return setup_logging("INFO", profile="production", log_file=log_file)
 
 
-def configure_for_development(log_file: Optional[str] = None) -> logging.Logger:
+def configure_for_development(
+    log_file: Optional[str] = None,
+) -> logging.Logger:
     """Configure logging for development environment."""
-    return setup_logging("DEBUG", profile="development", log_file=log_file, console_output=True)
+    return setup_logging(
+        "DEBUG", profile="development", log_file=log_file, console_output=True
+    )
 
 
 def configure_for_testing(log_file: Optional[str] = None) -> logging.Logger:
     """Configure logging for testing environment."""
-    return setup_logging("DEBUG", profile="testing", log_file=log_file, console_output=False)
+    return setup_logging(
+        "DEBUG", profile="testing", log_file=log_file, console_output=False
+    )
 
 
 def configure_for_ci(log_file: Optional[str] = None) -> logging.Logger:
     """Configure logging for CI/CD environment."""
-    return setup_logging("INFO", profile="ci", log_file=log_file, console_output=True)
+    return setup_logging(
+        "INFO", profile="ci", log_file=log_file, console_output=True
+    )
 
 
-def log_exception(logger: logging.Logger, message: str = "Exception occurred") -> None:
+def log_exception(
+    logger: logging.Logger, message: str = "Exception occurred"
+) -> None:
     """Log an exception with full traceback.
-    
+
     Args:
         logger: Logger instance to use
         message: Message to log before exception
-    
+
     Example:
         >>> logger = get_logger(__name__)
         >>> try:

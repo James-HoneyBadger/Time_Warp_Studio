@@ -5,7 +5,9 @@ Handles HTTP endpoints for operational transformation and sync operations
 
 import logging
 from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
@@ -13,9 +15,6 @@ from ..services import SyncService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/sync", tags=["sync"])
-
-
-from pydantic import BaseModel
 
 
 class OperationRequest(BaseModel):
@@ -81,7 +80,9 @@ async def record_operation(
 
 
 @router.get("/{room_id}/version", response_model=VersionResponse)
-async def get_current_version(room_id: str, session: AsyncSession = Depends(get_session)):
+async def get_current_version(
+    room_id: str, session: AsyncSession = Depends(get_session)
+):
     """Get current version of document in room"""
     try:
         service = SyncService(session)
@@ -110,10 +111,14 @@ async def get_operations(
         service = SyncService(session)
         if to_version is None:
             # Get all operations from version onwards
-            operations = await service.get_operations_since(room_id, from_version)
+            operations = await service.get_operations_since(
+                room_id, from_version
+            )
         else:
             # Get operations in range
-            operations = await service.get_operations_since(room_id, from_version)
+            operations = await service.get_operations_since(
+                room_id, from_version
+            )
             operations = [op for op in operations if op.version <= to_version]
 
         return {

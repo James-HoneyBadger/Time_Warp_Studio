@@ -35,7 +35,7 @@ class Token:  # pylint: disable=R0903
         COMMA = auto()
 
     def __init__(self, token_type: "Token.Type", value: Any = None) -> None:
-        # Use Any for Token.value due to different token types (numbers or strings)
+        # Use Any for Token.value due to different token types
         # and to keep the runtime flexible for this tokenizer/evaluator.
         self.type = token_type
         self.value = value
@@ -178,7 +178,9 @@ class ExpressionEvaluator:
                 if i < len(expr) and expr[i] == "(":
                     tokens.append(Token(Token.Type.FUNCTION, name_upper))
                 else:
-                    tokens.append(Token(Token.Type.VARIABLE, name_upper + suffix))
+                    tokens.append(
+                        Token(Token.Type.VARIABLE, name_upper + suffix)
+                    )
                 continue
 
             # Operators
@@ -309,7 +311,8 @@ class ExpressionEvaluator:
 
             elif token.type == Token.Type.RIGHT_PAREN:
                 while (
-                    operator_stack and operator_stack[-1].type != Token.Type.LEFT_PAREN
+                    operator_stack
+                    and operator_stack[-1].type != Token.Type.LEFT_PAREN
                 ):
                     output.append(operator_stack.pop())
 
@@ -319,12 +322,16 @@ class ExpressionEvaluator:
                 operator_stack.pop()  # Remove left paren
 
                 # If there's a function on stack, pop it to output
-                if operator_stack and operator_stack[-1].type == Token.Type.FUNCTION:
+                if (
+                    operator_stack
+                    and operator_stack[-1].type == Token.Type.FUNCTION
+                ):
                     output.append(operator_stack.pop())
 
             elif token.type == Token.Type.COMMA:
                 while (
-                    operator_stack and operator_stack[-1].type != Token.Type.LEFT_PAREN
+                    operator_stack
+                    and operator_stack[-1].type != Token.Type.LEFT_PAREN
                 ):
                     output.append(operator_stack.pop())
 
@@ -363,7 +370,9 @@ class ExpressionEvaluator:
                 # inside expressions
                 if var_name and var_name[-1] in "%&!#$":
                     if var_name[-1] == "$":
-                        raise ValueError("String variable in numeric expression")
+                        raise ValueError(
+                            "String variable in numeric expression"
+                        )
                     base = var_name[:-1]
                 else:
                     base = var_name
@@ -470,7 +479,8 @@ class ExpressionEvaluator:
         if len(stack) != 1:
             raise ValueError("Invalid expression")
 
-        # The evaluator only returns numeric results, convert final value to float
-        # to keep the public API strictly float-typed for callers.
+        # The evaluator only returns numeric results, convert
+        # final value to float to keep the public API strictly
+        # float-typed for callers.
         final_value = stack[0]
         return float(final_value)

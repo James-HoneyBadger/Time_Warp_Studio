@@ -6,16 +6,17 @@ Implements room management, sync, and collaboration services
 import logging
 import uuid
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import Any, Dict, List, Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .models import Room, RoomMember, Operation, Message, DocumentSnapshot
+from .models import DocumentSnapshot, Message, Operation, Room, RoomMember
 from .repositories import (
-    RoomRepository,
-    RoomMemberRepository,
-    OperationRepository,
-    MessageRepository,
     DocumentSnapshotRepository,
+    MessageRepository,
+    OperationRepository,
+    RoomMemberRepository,
+    RoomRepository,
 )
 
 logger = logging.getLogger(__name__)
@@ -57,7 +58,11 @@ class RoomService:
         return await self.repo.get(room_id)
 
     async def add_member(
-        self, room_id: str, user_id: str, user_name: str, user_email: str = None
+        self,
+        room_id: str,
+        user_id: str,
+        user_name: str,
+        user_email: str = None,
     ) -> RoomMember:
         """Add member to room"""
         member = await self.member_repo.create(
@@ -149,7 +154,9 @@ class SyncService:
         logger.info(f"Created snapshot v{version} for room {room_id}")
         return snapshot
 
-    async def get_latest_snapshot(self, room_id: str) -> Optional[DocumentSnapshot]:
+    async def get_latest_snapshot(
+        self, room_id: str
+    ) -> Optional[DocumentSnapshot]:
         """Get latest snapshot"""
         return await self.snapshot_repo.get_latest_snapshot(room_id)
 
@@ -175,7 +182,9 @@ class ChatService:
         logger.info(f"Added message to room {room_id}")
         return message
 
-    async def edit_message(self, message_id: str, new_content: str) -> Optional[Message]:
+    async def edit_message(
+        self, message_id: str, new_content: str
+    ) -> Optional[Message]:
         """Edit a message"""
         message = await self.repo.get(message_id)
         if message:

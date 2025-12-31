@@ -3,13 +3,13 @@ WebSocket Integration Tests
 Tests real-time collaboration features
 """
 
-import pytest
 import json
-from unittest.mock import Mock, AsyncMock, patch
-from socketio import AsyncClient as SIOAsyncClient
+from unittest.mock import AsyncMock, Mock, patch
 
+import pytest
+from services import ChatService, RoomService, SyncService
+from socketio import AsyncClient as SIOAsyncClient
 from websocket_handlers import WebSocketEventHandler
-from services import RoomService, SyncService, ChatService
 
 
 @pytest.fixture
@@ -54,7 +54,10 @@ async def test_on_connect(event_handler):
 async def test_on_disconnect(event_handler):
     """Test disconnection handler"""
     # Register connection first
-    event_handler.connections["sid123"] = {"user_id": "user123", "room_id": "room123"}
+    event_handler.connections["sid123"] = {
+        "user_id": "user123",
+        "room_id": "room123",
+    }
 
     await event_handler.on_disconnect("sid123")
 
@@ -74,7 +77,8 @@ async def test_on_join_room(event_handler, mock_sio, mock_session):
         mock_add.return_value = mock_member
 
         await event_handler.on_join_room(
-            "sid123", {"room_id": "room123", "user_id": "user123", "username": "John"}
+            "sid123",
+            {"room_id": "room123", "user_id": "user123", "username": "John"},
         )
 
         # Verify service was called
@@ -87,7 +91,10 @@ async def test_on_join_room(event_handler, mock_sio, mock_session):
 async def test_on_leave_room(event_handler, mock_sio, mock_session):
     """Test leave room handler"""
     # Register connection first
-    event_handler.connections["sid123"] = {"user_id": "user123", "room_id": "room123"}
+    event_handler.connections["sid123"] = {
+        "user_id": "user123",
+        "room_id": "room123",
+    }
 
     with patch.object(
         RoomService, "remove_member", new_callable=AsyncMock
@@ -105,7 +112,10 @@ async def test_on_leave_room(event_handler, mock_sio, mock_session):
 async def test_on_code_change(event_handler, mock_sio, mock_session):
     """Test code change handler (OT)"""
     # Register connection
-    event_handler.connections["sid123"] = {"user_id": "user123", "room_id": "room123"}
+    event_handler.connections["sid123"] = {
+        "user_id": "user123",
+        "room_id": "room123",
+    }
 
     with patch.object(
         SyncService, "record_operation", new_callable=AsyncMock
@@ -134,7 +144,10 @@ async def test_on_code_change(event_handler, mock_sio, mock_session):
 async def test_on_cursor_update(event_handler, mock_sio):
     """Test cursor update handler"""
     # Register connection
-    event_handler.connections["sid123"] = {"user_id": "user123", "room_id": "room123"}
+    event_handler.connections["sid123"] = {
+        "user_id": "user123",
+        "room_id": "room123",
+    }
 
     await event_handler.on_cursor_update(
         "sid123", {"room_id": "room123", "position": 42}
@@ -148,9 +161,14 @@ async def test_on_cursor_update(event_handler, mock_sio):
 async def test_on_typing(event_handler, mock_sio):
     """Test typing indicator handler"""
     # Register connection
-    event_handler.connections["sid123"] = {"user_id": "user123", "room_id": "room123"}
+    event_handler.connections["sid123"] = {
+        "user_id": "user123",
+        "room_id": "room123",
+    }
 
-    await event_handler.on_typing("sid123", {"room_id": "room123", "is_typing": True})
+    await event_handler.on_typing(
+        "sid123", {"room_id": "room123", "is_typing": True}
+    )
 
     # Verify broadcast was called
     mock_sio.emit.assert_called()
@@ -161,7 +179,10 @@ async def test_on_typing(event_handler, mock_sio):
 async def test_on_chat_message(event_handler, mock_sio, mock_session):
     """Test chat message handler"""
     # Register connection
-    event_handler.connections["sid123"] = {"user_id": "user123", "room_id": "room123"}
+    event_handler.connections["sid123"] = {
+        "user_id": "user123",
+        "room_id": "room123",
+    }
 
     with patch.object(
         ChatService, "add_message", new_callable=AsyncMock
@@ -184,7 +205,10 @@ async def test_on_chat_message(event_handler, mock_sio, mock_session):
 async def test_on_add_reaction(event_handler, mock_sio, mock_session):
     """Test reaction handler"""
     # Register connection
-    event_handler.connections["sid123"] = {"user_id": "user123", "room_id": "room123"}
+    event_handler.connections["sid123"] = {
+        "user_id": "user123",
+        "room_id": "room123",
+    }
 
     with patch.object(
         ChatService, "add_reaction", new_callable=AsyncMock
@@ -203,14 +227,19 @@ async def test_on_add_reaction(event_handler, mock_sio, mock_session):
 async def test_on_get_sync(event_handler, mock_sio, mock_session):
     """Test sync request handler"""
     # Register connection
-    event_handler.connections["sid123"] = {"user_id": "user123", "room_id": "room123"}
+    event_handler.connections["sid123"] = {
+        "user_id": "user123",
+        "room_id": "room123",
+    }
 
     with patch.object(
         SyncService, "get_operations_since", new_callable=AsyncMock
     ) as mock_get:
         mock_get.return_value = []
 
-        await event_handler.on_get_sync("sid123", {"room_id": "room123", "version": 0})
+        await event_handler.on_get_sync(
+            "sid123", {"room_id": "room123", "version": 0}
+        )
 
         # Verify sync was retrieved
         mock_get.assert_called_once()
@@ -223,7 +252,10 @@ async def test_on_get_sync(event_handler, mock_sio, mock_session):
 async def test_on_presence_update(event_handler, mock_sio):
     """Test presence update handler"""
     # Register connection
-    event_handler.connections["sid123"] = {"user_id": "user123", "room_id": "room123"}
+    event_handler.connections["sid123"] = {
+        "user_id": "user123",
+        "room_id": "room123",
+    }
 
     await event_handler.on_presence_update(
         "sid123",
@@ -239,7 +271,10 @@ async def test_on_presence_update(event_handler, mock_sio):
 async def test_on_code_change_invalid_data(event_handler):
     """Test code change with invalid data"""
     # Register connection
-    event_handler.connections["sid123"] = {"user_id": "user123", "room_id": "room123"}
+    event_handler.connections["sid123"] = {
+        "user_id": "user123",
+        "room_id": "room123",
+    }
 
     # Should not raise exception with invalid data
     result = await event_handler.on_code_change(
@@ -257,6 +292,8 @@ async def test_unregistered_connection(event_handler):
     assert "unknown_sid" not in event_handler.connections
 
     # Should handle gracefully
-    result = await event_handler.on_cursor_update("unknown_sid", {"position": 0})
+    result = await event_handler.on_cursor_update(
+        "unknown_sid", {"position": 0}
+    )
 
     assert result is None or isinstance(result, dict)

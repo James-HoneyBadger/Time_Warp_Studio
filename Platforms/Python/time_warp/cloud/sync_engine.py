@@ -4,18 +4,17 @@ Handles synchronization between local IDE and cloud backend, including
 conflict resolution, offline support, and real-time updates.
 """
 
-from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any, Callable
-from enum import Enum
-from datetime import datetime, timezone
-import json
 import hashlib
-import asyncio
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from enum import Enum
 from pathlib import Path
+from typing import Any, Callable, Dict, List, Optional
 
 
 class SyncStatus(str, Enum):
     """Sync status states."""
+
     IDLE = "idle"
     SYNCING = "syncing"
     SYNCED = "synced"
@@ -26,6 +25,7 @@ class SyncStatus(str, Enum):
 
 class ConflictResolution(str, Enum):
     """Conflict resolution strategies."""
+
     LOCAL_WINS = "local_wins"
     CLOUD_WINS = "cloud_wins"
     MERGE = "merge"
@@ -35,6 +35,7 @@ class ConflictResolution(str, Enum):
 @dataclass
 class FileChange:
     """Represents a file change."""
+
     filename: str
     content: str
     timestamp: datetime
@@ -50,10 +51,13 @@ class FileChange:
 @dataclass
 class SyncConflict:
     """Represents a sync conflict."""
+
     filename: str
     local_version: FileChange
     cloud_version: FileChange
-    conflict_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    conflict_time: datetime = field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
     resolution: Optional[ConflictResolution] = None
 
     def can_auto_merge(self) -> bool:
@@ -73,6 +77,7 @@ class SyncConflict:
 @dataclass
 class SyncLog:
     """Log entry for sync operations."""
+
     timestamp: datetime
     operation: str
     filename: Optional[str]
@@ -113,9 +118,9 @@ class CloudSyncEngine:
 
         # Callbacks
         self.on_status_changed: Optional[Callable[[SyncStatus], None]] = None
-        self.on_conflict_detected: Optional[
-            Callable[[SyncConflict], None]
-        ] = None
+        self.on_conflict_detected: Optional[Callable[[SyncConflict], None]] = (
+            None
+        )
         self.on_sync_complete: Optional[Callable[[int], None]] = None
 
         # Ensure storage path exists
@@ -188,7 +193,9 @@ class CloudSyncEngine:
             True if sync successful, False otherwise
         """
         self._update_status(SyncStatus.SYNCING)
-        self._log_operation("sync_project", metadata={"project_id": project_id})
+        self._log_operation(
+            "sync_project", metadata={"project_id": project_id}
+        )
 
         try:
             if self.offline_mode:
@@ -288,7 +295,10 @@ class CloudSyncEngine:
         """
         self._log_operation(
             "offline_sync",
-            metadata={"project_id": project_id, "queued_changes": len(self.pending_changes)},
+            metadata={
+                "project_id": project_id,
+                "queued_changes": len(self.pending_changes),
+            },
         )
         self._update_status(SyncStatus.OFFLINE)
         return True
@@ -353,9 +363,7 @@ class CloudSyncEngine:
             )
             return False
 
-    async def _merge_versions(
-        self, conflict: SyncConflict
-    ) -> Optional[str]:
+    async def _merge_versions(self, conflict: SyncConflict) -> Optional[str]:
         """Merge conflicting versions.
 
         Args:

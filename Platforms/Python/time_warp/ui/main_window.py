@@ -11,8 +11,6 @@ from pathlib import Path
 # pylint: disable=too-many-lines
 from PySide6.QtCore import QSettings, Qt, QTimer
 from PySide6.QtGui import QAction, QActionGroup, QKeySequence
-
-
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -40,11 +38,11 @@ from .collaboration_client import CollaborationClient
 from .crt_effect import CRTEffectOverlay
 from .debug_panel import DebugPanel
 from .editor import CodeEditor
+from .feature_integration import FeatureIntegrationManager
 from .output import ImmediateModePanel, OutputPanel
 from .screen_modes import ScreenModeManager
 from .themes import ThemeManager
 from .variable_inspector import VariableInspector
-from .feature_integration import FeatureIntegrationManager
 
 # pylint: enable=no-name-in-module
 
@@ -299,8 +297,8 @@ class MainWindow(QMainWindow):
         """Print the canvas graphics."""
         try:
             # pylint: disable=import-outside-toplevel
-            from PySide6.QtPrintSupport import QPrintDialog, QPrinter
             from PySide6.QtGui import QPainter
+            from PySide6.QtPrintSupport import QPrintDialog, QPrinter
         except ImportError:
             self.statusbar.showMessage("Print support not available", 3000)
             return
@@ -1833,8 +1831,7 @@ class MainWindow(QMainWindow):
             elif line.strip() == "---":
                 html_lines.append("<hr>")
             # List items
-            if (line.strip().startswith("- ") or
-                    line.strip().startswith("* ")):
+            if line.strip().startswith("- ") or line.strip().startswith("* "):
                 if not in_list:
                     html_lines.append("<ul>")
                     in_list = True

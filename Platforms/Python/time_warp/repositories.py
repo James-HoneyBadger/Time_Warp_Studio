@@ -4,11 +4,20 @@ Provides CRUD operations for all models with async support
 """
 
 import logging
-from typing import List, Optional
 from datetime import datetime
-from sqlalchemy import select, desc, and_
+from typing import List, Optional
+
+from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from .models import Room, RoomMember, Message, Operation, DocumentSnapshot, ConflictResolution
+
+from .models import (
+    ConflictResolution,
+    DocumentSnapshot,
+    Message,
+    Operation,
+    Room,
+    RoomMember,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -114,16 +123,21 @@ class RoomMemberRepository(BaseRepository):
         """Get active members in a room"""
         result = await self.session.execute(
             select(self.model).where(
-                and_(self.model.room_id == room_id, self.model.is_active == True)
+                and_(self.model.room_id == room_id, self.model.is_active)
             )
         )
         return result.scalars().all()
 
-    async def get_member(self, room_id: str, user_id: str) -> Optional[RoomMember]:
+    async def get_member(
+        self, room_id: str, user_id: str
+    ) -> Optional[RoomMember]:
         """Get specific member"""
         result = await self.session.execute(
             select(self.model).where(
-                and_(self.model.room_id == room_id, self.model.user_id == user_id)
+                and_(
+                    self.model.room_id == room_id,
+                    self.model.user_id == user_id,
+                )
             )
         )
         return result.scalars().first()
@@ -147,12 +161,16 @@ class OperationRepository(BaseRepository):
         )
         return result.scalars().all()
 
-    async def get_operations_since(self, room_id: str, version: int) -> List[Operation]:
+    async def get_operations_since(
+        self, room_id: str, version: int
+    ) -> List[Operation]:
         """Get operations after a specific version"""
         result = await self.session.execute(
             select(self.model)
             .where(
-                and_(self.model.room_id == room_id, self.model.version > version)
+                and_(
+                    self.model.room_id == room_id, self.model.version > version
+                )
             )
             .order_by(self.model.version)
         )
@@ -243,7 +261,9 @@ class DocumentSnapshotRepository(BaseRepository):
     def __init__(self, session: AsyncSession):
         super().__init__(session, DocumentSnapshot)
 
-    async def get_latest_snapshot(self, room_id: str) -> Optional[DocumentSnapshot]:
+    async def get_latest_snapshot(
+        self, room_id: str
+    ) -> Optional[DocumentSnapshot]:
         """Get latest snapshot for a room"""
         result = await self.session.execute(
             select(self.model)

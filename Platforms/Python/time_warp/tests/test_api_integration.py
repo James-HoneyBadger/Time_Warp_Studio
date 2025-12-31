@@ -3,13 +3,17 @@ Integration Tests for Backend API Routes
 Tests REST endpoints and WebSocket integration
 """
 
-import pytest
 import json
-from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
-from main import app
+import pytest
 from db import Base, get_session
+from httpx import AsyncClient
+from main import app
+from sqlalchemy.ext.asyncio import (
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 
 # Fixtures for test database and client
@@ -24,7 +28,9 @@ async def test_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
-    TestingSessionLocal = async_sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
+    TestingSessionLocal = async_sessionmaker(
+        engine, class_=AsyncSession, expire_on_commit=False
+    )
 
     async def override_get_session():
         async with TestingSessionLocal() as session:

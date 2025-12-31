@@ -91,7 +91,10 @@ BASIC_SNIPPETS: List[CodeSnippet] = [
     CodeSnippet(
         name="Input Example",
         description="Get user input",
-        code=('10 INPUT "What is your name? "; NAME$\n' '20 PRINT "Hello, "; NAME$'),
+        code=(
+            '10 INPUT "What is your name? "; NAME$\n'
+            '20 PRINT "Hello, "; NAME$'
+        ),
         language="BASIC",
         category="Input/Output",
     ),
@@ -200,7 +203,10 @@ BASIC_SNIPPETS: List[CodeSnippet] = [
         name="Sound Effect",
         description="Play sound effects",
         code=(
-            "10 BEEP\n" "20 SOUND 440, 10\n" "30 SOUND 880, 10\n" "40 SOUND 1320, 10"
+            "10 BEEP\n"
+            "20 SOUND 440, 10\n"
+            "30 SOUND 880, 10\n"
+            "40 SOUND 1320, 10"
         ),
         language="BASIC",
         category="Sound",
@@ -420,7 +426,8 @@ class SnippetLibrary:
         return [
             s
             for s in snippets
-            if query_lower in s.name.lower() or query_lower in s.description.lower()
+            if query_lower in s.name.lower()
+            or query_lower in s.description.lower()
         ]
 
     def add_snippet(self, snippet: CodeSnippet):

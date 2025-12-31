@@ -5,28 +5,32 @@ creating a feature menu system, and managing signals/callbacks for all features.
 """
 
 from typing import Dict, Optional
+
 from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import QAction, QActionGroup, QIcon
 from PySide6.QtWidgets import (
-    QDockWidget, QTabWidget, QWidget, QVBoxLayout, 
-    QMessageBox
+    QDockWidget,
+    QMessageBox,
+    QTabWidget,
+    QVBoxLayout,
+    QWidget,
 )
 
 from .feature_panels import (
-    SyntaxValidatorPanel,
-    ProjectTemplatesPanel,
-    DebuggerPanel,
-    LanguageComparatorPanel,
+    AccessibilityPanel,
+    AIAssistantPanel,
     AssetLibraryPanel,
     CollaborationPanel,
-    PerformanceProfilerPanel,
+    DebuggerPanel,
     ExecutionReplayPanel,
-    HardwareSimulatorPanel,
-    AIAssistantPanel,
     ExportableExporterPanel,
+    HardwareSimulatorPanel,
+    LanguageComparatorPanel,
     LearningAnalyticsPanel,
-    AccessibilityPanel,
     PeerReviewPanel,
+    PerformanceProfilerPanel,
+    ProjectTemplatesPanel,
+    SyntaxValidatorPanel,
 )
 
 
@@ -35,32 +39,117 @@ class FeatureIntegrationManager:
 
     # Phase 1 features (5)
     PHASE_1_FEATURES = [
-        ("Syntax Validator", "syntax_validator", SyntaxValidatorPanel, "real-time error detection"),
-        ("Project Templates", "project_templates", ProjectTemplatesPanel, "starter templates"),
-        ("Timeline Debugger", "timeline_debugger", DebuggerPanel, "step-through execution"),
-        ("Language Comparator", "language_comparator", LanguageComparatorPanel, "compare paradigms"),
+        (
+            "Syntax Validator",
+            "syntax_validator",
+            SyntaxValidatorPanel,
+            "real-time error detection",
+        ),
+        (
+            "Project Templates",
+            "project_templates",
+            ProjectTemplatesPanel,
+            "starter templates",
+        ),
+        (
+            "Timeline Debugger",
+            "timeline_debugger",
+            DebuggerPanel,
+            "step-through execution",
+        ),
+        (
+            "Language Comparator",
+            "language_comparator",
+            LanguageComparatorPanel,
+            "compare paradigms",
+        ),
         ("Asset Library", "asset_library", AssetLibraryPanel, "game assets"),
     ]
 
     # Phase 2 features (10)
     PHASE_2_FEATURES = [
-        ("Collaboration Tool", "collaboration_tool", CollaborationPanel, "pair programming"),
-        ("Performance Profiler", "performance_profiler", PerformanceProfilerPanel, "hotspot detection"),
-        ("Execution Replay", "execution_replay", ExecutionReplayPanel, "algorithm visualization"),
-        ("Hardware Simulator", "hardware_simulator", HardwareSimulatorPanel, "device simulation"),
-        ("AI Assistant", "ai_assistant", AIAssistantPanel, "knowledge-based help"),
-        ("Executable Exporter", "executable_exporter", ExportableExporterPanel, "multi-format export"),
-        ("Learning Analytics", "learning_analytics", LearningAnalyticsPanel, "progress tracking"),
-        ("Accessibility Suite", "accessibility_suite", AccessibilityPanel, "inclusive features"),
-        ("Peer Review Tool", "peer_review_tool", PeerReviewPanel, "code feedback"),
-        ("Quick Reference", "quick_reference", None, "syntax help"),  # Reference is integrated elsewhere
+        (
+            "Collaboration Tool",
+            "collaboration_tool",
+            CollaborationPanel,
+            "pair programming",
+        ),
+        (
+            "Performance Profiler",
+            "performance_profiler",
+            PerformanceProfilerPanel,
+            "hotspot detection",
+        ),
+        (
+            "Execution Replay",
+            "execution_replay",
+            ExecutionReplayPanel,
+            "algorithm visualization",
+        ),
+        (
+            "Hardware Simulator",
+            "hardware_simulator",
+            HardwareSimulatorPanel,
+            "device simulation",
+        ),
+        (
+            "AI Assistant",
+            "ai_assistant",
+            AIAssistantPanel,
+            "knowledge-based help",
+        ),
+        (
+            "Executable Exporter",
+            "executable_exporter",
+            ExportableExporterPanel,
+            "multi-format export",
+        ),
+        (
+            "Learning Analytics",
+            "learning_analytics",
+            LearningAnalyticsPanel,
+            "progress tracking",
+        ),
+        (
+            "Accessibility Suite",
+            "accessibility_suite",
+            AccessibilityPanel,
+            "inclusive features",
+        ),
+        (
+            "Peer Review Tool",
+            "peer_review_tool",
+            PeerReviewPanel,
+            "code feedback",
+        ),
+        (
+            "Quick Reference",
+            "quick_reference",
+            None,
+            "syntax help",
+        ),  # Reference is integrated elsewhere
     ]
 
     # Phase 3 features (3) - handled by interpreter integration
     PHASE_3_FEATURES = [
-        ("Multiplayer Leaderboard", "multiplayer_leaderboard", None, "competitive learning"),
-        ("LMS Integration", "lms_integration", None, "Canvas/Google Classroom"),
-        ("Community Marketplace", "community_marketplace", None, "resource sharing"),
+        (
+            "Multiplayer Leaderboard",
+            "multiplayer_leaderboard",
+            None,
+            "competitive learning",
+        ),
+        (
+            "LMS Integration",
+            "lms_integration",
+            None,
+            "Canvas/Google Classroom",
+        ),
+        (
+            "Community Marketplace",
+            "community_marketplace",
+            None,
+            "resource sharing",
+        ),
     ]
 
     def __init__(self, main_window):
@@ -108,7 +197,7 @@ class FeatureIntegrationManager:
                     # If panel requires arguments, create with empty init
                     panel = QWidget()
                     panel.setWindowTitle(feature_name)
-                
+
                 self.feature_panels[feature_id] = panel
 
                 # Create dock widget for panel
@@ -131,7 +220,7 @@ class FeatureIntegrationManager:
                 placeholder = QWidget()
                 placeholder.setWindowTitle(f"{feature_name} (Not Available)")
                 self.feature_panels[feature_id] = placeholder
-                
+
                 dock = QDockWidget(f"🎯 {feature_name}", self.main_window)
                 dock.setWidget(placeholder)
                 dock.setObjectName(feature_id)
@@ -159,7 +248,9 @@ class FeatureIntegrationManager:
         # Reorganize menu bar if needed
         if help_menu:
             menubar.removeAction(help_menu)
-            menubar.addMenu(help_menu.menu() if hasattr(help_menu, 'menu') else help_menu)
+            menubar.addMenu(
+                help_menu.menu() if hasattr(help_menu, "menu") else help_menu
+            )
 
         # Add Phase 1 submenu
         phase1_menu = features_menu.addMenu("Phase 1️⃣ - Core")
@@ -199,7 +290,9 @@ class FeatureIntegrationManager:
         for feature_name, feature_id, panel_class, description in features:
             if panel_class is None:
                 # Show as disabled for Phase 3 features
-                action = QAction(f"{feature_name} ({description})", self.main_window)
+                action = QAction(
+                    f"{feature_name} ({description})", self.main_window
+                )
                 action.setEnabled(False)
             else:
                 # Create checkable action for toggleable panels
@@ -207,13 +300,17 @@ class FeatureIntegrationManager:
                 action.setCheckable(True)
                 action.setChecked(False)
                 action.triggered.connect(
-                    lambda checked, fid=feature_id: self.toggle_feature_panel(fid)
+                    lambda checked, fid=feature_id: self.toggle_feature_panel(
+                        fid
+                    )
                 )
 
             self.feature_actions[feature_id] = action
             menu.addAction(action)
 
-    def toggle_feature_panel(self, feature_id: str, visible: Optional[bool] = None):
+    def toggle_feature_panel(
+        self, feature_id: str, visible: Optional[bool] = None
+    ):
         """Toggle visibility of a feature panel.
 
         Args:
@@ -236,7 +333,7 @@ class FeatureIntegrationManager:
             self.feature_actions[feature_id].setChecked(visible)
 
         # Update status bar
-        if panel and hasattr(panel, 'status_changed'):
+        if panel and hasattr(panel, "status_changed"):
             if visible:
                 status = f"✓ {panel.__class__.__name__} activated"
             else:
@@ -247,36 +344,38 @@ class FeatureIntegrationManager:
         """Show all feature panels."""
         for feature_id in self.dock_widgets:
             self.toggle_feature_panel(feature_id, visible=True)
-        self.main_window.statusbar.showMessage(
-            "✓ All features shown", 2000
-        )
+        self.main_window.statusbar.showMessage("✓ All features shown", 2000)
 
     def hide_all_features(self):
         """Hide all feature panels."""
         for feature_id in self.dock_widgets:
             self.toggle_feature_panel(feature_id, visible=False)
-        self.main_window.statusbar.showMessage(
-            "✗ All features hidden", 2000
-        )
+        self.main_window.statusbar.showMessage("✗ All features hidden", 2000)
 
     def _connect_feature_signals(self):
         """Connect feature panel signals to IDE status bar and other components."""
         for feature_id, panel in self.feature_panels.items():
             # Connect status_changed signal if available
-            if hasattr(panel, 'status_changed'):
+            if hasattr(panel, "status_changed"):
                 panel.status_changed.connect(
-                    lambda status, fid=feature_id: self._on_feature_status_changed(fid, status)
+                    lambda status, fid=feature_id: self._on_feature_status_changed(
+                        fid, status
+                    )
                 )
 
             # Connect operation signals if available
-            if hasattr(panel, 'operation_started'):
+            if hasattr(panel, "operation_started"):
                 panel.operation_started.connect(
-                    lambda op, fid=feature_id: self._on_operation_started(fid, op)
+                    lambda op, fid=feature_id: self._on_operation_started(
+                        fid, op
+                    )
                 )
 
-            if hasattr(panel, 'operation_completed'):
+            if hasattr(panel, "operation_completed"):
                 panel.operation_completed.connect(
-                    lambda result, fid=feature_id: self._on_operation_completed(fid, result)
+                    lambda result, fid=feature_id: self._on_operation_completed(
+                        fid, result
+                    )
                 )
 
     def _on_feature_status_changed(self, feature_id: str, status: str):
@@ -307,12 +406,12 @@ class FeatureIntegrationManager:
             feature_id: ID of the feature
             result: Operation result (may contain success/error info)
         """
-        if result.get('success', True):
+        if result.get("success", True):
             self.main_window.statusbar.showMessage(
                 f"✅ Operation completed", 2000
             )
         else:
-            error = result.get('error', 'Unknown error')
+            error = result.get("error", "Unknown error")
             self.main_window.statusbar.showMessage(
                 f"❌ Operation failed: {error}", 3000
             )
@@ -335,8 +434,10 @@ class FeatureIntegrationManager:
             String describing currently visible features
         """
         active_features = [
-            name for feature_id, (name, _, _, _) in [
-                (fid, info) for fid in self.dock_widgets
+            name
+            for feature_id, (name, _, _, _) in [
+                (fid, info)
+                for fid in self.dock_widgets
                 for info in self.PHASE_1_FEATURES + self.PHASE_2_FEATURES
                 if info[1] == fid
             ]
@@ -367,8 +468,8 @@ class FeatureIntegrationManager:
         config = {}
         for feature_id, dock in self.dock_widgets.items():
             config[feature_id] = {
-                'visible': dock.isVisible(),
-                'geometry': dock.geometry(),
+                "visible": dock.isVisible(),
+                "geometry": dock.geometry(),
             }
         return config
 
@@ -381,4 +482,4 @@ class FeatureIntegrationManager:
         for feature_id, state in config.items():
             if feature_id in self.dock_widgets:
                 dock = self.dock_widgets[feature_id]
-                dock.setVisible(state.get('visible', False))
+                dock.setVisible(state.get("visible", False))

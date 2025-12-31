@@ -80,15 +80,20 @@ class InterpreterThread(QThread):
             self.interp.output_callback = on_output
 
             # Setup state change callback - emit the signal when turtle changes
-            # The wrapper lambda captures the turtle and passes it to the signal
+            # The wrapper lambda captures the turtle and passes it to the
+            # signal
             def on_turtle_change():
-                import sys
-                print(
-                    f"[THREAD] Turtle changed! {len(self.turtle.lines)} lines",
-                    file=sys.stderr,
-                )
+                try:
+                    import sys
+
+                    print(
+                        f"[THREAD] Turtle changed! {len(self.turtle.lines)} lines",
+                        file=sys.stderr,
+                    )
+                except (BrokenPipeError, OSError):
+                    pass
                 self.state_changed.emit()
-            
+
             self.turtle.on_change = on_turtle_change
 
             # Execute with timeout protection
@@ -150,7 +155,9 @@ class OutputPanel(QTextEdit):
 
         # Store last error for AI assistance
         self.last_error = None
-        self.tabs_widget = None  # Reference to right_tabs for switching to Graphics tab
+        self.tabs_widget = (
+            None  # Reference to right_tabs for switching to Graphics tab
+        )
 
     def set_language(self, language):
         """Set the current language for execution."""
@@ -164,18 +171,28 @@ class OutputPanel(QTextEdit):
         """Run program in background thread."""
         # DEBUG: Log program start
         import sys
-        print(
-            f"[OUTPUT] run_program called: canvas={canvas is not None}, "
-            f"code_length={len(code)}",
-            file=sys.stderr,
-        )
-        
+
+        try:
+            print(
+                f"[OUTPUT] run_program called: canvas={canvas is not None}, "
+                f"code_length={len(code)}",
+                file=sys.stderr,
+            )
+        except (BrokenPipeError, OSError):
+            pass  # Ignore broken pipe errors during debug output
+
         if self.exec_thread and self.exec_thread.isRunning():
             self.append_colored("⚠️ Program already running", "warning")
             return
 
         self.current_canvas = canvas
-        print(f"[OUTPUT] Set current_canvas = {canvas is not None}", file=sys.stderr)
+        try:
+            print(
+                f"[OUTPUT] Set current_canvas = {canvas is not None}",
+                file=sys.stderr,
+            )
+        except (BrokenPipeError, OSError):
+            pass
 
         # Clear and show header
         self.clear()
@@ -183,7 +200,10 @@ class OutputPanel(QTextEdit):
 
         # Create new turtle
         turtle = TurtleState()
-        print("[OUTPUT] Created new turtle", file=sys.stderr)
+        try:
+            print("[OUTPUT] Created new turtle", file=sys.stderr)
+        except (BrokenPipeError, OSError):
+            pass
 
         # Create and start thread
         self._start_thread(
@@ -209,12 +229,16 @@ class OutputPanel(QTextEdit):
     ):
         """Start execution thread."""
         import sys
-        print(
-            f"[OUTPUT] _start_thread: language={language}, "
-            f"turtle={turtle is not None}",
-            file=sys.stderr,
-        )
-        
+
+        try:
+            print(
+                f"[OUTPUT] _start_thread: language={language}, "
+                f"turtle={turtle is not None}",
+                file=sys.stderr,
+            )
+        except (BrokenPipeError, OSError):
+            pass
+
         self.exec_thread = InterpreterThread(
             code, turtle, language, interpreter, debug_mode, breakpoints
         )
@@ -227,12 +251,14 @@ class OutputPanel(QTextEdit):
         # lambda expression and exceed line-length limits.
 
         def _on_state_changed():
-            print("[OUTPUT] _on_state_changed signal received!", file=sys.stderr)
+            print(
+                "[OUTPUT] _on_state_changed signal received!", file=sys.stderr
+            )
             self.on_state_change(turtle)
 
         self.exec_thread.state_changed.connect(_on_state_changed)
         print("[OUTPUT] Connected state_changed signal", file=sys.stderr)
-        
+
         self.exec_thread.input_requested.connect(self.on_input_requested)
 
         # Forward the execution thread debug_paused into the OutputPanel
@@ -280,12 +306,13 @@ class OutputPanel(QTextEdit):
         """Handle turtle state change."""
         # DEBUG: Log state changes
         import sys
+
         print(
             f"[OUTPUT] on_state_change: canvas={self.current_canvas is not None}, "
             f"lines={len(turtle.lines)}",
             file=sys.stderr,
         )
-        
+
         if self.current_canvas:
             print(
                 f"[OUTPUT] Calling set_turtle_state with {len(turtle.lines)} lines",
@@ -307,7 +334,9 @@ class OutputPanel(QTextEdit):
                             break
                 except (AttributeError, RuntimeError) as e:
                     # tabs_widget not available or invalid, skip tab switching
-                    print(f"[OUTPUT] Tab switching error: {e}", file=sys.stderr)
+                    print(
+                        f"[OUTPUT] Tab switching error: {e}", file=sys.stderr
+                    )
         else:
             print("[OUTPUT] WARNING: current_canvas is None!", file=sys.stderr)
 
@@ -394,11 +423,13 @@ class OutputPanel(QTextEdit):
             ),
             (
                 "unknown command",
-                "Check spelling of commands. " + "Use language-specific syntax.",
+                "Check spelling of commands. "
+                + "Use language-specific syntax.",
             ),
             (
                 "unknown keyword",
-                "Check spelling of commands. " + "Use language-specific syntax.",
+                "Check spelling of commands. "
+                + "Use language-specific syntax.",
             ),
             (
                 "invalid expression",
@@ -528,7 +559,10 @@ class ImmediateModePanel(QWidget):
 
     def _history_up(self):
         """Navigate up in command history."""
-        if self.command_history and self.history_index < len(self.command_history) - 1:
+        if (
+            self.command_history
+            and self.history_index < len(self.command_history) - 1
+        ):
             self.history_index += 1
             cmd = self.command_history[-(self.history_index + 1)]
             self.command_input.setText(cmd)
@@ -615,7 +649,13 @@ class ImmediateModePanel(QWidget):
             variables = self.interpreter.get_variables()
             self.variables_updated.emit(variables)
 
-        except (SyntaxError, NameError, ValueError, TypeError, ZeroDivisionError) as e:
+        except (
+            SyntaxError,
+            NameError,
+            ValueError,
+            TypeError,
+            ZeroDivisionError,
+        ) as e:
             self._send_output(f"❌ Error: {e}", "error")
         except KeyboardInterrupt:
             self._send_output("⚠️ Execution interrupted", "warning")

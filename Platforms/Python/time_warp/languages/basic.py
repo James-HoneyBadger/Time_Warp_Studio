@@ -32,13 +32,13 @@ _VAR_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_$]*$")
 
 def _strip_comment(args: str) -> str:
     """Strip trailing comments from arguments, respecting quoted strings.
-    
+
     Args:
         args: Argument string (may contain REM comments)
-    
+
     Returns:
         Arguments with comments removed
-    
+
     Example:
         >>> _strip_comment('"HELLO : REM not a comment"')
         '"HELLO : REM not a comment"'
@@ -49,21 +49,21 @@ def _strip_comment(args: str) -> str:
     i = 0
     while i < len(args):
         ch = args[i]
-        
+
         # Toggle quote state
         if ch == '"':
             in_quotes = not in_quotes
             i += 1
             continue
-        
+
         # Check for REM comment (only outside quotes)
         if not in_quotes and args[i:].upper().startswith(": REM"):
             return args[:i].strip()
         if not in_quotes and args[i:].upper().startswith(":REM"):
             return args[:i].strip()
-        
+
         i += 1
-    
+
     return args
 
 
@@ -323,13 +323,13 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
         parts.append(current.strip())
     if not parts:
         return "\n"
-    
+
     out_items: List[str] = []
     string_eval = StringExpressionEvaluator(
         string_variables=interpreter.string_variables,
-        numeric_variables=interpreter.variables
+        numeric_variables=interpreter.variables,
     )
-    
+
     for item in parts:
         item_trim = item.strip()
         item_upper = item_trim.upper()
@@ -368,8 +368,23 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
                 out_items.append(interpreter.string_variables[item_upper])
             else:
                 out_items.append("")  # Undefined string variable is empty
-        # Handle string functions (LEN, LEFT, RIGHT, MID, INSTR, UPPER, LOWER, TRIM, STR, VAL)
-        elif any(item_upper.startswith(func) for func in ["LEN(", "LEFT(", "RIGHT(", "MID(", "INSTR(", "UPPER(", "LOWER(", "TRIM(", "STR(", "VAL("]):
+        # Handle string functions (LEN, LEFT, RIGHT, MID, INSTR, UPPER, LOWER,
+        # TRIM, STR, VAL)
+        elif any(
+            item_upper.startswith(func)
+            for func in [
+                "LEN(",
+                "LEFT(",
+                "RIGHT(",
+                "MID(",
+                "INSTR(",
+                "UPPER(",
+                "LOWER(",
+                "TRIM(",
+                "STR(",
+                "VAL(",
+            ]
+        ):
             try:
                 result = string_eval.evaluate(item_trim)
                 out_items.append(str(result))
@@ -411,27 +426,27 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
 
 def _basic_let(interpreter: "Interpreter", args: str) -> str:
     """LET variable = expression - Assign variable value.
-    
+
     Args:
         interpreter: Interpreter instance
         args: Variable assignment statement
-    
+
     Returns:
         Error message if parsing/evaluation fails, empty string on success
     """
     from ..logging_config import get_logger
-    from ..utils.validators import validate_variable_name, ValidationError
-    
+    from ..utils.validators import ValidationError, validate_variable_name
+
     logger = get_logger(__name__)
-    
+
     if "=" not in args:
         return "❌ LET requires format: variable = expression\n"
-    
+
     parts = args.split("=", 1)
     var_name = parts[0].strip().upper()
     expr = parts[1].strip()
     expr_upper = expr.upper()
-    
+
     if not var_name:
         return "❌ LET requires variable name\n"
 
@@ -451,32 +466,38 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
             return f"❌ Array not defined: {array_name}\n"
         except (ValueError, TypeError) as e:
             return f"❌ Invalid array index or value: {e}\n"
-    
+
     try:
         validate_variable_name(var_name, allow_suffix=True)
-        
+
         # String assignment
         if var_name.endswith("$"):
             if expr.startswith('"') and expr.endswith('"'):
                 interpreter.set_typed_variable(var_name, expr[1:-1])
             # Handle special string functions
             elif expr_upper == "INKEY$":
-                interpreter.set_typed_variable(var_name, interpreter.get_inkey())
+                interpreter.set_typed_variable(
+                    var_name, interpreter.get_inkey()
+                )
             elif expr_upper == "TIME$":
                 # pylint: disable=import-outside-toplevel
                 from ..core.game_support import get_game_state
 
-                interpreter.set_typed_variable(var_name, get_game_state().get_time_string())
+                interpreter.set_typed_variable(
+                    var_name, get_game_state().get_time_string()
+                )
             elif expr_upper == "DATE$":
                 # pylint: disable=import-outside-toplevel
                 from ..core.game_support import get_game_state
 
-                interpreter.set_typed_variable(var_name, get_game_state().get_date_string())
+                interpreter.set_typed_variable(
+                    var_name, get_game_state().get_date_string()
+                )
             else:
                 # Try to evaluate as string expression
                 string_eval = StringExpressionEvaluator(
                     string_variables=interpreter.string_variables,
-                    numeric_variables=interpreter.variables
+                    numeric_variables=interpreter.variables,
                 )
                 try:
                     result = string_eval.evaluate(expr)
@@ -486,16 +507,18 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
                     interpreter.set_typed_variable(var_name, str(expr))
             logger.debug(f"LET {var_name} = {expr}")
             return ""
-        
+
         # Handle TIMER special variable
         if expr_upper == "TIMER":
             # pylint: disable=import-outside-toplevel
             from ..core.game_support import get_game_state
 
-            interpreter.set_typed_variable(var_name, get_game_state().get_timer_value())
+            interpreter.set_typed_variable(
+                var_name, get_game_state().get_timer_value()
+            )
             logger.debug(f"LET {var_name} = TIMER")
             return ""
-        
+
         try:
             result = interpreter.evaluate_expression(expr)
             interpreter.set_typed_variable(var_name, result)
@@ -505,17 +528,17 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
             return f"❌ Error in LET: {e} (expr: '{expr}')\n"
     except ValidationError as e:
         return f"❌ {e}\n"
-    
+
     return ""
 
 
 def _basic_input(interpreter: "Interpreter", args: str) -> str:
     # pylint: disable=import-outside-toplevel
-    from ..utils.validators import validate_variable_name, ValidationError
     from ..logging_config import get_logger
-    
+    from ..utils.validators import ValidationError, validate_variable_name
+
     logger = get_logger(__name__)
-    
+
     var_name = args.strip().upper()
     prompt = "? "
     if '"' in args:
@@ -523,15 +546,17 @@ def _basic_input(interpreter: "Interpreter", args: str) -> str:
         if match:
             prompt = match.group(1) + " "
             var_name = match.group(2).strip().upper()
-    
+
     if not var_name:
         logger.error("INPUT: Missing variable name")
         return "❌ INPUT requires variable name\n"
-    
+
     try:
         # Validate variable name format
         validate_variable_name(var_name, "input variable")
-        logger.debug(f"INPUT: Requesting input for variable '{var_name}' with prompt '{prompt}'")
+        logger.debug(
+            f"INPUT: Requesting input for variable '{var_name}' with prompt '{prompt}'"
+        )
         interpreter.start_input_request(
             prompt,
             var_name,
@@ -585,39 +610,39 @@ def _basic_goto(interpreter: "Interpreter", args: str) -> str:
 
 def _basic_for(interpreter: "Interpreter", args: str) -> str:
     """FOR var = start TO end [STEP step] - Loop from start to end.
-    
+
     Args:
         interpreter: Interpreter instance
         args: Loop control expression
-    
+
     Returns:
         Error message if parsing fails, empty string on success
     """
     # pylint: disable=import-outside-toplevel
     from ..core.interpreter import ForContext
     from ..logging_config import get_logger
-    from ..utils.validators import validate_variable_name, ValidationError
+    from ..utils.validators import ValidationError, validate_variable_name
 
     logger = get_logger(__name__)
 
     match = _FOR_PATTERN.match(args.upper())
     if not match:
         return "❌ FOR requires format: var = start TO end [STEP step]\n"
-    
+
     var_name = match.group(1)
     start_expr = match.group(2)
     end_expr = match.group(3)
     step_expr = match.group(4) if match.group(4) else "1"
-    
+
     try:
         validate_variable_name(var_name, allow_suffix=True)
         start_val = interpreter.evaluate_expression(start_expr)
         end_val = interpreter.evaluate_expression(end_expr)
         step_val = interpreter.evaluate_expression(step_expr)
-        
+
         if step_val == 0:
             return "❌ FOR STEP cannot be 0\n"
-        
+
         interpreter.set_typed_variable(var_name, start_val)
 
         context = ForContext(
@@ -627,7 +652,9 @@ def _basic_for(interpreter: "Interpreter", args: str) -> str:
             for_line=interpreter.current_line,
         )
         interpreter.for_stack.append(context)
-        logger.debug(f"FOR {var_name} = {start_val} TO {end_val} STEP {step_val}")
+        logger.debug(
+            f"FOR {var_name} = {start_val} TO {end_val} STEP {step_val}"
+        )
     except ValidationError as e:
         return f"❌ {e}\n"
     except (ValueError, TypeError, ZeroDivisionError) as e:
@@ -656,23 +683,23 @@ def _basic_next(interpreter: "Interpreter", _args: str) -> str:
 
 def _basic_gosub(interpreter: "Interpreter", args: str) -> str:
     """GOSUB line_number - Call subroutine at line number.
-    
+
     Args:
         interpreter: Interpreter instance
         args: Target line number
-    
+
     Returns:
         Error message if validation fails, empty string on success
     """
-    from ..utils.validators import validate_numeric, ValidationError
     from ..logging_config import get_logger
-    
+    from ..utils.validators import ValidationError, validate_numeric
+
     logger = get_logger(__name__)
     target = args.strip()
-    
+
     if not target:
         return "❌ GOSUB requires line number\n"
-    
+
     try:
         line_num = validate_numeric(target, param_name="line number")
         interpreter.gosub_stack.append(interpreter.current_line)
@@ -684,24 +711,24 @@ def _basic_gosub(interpreter: "Interpreter", args: str) -> str:
     except (KeyError, IndexError) as e:
         logger.error(f"GOSUB failed: {e}")
         return f"❌ Error in GOSUB: {e}\n"
-    
+
     return ""
 
 
 def _basic_return(interpreter: "Interpreter") -> str:
     """RETURN - Return from subroutine.
-    
+
     Returns:
         Error message if GOSUB stack is empty, empty string on success
     """
     from ..logging_config import get_logger
-    
+
     logger = get_logger(__name__)
-    
+
     if not interpreter.gosub_stack:
         logger.warning("RETURN executed without matching GOSUB")
         return "❌ RETURN without GOSUB\n"
-    
+
     try:
         return_line = interpreter.gosub_stack.pop()
         interpreter.current_line = return_line
@@ -709,30 +736,34 @@ def _basic_return(interpreter: "Interpreter") -> str:
     except IndexError as e:
         logger.error(f"RETURN failed: {e}")
         return f"❌ Error in RETURN: {e}\n"
-    
+
     return ""
 
 
 def _basic_screen(interpreter: "Interpreter", args: str) -> str:
     """SCREEN mode[, width, height] - Set screen mode.
-    
+
     Args:
         interpreter: Interpreter instance
         args: Screen mode and optional dimensions
-    
+
     Returns:
         Status message or error
-    
+
     Raises:
         Returns error message string on validation failure
     """
     # pylint: disable=import-outside-toplevel
     from ..core.interpreter import ScreenMode
-    from ..utils.validators import validate_numeric, validate_range, ValidationError
     from ..logging_config import get_logger
+    from ..utils.validators import (
+        ValidationError,
+        validate_numeric,
+        validate_range,
+    )
 
     logger = get_logger(__name__)
-    
+
     parts = args.split(",")
     if not parts:
         return "❌ SCREEN requires mode parameter\n"
@@ -740,7 +771,7 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
     try:
         mode_str = validate_numeric(parts[0].strip(), param_name="screen mode")
         mode = int(mode_str)
-        
+
         # Validate mode is 0 or 1
         validate_range(mode, 0, 1, "screen mode")
 
@@ -748,8 +779,12 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
             interpreter.screen_mode = ScreenMode.TEXT
             if len(parts) >= 3:
                 try:
-                    cols_str = validate_numeric(parts[1].strip(), param_name="columns")
-                    rows_str = validate_numeric(parts[2].strip(), param_name="rows")
+                    cols_str = validate_numeric(
+                        parts[1].strip(), param_name="columns"
+                    )
+                    rows_str = validate_numeric(
+                        parts[2].strip(), param_name="rows"
+                    )
                     cols = int(cols_str)
                     rows = int(rows_str)
                     validate_range(cols, 40, 120, "columns")
@@ -764,13 +799,17 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
             )
             logger.info(f"Set TEXT mode ({cols}x{rows})")
             return f"🎨 Text mode ({cols}x{rows})\n"
-            
+
         if mode == 1:  # Graphics mode
             interpreter.screen_mode = ScreenMode.GRAPHICS
             if len(parts) >= 3:
                 try:
-                    width_str = validate_numeric(parts[1].strip(), param_name="width")
-                    height_str = validate_numeric(parts[2].strip(), param_name="height")
+                    width_str = validate_numeric(
+                        parts[1].strip(), param_name="width"
+                    )
+                    height_str = validate_numeric(
+                        parts[2].strip(), param_name="height"
+                    )
                     width = int(width_str)
                     height = int(height_str)
                     validate_range(width, 320, 1920, "width")
@@ -785,7 +824,7 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
             )
             logger.info(f"Set GRAPHICS mode ({width}x{height})")
             return f"🎨 Graphics mode ({width}x{height})\n"
-        
+
         return f"❌ Unsupported SCREEN mode: {mode}\n"
 
     except ValueError as e:
@@ -794,33 +833,37 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
 
 def _basic_locate(interpreter: "Interpreter", args: str) -> str:
     """LOCATE row, col - Move cursor to position.
-    
+
     Args:
         interpreter: Interpreter instance
         args: Row and column coordinates
-    
+
     Returns:
         Error message if parsing fails, empty string on success
     """
     from ..logging_config import get_logger
-    from ..utils.validators import validate_numeric, validate_range, ValidationError
-    
+    from ..utils.validators import (
+        ValidationError,
+        validate_numeric,
+        validate_range,
+    )
+
     logger = get_logger(__name__)
-    
+
     parts = args.split(",")
     if len(parts) < 2:
         return "❌ LOCATE requires row, col\n"
-    
+
     try:
         row_str = validate_numeric(parts[0].strip(), param_name="row")
         col_str = validate_numeric(parts[1].strip(), param_name="column")
-        
+
         row = int(interpreter.evaluate_expression(row_str))
         col = int(interpreter.evaluate_expression(col_str))
-        
+
         validate_range(row, 1, 25, "row")
         validate_range(col, 1, 80, "column")
-        
+
         interpreter.cursor_row = max(0, min(24, row - 1))
         interpreter.cursor_col = max(0, min(79, col - 1))
         logger.debug(f"LOCATE {row},{col}")
@@ -829,7 +872,7 @@ def _basic_locate(interpreter: "Interpreter", args: str) -> str:
     except (ValueError, TypeError, ZeroDivisionError) as e:
         logger.error(f"LOCATE error: {e}")
         return f"❌ LOCATE error: {e}\n"
-    
+
     return ""
 
 
@@ -986,12 +1029,12 @@ def _basic_while(interpreter: "Interpreter", args: str) -> str:
             # Push current line index to stack
             interpreter.basic_while_stack.append(interpreter.current_line)
             return ""
-        
+
         # Condition false: skip to WEND
         wend_idx = _find_matching_wend(interpreter, interpreter.current_line)
         if wend_idx == -1:
             return "❌ WHILE without WEND\n"
-        
+
         # Jump to WEND (loop will increment to WEND+1)
         interpreter.current_line = wend_idx
         return ""
@@ -1030,26 +1073,26 @@ def _basic_do(interpreter: "Interpreter", args: str) -> str:
     # Handle DO WHILE/UNTIL condition if present
     args = args.strip().upper()
     should_run = True
-    
+
     if args.startswith("WHILE "):
         cond = args[6:].strip()
         try:
             val = interpreter.evaluate_expression(cond)
-            should_run = (val != 0)
+            should_run = val != 0
         except (ValueError, TypeError):
             return "❌ Invalid DO WHILE condition\n"
     elif args.startswith("UNTIL "):
         cond = args[6:].strip()
         try:
             val = interpreter.evaluate_expression(cond)
-            should_run = (val == 0)
+            should_run = val == 0
         except (ValueError, TypeError):
             return "❌ Invalid DO UNTIL condition\n"
-            
+
     if should_run:
         interpreter.basic_do_stack.append((interpreter.current_line, "DO"))
         return ""
-    
+
     # Skip to LOOP
     loop_idx = _find_matching_loop(interpreter, interpreter.current_line)
     if loop_idx == -1:
@@ -1062,34 +1105,34 @@ def _basic_loop(interpreter: "Interpreter", args: str) -> str:
     """LOOP [WHILE/UNTIL cond] - End do loop"""
     if not interpreter.basic_do_stack:
         return "❌ LOOP without DO\n"
-        
+
     do_idx, _ = interpreter.basic_do_stack.pop()
-    
+
     # Check exit condition
     args = args.strip().upper()
     should_loop = True
-    
+
     if args.startswith("WHILE "):
         cond = args[6:].strip()
         try:
             val = interpreter.evaluate_expression(cond)
-            should_loop = (val != 0)
+            should_loop = val != 0
         except (ValueError, TypeError):
             return "❌ Invalid LOOP WHILE condition\n"
     elif args.startswith("UNTIL "):
         cond = args[6:].strip()
         try:
             val = interpreter.evaluate_expression(cond)
-            should_loop = (val == 0)  # Loop until true (so loop while false)
+            should_loop = val == 0  # Loop until true (so loop while false)
         except (ValueError, TypeError):
             return "❌ Invalid LOOP UNTIL condition\n"
-            
+
     if should_loop:
         # Jump back to DO (re-execute DO check if any)
         interpreter.current_line = do_idx - 1
         # Push back stack item since we are looping
         interpreter.basic_do_stack.append((do_idx, "DO"))
-        
+
     return ""
 
 
@@ -1153,19 +1196,19 @@ def _basic_end_function(_interpreter: "Interpreter") -> str:
 def _basic_call(interpreter: "Interpreter", args: str) -> str:
     """CALL subroutine[(args)] - Call subroutine"""
     # pylint: disable=import-outside-toplevel
-    from ..utils.validators import validate_variable_name, ValidationError
     from ..logging_config import get_logger
-    
+    from ..utils.validators import ValidationError, validate_variable_name
+
     logger = get_logger(__name__)
-    
+
     args = args.strip()
     if not args:
         logger.error("CALL: Missing subroutine name")
         return "❌ CALL requires subroutine name\n"
-    
+
     # Extract subroutine name (before any parentheses)
     sub_name = args.split("(")[0].strip().upper()
-    
+
     try:
         # Validate subroutine name format
         validate_variable_name(sub_name, "subroutine name")
@@ -1179,11 +1222,15 @@ def _basic_call(interpreter: "Interpreter", args: str) -> str:
 def _basic_dim(interpreter: "Interpreter", args: str) -> str:
     """DIM variable[(dimensions)] - Declare array"""
     # pylint: disable=import-outside-toplevel
-    from ..utils.validators import validate_variable_name, validate_numeric, ValidationError
     from ..logging_config import get_logger
-    
+    from ..utils.validators import (
+        ValidationError,
+        validate_numeric,
+        validate_variable_name,
+    )
+
     logger = get_logger(__name__)
-    
+
     parts = args.split(",")
     for part in parts:
         part = part.strip()
@@ -1198,15 +1245,15 @@ def _basic_dim(interpreter: "Interpreter", args: str) -> str:
         try:
             # Validate array name format
             validate_variable_name(name_part, "array name")
-            
+
             # Validate and evaluate array size
             size_str = validate_numeric(size_part, "array dimension")
             size = int(interpreter.evaluate_expression(size_str))
-            
+
             if size < 0:
                 logger.error(f"DIM: Negative array dimension for {name_part}")
                 return f"❌ Array dimension must be non-negative: {size}\n"
-            
+
             # Create array initialized to 0.0
             # BASIC arrays are usually 0 to size (inclusive)
             interpreter.arrays[name_part] = [0.0] * (size + 1)
@@ -1230,7 +1277,7 @@ def _basic_read(interpreter: "Interpreter", args: str) -> str:
 
         val_str = interpreter.data_values[interpreter.data_pointer]
         interpreter.data_pointer += 1
-        
+
         # print(f"DEBUG: READ {var_name} = {val_str}")
 
         try:
@@ -1512,7 +1559,9 @@ def _basic_say(_interpreter: "Interpreter", args: str) -> str:
 # ============================================================================
 
 
-def _basic_shape(interpreter: "Interpreter", args: str, turtle: "TurtleState") -> str:
+def _basic_shape(
+    interpreter: "Interpreter", args: str, turtle: "TurtleState"
+) -> str:
     """SHAPE name, size [, fill] - Draw a pre-built shape.
 
     Shapes: POLYGON, STAR, HEART, ARROW, SPIRAL, GEAR, CROSS, DIAMOND
@@ -1615,7 +1664,9 @@ def _basic_particle(interpreter: "Interpreter", args: str) -> str:
         return f"❌ PARTICLE error: {e}\n"
 
 
-def _basic_fractal(interpreter: "Interpreter", args: str, turtle: "TurtleState") -> str:
+def _basic_fractal(
+    interpreter: "Interpreter", args: str, turtle: "TurtleState"
+) -> str:
     """FRACTAL name [, iterations [, size]] - Draw L-System fractal.
 
     Available fractals: KOCH, SIERPINSKI, DRAGON, PLANT, TREE, HILBERT,
@@ -1660,54 +1711,54 @@ def _basic_fractal(interpreter: "Interpreter", args: str, turtle: "TurtleState")
 
 def _basic_poke(interpreter: "Interpreter", args: str) -> str:
     """POKE address, value - Write value to memory address (simulated).
-    
+
     Syntax: POKE <address>, <value>
     """
     # pylint: disable=import-outside-toplevel
-    from ..utils.validators import validate_numeric, ValidationError
     from ..logging_config import get_logger
-    
+    from ..utils.validators import ValidationError, validate_numeric
+
     logger = get_logger(__name__)
-    
+
     if "," not in args:
         logger.error("POKE: Missing comma separator")
         return "❌ POKE requires: POKE address, value\n"
-    
+
     try:
         # Parse address and value
         parts = [p.strip() for p in args.split(",", 1)]
         if len(parts) != 2:
             logger.error("POKE: Invalid format")
             return "❌ POKE requires: POKE address, value\n"
-        
+
         addr_str = parts[0]
         value_str = parts[1]
-        
+
         # Validate numeric values
         addr_str = validate_numeric(addr_str, "memory address")
         value_str = validate_numeric(value_str, "memory value")
-        
+
         # Evaluate expressions
         address = int(interpreter.evaluate_expression(addr_str))
         value = int(interpreter.evaluate_expression(value_str))
-        
+
         # Range checks
         if address < 0 or address > 65535:
             logger.error(f"POKE: Address out of range: {address}")
             return "❌ POKE address must be 0-65535\n"
-        
+
         if value < 0 or value > 255:
             logger.error(f"POKE: Value out of range: {value}")
             return "❌ POKE value must be 0-255\n"
-        
+
         # Store in simulated memory
-        if not hasattr(interpreter, 'memory'):
+        if not hasattr(interpreter, "memory"):
             interpreter.memory = {}
-        
+
         interpreter.memory[address] = value
         logger.debug(f"POKE: Wrote {value} to address {address}")
         return ""
-        
+
     except ValidationError as e:
         logger.error(f"POKE validation failed: {e}")
         return f"❌ {e}\n"
@@ -1718,40 +1769,40 @@ def _basic_poke(interpreter: "Interpreter", args: str) -> str:
 
 def _basic_peek(interpreter: "Interpreter", args: str) -> str:
     """PEEK(address) - Read value from memory address (simulated).
-    
+
     Used as a function: X = PEEK(address)
     Returns the byte value at the given address.
     """
     # pylint: disable=import-outside-toplevel
-    from ..utils.validators import validate_numeric, ValidationError
     from ..logging_config import get_logger
-    
+    from ..utils.validators import ValidationError, validate_numeric
+
     logger = get_logger(__name__)
-    
+
     try:
         # Validate numeric argument
         args = validate_numeric(args.strip(), "memory address")
-        
+
         # Evaluate expression
         address = int(interpreter.evaluate_expression(args))
-        
+
         # Range check
         if address < 0 or address > 65535:
             logger.error(f"PEEK: Address out of range: {address}")
             return f"❌ PEEK address must be 0-65535: got {address}\n"
-        
+
         # Retrieve from simulated memory (default to 0)
-        if not hasattr(interpreter, 'memory'):
+        if not hasattr(interpreter, "memory"):
             interpreter.memory = {}
-        
+
         value = interpreter.memory.get(address, 0)
         logger.debug(f"PEEK: Read {value} from address {address}")
-        
+
         # This is typically used in expressions like: X = PEEK(address)
         # The value needs to be stored in a return value
         # For now, return a success message (integration with evaluator needed)
         return f"ℹ️ PEEK({address}) = {value}\n"
-        
+
     except ValidationError as e:
         logger.error(f"PEEK validation failed: {e}")
         return f"❌ {e}\n"
@@ -1762,54 +1813,54 @@ def _basic_peek(interpreter: "Interpreter", args: str) -> str:
 
 def _basic_out(interpreter: "Interpreter", args: str) -> str:
     """OUT port, value - Write value to port (simulated).
-    
+
     Syntax: OUT <port>, <value>
     """
     # pylint: disable=import-outside-toplevel
-    from ..utils.validators import validate_numeric, ValidationError
     from ..logging_config import get_logger
-    
+    from ..utils.validators import ValidationError, validate_numeric
+
     logger = get_logger(__name__)
-    
+
     if "," not in args:
         logger.error("OUT: Missing comma separator")
         return "❌ OUT requires: OUT port, value\n"
-    
+
     try:
         # Parse port and value
         parts = [p.strip() for p in args.split(",", 1)]
         if len(parts) != 2:
             logger.error("OUT: Invalid format")
             return "❌ OUT requires: OUT port, value\n"
-        
+
         port_str = parts[0]
         value_str = parts[1]
-        
+
         # Validate numeric values
         port_str = validate_numeric(port_str, "port number")
         value_str = validate_numeric(value_str, "port value")
-        
+
         # Evaluate expressions
         port = int(interpreter.evaluate_expression(port_str))
         value = int(interpreter.evaluate_expression(value_str))
-        
+
         # Range checks
         if port < 0 or port > 65535:
             logger.error(f"OUT: Port out of range: {port}")
             return "❌ OUT port must be 0-65535\n"
-        
+
         if value < 0 or value > 255:
             logger.error(f"OUT: Value out of range: {value}")
             return "❌ OUT value must be 0-255\n"
-        
+
         # Store in simulated ports
-        if not hasattr(interpreter, 'ports'):
+        if not hasattr(interpreter, "ports"):
             interpreter.ports = {}
-        
+
         interpreter.ports[port] = value
         logger.debug(f"OUT: Wrote {value} to port {port}")
         return ""
-        
+
     except ValidationError as e:
         logger.error(f"OUT validation failed: {e}")
         return f"❌ {e}\n"
@@ -1820,38 +1871,38 @@ def _basic_out(interpreter: "Interpreter", args: str) -> str:
 
 def _basic_in(interpreter: "Interpreter", args: str) -> str:
     """IN(port) - Read value from port (simulated).
-    
+
     Used as a function: X = IN(port)
     Returns the byte value from the given port.
     """
     # pylint: disable=import-outside-toplevel
-    from ..utils.validators import validate_numeric, ValidationError
     from ..logging_config import get_logger
-    
+    from ..utils.validators import ValidationError, validate_numeric
+
     logger = get_logger(__name__)
-    
+
     try:
         # Validate numeric argument
         args = validate_numeric(args.strip(), "port number")
-        
+
         # Evaluate expression
         port = int(interpreter.evaluate_expression(args))
-        
+
         # Range check
         if port < 0 or port > 65535:
             logger.error(f"IN: Port out of range: {port}")
             return f"❌ IN port must be 0-65535: got {port}\n"
-        
+
         # Retrieve from simulated ports (default to 0)
-        if not hasattr(interpreter, 'ports'):
+        if not hasattr(interpreter, "ports"):
             interpreter.ports = {}
-        
+
         value = interpreter.ports.get(port, 0)
         logger.debug(f"IN: Read {value} from port {port}")
-        
+
         # This is typically used in expressions like: X = IN(port)
         return f"ℹ️ IN({port}) = {value}\n"
-        
+
     except ValidationError as e:
         logger.error(f"IN validation failed: {e}")
         return f"❌ {e}\n"
@@ -1862,32 +1913,34 @@ def _basic_in(interpreter: "Interpreter", args: str) -> str:
 
 def _basic_shell(interpreter: "Interpreter", args: str) -> str:
     """SHELL command - Execute system shell command.
-    
+
     Syntax: SHELL "command"
-    
+
     Note: Disabled in IDE for security reasons. Returns informational message.
     """
     # pylint: disable=import-outside-toplevel
     from ..logging_config import get_logger
-    
+
     logger = get_logger(__name__)
-    
+
     if not args.strip():
         logger.error("SHELL: Missing command")
         return "❌ SHELL requires command string\n"
-    
+
     # Extract command from quotes if present
     cmd = args.strip()
     if cmd.startswith('"') and cmd.endswith('"'):
         cmd = cmd[1:-1]
-    
+
     # Check for empty command
     if not cmd:
         return "❌ SHELL requires a command string\n"
-    
+
     # For security, log but don't execute in IDE
     logger.warning(f"SHELL command attempted (blocked for security): {cmd}")
-    return f"ℹ️ SHELL commands are disabled in IDE for security. Command: {cmd}\n"
+    return (
+        f"ℹ️ SHELL commands are disabled in IDE for security. Command: {cmd}\n"
+    )
 
 
 def _basic_joyinit(_interpreter: "Interpreter") -> str:
@@ -1910,7 +1963,9 @@ def _basic_joyinit(_interpreter: "Interpreter") -> str:
             count = len(manager.gamepads)
             if count > 0:
                 return f"🎮 Gamepad initialized ({count} device(s) found)\n"
-            return f"🎮 Gamepad system ready (backend: {manager.backend_name})\n"
+            return (
+                f"🎮 Gamepad system ready (backend: {manager.backend_name})\n"
+            )
         return "❌ No gamepad backend available (install pygame or inputs)\n"
     except (ImportError, RuntimeError) as e:
         return f"❌ JOYINIT error: {e}\n"

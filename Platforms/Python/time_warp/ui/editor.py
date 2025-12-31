@@ -74,7 +74,9 @@ class LineNumberArea(QWidget):
 
             while block.isValid():
                 block_top = top
-                block_bottom = block_top + self.editor.blockBoundingRect(block).height()
+                block_bottom = (
+                    block_top + self.editor.blockBoundingRect(block).height()
+                )
 
                 if block_top <= event.position().y() < block_bottom:
                     line_number = block.blockNumber() + 1
@@ -400,14 +402,41 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
 
         elif language == Language.FORTH:
             self.keywords = [
-                "DUP", "DROP", "SWAP", "OVER", "ROT",
-                "IF", "ELSE", "THEN", "DO", "LOOP",
-                "BEGIN", "UNTIL", "WHILE", "REPEAT",
-                "VARIABLE", "CONSTANT", "ALLOT", "CREATE",
-                "!", "@", ",",
-                ":", ";",
-                ".", ".S", "CR",
-                "FD", "BK", "RT", "LT", "PU", "PD", "HOME", "CLEAN", "PEN"
+                "DUP",
+                "DROP",
+                "SWAP",
+                "OVER",
+                "ROT",
+                "IF",
+                "ELSE",
+                "THEN",
+                "DO",
+                "LOOP",
+                "BEGIN",
+                "UNTIL",
+                "WHILE",
+                "REPEAT",
+                "VARIABLE",
+                "CONSTANT",
+                "ALLOT",
+                "CREATE",
+                "!",
+                "@",
+                ",",
+                ":",
+                ";",
+                ".",
+                ".S",
+                "CR",
+                "FD",
+                "BK",
+                "RT",
+                "LT",
+                "PU",
+                "PD",
+                "HOME",
+                "CLEAN",
+                "PEN",
             ]
             self.comment_pattern = r"\( .*? \)|\\ .*$"
             self.string_pattern = r'\." .*?"'
@@ -723,7 +752,9 @@ class CodeEditor(QPlainTextEdit):
                     circle_size = min(14, font_height - 2)
                     circle_x = 3
                     circle_y = int(top) + (font_height - circle_size) // 2
-                    painter.drawEllipse(circle_x, circle_y, circle_size, circle_size)
+                    painter.drawEllipse(
+                        circle_x, circle_y, circle_size, circle_size
+                    )
 
                 # Draw current execution line indicator
                 if line_num == self._current_line:
@@ -780,13 +811,17 @@ class CodeEditor(QPlainTextEdit):
 
         # connect/disconnect signal for live updates
         try:
-            self.cursorPositionChanged.disconnect(self._update_current_line_highlight)
+            self.cursorPositionChanged.disconnect(
+                self._update_current_line_highlight
+            )
         except TypeError:
             # ignore if not connected
             pass
 
         if self._highlight_current_line:
-            self.cursorPositionChanged.connect(self._update_current_line_highlight)
+            self.cursorPositionChanged.connect(
+                self._update_current_line_highlight
+            )
             # ensure highlight is applied immediately
             self._update_current_line_highlight()
         else:
@@ -958,7 +993,9 @@ class CodeEditor(QPlainTextEdit):
         """
         if enable:
             if self._whitespace_highlighter is None:
-                self._whitespace_highlighter = _WhitespaceHighlighter(self.document())
+                self._whitespace_highlighter = _WhitespaceHighlighter(
+                    self.document()
+                )
         else:
             if self._whitespace_highlighter is not None:
                 # Delete the highlighter instance to stop highlighting

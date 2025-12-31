@@ -5,21 +5,27 @@ the cloud synchronization engine, handling project sync, offline mode,
 and user authentication.
 """
 
-from datetime import datetime, timezone
-from typing import Optional, Callable, List, Dict, Any
-from enum import Enum
-import json
-import threading
 import logging
+import threading
+from datetime import datetime, timezone
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional
 
 from .api_server import TimeWarpCloudAPI, TokenResponse
-from .sync_engine import CloudSyncEngine, SyncStatus, FileChange, SyncConflict, ConflictResolution
+from .sync_engine import (
+    CloudSyncEngine,
+    ConflictResolution,
+    FileChange,
+    SyncConflict,
+    SyncStatus,
+)
 
 logger = logging.getLogger(__name__)
 
 
 class CloudAuthStatus(str, Enum):
     """Cloud authentication status."""
+
     LOGGED_OUT = "logged_out"
     LOGGING_IN = "logging_in"
     AUTHENTICATED = "authenticated"
@@ -30,7 +36,9 @@ class CloudAuthStatus(str, Enum):
 class CloudSyncManager:
     """Manages cloud synchronization for Time Warp IDE."""
 
-    def __init__(self, api_server: TimeWarpCloudAPI = None, auto_sync: bool = True):
+    def __init__(
+        self, api_server: TimeWarpCloudAPI = None, auto_sync: bool = True
+    ):
         """Initialize Cloud Sync Manager.
 
         Args:
@@ -38,13 +46,13 @@ class CloudSyncManager:
             auto_sync: Enable automatic sync on file changes (default: True)
         """
         self.api_server = api_server or TimeWarpCloudAPI()
-        
+
         # Create sync engine with api_server and temp storage path
         import tempfile
+
         temp_dir = tempfile.mkdtemp(prefix="time_warp_sync_")
         self.sync_engine = CloudSyncEngine(
-            api_client=self.api_server,
-            local_storage_path=temp_dir
+            api_client=self.api_server, local_storage_path=temp_dir
         )
         self.auto_sync = auto_sync
 
@@ -77,7 +85,9 @@ class CloudSyncManager:
     # Authentication Methods
     # ========================================================================
 
-    def register_user(self, username: str, email: str, password: str, full_name: str = None) -> bool:
+    def register_user(
+        self, username: str, email: str, password: str, full_name: str = None
+    ) -> bool:
         """Register a new user on cloud.
 
         Args:
@@ -187,7 +197,9 @@ class CloudSyncManager:
                 return False
 
             # Decode refresh token to get user ID
-            payload = self.api_server.auth_manager.verify_token(self.refresh_token)
+            payload = self.api_server.auth_manager.verify_token(
+                self.refresh_token
+            )
             user_id = payload.get("sub")
 
             if not user_id:
@@ -210,7 +222,9 @@ class CloudSyncManager:
     # Project Sync Methods
     # ========================================================================
 
-    def create_cloud_project(self, name: str, language: str, description: str = None) -> Optional[str]:
+    def create_cloud_project(
+        self, name: str, language: str, description: str = None
+    ) -> Optional[str]:
         """Create a new project on cloud.
 
         Args:
@@ -324,7 +338,9 @@ class CloudSyncManager:
             logger.error(f"Project sync failed: {e}")
             return False
 
-    def add_file(self, filename: str, content: str, language: str = None) -> bool:
+    def add_file(
+        self, filename: str, content: str, language: str = None
+    ) -> bool:
         """Add or update a file in the current project.
 
         Args:
@@ -414,7 +430,9 @@ class CloudSyncManager:
         """
         return self.sync_engine.conflicts
 
-    def resolve_conflict(self, conflict_id: str, resolution: ConflictResolution) -> bool:
+    def resolve_conflict(
+        self, conflict_id: str, resolution: ConflictResolution
+    ) -> bool:
         """Resolve a sync conflict.
 
         Args:
@@ -426,7 +444,9 @@ class CloudSyncManager:
         """
         try:
             self.sync_engine.resolve_conflict(conflict_id, resolution)
-            logger.info(f"Conflict resolved: {conflict_id} ({resolution.value})")
+            logger.info(
+                f"Conflict resolved: {conflict_id} ({resolution.value})"
+            )
             return True
         except Exception as e:
             logger.error(f"Failed to resolve conflict: {e}")
@@ -525,6 +545,7 @@ class CloudSyncManager:
             interval_seconds: Sync interval in seconds
         """
         import time
+
         while self._sync_running:
             try:
                 if self.current_project and self.sync_queue:

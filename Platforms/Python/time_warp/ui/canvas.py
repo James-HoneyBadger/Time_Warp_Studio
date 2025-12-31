@@ -49,7 +49,9 @@ class TurtleCanvas(
 
         # Screen mode support
         self.screen_mode_manager = ScreenModeManager()
-        self.screen_mode_enabled = False  # When True, simulate retro resolution
+        self.screen_mode_enabled = (
+            False  # When True, simulate retro resolution
+        )
 
         # Minimum size
         self.setMinimumSize(400, 400)
@@ -69,15 +71,19 @@ class TurtleCanvas(
         """Set turtle state and repaint."""
         # DEBUG: Log state updates
         import sys
-        print(f"[CANVAS] set_turtle_state: {len(turtle.lines)} lines", file=sys.stderr)
-        
+
+        print(
+            f"[CANVAS] set_turtle_state: {len(turtle.lines)} lines",
+            file=sys.stderr,
+        )
+
         self.turtle = turtle
         self.lines = turtle.lines.copy()
         print(
             f"[CANVAS] Copied lines: self.lines now has {len(self.lines)} lines",
             file=sys.stderr,
         )
-        
+
         # Adopt background color from turtle state if available
         try:
             r, g, b = getattr(turtle, "bg_color", (40, 42, 54))
@@ -85,11 +91,12 @@ class TurtleCanvas(
         except (TypeError, ValueError):
             # Fallback to default theme background
             self.bg_color = QColor(40, 42, 54)
-        
+
         print("[CANVAS] Calling self.update()", file=sys.stderr)
         # Use repaint() instead of update() to force immediate redraw
         # update() schedules a paint event, but doesn't guarantee immediate rendering
-        # repaint() forces immediate rendering, which is more reliable for graphics
+        # repaint() forces immediate rendering, which is more reliable for
+        # graphics
         self.repaint()
         print("[CANVAS] repaint() called", file=sys.stderr)
 
@@ -109,6 +116,7 @@ class TurtleCanvas(
 
         # DEBUG: Log paint events
         import sys
+
         if len(self.lines) > 0:
             print(
                 f"[CANVAS] paintEvent: {len(self.lines)} lines, zoom={self.zoom}",
@@ -154,9 +162,12 @@ class TurtleCanvas(
         # Draw turtle lines
         for line in self.lines:
             color = QColor(line.color[0], line.color[1], line.color[2])
-            # Adjust pen width inversely to zoom so it stays visible at all zoom levels
+            # Adjust pen width inversely to zoom so it stays visible at all
+            # zoom levels
             adjusted_width = (
-                line.width / max(self.zoom, 0.1) if self.zoom != 0 else line.width
+                line.width / max(self.zoom, 0.1)
+                if self.zoom != 0
+                else line.width
             )
             pen = QPen(color, adjusted_width)
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
@@ -214,7 +225,10 @@ class TurtleCanvas(
         painter.setPen(QPen(border_color, 2))
         painter.setBrush(self.bg_color)
         painter.drawRect(
-            int(offset_x - 2), int(offset_y - 2), int(scaled_w + 4), int(scaled_h + 4)
+            int(offset_x - 2),
+            int(offset_y - 2),
+            int(scaled_w + 4),
+            int(scaled_h + 4),
         )
 
         # Draw mode info in corner
@@ -324,7 +338,8 @@ class TurtleCanvas(
 
         cursor_color = QColor(255, 255, 255, 180)
         painter.fillRect(
-            QRectF(cursor_x, cursor_y, mode.char_width, mode.char_height), cursor_color
+            QRectF(cursor_x, cursor_y, mode.char_width, mode.char_height),
+            cursor_color,
         )
 
     def _draw_turtle_cursor(self, painter: QPainter):
@@ -412,7 +427,9 @@ class TurtleCanvas(
         self.offset_y = 0.0
         self.update()
 
-    def export_to_png(self, filepath: str, width: int = 800, height: int = 600) -> bool:
+    def export_to_png(
+        self, filepath: str, width: int = 800, height: int = 600
+    ) -> bool:
         """Export canvas content to PNG file.
 
         Args:
@@ -439,7 +456,9 @@ class TurtleCanvas(
         # Save image
         return image.save(filepath, b"PNG")
 
-    def export_to_svg(self, filepath: str, width: int = 800, height: int = 600) -> bool:
+    def export_to_svg(
+        self, filepath: str, width: int = 800, height: int = 600
+    ) -> bool:
         """Export canvas content to SVG file.
 
         Args:

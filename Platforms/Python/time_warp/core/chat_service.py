@@ -4,10 +4,10 @@ Manages chat messages, notifications, and message history
 """
 
 import logging
-from typing import Dict, List, Any
-from datetime import datetime
-from dataclasses import dataclass
 import uuid
+from dataclasses import dataclass
+from datetime import datetime
+from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +89,9 @@ class ChatService:
         )
         return message
 
-    def edit_message(self, room_id: str, message_id: str, new_content: str) -> bool:
+    def edit_message(
+        self, room_id: str, message_id: str, new_content: str
+    ) -> bool:
         """Edit an existing message"""
         if (
             room_id not in self.message_index
@@ -214,7 +216,9 @@ class ChatService:
         if room_id not in self.messages:
             return []
 
-        messages = [msg for msg in self.messages[room_id] if msg.user_id == user_id]
+        messages = [
+            msg for msg in self.messages[room_id] if msg.user_id == user_id
+        ]
 
         return [msg.to_dict() for msg in messages[-limit:]]
 
@@ -227,18 +231,16 @@ class ChatService:
         user_message_counts: Dict[str, int] = {}
 
         for msg in messages:
-            user_message_counts[msg.username] = user_message_counts.get(
-                msg.username, 0
-            ) + 1
+            user_message_counts[msg.username] = (
+                user_message_counts.get(msg.username, 0) + 1
+            )
 
         return {
             "roomId": room_id,
             "totalMessages": len(messages),
             "uniqueUsers": len(user_message_counts),
             "messagesByUser": user_message_counts,
-            "oldestMessage": (
-                messages[0].timestamp if messages else None
-            ),
+            "oldestMessage": (messages[0].timestamp if messages else None),
             "newestMessage": messages[-1].timestamp if messages else None,
         }
 
@@ -264,7 +266,13 @@ class ChatService:
             lines = ["timestamp,username,content"]
             for msg in messages:
                 lines.append(
-                    f'{msg.timestamp},"{msg.username}","{msg.content.replace(chr(34), chr(34)+chr(34))}"'
+                    f'{
+                        msg.timestamp},"{
+                        msg.username}","{
+                        msg.content.replace(
+                            chr(34),
+                            chr(34) +
+                            chr(34))}"'
                 )
             return "\n".join(lines)
         elif format == "txt":

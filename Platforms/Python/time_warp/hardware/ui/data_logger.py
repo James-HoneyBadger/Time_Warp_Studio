@@ -144,7 +144,10 @@ class DataLogger:
         device_id: str,
     ) -> Dict[str, Any]:
         """Get statistics for device data"""
-        if device_id not in self.data_buffer or not self.data_buffer[device_id]:
+        if (
+            device_id not in self.data_buffer
+            or not self.data_buffer[device_id]
+        ):
             return {}
 
         data = list(self.data_buffer[device_id])

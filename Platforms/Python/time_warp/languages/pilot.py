@@ -7,13 +7,13 @@ import re
 import time
 from typing import TYPE_CHECKING
 
+from ..logging_config import get_logger
 from ..utils.validators import (
+    ValidationError,
     validate_arg_count,
     validate_file_path,
     validate_variable_name,
-    ValidationError,
 )
-from ..logging_config import get_logger
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -48,7 +48,7 @@ def execute_pilot(
         return f"❌ Invalid PILOT command: {command}\n"
 
     prefix = cmd[:colon_pos].upper()
-    rest = cmd[colon_pos + 1:].strip()
+    rest = cmd[colon_pos + 1 :].strip()
 
     # Extract base command and conditional suffix
     if len(prefix) == 1:

@@ -1,5 +1,4 @@
-
-from typing import List, Dict, Callable, TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, Callable, Dict, List, Optional
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -32,14 +31,14 @@ class ForthExecutor:
         self.dictionary["."] = self._dot
         self.dictionary[".S"] = self._dot_s
         self.dictionary["CR"] = self._cr
-        
+
         # Arithmetic
         self.dictionary["+"] = self._add
         self.dictionary["-"] = self._sub
         self.dictionary["*"] = self._mul
         self.dictionary["/"] = self._div
         self.dictionary["MOD"] = self._mod
-        
+
         # Logic
         self.dictionary["="] = self._eq
         self.dictionary["<"] = self._lt
@@ -47,12 +46,12 @@ class ForthExecutor:
         self.dictionary["AND"] = self._and
         self.dictionary["OR"] = self._or
         self.dictionary["INVERT"] = self._invert
-        
+
         # Memory
         self.dictionary["@"] = self._fetch
         self.dictionary["!"] = self._store
         self.dictionary["VARIABLE"] = self._variable
-        
+
         # Graphics (Time Warp extensions)
         self.dictionary["FD"] = self._fd
         self.dictionary["BK"] = self._bk
@@ -92,17 +91,17 @@ class ForthExecutor:
             self.stack.append(b)
             self.stack.append(c)
             self.stack.append(a)
-            
+
     def _dot(self):
         if self.stack:
             val = self.stack.pop()
             self.output_buffer += f"{val} "
-            
+
     def _dot_s(self):
         self.output_buffer += (
             f"<{len(self.stack)}> " + " ".join(map(str, self.stack)) + " "
         )
-        
+
     def _cr(self):
         self.interpreter.log_output(self.output_buffer)
         self.output_buffer = ""
@@ -143,7 +142,9 @@ class ForthExecutor:
 
     def _eq(self):
         if len(self.stack) >= 2:
-            self.stack.append(-1 if self.stack.pop() == self.stack.pop() else 0)
+            self.stack.append(
+                -1 if self.stack.pop() == self.stack.pop() else 0
+            )
 
     def _lt(self):
         if len(self.stack) >= 2:
@@ -176,7 +177,9 @@ class ForthExecutor:
             if 0 <= addr < len(self.memory):
                 self.stack.append(self.memory[addr])
             else:
-                self.interpreter.log_output(f"❌ Invalid memory address: {addr}")
+                self.interpreter.log_output(
+                    f"❌ Invalid memory address: {addr}"
+                )
                 self.stack.append(0)
 
     def _store(self):
@@ -186,7 +189,9 @@ class ForthExecutor:
             if 0 <= addr < len(self.memory):
                 self.memory[addr] = val
             else:
-                self.interpreter.log_output(f"❌ Invalid memory address: {addr}")
+                self.interpreter.log_output(
+                    f"❌ Invalid memory address: {addr}"
+                )
 
     def _variable(self):
         # This is tricky because VARIABLE reads the NEXT token.
@@ -238,18 +243,20 @@ class ForthExecutor:
         while i < len(tokens):
             token = tokens[i]
             token_upper = token.upper()
-            
+
             if self.compiling:
                 if token == ";":
                     self.compiling = False
                     # Define the new word
                     definition = list(self.new_word_definition)
-                    
+
                     def new_word_func(d=definition):
                         self.execute_tokens(d)
-                        
+
                     self.dictionary[self.new_word_name] = new_word_func
-                    self.interpreter.log_output(f"Defined {self.new_word_name}")
+                    self.interpreter.log_output(
+                        f"Defined {self.new_word_name}"
+                    )
                 else:
                     self.new_word_definition.append(token)
                 i += 1
@@ -268,10 +275,13 @@ class ForthExecutor:
                     while i + 1 < len(tokens):
                         i += 1
                         t = tokens[i].upper()
-                        if t == "IF": depth += 1
-                        if t == "THEN": depth -= 1
+                        if t == "IF":
+                            depth += 1
+                        if t == "THEN":
+                            depth -= 1
                         if t == "ELSE" and depth == 1:
-                            # Found ELSE at same level, stop skipping and execute ELSE block
+                            # Found ELSE at same level, stop skipping and
+                            # execute ELSE block
                             break
                         if depth == 0:
                             # Found THEN, stop skipping
@@ -286,9 +296,12 @@ class ForthExecutor:
                 while i + 1 < len(tokens):
                     i += 1
                     t = tokens[i].upper()
-                    if t == "IF": depth += 1
-                    if t == "THEN": depth -= 1
-                    if depth == 0: break
+                    if t == "IF":
+                        depth += 1
+                    if t == "THEN":
+                        depth -= 1
+                    if depth == 0:
+                        break
                 i += 1
                 continue
 
@@ -311,32 +324,34 @@ class ForthExecutor:
                 limit = self.stack.pop()
                 self.return_stack.append(limit)
                 self.return_stack.append(start)
-                self.return_stack.append(i) # Save loop start index
+                self.return_stack.append(i)  # Save loop start index
                 i += 1
                 continue
 
             if token_upper == "LOOP":
                 if len(self.return_stack) < 3:
-                    self.interpreter.log_output("❌ Return stack underflow for LOOP")
+                    self.interpreter.log_output(
+                        "❌ Return stack underflow for LOOP"
+                    )
                     i += 1
                     continue
-                
+
                 loop_start_idx = self.return_stack.pop()
                 index = self.return_stack.pop()
                 limit = self.return_stack.pop()
-                
+
                 index += 1
                 if index < limit:
                     # Loop again
                     self.return_stack.append(limit)
                     self.return_stack.append(index)
                     self.return_stack.append(loop_start_idx)
-                    i = loop_start_idx + 1 # Jump back
+                    i = loop_start_idx + 1  # Jump back
                 else:
                     # Loop finished
                     pass
                 continue
-                
+
             if token_upper == "I":
                 if len(self.return_stack) >= 2:
                     # Index is second on return stack (top is loop_start_idx if we keep it there? No, we popped it)
@@ -353,17 +368,19 @@ class ForthExecutor:
 
             if token_upper == "VARIABLE":
                 if i + 1 < len(tokens):
-                    var_name = tokens[i+1].upper()
+                    var_name = tokens[i + 1].upper()
                     addr = len(self.memory)
                     self.memory.append(0)
-                    
+
                     # Define word that pushes address
                     def var_func(a=addr):
                         self.stack.append(a)
-                        
+
                     self.dictionary[var_name] = var_func
-                    self.interpreter.log_output(f"Variable {var_name} allocated at {addr}")
-                    i += 2 # Skip VARIABLE and Name
+                    self.interpreter.log_output(
+                        f"Variable {var_name} allocated at {addr}"
+                    )
+                    i += 2  # Skip VARIABLE and Name
                     continue
                 else:
                     self.interpreter.log_output("❌ VARIABLE requires name")
@@ -373,9 +390,9 @@ class ForthExecutor:
             if token_upper == ":":
                 self.compiling = True
                 if i + 1 < len(tokens):
-                    self.new_word_name = tokens[i+1].upper()
+                    self.new_word_name = tokens[i + 1].upper()
                     self.new_word_definition = []
-                    i += 2 # Skip : and Name
+                    i += 2  # Skip : and Name
                 else:
                     self.interpreter.log_output("❌ : requires name")
                     i += 1
@@ -386,7 +403,7 @@ class ForthExecutor:
                 self.dictionary[token_upper]()
                 i += 1
                 continue
-                
+
             # Check number
             try:
                 val = int(token)
@@ -395,7 +412,7 @@ class ForthExecutor:
                 continue
             except ValueError:
                 pass
-                
+
             # Check string literal (." Hello ")
             if token.startswith('."') and token.endswith('"'):
                 self.output_buffer += token[2:-1]
@@ -407,7 +424,7 @@ class ForthExecutor:
 
     def execute_line(self, line: str, turtle=None):
         self.turtle = turtle
-        
+
         # Tokenizer
         tokens = []
         parts = line.split()
@@ -434,7 +451,7 @@ class ForthExecutor:
                     j += 1
             elif t == "\\":
                 # Comment \ ...
-                break # Ignore rest of line
+                break  # Ignore rest of line
             else:
                 tokens.append(t)
             j += 1
@@ -451,7 +468,9 @@ class ForthExecutor:
 _forth_executor = None
 
 
-def execute_forth(interpreter: "Interpreter", command: str, _turtle=None) -> str:
+def execute_forth(
+    interpreter: "Interpreter", command: str, _turtle=None
+) -> str:
     global _forth_executor  # pylint: disable=global-statement
     if _forth_executor is None or _forth_executor.interpreter != interpreter:
         _forth_executor = ForthExecutor(interpreter)

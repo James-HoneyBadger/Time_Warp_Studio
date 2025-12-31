@@ -103,7 +103,10 @@ class ArduinoDevice(HardwareDevice):
         if not self.connected:
             return False
 
-        if pin_number not in self.DIGITAL_PINS and pin_number not in self.ANALOG_PINS:
+        if (
+            pin_number not in self.DIGITAL_PINS
+            and pin_number not in self.ANALOG_PINS
+        ):
             return False
 
         try:

@@ -14,16 +14,25 @@ import threading
 import time
 from dataclasses import dataclass
 from enum import Enum, auto
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Optional, Tuple, TextIO
+from typing import (
+    TYPE_CHECKING,
+    Any,
+    Callable,
+    Dict,
+    List,
+    Optional,
+    TextIO,
+    Tuple,
+)
 
 # Import language executors
 from ..languages.basic import execute_basic
 from ..languages.c_lang_fixed import execute_c
+from ..languages.forth import execute_forth
 from ..languages.logo import execute_logo
 from ..languages.pascal import execute_pascal
 from ..languages.pilot import execute_pilot
 from ..languages.prolog import execute_prolog
-from ..languages.forth import execute_forth
 
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
@@ -167,7 +176,8 @@ class Interpreter:
     # Variable interpolation patterns
     # *VAR* syntax (BASIC style)
     VAR_INTERPOLATION_PATTERN = re.compile(r"\*([A-Z_][A-Z0-9_]*)\*")
-    # #VAR syntax (PILOT style) - matches #VAR followed by non-alphanumeric or end
+    # #VAR syntax (PILOT style) - matches #VAR followed by
+    # non-alphanumeric or end
     PILOT_VAR_PATTERN = re.compile(r"#([A-Z_][A-Z0-9_]*)", re.IGNORECASE)
 
     def __init__(self):
@@ -250,7 +260,8 @@ class Interpreter:
         # Pascal-specific state
         self.pascal_procs: Dict[str, Dict[str, Any]] = {}  # Pascal procedures
         self.pascal_types: Dict[str, str] = {}  # Pascal type definitions
-        self.pascal_block_stack: List[Dict[str, Any]] = []  # Pascal block tracking
+        # Pascal block tracking
+        self.pascal_block_stack: List[Dict[str, Any]] = []
         self.pascal_call_stack: List[Dict[str, Any]] = []  # Pascal call stack
 
         # C-specific state
@@ -692,9 +703,7 @@ class Interpreter:
             self.log_output("⚠️ Warning: Maximum iterations reached")
         return self.output.copy()
 
-    def _should_break(
-        self, current_command: str, line_number: int
-    ) -> bool:
+    def _should_break(self, current_command: str, line_number: int) -> bool:
         if not (self.debug_mode and current_command.strip()):
             return False
         if self.step_mode:
@@ -710,7 +719,9 @@ class Interpreter:
 
     def _check_timeout(self, start_time: float):
         if time.time() - start_time > self.MAX_EXECUTION_TIME:
-            self.log_output("❌ Error: Execution timeout (10 seconds exceeded)")
+            self.log_output(
+                "❌ Error: Execution timeout (10 seconds exceeded)"
+            )
 
     def _execute_line_safely(
         self,

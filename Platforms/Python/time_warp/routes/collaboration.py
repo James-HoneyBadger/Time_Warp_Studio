@@ -5,14 +5,15 @@ Handles all WebSocket connections and message routing
 
 import json
 import logging
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends
-from typing import Dict
 import uuid
+from typing import Dict
 
-from ..core.websocket_manager import ConnectionManager
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+
+from ..core.chat_service import ChatService
 from ..core.collaboration_engine import OperationalTransform
 from ..core.presence_service import PresenceService
-from ..core.chat_service import ChatService
+from ..core.websocket_manager import ConnectionManager
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,12 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
             # Code change event
             if message_type == "code_change":
                 await handle_code_change(
-                    room_id, connection_id, user_id, data, connection_manager, ot_engines
+                    room_id,
+                    connection_id,
+                    user_id,
+                    data,
+                    connection_manager,
+                    ot_engines,
                 )
 
             # Cursor update event
@@ -112,7 +118,9 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
             # Typing event
             elif message_type == "typing":
                 is_typing = data.get("isTyping", False)
-                update = presence_service.set_typing(connection_id, room_id, is_typing)
+                update = presence_service.set_typing(
+                    connection_id, room_id, is_typing
+                )
                 await connection_manager.broadcast_to_room(
                     room_id,
                     update,
@@ -184,7 +192,9 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
                         "version": ot.version,
                         "users": users,
                         "messages": messages,
-                        "presence": presence_service.get_room_presence(room_id),
+                        "presence": presence_service.get_room_presence(
+                            room_id
+                        ),
                     },
                 )
 
@@ -193,15 +203,21 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
 
     except WebSocketDisconnect:
         logger.info(f"User disconnected: {connection_id}")
-        await handle_disconnect(connection_id, room_id, connection_manager, presence_service)
+        await handle_disconnect(
+            connection_id, room_id, connection_manager, presence_service
+        )
 
     except Exception as e:
         logger.error(f"WebSocket error: {e}")
-        await handle_disconnect(connection_id, room_id, connection_manager, presence_service)
+        await handle_disconnect(
+            connection_id, room_id, connection_manager, presence_service
+        )
         raise
 
 
-async def handle_code_change(room_id, connection_id, user_id, data, manager, engines):
+async def handle_code_change(
+    room_id, connection_id, user_id, data, manager, engines
+):
     """Handle code change with Operational Transform"""
     ot = get_ot_engine(room_id)
 
@@ -216,8 +232,7 @@ async def handle_code_change(room_id, connection_id, user_id, data, manager, eng
     pending = [
         op
         for op in ot.operation_history
-        if op.user_id != user_id
-        and op.version >= operation.version - 10
+        if op.user_id != user_id and op.version >= operation.version - 10
     ]
 
     # Apply with transformation

@@ -8,7 +8,7 @@ from pathlib import Path
 from PySide6.QtCore import Qt
 from PySide6.QtWidgets import QApplication
 
-from time_warp.logging_config import setup_logging, get_logger
+from time_warp.logging_config import get_logger, setup_logging
 from time_warp.ui import MainWindow
 
 
@@ -17,10 +17,10 @@ def main():
     # Setup logging (INFO level for normal use, can be overridden)
     log_file = Path.home() / ".time_warp" / "logs" / "ide.log"
     setup_logging(log_level=logging.INFO, log_file=log_file)
-    
+
     logger = get_logger(__name__)
     logger.info("Time Warp IDE starting")
-    
+
     # Enable high DPI scaling
     QApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough

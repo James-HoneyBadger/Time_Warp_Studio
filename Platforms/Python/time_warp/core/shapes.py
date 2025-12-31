@@ -15,9 +15,7 @@ if TYPE_CHECKING:
 class ShapeCommand:
     """A single drawing command for a shape."""
 
-    action: (
-        str  # 'move', 'draw', 'pen_up', 'pen_down', 'color', 'fill_start', 'fill_end'
-    )
+    action: str  # 'move', 'draw', 'pen_up', 'pen_down', 'color', 'fill_start', 'fill_end'
     x: float = 0.0
     y: float = 0.0
     color: str = ""
@@ -51,7 +49,11 @@ def generate_polygon(
 
 
 def generate_star(
-    points: int, outer_radius: float, inner_radius: float, cx: float = 0, cy: float = 0
+    points: int,
+    outer_radius: float,
+    inner_radius: float,
+    cx: float = 0,
+    cy: float = 0,
 ) -> List[Tuple[float, float]]:
     """Generate vertices for a star shape.
 
@@ -110,7 +112,11 @@ def generate_heart(
 
 
 def generate_arrow(
-    length: float, width: float, cx: float = 0, cy: float = 0, direction: float = 0
+    length: float,
+    width: float,
+    cx: float = 0,
+    cy: float = 0,
+    direction: float = 0,
 ) -> List[Tuple[float, float]]:
     """Generate vertices for an arrow shape.
 
@@ -152,7 +158,11 @@ def generate_arrow(
 
 
 def generate_spiral(
-    turns: float, start_radius: float, end_radius: float, cx: float = 0, cy: float = 0
+    turns: float,
+    start_radius: float,
+    end_radius: float,
+    cx: float = 0,
+    cy: float = 0,
 ) -> List[Tuple[float, float]]:
     """Generate vertices for a spiral shape.
 
@@ -180,7 +190,11 @@ def generate_spiral(
 
 
 def generate_gear(
-    teeth: int, outer_radius: float, inner_radius: float, cx: float = 0, cy: float = 0
+    teeth: int,
+    outer_radius: float,
+    inner_radius: float,
+    cx: float = 0,
+    cy: float = 0,
 ) -> List[Tuple[float, float]]:
     """Generate vertices for a gear shape.
 
@@ -400,7 +414,9 @@ class ShapeLibrary:
         return f"⭐ Drew {points}-pointed star\n"
 
     @staticmethod
-    def draw_heart(turtle: "TurtleState", size: float, fill: bool = False) -> str:
+    def draw_heart(
+        turtle: "TurtleState", size: float, fill: bool = False
+    ) -> str:
         """Draw a heart shape."""
         cx, cy = turtle.x, turtle.y
         points = generate_heart(size, cx, cy)

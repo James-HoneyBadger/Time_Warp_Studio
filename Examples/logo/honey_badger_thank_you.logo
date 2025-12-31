@@ -1,0 +1,308 @@
+# Honey Badger Thank You Animation
+# A colorful, animated Logo program featuring a grateful honey badger
+
+# Set up the environment
+SETSCREENCOLOR [240 240 245]
+PENUP
+HOME
+
+# Function to draw a circle
+TO CIRCLE :radius :color
+  SETPENCOLOR :color
+  PENDOWN
+  REPEAT 360 [
+    FORWARD 1
+    RIGHT 1
+  ]
+  PENUP
+END
+
+# Function to draw a filled circle
+TO FILLCIRCLE :radius :color
+  SETPENCOLOR :color
+  PENDOWN
+  REPEAT 360 [
+    FORWARD :radius
+    RIGHT 1
+  ]
+  PENUP
+END
+
+# Function to draw the badger body
+TO DRAWBODY
+  # Body (black with white stripe)
+  SETPENCOLOR [0 0 0]
+  PENDOWN
+  
+  # Main body - dark oval
+  REPEAT 2 [
+    FORWARD 60
+    RIGHT 90
+    FORWARD 40
+    RIGHT 90
+  ]
+  PENUP
+  
+  # White stripe down back
+  FORWARD 5
+  PENDOWN
+  SETPENCOLOR [255 255 255]
+  RIGHT 90
+  FORWARD 40
+  LEFT 90
+  PENUP
+END
+
+# Function to draw badger head
+TO DRAWHEAD
+  PENUP
+  FORWARD 60
+  LEFT 90
+  FORWARD 15
+  RIGHT 90
+  
+  # Head - gray/black circle
+  SETPENCOLOR [50 50 50]
+  PENDOWN
+  REPEAT 360 [
+    FORWARD 0.8
+    RIGHT 1
+  ]
+  PENUP
+  
+  # White face stripe
+  FORWARD 8
+  PENDOWN
+  SETPENCOLOR [255 255 255]
+  RIGHT 90
+  FORWARD 15
+  LEFT 90
+  PENUP
+END
+
+# Function to draw ears
+TO DRAWEARS
+  # Left ear
+  PENUP
+  BACK 25
+  LEFT 90
+  FORWARD 10
+  SETPENCOLOR [30 30 30]
+  PENDOWN
+  FORWARD 15
+  RIGHT 45
+  FORWARD 10
+  LEFT 45
+  BACK 25
+  PENUP
+  
+  # Right ear
+  RIGHT 90
+  FORWARD 20
+  SETPENCOLOR [30 30 30]
+  PENDOWN
+  FORWARD 15
+  LEFT 45
+  FORWARD 10
+  RIGHT 45
+  BACK 25
+  PENUP
+END
+
+# Function to draw eyes
+TO DRAWEYES
+  PENUP
+  BACK 10
+  LEFT 90
+  FORWARD 5
+  
+  # Left eye
+  SETPENCOLOR [255 255 255]
+  PENDOWN
+  REPEAT 360 [
+    FORWARD 0.3
+    RIGHT 1
+  ]
+  PENUP
+  
+  # Left pupil
+  SETPENCOLOR [0 0 0]
+  FORWARD 1
+  PENDOWN
+  REPEAT 360 [
+    FORWARD 0.15
+    RIGHT 1
+  ]
+  PENUP
+  
+  # Right eye
+  FORWARD 8
+  SETPENCOLOR [255 255 255]
+  PENDOWN
+  REPEAT 360 [
+    FORWARD 0.3
+    RIGHT 1
+  ]
+  PENUP
+  
+  # Right pupil
+  SETPENCOLOR [0 0 0]
+  FORWARD 1
+  PENDOWN
+  REPEAT 360 [
+    FORWARD 0.15
+    RIGHT 1
+  ]
+  PENUP
+END
+
+# Function to draw nose
+TO DRIVENOSE
+  PENUP
+  FORWARD 3
+  LEFT 90
+  FORWARD 2
+  SETPENCOLOR [100 50 50]
+  PENDOWN
+  REPEAT 360 [
+    FORWARD 0.25
+    RIGHT 1
+  ]
+  PENUP
+END
+
+# Function to draw tail
+TO DRAWTAIL
+  PENUP
+  BACK 65
+  RIGHT 90
+  FORWARD 20
+  SETPENCOLOR [50 50 50]
+  PENDOWN
+  
+  # Curved tail
+  REPEAT 3 [
+    FORWARD 20
+    RIGHT 30
+  ]
+  PENUP
+END
+
+# Function to draw complete badger
+TO DRAWBADGER :x :y
+  PENUP
+  SETPOSITION [:x :y]
+  SETHEADING 0
+  
+  # Draw badger parts
+  DRAWTAIL
+  SETPOSITION [:x :y]
+  DRAWBODY
+  SETPOSITION [:x :y]
+  DRAWHEAD
+  SETPOSITION [:x :y]
+  DRAWEARS
+  SETPOSITION [:x :y]
+  DRAWEYES
+  SETPOSITION [:x :y]
+  DRIVENOSE
+  PENUP
+END
+
+# Function to write text with style
+TO WRITE :text :size :color :x :y
+  PENUP
+  SETPOSITION [:x :y]
+  SETPENCOLOR :color
+  # Simulate text by drawing colored rectangle as background
+  PENDOWN
+  FORWARD :size
+  RIGHT 90
+  FORWARD :size
+  RIGHT 90
+  FORWARD :size
+  RIGHT 90
+  FORWARD :size
+  PENUP
+END
+
+# Main animation
+PENUP
+HOME
+
+# Draw multiple badgers in animation sequence
+DRAWBADGER -40 40
+
+# Add some animated stars
+PENUP
+SETPENCOLOR [255 215 0]
+PENDOWN
+
+# Star 1 (top left)
+SETPOSITION [-80 80]
+REPEAT 5 [
+  FORWARD 10
+  RIGHT 144
+]
+
+# Star 2 (top right)
+PENUP
+SETPOSITION [80 80]
+PENDOWN
+REPEAT 5 [
+  FORWARD 10
+  RIGHT 144
+]
+
+# Star 3 (bottom left)
+PENUP
+SETPOSITION [-80 -50]
+PENDOWN
+REPEAT 5 [
+  FORWARD 10
+  RIGHT 144
+]
+
+# Star 4 (bottom right)
+PENUP
+SETPOSITION [80 -50]
+PENDOWN
+REPEAT 5 [
+  FORWARD 10
+  RIGHT 144
+]
+
+# Draw "THANK YOU" message with decorative frame
+PENUP
+SETPOSITION [-50 -80]
+SETPENCOLOR [200 100 200]
+PENDOWN
+
+# Purple frame border
+REPEAT 2 [
+  FORWARD 100
+  RIGHT 90
+  FORWARD 30
+  RIGHT 90
+]
+
+# Add colorful accent lines
+PENUP
+SETPOSITION [-60 -85]
+SETPENCOLOR [255 100 150]
+PENDOWN
+
+REPEAT 12 [
+  FORWARD 15
+  PENUP
+  FORWARD 5
+  PENDOWN
+  BACK 20
+  RIGHT 90
+  FORWARD 6
+  LEFT 90
+]
+
+PENUP
+HOME
+SHOWTURTLE

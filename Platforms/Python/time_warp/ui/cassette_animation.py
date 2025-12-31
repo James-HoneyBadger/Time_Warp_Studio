@@ -11,7 +11,14 @@ on Apple II, C64, ZX Spectrum, etc.
 import math
 
 from PySide6.QtCore import QPointF, Qt, QTimer, Signal
-from PySide6.QtGui import QBrush, QColor, QFont, QPainter, QPen, QRadialGradient
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QFont,
+    QPainter,
+    QPen,
+    QRadialGradient,
+)
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -126,7 +133,9 @@ class CassetteWidget(QWidget):
         )
 
         # Draw label
-        self._draw_label(painter, cassette_x, cassette_y, cassette_w, cassette_h)
+        self._draw_label(
+            painter, cassette_x, cassette_y, cassette_w, cassette_h
+        )
 
     def _draw_cassette_body(
         self, painter: QPainter, x: float, y: float, w: float, h: float
@@ -164,7 +173,12 @@ class CassetteWidget(QWidget):
             )
 
     def _draw_reel(
-        self, painter: QPainter, x: float, y: float, radius: float, tape_amount: float
+        self,
+        painter: QPainter,
+        x: float,
+        y: float,
+        radius: float,
+        tape_amount: float,
     ):
         """Draw a tape reel with spokes."""
         # Calculate tape radius (more tape = larger visual radius)
@@ -204,7 +218,9 @@ class CassetteWidget(QWidget):
             inner_y = y + center_radius * math.sin(angle)
             outer_x = x + (center_radius + spoke_len) * math.cos(angle)
             outer_y = y + (center_radius + spoke_len) * math.sin(angle)
-            painter.drawLine(int(inner_x), int(inner_y), int(outer_x), int(outer_y))
+            painter.drawLine(
+                int(inner_x), int(inner_y), int(outer_x), int(outer_y)
+            )
 
     def _draw_tape_path(
         self,
@@ -247,7 +263,9 @@ class CassetteWidget(QWidget):
         painter.setPen(QPen(QColor(100, 100, 100), 1))
         painter.drawRect(int(head_x - 15), int(head_y - 5), 30, 12)
 
-    def _draw_label(self, painter: QPainter, x: float, y: float, w: float, h: float):
+    def _draw_label(
+        self, painter: QPainter, x: float, y: float, w: float, h: float
+    ):
         """Draw the cassette label."""
         label_w = w * 0.5
         label_h = h * 0.15
@@ -257,7 +275,9 @@ class CassetteWidget(QWidget):
         # Label background
         painter.setBrush(QBrush(self.label_color))
         painter.setPen(QPen(QColor(200, 150, 80), 1))
-        painter.drawRect(int(label_x), int(label_y), int(label_w), int(label_h))
+        painter.drawRect(
+            int(label_x), int(label_y), int(label_w), int(label_h)
+        )
 
         # Label text
         font = QFont("Courier", 8, QFont.Bold)

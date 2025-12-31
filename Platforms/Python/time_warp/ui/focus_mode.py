@@ -3,9 +3,11 @@
 # pylint: disable=no-name-in-module
 
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
-from PySide6.QtWidgets import QWidget
+
 from PySide6.QtCore import QObject, Signal
+from PySide6.QtWidgets import QWidget
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QMainWindow

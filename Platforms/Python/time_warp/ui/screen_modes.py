@@ -43,7 +43,10 @@ class ScreenMode:
     def pixel_size(self) -> Tuple[int, int]:
         """Get total pixel dimensions (for text modes, calculates from chars)."""
         if self.mode_type == ModeType.TEXT:
-            return (self.width * self.char_width, self.height * self.char_height)
+            return (
+                self.width * self.char_width,
+                self.height * self.char_height,
+            )
         return (self.width, self.height)
 
 
@@ -225,7 +228,9 @@ class ScreenModeManager:
 
     def get_graphics_modes(self) -> list:
         """Get all graphics modes."""
-        return [m for m in self.modes.values() if m.mode_type == ModeType.GRAPHICS]
+        return [
+            m for m in self.modes.values() if m.mode_type == ModeType.GRAPHICS
+        ]
 
     def get_all_modes(self) -> list:
         """Get all modes sorted by number."""

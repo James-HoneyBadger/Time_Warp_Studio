@@ -3,6 +3,7 @@ Procedural Art Toolkit - Generators for fractals, L-systems, and harmonic motion
 """
 
 from __future__ import annotations
+
 import math
 import random
 from dataclasses import dataclass
@@ -19,7 +20,9 @@ class LSystemRule:
 class LSystem:
     """Lindenmayer system generator for procedural patterns."""
 
-    def __init__(self, axiom: str, rules: list[LSystemRule], angle: float = 90.0):
+    def __init__(
+        self, axiom: str, rules: list[LSystemRule], angle: float = 90.0
+    ):
         self.axiom = axiom
         self.rules = {rule.symbol: rule.replacement for rule in rules}
         self.angle = angle
@@ -149,7 +152,9 @@ class FractalGenerator:
                     if i == 1 and j == 1:
                         continue
                     squares.extend(
-                        subdivide(x + i * third, y + j * third, third, depth - 1)
+                        subdivide(
+                            x + i * third, y + j * third, third, depth - 1
+                        )
                     )
 
             return squares
@@ -316,6 +321,8 @@ PRESET_PATTERNS = {
         DRAGON_CURVE.generate(10), step_size=5
     ),
     "plant": lambda: PLANT.to_turtle_commands(PLANT.generate(5), step_size=3),
-    "lissajous_3_2": lambda: HarmonicMotion.lissajous(3, 2, math.pi / 2, 1000, 100),
+    "lissajous_3_2": lambda: HarmonicMotion.lissajous(
+        3, 2, math.pi / 2, 1000, 100
+    ),
     "rose_7": lambda: HarmonicMotion.rose_curve(7, 2, 1000, 100),
 }

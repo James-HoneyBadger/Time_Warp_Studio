@@ -75,7 +75,9 @@ class CRTEffectOverlay(QWidget):
         """Check if effects are enabled."""
         return self._enabled
 
-    def set_scanlines(self, enabled: bool, intensity: float = 0.15, spacing: int = 2):
+    def set_scanlines(
+        self, enabled: bool, intensity: float = 0.15, spacing: int = 2
+    ):
         """Configure scanline effect."""
         self.scanlines_enabled = enabled
         self.scanline_intensity = max(0.0, min(1.0, intensity))
@@ -141,7 +143,9 @@ class CRTEffectOverlay(QWidget):
 
         # Apply flicker as overall brightness
         if self.flicker_enabled:
-            flicker_color = QColor(0, 0, 0, int((1.0 - self.flicker_brightness) * 30))
+            flicker_color = QColor(
+                0, 0, 0, int((1.0 - self.flicker_brightness) * 30)
+            )
             painter.fillRect(rect, flicker_color)
 
         # Draw vignette (edge darkening)
@@ -183,8 +187,12 @@ class CRTEffectOverlay(QWidget):
         gradient = QRadialGradient(center_x, center_y, radius)
         gradient.setColorAt(0.0, QColor(0, 0, 0, 0))
         gradient.setColorAt(0.5, QColor(0, 0, 0, 0))
-        gradient.setColorAt(0.8, QColor(0, 0, 0, int(self.vignette_intensity * 100)))
-        gradient.setColorAt(1.0, QColor(0, 0, 0, int(self.vignette_intensity * 200)))
+        gradient.setColorAt(
+            0.8, QColor(0, 0, 0, int(self.vignette_intensity * 100))
+        )
+        gradient.setColorAt(
+            1.0, QColor(0, 0, 0, int(self.vignette_intensity * 200))
+        )
 
         painter.setBrush(QBrush(gradient))
         painter.setPen(Qt.NoPen)
@@ -194,12 +202,18 @@ class CRTEffectOverlay(QWidget):
         """Draw shadow effect simulating curved screen edges."""
         # Top edge shadow
         top_gradient = QLinearGradient(0, 0, 0, rect.height() * 0.1)
-        top_gradient.setColorAt(0, QColor(0, 0, 0, int(self.curvature_amount * 1000)))
+        top_gradient.setColorAt(
+            0, QColor(0, 0, 0, int(self.curvature_amount * 1000))
+        )
         top_gradient.setColorAt(1, QColor(0, 0, 0, 0))
-        painter.fillRect(QRectF(0, 0, rect.width(), rect.height() * 0.1), top_gradient)
+        painter.fillRect(
+            QRectF(0, 0, rect.width(), rect.height() * 0.1), top_gradient
+        )
 
         # Bottom edge shadow
-        bottom_gradient = QLinearGradient(0, rect.height() * 0.9, 0, rect.height())
+        bottom_gradient = QLinearGradient(
+            0, rect.height() * 0.9, 0, rect.height()
+        )
         bottom_gradient.setColorAt(0, QColor(0, 0, 0, 0))
         bottom_gradient.setColorAt(
             1, QColor(0, 0, 0, int(self.curvature_amount * 1000))
@@ -211,16 +225,22 @@ class CRTEffectOverlay(QWidget):
 
         # Left edge shadow
         left_gradient = QLinearGradient(0, 0, rect.width() * 0.05, 0)
-        left_gradient.setColorAt(0, QColor(0, 0, 0, int(self.curvature_amount * 800)))
+        left_gradient.setColorAt(
+            0, QColor(0, 0, 0, int(self.curvature_amount * 800))
+        )
         left_gradient.setColorAt(1, QColor(0, 0, 0, 0))
         painter.fillRect(
             QRectF(0, 0, rect.width() * 0.05, rect.height()), left_gradient
         )
 
         # Right edge shadow
-        right_gradient = QLinearGradient(rect.width() * 0.95, 0, rect.width(), 0)
+        right_gradient = QLinearGradient(
+            rect.width() * 0.95, 0, rect.width(), 0
+        )
         right_gradient.setColorAt(0, QColor(0, 0, 0, 0))
-        right_gradient.setColorAt(1, QColor(0, 0, 0, int(self.curvature_amount * 800)))
+        right_gradient.setColorAt(
+            1, QColor(0, 0, 0, int(self.curvature_amount * 800))
+        )
         painter.fillRect(
             QRectF(rect.width() * 0.95, 0, rect.width() * 0.05, rect.height()),
             right_gradient,

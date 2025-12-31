@@ -7,14 +7,14 @@ Handles Logo-specific commands and syntax.
 
 import random
 import re
-from typing import TYPE_CHECKING, List, Optional, Any
+from typing import TYPE_CHECKING, Any, List, Optional
 
+from ..logging_config import get_logger
 from ..utils.validators import (
-    validate_arg_count,
     ValidationError,
+    validate_arg_count,
     validate_range,
 )
-from ..logging_config import get_logger
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -653,9 +653,7 @@ def _logo_setposition(
             content = arg[1:-1].strip()
             parts = content.split()
             if len(parts) != 2:
-                return (
-                    "❌ SETPOSITION list must contain exactly 2 numbers\n"
-                )
+                return "❌ SETPOSITION list must contain exactly 2 numbers\n"
 
             x = _logo_eval_arg(interpreter, parts[0])
             y = _logo_eval_arg(interpreter, parts[1])
@@ -844,7 +842,7 @@ def _logo_repeat(
     if end_bracket == -1 or end_bracket < start_bracket:
         return "❌ REPEAT requires [commands]\n"
 
-    body_content = command[start_bracket + 1:end_bracket].strip()
+    body_content = command[start_bracket + 1 : end_bracket].strip()
 
     if not header.upper().startswith("REPEAT"):
         return "❌ Invalid REPEAT command\n"
@@ -880,7 +878,7 @@ def _logo_if(
     if end_bracket == -1 or end_bracket < start_bracket:
         return "❌ IF requires [commands]\n"
 
-    body_content = command[start_bracket + 1:end_bracket].strip()
+    body_content = command[start_bracket + 1 : end_bracket].strip()
 
     if not header.upper().startswith("IF"):
         return "❌ Invalid IF command\n"
@@ -1629,10 +1627,10 @@ def _logo_ifelse(
     if end_bracket1 == -1:
         return "❌ IFELSE first block malformed\n"
 
-    true_block = command[start_bracket1 + 1:end_bracket1].strip()
+    true_block = command[start_bracket1 + 1 : end_bracket1].strip()
 
     # Find second block
-    remaining = command[end_bracket1 + 1:]
+    remaining = command[end_bracket1 + 1 :]
     start_bracket2 = remaining.find("[")
     if start_bracket2 == -1:
         return "❌ IFELSE requires second [false] block\n"
@@ -1655,7 +1653,7 @@ def _logo_ifelse(
     if end_bracket2 == -1:
         return "❌ IFELSE second block malformed\n"
 
-    false_block = command[start_bracket2 + 1:end_bracket2].strip()
+    false_block = command[start_bracket2 + 1 : end_bracket2].strip()
 
     try:
         condition = _logo_eval_expr_str(interpreter, condition_str)

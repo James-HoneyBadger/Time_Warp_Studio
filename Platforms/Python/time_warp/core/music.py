@@ -146,7 +146,9 @@ class MMLParser:
                     dotted = True
                     i += 1
 
-                freq = self.note_to_frequency(note_name, self.octave, sharp, flat)
+                freq = self.note_to_frequency(
+                    note_name, self.octave, sharp, flat
+                )
                 length = custom_length if custom_length else self.length
                 duration = self.duration_to_ms(length, dotted)
 
@@ -305,7 +307,9 @@ class MusicPlayer:
                         value = math.sin(2 * math.pi * note.frequency * t)
 
                     # Apply volume and convert to 16-bit
-                    sample = int(value * note.volume * 32767 * 0.3)  # 0.3 for headroom
+                    sample = int(
+                        value * note.volume * 32767 * 0.3
+                    )  # 0.3 for headroom
                     samples.append(max(-32768, min(32767, sample)))
 
         # Create WAV file in memory
@@ -319,7 +323,9 @@ class MusicPlayer:
 
         return buffer.getvalue()
 
-    def parse_and_generate(self, mml_string: str, waveform: str = "square") -> bytes:
+    def parse_and_generate(
+        self, mml_string: str, waveform: str = "square"
+    ) -> bytes:
         """Parse MML string and generate WAV data."""
         notes = self.parser.parse(mml_string)
         return self.generate_wave(notes, waveform)

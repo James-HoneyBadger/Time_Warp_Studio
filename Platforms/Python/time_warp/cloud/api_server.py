@@ -4,19 +4,18 @@ This module provides the cloud backend services for Time Warp IDE v6.1.0,
 including REST APIs, WebSocket support, and real-time multiplayer features.
 """
 
-from datetime import datetime, timedelta, timezone
-from typing import Optional, List, Dict, Any
-from enum import Enum
-import json
-import uuid
-import jwt
-import secrets
-
-from pydantic import BaseModel, Field, EmailStr
-from fastapi import FastAPI, HTTPException, Depends, WebSocket, status, Header
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import logging
+import secrets
+import uuid
+from datetime import datetime, timedelta, timezone
+from enum import Enum
+from typing import Any, Dict, List, Optional
+
+import jwt
+from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel, EmailStr, Field
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -27,8 +26,10 @@ logger = logging.getLogger(__name__)
 # DATA MODELS
 # ============================================================================
 
+
 class UserRole(str, Enum):
     """User roles in Time Warp Cloud."""
+
     STUDENT = "student"
     TEACHER = "teacher"
     DEVELOPER = "developer"
@@ -37,6 +38,7 @@ class UserRole(str, Enum):
 
 class ProjectLanguage(str, Enum):
     """Supported programming languages."""
+
     BASIC = "basic"
     LOGO = "logo"
     PILOT = "pilot"
@@ -48,6 +50,7 @@ class ProjectLanguage(str, Enum):
 
 class SyncStatus(str, Enum):
     """Project sync status."""
+
     SYNCED = "synced"
     PENDING = "pending"
     CONFLICTED = "conflicted"
@@ -56,6 +59,7 @@ class SyncStatus(str, Enum):
 
 class SessionMode(str, Enum):
     """Multiplayer session modes."""
+
     PAIR = "pair"
     GROUP = "group"
     CLASSROOM = "classroom"
@@ -65,6 +69,7 @@ class SessionMode(str, Enum):
 # Request/Response Models
 class UserCreate(BaseModel):
     """User registration request."""
+
     username: str = Field(..., min_length=3, max_length=50)
     email: EmailStr
     password: str = Field(..., min_length=8)
@@ -74,6 +79,7 @@ class UserCreate(BaseModel):
 
 class UserResponse(BaseModel):
     """User response model."""
+
     id: str
     username: str
     email: str
@@ -86,12 +92,14 @@ class UserResponse(BaseModel):
 
 class LoginRequest(BaseModel):
     """Login request model."""
+
     email: str
     password: str
 
 
 class TokenResponse(BaseModel):
     """Token response model."""
+
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
@@ -100,6 +108,7 @@ class TokenResponse(BaseModel):
 
 class ProjectCreate(BaseModel):
     """Create project request."""
+
     name: str = Field(..., min_length=1, max_length=100)
     description: Optional[str] = None
     language: ProjectLanguage
@@ -108,6 +117,7 @@ class ProjectCreate(BaseModel):
 
 class ProjectUpdate(BaseModel):
     """Update project request."""
+
     name: Optional[str] = None
     description: Optional[str] = None
     is_public: Optional[bool] = None
@@ -115,6 +125,7 @@ class ProjectUpdate(BaseModel):
 
 class ProjectResponse(BaseModel):
     """Project response model."""
+
     id: str
     name: str
     description: Optional[str]
@@ -129,6 +140,7 @@ class ProjectResponse(BaseModel):
 
 class FileContent(BaseModel):
     """File content model."""
+
     id: str
     project_id: str
     filename: str
@@ -141,6 +153,7 @@ class FileContent(BaseModel):
 
 class SessionCreate(BaseModel):
     """Create multiplayer session."""
+
     name: str = Field(..., min_length=1, max_length=100)
     mode: SessionMode
     max_participants: int = Field(2, ge=2, le=100)
@@ -149,6 +162,7 @@ class SessionCreate(BaseModel):
 
 class SessionResponse(BaseModel):
     """Session response model."""
+
     id: str
     name: str
     mode: SessionMode
@@ -162,6 +176,7 @@ class SessionResponse(BaseModel):
 
 class AchievementResponse(BaseModel):
     """Achievement response model."""
+
     id: str
     user_id: str
     name: str
@@ -172,6 +187,7 @@ class AchievementResponse(BaseModel):
 
 class LeaderboardEntry(BaseModel):
     """Leaderboard entry model."""
+
     rank: int
     user_id: str
     username: str
@@ -183,6 +199,7 @@ class LeaderboardEntry(BaseModel):
 # ============================================================================
 # AUTHENTICATION & SECURITY
 # ============================================================================
+
 
 class CloudAuthManager:
     """Manages authentication and JWT tokens."""
@@ -264,6 +281,7 @@ class CloudAuthManager:
 # CLOUD API SERVER
 # ============================================================================
 
+
 class TimeWarpCloudAPI:
     """Main Time Warp Cloud API application."""
 
@@ -327,6 +345,7 @@ class TimeWarpCloudAPI:
 
     def _setup_routes(self):
         """Setup API routes."""
+
         # Health check
         @self.app.get("/health")
         async def health_check():
@@ -340,7 +359,9 @@ class TimeWarpCloudAPI:
         async def register(user: UserCreate):
             """Register new user."""
             if user.email in [u["email"] for u in self.users.values()]:
-                raise HTTPException(status_code=400, detail="Email already registered")
+                raise HTTPException(
+                    status_code=400, detail="Email already registered"
+                )
 
             user_id = str(uuid.uuid4())
             self.users[user_id] = {
@@ -367,13 +388,17 @@ class TimeWarpCloudAPI:
                     break
 
             if not user or user["password"] != creds.password:
-                raise HTTPException(status_code=401, detail="Invalid credentials")
+                raise HTTPException(
+                    status_code=401, detail="Invalid credentials"
+                )
 
             tokens = self.auth_manager.create_tokens(user["id"])
             return TokenResponse(**tokens)
 
         @self.app.get("/api/v1/auth/me", response_model=UserResponse)
-        async def get_current_user(auth: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
+        async def get_current_user(
+            auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
+        ):
             """Get current user profile."""
             payload = self.auth_manager.verify_token(auth.credentials)
             user_id = payload.get("sub")
@@ -388,7 +413,9 @@ class TimeWarpCloudAPI:
         # ====================================================================
 
         @self.app.get("/api/v1/projects")
-        async def list_projects(auth: HTTPAuthorizationCredentials = Depends(HTTPBearer())):
+        async def list_projects(
+            auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
+        ):
             """List user's projects."""
             payload = self.auth_manager.verify_token(auth.credentials)
             user_id = payload.get("sub")
@@ -425,17 +452,24 @@ class TimeWarpCloudAPI:
 
             return self.projects[project_id]
 
-        @self.app.get("/api/v1/projects/{project_id}", response_model=ProjectResponse)
+        @self.app.get(
+            "/api/v1/projects/{project_id}", response_model=ProjectResponse
+        )
         async def get_project(
-            project_id: str, auth: HTTPAuthorizationCredentials = Depends(HTTPBearer())
+            project_id: str,
+            auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
         ):
             """Get project details."""
             if project_id not in self.projects:
-                raise HTTPException(status_code=404, detail="Project not found")
+                raise HTTPException(
+                    status_code=404, detail="Project not found"
+                )
 
             return self.projects[project_id]
 
-        @self.app.put("/api/v1/projects/{project_id}", response_model=ProjectResponse)
+        @self.app.put(
+            "/api/v1/projects/{project_id}", response_model=ProjectResponse
+        )
         async def update_project(
             project_id: str,
             update: ProjectUpdate,
@@ -443,7 +477,9 @@ class TimeWarpCloudAPI:
         ):
             """Update project."""
             if project_id not in self.projects:
-                raise HTTPException(status_code=404, detail="Project not found")
+                raise HTTPException(
+                    status_code=404, detail="Project not found"
+                )
 
             project = self.projects[project_id]
             if update.name:
@@ -462,7 +498,9 @@ class TimeWarpCloudAPI:
         # MULTIPLAYER ENDPOINTS
         # ====================================================================
 
-        @self.app.post("/api/v1/multiplayer/sessions", response_model=SessionResponse)
+        @self.app.post(
+            "/api/v1/multiplayer/sessions", response_model=SessionResponse
+        )
         async def create_session(
             session: SessionCreate,
             auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
@@ -492,7 +530,9 @@ class TimeWarpCloudAPI:
         async def get_session(session_id: str):
             """Get session details."""
             if session_id not in self.sessions:
-                raise HTTPException(status_code=404, detail="Session not found")
+                raise HTTPException(
+                    status_code=404, detail="Session not found"
+                )
 
             return self.sessions[session_id]
 
@@ -509,11 +549,26 @@ class TimeWarpCloudAPI:
                     rank=i + 1,
                     user_id=user_id,
                     username=user["username"],
-                    points=len([p for p in self.projects.values() if p["owner_id"] == user_id]) * 100,
-                    projects_completed=len([p for p in self.projects.values() if p["owner_id"] == user_id]),
+                    points=len(
+                        [
+                            p
+                            for p in self.projects.values()
+                            if p["owner_id"] == user_id
+                        ]
+                    )
+                    * 100,
+                    projects_completed=len(
+                        [
+                            p
+                            for p in self.projects.values()
+                            if p["owner_id"] == user_id
+                        ]
+                    ),
                     sessions_participated=0,
                 )
-                for i, (user_id, user) in enumerate(list(self.users.items())[:limit])
+                for i, (user_id, user) in enumerate(
+                    list(self.users.items())[:limit]
+                )
             ]
 
             return leaderboard
@@ -533,7 +588,11 @@ class TimeWarpCloudAPI:
                 "username": self.users[user_id]["username"],
                 "projects_created": len(user_projects),
                 "total_points": len(user_projects) * 100,
-                "achievements": [a for a in self.achievements.values() if a["user_id"] == user_id],
+                "achievements": [
+                    a
+                    for a in self.achievements.values()
+                    if a["user_id"] == user_id
+                ],
                 "joined_date": self.users[user_id]["created_at"],
             }
 
@@ -545,6 +604,7 @@ class TimeWarpCloudAPI:
 # ============================================================================
 # APPLICATION FACTORY
 # ============================================================================
+
 
 def create_cloud_api(secret_key: str = None) -> FastAPI:
     """Create and configure Time Warp Cloud API.

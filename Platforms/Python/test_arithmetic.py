@@ -1,20 +1,27 @@
 #!/usr/bin/env python
 """Test script to verify 03_arithmetic.bas output."""
 
-from time_warp.core.interpreter import Interpreter, Language
-from time_warp.graphics.turtle_state import TurtleState
+if __name__ == "__main__":
+    import sys
+    from pathlib import Path
 
-# Simple test first
-print("Testing simple BASIC:")
-interp = Interpreter(Language.BASIC)
-turtle = TurtleState()
+    # Add the time_warp package to path
+    sys.path.insert(0, str(Path(__file__).parent))
 
-simple_code = """10 PRINT "Hello"
+    from time_warp.core.interpreter import Interpreter, Language
+    from time_warp.graphics.turtle_state import TurtleState
+
+    # Simple test first
+    print("Testing simple BASIC:")
+    interp = Interpreter(Language.BASIC)
+    turtle = TurtleState()
+
+    simple_code = """10 PRINT "Hello"
 20 PRINT ""
 30 PRINT "World"
 """
 
-interp.load_program(simple_code)
+    interp.load_program(simple_code)
 result = interp.execute(turtle)
 
 print(f"Total output lines: {len(result)}")

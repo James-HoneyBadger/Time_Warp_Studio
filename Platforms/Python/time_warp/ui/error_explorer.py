@@ -6,20 +6,22 @@ suggestions, and state inspection.
 # pylint: disable=no-name-in-module
 
 from __future__ import annotations
+
 from typing import TYPE_CHECKING
-from PySide6.QtWidgets import (
-    QDockWidget,
-    QWidget,
-    QVBoxLayout,
-    QTreeWidget,
-    QTreeWidgetItem,
-    QPushButton,
-    QHBoxLayout,
-    QLabel,
-    QTextEdit,
-)
+
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
+from PySide6.QtWidgets import (
+    QDockWidget,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QTextEdit,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -82,7 +84,9 @@ class ErrorExplorerWidget(QDockWidget):
         self.setWidget(widget)
 
         # Connect tree selection
-        self.error_tree.itemSelectionChanged.connect(self._on_selection_changed)
+        self.error_tree.itemSelectionChanged.connect(
+            self._on_selection_changed
+        )
 
     def add_error(
         self,
@@ -166,7 +170,9 @@ class ErrorExplorerWidget(QDockWidget):
                 # Get state info
                 state_info = self._format_state_info(interpreter)
 
-                self.add_error(line_num, error_type, message, suggestion, state_info)
+                self.add_error(
+                    line_num, error_type, message, suggestion, state_info
+                )
 
     def _format_state_info(self, interpreter: Interpreter) -> str:
         """Format interpreter state for error context."""
@@ -183,10 +189,17 @@ class ErrorExplorerWidget(QDockWidget):
             info_parts.append(f"Variables: {var_str}")
 
         # Call stack depth
-        if hasattr(interpreter, "subroutine_stack") and interpreter.subroutine_stack:
-            info_parts.append(f"Call depth: {len(interpreter.subroutine_stack)}")
+        if (
+            hasattr(interpreter, "subroutine_stack")
+            and interpreter.subroutine_stack
+        ):
+            info_parts.append(
+                f"Call depth: {len(interpreter.subroutine_stack)}"
+            )
 
-        return "\n".join(info_parts) if info_parts else "No state info available"
+        return (
+            "\n".join(info_parts) if info_parts else "No state info available"
+        )
 
     def _update_count(self):
         """Update error count label."""
@@ -218,10 +231,14 @@ class ErrorExplorerWidget(QDockWidget):
         details.append(f"<b>Message:</b> {error_data['message']}")
 
         if error_data.get("suggestion"):
-            details.append(f"<p><b>💡 Suggestion:</b> {error_data['suggestion']}</p>")
+            details.append(
+                f"<p><b>💡 Suggestion:</b> {error_data['suggestion']}</p>"
+            )
 
         if error_data.get("state"):
-            details.append(f"<p><b>State:</b><br><pre>{error_data['state']}</pre></p>")
+            details.append(
+                f"<p><b>State:</b><br><pre>{error_data['state']}</pre></p>"
+            )
 
         self.detail_text.setHtml("<br>".join(details))
 

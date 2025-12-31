@@ -13,9 +13,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from .socketio_config import SocketIOManager
 from .db import engine, get_session
-from .routes import rooms, users, sync
+from .routes import rooms, sync, users
+from .socketio_config import SocketIOManager
 from .websocket_handlers import WebSocketEventHandler
 
 # Configure logging
@@ -65,9 +65,9 @@ app = FastAPI(
 )
 
 # Configure CORS
-origins = os.getenv("CORS_ORIGINS", "http://localhost:3000,http://localhost:5173").split(
-    ","
-)
+origins = os.getenv(
+    "CORS_ORIGINS", "http://localhost:3000,http://localhost:5173"
+).split(",")
 
 app.add_middleware(
     CORSMiddleware,

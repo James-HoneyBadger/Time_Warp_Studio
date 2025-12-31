@@ -3,6 +3,7 @@ Accessibility themes with high-contrast modes and dyslexia-friendly fonts.
 """
 
 from __future__ import annotations
+
 from dataclasses import dataclass
 
 

@@ -17,9 +17,9 @@ Notes:
 
 from __future__ import annotations
 
-import re
-from typing import TYPE_CHECKING, Dict, List, Any
 import random
+import re
+from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -157,7 +157,9 @@ def _exec_c_side_effect_expr(interpreter: "Interpreter", expr: str) -> bool:
         return True
     # Fallback: evaluate expression (no side effects captured)
     try:
-        norm = re.sub(r"([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*(.*?)\s*\]", r"\1(\2)", s)
+        norm = re.sub(
+            r"([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*(.*?)\s*\]", r"\1(\2)", s
+        )
         interpreter.evaluate_expression(norm)
         return True
     except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
@@ -184,7 +186,11 @@ def _printf(interpreter: "Interpreter", arglist: str) -> str:
             else:
                 try:
                     values.append(interpreter.evaluate_expression(expr))
-                except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
+                except (
+                    ValueError,
+                    TypeError,
+                    ZeroDivisionError,
+                ):  # noqa: BLE001
                     values.append(0)
 
     out: List[str] = []
@@ -196,20 +202,23 @@ def _printf(interpreter: "Interpreter", arglist: str) -> str:
             # Try to match a format specifier
             # Regex: %[-+0 #]*[0-9]*(\.[0-9]+)?[hlL]?[diuoxXfFeEgGaAcspn%]
             # We'll use a simpler one for now: %[^a-zA-Z%]*[a-zA-Z%]
-            m = re.match(r"^%([-+0 #]*[0-9]*(\.[0-9]+)?[hlL]?[diuoxXfFeEgGaAcspn%])", fmt[i:])
+            m = re.match(
+                r"^%([-+0 #]*[0-9]*(\.[0-9]+)?[hlL]?[diuoxXfFeEgGaAcspn%])",
+                fmt[i:],
+            )
             if m:
                 spec_full = m.group(0)
                 spec_type = spec_full[-1]
-                
+
                 if spec_type == "%":
                     out.append("%")
                     i += len(spec_full)
                     continue
-                
+
                 if vi < len(values):
                     val = values[vi]
                     vi += 1
-                    
+
                     # Convert value to appropriate type for formatting
                     try:
                         if spec_type in "diuoxX":
@@ -218,14 +227,15 @@ def _printf(interpreter: "Interpreter", arglist: str) -> str:
                             val = float(val)
                         elif spec_type in "cs":
                             val = str(val)
-                            
+
                         # Use Python's string formatting which is compatible with C's for most parts
-                        # We need to remove 'l' or 'L' length modifiers as Python doesn't use them
+                        # We need to remove 'l' or 'L' length modifiers as
+                        # Python doesn't use them
                         py_spec = spec_full.replace("l", "").replace("L", "")
                         out.append(py_spec % val)
                     except Exception:
-                        out.append(spec_full) # Fallback
-                    
+                        out.append(spec_full)  # Fallback
+
                     i += len(spec_full)
                     continue
                 else:
@@ -293,7 +303,8 @@ def _set_block_comment_flag(interpreter: "Interpreter", value: bool) -> None:
     try:
         setattr(interpreter, "_in_c_block_comment", value)
     except AttributeError:
-        # If interpreter forbids setting arbitrary attributes, ignore gracefully
+        # If interpreter forbids setting arbitrary attributes, ignore
+        # gracefully
         pass
 
 
@@ -461,7 +472,11 @@ def _handle_close_brace(interpreter: "Interpreter") -> str:
                 cond_expr = mw.group(1).strip()
                 try:
                     cond_val = interpreter.evaluate_expression(cond_expr)
-                except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
+                except (
+                    ValueError,
+                    TypeError,
+                    ZeroDivisionError,
+                ):  # noqa: BLE001
                     cond_val = 0
                 if cond_val:
                     interpreter.current_line = (
@@ -494,7 +509,8 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
 
     cmd = command.strip()
 
-    # If we are currently inside a /* ... */ comment block ignore until we see */
+    # If we are currently inside a /* ... */ comment block ignore until we see
+    # */
     if _get_block_comment_flag(interpreter):
         if "*/" in cmd:
             # End block comment; ignore everything through this marker
@@ -513,7 +529,8 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
 
     # Accept function headers like 'int main() {' as valid no-op lines
     if re.match(
-        r"^\s*(?:int|void|char|float|double)\s+[A-Za-z_]\w*\s*\([^)]*\)\s*\{?$", cmd
+        r"^\s*(?:int|void|char|float|double)\s+[A-Za-z_]\w*\s*\([^)]*\)\s*\{?$",
+        cmd,
     ):
         # If there's an opening brace here, let the brace handling code
         # deal with block depth
@@ -534,7 +551,11 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
                 cond_expr = m.group(1).strip()
                 try:
                     cond_val = interpreter.evaluate_expression(cond_expr)
-                except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
+                except (
+                    ValueError,
+                    TypeError,
+                    ZeroDivisionError,
+                ):  # noqa: BLE001
                     cond_val = 0
                 if cond_val:
                     interpreter.current_line = (
@@ -576,7 +597,9 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
         lines = interpreter.program_lines
         else_start = None
         else_end = None
-        if end_idx < len(lines) and _ELSE_ON_SAME_LINE_RE.match(lines[end_idx][1]):
+        if end_idx < len(lines) and _ELSE_ON_SAME_LINE_RE.match(
+            lines[end_idx][1]
+        ):
             else_end = _find_block_end(interpreter, end_idx)
             else_start = _first_inside_index(interpreter, end_idx)
         else:
@@ -648,7 +671,8 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
         # for (int i = 0; i < n; ++i) arr[i] = ...;
         # rest was captured in regex (trailing statement or brace)
         if rest and not rest.startswith("{"):
-            # Handle single-line for-loop by executing init, then looping over body
+            # Handle single-line for-loop by executing init, then looping over
+            # body
             if init.strip():
                 # allow declarations in init: e.g. 'int i = 0'
                 d = _DECL_RE.match(init.strip())
@@ -666,7 +690,11 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
                         if cond_expr.strip()
                         else 0
                     )
-                except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
+                except (
+                    ValueError,
+                    TypeError,
+                    ZeroDivisionError,
+                ):  # noqa: BLE001
                     cond_val = 0
                 if not cond_val:
                     break
@@ -716,7 +744,9 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
         header_idx = interpreter.current_line
         end_idx = _find_block_end(interpreter, header_idx)
         start = _first_inside_index(interpreter, header_idx)
-        interpreter.c_block_stack.append({"type": "do", "end": end_idx, "start": start})
+        interpreter.c_block_stack.append(
+            {"type": "do", "end": end_idx, "start": start}
+        )
         interpreter.current_line = start - 1
         return ""
 
@@ -749,10 +779,12 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
 
     # Handle 'return' statements gracefully: end execution if inside main
     if cmd.lower().startswith("return"):
-        # try to parse return expression and ignore — treat it as program termination
+        # try to parse return expression and ignore — treat it as program
+        # termination
         inner = cmd[len("return") :].strip().rstrip(";")
         if inner:
-            # Evaluate expression (if numeric) and set variable _RETURN if needed
+            # Evaluate expression (if numeric) and set variable _RETURN if
+            # needed
             try:
                 val = interpreter.evaluate_expression(inner)
                 interpreter.set_typed_variable("_RETURN#", val)

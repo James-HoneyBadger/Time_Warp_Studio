@@ -264,9 +264,15 @@ class WatchPanel(QWidget):
         self.watch_table = QTableWidget()
         self.watch_table.setColumnCount(3)
         self.watch_table.setHorizontalHeaderLabels(["Expression", "Value", ""])
-        self.watch_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
-        self.watch_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-        self.watch_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Fixed)
+        self.watch_table.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.Stretch
+        )
+        self.watch_table.horizontalHeader().setSectionResizeMode(
+            1, QHeaderView.Stretch
+        )
+        self.watch_table.horizontalHeader().setSectionResizeMode(
+            2, QHeaderView.Fixed
+        )
         self.watch_table.setColumnWidth(2, 30)
         self.watch_table.verticalHeader().setVisible(False)
         self.watch_table.setAlternatingRowColors(True)
@@ -535,7 +541,9 @@ class DebugPanel(QWidget):
         # Forward other panel signals
         self.call_stack_panel.frame_selected.connect(self.goto_line.emit)
         self.breakpoint_panel.breakpoint_goto.connect(self.goto_line.emit)
-        self.breakpoint_panel.breakpoint_toggled.connect(self.breakpoint_toggled.emit)
+        self.breakpoint_panel.breakpoint_toggled.connect(
+            self.breakpoint_toggled.emit
+        )
 
     def set_debugging(self, is_debugging: bool):
         """Update UI for debugging state."""

@@ -80,8 +80,12 @@ class CollaborationClient:
         self.on_operation_received: Optional[
             Callable[[CollaborationOperation], None]
         ] = None
-        self.on_cursor_update: Optional[Callable[[str, Dict[str, Any]], None]] = None
-        self.on_user_joined: Optional[Callable[[CollaborationUser], None]] = None
+        self.on_cursor_update: Optional[
+            Callable[[str, Dict[str, Any]], None]
+        ] = None
+        self.on_user_joined: Optional[Callable[[CollaborationUser], None]] = (
+            None
+        )
         self.on_user_left: Optional[Callable[[str], None]] = None
         self.on_session_joined: Optional[
             Callable[[str, str, List[CollaborationUser]], None]

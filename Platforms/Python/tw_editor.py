@@ -4,30 +4,31 @@ TW Editor - Standalone Code Editor for Time Warp Languages.
 Features syntax highlighting, formatting, and basic editing capabilities.
 """
 
-import sys
 import logging
+import sys
 from pathlib import Path
 
 from PySide6.QtCore import QSize
 from PySide6.QtGui import QAction, QKeySequence
 from PySide6.QtWidgets import (
     QApplication,
-    QMainWindow,
-    QWidget,
-    QVBoxLayout,
-    QFileDialog,
-    QMessageBox,
     QComboBox,
+    QFileDialog,
     QLabel,
-    QToolBar,
+    QMainWindow,
+    QMessageBox,
     QStatusBar,
+    QToolBar,
+    QVBoxLayout,
+    QWidget,
 )
+
+from time_warp.core.interpreter import Language
+from time_warp.logging_config import get_logger, setup_logging
 
 # Import Time Warp components
 from time_warp.ui.editor import CodeEditor
-from time_warp.core.interpreter import Language
 from time_warp.utils.code_formatter import get_formatter
-from time_warp.logging_config import setup_logging, get_logger
 
 
 class TWEditorWindow(QMainWindow):
@@ -232,7 +233,7 @@ class TWEditorWindow(QMainWindow):
         """Load content from file."""
         try:
             path = Path(file_path)
-            text = path.read_text(encoding='utf-8')
+            text = path.read_text(encoding="utf-8")
             self.editor.setPlainText(text)
             self.current_file = file_path
             self.setWindowTitle(f"{path.name} - TW Editor v5.1.0")
@@ -273,7 +274,7 @@ class TWEditorWindow(QMainWindow):
         """Save content to specific path."""
         try:
             path = Path(file_path)
-            path.write_text(self.editor.toPlainText(), encoding='utf-8')
+            path.write_text(self.editor.toPlainText(), encoding="utf-8")
             self.current_file = file_path
             self.setWindowTitle(f"{path.name} - TW Editor v5.1.0")
             self.editor.document().setModified(False)

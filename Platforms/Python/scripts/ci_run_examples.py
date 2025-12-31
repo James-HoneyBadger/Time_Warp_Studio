@@ -13,9 +13,9 @@ with fixtures). Fixtures are searched under Examples/fixtures with the same
 relative path and a .in extension, e.g. Examples/basic/showcase.in
 """
 
-import sys
-import subprocess
 import importlib
+import subprocess
+import sys
 from pathlib import Path
 from typing import List
 
@@ -71,12 +71,18 @@ def run_example(path: Path, inputs: List[str]):
         exe = Path("/tmp") / (path.stem + "-ci-bin")
         try:
             subprocess.run(
-                ["gcc", str(path), "-o", str(exe)], check=True, capture_output=True
+                ["gcc", str(path), "-o", str(exe)],
+                check=True,
+                capture_output=True,
             )
             # Run compiled binary with fixture input (if provided)
             inp = "\n".join(inputs) if inputs else None
             run = subprocess.run(
-                [str(exe)], input=inp, text=True, capture_output=True, check=True
+                [str(exe)],
+                input=inp,
+                text=True,
+                capture_output=True,
+                check=True,
             )
             if run.stdout:
                 for line in run.stdout.splitlines():

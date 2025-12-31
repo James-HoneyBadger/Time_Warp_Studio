@@ -5,7 +5,7 @@ Implements Lindenmayer systems for fractal generation.
 """
 
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
     from ..graphics.turtle_state import TurtleState
@@ -301,7 +301,9 @@ class FractalGenerator:
         result_string = lsystem.iterate(iterations)
 
         # Render it
-        return self.renderer.render(turtle, result_string, lsystem.angle, step_size)
+        return self.renderer.render(
+            turtle, result_string, lsystem.angle, step_size
+        )
 
     def draw_preset(
         self,
@@ -324,7 +326,9 @@ class FractalGenerator:
         lsystem = self.get_preset(preset_name)
         if not lsystem:
             available = ", ".join(self.get_preset_names())
-            return f"❌ Unknown fractal: {preset_name}. Available: {available}\n"
+            return (
+                f"❌ Unknown fractal: {preset_name}. Available: {available}\n"
+            )
 
         return self.generate(turtle, lsystem, iterations, step_size)
 

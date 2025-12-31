@@ -5,7 +5,9 @@ Handles HTTP endpoints for user operations and profile management
 
 import logging
 from typing import List
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
@@ -13,9 +15,6 @@ from ..services import RoomService
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/users", tags=["users"])
-
-
-from pydantic import BaseModel
 
 
 class UserProfile(BaseModel):
@@ -51,7 +50,9 @@ async def get_user_profile(user_id: str):
 
 
 @router.get("/{user_id}/rooms", response_model=List[UserRoomsResponse])
-async def get_user_rooms(user_id: str, session: AsyncSession = Depends(get_session)):
+async def get_user_rooms(
+    user_id: str, session: AsyncSession = Depends(get_session)
+):
     """Get all rooms for a user"""
     try:
         service = RoomService(session)
@@ -62,7 +63,9 @@ async def get_user_rooms(user_id: str, session: AsyncSession = Depends(get_sessi
                 "name": room.name,
                 "owner_id": room.owner_id,
                 "is_private": room.is_private,
-                "member_count": len(room.members) if hasattr(room, "members") else 0,
+                "member_count": (
+                    len(room.members) if hasattr(room, "members") else 0
+                ),
             }
             for room in rooms
         ]
@@ -76,7 +79,10 @@ async def get_user_rooms(user_id: str, session: AsyncSession = Depends(get_sessi
 
 @router.post("/{user_id}/rooms/{room_id}/join")
 async def join_room(
-    user_id: str, room_id: str, username: str, session: AsyncSession = Depends(get_session)
+    user_id: str,
+    room_id: str,
+    username: str,
+    session: AsyncSession = Depends(get_session),
 ):
     """User joins a room"""
     try:
@@ -101,7 +107,8 @@ async def leave_room(
         success = await service.remove_member(room_id, user_id)
         if not success:
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, detail="Member not found"
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Member not found",
             )
         return {"message": "Left room"}
     except Exception as e:
@@ -116,7 +123,11 @@ async def leave_room(
 async def get_user_status(user_id: str):
     """Get user status"""
     # This would normally fetch from user service
-    return {"user_id": user_id, "status": "online", "last_seen": "2025-12-31T00:00:00Z"}
+    return {
+        "user_id": user_id,
+        "status": "online",
+        "last_seen": "2025-12-31T00:00:00Z",
+    }
 
 
 @router.put("/{user_id}/status")
