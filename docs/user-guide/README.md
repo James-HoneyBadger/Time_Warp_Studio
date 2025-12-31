@@ -266,7 +266,6 @@ Right-click in editor for options:
 1. **Reduce drawing** - Fewer FORWARD/RIGHT commands
 2. **Check loops** - Very large loops take time
 3. **Simplify graphics** - Complex fractals are slow
-4. **Use Rust version** - Better performance for intensive code
 
 ### Getting Help
 

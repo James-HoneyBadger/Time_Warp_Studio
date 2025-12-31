@@ -10,7 +10,6 @@ This directory contains documentation for the Time Warp IDE project.
 
 ### Core Implementation
 - **Platforms/Python/** - Official Python (PySide6) implementation
-- **Platforms/Rust/** - Experimental Rust port (see [EXPERIMENTAL.md](../Platforms/Rust/EXPERIMENTAL.md))
 
 ### Assets
 - **Examples/** - Example programs in all supported languages

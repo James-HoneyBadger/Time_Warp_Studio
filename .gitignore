@@ -31,29 +31,10 @@ tools/swiftly
 .vs/
 *.user
 
-# Rust build artifacts
-target/
-Cargo.lock
-
 # Build outputs
 dist/
 build/
 *.egg-info/
-
-# IDE
-.idea/
-*.swp
-*.swo
-*~
-*.suo
-*.sln
-*.opensdf
-*.sdf
-
-# Rust
-target/
-**/*.rs.bk
-Cargo.lock
 
 # Build artifacts
 dist/
@@ -63,4 +44,3 @@ build/
 *.dll
 *.exe
 *.pdb
-tw

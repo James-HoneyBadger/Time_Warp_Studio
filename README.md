@@ -43,18 +43,18 @@ END:
 
 ## Key Features
 
-| Feature | Python ✅ | Rust ⚠️ |
-|---------|-----------|---------|
-| **7 Programming Languages** | Full | Partial |
-| **Turtle Graphics** | Full featured | Basic |
-| **Code Editor** | Tabs, snippets, themes | Basic |
-| **Immediate Mode (REPL)** | Yes | Yes |
-| **Variable Inspector** | Yes | No |
-| **Debugging Tools** | Breakpoints, debug panel | No |
-| **Graphics Modes** | Multiple | Single |
-| **Themes** | 23 themes | 4 themes |
-| **Educational Examples** | 50+ examples | Limited |
-| **Performance** | Good | Excellent |
+| Feature | Status |
+|---------|--------|
+| **7 Programming Languages** | Full |
+| **Turtle Graphics** | Full featured |
+| **Code Editor** | Tabs, snippets, themes |
+| **Immediate Mode (REPL)** | Yes |
+| **Variable Inspector** | Yes |
+| **Debugging Tools** | Breakpoints, debug panel |
+| **Graphics Modes** | Multiple |
+| **Themes** | 23 themes |
+| **Educational Examples** | 50+ examples |
+| **Performance** | Excellent |
 
 ## Getting Started
 
@@ -117,8 +117,7 @@ JUMP ACCEPT
 ```
 Time_Warp_Studio/
 ├── Platforms/
-│   ├── Python/          ← Main implementation (PySide6)
-│   └── Rust/            ← Experimental (early stage)
+│   └── Python/          ← Main implementation (PySide6)
 ├── Examples/            ← 50+ sample programs
 ├── docs/                ← Comprehensive documentation
 ├── Scripts/             ← Build and utility scripts
@@ -136,7 +135,7 @@ See [STRUCTURE.md](STRUCTURE.md) for detailed breakdown.
 
 **For Developers:**
 - [Technical Reference](docs/technical/README.md) - Architecture, components
-- [Building Guide](INSTALL_NATIVE.md) - Native builds, Rust port
+- [Building Guide](INSTALL_NATIVE.md) - Native builds
 - [API Documentation](docs/technical/api.md) - Interpreter interfaces
 
 ## Supported Languages
@@ -153,16 +152,11 @@ See [STRUCTURE.md](STRUCTURE.md) for detailed breakdown.
 
 ## Requirements
 
-**Python Version (Recommended)**
+**Requirements**
 - Python 3.8+
 - PySide6
 - Pillow
 - (Optional: pyfirmata, RPi.GPIO for hardware)
-
-**Rust Version (Experimental)**
-- Rust 1.70+
-- egui 0.24
-- Single binary, no dependencies
 
 ## IDE Features
 
@@ -218,11 +212,10 @@ See [LICENSE](LICENSE) file.
 
 ## Version History
 
-**5.0.1** (December 2025)
-- Stabilized Python implementation
-- Experimental Rust port available
+**5.1.0** (December 2025)
+- Full Python implementation with all features
 - 50+ examples for all languages
-- 8 themes, full IDE features
+- 23 themes, full IDE features
 
 ## Support & Resources
 

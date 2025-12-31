@@ -1,6 +1,6 @@
 """
 Core interpreter for Time Warp IDE
-Ported from Rust: time_warp_unified::interpreter::mod.rs
+Time Warp interpreter for executing code in multiple languages
 """
 
 # The interpreter is intentionally large and exposes many public methods
@@ -139,7 +139,7 @@ class Interpreter:
     Central execution engine for Time Warp (BASIC, PILOT, Logo).
 
     Manages program state, variable storage, and control flow.
-    Ported from Rust time_warp_unified::interpreter::Interpreter
+    Time Warp interpreter for executing code
 
     Security Features:
     - Max iterations: 100,000 (prevents infinite loops)
@@ -785,7 +785,7 @@ class Interpreter:
 
     def log_output(self, text: str):
         """Add text to output buffer (helper method)."""
-        if text and text.strip():
+        if text:  # Include all output, even blank lines
             self.output.append(text)
             if self.output_callback:
                 # pylint: disable=not-callable

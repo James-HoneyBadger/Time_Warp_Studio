@@ -82,29 +82,6 @@ self.setWindowTitle(f"{path.name} - TW Editor v5.1.0")
 
 **Result:** All TW Editor window states now show v5.1.0
 
-### 4. Rust IDE
-**File:** `Platforms/Rust/src/main.rs`
-
-#### Viewport Title
-```rust
-// BEFORE
-.with_title("Time Warp Studio"),
-
-// AFTER
-.with_title("Time Warp Studio v5.1.0"),
-```
-
-#### Window Name
-```rust
-// BEFORE
-"Time Warp Studio",
-
-// AFTER
-"Time Warp Studio v5.1.0",
-```
-
-**Result:** Rust IDE window displays "Time Warp Studio v5.1.0"
-
 ---
 
 ## Version Consistency Matrix
@@ -113,11 +90,9 @@ self.setWindowTitle(f"{path.name} - TW Editor v5.1.0")
 |-----------|------------|-------------|-----------|-----------------|
 | Python IDE | 5.1.0 ✅ | 5.1.0 ✅ | 5.1.0 ✅ | 5.1.0 ✅ |
 | TW Editor | N/A | 5.1.0 ✅ | N/A | 5.1.0 ✅ |
-| Rust IDE | 0.1.0 | 5.1.0 ✅ | N/A | N/A |
 
 **Notes:**
 - Python __version__ string: `Platforms/Python/time_warp/__init__.py:7`
-- Rust Cargo.toml: Version 0.1.0 (pre-release build, separate versioning)
 - All UI displays now consistently show 5.1.0
 
 ---
@@ -175,10 +150,6 @@ When users launch the editor, they will see:
 - **New File:** "Untitled - TW Editor v5.1.0"
 - **Open/Save:** "[filename] - TW Editor v5.1.0"
 
-### Rust IDE
-When users launch the Rust version, they will see:
-- **Window Title:** "Time Warp Studio v5.1.0"
-
 ---
 
 ## Impact Assessment
@@ -208,7 +179,6 @@ When users launch the Rust version, they will see:
 - ✅ Python About dialog shows "Version 5.1.0"
 - ✅ TW Editor initial title shows version
 - ✅ TW Editor file operations update title with version
-- ✅ Rust IDE window shows "Time Warp Studio v5.1.0"
 - ✅ Python syntax validation passes
 - ✅ Version import works correctly
 - ✅ No syntax errors in modified files

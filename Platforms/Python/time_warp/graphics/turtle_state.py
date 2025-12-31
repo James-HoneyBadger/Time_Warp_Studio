@@ -1,6 +1,6 @@
 """
 Turtle graphics state for Logo-style drawing
-Ported from Rust: time_warp_unified::graphics::mod.rs
+Turtle graphics state management for Time Warp IDE
 """
 
 import math

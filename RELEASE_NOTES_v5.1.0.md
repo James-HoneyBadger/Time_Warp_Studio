@@ -115,7 +115,6 @@
 
 **Platforms**
 - ✅ Python (PySide6) - Primary, maintained
-- ⚙️ Rust - Reference implementation
 - 📦 Windows2000 - Legacy experimental
 
 **Code Quality**
@@ -134,7 +133,6 @@
 - `Platforms/Python/time_warp/__init__.py`
 - `Platforms/Python/time_warp/ui/main_window.py`
 - `Platforms/Python/tw_editor.py`
-- `Platforms/Rust/src/main.rs`
 - `README.md`
 - `PROJECT_SUMMARY.md`
 - And 5+ other reference documents

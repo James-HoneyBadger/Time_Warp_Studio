@@ -1,6 +1,6 @@
 """
 Safe mathematical expression evaluator for Time Warp IDE
-Ported from Rust: time_warp_unified::utils::expr_eval.rs
+Safe expression evaluation for Time Warp IDE
 
 Provides secure evaluation without eval() or exec()
 """

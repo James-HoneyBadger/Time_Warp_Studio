@@ -3,17 +3,11 @@
 ```
 Time_Warp_Studio/
 ├── Platforms/
-│   ├── Python/              ← MAIN IMPLEMENTATION (PySide6)
-│   │   ├── time_warp_ide.py ← Entry point
-│   │   ├── time_warp/       ← Core package
-│   │   ├── requirements.txt
-│   │   └── .venv/           ← Virtual environment
-│   │
-│   └── Rust/                ← EXPERIMENTAL PORT
-│       ├── src/
-│       ├── Cargo.toml
-│       ├── EXPERIMENTAL.md  ← Status & limitations
-│       └── target/          ← Build output
+│   └── Python/              ← MAIN IMPLEMENTATION (PySide6)
+│       ├── time_warp_ide.py ← Entry point
+│       ├── time_warp/       ← Core package
+│       ├── requirements.txt
+│       └── .venv/           ← Virtual environment
 │
 ├── Examples/                ← Sample programs
 │   ├── basic/
@@ -45,7 +39,6 @@ Time_Warp_Studio/
 ### Documentation
 - **README.md** - Overview, quick start, feature list
 - **INSTALL_NATIVE.md** - Building native versions
-- **Platforms/Rust/EXPERIMENTAL.md** - Rust port status
 
 ### Main Implementation
 - **Platforms/Python/time_warp_ide.py** - Official IDE entry point
@@ -71,12 +64,3 @@ source .venv/bin/activate
 pip install -r requirements.txt
 python time_warp_ide.py
 ```
-
-### Rust (Experimental)
-```bash
-cd Platforms/Rust
-cargo build
-./target/debug/tw
-```
-
-See [Platforms/Rust/EXPERIMENTAL.md](Platforms/Rust/EXPERIMENTAL.md) for limitations and status.

@@ -72,8 +72,7 @@ Time_Warp_Studio/
 │   │       └── syntax.py         ← Syntax highlighting
 │   ├── requirements.txt
 │   └── .venv/                    ← Virtual environment
-├── Platforms/Rust/               ← Experimental port
-└── Examples/                      ← Sample programs
+├── Examples/                      ← Sample programs
 ```
 
 ## Core Components
@@ -268,7 +267,6 @@ python test_runner.py --comprehensive
 ### Code Style
 
 - **Python** - Follow PEP 8
-- **Rust** - Use `cargo fmt`
 - **Documentation** - Docstrings for all public functions
 
 ### Common Tasks
@@ -299,7 +297,6 @@ Use the debug panel:
 1. **Avoid deep recursion** - Stack depth limited
 2. **Cache expressions** - Don't re-parse same code
 3. **Batch graphics** - Group FORWARD/RIGHT commands
-4. **Use Rust version** - 10-100x faster for compute-heavy code
 
 ### Profiling
 
