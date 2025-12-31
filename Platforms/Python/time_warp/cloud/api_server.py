@@ -302,6 +302,29 @@ class TimeWarpCloudAPI:
         # Setup routes
         self._setup_routes()
 
+    def _create_user(self, user_data: Dict[str, Any]) -> str:
+        """Create a user in storage (internal helper).
+
+        Args:
+            user_data: User data dict with username, email, password, role, full_name
+
+        Returns:
+            User ID
+        """
+        user_id = str(len(self.users) + 1)
+        self.users[user_data["email"]] = {
+            "id": user_id,
+            "username": user_data["username"],
+            "email": user_data["email"],
+            "password": user_data["password"],
+            "full_name": user_data.get("full_name"),
+            "role": user_data.get("role", "student"),
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "cloud_sync_enabled": False,
+            "max_projects": 10,
+        }
+        return user_id
+
     def _setup_routes(self):
         """Setup API routes."""
         # Health check
