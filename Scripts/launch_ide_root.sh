@@ -27,8 +27,8 @@ NC='\033[0m' # No Color
 
 # Configuration
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PYTHON_DIR="$SCRIPT_DIR/Platforms/Python"
-VENV_DIR="$PYTHON_DIR/.venv"
+PYTHON_DIR="$SCRIPT_DIR/../Platforms/Python"
+VENV_DIR="$SCRIPT_DIR/../.venv"
 IDE_SCRIPT="$PYTHON_DIR/time_warp_ide.py"
 REQUIREMENTS_FILE="$PYTHON_DIR/requirements.txt"
 REQUIREMENTS_DEV_FILE="$PYTHON_DIR/requirements-dev.txt"

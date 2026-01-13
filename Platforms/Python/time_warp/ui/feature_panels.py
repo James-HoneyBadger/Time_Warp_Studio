@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
     QListWidgetItem,
     QMessageBox,
@@ -42,13 +43,13 @@ from PySide6.QtWidgets import (
 from ..core.accessibility import AccessibilityManager
 from ..core.ai_assistant import LocalAIAssistant
 from ..core.asset_library import AssetLibrary
-from ..core.collaboration import CollaborativeMessage
+from ..core.collaboration import LocalCollaborationSession, SessionManager, CollaborativeMessage
 from ..core.debugger import CodeDebugger
 from ..core.executable_exporter import ExecutableExporter
 from ..core.execution_replay import ExecutionReplayPlayer
 from ..core.hardware_simulator import HardwareSimulator
 from ..core.language_comparator import MultiLanguageComparator
-from ..core.learning_analytics import ConceptMastery
+from ..core.learning_analytics import ConceptMastery, LearningAnalytics
 from ..core.peer_review import CodeReviewSession
 from ..core.performance_profiler import PerformanceProfiler
 from ..core.project_templates import TemplateLibrary
@@ -144,7 +145,7 @@ class ProjectTemplatesPanel(FeaturePanelBase):
 
     def __init__(self):
         super().__init__("Project Templates")
-        self.templates_mgr = ProjectTemplates()
+        self.templates_mgr = TemplateLibrary()
         self.setup_ui()
 
     def setup_ui(self):
@@ -154,7 +155,7 @@ class ProjectTemplatesPanel(FeaturePanelBase):
         cat_layout.addWidget(QLabel("Category:"))
         self.cat_combo = QComboBox()
         self.cat_combo.addItems(
-            ["All", "Game", "Graphics", "Math", "I/O", "Advanced"]
+            ["All", "Game", "Art Generation", "Learning", "Robotics", "Data Visualization", "Demo"]
         )
         self.cat_combo.currentTextChanged.connect(self.refresh_templates)
         cat_layout.addWidget(self.cat_combo)
@@ -182,14 +183,23 @@ class ProjectTemplatesPanel(FeaturePanelBase):
 
     def refresh_templates(self):
         """Refresh templates list."""
-        category = self.cat_combo.currentText()
-        templates = self.templates_mgr.get_templates(
-            category if category != "All" else None
-        )
+        category_text = self.cat_combo.currentText()
+
+        # Get all templates (TemplateLibrary.get_all() returns Dict[str, Template])
+        all_templates = self.templates_mgr.get_all().values()
+
+        # Filter
+        templates = []
+        if category_text == "All":
+            templates = list(all_templates)
+        else:
+            # Map "Art Generation" -> "art_generation"
+            cat_val = category_text.lower().replace(" ", "_")
+            templates = [t for t in all_templates if t.category.value == cat_val]
 
         self.templates_list.clear()
         for tpl in templates:
-            item = QListWidgetItem(tpl.get("name", "Unknown"))
+            item = QListWidgetItem(tpl.name)
             item.setData(Qt.UserRole, tpl)
             self.templates_list.addItem(item)
 
@@ -197,7 +207,7 @@ class ProjectTemplatesPanel(FeaturePanelBase):
         """Show template details."""
         template = item.data(Qt.UserRole)
         self.details_text.setText(
-            template.get("description", "No description")
+            template.description if template.description else "No description"
         )
 
     def create_project(self):
@@ -211,7 +221,7 @@ class ProjectTemplatesPanel(FeaturePanelBase):
 
         template = item.data(Qt.UserRole)
         self.emit_status(
-            f"Creating project from {template.get('name', 'template')}..."
+            f"Creating project from {template.name}..."
         )
 
 
@@ -220,7 +230,7 @@ class DebuggerPanel(FeaturePanelBase):
 
     def __init__(self):
         super().__init__("Timeline Debugger")
-        self.debugger = Debugger()
+        self.debugger = CodeDebugger()
         self.setup_ui()
 
     def setup_ui(self):
@@ -266,7 +276,7 @@ class LanguageComparatorPanel(FeaturePanelBase):
 
     def __init__(self):
         super().__init__("Language Comparator")
-        self.comparator = LanguageComparator()
+        self.comparator = MultiLanguageComparator()
         self.setup_ui()
 
     def setup_ui(self):
@@ -275,16 +285,13 @@ class LanguageComparatorPanel(FeaturePanelBase):
         comp_layout = QHBoxLayout()
         comp_layout.addWidget(QLabel("Compare:"))
         self.comp_combo = QComboBox()
-        self.comp_combo.addItems(
-            [
-                "BASIC vs LOGO",
-                "BASIC vs PILOT",
-                "BASIC vs PASCAL",
-                "BASIC vs C",
-                "LOGO vs PILOT",
-            ]
-        )
-        self.comp_combo.currentTextChanged.connect(self.refresh_comparison)
+        
+        # Populate from comparator pairs
+        pairs = self.comparator.get_builtin_pairs()
+        for pid, (l1, l2) in pairs.items():
+            self.comp_combo.addItem(f"{l1} vs {l2} ({pid})", pid)
+
+        self.comp_combo.currentIndexChanged.connect(self.refresh_comparison)
         comp_layout.addWidget(self.comp_combo)
         comp_layout.addStretch()
         self.layout_main.addLayout(comp_layout)
@@ -293,7 +300,8 @@ class LanguageComparatorPanel(FeaturePanelBase):
         splitter = QSplitter(Qt.Horizontal)
 
         left_layout = QVBoxLayout()
-        left_layout.addWidget(QLabel("Language 1:"))
+        self.label1 = QLabel("Language 1:")
+        left_layout.addWidget(self.label1)
         self.lang1_text = QTextEdit()
         self.lang1_text.setReadOnly(True)
         left_layout.addWidget(self.lang1_text)
@@ -303,7 +311,8 @@ class LanguageComparatorPanel(FeaturePanelBase):
         splitter.addWidget(left_widget)
 
         right_layout = QVBoxLayout()
-        right_layout.addWidget(QLabel("Language 2:"))
+        self.label2 = QLabel("Language 2:")
+        right_layout.addWidget(self.label2)
         self.lang2_text = QTextEdit()
         self.lang2_text.setReadOnly(True)
         right_layout.addWidget(self.lang2_text)
@@ -318,14 +327,19 @@ class LanguageComparatorPanel(FeaturePanelBase):
 
     def refresh_comparison(self):
         """Refresh comparison display."""
-        comparison = self.comp_combo.currentText()
-        lang1, lang2 = comparison.split(" vs ")
+        index = self.comp_combo.currentIndex()
+        if index < 0:
+            return
 
-        code1 = self.comparator.get_example(lang1)
-        code2 = self.comparator.get_example(lang2)
+        pid = self.comp_combo.itemData(index)
+        pair_data = self.comparator.get_builtin_pair(pid)
 
-        self.lang1_text.setPlainText(code1)
-        self.lang2_text.setPlainText(code2)
+        if pair_data:
+            l1, l2, code1, code2 = pair_data
+            self.label1.setText(f"{l1}:")
+            self.label2.setText(f"{l2}:")
+            self.lang1_text.setPlainText(code1)
+            self.lang2_text.setPlainText(code2)
 
 
 class AssetLibraryPanel(FeaturePanelBase):
@@ -372,23 +386,35 @@ class AssetLibraryPanel(FeaturePanelBase):
     def refresh_assets(self):
         """Refresh assets list."""
         category = self.cat_combo.currentText()
-        assets = self.library.list_assets(
-            category if category != "All" else None
-        )
+        all_assets = self.library.list_all()
+
+        filtered = []
+        for a in all_assets:
+             atype = a.asset_type.value if hasattr(a.asset_type, 'value') else str(a.asset_type)
+             if category == "All":
+                 filtered.append(a)
+             elif category == "Sprites" and atype == "sprite":
+                 filtered.append(a)
+             elif category in ["Sounds", "Music", "Effects"] and atype == "sound":
+                 filtered.append(a)
+             elif category == "Tiles" and atype == "tileset":
+                 filtered.append(a)
 
         self.assets_list.clear()
-        for asset in assets:
-            item = QListWidgetItem(asset.get("name", "Unknown"))
+        for asset in filtered:
+            item = QListWidgetItem(asset.name)
             item.setData(Qt.UserRole, asset)
             self.assets_list.addItem(item)
 
     def on_asset_selected(self, item):
         """Show asset preview."""
         asset = item.data(Qt.UserRole)
-        preview = f"Name: {asset.get('name')}\n\n"
-        preview += f"Type: {asset.get('type')}\n"
-        preview += f"Size: {asset.get('size')}\n"
-        preview += f"Description: {asset.get('description')}\n"
+        description = getattr(asset, 'description', '')
+        atype = asset.asset_type.value if hasattr(asset.asset_type, 'value') else str(asset.asset_type)
+
+        preview = f"Name: {asset.name}\n\n"
+        preview += f"Type: {atype}\n"
+        preview += f"Description: {description}\n"
         self.preview_text.setText(preview)
 
     def import_asset(self):
@@ -399,7 +425,7 @@ class AssetLibraryPanel(FeaturePanelBase):
             return
 
         asset = item.data(Qt.UserRole)
-        self.emit_status(f"Imported: {asset.get('name')}")
+        self.emit_status(f"Imported: {asset.name}")
 
 
 # ============================================================================
@@ -412,7 +438,8 @@ class CollaborationPanel(FeaturePanelBase):
 
     def __init__(self):
         super().__init__("Collaboration Tool")
-        self.collab = CollaborationServer()
+        self.session_manager = SessionManager()
+        self.current_session: Optional[LocalCollaborationSession] = None
         self.setup_ui()
 
     def setup_ui(self):
@@ -510,7 +537,7 @@ class ExecutionReplayPanel(FeaturePanelBase):
 
     def __init__(self):
         super().__init__("Execution Replay")
-        self.replayer = ExecutionReplayer()
+        self.replayer = ExecutionReplayPlayer()
         self.setup_ui()
 
     def setup_ui(self):

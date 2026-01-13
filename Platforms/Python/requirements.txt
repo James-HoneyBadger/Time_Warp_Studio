@@ -14,6 +14,9 @@ Pillow>=10.0.0
 # HTTP requests (for AI provider APIs)
 requests>=2.31.0
 
+# WebSocket support (for collaboration features)
+websockets>=11.0.3
+
 # ============================================================================
 # DEVELOPMENT & TESTING
 # ============================================================================
