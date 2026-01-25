@@ -1,103 +1,207 @@
-# Documentation Index
+# Time Warp Studio Documentation
 
-Welcome to the Time Warp Studio documentation! This page helps you navigate all available resources.
+Welcome to the complete Time Warp Studio documentation! This is your central hub for learning to use the IDE, mastering programming languages, and building amazing projects.
 
-> **Note:** Time Warp Studio is a native desktop application built with Python and PySide6 (Qt6). All documentation refers to the desktop version.
+> **New to Time Warp Studio?** Start with [Getting Started Guide](guides/01-getting-started.md) or [Quick Start](../LAUNCH_GUIDE.md)
 
-## Getting Started
+---
 
-New to Time Warp? Start here:
+## 🚀 Getting Started
 
-- **[Getting Started Guide](guides/01-getting-started.md)** - Installation, first program, menu overview
-- **[IDE Basics](guides/02-ide-basics.md)** - Learn the IDE interface and features
+Start here if you're new to Time Warp Studio:
 
-## Programming Languages
+- **[Installation & Setup](guides/01-getting-started.md)** - Install, configure, and launch the IDE
+- **[IDE Basics](guides/02-ide-basics.md)** - Learn the interface, menus, and keyboard shortcuts
+- **[Quick Start](../LAUNCH_GUIDE.md)** - Get running in 2 minutes with first program
 
-Choose your language and dive into tutorials:
+---
+
+## 📚 Programming Languages
 
 ### Educational Languages
 
-- **[BASIC Tutorial](tutorials/basic.md)** - Classic BASIC with variables, loops, and subroutines
-- **[PILOT Tutorial](tutorials/pilot.md)** - Interactive teaching language for lessons and quizzes
-- **[Logo Tutorial](tutorials/logo.md)** - Turtle graphics and visual programming
+Best for learning fundamental programming concepts:
 
-### General-Purpose Languages
+- **[BASIC Tutorial](tutorials/basic.md)** - Classic BASIC with variables, loops, conditionals, and subroutines
+- **[PILOT Tutorial](tutorials/pilot.md)** - Interactive teaching language designed for computer-based instruction
+- **[Logo Tutorial](tutorials/logo.md)** - Turtle graphics and visual programming for geometric learning
 
-- **[Python Tutorial](tutorials/python.md)** - Modern Python programming with functions and modules
-- **[C Tutorial](tutorials/c.md)** - Systems programming with C language
-- **[Pascal Tutorial](tutorials/pascal.md)** - Structured programming with Pascal
+### Modern Languages
 
-### Logic Programming
+General-purpose languages with modern features:
 
-- **[Prolog Tutorial](tutorials/prolog.md)** - Logic-based programming with facts and rules
+- **[Python Guide](tutorials/python.md)** - Modern Python with functions, data structures, and libraries
+- **[C Reference](tutorials/c.md)** - Systems programming and low-level concepts
+- **[Pascal Guide](tutorials/pascal.md)** - Structured programming with strong typing
 
-## Guides and How-Tos
+### Specialized Languages
 
-Detailed guides for specific topics:
+Domain-specific languages for unique paradigms:
 
-- **[Turtle Graphics Guide](guides/04-turtle-graphics.md)** - Deep dive into Logo turtle graphics
-- **[Troubleshooting Guide](guides/08-troubleshooting.md)** - Solutions for common problems
+- **[Prolog Guide](tutorials/prolog.md)** - Logic programming with facts, rules, and unification
+- **[Forth Guide](tutorials/forth.md)** - Stack-based programming and low-level operations
 
-## Reference Materials
+---
 
-Quick reference and frequently asked questions:
+## 🎨 Feature Guides
 
-- **[FAQ](reference/faq.md)** - Frequently asked questions (70+ topics covered)
+Deep dives into specific IDE features:
 
-## Examples and Code
+- **[Turtle Graphics](guides/04-turtle-graphics.md)** - Master Logo turtle graphics, colors, and animations
+- **[Settings & Themes](guides/06-settings.md)** - Customize appearance with 8 themes or create your own
+- **[Keyboard Shortcuts](guides/07-shortcuts.md)** - Speed up your workflow with essential shortcuts
+- **[Lesson System](guides/03-lessons.md)** - Use structured lessons with checkpoints and verification
 
-The [Examples/](../Examples/) directory contains sample programs for each language:
+---
 
-- `Examples/basic/` - BASIC sample programs
-- `Examples/pilot/` - PILOT interactive lessons
-- `Examples/logo/` - Logo turtle graphics examples
-- `Examples/python/` - Python example programs
-- `Examples/c/` - C language examples
-- `Examples/pascal/` - Pascal example programs
-- `Examples/prolog/` - Prolog logic programs
+## 📖 Reference & Support
 
-## Quick Links by Topic
+### Quick Reference
+- **[Keyboard Shortcuts](guides/07-shortcuts.md)** - All available shortcuts and their actions
+- **[FAQ](reference/faq.md)** - 70+ frequently asked questions with answers
 
-### For Beginners
+### Troubleshooting
+- **[Troubleshooting Guide](guides/08-troubleshooting.md)** - Solutions for common issues
+- **[Architecture Guide](../ARCHITECTURE.md)** - Project structure and design decisions
 
-1. Read **Getting Started Guide**
-2. Follow **IDE Basics**
-3. Choose a language tutorial (BASIC, PILOT, or Logo recommended)
-4. Copy examples and modify them
-5. Check **Troubleshooting Guide** if you encounter issues
+---
+
+## 🎯 Learning Paths
+
+### For Complete Beginners
+
+**Recommended Path:**
+1. [Getting Started Guide](guides/01-getting-started.md) - Setup and basic navigation
+2. [IDE Basics](guides/02-ide-basics.md) - Understand the interface
+3. [BASIC Tutorial](tutorials/basic.md) - Learn fundamental programming
+4. [Examples Browser](guides/01-getting-started.md#examples) - Run and modify examples
+
+**First Program to Try:**
+```basic
+PRINT "Hello, World!"
+```
 
 ### For Learning Graphics
 
-1. Start with **Logo Tutorial** for basics
-2. Read **Turtle Graphics Guide** for advanced techniques
-3. Explore `Examples/logo/` for inspiration
+**Recommended Path:**
+1. [Logo Tutorial](tutorials/logo.md) - Learn Logo basics
+2. [Turtle Graphics Guide](guides/04-turtle-graphics.md) - Advanced turtle techniques
+3. Open **File → Examples → logo/** to see 10+ examples
+4. Try examples like `02_squares.logo`, `05_trees.logo`
 
-### For Learning Programming Concepts
+**First Turtle Program:**
+```logo
+REPEAT 4 [FORWARD 100 RIGHT 90]
+```
 
-- **BASIC**: Learn fundamental programming (variables, loops, functions)
-- **PILOT**: Learn interactive program design and branching
-- **Logo**: Learn visual thinking and recursion through graphics
-- **Python**: Learn modern programming with data structures
-- **C**: Learn systems programming and memory management
-- **Pascal**: Learn structured programming and procedures
-- **Prolog**: Learn logic programming and rule-based systems
+### For Teaching/Classroom Use
 
-### For Troubleshooting
+**Recommended Resources:**
+1. [Classroom Mode Guide](guides/06-settings.md) - Presentation and assignment features
+2. [Lesson System Guide](guides/03-lessons.md) - Create structured lessons
+3. [Examples Browser](guides/01-getting-started.md#examples) - 100+ ready-made programs
+4. See [ARCHITECTURE.md](../ARCHITECTURE.md) for extending features
 
-1. Check **IDE Basics** for menu and feature descriptions
-2. Read **Troubleshooting Guide** for common problems
-3. Consult **FAQ** for specific questions
-4. Review error messages in the Output panel
+### For Advanced Users
 
-## Documentation Format
+**Topics:**
+- Custom themes: [Settings & Themes](guides/06-settings.md)
+- Adding languages: [ARCHITECTURE.md](../ARCHITECTURE.md#adding-a-new-language)
+- Contributing: [README.md](../README.md#contributing)
+- Development: [ARCHITECTURE.md](../ARCHITECTURE.md#development-guide)
 
-All documentation uses Markdown format with:
+---
 
-- **Bold text** for emphasis
-- `code blocks` for programming examples
-- Tables for reference information
-- Headers for organization
-- Links for navigation
+## 📁 Examples
+
+Browse 100+ example programs organized by language:
+
+| Directory | Count | Level | Purpose |
+|-----------|-------|-------|---------|
+| `basic/` | 11 | Beginner | Learn BASIC fundamentals |
+| `logo/` | 10 | Beginner-Intermediate | Turtle graphics and recursion |
+| `pilot/` | 8 | Intermediate | Interactive instruction |
+| `c/` | 8 | Intermediate | Systems programming |
+| `python/` | 5+ | Intermediate | Modern Python features |
+| `pascal/` | 8 | Intermediate | Structured programming |
+| `prolog/` | 5+ | Advanced | Logic programming |
+| `forth/` | 5 | Advanced | Stack-based programming |
+
+**How to use examples:**
+1. Press **Ctrl+E** or **File → Examples**
+2. Browse by language and difficulty
+3. Click **Load** to open in editor
+4. Press **Ctrl+R** to run
+
+---
+
+## 🔧 Common Tasks
+
+### Run a program
+1. Open file (Ctrl+O) or create new (Ctrl+N)
+2. Type or paste code
+3. Press Ctrl+R or click Run
+
+### Change language
+- Use Language dropdown (top right of editor)
+- Or File → New → [Language]
+
+### Customize theme
+- File → Settings → Themes
+- 8 built-in themes + custom theme editor
+
+### Use autosave
+- Enabled by default
+- Auto-saves every 30 seconds to `~/.Time_Warp/`
+- Keep up to 20 versions per file
+
+### Follow a lesson
+- File → Lessons
+- Select lesson from catalog
+- Complete checkpoints with auto-verification
+
+---
+
+## ❓ Need Help?
+
+- **Can't find answer?** Check [FAQ](reference/faq.md)
+- **Having issues?** See [Troubleshooting](guides/08-troubleshooting.md)
+- **Want to extend?** Read [ARCHITECTURE.md](../ARCHITECTURE.md)
+- **Report bug?** Open [GitHub Issue](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues)
+
+---
+
+## 📚 Complete File Index
+
+```
+docs/
+├── INDEX.md (you are here)
+├── guides/
+│   ├── 01-getting-started.md
+│   ├── 02-ide-basics.md
+│   ├── 03-lessons.md
+│   ├── 04-turtle-graphics.md
+│   ├── 06-settings.md
+│   ├── 07-shortcuts.md
+│   └── 08-troubleshooting.md
+├── tutorials/
+│   ├── basic.md
+│   ├── pilot.md
+│   ├── logo.md
+│   ├── python.md
+│   ├── c.md
+│   ├── pascal.md
+│   ├── prolog.md
+│   └── forth.md
+└── reference/
+    └── faq.md
+```
+
+---
+
+**Last Updated:** January 2026  
+**Version:** 6.0.0+  
+**License:** Apache 2.0
 
 ## How to Use This Documentation
 
