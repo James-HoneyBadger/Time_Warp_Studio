@@ -2,9 +2,9 @@
 
 ## Our Commitment
 
-We are committed to providing a welcoming and inspiring community for all. Time Warp IDE is dedicated to fostering an open, friendly, and collaborative environment that embraces diversity and inclusivity.
+We are committed to providing a welcoming and inspiring community for all. Time Warp Studio is dedicated to fostering an open, friendly, and collaborative environment that embraces diversity and inclusivity.
 
-This Code of Conduct outlines expectations for participation in our community and applies to all spaces managed by the Time Warp IDE project, including but not limited to:
+This Code of Conduct outlines expectations for participation in our community and applies to all spaces managed by the Time Warp Studio project, including but not limited to:
 - GitHub repositories and discussions
 - Issue trackers and pull requests
 - Community forums and chat channels
@@ -108,7 +108,7 @@ These are excellent resources for building inclusive communities.
 
 ## Diversity and Inclusion
 
-We actively welcome and encourage participation from people of all backgrounds. We believe that diversity of thought, experience, and perspective strengthens our community and makes Time Warp IDE better for everyone.
+We actively welcome and encourage participation from people of all backgrounds. We believe that diversity of thought, experience, and perspective strengthens our community and makes Time Warp Studio better for everyone.
 
 We are committed to:
 - Creating accessible documentation

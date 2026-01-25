@@ -1,4 +1,4 @@
-"""Error hint and suggestion system for Time Warp IDE.
+"""Error hint and suggestion system for Time Warp Studio.
 
 Provides typo detection, command suggestions, and syntax checking
 to help users fix common programming mistakes.

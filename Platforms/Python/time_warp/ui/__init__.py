@@ -1,4 +1,4 @@
-"""UI module for Time Warp IDE."""
+"""UI module for Time Warp Studio."""
 
 from .canvas import TurtleCanvas
 from .editor import CodeEditor

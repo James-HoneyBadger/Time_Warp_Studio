@@ -1,6 +1,6 @@
 # IDE Settings and Customization
 
-Time Warp IDE allows extensive customization of the editor, display, and behavior to suit your preferences.
+Time Warp Studio allows extensive customization of the editor, display, and behavior to suit your preferences.
 
 ## Accessing Settings
 

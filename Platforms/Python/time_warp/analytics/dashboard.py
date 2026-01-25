@@ -13,7 +13,7 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 # ===== ENUMS =====
 
@@ -94,9 +94,7 @@ class UserMetrics:
     total_execution_time_ms: int = 0
     avg_execution_time_ms: float = 0.0
     favorite_language: str = ""
-    languages_used: Dict[str, int] = field(
-        default_factory=dict
-    )  # language -> count
+    languages_used: Dict[str, int] = field(default_factory=dict)  # language -> count
     last_active: datetime = field(default_factory=datetime.utcnow)
 
 
@@ -226,8 +224,7 @@ class AnalyticsEngine:
         success_count = sum(
             1
             for e in self.collector.get_events(hours=hours)
-            if e.event_type == EventType.CODE_RUN
-            and e.data.get("success", False)
+            if e.event_type == EventType.CODE_RUN and e.data.get("success", False)
         )
         error_count = sum(
             1
@@ -251,14 +248,11 @@ class AnalyticsEngine:
         """Get user-specific metrics"""
         events = self.collector.get_events(user_id=user_id, hours=hours)
 
-        total_executions = sum(
-            1 for e in events if e.event_type == EventType.CODE_RUN
-        )
+        total_executions = sum(1 for e in events if e.event_type == EventType.CODE_RUN)
         successful = sum(
             1
             for e in events
-            if e.event_type == EventType.CODE_RUN
-            and e.data.get("success", False)
+            if e.event_type == EventType.CODE_RUN and e.data.get("success", False)
         )
         failed = total_executions - successful
 
@@ -278,9 +272,7 @@ class AnalyticsEngine:
                 languages_used[e.data["language"]] += 1
 
         favorite_language = (
-            max(languages_used, key=languages_used.get)
-            if languages_used
-            else ""
+            max(languages_used, key=languages_used.get) if languages_used else ""
         )
 
         return UserMetrics(
@@ -293,9 +285,7 @@ class AnalyticsEngine:
             favorite_language=favorite_language,
             languages_used=dict(languages_used),
             last_active=(
-                max([e.timestamp for e in events])
-                if events
-                else datetime.utcnow()
+                max([e.timestamp for e in events]) if events else datetime.utcnow()
             ),
         )
 
@@ -303,13 +293,9 @@ class AnalyticsEngine:
         """Get current system health"""
         # Get recent error rate
         recent_events = self.collector.get_events(hours=1)
-        error_count = sum(
-            1 for e in recent_events if e.event_type == EventType.ERROR
-        )
+        error_count = sum(1 for e in recent_events if e.event_type == EventType.ERROR)
         total_count = len(recent_events)
-        error_rate = (
-            (error_count / total_count * 100) if total_count > 0 else 0
-        )
+        error_rate = (error_count / total_count * 100) if total_count > 0 else 0
 
         return SystemHealth(
             cpu_usage_percent=0.0,  # Would be filled by actual system monitoring
@@ -468,18 +454,18 @@ if __name__ == "__main__":
 
     # Get dashboard data
     data = dashboard.get_dashboard_data()
-    print(f"Performance Stats:")
+    print("Performance Stats:")
     print(f"  Avg Latency: {data['performance'].avg_latency_ms:.1f}ms")
     print(f"  P99 Latency: {data['performance'].p99_latency_ms:.1f}ms")
     print(f"  Error Rate: {data['health'].error_rate_percent:.1f}%")
 
-    print(f"\nMetrics Summary:")
+    print("\nMetrics Summary:")
     print(f"  Total Executions: {data['metrics_summary']['total_executions']}")
     print(f"  Total Errors: {data['metrics_summary']['total_errors']}")
 
     # Get user metrics
     user_metrics = dashboard.analytics.get_user_metrics("user1")
-    print(f"\nUser1 Metrics:")
+    print("\nUser1 Metrics:")
     print(f"  Total: {user_metrics.total_executions}")
     print(f"  Successful: {user_metrics.successful_executions}")
     print(f"  Favorite: {user_metrics.favorite_language}")

@@ -1,6 +1,6 @@
 # BASIC Programming Tutorial
 
-Learn BASIC programming language in Time Warp IDE. BASIC is a beginner-friendly language perfect for learning programming fundamentals.
+Learn BASIC programming language in Time Warp Studio. BASIC is a beginner-friendly language perfect for learning programming fundamentals.
 
 ---
 

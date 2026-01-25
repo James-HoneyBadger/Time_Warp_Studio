@@ -50,10 +50,13 @@ def load_fixture_for(example_path: Path) -> List[str]:
     """
     rel = example_path.relative_to(EXAMPLES)
     fixture = ROOT / "Examples" / "fixtures" / rel.with_suffix(".in")
+    print(f"DEBUG: Looking for fixture at {fixture}")
     if fixture.exists():
         text = fixture.read_text(encoding="utf-8")
         lines = [line.rstrip("\n") for line in text.splitlines()]
+        print(f"DEBUG: Loaded {len(lines)} input lines")
         return lines
+    print("DEBUG: Fixture not found")
     return []
 
 
@@ -105,14 +108,19 @@ def run_example(path: Path, inputs: List[str]):
         interp.load_program(code, language=interp.language)
 
     input_iter = iter(inputs)
+    last_output_len = 0
 
     all_output = []
     # For compiled C path we early-return above; interpreted languages continue
     while True:
         outputs = interp.execute(turtle)
-        for o in outputs:
+
+        # Only print new lines
+        new_lines = outputs[last_output_len:]
+        for o in new_lines:
             print(o)
             all_output.append(o)
+        last_output_len = len(outputs)
 
         if interp.pending_input:
             try:
@@ -123,16 +131,15 @@ def run_example(path: Path, inputs: List[str]):
                 continue
             except StopIteration:
                 print(
-                    "No more fixture input available — providing empty string to "
-                    "continue."
+                    "No more fixture input available — aborting execution to prevent infinite loop."
                 )
-                interp.provide_input("")
-                continue
+                break
 
         # Not pending input; execution ended or waiting — break loop
         break
 
-    print(f"--- Finished: {path} (lines drawn: {len(turtle.lines)}) ---\n")
+    line_count = len(turtle.lines)
+    print(f"--- Finished: {path} (lines drawn: {line_count}) ---\n")
     return all_output
 
 

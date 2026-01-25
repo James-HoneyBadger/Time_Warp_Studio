@@ -1,6 +1,6 @@
 """
 Turtle graphics state for Logo-style drawing
-Turtle graphics state management for Time Warp IDE
+Turtle graphics state management for Time Warp Studio
 """
 
 import math

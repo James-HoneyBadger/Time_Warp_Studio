@@ -1,4 +1,4 @@
-"""Setup configuration for Time Warp IDE - Root project."""
+"""Setup configuration for Time Warp Studio - Root project."""
 
 from setuptools import setup
 

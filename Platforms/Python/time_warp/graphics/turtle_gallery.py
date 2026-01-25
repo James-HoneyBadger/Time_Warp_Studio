@@ -104,9 +104,7 @@ class TurtleGallery:
             raise ValueError("No recording to save")
 
         duration_ms = (
-            self.recording_steps[-1].timestamp_ms
-            if self.recording_steps
-            else 0
+            self.recording_steps[-1].timestamp_ms if self.recording_steps else 0
         )
 
         metadata = DrawingMetadata(
@@ -122,9 +120,7 @@ class TurtleGallery:
         )
 
         # Create safe filename
-        safe_title = "".join(
-            c for c in title if c.isalnum() or c in (" ", "-", "_")
-        )
+        safe_title = "".join(c for c in title if c.isalnum() or c in (" ", "-", "_"))
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"{safe_title}_{timestamp}.json"
         filepath = self.gallery_dir / filename
@@ -140,9 +136,7 @@ class TurtleGallery:
 
         return filepath
 
-    def load_drawing(
-        self, filepath: Path
-    ) -> tuple[DrawingMetadata, list[DrawingStep]]:
+    def load_drawing(self, filepath: Path) -> tuple[DrawingMetadata, list[DrawingStep]]:
         """Load a drawing from file."""
         with open(filepath, "r", encoding="utf-8") as f:
             data = json.load(f)
@@ -180,13 +174,11 @@ class TurtleGallery:
         svg_lines = [
             f'<svg width="{
                 metadata.canvas_width}" height="{
-                metadata.canvas_height}" '
-            'xmlns="http://www.w3.org/2000/svg">',
+                metadata.canvas_height}" ' 'xmlns="http://www.w3.org/2000/svg">',
             '  <rect width="100%" height="100%" fill="white"/>',
             f'  <g transform="translate({
                 metadata.canvas_width /
-                2}, '
-            f'{
+                2}, ' f'{
                     metadata.canvas_height /
                     2}) scale(1, -1)">',
         ]
@@ -236,9 +228,7 @@ class TurtleGallery:
             yield step, elapsed, total_time
 
 
-def create_share_link(
-    filepath: Path, base_url: str = "https://timewarp.art"
-) -> str:
+def create_share_link(filepath: Path, base_url: str = "https://timewarp.art") -> str:
     """Create a shareable link for a drawing (placeholder)."""
     # In a real implementation, this would upload to a sharing service
     return f"{base_url}/gallery/{filepath.stem}"

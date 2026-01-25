@@ -36,9 +36,7 @@ class PixelCanvas:
 
     def clear(self, color: str = "."):
         """Clear canvas to background color."""
-        self.grid = [
-            [color for _ in range(self.width)] for _ in range(self.height)
-        ]
+        self.grid = [[color for _ in range(self.width)] for _ in range(self.height)]
 
     def set_pixel(self, x: int, y: int, color: str):
         """Set individual pixel."""

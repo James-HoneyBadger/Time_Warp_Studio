@@ -13,7 +13,7 @@ import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 # ===== ENUMS =====
 
@@ -222,9 +222,7 @@ class MarketplaceService:
     ) -> List[PluginListing]:
         """Search marketplace plugins"""
         results = [
-            p
-            for p in self.listings.values()
-            if p.status == PublishStatus.PUBLISHED
+            p for p in self.listings.values() if p.status == PublishStatus.PUBLISHED
         ]
 
         if query:
@@ -249,9 +247,7 @@ class MarketplaceService:
     def get_trending_plugins(self, limit: int = 10) -> List[PluginListing]:
         """Get trending plugins"""
         plugins = [
-            p
-            for p in self.listings.values()
-            if p.status == PublishStatus.PUBLISHED
+            p for p in self.listings.values() if p.status == PublishStatus.PUBLISHED
         ]
 
         # Sort by downloads in last week (simplified)
@@ -325,15 +321,11 @@ class MarketplaceService:
         self, user_id: str, username: str, email: str
     ) -> DeveloperProfile:
         """Register as plugin developer"""
-        profile = DeveloperProfile(
-            user_id=user_id, username=username, email=email
-        )
+        profile = DeveloperProfile(user_id=user_id, username=username, email=email)
         self.developers[user_id] = profile
         return profile
 
-    def get_developer_profile(
-        self, user_id: str
-    ) -> Optional[DeveloperProfile]:
+    def get_developer_profile(self, user_id: str) -> Optional[DeveloperProfile]:
         """Get developer profile"""
         return self.developers.get(user_id)
 
@@ -376,9 +368,7 @@ class InstallationService:
         self.installations: Dict[str, Dict] = {}
         self.version_locks: Dict[str, str] = {}
 
-    def install_plugin(
-        self, plugin_id: str, version: str, user_id: str
-    ) -> bool:
+    def install_plugin(self, plugin_id: str, version: str, user_id: str) -> bool:
         """Install plugin for user"""
         key = f"{user_id}:{plugin_id}"
         self.installations[key] = {
@@ -399,11 +389,7 @@ class InstallationService:
 
     def get_installed_plugins(self, user_id: str) -> List[Dict]:
         """Get user's installed plugins"""
-        return [
-            v
-            for k, v in self.installations.items()
-            if k.startswith(f"{user_id}:")
-        ]
+        return [v for k, v in self.installations.items() if k.startswith(f"{user_id}:")]
 
     def check_updates(self, plugin_id: str) -> Optional[str]:
         """Check if plugin update available"""
@@ -453,9 +439,7 @@ if __name__ == "__main__":
     marketplace = MarketplaceService()
 
     # Register developer
-    dev = marketplace.register_developer(
-        "dev1", "john_dev", "john@example.com"
-    )
+    dev = marketplace.register_developer("dev1", "john_dev", "john@example.com")
     print(f"Developer registered: {dev.username}")
 
     # Publish plugin

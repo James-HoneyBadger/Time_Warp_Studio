@@ -1,16 +1,16 @@
 # Frequently Asked Questions (FAQ)
 
-Quick answers to common questions about Time Warp IDE.
+Quick answers to common questions about Time Warp Studio.
 
 ---
 
 ## General Questions
 
-### What is Time Warp IDE?
+### What is Time Warp Studio?
 
-Time Warp IDE is an educational programming environment that combines classic and modern programming languages in a single, easy-to-use interface. It's perfect for learning programming concepts through languages like BASIC, Logo, Python, and more.
+Time Warp Studio is a desktop educational programming environment built with Python and PySide6 (Qt6) that combines classic and modern programming languages in a single application. It's perfect for learning programming concepts through languages like BASIC, Logo, and PILOT with integrated turtle graphics.
 
-### Who should use Time Warp IDE?
+### Who should use Time Warp Studio?
 
 - Students learning to program
 - Teachers in computer science classes
@@ -18,11 +18,11 @@ Time Warp IDE is an educational programming environment that combines classic an
 - People wanting to learn graphics programming
 - Educators exploring different language paradigms
 
-### Is Time Warp IDE free?
+### Is Time Warp Studio free?
 
-Yes! Time Warp IDE is open source and completely free under the Apache 2.0 license.
+Yes! Time Warp Studio is open source and completely free under the Apache 2.0 license.
 
-### Can I use Time Warp IDE commercially?
+### Can I use Time Warp Studio commercially?
 
 Yes. The Apache 2.0 license permits commercial use. See LICENSE file for details.
 
@@ -32,10 +32,11 @@ Yes. The Apache 2.0 license permits commercial use. See LICENSE file for details
 
 ### What are the system requirements?
 
-- **Python 3.8+** (3.11+ recommended)
-- **2GB RAM minimum** (4GB+ recommended)
-- **Modern CPU** with SSE4.2 support (2012+)
+- **Python 3.10+** (3.11+ recommended)
+- **4GB RAM minimum** (8GB+ recommended)
+- **Modern CPU** with SSSE3/SSE4 support (most from 2012+)
 - **Operating System:** Linux, macOS, or Windows
+- **PySide6** (Qt6) - installed automatically with pip
 
 ### Why do I get "Illegal instruction" error?
 
@@ -46,7 +47,7 @@ Your CPU lacks required features (SSSE3, SSE4.1, SSE4.2, POPCNT). This commonly 
 
 **Solution:** Use a newer physical computer or cloud VM.
 
-### How do I install Time Warp IDE?
+### How do I install Time Warp Studio?
 
 1. Clone: `git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git`
 2. Create venv: `python3 -m venv .venv_new`
@@ -56,11 +57,11 @@ Your CPU lacks required features (SSSE3, SSE4.1, SSE4.2, POPCNT). This commonly 
 
 See [Getting Started Guide](guides/01-getting-started.md) for details.
 
-### Does Time Warp IDE run on Windows?
+### Does Time Warp Studio run on Windows?
 
 Yes! All steps work on Windows. Use `.venv_new\Scripts\activate` instead of `source`.
 
-### Does Time Warp IDE run on Mac?
+### Does Time Warp Studio run on Mac?
 
 Yes! Works on both Intel and Apple Silicon Macs.
 
@@ -255,7 +256,7 @@ Provide:
 
 ## Development & Contributing
 
-### Can I contribute to Time Warp IDE?
+### Can I contribute to Time Warp Studio?
 
 Yes! Please read [CODE_OF_CONDUCT.md](../../CODE_OF_CONDUCT.md) first, then:
 
@@ -277,7 +278,7 @@ Yes! Please read [CODE_OF_CONDUCT.md](../../CODE_OF_CONDUCT.md) first, then:
 
 See [Extending Time Warp](guides/09-extending.md) for detailed instructions.
 
-### Can I use Time Warp IDE code in my project?
+### Can I use Time Warp Studio code in my project?
 
 Yes, under Apache 2.0 license terms. See LICENSE file.
 

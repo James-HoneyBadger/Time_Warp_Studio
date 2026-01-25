@@ -8,7 +8,6 @@ Adds:
 - Interactive REPL support
 """
 
-import json
 import subprocess
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
@@ -377,25 +376,21 @@ if __name__ == "__main__":
     # Example: Execute Ruby
     ruby_executor = LanguageRegistry.get("ruby")
     if ruby_executor:
-        result = ruby_executor.execute(
-            """
+        result = ruby_executor.execute("""
 puts "Hello, Ruby!"
 5.times { |i| puts i }
-"""
-        )
+""")
         print(f"Ruby Output:\n{result.output}")
 
     # Example: Execute JavaScript
     js_executor = LanguageRegistry.get("javascript")
     if js_executor:
-        result = js_executor.execute(
-            """
+        result = js_executor.execute("""
 console.log("Hello, JavaScript!");
 for (let i = 0; i < 5; i++) {
   console.log(i);
 }
-"""
-        )
+""")
         print(f"JavaScript Output:\n{result.output}")
 
     # List available languages

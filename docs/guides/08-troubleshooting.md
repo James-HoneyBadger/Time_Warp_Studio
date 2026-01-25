@@ -1,6 +1,6 @@
 # Troubleshooting Guide
 
-Solutions to common Time Warp IDE issues.
+Solutions to common Time Warp Studio issues.
 
 ---
 

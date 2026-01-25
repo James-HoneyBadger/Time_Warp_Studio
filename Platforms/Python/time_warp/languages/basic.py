@@ -1,6 +1,6 @@
 # pylint: disable=too-many-lines
 """
-BASIC language executor for Time Warp IDE.
+BASIC language executor for Time Warp Studio.
 Handles BASIC-specific commands and syntax.
 """
 
@@ -99,11 +99,16 @@ def execute_basic(
     # Strip leading/trailing whitespace from the command line
     command = command.strip()
 
+    # Ignore label-only lines (commands ending in colon not followed by commands)
+    if command.endswith(":") and " " not in command:
+        return ""
+
     # Handle multi-statement lines
     if (
         ":" in command
         and not command.upper().startswith("REM")
         and not command.upper().startswith("'")
+        and not command.upper().startswith("IF ")
     ):
         statements = _split_statements(command)
         if len(statements) > 1:
@@ -476,9 +481,7 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
                 interpreter.set_typed_variable(var_name, expr[1:-1])
             # Handle special string functions
             elif expr_upper == "INKEY$":
-                interpreter.set_typed_variable(
-                    var_name, interpreter.get_inkey()
-                )
+                interpreter.set_typed_variable(var_name, interpreter.get_inkey())
             elif expr_upper == "TIME$":
                 # pylint: disable=import-outside-toplevel
                 from ..core.game_support import get_game_state
@@ -513,9 +516,7 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
             # pylint: disable=import-outside-toplevel
             from ..core.game_support import get_game_state
 
-            interpreter.set_typed_variable(
-                var_name, get_game_state().get_timer_value()
-            )
+            interpreter.set_typed_variable(var_name, get_game_state().get_timer_value())
             logger.debug(f"LET {var_name} = TIMER")
             return ""
 
@@ -579,6 +580,7 @@ def _basic_if(
     then_pos = args_upper.find(" THEN ")
     condition = args[:then_pos].strip()
     then_part = args[then_pos + 6 :].strip()
+
     try:
         result = interpreter.evaluate_expression(condition)
         condition_true = abs(result) > 0.0001
@@ -652,9 +654,7 @@ def _basic_for(interpreter: "Interpreter", args: str) -> str:
             for_line=interpreter.current_line,
         )
         interpreter.for_stack.append(context)
-        logger.debug(
-            f"FOR {var_name} = {start_val} TO {end_val} STEP {step_val}"
-        )
+        logger.debug(f"FOR {var_name} = {start_val} TO {end_val} STEP {step_val}")
     except ValidationError as e:
         return f"❌ {e}\n"
     except (ValueError, TypeError, ZeroDivisionError) as e:
@@ -779,12 +779,8 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
             interpreter.screen_mode = ScreenMode.TEXT
             if len(parts) >= 3:
                 try:
-                    cols_str = validate_numeric(
-                        parts[1].strip(), param_name="columns"
-                    )
-                    rows_str = validate_numeric(
-                        parts[2].strip(), param_name="rows"
-                    )
+                    cols_str = validate_numeric(parts[1].strip(), param_name="columns")
+                    rows_str = validate_numeric(parts[2].strip(), param_name="rows")
                     cols = int(cols_str)
                     rows = int(rows_str)
                     validate_range(cols, 40, 120, "columns")
@@ -804,12 +800,8 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
             interpreter.screen_mode = ScreenMode.GRAPHICS
             if len(parts) >= 3:
                 try:
-                    width_str = validate_numeric(
-                        parts[1].strip(), param_name="width"
-                    )
-                    height_str = validate_numeric(
-                        parts[2].strip(), param_name="height"
-                    )
+                    width_str = validate_numeric(parts[1].strip(), param_name="width")
+                    height_str = validate_numeric(parts[2].strip(), param_name="height")
                     width = int(width_str)
                     height = int(height_str)
                     validate_range(width, 320, 1920, "width")
@@ -1559,9 +1551,7 @@ def _basic_say(_interpreter: "Interpreter", args: str) -> str:
 # ============================================================================
 
 
-def _basic_shape(
-    interpreter: "Interpreter", args: str, turtle: "TurtleState"
-) -> str:
+def _basic_shape(interpreter: "Interpreter", args: str, turtle: "TurtleState") -> str:
     """SHAPE name, size [, fill] - Draw a pre-built shape.
 
     Shapes: POLYGON, STAR, HEART, ARROW, SPIRAL, GEAR, CROSS, DIAMOND
@@ -1664,9 +1654,7 @@ def _basic_particle(interpreter: "Interpreter", args: str) -> str:
         return f"❌ PARTICLE error: {e}\n"
 
 
-def _basic_fractal(
-    interpreter: "Interpreter", args: str, turtle: "TurtleState"
-) -> str:
+def _basic_fractal(interpreter: "Interpreter", args: str, turtle: "TurtleState") -> str:
     """FRACTAL name [, iterations [, size]] - Draw L-System fractal.
 
     Available fractals: KOCH, SIERPINSKI, DRAGON, PLANT, TREE, HILBERT,
@@ -1938,9 +1926,7 @@ def _basic_shell(interpreter: "Interpreter", args: str) -> str:
 
     # For security, log but don't execute in IDE
     logger.warning(f"SHELL command attempted (blocked for security): {cmd}")
-    return (
-        f"ℹ️ SHELL commands are disabled in IDE for security. Command: {cmd}\n"
-    )
+    return f"ℹ️ SHELL commands are disabled in IDE for security. Command: {cmd}\n"
 
 
 def _basic_joyinit(_interpreter: "Interpreter") -> str:
@@ -1963,9 +1949,7 @@ def _basic_joyinit(_interpreter: "Interpreter") -> str:
             count = len(manager.gamepads)
             if count > 0:
                 return f"🎮 Gamepad initialized ({count} device(s) found)\n"
-            return (
-                f"🎮 Gamepad system ready (backend: {manager.backend_name})\n"
-            )
+            return f"🎮 Gamepad system ready (backend: {manager.backend_name})\n"
         return "❌ No gamepad backend available (install pygame or inputs)\n"
     except (ImportError, RuntimeError) as e:
         return f"❌ JOYINIT error: {e}\n"

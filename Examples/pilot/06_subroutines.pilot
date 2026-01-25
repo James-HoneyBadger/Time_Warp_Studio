@@ -49,7 +49,7 @@ REMARK SUBROUTINE: Greet User
 REMARK ================================================
 RULE greet_user:
     PRINT Hello, $name!
-    PRINT Welcome to Time Warp IDE PILOT
+    PRINT Welcome to Time Warp Studio PILOT
 RETURN
 
 REMARK ================================================

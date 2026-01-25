@@ -44,31 +44,6 @@ jobs:
       - name: Run Pylint
         run: pylint Platforms/Python/ --disable=C0111 || true
 
-  lint-frontend:
-    runs-on: ubuntu-latest
-    name: Lint TypeScript Frontend
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'Platforms/web/package-lock.json'
-      
-      - name: Install dependencies
-        working-directory: Platforms/web
-        run: npm ci
-      
-      - name: Run ESLint
-        working-directory: Platforms/web
-        run: npm run lint
-      
-      - name: Run Prettier check
-        working-directory: Platforms/web
-        run: npm run format:check
-
   # ===== TESTING =====
   
   test-backend:
@@ -137,40 +112,12 @@ jobs:
           name: backend-test-results
           path: Platforms/Python/test-results.xml
 
-  test-frontend:
-    runs-on: ubuntu-latest
-    name: Test TypeScript Frontend
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'Platforms/web/package-lock.json'
-      
-      - name: Install dependencies
-        working-directory: Platforms/web
-        run: npm ci
-      
-      - name: Run Jest tests with coverage
-        working-directory: Platforms/web
-        run: npm run test -- --coverage --passWithNoTests
-      
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v3
-        with:
-          files: ./Platforms/web/coverage/coverage-final.json
-          flags: frontend
-          fail_ci_if_error: false
-
   # ===== BUILD =====
   
   build-docker:
     runs-on: ubuntu-latest
     name: Build Docker Image
-    needs: [ lint-backend, lint-frontend, test-backend, test-frontend ]
+    needs: [ lint-backend, test-backend ]
     permissions:
       contents: read
       packages: write
@@ -253,17 +200,6 @@ jobs:
         run: |
           pip install safety
           safety check -r Platforms/Python/requirements.txt --json || true
-      
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: 'Platforms/web/package-lock.json'
-      
-      - name: Check npm vulnerabilities
-        working-directory: Platforms/web
-        run: npm audit --audit-level=high || true
 
   # ===== DEPLOYMENT =====
   
@@ -351,7 +287,7 @@ jobs:
   publish-docs:
     runs-on: ubuntu-latest
     name: Publish Documentation
-    needs: [ test-backend, test-frontend ]
+    needs: [ test-backend ]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     steps:
@@ -362,10 +298,6 @@ jobs:
           mkdir -p docs/generated
           cd Platforms/Python
           python -m pdoc --html --output-directory ../../docs/generated core handlers
-      
-      - name: Generate TypeScript documentation
-        working-directory: Platforms/web
-        run: npm run docs
       
       - name: Deploy docs to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
@@ -379,15 +311,13 @@ jobs:
   build-status:
     runs-on: ubuntu-latest
     name: Build Status Check
-    needs: [ lint-backend, lint-frontend, test-backend, test-frontend, build-docker ]
+    needs: [ lint-backend, test-backend, build-docker ]
     if: always()
     steps:
       - name: Check build status
         run: |
           if [ "${{ needs.lint-backend.result }}" != "success" ] || \
-             [ "${{ needs.lint-frontend.result }}" != "success" ] || \
              [ "${{ needs.test-backend.result }}" != "success" ] || \
-             [ "${{ needs.test-frontend.result }}" != "success" ] || \
              [ "${{ needs.build-docker.result }}" != "success" ]; then
             echo "Build failed!"
             exit 1

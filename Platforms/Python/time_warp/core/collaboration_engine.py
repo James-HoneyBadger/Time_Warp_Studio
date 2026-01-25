@@ -72,9 +72,7 @@ class OperationalTransform:
                 )
             elif op.type == "delete":
                 end_pos = op.position + len(op.content)
-                self.content = (
-                    self.content[: op.position] + self.content[end_pos:]
-                )
+                self.content = self.content[: op.position] + self.content[end_pos:]
 
             self.version += 1
             op.version = self.version
@@ -87,9 +85,7 @@ class OperationalTransform:
             logger.error(f"Error applying operation: {e}")
             return False, f"Error applying operation: {str(e)}"
 
-    def _transform_operations(
-        self, op_a: Operation, op_b: Operation
-    ) -> Operation:
+    def _transform_operations(self, op_a: Operation, op_b: Operation) -> Operation:
         """
         Transform operation A against operation B
         Used when operations are concurrent
@@ -118,12 +114,9 @@ class OperationalTransform:
         elif op_a.type == "insert" and op_b.type == "delete":
             if op_b.position < op_a.position:
                 # Deletion before insertion
-                op_a.position -= min(
-                    len(op_b.content), op_a.position - op_b.position
-                )
-            elif (
-                op_b.position >= op_a.position
-                and op_b.position < op_a.position + len(op_a.content)
+                op_a.position -= min(len(op_b.content), op_a.position - op_b.position)
+            elif op_b.position >= op_a.position and op_b.position < op_a.position + len(
+                op_a.content
             ):
                 # Deletion overlaps with insertion
                 pass  # Position stays same
@@ -137,17 +130,13 @@ class OperationalTransform:
                 # Insertion within deletion range
                 op_a.content = (
                     op_a.content[: op_b.position - op_a.position]
-                    + op_a.content[
-                        op_b.position - op_a.position + len(op_b.content) :
-                    ]
+                    + op_a.content[op_b.position - op_a.position + len(op_b.content) :]
                 )
 
         # Delete vs Delete
         elif op_a.type == "delete" and op_b.type == "delete":
             if op_b.position < op_a.position:
-                op_a.position -= min(
-                    len(op_b.content), op_a.position - op_b.position
-                )
+                op_a.position -= min(len(op_b.content), op_a.position - op_b.position)
 
         return op_a
 
@@ -203,9 +192,7 @@ class OperationalTransform:
             self.operation_history = old_history  # Restore history
             return False
 
-    def detect_conflict(
-        self, op_a: Operation, op_b: Operation
-    ) -> Tuple[bool, str]:
+    def detect_conflict(self, op_a: Operation, op_b: Operation) -> Tuple[bool, str]:
         """
         Detect potential conflicts between operations
         Returns: (is_conflict, description)

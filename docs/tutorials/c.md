@@ -1,6 +1,6 @@
-# C Programming with Time Warp IDE
+# C Programming with Time Warp Studio
 
-C is a powerful, fundamental programming language. Time Warp IDE provides experimental C support for those who want to explore systems programming concepts.
+C is a powerful, fundamental programming language. Time Warp Studio provides experimental C support for those who want to explore systems programming concepts.
 
 ## Quick Start
 
@@ -479,7 +479,7 @@ free(ptr);
 - **Debug**: Use printf() to debug values
 - **Experiment**: Modify examples to understand concepts
 
-## Running C Programs in Time Warp IDE
+## Running C Programs in Time Warp Studio
 
 1. Create a `.c` file with your program
 2. Select "C" from the language dropdown

@@ -1,6 +1,6 @@
 # pylint: disable=too-few-public-methods
 """
-L-System fractal generator for Time Warp IDE.
+L-System fractal generator for Time Warp Studio.
 Implements Lindenmayer systems for fractal generation.
 """
 
@@ -301,9 +301,7 @@ class FractalGenerator:
         result_string = lsystem.iterate(iterations)
 
         # Render it
-        return self.renderer.render(
-            turtle, result_string, lsystem.angle, step_size
-        )
+        return self.renderer.render(turtle, result_string, lsystem.angle, step_size)
 
     def draw_preset(
         self,
@@ -326,9 +324,7 @@ class FractalGenerator:
         lsystem = self.get_preset(preset_name)
         if not lsystem:
             available = ", ".join(self.get_preset_names())
-            return (
-                f"❌ Unknown fractal: {preset_name}. Available: {available}\n"
-            )
+            return f"❌ Unknown fractal: {preset_name}. Available: {available}\n"
 
         return self.generate(turtle, lsystem, iterations, step_size)
 

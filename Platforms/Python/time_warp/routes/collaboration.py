@@ -3,12 +3,11 @@ WebSocket Routes for Real-time Collaboration
 Handles all WebSocket connections and message routing
 """
 
-import json
 import logging
 import uuid
 from typing import Dict
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 from ..core.chat_service import ChatService
 from ..core.collaboration_engine import OperationalTransform
@@ -118,9 +117,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
             # Typing event
             elif message_type == "typing":
                 is_typing = data.get("isTyping", False)
-                update = presence_service.set_typing(
-                    connection_id, room_id, is_typing
-                )
+                update = presence_service.set_typing(connection_id, room_id, is_typing)
                 await connection_manager.broadcast_to_room(
                     room_id,
                     update,
@@ -192,9 +189,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
                         "version": ot.version,
                         "users": users,
                         "messages": messages,
-                        "presence": presence_service.get_room_presence(
-                            room_id
-                        ),
+                        "presence": presence_service.get_room_presence(room_id),
                     },
                 )
 
@@ -215,9 +210,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
         raise
 
 
-async def handle_code_change(
-    room_id, connection_id, user_id, data, manager, engines
-):
+async def handle_code_change(room_id, connection_id, user_id, data, manager, engines):
     """Handle code change with Operational Transform"""
     ot = get_ot_engine(room_id)
 

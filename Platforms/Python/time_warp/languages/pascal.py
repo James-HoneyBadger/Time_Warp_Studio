@@ -159,9 +159,7 @@ def _find_end_for_begin(interpreter: "Interpreter", begin_idx: int) -> int:
 def _parse_case_blocks(interpreter: "Interpreter", case_idx: int):
     lines = interpreter.program_lines
     j = case_idx + 1
-    blocks: List[Tuple[str, int, int]] = (
-        []
-    )  # (label|"__ELSE__", begin_inner, end_idx)
+    blocks: List[Tuple[str, int, int]] = []  # (label|"__ELSE__", begin_inner, end_idx)
     current_label = None
     current_begin = None
     while j < len(lines):
@@ -191,11 +189,7 @@ def _parse_case_blocks(interpreter: "Interpreter", case_idx: int):
             current_begin = None
             j += 1
             continue
-        if (
-            _is_begin(s)
-            and current_label is not None
-            and current_begin is None
-        ):
+        if _is_begin(s) and current_label is not None and current_begin is None:
             begin_idx = j
             end_idx = _find_end_for_begin(interpreter, begin_idx)
             blocks.append((current_label, begin_idx + 1, end_idx))
@@ -679,9 +673,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
                 else:
                     interpreter.pascal_block_stack.pop()
                     return ""
-            elif (
-                top.get("type") == "if" and top.get("skip_else_to") is not None
-            ):
+            elif top.get("type") == "if" and top.get("skip_else_to") is not None:
                 _skip_to = top.get("skip_else_to")
                 interpreter.current_line = _skip_to - 1
                 interpreter.pascal_block_stack.pop()
@@ -712,16 +704,11 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
 
     # Procedure/function return: when reaching the end index
     # of a called proc, return
-    if (
-        hasattr(interpreter, "pascal_call_stack")
-        and interpreter.pascal_call_stack
-    ):
+    if hasattr(interpreter, "pascal_call_stack") and interpreter.pascal_call_stack:
         frame = interpreter.pascal_call_stack[-1]
-        print(
-            f"DEBUG: Check return. Line={
+        print(f"DEBUG: Check return. Line={
                 interpreter.current_line}, End={
-                frame.get('end')}"
-        )
+                frame.get('end')}")
         if interpreter.current_line == frame.get("end"):
             backups = frame.get("backups") or []
             # Skip restoring values for by-ref parameters
@@ -937,10 +924,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
             val = "" if suf == "$" else 0
         # Handle by-reference parameter aliasing
         var_key = up + (suf or "#")
-        if (
-            hasattr(interpreter, "pascal_call_stack")
-            and interpreter.pascal_call_stack
-        ):
+        if hasattr(interpreter, "pascal_call_stack") and interpreter.pascal_call_stack:
             top = interpreter.pascal_call_stack[-1]
             aliases = top.get("aliases", {})
             target_key = aliases.get(var_key)

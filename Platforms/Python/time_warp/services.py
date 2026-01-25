@@ -6,7 +6,7 @@ Implements room management, sync, and collaboration services
 import logging
 import uuid
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -92,6 +92,10 @@ class RoomService:
         """Get active members in room"""
         return await self.member_repo.get_active_members(room_id)
 
+    async def get_user_rooms(self, user_id: str) -> List[Room]:
+        """Get all rooms user is a member of"""
+        return await self.repo.get_user_rooms(user_id)
+
     async def delete_room(self, room_id: str) -> bool:
         """Delete room and all related data"""
         return await self.repo.delete(room_id)
@@ -130,9 +134,7 @@ class SyncService:
         logger.info(f"Recorded operation v{version} in room {room_id}")
         return operation
 
-    async def get_operations_since(
-        self, room_id: str, version: int
-    ) -> List[Operation]:
+    async def get_operations_since(self, room_id: str, version: int) -> List[Operation]:
         """Get operations after a version"""
         return await self.op_repo.get_operations_since(room_id, version)
 
@@ -154,9 +156,7 @@ class SyncService:
         logger.info(f"Created snapshot v{version} for room {room_id}")
         return snapshot
 
-    async def get_latest_snapshot(
-        self, room_id: str
-    ) -> Optional[DocumentSnapshot]:
+    async def get_latest_snapshot(self, room_id: str) -> Optional[DocumentSnapshot]:
         """Get latest snapshot"""
         return await self.snapshot_repo.get_latest_snapshot(room_id)
 
@@ -205,9 +205,7 @@ class ChatService:
             return True
         return False
 
-    async def add_reaction(
-        self, message_id: str, emoji: str, user_id: str
-    ) -> bool:
+    async def add_reaction(self, message_id: str, emoji: str, user_id: str) -> bool:
         """Add emoji reaction to message"""
         message = await self.repo.get(message_id)
         if message:

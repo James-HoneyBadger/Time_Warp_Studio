@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-Successfully upgraded Time Warp IDE from version 5.1.0 to version 6.0.0 with modernized Python support (3.10+), updated dependencies, and comprehensive documentation integration. All code has been verified for syntax correctness and the IDE launches successfully with the new version.
+Successfully upgraded Time Warp Studio from version 5.1.0 to version 6.0.0 with modernized Python support (3.10+), updated dependencies, and comprehensive documentation integration. All code has been verified for syntax correctness and the IDE launches successfully with the new version.
 
 ---
 
@@ -100,7 +100,7 @@ python_version = "3.10"
 ```bash
 IDE Start: Successful
 Version Display: v6.0.0
-Window Title: "🎨 Time Warp IDE v6.0.0 - Python Edition"
+Window Title: "🎨 Time Warp Studio v6.0.0 - Python Edition"
 About Dialog: "Version 6.0.0 — Modern PySide6 Release"
 Critical Errors: None
 ```
@@ -261,7 +261,7 @@ pip install --upgrade time-warp-ide
 
 ### For Users
 1. Update to Python 3.10+ if needed
-2. Upgrade Time Warp IDE to v6.0.0
+2. Upgrade Time Warp Studio to v6.0.0
 3. Run: `python Platforms/Python/time_warp_ide.py`
 4. Verify version in Help → About
 
@@ -329,7 +329,7 @@ pip install --upgrade time-warp-ide
 
 ## Conclusion
 
-Time Warp IDE v6.0.0 is a modernized, production-ready release featuring:
+Time Warp Studio v6.0.0 is a modernized, production-ready release featuring:
 - ✅ Current Python support (3.10-3.13)
 - ✅ Updated development tools
 - ✅ Comprehensive documentation

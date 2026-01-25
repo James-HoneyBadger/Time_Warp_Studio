@@ -1,8 +1,8 @@
 @echo off
 REM ============================================================================
-REM              TIME WARP IDE - LAUNCH SCRIPT (WINDOWS)
+REM              TIME WARP STUDIO - LAUNCH SCRIPT (WINDOWS)
 REM ============================================================================
-REM This script sets up and launches the Time Warp IDE with Python
+REM This script sets up and launches the Time Warp Studio with Python
 REM It automatically:
 REM  • Creates a virtual environment if needed
 REM  • Installs/updates all required dependencies
@@ -47,7 +47,7 @@ goto parse_args
 :args_done
 echo.
 echo ============================================================
-echo          TIME WARP IDE - LAUNCHER (Windows)
+echo          TIME WARP STUDIO - LAUNCHER (Windows)
 echo ============================================================
 echo.
 
@@ -128,7 +128,7 @@ if not exist "%IDE_SCRIPT%" (
 REM Launch the IDE
 echo.
 echo ============================================================
-echo              LAUNCHING TIME WARP IDE...
+echo              LAUNCHING TIME WARP STUDIO...
 echo ============================================================
 echo.
 echo Starting IDE...

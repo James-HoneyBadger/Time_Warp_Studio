@@ -1,6 +1,6 @@
-# Time Warp IDE - AI Coding Agent Instructions
+# Time Warp Studio - AI Coding Agent Instructions
 
-**Project:** Time Warp IDE - Educational multi-language programming environment  
+**Project:** Time Warp Studio - Educational multi-language programming environment  
 **Maintainer:** James Temple <james@honey-badger.org>  
 **Last Updated:** October 27, 2025
 
@@ -8,18 +8,20 @@
 
 ## Project Overview
 
-Time Warp IDE is an educational programming environment that unifies BASIC, PILOT, and Logo with integrated turtle graphics, IoT/robotics capabilities, and game development features.
+Time Warp Studio is an educational desktop programming environment built with Python and PySide6 (Qt6) that provides a unified IDE for learning BASIC, PILOT, and Logo with integrated turtle graphics.
 
-**Current State:** Python implementation (PySide6) is the sole actively maintained version.
+**Current State:** Native desktop application (Python/PySide6) - single actively maintained version.
 
 ## Architecture: The Big Picture
 
 ### Implementation
 
-- **Python (PySide6)** — primary and official version
-    - Entry point: `time_warp_ide.py` → Core: `Platforms/Python/time_warp/core/interpreter.py`
-    - Languages: BASIC, PILOT, Logo (+ Pascal, Prolog, C experimental)
-    - All UI state (editor, canvas, themes) lives outside language executors
+- **Desktop Application (Python/PySide6)** — primary and only maintained version
+    - Entry point: `Platforms/Python/time_warp_ide.py`
+    - Core: `Platforms/Python/time_warp/core/interpreter.py`
+    - Languages: BASIC, PILOT, Logo (core) + Pascal, Prolog, C (experimental)
+    - UI: PySide6 (Qt6) with modern desktop interface
+    - All UI state (editor, canvas, themes) managed by main application
 
 **Critical Design Decision:** Language executors are stateless command processors returning text output. All UI state (turtle canvas, output display, themes) lives in the main application, not the interpreter.
 
@@ -29,15 +31,17 @@ Each language executor in Python handles parsing and updates interpreter state, 
 
 ## Critical Workflows
 
-### Running the IDE
+### Running the Desktop IDE
 
 ```bash
-# Primary method (auto-installs PySide6 if needed)
-python Time_Warp_IDE.py
+# Primary method
+python Platforms/Python/time_warp_ide.py
 
-# System Requirements Check
-# IDE exits with clear error if CPU lacks SSSE3/SSE4.1/SSE4.2/POPCNT
-# Common on older VMs/QEMU instances - must run on physical hardware or modern cloud
+# System Requirements
+# - Python 3.10+
+# - PySide6 (auto-installed if needed)
+# - CPU with SSSE3/SSE4.1/SSE4.2/POPCNT support
+# Note: Older VMs/QEMU may lack required CPU features
 ```
 
 ### Testing Strategy

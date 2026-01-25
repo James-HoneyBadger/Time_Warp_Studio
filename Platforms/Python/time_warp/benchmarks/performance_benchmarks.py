@@ -15,7 +15,7 @@ import statistics
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Callable, List, Optional
 
 # ===== DATA CLASSES =====
 
@@ -115,9 +115,7 @@ class BenchmarkRunner:
         suite = BenchmarkSuite(suite_name=name)
         suite.results = self.results
         suite.end_time = datetime.utcnow()
-        suite.total_duration = (
-            suite.end_time - suite.start_time
-        ).total_seconds()
+        suite.total_duration = (suite.end_time - suite.start_time).total_seconds()
         return suite
 
 
@@ -190,9 +188,7 @@ class DebuggerBenchmarks:
 
         def test():
             counter[0] += 1
-            engine.create_breakpoint(
-                file="test.bas", line=counter[0], condition=None
-            )
+            engine.create_breakpoint(file="test.bas", line=counter[0], condition=None)
 
         return self.runner.run_benchmark("debugger_breakpoint", test)
 
@@ -257,9 +253,7 @@ class AIBenchmarks:
 
         def test():
             counter[0] += 1
-            generator.create_learning_path(
-                f"user_{counter[0]}", LearningLevel.BEGINNER
-            )
+            generator.create_learning_path(f"user_{counter[0]}", LearningLevel.BEGINNER)
 
         return self.runner.run_benchmark("ai_learning_path", test)
 

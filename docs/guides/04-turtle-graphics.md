@@ -1,6 +1,6 @@
 # Turtle Graphics Guide
 
-Master the turtle graphics system in Time Warp IDE.
+Master the turtle graphics system in Time Warp Studio.
 
 ---
 

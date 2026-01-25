@@ -17,7 +17,7 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from enum import Enum
 from functools import wraps
-from typing import Any, Callable, Dict, Generic, List, Optional, TypeVar
+from typing import Any, Callable, Dict, List, Optional
 
 # ===== ERROR TYPES =====
 
@@ -181,9 +181,7 @@ class CircuitBreakerStrategy(RecoveryStrategy):
         if self.open:
             # Check if timeout has passed
             if self.last_failure_time:
-                elapsed = (
-                    datetime.utcnow() - self.last_failure_time
-                ).total_seconds()
+                elapsed = (datetime.utcnow() - self.last_failure_time).total_seconds()
                 if elapsed > self.timeout:
                     self.open = False
                     self.failure_count = 0
@@ -264,9 +262,7 @@ class ErrorHandler:
             if strategy.can_recover(error, context):
                 if strategy.recover(error, context):
                     record.resolved = True
-                    record.resolution_time = (
-                        datetime.utcnow() - record.timestamp
-                    )
+                    record.resolution_time = datetime.utcnow() - record.timestamp
                     return True
 
         return False
@@ -374,8 +370,7 @@ class Monitor:
 
         return {
             "count": len(recent),
-            "avg_response_time": sum(m.response_time_ms for m in recent)
-            / len(recent),
+            "avg_response_time": sum(m.response_time_ms for m in recent) / len(recent),
             "max_response_time": max(m.response_time_ms for m in recent),
             "min_response_time": min(m.response_time_ms for m in recent),
             "avg_memory": sum(m.memory_mb for m in recent) / len(recent),
@@ -426,7 +421,7 @@ def monitor_performance(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
-        start_memory = get_memory_usage()
+        _start_memory = get_memory_usage()
 
         try:
             result = func(*args, **kwargs)
@@ -458,7 +453,7 @@ def retry(max_attempts: int = 3, delay: float = 1.0):
             for attempt in range(max_attempts):
                 try:
                     return func(*args, **kwargs)
-                except Exception as e:
+                except Exception:
                     if attempt == max_attempts - 1:
                         raise
                     time.sleep(delay)

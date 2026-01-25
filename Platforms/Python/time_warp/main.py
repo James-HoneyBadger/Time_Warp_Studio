@@ -11,12 +11,10 @@ from typing import AsyncGenerator
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from .db import engine, get_session
 from .routes import rooms, sync, users
 from .socketio_config import SocketIOManager
-from .websocket_handlers import WebSocketEventHandler
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -30,7 +28,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     Manage application lifecycle
     """
     # Startup
-    logger.info("Starting Time Warp IDE Server...")
+    logger.info("Starting Time Warp Studio Server...")
 
     # Initialize database
     try:
@@ -51,14 +49,14 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
     yield
 
     # Shutdown
-    logger.info("Shutting down Time Warp IDE Server...")
+    logger.info("Shutting down Time Warp Studio Server...")
     await engine.dispose()
     logger.info("Database connection closed")
 
 
 # Create FastAPI application
 app = FastAPI(
-    title="Time Warp IDE Server",
+    title="Time Warp Studio Server",
     description="Real-time collaborative programming IDE backend",
     version="4.5.2",
     lifespan=lifespan,
@@ -108,7 +106,7 @@ async def health_check():
 async def root():
     """Root endpoint"""
     return {
-        "message": "Time Warp IDE Server",
+        "message": "Time Warp Studio Server",
         "version": "4.5.2",
         "docs": "/docs",
         "health": "/health",

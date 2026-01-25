@@ -153,9 +153,7 @@ class GamepadManager:
                 joy = pygame.joystick.Joystick(i)
                 joy.init()
                 self._pygame_joysticks[i] = joy
-                self.gamepads[i] = GamepadState(
-                    connected=True, name=joy.get_name()
-                )
+                self.gamepads[i] = GamepadState(connected=True, name=joy.get_name())
 
             joy = self._pygame_joysticks[i]
             state = self.gamepads[i]
@@ -212,9 +210,7 @@ class GamepadManager:
             events = inputs.get_gamepad()
             for event in events:
                 if 0 not in self.gamepads:
-                    self.gamepads[0] = GamepadState(
-                        connected=True, name="Gamepad"
-                    )
+                    self.gamepads[0] = GamepadState(connected=True, name="Gamepad")
 
                 state = self.gamepads[0]
 

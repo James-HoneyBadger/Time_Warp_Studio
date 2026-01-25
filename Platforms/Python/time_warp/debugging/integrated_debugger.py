@@ -13,7 +13,7 @@ Provides:
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Optional, Tuple
 
 # ===== ENUMS =====
 
@@ -306,9 +306,7 @@ class DebuggerEngine:
         session = self.sessions.get(session_id)
         return session.call_stack if session else []
 
-    def get_variables(
-        self, session_id: str, frame_id: int = 0
-    ) -> Dict[str, Variable]:
+    def get_variables(self, session_id: str, frame_id: int = 0) -> Dict[str, Variable]:
         """Get variables in frame"""
         session = self.sessions.get(session_id)
         if not session or frame_id >= len(session.call_stack):
@@ -356,7 +354,7 @@ class DebugConsole:
 
         elif cmd == "watch" and len(args) >= 1:
             expr = " ".join(args)
-            watch = self.debugger.add_watch(
+            self.debugger.add_watch(
                 (
                     self.debugger.current_session.id
                     if self.debugger.current_session
@@ -417,9 +415,7 @@ class PerformanceProfiler:
 
     def get_hotspots(self, limit: int = 10) -> List[Tuple[str, float]]:
         """Get slowest functions"""
-        items = sorted(
-            self.function_times.items(), key=lambda x: x[1], reverse=True
-        )
+        items = sorted(self.function_times.items(), key=lambda x: x[1], reverse=True)
         return items[:limit]
 
     def get_profile_summary(self) -> Dict:

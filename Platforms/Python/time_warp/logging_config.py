@@ -1,4 +1,4 @@
-"""Logging configuration for Time Warp IDE.
+"""Logging configuration for Time Warp Studio.
 
 Provides structured logging with console and optional file output,
 replacing ad-hoc print() statements throughout the codebase.
@@ -28,7 +28,7 @@ def setup_logging(
     log_file: Optional[Path] = None,
     include_timestamps: bool = True,
 ) -> logging.Logger:
-    """Configure Time Warp IDE logging system.
+    """Configure Time Warp Studio logging system.
 
     Sets up console and optional file logging with consistent formatting.
     This function should be called once at application startup.
@@ -97,9 +97,7 @@ def configure_for_testing(verbose: bool = False) -> logging.Logger:
         Root logger instance
     """
     level = logging.DEBUG if verbose else logging.WARNING
-    return setup_logging(
-        log_level=level, log_file=None, include_timestamps=False
-    )
+    return setup_logging(log_level=level, log_file=None, include_timestamps=False)
 
 
 def configure_for_ci(log_file: Optional[Path] = None) -> logging.Logger:

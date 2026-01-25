@@ -1,6 +1,8 @@
 # Documentation Index
 
-Welcome to the Time Warp IDE documentation! This page helps you navigate all available resources.
+Welcome to the Time Warp Studio documentation! This page helps you navigate all available resources.
+
+> **Note:** Time Warp Studio is a native desktop application built with Python and PySide6 (Qt6). All documentation refers to the desktop version.
 
 ## Getting Started
 
@@ -107,7 +109,7 @@ All documentation uses Markdown format with:
 
 ## Updates and Contributions
 
-This documentation is maintained alongside Time Warp IDE development. If you find:
+This documentation is maintained alongside Time Warp Studio development. If you find:
 
 - **Errors**: Report them so we can fix them
 - **Unclear sections**: Let us know what needs clarification
@@ -154,7 +156,7 @@ This documentation is maintained alongside Time Warp IDE development. If you fin
 
 ## Version Information
 
-- **Time Warp IDE** v6.0.0
+- **Time Warp Studio** v6.0.0
 - **Python Edition** (PySide6)
 - **Last Updated** January 2025
 

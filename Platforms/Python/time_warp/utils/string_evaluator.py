@@ -1,10 +1,10 @@
 """
-String expression evaluator for Time Warp IDE
+String expression evaluator for Time Warp Studio
 Handles BASIC string functions like LEN, LEFT, RIGHT, MID, INSTR, UPPER, LOWER, TRIM, STR, VAL
 """
 
 import re
-from typing import Any, Dict, List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 
 class StringExpressionEvaluator:
@@ -63,10 +63,7 @@ class StringExpressionEvaluator:
             return expr[1:-1]
 
         # Handle string variables
-        if (
-            expr.endswith("$")
-            and expr.replace("$", "").replace("_", "").isalnum()
-        ):
+        if expr.endswith("$") and expr.replace("$", "").replace("_", "").isalnum():
             return self.string_variables.get(expr, "")
 
         # Handle function calls
@@ -272,9 +269,7 @@ class StringExpressionEvaluator:
 
         try:
             length = (
-                int(self._evaluate_arg(args[2]))
-                if len(args) >= 3
-                else len(string_val)
+                int(self._evaluate_arg(args[2])) if len(args) >= 3 else len(string_val)
             )
         except (ValueError, TypeError):
             length = len(string_val)

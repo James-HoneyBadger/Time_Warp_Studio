@@ -14,6 +14,6 @@
 int main() {
     printf("Hello, World!\n");
     printf("Welcome to C programming!\n");
-    printf("Time Warp IDE supports C language.\n");
+    printf("Time Warp Studio supports C language.\n");
     return 0;
 }

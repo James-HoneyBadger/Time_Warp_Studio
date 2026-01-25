@@ -196,9 +196,7 @@ class CodeCompletionEngine:
 
         # Analyze context
         lines = code.split("\n")
-        prefix = (
-            lines[current_line].strip() if current_line < len(lines) else ""
-        )
+        prefix = lines[current_line].strip() if current_line < len(lines) else ""
 
         # Pattern-based suggestions
         if language == "basic":
@@ -367,9 +365,7 @@ class ReviewInsightEngine:
                 )
 
         # Insight 2: Comments
-        comment_lines = sum(
-            1 for line in lines if line.strip().startswith("REM")
-        )
+        comment_lines = sum(1 for line in lines if line.strip().startswith("REM"))
         if comment_lines < len(lines) * 0.1:
             insights.append(
                 ReviewInsight(

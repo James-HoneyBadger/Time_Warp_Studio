@@ -1,5 +1,5 @@
 10 REM ========================================
-20 REM  Time Warp IDE — BASIC Showcase
+20 REM  Time Warp Studio — BASIC Showcase
 30 REM  A large, feature-rich demo demonstrating many language features
 40 REM  - Variables, strings, math, arrays
 50 REM  - Input validation
@@ -130,6 +130,6 @@
 
 9000 REM === Credits & Exit ===
 9010 PRINT "\nTime Warp BASIC Showcase!"
-9020 PRINT "Author: Time Warp IDE — Showcase Program"
+9020 PRINT "Author: Time Warp Studio — Showcase Program"
 9030 PRINT "Thanks for playing, "; PLAYER$; " — final score: "; TOTAL_SCORE
 9040 END

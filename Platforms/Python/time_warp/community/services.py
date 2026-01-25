@@ -11,7 +11,7 @@ Provides:
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
 from typing import Dict, List, Optional, Set
 
@@ -226,9 +226,7 @@ class ProfileService:
         self.profiles: Dict[str, UserProfile] = {}
         self.follows: Dict[str, Set[str]] = {}  # user -> following
 
-    def create_profile(
-        self, user_id: str, username: str, email: str
-    ) -> UserProfile:
+    def create_profile(self, user_id: str, username: str, email: str) -> UserProfile:
         """Create new user profile"""
         profile = UserProfile(user_id=user_id, username=username, email=email)
         self.profiles[user_id] = profile
@@ -354,9 +352,7 @@ class ChallengeService:
         passed = len([t for t in self.challenges[challenge_id].test_cases])
         submission.passed_tests = passed
         submission.total_tests = passed
-        submission.completed = passed == len(
-            self.challenges[challenge_id].test_cases
-        )
+        submission.completed = passed == len(self.challenges[challenge_id].test_cases)
 
         self.submissions[submission.id] = submission
         return submission
@@ -410,13 +406,9 @@ class CommunityService:
         self.posts[post.id] = post
         return post
 
-    def reply_to_post(
-        self, post_id: str, author_id: str, content: str
-    ) -> ForumReply:
+    def reply_to_post(self, post_id: str, author_id: str, content: str) -> ForumReply:
         """Reply to forum post"""
-        reply = ForumReply(
-            post_id=post_id, author_id=author_id, content=content
-        )
+        reply = ForumReply(post_id=post_id, author_id=author_id, content=content)
         self.replies[reply.id] = reply
 
         # Update post reply count
@@ -501,9 +493,7 @@ class CommunityService:
             results = [s for s in results if s.language == language]
 
         if tags:
-            results = [
-                s for s in results if any(tag in s.tags for tag in tags)
-            ]
+            results = [s for s in results if any(tag in s.tags for tag in tags)]
 
         # Sort by popularity
         results.sort(key=lambda s: s.views + s.likes * 5, reverse=True)
@@ -520,9 +510,7 @@ if __name__ == "__main__":
     community_service = CommunityService()
 
     # Create user profile
-    profile = profile_service.create_profile(
-        "user_1", "john_doe", "john@example.com"
-    )
+    profile = profile_service.create_profile("user_1", "john_doe", "john@example.com")
     print(f"Created profile: {profile.username}")
 
     # Create challenge

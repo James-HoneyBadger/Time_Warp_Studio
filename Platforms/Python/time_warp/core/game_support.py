@@ -1,5 +1,5 @@
 """
-Game support utilities for Time Warp IDE.
+Game support utilities for Time Warp Studio.
 Provides INKEY$, timer, collision detection, and sound support.
 """
 

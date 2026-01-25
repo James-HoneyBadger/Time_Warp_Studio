@@ -1,4 +1,4 @@
-# Development requirements for Time Warp IDE
+# Development requirements for Time Warp Studio
 # This file is for legacy CI compatibility
 
 # Basic testing framework

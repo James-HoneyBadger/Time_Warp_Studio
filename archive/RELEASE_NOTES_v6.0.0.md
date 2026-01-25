@@ -197,7 +197,7 @@ The IDE now includes integrated Help with documentation links:
   - BASIC Commands → BASIC Tutorial
   - PILOT Commands → PILOT Tutorial
   - Logo Commands → Logo Tutorial
-- **About Time Warp IDE** → Version info
+- **About Time Warp Studio** → Version info
 
 ---
 
@@ -266,9 +266,9 @@ v6.0.0 benefits from:
 
 ### Recommended Steps
 1. Backup your projects
-2. Uninstall Time Warp IDE v5.1.0
+2. Uninstall Time Warp Studio v5.1.0
 3. Install Python 3.10+
-4. Install Time Warp IDE v6.0.0
+4. Install Time Warp Studio v6.0.0
 5. Verify projects load correctly
 
 ### If Issues Occur
@@ -299,7 +299,7 @@ v6.0.0 benefits from:
 
 ## Acknowledgments
 
-Time Warp IDE v6.0.0 was built with:
+Time Warp Studio v6.0.0 was built with:
 - **PySide6** - Modern Qt bindings for Python
 - **Pillow** - Image processing library
 - **Requests** - HTTP library
@@ -340,7 +340,7 @@ Time Warp IDE v6.0.0 was built with:
 
 ## License
 
-Time Warp IDE v6.0.0 is released under the MIT License. See LICENSE file for details.
+Time Warp Studio v6.0.0 is released under the MIT License. See LICENSE file for details.
 
 ---
 
@@ -369,7 +369,7 @@ Time Warp IDE v6.0.0 is released under the MIT License. See LICENSE file for det
 
 ---
 
-**Thank you for using Time Warp IDE!** 🚀
+**Thank you for using Time Warp Studio!** 🚀
 
 For latest updates, visit: https://github.com/James-HoneyBadger/Time_Warp_Studio
 

@@ -1,5 +1,5 @@
 """
-Core interpreter for Time Warp IDE
+Core interpreter for Time Warp Studio
 Time Warp interpreter for executing code in multiple languages
 """
 
@@ -397,6 +397,7 @@ class Interpreter:
         base, t = self._resolve_var_base_and_type(var_name)
         if not base:
             return
+
         if t == "string":
             self.string_variables[base + "$"] = str(value)
             return
@@ -676,7 +677,7 @@ class Interpreter:
             iterations += 1
 
             command = current_command
-            # print(f"DEBUG: Line {self.current_line}: {command}")
+            # print(f"DEBUG: Line {physical_line}: {command}")
 
             if not command.strip():
                 self.current_line += 1
@@ -719,9 +720,7 @@ class Interpreter:
 
     def _check_timeout(self, start_time: float):
         if time.time() - start_time > self.MAX_EXECUTION_TIME:
-            self.log_output(
-                "❌ Error: Execution timeout (10 seconds exceeded)"
-            )
+            self.log_output("❌ Error: Execution timeout (10 seconds exceeded)")
 
     def _execute_line_safely(
         self,
@@ -827,7 +826,9 @@ class Interpreter:
         # Back-compat overlay
         num_vars.update(self.variables)
 
-        evaluator = ExpressionEvaluator(num_vars, self.arrays.copy())
+        evaluator = ExpressionEvaluator(
+            num_vars, self.arrays.copy(), string_variables=self.string_variables.copy()
+        )
         return evaluator.evaluate(expr)
 
     def interpolate_text(self, text: str) -> str:

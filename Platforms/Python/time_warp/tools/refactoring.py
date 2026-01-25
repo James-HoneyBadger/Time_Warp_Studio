@@ -12,7 +12,7 @@ Provides:
 import re
 from dataclasses import dataclass, field
 from enum import Enum
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 # ===== ENUMS =====
 
@@ -76,9 +76,7 @@ class RefactoringSuggestion:
     """Refactoring suggestion"""
 
     id: str = ""
-    type: RefactoringSuggestionType = (
-        RefactoringSuggestionType.IMPROVE_READABILITY
-    )
+    type: RefactoringSuggestionType = RefactoringSuggestionType.IMPROVE_READABILITY
     title: str = ""
     description: str = ""
 
@@ -178,28 +176,28 @@ class CodeMetricsAnalyzer:
 
         # Lines of code (excluding comments and blank lines)
         non_empty_lines = [
-            l.strip()
-            for l in lines
-            if l.strip()
-            and not l.strip().startswith("REM")
-            and not l.strip().startswith("\\")
+            line.strip()
+            for line in lines
+            if line.strip()
+            and not line.strip().startswith("REM")
+            and not line.strip().startswith("\\")
         ]
         metrics.lines_of_code = len(non_empty_lines)
 
         # Comment lines
         comment_lines = [
-            l
-            for l in lines
-            if l.strip().startswith("REM") or l.strip().startswith("\\")
+            line
+            for line in lines
+            if line.strip().startswith("REM") or line.strip().startswith("\\")
         ]
         metrics.number_of_comments = len(comment_lines)
         metrics.comment_ratio = len(comment_lines) / len(lines) if lines else 0
 
         # Average line length
         if non_empty_lines:
-            metrics.average_line_length = sum(
-                len(l) for l in non_empty_lines
-            ) // len(non_empty_lines)
+            metrics.average_line_length = sum(len(line) for line in non_empty_lines) // len(
+                non_empty_lines
+            )
 
         # Cyclomatic complexity (simplified)
         metrics.cyclomatic_complexity = (
@@ -219,22 +217,17 @@ class CodeMetricsAnalyzer:
                 current_depth += 1
                 max_depth = max(max_depth, current_depth)
             elif any(
-                kw in stripped
-                for kw in ["END IF", "END FOR", "END WHILE", "END DO"]
+                kw in stripped for kw in ["END IF", "END FOR", "END WHILE", "END DO"]
             ):
                 current_depth = max(0, current_depth - 1)
         metrics.nesting_depth = max_depth
 
         # Functions (SUB/FUNCTION declarations)
-        metrics.number_of_functions = code.count(" SUB ") + code.count(
-            " FUNCTION "
-        )
+        metrics.number_of_functions = code.count(" SUB ") + code.count(" FUNCTION ")
 
         # Variables
         var_pattern = r"(DIM|LET|VAR)\s+\w+"
-        metrics.number_of_variables = len(
-            re.findall(var_pattern, code, re.IGNORECASE)
-        )
+        metrics.number_of_variables = len(re.findall(var_pattern, code, re.IGNORECASE))
 
         return metrics
 
@@ -384,9 +377,7 @@ class DuplicationDetector:
             if len(positions) > 1:
                 dup = DuplicationBlock(
                     code=block,
-                    occurrences=[
-                        (pos, pos + min_block_size - 1) for pos in positions
-                    ],
+                    occurrences=[(pos, pos + min_block_size - 1) for pos in positions],
                 )
                 duplications.append(dup)
 
@@ -451,9 +442,7 @@ class OptimizationAnalyzer:
     """Analyzes optimization opportunities"""
 
     @staticmethod
-    def analyze(
-        code: str, metrics: CodeMetrics
-    ) -> List[OptimizationOpportunity]:
+    def analyze(code: str, metrics: CodeMetrics) -> List[OptimizationOpportunity]:
         """Find optimization opportunities"""
         opportunities: List[OptimizationOpportunity] = []
 
@@ -523,9 +512,7 @@ class RefactoringService:
             "suggestions": suggestions,
             "optimizations": optimizations,
             "summary": {
-                "code_quality_score": self._compute_quality_score(
-                    metrics, smells
-                ),
+                "code_quality_score": self._compute_quality_score(metrics, smells),
                 "refactoring_priority": self._compute_priority(smells),
                 "total_issues": len(smells) + len(duplications),
             },
@@ -592,12 +579,10 @@ if __name__ == "__main__":
     service = RefactoringService()
     analysis = service.analyze_code(sample_code)
 
-    print(
-        f"Quality Score: {analysis['summary']['code_quality_score']:.1f}/100"
-    )
+    print(f"Quality Score: {analysis['summary']['code_quality_score']:.1f}/100")
     print(f"Issues Found: {analysis['summary']['total_issues']}")
     print(f"Priority: {analysis['summary']['refactoring_priority'].upper()}")
-    print(f"\nMetrics:")
+    print("\nMetrics:")
     print(f"  LOC: {analysis['metrics'].lines_of_code}")
     print(f"  Complexity: {analysis['metrics'].cyclomatic_complexity}")
     print(f"  Nesting: {analysis['metrics'].nesting_depth}")

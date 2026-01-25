@@ -13,7 +13,7 @@ Supports grade sync, assignment submission, roster import, and analytics export.
 from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 import requests
 
@@ -192,7 +192,8 @@ class CanvasConnector(LMSConnector):
         """Submit grade to Canvas."""
         try:
             response = self.session.put(
-                f"{self.base_url}/api/v1/courses/{course_id}/assignments/{assignment_id}/submissions/{student_id}",
+                f"{self.base_url}/api/v1/courses/{course_id}/assignments/"
+                f"{assignment_id}/submissions/{student_id}",
                 json={
                     "submission": {"posted_grade": score},
                     "comment": {"text_comment": feedback},
@@ -212,9 +213,7 @@ class GoogleClassroomConnector(LMSConnector):
     def get_courses(self) -> List[Dict]:
         """Get list of courses."""
         try:
-            response = self.session.get(
-                "https://classroom.googleapis.com/v1/courses"
-            )
+            response = self.session.get("https://classroom.googleapis.com/v1/courses")
             return (
                 response.json().get("courses", [])
                 if response.status_code == 200
@@ -281,7 +280,8 @@ class GoogleClassroomConnector(LMSConnector):
         """Submit grade to Google Classroom."""
         try:
             response = self.session.patch(
-                f"https://classroom.googleapis.com/v1/courses/{course_id}/courseWork/{assignment_id}/studentSubmissions/{student_id}",
+                "https://classroom.googleapis.com/v1/courses/"
+                f"{course_id}/courseWork/{assignment_id}/studentSubmissions/{student_id}",
                 json={"assignedGrade": score, "draftGrade": score},
             )
             return response.status_code == 200
@@ -455,8 +455,7 @@ class LMSIntegration:
             "synced_assignments": len(self.synced_assignments),
             "total_submissions": len(self.student_submissions),
             "authenticated": bool(
-                self.active_lms
-                and self.connectors[self.active_lms].authenticate()
+                self.active_lms and self.connectors[self.active_lms].authenticate()
                 if self.active_lms
                 else False
             ),

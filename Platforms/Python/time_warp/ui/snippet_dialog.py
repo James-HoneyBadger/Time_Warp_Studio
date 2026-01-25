@@ -1,6 +1,6 @@
 # pylint: disable=too-few-public-methods
 """
-Snippet dialog for Time Warp IDE.
+Snippet dialog for Time Warp Studio.
 Provides a dialog for browsing and inserting code snippets.
 """
 
@@ -53,9 +53,7 @@ class SnippetDialog(QDialog):
         self.language_combo = QComboBox()
         self.language_combo.addItems(["BASIC", "PILOT", "LOGO"])
         self.language_combo.setCurrentText(self.language)
-        self.language_combo.currentTextChanged.connect(
-            self._on_language_changed
-        )
+        self.language_combo.currentTextChanged.connect(self._on_language_changed)
         top_bar.addWidget(self.language_combo)
 
         top_bar.addSpacing(20)
@@ -64,9 +62,7 @@ class SnippetDialog(QDialog):
         top_bar.addWidget(QLabel("Category:"))
         self.category_combo = QComboBox()
         self.category_combo.addItem("All")
-        self.category_combo.currentTextChanged.connect(
-            self._on_category_changed
-        )
+        self.category_combo.currentTextChanged.connect(self._on_category_changed)
         top_bar.addWidget(self.category_combo)
 
         top_bar.addSpacing(20)
@@ -110,9 +106,7 @@ class SnippetDialog(QDialog):
         # Description
         self.description_label = QLabel("")
         self.description_label.setWordWrap(True)
-        self.description_label.setStyleSheet(
-            "color: #888; font-style: italic;"
-        )
+        self.description_label.setStyleSheet("color: #888; font-style: italic;")
         preview_layout.addWidget(self.description_label)
 
         splitter.addWidget(preview_widget)

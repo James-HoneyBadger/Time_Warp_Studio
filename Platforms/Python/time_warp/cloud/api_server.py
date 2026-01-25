@@ -1,6 +1,6 @@
 """Time Warp Cloud Backend API Server - FastAPI Implementation.
 
-This module provides the cloud backend services for Time Warp IDE v6.1.0,
+This module provides the cloud backend services for Time Warp Studio v6.1.0,
 including REST APIs, WebSocket support, and real-time multiplayer features.
 """
 
@@ -12,7 +12,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 import jwt
-from fastapi import Depends, FastAPI, Header, HTTPException, WebSocket, status
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel, EmailStr, Field
@@ -267,9 +267,7 @@ class CloudAuthManager:
             HTTPException: If token is invalid
         """
         try:
-            payload = jwt.decode(
-                token, self.secret_key, algorithms=[self.algorithm]
-            )
+            payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
             return payload
         except jwt.ExpiredSignatureError:
             raise HTTPException(status_code=401, detail="Token expired")
@@ -293,7 +291,7 @@ class TimeWarpCloudAPI:
         """
         self.app = FastAPI(
             title="Time Warp Cloud API",
-            description="Cloud backend for Time Warp IDE v6.1.0",
+            description="Cloud backend for Time Warp Studio v6.1.0",
             version="6.1.0",
         )
 
@@ -359,9 +357,7 @@ class TimeWarpCloudAPI:
         async def register(user: UserCreate):
             """Register new user."""
             if user.email in [u["email"] for u in self.users.values()]:
-                raise HTTPException(
-                    status_code=400, detail="Email already registered"
-                )
+                raise HTTPException(status_code=400, detail="Email already registered")
 
             user_id = str(uuid.uuid4())
             self.users[user_id] = {
@@ -388,9 +384,7 @@ class TimeWarpCloudAPI:
                     break
 
             if not user or user["password"] != creds.password:
-                raise HTTPException(
-                    status_code=401, detail="Invalid credentials"
-                )
+                raise HTTPException(status_code=401, detail="Invalid credentials")
 
             tokens = self.auth_manager.create_tokens(user["id"])
             return TokenResponse(**tokens)
@@ -452,24 +446,18 @@ class TimeWarpCloudAPI:
 
             return self.projects[project_id]
 
-        @self.app.get(
-            "/api/v1/projects/{project_id}", response_model=ProjectResponse
-        )
+        @self.app.get("/api/v1/projects/{project_id}", response_model=ProjectResponse)
         async def get_project(
             project_id: str,
             auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
         ):
             """Get project details."""
             if project_id not in self.projects:
-                raise HTTPException(
-                    status_code=404, detail="Project not found"
-                )
+                raise HTTPException(status_code=404, detail="Project not found")
 
             return self.projects[project_id]
 
-        @self.app.put(
-            "/api/v1/projects/{project_id}", response_model=ProjectResponse
-        )
+        @self.app.put("/api/v1/projects/{project_id}", response_model=ProjectResponse)
         async def update_project(
             project_id: str,
             update: ProjectUpdate,
@@ -477,9 +465,7 @@ class TimeWarpCloudAPI:
         ):
             """Update project."""
             if project_id not in self.projects:
-                raise HTTPException(
-                    status_code=404, detail="Project not found"
-                )
+                raise HTTPException(status_code=404, detail="Project not found")
 
             project = self.projects[project_id]
             if update.name:
@@ -498,9 +484,7 @@ class TimeWarpCloudAPI:
         # MULTIPLAYER ENDPOINTS
         # ====================================================================
 
-        @self.app.post(
-            "/api/v1/multiplayer/sessions", response_model=SessionResponse
-        )
+        @self.app.post("/api/v1/multiplayer/sessions", response_model=SessionResponse)
         async def create_session(
             session: SessionCreate,
             auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
@@ -530,9 +514,7 @@ class TimeWarpCloudAPI:
         async def get_session(session_id: str):
             """Get session details."""
             if session_id not in self.sessions:
-                raise HTTPException(
-                    status_code=404, detail="Session not found"
-                )
+                raise HTTPException(status_code=404, detail="Session not found")
 
             return self.sessions[session_id]
 
@@ -550,25 +532,15 @@ class TimeWarpCloudAPI:
                     user_id=user_id,
                     username=user["username"],
                     points=len(
-                        [
-                            p
-                            for p in self.projects.values()
-                            if p["owner_id"] == user_id
-                        ]
+                        [p for p in self.projects.values() if p["owner_id"] == user_id]
                     )
                     * 100,
                     projects_completed=len(
-                        [
-                            p
-                            for p in self.projects.values()
-                            if p["owner_id"] == user_id
-                        ]
+                        [p for p in self.projects.values() if p["owner_id"] == user_id]
                     ),
                     sessions_participated=0,
                 )
-                for i, (user_id, user) in enumerate(
-                    list(self.users.items())[:limit]
-                )
+                for i, (user_id, user) in enumerate(list(self.users.items())[:limit])
             ]
 
             return leaderboard
@@ -589,9 +561,7 @@ class TimeWarpCloudAPI:
                 "projects_created": len(user_projects),
                 "total_points": len(user_projects) * 100,
                 "achievements": [
-                    a
-                    for a in self.achievements.values()
-                    if a["user_id"] == user_id
+                    a for a in self.achievements.values() if a["user_id"] == user_id
                 ],
                 "joined_date": self.users[user_id]["created_at"],
             }

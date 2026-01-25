@@ -203,9 +203,7 @@ class SystemOrchestrator:
                         component_info.last_initialized = datetime.utcnow()
                     self.initialization_report.components_initialized += 1
                 except Exception as e:
-                    self.initialization_report.errors.append(
-                        f"{name}: {str(e)}"
-                    )
+                    self.initialization_report.errors.append(f"{name}: {str(e)}")
                     self.initialization_report.components_failed += 1
                     component_info = self.system_info.components.get(name)
                     if component_info:
@@ -250,7 +248,7 @@ class SystemOrchestrator:
                     )
 
             return True
-        except Exception as e:
+        except Exception:
             self._set_status(SystemStatus.FAILED)
             return False
 
@@ -370,10 +368,8 @@ if __name__ == "__main__":
     print("🚀 Initializing Time Warp Studio...")
     report = orchestrator.initialize_system()
 
-    print(
-        f"✅ Initialization completed in {
-            report.initialization_time_seconds:.2f}s"
-    )
+    print(f"✅ Initialization completed in {
+            report.initialization_time_seconds:.2f}s")
     print(f"✅ Components initialized: {report.components_initialized}")
     if report.components_failed > 0:
         print(f"⚠️  Components failed: {report.components_failed}")
@@ -386,7 +382,7 @@ if __name__ == "__main__":
     print(f"  Python: {status['python_version']}")
     print(f"  Languages: {', '.join(status['supported_languages'])}")
 
-    print(f"\n📦 Component Status:")
+    print("\n📦 Component Status:")
     for name, component_status in status["components"].items():
         print(f"  {name}: {component_status['status']}")
 

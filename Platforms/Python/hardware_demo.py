@@ -3,7 +3,7 @@
 # Disable some checks for this demo script which imports many PySide6
 # widgets used only at runtime by the GUI.
 # pylint: disable=no-name-in-module, too-few-public-methods
-"""Demo script for Time Warp IDE Hardware Control Panel
+"""Demo script for Time Warp Studio Hardware Control Panel
 Shows how to integrate hardware visualization into the IDE
 """
 
@@ -23,7 +23,7 @@ class HardwareDemoWindow(QMainWindow):
 
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("Time Warp IDE - Hardware Demo")
+        self.setWindowTitle("Time Warp Studio - Hardware Demo")
         self.setGeometry(100, 100, 1000, 700)
 
         # Create central widget

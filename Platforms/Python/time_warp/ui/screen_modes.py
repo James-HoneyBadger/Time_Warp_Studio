@@ -228,9 +228,7 @@ class ScreenModeManager:
 
     def get_graphics_modes(self) -> list:
         """Get all graphics modes."""
-        return [
-            m for m in self.modes.values() if m.mode_type == ModeType.GRAPHICS
-        ]
+        return [m for m in self.modes.values() if m.mode_type == ModeType.GRAPHICS]
 
     def get_all_modes(self) -> list:
         """Get all modes sorted by number."""

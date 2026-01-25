@@ -51,9 +51,7 @@ class PresenceService:
         self.room_presence[room_id][connection_id] = presence_data
         self.user_presence[connection_id] = presence_data
 
-        logger.info(
-            f"User {user_data.get('name')} presence set in room {room_id}"
-        )
+        logger.info(f"User {user_data.get('name')} presence set in room {room_id}")
         return presence_data
 
     def update_user_status(
@@ -115,9 +113,7 @@ class PresenceService:
         return {
             "type": "typing_update",
             "userId": (
-                self.user_presence.get(connection_id, {}).get(
-                    "userId", connection_id
-                )
+                self.user_presence.get(connection_id, {}).get("userId", connection_id)
             ),
             "isTyping": is_typing,
         }
@@ -175,9 +171,7 @@ class PresenceService:
         removed_users = []
         current_time = datetime.utcnow()
 
-        for connection_id, presence in list(
-            self.room_presence[room_id].items()
-        ):
+        for connection_id, presence in list(self.room_presence[room_id].items()):
             last_activity = datetime.fromisoformat(presence["lastActivity"])
             elapsed = (current_time - last_activity).total_seconds()
 
@@ -192,10 +186,8 @@ class PresenceService:
                 self.remove_user_presence(connection_id, room_id)
 
         if removed_users:
-            logger.info(
-                f"Cleaned up {
-                    len(removed_users)} inactive users from {room_id}"
-            )
+            logger.info(f"Cleaned up {
+                    len(removed_users)} inactive users from {room_id}")
 
         return removed_users
 

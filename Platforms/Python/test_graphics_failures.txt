@@ -1,0 +1,159 @@
+============================= test session starts ==============================
+platform linux -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- /home/james/Time_Warp_Studio/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/james/Time_Warp_Studio/Platforms/Python
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.0.0, asyncio-1.3.0, anyio-4.12.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 6 items
+
+time_warp/tests/test_logo_graphics.py::TestTurtleGraphics::test_initial_state PASSED [ 16%]
+time_warp/tests/test_logo_graphics.py::TestTurtleGraphics::test_movement PASSED [ 33%]
+time_warp/tests/test_logo_graphics.py::TestTurtleGraphics::test_rotation PASSED [ 50%]
+time_warp/tests/test_logo_graphics.py::TestTurtleGraphics::test_pen_state FAILED [ 66%]
+time_warp/tests/test_logo_graphics.py::TestTurtleGraphics::test_state_persistence PASSED [ 83%]
+time_warp/tests/test_logo_graphics.py::TestTurtleGraphics::test_color_handling FAILED [100%]
+
+=================================== FAILURES ===================================
+______________________ TestTurtleGraphics.test_pen_state _______________________
+
+self = <test_logo_graphics.TestTurtleGraphics object at 0xffff8392c8a0>
+turtle = <time_warp.graphics.turtle_state.TurtleState object at 0xffff8392c770>
+
+    def test_pen_state(self, turtle):
+        """Test pen up/down behavior"""
+>       turtle.pen_up()
+        ^^^^^^^^^^^^^
+E       AttributeError: 'TurtleState' object has no attribute 'pen_up'. Did you mean: 'penup'?
+
+time_warp/tests/test_logo_graphics.py:71: AttributeError
+____________________ TestTurtleGraphics.test_color_handling ____________________
+
+self = <test_logo_graphics.TestTurtleGraphics object at 0xffff83a77bd0>
+turtle = <time_warp.graphics.turtle_state.TurtleState object at 0xffff8392c9d0>
+
+    def test_color_handling(self, turtle):
+        """Test color setting"""
+        # Test RGB tuple
+>       turtle.set_color((255, 0, 0))
+        ^^^^^^^^^^^^^^^^
+E       AttributeError: 'TurtleState' object has no attribute 'set_color'. Did you mean: 'setcolor'?
+
+time_warp/tests/test_logo_graphics.py:101: AttributeError
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.14.2-final-0 ________________
+
+Name                                          Stmts   Miss  Cover   Missing
+---------------------------------------------------------------------------
+time_warp/__init__.py                             8      0   100%
+time_warp/cloud/__init__.py                      48     48     0%   9-157
+time_warp/cloud/api_server.py                   199    199     0%   7-627
+time_warp/cloud/cloud_sync_manager.py           307    307     0%   8-711
+time_warp/cloud/sync_engine.py                  194    194     0%   7-549
+time_warp/compiler/__init__.py                    2      2     0%   3-5
+time_warp/compiler/compiler.py                   75     75     0%   6-192
+time_warp/core/__init__.py                        2      2     0%   3-12
+time_warp/core/accessibility.py                 218    218     0%   3-419
+time_warp/core/ai_assistant.py                  185    185     0%   3-502
+time_warp/core/analytics.py                     181    181     0%   12-459
+time_warp/core/asset_library.py                 182    182     0%   3-408
+time_warp/core/chat_service.py                  130    130     0%   6-287
+time_warp/core/collaboration.py                 196    196     0%   3-421
+time_warp/core/collaboration_engine.py           99     99     0%   6-265
+time_warp/core/community_marketplace.py         173    173     0%   14-461
+time_warp/core/debugger.py                      177    177     0%   3-355
+time_warp/core/error_recovery.py                219    219     0%   12-492
+time_warp/core/executable_exporter.py           114    114     0%   3-467
+time_warp/core/execution_replay.py              186    186     0%   3-439
+time_warp/core/fractals.py                       79     79     0%   7-345
+time_warp/core/game_support.py                  119    119     0%   6-288
+time_warp/core/gamepad.py                       208    208     0%   14-344
+time_warp/core/hardware_simulator.py            196    196     0%   3-403
+time_warp/core/interpreter.py                   544    544     0%   12-999
+time_warp/core/language_comparator.py           124    124     0%   3-433
+time_warp/core/learning_analytics.py            194    194     0%   3-497
+time_warp/core/lms_integration.py               183    183     0%   13-451
+time_warp/core/multiplayer_leaderboard.py       181    181     0%   8-508
+time_warp/core/music.py                         208    208     0%   6-406
+time_warp/core/orchestrator.py                  192    192     0%   12-396
+time_warp/core/particles.py                     256    256     0%   6-393
+time_warp/core/peer_review.py                   219    219     0%   3-602
+time_warp/core/performance_profiler.py          145    145     0%   3-336
+time_warp/core/presence_service.py               89     89     0%   6-214
+time_warp/core/project_templates.py              80     80     0%   3-354
+time_warp/core/shapes.py                        255    255     0%   6-626
+time_warp/core/speech.py                        123    123     0%   6-232
+time_warp/core/syntax_validator.py              161    161     0%   3-423
+time_warp/core/websocket_manager.py              94     94     0%   6-222
+time_warp/db.py                                  32     32     0%   6-92
+time_warp/graphics/__init__.py                    2      0   100%
+time_warp/graphics/art_toolkit.py               158    158     0%   5-316
+time_warp/graphics/pixel_canvas.py              150    150     0%   7-314
+time_warp/graphics/turtle_gallery.py            104    104     0%   5-244
+time_warp/graphics/turtle_state.py              125     69    45%   74, 111, 127-140, 144, 148, 152-154, 158-159, 163-171, 175-176, 180-181, 185-186, 190-211, 215-216, 220-221, 225-226, 230-231, 235-236, 240-257
+time_warp/hardware/__init__.py                  254    254     0%   6-473
+time_warp/hardware/arduino/__init__.py          179    179     0%   6-337
+time_warp/hardware/raspberry_pi/__init__.py     224    224     0%   6-475
+time_warp/hardware/ui/__init__.py               304    304     0%   10-510
+time_warp/hardware/ui/data_logger.py            122    122     0%   6-236
+time_warp/languages/__init__.py                   4      4     0%   3-7
+time_warp/languages/basic.py                   1130   1130     0%   7-1971
+time_warp/languages/c_lang.py                     3      3     0%   3-8
+time_warp/languages/c_lang_fixed.py             532    532     0%   18-809
+time_warp/languages/forth.py                    335    335     0%   1-479
+time_warp/languages/logo.py                    1029   1029     0%   8-1745
+time_warp/languages/parser_patterns.py           16     16     0%   20-246
+time_warp/languages/pascal.py                   679    679     0%   12-1019
+time_warp/languages/pilot.py                    334    334     0%   6-462
+time_warp/languages/prolog.py                   543    543     0%   18-862
+time_warp/logging_config.py                      37     37     0%   7-119
+time_warp/main.py                                62     62     0%   6-138
+time_warp/models.py                              89     89     0%   6-213
+time_warp/repositories.py                       102    102     0%   6-290
+time_warp/routes/__init__.py                      2      2     0%   6-8
+time_warp/routes/collaboration.py                90     90     0%   6-275
+time_warp/routes/rooms.py                       121    121     0%   6-282
+time_warp/routes/sync.py                         76     76     0%   6-250
+time_warp/routes/users.py                        53     53     0%   6-140
+time_warp/services.py                            99     99     0%   6-234
+time_warp/socketio_config.py                     44     44     0%   6-91
+time_warp/ui/__init__.py                          6      6     0%   3-9
+time_warp/ui/accessibility.py                    36     36     0%   5-230
+time_warp/ui/canvas.py                          273    273     0%   9-564
+time_warp/ui/cassette_animation.py              230    230     0%   11-498
+time_warp/ui/collaboration_client.py            281    281     0%   6-521
+time_warp/ui/crt_effect.py                      161    161     0%   13-324
+time_warp/ui/debug_panel.py                     316    316     0%   6-568
+time_warp/ui/editor.py                          473    473     0%   8-1142
+time_warp/ui/error_explorer.py                  135    135     0%   8-268
+time_warp/ui/feature_integration.py             147    147     0%   7-471
+time_warp/ui/feature_panels.py                  563    563     0%   8-932
+time_warp/ui/focus_mode.py                       90     90     0%   5-162
+time_warp/ui/main_window.py                    1373   1373     0%   3-2582
+time_warp/ui/onboarding.py                      152    152     0%   8-348
+time_warp/ui/output.py                          319    319     0%   7-678
+time_warp/ui/phase_vii_x_panels.py              278    278     0%   13-565
+time_warp/ui/screen_modes.py                     62     62     0%   7-329
+time_warp/ui/snippet_dialog.py                  130    130     0%   8-224
+time_warp/ui/snippets.py                         34     34     0%   6-450
+time_warp/ui/themes.py                           92     92     0%   8-887
+time_warp/ui/variable_inspector.py               29     29     0%   7-55
+time_warp/utils/__init__.py                       6      6     0%   3-20
+time_warp/utils/code_formatter.py               177    177     0%   6-468
+time_warp/utils/error_hints.py                   83     83     0%   7-348
+time_warp/utils/error_messages.py                74     74     0%   7-194
+time_warp/utils/execution_timeout.py             62     62     0%   7-146
+time_warp/utils/expression_evaluator.py         245    245     0%   8-486
+time_warp/utils/logging_config.py                56     56     0%   7-164
+time_warp/utils/profiler.py                     134    134     0%   6-238
+time_warp/utils/string_evaluator.py             236    236     0%   6-390
+time_warp/utils/validators.py                    56     56     0%   7-260
+time_warp/websocket_handlers.py                 154    154     0%   6-323
+---------------------------------------------------------------------------
+TOTAL                                         20042  19976     1%
+Coverage HTML written to dir htmlcov
+Coverage XML written to file coverage.xml
+=========================== short test summary info ============================
+FAILED time_warp/tests/test_logo_graphics.py::TestTurtleGraphics::test_pen_state
+FAILED time_warp/tests/test_logo_graphics.py::TestTurtleGraphics::test_color_handling
+========================= 2 failed, 4 passed in 2.40s ==========================

@@ -14,5 +14,5 @@ else
 fi
 
 # Launch GUI
-echo "🚀 Launching Time Warp IDE (Python/PySide6)..."
+echo "🚀 Launching Time Warp Studio (Python/PySide6)..."
 exec "$PYTHON" time_warp_ide.py "$@"

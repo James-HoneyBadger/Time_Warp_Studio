@@ -415,7 +415,7 @@ J: STATE_END
 T: Ending
 ```
 
-## Running PILOT Programs in Time Warp IDE
+## Running PILOT Programs in Time Warp Studio
 
 1. Create a `.pilot` file with your program
 2. Select PILOT from the language dropdown

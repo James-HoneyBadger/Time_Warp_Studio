@@ -3,13 +3,12 @@ WebSocket Integration Tests
 Tests real-time collaboration features
 """
 
-import json
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from services import ChatService, RoomService, SyncService
-from socketio import AsyncClient as SIOAsyncClient
-from websocket_handlers import WebSocketEventHandler
+
+from time_warp.services import ChatService, RoomService, SyncService
+from time_warp.websocket_handlers import WebSocketEventHandler
 
 
 @pytest.fixture
@@ -26,9 +25,11 @@ def mock_sio():
 
 @pytest.fixture
 def event_handler(mock_sio, mock_session):
-    """Create event handler instance"""
-    handler = WebSocketEventHandler(mock_sio, mock_session)
-    return handler
+    """Create event handler instance with mocked session"""
+    with patch("time_warp.websocket_handlers.AsyncSessionLocal") as mock_sl:
+        mock_sl.return_value.__aenter__.return_value = mock_session
+        handler = WebSocketEventHandler(mock_sio)
+        yield handler
 
 
 @pytest.fixture
@@ -46,32 +47,30 @@ async def mock_room():
 async def test_on_connect(event_handler):
     """Test connection handler"""
     await event_handler.on_connect("sid123", None)
-    # Verify connection was registered
-    assert "sid123" in event_handler.connections
+    # Verify connection response
+    event_handler.sio.emit.assert_called_with(
+        "connection_response", {"data": "Connected to server"}, to="sid123"
+    )
 
 
 @pytest.mark.asyncio
 async def test_on_disconnect(event_handler):
     """Test disconnection handler"""
     # Register connection first
-    event_handler.connections["sid123"] = {
-        "user_id": "user123",
-        "room_id": "room123",
-    }
+    event_handler.connection_manager.users["sid123"] = {"id": "user123"}
+    await event_handler.connection_manager.join_room("sid123", "room123")
 
     await event_handler.on_disconnect("sid123")
 
     # Verify connection was cleaned up
-    assert "sid123" not in event_handler.connections
+    assert "sid123" not in event_handler.connection_manager.users
 
 
 # Room Collaboration Tests
 @pytest.mark.asyncio
 async def test_on_join_room(event_handler, mock_sio, mock_session):
     """Test join room handler"""
-    with patch.object(
-        RoomService, "add_member", new_callable=AsyncMock
-    ) as mock_add:
+    with patch.object(RoomService, "add_member", new_callable=AsyncMock) as mock_add:
         mock_member = Mock()
         mock_member.id = "member123"
         mock_add.return_value = mock_member
@@ -84,27 +83,25 @@ async def test_on_join_room(event_handler, mock_sio, mock_session):
         # Verify service was called
         mock_add.assert_called_once()
         # Verify connection was registered
-        assert event_handler.connections["sid123"]["room_id"] == "room123"
+        assert "sid123" in event_handler.connection_manager.users
+        assert "sid123" in event_handler.connection_manager.rooms["room123"]
 
 
 @pytest.mark.asyncio
 async def test_on_leave_room(event_handler, mock_sio, mock_session):
     """Test leave room handler"""
     # Register connection first
-    event_handler.connections["sid123"] = {
-        "user_id": "user123",
-        "room_id": "room123",
-    }
+    event_handler.connection_manager.users["sid123"] = {"id": "user123"}
+    await event_handler.connection_manager.join_room("sid123", "room123")
+    event_handler.presence_service.set_user_presence(
+        "sid123", "room123", {"userId": "user123"}
+    )
 
-    with patch.object(
-        RoomService, "remove_member", new_callable=AsyncMock
-    ) as mock_remove:
-        mock_remove.return_value = True
+    # on_leave_room doesn't remove from DB in current implementation, just presence
+    await event_handler.on_leave_room("sid123", {"room_id": "room123"})
 
-        await event_handler.on_leave_room("sid123", {})
-
-        # Verify service was called
-        mock_remove.assert_called_once()
+    # Verify message broadcast
+    mock_sio.emit.assert_called()
 
 
 # Code Collaboration Tests
@@ -112,10 +109,13 @@ async def test_on_leave_room(event_handler, mock_sio, mock_session):
 async def test_on_code_change(event_handler, mock_sio, mock_session):
     """Test code change handler (OT)"""
     # Register connection
-    event_handler.connections["sid123"] = {
-        "user_id": "user123",
-        "room_id": "room123",
-    }
+    event_handler.connection_manager.users["sid123"] = {"id": "user123"}
+    await event_handler.connection_manager.join_room("sid123", "room123")
+
+    # Initialize OT engine
+    from time_warp.core.collaboration_engine import OperationalTransform
+
+    event_handler.ot_engines["room123"] = OperationalTransform()
 
     with patch.object(
         SyncService, "record_operation", new_callable=AsyncMock
@@ -144,10 +144,8 @@ async def test_on_code_change(event_handler, mock_sio, mock_session):
 async def test_on_cursor_update(event_handler, mock_sio):
     """Test cursor update handler"""
     # Register connection
-    event_handler.connections["sid123"] = {
-        "user_id": "user123",
-        "room_id": "room123",
-    }
+    event_handler.connection_manager.users["sid123"] = {"id": "user123"}
+    await event_handler.connection_manager.join_room("sid123", "room123")
 
     await event_handler.on_cursor_update(
         "sid123", {"room_id": "room123", "position": 42}
@@ -161,14 +159,10 @@ async def test_on_cursor_update(event_handler, mock_sio):
 async def test_on_typing(event_handler, mock_sio):
     """Test typing indicator handler"""
     # Register connection
-    event_handler.connections["sid123"] = {
-        "user_id": "user123",
-        "room_id": "room123",
-    }
+    event_handler.connection_manager.users["sid123"] = {"id": "user123"}
+    await event_handler.connection_manager.join_room("sid123", "room123")
 
-    await event_handler.on_typing(
-        "sid123", {"room_id": "room123", "is_typing": True}
-    )
+    await event_handler.on_typing("sid123", {"room_id": "room123", "is_typing": True})
 
     # Verify broadcast was called
     mock_sio.emit.assert_called()
@@ -179,14 +173,10 @@ async def test_on_typing(event_handler, mock_sio):
 async def test_on_chat_message(event_handler, mock_sio, mock_session):
     """Test chat message handler"""
     # Register connection
-    event_handler.connections["sid123"] = {
-        "user_id": "user123",
-        "room_id": "room123",
-    }
+    event_handler.connection_manager.users["sid123"] = {"id": "user123"}
+    await event_handler.connection_manager.join_room("sid123", "room123")
 
-    with patch.object(
-        ChatService, "add_message", new_callable=AsyncMock
-    ) as mock_add:
+    with patch.object(ChatService, "add_message", new_callable=AsyncMock) as mock_add:
         mock_message = Mock()
         mock_message.id = "msg123"
         mock_add.return_value = mock_message
@@ -205,10 +195,8 @@ async def test_on_chat_message(event_handler, mock_sio, mock_session):
 async def test_on_add_reaction(event_handler, mock_sio, mock_session):
     """Test reaction handler"""
     # Register connection
-    event_handler.connections["sid123"] = {
-        "user_id": "user123",
-        "room_id": "room123",
-    }
+    event_handler.connection_manager.users["sid123"] = {"id": "user123"}
+    await event_handler.connection_manager.join_room("sid123", "room123")
 
     with patch.object(
         ChatService, "add_reaction", new_callable=AsyncMock
@@ -227,24 +215,28 @@ async def test_on_add_reaction(event_handler, mock_sio, mock_session):
 async def test_on_get_sync(event_handler, mock_sio, mock_session):
     """Test sync request handler"""
     # Register connection
-    event_handler.connections["sid123"] = {
-        "user_id": "user123",
-        "room_id": "room123",
-    }
+    event_handler.connection_manager.users["sid123"] = {"id": "user123"}
+    await event_handler.connection_manager.join_room("sid123", "room123")
 
-    with patch.object(
-        SyncService, "get_operations_since", new_callable=AsyncMock
-    ) as mock_get:
-        mock_get.return_value = []
+    # Setup memory OT
+    from time_warp.core.collaboration_engine import OperationalTransform
 
-        await event_handler.on_get_sync(
-            "sid123", {"room_id": "room123", "version": 0}
-        )
+    ot = OperationalTransform()
+    ot.version = 5
+    event_handler.ot_engines["room123"] = ot
 
-        # Verify sync was retrieved
-        mock_get.assert_called_once()
-        # Verify response was emitted
-        mock_sio.emit.assert_called()
+    await event_handler.on_get_sync("sid123", {"room_id": "room123", "version": 0})
+
+    # Verify response was emitted
+    mock_sio.emit.assert_called_with(
+        "sync_response",
+        {
+            "version": 5,
+            "operations": [],
+            "content": "",
+        },
+        to="sid123",
+    )
 
 
 # Presence Tests
@@ -252,10 +244,8 @@ async def test_on_get_sync(event_handler, mock_sio, mock_session):
 async def test_on_presence_update(event_handler, mock_sio):
     """Test presence update handler"""
     # Register connection
-    event_handler.connections["sid123"] = {
-        "user_id": "user123",
-        "room_id": "room123",
-    }
+    event_handler.connection_manager.users["sid123"] = {"id": "user123"}
+    await event_handler.connection_manager.join_room("sid123", "room123")
 
     await event_handler.on_presence_update(
         "sid123",
@@ -271,10 +261,13 @@ async def test_on_presence_update(event_handler, mock_sio):
 async def test_on_code_change_invalid_data(event_handler):
     """Test code change with invalid data"""
     # Register connection
-    event_handler.connections["sid123"] = {
-        "user_id": "user123",
-        "room_id": "room123",
-    }
+    event_handler.connection_manager.users["sid123"] = {"id": "user123"}
+    await event_handler.connection_manager.join_room("sid123", "room123")
+
+    # Initialize OT engine to avoid error there, IF it checks connection/room first
+    from time_warp.core.collaboration_engine import OperationalTransform
+
+    event_handler.ot_engines["room123"] = OperationalTransform()
 
     # Should not raise exception with invalid data
     result = await event_handler.on_code_change(
@@ -289,11 +282,9 @@ async def test_on_code_change_invalid_data(event_handler):
 async def test_unregistered_connection(event_handler):
     """Test handling of unregistered connection"""
     # Connection not in registry
-    assert "unknown_sid" not in event_handler.connections
+    assert "unknown_sid" not in event_handler.connection_manager.users
 
     # Should handle gracefully
-    result = await event_handler.on_cursor_update(
-        "unknown_sid", {"position": 0}
-    )
+    result = await event_handler.on_cursor_update("unknown_sid", {"position": 0})
 
     assert result is None or isinstance(result, dict)

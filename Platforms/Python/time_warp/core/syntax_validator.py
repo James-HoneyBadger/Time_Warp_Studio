@@ -124,9 +124,7 @@ class SyntaxValidator:
             for close_word in open_structures.values():
                 if close_word in stripped:
                     keyword = [
-                        k
-                        for k, v in open_structures.items()
-                        if v == close_word
+                        k for k, v in open_structures.items() if v == close_word
                     ][0]
                     open_count[keyword] -= 1
                     if open_count[keyword] < 0:
@@ -240,9 +238,7 @@ class SyntaxValidator:
                 continue
 
             # Check for label (ends with :)
-            if stripped.endswith(":") and not any(
-                c in stripped for c in "ATMEYNU"
-            ):
+            if stripped.endswith(":") and not any(c in stripped for c in "ATMEYNU"):
                 continue  # Valid label
 
             # Check command prefix

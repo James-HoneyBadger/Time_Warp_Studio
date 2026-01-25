@@ -1,11 +1,11 @@
-# 🚀 Time Warp IDE - Enterprise Real-Time Collaborative Programming Environment
+# 🚀 Time Warp Studio - Enterprise Real-Time Collaborative Programming Environment
 
 [![Status](https://img.shields.io/badge/status-production%20ready-brightgreen)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 [![Version](https://img.shields.io/badge/version-5.1.0-blue)](https://github.com/James-HoneyBadger/Time_Warp_Studio/releases)
 [![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 [![Build](https://img.shields.io/badge/build-passing-brightgreen)](https://github.com/James-HoneyBadger/Time_Warp_Studio/actions)
 
-**Time Warp IDE** is an enterprise-grade, cloud-native programming environment that unifies multiple educational languages (BASIC, PILOT, Logo, Pascal, Prolog, C, Forth) with real-time collaboration, turtle graphics, IoT/robotics capabilities, and a modern multiplayer infrastructure.
+**Time Warp Studio** is an enterprise-grade, cloud-native programming environment that unifies multiple educational languages (BASIC, PILOT, Logo, Pascal, Prolog, C, Forth) with real-time collaboration, turtle graphics, IoT/robotics capabilities, and a modern multiplayer infrastructure.
 
 ---
 
@@ -58,7 +58,7 @@
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                    Time Warp IDE Stack                      │
+│                    Time Warp Studio Stack                      │
 ├─────────────────────────────────────────────────────────────┤
 │                                                               │
 │  Frontend Layer (React 18)                                   │
@@ -454,7 +454,7 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) file for
 
 ## 🙏 Acknowledgments
 
-Built with ❤️ by the Time Warp IDE community.
+Built with ❤️ by the Time Warp Studio community.
 
 **Key Contributors:**
 - James Temple - Creator & Lead Developer

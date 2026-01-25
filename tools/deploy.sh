@@ -1,9 +1,9 @@
 #!/bin/bash
 
 #############################################
-# Time Warp IDE - Production Deployment Script
+# Time Warp Studio - Production Deployment Script
 # Handles all deployment tasks for Phase 4.5
-# Usage: ./deploy.sh [backend|frontend|mobile|all] [dev|staging|prod]
+# Usage: ./deploy.sh [backend|all] [dev|staging|prod]
 #############################################
 
 set -e
@@ -27,8 +27,8 @@ TARGET=${1:-all}
 ENVIRONMENT=${2:-dev}
 
 # Validate arguments
-if [[ ! "$TARGET" =~ ^(backend|frontend|mobile|all)$ ]]; then
-    echo -e "${RED}Error: Invalid target. Must be: backend, frontend, mobile, or all${NC}"
+if [[ ! "$TARGET" =~ ^(backend|all)$ ]]; then
+    echo -e "${RED}Error: Invalid target. Must be: backend or all${NC}"
     exit 1
 fi
 
@@ -66,15 +66,6 @@ check_prerequisites() {
         command -v kubectl >/dev/null 2>&1 || { log_error "Kubectl is required"; exit 1; }
     fi
     
-    if [[ "$TARGET" =~ ^(frontend|all)$ ]]; then
-        command -v npm >/dev/null 2>&1 || { log_error "npm is required"; exit 1; }
-        command -v aws >/dev/null 2>&1 || { log_error "AWS CLI is required"; exit 1; }
-    fi
-    
-    if [[ "$TARGET" =~ ^(mobile|all)$ ]]; then
-        command -v node >/dev/null 2>&1 || { log_error "Node.js is required"; exit 1; }
-    fi
-    
     log_success "All prerequisites met"
 }
 
@@ -88,22 +79,6 @@ run_tests() {
         python -m pytest tests/ -v --tb=short --cov=. --cov-report=html
         cd ../..
         log_success "Backend tests passed"
-    fi
-    
-    if [[ "$TARGET" =~ ^(frontend|all)$ ]]; then
-        log_info "Running frontend tests..."
-        cd Platforms/web
-        npm test -- --coverage --watchAll=false
-        cd ../..
-        log_success "Frontend tests passed"
-    fi
-    
-    if [[ "$TARGET" =~ ^(mobile|all)$ ]]; then
-        log_info "Running mobile tests..."
-        cd Platforms/mobile
-        npm test -- --coverage --watchAll=false
-        cd ../..
-        log_success "Mobile tests passed"
     fi
 }
 
@@ -158,43 +133,6 @@ build_backend() {
     cd ../..
 }
 
-# Build frontend
-build_frontend() {
-    log_info "Building frontend..."
-    
-    cd Platforms/web
-    
-    # Install dependencies
-    npm ci
-    
-    # Build optimized bundle
-    npm run build
-    
-    log_success "Frontend built successfully"
-    
-    cd ../..
-}
-
-# Build mobile
-build_mobile() {
-    log_info "Building mobile app..."
-    
-    cd Platforms/mobile
-    
-    # Install dependencies
-    npm ci
-    
-    if [[ "$ENVIRONMENT" == "prod" ]]; then
-        # Production build
-        npm run build:ios
-        npm run build:android
-    fi
-    
-    log_success "Mobile app built successfully"
-    
-    cd ../..
-}
-
 # Backup database
 backup_database() {
     log_info "Backing up database..."
@@ -245,51 +183,6 @@ deploy_backend_k8s() {
     log_success "Backend deployed to Kubernetes ($NAMESPACE)"
 }
 
-# Deploy frontend to CDN
-deploy_frontend_cdn() {
-    log_info "Deploying frontend to CDN ($ENVIRONMENT)..."
-    
-    # Determine S3 bucket
-    if [[ "$ENVIRONMENT" == "prod" ]]; then
-        S3_BUCKET="s3://timewarp-cdn-prod"
-        CF_DISTRIBUTION="E1234PROD"
-    elif [[ "$ENVIRONMENT" == "staging" ]]; then
-        S3_BUCKET="s3://timewarp-cdn-staging"
-        CF_DISTRIBUTION="E1234STAGING"
-    else
-        S3_BUCKET="s3://timewarp-cdn-dev"
-        CF_DISTRIBUTION="E1234DEV"
-    fi
-    
-    # Upload to S3
-    aws s3 sync Platforms/web/dist/ "$S3_BUCKET/" --delete --cache-control "max-age=3600"
-    
-    # Invalidate CloudFront cache
-    aws cloudfront create-invalidation \
-        --distribution-id "$CF_DISTRIBUTION" \
-        --paths "/*"
-    
-    log_success "Frontend deployed to CDN ($ENVIRONMENT)"
-}
-
-# Deploy mobile to stores
-deploy_mobile() {
-    log_info "Deploying mobile app ($ENVIRONMENT)..."
-    
-    if [[ "$ENVIRONMENT" == "prod" ]]; then
-        log_info "Deploying iOS to App Store..."
-        # This would use Fastlane or similar
-        # fastlane ios release version:"$VERSION"
-        log_warn "iOS deployment requires manual review in App Store Connect"
-        
-        log_info "Deploying Android to Play Store..."
-        # fastlane android release version:"$VERSION"
-        log_warn "Android deployment requires manual review in Google Play Console"
-    fi
-    
-    log_success "Mobile deployment initiated ($ENVIRONMENT)"
-}
-
 # Run health checks
 health_check() {
     log_info "Running health checks..."
@@ -323,25 +216,6 @@ health_check() {
         fi
     fi
     
-    if [[ "$TARGET" =~ ^(frontend|all)$ ]]; then
-        log_info "Checking frontend deployment..."
-        
-        if [[ "$ENVIRONMENT" == "prod" ]]; then
-            FE_URL="https://timewarp.io"
-        elif [[ "$ENVIRONMENT" == "staging" ]]; then
-            FE_URL="https://staging.timewarp.io"
-        else
-            FE_URL="http://localhost:3000"
-        fi
-        
-        if curl -sf "$FE_URL" > /dev/null; then
-            log_success "Frontend deployment check passed"
-        else
-            log_error "Frontend deployment check failed"
-            return 1
-        fi
-    fi
-    
     log_success "All health checks passed"
 }
 
@@ -355,18 +229,13 @@ rollback() {
         log_success "Backend rolled back"
     fi
     
-    if [[ "$TARGET" =~ ^(frontend|all)$ ]]; then
-        # CloudFront invalidation with previous version would go here
-        log_warn "Frontend rollback requires manual CDN invalidation"
-    fi
-    
     log_success "Rollback completed"
 }
 
 # Main deployment flow
 main() {
     log_info "=========================================="
-    log_info "Time Warp IDE Deployment"
+    log_info "Time Warp Studio Deployment"
     log_info "Target: $TARGET | Environment: $ENVIRONMENT | Version: $VERSION"
     log_info "=========================================="
     
@@ -392,11 +261,9 @@ main() {
     fi
     
     if [[ "$TARGET" =~ ^(frontend|all)$ ]]; then
-        build_frontend
     fi
     
     if [[ "$TARGET" =~ ^(mobile|all)$ ]]; then
-        build_mobile
     fi
     
     # Deploy
@@ -405,11 +272,9 @@ main() {
     fi
     
     if [[ "$TARGET" =~ ^(frontend|all)$ ]]; then
-        deploy_frontend_cdn
     fi
     
     if [[ "$TARGET" =~ ^(mobile|all)$ ]]; then
-        deploy_mobile
     fi
     
     # Health checks

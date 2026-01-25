@@ -82,28 +82,6 @@ services:
       - timewarp-network
     restart: unless-stopped
 
-  # Frontend (Development only, use Nginx in production)
-  frontend:
-    image: node:20-alpine
-    container_name: timewarp-frontend-dev
-    working_dir: /app
-    command: npm run dev -- --host
-    environment:
-      VITE_API_URL: http://localhost:8000
-      VITE_WS_URL: ws://localhost:8000/ws
-    volumes:
-      - ./Platforms/web:/app
-      - /app/node_modules
-    ports:
-      - "5173:5173"
-    depends_on:
-      - api
-    networks:
-      - timewarp-network
-    restart: unless-stopped
-    profiles:
-      - dev
-
   # Nginx Reverse Proxy (Production)
   nginx:
     image: nginx:alpine

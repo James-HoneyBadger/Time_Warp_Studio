@@ -1,4 +1,4 @@
-"""Hardware control panel UI for Time Warp IDE
+"""Hardware control panel UI for Time Warp Studio
 Provides real-time sensor visualization and actuator control
 """
 

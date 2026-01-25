@@ -4,8 +4,7 @@ Tests WebSocket communication, OT algorithm, presence tracking, and chat
 """
 
 import asyncio
-import json
-from unittest.mock import AsyncMock, Mock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -252,10 +251,7 @@ class TestChatService:
         success = service.edit_message("room1", message_id, "Hello world!")
 
         assert success is True
-        assert (
-            service.message_index["room1"][message_id].content
-            == "Hello world!"
-        )
+        assert service.message_index["room1"][message_id].content == "Hello world!"
 
     def test_delete_message(self):
         """Test deleting a message"""
@@ -360,10 +356,8 @@ class TestMultiUserCollaboration:
         ot = OperationalTransform()
 
         # Users chat
-        msg1 = chat.add_message(
-            "room1", "user1", "Alice", "Let's add a feature"
-        )
-        msg2 = chat.add_message("room1", "user2", "Bob", "Sure!")
+        chat.add_message("room1", "user1", "Alice", "Let's add a feature")
+        chat.add_message("room1", "user2", "Bob", "Sure!")
 
         # Users edit code
         op1 = ot.create_operation("user1", "insert", 0, "def hello():")

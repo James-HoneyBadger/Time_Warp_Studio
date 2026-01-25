@@ -1,6 +1,6 @@
 # Keyboard Shortcuts Guide
 
-Master Time Warp IDE with these keyboard shortcuts. Use them to work faster and more efficiently.
+Master Time Warp Studio with these keyboard shortcuts. Use them to work faster and more efficiently.
 
 ## File Operations
 

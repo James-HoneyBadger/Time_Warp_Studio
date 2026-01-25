@@ -1,4 +1,4 @@
-# WASM Build Configuration for Time Warp IDE Language Interpreters
+# WASM Build Configuration for Time Warp Studio Language Interpreters
 # Compiles all language interpreters to WebAssembly for browser execution
 
 .PHONY: wasm-all wasm-clean wasm-test wasm-bench wasm-basic wasm-logo wasm-pilot wasm-pascal wasm-prolog wasm-forth wasm-c wasm-optimize
@@ -27,7 +27,7 @@ WASM_FLAGS := -O3 \
 EXPORT_FUNCS := _execute_code,_init_interpreter,_cleanup,_get_error,_get_output,_malloc,_free
 
 # Output directories
-WASM_OUTPUT_DIR := Platforms/web/public/wasm
+WASM_OUTPUT_DIR := Platforms/backend/wasm
 WASM_SRC_DIR := Platforms/wasm
 
 # Interpreter source files
@@ -234,7 +234,7 @@ wasm-check:
 
 # Help
 wasm-help:
-	@echo "WASM Build System - Time Warp IDE"
+	@echo "WASM Build System - Time Warp Studio"
 	@echo ""
 	@echo "Targets:"
 	@echo "  make wasm-all          - Build all WASM modules"

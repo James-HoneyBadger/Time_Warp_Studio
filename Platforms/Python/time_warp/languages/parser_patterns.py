@@ -49,14 +49,10 @@ BASIC_PATTERNS: Dict[str, re.Pattern] = {
     "INPUT": re.compile(r"INPUT\s+(.+)", re.IGNORECASE),
     "LOCATE": re.compile(r"LOCATE\s+(\d+)\s*,\s*(\d+)", re.IGNORECASE),
     "CLS": re.compile(r"CLS\s*$", re.IGNORECASE),
-    "SCREEN": re.compile(
-        r"SCREEN\s+(\d+)(?:\s*,\s*(\d+)\s*,\s*(\d+))?", re.IGNORECASE
-    ),
+    "SCREEN": re.compile(r"SCREEN\s+(\d+)(?:\s*,\s*(\d+)\s*,\s*(\d+))?", re.IGNORECASE),
     "COLOR": re.compile(r"COLOR\s+(\d+)(?:\s*,\s*(\d+))?", re.IGNORECASE),
     # Variables and functions
-    "LET": re.compile(
-        r"LET\s+([A-Z][A-Z0-9]*)\s*\$?\s*=\s*(.+)", re.IGNORECASE
-    ),
+    "LET": re.compile(r"LET\s+([A-Z][A-Z0-9]*)\s*\$?\s*=\s*(.+)", re.IGNORECASE),
     "DIM": re.compile(r"DIM\s+(.+)", re.IGNORECASE),
     "DATA": re.compile(r"DATA\s+(.+)", re.IGNORECASE),
     "READ": re.compile(r"READ\s+(.+)", re.IGNORECASE),
@@ -146,16 +142,12 @@ LOGO_PATTERNS: Dict[str, re.Pattern] = {
     # Control flow
     "REPEAT": re.compile(r"REPEAT\s+(.+?)\s*\[", re.IGNORECASE),
     "IF": re.compile(r"IF\s+(.+?)\s*\[", re.IGNORECASE),
-    "IFELSE": re.compile(
-        r"IFELSE\s+(.+?)\s*\[\s*(.+?)\s*\]\s*\[", re.IGNORECASE
-    ),
+    "IFELSE": re.compile(r"IFELSE\s+(.+?)\s*\[\s*(.+?)\s*\]\s*\[", re.IGNORECASE),
     "WHILE": re.compile(r"WHILE\s+(.+?)\s*\[", re.IGNORECASE),
     "FOREVER": re.compile(r"FOREVER\s*$", re.IGNORECASE),
     "BREAK": re.compile(r"BREAK\s*$", re.IGNORECASE),
     # Lists and variables
-    "MAKE": re.compile(
-        r"MAKE\s+([A-Za-z_][A-Za-z0-9_]*)\s+(.+)", re.IGNORECASE
-    ),
+    "MAKE": re.compile(r"MAKE\s+([A-Za-z_][A-Za-z0-9_]*)\s+(.+)", re.IGNORECASE),
     "LOCAL": re.compile(r"LOCAL\s+(.+)", re.IGNORECASE),
     "GLOBAL": re.compile(r"GLOBAL\s+(.+)", re.IGNORECASE),
     # Procedures

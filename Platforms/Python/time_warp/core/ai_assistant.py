@@ -72,9 +72,14 @@ class LocalAIAssistant:
             "C": 'int arr[10]; arr[0] = 42; printf("%d\\n", arr[0]);',
         },
         "functions": {
-            "BASIC": 'SUB greet(name$)\n  PRINT "Hello " name$\nEND SUB\nCALL greet("World")',
+            "BASIC": (
+                'SUB greet(name$)\n  PRINT "Hello " name$\nEND SUB\n'
+                'CALL greet("World")'
+            ),
             "LOGO": "TO square :size\n  REPEAT 4 [FORWARD :size RIGHT 90]\nEND",
-            "PASCAL": 'procedure greet(name: string); begin WriteLn("Hello " + name); end;',
+            "PASCAL": (
+                'procedure greet(name: string); begin WriteLn("Hello " + name); end;'
+            ),
             "C": 'void greet(char *name) { printf("Hello %s\\n", name); }',
         },
     }
@@ -98,7 +103,9 @@ class LocalAIAssistant:
         },
         "divide by zero": {
             "pattern": "divide by zero",
-            "suggestion": 'Add a check before division: IF divisor = 0 THEN PRINT "Error"',
+            "suggestion": (
+                'Add a check before division: IF divisor = 0 THEN PRINT "Error"'
+            ),
             "example": "IF x <> 0 THEN result = y / x",
         },
     }
@@ -154,9 +161,7 @@ class LocalAIAssistant:
         code = self.KNOWLEDGE_BASE.get(concept.lower(), {}).get(lang_name, "")
 
         if code:
-            explanation = (
-                f"Here's how to implement {concept} in {lang_name}:\n\n{code}"
-            )
+            explanation = f"Here's how to implement {concept} in {lang_name}:\n\n{code}"
             confidence = 0.95
         else:
             explanation = (
@@ -176,23 +181,17 @@ class LocalAIAssistant:
         self._trigger_callbacks("code_suggested", suggestion=result)
         return result
 
-    def fix_syntax(
-        self, code: str, error: Optional[str] = None
-    ) -> AssistantSuggestion:
+    def fix_syntax(self, code: str, error: Optional[str] = None) -> AssistantSuggestion:
         """Suggest fixes for syntax errors."""
         fixes = self._identify_common_syntax_issues(code)
 
         if fixes:
             explanation = "Found potential syntax issues:\n\n"
             for i, fix in enumerate(fixes, 1):
-                explanation += (
-                    f"{i}. {fix['issue']}\n   Fix: {fix['suggestion']}\n\n"
-                )
+                explanation += f"{i}. {fix['issue']}\n   Fix: {fix['suggestion']}\n\n"
             confidence = 0.8
         else:
-            explanation = (
-                "No obvious syntax errors found. The issue might be semantic."
-            )
+            explanation = "No obvious syntax errors found. The issue might be semantic."
             confidence = 0.5
 
         result = AssistantSuggestion(
@@ -212,9 +211,7 @@ class LocalAIAssistant:
 
         explanation = "Optimization opportunities:\n\n"
         for sug in suggestions:
-            explanation += (
-                f"• {sug['description']}\n  Impact: {sug['impact']}\n\n"
-            )
+            explanation += f"• {sug['description']}\n  Impact: {sug['impact']}\n\n"
 
         result = AssistantSuggestion(
             mode=AssistantMode.OPTIMIZE_CODE,
@@ -230,13 +227,33 @@ class LocalAIAssistant:
     def explain_concept(self, concept: str) -> str:
         """Explain a programming concept."""
         explanations = {
-            "loop": "A loop repeats a block of code multiple times. USE: FOR loops for fixed counts, WHILE loops for conditions.",
-            "variable": "A variable stores a value that can change. You can assign different values to it throughout your program.",
-            "array": "An array is a list of values. Access items by index (0, 1, 2, etc.).",
-            "function": "A function is reusable code. Define it once, call it many times.",
-            "conditional": "IF statements make decisions. IF condition is true, execute one block, ELSE execute another.",
-            "recursion": "A function calling itself. Useful for trees, fractals, and divide-and-conquer problems.",
-            "variable scope": "Where a variable is accessible. Local = inside function, Global = everywhere.",
+            "loop": (
+                "A loop repeats a block of code multiple times. USE: FOR loops for "
+                "fixed counts, WHILE loops for conditions."
+            ),
+            "variable": (
+                "A variable stores a value that can change. You can assign different "
+                "values to it throughout your program."
+            ),
+            "array": (
+                "An array is a list of values. Access items by index (0, 1, 2, etc.)."
+            ),
+            "function": (
+                "A function is reusable code. Define it once, call it many times."
+            ),
+            "conditional": (
+                "IF statements make decisions. "
+                "IF condition is true, execute one block, "
+                "ELSE execute another."
+            ),
+            "recursion": (
+                "A function calling itself. Useful for trees, fractals, and divide-and-"
+                "conquer problems."
+            ),
+            "variable scope": (
+                "Where a variable is accessible. Local = inside function, Global = "
+                "everywhere."
+            ),
         }
 
         explanation = explanations.get(
@@ -249,9 +266,7 @@ class LocalAIAssistant:
         )
         return explanation
 
-    def generate_example(
-        self, concept: str, difficulty: str = "beginner"
-    ) -> str:
+    def generate_example(self, concept: str, difficulty: str = "beginner") -> str:
         """Generate example code."""
         examples = {
             "loop": {
@@ -260,7 +275,10 @@ class LocalAIAssistant:
             },
             "function": {
                 "beginner": 'SUB hello()\n  PRINT "Hello World"\nEND SUB\nCALL hello()',
-                "intermediate": "FUNCTION add(a, b)\n  RETURN a + b\nEND FUNCTION\nRESULT = add(3, 4)",
+                "intermediate": (
+                    "FUNCTION add(a, b)\n  RETURN a + b\nEND FUNCTION\n"
+                    "RESULT = add(3, 4)"
+                ),
             },
         }
 
@@ -268,9 +286,7 @@ class LocalAIAssistant:
             difficulty, "No example available"
         )
 
-        self._trigger_callbacks(
-            "example_generated", concept=concept, example=example
-        )
+        self._trigger_callbacks("example_generated", concept=concept, example=example)
         return example
 
     def chat(self, user_message: str) -> str:
@@ -284,9 +300,7 @@ class LocalAIAssistant:
         response = self._generate_chat_response(user_message)
 
         self.conversation_history.append(
-            ConversationMessage(
-                role="assistant", content=response, timestamp=0
-            )
+            ConversationMessage(role="assistant", content=response, timestamp=0)
         )
 
         self._trigger_callbacks("chat_response", message=response)
@@ -330,7 +344,6 @@ class LocalAIAssistant:
     def _identify_common_syntax_issues(self, code: str) -> List[Dict]:
         """Identify common syntax problems."""
         issues = []
-        lines = code.split("\n")
 
         # Check for unclosed structures
         open_if = code.count("IF")
@@ -338,7 +351,9 @@ class LocalAIAssistant:
         if open_if > close_if:
             issues.append(
                 {
-                    "issue": f"Unclosed IF statement (found {open_if} IF, {close_if} ENDIF)",
+                    "issue": (
+                        f"Unclosed IF statement (found {open_if} IF, {close_if} ENDIF)"
+                    ),
                     "suggestion": "Add ENDIF at the end of IF blocks",
                     "fixed": code,  # Would need to add actual fix
                 }
@@ -350,7 +365,9 @@ class LocalAIAssistant:
         if for_count > next_count:
             issues.append(
                 {
-                    "issue": f"Unclosed FOR loop (found {for_count} FOR, {next_count} NEXT)",
+                    "issue": (
+                        f"Unclosed FOR loop (found {for_count} FOR, {next_count} NEXT)"
+                    ),
                     "suggestion": "Add NEXT at the end of FOR loops",
                 }
             )
@@ -384,7 +401,10 @@ class LocalAIAssistant:
                     {
                         "description": f"Repeated code found {count} times",
                         "impact": "HIGH - Extract to function",
-                        "suggestion": f"Move this repeated code to a subroutine: {line[:40]}...",
+                        "suggestion": (
+                            "Move this repeated code to a subroutine: "
+                            f"{line[:40]}..."
+                        ),
                     }
                 )
 
@@ -395,7 +415,9 @@ class LocalAIAssistant:
                 {
                     "description": "Nested loops detected",
                     "impact": "MEDIUM - Consider algorithm changes",
-                    "suggestion": "Nested loops can be slow. Consider if you need both.",
+                    "suggestion": (
+                        "Nested loops can be slow. Consider if you need both."
+                    ),
                 }
             )
 
@@ -412,7 +434,10 @@ class LocalAIAssistant:
             elif "function" in msg_lower or "subroutine" in msg_lower:
                 return self.suggest_code("functions").explanation
             else:
-                return "I can help with loops, functions, arrays, and conditionals. What would you like to learn?"
+                return (
+                    "I can help with loops, functions, arrays, and conditionals. "
+                    "What would you like to learn?"
+                )
 
         # Error queries
         if "error" in msg_lower or "bug" in msg_lower or "fix" in msg_lower:
@@ -434,7 +459,10 @@ class LocalAIAssistant:
             return self.generate_example("loop", "beginner")
 
         # Default response
-        return "Ask me about loops, functions, arrays, conditionals, or any errors you're seeing!"
+        return (
+            "Ask me about loops, functions, arrays, conditionals, or any errors you're "
+            "seeing!"
+        )
 
 
 class RemoteAIAssistant:
@@ -447,9 +475,7 @@ class RemoteAIAssistant:
         self.model = "gpt-3.5-turbo"
         self.conversation_history: List[ConversationMessage] = []
 
-    def explain_error(
-        self, error: str, code: Optional[str] = None
-    ) -> Optional[str]:
+    def explain_error(self, error: str, code: Optional[str] = None) -> Optional[str]:
         """Use OpenAI to explain error."""
         if not self.enabled:
             return None
@@ -476,9 +502,7 @@ class RemoteAIAssistant:
         except Exception as e:
             return f"API error: {str(e)}"
 
-    def suggest_code(
-        self, description: str, language: str = "BASIC"
-    ) -> Optional[str]:
+    def suggest_code(self, description: str, language: str = "BASIC") -> Optional[str]:
         """Use OpenAI to suggest code."""
         if not self.enabled:
             return None
@@ -498,5 +522,5 @@ class RemoteAIAssistant:
 
             return response.choices[0].message.content
 
-        except Exception as e:
+        except Exception:
             return None

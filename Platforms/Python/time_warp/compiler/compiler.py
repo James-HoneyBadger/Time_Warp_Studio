@@ -1,4 +1,4 @@
-"""Compiler for Time Warp IDE.
+"""Compiler for Time Warp Studio.
 
 Compiles programs to C and then to native executables.
 """

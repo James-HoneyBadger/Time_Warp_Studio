@@ -1,4 +1,4 @@
-# Time Warp IDE Server Requirements
+# Time Warp Studio Server Requirements
 # Phase 4.5.2 Backend Integration
 
 # Core Framework

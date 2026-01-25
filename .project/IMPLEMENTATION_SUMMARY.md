@@ -394,7 +394,7 @@ Time Warp Studio now provides:
 **Documentation**: Complete  
 **Test Coverage**: 100%  
 
-All modules are production-ready and can be integrated into the Time Warp IDE immediately.
+All modules are production-ready and can be integrated into the Time Warp Studio immediately.
 
 ---
 

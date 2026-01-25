@@ -116,9 +116,7 @@ class AccessibilityManager:
         if mode:
             self.enabled_features.add(AccessibilityFeature.COLOR_BLIND_MODE)
         else:
-            self.enabled_features.discard(
-                AccessibilityFeature.COLOR_BLIND_MODE
-            )
+            self.enabled_features.discard(AccessibilityFeature.COLOR_BLIND_MODE)
 
         self._trigger_callbacks("color_blind_mode_changed", mode=mode)
 
@@ -162,9 +160,7 @@ class ScreenReaderSupport:
     """Screen reader support and ARIA labels."""
 
     @staticmethod
-    def generate_aria_label(
-        element_type: str, content: str, state: str = ""
-    ) -> str:
+    def generate_aria_label(element_type: str, content: str, state: str = "") -> str:
         """Generate ARIA label for UI element."""
         labels = {
             "button": f"Button: {content}",
@@ -199,23 +195,19 @@ class ScreenReaderSupport:
     @staticmethod
     def describe_turtle_graphics(turtle_state: Dict) -> str:
         """Create accessible description of turtle state."""
-        return (
-            f"Turtle at position {
+        return f"Turtle at position {
                 turtle_state.get(
                     'x',
                     0)}, {
                 turtle_state.get(
                     'y',
-                    0)} "
-            f"facing {
+                    0)} " f"facing {
                         turtle_state.get(
                             'angle',
-                            0)} degrees, "
-            f"pen is {
+                            0)} degrees, " f"pen is {
                                 'down' if turtle_state.get(
                                     'pen_down',
                                     True) else 'up'}"
-        )
 
 
 class TextToSpeechEngine:
@@ -321,9 +313,7 @@ class SpeechToTextEngine:
             return text
 
         except ImportError:
-            self._trigger_callbacks(
-                "error", message="Speech recognition not installed"
-            )
+            self._trigger_callbacks("error", message="Speech recognition not installed")
             return None
         except Exception as e:
             self._trigger_callbacks("error", message=str(e))

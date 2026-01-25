@@ -4,14 +4,12 @@ Provides CRUD operations for all models with async support
 """
 
 import logging
-from datetime import datetime
 from typing import List, Optional
 
 from sqlalchemy import and_, desc, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .models import (
-    ConflictResolution,
     DocumentSnapshot,
     Message,
     Operation,
@@ -128,9 +126,7 @@ class RoomMemberRepository(BaseRepository):
         )
         return result.scalars().all()
 
-    async def get_member(
-        self, room_id: str, user_id: str
-    ) -> Optional[RoomMember]:
+    async def get_member(self, room_id: str, user_id: str) -> Optional[RoomMember]:
         """Get specific member"""
         result = await self.session.execute(
             select(self.model).where(
@@ -161,17 +157,11 @@ class OperationRepository(BaseRepository):
         )
         return result.scalars().all()
 
-    async def get_operations_since(
-        self, room_id: str, version: int
-    ) -> List[Operation]:
+    async def get_operations_since(self, room_id: str, version: int) -> List[Operation]:
         """Get operations after a specific version"""
         result = await self.session.execute(
             select(self.model)
-            .where(
-                and_(
-                    self.model.room_id == room_id, self.model.version > version
-                )
-            )
+            .where(and_(self.model.room_id == room_id, self.model.version > version))
             .order_by(self.model.version)
         )
         return result.scalars().all()
@@ -187,9 +177,7 @@ class OperationRepository(BaseRepository):
         version = result.scalar()
         return version or 0
 
-    async def get_user_operations(
-        self, room_id: str, user_id: str
-    ) -> List[Operation]:
+    async def get_user_operations(self, room_id: str, user_id: str) -> List[Operation]:
         """Get operations by specific user in room"""
         result = await self.session.execute(
             select(self.model)
@@ -238,9 +226,7 @@ class MessageRepository(BaseRepository):
         )
         return result.scalars().all()
 
-    async def get_user_messages(
-        self, room_id: str, user_id: str
-    ) -> List[Message]:
+    async def get_user_messages(self, room_id: str, user_id: str) -> List[Message]:
         """Get messages by specific user"""
         result = await self.session.execute(
             select(self.model)
@@ -261,9 +247,7 @@ class DocumentSnapshotRepository(BaseRepository):
     def __init__(self, session: AsyncSession):
         super().__init__(session, DocumentSnapshot)
 
-    async def get_latest_snapshot(
-        self, room_id: str
-    ) -> Optional[DocumentSnapshot]:
+    async def get_latest_snapshot(self, room_id: str) -> Optional[DocumentSnapshot]:
         """Get latest snapshot for a room"""
         result = await self.session.execute(
             select(self.model)

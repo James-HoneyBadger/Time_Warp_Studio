@@ -84,14 +84,10 @@ class ChatService:
             old_message = self.messages[room_id].pop(0)
             del self.message_index[room_id][old_message.id]
 
-        logger.info(
-            f"Message added to room {room_id} by {username}: {content[:50]}..."
-        )
+        logger.info(f"Message added to room {room_id} by {username}: {content[:50]}...")
         return message
 
-    def edit_message(
-        self, room_id: str, message_id: str, new_content: str
-    ) -> bool:
+    def edit_message(self, room_id: str, message_id: str, new_content: str) -> bool:
         """Edit an existing message"""
         if (
             room_id not in self.message_index
@@ -216,9 +212,7 @@ class ChatService:
         if room_id not in self.messages:
             return []
 
-        messages = [
-            msg for msg in self.messages[room_id] if msg.user_id == user_id
-        ]
+        messages = [msg for msg in self.messages[room_id] if msg.user_id == user_id]
 
         return [msg.to_dict() for msg in messages[-limit:]]
 
@@ -265,15 +259,13 @@ class ChatService:
         elif format == "csv":
             lines = ["timestamp,username,content"]
             for msg in messages:
-                lines.append(
-                    f'{
+                lines.append(f'{
                         msg.timestamp},"{
                         msg.username}","{
                         msg.content.replace(
                             chr(34),
                             chr(34) +
-                            chr(34))}"'
-                )
+                            chr(34))}"')
             return "\n".join(lines)
         elif format == "txt":
             lines = []

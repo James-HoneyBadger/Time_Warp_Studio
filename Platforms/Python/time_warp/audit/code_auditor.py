@@ -13,7 +13,7 @@ Comprehensive audit covering:
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Dict, List, Optional, Tuple
 
 # ===== ENUMS =====
 
@@ -158,9 +158,7 @@ class CodeQualityReport:
     )
 
     # Details
-    test_coverage: TestCoverageReport = field(
-        default_factory=TestCoverageReport
-    )
+    test_coverage: TestCoverageReport = field(default_factory=TestCoverageReport)
     documentation_completeness: float = 0.0  # percentage
 
     # Summary
@@ -287,24 +285,22 @@ class MaintainabilityAnalyzer:
         # Check for descriptive variable names
         short_names = len([w for w in code.split() if len(w) < 2])
         if short_names > 10:
-            issues.append(
-                "Many single-letter variable names reduce readability"
-            )
+            issues.append("Many single-letter variable names reduce readability")
 
         # Check for long lines
         lines = code.split("\n")
-        long_lines = sum(1 for l in lines if len(l) > 120)
+        long_lines = sum(1 for line in lines if len(line) > 120)
         if long_lines > len(lines) * 0.1:
             issues.append("Many lines exceed 120 characters")
 
         # Check for comments
-        comment_lines = sum(1 for l in lines if l.strip().startswith("#"))
+        comment_lines = sum(1 for line in lines if line.strip().startswith("#"))
         if comment_lines < len(lines) * 0.05:
             issues.append("Low comment-to-code ratio")
 
         # Check for deeply nested blocks
         max_indent = max(
-            (len(l) - len(l.lstrip())) // 4 for l in lines if l.strip()
+            (len(line) - len(line.lstrip())) // 4 for line in lines if line.strip()
         )
         if max_indent > 6:
             issues.append("Deeply nested code blocks reduce readability")
@@ -361,9 +357,7 @@ class PerformanceOptimizer:
                 # Check indentation of next line
                 if i + 1 < len(lines):
                     current_indent = len(line) - len(line.lstrip())
-                    next_indent = len(lines[i + 1]) - len(
-                        lines[i + 1].lstrip()
-                    )
+                    next_indent = len(lines[i + 1]) - len(lines[i + 1].lstrip())
                     if next_indent > current_indent:
                         nested_loops += 1
 
@@ -433,8 +427,8 @@ class CodeAuditService:
             report.dependency_vulnerabilities = vulns
 
         # Maintainability analysis
-        maintainability_score, maint_issues = (
-            self.maintainability_analyzer.analyze(code)
+        maintainability_score, maint_issues = self.maintainability_analyzer.analyze(
+            code
         )
         report.maintainability_score = maintainability_score
 
@@ -459,9 +453,7 @@ class CodeAuditService:
         critical_count = sum(
             1 for s in security_issues if s.severity == SecurityLevel.CRITICAL
         )
-        high_count = sum(
-            1 for s in security_issues if s.severity == SecurityLevel.HIGH
-        )
+        high_count = sum(1 for s in security_issues if s.severity == SecurityLevel.HIGH)
         report.total_critical_issues = critical_count
         report.total_high_issues = high_count
         report.reliability_score = max(
@@ -498,7 +490,8 @@ class CodeAuditService:
 
         for issue in report.security_issues:
             lines.append(
-                f"[{issue.severity.value.upper()}] {issue.title} ({issue.file}:{issue.line})"
+                f"[{issue.severity.value.upper()}] {issue.title} "
+                f"({issue.file}:{issue.line})"
             )
             lines.append(f"  {issue.remediation}")
 
@@ -512,9 +505,7 @@ class CodeAuditService:
 
         for issue in report.performance_issues:
             lines.append(f"[{issue.impact_priority.upper()}] {issue.title}")
-            lines.append(
-                f"  Expected Improvement: {issue.expected_improvement:.0f}%"
-            )
+            lines.append(f"  Expected Improvement: {issue.expected_improvement:.0f}%")
             lines.append(f"  Effort: {issue.estimated_effort_hours:.1f} hours")
 
         lines.extend(
@@ -523,7 +514,8 @@ class CodeAuditService:
                 "TEST COVERAGE",
                 "-" * 60,
                 f"Line Coverage: {report.test_coverage.overall_coverage:.1f}%",
-                f"Critical Uncovered: {len(report.test_coverage.critical_uncovered)} functions",
+                "Critical Uncovered: "
+                f"{len(report.test_coverage.critical_uncovered)} functions",
                 "",
                 "RECOMMENDATIONS",
                 "-" * 60,

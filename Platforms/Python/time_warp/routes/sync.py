@@ -4,7 +4,7 @@ Handles HTTP endpoints for operational transformation and sync operations
 """
 
 import logging
-from typing import List, Optional
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from pydantic import BaseModel
@@ -111,14 +111,10 @@ async def get_operations(
         service = SyncService(session)
         if to_version is None:
             # Get all operations from version onwards
-            operations = await service.get_operations_since(
-                room_id, from_version
-            )
+            operations = await service.get_operations_since(room_id, from_version)
         else:
             # Get operations in range
-            operations = await service.get_operations_since(
-                room_id, from_version
-            )
+            operations = await service.get_operations_since(room_id, from_version)
             operations = [op for op in operations if op.version <= to_version]
 
         return {

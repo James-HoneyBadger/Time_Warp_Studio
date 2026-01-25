@@ -48,7 +48,7 @@ class OnboardingDialog(QDialog):
 
     def __init__(self, parent: QMainWindow | None = None):
         super().__init__(parent)
-        self.setWindowTitle("Welcome to Time Warp IDE")
+        self.setWindowTitle("Welcome to Time Warp Studio")
         self.setMinimumSize(700, 500)
         self.setModal(False)
 
@@ -140,8 +140,8 @@ class OnboardingDialog(QDialog):
         return [
             OnboardingStep(
                 step_id="welcome",
-                title="Welcome to Time Warp IDE!",
-                description="Time Warp IDE is an educational multi-language "
+                title="Welcome to Time Warp Studio!",
+                description="Time Warp Studio is an educational multi-language "
                 "programming environment with BASIC, PILOT, and Logo.",
                 instructions=[
                     "This tutorial will guide you through the IDE",
@@ -257,9 +257,7 @@ class OnboardingDialog(QDialog):
     def _next_step(self):
         """Move to next step."""
         if self.current_step_index < len(self.steps) - 1:
-            self.step_completed.emit(
-                self.steps[self.current_step_index].step_id
-            )
+            self.step_completed.emit(self.steps[self.current_step_index].step_id)
             self.current_step_index += 1
             self._show_current_step()
 
@@ -307,9 +305,7 @@ class OnboardingManager:
                 with open(self.config_file, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     self.completed_steps = set(data.get("completed_steps", []))
-                    self.tutorial_completed = data.get(
-                        "tutorial_completed", False
-                    )
+                    self.tutorial_completed = data.get("tutorial_completed", False)
                     self.skip_onboarding = data.get("skip_onboarding", False)
             except (json.JSONDecodeError, OSError):
                 pass

@@ -6,7 +6,7 @@
 60 REM It demonstrates basic output with PRINT.
 70 REM
 80 PRINT "HELLO, WORLD!"
-90 PRINT "Welcome to Time Warp IDE BASIC"
+90 PRINT "Welcome to Time Warp Studio BASIC"
 100 PRINT ""
 110 PRINT "This is your first program!"
 120 END

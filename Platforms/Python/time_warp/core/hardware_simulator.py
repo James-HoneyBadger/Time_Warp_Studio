@@ -77,9 +77,7 @@ class HardwareSimulator:
     def __init__(self):
         """Initialize hardware simulator."""
         self.devices: Dict[str, SimulatedDevice] = {}
-        self.virtual_environment = (
-            {}
-        )  # Environmental simulation (temp, light, etc.)
+        self.virtual_environment = {}  # Environmental simulation (temp, light, etc.)
         self.callbacks: Dict[str, List[Callable]] = {}
         self.recording_enabled = False
         self.event_log: List[Dict] = []
@@ -88,9 +86,7 @@ class HardwareSimulator:
         self, device_id: str, device_type: HardwareType, pin: int
     ) -> SimulatedDevice:
         """Add a simulated device."""
-        device = SimulatedDevice(
-            device_id=device_id, device_type=device_type, pin=pin
-        )
+        device = SimulatedDevice(device_id=device_id, device_type=device_type, pin=pin)
         self.devices[device_id] = device
         self._trigger_event("device_added", device)
         return device
@@ -103,9 +99,7 @@ class HardwareSimulator:
             return True
         return False
 
-    def activate_device(
-        self, device_id: str, value: Optional[float] = None
-    ) -> bool:
+    def activate_device(self, device_id: str, value: Optional[float] = None) -> bool:
         """Activate a device (turn on LED, etc.)."""
         if device_id not in self.devices:
             return False
@@ -115,9 +109,7 @@ class HardwareSimulator:
         if value is not None:
             device.current_value = value
 
-        self._log_event(
-            "device_activated", {"device_id": device_id, "value": value}
-        )
+        self._log_event("device_activated", {"device_id": device_id, "value": value})
         self._trigger_event("device_activated", device_id, value)
         return True
 
@@ -146,9 +138,7 @@ class HardwareSimulator:
             "device_value_set",
             {"device_id": device_id, "value": device.current_value},
         )
-        self._trigger_event(
-            "device_value_changed", device_id, device.current_value
-        )
+        self._trigger_event("device_value_changed", device_id, device.current_value)
         return True
 
     def read_sensor(self, sensor_id: str) -> Optional[SensorReading]:
@@ -264,9 +254,7 @@ class HardwareSimulator:
 
     def get_all_device_status(self) -> List[Dict[str, Any]]:
         """Get status of all devices."""
-        return [
-            self.get_device_status(device_id) for device_id in self.devices
-        ]
+        return [self.get_device_status(device_id) for device_id in self.devices]
 
     def get_sensor_history(
         self, sensor_id: str, limit: Optional[int] = None

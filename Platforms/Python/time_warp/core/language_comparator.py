@@ -129,9 +129,7 @@ T: It's negative or zero.
         """Get available built-in comparison pairs."""
         return {k: (v[0], v[1]) for k, v in self._builtin_pairs.items()}
 
-    def get_builtin_pair(
-        self, pair_id: str
-    ) -> Optional[Tuple[str, str, str, str]]:
+    def get_builtin_pair(self, pair_id: str) -> Optional[Tuple[str, str, str, str]]:
         """Get a specific built-in pair by ID."""
         return self._builtin_pairs.get(pair_id)
 
@@ -209,25 +207,19 @@ T: It's negative or zero.
 
         # Check for errors
         if err1 and not err2:
-            differences.append(
-                f"❌ {lang1.value} has error, {lang2.value} succeeds"
-            )
+            differences.append(f"❌ {lang1.value} has error, {lang2.value} succeeds")
         elif err2 and not err1:
-            differences.append(
-                f"❌ {lang2.value} has error, {lang1.value} succeeds"
-            )
+            differences.append(f"❌ {lang2.value} has error, {lang1.value} succeeds")
         elif err1 and err2:
-            differences.append(f"⚠️ Both have errors (different languages?)")
+            differences.append("⚠️ Both have errors (different languages?)")
 
         # Check output differences
         if out1.strip() != out2.strip():
-            differences.append(f"📊 Different output")
+            differences.append("📊 Different output")
             if len(out1) != len(out2):
-                differences.append(
-                    f"   Length: {len(out1)} vs {len(out2)} chars"
-                )
+                differences.append(f"   Length: {len(out1)} vs {len(out2)} chars")
         else:
-            differences.append(f"✅ Output matches")
+            differences.append("✅ Output matches")
 
         # Code structure differences
         lines1 = len(code1.split("\n"))
@@ -241,15 +233,9 @@ T: It's negative or zero.
 
         return differences
 
-    def _get_paradigm_notes(
-        self, lang1: Language, lang2: Language
-    ) -> List[str]:
+    def _get_paradigm_notes(self, lang1: Language, lang2: Language) -> List[str]:
         """Get notes about language paradigm differences."""
         notes = []
-
-        procedural = {"BASIC", "C", "PILOT"}
-        declarative = {"PROLOG"}
-        graphics = {"LOGO"}
 
         cats1 = self._categorize_language(lang1)
         cats2 = self._categorize_language(lang2)
@@ -259,13 +245,9 @@ T: It's negative or zero.
         elif "graphics" in cats1 and "graphics" in cats2:
             notes.append("🎨 Both have graphics capabilities")
         elif "graphics" in cats1:
-            notes.append(
-                f"🎨 {lang1.value} has graphics, {lang2.value} does not"
-            )
+            notes.append(f"🎨 {lang1.value} has graphics, {lang2.value} does not")
         elif "graphics" in cats2:
-            notes.append(
-                f"🎨 {lang2.value} has graphics, {lang1.value} does not"
-            )
+            notes.append(f"🎨 {lang2.value} has graphics, {lang1.value} does not")
 
         return notes
 
@@ -284,9 +266,7 @@ T: It's negative or zero.
 
         return categories
 
-    def get_comparison_metrics(
-        self, comparison: LanguageComparison
-    ) -> Dict[str, any]:
+    def get_comparison_metrics(self, comparison: LanguageComparison) -> Dict[str, any]:
         """Get metrics about the comparison."""
         return {
             "languages": f"{comparison.language1.value} vs {comparison.language2.value}",
@@ -300,12 +280,9 @@ T: It's negative or zero.
             ),
             "execution_time": (comparison.time1, comparison.time2),
             "time_ratio": (
-                comparison.time2 / comparison.time1
-                if comparison.time1 > 0
-                else 0
+                comparison.time2 / comparison.time1 if comparison.time1 > 0 else 0
             ),
-            "output_matches": comparison.output1.strip()
-            == comparison.output2.strip(),
+            "output_matches": comparison.output1.strip() == comparison.output2.strip(),
             "difference_count": len(comparison.differences),
         }
 
@@ -398,11 +375,9 @@ class ComparisonRenderer:
         """Render comparison as plain text."""
         lines = []
         lines.append("=" * 70)
-        lines.append(
-            f"LANGUAGE COMPARISON: {
+        lines.append(f"LANGUAGE COMPARISON: {
                 comparison.language1.value} vs {
-                comparison.language2.value}"
-        )
+                comparison.language2.value}")
         lines.append("=" * 70)
         lines.append("")
 
@@ -418,12 +393,8 @@ class ComparisonRenderer:
 
         lines.append("[OUTPUT COMPARISON]")
         lines.append("-" * 35)
-        lines.append(
-            f"{comparison.language1.value} Output: {comparison.output1}"
-        )
-        lines.append(
-            f"{comparison.language2.value} Output: {comparison.output2}"
-        )
+        lines.append(f"{comparison.language1.value} Output: {comparison.output1}")
+        lines.append(f"{comparison.language2.value} Output: {comparison.output2}")
         lines.append("")
 
         lines.append("[ANALYSIS]")

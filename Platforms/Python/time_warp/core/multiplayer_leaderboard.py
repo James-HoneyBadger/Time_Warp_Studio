@@ -7,9 +7,9 @@ and multiplayer challenges. Supports local networks and cloud connectivity.
 
 import time
 from dataclasses import asdict, dataclass
-from datetime import datetime, timedelta
+from datetime import datetime
 from enum import Enum
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 
 
 class AchievementType(Enum):
@@ -165,9 +165,7 @@ class MultiplayerLeaderboard:
         }
         self.active_challenges: List[Challenge] = []
         self.challenge_results: Dict[str, Dict] = {}
-        self.achievements: Dict[str, Achievement] = (
-            self._initialize_achievements()
-        )
+        self.achievements: Dict[str, Achievement] = self._initialize_achievements()
 
         # Callbacks
         self._on_player_joined: List[Callable] = []
@@ -288,10 +286,7 @@ class MultiplayerLeaderboard:
         if challenge_id not in self.challenge_results:
             return {"success": False, "message": "Challenge not found"}
 
-        if (
-            username
-            not in self.challenge_results[challenge_id]["participants"]
-        ):
+        if username not in self.challenge_results[challenge_id]["participants"]:
             return {
                 "success": False,
                 "message": "Not registered for challenge",
@@ -323,9 +318,7 @@ class MultiplayerLeaderboard:
             challenge = self._find_challenge(challenge_id)
             points = challenge.rewards["winner_points"]
         else:
-            points = self.challenge_results[challenge_id]["participants"][
-                username
-            ]
+            points = self.challenge_results[challenge_id]["participants"][username]
             points = 50  # participation points
 
         self.record_solve(username, challenge_id, time_seconds, errors)
@@ -433,9 +426,7 @@ class MultiplayerLeaderboard:
             criteria = achievement.unlock_criteria
 
             if achievement.type == AchievementType.SPEED:
-                if player.problems_solved >= criteria.get(
-                    "problems_solved", 1
-                ):
+                if player.problems_solved >= criteria.get("problems_solved", 1):
                     player.unlock_achievement(achievement)
                     self._trigger_callbacks(
                         self._on_achievement_unlocked,

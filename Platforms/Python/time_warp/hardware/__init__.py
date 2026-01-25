@@ -1,5 +1,5 @@
 """
-Hardware abstraction layer for Time Warp IDE
+Hardware abstraction layer for Time Warp Studio
 Enables IoT integration with Arduino, Raspberry Pi, and sensors
 """
 

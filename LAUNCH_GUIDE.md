@@ -1,4 +1,4 @@
-# Time Warp IDE - Launch Guide
+# Time Warp Studio - Launch Guide
 
 ## Quick Start
 
@@ -38,12 +38,17 @@ python Platforms/Python/time_warp_ide.py
 ```
 Time_Warp_Studio/
 ├── Platforms/Python/
-│   └── time_warp_ide.py         # Main IDE entry point
-├── Examples/                    # Demo programs (BASIC, Logo, Pascal, etc.)
+│   ├── time_warp_ide.py         # Main IDE entry point
+│   └── time_warp/
+│       ├── core/                # Core interpreter
+│       ├── languages/           # Language executors
+│       ├── ui/                  # PySide6 UI components
+│       └── tests/               # Test suite
+├── Examples/                    # Demo programs
 ├── docs/                        # Complete documentation
-├── config/                      # Configuration files (.flake8, .markdownlint.json)
-├── archive/                     # Historical release notes and documentation
-└── Scripts/                     # Build and launch utilities
+├── config/                      # Configuration files
+├── archive/                     # Historical documentation
+└── Scripts/                     # Launch utilities
 ```
 
 ## Testing

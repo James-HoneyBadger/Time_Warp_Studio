@@ -1,4 +1,4 @@
-# Release Checklist - Time Warp IDE v5.0.1
+# Release Checklist - Time Warp Studio v5.0.1
 
 ## Pre-Release Tasks
 
@@ -35,7 +35,7 @@
 
 - [ ] Create release branch `release/v5.0.1`
 - [ ] Merge final changes and ensure `main` is up to date
-- [ ] Tag commit: `git tag -a v5.0.1 -m "Time Warp IDE v5.0.1"`
+- [ ] Tag commit: `git tag -a v5.0.1 -m "Time Warp Studio v5.0.1"`
 - [ ] Push branch and tag to origin
 
 ### Release Assets
@@ -57,7 +57,7 @@
 ### GitHub Release Page
 
 - [ ] Create new release from tag `v5.0.1`
-- [ ] Title: `Time Warp IDE v5.0.1`
+- [ ] Title: `Time Warp Studio v5.0.1`
 - [ ] Paste highlights from `Docs/misc/RELEASE_NOTES.md`
 - [ ] Attach wheel, source tarball, examples archive, and any supplemental assets
 - [ ] Mark release as latest and publish

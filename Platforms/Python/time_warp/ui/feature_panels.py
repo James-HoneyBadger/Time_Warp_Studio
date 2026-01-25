@@ -1,22 +1,16 @@
 """
-Feature UI Panels for Time Warp IDE v6.0.0
+Feature UI Panels for Time Warp Studio v6.0.0
 
 This module provides PySide6 Qt widget panels for all 14 educational features.
 Each panel wraps a core module and provides a user-friendly interface.
 """
 
-import json
-from datetime import datetime
-from pathlib import Path
-from typing import Any, Callable, Dict, List, Optional
+from typing import Optional
 
-from PySide6.QtCore import QObject, Qt, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QTextCursor
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
-    QDialog,
-    QDialogButtonBox,
     QFileDialog,
     QFormLayout,
     QGroupBox,
@@ -28,13 +22,10 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QProgressBar,
     QPushButton,
-    QScrollArea,
     QSpinBox,
     QSplitter,
-    QStatusBar,
     QTableWidget,
     QTableWidgetItem,
-    QTabWidget,
     QTextEdit,
     QVBoxLayout,
     QWidget,
@@ -43,13 +34,13 @@ from PySide6.QtWidgets import (
 from ..core.accessibility import AccessibilityManager
 from ..core.ai_assistant import LocalAIAssistant
 from ..core.asset_library import AssetLibrary
-from ..core.collaboration import LocalCollaborationSession, SessionManager, CollaborativeMessage
+from ..core.collaboration import LocalCollaborationSession, SessionManager
 from ..core.debugger import CodeDebugger
 from ..core.executable_exporter import ExecutableExporter
 from ..core.execution_replay import ExecutionReplayPlayer
 from ..core.hardware_simulator import HardwareSimulator
 from ..core.language_comparator import MultiLanguageComparator
-from ..core.learning_analytics import ConceptMastery, LearningAnalytics
+from ..core.learning_analytics import LearningAnalytics
 from ..core.peer_review import CodeReviewSession
 from ..core.performance_profiler import PerformanceProfiler
 from ..core.project_templates import TemplateLibrary
@@ -130,9 +121,7 @@ class SyntaxValidatorPanel(FeaturePanelBase):
             self.results_table.setItem(
                 i, 1, QTableWidgetItem(error.get("type", "error"))
             )
-            self.results_table.setItem(
-                i, 2, QTableWidgetItem(error.get("message", ""))
-            )
+            self.results_table.setItem(i, 2, QTableWidgetItem(error.get("message", "")))
             self.results_table.setItem(
                 i, 3, QTableWidgetItem(error.get("severity", "error"))
             )
@@ -155,7 +144,15 @@ class ProjectTemplatesPanel(FeaturePanelBase):
         cat_layout.addWidget(QLabel("Category:"))
         self.cat_combo = QComboBox()
         self.cat_combo.addItems(
-            ["All", "Game", "Art Generation", "Learning", "Robotics", "Data Visualization", "Demo"]
+            [
+                "All",
+                "Game",
+                "Art Generation",
+                "Learning",
+                "Robotics",
+                "Data Visualization",
+                "Demo",
+            ]
         )
         self.cat_combo.currentTextChanged.connect(self.refresh_templates)
         cat_layout.addWidget(self.cat_combo)
@@ -214,15 +211,11 @@ class ProjectTemplatesPanel(FeaturePanelBase):
         """Create a new project from selected template."""
         item = self.templates_list.currentItem()
         if not item:
-            QMessageBox.warning(
-                self, "Error", "Please select a template first"
-            )
+            QMessageBox.warning(self, "Error", "Please select a template first")
             return
 
         template = item.data(Qt.UserRole)
-        self.emit_status(
-            f"Creating project from {template.name}..."
-        )
+        self.emit_status(f"Creating project from {template.name}...")
 
 
 class DebuggerPanel(FeaturePanelBase):
@@ -285,7 +278,7 @@ class LanguageComparatorPanel(FeaturePanelBase):
         comp_layout = QHBoxLayout()
         comp_layout.addWidget(QLabel("Compare:"))
         self.comp_combo = QComboBox()
-        
+
         # Populate from comparator pairs
         pairs = self.comparator.get_builtin_pairs()
         for pid, (l1, l2) in pairs.items():
@@ -390,15 +383,19 @@ class AssetLibraryPanel(FeaturePanelBase):
 
         filtered = []
         for a in all_assets:
-             atype = a.asset_type.value if hasattr(a.asset_type, 'value') else str(a.asset_type)
-             if category == "All":
-                 filtered.append(a)
-             elif category == "Sprites" and atype == "sprite":
-                 filtered.append(a)
-             elif category in ["Sounds", "Music", "Effects"] and atype == "sound":
-                 filtered.append(a)
-             elif category == "Tiles" and atype == "tileset":
-                 filtered.append(a)
+            atype = (
+                a.asset_type.value
+                if hasattr(a.asset_type, "value")
+                else str(a.asset_type)
+            )
+            if category == "All":
+                filtered.append(a)
+            elif category == "Sprites" and atype == "sprite":
+                filtered.append(a)
+            elif category in ["Sounds", "Music", "Effects"] and atype == "sound":
+                filtered.append(a)
+            elif category == "Tiles" and atype == "tileset":
+                filtered.append(a)
 
         self.assets_list.clear()
         for asset in filtered:
@@ -409,8 +406,12 @@ class AssetLibraryPanel(FeaturePanelBase):
     def on_asset_selected(self, item):
         """Show asset preview."""
         asset = item.data(Qt.UserRole)
-        description = getattr(asset, 'description', '')
-        atype = asset.asset_type.value if hasattr(asset.asset_type, 'value') else str(asset.asset_type)
+        description = getattr(asset, "description", "")
+        atype = (
+            asset.asset_type.value
+            if hasattr(asset.asset_type, "value")
+            else str(asset.asset_type)
+        )
 
         preview = f"Name: {asset.name}\n\n"
         preview += f"Type: {atype}\n"
@@ -607,9 +608,7 @@ class HardwareSimulatorPanel(FeaturePanelBase):
         # Sensor readings
         self.readings_table = QTableWidget()
         self.readings_table.setColumnCount(3)
-        self.readings_table.setHorizontalHeaderLabels(
-            ["Sensor", "Value", "Unit"]
-        )
+        self.readings_table.setHorizontalHeaderLabels(["Sensor", "Value", "Unit"])
         self.layout_main.addWidget(QLabel("Sensor Readings:"))
         self.layout_main.addWidget(self.readings_table)
 
@@ -631,9 +630,7 @@ class AIAssistantPanel(FeaturePanelBase):
         """Setup AI assistant panel UI."""
         # Query input
         self.query_input = QLineEdit()
-        self.query_input.setPlaceholderText(
-            "Ask a question about your code..."
-        )
+        self.query_input.setPlaceholderText("Ask a question about your code...")
         self.query_input.returnPressed.connect(self.ask_question)
         self.layout_main.addWidget(QLabel("Question:"))
         self.layout_main.addWidget(self.query_input)
@@ -741,9 +738,7 @@ class ExportableExporterPanel(FeaturePanelBase):
         fmt = self.format_combo.currentText()
         output = self.output_path.text()
         if not output:
-            QMessageBox.warning(
-                self, "Error", "Please specify output location"
-            )
+            QMessageBox.warning(self, "Error", "Please specify output location")
             return
         self.emit_status(f"Exporting to {fmt}...")
 
@@ -900,9 +895,7 @@ class PeerReviewPanel(FeaturePanelBase):
         # Rubric
         self.rubric_table = QTableWidget()
         self.rubric_table.setColumnCount(3)
-        self.rubric_table.setHorizontalHeaderLabels(
-            ["Criterion", "Score", "Feedback"]
-        )
+        self.rubric_table.setHorizontalHeaderLabels(["Criterion", "Score", "Feedback"])
         self.layout_main.addWidget(QLabel("Review Rubric:"))
         self.layout_main.addWidget(self.rubric_table)
 

@@ -1,4 +1,4 @@
-"""Main window for Time Warp IDE."""
+"""Main window for Time Warp Studio."""
 
 import getpass
 import re
@@ -311,9 +311,7 @@ class MainWindow(QMainWindow):
             rect = painter.viewport()
             size = image.size()
             size.scale(rect.size(), Qt.AspectRatioMode.KeepAspectRatio)
-            painter.setViewport(
-                rect.x(), rect.y(), size.width(), size.height()
-            )
+            painter.setViewport(rect.x(), rect.y(), size.width(), size.height())
             painter.setWindow(image.rect())
             painter.drawImage(0, 0, image)
             painter.end()
@@ -357,10 +355,7 @@ class MainWindow(QMainWindow):
         else:
             session = profiler.end_session()
             if session:
-                msg = (
-                    f"⏱️ Profiling stopped: "
-                    f"{session.total_lines_executed} lines"
-                )
+                msg = f"⏱️ Profiling stopped: " f"{session.total_lines_executed} lines"
                 self.statusbar.showMessage(msg, 3000)
 
     def _show_profile_report(self, _checked: bool = False):
@@ -506,12 +501,11 @@ class MainWindow(QMainWindow):
 
     def setup_ui(self):
         """Setup main UI layout."""
-        self.setWindowTitle("🎨 Time Warp IDE v6.0.0 - Python Edition")
+        self.setWindowTitle("🎨 Time Warp Studio v6.0.0 - Python Edition")
         self.setMinimumSize(1200, 800)
 
         # Set main window style
-        self.setStyleSheet(
-            """
+        self.setStyleSheet("""
             QMainWindow {
                 background-color: palette(window);
             }
@@ -580,8 +574,7 @@ class MainWindow(QMainWindow):
             QDialogButtonBox QPushButton {
                 min-width: 70px;
             }
-        """
-        )
+        """)
 
         # Central widget with splitter
         central = QWidget()
@@ -591,13 +584,11 @@ class MainWindow(QMainWindow):
 
         # Main splitter (horizontal) - left side vs right side
         splitter = QSplitter(Qt.Horizontal)
-        splitter.setStyleSheet(
-            """
+        splitter.setStyleSheet("""
             QSplitter {
                 background-color: palette(window);
             }
-        """
-        )
+        """)
 
         # Left side: Vertical splitter for editor + immediate mode
         left_splitter = QSplitter(Qt.Vertical)
@@ -607,15 +598,13 @@ class MainWindow(QMainWindow):
         self.editor_tabs.setTabsClosable(True)
         self.editor_tabs.tabCloseRequested.connect(self.close_tab)
         self.editor_tabs.currentChanged.connect(self.on_tab_changed)
-        self.editor_tabs.setStyleSheet(
-            """
+        self.editor_tabs.setStyleSheet("""
             QTabWidget {
                 background-color: palette(base);
                 border: 1px solid palette(dark);
                 border-radius: 4px;
             }
-        """
-        )
+        """)
 
         # Create initial tab
         self.new_file()
@@ -633,15 +622,13 @@ class MainWindow(QMainWindow):
 
         # Right side: Tabs for Output and Canvas
         self.right_tabs = QTabWidget()
-        self.right_tabs.setStyleSheet(
-            """
+        self.right_tabs.setStyleSheet("""
             QTabWidget {
                 background-color: palette(base);
                 border: 1px solid palette(dark);
                 border-radius: 4px;
             }
-        """
-        )
+        """)
 
         # Output panel
         self.output = OutputPanel(self)
@@ -660,9 +647,7 @@ class MainWindow(QMainWindow):
         # Connect immediate mode to output panel and canvas
         self.immediate_mode.set_canvas(self.canvas)
         self.immediate_mode.set_output_panel(self.output)
-        self.immediate_mode.variables_updated.connect(
-            self.on_variables_updated
-        )
+        self.immediate_mode.variables_updated.connect(self.on_variables_updated)
 
         # Variable inspector
         self.variable_inspector = VariableInspector(self)
@@ -934,9 +919,7 @@ class MainWindow(QMainWindow):
             is_current = font_family == self.theme_manager.current_font_family
             font_action.setChecked(is_current)
             font_action.triggered.connect(
-                lambda checked, family=font_family: (
-                    self.change_font_family(family)
-                )
+                lambda checked, family=font_family: (self.change_font_family(family))
             )
             self.font_family_group.addAction(font_action)
             font_family_menu.addAction(font_action)
@@ -1002,9 +985,7 @@ class MainWindow(QMainWindow):
         screen_mode_menu.addSeparator()
 
         for mode in self.screen_mode_manager.get_all_modes():
-            mode_action = QAction(
-                f"MODE {mode.mode_number}: {mode.name}", self
-            )
+            mode_action = QAction(f"MODE {mode.mode_number}: {mode.name}", self)
             mode_action.setCheckable(True)
             mode_action.setChecked(False)
             mode_action.triggered.connect(
@@ -1107,7 +1088,7 @@ class MainWindow(QMainWindow):
 
         help_menu.addSeparator()
 
-        about_action = QAction("&About Time Warp IDE", self)
+        about_action = QAction("&About Time Warp Studio", self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
 
@@ -1124,8 +1105,7 @@ class MainWindow(QMainWindow):
         toolbar.setIconSize(toolbar.iconSize())  # Use default icon size
         # Toolbar height for better button appearance
         toolbar.setMinimumHeight(44)
-        toolbar.setStyleSheet(
-            """
+        toolbar.setStyleSheet("""
             QToolBar {
                 background-color: palette(window);
                 border-bottom: 2px solid palette(highlight);
@@ -1157,8 +1137,7 @@ class MainWindow(QMainWindow):
                 color: palette(dark);
                 background-color: transparent;
             }
-        """
-        )
+        """)
         self.addToolBar(toolbar)
 
         # Add common actions with enhanced styling and better organization
@@ -1185,8 +1164,7 @@ class MainWindow(QMainWindow):
         self.language_combo.setStatusTip(
             "Change the syntax highlighting and execution engine"
         )
-        self.language_combo.setStyleSheet(
-            """
+        self.language_combo.setStyleSheet("""
             QComboBox {
                 background-color: palette(base);
                 color: palette(text);
@@ -1209,16 +1187,13 @@ class MainWindow(QMainWindow):
                 border-top: 4px solid palette(text);
                 margin-right: 8px;
             }
-        """
-        )
+        """)
 
         # Populate combo
         for lang in Language:
             self.language_combo.addItem(f"💻 {lang.friendly_name()}", lang)
 
-        self.language_combo.currentIndexChanged.connect(
-            self.on_language_changed
-        )
+        self.language_combo.currentIndexChanged.connect(self.on_language_changed)
         toolbar.addWidget(self.language_combo)
 
         toolbar.addSeparator()
@@ -1233,9 +1208,7 @@ class MainWindow(QMainWindow):
         self.debug_btn.setToolTip("Start debugging (F5)")
         self.debug_btn.setStatusTip("Start debugging with breakpoints")
 
-        self.continue_btn = toolbar.addAction(
-            "▶️ Continue", self.debug_continue
-        )
+        self.continue_btn = toolbar.addAction("▶️ Continue", self.debug_continue)
         self.continue_btn.setToolTip("Continue execution (F5)")
         self.continue_btn.setStatusTip("Resume execution from breakpoint")
         self.continue_btn.setEnabled(False)
@@ -1269,8 +1242,7 @@ class MainWindow(QMainWindow):
     def create_statusbar(self):
         """Create status bar."""
         self.statusbar = QStatusBar()
-        self.statusbar.setStyleSheet(
-            """
+        self.statusbar.setStyleSheet("""
             QStatusBar {
                 background-color: palette(window);
                 border-top: 1px solid palette(dark);
@@ -1281,14 +1253,12 @@ class MainWindow(QMainWindow):
                 padding: 2px 8px;
                 border-radius: 3px;
             }
-        """
-        )
+        """)
         self.setStatusBar(self.statusbar)
 
         # Add permanent widgets for better visual feedback
         self.language_label = QLabel("Language: BASIC")
-        self.language_label.setStyleSheet(
-            """
+        self.language_label.setStyleSheet("""
             QLabel {
                 background-color: palette(highlight);
                 color: palette(highlighted-text);
@@ -1296,13 +1266,11 @@ class MainWindow(QMainWindow):
                 padding: 2px 6px;
                 border-radius: 3px;
             }
-        """
-        )
+        """)
         self.statusbar.addPermanentWidget(self.language_label)
 
         self.position_label = QLabel("Ln 1, Col 1")
-        self.position_label.setStyleSheet(
-            """
+        self.position_label.setStyleSheet("""
             QLabel {
                 background-color: palette(base);
                 color: palette(text);
@@ -1310,11 +1278,10 @@ class MainWindow(QMainWindow):
                 border-radius: 3px;
                 border: 1px solid palette(dark);
             }
-        """
-        )
+        """)
         self.statusbar.addPermanentWidget(self.position_label)
 
-        ready_msg = "🎉 Ready - Time Warp IDE loaded successfully!"
+        ready_msg = "🎉 Ready - Time Warp Studio loaded successfully!"
         self.statusbar.showMessage(ready_msg)
 
     def new_file(self):
@@ -1617,7 +1584,7 @@ class MainWindow(QMainWindow):
 
     def update_title(self):
         """Update window title."""
-        title = "Time Warp IDE v6.0.0"
+        title = "Time Warp Studio v6.0.0"
 
         current_info = self.get_current_tab_info()
         if current_info["file"]:
@@ -1742,16 +1709,14 @@ class MainWindow(QMainWindow):
 
         browser = QTextBrowser()
         browser.setOpenExternalLinks(True)
-        browser.setStyleSheet(
-            """
+        browser.setStyleSheet("""
             QTextBrowser {
                 font-family: 'Segoe UI', 'DejaVu Sans', sans-serif;
                 font-size: 12pt;
                 padding: 10px;
                 background-color: palette(base);
             }
-        """
-        )
+        """)
 
         if filepath.exists():
             content = filepath.read_text(encoding="utf-8")
@@ -1794,9 +1759,7 @@ class MainWindow(QMainWindow):
             if in_code_block:
                 # Escape HTML in code blocks
                 line = (
-                    line.replace("&", "&amp;")
-                    .replace("<", "&lt;")
-                    .replace(">", "&gt;")
+                    line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
                 )
                 html_lines.append(line)
                 continue
@@ -1849,7 +1812,7 @@ class MainWindow(QMainWindow):
     def show_user_manual(self):
         """Show the user manual."""
         docs_path = self._get_docs_path() / "guides" / "01-getting-started.md"
-        self._show_help_dialog("Getting Started with Time Warp IDE", docs_path)
+        self._show_help_dialog("Getting Started with Time Warp Studio", docs_path)
 
     def show_quick_reference(self):
         """Show quick reference guide."""
@@ -1894,8 +1857,8 @@ class MainWindow(QMainWindow):
         """Show about dialog."""
         QMessageBox.about(
             self,
-            "About Time Warp IDE",
-            "<h2>Time Warp IDE - Python Edition</h2>"
+            "About Time Warp Studio",
+            "<h2>Time Warp Studio - Python Edition</h2>"
             "<p>Version 6.0.0 — Modern PySide6 Release</p>"
             "<p>Educational programming environment supporting:</p>"
             "<ul>"
@@ -2254,8 +2217,7 @@ class MainWindow(QMainWindow):
 
         # Buttons
         flags = (
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         buttons = QDialogButtonBox(flags)
         buttons.accepted.connect(dialog.accept)
@@ -2340,8 +2302,7 @@ class MainWindow(QMainWindow):
 
         # Buttons
         flags = (
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         buttons = QDialogButtonBox(flags)
         buttons.accepted.connect(dialog.accept)
@@ -2416,8 +2377,7 @@ class MainWindow(QMainWindow):
 
         # Buttons
         flags = (
-            QDialogButtonBox.StandardButton.Ok
-            | QDialogButtonBox.StandardButton.Cancel
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
         buttons = QDialogButtonBox(flags)
         buttons.accepted.connect(dialog.accept)

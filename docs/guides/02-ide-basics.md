@@ -1,6 +1,6 @@
 # IDE Basics - Understanding Time Warp
 
-Learn your way around the Time Warp IDE interface.
+Learn your way around the Time Warp Studio interface.
 
 ---
 

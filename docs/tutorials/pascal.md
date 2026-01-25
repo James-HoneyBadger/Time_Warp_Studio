@@ -1,6 +1,6 @@
-# Pascal Programming with Time Warp IDE
+# Pascal Programming with Time Warp Studio
 
-Pascal is a structured programming language known for emphasizing clarity and structure. Time Warp IDE provides experimental Pascal support for learning procedural programming concepts.
+Pascal is a structured programming language known for emphasizing clarity and structure. Time Warp Studio provides experimental Pascal support for learning procedural programming concepts.
 
 ## Quick Start
 
@@ -471,7 +471,7 @@ numbers[5] := 5;
 - **Debug**: Add WriteLn statements to check values
 - **Experiment**: Modify examples to understand concepts
 
-## Running Pascal Programs in Time Warp IDE
+## Running Pascal Programs in Time Warp Studio
 
 1. Create a `.pas` file with your program
 2. Select "Pascal" from the language dropdown

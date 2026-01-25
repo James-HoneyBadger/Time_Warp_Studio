@@ -1,5 +1,5 @@
 """
-Shape library for Time Warp IDE turtle graphics.
+Shape library for Time Warp Studio turtle graphics.
 Provides pre-built shapes for easy drawing.
 """
 
@@ -15,7 +15,9 @@ if TYPE_CHECKING:
 class ShapeCommand:
     """A single drawing command for a shape."""
 
-    action: str  # 'move', 'draw', 'pen_up', 'pen_down', 'color', 'fill_start', 'fill_end'
+    action: (
+        str  # 'move', 'draw', 'pen_up', 'pen_down', 'color', 'fill_start', 'fill_end'
+    )
     x: float = 0.0
     y: float = 0.0
     color: str = ""
@@ -414,9 +416,7 @@ class ShapeLibrary:
         return f"⭐ Drew {points}-pointed star\n"
 
     @staticmethod
-    def draw_heart(
-        turtle: "TurtleState", size: float, fill: bool = False
-    ) -> str:
+    def draw_heart(turtle: "TurtleState", size: float, fill: bool = False) -> str:
         """Draw a heart shape."""
         cx, cy = turtle.x, turtle.y
         points = generate_heart(size, cx, cy)

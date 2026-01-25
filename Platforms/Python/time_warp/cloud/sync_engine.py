@@ -1,4 +1,4 @@
-"""Cloud Sync Engine for Time Warp IDE.
+"""Cloud Sync Engine for Time Warp Studio.
 
 Handles synchronization between local IDE and cloud backend, including
 conflict resolution, offline support, and real-time updates.
@@ -55,9 +55,7 @@ class SyncConflict:
     filename: str
     local_version: FileChange
     cloud_version: FileChange
-    conflict_time: datetime = field(
-        default_factory=lambda: datetime.now(timezone.utc)
-    )
+    conflict_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     resolution: Optional[ConflictResolution] = None
 
     def can_auto_merge(self) -> bool:
@@ -118,9 +116,7 @@ class CloudSyncEngine:
 
         # Callbacks
         self.on_status_changed: Optional[Callable[[SyncStatus], None]] = None
-        self.on_conflict_detected: Optional[Callable[[SyncConflict], None]] = (
-            None
-        )
+        self.on_conflict_detected: Optional[Callable[[SyncConflict], None]] = None
         self.on_sync_complete: Optional[Callable[[int], None]] = None
 
         # Ensure storage path exists
@@ -193,9 +189,7 @@ class CloudSyncEngine:
             True if sync successful, False otherwise
         """
         self._update_status(SyncStatus.SYNCING)
-        self._log_operation(
-            "sync_project", metadata={"project_id": project_id}
-        )
+        self._log_operation("sync_project", metadata={"project_id": project_id})
 
         try:
             if self.offline_mode:

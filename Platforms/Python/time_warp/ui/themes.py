@@ -1,4 +1,4 @@
-"""Theme management for Time Warp IDE."""
+"""Theme management for Time Warp Studio."""
 
 # PySide6 static analysis may not expose all names in some environments.
 # Pylint can raise false positives like 'no-name-in-module' for these symbols.
@@ -629,8 +629,7 @@ class ThemeManager:
         app.setPalette(palette)
 
         # Apply comprehensive stylesheet for consistent UI
-        app.setStyleSheet(
-            f"""
+        app.setStyleSheet(f"""
             QMainWindow {{
                 background-color: {theme.background};
             }}
@@ -834,8 +833,7 @@ class ThemeManager:
                 subcontrol-position: top left;
                 padding: 0 4px;
             }}
-        """
-        )
+        """)
 
         # Get current font
         font = self.get_font()
@@ -843,8 +841,7 @@ class ThemeManager:
         # Apply to editor
         if editor:
             editor.setFont(font)
-            editor.setStyleSheet(
-                f"""
+            editor.setStyleSheet(f"""
                 QPlainTextEdit {{
                     background-color: {theme.editor_bg};
                     color: {theme.editor_fg};
@@ -852,14 +849,12 @@ class ThemeManager:
                     selection-color: {theme.selection_fg};
                     border: none;
                 }}
-            """
-            )
+            """)
 
         # Apply to output
         if output:
             output.setFont(font)
-            output.setStyleSheet(
-                f"""
+            output.setStyleSheet(f"""
                 QTextEdit {{
                     background-color: {theme.editor_bg};
                     color: {theme.editor_fg};
@@ -867,8 +862,7 @@ class ThemeManager:
                     selection-color: {theme.selection_fg};
                     border: none;
                 }}
-            """
-            )
+            """)
 
         # Apply to canvas
         if canvas:

@@ -1,5 +1,5 @@
 """
-PILOT language executor for Time Warp IDE.
+PILOT language executor for Time Warp Studio.
 Handles PILOT-specific commands and syntax.
 """
 

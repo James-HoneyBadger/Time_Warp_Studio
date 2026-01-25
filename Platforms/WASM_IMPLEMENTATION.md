@@ -1,21 +1,25 @@
-# WASM Implementation Guide
+# WASM Implementation Guide (Experimental)
+
+> **⚠️ Note:** This document describes experimental WebAssembly compilation for potential future web deployment. Time Warp Studio currently focuses on the native desktop application (Python/PySide6).
 
 ## Overview
 
-Phase 5 of Time Warp IDE implements WebAssembly (WASM) compilation of all language interpreters to enable **client-side execution** with **10x performance improvement** over server-based execution.
+This guide outlines how Time Warp Studio language interpreters could be compiled to WebAssembly (WASM) for potential browser-based deployment with client-side execution.
 
-**Key Benefits:**
+**Potential Benefits:**
 - ⚡ **10x faster**: WASM execution vs server (~10ms vs 100ms)
 - 🔌 **Offline capable**: Execute code without network
 - 🌍 **Global CDN**: Distribute WASM modules via CDN
 - 💾 **Storage efficient**: WASM modules ~100-200KB each
 - 🔄 **Automatic fallback**: Server execution if WASM unavailable
 
+**Current Status:** Experimental - desktop application is the primary focus.
+
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────┐
-│         Time Warp IDE (Browser)         │
+│         Time Warp Studio (Browser)         │
 ├─────────────────────────────────────────┤
 │  React Editor          │  Canvas/Output  │
 └────────────┬──────────────┬─────────────┘
@@ -384,7 +388,7 @@ wasm2wat basic.wasm -o basic.wast
 wasm-validate basic.wasm
 
 # Show module size
-ls -lh platforms/web/public/wasm/*.wasm
+ls -lh platforms/backend/wasm/*.wasm
 ```
 
 ### Performance Profiling
@@ -431,7 +435,7 @@ make wasm-sizes
 # ...
 
 # Compress for transmission
-gzip platforms/web/public/wasm/*.wasm
+gzip platforms/backend/wasm/*.wasm
 # 120KB → 35KB (71% reduction)
 ```
 

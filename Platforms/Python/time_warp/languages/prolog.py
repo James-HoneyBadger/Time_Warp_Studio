@@ -158,12 +158,7 @@ def _unify(x: str, y: str, env: Dict[str, str]) -> Optional[Dict[str, str]]:
         return e
 
     # List Unification
-    if (
-        x.startswith("[")
-        and x.endswith("]")
-        and y.startswith("[")
-        and y.endswith("]")
-    ):
+    if x.startswith("[") and x.endswith("]") and y.startswith("[") and y.endswith("]"):
         if x == "[]" and y == "[]":
             return env
         if x == "[]" or y == "[]":
@@ -388,8 +383,6 @@ def _eval_math(expr: str, env: Dict[str, str]) -> Optional[float]:
     """Evaluate simple math expression with variables."""
     # Replace variables with values
     # Sort keys by length descending to avoid partial replacements
-    sorted_vars = sorted(env.keys(), key=len, reverse=True)
-
     # Tokenize to avoid replacing substrings of other words
     # Simple approach: split by non-alphanumeric
 
@@ -765,9 +758,7 @@ def execute_prolog(interpreter: "Interpreter", command: str, _turtle) -> str:
     cmd = full_cmd[:-1].strip()  # Remove trailing dot
 
     # Pre-processing for infix operators
-    cmd = re.sub(
-        r"([a-zA-Z0-9_]+)\s*\\=\s*([a-zA-Z0-9_]+)", r"neq(\1, \2)", cmd
-    )
+    cmd = re.sub(r"([a-zA-Z0-9_]+)\s*\\=\s*([a-zA-Z0-9_]+)", r"neq(\1, \2)", cmd)
 
     # GOAL section execution
     if section == "GOAL":
@@ -785,9 +776,7 @@ def execute_prolog(interpreter: "Interpreter", command: str, _turtle) -> str:
         if not sols:
             return "❌ false"
 
-        var_names = sorted(
-            list(set(re.findall(r"\b[A-Z][a-zA-Z0-9_]*\b", cmd)))
-        )
+        var_names = sorted(list(set(re.findall(r"\b[A-Z][a-zA-Z0-9_]*\b", cmd))))
         if not var_names:
             return "✅ true"
 
@@ -812,9 +801,7 @@ def execute_prolog(interpreter: "Interpreter", command: str, _turtle) -> str:
         if not sols:
             return "❌ false"
 
-        var_names = sorted(
-            list(set(re.findall(r"\b[A-Z][a-zA-Z0-9_]*\b", body)))
-        )
+        var_names = sorted(list(set(re.findall(r"\b[A-Z][a-zA-Z0-9_]*\b", body))))
         if not var_names:
             return "✅ true"
 

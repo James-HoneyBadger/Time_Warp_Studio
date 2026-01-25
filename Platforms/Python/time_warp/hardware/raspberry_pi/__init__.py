@@ -1,5 +1,5 @@
 """
-Raspberry Pi integration for Time Warp IDE
+Raspberry Pi integration for Time Warp Studio
 Provides GPIO control, I2C/SPI communication, and sensor support
 """
 

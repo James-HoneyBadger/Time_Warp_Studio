@@ -1,5 +1,5 @@
 """
-Logo language executor for Time Warp IDE.
+Logo language executor for Time Warp Studio.
 Handles Logo-specific commands and syntax.
 """
 
@@ -495,9 +495,7 @@ def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
     try:
         return interpreter.evaluate_expression(expr_norm)
     except (ValueError, TypeError, ZeroDivisionError) as e:
-        raise ValueError(
-            f"Cannot evaluate Logo expression '{expr}': {e}"
-        ) from e
+        raise ValueError(f"Cannot evaluate Logo expression '{expr}': {e}") from e
 
 
 def _logo_forward(
@@ -1458,9 +1456,7 @@ def _logo_item(interpreter: "Interpreter", args: List[str]) -> str:
         return "❌ ITEM requires index and thing\n"
 
     try:
-        index = (
-            int(interpreter.evaluate_expression(consumed[0])) - 1
-        )  # 1-indexed
+        index = int(interpreter.evaluate_expression(consumed[0])) - 1  # 1-indexed
     except (ValueError, TypeError):
         return "❌ Invalid index\n"
 

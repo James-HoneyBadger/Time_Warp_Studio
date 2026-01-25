@@ -49,9 +49,7 @@ class TurtleCanvas(
 
         # Screen mode support
         self.screen_mode_manager = ScreenModeManager()
-        self.screen_mode_enabled = (
-            False  # When True, simulate retro resolution
-        )
+        self.screen_mode_enabled = False  # When True, simulate retro resolution
 
         # Minimum size
         self.setMinimumSize(400, 400)
@@ -165,9 +163,7 @@ class TurtleCanvas(
             # Adjust pen width inversely to zoom so it stays visible at all
             # zoom levels
             adjusted_width = (
-                line.width / max(self.zoom, 0.1)
-                if self.zoom != 0
-                else line.width
+                line.width / max(self.zoom, 0.1) if self.zoom != 0 else line.width
             )
             pen = QPen(color, adjusted_width)
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
@@ -427,9 +423,7 @@ class TurtleCanvas(
         self.offset_y = 0.0
         self.update()
 
-    def export_to_png(
-        self, filepath: str, width: int = 800, height: int = 600
-    ) -> bool:
+    def export_to_png(self, filepath: str, width: int = 800, height: int = 600) -> bool:
         """Export canvas content to PNG file.
 
         Args:
@@ -456,9 +450,7 @@ class TurtleCanvas(
         # Save image
         return image.save(filepath, b"PNG")
 
-    def export_to_svg(
-        self, filepath: str, width: int = 800, height: int = 600
-    ) -> bool:
+    def export_to_svg(self, filepath: str, width: int = 800, height: int = 600) -> bool:
         """Export canvas content to SVG file.
 
         Args:
@@ -479,7 +471,7 @@ class TurtleCanvas(
         generator.setFileName(filepath)
         generator.setSize(QRectF(0, 0, width, height).size().toSize())
         generator.setViewBox(QRectF(0, 0, width, height))
-        generator.setTitle("Time Warp IDE - Turtle Graphics")
+        generator.setTitle("Time Warp Studio - Turtle Graphics")
 
         painter = QPainter(generator)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)

@@ -11,8 +11,7 @@ Compatible with PySide6/PyQt5
 """
 
 import logging
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Optional
+from typing import Dict, List
 
 try:
     from PySide6.QtCharts import QChart, QChartView, QLineSeries
@@ -56,48 +55,21 @@ try:
     )
 except ImportError:
     # Fallback for PyQt5
-    from PyQt5.QtCore import (
-        QObject,
-        QSize,
-        Qt,
-        QThread,
-        QTimer,
-    )
     from PyQt5.QtCore import pyqtSignal as Signal
-    from PyQt5.QtGui import (
-        QColor,
-        QFont,
-        QIcon,
-        QPixmap,
-        QStandardItem,
-        QStandardItemModel,
-    )
     from PyQt5.QtWidgets import (
-        QCheckBox,
-        QComboBox,
-        QDialog,
-        QDockWidget,
         QHBoxLayout,
-        QHeaderView,
         QLabel,
         QLineEdit,
         QListWidget,
         QListWidgetItem,
-        QMenu,
-        QMenuBar,
         QMessageBox,
         QProgressBar,
         QPushButton,
-        QSpinBox,
-        QSplitter,
-        QStatusBar,
         QTableWidget,
         QTableWidgetItem,
         QTabWidget,
         QTextEdit,
-        QToolBar,
         QTreeWidget,
-        QTreeWidgetItem,
         QVBoxLayout,
         QWidget,
     )
@@ -174,9 +146,7 @@ class MarketplacePanel(QWidget):
 
         for row, plugin in enumerate(plugins):
             # Name
-            self.plugin_table.setItem(
-                row, 0, QTableWidgetItem(plugin.get("name", ""))
-            )
+            self.plugin_table.setItem(row, 0, QTableWidgetItem(plugin.get("name", "")))
 
             # Version
             self.plugin_table.setItem(
@@ -185,15 +155,11 @@ class MarketplacePanel(QWidget):
 
             # Rating
             rating = plugin.get("rating", 0)
-            self.plugin_table.setItem(
-                row, 2, QTableWidgetItem(f"{rating:.1f}⭐")
-            )
+            self.plugin_table.setItem(row, 2, QTableWidgetItem(f"{rating:.1f}⭐"))
 
             # Downloads
             downloads = plugin.get("downloads", 0)
-            self.plugin_table.setItem(
-                row, 3, QTableWidgetItem(f"{downloads:,}")
-            )
+            self.plugin_table.setItem(row, 3, QTableWidgetItem(f"{downloads:,}"))
 
             # Install button
             install_btn = QPushButton("Install")
@@ -284,9 +250,7 @@ class DebuggerPanel(QWidget):
 
         self.watch_table = QTableWidget()
         self.watch_table.setColumnCount(3)
-        self.watch_table.setHorizontalHeaderLabels(
-            ["Expression", "Value", "Type"]
-        )
+        self.watch_table.setHorizontalHeaderLabels(["Expression", "Value", "Type"])
         self.watch_table.setMaximumHeight(150)
         watch_layout.addWidget(self.watch_table)
         layout.addLayout(watch_layout)
@@ -403,9 +367,7 @@ class AISuggestionsPanel(QWidget):
         layout.addWidget(QLabel("Review Insights:"))
 
         self.review_tree = QTreeWidget()
-        self.review_tree.setHeaderLabels(
-            ["Category", "Observation", "Recommendation"]
-        )
+        self.review_tree.setHeaderLabels(["Category", "Observation", "Recommendation"])
         layout.addWidget(self.review_tree)
 
         widget.setLayout(layout)
@@ -476,18 +438,10 @@ class AISuggestionsPanel(QWidget):
         self.bugs_table.setRowCount(len(bugs))
 
         for row, bug in enumerate(bugs):
-            self.bugs_table.setItem(
-                row, 0, QTableWidgetItem(str(bug.get("line", "")))
-            )
-            self.bugs_table.setItem(
-                row, 1, QTableWidgetItem(bug.get("severity", ""))
-            )
-            self.bugs_table.setItem(
-                row, 2, QTableWidgetItem(bug.get("message", ""))
-            )
-            self.bugs_table.setItem(
-                row, 3, QTableWidgetItem(bug.get("suggestion", ""))
-            )
+            self.bugs_table.setItem(row, 0, QTableWidgetItem(str(bug.get("line", ""))))
+            self.bugs_table.setItem(row, 1, QTableWidgetItem(bug.get("severity", "")))
+            self.bugs_table.setItem(row, 2, QTableWidgetItem(bug.get("message", "")))
+            self.bugs_table.setItem(row, 3, QTableWidgetItem(bug.get("suggestion", "")))
 
 
 # ===== PERFORMANCE MONITORING PANEL =====
@@ -539,15 +493,9 @@ class PerformanceMonitorPanel(QWidget):
         for component, component_metrics in metrics.items():
             for metric_name, value in component_metrics.items():
                 self.metrics_table.setItem(row, 0, QTableWidgetItem(component))
-                self.metrics_table.setItem(
-                    row, 1, QTableWidgetItem(metric_name)
-                )
-                self.metrics_table.setItem(
-                    row, 2, QTableWidgetItem(f"{value:.2f}")
-                )
-                self.metrics_table.setItem(
-                    row, 3, QTableWidgetItem("ms/count")
-                )
+                self.metrics_table.setItem(row, 1, QTableWidgetItem(metric_name))
+                self.metrics_table.setItem(row, 2, QTableWidgetItem(f"{value:.2f}"))
+                self.metrics_table.setItem(row, 3, QTableWidgetItem("ms/count"))
                 row += 1
 
 

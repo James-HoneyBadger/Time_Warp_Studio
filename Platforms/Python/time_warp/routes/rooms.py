@@ -4,6 +4,7 @@ Handles HTTP endpoints for room operations and synchronization
 """
 
 import logging
+from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -11,7 +12,6 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
-from ..models import Message, Operation, Room
 from ..services import ChatService, RoomService, SyncService
 
 logger = logging.getLogger(__name__)
@@ -35,7 +35,7 @@ class RoomResponse(BaseModel):
     name: str
     owner_id: str
     is_private: bool
-    created_at: str
+    created_at: datetime
 
     class Config:
         from_attributes = True
@@ -48,7 +48,7 @@ class MemberResponse(BaseModel):
     user_id: str
     user_name: str
     role: str
-    joined_at: str
+    joined_at: datetime
 
     class Config:
         from_attributes = True
@@ -63,7 +63,7 @@ class OperationResponse(BaseModel):
     position: int
     content: str
     version: int
-    timestamp: str
+    timestamp: datetime
 
     class Config:
         from_attributes = True
@@ -76,7 +76,7 @@ class MessageResponse(BaseModel):
     user_id: str
     username: str
     content: str
-    timestamp: str
+    timestamp: datetime
 
     class Config:
         from_attributes = True
@@ -94,9 +94,7 @@ async def create_room(
     """Create a new collaboration room"""
     try:
         service = RoomService(session)
-        room = await service.create_room(
-            room_data.name, owner_id, room_data.is_private
-        )
+        room = await service.create_room(room_data.name, owner_id, room_data.is_private)
         return room
     except Exception as e:
         logger.error(f"Error creating room: {e}")
@@ -126,9 +124,7 @@ async def get_room(room_id: str, session: AsyncSession = Depends(get_session)):
 
 
 @router.get("/{room_id}/members", response_model=List[MemberResponse])
-async def get_room_members(
-    room_id: str, session: AsyncSession = Depends(get_session)
-):
+async def get_room_members(room_id: str, session: AsyncSession = Depends(get_session)):
     """Get all members in a room"""
     try:
         service = RoomService(session)
@@ -153,9 +149,7 @@ async def add_room_member(
     """Add member to room"""
     try:
         service = RoomService(session)
-        member = await service.add_member(
-            room_id, user_id, user_name, user_email
-        )
+        member = await service.add_member(room_id, user_id, user_name, user_email)
         return {"message": "Member added", "member_id": member.id}
     except Exception as e:
         logger.error(f"Error adding member: {e}")
@@ -264,9 +258,7 @@ async def search_messages(
 
 
 @router.delete("/{room_id}")
-async def delete_room(
-    room_id: str, session: AsyncSession = Depends(get_session)
-):
+async def delete_room(room_id: str, session: AsyncSession = Depends(get_session)):
     """Delete a room"""
     try:
         service = RoomService(session)

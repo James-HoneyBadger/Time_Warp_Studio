@@ -69,9 +69,7 @@ class ReviewRubric:
     """Grading rubric for reviews."""
 
     name: str
-    criteria: Dict[str, int] = field(
-        default_factory=dict
-    )  # criterion -> max points
+    criteria: Dict[str, int] = field(default_factory=dict)  # criterion -> max points
 
     def get_total_points(self) -> int:
         """Get total possible points."""
@@ -243,9 +241,7 @@ CODE
                     elif comment.comment_type == CommentType.SUGGESTION:
                         icon = "💡"
 
-                    report += (
-                        f"    {icon} [{comment.author}] {comment.content}\n"
-                    )
+                    report += f"    {icon} [{comment.author}] {comment.content}\n"
 
         # Summary
         report += """
@@ -267,9 +263,7 @@ Summary: {self.feedback.summary}
 
         # Comment breakdown
         issues = [
-            c
-            for c in self.get_all_comments()
-            if c.comment_type == CommentType.ISSUE
+            c for c in self.get_all_comments() if c.comment_type == CommentType.ISSUE
         ]
         suggestions = [
             c
@@ -277,12 +271,10 @@ Summary: {self.feedback.summary}
             if c.comment_type == CommentType.SUGGESTION
         ]
         questions = [
-            c
-            for c in self.get_all_comments()
-            if c.comment_type == CommentType.QUESTION
+            c for c in self.get_all_comments() if c.comment_type == CommentType.QUESTION
         ]
 
-        report += """
+        report += f"""
 
 Comment Breakdown:
   Issues: {len(issues)}
@@ -390,9 +382,7 @@ class PeerReviewManager:
                 comment_type=comment_type,
                 severity=severity,
             )
-            self._trigger_callbacks(
-                "comment_added", review=review, comment=comment
-            )
+            self._trigger_callbacks("comment_added", review=review, comment=comment)
             return comment
         return None
 
@@ -415,9 +405,7 @@ class PeerReviewManager:
             rubric = self.rubrics[rubric_name]
             review.set_rubric(rubric)
             score = review.grade(scores)
-            self._trigger_callbacks(
-                "review_submitted", review=review, score=score
-            )
+            self._trigger_callbacks("review_submitted", review=review, score=score)
             return score
 
         return 0.0
@@ -426,9 +414,7 @@ class PeerReviewManager:
         """Get all reviews for an author."""
         return [r for r in self.reviews.values() if r.author == author]
 
-    def get_reviews_by_status(
-        self, status: ReviewStatus
-    ) -> List[CodeReviewSession]:
+    def get_reviews_by_status(self, status: ReviewStatus) -> List[CodeReviewSession]:
         """Get reviews by status."""
         return [r for r in self.reviews.values() if r.status == status]
 
@@ -472,15 +458,11 @@ class PeerReviewManager:
         completed = len(self.get_completed_reviews())
         pending = len(self.get_pending_reviews())
 
-        total_comments = sum(
-            len(r.get_all_comments()) for r in self.reviews.values()
-        )
+        total_comments = sum(len(r.get_all_comments()) for r in self.reviews.values())
 
         total_issues = sum(len(r.get_issues()) for r in self.reviews.values())
 
-        avg_comments = (
-            total_comments / total_reviews if total_reviews > 0 else 0
-        )
+        avg_comments = total_comments / total_reviews if total_reviews > 0 else 0
         avg_issues = total_issues / total_reviews if total_reviews > 0 else 0
 
         return {

@@ -3,21 +3,24 @@ Integration Tests for Backend API Routes
 Tests REST endpoints and WebSocket integration
 """
 
-import json
-
 import pytest
-from db import Base, get_session
-from httpx import AsyncClient
-from main import app
+import pytest_asyncio
+from httpx import ASGITransport, AsyncClient
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
     async_sessionmaker,
     create_async_engine,
 )
 
+from time_warp.db import get_session
+from time_warp.main import app
+from time_warp.models import Base
+
+pytestmark = pytest.mark.asyncio
+
 
 # Fixtures for test database and client
-@pytest.fixture
+@pytest_asyncio.fixture
 async def test_db():
     """Create test database"""
     # Use in-memory SQLite for testing (or test PostgreSQL)
@@ -43,10 +46,12 @@ async def test_db():
     await engine.dispose()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def client(test_db):
     """Create test client"""
-    async with AsyncClient(app=app, base_url="http://test") as ac:
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as ac:
         yield ac
 
 
@@ -251,4 +256,4 @@ async def test_root_endpoint(client):
     assert response.status_code == 200
     data = response.json()
     assert "message" in data
-    assert data["message"] == "Time Warp IDE Server"
+    assert data["message"] == "Time Warp Studio Server"

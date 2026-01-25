@@ -15,7 +15,7 @@ import hashlib
 from dataclasses import asdict, dataclass
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 
 class ItemType(Enum):
@@ -214,9 +214,7 @@ class CommunityMarketplace:
         """Search marketplace items."""
 
         results = [
-            item
-            for item in self.items.values()
-            if item.status == ItemStatus.PUBLISHED
+            item for item in self.items.values() if item.status == ItemStatus.PUBLISHED
         ]
 
         # Filter by query
@@ -356,15 +354,11 @@ class CommunityMarketplace:
 
     def get_user_items(self, author_id: str) -> List[MarketplaceItem]:
         """Get all items by author."""
-        return [
-            item for item in self.items.values() if item.author_id == author_id
-        ]
+        return [item for item in self.items.values() if item.author_id == author_id]
 
     def get_featured_items(self, limit: int = 10) -> List[MarketplaceItem]:
         """Get featured items."""
-        featured = [
-            self.items[iid] for iid in self.featured_items if iid in self.items
-        ]
+        featured = [self.items[iid] for iid in self.featured_items if iid in self.items]
         return featured[:limit]
 
     def get_trending_items(self, limit: int = 10) -> List[MarketplaceItem]:
@@ -453,32 +447,23 @@ class CommunityMarketplace:
     def get_status(self) -> Dict:
         """Get marketplace statistics."""
         published_items = [
-            item
-            for item in self.items.values()
-            if item.status == ItemStatus.PUBLISHED
+            item for item in self.items.values() if item.status == ItemStatus.PUBLISHED
         ]
 
         return {
             "total_items": len(self.items),
             "published_items": len(published_items),
             "total_downloads": sum(
-                self.stats.get(
-                    iid, ItemStats(iid, 0, 0, 0, 0, 0, 0, 0, "")
-                ).downloads
+                self.stats.get(iid, ItemStats(iid, 0, 0, 0, 0, 0, 0, 0, "")).downloads
                 for iid in self.items
             ),
             "average_rating": (
-                sum(
-                    item.rating_avg * item.rating_count
-                    for item in published_items
-                )
+                sum(item.rating_avg * item.rating_count for item in published_items)
                 / sum(item.rating_count for item in published_items)
                 if published_items
                 else 0.0
             ),
-            "total_authors": len(
-                set(item.author_id for item in published_items)
-            ),
+            "total_authors": len(set(item.author_id for item in published_items)),
             "categories": len(self.categories),
             "updated_at": datetime.now().isoformat(),
         }

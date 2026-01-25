@@ -6,7 +6,7 @@
 
 TO GREET
     PRINT [Hello, LOGO!]
-    PRINT [Welcome to Time Warp IDE]
+    PRINT [Welcome to Time Warp Studio]
 END
 
 ; Call the procedure

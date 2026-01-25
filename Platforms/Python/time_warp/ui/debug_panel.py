@@ -44,8 +44,7 @@ class DebugToolbar(QFrame):
     def _setup_ui(self):
         """Setup the toolbar UI."""
         self.setFrameShape(QFrame.StyledPanel)
-        self.setStyleSheet(
-            """
+        self.setStyleSheet("""
             QFrame {
                 background-color: palette(window);
                 border: 1px solid palette(dark);
@@ -70,8 +69,7 @@ class DebugToolbar(QFrame):
             QToolButton:disabled {
                 color: palette(disabled-text);
             }
-        """
-        )
+        """)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(4, 2, 4, 2)
@@ -141,8 +139,7 @@ class DebugToolbar(QFrame):
 
         # Status label
         self.status_label = QLabel("Ready")
-        self.status_label.setStyleSheet(
-            """
+        self.status_label.setStyleSheet("""
             QLabel {
                 background-color: palette(base);
                 border: 1px solid palette(dark);
@@ -150,8 +147,7 @@ class DebugToolbar(QFrame):
                 padding: 2px 8px;
                 font-weight: bold;
             }
-        """
-        )
+        """)
         layout.addWidget(self.status_label)
 
     def set_debugging(self, is_debugging: bool):
@@ -163,8 +159,7 @@ class DebugToolbar(QFrame):
 
         if is_debugging:
             self.status_label.setText("🟢 Running")
-            self.status_label.setStyleSheet(
-                """
+            self.status_label.setStyleSheet("""
                 QLabel {
                     background-color: #2d5016;
                     color: #90EE90;
@@ -173,12 +168,10 @@ class DebugToolbar(QFrame):
                     padding: 2px 8px;
                     font-weight: bold;
                 }
-            """
-            )
+            """)
         else:
             self.status_label.setText("⚪ Ready")
-            self.status_label.setStyleSheet(
-                """
+            self.status_label.setStyleSheet("""
                 QLabel {
                     background-color: palette(base);
                     border: 1px solid palette(dark);
@@ -186,8 +179,7 @@ class DebugToolbar(QFrame):
                     padding: 2px 8px;
                     font-weight: bold;
                 }
-            """
-            )
+            """)
 
     def set_paused(self, is_paused: bool, line: int = 0):
         """Update toolbar state for paused execution."""
@@ -200,8 +192,7 @@ class DebugToolbar(QFrame):
 
         if is_paused:
             self.status_label.setText(f"🟡 Paused (Line {line})")
-            self.status_label.setStyleSheet(
-                """
+            self.status_label.setStyleSheet("""
                 QLabel {
                     background-color: #5c4a00;
                     color: #FFD700;
@@ -210,12 +201,10 @@ class DebugToolbar(QFrame):
                     padding: 2px 8px;
                     font-weight: bold;
                 }
-            """
-            )
+            """)
         elif self._is_debugging:
             self.status_label.setText("🟢 Running")
-            self.status_label.setStyleSheet(
-                """
+            self.status_label.setStyleSheet("""
                 QLabel {
                     background-color: #2d5016;
                     color: #90EE90;
@@ -224,8 +213,7 @@ class DebugToolbar(QFrame):
                     padding: 2px 8px;
                     font-weight: bold;
                 }
-            """
-            )
+            """)
 
 
 class WatchPanel(QWidget):
@@ -264,15 +252,9 @@ class WatchPanel(QWidget):
         self.watch_table = QTableWidget()
         self.watch_table.setColumnCount(3)
         self.watch_table.setHorizontalHeaderLabels(["Expression", "Value", ""])
-        self.watch_table.horizontalHeader().setSectionResizeMode(
-            0, QHeaderView.Stretch
-        )
-        self.watch_table.horizontalHeader().setSectionResizeMode(
-            1, QHeaderView.Stretch
-        )
-        self.watch_table.horizontalHeader().setSectionResizeMode(
-            2, QHeaderView.Fixed
-        )
+        self.watch_table.horizontalHeader().setSectionResizeMode(0, QHeaderView.Stretch)
+        self.watch_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.watch_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Fixed)
         self.watch_table.setColumnWidth(2, 30)
         self.watch_table.verticalHeader().setVisible(False)
         self.watch_table.setAlternatingRowColors(True)
@@ -541,9 +523,7 @@ class DebugPanel(QWidget):
         # Forward other panel signals
         self.call_stack_panel.frame_selected.connect(self.goto_line.emit)
         self.breakpoint_panel.breakpoint_goto.connect(self.goto_line.emit)
-        self.breakpoint_panel.breakpoint_toggled.connect(
-            self.breakpoint_toggled.emit
-        )
+        self.breakpoint_panel.breakpoint_toggled.connect(self.breakpoint_toggled.emit)
 
     def set_debugging(self, is_debugging: bool):
         """Update UI for debugging state."""

@@ -1,4 +1,4 @@
-"""Utilities module for Time Warp IDE."""
+"""Utilities module for Time Warp Studio."""
 
 from .error_hints import check_syntax_mistakes, suggest_command
 from .error_messages import ErrorMessage

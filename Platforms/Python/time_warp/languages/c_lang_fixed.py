@@ -157,9 +157,7 @@ def _exec_c_side_effect_expr(interpreter: "Interpreter", expr: str) -> bool:
         return True
     # Fallback: evaluate expression (no side effects captured)
     try:
-        norm = re.sub(
-            r"([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*(.*?)\s*\]", r"\1(\2)", s
-        )
+        norm = re.sub(r"([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*(.*?)\s*\]", r"\1(\2)", s)
         interpreter.evaluate_expression(norm)
         return True
     except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
@@ -597,9 +595,7 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
         lines = interpreter.program_lines
         else_start = None
         else_end = None
-        if end_idx < len(lines) and _ELSE_ON_SAME_LINE_RE.match(
-            lines[end_idx][1]
-        ):
+        if end_idx < len(lines) and _ELSE_ON_SAME_LINE_RE.match(lines[end_idx][1]):
             else_end = _find_block_end(interpreter, end_idx)
             else_start = _first_inside_index(interpreter, end_idx)
         else:
@@ -744,9 +740,7 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
         header_idx = interpreter.current_line
         end_idx = _find_block_end(interpreter, header_idx)
         start = _first_inside_index(interpreter, header_idx)
-        interpreter.c_block_stack.append(
-            {"type": "do", "end": end_idx, "start": start}
-        )
+        interpreter.c_block_stack.append({"type": "do", "end": end_idx, "start": start})
         interpreter.current_line = start - 1
         return ""
 

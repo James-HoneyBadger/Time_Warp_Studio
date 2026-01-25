@@ -6,7 +6,7 @@ REMARK This is a simple PILOT program demonstrating
 REMARK basic input/output and program structure.
 REMARK
 
-PRINT Welcome to Time Warp IDE PILOT
+PRINT Welcome to Time Warp Studio PILOT
 PRINT
 ACCEPT USER_NAME What is your name?
 PRINT Hello, $USER_NAME!

@@ -38,8 +38,7 @@ def validate_arg_count(
     if isinstance(expected, int):
         if arg_count != expected:
             raise ValidationError(
-                f"{command_name} expects {expected} argument(s), "
-                f"got {arg_count}"
+                f"{command_name} expects {expected} argument(s), " f"got {arg_count}"
             )
     elif isinstance(expected, tuple):
         min_count, max_count = expected
@@ -74,9 +73,7 @@ def validate_numeric(value: Any, param_name: str = "") -> Any:
         float(value)
     except (ValueError, TypeError) as e:
         name_str = f" for {param_name}" if param_name else ""
-        raise ValidationError(
-            f"Expected numeric value{name_str}, got '{value}'"
-        ) from e
+        raise ValidationError(f"Expected numeric value{name_str}, got '{value}'") from e
     return value
 
 
@@ -213,9 +210,7 @@ def validate_file_path(
         try:
             file_path.relative_to(base_resolved)
         except ValueError as e:
-            raise ValidationError(
-                f"Path '{filename}' escapes sandbox directory"
-            ) from e
+            raise ValidationError(f"Path '{filename}' escapes sandbox directory") from e
 
     return filename
 
@@ -247,14 +242,10 @@ def validate_range(
     """
     if min_val is not None and value < min_val:
         name_str = f" for {param_name}" if param_name else ""
-        raise ValidationError(
-            f"Value {value}{name_str} is below minimum {min_val}"
-        )
+        raise ValidationError(f"Value {value}{name_str} is below minimum {min_val}")
 
     if max_val is not None and value > max_val:
         name_str = f" for {param_name}" if param_name else ""
-        raise ValidationError(
-            f"Value {value}{name_str} exceeds maximum {max_val}"
-        )
+        raise ValidationError(f"Value {value}{name_str} exceeds maximum {max_val}")
 
     return value

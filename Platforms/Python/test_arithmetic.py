@@ -13,7 +13,8 @@ if __name__ == "__main__":
 
     # Simple test first
     print("Testing simple BASIC:")
-    interp = Interpreter(Language.BASIC)
+    interp = Interpreter()
+    interp.language = Language.BASIC
     turtle = TurtleState()
 
     simple_code = """10 PRINT "Hello"
@@ -22,8 +23,8 @@ if __name__ == "__main__":
 """
 
     interp.load_program(simple_code)
-result = interp.execute(turtle)
+    result = interp.execute(turtle)
 
-print(f"Total output lines: {len(result)}")
-for i, line in enumerate(result):
-    print(f"  Line {i}: {repr(line)}")
+    print(f"Total output lines: {len(result)}")
+    for i, line in enumerate(result):
+        print(f"  Line {i}: {repr(line)}")

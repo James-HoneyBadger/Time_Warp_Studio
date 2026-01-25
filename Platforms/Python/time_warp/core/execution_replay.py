@@ -1,6 +1,6 @@
 """Visual execution replay for understanding algorithms."""
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple
 
@@ -337,9 +337,7 @@ class ExecutionReplayPlayer:
                 frame.data.get("values", []), frame.data.get("highlighted", [])
             )
         elif frame.visualization_type == VisualizationType.STACK:
-            return StackVisualizer.visualize_ascii(
-                frame.data.get("values", [])
-            )
+            return StackVisualizer.visualize_ascii(frame.data.get("values", []))
 
         return None
 
@@ -396,9 +394,7 @@ class AlgorithmVisualizer:
         return recorder
 
     @staticmethod
-    def visualize_binary_search(
-        arr: List[int], target: int
-    ) -> VisualizationRecorder:
+    def visualize_binary_search(arr: List[int], target: int) -> VisualizationRecorder:
         """Record binary search visualization."""
         recorder = VisualizationRecorder()
         recorder.start_recording()

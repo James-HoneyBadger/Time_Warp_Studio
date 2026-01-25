@@ -1,4 +1,4 @@
-# Time Warp IDE v6.0.0
+# Time Warp Studio v6.0.0
 
 A unified educational programming environment supporting BASIC, PILOT, Logo, Python, C, Pascal, and Prolog with integrated turtle graphics and modern IDE features.
 
@@ -8,7 +8,7 @@ A unified educational programming environment supporting BASIC, PILOT, Logo, Pyt
 
 ## Overview
 
-Time Warp IDE brings classic and modern programming languages into a single, accessible environment designed for education and experimentation. Whether you're learning BASIC on a virtual computer, drawing with Logo, or exploring algorithms with Python, Time Warp provides the tools you need.
+Time Warp Studio is a desktop educational programming environment that brings classic and modern programming languages into a single application designed for education and experimentation. Built with Python and PySide6, it provides a native desktop experience for learning BASIC, drawing with Logo, and exploring programming concepts.
 
 ### Key Features
 
@@ -27,8 +27,10 @@ Time Warp IDE brings classic and modern programming languages into a single, acc
 ### Requirements
 
 - **Python** 3.10 or higher
+- **PySide6** (Qt6 bindings for Python)
 - **Modern operating system** (Windows, macOS, Linux)
 - **4GB RAM** minimum recommended
+- **CPU with SSSE3/SSE4** support (required for PySide6)
 
 ### Installation
 
@@ -116,23 +118,28 @@ Run any example by opening it in the IDE and pressing Ctrl+R.
 
 ## Architecture
 
-### Core Components
+### Desktop Application (Python/PySide6)
 
-**Interpreter** (`Platforms/Python/time_warp/core/interpreter.py`)
+Time Warp Studio is a native desktop application built with Python and PySide6 (Qt6).
+
+**Core Interpreter** (`Platforms/Python/time_warp/core/interpreter.py`)
 - Central command dispatcher
 - Language-specific executors
 - State management
+- Safe expression evaluation
 
-**Language Executors** (`Platforms/Python/time_warp/core/interpreters/`)
+**Language Executors** (`Platforms/Python/time_warp/languages/`)
 - `basic.py` - BASIC interpreter
 - `pilot.py` - PILOT interpreter
 - `logo.py` - Logo interpreter with turtle graphics
 - Experimental: `python.py`, `c.py`, `pascal.py`, `prolog.py`
 
 **UI Components** (`Platforms/Python/time_warp/ui/`)
-- Main window and editor
-- Turtle graphics canvas
+- Main window (PySide6/Qt6)
+- Code editor with syntax highlighting
+- Turtle graphics canvas with zoom/pan
 - Output panel and console
+- Theme system (8 built-in themes)
 
 ---
 
@@ -239,7 +246,7 @@ This project is licensed under the Apache License 2.0 - see [LICENSE](LICENSE) f
 
 ## Acknowledgments
 
-Time Warp IDE builds on the legacy of educational programming languages while incorporating modern development practices. Special thanks to the BASIC, Logo, PILOT, and open-source communities for their inspiration.
+Time Warp Studio builds on the legacy of educational programming languages while incorporating modern development practices. Special thanks to the BASIC, Logo, PILOT, and open-source communities for their inspiration.
 
 ---
 

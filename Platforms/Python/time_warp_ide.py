@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Time Warp IDE - Entry point for desktop application."""
+"""Time Warp Studio - Entry point for desktop application."""
 
 import logging
 import sys
@@ -13,13 +13,13 @@ from time_warp.ui import MainWindow
 
 
 def main():
-    """Launch Time Warp IDE."""
+    """Launch Time Warp Studio."""
     # Setup logging (INFO level for normal use, can be overridden)
     log_file = Path.home() / ".time_warp" / "logs" / "ide.log"
     setup_logging(log_level=logging.INFO, log_file=log_file)
 
     logger = get_logger(__name__)
-    logger.info("Time Warp IDE starting")
+    logger.info("Time Warp Studio starting")
 
     # Enable high DPI scaling
     QApplication.setHighDpiScaleFactorRoundingPolicy(
@@ -28,8 +28,8 @@ def main():
 
     # Create application
     app = QApplication(sys.argv)
-    app.setApplicationName("Time Warp IDE")
-    app.setApplicationDisplayName("Time Warp IDE")
+    app.setApplicationName("Time Warp Studio")
+    app.setApplicationDisplayName("Time Warp Studio")
     app.setOrganizationName("TimeWarp")
     app.setOrganizationDomain("timewarp.edu")
 
@@ -47,9 +47,9 @@ def main():
     # Run application
     try:
         exit_code = app.exec()
-        logger.info("Time Warp IDE exiting normally")
+        logger.info("Time Warp Studio exiting normally")
         sys.exit(exit_code)
-    except Exception as e:
+    except Exception:
         logger.exception("Unexpected error in main loop")
         raise
 

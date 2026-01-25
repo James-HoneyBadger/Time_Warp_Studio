@@ -1,0 +1,316 @@
+============================= test session starts ==============================
+platform linux -- Python 3.14.2, pytest-9.0.2, pluggy-1.6.0 -- /home/james/Time_Warp_Studio/.venv/bin/python
+cachedir: .pytest_cache
+rootdir: /home/james/Time_Warp_Studio/Platforms/Python
+configfile: pyproject.toml
+plugins: mock-3.15.1, cov-7.0.0, asyncio-1.3.0, anyio-4.12.1
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 12 items
+
+time_warp/tests/test_api_integration.py::test_create_room ERROR          [  8%]
+time_warp/tests/test_api_integration.py::test_get_room ERROR             [ 16%]
+time_warp/tests/test_api_integration.py::test_add_room_member ERROR      [ 25%]
+time_warp/tests/test_api_integration.py::test_get_room_members ERROR     [ 33%]
+time_warp/tests/test_api_integration.py::test_get_user_profile ERROR     [ 41%]
+time_warp/tests/test_api_integration.py::test_get_user_rooms ERROR       [ 50%]
+time_warp/tests/test_api_integration.py::test_join_room ERROR            [ 58%]
+time_warp/tests/test_api_integration.py::test_record_operation ERROR     [ 66%]
+time_warp/tests/test_api_integration.py::test_get_current_version ERROR  [ 75%]
+time_warp/tests/test_api_integration.py::test_get_snapshot ERROR         [ 83%]
+time_warp/tests/test_api_integration.py::test_health_check ERROR         [ 91%]
+time_warp/tests/test_api_integration.py::test_root_endpoint ERROR        [100%]
+
+==================================== ERRORS ====================================
+______________________ ERROR at setup of test_create_room ______________________
+
+test_db = async_sessionmaker(class_='AsyncSession', bind=<sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0xffffa5079d50>, autoflush=True, expire_on_commit=False)
+
+    @pytest_asyncio.fixture
+    async def client(test_db):
+        """Create test client"""
+>       async with AsyncClient(app=app, base_url="http://test") as ac:
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncClient.__init__() got an unexpected keyword argument 'app'
+
+time_warp/tests/test_api_integration.py:53: TypeError
+_______________________ ERROR at setup of test_get_room ________________________
+
+test_db = async_sessionmaker(class_='AsyncSession', bind=<sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0xffffa5103cd0>, autoflush=True, expire_on_commit=False)
+
+    @pytest_asyncio.fixture
+    async def client(test_db):
+        """Create test client"""
+>       async with AsyncClient(app=app, base_url="http://test") as ac:
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncClient.__init__() got an unexpected keyword argument 'app'
+
+time_warp/tests/test_api_integration.py:53: TypeError
+____________________ ERROR at setup of test_add_room_member ____________________
+
+test_db = async_sessionmaker(class_='AsyncSession', bind=<sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0xffffa5103890>, autoflush=True, expire_on_commit=False)
+
+    @pytest_asyncio.fixture
+    async def client(test_db):
+        """Create test client"""
+>       async with AsyncClient(app=app, base_url="http://test") as ac:
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncClient.__init__() got an unexpected keyword argument 'app'
+
+time_warp/tests/test_api_integration.py:53: TypeError
+___________________ ERROR at setup of test_get_room_members ____________________
+
+test_db = async_sessionmaker(class_='AsyncSession', bind=<sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0xffffa5102cd0>, autoflush=True, expire_on_commit=False)
+
+    @pytest_asyncio.fixture
+    async def client(test_db):
+        """Create test client"""
+>       async with AsyncClient(app=app, base_url="http://test") as ac:
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncClient.__init__() got an unexpected keyword argument 'app'
+
+time_warp/tests/test_api_integration.py:53: TypeError
+___________________ ERROR at setup of test_get_user_profile ____________________
+
+test_db = async_sessionmaker(class_='AsyncSession', bind=<sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0xffffa51027d0>, autoflush=True, expire_on_commit=False)
+
+    @pytest_asyncio.fixture
+    async def client(test_db):
+        """Create test client"""
+>       async with AsyncClient(app=app, base_url="http://test") as ac:
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncClient.__init__() got an unexpected keyword argument 'app'
+
+time_warp/tests/test_api_integration.py:53: TypeError
+____________________ ERROR at setup of test_get_user_rooms _____________________
+
+test_db = async_sessionmaker(class_='AsyncSession', bind=<sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0xffffa4761050>, autoflush=True, expire_on_commit=False)
+
+    @pytest_asyncio.fixture
+    async def client(test_db):
+        """Create test client"""
+>       async with AsyncClient(app=app, base_url="http://test") as ac:
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncClient.__init__() got an unexpected keyword argument 'app'
+
+time_warp/tests/test_api_integration.py:53: TypeError
+_______________________ ERROR at setup of test_join_room _______________________
+
+test_db = async_sessionmaker(class_='AsyncSession', bind=<sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0xffffa4718e10>, autoflush=True, expire_on_commit=False)
+
+    @pytest_asyncio.fixture
+    async def client(test_db):
+        """Create test client"""
+>       async with AsyncClient(app=app, base_url="http://test") as ac:
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncClient.__init__() got an unexpected keyword argument 'app'
+
+time_warp/tests/test_api_integration.py:53: TypeError
+___________________ ERROR at setup of test_record_operation ____________________
+
+test_db = async_sessionmaker(class_='AsyncSession', bind=<sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0xffffa4718790>, autoflush=True, expire_on_commit=False)
+
+    @pytest_asyncio.fixture
+    async def client(test_db):
+        """Create test client"""
+>       async with AsyncClient(app=app, base_url="http://test") as ac:
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncClient.__init__() got an unexpected keyword argument 'app'
+
+time_warp/tests/test_api_integration.py:53: TypeError
+__________________ ERROR at setup of test_get_current_version __________________
+
+test_db = async_sessionmaker(class_='AsyncSession', bind=<sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0xffffa471ba90>, autoflush=True, expire_on_commit=False)
+
+    @pytest_asyncio.fixture
+    async def client(test_db):
+        """Create test client"""
+>       async with AsyncClient(app=app, base_url="http://test") as ac:
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncClient.__init__() got an unexpected keyword argument 'app'
+
+time_warp/tests/test_api_integration.py:53: TypeError
+_____________________ ERROR at setup of test_get_snapshot ______________________
+
+test_db = async_sessionmaker(class_='AsyncSession', bind=<sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0xffffa4777d10>, autoflush=True, expire_on_commit=False)
+
+    @pytest_asyncio.fixture
+    async def client(test_db):
+        """Create test client"""
+>       async with AsyncClient(app=app, base_url="http://test") as ac:
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncClient.__init__() got an unexpected keyword argument 'app'
+
+time_warp/tests/test_api_integration.py:53: TypeError
+_____________________ ERROR at setup of test_health_check ______________________
+
+test_db = async_sessionmaker(class_='AsyncSession', bind=<sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0xffffa50fab50>, autoflush=True, expire_on_commit=False)
+
+    @pytest_asyncio.fixture
+    async def client(test_db):
+        """Create test client"""
+>       async with AsyncClient(app=app, base_url="http://test") as ac:
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncClient.__init__() got an unexpected keyword argument 'app'
+
+time_warp/tests/test_api_integration.py:53: TypeError
+_____________________ ERROR at setup of test_root_endpoint _____________________
+
+test_db = async_sessionmaker(class_='AsyncSession', bind=<sqlalchemy.ext.asyncio.engine.AsyncEngine object at 0xffffa50fb210>, autoflush=True, expire_on_commit=False)
+
+    @pytest_asyncio.fixture
+    async def client(test_db):
+        """Create test client"""
+>       async with AsyncClient(app=app, base_url="http://test") as ac:
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: AsyncClient.__init__() got an unexpected keyword argument 'app'
+
+time_warp/tests/test_api_integration.py:53: TypeError
+=============================== warnings summary ===============================
+time_warp/models.py:23
+  /home/james/Time_Warp_Studio/Platforms/Python/time_warp/models.py:23: MovedIn20Warning: The ``declarative_base()`` function is now available as sqlalchemy.orm.declarative_base(). (deprecated since: 2.0) (Background on SQLAlchemy 2.0 at: https://sqlalche.me/e/b8d9)
+    Base = declarative_base()
+
+time_warp/routes/rooms.py:31
+  /home/james/Time_Warp_Studio/Platforms/Python/time_warp/routes/rooms.py:31: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class RoomResponse(BaseModel):
+
+time_warp/routes/rooms.py:44
+  /home/james/Time_Warp_Studio/Platforms/Python/time_warp/routes/rooms.py:44: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class MemberResponse(BaseModel):
+
+time_warp/routes/rooms.py:57
+  /home/james/Time_Warp_Studio/Platforms/Python/time_warp/routes/rooms.py:57: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class OperationResponse(BaseModel):
+
+time_warp/routes/rooms.py:72
+  /home/james/Time_Warp_Studio/Platforms/Python/time_warp/routes/rooms.py:72: PydanticDeprecatedSince20: Support for class-based `config` is deprecated, use ConfigDict instead. Deprecated in Pydantic V2.0 to be removed in V3.0. See Pydantic V2 Migration Guide at https://errors.pydantic.dev/2.12/migration/
+    class MessageResponse(BaseModel):
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+================================ tests coverage ================================
+_______________ coverage: platform linux, python 3.14.2-final-0 ________________
+
+Name                                          Stmts   Miss  Cover   Missing
+---------------------------------------------------------------------------
+time_warp/__init__.py                             8      0   100%
+time_warp/cloud/__init__.py                      48     48     0%   9-157
+time_warp/cloud/api_server.py                   199    199     0%   7-627
+time_warp/cloud/cloud_sync_manager.py           307    307     0%   8-711
+time_warp/cloud/sync_engine.py                  194    194     0%   7-549
+time_warp/compiler/__init__.py                    2      2     0%   3-5
+time_warp/compiler/compiler.py                   75     75     0%   6-192
+time_warp/core/__init__.py                        2      0   100%
+time_warp/core/accessibility.py                 218    218     0%   3-419
+time_warp/core/ai_assistant.py                  185    185     0%   3-502
+time_warp/core/analytics.py                     181    181     0%   12-459
+time_warp/core/asset_library.py                 182    182     0%   3-408
+time_warp/core/chat_service.py                  130    103    21%   30, 48-59, 65-90, 96-107, 111-121, 127-143, 149-164, 170-177, 181-187, 191-194, 200-210, 216-223, 227-238, 249-252, 256-287
+time_warp/core/collaboration.py                 196    196     0%   3-421
+time_warp/core/collaboration_engine.py           99     80    19%   28, 48-51, 60-88, 103-152, 162, 174, 178, 186-204, 214-235, 242-265
+time_warp/core/community_marketplace.py         173    173     0%   14-461
+time_warp/core/debugger.py                      177    177     0%   3-355
+time_warp/core/error_recovery.py                219    219     0%   12-492
+time_warp/core/executable_exporter.py           114    114     0%   3-467
+time_warp/core/execution_replay.py              186    186     0%   3-439
+time_warp/core/fractals.py                       79     79     0%   7-345
+time_warp/core/game_support.py                  119    119     0%   6-288
+time_warp/core/gamepad.py                       208    208     0%   14-344
+time_warp/core/hardware_simulator.py            196    196     0%   3-403
+time_warp/core/interpreter.py                   544    444    18%   61-63, 94-107, 111-120, 190-282, 286-325, 330, 340-355, 363-376, 384, 387-393, 397-419, 423-445, 449, 466-478, 484-490, 494-497, 501-514, 518-526, 533-586, 594-623, 641-647, 654-656, 662-698, 702-704, 707-711, 714-718, 721-722, 734-751, 764-782, 787-795, 799-803, 818-831, 845-882, 886-888, 897-898, 902-914, 918-927, 935-938, 946-950, 955, 959, 963, 967, 971, 975-976, 980-981, 985, 989-999
+time_warp/core/language_comparator.py           124    124     0%   3-433
+time_warp/core/learning_analytics.py            194    194     0%   3-497
+time_warp/core/lms_integration.py               183    183     0%   13-451
+time_warp/core/multiplayer_leaderboard.py       181    181     0%   8-508
+time_warp/core/music.py                         208    208     0%   6-406
+time_warp/core/orchestrator.py                  192    192     0%   12-396
+time_warp/core/particles.py                     256    256     0%   6-393
+time_warp/core/peer_review.py                   219    219     0%   3-602
+time_warp/core/performance_profiler.py          145    145     0%   3-336
+time_warp/core/presence_service.py               89     72    19%   18-27, 36-57, 63-75, 86-101, 110-115, 127-130, 134, 138-153, 157-160, 168, 172-200, 204-214
+time_warp/core/project_templates.py              80     80     0%   3-354
+time_warp/core/shapes.py                        255    255     0%   6-626
+time_warp/core/speech.py                        123    123     0%   6-232
+time_warp/core/syntax_validator.py              161    161     0%   3-423
+time_warp/core/websocket_manager.py              91     73    20%   20-35, 44-47, 51-62, 68-111, 115-135, 141-145, 154-177, 181-190, 194-197, 209, 213, 217
+time_warp/db.py                                  32     18    44%   27, 61-65, 70-74, 79-80, 86-92
+time_warp/graphics/__init__.py                    2      2     0%   3-5
+time_warp/graphics/art_toolkit.py               158    158     0%   5-316
+time_warp/graphics/pixel_canvas.py              150    150     0%   7-314
+time_warp/graphics/turtle_gallery.py            104    104     0%   5-244
+time_warp/graphics/turtle_state.py              125    125     0%   6-257
+time_warp/hardware/__init__.py                  254    254     0%   6-473
+time_warp/hardware/arduino/__init__.py          179    179     0%   6-337
+time_warp/hardware/raspberry_pi/__init__.py     224    224     0%   6-475
+time_warp/hardware/ui/__init__.py               304    304     0%   10-510
+time_warp/hardware/ui/data_logger.py            122    122     0%   6-236
+time_warp/languages/__init__.py                   4      0   100%
+time_warp/languages/basic.py                   1130   1062     6%   48-67, 72-86, 100-279, 286-424, 437-532, 537-568, 576-591, 595-608, 622-663, 667-681, 694-715, 724-740, 757-831, 844-876, 888-940, 946-992, 998-999, 1005-1006, 1011-1020, 1025-1042, 1047-1054, 1059-1068, 1074-1101, 1106-1136, 1141-1143, 1148-1161, 1166-1168, 1174-1175, 1180-1181, 1186-1187, 1192-1193, 1199-1219, 1225-1268, 1273-1291, 1296-1297, 1302-1309, 1314-1318, 1323, 1328, 1333, 1338, 1343-1344, 1355-1359, 1369-1385, 1395-1409, 1420-1449, 1458-1474, 1480-1484, 1490-1494, 1511-1530, 1541-1554, 1574-1622, 1640-1664, 1682-1709, 1718-1767, 1777-1811, 1820-1869, 1879-1911, 1922-1941, 1957-1971
+time_warp/languages/c_lang.py                     3      3     0%   3-8
+time_warp/languages/c_lang_fixed.py             532    501     6%   55-78, 82-85, 89-98, 102-167, 171-264, 268-288, 292-293, 298, 303-308, 312-329, 333-340, 350-365, 370-438, 443-500, 505-809
+time_warp/languages/forth.py                    335    296    12%   10-22, 26-64, 68-69, 72-73, 76-80, 83-84, 87-93, 96-98, 101, 106-107, 110-111, 114-117, 120-121, 124-131, 134-141, 144-145, 150-153, 156-159, 162-163, 166-167, 170-171, 175-183, 186-192, 201, 205-206, 209-210, 213-214, 217-218, 221-222, 225-226, 229-230, 233-234, 237-239, 242-423, 426-464, 475-479
+time_warp/languages/logo.py                    1029    965     6%   113-165, 177-184, 193-376, 392-401, 409-449, 466-498, 518-535, 543-554, 562-573, 581-592, 610-625, 643-679, 687-694, 702-709, 717-724, 732, 740-761, 769-794, 812-827, 836-863, 872-899, 904, 909-921, 930-977, 982, 987-1013, 1021-1055, 1065-1125, 1129-1177, 1183-1210, 1215-1227, 1232-1236, 1241-1245, 1251-1263, 1268-1276, 1281-1295, 1300-1332, 1337-1370, 1375-1409, 1414-1448, 1453-1507, 1512-1529, 1535-1542, 1547-1554, 1559-1566, 1571-1580, 1586-1592, 1602-1665, 1672-1687, 1692, 1702-1712, 1719-1735, 1740-1745
+time_warp/languages/parser_patterns.py           16     16     0%   20-246
+time_warp/languages/pascal.py                   679    630     7%   91-92, 96-97, 101, 108-141, 145-156, 160-213, 217-236, 240-243, 247-254, 258-286, 293-306, 319-336, 348-450, 455-487, 492-525, 530-551, 556-571, 576-591, 604-640, 646-1019
+time_warp/languages/pilot.py                    334    325     3%   37-212, 222-336, 345-462
+time_warp/languages/prolog.py                   543    514     5%   36-40, 44-60, 64-83, 88-122, 126-194, 215-230, 234-282, 286-289, 298-309, 318-331, 335-349, 355-374, 382-384, 391-417, 422-443, 451-628, 632-638, 642-647, 653-725, 730-862
+time_warp/logging_config.py                      37     27    27%   49-85, 99-100, 116-119
+time_warp/main.py                                62     31    50%   33-56, 90-99, 110, 126-138
+time_warp/models.py                              89      5    94%   54, 116, 154, 182, 213
+time_warp/repositories.py                       102     63    38%   29-30, 34-38, 42-45, 49-52, 56-62, 66-72, 79, 83-88, 92-98, 102-106, 113, 117-120, 124-129, 135-143, 150, 156-162, 168-177, 181-188, 194-204, 211, 217-224, 228-239, 245-255, 262, 268-274, 280-290
+time_warp/routes/__init__.py                      2      0   100%
+time_warp/routes/collaboration.py                90     90     0%   6-275
+time_warp/routes/rooms.py                       120     76    37%   95-103, 112-122, 133-139, 154-162, 173-184, 197-203, 214-223, 237-243, 254-260, 271-281
+time_warp/routes/sync.py                         76     51    33%   60-76, 87-96, 110-140, 153-177, 191-201, 212-250
+time_warp/routes/users.py                        53     28    47%   44, 57-74, 88-94, 105-116, 126, 136-140
+time_warp/services.py                            97     65    33%   29-31, 37-54, 58, 68-76, 80-85, 89, 93, 97, 104-106, 117-131, 137, 141, 147-155, 161, 168-169, 175-183, 189-196, 200-206, 212-220, 226, 230
+time_warp/socketio_config.py                     44     26    41%   21-24, 28-45, 49-52, 56-61, 65, 69, 79-82, 88-91
+time_warp/ui/__init__.py                          6      6     0%   3-9
+time_warp/ui/accessibility.py                    36     36     0%   5-230
+time_warp/ui/canvas.py                          273    273     0%   9-564
+time_warp/ui/cassette_animation.py              230    230     0%   11-498
+time_warp/ui/collaboration_client.py            281    281     0%   6-521
+time_warp/ui/crt_effect.py                      161    161     0%   13-324
+time_warp/ui/debug_panel.py                     316    316     0%   6-568
+time_warp/ui/editor.py                          473    473     0%   8-1142
+time_warp/ui/error_explorer.py                  135    135     0%   8-268
+time_warp/ui/feature_integration.py             147    147     0%   7-471
+time_warp/ui/feature_panels.py                  563    563     0%   8-932
+time_warp/ui/focus_mode.py                       90     90     0%   5-162
+time_warp/ui/main_window.py                    1373   1373     0%   3-2582
+time_warp/ui/onboarding.py                      152    152     0%   8-348
+time_warp/ui/output.py                          319    319     0%   7-678
+time_warp/ui/phase_vii_x_panels.py              278    278     0%   13-565
+time_warp/ui/screen_modes.py                     62     62     0%   7-329
+time_warp/ui/snippet_dialog.py                  130    130     0%   8-224
+time_warp/ui/snippets.py                         34     34     0%   6-450
+time_warp/ui/themes.py                           92     92     0%   8-887
+time_warp/ui/variable_inspector.py               29     29     0%   7-55
+time_warp/utils/__init__.py                       6      0   100%
+time_warp/utils/code_formatter.py               177    177     0%   6-468
+time_warp/utils/error_hints.py                   83     77     7%   129-150, 163-241, 258-318, 331-348
+time_warp/utils/error_messages.py                74     38    49%   42-44, 49-51, 56, 61, 79-97, 119-123, 145-150, 155, 160, 165, 184, 192-194
+time_warp/utils/execution_timeout.py             62     42    32%   43-67, 82-84, 88-92, 96-104, 108-109, 115, 134-146
+time_warp/utils/expression_evaluator.py         245    221    10%   40-41, 99-101, 105, 121-128, 136-244, 251-343, 347-486
+time_warp/utils/logging_config.py                56     36    36%   23-25, 73-117, 122, 129, 136, 143, 164
+time_warp/utils/profiler.py                     134    134     0%   6-238
+time_warp/utils/string_evaluator.py             236    212    10%   37-38, 52-53, 57-87, 91-95, 100-136, 140-159, 163-194, 198-211, 216-223, 227-239, 243-257, 261-286, 290-305, 309-316, 320-327, 331-338, 342-354, 358-379, 383-390
+time_warp/utils/validators.py                    56     48    14%   36-47, 73-80, 106-165, 195-220, 248-260
+time_warp/websocket_handlers.py                 150    125    17%   26-32, 36-48, 52-53, 59-63, 67-111, 115-135, 139-178, 194-206, 210-217, 223-230, 234-258, 272-294, 302-315
+---------------------------------------------------------------------------
+TOTAL                                         20032  19055     5%
+Coverage HTML written to dir htmlcov
+Coverage XML written to file coverage.xml
+=========================== short test summary info ============================
+ERROR time_warp/tests/test_api_integration.py::test_create_room - TypeError: ...
+ERROR time_warp/tests/test_api_integration.py::test_get_room - TypeError: Asy...
+ERROR time_warp/tests/test_api_integration.py::test_add_room_member - TypeErr...
+ERROR time_warp/tests/test_api_integration.py::test_get_room_members - TypeEr...
+ERROR time_warp/tests/test_api_integration.py::test_get_user_profile - TypeEr...
+ERROR time_warp/tests/test_api_integration.py::test_get_user_rooms - TypeErro...
+ERROR time_warp/tests/test_api_integration.py::test_join_room - TypeError: As...
+ERROR time_warp/tests/test_api_integration.py::test_record_operation - TypeEr...
+ERROR time_warp/tests/test_api_integration.py::test_get_current_version - Typ...
+ERROR time_warp/tests/test_api_integration.py::test_get_snapshot - TypeError:...
+ERROR time_warp/tests/test_api_integration.py::test_health_check - TypeError:...
+ERROR time_warp/tests/test_api_integration.py::test_root_endpoint - TypeError...
+======================== 5 warnings, 12 errors in 3.08s ========================

@@ -5,11 +5,10 @@ Initializes Socket.io server with FastAPI integration
 
 import logging
 from contextlib import asynccontextmanager
-from typing import Any, Dict
 
+from engineio import AsyncServer as AsyncEngineIO
 from fastapi import FastAPI
-from python_engineio import AsyncEngineIO
-from python_socketio import AsyncServer
+from socketio import AsyncServer
 
 logger = logging.getLogger(__name__)
 

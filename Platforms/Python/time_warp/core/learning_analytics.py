@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Set
+from typing import Callable, Dict, List, Optional
 
 
 class ConceptType(Enum):
@@ -150,9 +150,7 @@ class LearningAnalytics:
     def end_session(self) -> float:
         """End session and return total time."""
         if self.session_start:
-            session_duration = (
-                datetime.now() - self.session_start
-            ).total_seconds()
+            session_duration = (datetime.now() - self.session_start).total_seconds()
             self.total_coding_time += session_duration
             self._trigger_callbacks("session_ended", duration=session_duration)
             return session_duration
@@ -330,33 +328,33 @@ class LearningAnalytics:
 
     def export_report(self, output_path: Optional[Path] = None) -> str:
         """Export learning report as formatted text."""
-        report = """
-╔════════════════════════════════════════════════════════════╗
-║       TIME WARP STUDIO - LEARNING ANALYTICS REPORT         ║
-╚════════════════════════════════════════════════════════════╝
+        report = f"""
+    ╔════════════════════════════════════════════════════════════╗
+    ║       TIME WARP STUDIO - LEARNING ANALYTICS REPORT         ║
+    ╚════════════════════════════════════════════════════════════╝
 
-Student: {self.student_name}
-Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    Student: {self.student_name}
+    Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
 
-═══════════════════════════════════════════════════════════
-PROGRESS SUMMARY
-═══════════════════════════════════════════════════════════
-"""
+    ═══════════════════════════════════════════════════════════
+    PROGRESS SUMMARY
+    ═══════════════════════════════════════════════════════════
+    """
 
         metrics = self.get_progress_metrics()
-        report += """
-Programs Written: {metrics['programs']}
-Success Rate: {metrics['successful_rate'] * 100:.1f}%
-Lines of Code: {metrics['total_lines_written']}
-Coding Time: {metrics['total_time_hours']:.1f} hours
-Current Streak: {metrics['streak']}
-Best Streak: {metrics['best_streak']}
-Concepts Mastered: {metrics['concepts_mastered']}/10
+        report += f"""
+    Programs Written: {metrics['programs']}
+    Success Rate: {metrics['successful_rate'] * 100:.1f}%
+    Lines of Code: {metrics['total_lines_written']}
+    Coding Time: {metrics['total_time_hours']:.1f} hours
+    Current Streak: {metrics['streak']}
+    Best Streak: {metrics['best_streak']}
+    Concepts Mastered: {metrics['concepts_mastered']}/10
 
-═══════════════════════════════════════════════════════════
-CONCEPT MASTERY
-═══════════════════════════════════════════════════════════
-"""
+    ═══════════════════════════════════════════════════════════
+    CONCEPT MASTERY
+    ═══════════════════════════════════════════════════════════
+    """
 
         concept_summary = self.get_concept_summary()
         for concept, info in concept_summary.items():
@@ -406,9 +404,7 @@ Next Steps:
         for rec in self.get_recommended_concepts():
             report += f"  • {rec}\n"
 
-        report += (
-            "\n═══════════════════════════════════════════════════════════\n"
-        )
+        report += "\n═══════════════════════════════════════════════════════════\n"
 
         if output_path:
             with open(output_path, "w") as f:
@@ -490,8 +486,7 @@ class ClassroomAnalytics:
 
         all_programs = sum(len(s.programs) for s in self.students.values())
         avg_success = sum(
-            s.get_progress_metrics()["successful_rate"]
-            for s in self.students.values()
+            s.get_progress_metrics()["successful_rate"] for s in self.students.values()
         ) / len(self.students)
 
         return {

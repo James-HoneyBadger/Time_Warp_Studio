@@ -1,6 +1,6 @@
-# Prolog Programming with Time Warp IDE
+# Prolog Programming with Time Warp Studio
 
-Prolog is a unique logic programming language based on first-order logic. Time Warp IDE provides experimental Prolog support for exploring declarative, rule-based programming.
+Prolog is a unique logic programming language based on first-order logic. Time Warp Studio provides experimental Prolog support for exploring declarative, rule-based programming.
 
 ## Quick Start
 
@@ -395,7 +395,7 @@ parent(unknown, bob).
 ?- parent(unknown, bob).  % Now succeeds
 ```
 
-## Running Prolog Programs in Time Warp IDE
+## Running Prolog Programs in Time Warp Studio
 
 1. Create a `.pl` or `.pro` file with your program
 2. Select "Prolog" from the language dropdown

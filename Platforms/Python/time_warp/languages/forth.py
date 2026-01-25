@@ -142,9 +142,7 @@ class ForthExecutor:
 
     def _eq(self):
         if len(self.stack) >= 2:
-            self.stack.append(
-                -1 if self.stack.pop() == self.stack.pop() else 0
-            )
+            self.stack.append(-1 if self.stack.pop() == self.stack.pop() else 0)
 
     def _lt(self):
         if len(self.stack) >= 2:
@@ -177,9 +175,7 @@ class ForthExecutor:
             if 0 <= addr < len(self.memory):
                 self.stack.append(self.memory[addr])
             else:
-                self.interpreter.log_output(
-                    f"❌ Invalid memory address: {addr}"
-                )
+                self.interpreter.log_output(f"❌ Invalid memory address: {addr}")
                 self.stack.append(0)
 
     def _store(self):
@@ -189,9 +185,7 @@ class ForthExecutor:
             if 0 <= addr < len(self.memory):
                 self.memory[addr] = val
             else:
-                self.interpreter.log_output(
-                    f"❌ Invalid memory address: {addr}"
-                )
+                self.interpreter.log_output(f"❌ Invalid memory address: {addr}")
 
     def _variable(self):
         # This is tricky because VARIABLE reads the NEXT token.
@@ -254,9 +248,7 @@ class ForthExecutor:
                         self.execute_tokens(d)
 
                     self.dictionary[self.new_word_name] = new_word_func
-                    self.interpreter.log_output(
-                        f"Defined {self.new_word_name}"
-                    )
+                    self.interpreter.log_output(f"Defined {self.new_word_name}")
                 else:
                     self.new_word_definition.append(token)
                 i += 1
@@ -330,9 +322,7 @@ class ForthExecutor:
 
             if token_upper == "LOOP":
                 if len(self.return_stack) < 3:
-                    self.interpreter.log_output(
-                        "❌ Return stack underflow for LOOP"
-                    )
+                    self.interpreter.log_output("❌ Return stack underflow for LOOP")
                     i += 1
                     continue
 
@@ -468,9 +458,7 @@ class ForthExecutor:
 _forth_executor = None
 
 
-def execute_forth(
-    interpreter: "Interpreter", command: str, _turtle=None
-) -> str:
+def execute_forth(interpreter: "Interpreter", command: str, _turtle=None) -> str:
     global _forth_executor  # pylint: disable=global-statement
     if _forth_executor is None or _forth_executor.interpreter != interpreter:
         _forth_executor = ForthExecutor(interpreter)

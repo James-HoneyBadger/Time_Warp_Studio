@@ -4,7 +4,6 @@ Defines schema for rooms, messages, operations, and user presence
 """
 
 from datetime import datetime
-from typing import Optional
 
 from sqlalchemy import (
     JSON,
@@ -35,9 +34,7 @@ class Room(Base):
     is_private = Column(Boolean, default=False)
     max_users = Column(Integer, default=100)
     created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     messages = relationship(
@@ -70,18 +67,14 @@ class RoomMember(Base):
     __table_args__ = (Index("idx_room_user", "room_id", "user_id"),)
 
     id = Column(String(255), primary_key=True, index=True)
-    room_id = Column(
-        String(255), ForeignKey("rooms.id"), nullable=False, index=True
-    )
+    room_id = Column(String(255), ForeignKey("rooms.id"), nullable=False, index=True)
     user_id = Column(String(255), nullable=False, index=True)
     user_name = Column(String(255), nullable=False)
     user_email = Column(String(255), nullable=True)
     user_color = Column(String(7), default="#3B82F6")
     role = Column(String(50), default="member")  # admin, member, viewer
     joined_at = Column(DateTime, default=datetime.utcnow)
-    last_seen = Column(
-        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-    )
+    last_seen = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = Column(Boolean, default=True)
 
     # Relationships
@@ -93,21 +86,19 @@ class Operation(Base):
 
     __tablename__ = "operations"
     __table_args__ = (
-        Index("idx_room_version", "room_id", "version"),
-        Index("idx_room_timestamp", "room_id", "timestamp"),
+        Index("idx_ops_room_version", "room_id", "version"),
+        Index("idx_ops_room_timestamp", "room_id", "timestamp"),
     )
 
     id = Column(String(255), primary_key=True, index=True)
-    room_id = Column(
-        String(255), ForeignKey("rooms.id"), nullable=False, index=True
-    )
+    room_id = Column(String(255), ForeignKey("rooms.id"), nullable=False, index=True)
     user_id = Column(String(255), nullable=False, index=True)
     operation_type = Column(String(50), nullable=False)  # insert, delete
     position = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
     version = Column(Integer, nullable=False, index=True)
     timestamp = Column(DateTime, default=datetime.utcnow, index=True)
-    metadata = Column(JSON, nullable=True)
+    meta_info = Column(JSON, nullable=True)
 
     # Relationships
     room = relationship("Room", back_populates="operations")
@@ -130,14 +121,12 @@ class Message(Base):
 
     __tablename__ = "messages"
     __table_args__ = (
-        Index("idx_room_timestamp", "room_id", "timestamp"),
-        Index("idx_user_timestamp", "user_id", "timestamp"),
+        Index("idx_msgs_room_timestamp", "room_id", "timestamp"),
+        Index("idx_msgs_user_timestamp", "user_id", "timestamp"),
     )
 
     id = Column(String(255), primary_key=True, index=True)
-    room_id = Column(
-        String(255), ForeignKey("rooms.id"), nullable=False, index=True
-    )
+    room_id = Column(String(255), ForeignKey("rooms.id"), nullable=False, index=True)
     user_id = Column(String(255), nullable=False, index=True)
     username = Column(String(255), nullable=False)
     content = Column(Text, nullable=False)
@@ -170,9 +159,7 @@ class DocumentSnapshot(Base):
     __tablename__ = "document_snapshots"
 
     id = Column(String(255), primary_key=True, index=True)
-    room_id = Column(
-        String(255), ForeignKey("rooms.id"), nullable=False, index=True
-    )
+    room_id = Column(String(255), ForeignKey("rooms.id"), nullable=False, index=True)
     content = Column(Text, nullable=False)
     version = Column(Integer, nullable=False)
     size_bytes = Column(Integer, nullable=False)
@@ -194,9 +181,7 @@ class ConflictResolution(Base):
     __tablename__ = "conflict_resolutions"
 
     id = Column(String(255), primary_key=True, index=True)
-    room_id = Column(
-        String(255), ForeignKey("rooms.id"), nullable=False, index=True
-    )
+    room_id = Column(String(255), ForeignKey("rooms.id"), nullable=False, index=True)
     operation_id_1 = Column(String(255), nullable=False)
     operation_id_2 = Column(String(255), nullable=False)
     user_id_1 = Column(String(255), nullable=False)
@@ -204,9 +189,7 @@ class ConflictResolution(Base):
     conflict_type = Column(
         String(50), nullable=False
     )  # insert-insert, delete-delete, etc
-    resolution_strategy = Column(
-        String(50), nullable=False
-    )  # timestamp, user_id, etc
+    resolution_strategy = Column(String(50), nullable=False)  # timestamp, user_id, etc
     resolved_at = Column(DateTime, default=datetime.utcnow)
 
     def to_dict(self):

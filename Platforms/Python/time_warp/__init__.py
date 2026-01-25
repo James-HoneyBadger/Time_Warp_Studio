@@ -1,7 +1,7 @@
 """
-Time Warp IDE - Python Implementation
+Time Warp Studio - Python Implementation
 Educational programming environment (unified BASIC, PILOT, Logo)
-Aligned with Time Warp IDE v5.1.0 release
+Aligned with Time Warp Studio v5.1.0 release
 """
 
 __version__ = "5.1.0"

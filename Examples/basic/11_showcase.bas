@@ -3,7 +3,7 @@
 30 REM All major BASIC features combined
 40 REM ================================================
 50 PRINT "╔════════════════════════════════════════════╗"
-60 PRINT "║  TIME WARP IDE - BASIC SHOWCASE PROGRAM   ║"
+60 PRINT "║  TIME WARP STUDIO - BASIC SHOWCASE PROGRAM   ║"
 61 PRINT "║        Demonstrating All Features         ║"
 62 PRINT "╚════════════════════════════════════════════╝"
 63 PRINT ""
@@ -12,7 +12,7 @@
 80 PRINT "1. VARIABLES AND TYPES"
 90 PRINT "─────────────────────"
 100 LET INT_VAR = 100
-110 LET STR_VAR$ = "Time Warp IDE"
+110 LET STR_VAR$ = "Time Warp Studio"
 120 LET BOOL_VAR = 1
 130 PRINT "Integer: " + STR$(INT_VAR)
 140 PRINT "String: " + STR_VAR$
@@ -98,7 +98,7 @@
 940 PRINT "9. PROGRAM COMPLETE"
 950 PRINT "───────────────────"
 960 PRINT "All BASIC features demonstrated successfully!"
-970 PRINT "Happy coding with Time Warp IDE!"
+970 PRINT "Happy coding with Time Warp Studio!"
 980 
 990 END
 1000 

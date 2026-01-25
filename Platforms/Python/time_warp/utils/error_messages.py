@@ -1,4 +1,4 @@
-"""Standardized error message formatting for Time Warp IDE.
+"""Standardized error message formatting for Time Warp Studio.
 
 Provides consistent emoji-prefixed error messages across all language
 executors and UI components.
@@ -162,9 +162,7 @@ class ErrorMessage:
     @staticmethod
     def type_mismatch(expected: str, got: str) -> str:
         """Format type mismatch error."""
-        return ErrorMessage.error(
-            f"Type mismatch: expected {expected}, got {got}"
-        )
+        return ErrorMessage.error(f"Type mismatch: expected {expected}, got {got}")
 
     @staticmethod
     def file_error(filename: str, reason: str) -> str:

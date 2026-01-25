@@ -302,8 +302,7 @@ class TWEditorWindow(QMainWindow):
         ret = QMessageBox.warning(
             self,
             "TW Editor",
-            "The document has been modified.\n"
-            "Do you want to save your changes?",
+            "The document has been modified.\n" "Do you want to save your changes?",
             QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
         )
 

@@ -1,4 +1,4 @@
-"""Compiler package for Time Warp IDE."""
+"""Compiler package for Time Warp Studio."""
 
 from .compiler import compile_to_c, compile_to_executable
 

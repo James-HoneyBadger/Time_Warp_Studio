@@ -1,9 +1,9 @@
 #!/bin/bash
 
 ################################################################################
-#                     TIME WARP IDE - LAUNCH SCRIPT                           #
+#                     TIME WARP STUDIO - LAUNCH SCRIPT                           #
 #                                                                              #
-# This script sets up and launches the Time Warp IDE with Python              #
+# This script sets up and launches the Time Warp Studio with Python              #
 # It automatically:                                                           #
 #  • Creates a virtual environment if needed                                  #
 #  • Installs/updates all required dependencies                               #
@@ -56,7 +56,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 echo -e "${BLUE}╔════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║          TIME WARP IDE - LAUNCHER                     ║${NC}"
+echo -e "${BLUE}║          TIME WARP STUDIO - LAUNCHER                     ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════════════╝${NC}"
 echo ""
 
@@ -127,7 +127,7 @@ fi
 
 # Launch the IDE
 echo -e "${BLUE}╔════════════════════════════════════════════════════════╗${NC}"
-echo -e "${BLUE}║              LAUNCHING TIME WARP IDE...               ║${NC}"
+echo -e "${BLUE}║              LAUNCHING TIME WARP STUDIO...               ║${NC}"
 echo -e "${BLUE}╚════════════════════════════════════════════════════════╝${NC}"
 echo ""
 echo -e "${GREEN}Starting IDE...${NC}"

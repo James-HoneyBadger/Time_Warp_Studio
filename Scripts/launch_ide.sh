@@ -1,5 +1,5 @@
 #!/bin/bash
-# Time Warp IDE Desktop Launcher
+# Time Warp Studio Desktop Launcher
 
 cd "$(dirname "$0")"
 

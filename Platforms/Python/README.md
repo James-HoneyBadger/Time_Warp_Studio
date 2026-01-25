@@ -1,23 +1,24 @@
-# 🐍 Time Warp IDE - Python Implementation
+# 🐍 Time Warp Studio - Desktop Application
 
-**🎓 Educational Programming Platform - Accessibility & Portability Focus**
+**🎯 Educational Programming Platform - Python/PySide6 Implementation**
 
-[![Python 3.8+](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org)
+[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org)
+[![PySide6](https://img.shields.io/badge/PySide6-Qt6-green.svg)](https://pypi.org/project/PySide6/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../../LICENSE)
-[![Tests: Passing](https://img.shields.io/badge/Tests-Passing-success.svg)](../../Docs/developer/00-developer-guide.md#testing)
 
-> **🎯 Part of the Time Warp Educational Platform** — See [main documentation](../../Docs/INDEX.md) for complete guides and curriculum materials.
+> **🎯 Primary Implementation** — Native desktop IDE for educational multi-language programming. See [main documentation](../../docs/INDEX.md) for guides and tutorials.
 
-The **Python implementation** of Time Warp IDE prioritizes **accessibility and educational value**. With its pure-Python codebase, this version runs on any system with Python 3.8+, making it perfect for schools, coding camps, and educational environments where easy installation and cross-platform compatibility are essential.
+The **desktop implementation** of Time Warp Studio provides a native application experience with PySide6 (Qt6), offering a professional IDE environment for learning programming through multiple classic and modern languages.
 
-## 🎯 Why Choose the Python Version?
+## 🎯 Why This Desktop Application?
 
-- **📱 Universal Compatibility**: Runs on any device with Python (including Raspberry Pi)
-- **🔧 Easy Installation**: Simple `pip install` or run directly from source
-- **👨‍🏫 Education-First**: Designed specifically for classroom environments
-- **🔍 Readable Code**: Students can explore the implementation to learn Python
-- **📦 Lightweight**: Minimal dependencies make it perfect for restricted networks
-- **🎨 Full Feature Set**: Complete multi-language support with turtle graphics
+- 💻 **Native Experience**: Full-featured desktop IDE with PySide6/Qt6
+- 📦 **Easy Installation**: Simple `pip install` or run directly from source
+- 👨‍🏫 **Education-First**: Designed specifically for teaching environments
+- 🔍 **Readable Code**: Students can explore the Python implementation
+- 🐍 **Cross-Platform**: Runs on Windows, macOS, and Linux
+- 🎨 **Full Feature Set**: Complete multi-language support with turtle graphics
+- 🛠️ **Professional UI**: Modern Qt6 interface with themes and customization
 
 ---
 
@@ -359,15 +360,18 @@ suggestion = hints.get_suggestion('FORWRD', ['FORWARD', 'BACKWARD'])
 
 ---
 
-## 🖥 Platform Snapshot
+## 🖥 Platform Architecture
 
-| Platform | Location | Status | Notes |
-|----------|----------|--------|-------|
-| Python (PySide6) | `Platforms/Python/` | ✅ Official | Primary desktop IDE with full BASIC, PILOT, and Logo support |
-| Browser (HTML/JS) | `Platforms/Browser/` | 🧪 Experimental | Prototype for future web deployment |
-| DOS (C89) | `Platforms/DOS/` | 🧪 Experimental | Retro text-mode interpreter retained for history labs |
+Time Warp Studio is a native desktop application built with Python and PySide6 (Qt6).
 
-Legacy implementations such as Go, Haiku, and others were removed during the v5.1.0 cleanup to keep maintenance focused on the supported stack.
+**Primary Platform:**
+- **Python (PySide6)** - `Platforms/Python/` - ✅ Official desktop IDE with full BASIC, PILOT, and Logo support
+
+**Project Focus:**
+- Native desktop experience with modern Qt6 interface
+- Cross-platform support (Windows, macOS, Linux)
+- Educational programming with integrated turtle graphics
+- Professional IDE features (syntax highlighting, themes, project management)
 
 ---
 
@@ -426,8 +430,6 @@ MIT License - see [LICENSE](../../LICENSE) file in repository root.
 
 ### 📦 Assets & Examples
 - **Example Programs**: [`Examples/`](../../Examples/) — A curated set of BASIC, PILOT, and Logo samples for lessons and demos.
-- **Browser Prototype**: [`Platforms/Browser/`](../Browser/) — Experimental HTML/JS build for future deployment.
-- **DOS Interpreter**: [`Platforms/DOS/`](../DOS/) — C89 text-mode interpreter for historical computing labs.
 
 ---
 
@@ -441,7 +443,7 @@ MIT License - see [LICENSE](../../LICENSE) file in repository root.
 
 <div align="center">
 
-**🐍 Time Warp IDE - Python Implementation** 
+**🐍 Time Warp Studio - Python Implementation** 
 
 *Educational programming made accessible everywhere* 
 

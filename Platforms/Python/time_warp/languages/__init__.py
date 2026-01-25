@@ -1,4 +1,4 @@
-"""Languages package for Time Warp IDE - Separate language executors."""
+"""Languages package for Time Warp Studio - Separate language executors."""
 
 from .basic import execute_basic
 from .logo import execute_logo

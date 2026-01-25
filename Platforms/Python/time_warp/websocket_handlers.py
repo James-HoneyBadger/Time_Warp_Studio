@@ -6,8 +6,7 @@ Processes incoming WebSocket events and manages collaboration
 import logging
 from typing import Any, Dict
 
-from python_socketio import AsyncServer
-from sqlalchemy.ext.asyncio import AsyncSession
+from socketio import AsyncServer
 
 from .core.chat_service import ChatService as ChatServiceMemory
 from .core.collaboration_engine import OperationalTransform
@@ -62,6 +61,9 @@ class WebSocketEventHandler:
         for room_id in rooms:
             await self.on_leave_room(sid, {"room_id": room_id})
 
+        # Remove from connection manager
+        self.connection_manager.disconnect(sid)
+
     async def on_join_room(self, sid: str, data: Dict[str, Any]):
         """Handle room join"""
         room_id = data.get("room_id")
@@ -74,7 +76,12 @@ class WebSocketEventHandler:
 
         # Add to connection manager
         user_data["id"] = user_id
+        # Ensure user is tracked in manager
+        if sid not in self.connection_manager.users:
+            self.connection_manager.users[sid] = user_data
+
         await self.connection_manager.join_room(sid, room_id)
+        await self.sio.enter_room(sid, room_id)
 
         # Add to database
         try:
@@ -198,9 +205,7 @@ class WebSocketEventHandler:
             return
 
         # Update in presence service
-        update = self.presence_service.update_cursor_position(
-            sid, room_id, position
-        )
+        update = self.presence_service.update_cursor_position(sid, room_id, position)
 
         # Broadcast to room
         await self.sio.emit("cursor_update", update, to=room_id, skip_sid=sid)
@@ -214,9 +219,7 @@ class WebSocketEventHandler:
             return
 
         update = self.presence_service.update_user_status(sid, room_id, status)
-        await self.sio.emit(
-            "presence_update", update, to=room_id, skip_sid=sid
-        )
+        await self.sio.emit("presence_update", update, to=room_id, skip_sid=sid)
 
     async def on_typing(self, sid: str, data: Dict[str, Any]):
         """Handle typing indicator"""
@@ -248,9 +251,7 @@ class WebSocketEventHandler:
         try:
             async with AsyncSessionLocal() as session:
                 chat_service = ChatService(session)
-                await chat_service.add_message(
-                    room_id, user_id, username, content
-                )
+                await chat_service.add_message(room_id, user_id, username, content)
         except Exception as e:
             logger.error(f"Error persisting message: {e}")
 
@@ -278,9 +279,7 @@ class WebSocketEventHandler:
             return
 
         # Add to memory
-        self.chat_service_memory.add_reaction(
-            room_id, message_id, emoji, user_id
-        )
+        self.chat_service_memory.add_reaction(room_id, message_id, emoji, user_id)
 
         # Persist to database
         try:

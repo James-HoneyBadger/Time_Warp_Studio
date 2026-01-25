@@ -326,9 +326,7 @@ E:
         """Get beginner-friendly templates."""
         if not cls.TEMPLATES:
             cls.initialize()
-        return [
-            t for t in cls.TEMPLATES.values() if t.difficulty == "beginner"
-        ]
+        return [t for t in cls.TEMPLATES.values() if t.difficulty == "beginner"]
 
     @classmethod
     def export_as_json(cls) -> str:

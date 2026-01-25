@@ -1,5 +1,5 @@
 """
-Code formatter for Time Warp IDE.
+Code formatter for Time Warp Studio.
 Auto-formats BASIC, Logo, and PILOT code.
 """
 
@@ -106,10 +106,7 @@ class BasicFormatter:
                 indent_level += 1
 
             # Handle CASE which dedents then indents
-            if (
-                upper_content.startswith("CASE ")
-                and upper_content != "CASE ELSE"
-            ):
+            if upper_content.startswith("CASE ") and upper_content != "CASE ELSE":
                 # Already dedented above, now indent for case body
                 indent_level += 1
 

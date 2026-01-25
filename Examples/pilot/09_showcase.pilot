@@ -5,7 +5,7 @@ REMARK ================================================
 
 PRINT
 PRINT ╔═════════════════════════════════════════════╗
-PRINT ║   TIME WARP IDE - PILOT SHOWCASE PROGRAM    ║
+PRINT ║   TIME WARP STUDIO - PILOT SHOWCASE PROGRAM    ║
 PRINT ║        Demonstrating All Features          ║
 PRINT ╚═════════════════════════════════════════════╝
 PRINT
@@ -17,7 +17,7 @@ PRINT 1. BASIC INPUT AND OUTPUT
 PRINT ──────────────────────────
 ACCEPT demo_name What is your name?
 PRINT Hello, $demo_name!
-PRINT Welcome to the Time Warp IDE PILOT showcase.
+PRINT Welcome to the Time Warp Studio PILOT showcase.
 PRINT
 
 REMARK =====================================================
@@ -109,7 +109,7 @@ PRINT
 PRINT ════════════════════════════════════════════
 PRINT PILOT Showcase Complete!
 PRINT All language features demonstrated.
-PRINT Thank you for using Time Warp IDE!
+PRINT Thank you for using Time Warp Studio!
 PRINT ════════════════════════════════════════════
 
 STOP

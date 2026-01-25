@@ -134,7 +134,7 @@ class AssetLibrary:
         if metadata_file.exists():
             try:
                 with open(metadata_file) as f:
-                    metadata = json.load(f)
+                    _ = json.load(f)
                     # Could load additional metadata here
             except Exception:
                 pass

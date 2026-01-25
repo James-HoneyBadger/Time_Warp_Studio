@@ -11,8 +11,6 @@ Provides:
 
 import uuid
 from abc import ABC, abstractmethod
-
-dataclass, field
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
@@ -324,9 +322,7 @@ class LocalFeatureFlagProvider(FeatureFlagProvider):
                 return False
         return True
 
-    def _evaluate_rule(
-        self, rule: FeatureFlagRule, context: Dict[str, Any]
-    ) -> bool:
+    def _evaluate_rule(self, rule: FeatureFlagRule, context: Dict[str, Any]) -> bool:
         """Evaluate single rule"""
         value = context.get(rule.attribute)
 
@@ -406,14 +402,6 @@ FEATURE_FLAGS = {
         description="Create and save custom editor themes",
         flag_type=FeatureFlagType.BOOLEAN,
         enabled=True,
-    ),
-    "mobile_app": FeatureFlag(
-        key="mobile_app",
-        name="Native Mobile App",
-        description="iOS and Android native applications",
-        flag_type=FeatureFlagType.PERCENTAGE,
-        enabled=False,
-        percentage=5,  # 5% beta testing
     ),
 }
 

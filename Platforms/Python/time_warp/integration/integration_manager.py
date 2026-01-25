@@ -103,9 +103,7 @@ class IntegrationManager:
         """Register a component for integration"""
         with self.lock:
             if component_id in self.components:
-                self.logger.warning(
-                    f"Component {component_id} already registered"
-                )
+                self.logger.warning(f"Component {component_id} already registered")
                 return False
 
             self.components[component_id] = metadata
@@ -114,9 +112,7 @@ class IntegrationManager:
             )
             return True
 
-    def initialize_component(
-        self, component_id: str, initializer: Callable
-    ) -> bool:
+    def initialize_component(self, component_id: str, initializer: Callable) -> bool:
         """Initialize a registered component"""
         with self.lock:
             if component_id not in self.components:
@@ -152,9 +148,7 @@ class IntegrationManager:
                 self.logger.error(f"Failed to initialize {component_id}: {e}")
                 return False
 
-    def get_component_status(
-        self, component_id: str
-    ) -> Optional[ComponentMetadata]:
+    def get_component_status(self, component_id: str) -> Optional[ComponentMetadata]:
         """Get component status"""
         with self.lock:
             return self.components.get(component_id)
@@ -264,9 +258,7 @@ class MarketplaceIntegration:
             self.logger.error(f"Failed to import marketplace: {e}")
             raise
 
-    def search_plugins(
-        self, query: str, limit: int = 10
-    ) -> List[Dict[str, Any]]:
+    def search_plugins(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Search marketplace for plugins"""
         if not self.marketplace_service:
             return []
@@ -295,17 +287,13 @@ class MarketplaceIntegration:
             for r in results
         ]
 
-    def install_plugin(
-        self, plugin_id: str, version: str, user_id: str
-    ) -> bool:
+    def install_plugin(self, plugin_id: str, version: str, user_id: str) -> bool:
         """Install a plugin"""
         if not self.installation_service:
             return False
 
         try:
-            self.installation_service.install_plugin(
-                plugin_id, version, user_id
-            )
+            self.installation_service.install_plugin(plugin_id, version, user_id)
             return True
         except Exception as e:
             self.logger.error(f"Failed to install plugin: {e}")
@@ -420,9 +408,7 @@ class AIIntegration:
         if not self.completion_engine:
             return []
 
-        suggestions = self.completion_engine.suggest_completion(
-            code, line, language
-        )
+        suggestions = self.completion_engine.suggest_completion(code, line, language)
 
         return [
             {
@@ -474,9 +460,7 @@ class IntegrationHealthCheck:
                     "type": meta.type.value,
                     "status": meta.status.value,
                     "initialized_at": (
-                        meta.initialized_at.isoformat()
-                        if meta.initialized_at
-                        else None
+                        meta.initialized_at.isoformat() if meta.initialized_at else None
                     ),
                     "error": meta.error_message,
                 }

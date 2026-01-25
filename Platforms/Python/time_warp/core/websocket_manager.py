@@ -5,7 +5,7 @@ Handles connections, rooms, and message broadcasting
 
 import logging
 from datetime import datetime
-from typing import Any, Callable, Dict, List
+from typing import Any, Dict, List
 
 from fastapi import WebSocket
 
@@ -48,20 +48,23 @@ class ConnectionManager:
 
     def disconnect(self, connection_id: str):
         """Remove a connection"""
+        user_data = self.users.get(connection_id, {})
+
         if connection_id in self.active_connections:
-            user_data = self.users.pop(connection_id, {})
             self.active_connections.pop(connection_id)
 
-            # Remove from all rooms
-            for room_id, members in list(self.rooms.items()):
-                if connection_id in members:
-                    members.discard(connection_id)
-                    if not members:
-                        self.rooms.pop(room_id)
+        if connection_id in self.users:
+            self.users.pop(connection_id)
 
-            logger.info(
-                f"User {user_data.get('name')} disconnected: {connection_id}"
-            )
+        # Remove from all rooms
+        for room_id, members in list(self.rooms.items()):
+            if connection_id in members:
+                members.discard(connection_id)
+                if not members:
+                    self.rooms.pop(room_id)
+
+        if user_data:
+            logger.info(f"User {user_data.get('name')} disconnected: {connection_id}")
 
     async def join_room(self, connection_id: str, room_id: str):
         """Add connection to a room"""
@@ -134,9 +137,7 @@ class ConnectionManager:
 
         logger.info(f"Connection {connection_id} left room {room_id}")
 
-    async def send_to_connection(
-        self, connection_id: str, message: Dict[str, Any]
-    ):
+    async def send_to_connection(self, connection_id: str, message: Dict[str, Any]):
         """Send message to specific connection"""
         if connection_id in self.active_connections:
             try:

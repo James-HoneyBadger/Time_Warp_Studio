@@ -1,4 +1,4 @@
-# Multi-stage build for Time Warp IDE Server
+# Multi-stage build for Time Warp Studio Server
 
 # Build stage
 FROM python:3.13-slim as builder

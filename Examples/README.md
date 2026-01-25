@@ -1,8 +1,16 @@
-# Time Warp IDE - Updated Example Programs
+# Time Warp Studio - Example Programs
 
 ## Overview
 
-This directory contains updated example programs for all supported languages in Time Warp IDE. Each example has been verified to use current syntax and demonstrate working functionality.
+This directory contains example programs for all supported languages in Time Warp Studio desktop application. Each example demonstrates language features and has been verified to work with the current interpreter.
+
+## How to Use Examples
+
+1. Launch Time Warp Studio: `python Platforms/Python/time_warp_ide.py`
+2. Open File → Open or use Ctrl+O
+3. Navigate to the appropriate language folder in `Examples/`
+4. Select an example program
+5. Click Run (or press F5/Ctrl+R)
 
 ## Language Examples
 
@@ -166,8 +174,8 @@ This directory contains updated example programs for all supported languages in 
 
 ## How to Run Examples
 
-### In Time Warp IDE
-1. Open Time Warp IDE
+### In Time Warp Studio
+1. Open Time Warp Studio
 2. Select language (BASIC, Logo, PILOT, C, Pascal, Forth, Prolog)
 3. Load example file from Examples directory
 4. Click Run or press Execute

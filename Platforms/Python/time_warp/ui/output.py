@@ -155,9 +155,7 @@ class OutputPanel(QTextEdit):
 
         # Store last error for AI assistance
         self.last_error = None
-        self.tabs_widget = (
-            None  # Reference to right_tabs for switching to Graphics tab
-        )
+        self.tabs_widget = None  # Reference to right_tabs for switching to Graphics tab
 
     def set_language(self, language):
         """Set the current language for execution."""
@@ -251,9 +249,7 @@ class OutputPanel(QTextEdit):
         # lambda expression and exceed line-length limits.
 
         def _on_state_changed():
-            print(
-                "[OUTPUT] _on_state_changed signal received!", file=sys.stderr
-            )
+            print("[OUTPUT] _on_state_changed signal received!", file=sys.stderr)
             self.on_state_change(turtle)
 
         self.exec_thread.state_changed.connect(_on_state_changed)
@@ -334,9 +330,7 @@ class OutputPanel(QTextEdit):
                             break
                 except (AttributeError, RuntimeError) as e:
                     # tabs_widget not available or invalid, skip tab switching
-                    print(
-                        f"[OUTPUT] Tab switching error: {e}", file=sys.stderr
-                    )
+                    print(f"[OUTPUT] Tab switching error: {e}", file=sys.stderr)
         else:
             print("[OUTPUT] WARNING: current_canvas is None!", file=sys.stderr)
 
@@ -423,13 +417,11 @@ class OutputPanel(QTextEdit):
             ),
             (
                 "unknown command",
-                "Check spelling of commands. "
-                + "Use language-specific syntax.",
+                "Check spelling of commands. " + "Use language-specific syntax.",
             ),
             (
                 "unknown keyword",
-                "Check spelling of commands. "
-                + "Use language-specific syntax.",
+                "Check spelling of commands. " + "Use language-specific syntax.",
             ),
             (
                 "invalid expression",
@@ -559,10 +551,7 @@ class ImmediateModePanel(QWidget):
 
     def _history_up(self):
         """Navigate up in command history."""
-        if (
-            self.command_history
-            and self.history_index < len(self.command_history) - 1
-        ):
+        if self.command_history and self.history_index < len(self.command_history) - 1:
             self.history_index += 1
             cmd = self.command_history[-(self.history_index + 1)]
             self.command_input.setText(cmd)

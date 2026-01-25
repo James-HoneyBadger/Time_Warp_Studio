@@ -50,9 +50,7 @@ async def get_user_profile(user_id: str):
 
 
 @router.get("/{user_id}/rooms", response_model=List[UserRoomsResponse])
-async def get_user_rooms(
-    user_id: str, session: AsyncSession = Depends(get_session)
-):
+async def get_user_rooms(user_id: str, session: AsyncSession = Depends(get_session)):
     """Get all rooms for a user"""
     try:
         service = RoomService(session)
@@ -63,9 +61,7 @@ async def get_user_rooms(
                 "name": room.name,
                 "owner_id": room.owner_id,
                 "is_private": room.is_private,
-                "member_count": (
-                    len(room.members) if hasattr(room, "members") else 0
-                ),
+                "member_count": (len(room.members) if hasattr(room, "members") else 0),
             }
             for room in rooms
         ]

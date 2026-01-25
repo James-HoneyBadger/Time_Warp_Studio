@@ -1,4 +1,4 @@
-# Time Warp IDE - Complete Project Requirements
+# Time Warp Studio - Complete Project Requirements
 # This is the root-level requirements file covering all Python components
 
 # ============================================================================
@@ -16,6 +16,14 @@ requests>=2.31.0
 
 # WebSocket support (for collaboration features)
 websockets>=11.0.3
+
+# Backend & API
+fastapi>=0.100.0
+uvicorn>=0.23.0
+sqlalchemy>=2.0.0
+asyncpg>=0.28.0
+python-socketio>=5.9.0
+httpx>=0.24.0
 
 # ============================================================================
 # DEVELOPMENT & TESTING

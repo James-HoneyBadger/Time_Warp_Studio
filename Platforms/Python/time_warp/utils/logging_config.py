@@ -1,4 +1,4 @@
-"""Centralized logging configuration for Time Warp IDE.
+"""Centralized logging configuration for Time Warp Studio.
 
 Provides structured logging with file rotation, multiple profiles, and
 both console and file output for debugging and monitoring.
@@ -6,7 +6,6 @@ both console and file output for debugging and monitoring.
 
 import logging
 import logging.handlers
-import os
 import sys
 from pathlib import Path
 from typing import Literal, Optional
@@ -48,7 +47,7 @@ def setup_logging(
     max_bytes: int = 10485760,  # 10MB
     backup_count: int = 5,
 ) -> logging.Logger:
-    """Configure logging for Time Warp IDE.
+    """Configure logging for Time Warp Studio.
 
     Sets up both console and file logging with appropriate levels
     and formats based on the execution profile.
@@ -140,14 +139,10 @@ def configure_for_testing(log_file: Optional[str] = None) -> logging.Logger:
 
 def configure_for_ci(log_file: Optional[str] = None) -> logging.Logger:
     """Configure logging for CI/CD environment."""
-    return setup_logging(
-        "INFO", profile="ci", log_file=log_file, console_output=True
-    )
+    return setup_logging("INFO", profile="ci", log_file=log_file, console_output=True)
 
 
-def log_exception(
-    logger: logging.Logger, message: str = "Exception occurred"
-) -> None:
+def log_exception(logger: logging.Logger, message: str = "Exception occurred") -> None:
     """Log an exception with full traceback.
 
     Args:

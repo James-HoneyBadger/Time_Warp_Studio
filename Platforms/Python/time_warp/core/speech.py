@@ -1,5 +1,5 @@
 """
-Speech synthesis support for Time Warp IDE.
+Speech synthesis support for Time Warp Studio.
 Provides SAY command for text-to-speech.
 """
 

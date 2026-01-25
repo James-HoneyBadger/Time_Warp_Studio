@@ -11,6 +11,6 @@
 Program HelloWorld;
 Begin
   WriteLn('Hello, World!');
-  WriteLn('Welcome to Time Warp IDE Pascal');
+  WriteLn('Welcome to Time Warp Studio Pascal');
   WriteLn('This is a simple Pascal program.');
 End.

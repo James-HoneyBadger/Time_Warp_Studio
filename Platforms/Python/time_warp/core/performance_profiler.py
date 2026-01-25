@@ -4,7 +4,7 @@ import sys
 import time
 from dataclasses import dataclass
 from enum import Enum
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 
 class TimeUnit(Enum):
@@ -100,9 +100,7 @@ class PerformanceProfiler:
         for line_no, times in self._line_times.items():
             total = sum(times)
             avg = total / len(times) if times else 0
-            percentage = (
-                (total / self.total_time * 100) if self.total_time > 0 else 0
-            )
+            percentage = (total / self.total_time * 100) if self.total_time > 0 else 0
 
             profile = LineProfile(
                 line_no=line_no,
@@ -151,14 +149,12 @@ class PerformanceProfiler:
         if hotspots:
             lines.append("TOP 10 HOTSPOTS (Slowest Lines):")
             lines.append("-" * 70)
-            lines.append(
-                f"{
+            lines.append(f"{
                     'Line':<6} {
                     'Time (ms)':<12} {
                     'Calls':<8} {
                     'Avg (ms)':<12} {
-                        '% Total':<10}"
-            )
+                        '% Total':<10}")
             lines.append("-" * 70)
 
             for profile in hotspots:
@@ -216,9 +212,7 @@ class LineExecutionTracer:
 
             # Record execution time for previous line
             if line_no in self.frame_times:
-                self.profiler.record_line_execution(
-                    line_no, "code line", elapsed
-                )
+                self.profiler.record_line_execution(line_no, "code line", elapsed)
 
             self.last_time = current_time
             return self.trace_lines
@@ -256,12 +250,9 @@ class OptimizationSuggester:
                     f"Consider moving loop to outer scope or optimizing the expression."
                 )
             elif profile.call_count > 100:
-                suggestions.append(
-                    f"Line {
+                suggestions.append(f"Line {
                         profile.line_no}: High call count ({
-                        profile.call_count}). "
-                    f"Check for unnecessary nested loops."
-                )
+                        profile.call_count}). " f"Check for unnecessary nested loops.")
 
         # Check for lines taking >20% of total time
         for profile in hotspots:
@@ -306,13 +297,11 @@ class ExecutionTimeVisualizer:
                 else 0
             )
 
-            lines.append(
-                f"Line {
+            lines.append(f"Line {
                     profile.line_no:<5} {
                     bar:<50} {
                     percentage:>5.1f}% ({
-                    profile.total_time:.2f}ms)"
-            )
+                    profile.total_time:.2f}ms)")
 
         return "\n".join(lines)
 

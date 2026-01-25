@@ -8,7 +8,6 @@ import functools
 import signal
 import sys
 import threading
-import time
 from contextlib import contextmanager
 from typing import Optional
 
@@ -52,9 +51,7 @@ def execution_timeout(seconds: float = 10.0):
         return
 
     def timeout_handler(signum, frame):
-        raise ExecutionTimeoutError(
-            f"Execution exceeded {seconds:.1f} second timeout"
-        )
+        raise ExecutionTimeoutError(f"Execution exceeded {seconds:.1f} second timeout")
 
     # Save previous handler
     old_handler = signal.signal(signal.SIGALRM, timeout_handler)
@@ -106,9 +103,7 @@ class ThreadedExecutionTimeout:
     def _set_timeout_flag(self):
         """Called when timeout expires."""
         self.timed_out = True
-        logger.warning(
-            "Execution timeout expired after %.1f seconds", self.timeout
-        )
+        logger.warning("Execution timeout expired after %.1f seconds", self.timeout)
 
     def is_expired(self) -> bool:
         """Check if timeout has expired."""

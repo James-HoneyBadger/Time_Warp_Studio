@@ -6,7 +6,6 @@ Handles component initialization, UI integration, and event routing.
 """
 
 import logging
-import sys
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional
 
@@ -27,7 +26,6 @@ class IDEComponentInitializer:
         """Initialize marketplace component"""
         try:
             from integration.integration_manager import (
-                IntegrationManager,
                 MarketplaceIntegration,
             )
             from marketplace.plugin_marketplace import MarketplaceService
@@ -52,9 +50,7 @@ class IDEComponentInitializer:
         """Initialize debugger component"""
         try:
             from debugging.integrated_debugger import (
-                Breakpoint,
                 DebuggerEngine,
-                DebugSession,
             )
             from integration.integration_manager import DebuggerIntegration
 
@@ -115,8 +111,6 @@ class IDEComponentInitializer:
         try:
             from testing.beta_testing_framework import (
                 BetaTestingManager,
-                FeedbackCollector,
-                SessionTracker,
             )
 
             manager = BetaTestingManager()
@@ -138,8 +132,6 @@ class IDEComponentInitializer:
         """Initialize central integration manager"""
         try:
             from integration.integration_manager import (
-                ComponentMetadata,
-                ComponentType,
                 IntegrationManager,
                 bootstrap_integration,
             )
@@ -152,9 +144,7 @@ class IDEComponentInitializer:
             self.logger.info("✅ Integration Manager initialized")
             return True
         except Exception as e:
-            self.logger.error(
-                f"❌ Integration Manager initialization failed: {e}"
-            )
+            self.logger.error(f"❌ Integration Manager initialization failed: {e}")
             return False
 
     def initialize_all(self) -> Dict[str, bool]:
@@ -168,9 +158,7 @@ class IDEComponentInitializer:
         }
 
         successful = sum(1 for v in results.values() if v)
-        self.logger.info(
-            f"Initialization complete: {successful}/5 components ready"
-        )
+        self.logger.info(f"Initialization complete: {successful}/5 components ready")
 
         return results
 
@@ -228,9 +216,7 @@ class IDEEventRouter:
             self.emit_event("marketplace:installed", plugin_id=plugin_id)
 
     # Debugger events
-    def on_breakpoint_created(
-        self, file: str, line: int, condition: str = None
-    ):
+    def on_breakpoint_created(self, file: str, line: int, condition: str = None):
         """Handle breakpoint creation"""
         debugger = self.initializer.get_component("debugger")
         if debugger:
@@ -271,17 +257,13 @@ class IDEEventRouter:
             # Get bugs
             bugs = ai["engines"]["bug_detection"].analyze_code(code, language)
 
-            self.emit_event(
-                "ai:suggestions", completions=completions, bugs=bugs
-            )
+            self.emit_event("ai:suggestions", completions=completions, bugs=bugs)
 
     def on_request_optimization(self, code: str, language: str):
         """Request code optimization"""
         ai = self.initializer.get_component("ai_intelligence")
         if ai:
-            optimizations = ai["engines"]["optimization"].analyze_code(
-                code, language
-            )
+            optimizations = ai["engines"]["optimization"].analyze_code(code, language)
             self.emit_event("ai:optimizations", optimizations=optimizations)
 
 
@@ -299,14 +281,10 @@ class MarketplaceIntegrationMixin:
             self.marketplace_panel = MarketplacePanel()
             marketplace = self.initializer.get_component("marketplace")
             if marketplace:
-                self.marketplace_panel.set_marketplace_service(
-                    marketplace["service"]
-                )
+                self.marketplace_panel.set_marketplace_service(marketplace["service"])
 
             # Connect signals
-            self.marketplace_panel.plugin_installed.connect(
-                self.on_plugin_installed
-            )
+            self.marketplace_panel.plugin_installed.connect(self.on_plugin_installed)
 
             self.logger.info("✅ Marketplace UI initialized")
         except Exception as e:
@@ -331,15 +309,9 @@ class DebuggerIntegrationMixin:
             self.debugger_panel.breakpoint_created.connect(
                 self.on_breakpoint_ui_created
             )
-            self.debugger_panel.step_into.connect(
-                lambda: self.on_debug_step_ui("into")
-            )
-            self.debugger_panel.step_over.connect(
-                lambda: self.on_debug_step_ui("over")
-            )
-            self.debugger_panel.step_out.connect(
-                lambda: self.on_debug_step_ui("out")
-            )
+            self.debugger_panel.step_into.connect(lambda: self.on_debug_step_ui("into"))
+            self.debugger_panel.step_over.connect(lambda: self.on_debug_step_ui("over"))
+            self.debugger_panel.step_out.connect(lambda: self.on_debug_step_ui("out"))
 
             self.logger.info("✅ Debugger UI initialized")
         except Exception as e:
@@ -392,9 +364,7 @@ class PerformanceMonitoringMixin:
 
             self.logger.info("✅ Performance Monitor UI initialized")
         except Exception as e:
-            self.logger.error(
-                f"❌ Performance Monitor UI initialization failed: {e}"
-            )
+            self.logger.error(f"❌ Performance Monitor UI initialization failed: {e}")
 
     def start_performance_monitoring(self):
         """Start periodic performance metric updates"""

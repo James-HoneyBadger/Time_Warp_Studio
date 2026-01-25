@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 #
-# Time Warp IDE - Debian System Installation Script
-# Installs Time Warp IDE system-wide with desktop integration
+# Time Warp Studio - Debian System Installation Script
+# Installs Time Warp Studio system-wide with desktop integration
 #
 # Usage:
 #   sudo ./install.sh                    # Install system-wide
@@ -30,11 +30,11 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # Installation options
 UNINSTALL=false
         --help|-h)
-            echo "Time Warp IDE Installation Script"
+            echo "Time Warp Studio Installation Script"
             echo ""
             echo "Usage:"
-            echo "  sudo ./install.sh                 Install Time Warp IDE system-wide"
-            echo "  sudo ./install.sh --uninstall     Remove Time Warp IDE"
+            echo "  sudo ./install.sh                 Install Time Warp Studio system-wide"
+            echo "  sudo ./install.sh --uninstall     Remove Time Warp Studio"
             echo "  sudo ./install.sh --help          Show this help message"
             exit 0
             ;;
@@ -79,7 +79,7 @@ print_header() {
 
 # Uninstall function
 uninstall() {
-    print_header "Uninstalling Time Warp IDE"
+    print_header "Uninstalling Time Warp Studio"
     
     # Remove binaries
     print_info "Removing binaries..."
@@ -106,7 +106,7 @@ uninstall() {
         update-desktop-database "$DESKTOP_DIR" 2>/dev/null || true
     fi
     
-    print_success "Time Warp IDE has been uninstalled"
+    print_success "Time Warp Studio has been uninstalled"
 }
 
 # Install Python dependencies
@@ -186,7 +186,7 @@ EOF
     fi
 }
 
-# Create desktop entry for Time Warp IDE
+# Create desktop entry for Time Warp Studio
 create_desktop() {
     print_info "Creating desktop entry..."
     
@@ -194,7 +194,7 @@ create_desktop() {
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Time Warp IDE
+Name=Time Warp Studio
 GenericName=Educational Programming Environment
 Comment=Multi-language programming environment for BASIC, PILOT, and Logo
 Exec=$BIN_DIR/timewarp %F
@@ -216,7 +216,7 @@ create_launchers() {
     
     cat > "$BIN_DIR/timewarp" << EOF
 #!/bin/bash
-# Time Warp IDE launcher
+# Time Warp Studio launcher
 exec "$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/time_warp_ide.py" "\$@"
 EOF
     chmod 755 "$BIN_DIR/timewarp"
@@ -252,7 +252,7 @@ install_files() {
 
 # Main installation
 install() {
-    print_header "Installing Time Warp IDE v5.0.1"
+    print_header "Installing Time Warp Studio v5.0.1"
     
     print_info "Installation directory: $INSTALL_DIR"
     echo ""
@@ -288,11 +288,11 @@ install() {
     # Print success message
     print_header "Installation Complete!"
     
-    echo -e "${GREEN}Time Warp IDE has been successfully installed!${NC}"
+    echo -e "${GREEN}Time Warp Studio has been successfully installed!${NC}"
     echo ""
     echo "Launch methods:"
     echo "  • Command line: ${BLUE}timewarp${NC}"
-    echo "  • Desktop menu: Look for 'Time Warp IDE' in Education or Development"
+    echo "  • Desktop menu: Look for 'Time Warp Studio' in Education or Development"
     echo ""
     echo "Documentation: $DOC_DIR"
     echo "Examples: $INSTALL_DIR/examples"

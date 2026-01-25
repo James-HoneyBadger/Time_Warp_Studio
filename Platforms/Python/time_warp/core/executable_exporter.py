@@ -1,6 +1,7 @@
 """Export programs to standalone executables."""
 
 import subprocess
+import importlib.util
 import sys
 import tempfile
 from enum import Enum
@@ -104,9 +105,7 @@ if __name__ == "__main__":
         """
         try:
             # Check if PyInstaller is installed
-            try:
-                import PyInstaller
-            except ImportError:
+            if importlib.util.find_spec("PyInstaller") is None:
                 return (
                     False,
                     "PyInstaller not installed. Install with: pip install pyinstaller",
@@ -160,9 +159,7 @@ if __name__ == "__main__":
             js_code = self._transpile_to_javascript(code, language)
 
             # Generate HTML
-            html_content = self.HTML5_WRAPPER.format(
-                TITLE=title, PROGRAM_CODE=js_code
-            )
+            html_content = self.HTML5_WRAPPER.format(TITLE=title, PROGRAM_CODE=js_code)
 
             # Write HTML file
             with open(output_path, "w") as f:
@@ -449,15 +446,11 @@ class ExportPresets:
             "quick_python": ExportProfile(
                 "Quick Python", ExportFormat.PYTHON_EXE, "BASIC"
             ),
-            "logo_html5": ExportProfile(
-                "Logo HTML5", ExportFormat.HTML5, "LOGO"
-            ),
+            "logo_html5": ExportProfile("Logo HTML5", ExportFormat.HTML5, "LOGO"),
             "game_windows": ExportProfile(
                 "Game Windows", ExportFormat.WINDOWS_EXE, "BASIC"
             ),
-            "web_app": ExportProfile(
-                "Web Application", ExportFormat.WEB_APP, "BASIC"
-            ),
+            "web_app": ExportProfile("Web Application", ExportFormat.WEB_APP, "BASIC"),
         }
         return presets.get(preset_name)
 

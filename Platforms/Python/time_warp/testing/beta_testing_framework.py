@@ -144,9 +144,7 @@ class UserSession:
     def end_session(self):
         """End session and calculate duration"""
         self.end_time = datetime.utcnow()
-        self.duration_seconds = (
-            self.end_time - self.start_time
-        ).total_seconds()
+        self.duration_seconds = (self.end_time - self.start_time).total_seconds()
 
 
 @dataclass
@@ -187,9 +185,7 @@ class FeedbackCollector:
         self.logger.info(f"Bug reported: {bug.id}")
         return bug.id
 
-    def get_feedback_by_type(
-        self, feedback_type: FeedbackType
-    ) -> List[UserFeedback]:
+    def get_feedback_by_type(self, feedback_type: FeedbackType) -> List[UserFeedback]:
         """Get feedback by type"""
         return [f for f in self.feedback_items if f.type == feedback_type]
 
@@ -209,8 +205,7 @@ class FeedbackCollector:
             "avg_rating": sum(f.rating for f in self.feedback_items)
             / max(len(self.feedback_items), 1),
             "by_type": {
-                ft.value: len(self.get_feedback_by_type(ft))
-                for ft in FeedbackType
+                ft.value: len(self.get_feedback_by_type(ft)) for ft in FeedbackType
             },
             "critical_bugs": len(self.get_critical_bugs()),
         }
@@ -230,7 +225,6 @@ class BugReporter:
         self, exc: Exception, component: str, reporter: str = "system"
     ) -> BugReport:
         """Create bug report from exception"""
-        import traceback
 
         bug = BugReport(
             title=f"Exception in {component}",
@@ -324,9 +318,7 @@ class ABTestFramework:
         """Get variant for user"""
         return self.user_assignments.get(user_id, {}).get(test_id)
 
-    def record_metric(
-        self, test_id: str, variant: str, metric: str, value: float
-    ):
+    def record_metric(self, test_id: str, variant: str, metric: str, value: float):
         """Record test metric"""
         test = self.tests.get(test_id)
         if not test:
@@ -393,9 +385,7 @@ class SessionTracker:
         if not self.sessions:
             return None
 
-        total_duration = sum(
-            s.duration_seconds for s in self.sessions.values()
-        )
+        total_duration = sum(s.duration_seconds for s in self.sessions.values())
         avg_duration = total_duration / len(self.sessions)
 
         # Count feature usage
@@ -407,10 +397,7 @@ class SessionTracker:
 
         total_actions = sum(feature_usage.values())
         feature_adoption = (
-            {
-                f: (count / total_actions * 100)
-                for f, count in feature_usage.items()
-            }
+            {f: (count / total_actions * 100) for f, count in feature_usage.items()}
             if total_actions > 0
             else {}
         )
@@ -448,11 +435,7 @@ class BetaTestingManager:
         return {
             "feedback": self.feedback_collector.get_feedback_summary(),
             "active_tests": len(
-                [
-                    t
-                    for t in self.ab_framework.tests.values()
-                    if t.status == "running"
-                ]
+                [t for t in self.ab_framework.tests.values() if t.status == "running"]
             ),
             "active_sessions": len(self.session_tracker.sessions),
             "analytics": (
@@ -468,8 +451,7 @@ class BetaTestingManager:
             "timestamp": datetime.utcnow().isoformat(),
             "feedback_summary": self.feedback_collector.get_feedback_summary(),
             "critical_bugs": [
-                asdict(b)
-                for b in self.bug_reporter.collector.get_critical_bugs()
+                asdict(b) for b in self.bug_reporter.collector.get_critical_bugs()
             ],
             "ab_tests": {
                 test_id: {
@@ -504,7 +486,7 @@ class BetaTestingUI:
     def display_feedback_form(self):
         """Display feedback collection form"""
         print("\n" + "=" * 60)
-        print("TIME WARP IDE - BETA FEEDBACK FORM")
+        print("TIME WARP STUDIO - BETA FEEDBACK FORM")
         print("=" * 60)
 
         feedback_type = input(
@@ -535,7 +517,7 @@ class BetaTestingUI:
     def display_bug_form(self):
         """Display bug reporting form"""
         print("\n" + "=" * 60)
-        print("TIME WARP IDE - BUG REPORT FORM")
+        print("TIME WARP STUDIO - BUG REPORT FORM")
         print("=" * 60)
 
         title = input("Bug Title: ")

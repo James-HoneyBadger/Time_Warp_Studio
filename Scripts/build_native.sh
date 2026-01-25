@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-# Time Warp IDE - Native Build Script
+# Time Warp Studio - Native Build Script
 # Builds a standalone executable for the current architecture using PyInstaller
 # and packages it into a .deb file.
 
@@ -19,7 +19,7 @@ else
 fi
 
 echo "=========================================="
-echo "Building Time Warp IDE for $ARCH ($DEB_ARCH)"
+echo "Building Time Warp Studio for $ARCH ($DEB_ARCH)"
 echo "=========================================="
 
 # 2. Setup Paths
@@ -105,7 +105,7 @@ if [ "\$(id -u)" -ne 0 ]; then
     exit 1
 fi
 
-echo "Installing Time Warp IDE..."
+echo "Installing Time Warp Studio..."
 
 # Install executable
 cp time-warp-ide /usr/local/bin/
@@ -152,7 +152,7 @@ Section: devel
 Priority: optional
 Architecture: $DEB_ARCH
 Maintainer: James Temple <james@honey-badger.org>
-Description: Time Warp IDE
+Description: Time Warp Studio
  Educational multi-language programming environment.
  Unifies BASIC, PILOT, Logo, Pascal, and Prolog.
  Native standalone build.
@@ -161,7 +161,7 @@ EOF
     # Create Desktop entry
     cat > "$DEB_BUILD_DIR/usr/share/applications/time-warp-ide.desktop" <<EOF
 [Desktop Entry]
-Name=Time Warp IDE
+Name=Time Warp Studio
 Comment=Educational Programming Environment
 Exec=/usr/local/bin/time-warp-ide
 Icon=time-warp-ide

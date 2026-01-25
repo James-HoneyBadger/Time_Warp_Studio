@@ -142,17 +142,13 @@ class ExecutionTimeline:
         """Move to next frame."""
         if self.current_frame_index < len(self.frames) - 1:
             self.current_frame_index += 1
-            self._trigger_callbacks(
-                "stepped", self.frames[self.current_frame_index]
-            )
+            self._trigger_callbacks("stepped", self.frames[self.current_frame_index])
 
     def step_backward(self):
         """Move to previous frame."""
         if self.current_frame_index > 0:
             self.current_frame_index -= 1
-            self._trigger_callbacks(
-                "stepped", self.frames[self.current_frame_index]
-            )
+            self._trigger_callbacks("stepped", self.frames[self.current_frame_index])
 
     def set_breakpoint(self, line: int):
         """Set a breakpoint at a line."""
@@ -187,13 +183,9 @@ class ExecutionTimeline:
         """Get complete history of a variable."""
         return self.variables_history.get(var_name, [])
 
-    def get_frames_around(
-        self, line: int, context: int = 5
-    ) -> List[ExecutionFrame]:
+    def get_frames_around(self, line: int, context: int = 5) -> List[ExecutionFrame]:
         """Get frames around a specific line for context."""
-        relevant_frames = [
-            f for f in self.frames if abs(f.line - line) <= context
-        ]
+        relevant_frames = [f for f in self.frames if abs(f.line - line) <= context]
         return relevant_frames
 
     def get_execution_flow(self) -> List[int]:
@@ -257,9 +249,7 @@ class DebuggerTracer:
             line_no = frame.f_lineno
             code = frame.f_code.co_name
             variables = {
-                k: v
-                for k, v in frame.f_locals.items()
-                if not k.startswith("_")
+                k: v for k, v in frame.f_locals.items() if not k.startswith("_")
             }
 
             self.timeline.record_frame(
@@ -299,9 +289,7 @@ class CodeDebugger:
         self.timeline = ExecutionTimeline()
         self.tracer = DebuggerTracer(self.timeline)
 
-    def debug_code(
-        self, code_string: str, globals_dict: Optional[Dict] = None
-    ):
+    def debug_code(self, code_string: str, globals_dict: Optional[Dict] = None):
         """Execute code with debugging enabled."""
         self.timeline.start_recording()
         self.tracer.start()
@@ -340,12 +328,8 @@ class CodeDebugger:
 
         if self.timeline.frames:
             report.append("EXECUTION FLOW:")
-            for i, frame in enumerate(
-                self.timeline.frames[:20]
-            ):  # Show first 20
-                report.append(
-                    f"  {i}: Line {frame.line} - {frame.state.value}"
-                )
+            for i, frame in enumerate(self.timeline.frames[:20]):  # Show first 20
+                report.append(f"  {i}: Line {frame.line} - {frame.state.value}")
                 if frame.variables:
                     for var, val in list(frame.variables.items())[
                         :3

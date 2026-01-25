@@ -1,6 +1,6 @@
-# Getting Started with Time Warp IDE
+# Getting Started with Time Warp Studio
 
-Welcome! This guide will get you up and running with Time Warp IDE in minutes.
+Welcome! This guide will get you up and running with Time Warp Studio in minutes.
 
 ---
 
@@ -8,10 +8,12 @@ Welcome! This guide will get you up and running with Time Warp IDE in minutes.
 
 ### Prerequisites
 
-- **Python 3.8+** (Python 3.11+ recommended)
+- **Python 3.10+** (Python 3.11+ recommended)
 - **Operating System:** Linux, macOS, or Windows
-- **RAM:** 2GB minimum, 4GB recommended
-- **Modern CPU:** With SSE4.2 support (most CPUs from 2012+)
+- **RAM:** 4GB minimum, 8GB recommended
+- **CPU:** Modern CPU with SSSE3/SSE4 support (required for PySide6)
+  - Most CPUs from 2012+ have this
+  - Older VMs/QEMU may lack support
 
 ### Step 1: Clone the Repository
 
@@ -57,7 +59,7 @@ The IDE window should appear in 2-3 seconds.
 
 ## First Look at the IDE
 
-When you open Time Warp IDE, you'll see:
+When you open Time Warp Studio, you'll see:
 
 ```
 ┌─────────────────────────────────────────┐
@@ -111,7 +113,7 @@ Hello, World!
 
 ### Congratulations! 🎉
 
-You've written and executed your first program in Time Warp IDE!
+You've written and executed your first program in Time Warp Studio!
 
 ---
 

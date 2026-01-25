@@ -1,4 +1,4 @@
-"""Feature integration module for Time Warp IDE.
+"""Feature integration module for Time Warp Studio.
 
 This module handles integration of the 14 feature panels into the IDE window,
 creating a feature menu system, and managing signals/callbacks for features.
@@ -192,8 +192,7 @@ class FeatureIntegrationManager:
                 self.feature_panels[feature_id] = panel
 
                 # Create dock widget for panel
-                dock = QDockWidget(f"🎯 {feature_name}",
-                                   self.main_window)
+                dock = QDockWidget(f"🎯 {feature_name}", self.main_window)
                 dock.setWidget(panel)
                 dock.setObjectName(feature_id)
                 dock.setAllowedAreas(
@@ -204,8 +203,7 @@ class FeatureIntegrationManager:
                 dock.setVisible(False)  # Hidden by default
 
                 self.dock_widgets[feature_id] = dock
-                self.main_window.addDockWidget(
-                    Qt.RightDockWidgetArea, dock)
+                self.main_window.addDockWidget(Qt.RightDockWidgetArea, dock)
 
             except (TypeError, ValueError) as e:
                 print(f"❌ Error creating {feature_name} panel: {e}")
@@ -280,9 +278,7 @@ class FeatureIntegrationManager:
         for feature_name, feature_id, panel_class, description in features:
             if panel_class is None:
                 # Show as disabled for Phase 3 features
-                action = QAction(
-                    f"{feature_name} ({description})", self.main_window
-                )
+                action = QAction(f"{feature_name} ({description})", self.main_window)
                 action.setEnabled(False)
             else:
                 # Create checkable action for toggleable panels
@@ -290,17 +286,13 @@ class FeatureIntegrationManager:
                 action.setCheckable(True)
                 action.setChecked(False)
                 action.triggered.connect(
-                    lambda checked, fid=feature_id: self.toggle_feature_panel(
-                        fid
-                    )
+                    lambda checked, fid=feature_id: self.toggle_feature_panel(fid)
                 )
 
             self.feature_actions[feature_id] = action
             menu.addAction(action)
 
-    def toggle_feature_panel(
-        self, feature_id: str, visible: Optional[bool] = None
-    ):
+    def toggle_feature_panel(self, feature_id: str, visible: Optional[bool] = None):
         """Toggle visibility of a feature panel.
 
         Args:
@@ -349,21 +341,22 @@ class FeatureIntegrationManager:
             # Connect status_changed signal if available
             if hasattr(panel, "status_changed"):
                 panel.status_changed.connect(
-                    lambda status, fid=feature_id:
-                    self._on_feature_status_changed(fid, status)
+                    lambda status, fid=feature_id: self._on_feature_status_changed(
+                        fid, status
+                    )
                 )
 
             # Connect operation signals if available
             if hasattr(panel, "operation_started"):
                 panel.operation_started.connect(
-                    lambda op, fid=feature_id:
-                    self._on_operation_started(fid, op)
+                    lambda op, fid=feature_id: self._on_operation_started(fid, op)
                 )
 
             if hasattr(panel, "operation_completed"):
                 panel.operation_completed.connect(
-                    lambda result, fid=feature_id:
-                    self._on_operation_completed(fid, result)
+                    lambda result, fid=feature_id: self._on_operation_completed(
+                        fid, result
+                    )
                 )
 
     def _on_feature_status_changed(self, _: str, status: str):
@@ -394,9 +387,7 @@ class FeatureIntegrationManager:
             result: Operation result (may contain success/error)
         """
         if result.get("success", True):
-            self.main_window.statusbar.showMessage(
-                "✅ Operation completed", 2000
-            )
+            self.main_window.statusbar.showMessage("✅ Operation completed", 2000)
         else:
             error = result.get("error", "Unknown error")
             msg = f"❌ Operation failed: {error}"

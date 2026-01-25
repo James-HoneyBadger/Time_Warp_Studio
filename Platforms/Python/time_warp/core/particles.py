@@ -1,5 +1,5 @@
 """
-Particle system for Time Warp IDE.
+Particle system for Time Warp Studio.
 Simple particle effects for games.
 """
 
@@ -135,9 +135,7 @@ class ParticlePresets:
     """Pre-configured particle effects."""
 
     @staticmethod
-    def explosion(
-        x: float, y: float, intensity: float = 1.0
-    ) -> ParticleEmitter:
+    def explosion(x: float, y: float, intensity: float = 1.0) -> ParticleEmitter:
         """Create an explosion effect."""
         emitter = ParticleEmitter(x=x, y=y, active=False)
         emitter.burst = int(50 * intensity)
@@ -314,9 +312,7 @@ class ParticleSystem:
         if 0 <= index < len(self.emitters):
             self.emitters.pop(index)
 
-    def create_effect(
-        self, effect_name: str, x: float, y: float, **kwargs
-    ) -> int:
+    def create_effect(self, effect_name: str, x: float, y: float, **kwargs) -> int:
         """Create a preset effect at the given position.
 
         Args:
@@ -361,9 +357,7 @@ class ParticleSystem:
             emitter.update(dt)
 
         # Remove inactive emitters with no particles
-        self.emitters = [
-            e for e in self.emitters if e.active or len(e.particles) > 0
-        ]
+        self.emitters = [e for e in self.emitters if e.active or len(e.particles) > 0]
 
     def get_all_particles(self) -> List[Particle]:
         """Get all particles from all emitters."""

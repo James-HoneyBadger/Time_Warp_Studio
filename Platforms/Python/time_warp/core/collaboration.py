@@ -156,9 +156,7 @@ class LocalCollaborationSession:
             # Try common ports
             for port in [9000, 9001, 9002, 9003]:
                 try:
-                    sock.sendto(
-                        json.dumps(message).encode(), ("<broadcast>", port)
-                    )
+                    sock.sendto(json.dumps(message).encode(), ("<broadcast>", port))
                 except BaseException:
                     pass
 
@@ -191,9 +189,7 @@ class LocalCollaborationSession:
         self.state = SessionState.IDLE
         return discovered
 
-    def join_session(
-        self, host_user_id: str, host_ip: str, host_port: int
-    ) -> bool:
+    def join_session(self, host_user_id: str, host_ip: str, host_port: int) -> bool:
         """
         Join an existing collaborative session.
 
@@ -226,9 +222,7 @@ class LocalCollaborationSession:
             self._trigger_event("session_joined")
 
             # Request full code sync
-            self._send_message(
-                MessageType.SYNC_REQUEST, {"user_id": self.user_id}
-            )
+            self._send_message(MessageType.SYNC_REQUEST, {"user_id": self.user_id})
 
             return True
 
@@ -299,8 +293,7 @@ class LocalCollaborationSession:
     def get_cursor_positions(self) -> Dict[str, Tuple[int, int]]:
         """Get cursor positions of all participants."""
         return {
-            p.user_id: (p.cursor_line, p.cursor_col)
-            for p in self.participants.values()
+            p.user_id: (p.cursor_line, p.cursor_col) for p in self.participants.values()
         }
 
     def get_participant_color(self, user_id: str) -> str:
@@ -312,9 +305,7 @@ class LocalCollaborationSession:
     def disconnect(self):
         """Disconnect from session."""
         try:
-            self._send_message(
-                MessageType.DISCONNECT, {"user_id": self.user_id}
-            )
+            self._send_message(MessageType.DISCONNECT, {"user_id": self.user_id})
         except BaseException:
             pass
 

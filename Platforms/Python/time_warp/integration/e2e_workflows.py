@@ -9,10 +9,6 @@ Demonstrates complete user journeys for:
 5. Performance Optimization
 """
 
-import logging
-from dataclasses import dataclass
-from typing import Optional
-
 # ===== WORKFLOW 1: MARKETPLACE DISCOVERY & INSTALLATION =====
 
 
@@ -86,6 +82,7 @@ Expected Outcome:
   ✅ Total workflow time: ~2 minutes
   ✅ No technical knowledge required
         """)
+
 
 # ===== WORKFLOW 2: INTERACTIVE DEBUGGING =====
 
@@ -183,6 +180,7 @@ Expected Outcome:
   ✅ Total time: ~5 minutes
   ✅ No external debugger tools needed
         """)
+
 
 # ===== WORKFLOW 3: AI-ASSISTED DEVELOPMENT =====
 
@@ -287,6 +285,7 @@ Expected Outcome:
   ✅ No external tools or resources needed
         """)
 
+
 # ===== WORKFLOW 4: LEARNING PATH PROGRESSION =====
 
 
@@ -379,6 +378,7 @@ Expected Outcome:
   ✅ Clear progression visible
   ✅ User ready to tackle intermediate topics
         """)
+
 
 # ===== WORKFLOW 5: CODE OPTIMIZATION =====
 
@@ -481,6 +481,7 @@ Expected Outcome:
   ✅ Tradeoffs explained and understood
   ✅ Code remains readable and maintainable
         """)
+
 
 # ===== WORKFLOW 6: BETA FEEDBACK & TESTING =====
 
@@ -593,6 +594,7 @@ Expected Outcome:
   ✅ Continuous improvement cycle established
         """)
 
+
 # ===== MAIN WORKFLOW RUNNER =====
 
 
@@ -600,7 +602,7 @@ def run_all_workflows():
     """Display all workflow examples"""
 
     print("\n" + "=" * 65)
-    print("TIME WARP IDE - PHASE VII-X WORKFLOW EXAMPLES")
+    print("TIME WARP STUDIO - PHASE VII-X WORKFLOW EXAMPLES")
     print("=" * 65)
 
     workflows = [
@@ -609,7 +611,7 @@ def run_all_workflows():
         AIWorkflowExample,
         LearningWorkflowExample,
         OptimizationWorkflowExample,
-        BetaTestingWorkflowExample
+        BetaTestingWorkflowExample,
     ]
 
     for workflow_class in workflows:

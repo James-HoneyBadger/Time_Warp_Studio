@@ -1,4 +1,4 @@
-# Time Warp IDE v6.0.0 - Project Update Summary
+# Time Warp Studio v6.0.0 - Project Update Summary
 
 **Completion Date:** January 2025  
 **Status:** ✅ **COMPLETE & PRODUCTION-READY**
@@ -7,7 +7,7 @@
 
 ## Overview
 
-Time Warp IDE has been successfully upgraded to version 6.0.0 with modernized Python support, updated project configuration, and enhanced documentation. The codebase is current, tested, and ready for production use.
+Time Warp Studio has been successfully upgraded to version 6.0.0 with modernized Python support, updated project configuration, and enhanced documentation. The codebase is current, tested, and ready for production use.
 
 ---
 
@@ -70,7 +70,7 @@ Time Warp IDE has been successfully upgraded to version 6.0.0 with modernized Py
 ### IDE Launch Test ✅
 ```
 ✓ IDE starts without critical errors
-✓ Window title displays: "🎨 Time Warp IDE v6.0.0 - Python Edition"
+✓ Window title displays: "🎨 Time Warp Studio v6.0.0 - Python Edition"
 ✓ Help menu accessible
 ✓ About dialog shows: "Version 6.0.0 — Modern PySide6 Release"
 ✓ Documentation system operational
@@ -230,7 +230,7 @@ Two options:
    ```
 
 2. **Use v5.1.0**
-   - Time Warp IDE v5.1.0 still supports Python 3.8-3.9
+   - Time Warp Studio v5.1.0 still supports Python 3.8-3.9
    - No breaking changes between v5.1.0 and v6.0.0 aside from Python version
 
 #### Migration from v5.1.0
@@ -290,9 +290,9 @@ python Platforms/Python/time_warp_ide.py
 ```
 
 ### Verify Version
-Look at IDE window title: **"🎨 Time Warp IDE v6.0.0 - Python Edition"**
+Look at IDE window title: **"🎨 Time Warp Studio v6.0.0 - Python Edition"**
 
-Access Help: **Help → About Time Warp IDE**
+Access Help: **Help → About Time Warp Studio**
 
 ---
 
@@ -382,7 +382,7 @@ Access Help: **Help → About Time Warp IDE**
 
 ---
 
-**Time Warp IDE v6.0.0 is ready for production use.**
+**Time Warp Studio v6.0.0 is ready for production use.**
 
 All code is verified, tested, and fully documented.
 

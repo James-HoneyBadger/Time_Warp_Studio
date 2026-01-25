@@ -1,6 +1,6 @@
 """
-Safe mathematical expression evaluator for Time Warp IDE
-Safe expression evaluation for Time Warp IDE
+Safe mathematical expression evaluator for Time Warp Studio
+Safe expression evaluation for Time Warp Studio
 
 Provides secure evaluation without eval() or exec()
 """
@@ -95,10 +95,15 @@ class ExpressionEvaluator:
         self,
         variables: Optional[Dict[str, float]] = None,
         arrays: Optional[Dict[str, List[float]]] = None,
+        string_variables: Optional[Dict[str, str]] = None,
     ):
         self.variables = variables or {}
         self.arrays = arrays or {}
+        self.string_variables = string_variables or {}
         self.token_cache: Dict[str, List[Token]] = {}
+
+        # Add LEN support for strings
+        self.FUNCTIONS["LEN"] = len
 
     def set_variable(self, name: str, value: float):
         """Set or update a variable value"""
@@ -178,9 +183,7 @@ class ExpressionEvaluator:
                 if i < len(expr) and expr[i] == "(":
                     tokens.append(Token(Token.Type.FUNCTION, name_upper))
                 else:
-                    tokens.append(
-                        Token(Token.Type.VARIABLE, name_upper + suffix)
-                    )
+                    tokens.append(Token(Token.Type.VARIABLE, name_upper + suffix))
                 continue
 
             # Operators
@@ -311,8 +314,7 @@ class ExpressionEvaluator:
 
             elif token.type == Token.Type.RIGHT_PAREN:
                 while (
-                    operator_stack
-                    and operator_stack[-1].type != Token.Type.LEFT_PAREN
+                    operator_stack and operator_stack[-1].type != Token.Type.LEFT_PAREN
                 ):
                     output.append(operator_stack.pop())
 
@@ -322,16 +324,12 @@ class ExpressionEvaluator:
                 operator_stack.pop()  # Remove left paren
 
                 # If there's a function on stack, pop it to output
-                if (
-                    operator_stack
-                    and operator_stack[-1].type == Token.Type.FUNCTION
-                ):
+                if operator_stack and operator_stack[-1].type == Token.Type.FUNCTION:
                     output.append(operator_stack.pop())
 
             elif token.type == Token.Type.COMMA:
                 while (
-                    operator_stack
-                    and operator_stack[-1].type != Token.Type.LEFT_PAREN
+                    operator_stack and operator_stack[-1].type != Token.Type.LEFT_PAREN
                 ):
                     output.append(operator_stack.pop())
 
@@ -370,9 +368,12 @@ class ExpressionEvaluator:
                 # inside expressions
                 if var_name and var_name[-1] in "%&!#$":
                     if var_name[-1] == "$":
-                        raise ValueError(
-                            "String variable in numeric expression"
-                        )
+                        # Allow string variables for functions like LEN()
+                        if var_name in self.string_variables:
+                            stack.append(self.string_variables[var_name])
+                        else:
+                            stack.append("")  # Default empty string
+                        continue
                     base = var_name[:-1]
                 else:
                     base = var_name

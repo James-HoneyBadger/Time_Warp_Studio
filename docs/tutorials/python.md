@@ -1,6 +1,6 @@
 # Python Programming Tutorial
 
-Python is a powerful, general-purpose programming language included in Time Warp IDE. It provides access to modern programming capabilities while maintaining educational clarity.
+Python is a powerful, general-purpose programming language included in Time Warp Studio. It provides access to modern programming capabilities while maintaining educational clarity.
 
 ## Quick Start
 
@@ -544,7 +544,7 @@ def add_item(item, list=None):
 | `enumerate()` | Index and value | `enumerate(['a', 'b'])` → [(0, 'a'), (1, 'b')] |
 | `zip()` | Combine lists | `zip([1, 2], ['a', 'b'])` → [(1, 'a'), (2, 'b')] |
 
-## Running Python Programs in Time Warp IDE
+## Running Python Programs in Time Warp Studio
 
 1. Create a `.py` file with your program
 2. Select "Python" from the language dropdown

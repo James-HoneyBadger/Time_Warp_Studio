@@ -1,5 +1,5 @@
 """
-Performance profiler for Time Warp IDE.
+Performance profiler for Time Warp Studio.
 Tracks execution time per line.
 """
 
@@ -163,9 +163,7 @@ class PerformanceProfiler:
         lines.append("-" * 60)
         lines.append("TOP 10 MOST EXECUTED LINES")
         lines.append("-" * 60)
-        lines.append(
-            f"{'Line':>6} {'Count':>8} {'Total(ms)':>12} {'Avg(ms)':>10}"
-        )
+        lines.append(f"{'Line':>6} {'Count':>8} {'Total(ms)':>12} {'Avg(ms)':>10}")
         lines.append("-" * 60)
 
         for profile in session.get_most_executed(10):

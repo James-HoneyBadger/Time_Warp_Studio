@@ -1,6 +1,6 @@
 """Cloud Sync Manager - IDE Integration Layer.
 
-This module provides the integration layer between the Time Warp IDE and
+This module provides the integration layer between the Time Warp Studio and
 the cloud synchronization engine, handling project sync, offline mode,
 and user authentication.
 """
@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
-from .api_server import TimeWarpCloudAPI, TokenResponse
+from .api_server import TimeWarpCloudAPI
 from .sync_engine import (
     CloudSyncEngine,
     ConflictResolution,
@@ -34,11 +34,9 @@ class CloudAuthStatus(str, Enum):
 
 
 class CloudSyncManager:
-    """Manages cloud synchronization for Time Warp IDE."""
+    """Manages cloud synchronization for Time Warp Studio."""
 
-    def __init__(
-        self, api_server: TimeWarpCloudAPI = None, auto_sync: bool = True
-    ):
+    def __init__(self, api_server: TimeWarpCloudAPI = None, auto_sync: bool = True):
         """Initialize Cloud Sync Manager.
 
         Args:
@@ -113,7 +111,7 @@ class CloudSyncManager:
                 "full_name": full_name,
                 "role": "student",
             }
-            user_id = self.api_server._create_user(user_data)
+            self.api_server._create_user(user_data)
             logger.info(f"User registered: {username} ({email})")
             return True
         except Exception as e:
@@ -139,7 +137,7 @@ class CloudSyncManager:
             if not user or user["password"] != password:
                 self.auth_status = CloudAuthStatus.AUTH_FAILED
                 self._notify_auth_status_changed()
-                logger.error(f"Login failed: invalid credentials")
+                logger.error("Login failed: invalid credentials")
                 return False
 
             # Create tokens
@@ -197,9 +195,7 @@ class CloudSyncManager:
                 return False
 
             # Decode refresh token to get user ID
-            payload = self.api_server.auth_manager.verify_token(
-                self.refresh_token
-            )
+            payload = self.api_server.auth_manager.verify_token(self.refresh_token)
             user_id = payload.get("sub")
 
             if not user_id:
@@ -338,9 +334,7 @@ class CloudSyncManager:
             logger.error(f"Project sync failed: {e}")
             return False
 
-    def add_file(
-        self, filename: str, content: str, language: str = None
-    ) -> bool:
+    def add_file(self, filename: str, content: str, language: str = None) -> bool:
         """Add or update a file in the current project.
 
         Args:
@@ -444,9 +438,7 @@ class CloudSyncManager:
         """
         try:
             self.sync_engine.resolve_conflict(conflict_id, resolution)
-            logger.info(
-                f"Conflict resolved: {conflict_id} ({resolution.value})"
-            )
+            logger.info(f"Conflict resolved: {conflict_id} ({resolution.value})")
             return True
         except Exception as e:
             logger.error(f"Failed to resolve conflict: {e}")
