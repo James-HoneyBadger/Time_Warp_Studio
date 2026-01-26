@@ -80,7 +80,7 @@ class PluginListing:
     updated_at: datetime = field(default_factory=datetime.utcnow)
 
     # Requirements
-    min_version: str = "6.0.0"
+    min_version: str = "6.1.0"
     compatible_versions: List[str] = field(default_factory=list)
 
 

@@ -1859,7 +1859,7 @@ class MainWindow(QMainWindow):
             self,
             "About Time Warp Studio",
             "<h2>Time Warp Studio - Python Edition</h2>"
-            "<p>Version 6.0.0 — Modern PySide6 Release</p>"
+            "<p>Version 6.1.0 — Code Quality Release</p>"
             "<p>Educational programming environment supporting:</p>"
             "<ul>"
             "<li>PILOT - Interactive teaching language</li>"

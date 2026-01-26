@@ -19,7 +19,7 @@ from datetime import datetime
 
 # ===== VERSION INFORMATION =====
 
-TIME_WARP_VERSION = "6.0.0"
+TIME_WARP_VERSION = "6.1.0"
 MINIMUM_PYTHON_VERSION = (3, 8)
 REQUIRED_MODULES = ["PySide6", "PIL", "requests"]
 OPTIONAL_MODULES = ["pytest", "pytest-cov", "black", "mypy"]
