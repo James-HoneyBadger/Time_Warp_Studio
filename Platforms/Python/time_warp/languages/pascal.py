@@ -23,7 +23,10 @@ _VAR_RE = re.compile(
     re.IGNORECASE,
 )
 _VAR_ARRAY_RE = re.compile(
-    r"^\s*(?:var\s+)?(.+):\s*array\s*\[\s*(\d+)\.\.(\d+)\s*\]\s*of\s*(integer|longint|real|string)\s*;?\s*$",
+    (
+        r"^\s*(?:var\s+)?(.+):\s*array\s*\[\s*(\d+)\.\.(\d+)\s*\]\s*of\s*"
+        r"(integer|longint|real|string)\s*;?\s*$"
+    ),
     re.IGNORECASE,
 )
 _VAR_KEYWORD_RE = re.compile(r"^\s*var\s*$", re.IGNORECASE)
@@ -380,7 +383,7 @@ def _handle_proc_call(
                 cur: Any = interpreter.get_numeric_value(target_up) or 0
             # Backup only local param if it existed
             local_existed = False
-            local_old: Any = None
+            local_old: Any | None = None
             if suf == "$":
                 if var_key in interpreter.string_variables:
                     local_existed = True
@@ -401,7 +404,7 @@ def _handle_proc_call(
             aliases[var_key] = target_key
         else:
             existed = False
-            old_val: Any = None
+            old_val: Any | None = None
             if suf == "$":
                 if var_key in interpreter.string_variables:
                     existed = True

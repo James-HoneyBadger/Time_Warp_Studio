@@ -454,7 +454,7 @@ class CodeFormatter:
 
 
 # Global instance
-_formatter: CodeFormatter = None
+_formatter: CodeFormatter | None = None
 
 
 def get_formatter() -> CodeFormatter:

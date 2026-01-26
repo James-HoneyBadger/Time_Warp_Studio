@@ -51,7 +51,7 @@ class PresenceService:
         self.room_presence[room_id][connection_id] = presence_data
         self.user_presence[connection_id] = presence_data
 
-        logger.info(f"User {user_data.get('name')} presence set in room {room_id}")
+        logger.info("User %s presence set in room {room_id}", user_data.get('name'))
         return presence_data
 
     def update_user_status(
@@ -129,7 +129,7 @@ class PresenceService:
         """Get presence data for specific user"""
         return self.user_presence.get(connection_id, {})
 
-    def remove_user_presence(self, connection_id: str, room_id: str = None):
+    def remove_user_presence(self, connection_id: str, room_id: str | None = None):
         """Remove presence data for user"""
         if connection_id in self.user_presence:
             del self.user_presence[connection_id]
@@ -146,7 +146,7 @@ class PresenceService:
             if connection_id in self.cursor_positions[room_id]:
                 del self.cursor_positions[room_id][connection_id]
 
-        logger.info(f"Presence removed for {connection_id}")
+        logger.info("Presence removed for %s", connection_id)
 
     def get_typing_users(self, room_id: str) -> List[str]:
         """Get list of users currently typing in room"""
@@ -186,8 +186,8 @@ class PresenceService:
                 self.remove_user_presence(connection_id, room_id)
 
         if removed_users:
-            logger.info(f"Cleaned up {
-                    len(removed_users)} inactive users from {room_id}")
+            logger.info("Cleaned up %s inactive users from {room_id}", 
+                    len(removed_users))
 
         return removed_users
 

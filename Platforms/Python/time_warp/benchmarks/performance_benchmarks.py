@@ -391,7 +391,7 @@ class BenchmarkReport:
             ]
         }
 
-        with open(filepath, "w") as f:
+        with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2)
 
 
@@ -411,7 +411,7 @@ def run_all_benchmarks() -> List[BenchmarkSuite]:
     try:
         suites.append(mp_bench.run_all())
     except Exception as e:
-        logger.error(f"Marketplace benchmarks failed: {e}")
+        logger.error("Marketplace benchmarks failed: %s", e)
 
     # Debugger benchmarks
     logger.info("Running Debugger benchmarks...")
@@ -419,7 +419,7 @@ def run_all_benchmarks() -> List[BenchmarkSuite]:
     try:
         suites.append(db_bench.run_all())
     except Exception as e:
-        logger.error(f"Debugger benchmarks failed: {e}")
+        logger.error("Debugger benchmarks failed: %s", e)
 
     # AI benchmarks
     logger.info("Running AI Intelligence benchmarks...")
@@ -427,7 +427,7 @@ def run_all_benchmarks() -> List[BenchmarkSuite]:
     try:
         suites.append(ai_bench.run_all())
     except Exception as e:
-        logger.error(f"AI benchmarks failed: {e}")
+        logger.error("AI benchmarks failed: %s", e)
 
     # Integration benchmarks
     logger.info("Running Integration benchmarks...")
@@ -435,7 +435,7 @@ def run_all_benchmarks() -> List[BenchmarkSuite]:
     try:
         suites.append(int_bench.run_all())
     except Exception as e:
-        logger.error(f"Integration benchmarks failed: {e}")
+        logger.error("Integration benchmarks failed: %s", e)
 
     return suites
 

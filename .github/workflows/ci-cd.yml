@@ -36,7 +36,7 @@ jobs:
         run: black --check Platforms/Python/
       
       - name: Run Flake8 linter
-        run: flake8 Platforms/Python/ --max-line-length=120 --count --statistics
+        run: flake8 Platforms/Python/ --max-line-length=99 --count --statistics
       
       - name: Run MyPy type checker
         run: mypy Platforms/Python/ --ignore-missing-imports
@@ -276,11 +276,14 @@ jobs:
       
       - name: Notify Slack
         if: always()
-        uses: 8398a7/action-slack@v3
+        uses: slackapi/slack-github-action@v1
         with:
-          status: ${{ job.status }}
-          text: 'Production deployment for ${{ github.ref_name }}'
-          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          webhook-url: ${{ secrets.SLACK_WEBHOOK }}
+          payload: |
+            {
+              "text": "Production deployment for ${{ github.ref_name }}",
+              "status": "${{ job.status }}"
+            }
 
   # ===== DOCUMENTATION =====
   

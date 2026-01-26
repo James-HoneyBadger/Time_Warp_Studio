@@ -50,7 +50,7 @@ class RoomService:
             role="admin",
         )
 
-        logger.info(f"Created room: {room.id} by {owner_id}")
+        logger.info("Created room: %s by {owner_id}", room.id)
         return room
 
     async def get_room(self, room_id: str) -> Optional[Room]:
@@ -62,7 +62,7 @@ class RoomService:
         room_id: str,
         user_id: str,
         user_name: str,
-        user_email: str = None,
+        user_email: str | None = None,
     ) -> RoomMember:
         """Add member to room"""
         member = await self.member_repo.create(
@@ -72,7 +72,7 @@ class RoomService:
             user_name=user_name,
             user_email=user_email,
         )
-        logger.info(f"Added member {user_id} to room {room_id}")
+        logger.info("Added member %s to room {room_id}", user_id)
         return member
 
     async def remove_member(self, room_id: str, user_id: str) -> bool:
@@ -80,7 +80,7 @@ class RoomService:
         member = await self.member_repo.get_member(room_id, user_id)
         if member:
             await self.member_repo.delete(member.id)
-            logger.info(f"Removed member {user_id} from room {room_id}")
+            logger.info("Removed member %s from room {room_id}", user_id)
             return True
         return False
 
@@ -131,7 +131,7 @@ class SyncService:
             version=version,
         )
 
-        logger.info(f"Recorded operation v{version} in room {room_id}")
+        logger.info("Recorded operation v%s in room {room_id}", version)
         return operation
 
     async def get_operations_since(self, room_id: str, version: int) -> List[Operation]:
@@ -153,7 +153,7 @@ class SyncService:
             version=version,
             size_bytes=len(content.encode("utf-8")),
         )
-        logger.info(f"Created snapshot v{version} for room {room_id}")
+        logger.info("Created snapshot v%s for room {room_id}", version)
         return snapshot
 
     async def get_latest_snapshot(self, room_id: str) -> Optional[DocumentSnapshot]:
@@ -179,7 +179,7 @@ class ChatService:
             username=username,
             content=content,
         )
-        logger.info(f"Added message to room {room_id}")
+        logger.info("Added message to room %s", room_id)
         return message
 
     async def edit_message(
@@ -192,7 +192,7 @@ class ChatService:
             message.is_edited = True
             message.edited_at = datetime.utcnow()
             await self.session.commit()
-            logger.info(f"Edited message {message_id}")
+            logger.info("Edited message %s", message_id)
         return message
 
     async def delete_message(self, message_id: str) -> bool:
@@ -201,7 +201,7 @@ class ChatService:
         if message:
             message.is_deleted = True
             await self.session.commit()
-            logger.info(f"Deleted message {message_id}")
+            logger.info("Deleted message %s", message_id)
             return True
         return False
 

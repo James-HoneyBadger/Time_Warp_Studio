@@ -37,9 +37,9 @@ class Theme:
     function: str = "#dcdcaa"  # Default function color
     variable: str = "#9cdcfe"  # Default variable color
     # Menu and UI colors for consistency
-    menu_bg: str = None  # Falls back to background if None
-    menu_fg: str = None  # Falls back to foreground if None
-    border_color: str = None  # Falls back to line_number_bg if None
+    menu_bg: str | None = None  # Falls back to background if None
+    menu_fg: str | None = None  # Falls back to foreground if None
+    border_color: str | None = None  # Falls back to line_number_bg if None
 
 
 class ThemeManager:

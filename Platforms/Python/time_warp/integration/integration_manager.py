@@ -103,7 +103,7 @@ class IntegrationManager:
         """Register a component for integration"""
         with self.lock:
             if component_id in self.components:
-                self.logger.warning(f"Component {component_id} already registered")
+                self.logger.warning("Component %s already registered", component_id)
                 return False
 
             self.components[component_id] = metadata
@@ -116,7 +116,7 @@ class IntegrationManager:
         """Initialize a registered component"""
         with self.lock:
             if component_id not in self.components:
-                self.logger.error(f"Component not found: {component_id}")
+                self.logger.error("Component not found: %s", component_id)
                 return False
 
             metadata = self.components[component_id]
@@ -133,7 +133,7 @@ class IntegrationManager:
                         data={"component_id": component_id},
                     )
                 )
-                self.logger.info(f"Initialized: {component_id}")
+                self.logger.info("Initialized: %s", component_id)
                 return True
             except Exception as e:
                 metadata.status = IntegrationStatus.ERROR
@@ -145,7 +145,7 @@ class IntegrationManager:
                         data={"component_id": component_id, "error": str(e)},
                     )
                 )
-                self.logger.error(f"Failed to initialize {component_id}: {e}")
+                self.logger.error("Failed to initialize %s: {e}", component_id)
                 return False
 
     def get_component_status(self, component_id: str) -> Optional[ComponentMetadata]:
@@ -180,7 +180,7 @@ class IntegrationManager:
                 try:
                     handler(event)
                 except Exception as e:
-                    self.logger.error(f"Error in event handler: {e}")
+                    self.logger.error("Error in event handler: %s", e)
 
     def record_metric(self, metric: PerformanceMetric):
         """Record performance metric"""
@@ -255,7 +255,7 @@ class MarketplaceIntegration:
 
             self.logger.info("Marketplace services initialized")
         except ImportError as e:
-            self.logger.error(f"Failed to import marketplace: {e}")
+            self.logger.error("Failed to import marketplace: %s", e)
             raise
 
     def search_plugins(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
@@ -296,7 +296,7 @@ class MarketplaceIntegration:
             self.installation_service.install_plugin(plugin_id, version, user_id)
             return True
         except Exception as e:
-            self.logger.error(f"Failed to install plugin: {e}")
+            self.logger.error("Failed to install plugin: %s", e)
             return False
 
 
@@ -328,7 +328,7 @@ class DebuggerIntegration:
 
             self.logger.info("Debugger services initialized")
         except ImportError as e:
-            self.logger.error(f"Failed to import debugger: {e}")
+            self.logger.error("Failed to import debugger: %s", e)
             raise
 
     def create_breakpoint(
@@ -398,7 +398,7 @@ class AIIntegration:
 
             self.logger.info("AI services initialized")
         except ImportError as e:
-            self.logger.error(f"Failed to import AI services: {e}")
+            self.logger.error("Failed to import AI services: %s", e)
             raise
 
     def get_code_completions(

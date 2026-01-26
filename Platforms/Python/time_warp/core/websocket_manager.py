@@ -44,7 +44,7 @@ class ConnectionManager:
         await websocket.accept()
         self.active_connections[connection_id] = websocket
         self.users[connection_id] = user_data
-        logger.info(f"User {user_data.get('name')} connected: {connection_id}")
+        logger.info("User %s connected: {connection_id}", user_data.get('name'))
 
     def disconnect(self, connection_id: str):
         """Remove a connection"""
@@ -64,7 +64,7 @@ class ConnectionManager:
                     self.rooms.pop(room_id)
 
         if user_data:
-            logger.info(f"User {user_data.get('name')} disconnected: {connection_id}")
+            logger.info("User %s disconnected: {connection_id}", user_data.get('name'))
 
     async def join_room(self, connection_id: str, room_id: str):
         """Add connection to a room"""
@@ -111,7 +111,7 @@ class ConnectionManager:
             },
         )
 
-        logger.info(f"Connection {connection_id} joined room {room_id}")
+        logger.info("Connection %s joined room {room_id}", connection_id)
 
     async def leave_room(self, connection_id: str, room_id: str):
         """Remove connection from a room"""
@@ -135,7 +135,7 @@ class ConnectionManager:
                 if room_id in self.message_history:
                     self.message_history.pop(room_id)
 
-        logger.info(f"Connection {connection_id} left room {room_id}")
+        logger.info("Connection %s left room {room_id}", connection_id)
 
     async def send_to_connection(self, connection_id: str, message: Dict[str, Any]):
         """Send message to specific connection"""
@@ -143,13 +143,13 @@ class ConnectionManager:
             try:
                 await self.active_connections[connection_id].send_json(message)
             except Exception as e:
-                logger.error(f"Error sending to {connection_id}: {e}")
+                logger.error("Error sending to %s: {e}", connection_id)
 
     async def broadcast_to_room(
         self,
         room_id: str,
         message: Dict[str, Any],
-        exclude_connection: str = None,
+        exclude_connection: str | None = None,
     ):
         """Broadcast message to all users in a room"""
         if room_id not in self.rooms:
@@ -170,7 +170,7 @@ class ConnectionManager:
             try:
                 await self.active_connections[connection_id].send_json(message)
             except Exception as e:
-                logger.error(f"Error broadcasting to {connection_id}: {e}")
+                logger.error("Error broadcasting to %s: {e}", connection_id)
                 dead_connections.append(connection_id)
 
         # Clean up dead connections
@@ -184,7 +184,7 @@ class ConnectionManager:
             try:
                 await self.active_connections[connection_id].send_json(message)
             except Exception as e:
-                logger.error(f"Error broadcasting to {connection_id}: {e}")
+                logger.error("Error broadcasting to %s: {e}", connection_id)
                 dead_connections.append(connection_id)
 
         for connection_id in dead_connections:

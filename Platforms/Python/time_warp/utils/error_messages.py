@@ -83,14 +83,14 @@ class ErrorMessage:
         # Log at appropriate level
         if log_level == "warning":
             if context:
-                logger.warning(f"[{context}] {full_msg}")
+                logger.warning("[%s] {full_msg}", context)
             else:
                 logger.warning(full_msg)
         elif log_level == "debug":
-            logger.debug(f"{full_msg}", exc_info=True)
+            logger.debug("%s", full_msg, exc_info=True)
         else:  # error (default)
             if context:
-                logger.error(f"[{context}] {full_msg}")
+                logger.error("[%s] {full_msg}", context)
             else:
                 logger.error(full_msg)
 

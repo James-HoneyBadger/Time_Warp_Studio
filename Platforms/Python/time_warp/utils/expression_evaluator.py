@@ -34,7 +34,7 @@ class Token:  # pylint: disable=R0903
         RIGHT_PAREN = auto()
         COMMA = auto()
 
-    def __init__(self, token_type: "Token.Type", value: Any = None) -> None:
+    def __init__(self, token_type: "Token.Type", value: Any | None = None) -> None:
         # Use Any for Token.value due to different token types
         # and to keep the runtime flexible for this tokenizer/evaluator.
         self.type = token_type

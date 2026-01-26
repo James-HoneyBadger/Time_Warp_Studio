@@ -36,14 +36,18 @@ class CloudAuthStatus(str, Enum):
 class CloudSyncManager:
     """Manages cloud synchronization for Time Warp Studio."""
 
-    def __init__(self, api_server: TimeWarpCloudAPI = None, auto_sync: bool = True):
+    def __init__(
+        self,
+        api_server: TimeWarpCloudAPI | None = None,
+        auto_sync: bool = True,
+    ):
         """Initialize Cloud Sync Manager.
 
         Args:
             api_server: Cloud API server instance (creates default if None)
             auto_sync: Enable automatic sync on file changes (default: True)
         """
-        self.api_server = api_server or TimeWarpCloudAPI()
+        self.api_server: TimeWarpCloudAPI = api_server or TimeWarpCloudAPI()
 
         # Create sync engine with api_server and temp storage path
         import tempfile
@@ -52,24 +56,24 @@ class CloudSyncManager:
         self.sync_engine = CloudSyncEngine(
             api_client=self.api_server, local_storage_path=temp_dir
         )
-        self.auto_sync = auto_sync
+        self.auto_sync: bool = auto_sync
 
         # Authentication state
-        self.auth_status = CloudAuthStatus.LOGGED_OUT
-        self.current_user = None
-        self.access_token = None
-        self.refresh_token = None
+        self.auth_status: CloudAuthStatus = CloudAuthStatus.LOGGED_OUT
+        self.current_user: Dict[str, Any] | None = None
+        self.access_token: str | None = None
+        self.refresh_token: str | None = None
 
         # Project state
-        self.current_project = None
-        self.project_files = {}
-        self.sync_queue = []
+        self.current_project: Dict[str, Any] | None = None
+        self.project_files: Dict[str, Any] = {}
+        self.sync_queue: List[Dict[str, Any]] = []
 
         # Callbacks
-        self._auth_status_changed_callbacks = []
-        self._sync_status_changed_callbacks = []
-        self._conflict_detected_callbacks = []
-        self._sync_complete_callbacks = []
+        self._auth_status_changed_callbacks: List[Callable[[CloudAuthStatus], None]] = []
+        self._sync_status_changed_callbacks: List[Callable[[SyncStatus], None]] = []
+        self._conflict_detected_callbacks: List[Callable[[SyncConflict], None]] = []
+        self._sync_complete_callbacks: List[Callable[[SyncStatus], None]] = []
 
         # Background sync thread
         self._sync_thread = None
@@ -84,7 +88,7 @@ class CloudSyncManager:
     # ========================================================================
 
     def register_user(
-        self, username: str, email: str, password: str, full_name: str = None
+        self, username: str, email: str, password: str, full_name: str | None = None
     ) -> bool:
         """Register a new user on cloud.
 
@@ -100,7 +104,7 @@ class CloudSyncManager:
         try:
             # Check if user already exists
             if email in self.api_server.users:
-                logger.warning(f"User {email} already registered")
+                logger.warning("User %s already registered", email)
                 return False
 
             # Create user via API server
@@ -112,10 +116,10 @@ class CloudSyncManager:
                 "role": "student",
             }
             self.api_server._create_user(user_data)
-            logger.info(f"User registered: {username} ({email})")
+            logger.info("User registered: %s (%s)", username, email)
             return True
         except Exception as e:
-            logger.error(f"Registration failed: {e}")
+            logger.error("Registration failed: %s", e)
             return False
 
     def login(self, email: str, password: str) -> bool:
@@ -152,12 +156,12 @@ class CloudSyncManager:
 
             self.auth_status = CloudAuthStatus.AUTHENTICATED
             self._notify_auth_status_changed()
-            logger.info(f"User logged in: {user['username']}")
+            logger.info("User logged in: %s", user['username'])
             return True
         except Exception as e:
             self.auth_status = CloudAuthStatus.AUTH_FAILED
             self._notify_auth_status_changed()
-            logger.error(f"Login failed: {e}")
+            logger.error("Login failed: %s", e)
             return False
 
     def logout(self) -> bool:
@@ -181,7 +185,7 @@ class CloudSyncManager:
             logger.info("User logged out")
             return True
         except Exception as e:
-            logger.error(f"Logout failed: {e}")
+            logger.error("Logout failed: %s", e)
             return False
 
     def refresh_tokens(self) -> bool:
@@ -209,7 +213,7 @@ class CloudSyncManager:
             logger.info("Tokens refreshed")
             return True
         except Exception as e:
-            logger.error(f"Token refresh failed: {e}")
+            logger.error("Token refresh failed: %s", e)
             self.auth_status = CloudAuthStatus.TOKEN_EXPIRED
             self._notify_auth_status_changed()
             return False
@@ -219,7 +223,7 @@ class CloudSyncManager:
     # ========================================================================
 
     def create_cloud_project(
-        self, name: str, language: str, description: str = None
+        self, name: str, language: str, description: str | None = None
     ) -> Optional[str]:
         """Create a new project on cloud.
 
@@ -250,10 +254,10 @@ class CloudSyncManager:
             }
 
             self.api_server.projects[project_id] = project
-            logger.info(f"Cloud project created: {name} ({project_id})")
+            logger.info("Cloud project created: %s ({project_id})", name)
             return project_id
         except Exception as e:
-            logger.error(f"Project creation failed: {e}")
+            logger.error("Project creation failed: %s", e)
             return None
 
     def open_project(self, project_id: str) -> bool:
@@ -272,17 +276,17 @@ class CloudSyncManager:
 
             project = self.api_server.projects.get(project_id)
             if not project:
-                logger.error(f"Project not found: {project_id}")
+                logger.error("Project not found: %s", project_id)
                 return False
 
             self.current_project = project
             self.project_files = {}
             self.sync_queue = []
 
-            logger.info(f"Project opened: {project['name']}")
+            logger.info("Project opened: %s", project['name'])
             return True
         except Exception as e:
-            logger.error(f"Failed to open project: {e}")
+            logger.error("Failed to open project: %s", e)
             return False
 
     def close_project(self) -> bool:
@@ -296,10 +300,10 @@ class CloudSyncManager:
                 project_name = self.current_project.get("name")
                 self.current_project = None
                 self.project_files = {}
-                logger.info(f"Project closed: {project_name}")
+                logger.info("Project closed: %s", project_name)
             return True
         except Exception as e:
-            logger.error(f"Failed to close project: {e}")
+            logger.error("Failed to close project: %s", e)
             return False
 
     def sync_project(self) -> bool:
@@ -327,14 +331,14 @@ class CloudSyncManager:
                 self.project_files,
             )
 
-            logger.info(f"Project synced: {self.current_project['name']}")
+            logger.info("Project synced: %s", self.current_project['name'])
             self._notify_sync_complete()
             return True
         except Exception as e:
-            logger.error(f"Project sync failed: {e}")
+            logger.error("Project sync failed: %s", e)
             return False
 
-    def add_file(self, filename: str, content: str, language: str = None) -> bool:
+    def add_file(self, filename: str, content: str, language: str | None = None) -> bool:
         """Add or update a file in the current project.
 
         Args:
@@ -370,10 +374,10 @@ class CloudSyncManager:
                     content,
                 )
 
-            logger.info(f"File added: {filename}")
+            logger.info("File added: %s", filename)
             return True
         except Exception as e:
-            logger.error(f"Failed to add file: {e}")
+            logger.error("Failed to add file: %s", e)
             return False
 
     def remove_file(self, filename: str) -> bool:
@@ -386,14 +390,14 @@ class CloudSyncManager:
             True if file removed successfully
         """
         try:
-            file_id = None
+            file_id: str | None = None
             for fid, file_data in self.project_files.items():
                 if file_data["filename"] == filename:
                     file_id = fid
                     break
 
             if not file_id:
-                logger.warning(f"File not found: {filename}")
+                logger.warning("File not found: %s", filename)
                 return False
 
             del self.project_files[file_id]
@@ -406,10 +410,10 @@ class CloudSyncManager:
                     "",
                 )
 
-            logger.info(f"File removed: {filename}")
+            logger.info("File removed: %s", filename)
             return True
         except Exception as e:
-            logger.error(f"Failed to remove file: {e}")
+            logger.error("Failed to remove file: %s", e)
             return False
 
     # ========================================================================
@@ -438,10 +442,10 @@ class CloudSyncManager:
         """
         try:
             self.sync_engine.resolve_conflict(conflict_id, resolution)
-            logger.info(f"Conflict resolved: {conflict_id} ({resolution.value})")
+            logger.info("Conflict resolved: %s ({resolution.value})", conflict_id)
             return True
         except Exception as e:
-            logger.error(f"Failed to resolve conflict: {e}")
+            logger.error("Failed to resolve conflict: %s", e)
             return False
 
     # ========================================================================
@@ -460,7 +464,7 @@ class CloudSyncManager:
             self._notify_sync_status_changed()
             return True
         except Exception as e:
-            logger.error(f"Failed to enable offline mode: {e}")
+            logger.error("Failed to enable offline mode: %s", e)
             return False
 
     def disable_offline_mode(self) -> bool:
@@ -480,7 +484,7 @@ class CloudSyncManager:
             self._notify_sync_status_changed()
             return True
         except Exception as e:
-            logger.error(f"Failed to disable offline mode: {e}")
+            logger.error("Failed to disable offline mode: %s", e)
             return False
 
     # ========================================================================
@@ -511,7 +515,7 @@ class CloudSyncManager:
             logger.info("Auto-sync started")
             return True
         except Exception as e:
-            logger.error(f"Failed to start auto-sync: {e}")
+            logger.error("Failed to start auto-sync: %s", e)
             return False
 
     def stop_auto_sync(self) -> bool:
@@ -527,7 +531,7 @@ class CloudSyncManager:
             logger.info("Auto-sync stopped")
             return True
         except Exception as e:
-            logger.error(f"Failed to stop auto-sync: {e}")
+            logger.error("Failed to stop auto-sync: %s", e)
             return False
 
     def _auto_sync_worker(self, interval_seconds: int):
@@ -543,7 +547,7 @@ class CloudSyncManager:
                 if self.current_project and self.sync_queue:
                     self.sync_project()
             except Exception as e:
-                logger.error(f"Auto-sync error: {e}")
+                logger.error("Auto-sync error: %s", e)
             time.sleep(interval_seconds)
 
     # ========================================================================
@@ -672,7 +676,7 @@ class CloudSyncManager:
             try:
                 callback(self.auth_status)
             except Exception as e:
-                logger.error(f"Callback error: {e}")
+                logger.error("Callback error: %s", e)
 
     def _notify_sync_status_changed(self):
         """Notify all sync status change callbacks."""
@@ -680,7 +684,7 @@ class CloudSyncManager:
             try:
                 callback(self.sync_engine.get_sync_status())
             except Exception as e:
-                logger.error(f"Callback error: {e}")
+                logger.error("Callback error: %s", e)
 
     def _notify_conflict_detected(self, conflict: SyncConflict):
         """Notify all conflict detection callbacks.
@@ -692,7 +696,7 @@ class CloudSyncManager:
             try:
                 callback(conflict)
             except Exception as e:
-                logger.error(f"Callback error: {e}")
+                logger.error("Callback error: %s", e)
 
     def _notify_sync_complete(self):
         """Notify all sync complete callbacks."""
@@ -700,4 +704,4 @@ class CloudSyncManager:
             try:
                 callback()
             except Exception as e:
-                logger.error(f"Callback error: {e}")
+                logger.error("Callback error: %s", e)

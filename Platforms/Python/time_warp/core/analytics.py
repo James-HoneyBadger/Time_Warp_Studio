@@ -249,7 +249,7 @@ class FeatureFlagProvider(ABC):
     def is_enabled(
         self,
         flag_key: str,
-        user_id: str = None,
+        user_id: str | None = None,
         context: Dict[str, Any] = None,
     ) -> bool:
         """Check if feature flag is enabled"""
@@ -275,7 +275,7 @@ class LocalFeatureFlagProvider(FeatureFlagProvider):
     def is_enabled(
         self,
         flag_key: str,
-        user_id: str = None,
+        user_id: str | None = None,
         context: Dict[str, Any] = None,
     ) -> bool:
         """Check if flag is enabled"""
@@ -343,7 +343,7 @@ class LocalFeatureFlagProvider(FeatureFlagProvider):
 class FeatureFlagClient:
     """Client for feature flag checks"""
 
-    def __init__(self, provider: FeatureFlagProvider, user_id: str = None):
+    def __init__(self, provider: FeatureFlagProvider, user_id: str | None = None):
         self.provider = provider
         self.user_id = user_id
         self.context: Dict[str, Any] = {}

@@ -204,7 +204,7 @@ class LeaderboardEntry(BaseModel):
 class CloudAuthManager:
     """Manages authentication and JWT tokens."""
 
-    def __init__(self, secret_key: str = None):
+    def __init__(self, secret_key: str | None = None):
         """Initialize auth manager.
 
         Args:
@@ -283,7 +283,7 @@ class CloudAuthManager:
 class TimeWarpCloudAPI:
     """Main Time Warp Cloud API application."""
 
-    def __init__(self, secret_key: str = None):
+    def __init__(self, secret_key: str | None = None):
         """Initialize Cloud API.
 
         Args:
@@ -576,7 +576,7 @@ class TimeWarpCloudAPI:
 # ============================================================================
 
 
-def create_cloud_api(secret_key: str = None) -> FastAPI:
+def create_cloud_api(secret_key: str | None = None) -> FastAPI:
     """Create and configure Time Warp Cloud API.
 
     Args:

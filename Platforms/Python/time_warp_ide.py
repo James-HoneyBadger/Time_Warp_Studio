@@ -41,7 +41,7 @@ def main():
     if len(sys.argv) > 1:
         file_path = Path(sys.argv[1])
         if file_path.exists() and file_path.is_file():
-            logger.info(f"Opening file: {file_path}")
+            logger.info("Opening file: %s", file_path)
             window.load_file(str(file_path))
 
     # Run application
@@ -49,7 +49,7 @@ def main():
         exit_code = app.exec()
         logger.info("Time Warp Studio exiting normally")
         sys.exit(exit_code)
-    except Exception:
+    except (ValueError, TypeError):
         logger.exception("Unexpected error in main loop")
         raise
 

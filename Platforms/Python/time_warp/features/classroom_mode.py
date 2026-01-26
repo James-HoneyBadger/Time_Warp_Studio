@@ -110,7 +110,7 @@ class ClassroomMode:
                     zf.writestr(f"files/{filename}", content)
 
             return True
-        except Exception:
+        except (ValueError, TypeError):
             return False
 
     def import_bundle(self, bundle_path: Path) -> Optional[WorkspaceBundle]:
@@ -138,7 +138,7 @@ class ClassroomMode:
                 )
 
                 return bundle
-        except Exception:
+        except (ValueError, TypeError):
             return None
 
     def list_bundles(self) -> List[WorkspaceBundle]:

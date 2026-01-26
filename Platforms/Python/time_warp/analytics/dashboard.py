@@ -155,7 +155,7 @@ class MetricsCollector:
         self,
         event_type: EventType,
         user_id: Optional[str] = None,
-        data: Dict = None,
+        data: Dict | None = None,
     ) -> None:
         """Record an event"""
         event = Event(event_type=event_type, user_id=user_id, data=data or {})

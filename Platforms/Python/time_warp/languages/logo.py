@@ -1131,7 +1131,7 @@ def _logo_print(interpreter: "Interpreter", args: List[str]) -> str:
     # Check for variable access :VAR
     if len(args) == 1 and args[0].startswith(":"):
         var_name = args[0][1:].upper()
-        val: Any = None
+        val: Any | None = None
         if var_name in interpreter.variables:
             val = interpreter.variables[var_name]
         elif var_name in interpreter.string_variables:

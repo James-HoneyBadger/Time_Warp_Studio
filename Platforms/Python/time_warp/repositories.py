@@ -32,7 +32,7 @@ class BaseRepository:
         instance = self.model(**kwargs)
         self.session.add(instance)
         await self.session.commit()
-        logger.info(f"Created {self.model.__name__}: {instance.id}")
+        logger.info("Created %s: {instance.id}", self.model.__name__)
         return instance
 
     async def get(self, id: str) -> Optional[any]:
@@ -56,7 +56,7 @@ class BaseRepository:
             for key, value in kwargs.items():
                 setattr(instance, key, value)
             await self.session.commit()
-            logger.info(f"Updated {self.model.__name__}: {id}")
+            logger.info("Updated %s: {id}", self.model.__name__)
         return instance
 
     async def delete(self, id: str) -> bool:
@@ -65,7 +65,7 @@ class BaseRepository:
         if instance:
             await self.session.delete(instance)
             await self.session.commit()
-            logger.info(f"Deleted {self.model.__name__}: {id}")
+            logger.info("Deleted %s: {id}", self.model.__name__)
             return True
         return False
 

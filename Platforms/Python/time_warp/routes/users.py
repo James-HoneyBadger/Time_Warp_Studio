@@ -23,7 +23,7 @@ class UserProfile(BaseModel):
     id: str
     email: str
     name: str
-    avatar_url: str = None
+    avatar_url: str | None = None
     status: str = "online"
 
 
@@ -65,8 +65,8 @@ async def get_user_rooms(user_id: str, session: AsyncSession = Depends(get_sessi
             }
             for room in rooms
         ]
-    except Exception as e:
-        logger.error(f"Error getting user rooms: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error getting user rooms: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get user rooms",
@@ -85,8 +85,8 @@ async def join_room(
         service = RoomService(session)
         member = await service.add_member(room_id, user_id, username)
         return {"message": "Joined room", "member_id": member.id}
-    except Exception as e:
-        logger.error(f"Error joining room: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error joining room: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to join room",
@@ -107,8 +107,8 @@ async def leave_room(
                 detail="Member not found",
             )
         return {"message": "Left room"}
-    except Exception as e:
-        logger.error(f"Error leaving room: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error leaving room: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to leave room",

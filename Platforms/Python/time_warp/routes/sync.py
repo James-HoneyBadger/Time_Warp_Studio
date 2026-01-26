@@ -71,8 +71,8 @@ async def record_operation(
             "version": op.version,
             "timestamp": op.timestamp.isoformat(),
         }
-    except Exception as e:
-        logger.error(f"Error recording operation: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error recording operation: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to record operation",
@@ -91,8 +91,8 @@ async def get_current_version(
             "current_version": version,
             "last_update": "2025-12-31T00:00:00Z",  # Would fetch from DB
         }
-    except Exception as e:
-        logger.error(f"Error getting version: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error getting version: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get version",
@@ -131,8 +131,8 @@ async def get_operations(
                 for op in operations
             ]
         }
-    except Exception as e:
-        logger.error(f"Error getting operations: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error getting operations: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get operations",
@@ -168,8 +168,8 @@ async def get_snapshot(
             "size_bytes": snapshot.size_bytes,
             "created_at": snapshot.created_at.isoformat(),
         }
-    except Exception as e:
-        logger.error(f"Error getting snapshot: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error getting snapshot: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get snapshot",
@@ -192,8 +192,8 @@ async def create_snapshot(
             "version": snapshot.version,
             "size_bytes": snapshot.size_bytes,
         }
-    except Exception as e:
-        logger.error(f"Error creating snapshot: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error creating snapshot: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create snapshot",
@@ -241,8 +241,8 @@ async def sync_client(
                 for op in operations
             ],
         }
-    except Exception as e:
-        logger.error(f"Error in sync: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error in sync: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to sync",

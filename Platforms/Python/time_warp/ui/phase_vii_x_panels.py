@@ -14,42 +14,21 @@ import logging
 from typing import Dict, List
 
 try:
-    from PySide6.QtCharts import QChart, QChartView, QLineSeries
-    from PySide6.QtCore import QObject, QSize, Qt, QThread, QTimer, Signal
-    from PySide6.QtGui import (
-        QColor,
-        QFont,
-        QIcon,
-        QPixmap,
-        QStandardItem,
-        QStandardItemModel,
-    )
+    from PySide6.QtCore import Signal
     from PySide6.QtWidgets import (
-        QCheckBox,
-        QComboBox,
-        QDialog,
-        QDockWidget,
         QHBoxLayout,
-        QHeaderView,
         QLabel,
         QLineEdit,
         QListWidget,
         QListWidgetItem,
-        QMenu,
-        QMenuBar,
         QMessageBox,
         QProgressBar,
         QPushButton,
-        QSpinBox,
-        QSplitter,
-        QStatusBar,
         QTableWidget,
         QTableWidgetItem,
         QTabWidget,
         QTextEdit,
-        QToolBar,
         QTreeWidget,
-        QTreeWidgetItem,
         QVBoxLayout,
         QWidget,
     )
@@ -137,7 +116,7 @@ class MarketplacePanel(QWidget):
             results = self.marketplace_service.search_plugins(query)
             self.display_results(results)
         except Exception as e:
-            self.logger.error(f"Search failed: {e}")
+            self.logger.error("Search failed: %s", e)
             QMessageBox.warning(self, "Error", f"Search failed: {e}")
 
     def display_results(self, plugins: List[Dict]):

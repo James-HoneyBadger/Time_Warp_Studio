@@ -134,7 +134,7 @@ class GamepadManager:
                     self._poll_pygame()
                 elif self._backend == "inputs":
                     self._poll_inputs()
-            except Exception:  # pylint: disable=broad-except
+            except (ValueError, TypeError):  # pylint: disable=broad-except
                 pass
 
             time.sleep(0.016)

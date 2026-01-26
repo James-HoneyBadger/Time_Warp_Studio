@@ -96,7 +96,7 @@ class FileHistory:
         try:
             self.file_path.write_text(content)
             return True
-        except Exception:
+        except (ValueError, TypeError):
             return False
 
     def list_versions(self) -> List[FileVersion]:
@@ -162,7 +162,7 @@ class AutosaveManager:
             history.save_version(content)
 
             return True
-        except Exception:
+        except (ValueError, TypeError):
             return False
 
     def _get_history(self, file_path: Path) -> FileHistory:

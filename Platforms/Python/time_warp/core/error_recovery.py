@@ -141,7 +141,7 @@ class RetryStrategy(RecoveryStrategy):
                 time.sleep(delay)
                 func()
                 return True
-            except Exception:
+            except (ValueError, TypeError):
                 continue
 
         return False
@@ -162,7 +162,7 @@ class FallbackStrategy(RecoveryStrategy):
         try:
             self.fallback_func()
             return True
-        except Exception:
+        except (ValueError, TypeError):
             return False
 
 
@@ -228,8 +228,8 @@ class ErrorHandler:
         category: ErrorCategory,
         severity: ErrorSeverity,
         context: Dict[str, Any] = None,
-        component: str = None,
-        user_id: str = None,
+        component: str | None = None,
+        user_id: str | None = None,
     ) -> bool:
         """Handle an error"""
         context = context or {}
@@ -254,7 +254,7 @@ class ErrorHandler:
         if type(error) in self.error_handlers:
             try:
                 return self.error_handlers[type(error)](error, context)
-            except Exception:
+            except (ValueError, TypeError):
                 pass
 
         # Try recovery strategies
@@ -385,7 +385,7 @@ class Monitor:
 def handle_errors(
     category: ErrorCategory,
     severity: ErrorSeverity,
-    component: str = None,
+    component: str | None = None,
 ):
     """Decorator for automatic error handling"""
 
@@ -453,7 +453,7 @@ def retry(max_attempts: int = 3, delay: float = 1.0):
             for attempt in range(max_attempts):
                 try:
                     return func(*args, **kwargs)
-                except Exception:
+                except (ValueError, TypeError):
                     if attempt == max_attempts - 1:
                         raise
                     time.sleep(delay)

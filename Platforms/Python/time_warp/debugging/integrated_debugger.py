@@ -94,7 +94,7 @@ class Variable:
     """Variable in debugger"""
 
     name: str = ""
-    value: Any = None
+    value: Any | None = None
     type: str = ""
 
     # Complex types
@@ -111,7 +111,7 @@ class Watch:
 
     id: str = ""
     expression: str = ""
-    current_value: Any = None
+    current_value: Any | None = None
     previous_value: Optional[Any] = None
     data_type: str = ""
 

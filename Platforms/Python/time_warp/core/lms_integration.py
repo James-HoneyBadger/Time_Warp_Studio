@@ -93,7 +93,7 @@ class LMSConnector:
         try:
             response = self.session.get(f"{self.base_url}/api/user")
             return response.status_code == 200
-        except Exception:
+        except (ValueError, TypeError):
             return False
 
     def get_courses(self) -> List[Dict]:
@@ -131,7 +131,7 @@ class CanvasConnector(LMSConnector):
         try:
             response = self.session.get(f"{self.base_url}/api/v1/courses")
             return response.json() if response.status_code == 200 else []
-        except Exception:
+        except (ValueError, TypeError):
             return []
 
     def get_students(self, course_id: str) -> List[Student]:
@@ -152,7 +152,7 @@ class CanvasConnector(LMSConnector):
                     )
                 )
             return students
-        except Exception:
+        except (ValueError, TypeError):
             return []
 
     def get_assignments(self, course_id: str) -> List[LMSAssignment]:
@@ -178,7 +178,7 @@ class CanvasConnector(LMSConnector):
                     )
                 )
             return assignments
-        except Exception:
+        except (ValueError, TypeError):
             return []
 
     def submit_grade(
@@ -200,7 +200,7 @@ class CanvasConnector(LMSConnector):
                 },
             )
             return response.status_code == 200
-        except Exception:
+        except (ValueError, TypeError):
             return False
 
 
@@ -219,7 +219,7 @@ class GoogleClassroomConnector(LMSConnector):
                 if response.status_code == 200
                 else []
             )
-        except Exception:
+        except (ValueError, TypeError):
             return []
 
     def get_students(self, course_id: str) -> List[Student]:
@@ -240,7 +240,7 @@ class GoogleClassroomConnector(LMSConnector):
                     )
                 )
             return students
-        except Exception:
+        except (ValueError, TypeError):
             return []
 
     def get_assignments(self, course_id: str) -> List[LMSAssignment]:
@@ -266,7 +266,7 @@ class GoogleClassroomConnector(LMSConnector):
                     )
                 )
             return assignments
-        except Exception:
+        except (ValueError, TypeError):
             return []
 
     def submit_grade(
@@ -285,7 +285,7 @@ class GoogleClassroomConnector(LMSConnector):
                 json={"assignedGrade": score, "draftGrade": score},
             )
             return response.status_code == 200
-        except Exception:
+        except (ValueError, TypeError):
             return False
 
 

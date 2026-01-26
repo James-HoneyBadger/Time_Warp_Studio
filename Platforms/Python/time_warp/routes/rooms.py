@@ -96,8 +96,8 @@ async def create_room(
         service = RoomService(session)
         room = await service.create_room(room_data.name, owner_id, room_data.is_private)
         return room
-    except Exception as e:
-        logger.error(f"Error creating room: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error creating room: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to create room",
@@ -115,8 +115,8 @@ async def get_room(room_id: str, session: AsyncSession = Depends(get_session)):
                 status_code=status.HTTP_404_NOT_FOUND, detail="Room not found"
             )
         return room
-    except Exception as e:
-        logger.error(f"Error getting room: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error getting room: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get room",
@@ -130,8 +130,8 @@ async def get_room_members(room_id: str, session: AsyncSession = Depends(get_ses
         service = RoomService(session)
         members = await service.get_room_members(room_id)
         return members
-    except Exception as e:
-        logger.error(f"Error getting room members: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error getting room members: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get members",
@@ -143,7 +143,7 @@ async def add_room_member(
     room_id: str,
     user_id: str,
     user_name: str,
-    user_email: str = None,
+    user_email: str | None = None,
     session: AsyncSession = Depends(get_session),
 ):
     """Add member to room"""
@@ -151,8 +151,8 @@ async def add_room_member(
         service = RoomService(session)
         member = await service.add_member(room_id, user_id, user_name, user_email)
         return {"message": "Member added", "member_id": member.id}
-    except Exception as e:
-        logger.error(f"Error adding member: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error adding member: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to add member",
@@ -173,8 +173,8 @@ async def remove_room_member(
                 detail="Member not found",
             )
         return {"message": "Member removed"}
-    except Exception as e:
-        logger.error(f"Error removing member: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error removing member: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to remove member",
@@ -192,8 +192,8 @@ async def get_room_operations(
         service = SyncService(session)
         operations = await service.op_repo.get_room_operations(room_id, limit)
         return operations
-    except Exception as e:
-        logger.error(f"Error getting operations: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error getting operations: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get operations",
@@ -212,8 +212,8 @@ async def get_operations_since(
             "version": await service.get_latest_version(room_id),
             "operations": [op.to_dict() for op in operations],
         }
-    except Exception as e:
-        logger.error(f"Error getting operations: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error getting operations: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get operations",
@@ -232,8 +232,8 @@ async def get_room_messages(
         service = ChatService(session)
         messages = await service.get_room_messages(room_id, limit, offset)
         return messages
-    except Exception as e:
-        logger.error(f"Error getting messages: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error getting messages: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get messages",
@@ -249,8 +249,8 @@ async def search_messages(
         service = ChatService(session)
         messages = await service.search_messages(room_id, query)
         return {"query": query, "results": [msg.to_dict() for msg in messages]}
-    except Exception as e:
-        logger.error(f"Error searching messages: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error searching messages: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to search messages",
@@ -268,8 +268,8 @@ async def delete_room(room_id: str, session: AsyncSession = Depends(get_session)
                 status_code=status.HTTP_404_NOT_FOUND, detail="Room not found"
             )
         return {"message": "Room deleted"}
-    except Exception as e:
-        logger.error(f"Error deleting room: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("Error deleting room: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete room",

@@ -406,7 +406,7 @@ def _eval_math(expr: str, env: Dict[str, str]) -> Optional[float]:
         if not re.match(r"^[\d\s+\-*/%().]+$", expr_sub):
             return None
         return float(eval(expr_sub))
-    except Exception:
+    except (ValueError, TypeError):
         return None
 
 
@@ -769,14 +769,24 @@ def execute_prolog(interpreter: "Interpreter", command: str, _turtle) -> str:
 
         # In Turbo Prolog, GOAL usually just runs and prints output via write/writeln
         # But if there are variables, we might want to show them?
-        # Turbo Prolog usually doesn't show bindings for the GOAL section unless explicitly printed.
+        # Turbo Prolog usually doesn't show bindings for the GOAL section
+        # unless explicitly printed.
         # But for compatibility with our interactive shell, let's show bindings
         # if any.
 
         if not sols:
             return "❌ false"
 
-        var_names = sorted(list(set(re.findall(r"\b[A-Z][a-zA-Z0-9_]*\b", cmd))))
+        var_names = sorted(
+            list(
+                set(
+                    re.findall(
+                        r"\b[A-Z][a-zA-Z0-9_]*\b",
+                        cmd,
+                    )
+                )
+            )
+        )
         if not var_names:
             return "✅ true"
 

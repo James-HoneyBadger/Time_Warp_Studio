@@ -23,7 +23,7 @@ class ChatMessage:
     content: str
     timestamp: float
     edited: bool = False
-    edited_at: float = None
+    edited_at: float | None = None
     reactions: Dict[str, List[str]] = None  # emoji -> [user_ids]
 
     def to_dict(self) -> Dict[str, Any]:
@@ -84,7 +84,7 @@ class ChatService:
             old_message = self.messages[room_id].pop(0)
             del self.message_index[room_id][old_message.id]
 
-        logger.info(f"Message added to room {room_id} by {username}: {content[:50]}...")
+        logger.info("Message added to room %s by {username}: {content[:50]}...", room_id)
         return message
 
     def edit_message(self, room_id: str, message_id: str, new_content: str) -> bool:
@@ -243,7 +243,7 @@ class ChatService:
         if room_id in self.messages:
             self.messages[room_id] = []
             self.message_index[room_id] = {}
-            logger.info(f"Cleared all messages from room {room_id}")
+            logger.info("Cleared all messages from room %s", room_id)
 
     def export_messages(self, room_id: str, format: str = "json") -> str:
         """Export messages from a room"""

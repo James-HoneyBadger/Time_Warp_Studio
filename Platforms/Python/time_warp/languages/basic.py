@@ -508,7 +508,7 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
                 except (ValueError, TypeError):
                     # Fallback to literal string if evaluation fails
                     interpreter.set_typed_variable(var_name, str(expr))
-            logger.debug(f"LET {var_name} = {expr}")
+            logger.debug("LET %s = {expr}", var_name)
             return ""
 
         # Handle TIMER special variable
@@ -517,15 +517,15 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
             from ..core.game_support import get_game_state
 
             interpreter.set_typed_variable(var_name, get_game_state().get_timer_value())
-            logger.debug(f"LET {var_name} = TIMER")
+            logger.debug("LET %s = TIMER", var_name)
             return ""
 
         try:
             result = interpreter.evaluate_expression(expr)
             interpreter.set_typed_variable(var_name, result)
-            logger.debug(f"LET {var_name} = {result}")
+            logger.debug("LET %s = {result}", var_name)
         except (ValueError, TypeError, ZeroDivisionError) as e:
-            logger.error(f"LET evaluation error: {e}")
+            logger.error("LET evaluation error: %s", e)
             return f"❌ Error in LET: {e} (expr: '{expr}')\n"
     except ValidationError as e:
         return f"❌ {e}\n"
@@ -565,7 +565,7 @@ def _basic_input(interpreter: "Interpreter", args: str) -> str:
         )
         return ""
     except ValidationError as e:
-        logger.error(f"INPUT validation failed: {e}")
+        logger.error("INPUT validation failed: %s", e)
         return f"❌ {e}\n"
 
 
@@ -654,11 +654,11 @@ def _basic_for(interpreter: "Interpreter", args: str) -> str:
             for_line=interpreter.current_line,
         )
         interpreter.for_stack.append(context)
-        logger.debug(f"FOR {var_name} = {start_val} TO {end_val} STEP {step_val}")
+        logger.debug("FOR %s = {start_val} TO {end_val} STEP {step_val}", var_name)
     except ValidationError as e:
         return f"❌ {e}\n"
     except (ValueError, TypeError, ZeroDivisionError) as e:
-        logger.error(f"FOR error: {e}")
+        logger.error("FOR error: %s", e)
         return f"❌ Error in FOR: {e}\n"
     return ""
 
@@ -705,11 +705,11 @@ def _basic_gosub(interpreter: "Interpreter", args: str) -> str:
         interpreter.gosub_stack.append(interpreter.current_line)
         # print(f"DEBUG: GOSUB pushing {interpreter.current_line}, jumping to {line_num}")
         interpreter.jump_to_line_number(int(line_num))
-        logger.debug(f"GOSUB to line {int(line_num)}")
+        logger.debug("GOSUB to line %s", int(line_num))
     except ValidationError as e:
         return f"❌ {e}\n"
     except (KeyError, IndexError) as e:
-        logger.error(f"GOSUB failed: {e}")
+        logger.error("GOSUB failed: %s", e)
         return f"❌ Error in GOSUB: {e}\n"
 
     return ""
@@ -732,9 +732,9 @@ def _basic_return(interpreter: "Interpreter") -> str:
     try:
         return_line = interpreter.gosub_stack.pop()
         interpreter.current_line = return_line
-        logger.debug(f"RETURN to line {return_line + 1}")
+        logger.debug("RETURN to line %s", return_line + 1)
     except IndexError as e:
-        logger.error(f"RETURN failed: {e}")
+        logger.error("RETURN failed: %s", e)
         return f"❌ Error in RETURN: {e}\n"
 
     return ""
@@ -793,7 +793,7 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
                 interpreter.screen_mode.cols,
                 interpreter.screen_mode.rows,
             )
-            logger.info(f"Set TEXT mode ({cols}x{rows})")
+            logger.info("Set TEXT mode (%sx{rows})", cols)
             return f"🎨 Text mode ({cols}x{rows})\n"
 
         if mode == 1:  # Graphics mode
@@ -814,7 +814,7 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
                 interpreter.screen_mode.width,
                 interpreter.screen_mode.height,
             )
-            logger.info(f"Set GRAPHICS mode ({width}x{height})")
+            logger.info("Set GRAPHICS mode (%sx{height})", width)
             return f"🎨 Graphics mode ({width}x{height})\n"
 
         return f"❌ Unsupported SCREEN mode: {mode}\n"
@@ -858,11 +858,11 @@ def _basic_locate(interpreter: "Interpreter", args: str) -> str:
 
         interpreter.cursor_row = max(0, min(24, row - 1))
         interpreter.cursor_col = max(0, min(79, col - 1))
-        logger.debug(f"LOCATE {row},{col}")
+        logger.debug("LOCATE %s,{col}", row)
     except ValidationError as e:
         return f"❌ {e}\n"
     except (ValueError, TypeError, ZeroDivisionError) as e:
-        logger.error(f"LOCATE error: {e}")
+        logger.error("LOCATE error: %s", e)
         return f"❌ LOCATE error: {e}\n"
 
     return ""
@@ -1204,10 +1204,10 @@ def _basic_call(interpreter: "Interpreter", args: str) -> str:
     try:
         # Validate subroutine name format
         validate_variable_name(sub_name, "subroutine name")
-        logger.debug(f"CALL: Executing subroutine '{sub_name}'")
+        logger.debug("CALL: Executing subroutine '%s'", sub_name)
         return f"📞 Called subroutine: {args.strip()}\n"
     except ValidationError as e:
-        logger.error(f"CALL validation failed: {e}")
+        logger.error("CALL validation failed: %s", e)
         return f"❌ {e}\n"
 
 
@@ -1227,7 +1227,7 @@ def _basic_dim(interpreter: "Interpreter", args: str) -> str:
     for part in parts:
         part = part.strip()
         if "(" not in part or not part.endswith(")"):
-            logger.error(f"DIM: Invalid syntax '{part}'")
+            logger.error("DIM: Invalid syntax '%s'", part)
             return f"❌ Invalid DIM syntax: {part}\n"
 
         # Extract name and size from the form NAME(size)
@@ -1243,18 +1243,18 @@ def _basic_dim(interpreter: "Interpreter", args: str) -> str:
             size = int(interpreter.evaluate_expression(size_str))
 
             if size < 0:
-                logger.error(f"DIM: Negative array dimension for {name_part}")
+                logger.error("DIM: Negative array dimension for %s", name_part)
                 return f"❌ Array dimension must be non-negative: {size}\n"
 
             # Create array initialized to 0.0
             # BASIC arrays are usually 0 to size (inclusive)
             interpreter.arrays[name_part] = [0.0] * (size + 1)
-            logger.debug(f"DIM: Created array '{name_part}' with size {size}")
+            logger.debug("DIM: Created array '%s' with size {size}", name_part)
         except ValidationError as e:
-            logger.error(f"DIM validation failed for {name_part}: {e}")
+            logger.error("DIM validation failed for %s: {e}", name_part)
             return f"❌ {e}\n"
         except (ValueError, TypeError, ZeroDivisionError) as e:
-            logger.error(f"DIM evaluation error for {name_part}: {e}")
+            logger.error("DIM evaluation error for %s: {e}", name_part)
             return f"❌ Error in DIM {name_part}: {e}\n"
 
     return ""
@@ -1732,11 +1732,11 @@ def _basic_poke(interpreter: "Interpreter", args: str) -> str:
 
         # Range checks
         if address < 0 or address > 65535:
-            logger.error(f"POKE: Address out of range: {address}")
+            logger.error("POKE: Address out of range: %s", address)
             return "❌ POKE address must be 0-65535\n"
 
         if value < 0 or value > 255:
-            logger.error(f"POKE: Value out of range: {value}")
+            logger.error("POKE: Value out of range: %s", value)
             return "❌ POKE value must be 0-255\n"
 
         # Store in simulated memory
@@ -1744,14 +1744,14 @@ def _basic_poke(interpreter: "Interpreter", args: str) -> str:
             interpreter.memory = {}
 
         interpreter.memory[address] = value
-        logger.debug(f"POKE: Wrote {value} to address {address}")
+        logger.debug("POKE: Wrote %s to address {address}", value)
         return ""
 
     except ValidationError as e:
-        logger.error(f"POKE validation failed: {e}")
+        logger.error("POKE validation failed: %s", e)
         return f"❌ {e}\n"
     except (ValueError, TypeError, ZeroDivisionError) as e:
-        logger.error(f"POKE evaluation error: {e}")
+        logger.error("POKE evaluation error: %s", e)
         return f"❌ POKE error: {e}\n"
 
 
@@ -1776,7 +1776,7 @@ def _basic_peek(interpreter: "Interpreter", args: str) -> str:
 
         # Range check
         if address < 0 or address > 65535:
-            logger.error(f"PEEK: Address out of range: {address}")
+            logger.error("PEEK: Address out of range: %s", address)
             return f"❌ PEEK address must be 0-65535: got {address}\n"
 
         # Retrieve from simulated memory (default to 0)
@@ -1784,7 +1784,7 @@ def _basic_peek(interpreter: "Interpreter", args: str) -> str:
             interpreter.memory = {}
 
         value = interpreter.memory.get(address, 0)
-        logger.debug(f"PEEK: Read {value} from address {address}")
+        logger.debug("PEEK: Read %s from address {address}", value)
 
         # This is typically used in expressions like: X = PEEK(address)
         # The value needs to be stored in a return value
@@ -1792,10 +1792,10 @@ def _basic_peek(interpreter: "Interpreter", args: str) -> str:
         return f"ℹ️ PEEK({address}) = {value}\n"
 
     except ValidationError as e:
-        logger.error(f"PEEK validation failed: {e}")
+        logger.error("PEEK validation failed: %s", e)
         return f"❌ {e}\n"
     except (ValueError, TypeError, ZeroDivisionError) as e:
-        logger.error(f"PEEK evaluation error: {e}")
+        logger.error("PEEK evaluation error: %s", e)
         return f"❌ PEEK error: {e}\n"
 
 
@@ -1834,11 +1834,11 @@ def _basic_out(interpreter: "Interpreter", args: str) -> str:
 
         # Range checks
         if port < 0 or port > 65535:
-            logger.error(f"OUT: Port out of range: {port}")
+            logger.error("OUT: Port out of range: %s", port)
             return "❌ OUT port must be 0-65535\n"
 
         if value < 0 or value > 255:
-            logger.error(f"OUT: Value out of range: {value}")
+            logger.error("OUT: Value out of range: %s", value)
             return "❌ OUT value must be 0-255\n"
 
         # Store in simulated ports
@@ -1846,14 +1846,14 @@ def _basic_out(interpreter: "Interpreter", args: str) -> str:
             interpreter.ports = {}
 
         interpreter.ports[port] = value
-        logger.debug(f"OUT: Wrote {value} to port {port}")
+        logger.debug("OUT: Wrote %s to port {port}", value)
         return ""
 
     except ValidationError as e:
-        logger.error(f"OUT validation failed: {e}")
+        logger.error("OUT validation failed: %s", e)
         return f"❌ {e}\n"
     except (ValueError, TypeError, ZeroDivisionError) as e:
-        logger.error(f"OUT evaluation error: {e}")
+        logger.error("OUT evaluation error: %s", e)
         return f"❌ OUT error: {e}\n"
 
 
@@ -1878,7 +1878,7 @@ def _basic_in(interpreter: "Interpreter", args: str) -> str:
 
         # Range check
         if port < 0 or port > 65535:
-            logger.error(f"IN: Port out of range: {port}")
+            logger.error("IN: Port out of range: %s", port)
             return f"❌ IN port must be 0-65535: got {port}\n"
 
         # Retrieve from simulated ports (default to 0)
@@ -1886,16 +1886,16 @@ def _basic_in(interpreter: "Interpreter", args: str) -> str:
             interpreter.ports = {}
 
         value = interpreter.ports.get(port, 0)
-        logger.debug(f"IN: Read {value} from port {port}")
+        logger.debug("IN: Read %s from port {port}", value)
 
         # This is typically used in expressions like: X = IN(port)
         return f"ℹ️ IN({port}) = {value}\n"
 
     except ValidationError as e:
-        logger.error(f"IN validation failed: {e}")
+        logger.error("IN validation failed: %s", e)
         return f"❌ {e}\n"
     except (ValueError, TypeError, ZeroDivisionError) as e:
-        logger.error(f"IN evaluation error: {e}")
+        logger.error("IN evaluation error: %s", e)
         return f"❌ IN error: {e}\n"
 
 
@@ -1925,7 +1925,7 @@ def _basic_shell(interpreter: "Interpreter", args: str) -> str:
         return "❌ SHELL requires a command string\n"
 
     # For security, log but don't execute in IDE
-    logger.warning(f"SHELL command attempted (blocked for security): {cmd}")
+    logger.warning("SHELL command attempted (blocked for security): %s", cmd)
     return f"ℹ️ SHELL commands are disabled in IDE for security. Command: {cmd}\n"
 
 

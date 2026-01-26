@@ -176,13 +176,13 @@ class FeedbackCollector:
     def submit_feedback(self, feedback: UserFeedback) -> str:
         """Submit user feedback"""
         self.feedback_items.append(feedback)
-        self.logger.info(f"Feedback submitted: {feedback.id}")
+        self.logger.info("Feedback submitted: %s", feedback.id)
         return feedback.id
 
     def submit_bug_report(self, bug: BugReport) -> str:
         """Submit bug report"""
         self.bug_reports.append(bug)
-        self.logger.info(f"Bug reported: {bug.id}")
+        self.logger.info("Bug reported: %s", bug.id)
         return bug.id
 
     def get_feedback_by_type(self, feedback_type: FeedbackType) -> List[UserFeedback]:
@@ -267,10 +267,10 @@ class BugReporter:
             if bug.id == bug_id:
                 bug.status = status
                 bug.updated_at = datetime.utcnow()
-                self.logger.info(f"Bug {bug_id} updated to {status}")
+                self.logger.info("Bug %s updated to {status}", bug_id)
                 return
 
-        self.logger.warning(f"Bug {bug_id} not found")
+        self.logger.warning("Bug %s not found", bug_id)
 
 
 # ===== A/B TEST FRAMEWORK =====
@@ -289,7 +289,7 @@ class ABTestFramework:
     def create_test(self, ab_test: ABTest) -> str:
         """Create A/B test"""
         self.tests[ab_test.id] = ab_test
-        self.logger.info(f"A/B test created: {ab_test.id}")
+        self.logger.info("A/B test created: %s", ab_test.id)
         return ab_test.id
 
     def assign_user(self, user_id: str, test_id: str) -> str:
@@ -335,7 +335,7 @@ class ABTestFramework:
         if test:
             test.status = "completed"
             test.end_date = datetime.utcnow()
-            self.logger.info(f"A/B test completed: {test_id}")
+            self.logger.info("A/B test completed: %s", test_id)
 
 
 # ===== SESSION TRACKER =====
@@ -353,7 +353,7 @@ class SessionTracker:
         """Start new user session"""
         session = UserSession(user_id=user_id)
         self.sessions[session.id] = session
-        self.logger.info(f"Session started: {session.id}")
+        self.logger.info("Session started: %s", session.id)
         return session
 
     def end_session(self, session_id: str):
@@ -361,7 +361,7 @@ class SessionTracker:
         session = self.sessions.get(session_id)
         if session:
             session.end_session()
-            self.logger.info(f"Session ended: {session_id}")
+            self.logger.info("Session ended: %s", session_id)
 
     def record_action(
         self,
@@ -378,7 +378,7 @@ class SessionTracker:
                 "metadata": metadata or {},
             }
             session.actions.append(action)
-            self.logger.debug(f"Action recorded: {action_name}")
+            self.logger.debug("Action recorded: %s", action_name)
 
     def get_session_analytics(self) -> BetaAnalytics:
         """Generate session analytics"""
@@ -468,10 +468,10 @@ class BetaTestingManager:
             ),
         }
 
-        with open(filepath, "w") as f:
+        with open(filepath, 'w', encoding='utf-8') as f:
             json.dump(report, f, indent=2, default=str)
 
-        self.logger.info(f"Report exported to {filepath}")
+        self.logger.info("Report exported to %s", filepath)
 
 
 # ===== BETA TESTING UI =====

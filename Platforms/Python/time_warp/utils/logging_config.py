@@ -153,7 +153,7 @@ def log_exception(logger: logging.Logger, message: str = "Exception occurred") -
         >>> logger = get_logger(__name__)
         >>> try:
         ...     do_something()
-        ... except Exception:
+        ... except (ValueError, TypeError):
         ...     log_exception(logger, "Failed to process")
     """
     logger.exception(message)

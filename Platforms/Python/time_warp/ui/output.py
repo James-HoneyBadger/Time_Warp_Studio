@@ -116,7 +116,7 @@ class InterpreterThread(QThread):
                 try:
                     variables = self.interp.get_variables()
                     self.variables_updated.emit(variables)
-                except Exception:  # pylint: disable=broad-except
+                except (ValueError, TypeError):  # pylint: disable=broad-except
                     pass
             self.execution_complete.emit()
 

@@ -136,7 +136,7 @@ class AssetLibrary:
                 with open(metadata_file) as f:
                     _ = json.load(f)
                     # Could load additional metadata here
-            except Exception:
+            except (ValueError, TypeError):
                 pass
 
     def import_asset(
@@ -276,7 +276,7 @@ class AssetLibrary:
 
             img = Image.open(file_path)
             return img.size
-        except Exception:
+        except (ValueError, TypeError):
             return (0, 0)
 
     def _get_audio_duration(self, file_path: Path) -> float:
@@ -300,7 +300,7 @@ class AssetLibrary:
             except ImportError:
                 pass
 
-        except Exception:
+        except (ValueError, TypeError):
             pass
 
         return 0.0
@@ -321,9 +321,9 @@ class AssetLibrary:
         }
 
         try:
-            with open(metadata_file, "w") as f:
+            with open(metadata_file, 'w', encoding='utf-8') as f:
                 json.dump(metadata, f, indent=2)
-        except Exception:
+        except (ValueError, TypeError):
             pass
 
     def _get_last_modified(self) -> str:
@@ -334,7 +334,7 @@ class AssetLibrary:
                 from datetime import datetime
 
                 return datetime.fromtimestamp(max(times)).isoformat()
-        except Exception:
+        except (ValueError, TypeError):
             pass
         return "Unknown"
 

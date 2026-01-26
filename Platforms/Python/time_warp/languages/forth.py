@@ -344,11 +344,11 @@ class ForthExecutor:
 
             if token_upper == "I":
                 if len(self.return_stack) >= 2:
-                    # Index is second on return stack (top is loop_start_idx if we keep it there? No, we popped it)
-                    # Wait, in DO we pushed limit, start, idx.
+                    # Index is second on return stack
+                    # (top is loop_start_idx if kept there? No, we popped it)
+                    # In DO we pushed limit, start, idx.
                     # In LOOP we popped them.
                     # So inside the loop, they are on the return stack.
-                    # We need to peek.
                     # Top is loop_start_idx. Next is index.
                     self.stack.append(self.return_stack[-2])
                 else:

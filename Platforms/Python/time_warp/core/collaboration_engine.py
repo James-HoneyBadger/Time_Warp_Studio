@@ -78,11 +78,11 @@ class OperationalTransform:
             op.version = self.version
             self.operation_history.append(op)
 
-            logger.info(f"Applied operation {op.id} from user {op.user_id}")
+            logger.info("Applied operation %s from user {op.user_id}", op.id)
             return True, f"Operation applied successfully (v{self.version})"
 
         except Exception as e:
-            logger.error(f"Error applying operation: {e}")
+            logger.error("Error applying operation: %s", e)
             return False, f"Error applying operation: {str(e)}"
 
     def _transform_operations(self, op_a: Operation, op_b: Operation) -> Operation:
@@ -185,10 +185,10 @@ class OperationalTransform:
                 else:
                     break
 
-            logger.info(f"Reverted to version {version}")
+            logger.info("Reverted to version %s", version)
             return True
         except Exception as e:
-            logger.error(f"Error reverting: {e}")
+            logger.error("Error reverting: %s", e)
             self.operation_history = old_history  # Restore history
             return False
 

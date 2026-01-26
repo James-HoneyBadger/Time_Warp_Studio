@@ -28,7 +28,7 @@ if not DATABASE_URL.startswith("postgresql+asyncpg://"):
         "postgresql://", "postgresql+asyncpg://"
     ).replace("postgres://", "postgresql+asyncpg://")
 
-logger.info(f"Database URL: {DATABASE_URL.split('@')[0]}...")
+logger.info("Database URL: %s...", DATABASE_URL.split('@')[0])
 
 
 # Create async engine
@@ -88,5 +88,5 @@ async def check_db_health() -> bool:
             await session.execute("SELECT 1")
             return True
     except Exception as e:
-        logger.error(f"Database health check failed: {e}")
+        logger.error("Database health check failed: %s", e)
         return False

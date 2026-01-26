@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
             await conn.run_sync(Base.metadata.create_all)
             logger.info("Database tables created")
     except Exception as e:
-        logger.error(f"Database initialization error: {e}")
+        logger.error("Database initialization error: %s", e)
 
     # Initialize Socket.io
     sio_manager = SocketIOManager(app)
@@ -91,7 +91,7 @@ async def health_check():
             await session.execute("SELECT 1")
         db_status = "healthy"
     except Exception as e:
-        logger.error(f"Database health check failed: {e}")
+        logger.error("Database health check failed: %s", e)
         db_status = "unhealthy"
 
     return {
@@ -117,7 +117,7 @@ async def root():
 try:
     app.mount("/static", StaticFiles(directory="static"), name="static")
 except Exception as e:
-    logger.warning(f"Static files not mounted: {e}")
+    logger.warning("Static files not mounted: %s", e)
 
 
 if __name__ == "__main__":
@@ -131,7 +131,7 @@ if __name__ == "__main__":
     # For development, use reload
     reload = os.getenv("ENV", "development") == "development"
 
-    logger.info(f"Starting server on {host}:{port}")
+    logger.info("Starting server on %s:{port}", host)
 
     uvicorn.run(
         "main:app",

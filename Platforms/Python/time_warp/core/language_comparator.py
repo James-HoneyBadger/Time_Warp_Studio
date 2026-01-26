@@ -302,19 +302,29 @@ class ComparisonRenderer:
             <style>
                 body {{ font-family: monospace; margin: 10px; }}
                 .header {{ background: #f0f0f0; padding: 10px; margin: 10px 0; }}
-                .code {{ background: #fff; border: 1px solid #ccc; padding: 10px; margin: 10px 0; }}
-                .output {{ background: #f9f9f9; border-left: 3px solid #0066cc; padding: 10px; }}
+                .code {{
+                    background: #fff; border: 1px solid #ccc;
+                    padding: 10px; margin: 10px 0;
+                }}
+                .output {{
+                    background: #f9f9f9; border-left: 3px solid #0066cc;
+                    padding: 10px;
+                }}
                 .diff {{ color: #cc0000; }}
                 .match {{ color: #00cc00; }}
                 table {{ width: 100%; border-collapse: collapse; }}
-                th, td {{ padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }}
+                th, td {{
+                    padding: 8px; text-align: left;
+                    border-bottom: 1px solid #ddd;
+                }}
             </style>
         </head>
         <body>
             <h2>Language Comparison Report</h2>
 
             <div class="header">
-                <strong>{comparison.language1.value}</strong> vs <strong>{comparison.language2.value}</strong>
+                <strong>{comparison.language1.value}</strong> vs
+                <strong>{comparison.language2.value}</strong>
             </div>
 
             <table>

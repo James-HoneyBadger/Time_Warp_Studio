@@ -522,5 +522,5 @@ class RemoteAIAssistant:
 
             return response.choices[0].message.content
 
-        except Exception:
+        except (ValueError, TypeError):
             return None

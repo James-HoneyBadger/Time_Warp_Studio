@@ -43,7 +43,7 @@ class IDEComponentInitializer:
             self.logger.info("✅ Marketplace initialized")
             return True
         except Exception as e:
-            self.logger.error(f"❌ Marketplace initialization failed: {e}")
+            self.logger.error("❌ Marketplace initialization failed: %s", e)
             return False
 
     def initialize_debugger(self) -> bool:
@@ -68,7 +68,7 @@ class IDEComponentInitializer:
             self.logger.info("✅ Debugger initialized")
             return True
         except Exception as e:
-            self.logger.error(f"❌ Debugger initialization failed: {e}")
+            self.logger.error("❌ Debugger initialization failed: %s", e)
             return False
 
     def initialize_ai_intelligence(self) -> bool:
@@ -103,7 +103,7 @@ class IDEComponentInitializer:
             self.logger.info("✅ AI Intelligence initialized")
             return True
         except Exception as e:
-            self.logger.error(f"❌ AI Intelligence initialization failed: {e}")
+            self.logger.error("❌ AI Intelligence initialization failed: %s", e)
             return False
 
     def initialize_beta_testing(self) -> bool:
@@ -125,7 +125,7 @@ class IDEComponentInitializer:
             self.logger.info("✅ Beta Testing initialized")
             return True
         except Exception as e:
-            self.logger.error(f"❌ Beta Testing initialization failed: {e}")
+            self.logger.error("❌ Beta Testing initialization failed: %s", e)
             return False
 
     def initialize_integration_manager(self) -> bool:
@@ -144,7 +144,7 @@ class IDEComponentInitializer:
             self.logger.info("✅ Integration Manager initialized")
             return True
         except Exception as e:
-            self.logger.error(f"❌ Integration Manager initialization failed: {e}")
+            self.logger.error("❌ Integration Manager initialization failed: %s", e)
             return False
 
     def initialize_all(self) -> Dict[str, bool]:
@@ -158,7 +158,7 @@ class IDEComponentInitializer:
         }
 
         successful = sum(1 for v in results.values() if v)
-        self.logger.info(f"Initialization complete: {successful}/5 components ready")
+        self.logger.info("Initialization complete: %s/5 components ready", successful)
 
         return results
 
@@ -198,7 +198,7 @@ class IDEEventRouter:
                 try:
                     handler(**data)
                 except Exception as e:
-                    self.logger.error(f"Handler error for {event_type}: {e}")
+                    self.logger.error("Handler error for %s: {e}", event_type)
 
     # Marketplace events
     def on_plugin_search(self, query: str):
@@ -216,7 +216,7 @@ class IDEEventRouter:
             self.emit_event("marketplace:installed", plugin_id=plugin_id)
 
     # Debugger events
-    def on_breakpoint_created(self, file: str, line: int, condition: str = None):
+    def on_breakpoint_created(self, file: str, line: int, condition: str | None = None):
         """Handle breakpoint creation"""
         debugger = self.initializer.get_component("debugger")
         if debugger:
@@ -288,7 +288,7 @@ class MarketplaceIntegrationMixin:
 
             self.logger.info("✅ Marketplace UI initialized")
         except Exception as e:
-            self.logger.error(f"❌ Marketplace UI initialization failed: {e}")
+            self.logger.error("❌ Marketplace UI initialization failed: %s", e)
 
     def on_plugin_installed(self, plugin_id: str):
         """Handle plugin installation from UI"""
@@ -315,7 +315,7 @@ class DebuggerIntegrationMixin:
 
             self.logger.info("✅ Debugger UI initialized")
         except Exception as e:
-            self.logger.error(f"❌ Debugger UI initialization failed: {e}")
+            self.logger.error("❌ Debugger UI initialization failed: %s", e)
 
     def on_breakpoint_ui_created(self, file: str, line: int):
         """Handle breakpoint creation from UI"""
@@ -342,7 +342,7 @@ class AIIntegrationMixin:
 
             self.logger.info("✅ AI UI initialized")
         except Exception as e:
-            self.logger.error(f"❌ AI UI initialization failed: {e}")
+            self.logger.error("❌ AI UI initialization failed: %s", e)
 
     def on_code_edited(self, code: str, language: str, position: tuple):
         """Handle code editing for AI suggestions"""
@@ -364,7 +364,7 @@ class PerformanceMonitoringMixin:
 
             self.logger.info("✅ Performance Monitor UI initialized")
         except Exception as e:
-            self.logger.error(f"❌ Performance Monitor UI initialization failed: {e}")
+            self.logger.error("❌ Performance Monitor UI initialization failed: %s", e)
 
     def start_performance_monitoring(self):
         """Start periodic performance metric updates"""
@@ -406,7 +406,7 @@ class IDEIntegrationController:
             self.logger.info("✅ IDE integration complete")
             return True
         except Exception as e:
-            self.logger.error(f"❌ IDE integration failed: {e}")
+            self.logger.error("❌ IDE integration failed: %s", e)
             import traceback
 
             traceback.print_exc()
@@ -421,7 +421,7 @@ class IDEIntegrationController:
 
             self.logger.info("UI components ready for integration")
         except Exception as e:
-            self.logger.error(f"Failed to add UI components: {e}")
+            self.logger.error("Failed to add UI components: %s", e)
 
 
 # ===== DECORATORS FOR IDE HOOKS =====

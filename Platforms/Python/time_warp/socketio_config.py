@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class SocketIOManager:
     """Manages Socket.io server instance and lifecycle"""
 
-    def __init__(self, app: FastAPI = None, cors_origins: list = None):
+    def __init__(self, app: FastAPI | None = None, cors_origins: list | None = None):
         self.app = app
         self.socketio = None
         self.engine = None
@@ -57,7 +57,7 @@ class SocketIOManager:
 
         handler = handler_class(self.socketio)
         handler.register_all()
-        logger.info(f"Registered handlers from {handler_class.__name__}")
+        logger.info("Registered handlers from %s", handler_class.__name__)
 
     async def connect_server(self):
         """Called when server starts"""
@@ -72,7 +72,7 @@ class SocketIOManager:
 _socketio_manager = None
 
 
-def get_socketio_manager(app: FastAPI = None) -> SocketIOManager:
+def get_socketio_manager(app: FastAPI | None = None) -> SocketIOManager:
     """Get or create Socket.io manager"""
     global _socketio_manager
     if _socketio_manager is None:

@@ -407,7 +407,7 @@ Next Steps:
         report += "\n═══════════════════════════════════════════════════════════\n"
 
         if output_path:
-            with open(output_path, "w") as f:
+            with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(report)
 
         return report
@@ -437,7 +437,7 @@ Next Steps:
         json_str = json.dumps(data, indent=2, default=str)
 
         if output_path:
-            with open(output_path, "w") as f:
+            with open(output_path, 'w', encoding='utf-8') as f:
                 f.write(json_str)
 
         return json_str

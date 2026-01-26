@@ -131,7 +131,8 @@ def run_example(path: Path, inputs: List[str]):
                 continue
             except StopIteration:
                 print(
-                    "No more fixture input available — aborting execution to prevent infinite loop."
+                    "No more fixture input available — "
+                    "aborting execution to prevent infinite loop."
                 )
                 break
 

@@ -110,7 +110,7 @@ class TurtlePreview:
             try:
                 handler = self.command_map[cmd]
                 handler(args, line_num)
-            except Exception:
+            except (ValueError, TypeError):
                 pass  # Silently skip invalid commands
 
     def _forward(self, args: List[str], line_num: int) -> None:

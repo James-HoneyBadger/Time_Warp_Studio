@@ -109,8 +109,8 @@ class CollaborationClient:
 
     def connect(
         self,
-        server: str = None,
-        username: str = None,
+        server: str | None = None,
+        username: str | None = None,
         callback: Callable[[bool, str], None] = None,
     ) -> bool:
         """Connect to collaboration server."""

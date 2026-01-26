@@ -272,7 +272,7 @@ class Interpreter:
         # Debugging state
         self.debug_mode: bool = False
         self.debug_event = threading.Event()
-        self.debug_callback: DebugCallback = None
+        self.debug_callback: DebugCallback | None = None
         self.breakpoints: set = set()
         self.step_mode: bool = False
 

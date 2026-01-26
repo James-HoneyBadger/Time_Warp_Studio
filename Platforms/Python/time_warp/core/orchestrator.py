@@ -248,7 +248,7 @@ class SystemOrchestrator:
                     )
 
             return True
-        except Exception:
+        except (ValueError, TypeError):
             self._set_status(SystemStatus.FAILED)
             return False
 

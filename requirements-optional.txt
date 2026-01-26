@@ -1,0 +1,5 @@
+# Optional dependencies for extended features
+openai>=1.0.0
+librosa>=0.10.0
+pydub>=0.25.1
+requests>=2.31.0

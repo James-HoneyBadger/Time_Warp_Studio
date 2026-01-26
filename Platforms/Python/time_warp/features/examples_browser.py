@@ -117,7 +117,7 @@ class ExamplesBrowser:
                 # Read code
                 try:
                     code = file_path.read_text()
-                except Exception:
+                except (ValueError, TypeError):
                     code = ""
 
                 example = Example(

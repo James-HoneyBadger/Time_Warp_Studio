@@ -226,12 +226,11 @@ def _printf(interpreter: "Interpreter", arglist: str) -> str:
                         elif spec_type in "cs":
                             val = str(val)
 
-                        # Use Python's string formatting which is compatible with C's for most parts
-                        # We need to remove 'l' or 'L' length modifiers as
-                        # Python doesn't use them
+                        # Use Python's string formatting compatible with C
+                        # Remove 'l' or 'L' length modifiers (not in Python)
                         py_spec = spec_full.replace("l", "").replace("L", "")
                         out.append(py_spec % val)
-                    except Exception:
+                    except (ValueError, TypeError):
                         out.append(spec_full)  # Fallback
 
                     i += len(spec_full)

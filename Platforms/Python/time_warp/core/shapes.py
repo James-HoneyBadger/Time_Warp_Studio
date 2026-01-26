@@ -374,7 +374,7 @@ class ShapeLibrary:
         turtle: "TurtleState",
         points: int,
         outer_size: float,
-        inner_size: float = None,
+        inner_size: float | None = None,
         fill: bool = False,
     ) -> str:
         """Draw a star shape.
@@ -445,7 +445,7 @@ class ShapeLibrary:
     def draw_arrow(
         turtle: "TurtleState",
         length: float,
-        width: float = None,
+        width: float | None = None,
         fill: bool = False,
     ) -> str:
         """Draw an arrow in the turtle's current direction."""
@@ -501,7 +501,7 @@ class ShapeLibrary:
         turtle: "TurtleState",
         teeth: int,
         outer_size: float,
-        inner_size: float = None,
+        inner_size: float | None = None,
         fill: bool = False,
     ) -> str:
         """Draw a gear shape."""
@@ -535,7 +535,7 @@ class ShapeLibrary:
     def draw_cross(
         turtle: "TurtleState",
         size: float,
-        thickness: float = None,
+        thickness: float | None = None,
         fill: bool = False,
     ) -> str:
         """Draw a cross/plus shape."""
@@ -569,7 +569,7 @@ class ShapeLibrary:
     def draw_diamond(
         turtle: "TurtleState",
         width: float,
-        height: float = None,
+        height: float | None = None,
         fill: bool = False,
     ) -> str:
         """Draw a diamond shape."""
@@ -615,7 +615,7 @@ class ShapeLibrary:
 
 
 # Global instance
-_shape_library: ShapeLibrary = None
+_shape_library: ShapeLibrary | None = None
 
 
 def get_shape_library() -> ShapeLibrary:

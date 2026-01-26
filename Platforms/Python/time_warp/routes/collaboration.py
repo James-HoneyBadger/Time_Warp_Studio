@@ -54,7 +54,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
 
         # Accept connection
         await connection_manager.connect(connection_id, websocket, user_data)
-        logger.info(f"User {user_data['name']} connected: {connection_id}")
+        logger.info("User %s connected: {connection_id}", user_data['name'])
 
         # Join room
         await connection_manager.join_room(connection_id, room_id)
@@ -194,16 +194,16 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
                 )
 
             else:
-                logger.warning(f"Unknown message type: {message_type}")
+                logger.warning("Unknown message type: %s", message_type)
 
     except WebSocketDisconnect:
-        logger.info(f"User disconnected: {connection_id}")
+        logger.info("User disconnected: %s", connection_id)
         await handle_disconnect(
             connection_id, room_id, connection_manager, presence_service
         )
 
-    except Exception as e:
-        logger.error(f"WebSocket error: {e}")
+    except (ValueError, KeyError, AttributeError, TypeError) as e:
+        logger.error("WebSocket error: %s", e)
         await handle_disconnect(
             connection_id, room_id, connection_manager, presence_service
         )
@@ -246,7 +246,7 @@ async def handle_code_change(room_id, connection_id, user_id, data, manager, eng
                 "timestamp": operation.timestamp,
             },
         )
-        logger.info(f"Code change applied in room {room_id}: {op_type}")
+        logger.info("Code change applied in room %s: {op_type}", room_id)
     else:
         await manager.send_to_connection(
             connection_id,
@@ -265,4 +265,4 @@ async def handle_disconnect(connection_id, room_id, manager, presence_service):
     # Remove connection
     manager.disconnect(connection_id)
 
-    logger.info(f"User {connection_id} disconnected from room {room_id}")
+    logger.info("User %s disconnected from room {room_id}", connection_id)

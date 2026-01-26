@@ -185,7 +185,7 @@ class ThemeManager:
                 data = json.loads(theme_file.read_text())
                 theme = Theme.from_dict(data)
                 self.themes[theme.id] = theme
-            except Exception:
+            except (ValueError, TypeError):
                 pass  # Skip invalid themes
 
     def save_custom_theme(self, theme: Theme) -> bool:
@@ -200,7 +200,7 @@ class ThemeManager:
             theme_file.write_text(json.dumps(theme.to_dict(), indent=2))
             self.themes[theme.id] = theme
             return True
-        except Exception:
+        except (ValueError, TypeError):
             return False
 
     def create_theme(

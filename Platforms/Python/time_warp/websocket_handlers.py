@@ -48,14 +48,14 @@ class WebSocketEventHandler:
 
     async def on_connect(self, sid: str, environ: Dict[str, Any]):
         """Handle connection"""
-        logger.info(f"Client connected: {sid}")
+        logger.info("Client connected: %s", sid)
         await self.sio.emit(
             "connection_response", {"data": "Connected to server"}, to=sid
         )
 
     async def on_disconnect(self, sid: str):
         """Handle disconnection"""
-        logger.info(f"Client disconnected: {sid}")
+        logger.info("Client disconnected: %s", sid)
         # Clean up user from all rooms
         rooms = self.connection_manager.get_user_rooms(sid)
         for room_id in rooms:
@@ -94,7 +94,7 @@ class WebSocketEventHandler:
                     user_data.get("email"),
                 )
         except Exception as e:
-            logger.error(f"Error adding member to database: {e}")
+            logger.error("Error adding member to database: %s", e)
 
         # Set presence
         self.presence_service.set_user_presence(sid, room_id, user_data)
@@ -115,7 +115,7 @@ class WebSocketEventHandler:
             skip_sid=sid,
         )
 
-        logger.info(f"User {user_id} joined room {room_id}")
+        logger.info("User %s joined room {room_id}", user_id)
 
     async def on_leave_room(self, sid: str, data: Dict[str, Any]):
         """Handle room leave"""
@@ -139,7 +139,7 @@ class WebSocketEventHandler:
             to=room_id,
         )
 
-        logger.info(f"User {user_id} left room {room_id}")
+        logger.info("User %s left room {room_id}", user_id)
 
     async def on_code_change(self, sid: str, data: Dict[str, Any]):
         """Handle code changes with OT"""
@@ -179,7 +179,7 @@ class WebSocketEventHandler:
                         op.content,
                     )
             except Exception as e:
-                logger.error(f"Error persisting operation: {e}")
+                logger.error("Error persisting operation: %s", e)
 
             # Broadcast to room
             await self.sio.emit(
@@ -253,7 +253,7 @@ class WebSocketEventHandler:
                 chat_service = ChatService(session)
                 await chat_service.add_message(room_id, user_id, username, content)
         except Exception as e:
-            logger.error(f"Error persisting message: {e}")
+            logger.error("Error persisting message: %s", e)
 
         # Broadcast
         await self.sio.emit(
@@ -287,7 +287,7 @@ class WebSocketEventHandler:
                 chat_service = ChatService(session)
                 await chat_service.add_reaction(message_id, emoji, user_id)
         except Exception as e:
-            logger.error(f"Error adding reaction: {e}")
+            logger.error("Error adding reaction: %s", e)
 
         # Broadcast
         await self.sio.emit(
