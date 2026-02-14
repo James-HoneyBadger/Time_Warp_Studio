@@ -6,7 +6,7 @@ Handles conflict-free concurrent edits across multiple clients
 import logging
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List, Tuple
 
 logger = logging.getLogger(__name__)
@@ -154,7 +154,7 @@ class OperationalTransform:
             type=op_type,
             position=position,
             content=content,
-            timestamp=datetime.utcnow().timestamp(),
+            timestamp=datetime.now(timezone.utc).timestamp(),
             version=self.version,
         )
 

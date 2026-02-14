@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 
 class ConceptType(Enum):
@@ -150,7 +150,9 @@ class LearningAnalytics:
     def end_session(self) -> float:
         """End session and return total time."""
         if self.session_start:
-            session_duration = (datetime.now() - self.session_start).total_seconds()
+            session_duration = (
+                datetime.now() - self.session_start
+            ).total_seconds()
             self.total_coding_time += session_duration
             self._trigger_callbacks("session_ended", duration=session_duration)
             return session_duration
@@ -220,7 +222,7 @@ class LearningAnalytics:
 
     def get_error_analysis(self) -> Dict:
         """Analyze error patterns."""
-        analysis = {
+        analysis: Dict[str, Any] = {
             "total_errors": len(self.error_patterns),
             "most_common": [],
             "by_category": {},
@@ -232,7 +234,7 @@ class LearningAnalytics:
         )
 
         # Most common errors
-        for error_key, pattern in sorted_errors[:5]:
+        for _error_key, pattern in sorted_errors[:5]:
             analysis["most_common"].append(
                 {
                     "message": pattern.message,
@@ -242,7 +244,7 @@ class LearningAnalytics:
             )
 
         # Errors by category
-        for error_key, pattern in self.error_patterns.items():
+        for _error_key, pattern in self.error_patterns.items():
             cat = pattern.category.value
             if cat not in analysis["by_category"]:
                 analysis["by_category"][cat] = []
@@ -359,11 +361,11 @@ class LearningAnalytics:
         concept_summary = self.get_concept_summary()
         for concept, info in concept_summary.items():
             level = info["level"].upper()
-            bar = "█" * int(info["confidence"] * 10) + "░" * (
+            bar_segment = "█" * int(info["confidence"] * 10) + "░" * (
                 10 - int(info["confidence"] * 10)
             )
             report += f"\n{
-                concept:20} [{bar}] {
+                concept:20} [{bar_segment}] {
                 info['confidence'] *
                 100:3.0f}% ({level})"
 
@@ -404,10 +406,12 @@ Next Steps:
         for rec in self.get_recommended_concepts():
             report += f"  • {rec}\n"
 
-        report += "\n═══════════════════════════════════════════════════════════\n"
+        report += (
+            "\n═══════════════════════════════════════════════════════════\n"
+        )
 
         if output_path:
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 f.write(report)
 
         return report
@@ -485,9 +489,13 @@ class ClassroomAnalytics:
             return {}
 
         all_programs = sum(len(s.programs) for s in self.students.values())
-        avg_success = sum(
-            s.get_progress_metrics()["successful_rate"] for s in self.students.values()
-        ) / len(self.students)
+        avg_success = (
+            sum(
+                s.get_progress_metrics()["successful_rate"]
+                for s in self.students.values()
+            )
+            / len(self.students)
+        )
 
         return {
             "total_students": len(self.students),

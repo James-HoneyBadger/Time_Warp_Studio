@@ -11,9 +11,13 @@ Provides:
 
 from collections import defaultdict
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Dict, List, Optional
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 # ===== ENUMS =====
 

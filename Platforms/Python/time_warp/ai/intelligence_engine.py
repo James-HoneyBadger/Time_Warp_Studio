@@ -11,9 +11,13 @@ Provides:
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 # ===== ENUMS =====
 
@@ -148,8 +152,8 @@ class LearningPath:
     recommended_topics: List[str] = field(default_factory=list)
 
     # Metadata
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)
 
 
 @dataclass
@@ -427,7 +431,7 @@ class LearningPathGenerator:
 
         self.user_profiles[user_id] = {
             "path": path,
-            "created_at": datetime.utcnow(),
+            "created_at": utc_now(),
         }
 
         return path
@@ -460,7 +464,7 @@ class LearningPathGenerator:
                 elif path.current_level == LearningLevel.INTERMEDIATE:
                     path.current_level = LearningLevel.ADVANCED
 
-        path.updated_at = datetime.utcnow()
+        path.updated_at = utc_now()
         return True
 
 

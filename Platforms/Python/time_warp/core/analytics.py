@@ -12,9 +12,13 @@ Provides:
 import uuid
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 # ===== ANALYTICS =====
 
@@ -65,7 +69,7 @@ class AnalyticsEvent:
 
     event_type: EventType
     user_id: str
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=utc_now)
     session_id: str = field(default_factory=lambda: str(uuid.uuid4()))
     properties: Dict[str, Any] = field(default_factory=dict)
     context: Dict[str, Any] = field(default_factory=dict)
@@ -238,8 +242,8 @@ class FeatureFlag:
     whitelist_users: List[str] = field(default_factory=list)
     blacklist_users: List[str] = field(default_factory=list)
     rules: List[FeatureFlagRule] = field(default_factory=list)
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)
 
 
 class FeatureFlagProvider(ABC):
@@ -309,7 +313,7 @@ class LocalFeatureFlagProvider(FeatureFlagProvider):
 
     def set_flag(self, flag: FeatureFlag) -> bool:
         """Set flag"""
-        flag.updated_at = datetime.utcnow()
+        flag.updated_at = utc_now()
         self.flags[flag.key] = flag
         return True
 

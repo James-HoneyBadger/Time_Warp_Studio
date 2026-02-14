@@ -60,7 +60,10 @@ class LocalAIAssistant:
             "C": 'for (int i = 1; i <= 10; i++) printf("%d\\n", i);',
         },
         "conditionals": {
-            "BASIC": 'IF x > 5 THEN\n  PRINT "Greater"\nELSE\n  PRINT "Less"\nEND IF',
+            "BASIC": (
+                'IF x > 5 THEN\n  PRINT "Greater"\nELSE\n'
+                '  PRINT "Less"\nEND IF'
+            ),
             "LOGO": 'IF :x > 5 [PRINT "Greater"] [PRINT "Less"]',
             "PASCAL": 'if x > 5 then WriteLn("Greater") else WriteLn("Less");',
             "C": 'if (x > 5) printf("Greater\\n"); else printf("Less\\n");',
@@ -76,9 +79,13 @@ class LocalAIAssistant:
                 'SUB greet(name$)\n  PRINT "Hello " name$\nEND SUB\n'
                 'CALL greet("World")'
             ),
-            "LOGO": "TO square :size\n  REPEAT 4 [FORWARD :size RIGHT 90]\nEND",
+            "LOGO": (
+                "TO square :size\n  REPEAT 4 "
+                "[FORWARD :size RIGHT 90]\nEND"
+            ),
             "PASCAL": (
-                'procedure greet(name: string); begin WriteLn("Hello " + name); end;'
+                "procedure greet(name: string); "
+                "begin WriteLn(\"Hello \" + name); end;"
             ),
             "C": 'void greet(char *name) { printf("Hello %s\\n", name); }',
         },
@@ -88,7 +95,9 @@ class LocalAIAssistant:
     ERROR_PATTERNS = {
         "undefined variable": {
             "pattern": "variable .* not found",
-            "suggestion": "Make sure the variable is declared or assigned before use.",
+            "suggestion": (
+                "Make sure the variable is declared or assigned before use."
+            ),
             "example": "Use: x = 10 before using x",
         },
         "syntax error": {
@@ -104,7 +113,8 @@ class LocalAIAssistant:
         "divide by zero": {
             "pattern": "divide by zero",
             "suggestion": (
-                'Add a check before division: IF divisor = 0 THEN PRINT "Error"'
+                "Add a check before division: IF divisor = 0 THEN PRINT "
+                '"Error"'
             ),
             "example": "IF x <> 0 THEN result = y / x",
         },
@@ -122,6 +132,24 @@ class LocalAIAssistant:
             self.callbacks[event_name] = []
         self.callbacks[event_name].append(callback)
 
+    def load_knowledge_base(self):
+        """Load or refresh the local knowledge base.
+
+        The assistant ships with a built-in knowledge base, so this is a
+        lightweight no-op kept for UI compatibility.
+        """
+        self._trigger_callbacks("knowledge_loaded")
+
+    def query(self, prompt: str) -> str:
+        """Handle a generic query using built-in heuristics."""
+        normalized = prompt.strip().lower()
+        for concept in self.KNOWLEDGE_BASE:
+            if concept in normalized:
+                suggestion = self.suggest_code(concept)
+                return suggestion.explanation
+
+        return self.explain_concept(normalized)
+
     def _trigger_callbacks(self, event_name: str, **kwargs):
         """Trigger callbacks for event."""
         if event_name in self.callbacks:
@@ -129,7 +157,7 @@ class LocalAIAssistant:
                 callback(**kwargs)
 
     def explain_error(
-        self, error_message: str, code: Optional[str] = None
+        self, error_message: str, _code: Optional[str] = None
     ) -> AssistantSuggestion:
         """Explain an error message."""
         explanation = self._analyze_error(error_message)
@@ -161,7 +189,9 @@ class LocalAIAssistant:
         code = self.KNOWLEDGE_BASE.get(concept.lower(), {}).get(lang_name, "")
 
         if code:
-            explanation = f"Here's how to implement {concept} in {lang_name}:\n\n{code}"
+            explanation = (
+                f"Here's how to implement {concept} in {lang_name}:\n\n{code}"
+            )
             confidence = 0.95
         else:
             explanation = (
@@ -181,17 +211,23 @@ class LocalAIAssistant:
         self._trigger_callbacks("code_suggested", suggestion=result)
         return result
 
-    def fix_syntax(self, code: str, error: Optional[str] = None) -> AssistantSuggestion:
+    def fix_syntax(
+        self, code: str, _error: Optional[str] = None
+    ) -> AssistantSuggestion:
         """Suggest fixes for syntax errors."""
         fixes = self._identify_common_syntax_issues(code)
 
         if fixes:
             explanation = "Found potential syntax issues:\n\n"
             for i, fix in enumerate(fixes, 1):
-                explanation += f"{i}. {fix['issue']}\n   Fix: {fix['suggestion']}\n\n"
+                explanation += (
+                    f"{i}. {fix['issue']}\n   Fix: {fix['suggestion']}\n\n"
+                )
             confidence = 0.8
         else:
-            explanation = "No obvious syntax errors found. The issue might be semantic."
+            explanation = (
+                "No obvious syntax errors found. The issue might be semantic."
+            )
             confidence = 0.5
 
         result = AssistantSuggestion(
@@ -211,7 +247,9 @@ class LocalAIAssistant:
 
         explanation = "Optimization opportunities:\n\n"
         for sug in suggestions:
-            explanation += f"• {sug['description']}\n  Impact: {sug['impact']}\n\n"
+            explanation += (
+                f"• {sug['description']}\n  Impact: {sug['impact']}\n\n"
+            )
 
         result = AssistantSuggestion(
             mode=AssistantMode.OPTIMIZE_CODE,
@@ -228,18 +266,20 @@ class LocalAIAssistant:
         """Explain a programming concept."""
         explanations = {
             "loop": (
-                "A loop repeats a block of code multiple times. USE: FOR loops for "
-                "fixed counts, WHILE loops for conditions."
+                "A loop repeats a block of code multiple times. USE: FOR "
+                "loops for fixed counts, WHILE loops for conditions."
             ),
             "variable": (
-                "A variable stores a value that can change. You can assign different "
-                "values to it throughout your program."
+                "A variable stores a value that can change. You can assign "
+                "different values to it throughout your program."
             ),
             "array": (
-                "An array is a list of values. Access items by index (0, 1, 2, etc.)."
+                "An array is a list of values. Access items by index "
+                "(0, 1, 2, etc.)."
             ),
             "function": (
-                "A function is reusable code. Define it once, call it many times."
+                "A function is reusable code. Define it once, call it many "
+                "times."
             ),
             "conditional": (
                 "IF statements make decisions. "
@@ -247,12 +287,12 @@ class LocalAIAssistant:
                 "ELSE execute another."
             ),
             "recursion": (
-                "A function calling itself. Useful for trees, fractals, and divide-and-"
-                "conquer problems."
+                "A function calling itself. Useful for trees, fractals, and "
+                "divide-and-conquer problems."
             ),
             "variable scope": (
-                "Where a variable is accessible. Local = inside function, Global = "
-                "everywhere."
+                "Where a variable is accessible. Local = inside function, "
+                "Global = everywhere."
             ),
         }
 
@@ -266,15 +306,21 @@ class LocalAIAssistant:
         )
         return explanation
 
-    def generate_example(self, concept: str, difficulty: str = "beginner") -> str:
+    def generate_example(
+        self, concept: str, difficulty: str = "beginner"
+    ) -> str:
         """Generate example code."""
         examples = {
             "loop": {
                 "beginner": "FOR i = 1 TO 5\n  PRINT i\nNEXT i",
-                "intermediate": "WHILE x < 100\n  x = x * 2\n  PRINT x\nEND WHILE",
+                "intermediate": (
+                    "WHILE x < 100\n  x = x * 2\n  PRINT x\nEND WHILE"
+                ),
             },
             "function": {
-                "beginner": 'SUB hello()\n  PRINT "Hello World"\nEND SUB\nCALL hello()',
+                "beginner": (
+                    'SUB hello()\n  PRINT "Hello World"\nEND SUB\nCALL hello()'
+                ),
                 "intermediate": (
                     "FUNCTION add(a, b)\n  RETURN a + b\nEND FUNCTION\n"
                     "RESULT = add(3, 4)"
@@ -286,7 +332,11 @@ class LocalAIAssistant:
             difficulty, "No example available"
         )
 
-        self._trigger_callbacks("example_generated", concept=concept, example=example)
+        self._trigger_callbacks(
+            "example_generated",
+            concept=concept,
+            example=example,
+        )
         return example
 
     def chat(self, user_message: str) -> str:
@@ -300,7 +350,11 @@ class LocalAIAssistant:
         response = self._generate_chat_response(user_message)
 
         self.conversation_history.append(
-            ConversationMessage(role="assistant", content=response, timestamp=0)
+            ConversationMessage(
+                role="assistant",
+                content=response,
+                timestamp=0,
+            )
         )
 
         self._trigger_callbacks("chat_response", message=response)
@@ -336,7 +390,10 @@ class LocalAIAssistant:
         # Generic error handling
         return {
             "meaning": "An error occurred during execution.",
-            "fix": "Check the error message for clues. Read the code line by line.",
+            "fix": (
+                "Check the error message for clues. Read the code line by "
+                "line."
+            ),
             "confidence": 0.5,
             "alternatives": [],
         }
@@ -352,7 +409,8 @@ class LocalAIAssistant:
             issues.append(
                 {
                     "issue": (
-                        f"Unclosed IF statement (found {open_if} IF, {close_if} ENDIF)"
+                        "Unclosed IF statement (found "
+                        f"{open_if} IF, {close_if} ENDIF)"
                     ),
                     "suggestion": "Add ENDIF at the end of IF blocks",
                     "fixed": code,  # Would need to add actual fix
@@ -366,7 +424,8 @@ class LocalAIAssistant:
             issues.append(
                 {
                     "issue": (
-                        f"Unclosed FOR loop (found {for_count} FOR, {next_count} NEXT)"
+                        "Unclosed FOR loop (found "
+                        f"{for_count} FOR, {next_count} NEXT)"
                     ),
                     "suggestion": "Add NEXT at the end of FOR loops",
                 }
@@ -391,7 +450,7 @@ class LocalAIAssistant:
         lines = code.split("\n")
 
         # Check for repeated code
-        line_counts = {}
+        line_counts: Dict[str, int] = {}
         for line in lines:
             line_counts[line] = line_counts.get(line, 0) + 1
 
@@ -435,13 +494,16 @@ class LocalAIAssistant:
                 return self.suggest_code("functions").explanation
             else:
                 return (
-                    "I can help with loops, functions, arrays, and conditionals. "
-                    "What would you like to learn?"
+                    "I can help with loops, functions, arrays, and "
+                    "conditionals. What would you like to learn?"
                 )
 
         # Error queries
         if "error" in msg_lower or "bug" in msg_lower or "fix" in msg_lower:
-            return "Share your error message and code snippet, and I'll help debug it!"
+            return (
+                "Share your error message and code snippet, and I'll help "
+                "debug it!"
+            )
 
         # Concept queries
         if "what is" in msg_lower or "explain" in msg_lower:
@@ -460,8 +522,8 @@ class LocalAIAssistant:
 
         # Default response
         return (
-            "Ask me about loops, functions, arrays, conditionals, or any errors you're "
-            "seeing!"
+            "Ask me about loops, functions, arrays, conditionals, or any "
+            "errors you're seeing!"
         )
 
 
@@ -475,15 +537,19 @@ class RemoteAIAssistant:
         self.model = "gpt-3.5-turbo"
         self.conversation_history: List[ConversationMessage] = []
 
-    def explain_error(self, error: str, code: Optional[str] = None) -> Optional[str]:
+    def explain_error(
+        self, error: str, code: Optional[str] = None
+    ) -> Optional[str]:
         """Use OpenAI to explain error."""
         if not self.enabled:
             return None
 
         try:
-            import openai
+            import importlib
 
-            openai.api_key = self.api_key
+            openai = importlib.import_module("openai")
+
+            setattr(openai, "api_key", self.api_key)
 
             prompt = f"Explain this programming error in simple terms: {error}"
             if code:
@@ -498,19 +564,26 @@ class RemoteAIAssistant:
             return response.choices[0].message.content
 
         except ImportError:
-            return "OpenAI library not installed. Install with: pip install openai"
-        except Exception as e:
-            return f"API error: {str(e)}"
+            return (
+                "OpenAI library not installed. Install with: "
+                "pip install openai"
+            )
+        except (ValueError, RuntimeError) as exc:
+            return f"API error: {str(exc)}"
 
-    def suggest_code(self, description: str, language: str = "BASIC") -> Optional[str]:
+    def suggest_code(
+        self, description: str, language: str = "BASIC"
+    ) -> Optional[str]:
         """Use OpenAI to suggest code."""
         if not self.enabled:
             return None
 
         try:
-            import openai
+            import importlib
 
-            openai.api_key = self.api_key
+            openai = importlib.import_module("openai")
+
+            setattr(openai, "api_key", self.api_key)
 
             prompt = f"Write a {language} program that: {description}"
 

@@ -62,6 +62,8 @@ class MainWindow(QMainWindow):
     # methods to avoid excessive linter noise.
     # pylint: disable=too-many-instance-attributes,too-many-public-methods
 
+    MAX_SAFE_LINES = 10000
+
     def __init__(self):
         super().__init__()
 
@@ -636,6 +638,8 @@ class MainWindow(QMainWindow):
 
         # Connect output panel signals
         self.output.variables_updated.connect(self.on_variables_updated)
+        self.output.execution_stats.connect(self.on_execution_stats)
+        self.output.error_occurred.connect(self.on_execution_error)
 
         # Turtle canvas
         self.canvas = TurtleCanvas(self)
@@ -1519,6 +1523,10 @@ class MainWindow(QMainWindow):
         if not editor:
             return
 
+        if self.output.is_running():
+            self.statusbar.showMessage("Program already running")
+            return
+
         current_info = self.get_current_tab_info()
         language = current_info["language"]
 
@@ -1534,6 +1542,26 @@ class MainWindow(QMainWindow):
 
         code = editor.toPlainText()
 
+        line_count = len(code.splitlines())
+        if line_count > self.MAX_SAFE_LINES:
+            choice = QMessageBox.warning(
+                self,
+                "Large Program Warning",
+                (
+                    "This program is very large and may slow down the IDE. "
+                    "Run anyway?"
+                ),
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            if choice != QMessageBox.StandardButton.Yes:
+                self.statusbar.showMessage("Execution cancelled")
+                return
+
+        if not self._validate_before_run(code, language):
+            self.statusbar.showMessage("Execution cancelled")
+            return
+
         # Update UI state
         self.run_action.setEnabled(False)
         self.stop_action.setEnabled(True)
@@ -1541,6 +1569,56 @@ class MainWindow(QMainWindow):
 
         # Start execution (no debug controls in this build)
         self.output.run_program(code, self.canvas, debug_mode=False)
+
+    def _validate_before_run(self, code: str, language: Language) -> bool:
+        """Validate code with the Syntax Validator panel before execution."""
+        panel = self.feature_manager.get_feature_panel("syntax_validator")
+        if panel and hasattr(panel, "validate_external"):
+            issues = panel.validate_external(code, language)
+            if issues > 0:
+                choice = QMessageBox.question(
+                    self,
+                    "Syntax Issues Detected",
+                    (
+                        f"Syntax Validator found {issues} issues. "
+                        "Run anyway?"
+                    ),
+                    QMessageBox.StandardButton.Yes
+                    | QMessageBox.StandardButton.No,
+                    QMessageBox.StandardButton.No,
+                )
+                return choice == QMessageBox.StandardButton.Yes
+        return True
+
+    def on_execution_stats(self, stats: dict):
+        """Handle execution stats from output panel."""
+        language = stats.get("language")
+        if isinstance(language, Language):
+            stats["language"] = language.friendly_name()
+
+        profiler_panel = self.feature_manager.get_feature_panel(
+            "performance_profiler"
+        )
+        if profiler_panel and hasattr(profiler_panel, "update_from_stats"):
+            profiler_panel.update_from_stats(stats)
+
+        replay_panel = self.feature_manager.get_feature_panel(
+            "execution_replay"
+        )
+        if replay_panel and hasattr(replay_panel, "record_execution"):
+            replay_panel.record_execution(stats)
+
+        analytics_panel = self.feature_manager.get_feature_panel(
+            "learning_analytics"
+        )
+        if analytics_panel and hasattr(analytics_panel, "record_execution"):
+            analytics_panel.record_execution(stats)
+
+    def on_execution_error(self, error: str):
+        """Handle execution errors for AI assistance."""
+        ai_panel = self.feature_manager.get_feature_panel("ai_assistant")
+        if ai_panel and hasattr(ai_panel, "set_error_context"):
+            ai_panel.set_error_context(error)
 
     def stop_program(self):
         """Stop running program."""

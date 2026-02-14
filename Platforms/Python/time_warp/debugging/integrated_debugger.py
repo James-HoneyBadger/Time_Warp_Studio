@@ -11,9 +11,13 @@ Provides:
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional, Tuple
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 # ===== ENUMS =====
 
@@ -70,7 +74,7 @@ class Breakpoint:
     verified: bool = False
 
     # Metadata
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
 
 
 @dataclass
@@ -117,14 +121,14 @@ class Watch:
 
     # Notification
     changed: bool = False
-    last_evaluated: datetime = field(default_factory=datetime.utcnow)
+    last_evaluated: datetime = field(default_factory=utc_now)
 
 
 @dataclass
 class ExecutionTrace:
     """Execution trace point"""
 
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=utc_now)
     file: str = ""
     line: int = 0
     function: str = ""
@@ -156,7 +160,7 @@ class DebugSession:
     total_execution_time_ms: float = 0.0
 
     # Metadata
-    started_at: datetime = field(default_factory=datetime.utcnow)
+    started_at: datetime = field(default_factory=utc_now)
     paused_at: Optional[datetime] = None
 
 
@@ -237,7 +241,8 @@ class DebuggerEngine:
             return False
 
         self.current_session.state = ExecutionState.PAUSED
-        self.current_session.paused_at = datetime.utcnow()
+        self.current_session.paused_at = utc_now()
+            "created_at": utc_now(),
 
         for handler in self.breakpoint_handlers:
             handler(bp_id, self.current_session)
@@ -449,7 +454,7 @@ class PairDebugManager:
             "target": target_id,
             "shared_breakpoints": [],
             "synchronized": False,
-            "created_at": datetime.utcnow(),
+            "created_at": utc_now(),
         }
         return session_id
 

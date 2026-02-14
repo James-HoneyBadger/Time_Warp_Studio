@@ -6,7 +6,7 @@ Manages chat messages, notifications, and message history
 import logging
 import uuid
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
@@ -73,7 +73,7 @@ class ChatService:
             user_id=user_id,
             username=username,
             content=content,
-            timestamp=datetime.utcnow().timestamp(),
+            timestamp=datetime.now(timezone.utc).timestamp(),
         )
 
         self.messages[room_id].append(message)
@@ -98,7 +98,7 @@ class ChatService:
         message = self.message_index[room_id][message_id]
         message.content = new_content
         message.edited = True
-        message.edited_at = datetime.utcnow().timestamp()
+        message.edited_at = datetime.now(timezone.utc).timestamp()
 
         return True
 

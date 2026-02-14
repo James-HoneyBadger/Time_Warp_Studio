@@ -197,8 +197,8 @@ class IDEEventRouter:
             for handler in self.handlers[event_type]:
                 try:
                     handler(**data)
-                except Exception as e:
-                    self.logger.error("Handler error for %s: {e}", event_type)
+                except Exception as exc:
+                    self.logger.error("Handler error for %s: %s", event_type, exc)
 
     # Marketplace events
     def on_plugin_search(self, query: str):

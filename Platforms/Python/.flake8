@@ -8,6 +8,8 @@ exclude =
 max-line-length = 88
 extend-ignore = 
     E203,
+    E266,
+    E501,
     C901,
     W503
 per-file-ignores =

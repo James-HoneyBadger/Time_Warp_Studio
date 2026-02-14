@@ -4,7 +4,7 @@ Tracks user status, cursor position, and activity in rooms
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 logger = logging.getLogger(__name__)
@@ -44,8 +44,8 @@ class PresenceService:
             "color": user_data.get("color", "#3B82F6"),
             "status": "idle",
             "cursorPosition": {"line": 0, "column": 0},
-            "lastActivity": datetime.utcnow().isoformat(),
-            "joinedAt": datetime.utcnow().isoformat(),
+            "lastActivity": datetime.now(timezone.utc).isoformat(),
+            "joinedAt": datetime.now(timezone.utc).isoformat(),
         }
 
         self.room_presence[room_id][connection_id] = presence_data
@@ -66,7 +66,7 @@ class PresenceService:
 
         presence = self.room_presence[room_id][connection_id]
         presence["status"] = status
-        presence["lastActivity"] = datetime.utcnow().isoformat()
+        presence["lastActivity"] = datetime.now(timezone.utc).isoformat()
 
         self.user_presence[connection_id] = presence
 
@@ -89,7 +89,7 @@ class PresenceService:
 
         presence = self.room_presence[room_id][connection_id]
         presence["cursorPosition"] = position
-        presence["lastActivity"] = datetime.utcnow().isoformat()
+        presence["lastActivity"] = datetime.now(timezone.utc).isoformat()
 
         if room_id not in self.cursor_positions:
             self.cursor_positions[room_id] = {}
@@ -169,7 +169,7 @@ class PresenceService:
             return []
 
         removed_users = []
-        current_time = datetime.utcnow()
+        current_time = datetime.now(timezone.utc)
 
         for connection_id, presence in list(self.room_presence[room_id].items()):
             last_activity = datetime.fromisoformat(presence["lastActivity"])
@@ -186,8 +186,11 @@ class PresenceService:
                 self.remove_user_presence(connection_id, room_id)
 
         if removed_users:
-            logger.info("Cleaned up %s inactive users from {room_id}", 
-                    len(removed_users))
+            logger.info(
+                "Cleaned up %s inactive users from %s",
+                len(removed_users),
+                room_id,
+            )
 
         return removed_users
 

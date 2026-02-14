@@ -14,10 +14,14 @@ import time
 import traceback
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from enum import Enum
 from functools import wraps
 from typing import Any, Callable, Dict, List, Optional
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 # ===== ERROR TYPES =====
 
@@ -86,7 +90,7 @@ class HealthCheckResult:
     status_code: int
     response_time_ms: float
     message: str
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=utc_now)
     dependencies: Dict[str, bool] = field(default_factory=dict)
 
 
@@ -181,7 +185,7 @@ class CircuitBreakerStrategy(RecoveryStrategy):
         if self.open:
             # Check if timeout has passed
             if self.last_failure_time:
-                elapsed = (datetime.utcnow() - self.last_failure_time).total_seconds()
+                elapsed = (utc_now() - self.last_failure_time).total_seconds()
                 if elapsed > self.timeout:
                     self.open = False
                     self.failure_count = 0
@@ -193,7 +197,7 @@ class CircuitBreakerStrategy(RecoveryStrategy):
     def recover(self, error: Exception, context: Dict[str, Any]) -> bool:
         """Track failures and open circuit if needed"""
         self.failure_count += 1
-        self.last_failure_time = datetime.utcnow()
+        self.last_failure_time = utc_now()
 
         if self.failure_count >= self.failure_threshold:
             self.open = True
@@ -262,7 +266,7 @@ class ErrorHandler:
             if strategy.can_recover(error, context):
                 if strategy.recover(error, context):
                     record.resolved = True
-                    record.resolution_time = datetime.utcnow() - record.timestamp
+                    record.resolution_time = utc_now() - record.timestamp
                     return True
 
         return False
@@ -281,7 +285,7 @@ class ErrorHandler:
 
         return ErrorRecord(
             id=str(uuid.uuid4()),
-            timestamp=datetime.utcnow(),
+            timestamp=utc_now(),
             category=category,
             severity=severity,
             message=str(error),
@@ -316,7 +320,7 @@ class PerformanceMetrics:
     cpu_percent: float
     error_rate: float
     throughput: float  # requests per second
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=utc_now)
 
 
 class Monitor:
@@ -362,7 +366,7 @@ class Monitor:
 
     def get_metrics_summary(self, minutes: int = 60) -> Dict[str, Any]:
         """Get metrics summary for time period"""
-        cutoff = datetime.utcnow() - timedelta(minutes=minutes)
+        cutoff = utc_now() - timedelta(minutes=minutes)
         recent = [m for m in self.metrics if m.timestamp >= cutoff]
 
         if not recent:
@@ -421,7 +425,7 @@ def monitor_performance(func):
     @wraps(func)
     def wrapper(*args, **kwargs):
         start_time = time.time()
-        _start_memory = get_memory_usage()
+        get_memory_usage()
 
         try:
             result = func(*args, **kwargs)

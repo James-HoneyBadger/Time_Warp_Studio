@@ -4,6 +4,10 @@ This module handles integration of the 14 feature panels into the IDE window,
 creating a feature menu system, and managing signals/callbacks for features.
 """
 
+# PySide6 symbols are provided at runtime; silence pylint import resolution
+# errors for these modules in this file.
+# pylint: disable=no-name-in-module
+
 from typing import Dict, Optional
 
 from PySide6.QtCore import Qt
@@ -169,6 +173,9 @@ class FeatureIntegrationManager:
         # Create all feature panels
         self._create_feature_panels()
 
+        # Create features menu
+        self._create_features_menu()
+
         # Connect feature status signals to IDE
         self._connect_feature_signals()
 
@@ -278,7 +285,10 @@ class FeatureIntegrationManager:
         for feature_name, feature_id, panel_class, description in features:
             if panel_class is None:
                 # Show as disabled for Phase 3 features
-                action = QAction(f"{feature_name} ({description})", self.main_window)
+                action = QAction(
+                    f"{feature_name} ({description})",
+                    self.main_window,
+                )
                 action.setEnabled(False)
             else:
                 # Create checkable action for toggleable panels
@@ -326,7 +336,10 @@ class FeatureIntegrationManager:
         """Show all feature panels."""
         for feature_id in self.dock_widgets:
             self.toggle_feature_panel(feature_id, visible=True)
-        self.main_window.statusbar.showMessage("✓ All features shown", 2000)
+        self.main_window.statusbar.showMessage(
+            "✓ All features shown",
+            2000,
+        )
 
     def hide_all_features(self):
         """Hide all feature panels."""
@@ -342,7 +355,8 @@ class FeatureIntegrationManager:
             if hasattr(panel, "status_changed"):
                 panel.status_changed.connect(
                     lambda status, fid=feature_id: self._on_feature_status_changed(
-                        fid, status
+                        fid,
+                        status,
                     )
                 )
 
@@ -355,7 +369,8 @@ class FeatureIntegrationManager:
             if hasattr(panel, "operation_completed"):
                 panel.operation_completed.connect(
                     lambda result, fid=feature_id: self._on_operation_completed(
-                        fid, result
+                        fid,
+                        result,
                     )
                 )
 

@@ -14,8 +14,12 @@ import logging
 import statistics
 import time
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Callable, List, Optional
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 # ===== DATA CLASSES =====
 
@@ -32,7 +36,7 @@ class BenchmarkResult:
     avg_time: float
     std_dev: float
     throughput: float  # iterations per second
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=utc_now)
 
 
 @dataclass
@@ -41,7 +45,7 @@ class BenchmarkSuite:
 
     suite_name: str
     results: List[BenchmarkResult] = field(default_factory=list)
-    start_time: datetime = field(default_factory=datetime.utcnow)
+    start_time: datetime = field(default_factory=utc_now)
     end_time: Optional[datetime] = None
     total_duration: float = 0.0
 
@@ -114,7 +118,7 @@ class BenchmarkRunner:
         """Create a benchmark suite"""
         suite = BenchmarkSuite(suite_name=name)
         suite.results = self.results
-        suite.end_time = datetime.utcnow()
+        suite.end_time = utc_now()
         suite.total_duration = (suite.end_time - suite.start_time).total_seconds()
         return suite
 

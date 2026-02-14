@@ -4,7 +4,7 @@ Handles connections, rooms, and message broadcasting
 """
 
 import logging
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Dict, List
 
 from fastapi import WebSocket
@@ -82,7 +82,7 @@ class ConnectionManager:
                 "userId": connection_id,
                 "name": self.users[connection_id].get("name"),
                 "color": self.users[connection_id].get("color"),
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
             },
             exclude_connection=connection_id,
         )
@@ -126,7 +126,7 @@ class ConnectionManager:
                     "type": "user_left",
                     "userId": connection_id,
                     "name": user_data.get("name"),
-                    "timestamp": datetime.utcnow().isoformat(),
+                    "timestamp": datetime.now(timezone.utc).isoformat(),
                 },
             )
 
@@ -142,8 +142,8 @@ class ConnectionManager:
         if connection_id in self.active_connections:
             try:
                 await self.active_connections[connection_id].send_json(message)
-            except Exception as e:
-                logger.error("Error sending to %s: {e}", connection_id)
+            except Exception as exc:
+                logger.error("Error sending to %s: %s", connection_id, exc)
 
     async def broadcast_to_room(
         self,
@@ -169,8 +169,8 @@ class ConnectionManager:
 
             try:
                 await self.active_connections[connection_id].send_json(message)
-            except Exception as e:
-                logger.error("Error broadcasting to %s: {e}", connection_id)
+            except Exception as exc:
+                logger.error("Error broadcasting to %s: %s", connection_id, exc)
                 dead_connections.append(connection_id)
 
         # Clean up dead connections
@@ -183,8 +183,8 @@ class ConnectionManager:
         for connection_id in self.active_connections:
             try:
                 await self.active_connections[connection_id].send_json(message)
-            except Exception as e:
-                logger.error("Error broadcasting to %s: {e}", connection_id)
+            except Exception as exc:
+                logger.error("Error broadcasting to %s: %s", connection_id, exc)
                 dead_connections.append(connection_id)
 
         for connection_id in dead_connections:

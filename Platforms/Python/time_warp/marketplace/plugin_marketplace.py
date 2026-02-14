@@ -11,9 +11,13 @@ Provides:
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 # ===== ENUMS =====
 
@@ -77,7 +81,7 @@ class PluginListing:
     # Status
     status: PublishStatus = PublishStatus.DRAFT
     published_at: Optional[datetime] = None
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    updated_at: datetime = field(default_factory=utc_now)
 
     # Requirements
     min_version: str = "6.1.0"
@@ -102,8 +106,8 @@ class PluginReview:
     reported: bool = False
 
     # Metadata
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)
 
 
 @dataclass
@@ -122,7 +126,7 @@ class PluginRelease:
 
     # Status
     status: PublishStatus = PublishStatus.PUBLISHED
-    released_at: datetime = field(default_factory=datetime.utcnow)
+    released_at: datetime = field(default_factory=utc_now)
 
     # Stats
     downloads: int = 0
@@ -148,7 +152,7 @@ class DeveloperProfile:
     average_rating: float = 0.0
 
     # Metadata
-    joined_at: datetime = field(default_factory=datetime.utcnow)
+    joined_at: datetime = field(default_factory=utc_now)
     verified: bool = False
 
 
@@ -167,7 +171,7 @@ class PluginTemplate:
     example_manifest: Dict = field(default_factory=dict)
 
     # Metadata
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
     downloads: int = 0
 
 
@@ -209,7 +213,7 @@ class MarketplaceService:
         listing = self.listings.get(plugin_id)
         if listing:
             listing.status = PublishStatus.APPROVED
-            listing.published_at = datetime.utcnow()
+            listing.published_at = utc_now()
             return True
         return False
 
@@ -309,7 +313,8 @@ class MarketplaceService:
         listing = self.listings.get(plugin_id)
         if listing:
             listing.version = version
-            listing.updated_at = datetime.utcnow()
+            listing.updated_at = utc_now()
+            "installed_at": utc_now(),
 
         return release
 
@@ -374,7 +379,7 @@ class InstallationService:
         self.installations[key] = {
             "plugin_id": plugin_id,
             "version": version,
-            "installed_at": datetime.utcnow(),
+            "installed_at": utc_now(),
             "enabled": True,
         }
         return True

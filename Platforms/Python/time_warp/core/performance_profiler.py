@@ -48,7 +48,8 @@ class PerformanceProfiler:
         Initialize profiler.
 
         Args:
-            hotspot_threshold: Percentage of total time to mark as hotspot (default 5%)
+            hotspot_threshold: Percentage of total time to mark as hotspot
+                (default 5%)
         """
         self.hotspot_threshold = hotspot_threshold
         self.line_profiles: Dict[int, LineProfile] = {}
@@ -78,14 +79,13 @@ class PerformanceProfiler:
         self._calculate_hotspots()
 
     def record_line_execution(
-        self, line_no: int, line_content: str, execution_time: float
+        self, line_no: int, _line_content: str, execution_time: float
     ):
-        """
-        Record execution time for a line.
+        """Record execution time for a line.
 
         Args:
             line_no: Line number
-            line_content: Source code content
+            _line_content: Source code content
             execution_time: Execution time in milliseconds
         """
         if line_no not in self._line_times:
@@ -100,7 +100,10 @@ class PerformanceProfiler:
         for line_no, times in self._line_times.items():
             total = sum(times)
             avg = total / len(times) if times else 0
-            percentage = (total / self.total_time * 100) if self.total_time > 0 else 0
+            if self.total_time > 0:
+                percentage = (total / self.total_time) * 100
+            else:
+                percentage = 0
 
             profile = LineProfile(
                 line_no=line_no,
@@ -149,12 +152,10 @@ class PerformanceProfiler:
         if hotspots:
             lines.append("TOP 10 HOTSPOTS (Slowest Lines):")
             lines.append("-" * 70)
-            lines.append(f"{
-                    'Line':<6} {
-                    'Time (ms)':<12} {
-                    'Calls':<8} {
-                    'Avg (ms)':<12} {
-                        '% Total':<10}")
+            lines.append(
+                f"{'Line':<6} {'Time (ms)':<12} {'Calls':<8} "
+                f"{'Avg (ms)':<12} {'% Total':<10}"
+            )
             lines.append("-" * 70)
 
             for profile in hotspots:
@@ -198,7 +199,7 @@ class LineExecutionTracer:
         self.last_time = time.perf_counter()
         self.frame_times: Dict[int, float] = {}
 
-    def trace_lines(self, frame, event, arg):
+    def trace_lines(self, frame, event, _arg):
         """Trace function for sys.settrace()."""
         if not self.profiler.is_profiling:
             return None
@@ -212,7 +213,11 @@ class LineExecutionTracer:
 
             # Record execution time for previous line
             if line_no in self.frame_times:
-                self.profiler.record_line_execution(line_no, "code line", elapsed)
+                self.profiler.record_line_execution(
+                    line_no,
+                    "code line",
+                    elapsed,
+                )
 
             self.last_time = current_time
             return self.trace_lines
@@ -246,27 +251,36 @@ class OptimizationSuggester:
         for profile in hotspots:
             if profile.call_count > 1000:
                 suggestions.append(
-                    f"Line {profile.line_no}: Called {profile.call_count} times. "
-                    f"Consider moving loop to outer scope or optimizing the expression."
+                    (
+                        f"Line {profile.line_no}: Called {profile.call_count} "
+                        "times. Consider moving loop to outer scope or "
+                        "optimizing the expression."
+                    )
                 )
             elif profile.call_count > 100:
-                suggestions.append(f"Line {
-                        profile.line_no}: High call count ({
-                        profile.call_count}). " f"Check for unnecessary nested loops.")
+                suggestions.append(
+                    (
+                        f"Line {profile.line_no}: High call count "
+                        f"({profile.call_count}). Check for unnecessary "
+                        "nested loops."
+                    )
+                )
 
         # Check for lines taking >20% of total time
         for profile in hotspots:
             if profile.time_percentage > 20:
                 suggestions.append(
-                    f"Line {
-                        profile.line_no}: Uses {
-                        profile.time_percentage:.1f}% of total time. "
-                    f"This is a major bottleneck."
+                    (
+                        f"Line {profile.line_no}: Uses "
+                        f"{profile.time_percentage:.1f}% of total time. "
+                        "This is a major bottleneck."
+                    )
                 )
 
         if not suggestions:
             suggestions.append(
-                "No critical hotspots found. Code is reasonably well-optimized."
+                "No critical hotspots found. Code is reasonably "
+                "well-optimized."
             )
 
         return suggestions
@@ -290,18 +304,17 @@ class ExecutionTimeVisualizer:
 
         for profile in hotspots:
             bar_width = int((profile.total_time / max_time) * width)
-            bar = "█" * bar_width
+            bar_segment = "█" * bar_width
             percentage = (
                 (profile.total_time / profiler.total_time * 100)
                 if profiler.total_time > 0
                 else 0
             )
-
-            lines.append(f"Line {
-                    profile.line_no:<5} {
-                    bar:<50} {
-                    percentage:>5.1f}% ({
-                    profile.total_time:.2f}ms)")
+            lines.append(
+                f"Line {profile.line_no:<5} "
+                f"{bar_segment:<50} {percentage:>5.1f}% "
+                f"({profile.total_time:.2f}ms)"
+            )
 
         return "\n".join(lines)
 

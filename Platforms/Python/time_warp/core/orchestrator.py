@@ -11,9 +11,13 @@ Provides:
 
 import sys
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 # ===== ENUMS =====
 
@@ -62,7 +66,7 @@ class SystemInfo:
     version: str = "6.1.0"
     status: SystemStatus = SystemStatus.INITIALIZING
     uptime_seconds: int = 0
-    started_at: datetime = field(default_factory=datetime.utcnow)
+    started_at: datetime = field(default_factory=utc_now)
     components: Dict[str, ComponentInfo] = field(default_factory=dict)
 
     # Subsystem versions
@@ -81,7 +85,7 @@ class InitializationReport:
     """Report from system initialization"""
 
     success: bool = True
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=utc_now)
     components_initialized: int = 0
     components_failed: int = 0
     initialization_time_seconds: float = 0.0
@@ -177,7 +181,7 @@ class SystemOrchestrator:
     def initialize_system(self) -> InitializationReport:
         """Initialize all system components"""
         self._set_status(SystemStatus.INITIALIZING)
-        start_time = datetime.utcnow()
+        start_time = utc_now()
 
         try:
             # Set default supported languages
@@ -200,7 +204,7 @@ class SystemOrchestrator:
                     component_info = self.system_info.components.get(name)
                     if component_info:
                         component_info.status = ComponentStatus.READY
-                        component_info.last_initialized = datetime.utcnow()
+                        component_info.last_initialized = utc_now()
                     self.initialization_report.components_initialized += 1
                 except Exception as e:
                     self.initialization_report.errors.append(f"{name}: {str(e)}")
@@ -211,7 +215,7 @@ class SystemOrchestrator:
                         component_info.last_error = str(e)
 
             # Calculate initialization time
-            init_time = (datetime.utcnow() - start_time).total_seconds()
+            init_time = (utc_now() - start_time).total_seconds()
             self.initialization_report.initialization_time_seconds = init_time
 
             # Determine overall success
@@ -258,7 +262,7 @@ class SystemOrchestrator:
             "status": self.system_info.status.value,
             "version": self.system_info.version,
             "uptime_seconds": (
-                datetime.utcnow() - self.system_info.started_at
+                utc_now() - self.system_info.started_at
             ).total_seconds(),
             "components": {
                 name: {

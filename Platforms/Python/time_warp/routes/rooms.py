@@ -8,7 +8,7 @@ from datetime import datetime
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..db import get_session
@@ -37,8 +37,7 @@ class RoomResponse(BaseModel):
     is_private: bool
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MemberResponse(BaseModel):
@@ -50,8 +49,7 @@ class MemberResponse(BaseModel):
     role: str
     joined_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class OperationResponse(BaseModel):
@@ -65,8 +63,7 @@ class OperationResponse(BaseModel):
     version: int
     timestamp: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MessageResponse(BaseModel):
@@ -78,8 +75,7 @@ class MessageResponse(BaseModel):
     content: str
     timestamp: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 # Routes

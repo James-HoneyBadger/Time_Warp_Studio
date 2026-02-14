@@ -3,7 +3,7 @@ SQLAlchemy Models for Collaborative Editing
 Defines schema for rooms, messages, operations, and user presence
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import (
     JSON,
@@ -16,8 +16,11 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import declarative_base, relationship
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 Base = declarative_base()
 
@@ -33,8 +36,8 @@ class Room(Base):
     owner_id = Column(String(255), nullable=False, index=True)
     is_private = Column(Boolean, default=False)
     max_users = Column(Integer, default=100)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = Column(DateTime(timezone=True), default=utc_now, index=True)
+    updated_at = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
 
     # Relationships
     messages = relationship(
@@ -73,8 +76,8 @@ class RoomMember(Base):
     user_email = Column(String(255), nullable=True)
     user_color = Column(String(7), default="#3B82F6")
     role = Column(String(50), default="member")  # admin, member, viewer
-    joined_at = Column(DateTime, default=datetime.utcnow)
-    last_seen = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    joined_at = Column(DateTime(timezone=True), default=utc_now)
+    last_seen = Column(DateTime(timezone=True), default=utc_now, onupdate=utc_now)
     is_active = Column(Boolean, default=True)
 
     # Relationships
@@ -97,7 +100,7 @@ class Operation(Base):
     position = Column(Integer, nullable=False)
     content = Column(Text, nullable=False)
     version = Column(Integer, nullable=False, index=True)
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
+    timestamp = Column(DateTime(timezone=True), default=utc_now, index=True)
     meta_info = Column(JSON, nullable=True)
 
     # Relationships
@@ -130,8 +133,8 @@ class Message(Base):
     user_id = Column(String(255), nullable=False, index=True)
     username = Column(String(255), nullable=False)
     content = Column(Text, nullable=False)
-    timestamp = Column(DateTime, default=datetime.utcnow, index=True)
-    edited_at = Column(DateTime, nullable=True)
+    timestamp = Column(DateTime(timezone=True), default=utc_now, index=True)
+    edited_at = Column(DateTime(timezone=True), nullable=True)
     is_edited = Column(Boolean, default=False)
     reactions = Column(JSON, default={})  # {emoji: [user_ids]}
     is_deleted = Column(Boolean, default=False)
@@ -163,7 +166,7 @@ class DocumentSnapshot(Base):
     content = Column(Text, nullable=False)
     version = Column(Integer, nullable=False)
     size_bytes = Column(Integer, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow, index=True)
+    created_at = Column(DateTime(timezone=True), default=utc_now, index=True)
 
     def to_dict(self):
         return {
@@ -190,7 +193,7 @@ class ConflictResolution(Base):
         String(50), nullable=False
     )  # insert-insert, delete-delete, etc
     resolution_strategy = Column(String(50), nullable=False)  # timestamp, user_id, etc
-    resolved_at = Column(DateTime, default=datetime.utcnow)
+    resolved_at = Column(DateTime(timezone=True), default=utc_now)
 
     def to_dict(self):
         return {

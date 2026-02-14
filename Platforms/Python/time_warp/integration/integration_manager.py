@@ -18,9 +18,13 @@ Handles:
 import logging
 import threading
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 # ===== ENUMS =====
 
@@ -67,8 +71,8 @@ class IntegrationEvent:
 
     component: ComponentType
     event_type: str  # initialized, ready, error, metrics
-    timestamp: datetime = field(default_factory=datetime.utcnow)
     data: Dict[str, Any] = field(default_factory=dict)
+    timestamp: datetime = field(default_factory=utc_now)
 
 
 @dataclass
@@ -79,7 +83,7 @@ class PerformanceMetric:
     metric_name: str
     value: float
     unit: str
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=utc_now)
     threshold: Optional[float] = None
 
 
@@ -125,7 +129,7 @@ class IntegrationManager:
             try:
                 initializer()
                 metadata.status = IntegrationStatus.READY
-                metadata.initialized_at = datetime.utcnow()
+                metadata.initialized_at = utc_now()
                 self._fire_event(
                     IntegrationEvent(
                         component=metadata.type,
@@ -453,7 +457,7 @@ class IntegrationHealthCheck:
         metrics = self.manager.get_metrics_summary()
 
         status = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": utc_now().isoformat(),
             "components": {
                 cid: {
                     "name": meta.name,

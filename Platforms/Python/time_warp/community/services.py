@@ -11,9 +11,13 @@ Provides:
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional, Set
+
+
+def utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 # ===== ENUMS =====
 
@@ -68,8 +72,8 @@ class UserProfile:
     notifications_enabled: bool = True
 
     # Dates
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    last_active: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
+    last_active: datetime = field(default_factory=utc_now)
 
 
 @dataclass
@@ -92,8 +96,8 @@ class CodeSnippet:
     comments: int = 0
 
     # Metadata
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)
     is_public: bool = True
     is_pinned: bool = False
 
@@ -115,7 +119,7 @@ class Challenge:
 
     # Metadata
     author_id: str = ""
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
     deadline: Optional[datetime] = None
 
     # Participation
@@ -143,7 +147,7 @@ class ChallengeSubmission:
     execution_time_ms: float = 0.0
 
     # Metadata
-    submitted_at: datetime = field(default_factory=datetime.utcnow)
+    submitted_at: datetime = field(default_factory=utc_now)
     completed: bool = False
     completion_time_minutes: int = 0
 
@@ -189,8 +193,9 @@ class ForumPost:
     helpful_votes: int = 0
 
     # Metadata
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)
+        profile.last_active = utc_now()
     pinned: bool = False
     closed: bool = False
 
@@ -212,8 +217,8 @@ class ForumReply:
     is_accepted_answer: bool = False
 
     # Metadata
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=utc_now)
+    updated_at: datetime = field(default_factory=utc_now)
 
 
 # ===== SERVICES =====
@@ -246,7 +251,7 @@ class ProfileService:
             if hasattr(profile, key):
                 setattr(profile, key, value)
 
-        profile.last_active = datetime.utcnow()
+        profile.last_active = utc_now()
         return True
 
     def follow(self, user_id: str, target_user_id: str) -> bool:
@@ -458,7 +463,7 @@ class CommunityService:
             xp_reward=xp_reward,
             reputation_reward=reputation_reward,
             unlocked=True,
-            unlocked_at=datetime.utcnow(),
+            unlocked_at=utc_now(),
         )
 
         if user_id not in self.achievements:

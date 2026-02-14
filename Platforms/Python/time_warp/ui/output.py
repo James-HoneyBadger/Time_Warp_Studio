@@ -4,6 +4,8 @@
 # Disable 'no-name-in-module' here; PySide6 provides these symbols at runtime.
 # pylint: disable=no-name-in-module
 
+import time
+
 from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
@@ -31,6 +33,7 @@ class InterpreterThread(QThread):
     input_requested = Signal(str, bool)  # (prompt, is_numeric)
     debug_paused = Signal(int, dict)  # (line, variables)
     variables_updated = Signal(dict)  # variables dict after execution
+    execution_stats = Signal(dict)  # execution metrics
 
     # The thread __init__ intentionally accepts several parameters for
     # configuration; silence the "too many args" checks for readability.
@@ -52,9 +55,11 @@ class InterpreterThread(QThread):
         self.interp = interpreter
         self.debug_mode = debug_mode
         self.breakpoints = breakpoints or set()
+        self._had_error = False
 
     def run(self):
         """Run interpreter in background."""
+        start_time = time.perf_counter()
         try:
             if self.interp is None:
                 self.interp = Interpreter()
@@ -86,10 +91,11 @@ class InterpreterThread(QThread):
                 try:
                     import sys
 
-                    print(
-                        f"[THREAD] Turtle changed! {len(self.turtle.lines)} lines",
-                        file=sys.stderr,
+                    message = (
+                        "[THREAD] Turtle changed! "
+                        f"{len(self.turtle.lines)} lines"
                     )
+                    print(message, file=sys.stderr)
                 except (BrokenPipeError, OSError):
                     pass
                 self.state_changed.emit()
@@ -107,9 +113,22 @@ class InterpreterThread(QThread):
                 # Emit variables after execution
                 variables = self.interp.get_variables()
                 self.variables_updated.emit(variables)
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                line_count = len(
+                    [line for line in self.code.splitlines() if line.strip()]
+                )
+                self.execution_stats.emit(
+                    {
+                        "duration_ms": duration_ms,
+                        "lines": line_count,
+                        "language": self.language,
+                        "successful": not self._had_error,
+                    }
+                )
                 self.execution_complete.emit()
 
         except (ValueError, RuntimeError, OSError) as e:
+            self._had_error = True
             self.error_occurred.emit(str(e))
             # Still emit variables on error if interpreter exists
             if self.interp:
@@ -118,6 +137,18 @@ class InterpreterThread(QThread):
                     self.variables_updated.emit(variables)
                 except (ValueError, TypeError):  # pylint: disable=broad-except
                     pass
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            line_count = len(
+                [line for line in self.code.splitlines() if line.strip()]
+            )
+            self.execution_stats.emit(
+                {
+                    "duration_ms": duration_ms,
+                    "lines": line_count,
+                    "language": self.language,
+                    "successful": False,
+                }
+            )
             self.execution_complete.emit()
 
     def stop(self):
@@ -135,6 +166,8 @@ class OutputPanel(QTextEdit):
     # pause before the UI has hooked the thread signal).
     debug_paused = Signal(int, dict)  # (line, variables)
     variables_updated = Signal(dict)  # variables after execution
+    execution_stats = Signal(dict)
+    error_occurred = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -155,7 +188,8 @@ class OutputPanel(QTextEdit):
 
         # Store last error for AI assistance
         self.last_error = None
-        self.tabs_widget = None  # Reference to right_tabs for switching to Graphics tab
+        # Reference to right_tabs for switching to Graphics tab
+        self.tabs_widget = None
 
     def set_language(self, language):
         """Set the current language for execution."""
@@ -245,11 +279,15 @@ class OutputPanel(QTextEdit):
         self.exec_thread.execution_complete.connect(
             lambda: self.on_complete(self.current_canvas, turtle)
         )
+        self.exec_thread.execution_stats.connect(self.execution_stats.emit)
         # Wrap state_changed connection so we don't build a long inline
         # lambda expression and exceed line-length limits.
 
         def _on_state_changed():
-            print("[OUTPUT] _on_state_changed signal received!", file=sys.stderr)
+            print(
+                "[OUTPUT] _on_state_changed signal received!",
+                file=sys.stderr,
+            )
             self.on_state_change(turtle)
 
         self.exec_thread.state_changed.connect(_on_state_changed)
@@ -303,15 +341,19 @@ class OutputPanel(QTextEdit):
         # DEBUG: Log state changes
         import sys
 
-        print(
-            f"[OUTPUT] on_state_change: canvas={self.current_canvas is not None}, "
-            f"lines={len(turtle.lines)}",
-            file=sys.stderr,
+        message = (
+            "[OUTPUT] on_state_change: "
+            f"canvas={self.current_canvas is not None}, "
+            f"lines={len(turtle.lines)}"
         )
+        print(message, file=sys.stderr)
 
         if self.current_canvas:
             print(
-                f"[OUTPUT] Calling set_turtle_state with {len(turtle.lines)} lines",
+                (
+                    "[OUTPUT] Calling set_turtle_state with "
+                    f"{len(turtle.lines)} lines"
+                ),
                 file=sys.stderr,
             )
             self.current_canvas.set_turtle_state(turtle)
@@ -323,14 +365,20 @@ class OutputPanel(QTextEdit):
                     for i in range(self.tabs_widget.count()):
                         if "Graphics" in self.tabs_widget.tabText(i):
                             print(
-                                f"[OUTPUT] Switching to Graphics tab (index {i})",
+                                (
+                                    "[OUTPUT] Switching to Graphics tab "
+                                    f"(index {i})"
+                                ),
                                 file=sys.stderr,
                             )
                             self.tabs_widget.setCurrentIndex(i)
                             break
                 except (AttributeError, RuntimeError) as e:
                     # tabs_widget not available or invalid, skip tab switching
-                    print(f"[OUTPUT] Tab switching error: {e}", file=sys.stderr)
+                    print(
+                        f"[OUTPUT] Tab switching error: {e}",
+                        file=sys.stderr,
+                    )
         else:
             print("[OUTPUT] WARNING: current_canvas is None!", file=sys.stderr)
 
@@ -363,6 +411,8 @@ class OutputPanel(QTextEdit):
         """Handle error from interpreter with suggestions."""
         self.last_error = error  # Store for AI assistance
         self.append_colored(f"\n❌ Error: {error}", "error")
+
+        self.error_occurred.emit(error)
 
         # Provide suggestions based on error type
         suggestions = self._get_error_suggestions(error)
@@ -417,11 +467,17 @@ class OutputPanel(QTextEdit):
             ),
             (
                 "unknown command",
-                "Check spelling of commands. " + "Use language-specific syntax.",
+                (
+                    "Check spelling of commands. "
+                    "Use language-specific syntax."
+                ),
             ),
             (
                 "unknown keyword",
-                "Check spelling of commands. " + "Use language-specific syntax.",
+                (
+                    "Check spelling of commands. "
+                    "Use language-specific syntax."
+                ),
             ),
             (
                 "invalid expression",
@@ -551,7 +607,9 @@ class ImmediateModePanel(QWidget):
 
     def _history_up(self):
         """Navigate up in command history."""
-        if self.command_history and self.history_index < len(self.command_history) - 1:
+        if self.command_history and (
+            self.history_index < len(self.command_history) - 1
+        ):
             self.history_index += 1
             cmd = self.command_history[-(self.history_index + 1)]
             self.command_input.setText(cmd)

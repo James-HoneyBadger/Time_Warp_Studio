@@ -827,7 +827,9 @@ class Interpreter:
         num_vars.update(self.variables)
 
         evaluator = ExpressionEvaluator(
-            num_vars, self.arrays.copy(), string_variables=self.string_variables.copy()
+            num_vars,
+            self.arrays.copy(),
+            string_variables=self.string_variables.copy(),
         )
         return evaluator.evaluate(expr)
 

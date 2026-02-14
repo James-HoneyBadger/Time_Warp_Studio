@@ -5,6 +5,10 @@ This module provides PySide6 Qt widget panels for all 14 educational features.
 Each panel wraps a core module and provides a user-friendly interface.
 """
 
+# PySide6 symbols are provided at runtime; silence pylint import resolution
+# errors for these modules in this file.
+# pylint: disable=no-name-in-module
+
 from typing import Optional
 
 from PySide6.QtCore import Qt, Signal
@@ -31,13 +35,17 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..core.interpreter import Language
 from ..core.accessibility import AccessibilityManager
 from ..core.ai_assistant import LocalAIAssistant
 from ..core.asset_library import AssetLibrary
 from ..core.collaboration import LocalCollaborationSession, SessionManager
 from ..core.debugger import CodeDebugger
 from ..core.executable_exporter import ExecutableExporter
-from ..core.execution_replay import ExecutionReplayPlayer
+from ..core.execution_replay import (
+    ExecutionReplayPlayer,
+    VisualizationRecorder,
+)
 from ..core.hardware_simulator import HardwareSimulator
 from ..core.language_comparator import MultiLanguageComparator
 from ..core.learning_analytics import LearningAnalytics
@@ -61,6 +69,7 @@ class FeaturePanelBase(QWidget):
 
     def emit_status(self, message: str, duration: int = 3000):
         """Emit status message."""
+        _ = duration
         self.status_changed.emit(f"[{self.title}] {message}")
 
 
@@ -106,27 +115,58 @@ class SyntaxValidatorPanel(FeaturePanelBase):
         self.layout_main.addWidget(QLabel("Validation Results:"))
         self.layout_main.addWidget(self.results_table)
 
-    def validate(self):
+    def _normalize_language(self, language):
+        """Normalize language input to Language enum."""
+        if isinstance(language, Language):
+            return language
+        if isinstance(language, str):
+            cleaned = language.strip().upper()
+            mapping = {
+                "BASIC": Language.BASIC,
+                "LOGO": Language.LOGO,
+                "PILOT": Language.PILOT,
+                "PASCAL": Language.PASCAL,
+                "C": Language.C,
+                "FORTH": Language.FORTH,
+                "PROLOG": Language.PROLOG,
+            }
+            return mapping.get(cleaned, Language.BASIC)
+        return Language.BASIC
+
+    def validate(self, language=None):
         """Validate current code."""
         code = self.code_input.toPlainText()
-        lang = self.lang_combo.currentText()
+        lang = language or self.lang_combo.currentText()
+        lang = self._normalize_language(lang)
 
         errors = self.validator.validate(code, lang)
 
         self.results_table.setRowCount(len(errors))
         for i, error in enumerate(errors):
-            self.results_table.setItem(
-                i, 0, QTableWidgetItem(str(error.get("line", "?")))
-            )
-            self.results_table.setItem(
-                i, 1, QTableWidgetItem(error.get("type", "error"))
-            )
-            self.results_table.setItem(i, 2, QTableWidgetItem(error.get("message", "")))
-            self.results_table.setItem(
-                i, 3, QTableWidgetItem(error.get("severity", "error"))
-            )
+            line = getattr(error, "line", "?")
+            message = getattr(error, "message", "")
+            severity = getattr(error, "severity", "error")
+            if hasattr(severity, "value"):
+                severity_value = severity.value
+            else:
+                severity_value = str(severity)
+            self.results_table.setItem(i, 0, QTableWidgetItem(str(line)))
+            self.results_table.setItem(i, 1, QTableWidgetItem("syntax"))
+            self.results_table.setItem(i, 2, QTableWidgetItem(message))
+            self.results_table.setItem(i, 3, QTableWidgetItem(severity_value))
 
         self.emit_status(f"Validated: {len(errors)} issues found")
+        return len(errors)
+
+    def validate_external(self, code: str, language: Language) -> int:
+        """Validate code provided by the IDE."""
+        lang_enum = self._normalize_language(language)
+        try:
+            self.lang_combo.setCurrentText(lang_enum.name)
+        except (AttributeError, ValueError):
+            pass
+        self.code_input.setPlainText(code)
+        return self.validate(lang_enum)
 
 
 class ProjectTemplatesPanel(FeaturePanelBase):
@@ -182,7 +222,8 @@ class ProjectTemplatesPanel(FeaturePanelBase):
         """Refresh templates list."""
         category_text = self.cat_combo.currentText()
 
-        # Get all templates (TemplateLibrary.get_all() returns Dict[str, Template])
+        # Get all templates (TemplateLibrary.get_all() returns
+        # Dict[str, Template])
         all_templates = self.templates_mgr.get_all().values()
 
         # Filter
@@ -192,7 +233,9 @@ class ProjectTemplatesPanel(FeaturePanelBase):
         else:
             # Map "Art Generation" -> "art_generation"
             cat_val = category_text.lower().replace(" ", "_")
-            templates = [t for t in all_templates if t.category.value == cat_val]
+            templates = [
+                tpl for tpl in all_templates if tpl.category.value == cat_val
+            ]
 
         self.templates_list.clear()
         for tpl in templates:
@@ -211,7 +254,11 @@ class ProjectTemplatesPanel(FeaturePanelBase):
         """Create a new project from selected template."""
         item = self.templates_list.currentItem()
         if not item:
-            QMessageBox.warning(self, "Error", "Please select a template first")
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Please select a template first",
+            )
             return
 
         template = item.data(Qt.UserRole)
@@ -392,7 +439,10 @@ class AssetLibraryPanel(FeaturePanelBase):
                 filtered.append(a)
             elif category == "Sprites" and atype == "sprite":
                 filtered.append(a)
-            elif category in ["Sounds", "Music", "Effects"] and atype == "sound":
+            elif (
+                category in ["Sounds", "Music", "Effects"]
+                and atype == "sound"
+            ):
                 filtered.append(a)
             elif category == "Tiles" and atype == "tileset":
                 filtered.append(a)
@@ -439,7 +489,7 @@ class CollaborationPanel(FeaturePanelBase):
 
     def __init__(self):
         super().__init__("Collaboration Tool")
-        self.session_manager = SessionManager()
+        self.session_manager = SessionManager("LocalUser")
         self.current_session: Optional[LocalCollaborationSession] = None
         self.setup_ui()
 
@@ -532,13 +582,22 @@ class PerformanceProfilerPanel(FeaturePanelBase):
         stats_layout.addStretch()
         self.layout_main.addLayout(stats_layout)
 
+    def update_from_stats(self, stats: dict):
+        """Update profiler summary from execution stats."""
+        duration_ms = stats.get("duration_ms", 0.0)
+        line_count = stats.get("lines", 0)
+        self.total_time_label.setText(f"{duration_ms:.2f} ms")
+        self.calls_label.setText(str(line_count))
+        self.emit_status("Performance summary updated")
+
 
 class ExecutionReplayPanel(FeaturePanelBase):
     """UI for visualizing and replaying program execution."""
 
     def __init__(self):
         super().__init__("Execution Replay")
-        self.replayer = ExecutionReplayPlayer()
+        self.recorder = VisualizationRecorder()
+        self.replayer = ExecutionReplayPlayer(self.recorder)
         self.setup_ui()
 
     def setup_ui(self):
@@ -570,6 +629,15 @@ class ExecutionReplayPanel(FeaturePanelBase):
         self.trace_list = QListWidget()
         self.layout_main.addWidget(QLabel("Execution Trace:"))
         self.layout_main.addWidget(self.trace_list)
+
+    def record_execution(self, stats: dict):
+        """Append a short execution summary to the trace list."""
+        language = stats.get("language")
+        duration_ms = stats.get("duration_ms", 0.0)
+        success = stats.get("successful", True)
+        status = "✅" if success else "❌"
+        label = f"{status} {language} run in {duration_ms:.2f} ms"
+        self.trace_list.insertItem(0, label)
 
 
 class HardwareSimulatorPanel(FeaturePanelBase):
@@ -608,7 +676,9 @@ class HardwareSimulatorPanel(FeaturePanelBase):
         # Sensor readings
         self.readings_table = QTableWidget()
         self.readings_table.setColumnCount(3)
-        self.readings_table.setHorizontalHeaderLabels(["Sensor", "Value", "Unit"])
+        self.readings_table.setHorizontalHeaderLabels(
+            ["Sensor", "Value", "Unit"]
+        )
         self.layout_main.addWidget(QLabel("Sensor Readings:"))
         self.layout_main.addWidget(self.readings_table)
 
@@ -630,7 +700,9 @@ class AIAssistantPanel(FeaturePanelBase):
         """Setup AI assistant panel UI."""
         # Query input
         self.query_input = QLineEdit()
-        self.query_input.setPlaceholderText("Ask a question about your code...")
+        self.query_input.setPlaceholderText(
+            "Ask a question about your code..."
+        )
         self.query_input.returnPressed.connect(self.ask_question)
         self.layout_main.addWidget(QLabel("Question:"))
         self.layout_main.addWidget(self.query_input)
@@ -665,6 +737,12 @@ class AIAssistantPanel(FeaturePanelBase):
         """Load knowledge base."""
         self.ai.load_knowledge_base()
         self.emit_status("Knowledge base loaded")
+
+    def set_error_context(self, error_message: str):
+        """Provide an error context for quick help."""
+        suggestion = self.ai.explain_error(error_message)
+        self.response_display.setText(suggestion.explanation)
+        self.emit_status("AI generated an error explanation")
 
 
 class ExportableExporterPanel(FeaturePanelBase):
@@ -738,7 +816,11 @@ class ExportableExporterPanel(FeaturePanelBase):
         fmt = self.format_combo.currentText()
         output = self.output_path.text()
         if not output:
-            QMessageBox.warning(self, "Error", "Please specify output location")
+            QMessageBox.warning(
+                self,
+                "Error",
+                "Please specify output location",
+            )
             return
         self.emit_status(f"Exporting to {fmt}...")
 
@@ -785,6 +867,53 @@ class LearningAnalyticsPanel(FeaturePanelBase):
         stats_layout.addWidget(self.problems_label)
         stats_layout.addStretch()
         self.layout_main.addLayout(stats_layout)
+
+    def record_execution(self, stats: dict):
+        """Record execution stats into analytics and refresh UI."""
+        language = stats.get("language", "Unknown")
+        duration_ms = stats.get("duration_ms", 0.0)
+        lines = stats.get("lines", 0)
+        successful = stats.get("successful", True)
+        self.analytics.record_program(
+            name="Untitled",
+            language=str(language),
+            execution_time=duration_ms / 1000.0,
+            successful=successful,
+            lines_of_code=lines,
+            concepts=[],
+            errors=[],
+        )
+        self.refresh_from_analytics()
+
+    def refresh_from_analytics(self):
+        """Refresh UI widgets from analytics state."""
+        metrics = self.analytics.get_progress_metrics()
+        successful_rate = metrics.get("successful_rate", 0.0)
+        self.progress_bar.setValue(int(successful_rate * 100))
+        total_time_hours = metrics.get("total_time_hours", 0.0)
+        hours = int(total_time_hours)
+        minutes = int((total_time_hours - hours) * 60)
+        self.time_label.setText(f"{hours}h {minutes}m")
+        self.problems_label.setText(str(metrics.get("programs", 0)))
+
+        concept_summary = self.analytics.get_concept_summary()
+        self.concepts_table.setRowCount(len(concept_summary))
+        for row, (concept, info) in enumerate(concept_summary.items()):
+            mastery_pct = int(info.get("confidence", 0.0) * 100)
+            attempts = info.get("attempts", 0)
+            status = info.get("level", "novice")
+            self.concepts_table.setItem(row, 0, QTableWidgetItem(concept))
+            self.concepts_table.setItem(
+                row, 1, QTableWidgetItem(f"{mastery_pct}%")
+            )
+            self.concepts_table.setItem(
+                row, 2, QTableWidgetItem(str(attempts))
+            )
+            self.concepts_table.setItem(row, 3, QTableWidgetItem(status))
+
+        self.path_list.clear()
+        for step in self.analytics.get_learning_path():
+            self.path_list.addItem(step)
 
 
 class AccessibilityPanel(FeaturePanelBase):
@@ -860,7 +989,12 @@ class PeerReviewPanel(FeaturePanelBase):
 
     def __init__(self):
         super().__init__("Peer Review Tool")
-        self.reviewer = CodeReviewSession()
+        self.reviewer = CodeReviewSession(
+            submission_id="demo",
+            author="Anonymous",
+            code="",
+            language="BASIC",
+        )
         self.setup_ui()
 
     def setup_ui(self):
@@ -895,7 +1029,9 @@ class PeerReviewPanel(FeaturePanelBase):
         # Rubric
         self.rubric_table = QTableWidget()
         self.rubric_table.setColumnCount(3)
-        self.rubric_table.setHorizontalHeaderLabels(["Criterion", "Score", "Feedback"])
+        self.rubric_table.setHorizontalHeaderLabels(
+            ["Criterion", "Score", "Feedback"]
+        )
         self.layout_main.addWidget(QLabel("Review Rubric:"))
         self.layout_main.addWidget(self.rubric_table)
 
@@ -904,7 +1040,7 @@ class PeerReviewPanel(FeaturePanelBase):
         submit_btn.clicked.connect(self.submit_review)
         self.layout_main.addWidget(submit_btn)
 
-    def on_session_selected(self, item):
+    def on_session_selected(self, _item):
         """Load selected review session."""
         self.emit_status("Loaded review session")
 

@@ -5,7 +5,7 @@ Implements room management, sync, and collaboration services
 
 import logging
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List, Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -190,7 +190,7 @@ class ChatService:
         if message:
             message.content = new_content
             message.is_edited = True
-            message.edited_at = datetime.utcnow()
+            message.edited_at = datetime.now(timezone.utc)
             await self.session.commit()
             logger.info("Edited message %s", message_id)
         return message
