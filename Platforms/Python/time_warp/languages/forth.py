@@ -201,7 +201,7 @@ class ForthExecutor:
 
     def _bk(self):
         if self.stack and self.turtle:
-            self.turtle.backward(self.stack.pop())
+            self.turtle.back(self.stack.pop())
 
     def _rt(self):
         if self.stack and self.turtle:
@@ -229,8 +229,16 @@ class ForthExecutor:
 
     def _pen(self):
         if self.stack and self.turtle:
-            color_idx = self.stack.pop()
-            self.turtle.pencolor(color_idx)
+            color_idx = int(self.stack.pop())
+            # Map color index to color name
+            color_map = {
+                0: "BLACK", 1: "RED", 2: "GREEN", 3: "BLUE",
+                4: "YELLOW", 5: "CYAN", 6: "MAGENTA", 7: "WHITE",
+                8: "ORANGE", 9: "PURPLE", 10: "BROWN", 11: "PINK",
+                12: "GRAY", 13: "LIME", 14: "NAVY", 15: "TEAL",
+            }
+            color_name = color_map.get(color_idx, "WHITE")
+            self.turtle.pencolor(color_name)
 
     def execute_tokens(self, tokens: List[str]):
         i = 0
@@ -456,6 +464,12 @@ class ForthExecutor:
 
 # Global instance for persistence across lines
 _forth_executor = None
+
+
+def reset_forth():
+    """Reset the global Forth executor so state doesn't leak between runs."""
+    global _forth_executor  # pylint: disable=global-statement
+    _forth_executor = None
 
 
 def execute_forth(interpreter: "Interpreter", command: str, _turtle=None) -> str:

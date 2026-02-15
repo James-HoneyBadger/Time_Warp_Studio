@@ -111,8 +111,6 @@ def execute_pilot(
             label = rest.strip()
             if label:
                 interpreter.jump_to_label(label)
-            if label:
-                interpreter.jump_to_label(label)
         return ""
     if cmd_type == "C":
         if "=" not in rest:

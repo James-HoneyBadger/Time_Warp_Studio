@@ -112,10 +112,10 @@ The lesson panel shows:
 
 ### Language-Specific
 
-- **Python Lessons** - Modern Python fundamentals
 - **C Lessons** - Systems programming basics
 - **Pascal Lessons** - Structured programming
 - **Prolog Lessons** - Logic programming
+- **Forth Lessons** - Stack-based programming
 
 ---
 
@@ -321,10 +321,10 @@ Each supported language has lessons:
 - BASIC (10+ lessons)
 - Logo (8+ lessons)
 - PILOT (6+ lessons)
-- Python (8+ lessons)
 - C (6+ lessons)
 - Pascal (4+ lessons)
 - Prolog (4+ lessons)
+- Forth (4+ lessons)
 
 ### By Topic
 

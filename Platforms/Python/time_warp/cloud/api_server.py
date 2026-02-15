@@ -1,6 +1,6 @@
 """Time Warp Cloud Backend API Server - FastAPI Implementation.
 
-This module provides the cloud backend services for Time Warp Studio v6.1.0,
+This module provides the cloud backend services for Time Warp Studio v7.0.0,
 including REST APIs, WebSocket support, and real-time multiplayer features.
 """
 
@@ -9,7 +9,7 @@ import secrets
 import uuid
 from datetime import datetime, timedelta, timezone
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 
 import jwt
 from fastapi import Depends, FastAPI, HTTPException
@@ -103,6 +103,14 @@ class TokenResponse(BaseModel):
     access_token: str
     refresh_token: str
     token_type: str = "bearer"
+    expires_in: int
+
+
+class TokenDict(TypedDict):
+    """Typed dictionary for token response."""
+
+    access_token: str
+    refresh_token: str
     expires_in: int
 
 
@@ -215,7 +223,7 @@ class CloudAuthManager:
         self.access_token_expire = 3600  # 1 hour
         self.refresh_token_expire = 86400 * 7  # 7 days
 
-    def create_tokens(self, user_id: str) -> Dict[str, str]:
+    def create_tokens(self, user_id: str) -> "TokenDict":
         """Create access and refresh tokens.
 
         Args:
@@ -270,9 +278,9 @@ class CloudAuthManager:
             payload = jwt.decode(token, self.secret_key, algorithms=[self.algorithm])
             return payload
         except jwt.ExpiredSignatureError:
-            raise HTTPException(status_code=401, detail="Token expired")
+            raise HTTPException(status_code=401, detail="Token expired") from None
         except jwt.InvalidTokenError:
-            raise HTTPException(status_code=401, detail="Invalid token")
+            raise HTTPException(status_code=401, detail="Invalid token") from None
 
 
 # ============================================================================
@@ -291,8 +299,8 @@ class TimeWarpCloudAPI:
         """
         self.app = FastAPI(
             title="Time Warp Cloud API",
-            description="Cloud backend for Time Warp Studio v6.1.0",
-            version="6.1.0",
+            description="Cloud backend for Time Warp Studio v7.0.0",
+            version="7.0.0",
         )
 
         # Configure CORS
@@ -308,12 +316,12 @@ class TimeWarpCloudAPI:
         self.auth_manager = CloudAuthManager(secret_key)
 
         # In-memory storage (replace with database in production)
-        self.users = {}
-        self.projects = {}
-        self.files = {}
-        self.sessions = {}
-        self.achievements = {}
-        self.websocket_connections = {}
+        self.users: Dict[str, Any] = {}
+        self.projects: Dict[str, Any] = {}
+        self.files: Dict[str, Any] = {}
+        self.sessions: Dict[str, Any] = {}
+        self.achievements: Dict[str, Any] = {}
+        self.websocket_connections: Dict[str, Any] = {}
 
         # Setup routes
         self._setup_routes()
@@ -347,7 +355,7 @@ class TimeWarpCloudAPI:
         # Health check
         @self.app.get("/health")
         async def health_check():
-            return {"status": "healthy", "version": "6.1.0"}
+            return {"status": "healthy", "version": "7.0.0"}
 
         # ====================================================================
         # AUTHENTICATION ENDPOINTS

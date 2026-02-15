@@ -28,7 +28,7 @@ from typing import (
 # Import language executors
 from ..languages.basic import execute_basic
 from ..languages.c_lang_fixed import execute_c
-from ..languages.forth import execute_forth
+from ..languages.forth import execute_forth, reset_forth
 from ..languages.logo import execute_logo
 from ..languages.pascal import execute_pascal
 from ..languages.pilot import execute_pilot
@@ -38,9 +38,14 @@ from ..languages.prolog import execute_prolog
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
 from ..utils.expression_evaluator import ExpressionEvaluator
 
-# Compact alias used for debug callback annotations in this module.
+# Compact aliases used for debug callback annotations in this module.
 # Using a short alias keeps signatures readable while still being typed.
 DebugCallback = Optional[Callable[[int, Dict[str, Any]], None]]
+DebugFrameCallback = Optional[Callable[["ExecutionFrame"], None]]
+
+
+if TYPE_CHECKING:
+    from .debugger import ExecutionFrame, ExecutionTimeline
 
 
 class ExecutionResult(Enum):
@@ -196,14 +201,11 @@ class Interpreter:
         self.string_variables: Dict[str, str] = {}
         self.arrays: Dict[str, List[float]] = {}  # BASIC arrays
         # Logo data types
-        self.logo_lists: Dict[str, List] = {}  # Logo lists
-        self.logo_arrays: Dict[str, List] = {}  # Logo arrays (1-indexed)
-        self.property_lists: Dict[str, Dict[str, object]] = {}  # Properties
+        self.logo_lists: Dict[str, List[str]] = {}
+        self.logo_arrays: Dict[str, Dict[int, object]] = {}
+        self.property_lists: Dict[str, Dict[str, object]] = {}
         self.logo_procedures: Dict[str, str] = {}
         self.logo_procedure_params: Dict[str, List[str]] = {}
-        self.logo_lists: Dict[str, List[object]] = {}
-        self.logo_arrays: Dict[str, Dict[int, object]] = {}
-        self.property_lists: Dict[str, Dict[str, object]] = {}  # Procedures
         self.output: List[str] = []
 
         # Program state
@@ -243,19 +245,30 @@ class Interpreter:
         self.cursor_col: int = 0
 
         # BASIC-specific state
-        self.basic_while_stack: List[str] = []
-        self.basic_do_stack: List[Tuple[str, str]] = []
+        self.basic_while_stack: List[int] = []
+        self.basic_do_stack: List[Tuple[int, str]] = []
         self.basic_select_expression: str = ""
         self.basic_in_select: bool = False
         self.basic_in_sub: bool = False
         self.basic_in_function: bool = False
+        # SUB/FUNCTION definitions: name -> {"params": [...], "start_line": int,
+        #   "end_line": int}
+        self.basic_subs: Dict[str, Dict] = {}
+        self.basic_functions: Dict[str, Dict] = {}
+        # Stack for CALL/FUNCTION return addresses and saved variables
+        self.basic_call_stack: List[Dict] = []
 
         # BASIC DATA/READ state
         self.data_values: List[str] = []
         self.data_pointer: int = 0
 
+        # BASIC hardware simulation state
+        self.memory: Dict[int, int] = {}  # PEEK/POKE simulated memory
+        self.ports: Dict[int, int] = {}  # IN/OUT simulated I/O ports
+        self.last_music_data: Optional[bytes] = None  # PLAY MML output
+
         # Prolog-specific state
-        self.prolog_kb: Dict[str, List] = {}  # Prolog knowledge base
+        self.prolog_kb: Dict[str, Any] = {}  # Prolog knowledge base
 
         # Pascal-specific state
         self.pascal_procs: Dict[str, Dict[str, Any]] = {}  # Pascal procedures
@@ -273,6 +286,9 @@ class Interpreter:
         self.debug_mode: bool = False
         self.debug_event = threading.Event()
         self.debug_callback: DebugCallback | None = None
+        self.debug_frame_callback: DebugFrameCallback | None = None
+        self.debug_timeline: "ExecutionTimeline" | None = None
+        self.debug_step_granularity: str = "line"
         self.breakpoints: set = set()
         self.step_mode: bool = False
 
@@ -313,6 +329,19 @@ class Interpreter:
         self.debug_event.clear()
         self.cursor_col = 0
         self.logo_procedures.clear()
+        # PILOT-specific reset
+        self.last_match_succeeded = False
+        self.subroutine_stack.clear()
+        # Close any open file handles before clearing
+        for fh in self.open_files.values():
+            try:
+                fh.close()
+            except Exception:  # pylint: disable=broad-exception-caught
+                pass
+        self.open_files.clear()
+        self.last_input = ""
+        self.pending_input = None
+        self.pending_resume_line = None
         # BASIC-specific reset
         self.basic_while_stack.clear()
         self.basic_do_stack.clear()
@@ -320,8 +349,22 @@ class Interpreter:
         self.basic_in_select = False
         self.basic_in_sub = False
         self.basic_in_function = False
+        self.basic_subs.clear()
+        self.basic_functions.clear()
+        self.basic_call_stack.clear()
         self.data_values.clear()
         self.data_pointer = 0
+        # Prolog-specific reset
+        self.prolog_kb.clear()
+        # Pascal-specific reset
+        self.pascal_procs.clear()
+        self.pascal_types.clear()
+        self.pascal_block_stack.clear()
+        self.pascal_call_stack.clear()
+        # C-specific reset
+        self.c_block_stack.clear()
+        # Forth-specific reset
+        reset_forth()
         self._reset_type_defaults()
 
     # ---------- Typed variable support ----------
@@ -445,8 +488,17 @@ class Interpreter:
 
         return result
 
-    def set_language(self, language: Language):
-        """Set the active language for execution."""
+    def set_language(self, language):
+        """Set the active language for execution.
+
+        Args:
+            language: A Language enum value or a language name string.
+        """
+        if isinstance(language, str):
+            try:
+                language = Language[language.upper()]
+            except KeyError:
+                raise ValueError(f"Unknown language: {language}") from None
         self.language = language
 
     def load_program(
@@ -477,6 +529,7 @@ class Interpreter:
         # Collect BASIC DATA values after lines are populated
         if self.language == Language.BASIC:
             self._collect_basic_data_values()
+            self._prescan_basic_subs()
 
     def _load_from_lines(self, lines: List[str], language: Language):
         """Populate program_lines, labels and the line-number map.
@@ -525,6 +578,56 @@ class Interpreter:
                     if val.startswith('"') and val.endswith('"'):
                         val = val[1:-1]
                     self.data_values.append(val)
+
+    def _prescan_basic_subs(self):
+        """Pre-scan BASIC program for SUB/FUNCTION definitions.
+
+        This runs during load_program so that CALL can find subroutines
+        defined after the call site (forward references).
+        """
+        i = 0
+        while i < len(self.program_lines):
+            _, cmd_text = self.program_lines[i]
+            cmd_upper = cmd_text.strip().upper()
+
+            if cmd_upper.startswith("SUB "):
+                self._register_basic_block(
+                    i, cmd_text.strip()[4:], "END SUB", self.basic_subs
+                )
+            elif cmd_upper.startswith("FUNCTION "):
+                self._register_basic_block(
+                    i, cmd_text.strip()[9:], "END FUNCTION", self.basic_functions
+                )
+            i += 1
+
+    def _register_basic_block(
+        self, start: int, header: str, end_marker: str, registry: dict
+    ):
+        """Register a SUB or FUNCTION block found at *start*."""
+        header = header.strip()
+        if "(" in header:
+            name = header[: header.index("(")].strip().upper()
+            param_str = header[header.index("(") + 1 :]
+            if param_str.endswith(")"):
+                param_str = param_str[:-1]
+            params = [p.strip().upper() for p in param_str.split(",") if p.strip()]
+        else:
+            name = header.upper()
+            params = []
+
+        end_line = None
+        for j in range(start + 1, len(self.program_lines)):
+            _, line_text = self.program_lines[j]
+            if line_text.strip().upper() == end_marker:
+                end_line = j
+                break
+
+        if end_line is not None:
+            registry[name] = {
+                "params": params,
+                "start_line": start + 1,
+                "end_line": end_line,
+            }
 
     def _parse_logo_program(self, lines: List[str]):
         """
@@ -669,12 +772,7 @@ class Interpreter:
             # Use physical line number (1-based) for breakpoints and UI
             physical_line = self.current_line + 1
 
-            if self._should_break(current_command, physical_line):
-                self._do_debug_pause(physical_line)
-
             self._check_timeout(start_time)
-
-            iterations += 1
 
             command = current_command
             # print(f"DEBUG: Line {physical_line}: {command}")
@@ -683,16 +781,39 @@ class Interpreter:
                 self.current_line += 1
                 continue
 
-            success = self._execute_line_safely(command, turtle)
-            if not success:
-                self.current_line += 1
+            statements = self._split_statements(command)
+            line_changed = False
+
+            for idx, statement in enumerate(statements):
+                if self._should_break_statement(statement, physical_line, idx):
+                    self._do_debug_pause(physical_line)
+
+                self._check_timeout(start_time)
+                iterations += 1
+
+                if not statement.strip():
+                    continue
+
+                success = self._execute_line_safely(statement, turtle)
+                self._record_debug_frame(
+                    physical_line, statement, idx, len(statements)
+                )
+
+                if not success:
+                    break
+
+                if not self.running or self.pending_input:
+                    break
+
+                if self.current_line != physical_line - 1:
+                    line_changed = True
+                    break
+
+            if not self.running or self.pending_input:
+                break
+
+            if line_changed:
                 continue
-
-            if not self.running:
-                break
-
-            if self.pending_input:
-                break
 
             self.current_line += 1
 
@@ -704,12 +825,16 @@ class Interpreter:
             self.log_output("⚠️ Warning: Maximum iterations reached")
         return self.output.copy()
 
-    def _should_break(self, current_command: str, line_number: int) -> bool:
-        if not (self.debug_mode and current_command.strip()):
+    def _should_break_statement(
+        self, statement: str, line_number: int, statement_index: int
+    ) -> bool:
+        if not (self.debug_mode and statement.strip()):
             return False
         if self.step_mode:
             return True
-        return line_number in self.breakpoints
+        if line_number in self.breakpoints and statement_index == 0:
+            return True
+        return False
 
     def _do_debug_pause(self, line_number: int):
         if self.debug_callback:
@@ -718,9 +843,41 @@ class Interpreter:
         self.debug_event.wait()
         self.debug_event.clear()
 
+    def _record_debug_frame(
+        self,
+        line_number: int,
+        statement: str,
+        statement_index: int,
+        statement_total: int,
+    ) -> None:
+        if not self.debug_timeline:
+            return
+        frame = self.debug_timeline.record_frame(
+            line=line_number,
+            line_content=statement.strip(),
+            variables=self.get_variables(),
+            stack_depth=len(self.gosub_stack),
+            statement_index=statement_index,
+            statement_total=statement_total,
+        )
+        if self.debug_frame_callback and frame is not None:
+            # pylint: disable=not-callable
+            self.debug_frame_callback(frame)
+
+    def _split_statements(self, command: str) -> List[str]:
+        """Split a command line into statement units when supported."""
+        if self.debug_step_granularity != "statement":
+            return [command]
+        if self.language != Language.BASIC:
+            return [command]
+        if ":" not in command:
+            return [command]
+        return [part.strip() for part in command.split(":")]
+
     def _check_timeout(self, start_time: float):
         if time.time() - start_time > self.MAX_EXECUTION_TIME:
             self.log_output("❌ Error: Execution timeout (10 seconds exceeded)")
+            self.running = False
 
     def _execute_line_safely(
         self,
@@ -795,7 +952,7 @@ class Interpreter:
 
     def log_output(self, text: str):
         """Add text to output buffer (helper method)."""
-        if text:  # Include all output, even blank lines
+        if text is not None and text != "":  # Include all output, even blank lines
             self.output.append(text)
             if self.output_callback:
                 # pylint: disable=not-callable
@@ -960,6 +1117,20 @@ class Interpreter:
     def set_debug_callback(self, callback: DebugCallback):
         """Set callback for debug events."""
         self.debug_callback = callback
+
+    def set_debug_frame_callback(self, callback: DebugFrameCallback):
+        """Set callback for debug frame events."""
+        self.debug_frame_callback = callback
+
+    def set_debug_timeline(self, timeline: "ExecutionTimeline" | None):
+        """Attach a debug timeline recorder."""
+        self.debug_timeline = timeline
+
+    def set_debug_step_granularity(self, granularity: str):
+        """Set debug stepping granularity ('line' or 'statement')."""
+        if granularity not in {"line", "statement"}:
+            granularity = "line"
+        self.debug_step_granularity = granularity
 
     def add_breakpoint(self, line: int):
         """Add a breakpoint at the specified line"""

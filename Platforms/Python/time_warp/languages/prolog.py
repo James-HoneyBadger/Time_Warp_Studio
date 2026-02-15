@@ -167,26 +167,10 @@ def _unify(x: str, y: str, env: Dict[str, str]) -> Optional[Dict[str, str]]:
         xh, xt = _split_list_head_tail(x)
         yh, yt = _split_list_head_tail(y)
 
-        env = _unify(xh, yh, env)
-        if env is None:
+        env2 = _unify(xh, yh, env)
+        if env2 is None:
             return None
-        return _unify(xt, yt, env)
-
-    # Variable vs ground term
-    if _is_var(x) and not _is_var(y):
-        if x in env:
-            return _unify(env[x], y, env)
-        e = env.copy()
-        e[x] = y
-        return e
-    if _is_var(y) and not _is_var(x):
-        if y in env:
-            return _unify(env[y], x, env)
-        e = env.copy()
-        e[y] = x
-        return e
-    # Ground terms: case-insensitive match
-    return env if x.lower() == y.lower() else None
+        return _unify(xt, yt, env2)
 
     # Variable vs ground term
     if _is_var(x) and not _is_var(y):
@@ -405,8 +389,10 @@ def _eval_math(expr: str, env: Dict[str, str]) -> Optional[float]:
         # Safe evaluation: only allow numbers and operators
         if not re.match(r"^[\d\s+\-*/%().]+$", expr_sub):
             return None
-        return float(eval(expr_sub))
-    except (ValueError, TypeError):
+        # Use a restricted evaluation with only math operations
+        allowed_names: Dict[str, Any] = {"__builtins__": {}}
+        return float(eval(expr_sub, allowed_names, {}))  # noqa: S307
+    except (ValueError, TypeError, SyntaxError, ZeroDivisionError):
         return None
 
 
@@ -534,11 +520,11 @@ def _solve_goals_cut(
         # Concatenate all args
         text_parts = []
         for arg in args:
-            val = _substitute_term(arg, env)
+            sval = _substitute_term(arg, env)
             # Strip quotes if it's a string literal
-            if val.startswith('"') and val.endswith('"'):
-                val = val[1:-1]
-            text_parts.append(str(val))
+            if sval.startswith('"') and sval.endswith('"'):
+                sval = sval[1:-1]
+            text_parts.append(str(sval))
 
         if interpreter:
             # We don't have a direct "write without newline" on interpreter output list
@@ -559,10 +545,10 @@ def _solve_goals_cut(
     if pred == "writeln" and len(args) >= 1:
         text_parts = []
         for arg in args:
-            val = _substitute_term(arg, env)
-            if val.startswith('"') and val.endswith('"'):
-                val = val[1:-1]
-            text_parts.append(str(val))
+            sval = _substitute_term(arg, env)
+            if sval.startswith('"') and sval.endswith('"'):
+                sval = sval[1:-1]
+            text_parts.append(str(sval))
         if interpreter:
             interpreter.output.append("".join(text_parts))
         return _solve_goals_cut(kb, rest, env)
@@ -815,7 +801,7 @@ def execute_prolog(interpreter: "Interpreter", command: str, _turtle) -> str:
         if not var_names:
             return "✅ true"
 
-        lines: List[str] = []
+        lines = []
         for env in sols:
             assigns = []
             for v in var_names:

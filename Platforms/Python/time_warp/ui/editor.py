@@ -652,6 +652,11 @@ class CodeEditor(QPlainTextEdit):
         self._highlight_current_line = False
         self._whitespace_highlighter = None
 
+    def show_find_dialog(self):
+        """Show the find/replace dialog."""
+        dialog = FindDialog(self)
+        dialog.show()
+
     def set_language(self, language):
         """Set the syntax highlighting language."""
         # Re-create highlighter with new language

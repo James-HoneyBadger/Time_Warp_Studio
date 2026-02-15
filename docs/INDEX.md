@@ -26,11 +26,10 @@ Best for learning fundamental programming concepts:
 - **[PILOT Tutorial](tutorials/pilot.md)** - Interactive teaching language designed for computer-based instruction
 - **[Logo Tutorial](tutorials/logo.md)** - Turtle graphics and visual programming for geometric learning
 
-### Modern Languages
+### Systems & Structured Languages
 
-General-purpose languages with modern features:
+General-purpose languages with strong typing:
 
-- **[Python Guide](tutorials/python.md)** - Modern Python with functions, data structures, and libraries
 - **[C Reference](tutorials/c.md)** - Systems programming and low-level concepts
 - **[Pascal Guide](tutorials/pascal.md)** - Structured programming with strong typing
 
@@ -86,7 +85,7 @@ PRINT "Hello, World!"
 **Recommended Path:**
 1. [Logo Tutorial](tutorials/logo.md) - Learn Logo basics
 2. [Turtle Graphics Guide](guides/04-turtle-graphics.md) - Advanced turtle techniques
-3. Open **File → Examples → logo/** to see 10+ examples
+3. Open **File → Examples → logo/** to see 17 examples
 4. Try examples like `02_squares.logo`, `05_trees.logo`
 
 **First Turtle Program:**
@@ -99,7 +98,7 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 **Recommended Resources:**
 1. [Classroom Mode Guide](guides/06-settings.md) - Presentation and assignment features
 2. [Lesson System Guide](guides/03-lessons.md) - Create structured lessons
-3. [Examples Browser](guides/01-getting-started.md#examples) - 100+ ready-made programs
+3. [Examples Browser](guides/01-getting-started.md#examples) - 86+ ready-made programs
 4. See [ARCHITECTURE.md](../ARCHITECTURE.md) for extending features
 
 ### For Advanced Users
@@ -114,17 +113,16 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 
 ## 📁 Examples
 
-Browse 100+ example programs organized by language:
+Browse 86+ example programs organized by language:
 
 | Directory | Count | Level | Purpose |
 |-----------|-------|-------|---------|
-| `basic/` | 11 | Beginner | Learn BASIC fundamentals |
-| `logo/` | 10 | Beginner-Intermediate | Turtle graphics and recursion |
-| `pilot/` | 8 | Intermediate | Interactive instruction |
-| `c/` | 8 | Intermediate | Systems programming |
-| `python/` | 5+ | Intermediate | Modern Python features |
-| `pascal/` | 8 | Intermediate | Structured programming |
-| `prolog/` | 5+ | Advanced | Logic programming |
+| `basic/` | 18 | Beginner | Learn BASIC fundamentals |
+| `logo/` | 17 | Beginner-Intermediate | Turtle graphics and recursion |
+| `pilot/` | 14 | Beginner-Intermediate | Interactive instruction |
+| `c/` | 12 | Intermediate | Systems programming |
+| `pascal/` | 10 | Intermediate | Structured programming |
+| `prolog/` | 10 | Advanced | Logic programming |
 | `forth/` | 5 | Advanced | Stack-based programming |
 
 **How to use examples:**
@@ -188,10 +186,10 @@ docs/
 │   ├── basic.md
 │   ├── pilot.md
 │   ├── logo.md
-│   ├── python.md
 │   ├── c.md
 │   ├── pascal.md
 │   ├── prolog.md
+│   ├── python.md
 │   └── forth.md
 └── reference/
     └── faq.md
@@ -199,8 +197,8 @@ docs/
 
 ---
 
-**Last Updated:** January 2026  
-**Version:** 6.0.0+  
+**Last Updated:** February 2026  
+**Version:** 7.0.0+  
 **License:** Apache 2.0
 
 ## How to Use This Documentation
@@ -260,7 +258,7 @@ This documentation is maintained alongside Time Warp Studio development. If you 
 
 ## Version Information
 
-- **Time Warp Studio** v6.0.0
+- **Time Warp Studio** v7.0.0
 - **Python Edition** (PySide6)
 - **Last Updated** January 2025
 

@@ -4,7 +4,7 @@ Educational programming environment (unified BASIC, PILOT, Logo)
 Aligned with Time Warp Studio v5.1.0 release
 """
 
-__version__ = "6.1.0"
+__version__ = "7.0.0"
 __author__ = "James-HoneyBadger"
 
 from typing import TYPE_CHECKING, Any

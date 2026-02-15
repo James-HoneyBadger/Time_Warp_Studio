@@ -26,14 +26,14 @@ cd Time_Warp_Studio
 
 ```bash
 # Create virtual environment
-python3 -m venv .venv_new
+python3 -m venv .venv
 
 # Activate it
 # On Linux/macOS:
-source .venv_new/bin/activate
+source .venv/bin/activate
 
 # On Windows:
-.venv_new\Scripts\activate
+.venv\Scripts\activate
 ```
 
 ### Step 3: Install Dependencies

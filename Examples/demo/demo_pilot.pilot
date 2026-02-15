@@ -1,0 +1,34 @@
+T: Welcome to PILOT!
+T: PILOT is for computer-aided instruction
+T:
+T: This demonstrates PILOT features
+T:
+T: PILOT Components:
+T: - T units for text output
+T: - A units for accepting input
+T: - J units for jumps/branching
+T:
+T: Let's start with a simple exercise.
+T:
+T: What is 2 + 2?
+A: [ANSWER]
+C: (ANSWER = 4) or (ANSWER = four)
+J: Y: CORRECT
+J: N: INCORRECT
+T: Correct! Good work.
+J: END
+T: Not quite. 2 + 2 = 4.
+J: END
+T:
+T: Now another question:
+T: What is the capital of France?
+A: [ANSWER]
+C: (ANSWER = Paris) or (ANSWER = paris)
+J: Y: GREAT
+J: N: TRYAGAIN
+T: Excellent! Paris is correct.
+J: END
+T: The answer is Paris.
+J: END
+T:
+T: Demo complete! Good work.

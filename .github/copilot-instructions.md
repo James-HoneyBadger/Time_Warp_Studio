@@ -2,13 +2,13 @@
 
 **Project:** Time Warp Studio - Educational multi-language programming environment  
 **Maintainer:** James Temple <james@honey-badger.org>  
-**Last Updated:** October 27, 2025
+**Last Updated:** January 2026
 
 ---
 
 ## Project Overview
 
-Time Warp Studio is an educational desktop programming environment built with Python and PySide6 (Qt6) that provides a unified IDE for learning BASIC, PILOT, and Logo with integrated turtle graphics.
+Time Warp Studio is an educational desktop programming environment built with Python and PySide6 (Qt6) that provides a unified IDE for learning BASIC, PILOT, Logo, C, Pascal, Prolog, and Forth with integrated turtle graphics.
 
 **Current State:** Native desktop application (Python/PySide6) - single actively maintained version.
 
@@ -19,7 +19,7 @@ Time Warp Studio is an educational desktop programming environment built with Py
 - **Desktop Application (Python/PySide6)** — primary and only maintained version
     - Entry point: `Platforms/Python/time_warp_ide.py`
     - Core: `Platforms/Python/time_warp/core/interpreter.py`
-    - Languages: BASIC, PILOT, Logo (core) + Pascal, Prolog, C (experimental)
+    - Languages: BASIC, PILOT, Logo, C, Pascal, Prolog, Forth
     - UI: PySide6 (Qt6) with modern desktop interface
     - All UI state (editor, canvas, themes) managed by main application
 
@@ -157,14 +157,13 @@ runner.run_code(code_string, callback=on_complete)
 ## File Structure at a Glance
 
 - `Time_Warp_IDE.py` - Primary entry point (PySide6)
-- `core/interpreter.py` - Central interpreter (1521 lines, dispatches to executors)
-- `core/interpreters/` - Language executors (pilot, basic, logo)
-- `ui/qt_ui.py` - PySide6 UI factory
+- `core/interpreter.py` - Central interpreter (dispatches to executors)
+- `core/interpreters/` - Language executors (basic, pilot, logo, c_lang_fixed, pascal, prolog, forth)
+- `ui/main_window.py` - PySide6 main window
 - `tools/theme.py` - Theme manager (8 themes)
 - `test_runner.py` - Test orchestration with reporting
-- `tests/` - Pytest suite (30+ test files)
-- `plugins/` - Plugin samples and docs
-- `examples/` - Demo programs in all languages
+- `tests/` - Pytest suite (4 test files, 55 tests)
+- `examples/` - Demo programs in all languages (86 programs)
 
 ## Dependencies
 
@@ -259,9 +258,9 @@ EXTENSION INSTALLATION RULES:
 
 ### Adding New Languages
 
-1. Create executor module in `src/languages/new_language.rs`
+1. Create executor module in `core/interpreters/new_language.py`
 2. Implement `execute_command()` method following existing patterns
-3. Register in `src/main.rs` import and language mapping
+3. Register in `core/interpreter.py` import and language mapping
 4. Add syntax highlighting and file extensions to main UI
 
 PROJECT CONTENT RULES:
@@ -283,7 +282,7 @@ Themes defined in `tools/theme.py` with color schemes applied uniformly across:
 
 TASK COMPLETION RULES:
 - Your task is complete when:
-  - Code runs without errors (`python Time_Warp_IDE.py`)
+  - Code runs without errors (`python Platforms/Python/time_warp_ide.py`)
   - copilot-instructions.md file in the .github directory exists in the project
   - README.md file exists and is up to date
   - User is provided with clear instructions to debug/launch the project

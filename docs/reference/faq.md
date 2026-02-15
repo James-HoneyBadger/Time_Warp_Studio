@@ -8,7 +8,7 @@ Quick answers to common questions about Time Warp Studio.
 
 ### What is Time Warp Studio?
 
-Time Warp Studio is a desktop educational programming environment built with Python and PySide6 (Qt6) that combines classic and modern programming languages in a single application. It's perfect for learning programming concepts through languages like BASIC, Logo, and PILOT with integrated turtle graphics.
+Time Warp Studio is a desktop educational programming environment built with Python and PySide6 (Qt6) that combines classic and modern programming languages in a single application. It's perfect for learning programming concepts through languages like BASIC, Logo, PILOT, C, Pascal, Prolog, and Forth with integrated turtle graphics.
 
 ### Who should use Time Warp Studio?
 
@@ -50,8 +50,8 @@ Your CPU lacks required features (SSSE3, SSE4.1, SSE4.2, POPCNT). This commonly 
 ### How do I install Time Warp Studio?
 
 1. Clone: `git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git`
-2. Create venv: `python3 -m venv .venv_new`
-3. Activate: `source .venv_new/bin/activate`
+2. Create venv: `python3 -m venv .venv`
+3. Activate: `source .venv/bin/activate`
 4. Install: `pip install PySide6 Pillow requests`
 5. Run: `python Platforms/Python/time_warp_ide.py`
 
@@ -59,7 +59,7 @@ See [Getting Started Guide](guides/01-getting-started.md) for details.
 
 ### Does Time Warp Studio run on Windows?
 
-Yes! All steps work on Windows. Use `.venv_new\Scripts\activate` instead of `source`.
+Yes! All steps work on Windows. Uses `.venv\Scripts\activate` instead of `source`.
 
 ### Does Time Warp Studio run on Mac?
 
@@ -74,10 +74,10 @@ Yes! Works on both Intel and Apple Silicon Macs.
 - **BASIC** - Classic BASIC language
 - **Logo** - Turtle graphics and drawing
 - **PILOT** - Computer-based instruction
-- **Python** - Python 3 subset
-- **C** - C language (experimental)
-- **Pascal** - Pascal language (experimental)
-- **Prolog** - Logic programming (experimental)
+- **C** - C language
+- **Pascal** - Structured programming
+- **Prolog** - Logic programming
+- **Forth** - Stack-based programming
 
 ### Can I save my programs?
 
@@ -276,7 +276,7 @@ Yes! Please read [CODE_OF_CONDUCT.md](../../CODE_OF_CONDUCT.md) first, then:
 
 ### How do I add a new language?
 
-See [Extending Time Warp](guides/09-extending.md) for detailed instructions.
+See [ARCHITECTURE.md](../../ARCHITECTURE.md#adding-a-new-language) for detailed instructions.
 
 ### Can I use Time Warp Studio code in my project?
 

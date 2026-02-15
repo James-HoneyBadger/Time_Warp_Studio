@@ -4,6 +4,8 @@
 # Disable 'no-name-in-module' here; PySide6 provides these symbols at runtime.
 # pylint: disable=no-name-in-module
 
+import copy
+import os
 import time
 
 from PySide6.QtCore import Qt, QThread, Signal
@@ -18,9 +20,13 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..core.debugger import ExecutionTimeline
 from ..core.interpreter import Interpreter, Language
 from ..graphics.turtle_state import TurtleState
 from ..logging_config import get_logger
+
+# Set to True or use TWS_DEBUG=1 env var to enable verbose debug output
+_DEBUG = os.environ.get("TWS_DEBUG", "").strip() in ("1", "true", "yes")
 
 
 class InterpreterThread(QThread):
@@ -32,6 +38,8 @@ class InterpreterThread(QThread):
     state_changed = Signal()
     input_requested = Signal(str, bool)  # (prompt, is_numeric)
     debug_paused = Signal(int, dict)  # (line, variables)
+    debug_frame_recorded = Signal(object)
+    debug_timeline_ready = Signal(object)
     variables_updated = Signal(dict)  # variables dict after execution
     execution_stats = Signal(dict)  # execution metrics
 
@@ -46,6 +54,7 @@ class InterpreterThread(QThread):
         interpreter=None,
         debug_mode=False,
         breakpoints=None,
+        debug_step_granularity="line",
     ):
         super().__init__()
         self.code = code
@@ -55,6 +64,7 @@ class InterpreterThread(QThread):
         self.interp = interpreter
         self.debug_mode = debug_mode
         self.breakpoints = breakpoints or set()
+        self.debug_step_granularity = debug_step_granularity
         self._had_error = False
 
     def run(self):
@@ -68,6 +78,14 @@ class InterpreterThread(QThread):
             # Configure debugging
             self.interp.set_debug_mode(self.debug_mode)
             if self.debug_mode:
+                timeline = ExecutionTimeline()
+                timeline.start_recording()
+                self.interp.set_debug_timeline(timeline)
+                granularity = self.debug_step_granularity
+                if self.language != Language.BASIC:
+                    granularity = "line"
+                self.interp.set_debug_step_granularity(granularity)
+            if self.debug_mode:
                 self.interp.step_mode = True  # Start paused at first line
             for bp in self.breakpoints:
                 self.interp.add_breakpoint(bp)
@@ -76,6 +94,11 @@ class InterpreterThread(QThread):
                 self.debug_paused.emit(line, variables)
 
             self.interp.set_debug_callback(on_debug)
+
+            def on_frame(frame):
+                self.debug_frame_recorded.emit(frame)
+
+            self.interp.set_debug_frame_callback(on_frame)
 
             # Setup streaming output (always reconnect signals)
             def on_output(text):
@@ -95,7 +118,8 @@ class InterpreterThread(QThread):
                         "[THREAD] Turtle changed! "
                         f"{len(self.turtle.lines)} lines"
                     )
-                    print(message, file=sys.stderr)
+                    if _DEBUG:  # pragma: no cover
+                        print(message, file=sys.stderr)
                 except (BrokenPipeError, OSError):
                     pass
                 self.state_changed.emit()
@@ -104,6 +128,10 @@ class InterpreterThread(QThread):
 
             # Execute with timeout protection
             self.interp.execute(self.turtle)
+
+            if self.debug_mode and self.interp.debug_timeline:
+                self.interp.debug_timeline.stop_recording()
+                self.debug_timeline_ready.emit(self.interp.debug_timeline)
 
             if self.interp.pending_input:
                 req = self.interp.pending_input
@@ -150,6 +178,9 @@ class InterpreterThread(QThread):
                 }
             )
             self.execution_complete.emit()
+            if self.debug_mode and self.interp and self.interp.debug_timeline:
+                self.interp.debug_timeline.stop_recording()
+                self.debug_timeline_ready.emit(self.interp.debug_timeline)
 
     def stop(self):
         """Request thread to stop."""
@@ -165,9 +196,15 @@ class OutputPanel(QTextEdit):
     # interpreter thread is started (avoids a race where the thread emits a
     # pause before the UI has hooked the thread signal).
     debug_paused = Signal(int, dict)  # (line, variables)
+    debug_frame_recorded = Signal(object)
+    debug_timeline_ready = Signal(object)
     variables_updated = Signal(dict)  # variables after execution
     execution_stats = Signal(dict)
     error_occurred = Signal(str)
+    execution_complete = Signal()
+    output_streamed = Signal(str, str)  # (text, type)
+    turtle_state_changed = Signal(object)
+    turtle_state_reset = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -190,6 +227,7 @@ class OutputPanel(QTextEdit):
         self.last_error = None
         # Reference to right_tabs for switching to Graphics tab
         self.tabs_widget = None
+        self._debug_turtle_frames: dict[int, object] = {}
 
     def set_language(self, language):
         """Set the current language for execution."""
@@ -199,41 +237,51 @@ class OutputPanel(QTextEdit):
         """Set reference to tabs widget for auto-switching to Graphics tab."""
         self.tabs_widget = tabs
 
-    def run_program(self, code, canvas, debug_mode=False, breakpoints=None):
+    def run_program(
+        self,
+        code,
+        canvas,
+        debug_mode=False,
+        breakpoints=None,
+        debug_step_granularity="line",
+    ):
         """Run program in background thread."""
-        # DEBUG: Log program start
         import sys
 
-        try:
-            print(
-                f"[OUTPUT] run_program called: canvas={canvas is not None}, "
-                f"code_length={len(code)}",
-                file=sys.stderr,
-            )
-        except (BrokenPipeError, OSError):
-            pass  # Ignore broken pipe errors during debug output
+        if _DEBUG:  # pragma: no cover
+            try:
+                print(
+                    f"[OUTPUT] run_program called: canvas={canvas is not None}, "
+                    f"code_length={len(code)}",
+                    file=sys.stderr,
+                )
+            except (BrokenPipeError, OSError):
+                pass
 
         if self.exec_thread and self.exec_thread.isRunning():
             self.append_colored("⚠️ Program already running", "warning")
             return
 
         self.current_canvas = canvas
-        try:
-            print(
-                f"[OUTPUT] Set current_canvas = {canvas is not None}",
-                file=sys.stderr,
-            )
-        except (BrokenPipeError, OSError):
-            pass
+        if _DEBUG:  # pragma: no cover
+            try:
+                print(
+                    f"[OUTPUT] Set current_canvas = {canvas is not None}",
+                    file=sys.stderr,
+                )
+            except (BrokenPipeError, OSError):
+                pass
 
         # Clear and show header
         self.clear()
         self.append_colored("🚀 Running program...\n", "info")
+        self.turtle_state_reset.emit()
 
         # Create new turtle
         turtle = TurtleState()
         try:
-            print("[OUTPUT] Created new turtle", file=sys.stderr)
+            if _DEBUG:  # pragma: no cover
+                print("[OUTPUT] Created new turtle", file=sys.stderr)
         except (BrokenPipeError, OSError):
             pass
 
@@ -244,6 +292,7 @@ class OutputPanel(QTextEdit):
             self.current_language,
             debug_mode=debug_mode,
             breakpoints=breakpoints,
+            debug_step_granularity=debug_step_granularity,
         )
 
     # This method coordinates starting the interpreter thread and intentionally
@@ -258,40 +307,50 @@ class OutputPanel(QTextEdit):
         interpreter=None,
         debug_mode=False,
         breakpoints=None,
+        debug_step_granularity="line",
     ):
         """Start execution thread."""
         import sys
 
-        try:
-            print(
-                f"[OUTPUT] _start_thread: language={language}, "
-                f"turtle={turtle is not None}",
-                file=sys.stderr,
-            )
-        except (BrokenPipeError, OSError):
-            pass
+        if _DEBUG:  # pragma: no cover
+            try:
+                print(
+                    f"[OUTPUT] _start_thread: language={language}, "
+                    f"turtle={turtle is not None}",
+                    file=sys.stderr,
+                )
+            except (BrokenPipeError, OSError):
+                pass
 
         self.exec_thread = InterpreterThread(
-            code, turtle, language, interpreter, debug_mode, breakpoints
+            code,
+            turtle,
+            language,
+            interpreter,
+            debug_mode,
+            breakpoints,
+            debug_step_granularity,
         )
         self.exec_thread.output_ready.connect(self.on_output)
         self.exec_thread.error_occurred.connect(self.on_error)
         self.exec_thread.execution_complete.connect(
-            lambda: self.on_complete(self.current_canvas, turtle)
+            lambda: self._on_execution_complete(self.current_canvas, turtle)
         )
         self.exec_thread.execution_stats.connect(self.execution_stats.emit)
         # Wrap state_changed connection so we don't build a long inline
         # lambda expression and exceed line-length limits.
 
         def _on_state_changed():
-            print(
-                "[OUTPUT] _on_state_changed signal received!",
-                file=sys.stderr,
-            )
+            if _DEBUG:  # pragma: no cover
+                print(
+                    "[OUTPUT] _on_state_changed signal received!",
+                    file=sys.stderr,
+                )
             self.on_state_change(turtle)
 
         self.exec_thread.state_changed.connect(_on_state_changed)
-        print("[OUTPUT] Connected state_changed signal", file=sys.stderr)
+        if _DEBUG:  # pragma: no cover
+            print("[OUTPUT] Connected state_changed signal", file=sys.stderr)
 
         self.exec_thread.input_requested.connect(self.on_input_requested)
 
@@ -307,6 +366,16 @@ class OutputPanel(QTextEdit):
         except AttributeError:
             # If the thread doesn't expose debug_paused for any reason,
             # continue without breaking execution.
+            pass
+
+        try:
+            self.exec_thread.debug_frame_recorded.connect(
+                self._on_debug_frame_recorded
+            )
+            self.exec_thread.debug_timeline_ready.connect(
+                self.debug_timeline_ready.emit
+            )
+        except AttributeError:
             pass
 
         # Forward variables_updated signal
@@ -325,6 +394,29 @@ class OutputPanel(QTextEdit):
         the signal chain clearer during testing.
         """
         self.debug_paused.emit(line, variables)
+
+    def _on_debug_frame_recorded(self, frame):
+        """Capture turtle state per debug frame and emit signal."""
+        if self.exec_thread and self.exec_thread.turtle:
+            try:
+                snapshot = copy.deepcopy(self.exec_thread.turtle)
+            except (TypeError, ValueError):
+                snapshot = self.exec_thread.turtle
+            frame_id = getattr(frame, "timestamp", None)
+            if frame_id is not None:
+                self._debug_turtle_frames[frame_id] = snapshot
+        self.debug_frame_recorded.emit(frame)
+
+    def clear_debug_timeline(self):
+        """Clear stored debug timeline snapshots."""
+        self._debug_turtle_frames = {}
+
+    def get_debug_turtle_snapshot(self, frame):
+        """Get turtle snapshot for a debug frame."""
+        frame_id = getattr(frame, "timestamp", None)
+        if frame_id is None:
+            return None
+        return self._debug_turtle_frames.get(frame_id)
 
     def resume_execution(self):
         """Resume execution."""
@@ -346,17 +438,24 @@ class OutputPanel(QTextEdit):
             f"canvas={self.current_canvas is not None}, "
             f"lines={len(turtle.lines)}"
         )
-        print(message, file=sys.stderr)
+        if _DEBUG:  # pragma: no cover
+            print(message, file=sys.stderr)
 
         if self.current_canvas:
-            print(
-                (
-                    "[OUTPUT] Calling set_turtle_state with "
-                    f"{len(turtle.lines)} lines"
-                ),
-                file=sys.stderr,
-            )
+            if _DEBUG:  # pragma: no cover
+                print(
+                    (
+                        "[OUTPUT] Calling set_turtle_state with "
+                        f"{len(turtle.lines)} lines"
+                    ),
+                    file=sys.stderr,
+                )
             self.current_canvas.set_turtle_state(turtle)
+
+            try:
+                self.turtle_state_changed.emit(copy.deepcopy(turtle))
+            except (TypeError, ValueError):
+                self.turtle_state_changed.emit(turtle)
 
             # Auto-switch to Graphics tab when lines are being drawn
             if turtle.lines and self.tabs_widget:
@@ -364,23 +463,26 @@ class OutputPanel(QTextEdit):
                     # Find the Graphics tab and switch to it
                     for i in range(self.tabs_widget.count()):
                         if "Graphics" in self.tabs_widget.tabText(i):
-                            print(
-                                (
-                                    "[OUTPUT] Switching to Graphics tab "
-                                    f"(index {i})"
-                                ),
-                                file=sys.stderr,
-                            )
+                            if _DEBUG:  # pragma: no cover
+                                print(
+                                    (
+                                        "[OUTPUT] Switching to Graphics tab "
+                                        f"(index {i})"
+                                    ),
+                                    file=sys.stderr,
+                                )
                             self.tabs_widget.setCurrentIndex(i)
                             break
                 except (AttributeError, RuntimeError) as e:
                     # tabs_widget not available or invalid, skip tab switching
-                    print(
-                        f"[OUTPUT] Tab switching error: {e}",
-                        file=sys.stderr,
-                    )
+                    if _DEBUG:  # pragma: no cover
+                        print(
+                            f"[OUTPUT] Tab switching error: {e}",
+                            file=sys.stderr,
+                        )
         else:
-            print("[OUTPUT] WARNING: current_canvas is None!", file=sys.stderr)
+            if _DEBUG:  # pragma: no cover
+                print("[OUTPUT] WARNING: current_canvas is None!", file=sys.stderr)
 
     def on_input_requested(self, prompt, _is_numeric):
         """Handle input request."""
@@ -406,6 +508,7 @@ class OutputPanel(QTextEdit):
     def on_output(self, text, output_type):
         """Handle output from interpreter."""
         self.append_colored(text, output_type)
+        self.output_streamed.emit(text, output_type)
 
     def on_error(self, error):
         """Handle error from interpreter with suggestions."""
@@ -413,6 +516,7 @@ class OutputPanel(QTextEdit):
         self.append_colored(f"\n❌ Error: {error}", "error")
 
         self.error_occurred.emit(error)
+        self.output_streamed.emit(f"\n❌ Error: {error}", "error")
 
         # Provide suggestions based on error type
         suggestions = self._get_error_suggestions(error)
@@ -496,6 +600,11 @@ class OutputPanel(QTextEdit):
         """Handle execution complete."""
         # Update canvas with turtle lines
         canvas.set_turtle_state(turtle)
+
+    def _on_execution_complete(self, canvas, turtle):
+        """Handle completion and notify listeners."""
+        self.on_complete(canvas, turtle)
+        self.execution_complete.emit()
 
     def stop_execution(self):
         """Stop running program."""

@@ -4,9 +4,11 @@
 # pylint: disable=no-name-in-module
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QFont
+from PySide6.QtGui import QFont, QTextCursor
 from PySide6.QtWidgets import (
+    QComboBox,
     QFrame,
+    QFormLayout,
     QHBoxLayout,
     QHeaderView,
     QLabel,
@@ -17,6 +19,7 @@ from PySide6.QtWidgets import (
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
+    QTextEdit,
     QToolButton,
     QVBoxLayout,
     QWidget,
@@ -34,6 +37,7 @@ class DebugToolbar(QFrame):
     step_out = Signal()
     continue_execution = Signal()
     pause_execution = Signal()
+    step_granularity_changed = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -96,6 +100,17 @@ class DebugToolbar(QFrame):
 
         layout.addSpacing(10)
 
+        # Step granularity toggle
+        mode_label = QLabel("Step:")
+        layout.addWidget(mode_label)
+        self.step_mode_combo = QComboBox()
+        self.step_mode_combo.addItem("Line", "line")
+        self.step_mode_combo.addItem("Statement", "statement")
+        self.step_mode_combo.currentIndexChanged.connect(
+            self._emit_step_granularity
+        )
+        layout.addWidget(self.step_mode_combo)
+
         # Pause/Continue
         self.pause_btn = QToolButton()
         self.pause_btn.setText("⏸️ Pause")
@@ -149,6 +164,12 @@ class DebugToolbar(QFrame):
             }
         """)
         layout.addWidget(self.status_label)
+
+    def _emit_step_granularity(self, _index: int):
+        """Emit selected step granularity."""
+        value = self.step_mode_combo.currentData()
+        if value:
+            self.step_granularity_changed.emit(value)
 
     def set_debugging(self, is_debugging: bool):
         """Update toolbar state for debugging mode."""
@@ -351,7 +372,7 @@ class CallStackPanel(QWidget):
 
         if not call_stack:
             item = QListWidgetItem("(empty)")
-            item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
             self.stack_list.addItem(item)
             return
 
@@ -362,12 +383,12 @@ class CallStackPanel(QWidget):
             else:
                 text = f"#{i}: Line {frame}"
             item = QListWidgetItem(text)
-            item.setData(Qt.UserRole, frame)
+            item.setData(Qt.ItemDataRole.UserRole, frame)
             self.stack_list.addItem(item)
 
     def _on_frame_selected(self, item: QListWidgetItem):
         """Handle stack frame selection."""
-        frame = item.data(Qt.UserRole)
+        frame = item.data(Qt.ItemDataRole.UserRole)
         if frame:
             line = frame[0] if isinstance(frame, tuple) else frame
             self.frame_selected.emit(line)
@@ -426,20 +447,205 @@ class BreakpointPanel(QWidget):
 
         if not self._breakpoints:
             item = QListWidgetItem("(no breakpoints)")
-            item.setFlags(item.flags() & ~Qt.ItemIsSelectable)
+            item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
             self.bp_list.addItem(item)
             return
 
         for line in sorted(self._breakpoints):
             item = QListWidgetItem(f"🔴 Line {line}")
-            item.setData(Qt.UserRole, line)
+            item.setData(Qt.ItemDataRole.UserRole, line)
             self.bp_list.addItem(item)
 
     def _on_breakpoint_goto(self, item: QListWidgetItem):
         """Handle double-click to go to breakpoint line."""
-        line = item.data(Qt.UserRole)
+        line = item.data(Qt.ItemDataRole.UserRole)
         if line:
             self.breakpoint_goto.emit(line)
+
+
+class TurtleStatePanel(QWidget):
+    """Display current turtle state while debugging."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._setup_ui()
+
+    def _setup_ui(self):
+        """Setup turtle state UI."""
+        layout = QFormLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+
+        self.pos_label = QLabel("(0, 0)")
+        self.heading_label = QLabel("0°")
+        self.pen_label = QLabel("down")
+        self.color_label = QLabel("(255, 255, 255)")
+        self.width_label = QLabel("2")
+        self.visible_label = QLabel("visible")
+        self.lines_label = QLabel("0")
+
+        layout.addRow("Position:", self.pos_label)
+        layout.addRow("Heading:", self.heading_label)
+        layout.addRow("Pen:", self.pen_label)
+        layout.addRow("Color:", self.color_label)
+        layout.addRow("Width:", self.width_label)
+        layout.addRow("Visible:", self.visible_label)
+        layout.addRow("Lines:", self.lines_label)
+
+    def update_state(self, turtle_state: dict):
+        """Update turtle state labels."""
+        if not turtle_state:
+            return
+
+        x = turtle_state.get("x", 0.0)
+        y = turtle_state.get("y", 0.0)
+        heading = turtle_state.get("heading", 0.0)
+        pen_down = turtle_state.get("pen_down", True)
+        color = turtle_state.get("pen_color", (255, 255, 255))
+        width = turtle_state.get("pen_width", 2.0)
+        visible = turtle_state.get("visible", True)
+        lines = turtle_state.get("lines", 0)
+
+        self.pos_label.setText(f"({x:.2f}, {y:.2f})")
+        self.heading_label.setText(f"{heading:.1f}°")
+        self.pen_label.setText("down" if pen_down else "up")
+        self.color_label.setText(str(color))
+        self.width_label.setText(str(width))
+        self.visible_label.setText("visible" if visible else "hidden")
+        self.lines_label.setText(str(lines))
+
+
+class OutputStreamPanel(QWidget):
+    """Display output stream during debugging."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._setup_ui()
+
+    def _setup_ui(self):
+        """Setup output stream UI."""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+
+        self.output_view = QTextEdit()
+        self.output_view.setReadOnly(True)
+        self.output_view.setFont(QFont("Courier New", 10))
+        layout.addWidget(self.output_view)
+
+    def append_output(self, text: str):
+        """Append output text."""
+        self.output_view.moveCursor(QTextCursor.MoveOperation.End)
+        self.output_view.insertPlainText(text)
+        self.output_view.moveCursor(QTextCursor.MoveOperation.End)
+
+    def clear_output(self):
+        """Clear output log."""
+        self.output_view.clear()
+
+
+class TimelinePanel(QWidget):
+    """Timeline list for recorded debug frames."""
+
+    frame_selected = Signal(object)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._setup_ui()
+
+    def _setup_ui(self):
+        """Setup timeline UI."""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+        self.timeline_list = QListWidget()
+        self.timeline_list.currentItemChanged.connect(
+            self._on_frame_selected
+        )
+        layout.addWidget(self.timeline_list)
+
+    def append_frame(self, frame):
+        """Append a frame entry."""
+        if not frame:
+            return
+        line = getattr(frame, "line", 0)
+        content = getattr(frame, "line_content", "")
+        stmt_index = getattr(frame, "statement_index", None)
+        stmt_total = getattr(frame, "statement_total", None)
+        if stmt_index is not None and stmt_total:
+            label = f"Line {line} ({stmt_index + 1}/{stmt_total}) - {content}"
+        else:
+            label = f"Line {line} - {content}"
+        item = QListWidgetItem(label)
+        item.setData(Qt.ItemDataRole.UserRole, frame)
+        self.timeline_list.addItem(item)
+        self.timeline_list.setCurrentItem(item)
+
+    def set_frames(self, frames: list):
+        """Replace timeline entries."""
+        self.timeline_list.clear()
+        for frame in frames:
+            self.append_frame(frame)
+
+    def _on_frame_selected(self, current: QListWidgetItem, _previous):
+        """Handle timeline selection."""
+        if not current:
+            return
+        frame = current.data(Qt.ItemDataRole.UserRole)
+        if frame:
+            self.frame_selected.emit(frame)
+
+
+class VariableDiffPanel(QWidget):
+    """Show variable differences between frames."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._setup_ui()
+
+    def _setup_ui(self):
+        """Setup diff UI."""
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(4, 4, 4, 4)
+        self.diff_table = QTableWidget()
+        self.diff_table.setColumnCount(3)
+        self.diff_table.setHorizontalHeaderLabels(
+            ["Variable", "Before", "After"]
+        )
+        self.diff_table.horizontalHeader().setSectionResizeMode(
+            0, QHeaderView.ResizeToContents
+        )
+        self.diff_table.horizontalHeader().setSectionResizeMode(
+            1, QHeaderView.Stretch
+        )
+        self.diff_table.horizontalHeader().setSectionResizeMode(
+            2, QHeaderView.Stretch
+        )
+        self.diff_table.verticalHeader().setVisible(False)
+        self.diff_table.setAlternatingRowColors(True)
+        layout.addWidget(self.diff_table)
+
+    def update_diff(self, current_frame, previous_frame):
+        """Update diff table for selected frame."""
+        if current_frame is None:
+            self.diff_table.setRowCount(0)
+            return
+
+        current_vars = getattr(current_frame, "variables", {}) or {}
+        previous_vars = (
+            getattr(previous_frame, "variables", {}) if previous_frame else {}
+        ) or {}
+
+        changed = []
+        keys = set(current_vars.keys()) | set(previous_vars.keys())
+        for key in sorted(keys):
+            before = previous_vars.get(key)
+            after = current_vars.get(key)
+            if before != after:
+                changed.append((key, before, after))
+
+        self.diff_table.setRowCount(len(changed))
+        for row, (key, before, after) in enumerate(changed):
+            self.diff_table.setItem(row, 0, QTableWidgetItem(str(key)))
+            self.diff_table.setItem(row, 1, QTableWidgetItem(str(before)))
+            self.diff_table.setItem(row, 2, QTableWidgetItem(str(after)))
 
 
 class DebugPanel(QWidget):
@@ -455,6 +661,9 @@ class DebugPanel(QWidget):
     pause_execution = Signal()
     breakpoint_toggled = Signal(int)
     goto_line = Signal(int)
+    timeline_frame_selected = Signal(object)
+    export_timeline_requested = Signal()
+    step_granularity_changed = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -507,6 +716,56 @@ class DebugPanel(QWidget):
         bp_layout.addWidget(self.breakpoint_panel)
         splitter.addWidget(bp_container)
 
+        # Turtle state panel
+        turtle_container = QWidget()
+        turtle_layout = QVBoxLayout(turtle_container)
+        turtle_layout.setContentsMargins(4, 4, 4, 4)
+        turtle_label = QLabel("🐢 Turtle State")
+        turtle_label.setStyleSheet("font-weight: bold;")
+        turtle_layout.addWidget(turtle_label)
+        self.turtle_panel = TurtleStatePanel(self)
+        turtle_layout.addWidget(self.turtle_panel)
+        splitter.addWidget(turtle_container)
+
+        # Output stream panel
+        output_container = QWidget()
+        output_layout = QVBoxLayout(output_container)
+        output_layout.setContentsMargins(4, 4, 4, 4)
+        output_label = QLabel("🧾 Output Stream")
+        output_label.setStyleSheet("font-weight: bold;")
+        output_layout.addWidget(output_label)
+        self.output_stream_panel = OutputStreamPanel(self)
+        output_layout.addWidget(self.output_stream_panel)
+        splitter.addWidget(output_container)
+
+        # Timeline panel
+        timeline_container = QWidget()
+        timeline_layout = QVBoxLayout(timeline_container)
+        timeline_layout.setContentsMargins(4, 4, 4, 4)
+        timeline_header = QHBoxLayout()
+        timeline_label = QLabel("🧭 Timeline")
+        timeline_label.setStyleSheet("font-weight: bold;")
+        timeline_header.addWidget(timeline_label)
+        timeline_header.addStretch()
+        export_btn = QPushButton("Export JSON")
+        export_btn.clicked.connect(self.export_timeline_requested.emit)
+        timeline_header.addWidget(export_btn)
+        timeline_layout.addLayout(timeline_header)
+        self.timeline_panel = TimelinePanel(self)
+        timeline_layout.addWidget(self.timeline_panel)
+        splitter.addWidget(timeline_container)
+
+        # Variable diff panel
+        diff_container = QWidget()
+        diff_layout = QVBoxLayout(diff_container)
+        diff_layout.setContentsMargins(4, 4, 4, 4)
+        diff_label = QLabel("Δ Variable Changes")
+        diff_label.setStyleSheet("font-weight: bold;")
+        diff_layout.addWidget(diff_label)
+        self.diff_panel = VariableDiffPanel(self)
+        diff_layout.addWidget(self.diff_panel)
+        splitter.addWidget(diff_container)
+
         layout.addWidget(splitter)
 
     def _connect_signals(self):
@@ -524,6 +783,12 @@ class DebugPanel(QWidget):
         self.call_stack_panel.frame_selected.connect(self.goto_line.emit)
         self.breakpoint_panel.breakpoint_goto.connect(self.goto_line.emit)
         self.breakpoint_panel.breakpoint_toggled.connect(self.breakpoint_toggled.emit)
+        self.timeline_panel.frame_selected.connect(
+            self._on_timeline_frame_selected
+        )
+        self.toolbar.step_granularity_changed.connect(
+            self.step_granularity_changed.emit
+        )
 
     def set_debugging(self, is_debugging: bool):
         """Update UI for debugging state."""
@@ -546,3 +811,64 @@ class DebugPanel(QWidget):
     def update_breakpoints(self, breakpoints: set):
         """Update breakpoints display."""
         self.breakpoint_panel.update_breakpoints(breakpoints)
+
+    def update_turtle_state(self, turtle_state: dict):
+        """Update turtle state display."""
+        self.turtle_panel.update_state(turtle_state)
+
+    def append_output_stream(self, text: str):
+        """Append text to output stream panel."""
+        self.output_stream_panel.append_output(text)
+
+    def clear_output_stream(self):
+        """Clear output stream panel."""
+        self.output_stream_panel.clear_output()
+
+    def append_timeline_frame(self, frame):
+        """Append a timeline frame and update diffs."""
+        if not frame:
+            return
+        previous = self._get_last_frame()
+        self.timeline_panel.append_frame(frame)
+        self.diff_panel.update_diff(frame, previous)
+
+    def set_timeline(self, timeline):
+        """Replace timeline frames."""
+        frames = getattr(timeline, "frames", []) if timeline else []
+        self.timeline_panel.set_frames(frames)
+        if frames:
+            self.diff_panel.update_diff(frames[-1], frames[-2] if len(frames) > 1 else None)
+
+    def clear_timeline(self):
+        """Clear timeline frames and diffs."""
+        self.timeline_panel.set_frames([])
+        self.diff_panel.update_diff(None, None)
+
+    def get_step_granularity(self) -> str:
+        """Return selected step granularity."""
+        return self.toolbar.step_mode_combo.currentData() or "line"
+
+    def _on_timeline_frame_selected(self, frame):
+        """Handle timeline selection and update diff."""
+        previous = self._get_previous_frame()
+        self.diff_panel.update_diff(frame, previous)
+        self.timeline_frame_selected.emit(frame)
+
+    def _get_previous_frame(self):
+        """Get previous frame for diffing."""
+        list_widget = self.timeline_panel.timeline_list
+        current_row = list_widget.currentRow()
+        if current_row <= 0:
+            return None
+        item = list_widget.item(current_row - 1)
+        if not item:
+            return None
+        return item.data(Qt.ItemDataRole.UserRole)
+
+    def _get_last_frame(self):
+        """Get last frame from timeline list."""
+        items = self.timeline_panel.timeline_list
+        if items.count() == 0:
+            return None
+        item = items.item(items.count() - 1)
+        return item.data(Qt.ItemDataRole.UserRole)

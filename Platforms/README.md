@@ -43,7 +43,7 @@ Python/
 │   │   └── forth.py              # Forth language (experimental)
 │   ├── features/
 │   │   ├── lesson_system.py      # Structured lessons with checkpoints
-│   │   ├── examples_browser.py   # Searchable example catalog (100+)
+│   │   ├── examples_browser.py   # Searchable example catalog (86+)
 │   │   ├── turtle_preview.py     # Live Logo code preview
 │   │   ├── theme_editor.py       # Custom theme creation (8 built-in)
 │   │   ├── autosave_manager.py   # Background autosave with versioning
@@ -54,7 +54,7 @@ Python/
 │   │   ├── editor.py             # Code editor with syntax highlighting
 │   │   └── canvas.py             # Turtle graphics rendering canvas
 │   └── tests/
-│       └── [30+ test files]      # Comprehensive pytest suite (55+ tests)
+│       └── [4 test files]        # Comprehensive pytest suite (55 tests)
 ├── requirements.txt              # Production dependencies
 ├── requirements-dev.txt          # Development dependencies
 ├── test_runner.py                # Test orchestration with reporting
@@ -79,7 +79,7 @@ Python/
 
 **Learning Tools:**
 - 📚 Lesson System - Step-by-step guided lessons with checkpoints
-- 📖 Examples Browser - Searchable catalog of 100+ example programs
+- 📖 Examples Browser - Searchable catalog of 86+ example programs
 - 🐢 Turtle Preview - Live visualization while coding
 
 **Productivity:**
@@ -253,5 +253,5 @@ Contributions are welcome! See main [README.md](../../README.md#development) for
 
 **Last Updated:** January 2026  
 **Primary Implementation:** Python with PySide6 (Qt6)  
-**Version:** 6.0.0+  
+**Version:** 7.0.0+  
 **Maintainer:** James Temple <james@honey-badger.org>

@@ -1,5 +1,5 @@
 """
-Feature UI Panels for Time Warp Studio v6.0.0
+Feature UI Panels for Time Warp Studio v7.0.0
 
 This module provides PySide6 Qt widget panels for all 14 educational features.
 Each panel wraps a core module and provides a user-friendly interface.
@@ -11,7 +11,7 @@ Each panel wraps a core module and provides a user-friendly interface.
 
 from typing import Optional
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import Qt, Signal, QTimer
 from PySide6.QtWidgets import (
     QCheckBox,
     QComboBox,
@@ -33,14 +33,15 @@ from PySide6.QtWidgets import (
     QTextEdit,
     QVBoxLayout,
     QWidget,
+    QSlider,
 )
 
 from ..core.interpreter import Language
 from ..core.accessibility import AccessibilityManager
-from ..core.ai_assistant import LocalAIAssistant
 from ..core.asset_library import AssetLibrary
 from ..core.collaboration import LocalCollaborationSession, SessionManager
 from ..core.debugger import CodeDebugger
+from ..core.ai_assistant import LocalAIAssistant
 from ..core.executable_exporter import ExecutableExporter
 from ..core.execution_replay import (
     ExecutionReplayPlayer,
@@ -53,6 +54,11 @@ from ..core.peer_review import CodeReviewSession
 from ..core.performance_profiler import PerformanceProfiler
 from ..core.project_templates import TemplateLibrary
 from ..core.syntax_validator import SyntaxValidator
+from ..features.lesson_system import LessonManager, LessonStatus
+from ..features.classroom_mode import ClassroomMode
+from ..features.reference_search import ReferenceIndex
+from ..features.achievements import ProgressTracker
+from ..utils.error_hints import get_enhanced_error_message
 
 
 class FeaturePanelBase(QWidget):
@@ -240,12 +246,12 @@ class ProjectTemplatesPanel(FeaturePanelBase):
         self.templates_list.clear()
         for tpl in templates:
             item = QListWidgetItem(tpl.name)
-            item.setData(Qt.UserRole, tpl)
+            item.setData(Qt.ItemDataRole.UserRole, tpl)
             self.templates_list.addItem(item)
 
     def on_template_selected(self, item):
         """Show template details."""
-        template = item.data(Qt.UserRole)
+        template = item.data(Qt.ItemDataRole.UserRole)
         self.details_text.setText(
             template.description if template.description else "No description"
         )
@@ -261,8 +267,822 @@ class ProjectTemplatesPanel(FeaturePanelBase):
             )
             return
 
-        template = item.data(Qt.UserRole)
+        template = item.data(Qt.ItemDataRole.UserRole)
         self.emit_status(f"Creating project from {template.name}...")
+
+
+class LessonModePanel(FeaturePanelBase):
+    """UI for guided lessons with checkpoints and hints."""
+
+    lesson_started = Signal(str, str)  # (language, starter_code)
+    lesson_checkpoint_ready = Signal(str, str)  # (language, starter_code)
+    export_markdown_requested = Signal()
+    export_pdf_requested = Signal()
+    lesson_completed = Signal(str)
+
+    def __init__(self):
+        super().__init__("Lesson Mode")
+        self.lesson_manager = LessonManager()
+        self._hint_index = 0
+        self._setup_ui()
+        self._load_lessons()
+
+    def _setup_ui(self):
+        """Setup lesson mode UI."""
+        splitter = QSplitter(Qt.Horizontal)
+
+        # Lesson list
+        list_widget = QWidget()
+        list_layout = QVBoxLayout(list_widget)
+        list_layout.setContentsMargins(0, 0, 0, 0)
+
+        list_layout.addWidget(QLabel("Lessons:"))
+        self.lesson_list = QListWidget()
+        self.lesson_list.currentItemChanged.connect(
+            self._on_lesson_selected
+        )
+        list_layout.addWidget(self.lesson_list)
+
+        splitter.addWidget(list_widget)
+
+        # Lesson details
+        details_widget = QWidget()
+        details_layout = QVBoxLayout(details_widget)
+        details_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.lesson_title = QLabel("Select a lesson")
+        self.lesson_title.setStyleSheet("font-weight: bold; font-size: 14px;")
+        details_layout.addWidget(self.lesson_title)
+
+        self.lesson_description = QTextEdit()
+        self.lesson_description.setReadOnly(True)
+        details_layout.addWidget(self.lesson_description)
+
+        self.checkpoint_title = QLabel("Checkpoint: -")
+        details_layout.addWidget(self.checkpoint_title)
+
+        self.checkpoint_description = QTextEdit()
+        self.checkpoint_description.setReadOnly(True)
+        details_layout.addWidget(self.checkpoint_description)
+
+        self.status_label = QLabel("Status: idle")
+        details_layout.addWidget(self.status_label)
+
+        button_row = QHBoxLayout()
+        self.start_button = QPushButton("Start Lesson")
+        self.start_button.clicked.connect(self._start_lesson)
+        button_row.addWidget(self.start_button)
+
+        self.hint_button = QPushButton("Show Hint")
+        self.hint_button.clicked.connect(self._show_hint)
+        self.hint_button.setEnabled(False)
+        button_row.addWidget(self.hint_button)
+
+        self.solution_button = QPushButton("Show Solution")
+        self.solution_button.clicked.connect(self._show_solution)
+        self.solution_button.setEnabled(False)
+        button_row.addWidget(self.solution_button)
+
+        export_md_btn = QPushButton("Export Markdown")
+        export_md_btn.clicked.connect(self.export_markdown_requested.emit)
+        button_row.addWidget(export_md_btn)
+
+        export_pdf_btn = QPushButton("Export PDF")
+        export_pdf_btn.clicked.connect(self.export_pdf_requested.emit)
+        button_row.addWidget(export_pdf_btn)
+
+        details_layout.addLayout(button_row)
+
+        self.hint_output = QTextEdit()
+        self.hint_output.setReadOnly(True)
+        self.hint_output.setPlaceholderText("Hints and solutions appear here...")
+        details_layout.addWidget(self.hint_output)
+
+        splitter.addWidget(details_widget)
+        splitter.setSizes([220, 520])
+
+        self.layout_main.addWidget(splitter)
+
+    def _load_lessons(self):
+        """Populate lessons list."""
+        self.lesson_list.clear()
+        for lesson in self.lesson_manager.list_lessons():
+            item = QListWidgetItem(f"📘 {lesson.title}")
+            item.setData(Qt.ItemDataRole.UserRole, lesson.id)
+            self.lesson_list.addItem(item)
+
+    def _on_lesson_selected(self, current: QListWidgetItem, _previous):
+        """Display details for selected lesson."""
+        if current is None:
+            return
+        lesson_id = current.data(Qt.ItemDataRole.UserRole)
+        lesson = self.lesson_manager.lessons.get(lesson_id)
+        if not lesson:
+            return
+
+        self.lesson_title.setText(lesson.title)
+        self.lesson_description.setText(lesson.description)
+        self._update_checkpoint_ui(lesson)
+        self.hint_output.clear()
+
+    def _start_lesson(self):
+        """Start the selected lesson."""
+        item = self.lesson_list.currentItem()
+        if not item:
+            return
+        lesson_id = item.data(Qt.ItemDataRole.UserRole)
+        if not self.lesson_manager.start_lesson(lesson_id):
+            return
+
+        self._hint_index = 0
+        lesson = self.lesson_manager.current_lesson
+        if not lesson:
+            return
+
+        checkpoint = self.lesson_manager.get_current_checkpoint()
+        if checkpoint:
+            self.lesson_started.emit(lesson.language, checkpoint.starter_code)
+
+        self._update_checkpoint_ui(lesson)
+        self.hint_button.setEnabled(True)
+        self.solution_button.setEnabled(True)
+        self.emit_status(f"Lesson started: {lesson.title}")
+
+    def _update_checkpoint_ui(self, lesson):
+        """Refresh checkpoint details UI."""
+        status_text = lesson.status.value if lesson else "idle"
+        self.status_label.setText(f"Status: {status_text}")
+
+        checkpoint = self.lesson_manager.get_current_checkpoint()
+        if checkpoint:
+            self.checkpoint_title.setText(f"Checkpoint: {checkpoint.title}")
+            self.checkpoint_description.setText(checkpoint.description)
+        else:
+            self.checkpoint_title.setText("Checkpoint: -")
+            self.checkpoint_description.setText("")
+
+    def _show_hint(self):
+        """Show next hint for the current checkpoint."""
+        checkpoint = self.lesson_manager.get_current_checkpoint()
+        if not checkpoint or not checkpoint.hints:
+            self.hint_output.setText("No hints available.")
+            return
+
+        hint_index = min(self._hint_index, len(checkpoint.hints) - 1)
+        hint = checkpoint.hints[hint_index]
+        self.hint_output.setText(f"Hint {hint_index + 1}: {hint}")
+        if self._hint_index < len(checkpoint.hints) - 1:
+            self._hint_index += 1
+
+    def _show_solution(self):
+        """Show solution for the current checkpoint."""
+        solution = self.lesson_manager.get_solution()
+        if solution:
+            self.hint_output.setText("Solution:\n" + solution)
+        else:
+            self.hint_output.setText("No solution available.")
+
+    def handle_execution_output(self, output_text: str):
+        """Check output against current checkpoint and advance if correct."""
+        lesson = self.lesson_manager.current_lesson
+        if not lesson:
+            return
+
+        if not self.lesson_manager.get_current_checkpoint():
+            return
+
+        if self.lesson_manager.check_output(output_text):
+            advanced = self.lesson_manager.advance_checkpoint()
+            if lesson.status == LessonStatus.COMPLETED:
+                self.status_label.setText("Status: completed")
+                self.hint_output.setText("✅ Lesson complete!")
+                self.emit_status("Lesson completed")
+                self.lesson_completed.emit(lesson.id)
+            elif advanced:
+                self._hint_index = 0
+                checkpoint = self.lesson_manager.get_current_checkpoint()
+                if checkpoint:
+                    self.lesson_checkpoint_ready.emit(
+                        lesson.language, checkpoint.starter_code
+                    )
+                self._update_checkpoint_ui(lesson)
+                self.hint_output.setText("✅ Checkpoint passed. Next up!")
+            else:
+                self._update_checkpoint_ui(lesson)
+        else:
+            self.hint_output.setText("❌ Output did not match. Try again.")
+
+    def get_session_snapshot(self) -> dict:
+        """Return summary details for export."""
+        lesson = self.lesson_manager.current_lesson
+        if not lesson:
+            return {
+                "status": "idle",
+            }
+
+        checkpoint = self.lesson_manager.get_current_checkpoint()
+        return {
+            "lesson_id": lesson.id,
+            "lesson_title": lesson.title,
+            "lesson_description": lesson.description,
+            "language": lesson.language,
+            "difficulty": lesson.difficulty,
+            "status": lesson.status.value,
+            "checkpoint_index": lesson.current_checkpoint + 1,
+            "checkpoint_total": len(lesson.checkpoints),
+            "checkpoint_title": checkpoint.title if checkpoint else "",
+            "checkpoint_description": checkpoint.description
+            if checkpoint
+            else "",
+        }
+
+
+class ProjectRunnerPanel(FeaturePanelBase):
+    """UI for running multiple tabs as a project."""
+
+    run_requested = Signal(list, dict)  # (tab_indices, options)
+    stop_requested = Signal()
+    refresh_requested = Signal()
+
+    def __init__(self):
+        super().__init__("Project Runner")
+        self._setup_ui()
+
+    def _setup_ui(self):
+        """Setup project runner UI."""
+        layout = self.layout_main
+
+        layout.addWidget(QLabel("Open Tabs:"))
+        self.tabs_list = QListWidget()
+        layout.addWidget(self.tabs_list)
+
+        options_group = QGroupBox("Run Options")
+        options_layout = QVBoxLayout(options_group)
+        self.clear_output = QCheckBox("Clear output between runs")
+        self.clear_output.setChecked(True)
+        self.clear_canvas = QCheckBox("Clear canvas between runs")
+        self.clear_canvas.setChecked(False)
+        options_layout.addWidget(self.clear_output)
+        options_layout.addWidget(self.clear_canvas)
+        layout.addWidget(options_group)
+
+        button_row = QHBoxLayout()
+        refresh_btn = QPushButton("Refresh Tabs")
+        refresh_btn.clicked.connect(self.refresh_requested.emit)
+        button_row.addWidget(refresh_btn)
+
+        run_btn = QPushButton("Run Selected")
+        run_btn.clicked.connect(self._run_selected)
+        button_row.addWidget(run_btn)
+
+        stop_btn = QPushButton("Stop Project")
+        stop_btn.clicked.connect(self.stop_requested.emit)
+        button_row.addWidget(stop_btn)
+
+        layout.addLayout(button_row)
+
+    def update_tabs(self, tabs: list[dict]):
+        """Update list of available tabs."""
+        self.tabs_list.clear()
+        for tab in tabs:
+            title = tab.get("title", "Untitled")
+            language = tab.get("language", "BASIC")
+            index = tab.get("index", -1)
+            item = QListWidgetItem(f"{title} ({language})")
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(Qt.CheckState.Unchecked)
+            item.setData(Qt.ItemDataRole.UserRole, index)
+            self.tabs_list.addItem(item)
+
+    def _run_selected(self):
+        """Emit run request for selected tabs."""
+        selected = []
+        for i in range(self.tabs_list.count()):
+            item = self.tabs_list.item(i)
+            if item.checkState() == Qt.Checked:
+                idx = item.data(Qt.ItemDataRole.UserRole)
+                if idx is not None and idx >= 0:
+                    selected.append(int(idx))
+
+        options = {
+            "clear_output": self.clear_output.isChecked(),
+            "clear_canvas": self.clear_canvas.isChecked(),
+        }
+        if selected:
+            self.run_requested.emit(selected, options)
+        else:
+            self.emit_status("No tabs selected")
+
+
+class TurtleInspectorPanel(FeaturePanelBase):
+    """Live turtle inspector with timeline scrubber."""
+
+    snapshot_selected = Signal(object)
+
+    def __init__(self):
+        super().__init__("Turtle Inspector")
+        self._snapshots = []
+        self._play_timer = QTimer(self)
+        self._play_timer.setInterval(120)
+        self._play_timer.timeout.connect(self._advance_frame)
+        self._setup_ui()
+
+    def _setup_ui(self):
+        """Setup turtle inspector UI."""
+        layout = self.layout_main
+
+        self.state_label = QLabel("No turtle data")
+        self.state_label.setStyleSheet("font-weight: bold;")
+        layout.addWidget(self.state_label)
+
+        self.details_text = QTextEdit()
+        self.details_text.setReadOnly(True)
+        layout.addWidget(self.details_text)
+
+        slider_row = QHBoxLayout()
+        self.frame_label = QLabel("Frame 0 / 0")
+        slider_row.addWidget(self.frame_label)
+
+        self.frame_slider = QSlider(Qt.Horizontal)
+        self.frame_slider.setMinimum(0)
+        self.frame_slider.setMaximum(0)
+        self.frame_slider.valueChanged.connect(self._on_frame_changed)
+        slider_row.addWidget(self.frame_slider, 1)
+        layout.addLayout(slider_row)
+
+        buttons = QHBoxLayout()
+        play_btn = QPushButton("Play")
+        play_btn.clicked.connect(self._start_playback)
+        buttons.addWidget(play_btn)
+
+        pause_btn = QPushButton("Pause")
+        pause_btn.clicked.connect(self._stop_playback)
+        buttons.addWidget(pause_btn)
+
+        clear_btn = QPushButton("Clear Timeline")
+        clear_btn.clicked.connect(self.clear_timeline)
+        buttons.addWidget(clear_btn)
+        layout.addLayout(buttons)
+
+    def add_snapshot(self, turtle_state):
+        """Add a turtle state snapshot to the timeline."""
+        if turtle_state is None:
+            return
+        self._snapshots.append(turtle_state)
+        self.frame_slider.blockSignals(True)
+        self.frame_slider.setMaximum(len(self._snapshots) - 1)
+        self.frame_slider.setValue(len(self._snapshots) - 1)
+        self.frame_slider.blockSignals(False)
+        self._update_frame_display(len(self._snapshots) - 1)
+
+    def clear_timeline(self):
+        """Clear recorded turtle snapshots."""
+        self._snapshots = []
+        self.frame_slider.setMaximum(0)
+        self.frame_slider.setValue(0)
+        self.frame_label.setText("Frame 0 / 0")
+        self.state_label.setText("No turtle data")
+        self.details_text.clear()
+        self._stop_playback()
+
+    def _start_playback(self):
+        """Start timeline playback."""
+        if self._snapshots:
+            self._play_timer.start()
+
+    def _stop_playback(self):
+        """Stop timeline playback."""
+        self._play_timer.stop()
+
+    def _advance_frame(self):
+        """Advance to the next frame during playback."""
+        if not self._snapshots:
+            return
+        current = self.frame_slider.value()
+        next_frame = current + 1
+        if next_frame >= len(self._snapshots):
+            self._stop_playback()
+            return
+        self.frame_slider.setValue(next_frame)
+
+    def _on_frame_changed(self, index: int):
+        """Handle scrubber updates."""
+        self._update_frame_display(index)
+        if 0 <= index < len(self._snapshots):
+            self.snapshot_selected.emit(self._snapshots[index])
+
+    def _update_frame_display(self, index: int):
+        """Update text display for the current frame."""
+        total = len(self._snapshots)
+        self.frame_label.setText(f"Frame {index + 1} / {total}")
+        if not self._snapshots or index < 0 or index >= total:
+            return
+
+        snap = self._snapshots[index]
+        x = getattr(snap, "x", 0.0)
+        y = getattr(snap, "y", 0.0)
+        heading = getattr(snap, "heading", 0.0)
+        pen_down = getattr(snap, "pen_down", True)
+        color = getattr(snap, "pen_color", (255, 255, 255))
+        width = getattr(snap, "pen_width", 2.0)
+        visible = getattr(snap, "visible", True)
+        lines = len(getattr(snap, "lines", []) or [])
+
+        self.state_label.setText("Live Turtle State")
+        details = (
+            f"Position: ({x:.2f}, {y:.2f})\n"
+            f"Heading: {heading:.1f}°\n"
+            f"Pen: {'down' if pen_down else 'up'}\n"
+            f"Color: {color}\n"
+            f"Width: {width}\n"
+            f"Visible: {'yes' if visible else 'no'}\n"
+            f"Lines: {lines}"
+        )
+        self.details_text.setText(details)
+
+
+class ErrorExplainerPanel(FeaturePanelBase):
+    """Explain interpreter errors with friendly tips and examples."""
+
+    def __init__(self):
+        super().__init__("Error Explainer")
+        self.assistant = LocalAIAssistant()
+        self._setup_ui()
+
+    def _setup_ui(self):
+        """Setup error explainer UI."""
+        layout = self.layout_main
+
+        self.error_label = QLabel("No errors yet")
+        self.error_label.setStyleSheet("font-weight: bold;")
+        layout.addWidget(self.error_label)
+
+        self.enhanced_text = QTextEdit()
+        self.enhanced_text.setReadOnly(True)
+        layout.addWidget(self.enhanced_text)
+
+        self.ai_text = QTextEdit()
+        self.ai_text.setReadOnly(True)
+        layout.addWidget(self.ai_text)
+
+    def set_error_context(self, error_message: str, context: str = ""):
+        """Update panel with an error and suggested fixes."""
+        self.error_label.setText(f"Error: {error_message}")
+        enhanced = get_enhanced_error_message(error_message, context)
+        self.enhanced_text.setText(enhanced)
+
+        suggestion = self.assistant.explain_error(error_message)
+        self.ai_text.setText(suggestion.explanation)
+
+
+class ClassroomModePanel(FeaturePanelBase):
+    """UI for classroom and presentation controls."""
+
+    start_presentation = Signal(dict)
+    stop_presentation = Signal()
+    export_bundle_requested = Signal(str, str)
+    import_bundle_requested = Signal(str)
+    broadcast_code_requested = Signal()
+    collect_outputs_requested = Signal()
+
+    def __init__(self):
+        super().__init__("Classroom Mode")
+        self.classroom = ClassroomMode()
+        self._setup_ui()
+
+    def _setup_ui(self):
+        """Setup classroom mode UI."""
+        layout = self.layout_main
+
+        presentation_group = QGroupBox("Presentation Mode")
+        presentation_layout = QFormLayout(presentation_group)
+
+        self.font_size = QSpinBox()
+        self.font_size.setRange(10, 36)
+        self.font_size.setValue(16)
+        presentation_layout.addRow("Font size:", self.font_size)
+
+        self.read_only = QCheckBox("Read-only editors")
+        self.read_only.setChecked(True)
+        presentation_layout.addRow("", self.read_only)
+
+        self.fullscreen = QCheckBox("Fullscreen")
+        self.fullscreen.setChecked(True)
+        presentation_layout.addRow("", self.fullscreen)
+
+        self.hide_menus = QCheckBox("Hide menus")
+        presentation_layout.addRow("", self.hide_menus)
+
+        self.lock_theme = QCheckBox("Lock theme/settings")
+        presentation_layout.addRow("", self.lock_theme)
+
+        layout.addWidget(presentation_group)
+
+        presentation_buttons = QHBoxLayout()
+        start_btn = QPushButton("Start Presentation")
+        start_btn.clicked.connect(self._emit_start)
+        presentation_buttons.addWidget(start_btn)
+
+        stop_btn = QPushButton("Stop Presentation")
+        stop_btn.clicked.connect(self.stop_presentation.emit)
+        presentation_buttons.addWidget(stop_btn)
+        layout.addLayout(presentation_buttons)
+
+        bundle_group = QGroupBox("Bundles")
+        bundle_layout = QFormLayout(bundle_group)
+        self.bundle_name = QLineEdit()
+        self.bundle_name.setPlaceholderText("Lesson or assignment name")
+        bundle_layout.addRow("Name:", self.bundle_name)
+        self.bundle_desc = QLineEdit()
+        self.bundle_desc.setPlaceholderText("Description")
+        bundle_layout.addRow("Description:", self.bundle_desc)
+        layout.addWidget(bundle_group)
+
+        bundle_buttons = QHBoxLayout()
+        export_btn = QPushButton("Export Bundle")
+        export_btn.clicked.connect(self._emit_export)
+        bundle_buttons.addWidget(export_btn)
+
+        import_btn = QPushButton("Import Bundle")
+        import_btn.clicked.connect(self._emit_import)
+        bundle_buttons.addWidget(import_btn)
+        layout.addLayout(bundle_buttons)
+
+        classroom_buttons = QHBoxLayout()
+        broadcast_btn = QPushButton("Broadcast Sample Code")
+        broadcast_btn.clicked.connect(self.broadcast_code_requested.emit)
+        classroom_buttons.addWidget(broadcast_btn)
+
+        collect_btn = QPushButton("Collect Outputs")
+        collect_btn.clicked.connect(self.collect_outputs_requested.emit)
+        classroom_buttons.addWidget(collect_btn)
+        layout.addLayout(classroom_buttons)
+
+    def _emit_start(self):
+        """Emit presentation start request."""
+        settings = {
+            "font_size": self.font_size.value(),
+            "read_only": self.read_only.isChecked(),
+            "fullscreen": self.fullscreen.isChecked(),
+            "hide_menus": self.hide_menus.isChecked(),
+            "lock_theme": self.lock_theme.isChecked(),
+        }
+        self.start_presentation.emit(settings)
+
+    def _emit_export(self):
+        """Emit bundle export request."""
+        name = self.bundle_name.text().strip() or "Classroom Bundle"
+        desc = self.bundle_desc.text().strip() or ""
+        self.export_bundle_requested.emit(name, desc)
+
+    def _emit_import(self):
+        """Emit bundle import request with selected path."""
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Import Bundle",
+            "",
+            "Bundle Files (*.zip);;All Files (*)",
+        )
+        if path:
+            self.import_bundle_requested.emit(path)
+
+
+class ReferenceSearchPanel(FeaturePanelBase):
+    """Offline reference search across docs and examples."""
+
+    open_reference_requested = Signal(str)
+
+    def __init__(self):
+        super().__init__("Reference Search")
+        self.index = ReferenceIndex()
+        self._setup_ui()
+        self._populate_tags()
+        self._refresh_results()
+
+    def _setup_ui(self):
+        """Setup reference search UI."""
+        layout = self.layout_main
+
+        search_row = QHBoxLayout()
+        self.query_edit = QLineEdit()
+        self.query_edit.setPlaceholderText("Search docs and examples...")
+        self.query_edit.textChanged.connect(self._refresh_results)
+        search_row.addWidget(self.query_edit, 1)
+
+        self.tag_combo = QComboBox()
+        self.tag_combo.currentIndexChanged.connect(self._refresh_results)
+        search_row.addWidget(self.tag_combo)
+
+        refresh_btn = QPushButton("Rescan")
+        refresh_btn.clicked.connect(self._rescan)
+        search_row.addWidget(refresh_btn)
+        layout.addLayout(search_row)
+
+        splitter = QSplitter(Qt.Horizontal)
+        list_container = QWidget()
+        list_layout = QVBoxLayout(list_container)
+        list_layout.setContentsMargins(0, 0, 0, 0)
+        list_layout.addWidget(QLabel("Results:"))
+        self.results_list = QListWidget()
+        self.results_list.currentItemChanged.connect(self._on_result_selected)
+        list_layout.addWidget(self.results_list)
+        splitter.addWidget(list_container)
+
+        preview_container = QWidget()
+        preview_layout = QVBoxLayout(preview_container)
+        preview_layout.setContentsMargins(0, 0, 0, 0)
+        preview_layout.addWidget(QLabel("Preview:"))
+        self.preview_text = QTextEdit()
+        self.preview_text.setReadOnly(True)
+        preview_layout.addWidget(self.preview_text)
+
+        open_btn = QPushButton("Open in Editor")
+        open_btn.clicked.connect(self._open_selected)
+        preview_layout.addWidget(open_btn)
+        splitter.addWidget(preview_container)
+
+        splitter.setSizes([300, 500])
+        layout.addWidget(splitter)
+
+    def _populate_tags(self):
+        """Populate tag filter from index."""
+        self.tag_combo.blockSignals(True)
+        self.tag_combo.clear()
+        self.tag_combo.addItem("All")
+        for tag in self.index.get_tags():
+            self.tag_combo.addItem(tag)
+        self.tag_combo.blockSignals(False)
+
+    def _rescan(self):
+        """Rescan the index."""
+        self.index.scan()
+        self._populate_tags()
+        self._refresh_results()
+
+    def _refresh_results(self):
+        """Refresh search results."""
+        query = self.query_edit.text().strip()
+        tag = self.tag_combo.currentText()
+        if tag == "All":
+            tag = None
+        results = self.index.search(query, tag)
+
+        self.results_list.clear()
+        for entry in results:
+            item = QListWidgetItem(f"{entry.title} [{entry.source}]")
+            item.setData(Qt.ItemDataRole.UserRole, entry)
+            self.results_list.addItem(item)
+
+        if results:
+            self.results_list.setCurrentRow(0)
+        else:
+            self.preview_text.clear()
+
+    def _on_result_selected(self, current: QListWidgetItem, _previous):
+        """Show preview for selected entry."""
+        if not current:
+            return
+        entry = current.data(Qt.ItemDataRole.UserRole)
+        if not entry:
+            return
+        meta = f"Path: {entry.path}\nTags: {', '.join(entry.tags)}\n"
+        self.preview_text.setText(meta + "\n" + entry.snippet)
+
+    def _open_selected(self):
+        """Open selected reference entry in editor."""
+        item = self.results_list.currentItem()
+        if not item:
+            return
+        entry = item.data(Qt.ItemDataRole.UserRole)
+        if entry:
+            self.open_reference_requested.emit(str(entry.path))
+
+
+class AchievementsPanel(FeaturePanelBase):
+    """Track tutorial and example progress with badges."""
+
+    def __init__(self):
+        super().__init__("Achievements")
+        self.tracker = ProgressTracker()
+        self._setup_ui()
+        self.refresh()
+
+    def _setup_ui(self):
+        """Setup achievements UI."""
+        layout = self.layout_main
+
+        self.tutorial_progress = QProgressBar()
+        self.example_progress = QProgressBar()
+        layout.addWidget(QLabel("Tutorial Progress"))
+        layout.addWidget(self.tutorial_progress)
+        layout.addWidget(QLabel("Example Progress"))
+        layout.addWidget(self.example_progress)
+
+        splitter = QSplitter(Qt.Horizontal)
+
+        tutorial_widget = QWidget()
+        tutorial_layout = QVBoxLayout(tutorial_widget)
+        tutorial_layout.setContentsMargins(0, 0, 0, 0)
+        tutorial_layout.addWidget(QLabel("Tutorials"))
+        self.tutorial_list = QListWidget()
+        self.tutorial_list.itemChanged.connect(self._on_tutorial_toggled)
+        tutorial_layout.addWidget(self.tutorial_list)
+        splitter.addWidget(tutorial_widget)
+
+        example_widget = QWidget()
+        example_layout = QVBoxLayout(example_widget)
+        example_layout.setContentsMargins(0, 0, 0, 0)
+        example_layout.addWidget(QLabel("Examples"))
+        self.example_list = QListWidget()
+        self.example_list.itemChanged.connect(self._on_example_toggled)
+        example_layout.addWidget(self.example_list)
+        splitter.addWidget(example_widget)
+
+        splitter.setSizes([300, 300])
+        layout.addWidget(splitter)
+
+        layout.addWidget(QLabel("Badges"))
+        self.badge_list = QListWidget()
+        layout.addWidget(self.badge_list)
+
+        refresh_btn = QPushButton("Refresh Progress")
+        refresh_btn.clicked.connect(self.refresh)
+        layout.addWidget(refresh_btn)
+
+    def refresh(self):
+        """Refresh progress lists and badges."""
+        self._refresh_lists()
+        self._refresh_badges()
+
+    def record_example_run(self, path: str):
+        """Mark an example as completed when run."""
+        self.tracker.record_example_run(path)
+        self.refresh()
+
+    def _refresh_lists(self):
+        """Refresh tutorial and example lists."""
+        completed_tutorials = set(
+            self.tracker.state.get("completed_tutorials", [])
+        )
+        completed_examples = set(
+            self.tracker.state.get("completed_examples", [])
+        )
+
+        self.tutorial_list.blockSignals(True)
+        self.tutorial_list.clear()
+        for tutorial in self.tracker.get_tutorials():
+            item = QListWidgetItem(tutorial)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(
+                Qt.CheckState.Checked
+                if tutorial in completed_tutorials
+                else Qt.CheckState.Unchecked
+            )
+            item.setData(Qt.ItemDataRole.UserRole, tutorial)
+            self.tutorial_list.addItem(item)
+        self.tutorial_list.blockSignals(False)
+
+        self.example_list.blockSignals(True)
+        self.example_list.clear()
+        for example in self.tracker.get_examples():
+            item = QListWidgetItem(example)
+            item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+            item.setCheckState(
+                Qt.CheckState.Checked
+                if example in completed_examples
+                else Qt.CheckState.Unchecked
+            )
+            item.setData(Qt.ItemDataRole.UserRole, example)
+            self.example_list.addItem(item)
+        self.example_list.blockSignals(False)
+
+        progress = self.tracker.get_progress()
+        self.tutorial_progress.setValue(int(progress["tutorial_percent"]))
+        self.example_progress.setValue(int(progress["example_percent"]))
+
+    def _refresh_badges(self):
+        """Refresh badge list."""
+        self.badge_list.clear()
+        for badge in self.tracker.get_badges():
+            status = "✅" if badge.unlocked else "🔒"
+            item = QListWidgetItem(f"{status} {badge.name} - {badge.description}")
+            self.badge_list.addItem(item)
+
+    def _on_tutorial_toggled(self, item: QListWidgetItem):
+        """Handle tutorial completion toggle."""
+        path = item.data(Qt.ItemDataRole.UserRole)
+        completed = item.checkState() == Qt.CheckState.Checked
+        self.tracker.mark_tutorial_completed(path, completed)
+        self._refresh_badges()
+        self._refresh_lists()
+
+    def _on_example_toggled(self, item: QListWidgetItem):
+        """Handle example completion toggle."""
+        path = item.data(Qt.ItemDataRole.UserRole)
+        completed = item.checkState() == Qt.CheckState.Checked
+        self.tracker.mark_example_completed(path, completed)
+        self._refresh_badges()
+        self._refresh_lists()
 
 
 class DebuggerPanel(FeaturePanelBase):
@@ -450,12 +1270,12 @@ class AssetLibraryPanel(FeaturePanelBase):
         self.assets_list.clear()
         for asset in filtered:
             item = QListWidgetItem(asset.name)
-            item.setData(Qt.UserRole, asset)
+            item.setData(Qt.ItemDataRole.UserRole, asset)
             self.assets_list.addItem(item)
 
     def on_asset_selected(self, item):
         """Show asset preview."""
-        asset = item.data(Qt.UserRole)
+        asset = item.data(Qt.ItemDataRole.UserRole)
         description = getattr(asset, "description", "")
         atype = (
             asset.asset_type.value
@@ -475,7 +1295,7 @@ class AssetLibraryPanel(FeaturePanelBase):
             QMessageBox.warning(self, "Error", "Please select an asset first")
             return
 
-        asset = item.data(Qt.UserRole)
+        asset = item.data(Qt.ItemDataRole.UserRole)
         self.emit_status(f"Imported: {asset.name}")
 
 
@@ -1059,8 +1879,15 @@ class PeerReviewPanel(FeaturePanelBase):
 
 # Export all panels
 __all__ = [
+    "LessonModePanel",
+    "ErrorExplainerPanel",
+    "ClassroomModePanel",
+    "ReferenceSearchPanel",
+    "AchievementsPanel",
     "SyntaxValidatorPanel",
     "ProjectTemplatesPanel",
+    "ProjectRunnerPanel",
+    "TurtleInspectorPanel",
     "DebuggerPanel",
     "LanguageComparatorPanel",
     "AssetLibraryPanel",

@@ -1,7 +1,11 @@
 """Main window for Time Warp Studio."""
 
 import getpass
+import html
+import json
 import re
+import time
+import uuid
 from functools import partial
 from pathlib import Path
 
@@ -10,7 +14,14 @@ from pathlib import Path
 # line-count threshold to be exceeded for readability and maintenance.
 # pylint: disable=too-many-lines
 from PySide6.QtCore import QSettings, Qt, QTimer
-from PySide6.QtGui import QAction, QActionGroup, QKeySequence
+from PySide6.QtGui import (
+    QAction,
+    QActionGroup,
+    QKeySequence,
+    QTextCursor,
+    QTextDocument,
+)
+from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
@@ -34,7 +45,7 @@ from PySide6.QtWidgets import (
 from ..core.interpreter import Language
 from .canvas import TurtleCanvas
 from .cassette_animation import show_cassette_load, show_cassette_save
-from .collaboration_client import CollaborationClient
+from .collaboration_client import CollaborationClient, CollaborationOperation
 from .crt_effect import CRTEffectOverlay
 from .debug_panel import DebugPanel
 from .editor import CodeEditor
@@ -43,6 +54,7 @@ from .output import ImmediateModePanel, OutputPanel
 from .screen_modes import ScreenModeManager
 from .themes import ThemeManager
 from .variable_inspector import VariableInspector
+from ..features.classroom_mode import ClassroomMode
 
 # pylint: enable=no-name-in-module
 
@@ -75,7 +87,16 @@ class MainWindow(QMainWindow):
 
         # Collaboration client
         self.collaboration_client = CollaborationClient()
+        self.collab_disconnect_action = QAction("Disconnect", self)
+        self.collab_disconnect_action.setEnabled(False)
         self.setup_collaboration_callbacks()
+
+        # Classroom mode
+        self.classroom_mode = ClassroomMode()
+        self._classroom_lock_theme = False
+        self._pre_presentation_font_size = None
+        self._pre_presentation_menu_visible = None
+        self._pre_presentation_was_fullscreen = None
 
         # Current file tracking (will be per tab)
         self.tab_files = {}  # tab_index -> filename
@@ -94,6 +115,13 @@ class MainWindow(QMainWindow):
         self._is_debugging = False
         self._is_paused = False
         self._current_debug_line = 0
+        self._debug_step_granularity = "line"
+        self._last_debug_timeline = None
+
+        # Project runner state
+        self._project_run_queue = []
+        self._project_run_active = False
+        self._project_run_options = {}
 
         # Retro features
         self.screen_mode_manager = ScreenModeManager()
@@ -111,6 +139,12 @@ class MainWindow(QMainWindow):
 
         # Setup feature panels and integration
         self.feature_manager.setup_features()
+        self.output.execution_complete.connect(self.on_execution_complete)
+        self._connect_lesson_signals()
+        self._connect_project_runner_signals()
+        self._connect_turtle_inspector_signals()
+        self._connect_classroom_signals()
+        self._connect_reference_signals()
 
         # Restore previous state
         self.restore_state()
@@ -201,6 +235,8 @@ class MainWindow(QMainWindow):
         self.tab_modified[tab_index] = False
         self.tab_languages[tab_index] = language
 
+        self._refresh_project_runner_tabs()
+
         return tab_index
 
     def _on_breakpoint_toggled(self, _line: int):
@@ -281,7 +317,7 @@ class MainWindow(QMainWindow):
         """Print the current code."""
         try:
             # pylint: disable=import-outside-toplevel
-            from PySide6.QtPrintSupport import QPrintDialog, QPrinter
+            from PySide6.QtPrintSupport import QPrintDialog
         except ImportError:
             self.statusbar.showMessage("Print support not available", 3000)
             return
@@ -300,7 +336,7 @@ class MainWindow(QMainWindow):
         try:
             # pylint: disable=import-outside-toplevel
             from PySide6.QtGui import QPainter
-            from PySide6.QtPrintSupport import QPrintDialog, QPrinter
+            from PySide6.QtPrintSupport import QPrintDialog
         except ImportError:
             self.statusbar.showMessage("Print support not available", 3000)
             return
@@ -421,6 +457,8 @@ class MainWindow(QMainWindow):
                 # Ensure we always have at least one editor open
                 self.new_file()
 
+            self._refresh_project_runner_tabs()
+
     def on_tab_changed(self, index):
         """Handle tab change."""
         if index >= 0:
@@ -444,6 +482,8 @@ class MainWindow(QMainWindow):
 
             # Update title
             self.update_title()
+
+        self._refresh_project_runner_tabs()
 
     def on_language_changed(self, index=None):
         """Handle language selection change."""
@@ -503,7 +543,7 @@ class MainWindow(QMainWindow):
 
     def setup_ui(self):
         """Setup main UI layout."""
-        self.setWindowTitle("🎨 Time Warp Studio v6.0.0 - Python Edition")
+        self.setWindowTitle("🎨 Time Warp Studio v7.0.0 - Python Edition")
         self.setMinimumSize(1200, 800)
 
         # Set main window style
@@ -814,7 +854,7 @@ class MainWindow(QMainWindow):
         run_menu.addAction(self.run_action)
 
         self.stop_action = QAction("&Stop", self)
-        self.stop_action.setShortcut("Shift+F5")
+        self.stop_action.setShortcut("Ctrl+Shift+F5")
         self.stop_action.setEnabled(False)
         self.stop_action.triggered.connect(self.stop_program)
         run_menu.addAction(self.stop_action)
@@ -846,7 +886,7 @@ class MainWindow(QMainWindow):
         debug_menu.addSeparator()
 
         self.debug_continue_action = QAction("&Continue", self)
-        self.debug_continue_action.setShortcut("F5")
+        self.debug_continue_action.setShortcut("Ctrl+F5")
         self.debug_continue_action.setEnabled(False)
         self.debug_continue_action.triggered.connect(self.debug_continue)
         debug_menu.addAction(self.debug_continue_action)
@@ -1614,11 +1654,496 @@ class MainWindow(QMainWindow):
         if analytics_panel and hasattr(analytics_panel, "record_execution"):
             analytics_panel.record_execution(stats)
 
+    def on_execution_complete(self):
+        """Handle completion from the output panel."""
+        self.check_execution_complete()
+
+        lesson_panel = self.feature_manager.get_feature_panel("lesson_mode")
+        if lesson_panel and hasattr(lesson_panel, "handle_execution_output"):
+            lesson_panel.handle_execution_output(self.output.toPlainText())
+
+        self._maybe_record_example_progress()
+
+        if self._project_run_active:
+            self._run_next_project_tab()
+
     def on_execution_error(self, error: str):
         """Handle execution errors for AI assistance."""
         ai_panel = self.feature_manager.get_feature_panel("ai_assistant")
         if ai_panel and hasattr(ai_panel, "set_error_context"):
             ai_panel.set_error_context(error)
+
+        explainer_panel = self.feature_manager.get_feature_panel(
+            "error_explainer"
+        )
+        if explainer_panel and hasattr(explainer_panel, "set_error_context"):
+            context = self._get_current_line_context()
+            explainer_panel.set_error_context(error, context)
+
+        if self._project_run_active:
+            self.stop_project_run()
+
+    def _get_current_line_context(self) -> str:
+        """Get the current editor line for error context."""
+        editor = self.get_current_editor()
+        if not editor:
+            return ""
+        cursor = editor.textCursor()
+        cursor.select(QTextCursor.SelectionType.LineUnderCursor)
+        return cursor.selectedText()
+
+    def _connect_lesson_signals(self):
+        """Connect lesson panel signals to the main window."""
+        panel = self.feature_manager.get_feature_panel("lesson_mode")
+        if not panel:
+            return
+        if hasattr(panel, "lesson_started"):
+            panel.lesson_started.connect(self._apply_lesson_code)
+        if hasattr(panel, "lesson_checkpoint_ready"):
+            panel.lesson_checkpoint_ready.connect(self._apply_lesson_code)
+        if hasattr(panel, "export_markdown_requested"):
+            panel.export_markdown_requested.connect(
+                lambda: self.export_lesson_session("markdown")
+            )
+        if hasattr(panel, "export_pdf_requested"):
+            panel.export_pdf_requested.connect(
+                lambda: self.export_lesson_session("pdf")
+            )
+
+    def _connect_project_runner_signals(self):
+        """Connect project runner panel signals to the main window."""
+        panel = self.feature_manager.get_feature_panel("project_runner")
+        if not panel:
+            return
+        if hasattr(panel, "run_requested"):
+            panel.run_requested.connect(self.start_project_run)
+        if hasattr(panel, "stop_requested"):
+            panel.stop_requested.connect(self.stop_project_run)
+        if hasattr(panel, "refresh_requested"):
+            panel.refresh_requested.connect(self._refresh_project_runner_tabs)
+        self._refresh_project_runner_tabs()
+
+    def _connect_turtle_inspector_signals(self):
+        """Connect turtle inspector panel to output events."""
+        panel = self.feature_manager.get_feature_panel("turtle_inspector")
+        if not panel:
+            return
+        if hasattr(panel, "add_snapshot"):
+            self.output.turtle_state_changed.connect(panel.add_snapshot)
+        if hasattr(panel, "clear_timeline"):
+            self.output.turtle_state_reset.connect(panel.clear_timeline)
+        if hasattr(panel, "snapshot_selected"):
+            panel.snapshot_selected.connect(self._apply_turtle_snapshot)
+
+    def _connect_reference_signals(self):
+        """Connect reference search panel signals."""
+        panel = self.feature_manager.get_feature_panel("reference_search")
+        if not panel:
+            return
+        if hasattr(panel, "open_reference_requested"):
+            panel.open_reference_requested.connect(self.load_file)
+
+    def _connect_classroom_signals(self):
+        """Connect classroom mode panel signals."""
+        panel = self.feature_manager.get_feature_panel("classroom_mode")
+        if not panel:
+            return
+        if hasattr(panel, "start_presentation"):
+            panel.start_presentation.connect(self.start_presentation_mode)
+        if hasattr(panel, "stop_presentation"):
+            panel.stop_presentation.connect(self.stop_presentation_mode)
+        if hasattr(panel, "export_bundle_requested"):
+            panel.export_bundle_requested.connect(self.export_classroom_bundle)
+        if hasattr(panel, "import_bundle_requested"):
+            panel.import_bundle_requested.connect(self.import_classroom_bundle)
+        if hasattr(panel, "broadcast_code_requested"):
+            panel.broadcast_code_requested.connect(self.broadcast_sample_code)
+        if hasattr(panel, "collect_outputs_requested"):
+            panel.collect_outputs_requested.connect(self.collect_student_outputs)
+
+    def _apply_turtle_snapshot(self, turtle_state):
+        """Apply a turtle snapshot to the canvas for replay."""
+        if turtle_state and hasattr(self, "canvas"):
+            self.canvas.set_turtle_state(turtle_state)
+
+    def start_presentation_mode(self, settings: dict):
+        """Enable presentation mode with classroom settings."""
+        self.classroom_mode.start_presentation(
+            font_size=settings.get("font_size", 16),
+            fullscreen=settings.get("fullscreen", True),
+        )
+
+        if self._pre_presentation_font_size is None:
+            self._pre_presentation_font_size = (
+                self.theme_manager.current_font_size
+            )
+        if self._pre_presentation_menu_visible is None:
+            self._pre_presentation_menu_visible = self.menuBar().isVisible()
+        if self._pre_presentation_was_fullscreen is None:
+            self._pre_presentation_was_fullscreen = self.isFullScreen()
+
+        if settings.get("read_only", True):
+            self._set_editors_read_only(True)
+        if settings.get("font_size"):
+            self.change_font_size(settings["font_size"])
+        if settings.get("hide_menus"):
+            self.menuBar().setVisible(False)
+        if settings.get("fullscreen", True):
+            self.showFullScreen()
+
+        self._classroom_lock_theme = bool(settings.get("lock_theme"))
+        self.statusbar.showMessage("Presentation mode enabled")
+
+    def stop_presentation_mode(self):
+        """Disable presentation mode and restore settings."""
+        self.classroom_mode.stop_presentation()
+        self._set_editors_read_only(False)
+
+        if self._pre_presentation_menu_visible is not None:
+            self.menuBar().setVisible(self._pre_presentation_menu_visible)
+        if self._pre_presentation_font_size is not None:
+            self.change_font_size(self._pre_presentation_font_size)
+        if self._pre_presentation_was_fullscreen:
+            self.showFullScreen()
+        else:
+            self.showNormal()
+
+        self._classroom_lock_theme = False
+        self.statusbar.showMessage("Presentation mode disabled")
+
+    def _set_editors_read_only(self, read_only: bool):
+        """Toggle read-only mode for all editors."""
+        for i in range(self.editor_tabs.count()):
+            editor = self.editor_tabs.widget(i)
+            if editor:
+                editor.setReadOnly(read_only)
+
+    def export_classroom_bundle(self, name: str, description: str):
+        """Export a classroom bundle from open tabs."""
+        files = {}
+        for i in range(self.editor_tabs.count()):
+            editor = self.editor_tabs.widget(i)
+            if not editor:
+                continue
+            filename = self.tab_files.get(i)
+            if filename:
+                file_key = Path(filename).name
+            else:
+                language = self.tab_languages.get(i, Language.BASIC)
+                ext = self._language_extension(language)
+                file_key = f"untitled_{i + 1}{ext}"
+            files[file_key] = editor.toPlainText()
+
+        settings = {
+            "theme": self.theme_manager.current_theme_name,
+            "font_size": self.theme_manager.current_font_size,
+        }
+        bundle = self.classroom_mode.create_bundle(
+            name=name,
+            description=description,
+            files=files,
+            settings=settings,
+        )
+
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Classroom Bundle",
+            "",
+            "Bundle Files (*.zip);;All Files (*)",
+        )
+        if not path:
+            return
+        if not path.lower().endswith(".zip"):
+            path += ".zip"
+
+        success = self.classroom_mode.export_bundle(bundle, Path(path))
+        if success:
+            self.statusbar.showMessage("Bundle exported")
+        else:
+            self.statusbar.showMessage("Bundle export failed")
+
+    def import_classroom_bundle(self, path: str):
+        """Import a classroom bundle and open its files."""
+        bundle = self.classroom_mode.import_bundle(Path(path))
+        if not bundle:
+            self.statusbar.showMessage("Bundle import failed")
+            return
+
+        for filename, content in bundle.files.items():
+            language = Language.from_extension(Path(filename).suffix)
+            self.create_new_tab(Path(filename).name, content, language)
+            self.set_current_tab_info(
+                file=None, modified=False, language=language
+            )
+
+        theme_name = bundle.settings.get("theme")
+        if theme_name:
+            self.change_theme(theme_name)
+
+        self.statusbar.showMessage(f"Imported bundle: {bundle.name}")
+
+    def broadcast_sample_code(self):
+        """Broadcast current code to collaboration session if connected."""
+        if not self.collaboration_client.connected:
+            self.statusbar.showMessage("Collaboration not connected")
+            return
+        editor = self.get_current_editor()
+        if not editor:
+            return
+
+        operation = CollaborationOperation(
+            id=uuid.uuid4().hex,
+            user_id=self.collaboration_client.user.id
+            if self.collaboration_client.user
+            else "",
+            type="replace",
+            position=0,
+            content=editor.toPlainText(),
+            timestamp=time.time(),
+        )
+
+        if self.collaboration_client.send_operation(operation):
+            self.statusbar.showMessage("Broadcasted sample code")
+        else:
+            self.statusbar.showMessage("Broadcast failed")
+
+    def collect_student_outputs(self):
+        """Save current output log for classroom collection."""
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Output Log",
+            "",
+            "Text Files (*.txt);;All Files (*)",
+        )
+        if not path:
+            return
+        if not path.lower().endswith(".txt"):
+            path += ".txt"
+
+        try:
+            with open(path, "w", encoding="utf-8") as handle:
+                handle.write(self.output.toPlainText())
+            self.statusbar.showMessage("Output log saved")
+        except OSError:
+            self.statusbar.showMessage("Failed to save output log")
+
+    def _language_extension(self, language: Language) -> str:
+        """Return file extension for a language."""
+        mapping = {
+            Language.BASIC: ".bas",
+            Language.PILOT: ".pilot",
+            Language.LOGO: ".logo",
+            Language.C: ".c",
+            Language.PASCAL: ".pas",
+            Language.PROLOG: ".pro",
+            Language.FORTH: ".f",
+        }
+        return mapping.get(language, ".bas")
+
+    def _apply_lesson_code(self, language_name: str, code: str):
+        """Load lesson starter code into the current editor."""
+        editor = self.get_current_editor()
+        if not editor:
+            self.new_file()
+            editor = self.get_current_editor()
+        if not editor:
+            return
+
+        language_map = {
+            "basic": Language.BASIC,
+            "pilot": Language.PILOT,
+            "logo": Language.LOGO,
+            "c": Language.C,
+            "pascal": Language.PASCAL,
+            "prolog": Language.PROLOG,
+            "forth": Language.FORTH,
+        }
+        lang = language_map.get(language_name.lower(), Language.BASIC)
+
+        editor.setPlainText(code)
+        editor.set_language(lang)
+        self.set_current_tab_info(modified=True, language=lang)
+        self.output.set_language(lang)
+
+        if hasattr(self, "language_combo"):
+            for i in range(self.language_combo.count()):
+                if self.language_combo.itemData(i) == lang:
+                    self.language_combo.setCurrentIndex(i)
+                    break
+
+    def export_lesson_session(self, format_name: str):
+        """Export lesson session to Markdown or PDF."""
+        panel = self.feature_manager.get_feature_panel("lesson_mode")
+        if not panel or not hasattr(panel, "get_session_snapshot"):
+            self.statusbar.showMessage("Lesson mode not available")
+            return
+
+        snapshot = panel.get_session_snapshot()
+        editor = self.get_current_editor()
+        code = editor.toPlainText() if editor else ""
+        output_text = self.output.toPlainText()
+
+        default_name = "lesson_session"
+        if format_name == "pdf":
+            path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Export Lesson Session (PDF)",
+                f"{default_name}.pdf",
+                "PDF Files (*.pdf);;All Files (*)",
+            )
+        else:
+            path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Export Lesson Session (Markdown)",
+                f"{default_name}.md",
+                "Markdown Files (*.md);;All Files (*)",
+            )
+
+        if not path:
+            return
+
+        export_path = Path(path)
+        image_path = export_path.with_suffix("").with_name(
+            export_path.stem + "_canvas.png"
+        )
+
+        image_saved = self._save_canvas_screenshot(image_path)
+
+        if format_name == "pdf":
+            html_doc = self._render_lesson_html(
+                snapshot, code, output_text, image_path if image_saved else None
+            )
+            printer = QPrinter(QPrinter.PrinterMode.HighResolution)
+            printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
+            printer.setOutputFileName(str(export_path))
+            doc = QTextDocument()
+            doc.setHtml(html_doc)
+            doc.print_(printer)
+            self.statusbar.showMessage("Lesson PDF exported")
+        else:
+            markdown = self._render_lesson_markdown(
+                snapshot, code, output_text, image_path if image_saved else None
+            )
+            try:
+                export_path.write_text(markdown, encoding="utf-8")
+                self.statusbar.showMessage("Lesson Markdown exported")
+            except OSError:
+                self.statusbar.showMessage("Failed to export Markdown")
+
+    def _render_lesson_markdown(
+        self, snapshot: dict, code: str, output_text: str, image_path: Path | None
+    ) -> str:
+        """Render lesson session as Markdown."""
+        language = snapshot.get("language", "")
+        md_lines = ["# Lesson Session Report", ""]
+        if snapshot.get("lesson_title"):
+            md_lines.append(f"## Lesson: {snapshot.get('lesson_title')}")
+            md_lines.append(snapshot.get("lesson_description", ""))
+            md_lines.append("")
+            md_lines.append(f"- Status: {snapshot.get('status', 'unknown')}")
+            md_lines.append(
+                "- Checkpoint: "
+                f"{snapshot.get('checkpoint_index', 0)}"
+                f"/{snapshot.get('checkpoint_total', 0)}"
+            )
+            if snapshot.get("checkpoint_title"):
+                md_lines.append(
+                    f"- Current checkpoint: {snapshot.get('checkpoint_title')}"
+                )
+            md_lines.append("")
+
+        md_lines.append("## Code")
+        fence_lang = language.lower() if isinstance(language, str) else ""
+        md_lines.append(f"```{fence_lang}")
+        md_lines.append(code.rstrip())
+        md_lines.append("```")
+        md_lines.append("")
+
+        md_lines.append("## Output")
+        md_lines.append("```")
+        md_lines.append(output_text.rstrip())
+        md_lines.append("```")
+
+        if image_path:
+            md_lines.append("")
+            md_lines.append("## Canvas")
+            md_lines.append(f"![Canvas]({image_path.name})")
+
+        md_lines.append("")
+        return "\n".join(md_lines)
+
+    def _render_lesson_html(
+        self, snapshot: dict, code: str, output_text: str, image_path: Path | None
+    ) -> str:
+        """Render lesson session as HTML for PDF export."""
+        title = html.escape(snapshot.get("lesson_title", "Lesson Session"))
+        description = html.escape(snapshot.get("lesson_description", ""))
+        status = html.escape(snapshot.get("status", "unknown"))
+        checkpoint = (
+            f"{snapshot.get('checkpoint_index', 0)}"
+            f"/{snapshot.get('checkpoint_total', 0)}"
+        )
+        checkpoint_title = html.escape(snapshot.get("checkpoint_title", ""))
+
+        code_block = html.escape(code)
+        output_block = html.escape(output_text)
+
+        image_html = ""
+        if image_path:
+            image_html = (
+                f"<h2>Canvas</h2><img src=\"{image_path}\" width=\"640\" />"
+            )
+
+        return (
+            "<html><body>"
+            f"<h1>Lesson Session Report</h1>"
+            f"<h2>Lesson: {title}</h2>"
+            f"<p>{description}</p>"
+            f"<p><strong>Status:</strong> {status}</p>"
+            f"<p><strong>Checkpoint:</strong> {checkpoint}</p>"
+            f"<p><strong>Current checkpoint:</strong> {checkpoint_title}</p>"
+            "<h2>Code</h2>"
+            f"<pre>{code_block}</pre>"
+            "<h2>Output</h2>"
+            f"<pre>{output_block}</pre>"
+            f"{image_html}"
+            "</body></html>"
+        )
+
+    def _save_canvas_screenshot(self, path: Path) -> bool:
+        """Save current canvas screenshot to disk."""
+        if not hasattr(self, "canvas"):
+            return False
+        pixmap = self.canvas.grab()
+        return pixmap.save(str(path), "PNG")
+
+    def _maybe_record_example_progress(self):
+        """Record example progress if current file is an example."""
+        panel = self.feature_manager.get_feature_panel("achievements")
+        if not panel or not hasattr(panel, "record_example_run"):
+            return
+        current_info = self.get_current_tab_info()
+        file_path = current_info.get("file")
+        if not file_path:
+            return
+        path = Path(file_path).resolve()
+        root = self._find_repo_root()
+        if not root:
+            return
+        try:
+            rel_path = str(path.relative_to(root))
+        except ValueError:
+            return
+        if rel_path.startswith("Examples/"):
+            panel.record_example_run(rel_path)
+
+    def _find_repo_root(self) -> Path | None:
+        """Locate repository root for relative paths."""
+        start = Path(__file__).resolve()
+        for parent in [start] + list(start.parents):
+            if (parent / "Examples").exists() and (parent / "docs").exists():
+                return parent
+        return None
 
     def stop_program(self):
         """Stop running program."""
@@ -1627,6 +2152,75 @@ class MainWindow(QMainWindow):
         self.stop_action.setEnabled(False)
         self.statusbar.showMessage("Stopped")
         # debug pause handling removed
+        if self._project_run_active:
+            self.stop_project_run()
+
+    def start_project_run(self, tab_indices: list, options: dict):
+        """Start executing a project run across multiple tabs."""
+        if self.output.is_running():
+            self.statusbar.showMessage("Program already running")
+            return
+        self._project_run_queue = list(tab_indices)
+        self._project_run_active = True
+        self._project_run_options = options or {}
+        self.statusbar.showMessage("🚀 Running project...")
+        self._run_next_project_tab()
+
+    def stop_project_run(self):
+        """Stop project execution and clear queue."""
+        self._project_run_queue = []
+        self._project_run_active = False
+        self._project_run_options = {}
+        self.statusbar.showMessage("Project run stopped")
+
+    def _run_next_project_tab(self):
+        """Run the next tab in the project queue."""
+        if not self._project_run_queue:
+            self._project_run_active = False
+            self.statusbar.showMessage("Project run complete")
+            return
+
+        tab_index = self._project_run_queue.pop(0)
+        if tab_index < 0 or tab_index >= self.editor_tabs.count():
+            self._run_next_project_tab()
+            return
+
+        editor = self.editor_tabs.widget(tab_index)
+        if not editor:
+            self._run_next_project_tab()
+            return
+
+        if self._project_run_options.get("clear_output"):
+            self.output.clear()
+        if self._project_run_options.get("clear_canvas"):
+            self.canvas.clear()
+
+        language = self.tab_languages.get(tab_index, Language.BASIC)
+        self.output.set_language(language)
+        self.editor_tabs.setCurrentIndex(tab_index)
+
+        code = editor.toPlainText()
+        self.output.run_program(code, self.canvas, debug_mode=False)
+
+    def _refresh_project_runner_tabs(self):
+        """Update project runner panel with open tabs."""
+        panel = self.feature_manager.get_feature_panel("project_runner")
+        if not panel or not hasattr(panel, "update_tabs"):
+            return
+
+        tabs = []
+        for i in range(self.editor_tabs.count()):
+            title = self.editor_tabs.tabText(i)
+            language = self.tab_languages.get(i, Language.BASIC)
+            tabs.append(
+                {
+                    "index": i,
+                    "title": title,
+                    "language": language.friendly_name(),
+                }
+            )
+
+        panel.update_tabs(tabs)
 
     def on_variables_updated(self, variables):
         """Handle variables update from interpreter."""
@@ -1662,7 +2256,7 @@ class MainWindow(QMainWindow):
 
     def update_title(self):
         """Update window title."""
-        title = "Time Warp Studio v6.0.0"
+        title = "Time Warp Studio v7.0.0"
 
         current_info = self.get_current_tab_info()
         if current_info["file"]:
@@ -1676,28 +2270,33 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(title)
 
     def check_save_changes(self):
-        """Check if current tab has unsaved changes."""
-        current_info = self.get_current_tab_info()
-        if not current_info["modified"]:
-            return True
-
-        reply = QMessageBox.question(
-            self,
-            "Unsaved Changes",
-            "Do you want to save your changes?",
-            QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
-            QMessageBox.Save,
-        )
-
-        if reply == QMessageBox.Save:
-            self.save_file()
-            return True
-        if reply == QMessageBox.Discard:
-            return True
-        return False
+        """Check all tabs for unsaved changes before closing."""
+        for i in range(self.editor_tabs.count()):
+            modified = self.tab_modified.get(i, False)
+            if not modified:
+                continue
+            # Switch to the tab so the user can see what file we're asking about
+            self.editor_tabs.setCurrentIndex(i)
+            tab_name = self.editor_tabs.tabText(i).rstrip(" *")
+            reply = QMessageBox.question(
+                self,
+                "Unsaved Changes",
+                f"Do you want to save changes to {tab_name}?",
+                QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
+                QMessageBox.Save,
+            )
+            if reply == QMessageBox.Save:
+                self.save_file()
+            elif reply == QMessageBox.Cancel:
+                return False
+            # Discard: continue to next tab
+        return True
 
     def change_theme(self, theme_name):
         """Change IDE theme."""
+        if self._classroom_lock_theme:
+            self.statusBar().showMessage("Theme locked in classroom mode")
+            return
         # Apply theme to all editors
         for i in range(self.editor_tabs.count()):
             editor = self.editor_tabs.widget(i)
@@ -1716,6 +2315,9 @@ class MainWindow(QMainWindow):
 
     def change_font_family(self, font_family):
         """Change editor font family."""
+        if self._classroom_lock_theme:
+            self.statusBar().showMessage("Settings locked in classroom mode")
+            return
         size = self.theme_manager.current_font_size
         self.theme_manager.set_font(font_family, size)
         self._apply_font_to_editors()
@@ -1724,6 +2326,9 @@ class MainWindow(QMainWindow):
 
     def change_font_size(self, size):
         """Change editor font size."""
+        if self._classroom_lock_theme:
+            self.statusBar().showMessage("Settings locked in classroom mode")
+            return
         family = self.theme_manager.current_font_family
         self.theme_manager.set_font(family, size)
         self._apply_font_to_editors()
@@ -1799,8 +2404,8 @@ class MainWindow(QMainWindow):
         if filepath.exists():
             content = filepath.read_text(encoding="utf-8")
             # Convert markdown to simple HTML
-            html = self._markdown_to_html(content)
-            browser.setHtml(html)
+            html_text = self._markdown_to_html(content)
+            browser.setHtml(html_text)
         else:
             browser.setPlainText(f"Documentation not found: {filepath}")
 
@@ -1855,7 +2460,7 @@ class MainWindow(QMainWindow):
             elif line.strip() == "---":
                 html_lines.append("<hr>")
             # List items
-            if line.strip().startswith("- ") or line.strip().startswith("* "):
+            elif line.strip().startswith("- ") or line.strip().startswith("* "):
                 if not in_list:
                     html_lines.append("<ul>")
                     in_list = True
@@ -1937,7 +2542,7 @@ class MainWindow(QMainWindow):
             self,
             "About Time Warp Studio",
             "<h2>Time Warp Studio - Python Edition</h2>"
-            "<p>Version 6.1.0 — Code Quality Release</p>"
+            "<p>Version 7.0.0 — Advanced Features Release</p>"
             "<p>Educational programming environment supporting:</p>"
             "<ul>"
             "<li>PILOT - Interactive teaching language</li>"
@@ -2006,6 +2611,25 @@ class MainWindow(QMainWindow):
 
         # Connect output panel debug signals
         self.output.debug_paused.connect(self._on_debug_paused)
+        self.output.output_streamed.connect(self._on_debug_output_stream)
+        self.output.debug_frame_recorded.connect(
+            self.debug_panel.append_timeline_frame
+        )
+        self.output.debug_timeline_ready.connect(
+            self.debug_panel.set_timeline
+        )
+        self.debug_panel.timeline_frame_selected.connect(
+            self._on_timeline_frame_selected
+        )
+        self.debug_panel.export_timeline_requested.connect(
+            self.export_debug_timeline
+        )
+        self.debug_panel.step_granularity_changed.connect(
+            self._set_debug_step_granularity
+        )
+        self.output.debug_timeline_ready.connect(
+            self._on_debug_timeline_ready
+        )
 
     def _goto_line(self, line: int):
         """Go to a specific line in the current editor."""
@@ -2042,12 +2666,20 @@ class MainWindow(QMainWindow):
 
         # Start execution in debug mode
         self.output.run_program(
-            code, self.canvas, debug_mode=True, breakpoints=breakpoints
+            code,
+            self.canvas,
+            debug_mode=True,
+            breakpoints=breakpoints,
+            debug_step_granularity=self._debug_step_granularity,
         )
 
         # Update debug panel
         self.debug_panel.set_debugging(True)
         self.debug_panel.update_breakpoints(breakpoints)
+        self.debug_panel.clear_output_stream()
+        self.debug_panel.clear_timeline()
+        self.output.clear_debug_timeline()
+        self.debug_panel.clear_timeline()
 
     def stop_debug(self):
         """Stop debugging."""
@@ -2118,6 +2750,11 @@ class MainWindow(QMainWindow):
         # Update variable inspector
         self.variable_inspector.update_variables(variables)
 
+        # Update turtle state in debug panel
+        turtle_state = self._get_turtle_state_snapshot()
+        if turtle_state:
+            self.debug_panel.update_turtle_state(turtle_state)
+
         # Get call stack from interpreter if available
         if self.output.exec_thread and self.output.exec_thread.interp:
             interp = self.output.exec_thread.interp
@@ -2125,6 +2762,75 @@ class MainWindow(QMainWindow):
                 self.debug_panel.update_call_stack(interp.call_stack)
 
         self.statusbar.showMessage(f"🔴 Paused at line {line}")
+
+    def _on_timeline_frame_selected(self, frame):
+        """Update UI from a selected timeline frame."""
+        if not frame:
+            return
+        line = getattr(frame, "line", 0)
+        variables = getattr(frame, "variables", {}) or {}
+
+        editor = self.get_current_editor()
+        if editor and line:
+            editor.set_current_line(line)
+
+        self.variable_inspector.update_variables(variables)
+        if hasattr(self, "debug_panel"):
+            self.debug_panel.update_variables(variables)
+
+        snapshot = self.output.get_debug_turtle_snapshot(frame)
+        if snapshot:
+            self.canvas.set_turtle_state(snapshot)
+
+    def _set_debug_step_granularity(self, granularity: str):
+        """Update debug stepping granularity for the next session."""
+        self._debug_step_granularity = granularity
+
+    def _on_debug_timeline_ready(self, timeline):
+        """Capture latest debug timeline."""
+        self._last_debug_timeline = timeline
+
+    def export_debug_timeline(self):
+        """Export current debug timeline as JSON."""
+        if not self._last_debug_timeline:
+            self.statusbar.showMessage("No debug timeline available")
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Debug Timeline",
+            "debug_timeline.json",
+            "JSON Files (*.json);;All Files (*)",
+        )
+        if not path:
+            return
+        data = self._last_debug_timeline.export_timeline_json()
+        try:
+            Path(path).write_text(json.dumps(data, indent=2), encoding="utf-8")
+            self.statusbar.showMessage("Debug timeline exported")
+        except OSError:
+            self.statusbar.showMessage("Failed to export timeline")
+
+    def _on_debug_output_stream(self, text: str, _output_type: str):
+        """Forward output stream into the debug panel."""
+        self.debug_panel.append_output_stream(text)
+
+    def _get_turtle_state_snapshot(self) -> dict | None:
+        """Capture a snapshot of the turtle state if available."""
+        if not self.output.exec_thread:
+            return None
+        turtle = getattr(self.output.exec_thread, "turtle", None)
+        if not turtle:
+            return None
+        return {
+            "x": getattr(turtle, "x", 0.0),
+            "y": getattr(turtle, "y", 0.0),
+            "heading": getattr(turtle, "heading", 0.0),
+            "pen_down": getattr(turtle, "pen_down", True),
+            "pen_color": getattr(turtle, "pen_color", (255, 255, 255)),
+            "pen_width": getattr(turtle, "pen_width", 2.0),
+            "visible": getattr(turtle, "visible", True),
+            "lines": len(getattr(turtle, "lines", []) or []),
+        }
 
     def _update_debug_ui(self):
         """Update debug-related UI elements."""

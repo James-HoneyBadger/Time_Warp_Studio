@@ -41,7 +41,7 @@ The IDE will start in ~5 seconds. If successful, you'll see the Time Warp Studio
 
 ### 2. Explore Examples
 - Press **Ctrl+E** or go to **File → Examples**
-- Browse 100+ programs by language and difficulty
+- Browse 90+ programs across 7 languages
 - Load any example and press **Ctrl+R** to run
 
 ### 3. Try Turtle Graphics
@@ -67,13 +67,12 @@ Time_Warp_Studio/
 │   ├── time_warp_ide.py           ← Main IDE executable
 │   ├── time_warp/                 ← Core application
 │   │   ├── core/                  ← Interpreter and language executors
-│   │   ├── languages/             ← BASIC, PILOT, Logo, etc.
 │   │   ├── features/              ← Lesson, autosave, theme systems
 │   │   ├── ui/                    ← PySide6 GUI components
-│   │   └── tests/                 ← Test suite (55+ tests)
+│   │   └── tests/                 ← Test suite (55 tests)
 │   ├── requirements.txt           ← Python dependencies
 │   └── test_runner.py             ← Test orchestration
-├── Examples/                      ← 100+ example programs
+├── Examples/                      ← 90+ example programs
 ├── docs/                          ← Complete documentation
 │   ├── guides/                    ← How-to guides
 │   ├── tutorials/                 ← Language tutorials
@@ -86,14 +85,14 @@ Time_Warp_Studio/
 ## Features Overview
 
 ### Core Features
-- ✅ **7 Languages**: BASIC, PILOT, Logo, Python, C, Pascal, Prolog
+- ✅ **7 Languages**: BASIC, PILOT, Logo, C, Pascal, Prolog, Forth
 - ✅ **Turtle Graphics**: Full turtle graphics with interactive canvas
 - ✅ **Syntax Highlighting**: Code editing with language support
 - ✅ **Real-time Output**: See program output instantly
 
 ### Learning Features
 - ✅ **Lesson System**: Structured lessons with checkpoints and hints
-- ✅ **Examples Browser**: Searchable catalog of 100+ programs
+- ✅ **Examples Browser**: Searchable catalog of 90+ programs
 - ✅ **Turtle Preview**: Live visualization while coding
 - ✅ **Auto-verification**: Lessons check your solutions automatically
 
@@ -182,7 +181,7 @@ pytest tests/test_core_interpreter.py -v
 ## Next Steps
 
 1. ✅ IDE is running - explore the interface
-2. 📝 **Run examples** - Open File → Examples to browse 100+ programs
+2. 📝 **Run examples** - Open File → Examples to browse 90+ programs
 3. 📚 **Try lessons** - Open File → Lessons to follow structured learning paths
 4. 🐢 **Learn Logo** - Draw with turtle graphics using simple commands
 5. 💾 **Create your own** - Start a new file and write your first program

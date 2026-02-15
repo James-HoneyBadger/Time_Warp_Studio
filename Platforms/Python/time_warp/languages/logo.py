@@ -239,6 +239,8 @@ def _execute_single_logo_command(
         "SETPW",
         "PENWIDTH",
         "SETPENSIZE",
+        "SETPOSITION",
+        "SETPOS",
         "REPEAT",
         "IF",
         "TO",
@@ -372,7 +374,30 @@ def _execute_single_logo_command(
     if cmd_name == "FILLED":
         return _logo_filled(interpreter, turtle, command)
     if cmd_name == "LABEL":
-        return _logo_label(interpreter, args)
+        return _logo_label(interpreter, turtle, command)
+    if cmd_name == "WAIT":
+        # WAIT n - pause for n/60 seconds
+        if args:
+            try:
+                ticks = _logo_eval_arg(interpreter, args[0])
+                import time
+                time.sleep(ticks / 60.0)
+            except (ValueError, TypeError):
+                return "❌ WAIT requires a numeric argument\n"
+        return ""
+    if cmd_name == "BYE":
+        # BYE - exit Logo (stop execution)
+        interpreter.running = False
+        return "✅ Goodbye!\n"
+    if cmd_name == "OP":
+        # OP is short for OUTPUT - return a value from a procedure
+        if args:
+            try:
+                val = _logo_eval_arg(interpreter, args[0])
+                return str(val)
+            except (ValueError, TypeError):
+                return " ".join(args)
+        return ""
     return f"❌ Unknown Logo command: {cmd_name}\n"
 
 
@@ -855,7 +880,9 @@ def _logo_repeat(
         return f"❌ Invalid REPEAT count: {count_str}\n"
 
     output = ""
-    for _ in range(count):
+    for i in range(count):
+        # Track loop counter for REPCOUNT
+        interpreter.variables["REPCOUNT"] = float(i + 1)
         output += execute_logo(interpreter, body_content, turtle)
 
     return output
@@ -1604,7 +1631,7 @@ def _logo_ifelse(
     if len(header_words) < 2:
         return "❌ IFELSE requires condition\n"
 
-    condition_str = header_words[1]
+    condition_str = " ".join(header_words[1:])
 
     # Find first block end
     # We need to scan from start_bracket1 to find matching ]
@@ -1652,7 +1679,13 @@ def _logo_ifelse(
     false_block = command[start_bracket2 + 1 : end_bracket2].strip()
 
     try:
-        condition = _logo_eval_expr_str(interpreter, condition_str)
+        cond_upper = condition_str.strip().upper()
+        if cond_upper == "TRUE":
+            condition: float = 1
+        elif cond_upper == "FALSE":
+            condition = 0
+        else:
+            condition = _logo_eval_expr_str(interpreter, condition_str)
     except (ValueError, TypeError, ZeroDivisionError):
         return f"❌ Invalid IFELSE condition: {condition_str}\n"
 
@@ -1664,28 +1697,37 @@ def _logo_ifelse(
 def _logo_forever(
     interpreter: "Interpreter", turtle: Optional["TurtleState"], command: str
 ) -> str:
-    """FOREVER [commands] - Repeat commands forever"""
-    parts = command.upper().split("[", 1)
-    if len(parts) < 2:
+    """FOREVER [commands] - Repeat commands until STOP or iteration limit"""
+    # Split on first [ preserving original case for the body
+    bracket_idx = command.find("[")
+    if bracket_idx == -1:
         return "❌ FOREVER requires [commands]\n"
 
-    body = "[" + parts[1]
-    if "[" not in body or "]" not in body:
-        return "❌ FOREVER requires [commands]\n"
-
+    body = command[bracket_idx:]
     start = body.find("[") + 1
     end = body.rfind("]")
     if start >= end:
         return "❌ FOREVER commands malformed\n"
 
     commands_text = body[start:end].strip()
-    # For now, just execute once to avoid infinite loops
-    return execute_logo(interpreter, commands_text, turtle)
+    max_iterations = 10000
+    output_parts = []
+    for i in range(max_iterations):
+        if not interpreter.running:
+            break
+        interpreter.variables["REPCOUNT"] = i + 1
+        result = execute_logo(interpreter, commands_text, turtle)
+        if result:
+            output_parts.append(result)
+        # Check if STOP was called (running set to False)
+        if not interpreter.running:
+            break
+    return "".join(output_parts)
 
 
-def _logo_repcount(_interpreter: "Interpreter") -> str:
-    """REPCOUNT - Get current repeat iteration (simplified)"""
-    return "1"
+def _logo_repcount(interpreter: "Interpreter") -> str:
+    """REPCOUNT - Get current repeat iteration"""
+    return str(int(interpreter.variables.get("REPCOUNT", 1)))
 
 
 # Graphics enhancements
@@ -1711,31 +1753,160 @@ def _logo_arc(
 def _logo_filled(
     interpreter: "Interpreter", turtle: Optional["TurtleState"], command: str
 ) -> str:
-    """FILLED color [commands] - Fill area with color"""
-    parts = command.upper().split("[", 1)
-    if len(parts) < 2:
+    """FILLED color [commands] - Execute commands and fill the traced polygon.
+
+    Records turtle positions before/after each move command, then draws a
+    filled polygon with the given color using the traced path.
+    """
+    # Parse: FILLED "red" [FD 100 RT 90 FD 100 ...]
+    #    or: FILLED [0 128 255] [FD 100 RT 90 FD 100 ...]
+    # Need to distinguish color brackets from body brackets.
+    bracket_idx = command.find("[")
+    if bracket_idx == -1:
         return "❌ FILLED requires color and [commands]\n"
 
-    body = "[" + parts[1]
+    header = command[:bracket_idx].strip()
+    # header is like: FILLED "red"  or  FILLED 255 0 0  or just FILLED (if color is [R G B])
+    header_words = header.split()
 
-    # For now, just execute the commands without filling
-    if "[" not in body or "]" not in body:
-        return "❌ FILLED requires [commands]\n"
+    fill_rgb = None
+    body_start_search = bracket_idx  # where to look for the body brackets
 
+    if len(header_words) >= 2:
+        # Color is in the header text (e.g., FILLED "red" or FILLED 255 0 0)
+        color_tokens = header_words[1:]
+        if len(color_tokens) == 1:
+            color_name = color_tokens[0].strip('"').upper()
+            if color_name in COLOR_NAMES:
+                fill_rgb = COLOR_NAMES[color_name]
+            else:
+                try:
+                    val = int(color_name)
+                    fill_rgb = (val, val, val)
+                except ValueError:
+                    fill_rgb = (255, 255, 255)
+        elif len(color_tokens) >= 3:
+            try:
+                fill_rgb = (
+                    int(color_tokens[0]),
+                    int(color_tokens[1]),
+                    int(color_tokens[2]),
+                )
+            except ValueError:
+                fill_rgb = (255, 255, 255)
+        else:
+            fill_rgb = (255, 255, 255)
+    else:
+        # Color might be in brackets: FILLED [R G B] [commands]
+        # Extract first bracketed group as color
+        close = command.find("]", bracket_idx)
+        if close == -1:
+            return "❌ FILLED requires a color argument\n"
+        color_text = command[bracket_idx + 1 : close].strip()
+        color_parts = color_text.split()
+        if len(color_parts) == 3:
+            try:
+                fill_rgb = (
+                    int(color_parts[0]),
+                    int(color_parts[1]),
+                    int(color_parts[2]),
+                )
+            except ValueError:
+                fill_rgb = (255, 255, 255)
+        elif len(color_parts) == 1:
+            try:
+                val = int(color_parts[0])
+                fill_rgb = (val, val, val)
+            except ValueError:
+                fill_rgb = (255, 255, 255)
+        else:
+            fill_rgb = (255, 255, 255)
+        # Body brackets start after the color close bracket
+        body_start_search = close + 1
+
+    # Extract the body inside brackets (preserve original case)
+    body = command[body_start_search:]
     start = body.find("[") + 1
     end = body.rfind("]")
-    if start >= end:
+    if start >= end or start == 0:
         return "❌ FILLED commands malformed\n"
 
     commands_text = body[start:end].strip()
-    return execute_logo(interpreter, commands_text, turtle)
+
+    if turtle is None:
+        return "❌ Graphics not available for FILLED\n"
+
+    # Record the starting position
+    path_points = [(turtle.x, turtle.y)]
+
+    # Save the original on_change to temporarily intercept moves
+    orig_on_change = turtle.on_change
+
+    def _track_position():
+        """Append the current turtle position after each state change."""
+        pos = (turtle.x, turtle.y)
+        if not path_points or path_points[-1] != pos:
+            path_points.append(pos)
+        if orig_on_change:
+            orig_on_change()
+
+    turtle.on_change = _track_position
+
+    # Execute the body commands (this moves the turtle, tracing the path)
+    result = execute_logo(interpreter, commands_text, turtle)
+
+    # Restore original on_change
+    turtle.on_change = orig_on_change
+
+    # Add final position
+    final_pos = (turtle.x, turtle.y)
+    if not path_points or path_points[-1] != final_pos:
+        path_points.append(final_pos)
+
+    # Draw the filled polygon if we have enough points
+    if len(path_points) >= 3:
+        turtle.draw_polygon(
+            points=path_points,
+            color=turtle.pen_color,
+            fill_color=fill_rgb,
+            width=turtle.pen_width,
+        )
+
+    return result
 
 
-def _logo_label(interpreter: "Interpreter", args: List[str]) -> str:
-    """LABEL text - Draw text at turtle position"""
-    if not args:
+def _logo_label(
+    interpreter: "Interpreter",
+    turtle: Optional["TurtleState"],
+    command: str,
+) -> str:
+    """LABEL text - Draw text on the canvas at the turtle's current position."""
+    # Extract text from original command (preserving case)
+    # command is the original-case string like: LABEL "Hello World"
+    rest = command.strip()
+    # Remove the LABEL keyword (case-insensitive)
+    if rest.upper().startswith("LABEL"):
+        rest = rest[5:].strip()
+    if not rest:
         return "❌ LABEL requires text\n"
-    text = " ".join(args).strip('"')
-    # For now, just print to output
-    interpreter.output.append(text)
-    return text + "\n"
+    text = rest.strip('"')
+
+    if turtle is None:
+        # Fallback: just print to output
+        interpreter.output.append(text)
+        return text + "\n"
+
+    # Import TurtleShape to create a text shape at turtle position
+    from ..graphics.turtle_state import TurtleShape
+
+    turtle.shapes.append(
+        TurtleShape(
+            shape_type="text",
+            points=[(turtle.x, turtle.y)],
+            color=turtle.pen_color,
+            text=text,
+            font_size=12,
+        )
+    )
+    turtle._notify_change()
+    return ""

@@ -97,10 +97,10 @@ Master Time Warp Studio with these keyboard shortcuts. Use them to work faster a
 | **Alt+B** | Switch to BASIC |
 | **Alt+P** | Switch to PILOT |
 | **Alt+L** | Switch to Logo |
-| **Alt+Y** | Switch to Python |
 | **Alt+C** | Switch to C |
 | **Alt+A** | Switch to Pascal |
 | **Alt+R** | Switch to Prolog |
+| **Alt+F** | Switch to Forth |
 
 ## Help and Documentation
 

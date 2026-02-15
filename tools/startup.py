@@ -11,15 +11,14 @@ Comprehensive startup script that:
 """
 
 import sys
-import os
 import json
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Any, Callable, Dict, List, Tuple, Optional
 from datetime import datetime
 
 # ===== VERSION INFORMATION =====
 
-TIME_WARP_VERSION = "6.1.0"
+TIME_WARP_VERSION = "7.0.0"
 MINIMUM_PYTHON_VERSION = (3, 8)
 REQUIRED_MODULES = ["PySide6", "PIL", "requests"]
 OPTIONAL_MODULES = ["pytest", "pytest-cov", "black", "mypy"]
@@ -52,9 +51,9 @@ class SystemRequirements:
             return not required, f"{module_name} {status}", None
     
     @staticmethod
-    def verify_all() -> Tuple[bool, Dict[str, any]]:
+    def verify_all() -> Tuple[bool, Dict[str, Any]]:
         """Verify all system requirements"""
-        requirements = {
+        requirements: Dict[str, Any] = {
             'python': {'passed': False, 'message': ''},
             'required_modules': {},
             'optional_modules': {},
@@ -149,11 +148,11 @@ class ConfigurationManager:
             print(f"❌ Error saving config: {e}")
             return False
     
-    def get(self, key: str, default: any = None) -> any:
+    def get(self, key: str, default: Any = None) -> Any:
         """Get configuration value"""
         return self.config.get(key, default)
     
-    def set(self, key: str, value: any) -> None:
+    def set(self, key: str, value: Any) -> None:
         """Set configuration value"""
         self.config[key] = value
 
@@ -163,11 +162,11 @@ class StartupSequence:
     """Manages the startup sequence"""
     
     def __init__(self):
-        self.steps: List[Tuple[str, callable]] = []
-        self.results: Dict[str, any] = {}
+        self.steps: List[Tuple[str, Callable]] = []
+        self.results: Dict[str, Any] = {}
         self.start_time = datetime.utcnow()
     
-    def add_step(self, name: str, handler: callable) -> None:
+    def add_step(self, name: str, handler: Callable) -> None:
         """Add a startup step"""
         self.steps.append((name, handler))
     
@@ -237,10 +236,12 @@ def verify_requirements() -> bool:
     
     return True
 
+
 def load_configuration() -> bool:
     """Load system configuration"""
-    config = ConfigurationManager()
+    _config = ConfigurationManager()
     return True
+
 
 def initialize_interpreter() -> bool:
     """Initialize language interpreters"""
@@ -253,6 +254,7 @@ def initialize_interpreter() -> bool:
         print(f"Interpreter initialization failed: {e}")
         return False
 
+
 def initialize_ui() -> bool:
     """Initialize UI components"""
     try:
@@ -263,6 +265,7 @@ def initialize_ui() -> bool:
     except Exception as e:
         print(f"UI initialization failed: {e}")
         return False
+
 
 def initialize_plugins() -> bool:
     """Initialize plugin system"""
@@ -275,6 +278,7 @@ def initialize_plugins() -> bool:
     except Exception as e:
         print(f"Plugin initialization failed: {e}")
         return False
+
 
 def start_monitoring() -> bool:
     """Start system monitoring"""

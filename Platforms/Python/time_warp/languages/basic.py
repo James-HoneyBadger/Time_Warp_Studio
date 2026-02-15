@@ -6,7 +6,7 @@ Handles BASIC-specific commands and syntax.
 
 import math
 import re
-from typing import TYPE_CHECKING, List
+from typing import TYPE_CHECKING, Any, List, Optional
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -175,7 +175,7 @@ def execute_basic(
     if "=" in cmd and not cmd.startswith("IF ") and not cmd.startswith("FOR "):
         return _basic_let(interpreter, _strip_comment(command))
     if cmd.startswith("COLOR "):
-        return _basic_color(interpreter, _strip_comment(command[6:]))
+        return _basic_color(interpreter, _strip_comment(command[6:]), turtle)
     if cmd.startswith("WIDTH "):
         return _basic_width(interpreter, _strip_comment(command[6:]))
     if cmd.startswith("OPEN "):
@@ -193,13 +193,19 @@ def execute_basic(
         interpreter.text_lines.clear()
         return "🎨 Screen cleared\n"
     if cmd.startswith("SCREEN "):
-        return _basic_screen(interpreter, _strip_comment(command[7:]))
+        return _basic_screen(interpreter, _strip_comment(command[7:]), turtle)
     if cmd.startswith("LOCATE "):
         return _basic_locate(interpreter, _strip_comment(command[7:]))
     if cmd.startswith("LINE "):
         return _basic_line(interpreter, _strip_comment(command[5:]), turtle)
     if cmd.startswith("CIRCLE "):
         return _basic_circle(interpreter, _strip_comment(command[7:]), turtle)
+    if cmd.startswith("PSET "):
+        return _basic_pset(interpreter, _strip_comment(command[5:]), turtle)
+    if cmd.startswith("PRESET "):
+        return _basic_preset(interpreter, _strip_comment(command[7:]), turtle)
+    if cmd.startswith("PAINT "):
+        return _basic_paint(interpreter, _strip_comment(command[6:]), turtle)
     if cmd.startswith("DATA "):
         return ""
     if cmd.startswith("READ "):
@@ -503,8 +509,8 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
                     numeric_variables=interpreter.variables,
                 )
                 try:
-                    result = string_eval.evaluate(expr)
-                    interpreter.set_typed_variable(var_name, str(result))
+                    str_result = string_eval.evaluate(expr)
+                    interpreter.set_typed_variable(var_name, str(str_result))
                 except (ValueError, TypeError):
                     # Fallback to literal string if evaluation fails
                     interpreter.set_typed_variable(var_name, str(expr))
@@ -554,7 +560,7 @@ def _basic_input(interpreter: "Interpreter", args: str) -> str:
 
     try:
         # Validate variable name format
-        validate_variable_name(var_name, "input variable")
+        validate_variable_name(var_name, allow_suffix=True)
         logger.debug(
             f"INPUT: Requesting input for variable '{var_name}' with prompt '{prompt}'"
         )
@@ -581,6 +587,14 @@ def _basic_if(
     condition = args[:then_pos].strip()
     then_part = args[then_pos + 6 :].strip()
 
+    # Check for ELSE clause
+    else_part = ""
+    then_upper = then_part.upper()
+    else_pos = then_upper.find(" ELSE ")
+    if else_pos != -1:
+        else_part = then_part[else_pos + 6:].strip()
+        then_part = then_part[:else_pos].strip()
+
     try:
         result = interpreter.evaluate_expression(condition)
         condition_true = abs(result) > 0.0001
@@ -590,6 +604,10 @@ def _basic_if(
         if then_part.isdigit():
             return _basic_goto(interpreter, then_part)
         return execute_basic(interpreter, then_part, turtle)
+    elif not condition_true and else_part:
+        if else_part.isdigit():
+            return _basic_goto(interpreter, else_part)
+        return execute_basic(interpreter, else_part, turtle)
     return ""
 
 
@@ -740,12 +758,13 @@ def _basic_return(interpreter: "Interpreter") -> str:
     return ""
 
 
-def _basic_screen(interpreter: "Interpreter", args: str) -> str:
+def _basic_screen(interpreter: "Interpreter", args: str, turtle: Optional["TurtleState"] = None) -> str:
     """SCREEN mode[, width, height] - Set screen mode.
 
     Args:
         interpreter: Interpreter instance
         args: Screen mode and optional dimensions
+        turtle: Turtle graphics state
 
     Returns:
         Status message or error
@@ -793,7 +812,7 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
                 interpreter.screen_mode.cols,
                 interpreter.screen_mode.rows,
             )
-            logger.info("Set TEXT mode (%sx{rows})", cols)
+            logger.info("Set TEXT mode (%sx%s)", cols, rows)
             return f"🎨 Text mode ({cols}x{rows})\n"
 
         if mode == 1:  # Graphics mode
@@ -814,7 +833,7 @@ def _basic_screen(interpreter: "Interpreter", args: str) -> str:
                 interpreter.screen_mode.width,
                 interpreter.screen_mode.height,
             )
-            logger.info("Set GRAPHICS mode (%sx{height})", width)
+            logger.info("Set GRAPHICS mode (%sx%s)", width, height)
             return f"🎨 Graphics mode ({width}x{height})\n"
 
         return f"❌ Unsupported SCREEN mode: {mode}\n"
@@ -873,83 +892,136 @@ def _basic_line(
     args: str,
     t: "TurtleState",
 ) -> str:
-    """Draw line in BASIC graphics. Syntax: LINE (x1,y1)-(x2,y2)"""
-    # Try QBasic syntax: (x1, y1)-(x2, y2)
-    # Regex to match (x1, y1)-(x2, y2)
-    # We use a flexible regex that handles spaces
+    """Draw line in BASIC graphics. Syntax: LINE (x1,y1)-(x2,y2)[,color][,B|BF]
+
+    Args:
+        _interpreter: Interpreter instance
+        args: Line parameters
+        t: Turtle graphics state
+
+    Returns:
+        Error message or empty string
+
+    Examples:
+        LINE (0,0)-(100,100)              ; Draw line in current color
+        LINE (0,0)-(100,100),5            ; Draw line in palette color 5
+        LINE (10,10)-(100,100),15,B       ; Draw rectangle outline
+        LINE (10,10)-(100,100),4,BF       ; Draw filled rectangle
+    """
+    # Try QBasic syntax: (x1, y1)-(x2, y2)[,color][,B|BF]
     match = re.match(
         r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)\s*-\s*"
         r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)"
-        r"(?:,\s*(.+))?",
+        r"(?:\s*,\s*([^,]+?))?"
+        r"(?:\s*,\s*(B|BF|b|bf))?"
+        r"\s*$",
         args,
     )
 
-    x1_str, y1_str, x2_str, y2_str = "", "", "", ""
-    # color_str = None  # Not used yet
+    x1_str, y1_str, x2_str, y2_str, color_str, mode = "", "", "", "", None, None
 
     if match:
         x1_str = match.group(1)
         y1_str = match.group(2)
         x2_str = match.group(3)
         y2_str = match.group(4)
-        # if match.group(5):
-        #     color_str = match.group(5)
+        color_str = match.group(5)
+        mode = match.group(6).upper() if match.group(6) else None
     else:
-        # Try standard syntax: x1, y1, x2, y2
-        parts = args.split(",")
+        # Try standard syntax: x1, y1, x2, y2[, color][, B|BF]
+        parts = [p.strip() for p in args.split(",")]
         if len(parts) >= 4:
             x1_str = parts[0]
             y1_str = parts[1]
             x2_str = parts[2]
             y2_str = parts[3]
-            # if len(parts) > 4:
-            #     color_str = parts[4]
+            color_str = parts[4] if len(parts) > 4 else None
+            if len(parts) > 5:
+                mode = parts[5].upper()
         else:
-            return "❌ LINE requires x1,y1,x2,y2 coordinates\n"
+            return "❌ LINE requires (x1,y1)-(x2,y2)\n"
 
     try:
-        # Evaluate expressions for coordinates
+        # Evaluate coordinates
         x1 = _interpreter.evaluate_expression(x1_str)
         y1 = _interpreter.evaluate_expression(y1_str)
         x2 = _interpreter.evaluate_expression(x2_str)
         y2 = _interpreter.evaluate_expression(y2_str)
 
-        # Move to start position without drawing
-        old_pen = t.pen_down
-        t.penup()
-        t.goto(x1, y1)
+        # Resolve color
+        color = t.pen_color
+        if color_str:
+            color = t.resolve_color(color_str, default=t.pen_color)
 
-        # Draw line to end position
-        t.pendown()
-        t.goto(x2, y2)
-
-        # Restore pen state
-        if not old_pen:
-            t.penup()
+        # Handle drawing modes
+        if mode == "B":
+            # Draw rectangle outline (four lines)
+            t.draw_line(x1, y1, x2, y1, color=color, width=t.pen_width)
+            t.draw_line(x2, y1, x2, y2, color=color, width=t.pen_width)
+            t.draw_line(x2, y2, x1, y2, color=color, width=t.pen_width)
+            t.draw_line(x1, y2, x1, y1, color=color, width=t.pen_width)
+        elif mode == "BF":
+            # Draw filled rectangle
+            t.draw_rect(x1, y1, x2, y2, color=color, fill_color=color)
+        else:
+            # Draw simple line
+            t.draw_line(x1, y1, x2, y2, color=color, width=t.pen_width)
 
         return ""
     except (ValueError, TypeError, ZeroDivisionError) as e:
-        return f"❌ LINE error: {e} (args: '{args}')\n"
+        return f"❌ LINE error: {e}\n"
 
 
 def _basic_circle(i: "Interpreter", args: str, t: "TurtleState") -> str:
-    """Draw circle in BASIC graphics. Syntax: CIRCLE (x,y),r"""
-    # Try QBasic syntax: (x, y), radius
-    match = _LINE_PATTERN.match(args)
+    """Draw circle in BASIC graphics. Syntax: CIRCLE (x,y),r[,color[,start,end]]
 
-    x_str, y_str, r_str = "", "", ""
+    Args:
+        i: Interpreter instance
+        args: Circle parameters
+        t: Turtle graphics state
+
+    Returns:
+        Error message or empty string
+
+    Examples:
+        CIRCLE (100,100),50               ; Draw circle at (100,100) radius 50
+        CIRCLE (100,100),50,4             ; Draw in palette color 4
+        CIRCLE (100,100),50,4,0,3.14158   ; Draw arc from 0 to π radians
+    """
+    # Try QBasic syntax: (x, y), radius[, color[, start, end]]
+    match = re.match(
+        r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)\s*,\s*([^,)]+)"
+        r"(?:\s*,\s*([^,)]+))?"
+        r"(?:\s*,\s*([^,)]+))?"
+        r"(?:\s*,\s*([^,)]+))?",
+        args,
+    )
+
+    x_str, y_str, r_str, color_str = "", "", "", None
+    start_angle_str, end_angle_str = None, None
 
     if match:
-        x_str, y_str, r_str = match.group(1), match.group(2), match.group(3)
+        x_str = match.group(1)
+        y_str = match.group(2)
+        r_str = match.group(3)
+        color_str = match.group(4)
+        start_angle_str = match.group(5)
+        end_angle_str = match.group(6)
     else:
-        # Try standard syntax: x, y, radius
+        # Try standard syntax: x, y, radius[, color[, start, end]]
         parts = args.split(",")
         if len(parts) >= 3:
-            x_str, y_str, r_str = parts[0], parts[1], parts[2]
+            x_str = parts[0]
+            y_str = parts[1]
+            r_str = parts[2]
+            color_str = parts[3] if len(parts) > 3 else None
+            start_angle_str = parts[4] if len(parts) > 4 else None
+            end_angle_str = parts[5] if len(parts) > 5 else None
         else:
-            return "❌ CIRCLE requires x,y,radius\n"
+            return "❌ CIRCLE requires (x,y),radius\n"
 
     try:
+        # Evaluate coordinates and radius
         center_x = i.evaluate_expression(x_str)
         center_y = i.evaluate_expression(y_str)
         radius = i.evaluate_expression(r_str)
@@ -957,25 +1029,51 @@ def _basic_circle(i: "Interpreter", args: str, t: "TurtleState") -> str:
         if radius <= 0:
             return "❌ CIRCLE radius must be positive\n"
 
-        # Draw circle using turtle graphics
+        # Resolve color
+        color = t.pen_color
+        if color_str:
+            color = t.resolve_color(color_str, default=t.pen_color)
+
+        # Handle arc (start/end angles in radians)
+        start_angle = 0.0
+        end_angle = 360.0
+        if start_angle_str:
+            start_angle = math.degrees(i.evaluate_expression(start_angle_str))
+        if end_angle_str:
+            end_angle = math.degrees(i.evaluate_expression(end_angle_str))
+
+        # Draw arc via turtle.circle (which uses heading 0=up)
+        extent = end_angle - start_angle
+        if extent == 0:
+            extent = 360.0
+
         # Move to starting position on circle
         old_pen = t.pen_down
         t.penup()
         t.goto(center_x + radius, center_y)
         t.pendown()
 
-        # Draw circle in segments
-        segments = 36  # Good approximation for a circle
-        angle_step = 360.0 / segments
+        # Temporarily set pen color
+        old_color = t.pen_color
+        t.setcolor(color[0], color[1], color[2])
+
+        # Draw circle/arc
+        segments = max(12, int(abs(extent) / 10))
+        angle_step = extent / segments
 
         for step in range(segments + 1):
-            angle = step * angle_step
+            angle = start_angle + step * angle_step
             rad = math.radians(angle)
             x = center_x + radius * math.cos(rad)
             y = center_y + radius * math.sin(rad)
             t.goto(x, y)
 
+        # For complete circles, close the path
+        if extent >= 360.0:
+            t.goto(center_x + radius, center_y)
+
         # Restore pen state
+        t.setcolor(old_color[0], old_color[1], old_color[2])
         if not old_pen:
             t.penup()
 
@@ -989,6 +1087,124 @@ def _basic_run(_interpreter: "Interpreter", _args: str) -> str:
     # For now, just reset the interpreter
     _interpreter.reset()
     return "🚀 Program reset\n"
+
+
+def _basic_pset(i: "Interpreter", args: str, t: "TurtleState") -> str:
+    """PSET (x, y)[, color] - Set a pixel (paint set).
+
+    Args:
+        i: Interpreter instance
+        args: Coordinates and optional color
+        t: Turtle graphics state
+
+    Returns:
+        Error message or empty string
+
+    Example:
+        PSET (100,100)               ; Draw pixel at (100,100) in current color
+        PSET (100,100),15            ; Draw pixel in color 15 (white)
+    """
+    # Parse (x, y)[, color]
+    match = re.match(
+        r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)"
+        r"(?:\s*,\s*(.+))?",
+        args,
+    )
+
+    if not match:
+        return "❌ PSET requires (x,y)\n"
+
+    try:
+        x = i.evaluate_expression(match.group(1))
+        y = i.evaluate_expression(match.group(2))
+
+        color = t.pen_color
+        if match.group(3):
+            color_str = match.group(3).strip()
+            color = t.resolve_color(color_str, default=t.pen_color)
+
+        t.draw_point(x, y, color=color)
+        return ""
+    except (ValueError, TypeError, ZeroDivisionError) as e:
+        return f"❌ PSET error: {e}\n"
+
+
+def _basic_preset(i: "Interpreter", args: str, t: "TurtleState") -> str:
+    """PRESET (x, y)[, color] - Erase a pixel (preset to background).
+
+    Args:
+        i: Interpreter instance
+        args: Coordinates and optional color
+        t: Turtle graphics state
+
+    Returns:
+        Error message or empty string
+
+    Example:
+        PRESET (100,100)             ; Erase pixel (set to background color)
+        PRESET (100,100),0           ; Erase pixel (set to color 0, black)
+    """
+    # Parse (x, y)[, color]
+    match = re.match(
+        r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)"
+        r"(?:\s*,\s*(.+))?",
+        args,
+    )
+
+    if not match:
+        return "❌ PRESET requires (x,y)\n"
+
+    try:
+        x = i.evaluate_expression(match.group(1))
+        y = i.evaluate_expression(match.group(2))
+
+        # Default to background color (or black)
+        color = t.bg_color
+        if match.group(3):
+            color_str = match.group(3).strip()
+            color = t.resolve_color(color_str, default=t.bg_color)
+
+        t.draw_point(x, y, color=color)
+        return ""
+    except (ValueError, TypeError, ZeroDivisionError) as e:
+        return f"❌ PRESET error: {e}\n"
+
+
+def _basic_paint(_i: "Interpreter", args: str, t: "TurtleState") -> str:
+    """PAINT (x, y)[, fill_color[, border_color]] - Fill a closed region.
+
+    Args:
+        i: Interpreter instance
+        args: Starting coordinates, fill color, optional border color
+        t: Turtle graphics state
+
+    Returns:
+        Error message or empty string
+
+    Example:
+        PAINT (150,150),4            ; Fill region starting at (150,150) with color 4
+        PAINT (150,150),15,1         ; Fill with color 15, stop at color 1 borders
+    """
+    # For now, apply fill to the last fillable shape (polygon/rect)
+    # This is a simplified implementation
+    parts = [p.strip() for p in args.split(",")]
+
+    if len(parts) < 1:
+        return "❌ PAINT requires coordinates\n"
+
+    try:
+        # Fill color
+        fill_color = (255, 255, 255)  # Default white
+        if len(parts) >= 2:
+            fill_color = t.resolve_color(parts[1], default=fill_color)
+
+        # If there's a last fillable shape, fill it
+        if t.fill_last_shape(fill_color):
+            return ""
+        else:
+            return "ℹ️ No shape to fill\n"
+    except (ValueError, TypeError) as e:
+        return f"❌ PAINT error: {e}\n"
 
 
 def _basic_system(_interpreter: "Interpreter", _args: str) -> str:
@@ -1160,36 +1376,125 @@ def _basic_end_select(_interpreter: "Interpreter") -> str:
     return ""
 
 
-def _basic_sub(_interpreter: "Interpreter", _args: str) -> str:
-    """SUB name[(params)] - Define subroutine"""
-    # Simplified: just store that we're in a sub
-    _interpreter.basic_in_sub = True
+def _basic_sub(interpreter: "Interpreter", args: str) -> str:
+    """SUB name[(params)] - Define subroutine.
+
+    When execution flow reaches this line (definition site), skip past
+    END SUB so the body isn't executed immediately.  The block was
+    already registered during the load-time prescan.
+    """
+    args = args.strip()
+    if not args:
+        return "❌ SUB requires a name\n"
+
+    name = args.split("(")[0].strip().upper()
+    definition = interpreter.basic_subs.get(name)
+
+    if definition and "end_line" in definition:
+        # Skip past END SUB (main loop will increment current_line)
+        interpreter.current_line = definition["end_line"]
+    else:
+        # Fallback: scan forward
+        start_line = interpreter.current_line
+        for i in range(start_line + 1, len(interpreter.program_lines)):
+            _, line_text = interpreter.program_lines[i]
+            if line_text.strip().upper() == "END SUB":
+                interpreter.current_line = i
+                break
     return ""
 
 
-def _basic_end_sub(_interpreter: "Interpreter") -> str:
-    """END SUB - End subroutine"""
-    _interpreter.basic_in_sub = False
+def _basic_end_sub(interpreter: "Interpreter") -> str:
+    """END SUB - Return from subroutine call."""
+    if not interpreter.basic_call_stack:
+        # Just a definition boundary, nothing to return from
+        interpreter.basic_in_sub = False
+        return ""
+
+    # Pop call frame and restore state
+    frame = interpreter.basic_call_stack.pop()
+    # Restore numeric variables that were overwritten by parameters
+    for var_name, old_value in frame.get("saved_vars", {}).items():
+        if old_value is None:
+            interpreter.variables.pop(var_name, None)
+        else:
+            interpreter.variables[var_name] = old_value
+    # Restore string variables
+    for var_name, old_value in frame.get("saved_str_vars", {}).items():
+        if old_value is None:
+            interpreter.string_variables.pop(var_name, None)
+        else:
+            interpreter.string_variables[var_name] = old_value
+    # Return to the line after the CALL (main loop detects line_changed
+    # and does continue without incrementing, so we add 1 here)
+    interpreter.current_line = frame["return_line"] + 1
+    interpreter.basic_in_sub = False
     return ""
 
 
-def _basic_function(_interpreter: "Interpreter", _args: str) -> str:
-    """FUNCTION name[(params)] - Define function"""
-    _interpreter.basic_in_function = True
+def _basic_function(interpreter: "Interpreter", args: str) -> str:
+    """FUNCTION name[(params)] - Define function.
+
+    When execution flow reaches this line, skip past END FUNCTION.
+    The block was already registered during the load-time prescan.
+    """
+    args = args.strip()
+    if not args:
+        return "❌ FUNCTION requires a name\n"
+
+    name = args.split("(")[0].strip().upper()
+    definition = interpreter.basic_functions.get(name)
+
+    if definition and "end_line" in definition:
+        interpreter.current_line = definition["end_line"]
+    else:
+        # Fallback: scan forward
+        start_line = interpreter.current_line
+        for i in range(start_line + 1, len(interpreter.program_lines)):
+            _, line_text = interpreter.program_lines[i]
+            if line_text.strip().upper() == "END FUNCTION":
+                interpreter.current_line = i
+                break
     return ""
 
 
-def _basic_end_function(_interpreter: "Interpreter") -> str:
-    """END FUNCTION - End function"""
-    _interpreter.basic_in_function = False
+def _basic_end_function(interpreter: "Interpreter") -> str:
+    """END FUNCTION - Return from function call."""
+    if not interpreter.basic_call_stack:
+        interpreter.basic_in_function = False
+        return ""
+
+    frame = interpreter.basic_call_stack.pop()
+    func_name = frame.get("func_name", "")
+
+    # The function return value is stored in a variable matching the
+    # function name (e.g., FUNCTION ADD sets ADD = result)
+    return_value = interpreter.variables.get(func_name, 0)
+
+    # Restore numeric variables
+    for var_name, old_value in frame.get("saved_vars", {}).items():
+        if old_value is None:
+            interpreter.variables.pop(var_name, None)
+        else:
+            interpreter.variables[var_name] = old_value
+    # Restore string variables
+    for var_name, old_value in frame.get("saved_str_vars", {}).items():
+        if old_value is None:
+            interpreter.string_variables.pop(var_name, None)
+        else:
+            interpreter.string_variables[var_name] = old_value
+
+    # Place return value in the variable namespace so caller can use it
+    interpreter.variables[func_name] = return_value
+    # Return to the line after the CALL
+    interpreter.current_line = frame["return_line"] + 1
+    interpreter.basic_in_function = False
     return ""
 
 
 def _basic_call(interpreter: "Interpreter", args: str) -> str:
-    """CALL subroutine[(args)] - Call subroutine"""
-    # pylint: disable=import-outside-toplevel
+    """CALL subroutine[(args)] - Call a SUB or FUNCTION by name."""
     from ..logging_config import get_logger
-    from ..utils.validators import ValidationError, validate_variable_name
 
     logger = get_logger(__name__)
 
@@ -1198,17 +1503,75 @@ def _basic_call(interpreter: "Interpreter", args: str) -> str:
         logger.error("CALL: Missing subroutine name")
         return "❌ CALL requires subroutine name\n"
 
-    # Extract subroutine name (before any parentheses)
-    sub_name = args.split("(")[0].strip().upper()
+    # Parse: CALL MySub(expr1, expr2)
+    if "(" in args:
+        sub_name = args[: args.index("(")].strip().upper()
+        arg_str = args[args.index("(") + 1 :]
+        if arg_str.endswith(")"):
+            arg_str = arg_str[:-1]
+        call_args = [a.strip() for a in arg_str.split(",") if a.strip()]
+    else:
+        sub_name = args.upper()
+        call_args = []
 
-    try:
-        # Validate subroutine name format
-        validate_variable_name(sub_name, "subroutine name")
-        logger.debug("CALL: Executing subroutine '%s'", sub_name)
-        return f"📞 Called subroutine: {args.strip()}\n"
-    except ValidationError as e:
-        logger.error("CALL validation failed: %s", e)
-        return f"❌ {e}\n"
+    # Look up in subs first, then functions
+    is_function = False
+    definition = interpreter.basic_subs.get(sub_name)
+    if definition is None:
+        definition = interpreter.basic_functions.get(sub_name)
+        is_function = True
+    if definition is None:
+        logger.error("CALL: Subroutine '%s' not defined", sub_name)
+        return f"❌ Subroutine not found: {sub_name}\n"
+
+    params = definition["params"]
+
+    # Evaluate argument expressions
+    evaluated_args: list[Any] = []
+    for arg_expr in call_args:
+        try:
+            val = interpreter.evaluate_expression(arg_expr)
+            evaluated_args.append(val)
+        except (ValueError, TypeError):
+            # Might be a string
+            evaluated_args.append(arg_expr.strip('"'))
+
+    # Save current variables that will be overwritten by params
+    saved_vars = {}       # numeric vars backup
+    saved_str_vars = {}   # string vars backup
+    for i, param_name in enumerate(params):
+        if param_name.endswith("$"):
+            # String parameter — use string_variables
+            saved_str_vars[param_name] = interpreter.string_variables.get(param_name)
+            if i < len(evaluated_args):
+                interpreter.string_variables[param_name] = str(evaluated_args[i])
+            else:
+                interpreter.string_variables[param_name] = ""
+        else:
+            # Numeric parameter — use variables
+            saved_vars[param_name] = interpreter.variables.get(param_name)
+            if i < len(evaluated_args):
+                interpreter.variables[param_name] = evaluated_args[i]
+            else:
+                interpreter.variables[param_name] = 0  # default
+
+    # Push call frame
+    interpreter.basic_call_stack.append({
+        "return_line": interpreter.current_line,
+        "saved_vars": saved_vars,
+        "saved_str_vars": saved_str_vars,
+        "func_name": sub_name if is_function else "",
+    })
+
+    # Jump to sub body (main loop detects line_changed and does NOT
+    # increment, so set directly to the first body line)
+    interpreter.current_line = definition["start_line"]
+    if is_function:
+        interpreter.basic_in_function = True
+    else:
+        interpreter.basic_in_sub = True
+    logger.debug("CALL: Jumping to %s at line %d", sub_name, definition["start_line"])
+    return ""
 
 
 def _basic_dim(interpreter: "Interpreter", args: str) -> str:
@@ -1236,7 +1599,7 @@ def _basic_dim(interpreter: "Interpreter", args: str) -> str:
 
         try:
             # Validate array name format
-            validate_variable_name(name_part, "array name")
+            validate_variable_name(name_part, allow_suffix=True)
 
             # Validate and evaluate array size
             size_str = validate_numeric(size_part, "array dimension")
@@ -1289,16 +1652,44 @@ def _basic_restore(interpreter: "Interpreter", _args: str) -> str:
     return ""
 
 
-def _basic_color(_interpreter: "Interpreter", args: str) -> str:
-    """COLOR [foreground][,background] - Set colors"""
+def _basic_color(
+    interpreter: "Interpreter",
+    args: str,
+    turtle: Optional["TurtleState"] = None,
+) -> str:
+    """COLOR [foreground][,background] - Set pen color and background.
+
+    Args:
+        interpreter: Interpreter instance
+        args: Color arguments (attribute, background)
+        turtle: Turtle graphics state
+
+    Returns:
+        Status message or empty string
+    """
     parts = args.split(",")
-    fg = "default"
-    bg = "default"
-    if len(parts) >= 1:
-        fg = parts[0].strip()
-    if len(parts) >= 2:
-        bg = parts[1].strip()
-    return f"🎨 Set color: FG={fg}, BG={bg}\n"
+    if not args.strip():
+        return ""
+
+    try:
+        # First argument: pen color (resolve as palette or RGB)
+        if len(parts) >= 1 and parts[0].strip():
+            fg_str = parts[0].strip()
+            if turtle:
+                color_val = turtle.resolve_color(fg_str, default=turtle.pen_color)
+                turtle.setcolor(color_val[0], color_val[1], color_val[2])
+
+        # Second argument: background color
+        if len(parts) >= 2 and parts[1].strip():
+            bg_str = parts[1].strip()
+            if turtle:
+                bg_val = turtle.resolve_color(bg_str, default=turtle.bg_color)
+                turtle.setbgcolor(bg_val[0], bg_val[1], bg_val[2])
+                return "🎨 Colors set\n"
+
+        return "🎨 Pen color set\n"
+    except (ValueError, TypeError) as e:
+        return f"❌ COLOR error: {e}\n"
 
 
 def _basic_width(_interpreter: "Interpreter", args: str) -> str:

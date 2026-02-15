@@ -35,8 +35,8 @@ ModuleNotFoundError: No module named 'PySide6'
 **Solution:**
 ```bash
 # Activate your virtual environment
-source .venv_new/bin/activate    # Linux/macOS
-.venv_new\Scripts\activate        # Windows
+source .venv/bin/activate    # Linux/macOS
+.venv\Scripts\activate        # Windows
 
 # Install dependencies
 pip install PySide6 Pillow requests

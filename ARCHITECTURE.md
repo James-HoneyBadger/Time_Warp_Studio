@@ -1,257 +1,351 @@
-# Time Warp Studio Architecture Guide
+# Architecture Guide
 
-**Complete architectural overview for developers and contributors**
+**Time Warp Studio v7.0.0 — System Design and Implementation**
 
 ---
 
 ## Table of Contents
 
-1. [System Overview](#system-overview)
-2. [Core Components](#core-components)
+1. [Overview](#overview)
+2. [Core Interpreter Architecture](#core-interpreter-architecture)
 3. [Language Executors](#language-executors)
-4. [Data Flow](#data-flow)
-5. [Feature Modules](#feature-modules)
-6. [UI Architecture](#ui-architecture)
-7. [Extending the IDE](#extending-the-ide)
-8. [Development Guidelines](#development-guidelines)
+4. [UI Architecture](#ui-architecture)
+5. [Graphics System](#graphics-system)
+6. [Debugger System](#debugger-system)
+7. [Data Flow](#data-flow)
+8. [Extension Points](#extension-points)
+9. [Threading Model](#threading-model)
+10. [Configuration & Persistence](#configuration--persistence)
 
 ---
 
-## System Overview
+## Overview
 
-### High-Level Architecture
+Time Warp Studio is a desktop IDE built with:
+- **Backend**: Python 3.10+ with PySide6 (Qt6)
+- **Architecture**: Single-process, multi-threaded desktop application
+- **Core Pattern**: Central interpreter with stateless language executors
+- **UI Framework**: PySide6/Qt6 for cross-platform GUI
 
-Time Warp Studio is a **single-process desktop application** with a clear separation between the **core interpreter** and the **UI layer**.
+### Design Philosophy
 
-```
-┌─────────────────────────────────────────┐
-│      PySide6 (Qt6) User Interface       │
-│  ┌─────────────────────────────────────┐│
-│  │ Editor | Canvas | Output | Panels   ││
-│  └─────────────────────────────────────┘│
-└────────────────┬────────────────────────┘
-                 │
-         Command Dispatch
-                 │
-┌────────────────▼────────────────────────┐
-│    TimeWarpInterpreter (Core)           │
-│  ┌──────────────────────────────────────┤
-│  │ Language Executors:                  │
-│  │ • BASIC → BasicExecutor              │
-│  │ • PILOT → PilotExecutor              │
-│  │ • Logo  → LogoExecutor               │
-│  │ • Python, C, Pascal, Prolog, Forth   │
-│  └──────────────────────────────────────┘
-│  ┌──────────────────────────────────────┤
-│  │ Support Modules:                     │
-│  │ • safe_expression_evaluator.py       │
-│  │ • analytics.py                       │
-│  │ • debugger.py                        │
-│  │ • [40+ other modules]                │
-│  └──────────────────────────────────────┘
-└────────────────┬────────────────────────┘
-                 │
-         Text Output with Emoji Prefixes
-                 │
-                 ▼
-        Display in UI (Output Panel)
-```
+**State Management**:
+- UI owns all state (editor content, canvas, variables)
+- Language executors are stateless command processors
+- Results returned as text strings with emoji prefixes
 
-### Key Design Principles
+**Safety**:
+- No use of `eval()` for expression evaluation
+- Protected math expression evaluator
+- Thread-safe queues for execution communication
 
-1. **Stateless Executors**: Language executors don't own UI state; they return text output only
-2. **Single Responsibility**: Each component has one clear purpose
-3. **Text-Based Protocol**: Executors communicate via strings with emoji prefixes (❌, ✅, ℹ️, 🐢, 🎨, 🚀, 📝)
-4. **Safe Evaluation**: Math expressions use protected evaluator, never raw `eval()`
-5. **Async Support**: Non-blocking execution via AsyncInterpreterRunner
-6. **Cross-Platform**: Works on Windows, macOS, Linux with identical behavior
+**Modularity**:
+- 7 independent language modules (easily extensible)
+- Feature panels loaded dynamically
+- Theme system completely separate from core logic
 
 ---
 
-## Core Components
+## Core Interpreter Architecture
 
-### 1. TimeWarpInterpreter (`core/interpreter.py`)
+### TimeWarpInterpreter (Main Class)
 
-The **central command dispatcher** and state manager.
+Location: `Platforms/Python/time_warp/core/interpreter.py`
 
-**Responsibilities:**
-- Detect programming language from code
-- Dispatch commands to appropriate executor
-- Maintain global interpreter state (variables, functions)
-- Handle special commands (help, clear, etc.)
-- Manage plugin system
+Core dispatcher managing all 7 language executors:
 
-**Key Methods:**
 ```python
 class TimeWarpInterpreter:
-    def execute(self, code: str) -> str
-        """Execute code in appropriate language"""
-    
-    def get_language(self, code: str) -> str
-        """Detect programming language"""
-    
-    def reset(self) -> str
-        """Clear all state and reset"""
-    
-    def set_plugin(self, plugin) -> None
-        """Register a plugin"""
+    def __init__(self):
+        # Initialize all 7 language executors
+        self.basic = BasicExecutor(self)
+        self.logo = LogoExecutor(self)
+        self.pilot = PilotExecutor(self)
+        self.c_lang = CExecutor(self)
+        self.pascal = PascalExecutor(self)
+        self.prolog = PrologExecutor(self)
+        self.forth = ForthExecutor(self)
 ```
 
-**State Management:**
-- Variables dictionary
-- Function registry
-- Output buffer
-- Turtle graphics state (turtle_x, turtle_y, turtle_angle, pen_state)
+### Core Methods
 
-### 2. Language Executors (`languages/`)
+**execute(code: str, language: Language) -> ExecutionResult**
+- Main entry point for code execution
+- Routes to appropriate executor based on language
+- Captures output and errors
+- Returns structured result with emoji prefix
 
-Each language has its own executor implementing the `LanguageExecutor` interface.
+Output Prefixes:
+- `❌` Execution error
+- `✅` Success
+- `ℹ️` Information message
+- `🐢` Turtle graphics command
+- `🎨` Theme change notification
 
-**Base Interface:**
-```python
-class LanguageExecutor:
-    def __init__(self, interpreter: TimeWarpInterpreter):
-        self.interpreter = interpreter
-    
-    def execute_command(self, command: str) -> str:
-        """Parse and execute command, return string output"""
-        pass
+### Execution Flow
+
 ```
-
-**Available Executors:**
-- `basic.py` - BASIC interpreter (core)
-- `pilot.py` - PILOT interpreter (core)
-- `logo.py` - Logo with turtle graphics (core)
-- `python.py` - Python support
-- `c.py` - C language (experimental)
-- `pascal.py` - Pascal language (experimental)
-- `prolog.py` - Prolog language (experimental)
-- `forth.py` - Forth language (experimental)
-
-**Output Protocol - Emoji Prefixes:**
+User Code
+    ↓
+UI calls: interpreter.execute(code, language)
+    ↓
+Route to language executor
+    ↓
+Executor parses and executes
+    ↓
+Returns: "✅ Output\n" or "❌ Error\n"
+    ↓
+UI updates console and canvas
 ```
-❌ - Error message (error, undefined variable, etc.)
-✅ - Success confirmation ("Program executed successfully")
-ℹ️ - Informational message
-🎨 - Theme/UI change notification
-🚀 - Execution event (program start, end)
-🐢 - Turtle graphics action (move, turn, pen up/down)
-📝 - Input prompt
-```
-
-### 3. Safe Expression Evaluator (`core/safe_expression_evaluator.py`)
-
-Protected mathematical expression evaluation without using `eval()`.
-
-**Usage:**
-```python
-from core.safe_expression_evaluator import safe_eval
-
-result = safe_eval("2 + 3 * X", {"X": 5})  # Returns 17
-
-# Allowed operations:
-# - Arithmetic: +, -, *, /, //, %, **
-# - Comparison: ==, !=, <, >, <=, >=
-# - Logical: and, or, not
-# - Functions: abs, round, int, float, min, max, sum, len
-```
-
-**Security Features:**
-- No access to builtins
-- No attribute access
-- No function definitions
-- Safe operators only
 
 ---
 
 ## Language Executors
 
-### BASIC Executor (`languages/basic.py`)
+### Architecture Pattern
 
-**Supported Features:**
-- Variable declaration and assignment
-- Arrays (DIM statement)
-- Arithmetic and string operations
-- Control flow (IF/THEN/ELSE, FOR, WHILE, DO/LOOP)
-- Subroutines (SUB/FUNCTION)
-- String functions (LEN, LEFT, RIGHT, MID, UPPER, LOWER)
-- Input/Output (INPUT, PRINT)
-- Comments (REM)
+Each language follows stateless pattern:
 
-**Example:**
-```basic
-DIM A(10)
-FOR I = 1 TO 10
-  A(I) = I * 2
-NEXT I
-PRINT "Array sum:", SUM(A)
-```
-
-### PILOT Executor (`languages/pilot.py`)
-
-**Supported Features:**
-- Interactive instruction language
-- COMPUTE statements (arithmetic)
-- MATCH statements (conditional)
-- JUMP/JUMPT (conditionals branching)
-- LOOP statements
-- Type (output)
-- Accept (input)
-- Remarks (comments)
-
-**Example:**
-```pilot
-*START
-T: What is 2+2?
-A: 4
-M: Correct!
-J: *DONE
-M: Try again.
-J: *START
-*DONE
-```
-
-### Logo Executor (`languages/logo.py`)
-
-**Supported Features:**
-- Turtle graphics commands
-- Procedures with parameters
-- Recursion
-- Pen control (PENUP, PENDOWN, PENWIDTH, PENCOLOR)
-- Movement (FORWARD, BACKWARD, RIGHT, LEFT)
-- Colors (SETCOLOR or direct color names)
-- Loops (REPEAT)
-
-**Example:**
-```logo
-TO SQUARE :SIZE
-  REPEAT 4 [
-    FORWARD :SIZE
-    RIGHT 90
-  ]
-END
-
-TO TREE :SIZE :DEPTH
-  IF :DEPTH = 0 [STOP]
-  FORWARD :SIZE
-  RIGHT 30
-  TREE :SIZE * 0.8 :DEPTH - 1
-  LEFT 60
-  TREE :SIZE * 0.8 :DEPTH - 1
-  RIGHT 30
-  BACKWARD :SIZE
-END
-```
-
-**Turtle State:**
 ```python
-turtle_x = 0           # X coordinate
-turtle_y = 0           # Y coordinate
-turtle_angle = 0       # Heading (0 = up, 90 = right)
-pen_down = True        # Is pen drawing?
-pen_color = (0,0,0)    # RGB color
-pen_width = 1          # Line width
+class BasicExecutor(LanguageExecutor):
+    def __init__(self, interpreter):
+        self.interpreter = interpreter
+    
+    def execute_command(self, command: str) -> str:
+        # Parse and execute
+        return output_with_emoji_prefix
 ```
+
+### Key Design Rule
+
+**Language executors MUST NOT:**
+- ❌ Store UI widget references
+- ❌ Update canvas directly
+- ❌ Modify main window
+
+**Language executors CAN:**
+- ✅ Track internal state (variables, turtle position)
+- ✅ Return strings as output
+- ✅ Reference the interpreter
+
+### The 7 Supported Languages
+
+#### 1. BASIC
+
+Features:
+- Variables and arrays (DIM statement)
+- Control flow (IF/ELSE, FOR, WHILE, DO...LOOP)
+- Subroutines (GOSUB/RETURN)
+- Turbo BASIC graphics
+  - SCREEN, COLOR, LINE, CIRCLE, PSET, PAINT
+
+#### 2. LOGO
+
+Features:  
+- Turtle graphics (FORWARD, BACKWARD, RIGHT, LEFT)
+- Pen control (PENUP, PENDOWN)
+- Shapes (CIRCLE, RECTANGLE, POLYGON)
+- Procedures (TO/END definitions)
+- Recursion support
+
+Turtle State Tracking:
+- Position: `x`, `y` (-400 to 400 logical coords)
+- Heading: `angle` (0-360 degrees)
+- Pen: `pen_down`, `pen_color`, `pen_width`
+
+#### 3. PILOT
+
+Features:
+- T-units: Text output
+- A-units: Answer input validation
+- J-units: Conditional jumps
+- Used for CAI (Computer-Aided Instruction) lessons
+
+#### 4. C
+
+Features:
+- Basic C syntax (variables, functions)
+- stdio (printf, scanf)
+- Standard math library
+- Limited to safe subset
+
+Status: Experimental
+
+#### 5. Pascal
+
+Features:
+- Structured programming
+- Type declarations, procedures, functions
+- Control structures (IF, FOR, WHILE, REPEAT)
+
+Status: Experimental
+
+#### 6. Prolog
+
+Features:
+- Facts and rules
+- Unification and backtracking
+- List operations
+- Query processing
+
+Status: Experimental
+
+#### 7. Forth
+
+Features:
+- Stack operations (DUP, SWAP, DROP)
+- Word definitions (: WORD ... ;)
+- Control structures (IF...THEN, DO...LOOP)
+- Integer arithmetic
+
+Status: Experimental
+
+---
+
+## UI Architecture
+
+### Main Components
+
+```
+MainWindow
+├── MenuBar (File, Edit, Run, Debug, View, Help)
+├── Central Widget
+│   ├── CodeEditor
+│   ├── TabbedPanels
+│   │   ├── OutputPanel
+│   │   ├── GraphicsCanvas
+│   │   ├── VariablesInspector
+│   │   └── ...
+│   └── 14 Feature Panels
+├── Toolbar
+└── StatusBar
+```
+
+### Editor & Canvas
+
+**CodeEditor** (`ui/editor.py`):
+- Syntax highlighting per language
+- Real-time validation
+- Line numbers, code folding
+- Find/Replace functionality
+
+**Canvas** (`ui/canvas.py`):
+- Qt-based graphics rendering
+- Zoom (0.1x to 5.0x) and pan support
+- Renders turtle graphics in real-time
+- 800x600 logical coordinates
+
+### 14 Feature Panels
+
+Specialized development tools accessible via tabs:
+1. Lesson Mode - Step-by-step guided instruction
+2. AI Assistant - Code suggestions
+3. Error Explainer - Understand errors
+4. Reference Search - Quick documentation
+5. Examples Browser - Browse code examples
+6. Turtle Inspector - Visualize turtle state
+7. Debugger - Step through execution
+8. Variables Inspector - View current variables
+9. Achievements - Progress gamification
+10. Project Runner - Multi-file management
+11. Classroom Mode - Teaching features
+12. Performance Monitor - Execution profiling
+13. Settings - IDE configuration
+14. Help - Integrated documentation
+
+### Menu System (53+ Items)
+
+**File**: New, Open, Save, Export, Recent, Examples, Lessons
+**Edit**: Undo, Redo, Cut, Copy, Paste, Find, Replace
+**Run**: Execute, Continue, Stop, Clear output
+**Debug**: Step Into, Step Over, Breakpoints, Timeline
+**View**: Show/Hide panels, Themes, Zoom
+**Help**: Documentation, Shortcuts, About, Settings
+
+---
+
+## Graphics System
+
+### TurtleShape Primitives
+
+Core drawing system with 50+ commands:
+
+```python
+class TurtleState:
+    x: float              # Position X
+    y: float              # Position Y
+    angle: float          # Heading 0-360
+    pen_down: bool        # Drawing enabled
+    pen_color: tuple      # RGB color
+    pen_width: int        # Pixel width
+```
+
+### Canvas Coordinate System
+
+```
+     -400    0    400
+  300 ┌─────┬──────┐
+      │     │      │
+    0 ├─────•(0,0) ┤
+      │     │      │
+-300 └─────┴──────┘
+```
+
+Canvas: 800x600 logical coordinates
+Turtle: Center at (0, 0)
+Angle: 0°=East, 90°=North, 180°=West, 270°=South
+
+### Drawing Operations
+
+Movement:
+- FORWARD, BACKWARD - Move and optionally draw
+- RIGHT, LEFT - Rotate turtle
+- SETPOSITION - Absolute move
+
+Drawing:
+- PENUP, PENDOWN - Control drawing
+- LINE - Draw line
+- CIRCLE - Draw circle
+- POINT - Draw single pixel
+
+Style:
+- SETCOLOR - Change pen color
+- SETWIDTH - Change pen width
+- CLEAR - Erase canvas
+- HOME - Reset to origin
+
+---
+
+## Debugger System
+
+### Features
+
+- **Breakpoints**: Stop at specific lines
+- **Stepping**: Step into/over statements
+- **Timeline**: Full execution history
+- **Variables**: Inspect values at each step
+- **Rewind**: Navigate backwards through execution
+
+### Timeline Recording
+
+Each execution step stored with:
+- Step number
+- Line number
+- Command executed
+- Variable snapshot
+- Turtle state snapshot
+- Output generated
+- Any errors
+
+### Debug Commands
+
+- Step Into - Execute next, enter functions
+- Step Over - Execute next, skip functions  
+- Continue - Run until next breakpoint
+- Pause - Pause execution
+- Stop - Halt program
+- Toggle Breakpoint - Add/remove breakpoint
+- View Timeline - Browse execution history
 
 ---
 
@@ -260,480 +354,260 @@ pen_width = 1          # Line width
 ### Execution Pipeline
 
 ```
-1. User writes code in Editor
-            ↓
-2. User presses Ctrl+R (Run)
-            ↓
-3. UI sends code to TimeWarpInterpreter.execute()
-            ↓
-4. Interpreter detects language (BASIC, Logo, etc.)
-            ↓
-5. Appropriate executor processes the code
-            ↓
-6. Executor returns string output with emoji prefixes
-            ↓
-7. UI displays output in Output Panel
-            ↓
-8. If turtle graphics: UI reads turtle state and renders canvas
+User Code in Editor
+        ↓
+[User clicks Run]
+        ↓
+MainWindow.on_run_clicked()
+        ↓
+Create ExecutionThread
+        ↓
+ExecutionThread.run()
+        ↓
+interpreter.execute(code, language)
+        ↓
+Language Executor processes code
+        ↓
+Emit signals with results
+        ↓
+Main thread receives signals
+        ↓
+Update UI (console, canvas, variables)
 ```
 
-### State Management
+### Signal/Slot Communication
 
-**Interpreter Holds State:**
-- Variable dictionary
-- Function registry
-- Turtle position/angle/pen state
-- Output buffer
-- Error state
+Qt signal/slot pattern for thread-safe communication:
 
-**UI Holds State:**
-- Window geometry
-- Editor content
-- Canvas rendering
-- Theme preference
-- Recent files
-
-**Never:**
-- Store UI references in executor
-- Store window/canvas refs in interpreter
-- Mix UI concerns with language execution
-
----
-
-## Feature Modules
-
-### 1. Lesson System (`features/lesson_system.py`)
-
-Provides structured learning with step-by-step guidance.
-
-**Classes:**
-- `Lesson` - A complete lesson with description, code examples, objectives
-- `Checkpoint` - A verification point within a lesson with expected output
-- `LessonManager` - Manages lesson lifecycle, progress tracking
-- `LessonStatus` - Tracks completion state and hints used
-
-**Usage:**
 ```python
-from features.lesson_system import LessonManager, Lesson
+# Signal definitions
+state_changed = pyqtSignal(dict)  # Full state update
+output_received = pyqtSignal(str)
+error_received = pyqtSignal(str)
 
-manager = LessonManager()
-lesson = manager.load_lesson("basic_fundamentals")
-lesson.start()
-
-# User solves checkpoint
-checkpoint = lesson.current_checkpoint()
-is_correct = checkpoint.verify(user_solution)
-lesson.hint()  # Get a hint
-lesson.next_checkpoint()  # Move to next
-```
-
-### 2. Examples Browser (`features/examples_browser.py`)
-
-Searchable catalog of 100+ example programs.
-
-**Classes:**
-- `Example` - Single example program with metadata
-- `ExamplesBrowser` - Load, search, filter examples
-- `Language` and `Difficulty` enums - Organization metadata
-
-**Usage:**
-```python
-from features.examples_browser import ExamplesBrowser
-
-browser = ExamplesBrowser()
-examples = browser.search("graphics", language="logo", difficulty="beginner")
-for example in examples:
-    print(f"{example.title}: {example.description}")
-    code = browser.load_example(example.id)
-```
-
-### 3. Turtle Preview (`features/turtle_preview.py`)
-
-Live visualization of Logo code as you type.
-
-**Classes:**
-- `TurtlePreview` - Real-time preview engine
-- `TurtleState` - Turtle position, angle, pen state
-- `TurtleStroke` - Individual line segment from turtle movement
-
-**Usage:**
-```python
-from features.turtle_preview import TurtlePreview
-
-preview = TurtlePreview()
-preview.execute("FORWARD 100")
-preview.execute("RIGHT 90")
-strokes = preview.get_strokes()  # For rendering
-```
-
-### 4. Theme Editor (`features/theme_editor.py`)
-
-Create and manage editor themes.
-
-**Classes:**
-- `Theme` - Complete theme definition
-- `ThemeColors` - Color palette (background, text, syntax)
-- `ThemeManager` - Load, save, apply themes
-
-**Usage:**
-```python
-from features.theme_editor import ThemeManager, Theme
-
-manager = ThemeManager()
-theme = manager.get_theme("dracula")
-manager.apply_theme(theme)  # Apply to UI
-
-# Create custom theme
-custom = Theme(
-    name="My Theme",
-    background=(40, 40, 40),
-    text=(255, 255, 255),
-    keywords=(86, 156, 214)
-)
-manager.save_custom_theme(custom)
-```
-
-### 5. Autosave Manager (`features/autosave_manager.py`)
-
-Background file saving with version history.
-
-**Classes:**
-- `FileVersion` - Single saved version with timestamp
-- `FileHistory` - Collection of versions for one file
-- `AutosaveManager` - Automatic and manual save operations
-
-**Usage:**
-```python
-from features.autosave_manager import AutosaveManager
-
-autosave = AutosaveManager(interval_seconds=30)
-autosave.save_file("program.bas", "PRINT 'Hello'")
-autosave.enable()  # Start background autosaving
-
-# Restore previous version
-versions = autosave.get_versions("program.bas")
-content = autosave.restore_version("program.bas", versions[0])
-```
-
-### 6. Classroom Mode (`features/classroom_mode.py`)
-
-Teaching tools for presentations and assignments.
-
-**Classes:**
-- `PresentationMode` - Full-screen code display
-- `WorkspaceBundle` - Package code and examples for distribution
-- `ClassroomMode` - Manage presentations and assignments
-
-**Usage:**
-```python
-from features.classroom_mode import ClassroomMode, WorkspaceBundle
-
-classroom = ClassroomMode()
-classroom.start_presentation("advanced_logo.py")
-
-bundle = WorkspaceBundle()
-bundle.add_file("solution.bas")
-bundle.add_example("guessing_game.bas")
-bundle.export_zip("assignment.zip")
+# Slots (received in main thread)
+@pyqtSlot(dict)
+def on_state_changed(self, state):
+    # Update all UI components
+    pass
 ```
 
 ---
 
-## UI Architecture
-
-### PySide6 (Qt6) UI Framework
-
-**Main Components:**
-
-```
-MainWindow (time_warp_ide.py)
-├── MenuBar
-│   ├── File (New, Open, Save, Save As, Lessons, Examples, Settings)
-│   ├── Edit (Undo, Redo, Cut, Copy, Paste, Find, Replace)
-│   ├── View (Zoom, Theme, Panels)
-│   └── Help (Documentation, About, Report Issue)
-├── ToolBar
-│   ├── Language Selector dropdown
-│   ├── Run/Stop buttons
-│   ├── Clear/Reset buttons
-│   └── Settings button
-├── Central Widget
-│   ├── EditorPanel (Code editor with syntax highlighting)
-│   ├── CanvasPanel (Turtle graphics canvas with zoom/pan)
-│   ├── OutputPanel (Program output and error messages)
-│   ├── InputPanel (For INPUT statements)
-│   └── StatusBar (Current line/col, mode, status)
-└── Dialogs
-    ├── Settings/Preferences
-    ├── Theme Editor
-    ├── Find/Replace
-    └── About
-```
-
-### Editor Component (`ui/editor.py`)
-
-- Syntax highlighting for all supported languages
-- Line numbers
-- Code folding
-- Bracket matching
-- Search/replace
-- Themes support
-
-### Canvas Component (`ui/canvas.py`)
-
-- Turtle graphics rendering with QPainter
-- Zoom and pan controls
-- Stroke rendering
-- Color support
-- Grid overlay (optional)
-
-### Theme System (`tools/theme.py`)
-
-8 built-in themes:
-1. **Dracula** - Popular dark theme
-2. **Monokai** - Classic code editor colors
-3. **Solarized Dark** - Low contrast dark
-4. **Ocean** - Blue palette
-5. **Spring** - Green pastels
-6. **Sunset** - Warm orange/red
-7. **Candy** - Bright pastels
-8. **Forest** - Deep greens/browns
-
-Each theme defines:
-- Background colors
-- Text colors
-- Keyword colors
-- Comment colors
-- Error colors
-- Canvas background
-
----
-
-## Extending the IDE
+## Extension Points
 
 ### Adding a New Language
 
-**Step 1: Create Executor**
+1. Create `languages/newlang.py`:
+
 ```python
-# time_warp/languages/mylang.py
 from . import LanguageExecutor
 
-class MyLangExecutor(LanguageExecutor):
+class NewLangExecutor(LanguageExecutor):
     def __init__(self, interpreter):
         self.interpreter = interpreter
     
     def execute_command(self, command: str) -> str:
         try:
             # Parse and execute
-            result = self._execute(command)
-            return f"✅ {result}\n"
+            return "✅ Result\n"
         except Exception as e:
-            return f"❌ Error: {str(e)}\n"
-    
-    def _execute(self, command: str):
-        # Your implementation here
-        pass
+            return f"❌ {e}\n"
 ```
 
-**Step 2: Register in Interpreter**
+2. Register in `core/interpreter.py`:
+
 ```python
-# time_warp/core/interpreter.py
-from .languages.mylang import MyLangExecutor
-
-class TimeWarpInterpreter:
-    def __init__(self):
-        # ... other initializations
-        self.mylang = MyLangExecutor(self)
-    
-    def execute(self, code: str) -> str:
-        if code.startswith("mylang:"):
-            return self.mylang.execute_command(code)
+from .languages.newlang import NewLangExecutor
+self.newlang = NewLangExecutor(self)
 ```
 
-**Step 3: Add Language Detection**
+3. Add detection in `execute()` method
+
+4. Create examples in `Examples/newlang/`
+
+5. Write tests in `tests/test_newlang.py`
+
+### Adding a Feature Panel
+
+1. Create in `ui/feature_panels/new_panel.py`
+
+2. Register in `ui/main_window.py`:
+
 ```python
-def get_language(self, code: str) -> str:
-    if "mylang:" in code.lower():
-        return "mylang"
-    # ... other detections
+self.new_panel = NewPanel()
+self.tabs.addTab(self.new_panel, "New Panel")
 ```
 
-**Step 4: Create Examples**
-```
-Examples/
-└── mylang/
-    ├── 01_hello_world.ml
-    ├── 02_variables.ml
-    └── ...
-```
+3. Add menu toggle in View menu:
 
-**Step 5: Write Tests**
 ```python
-# tests/test_mylang.py
-import pytest
-from time_warp.languages.mylang import MyLangExecutor
-
-def test_hello():
-    executor = MyLangExecutor(mock_interpreter)
-    result = executor.execute_command("print 'hello'")
-    assert "✅" in result
-```
-
-### Adding a Feature Module
-
-**Create Feature File:**
-```python
-# time_warp/features/my_feature.py
-class MyFeature:
-    def __init__(self):
-        self.config = {}
-    
-    def initialize(self, interpreter, ui):
-        """Called when feature is loaded"""
-        self.interpreter = interpreter
-        self.ui = ui
-    
-    def execute(self, command):
-        """Handle feature-specific commands"""
-        pass
-```
-
-**Register in UI:**
-```python
-# time_warp_ide.py
-from features.my_feature import MyFeature
-
-class MainWindow:
-    def __init__(self):
-        # ... UI setup
-        self.my_feature = MyFeature()
-        self.my_feature.initialize(self.interpreter, self)
+self.action_show_new = self.menu_view.addAction("New Panel")
+self.action_show_new.setCheckable(True)
+self.action_show_new.triggered.connect(self.new_panel.show)
 ```
 
 ### Adding a Theme
 
-**Create Theme File:**
-```python
-# In tools/theme.py or custom location
-from dataclasses import dataclass
+1. Define in `tools/theme.py`:
 
-@dataclass
-class MyTheme:
-    name: str = "My Theme"
-    background: tuple = (30, 30, 30)
-    text: tuple = (255, 255, 255)
-    keywords: tuple = (0, 150, 255)
-    # ... more colors
+```python
+THEME_CUSTOM = {
+    "name": "Custom",
+    "colors": {
+        "background": "#ffffff",
+        "foreground": "#000000",
+        # ... colors for all UI elements
+    }
+}
 ```
 
-**Register in ThemeManager:**
-```python
-manager = ThemeManager()
-manager.register_theme(MyTheme())
-manager.apply_theme("My Theme")
-```
+2. Add to THEMES list - automatically available in menu
 
 ---
 
-## Development Guidelines
+## Threading Model
+
+### Single-Threaded UI, Multi-Threaded Execution
+
+```
+┌──────────────────────┐
+│ Qt Main Event Loop   │
+│ - User input         │
+│ - UI rendering       │
+│ - Signal processing  │
+└──────────────────────┘
+        ↕ (signals/slots)
+┌──────────────────────┐
+│ Execution Thread     │
+│ - Run interpreter    │
+│ - Emit results       │
+└──────────────────────┘
+```
+
+All UI updates happen in main thread via slots.
+All code execution happens in worker thread.
+
+---
+
+## Configuration & Persistence
+
+### Config File
+
+Location: `~/.Time_Warp/config.json`
+
+Contains:
+- Theme preference
+- Editor settings (font, size)
+- Canvas settings
+- Recent files
+- Feature panel visibility
+- Color schemes
+- Keyboard shortcuts
+- Learning progress
+
+### Automatic Saving
+
+- Config auto-saved on changes
+- Windows geometry saved on close
+- Recent files list maintained
+- Theme choice persisted
+
+### Theme System
+
+8 built-in themes:
+- Dracula - Purple dark theme
+- Monokai - Classic editor
+- Solarized Dark - Low contrast
+- Ocean - Blue palette
+- Spring - Green/pastels
+- Sunset - Warm oranges
+- Candy - Bright pastels
+- Forest - Deep greens
+
+Custom themes can be created and saved.
+
+---
+
+## Module Overview
+
+### Core (`core/`)
+- `interpreter.py` - Main dispatcher (1100+ lines)
+- `game_support.py` - Game state and timers
+- `accessibility.py` - Accessibility features
+- `ai_assistant.py` - AI code suggestions
+- `chat_service.py` - Chat integration
+- Support modules (analytics, collaboration, etc.)
+
+### Languages (`languages/`)
+- `basic.py`, `logo.py`, `pilot.py`, `c_lang_fixed.py`, `pascal.py`, `prolog.py`, `forth.py`
+
+### UI (`ui/`)
+- `main_window.py` - Main IDE window (3300+ lines)
+- `editor.py` - Code editor
+- `canvas.py` - Graphics canvas
+- `output.py` - Console output
+- `feature_panels.py` - 14 specialized panels
+- `themes.py` - Theme application
+
+### Tools (`tools/`)
+- `theme.py` - Theme definitions (8 themes)
+- `startup.py` - Startup sequence manager
+
+---
+
+## Performance Characteristics
+
+### Startup
+- Cold start: 2-5 seconds
+- Theme loading: 0.5 seconds
+- Interpreter init: 1 second
+- UI rendering: 0.5 seconds
+
+### Execution
+- BASIC: ~1000 statements/second
+- Logo: 100+ turtle commands/second
+- Debugger overhead: ~10% slower
+
+### Memory
+- Base: 200-300 MB
+- Per file: +5-10 MB
+- Large graphics: +50-100 MB per 1000 commands
+
+---
+
+## Contributing
 
 ### Code Style
 
-- **Language:** Python 3.10+
-- **Formatter:** black (line length 100)
-- **Linter:** flake8
-- **Type Checker:** mypy
-- **Import Sorter:** isort
-
-**Configuration:**
-```toml
-# pyproject.toml
-[tool.black]
-line-length = 100
-
-[tool.mypy]
-strict = true
-```
+- Python: PEP 8, 100 char line limit
+- Formatter: black
+- Linter: flake8, pylint
+- Types: mypy strict mode
+- Docstrings: All public functions
 
 ### Testing
 
-- **Framework:** pytest
-- **Coverage:** pytest-cov
-- **Mock:** pytest-mock
-- **Fixtures:** conftest.py
-
-**Test Structure:**
-```
-tests/
-├── test_*.py          # Unit tests
-├── *_test.py          # Integration tests
-└── conftest.py        # Shared fixtures
+```bash
+pytest tests/ -v                           # Run tests
+python test_runner.py --comprehensive     # Full suite
+black --check .                            # Check formatting
+flake8 time_warp                          # Linting
+mypy time_warp --strict                   # Type check
 ```
 
-**Example Test:**
-```python
-def test_basic_print(interpreter):
-    result = interpreter.execute('PRINT "Hello"')
-    assert "Hello" in result
-    assert "✅" in result
-```
-
-### Commit Guidelines
-
-- **Branch naming:** feature/name, bugfix/name, docs/name
-- **Commit messages:** "Add feature", "Fix issue", "Docs: update guides"
-- **PR description:** What, why, how, testing steps
-
-### Pull Request Process
+### PR Process
 
 1. Fork repository
 2. Create feature branch
-3. Make changes with tests
-4. Run: `pytest tests/ -v --cov`
-5. Run: `flake8`
-6. Commit and push
-7. Create PR with description
+3. Make changes following style guide
+4. Write/update tests
+5. Run test suite (all pass)
+6. Submit PR with description
 
 ---
 
-## Performance Considerations
-
-- **Interpreter:** Single-threaded, ~ms per command
-- **Canvas:** Direct QPainter drawing, ~60 FPS
-- **Autosave:** Background thread, configurable interval
-- **Memory:** ~100MB base, scales with file count
-
-**Optimization Tips:**
-- Use async execution for long-running code
-- Batch turtle drawing commands
-- Limit undo/redo history
-- Clear canvas between runs
-
----
-
-## Troubleshooting for Developers
-
-### "Illegal instruction" error
-- **Cause:** Missing CPU features (SSSE3, SSE4.1, SSE4.2, POPCNT)
-- **Solution:** Run on modern hardware or VM with full CPU features
-
-### Tests failing
-- **Check:** Python version (3.10+)
-- **Check:** Dependencies installed (`pip install -r requirements-dev.txt`)
-- **Check:** Working directory (should be `Platforms/Python/`)
-
-### UI not rendering
-- **Check:** PySide6 version (`pip show PySide6`)
-- **Check:** Qt platform plugin availability
-- **Try:** Set environment variable `QT_QPA_PLATFORM_PLUGIN_PATH`
-
-### Language not detected
-- **Check:** Detection logic in `get_language()`
-- **Check:** Command format matches expected pattern
-- **Check:** Executor registered in `__init__()`
-
----
-
-**Last Updated:** January 2026  
-**Version:** 6.0.0  
-**Maintainer:** James Temple <james@honey-badger.org>
+**For more details:**
+- [README.md](README.md) - Project overview
+- [CONTRIBUTING.md](CONTRIBUTING.md) - Contributing
+- Source: `Platforms/Python/time_warp/`

@@ -133,10 +133,10 @@ Choose the default programming language:
 - **BASIC** - Classic line-numbered BASIC
 - **PILOT** - Interactive teaching language
 - **Logo** - Turtle graphics
-- **Python** - General-purpose programming
 - **C** - Systems programming
 - **Pascal** - Structured programming
 - **Prolog** - Logic programming
+- **Forth** - Stack-based programming
 
 The selected language is remembered between sessions.
 
@@ -386,7 +386,7 @@ Settings are stored in `~/.Time_Warp/config.json`:
   "theme": "dracula",
   "font_size": 12,
   "font_family": "Consolas",
-  "default_language": "python",
+  "default_language": "basic",
   "show_line_numbers": true,
   "canvas_width": 800,
   "canvas_height": 600,

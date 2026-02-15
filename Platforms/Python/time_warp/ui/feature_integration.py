@@ -19,16 +19,23 @@ from .feature_panels import (
     AIAssistantPanel,
     AssetLibraryPanel,
     CollaborationPanel,
+    ClassroomModePanel,
     DebuggerPanel,
+    ErrorExplainerPanel,
+    ReferenceSearchPanel,
+    AchievementsPanel,
     ExecutionReplayPanel,
     ExportableExporterPanel,
     HardwareSimulatorPanel,
     LanguageComparatorPanel,
+    LessonModePanel,
     LearningAnalyticsPanel,
     PeerReviewPanel,
     PerformanceProfilerPanel,
+    ProjectRunnerPanel,
     ProjectTemplatesPanel,
     SyntaxValidatorPanel,
+    TurtleInspectorPanel,
 )
 
 
@@ -37,6 +44,18 @@ class FeatureIntegrationManager:
 
     # Phase 1 features (5)
     PHASE_1_FEATURES = [
+        (
+            "Lesson Mode",
+            "lesson_mode",
+            LessonModePanel,
+            "guided checkpoints",
+        ),
+        (
+            "Error Explainer",
+            "error_explainer",
+            ErrorExplainerPanel,
+            "friendly error tips",
+        ),
         (
             "Syntax Validator",
             "syntax_validator",
@@ -66,6 +85,36 @@ class FeatureIntegrationManager:
 
     # Phase 2 features (10)
     PHASE_2_FEATURES = [
+        (
+            "Project Runner",
+            "project_runner",
+            ProjectRunnerPanel,
+            "multi-tab runs",
+        ),
+        (
+            "Classroom Mode",
+            "classroom_mode",
+            ClassroomModePanel,
+            "presentation tools",
+        ),
+        (
+            "Reference Search",
+            "reference_search",
+            ReferenceSearchPanel,
+            "offline docs search",
+        ),
+        (
+            "Achievements",
+            "achievements",
+            AchievementsPanel,
+            "progress tracking",
+        ),
+        (
+            "Turtle Inspector",
+            "turtle_inspector",
+            TurtleInspectorPanel,
+            "turtle timeline",
+        ),
         (
             "Collaboration Tool",
             "collaboration_tool",

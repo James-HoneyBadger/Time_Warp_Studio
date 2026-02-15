@@ -63,7 +63,7 @@ class ComponentInfo:
 class SystemInfo:
     """Overall system information"""
 
-    version: str = "6.1.0"
+    version: str = "7.0.0"
     status: SystemStatus = SystemStatus.INITIALIZING
     uptime_seconds: int = 0
     started_at: datetime = field(default_factory=utc_now)
@@ -111,7 +111,7 @@ class ComponentRegistry:
         initializer: Optional[Callable] = None,
         shutdown_handler: Optional[Callable] = None,
         version: str = "1.0.0",
-        dependencies: List[str] = None,
+        dependencies: Optional[List[str]] = None,
     ) -> None:
         """Register a system component"""
         self.components[name] = component
@@ -152,7 +152,7 @@ class SystemOrchestrator:
         name: str,
         component: Any,
         version: str = "1.0.0",
-        dependencies: List[str] = None,
+        dependencies: Optional[List[str]] = None,
         initializer: Optional[Callable] = None,
         shutdown_handler: Optional[Callable] = None,
     ) -> bool:

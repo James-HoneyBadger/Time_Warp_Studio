@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "time_warp_ide"
-version = "6.0.0"
+version = "7.0.0"
 description = "Educational programming environment for BASIC, PILOT, Logo, Pascal, and Prolog"
 readme = "README.md"
 requires-python = ">=3.10"

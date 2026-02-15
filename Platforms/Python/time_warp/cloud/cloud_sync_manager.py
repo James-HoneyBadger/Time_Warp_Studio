@@ -5,6 +5,7 @@ the cloud synchronization engine, handling project sync, offline mode,
 and user authentication.
 """
 
+import asyncio
 import logging
 import threading
 from datetime import datetime, timezone
@@ -17,6 +18,7 @@ from .sync_engine import (
     ConflictResolution,
     FileChange,
     SyncConflict,
+    SyncLog,
     SyncStatus,
 )
 
@@ -52,9 +54,11 @@ class CloudSyncManager:
         # Create sync engine with api_server and temp storage path
         import tempfile
 
+        from pathlib import Path
+
         temp_dir = tempfile.mkdtemp(prefix="time_warp_sync_")
         self.sync_engine = CloudSyncEngine(
-            api_client=self.api_server, local_storage_path=temp_dir
+            api_client=self.api_server, local_storage_path=Path(temp_dir)
         )
         self.auto_sync: bool = auto_sync
 
@@ -76,7 +80,7 @@ class CloudSyncManager:
         self._sync_complete_callbacks: List[Callable[[SyncStatus], None]] = []
 
         # Background sync thread
-        self._sync_thread = None
+        self._sync_thread: threading.Thread | None = None
         self._sync_running = False
 
         # Register sync engine callbacks
@@ -254,7 +258,7 @@ class CloudSyncManager:
             }
 
             self.api_server.projects[project_id] = project
-            logger.info("Cloud project created: %s ({project_id})", name)
+            logger.info("Cloud project created: %s (%s)", name, project_id)
             return project_id
         except Exception as e:
             logger.error("Project creation failed: %s", e)
@@ -322,13 +326,15 @@ class CloudSyncManager:
 
             # Queue changes
             for change in local_changes:
-                self.sync_engine.queue_local_change(change)
+                self.sync_engine.queue_local_change(
+                    self.current_project["id"],
+                    change.filename,
+                    change.content,
+                )
 
-            # Start sync
-            self.sync_engine.sync_project(
-                self.current_project["id"],
-                self.current_project.copy(),
-                self.project_files,
+            # Start sync (async engine method)
+            asyncio.run(
+                self.sync_engine.sync_project(self.current_project["id"])
             )
 
             logger.info("Project synced: %s", self.current_project['name'])
@@ -403,7 +409,7 @@ class CloudSyncManager:
             del self.project_files[file_id]
 
             # Queue change if auto-sync enabled
-            if self.auto_sync:
+            if self.auto_sync and self.current_project:
                 self.sync_engine.queue_local_change(
                     self.current_project["id"],
                     filename,
@@ -441,8 +447,18 @@ class CloudSyncManager:
             True if conflict resolved successfully
         """
         try:
-            self.sync_engine.resolve_conflict(conflict_id, resolution)
-            logger.info("Conflict resolved: %s ({resolution.value})", conflict_id)
+            # Find the conflict object by ID (uses filename as identifier)
+            conflict = next(
+                (c for c in self.sync_engine.conflicts if c.filename == conflict_id),
+                None,
+            )
+            if conflict is None:
+                logger.warning("Conflict not found: %s", conflict_id)
+                return False
+            asyncio.run(
+                self.sync_engine.resolve_conflict(conflict, resolution)
+            )
+            logger.info("Conflict resolved: %s (%s)", conflict_id, resolution.value)
             return True
         except Exception as e:
             logger.error("Failed to resolve conflict: %s", e)
@@ -554,7 +570,7 @@ class CloudSyncManager:
     # Status and Statistics Methods
     # ========================================================================
 
-    def get_sync_status(self) -> SyncStatus:
+    def get_sync_status(self) -> Dict[str, Any]:
         """Get current sync status.
 
         Returns:
@@ -562,7 +578,7 @@ class CloudSyncManager:
         """
         return self.sync_engine.get_sync_status()
 
-    def get_sync_history(self, limit: int = 10) -> List[Dict[str, Any]]:
+    def get_sync_history(self, limit: int = 10) -> List["SyncLog"]:
         """Get sync operation history.
 
         Args:

@@ -242,7 +242,6 @@ class DebuggerEngine:
 
         self.current_session.state = ExecutionState.PAUSED
         self.current_session.paused_at = utc_now()
-            "created_at": utc_now(),
 
         for handler in self.breakpoint_handlers:
             handler(bp_id, self.current_session)
@@ -277,7 +276,7 @@ class DebuggerEngine:
             return True
         return False
 
-    def add_watch(self, session_id: str, expression: str) -> Watch:
+    def add_watch(self, session_id: str, expression: str) -> Optional[Watch]:
         """Add watch expression"""
         session = self.sessions.get(session_id)
         if not session:
@@ -501,7 +500,8 @@ if __name__ == "__main__":
 
     # Add watches
     watch = debugger.add_watch(session.id, "counter")
-    print(f"Watch added: {watch.expression}")
+    if watch:
+        print(f"Watch added: {watch.expression}")
 
     # Performance profiling
     trace = ExecutionTrace(

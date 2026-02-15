@@ -71,10 +71,10 @@ The toolbar contains quick-access tools:
 - BASIC - Classic BASIC language
 - PILOT - Computer-based instruction
 - Logo - Turtle graphics language
-- Python - Python 3 subset
-- C - C language (experimental)
-- Pascal - Pascal language (experimental)
-- Prolog - Logic programming (experimental)
+- C - C language
+- Pascal - Structured programming
+- Prolog - Logic programming
+- Forth - Stack-based programming
 
 ### 3. Code Editor (Left Panel)
 

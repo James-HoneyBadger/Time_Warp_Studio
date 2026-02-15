@@ -35,6 +35,8 @@ class ExecutionFrame:
 
     line: int
     line_content: str
+    statement_index: int | None = None
+    statement_total: int | None = None
     variables: Dict[str, Any] = field(default_factory=dict)
     state: ExecutionState = ExecutionState.RUNNING
     error: Optional[str] = None
@@ -76,6 +78,8 @@ class ExecutionTimeline:
         line_content: str,
         variables: Dict[str, Any],
         stack_depth: int = 0,
+        statement_index: int | None = None,
+        statement_total: int | None = None,
     ):
         """Record a single execution frame."""
         if not self.is_recording:
@@ -84,6 +88,8 @@ class ExecutionTimeline:
         frame = ExecutionFrame(
             line=line,
             line_content=line_content,
+            statement_index=statement_index,
+            statement_total=statement_total,
             variables=variables.copy(),
             state=ExecutionState.RUNNING,
             stack_depth=stack_depth,
@@ -111,6 +117,8 @@ class ExecutionTimeline:
             self.pause_at_line(line)
 
         self._trigger_callbacks("frame_recorded", frame)
+
+        return frame
 
     def record_error(self, line: int, error_msg: str):
         """Record an error frame."""
@@ -200,6 +208,8 @@ class ExecutionTimeline:
                 "line": frame.line,
                 "content": frame.line_content,
                 "state": frame.state.value,
+                "statement_index": frame.statement_index,
+                "statement_total": frame.statement_total,
                 "stack_depth": frame.stack_depth,
                 "timestamp": frame.timestamp,
                 "variables": {k: str(v) for k, v in frame.variables.items()},
@@ -225,7 +235,7 @@ class ExecutionTimeline:
         for callback in self._callbacks:
             try:
                 callback(event_type, *args)
-            except Exception as e:
+            except (RuntimeError, ValueError, TypeError) as e:
                 print(f"Callback error: {e}")
 
 
@@ -235,7 +245,7 @@ class DebuggerTracer:
     def __init__(self, timeline: ExecutionTimeline):
         """Initialize tracer."""
         self.timeline = timeline
-        self.current_locals = {}
+        self.current_locals: Dict[str, Any] = {}
         self.in_user_code = True
 
     def trace_calls(self, frame, event, arg):
@@ -263,7 +273,7 @@ class DebuggerTracer:
 
         elif event == "exception":
             # Record exceptions
-            exc_type, exc_value, exc_tb = arg
+            exc_type, exc_value, _ = arg
             self.timeline.record_error(
                 line=frame.f_lineno,
                 error_msg=f"{exc_type.__name__}: {exc_value}",
@@ -290,19 +300,31 @@ class CodeDebugger:
         self.tracer = DebuggerTracer(self.timeline)
 
     def debug_code(self, code_string: str, globals_dict: Optional[Dict] = None):
-        """Execute code with debugging enabled."""
-        self.timeline.start_recording()
-        self.tracer.start()
+        """Execute code with debugging enabled.
 
+        Uses the DebuggerTracer to trace execution and record frames
+        into the ExecutionTimeline.
+
+        Args:
+            code_string: Source code to debug
+            globals_dict: Optional globals dict for execution context
+        """
+        if globals_dict is None:
+            globals_dict = {}
         try:
-            exec_globals = globals_dict or {}
-            exec(code_string, exec_globals)
+            compiled = compile(code_string, "<debug>", "exec")
+            self.tracer.start()
+            exec(compiled, globals_dict)  # noqa: S102
         except Exception as e:
-            # Record the error
-            self.timeline.record_error(line=1, error_msg=str(e))
+            # Record the error in the timeline
+            self.timeline.record_frame(
+                line=0,
+                line_content=f"Error: {e}",
+                variables={},
+                stack_depth=0,
+            )
         finally:
             self.tracer.stop()
-            self.timeline.stop_recording()
 
     def get_timeline(self) -> ExecutionTimeline:
         """Get the execution timeline."""

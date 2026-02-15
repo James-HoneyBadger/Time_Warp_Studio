@@ -84,7 +84,7 @@ class PluginListing:
     updated_at: datetime = field(default_factory=utc_now)
 
     # Requirements
-    min_version: str = "6.1.0"
+    min_version: str = "7.0.0"
     compatible_versions: List[str] = field(default_factory=list)
 
 
@@ -314,7 +314,6 @@ class MarketplaceService:
         if listing:
             listing.version = version
             listing.updated_at = utc_now()
-            "installed_at": utc_now(),
 
         return release
 

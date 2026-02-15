@@ -378,9 +378,9 @@ def _handle_proc_call(
             target_key = target_up + suf
             # Initialize local mirror but do NOT backup target (allow mutation)
             if suf == "$":
-                cur = interpreter.string_variables.get(target_key, "")
+                cur: Any = interpreter.string_variables.get(target_key, "")
             else:
-                cur: Any = interpreter.get_numeric_value(target_up) or 0
+                cur = interpreter.get_numeric_value(target_up) or 0
             # Backup only local param if it existed
             local_existed = False
             local_old: Any | None = None
@@ -637,7 +637,7 @@ def _handle_for(
     return ""
 
 
-def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
+def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
     """Execute Pascal language command."""
     # Strip inline Pascal comments {...} and (* ... *) for control-flow parsing
     cmd = re.sub(r"\{.*?\}|\(\*.*?\*\)", "", command).strip()
@@ -677,8 +677,8 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
                     interpreter.pascal_block_stack.pop()
                     return ""
             elif top.get("type") == "if" and top.get("skip_else_to") is not None:
-                _skip_to = top.get("skip_else_to")
-                interpreter.current_line = _skip_to - 1
+                _skip_to = top.get("skip_else_to", 0)
+                interpreter.current_line = int(_skip_to) - 1
                 interpreter.pascal_block_stack.pop()
             elif top.get("type") == "for":
                 # increment/decrement and re-check
@@ -690,7 +690,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
                 cur = interpreter.get_numeric_value(var) or 0
                 interpreter.set_typed_variable(var, cur + step)
                 # Check limit
-                val = interpreter.get_numeric_value(var) or 0
+                val: Any = interpreter.get_numeric_value(var) or 0
                 limit = top.get("limit", 0)
                 ok = val <= limit if step > 0 else val >= limit
                 if ok:
@@ -709,9 +709,6 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
     # of a called proc, return
     if hasattr(interpreter, "pascal_call_stack") and interpreter.pascal_call_stack:
         frame = interpreter.pascal_call_stack[-1]
-        print(f"DEBUG: Check return. Line={
-                interpreter.current_line}, End={
-                frame.get('end')}")
         if interpreter.current_line == frame.get("end"):
             backups = frame.get("backups") or []
             # Skip restoring values for by-ref parameters
@@ -826,6 +823,35 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
             pass
         return ""
 
+    m = _GOTOXY_RE.match(cmd)
+    if m:
+        try:
+            x = int(interpreter.evaluate_expression(m.group(1).strip()))
+            y = int(interpreter.evaluate_expression(m.group(2).strip()))
+            interpreter.cursor_col = x
+            interpreter.cursor_row = y
+        except (ValueError, TypeError):
+            pass
+        return ""
+
+    m = _TEXTCOLOR_RE.match(cmd)
+    if m:
+        # TextColor sets the console text color (informational in this context)
+        try:
+            color_val = int(interpreter.evaluate_expression(m.group(1).strip()))
+            if turtle:
+                color_map = {
+                    0: "BLACK", 1: "BLUE", 2: "GREEN", 3: "CYAN",
+                    4: "RED", 5: "MAGENTA", 6: "BROWN", 7: "GRAY",
+                    8: "GRAY", 9: "BLUE", 10: "GREEN", 11: "CYAN",
+                    12: "RED", 13: "MAGENTA", 14: "YELLOW", 15: "WHITE",
+                }
+                color_name = color_map.get(color_val, "WHITE")
+                turtle.pencolor(color_name)
+        except (ValueError, TypeError):
+            pass
+        return ""
+
     # Array Declaration
     m = _VAR_ARRAY_RE.match(cmd)
     if m:
@@ -836,7 +862,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
         if size <= 0:
             return "❌ Error: Invalid array size"
 
-        suf = _suffix_for_type(t)
+        suf: str | None = _suffix_for_type(t)
         default_val = 0.0
 
         for raw in names.split(","):
@@ -917,7 +943,6 @@ def execute_pascal(interpreter: "Interpreter", command: str, _turtle) -> str:
         suf = None
         if hasattr(interpreter, "pascal_types"):
             suf = interpreter.pascal_types.get(up)
-        val: Any
         try:
             if suf == "$":
                 val = _unquote(expr)
