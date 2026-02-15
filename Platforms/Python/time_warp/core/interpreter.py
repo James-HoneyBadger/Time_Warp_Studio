@@ -287,7 +287,7 @@ class Interpreter:
         self.debug_event = threading.Event()
         self.debug_callback: DebugCallback | None = None
         self.debug_frame_callback: DebugFrameCallback | None = None
-        self.debug_timeline: "ExecutionTimeline" | None = None
+        self.debug_timeline: "ExecutionTimeline | None" = None
         self.debug_step_granularity: str = "line"
         self.breakpoints: set = set()
         self.step_mode: bool = False
@@ -1120,7 +1120,7 @@ class Interpreter:
         """Set callback for debug frame events."""
         self.debug_frame_callback = callback
 
-    def set_debug_timeline(self, timeline: "ExecutionTimeline" | None):
+    def set_debug_timeline(self, timeline: "ExecutionTimeline | None"):
         """Attach a debug timeline recorder."""
         self.debug_timeline = timeline
 
