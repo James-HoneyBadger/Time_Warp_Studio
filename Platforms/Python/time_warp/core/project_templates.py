@@ -29,7 +29,7 @@ class Template:
     code: str  # Template code
     tags: List[str]
     author: Optional[str] = None
-    min_version: str = "5.1.0"
+    min_version: str = "7.0.0"
 
 
 class TemplateLibrary:

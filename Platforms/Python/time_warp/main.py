@@ -58,7 +58,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
 app = FastAPI(
     title="Time Warp Studio Server",
     description="Real-time collaborative programming IDE backend",
-    version="4.5.2",
+    version="7.0.0",
     lifespan=lifespan,
 )
 
@@ -96,7 +96,7 @@ async def health_check():
 
     return {
         "status": "running",
-        "version": "4.5.2",
+        "version": "7.0.0",
         "database": db_status,
     }
 
@@ -107,7 +107,7 @@ async def root():
     """Root endpoint"""
     return {
         "message": "Time Warp Studio Server",
-        "version": "4.5.2",
+        "version": "7.0.0",
         "docs": "/docs",
         "health": "/health",
     }

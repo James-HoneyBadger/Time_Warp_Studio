@@ -246,7 +246,7 @@ async def test_health_check(client):
     assert response.status_code == 200
     data = response.json()
     assert data["status"] == "running"
-    assert data["version"] == "4.5.2"
+    assert data["version"] == "7.0.0"
 
 
 @pytest.mark.asyncio

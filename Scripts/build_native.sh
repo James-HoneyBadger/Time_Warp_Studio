@@ -28,7 +28,7 @@ PYTHON_SOURCE="$REPO_ROOT/Platforms/Python"
 ENTRY_POINT="$PYTHON_SOURCE/time_warp_ide.py"
 DIST_DIR="$REPO_ROOT/dist/$ARCH"
 BUILD_DIR="$REPO_ROOT/build/$ARCH"
-VERSION="1.0.0"
+VERSION="7.0.0"
 
 # 3. Check Dependencies and Setup Venv
 VENV_DIR="$REPO_ROOT/.build_venv"
