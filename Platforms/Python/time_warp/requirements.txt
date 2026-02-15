@@ -1,51 +1,49 @@
 # Time Warp Studio Server Requirements
-# Phase 4.5.2 Backend Integration
+# Updated February 2026
 
 # Core Framework
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-socketio[asyncio_client]==5.9.0
-python-engineio==4.7.1
-python-multipart==0.0.18
+fastapi==0.129.0
+uvicorn[standard]==0.40.0
+python-socketio[asyncio_client]==5.16.1
+python-engineio==4.13.1
+python-multipart==0.0.22
 
 # Database & ORM
-sqlalchemy[asyncio]==2.0.23
-asyncpg==0.29.0
-alembic==1.13.1
-psycopg2-binary==2.9.9
+sqlalchemy[asyncio]==2.0.46
+asyncpg==0.31.0
+alembic==1.18.4
+psycopg2-binary==2.9.11
 
 # Data Validation
-pydantic==2.5.0
-pydantic-settings==2.1.0
+pydantic==2.12.5
+pydantic-settings==2.13.0
 
 # Async Support
-aiofiles==23.2.1
+aiofiles==25.1.0
 
 # Redis (optional, for production scaling)
-redis==5.0.1
-aioredis==2.0.1
+redis==7.1.1
 
 # Authentication
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.18
 
 # Utilities
-python-dotenv==1.0.0
-tenacity==8.2.3
+python-dotenv==1.2.1
+tenacity==9.1.4
 pytz==2023.3
 
 # Development & Testing
 pytest==7.4.3
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
-httpx==0.25.2
+httpx==0.28.1
 
 # Code Quality
-black==24.3.0
+black==26.1.0
 flake8==6.1.0
 mypy==1.7.1
 pylint==3.0.3
 
 # Monitoring & Logging
-python-json-logger==2.0.7
+python-json-logger==4.0.0
