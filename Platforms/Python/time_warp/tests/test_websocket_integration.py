@@ -3,12 +3,14 @@ WebSocket Integration Tests
 Tests real-time collaboration features
 """
 
+# pylint: disable=import-error,redefined-outer-name
+
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from time_warp.services import ChatService, RoomService, SyncService
-from time_warp.websocket_handlers import WebSocketEventHandler
+from time_warp.services import ChatService, RoomService, SyncService  # type: ignore[import-not-found]
+from time_warp.websocket_handlers import WebSocketEventHandler  # type: ignore[import-not-found]
 
 
 @pytest.fixture
@@ -113,7 +115,7 @@ async def test_on_code_change(event_handler, mock_sio, mock_session):
     await event_handler.connection_manager.join_room("sid123", "room123")
 
     # Initialize OT engine
-    from time_warp.core.collaboration_engine import OperationalTransform
+    from time_warp.core.collaboration_engine import OperationalTransform  # type: ignore[import-not-found]
 
     event_handler.ot_engines["room123"] = OperationalTransform()
 
@@ -219,7 +221,7 @@ async def test_on_get_sync(event_handler, mock_sio, mock_session):
     await event_handler.connection_manager.join_room("sid123", "room123")
 
     # Setup memory OT
-    from time_warp.core.collaboration_engine import OperationalTransform
+    from time_warp.core.collaboration_engine import OperationalTransform  # type: ignore[import-not-found]
 
     ot = OperationalTransform()
     ot.version = 5
@@ -265,7 +267,7 @@ async def test_on_code_change_invalid_data(event_handler):
     await event_handler.connection_manager.join_room("sid123", "room123")
 
     # Initialize OT engine to avoid error there, IF it checks connection/room first
-    from time_warp.core.collaboration_engine import OperationalTransform
+    from time_warp.core.collaboration_engine import OperationalTransform  # type: ignore[import-not-found]
 
     event_handler.ot_engines["room123"] = OperationalTransform()
 

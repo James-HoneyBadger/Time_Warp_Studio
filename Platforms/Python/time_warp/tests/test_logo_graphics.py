@@ -3,11 +3,13 @@ Tests for Logo Graphics and Turtle State
 Verifies the core graphics engine functionality
 """
 
+# pylint: disable=import-error,redefined-outer-name
+
 import math
 
 import pytest
 
-from time_warp.graphics.turtle_state import TurtleState
+from time_warp.graphics.turtle_state import TurtleState  # type: ignore[import-not-found]
 
 
 class TestTurtleGraphics:

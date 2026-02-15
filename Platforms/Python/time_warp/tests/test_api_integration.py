@@ -3,6 +3,8 @@ Integration Tests for Backend API Routes
 Tests REST endpoints and WebSocket integration
 """
 
+# pylint: disable=import-error,redefined-outer-name
+
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
@@ -12,9 +14,9 @@ from sqlalchemy.ext.asyncio import (
     create_async_engine,
 )
 
-from time_warp.db import get_session
-from time_warp.main import app
-from time_warp.models import Base
+from time_warp.db import get_session  # type: ignore[import-not-found]
+from time_warp.main import app  # type: ignore[import-not-found]
+from time_warp.models import Base  # type: ignore[import-not-found]
 
 pytestmark = pytest.mark.asyncio
 

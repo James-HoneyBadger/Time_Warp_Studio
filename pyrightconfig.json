@@ -8,11 +8,13 @@
     "**/__pycache__",
     ".venv",
     "archive",
-    "docs"
+    "docs",
+    "Platforms/Python/time_warp/tests"
   ],
   "ignore": [
     "Platforms/Python/time_warp/ui/*.py",
     "Platforms/Python/time_warp/cloud/api_server.py",
+    "Platforms/Python/time_warp/tests",
     "Platforms/Python/tw_editor.py"
   ],
   "reportMissingImports": "warning",

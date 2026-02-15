@@ -3,17 +3,18 @@ Integration tests for Phase 4.5 Multiplayer Features
 Tests WebSocket communication, OT algorithm, presence tracking, and chat
 """
 
+# pylint: disable=import-error,redefined-outer-name
+
 import asyncio
 from unittest.mock import AsyncMock
 
 import pytest
 
-from time_warp.core.chat_service import ChatService
-from time_warp.core.collaboration_engine import Operation, OperationalTransform
-from time_warp.core.presence_service import PresenceService
+from time_warp.core.chat_service import ChatService  # type: ignore[import-not-found]
+from time_warp.core.collaboration_engine import Operation, OperationalTransform  # type: ignore[import-not-found]
+from time_warp.core.presence_service import PresenceService  # type: ignore[import-not-found]
 
-# Test imports (would be actual imports in real project)
-from time_warp.core.websocket_manager import ConnectionManager
+from time_warp.core.websocket_manager import ConnectionManager  # type: ignore[import-not-found]
 
 
 class TestWebSocketManager:
@@ -127,7 +128,7 @@ class TestOperationalTransform:
         )
 
         # Transform op2 against op1
-        transformed = ot._transform_operations(op2, op1)
+        transformed = ot._transform_operations(op2, op1)  # type: ignore[attr-defined]  # pylint: disable=protected-access
 
         # After transformation, position should be adjusted
         assert transformed.position == 2  # Shifted due to op1's insertion
