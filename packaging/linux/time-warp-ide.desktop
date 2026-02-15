@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=Time Warp Studio
+Comment=Educational Multi-Language Programming Environment
+Exec=/usr/local/bin/time-warp-ide
+Icon=time-warp-ide
+Terminal=false
+Type=Application
+Categories=Development;Education;
+Keywords=programming;education;BASIC;Logo;Pascal;Prolog;PILOT;Forth;

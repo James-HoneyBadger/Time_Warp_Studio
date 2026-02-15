@@ -31,19 +31,24 @@ BUILD_DIR="$REPO_ROOT/build/$ARCH"
 VERSION="7.0.0"
 
 # 3. Check Dependencies and Setup Venv
-VENV_DIR="$REPO_ROOT/.build_venv"
-if [ ! -d "$VENV_DIR" ]; then
-    echo "Creating virtual environment..."
-    python3 -m venv "$VENV_DIR"
+# In CI environments, skip venv creation since dependencies are pre-installed
+if [ -z "$CI" ]; then
+    VENV_DIR="$REPO_ROOT/.build_venv"
+    if [ ! -d "$VENV_DIR" ]; then
+        echo "Creating virtual environment..."
+        python3 -m venv "$VENV_DIR"
+    fi
+
+    source "$VENV_DIR/bin/activate"
+
+    echo "Installing dependencies..."
+    pip install --upgrade pip
+    pip install pyinstaller
+    # Install the project in editable mode to ensure PyInstaller can find all modules
+    pip install -e "$PYTHON_SOURCE"
+else
+    echo "CI environment detected, skipping venv setup..."
 fi
-
-source "$VENV_DIR/bin/activate"
-
-echo "Installing dependencies..."
-pip install --upgrade pip
-pip install pyinstaller
-# Install the project in editable mode to ensure PyInstaller can find all modules
-pip install -e "$PYTHON_SOURCE"
 
 # 4. Clean previous builds
 rm -rf "$DIST_DIR" "$BUILD_DIR"
@@ -93,8 +98,8 @@ mkdir -p "$TARBALL_DIR"
 cp "$EXECUTABLE" "$TARBALL_DIR/time-warp-ide"
 cp "$REPO_ROOT/README.md" "$TARBALL_DIR/"
 cp "$REPO_ROOT/LICENSE" "$TARBALL_DIR/" 2>/dev/null || touch "$TARBALL_DIR/LICENSE"
-cp "$REPO_ROOT/packaging/linux/time-warp-ide.desktop" "$TARBALL_DIR/"
-cp "$REPO_ROOT/packaging/linux/icon.png" "$TARBALL_DIR/"
+cp "$REPO_ROOT/packaging/linux/time-warp-ide.desktop" "$TARBALL_DIR/" 2>/dev/null || true
+cp "$REPO_ROOT/packaging/linux/icon.png" "$TARBALL_DIR/" 2>/dev/null || true
 
 # Create simple install script for tarball
 cat > "$TARBALL_DIR/install.sh" <<EOF
