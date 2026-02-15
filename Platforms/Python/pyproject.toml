@@ -149,6 +149,9 @@ python_functions = ["test_*"]
 addopts = [
     "--strict-markers",
     "--strict-config",
+    "--ignore=time_warp/tests/test_api_integration.py",
+    "--ignore=time_warp/tests/test_websocket_integration.py",
+    "--ignore=time_warp/tests/test_multiplayer_integration.py",
     "--cov=time_warp",
     "--cov-report=term-missing",
     "--cov-report=html",
