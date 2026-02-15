@@ -6,7 +6,7 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-socketio[asyncio_client]==5.9.0
 python-engineio==4.7.1
-python-multipart==0.0.18
+python-multipart==0.0.22
 
 # Database & ORM
 sqlalchemy[asyncio]==2.0.23
@@ -28,7 +28,7 @@ aioredis==2.0.1
 # Authentication
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
-python-multipart==0.0.18
+python-multipart==0.0.22
 
 # Utilities
 python-dotenv==1.0.0
