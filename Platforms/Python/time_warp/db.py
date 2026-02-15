@@ -5,7 +5,8 @@ Handles SQLAlchemy setup and database connection pooling
 
 import logging
 import os
-from typing import Generator
+from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import (
     AsyncSession,
@@ -56,7 +57,8 @@ AsyncSessionLocal = async_sessionmaker(
 )
 
 
-async def get_session() -> Generator[AsyncSession, None, None]:
+@asynccontextmanager
+async def get_session() -> AsyncGenerator[AsyncSession, None]:
     """Dependency for FastAPI to get database session"""
     async with AsyncSessionLocal() as session:
         try:
@@ -85,7 +87,9 @@ async def check_db_health() -> bool:
     """Check database connectivity"""
     try:
         async with AsyncSessionLocal() as session:
-            await session.execute("SELECT 1")
+            from sqlalchemy import text
+
+            await session.execute(text("SELECT 1"))
             return True
     except Exception as e:
         logger.error("Database health check failed: %s", e)

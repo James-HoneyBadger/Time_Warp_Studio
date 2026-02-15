@@ -6,7 +6,7 @@ Integrates WebSocket, REST API, and database components
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator
+from typing import AsyncGenerator  # noqa: UP035
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 # Lifespan context manager for startup/shutdown
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator:
+async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # pylint: disable=redefined-outer-name
     """
     Manage application lifecycle
     """
@@ -43,7 +43,8 @@ async def lifespan(app: FastAPI) -> AsyncGenerator:
 
     # Initialize Socket.io
     sio_manager = SocketIOManager(app)
-    await sio_manager.initialize()
+    sio_manager.init_socketio()
+    await sio_manager.connect_server()
     logger.info("Socket.io initialized")
 
     yield
@@ -88,7 +89,9 @@ async def health_check():
     try:
         # Check database connection
         async with get_session() as session:
-            await session.execute("SELECT 1")
+            from sqlalchemy import text
+
+            await session.execute(text("SELECT 1"))
         db_status = "healthy"
     except Exception as e:
         logger.error("Database health check failed: %s", e)
@@ -125,8 +128,8 @@ if __name__ == "__main__":
 
     # Load environment variables
     host = os.getenv("HOST", "0.0.0.0")
-    port = int(os.getenv("PORT", 8000))
-    workers = int(os.getenv("WORKERS", 1))
+    port = int(os.getenv("PORT", "8000"))
+    workers = int(os.getenv("WORKERS", "1"))
 
     # For development, use reload
     reload = os.getenv("ENV", "development") == "development"
