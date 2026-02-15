@@ -1,8 +1,7 @@
 name: Release Windows 2000 Installer
 
 on:
-  release:
-    types: [published]
+  workflow_dispatch:  # Manual trigger only - Platforms/Windows2000 not yet implemented
 
 jobs:
   package-windows2000:
