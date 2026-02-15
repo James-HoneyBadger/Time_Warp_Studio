@@ -48,7 +48,7 @@ jobs:
         run: |
           brew install ruby || true
           gem install bundler || true
-          bundle install || true
+          bundle install || true  # Gemfile may not exist yet
         working-directory: .
 
       - name: Import signing certificate (APP_SIGNING_P12)

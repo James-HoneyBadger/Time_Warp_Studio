@@ -14,11 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Lint Markdown
-        uses: github/super-linter/slim@v5
+        uses: github/super-linter/slim@v7
         env:
           VALIDATE_MARKDOWN: true
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          MARKDOWN_CONFIG_FILE: '.markdownlint.json'
+          MARKDOWN_CONFIG_FILE: 'config/.markdownlint.json'
         continue-on-error: true
       - name: Spellcheck Markdown
         uses: rojopolis/spellcheck-github-actions@0.36.0
