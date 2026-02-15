@@ -23,7 +23,9 @@ logger = logging.getLogger(__name__)
 
 # Lifespan context manager for startup/shutdown
 @asynccontextmanager
-async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:  # pylint: disable=redefined-outer-name
+async def lifespan(
+    app: FastAPI,
+) -> AsyncGenerator[None, None]:  # pylint: disable=redefined-outer-name
     """
     Manage application lifecycle
     """
