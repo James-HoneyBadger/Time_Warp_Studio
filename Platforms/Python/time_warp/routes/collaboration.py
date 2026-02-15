@@ -54,7 +54,7 @@ async def websocket_endpoint(websocket: WebSocket, room_id: str, user_id: str):
 
         # Accept connection
         await connection_manager.connect(connection_id, websocket, user_data)
-        logger.info("User %s connected: {connection_id}", user_data['name'])
+        logger.info("User %s connected: {connection_id}", user_data["name"])
 
         # Join room
         await connection_manager.join_room(connection_id, room_id)

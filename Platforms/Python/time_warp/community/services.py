@@ -1,3 +1,4 @@
+# pylint: disable=redefined-outer-name
 """
 Time Warp Studio - Community & Social Features
 
@@ -18,6 +19,7 @@ from typing import Dict, List, Optional, Set
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
 
 # ===== ENUMS =====
 
@@ -195,7 +197,6 @@ class ForumPost:
     # Metadata
     created_at: datetime = field(default_factory=utc_now)
     updated_at: datetime = field(default_factory=utc_now)
-        profile.last_active = utc_now()
     pinned: bool = False
     closed: bool = False
 

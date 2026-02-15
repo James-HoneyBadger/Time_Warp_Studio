@@ -381,6 +381,7 @@ def _execute_single_logo_command(
             try:
                 ticks = _logo_eval_arg(interpreter, args[0])
                 import time
+
                 time.sleep(ticks / 60.0)
             except (ValueError, TypeError):
                 return "❌ WAIT requires a numeric argument\n"
@@ -1908,5 +1909,5 @@ def _logo_label(
             font_size=12,
         )
     )
-    turtle._notify_change()
+    turtle._notify_change()  # pylint: disable=protected-access
     return ""

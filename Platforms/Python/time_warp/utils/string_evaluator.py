@@ -105,7 +105,7 @@ class StringExpressionEvaluator:
         if close_idx == -1:
             raise ValueError(f"Mismatched parentheses in: {expr}")
 
-        args_str = expr[paren_idx + 1:close_idx].strip()
+        args_str = expr[paren_idx + 1 : close_idx].strip()
         args = self._parse_arguments(args_str)
 
         # Route to appropriate function handler
@@ -278,7 +278,7 @@ class StringExpressionEvaluator:
         start = max(1, start)
         length = max(0, length)
 
-        return string_val[start - 1:start - 1 + length]
+        return string_val[start - 1 : start - 1 + length]
 
     def _func_instr(self, args: List[str]) -> str:
         """INSTR(string, search) - Find position of substring."""

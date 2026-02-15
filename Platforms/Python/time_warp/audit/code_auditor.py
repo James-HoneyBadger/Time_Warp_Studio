@@ -456,9 +456,7 @@ class CodeAuditService:
         high_count = sum(1 for s in security_issues if s.severity == SecurityLevel.HIGH)
         report.total_critical_issues = critical_count
         report.total_high_issues = high_count
-        report.reliability_score = max(
-            0, 100 - (critical_count * 20 + high_count * 10)
-        )
+        report.reliability_score = max(0, 100 - (critical_count * 20 + high_count * 10))
 
         return report
 

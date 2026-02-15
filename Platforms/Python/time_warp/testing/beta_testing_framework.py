@@ -21,6 +21,7 @@ from typing import Any, Dict, List, Optional
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
+
 # ===== ENUMS =====
 
 
@@ -472,7 +473,7 @@ class BetaTestingManager:
             ),
         }
 
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(report, f, indent=2, default=str)
 
         self.logger.info("Report exported to %s", filepath)

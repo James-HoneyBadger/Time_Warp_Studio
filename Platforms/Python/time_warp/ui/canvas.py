@@ -152,7 +152,7 @@ class TurtleCanvas(
             )
 
         # Draw turtle shapes if available
-        if self.turtle and hasattr(self.turtle, 'shapes'):
+        if self.turtle and hasattr(self.turtle, "shapes"):
             self._draw_turtle_shapes(painter)
 
         # Draw turtle cursor if present
@@ -351,9 +351,9 @@ class TurtleCanvas(
 
     def _draw_turtle_shapes(self, painter: QPainter):
         """Draw high-level turtle shapes (point, line, rect, polygon, ellipse, text)."""
-        if not hasattr(self.turtle, 'shapes'):
+        if not hasattr(self.turtle, "shapes"):
             return
-        
+
         for shape in self.turtle.shapes:
             self._draw_single_shape(painter, shape)
 
@@ -361,13 +361,13 @@ class TurtleCanvas(
         """Draw a single turtle shape."""
         shape_type = shape.shape_type
         color = QColor(shape.color[0], shape.color[1], shape.color[2])
-        
+
         if shape_type == "point":
             # Single pixel/point
             if len(shape.points) > 0:
                 x, y = shape.points[0]
                 painter.fillRect(int(x) - 1, int(y) - 1, 2, 2, color)
-        
+
         elif shape_type == "line":
             # Two-point line
             if len(shape.points) >= 2:
@@ -378,37 +378,39 @@ class TurtleCanvas(
                 x1, y1 = shape.points[0]
                 x2, y2 = shape.points[1]
                 painter.drawLine(int(x1), int(y1), int(x2), int(y2))
-        
+
         elif shape_type == "rect":
             # Rectangle (outline and/or fill)
             if len(shape.points) >= 2:
                 x1, y1 = shape.points[0]
                 x2, y2 = shape.points[1]
-                rect = QRectF(
-                    min(x1, x2), min(y1, y2),
-                    abs(x2 - x1), abs(y2 - y1)
-                )
+                rect = QRectF(min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1))
                 if shape.fill_color:
-                    fill = QColor(shape.fill_color[0], shape.fill_color[1], shape.fill_color[2])
+                    fill = QColor(
+                        shape.fill_color[0], shape.fill_color[1], shape.fill_color[2]
+                    )
                     painter.fillRect(rect, fill)
                 pen = QPen(color, shape.width)
                 painter.setPen(pen)
                 painter.drawRect(rect)
-        
+
         elif shape_type == "polygon":
             # Closed polygon
             if len(shape.points) >= 3:
                 from PySide6.QtGui import QPolygonF
+
                 poly = QPolygonF([QPointF(x, y) for x, y in shape.points])
                 if shape.fill_color:
-                    fill = QColor(shape.fill_color[0], shape.fill_color[1], shape.fill_color[2])
+                    fill = QColor(
+                        shape.fill_color[0], shape.fill_color[1], shape.fill_color[2]
+                    )
                     painter.setBrush(fill)
                     painter.drawPolygon(poly)
                     painter.setBrush(Qt.BrushStyle.NoBrush)
                 pen = QPen(color, shape.width)
                 painter.setPen(pen)
                 painter.drawPolygon(poly)
-        
+
         elif shape_type == "polyline":
             # Open polyline
             if len(shape.points) >= 2:
@@ -420,7 +422,7 @@ class TurtleCanvas(
                     x1, y1 = shape.points[i]
                     x2, y2 = shape.points[i + 1]
                     painter.drawLine(int(x1), int(y1), int(x2), int(y2))
-        
+
         elif shape_type == "ellipse":
             # Ellipse (center and radii)
             if len(shape.points) >= 2:
@@ -428,14 +430,16 @@ class TurtleCanvas(
                 rx, ry = shape.points[1]
                 rect = QRectF(x - rx, y - ry, 2 * rx, 2 * ry)
                 if shape.fill_color:
-                    fill = QColor(shape.fill_color[0], shape.fill_color[1], shape.fill_color[2])
+                    fill = QColor(
+                        shape.fill_color[0], shape.fill_color[1], shape.fill_color[2]
+                    )
                     painter.setBrush(fill)
                     painter.drawEllipse(rect)
                     painter.setBrush(Qt.BrushStyle.NoBrush)
                 pen = QPen(color, shape.width)
                 painter.setPen(pen)
                 painter.drawEllipse(rect)
-        
+
         elif shape_type == "text":
             # Text label
             if len(shape.points) > 0 and shape.text:

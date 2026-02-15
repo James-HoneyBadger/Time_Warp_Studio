@@ -1619,12 +1619,8 @@ class MainWindow(QMainWindow):
                 choice = QMessageBox.question(
                     self,
                     "Syntax Issues Detected",
-                    (
-                        f"Syntax Validator found {issues} issues. "
-                        "Run anyway?"
-                    ),
-                    QMessageBox.StandardButton.Yes
-                    | QMessageBox.StandardButton.No,
+                    (f"Syntax Validator found {issues} issues. " "Run anyway?"),
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                     QMessageBox.StandardButton.No,
                 )
                 return choice == QMessageBox.StandardButton.Yes
@@ -1636,21 +1632,15 @@ class MainWindow(QMainWindow):
         if isinstance(language, Language):
             stats["language"] = language.friendly_name()
 
-        profiler_panel = self.feature_manager.get_feature_panel(
-            "performance_profiler"
-        )
+        profiler_panel = self.feature_manager.get_feature_panel("performance_profiler")
         if profiler_panel and hasattr(profiler_panel, "update_from_stats"):
             profiler_panel.update_from_stats(stats)
 
-        replay_panel = self.feature_manager.get_feature_panel(
-            "execution_replay"
-        )
+        replay_panel = self.feature_manager.get_feature_panel("execution_replay")
         if replay_panel and hasattr(replay_panel, "record_execution"):
             replay_panel.record_execution(stats)
 
-        analytics_panel = self.feature_manager.get_feature_panel(
-            "learning_analytics"
-        )
+        analytics_panel = self.feature_manager.get_feature_panel("learning_analytics")
         if analytics_panel and hasattr(analytics_panel, "record_execution"):
             analytics_panel.record_execution(stats)
 
@@ -1673,9 +1663,7 @@ class MainWindow(QMainWindow):
         if ai_panel and hasattr(ai_panel, "set_error_context"):
             ai_panel.set_error_context(error)
 
-        explainer_panel = self.feature_manager.get_feature_panel(
-            "error_explainer"
-        )
+        explainer_panel = self.feature_manager.get_feature_panel("error_explainer")
         if explainer_panel and hasattr(explainer_panel, "set_error_context"):
             context = self._get_current_line_context()
             explainer_panel.set_error_context(error, context)
@@ -1774,9 +1762,7 @@ class MainWindow(QMainWindow):
         )
 
         if self._pre_presentation_font_size is None:
-            self._pre_presentation_font_size = (
-                self.theme_manager.current_font_size
-            )
+            self._pre_presentation_font_size = self.theme_manager.current_font_size
         if self._pre_presentation_menu_visible is None:
             self._pre_presentation_menu_visible = self.menuBar().isVisible()
         if self._pre_presentation_was_fullscreen is None:
@@ -1872,9 +1858,7 @@ class MainWindow(QMainWindow):
         for filename, content in bundle.files.items():
             language = Language.from_extension(Path(filename).suffix)
             self.create_new_tab(Path(filename).name, content, language)
-            self.set_current_tab_info(
-                file=None, modified=False, language=language
-            )
+            self.set_current_tab_info(file=None, modified=False, language=language)
 
         theme_name = bundle.settings.get("theme")
         if theme_name:
@@ -1893,9 +1877,11 @@ class MainWindow(QMainWindow):
 
         operation = CollaborationOperation(
             id=uuid.uuid4().hex,
-            user_id=self.collaboration_client.user.id
-            if self.collaboration_client.user
-            else "",
+            user_id=(
+                self.collaboration_client.user.id
+                if self.collaboration_client.user
+                else ""
+            ),
             type="replace",
             position=0,
             content=editor.toPlainText(),
@@ -2090,9 +2076,7 @@ class MainWindow(QMainWindow):
 
         image_html = ""
         if image_path:
-            image_html = (
-                f"<h2>Canvas</h2><img src=\"{image_path}\" width=\"640\" />"
-            )
+            image_html = f'<h2>Canvas</h2><img src="{image_path}" width="640" />'
 
         return (
             "<html><body>"
@@ -2612,24 +2596,16 @@ class MainWindow(QMainWindow):
         # Connect output panel debug signals
         self.output.debug_paused.connect(self._on_debug_paused)
         self.output.output_streamed.connect(self._on_debug_output_stream)
-        self.output.debug_frame_recorded.connect(
-            self.debug_panel.append_timeline_frame
-        )
-        self.output.debug_timeline_ready.connect(
-            self.debug_panel.set_timeline
-        )
+        self.output.debug_frame_recorded.connect(self.debug_panel.append_timeline_frame)
+        self.output.debug_timeline_ready.connect(self.debug_panel.set_timeline)
         self.debug_panel.timeline_frame_selected.connect(
             self._on_timeline_frame_selected
         )
-        self.debug_panel.export_timeline_requested.connect(
-            self.export_debug_timeline
-        )
+        self.debug_panel.export_timeline_requested.connect(self.export_debug_timeline)
         self.debug_panel.step_granularity_changed.connect(
             self._set_debug_step_granularity
         )
-        self.output.debug_timeline_ready.connect(
-            self._on_debug_timeline_ready
-        )
+        self.output.debug_timeline_ready.connect(self._on_debug_timeline_ready)
 
     def _goto_line(self, line: int):
         """Go to a specific line in the current editor."""

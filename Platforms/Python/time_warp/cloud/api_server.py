@@ -1,3 +1,4 @@
+# pyright: reportMissingImports=false, reportMissingModuleSource=false
 """Time Warp Cloud Backend API Server - FastAPI Implementation.
 
 This module provides the cloud backend services for Time Warp Studio v7.0.0,
@@ -11,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional, TypedDict
 
-import jwt
+import jwt  # type: ignore[import-untyped]  # pylint: disable=import-error  # pyright: ignore[reportMissingModuleSource]
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
@@ -457,7 +458,7 @@ class TimeWarpCloudAPI:
         @self.app.get("/api/v1/projects/{project_id}", response_model=ProjectResponse)
         async def get_project(
             project_id: str,
-            auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
+            _auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
         ):
             """Get project details."""
             if project_id not in self.projects:
@@ -469,7 +470,7 @@ class TimeWarpCloudAPI:
         async def update_project(
             project_id: str,
             update: ProjectUpdate,
-            auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
+            _auth: HTTPAuthorizationCredentials = Depends(HTTPBearer()),
         ):
             """Update project."""
             if project_id not in self.projects:

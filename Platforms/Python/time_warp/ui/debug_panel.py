@@ -106,9 +106,7 @@ class DebugToolbar(QFrame):
         self.step_mode_combo = QComboBox()
         self.step_mode_combo.addItem("Line", "line")
         self.step_mode_combo.addItem("Statement", "statement")
-        self.step_mode_combo.currentIndexChanged.connect(
-            self._emit_step_granularity
-        )
+        self.step_mode_combo.currentIndexChanged.connect(self._emit_step_granularity)
         layout.addWidget(self.step_mode_combo)
 
         # Pause/Continue
@@ -556,9 +554,7 @@ class TimelinePanel(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(4, 4, 4, 4)
         self.timeline_list = QListWidget()
-        self.timeline_list.currentItemChanged.connect(
-            self._on_frame_selected
-        )
+        self.timeline_list.currentItemChanged.connect(self._on_frame_selected)
         layout.addWidget(self.timeline_list)
 
     def append_frame(self, frame):
@@ -606,18 +602,12 @@ class VariableDiffPanel(QWidget):
         layout.setContentsMargins(4, 4, 4, 4)
         self.diff_table = QTableWidget()
         self.diff_table.setColumnCount(3)
-        self.diff_table.setHorizontalHeaderLabels(
-            ["Variable", "Before", "After"]
-        )
+        self.diff_table.setHorizontalHeaderLabels(["Variable", "Before", "After"])
         self.diff_table.horizontalHeader().setSectionResizeMode(
             0, QHeaderView.ResizeToContents
         )
-        self.diff_table.horizontalHeader().setSectionResizeMode(
-            1, QHeaderView.Stretch
-        )
-        self.diff_table.horizontalHeader().setSectionResizeMode(
-            2, QHeaderView.Stretch
-        )
+        self.diff_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+        self.diff_table.horizontalHeader().setSectionResizeMode(2, QHeaderView.Stretch)
         self.diff_table.verticalHeader().setVisible(False)
         self.diff_table.setAlternatingRowColors(True)
         layout.addWidget(self.diff_table)
@@ -783,9 +773,7 @@ class DebugPanel(QWidget):
         self.call_stack_panel.frame_selected.connect(self.goto_line.emit)
         self.breakpoint_panel.breakpoint_goto.connect(self.goto_line.emit)
         self.breakpoint_panel.breakpoint_toggled.connect(self.breakpoint_toggled.emit)
-        self.timeline_panel.frame_selected.connect(
-            self._on_timeline_frame_selected
-        )
+        self.timeline_panel.frame_selected.connect(self._on_timeline_frame_selected)
         self.toolbar.step_granularity_changed.connect(
             self.step_granularity_changed.emit
         )
@@ -837,7 +825,9 @@ class DebugPanel(QWidget):
         frames = getattr(timeline, "frames", []) if timeline else []
         self.timeline_panel.set_frames(frames)
         if frames:
-            self.diff_panel.update_diff(frames[-1], frames[-2] if len(frames) > 1 else None)
+            self.diff_panel.update_diff(
+                frames[-1], frames[-2] if len(frames) > 1 else None
+            )
 
     def clear_timeline(self):
         """Clear timeline frames and diffs."""

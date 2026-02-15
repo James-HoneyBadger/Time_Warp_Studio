@@ -232,10 +232,22 @@ class ForthExecutor:
             color_idx = int(self.stack.pop())
             # Map color index to color name
             color_map = {
-                0: "BLACK", 1: "RED", 2: "GREEN", 3: "BLUE",
-                4: "YELLOW", 5: "CYAN", 6: "MAGENTA", 7: "WHITE",
-                8: "ORANGE", 9: "PURPLE", 10: "BROWN", 11: "PINK",
-                12: "GRAY", 13: "LIME", 14: "NAVY", 15: "TEAL",
+                0: "BLACK",
+                1: "RED",
+                2: "GREEN",
+                3: "BLUE",
+                4: "YELLOW",
+                5: "CYAN",
+                6: "MAGENTA",
+                7: "WHITE",
+                8: "ORANGE",
+                9: "PURPLE",
+                10: "BROWN",
+                11: "PINK",
+                12: "GRAY",
+                13: "LIME",
+                14: "NAVY",
+                15: "TEAL",
             }
             color_name = color_map.get(color_idx, "WHITE")
             self.turtle.pencolor(color_name)
@@ -252,8 +264,8 @@ class ForthExecutor:
                     # Define the new word
                     definition = list(self.new_word_definition)
 
-                    def new_word_func(d=definition):
-                        self.execute_tokens(d)
+                    def new_word_func(d=tuple(definition)):
+                        self.execute_tokens(list(d))
 
                     self.dictionary[self.new_word_name] = new_word_func
                     self.interpreter.log_output(f"Defined {self.new_word_name}")

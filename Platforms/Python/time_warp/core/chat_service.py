@@ -84,7 +84,9 @@ class ChatService:
             old_message = self.messages[room_id].pop(0)
             del self.message_index[room_id][old_message.id]
 
-        logger.info("Message added to room %s by {username}: {content[:50]}...", room_id)
+        logger.info(
+            "Message added to room %s by {username}: {content[:50]}...", room_id
+        )
         return message
 
     def edit_message(self, room_id: str, message_id: str, new_content: str) -> bool:

@@ -311,7 +311,7 @@ class MusicPlayer:
         # Create WAV file in memory
         buffer = BytesIO()
         # pylint: disable=no-member
-        with wave.open(buffer, 'wb', encoding='utf-8') as wav:  # type: wave.Wave_write
+        with wave.open(buffer, "wb") as wav:  # type: ignore[call-overload]
             wav.setnchannels(1)
             wav.setsampwidth(2)
             wav.setframerate(self.sample_rate)

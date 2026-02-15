@@ -437,7 +437,7 @@ class PeerReviewManager:
         report = review.export_report()
 
         if output_path:
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 f.write(report)
 
         return report
@@ -449,7 +449,7 @@ class PeerReviewManager:
         for submission_id, review in self.reviews.items():
             report = self.export_review(submission_id)
             output_path = output_dir / f"{submission_id}_review.txt"
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 f.write(report)
 
     def get_summary_statistics(self) -> Dict:

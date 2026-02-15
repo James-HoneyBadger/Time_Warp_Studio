@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# pyright: reportMissingModuleSource=false, reportMissingImports=false, reportAttributeAccessIssue=false, reportGeneralTypeIssues=false
+# pylint: disable=import-error
 """
 TW Editor - Standalone Code Editor for Time Warp Languages.
 Features syntax highlighting, formatting, and basic editing capabilities.
@@ -8,9 +10,9 @@ import logging
 import sys
 from pathlib import Path
 
-from PySide6.QtCore import QSize
-from PySide6.QtGui import QAction, QKeySequence
-from PySide6.QtWidgets import (
+from PySide6.QtCore import QSize  # type: ignore[import]
+from PySide6.QtGui import QAction, QKeySequence  # type: ignore[import]
+from PySide6.QtWidgets import (  # type: ignore[import]
     QApplication,
     QComboBox,
     QFileDialog,
@@ -23,12 +25,12 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
-from time_warp.core.interpreter import Language
-from time_warp.logging_config import get_logger, setup_logging
+from time_warp.core.interpreter import Language  # type: ignore[import]
+from time_warp.logging_config import get_logger, setup_logging  # type: ignore[import]
 
 # Import Time Warp components
-from time_warp.ui.editor import CodeEditor
-from time_warp.utils.code_formatter import get_formatter
+from time_warp.ui.editor import CodeEditor  # type: ignore[import]
+from time_warp.utils.code_formatter import get_formatter  # type: ignore[import]
 
 
 class TWEditorWindow(QMainWindow):
@@ -247,7 +249,7 @@ class TWEditorWindow(QMainWindow):
             except ValueError:
                 pass  # Keep current language if unknown
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             msg = f"Could not open file: {e}"
             QMessageBox.warning(self, "Error", msg)
 
@@ -289,7 +291,7 @@ class TWEditorWindow(QMainWindow):
                 pass
 
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             msg = f"Could not save file: {e}"
             QMessageBox.warning(self, "Error", msg)
             return False
@@ -302,7 +304,7 @@ class TWEditorWindow(QMainWindow):
         ret = QMessageBox.warning(
             self,
             "TW Editor",
-            "The document has been modified.\n" "Do you want to save your changes?",
+            "The document has been modified.\nDo you want to save your changes?",
             QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
         )
 

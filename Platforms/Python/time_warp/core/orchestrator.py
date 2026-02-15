@@ -1,3 +1,4 @@
+# pylint: disable=redefined-outer-name
 """
 Time Warp Studio - System Integration & Orchestration
 
@@ -18,6 +19,7 @@ from typing import Any, Callable, Dict, List, Optional
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
 
 # ===== ENUMS =====
 
@@ -110,8 +112,8 @@ class ComponentRegistry:
         component: Any,
         initializer: Optional[Callable] = None,
         shutdown_handler: Optional[Callable] = None,
-        version: str = "1.0.0",
-        dependencies: Optional[List[str]] = None,
+        version: str = "1.0.0",  # pylint: disable=unused-argument
+        dependencies: Optional[List[str]] = None,  # pylint: disable=unused-argument
     ) -> None:
         """Register a system component"""
         self.components[name] = component
@@ -172,7 +174,7 @@ class SystemOrchestrator:
             )
             self.system_info.components[name] = info
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             self.initialization_report.errors.append(
                 f"Failed to register {name}: {str(e)}"
             )
@@ -206,7 +208,9 @@ class SystemOrchestrator:
                         component_info.status = ComponentStatus.READY
                         component_info.last_initialized = utc_now()
                     self.initialization_report.components_initialized += 1
-                except Exception as e:
+                except (
+                    Exception
+                ) as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                     self.initialization_report.errors.append(f"{name}: {str(e)}")
                     self.initialization_report.components_failed += 1
                     component_info = self.system_info.components.get(name)
@@ -228,7 +232,7 @@ class SystemOrchestrator:
 
             return self.initialization_report
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             self.initialization_report.success = False
             self.initialization_report.errors.append(
                 f"System initialization failed: {str(e)}"
@@ -246,7 +250,9 @@ class SystemOrchestrator:
                 try:
                     shutdown_handler = self.registry.shutdown_handlers[name]
                     shutdown_handler()
-                except Exception as e:
+                except (
+                    Exception
+                ) as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                     self.initialization_report.warnings.append(
                         f"Error shutting down {name}: {str(e)}"
                     )
@@ -261,9 +267,7 @@ class SystemOrchestrator:
         return {
             "status": self.system_info.status.value,
             "version": self.system_info.version,
-            "uptime_seconds": (
-                utc_now() - self.system_info.started_at
-            ).total_seconds(),
+            "uptime_seconds": (utc_now() - self.system_info.started_at).total_seconds(),
             "components": {
                 name: {
                     "version": info.version,
@@ -292,7 +296,9 @@ class SystemOrchestrator:
         for callback in self.status_callbacks:
             try:
                 callback(status)
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                 print(f"Error in status callback: {e}")
 
 
@@ -303,7 +309,7 @@ _global_orchestrator: Optional[SystemOrchestrator] = None
 
 def get_system_orchestrator() -> SystemOrchestrator:
     """Get global system orchestrator"""
-    global _global_orchestrator
+    global _global_orchestrator  # pylint: disable=global-statement
     if _global_orchestrator is None:
         _global_orchestrator = SystemOrchestrator()
     return _global_orchestrator

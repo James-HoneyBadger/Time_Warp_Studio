@@ -70,9 +70,13 @@ def print_error(text: str) -> None:
 def check_python_version() -> bool:
     """Check if Python version is 3.10+"""
     if sys.version_info < (3, 10):
-        print_error(f"Python 3.10+ required (you have {sys.version_info.major}.{sys.version_info.minor})")
+        print_error(
+            f"Python 3.10+ required (you have {sys.version_info.major}.{sys.version_info.minor})"
+        )
         return False
-    print_success(f"Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
+    print_success(
+        f"Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"
+    )
     return True
 
 
@@ -84,7 +88,7 @@ def create_venv() -> bool:
             [PYTHON_EXECUTABLE, "-m", "venv", str(VENV_DIR)],
             check=True,
             capture_output=True,
-            timeout=60
+            timeout=60,
         )
         print_success("Virtual environment created")
         return True
@@ -108,10 +112,19 @@ def upgrade_pip(venv_python: Path) -> bool:
     print_info("Upgrading pip...")
     try:
         subprocess.run(
-            [str(venv_python), "-m", "pip", "install", "--upgrade", "pip", "setuptools", "wheel"],
+            [
+                str(venv_python),
+                "-m",
+                "pip",
+                "install",
+                "--upgrade",
+                "pip",
+                "setuptools",
+                "wheel",
+            ],
             check=True,
             capture_output=True,
-            timeout=120
+            timeout=120,
         )
         print_success("pip upgraded")
         return True
@@ -128,13 +141,13 @@ def install_dependencies(venv_python: Path) -> bool:
     if not REQUIREMENTS_FILE.exists():
         print_warning(f"Requirements file not found: {REQUIREMENTS_FILE}")
         return False
-    
+
     print_info(f"Installing dependencies from {REQUIREMENTS_FILE.name}...")
     try:
         subprocess.run(
             [str(venv_python), "-m", "pip", "install", "-r", str(REQUIREMENTS_FILE)],
             check=True,
-            timeout=300
+            timeout=300,
         )
         print_success("Dependencies installed")
         return True
@@ -158,23 +171,21 @@ def verify_ide_script() -> bool:
 def run_ide(venv_python: Path) -> bool:
     """Execute the IDE"""
     print_header("🚀 Launching Time Warp Studio")
-    
+
     if not IDE_SCRIPT.exists():
         print_error(f"IDE script not found: {IDE_SCRIPT}")
         return False
-    
+
     try:
         # Run IDE in venv
         subprocess.run(
-            [str(venv_python), str(IDE_SCRIPT)],
-            cwd=str(PROJECT_ROOT),
-            check=True
+            [str(venv_python), str(IDE_SCRIPT)], cwd=str(PROJECT_ROOT), check=True
         )
         return True
     except KeyboardInterrupt:
         print_info("\nIDE closed by user")
         return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
         print_error(f"Failed to run IDE: {e}")
         return False
 
@@ -183,37 +194,35 @@ def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(
         description="Time Warp Studio Launcher",
-        epilog="https://github.com/James-HoneyBadger/Time_Warp_Studio"
+        epilog="https://github.com/James-HoneyBadger/Time_Warp_Studio",
     )
     parser.add_argument(
-        "--fresh",
-        action="store_true",
-        help="Delete and recreate virtual environment"
+        "--fresh", action="store_true", help="Delete and recreate virtual environment"
     )
     parser.add_argument(
         "--skip-setup",
         action="store_true",
-        help="Skip dependency installation (assume venv is ready)"
+        help="Skip dependency installation (assume venv is ready)",
     )
     parser.add_argument(
         "--no-venv",
         action="store_true",
-        help="Run with system Python (not recommended)"
+        help="Run with system Python (not recommended)",
     )
-    
+
     args = parser.parse_args()
-    
+
     print_header("⏰ Time Warp Studio Launcher")
-    
+
     # Step 1: Check Python version
     print_info("Checking Python version...")
     if not check_python_version():
         print_error("Please install Python 3.10 or higher")
         sys.exit(1)
-    
+
     # Step 2: Handle virtual environment
     venv_python = get_venv_python()
-    
+
     if args.no_venv:
         print_warning("Running with system Python (not recommended)")
         venv_python = Path(PYTHON_EXECUTABLE)
@@ -223,7 +232,7 @@ def main():
             print_info("Removing existing virtual environment...")
             subprocess.run(["rm", "-rf", str(VENV_DIR)], check=True)
             print_success("Virtual environment removed")
-        
+
         # Create venv if needed
         if not VENV_DIR.exists():
             print_info("Virtual environment not found")
@@ -231,29 +240,30 @@ def main():
                 sys.exit(1)
         else:
             print_success(f"Virtual environment found: {VENV_DIR.name}/")
-    
+
     # Step 3: Install dependencies
     if not args.skip_setup:
         print_header("📦 Setting up dependencies")
         if not upgrade_pip(venv_python):
             print_warning("pip upgrade failed, continuing...")
-        
+
         if not install_dependencies(venv_python):
             print_error("Failed to install dependencies")
             sys.exit(1)
     else:
         print_info("Skipping dependency check (--skip-setup)")
-    
+
     # Step 4: Verify IDE script exists
     print_header("🔍 Verifying installation")
     if not verify_ide_script():
         sys.exit(1)
-    
+
     # Step 5: Run IDE
     if not run_ide(venv_python):
         sys.exit(1)
-    
+
     print_header("👋 Thank you for using Time Warp Studio!")
+
 
 if __name__ == "__main__":
     try:
@@ -261,6 +271,6 @@ if __name__ == "__main__":
     except KeyboardInterrupt:
         print(f"\n{Colors.YELLOW}Launcher interrupted by user{Colors.RESET}")
         sys.exit(0)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
         print_error(f"Unexpected error: {e}")
         sys.exit(1)

@@ -26,6 +26,7 @@ from typing import Any, Callable, Dict, List, Optional
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
+
 # ===== ENUMS =====
 
 

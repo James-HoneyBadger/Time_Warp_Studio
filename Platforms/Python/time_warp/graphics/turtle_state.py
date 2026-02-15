@@ -103,6 +103,50 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
         self.on_change: Optional[Callable[[], None]] = None
         self.palette: dict[int, Tuple[int, int, int]] = dict(DEFAULT_PALETTE_16)
         self._last_fillable_shape_index: Optional[int] = None
+        self._filling: bool = False
+        self._fill_start_line_index: int = 0
+
+    @property
+    def angle(self) -> float:
+        """Alias for heading (compatibility with standard turtle interface)."""
+        return self.heading
+
+    @angle.setter
+    def angle(self, value: float) -> None:
+        """Set heading via angle alias."""
+        self.heading = value % 360.0
+
+    def begin_fill(self) -> None:
+        """Begin recording lines for fill. Call end_fill() to fill the shape."""
+        self._filling = True
+        self._fill_start_line_index = len(self.lines)
+
+    def end_fill(self) -> None:
+        """End fill recording and create a filled polygon from recorded lines."""
+        if not self._filling:
+            return
+        self._filling = False
+        # Collect points from lines drawn since begin_fill
+        fill_lines = self.lines[self._fill_start_line_index :]
+        if not fill_lines:
+            return
+        points: List[Tuple[float, float]] = [
+            (fill_lines[0].start_x, fill_lines[0].start_y)
+        ]
+        for line in fill_lines:
+            points.append((line.end_x, line.end_y))
+        if len(points) >= 3:
+            self.shapes.append(
+                TurtleShape(
+                    shape_type="polygon",
+                    points=points,
+                    color=self.pen_color,
+                    width=self.pen_width,
+                    fill_color=self.pen_color,
+                )
+            )
+            self._last_fillable_shape_index = len(self.shapes) - 1
+            self._notify_change()
 
     def _notify_change(self) -> None:
         """Notify listeners of state change"""

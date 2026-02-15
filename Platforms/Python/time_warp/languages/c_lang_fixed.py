@@ -400,13 +400,14 @@ def _assign_variable(interpreter: "Interpreter", name: str, expr: str):
             r"rand\s*\([^)]*\)", rnum, expr_repl, count=1, flags=re.IGNORECASE
         )
 
+    val: Any
     try:
         if suf == "$":
             val = _unquote(expr_repl)
         else:
             val = interpreter.evaluate_expression(expr_repl)
     except (ValueError, TypeError, ZeroDivisionError):  # noqa: BLE001
-        val: Any = "" if suf == "$" else 0
+        val = "" if suf == "$" else 0
     # Infer type if not declared yet
     if suf is None:
         if isinstance(val, str):
@@ -427,7 +428,7 @@ def _assign_variable(interpreter: "Interpreter", name: str, expr: str):
             idx_to_use = arr_idx
         if idx_to_use >= len(a):
             a.extend([0] * (idx_to_use + 1 - len(a)))
-        a[idx_to_use] = val
+        a[idx_to_use] = val  # type: ignore[call-overload]
         interpreter.arrays[up] = a
         return ""
 
@@ -578,7 +579,7 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
         return ""
     if low == "continue":
         for i in range(len(interpreter.c_block_stack) - 1, -1, -1):
-            fr: Dict[str, Any] = interpreter.c_block_stack[i]
+            fr = interpreter.c_block_stack[i]
             if fr.get("type") == "while":
                 _end = fr.get("end", interpreter.current_line)
                 interpreter.current_line = _end - 1

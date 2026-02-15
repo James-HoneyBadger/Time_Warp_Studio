@@ -1,3 +1,4 @@
+# pylint: disable=redefined-outer-name,redefined-builtin
 """
 Time Warp Studio - Phase VIII: Integrated Debugger System
 
@@ -18,6 +19,7 @@ from typing import Any, Callable, Dict, List, Optional, Tuple
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
 
 # ===== ENUMS =====
 
@@ -299,7 +301,7 @@ class DebuggerEngine:
         session = self.sessions.get(session_id)
         return session.watches if session else {}
 
-    def evaluate_expression(self, session_id: str, expression: str) -> Any:
+    def evaluate_expression(self, _session_id: str, _expression: str) -> Any:
         """Evaluate expression in current context"""
         # This would use the current variable scope
         # Simplified placeholder
@@ -468,8 +470,7 @@ class PairDebugManager:
 
     def share_watch(self, session_id: str, watch: Watch) -> None:
         """Share watch expression"""
-        # Broadcast to pair participant
-        pass
+        # Broadcast to pair participant — placeholder for future implementation
 
     def get_pair_session(self, session_id: str) -> Optional[Dict]:
         """Get pair session info"""

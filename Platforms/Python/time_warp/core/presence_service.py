@@ -51,7 +51,7 @@ class PresenceService:
         self.room_presence[room_id][connection_id] = presence_data
         self.user_presence[connection_id] = presence_data
 
-        logger.info("User %s presence set in room {room_id}", user_data.get('name'))
+        logger.info("User %s presence set in room {room_id}", user_data.get("name"))
         return presence_data
 
     def update_user_status(

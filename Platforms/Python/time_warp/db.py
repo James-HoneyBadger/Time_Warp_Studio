@@ -28,7 +28,7 @@ if not DATABASE_URL.startswith("postgresql+asyncpg://"):
         "postgresql://", "postgresql+asyncpg://"
     ).replace("postgres://", "postgresql+asyncpg://")
 
-logger.info("Database URL: %s...", DATABASE_URL.split('@')[0])
+logger.info("Database URL: %s...", DATABASE_URL.split("@")[0])
 
 
 # Create async engine

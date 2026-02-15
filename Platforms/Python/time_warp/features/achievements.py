@@ -61,7 +61,9 @@ class ProgressTracker:
         tutorials_root = self.root / "docs" / "tutorials"
         if not tutorials_root.exists():
             return []
-        return sorted(str(p.relative_to(self.root)) for p in tutorials_root.glob("*.md"))
+        return sorted(
+            str(p.relative_to(self.root)) for p in tutorials_root.glob("*.md")
+        )
 
     def get_examples(self) -> List[str]:
         """List example source files."""
@@ -109,9 +111,7 @@ class ProgressTracker:
         completed_tutorials = set(self.state.get("completed_tutorials", []))
         completed_examples = set(self.state.get("completed_examples", []))
 
-        tutorial_pct = (
-            len(completed_tutorials) / max(1, len(tutorials)) * 100.0
-        )
+        tutorial_pct = len(completed_tutorials) / max(1, len(tutorials)) * 100.0
         example_total = len(self.get_examples())
         example_pct = len(completed_examples) / max(1, example_total) * 100.0
 
@@ -141,7 +141,8 @@ class ProgressTracker:
                 id="all_tutorials",
                 name="Tutorial Master",
                 description="Complete all tutorials",
-                unlocked=len(completed_tutorials) >= len(tutorials) and len(tutorials) > 0,
+                unlocked=len(completed_tutorials) >= len(tutorials)
+                and len(tutorials) > 0,
             ),
             Badge(
                 id="first_example",

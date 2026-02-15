@@ -115,7 +115,7 @@ if __name__ == "__main__":
             wrapper_code = self.PYTHON_WRAPPER.format(PROGRAM_CODE=code)
             script_path = self.temp_dir / "program.py"
 
-            with open(script_path, 'w', encoding='utf-8') as f:
+            with open(script_path, "w", encoding="utf-8") as f:
                 f.write(wrapper_code)
 
             # Build with PyInstaller
@@ -162,7 +162,7 @@ if __name__ == "__main__":
             html_content = self.HTML5_WRAPPER.format(TITLE=title, PROGRAM_CODE=js_code)
 
             # Write HTML file
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 f.write(html_content)
 
             return (True, f"HTML5 application created: {output_path}")
@@ -191,17 +191,17 @@ if __name__ == "__main__":
 
             # Create Python Flask app
             flask_app = self._create_flask_app(code, language)
-            with open(output_dir / "app.py", 'w', encoding='utf-8') as f:
+            with open(output_dir / "app.py", "w", encoding="utf-8") as f:
                 f.write(flask_app)
 
             # Create requirements.txt
             requirements = "Flask==2.3.0\nWerkzeug==2.3.0\n"
-            with open(output_dir / "requirements.txt", 'w', encoding='utf-8') as f:
+            with open(output_dir / "requirements.txt", "w", encoding="utf-8") as f:
                 f.write(requirements)
 
             # Create README
             readme = self._create_readme(app_name, language)
-            with open(output_dir / "README.md", 'w', encoding='utf-8') as f:
+            with open(output_dir / "README.md", "w", encoding="utf-8") as f:
                 f.write(readme)
 
             return (
@@ -226,7 +226,7 @@ python3 << 'EOF'
 EOF
 """
 
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 f.write(script)
 
             # Make executable

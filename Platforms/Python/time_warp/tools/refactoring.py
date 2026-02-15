@@ -195,9 +195,9 @@ class CodeMetricsAnalyzer:
 
         # Average line length
         if non_empty_lines:
-            metrics.average_line_length = sum(len(line) for line in non_empty_lines) // len(
-                non_empty_lines
-            )
+            metrics.average_line_length = sum(
+                len(line) for line in non_empty_lines
+            ) // len(non_empty_lines)
 
         # Cyclomatic complexity (simplified)
         metrics.cyclomatic_complexity = (

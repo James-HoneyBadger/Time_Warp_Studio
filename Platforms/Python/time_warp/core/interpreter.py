@@ -795,9 +795,7 @@ class Interpreter:
                     continue
 
                 success = self._execute_line_safely(statement, turtle)
-                self._record_debug_frame(
-                    physical_line, statement, idx, len(statements)
-                )
+                self._record_debug_frame(physical_line, statement, idx, len(statements))
 
                 if not success:
                     break

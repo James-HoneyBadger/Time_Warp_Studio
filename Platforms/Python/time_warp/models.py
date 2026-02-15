@@ -16,13 +16,15 @@ from sqlalchemy import (
     String,
     Text,
 )
-from sqlalchemy.orm import declarative_base, relationship
+from sqlalchemy.orm import DeclarativeBase, relationship
 
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    """SQLAlchemy declarative base class."""
 
 
 class Room(Base):

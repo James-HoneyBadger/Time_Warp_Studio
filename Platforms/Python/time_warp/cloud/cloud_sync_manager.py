@@ -74,7 +74,9 @@ class CloudSyncManager:
         self.sync_queue: List[Dict[str, Any]] = []
 
         # Callbacks
-        self._auth_status_changed_callbacks: List[Callable[[CloudAuthStatus], None]] = []
+        self._auth_status_changed_callbacks: List[Callable[[CloudAuthStatus], None]] = (
+            []
+        )
         self._sync_status_changed_callbacks: List[Callable[[SyncStatus], None]] = []
         self._conflict_detected_callbacks: List[Callable[[SyncConflict], None]] = []
         self._sync_complete_callbacks: List[Callable[[SyncStatus], None]] = []
@@ -119,10 +121,10 @@ class CloudSyncManager:
                 "full_name": full_name,
                 "role": "student",
             }
-            self.api_server._create_user(user_data)
+            self.api_server._create_user(user_data)  # pylint: disable=protected-access
             logger.info("User registered: %s (%s)", username, email)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.error("Registration failed: %s", e)
             return False
 
@@ -150,8 +152,8 @@ class CloudSyncManager:
 
             # Create tokens
             tokens = self.api_server.auth_manager.create_tokens(user["id"])
-            self.access_token = tokens["access_token"]
-            self.refresh_token = tokens["refresh_token"]
+            self.access_token = str(tokens["access_token"])
+            self.refresh_token = str(tokens["refresh_token"])
             self.current_user = {
                 "id": user["id"],
                 "username": user["username"],
@@ -160,9 +162,9 @@ class CloudSyncManager:
 
             self.auth_status = CloudAuthStatus.AUTHENTICATED
             self._notify_auth_status_changed()
-            logger.info("User logged in: %s", user['username'])
+            logger.info("User logged in: %s", user["username"])
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             self.auth_status = CloudAuthStatus.AUTH_FAILED
             self._notify_auth_status_changed()
             logger.error("Login failed: %s", e)
@@ -188,7 +190,7 @@ class CloudSyncManager:
             self._notify_auth_status_changed()
             logger.info("User logged out")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.error("Logout failed: %s", e)
             return False
 
@@ -211,12 +213,12 @@ class CloudSyncManager:
 
             # Create new tokens
             tokens = self.api_server.auth_manager.create_tokens(user_id)
-            self.access_token = tokens["access_token"]
-            self.refresh_token = tokens["refresh_token"]
+            self.access_token = str(tokens["access_token"])
+            self.refresh_token = str(tokens["refresh_token"])
 
             logger.info("Tokens refreshed")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.error("Token refresh failed: %s", e)
             self.auth_status = CloudAuthStatus.TOKEN_EXPIRED
             self._notify_auth_status_changed()
@@ -260,7 +262,7 @@ class CloudSyncManager:
             self.api_server.projects[project_id] = project
             logger.info("Cloud project created: %s (%s)", name, project_id)
             return project_id
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.error("Project creation failed: %s", e)
             return None
 
@@ -287,9 +289,9 @@ class CloudSyncManager:
             self.project_files = {}
             self.sync_queue = []
 
-            logger.info("Project opened: %s", project['name'])
+            logger.info("Project opened: %s", project["name"])
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.error("Failed to open project: %s", e)
             return False
 
@@ -306,7 +308,7 @@ class CloudSyncManager:
                 self.project_files = {}
                 logger.info("Project closed: %s", project_name)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.error("Failed to close project: %s", e)
             return False
 
@@ -333,18 +335,18 @@ class CloudSyncManager:
                 )
 
             # Start sync (async engine method)
-            asyncio.run(
-                self.sync_engine.sync_project(self.current_project["id"])
-            )
+            asyncio.run(self.sync_engine.sync_project(self.current_project["id"]))
 
-            logger.info("Project synced: %s", self.current_project['name'])
+            logger.info("Project synced: %s", self.current_project["name"])
             self._notify_sync_complete()
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.error("Project sync failed: %s", e)
             return False
 
-    def add_file(self, filename: str, content: str, language: str | None = None) -> bool:
+    def add_file(
+        self, filename: str, content: str, language: str | None = None
+    ) -> bool:
         """Add or update a file in the current project.
 
         Args:
@@ -382,7 +384,7 @@ class CloudSyncManager:
 
             logger.info("File added: %s", filename)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.error("Failed to add file: %s", e)
             return False
 
@@ -418,7 +420,7 @@ class CloudSyncManager:
 
             logger.info("File removed: %s", filename)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.error("Failed to remove file: %s", e)
             return False
 
@@ -455,12 +457,10 @@ class CloudSyncManager:
             if conflict is None:
                 logger.warning("Conflict not found: %s", conflict_id)
                 return False
-            asyncio.run(
-                self.sync_engine.resolve_conflict(conflict, resolution)
-            )
+            asyncio.run(self.sync_engine.resolve_conflict(conflict, resolution))
             logger.info("Conflict resolved: %s (%s)", conflict_id, resolution.value)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.error("Failed to resolve conflict: %s", e)
             return False
 
@@ -479,7 +479,7 @@ class CloudSyncManager:
             logger.info("Offline mode enabled")
             self._notify_sync_status_changed()
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.error("Failed to enable offline mode: %s", e)
             return False
 
@@ -499,7 +499,7 @@ class CloudSyncManager:
 
             self._notify_sync_status_changed()
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.error("Failed to disable offline mode: %s", e)
             return False
 
@@ -530,7 +530,7 @@ class CloudSyncManager:
             self._sync_thread.start()
             logger.info("Auto-sync started")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.error("Failed to start auto-sync: %s", e)
             return False
 
@@ -546,7 +546,7 @@ class CloudSyncManager:
                 self._sync_thread.join(timeout=5)
             logger.info("Auto-sync stopped")
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             logger.error("Failed to stop auto-sync: %s", e)
             return False
 
@@ -562,7 +562,9 @@ class CloudSyncManager:
             try:
                 if self.current_project and self.sync_queue:
                     self.sync_project()
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                 logger.error("Auto-sync error: %s", e)
             time.sleep(interval_seconds)
 
@@ -624,7 +626,7 @@ class CloudSyncManager:
             List of FileChange objects
         """
         changes = []
-        for file_id, file_data in self.project_files.items():
+        for _file_id, file_data in self.project_files.items():
             change = FileChange(
                 filename=file_data["filename"],
                 content=file_data["content"],
@@ -634,7 +636,7 @@ class CloudSyncManager:
             changes.append(change)
         return changes
 
-    def _on_sync_status_changed(self, status: SyncStatus):
+    def _on_sync_status_changed(self, _status: SyncStatus):
         """Handle sync status changes.
 
         Args:
@@ -691,7 +693,9 @@ class CloudSyncManager:
         for callback in self._auth_status_changed_callbacks:
             try:
                 callback(self.auth_status)
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                 logger.error("Callback error: %s", e)
 
     def _notify_sync_status_changed(self):
@@ -699,7 +703,9 @@ class CloudSyncManager:
         for callback in self._sync_status_changed_callbacks:
             try:
                 callback(self.sync_engine.get_sync_status())
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                 logger.error("Callback error: %s", e)
 
     def _notify_conflict_detected(self, conflict: SyncConflict):
@@ -711,7 +717,9 @@ class CloudSyncManager:
         for callback in self._conflict_detected_callbacks:
             try:
                 callback(conflict)
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                 logger.error("Callback error: %s", e)
 
     def _notify_sync_complete(self):
@@ -719,5 +727,7 @@ class CloudSyncManager:
         for callback in self._sync_complete_callbacks:
             try:
                 callback()
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                 logger.error("Callback error: %s", e)

@@ -279,8 +279,7 @@ class OptimizationSuggester:
 
         if not suggestions:
             suggestions.append(
-                "No critical hotspots found. Code is reasonably "
-                "well-optimized."
+                "No critical hotspots found. Code is reasonably " "well-optimized."
             )
 
         return suggestions

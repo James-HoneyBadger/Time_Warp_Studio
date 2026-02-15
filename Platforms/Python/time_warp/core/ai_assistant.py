@@ -61,8 +61,7 @@ class LocalAIAssistant:
         },
         "conditionals": {
             "BASIC": (
-                'IF x > 5 THEN\n  PRINT "Greater"\nELSE\n'
-                '  PRINT "Less"\nEND IF'
+                'IF x > 5 THEN\n  PRINT "Greater"\nELSE\n' '  PRINT "Less"\nEND IF'
             ),
             "LOGO": 'IF :x > 5 [PRINT "Greater"] [PRINT "Less"]',
             "PASCAL": 'if x > 5 then WriteLn("Greater") else WriteLn("Less");',
@@ -79,13 +78,9 @@ class LocalAIAssistant:
                 'SUB greet(name$)\n  PRINT "Hello " name$\nEND SUB\n'
                 'CALL greet("World")'
             ),
-            "LOGO": (
-                "TO square :size\n  REPEAT 4 "
-                "[FORWARD :size RIGHT 90]\nEND"
-            ),
+            "LOGO": ("TO square :size\n  REPEAT 4 " "[FORWARD :size RIGHT 90]\nEND"),
             "PASCAL": (
-                "procedure greet(name: string); "
-                "begin WriteLn(\"Hello \" + name); end;"
+                "procedure greet(name: string); " 'begin WriteLn("Hello " + name); end;'
             ),
             "C": 'void greet(char *name) { printf("Hello %s\\n", name); }',
         },
@@ -113,8 +108,7 @@ class LocalAIAssistant:
         "divide by zero": {
             "pattern": "divide by zero",
             "suggestion": (
-                "Add a check before division: IF divisor = 0 THEN PRINT "
-                '"Error"'
+                "Add a check before division: IF divisor = 0 THEN PRINT " '"Error"'
             ),
             "example": "IF x <> 0 THEN result = y / x",
         },
@@ -189,9 +183,7 @@ class LocalAIAssistant:
         code = self.KNOWLEDGE_BASE.get(concept.lower(), {}).get(lang_name, "")
 
         if code:
-            explanation = (
-                f"Here's how to implement {concept} in {lang_name}:\n\n{code}"
-            )
+            explanation = f"Here's how to implement {concept} in {lang_name}:\n\n{code}"
             confidence = 0.95
         else:
             explanation = (
@@ -220,14 +212,10 @@ class LocalAIAssistant:
         if fixes:
             explanation = "Found potential syntax issues:\n\n"
             for i, fix in enumerate(fixes, 1):
-                explanation += (
-                    f"{i}. {fix['issue']}\n   Fix: {fix['suggestion']}\n\n"
-                )
+                explanation += f"{i}. {fix['issue']}\n   Fix: {fix['suggestion']}\n\n"
             confidence = 0.8
         else:
-            explanation = (
-                "No obvious syntax errors found. The issue might be semantic."
-            )
+            explanation = "No obvious syntax errors found. The issue might be semantic."
             confidence = 0.5
 
         result = AssistantSuggestion(
@@ -247,9 +235,7 @@ class LocalAIAssistant:
 
         explanation = "Optimization opportunities:\n\n"
         for sug in suggestions:
-            explanation += (
-                f"• {sug['description']}\n  Impact: {sug['impact']}\n\n"
-            )
+            explanation += f"• {sug['description']}\n  Impact: {sug['impact']}\n\n"
 
         result = AssistantSuggestion(
             mode=AssistantMode.OPTIMIZE_CODE,
@@ -278,8 +264,7 @@ class LocalAIAssistant:
                 "(0, 1, 2, etc.)."
             ),
             "function": (
-                "A function is reusable code. Define it once, call it many "
-                "times."
+                "A function is reusable code. Define it once, call it many " "times."
             ),
             "conditional": (
                 "IF statements make decisions. "
@@ -306,16 +291,12 @@ class LocalAIAssistant:
         )
         return explanation
 
-    def generate_example(
-        self, concept: str, difficulty: str = "beginner"
-    ) -> str:
+    def generate_example(self, concept: str, difficulty: str = "beginner") -> str:
         """Generate example code."""
         examples = {
             "loop": {
                 "beginner": "FOR i = 1 TO 5\n  PRINT i\nNEXT i",
-                "intermediate": (
-                    "WHILE x < 100\n  x = x * 2\n  PRINT x\nEND WHILE"
-                ),
+                "intermediate": ("WHILE x < 100\n  x = x * 2\n  PRINT x\nEND WHILE"),
             },
             "function": {
                 "beginner": (
@@ -391,8 +372,7 @@ class LocalAIAssistant:
         return {
             "meaning": "An error occurred during execution.",
             "fix": (
-                "Check the error message for clues. Read the code line by "
-                "line."
+                "Check the error message for clues. Read the code line by " "line."
             ),
             "confidence": 0.5,
             "alternatives": [],
@@ -501,8 +481,7 @@ class LocalAIAssistant:
         # Error queries
         if "error" in msg_lower or "bug" in msg_lower or "fix" in msg_lower:
             return (
-                "Share your error message and code snippet, and I'll help "
-                "debug it!"
+                "Share your error message and code snippet, and I'll help " "debug it!"
             )
 
         # Concept queries
@@ -537,9 +516,7 @@ class RemoteAIAssistant:
         self.model = "gpt-3.5-turbo"
         self.conversation_history: List[ConversationMessage] = []
 
-    def explain_error(
-        self, error: str, code: Optional[str] = None
-    ) -> Optional[str]:
+    def explain_error(self, error: str, code: Optional[str] = None) -> Optional[str]:
         """Use OpenAI to explain error."""
         if not self.enabled:
             return None
@@ -564,16 +541,11 @@ class RemoteAIAssistant:
             return response.choices[0].message.content
 
         except ImportError:
-            return (
-                "OpenAI library not installed. Install with: "
-                "pip install openai"
-            )
+            return "OpenAI library not installed. Install with: " "pip install openai"
         except (ValueError, RuntimeError) as exc:
             return f"API error: {str(exc)}"
 
-    def suggest_code(
-        self, description: str, language: str = "BASIC"
-    ) -> Optional[str]:
+    def suggest_code(self, description: str, language: str = "BASIC") -> Optional[str]:
         """Use OpenAI to suggest code."""
         if not self.enabled:
             return None

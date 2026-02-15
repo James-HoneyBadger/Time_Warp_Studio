@@ -819,7 +819,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
             import time
 
             time.sleep(ms / 1000.0)
-        except BaseException:
+        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             pass
         return ""
 
@@ -841,10 +841,22 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
             color_val = int(interpreter.evaluate_expression(m.group(1).strip()))
             if turtle:
                 color_map = {
-                    0: "BLACK", 1: "BLUE", 2: "GREEN", 3: "CYAN",
-                    4: "RED", 5: "MAGENTA", 6: "BROWN", 7: "GRAY",
-                    8: "GRAY", 9: "BLUE", 10: "GREEN", 11: "CYAN",
-                    12: "RED", 13: "MAGENTA", 14: "YELLOW", 15: "WHITE",
+                    0: "BLACK",
+                    1: "BLUE",
+                    2: "GREEN",
+                    3: "CYAN",
+                    4: "RED",
+                    5: "MAGENTA",
+                    6: "BROWN",
+                    7: "GRAY",
+                    8: "GRAY",
+                    9: "BLUE",
+                    10: "GREEN",
+                    11: "CYAN",
+                    12: "RED",
+                    13: "MAGENTA",
+                    14: "YELLOW",
+                    15: "WHITE",
                 }
                 color_name = color_map.get(color_val, "WHITE")
                 turtle.pencolor(color_name)
@@ -886,7 +898,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
             else:
                 val = float(val_str)
                 interpreter.variables[name] = val
-        except BaseException:
+        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             pass
         return ""
 
@@ -898,7 +910,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
         idx_expr = idx_expr.replace("[", "(").replace("]", ")")
         try:
             idx = int(interpreter.evaluate_expression(idx_expr))
-        except BaseException:
+        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             return "❌ Error: Invalid array index"
 
         val_expr = val_expr.rstrip(";").strip()
@@ -913,7 +925,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
 
         try:
             val = interpreter.evaluate_expression(val_expr)
-        except BaseException:
+        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             val = 0.0
 
         arr[idx] = val

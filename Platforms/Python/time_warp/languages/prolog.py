@@ -391,7 +391,9 @@ def _eval_math(expr: str, env: Dict[str, str]) -> Optional[float]:
             return None
         # Use a restricted evaluation with only math operations
         allowed_names: Dict[str, Any] = {"__builtins__": {}}
-        return float(eval(expr_sub, allowed_names, {}))  # noqa: S307
+        return float(
+            eval(expr_sub, allowed_names, {})
+        )  # noqa: S307  # pylint: disable=eval-used
     except (ValueError, TypeError, SyntaxError, ZeroDivisionError):
         return None
 

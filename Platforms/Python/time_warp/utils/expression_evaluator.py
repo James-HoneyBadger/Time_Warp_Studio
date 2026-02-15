@@ -284,7 +284,7 @@ class ExpressionEvaluator:
                 operator_stack.append(token)
 
             elif token.type in (Token.Type.OPERATOR, Token.Type.COMPARISON):
-                op = token.value
+                op = str(token.value)
                 while operator_stack:
                     top = operator_stack[-1]
                     if top.type == Token.Type.LEFT_PAREN:
@@ -294,7 +294,7 @@ class ExpressionEvaluator:
                         Token.Type.OPERATOR,
                         Token.Type.COMPARISON,
                     ):
-                        top_op = top.value
+                        top_op = str(top.value)
                         if precedence[top_op] > precedence[op] or (
                             precedence[top_op] == precedence[op]
                             and op not in right_associative
@@ -342,7 +342,7 @@ class ExpressionEvaluator:
 
     def _evaluate_rpn(self, rpn: List[Token]) -> float:
         """Evaluate RPN expression"""
-        stack = []
+        stack: List[Any] = []
 
         for token in rpn:
             if token.type == Token.Type.NUMBER:

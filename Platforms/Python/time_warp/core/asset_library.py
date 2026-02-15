@@ -321,7 +321,7 @@ class AssetLibrary:
         }
 
         try:
-            with open(metadata_file, 'w', encoding='utf-8') as f:
+            with open(metadata_file, "w", encoding="utf-8") as f:
                 json.dump(metadata, f, indent=2)
         except (ValueError, TypeError):
             pass

@@ -562,7 +562,9 @@ def _basic_input(interpreter: "Interpreter", args: str) -> str:
         # Validate variable name format
         validate_variable_name(var_name, allow_suffix=True)
         logger.debug(
-            f"INPUT: Requesting input for variable '{var_name}' with prompt '{prompt}'"
+            "INPUT: Requesting input for variable '%s' with prompt '%s'",
+            var_name,
+            prompt,
         )
         interpreter.start_input_request(
             prompt,
@@ -592,7 +594,7 @@ def _basic_if(
     then_upper = then_part.upper()
     else_pos = then_upper.find(" ELSE ")
     if else_pos != -1:
-        else_part = then_part[else_pos + 6:].strip()
+        else_part = then_part[else_pos + 6 :].strip()
         then_part = then_part[:else_pos].strip()
 
     try:
@@ -758,7 +760,9 @@ def _basic_return(interpreter: "Interpreter") -> str:
     return ""
 
 
-def _basic_screen(interpreter: "Interpreter", args: str, turtle: Optional["TurtleState"] = None) -> str:
+def _basic_screen(
+    interpreter: "Interpreter", args: str, _turtle: Optional["TurtleState"] = None
+) -> str:
     """SCREEN mode[, width, height] - Set screen mode.
 
     Args:
@@ -1106,8 +1110,7 @@ def _basic_pset(i: "Interpreter", args: str, t: "TurtleState") -> str:
     """
     # Parse (x, y)[, color]
     match = re.match(
-        r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)"
-        r"(?:\s*,\s*(.+))?",
+        r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)" r"(?:\s*,\s*(.+))?",
         args,
     )
 
@@ -1146,8 +1149,7 @@ def _basic_preset(i: "Interpreter", args: str, t: "TurtleState") -> str:
     """
     # Parse (x, y)[, color]
     match = re.match(
-        r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)"
-        r"(?:\s*,\s*(.+))?",
+        r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)" r"(?:\s*,\s*(.+))?",
         args,
     )
 
@@ -1537,8 +1539,8 @@ def _basic_call(interpreter: "Interpreter", args: str) -> str:
             evaluated_args.append(arg_expr.strip('"'))
 
     # Save current variables that will be overwritten by params
-    saved_vars = {}       # numeric vars backup
-    saved_str_vars = {}   # string vars backup
+    saved_vars = {}  # numeric vars backup
+    saved_str_vars = {}  # string vars backup
     for i, param_name in enumerate(params):
         if param_name.endswith("$"):
             # String parameter — use string_variables
@@ -1556,12 +1558,14 @@ def _basic_call(interpreter: "Interpreter", args: str) -> str:
                 interpreter.variables[param_name] = 0  # default
 
     # Push call frame
-    interpreter.basic_call_stack.append({
-        "return_line": interpreter.current_line,
-        "saved_vars": saved_vars,
-        "saved_str_vars": saved_str_vars,
-        "func_name": sub_name if is_function else "",
-    })
+    interpreter.basic_call_stack.append(
+        {
+            "return_line": interpreter.current_line,
+            "saved_vars": saved_vars,
+            "saved_str_vars": saved_str_vars,
+            "func_name": sub_name if is_function else "",
+        }
+    )
 
     # Jump to sub body (main loop detects line_changed and does NOT
     # increment, so set directly to the first body line)
@@ -1653,7 +1657,7 @@ def _basic_restore(interpreter: "Interpreter", _args: str) -> str:
 
 
 def _basic_color(
-    interpreter: "Interpreter",
+    _interpreter: "Interpreter",
     args: str,
     turtle: Optional["TurtleState"] = None,
 ) -> str:
@@ -2290,7 +2294,7 @@ def _basic_in(interpreter: "Interpreter", args: str) -> str:
         return f"❌ IN error: {e}\n"
 
 
-def _basic_shell(interpreter: "Interpreter", args: str) -> str:
+def _basic_shell(_interpreter: "Interpreter", args: str) -> str:
     """SHELL command - Execute system shell command.
 
     Syntax: SHELL "command"

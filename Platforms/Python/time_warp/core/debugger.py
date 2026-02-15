@@ -314,8 +314,8 @@ class CodeDebugger:
         try:
             compiled = compile(code_string, "<debug>", "exec")
             self.tracer.start()
-            exec(compiled, globals_dict)  # noqa: S102
-        except Exception as e:
+            exec(compiled, globals_dict)  # noqa: S102  # pylint: disable=exec-used
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             # Record the error in the timeline
             self.timeline.record_frame(
                 line=0,

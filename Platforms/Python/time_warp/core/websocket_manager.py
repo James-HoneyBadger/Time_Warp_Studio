@@ -44,7 +44,7 @@ class ConnectionManager:
         await websocket.accept()
         self.active_connections[connection_id] = websocket
         self.users[connection_id] = user_data
-        logger.info("User %s connected: {connection_id}", user_data.get('name'))
+        logger.info("User %s connected: {connection_id}", user_data.get("name"))
 
     def disconnect(self, connection_id: str):
         """Remove a connection"""
@@ -64,7 +64,7 @@ class ConnectionManager:
                     self.rooms.pop(room_id)
 
         if user_data:
-            logger.info("User %s disconnected: {connection_id}", user_data.get('name'))
+            logger.info("User %s disconnected: {connection_id}", user_data.get("name"))
 
     async def join_room(self, connection_id: str, room_id: str):
         """Add connection to a room"""

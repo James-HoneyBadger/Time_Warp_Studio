@@ -115,8 +115,7 @@ class InterpreterThread(QThread):
                     import sys
 
                     message = (
-                        "[THREAD] Turtle changed! "
-                        f"{len(self.turtle.lines)} lines"
+                        "[THREAD] Turtle changed! " f"{len(self.turtle.lines)} lines"
                     )
                     if _DEBUG:  # pragma: no cover
                         print(message, file=sys.stderr)
@@ -166,9 +165,7 @@ class InterpreterThread(QThread):
                 except (ValueError, TypeError):  # pylint: disable=broad-except
                     pass
             duration_ms = (time.perf_counter() - start_time) * 1000
-            line_count = len(
-                [line for line in self.code.splitlines() if line.strip()]
-            )
+            line_count = len([line for line in self.code.splitlines() if line.strip()])
             self.execution_stats.emit(
                 {
                     "duration_ms": duration_ms,
@@ -369,9 +366,7 @@ class OutputPanel(QTextEdit):
             pass
 
         try:
-            self.exec_thread.debug_frame_recorded.connect(
-                self._on_debug_frame_recorded
-            )
+            self.exec_thread.debug_frame_recorded.connect(self._on_debug_frame_recorded)
             self.exec_thread.debug_timeline_ready.connect(
                 self.debug_timeline_ready.emit
             )
@@ -571,17 +566,11 @@ class OutputPanel(QTextEdit):
             ),
             (
                 "unknown command",
-                (
-                    "Check spelling of commands. "
-                    "Use language-specific syntax."
-                ),
+                ("Check spelling of commands. " "Use language-specific syntax."),
             ),
             (
                 "unknown keyword",
-                (
-                    "Check spelling of commands. "
-                    "Use language-specific syntax."
-                ),
+                ("Check spelling of commands. " "Use language-specific syntax."),
             ),
             (
                 "invalid expression",

@@ -239,9 +239,7 @@ class ProjectTemplatesPanel(FeaturePanelBase):
         else:
             # Map "Art Generation" -> "art_generation"
             cat_val = category_text.lower().replace(" ", "_")
-            templates = [
-                tpl for tpl in all_templates if tpl.category.value == cat_val
-            ]
+            templates = [tpl for tpl in all_templates if tpl.category.value == cat_val]
 
         self.templates_list.clear()
         for tpl in templates:
@@ -298,9 +296,7 @@ class LessonModePanel(FeaturePanelBase):
 
         list_layout.addWidget(QLabel("Lessons:"))
         self.lesson_list = QListWidget()
-        self.lesson_list.currentItemChanged.connect(
-            self._on_lesson_selected
-        )
+        self.lesson_list.currentItemChanged.connect(self._on_lesson_selected)
         list_layout.addWidget(self.lesson_list)
 
         splitter.addWidget(list_widget)
@@ -491,9 +487,7 @@ class LessonModePanel(FeaturePanelBase):
             "checkpoint_index": lesson.current_checkpoint + 1,
             "checkpoint_total": len(lesson.checkpoints),
             "checkpoint_title": checkpoint.title if checkpoint else "",
-            "checkpoint_description": checkpoint.description
-            if checkpoint
-            else "",
+            "checkpoint_description": checkpoint.description if checkpoint else "",
         }
 
 
@@ -1021,12 +1015,8 @@ class AchievementsPanel(FeaturePanelBase):
 
     def _refresh_lists(self):
         """Refresh tutorial and example lists."""
-        completed_tutorials = set(
-            self.tracker.state.get("completed_tutorials", [])
-        )
-        completed_examples = set(
-            self.tracker.state.get("completed_examples", [])
-        )
+        completed_tutorials = set(self.tracker.state.get("completed_tutorials", []))
+        completed_examples = set(self.tracker.state.get("completed_examples", []))
 
         self.tutorial_list.blockSignals(True)
         self.tutorial_list.clear()
@@ -1259,10 +1249,7 @@ class AssetLibraryPanel(FeaturePanelBase):
                 filtered.append(a)
             elif category == "Sprites" and atype == "sprite":
                 filtered.append(a)
-            elif (
-                category in ["Sounds", "Music", "Effects"]
-                and atype == "sound"
-            ):
+            elif category in ["Sounds", "Music", "Effects"] and atype == "sound":
                 filtered.append(a)
             elif category == "Tiles" and atype == "tileset":
                 filtered.append(a)
@@ -1496,9 +1483,7 @@ class HardwareSimulatorPanel(FeaturePanelBase):
         # Sensor readings
         self.readings_table = QTableWidget()
         self.readings_table.setColumnCount(3)
-        self.readings_table.setHorizontalHeaderLabels(
-            ["Sensor", "Value", "Unit"]
-        )
+        self.readings_table.setHorizontalHeaderLabels(["Sensor", "Value", "Unit"])
         self.layout_main.addWidget(QLabel("Sensor Readings:"))
         self.layout_main.addWidget(self.readings_table)
 
@@ -1520,9 +1505,7 @@ class AIAssistantPanel(FeaturePanelBase):
         """Setup AI assistant panel UI."""
         # Query input
         self.query_input = QLineEdit()
-        self.query_input.setPlaceholderText(
-            "Ask a question about your code..."
-        )
+        self.query_input.setPlaceholderText("Ask a question about your code...")
         self.query_input.returnPressed.connect(self.ask_question)
         self.layout_main.addWidget(QLabel("Question:"))
         self.layout_main.addWidget(self.query_input)
@@ -1723,12 +1706,8 @@ class LearningAnalyticsPanel(FeaturePanelBase):
             attempts = info.get("attempts", 0)
             status = info.get("level", "novice")
             self.concepts_table.setItem(row, 0, QTableWidgetItem(concept))
-            self.concepts_table.setItem(
-                row, 1, QTableWidgetItem(f"{mastery_pct}%")
-            )
-            self.concepts_table.setItem(
-                row, 2, QTableWidgetItem(str(attempts))
-            )
+            self.concepts_table.setItem(row, 1, QTableWidgetItem(f"{mastery_pct}%"))
+            self.concepts_table.setItem(row, 2, QTableWidgetItem(str(attempts)))
             self.concepts_table.setItem(row, 3, QTableWidgetItem(status))
 
         self.path_list.clear()
@@ -1849,9 +1828,7 @@ class PeerReviewPanel(FeaturePanelBase):
         # Rubric
         self.rubric_table = QTableWidget()
         self.rubric_table.setColumnCount(3)
-        self.rubric_table.setHorizontalHeaderLabels(
-            ["Criterion", "Score", "Feedback"]
-        )
+        self.rubric_table.setHorizontalHeaderLabels(["Criterion", "Score", "Feedback"])
         self.layout_main.addWidget(QLabel("Review Rubric:"))
         self.layout_main.addWidget(self.rubric_table)
 

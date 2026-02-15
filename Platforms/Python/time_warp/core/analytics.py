@@ -20,6 +20,7 @@ from typing import Any, Dict, List, Optional
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
+
 # ===== ANALYTICS =====
 
 

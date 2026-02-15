@@ -150,9 +150,7 @@ class LearningAnalytics:
     def end_session(self) -> float:
         """End session and return total time."""
         if self.session_start:
-            session_duration = (
-                datetime.now() - self.session_start
-            ).total_seconds()
+            session_duration = (datetime.now() - self.session_start).total_seconds()
             self.total_coding_time += session_duration
             self._trigger_callbacks("session_ended", duration=session_duration)
             return session_duration
@@ -406,9 +404,7 @@ Next Steps:
         for rec in self.get_recommended_concepts():
             report += f"  • {rec}\n"
 
-        report += (
-            "\n═══════════════════════════════════════════════════════════\n"
-        )
+        report += "\n═══════════════════════════════════════════════════════════\n"
 
         if output_path:
             with open(output_path, "w", encoding="utf-8") as f:
@@ -441,7 +437,7 @@ Next Steps:
         json_str = json.dumps(data, indent=2, default=str)
 
         if output_path:
-            with open(output_path, 'w', encoding='utf-8') as f:
+            with open(output_path, "w", encoding="utf-8") as f:
                 f.write(json_str)
 
         return json_str
@@ -489,13 +485,9 @@ class ClassroomAnalytics:
             return {}
 
         all_programs = sum(len(s.programs) for s in self.students.values())
-        avg_success = (
-            sum(
-                s.get_progress_metrics()["successful_rate"]
-                for s in self.students.values()
-            )
-            / len(self.students)
-        )
+        avg_success = sum(
+            s.get_progress_metrics()["successful_rate"] for s in self.students.values()
+        ) / len(self.students)
 
         return {
             "total_students": len(self.students),

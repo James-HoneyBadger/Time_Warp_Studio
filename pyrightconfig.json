@@ -1,17 +1,19 @@
 {
   "include": [
-    "time_warp"
+    "Platforms/Python/time_warp",
+    "run.py",
+    "tools"
   ],
   "exclude": [
     "**/__pycache__",
     ".venv",
-    "tests",
-    "legacy"
+    "archive",
+    "docs"
   ],
   "ignore": [
-    "time_warp/ui/*.py",
-    "time_warp/cloud/api_server.py",
-    "tw_editor.py"
+    "Platforms/Python/time_warp/ui/*.py",
+    "Platforms/Python/time_warp/cloud/api_server.py",
+    "Platforms/Python/tw_editor.py"
   ],
   "reportMissingImports": "warning",
   "reportMissingTypeStubs": false,

@@ -25,165 +25,178 @@ OPTIONAL_MODULES = ["pytest", "pytest-cov", "black", "mypy"]
 
 # ===== SYSTEM REQUIREMENTS =====
 
+
 class SystemRequirements:
     """Check and report system requirements"""
-    
+
     @staticmethod
     def check_python_version() -> Tuple[bool, str]:
         """Check Python version"""
         current = sys.version_info[:2]
         required = MINIMUM_PYTHON_VERSION
-        
+
         if current >= required:
             return True, f"Python {current[0]}.{current[1]} ✅"
         else:
-            return False, f"Python {current[0]}.{current[1]} ❌ (requires {required[0]}.{required[1]}+)"
-    
+            return (
+                False,
+                f"Python {current[0]}.{current[1]} ❌ (requires {required[0]}.{required[1]}+)",
+            )
+
     @staticmethod
-    def check_module(module_name: str, required: bool = True) -> Tuple[bool, str, Optional[str]]:
+    def check_module(
+        module_name: str, required: bool = True
+    ) -> Tuple[bool, str, Optional[str]]:
         """Check if module is installed"""
         try:
             module = __import__(module_name)
-            version = getattr(module, '__version__', 'unknown')
+            version = getattr(module, "__version__", "unknown")
             return True, f"{module_name} ({version})", version
         except ImportError:
             status = "❌ (required)" if required else "⚠️  (optional)"
             return not required, f"{module_name} {status}", None
-    
+
     @staticmethod
     def verify_all() -> Tuple[bool, Dict[str, Any]]:
         """Verify all system requirements"""
         requirements: Dict[str, Any] = {
-            'python': {'passed': False, 'message': ''},
-            'required_modules': {},
-            'optional_modules': {},
-            'summary': {'passed': False, 'critical_issues': 0, 'warnings': 0}
+            "python": {"passed": False, "message": ""},
+            "required_modules": {},
+            "optional_modules": {},
+            "summary": {"passed": False, "critical_issues": 0, "warnings": 0},
         }
-        
+
         # Check Python version
         passed, message = SystemRequirements.check_python_version()
-        requirements['python']['passed'] = passed
-        requirements['python']['message'] = message
+        requirements["python"]["passed"] = passed
+        requirements["python"]["message"] = message
         if not passed:
-            requirements['summary']['critical_issues'] += 1
-        
+            requirements["summary"]["critical_issues"] += 1
+
         # Check required modules
         for module in REQUIRED_MODULES:
-            passed, message, version = SystemRequirements.check_module(module, required=True)
-            requirements['required_modules'][module] = {
-                'passed': passed,
-                'message': message,
-                'version': version
+            passed, message, version = SystemRequirements.check_module(
+                module, required=True
+            )
+            requirements["required_modules"][module] = {
+                "passed": passed,
+                "message": message,
+                "version": version,
             }
             if not passed:
-                requirements['summary']['critical_issues'] += 1
-        
+                requirements["summary"]["critical_issues"] += 1
+
         # Check optional modules
         for module in OPTIONAL_MODULES:
-            passed, message, version = SystemRequirements.check_module(module, required=False)
-            requirements['optional_modules'][module] = {
-                'passed': passed,
-                'message': message,
-                'version': version
+            passed, message, version = SystemRequirements.check_module(
+                module, required=False
+            )
+            requirements["optional_modules"][module] = {
+                "passed": passed,
+                "message": message,
+                "version": version,
             }
             if not passed:
-                requirements['summary']['warnings'] += 1
-        
+                requirements["summary"]["warnings"] += 1
+
         # Overall status
-        overall_passed = (
-            requirements['python']['passed'] and
-            all(m['passed'] for m in requirements['required_modules'].values())
+        overall_passed = requirements["python"]["passed"] and all(
+            m["passed"] for m in requirements["required_modules"].values()
         )
-        requirements['summary']['passed'] = overall_passed
-        
+        requirements["summary"]["passed"] = overall_passed
+
         return overall_passed, requirements
+
 
 # ===== CONFIGURATION MANAGEMENT =====
 
+
 class ConfigurationManager:
     """Manages system configuration"""
-    
+
     DEFAULT_CONFIG = {
-        'theme': 'dark',
-        'editor_font_size': 12,
-        'auto_save_interval_seconds': 30,
-        'languages': ['basic', 'pilot', 'logo'],
-        'plugins_enabled': True,
-        'analytics_enabled': True,
-        'update_check_interval_hours': 24,
-        'debug_mode': False,
-        'log_level': 'info'
+        "theme": "dark",
+        "editor_font_size": 12,
+        "auto_save_interval_seconds": 30,
+        "languages": ["basic", "pilot", "logo"],
+        "plugins_enabled": True,
+        "analytics_enabled": True,
+        "update_check_interval_hours": 24,
+        "debug_mode": False,
+        "log_level": "info",
     }
-    
+
     def __init__(self, config_path: Optional[str] = None):
         if config_path is None:
             self.config_path = Path.home() / ".Time_Warp" / "config.json"
         else:
             self.config_path = Path(config_path)
-        
+
         self.config = self.DEFAULT_CONFIG.copy()
         self.load()
-    
+
     def load(self) -> bool:
         """Load configuration from file"""
         try:
             if self.config_path.exists():
-                with open(self.config_path, 'r') as f:
+                with open(self.config_path, "r", encoding="utf-8") as f:
                     loaded = json.load(f)
                     self.config.update(loaded)
                 return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             print(f"⚠️  Error loading config: {e}")
-        
+
         return False
-    
+
     def save(self) -> bool:
         """Save configuration to file"""
         try:
             self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            with open(self.config_path, 'w') as f:
+            with open(self.config_path, "w", encoding="utf-8") as f:
                 json.dump(self.config, f, indent=2)
             return True
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             print(f"❌ Error saving config: {e}")
             return False
-    
+
     def get(self, key: str, default: Any = None) -> Any:
         """Get configuration value"""
         return self.config.get(key, default)
-    
+
     def set(self, key: str, value: Any) -> None:
         """Set configuration value"""
         self.config[key] = value
 
+
 # ===== STARTUP SEQUENCE =====
+
 
 class StartupSequence:
     """Manages the startup sequence"""
-    
+
     def __init__(self):
         self.steps: List[Tuple[str, Callable]] = []
         self.results: Dict[str, Any] = {}
         self.start_time = datetime.utcnow()
-    
+
     def add_step(self, name: str, handler: Callable) -> None:
         """Add a startup step"""
         self.steps.append((name, handler))
-    
+
     def execute(self) -> bool:
         """Execute all startup steps"""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("TIME WARP STUDIO v" + TIME_WARP_VERSION)
-        print("="*60)
+        print("=" * 60)
         print()
-        
+
         all_passed = True
-        
+
         for i, (name, handler) in enumerate(self.steps, 1):
             try:
                 print(f"[{i}/{len(self.steps)}] {name}...", end=" ", flush=True)
                 result = handler()
-                
+
                 if result:
                     print("✅")
                     self.results[name] = True
@@ -191,15 +204,17 @@ class StartupSequence:
                     print("❌")
                     self.results[name] = False
                     all_passed = False
-            except Exception as e:
+            except (
+                Exception
+            ) as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                 print(f"❌ ({str(e)[:40]})")
                 self.results[name] = False
                 all_passed = False
-        
+
         startup_time = (datetime.utcnow() - self.start_time).total_seconds()
         print()
-        print("="*60)
-        
+        print("=" * 60)
+
         if all_passed:
             print(f"✅ Startup completed in {startup_time:.2f}s")
             print("🚀 Time Warp Studio is ready!")
@@ -207,39 +222,41 @@ class StartupSequence:
             failed_steps = [k for k, v in self.results.items() if not v]
             print(f"⚠️  Startup completed with errors in {startup_time:.2f}s")
             print(f"Failed steps: {', '.join(failed_steps)}")
-        
-        print("="*60 + "\n")
-        
+
+        print("=" * 60 + "\n")
+
         return all_passed
 
+
 # ===== STARTUP HANDLERS =====
+
 
 def verify_requirements() -> bool:
     """Verify system requirements"""
     passed, requirements = SystemRequirements.verify_all()
-    
+
     print("\nSystem Requirements:")
     print(f"  {requirements['python']['message']}")
-    
-    for module, info in requirements['required_modules'].items():
+
+    for _module, info in requirements["required_modules"].items():
         print(f"  {info['message']}")
-    
-    if requirements['optional_modules']:
+
+    if requirements["optional_modules"]:
         print("\n  Optional:")
-        for module, info in requirements['optional_modules'].items():
-            if not info['passed']:
+        for _module, info in requirements["optional_modules"].items():
+            if not info["passed"]:
                 print(f"  {info['message']}")
-    
+
     if not passed:
         print("\n❌ Critical requirements not met. Cannot start.")
         return False
-    
+
     return True
 
 
 def load_configuration() -> bool:
     """Load system configuration"""
-    _config = ConfigurationManager()
+    ConfigurationManager()
     return True
 
 
@@ -250,7 +267,7 @@ def initialize_interpreter() -> bool:
         # from time_warp.core.interpreter import TimeWarpInterpreter
         # interpreter = TimeWarpInterpreter()
         return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
         print(f"Interpreter initialization failed: {e}")
         return False
 
@@ -262,7 +279,7 @@ def initialize_ui() -> bool:
         # from PySide6.QtWidgets import QApplication
         # app = QApplication()
         return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
         print(f"UI initialization failed: {e}")
         return False
 
@@ -275,7 +292,7 @@ def initialize_plugins() -> bool:
         # plugin_manager = PluginManager()
         # plugin_manager.discover_plugins()
         return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
         print(f"Plugin initialization failed: {e}")
         return False
 
@@ -287,18 +304,20 @@ def start_monitoring() -> bool:
         # from time_warp.analytics.dashboard import DashboardService
         # dashboard = DashboardService()
         return True
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
         print(f"Monitoring startup failed: {e}")
         return False
 
+
 # ===== MAIN STARTUP =====
+
 
 def main() -> int:
     """Main startup routine"""
-    
+
     # Create startup sequence
     startup = StartupSequence()
-    
+
     # Add startup steps
     startup.add_step("Verifying system requirements", verify_requirements)
     startup.add_step("Loading configuration", load_configuration)
@@ -306,12 +325,14 @@ def main() -> int:
     startup.add_step("Initializing UI", initialize_ui)
     startup.add_step("Initializing plugins", initialize_plugins)
     startup.add_step("Starting monitoring", start_monitoring)
-    
+
     # Execute startup
     if startup.execute():
         # All systems ready
         print("\n🎉 Welcome to Time Warp Studio!")
-        print("📚 Supported Languages: BASIC, PILOT, Logo, Pascal, Prolog, C, Forth, Ruby, JavaScript")
+        print(
+            "📚 Supported Languages: BASIC, PILOT, Logo, Pascal, Prolog, C, Forth, Ruby, JavaScript"
+        )
         print("💡 Tip: Use 'help' command to get started")
         print()
         return 0
@@ -319,6 +340,7 @@ def main() -> int:
         # Startup failed
         print("\n❌ Startup failed. Check errors above.")
         return 1
+
 
 if __name__ == "__main__":
     sys.exit(main())

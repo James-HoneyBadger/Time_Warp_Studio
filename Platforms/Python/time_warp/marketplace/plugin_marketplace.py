@@ -1,3 +1,4 @@
+# pylint: disable=redefined-outer-name
 """
 Time Warp Studio - Phase VII: Plugin Marketplace System
 
@@ -18,6 +19,7 @@ from typing import Dict, List, Optional
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
+
 
 # ===== ENUMS =====
 
@@ -395,7 +397,7 @@ class InstallationService:
         """Get user's installed plugins"""
         return [v for k, v in self.installations.items() if k.startswith(f"{user_id}:")]
 
-    def check_updates(self, plugin_id: str) -> Optional[str]:
+    def check_updates(self, _plugin_id: str) -> Optional[str]:
         """Check if plugin update available"""
         # Would check marketplace for newer version
         return None

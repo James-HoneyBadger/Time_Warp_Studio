@@ -21,6 +21,7 @@ from typing import Callable, List, Optional
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
+
 # ===== DATA CLASSES =====
 
 
@@ -395,7 +396,7 @@ class BenchmarkReport:
             ]
         }
 
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(filepath, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
 
 
