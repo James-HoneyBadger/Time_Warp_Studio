@@ -8,11 +8,11 @@ on:
 
 jobs:
   python:
-    name: Python tests (platforms/python)
+    name: Python tests (Platforms/Python)
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: platforms/python
+        working-directory: Platforms/Python
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -22,7 +22,7 @@ jobs:
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('platforms/python/pyproject.toml', 'platforms/python/requirements*.txt') }}
+          key: ${{ runner.os }}-pip-${{ hashFiles('Platforms/Python/pyproject.toml', 'Platforms/Python/requirements*.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-
       - name: Install system dependencies (GUI/Xvfb)
