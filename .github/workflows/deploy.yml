@@ -1,0 +1,478 @@
+name: Deployments
+
+on:
+  push:
+    branches: [main]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Target deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+concurrency:
+  group: deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  PYTHON_VERSION: '3.11'
+
+# ─────────────────────────────────────────────────────────────
+# JOB 1 — Determine deployment context
+# ─────────────────────────────────────────────────────────────
+jobs:
+  context:
+    name: Resolve Deployment Context
+    runs-on: ubuntu-latest
+    outputs:
+      environment: ${{ steps.resolve.outputs.environment }}
+      version: ${{ steps.resolve.outputs.version }}
+      is_release: ${{ steps.resolve.outputs.is_release }}
+      deploy_ref: ${{ steps.resolve.outputs.deploy_ref }}
+    steps:
+      - name: Resolve environment and version
+        id: resolve
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            echo "environment=production"    >> "$GITHUB_OUTPUT"
+            echo "is_release=true"           >> "$GITHUB_OUTPUT"
+            echo "version=${GITHUB_REF_NAME}"     >> "$GITHUB_OUTPUT"
+            echo "deploy_ref=${GITHUB_REF_NAME}"  >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event_name }}" == "workflow_dispatch" ]]; then
+            echo "environment=${{ github.event.inputs.environment }}" >> "$GITHUB_OUTPUT"
+            echo "is_release=false"          >> "$GITHUB_OUTPUT"
+            echo "version=manual-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+            echo "deploy_ref=${GITHUB_SHA}"       >> "$GITHUB_OUTPUT"
+          elif [[ "${{ github.event_name }}" == "pull_request" ]]; then
+            echo "environment=preview"       >> "$GITHUB_OUTPUT"
+            echo "is_release=false"          >> "$GITHUB_OUTPUT"
+            echo "version=pr-${{ github.event.pull_request.number }}-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+            echo "deploy_ref=${GITHUB_SHA}"  >> "$GITHUB_OUTPUT"
+          else
+            echo "environment=staging"       >> "$GITHUB_OUTPUT"
+            echo "is_release=false"          >> "$GITHUB_OUTPUT"
+            echo "version=main-${GITHUB_SHA::8}" >> "$GITHUB_OUTPUT"
+            echo "deploy_ref=${GITHUB_SHA}"  >> "$GITHUB_OUTPUT"
+          fi
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 2 — Run tests before deploying
+  # ─────────────────────────────────────────────────────────────
+  test:
+    name: Pre-deployment Tests
+    runs-on: ubuntu-latest
+    needs: context
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install -e "Platforms/Python[dev]"
+          pip install pytest-asyncio
+
+      - name: Run test suite
+        working-directory: Platforms/Python
+        run: |
+          pytest time_warp/tests/ -v \
+            --ignore=time_warp/tests/test_api_integration.py \
+            --ignore=time_warp/tests/test_websocket_integration.py \
+            --ignore=time_warp/tests/test_multiplayer_integration.py \
+            --junit-xml=test-results.xml -q
+
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pre-deploy-test-results-${{ needs.context.outputs.version }}
+          path: Platforms/Python/test-results.xml
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 3 — Build Docker image
+  # ─────────────────────────────────────────────────────────────
+  build-image:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: [context, test]
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      image_digest: ${{ steps.push.outputs.digest }}
+      image_tags: ${{ steps.meta.outputs.tags }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,prefix=${{ needs.context.outputs.environment }}-
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+            type=raw,value=stable,enable=${{ needs.context.outputs.is_release == 'true' }}
+
+      - name: Build and push Docker image
+        id: push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            BUILD_VERSION=${{ needs.context.outputs.version }}
+            BUILD_SHA=${{ github.sha }}
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 4 — Build native Linux binaries (releases only)
+  # ─────────────────────────────────────────────────────────────
+  build-binaries:
+    name: Build Native Binaries
+    runs-on: ubuntu-latest
+    needs: [context, test]
+    if: needs.context.outputs.is_release == 'true'
+    strategy:
+      matrix:
+        include:
+          - arch: x86_64
+            artifact: time-warp-linux-amd64
+            dist_dir: dist/x86_64
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y dpkg-dev patchelf
+          pip install -r Platforms/Python/requirements.txt
+          pip install -e Platforms/Python
+          pip install pyinstaller
+
+      - name: Build binary with PyInstaller
+        run: |
+          chmod +x Scripts/build_native.sh
+          ./Scripts/build_native.sh
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: ${{ matrix.dist_dir }}/*
+          retention-days: 30
+          if-no-files-found: warn
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 5 — Deploy to Staging (main branch)
+  # ─────────────────────────────────────────────────────────────
+  deploy-staging:
+    name: Deploy → Staging
+    runs-on: ubuntu-latest
+    needs: [context, test, build-image]
+    if: |
+      github.event_name == 'push' &&
+      github.ref == 'refs/heads/main' &&
+      needs.context.outputs.environment == 'staging'
+    environment:
+      name: staging
+      url: https://github.com/${{ github.repository }}/pkgs/container/time_warp_studio
+    permissions:
+      contents: read
+      deployments: write
+      packages: read
+    steps:
+      - name: Create GitHub Deployment
+        id: deployment
+        uses: chrnorm/deployment-action@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          environment: staging
+          ref: ${{ needs.context.outputs.deploy_ref }}
+          description: 'Staging deployment — ${{ needs.context.outputs.version }}'
+          auto-merge: false
+          required-contexts: ''
+
+      - name: Verify staging image is available
+        run: |
+          echo "✅ Docker image pushed to GHCR for staging"
+          echo "Image tags: ${{ needs.build-image.outputs.image_tags }}"
+          echo "Digest:     ${{ needs.build-image.outputs.image_digest }}"
+
+      - name: Mark deployment success
+        if: success()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: success
+          description: 'Staging deployment successful — ${{ needs.context.outputs.version }}'
+          environment-url: https://github.com/${{ github.repository }}/pkgs/container/time_warp_studio
+
+      - name: Mark deployment failure
+        if: failure()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: failure
+          description: 'Staging deployment failed — ${{ needs.context.outputs.version }}'
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 6 — Deploy to Production (version tags)
+  # ─────────────────────────────────────────────────────────────
+  deploy-production:
+    name: Deploy → Production
+    runs-on: ubuntu-latest
+    needs: [context, test, build-image, build-binaries]
+    if: needs.context.outputs.is_release == 'true'
+    environment:
+      name: production
+      url: https://github.com/${{ github.repository }}/releases/tag/${{ needs.context.outputs.version }}
+    permissions:
+      contents: write
+      deployments: write
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitHub Deployment
+        id: deployment
+        uses: chrnorm/deployment-action@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          environment: production
+          ref: ${{ needs.context.outputs.version }}
+          description: 'Production release ${{ needs.context.outputs.version }}'
+          auto-merge: false
+          required-contexts: ''
+
+      - name: Download Linux amd64 binary
+        uses: actions/download-artifact@v4
+        with:
+          name: time-warp-linux-amd64
+          path: release-assets/linux-amd64
+        continue-on-error: true
+
+      - name: Package release assets
+        run: |
+          mkdir -p release-final
+          # Compress binary artifacts if present
+          if [ -d "release-assets/linux-amd64" ] && [ "$(ls -A release-assets/linux-amd64)" ]; then
+            tar -czf release-final/time-warp-studio-${{ needs.context.outputs.version }}-linux-amd64.tar.gz \
+              -C release-assets/linux-amd64 .
+            echo "Packaged Linux amd64 binary"
+          fi
+
+      - name: Generate release notes
+        id: release_notes
+        run: |
+          cat <<'EOF' > release-notes.md
+          ## Time Warp Studio ${{ needs.context.outputs.version }}
+
+          An educational multi-language programming environment supporting BASIC, PILOT, Logo, C, Pascal, Prolog, and Forth with integrated turtle graphics.
+
+          ### What's included
+          - **Linux x86_64 binary** — standalone executable (no Python required)
+          - **Docker image** — `ghcr.io/${{ github.repository }}:${{ needs.context.outputs.version }}`
+
+          ### Quick Start
+          ```bash
+          # Run with Docker
+          docker pull ghcr.io/${{ github.repository }}:${{ needs.context.outputs.version }}
+
+          # Or download the binary below and run:
+          tar -xzf time-warp-studio-*.tar.gz
+          ./time_warp_ide
+          ```
+
+          ### Container Image
+          ```
+          ghcr.io/${{ github.repository }}:${{ needs.context.outputs.version }}
+          ghcr.io/${{ github.repository }}:latest (if this is the latest stable)
+          ```
+          EOF
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.context.outputs.version }}
+          name: Time Warp Studio ${{ needs.context.outputs.version }}
+          body_path: release-notes.md
+          draft: false
+          prerelease: ${{ contains(needs.context.outputs.version, '-') }}
+          files: |
+            release-final/*
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Mark production deployment success
+        if: success()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: success
+          description: 'Production release ${{ needs.context.outputs.version }} published'
+          environment-url: https://github.com/${{ github.repository }}/releases/tag/${{ needs.context.outputs.version }}
+
+      - name: Mark production deployment failure
+        if: failure()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: failure
+          description: 'Production deployment failed — ${{ needs.context.outputs.version }}'
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 7 — Preview deployment status (pull requests)
+  # ─────────────────────────────────────────────────────────────
+  deploy-preview:
+    name: Deploy → Preview
+    runs-on: ubuntu-latest
+    needs: [context, test]
+    if: github.event_name == 'pull_request'
+    environment:
+      name: preview
+    permissions:
+      contents: read
+      deployments: write
+      pull-requests: write
+    steps:
+      - name: Create preview deployment
+        id: deployment
+        uses: chrnorm/deployment-action@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          environment: preview
+          ref: ${{ needs.context.outputs.deploy_ref }}
+          description: 'Preview for PR #${{ github.event.pull_request.number }}'
+          auto-merge: false
+          required-contexts: ''
+
+      - name: Post deployment info to PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const body = [
+              '## 🚀 Preview Deployment',
+              '',
+              `**Version:** \`${{ needs.context.outputs.version }}\``,
+              `**SHA:** \`${{ github.sha }}\``,
+              '',
+              '**Status:** ✅ Pre-deployment tests passed',
+              '',
+              '> The Docker image will be built and pushed to GHCR on merge to `main`.',
+            ].join('\n');
+
+            // Update or create comment
+            const { data: comments } = await github.rest.issues.listComments({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+            });
+            const botComment = comments.find(c =>
+              c.user.type === 'Bot' && c.body.includes('Preview Deployment')
+            );
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body,
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: context.issue.number,
+                body,
+              });
+            }
+
+      - name: Mark preview deployment success
+        if: success()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: success
+          description: 'Preview checks passed for PR #${{ github.event.pull_request.number }}'
+
+      - name: Mark preview deployment failure
+        if: failure()
+        uses: chrnorm/deployment-status@v2
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          deployment-id: ${{ steps.deployment.outputs.deployment_id }}
+          state: failure
+          description: 'Preview checks failed for PR #${{ github.event.pull_request.number }}'
+
+  # ─────────────────────────────────────────────────────────────
+  # JOB 8 — Deployment summary
+  # ─────────────────────────────────────────────────────────────
+  deploy-summary:
+    name: Deployment Summary
+    runs-on: ubuntu-latest
+    needs:
+      - context
+      - test
+      - build-image
+      - deploy-staging
+      - deploy-production
+      - deploy-preview
+    if: always()
+    steps:
+      - name: Write job summary
+        run: |
+          {
+            echo "## Time Warp Studio — Deployment Summary"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Environment | \`${{ needs.context.outputs.environment }}\` |"
+            echo "| Version | \`${{ needs.context.outputs.version }}\` |"
+            echo "| Is Release | \`${{ needs.context.outputs.is_release }}\` |"
+            echo "| Tests | ${{ needs.test.result == 'success' && '✅ Passed' || '❌ Failed' }} |"
+            echo "| Docker Build | ${{ needs.build-image.result == 'success' && '✅ Pushed' || needs.build-image.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |"
+            echo "| Staging | ${{ needs.deploy-staging.result == 'success' && '✅ Deployed' || needs.deploy-staging.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |"
+            echo "| Production | ${{ needs.deploy-production.result == 'success' && '✅ Released' || needs.deploy-production.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |"
+            echo "| Preview | ${{ needs.deploy-preview.result == 'success' && '✅ Ready' || needs.deploy-preview.result == 'skipped' && '⏭️ Skipped' || '❌ Failed' }} |"
+          } >> "$GITHUB_STEP_SUMMARY"
