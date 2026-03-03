@@ -1,0 +1,93 @@
+-- =============================================
+--  HyperTalk Comprehensive Demo - Time Warp Studio
+-- =============================================
+
+-- --- Hello World ---
+answer "===== HELLO WORLD ====="
+answer "Welcome to HyperTalk!"
+answer ""
+
+-- --- Variables ---
+answer "===== VARIABLES ====="
+put 10 into x
+put 3 into y
+put "HyperTalk" into name
+answer x
+answer y
+answer name
+answer ""
+
+-- --- Arithmetic ---
+answer "===== ARITHMETIC ====="
+answer x + y
+answer x - y
+answer x * y
+answer x / y
+answer x mod y
+answer ""
+
+-- --- String Operations ---
+answer "===== STRINGS ====="
+answer the length of "Hello"
+answer char 1 of "Hello"
+answer word 2 of "Hello World Foo"
+answer the number of words in "Hello World Foo"
+put "Hello" into s
+put " World" after s
+answer s
+answer ""
+
+-- --- Conditionals ---
+answer "===== CONDITIONALS ====="
+if x > 5 then answer "x is greater than 5"
+if y = 3 then
+  answer "y equals 3"
+else
+  answer "y does not equal 3"
+end if
+answer ""
+
+-- --- Repeat Loops ---
+answer "===== REPEAT WITH ====="
+repeat with i = 1 to 5
+  answer i
+end repeat
+answer ""
+
+answer "===== REPEAT TIMES ====="
+repeat 3 times
+  answer "Hello"
+end repeat
+answer ""
+
+-- --- Handlers ---
+answer "===== HANDLERS ====="
+on greet
+  answer "Hello from handler!"
+end greet
+greet
+
+on double n
+  answer n * 2
+end double
+double 5
+double 21
+answer ""
+
+-- --- Math Functions ---
+answer "===== MATH ====="
+answer sqrt(16)
+answer abs(-5)
+answer round(3.7)
+answer trunc(3.7)
+answer ""
+
+-- --- Get / It ---
+answer "===== GET & IT ====="
+get 42
+answer it
+get "Hello World"
+answer it
+answer ""
+
+answer "===== DONE ====="

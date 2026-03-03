@@ -130,6 +130,7 @@ Auto-format code when running:
 
 Choose the default programming language:
 
+**Classic:**
 - **BASIC** - Classic line-numbered BASIC
 - **PILOT** - Interactive teaching language
 - **Logo** - Turtle graphics
@@ -137,6 +138,29 @@ Choose the default programming language:
 - **Pascal** - Structured programming
 - **Prolog** - Logic programming
 - **Forth** - Stack-based programming
+
+**Modern:**
+- **Python** - General-purpose scripting
+- **JavaScript** - Web & general-purpose scripting
+- **Lua** - Lightweight embeddable scripting
+- **Haskell** - Purely functional programming
+- **Scheme** - Minimalist Lisp dialect
+- **Smalltalk** - Message-passing OOP
+
+**Mainframe & Enterprise:**
+- **COBOL** - Business data processing
+- **REXX** - IBM scripting language
+- **Fortran** - Scientific computing
+- **JCL** - IBM Job Control Language
+- **CICS** - Transaction processing
+- **SQL** - Relational database queries
+- **SQR** - Report generation
+
+**Esoteric & Historical:**
+- **Assembly** - x86-64 machine code
+- **APL** - Array programming language
+- **HyperTalk** - HyperCard scripting
+- **Brainfuck** - Minimalist esoteric language
 
 The selected language is remembered between sessions.
 

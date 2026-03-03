@@ -41,7 +41,7 @@ The IDE will start in ~5 seconds. If successful, you'll see the Time Warp Studio
 
 ### 2. Explore Examples
 - Press **Ctrl+E** or go to **File → Examples**
-- Browse 90+ programs across 7 languages
+- Browse 220+ programs across 24 languages
 - Load any example and press **Ctrl+R** to run
 
 ### 3. Try Turtle Graphics
@@ -69,10 +69,10 @@ Time_Warp_Studio/
 │   │   ├── core/                  ← Interpreter and language executors
 │   │   ├── features/              ← Lesson, autosave, theme systems
 │   │   ├── ui/                    ← PySide6 GUI components
-│   │   └── tests/                 ← Test suite (55 tests)
+│   │   └── tests/                 ← Test suite (28 tests)
 │   ├── requirements.txt           ← Python dependencies
 │   └── test_runner.py             ← Test orchestration
-├── Examples/                      ← 90+ example programs
+├── Examples/                      ← 220+ example programs
 ├── docs/                          ← Complete documentation
 │   ├── guides/                    ← How-to guides
 │   ├── tutorials/                 ← Language tutorials
@@ -116,6 +116,26 @@ pip install -r Platforms/Python/requirements.txt
 ### Issue: "Illegal instruction" Error
 **Cause:** Your CPU lacks required CPU features (SSSE3, SSE4.1, SSE4.2, POPCNT)  
 **Solution:** Run on modern hardware or upgrade to a VM with full CPU features
+
+### Issue: Qt xcb platform plugin fails to load
+**Symptoms:**
+- `qt.qpa.plugin: From 6.5.0, xcb-cursor0 or libxcb-cursor0 is needed`
+- `Could not load the Qt platform plugin "xcb"`
+
+**Cause:** Missing Linux X11 runtime libraries required by Qt.
+
+**Solution:** Install platform packages, then relaunch:
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0
+
+# Fedora
+sudo dnf install xcb-util-cursor libxkbcommon-x11 xcb-util-wm xcb-util-keysyms xcb-util-renderutil
+
+# Arch/Arch Linux ARM
+sudo pacman -S xcb-util-cursor libxkbcommon-x11 xcb-util-wm xcb-util-keysyms xcb-util-renderutil
+```
 
 ### Issue: IDE Won't Start
 **Solution:** Check Python version and dependencies:

@@ -195,10 +195,13 @@ class OnboardingDialog(QDialog):
                 step_id="languages",
                 title="Multiple Languages",
                 description="Time Warp supports BASIC, PILOT, Logo, "
-                "Pascal, Prolog, and C.",
+                "Pascal, Prolog, C, Python, Lua, Scheme, COBOL, "
+                "Assembly, JavaScript, FORTRAN, REXX, Smalltalk, "
+                "HyperTalk, Haskell, APL, and Brainfuck.",
                 instructions=[
                     "Language is auto-detected from file extension",
-                    ".bas = BASIC, .pilot = PILOT, .logo = Logo",
+                    ".bas=BASIC  .pilot=PILOT  .logo=Logo  .py=Python",
+                    ".lua=Lua  .scm=Scheme  .js=JavaScript  .hs=Haskell",
                     "Or use File → New to select a language",
                 ],
                 task_description="Try a PILOT program: T:Hello from PILOT!",

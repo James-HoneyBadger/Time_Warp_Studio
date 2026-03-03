@@ -329,7 +329,7 @@ PRINT "Sum:", SUM
 
 ## Debugger Features by Language
 
-All 7 languages support:
+All 24 languages support:
 - Breakpoints
 - Stepping (Step Into/Over)
 - Variables inspection

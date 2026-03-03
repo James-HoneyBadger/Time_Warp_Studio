@@ -3,7 +3,7 @@
 
 # pylint: disable=no-name-in-module
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QFont, QTextCursor
 from PySide6.QtWidgets import (
     QComboBox,
@@ -659,6 +659,10 @@ class DebugPanel(QWidget):
         super().__init__(parent)
         self._setup_ui()
         self._connect_signals()
+
+    def minimumSizeHint(self) -> QSize:  # type: ignore[override]
+        """Return a small hint so QTabWidget doesn't enforce a huge window."""
+        return QSize(100, 100)
 
     def _setup_ui(self):
         """Setup the debug panel UI."""

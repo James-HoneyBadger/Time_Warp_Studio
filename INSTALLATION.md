@@ -258,6 +258,35 @@ grep -E 'ssse3|sse4_1|sse4_2|popcnt' /proc/cpuinfo
 # - Compile custom PySide6 build without SIMD
 ```
 
+### Qt xcb Platform Plugin Error
+
+**Problem**:
+- `qt.qpa.plugin: From 6.5.0, xcb-cursor0 or libxcb-cursor0 is needed`
+- `Could not load the Qt platform plugin "xcb"`
+
+**Cause**: Required Linux X11 runtime libraries for Qt are missing.
+
+**Solution**:
+
+```bash
+# Ubuntu/Debian
+sudo apt-get update
+sudo apt-get install -y libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0
+
+# Fedora
+sudo dnf install xcb-util-cursor libxkbcommon-x11 xcb-util-wm xcb-util-keysyms xcb-util-renderutil
+
+# Arch/Arch Linux ARM
+sudo pacman -S xcb-util-cursor libxkbcommon-x11 xcb-util-wm xcb-util-keysyms xcb-util-renderutil
+```
+
+Then verify Qt import and relaunch:
+
+```bash
+python -c "from PySide6.QtWidgets import QApplication; print('✅ PySide6 imports!')"
+python Platforms/Python/time_warp_ide.py
+```
+
 ### Git Not Found
 
 **Problem**: `git: command not found`

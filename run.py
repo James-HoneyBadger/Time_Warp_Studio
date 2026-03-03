@@ -19,6 +19,7 @@ Usage:
 import sys
 import subprocess
 import argparse
+import os
 from pathlib import Path
 
 # Configuration
@@ -176,12 +177,82 @@ def run_ide(venv_python: Path) -> bool:
         print_error(f"IDE script not found: {IDE_SCRIPT}")
         return False
 
+    env = os.environ.copy()
+    existing_rules = env.get("QT_LOGGING_RULES", "").strip()
+    required_rules = {
+        "qt.svg.warning": "false",
+        "qt.qpa.theme.gnome.warning": "false",
+    }
+
+    parsed_rules = {}
+    if existing_rules:
+        for part in existing_rules.split(";"):
+            item = part.strip()
+            if not item or "=" not in item:
+                continue
+            key, value = item.split("=", 1)
+            parsed_rules[key.strip()] = value.strip()
+
+    for key, value in required_rules.items():
+        parsed_rules.setdefault(key, value)
+
+    env["QT_LOGGING_RULES"] = ";".join(
+        f"{key}={value}" for key, value in parsed_rules.items()
+    )
+
+    # Prefer the native platform plugin; fall back to xcb if Wayland is
+    # unavailable so the launcher doesn't silently get SIGKILL'd by the
+    # compositor when there is no active Wayland session.
+    if "QT_QPA_PLATFORM" not in env:
+        if env.get("WAYLAND_DISPLAY"):
+            env["QT_QPA_PLATFORM"] = "wayland;xcb"
+        elif env.get("DISPLAY"):
+            env["QT_QPA_PLATFORM"] = "xcb"
+
     try:
-        # Run IDE in venv
-        subprocess.run(
-            [str(venv_python), str(IDE_SCRIPT)], cwd=str(PROJECT_ROOT), check=True
+        # Run IDE in venv — don't use check=True so we can inspect the
+        # returncode and signal ourselves and give a useful message.
+        result = subprocess.run(
+            [str(venv_python), str(IDE_SCRIPT)],
+            cwd=str(PROJECT_ROOT),
+            env=env,
         )
-        return True
+        rc = result.returncode
+        if rc == 0:
+            return True
+        # Negative returncode means the process was killed by a signal
+        if rc < 0:
+            import signal as _signal
+
+            try:
+                sig = _signal.Signals(-rc)
+                if sig == _signal.SIGKILL:
+                    print_error(
+                        "IDE was force-killed (SIGKILL). "
+                        "This is usually caused by the system OOM killer "
+                        "running out of memory, or the Wayland/X compositor "
+                        "terminating an unresponsive client. "
+                        "Try closing other applications and running again."
+                    )
+                elif sig == _signal.SIGSEGV:
+                    print_error(
+                        "IDE crashed with a segmentation fault (SIGSEGV). "
+                        "This may be a PySide6/Qt driver issue. "
+                        "Try: QT_QPA_PLATFORM=xcb ./run.sh"
+                    )
+                elif sig == _signal.SIGILL:
+                    print_error(
+                        "IDE crashed due to an illegal CPU instruction (SIGILL). "
+                        "PySide6 6.x requires SSSE3/SSE4.1/SSE4.2/POPCNT. "
+                        "Your CPU or VM may not support these instructions."
+                    )
+                else:
+                    print_error(f"IDE terminated by signal {sig.name} ({-rc})")
+            except ValueError:
+                print_error(f"IDE terminated by unknown signal {-rc}")
+            return False
+        print_error(f"IDE exited with code {rc}")
+        return False
     except KeyboardInterrupt:
         print_info("\nIDE closed by user")
         return True

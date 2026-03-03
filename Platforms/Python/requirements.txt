@@ -21,6 +21,7 @@ websockets>=11.0.3
 fastapi>=0.100.0
 uvicorn>=0.23.0
 sqlalchemy>=2.0.0
+aiosqlite>=0.20.0
 asyncpg>=0.28.0
 python-socketio>=5.9.0
 httpx>=0.24.0

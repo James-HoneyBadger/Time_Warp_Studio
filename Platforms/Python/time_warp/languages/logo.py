@@ -78,6 +78,7 @@ LOGO_COMMANDS = {
     "SETPENWIDTH",
     "SETPW",
     "PENWIDTH",
+    "PENSIZE",
     "SETPENSIZE",
     "REPEAT",
     "IF",
@@ -98,6 +99,7 @@ LOGO_COMMANDS = {
     "BYE",
     "OP",
     "FOREVER",
+    "REM",
     # "REPCOUNT", # Reporter
 }
 
@@ -110,6 +112,17 @@ def _split_logo_commands(
     Splits a Logo command string into individual commands,
     respecting brackets and nesting.
     """
+    # Strip ; comments from each line BEFORE tokenizing, so that
+    # Logo command names appearing inside comments (e.g.
+    # "; Demonstrates: FORWARD, RIGHT") are never mis-parsed.
+    stripped_lines = []
+    for raw_line in text.split("\n"):
+        comment_idx = raw_line.find(";")
+        if comment_idx != -1:
+            raw_line = raw_line[:comment_idx]
+        stripped_lines.append(raw_line)
+    text = "\n".join(stripped_lines)
+
     commands = []
     current_command = []
     bracket_depth = 0
@@ -307,7 +320,7 @@ def _execute_single_logo_command(
         return _logo_setcolor(interpreter, turtle, args)
     if cmd_name in ["SETBGCOLOR", "SETBG"]:
         return _logo_setbgcolor(interpreter, turtle, args)
-    if cmd_name in ["SETPENWIDTH", "SETPW", "PENWIDTH", "SETPENSIZE"]:
+    if cmd_name in ["SETPENWIDTH", "SETPW", "PENWIDTH", "PENSIZE", "SETPENSIZE"]:
         return _logo_setpenwidth(interpreter, turtle, args)
     if cmd_name == "REPEAT":
         return _logo_repeat(interpreter, turtle, command)
@@ -398,6 +411,9 @@ def _execute_single_logo_command(
                 return str(val)
             except (ValueError, TypeError):
                 return " ".join(args)
+        return ""
+    if cmd_name == "REM":
+        # REM is a BASIC-style comment - skip the line
         return ""
     return f"❌ Unknown Logo command: {cmd_name}\n"
 
@@ -882,8 +898,10 @@ def _logo_repeat(
 
     output = ""
     for i in range(count):
-        # Track loop counter for REPCOUNT
-        interpreter.variables["REPCOUNT"] = float(i + 1)
+        # Track loop counter for REPCOUNT and legacy REPCOUNTER alias
+        current_count = float(i + 1)
+        interpreter.variables["REPCOUNT"] = current_count
+        interpreter.variables["REPCOUNTER"] = current_count
         output += execute_logo(interpreter, body_content, turtle)
 
     return output
@@ -1113,8 +1131,17 @@ def _logo_call_procedure(
 
     for i, param_name in enumerate(params):
         arg_expr = used_args[i]
-        # Evaluate the argument expression
-        val = _logo_eval_expr_str(interpreter, arg_expr)
+        # Handle Logo string literals ("word means the string "word")
+        val: Any
+        if arg_expr.startswith('"'):
+            val = arg_expr[1:]  # strip leading " to get the string value
+        else:
+            # Evaluate the argument expression
+            try:
+                val = _logo_eval_expr_str(interpreter, arg_expr)
+            except (ValueError, TypeError):
+                # Could be a bare word; treat as string
+                val = arg_expr
         old_values[param_name] = interpreter.variables.get(param_name)
         interpreter.variables[param_name] = val
 
@@ -1197,6 +1224,23 @@ def _logo_print(interpreter: "Interpreter", args: List[str]) -> str:
             result = result[:-1]
         interpreter.output.append(result)
         return result + "\n"
+    # Check for reporter commands (POS, XCOR, YCOR, HEADING)
+    if len(args) == 1 and args[0].upper() in ("POS", "XCOR", "YCOR", "HEADING"):
+        reporter = args[0].upper()
+        turtle = getattr(interpreter, "_logo_turtle", None)
+        if turtle is None:
+            turtle = type("T", (), {"x": 0, "y": 0, "heading": 0})()
+        if reporter == "POS":
+            val_str = f"[{turtle.x} {turtle.y}]"
+        elif reporter == "XCOR":
+            val_str = str(turtle.x)
+        elif reporter == "YCOR":
+            val_str = str(turtle.y)
+        else:  # HEADING
+            val_str = str(turtle.heading)
+        interpreter.output.append(val_str)
+        return val_str + "\n"
+
     # Otherwise treat as literal
     output = " ".join(args)
     interpreter.output.append(output)
@@ -1716,7 +1760,9 @@ def _logo_forever(
     for i in range(max_iterations):
         if not interpreter.running:
             break
-        interpreter.variables["REPCOUNT"] = i + 1
+        current_count = float(i + 1)
+        interpreter.variables["REPCOUNT"] = current_count
+        interpreter.variables["REPCOUNTER"] = current_count
         result = execute_logo(interpreter, commands_text, turtle)
         if result:
             output_parts.append(result)

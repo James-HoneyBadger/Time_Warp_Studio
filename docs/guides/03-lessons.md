@@ -318,6 +318,8 @@ Go to **File → Settings → Learning Statistics** to see:
 ### By Language
 
 Each supported language has lessons:
+
+**Classic Languages:**
 - BASIC (10+ lessons)
 - Logo (8+ lessons)
 - PILOT (6+ lessons)
@@ -325,6 +327,29 @@ Each supported language has lessons:
 - Pascal (4+ lessons)
 - Prolog (4+ lessons)
 - Forth (4+ lessons)
+
+**Modern Languages:**
+- Python (5+ lessons)
+- JavaScript (5+ lessons)
+- Lua (4+ lessons)
+- Haskell (4+ lessons)
+- Scheme (4+ lessons)
+- Smalltalk (4+ lessons)
+
+**Mainframe & Enterprise:**
+- COBOL (4+ lessons)
+- REXX (4+ lessons)
+- Fortran (4+ lessons)
+- JCL (3+ lessons)
+- CICS (3+ lessons)
+- SQL (4+ lessons)
+- SQR (3+ lessons)
+
+**Esoteric & Historical:**
+- Assembly (4+ lessons)
+- APL (4+ lessons)
+- HyperTalk (3+ lessons)
+- Brainfuck (3+ lessons)
 
 ### By Topic
 

@@ -115,7 +115,7 @@ Creates empty file with default language (BASIC).
 File → Open [Ctrl+O]
 ```
 
-File browser opens. Select any `.bas`, `.logo`, `.pilot`, `.c`, `.pas`, `.pro`, or `.f` file.
+File browser opens. Select any supported source file (`.bas`, `.py`, `.lua`, `.js`, `.c`, `.pas`, `.logo`, `.hs`, `.scm`, `.st`, `.rex`, `.pro`, `.f`, `.cob`, `.f90`, `.asm`, `.apl`, `.sql`, `.sqr`, `.bf`, `.jcl`, `.cics`, `.ht`, `.pilot`).
 
 ### Saving Your Work
 
@@ -145,14 +145,13 @@ Quick access to 10 most recently opened files.
 
 ## Selecting a Language
 
-Programs can be written in 7 different languages:
+Programs can be written in **24 different languages**:
 
 ### Auto-Detection
 
 IDE automatically detects language based on:
-- **File extension**: `.bas` → BASIC, `.logo` → Logo
-- **File content**: First comment or statement
-- **Explicit menu**: Select language from Run menu
+- **File extension**: `.bas` → BASIC, `.py` → Python, `.lua` → Lua, etc.
+- **Explicit dropdown**: Select language from the toolbar or Run menu
 
 ### Manual Selection
 
@@ -164,15 +163,32 @@ Dropdown also available in top toolbar.
 
 ### Supported Languages
 
-| Language | Extension | Paradigm |
-|----------|-----------|----------|
-| **BASIC** | .bas | Procedural |
-| **Logo** | .logo | Visual/Graphics |
-| **PILOT** | .pilot | Interactive Teaching |
-| **C** | .c | Systems |
-| **Pascal** | .pas | Structured |
-| **Prolog** | .pro | Logic |
-| **Forth** | .f | Stack-based |
+| Language | Extension | Paradigm | Era |
+|----------|-----------|----------|-----|
+| **BASIC** | .bas | Procedural/Educational | 1964 |
+| **Logo** | .logo | Turtle Graphics | 1967 |
+| **PILOT** | .pilot | Interactive Teaching | 1969 |
+| **C** | .c | Systems/Procedural | 1972 |
+| **Forth** | .f / .4th | Stack-based | 1970 |
+| **Pascal** | .pas | Structured | 1970 |
+| **Prolog** | .pro | Logic/Declarative | 1972 |
+| **SQL** | .sql | Relational/Query | 1974 |
+| **Smalltalk** | .st | Object-Oriented | 1980 |
+| **APL** | .apl | Array/Mathematical | 1966 |
+| **Assembly** | .asm / .s | Low-level | 1950s |
+| **Brainfuck** | .bf | Esoteric/Turing | 1993 |
+| **CICS** | .cics | Mainframe/Transaction | 1969 |
+| **COBOL** | .cob | Business/Data | 1959 |
+| **Fortran** | .f90 / .for | Scientific/Numeric | 1957 |
+| **Haskell** | .hs | Functional/Typed | 1990 |
+| **HyperTalk** | .ht | Event-driven | 1987 |
+| **JavaScript** | .js | Scripting/Web | 1995 |
+| **JCL** | .jcl | Mainframe Job Control | 1964 |
+| **Lua** | .lua | Scripting/Embedded | 1993 |
+| **Python** | .py | Multi-paradigm | 1991 |
+| **REXX** | .rex | Scripting/Mainframe | 1979 |
+| **Scheme** | .scm | Functional/Lisp | 1975 |
+| **SQR** | .sqr | Report/Database | 1980s |
 
 ---
 
@@ -609,7 +625,7 @@ Your theme choice automatically saved to `~/.Time_Warp/config.json` and restored
 ---
 
 **For language-specific help, see:**
-- [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Syntax for all 7 languages
+- [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Syntax for all 24 languages
 - [DEBUGGER_GUIDE.md](DEBUGGER_GUIDE.md) - Using the debugger
 - [TURTLE_GRAPHICS.md](TURTLE_GRAPHICS.md) - Graphics programming
 - [FAQ.md](FAQ.md) - Frequently asked questions

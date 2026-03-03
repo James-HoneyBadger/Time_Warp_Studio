@@ -18,9 +18,7 @@ Start here if you're new to Time Warp Studio:
 
 ## 📚 Programming Languages
 
-### Educational Languages
-
-Best for learning fundamental programming concepts:
+### Classic Educational
 
 - **[BASIC Tutorial](tutorials/basic.md)** - Classic BASIC with variables, loops, conditionals, and subroutines
 - **[PILOT Tutorial](tutorials/pilot.md)** - Interactive teaching language designed for computer-based instruction
@@ -28,17 +26,54 @@ Best for learning fundamental programming concepts:
 
 ### Systems & Structured Languages
 
-General-purpose languages with strong typing:
-
 - **[C Reference](tutorials/c.md)** - Systems programming and low-level concepts
 - **[Pascal Guide](tutorials/pascal.md)** - Structured programming with strong typing
+- **[Fortran Tutorial](tutorials/fortran.md)** - Scientific computing and numerical methods
+- **[Assembly Guide](tutorials/assembly.md)** - x86 low-level programming
 
-### Specialized Languages
-
-Domain-specific languages for unique paradigms:
+### Functional & Declarative Languages
 
 - **[Prolog Guide](tutorials/prolog.md)** - Logic programming with facts, rules, and unification
+- **[Haskell Tutorial](tutorials/haskell.md)** - Pure functional programming with type system
+- **[Scheme Tutorial](tutorials/scheme.md)** - Lisp-family functional programming
+
+### Modern Scripting Languages
+
+- **[Python Tutorial](tutorials/python.md)** - Modern sandboxed Python execution
+- **[JavaScript Tutorial](tutorials/javascript.md)** - Web-era scripting
+- **[Lua Tutorial](tutorials/lua.md)** - Lightweight embeddable scripting
+- **[REXX Tutorial](tutorials/rexx.md)** - IBM mainframe scripting language
+
+### Stack & Concatenative
+
 - **[Forth Guide](tutorials/forth.md)** - Stack-based programming and low-level operations
+
+### Object-Oriented
+
+- **[Smalltalk Tutorial](tutorials/smalltalk.md)** - The original object-oriented language
+
+### Array & Mathematical
+
+- **[APL Tutorial](tutorials/apl.md)** - Array programming with symbolic notation
+
+### Business & Mainframe Languages
+
+- **[COBOL Tutorial](tutorials/cobol.md)** - Business data processing language
+- **[JCL Tutorial](tutorials/jcl.md)** - IBM Job Control Language
+- **[CICS Tutorial](tutorials/cics.md)** - IBM CICS transaction processing
+- **[SQR Tutorial](tutorials/sqr.md)** - Oracle/PeopleSoft report generation
+
+### Data Languages
+
+- **[SQL Tutorial](tutorials/sql.md)** - Relational database queries and manipulation
+
+### Event-Driven
+
+- **[HyperTalk Tutorial](tutorials/hypertalk.md)** - Apple HyperCard scripting language
+
+### Esoteric Languages
+
+- **[Brainfuck Tutorial](tutorials/brainfuck.md)** - Esoteric Turing-complete language
 
 ---
 
@@ -98,7 +133,7 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 **Recommended Resources:**
 1. [Classroom Mode Guide](guides/06-settings.md) - Presentation and assignment features
 2. [Lesson System Guide](guides/03-lessons.md) - Create structured lessons
-3. [Examples Browser](guides/01-getting-started.md#examples) - 86+ ready-made programs
+3. [Examples Browser](guides/01-getting-started.md#examples) - 220+ ready-made programs
 4. See [ARCHITECTURE.md](../ARCHITECTURE.md) for extending features
 
 ### For Advanced Users
@@ -113,17 +148,35 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 
 ## 📁 Examples
 
-Browse 86+ example programs organized by language:
+Browse 220+ example programs organized by language:
 
 | Directory | Count | Level | Purpose |
 |-----------|-------|-------|---------|
 | `basic/` | 18 | Beginner | Learn BASIC fundamentals |
 | `logo/` | 17 | Beginner-Intermediate | Turtle graphics and recursion |
 | `pilot/` | 14 | Beginner-Intermediate | Interactive instruction |
+| `assembly/` | 11 | Advanced | x86 low-level programming |
 | `c/` | 12 | Intermediate | Systems programming |
+| `cobol/` | 10 | Intermediate | Business data processing |
+| `sqr/` | 10 | Intermediate | Report generation |
+| `fortran/` | 10 | Intermediate | Scientific computing |
+| `haskell/` | 10 | Advanced | Functional programming |
+| `javascript/` | 10 | Intermediate | Scripting |
 | `pascal/` | 10 | Intermediate | Structured programming |
 | `prolog/` | 10 | Advanced | Logic programming |
+| `apl/` | 7 | Advanced | Array programming |
+| `hypertalk/` | 7 | Intermediate | Event-driven scripting |
+| `brainfuck/` | 6 | Advanced | Esoteric computing |
+| `cics/` | 5 | Advanced | Mainframe transactions |
 | `forth/` | 5 | Advanced | Stack-based programming |
+| `jcl/` | 5 | Intermediate | Mainframe job control |
+| `lua/` | 5 | Beginner-Intermediate | Scripting |
+| `python/` | 5 | Beginner-Intermediate | Modern scripting |
+| `rexx/` | 5 | Intermediate | Mainframe scripting |
+| `scheme/` | 5 | Intermediate-Advanced | Functional/Lisp |
+| `smalltalk/` | 5 | Intermediate | Object-oriented |
+| `sql/` | 5 | Intermediate | Database queries |
+| `demo/` | 8 | All | Cross-language showcases |
 
 **How to use examples:**
 1. Press **Ctrl+E** or **File → Examples**

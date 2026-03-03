@@ -6,9 +6,10 @@
 
 import copy
 import os
+import threading
 import time
 
-from PySide6.QtCore import Qt, QThread, Signal
+from PySide6.QtCore import QSettings, Qt, QThread, QTimer, Signal
 from PySide6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
     QHBoxLayout,
@@ -27,6 +28,44 @@ from ..logging_config import get_logger
 
 # Set to True or use TWS_DEBUG=1 env var to enable verbose debug output
 _DEBUG = os.environ.get("TWS_DEBUG", "").strip() in ("1", "true", "yes")
+
+
+class REPLThread(QThread):
+    """Background thread for REPL / immediate-mode single-command execution.
+
+    Keeps the main UI thread free while a REPL command is running.
+    """
+
+    execution_complete = Signal(list, object)  # (output_lines, variables_dict)
+    error_occurred = Signal(str)
+
+    def __init__(self, interpreter, turtle, command, language, parent=None):
+        super().__init__(parent)
+        self._interp = interpreter
+        self._turtle = turtle
+        self._command = command
+        self._language = language
+
+    def run(self):
+        """Execute the REPL command in a background thread."""
+        output_lines = []
+
+        def capture(text):
+            output_lines.append(text)
+
+        self._interp.output_callback = capture
+        try:
+            self._interp.load_program(self._command, self._language)
+            self._interp.execute(self._turtle)
+            try:
+                variables = self._interp.get_variables()
+            except Exception:  # pylint: disable=broad-except
+                variables = {}
+            self.execution_complete.emit(list(output_lines), variables)
+        except (SyntaxError, NameError, ValueError, TypeError, ZeroDivisionError) as e:
+            self.error_occurred.emit(f"❌ Error: {e}")
+        except Exception as e:  # pylint: disable=broad-except
+            self.error_occurred.emit(f"❌ Unexpected error: {e}")
 
 
 class InterpreterThread(QThread):
@@ -70,6 +109,7 @@ class InterpreterThread(QThread):
     def run(self):
         """Run interpreter in background."""
         start_time = time.perf_counter()
+        _complete_emitted = False
         try:
             if self.interp is None:
                 self.interp = Interpreter()
@@ -126,7 +166,24 @@ class InterpreterThread(QThread):
             self.turtle.on_change = on_turtle_change
 
             # Execute with timeout protection
-            self.interp.execute(self.turtle)
+            _TIMEOUT_SECONDS = 30.0
+
+            def _on_timeout():
+                """Kill runaway program after timeout."""
+                if self.interp is not None:
+                    self.interp.running = False
+                self.output_ready.emit(
+                    f"\n\u23f1\ufe0f Execution stopped: exceeded {_TIMEOUT_SECONDS:.0f} second timeout",
+                    "error",
+                )
+
+            _timeout_timer = threading.Timer(_TIMEOUT_SECONDS, _on_timeout)
+            _timeout_timer.daemon = True
+            _timeout_timer.start()
+            try:
+                self.interp.execute(self.turtle)
+            finally:
+                _timeout_timer.cancel()
 
             if self.debug_mode and self.interp.debug_timeline:
                 self.interp.debug_timeline.stop_recording()
@@ -153,8 +210,9 @@ class InterpreterThread(QThread):
                     }
                 )
                 self.execution_complete.emit()
+                _complete_emitted = True
 
-        except (ValueError, RuntimeError, OSError) as e:
+        except Exception as e:  # pylint: disable=broad-except
             self._had_error = True
             self.error_occurred.emit(str(e))
             # Still emit variables on error if interpreter exists
@@ -175,9 +233,15 @@ class InterpreterThread(QThread):
                 }
             )
             self.execution_complete.emit()
+            _complete_emitted = True
             if self.debug_mode and self.interp and self.interp.debug_timeline:
                 self.interp.debug_timeline.stop_recording()
                 self.debug_timeline_ready.emit(self.interp.debug_timeline)
+
+        finally:
+            # Always re-enable the Run button, regardless of how execution ended
+            if not _complete_emitted:
+                self.execution_complete.emit()
 
     def stop(self):
         """Request thread to stop."""
@@ -225,6 +289,29 @@ class OutputPanel(QTextEdit):
         # Reference to right_tabs for switching to Graphics tab
         self.tabs_widget = None
         self._debug_turtle_frames: dict[int, object] = {}
+
+        # Cap output text to avoid unbounded memory growth.
+        # Qt automatically drops the oldest blocks when the limit is exceeded.
+        self.document().setMaximumBlockCount(5000)
+
+        # Repaint throttle: coalesce rapid turtle-move signals into at most
+        # ~30 repaints per second so a tight Logo loop can't flood the queue.
+        self._paint_pending = False
+        self._paint_timer = QTimer(self)
+        self._paint_timer.setSingleShot(True)
+        self._paint_timer.setInterval(33)  # ~30 fps
+        self._paint_timer.timeout.connect(self._flush_paint)
+        self._paint_turtle: object = None
+
+    def _flush_paint(self):
+        """Perform the deferred canvas repaint (runs on the main thread)."""
+        self._paint_pending = False
+        turtle = self._paint_turtle
+        if turtle is None or self.current_canvas is None:
+            return
+        self.current_canvas.set_turtle_state(turtle)
+        # Emit without deepcopy — listeners must not mutate the object.
+        self.turtle_state_changed.emit(turtle)
 
     def set_language(self, language):
         """Set the current language for execution."""
@@ -318,6 +405,17 @@ class OutputPanel(QTextEdit):
                 )
             except (BrokenPipeError, OSError):
                 pass
+
+        # Clean up the previous thread before creating a new one so Qt
+        # objects and signal connections don't accumulate between runs.
+        if self.exec_thread is not None:
+            old = self.exec_thread
+            self.exec_thread = None
+            if old.isRunning():
+                old.stop()
+                old.quit()
+                old.wait(500)  # brief wait; won't block UI noticeably
+            old.deleteLater()
 
         self.exec_thread = InterpreterThread(
             code,
@@ -445,36 +543,12 @@ class OutputPanel(QTextEdit):
                     ),
                     file=sys.stderr,
                 )
-            self.current_canvas.set_turtle_state(turtle)
-
-            try:
-                self.turtle_state_changed.emit(copy.deepcopy(turtle))
-            except (TypeError, ValueError):
-                self.turtle_state_changed.emit(turtle)
-
-            # Auto-switch to Graphics tab when lines are being drawn
-            if turtle.lines and self.tabs_widget:
-                try:
-                    # Find the Graphics tab and switch to it
-                    for i in range(self.tabs_widget.count()):
-                        if "Graphics" in self.tabs_widget.tabText(i):
-                            if _DEBUG:  # pragma: no cover
-                                print(
-                                    (
-                                        "[OUTPUT] Switching to Graphics tab "
-                                        f"(index {i})"
-                                    ),
-                                    file=sys.stderr,
-                                )
-                            self.tabs_widget.setCurrentIndex(i)
-                            break
-                except (AttributeError, RuntimeError) as e:
-                    # tabs_widget not available or invalid, skip tab switching
-                    if _DEBUG:  # pragma: no cover
-                        print(
-                            f"[OUTPUT] Tab switching error: {e}",
-                            file=sys.stderr,
-                        )
+            # Throttle repaints: store the latest turtle reference and let
+            # a timer coalesce rapid moves into at most ~30 repaints/sec.
+            self._paint_turtle = turtle
+            if not self._paint_pending:
+                self._paint_pending = True
+                self._paint_timer.start()
         else:
             if _DEBUG:  # pragma: no cover
                 print("[OUTPUT] WARNING: current_canvas is None!", file=sys.stderr)
@@ -587,20 +661,27 @@ class OutputPanel(QTextEdit):
 
     def on_complete(self, canvas, turtle):
         """Handle execution complete."""
-        # Update canvas with turtle lines
-        canvas.set_turtle_state(turtle)
+        # Update canvas with turtle lines (guard against None canvas)
+        if canvas is not None:
+            canvas.set_turtle_state(turtle)
 
     def _on_execution_complete(self, canvas, turtle):
         """Handle completion and notify listeners."""
-        self.on_complete(canvas, turtle)
-        self.execution_complete.emit()
+        try:
+            self.on_complete(canvas, turtle)
+        except Exception:  # pylint: disable=broad-except
+            # Never let canvas errors prevent the completion signal from firing
+            pass
+        finally:
+            self.execution_complete.emit()
 
     def stop_execution(self):
         """Stop running program."""
         if self.exec_thread and self.exec_thread.isRunning():
             self.append_colored("\n⏹️ Stopping...", "warning")
             self.exec_thread.stop()
-            self.exec_thread.wait(2000)  # Wait up to 2 seconds
+            # Do NOT call wait() here — it blocks the main/UI thread.
+            # The thread will terminate shortly and emit execution_complete.
 
     def is_running(self):
         """Check if execution is running."""
@@ -655,9 +736,12 @@ class ImmediateModePanel(QWidget):
         self.canvas = None
         self.output_panel = None  # Reference to main output panel
         self.current_language = Language.BASIC
+        self._repl_thread = None  # Background thread for REPL execution
 
-        # Command history
-        self.command_history = []
+        # Command history — loaded from persistent settings
+        _s = QSettings("TimeWarp", "IDE")
+        saved_history = _s.value("repl_history", [])
+        self.command_history = list(saved_history) if saved_history else []
         self.history_index = -1
 
         self._setup_ui()
@@ -741,6 +825,22 @@ class ImmediateModePanel(QWidget):
             Language.BASIC: "READY>",
             Language.PILOT: "PILOT>",
             Language.LOGO: "LOGO>",
+            Language.PYTHON: "PY>",
+            Language.LUA: "LUA>",
+            Language.SCHEME: "SCM>",
+            Language.COBOL: "COBOL>",
+            Language.BRAINFUCK: "BF>",
+            Language.ASSEMBLY: "ASM>",
+            Language.JAVASCRIPT: "JS>",
+            Language.FORTRAN: "F77>",
+            Language.REXX: "REXX>",
+            Language.SMALLTALK: "ST>",
+            Language.HYPERTALK: "HTALK>",
+            Language.HASKELL: "HS>",
+            Language.APL: "APL>",
+            Language.SQL: "SQL>",
+            Language.JCL: "JCL>",
+            Language.CICS: "CICS>",
         }
         self.prompt_label.setText(prompts.get(language, "CMD>"))
 
@@ -756,61 +856,56 @@ class ImmediateModePanel(QWidget):
         self.output_ready.emit(text, output_type)
 
     def _execute_command(self):
-        """Execute the entered command."""
+        """Execute the entered command in a background thread (non-blocking)."""
         command = self.command_input.text().strip()
         if not command:
             return
 
-        # Add to history
+        # Guard against running a second command while one is in flight
+        if self._repl_thread and self._repl_thread.isRunning():
+            return
+
+        # Add to history and persist (cap at 200 entries)
         if not self.command_history or self.command_history[-1] != command:
             self.command_history.append(command)
         self.history_index = -1
+        _s = QSettings("TimeWarp", "IDE")
+        _s.setValue("repl_history", self.command_history[-200:])
 
         # Show command in output
         self._send_output(f"⚡ {command}", "info")
 
-        # Capture output
-        output_lines = []
-
-        def capture_output(text):
-            output_lines.append(text)
-
-        self.interpreter.output_callback = capture_output
-
-        try:
-            # Load and execute single command
-            self.interpreter.load_program(command, self.current_language)
-            self.interpreter.execute(self.turtle)
-
-            # Show any output
-            for line in output_lines:
-                self._send_output(line, "normal")
-
-            # Update canvas if turtle was used
-            if self.canvas:
-                self.canvas.set_turtle_state(self.turtle)
-
-            # Emit variables update
-            variables = self.interpreter.get_variables()
-            self.variables_updated.emit(variables)
-
-        except (
-            SyntaxError,
-            NameError,
-            ValueError,
-            TypeError,
-            ZeroDivisionError,
-        ) as e:
-            self._send_output(f"❌ Error: {e}", "error")
-        except KeyboardInterrupt:
-            self._send_output("⚠️ Execution interrupted", "warning")
-        except Exception as e:  # pylint: disable=broad-except
-            logger = get_logger(__name__)
-            logger.exception("Unexpected error in command execution")
-            self._send_output(f"❌ Unexpected error: {e}", "error")
-
-        # Clear input and focus
+        # Disable input while the command is running so the UI stays consistent
+        self.command_input.setEnabled(False)
+        self.exec_button.setEnabled(False)
         self.command_input.clear()
+
+        # Execute in a background thread to avoid blocking the main UI thread
+        self._repl_thread = REPLThread(
+            self.interpreter, self.turtle, command, self.current_language, self
+        )
+        self._repl_thread.execution_complete.connect(self._on_repl_complete)
+        self._repl_thread.error_occurred.connect(self._on_repl_error)
+        self._repl_thread.start()
+
+    def _on_repl_complete(self, output_lines, variables):
+        """Handle successful REPL execution completion (called on main thread)."""
+        for line in output_lines:
+            self._send_output(line, "normal")
+        if self.canvas:
+            self.canvas.set_turtle_state(self.turtle)
+        self.variables_updated.emit(variables)
+        self._repl_done()
+
+    def _on_repl_error(self, message):
+        """Handle REPL execution error (called on main thread)."""
+        self._send_output(message, "error")
+        self._repl_done()
+
+    def _repl_done(self):
+        """Re-enable the REPL input after execution finishes."""
+        self.command_input.setEnabled(True)
+        self.exec_button.setEnabled(True)
         self.command_input.setFocus()
 
     def clear_state(self):

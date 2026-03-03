@@ -282,13 +282,13 @@ SETPOSITION 100 50  ' Jump to coordinate (100, 50)
 ### Heading
 
 ```logo
-SETANGLE 0          ' Face east
+SETHEADING 0        ' Face north/up
 FORWARD 50
 
-SETANGLE 90         ' Face north
+SETHEADING 90       ' Face east/right
 FORWARD 50
 
-SETANGLE 180        ' Face west
+SETHEADING 180      ' Face south/down
 FORWARD 50
 ```
 

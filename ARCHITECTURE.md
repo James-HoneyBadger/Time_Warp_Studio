@@ -52,19 +52,36 @@ Time Warp Studio is a desktop IDE built with:
 
 Location: `Platforms/Python/time_warp/core/interpreter.py`
 
-Core dispatcher managing all 7 language executors:
+Core dispatcher managing all 24 language executors:
 
 ```python
 class TimeWarpInterpreter:
     def __init__(self):
-        # Initialize all 7 language executors
-        self.basic = BasicExecutor(self)
-        self.logo = LogoExecutor(self)
-        self.pilot = PilotExecutor(self)
-        self.c_lang = CExecutor(self)
-        self.pascal = PascalExecutor(self)
-        self.prolog = PrologExecutor(self)
-        self.forth = ForthExecutor(self)
+        # Initialize all 24 language executors
+        self.basic      = BasicExecutor(self)
+        self.logo       = LogoExecutor(self)
+        self.pilot      = PilotExecutor(self)
+        self.c_lang     = CExecutor(self)
+        self.pascal     = PascalExecutor(self)
+        self.prolog     = PrologExecutor(self)
+        self.forth      = ForthExecutor(self)
+        self.python     = PythonExecutor(self)
+        self.javascript = JavaScriptExecutor(self)
+        self.lua        = LuaExecutor(self)
+        self.haskell    = HaskellExecutor(self)
+        self.rexx       = RexxExecutor(self)
+        self.scheme     = SchemeExecutor(self)
+        self.smalltalk  = SmalltalkExecutor(self)
+        self.brainfuck  = BrainfuckExecutor(self)
+        self.cobol      = CobolExecutor(self)
+        self.fortran    = FortranExecutor(self)
+        self.assembly   = AssemblyExecutor(self)
+        self.apl        = AplExecutor(self)
+        self.hypertalk  = HyperTalkExecutor(self)
+        self.jcl        = JclExecutor(self)
+        self.cics       = CicsExecutor(self)
+        self.sql        = SqlExecutor(self)
+        self.sqr        = SqrExecutor(self)
 ```
 
 ### Core Methods

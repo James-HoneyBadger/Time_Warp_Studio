@@ -3,10 +3,18 @@ Security Audit & Hardening Tests
 Validates security controls and vulnerability mitigation
 """
 
+import os
 import pytest
 import asyncio
 from httpx import AsyncClient
 from unittest.mock import patch, MagicMock
+
+
+if os.getenv("RUN_BACKEND_INTEGRATION") != "1":
+    pytest.skip(
+        "Backend security tests require running backend services and RUN_BACKEND_INTEGRATION=1",
+        allow_module_level=True,
+    )
 
 
 class TestInputValidation:

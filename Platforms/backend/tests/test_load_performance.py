@@ -4,6 +4,7 @@ Tests system performance under concurrent user load
 """
 
 import asyncio
+import os
 import time
 import random
 import statistics
@@ -12,6 +13,13 @@ import pytest
 from httpx import AsyncClient
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker
+
+
+if os.getenv("RUN_BACKEND_INTEGRATION") != "1":
+    pytest.skip(
+        "Backend load tests require running backend services and RUN_BACKEND_INTEGRATION=1",
+        allow_module_level=True,
+    )
 
 # Performance thresholds
 LATENCY_THRESHOLDS = {

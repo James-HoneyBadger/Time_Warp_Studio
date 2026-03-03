@@ -51,7 +51,12 @@ class SnippetDialog(QDialog):
         # Language selector
         top_bar.addWidget(QLabel("Language:"))
         self.language_combo = QComboBox()
-        self.language_combo.addItems(["BASIC", "PILOT", "LOGO"])
+        self.language_combo.addItems([
+            "BASIC", "PILOT", "LOGO", "PYTHON", "LUA", "SCHEME", "COBOL",
+            "BRAINFUCK", "ASSEMBLY", "JAVASCRIPT", "FORTRAN", "REXX",
+            "SMALLTALK", "HYPERTALK", "HASKELL", "APL",
+            "SQL", "JCL", "CICS",
+        ])
         self.language_combo.setCurrentText(self.language)
         self.language_combo.currentTextChanged.connect(self._on_language_changed)
         top_bar.addWidget(self.language_combo)

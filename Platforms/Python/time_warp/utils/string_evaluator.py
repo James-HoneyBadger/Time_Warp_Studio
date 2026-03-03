@@ -17,8 +17,8 @@ class StringExpressionEvaluator:
     - Nested function calls
     """
 
-    # Pattern to match function calls: FUNC(args)
-    FUNCTION_PATTERN = re.compile(r"([A-Z]+)\s*\(", re.IGNORECASE)
+    # Pattern to match function calls: FUNC(args) or FUNC$(args)
+    FUNCTION_PATTERN = re.compile(r"([A-Z]+\$?)\s*\(", re.IGNORECASE)
 
     # Pattern to match string literals: "..." or '...'
     STRING_LITERAL_PATTERN = re.compile(r'("[^"]*"|\'[^\']*\')')
@@ -27,15 +27,21 @@ class StringExpressionEvaluator:
         self,
         string_variables: Optional[Dict[str, str]] = None,
         numeric_variables: Optional[Dict[str, float]] = None,
+        string_arrays: Optional[Dict[str, List[str]]] = None,
+        numeric_arrays: Optional[Dict[str, List[float]]] = None,
     ):
         """Initialize string evaluator.
 
         Args:
             string_variables: Dict of string variables (e.g., {"A$": "hello"})
             numeric_variables: Dict of numeric variables for VAL context
+            string_arrays: Dict of string arrays (e.g., {"NAMES$": ["", "Alice", ...]})
+            numeric_arrays: Dict of numeric arrays for array access within expressions
         """
         self.string_variables = string_variables or {}
         self.numeric_variables = numeric_variables or {}
+        self.string_arrays = string_arrays or {}
+        self.numeric_arrays = numeric_arrays or {}
 
     def evaluate(self, expr: str) -> str:
         """Evaluate string expression.
@@ -56,15 +62,36 @@ class StringExpressionEvaluator:
         """Recursively evaluate expression."""
         expr = expr.strip()
 
-        # Handle string literals
+        # Handle string literals (must be a SINGLE literal, not concat like "A" + "B")
         if (expr.startswith('"') and expr.endswith('"')) or (
             expr.startswith("'") and expr.endswith("'")
         ):
-            return expr[1:-1]
+            # Check it's truly a single literal — count unescaped quotes
+            q = expr[0]
+            inner = expr[1:-1]
+            if q not in inner:
+                return inner
 
         # Handle string variables
         if expr.endswith("$") and expr.replace("$", "").replace("_", "").isalnum():
             return self.string_variables.get(expr, "")
+
+        # Handle string array element: NAMES$(I) or NAMES$(3)
+        if "$(" in expr and expr.endswith(")"):
+            arr_name = expr.split("(", 1)[0].upper()
+            idx_str = expr.split("(", 1)[1][:-1].strip()
+            if arr_name.endswith("$") and arr_name in self.string_arrays:
+                try:
+                    idx = int(float(self.numeric_variables.get(idx_str, idx_str)))
+                except (ValueError, TypeError):
+                    try:
+                        idx = int(idx_str)
+                    except (ValueError, TypeError):
+                        return ""
+                arr = self.string_arrays[arr_name]
+                if 0 <= idx < len(arr):
+                    return arr[idx]
+                return ""
 
         # Handle function calls
         func_match = self.FUNCTION_PATTERN.match(expr)
@@ -99,6 +126,9 @@ class StringExpressionEvaluator:
             return str(expr)
 
         func_name = expr[:paren_idx].strip().upper()
+        # Strip $ suffix (BASIC uses STR$(), CHR$(), etc.)
+        if func_name.endswith("$"):
+            func_name = func_name[:-1]
 
         # Find matching closing paren
         close_idx = self._find_matching_paren(expr, paren_idx)
@@ -127,8 +157,18 @@ class StringExpressionEvaluator:
             return self._func_trim(args)
         elif func_name == "STR":
             return self._func_str(args)
+        elif func_name == "CHR":
+            return self._func_chr(args)
+        elif func_name == "ASC":
+            return self._func_asc(args)
         elif func_name == "VAL":
             return self._func_val(args)
+        elif func_name == "TAB":
+            return self._func_tab(args)
+        elif func_name == "SPC":
+            return self._func_spc(args)
+        elif func_name == "STRING":
+            return self._func_string_fn(args)
         else:
             raise ValueError(f"Unknown string function: {func_name}")
 
@@ -203,6 +243,11 @@ class StringExpressionEvaluator:
             return float(arg)
         except (ValueError, TypeError):
             pass
+
+        # Check for numeric variable
+        arg_upper = arg.upper()
+        if arg_upper in self.numeric_variables:
+            return self.numeric_variables[arg_upper]
 
         # Try to evaluate as string expression
         return self._evaluate_expr(arg)
@@ -337,7 +382,7 @@ class StringExpressionEvaluator:
         if len(args) < 1:
             raise ValueError("STR requires 1 argument")
 
-        # Evaluate as numeric
+        # Evaluate as numeric — try simple arithmetic with variables
         val = self._evaluate_arg(args[0])
         try:
             num = float(val)
@@ -346,6 +391,19 @@ class StringExpressionEvaluator:
                 return str(int(num))
             return str(num)
         except (ValueError, TypeError):
+            pass
+
+        # Try evaluating as a simple arithmetic expression with variable substitution
+        try:
+            expr_str = args[0].strip()
+            # Substitute numeric variables into the expression
+            for vname, vval in sorted(self.numeric_variables.items(), key=lambda x: -len(x[0])):
+                expr_str = re.sub(r'\b' + re.escape(vname) + r'\b', str(vval), expr_str, flags=re.IGNORECASE)
+            num = float(eval(expr_str, {"__builtins__": {}}, {}))  # noqa: S307
+            if num == int(num):
+                return str(int(num))
+            return str(num)
+        except Exception:
             return str(val)
 
     def _func_val(self, args: List[str]) -> str:
@@ -375,7 +433,7 @@ class StringExpressionEvaluator:
 
     def _evaluate_concatenation(self, expr: str, op: str) -> str:
         """Evaluate string concatenation with & or + operator."""
-        parts = expr.split(op)
+        parts = self._split_respecting_parens_and_quotes(expr, op)
         result_parts = []
 
         for part in parts:
@@ -383,3 +441,84 @@ class StringExpressionEvaluator:
             result_parts.append(str(val))
 
         return "".join(result_parts)
+
+    def _split_respecting_parens_and_quotes(self, expr: str, op: str) -> list:
+        """Split expression by operator, respecting parentheses and quotes."""
+        parts = []
+        current = []
+        in_str = False
+        str_char = ""
+        depth = 0
+        i = 0
+        while i < len(expr):
+            ch = expr[i]
+            if in_str:
+                current.append(ch)
+                if ch == str_char:
+                    in_str = False
+            elif ch in '"\'':
+                in_str = True
+                str_char = ch
+                current.append(ch)
+            elif ch == '(':
+                depth += 1
+                current.append(ch)
+            elif ch == ')':
+                depth -= 1
+                current.append(ch)
+            elif depth == 0 and expr[i:i+len(op)] == op:
+                parts.append("".join(current))
+                current = []
+                i += len(op)
+                continue
+            else:
+                current.append(ch)
+            i += 1
+        if current:
+            parts.append("".join(current))
+        return parts
+
+    def _func_chr(self, args: list) -> str:
+        """CHR$(n) - Return character for ASCII code."""
+        if len(args) < 1:
+            raise ValueError("CHR requires 1 argument")
+        val = self._evaluate_arg(args[0])
+        try:
+            return chr(int(float(val)))
+        except (ValueError, TypeError):
+            return ""
+
+    def _func_asc(self, args: list) -> str:
+        """ASC(s) - Return ASCII code for first character."""
+        if len(args) < 1:
+            raise ValueError("ASC requires 1 argument")
+        val = self._evaluate_arg(args[0])
+        s = str(val)
+        return str(ord(s[0])) if s else "0"
+
+    def _func_tab(self, args: list) -> str:
+        """TAB(n) - Return spaces to tab position."""
+        if len(args) < 1:
+            return ""
+        try:
+            n = int(float(self._evaluate_arg(args[0])))
+            return " " * max(0, n)
+        except (ValueError, TypeError):
+            return ""
+
+    def _func_spc(self, args: list) -> str:
+        """SPC(n) - Return n spaces."""
+        return self._func_tab(args)
+
+    def _func_string_fn(self, args: list) -> str:
+        """STRING$(n, char) - Return n copies of character."""
+        if len(args) < 2:
+            raise ValueError("STRING requires 2 arguments")
+        try:
+            n = int(float(self._evaluate_arg(args[0])))
+            c = self._evaluate_arg(args[1])
+            if isinstance(c, (int, float)):
+                c = chr(int(c))
+            return str(c)[0:1] * max(0, n)
+        except (ValueError, TypeError):
+            return ""

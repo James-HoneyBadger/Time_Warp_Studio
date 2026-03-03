@@ -2,6 +2,7 @@
 """Time Warp Studio - Entry point for desktop application."""
 
 import logging
+import os
 import sys
 from pathlib import Path
 
@@ -12,8 +13,62 @@ from time_warp.logging_config import get_logger, setup_logging
 from time_warp.ui import MainWindow
 
 
+def _configure_qt_logging_rules() -> None:
+    """Reduce known non-fatal Qt warning noise in desktop environments."""
+    suppress_rules = {
+        "qt.svg.warning": "false",
+        "qt.qpa.theme.gnome.warning": "false",
+    }
+
+    existing = os.environ.get("QT_LOGGING_RULES", "").strip()
+    parsed_rules = {}
+
+    if existing:
+        for part in existing.split(";"):
+            item = part.strip()
+            if not item or "=" not in item:
+                continue
+            key, value = item.split("=", 1)
+            parsed_rules[key.strip()] = value.strip()
+
+    for key, value in suppress_rules.items():
+        parsed_rules.setdefault(key, value)
+
+    os.environ["QT_LOGGING_RULES"] = ";".join(
+        f"{key}={value}" for key, value in parsed_rules.items()
+    )
+
+
+def _check_display_available() -> bool:
+    """Verify a graphical display is reachable before Qt tries to open one.
+
+    If neither DISPLAY (X11) nor WAYLAND_DISPLAY is set Qt will call
+    qFatal() which ultimately sends an abort/kill signal to the process,
+    producing a confusing 'died with SIGKILL' message in the launcher.
+    We detect this early and print an actionable error instead.
+    """
+    if os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"):
+        return True
+    # Qt also honours QT_QPA_PLATFORM=offscreen for headless use
+    if os.environ.get("QT_QPA_PLATFORM", "").startswith("offscreen"):
+        return True
+    print(
+        "❌ No graphical display found.\n"
+        "   Set DISPLAY (X11) or WAYLAND_DISPLAY before launching the IDE.\n"
+        "   If running headless, use: QT_QPA_PLATFORM=offscreen ./run.sh",
+        file=sys.stderr,
+    )
+    return False
+
+
 def main():
     """Launch Time Warp Studio."""
+    _configure_qt_logging_rules()
+
+    # Fail fast with a clear message rather than letting Qt abort the process
+    if not _check_display_available():
+        sys.exit(1)
+
     # Setup logging (INFO level for normal use, can be overridden)
     log_file = Path.home() / ".time_warp" / "logs" / "ide.log"
     setup_logging(log_level=logging.INFO, log_file=log_file)

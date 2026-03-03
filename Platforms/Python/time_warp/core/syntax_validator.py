@@ -1,10 +1,20 @@
 """Real-time syntax validation for all supported languages."""
 
+import re
 from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional
 
 from .interpreter import Language
+
+
+# Regex to match quoted string literals in BASIC
+_BASIC_STRING_RE = re.compile(r'"[^"]*"')
+
+
+def _strip_basic_strings(line: str) -> str:
+    """Replace string literal contents with empty strings to avoid false keyword matches."""
+    return _BASIC_STRING_RE.sub('""', line)
 
 
 class SeverityLevel(Enum):
@@ -106,7 +116,6 @@ class SyntaxValidator:
 
         # Check for balanced BASIC keywords
         open_structures = {
-            "IF": "THEN",
             "FOR": "NEXT",
             "WHILE": "WEND",
             "DO": "LOOP",
@@ -116,13 +125,29 @@ class SyntaxValidator:
         for i, line in enumerate(lines, 1):
             stripped = line.strip().upper()
 
-            # Count opens/closes
+            # Skip empty lines
+            if not stripped:
+                continue
+
+            # Strip line number prefix
+            parts = stripped.split(maxsplit=1)
+            if parts and parts[0].isdigit():
+                stripped = parts[1] if len(parts) > 1 else ""
+
+            # Skip REM comment lines entirely
+            if stripped.startswith("REM"):
+                continue
+
+            # Remove string literal contents to avoid false keyword matches
+            cleaned = _strip_basic_strings(stripped)
+
+            # Count opens/closes on the cleaned line
             for keyword in open_structures:
-                if keyword in stripped and f"{keyword} " in (stripped + " "):
+                if keyword in cleaned and f"{keyword} " in (cleaned + " "):
                     open_count[keyword] += 1
 
             for close_word in open_structures.values():
-                if close_word in stripped:
+                if close_word in cleaned:
                     keyword = [
                         k for k, v in open_structures.items() if v == close_word
                     ][0]
@@ -140,6 +165,7 @@ class SyntaxValidator:
                                 code="E002",
                             )
                         )
+                        open_count[keyword] = 0
 
         # Check unclosed structures
         for keyword, count in open_count.items():

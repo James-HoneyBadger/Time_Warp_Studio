@@ -1,0 +1,90 @@
+; =============================================
+;  Logo Comprehensive Demo - Time Warp Studio
+; =============================================
+
+PRINT "===== HELLO WORLD =====
+PRINT "Welcome
+PRINT "
+
+; --- Variables and Arithmetic ---
+PRINT "===== VARIABLES =====
+MAKE "X 10
+MAKE "Y 3
+PRINT :X
+PRINT :Y
+MAKE "S :X + :Y
+PRINT :S
+MAKE "P :X * :Y
+PRINT :P
+MAKE "D :X - :Y
+PRINT :D
+MAKE "Q :X / :Y
+PRINT :Q
+PRINT "
+
+; --- String Operations ---
+PRINT "===== STRINGS =====
+PRINT FIRST "Hello
+PRINT LAST "Hello
+PRINT "
+
+; --- Loops ---
+PRINT "===== LOOPS =====
+REPEAT 5 [PRINT "Loop]
+PRINT "
+
+; --- Conditionals ---
+PRINT "===== CONDITIONALS =====
+MAKE "X 7
+IF :X > 5 [PRINT "Greater]
+IF :X < 3 [PRINT "Less]
+IFELSE :X > 5 [PRINT "Big] [PRINT "Small]
+PRINT "
+
+; --- Procedures ---
+PRINT "===== PROCEDURES =====
+TO SQUARE :SIZE
+  REPEAT 4 [FD :SIZE RT 90]
+END
+SQUARE 60
+
+TO GREET
+  PRINT "Hello
+END
+GREET
+PRINT "
+
+; --- Turtle Graphics ---
+PRINT "===== TURTLE GRAPHICS =====
+CS
+PU
+SETXY -100 100
+PD
+
+; Draw a triangle
+FD 80
+RT 120
+FD 80
+RT 120
+FD 80
+RT 120
+
+; Move and draw a square
+PU
+FD 100
+PD
+REPEAT 4 [FD 50 RT 90]
+
+; Draw with colors
+SETPENCOLOR "red
+FD 60
+RT 90
+SETPENCOLOR "blue
+FD 60
+RT 90
+SETPENCOLOR "green
+FD 60
+HOME
+PRINT "
+
+PRINT "===== DONE =====

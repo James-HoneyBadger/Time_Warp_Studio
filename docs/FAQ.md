@@ -8,7 +8,7 @@ Common questions and answers about Time Warp Studio.
 
 ### Q: What is Time Warp Studio?
 
-**A:** Time Warp Studio is an educational programming IDE that supports 7 languages: BASIC, Logo, PILOT, C, Pascal, Prolog, and Forth. It combines classic educational programming languages with modern IDE features including graphics, debugging, and lessons.
+**A:** Time Warp Studio is an educational programming IDE that supports **24 languages** spanning six decades of computing history: BASIC, Logo, PILOT, C, Pascal, Prolog, Forth, Python, JavaScript, Lua, REXX, Haskell, Scheme, Smalltalk, APL, COBOL, Fortran, Assembly, Brainfuck, HyperTalk, JCL, CICS, SQL, and SQR. It combines classic educational programming languages with modern IDE features including graphics, debugging, and lessons.
 
 ### Q: Can I use it for free?
 
@@ -63,10 +63,12 @@ python Platforms/Python/time_warp_ide.py
 ### Q: Which language should I learn first?
 
 **A:** 
-- **Beginners**: Start with Logo (visual/graphics)
-- **Classic**: Try BASIC for traditional programming
-- **Modern**: Use C or Pascal for structured programming
-- **Advanced**: Learn Prolog for logic programming
+- **Complete beginners**: Start with **Logo** (visual) or **BASIC** (text-based)
+- **Modern scripting**: Try **Python** or **JavaScript**
+- **Functional**: Explore **Haskell** or **Scheme**
+- **Mainframe/legacy**: Learn **COBOL**, **JCL**, or **REXX**
+- **Logic**: Try **Prolog**
+- **For fun**: Explore **Brainfuck** to understand Turing completeness
 
 ### Q: Can I mix languages in one file?
 

@@ -1,7 +1,67 @@
-R: ========================================
-R: Hello World - Time Warp PILOT
-R: Demonstrates: T (Type), R (Remark)
-R: ========================================
+REM =============================================
+REM  PILOT Comprehensive Demo - Time Warp Studio
+REM =============================================
 
-T: Hello, World!
-T: Welcome to Time Warp PILOT.
+T:===== HELLO WORLD =====
+T:Welcome to PILOT!
+T:
+
+REM --- Variables and Arithmetic ---
+T:===== VARIABLES & MATH =====
+C:X = 10
+C:Y = 3
+T:X = $X
+T:Y = $Y
+C:SUM = $X + $Y
+T:X + Y = $SUM
+C:PROD = $X * $Y
+T:X * Y = $PROD
+T:
+
+REM --- Matching ---
+T:===== PATTERN MATCHING =====
+T:Type YES to continue:
+A:
+M:YES,YEAH,Y
+TY:You said yes!
+TN:You did not say yes.
+T:
+
+REM --- Jump and Labels ---
+T:===== JUMPS =====
+T:Before jump
+J:*AFTER
+T:This line is skipped
+*AFTER
+T:After jump
+T:
+
+REM --- Subroutines ---
+T:===== SUBROUTINES =====
+T:Calling subroutine...
+S:*GREET
+T:Back from subroutine
+T:
+
+REM --- Computed Values ---
+T:===== COMPUTATION =====
+C:A = 5
+C:B = $A * 2
+T:A = $A
+T:A * 2 = $B
+C:C = $B + $A
+T:A * 2 + A = $C
+T:
+
+REM --- Conditional Compute ---
+T:===== CONDITIONALS =====
+C:SCORE = 85
+T:Score is $SCORE
+C:PASS = 1
+T:
+T:===== DONE =====
+E:
+
+*GREET
+T:Hello from subroutine!
+R:

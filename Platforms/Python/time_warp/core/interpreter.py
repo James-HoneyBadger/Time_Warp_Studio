@@ -33,6 +33,23 @@ from ..languages.logo import execute_logo
 from ..languages.pascal import execute_pascal
 from ..languages.pilot import execute_pilot
 from ..languages.prolog import execute_prolog
+from ..languages.python import execute_python
+from ..languages.lua import execute_lua
+from ..languages.scheme import execute_scheme
+from ..languages.cobol import execute_cobol
+from ..languages.brainfuck import execute_brainfuck
+from ..languages.assembly import execute_assembly
+from ..languages.javascript import execute_javascript
+from ..languages.fortran import execute_fortran
+from ..languages.rexx import execute_rexx
+from ..languages.smalltalk import execute_smalltalk
+from ..languages.hypertalk import execute_hypertalk
+from ..languages.haskell import execute_haskell
+from ..languages.apl import execute_apl
+from ..languages.sql import execute_sql
+from ..languages.jcl import execute_jcl
+from ..languages.cics import execute_cics
+from ..languages.sqr import execute_sqr
 
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
@@ -92,6 +109,23 @@ class Language(Enum):
     PROLOG = auto()
     PASCAL = auto()
     FORTH = auto()
+    PYTHON = auto()
+    LUA = auto()
+    SCHEME = auto()
+    COBOL = auto()
+    BRAINFUCK = auto()
+    ASSEMBLY = auto()
+    JAVASCRIPT = auto()
+    FORTRAN = auto()
+    REXX = auto()
+    SMALLTALK = auto()
+    HYPERTALK = auto()
+    HASKELL = auto()
+    APL = auto()
+    SQL = auto()
+    JCL = auto()
+    CICS = auto()
+    SQR = auto()
 
     @classmethod
     def from_extension(cls, ext: str) -> "Language":
@@ -104,10 +138,34 @@ class Language(Enum):
             ".c": cls.C,
             ".pro": cls.PROLOG,
             ".prolog": cls.PROLOG,
+            ".pl": cls.PROLOG,
             ".pas": cls.PASCAL,
             ".f": cls.FORTH,
             ".fs": cls.FORTH,
             ".forth": cls.FORTH,
+            ".py": cls.PYTHON,
+            ".lua": cls.LUA,
+            ".scm": cls.SCHEME,
+            ".rkt": cls.SCHEME,
+            ".cob": cls.COBOL,
+            ".cbl": cls.COBOL,
+            ".bf": cls.BRAINFUCK,
+            ".asm": cls.ASSEMBLY,
+            ".s": cls.ASSEMBLY,
+            ".js": cls.JAVASCRIPT,
+            ".f77": cls.FORTRAN,
+            ".for": cls.FORTRAN,
+            ".rex": cls.REXX,
+            ".rexx": cls.REXX,
+            ".st": cls.SMALLTALK,
+            ".htalk": cls.HYPERTALK,
+            ".hs": cls.HASKELL,
+            ".apl": cls.APL,
+            ".sql": cls.SQL,
+            ".jcl": cls.JCL,
+            ".cics": cls.CICS,
+            ".sqr": cls.SQR,
+            ".sqc": cls.SQR,
         }
         return mapping.get(ext, cls.BASIC)
 
@@ -121,6 +179,23 @@ class Language(Enum):
             Language.PROLOG: "Prolog",
             Language.PASCAL: "Pascal",
             Language.FORTH: "Forth",
+            Language.PYTHON: "Python",
+            Language.LUA: "Lua",
+            Language.SCHEME: "Scheme",
+            Language.COBOL: "COBOL",
+            Language.BRAINFUCK: "Brainfuck",
+            Language.ASSEMBLY: "Assembly",
+            Language.JAVASCRIPT: "JavaScript",
+            Language.FORTRAN: "FORTRAN 77",
+            Language.REXX: "REXX",
+            Language.SMALLTALK: "Smalltalk",
+            Language.HYPERTALK: "HyperTalk",
+            Language.HASKELL: "Haskell",
+            Language.APL: "APL",
+            Language.SQL: "SQL Server",
+            Language.JCL: "JCL",
+            Language.CICS: "CICS",
+            Language.SQR: "SQR",
         }
         return names.get(self, "Unknown")
 
@@ -199,7 +274,8 @@ class Interpreter:
         self.single_variables: Dict[str, float] = {}
         self.double_variables: Dict[str, float] = {}
         self.string_variables: Dict[str, str] = {}
-        self.arrays: Dict[str, List[float]] = {}  # BASIC arrays
+        self.arrays: Dict[str, List[float]] = {}  # BASIC numeric arrays
+        self.string_arrays: Dict[str, List[str]] = {}  # BASIC string arrays
         # Logo data types
         self.logo_lists: Dict[str, List[str]] = {}
         self.logo_arrays: Dict[str, Dict[int, object]] = {}
@@ -306,6 +382,7 @@ class Interpreter:
         self.double_variables.clear()
         self.string_variables.clear()
         self.arrays.clear()
+        self.string_arrays.clear()
         self.logo_lists.clear()
         self.logo_arrays.clear()
         self.property_lists.clear()
@@ -524,6 +601,9 @@ class Interpreter:
         self.program_lines.clear()
         self.line_number_map.clear()
 
+        # Keep original source for Python sandbox execution
+        self.program_source: str = program_text
+
         self._load_from_lines(lines, language or self.language)
 
         # Collect BASIC DATA values after lines are populated
@@ -540,6 +620,25 @@ class Interpreter:
             return
         if language == Language.FORTH:
             self._parse_forth_program(lines)
+            return
+        if language == Language.PYTHON:
+            # Python is run as a complete block; we still store lines so the
+            # line count is visible in the UI, but no line-number parsing.
+            for idx, line in enumerate(lines):
+                self.program_lines.append((idx + 1, line))
+            return
+        # Other whole-program languages: store lines without line-number parsing
+        _WHOLE_PROGRAM = {
+            Language.LUA, Language.SCHEME, Language.COBOL, Language.BRAINFUCK,
+            Language.ASSEMBLY, Language.JAVASCRIPT, Language.FORTRAN,
+            Language.REXX, Language.SMALLTALK, Language.HYPERTALK,
+            Language.HASKELL, Language.APL,
+            Language.SQL, Language.JCL, Language.CICS,
+            Language.SQR,
+        }
+        if language in _WHOLE_PROGRAM:
+            for idx, line in enumerate(lines):
+                self.program_lines.append((idx + 1, line))
             return
         self._parse_standard_program(lines)
 
@@ -562,7 +661,7 @@ class Interpreter:
                 label = command_str[2:].strip()
                 self.labels[label] = idx
             elif command_str.startswith("*"):
-                label = command_str.strip()
+                label = command_str[1:].strip()
                 self.labels[label] = idx
 
             self.program_lines.append((line_num, command_str))
@@ -640,6 +739,15 @@ class Interpreter:
 
         while i < len(lines):
             line = lines[i].strip()
+            if not line:
+                i += 1
+                continue
+
+            # Strip ; comments so command names in comments
+            # don't affect bracket counting or TO detection
+            comment_idx = line.find(";")
+            if comment_idx != -1:
+                line = line[:comment_idx].strip()
             if not line:
                 i += 1
                 continue
@@ -741,6 +849,41 @@ class Interpreter:
 
         Features error recovery: continues on non-fatal errors
         """
+        # Python is run as a complete block, not line-by-line
+        if self.language == Language.PYTHON:
+            source = getattr(self, "program_source", "")
+            output_text = execute_python(self, source, turtle)
+            for line in output_text.splitlines(keepends=True):
+                self.log_output(line.rstrip("\n"))
+            return self.output.copy()
+
+        # Whole-program languages: run the full source, not line-by-line
+        _WHOLE_PROGRAM_LANGS = {
+            Language.LUA: execute_lua,
+            Language.SCHEME: execute_scheme,
+            Language.COBOL: execute_cobol,
+            Language.BRAINFUCK: execute_brainfuck,
+            Language.ASSEMBLY: execute_assembly,
+            Language.JAVASCRIPT: execute_javascript,
+            Language.FORTRAN: execute_fortran,
+            Language.REXX: execute_rexx,
+            Language.SMALLTALK: execute_smalltalk,
+            Language.HYPERTALK: execute_hypertalk,
+            Language.HASKELL: execute_haskell,
+            Language.APL: execute_apl,
+            Language.SQL: execute_sql,
+            Language.JCL: execute_jcl,
+            Language.CICS: execute_cics,
+            Language.SQR: execute_sqr,
+        }
+        if self.language in _WHOLE_PROGRAM_LANGS:
+            source = getattr(self, "program_source", "")
+            fn = _WHOLE_PROGRAM_LANGS[self.language]
+            output_text = fn(self, source, turtle)
+            for line in output_text.splitlines(keepends=True):
+                self.log_output(line.rstrip("\n"))
+            return self.output.copy()
+
         # Setup runtime (fresh run detection, counters, timer)
         iterations, start_time = self._setup_runtime()
 
@@ -920,6 +1063,7 @@ class Interpreter:
         elif self.language == Language.PILOT:
             output = execute_pilot(self, command, turtle)
         elif self.language == Language.LOGO:
+            self._logo_turtle = turtle  # store for reporter commands
             output = execute_logo(self, command, turtle)
         elif self.language == Language.C:
             output = execute_c(self, command, turtle)
@@ -929,6 +1073,17 @@ class Interpreter:
             output = execute_prolog(self, command, turtle)
         elif self.language == Language.FORTH:
             output = execute_forth(self, command, turtle)
+        elif self.language == Language.PYTHON:
+            # Python runs whole-program via execute(); individual lines are no-op
+            output = ""
+        elif self.language in (
+            Language.LUA, Language.SCHEME, Language.COBOL, Language.BRAINFUCK,
+            Language.ASSEMBLY, Language.JAVASCRIPT, Language.FORTRAN, Language.REXX,
+            Language.SMALLTALK, Language.HYPERTALK, Language.HASKELL, Language.APL,
+            Language.SQL, Language.JCL, Language.CICS,
+        ):
+            # Whole-program languages: individual lines are no-op
+            output = ""
         else:
             raise ValueError(f"Unsupported language: {self.language}")
 
@@ -1088,9 +1243,13 @@ class Interpreter:
         """Jump execution to a labeled line (PILOT L: labels).
 
         Args:
-            label: Label name to jump to
+            label: Label name to jump to (may include * prefix)
         """
-        if label in self.labels:
+        # Strip leading * used in PILOT label references
+        clean_label = label.lstrip("*").strip()
+        if clean_label in self.labels:
+            self.current_line = self.labels[clean_label]
+        elif label in self.labels:
             self.current_line = self.labels[label]
         else:
             raise ValueError(f"Label '{label}' not found")
@@ -1102,8 +1261,8 @@ class Interpreter:
             line_num: Line number to jump to
         """
         if line_num in self.line_number_map:
-            # Set to index - 1 because the main loop increments current_line
-            self.current_line = self.line_number_map[line_num] - 1
+            # Set to exact index (line_changed path does NOT increment)
+            self.current_line = self.line_number_map[line_num]
         else:
             raise ValueError(f"Line number {line_num} not found")
 

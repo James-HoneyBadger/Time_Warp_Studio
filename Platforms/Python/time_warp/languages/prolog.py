@@ -24,12 +24,35 @@ if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
 
 
-_FACT_RE = re.compile(r"^\s*([a-z][a-z0-9_]*)\s*\(([^)]*)\)\s*\.\s*$")
+_FACT_RE = re.compile(r"^\s*([a-z][a-z0-9_]*)\s*\((.+)\)\s*\.\s*$")
 _RULE_PART1 = r"^\s*([a-z][a-z0-9_]*)\s*"
-_RULE_PART2 = r"\(([^)]*)\)\s*:-\s*(.+)\s*\.\s*$"
+_RULE_PART2 = r"\((.+)\)\s*:-\s*(.+)\s*\.\s*$"
 _RULE_PATTERN = _RULE_PART1 + _RULE_PART2
 _RULE_RE = re.compile(_RULE_PATTERN)
-_QUERY_RE = re.compile(r"^\s*\?-\s*([a-z][a-z0-9_]*)\s*\(([^)]*)\)\s*\.\s*$")
+_QUERY_RE = re.compile(r"^\s*\?-\s*([a-z][a-z0-9_]*)\s*\((.+)\)\s*\.\s*$")
+
+
+def _extract_outer_args(s: str, start: int = 0) -> Tuple[Optional[str], int]:
+    """Given a string starting at '(', find the matching ')' respecting nesting.
+    Returns (content_between_parens, index_after_close_paren) or (None, -1)."""
+    if start >= len(s) or s[start] != '(':
+        return None, -1
+    depth = 0
+    i = start
+    while i < len(s):
+        if s[i] == '(':
+            depth += 1
+        elif s[i] == ')':
+            depth -= 1
+            if depth == 0:
+                return s[start + 1:i], i + 1
+        elif s[i] == "'" or s[i] == '"':
+            q = s[i]
+            i += 1
+            while i < len(s) and s[i] != q:
+                i += 1
+        i += 1
+    return None, -1
 
 
 def _is_var(token: str) -> bool:
@@ -254,11 +277,36 @@ def _parse_single_goal(text: str) -> Tuple[str, Tuple[str, ...]]:
     if eq_match:
         return ("eq", (eq_match.group(1), eq_match.group(2)))
 
-    m = re.match(r"^([a-z][a-z0-9_]*)\s*\(([^)]*)\)\s*$", t)
-    if not m:
-        # Treat bare atom as predicate with arity 0
-        return (t.lower(), tuple())
-    return (m.group(1).lower(), _parse_terms(m.group(2)))
+    # Handle infix =:= (arithmetic equality)
+    eqe_match = re.match(r"^(.+?)\s*=:=\s*(.+)$", t)
+    if eqe_match:
+        return ("=:=", (eqe_match.group(1).strip(), eqe_match.group(2).strip()))
+
+    # Handle infix =\= (arithmetic inequality)
+    ane_match = re.match(r"^(.+?)\s*=\\=\s*(.+)$", t)
+    if ane_match:
+        return ("=\\=", (ane_match.group(1).strip(), ane_match.group(2).strip()))
+
+    # Compound term: functor(args...) with balanced parens
+    fm = re.match(r"^([a-z][a-z0-9_]*)\s*\(", t)
+    if fm:
+        functor = fm.group(1)
+        # Find matching closing paren
+        start = t.index("(", len(functor))
+        depth = 0
+        for idx in range(start, len(t)):
+            if t[idx] == "(":
+                depth += 1
+            elif t[idx] == ")":
+                depth -= 1
+                if depth == 0:
+                    args_str = t[start + 1:idx]
+                    rest = t[idx + 1:].strip()
+                    if not rest:  # nothing after closing paren
+                        return (functor.lower(), _parse_terms(args_str))
+                    break
+    # Treat bare atom as predicate with arity 0
+    return (t.lower(), tuple())
 
 
 def _body_has_cut(goals: List[Tuple[str, Tuple[str, ...]]]) -> bool:
@@ -364,13 +412,9 @@ def _solve_goals(
 
 
 def _eval_math(expr: str, env: Dict[str, str]) -> Optional[float]:
-    """Evaluate simple math expression with variables."""
-    # Replace variables with values
-    # Sort keys by length descending to avoid partial replacements
-    # Tokenize to avoid replacing substrings of other words
-    # Simple approach: split by non-alphanumeric
+    """Evaluate arithmetic expression with variables - full set of functions."""
+    import math as _math
 
-    # Better approach: use regex to find variables
     def replace_var(match):
         var_name = match.group(0)
         if var_name in env:
@@ -379,22 +423,47 @@ def _eval_math(expr: str, env: Dict[str, str]) -> Optional[float]:
                 return val
         return var_name
 
-    # Replace variables that look like Prolog vars (Capitalized)
     expr_sub = re.sub(r"\b[A-Z][a-zA-Z0-9_]*\b", replace_var, expr)
-
-    # Handle 'mod' operator (python uses %)
     expr_sub = re.sub(r"\bmod\b", "%", expr_sub)
+    expr_sub = re.sub(r"\brem\b", "%", expr_sub)
+    expr_sub = re.sub(r"\bdiv\b", "//", expr_sub)
+    expr_sub = re.sub(r"\bxor\b", "^", expr_sub)
+    expr_sub = re.sub(r"\b/\\b/", "//", expr_sub)
+
+    # Map Prolog math functions to Python
+    fn_map = {
+        "abs": "abs", "sign": "sign", "sqrt": "_math.sqrt",
+        "sin": "_math.sin", "cos": "_math.cos", "tan": "_math.tan",
+        "asin": "_math.asin", "acos": "_math.acos", "atan": "_math.atan",
+        "atan2": "_math.atan2",
+        "exp": "_math.exp", "log": "_math.log", "log2": "_math.log2",
+        "ceiling": "_math.ceil", "floor": "_math.floor",
+        "round": "round", "truncate": "int", "float": "float",
+        "float_integer_part": "float", "float_fractional_part": "lambda x: x % 1",
+        "integer": "int", "max": "max", "min": "min",
+        "pi": str(_math.pi), "e": str(_math.e),
+        "inf": "float('inf')", "nan": "float('nan')",
+        "succ": "lambda x: x+1", "plus": "lambda x,y: x+y",
+        "msb": "lambda x: x.bit_length()-1 if x>0 else 0",
+    }
+    for k, v in fn_map.items():
+        if k in ("pi", "e", "inf", "nan"):
+            expr_sub = re.sub(r"\b" + k + r"\b", v, expr_sub)
+        else:
+            expr_sub = re.sub(r"\b" + k + r"\b", v, expr_sub)
 
     try:
-        # Safe evaluation: only allow numbers and operators
-        if not re.match(r"^[\d\s+\-*/%().]+$", expr_sub):
+        if not re.match(r"^[\d\s+\-*/%().a-zA-Z_,']+$", expr_sub):
             return None
-        # Use a restricted evaluation with only math operations
-        allowed_names: Dict[str, Any] = {"__builtins__": {}}
-        return float(
-            eval(expr_sub, allowed_names, {})
-        )  # noqa: S307  # pylint: disable=eval-used
-    except (ValueError, TypeError, SyntaxError, ZeroDivisionError):
+        allowed_names: Dict[str, Any] = {
+            "__builtins__": {},
+            "_math": _math,
+            "abs": abs, "round": round, "int": int, "float": float,
+            "max": max, "min": min,
+            "sign": lambda x: (1.0 if x > 0 else (-1.0 if x < 0 else 0.0)),
+        }
+        return float(eval(expr_sub, allowed_names, {}))  # noqa: S307
+    except (ValueError, TypeError, SyntaxError, ZeroDivisionError, NameError):
         return None
 
 
@@ -576,6 +645,543 @@ def _solve_goals_cut(
             if e is not None:
                 return _solve_goals_cut(kb, rest, e)
         return []
+
+    # ── Standard arithmetic comparison predicates ─────────────────────────────
+    if pred == "=:=" and len(args) == 2:
+        av, bv = _eval_math(args[0], env), _eval_math(args[1], env)
+        return _solve_goals_cut(kb, rest, env) if av is not None and bv is not None and av == bv else []
+    if pred in ("=\\=", "=\\\\=") and len(args) == 2:
+        av, bv = _eval_math(args[0], env), _eval_math(args[1], env)
+        return _solve_goals_cut(kb, rest, env) if av is not None and bv is not None and av != bv else []
+    if pred == "<" and len(args) == 2:
+        av, bv = _eval_math(args[0], env), _eval_math(args[1], env)
+        return _solve_goals_cut(kb, rest, env) if av is not None and bv is not None and av < bv else []
+    if pred == ">" and len(args) == 2:
+        av, bv = _eval_math(args[0], env), _eval_math(args[1], env)
+        return _solve_goals_cut(kb, rest, env) if av is not None and bv is not None and av > bv else []
+    if pred == "=<" and len(args) == 2:
+        av, bv = _eval_math(args[0], env), _eval_math(args[1], env)
+        return _solve_goals_cut(kb, rest, env) if av is not None and bv is not None and av <= bv else []
+    if pred == ">=" and len(args) == 2:
+        av, bv = _eval_math(args[0], env), _eval_math(args[1], env)
+        return _solve_goals_cut(kb, rest, env) if av is not None and bv is not None and av >= bv else []
+
+    # ── Unification ==/\== ────────────────────────────────────────────────────
+    if pred == "==" and len(args) == 2:
+        a_sub = _substitute_term(args[0], env)
+        b_sub = _substitute_term(args[1], env)
+        return _solve_goals_cut(kb, rest, env) if a_sub == b_sub else []
+    if pred in ("\\==", "\\\\==") and len(args) == 2:
+        a_sub = _substitute_term(args[0], env)
+        b_sub = _substitute_term(args[1], env)
+        return _solve_goals_cut(kb, rest, env) if a_sub != b_sub else []
+    if pred == "=" and len(args) == 2:
+        e = _unify(args[0], args[1], env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+    if pred in ("\\=", "\\\\=") and len(args) == 2:
+        e = _unify(args[0], args[1], env.copy())
+        return [] if e is not None else _solve_goals_cut(kb, rest, env)
+
+    # ── Dynamic database modification ─────────────────────────────────────────
+    if pred in ("assert", "assertz") and len(args) == 1:
+        clause = _substitute_term(args[0], env)
+        # Parse: head :- body  or just head
+        if ":-" in clause:
+            parts = clause.split(":-", 1)
+            head_str = parts[0].strip()
+        else:
+            head_str = clause.strip()
+        hm = re.match(r"^(\w+)\s*(?:\((.+)\))?$", head_str)
+        if hm:
+            name = hm.group(1)
+            hargs = tuple(a.strip() for a in (hm.group(2) or "").split(",")) if hm.group(2) else ()
+            if ":-" in clause:
+                body_str = clause.split(":-", 1)[1].strip()
+                body = _parse_body_goals(body_str)
+                kb["rules"].append((name, hargs, body))
+            else:
+                kb["facts"].append((name, hargs))
+        return _solve_goals_cut(kb, rest, env)
+
+    if pred == "asserta" and len(args) == 1:
+        clause = _substitute_term(args[0], env)
+        if ":-" in clause:
+            parts = clause.split(":-", 1)
+            head_str = parts[0].strip()
+        else:
+            head_str = clause.strip()
+        hm = re.match(r"^(\w+)\s*(?:\((.+)\))?$", head_str)
+        if hm:
+            name = hm.group(1)
+            hargs = tuple(a.strip() for a in (hm.group(2) or "").split(",")) if hm.group(2) else ()
+            if ":-" in clause:
+                body_str = clause.split(":-", 1)[1].strip()
+                body = _parse_body_goals(body_str)
+                kb["rules"].insert(0, (name, hargs, body))
+            else:
+                kb["facts"].insert(0, (name, hargs))
+        return _solve_goals_cut(kb, rest, env)
+
+    if pred == "retract" and len(args) == 1:
+        clause = _substitute_term(args[0], env)
+        if ":-" in clause:
+            head_str = clause.split(":-", 1)[0].strip()
+        else:
+            head_str = clause.strip()
+        hm = re.match(r"^(\w+)\s*(?:\((.+)\))?$", head_str)
+        if hm:
+            name = hm.group(1)
+            hargs = tuple(a.strip() for a in (hm.group(2) or "").split(",")) if hm.group(2) else ()
+            # Remove first matching fact
+            for i, f in enumerate(kb.get("facts", [])):
+                if f[0] == name and f[1] == hargs:
+                    kb["facts"].pop(i)
+                    break
+        return _solve_goals_cut(kb, rest, env)
+
+    if pred == "abolish" and len(args) == 1:
+        name = _substitute_term(args[0], env).split("/")[0]
+        kb["facts"] = [f for f in kb.get("facts", []) if f[0] != name]
+        kb["rules"] = [r for r in kb.get("rules", []) if r[0] != name]
+        return _solve_goals_cut(kb, rest, env)
+
+    # ── findall/3: findall(Template, Goal, Bag) ────────────────────────────────
+    if pred == "findall" and len(args) == 3:
+        template, goal_term, bag_var = args
+        template = _substitute_term(template, env)
+        bag_var_sub = _substitute_term(bag_var, env)
+        goal_parsed = _parse_body_goals(goal_term)
+        solutions = _solve_goals(kb, goal_parsed, env.copy())
+        bag_items = [_substitute_term(template, sol) for sol in solutions]
+        # Build prolog list
+        bag_list = "[]"
+        for item in reversed(bag_items):
+            bag_list = f"[{item}|{bag_list}]" if bag_list != "[]" else f"[{item}]"
+        # Join into comma list
+        bag_str = "[" + ",".join(bag_items) + "]"
+        e = _unify(bag_var_sub, bag_str, env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    # ── bagof/3: like findall but fails if no solutions ────────────────────────
+    if pred == "bagof" and len(args) == 3:
+        template, goal_term, bag_var = args
+        template = _substitute_term(template, env)
+        goal_parsed = _parse_body_goals(goal_term)
+        solutions = _solve_goals(kb, goal_parsed, env.copy())
+        if not solutions:
+            return []
+        bag_items = [_substitute_term(template, sol) for sol in solutions]
+        bag_str = "[" + ",".join(bag_items) + "]"
+        e = _unify(bag_var, bag_str, env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    # ── setof/3: like bagof but sorted and uniqued ─────────────────────────────
+    if pred == "setof" and len(args) == 3:
+        template, goal_term, bag_var = args
+        template = _substitute_term(template, env)
+        goal_parsed = _parse_body_goals(goal_term)
+        solutions = _solve_goals(kb, goal_parsed, env.copy())
+        if not solutions:
+            return []
+        bag_items = list(dict.fromkeys(_substitute_term(template, sol) for sol in solutions))
+        bag_items.sort()
+        bag_str = "[" + ",".join(bag_items) + "]"
+        e = _unify(bag_var, bag_str, env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    # ── aggregate_all/3 ───────────────────────────────────────────────────────
+    if pred == "aggregate_all" and len(args) == 3:
+        agg_type, goal_term, result_var = args
+        goal_parsed = _parse_body_goals(goal_term)
+        solutions = _solve_goals(kb, goal_parsed, env.copy())
+        agg = _substitute_term(agg_type, env)
+        if agg == "count":
+            result = str(len(solutions))
+        else:
+            result = str(len(solutions))
+        e = _unify(result_var, result, env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    # ── Type checking predicates ───────────────────────────────────────────────
+    if pred == "var" and len(args) == 1:
+        a_sub = _substitute_term(args[0], env)
+        return _solve_goals_cut(kb, rest, env) if _is_var(a_sub) else []
+    if pred == "nonvar" and len(args) == 1:
+        a_sub = _substitute_term(args[0], env)
+        return _solve_goals_cut(kb, rest, env) if not _is_var(a_sub) else []
+    if pred == "atom" and len(args) == 1:
+        a_sub = _substitute_term(args[0], env)
+        is_atom = not _is_var(a_sub) and not re.match(r"^-?\d", a_sub) and not a_sub.startswith("[")
+        return _solve_goals_cut(kb, rest, env) if is_atom else []
+    if pred == "number" and len(args) == 1:
+        a_sub = _substitute_term(args[0], env)
+        try:
+            float(a_sub)
+            return _solve_goals_cut(kb, rest, env)
+        except (ValueError, TypeError):
+            return []
+    if pred == "integer" and len(args) == 1:
+        a_sub = _substitute_term(args[0], env)
+        try:
+            int(a_sub)
+            return _solve_goals_cut(kb, rest, env)
+        except (ValueError, TypeError):
+            return []
+    if pred == "float" and len(args) == 1:
+        a_sub = _substitute_term(args[0], env)
+        try:
+            f = float(a_sub)
+            return _solve_goals_cut(kb, rest, env) if "." in str(f) else []
+        except (ValueError, TypeError):
+            return []
+    if pred == "atomic" and len(args) == 1:
+        a_sub = _substitute_term(args[0], env)
+        return _solve_goals_cut(kb, rest, env) if not _is_var(a_sub) and not (a_sub.startswith("[") or "(" in a_sub) else []
+    if pred == "compound" and len(args) == 1:
+        a_sub = _substitute_term(args[0], env)
+        return _solve_goals_cut(kb, rest, env) if "(" in a_sub or (a_sub.startswith("[") and a_sub != "[]") else []
+    if pred == "is_list" and len(args) == 1:
+        a_sub = _substitute_term(args[0], env)
+        return _solve_goals_cut(kb, rest, env) if a_sub.startswith("[") else []
+    if pred == "callable" and len(args) == 1:
+        a_sub = _substitute_term(args[0], env)
+        return _solve_goals_cut(kb, rest, env) if not _is_var(a_sub) else []
+
+    # ── List predicates ────────────────────────────────────────────────────────
+    if pred == "append" and len(args) == 3:
+        list1 = _substitute_term(args[0], env)
+        list2 = _substitute_term(args[1], env)
+        list3 = _substitute_term(args[2], env)
+        if not _is_var(list1) and not _is_var(list2):
+            items1 = [x.strip() for x in list1.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            items2 = [x.strip() for x in list2.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            merged = "[" + ",".join(items1 + items2) + "]"
+            e = _unify(list3, merged, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "member" and len(args) == 2:
+        elem, lst = args
+        lst_sub = _substitute_term(lst, env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            for item in items:
+                e = _unify(elem, item, env.copy())
+                if e is not None:
+                    results = _solve_goals_cut(kb, rest, e)
+                    out.extend(results)
+            return out
+        return []
+
+    if pred == "memberchk" and len(args) == 2:
+        elem, lst = args
+        lst_sub = _substitute_term(lst, env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            for item in items:
+                e = _unify(elem, item, env.copy())
+                if e is not None:
+                    return _solve_goals_cut(kb, rest, e)
+        return []
+
+    if pred == "length" and len(args) == 2:
+        lst_sub = _substitute_term(args[0], env)
+        len_sub = _substitute_term(args[1], env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            n = len(items if lst_sub != "[]" else [])
+            e = _unify(len_sub, str(n), env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "last" and len(args) == 2:
+        lst_sub = _substitute_term(args[0], env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            if items:
+                e = _unify(args[1], items[-1], env.copy())
+                return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred in ("nth0", "nth1") and len(args) == 3:
+        idx_sub = _substitute_term(args[0], env)
+        lst_sub = _substitute_term(args[1], env)
+        elem_var = args[2]
+        if not _is_var(idx_sub) and not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            try:
+                idx = int(idx_sub)
+                if pred == "nth1":
+                    idx -= 1
+                e = _unify(elem_var, items[idx], env.copy())
+                return _solve_goals_cut(kb, rest, e) if e is not None else []
+            except (ValueError, IndexError):
+                pass
+        return []
+
+    if pred == "reverse" and len(args) == 2:
+        lst_sub = _substitute_term(args[0], env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            rev = "[" + ",".join(reversed(items)) + "]"
+            e = _unify(args[1], rev, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred in ("sort", "msort") and len(args) == 2:
+        lst_sub = _substitute_term(args[0], env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            sorted_items = sorted(set(items) if pred == "sort" else items)
+            sorted_str = "[" + ",".join(sorted_items) + "]"
+            e = _unify(args[1], sorted_str, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "flatten" and len(args) == 2:
+        lst_sub = _substitute_term(args[0], env)
+        flat = re.sub(r"[\[\]]", "", lst_sub)
+        flat_items = [x.strip() for x in flat.split(",") if x.strip()]
+        flat_str = "[" + ",".join(flat_items) + "]"
+        e = _unify(args[1], flat_str, env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    if pred == "between" and len(args) == 3:
+        low_s = _substitute_term(args[0], env)
+        high_s = _substitute_term(args[1], env)
+        x_var = args[2]
+        try:
+            low, high = int(float(low_s)), int(float(high_s))
+            for i in range(low, high + 1):
+                e = _unify(x_var, str(i), env.copy())
+                if e is not None:
+                    results = _solve_goals_cut(kb, rest, e)
+                    out.extend(results)
+            return out
+        except (ValueError, TypeError):
+            return []
+
+    if pred == "succ" and len(args) == 2:
+        a_sub = _substitute_term(args[0], env)
+        b_sub = _substitute_term(args[1], env)
+        if not _is_var(a_sub):
+            e = _unify(b_sub, str(int(float(a_sub)) + 1), env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        if not _is_var(b_sub):
+            e = _unify(a_sub, str(int(float(b_sub)) - 1), env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "plus" and len(args) == 3:
+        a_v = _num_value(args[0], env)
+        b_v = _num_value(args[1], env)
+        c_v = _num_value(args[2], env)
+        if a_v is not None and b_v is not None:
+            e = _unify(args[2], str(int(a_v + b_v)), env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        if a_v is not None and c_v is not None:
+            e = _unify(args[1], str(int(c_v - a_v)), env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        if b_v is not None and c_v is not None:
+            e = _unify(args[0], str(int(c_v - b_v)), env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    # ── Atom/string predicates ─────────────────────────────────────────────────
+    if pred == "atom_length" and len(args) == 2:
+        atom_sub = _substitute_term(args[0], env).strip("'\"")
+        e = _unify(args[1], str(len(atom_sub)), env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    if pred == "atom_concat" and len(args) == 3:
+        a_sub = _substitute_term(args[0], env).strip("'\"")
+        b_sub = _substitute_term(args[1], env).strip("'\"")
+        result = a_sub + b_sub
+        e = _unify(args[2], result, env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    if pred == "atom_chars" and len(args) == 2:
+        atom_sub = _substitute_term(args[0], env).strip("'\"")
+        if not _is_var(atom_sub):
+            chars = "[" + ",".join(f"'{c}'" for c in atom_sub) + "]"
+            e = _unify(args[1], chars, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "atom_codes" and len(args) == 2:
+        atom_sub = _substitute_term(args[0], env).strip("'\"")
+        if not _is_var(atom_sub):
+            codes = "[" + ",".join(str(ord(c)) for c in atom_sub) + "]"
+            e = _unify(args[1], codes, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "char_code" and len(args) == 2:
+        char_sub = _substitute_term(args[0], env).strip("'\"")
+        if not _is_var(char_sub) and char_sub:
+            e = _unify(args[1], str(ord(char_sub[0])), env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "number_codes" and len(args) == 2:
+        num_sub = _substitute_term(args[0], env)
+        if not _is_var(num_sub):
+            codes = "[" + ",".join(str(ord(c)) for c in str(num_sub)) + "]"
+            e = _unify(args[1], codes, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "number_chars" and len(args) == 2:
+        num_sub = _substitute_term(args[0], env)
+        if not _is_var(num_sub):
+            chars = "[" + ",".join(f"'{c}'" for c in str(num_sub)) + "]"
+            e = _unify(args[1], chars, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred in ("atom_string", "string_to_atom") and len(args) == 2:
+        a_sub = _substitute_term(args[0], env)
+        b_sub = _substitute_term(args[1], env)
+        if not _is_var(a_sub):
+            e = _unify(b_sub, a_sub.strip("'\""), env.copy())
+        elif not _is_var(b_sub):
+            e = _unify(a_sub, f"'{b_sub}'", env.copy())
+        else:
+            return []
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    if pred == "upcase_atom" and len(args) == 2:
+        a_sub = _substitute_term(args[0], env).strip("'\"")
+        e = _unify(args[1], a_sub.upper(), env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    if pred == "downcase_atom" and len(args) == 2:
+        a_sub = _substitute_term(args[0], env).strip("'\"")
+        e = _unify(args[1], a_sub.lower(), env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    if pred == "sub_atom" and len(args) == 5:
+        atom_sub = _substitute_term(args[0], env).strip("'\"")
+        sub_sub = _substitute_term(args[4], env).strip("'\"")
+        if not _is_var(sub_sub):
+            idx = atom_sub.find(sub_sub)
+            if idx >= 0:
+                e = env.copy()
+                e = _unify(args[1], str(idx), e)
+                e = _unify(args[2], str(len(atom_sub) - idx - len(sub_sub)), e) if e is not None else None
+                e = _unify(args[3], str(len(sub_sub)), e) if e is not None else None
+                return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    # ── Term inspection ────────────────────────────────────────────────────────
+    if pred == "functor" and len(args) == 3:
+        t_sub = _substitute_term(args[0], env)
+        fm = re.match(r"^(\w+)\s*\((.+)\)$", t_sub)
+        if fm:
+            name_str = fm.group(1)
+            f_args = [a.strip() for a in fm.group(2).split(",")]
+            arity = str(len(f_args))
+        else:
+            name_str = t_sub
+            arity = "0"
+        e = _unify(args[1], name_str, env.copy())
+        e = _unify(args[2], arity, e) if e is not None else None
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    if pred == "arg" and len(args) == 3:
+        n_sub = _substitute_term(args[0], env)
+        t_sub = _substitute_term(args[1], env)
+        fm = re.match(r"^\w+\s*\((.+)\)$", t_sub)
+        if fm:
+            f_args = [a.strip() for a in fm.group(1).split(",")]
+            try:
+                idx = int(n_sub) - 1
+                e = _unify(args[2], f_args[idx], env.copy())
+                return _solve_goals_cut(kb, rest, e) if e is not None else []
+            except (ValueError, IndexError):
+                pass
+        return []
+
+    if pred == "copy_term" and len(args) == 2:
+        t_sub = _substitute_term(args[0], env)
+        import random as _rand
+        suffix = str(_rand.randint(10000, 99999))
+        renamed = _rename_vars_in_term(t_sub, suffix)
+        e = _unify(args[1], renamed, env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    # ── format/2 ─────────────────────────────────────────────────────────────
+    if pred in ("format", "print") and len(args) >= 1:
+        fmt = _substitute_term(args[0], env).strip("\"'")
+        fmt_result = fmt.replace("~w", "{}").replace("~d", "{}").replace("~a", "{}").replace("~n", "\n").replace("~N", "\n")
+        insert_vals = [_substitute_term(a, env).strip("\"'") for a in args[1:]]
+        try:
+            output = fmt_result.format(*insert_vals)
+        except (IndexError, KeyError):
+            output = fmt_result
+        if interpreter:
+            for line in output.splitlines():
+                interpreter.output.append(line)
+        return _solve_goals_cut(kb, rest, env)
+
+    if pred == "tab" and len(args) == 1:
+        n_sub = _substitute_term(args[0], env)
+        try:
+            n = int(float(n_sub))
+            if interpreter:
+                interpreter.output.append(" " * n)
+        except (ValueError, TypeError):
+            pass
+        return _solve_goals_cut(kb, rest, env)
+
+    # ── Control predicates ─────────────────────────────────────────────────────
+    if pred == "true":
+        return _solve_goals_cut(kb, rest, env)
+    if pred in ("fail", "false"):
+        return []
+    if pred == "halt":
+        return []
+    if pred == "once" and len(args) == 1:
+        inner_goals = _parse_body_goals(args[0])
+        solutions = _solve_goals(kb, inner_goals, env.copy())
+        if solutions:
+            return _solve_goals_cut(kb, rest, solutions[0])
+        return []
+    if pred == "ignore" and len(args) == 1:
+        inner_goals = _parse_body_goals(args[0])
+        _solve_goals(kb, inner_goals, env.copy())  # ignore result
+        return _solve_goals_cut(kb, rest, env)
+    if pred in ("call", "\\+") or (pred == "not" and len(args) == 1):
+        if pred in ("call",) and args:
+            inner_goals = _parse_body_goals(args[0])
+            return _solve_goals_cut(kb, _parse_body_goals(args[0]) + list(rest), env)
+        if pred in ("not", "\\+"):
+            inner_goals = _parse_body_goals(args[0])
+            solutions = _solve_goals(kb, inner_goals, env.copy())
+            return _solve_goals_cut(kb, rest, env) if not solutions else []
+        return []
+    if pred == "forall" and len(args) == 2:
+        cond = _parse_body_goals(args[0])
+        action = _parse_body_goals(args[1])
+        cond_sols = _solve_goals(kb, cond, env.copy())
+        for sol in cond_sols:
+            if not _solve_goals(kb, action, sol):
+                return []
+        return _solve_goals_cut(kb, rest, env)
+
+    # ── Arithmetic shortcuts (abs/max/min as predicates) ──────────────────────
+    if pred == "succ_or_zero" and len(args) == 2:
+        a_v = _num_value(args[0], env)
+        if a_v is not None:
+            e = _unify(args[1], str(max(0, int(a_v) - 1)), env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    # ── String number conversion ───────────────────────────────────────────────
+    if pred == "term_to_atom" and len(args) == 2:
+        t_sub = _substitute_term(args[0], env)
+        e = _unify(args[1], f"'{t_sub}'", env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
 
     # Regular predicate: resolve all matches and respect cut propagation
     prune_here = False
@@ -822,6 +1428,15 @@ def execute_prolog(interpreter: "Interpreter", command: str, _turtle) -> str:
     # Let's adjust the regexes or put the dot back.
 
     cmd_with_dot = cmd + "."
+
+    # Directive: :- Goal.  (execute goal immediately)
+    if cmd.startswith(":-"):
+        directive_body = cmd[2:].strip()
+        if directive_body:
+            goals = _parse_body_goals(directive_body)
+            interpreter.prolog_kb["cut_active"] = False
+            sols = _solve_goals(interpreter.prolog_kb, goals, {})
+            return ""  # directives produce side-effects via write/nl, no return val
 
     m = _RULE_RE.match(cmd_with_dot)
     if m:

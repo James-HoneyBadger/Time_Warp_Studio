@@ -178,6 +178,15 @@ class ExpressionEvaluator:
                     suffix = expr[i]
                     i += 1
 
+                # Keyword operators: AND, OR, NOT, MOD
+                if name_upper in ("AND", "OR", "NOT", "MOD"):
+                    if name_upper == "NOT":
+                        # NOT is a unary prefix operator
+                        tokens.append(Token(Token.Type.OPERATOR, "NOT"))
+                    else:
+                        tokens.append(Token(Token.Type.OPERATOR, name_upper))
+                    continue
+
                 # Check if it's a function (followed by '(').
                 # Functions do not use suffixes.
                 if i < len(expr) and expr[i] == "(":
@@ -255,23 +264,27 @@ class ExpressionEvaluator:
         operator_stack = []
 
         precedence = {
-            "+": 1,
-            "-": 1,
-            "*": 2,
-            "/": 2,
-            "%": 2,
-            "^": 3,
-            "u+": 4,  # Unary plus
-            "u-": 4,  # Unary minus
+            "OR": -2,
+            "AND": -1,
             "<": 0,
             ">": 0,
             "<=": 0,
             ">=": 0,
             "==": 0,
             "!=": 0,
+            "+": 1,
+            "-": 1,
+            "*": 2,
+            "/": 2,
+            "%": 2,
+            "MOD": 2,
+            "^": 3,
+            "NOT": 4,  # Unary NOT
+            "u+": 4,  # Unary plus
+            "u-": 4,  # Unary minus
         }
 
-        right_associative = {"^", "u+", "u-"}
+        right_associative = {"^", "u+", "u-", "NOT"}
 
         for token in tokens:
             if token.type == Token.Type.NUMBER:
@@ -386,12 +399,14 @@ class ExpressionEvaluator:
                 op = token.value
 
                 # Handle unary operators
-                if op in ("u+", "u-"):
+                if op in ("u+", "u-", "NOT"):
                     if len(stack) < 1:
                         raise ValueError("Invalid expression")
                     a = stack.pop()
                     if op == "u-":
                         result = -a
+                    elif op == "NOT":
+                        result = 0.0 if a else 1.0
                     else:  # u+
                         result = a
                     stack.append(result)
@@ -412,8 +427,14 @@ class ExpressionEvaluator:
                         if b == 0:
                             raise ValueError("Division by zero")
                         result = a / b
-                    elif op == "%":
+                    elif op in ("%", "MOD"):
+                        if b == 0:
+                            raise ValueError("Division by zero (MOD)")
                         result = a % b
+                    elif op == "AND":
+                        result = 1.0 if (a and b) else 0.0
+                    elif op == "OR":
+                        result = 1.0 if (a or b) else 0.0
                     elif op == "^":
                         result = a**b
                     elif op == "<":

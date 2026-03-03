@@ -274,10 +274,8 @@ class CRTEffectOverlay(QWidget):
         painter.drawPath(path)
 
     def resizeEvent(self, event):  # pylint: disable=invalid-name
-        """Handle resize to match parent."""
+        """Handle resize — the parent is responsible for our geometry."""
         super().resizeEvent(event)
-        if self.parent():
-            self.setGeometry(self.parent().rect())
 
 
 class CRTCanvas(QWidget):

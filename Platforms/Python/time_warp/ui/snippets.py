@@ -392,6 +392,23 @@ class SnippetLibrary:
             "BASIC": BASIC_SNIPPETS.copy(),
             "PILOT": PILOT_SNIPPETS.copy(),
             "LOGO": LOGO_SNIPPETS.copy(),
+            # New languages — empty snippet lists ensure no KeyError
+            "PYTHON": [],
+            "LUA": [],
+            "SCHEME": [],
+            "COBOL": [],
+            "BRAINFUCK": [],
+            "ASSEMBLY": [],
+            "JAVASCRIPT": [],
+            "FORTRAN": [],
+            "REXX": [],
+            "SMALLTALK": [],
+            "HYPERTALK": [],
+            "HASKELL": [],
+            "APL": [],
+            "SQL": [],
+            "JCL": [],
+            "CICS": [],
         }
 
     def get_snippets(self, language: str) -> List[CodeSnippet]:

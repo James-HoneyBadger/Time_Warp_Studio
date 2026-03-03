@@ -42,6 +42,53 @@ def execute_pilot(
     if cmd[0] == "*" or cmd.upper().startswith("L:"):
         return ""
 
+    # REMARK (and REM) are comment lines — ignore
+    cmd_upper = cmd.upper()
+    if cmd_upper.startswith("REMARK") or cmd_upper.startswith("REM ") or cmd_upper == "REM":
+        return ""
+
+    # ── Long-form keyword mapping ────────────────────────────────────────
+    # Accept long-form PILOT commands (PRINT, ACCEPT, COMPUTE, MATCH, JUMP,
+    # USE, STOP, PAUSE, TYPE, GRAPHIC) and convert to canonical X: format.
+    _LONGFORM_MAP = {
+        "PRINT": "T",
+        "TYPE": "T",
+        "ACCEPT": "A",
+        "COMPUTE": "C",
+        "MATCH": "M",
+        "JUMP": "J",
+        "USE": "U",
+        "STOP": "E",
+        "END": "E",
+        "PAUSE": "P",
+        "GRAPHIC": "G",
+        "FILE": "F",
+        "DELAY": "D",
+        "LINK": "S",
+    }
+    for keyword, letter in _LONGFORM_MAP.items():
+        if cmd_upper == keyword or cmd_upper.startswith(keyword + " "):
+            rest_text = cmd[len(keyword):].strip()
+            # For COMPUTE, normalise "var value" → "var = value" if no "="
+            if letter == "C" and "=" not in rest_text and " " in rest_text:
+                parts = rest_text.split(None, 1)
+                rest_text = f"{parts[0]} = {parts[1]}" if len(parts) == 2 else rest_text
+            # STOP/END has no argument
+            if letter == "E":
+                interpreter.running = False
+                return ""
+            return execute_pilot(interpreter, f"{letter}:{rest_text}", turtle)
+
+    # TU (subroutine call via long-form "TU label")
+    if cmd_upper.startswith("TU "):
+        label = cmd[3:].strip()
+        if label:
+            if not hasattr(interpreter, "subroutine_stack"):
+                interpreter.subroutine_stack = []
+            interpreter.subroutine_stack.append(interpreter.current_line + 1)
+            interpreter.jump_to_label(label)
+        return ""
+
     # Parse command prefix - handle both X: and XY:/XN: formats
     colon_pos = cmd.find(":")
     if colon_pos < 1:
@@ -67,13 +114,43 @@ def execute_pilot(
         return ""  # Skip - condition not met
 
     if cmd_type == "T":
+        # Substitute $variable and #variable references with their values
+        import re as _re_t
+        def _subst_var_t(m):
+            vn = m.group(1)
+            val = None
+            vnu = vn.upper()
+            # Check string variables first (e.g. ANSWER$)
+            if vnu + "$" in interpreter.string_variables:
+                val = interpreter.string_variables[vnu + "$"]
+            elif vn + "$" in interpreter.string_variables:
+                val = interpreter.string_variables[vn + "$"]
+            # Then check general variables
+            elif vn in interpreter.variables:
+                val = interpreter.variables[vn]
+            elif vnu in interpreter.variables:
+                val = interpreter.variables[vnu]
+            if val is not None:
+                if isinstance(val, float) and val == int(val):
+                    return str(int(val))
+                return str(val)
+            return m.group(0)
+        rest = _re_t.sub(r'\$([A-Za-z_][A-Za-z0-9_]*)', _subst_var_t, rest)
+        rest = _re_t.sub(r'#([A-Za-z_][A-Za-z0-9_]*)', _subst_var_t, rest)
         text = interpreter.interpolate_text(rest)
         interpreter.output.append(text)
         return text + "\n"
     if cmd_type == "A":
-        var_name = rest.strip()
-        # Start async input request
-        interpreter.start_input_request("? ", var_name, is_numeric=False)
+        prompt_text = rest.strip() if rest.strip() else ""
+        # In PILOT, A: accepts input into the built-in ANSWER variable.
+        # If the rest text starts with $ it names a specific variable.
+        if prompt_text.startswith("$"):
+            var_name = prompt_text[1:].strip().upper() + "$"
+        else:
+            var_name = "ANSWER$"
+        display_prompt = (prompt_text + " ") if prompt_text and not prompt_text.startswith("$") else "? "
+        # Start async input request — store as string
+        interpreter.start_input_request(display_prompt, var_name, is_numeric=False)
         return ""
     if cmd_type == "M":
         pattern = rest.strip()
@@ -123,10 +200,26 @@ def execute_pilot(
         if not var_name:
             return "❌ C: requires variable name\n"
 
+        # Substitute $variable references with their values
+        import re as _re
+        def _subst_var(m):
+            vn = m.group(1)
+            val = None
+            if vn in interpreter.variables:
+                val = interpreter.variables[vn]
+            elif vn.upper() in interpreter.variables:
+                val = interpreter.variables[vn.upper()]
+            if val is not None:
+                if isinstance(val, float) and val == int(val):
+                    return str(int(val))
+                return str(val)
+            return m.group(0)
+        expr = _re.sub(r'\$([A-Za-z_][A-Za-z0-9_]*)', _subst_var, expr)
+
         try:
             validate_variable_name(var_name, allow_suffix=True)
             result = interpreter.evaluate_expression(expr)
-            interpreter.variables[var_name] = result
+            interpreter.variables[var_name.upper()] = result
             logger.debug("PILOT C: %s = %s", var_name, result)
         except ValidationError as e:
             return f"❌ {e}\n"
@@ -177,8 +270,8 @@ def execute_pilot(
         # S: Subroutine call
         label = rest.strip()
         if label:
-            # Push current line for return
-            interpreter.subroutine_stack.append(interpreter.current_line)
+            # Push next line for return (so R: returns to the line after S:)
+            interpreter.subroutine_stack.append(interpreter.current_line + 1)
             interpreter.jump_to_label(label)
         return ""
     if cmd_type == "R":

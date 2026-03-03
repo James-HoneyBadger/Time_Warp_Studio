@@ -73,7 +73,13 @@ class ReferenceIndex:
         if not examples_root.exists():
             return []
 
-        extensions = {".bas", ".pilot", ".logo", ".c", ".pas", ".pro", ".pl", ".f"}
+        extensions = {
+            ".bas", ".pilot", ".logo", ".c", ".pas", ".pro", ".pl", ".f",
+            ".py", ".lua", ".scm", ".rkt", ".cob", ".cbl", ".bf",
+            ".asm", ".s", ".js", ".f77", ".for", ".rex", ".rexx",
+            ".st", ".htalk", ".hs", ".apl",
+            ".sql", ".jcl", ".cics",
+        }
         entries: List[ReferenceEntry] = []
         for path in examples_root.rglob("*"):
             if not path.is_file():

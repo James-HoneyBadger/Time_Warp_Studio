@@ -51,8 +51,8 @@ class TurtleCanvas(
         self.screen_mode_manager = ScreenModeManager()
         self.screen_mode_enabled = False  # When True, simulate retro resolution
 
-        # Minimum size
-        self.setMinimumSize(400, 400)
+        # Minimum size — small enough to allow the splitter to resize freely
+        self.setMinimumSize(200, 200)
 
     def set_screen_mode(self, mode: ScreenMode):
         """Set the current screen mode for rendering."""

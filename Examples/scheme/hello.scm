@@ -1,0 +1,165 @@
+; =============================================
+;  Scheme Comprehensive Demo - Time Warp Studio
+; =============================================
+
+; --- Hello World ---
+(display "===== HELLO WORLD =====")
+(newline)
+(display "Welcome to Scheme!")
+(newline)
+(newline)
+
+; --- Variables ---
+(display "===== VARIABLES =====")
+(newline)
+(define x 10)
+(define y 3)
+(define name "Scheme")
+(display x)
+(newline)
+(display y)
+(newline)
+(display name)
+(newline)
+(newline)
+
+; --- Arithmetic ---
+(display "===== ARITHMETIC =====")
+(newline)
+(display (+ x y))
+(newline)
+(display (- x y))
+(newline)
+(display (* x y))
+(newline)
+(display (/ x y))
+(newline)
+(display (modulo x y))
+(newline)
+(display (expt 2 10))
+(newline)
+(display (abs -5))
+(newline)
+(newline)
+
+; --- Strings ---
+(display "===== STRINGS =====")
+(newline)
+(display (string-append "Hello" " " "World"))
+(newline)
+(display (string-length "Hello"))
+(newline)
+(newline)
+
+; --- Conditionals ---
+(display "===== CONDITIONALS =====")
+(newline)
+(if (> x 5)
+  (display "x is greater than 5")
+  (display "x is not greater than 5"))
+(newline)
+(display (if (> y 0) "positive" "non-positive"))
+(newline)
+(newline)
+
+; --- Cond (multi-branch) ---
+(display "===== COND =====")
+(newline)
+(define grade 85)
+(cond
+  ((>= grade 90) (display "A"))
+  ((>= grade 80) (display "B"))
+  ((>= grade 70) (display "C"))
+  (else (display "F")))
+(newline)
+(newline)
+
+; --- Functions ---
+(display "===== FUNCTIONS =====")
+(newline)
+(define (double n) (* n 2))
+(display (double 5))
+(newline)
+
+(define (factorial n)
+  (if (<= n 1) 1 (* n (factorial (- n 1)))))
+(display (factorial 5))
+(newline)
+(display (factorial 10))
+(newline)
+(newline)
+
+; --- Lambda ---
+(display "===== LAMBDA =====")
+(newline)
+(define triple (lambda (x) (* x 3)))
+(display (triple 7))
+(newline)
+(newline)
+
+; --- Let bindings ---
+(display "===== LET =====")
+(newline)
+(let ((a 5) (b 3))
+  (display (+ a b)))
+(newline)
+(let* ((a 5) (b (* a 2)))
+  (display b))
+(newline)
+(newline)
+
+; --- Lists ---
+(display "===== LISTS =====")
+(newline)
+(define nums (list 1 2 3 4 5))
+(display nums)
+(newline)
+(display (car nums))
+(newline)
+(display (cdr nums))
+(newline)
+(display (length nums))
+(newline)
+(display (reverse nums))
+(newline)
+(display (append (list 1 2) (list 3 4)))
+(newline)
+(newline)
+
+; --- Higher-Order Functions ---
+(display "===== MAP & FILTER =====")
+(newline)
+(display (map double nums))
+(newline)
+(display (filter (lambda (x) (> x 3)) nums))
+(newline)
+(newline)
+
+; --- Math ---
+(display "===== MATH =====")
+(newline)
+(display (sqrt 16))
+(newline)
+(display (floor 3.7))
+(newline)
+(display (ceiling 3.2))
+(newline)
+(display (min 3 7))
+(newline)
+(display (max 3 7))
+(newline)
+(newline)
+
+; --- Boolean Logic ---
+(display "===== BOOLEAN =====")
+(newline)
+(display (and #t #t))
+(newline)
+(display (or #f #t))
+(newline)
+(display (not #f))
+(newline)
+(newline)
+
+(display "===== DONE =====")
+(newline)

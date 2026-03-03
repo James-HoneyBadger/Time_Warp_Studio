@@ -30,6 +30,111 @@ _LINE_PATTERN = re.compile(r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)\s*,\s*(.+)")
 _VAR_PATTERN = re.compile(r"^[A-Za-z_][A-Za-z0-9_$]*$")
 
 
+def _has_string_concat(expr: str) -> bool:
+    """Detect if expression has '+' concatenation between string parts.
+
+    Returns True for patterns like:
+      "A" + "B"
+      "Line " + STR$(I)
+      NAME$ + " is cool"
+    Returns False for purely numeric expressions like "3 + 4".
+    """
+    in_str = False
+    str_char = ""
+    depth = 0
+    has_str_part = False
+    has_plus_outside = False
+    for ch in expr:
+        if in_str:
+            if ch == str_char:
+                in_str = False
+        elif ch in "\"'":
+            in_str = True
+            str_char = ch
+            has_str_part = True
+        elif ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        elif ch == "+" and depth == 0:
+            has_plus_outside = True
+    # Also detect $ in the expression (string variables/functions)
+    if "$" in expr:
+        has_str_part = True
+    return has_str_part and has_plus_outside
+
+
+def _try_string_comparison(
+    interpreter: "Interpreter", condition: str
+) -> "bool | None":
+    """Try to evaluate a string comparison condition.
+
+    Handles patterns like:
+        NAME$ = ""
+        A$ <> "hello"
+        X$ = Y$
+        "hello" = NAME$
+
+    Returns True/False if this is a string comparison, or None if not.
+    """
+    # Check if this looks like a string comparison (has $ variable or "" literal)
+    has_string_indicator = "$" in condition or '""' in condition
+
+    if not has_string_indicator:
+        return None
+
+    # Try each comparison operator (check <> and >= and <= before = < >)
+    for op_str, op_func in [
+        ("<>", lambda a, b: a != b),
+        (">=", lambda a, b: a >= b),
+        ("<=", lambda a, b: a <= b),
+        ("=", lambda a, b: a == b),
+        ("<", lambda a, b: a < b),
+        (">", lambda a, b: a > b),
+    ]:
+        if op_str in condition:
+            parts = condition.split(op_str, 1)
+            if len(parts) == 2:
+                lhs = _resolve_string_value(interpreter, parts[0].strip())
+                rhs = _resolve_string_value(interpreter, parts[1].strip())
+                if lhs is not None and rhs is not None:
+                    return op_func(lhs, rhs)
+
+    return None
+
+
+def _resolve_string_value(
+    interpreter: "Interpreter", expr: str
+) -> "str | None":
+    """Resolve a string expression to its value for comparison.
+
+    Returns the string value, or None if not resolvable as a string.
+    """
+    # String literal: "hello" or ""
+    if expr.startswith('"') and expr.endswith('"'):
+        return expr[1:-1]
+
+    expr_upper = expr.upper()
+
+    # String variable: NAME$, A$, etc.
+    if expr_upper.endswith("$"):
+        return interpreter.string_variables.get(expr_upper, "")
+
+    # String function call: LEFT$(...), MID$(...), etc.
+    if "$(" in expr_upper:
+        try:
+            from ..utils.string_evaluator import StringExpressionEvaluator
+            evaluator = StringExpressionEvaluator(
+                interpreter.string_variables,
+                interpreter.numeric_variables,
+            )
+            return str(evaluator.evaluate(expr))
+        except Exception:
+            return None
+
+    return None
+
+
 def _strip_comment(args: str) -> str:
     """Strip trailing comments from arguments, respecting quoted strings.
 
@@ -119,6 +224,43 @@ def execute_basic(
 
     cmd = command.upper()
     # print(f"DEBUG: EXEC {cmd}")
+
+    # ── Block IF skip-mode ────────────────────────────────────────────────
+    # When a block IF condition was false we skip lines until ELSE / END IF.
+    if not hasattr(interpreter, "_basic_if_stack"):
+        interpreter._basic_if_stack = []  # list of dicts
+
+    if interpreter._basic_if_stack:
+        top = interpreter._basic_if_stack[-1]
+        # Skipping mode — only react to structural keywords at the correct depth
+        if top.get("skip"):
+            # Track nested IFs so we don't pop early
+            if cmd.startswith("IF ") and (cmd.rstrip().endswith("THEN") or cmd.rstrip().endswith("THEN ")):
+                top["depth"] = top.get("depth", 0) + 1
+                return ""
+            depth = top.get("depth", 0)
+            if cmd in ("ENDIF", "END IF"):
+                if depth > 0:
+                    top["depth"] = depth - 1
+                    return ""
+                interpreter._basic_if_stack.pop()
+                return ""
+            if cmd == "ELSE" and depth == 0:
+                # Found matching ELSE — stop skipping (run ELSE branch)
+                top["skip"] = False
+                return ""
+            return ""  # skip this line
+        # We are in a block IF executing (not skipping) — handle END IF / ELSE
+        if cmd in ("ENDIF", "END IF"):
+            interpreter._basic_if_stack.pop()
+            return ""
+        if cmd == "ELSE":
+            # We already executed the THEN branch; skip to END IF
+            top["skip"] = True
+            return ""
+    elif cmd in ("ENDIF", "END IF", "ELSE"):
+        return ""  # stray structural keyword; ignore
+
     if cmd.startswith("REM") or cmd.startswith("'"):
         return ""
     if cmd.startswith("PRINT ") or cmd == "PRINT":
@@ -287,6 +429,14 @@ def execute_basic(
         return _basic_in(interpreter, _strip_comment(command[3:]))
     if cmd.startswith("SHELL "):
         return _basic_shell(interpreter, _strip_comment(command[6:]))
+    # SQL embedded in BASIC:  EXEC SQL <T-SQL statement>
+    if cmd.startswith("EXEC SQL "):
+        return _basic_exec_sql(interpreter, command[9:].strip())
+    # RANDOMIZE [TIMER] — seed the random number generator
+    if cmd.startswith("RANDOMIZE"):
+        import random as _rng
+        _rng.seed()
+        return ""
     return f"❌ Unknown BASIC command: {command}\n"
 
 
@@ -339,17 +489,40 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
     string_eval = StringExpressionEvaluator(
         string_variables=interpreter.string_variables,
         numeric_variables=interpreter.variables,
+        string_arrays=getattr(interpreter, 'string_arrays', {}),
+        numeric_arrays=interpreter.arrays,
     )
 
     for item in parts:
         item_trim = item.strip()
         item_upper = item_trim.upper()
 
-        # Handle string literals
+        # ── Detect string expressions that need the string evaluator ──
+        # String concat: "A" + "B", VAR$ + "text", or expressions with STR$/CHR$/etc.
+        _is_string_expr = False
+        if _has_string_concat(item_trim):
+            _is_string_expr = True
+        elif re.search(r'\b(STR|CHR|MID|LEFT|RIGHT|INSTR|UPPER|LOWER|TRIM|STRING)\$?\s*\(', item_upper):
+            _is_string_expr = True
+
+        if _is_string_expr:
+            try:
+                result = string_eval.evaluate(item_trim)
+                out_items.append(str(result))
+            except (ValueError, TypeError):
+                try:
+                    value = interpreter.evaluate_expression(item_trim)
+                    out_items.append(_format_numeric(value))
+                except (ValueError, TypeError, ZeroDivisionError):
+                    out_items.append(interpreter.interpolate_text(item_trim))
+            continue
+
+        # Handle simple string literals (no concat)
         if (
             item_trim.startswith('"')
             and item_trim.endswith('"')
             and len(item_trim) >= 2
+            and '"' not in item_trim[1:-1]
         ):
             out_items.append(item_trim[1:-1])
         # Handle INKEY$ - get key from buffer
@@ -373,9 +546,25 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
             from ..core.game_support import get_game_state
 
             out_items.append(str(int(get_game_state().get_timer_value())))
-        # Handle string variables (end with $)
-        elif item_upper.endswith("$"):
-            if item_upper in interpreter.string_variables:
+        # Handle string variables (end with $) or string array elements
+        elif item_upper.endswith("$") or (item_upper.endswith(")") and "$(" in item_upper):
+            # Check for string array element: NAMES$(I)
+            if "(" in item_trim and item_trim.endswith(")"):
+                arr_name = item_trim.split("(", 1)[0].upper()
+                idx_expr = item_trim.split("(", 1)[1][:-1]
+                if arr_name.endswith("$") and arr_name in interpreter.string_arrays:
+                    try:
+                        idx = int(interpreter.evaluate_expression(idx_expr))
+                        arr = interpreter.string_arrays[arr_name]
+                        if 0 <= idx < len(arr):
+                            out_items.append(arr[idx])
+                        else:
+                            out_items.append("")
+                    except (ValueError, TypeError):
+                        out_items.append("")
+                else:
+                    out_items.append("")
+            elif item_upper in interpreter.string_variables:
                 out_items.append(interpreter.string_variables[item_upper])
             else:
                 out_items.append("")  # Undefined string variable is empty
@@ -461,12 +650,30 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
     if not var_name:
         return "❌ LET requires variable name\n"
 
-    # Check for array assignment: VAR(INDEX) = EXPR
+    # Check for array assignment: VAR(INDEX) = EXPR  or  VAR$(INDEX) = EXPR
     if "(" in var_name and var_name.endswith(")"):
         array_name = var_name.split("(", 1)[0]
         index_expr = var_name.split("(", 1)[1][:-1]
         try:
             idx = int(interpreter.evaluate_expression(index_expr))
+            # String array?
+            if array_name.endswith("$") and array_name in interpreter.string_arrays:
+                string_eval = StringExpressionEvaluator(
+                    string_variables=interpreter.string_variables,
+                    numeric_variables=interpreter.variables,
+                    string_arrays=getattr(interpreter, 'string_arrays', {}),
+                    numeric_arrays=interpreter.arrays,
+                )
+                try:
+                    str_val = string_eval.evaluate(expr)
+                except (ValueError, TypeError):
+                    str_val = str(expr)
+                arr = interpreter.string_arrays[array_name]
+                if 0 <= idx < len(arr):
+                    arr[idx] = str_val
+                    return ""
+                return f"❌ Array index out of bounds: {idx}\n"
+            # Numeric array
             val = interpreter.evaluate_expression(expr)
             if array_name in interpreter.arrays:
                 arr = interpreter.arrays[array_name]
@@ -507,6 +714,8 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
                 string_eval = StringExpressionEvaluator(
                     string_variables=interpreter.string_variables,
                     numeric_variables=interpreter.variables,
+                    string_arrays=getattr(interpreter, 'string_arrays', {}),
+                    numeric_arrays=interpreter.arrays,
                 )
                 try:
                     str_result = string_eval.evaluate(expr)
@@ -531,8 +740,20 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
             interpreter.set_typed_variable(var_name, result)
             logger.debug("LET %s = {result}", var_name)
         except (ValueError, TypeError, ZeroDivisionError) as e:
-            logger.error("LET evaluation error: %s", e)
-            return f"❌ Error in LET: {e} (expr: '{expr}')\n"
+            # Fallback: try string evaluator for functions that return numbers
+            # (LEN, INSTR, VAL)
+            try:
+                string_eval = StringExpressionEvaluator(
+                    string_variables=interpreter.string_variables,
+                    numeric_variables=interpreter.variables,
+                    string_arrays=getattr(interpreter, 'string_arrays', {}),
+                    numeric_arrays=interpreter.arrays,
+                )
+                str_result = string_eval.evaluate(expr)
+                interpreter.set_typed_variable(var_name, float(str_result))
+            except (ValueError, TypeError, ZeroDivisionError):
+                logger.error("LET evaluation error: %s", e)
+                return f"❌ Error in LET: {e} (expr: '{expr}')\n"
     except ValidationError as e:
         return f"❌ {e}\n"
 
@@ -583,25 +804,53 @@ def _basic_if(
     turtle: "TurtleState",
 ) -> str:
     args_upper = args.upper()
-    if " THEN " not in args_upper:
-        return "❌ IF requires THEN keyword\n"
-    then_pos = args_upper.find(" THEN ")
-    condition = args[:then_pos].strip()
-    then_part = args[then_pos + 6 :].strip()
 
-    # Check for ELSE clause
+    # Locate THEN keyword — support both " THEN " (with stuff after) and
+    # trailing "THEN" (block IF).
+    then_pos = -1
+    if " THEN " in args_upper:
+        then_pos = args_upper.find(" THEN ")
+    elif args_upper.rstrip().endswith("THEN"):
+        then_pos = args_upper.rstrip().rfind("THEN") - 1
+        if then_pos < 0:
+            then_pos = -1
+
+    if then_pos == -1:
+        return "❌ IF requires THEN keyword\n"
+
+    condition = args[:then_pos + 1].strip()
+    then_part = args[then_pos + 6:].strip() if (then_pos + 6) < len(args) else ""
+
+    # --- String comparison handling ---
+    # Detect conditions like: NAME$ = "", A$ <> "hello", X$ = Y$
+    _str_cmp_result = _try_string_comparison(interpreter, condition)
+    if _str_cmp_result is not None:
+        condition_true = _str_cmp_result
+    else:
+        try:
+            result = interpreter.evaluate_expression(condition)
+            condition_true = abs(result) > 0.0001
+        except (ValueError, TypeError, ZeroDivisionError) as e:
+            return f"❌ Error in IF condition: {e}\n"
+
+    # Block IF: nothing after THEN → multi-line
+    if not then_part:
+        if not hasattr(interpreter, "_basic_if_stack"):
+            interpreter._basic_if_stack = []
+        interpreter._basic_if_stack.append({
+            "skip": not condition_true,
+            "depth": 0,
+        })
+        return ""
+
+    # Inline IF...THEN...ELSE
     else_part = ""
     then_upper = then_part.upper()
     else_pos = then_upper.find(" ELSE ")
     if else_pos != -1:
-        else_part = then_part[else_pos + 6 :].strip()
+        else_part = then_part[else_pos + 6:].strip()
         then_part = then_part[:else_pos].strip()
 
-    try:
-        result = interpreter.evaluate_expression(condition)
-        condition_true = abs(result) > 0.0001
-    except (ValueError, TypeError, ZeroDivisionError) as e:
-        return f"❌ Error in IF condition: {e}\n"
     if condition_true and then_part:
         if then_part.isdigit():
             return _basic_goto(interpreter, then_part)
@@ -622,7 +871,7 @@ def _basic_goto(interpreter: "Interpreter", args: str) -> str:
         if line_num not in interpreter.line_number_map:
             return f"❌ GOTO {line_num} failed: line not found\n"
         target_idx = interpreter.line_number_map[line_num]
-        interpreter.current_line = target_idx - 1
+        interpreter.current_line = target_idx
     except ValueError:
         return f"❌ Invalid line number: {target}\n"
     except (KeyError, IndexError) as e:
@@ -695,7 +944,7 @@ def _basic_next(interpreter: "Interpreter", _args: str) -> str:
     else:
         should_continue = new_val >= context.end_value
     if should_continue:
-        interpreter.current_line = context.for_line
+        interpreter.current_line = context.for_line + 1
     else:
         interpreter.for_stack.pop()
     return ""
@@ -751,8 +1000,8 @@ def _basic_return(interpreter: "Interpreter") -> str:
 
     try:
         return_line = interpreter.gosub_stack.pop()
-        interpreter.current_line = return_line
-        logger.debug("RETURN to line %s", return_line + 1)
+        interpreter.current_line = return_line + 1
+        logger.debug("RETURN to line %s", return_line + 2)
     except IndexError as e:
         logger.error("RETURN failed: %s", e)
         return f"❌ Error in RETURN: {e}\n"
@@ -1216,6 +1465,19 @@ def _basic_system(_interpreter: "Interpreter", _args: str) -> str:
     return "ℹ️ Returned to system prompt\n"
 
 
+def _basic_exec_sql(interpreter: "Interpreter", query: str) -> str:
+    """EXEC SQL <query> — Execute a T-SQL statement from BASIC."""
+    try:
+        from ..core.sql_engine import SQLSession
+        sess = getattr(interpreter, "sql_session", None)
+        if sess is None:
+            sess = SQLSession()
+            interpreter.sql_session = sess
+        return sess.run_statement(query)
+    except Exception as e:
+        return f"❌ SQL error: {e}\n"
+
+
 def _find_matching_wend(interpreter: "Interpreter", start_idx: int) -> int:
     """Find index of matching WEND for WHILE at start_idx."""
     depth = 0
@@ -1245,8 +1507,8 @@ def _basic_while(interpreter: "Interpreter", args: str) -> str:
         if wend_idx == -1:
             return "❌ WHILE without WEND\n"
 
-        # Jump to WEND (loop will increment to WEND+1)
-        interpreter.current_line = wend_idx
+        # Jump past WEND (line_changed path does not increment)
+        interpreter.current_line = wend_idx + 1
         return ""
     except (ValueError, TypeError, ZeroDivisionError) as e:
         return f"❌ WHILE syntax error: {e}\n"
@@ -1258,9 +1520,9 @@ def _basic_wend(interpreter: "Interpreter") -> str:
         return "❌ WEND without WHILE\n"
 
     while_idx = interpreter.basic_while_stack.pop()
-    # Jump back to WHILE (loop will increment to WHILE+1? No, we want to re-execute WHILE)
-    # So set to while_idx - 1
-    interpreter.current_line = while_idx - 1
+    # Jump back to WHILE to re-evaluate condition
+    # (line_changed path does NOT increment current_line)
+    interpreter.current_line = while_idx
     return ""
 
 
@@ -1307,7 +1569,7 @@ def _basic_do(interpreter: "Interpreter", args: str) -> str:
     loop_idx = _find_matching_loop(interpreter, interpreter.current_line)
     if loop_idx == -1:
         return "❌ DO without LOOP\n"
-    interpreter.current_line = loop_idx
+    interpreter.current_line = loop_idx + 1
     return ""
 
 
@@ -1339,9 +1601,8 @@ def _basic_loop(interpreter: "Interpreter", args: str) -> str:
 
     if should_loop:
         # Jump back to DO (re-execute DO check if any)
-        interpreter.current_line = do_idx - 1
-        # Push back stack item since we are looping
-        interpreter.basic_do_stack.append((do_idx, "DO"))
+        # line_changed path does NOT increment, so set to exact index
+        interpreter.current_line = do_idx
 
     return ""
 
@@ -1613,9 +1874,12 @@ def _basic_dim(interpreter: "Interpreter", args: str) -> str:
                 logger.error("DIM: Negative array dimension for %s", name_part)
                 return f"❌ Array dimension must be non-negative: {size}\n"
 
-            # Create array initialized to 0.0
-            # BASIC arrays are usually 0 to size (inclusive)
-            interpreter.arrays[name_part] = [0.0] * (size + 1)
+            # Create array — string arrays (ending with $) store strings,
+            # numeric arrays store floats.
+            if name_part.endswith("$"):
+                interpreter.string_arrays[name_part] = [""] * (size + 1)
+            else:
+                interpreter.arrays[name_part] = [0.0] * (size + 1)
             logger.debug("DIM: Created array '%s' with size {size}", name_part)
         except ValidationError as e:
             logger.error("DIM validation failed for %s: {e}", name_part)

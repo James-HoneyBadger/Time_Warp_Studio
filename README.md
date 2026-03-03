@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-7.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
-Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **7 programming languages** — BASIC, PILOT, Logo, C, Pascal, Prolog, and Forth — into a single, modern IDE. Built with Python and PySide6 (Qt6), it provides an integrated platform for learning programming concepts, exploring turtle graphics, and working through structured lessons.
+Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **24 programming languages** spanning six decades of computing history into a single, modern IDE. Built with Python and PySide6 (Qt6), it provides an integrated platform for learning programming concepts, exploring turtle graphics, and working through structured lessons.
 
 ---
 
@@ -32,15 +32,34 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 
 ### Multi-Language Support
 
-| Language | Description | Status |
-|----------|-------------|--------|
-| **BASIC** | Turbo BASIC with graphics extensions (SCREEN, LINE, CIRCLE, PSET, COLOR) | Complete |
-| **Logo** | Full turtle graphics with procedures, recursion, and 50+ commands | Complete |
-| **PILOT** | Computer-Aided Instruction for interactive lessons | Complete |
-| **C** | Subset of C with stdio, math, conditionals, loops, and functions | Experimental |
-| **Pascal** | Structured programming with procedures, functions, and types | Experimental |
-| **Prolog** | Logic programming with unification and backtracking | Experimental |
-| **Forth** | Stack-based programming with word definitions | Experimental |
+24 languages spanning six decades of computing history:
+
+| Language | Paradigm | Era | Status |
+|----------|----------|-----|--------|
+| **BASIC** | Imperative / Educational | 1964 | Complete |
+| **Logo** | Turtle Graphics / Educational | 1967 | Complete |
+| **PILOT** | Computer-Aided Instruction | 1969 | Complete |
+| **C** | Systems / Procedural | 1972 | Complete |
+| **Forth** | Stack-based / Concatenative | 1970 | Complete |
+| **Pascal** | Structured / Educational | 1970 | Complete |
+| **Prolog** | Logic / Declarative | 1972 | Complete |
+| **SQL** | Relational / Query | 1974 | Complete |
+| **Smalltalk** | Object-Oriented | 1980 | Complete |
+| **APL** | Array / Mathematical | 1966 | Complete |
+| **Assembly** | Low-level / x86 | 1950s | Complete |
+| **Brainfuck** | Esoteric / Turing | 1993 | Complete |
+| **CICS** | Mainframe / Transaction | 1969 | Complete |
+| **COBOL** | Business / Data | 1959 | Complete |
+| **Fortran** | Scientific / Numeric | 1957 | Complete |
+| **Haskell** | Functional / Typed | 1990 | Complete |
+| **HyperTalk** | Event-driven / English | 1987 | Complete |
+| **JavaScript** | Scripting / Web | 1995 | Complete |
+| **JCL** | Job Control / Mainframe | 1964 | Complete |
+| **Lua** | Scripting / Embedded | 1993 | Complete |
+| **Python** | Multi-paradigm / Modern | 1991 | Complete |
+| **REXX** | Scripting / Mainframe | 1979 | Complete |
+| **Scheme** | Functional / Lisp | 1975 | Complete |
+| **SQR** | Report / Database | 1980s | Complete |
 
 ### Integrated IDE
 
@@ -69,7 +88,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Lesson System** — Step-by-step guided instruction with auto-verification
 - **AI Assistant** — Intelligent code suggestions and explanations
 - **Error Explainer** — Human-readable explanations of programming errors
-- **Examples Browser** — 90+ example programs across all 7 languages
+- **Examples Browser** — 220+ example programs across all 24 languages
 - **Achievements** — Gamified progress tracking
 
 ---
@@ -236,7 +255,7 @@ GREET
 5 3 + . CR
 ```
 
-Browse 90+ more examples in the [Examples/](Examples/) directory or through **File → Examples** in the IDE.
+Browse 220+ more examples in the [Examples/](Examples/) directory or through **File → Examples** in the IDE.
 
 ---
 
@@ -273,6 +292,24 @@ Browse 90+ more examples in the [Examples/](Examples/) directory or through **Fi
 | [C](docs/tutorials/c.md) | C language basics |
 | [Pascal](docs/tutorials/pascal.md) | Structured programming |
 | [Prolog](docs/tutorials/prolog.md) | Logic programming |
+| [Python](docs/tutorials/python.md) | Modern scripting & sandboxed execution |
+| [Lua](docs/tutorials/lua.md) | Lightweight scripting language |
+| [JavaScript](docs/tutorials/javascript.md) | Scripting in the browser era |
+| [Haskell](docs/tutorials/haskell.md) | Pure functional programming |
+| [Scheme](docs/tutorials/scheme.md) | Lisp-family functional programming |
+| [Smalltalk](docs/tutorials/smalltalk.md) | Object-oriented programming |
+| [REXX](docs/tutorials/rexx.md) | Mainframe scripting language |
+| [Forth](docs/tutorials/forth.md) | Stack-based programming |
+| [Brainfuck](docs/tutorials/brainfuck.md) | Esoteric Turing-complete language |
+| [COBOL](docs/tutorials/cobol.md) | Business data processing |
+| [Fortran](docs/tutorials/fortran.md) | Scientific computing |
+| [Assembly](docs/tutorials/assembly.md) | x86 low-level programming |
+| [APL](docs/tutorials/apl.md) | Array programming language |
+| [HyperTalk](docs/tutorials/hypertalk.md) | Event-driven scripting |
+| [JCL](docs/tutorials/jcl.md) | IBM Job Control Language |
+| [CICS](docs/tutorials/cics.md) | IBM Transaction processing |
+| [SQL](docs/tutorials/sql.md) | Relational database queries |
+| [SQR](docs/tutorials/sqr.md) | Structured Query reporting |
 
 ### Reference
 
@@ -302,14 +339,31 @@ Time_Warp_Studio/
 │   └── time_warp/
 │       ├── core/                  # Interpreter engine and services
 │       │   └── interpreter.py     # Central command dispatcher
-│       ├── languages/             # 7 language executors
+│       ├── languages/             # 24 language executors
 │       │   ├── basic.py           # BASIC with Turbo graphics
 │       │   ├── logo.py            # Logo turtle graphics
 │       │   ├── pilot.py           # PILOT CAI system
 │       │   ├── c_lang_fixed.py    # C language subset
 │       │   ├── pascal.py          # Pascal programming
 │       │   ├── prolog.py          # Prolog logic engine
-│       │   └── forth.py           # Forth stack machine
+│       │   ├── forth.py           # Forth stack machine
+│       │   ├── python.py          # Python sandbox executor
+│       │   ├── lua.py             # Lua scripting
+│       │   ├── javascript.py      # JavaScript interpreter
+│       │   ├── haskell.py         # Haskell functional
+│       │   ├── scheme.py          # Scheme/Lisp dialect
+│       │   ├── smalltalk.py       # Smalltalk OO
+│       │   ├── rexx.py            # REXX scripting
+│       │   ├── brainfuck.py       # Brainfuck esoteric
+│       │   ├── cobol.py           # COBOL business
+│       │   ├── fortran.py         # Fortran scientific
+│       │   ├── assembly.py        # x86 Assembly
+│       │   ├── apl.py             # APL array language
+│       │   ├── hypertalk.py       # HyperTalk
+│       │   ├── jcl.py             # JCL mainframe
+│       │   ├── cics.py            # CICS transactions
+│       │   ├── sql.py             # SQL queries
+│       │   └── sqr.py             # SQR reporting
 │       ├── ui/                    # PySide6 UI components
 │       │   ├── main_window.py     # Main IDE window
 │       │   ├── editor.py          # Code editor widget
@@ -319,17 +373,18 @@ Time_Warp_Studio/
 │       ├── features/              # Lessons, autosave, etc.
 │       ├── cloud/                 # Cloud sync services
 │       ├── debugging/             # Integrated debugger
-│       └── tests/                 # Test suite (55 tests)
+│       └── tests/                 # Test suite (28 tests)
 │
-├── Examples/                      # 90+ example programs
-│   ├── basic/                     # 18 BASIC examples
-│   ├── logo/                      # 17 Logo examples
-│   ├── pilot/                     # 14 PILOT examples
-│   ├── c/                         # 12 C examples
-│   ├── pascal/                    # 10 Pascal examples
-│   ├── prolog/                    # 10 Prolog examples
-│   ├── forth/                     # 5 Forth examples
-│   └── demo/                      # 8 cross-language demos
+├── Examples/                      # 220+ example programs across 24 languages
+│   ├── basic/      (18)  ├── logo/       (17)  ├── pilot/      (14)
+│   ├── c/          (12)  ├── pascal/     (10)  ├── prolog/     (10)
+│   ├── cobol/      (10)  ├── sqr/        (10)  ├── fortran/    (10)
+│   ├── haskell/    (10)  ├── javascript/ (10)  ├── assembly/   (11)
+│   ├── apl/         (7)  ├── hypertalk/   (7)  ├── brainfuck/   (6)
+│   ├── forth/       (5)  ├── lua/         (5)  ├── rexx/        (5)
+│   ├── scheme/      (5)  ├── smalltalk/   (5)  ├── python/      (5)
+│   ├── sql/         (5)  ├── cics/        (5)  ├── jcl/         (5)
+│   └── demo/        (8)  # cross-language showcases
 │
 ├── docs/                          # Documentation
 │   ├── INDEX.md                   # Documentation index
@@ -362,7 +417,7 @@ python Platforms/Python/time_warp_ide.py
 
 ### What Happens on Startup
 
-1. Language interpreters are initialized (BASIC, Logo, PILOT, C, Pascal, Prolog, Forth)
+1. All 24 language interpreters are initialized
 2. Configuration is loaded from `~/.Time_Warp/config.json`
 3. The main IDE window opens with editor, canvas, and output panels
 4. Your last theme and settings are restored
@@ -379,20 +434,26 @@ python Platforms/Python/time_warp_ide.py
 
 ## 🧪 Testing
 
-Run from the `Platforms/Python/` directory:
+Run from the repository root:
 
 ```bash
-# Run full test suite with coverage
-python -m pytest time_warp/tests/ -v
+# Quick root-level test run
+pytest -q
 
-# Comprehensive suite with HTML reporting
-python test_runner.py --comprehensive
+# Full package suite with integrated reporting
+python Platforms/Python/test_runner.py --comprehensive
 
-# Quick smoke tests
-python test_runner.py --basic
+# Basic smoke suite
+python Platforms/Python/test_runner.py --basic
+
+# Full package tests directly via pytest
+PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
+
+# Optional backend load/security suites (require backend services)
+RUN_BACKEND_INTEGRATION=1 PYTHONPATH=Platforms/Python pytest Platforms/backend/tests -q
 ```
 
-**Current status:** 55 tests passing across 4 test modules, covering API integration, Logo graphics, multiplayer collaboration, and WebSocket integration.
+**Current status:** 28 tests passing across language executor and graphics test modules.
 
 ---
 
@@ -414,8 +475,8 @@ We welcome contributions! Here's how to get started:
 4. **Make** your changes following [PEP 8](https://peps.python.org/pep-0008/) style
 5. **Test** that all tests pass:
    ```bash
-   cd Platforms/Python
-   python -m pytest time_warp/tests/ -v
+  pytest -q
+  python Platforms/Python/test_runner.py --basic
    ```
 6. **Commit** with a clear message and submit a pull request
 
@@ -439,7 +500,7 @@ Licensed under the **[MIT License](LICENSE)**.
 
 ## 🙏 Acknowledgments
 
-Time Warp Studio honors the educational legacy of BASIC, Logo, PILOT, and other pioneering programming languages from the 1960s–1980s, while providing a modern IDE experience for today's learners. Special thanks to the open-source communities behind Python, PySide6/Qt, and the many educators who continue to champion accessible programming education.
+Time Warp Studio honors the educational legacy of BASIC, Logo, PILOT, COBOL, Fortran, APL, and other pioneering programming languages spanning six decades of computing history, while providing a modern IDE experience for today's learners. Special thanks to the open-source communities behind Python, PySide6/Qt, and the many educators who continue to champion accessible programming education.
 
 ---
 

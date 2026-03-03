@@ -99,7 +99,10 @@ class SyntaxValidatorPanel(FeaturePanelBase):
         lang_layout.addWidget(QLabel("Language:"))
         self.lang_combo = QComboBox()
         self.lang_combo.addItems(
-            ["BASIC", "LOGO", "PILOT", "PASCAL", "C", "FORTH", "PROLOG"]
+            ["BASIC", "LOGO", "PILOT", "PASCAL", "C", "FORTH", "PROLOG", "PYTHON",
+             "LUA", "SCHEME", "COBOL", "BRAINFUCK", "ASSEMBLY", "JAVASCRIPT",
+             "FORTRAN", "REXX", "SMALLTALK", "HYPERTALK", "HASKELL", "APL",
+             "SQL", "JCL", "CICS"]
         )
         lang_layout.addWidget(self.lang_combo)
         lang_layout.addStretch()
@@ -135,6 +138,23 @@ class SyntaxValidatorPanel(FeaturePanelBase):
                 "C": Language.C,
                 "FORTH": Language.FORTH,
                 "PROLOG": Language.PROLOG,
+                "PYTHON": Language.PYTHON,
+                "LUA": Language.LUA,
+                "SCHEME": Language.SCHEME,
+                "COBOL": Language.COBOL,
+                "BRAINFUCK": Language.BRAINFUCK,
+                "ASSEMBLY": Language.ASSEMBLY,
+                "JAVASCRIPT": Language.JAVASCRIPT,
+                "FORTRAN": Language.FORTRAN,
+                "REXX": Language.REXX,
+                "SMALLTALK": Language.SMALLTALK,
+                "HYPERTALK": Language.HYPERTALK,
+                "HASKELL": Language.HASKELL,
+                "APL": Language.APL,
+                "SQL": Language.SQL,
+                "SQL SERVER": Language.SQL,
+                "JCL": Language.JCL,
+                "CICS": Language.CICS,
             }
             return mapping.get(cleaned, Language.BASIC)
         return Language.BASIC

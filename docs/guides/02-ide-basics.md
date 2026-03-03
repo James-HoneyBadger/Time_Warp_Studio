@@ -67,14 +67,16 @@ The toolbar contains quick-access tools:
 | Stop | Halt execution | Ctrl+Shift+R |
 | Clear | Clear output panel | Ctrl+E |
 
-**Language Options:**
-- BASIC - Classic BASIC language
-- PILOT - Computer-based instruction
-- Logo - Turtle graphics language
-- C - C language
-- Pascal - Structured programming
-- Prolog - Logic programming
-- Forth - Stack-based programming
+**Language Options (24 total):**
+- BASIC, Logo, PILOT — educational classics
+- C, Pascal, Forth — structured/systems
+- Python, JavaScript, Lua, REXX — modern scripting
+- Haskell, Scheme, Prolog — functional/logical
+- Smalltalk — object-oriented
+- APL — array/mathematical
+- COBOL, Fortran, Assembly — vintage computing
+- Brainfuck, HyperTalk — esoteric/event-driven
+- JCL, CICS, SQL, SQR — mainframe/data
 
 ### 3. Code Editor (Left Panel)
 

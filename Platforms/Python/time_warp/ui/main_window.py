@@ -13,7 +13,7 @@ from pathlib import Path
 # Large UI file with many helper methods and nested classes — allow the
 # line-count threshold to be exceeded for readability and maintenance.
 # pylint: disable=too-many-lines
-from PySide6.QtCore import QSettings, Qt, QTimer
+from PySide6.QtCore import QSettings, QSize, Qt, QTimer
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
@@ -44,7 +44,6 @@ from PySide6.QtWidgets import (
 
 from ..core.interpreter import Language
 from .canvas import TurtleCanvas
-from .cassette_animation import show_cassette_load, show_cassette_save
 from .collaboration_client import CollaborationClient, CollaborationOperation
 from .crt_effect import CRTEffectOverlay
 from .debug_panel import DebugPanel
@@ -55,8 +54,42 @@ from .screen_modes import ScreenModeManager
 from .themes import ThemeManager
 from .variable_inspector import VariableInspector
 from ..features.classroom_mode import ClassroomMode
+from ..features.autosave_manager import AutosaveManager
+from .version_history_dialog import VersionHistoryDialog
+from .focus_mode import FocusModeManager
+from .onboarding import OnboardingDialog, OnboardingManager
+from .sql_panel import SQLPanel
+from .dbms_window import DBMSWindow
+from .cics_panel import CICSPanel
+from ..features.examples_browser import ExamplesBrowser
+from ..utils.error_hints import get_enhanced_error_message
 
 # pylint: enable=no-name-in-module
+
+
+class ResizableTabWidget(QTabWidget):
+    """QTabWidget whose minimum/size hints reflect only the current page.
+
+    Qt's default QTabWidget.minimumSizeHint() returns the *maximum* of all
+    tab page hints, forcing the window to stay huge even when large pages are
+    hidden.  This subclass returns a small fixed minimum so the splitter and
+    window can shrink freely; the current page drives the preferred size hint.
+    """
+
+    _TAB_BAR_MARGIN = 8  # extra pixels above/below tab bar text
+
+    def minimumSizeHint(self) -> QSize:  # type: ignore[override]
+        return QSize(100, 100)
+
+    def sizeHint(self) -> QSize:  # type: ignore[override]
+        current = self.currentWidget()
+        if current is None:
+            return QSize(400, 300)
+        bar_h = self.tabBar().sizeHint().height() + self._TAB_BAR_MARGIN
+        sh = current.sizeHint()
+        w = max(sh.width(), 100) if sh.width() > 0 else 400
+        h = (max(sh.height(), 100) if sh.height() > 0 else 300) + bar_h
+        return QSize(w, h)
 
 
 class MainWindow(QMainWindow):
@@ -126,7 +159,15 @@ class MainWindow(QMainWindow):
         # Retro features
         self.screen_mode_manager = ScreenModeManager()
         self.crt_enabled = False
-        self.cassette_mode = True  # Fun cassette animation for save/load
+
+        # Autosave and version history
+        self._autosave_manager = AutosaveManager(autosave_interval=300)
+
+        # Focus mode
+        self._focus_mode = FocusModeManager(self)
+
+        # Onboarding (first-run wizard)
+        self._onboarding_manager = OnboardingManager()
 
         # Feature integration manager
         self.feature_manager = FeatureIntegrationManager(self)
@@ -146,8 +187,15 @@ class MainWindow(QMainWindow):
         self._connect_classroom_signals()
         self._connect_reference_signals()
 
+        # Set a sensible default size before restoring saved geometry.
+        # restoreGeometry() will override this when a previous session exists.
+        self.resize(1400, 900)
+
         # Restore previous state
         self.restore_state()
+
+        # Show first-run onboarding after UI settles
+        QTimer.singleShot(600, self._maybe_show_onboarding)
 
         # Apply theme to current editor
         current_editor = self.get_current_editor()
@@ -354,6 +402,264 @@ class MainWindow(QMainWindow):
             painter.drawImage(0, 0, image)
             painter.end()
 
+    def _export_code_pdf(self, _checked: bool = False):
+        """Export the current code as a PDF file."""
+        try:
+            # pylint: disable=import-outside-toplevel
+            from PySide6.QtPrintSupport import QPrinter as _QPrinter
+        except ImportError:
+            self.statusbar.showMessage("PDF export not available", 3000)
+            return
+
+        ed = self.get_current_editor()
+        if not ed:
+            return
+
+        default_name = ""
+        info = self.get_current_tab_info()
+        if info.get("file"):
+            default_name = str(Path(info["file"]).with_suffix(".pdf"))
+
+        filepath, _ = QFileDialog.getSaveFileName(
+            self, "Export Code as PDF", default_name, "PDF Files (*.pdf)"
+        )
+        if not filepath:
+            return
+
+        printer = _QPrinter(_QPrinter.PrinterMode.HighResolution)
+        printer.setOutputFormat(_QPrinter.OutputFormat.PdfFormat)
+        printer.setOutputFileName(filepath)
+        ed.print_(printer)
+        self.statusbar.showMessage(f"PDF saved: {filepath}", 3000)
+
+    def _show_version_history(self, _checked: bool = False):
+        """Open the version history browser for the current file."""
+        info = self.get_current_tab_info()
+        file_path = info.get("file")
+        if not file_path:
+            QMessageBox.information(
+                self,
+                "Version History",
+                "Save the file first to track its version history.",
+            )
+            return
+
+        ed = self.get_current_editor()
+        current_content = ed.toPlainText() if ed else ""
+        path = Path(file_path)
+
+        dlg = VersionHistoryDialog(
+            self._autosave_manager, path, current_content, parent=self
+        )
+        if dlg.exec() == VersionHistoryDialog.Accepted:
+            content = dlg.restored_content
+            if content is not None and ed is not None:
+                ed.setPlainText(content)
+                self.set_current_tab_info(modified=True)
+                self.statusbar.showMessage("Version restored", 3000)
+
+    # ---- Focus mode ----
+
+    def _toggle_focus_mode(self, _checked: bool = False):
+        """Toggle distraction-free focus mode."""
+        self._focus_mode.toggle_focus_mode()
+        self._focus_mode_action.setChecked(self._focus_mode.is_focus_mode)
+
+    # ---- Onboarding ----
+
+    def _maybe_show_onboarding(self):
+        """Show first-run onboarding wizard if not yet completed."""
+        try:
+            if self._onboarding_manager.should_show_onboarding():
+                dlg = OnboardingDialog(self)
+                dlg.exec()
+                self._onboarding_manager.mark_tutorial_completed()
+        except Exception:  # pylint: disable=broad-except
+            pass  # Onboarding must never crash the IDE
+
+    # ---- Examples browser ----
+
+    def _show_examples_browser(self, _checked: bool = False):
+        """Show the examples browser dialog."""
+        examples_dir = Path(__file__).parent.parent.parent.parent.parent / "Examples"
+        browser = ExamplesBrowser(examples_dir)
+        browser.scan_examples()
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("\ud83d\udcda Examples Browser")
+        dlg.setMinimumSize(700, 500)
+        layout = QVBoxLayout(dlg)
+
+        from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QSplitter, QTextBrowser  # type: ignore[attr-defined]  # noqa: F401
+
+        splitter = QSplitter()
+
+        tree = QTreeWidget()
+        tree.setHeaderLabels(["Example", "Difficulty"])
+        tree.setMinimumWidth(260)
+
+        # Group by language
+        lang_nodes: dict = {}
+        for ex in browser.examples:
+            lang_name = ex.language.friendly_name()
+            if lang_name not in lang_nodes:
+                parent = QTreeWidgetItem(tree, [lang_name, ""])
+                parent.setExpanded(True)
+                lang_nodes[lang_name] = parent
+            item = QTreeWidgetItem(lang_nodes[lang_name], [ex.title, ex.difficulty.value])
+            item.setData(0, Qt.UserRole, ex)
+        splitter.addWidget(tree)
+
+        preview = QTextBrowser()
+        preview.setFontFamily("Courier New")
+        splitter.addWidget(preview)
+        splitter.setSizes([260, 440])
+        layout.addWidget(splitter)
+
+        from PySide6.QtWidgets import QDialogButtonBox  # noqa: F811  # type: ignore[attr-defined]
+        btns = QDialogButtonBox(QDialogButtonBox.StandardButton.Open | QDialogButtonBox.StandardButton.Cancel)
+        btns.accepted.connect(dlg.accept)
+        btns.rejected.connect(dlg.reject)
+        layout.addWidget(btns)
+
+        def on_item_clicked(item, _column):
+            ex = item.data(0, Qt.UserRole)
+            if ex:
+                preview.setPlainText(ex.code)
+
+        tree.itemClicked.connect(on_item_clicked)
+
+        if dlg.exec() == QDialog.Accepted:
+            selected = tree.currentItem()
+            if selected:
+                ex = selected.data(0, Qt.UserRole)
+                if ex:
+                    self.create_new_tab()
+                    editor = self.get_current_editor()
+                    if editor:
+                        editor.setPlainText(ex.code)
+                        lang = ex.language
+                        editor.set_language(lang)
+                        idx = self.editor_tabs.currentIndex()
+                        self.tab_languages[idx] = lang
+                        self.editor_tabs.setTabText(idx, ex.title)
+                        self.statusbar.showMessage(f"Opened example: {ex.title}", 3000)
+
+    # ---- Language comparator ----
+
+    def _show_language_comparator(self, _checked: bool = False):
+        """Show side-by-side language comparison dialog."""
+        from PySide6.QtWidgets import (  # type: ignore[attr-defined]
+            QPushButton as _QPB,
+            QPlainTextEdit as _PTE,
+            QDialogButtonBox as _DBB,
+        )
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("\u2696\ufe0f Language Comparator")
+        dlg.setMinimumSize(800, 540)
+        layout = QVBoxLayout(dlg)
+
+        # Two-column code editors (plain text)
+        top = QHBoxLayout()
+        lang_options = [lang.friendly_name() for lang in Language]
+
+        left_vbox = QVBoxLayout()
+        lang1_combo = QComboBox()
+        lang1_combo.addItems(lang_options)
+        lang1_combo.setCurrentText("BASIC")
+        left_vbox.addWidget(lang1_combo)
+        code1_edit = _PTE()
+        code1_edit.setPlaceholderText("Enter code for language 1\u2026")
+        left_vbox.addWidget(code1_edit)
+        top.addLayout(left_vbox)
+
+        right_vbox = QVBoxLayout()
+        lang2_combo = QComboBox()
+        lang2_combo.addItems(lang_options)
+        lang2_combo.setCurrentText("Python")
+        right_vbox.addWidget(lang2_combo)
+        code2_edit = _PTE()
+        code2_edit.setPlaceholderText("Enter code for language 2\u2026")
+        right_vbox.addWidget(code2_edit)
+        top.addLayout(right_vbox)
+        layout.addLayout(top)
+
+        run_btn = _QPB("\u25b6 Compare")
+        layout.addWidget(run_btn)
+
+        result_view = QTextBrowser()
+        result_view.setFontFamily("Courier New")
+        layout.addWidget(result_view)
+
+        close_btns = _DBB(_DBB.StandardButton.Close)
+        close_btns.rejected.connect(dlg.reject)
+        layout.addWidget(close_btns)
+
+        def _run_comparison():
+            l1 = Language.__members__.get(lang1_combo.currentText().upper(), Language.BASIC)
+            l2 = Language.__members__.get(lang2_combo.currentText().upper(), Language.BASIC)
+            try:
+                from ..core.interpreter import Interpreter as _Interp
+                from ..graphics.turtle_state import TurtleState as _TS
+
+                def _run_one(lang, code):
+                    interp = _Interp()
+                    interp.load_program(code, lang)
+                    out = interp.execute(_TS())
+                    return "\n".join(out) if out else "(no output)"
+
+                out1 = _run_one(l1, code1_edit.toPlainText())
+                out2 = _run_one(l2, code2_edit.toPlainText())
+
+                sep = "=" * 50
+                result_view.setPlainText(
+                    f"{sep}\n{l1.friendly_name()} OUTPUT\n{sep}\n{out1}\n\n"
+                    f"{sep}\n{l2.friendly_name()} OUTPUT\n{sep}\n{out2}"
+                )
+            except Exception as exc:  # pylint: disable=broad-except
+                result_view.setPlainText(f"\u274c Comparison failed: {exc}")
+
+        run_btn.clicked.connect(_run_comparison)
+        dlg.exec()
+
+    def _show_sql_workbench(self, _checked: bool = False):
+        """Switch to the SQL Workbench tab in the right panel."""
+        for i in range(self.right_tabs.count()):
+            if "SQL" in self.right_tabs.tabText(i).upper():
+                self.right_tabs.setCurrentIndex(i)
+                if hasattr(self, "sql_status_label"):
+                    self.sql_status_label.setText("🗄 SQL: online")
+                    self.sql_status_label.setStyleSheet("""
+                        QLabel {
+                            background-color: #2a5;
+                            color: white;
+                            padding: 2px 6px;
+                            border-radius: 3px;
+                            border: 1px solid #1a4;
+                            font-size: 11px;
+                        }
+                    """)
+                return
+        # Fallback: panel may not exist yet
+        self.statusBar().showMessage("SQL Workbench panel not found.")
+
+    def _show_dbms_window(self, _checked: bool = False):
+        """Open the full DBMS Manager window."""
+        if not hasattr(self, "_dbms_window") or self._dbms_window is None:
+            self._dbms_window = DBMSWindow(parent=self)
+        self._dbms_window.show()
+        self._dbms_window.raise_()
+        self._dbms_window.activateWindow()
+
+    def _show_cics_terminal(self, _checked: bool = False):
+        """Show the CICS 3278 Terminal panel in right_tabs."""
+        for i in range(self.right_tabs.count()):
+            if "CICS" in self.right_tabs.tabText(i).upper():
+                self.right_tabs.setCurrentIndex(i)
+                return
+        self.statusBar().showMessage("CICS Terminal panel not found.")
+
     def _format_code(self, _checked: bool = False):
         """Format the current code."""
         # pylint: disable=import-outside-toplevel
@@ -477,8 +783,7 @@ class MainWindow(QMainWindow):
 
             # Update status bar language label
             if hasattr(self, "language_label"):
-                lang_text = f"Language: {language.friendly_name()}"
-                self.language_label.setText(lang_text)
+                self.language_label.setText(self._lang_badge_text(language))
 
             # Update title
             self.update_title()
@@ -519,9 +824,7 @@ class MainWindow(QMainWindow):
 
             # Update status bar
             if hasattr(self, "language_label"):
-                lang_name = language.friendly_name()
-                msg = f"Language: {lang_name}"
-                self.language_label.setText(msg)
+                self.language_label.setText(self._lang_badge_text(language))
 
     def check_save_changes_for_tab(self, tab_index):
         """Check if tab has unsaved changes and prompt to save."""
@@ -544,7 +847,7 @@ class MainWindow(QMainWindow):
     def setup_ui(self):
         """Setup main UI layout."""
         self.setWindowTitle("🎨 Time Warp Studio v7.0.0 - Python Edition")
-        self.setMinimumSize(1200, 800)
+        self.setMinimumSize(900, 600)
 
         # Set main window style
         self.setStyleSheet("""
@@ -580,7 +883,9 @@ class MainWindow(QMainWindow):
             /* Splitter styling */
             QSplitter::handle {
                 background-color: palette(dark);
-                border: 1px solid palette(shadow);
+                border: none;
+                width: 6px;
+                height: 6px;
             }
             QSplitter::handle:hover {
                 background-color: palette(highlight);
@@ -631,12 +936,19 @@ class MainWindow(QMainWindow):
                 background-color: palette(window);
             }
         """)
+        # Prevent either side from being collapsed to zero during resize
+        splitter.setChildrenCollapsible(False)
+        # Wider grab handle so it's easy to drag with a mouse
+        splitter.setHandleWidth(6)
 
         # Left side: Vertical splitter for editor + immediate mode
         left_splitter = QSplitter(Qt.Vertical)
+        # Prevent the REPL bar from being dragged out of sight
+        left_splitter.setChildrenCollapsible(False)
+        left_splitter.setHandleWidth(6)
 
         # Editor tabs
-        self.editor_tabs = QTabWidget()
+        self.editor_tabs = ResizableTabWidget()
         self.editor_tabs.setTabsClosable(True)
         self.editor_tabs.tabCloseRequested.connect(self.close_tab)
         self.editor_tabs.currentChanged.connect(self.on_tab_changed)
@@ -652,10 +964,16 @@ class MainWindow(QMainWindow):
         self.new_file()
 
         left_splitter.addWidget(self.editor_tabs)
+        # Editor expands, REPL bar stays fixed-ish
+        left_splitter.setStretchFactor(0, 1)
 
         # Immediate mode panel (REPL) - below editor
         self.immediate_mode = ImmediateModePanel(self)
+        # Hard floor so the REPL bar can never be dragged to nothing
+        self.immediate_mode.setMinimumHeight(44)
         left_splitter.addWidget(self.immediate_mode)
+        # REPL bar does not steal space on resize
+        left_splitter.setStretchFactor(1, 0)
 
         # Set left splitter sizes (85% editor, 15% immediate mode)
         left_splitter.setSizes([550, 50])
@@ -663,7 +981,7 @@ class MainWindow(QMainWindow):
         splitter.addWidget(left_splitter)
 
         # Right side: Tabs for Output and Canvas
-        self.right_tabs = QTabWidget()
+        self.right_tabs = ResizableTabWidget()
         self.right_tabs.setStyleSheet("""
             QTabWidget {
                 background-color: palette(base);
@@ -674,8 +992,6 @@ class MainWindow(QMainWindow):
 
         # Output panel
         self.output = OutputPanel(self)
-        self.right_tabs.addTab(self.output, "📝 Output")
-
         # Connect output panel signals
         self.output.variables_updated.connect(self.on_variables_updated)
         self.output.execution_stats.connect(self.on_execution_stats)
@@ -683,10 +999,16 @@ class MainWindow(QMainWindow):
 
         # Turtle canvas
         self.canvas = TurtleCanvas(self)
-        self.right_tabs.addTab(self.canvas, "🎨 Graphics")
 
-        # Connect output panel to tabs for auto-switching to Graphics
-        self.output.set_tabs_widget(self.right_tabs)
+        # Combine Output and Graphics in a persistent vertical split so both
+        # panels are always visible — no tab-flipping when a program draws.
+        self.output_canvas_pane = QSplitter(Qt.Vertical)
+        self.output_canvas_pane.setChildrenCollapsible(False)
+        self.output_canvas_pane.setHandleWidth(5)
+        self.output_canvas_pane.addWidget(self.output)
+        self.output_canvas_pane.addWidget(self.canvas)
+        self.output_canvas_pane.setSizes([200, 300])
+        self.right_tabs.addTab(self.output_canvas_pane, "📝 Output  🎨 Graphics")
 
         # Connect immediate mode to output panel and canvas
         self.immediate_mode.set_canvas(self.canvas)
@@ -702,7 +1024,18 @@ class MainWindow(QMainWindow):
         self.right_tabs.addTab(self.debug_panel, "🐛 Debug")
         self._connect_debug_signals()
 
+        # SQL Workbench panel
+        self.sql_panel = SQLPanel(self)
+        self.right_tabs.addTab(self.sql_panel, "🗄 SQL")
+
+        # CICS 3278 Terminal panel
+        self.cics_panel = CICSPanel(self, parent=self)
+        self.right_tabs.addTab(self.cics_panel, "🖥 CICS")
+
         splitter.addWidget(self.right_tabs)
+        # Left (editor) gets 3 parts, right (output/canvas) gets 2 parts on resize
+        splitter.setStretchFactor(0, 3)
+        splitter.setStretchFactor(1, 2)
 
         # Set initial splitter sizes (60% editor, 40% output)
         splitter.setSizes([720, 480])
@@ -778,6 +1111,15 @@ class MainWindow(QMainWindow):
         print_graphics_action = QAction("Print &Graphics...", self)
         print_graphics_action.triggered.connect(self._print_graphics)
         file_menu.addAction(print_graphics_action)
+
+        export_pdf_action = QAction("Export Code as &PDF...", self)
+        export_pdf_action.triggered.connect(self._export_code_pdf)
+        file_menu.addAction(export_pdf_action)
+
+        version_history_action = QAction("&Version History...", self)
+        version_history_action.setShortcut("Ctrl+H")
+        version_history_action.triggered.connect(self._show_version_history)
+        file_menu.addAction(version_history_action)
 
         file_menu.addSeparator()
 
@@ -1083,14 +1425,50 @@ class MainWindow(QMainWindow):
 
         view_menu.addSeparator()
 
-        # Cassette mode toggle
-        self.cassette_action = QAction("📼 &Cassette Save Animation", self)
-        self.cassette_action.setCheckable(True)
-        self.cassette_action.setChecked(True)
-        self.cassette_action.triggered.connect(self._toggle_cassette_mode)
-        view_menu.addAction(self.cassette_action)
+        view_menu.addSeparator()
+
+        # Focus mode
+        self._focus_mode_action = QAction("🎯 &Focus Mode", self)
+        self._focus_mode_action.setShortcut("Ctrl+Shift+F11")
+        self._focus_mode_action.setCheckable(True)
+        self._focus_mode_action.triggered.connect(self._toggle_focus_mode)
+        view_menu.addAction(self._focus_mode_action)
 
         # Debugging UI removed — this distribution exposes Run/Stop only.
+
+        # Tools menu
+        tools_menu = menubar.addMenu("&Tools")
+
+        sql_wb_action = QAction("🗄 &SQL Workbench", self)
+        sql_wb_action.setShortcut("Ctrl+Shift+Q")
+        sql_wb_action.setStatusTip("Open the SQL Server 2000 workbench panel")
+        sql_wb_action.triggered.connect(self._show_sql_workbench)
+        tools_menu.addAction(sql_wb_action)
+
+        dbms_action = QAction("🗃 &Database Manager (DBMS)", self)
+        dbms_action.setShortcut("Ctrl+Shift+D")
+        dbms_action.setStatusTip("Open the full DBMS management window")
+        dbms_action.triggered.connect(self._show_dbms_window)
+        tools_menu.addAction(dbms_action)
+
+        cics_action = QAction("🖥 &CICS Terminal (IBM 3278)", self)
+        cics_action.setShortcut("Ctrl+Shift+C")
+        cics_action.setStatusTip("Open IBM 3278 CICS terminal emulator")
+        cics_action.triggered.connect(self._show_cics_terminal)
+        tools_menu.addAction(cics_action)
+
+        tools_menu.addSeparator()
+
+        compare_action = QAction("⚖️ &Compare Languages...", self)
+        compare_action.triggered.connect(self._show_language_comparator)
+        tools_menu.addAction(compare_action)
+
+        tools_menu.addSeparator()
+
+        format_tool_action = QAction("🔧 &Format Code", self)
+        format_tool_action.setShortcut("Ctrl+Alt+F")
+        format_tool_action.triggered.connect(self._format_code)
+        tools_menu.addAction(format_tool_action)
 
         # Help menu (last menu item)
         help_menu = menubar.addMenu("&Help")
@@ -1129,6 +1507,12 @@ class MainWindow(QMainWindow):
         logo_help = QAction("Logo Commands", self)
         logo_help.triggered.connect(lambda: self.show_language_help("logo"))
         lang_help_menu.addAction(logo_help)
+
+        help_menu.addSeparator()
+
+        examples_action = QAction("📚 Browse &Examples...", self)
+        examples_action.triggered.connect(self._show_examples_browser)
+        help_menu.addAction(examples_action)
 
         help_menu.addSeparator()
 
@@ -1283,6 +1667,34 @@ class MainWindow(QMainWindow):
         clear_canvas_btn.setToolTip("Clear the graphics canvas")
         clear_canvas_btn.setStatusTip("Clear all graphics drawings")
 
+        toolbar.addSeparator()
+
+        # Database / SQL group
+        sql_btn = toolbar.addAction("🗄 SQL", self._show_sql_workbench)
+        sql_btn.setToolTip("Open SQL Workbench (Ctrl+Shift+Q)")
+        sql_btn.setStatusTip("Open the embedded SQL Server 2000 workbench")
+
+    # Language name → status-bar emoji
+    _LANG_EMOJI: dict = {
+        "Logo": "🐢", "BASIC": "🔢", "PILOT": "✈️", "Pascal": "🏗️",
+        "Forth": "📚", "C": "⚙️", "Prolog": "🧠", "Haskell": "λ",
+        "APL": "∇", "Lua": "🌙", "Scheme": "λ", "COBOL": "🏢",
+        "Brainfuck": "🧨", "Assembly": "🔩", "JavaScript": "🌐",
+        "Fortran": "🔬", "REXX": "📜", "Smalltalk": "💬",
+        "HyperTalk": "💡", "SQL": "🗄", "JCL": "🖨️", "CICS": "🖥",
+        "SQR": "📊",
+    }
+
+    def _lang_badge_text(self, language) -> str:
+        """Return a compact emoji + name string for the status bar badge."""
+        name = (
+            language.friendly_name()
+            if hasattr(language, "friendly_name")
+            else str(language)
+        )
+        emoji = self._LANG_EMOJI.get(name, "📝")
+        return f"{emoji} {name}"
+
     def create_statusbar(self):
         """Create status bar."""
         self.statusbar = QStatusBar()
@@ -1301,7 +1713,7 @@ class MainWindow(QMainWindow):
         self.setStatusBar(self.statusbar)
 
         # Add permanent widgets for better visual feedback
-        self.language_label = QLabel("Language: BASIC")
+        self.language_label = QLabel("🔢 BASIC")
         self.language_label.setStyleSheet("""
             QLabel {
                 background-color: palette(highlight);
@@ -1325,6 +1737,21 @@ class MainWindow(QMainWindow):
         """)
         self.statusbar.addPermanentWidget(self.position_label)
 
+        self.sql_status_label = QLabel("🗄 SQL: offline")
+        self.sql_status_label.setToolTip("SQL Server 2000 — click to open workbench")
+        self.sql_status_label.setStyleSheet("""
+            QLabel {
+                background-color: palette(base);
+                color: palette(text);
+                padding: 2px 6px;
+                border-radius: 3px;
+                border: 1px solid palette(dark);
+                font-size: 11px;
+            }
+        """)
+        self.sql_status_label.mousePressEvent = lambda _: self._show_sql_workbench()
+        self.statusbar.addPermanentWidget(self.sql_status_label)
+
         ready_msg = "🎉 Ready - Time Warp Studio loaded successfully!"
         self.statusbar.showMessage(ready_msg)
 
@@ -1342,10 +1769,23 @@ class MainWindow(QMainWindow):
             self,
             "Open File",
             last_dir,
-            "Time Warp Files (*.pilot *.bas *.logo);;"
-            "PILOT Files (*.pilot);;"
+            "Time Warp Files (*.bas *.pilot *.logo *.c *.pas *.pro *.f *.py *.lua *.scm *.rkt *.cob *.cbl *.bf *.asm *.s *.js *.f77 *.for *.rex *.rexx *.st *.htalk *.hs *.apl *.sql *.jcl *.cics);;"
             "BASIC Files (*.bas);;"
+            "PILOT Files (*.pilot);;"
             "Logo Files (*.logo);;"
+            "Python Files (*.py);;"
+            "Lua Files (*.lua);;"
+            "Scheme Files (*.scm *.rkt);;"
+            "COBOL Files (*.cob *.cbl);;"
+            "Brainfuck Files (*.bf);;"
+            "Assembly Files (*.asm *.s);;"
+            "JavaScript Files (*.js);;"
+            "FORTRAN Files (*.f77 *.for);;"
+            "REXX Files (*.rex *.rexx);;"
+            "Smalltalk Files (*.st);;"
+            "HyperTalk Files (*.htalk);;"
+            "Haskell Files (*.hs);;"
+            "APL Files (*.apl);;"
             "All Files (*.*)",
             options=QFileDialog.Option.DontUseNativeDialog,
         )
@@ -1356,13 +1796,6 @@ class MainWindow(QMainWindow):
 
     def load_file(self, filename):
         """Load file into current tab."""
-        # Show cassette animation if enabled
-        if self.cassette_mode:
-            display_name = Path(filename).name
-            if not show_cassette_load(self, display_name, duration_ms=1800):
-                self.statusbar.showMessage("Load cancelled")
-                return
-
         try:
             with open(filename, "r", encoding="utf-8") as f:
                 content = f.read()
@@ -1427,15 +1860,15 @@ class MainWindow(QMainWindow):
             # No filename yet — prompt save-as flow
             return self.save_tab_as(current_index)
 
-        # Show cassette animation if enabled
-        if self.cassette_mode:
-            display_name = Path(filename).name
-            if not show_cassette_save(self, display_name, duration_ms=1500):
-                self.statusbar.showMessage("Save cancelled")
-                return False
-
         # Write to the existing file
         try:
+            # Save the existing content as a version before overwriting
+            try:
+                existing_content = editor.toPlainText()
+                self._autosave_manager.autosave_file(Path(filename), existing_content)
+            except Exception:  # pylint: disable=broad-except
+                pass  # Autosave failure must never block a real save
+
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(editor.toPlainText())
             self.set_current_tab_info(file=filename, modified=False)
@@ -1494,7 +1927,7 @@ class MainWindow(QMainWindow):
             self,
             "Save File As",
             last_dir,
-            "Time Warp Files (*.pilot *.bas *.logo);;All Files (*.*)",
+            "Time Warp Files (*.bas *.pilot *.logo *.c *.pas *.pro *.f *.py *.lua *.scm *.cob *.bf *.asm *.js *.f77 *.rex *.st *.htalk *.hs *.apl *.sql *.jcl *.cics);;SQL Files (*.sql);;JCL Files (*.jcl);;CICS Files (*.cics);;All Files (*.*)",
             options=QFileDialog.Option.DontUseNativeDialog,
         )
 
@@ -1548,14 +1981,6 @@ class MainWindow(QMainWindow):
                     editor.clear_current_line()
 
             self.statusbar.showMessage("Execution complete")
-            # If graphics were drawn, switch to Graphics tab for convenience
-            try:
-                if getattr(self.canvas, "lines", None):
-                    if len(self.canvas.lines) > 0:
-                        self.right_tabs.setCurrentWidget(self.canvas)
-            except (AttributeError, TypeError):
-                # Non-fatal; ignore any unexpected attribute/sequence issues
-                pass
 
     def run_program(self):
         """Run the current editor contents in the output panel."""
@@ -1573,11 +1998,9 @@ class MainWindow(QMainWindow):
         # Ensure output uses the current language and is visible
         self.output.set_language(language)
         try:
-            self.right_tabs.setCurrentWidget(self.output)
+            self.right_tabs.setCurrentWidget(self.output_canvas_pane)
         except AttributeError:
             # Non-fatal: if right_tabs not yet created in tests, ignore
-            # Only expect attribute errors from missing widgets; don't
-            # swallow unrelated exceptions.
             pass
 
         code = editor.toPlainText()
@@ -1606,6 +2029,11 @@ class MainWindow(QMainWindow):
         self.run_action.setEnabled(False)
         self.stop_action.setEnabled(True)
         self.statusbar.showMessage("Running program")
+
+        # Clear any error highlights from the previous run
+        editor = self.get_current_editor()
+        if editor:
+            editor.clear_error_lines()
 
         # Start execution (no debug controls in this build)
         self.output.run_program(code, self.canvas, debug_mode=False)
@@ -1658,7 +2086,27 @@ class MainWindow(QMainWindow):
             self._run_next_project_tab()
 
     def on_execution_error(self, error: str):
-        """Handle execution errors for AI assistance."""
+        """Handle execution errors for AI assistance and editor navigation."""
+        # Parse line number from error message (e.g. 'line 5', 'Line 5:', 'at line 5')
+        import re as _re
+        line_match = _re.search(r"(?:line|Line)\s+(\d+)", error)
+        if line_match:
+            err_line = int(line_match.group(1))
+            editor = self.get_current_editor()
+            if editor:
+                editor.clear_error_lines()
+                editor.set_error_line(err_line)
+                editor.goto_line(err_line)
+
+        # Append friendly error hint from error_hints module
+        try:
+            context = self._get_current_line_context()
+            hint = get_enhanced_error_message(error, context)
+            if hint and hint.strip() and hint.strip() != error.strip():
+                self.output.append(f"\n💡 Hint: {hint}")
+        except Exception:  # pylint: disable=broad-except
+            pass
+
         ai_panel = self.feature_manager.get_feature_panel("ai_assistant")
         if ai_panel and hasattr(ai_panel, "set_error_context"):
             ai_panel.set_error_context(error)
@@ -1923,6 +2371,22 @@ class MainWindow(QMainWindow):
             Language.PASCAL: ".pas",
             Language.PROLOG: ".pro",
             Language.FORTH: ".f",
+            Language.PYTHON: ".py",
+            Language.LUA: ".lua",
+            Language.SCHEME: ".scm",
+            Language.COBOL: ".cob",
+            Language.BRAINFUCK: ".bf",
+            Language.ASSEMBLY: ".asm",
+            Language.JAVASCRIPT: ".js",
+            Language.FORTRAN: ".f77",
+            Language.REXX: ".rex",
+            Language.SMALLTALK: ".st",
+            Language.HYPERTALK: ".htalk",
+            Language.HASKELL: ".hs",
+            Language.APL: ".apl",
+            Language.SQL: ".sql",
+            Language.JCL: ".jcl",
+            Language.CICS: ".cics",
         }
         return mapping.get(language, ".bas")
 
@@ -1943,6 +2407,23 @@ class MainWindow(QMainWindow):
             "pascal": Language.PASCAL,
             "prolog": Language.PROLOG,
             "forth": Language.FORTH,
+            "python": Language.PYTHON,
+            "lua": Language.LUA,
+            "scheme": Language.SCHEME,
+            "cobol": Language.COBOL,
+            "brainfuck": Language.BRAINFUCK,
+            "assembly": Language.ASSEMBLY,
+            "javascript": Language.JAVASCRIPT,
+            "fortran": Language.FORTRAN,
+            "rexx": Language.REXX,
+            "smalltalk": Language.SMALLTALK,
+            "hypertalk": Language.HYPERTALK,
+            "haskell": Language.HASKELL,
+            "apl": Language.APL,
+            "sql": Language.SQL,
+            "sql server": Language.SQL,
+            "jcl": Language.JCL,
+            "cics": Language.CICS,
         }
         lang = language_map.get(language_name.lower(), Language.BASIC)
 
@@ -2296,6 +2777,12 @@ class MainWindow(QMainWindow):
         # Save theme preference
         self.settings.setValue("theme", theme_name)
         self.statusBar().showMessage(f"Theme changed to: {theme_name}")
+        if hasattr(self, "sql_panel"):
+            self.sql_panel.apply_theme(theme_name)
+        if hasattr(self, "cics_panel"):
+            self.cics_panel.apply_theme(theme_name)
+        if hasattr(self, "_dbms_window") and self._dbms_window:
+            self._dbms_window.apply_theme(theme_name)
 
     def change_font_family(self, font_family):
         """Change editor font family."""
@@ -2887,8 +3374,8 @@ class MainWindow(QMainWindow):
             f"📺 {mode.name} - {mode.resolution_str} ({mode.colors} colors)"
         )
 
-        # Switch to Graphics tab to show the effect
-        self.right_tabs.setCurrentWidget(self.canvas)
+        # Show the output/graphics pane
+        self.right_tabs.setCurrentWidget(self.output_canvas_pane)
 
     def toggle_crt_effects(self, enabled: bool):
         """Toggle CRT effects on/off."""
@@ -2924,14 +3411,6 @@ class MainWindow(QMainWindow):
             intensity=0.1,
         )
         self.crt_overlay.set_flicker(self.flicker_action.isChecked())
-
-    def _toggle_cassette_mode(self, enabled: bool):
-        """Toggle cassette animation mode."""
-        self.cassette_mode = enabled
-        if enabled:
-            self.statusbar.showMessage("📼 Cassette mode enabled")
-        else:
-            self.statusbar.showMessage("📼 Cassette mode disabled")
 
     def resizeEvent(self, event):  # pylint: disable=invalid-name
         """Handle window resize - update CRT overlay."""
