@@ -1,0 +1,293 @@
+╔══════════════════════════════════════════════════════════════════════════╗
+║          ACME CORPORATION — ENTERPRISE RESOURCE PLANNING SYSTEM          ║
+║                    Time Warp Studio Mainframe Demo                        ║
+╚══════════════════════════════════════════════════════════════════════════╝
+
+This demo environment emulates a realistic enterprise mainframe ERP system
+using COBOL, CICS, JCL, SQL, and SQR — the languages of IBM z/OS data centers.
+All components share the same data model and work together as a real system.
+
+────────────────────────────────────────────────────────────────────────────
+ SYSTEM ARCHITECTURE
+────────────────────────────────────────────────────────────────────────────
+
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │                          IBM z/OS Mainframe                         │
+  │                                                                     │
+  │  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────────────┐  │
+  │  │  CICS    │  │  BATCH   │  │   SQR    │  │   DB2/SQL        │  │
+  │  │ Online   │  │  Jobs    │  │ Reports  │  │   Database       │  │
+  │  │ Screens  │  │  (JCL)   │  │          │  │                  │  │
+  │  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────────┬─────────┘  │
+  │       └─────────────┴─────────────┴─────────────────┘             │
+  │                         COBOL Programs                              │
+  └─────────────────────────────────────────────────────────────────────┘
+
+────────────────────────────────────────────────────────────────────────────
+ DATABASE (SQL) — erp_schema.sql
+────────────────────────────────────────────────────────────────────────────
+The foundation of the ERP. 18 tables, 4 views, complete with seed data.
+
+  MODULES:
+  ┌─────────────────────────────────────────────────────────────────────┐
+  │  HR/PAYROLL                                                         │
+  │    COMPANY          — Master company record (ACME Corporation)      │
+  │    DEPARTMENT       — 6 departments (Ops, Finance, IT, HR, Sales,  │
+  │                       Warehouse) with cost centers                  │
+  │    EMPLOYEE         — 7 employees with SSN, pay type, exempt status │
+  │    JOB_CODE         — Job classifications with grade/pay ranges     │
+  │    PAY_PERIOD        — Bi-weekly periods (Open/Closed/Posted)       │
+  │    TIMECARD         — Daily hours (reg/OT/sick/vacation)            │
+  │    PAYCHECK         — Computed pay with all deductions              │
+  │                                                                     │
+  │  INVENTORY                                                          │
+  │    WAREHOUSE        — 2 warehouses (Chicago, Detroit)               │
+  │    ITEM_MASTER      — Products, raw materials, services             │
+  │    INVENTORY_BALANCE — On-hand, committed, on-order by warehouse   │
+  │    INVENTORY_TRANSACTION — Complete audit trail                     │
+  │                                                                     │
+  │  SALES & AR                                                         │
+  │    CUSTOMER         — 4 B2B customers with credit limits            │
+  │    SALES_ORDER      — Open and completed orders                     │
+  │    SALES_ORDER_LINE — Line items with pricing and fulfillment       │
+  │                                                                     │
+  │  GENERAL LEDGER                                                     │
+  │    CHART_OF_ACCOUNTS — Full COA: Assets, Liabilities, Equity,      │
+  │                        Revenue, Expenses (25 accounts)              │
+  │    FISCAL_PERIOD    — Accounting periods                            │
+  │    GL_JOURNAL       — Journal entries with type codes               │
+  │    GL_JOURNAL_LINE  — Debit/credit detail with account coding       │
+  └─────────────────────────────────────────────────────────────────────┘
+
+  VIEWS:
+    VW_EMPLOYEE_SUMMARY   — Employee with dept, title, annual equivalent
+    VW_OPEN_ORDERS        — Open/partial orders with line counts
+    VW_INVENTORY_STATUS   — Stock levels with reorder alerts
+
+────────────────────────────────────────────────────────────────────────────
+ COBOL PROGRAMS
+────────────────────────────────────────────────────────────────────────────
+
+  payroll_processing.cob (PAYPRO01)
+  ─────────────────────────────────
+  The core payroll engine. Demonstrates:
+  - EXEC SQL embedded in COBOL (cursor, fetch, insert, commit)
+  - Decimal COMP-3 arithmetic for tax calculations
+  - PERFORM/EVALUATE for structured control flow
+  - FD/RECORD WORKING-STORAGE FILE sections
+  - REDEFINES for tax table overlay
+  - Multi-step journal entry generation
+  - Printed register with formatted numeric output (PIC Z,ZZ9.99)
+
+  Key logic:
+  1. Open cursor on EMPLOYEE WHERE ACTIVE_FLAG = 'Y'
+  2. For hourly employees, SUM hours from TIMECARD (SQL aggregate)
+  3. Calculate gross pay (salary/26 or hourly * hours + OT * 1.5)
+  4. Apply Federal withholding tax (tiered bracket method)
+  5. Apply Illinois state tax (4.95% flat, less exemptions)
+  6. Compute FICA: Social Security (6.2%) + Medicare (1.45%)
+  7. Apply benefit deductions: Health ($125), Dental ($18.50), 401k (4%)
+  8. Net pay = Gross - All deductions
+  9. INSERT into PAYCHECK table
+  10. Write GL journal: Dr Wages Expense (6100), Cr Payroll Cash (1020)
+      Cr Fed Tax Withheld (2300), Cr State Tax (2310), Cr FICA (2320)
+  11. Print formatted payroll register
+
+────────────────────────────────────────────────────────────────────────────
+ CICS ONLINE TRANSACTIONS
+────────────────────────────────────────────────────────────────────────────
+
+  customer_inquiry.cics (CINQPRO1, Transaction: CINQ)
+  ────────────────────────────────────────────────────
+  Customer service terminal inquiry screen. Demonstrates:
+  - EXEC CICS RECEIVE MAP / SEND MAP (BMS mapset processing)
+  - EXEC CICS ASSIGN AID (PF key detection)
+  - EXEC CICS XCTL (transfer control to linked program)
+  - EXEC CICS RETURN TRANSID COMMAREA (pseudo-conversational design)
+  - SQL cursor for open orders (last 5 FETCH FIRST 5 ROWS ONLY)
+  - SQL aggregate for AR aging buckets (CASE WHEN in SELECT)
+  - EVALUATE WS-AID for PF3/PF5/ENTER branching
+
+  Screen layout (3270 terminal):
+  ┌──────────────────────────────────────────────────────────────────┐
+  │  ACME ERP SYSTEM - CUSTOMER INQUIRY          Date: 12/26/2025   │
+  │  Customer ID: [CUST0001]                      Time: 09:15:30    │
+  │──────────────────────────────────────────────────────────────────│
+  │  Company:  Acme Industrial Supply             Phone: 312-555-0200│
+  │  Contact:  Tom Baker                          Terms: NET30       │
+  │  Address:  200 Commerce St, Chicago IL 60602  CrLim: $50,000.00 │
+  │──────────────────────────────────────────────────────────────────│
+  │  A/R BALANCE:  $1,372.03    30-day: $1,372.03  60-day: .00      │
+  │──────────────────────────────────────────────────────────────────│
+  │  OPEN ORDERS:                                                    │
+  │  SO-2025-001  11/15/2025  $1,372.03  COMPLETE                   │
+  │──────────────────────────────────────────────────────────────────│
+  │  PF3=Exit  PF5=Orders  PF7=Next  PF9=Print                      │
+  └──────────────────────────────────────────────────────────────────┘
+
+────────────────────────────────────────────────────────────────────────────
+ JCL JOB STREAMS
+────────────────────────────────────────────────────────────────────────────
+
+  payroll_run.jcl (PAYRJOB)
+  ─────────────────────────
+  Scheduled bi-weekly Friday payroll job stream:
+  Step 1: HOUSEKEEPING — IEFBR14 deletes prior work files
+  Step 2: TIMVLD01 — Validate timecard hours and codes
+  Step 3: IEBGENER — Print timecard error report to INTRDR
+  Step 4: PAYPRO01 — Main payroll calculation (COBOL above)
+  Step 5: Conditional abort if PAYCALC RC > 4
+  Step 6: IEBGENER — Print payroll register from PRNTFILE
+  Step 7: SQRRUN   — Generate SQR payroll register report
+  Step 8: GLPOST01 — Post GL journal entries (set POSTED_FLAG='Y')
+  Step 9: IEBCOPY  — Archive payroll datasets to tape
+  Final:  Write completion trigger, notify operator
+
+  daily_batch.jcl (DLYBTCH)
+  ─────────────────────────
+  Scheduled nightly (01:00 AM) daily operations:
+  Step 01: HOUSEKEEPING
+  Step 02: ORDFILL1 — Fulfill open orders from inventory
+  Step 03: INVPST01 — Post pending inventory transactions
+  Step 04: REORDPT1 — Generate reorder alert report
+  Step 05: ARAGING1 — Compute AR aging buckets
+  Step 06: GLSUM01  — Summarize daily GL activity
+  Step 07: SQRRUN   — Three daily management reports
+  Step 08: MAILDIST — Email reports to managers
+  Step 09: AUDTLOG1 — Record successful completion
+  Step 10: Alert operator on any step failure (RC > 4)
+
+  Demonstrates: COND parameters, IF/THEN/ENDIF, cataloged datasets,
+  DCB parameters, INTRDR output, conditional notification
+
+────────────────────────────────────────────────────────────────────────────
+ SQR REPORTS
+────────────────────────────────────────────────────────────────────────────
+
+  payroll_report.sqr
+  ──────────────────
+  Formatted payroll register report for management review.
+  Demonstrates SQR's unique combined report language:
+  - begin-program / begin-SELECT (direct SQL embedding)
+  - begin-heading with automatic page headers
+  - begin-footing with page numbers
+  - Department break logic with subtotal printing
+  - edit masks for currency formatting
+  - let/add/print commands
+  - Parameterized by &PERIOD_ID and &COMPANY_ID
+
+  Sample output: (132-column report)
+  ┌────────────────────────────────────────────────────────────────┐
+  │            ACME CORPORATION                                    │
+  │  PAYROLL REGISTER — DETAIL BY DEPARTMENT                      │
+  │  Pay Period: 2025122BI         Run Date: 12/26/2025           │
+  │──────────────────────────────────────────────────────────────  │
+  │  Department: Finance                                           │
+  │  E0001002  Johnson, Patricia  Accountant         $2,500.00 ...│
+  │  ─────────────────────────────────────────────────────────    │
+  │  Dept Total: Finance  1 emps  $2,500.00 ...                   │
+  ╞════════════════════════════════════════════════════════════════│
+  │  GRAND TOTAL  7 employees  $37,961.54  ...  $28,714.22        │
+  └────────────────────────────────────────────────────────────────┘
+
+────────────────────────────────────────────────────────────────────────────
+ HOW TO USE THESE EXAMPLES IN TIME WARP STUDIO
+────────────────────────────────────────────────────────────────────────────
+
+1. SQL SCHEMA        — Load erp_schema.sql to create tables and seed data
+                       Run in the SQL language mode
+
+2. COBOL PAYROLL     — Open payroll_processing.cob in COBOL mode
+                       Study the DATA DIVISION structure and PROCEDURE DIVISION
+                       The EXEC SQL statements show DB2/COBOL interface
+
+3. CICS CUSTOMER INQ — Open customer_inquiry.cics in CICS mode
+                       Trace the pseudo-conversational flow:
+                       RETURN → AID check → SQL lookup → SEND MAP
+
+4. JCL PAYROLL JOB   — Open payroll_run.jcl in JCL mode
+                       Study DD statement structure, COND parameters
+                       See how jobs chain: validate → calculate → post → report
+
+5. JCL DAILY BATCH   — Open daily_batch.jcl in JCL mode
+                       Observe IF/THEN/ENDIF conditional step execution
+
+6. SQR REPORT        — Open payroll_report.sqr in SQR mode
+                       See how begin-SELECT directly queries the database
+                       Study break logic for department subtotals
+
+────────────────────────────────────────────────────────────────────────────
+ DATA FLOW DIAGRAM
+────────────────────────────────────────────────────────────────────────────
+
+  HR ENTRY                          OPERATIONS
+  ─────────                         ──────────
+  Hire employee          ──→        EMPLOYEE table
+  Enter timecard         ──→        TIMECARD table
+                                         │
+                                         ▼
+  PAYROLL RUN (JCL: PAYRJOB)
+  ─────────────────────────
+  TIMVLD01: Validate timecards
+  PAYPRO01: Calculate pay        ──→  PAYCHECK table
+                                  ──→  GL_JOURNAL (PAYP)
+                                  ──→  Payroll Register (PRNTFILE)
+  GLPOST01: Post GL entries      ──→  GL_JOURNAL.POSTED_FLAG = 'Y'
+  SQRRUN:   Generate reports     ──→  payroll_report.sqr output
+
+  ONLINE (CICS: CINQ)
+  ────────────────────
+  Operator enters CINQ + CUSTOMER_ID
+  CINQPRO1 queries CUSTOMER, SALES_ORDER
+  Returns formatted 3270 display
+  PF5 → OINQPRO1 (order detail screen)
+
+  NIGHTLY BATCH (JCL: DLYBTCH)
+  ────────────────────────────
+  ORDFILL1: Check INVENTORY_BALANCE vs SALES_ORDER_LINE
+            Set QTY_COMMITTED, update ORDER STATUS
+  INVPST01: Post INVENTORY_TRANSACTION, update QTY_ON_HAND
+  REORDPT1: Query VW_INVENTORY_STATUS for STOCK_STATUS='REORDER NOW'
+  ARAGING1: Query SALES_ORDER by date ranges, update aging
+  GLSUM01:  Summarize GL_JOURNAL_LINE by account
+
+────────────────────────────────────────────────────────────────────────────
+ GLOSSARY — MAINFRAME TERMS
+────────────────────────────────────────────────────────────────────────────
+
+  BMS       Basic Mapping Support — CICS 3270 screen definition language
+  CICS      Customer Information Control System — IBM transaction server
+  COMP-3    Packed decimal storage format (2 digits per byte)
+  DD        Data Definition — JCL statement defining a dataset
+  DSN       Data Set Name — mainframe file identifier
+  JCL       Job Control Language — batch job script language
+  JES2/JES3 Job Entry Subsystem — z/OS batch job scheduler
+  LRECL     Logical Record Length — fixed/variable record size
+  OPC/TWS   Operations Planning & Control / Tivoli Workload Scheduler
+  PIC       PICTURE clause — COBOL data type definition
+  RECFM     Record Format: FB=Fixed/Blocked, FBA=Fixed/Blocked/ANSI
+  SQLCA     SQL Communication Area — COBOL/SQL error return structure
+  SQR       Structured Query Report Language (PeopleSoft/Oracle)
+  SYSIN     Standard input to a program step
+  SYSOUT    Directed to JES spool for printer/viewing
+  VSAM      Virtual Storage Access Method — indexed mainframe files
+
+────────────────────────────────────────────────────────────────────────────
+ FURTHER EXPLORATION
+────────────────────────────────────────────────────────────────────────────
+
+  Browse the other examples in each language directory:
+  • cobol/     — also see hello.cob for COBOL syntax basics
+  • sql/       — also see erp_reports.sql for business intelligence queries
+  • jcl/       — also see month_end.jcl for period close procedures
+  • cics/      — also see order_entry.cics for data entry screens
+  • sqr/       — also see gl_report.sqr for trial balance report
+
+  The ERP schema (erp_schema.sql) is the backbone — every other
+  component reads from or writes to these tables.
+
+════════════════════════════════════════════════════════════════════════════
+  ACME ERP SYSTEM — Time Warp Studio Mainframe Demo
+  Demonstrates: SQL, COBOL, CICS, JCL, SQR integration
+  Simulates: Real enterprise payroll, inventory, and GL processing
+════════════════════════════════════════════════════════════════════════════

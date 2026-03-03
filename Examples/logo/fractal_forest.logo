@@ -1,0 +1,157 @@
+; =====================================================
+;  FRACTAL FOREST - Recursive Trees and L-Systems
+;  A visually stunning natural fractal demo using
+;  recursive Logo procedures. Demonstrates recursion,
+;  procedures, turtle graphics, and color manipulation.
+; =====================================================
+
+; -- Color palette --
+TO SETLEAFCOLOR :DEPTH
+  IF :DEPTH < 2 [SETPENCOLOR "green STOP]
+  IF :DEPTH < 4 [SETPENCOLOR "lime STOP]
+  SETPENCOLOR "brown
+END
+
+; -- Recursive branch tree --
+TO BRANCH :LEN :DEPTH
+  IF :DEPTH = 0 [STOP]
+  SETPENSIZE :DEPTH
+  SETLEAFCOLOR :DEPTH
+  FD :LEN
+  RT 25
+  BRANCH :LEN * 0.7 :DEPTH - 1
+  LT 50
+  BRANCH :LEN * 0.7 :DEPTH - 1
+  RT 25
+  BK :LEN
+END
+
+; -- Draw one tree --
+TO TREE :X :Y :SIZE :DEPTH
+  PU
+  SETXY :X :Y
+  SETHEADING 0
+  PD
+  SETPENCOLOR "brown
+  SETPENSIZE :DEPTH
+  BRANCH :SIZE :DEPTH
+END
+
+; -- Colorful spiral --
+TO SPIRAL :SIZE :ANGLE :STEPS :CLR
+  IF :STEPS = 0 [STOP]
+  SETPENCOLOR :CLR
+  FD :SIZE
+  RT :ANGLE
+  SPIRAL :SIZE + 2 :ANGLE :STEPS - 1 :CLR
+END
+
+; -- Star shape --
+TO STAR :SIZE :POINTS
+  MAKE "ANGLE 360 / :POINTS + 360 / :POINTS
+  REPEAT :POINTS [
+    FD :SIZE
+    RT :ANGLE
+    FD :SIZE
+    LT :ANGLE / 2
+  ]
+END
+
+; -- Polygon --
+TO POLYGON :SIDES :SIZE
+  MAKE "ANGLE 360 / :SIDES
+  REPEAT :SIDES [FD :SIZE RT :ANGLE]
+END
+
+; -- Multicolor flower --
+TO PETAL :SIZE
+  REPEAT 180 [FD :SIZE / 50 RT 2]
+END
+
+TO FLOWER :SIZE :PETALS
+  MAKE "PETALAGL 360 / :PETALS
+  MAKE "COLORS ["red "yellow "orange "pink "purple "cyan]
+  MAKE "CI 1
+  REPEAT :PETALS [
+    SETPENCOLOR ITEM :CI :COLORS
+    PETAL :SIZE
+    RT :PETALAGL
+    MAKE "CI :CI + 1
+    IF :CI > 6 [MAKE "CI 1]
+  ]
+END
+
+; -- Snowflake / Koch curve --
+TO KOCHCURVE :LEN :DEPTH
+  IF :DEPTH = 0 [FD :LEN STOP]
+  KOCHCURVE :LEN / 3 :DEPTH - 1
+  LT 60
+  KOCHCURVE :LEN / 3 :DEPTH - 1
+  RT 120
+  KOCHCURVE :LEN / 3 :DEPTH - 1
+  LT 60
+  KOCHCURVE :LEN / 3 :DEPTH - 1
+END
+
+TO SNOWFLAKE :SIZE :DEPTH
+  REPEAT 3 [
+    KOCHCURVE :SIZE :DEPTH
+    RT 120
+  ]
+END
+
+; =====================================================
+;  MAIN SHOWCASE
+; =====================================================
+CS
+PRINT "Drawing fractal forest..."
+
+; Forest of trees --
+SETPENCOLOR "brown
+TREE -150 -200 60 5
+TREE  -50 -200 80 6
+TREE   80 -200 55 4
+TREE  180 -200 70 5
+
+; Ground line
+PU SETXY -250 -200 PD
+SETPENCOLOR "darkgreen
+SETPENSIZE 3
+SETXY 250 -200
+
+; Colorful spiral garden
+PU SETXY -200 100 PD
+SETPENCOLOR "blue
+SPIRAL 5 90 30 "blue
+
+PU SETXY 0 120 PD
+SPIRAL 3 89 40 "red
+
+PU SETXY 180 90 PD
+SPIRAL 4 91 35 "purple
+
+; Big flower center stage
+PU SETXY 0 0 PD
+SETHEADING 0
+FLOWER 100 12
+
+; Snowflake in corner
+PU SETXY -220 180 PD
+SETHEADING 0
+SETPENCOLOR "cyan
+SETPENSIZE 1
+SNOWFLAKE 60 3
+
+; Stars
+PU SETXY 200 150 PD
+SETHEADING 0
+SETPENCOLOR "yellow
+SETPENSIZE 2
+STAR 40 5
+
+PU SETXY 150 50 PD
+SETHEADING 30
+SETPENCOLOR "orange
+STAR 25 6
+
+PRINT "Fractal forest complete!"

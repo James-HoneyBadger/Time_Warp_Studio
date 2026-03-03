@@ -1,0 +1,163 @@
+; =====================================================
+;  GALAXY SIMULATOR - Space Art in Logo
+;  Draw a spiral galaxy, solar system, and nebulae.
+;  Demonstrates: math functions, color, complex paths.
+; =====================================================
+
+; -- Draw a single star --
+TO STAR5 :SIZE
+  REPEAT 5 [
+    FD :SIZE
+    RT 144
+  ]
+END
+
+; -- Spiral arm of galaxy --
+TO GALAXYARM :STEPS :GROW :ANGLE :CLR
+  SETPENCOLOR :CLR
+  MAKE "S 1
+  REPEAT :STEPS [
+    SETPENSIZE 1
+    FD :S * :GROW
+    RT :ANGLE
+    MAKE "S :S + 1
+  ]
+END
+
+; -- Circular orbit --
+TO ORBIT :RADIUS :SEGMENTS :CLR
+  SETPENCOLOR :CLR
+  MAKE "AGL 360 / :SEGMENTS
+  REPEAT :SEGMENTS [
+    FD :RADIUS * 2 * 3.14159 / :SEGMENTS
+    RT :AGL
+  ]
+END
+
+; -- Planet --
+TO PLANET :R :CLR
+  SETPENCOLOR :CLR
+  SETPENSIZE :R
+  FD 1
+  BK 1
+END
+
+; -- Galaxy core --
+TO CORE :SIZE
+  MAKE "I 1
+  WHILE [:I <= :SIZE] [
+    MAKE "BRIGHT (:I * 20) MOD 256
+    SETPENCOLOR "yellow
+    SETPENSIZE :I / 2
+    REPEAT 36 [FD 2 RT 10]
+    MAKE "I :I + 3
+  ]
+END
+
+; -- Nebula cloud --
+TO NEBULA :X :Y :SIZE :CLR
+  PU SETXY :X :Y PD
+  SETPENCOLOR :CLR
+  MAKE "I 1
+  WHILE [:I <= 20] [
+    SETPENSIZE :I / 4
+    REPEAT 36 [
+      FD :SIZE * :I / 20
+      RT 10
+    ]
+    RT 17
+    MAKE "I :I + 1
+  ]
+END
+
+; -- Shooting star trail --
+TO SHOOT :X1 :Y1 :X2 :Y2 :CLR
+  PU SETXY :X1 :Y1 PD
+  SETPENCOLOR :CLR
+  SETPENSIZE 2
+  PU SETXY :X2 :Y2 PD
+  SETPENCOLOR "black
+END
+
+; -- Constellations --
+TO BIGDIPPER
+  SETPENCOLOR "white
+  SETPENSIZE 2
+  ; Bowl
+  PU SETXY -220 150 PD FD 25 RT 80 FD 25 RT 90 FD 25 RT 100 FD 25
+  ; Handle
+  RT 20 FD 30 RT 15 FD 28 RT 10 FD 25
+END
+
+; =====================================================
+;  MAIN SHOWCASE
+; =====================================================
+CS
+PRINT "Rendering galaxy..."
+
+; Nebulae in background
+NEBULA -180 150 30 "purple
+NEBULA  160 -120 25 "blue
+NEBULA -80  -200 20 "cyan
+NEBULA  200 100 18 "red
+
+; Galaxy center glow
+PU SETXY 0 0 PD
+SETHEADING 0
+CORE 15
+
+; Galaxy spiral arms
+PU SETXY 0 0 PD SETHEADING 0
+GALAXYARM 40 1.2 19 "yellow
+
+PU SETXY 0 0 PD SETHEADING 90
+GALAXYARM 40 1.2 19 "orange
+
+PU SETXY 0 0 PD SETHEADING 180
+GALAXYARM 35 1.1 20 "white
+
+PU SETXY 0 0 PD SETHEADING 270
+GALAXYARM 35 1.1 20 "cyan
+
+; Solar system at left
+PU SETXY -180 -50 PD
+SETHEADING 0
+SETPENCOLOR "yellow
+SETPENSIZE 8
+FD 1 BK 1
+
+; Orbits
+PU SETXY -180 -50 PD SETHEADING 0
+ORBIT 30 72 "darkblue
+
+PU SETXY -180 -50 PD SETHEADING 0
+ORBIT 50 90 "blue
+
+PU SETXY -180 -50 PD SETHEADING 0
+ORBIT 70 108 "blue
+
+; Planets on orbits
+PU SETXY -150 -50 PD
+PLANET 3 "gray
+
+PU SETXY -130 -50 PD
+PLANET 4 "blue
+
+PU SETXY -180 -120 PD
+PLANET 3 "red
+
+; Stars scattered around  
+SETPENSIZE 1
+PU SETXY -240  200 PD SETPENCOLOR "white STAR5 4
+PU SETXY  240  200 PD STAR5 4
+PU SETXY  240 -200 PD STAR5 4
+PU SETXY -240 -200 PD STAR5 4
+PU SETXY  100  180 PD STAR5 6
+PU SETXY -100  -180 PD STAR5 5
+PU SETXY  180  -80 PD STAR5 3
+PU SETXY -200   20 PD STAR5 3
+
+; Big Dipper constellation
+BIGDIPPER
+
+PRINT "Galaxy rendered!"

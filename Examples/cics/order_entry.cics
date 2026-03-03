@@ -1,0 +1,467 @@
+      *================================================================
+      * PROGRAM:    OENTPRO1
+      * TRANSACTION: OENT — Order Entry
+      * MAP:        OENTMAP1 in mapset OENTMSP1
+      * DESCRIPTION: CICS pseudo-conversational order entry
+      *              - Customer lookup
+      *              - Item search and line entry
+      *              - Quantity/price validation
+      *              - Commit order to database
+      *================================================================
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. OENTPRO1.
+
+       ENVIRONMENT DIVISION.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+
+      *--- Communication Area ---
+       01  WS-COMMAREA.
+           05  CA-STATE             PIC X(2).
+               88  CA-INITIAL             VALUE '  '.
+               88  CA-CUSTOMER-ENTERED    VALUE 'CE'.
+               88  CA-LINES-ENTRY         VALUE 'LE'.
+               88  CA-CONFIRM-PENDING     VALUE 'CP'.
+           05  CA-CUSTOMER-ID       PIC X(8).
+           05  CA-CUST-NAME         PIC X(30).
+           05  CA-ORDER-ID          PIC S9(9)  COMP.
+           05  CA-LINE-COUNT        PIC S9(4)  COMP.
+           05  CA-ORDER-TOTAL       PIC S9(9)V99 COMP-3.
+           05  CA-LAST-MSGID        PIC X(3).
+           05  CA-TRANS-TIME        PIC X(8).
+
+      *--- AID Key Definitions ---
+       01  WS-AID-CODES.
+           05  DFHENTER    PIC X(1) VALUE X'7D'.
+           05  DFHPF1      PIC X(1) VALUE X'F1'.
+           05  DFHPF3      PIC X(1) VALUE X'F3'.
+           05  DFHPF4      PIC X(1) VALUE X'F4'.
+           05  DFHPF5      PIC X(1) VALUE X'F5'.
+           05  DFHPF7      PIC X(1) VALUE X'F7'.
+           05  DFHPF8      PIC X(1) VALUE X'F8'.
+           05  DFHPF12     PIC X(1) VALUE X'FC'.
+           05  WS-AID      PIC X(1).
+
+      *--- SQLCA ---
+       01  SQLCA.
+           05  SQLCODE     PIC S9(9) COMP.
+           05  SQLERRM.
+               10  SQLERRML PIC S9(4) COMP.
+               10  SQLERRMC PIC X(70).
+
+      *--- Map Fields (BMS Symbolic Map) ---
+       01  OENTMAPI.                  < input map
+           05  OENT-CUST-ID-I    PIC X(8).
+           05  OENT-CUST-NAME-I  PIC X(30).
+           05  OENT-PO-NUM-I     PIC X(15).
+           05  OENT-SHIP-DATE-I  PIC X(8).
+           05  OENT-ITEM-1-I     PIC X(10).
+           05  OENT-QTY-1-I      PIC 9(6).
+           05  OENT-PRICE-1-I    PIC S9(7)V99.
+           05  OENT-ITEM-2-I     PIC X(10).
+           05  OENT-QTY-2-I      PIC 9(6).
+           05  OENT-PRICE-2-I    PIC S9(7)V99.
+           05  OENT-ITEM-3-I     PIC X(10).
+           05  OENT-QTY-3-I      PIC 9(6).
+           05  OENT-PRICE-3-I    PIC S9(7)V99.
+           05  OENT-ITEM-4-I     PIC X(10).
+           05  OENT-QTY-4-I      PIC 9(6).
+           05  OENT-PRICE-4-I    PIC S9(7)V99.
+           05  OENT-ITEM-5-I     PIC X(10).
+           05  OENT-QTY-5-I      PIC 9(6).
+           05  OENT-PRICE-5-I    PIC S9(7)V99.
+           05  OENT-MSG-I        PIC X(79).
+
+       01  OENTMAPO.                  < output map (mirrored with -O suffix)
+           05  OENT-CUST-ID-O    PIC X(8).
+           05  OENT-CUST-NAME-O  PIC X(30).
+           05  OENT-CREDIT-LIM-O PIC ZZZ,ZZZ.99.
+           05  OENT-CUST-BAL-O   PIC ZZZ,ZZZ.99-.
+           05  OENT-PO-NUM-O     PIC X(15).
+           05  OENT-SHIP-DATE-O  PIC X(8).
+           05  OENT-ITEM-1-O     PIC X(10).
+           05  OENT-DESC-1-O     PIC X(25).
+           05  OENT-QTY-1-O      PIC ZZZ,ZZ9.
+           05  OENT-PRICE-1-O    PIC ZZZ,ZZ9.99.
+           05  OENT-EXT-1-O      PIC ZZZ,ZZZ,ZZ9.99.
+           05  OENT-ITEM-2-O     PIC X(10).
+           05  OENT-DESC-2-O     PIC X(25).
+           05  OENT-QTY-2-O      PIC ZZZ,ZZ9.
+           05  OENT-PRICE-2-O    PIC ZZZ,ZZ9.99.
+           05  OENT-EXT-2-O      PIC ZZZ,ZZZ,ZZ9.99.
+           05  OENT-ITEM-3-O     PIC X(10).
+           05  OENT-DESC-3-O     PIC X(25).
+           05  OENT-QTY-3-O      PIC ZZZ,ZZ9.
+           05  OENT-PRICE-3-O    PIC ZZZ,ZZ9.99.
+           05  OENT-EXT-3-O      PIC ZZZ,ZZZ,ZZ9.99.
+           05  OENT-ITEM-4-O     PIC X(10).
+           05  OENT-DESC-4-O     PIC X(25).
+           05  OENT-QTY-4-O      PIC ZZZ,ZZ9.
+           05  OENT-PRICE-4-O    PIC ZZZ,ZZ9.99.
+           05  OENT-EXT-4-O      PIC ZZZ,ZZZ,ZZ9.99.
+           05  OENT-ITEM-5-O     PIC X(10).
+           05  OENT-DESC-5-O     PIC X(25).
+           05  OENT-QTY-5-O      PIC ZZZ,ZZ9.
+           05  OENT-PRICE-5-O    PIC ZZZ,ZZ9.99.
+           05  OENT-EXT-5-O      PIC ZZZ,ZZZ,ZZ9.99.
+           05  OENT-ORDER-TOT-O  PIC ZZZ,ZZZ,ZZZ.99.
+           05  OENT-LINE-CNT-O   PIC Z9.
+           05  OENT-ORDER-ID-O   PIC 9(8).
+           05  OENT-TIME-O       PIC X(8).
+           05  OENT-MSG-O        PIC X(79).
+
+      *--- Work Fields ---
+       01  WS-WORK.
+           05  WS-CUST-ID          PIC X(8).
+           05  WS-CUST-NAME        PIC X(30).
+           05  WS-CUST-CREDIT-LIM  PIC S9(9)V99 COMP-3.
+           05  WS-CUST-BAL         PIC S9(9)V99 COMP-3.
+           05  WS-ITEM-NUM         PIC X(10).
+           05  WS-ITEM-DESC        PIC X(40).
+           05  WS-ITEM-PRICE       PIC S9(9)V99 COMP-3.
+           05  WS-QTY-AVAIL        PIC S9(9)V99 COMP-3.
+           05  WS-ORDER-TOTAL      PIC S9(13)V99 COMP-3.
+           05  WS-LINE-QTY         PIC S9(7)V99 COMP-3.
+           05  WS-LINE-PRICE       PIC S9(9)V99 COMP-3.
+           05  WS-LINE-EXT         PIC S9(13)V99 COMP-3.
+           05  WS-NEW-ORDER-ID     PIC S9(9) COMP.
+           05  WS-RESPONSE-CODE    PIC S9(8) COMP.
+           05  WS-MSG              PIC X(79).
+           05  WS-TIME-STR         PIC X(8).
+           05  WS-CICS-TIME        PIC S9(15) COMP.
+           05  WS-FORMATTED-TIME   PIC X(8).
+           05  WS-CREDIT-CHECK     PIC S9(13)V99 COMP-3.
+
+       PROCEDURE DIVISION.
+       0000-MAIN.
+      *    Establish COMMAREA or initialize
+           IF EIBCALEN = 0
+               MOVE SPACES TO CA-STATE
+           ELSE
+               MOVE DFHCOMMAREA TO WS-COMMAREA
+           END-IF
+
+           EXEC CICS ASSIGN AID(WS-AID) END-EXEC
+
+           EVALUATE TRUE
+               WHEN WS-AID = DFHPF3 OR WS-AID = DFHPF12
+                   PERFORM 9000-CLEAN-EXIT
+               WHEN CA-INITIAL
+                   PERFORM 1000-SEND-BLANK-MAP
+               WHEN CA-CUSTOMER-ENTERED
+                   PERFORM 2000-PROCESS-CUSTOMER
+               WHEN CA-LINES-ENTRY
+                   PERFORM 3000-PROCESS-LINES
+               WHEN CA-CONFIRM-PENDING
+                   PERFORM 4000-CONFIRM-ORDER
+               WHEN OTHER
+                   PERFORM 1000-SEND-BLANK-MAP
+           END-EVALUATE
+
+           EXEC CICS RETURN
+               TRANSID ('OENT')
+               COMMAREA(WS-COMMAREA)
+               LENGTH(LENGTH OF WS-COMMAREA)
+           END-EXEC.
+
+      *--- 1000 SEND BLANK MAP ---
+       1000-SEND-BLANK-MAP.
+           EXEC CICS ASKTIME ABSTIME(WS-CICS-TIME) END-EXEC
+           EXEC CICS FORMATTIME ABSTIME(WS-CICS-TIME)
+               TIME(WS-FORMATTED-TIME)
+               TIMESEP
+           END-EXEC
+           MOVE WS-FORMATTED-TIME TO OENT-TIME-O
+           MOVE 'Enter Customer ID and press ENTER' TO OENT-MSG-O
+           EXEC CICS SEND MAP('OENTMAP1') MAPSET('OENTMSP1')
+               ERASE CURSOR
+           END-EXEC
+           MOVE 'CE' TO CA-STATE.
+
+      *--- 2000 PROCESS CUSTOMER ---
+       2000-PROCESS-CUSTOMER.
+           EXEC CICS RECEIVE MAP('OENTMAP1') MAPSET('OENTMSP1')
+           END-EXEC
+           MOVE OENT-CUST-ID-I TO WS-CUST-ID
+
+           IF WS-CUST-ID = SPACES
+               MOVE 'Customer ID required' TO WS-MSG
+               PERFORM 9100-SEND-ERROR
+               GO TO 2999-EXIT
+           END-IF
+
+      *    Lookup customer
+           EXEC SQL
+               SELECT CUST_NAME, CREDIT_LIMIT, CURRENT_BALANCE
+               INTO :WS-CUST-NAME, :WS-CUST-CREDIT-LIM,
+                    :WS-CUST-BAL
+               FROM CUSTOMER
+               WHERE CUST_ID = :WS-CUST-ID
+               AND STATUS = 'A'
+           END-EXEC
+
+           IF SQLCODE = 100
+               MOVE 'Customer not found or inactive' TO WS-MSG
+               PERFORM 9100-SEND-ERROR
+               GO TO 2999-EXIT
+           END-IF
+
+           IF SQLCODE NOT = 0
+               MOVE 'Database error on customer lookup' TO WS-MSG
+               PERFORM 9100-SEND-ERROR
+               GO TO 2999-EXIT
+           END-IF
+
+           MOVE WS-CUST-ID      TO CA-CUSTOMER-ID
+           MOVE WS-CUST-NAME    TO CA-CUST-NAME
+
+      *    Populate output map
+           MOVE WS-CUST-ID          TO OENT-CUST-ID-O
+           MOVE WS-CUST-NAME        TO OENT-CUST-NAME-O
+           MOVE WS-CUST-CREDIT-LIM  TO OENT-CREDIT-LIM-O
+           MOVE WS-CUST-BAL         TO OENT-CUST-BAL-O
+           MOVE 'Enter items and quantities. PF4=Commit PF3=Cancel'
+               TO OENT-MSG-O
+
+           EXEC CICS SEND MAP('OENTMAP1') MAPSET('OENTMSP1')
+               DATAONLY CURSOR
+           END-EXEC
+           MOVE 'LE' TO CA-STATE
+
+       2999-EXIT. EXIT.
+
+      *--- 3000 PROCESS LINE ITEMS ---
+       3000-PROCESS-LINES.
+           EXEC CICS RECEIVE MAP('OENTMAP1') MAPSET('OENTMSP1')
+           END-EXEC
+
+           IF WS-AID = DFHPF4
+               PERFORM 4000-CONFIRM-ORDER
+               GO TO 3999-EXIT
+           END-IF
+
+           MOVE ZEROS TO WS-ORDER-TOTAL
+           MOVE 0     TO CA-LINE-COUNT
+
+           PERFORM 3100-VALIDATE-LINE
+               VARYING WS-ITEM-NUM   FROM OENT-ITEM-1-I BY 0
+               WS-LINE-QTY FROM OENT-QTY-1-I BY 0
+               WS-LINE-PRICE FROM OENT-PRICE-1-I BY 0
+               AFTER each line...      (BMS handles 5 table rows)
+
+      *    Inline validation for each of the 5 lines:
+           MOVE OENT-ITEM-1-I  TO WS-ITEM-NUM
+           MOVE OENT-QTY-1-I   TO WS-LINE-QTY
+           MOVE OENT-PRICE-1-I TO WS-LINE-PRICE
+           IF WS-ITEM-NUM NOT = SPACES
+               PERFORM 3100-VALIDATE-LINE
+               MOVE WS-LINE-EXT TO OENT-EXT-1-O
+               MOVE WS-ITEM-DESC(1:25) TO OENT-DESC-1-O
+               ADD 1 TO CA-LINE-COUNT
+           END-IF
+
+           MOVE OENT-ITEM-2-I  TO WS-ITEM-NUM
+           MOVE OENT-QTY-2-I   TO WS-LINE-QTY
+           MOVE OENT-PRICE-2-I TO WS-LINE-PRICE
+           IF WS-ITEM-NUM NOT = SPACES AND WS-MSG = SPACES
+               PERFORM 3100-VALIDATE-LINE
+               MOVE WS-LINE-EXT TO OENT-EXT-2-O
+               MOVE WS-ITEM-DESC(1:25) TO OENT-DESC-2-O
+               ADD 1 TO CA-LINE-COUNT
+           END-IF
+
+           MOVE OENT-ITEM-3-I  TO WS-ITEM-NUM
+           MOVE OENT-QTY-3-I   TO WS-LINE-QTY
+           MOVE OENT-PRICE-3-I TO WS-LINE-PRICE
+           IF WS-ITEM-NUM NOT = SPACES AND WS-MSG = SPACES
+               PERFORM 3100-VALIDATE-LINE
+               MOVE WS-LINE-EXT TO OENT-EXT-3-O
+               MOVE WS-ITEM-DESC(1:25) TO OENT-DESC-3-O
+               ADD 1 TO CA-LINE-COUNT
+           END-IF
+
+           MOVE OENT-ITEM-4-I  TO WS-ITEM-NUM
+           MOVE OENT-QTY-4-I   TO WS-LINE-QTY
+           MOVE OENT-PRICE-4-I TO WS-LINE-PRICE
+           IF WS-ITEM-NUM NOT = SPACES AND WS-MSG = SPACES
+               PERFORM 3100-VALIDATE-LINE
+               MOVE WS-LINE-EXT TO OENT-EXT-4-O
+               MOVE WS-ITEM-DESC(1:25) TO OENT-DESC-4-O
+               ADD 1 TO CA-LINE-COUNT
+           END-IF
+
+           MOVE OENT-ITEM-5-I  TO WS-ITEM-NUM
+           MOVE OENT-QTY-5-I   TO WS-LINE-QTY
+           MOVE OENT-PRICE-5-I TO WS-LINE-PRICE
+           IF WS-ITEM-NUM NOT = SPACES AND WS-MSG = SPACES
+               PERFORM 3100-VALIDATE-LINE
+               MOVE WS-LINE-EXT TO OENT-EXT-5-O
+               MOVE WS-ITEM-DESC(1:25) TO OENT-DESC-5-O
+               ADD 1 TO CA-LINE-COUNT
+           END-IF
+
+           MOVE WS-ORDER-TOTAL  TO OENT-ORDER-TOT-O
+           MOVE CA-LINE-COUNT   TO OENT-LINE-CNT-O
+
+           IF WS-MSG NOT = SPACES
+               PERFORM 9100-SEND-ERROR
+           ELSE
+               MOVE 'PF4=Commit order  PF3=Cancel  ENTER=Refresh'
+                   TO OENT-MSG-O
+               EXEC CICS SEND MAP('OENTMAP1') MAPSET('OENTMSP1')
+                   DATAONLY
+               END-EXEC
+               MOVE 'CP' TO CA-STATE
+           END-IF
+
+       3999-EXIT. EXIT.
+
+      *--- 3100 VALIDATE LINE ITEM ---
+       3100-VALIDATE-LINE.
+           IF WS-LINE-QTY = 0
+               MOVE 'Quantity must be > 0' TO WS-MSG
+               EXIT PERFORM
+           END-IF
+
+           EXEC SQL
+               SELECT I.ITEM_DESC, I.SELL_PRICE,
+                      COALESCE(SUM(B.QTY_ON_HAND - B.QTY_ALLOCATED),0)
+               INTO :WS-ITEM-DESC, :WS-ITEM-PRICE, :WS-QTY-AVAIL
+               FROM ITEM_MASTER I
+               LEFT JOIN INVENTORY_BALANCE B
+                    ON B.ITEM_NUMBER = I.ITEM_NUMBER
+               WHERE I.ITEM_NUMBER = :WS-ITEM-NUM
+               AND   I.ACTIVE_FLAG = 'Y'
+               GROUP BY I.ITEM_DESC, I.SELL_PRICE
+           END-EXEC
+
+           IF SQLCODE = 100
+               STRING 'Item not found: ' DELIMITED SIZE
+                      WS-ITEM-NUM DELIMITED SPACE
+                      INTO WS-MSG
+               EXIT PERFORM
+           END-IF
+
+           IF WS-QTY-AVAIL < WS-LINE-QTY
+               STRING 'Insufficient stock for ' DELIMITED SIZE
+                      WS-ITEM-NUM DELIMITED SPACE
+                      '. Avail: ' DELIMITED SIZE
+                      WS-QTY-AVAIL DELIMITED SPACE
+                      INTO WS-MSG
+               EXIT PERFORM
+           END-IF
+
+      *    Use entered price or default to catalog price
+           IF WS-LINE-PRICE = ZEROS
+               MOVE WS-ITEM-PRICE TO WS-LINE-PRICE
+           END-IF
+
+           COMPUTE WS-LINE-EXT = WS-LINE-QTY * WS-LINE-PRICE
+           ADD WS-LINE-EXT TO WS-ORDER-TOTAL.
+
+      *--- 4000 CONFIRM ORDER ---
+       4000-CONFIRM-ORDER.
+           MOVE CA-CUSTOMER-ID TO WS-CUST-ID
+
+      *    Credit limit check
+           EXEC SQL
+               SELECT CURRENT_BALANCE, CREDIT_LIMIT
+               INTO :WS-CUST-BAL, :WS-CUST-CREDIT-LIM
+               FROM CUSTOMER
+               WHERE CUST_ID = :WS-CUST-ID
+           END-EXEC
+
+           COMPUTE WS-CREDIT-CHECK =
+               WS-CUST-BAL + WS-ORDER-TOTAL
+           IF WS-CREDIT-CHECK > WS-CUST-CREDIT-LIM
+               MOVE 'Order exceeds customer credit limit'
+                   TO WS-MSG
+               PERFORM 9100-SEND-ERROR
+               GO TO 4999-EXIT
+           END-IF
+
+      *    Allocate next order ID
+           EXEC SQL
+               SELECT NEXT VALUE FOR ORDER_SEQ
+               INTO :WS-NEW-ORDER-ID
+               FROM SYSIBM.SYSDUMMY1
+           END-EXEC
+
+           EXEC SQL
+               INSERT INTO SALES_ORDER
+               (ORDER_ID, CUST_ID, ORDER_DATE, STATUS,
+                PO_NUMBER, SHIP_DATE)
+               VALUES (:WS-NEW-ORDER-ID, :WS-CUST-ID,
+                       CURRENT DATE, 'OPEN',
+                       :OENT-PO-NUM-I, :OENT-SHIP-DATE-I)
+           END-EXEC
+
+           IF SQLCODE NOT = 0
+               MOVE 'Error creating order header' TO WS-MSG
+               PERFORM 9100-SEND-ERROR
+               EXEC SQL ROLLBACK END-EXEC
+               GO TO 4999-EXIT
+           END-IF
+
+      *    Insert up to 5 lines
+           MOVE 1 TO CA-LINE-COUNT
+           PERFORM 4100-INSERT-LINE USING OENT-ITEM-1-I
+               OENT-QTY-1-I OENT-PRICE-1-I
+           PERFORM 4100-INSERT-LINE USING OENT-ITEM-2-I
+               OENT-QTY-2-I OENT-PRICE-2-I
+           PERFORM 4100-INSERT-LINE USING OENT-ITEM-3-I
+               OENT-QTY-3-I OENT-PRICE-3-I
+           PERFORM 4100-INSERT-LINE USING OENT-ITEM-4-I
+               OENT-QTY-4-I OENT-PRICE-4-I
+           PERFORM 4100-INSERT-LINE USING OENT-ITEM-5-I
+               OENT-QTY-5-I OENT-PRICE-5-I
+
+           EXEC SQL  COMMIT  END-EXEC
+
+           MOVE WS-NEW-ORDER-ID  TO OENT-ORDER-ID-O
+           MOVE CA-LINE-COUNT    TO OENT-LINE-CNT-O
+
+           STRING 'ORDER ' DELIMITED SIZE
+                  WS-NEW-ORDER-ID DELIMITED SPACE
+                  ' ACCEPTED — ' DELIMITED SIZE
+                  CA-LINE-COUNT DELIMITED SPACE
+                  ' LINES' DELIMITED SIZE
+                  INTO OENT-MSG-O
+
+           EXEC CICS SEND MAP('OENTMAP1') MAPSET('OENTMSP1')
+               DATAONLY ERASE
+           END-EXEC
+           MOVE 'CE' TO CA-STATE   < ready for next order >
+
+       4999-EXIT. EXIT.
+
+      *--- 4100 INSERT ORDER LINE ---
+       4100-INSERT-LINE.
+      *    Parameters passed by USING (simplified)
+           IF WS-ITEM-NUM = SPACES  EXIT PERFORM  END-IF
+           EXEC SQL
+               INSERT INTO SALES_ORDER_LINE
+               (ORDER_ID, LINE_SEQ, ITEM_NUMBER,
+                QTY_ORDERED, UNIT_PRICE, EXTENSION)
+               VALUES (:WS-NEW-ORDER-ID, :CA-LINE-COUNT,
+                       :WS-ITEM-NUM, :WS-LINE-QTY,
+                       :WS-LINE-PRICE, :WS-LINE-EXT)
+           END-EXEC
+           ADD 1 TO CA-LINE-COUNT.
+
+      *--- 9000 CLEAN EXIT ---
+       9000-CLEAN-EXIT.
+           EXEC CICS SEND TEXT
+               FROM('Thank you. Order entry session ended.')
+               ERASE
+           END-EXEC
+           EXEC CICS RETURN END-EXEC.
+
+      *--- 9100 SEND ERROR ---
+       9100-SEND-ERROR.
+           MOVE WS-MSG TO OENT-MSG-O
+           EXEC CICS SEND MAP('OENTMAP1') MAPSET('OENTMSP1')
+               DATAONLY ALARM
+           END-EXEC
+           MOVE SPACES TO WS-MSG.

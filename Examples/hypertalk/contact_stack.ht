@@ -1,0 +1,387 @@
+-- ================================================================
+--  HYPERTALK CONTACT CARD STACK
+--  Demonstrates HyperCard-style stack navigation, handlers,
+--  functions, global variables, dialogs, and scripting.
+-- ================================================================
+
+-- ──────────────────────────────────────────────────────────────
+--  STACK SCRIPT  (belongs to the stack object)
+-- ──────────────────────────────────────────────────────────────
+on openStack
+  global gCurrentCard, gSearchTerm, gTotalCards
+  put 1 into gCurrentCard
+  put "" into gSearchTerm
+  put the number of cards into gTotalCards
+  
+  -- Show welcome message on first open
+  if gTotalCards < 2 then
+    answer "Welcome to the Contact Card Stack!" & return & ¬
+           "Use the buttons to navigate and manage contacts."
+  end if
+end openStack
+
+on closeStack
+  -- Auto-save reminder
+  if the modified of this stack then
+    answer "Stack has unsaved changes." with "Save" or "Discard"
+    if it is "Save" then
+      save this stack
+    end if
+  end if
+end closeStack
+
+-- Function: count all cards in stack
+function stackSize
+  return the number of cards
+end stackSize
+
+-- Function: look up a contact by partial name
+function findContact searchName
+  repeat with i = 1 to the number of cards
+    go to card i
+    if field "fullName" contains searchName then
+      return i
+    end if
+  end repeat
+  return 0  -- not found
+end findContact
+
+-- ──────────────────────────────────────────────────────────────
+--  CARD SCRIPT  (belongs to each contact card)
+-- ──────────────────────────────────────────────────────────────
+on openCard
+  global gCurrentCard
+  put the number of this card into gCurrentCard
+  
+  -- Update the navigation counter: "Card 3 of 12"
+  put "Card " & gCurrentCard & " of " & stackSize() ¬
+      into field "cardCounter"
+  
+  -- Show birthday reminder if within 7 days
+  if field "birthday" is not empty then
+    if birthdayAlert(field "birthday") then
+      flash 3
+      beep 2
+      answer "🎂 Birthday coming up: " & field "fullName" & ¬
+             " — " & field "birthday"
+    end if
+  end if
+end openCard
+
+-- Keep record of last view date
+on closeCard
+  put the date into field "lastViewed"
+end closeCard
+
+-- Function: true if birthday is within next 7 days
+function birthdayAlert bDay
+  if bDay is empty then return false
+  
+  -- Extract month and day
+  put item 1 of bDay into bMonth
+  put item 2 of bDay into bDay
+  put month of (the date) into todayMonth
+  put day of (the date) into todayDay
+  
+  if bMonth = todayMonth then
+    if (bDay - todayDay) >= 0 and (bDay - todayDay) <= 7 then
+      return true
+    end if
+  end if
+  return false
+end birthdayAlert
+
+-- ──────────────────────────────────────────────────────────────
+--  BUTTON SCRIPTS
+-- ──────────────────────────────────────────────────────────────
+
+-- "New Card" button
+on mouseUp
+  -- Create a new blank contact card
+  doMenu "New Card"
+  
+  -- Set default values
+  put "New Contact" into field "fullName"
+  put the date into field "dateAdded"
+  put "" into field "phone"
+  put "" into field "email"
+  put "" into field "address"
+  put "" into field "notes"
+  put "" into field "birthday"
+  
+  -- Focus the name field for immediate editing
+  select field "fullName"
+end mouseUp
+
+-- "Delete Card" button
+on mouseUp
+  global gCurrentCard
+  
+  if stackSize() <= 1 then
+    answer "Cannot delete the last card in the stack."
+    exit mouseUp
+  end if
+  
+  ask "Delete contact for " & field "fullName" & "?" ¬
+      with "Type YES to confirm"
+  if it is "YES" then
+    delete this card
+    answer "Contact deleted."
+  end if
+end mouseUp
+
+-- "Search" button
+on mouseUp
+  global gSearchTerm
+  
+  ask "Search contacts:" with gSearchTerm
+  if it is empty then exit mouseUp
+  
+  put it into gSearchTerm
+  
+  put findContact(gSearchTerm) into foundCard
+  if foundCard > 0 then
+    go to card foundCard
+    flash 2  -- briefly flash to highlight
+  else
+    answer "No contact found matching: " & gSearchTerm
+  end if
+end mouseUp
+
+-- "Next" navigation button
+on mouseUp
+  if the number of this card < stackSize() then
+    go to next card
+  else
+    go to first card  -- wrap around
+  end if
+end mouseUp
+
+-- "Previous" navigation button
+on mouseUp
+  if the number of this card > 1 then
+    go to previous card
+  else
+    go to last card  -- wrap around
+  end if
+end mouseUp
+
+-- "First" / "Last" buttons
+on mouseUp
+  go to first card
+end mouseUp
+
+on mouseUp
+  go to last card
+end mouseUp
+
+-- "Print Card" button
+on mouseUp
+  -- Print just this card
+  print this card
+end mouseUp
+
+-- "Print All" button
+on mouseUp
+  -- Walk through every card and collect contact info
+  put "CONTACT LIST — " & the long date & return & return ¬
+      into printBuffer
+  
+  repeat with i = 1 to stackSize()
+    go to card i
+    put "──────────────────────────" & return into printBuffer
+    put printBuffer & field "fullName" & return
+    if field "phone" is not empty then
+      put printBuffer & "  Phone:   " & field "phone" & return
+    end if
+    if field "email" is not empty then
+      put printBuffer & "  Email:   " & field "email" & return
+    end if
+    if field "address" is not empty then
+      put printBuffer & "  Address: " & field "address" & return
+    end if
+    if field "birthday" is not empty then
+      put printBuffer & "  Birthday: " & field "birthday" & return
+    end if
+    if field "notes" is not empty then
+      put printBuffer & "  Notes: " & field "notes" & return
+    end if
+    put printBuffer & return
+  end repeat
+  
+  -- Display in a scrollable text window
+  put printBuffer into field "printPreview" of stack "Print Preview"
+  go to stack "Print Preview"
+end mouseUp
+
+-- "Export CSV" button
+on mouseUp
+  put "Name,Phone,Email,Address,Birthday,Notes" & return into csv
+  
+  repeat with i = 1 to stackSize()
+    go to card i
+    put quoted(field "fullName") & "," & ¬
+        quoted(field "phone") & "," & ¬
+        quoted(field "email") & "," & ¬
+        quoted(field "address") & "," & ¬
+        quoted(field "birthday") & "," & ¬
+        quoted(field "notes") & return ¬
+        after csv
+  end repeat
+  
+  -- Ask where to save
+  ask file "Save contacts as CSV:"
+  if it is not empty then
+    put csv into file it
+    answer "Exported " & (stackSize() - 1) & " contacts to CSV."
+  end if
+end mouseUp
+
+-- "Sort Cards" button — sorts all cards alphabetically by name
+on mouseUp
+  answer "Sort all contacts A–Z by name?" with "Sort" or "Cancel"
+  if it is "Cancel" then exit mouseUp
+  
+  -- Bubble sort on the stack cards by fullName field
+  put stackSize() into n
+  repeat with pass = 1 to n - 1
+    repeat with i = 1 to n - pass
+      go to card i
+      put field "fullName" into nameA
+      go to card (i + 1)
+      put field "fullName" into nameB
+      if nameA > nameB then
+        go to card i
+        -- Swap card positions
+        doMenu "Cut Card"
+        go to card i  -- now i+1 became i after cut
+        doMenu "Paste Card"
+      end if
+    end repeat
+  end repeat
+  
+  go to first card
+  answer "Contacts sorted alphabetically."
+end mouseUp
+
+-- ──────────────────────────────────────────────────────────────
+--  UTILITY FUNCTIONS
+-- ──────────────────────────────────────────────────────────────
+
+-- Wrap text in double quotes for CSV export
+function quoted txt
+  -- Escape any embedded quotes
+  put empty into result
+  repeat with i = 1 to length(txt)
+    put char i of txt into c
+    if c is quote then
+      put result & quote & quote into result  -- double-quote escape
+    else
+      put result & c into result
+    end if
+  end repeat
+  return quote & result & quote
+end quoted
+
+-- Calculate age from birthday
+function calculateAge bDay
+  if bDay is empty then return "Unknown"
+  
+  put item 1 of bDay into bMonth
+  put item 2 of bDay into bDayNum
+  put item 3 of bDay into bYear
+  
+  put year of (the date) into todayYear
+  put month of (the date) into todayMonth
+  put day of (the date) into todayDay
+  
+  put todayYear - bYear into age
+  
+  -- Adjust if birthday hasn't happened this year
+  if todayMonth < bMonth then
+    subtract 1 from age
+  else if todayMonth = bMonth and todayDay < bDayNum then
+    subtract 1 from age
+  end if
+  
+  return age
+end calculateAge
+
+-- ──────────────────────────────────────────────────────────────
+--  FIELD SCRIPT — validates phone number on edit
+-- ──────────────────────────────────────────────────────────────
+-- (This script belongs to the "phone" field)
+on closeField
+  put me into phoneText
+  
+  -- Strip all non-digit characters for validation
+  put empty into digits
+  repeat with i = 1 to length(phoneText)
+    if char i of phoneText is in "0123456789" then
+      put digits & char i of phoneText into digits
+    end if
+  end repeat
+  
+  if length(digits) > 0 and length(digits) < 7 then
+    beep
+    answer "Phone number appears incomplete (" & ¬
+           length(digits) & " digits)."
+    select me  -- re-select the field
+  end if
+  
+  -- Format 10-digit US number
+  if length(digits) = 10 then
+    put "(" & chars 1 to 3 of digits & ") " & ¬
+        chars 4 to 6 of digits & "-" & ¬
+        chars 7 to 10 of digits ¬
+        into me
+  end if
+end closeField
+
+-- ──────────────────────────────────────────────────────────────
+--  SAMPLE DATA SETUP HANDLER
+--  Run this once to populate the stack with demo contacts.
+-- ──────────────────────────────────────────────────────────────
+on createSampleData
+  -- Card 1
+  put "Alice Walker" into field "fullName"
+  put "(312) 555-0101" into field "phone"
+  put "alice@example.com" into field "email"
+  put "123 Maple St, Chicago IL 60601" into field "address"
+  put "7/15/1985" into field "birthday"
+  put "Met at PyCon 2023" into field "notes"
+  put the date into field "dateAdded"
+  
+  -- Card 2
+  doMenu "New Card"
+  put "Bob Chen" into field "fullName"
+  put "(415) 555-0202" into field "phone"
+  put "bob.chen@techco.com" into field "email"
+  put "456 Oak Ave, San Francisco CA 94102" into field "address"
+  put "3/22/1979" into field "birthday"
+  put "Software engineer, likes hiking" into field "notes"
+  put the date into field "dateAdded"
+  
+  -- Card 3
+  doMenu "New Card"
+  put "Carol Martinez" into field "fullName"
+  put "(713) 555-0303" into field "phone"
+  put "carol.m@design.io" into field "email"
+  put "789 Pine Rd, Houston TX 77001" into field "address"
+  put "11/30/1990" into field "birthday"
+  put "Graphic designer, freelance" into field "notes"
+  put the date into field "dateAdded"
+  
+  -- Card 4
+  doMenu "New Card"
+  put "David Okafor" into field "fullName"
+  put "(212) 555-0404" into field "phone"
+  put "d.okafor@law.edu" into field "email"
+  put "321 Broadway, New York NY 10001" into field "address"
+  put "5/8/1975" into field "birthday"
+  put "Professor, constitutional law" into field "notes"
+  put the date into field "dateAdded"
+  
+  go to first card
+  answer "Created 4 sample contacts."
+end createSampleData

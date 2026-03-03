@@ -1,0 +1,182 @@
+; =====================================================
+;  MANDALA GENERATOR - Sacred Geometry in Logo
+;  Draws intricate mandala patterns using symmetry.
+;  Demonstrates: nested loops, procedures, math,
+;  color cycling, and full turtle graphics toolkit.
+; =====================================================
+
+; -- Color cycle array --
+TO CYCLECOLOR :N
+  MAKE "COLORS ["red "orange "yellow "green "cyan "blue "purple "magenta "pink "white]
+  MAKE "IDX (:N MOD 10) + 1
+  SETPENCOLOR ITEM :IDX :COLORS
+END
+
+; -- Single petal of mandala --
+TO PETAL :R :CURVE
+  REPEAT :CURVE [
+    FD :R / :CURVE
+    RT 180 / :CURVE
+  ]
+  REPEAT :CURVE [
+    FD :R / :CURVE
+    RT 180 / :CURVE
+  ]
+END
+
+; -- Ring of petals --
+TO PETALRING :PETALS :R :CURVE :COLORSHIFT
+  MAKE "AGL 360 / :PETALS
+  REPEAT :PETALS [
+    CYCLECOLOR :COLORSHIFT
+    PETAL :R :CURVE
+    RT :AGL
+    MAKE "COLORSHIFT :COLORSHIFT + 1
+  ]
+END
+
+; -- Geometric ring --
+TO GEORING :N :R :ANGLE
+  MAKE "AGL 360 / :N
+  REPEAT :N [
+    FD :R
+    RT :ANGLE
+    FD :R
+    RT (360 - :ANGLE) + :AGL
+  ]
+END
+
+; -- Starburst --
+TO BURST :RAYS :LEN :CLR
+  SETPENCOLOR :CLR
+  MAKE "AGL 360 / :RAYS
+  REPEAT :RAYS [
+    FD :LEN
+    BK :LEN
+    RT :AGL
+  ]
+END
+
+; -- Layered mandala --
+TO MANDALA :RINGS
+  ; Inner core
+  SETPENCOLOR "white
+  SETPENSIZE 3
+  BURST 12 20 "yellow
+
+  ; Layer 1: tight petals
+  SETPENSIZE 2
+  PETALRING 8 30 20 0
+
+  ; Layer 2: wider petals
+  PETALRING 12 55 15 3
+
+  ; Layer 3: outer ring
+  PETALRING 16 80 12 6
+
+  ; Layer 4: outermost
+  PETALRING 20 110 10 8
+
+  ; Geometric overlays
+  SETPENCOLOR "white
+  SETPENSIZE 1
+  GEORING 6 40 120
+
+  SETPENCOLOR "cyan
+  GEORING 8 70 135
+
+  SETPENCOLOR "magenta
+  GEORING 4 95 90
+END
+
+; -- Rotating mandalas --
+TO SPIRALRUN :STEPS :AGL :GROW
+  MAKE "I 1
+  WHILE [:I <= :STEPS] [
+    CYCLECOLOR :I
+    SETPENSIZE 1
+    REPEAT 4 [FD :I * :GROW RT 90]
+    RT :AGL
+    MAKE "I :I + 1
+  ]
+END
+
+; -- Lissajous pattern --
+TO LISSAJOUS :A :B :STEPS
+  SETPENCOLOR "cyan
+  MAKE "T 0
+  MAKE "SCALE 120
+  REPEAT :STEPS [
+    MAKE "X :SCALE * SIN(:A * :T)
+    MAKE "Y :SCALE * SIN(:B * :T)
+    PU
+    SETXY :X :Y
+    PD
+    FD 2
+    MAKE "T :T + 5
+  ]
+END
+
+; -- Circular dot pattern --
+TO DOTCIRCLE :R :DOTS :CLR
+  SETPENCOLOR :CLR
+  MAKE "AGL 360 / :DOTS
+  REPEAT :DOTS [
+    PU
+    FD :R
+    PD
+    SETPENSIZE 5
+    FD 1
+    SETPENSIZE 1
+    PU
+    BK :R
+    RT :AGL
+  ]
+END
+
+; =====================================================
+;  MAIN SHOWCASE - Draw nested mandalas
+; =====================================================
+CS
+PRINT "Generating mandalas..."
+
+; Central large mandala
+PU SETXY 0 0 PD
+SETHEADING 0
+MANDALA 4
+
+; Satellite small mandalas
+PU SETXY -200 0 PD
+SETHEADING 0
+PETALRING 8 25 15 2
+BURST 8 15 "orange
+
+PU SETXY 200 0 PD
+SETHEADING 0
+PETALRING 8 25 15 5
+BURST 8 15 "cyan
+
+PU SETXY 0 180 PD
+SETHEADING 0
+PETALRING 6 22 12 4
+BURST 6 12 "yellow
+
+PU SETXY 0 -180 PD
+SETHEADING 0
+PETALRING 6 22 12 7
+BURST 6 12 "magenta
+
+; Background decoration - dot circles
+PU SETXY 0 0 PD SETHEADING 0
+DOTCIRCLE 130 24 "blue
+DOTCIRCLE 160 30 "purple
+
+; Corner spirals
+PU SETXY -220 200 PD SETHEADING 0
+SETPENSIZE 1
+SPIRALRUN 20 18 3
+
+PU SETXY 220 200 PD SETHEADING 0
+SPIRALRUN 20 18 3
+
+PRINT "Mandala complete!"

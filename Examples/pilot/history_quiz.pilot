@@ -1,0 +1,202 @@
+R: ╔══════════════════════════════════════════════════════╗
+R: ║      WORLD HISTORY QUIZ - PILOT Language Demo       ║
+R: ║  Tests all PILOT statements: R, T, A, M, J, JY, JN ║
+R: ╚══════════════════════════════════════════════════════╝
+R:
+R: Score variables
+*INIT
+COMPUTE: SCORE = 0
+COMPUTE: WRONG = 0
+COMPUTE: TOTAL = 10
+T: Welcome to the World History Quiz!
+T: There are 10 questions. Answer carefully.
+T: ─────────────────────────────────────────────────
+T:
+R:
+R: ───── QUESTION 1 ─────
+T: Question 1: Who was the first President of the United States?
+A: #ANSWER1
+M: #ANSWER1, Washington
+JY: *Q1CORRECT
+T: ✗ Incorrect! The answer is George Washington.
+COMPUTE: WRONG = WRONG + 1
+J: *Q2
+*Q1CORRECT
+T: ✓ Correct! George Washington, 1789.
+COMPUTE: SCORE = SCORE + 1
+*Q2
+R:
+R: ───── QUESTION 2 ─────
+T:
+T: Question 2: In what year did World War II end?
+A: #ANSWER2
+M: #ANSWER2, 1945
+JY: *Q2CORRECT
+T: ✗ Incorrect! World War II ended in 1945.
+COMPUTE: WRONG = WRONG + 1
+J: *Q3
+*Q2CORRECT
+T: ✓ Correct! 1945 - V-E Day May 8, V-J Day September 2.
+COMPUTE: SCORE = SCORE + 1
+*Q3
+R:
+R: ───── QUESTION 3 ─────
+T:
+T: Question 3: Which city was the capital of the Roman Empire?
+A: #ANSWER3
+M: #ANSWER3, Rome
+JY: *Q3CORRECT
+T: ✗ Incorrect! The answer is Rome.
+COMPUTE: WRONG = WRONG + 1
+J: *Q4
+*Q3CORRECT
+T: ✓ Correct! Rome, founded 753 BC.
+COMPUTE: SCORE = SCORE + 1
+*Q4
+R:
+R: ───── QUESTION 4 ─────
+T:
+T: Question 4: Who wrote the Magna Carta was signed by which King of England?
+A: #ANSWER4
+M: #ANSWER4, John
+JY: *Q4CORRECT
+T: ✗ Incorrect! King John signed the Magna Carta in 1215.
+COMPUTE: WRONG = WRONG + 1
+J: *Q5
+*Q4CORRECT
+T: ✓ Correct! King John, at Runnymede, 1215.
+COMPUTE: SCORE = SCORE + 1
+*Q5
+R:
+R: ───── QUESTION 5 ─────
+T:
+T: Question 5: On which continent is the Sahara Desert located?
+A: #ANSWER5
+M: #ANSWER5, Africa
+JY: *Q5CORRECT
+T: ✗ Incorrect! The Sahara is in Africa.
+COMPUTE: WRONG = WRONG + 1
+J: *Q6
+*Q5CORRECT
+T: ✓ Correct! Africa - the world's largest hot desert.
+COMPUTE: SCORE = SCORE + 1
+*Q6
+R:
+R: ───── QUESTION 6 ─────
+T:
+T: Question 6: What ancient wonder stood in Alexandria, Egypt?
+T: (Hint: It helped sailors navigate)
+A: #ANSWER6
+M: #ANSWER6, lighthouse
+JY: *Q6CORRECT
+M: #ANSWER6, pharos
+JY: *Q6CORRECT
+T: ✗ Incorrect! The Lighthouse of Alexandria (Pharos).
+COMPUTE: WRONG = WRONG + 1
+J: *Q7
+*Q6CORRECT
+T: ✓ Correct! The Lighthouse of Alexandria, one of the 7 Wonders.
+COMPUTE: SCORE = SCORE + 1
+*Q7
+R:
+R: ───── QUESTION 7 ─────
+T:
+T: Question 7: Who led the Cuban Revolution in 1959?
+A: #ANSWER7
+M: #ANSWER7, Castro
+JY: *Q7CORRECT
+T: ✗ Incorrect! Fidel Castro led the Cuban Revolution.
+COMPUTE: WRONG = WRONG + 1
+J: *Q8
+*Q7CORRECT
+T: ✓ Correct! Fidel Castro overthrew Batista in 1959.
+COMPUTE: SCORE = SCORE + 1
+*Q8
+R:
+R: ───── QUESTION 8 ─────
+T:
+T: Question 8: The Berlin Wall fell in which year?
+A: #ANSWER8
+M: #ANSWER8, 1989
+JY: *Q8CORRECT
+T: ✗ Incorrect! The Berlin Wall fell on November 9, 1989.
+COMPUTE: WRONG = WRONG + 1
+J: *Q9
+*Q8CORRECT
+T: ✓ Correct! November 9, 1989 - end of the Cold War era.
+COMPUTE: SCORE = SCORE + 1
+*Q9
+R:
+R: ───── QUESTION 9 ─────
+T:
+T: Question 9: Which empire was ruled by Genghis Khan?
+A: #ANSWER9
+M: #ANSWER9, mongol
+JY: *Q9CORRECT
+M: #ANSWER9, Mongol
+JY: *Q9CORRECT
+T: ✗ Incorrect! The Mongol Empire, the largest contiguous empire.
+COMPUTE: WRONG = WRONG + 1
+J: *Q10
+*Q9CORRECT
+T: ✓ Correct! The Mongol Empire, 13th-14th centuries.
+COMPUTE: SCORE = SCORE + 1
+*Q10
+R:
+R: ───── QUESTION 10 ─────
+T:
+T: Question 10: In which country did the Industrial Revolution begin?
+A: #ANSWER10
+M: #ANSWER10, England
+JY: *Q10CORRECT
+M: #ANSWER10, Britain
+JY: *Q10CORRECT
+M: #ANSWER10, UK
+JY: *Q10CORRECT
+T: ✗ Incorrect! The Industrial Revolution began in England (Great Britain).
+COMPUTE: WRONG = WRONG + 1
+J: *RESULTS
+*Q10CORRECT
+T: ✓ Correct! Great Britain, mid-18th century.
+COMPUTE: SCORE = SCORE + 1
+R:
+R: ───── RESULTS ─────
+*RESULTS
+T:
+T: ═══════════════════════════════════════
+T: QUIZ COMPLETE!
+T: ═══════════════════════════════════════
+T: Your Score: #SCORE / 10
+T: Wrong Answers: #WRONG
+T:
+COMPUTE: PERCENT = SCORE * 10
+T: Percentage: #PERCENT%
+T:
+*GRADE
+COMPUTE: CMP = SCORE - 9
+JY: *GRADE_A_PLUS
+COMPUTE: CMP = SCORE - 8
+JY: *GRADE_A
+COMPUTE: CMP = SCORE - 7
+JY: *GRADE_B
+COMPUTE: CMP = SCORE - 5
+JY: *GRADE_C
+J: *GRADE_F
+*GRADE_A_PLUS
+T: Grade: A+ — OUTSTANDING! History scholar!
+J: *END
+*GRADE_A
+T: Grade: A  — Excellent! Very strong historical knowledge.
+J: *END
+*GRADE_B
+T: Grade: B  — Good work! Solid understanding of history.
+J: *END
+*GRADE_C
+T: Grade: C  — Fair. Review your history notes.
+J: *END
+*GRADE_F
+T: Grade: F  — Keep studying! History is fascinating.
+*END
+T:
+T: Thank you for playing the World History Quiz!
+T: ═══════════════════════════════════════
