@@ -21,25 +21,23 @@ Tabs:
 from __future__ import annotations
 
 import csv
-import io
-import os
 import re
 from pathlib import Path
 from typing import List, Optional
 
 from PySide6.QtCore import (
     QAbstractTableModel, QModelIndex, QSortFilterProxyModel,
-    Qt, QThread, Signal, Slot,
+    Qt, QThread, Signal,
 )
 from PySide6.QtGui import (
-    QColor, QFont, QSyntaxHighlighter, QTextCharFormat,
+    QColor, QFont,
 )
 from PySide6.QtWidgets import (
-    QAbstractItemView, QApplication, QCheckBox, QComboBox,
+    QCheckBox, QComboBox,
     QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
-    QGroupBox, QHBoxLayout, QHeaderView, QLabel, QLineEdit,
+    QGroupBox, QHBoxLayout, QLabel, QLineEdit,
     QMainWindow, QMenu, QMessageBox, QPlainTextEdit,
-    QPushButton, QSizePolicy, QSplitter, QStatusBar, QTabWidget,
+    QPushButton, QSplitter, QStatusBar, QTabWidget,
     QTableView, QTableWidget, QTableWidgetItem, QToolBar,
     QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
 )
@@ -449,12 +447,12 @@ class ObjectExplorer(QWidget):
         if kind in ("tables", "table"):
             menu.addAction(f"Select top 1000 from {name}",
                            lambda: self.object_activated.emit("select_top", db, name))
-            menu.addAction(f"Edit table structure",
+            menu.addAction("Edit table structure",
                            lambda: self.object_activated.emit("edit_table", db, name))
             menu.addAction(f"Drop table {name}",
                            lambda: self._drop_object(db, "TABLE", name))
         elif kind in ("views", "view"):
-            menu.addAction(f"Show view definition",
+            menu.addAction("Show view definition",
                            lambda: self.object_activated.emit("view_def", db, name))
             menu.addAction(f"Drop view {name}",
                            lambda: self._drop_object(db, "VIEW", name))

@@ -650,7 +650,7 @@ class LuaEnvironment:
             "xpcall": lambda a: self._lua_xpcall(a),
             "load": lambda a: (lambda src: LuaLoadFunction(str(a[0]), self))(a[0]) if a else None,
             "loadstring": lambda a: LuaLoadFunction(str(a[0]), self) if a else None,
-            "dofile": lambda a: self._emit(f"ℹ️ dofile not supported in sandbox") or None,
+            "dofile": lambda a: self._emit("ℹ️ dofile not supported in sandbox") or None,
             "collectgarbage": lambda a: 0,
             "setmetatable": lambda a: a[0] if a else None,
             "getmetatable": lambda a: None,

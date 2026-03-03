@@ -1,10 +1,9 @@
 """Comprehensive tests for the COBOL language executor."""
 
-import pytest
 
 from time_warp.core.interpreter import Language
 
-from .conftest_lang import run, ok, has, no_errors, first_error
+from .conftest_lang import run, has, no_errors
 
 L = Language.COBOL
 

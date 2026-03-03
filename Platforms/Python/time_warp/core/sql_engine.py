@@ -25,11 +25,9 @@ from __future__ import annotations
 
 import re
 import sqlite3
-import os
 import threading
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 
 # ---------------------------------------------------------------------------
@@ -164,7 +162,7 @@ def _translate_tsql(sql: str) -> str:
     # CONVERT(type, expr) → CAST(expr AS type)
     def _convert_repl(m: re.Match) -> str:
         typ = m.group(1)
-        return f"CAST( "  # expr follows, we close at next matching paren
+        return "CAST( "  # expr follows, we close at next matching paren
     # Simple regex won't balance parens; do a token scan for multi-arg CONVERT
     sql = _rewrite_convert(sql)
 

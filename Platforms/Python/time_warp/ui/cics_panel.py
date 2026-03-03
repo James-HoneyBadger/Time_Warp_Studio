@@ -13,7 +13,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional
 
-from PySide6.QtCore import QSize, Qt, QThread, Signal, Slot
+from PySide6.QtCore import QSize, Qt, QThread, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
     QComboBox, QGroupBox, QHBoxLayout, QLabel,
@@ -22,11 +22,11 @@ from PySide6.QtWidgets import (
 )
 
 from .terminal_3278 import (
-    Attr, Color3270, Screen3270, Terminal3278, Terminal3278Window,
+    Attr, Color3270, Terminal3278,
 )
 
 if TYPE_CHECKING:
-    from ..core.interpreter import Interpreter
+    pass
 
 
 def _mono(size: int = 10) -> QFont:
@@ -51,8 +51,7 @@ class _CICSRunThread(QThread):
 
     def run(self):
         try:
-            from ..core.interpreter import Language
-            from ..languages.cics import execute_cics, extract_screen_ops
+            from ..languages.cics import execute_cics
             from ..graphics.turtle_state import TurtleState
             turtle = TurtleState()
             # execute_cics returns text output

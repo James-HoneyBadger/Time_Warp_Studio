@@ -40,8 +40,8 @@ so that surrounding COBOL logic flows correctly.
 from __future__ import annotations
 
 import re
-from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -197,7 +197,7 @@ class CICSEnvironment:
 
         # Print CICS banner
         self._emit("=" * 60)
-        self._emit(f"  CICS/TS 1.3 (Time Warp Studio Educational Simulation)")
+        self._emit("  CICS/TS 1.3 (Time Warp Studio Educational Simulation)")
         self._emit(f"  TRANSID={self._transid}  TERMINAL={self._terminal}  USERID={self._userid}")
         self._emit("=" * 60)
         self._emit("")
@@ -212,7 +212,7 @@ class CICSEnvironment:
             else:
                 self._emit("CICS RETURN: Task ended normally.")
         except CICSAbend as a:
-            self._emit(f"")
+            self._emit("")
             self._emit(f"❌ CICS ABEND: CODE={a.code}  TASK={self._task_number}")
         except Exception as e:
             self._emit(f"❌ CICS runtime error: {e}")

@@ -24,7 +24,6 @@ from PySide6.QtWidgets import (
 from ..core.debugger import ExecutionTimeline
 from ..core.interpreter import Interpreter, Language
 from ..graphics.turtle_state import TurtleState
-from ..logging_config import get_logger
 
 # Set to True or use TWS_DEBUG=1 env var to enable verbose debug output
 _DEBUG = os.environ.get("TWS_DEBUG", "").strip() in ("1", "true", "yes")

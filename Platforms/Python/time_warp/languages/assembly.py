@@ -43,7 +43,7 @@ from __future__ import annotations
 
 import math as _math
 import re
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter

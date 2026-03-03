@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import pathlib
 
-import pytest
 from time_warp.core.interpreter import Language
 from .conftest_lang import run, ok, has, no_errors
 

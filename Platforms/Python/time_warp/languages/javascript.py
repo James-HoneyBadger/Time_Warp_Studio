@@ -23,7 +23,7 @@ import math as _math
 import random as _random
 import re
 import time as _time
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -501,10 +501,10 @@ class JSPromise:
     def then(self,ok=None,fail=None):
         if self._state=="fulfilled" and ok:
             try: return JSPromise(lambda r,j: r(ok(self._val)))
-            except Exception as e: return JSPromise(lambda r,j: j(e))
+            except Exception: return JSPromise(lambda r,j: j(e))
         if self._state=="rejected" and fail:
             try: return JSPromise(lambda r,j: r(fail(self._err)))
-            except Exception as e: return JSPromise(lambda r,j: j(e))
+            except Exception: return JSPromise(lambda r,j: j(e))
         return self
     def catch(self,fn=None): return self.then(None,fn)
     def finally_(self,fn=None):

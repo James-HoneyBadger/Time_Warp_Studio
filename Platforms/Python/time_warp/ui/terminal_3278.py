@@ -16,20 +16,19 @@ Faithful emulation of the IBM 3278 Model 2 (24x80) terminal:
 from __future__ import annotations
 
 import re
-import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple
 
 from PySide6.QtCore import (
-    QPoint, QRect, QSize, Qt, QTimer, Signal, Slot,
+    QRect, QSize, Qt, QTimer, Signal,
 )
 from PySide6.QtGui import (
     QColor, QFont, QFontDatabase, QFontMetrics, QKeyEvent,
-    QPainter, QPen, QResizeEvent, QTextOption,
+    QPainter, QPen, QResizeEvent,
 )
 from PySide6.QtWidgets import (
-    QApplication, QDialog, QHBoxLayout, QLabel, QMainWindow,
-    QMenu, QStatusBar, QToolBar, QVBoxLayout, QWidget,
+    QLabel, QMainWindow,
+    QStatusBar, QToolBar, QVBoxLayout, QWidget,
 )
 
 # ---------------------------------------------------------------------------

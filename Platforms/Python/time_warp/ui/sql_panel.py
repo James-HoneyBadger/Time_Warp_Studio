@@ -12,17 +12,11 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, List, Optional
 
-from PySide6.QtCore import Qt, QThread, Signal, QTimer
+from PySide6.QtCore import Qt, QThread, Signal
 from PySide6.QtWidgets import (
-    QDialog,
-    QDialogButtonBox,
     QHBoxLayout,
     QInputDialog,
     QLabel,
-    QLineEdit,
-    QMessageBox,
-    QPushButton,
-    QSizePolicy,
     QSplitter,
     QTableWidget,
     QTableWidgetItem,
@@ -170,7 +164,6 @@ class SQLRunThread(QThread):
         self._sql = sql
 
     def run(self) -> None:
-        import sqlite3
         output = self._session.run_script(self._sql)
         self.result_ready.emit(output)
         # Also try to give tabular data for the last SELECT

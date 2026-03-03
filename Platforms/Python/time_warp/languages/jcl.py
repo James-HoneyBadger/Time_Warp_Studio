@@ -26,7 +26,7 @@ Built-in program simulation (PGM=):
 from __future__ import annotations
 
 import re
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -209,7 +209,7 @@ class JCLEnvironment:
         params = _parse_params(first.params)
         self._job_desc = params.get("'", self._job_name)
 
-        self._emit(f"JES2 JOB LOG -- SYSTEM TWRP -- NODE TIMEWARP")
+        self._emit("JES2 JOB LOG -- SYSTEM TWRP -- NODE TIMEWARP")
         self._emit(f"-------- {datetime.now().strftime('%a %b %d %H:%M:%S')} --------")
         self._emit(f"$HASP373 {self._job_name} STARTED")
         self._emit(f"IEF403I {self._job_name} - STARTED")
@@ -339,7 +339,7 @@ class JCLEnvironment:
             elif upper.startswith("PRINT "):
                 self._emit(f"IDC3001I PRINT COMMAND PROCESSED: {line.strip()}")
             elif upper.startswith("LIST "):
-                self._emit(f"IDC3501I LIST COMMAND PROCESSED")
+                self._emit("IDC3501I LIST COMMAND PROCESSED")
             elif upper and not upper.startswith("/*") and not upper.startswith("//"):
                 self._emit(f"IDC0005I COMMAND: {line.strip()}")
         return 0

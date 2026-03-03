@@ -276,7 +276,6 @@ def execute_python(
             result = sql_execute("SELECT TOP 5 * FROM Students")
             print(result)
         """
-        from ..core.sql_engine import SQLSession
         sess = getattr(interpreter, "sql_session", None) or _sql_connect(db)
         output = sess.run_statement(query)
         output_buf.write(output + "\n")
@@ -284,7 +283,7 @@ def execute_python(
 
     def _sql_query(query: str, db: str = "master"):
         """Execute a SELECT and return a list of dicts (one per row)."""
-        from ..core.sql_engine import SQLSession, _translate_tsql
+        from ..core.sql_engine import _translate_tsql
         sess = getattr(interpreter, "sql_session", None) or _sql_connect(db)
         try:
             cur = sess._conn.execute(_translate_tsql(query))
