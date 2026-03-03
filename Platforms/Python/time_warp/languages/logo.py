@@ -1180,7 +1180,6 @@ def _logo_call_procedure(
 
 def _logo_print(interpreter: "Interpreter", args: List[str]) -> str:
     if not args:
-        interpreter.output.append("")
         return "\n"
 
     # Check for variable access :VAR
@@ -1196,7 +1195,6 @@ def _logo_print(interpreter: "Interpreter", args: List[str]) -> str:
 
         if val is not None:
             val_str = str(val)
-            interpreter.output.append(val_str)
             return val_str + "\n"
 
     # Check if this is a function call
@@ -1222,7 +1220,6 @@ def _logo_print(interpreter: "Interpreter", args: List[str]) -> str:
         # Remove the trailing newline if present
         if result.endswith("\n"):
             result = result[:-1]
-        interpreter.output.append(result)
         return result + "\n"
     # Check for reporter commands (POS, XCOR, YCOR, HEADING)
     if len(args) == 1 and args[0].upper() in ("POS", "XCOR", "YCOR", "HEADING"):
@@ -1238,12 +1235,10 @@ def _logo_print(interpreter: "Interpreter", args: List[str]) -> str:
             val_str = str(turtle.y)
         else:  # HEADING
             val_str = str(turtle.heading)
-        interpreter.output.append(val_str)
         return val_str + "\n"
 
     # Otherwise treat as literal
     output = " ".join(args)
-    interpreter.output.append(output)
     return output + "\n"
 
 
@@ -1302,7 +1297,6 @@ def _logo_show(interpreter: "Interpreter", args: List[str]) -> str:
     if not args:
         return "❌ SHOW requires value\n"
     value = " ".join(args)
-    interpreter.output.append(value)
     return value + "\n"
 
 
@@ -1311,7 +1305,6 @@ def _logo_type(interpreter: "Interpreter", args: List[str]) -> str:
     if not args:
         return "❌ TYPE requires value\n"
     value = " ".join(args)
-    interpreter.output.append(value)
     return value
 
 
@@ -1940,7 +1933,6 @@ def _logo_label(
 
     if turtle is None:
         # Fallback: just print to output
-        interpreter.output.append(text)
         return text + "\n"
 
     # Import TurtleShape to create a text shape at turtle position

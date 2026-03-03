@@ -613,3 +613,25 @@ class TestRunSystem:
     def test_system(self):
         out = bas("10 SYSTEM")
         assert has(out, "system") or no_errors(out)
+
+
+# ============================================================================
+# DEF FN – user-defined functions
+# ============================================================================
+
+
+class TestDefFn:
+    """DEF FNA(X) = expr user-defined functions."""
+
+    def test_def_fn_simple(self):
+        out = bas("10 DEF FNA(X) = X * X + 1\n20 PRINT FNA(5)")
+        assert has(out, "26")
+
+    def test_def_fn_multiple(self):
+        out = bas(
+            "10 DEF FNA(X) = X * 2\n"
+            "20 DEF FNB(X) = X + 10\n"
+            "30 PRINT FNA(3); FNB(3)"
+        )
+        assert has(out, "6")
+        assert has(out, "13")

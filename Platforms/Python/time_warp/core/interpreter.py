@@ -1088,8 +1088,7 @@ class Interpreter:
             raise ValueError(f"Unsupported language: {self.language}")
 
         self.log_output(output)
-        return output  # Note: _determine_command_type removed - now using
-        # language-specific executors.
+        return output
 
     def _parse_line(self, line: str) -> Tuple[Optional[int], str]:
         """Parse line number if present, return (line_num, command)"""
@@ -1104,12 +1103,23 @@ class Interpreter:
         return (None, line)
 
     def log_output(self, text: str):
-        """Add text to output buffer (helper method)."""
-        if text is not None and text != "":  # Include all output, even blank lines
-            self.output.append(text)
+        """Add text to output buffer (helper method).
+
+        Multi-line text is split into individual entries so that each
+        logical output line is stored separately.
+        """
+        if text is None or text == "":
+            return
+        # Split multi-line output into separate entries
+        lines = text.split("\n")
+        # Remove trailing empty string from a final '\n'
+        if lines and lines[-1] == "":
+            lines = lines[:-1]
+        for line in lines:
+            self.output.append(line)
             if self.output_callback:
                 # pylint: disable=not-callable
-                self.output_callback(text)
+                self.output_callback(line)
 
     def evaluate_expression(self, expr: str) -> float:
         """
@@ -1141,6 +1151,27 @@ class Interpreter:
             self.arrays.copy(),
             string_variables=self.string_variables.copy(),
         )
+        # Register BASIC DEF FN user-defined functions
+        user_fns = getattr(self, "_basic_user_fns", {})
+        for fn_name, (params, body_expr) in user_fns.items():
+            # Create a closure that evaluates the body with params substituted
+            def _make_fn(p_list, b_expr, ev):
+                def _fn(*args):
+                    # Save existing variables, bind params
+                    saved = {}
+                    for i_p, pname in enumerate(p_list):
+                        saved[pname] = ev.variables.get(pname)
+                        ev.variables[pname] = float(args[i_p]) if i_p < len(args) else 0.0
+                    result = ev.evaluate(b_expr)
+                    # Restore
+                    for pname in p_list:
+                        if saved[pname] is not None:
+                            ev.variables[pname] = saved[pname]
+                        else:
+                            ev.variables.pop(pname, None)
+                    return result
+                return _fn
+            evaluator.FUNCTIONS[fn_name] = _make_fn(params, body_expr, evaluator)
         return evaluator.evaluate(expr)
 
     def interpolate_text(self, text: str) -> str:

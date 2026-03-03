@@ -250,3 +250,25 @@ class TestErrors:
     def test_empty_program(self):
         out = fort("")
         assert no_errors(out) or len(out) == 0
+
+
+# ============================================================================
+# Free-form Fortran (regression)
+# ============================================================================
+
+
+class TestFreeForm:
+    """Regression: Free-form Fortran with :: declarations and END DO."""
+
+    def test_free_form_do_loop(self):
+        src = "PROGRAM FREETEST\nINTEGER :: I\nDO I = 1, 3\n  PRINT *, I\nEND DO\nEND PROGRAM"
+        out = fort(src)
+        assert no_errors(out)
+        assert has(out, "1")
+        assert has(out, "3")
+
+    def test_free_form_real_decl(self):
+        src = "PROGRAM REALTEST\nREAL :: X = 3.14\nPRINT *, X\nEND PROGRAM"
+        out = fort(src)
+        assert no_errors(out)
+        assert has(out, "3.14")

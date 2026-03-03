@@ -337,13 +337,24 @@ class HaskellEvaluator:
         m = re.match(r"^\[(.+)\]$", expr)
         if m:
             inner = m.group(1).strip()
+            # List comprehension [expr | ...] — check for '|' at bracket depth 0
+            # before range, because inner may contain nested [a..b] ranges.
+            depth = 0
+            has_pipe_at_depth0 = False
+            for ch in inner:
+                if ch in "([":
+                    depth += 1
+                elif ch in ")]":
+                    depth -= 1
+                elif ch == "|" and depth == 0:
+                    has_pipe_at_depth0 = True
+                    break
+            if has_pipe_at_depth0:
+                return self._eval_list_comp(inner)
             # Range [a..b] or [a,b..c]
             range_m = re.match(r"^(.+?)\.\.\s*(.+)?$", inner)
             if range_m:
                 return self._eval_range(range_m.group(1).strip(), range_m.group(2) and range_m.group(2).strip())
-            # List comprehension [expr | ...]
-            if "|" in inner:
-                return self._eval_list_comp(inner)
             # Tuple from list (treat as Python list)
             parts = _split_commas_haskell(inner)
             return [self.eval(p.strip()) for p in parts]
@@ -357,11 +368,15 @@ class HaskellEvaluator:
             if re.match(r"^[+\-*/<>=!&|.]+$", inner):
                 op = inner
                 return lambda a: lambda b: _apply_op_haskell(a, op, b)
-            # Right section: (* 2), (+ 3)
-            sm = re.match(r"^([+\-*/<>=!]+)\s+(.+)$", inner)
+            # Right section: (* 2), (+ 3), (*2) — but not negative numbers like (-5)
+            sm = re.match(r"^([+\-*/<>=!]+)\s*(.+)$", inner)
             if sm:
                 op = sm.group(1)
-                right = self.eval(sm.group(2).strip())
+                rhs = sm.group(2).strip()
+                # Guard: (-5) is a negative number, not a right section
+                if op == "-" and re.match(r"^\d+\.?\d*$", rhs):
+                    return -self.eval(rhs)
+                right = self.eval(rhs)
                 return lambda x, _o=op, _r=right: _apply_op_haskell(x, _o, _r)
             # Left section: (2 +), (3 *)
             sm = re.match(r"^(.+?)\s+([+\-*/<>=!]+)$", inner)

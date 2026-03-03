@@ -72,6 +72,9 @@ class VirtualCPU:
             "C": False, "O": False, "P": False,  # Carry, Overflow, Parity
         }
         self.labels: dict[str, int] = {}
+        self.data_labels: dict[str, int] = {}  # label -> memory address
+        self.data_strings: dict[str, str] = {}  # label -> stored string
+        self._data_ptr = 0  # next free byte in memory for data
         self.instructions: list[tuple[str, str]] = []  # (opcode, args_str)
         self.ip = 0
 
@@ -120,7 +123,7 @@ class VirtualCPU:
             stmt = re.sub(r";.*$", "", raw).strip()
             if not stmt:
                 continue
-            # Label definition
+            # Label definition  (label: [instr])
             m = re.match(r"^(\w+)\s*:\s*(.*)$", stmt)
             if m:
                 self.labels[m.group(1).upper()] = line_no
@@ -130,9 +133,62 @@ class VirtualCPU:
                     self.instructions.append((op, args))
                     line_no += 1
                 continue
+            # Data definition without colon: name DB/DW/DD/DQ "string",0  or  name DW 42
+            dm = re.match(r"^(\w+)\s+(DB|DW|DD|DQ)\b\s*(.*)", stmt, re.IGNORECASE)
+            if dm:
+                label_name = dm.group(1).upper()
+                directive = dm.group(2).upper()
+                data_args = dm.group(3).strip()
+                self.data_labels[label_name] = self._data_ptr
+                self._store_data(label_name, directive, data_args)
+                # Also emit a no-op instruction so line numbers stay consistent
+                self.instructions.append(("_DATA", ""))
+                line_no += 1
+                continue
             op, args = self._split_instr(self._upper_preserve_strings(stmt))
             self.instructions.append((op, args))
             line_no += 1
+
+    def _store_data(self, label: str, directive: str, args: str):
+        """Parse DB/DW data and store in memory + data_strings."""
+        # Collect all data items (strings, numbers)
+        text_parts: list[str] = []
+        addr = self._data_ptr
+        i = 0
+        while i < len(args):
+            c = args[i]
+            if c in ('"', "'"):
+                # Quoted string
+                end = args.index(c, i + 1)
+                s = args[i + 1 : end]
+                text_parts.append(s)
+                for ch in s:
+                    if self._data_ptr < len(self.memory):
+                        self.memory[self._data_ptr] = ord(ch)
+                        self._data_ptr += 1
+                i = end + 1
+            elif c == ",":
+                i += 1
+            elif c.isspace():
+                i += 1
+            else:
+                # Numeric value
+                end = i
+                while end < len(args) and args[end] not in (",", " ", "\t"):
+                    end += 1
+                num_str = args[i:end].strip()
+                if num_str:
+                    try:
+                        val = int(num_str, 0)  # handles 0x, 0b, decimal
+                    except ValueError:
+                        val = 0
+                    if self._data_ptr < len(self.memory):
+                        self.memory[self._data_ptr] = val
+                        self._data_ptr += 1
+                i = end
+        # Store the combined text for easy PRINTS access
+        if text_parts:
+            self.data_strings[label] = "".join(text_parts)
 
     def _split_instr(self, stmt: str) -> tuple[str, str]:
         parts = stmt.split(None, 1)
@@ -705,11 +761,26 @@ class VirtualCPU:
         elif op == "ALIGN":
             pass  # assembler directive
         elif op in ("DB", "DW", "DD", "DQ", "RES", "RESB", "RESW", "RESD"):
-            pass  # data definition stubs
+            pass  # data definition stubs (handled in _parse for named defs)
+        elif op == "_DATA":
+            pass  # placeholder for parsed data definitions
         elif op in ("SECTION", ".TEXT", ".DATA", ".BSS", "ORG", "BITS", "CPU", "USE32", "USE64"):
             pass  # assembler directives
         elif op in ("GLOBAL", "EXTERN", "EXPORT"):
             pass  # symbol visibility stubs
+        elif op == "PRINTS":
+            # Print string at data label: PRINTS msg
+            lbl = a[0].upper() if a else ""
+            if lbl in self.data_strings:
+                self._emit(self.data_strings[lbl])
+            elif lbl in self.data_labels:
+                # Read from memory until null byte
+                addr = self.data_labels[lbl]
+                chars = []
+                while addr < len(self.memory) and self.memory[addr] != 0:
+                    chars.append(chr(self.memory[addr]))
+                    addr += 1
+                self._emit("".join(chars))
         elif op == "PRINTI":
             self._emit(str(self._val(a[0])))
         elif op == "PRINTR":
@@ -727,8 +798,23 @@ class VirtualCPU:
     # Helpers
     # ------------------------------------------------------------------
 
+    # x86 named register mapping (EAX→R0, EBX→R1, ECX→R2, EDX→R3, etc.)
+    _X86_REGS: dict[str, int] = {
+        "EAX": 0, "AX": 0, "AL": 0, "AH": 0,
+        "EBX": 1, "BX": 1, "BL": 1, "BH": 1,
+        "ECX": 2, "CX": 2, "CL": 2, "CH": 2,
+        "EDX": 3, "DX": 3, "DL": 3, "DH": 3,
+        "ESP": 4, "SP": 4, "EBP": 5, "BP": 5,
+        "ESI": 6, "SI": 6, "EDI": 7, "DI": 7,
+        "RAX": 0, "RBX": 1, "RCX": 2, "RDX": 3,
+        "RSP": 4, "RBP": 5, "RSI": 6, "RDI": 7,
+    }
+
     def _reg_index(self, name: str) -> int:
-        m = re.match(r"^R(\d+)$", name)
+        up = name.upper()
+        if up in self._X86_REGS:
+            return self._X86_REGS[up]
+        m = re.match(r"^R(\d+)$", up)
         if not m:
             raise AsmError(f"Invalid register: {name}")
         idx = int(m.group(1))
@@ -744,7 +830,12 @@ class VirtualCPU:
 
     def _val(self, operand: str) -> int:
         operand = operand.strip()
-        if re.match(r"^R\d+$", operand, re.IGNORECASE):
+        up = operand.upper()
+        if re.match(r"^R\d+$", up):
+            v = self._reg_get(operand)
+            return int(v) if isinstance(v, float) else v
+        # x86 named registers
+        if up in self._X86_REGS:
             v = self._reg_get(operand)
             return int(v) if isinstance(v, float) else v
         if re.match(r"^0X[\dA-F]+$", operand, re.IGNORECASE):
@@ -761,7 +852,15 @@ class VirtualCPU:
         try:
             return float(operand)  # float immediate (e.g. 3.14)
         except ValueError:
-            raise AsmError(f"Invalid immediate value: {operand}")
+            pass
+        # Resolve data labels to memory addresses
+        up = operand.upper()
+        if up in self.data_labels:
+            return self.data_labels[up]
+        # Resolve code labels to instruction addresses
+        if up in self.labels:
+            return self.labels[up]
+        raise AsmError(f"Invalid immediate value: {operand}")
 
     def _mem_addr(self, operand: str) -> int:
         operand = operand.strip()

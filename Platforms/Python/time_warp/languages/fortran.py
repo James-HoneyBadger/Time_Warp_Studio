@@ -91,7 +91,87 @@ class FortranEnvironment:
                 result.append(ch.upper())
         return "".join(result)
 
+    def _is_free_form(self, source: str) -> bool:
+        """Detect whether source is Fortran 90 free-form (vs fixed-format).
+
+        Heuristics: presence of ``::`` declarations, ``END DO``, ``PROGRAM``
+        at column 1, or lines where columns 1-6 contain non-label alphabetic
+        content all suggest free-form.
+        """
+        for raw in source.splitlines():
+            stripped = raw.strip()
+            if not stripped or stripped.startswith("!"):
+                continue
+            up = stripped.upper()
+            # "PROGRAM X" or "MODULE X" starting at col 1 = free-form
+            if up.startswith("PROGRAM ") or up.startswith("MODULE "):
+                return True
+            # :: in a declaration is Fortran 90
+            if "::" in up and re.match(r"^(INTEGER|REAL|CHARACTER|LOGICAL|DOUBLE\s+PRECISION)\b", up):
+                return True
+            # END DO / END PROGRAM / END IF are Fortran 90 structured constructs
+            if re.match(r"^END\s+(DO|PROGRAM|FUNCTION|SUBROUTINE|MODULE)\b", up):
+                return True
+        return False
+
     def _parse(self, source: str):
+        if self._is_free_form(source):
+            return self._parse_free_form(source)
+        return self._parse_fixed_format(source)
+
+    def _parse_free_form(self, source: str):
+        """Parse Fortran 90 free-form source."""
+        for raw in source.splitlines():
+            # Strip inline comments (outside strings)
+            stripped = raw.strip()
+            if not stripped or stripped.startswith("!"):
+                continue
+            # Remove trailing comment
+            in_str = False
+            qchar = ""
+            clean = []
+            for ch in stripped:
+                if in_str:
+                    clean.append(ch)
+                    if ch == qchar:
+                        in_str = False
+                elif ch in ("'", '"'):
+                    in_str = True
+                    qchar = ch
+                    clean.append(ch)
+                elif ch == "!":
+                    break
+                else:
+                    clean.append(ch)
+            stmt = self._upper_preserve_strings("".join(clean).strip())
+            if not stmt:
+                continue
+
+            # Extract optional numeric label
+            label = ""
+            lm = re.match(r"^(\d+)\s+", stmt)
+            if lm:
+                label = lm.group(1)
+                stmt = stmt[lm.end():].strip()
+
+            if stmt.startswith("SUBROUTINE "):
+                sub_m = re.match(r"SUBROUTINE\s+(\w+)", stmt)
+                if sub_m:
+                    self._subroutines[sub_m.group(1)] = len(self._lines)
+
+            func_m = re.match(r"^(?:(?:INTEGER|REAL|DOUBLE\s+PRECISION|CHARACTER|LOGICAL)\s+)?FUNCTION\s+(\w+)\s*\(", stmt)
+            if func_m:
+                self._functions[func_m.group(1)] = len(self._lines)
+
+            fmt_m = re.match(r"^FORMAT\s*\((.+)\)\s*$", stmt)
+            if fmt_m and label:
+                self._format_stmts[label] = fmt_m.group(1)
+
+            self._lines.append((label, stmt))
+            if label:
+                self._labels[label] = len(self._lines) - 1
+
+    def _parse_fixed_format(self, source: str):
         raw_lines = source.splitlines()
         continuation_buf: list[str] = []
         idx = 0
@@ -525,23 +605,43 @@ class FortranEnvironment:
 
     def _parse_declaration(self, stmt: str):
         # INTEGER I, J, K(10)  or  REAL X, Y  or  CHARACTER*20 NAME
+        # Fortran 90: INTEGER :: I = 0, J  or  REAL :: X = 1.5
         # Also handles DOUBLE PRECISION, COMPLEX, CHARACTER*(n)
-        char_m = re.match(r"^CHARACTER\s*(?:\*\s*(\d+|\*))?\s+(.+)$", stmt)
+
+        # Strip optional :: separator (Fortran 90 style)
+        decl_body = stmt
+        if "::" in decl_body:
+            # "INTEGER :: I = 0" → just the vars part after ::
+            decl_body = stmt.split("::", 1)[0].strip() + " " + stmt.split("::", 1)[1].strip()
+
+        char_m = re.match(r"^CHARACTER\s*(?:\*\s*(\d+|\*))?\s+(.+)$", decl_body)
         if char_m:
             width = int(char_m.group(1)) if (char_m.group(1) and char_m.group(1) != "*") else 1
             for item in char_m.group(2).split(","):
                 item = item.strip()
+                # Strip initializer (= value)
+                if "=" in item:
+                    item = item.split("=")[0].strip()
                 am = re.match(r"^(\w+)\s*\((\d+)\)$", item)
                 if am:
                     self._vars[am.group(1).upper()] = ["" for _ in range(int(am.group(2)))]
                 elif item:
                     self._vars[item.upper()] = " " * width
             return
-        m = re.match(r"^(?:INTEGER|REAL|LOGICAL|DOUBLE\s+PRECISION|COMPLEX|BYTE)\s+(.+)$", stmt)
+        m = re.match(r"^(?:INTEGER|REAL|LOGICAL|DOUBLE\s+PRECISION|COMPLEX|BYTE)\s+(.+)$", decl_body)
         if m:
-            is_int = stmt.startswith("INTEGER") or stmt.startswith("BYTE")
+            is_int = decl_body.startswith("INTEGER") or decl_body.startswith("BYTE")
             for item in m.group(1).split(","):
                 item = item.strip()
+                # Handle initializer: I = 0
+                init_val = None
+                if "=" in item:
+                    parts = item.split("=", 1)
+                    item = parts[0].strip()
+                    try:
+                        init_val = self._eval_expr(parts[1].strip())
+                    except Exception:
+                        init_val = 0 if is_int else 0.0
                 am = re.match(r"^(\w+)\s*\((.+)\)$", item)
                 if am:
                     dims = [int(float(self._eval_expr(d.strip()))) for d in am.group(2).split(",")]
@@ -550,7 +650,7 @@ class FortranEnvironment:
                         total *= d
                     self._vars[am.group(1).upper()] = [0] * total
                 elif item:
-                    self._vars[item.upper()] = 0 if is_int else 0.0
+                    self._vars[item.upper()] = init_val if init_val is not None else (0 if is_int else 0.0)
 
     def _skip_to_enddo(self, start: int) -> int:
         """Skip DO body until END DO / ENDDO / matching labeled DO end."""

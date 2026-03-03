@@ -32,7 +32,8 @@ _DECL_RE = re.compile(
 )
 _ARRAY_DECL_RE = re.compile(
     r"^\s*(int|long|float|double|char)\s+"
-    r"([A-Za-z_][A-Za-z0-9_]*)\s*\[(\d+)\]\s*;?\s*$",
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*\[(\d+)\]"
+    r"(?:\s*=\s*\{([^}]*)\})?\s*;?\s*$",
 )
 _ASSIGN_RE = re.compile(
     r"^\s*([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?)\s*=\s*(.+);?\s*$"
@@ -186,6 +187,37 @@ def _exec_c_side_effect_expr(interpreter: "Interpreter", expr: str) -> bool:
             return True
         # Simple assignment
         val: Any
+    # Compound assignment: +=, -=, *=, /=, %=
+    cm = re.match(
+        r"^\s*([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?)\s*([+\-*/%])=\s*(.+)$", s
+    )
+    if cm:
+        name = cm.group(1).strip().upper()
+        op = cm.group(2)
+        right_str = cm.group(3).strip()
+        cur = interpreter.get_numeric_value(name) or 0
+        try:
+            norm = re.sub(
+                r"([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*(.*?)\s*\]", r"\1(\2)", right_str
+            )
+            rval = _c_eval_expr(interpreter, norm)
+        except (ValueError, TypeError, ZeroDivisionError):
+            rval = 0
+        ops = {"+": lambda a, b: a + b, "-": lambda a, b: a - b,
+               "*": lambda a, b: a * b, "/": lambda a, b: a // b if b else 0,
+               "%": lambda a, b: a % b if b else 0}
+        new_val = ops[op](cur, rval)
+        suf = None
+        if name + "%" in interpreter.int_variables:
+            suf = "%"
+        elif name + "&" in interpreter.long_variables:
+            suf = "&"
+        elif name + "!" in interpreter.single_variables:
+            suf = "!"
+        elif name + "#" in interpreter.double_variables:
+            suf = "#"
+        interpreter.set_typed_variable(name + (suf or "#"), new_val)
+        return True
     if "=" in s:
         left, right = s.split("=", 1)
         name = left.strip().upper()
@@ -1269,16 +1301,30 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
         interpreter.current_line = start
         return ""
 
-    # Array declarations  (int a[3];)
+    # Array declarations  (int a[3];  or  int a[3]={10,20,30};)
     m = _ARRAY_DECL_RE.match(cmd)
     if m:
-        atype, aname, asize_str = m.groups()
+        atype = m.group(1)
+        aname = m.group(2)
+        asize_str = m.group(3)
+        init_list = m.group(4)  # may be None
         asize = int(asize_str)
         suffix = _suffix_for_type(atype)
         default: Any = "" if suffix == "$" else 0
         if not hasattr(interpreter, "arrays"):
             interpreter.arrays = {}
-        interpreter.arrays[aname.upper()] = [default] * asize
+        arr = [default] * asize
+        if init_list is not None:
+            # Parse initializer list: {10, 20, 30}
+            values = [v.strip() for v in init_list.split(",") if v.strip()]
+            for idx, val_str in enumerate(values):
+                if idx >= asize:
+                    break
+                try:
+                    arr[idx] = _c_eval_expr(interpreter, val_str)
+                except (ValueError, TypeError, ZeroDivisionError):
+                    arr[idx] = default
+        interpreter.arrays[aname.upper()] = arr
         return ""
 
     # Declarations

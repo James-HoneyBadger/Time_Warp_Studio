@@ -257,3 +257,28 @@ class TestErrors:
     def test_empty_program(self):
         out = asm("")
         assert no_errors(out) or len(out) == 0
+
+
+# ============================================================================
+# Data labels, DB/DW, x86 registers (regression)
+# ============================================================================
+
+
+class TestDataLabels:
+    """Regression: data labels without colons plus DB/DW strings."""
+
+    def test_db_string_and_prints(self):
+        src = "section .data\nmsg DB \"Hello\",0\nsection .text\nPRINTS msg\nHALT"
+        out = asm(src)
+        assert no_errors(out)
+        assert has(out, "Hello")
+
+
+class TestX86Registers:
+    """Regression: EAX/EBX etc. should map to internal registers."""
+
+    def test_eax_ebx_add(self):
+        src = "MOV EAX, 10\nMOV EBX, 20\nADD EAX, EBX\nPRINT EAX\nHALT"
+        out = asm(src)
+        assert no_errors(out)
+        assert has(out, "30")

@@ -158,6 +158,46 @@ class LuaEnvironment:
             raise LuaReturn(val)
         self._exec_stmt(stmt)
 
+    @staticmethod
+    def _split_inline_stmts(text: str) -> list[str]:
+        """Split inline statements at depth-0 ``end`` boundaries.
+
+        Example: ``"if x then y end z"`` → ``["if x then y end", "z"]``
+        """
+        parts: list[str] = []
+        depth = 0
+        start = 0
+        i = 0
+        n = len(text)
+        while i < n:
+            # word-boundary-safe keyword check helper
+            def _kw_at(kw: str) -> bool:
+                end_pos = i + len(kw)
+                if text[i:end_pos] != kw:
+                    return False
+                if i > 0 and (text[i - 1].isalnum() or text[i - 1] == "_"):
+                    return False
+                if end_pos < n and (text[end_pos].isalnum() or text[end_pos] == "_"):
+                    return False
+                return True
+
+            for kw in ("if", "for", "while", "function", "repeat", "do"):
+                if _kw_at(kw):
+                    depth += 1
+                    break
+            if _kw_at("end"):
+                depth -= 1
+                if depth == 0:
+                    part = text[start : i + 3].strip()
+                    if part:
+                        parts.append(part)
+                    start = i + 3
+            i += 1
+        remaining = text[start:].strip()
+        if remaining:
+            parts.append(remaining)
+        return parts if parts else [text.strip()]
+
     def _collect_block_to_end(self, lines: list[str], start: int) -> tuple[list[str], int]:
         """Collect lines until matching 'end', handling nesting."""
         depth = 1
@@ -268,10 +308,26 @@ class LuaEnvironment:
 
     def _exec_for(self, lines: list[str], start: int) -> int:
         line = lines[start].strip()
-        i = start + 1
-        body, end_i = self._collect_block_to_end(lines, i)
-        # Numeric for: for i = start, limit [, step] do
+
+        # Numeric for: for i = start, limit [, step] do [inline_body end]
         m = re.match(r"^for\s+(\w+)\s*=\s*(.+?),\s*(.+?)(?:,\s*(.+?))?\s+do\s*(.*)$", line)
+        # Generic for: for k, v in pairs(t) do [inline_body end]
+        m2 = None if m else re.match(r"^for\s+(.+?)\s+in\s+(.+?)\s+do\s*(.*)", line)
+
+        # Check for single-line form: "for ... do STMT end"
+        inline_body = None
+        tail_src = (m.group(5) if m else m2.group(3) if m2 else "").strip() if (m or m2) else ""
+        if tail_src and re.search(r"\bend\s*$", tail_src):
+            stmt = re.sub(r"\bend\s*$", "", tail_src).strip()
+            if stmt:
+                inline_body = self._split_inline_stmts(stmt)
+
+        if inline_body is not None:
+            body = inline_body
+            end_i = start + 1
+        else:
+            i = start + 1
+            body, end_i = self._collect_block_to_end(lines, i)
         if m:
             var = m.group(1)
             frm = self._eval_expr(m.group(2))
@@ -290,7 +346,6 @@ class LuaEnvironment:
                 raise r
         else:
             # Generic for: for k, v in pairs(t) do
-            m2 = re.match(r"^for\s+(.+?)\s+in\s+(.+?)\s+do", line)
             if m2:
                 vars_ = [v.strip() for v in m2.group(1).split(",")]
                 iterator = self._eval_expr(m2.group(2))
@@ -365,9 +420,21 @@ class LuaEnvironment:
 
     def _define_function(self, lines: list[str], start: int) -> int:
         line = lines[start].strip()
-        m = re.match(r"^(?:local\s+)?function\s+(\w+)\s*\((.*?)\)", line)
-        i = start + 1
-        body, end_i = self._collect_block_to_end(lines, i)
+        m = re.match(r"^(?:local\s+)?function\s+(\w+)\s*\((.*?)\)\s*(.*)", line)
+        # Check for single-line function: function f(x) return x*2 end
+        inline_body = None
+        if m and m.group(3):
+            tail = m.group(3).strip()
+            if re.search(r"\bend\s*$", tail):
+                stmt = re.sub(r"\bend\s*$", "", tail).strip()
+                if stmt:
+                    inline_body = self._split_inline_stmts(stmt)
+        if inline_body is not None:
+            body = inline_body
+            end_i = start + 1
+        else:
+            i = start + 1
+            body, end_i = self._collect_block_to_end(lines, i)
         if m:
             fname = m.group(1)
             params = [p.strip() for p in m.group(2).split(",") if p.strip()]

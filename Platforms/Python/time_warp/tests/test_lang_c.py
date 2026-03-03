@@ -696,3 +696,32 @@ class TestArrays:
     def test_array_multi_statement(self):
         out = c('int a[3];\na[0] = 10; a[1] = 20; a[2] = 30;\nprintf("%d %d %d\\n", a[0], a[1], a[2]);')
         assert has(out, "10", "20", "30")
+
+
+# ============================================================================
+# Array initializer + compound assignment (regression)
+# ============================================================================
+
+
+class TestArrayInitializer:
+    """Regression: int a[3] = {10,20,30} should populate elements."""
+
+    def test_array_initializer(self):
+        out = c('int a[3] = {10, 20, 30};\nprintf("%d\\n", a[1]);')
+        assert has(out, "20")
+
+
+class TestCompoundAssignment:
+    """Regression: +=, -=, *=, /=, %= operators."""
+
+    def test_plus_equals(self):
+        out = c('int x = 5;\nx += 3;\nprintf("%d\\n", x);')
+        assert has(out, "8")
+
+    def test_minus_equals(self):
+        out = c('int x = 10;\nx -= 3;\nprintf("%d\\n", x);')
+        assert has(out, "7")
+
+    def test_times_equals(self):
+        out = c('int x = 4;\nx *= 3;\nprintf("%d\\n", x);')
+        assert has(out, "12")

@@ -369,3 +369,28 @@ class TestIpairsFix:
         out = lua('local t = {10, 20, 30}\nfor i, v in ipairs(t) do\n  print(i, v)\nend')
         assert has(out, "1", "10")
         assert has(out, "3", "30")
+
+
+# ============================================================================
+# Inline for / inline function (regression)
+# ============================================================================
+
+
+class TestInlineFor:
+    """Regression: single-line for ... do BODY end should work."""
+
+    def test_inline_ipairs_for(self):
+        out = lua('local t={4,5,6}\nlocal s=0\nfor i,v in ipairs(t) do s=s+v end\nprint(s)')
+        assert has(out, "15")
+
+    def test_inline_numeric_for(self):
+        out = lua('local s=0\nfor i=1,5 do s=s+i end\nprint(s)')
+        assert has(out, "15")
+
+
+class TestInlineFunction:
+    """Regression: single-line function with if/return should work."""
+
+    def test_inline_recursive_function(self):
+        out = lua('function fact(n) if n<=1 then return 1 end return n*fact(n-1) end\nprint(fact(5))')
+        assert has(out, "120")

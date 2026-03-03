@@ -329,3 +329,24 @@ class TestListCompFix:
     def test_list_comp_with_inner_list(self):
         out = hs("main = print [x*2 | x <- [1,2,3]]")
         assert has(out, "2", "4", "6")
+
+
+# ============================================================================
+# Right-section + listcomp with range (regression)
+# ============================================================================
+
+
+class TestRightSection:
+    """Regression: (*2) right sections without space."""
+
+    def test_map_star_2(self):
+        out = hs("main = print (map (*2) [1,2,3])")
+        assert has(out, "2", "4", "6")
+
+
+class TestListCompRange:
+    """Regression: list comp with range generator [x*x | x <- [1..5]]."""
+
+    def test_listcomp_with_dotdot_range(self):
+        out = hs("main = print [x*x | x <- [1..5]]")
+        assert has(out, "1", "4", "9", "16", "25")

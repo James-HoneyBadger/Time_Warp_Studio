@@ -573,3 +573,24 @@ class TestStringProcParams:
     def test_to_with_string_param(self):
         out = logo('TO GREET :NAME\n  PRINT :NAME\nEND\nGREET "Hello')
         assert has(out, "HELLO")
+
+
+# ============================================================================
+# REPEAT output deduplication
+# ============================================================================
+
+
+class TestRepeatOutputDedup:
+    """Regression: REPEAT should not produce doubled output."""
+
+    def test_repeat_exact_count(self):
+        out = logo('REPEAT 3 [PRINT "hi]')
+        joined = "\n".join(out).upper()
+        # Exactly 3 occurrences, not 6 (was doubled before fix)
+        assert joined.count("HI") == 3
+
+    def test_single_print_no_duplicate(self):
+        out = logo("PRINT 42")
+        # Should produce exactly one output entry containing 42
+        matches = [line for line in out if "42" in line]
+        assert len(matches) == 1

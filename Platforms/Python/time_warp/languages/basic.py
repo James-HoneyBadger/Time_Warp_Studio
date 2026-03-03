@@ -191,6 +191,26 @@ def _split_statements(command: str) -> List[str]:
     return statements
 
 
+def _basic_def_fn(interpreter: "Interpreter", command: str) -> str:
+    """Handle DEF FNA(X) = X * X + 1 style user-defined functions."""
+    # Parse: DEF FNname(param) = expression
+    m = re.match(
+        r"^DEF\s+FN(\w+)\s*\(([^)]*)\)\s*=\s*(.+)$",
+        command.strip(),
+        re.IGNORECASE,
+    )
+    if not m:
+        return "❌ Invalid DEF FN syntax (expected DEF FNA(X) = expr)\n"
+    fn_name = "FN" + m.group(1).upper()  # e.g., "FNA"
+    params = [p.strip().upper() for p in m.group(2).split(",") if p.strip()]
+    body_expr = m.group(3).strip()
+    # Store on interpreter for later use by evaluate_expression
+    if not hasattr(interpreter, "_basic_user_fns"):
+        interpreter._basic_user_fns = {}
+    interpreter._basic_user_fns[fn_name] = (params, body_expr)
+    return ""
+
+
 # Function is large by design; keep pylint refactor checks disabled for it.
 # pylint: disable=R0911,R0912,R0915
 def execute_basic(
@@ -314,7 +334,7 @@ def execute_basic(
         return _basic_system(interpreter, _strip_comment(command[7:]))
     if cmd.startswith("DIM "):
         return _basic_dim(interpreter, _strip_comment(command[4:]))
-    if "=" in cmd and not cmd.startswith("IF ") and not cmd.startswith("FOR "):
+    if "=" in cmd and not cmd.startswith("IF ") and not cmd.startswith("FOR ") and not cmd.startswith("DEF FN"):
         return _basic_let(interpreter, _strip_comment(command))
     if cmd.startswith("COLOR "):
         return _basic_color(interpreter, _strip_comment(command[6:]), turtle)
@@ -385,6 +405,9 @@ def execute_basic(
             _strip_comment(command[7:]),
         )
         return ""
+    # DEF FN user-defined functions: DEF FNA(X) = X * X + 1
+    if cmd.startswith("DEF FN") or cmd.startswith("DEF  FN"):
+        return _basic_def_fn(interpreter, _strip_comment(command))
     # Game support commands
     if cmd == "BEEP":
         return _basic_beep(interpreter)
