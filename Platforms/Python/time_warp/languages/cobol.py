@@ -796,19 +796,13 @@ class CobolEnvironment:
     def _exec_embedded_sql(self, stmt: str) -> None:
         """Handle COBOL embedded SQL: EXEC SQL <sql> END-EXEC."""
         inner = re.sub(r"^EXEC\s+SQL\b", "", stmt, flags=re.I)
-        inner = re.sub(r"END-EXEC\.?$", "", inner, flags=re.I).strip()
+        # Strip END-EXEC (and anything following it) — it may not be at end-of-string
+        # if the multi-line merger included trailing COBOL statements
+        inner = re.split(r"\bEND-EXEC\b", inner, maxsplit=1, flags=re.I)[0].strip()
         if not inner:
             return
-        # Substitute :cobol-var host variables  → bare value
-        def _subst_host(m_: re.Match) -> str:
-            var = m_.group(1).upper()
-            val = self._vars.get(var, "")
-            if isinstance(val, str):
-                return f"'{val}'"
-            return str(val)
-        sql_with_vals = re.sub(r":(\w[\w-]*)", _subst_host, inner)
 
-        # Cursor operations — silently simulate
+        # Cursor operations — silently simulate (check BEFORE substitution)
         sql_upper_strip = inner.strip().upper()
         if re.match(r"^DECLARE\b", sql_upper_strip):
             self._emit(f"ℹ️  SQL: {inner.strip()[:60]}")
@@ -822,17 +816,42 @@ class CobolEnvironment:
         if re.match(r"^FETCH\b", sql_upper_strip):
             self._emit(f"ℹ️  SQL: fetch complete")
             return
+        # Skip INCLUDE / BEGIN DECLARE SECTION / END DECLARE SECTION
+        if re.match(r"^(INCLUDE|BEGIN\s+DECLARE\s+SECTION|END\s+DECLARE\s+SECTION)\b",
+                    sql_upper_strip):
+            return
 
-        # SELECT ... INTO :var1[, :var2, ...]  — strip entire INTO clause
+        # SELECT ... INTO :var1[, :var2, ...]  — identify and strip INTO clause
+        # (must be done on inner BEFORE host var substitution changes :vars to literals)
         into_m = re.search(r"\bINTO\s+(:\w[\w-]*\s*,\s*)*:\w[\w-]*", inner, re.I)
+        into_var = None
         if into_m:
-            into_var = re.findall(r":\w[\w-]*", into_m.group(0))
-            into_var = into_var[0].lstrip(":").upper() if into_var else None
-            sql_clean = re.sub(r"\bINTO\s+(?:\s*:\w[\w-]*\s*,)*\s*:\w[\w-]*", "",
-                               sql_with_vals, flags=re.I).strip()
-        else:
-            into_var = None
-            sql_clean = sql_with_vals
+            into_vars = re.findall(r":\w[\w-]*", into_m.group(0))
+            into_var = into_vars[0].lstrip(":").upper() if into_vars else None
+            # Remove the INTO clause from inner before substitution
+            inner = re.sub(r"\bINTO\s+(?:\s*:\w[\w-]*\s*,)*\s*:\w[\w-]*", "",
+                           inner, flags=re.I).strip()
+
+        # Substitute :cobol-var host variables  → bare value
+        def _subst_host(m_: re.Match) -> str:
+            var = m_.group(1).upper()
+            val = self._vars.get(var, "")
+            if isinstance(val, str):
+                return f"'{val}'"
+            return str(val)
+        sql_with_vals = re.sub(r":(\w[\w-]*)", _subst_host, inner)
+
+        # Normalise DB2/mainframe SQL to SQLite equivalents
+        # CURRENT DATE → date('now')
+        sql_with_vals = re.sub(r"\bCURRENT\s+DATE\b", "date('now')", sql_with_vals, flags=re.I)
+        # CURRENT TIMESTAMP → datetime('now')
+        sql_with_vals = re.sub(r"\bCURRENT\s+TIMESTAMP\b", "datetime('now')", sql_with_vals, flags=re.I)
+        # FETCH FIRST n ROW(S) ONLY → LIMIT n
+        sql_with_vals = re.sub(r"\bFETCH\s+FIRST\s+(\d+)\s+ROW(?:S)?\s+ONLY\b", r"LIMIT \1",
+                               sql_with_vals, flags=re.I)
+        # WITH UR / WITH CS / WITH RS  — isolation hints, strip
+        sql_with_vals = re.sub(r"\bWITH\s+(?:UR|CS|RS|RR)\b", "", sql_with_vals, flags=re.I)
+
         # Run through the SQL engine
         try:
             from ..core.sql_engine import SQLSession
@@ -840,7 +859,7 @@ class CobolEnvironment:
             if session is None:
                 session = SQLSession()
                 self.interpreter.sql_session = session
-            result = session.run_statement(sql_clean)
+            result = session.run_statement(sql_with_vals)
             self._emit(result)
             # If INTO target given and result contains a value, store it
             if into_var and result.strip():
@@ -848,7 +867,14 @@ class CobolEnvironment:
                 if len(lines) >= 2:  # header + row
                     self._vars[into_var] = lines[1].strip().split()[0] if lines[1].strip() else ""
         except Exception as e:
-            self._emit(f"❌ EXEC SQL error: {e}")
+            err_str = str(e)
+            # "no such table" is a demo-mode limitation; emit as info, not error
+            if "no such table" in err_str.lower():
+                tbl_m = re.search(r"no such table:\s*(\S+)", err_str, re.I)
+                tbl = tbl_m.group(1) if tbl_m else "?"
+                self._emit(f"ℹ️  SQL: table '{tbl}' not found (demo mode — table not pre-created)")
+            else:
+                self._emit(f"❌ EXEC SQL error: {e}")
 
     # COBOL verbs used to detect where condition ends and body begins
     _VERBS_RE = re.compile(

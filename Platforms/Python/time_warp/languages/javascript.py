@@ -999,6 +999,10 @@ def _translate_line(line: str) -> str:
     m = re.match(r"^(\w+)\s*\(([^)]*)\)\s*\{$", s)
     if m and m.group(1) not in ("if", "for", "while", "switch", "catch", "function", "return"):
         params = m.group(2).strip()
+        # Handle rest parameters: ...name → *name
+        if "..." in params:
+            parts = [p.strip() for p in params.split(",")]
+            params = ", ".join(f"*{p[3:]}" if p.startswith("...") else p for p in parts)
         if params:
             return pfx + f"def {m.group(1)}(self, {params}):"
         else:

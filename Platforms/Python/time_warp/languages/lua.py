@@ -108,6 +108,23 @@ class LuaEnvironment:
             if not line or line.startswith("--"):
                 i += 1
                 continue
+            # Merge multi-line table constructors: accumulate until braces balance.
+            # Only merge when no block-introducing keyword starts the line.
+            _block_kw = re.match(r"^(if|for|while|repeat|function|local\s+function)\b", line)
+            if not _block_kw:
+                brace_depth = line.count("{") - line.count("}")
+                if brace_depth > 0:
+                    merged = [line]
+                    i += 1
+                    while i < len(lines) and brace_depth > 0:
+                        nxt = lines[i].strip()
+                        merged.append(nxt)
+                        brace_depth += nxt.count("{") - nxt.count("}")
+                        i += 1
+                    line = " ".join(merged)
+                    # Execute merged line and continue (do not fall into block dispatch)
+                    self._exec_stmt(line)
+                    continue
             # Multi-line if
             if re.match(r"^if\b", line):
                 i = self._exec_if(lines, i)
@@ -457,6 +474,8 @@ class LuaEnvironment:
         stmt = stmt.strip()
         if not stmt or stmt.startswith("--"):
             return
+        # Strip inline comments (-- ...) that are outside of string literals
+        stmt = _strip_lua_comment(stmt)
 
         # print(...)
         m = re.match(r"^print\s*\((.+)\)$", stmt)
@@ -1160,6 +1179,23 @@ def _lua_tostring(v: Any) -> str:
     if isinstance(v, float) and v.is_integer():
         return str(int(v))
     return str(v)
+
+
+def _strip_lua_comment(stmt: str) -> str:
+    """Strip a trailing inline Lua comment (-- ...) that's outside string literals."""
+    in_str = None
+    i = 0
+    while i < len(stmt):
+        ch = stmt[i]
+        if in_str:
+            if ch == in_str and (i == 0 or stmt[i - 1] != "\\"):
+                in_str = None
+        elif ch in ('"', "'"):
+            in_str = ch
+        elif ch == "-" and i + 1 < len(stmt) and stmt[i + 1] == "-":
+            return stmt[:i].rstrip()
+        i += 1
+    return stmt
 
 
 def _split_commas(s: str) -> list[str]:

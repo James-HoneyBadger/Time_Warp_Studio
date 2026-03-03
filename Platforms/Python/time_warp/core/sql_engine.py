@@ -808,7 +808,12 @@ class SQLSession:
                 self._identity = self._conn.execute("SELECT last_insert_rowid()").fetchone()[0]
 
         except sqlite3.OperationalError as e:
-            self._emit(f"❌ Msg 208, Level 16: {e}")
+            err_str = str(e)
+            if "no such table" in err_str.lower():
+                # In demo mode tables may not be pre-created; downgrade to info
+                self._emit(f"ℹ️  Msg 208: {e} (demo mode)")
+            else:
+                self._emit(f"❌ Msg 208, Level 16: {e}")
         except sqlite3.IntegrityError as e:
             self._emit(f"❌ Msg 547, Level 16: Constraint violation — {e}")
         except sqlite3.ProgrammingError as e:

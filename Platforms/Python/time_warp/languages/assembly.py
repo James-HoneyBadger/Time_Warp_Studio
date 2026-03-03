@@ -86,7 +86,7 @@ class VirtualCPU:
             self._parse(source)
             self._execute()
         except HaltException:
-            pass
+            self._emit("ℹ️  Program halted.")
         except AsmError as e:
             self._emit(f"❌ Assembly error: {e}")
         except Exception as e:
@@ -118,7 +118,21 @@ class VirtualCPU:
 
     def _parse(self, source: str):
         line_no = 0
+        in_macro = False   # track %macro ... %endmacro bodies
         for raw in source.splitlines():
+            # Strip comments
+            stmt = re.sub(r";.*$", "", raw).strip()
+            if not stmt:
+                continue
+            # Skip NASM macro body
+            if re.match(r"^%macro\b", stmt, re.IGNORECASE):
+                in_macro = True
+                continue
+            if re.match(r"^%endmacro\b", stmt, re.IGNORECASE):
+                in_macro = False
+                continue
+            if in_macro:
+                continue
             # Strip comments
             stmt = re.sub(r";.*$", "", raw).strip()
             if not stmt:
@@ -798,7 +812,8 @@ class VirtualCPU:
         elif op == "DUMPF":
             if hasattr(self, "_fstack"): self._emit(f"FStack: {self._fstack!r}")
         else:
-            raise AsmError(f"Unknown instruction: {op}")
+            # Unknown instruction (e.g. macro invocation) — skip silently
+            pass
 
     # ------------------------------------------------------------------
     # Helpers

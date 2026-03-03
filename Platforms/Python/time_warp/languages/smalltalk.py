@@ -161,7 +161,11 @@ class SmalltalkEnvironment:
         m = re.match(r"^(\w+)\s*:=\s*(.+)$", stmt, re.DOTALL)
         if m:
             val = self._eval_expr(m.group(2).strip(), env)
-            env[m.group(1)] = val
+            var_name = m.group(1)
+            # Class variables (start with uppercase) go to globals scope
+            if var_name[0].isupper():
+                self._globals[var_name] = val
+            env[var_name] = val
             return val
 
         # Class definition: Object subclass: #Name instanceVariableNames: '...'
@@ -331,6 +335,9 @@ class SmalltalkEnvironment:
                 return recv[0]
             return recv
         if msg == "value":
+            # Block evaluation takes priority over Association value
+            if isinstance(recv, STBlock):
+                return recv.value([])
             # Association value  — returns second element of a (key, value) pair
             if isinstance(recv, tuple) and len(recv) == 2:
                 return recv[1]
@@ -378,9 +385,6 @@ class SmalltalkEnvironment:
             return recv.upper() if isinstance(recv, str) else recv
         if msg == "asLowercase":
             return recv.lower() if isinstance(recv, str) else recv
-        if msg == "value":
-            if isinstance(recv, STBlock):
-                return recv.value([])
         if msg == "new":
             if isinstance(recv, STClass):
                 return recv.instantiate()

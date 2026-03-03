@@ -301,7 +301,3 @@ begin-procedure sql-error
   display $sql-error
   stop quiet
 end-procedure
-
-begin-procedure main
-  do main
-end-procedure

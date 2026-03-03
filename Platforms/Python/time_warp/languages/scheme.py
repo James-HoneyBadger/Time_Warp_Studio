@@ -66,6 +66,13 @@ def _parse(tokens: list[str]) -> list:
         if tok == "(":
             lst = []
             while pos[0] < len(tokens) and tokens[pos[0]] != ")":
+                if tokens[pos[0]] == ".":  # dotted pair / rest-args
+                    pos[0] += 1  # skip '.'
+                    rest_elem = read()  # the cdr / rest symbol
+                    # Encode dotted rest as a special marker: ('.' . rest_symbol)
+                    lst.append(Symbol("."))
+                    lst.append(rest_elem)
+                    break
                 lst.append(read())
             if pos[0] >= len(tokens):
                 raise SchemeSyntaxError("Missing )")
@@ -175,7 +182,21 @@ class Env(dict):
     def __init__(self, params=(), args=(), outer=None):
         super().__init__()
         if isinstance(params, Symbol):
+            # (lambda args body) — all args go into rest symbol
             self[params] = list(args)
+        elif isinstance(params, list) and Symbol(".") in params:
+            # Dotted rest-args: (define (f a b . rest) ...) or (lambda (a . rest) ...)
+            # params = [a, b, Symbol('.'), rest_sym]
+            dot_idx = params.index(Symbol("."))
+            fixed_params = params[:dot_idx]
+            rest_sym = params[dot_idx + 1] if dot_idx + 1 < len(params) else None
+            if len(args) < len(fixed_params):
+                raise SchemeError(
+                    f"Expected at least {len(fixed_params)} args, got {len(args)}"
+                )
+            self.update(zip(fixed_params, args[:len(fixed_params)]))
+            if rest_sym is not None:
+                self[rest_sym] = list(args[len(fixed_params):])
         else:
             if len(params) != len(args):
                 raise SchemeError(f"Expected {len(params)} args, got {len(args)}")

@@ -128,49 +128,33 @@
       (if (< n 2) n
           (+ (fib-memo (- n 1)) (fib-memo (- n 2)))))))
 
-;;; ─── STREAMS (LAZY LISTS) ─────────────────────────────────
-(define-syntax stream-cons
-  (syntax-rules ()
-    ((stream-cons x s) (cons x (delay s)))))
+;;; ─── STREAMS (LAZY LISTS — finite simulation) ────────────
+;;; Note: This executor evaluates eagerly, so we use finite
+;;; lists to simulate lazy stream behaviour safely.
 
-(define stream-car car)
-(define (stream-cdr s) (force (cdr s)))
-(define stream-null? null?)
-(define the-empty-stream '())
+(define (stream-take n lst)
+  (take n lst))
 
-(define (stream-take n s)
-  (if (or (= n 0) (stream-null? s)) '()
-      (cons (stream-car s)
-            (stream-take (- n 1) (stream-cdr s)))))
+(define (stream-map f lst)
+  (map f lst))
 
-(define (stream-map f s)
-  (if (stream-null? s) the-empty-stream
-      (stream-cons (f (stream-car s))
-                   (stream-map f (stream-cdr s)))))
+(define (stream-filter pred lst)
+  (filter pred lst))
 
-(define (stream-filter pred s)
-  (cond ((stream-null? s) the-empty-stream)
-        ((pred (stream-car s))
-         (stream-cons (stream-car s)
-                      (stream-filter pred (stream-cdr s))))
-        (else (stream-filter pred (stream-cdr s)))))
+;; Finite list of naturals / positives (replaces infinite streams)
+(define naturals  (range 0 20))
+(define positives (range 1 21))
 
-;; Infinite stream of naturals
-(define (integers-from n)
-  (stream-cons n (integers-from (+ n 1))))
+;; Sieve of Eratosthenes on a finite list
+(define (sieve lst)
+  (if (null? lst) '()
+      (let ((p (car lst)))
+        (cons p
+          (sieve (filter
+                   (lambda (x) (not (= 0 (remainder x p))))
+                   (cdr lst)))))))
 
-(define naturals (integers-from 0))
-(define positives (integers-from 1))
-
-;; Sieve of Eratosthenes on streams
-(define (sieve s)
-  (let ((p (stream-car s)))
-    (stream-cons p
-      (sieve (stream-filter
-               (lambda (x) (not (= 0 (remainder x p))))
-               (stream-cdr s))))))
-
-(define primes (sieve (integers-from 2)))
+(define primes (sieve (range 2 60)))
 
 ;;; ─── TREE OPERATIONS ─────────────────────────────────────
 (define (make-tree val left right) (list val left right))
