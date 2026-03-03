@@ -405,6 +405,24 @@ class SchemeEnvironment:
                     new_env[formals] = [exp]
             return TailCall(["begin"] + expr[3:], new_env)
 
+        # define-syntax / syntax-rules: stub — macros not supported, silently skip
+        if head == Symbol("define-syntax") or head == Symbol("syntax-rules"):
+            return None
+        if head == Symbol("let-syntax") or head == Symbol("letrec-syntax"):
+            return TailCall(["begin"] + expr[2:], env) if len(expr) > 2 else None
+
+        # delay / force for lazy evaluation
+        if head == Symbol("delay"):
+            thunk_expr = expr[1]
+            thunk_env = env
+            return lambda: self.eval_expr(thunk_expr, thunk_env)
+        if head == Symbol("force"):
+            promise = self.eval_expr(expr[1], env)
+            return promise() if callable(promise) else promise
+        if head == Symbol("make-promise"):
+            v = self.eval_expr(expr[1], env)
+            return lambda: v
+
         if head == Symbol("define-record-type"):
             # Simplified R7RS record types
             type_name = expr[1]

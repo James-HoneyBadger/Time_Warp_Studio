@@ -133,6 +133,12 @@ class VirtualCPU:
                     self.instructions.append((op, args))
                     line_no += 1
                 continue
+            # EQU / RESB / RESD / RESW directives — define constants; skip for virtual CPU
+            if re.match(r"^(\w+)\s+(EQU|RESB|RESW|RESD|RESQ)\b", stmt, re.IGNORECASE):
+                continue
+            # NASM macro / section / global directives — skip
+            if re.match(r"^(%macro|%endmacro|%define|section|global|extern)\b", stmt, re.IGNORECASE):
+                continue
             # Data definition without colon: name DB/DW/DD/DQ "string",0  or  name DW 42
             dm = re.match(r"^(\w+)\s+(DB|DW|DD|DQ)\b\s*(.*)", stmt, re.IGNORECASE)
             if dm:

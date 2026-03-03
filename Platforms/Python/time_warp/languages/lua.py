@@ -267,8 +267,11 @@ class LuaEnvironment:
                     self._exec_block(block)
             elif m_elseif and not executed:
                 cond = self._eval_expr(m_elseif.group(1))
+                inline_elif = m_elseif.group(2).strip() if m_elseif.lastindex >= 2 else ""
                 if cond and cond != 0 and cond is not None and cond is not False:
                     executed = True
+                    if inline_elif:
+                        self._exec_inline(inline_elif)
                 i += 1
                 depth = 0
                 block = []
@@ -285,6 +288,8 @@ class LuaEnvironment:
                 if executed:
                     self._exec_block(block)
             elif m_else:
+                # Extract optional inline body: "else STMT" on the same line
+                else_inline = lines[i].strip()[4:].strip()  # strip "else"
                 i += 1
                 depth = 0
                 block = []
@@ -299,7 +304,10 @@ class LuaEnvironment:
                     block.append(lines[i])
                     i += 1
                 if not executed:
-                    self._exec_block(block)
+                    if else_inline:
+                        self._exec_inline(else_inline)
+                    else:
+                        self._exec_block(block)
             elif m_end:
                 return i + 1
             else:
@@ -546,7 +554,8 @@ class LuaEnvironment:
         # Unary minus
         m = re.match(r"^-\s*(\w.*)$", expr)
         if m:
-            return -self._eval_expr(m.group(1))
+            val = self._eval_expr(m.group(1))
+            return -val if val is not None else 0
         # String length #
         if expr.startswith("#"):
             v = self._eval_expr(expr[1:].strip())
@@ -599,6 +608,13 @@ class LuaEnvironment:
             idx = 1
             for item in _split_commas(inner):
                 item = item.strip()
+                # [expr] = value  (Lua table constructor with arbitrary key)
+                m_bk = re.match(r"^\[(.+)\]\s*=\s*(.+)$", item)
+                if m_bk:
+                    key = self._eval_expr(m_bk.group(1))
+                    tbl[key] = self._eval_expr(m_bk.group(2))
+                    continue
+                # name = value
                 m2 = re.match(r"^(\w+)\s*=\s*(.+)$", item)
                 if m2:
                     tbl[m2.group(1)] = self._eval_expr(m2.group(2))

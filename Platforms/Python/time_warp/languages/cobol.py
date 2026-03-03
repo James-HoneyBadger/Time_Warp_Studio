@@ -807,11 +807,29 @@ class CobolEnvironment:
                 return f"'{val}'"
             return str(val)
         sql_with_vals = re.sub(r":(\w[\w-]*)", _subst_host, inner)
-        # SELECT ... INTO :var  — extract INTO variable then run without INTO clause
-        into_m = re.search(r"\bINTO\s+:(\w[\w-]*)", inner, re.I)
+
+        # Cursor operations — silently simulate
+        sql_upper_strip = inner.strip().upper()
+        if re.match(r"^DECLARE\b", sql_upper_strip):
+            self._emit(f"ℹ️  SQL: {inner.strip()[:60]}")
+            return
+        if re.match(r"^OPEN\b", sql_upper_strip):
+            self._emit(f"ℹ️  SQL cursor opened")
+            return
+        if re.match(r"^CLOSE\b", sql_upper_strip):
+            self._emit(f"ℹ️  SQL cursor closed")
+            return
+        if re.match(r"^FETCH\b", sql_upper_strip):
+            self._emit(f"ℹ️  SQL: fetch complete")
+            return
+
+        # SELECT ... INTO :var1[, :var2, ...]  — strip entire INTO clause
+        into_m = re.search(r"\bINTO\s+(:\w[\w-]*\s*,\s*)*:\w[\w-]*", inner, re.I)
         if into_m:
-            into_var = into_m.group(1).upper()
-            sql_clean = re.sub(r"\bINTO\s+:\w[\w-]*", "", sql_with_vals, flags=re.I).strip()
+            into_var = re.findall(r":\w[\w-]*", into_m.group(0))
+            into_var = into_var[0].lstrip(":").upper() if into_var else None
+            sql_clean = re.sub(r"\bINTO\s+(?:\s*:\w[\w-]*\s*,)*\s*:\w[\w-]*", "",
+                               sql_with_vals, flags=re.I).strip()
         else:
             into_var = None
             sql_clean = sql_with_vals

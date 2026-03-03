@@ -1078,6 +1078,9 @@ class CodeEditor(QPlainTextEdit):
         self.completer.setCompletionMode(QCompleter.PopupCompletion)
         self.completer.setCaseSensitivity(Qt.CaseInsensitive)
         self.completer.activated.connect(self.insert_completion)
+        # Flag set by insert_completion so keyPressEvent knows a completion
+        # was just accepted (popup hides before keyPressEvent guard runs).
+        self._completing = False
 
         # Initialize completer with default language
         self._update_completer(Language.BASIC)
@@ -1535,6 +1538,7 @@ class CodeEditor(QPlainTextEdit):
 
     def insert_completion(self, completion):
         """Insert the selected completion."""
+        self._completing = True
         cursor = self.textCursor()
         extra = len(completion) - len(self.completer.completionPrefix())
         cursor.movePosition(QTextCursor.Left)
@@ -1605,8 +1609,14 @@ class CodeEditor(QPlainTextEdit):
                 event.ignore()
                 return
 
-        # Handle Enter/Return for auto-indent
+        # Handle Enter/Return for auto-indent.
+        # Guard against the race where QCompleter's event filter fires activated()
+        # (hiding the popup) before we reach this point — in that case
+        # _completing is True and we must not also insert a newline/indent.
         if event.key() in (Qt.Key_Enter, Qt.Key_Return):
+            if self._completing:
+                self._completing = False
+                return
             self._handle_auto_indent()
             return
 

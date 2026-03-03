@@ -122,6 +122,9 @@ class FortranEnvironment:
     def _parse_free_form(self, source: str):
         """Parse Fortran 90 free-form source."""
         for raw in source.splitlines():
+            # FORTRAN 77 full-line comments: C or * in column 1
+            if raw and raw[0] in ("C", "c", "*"):
+                continue
             # Strip inline comments (outside strings)
             stripped = raw.strip()
             if not stripped or stripped.startswith("!"):

@@ -325,6 +325,16 @@ class SmalltalkEnvironment:
         """Handle unary messages."""
         if msg == "printString":
             return repr(recv)
+        if msg == "key":
+            # Association key  — returns first element of a (key, value) pair
+            if isinstance(recv, tuple) and len(recv) == 2:
+                return recv[0]
+            return recv
+        if msg == "value":
+            # Association value  — returns second element of a (key, value) pair
+            if isinstance(recv, tuple) and len(recv) == 2:
+                return recv[1]
+            return recv
         if msg == "printNl":
             self._emit(str(recv))
             return recv
@@ -640,6 +650,15 @@ class SmalltalkEnvironment:
             return str(recv)
         if selector == "with:":
             return [recv, args[0]] if not isinstance(recv, list) else recv + [args[0]]
+        if selector == "with:with:":
+            return [recv, args[0], args[1]]
+        if selector == "with:with:with:":
+            return [recv, args[0], args[1], args[2]]
+        if selector == "with:with:with:with:":
+            return [recv, args[0], args[1], args[2], args[3]]
+        if selector == "key:value:":
+            # Association key:value:  — returns a (key, value) pair
+            return (args[0], args[1])
         if selector == "respondsTo:":
             return hasattr(recv, args[0])
 
