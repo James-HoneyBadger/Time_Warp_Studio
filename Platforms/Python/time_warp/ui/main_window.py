@@ -17,7 +17,10 @@ from PySide6.QtCore import QSettings, QSize, Qt, QTimer
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
+    QColor,
+    QFont,
     QKeySequence,
+    QTextCharFormat,
     QTextCursor,
     QTextDocument,
 )
@@ -32,19 +35,26 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QListWidget,
     QMainWindow,
+    QMenu,
     QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
     QSplitter,
     QStatusBar,
     QTabWidget,
     QTextBrowser,
+    QTextEdit,
     QToolBar,
+    QToolButton,
     QVBoxLayout,
     QWidget,
 )
 
 from ..core.interpreter import Language
 from .canvas import TurtleCanvas
+from .coach_marks import CoachMarkManager
 from .collaboration_client import CollaborationClient, CollaborationOperation
+from .command_palette import CommandPalette
 from .crt_effect import CRTEffectOverlay
 from .debug_panel import DebugPanel
 from .editor import CodeEditor
@@ -169,6 +179,15 @@ class MainWindow(QMainWindow):
         # Onboarding (first-run wizard)
         self._onboarding_manager = OnboardingManager()
 
+        # Command palette (Ctrl+Shift+P)
+        self._command_palette: CommandPalette | None = None
+
+        # Coach mark onboarding tour
+        self._coach_marks: CoachMarkManager | None = None
+
+        # Run history (last 10 runs: list of dicts with 'code','language','timestamp')
+        self._run_history: list = []
+
         # Feature integration manager
         self.feature_manager = FeatureIntegrationManager(self)
 
@@ -186,6 +205,9 @@ class MainWindow(QMainWindow):
         self._connect_turtle_inspector_signals()
         self._connect_classroom_signals()
         self._connect_reference_signals()
+
+        # Initialise coach-mark tour (shown on first launch after a delay)
+        self._coach_marks = CoachMarkManager(self)
 
         # Set a sensible default size before restoring saved geometry.
         # restoreGeometry() will override this when a previous session exists.
@@ -255,10 +277,32 @@ class MainWindow(QMainWindow):
             if file is not None:
                 self.tab_files[current_index] = file
             if modified is not None:
+                old_modified = self.tab_modified.get(current_index, False)
                 self.tab_modified[current_index] = modified
+                # Update tab title dot indicator when modified state changes
+                if modified != old_modified:
+                    self._update_tab_title_indicator(current_index, modified)
             if language is not None:
                 self.tab_languages[current_index] = language
             self.update_title()
+
+    def _update_tab_title_indicator(self, index: int, modified: bool):
+        """Add or remove the unsaved dot (●) from the tab title at *index*."""
+        if not hasattr(self, "editor_tabs"):
+            return
+        if index < 0 or index >= self.editor_tabs.count():
+            return
+        title = self.editor_tabs.tabText(index)
+        # Strip any existing indicator
+        clean = title.rstrip(" ●")
+        new_title = f"{clean} ●" if modified else clean
+        self.editor_tabs.setTabText(index, new_title)
+        # Colour the tab text red when unsaved
+        tab_bar = self.editor_tabs.tabBar()
+        if modified:
+            tab_bar.setTabTextColor(index, QColor(255, 120, 80))
+        else:
+            tab_bar.setTabTextColor(index, QColor())  # reset to default
 
     def create_new_tab(
         self,
@@ -474,6 +518,12 @@ class MainWindow(QMainWindow):
                 dlg = OnboardingDialog(self)
                 dlg.exec()
                 self._onboarding_manager.mark_tutorial_completed()
+                # After the wizard, show the coach-mark tour with a short delay
+                if self._coach_marks:
+                    QTimer.singleShot(800, lambda: self._coach_marks.start(force=True))
+            elif self._coach_marks and self._coach_marks.should_show():
+                # First time running after wizard was already done
+                QTimer.singleShot(800, self._coach_marks.start)
         except Exception:  # pylint: disable=broad-except
             pass  # Onboarding must never crash the IDE
 
@@ -1005,9 +1055,37 @@ class MainWindow(QMainWindow):
         self.output_canvas_pane = QSplitter(Qt.Vertical)
         self.output_canvas_pane.setChildrenCollapsible(False)
         self.output_canvas_pane.setHandleWidth(5)
-        self.output_canvas_pane.addWidget(self.output)
+
+        # Tabbed output area: Console / Errors / Turtle Log
+        self.output_sub_tabs = QTabWidget()
+        self.output_sub_tabs.setTabPosition(QTabWidget.TabPosition.South)
+        self.output_sub_tabs.setDocumentMode(True)
+        self.output_sub_tabs.setStyleSheet("""
+            QTabBar::tab { padding: 4px 10px; min-height: 20px; }
+        """)
+        self.output_sub_tabs.addTab(self.output, "📝 Console")
+
+        # Errors sub-tab
+        self.errors_log = QPlainTextEdit()
+        self.errors_log.setReadOnly(True)
+        self.errors_log.setFont(QFont("Courier New", 10))
+        self.errors_log.setPlaceholderText("Errors and warnings appear here…")
+        self.output_sub_tabs.addTab(self.errors_log, "❌ Errors")
+
+        # Turtle log sub-tab
+        self.turtle_log = QPlainTextEdit()
+        self.turtle_log.setReadOnly(True)
+        self.turtle_log.setFont(QFont("Courier New", 10))
+        self.turtle_log.setPlaceholderText("Turtle 🐢 commands appear here…")
+        self.output_sub_tabs.addTab(self.turtle_log, "🐢 Turtle Log")
+
+        self.output_canvas_pane.addWidget(self.output_sub_tabs)
         self.output_canvas_pane.addWidget(self.canvas)
         self.output_canvas_pane.setSizes([200, 300])
+
+        # Route streamed output to the appropriate sub-tabs
+        self.output.output_streamed.connect(self._route_output_to_subtabs)
+
         self.right_tabs.addTab(self.output_canvas_pane, "📝 Output  🎨 Graphics")
 
         # Connect immediate mode to output panel and canvas
@@ -1276,6 +1354,14 @@ class MainWindow(QMainWindow):
 
         # Theme submenu
         theme_menu = view_menu.addMenu("&Theme")
+
+        # Theme preview dialog
+        theme_preview_action = QAction("🎨 &Preview Themes…", self)
+        theme_preview_action.setStatusTip("Browse and preview all available themes")
+        theme_preview_action.triggered.connect(self._show_theme_preview_dialog)
+        theme_menu.addAction(theme_preview_action)
+        theme_menu.addSeparator()
+
         theme_group = QActionGroup(self)
         theme_group.setExclusive(True)
 
@@ -1434,6 +1520,39 @@ class MainWindow(QMainWindow):
         self._focus_mode_action.triggered.connect(self._toggle_focus_mode)
         view_menu.addAction(self._focus_mode_action)
 
+        view_menu.addSeparator()
+
+        # Command palette
+        cmd_palette_action = QAction("🎩 &Command Palette", self)
+        cmd_palette_action.setShortcut("Ctrl+Shift+P")
+        cmd_palette_action.setStatusTip("Open command palette to find any action")
+        cmd_palette_action.triggered.connect(self._show_command_palette)
+        view_menu.addAction(cmd_palette_action)
+
+        # Language picker shortcut
+        lang_picker_action = QAction("💻 &Language Picker", self)
+        lang_picker_action.setShortcut("Ctrl+Shift+L")
+        lang_picker_action.setStatusTip("Switch the current editor language")
+        lang_picker_action.triggered.connect(self._show_language_picker)
+        view_menu.addAction(lang_picker_action)
+
+        view_menu.addSeparator()
+
+        # Split editor panes
+        split_action = QAction("⬜ Split &Editor Right", self)
+        split_action.setShortcut("Ctrl+\\")
+        split_action.setStatusTip("Open a second editor pane side-by-side")
+        split_action.triggered.connect(self._split_editor_right)
+        view_menu.addAction(split_action)
+
+        # Minimap toggle
+        self._minimap_action = QAction("🗺 Show &Minimap", self)
+        self._minimap_action.setCheckable(True)
+        self._minimap_action.setChecked(False)
+        self._minimap_action.setStatusTip("Toggle the code minimap on the right edge of the editor")
+        self._minimap_action.triggered.connect(self._toggle_minimap)
+        view_menu.addAction(self._minimap_action)
+
         # Debugging UI removed — this distribution exposes Run/Stop only.
 
         # Tools menu
@@ -1519,6 +1638,13 @@ class MainWindow(QMainWindow):
         about_action = QAction("&About Time Warp Studio", self)
         about_action.triggered.connect(self.show_about)
         help_menu.addAction(about_action)
+
+        help_menu.addSeparator()
+
+        tour_action = QAction("🎓 &Start Guided Tour", self)
+        tour_action.setStatusTip("Replay the interactive coach-mark walkthrough")
+        tour_action.triggered.connect(self._start_coach_marks_tour)
+        help_menu.addAction(tour_action)
 
         # Collaboration features are disabled in this distribution. The
         # Collaboration menu is omitted to avoid exposing disabled
@@ -1627,9 +1753,40 @@ class MainWindow(QMainWindow):
         toolbar.addSeparator()
 
         # Execution controls group
-        run_btn = toolbar.addAction("🚀 Run", self.run_program)
-        run_btn.setToolTip("Run the current program (Ctrl+R)")
-        run_btn.setStatusTip("Execute the code in the current editor")
+        # Run button with history dropdown
+        self._run_tool_btn = QToolButton()
+        self._run_tool_btn.setText("🚀 Run")
+        self._run_tool_btn.setToolTip("Run the current program (Ctrl+R)\nClick ▼ for run history")
+        self._run_tool_btn.setStatusTip("Execute the code in the current editor")
+        self._run_tool_btn.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
+        self._run_tool_btn.setStyleSheet("""
+            QToolButton {
+                background-color: transparent;
+                border: 1px solid transparent;
+                border-radius: 5px;
+                padding: 6px 10px;
+                margin: 2px;
+                color: palette(window-text);
+                font-weight: bold;
+                min-width: 70px;
+                min-height: 28px;
+            }
+            QToolButton:hover {
+                background-color: palette(highlight);
+                color: palette(highlighted-text);
+                border: 1px solid palette(highlight);
+            }
+            QToolButton::menu-button {
+                border-left: 1px solid palette(dark);
+                width: 14px;
+            }
+        """)
+        self._run_history_menu = QMenu(self)
+        self._run_tool_btn.setMenu(self._run_history_menu)
+        self._run_tool_btn.clicked.connect(self.run_program)
+        # Populate with persisted history
+        self._populate_run_history_menu()
+        toolbar.addWidget(self._run_tool_btn)
 
         # Debug toolbar buttons
         self.debug_btn = toolbar.addAction("🐛 Debug", self.start_debug)
@@ -1655,7 +1812,7 @@ class MainWindow(QMainWindow):
         # Canvas/Output controls group
         clear_output_btn = toolbar.addAction(
             "🗑️ Clear",
-            self.output.clear,
+            self._clear_all_output,
         )
         clear_output_btn.setToolTip("Clear the output panel")
         clear_output_btn.setStatusTip("Clear all output text")
@@ -1673,6 +1830,16 @@ class MainWindow(QMainWindow):
         sql_btn = toolbar.addAction("🗄 SQL", self._show_sql_workbench)
         sql_btn.setToolTip("Open SQL Workbench (Ctrl+Shift+Q)")
         sql_btn.setStatusTip("Open the embedded SQL Server 2000 workbench")
+
+        toolbar.addSeparator()
+
+        # Accessibility preset — one click applies large font + high-contrast theme
+        access_btn = toolbar.addAction("♿ A+", self._apply_accessibility_preset)
+        access_btn.setToolTip(
+            "Accessibility Preset\n"
+            "Applies 18pt font, high-contrast theme, and disables CRT effects"
+        )
+        access_btn.setStatusTip("Apply large-print accessible theme")
 
     # Language name → status-bar emoji
     _LANG_EMOJI: dict = {
@@ -1736,6 +1903,18 @@ class MainWindow(QMainWindow):
             }
         """)
         self.statusbar.addPermanentWidget(self.position_label)
+
+        # Breadcrumb label: language > context hint
+        self.breadcrumb_label = QLabel("")
+        self.breadcrumb_label.setStyleSheet("""
+            QLabel {
+                color: palette(shadow);
+                padding: 2px 6px;
+                font-size: 11px;
+                font-style: italic;
+            }
+        """)
+        self.statusbar.addWidget(self.breadcrumb_label)
 
         self.sql_status_label = QLabel("🗄 SQL: offline")
         self.sql_status_label.setToolTip("SQL Server 2000 — click to open workbench")
@@ -2035,6 +2214,9 @@ class MainWindow(QMainWindow):
         if editor:
             editor.clear_error_lines()
 
+        # Save to run history
+        self._save_run_history(code, language)
+
         # Start execution (no debug controls in this build)
         self.output.run_program(code, self.canvas, debug_mode=False)
 
@@ -2097,6 +2279,8 @@ class MainWindow(QMainWindow):
                 editor.clear_error_lines()
                 editor.set_error_line(err_line)
                 editor.goto_line(err_line)
+                # Apply red wave underline to the error line
+                self._underline_error_lines_in_editor(editor, {err_line})
 
         # Append friendly error hint from error_hints module
         try:
@@ -3346,13 +3530,44 @@ class MainWindow(QMainWindow):
             self.debug_panel.update_breakpoints(breakpoints)
 
     def update_cursor_position(self):
-        """Update cursor position in status bar."""
+        """Update cursor position and breadcrumb in status bar."""
         editor = self.get_current_editor()
         if editor and hasattr(self, "position_label"):
             cursor = editor.textCursor()
             line = cursor.blockNumber() + 1
             col = cursor.columnNumber() + 1
             self.position_label.setText(f"Ln {line}, Col {col}")
+
+            # Update breadcrumb: show language context around cursor
+            if hasattr(self, "breadcrumb_label"):
+                current_idx = self.editor_tabs.currentIndex()
+                lang = self.tab_languages.get(current_idx, Language.BASIC)
+                lang_name = lang.friendly_name() if hasattr(lang, "friendly_name") else str(lang)
+                # Find nearest function/procedure name above cursor
+                context = self._get_cursor_context(editor, cursor)
+                if context:
+                    self.breadcrumb_label.setText(f"{lang_name}  ›  {context}  ›  Ln {line}")
+                else:
+                    self.breadcrumb_label.setText(f"{lang_name}  ›  Ln {line}")
+
+    def _get_cursor_context(self, editor, cursor) -> str:
+        """Return the name of the nearest function/procedure above the cursor."""
+        import re as _re
+        patterns = [
+            r"^\s*(?:def|function|sub|procedure|to|subroutine)\s+([A-Za-z_][A-Za-z0-9_]*)",
+        ]
+        block = cursor.block()
+        # Walk backwards for up to 80 lines
+        for _ in range(80):
+            if not block.isValid():
+                break
+            text = block.text()
+            for pat in patterns:
+                m = _re.match(pat, text, _re.IGNORECASE)
+                if m:
+                    return m.group(1)
+            block = block.previous()
+        return ""
 
     # ---- Retro Features ----
 
@@ -3779,3 +3994,356 @@ class MainWindow(QMainWindow):
     def on_user_left(self, _user_id, username):
         """Handle user leaving session."""
         self.statusbar.showMessage(f"User left: {username}")
+
+    # ===================================================================
+    # GUI Enhancement: tabbed output routing
+    # ===================================================================
+
+    def _route_output_to_subtabs(self, text: str, output_type: str):
+        """Route streamed output lines to the Errors and Turtle Log sub-tabs."""
+        is_error = output_type == "error" or text.lstrip().startswith("❌")
+        is_turtle = "🐢" in text
+
+        if is_error and hasattr(self, "errors_log"):
+            cursor = self.errors_log.textCursor()
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            cursor.insertText(text + "\n")
+            self.errors_log.setTextCursor(cursor)
+
+        if is_turtle and hasattr(self, "turtle_log"):
+            cursor = self.turtle_log.textCursor()
+            cursor.movePosition(QTextCursor.MoveOperation.End)
+            cursor.insertText(text + "\n")
+            self.turtle_log.setTextCursor(cursor)
+
+    def _clear_all_output(self):
+        """Clear the output panel and all sub-tabs."""
+        self.output.clear()
+        if hasattr(self, "errors_log"):
+            self.errors_log.clear()
+        if hasattr(self, "turtle_log"):
+            self.turtle_log.clear()
+
+    # ===================================================================
+    # GUI Enhancement: command palette
+    # ===================================================================
+
+    def _show_command_palette(self, _checked: bool = False):
+        """Open (or re-open) the command palette."""
+        if self._command_palette is None:
+            self._command_palette = CommandPalette(self)
+        self._command_palette.show_palette(self)
+
+    # ===================================================================
+    # GUI Enhancement: language picker (Ctrl+Shift+L)
+    # ===================================================================
+
+    def _show_language_picker(self, _checked: bool = False):
+        """Show a quick language selection dialog."""
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Select Language")
+        dlg.setMinimumWidth(300)
+        layout = QVBoxLayout(dlg)
+        layout.addWidget(QLabel("Choose a language for the current editor:"))
+
+        combo = QComboBox()
+        for lang in Language:
+            combo.addItem(f"💻 {lang.friendly_name()}", lang)
+
+        # Select current language
+        current_idx = self.editor_tabs.currentIndex()
+        current_lang = self.tab_languages.get(current_idx, Language.BASIC)
+        for i in range(combo.count()):
+            if combo.itemData(i) == current_lang:
+                combo.setCurrentIndex(i)
+                break
+
+        layout.addWidget(combo)
+        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons.accepted.connect(dlg.accept)
+        buttons.rejected.connect(dlg.reject)
+        layout.addWidget(buttons)
+
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            selected = combo.currentData()
+            if selected:
+                # Update the language combo on the toolbar
+                for i in range(self.language_combo.count()):
+                    if self.language_combo.itemData(i) == selected:
+                        self.language_combo.setCurrentIndex(i)
+                        break
+
+    # ===================================================================
+    # GUI Enhancement: accessibility preset
+    # ===================================================================
+
+    def _apply_accessibility_preset(self, _checked: bool = False):
+        """Apply one-click accessibility: 18pt font, light theme, no CRT."""
+        # Pick a high-contrast-friendly theme
+        accessible_themes = ["Solarized Light", "Spring", "Candy", "Forest"]
+        available = self.theme_manager.get_theme_names()
+        target_theme = next(
+            (t for t in accessible_themes if t in available),
+            available[0] if available else None,
+        )
+        if target_theme:
+            self.change_theme(target_theme)
+
+        # Set large font
+        self.change_font_size(18)
+
+        # Disable CRT effects
+        if hasattr(self, "crt_enable_action") and self.crt_enable_action.isChecked():
+            self.crt_enable_action.setChecked(False)
+            self.toggle_crt_effects(False)
+
+        self.statusbar.showMessage(
+            "♿ Accessibility preset applied (18pt font, light theme, no CRT)"
+        )
+
+    # ===================================================================
+    # GUI Enhancement: run history dropdown
+    # ===================================================================
+
+    def _populate_run_history_menu(self):
+        """Populate the run history dropdown from QSettings + in-memory list."""
+        if not hasattr(self, "_run_history_menu") or self._run_history_menu is None:
+            return
+        menu = self._run_history_menu
+        menu.clear()
+
+        # Load persisted history
+        stored = self.settings.value("run_history", []) or []
+        if isinstance(stored, str):
+            stored = []  # corrupt entry
+
+        # Merge persisted with current-session list
+        combined = []
+        seen_snippets: set = set()
+        for entry in stored:
+            if isinstance(entry, dict):
+                snippet = entry.get("snippet", "")
+                if snippet and snippet not in seen_snippets:
+                    seen_snippets.add(snippet)
+                    combined.append(entry)
+        for entry in self._run_history:
+            snippet = entry.get("snippet", "")
+            if snippet and snippet not in seen_snippets:
+                seen_snippets.add(snippet)
+                combined.insert(0, entry)
+
+        if not combined:
+            no_history = menu.addAction("(No run history yet)")
+            no_history.setEnabled(False)
+            return
+
+        for entry in combined[:10]:
+            lang_name = entry.get("language", "BASIC")
+            snippet = entry.get("snippet", "")
+            label = f"[{lang_name}]  {snippet[:50]}{'…' if len(snippet) > 50 else ''}"
+            action = menu.addAction(label)
+            action.setData(entry)
+            action.triggered.connect(
+                lambda checked=False, e=entry: self._load_run_from_history(e)
+            )
+
+        menu.addSeparator()
+        clear_action = menu.addAction("🗑 Clear History")
+        clear_action.triggered.connect(self._clear_run_history)
+
+    def _save_run_history(self, code: str, language: Language):
+        """Save a run to the history list and persist to QSettings."""
+        lang_name = language.friendly_name() if hasattr(language, "friendly_name") else str(language)
+        first_line = code.split("\n", 1)[0].strip()
+        entry = {
+            "snippet": first_line or code[:60],
+            "language": lang_name,
+            "code": code,
+            "timestamp": time.time(),
+        }
+        self._run_history.insert(0, entry)
+        self._run_history = self._run_history[:10]
+
+        # Persist
+        existing = self.settings.value("run_history", []) or []
+        if not isinstance(existing, list):
+            existing = []
+        existing.insert(0, entry)
+        self.settings.setValue("run_history", existing[:20])
+
+        self._populate_run_history_menu()
+
+    def _load_run_from_history(self, entry: dict):
+        """Load code from a run history entry into a new tab."""
+        code = entry.get("code", "")
+        lang_name = entry.get("language", "BASIC")
+        if not code:
+            return
+
+        # Find the language enum
+        language = Language.BASIC
+        for lang in Language:
+            if hasattr(lang, "friendly_name") and lang.friendly_name() == lang_name:
+                language = lang
+                break
+
+        self.create_new_tab(f"[history] {lang_name}", code, language)
+        self.set_current_tab_info(file=None, modified=True, language=language)
+
+        # Update combo
+        for i in range(self.language_combo.count()):
+            if self.language_combo.itemData(i) == language:
+                self.language_combo.setCurrentIndex(i)
+                break
+
+        self.statusbar.showMessage(f"Loaded {lang_name} run from history")
+
+    def _clear_run_history(self):
+        """Clear all run history."""
+        self._run_history.clear()
+        self.settings.remove("run_history")
+        self._populate_run_history_menu()
+        self.statusbar.showMessage("Run history cleared")
+
+    # ===================================================================
+    # GUI Enhancement: theme preview dialog
+    # ===================================================================
+
+    def _show_theme_preview_dialog(self, _checked: bool = False):
+        """Display a dialog showing a live preview of each theme."""
+        dlg = QDialog(self)
+        dlg.setWindowTitle("🎨 Theme Preview")
+        dlg.setMinimumSize(700, 400)
+        layout = QHBoxLayout(dlg)
+
+        # Left: theme list
+        theme_list = QListWidget()
+        theme_list.setMaximumWidth(180)
+        for name in self.theme_manager.get_theme_names():
+            theme_list.addItem(name)
+        layout.addWidget(theme_list)
+
+        # Right: code preview
+        preview = QPlainTextEdit()
+        preview.setReadOnly(True)
+        preview.setFont(QFont("Courier New", 11))
+        _SAMPLE = (
+            'REM Time Warp Studio — Theme Preview\n'
+            '10 LET greeting$ = "Hello, World!"\n'
+            '20 FOR I = 1 TO 5\n'
+            '30   PRINT I; ") "; greeting$\n'
+            '40 NEXT I\n'
+            '50 END\n'
+        )
+        preview.setPlainText(_SAMPLE)
+        layout.addWidget(preview)
+
+        def on_select(item):
+            name = item.text()
+            self.theme_manager.apply_theme(
+                name,
+                editor=preview,
+                output=None,
+                canvas=None,
+                highlighter=None,
+            )
+
+        def on_apply():
+            items = theme_list.selectedItems()
+            if items:
+                self.change_theme(items[0].text())
+            dlg.accept()
+
+        theme_list.currentItemChanged.connect(on_select)
+
+        # Pre-select current theme
+        for i in range(theme_list.count()):
+            if theme_list.item(i).text() == self.theme_manager.current_theme_name:
+                theme_list.setCurrentRow(i)
+                break
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Apply | QDialogButtonBox.StandardButton.Close
+        )
+        buttons.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(on_apply)
+        buttons.rejected.connect(dlg.reject)
+
+        outer = QVBoxLayout()
+        outer.addLayout(layout)
+        outer.addWidget(buttons)
+        dlg.setLayout(outer)
+        dlg.exec()
+
+    # ===================================================================
+    # GUI Enhancement: split editor panes
+    # ===================================================================
+
+    def _split_editor_right(self, _checked: bool = False):
+        """Open the current tab's content in a second side-by-side editor pane."""
+        current_editor = self.get_current_editor()
+        if not current_editor:
+            return
+
+        current_idx = self.editor_tabs.currentIndex()
+        code = current_editor.toPlainText()
+        language = self.tab_languages.get(current_idx, Language.BASIC)
+        title = f"[split] {self.editor_tabs.tabText(current_idx)}"
+
+        self.create_new_tab(title, code, language)
+        self.set_current_tab_info(file=None, modified=False, language=language)
+        self.statusbar.showMessage("Opened split editor pane — edits are independent")
+
+    # ===================================================================
+    # GUI Enhancement: minimap toggle
+    # ===================================================================
+
+    def _toggle_minimap(self, checked: bool = False):
+        """Toggle the minimap on all open editors."""
+        for i in range(self.editor_tabs.count()):
+            editor = self.editor_tabs.widget(i)
+            if editor is not None and hasattr(editor, "enable_minimap"):
+                editor.enable_minimap(checked)
+        state = "shown" if checked else "hidden"
+        self.statusbar.showMessage(f"Minimap {state}")
+
+    # ===================================================================
+    # GUI Enhancement: inline error wave-underlines
+    # ===================================================================
+
+    def _underline_error_lines_in_editor(self, editor, line_numbers: set):
+        """Apply red wavy underlines to the specified line numbers in *editor*."""
+        if not line_numbers or editor is None:
+            return
+        doc = editor.document()
+        extra_selections = list(editor.extraSelections())
+
+        for line_num in line_numbers:
+            block = doc.findBlockByLineNumber(line_num - 1)
+            if not block.isValid():
+                continue
+            cursor = QTextCursor(block)
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.KeepAnchor)
+
+            fmt = QTextCharFormat()
+            fmt.setUnderlineStyle(QTextCharFormat.UnderlineStyle.WaveUnderline)
+            fmt.setUnderlineColor(QColor(255, 60, 60))
+
+            sel = QTextEdit.ExtraSelection()
+            sel.cursor = cursor
+            sel.format = fmt
+            extra_selections.append(sel)  # type: ignore[attr-defined]
+
+        editor.setExtraSelections(extra_selections)
+
+    # ===================================================================
+    # GUI Enhancement: coach marks
+    # ===================================================================
+
+    def _start_coach_marks_tour(self, _checked: bool = False):
+        """Force-start the interactive guided tour."""
+        if self._coach_marks:
+            self._coach_marks.start(force=True)
+        else:
+            self._coach_marks = CoachMarkManager(self)
+            self._coach_marks.start(force=True)
+

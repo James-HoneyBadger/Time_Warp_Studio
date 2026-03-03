@@ -7,7 +7,7 @@
 
 import re
 
-from PySide6.QtCore import QPoint, QRect, QSize, QStringListModel, Qt, Signal
+from PySide6.QtCore import QPoint, QRect, QRectF, QSize, QStringListModel, Qt, Signal
 from PySide6.QtGui import (
     QBrush,
     QColor,
@@ -84,6 +84,91 @@ class LineNumberArea(QWidget):
                 block = block.next()
                 top = block_bottom
 
+        super().mousePressEvent(event)
+
+
+class MinimapWidget(QWidget):
+    """Read-only zoomed-out representation of the editor shown on the right.
+
+    Draws each source line as a tiny coloured bar.  A semi-transparent
+    highlight band shows the currently visible region; clicking in the
+    minimap instantly scrolls the editor to that portion of the document.
+
+    The widget is created as an *overlay* child of the CodeEditor, styled like
+    the LineNumberArea — it lives inside the editor's viewport margin.
+    """
+
+    MINIMAP_WIDTH = 80
+
+    # pylint: disable=invalid-name
+
+    def __init__(self, editor):
+        super().__init__(editor)
+        self.editor = editor
+        self.setCursor(Qt.PointingHandCursor)
+        self.setAttribute(Qt.WA_OpaquePaintEvent, True)
+
+    def sizeHint(self):
+        """Return preferred size."""
+        return QSize(self.MINIMAP_WIDTH, 0)
+
+    def paintEvent(self, event):  # pylint: disable=unused-argument
+        """Paint a miniaturised version of the document."""
+        painter = QPainter(self)
+        palette = self.editor.palette()
+        bg = palette.color(QPalette.Base).darker(115)
+        painter.fillRect(self.rect(), bg)
+
+        doc = self.editor.document()
+        block_count = max(doc.blockCount(), 1)
+        h = self.height()
+        line_h = h / block_count
+
+        block = doc.firstBlock()
+        y = 0.0
+        while block.isValid() and y < h:
+            text = block.text()
+            if text.strip():
+                bar_w = min(len(text) * 0.45, self.MINIMAP_WIDTH - 6)
+                bar_h = max(1.0, line_h * 0.8)
+                stripped = text.lstrip()
+                if stripped.startswith(("#", "//", ";", "REM ", "--")):
+                    color = QColor(100, 180, 100)
+                elif stripped[:1].upper() in ("D", "F", "S"):
+                    # Rough heuristic for def/function/sub/TO blocks
+                    color = QColor(150, 120, 200)
+                else:
+                    color = QColor(160, 165, 170)
+                painter.fillRect(QRectF(3.0, y, bar_w, bar_h), color)
+            block = block.next()
+            y += line_h
+
+        # Viewport highlight band
+        first_visible = self.editor.firstVisibleBlock()
+        first_num = first_visible.blockNumber()
+        fh = max(self.editor.fontMetrics().height(), 1)
+        visible_lines = max(1, self.editor.viewport().height() // fh)
+        band_top = (first_num / block_count) * h
+        band_h = max(4.0, (visible_lines / block_count) * h)
+        painter.fillRect(
+            QRectF(0, band_top, self.MINIMAP_WIDTH, band_h),
+            QColor(255, 255, 255, 35),
+        )
+        painter.setPen(QPen(QColor(100, 150, 255, 140), 1))
+        painter.drawRect(QRectF(0, band_top, self.MINIMAP_WIDTH - 1, band_h - 1))
+
+    def mousePressEvent(self, event):
+        """Click to scroll the editor to the clicked position."""
+        if event.button() == Qt.LeftButton:
+            ratio = event.position().y() / max(self.height(), 1)
+            doc = self.editor.document()
+            total = max(doc.blockCount(), 1)
+            target = int(ratio * total)
+            block = doc.findBlockByLineNumber(min(target, total - 1))
+            if block.isValid():
+                cursor = QTextCursor(block)
+                self.editor.setTextCursor(cursor)
+                self.editor.centerCursor()
         super().mousePressEvent(event)
 
 
@@ -1004,6 +1089,9 @@ class CodeEditor(QPlainTextEdit):
         # Tab settings
         self.setTabStopDistance(40)  # 4 spaces worth
 
+        # Minimap flag must be initialised BEFORE update_line_number_area_width
+        self._minimap_enabled = False
+
         # Connect signals
         self.blockCountChanged.connect(self.update_line_number_area_width)
         self.updateRequest.connect(self.update_line_number_area)
@@ -1015,6 +1103,11 @@ class CodeEditor(QPlainTextEdit):
         # Highlighting features (defaults off)
         self._highlight_current_line = False
         self._whitespace_highlighter = None
+
+        # Minimap (right side panel) — off by default (flag already set above)
+        # Signals are only connected when minimap is enabled (see enable_minimap)
+        self.minimap = MinimapWidget(self)
+        self.minimap.hide()
 
     def show_find_dialog(self):
         """Show the find/replace dialog."""
@@ -1142,7 +1235,8 @@ class CodeEditor(QPlainTextEdit):
 
     def update_line_number_area_width(self, _):
         """Update line number area width."""
-        self.setViewportMargins(self.line_number_area_width(), 0, 0, 0)
+        right_margin = MinimapWidget.MINIMAP_WIDTH if self._minimap_enabled else 0
+        self.setViewportMargins(self.line_number_area_width(), 0, right_margin, 0)
 
     def update_line_number_area(self, rect, dy):
         """Update line number area."""
@@ -1164,6 +1258,16 @@ class CodeEditor(QPlainTextEdit):
         width = self.line_number_area_width()
         rect = QRect(cr.left(), cr.top(), width, cr.height())
         self.line_number_area.setGeometry(rect)
+
+        # Position minimap on the right edge when enabled
+        if self._minimap_enabled:
+            mw = MinimapWidget.MINIMAP_WIDTH
+            self.minimap.setGeometry(
+                cr.right() - mw + 1,
+                cr.top(),
+                mw,
+                cr.height(),
+            )
 
     def line_number_area_paint_event(self, event):
         """Paint line numbers with breakpoint markers and current line."""
@@ -1456,6 +1560,37 @@ class CodeEditor(QPlainTextEdit):
     def is_show_whitespace_enabled(self) -> bool:
         """Return True if the whitespace highlighter is active."""
         return self._whitespace_highlighter is not None
+
+    def enable_minimap(self, enable: bool):
+        """Show or hide the minimap panel on the right side of the editor."""
+        was_enabled = self._minimap_enabled
+        self._minimap_enabled = bool(enable)
+        if self._minimap_enabled:
+            self.minimap.show()
+            if not was_enabled:
+                # Connect update signals when first enabled
+                self.document().contentsChanged.connect(self.minimap.update)
+                self.verticalScrollBar().valueChanged.connect(self.minimap.update)
+        else:
+            self.minimap.hide()
+            if was_enabled:
+                # Disconnect update signals when disabled
+                try:
+                    self.document().contentsChanged.disconnect(self.minimap.update)
+                    self.verticalScrollBar().valueChanged.disconnect(self.minimap.update)
+                except RuntimeError:
+                    pass
+        self.update_line_number_area_width(0)
+        # Reposition the minimap geometry without invoking super().resizeEvent
+        if self._minimap_enabled:
+            cr = self.contentsRect()
+            mw = MinimapWidget.MINIMAP_WIDTH
+            self.minimap.setGeometry(cr.right() - mw + 1, cr.top(), mw, cr.height())
+        self.minimap.update()
+
+    def is_minimap_enabled(self) -> bool:
+        """Return True if the minimap is currently visible."""
+        return self._minimap_enabled
 
     def keyPressEvent(self, event):
         """Handle key press events for auto-completion and auto-indent."""

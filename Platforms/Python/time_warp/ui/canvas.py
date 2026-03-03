@@ -18,7 +18,7 @@ from PySide6.QtGui import (
     QPen,
     QWheelEvent,
 )
-from PySide6.QtWidgets import QWidget
+from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget
 
 from .screen_modes import ModeType, ScreenMode, ScreenModeManager
 
@@ -53,6 +53,121 @@ class TurtleCanvas(
 
         # Minimum size — small enough to allow the splitter to resize freely
         self.setMinimumSize(200, 200)
+
+        # Overlay toolbar (zoom / reset controls)
+        self._setup_canvas_toolbar()
+
+    # ------------------------------------------------------------------
+    # Canvas overlay toolbar
+    # ------------------------------------------------------------------
+
+    _TOOLBAR_BTN_STYLE = """
+        QPushButton {
+            background-color: rgba(30, 31, 45, 175);
+            color: #cdd6f4;
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 11px;
+            font-weight: bold;
+            min-width: 24px;
+        }
+        QPushButton:hover {
+            background-color: rgba(80, 100, 180, 210);
+            border-color: rgba(255, 255, 255, 0.5);
+        }
+        QPushButton:pressed {
+            background-color: rgba(50, 70, 140, 220);
+        }
+    """
+
+    def _setup_canvas_toolbar(self):
+        """Create a small overlay toolbar anchored to the top-right corner."""
+        self._canvas_toolbar = QWidget(self)
+        self._canvas_toolbar.setObjectName("CanvasToolbar")
+        toolbar_layout = QHBoxLayout(self._canvas_toolbar)
+        toolbar_layout.setContentsMargins(3, 3, 3, 3)
+        toolbar_layout.setSpacing(3)
+
+        def _btn(icon: str, tip: str, cb) -> QPushButton:
+            b = QPushButton(icon)
+            b.setToolTip(tip)
+            b.setStyleSheet(self._TOOLBAR_BTN_STYLE)
+            b.setFixedWidth(28)
+            b.setFixedHeight(24)
+            b.clicked.connect(cb)
+            return b
+
+        toolbar_layout.addWidget(_btn("⊕", "Zoom In  (+)", self._zoom_in))
+        toolbar_layout.addWidget(_btn("⊖", "Zoom Out  (-)", self._zoom_out))
+        toolbar_layout.addWidget(_btn("⊙", "Reset View", self._reset_view))
+        toolbar_layout.addWidget(_btn("⊡", "Fit to Screen", self._fit_to_screen))
+
+        self._canvas_toolbar.adjustSize()
+        self._canvas_toolbar.raise_()
+
+    def _position_canvas_toolbar(self):
+        """Reposition the toolbar to the top-right corner."""
+        if hasattr(self, "_canvas_toolbar"):
+            tb = self._canvas_toolbar
+            tb.adjustSize()
+            tb.move(self.width() - tb.width() - 4, 4)
+
+    def resizeEvent(self, event):
+        """Reposition overlay toolbar on resize."""
+        super().resizeEvent(event)
+        self._position_canvas_toolbar()
+
+    # ------------------------------------------------------------------
+    # Zoom / pan helpers called by the toolbar buttons
+    # ------------------------------------------------------------------
+
+    def _zoom_in(self):
+        """Increase canvas zoom by 25%."""
+        self.zoom = min(self.zoom * 1.25, 24.0)
+        self.update()
+
+    def _zoom_out(self):
+        """Decrease canvas zoom by 20%."""
+        self.zoom = max(self.zoom / 1.25, 0.05)
+        self.update()
+
+    def _reset_view(self):
+        """Reset zoom and pan to default."""
+        self.zoom = 1.0
+        self.offset_x = 0.0
+        self.offset_y = 0.0
+        self.update()
+
+    def _fit_to_screen(self):
+        """Scale and centre the view to fit all drawn content."""
+        if not self.lines:
+            self._reset_view()
+            return
+
+        xs = [c for line in self.lines for c in (line.start_x, line.end_x)]
+        ys = [c for line in self.lines for c in (line.start_y, line.end_y)]
+        if not xs:
+            self._reset_view()
+            return
+
+        min_x, max_x = min(xs), max(xs)
+        min_y, max_y = min(ys), max(ys)
+        content_w = max(max_x - min_x, 1.0)
+        content_h = max(max_y - min_y, 1.0)
+        padding = 40.0
+
+        zoom_x = (self.width() - padding * 2) / content_w
+        zoom_y = (self.height() - padding * 2) / content_h
+        self.zoom = max(0.05, min(zoom_x, zoom_y, 24.0))
+
+        # Centre content: offset so the bounding-box centre maps to origin
+        cx = (min_x + max_x) / 2.0
+        cy = (min_y + max_y) / 2.0
+        self.offset_x = -cx * self.zoom
+        # Y is flipped in the painter (scale Y = -zoom), so offset is positive
+        self.offset_y = cy * self.zoom
+        self.update()
 
     def set_screen_mode(self, mode: ScreenMode):
         """Set the current screen mode for rendering."""
