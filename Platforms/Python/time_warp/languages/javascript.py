@@ -501,10 +501,10 @@ class JSPromise:
     def then(self,ok=None,fail=None):
         if self._state=="fulfilled" and ok:
             try: return JSPromise(lambda r,j: r(ok(self._val)))
-            except Exception: return JSPromise(lambda r,j: j(e))
+            except Exception as exc: return JSPromise(lambda r,j,_e=exc: j(_e))
         if self._state=="rejected" and fail:
             try: return JSPromise(lambda r,j: r(fail(self._err)))
-            except Exception: return JSPromise(lambda r,j: j(e))
+            except Exception as exc: return JSPromise(lambda r,j,_e=exc: j(_e))
         return self
     def catch(self,fn=None): return self.then(None,fn)
     def finally_(self,fn=None):

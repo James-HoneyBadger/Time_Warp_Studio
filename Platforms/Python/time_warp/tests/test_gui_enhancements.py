@@ -33,16 +33,21 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
 # ---------------------------------------------------------------------------
 # Skip the entire module if PySide6 is unavailable or cannot initialise.
+# Any exception (ImportError, RuntimeError, OSError, etc.) disables the suite.
 # ---------------------------------------------------------------------------
 try:
     import PySide6.QtCore  # noqa: F401 — import-time check only
+    import PySide6.QtWidgets as _qtw  # noqa: F401
+    # Verify we can actually create/obtain a QApplication before committing.
+    _app_check = _qtw.QApplication.instance() or _qtw.QApplication(sys.argv[:1])
+    del _qtw, _app_check
     _PYSIDE6_AVAILABLE = True
-except (ImportError, RuntimeError):
+except Exception:  # noqa: BLE001 — any failure means Qt is unusable here
     _PYSIDE6_AVAILABLE = False
 
 pytestmark = pytest.mark.skipif(
     not _PYSIDE6_AVAILABLE,
-    reason="PySide6 is not available in this environment",
+    reason="PySide6 / Qt is not usable in this environment",
 )
 
 
@@ -53,13 +58,16 @@ pytestmark = pytest.mark.skipif(
 
 @pytest.fixture(scope="module")
 def qapp():
-    """Create a QApplication for the module (only one may exist at a time)."""
-    from PySide6.QtWidgets import QApplication
+    """Return (or create) the QApplication; skip the test if Qt is unusable."""
+    try:
+        from PySide6.QtWidgets import QApplication
 
-    app = QApplication.instance()
-    if app is None:
-        app = QApplication(sys.argv[:1])
-    yield app
+        app = QApplication.instance()
+        if app is None:
+            app = QApplication(sys.argv[:1])
+        yield app
+    except Exception as exc:  # noqa: BLE001
+        pytest.skip(f"QApplication could not be created: {exc}")
 
 
 # ---------------------------------------------------------------------------
