@@ -300,8 +300,8 @@ class TimeWarpCloudAPI:
         """
         self.app = FastAPI(
             title="Time Warp Cloud API",
-            description="Cloud backend for Time Warp Studio v7.0.0",
-            version="7.0.0",
+            description="Cloud backend for Time Warp Studio v8.0.0",
+            version="8.0.0",
         )
 
         # Configure CORS

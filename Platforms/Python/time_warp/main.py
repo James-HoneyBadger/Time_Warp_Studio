@@ -61,7 +61,7 @@ async def lifespan(
 app = FastAPI(
     title="Time Warp Studio Server",
     description="Real-time collaborative programming IDE backend",
-    version="7.0.0",
+    version="8.0.0",
     lifespan=lifespan,
 )
 

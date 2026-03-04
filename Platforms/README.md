@@ -253,5 +253,5 @@ Contributions are welcome! See main [README.md](../../README.md#development) for
 
 **Last Updated:** January 2026  
 **Primary Implementation:** Python with PySide6 (Qt6)  
-**Version:** 7.0.0+  
+**Version:** 8.0.0+  
 **Maintainer:** James Temple <james@honey-badger.org>
