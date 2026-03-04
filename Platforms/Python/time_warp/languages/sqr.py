@@ -107,6 +107,7 @@ if TYPE_CHECKING:
 # Public entry point
 # ---------------------------------------------------------------------------
 
+
 def execute_sqr(
     interpreter: "Interpreter",
     source: str,
@@ -114,6 +115,7 @@ def execute_sqr(
 ) -> str:
     """Execute a complete SQR program and return formatted report output."""
     import sys
+
     old_limit = sys.getrecursionlimit()
     sys.setrecursionlimit(5000)
     try:
@@ -128,13 +130,13 @@ def execute_sqr(
 # ---------------------------------------------------------------------------
 
 _TOKEN_RE = re.compile(
-    r'"(?:[^"\\]|\\.)*"'          # double-quoted string
-    r"|'(?:[^'\\]|\\.)*'"         # single-quoted string
-    r'|[<>!]=|[<>]'               # two-char comparisons first
-    r'|[+\-*/%|(),]'              # single operators / punct
-    r'|\*\*'                      # power
-    r'|[a-zA-Z_#$&][a-zA-Z0-9_\-#$&]*'  # identifiers / variables
-    r'|[0-9]+(?:\.[0-9]*)?' ,     # numbers
+    r'"(?:[^"\\]|\\.)*"'  # double-quoted string
+    r"|'(?:[^'\\]|\\.)*'"  # single-quoted string
+    r"|[<>!]=|[<>]"  # two-char comparisons first
+    r"|[+\-*/%|(),]"  # single operators / punct
+    r"|\*\*"  # power
+    r"|[a-zA-Z_#$&][a-zA-Z0-9_\-#$&]*"  # identifiers / variables
+    r"|[0-9]+(?:\.[0-9]*)?",  # numbers
     re.ASCII,
 )
 
@@ -147,15 +149,16 @@ def _tokenise(expr: str) -> List[str]:
 # The SQR execution environment
 # ---------------------------------------------------------------------------
 
+
 class SQREnvironment:
     """Full SQR interpreter state and execution logic."""
 
     # ------------------------------------------------------------------ init
     def __init__(self, interpreter: "Interpreter") -> None:
         self._interp = interpreter
-        self._out: List[str] = []           # accumulated report output
-        self._report_buf: List[str] = []    # current page buffer
-        self._vars: Dict[str, Any] = {}     # $strings and #numerics
+        self._out: List[str] = []  # accumulated report output
+        self._report_buf: List[str] = []  # current page buffer
+        self._vars: Dict[str, Any] = {}  # $strings and #numerics
         self._procs: Dict[str, List[str]] = {}  # procedure name -> lines
         self._tables: Dict[str, List[Dict[str, Any]]] = {}  # SQL table simulator
         self._page: int = 1
@@ -182,7 +185,7 @@ class SQREnvironment:
     def run(self, source: str) -> str:
         """Parse and execute the full SQR source."""
         lines = source.splitlines()
-        self._first_pass(lines)   # collect procedure definitions
+        self._first_pass(lines)  # collect procedure definitions
         self._execute_body(lines)
         return self._build_output()
 
@@ -265,7 +268,9 @@ class SQREnvironment:
                     i += 1
             elif s.startswith("begin-procedure"):
                 # skip – already parsed
-                while i < len(lines) and not lines[i].strip().lower().startswith("end-procedure"):
+                while i < len(lines) and not lines[i].strip().lower().startswith(
+                    "end-procedure"
+                ):
                     i += 1
             i += 1
         # If no begin-program found, execute all non-procedure lines directly
@@ -276,9 +281,17 @@ class SQREnvironment:
                 s = lines[i].strip().lower()
                 if s.startswith("begin-procedure") or s.startswith("end-procedure"):
                     pass
-                elif not any(s.startswith(kw) for kw in
-                             ("begin-heading","end-heading","begin-footer","end-footer",
-                              "begin-setup","end-setup")):
+                elif not any(
+                    s.startswith(kw)
+                    for kw in (
+                        "begin-heading",
+                        "end-heading",
+                        "begin-footer",
+                        "end-footer",
+                        "begin-setup",
+                        "end-setup",
+                    )
+                ):
                     body.append(lines[i])
                 i += 1
             self._exec_block(body)
@@ -297,7 +310,7 @@ class SQREnvironment:
                 continue
             s_lower = stripped.lower()
 
-            # ---- begin-select block (inline SQL loop) ---- 
+            # ---- begin-select block (inline SQL loop) ----
             if s_lower.startswith("begin-select"):
                 i = self._exec_begin_select(lines, i)
                 continue
@@ -431,7 +444,9 @@ class SQREnvironment:
             elif (s.startswith("when ") or s == "when-other") and depth == 1:
                 if current_cond is not None:
                     clauses.append((current_cond, current_body))
-                current_cond = None if s == "when-other" else lines[i].strip()[5:].strip()
+                current_cond = (
+                    None if s == "when-other" else lines[i].strip()[5:].strip()
+                )
                 current_body = []
             else:
                 current_body.append(lines[i])
@@ -443,10 +458,12 @@ class SQREnvironment:
                 break
             when_val = self._eval_expr(cond)
             match = False
-            if isinstance(eval_val, (int, float)) and isinstance(when_val, (int, float)):
-                match = (eval_val == when_val)
+            if isinstance(eval_val, (int, float)) and isinstance(
+                when_val, (int, float)
+            ):
+                match = eval_val == when_val
             else:
-                match = (str(eval_val).strip().lower() == str(when_val).strip().lower())
+                match = str(eval_val).strip().lower() == str(when_val).strip().lower()
             if match:
                 self._exec_block(body)
                 break
@@ -485,10 +502,12 @@ class SQREnvironment:
                 from_line = stripped
                 in_from = True
                 continue
-            if in_from and (sl_lower.startswith("where ") or
-                            sl_lower.startswith("order ") or
-                            sl_lower.startswith("group ") or
-                            sl_lower.startswith("having ")):
+            if in_from and (
+                sl_lower.startswith("where ")
+                or sl_lower.startswith("order ")
+                or sl_lower.startswith("group ")
+                or sl_lower.startswith("having ")
+            ):
                 if from_line:
                     from_line += " " + stripped
                 continue
@@ -579,7 +598,8 @@ class SQREnvironment:
 
         m_insert = re.match(
             r"INSERT\s+INTO\s+(\w+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)",
-            sql, re.IGNORECASE,
+            sql,
+            re.IGNORECASE,
         )
         if m_insert:
             tname = m_insert.group(1).lower()
@@ -596,7 +616,9 @@ class SQREnvironment:
             self._tables.setdefault(tname, []).append(row)
             return
 
-        m_select = re.match(r"SELECT\b(.+)\bFROM\b\s*(\w+)", sql, re.IGNORECASE | re.DOTALL)
+        m_select = re.match(
+            r"SELECT\b(.+)\bFROM\b\s*(\w+)", sql, re.IGNORECASE | re.DOTALL
+        )
         if m_select:
             tname = m_select.group(2).strip().lower()
             rows = self._tables.get(tname, [])
@@ -740,7 +762,7 @@ class SQREnvironment:
         if at_match:
             col = int(at_match.group(1))
             self._col = col
-            s = (s[:at_match.start()] + s[at_match.end():]).strip()
+            s = (s[: at_match.start()] + s[at_match.end() :]).strip()
 
         # Strip modifiers
         for mod in ("fill", "bold", "narrow", "wide", "center", "noline"):
@@ -762,7 +784,9 @@ class SQREnvironment:
 
     # ---- move <val> to <var> ---------------------------------------------
     def _exec_move(self, rest: str) -> None:
-        m = re.match(r"(.+?)\s+to\s+([#$&][\w\-]+)\s*$", rest, re.IGNORECASE | re.DOTALL)
+        m = re.match(
+            r"(.+?)\s+to\s+([#$&][\w\-]+)\s*$", rest, re.IGNORECASE | re.DOTALL
+        )
         if not m:
             return
         val = self._eval_expr(m.group(1).strip())
@@ -771,7 +795,9 @@ class SQREnvironment:
 
     # ---- string $a $b into $c --------------------------------------------
     def _exec_string_concat(self, rest: str) -> None:
-        m = re.match(r"(.+?)\s+into\s+([#$&][\w\-]+)\s*$", rest, re.IGNORECASE | re.DOTALL)
+        m = re.match(
+            r"(.+?)\s+into\s+([#$&][\w\-]+)\s*$", rest, re.IGNORECASE | re.DOTALL
+        )
         if not m:
             return
         parts_str = m.group(1)
@@ -812,7 +838,8 @@ class SQREnvironment:
     def _exec_put(self, stmt: str) -> None:
         m = re.match(
             r"put\s+(.+?)\s+into\s+(\w+)\s*\(([^)]+)\)\s*[.\-]\s*(\w+)",
-            stmt, re.IGNORECASE,
+            stmt,
+            re.IGNORECASE,
         )
         if not m:
             return
@@ -828,7 +855,8 @@ class SQREnvironment:
     def _exec_get(self, stmt: str) -> None:
         m = re.match(
             r"get\s+([#$&][\w\-]+)\s+from\s+(\w+)\s*\(([^)]+)\)\s*[.\-]\s*(\w+)",
-            stmt, re.IGNORECASE,
+            stmt,
+            re.IGNORECASE,
         )
         if not m:
             return
@@ -867,7 +895,9 @@ class SQREnvironment:
 
     def _get_var(self, name: str) -> Any:
         name = name.lower()
-        return self._vars.get(name, "" if name.startswith("$") or name.startswith("&") else 0.0)
+        return self._vars.get(
+            name, "" if name.startswith("$") or name.startswith("&") else 0.0
+        )
 
     # ---- expression evaluator --------------------------------------------
     def _eval_expr(self, expr: str) -> Any:
@@ -883,8 +913,9 @@ class SQREnvironment:
             return self._eval_concat(expr)
 
         # Quoted string literal (safe now that || is handled above)
-        if (expr.startswith('"') and expr.endswith('"')) or \
-           (expr.startswith("'") and expr.endswith("'")):
+        if (expr.startswith('"') and expr.endswith('"')) or (
+            expr.startswith("'") and expr.endswith("'")
+        ):
             return expr[1:-1]
 
         # Number literal
@@ -988,12 +1019,12 @@ class SQREnvironment:
                 s = _str(0)
                 start = max(0, int(_num(1)) - 1)  # SQR is 1-based
                 length = int(_num(2)) if len(args) > 2 else len(s) - start
-                return s[start: start + length]
+                return s[start : start + length]
             case "concat":
                 return "".join(str(a) for a in args)
             case "instr" | "find":
                 haystack = _str(0)
-                needle   = _str(1)
+                needle = _str(1)
                 idx = haystack.find(needle)
                 return idx + 1 if idx >= 0 else 0  # 1-based
             case "lpad":
@@ -1029,7 +1060,7 @@ class SQREnvironment:
                 return round(_num(), dp)
             case "trunc" | "truncate":
                 dp = int(_num(1)) if len(args) > 1 else 0
-                factor = 10 ** dp
+                factor = 10**dp
                 return math.trunc(_num() * factor) / factor
             case "floor":
                 return math.floor(_num())
@@ -1069,7 +1100,12 @@ class SQREnvironment:
                 return datetime.date.today().strftime("%Y-%m-%d")
             case "datetostr" | "date-to-str":
                 # datetostr(date_val, 'fmt')
-                fmt = _str(1).replace("YYYY", "%Y").replace("MM", "%m").replace("DD", "%d")
+                fmt = (
+                    _str(1)
+                    .replace("YYYY", "%Y")
+                    .replace("MM", "%m")
+                    .replace("DD", "%d")
+                )
                 try:
                     d = datetime.datetime.strptime(_str(0), "%Y-%m-%d")
                     return d.strftime(fmt)
@@ -1079,9 +1115,9 @@ class SQREnvironment:
                 return _str(0)  # return as string for simplicity
             case "add-to-date":
                 try:
-                    d   = datetime.datetime.strptime(_str(0), "%Y-%m-%d")
+                    d = datetime.datetime.strptime(_str(0), "%Y-%m-%d")
                     unit = _str(1).lower()
-                    n    = int(_num(2))
+                    n = int(_num(2))
                     if unit == "year":
                         d = d.replace(year=d.year + n)
                     elif unit == "month":
@@ -1133,6 +1169,7 @@ class SQREnvironment:
 # Argument splitter respecting quoted strings
 # ---------------------------------------------------------------------------
 
+
 def _split_args(s: str) -> List[str]:
     """Split on commas, but respect quoted strings and nested parens."""
     return _split_by(s, ",")
@@ -1165,7 +1202,7 @@ def _split_by(s: str, sep: str) -> List[str]:
         elif ch == ")":
             depth -= 1
             current.append(ch)
-        elif depth == 0 and s[i:i + len(sep)] == sep:
+        elif depth == 0 and s[i : i + len(sep)] == sep:
             parts.append("".join(current).strip())
             current = []
             i += len(sep)

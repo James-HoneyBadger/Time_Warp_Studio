@@ -397,8 +397,15 @@ class StringExpressionEvaluator:
         try:
             expr_str = args[0].strip()
             # Substitute numeric variables into the expression
-            for vname, vval in sorted(self.numeric_variables.items(), key=lambda x: -len(x[0])):
-                expr_str = re.sub(r'\b' + re.escape(vname) + r'\b', str(vval), expr_str, flags=re.IGNORECASE)
+            for vname, vval in sorted(
+                self.numeric_variables.items(), key=lambda x: -len(x[0])
+            ):
+                expr_str = re.sub(
+                    r"\b" + re.escape(vname) + r"\b",
+                    str(vval),
+                    expr_str,
+                    flags=re.IGNORECASE,
+                )
             num = float(eval(expr_str, {"__builtins__": {}}, {}))  # noqa: S307
             if num == int(num):
                 return str(int(num))
@@ -456,17 +463,17 @@ class StringExpressionEvaluator:
                 current.append(ch)
                 if ch == str_char:
                     in_str = False
-            elif ch in '"\'':
+            elif ch in "\"'":
                 in_str = True
                 str_char = ch
                 current.append(ch)
-            elif ch == '(':
+            elif ch == "(":
                 depth += 1
                 current.append(ch)
-            elif ch == ')':
+            elif ch == ")":
                 depth -= 1
                 current.append(ch)
-            elif depth == 0 and expr[i:i+len(op)] == op:
+            elif depth == 0 and expr[i : i + len(op)] == op:
                 parts.append("".join(current))
                 current = []
                 i += len(op)

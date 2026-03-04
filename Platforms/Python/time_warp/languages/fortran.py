@@ -28,7 +28,9 @@ if TYPE_CHECKING:
     from ..core.turtle_state import TurtleState
 
 
-def execute_fortran(interpreter: "Interpreter", source: str, turtle: "TurtleState") -> str:
+def execute_fortran(
+    interpreter: "Interpreter", source: str, turtle: "TurtleState"
+) -> str:
     """Execute a FORTRAN 77 program and return all output."""
     env = FortranEnvironment(interpreter, turtle)
     return env.run(source)
@@ -40,7 +42,7 @@ class FortranEnvironment:
         self.turtle = turtle
         self._output: list[str] = []
         self._vars: dict[str, Any] = {}
-        self._labels: dict[str, int] = {}       # label -> line index
+        self._labels: dict[str, int] = {}  # label -> line index
         self._lines: list[tuple[str, str]] = []  # [(label, stmt)]
         self._subroutines: dict[str, int] = {}
         self._functions: dict[str, int] = {}
@@ -52,7 +54,7 @@ class FortranEnvironment:
         self._format_stmts: dict[str, str] = {}
         self._file_units: dict[int, dict] = {}
         self._implicit_none = False
-        self._declared_vars: set[str] = set()   # explicit declarations for IMPLICIT NONE
+        self._declared_vars: set[str] = set()  # explicit declarations for IMPLICIT NONE
         self._func_return_types: dict[str, str] = {}  # function name -> return type
 
     def _emit(self, text: str):
@@ -109,7 +111,9 @@ class FortranEnvironment:
             if up.startswith("PROGRAM ") or up.startswith("MODULE "):
                 return True
             # :: in a declaration is Fortran 90
-            if "::" in up and re.match(r"^(INTEGER|REAL|CHARACTER|LOGICAL|DOUBLE\s+PRECISION)\b", up):
+            if "::" in up and re.match(
+                r"^(INTEGER|REAL|CHARACTER|LOGICAL|DOUBLE\s+PRECISION)\b", up
+            ):
                 return True
             # END DO / END PROGRAM / END IF are Fortran 90 structured constructs
             if re.match(r"^END\s+(DO|PROGRAM|FUNCTION|SUBROUTINE|MODULE)\b", up):
@@ -157,20 +161,28 @@ class FortranEnvironment:
             lm = re.match(r"^(\d+)\s+", stmt)
             if lm:
                 label = lm.group(1)
-                stmt = stmt[lm.end():].strip()
+                stmt = stmt[lm.end() :].strip()
 
             if stmt.startswith("SUBROUTINE "):
                 sub_m = re.match(r"SUBROUTINE\s+(\w+)", stmt)
                 if sub_m:
                     self._subroutines[sub_m.group(1)] = len(self._lines)
 
-            func_m = re.match(r"^(?:(?:INTEGER|REAL|DOUBLE\s+PRECISION|CHARACTER|LOGICAL)\s+)?FUNCTION\s+(\w+)\s*\(", stmt)
+            func_m = re.match(
+                r"^(?:(?:INTEGER|REAL|DOUBLE\s+PRECISION|CHARACTER|LOGICAL)\s+)?FUNCTION\s+(\w+)\s*\(",
+                stmt,
+            )
             if func_m:
                 self._functions[func_m.group(1)] = len(self._lines)
                 # Record the return type for typed functions
-                type_m = re.match(r"^(INTEGER|REAL|DOUBLE\s+PRECISION|CHARACTER|LOGICAL)\s+FUNCTION", stmt)
+                type_m = re.match(
+                    r"^(INTEGER|REAL|DOUBLE\s+PRECISION|CHARACTER|LOGICAL)\s+FUNCTION",
+                    stmt,
+                )
                 if type_m:
-                    self._func_return_types[func_m.group(1).upper()] = type_m.group(1).upper()
+                    self._func_return_types[func_m.group(1).upper()] = type_m.group(
+                        1
+                    ).upper()
 
             fmt_m = re.match(r"^FORMAT\s*\((.+)\)\s*$", stmt)
             if fmt_m and label:
@@ -206,7 +218,11 @@ class FortranEnvironment:
 
             if continuation_buf:
                 # Flush previous
-                prev_label, prev_stmt = continuation_buf[-1] if isinstance(continuation_buf[-1], tuple) else ("", continuation_buf[-1])
+                prev_label, prev_stmt = (
+                    continuation_buf[-1]
+                    if isinstance(continuation_buf[-1], tuple)
+                    else ("", continuation_buf[-1])
+                )
                 self._lines.append((prev_label, prev_stmt))
                 if prev_label:
                     self._labels[prev_label] = len(self._lines) - 1
@@ -218,7 +234,10 @@ class FortranEnvironment:
                     self._subroutines[sub_m.group(1)] = len(self._lines)
 
             # Register FUNCTION definitions
-            func_m = re.match(r"^(?:(?:INTEGER|REAL|DOUBLE\s+PRECISION|CHARACTER|LOGICAL)\s+)?FUNCTION\s+(\w+)\s*\(", stmt)
+            func_m = re.match(
+                r"^(?:(?:INTEGER|REAL|DOUBLE\s+PRECISION|CHARACTER|LOGICAL)\s+)?FUNCTION\s+(\w+)\s*\(",
+                stmt,
+            )
             if func_m:
                 self._functions[func_m.group(1)] = len(self._lines)
 
@@ -254,7 +273,9 @@ class FortranEnvironment:
                     self._exec_stmt(stmt, ip)
                     new_val = _to_num(self._vars.get(var, 0)) + step_val
                     self._vars[var] = new_val
-                    if (step_val >= 0 and new_val <= end_val) or (step_val < 0 and new_val >= end_val):
+                    if (step_val >= 0 and new_val <= end_val) or (
+                        step_val < 0 and new_val >= end_val
+                    ):
                         ip = back_ip  # loop back
                     else:
                         self._do_stack.pop()
@@ -329,7 +350,9 @@ class FortranEnvironment:
                 for v in vals_list:
                     rm = re.match(r"^(\d+)\*(.+)$", v)
                     if rm:
-                        expanded_vals.extend([self._eval_expr(rm.group(2))] * int(rm.group(1)))
+                        expanded_vals.extend(
+                            [self._eval_expr(rm.group(2))] * int(rm.group(1))
+                        )
                     else:
                         expanded_vals.append(self._eval_expr(v))
                 for i, var in enumerate(vars_list):
@@ -364,7 +387,10 @@ class FortranEnvironment:
             return None
 
         # FUNCTION header — skip body
-        if re.match(r"^(?:(?:INTEGER|REAL|DOUBLE\s+PRECISION|CHARACTER|LOGICAL)\s+)?FUNCTION\b", stmt):
+        if re.match(
+            r"^(?:(?:INTEGER|REAL|DOUBLE\s+PRECISION|CHARACTER|LOGICAL)\s+)?FUNCTION\b",
+            stmt,
+        ):
             return None
 
         # SUBROUTINE header — skip body until RETURN/END
@@ -372,7 +398,9 @@ class FortranEnvironment:
             return None
 
         # Variable type declarations
-        if re.match(r"^(INTEGER|REAL|CHARACTER|LOGICAL|DOUBLE\s+PRECISION|COMPLEX|BYTE)\b", stmt):
+        if re.match(
+            r"^(INTEGER|REAL|CHARACTER|LOGICAL|DOUBLE\s+PRECISION|COMPLEX|BYTE)\b", stmt
+        ):
             self._parse_declaration(stmt)
             return None
 
@@ -383,7 +411,7 @@ class FortranEnvironment:
             unit_m = re.search(r"\bUNIT\s*=\s*(\d+)", args, re.I)
             unit = int(unit_m.group(1)) if unit_m else 10
             status_m = re.search(r"\bSTATUS\s*=\s*['\"]?(\w+)['\"]?", args, re.I)
-            mode = (status_m.group(1).upper() if status_m else "UNKNOWN")
+            mode = status_m.group(1).upper() if status_m else "UNKNOWN"
             self._file_units[unit] = {"mode": mode, "records": [], "pos": 0}
             return None
 
@@ -430,7 +458,9 @@ class FortranEnvironment:
             return None
 
         # WRITE(*,*) list  or  WRITE(*,'(...)') list
-        m = re.match(r"^(?:WRITE\s*\(\s*\*\s*,\s*[*'\"(][^)]*\)\s*|PRINT\s*\*\s*,\s*)(.*)", stmt)
+        m = re.match(
+            r"^(?:WRITE\s*\(\s*\*\s*,\s*[*'\"(][^)]*\)\s*|PRINT\s*\*\s*,\s*)(.*)", stmt
+        )
         if m:
             self._do_write(m.group(1).strip())
             return None
@@ -467,7 +497,9 @@ class FortranEnvironment:
             step_val = float(self._eval_expr(m.group(4).strip())) if m.group(4) else 1.0
             self._vars[var] = start_val
             self._do_stack.append((var, end_val, step_val, "", ip + 1))
-            if (step_val > 0 and start_val > end_val) or (step_val < 0 and start_val < end_val):
+            if (step_val > 0 and start_val > end_val) or (
+                step_val < 0 and start_val < end_val
+            ):
                 return self._skip_to_enddo(ip)
             return None
 
@@ -482,7 +514,9 @@ class FortranEnvironment:
                     return back_ip - 1  # -1 because executor will +1
                 new_val = _to_num(self._vars.get(var, 0)) + step_val
                 self._vars[var] = new_val
-                if (step_val >= 0 and new_val <= end_val) or (step_val < 0 and new_val >= end_val):
+                if (step_val >= 0 and new_val <= end_val) or (
+                    step_val < 0 and new_val >= end_val
+                ):
                     return back_ip  # loop back
                 self._do_stack.pop()
             return None
@@ -592,9 +626,9 @@ class FortranEnvironment:
                     return i + 1
             elif depth == 1:
                 if s == "ELSE":
-                    return i + 1   # skip ELSE keyword, execute body
+                    return i + 1  # skip ELSE keyword, execute body
                 elif re.match(r"^ELSE\s*IF\s*\(.+\)\s*THEN", s):
-                    return i       # evaluate ELSE IF condition
+                    return i  # evaluate ELSE IF condition
             i += 1
         return i
 
@@ -621,11 +655,17 @@ class FortranEnvironment:
         decl_body = stmt
         if "::" in decl_body:
             # "INTEGER :: I = 0" → just the vars part after ::
-            decl_body = stmt.split("::", 1)[0].strip() + " " + stmt.split("::", 1)[1].strip()
+            decl_body = (
+                stmt.split("::", 1)[0].strip() + " " + stmt.split("::", 1)[1].strip()
+            )
 
         char_m = re.match(r"^CHARACTER\s*(?:\*\s*(\d+|\*))?\s+(.+)$", decl_body)
         if char_m:
-            width = int(char_m.group(1)) if (char_m.group(1) and char_m.group(1) != "*") else 1
+            width = (
+                int(char_m.group(1))
+                if (char_m.group(1) and char_m.group(1) != "*")
+                else 1
+            )
             for item in char_m.group(2).split(","):
                 item = item.strip()
                 # Strip initializer (= value)
@@ -633,13 +673,18 @@ class FortranEnvironment:
                     item = item.split("=")[0].strip()
                 am = re.match(r"^(\w+)\s*\((\d+)\)$", item)
                 if am:
-                    self._vars[am.group(1).upper()] = ["" for _ in range(int(am.group(2)))]
+                    self._vars[am.group(1).upper()] = [
+                        "" for _ in range(int(am.group(2)))
+                    ]
                     self._declared_vars.add(am.group(1).upper())
                 elif item:
                     self._vars[item.upper()] = " " * width
                     self._declared_vars.add(item.upper())
             return
-        m = re.match(r"^(?:INTEGER|REAL|LOGICAL|DOUBLE\s+PRECISION|COMPLEX|BYTE)\s+(.+)$", decl_body)
+        m = re.match(
+            r"^(?:INTEGER|REAL|LOGICAL|DOUBLE\s+PRECISION|COMPLEX|BYTE)\s+(.+)$",
+            decl_body,
+        )
         if m:
             is_int = decl_body.startswith("INTEGER") or decl_body.startswith("BYTE")
             for item in m.group(1).split(","):
@@ -655,14 +700,19 @@ class FortranEnvironment:
                         init_val = 0 if is_int else 0.0
                 am = re.match(r"^(\w+)\s*\((.+)\)$", item)
                 if am:
-                    dims = [int(float(self._eval_expr(d.strip()))) for d in am.group(2).split(",")]
+                    dims = [
+                        int(float(self._eval_expr(d.strip())))
+                        for d in am.group(2).split(",")
+                    ]
                     total = 1
                     for d in dims:
                         total *= d
                     self._vars[am.group(1).upper()] = [0] * total
                     self._declared_vars.add(am.group(1).upper())
                 elif item:
-                    self._vars[item.upper()] = init_val if init_val is not None else (0 if is_int else 0.0)
+                    self._vars[item.upper()] = (
+                        init_val if init_val is not None else (0 if is_int else 0.0)
+                    )
                     self._declared_vars.add(item.upper())
 
     def _skip_to_enddo(self, start: int) -> int:
@@ -717,7 +767,9 @@ class FortranEnvironment:
         parts = []
         val_idx = 0
         # Parse format descriptors
-        descriptors = re.findall(r"'[^']*'|\"[^\"]*\"|/|\d*[IFEGALifeglX](?:\.\d+)?|\d+X", fmt)
+        descriptors = re.findall(
+            r"'[^']*'|\"[^\"]*\"|/|\d*[IFEGALifeglX](?:\.\d+)?|\d+X", fmt
+        )
         for desc in descriptors:
             desc = desc.strip()
             if not desc:
@@ -847,19 +899,38 @@ class FortranEnvironment:
             arg = args_evaled[0] if args_evaled else 0
             # Single-arg numeric intrinsics
             single_fns: dict = {
-                "SQRT": math.sqrt, "ABS": abs, "IABS": lambda x: abs(int(x)),
-                "INT": int, "IFIX": int, "IDINT": int, "AINT": math.trunc,
-                "ANINT": round, "NINT": round,
-                "REAL": float, "FLOAT": float, "DBLE": float,
-                "SIN": math.sin, "COS": math.cos, "TAN": math.tan,
-                "ASIN": math.asin, "ACOS": math.acos, "ATAN": math.atan,
+                "SQRT": math.sqrt,
+                "ABS": abs,
+                "IABS": lambda x: abs(int(x)),
+                "INT": int,
+                "IFIX": int,
+                "IDINT": int,
+                "AINT": math.trunc,
+                "ANINT": round,
+                "NINT": round,
+                "REAL": float,
+                "FLOAT": float,
+                "DBLE": float,
+                "SIN": math.sin,
+                "COS": math.cos,
+                "TAN": math.tan,
+                "ASIN": math.asin,
+                "ACOS": math.acos,
+                "ATAN": math.atan,
                 "SIND": lambda x: math.sin(math.radians(x)),
                 "COSD": lambda x: math.cos(math.radians(x)),
                 "TAND": lambda x: math.tan(math.radians(x)),
-                "SINH": math.sinh, "COSH": math.cosh, "TANH": math.tanh,
-                "EXP": math.exp, "LOG": math.log, "ALOG": math.log,
-                "LOG10": math.log10, "ALOG10": math.log10, "LOG2": math.log2,
-                "CEILING": math.ceil, "FLOOR": math.floor,
+                "SINH": math.sinh,
+                "COSH": math.cosh,
+                "TANH": math.tanh,
+                "EXP": math.exp,
+                "LOG": math.log,
+                "ALOG": math.log,
+                "LOG10": math.log10,
+                "ALOG10": math.log10,
+                "LOG2": math.log2,
+                "CEILING": math.ceil,
+                "FLOOR": math.floor,
                 "SIGN": lambda x: (1.0 if x >= 0 else -1.0),
                 "NOT": lambda x: ~int(x),
                 "LEN": lambda x: len(str(x)),
@@ -896,20 +967,35 @@ class FortranEnvironment:
                 two_fns: dict = {
                     "MOD": lambda a, b: a % b if b else 0,
                     "MODULO": lambda a, b: a % b if b else 0,
-                    "MAX": max, "MAX0": max, "MAX1": max, "AMAX0": max, "AMAX1": max,
-                    "MIN": min, "MIN0": min, "MIN1": min, "AMIN0": min, "AMIN1": min,
+                    "MAX": max,
+                    "MAX0": max,
+                    "MAX1": max,
+                    "AMAX0": max,
+                    "AMAX1": max,
+                    "MIN": min,
+                    "MIN0": min,
+                    "MIN1": min,
+                    "AMIN0": min,
+                    "AMIN1": min,
                     "ATAN2": math.atan2,
                     "DIM": lambda a, b: max(0.0, a - b),
                     "DPROD": lambda a, b: float(a) * float(b),
-                    "SIGN": lambda a, b: abs(float(a)) * (1.0 if float(b) >= 0 else -1.0),
+                    "SIGN": lambda a, b: abs(float(a))
+                    * (1.0 if float(b) >= 0 else -1.0),
                     "IBITS": lambda a, b: (int(a) >> int(b)),
-                    "ISHFT": lambda a, b: int(a) << int(b) if int(b) >= 0 else int(a) >> (-int(b)),
+                    "ISHFT": lambda a, b: (
+                        int(a) << int(b) if int(b) >= 0 else int(a) >> (-int(b))
+                    ),
                     "IOR": lambda a, b: int(a) | int(b),
                     "IAND": lambda a, b: int(a) & int(b),
                     "IEOR": lambda a, b: int(a) ^ int(b),
                     "INDEX": lambda a, b: str(a).find(str(b)) + 1,
-                    "SCAN": lambda a, b: next((i+1 for i, c in enumerate(str(a)) if c in str(b)), 0),
-                    "VERIFY": lambda a, b: next((i+1 for i, c in enumerate(str(a)) if c not in str(b)), 0),
+                    "SCAN": lambda a, b: next(
+                        (i + 1 for i, c in enumerate(str(a)) if c in str(b)), 0
+                    ),
+                    "VERIFY": lambda a, b: next(
+                        (i + 1 for i, c in enumerate(str(a)) if c not in str(b)), 0
+                    ),
                 }
                 if fn in two_fns:
                     try:
@@ -946,9 +1032,16 @@ class FortranEnvironment:
                 saved_vars = dict(self._vars)
                 # Parse the FUNCTION header to get param names
                 _, func_header = self._lines[func_start]
-                param_m = re.match(r"^(?:(?:INTEGER|REAL|DOUBLE\s+PRECISION|CHARACTER|LOGICAL)\s+)?FUNCTION\s+\w+\s*\(([^)]*)\)", func_header)
+                param_m = re.match(
+                    r"^(?:(?:INTEGER|REAL|DOUBLE\s+PRECISION|CHARACTER|LOGICAL)\s+)?FUNCTION\s+\w+\s*\(([^)]*)\)",
+                    func_header,
+                )
                 if param_m:
-                    params = [p.strip().upper() for p in param_m.group(1).split(",") if p.strip()]
+                    params = [
+                        p.strip().upper()
+                        for p in param_m.group(1).split(",")
+                        if p.strip()
+                    ]
                     for pname, pval in zip(params, args_evaled):
                         self._vars[pname] = pval
                 # Initialize result variable (same name as function)
@@ -1000,11 +1093,15 @@ class FortranEnvironment:
             if upper in self._vars:
                 return self._vars[upper]
             # IMPLICIT NONE enforcement for simple token lookups
-            if (self._implicit_none and not upper.lstrip("-").isdigit()
-                    and upper not in self._functions
-                    and upper not in self._subroutines
-                    and upper not in (".TRUE.", ".FALSE.")):
+            if (
+                self._implicit_none
+                and not upper.lstrip("-").isdigit()
+                and upper not in self._functions
+                and upper not in self._subroutines
+                and upper not in (".TRUE.", ".FALSE.")
+            ):
                 self._emit(f"❌ IMPLICIT NONE: variable '{expr}' used but not declared")
+
         # Build Python expression substituting variables
         def replace_var(m_):
             name = m_.group(0)
@@ -1015,17 +1112,20 @@ class FortranEnvironment:
             if upper in self._named_constants:
                 return str(self._named_constants[upper])
             # IMPLICIT NONE enforcement
-            if (self._implicit_none
-                    and upper not in self._vars
-                    and upper not in self._named_constants
-                    and upper not in self._functions
-                    and upper not in self._subroutines
-                    and not upper.lstrip("-").replace(".", "").isdigit()):
+            if (
+                self._implicit_none
+                and upper not in self._vars
+                and upper not in self._named_constants
+                and upper not in self._functions
+                and upper not in self._subroutines
+                and not upper.lstrip("-").replace(".", "").isdigit()
+            ):
                 self._emit(f"❌ IMPLICIT NONE: '{name}' used but not declared")
             val = self._vars.get(upper, self._vars.get(name))
             if val is not None and not isinstance(val, list):
                 return str(val)
             return name
+
         pyexpr = re.sub(r"\b\w+\b", replace_var, expr)
         pyexpr = pyexpr.replace("**", "**")
         pyexpr = re.sub(r"\.EQ\.", "==", pyexpr)
@@ -1040,8 +1140,17 @@ class FortranEnvironment:
         pyexpr = re.sub(r"\.EQV\.", "==", pyexpr)
         pyexpr = re.sub(r"\.NEQV\.", "!=", pyexpr)
         try:
-            return eval(pyexpr, {"__builtins__": {}, "abs": abs, "int": int, "float": float,  # noqa: S307
-                                 "round": round, "math": math})
+            return eval(
+                pyexpr,
+                {
+                    "__builtins__": {},
+                    "abs": abs,
+                    "int": int,
+                    "float": float,  # noqa: S307
+                    "round": round,
+                    "math": math,
+                },
+            )
         except Exception:
             return 0
 

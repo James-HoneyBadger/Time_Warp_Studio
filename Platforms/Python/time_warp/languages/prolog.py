@@ -35,17 +35,17 @@ _QUERY_RE = re.compile(r"^\s*\?-\s*([a-z][a-z0-9_]*)\s*\((.+)\)\s*\.\s*$")
 def _extract_outer_args(s: str, start: int = 0) -> Tuple[Optional[str], int]:
     """Given a string starting at '(', find the matching ')' respecting nesting.
     Returns (content_between_parens, index_after_close_paren) or (None, -1)."""
-    if start >= len(s) or s[start] != '(':
+    if start >= len(s) or s[start] != "(":
         return None, -1
     depth = 0
     i = start
     while i < len(s):
-        if s[i] == '(':
+        if s[i] == "(":
             depth += 1
-        elif s[i] == ')':
+        elif s[i] == ")":
             depth -= 1
             if depth == 0:
-                return s[start + 1:i], i + 1
+                return s[start + 1 : i], i + 1
         elif s[i] == "'" or s[i] == '"':
             q = s[i]
             i += 1
@@ -300,8 +300,8 @@ def _parse_single_goal(text: str) -> Tuple[str, Tuple[str, ...]]:
             elif t[idx] == ")":
                 depth -= 1
                 if depth == 0:
-                    args_str = t[start + 1:idx]
-                    rest = t[idx + 1:].strip()
+                    args_str = t[start + 1 : idx]
+                    rest = t[idx + 1 :].strip()
                     if not rest:  # nothing after closing paren
                         return (functor.lower(), _parse_terms(args_str))
                     break
@@ -432,18 +432,35 @@ def _eval_math(expr: str, env: Dict[str, str]) -> Optional[float]:
 
     # Map Prolog math functions to Python
     fn_map = {
-        "abs": "abs", "sign": "sign", "sqrt": "_math.sqrt",
-        "sin": "_math.sin", "cos": "_math.cos", "tan": "_math.tan",
-        "asin": "_math.asin", "acos": "_math.acos", "atan": "_math.atan",
+        "abs": "abs",
+        "sign": "sign",
+        "sqrt": "_math.sqrt",
+        "sin": "_math.sin",
+        "cos": "_math.cos",
+        "tan": "_math.tan",
+        "asin": "_math.asin",
+        "acos": "_math.acos",
+        "atan": "_math.atan",
         "atan2": "_math.atan2",
-        "exp": "_math.exp", "log": "_math.log", "log2": "_math.log2",
-        "ceiling": "_math.ceil", "floor": "_math.floor",
-        "round": "round", "truncate": "int", "float": "float",
-        "float_integer_part": "float", "float_fractional_part": "lambda x: x % 1",
-        "integer": "int", "max": "max", "min": "min",
-        "pi": str(_math.pi), "e": str(_math.e),
-        "inf": "float('inf')", "nan": "float('nan')",
-        "succ": "lambda x: x+1", "plus": "lambda x,y: x+y",
+        "exp": "_math.exp",
+        "log": "_math.log",
+        "log2": "_math.log2",
+        "ceiling": "_math.ceil",
+        "floor": "_math.floor",
+        "round": "round",
+        "truncate": "int",
+        "float": "float",
+        "float_integer_part": "float",
+        "float_fractional_part": "lambda x: x % 1",
+        "integer": "int",
+        "max": "max",
+        "min": "min",
+        "pi": str(_math.pi),
+        "e": str(_math.e),
+        "inf": "float('inf')",
+        "nan": "float('nan')",
+        "succ": "lambda x: x+1",
+        "plus": "lambda x,y: x+y",
         "msb": "lambda x: x.bit_length()-1 if x>0 else 0",
     }
     for k, v in fn_map.items():
@@ -458,8 +475,12 @@ def _eval_math(expr: str, env: Dict[str, str]) -> Optional[float]:
         allowed_names: Dict[str, Any] = {
             "__builtins__": {},
             "_math": _math,
-            "abs": abs, "round": round, "int": int, "float": float,
-            "max": max, "min": min,
+            "abs": abs,
+            "round": round,
+            "int": int,
+            "float": float,
+            "max": max,
+            "min": min,
             "sign": lambda x: (1.0 if x > 0 else (-1.0 if x < 0 else 0.0)),
         }
         return float(eval(expr_sub, allowed_names, {}))  # noqa: S307
@@ -649,22 +670,46 @@ def _solve_goals_cut(
     # ── Standard arithmetic comparison predicates ─────────────────────────────
     if pred == "=:=" and len(args) == 2:
         av, bv = _eval_math(args[0], env), _eval_math(args[1], env)
-        return _solve_goals_cut(kb, rest, env) if av is not None and bv is not None and av == bv else []
+        return (
+            _solve_goals_cut(kb, rest, env)
+            if av is not None and bv is not None and av == bv
+            else []
+        )
     if pred in ("=\\=", "=\\\\=") and len(args) == 2:
         av, bv = _eval_math(args[0], env), _eval_math(args[1], env)
-        return _solve_goals_cut(kb, rest, env) if av is not None and bv is not None and av != bv else []
+        return (
+            _solve_goals_cut(kb, rest, env)
+            if av is not None and bv is not None and av != bv
+            else []
+        )
     if pred == "<" and len(args) == 2:
         av, bv = _eval_math(args[0], env), _eval_math(args[1], env)
-        return _solve_goals_cut(kb, rest, env) if av is not None and bv is not None and av < bv else []
+        return (
+            _solve_goals_cut(kb, rest, env)
+            if av is not None and bv is not None and av < bv
+            else []
+        )
     if pred == ">" and len(args) == 2:
         av, bv = _eval_math(args[0], env), _eval_math(args[1], env)
-        return _solve_goals_cut(kb, rest, env) if av is not None and bv is not None and av > bv else []
+        return (
+            _solve_goals_cut(kb, rest, env)
+            if av is not None and bv is not None and av > bv
+            else []
+        )
     if pred == "=<" and len(args) == 2:
         av, bv = _eval_math(args[0], env), _eval_math(args[1], env)
-        return _solve_goals_cut(kb, rest, env) if av is not None and bv is not None and av <= bv else []
+        return (
+            _solve_goals_cut(kb, rest, env)
+            if av is not None and bv is not None and av <= bv
+            else []
+        )
     if pred == ">=" and len(args) == 2:
         av, bv = _eval_math(args[0], env), _eval_math(args[1], env)
-        return _solve_goals_cut(kb, rest, env) if av is not None and bv is not None and av >= bv else []
+        return (
+            _solve_goals_cut(kb, rest, env)
+            if av is not None and bv is not None and av >= bv
+            else []
+        )
 
     # ── Unification ==/\== ────────────────────────────────────────────────────
     if pred == "==" and len(args) == 2:
@@ -694,7 +739,11 @@ def _solve_goals_cut(
         hm = re.match(r"^(\w+)\s*(?:\((.+)\))?$", head_str)
         if hm:
             name = hm.group(1)
-            hargs = tuple(a.strip() for a in (hm.group(2) or "").split(",")) if hm.group(2) else ()
+            hargs = (
+                tuple(a.strip() for a in (hm.group(2) or "").split(","))
+                if hm.group(2)
+                else ()
+            )
             if ":-" in clause:
                 body_str = clause.split(":-", 1)[1].strip()
                 body = _parse_body_goals(body_str)
@@ -713,7 +762,11 @@ def _solve_goals_cut(
         hm = re.match(r"^(\w+)\s*(?:\((.+)\))?$", head_str)
         if hm:
             name = hm.group(1)
-            hargs = tuple(a.strip() for a in (hm.group(2) or "").split(",")) if hm.group(2) else ()
+            hargs = (
+                tuple(a.strip() for a in (hm.group(2) or "").split(","))
+                if hm.group(2)
+                else ()
+            )
             if ":-" in clause:
                 body_str = clause.split(":-", 1)[1].strip()
                 body = _parse_body_goals(body_str)
@@ -731,7 +784,11 @@ def _solve_goals_cut(
         hm = re.match(r"^(\w+)\s*(?:\((.+)\))?$", head_str)
         if hm:
             name = hm.group(1)
-            hargs = tuple(a.strip() for a in (hm.group(2) or "").split(",")) if hm.group(2) else ()
+            hargs = (
+                tuple(a.strip() for a in (hm.group(2) or "").split(","))
+                if hm.group(2)
+                else ()
+            )
             # Remove first matching fact
             for i, f in enumerate(kb.get("facts", [])):
                 if f[0] == name and f[1] == hargs:
@@ -789,7 +846,9 @@ def _solve_goals_cut(
         solutions = _solve_goals(setof_kb, goal_parsed, env.copy())
         if not solutions:
             return []
-        bag_items = list(dict.fromkeys(_substitute_term(template, sol) for sol in solutions))
+        bag_items = list(
+            dict.fromkeys(_substitute_term(template, sol) for sol in solutions)
+        )
         bag_items.sort()
         bag_str = "[" + ",".join(bag_items) + "]"
         e = _unify(bag_var, bag_str, env.copy())
@@ -817,7 +876,11 @@ def _solve_goals_cut(
         return _solve_goals_cut(kb, rest, env) if not _is_var(a_sub) else []
     if pred == "atom" and len(args) == 1:
         a_sub = _substitute_term(args[0], env)
-        is_atom = not _is_var(a_sub) and not re.match(r"^-?\d", a_sub) and not a_sub.startswith("[")
+        is_atom = (
+            not _is_var(a_sub)
+            and not re.match(r"^-?\d", a_sub)
+            and not a_sub.startswith("[")
+        )
         return _solve_goals_cut(kb, rest, env) if is_atom else []
     if pred == "number" and len(args) == 1:
         a_sub = _substitute_term(args[0], env)
@@ -842,10 +905,18 @@ def _solve_goals_cut(
             return []
     if pred == "atomic" and len(args) == 1:
         a_sub = _substitute_term(args[0], env)
-        return _solve_goals_cut(kb, rest, env) if not _is_var(a_sub) and not (a_sub.startswith("[") or "(" in a_sub) else []
+        return (
+            _solve_goals_cut(kb, rest, env)
+            if not _is_var(a_sub) and not (a_sub.startswith("[") or "(" in a_sub)
+            else []
+        )
     if pred == "compound" and len(args) == 1:
         a_sub = _substitute_term(args[0], env)
-        return _solve_goals_cut(kb, rest, env) if "(" in a_sub or (a_sub.startswith("[") and a_sub != "[]") else []
+        return (
+            _solve_goals_cut(kb, rest, env)
+            if "(" in a_sub or (a_sub.startswith("[") and a_sub != "[]")
+            else []
+        )
     if pred == "is_list" and len(args) == 1:
         a_sub = _substitute_term(args[0], env)
         return _solve_goals_cut(kb, rest, env) if a_sub.startswith("[") else []
@@ -859,8 +930,16 @@ def _solve_goals_cut(
         list2 = _substitute_term(args[1], env)
         list3 = _substitute_term(args[2], env)
         if not _is_var(list1) and not _is_var(list2):
-            items1 = [x.strip() for x in list1.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
-            items2 = [x.strip() for x in list2.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            items1 = [
+                x.strip()
+                for x in list1.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
+            items2 = [
+                x.strip()
+                for x in list2.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
             merged = "[" + ",".join(items1 + items2) + "]"
             e = _unify(list3, merged, env.copy())
             return _solve_goals_cut(kb, rest, e) if e is not None else []
@@ -870,7 +949,11 @@ def _solve_goals_cut(
         elem, lst = args
         lst_sub = _substitute_term(lst, env)
         if not _is_var(lst_sub) and lst_sub.startswith("["):
-            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
             for item in items:
                 e = _unify(elem, item, env.copy())
                 if e is not None:
@@ -883,7 +966,11 @@ def _solve_goals_cut(
         elem, lst = args
         lst_sub = _substitute_term(lst, env)
         if not _is_var(lst_sub) and lst_sub.startswith("["):
-            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
             for item in items:
                 e = _unify(elem, item, env.copy())
                 if e is not None:
@@ -894,7 +981,11 @@ def _solve_goals_cut(
         lst_sub = _substitute_term(args[0], env)
         len_sub = _substitute_term(args[1], env)
         if not _is_var(lst_sub) and lst_sub.startswith("["):
-            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
             n = len(items if lst_sub != "[]" else [])
             e = _unify(len_sub, str(n), env.copy())
             return _solve_goals_cut(kb, rest, e) if e is not None else []
@@ -903,7 +994,11 @@ def _solve_goals_cut(
     if pred == "last" and len(args) == 2:
         lst_sub = _substitute_term(args[0], env)
         if not _is_var(lst_sub) and lst_sub.startswith("["):
-            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
             if items:
                 e = _unify(args[1], items[-1], env.copy())
                 return _solve_goals_cut(kb, rest, e) if e is not None else []
@@ -914,7 +1009,11 @@ def _solve_goals_cut(
         lst_sub = _substitute_term(args[1], env)
         elem_var = args[2]
         if not _is_var(idx_sub) and not _is_var(lst_sub) and lst_sub.startswith("["):
-            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
             try:
                 idx = int(idx_sub)
                 if pred == "nth1":
@@ -928,7 +1027,11 @@ def _solve_goals_cut(
     if pred == "reverse" and len(args) == 2:
         lst_sub = _substitute_term(args[0], env)
         if not _is_var(lst_sub) and lst_sub.startswith("["):
-            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
             rev = "[" + ",".join(reversed(items)) + "]"
             e = _unify(args[1], rev, env.copy())
             return _solve_goals_cut(kb, rest, e) if e is not None else []
@@ -937,7 +1040,11 @@ def _solve_goals_cut(
     if pred in ("sort", "msort") and len(args) == 2:
         lst_sub = _substitute_term(args[0], env)
         if not _is_var(lst_sub) and lst_sub.startswith("["):
-            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
             sorted_items = sorted(set(items) if pred == "sort" else items)
             sorted_str = "[" + ",".join(sorted_items) + "]"
             e = _unify(args[1], sorted_str, env.copy())
@@ -955,7 +1062,11 @@ def _solve_goals_cut(
     if pred in ("sum_list", "sumlist") and len(args) == 2:
         lst_sub = _substitute_term(args[0], env)
         if not _is_var(lst_sub) and lst_sub.startswith("["):
-            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
             try:
                 total = sum(float(x) for x in items)
                 total_str = str(int(total)) if total == int(total) else str(total)
@@ -968,7 +1079,11 @@ def _solve_goals_cut(
     if pred == "max_list" and len(args) == 2:
         lst_sub = _substitute_term(args[0], env)
         if not _is_var(lst_sub) and lst_sub.startswith("["):
-            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
             try:
                 mx = max(float(x) for x in items)
                 mx_str = str(int(mx)) if mx == int(mx) else str(mx)
@@ -981,7 +1096,11 @@ def _solve_goals_cut(
     if pred == "min_list" and len(args) == 2:
         lst_sub = _substitute_term(args[0], env)
         if not _is_var(lst_sub) and lst_sub.startswith("["):
-            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
             try:
                 mn = min(float(x) for x in items)
                 mn_str = str(int(mn)) if mn == int(mn) else str(mn)
@@ -1125,7 +1244,11 @@ def _solve_goals_cut(
             if idx >= 0:
                 e = env.copy()
                 e = _unify(args[1], str(idx), e)
-                e = _unify(args[2], str(len(atom_sub) - idx - len(sub_sub)), e) if e is not None else None
+                e = (
+                    _unify(args[2], str(len(atom_sub) - idx - len(sub_sub)), e)
+                    if e is not None
+                    else None
+                )
                 e = _unify(args[3], str(len(sub_sub)), e) if e is not None else None
                 return _solve_goals_cut(kb, rest, e) if e is not None else []
         return []
@@ -1162,6 +1285,7 @@ def _solve_goals_cut(
     if pred == "copy_term" and len(args) == 2:
         t_sub = _substitute_term(args[0], env)
         import random as _rand
+
         suffix = str(_rand.randint(10000, 99999))
         renamed = _rename_vars_in_term(t_sub, suffix)
         e = _unify(args[1], renamed, env.copy())
@@ -1170,7 +1294,13 @@ def _solve_goals_cut(
     # ── format/2 ─────────────────────────────────────────────────────────────
     if pred in ("format", "print") and len(args) >= 1:
         fmt = _substitute_term(args[0], env).strip("\"'")
-        fmt_result = fmt.replace("~w", "{}").replace("~d", "{}").replace("~a", "{}").replace("~n", "\n").replace("~N", "\n")
+        fmt_result = (
+            fmt.replace("~w", "{}")
+            .replace("~d", "{}")
+            .replace("~a", "{}")
+            .replace("~n", "\n")
+            .replace("~N", "\n")
+        )
         insert_vals = [_substitute_term(a, env).strip("\"'") for a in args[1:]]
         try:
             output = fmt_result.format(*insert_vals)

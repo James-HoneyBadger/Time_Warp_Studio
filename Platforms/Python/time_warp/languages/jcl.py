@@ -37,6 +37,7 @@ if TYPE_CHECKING:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def execute_jcl(
     interpreter: "Interpreter",
     source: str,
@@ -51,12 +52,13 @@ def execute_jcl(
 # Data structures
 # ---------------------------------------------------------------------------
 
+
 class _JCLStatement:
     """Parsed JCL statement."""
 
     def __init__(self, name: str, oper: str, params: str, raw: str):
-        self.name = name      # //NAME part (may be empty)
-        self.oper = oper      # JOB / EXEC / DD / * / blank
+        self.name = name  # //NAME part (may be empty)
+        self.oper = oper  # JOB / EXEC / DD / * / blank
         self.params = params  # everything after the operand keyword
         self.raw = raw
 
@@ -68,13 +70,11 @@ class _JCLStatement:
 # Parser
 # ---------------------------------------------------------------------------
 
-_CONT_RE = re.compile(r"^//\s")        # continuation line
-_STMT_RE = re.compile(
-    r"^//(\S*)\s+(\S+)(?:\s+(.*))?$"  # //NAME OPER [params]
-)
+_CONT_RE = re.compile(r"^//\s")  # continuation line
+_STMT_RE = re.compile(r"^//(\S*)\s+(\S+)(?:\s+(.*))?$")  # //NAME OPER [params]
 _COMMENT_RE = re.compile(r"^//\*")
-_EOD_RE = re.compile(r"^/\*")         # end of inline data
-_BLANK_RE = re.compile(r"^//\s*$")    # blank JCL line
+_EOD_RE = re.compile(r"^/\*")  # end of inline data
+_BLANK_RE = re.compile(r"^//\s*$")  # blank JCL line
 
 
 def _parse_params(params_str: str) -> Dict[str, str]:
@@ -119,7 +119,11 @@ def _parse_jcl(source: str) -> List[_JCLStatement]:
             if _EOD_RE.match(line) or _BLANK_RE.match(line):
                 in_inline = False
                 # Store inline data as synthetic statement
-                stmts.append(_JCLStatement(inline_dd or "INLINE", "_DATA_", assembled.rstrip(), assembled))
+                stmts.append(
+                    _JCLStatement(
+                        inline_dd or "INLINE", "_DATA_", assembled.rstrip(), assembled
+                    )
+                )
                 assembled = ""
                 inline_dd = None
             else:
@@ -170,6 +174,7 @@ def _emit_stmt(line: str, stmts: List[_JCLStatement]) -> None:
 # Job execution environment
 # ---------------------------------------------------------------------------
 
+
 class JCLEnvironment:
     """Simulates OS/390 job execution."""
 
@@ -177,9 +182,9 @@ class JCLEnvironment:
         self.interpreter = interpreter
         self.turtle = turtle
         self._spool: List[str] = []
-        self._dds: Dict[str, Any] = {}         # DD name → data or "SYSOUT"
-        self._inline: Dict[str, str] = {}       # DD name → inline data
-        self._return_codes: Dict[str, int] = {} # step → RC
+        self._dds: Dict[str, Any] = {}  # DD name → data or "SYSOUT"
+        self._inline: Dict[str, str] = {}  # DD name → inline data
+        self._return_codes: Dict[str, int] = {}  # step → RC
         self._job_name = "TWJOB001"
         self._job_desc = "Time Warp JCL Job"
 
@@ -238,7 +243,9 @@ class JCLEnvironment:
         if worst_rc == 0:
             self._emit(f"IEF142I {self._job_name} STEP - NORMAL END")
         elif worst_rc <= 4:
-            self._emit(f"IEF142I {self._job_name} - COMPLETED WITH WARNINGS (CC={worst_rc:04d})")
+            self._emit(
+                f"IEF142I {self._job_name} - COMPLETED WITH WARNINGS (CC={worst_rc:04d})"
+            )
         else:
             self._emit(f"IEF142I {self._job_name} - ABENDED  CC={worst_rc:04d}")
         return "\n".join(self._spool)
@@ -297,7 +304,9 @@ class JCLEnvironment:
             self._emit(f"IEF285I   {pgm:8s} -- PROGRAM EXECUTED  PARM='{parm}'")
             rc = 0
 
-        self._emit(f"IEF142I {self._job_name} {step_name} - STEP WAS EXECUTED - COND CODE {rc:04d}")
+        self._emit(
+            f"IEF142I {self._job_name} {step_name} - STEP WAS EXECUTED - COND CODE {rc:04d}"
+        )
         self._emit("")
         return rc
 
@@ -374,7 +383,10 @@ class JCLEnvironment:
     ) -> int:
         """Invoke the COBOL executor against SOURCE DD inline data."""
         from ..languages.cobol import execute_cobol
-        data = self._get_inline_data("SOURCE", all_stmts) or self._get_inline_data("SYSIN", all_stmts)
+
+        data = self._get_inline_data("SOURCE", all_stmts) or self._get_inline_data(
+            "SYSIN", all_stmts
+        )
         if data:
             result = execute_cobol(self.interpreter, data, self.turtle)
             self._sysout(result)
@@ -390,7 +402,10 @@ class JCLEnvironment:
     ) -> int:
         """Invoke the REXX executor against SYSTSIN or REXXSRC inline data."""
         from ..languages.rexx import execute_rexx
-        data = self._get_inline_data("SYSTSIN", all_stmts) or self._get_inline_data("REXXSRC", all_stmts)
+
+        data = self._get_inline_data("SYSTSIN", all_stmts) or self._get_inline_data(
+            "REXXSRC", all_stmts
+        )
         if data:
             result = execute_rexx(self.interpreter, data, self.turtle)
             self._sysout(result)

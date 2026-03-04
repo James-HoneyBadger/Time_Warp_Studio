@@ -177,11 +177,7 @@ class CommandPalette(QDialog):
         if not q:
             filtered = self._actions
         else:
-            filtered = [
-                (t, sc, a)
-                for t, sc, a in self._actions
-                if q in t.lower()
-            ]
+            filtered = [(t, sc, a) for t, sc, a in self._actions if q in t.lower()]
         self._populate_list(filtered)
 
     def _trigger_selected(self):

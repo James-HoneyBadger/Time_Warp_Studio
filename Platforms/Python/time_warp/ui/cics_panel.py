@@ -16,13 +16,22 @@ from typing import TYPE_CHECKING, Optional
 from PySide6.QtCore import QSize, Qt, QThread, Signal
 from PySide6.QtGui import QFont
 from PySide6.QtWidgets import (
-    QComboBox, QGroupBox, QHBoxLayout, QLabel,
-    QPlainTextEdit, QPushButton, QScrollArea, QSplitter,
-    QVBoxLayout, QWidget,
+    QComboBox,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QPlainTextEdit,
+    QPushButton,
+    QScrollArea,
+    QSplitter,
+    QVBoxLayout,
+    QWidget,
 )
 
 from .terminal_3278 import (
-    Attr, Color3270, Terminal3278,
+    Attr,
+    Color3270,
+    Terminal3278,
 )
 
 if TYPE_CHECKING:
@@ -40,9 +49,10 @@ def _mono(size: int = 10) -> QFont:
 # Background execution thread for CICS
 # ---------------------------------------------------------------------------
 
+
 class _CICSRunThread(QThread):
     output_ready = Signal(str)
-    screen_ops_ready = Signal(list)   # list of (op, args) screen commands
+    screen_ops_ready = Signal(list)  # list of (op, args) screen commands
 
     def __init__(self, interpreter, source: str):
         super().__init__()
@@ -53,6 +63,7 @@ class _CICSRunThread(QThread):
         try:
             from ..languages.cics import execute_cics
             from ..graphics.turtle_state import TurtleState
+
             turtle = TurtleState()
             # execute_cics returns text output
             out = execute_cics(self._interpreter, self._source, turtle)
@@ -68,6 +79,7 @@ class _CICSRunThread(QThread):
 # ---------------------------------------------------------------------------
 # CICS IDE Panel
 # ---------------------------------------------------------------------------
+
 
 class CICSPanel(QWidget):
     """
@@ -102,8 +114,10 @@ class CICSPanel(QWidget):
         ctrl_row = QHBoxLayout()
         run_btn = QPushButton("▶  Run (F5)")
         run_btn.setShortcut("F5")
-        run_btn.setStyleSheet("font-weight:bold; background:#1a3a1a; color:#0f0; "
-                              "border:1px solid #0a0; padding:4px 10px;")
+        run_btn.setStyleSheet(
+            "font-weight:bold; background:#1a3a1a; color:#0f0; "
+            "border:1px solid #0a0; padding:4px 10px;"
+        )
         run_btn.clicked.connect(self._run)
         ctrl_row.addWidget(run_btn)
 
@@ -112,16 +126,18 @@ class CICSPanel(QWidget):
         ctrl_row.addWidget(clear_btn)
 
         self._template_combo = QComboBox()
-        self._template_combo.addItems([
-            "— Template —",
-            "Hello World",
-            "Customer Inquiry",
-            "Account Browse",
-            "Menu Screen",
-            "File Read Loop",
-            "VSAM Update",
-            "Multi-Map App",
-        ])
+        self._template_combo.addItems(
+            [
+                "— Template —",
+                "Hello World",
+                "Customer Inquiry",
+                "Account Browse",
+                "Menu Screen",
+                "File Read Loop",
+                "VSAM Update",
+                "Multi-Map App",
+            ]
+        )
         self._template_combo.currentIndexChanged.connect(self._load_template)
         ctrl_row.addWidget(self._template_combo)
         ctrl_row.addStretch()
@@ -171,27 +187,31 @@ class CICSPanel(QWidget):
         font_minus.setFixedWidth(28)
         font_minus.clicked.connect(
             lambda: self._terminal.set_font_size(
-                max(8, self._terminal._font.pointSize() - 1)))
+                max(8, self._terminal._font.pointSize() - 1)
+            )
+        )
         phos_row.addWidget(font_minus)
         font_plus = QPushButton("A+")
         font_plus.setFixedWidth(28)
         font_plus.clicked.connect(
             lambda: self._terminal.set_font_size(
-                min(22, self._terminal._font.pointSize() + 1)))
+                min(22, self._terminal._font.pointSize() + 1)
+            )
+        )
         phos_row.addWidget(font_plus)
         phos_row.addStretch()
 
         # Key hint
-        hint = QLabel(" Tab=next field  Shift+Tab=prev  F1-F24=PF keys  "
-                       "Esc=CLEAR  Enter=ENTER  Alt+1/2/3=PA1/2/3")
+        hint = QLabel(
+            " Tab=next field  Shift+Tab=prev  F1-F24=PF keys  "
+            "Esc=CLEAR  Enter=ENTER  Alt+1/2/3=PA1/2/3"
+        )
         hint.setStyleSheet("color:#888; font-size:9px;")
         phos_row.addWidget(hint)
         right_lay.addLayout(phos_row)
 
         # The actual 3278 terminal widget
-        self._terminal = Terminal3278(
-            self, phosphor=Color3270.GREEN_PHOSPHOR
-        )
+        self._terminal = Terminal3278(self, phosphor=Color3270.GREEN_PHOSPHOR)
         self._terminal.aid_key.connect(self._on_aid)
 
         # Wrap the terminal in a QScrollArea so its large fixed minimum size
@@ -200,7 +220,7 @@ class CICSPanel(QWidget):
         term_scroll = QScrollArea()
         term_scroll.setWidget(self._terminal)
         term_scroll.setWidgetResizable(False)  # terminal keeps its own size
-        term_scroll.setMinimumSize(200, 200)   # override sizeHint propagation
+        term_scroll.setMinimumSize(200, 200)  # override sizeHint propagation
         term_scroll.setStyleSheet("QScrollArea { background: #000; border: none; }")
         right_lay.addWidget(term_scroll)
 
@@ -263,19 +283,16 @@ class CICSPanel(QWidget):
                 break
             if raw.startswith("===") or raw.startswith("---"):
                 self._terminal.write_text(
-                    row, 0, raw[:80], Attr.PROT_BRIGHT, "turquoise")
+                    row, 0, raw[:80], Attr.PROT_BRIGHT, "turquoise"
+                )
             elif raw.startswith("❌") or "ERROR" in raw.upper():
-                self._terminal.write_text(
-                    row, 0, raw[:80], Attr.PROT_BRIGHT, "red")
+                self._terminal.write_text(row, 0, raw[:80], Attr.PROT_BRIGHT, "red")
             elif raw.startswith("ℹ") or raw.startswith("  CICS"):
-                self._terminal.write_text(
-                    row, 0, raw[:80], Attr.PROT_NORMAL, "yellow")
+                self._terminal.write_text(row, 0, raw[:80], Attr.PROT_NORMAL, "yellow")
             elif raw.startswith("🚀"):
-                self._terminal.write_text(
-                    row, 0, raw[:80], Attr.PROT_BRIGHT, "green")
+                self._terminal.write_text(row, 0, raw[:80], Attr.PROT_BRIGHT, "green")
             elif raw:
-                self._terminal.write_text(
-                    row, 0, raw[:80], Attr.PROT_NORMAL)
+                self._terminal.write_text(row, 0, raw[:80], Attr.PROT_NORMAL)
             row += 1
 
         # Place cursor at first unprotected field if any, else row 0
@@ -290,9 +307,11 @@ class CICSPanel(QWidget):
         self._terminal._show_welcome()
 
     def _change_phosphor(self, idx: int):
-        modes = [Color3270.GREEN_PHOSPHOR,
-                 Color3270.AMBER_PHOSPHOR,
-                 Color3270.WHITE_PAPER]
+        modes = [
+            Color3270.GREEN_PHOSPHOR,
+            Color3270.AMBER_PHOSPHOR,
+            Color3270.WHITE_PAPER,
+        ]
         if idx < len(modes):
             self._terminal.set_phosphor(modes[idx])
 
@@ -336,9 +355,7 @@ class CICSPanel(QWidget):
                 "background:#0d1a0d; color:#33ff33; "
                 "selection-background-color:#005500;"
             )
-            self._output.setStyleSheet(
-                "background:#0a0f0a; color:#00cc00;"
-            )
+            self._output.setStyleSheet("background:#0a0f0a; color:#00cc00;")
         else:
             self._editor.setStyleSheet("")
             self._output.setStyleSheet("")

@@ -1,6 +1,5 @@
 """Comprehensive tests for the SQR language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors
@@ -32,12 +31,7 @@ class TestOutput:
         assert has(out, "Testing")
 
     def test_multiple_print(self):
-        out = sqr(
-            "begin-program\n"
-            "  print 'A' ()\n"
-            "  print 'B' ()\n"
-            "end-program"
-        )
+        out = sqr("begin-program\n" "  print 'A' ()\n" "  print 'B' ()\n" "end-program")
         assert has(out, "A") and has(out, "B")
 
 
@@ -78,20 +72,12 @@ class TestVariables:
 
 class TestMove:
     def test_move_numeric(self):
-        out = sqr(
-            "begin-program\n"
-            "  move 42 to #x\n"
-            "  display #x\n"
-            "end-program"
-        )
+        out = sqr("begin-program\n" "  move 42 to #x\n" "  display #x\n" "end-program")
         assert has(out, "42")
 
     def test_move_string(self):
         out = sqr(
-            "begin-program\n"
-            "  move 'Hello' to $s\n"
-            "  display $s\n"
-            "end-program"
+            "begin-program\n" "  move 'Hello' to $s\n" "  display $s\n" "end-program"
         )
         assert has(out, "Hello")
 
@@ -229,7 +215,7 @@ class TestInput:
             "  input $name 'Enter name'\n"
             "  display $name\n"
             "end-program",
-            input_val="Alice"
+            input_val="Alice",
         )
         assert has(out, "Alice") or no_errors(out)
 

@@ -1,6 +1,5 @@
 """Comprehensive tests for the JavaScript language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors, first_error
@@ -272,12 +271,12 @@ class TestControlFlow:
 
     def test_switch(self):
         out = js(
-            'let x = 2;\n'
-            'switch(x) {\n'
+            "let x = 2;\n"
+            "switch(x) {\n"
             '  case 1: console.log("one"); break;\n'
             '  case 2: console.log("two"); break;\n'
             '  default: console.log("other");\n'
-            '}'
+            "}"
         )
         assert has(out, "two")
 
@@ -298,7 +297,7 @@ class TestControlFlow:
         assert has(out, "10") and has(out, "30")
 
     def test_for_in(self):
-        out = js('let o = {a: 1, b: 2};\nfor (let k in o) { console.log(k); }')
+        out = js("let o = {a: 1, b: 2};\nfor (let k in o) { console.log(k); }")
         assert has(out, "a") and has(out, "b")
 
     def test_break(self):
@@ -306,7 +305,9 @@ class TestControlFlow:
         assert has(out, "2") and not has(out, "4")
 
     def test_continue(self):
-        out = js("for (let i = 0; i < 5; i++) { if (i === 2) continue; console.log(i); }")
+        out = js(
+            "for (let i = 0; i < 5; i++) { if (i === 2) continue; console.log(i); }"
+        )
         assert has(out, "1") and has(out, "3")
 
 
@@ -317,7 +318,9 @@ class TestControlFlow:
 
 class TestFunctions:
     def test_function_declaration(self):
-        out = js('function greet(name) { return "Hello " + name; }\nconsole.log(greet("World"));')
+        out = js(
+            'function greet(name) { return "Hello " + name; }\nconsole.log(greet("World"));'
+        )
         assert has(out, "Hello World")
 
     def test_arrow_function(self):
@@ -329,11 +332,15 @@ class TestFunctions:
         assert has(out, "15")
 
     def test_rest_params(self):
-        out = js("function sum(...args) { return args.reduce((a, b) => a + b, 0); }\nconsole.log(sum(1, 2, 3));")
+        out = js(
+            "function sum(...args) { return args.reduce((a, b) => a + b, 0); }\nconsole.log(sum(1, 2, 3));"
+        )
         assert has(out, "6")
 
     def test_recursive(self):
-        out = js("function fact(n) { return n <= 1 ? 1 : n * fact(n - 1); }\nconsole.log(fact(5));")
+        out = js(
+            "function fact(n) { return n <= 1 ? 1 : n * fact(n - 1); }\nconsole.log(fact(5));"
+        )
         assert has(out, "120")
 
     def test_closure(self):
@@ -411,11 +418,11 @@ class TestMath:
 
 class TestObjects:
     def test_object_literal(self):
-        out = js('let o = {x: 1, y: 2};\nconsole.log(o.x);')
+        out = js("let o = {x: 1, y: 2};\nconsole.log(o.x);")
         assert has(out, "1")
 
     def test_object_keys(self):
-        out = js('let o = {a: 1, b: 2};\nconsole.log(Object.keys(o));')
+        out = js("let o = {a: 1, b: 2};\nconsole.log(Object.keys(o));")
         assert has(out, "a") and has(out, "b")
 
     def test_object_values(self):
@@ -480,11 +487,7 @@ class TestExceptions:
 
     def test_try_finally(self):
         out = js(
-            "try {\n"
-            "  let x = 1;\n"
-            "} finally {\n"
-            "  console.log('done');\n"
-            "}"
+            "try {\n" "  let x = 1;\n" "} finally {\n" "  console.log('done');\n" "}"
         )
         assert has(out, "done")
 
@@ -520,11 +523,11 @@ class TestTypeConversions:
         assert has(out, "true")
 
     def test_JSON_stringify(self):
-        out = js('console.log(JSON.stringify({a: 1}));')
+        out = js("console.log(JSON.stringify({a: 1}));")
         assert has(out, "a") and has(out, "1")
 
     def test_JSON_parse(self):
-        out = js('let o = JSON.parse(\'{"x": 42}\');\nconsole.log(o.x);')
+        out = js("let o = JSON.parse('{\"x\": 42}');\nconsole.log(o.x);")
         assert has(out, "42")
 
 

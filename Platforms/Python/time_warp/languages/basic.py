@@ -18,6 +18,7 @@ from ..utils.string_evaluator import StringExpressionEvaluator
 
 def _basic_eval_expr(interpreter: "Interpreter", expr: str) -> float:
     """Pre-process UDT field references, then delegate to evaluate_expression."""
+
     # Replace VAR.FIELD references in expression with their numeric values
     def _field_sub(m):
         obj_name = m.group(1).upper()
@@ -31,9 +32,14 @@ def _basic_eval_expr(interpreter: "Interpreter", expr: str) -> float:
             except (TypeError, ValueError):
                 return str(val)
         return m.group(0)
-    expanded = re.sub(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)\b",
-                      _field_sub, expr)
+
+    expanded = re.sub(
+        r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)\b",
+        _field_sub,
+        expr,
+    )
     return interpreter.evaluate_expression(expanded)
+
 
 # Runtime imports moved inside functions to avoid circular imports
 
@@ -84,9 +90,7 @@ def _has_string_concat(expr: str) -> bool:
     return has_str_part and has_plus_outside
 
 
-def _try_string_comparison(
-    interpreter: "Interpreter", condition: str
-) -> "bool | None":
+def _try_string_comparison(interpreter: "Interpreter", condition: str) -> "bool | None":
     """Try to evaluate a string comparison condition.
 
     Handles patterns like:
@@ -123,9 +127,7 @@ def _try_string_comparison(
     return None
 
 
-def _resolve_string_value(
-    interpreter: "Interpreter", expr: str
-) -> "str | None":
+def _resolve_string_value(interpreter: "Interpreter", expr: str) -> "str | None":
     """Resolve a string expression to its value for comparison.
 
     Returns the string value, or None if not resolvable as a string.
@@ -144,6 +146,7 @@ def _resolve_string_value(
     if "$(" in expr_upper:
         try:
             from ..utils.string_evaluator import StringExpressionEvaluator
+
             evaluator = StringExpressionEvaluator(
                 interpreter.string_variables,
                 interpreter.numeric_variables,
@@ -275,7 +278,9 @@ def execute_basic(
         # Skipping mode — only react to structural keywords at the correct depth
         if top.get("skip"):
             # Track nested IFs so we don't pop early
-            if cmd.startswith("IF ") and (cmd.rstrip().endswith("THEN") or cmd.rstrip().endswith("THEN ")):
+            if cmd.startswith("IF ") and (
+                cmd.rstrip().endswith("THEN") or cmd.rstrip().endswith("THEN ")
+            ):
                 top["depth"] = top.get("depth", 0) + 1
                 return ""
             depth = top.get("depth", 0)
@@ -359,7 +364,12 @@ def execute_basic(
         return _basic_type_def(interpreter, _strip_comment(command[5:]))
     if cmd in ("END TYPE", "ENDTYPE"):
         return ""  # handled inside _basic_type_def by scanning
-    if "=" in cmd and not cmd.startswith("IF ") and not cmd.startswith("FOR ") and not cmd.startswith("DEF FN"):
+    if (
+        "=" in cmd
+        and not cmd.startswith("IF ")
+        and not cmd.startswith("FOR ")
+        and not cmd.startswith("DEF FN")
+    ):
         return _basic_let(interpreter, _strip_comment(command))
     if cmd.startswith("COLOR "):
         return _basic_color(interpreter, _strip_comment(command[6:]), turtle)
@@ -495,6 +505,7 @@ def execute_basic(
     # RANDOMIZE [TIMER] — seed the random number generator
     if cmd.startswith("RANDOMIZE"):
         import random as _rng
+
         _rng.seed()
         return ""
     return f"❌ Unknown BASIC command: {command}\n"
@@ -549,7 +560,7 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
     string_eval = StringExpressionEvaluator(
         string_variables=interpreter.string_variables,
         numeric_variables=interpreter.variables,
-        string_arrays=getattr(interpreter, 'string_arrays', {}),
+        string_arrays=getattr(interpreter, "string_arrays", {}),
         numeric_arrays=interpreter.arrays,
     )
 
@@ -562,7 +573,10 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
         _is_string_expr = False
         if _has_string_concat(item_trim):
             _is_string_expr = True
-        elif re.search(r'\b(STR|CHR|MID|LEFT|RIGHT|INSTR|UPPER|LOWER|TRIM|STRING)\$?\s*\(', item_upper):
+        elif re.search(
+            r"\b(STR|CHR|MID|LEFT|RIGHT|INSTR|UPPER|LOWER|TRIM|STRING)\$?\s*\(",
+            item_upper,
+        ):
             _is_string_expr = True
 
         if _is_string_expr:
@@ -607,7 +621,9 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
 
             out_items.append(str(int(get_game_state().get_timer_value())))
         # Handle string variables (end with $) or string array elements
-        elif item_upper.endswith("$") or (item_upper.endswith(")") and "$(" in item_upper):
+        elif item_upper.endswith("$") or (
+            item_upper.endswith(")") and "$(" in item_upper
+        ):
             # Check for string array element: NAMES$(I)
             if "(" in item_trim and item_trim.endswith(")"):
                 arr_name = item_trim.split("(", 1)[0].upper()
@@ -721,7 +737,7 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
                 string_eval = StringExpressionEvaluator(
                     string_variables=interpreter.string_variables,
                     numeric_variables=interpreter.variables,
-                    string_arrays=getattr(interpreter, 'string_arrays', {}),
+                    string_arrays=getattr(interpreter, "string_arrays", {}),
                     numeric_arrays=interpreter.arrays,
                 )
                 try:
@@ -749,7 +765,7 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
     if "." in var_name:
         dot_idx = var_name.index(".")
         obj_name = var_name[:dot_idx]
-        field_name = var_name[dot_idx + 1:]
+        field_name = var_name[dot_idx + 1 :]
         obj = interpreter.variables.get(obj_name)
         if isinstance(obj, dict):
             if field_name.endswith("$"):
@@ -791,7 +807,7 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
                 string_eval = StringExpressionEvaluator(
                     string_variables=interpreter.string_variables,
                     numeric_variables=interpreter.variables,
-                    string_arrays=getattr(interpreter, 'string_arrays', {}),
+                    string_arrays=getattr(interpreter, "string_arrays", {}),
                     numeric_arrays=interpreter.arrays,
                 )
                 try:
@@ -823,7 +839,7 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
                 string_eval = StringExpressionEvaluator(
                     string_variables=interpreter.string_variables,
                     numeric_variables=interpreter.variables,
-                    string_arrays=getattr(interpreter, 'string_arrays', {}),
+                    string_arrays=getattr(interpreter, "string_arrays", {}),
                     numeric_arrays=interpreter.arrays,
                 )
                 str_result = string_eval.evaluate(expr)
@@ -895,8 +911,8 @@ def _basic_if(
     if then_pos == -1:
         return "❌ IF requires THEN keyword\n"
 
-    condition = args[:then_pos + 1].strip()
-    then_part = args[then_pos + 6:].strip() if (then_pos + 6) < len(args) else ""
+    condition = args[: then_pos + 1].strip()
+    then_part = args[then_pos + 6 :].strip() if (then_pos + 6) < len(args) else ""
 
     # --- String comparison handling ---
     # Detect conditions like: NAME$ = "", A$ <> "hello", X$ = Y$
@@ -914,10 +930,12 @@ def _basic_if(
     if not then_part:
         if not hasattr(interpreter, "_basic_if_stack"):
             interpreter._basic_if_stack = []
-        interpreter._basic_if_stack.append({
-            "skip": not condition_true,
-            "depth": 0,
-        })
+        interpreter._basic_if_stack.append(
+            {
+                "skip": not condition_true,
+                "depth": 0,
+            }
+        )
         return ""
 
     # Inline IF...THEN...ELSE
@@ -925,7 +943,7 @@ def _basic_if(
     then_upper = then_part.upper()
     else_pos = then_upper.find(" ELSE ")
     if else_pos != -1:
-        else_part = then_part[else_pos + 6:].strip()
+        else_part = then_part[else_pos + 6 :].strip()
         then_part = then_part[:else_pos].strip()
 
     if condition_true and then_part:
@@ -1591,6 +1609,7 @@ def _basic_exec_sql(interpreter: "Interpreter", query: str) -> str:
     """EXEC SQL <query> — Execute a T-SQL statement from BASIC."""
     try:
         from ..core.sql_engine import SQLSession
+
         sess = getattr(interpreter, "sql_session", None)
         if sess is None:
             sess = SQLSession()
@@ -1964,6 +1983,7 @@ def _basic_call(interpreter: "Interpreter", args: str) -> str:
 def _basic_type_def(interpreter: "Interpreter", args: str) -> str:
     """TYPE typename ... END TYPE - Define a user-defined type (VB-classic)."""
     import re as _re
+
     type_name = args.strip().upper()
     if not type_name:
         return "❌ TYPE requires a name\n"
@@ -1983,8 +2003,11 @@ def _basic_type_def(interpreter: "Interpreter", args: str) -> str:
             interpreter.current_line = scan_line
             break
         # Field declaration: fieldname AS type
-        fm = _re.match(r"^\s*([A-Za-z_][A-Za-z0-9_]*\$?)\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)\s*$",
-                       stripped, _re.IGNORECASE)
+        fm = _re.match(
+            r"^\s*([A-Za-z_][A-Za-z0-9_]*\$?)\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)\s*$",
+            stripped,
+            _re.IGNORECASE,
+        )
         if fm:
             fname = fm.group(1).strip().upper()
             ftype = fm.group(2).strip().upper()
@@ -2016,8 +2039,12 @@ def _basic_dim(interpreter: "Interpreter", args: str) -> str:
         part = part.strip()
         # DIM varname AS typename — user-defined type instance
         import re as _re
-        as_m = _re.match(r"^([A-Za-z_][A-Za-z0-9_]*\$?)\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)$",
-                         part, _re.IGNORECASE)
+
+        as_m = _re.match(
+            r"^([A-Za-z_][A-Za-z0-9_]*\$?)\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)$",
+            part,
+            _re.IGNORECASE,
+        )
         if as_m:
             var_name = as_m.group(1).strip().upper()
             type_name = as_m.group(2).strip().upper()

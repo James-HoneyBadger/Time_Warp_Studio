@@ -94,7 +94,7 @@ class APLEnvironment:
                     self._exec_lines(lines, i + 1, then_end)
                 else:
                     executed = False
-                    for (ei_cond_str, es, ee) in else_ranges:
+                    for ei_cond_str, es, ee in else_ranges:
                         if ei_cond_str is None:  # :Else block
                             if not executed:
                                 self._exec_lines(lines, es, ee)
@@ -147,7 +147,9 @@ class APLEnvironment:
                 continue
 
             # Skip block-end markers
-            if re.match(r"^:(EndIf|EndFor|EndWhile|Else|ElseIf)\b", line, re.IGNORECASE):
+            if re.match(
+                r"^:(EndIf|EndFor|EndWhile|Else|ElseIf)\b", line, re.IGNORECASE
+            ):
                 i += 1
                 continue
 
@@ -268,8 +270,10 @@ class APLEnvironment:
             return m.group(1).replace("''", "'")
 
         # Boolean
-        if expr == "1": return 1
-        if expr == "0": return 0
+        if expr == "1":
+            return 1
+        if expr == "0":
+            return 0
 
         # Vector literal: numbers separated by spaces
         m = re.match(r"^([\d¯.\s]+)$", expr)
@@ -390,7 +394,7 @@ class APLEnvironment:
                 continue
             if tok in _DYADIC_FUNS:
                 left = self._eval_tokens(tokens[:i])
-                right = self._eval_tokens(tokens[i+1:])
+                right = self._eval_tokens(tokens[i + 1 :])
                 return self._apply_dyadic(tok, left, right)
 
         # Numeric vector
@@ -415,34 +419,61 @@ class APLEnvironment:
                 return list(range(1, int(arr) + 1))
             if fn in ("+", "-", "×", "÷", "*", "⌈", "⌊", "!", "≢", "|"):
                 return [self._apply_monadic(fn, x) for x in arr]
-            if fn == "⌽": return arr[::-1]
+            if fn == "⌽":
+                return arr[::-1]
             if fn == "⍉":
                 # Transpose: simple 2D case
                 if arr and isinstance(arr[0], list):
                     return [list(row) for row in zip(*arr)]
                 return arr
-            if fn == "⍋": return sorted(range(len(arr)), key=lambda i: arr[i])
-            if fn == "⍒": return sorted(range(len(arr)), key=lambda i: -arr[i] if isinstance(arr[i], (int, float)) else arr[i], reverse=False)
-            if fn == ",": return arr  # ravel is identity on 1D
-            if fn == "≢": return len(arr)
-            if fn == "⍴": return [len(arr)]
-            if fn == "~": return [0 if x else 1 for x in arr]
+            if fn == "⍋":
+                return sorted(range(len(arr)), key=lambda i: arr[i])
+            if fn == "⍒":
+                return sorted(
+                    range(len(arr)),
+                    key=lambda i: (
+                        -arr[i] if isinstance(arr[i], (int, float)) else arr[i]
+                    ),
+                    reverse=False,
+                )
+            if fn == ",":
+                return arr  # ravel is identity on 1D
+            if fn == "≢":
+                return len(arr)
+            if fn == "⍴":
+                return [len(arr)]
+            if fn == "~":
+                return [0 if x else 1 for x in arr]
         else:
             n = arr
-            if fn == "⍳": return list(range(1, int(n) + 1))
-            if fn == "+": return n
-            if fn == "-": return -n
-            if fn == "|": return abs(n)
-            if fn == "×": return 0 if n == 0 else (1 if n > 0 else -1)
-            if fn == "÷": return 1 / n if n else float("inf")
-            if fn == "*": return math.exp(n)
-            if fn == "⌈": return math.ceil(n)
-            if fn == "⌊": return math.floor(n)
-            if fn == "!": return math.factorial(int(n))
-            if fn == "≢": return 1
-            if fn == "⍴": return []
-            if fn == ",": return [n]
-            if fn == "~": return 0 if n else 1
+            if fn == "⍳":
+                return list(range(1, int(n) + 1))
+            if fn == "+":
+                return n
+            if fn == "-":
+                return -n
+            if fn == "|":
+                return abs(n)
+            if fn == "×":
+                return 0 if n == 0 else (1 if n > 0 else -1)
+            if fn == "÷":
+                return 1 / n if n else float("inf")
+            if fn == "*":
+                return math.exp(n)
+            if fn == "⌈":
+                return math.ceil(n)
+            if fn == "⌊":
+                return math.floor(n)
+            if fn == "!":
+                return math.factorial(int(n))
+            if fn == "≢":
+                return 1
+            if fn == "⍴":
+                return []
+            if fn == ",":
+                return [n]
+            if fn == "~":
+                return 0 if n else 1
         return arr
 
     def _apply_dyadic(self, fn: str, left: Any, right: Any) -> Any:
@@ -464,22 +495,37 @@ class APLEnvironment:
         elif isinstance(right, list):
             return [self._apply_dyadic(fn, left, r) for r in right]
         # Scalars
-        if fn == "+": return left + right
-        if fn == "-": return left - right
-        if fn == "×": return left * right
-        if fn == "÷": return left / right if right else float("inf")
-        if fn == "*": return left ** right
-        if fn == "⌈": return max(left, right)
-        if fn == "⌊": return min(left, right)
-        if fn == "=": return 1 if left == right else 0
-        if fn == "≠": return 1 if left != right else 0
-        if fn == "<": return 1 if left < right else 0
-        if fn == ">": return 1 if left > right else 0
-        if fn == "≤": return 1 if left <= right else 0
-        if fn == "≥": return 1 if left >= right else 0
-        if fn == "|": return right % left if left else right
+        if fn == "+":
+            return left + right
+        if fn == "-":
+            return left - right
+        if fn == "×":
+            return left * right
+        if fn == "÷":
+            return left / right if right else float("inf")
+        if fn == "*":
+            return left**right
+        if fn == "⌈":
+            return max(left, right)
+        if fn == "⌊":
+            return min(left, right)
+        if fn == "=":
+            return 1 if left == right else 0
+        if fn == "≠":
+            return 1 if left != right else 0
+        if fn == "<":
+            return 1 if left < right else 0
+        if fn == ">":
+            return 1 if left > right else 0
+        if fn == "≤":
+            return 1 if left <= right else 0
+        if fn == "≥":
+            return 1 if left >= right else 0
+        if fn == "|":
+            return right % left if left else right
         if fn == "!":
             from math import comb
+
             return comb(int(right), int(left))
         if fn == "⍴":
             # Reshape: left is shape, right is data
@@ -500,8 +546,10 @@ class APLEnvironment:
             l_list = left if isinstance(left, list) else [left]
             r_list = right if isinstance(right, list) else [right]
             return l_list + r_list
-        if fn == "↑": return right[:int(left)] if isinstance(right, list) else right
-        if fn == "↓": return right[int(left):] if isinstance(right, list) else right
+        if fn == "↑":
+            return right[: int(left)] if isinstance(right, list) else right
+        if fn == "↓":
+            return right[int(left) :] if isinstance(right, list) else right
         if fn == "⌹":
             # Simple: scalar inverse
             return 1 / right if right else 0
@@ -543,9 +591,53 @@ class APLEnvironment:
 # Helpers
 # ---------------------------------------------------------------------------
 
-_MONADIC_FUNS = set(["⍳", "+", "-", "×", "÷", "*", "⌈", "⌊", "!", "≢", "⌽", "⍉", "⍋", "⍒", ",", "⍴", "~", "|"])
-_DYADIC_FUNS = set(["+", "-", "×", "÷", "*", "⌈", "⌊", "=", "≠", "<", ">", "≤", "≥",
-                    "|", "!", "⍴", "∊", ",", "↑", "↓", "⌹"])
+_MONADIC_FUNS = set(
+    [
+        "⍳",
+        "+",
+        "-",
+        "×",
+        "÷",
+        "*",
+        "⌈",
+        "⌊",
+        "!",
+        "≢",
+        "⌽",
+        "⍉",
+        "⍋",
+        "⍒",
+        ",",
+        "⍴",
+        "~",
+        "|",
+    ]
+)
+_DYADIC_FUNS = set(
+    [
+        "+",
+        "-",
+        "×",
+        "÷",
+        "*",
+        "⌈",
+        "⌊",
+        "=",
+        "≠",
+        "<",
+        ">",
+        "≤",
+        "≥",
+        "|",
+        "!",
+        "⍴",
+        "∊",
+        ",",
+        "↑",
+        "↓",
+        "⌹",
+    ]
+)
 
 
 def _apl_tokenize(expr: str) -> list[str]:
@@ -561,7 +653,7 @@ def _apl_tokenize(expr: str) -> list[str]:
             j = i + 1
             s = []
             while j < len(expr):
-                if expr[j] == "'" and j + 1 < len(expr) and expr[j+1] == "'":
+                if expr[j] == "'" and j + 1 < len(expr) and expr[j + 1] == "'":
                     s.append("'")
                     j += 2
                 elif expr[j] == "'":
@@ -573,12 +665,14 @@ def _apl_tokenize(expr: str) -> list[str]:
             tokens.append("'" + "".join(s) + "'")
             i = j
             continue
-        if ch == "(" :
+        if ch == "(":
             depth = 1
             j = i + 1
             while j < len(expr) and depth > 0:
-                if expr[j] == "(": depth += 1
-                elif expr[j] == ")": depth -= 1
+                if expr[j] == "(":
+                    depth += 1
+                elif expr[j] == ")":
+                    depth -= 1
                 j += 1
             tokens.append(expr[i:j])
             i = j
@@ -593,10 +687,18 @@ def _apl_tokenize(expr: str) -> list[str]:
             i = j
             continue
         # Number (possibly negative ¯)
-        if ch == "¯" or ch.isdigit() or (ch == "." and i + 1 < len(expr) and expr[i+1].isdigit()):
+        if (
+            ch == "¯"
+            or ch.isdigit()
+            or (ch == "." and i + 1 < len(expr) and expr[i + 1].isdigit())
+        ):
             j = i + 1
-            while j < len(expr) and (expr[j].isdigit() or expr[j] == "." or expr[j] == "E" or
-                                       (expr[j] == "-" and j > 0 and expr[j-1] == "E")):
+            while j < len(expr) and (
+                expr[j].isdigit()
+                or expr[j] == "."
+                or expr[j] == "E"
+                or (expr[j] == "-" and j > 0 and expr[j - 1] == "E")
+            ):
                 j += 1
             tokens.append(expr[i:j])
             i = j

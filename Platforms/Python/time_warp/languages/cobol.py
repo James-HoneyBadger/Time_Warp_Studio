@@ -22,7 +22,10 @@ if TYPE_CHECKING:
 # Public API
 # ---------------------------------------------------------------------------
 
-def execute_cobol(interpreter: "Interpreter", source: str, turtle: "TurtleState") -> str:
+
+def execute_cobol(
+    interpreter: "Interpreter", source: str, turtle: "TurtleState"
+) -> str:
     """Execute a complete COBOL program and return all output."""
     env = CobolEnvironment(interpreter, turtle)
     return env.run(source)
@@ -32,15 +35,34 @@ def execute_cobol(interpreter: "Interpreter", source: str, turtle: "TurtleState"
 # Environment
 # ---------------------------------------------------------------------------
 
+
 class CobolEnvironment:
     # COBOL end-scope markers — must NOT be treated as paragraph names
-    _END_MARKERS = frozenset({
-        "END-PERFORM", "END-IF", "END-EVALUATE", "END-READ", "END-WRITE",
-        "END-SEARCH", "END-COMPUTE", "END-ADD", "END-SUBTRACT",
-        "END-MULTIPLY", "END-DIVIDE", "END-STRING", "END-UNSTRING",
-        "END-CALL", "END-START", "END-DELETE", "END-REWRITE",
-        "END-RETURN", "END-ACCEPT", "END-DISPLAY", "STOP",
-    })
+    _END_MARKERS = frozenset(
+        {
+            "END-PERFORM",
+            "END-IF",
+            "END-EVALUATE",
+            "END-READ",
+            "END-WRITE",
+            "END-SEARCH",
+            "END-COMPUTE",
+            "END-ADD",
+            "END-SUBTRACT",
+            "END-MULTIPLY",
+            "END-DIVIDE",
+            "END-STRING",
+            "END-UNSTRING",
+            "END-CALL",
+            "END-START",
+            "END-DELETE",
+            "END-REWRITE",
+            "END-RETURN",
+            "END-ACCEPT",
+            "END-DISPLAY",
+            "STOP",
+        }
+    )
 
     def __init__(self, interpreter: "Interpreter", turtle: "TurtleState"):
         self.interpreter = interpreter
@@ -159,7 +181,9 @@ class CobolEnvironment:
                 continue
 
             # Skip section headers
-            if re.match(r"^(?:WORKING-STORAGE|FILE|LINKAGE|LOCAL-STORAGE)\s+SECTION", line, re.I):
+            if re.match(
+                r"^(?:WORKING-STORAGE|FILE|LINKAGE|LOCAL-STORAGE)\s+SECTION", line, re.I
+            ):
                 if division != "DATA":
                     division = "DATA"
                 continue
@@ -191,7 +215,11 @@ class CobolEnvironment:
             if not stripped:
                 continue
             # Skip section headers
-            if re.match(r"^(?:WORKING-STORAGE|FILE|LINKAGE|LOCAL-STORAGE)\s+SECTION", stripped, re.I):
+            if re.match(
+                r"^(?:WORKING-STORAGE|FILE|LINKAGE|LOCAL-STORAGE)\s+SECTION",
+                stripped,
+                re.I,
+            ):
                 continue
             # Data declarations
             if re.match(r"^(?:0?1|77|05)\s+[\w-]+\s+PIC\s+", stripped):
@@ -218,7 +246,7 @@ class CobolEnvironment:
         # Level 01/77  VAR-NAME  PIC X(10) VALUE SPACES.
         m = re.match(
             r"^(?:0?1|77|05)\s+([\w-]+)\s+PIC\s+([\w()\d]+)(?:\s+VALUE\s+(.+?))?\.?\s*$",
-            line
+            line,
         )
         if m:
             name = m.group(1)
@@ -233,14 +261,14 @@ class CobolEnvironment:
         if value_str.upper() in ("ZEROS", "ZEROES", "ZERO"):
             return 0 if is_numeric else "0"
         if value_str.startswith('"') or value_str.startswith("'"):
-            return value_str.strip('"\'')
+            return value_str.strip("\"'")
         try:
-            return int(value_str) if is_numeric else value_str.strip('"\'')
+            return int(value_str) if is_numeric else value_str.strip("\"'")
         except ValueError:
             try:
                 return float(value_str)
             except ValueError:
-                return value_str.strip('"\'')
+                return value_str.strip("\"'")
 
     # ------------------------------------------------------------------
     # Execution
@@ -324,7 +352,9 @@ class CobolEnvironment:
             return
 
         # ADD x TO y [GIVING z]
-        m = re.match(r"^ADD\s+(.+?)\s+TO\s+(\w[\w-]*?)(?:\s+GIVING\s+(\w[\w-]*))?$", stmt)
+        m = re.match(
+            r"^ADD\s+(.+?)\s+TO\s+(\w[\w-]*?)(?:\s+GIVING\s+(\w[\w-]*))?$", stmt
+        )
         if m:
             a = self._eval(m.group(1).strip())
             b = self._eval(m.group(2).strip())
@@ -334,7 +364,9 @@ class CobolEnvironment:
             return
 
         # SUBTRACT x FROM y [GIVING z]
-        m = re.match(r"^SUBTRACT\s+(.+?)\s+FROM\s+(\w[\w-]*?)(?:\s+GIVING\s+(\w[\w-]*))?$", stmt)
+        m = re.match(
+            r"^SUBTRACT\s+(.+?)\s+FROM\s+(\w[\w-]*?)(?:\s+GIVING\s+(\w[\w-]*))?$", stmt
+        )
         if m:
             a = _to_num(self._eval(m.group(1).strip()))
             b = _to_num(self._eval(m.group(2).strip()))
@@ -344,7 +376,9 @@ class CobolEnvironment:
             return
 
         # MULTIPLY x BY y [GIVING z]
-        m = re.match(r"^MULTIPLY\s+(.+?)\s+BY\s+(\w[\w-]*?)(?:\s+GIVING\s+(\w[\w-]*))?$", stmt)
+        m = re.match(
+            r"^MULTIPLY\s+(.+?)\s+BY\s+(\w[\w-]*?)(?:\s+GIVING\s+(\w[\w-]*))?$", stmt
+        )
         if m:
             a = _to_num(self._eval(m.group(1).strip()))
             b = _to_num(self._eval(m.group(2).strip()))
@@ -354,7 +388,9 @@ class CobolEnvironment:
             return
 
         # DIVIDE x INTO y [GIVING z]
-        m = re.match(r"^DIVIDE\s+(.+?)\s+INTO\s+(\w[\w-]*?)(?:\s+GIVING\s+(\w[\w-]*))?$", stmt)
+        m = re.match(
+            r"^DIVIDE\s+(.+?)\s+INTO\s+(\w[\w-]*?)(?:\s+GIVING\s+(\w[\w-]*))?$", stmt
+        )
         if m:
             a = _to_num(self._eval(m.group(1).strip()))
             b = _to_num(self._eval(m.group(2).strip()))
@@ -378,7 +414,7 @@ class CobolEnvironment:
         # PERFORM VARYING
         m = re.match(
             r"^PERFORM\s+VARYING\s+(\w[\w-]*)\s+FROM\s+(.+?)\s+BY\s+(.+?)\s+UNTIL\s+(.+)$",
-            stmt
+            stmt,
         )
         if m:
             var = m.group(1)
@@ -416,7 +452,11 @@ class CobolEnvironment:
         # ACCEPT
         m = re.match(r"^ACCEPT\s+([\w-]+)$", stmt)
         if m:
-            val = self.interpreter.request_input(f"Enter {m.group(1)}: ") if hasattr(self.interpreter, "request_input") else ""
+            val = (
+                self.interpreter.request_input(f"Enter {m.group(1)}: ")
+                if hasattr(self.interpreter, "request_input")
+                else ""
+            )
             self._vars[m.group(1)] = val
             return
 
@@ -455,12 +495,14 @@ class CobolEnvironment:
                         val_str = m3.group(1).strip()
                         action = m3.group(2).strip()
                         if re.search(r"\bTHROUGH\b|\bTHRU\b", val_str, re.I):
-                            parts_ = re.split(r"\bTHROUGH\b|\bTHRU\b", val_str, maxsplit=1, flags=re.I)
+                            parts_ = re.split(
+                                r"\bTHROUGH\b|\bTHRU\b", val_str, maxsplit=1, flags=re.I
+                            )
                             low = _to_num(self._eval(parts_[0].strip()))
                             high = _to_num(self._eval(parts_[1].strip()))
                             test = low <= _to_num(subject) <= high
                         else:
-                            test = (self._eval(val_str) == subject)
+                            test = self._eval(val_str) == subject
                         if test:
                             self._exec_stmt(action)
                             matched = True
@@ -492,18 +534,31 @@ class CobolEnvironment:
             src_part = m.group(1)
             dest_var = m.group(2).upper()
             # Extract pieces before DELIMITED tokens
-            pieces = re.split(r"\s+DELIMITED\s+(?:BY\s+)?(?:SIZE|SPACE|SPACES|['\"][^'\"]*['\"]|[\w-]+)\s*", src_part, flags=re.I)
-            result_str = "".join(self._resolve_str(p.strip()) for p in pieces if p.strip())
+            pieces = re.split(
+                r"\s+DELIMITED\s+(?:BY\s+)?(?:SIZE|SPACE|SPACES|['\"][^'\"]*['\"]|[\w-]+)\s*",
+                src_part,
+                flags=re.I,
+            )
+            result_str = "".join(
+                self._resolve_str(p.strip()) for p in pieces if p.strip()
+            )
             self._vars[dest_var] = result_str
             return
 
         # UNSTRING src DELIMITED BY delim INTO v1 [, v2 ...]
-        m = re.match(r"^UNSTRING\s+([\w-]+)\s+DELIMITED\s+(?:BY\s+)?(.+?)\s+INTO\s+(.+)$", stmt, re.I)
+        m = re.match(
+            r"^UNSTRING\s+([\w-]+)\s+DELIMITED\s+(?:BY\s+)?(.+?)\s+INTO\s+(.+)$",
+            stmt,
+            re.I,
+        )
         if m:
             src_var = m.group(1).upper()
             delim_raw = m.group(2).strip()
             # Multiple delimiters: split on " OR "
-            delims = [self._resolve_str(d.strip()) for d in re.split(r"\s+OR\s+", delim_raw, flags=re.I)]
+            delims = [
+                self._resolve_str(d.strip())
+                for d in re.split(r"\s+OR\s+", delim_raw, flags=re.I)
+            ]
             targets_str = m.group(3)
             targets = [t.strip() for t in re.split(r",\s*", targets_str) if t.strip()]
             src_val = str(self._vars.get(src_var, ""))
@@ -516,7 +571,11 @@ class CobolEnvironment:
             return
 
         # INSPECT TALLYING
-        m = re.match(r"^INSPECT\s+([\w-]+)\s+TALLYING\s+([\w-]+)\s+FOR\s+(ALL|LEADING|TRAILING)\s+(.+)$", stmt, re.I)
+        m = re.match(
+            r"^INSPECT\s+([\w-]+)\s+TALLYING\s+([\w-]+)\s+FOR\s+(ALL|LEADING|TRAILING)\s+(.+)$",
+            stmt,
+            re.I,
+        )
         if m:
             var = m.group(1).upper()
             counter = m.group(2).upper()
@@ -545,7 +604,11 @@ class CobolEnvironment:
             return
 
         # INSPECT REPLACING
-        m = re.match(r"^INSPECT\s+([\w-]+)\s+REPLACING\s+(ALL|LEADING|FIRST)\s+(.+?)\s+BY\s+(.+)$", stmt, re.I)
+        m = re.match(
+            r"^INSPECT\s+([\w-]+)\s+REPLACING\s+(ALL|LEADING|FIRST)\s+(.+?)\s+BY\s+(.+)$",
+            stmt,
+            re.I,
+        )
         if m:
             var = m.group(1).upper()
             mode = m.group(2).upper()
@@ -559,13 +622,15 @@ class CobolEnvironment:
             return
 
         # INSPECT CONVERTING
-        m = re.match(r"^INSPECT\s+([\w-]+)\s+CONVERTING\s+(.+?)\s+TO\s+(.+)$", stmt, re.I)
+        m = re.match(
+            r"^INSPECT\s+([\w-]+)\s+CONVERTING\s+(.+?)\s+TO\s+(.+)$", stmt, re.I
+        )
         if m:
             var = m.group(1).upper()
             from_str = self._resolve_str(m.group(2).strip())
             to_str = self._resolve_str(m.group(3).strip())
             src = str(self._vars.get(var, ""))
-            tbl = str.maketrans(from_str, to_str[:len(from_str)])
+            tbl = str.maketrans(from_str, to_str[: len(from_str)])
             self._vars[var] = src.translate(tbl)
             return
 
@@ -579,7 +644,11 @@ class CobolEnvironment:
             return
 
         # PERFORM UNTIL (inline body)
-        m = re.match(r"^PERFORM\s+UNTIL\s+(.+?)\s+(PERFORM\s+.+|DISPLAY\s+.+|MOVE\s+.+|ADD\s+.+)$", stmt, re.I)
+        m = re.match(
+            r"^PERFORM\s+UNTIL\s+(.+?)\s+(PERFORM\s+.+|DISPLAY\s+.+|MOVE\s+.+|ADD\s+.+)$",
+            stmt,
+            re.I,
+        )
         if m:
             until_cond = m.group(1).strip()
             body_stmt = m.group(2).strip()
@@ -591,7 +660,9 @@ class CobolEnvironment:
             return
 
         # ADD ... GIVING
-        m = re.match(r"^ADD\s+(.+?)\s+(?:AND\s+(.+?)\s+)?GIVING\s+([\w-]+)$", stmt, re.I)
+        m = re.match(
+            r"^ADD\s+(.+?)\s+(?:AND\s+(.+?)\s+)?GIVING\s+([\w-]+)$", stmt, re.I
+        )
         if m:
             a = _to_num(self._eval(m.group(1).strip()))
             b = _to_num(self._eval(m.group(2).strip())) if m.group(2) else 0
@@ -599,7 +670,9 @@ class CobolEnvironment:
             return
 
         # SUBTRACT ... FROM ... GIVING
-        m = re.match(r"^SUBTRACT\s+(.+?)\s+FROM\s+(.+?)\s+GIVING\s+([\w-]+)$", stmt, re.I)
+        m = re.match(
+            r"^SUBTRACT\s+(.+?)\s+FROM\s+(.+?)\s+GIVING\s+([\w-]+)$", stmt, re.I
+        )
         if m:
             a = _to_num(self._eval(m.group(1).strip()))
             b = _to_num(self._eval(m.group(2).strip()))
@@ -607,7 +680,11 @@ class CobolEnvironment:
             return
 
         # DIVIDE ... INTO/BY ... GIVING ... [REMAINDER ...]
-        m = re.match(r"^DIVIDE\s+(.+?)\s+(INTO|BY)\s+(.+?)\s+GIVING\s+([\w-]+)(?:\s+REMAINDER\s+([\w-]+))?$", stmt, re.I)
+        m = re.match(
+            r"^DIVIDE\s+(.+?)\s+(INTO|BY)\s+(.+?)\s+GIVING\s+([\w-]+)(?:\s+REMAINDER\s+([\w-]+))?$",
+            stmt,
+            re.I,
+        )
         if m:
             a = _to_num(self._eval(m.group(1).strip()))
             keyword = m.group(2).upper()
@@ -632,7 +709,7 @@ class CobolEnvironment:
             dst_prefix = m.group(2).upper()
             for key, val in list(self._vars.items()):
                 if key.startswith(src_prefix + "-") or key.startswith(src_prefix + "."):
-                    suffix = key[len(src_prefix):]
+                    suffix = key[len(src_prefix) :]
                     dst_key = dst_prefix + suffix
                     self._vars[dst_key] = val
             return
@@ -644,10 +721,12 @@ class CobolEnvironment:
             dst_prefix = m.group(2).upper()
             for key, val in list(self._vars.items()):
                 if key.startswith(src_prefix + "-") or key.startswith(src_prefix + "."):
-                    suffix = key[len(src_prefix):]
+                    suffix = key[len(src_prefix) :]
                     dst_key = dst_prefix + suffix
                     if dst_key in self._vars:
-                        self._vars[dst_key] = _to_num(self._vars[dst_key]) + _to_num(val)
+                        self._vars[dst_key] = _to_num(self._vars[dst_key]) + _to_num(
+                            val
+                        )
             return
 
         # CALL external program
@@ -694,7 +773,11 @@ class CobolEnvironment:
             return
 
         # READ file [INTO var] [AT END stmt]
-        m = re.match(r"^READ\s+([\w-]+)\s*(?:INTO\s+([\w-]+))?\s*(?:AT\s+END\s+(.+))?$", stmt, re.I)
+        m = re.match(
+            r"^READ\s+([\w-]+)\s*(?:INTO\s+([\w-]+))?\s*(?:AT\s+END\s+(.+))?$",
+            stmt,
+            re.I,
+        )
         if m:
             fname = m.group(1).upper()
             into_var = m.group(2).upper() if m.group(2) else None
@@ -745,21 +828,31 @@ class CobolEnvironment:
             return
 
         # SORT table [ON ASCENDING/DESCENDING KEY field]
-        m = re.match(r"^SORT\s+([\w-]+)\s+ON\s+(ASCENDING|DESCENDING)\s+KEY\s+([\w-]+)", stmt, re.I)
+        m = re.match(
+            r"^SORT\s+([\w-]+)\s+ON\s+(ASCENDING|DESCENDING)\s+KEY\s+([\w-]+)",
+            stmt,
+            re.I,
+        )
         if m:
             table_var = m.group(1).upper()
             order = m.group(2).upper()
-            reverse = (order == "DESCENDING")
+            reverse = order == "DESCENDING"
             prefix = table_var + "("
             entries = {k: v for k, v in self._vars.items() if k.startswith(prefix)}
             if entries:
-                sorted_items = sorted(entries.items(), key=lambda kv: str(kv[1]), reverse=reverse)
+                sorted_items = sorted(
+                    entries.items(), key=lambda kv: str(kv[1]), reverse=reverse
+                )
                 for k, v in sorted_items:
                     self._vars[k] = v
             return
 
         # SEARCH table VARYING idx WHEN cond stmt
-        m = re.match(r"^SEARCH\s+([\w-]+)\s+(?:VARYING\s+([\w-]+)\s+)?WHEN\s+(.+?)\s+(PERFORM\s+[\w-]+|DISPLAY\s+.+)$", stmt, re.I)
+        m = re.match(
+            r"^SEARCH\s+([\w-]+)\s+(?:VARYING\s+([\w-]+)\s+)?WHEN\s+(.+?)\s+(PERFORM\s+[\w-]+|DISPLAY\s+.+)$",
+            stmt,
+            re.I,
+        )
         if m:
             idx_var = (m.group(2) or m.group(1) + "-IDX").upper()
             cond = m.group(3).strip()
@@ -817,8 +910,10 @@ class CobolEnvironment:
             self._emit(f"ℹ️  SQL: fetch complete")
             return
         # Skip INCLUDE / BEGIN DECLARE SECTION / END DECLARE SECTION
-        if re.match(r"^(INCLUDE|BEGIN\s+DECLARE\s+SECTION|END\s+DECLARE\s+SECTION)\b",
-                    sql_upper_strip):
+        if re.match(
+            r"^(INCLUDE|BEGIN\s+DECLARE\s+SECTION|END\s+DECLARE\s+SECTION)\b",
+            sql_upper_strip,
+        ):
             return
 
         # SELECT ... INTO :var1[, :var2, ...]  — identify and strip INTO clause
@@ -829,8 +924,9 @@ class CobolEnvironment:
             into_vars = re.findall(r":\w[\w-]*", into_m.group(0))
             into_var = into_vars[0].lstrip(":").upper() if into_vars else None
             # Remove the INTO clause from inner before substitution
-            inner = re.sub(r"\bINTO\s+(?:\s*:\w[\w-]*\s*,)*\s*:\w[\w-]*", "",
-                           inner, flags=re.I).strip()
+            inner = re.sub(
+                r"\bINTO\s+(?:\s*:\w[\w-]*\s*,)*\s*:\w[\w-]*", "", inner, flags=re.I
+            ).strip()
 
         # Substitute :cobol-var host variables  → bare value
         def _subst_host(m_: re.Match) -> str:
@@ -839,22 +935,34 @@ class CobolEnvironment:
             if isinstance(val, str):
                 return f"'{val}'"
             return str(val)
+
         sql_with_vals = re.sub(r":(\w[\w-]*)", _subst_host, inner)
 
         # Normalise DB2/mainframe SQL to SQLite equivalents
         # CURRENT DATE → date('now')
-        sql_with_vals = re.sub(r"\bCURRENT\s+DATE\b", "date('now')", sql_with_vals, flags=re.I)
+        sql_with_vals = re.sub(
+            r"\bCURRENT\s+DATE\b", "date('now')", sql_with_vals, flags=re.I
+        )
         # CURRENT TIMESTAMP → datetime('now')
-        sql_with_vals = re.sub(r"\bCURRENT\s+TIMESTAMP\b", "datetime('now')", sql_with_vals, flags=re.I)
+        sql_with_vals = re.sub(
+            r"\bCURRENT\s+TIMESTAMP\b", "datetime('now')", sql_with_vals, flags=re.I
+        )
         # FETCH FIRST n ROW(S) ONLY → LIMIT n
-        sql_with_vals = re.sub(r"\bFETCH\s+FIRST\s+(\d+)\s+ROW(?:S)?\s+ONLY\b", r"LIMIT \1",
-                               sql_with_vals, flags=re.I)
+        sql_with_vals = re.sub(
+            r"\bFETCH\s+FIRST\s+(\d+)\s+ROW(?:S)?\s+ONLY\b",
+            r"LIMIT \1",
+            sql_with_vals,
+            flags=re.I,
+        )
         # WITH UR / WITH CS / WITH RS  — isolation hints, strip
-        sql_with_vals = re.sub(r"\bWITH\s+(?:UR|CS|RS|RR)\b", "", sql_with_vals, flags=re.I)
+        sql_with_vals = re.sub(
+            r"\bWITH\s+(?:UR|CS|RS|RR)\b", "", sql_with_vals, flags=re.I
+        )
 
         # Run through the SQL engine
         try:
             from ..core.sql_engine import SQLSession
+
             session = getattr(self.interpreter, "sql_session", None)
             if session is None:
                 session = SQLSession()
@@ -863,16 +971,24 @@ class CobolEnvironment:
             self._emit(result)
             # If INTO target given and result contains a value, store it
             if into_var and result.strip():
-                lines = [l for l in result.strip().splitlines() if l.strip() and not l.startswith("-")]
+                lines = [
+                    l
+                    for l in result.strip().splitlines()
+                    if l.strip() and not l.startswith("-")
+                ]
                 if len(lines) >= 2:  # header + row
-                    self._vars[into_var] = lines[1].strip().split()[0] if lines[1].strip() else ""
+                    self._vars[into_var] = (
+                        lines[1].strip().split()[0] if lines[1].strip() else ""
+                    )
         except Exception as e:
             err_str = str(e)
             # "no such table" is a demo-mode limitation; emit as info, not error
             if "no such table" in err_str.lower():
                 tbl_m = re.search(r"no such table:\s*(\S+)", err_str, re.I)
                 tbl = tbl_m.group(1) if tbl_m else "?"
-                self._emit(f"ℹ️  SQL: table '{tbl}' not found (demo mode — table not pre-created)")
+                self._emit(
+                    f"ℹ️  SQL: table '{tbl}' not found (demo mode — table not pre-created)"
+                )
             else:
                 self._emit(f"❌ EXEC SQL error: {e}")
 
@@ -898,8 +1014,8 @@ class CobolEnvironment:
         # Find where condition ends (first COBOL verb)
         vm = self._VERBS_RE.search(then_full)
         if vm:
-            cond = then_full[:vm.start()].strip()
-            then_body = then_full[vm.start():].strip()
+            cond = then_full[: vm.start()].strip()
+            then_body = then_full[vm.start() :].strip()
         else:
             cond = then_full
             then_body = ""
@@ -921,14 +1037,26 @@ class CobolEnvironment:
                 self._exec_stmt(body)
             return
         # PERFORM VARYING var FROM x BY y UNTIL cond body
-        vm = self._VERBS_RE.search(body_full, re.match(
-            r"^PERFORM\s+VARYING\s+[\w-]+\s+FROM\s+.+?\s+BY\s+.+?\s+UNTIL\s+", body_full, re.I
-        ).end() if re.match(
-            r"^PERFORM\s+VARYING\s+[\w-]+\s+FROM\s+.+?\s+BY\s+.+?\s+UNTIL\s+", body_full, re.I
-        ) else 0)
+        vm = self._VERBS_RE.search(
+            body_full,
+            (
+                re.match(
+                    r"^PERFORM\s+VARYING\s+[\w-]+\s+FROM\s+.+?\s+BY\s+.+?\s+UNTIL\s+",
+                    body_full,
+                    re.I,
+                ).end()
+                if re.match(
+                    r"^PERFORM\s+VARYING\s+[\w-]+\s+FROM\s+.+?\s+BY\s+.+?\s+UNTIL\s+",
+                    body_full,
+                    re.I,
+                )
+                else 0
+            ),
+        )
         hdr = re.match(
             r"^PERFORM\s+VARYING\s+([\w-]+)\s+FROM\s+(.+?)\s+BY\s+(.+?)\s+UNTIL\s+(.+)",
-            body_full, re.I,
+            body_full,
+            re.I,
         )
         if hdr and vm:
             var = hdr.group(1)
@@ -938,8 +1066,8 @@ class CobolEnvironment:
             until_and_body = hdr.group(4)
             vm2 = self._VERBS_RE.search(until_and_body)
             if vm2:
-                until_expr = until_and_body[:vm2.start()].strip()
-                body = until_and_body[vm2.start():].strip()
+                until_expr = until_and_body[: vm2.start()].strip()
+                body = until_and_body[vm2.start() :].strip()
             else:
                 until_expr = until_and_body.strip()
                 body = ""
@@ -957,8 +1085,8 @@ class CobolEnvironment:
             rest = hdr2.group(1)
             vm3 = self._VERBS_RE.search(rest)
             if vm3:
-                until_expr = rest[:vm3.start()].strip()
-                body = rest[vm3.start():].strip()
+                until_expr = rest[: vm3.start()].strip()
+                body = rest[vm3.start() :].strip()
                 for _ in range(10000):
                     if self._eval_cond(until_expr):
                         break
@@ -972,13 +1100,13 @@ class CobolEnvironment:
     def _resolve_str(self, expr: str) -> str:
         """Resolve DISPLAY argument (string literal or variable)."""
         if expr.startswith('"') or expr.startswith("'"):
-            return expr.strip('"\'')
+            return expr.strip("\"'")
         # Concatenation: "hello" " " NAME
         parts = re.findall(r'"[^"]*"|\'[^\']*\'|[\w-]+', expr)
         result = []
         for p in parts:
             if p.startswith('"') or p.startswith("'"):
-                result.append(p.strip('"\''))
+                result.append(p.strip("\"'"))
             else:
                 result.append(str(self._vars.get(p, p)))
         return "".join(result)
@@ -986,7 +1114,7 @@ class CobolEnvironment:
     def _eval(self, expr: str) -> Any:
         expr = expr.strip()
         if expr.startswith('"') or expr.startswith("'"):
-            return expr.strip('"\'')
+            return expr.strip("\"'")
         if expr.upper() == "SPACES" or expr.upper() == "SPACE":
             return " "
         if expr.upper() in ("ZEROS", "ZEROES", "ZERO"):
@@ -1000,12 +1128,14 @@ class CobolEnvironment:
 
     def _arith(self, expr: str) -> Any:
         """Evaluate simple arithmetic expression using Python eval."""
+
         # Translate COBOL names to Python
         def replace(m):
             name = m.group(0)
             if name in self._vars:
                 return str(self._vars[name])
             return name
+
         pyexpr = re.sub(r"[\w-]+", replace, expr)
         pyexpr = pyexpr.replace("**", "**")
         try:
@@ -1015,7 +1145,11 @@ class CobolEnvironment:
 
     def _eval_cond(self, cond: str) -> bool:
         """Evaluate a simple COBOL condition."""
-        m = re.match(r"^(.+?)\s*(=|NOT EQUAL|EQUAL TO|NOT EQUAL TO|>|<|>=|<=)\s*(.+)$", cond, re.IGNORECASE)
+        m = re.match(
+            r"^(.+?)\s*(=|NOT EQUAL|EQUAL TO|NOT EQUAL TO|>|<|>=|<=)\s*(.+)$",
+            cond,
+            re.IGNORECASE,
+        )
         if m:
             lhs = _to_num_or_str(self._eval(m.group(1).strip()))
             op = m.group(2).strip().upper()
@@ -1038,6 +1172,7 @@ class CobolEnvironment:
 # ---------------------------------------------------------------------------
 # Exceptions and helpers
 # ---------------------------------------------------------------------------
+
 
 class CobolStop(Exception):
     pass

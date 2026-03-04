@@ -30,7 +30,9 @@ if TYPE_CHECKING:
     from ..core.turtle_state import TurtleState
 
 
-def execute_haskell(interpreter: "Interpreter", source: str, turtle: "TurtleState") -> str:
+def execute_haskell(
+    interpreter: "Interpreter", source: str, turtle: "TurtleState"
+) -> str:
     """Execute a Haskell-subset program and return all output."""
     env = HaskellEnvironment(interpreter, turtle)
     return env.run(source)
@@ -81,7 +83,11 @@ class HaskellEnvironment:
         d["putStrLn"] = lambda s: emit(str(s) + "\n") or ()
         d["putStr"] = lambda s: emit(str(s)) or ()
         d["print"] = lambda x: emit(_haskell_show(x) + "\n") or ()
-        d["getLine"] = lambda: (interp.request_input("haskell> ") if hasattr(interp, "request_input") else "")
+        d["getLine"] = lambda: (
+            interp.request_input("haskell> ")
+            if hasattr(interp, "request_input")
+            else ""
+        )
         d["return"] = lambda x: x
 
         # Prelude functions
@@ -139,16 +145,18 @@ class HaskellEnvironment:
         d["unzip"] = lambda pairs: ([a for a, _ in pairs], [b for _, b in pairs])
         d["concat"] = lambda xss: [x for xs in xss for x in xs]
         d["concatMap"] = lambda f: lambda xs: [y for x in xs for y in f(x)]
-        d["take"] = lambda n: lambda xs: xs[:int(n)]
-        d["drop"] = lambda n: lambda xs: xs[int(n):]
+        d["take"] = lambda n: lambda xs: xs[: int(n)]
+        d["drop"] = lambda n: lambda xs: xs[int(n) :]
         d["takeWhile"] = lambda f: lambda xs: list(_takewhile(f, xs))
         d["dropWhile"] = lambda f: lambda xs: list(_dropwhile(f, xs))
-        d["splitAt"] = lambda n: lambda xs: (xs[:int(n)], xs[int(n):])
+        d["splitAt"] = lambda n: lambda xs: (xs[: int(n)], xs[int(n) :])
         d["span"] = lambda f: lambda xs: _span(f, xs)
         d["break_"] = lambda f: lambda xs: _span(lambda x: not f(x), xs)
         d["elem"] = lambda x: lambda xs: x in xs
         d["notElem"] = lambda x: lambda xs: x not in xs
-        d["lookup"] = lambda k: lambda pairs: next((v for key, v in pairs if key == k), None)
+        d["lookup"] = lambda k: lambda pairs: next(
+            (v for key, v in pairs if key == k), None
+        )
         d["replicate"] = lambda n: lambda x: [x] * int(n)
         d["iterate"] = lambda f: lambda x: _iterate(f, x)
         d["lines"] = lambda s: s.splitlines()
@@ -216,7 +224,9 @@ class HaskellEnvironment:
                 # Gather continuation lines (indented)
                 body_lines = [body_str]
                 j = i + 1
-                while j < len(lines) and (lines[j].startswith(" ") or lines[j].startswith("\t")):
+                while j < len(lines) and (
+                    lines[j].startswith(" ") or lines[j].startswith("\t")
+                ):
                     body_lines.append(lines[j].strip())
                     j += 1
                 full_body = "\n".join(body_lines)
@@ -239,19 +249,25 @@ class HaskellEnvironment:
         else:
             # Curried function — use live _defs so recursive calls work
             env = self._defs
+
             def make_fn(p_list, body_, env_):
                 if len(p_list) == 1:
+
                     def fn(arg):
                         local = env_.copy()
                         local[p_list[0]] = arg
                         return HaskellEvaluator(self, local).eval(body_)
+
                     return fn
                 else:
+
                     def fn(arg):
                         local = env_.copy()
                         local[p_list[0]] = arg
                         return make_fn(p_list[1:], body_, local)
+
                     return fn
+
             return make_fn(params, body, env)
 
     def _eval_expr(self, expr: str) -> Any:
@@ -277,7 +293,9 @@ class HaskellThunk:
 
     def force(self) -> Any:
         if not self._forced:
-            self._value = HaskellEvaluator(self.env, self.env._defs.copy()).eval(self.expr)
+            self._value = HaskellEvaluator(self.env, self.env._defs.copy()).eval(
+                self.expr
+            )
             self._forced = True
         return self._value
 
@@ -297,11 +315,16 @@ class HaskellEvaluator:
             return expr.force()
 
         # Literals
-        if expr == "True": return True
-        if expr == "False": return False
-        if expr == "Nothing": return None
-        if expr == "[]": return []
-        if expr == "()": return ()
+        if expr == "True":
+            return True
+        if expr == "False":
+            return False
+        if expr == "Nothing":
+            return None
+        if expr == "[]":
+            return []
+        if expr == "()":
+            return ()
 
         # String literal
         m = re.match(r'^"((?:[^"\\]|\\.)*)"$', expr)
@@ -354,7 +377,10 @@ class HaskellEvaluator:
             # Range [a..b] or [a,b..c]
             range_m = re.match(r"^(.+?)\.\.\s*(.+)?$", inner)
             if range_m:
-                return self._eval_range(range_m.group(1).strip(), range_m.group(2) and range_m.group(2).strip())
+                return self._eval_range(
+                    range_m.group(1).strip(),
+                    range_m.group(2) and range_m.group(2).strip(),
+                )
             # Tuple from list (treat as Python list)
             parts = _split_commas_haskell(inner)
             return [self.eval(p.strip()) for p in parts]
@@ -406,7 +432,9 @@ class HaskellEvaluator:
             for binding in bindings_str.split(";"):
                 bm = re.match(r"^\s*(\w+)\s*=\s*(.+)$", binding.strip())
                 if bm:
-                    local[bm.group(1)] = HaskellEvaluator(self.env, local).eval(bm.group(2).strip())
+                    local[bm.group(1)] = HaskellEvaluator(self.env, local).eval(
+                        bm.group(2).strip()
+                    )
             return HaskellEvaluator(self.env, local).eval(body)
 
         # if-then-else
@@ -445,20 +473,45 @@ class HaskellEvaluator:
             local = self.scope.copy()
             # Split bindings by semicolons or newlines, supporting multi-line where blocks
             import re as _re2
+
             raw_bindings = _re2.split(r";|\n", where_str)
             for binding in raw_bindings:
                 bm = re.match(r"^\s*(\w+)\s*=\s*(.+)$", binding.strip())
                 if bm:
-                    local[bm.group(1)] = HaskellEvaluator(self.env, local).eval(bm.group(2).strip())
+                    local[bm.group(1)] = HaskellEvaluator(self.env, local).eval(
+                        bm.group(2).strip()
+                    )
             return HaskellEvaluator(self.env, local).eval(body)
 
         # Operator expressions (lowest precedence first)
-        for op in ["||", "&&", "==", "/=", "<=", ">=", "<", ">", ":", "++"
-                   , "+", "-", "*", "/", "^", "**", "!!", ".", "$", "`div`", "`mod`", "`elem`"]:
+        for op in [
+            "||",
+            "&&",
+            "==",
+            "/=",
+            "<=",
+            ">=",
+            "<",
+            ">",
+            ":",
+            "++",
+            "+",
+            "-",
+            "*",
+            "/",
+            "^",
+            "**",
+            "!!",
+            ".",
+            "$",
+            "`div`",
+            "`mod`",
+            "`elem`",
+        ]:
             idx = _find_op_haskell(expr, op)
             if idx > 0:
                 lhs_s = expr[:idx].strip()
-                rhs_s = expr[idx + len(op):].strip()
+                rhs_s = expr[idx + len(op) :].strip()
                 if not lhs_s:
                     continue
                 lhs = self.eval(lhs_s)
@@ -510,16 +563,20 @@ class HaskellEvaluator:
     def _make_lambda(self, params: list[str], body: str):
         scope = self.scope.copy()
         if len(params) == 1:
+
             def lam(x, p=params[0], b=body, s=scope):
                 local = s.copy()
                 local[p] = x
                 return HaskellEvaluator(self.env, local).eval(b)
+
             return lam
         else:
+
             def lam_curry(x, p=params[0], rest=params[1:], b=body, s=scope):
                 local = s.copy()
                 local[p] = x
                 return HaskellEvaluator(self.env, local)._make_lambda(rest, b)
+
             return lam_curry
 
     def _eval_range(self, start_s: str, end_s: str | None) -> list:
@@ -535,7 +592,11 @@ class HaskellEvaluator:
                 result = []
                 cur = a
                 while (step > 0 and cur <= c + 1e-9) or (step < 0 and cur >= c - 1e-9):
-                    result.append(cur if isinstance(cur, int) else (int(cur) if cur == int(cur) else cur))
+                    result.append(
+                        cur
+                        if isinstance(cur, int)
+                        else (int(cur) if cur == int(cur) else cur)
+                    )
                     if len(result) > 10000:
                         break
                     cur += step
@@ -556,7 +617,7 @@ class HaskellEvaluator:
         """[expr | x <- list, guard, ...]"""
         pipe_idx = inner.index("|")
         expr_s = inner[:pipe_idx].strip()
-        generators_s = inner[pipe_idx+1:].strip()
+        generators_s = inner[pipe_idx + 1 :].strip()
         generators = self._split_generators(generators_s)
         results: list = []
         self._expand_generators(generators, 0, self.scope.copy(), expr_s, results)
@@ -583,7 +644,9 @@ class HaskellEvaluator:
             parts.append(rest)
         return parts
 
-    def _expand_generators(self, gens: list[str], idx: int, scope: dict, expr_s: str, results: list):
+    def _expand_generators(
+        self, gens: list[str], idx: int, scope: dict, expr_s: str, results: list
+    ):
         if idx >= len(gens):
             results.append(HaskellEvaluator(self.env, scope).eval(expr_s))
             return
@@ -605,7 +668,7 @@ class HaskellEvaluator:
         if pattern == "_":
             return True
         if pattern.startswith('"') or pattern.startswith("'"):
-            return str(value) == pattern.strip('"\'')
+            return str(value) == pattern.strip("\"'")
         try:
             return value == int(pattern)
         except ValueError:
@@ -624,7 +687,9 @@ class HaskellEvaluator:
             inner = pattern[1:-1].strip()
             parts = _split_commas_haskell(inner)
             if isinstance(value, (list, tuple)) and len(parts) == len(value):
-                return all(self._match_pattern(p.strip(), v) for p, v in zip(parts, value))
+                return all(
+                    self._match_pattern(p.strip(), v) for p, v in zip(parts, value)
+                )
         # Variable (always matches, binds)
         if re.match(r"^\w+$", pattern):
             self.scope[pattern] = value
@@ -698,12 +763,18 @@ class HaskellEvaluator:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _haskell_show(val: Any) -> str:
-    if isinstance(val, bool): return "True" if val else "False"
-    if isinstance(val, str): return '"' + val + '"'
-    if isinstance(val, list): return "[" + ", ".join(_haskell_show(x) for x in val) + "]"
-    if isinstance(val, tuple): return "(" + ", ".join(_haskell_show(x) for x in val) + ")"
-    if val is None: return "Nothing"
+    if isinstance(val, bool):
+        return "True" if val else "False"
+    if isinstance(val, str):
+        return '"' + val + '"'
+    if isinstance(val, list):
+        return "[" + ", ".join(_haskell_show(x) for x in val) + "]"
+    if isinstance(val, tuple):
+        return "(" + ", ".join(_haskell_show(x) for x in val) + ")"
+    if val is None:
+        return "Nothing"
     return str(val)
 
 
@@ -717,7 +788,11 @@ def _product(xs):
 def _foldl(f, z, xs):
     acc = z
     for x in xs:
-        acc = f(acc)(x) if not isinstance(f(acc), (int, float, str, bool, list, tuple)) else f(acc, x)
+        acc = (
+            f(acc)(x)
+            if not isinstance(f(acc), (int, float, str, bool, list, tuple))
+            else f(acc, x)
+        )
     return acc
 
 
@@ -825,9 +900,15 @@ def _find_op_haskell(expr: str, op: str) -> int:
             depth += 1
         elif ch in ")]}":
             depth -= 1
-        elif depth == 0 and expr[i:i+len(op)] == op:
+        elif depth == 0 and expr[i : i + len(op)] == op:
             # Skip '.' when it's a decimal point (digit.digit)
-            if op == "." and i > 0 and i + 1 < len(expr) and expr[i-1].isdigit() and expr[i+1].isdigit():
+            if (
+                op == "."
+                and i > 0
+                and i + 1 < len(expr)
+                and expr[i - 1].isdigit()
+                and expr[i + 1].isdigit()
+            ):
                 i += 1
                 continue
             if i > 0:
@@ -837,28 +918,46 @@ def _find_op_haskell(expr: str, op: str) -> int:
 
 
 def _apply_op_haskell(lhs: Any, op: str, rhs: Any) -> Any:
-    if op == "+": return lhs + rhs
-    if op == "-": return lhs - rhs
-    if op == "*": return lhs * rhs
-    if op == "/": return lhs / rhs
-    if op == "^" or op == "**": return lhs ** rhs
-    if op == "==": return lhs == rhs
-    if op == "/=": return lhs != rhs
-    if op == "<": return lhs < rhs
-    if op == ">": return lhs > rhs
-    if op == "<=": return lhs <= rhs
-    if op == ">=": return lhs >= rhs
-    if op == "&&": return lhs and rhs
-    if op == "||": return lhs or rhs
-    if op == ":": return [lhs] + list(rhs)
+    if op == "+":
+        return lhs + rhs
+    if op == "-":
+        return lhs - rhs
+    if op == "*":
+        return lhs * rhs
+    if op == "/":
+        return lhs / rhs
+    if op == "^" or op == "**":
+        return lhs**rhs
+    if op == "==":
+        return lhs == rhs
+    if op == "/=":
+        return lhs != rhs
+    if op == "<":
+        return lhs < rhs
+    if op == ">":
+        return lhs > rhs
+    if op == "<=":
+        return lhs <= rhs
+    if op == ">=":
+        return lhs >= rhs
+    if op == "&&":
+        return lhs and rhs
+    if op == "||":
+        return lhs or rhs
+    if op == ":":
+        return [lhs] + list(rhs)
     if op == "++":
         if isinstance(lhs, str) and isinstance(rhs, str):
             return lhs + rhs
         return list(lhs) + list(rhs)
-    if op == "!!": return list(lhs)[int(rhs)]
-    if op == "`div`" or op == "div": return int(lhs) // int(rhs)
-    if op == "`mod`" or op == "mod": return int(lhs) % int(rhs)
-    if op == "`elem`" or op == "elem": return lhs in rhs
+    if op == "!!":
+        return list(lhs)[int(rhs)]
+    if op == "`div`" or op == "div":
+        return int(lhs) // int(rhs)
+    if op == "`mod`" or op == "mod":
+        return int(lhs) % int(rhs)
+    if op == "`elem`" or op == "elem":
+        return lhs in rhs
     if op == ".":
         # Function composition
         fn_g, fn_f = lhs, rhs

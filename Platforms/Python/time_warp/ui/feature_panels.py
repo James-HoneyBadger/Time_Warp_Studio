@@ -99,10 +99,31 @@ class SyntaxValidatorPanel(FeaturePanelBase):
         lang_layout.addWidget(QLabel("Language:"))
         self.lang_combo = QComboBox()
         self.lang_combo.addItems(
-            ["BASIC", "LOGO", "PILOT", "PASCAL", "C", "FORTH", "PROLOG", "PYTHON",
-             "LUA", "SCHEME", "COBOL", "BRAINFUCK", "ASSEMBLY", "JAVASCRIPT",
-             "FORTRAN", "REXX", "SMALLTALK", "HYPERTALK", "HASKELL", "APL",
-             "SQL", "JCL", "CICS"]
+            [
+                "BASIC",
+                "LOGO",
+                "PILOT",
+                "PASCAL",
+                "C",
+                "FORTH",
+                "PROLOG",
+                "PYTHON",
+                "LUA",
+                "SCHEME",
+                "COBOL",
+                "BRAINFUCK",
+                "ASSEMBLY",
+                "JAVASCRIPT",
+                "FORTRAN",
+                "REXX",
+                "SMALLTALK",
+                "HYPERTALK",
+                "HASKELL",
+                "APL",
+                "SQL",
+                "JCL",
+                "CICS",
+            ]
         )
         lang_layout.addWidget(self.lang_combo)
         lang_layout.addStretch()

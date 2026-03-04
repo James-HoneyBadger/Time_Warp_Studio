@@ -102,8 +102,15 @@ class CoachMarkOverlay(QWidget):
     # Visual update
     # ------------------------------------------------------------------
 
-    def set_step(self, target_rect: QRect, title: str, body: str, step: int,
-                 total: int, above: bool = False):
+    def set_step(
+        self,
+        target_rect: QRect,
+        title: str,
+        body: str,
+        step: int,
+        total: int,
+        above: bool = False,
+    ):
         """Configure the overlay for the given step."""
         self._target_rect = target_rect
         self._callout_title = title
@@ -156,9 +163,7 @@ class CoachMarkOverlay(QWidget):
         # Highlight ring around spotlight
         if not self._target_rect.isNull():
             painter.setPen(QPen(QColor(81, 162, 255, 200), 2))
-            painter.drawRoundedRect(
-                self._target_rect.adjusted(-6, -6, 6, 6), 8, 8
-            )
+            painter.drawRoundedRect(self._target_rect.adjusted(-6, -6, 6, 6), 8, 8)
 
 
 class CoachMarkManager:
@@ -274,8 +279,12 @@ class CoachMarkManager:
         total = len(self.STEPS)
         above = self._step_index >= total // 2  # flip callout side at midpoint
         self._overlay.set_step(
-            rect, title, body,
-            self._step_index + 1, total, above=above,
+            rect,
+            title,
+            body,
+            self._step_index + 1,
+            total,
+            above=above,
         )
 
         # Update Next button text for last step

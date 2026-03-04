@@ -26,20 +26,44 @@ from pathlib import Path
 from typing import List, Optional
 
 from PySide6.QtCore import (
-    QAbstractTableModel, QModelIndex, QSortFilterProxyModel,
-    Qt, QThread, Signal,
+    QAbstractTableModel,
+    QModelIndex,
+    QSortFilterProxyModel,
+    Qt,
+    QThread,
+    Signal,
 )
 from PySide6.QtGui import (
-    QColor, QFont,
+    QColor,
+    QFont,
 )
 from PySide6.QtWidgets import (
-    QCheckBox, QComboBox,
-    QDialog, QDialogButtonBox, QFileDialog, QFormLayout,
-    QGroupBox, QHBoxLayout, QLabel, QLineEdit,
-    QMainWindow, QMenu, QMessageBox, QPlainTextEdit,
-    QPushButton, QSplitter, QStatusBar, QTabWidget,
-    QTableView, QTableWidget, QTableWidgetItem, QToolBar,
-    QTreeWidget, QTreeWidgetItem, QVBoxLayout, QWidget,
+    QCheckBox,
+    QComboBox,
+    QDialog,
+    QDialogButtonBox,
+    QFileDialog,
+    QFormLayout,
+    QGroupBox,
+    QHBoxLayout,
+    QLabel,
+    QLineEdit,
+    QMainWindow,
+    QMenu,
+    QMessageBox,
+    QPlainTextEdit,
+    QPushButton,
+    QSplitter,
+    QStatusBar,
+    QTabWidget,
+    QTableView,
+    QTableWidget,
+    QTableWidgetItem,
+    QToolBar,
+    QTreeWidget,
+    QTreeWidgetItem,
+    QVBoxLayout,
+    QWidget,
 )
 
 # ---------------------------------------------------------------------------
@@ -50,14 +74,18 @@ try:
     from .sql_panel import TSQLHighlighter
 except ImportError:
     from Platforms.Python.time_warp.core.sql_engine import (
-        SQLSession, list_databases, create_session,
+        SQLSession,
+        list_databases,
+        create_session,
     )
-    TSQLHighlighter = None   # type: ignore
+
+    TSQLHighlighter = None  # type: ignore
 
 
 # ============================================================================
 # Shared helpers
 # ============================================================================
+
 
 def _make_label(text: str, bold: bool = False) -> QLabel:
     lb = QLabel(text)
@@ -79,6 +107,7 @@ def _mono_font(size: int = 10) -> QFont:
 # 1. Query Analyzer Tab
 # ============================================================================
 
+
 class _RunThread(QThread):
     result_ready = Signal(str)
     rows_ready = Signal(list, list)
@@ -91,7 +120,9 @@ class _RunThread(QThread):
     def run(self):
         try:
             # Multi-statement: split on GO
-            batches = re.split(r"^\s*GO\s*$", self._sql, flags=re.MULTILINE | re.IGNORECASE)
+            batches = re.split(
+                r"^\s*GO\s*$", self._sql, flags=re.MULTILINE | re.IGNORECASE
+            )
             out_parts = []
             last_rows: List = []
             last_cols: List = []
@@ -108,14 +139,10 @@ class _RunThread(QThread):
                         if cur.description:
                             last_cols = [d[0] for d in cur.description]
                             last_rows = [list(r) for r in cur.fetchmany(5000)]
-                            out_parts.append(
-                                f"({len(last_rows)} row(s) returned)"
-                            )
+                            out_parts.append(f"({len(last_rows)} row(s) returned)")
                         else:
                             conn.commit()
-                            out_parts.append(
-                                f"({cur.rowcount} row(s) affected)"
-                            )
+                            out_parts.append(f"({cur.rowcount} row(s) affected)")
                     except Exception as e:
                         out_parts.append(f"❌ {e}")
             self.result_ready.emit("\n".join(out_parts))
@@ -211,8 +238,9 @@ class QueryAnalyzerTab(QWidget):
         ef_lay.setContentsMargins(0, 0, 0, 0)
         self._editor = QPlainTextEdit()
         self._editor.setFont(_mono_font(11))
-        self._editor.setPlaceholderText("-- Enter T-SQL here.   F5 = Execute\n"
-                                        "SELECT @@VERSION\nGO")
+        self._editor.setPlaceholderText(
+            "-- Enter T-SQL here.   F5 = Execute\n" "SELECT @@VERSION\nGO"
+        )
         if TSQLHighlighter:
             self._hl = TSQLHighlighter(self._editor.document())
         ef_lay.addWidget(self._editor)
@@ -326,14 +354,40 @@ class QueryAnalyzerTab(QWidget):
     @staticmethod
     def _do_format(sql: str) -> str:
         """Simple T-SQL formatter: uppercase keywords, newlines on clauses."""
-        kw = ["SELECT", "FROM", "WHERE", "JOIN", "INNER JOIN", "LEFT JOIN",
-              "RIGHT JOIN", "ON", "GROUP BY", "ORDER BY", "HAVING", "UNION",
-              "INSERT INTO", "VALUES", "UPDATE", "SET", "DELETE FROM",
-              "CREATE TABLE", "ALTER TABLE", "DROP TABLE", "BEGIN", "END",
-              "DECLARE", "EXEC", "EXECUTE", "IF", "ELSE", "WHILE"]
+        kw = [
+            "SELECT",
+            "FROM",
+            "WHERE",
+            "JOIN",
+            "INNER JOIN",
+            "LEFT JOIN",
+            "RIGHT JOIN",
+            "ON",
+            "GROUP BY",
+            "ORDER BY",
+            "HAVING",
+            "UNION",
+            "INSERT INTO",
+            "VALUES",
+            "UPDATE",
+            "SET",
+            "DELETE FROM",
+            "CREATE TABLE",
+            "ALTER TABLE",
+            "DROP TABLE",
+            "BEGIN",
+            "END",
+            "DECLARE",
+            "EXEC",
+            "EXECUTE",
+            "IF",
+            "ELSE",
+            "WHILE",
+        ]
         for k in sorted(kw, key=len, reverse=True):
-            sql = re.sub(r"\b" + re.escape(k) + r"\b", "\n" + k, sql,
-                         flags=re.IGNORECASE)
+            sql = re.sub(
+                r"\b" + re.escape(k) + r"\b", "\n" + k, sql, flags=re.IGNORECASE
+            )
         return sql.strip()
 
     def _export_csv(self):
@@ -341,15 +395,21 @@ class QueryAnalyzerTab(QWidget):
         if not model or model.rowCount() == 0:
             QMessageBox.information(self, "Export", "No results to export.")
             return
-        path, _ = QFileDialog.getSaveFileName(self, "Export CSV", "", "CSV Files (*.csv)")
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Export CSV", "", "CSV Files (*.csv)"
+        )
         if not path:
             return
         with open(path, "w", newline="", encoding="utf-8") as f:
             w = csv.writer(f)
-            cols = [model.headerData(c, Qt.Horizontal) for c in range(model.columnCount())]
+            cols = [
+                model.headerData(c, Qt.Horizontal) for c in range(model.columnCount())
+            ]
             w.writerow(cols)
             for r in range(model.rowCount()):
-                row = [model.data(model.index(r, c)) for c in range(model.columnCount())]
+                row = [
+                    model.data(model.index(r, c)) for c in range(model.columnCount())
+                ]
                 w.writerow(row)
         QMessageBox.information(self, "Export", f"Exported to {path}")
 
@@ -358,10 +418,11 @@ class QueryAnalyzerTab(QWidget):
 # 2. Object Explorer Tree
 # ============================================================================
 
+
 class ObjectExplorer(QWidget):
     """Tree view of all databases → tables/views/procs/triggers."""
 
-    object_activated = Signal(str, str, str)   # (kind, db, object_name)
+    object_activated = Signal(str, str, str)  # (kind, db, object_name)
 
     def __init__(self, get_session, parent=None):
         super().__init__(parent)
@@ -410,10 +471,10 @@ class ObjectExplorer(QWidget):
             return
         conn = sess._conn
         categories = {
-            "📋 Tables":    "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name",
-            "👁 Views":     "SELECT name FROM sqlite_master WHERE type='view'  ORDER BY name",
-            "⚡ Indexes":   "SELECT name FROM sqlite_master WHERE type='index' ORDER BY name",
-            "⚙ Triggers":  "SELECT name FROM sqlite_master WHERE type='trigger' ORDER BY name",
+            "📋 Tables": "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name",
+            "👁 Views": "SELECT name FROM sqlite_master WHERE type='view'  ORDER BY name",
+            "⚡ Indexes": "SELECT name FROM sqlite_master WHERE type='index' ORDER BY name",
+            "⚙ Triggers": "SELECT name FROM sqlite_master WHERE type='trigger' ORDER BY name",
         }
         for cat_label, query in categories.items():
             cat_item = QTreeWidgetItem([cat_label])
@@ -445,25 +506,35 @@ class ObjectExplorer(QWidget):
         kind, db, name = data
         menu = QMenu(self)
         if kind in ("tables", "table"):
-            menu.addAction(f"Select top 1000 from {name}",
-                           lambda: self.object_activated.emit("select_top", db, name))
-            menu.addAction("Edit table structure",
-                           lambda: self.object_activated.emit("edit_table", db, name))
-            menu.addAction(f"Drop table {name}",
-                           lambda: self._drop_object(db, "TABLE", name))
+            menu.addAction(
+                f"Select top 1000 from {name}",
+                lambda: self.object_activated.emit("select_top", db, name),
+            )
+            menu.addAction(
+                "Edit table structure",
+                lambda: self.object_activated.emit("edit_table", db, name),
+            )
+            menu.addAction(
+                f"Drop table {name}", lambda: self._drop_object(db, "TABLE", name)
+            )
         elif kind in ("views", "view"):
-            menu.addAction("Show view definition",
-                           lambda: self.object_activated.emit("view_def", db, name))
-            menu.addAction(f"Drop view {name}",
-                           lambda: self._drop_object(db, "VIEW", name))
+            menu.addAction(
+                "Show view definition",
+                lambda: self.object_activated.emit("view_def", db, name),
+            )
+            menu.addAction(
+                f"Drop view {name}", lambda: self._drop_object(db, "VIEW", name)
+            )
         elif kind in ("indexes", "index"):
-            menu.addAction(f"Drop index {name}",
-                           lambda: self._drop_object(db, "INDEX", name))
+            menu.addAction(
+                f"Drop index {name}", lambda: self._drop_object(db, "INDEX", name)
+            )
         menu.exec(self._tree.mapToGlobal(pos))
 
     def _drop_object(self, db: str, kind: str, name: str):
         reply = QMessageBox.question(
-            self, f"Drop {kind}",
+            self,
+            f"Drop {kind}",
             f"Drop {kind} [{name}] from database [{db}]?",
             QMessageBox.Yes | QMessageBox.No,
         )
@@ -494,6 +565,7 @@ class ObjectExplorer(QWidget):
 # ============================================================================
 # 3. Table Designer
 # ============================================================================
+
 
 class TableDesigner(QWidget):
     """Visual table creation/modification tool."""
@@ -590,11 +662,17 @@ class TableDesigner(QWidget):
             for r in rows:
                 self._add_column_row()
                 row_idx = self._col_table.rowCount() - 1
-                self._col_table.setItem(row_idx, 0, QTableWidgetItem(r[1]))   # name
-                self._col_table.setItem(row_idx, 1, QTableWidgetItem(r[2]))   # type
-                self._col_table.setItem(row_idx, 3, QTableWidgetItem("Y" if r[3] else ""))
-                self._col_table.setItem(row_idx, 4, QTableWidgetItem("PK" if r[5] else ""))
-                self._col_table.setItem(row_idx, 5, QTableWidgetItem(str(r[4]) if r[4] else ""))
+                self._col_table.setItem(row_idx, 0, QTableWidgetItem(r[1]))  # name
+                self._col_table.setItem(row_idx, 1, QTableWidgetItem(r[2]))  # type
+                self._col_table.setItem(
+                    row_idx, 3, QTableWidgetItem("Y" if r[3] else "")
+                )
+                self._col_table.setItem(
+                    row_idx, 4, QTableWidgetItem("PK" if r[5] else "")
+                )
+                self._col_table.setItem(
+                    row_idx, 5, QTableWidgetItem(str(r[4]) if r[4] else "")
+                )
         except Exception as e:
             QMessageBox.warning(self, "Load Table", str(e))
 
@@ -603,11 +681,32 @@ class TableDesigner(QWidget):
         self._col_table.insertRow(row)
         # Data type combo
         type_combo = QComboBox()
-        for t in ["INT", "BIGINT", "SMALLINT", "TINYINT", "BIT",
-                  "DECIMAL", "NUMERIC", "FLOAT", "REAL", "MONEY",
-                  "VARCHAR", "NVARCHAR", "CHAR", "NCHAR", "TEXT", "NTEXT",
-                  "DATETIME", "DATE", "TIME", "TIMESTAMP",
-                  "BINARY", "VARBINARY", "IMAGE", "UNIQUEIDENTIFIER"]:
+        for t in [
+            "INT",
+            "BIGINT",
+            "SMALLINT",
+            "TINYINT",
+            "BIT",
+            "DECIMAL",
+            "NUMERIC",
+            "FLOAT",
+            "REAL",
+            "MONEY",
+            "VARCHAR",
+            "NVARCHAR",
+            "CHAR",
+            "NCHAR",
+            "TEXT",
+            "NTEXT",
+            "DATETIME",
+            "DATE",
+            "TIME",
+            "TIMESTAMP",
+            "BINARY",
+            "VARBINARY",
+            "IMAGE",
+            "UNIQUEIDENTIFIER",
+        ]:
             type_combo.addItem(t)
         self._col_table.setCellWidget(row, 1, type_combo)
         self._col_table.setItem(row, 2, QTableWidgetItem("50"))
@@ -635,12 +734,22 @@ class TableDesigner(QWidget):
             len_item = self._col_table.item(r, 2)
             length = len_item.text().strip() if len_item else ""
             nn_w = self._col_table.cellWidget(r, 3)
-            not_null = " NOT NULL" if isinstance(nn_w, QCheckBox) and nn_w.isChecked() else ""
+            not_null = (
+                " NOT NULL" if isinstance(nn_w, QCheckBox) and nn_w.isChecked() else ""
+            )
             pk_w = self._col_table.cellWidget(r, 4)
             is_pk = isinstance(pk_w, QCheckBox) and pk_w.isChecked()
             def_item = self._col_table.item(r, 5)
-            default = f" DEFAULT {def_item.text().strip()}" if def_item and def_item.text().strip() else ""
-            full_type = f"{dtype}({length})" if length and dtype in ("VARCHAR", "NVARCHAR", "CHAR", "DECIMAL") else dtype
+            default = (
+                f" DEFAULT {def_item.text().strip()}"
+                if def_item and def_item.text().strip()
+                else ""
+            )
+            full_type = (
+                f"{dtype}({length})"
+                if length and dtype in ("VARCHAR", "NVARCHAR", "CHAR", "DECIMAL")
+                else dtype
+            )
             if dtype in ("INT", "BIGINT") and is_pk:
                 col_def = f"  [{name}] {full_type} IDENTITY(1,1) NOT NULL"
             else:
@@ -649,13 +758,17 @@ class TableDesigner(QWidget):
             if is_pk:
                 pks.append(f"[{name}]")
         if pks:
-            cols.append(f"  CONSTRAINT [PK_{self._table_name.text()}] PRIMARY KEY ({', '.join(pks)})")
+            cols.append(
+                f"  CONSTRAINT [PK_{self._table_name.text()}] PRIMARY KEY ({', '.join(pks)})"
+            )
         tname = self._table_name.text().strip() or "new_table"
         if self._editing_table:
             # ALTER TABLE … we just regenerate as DROP+CREATE for simplicity
-            sql = (f"-- Recreate table (backup data first!)\n"
-                   f"DROP TABLE IF EXISTS [{self._editing_table}];\n"
-                   f"CREATE TABLE [{tname}] (\n" + ",\n".join(cols) + "\n);")
+            sql = (
+                f"-- Recreate table (backup data first!)\n"
+                f"DROP TABLE IF EXISTS [{self._editing_table}];\n"
+                f"CREATE TABLE [{tname}] (\n" + ",\n".join(cols) + "\n);"
+            )
         else:
             sql = f"CREATE TABLE [{tname}] (\n" + ",\n".join(cols) + "\n);"
         self._sql_preview.setPlainText(sql)
@@ -675,6 +788,7 @@ class TableDesigner(QWidget):
 # ============================================================================
 # 4. Data Editor (row-level browse & edit)
 # ============================================================================
+
 
 class DataEditorTab(QWidget):
     """Browse, edit, insert, delete rows in any table."""
@@ -797,7 +911,9 @@ class DataEditorTab(QWidget):
             cur.execute(f"SELECT COUNT(*) FROM [{table}]{where_clause}")
             self._total_rows = cur.fetchone()[0]
             offset = self._page * self.PAGE_SIZE
-            cur.execute(f"SELECT * FROM [{table}]{where_clause} LIMIT {self.PAGE_SIZE} OFFSET {offset}")
+            cur.execute(
+                f"SELECT * FROM [{table}]{where_clause} LIMIT {self.PAGE_SIZE} OFFSET {offset}"
+            )
             self._cols = [d[0] for d in cur.description]
             rows = cur.fetchall()
             self._table.blockSignals(True)
@@ -812,7 +928,9 @@ class DataEditorTab(QWidget):
             self._table.blockSignals(False)
             self._table.resizeColumnsToContents()
             pages = max(1, (self._total_rows + self.PAGE_SIZE - 1) // self.PAGE_SIZE)
-            self._page_label.setText(f"Page {self._page + 1}/{pages}  ({self._total_rows} rows)")
+            self._page_label.setText(
+                f"Page {self._page + 1}/{pages}  ({self._total_rows} rows)"
+            )
             self._status.setText(f"Loaded {len(rows)} rows from [{table}]")
         except Exception as e:
             self._status.setText(f"❌ {e}")
@@ -892,6 +1010,7 @@ class DataEditorTab(QWidget):
 # 5. View Designer
 # ============================================================================
 
+
 class ViewDesignerTab(QWidget):
     def __init__(self, get_session, parent=None):
         super().__init__(parent)
@@ -910,7 +1029,9 @@ class ViewDesignerTab(QWidget):
         lay.addWidget(_make_label("SELECT Statement:", bold=True))
         self._editor = QPlainTextEdit()
         self._editor.setFont(_mono_font(11))
-        self._editor.setPlainText("SELECT\n    t.column1,\n    t.column2\nFROM [table] t\nWHERE t.active = 1")
+        self._editor.setPlainText(
+            "SELECT\n    t.column1,\n    t.column2\nFROM [table] t\nWHERE t.active = 1"
+        )
         if TSQLHighlighter:
             TSQLHighlighter(self._editor.document())
         lay.addWidget(self._editor)
@@ -947,7 +1068,9 @@ class ViewDesignerTab(QWidget):
         if not sess:
             return
         cur = sess._conn.cursor()
-        cur.execute("SELECT sql FROM sqlite_master WHERE type='view' AND name=?", (view,))
+        cur.execute(
+            "SELECT sql FROM sqlite_master WHERE type='view' AND name=?", (view,)
+        )
         row = cur.fetchone()
         if row:
             # Extract SELECT part
@@ -982,7 +1105,10 @@ class ViewDesignerTab(QWidget):
         name = self._view_name.text().strip()
         if not name:
             return
-        if QMessageBox.question(self, "Drop View", f"Drop view [{name}]?") != QMessageBox.Yes:
+        if (
+            QMessageBox.question(self, "Drop View", f"Drop view [{name}]?")
+            != QMessageBox.Yes
+        ):
             return
         sess = self._get_session(db)
         if sess:
@@ -993,6 +1119,7 @@ class ViewDesignerTab(QWidget):
 # ============================================================================
 # 6. Stored Procedures / User Functions
 # ============================================================================
+
 
 class StoredProcTab(QWidget):
     def __init__(self, get_session, parent=None):
@@ -1094,6 +1221,7 @@ class StoredProcTab(QWidget):
         db = self._db_combo.currentText()
         body = self._editor.toPlainText().strip()
         import re
+
         m = re.search(r"CREATE\s+PROCEDURE\s+(\w+)", body, re.IGNORECASE)
         if not m:
             QMessageBox.warning(self, "Save", "Cannot detect procedure name.")
@@ -1103,10 +1231,11 @@ class StoredProcTab(QWidget):
         if not sess:
             return
         import datetime
+
         conn = sess._conn
         conn.execute(
             "INSERT OR REPLACE INTO _tw_procs (name, body, created) VALUES (?,?,?)",
-            (name, body, str(datetime.datetime.now()))
+            (name, body, str(datetime.datetime.now())),
         )
         conn.commit()
         self._load_procs(db)
@@ -1128,7 +1257,10 @@ class StoredProcTab(QWidget):
         name = m.group(1) if m else ""
         if not name:
             return
-        if QMessageBox.question(self, "Drop", f"Drop procedure [{name}]?") != QMessageBox.Yes:
+        if (
+            QMessageBox.question(self, "Drop", f"Drop procedure [{name}]?")
+            != QMessageBox.Yes
+        ):
             return
         sess = self._get_session(db)
         if sess:
@@ -1141,6 +1273,7 @@ class StoredProcTab(QWidget):
 # ============================================================================
 # 7. Index Manager
 # ============================================================================
+
 
 class IndexManagerTab(QWidget):
     def __init__(self, get_session, parent=None):
@@ -1156,7 +1289,9 @@ class IndexManagerTab(QWidget):
         top.addWidget(_make_label("Database:"))
         top.addWidget(self._db_combo)
         refresh_btn = QPushButton("⟳ Refresh")
-        refresh_btn.clicked.connect(lambda: self._load_indexes(self._db_combo.currentText()))
+        refresh_btn.clicked.connect(
+            lambda: self._load_indexes(self._db_combo.currentText())
+        )
         top.addWidget(refresh_btn)
         top.addStretch()
         lay.addLayout(top)
@@ -1214,7 +1349,7 @@ class IndexManagerTab(QWidget):
         cur.execute(
             "SELECT name, tbl_name, sql FROM sqlite_master WHERE type='index' ORDER BY tbl_name, name"
         )
-        for (iname, tbl, isql) in cur.fetchall():
+        for iname, tbl, isql in cur.fetchall():
             r = self._idx_table.rowCount()
             self._idx_table.insertRow(r)
             self._idx_table.setItem(r, 0, QTableWidgetItem(iname or ""))
@@ -1227,7 +1362,9 @@ class IndexManagerTab(QWidget):
             unique = "YES" if isql and "UNIQUE" in isql.upper() else "NO"
             self._idx_table.setItem(r, 3, QTableWidgetItem(unique))
             drop_btn = QPushButton("Drop")
-            drop_btn.clicked.connect(lambda chk=False, n=iname, d=db: self._drop_index(d, n))
+            drop_btn.clicked.connect(
+                lambda chk=False, n=iname, d=db: self._drop_index(d, n)
+            )
             self._idx_table.setCellWidget(r, 4, drop_btn)
 
     def _create_index(self):
@@ -1247,7 +1384,10 @@ class IndexManagerTab(QWidget):
             self._load_indexes(db)
 
     def _drop_index(self, db: str, name: str):
-        if QMessageBox.question(self, "Drop Index", f"Drop index [{name}]?") != QMessageBox.Yes:
+        if (
+            QMessageBox.question(self, "Drop Index", f"Drop index [{name}]?")
+            != QMessageBox.Yes
+        ):
             return
         sess = self._get_session(db)
         if sess:
@@ -1259,6 +1399,7 @@ class IndexManagerTab(QWidget):
 # ============================================================================
 # 8. Users & Roles (simulated)
 # ============================================================================
+
 
 class UsersRolesTab(QWidget):
     def __init__(self, get_session, parent=None):
@@ -1331,12 +1472,13 @@ class UsersRolesTab(QWidget):
             root.removeChild(item)
 
     def refresh_databases(self):
-        pass   # users are global in this sim
+        pass  # users are global in this sim
 
 
 # ============================================================================
 # 9. Backup & Restore
 # ============================================================================
+
 
 class BackupRestoreTab(QWidget):
     def __init__(self, get_session, parent=None):
@@ -1404,13 +1546,15 @@ class BackupRestoreTab(QWidget):
 
     def _browse_backup(self):
         path, _ = QFileDialog.getSaveFileName(
-            self, "Backup To", str(Path.home()), "SQL Files (*.sql);;All (*)")
+            self, "Backup To", str(Path.home()), "SQL Files (*.sql);;All (*)"
+        )
         if path:
             self._bk_path.setText(path)
 
     def _browse_restore(self):
         path, _ = QFileDialog.getOpenFileName(
-            self, "Restore From", str(Path.home()), "SQL Files (*.sql);;All (*)")
+            self, "Restore From", str(Path.home()), "SQL Files (*.sql);;All (*)"
+        )
         if path:
             self._rs_path.setText(path)
 
@@ -1440,9 +1584,12 @@ class BackupRestoreTab(QWidget):
                         w = csv.writer(f)
                         w.writerow(cols)
                         w.writerows(rows)
-                self._log.appendPlainText(f"✅ CSV export: {len(tables)} tables → {base}_*.csv")
+                self._log.appendPlainText(
+                    f"✅ CSV export: {len(tables)} tables → {base}_*.csv"
+                )
             elif "SQLite" in fmt:
                 import shutil
+
                 db_dir = Path.home() / ".Time_Warp" / "databases"
                 src = db_dir / f"{db}.db"
                 if src.exists():
@@ -1454,8 +1601,10 @@ class BackupRestoreTab(QWidget):
                 # SQL dump
                 lines = []
                 cur = conn.cursor()
-                cur.execute("SELECT name, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY type, name")
-                for (name, sql) in cur.fetchall():
+                cur.execute(
+                    "SELECT name, sql FROM sqlite_master WHERE sql IS NOT NULL ORDER BY type, name"
+                )
+                for name, sql in cur.fetchall():
                     lines.append(f"-- Object: {name}")
                     lines.append(sql + ";")
                     lines.append("")
@@ -1467,10 +1616,16 @@ class BackupRestoreTab(QWidget):
                     cols = [d[0] for d in cur2.description]
                     for row in cur2.fetchall():
                         vals = ", ".join(
-                            "NULL" if v is None else f"'{str(v).replace(chr(39), chr(39)*2)}'"
+                            (
+                                "NULL"
+                                if v is None
+                                else f"'{str(v).replace(chr(39), chr(39)*2)}'"
+                            )
                             for v in row
                         )
-                        lines.append(f"INSERT INTO [{tbl}] ({','.join(cols)}) VALUES ({vals});")
+                        lines.append(
+                            f"INSERT INTO [{tbl}] ({','.join(cols)}) VALUES ({vals});"
+                        )
                 with open(path, "w", encoding="utf-8") as f:
                     f.write("\n".join(lines))
                 self._log.appendPlainText(f"✅ SQL dump → {path}")
@@ -1501,6 +1656,7 @@ class BackupRestoreTab(QWidget):
 # ============================================================================
 # 10. Server Info / Statistics
 # ============================================================================
+
 
 class ServerInfoTab(QWidget):
     def __init__(self, get_session, parent=None):
@@ -1544,7 +1700,9 @@ class ServerInfoTab(QWidget):
             conn = sess._conn
             cur = conn.cursor()
             # Table stats
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
+            cur.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+            )
             tables = [r[0] for r in cur.fetchall()]
             lines.append(f"Database: {db}   Tables: {len(tables)}")
             lines.append("-" * 60)
@@ -1556,7 +1714,7 @@ class ServerInfoTab(QWidget):
                     cnt = cur.fetchone()[0]
                     cur.execute(f"PRAGMA table_info([{tbl}])")
                     ncols = len(cur.fetchall())
-                    est_size = cnt * ncols * 20   # rough estimate in bytes
+                    est_size = cnt * ncols * 20  # rough estimate in bytes
                     lines.append(f"{tbl:<30} {cnt:>8,} {est_size:>10,}B")
                 except Exception:
                     lines.append(f"{tbl:<30} {'?':>8}")
@@ -1576,6 +1734,7 @@ class ServerInfoTab(QWidget):
 # ============================================================================
 # Main DBMS Window
 # ============================================================================
+
 
 class DBMSWindow(QMainWindow):
     """
@@ -1627,21 +1786,27 @@ class DBMSWindow(QMainWindow):
         self._tabs.setDocumentMode(True)
 
         # Construct all tabs
-        self.query_tab    = QueryAnalyzerTab(self._get_session)
+        self.query_tab = QueryAnalyzerTab(self._get_session)
         self.obj_explorer = ObjectExplorer(self._get_session)
         self.table_designer = TableDesigner(self._get_session)
-        self.data_editor   = DataEditorTab(self._get_session)
+        self.data_editor = DataEditorTab(self._get_session)
         self.view_designer = ViewDesignerTab(self._get_session)
-        self.proc_tab      = StoredProcTab(self._get_session)
-        self.index_tab     = IndexManagerTab(self._get_session)
-        self.users_tab     = UsersRolesTab(self._get_session)
-        self.backup_tab    = BackupRestoreTab(self._get_session)
-        self.info_tab      = ServerInfoTab(self._get_session)
+        self.proc_tab = StoredProcTab(self._get_session)
+        self.index_tab = IndexManagerTab(self._get_session)
+        self.users_tab = UsersRolesTab(self._get_session)
+        self.backup_tab = BackupRestoreTab(self._get_session)
+        self.info_tab = ServerInfoTab(self._get_session)
 
         self._all_subtabs = [
-            self.query_tab, self.table_designer, self.data_editor,
-            self.view_designer, self.proc_tab, self.index_tab,
-            self.users_tab, self.backup_tab, self.info_tab,
+            self.query_tab,
+            self.table_designer,
+            self.data_editor,
+            self.view_designer,
+            self.proc_tab,
+            self.index_tab,
+            self.users_tab,
+            self.backup_tab,
+            self.info_tab,
         ]
 
         # Left splitter: object explorer + main tabs
@@ -1651,15 +1816,15 @@ class DBMSWindow(QMainWindow):
         splitter.setSizes([230, 970])
         self.setCentralWidget(splitter)
 
-        self._tabs.addTab(self.query_tab,      "📝 Query Analyzer")
+        self._tabs.addTab(self.query_tab, "📝 Query Analyzer")
         self._tabs.addTab(self.table_designer, "🔧 Table Designer")
-        self._tabs.addTab(self.data_editor,    "📋 Data Editor")
-        self._tabs.addTab(self.view_designer,  "👁 View Designer")
-        self._tabs.addTab(self.proc_tab,       "⚙ Stored Procs")
-        self._tabs.addTab(self.index_tab,      "⚡ Index Manager")
-        self._tabs.addTab(self.users_tab,      "👤 Users & Roles")
-        self._tabs.addTab(self.backup_tab,     "💾 Backup/Restore")
-        self._tabs.addTab(self.info_tab,       "ℹ Server Info")
+        self._tabs.addTab(self.data_editor, "📋 Data Editor")
+        self._tabs.addTab(self.view_designer, "👁 View Designer")
+        self._tabs.addTab(self.proc_tab, "⚙ Stored Procs")
+        self._tabs.addTab(self.index_tab, "⚡ Index Manager")
+        self._tabs.addTab(self.users_tab, "👤 Users & Roles")
+        self._tabs.addTab(self.backup_tab, "💾 Backup/Restore")
+        self._tabs.addTab(self.info_tab, "ℹ Server Info")
 
         # Status bar
         self._sb = QStatusBar()
@@ -1689,13 +1854,15 @@ class DBMSWindow(QMainWindow):
         if not dbs:
             return
         from PySide6.QtWidgets import QInputDialog
+
         db, ok = QInputDialog.getItem(
             self, "Drop Database", "Select database to drop:", dbs, 0, False
         )
         if not ok or not db or db == "master":
             return
         reply = QMessageBox.warning(
-            self, "Drop Database",
+            self,
+            "Drop Database",
             f"⚠ ALL DATA in [{db}] will be destroyed!\nContinue?",
             QMessageBox.Yes | QMessageBox.No,
         )
@@ -1757,4 +1924,5 @@ class DBMSWindow(QMainWindow):
 
 def _input_dialog(parent, title: str, label: str) -> tuple[str, bool]:
     from PySide6.QtWidgets import QInputDialog
+
     return QInputDialog.getText(parent, title, label)

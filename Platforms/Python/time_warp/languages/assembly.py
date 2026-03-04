@@ -52,7 +52,9 @@ if TYPE_CHECKING:
 MAX_STEPS = 500_000
 
 
-def execute_assembly(interpreter: "Interpreter", source: str, turtle: "TurtleState") -> str:
+def execute_assembly(
+    interpreter: "Interpreter", source: str, turtle: "TurtleState"
+) -> str:
     """Execute a virtual-CPU assembly program and return all output."""
     cpu = VirtualCPU(interpreter, turtle)
     return cpu.run(source)
@@ -68,8 +70,12 @@ class VirtualCPU:
         self.stack: list[int] = []
         self.call_stack: list[int] = []
         self.flags: dict[str, bool] = {
-            "Z": False, "N": False, "S": False,  # Zero, Negative, Sign
-            "C": False, "O": False, "P": False,  # Carry, Overflow, Parity
+            "Z": False,
+            "N": False,
+            "S": False,  # Zero, Negative, Sign
+            "C": False,
+            "O": False,
+            "P": False,  # Carry, Overflow, Parity
         }
         self.labels: dict[str, int] = {}
         self.data_labels: dict[str, int] = {}  # label -> memory address
@@ -118,7 +124,7 @@ class VirtualCPU:
 
     def _parse(self, source: str):
         line_no = 0
-        in_macro = False   # track %macro ... %endmacro bodies
+        in_macro = False  # track %macro ... %endmacro bodies
         for raw in source.splitlines():
             # Strip comments
             stmt = re.sub(r";.*$", "", raw).strip()
@@ -143,7 +149,9 @@ class VirtualCPU:
                 self.labels[m.group(1).upper()] = line_no
                 remainder = m.group(2).strip()
                 if remainder:
-                    op, args = self._split_instr(self._upper_preserve_strings(remainder))
+                    op, args = self._split_instr(
+                        self._upper_preserve_strings(remainder)
+                    )
                     self.instructions.append((op, args))
                     line_no += 1
                 continue
@@ -151,7 +159,11 @@ class VirtualCPU:
             if re.match(r"^(\w+)\s+(EQU|RESB|RESW|RESD|RESQ)\b", stmt, re.IGNORECASE):
                 continue
             # NASM macro / section / global directives — skip
-            if re.match(r"^(%macro|%endmacro|%define|section|global|extern)\b", stmt, re.IGNORECASE):
+            if re.match(
+                r"^(%macro|%endmacro|%define|section|global|extern)\b",
+                stmt,
+                re.IGNORECASE,
+            ):
                 continue
             # Data definition without colon: name DB/DW/DD/DQ "string",0  or  name DW 42
             dm = re.match(r"^(\w+)\s+(DB|DW|DD|DQ)\b\s*(.*)", stmt, re.IGNORECASE)
@@ -335,7 +347,7 @@ class VirtualCPU:
         elif op == "PRINT":
             raw = args.strip()
             if raw.startswith('"') or raw.startswith("'"):
-                msg = raw.strip('"\'')
+                msg = raw.strip("\"'")
                 self._emit(msg)
             else:
                 self._emit(str(self._val(raw)))
@@ -366,25 +378,30 @@ class VirtualCPU:
         elif op in ("SHL", "SAL"):
             n = self._val(a[1]) if len(a) > 1 else 1
             r = (self._reg_get(a[0]) << n) & 0xFFFFFFFF
-            self._reg_set(a[0], r); self._set_flags(r)
+            self._reg_set(a[0], r)
+            self._set_flags(r)
         elif op == "SHR":
             n = self._val(a[1]) if len(a) > 1 else 1
             r = (self._reg_get(a[0]) & 0xFFFFFFFF) >> n
-            self._reg_set(a[0], r); self._set_flags(r)
+            self._reg_set(a[0], r)
+            self._set_flags(r)
         elif op == "SAR":
             n = self._val(a[1]) if len(a) > 1 else 1
-            r = self._reg_get(a[0]) >> n   # Python >> is arithmetic
-            self._reg_set(a[0], r); self._set_flags(r)
+            r = self._reg_get(a[0]) >> n  # Python >> is arithmetic
+            self._reg_set(a[0], r)
+            self._set_flags(r)
         elif op == "ROL":
             n = (self._val(a[1]) if len(a) > 1 else 1) & 31
             v = self._reg_get(a[0]) & 0xFFFFFFFF
             r = ((v << n) | (v >> (32 - n))) & 0xFFFFFFFF
-            self._reg_set(a[0], r); self._set_flags(r)
+            self._reg_set(a[0], r)
+            self._set_flags(r)
         elif op == "ROR":
             n = (self._val(a[1]) if len(a) > 1 else 1) & 31
             v = self._reg_get(a[0]) & 0xFFFFFFFF
             r = ((v >> n) | (v << (32 - n))) & 0xFFFFFFFF
-            self._reg_set(a[0], r); self._set_flags(r)
+            self._reg_set(a[0], r)
+            self._set_flags(r)
         elif op == "RCL":
             n = (self._val(a[1]) if len(a) > 1 else 1) & 31
             v = self._reg_get(a[0]) & 0xFFFFFFFF
@@ -392,46 +409,57 @@ class VirtualCPU:
             # 33-bit rotation including carry
             v33 = (v << 1) | cf
             r = ((v33 << n) | (v33 >> (33 - n))) & 0xFFFFFFFF
-            self._reg_set(a[0], r); self._set_flags(r)
+            self._reg_set(a[0], r)
+            self._set_flags(r)
         elif op == "RCR":
             n = (self._val(a[1]) if len(a) > 1 else 1) & 31
             v = self._reg_get(a[0]) & 0xFFFFFFFF
             cf = 1 if self.flags.get("C") else 0
             v33 = (cf << 32) | v
             r = ((v33 >> n) | (v33 << (33 - n))) & 0xFFFFFFFF
-            self._reg_set(a[0], r); self._set_flags(r)
+            self._reg_set(a[0], r)
+            self._set_flags(r)
 
         # ── Arithmetic extensions ────────────────────────────────────────────
         elif op == "NEG":
-            r = -self._reg_get(a[0]); self._reg_set(a[0], r); self._set_flags(r)
+            r = -self._reg_get(a[0])
+            self._reg_set(a[0], r)
+            self._set_flags(r)
         elif op in ("IMUL", "SMUL"):
             r = self._reg_get(a[0]) * self._val(a[1])
-            self._reg_set(a[0], r); self._set_flags(r)
+            self._reg_set(a[0], r)
+            self._set_flags(r)
         elif op in ("IDIV", "SDIV"):
             v = self._val(a[1])
-            if v == 0: raise AsmError("Division by zero")
+            if v == 0:
+                raise AsmError("Division by zero")
             r = int(self._reg_get(a[0]) / v)
-            self._reg_set(a[0], r); self._set_flags(r)
+            self._reg_set(a[0], r)
+            self._set_flags(r)
         elif op == "MULH":
             # High 32 bits of 64-bit product
             pr = self._reg_get(a[0]) * self._val(a[1])
             self._reg_set(a[0], (pr >> 32) & 0xFFFFFFFF)
         elif op == "ABS":
-            r = abs(self._reg_get(a[0])); self._reg_set(a[0], r)
+            r = abs(self._reg_get(a[0]))
+            self._reg_set(a[0], r)
         elif op == "CBRT":
             import math as _m
+
             v = self._reg_get(a[0])
             r = int(_m.cbrt(v) if v >= 0 else -_m.cbrt(-v))
             self._reg_set(a[0], r)
         elif op == "SQRT_INT":
             import math as _m
+
             r = int(_m.sqrt(max(0, self._reg_get(a[0]))))
             self._reg_set(a[0], r)
 
         # ── Data movement extensions ─────────────────────────────────────────
         elif op == "XCHG":
             va, vb = self._reg_get(a[0]), self._reg_get(a[1])
-            self._reg_set(a[0], vb); self._reg_set(a[1], va)
+            self._reg_set(a[0], vb)
+            self._reg_set(a[1], va)
         elif op == "MOVZX":
             # zero-extend byte/word from register or memory
             self._reg_set(a[0], self._val(a[1]) & 0xFF)
@@ -449,65 +477,83 @@ class VirtualCPU:
                 addr = self._val(operand)
             self._reg_set(a[0], addr)
         elif op == "CMOV" or op == "CMOVE":
-            if self.flags["Z"]: self._reg_set(a[0], self._val(a[1]))
+            if self.flags["Z"]:
+                self._reg_set(a[0], self._val(a[1]))
         elif op == "CMOVNE":
-            if not self.flags["Z"]: self._reg_set(a[0], self._val(a[1]))
+            if not self.flags["Z"]:
+                self._reg_set(a[0], self._val(a[1]))
         elif op == "CMOVG":
-            if not self.flags["N"] and not self.flags["Z"]: self._reg_set(a[0], self._val(a[1]))
+            if not self.flags["N"] and not self.flags["Z"]:
+                self._reg_set(a[0], self._val(a[1]))
         elif op == "CMOVL":
-            if self.flags["N"]: self._reg_set(a[0], self._val(a[1]))
+            if self.flags["N"]:
+                self._reg_set(a[0], self._val(a[1]))
         elif op in ("MOVQ", "MOVDQU", "MOVDQA"):
             self._reg_set(a[0], self._val(a[1]))
 
         # ── Additional jump aliases ─────────────────────────────────────────
-        elif op in ("JZ",):         # alias for JE
-            if self.flags["Z"]: self._jump(a[0])
-        elif op in ("JNZ",):        # alias for JNE
-            if not self.flags["Z"]: self._jump(a[0])
-        elif op in ("JB", "JC", "JNAE"):   # unsigned below / carry
-            if self.flags.get("C"): self._jump(a[0])
+        elif op in ("JZ",):  # alias for JE
+            if self.flags["Z"]:
+                self._jump(a[0])
+        elif op in ("JNZ",):  # alias for JNE
+            if not self.flags["Z"]:
+                self._jump(a[0])
+        elif op in ("JB", "JC", "JNAE"):  # unsigned below / carry
+            if self.flags.get("C"):
+                self._jump(a[0])
         elif op in ("JNB", "JNC", "JAE"):  # unsigned not below / no carry
-            if not self.flags.get("C"): self._jump(a[0])
-        elif op in ("JBE", "JNA"):   # unsigned below or equal
-            if self.flags.get("C") or self.flags["Z"]: self._jump(a[0])
-        elif op in ("JA", "JNBE"):   # unsigned above
-            if not self.flags.get("C") and not self.flags["Z"]: self._jump(a[0])
-        elif op in ("JS",):          # sign flag
-            if self.flags["N"]: self._jump(a[0])
-        elif op in ("JNS",):         # no sign
-            if not self.flags["N"]: self._jump(a[0])
-        elif op in ("JO",):          # overflow — stub: treat as never
+            if not self.flags.get("C"):
+                self._jump(a[0])
+        elif op in ("JBE", "JNA"):  # unsigned below or equal
+            if self.flags.get("C") or self.flags["Z"]:
+                self._jump(a[0])
+        elif op in ("JA", "JNBE"):  # unsigned above
+            if not self.flags.get("C") and not self.flags["Z"]:
+                self._jump(a[0])
+        elif op in ("JS",):  # sign flag
+            if self.flags["N"]:
+                self._jump(a[0])
+        elif op in ("JNS",):  # no sign
+            if not self.flags["N"]:
+                self._jump(a[0])
+        elif op in ("JO",):  # overflow — stub: treat as never
             pass
-        elif op in ("JNO",):         # no overflow — stub: always jump
+        elif op in ("JNO",):  # no overflow — stub: always jump
             self._jump(a[0])
-        elif op in ("JP", "JPE"):    # parity even — stub
+        elif op in ("JP", "JPE"):  # parity even — stub
             pass
-        elif op in ("JNP", "JPO"):   # parity odd — stub: always jump
+        elif op in ("JNP", "JPO"):  # parity odd — stub: always jump
             self._jump(a[0])
         elif op in ("JCXZ", "JECXZ", "JRCXZ"):  # jump if CX=0
-            if self.regs[0] == 0: self._jump(a[0])
+            if self.regs[0] == 0:
+                self._jump(a[0])
 
         # ── Bit operations ──────────────────────────────────────────────────
         elif op == "BT":
             # Bit test: sets/clears C flag
-            val = self._reg_get(a[0]); bit = self._val(a[1]) & 31
+            val = self._reg_get(a[0])
+            bit = self._val(a[1]) & 31
             self.flags["C"] = bool((val >> bit) & 1)
         elif op == "BTS":
-            val = self._reg_get(a[0]); bit = self._val(a[1]) & 31
+            val = self._reg_get(a[0])
+            bit = self._val(a[1]) & 31
             self.flags["C"] = bool((val >> bit) & 1)
             self._reg_set(a[0], val | (1 << bit))
         elif op == "BTR":
-            val = self._reg_get(a[0]); bit = self._val(a[1]) & 31
+            val = self._reg_get(a[0])
+            bit = self._val(a[1]) & 31
             self.flags["C"] = bool((val >> bit) & 1)
             self._reg_set(a[0], val & ~(1 << bit))
         elif op == "BTC":
-            val = self._reg_get(a[0]); bit = self._val(a[1]) & 31
+            val = self._reg_get(a[0])
+            bit = self._val(a[1]) & 31
             self.flags["C"] = bool((val >> bit) & 1)
             self._reg_set(a[0], val ^ (1 << bit))
         elif op == "BSF":
             # Bit scan forward — index of lowest set bit
             val = self._reg_get(a[1]) if len(a) > 1 else self._reg_get(a[0])
-            if val == 0: self.flags["Z"] = True
+            if val == 0:
+                self.flags["Z"] = True
             else:
                 self.flags["Z"] = False
                 bit = (val & -val).bit_length() - 1
@@ -515,7 +561,8 @@ class VirtualCPU:
         elif op == "BSR":
             # Bit scan reverse — index of highest set bit
             val = self._reg_get(a[1]) if len(a) > 1 else self._reg_get(a[0])
-            if val == 0: self.flags["Z"] = True
+            if val == 0:
+                self.flags["Z"] = True
             else:
                 self.flags["Z"] = False
                 self._reg_set(a[0], val.bit_length() - 1)
@@ -532,42 +579,65 @@ class VirtualCPU:
 
         # ── Flag operations ─────────────────────────────────────────────────
         elif op == "TEST":
-            r = self._reg_get(a[0]) & self._val(a[1]); self._set_flags(r)
+            r = self._reg_get(a[0]) & self._val(a[1])
+            self._set_flags(r)
         elif op == "CLFLAGS":
             self.flags = {"Z": False, "N": False, "C": False}
         elif op == "SETFLAGS":
             pass
         elif op == "PUSHF":
-            v = (1 if self.flags["Z"] else 0) | (2 if self.flags["N"] else 0) | (4 if self.flags.get("C") else 0)
+            v = (
+                (1 if self.flags["Z"] else 0)
+                | (2 if self.flags["N"] else 0)
+                | (4 if self.flags.get("C") else 0)
+            )
             self.stack.append(v)
         elif op == "POPF":
             v = self.stack.pop() if self.stack else 0
-            self.flags["Z"] = bool(v & 1); self.flags["N"] = bool(v & 2); self.flags["C"] = bool(v & 4)
+            self.flags["Z"] = bool(v & 1)
+            self.flags["N"] = bool(v & 2)
+            self.flags["C"] = bool(v & 4)
         elif op == "LAHF":
             v = (1 if self.flags["Z"] else 0) | (2 if self.flags["N"] else 0)
             self._reg_set("R0", v)
         elif op == "SAHF":
-            v = self._reg_get("R0"); self.flags["Z"] = bool(v & 1); self.flags["N"] = bool(v & 2)
+            v = self._reg_get("R0")
+            self.flags["Z"] = bool(v & 1)
+            self.flags["N"] = bool(v & 2)
         elif op in ("STC", "STCF"):
             self.flags["C"] = True
         elif op in ("CLC", "CLCF"):
             self.flags["C"] = False
         elif op in ("CMC", "CMCF"):
             self.flags["C"] = not self.flags.get("C", False)
-        elif op == "CLD": pass   # direction flag stub
-        elif op == "STD": pass   # direction flag stub
-        elif op == "CLI": pass   # interrupt stubs
-        elif op == "STI": pass
+        elif op == "CLD":
+            pass  # direction flag stub
+        elif op == "STD":
+            pass  # direction flag stub
+        elif op == "CLI":
+            pass  # interrupt stubs
+        elif op == "STI":
+            pass
 
         # ── Set-byte on condition ────────────────────────────────────────────
-        elif op == "SETE"  or op == "SETZ":  self._reg_set(a[0], 1 if self.flags["Z"] else 0)
-        elif op == "SETNE" or op == "SETNZ": self._reg_set(a[0], 0 if self.flags["Z"] else 1)
-        elif op == "SETG":  self._reg_set(a[0], 1 if (not self.flags["N"] and not self.flags["Z"]) else 0)
-        elif op == "SETL":  self._reg_set(a[0], 1 if self.flags["N"] else 0)
-        elif op == "SETGE": self._reg_set(a[0], 1 if not self.flags["N"] else 0)
-        elif op == "SETLE": self._reg_set(a[0], 1 if (self.flags["N"] or self.flags["Z"]) else 0)
-        elif op == "SETS":  self._reg_set(a[0], 1 if self.flags["N"] else 0)
-        elif op == "SETNS": self._reg_set(a[0], 0 if self.flags["N"] else 1)
+        elif op == "SETE" or op == "SETZ":
+            self._reg_set(a[0], 1 if self.flags["Z"] else 0)
+        elif op == "SETNE" or op == "SETNZ":
+            self._reg_set(a[0], 0 if self.flags["Z"] else 1)
+        elif op == "SETG":
+            self._reg_set(
+                a[0], 1 if (not self.flags["N"] and not self.flags["Z"]) else 0
+            )
+        elif op == "SETL":
+            self._reg_set(a[0], 1 if self.flags["N"] else 0)
+        elif op == "SETGE":
+            self._reg_set(a[0], 1 if not self.flags["N"] else 0)
+        elif op == "SETLE":
+            self._reg_set(a[0], 1 if (self.flags["N"] or self.flags["Z"]) else 0)
+        elif op == "SETS":
+            self._reg_set(a[0], 1 if self.flags["N"] else 0)
+        elif op == "SETNS":
+            self._reg_set(a[0], 0 if self.flags["N"] else 1)
 
         # ── String/memory block ops ─────────────────────────────────────────
         elif op in ("MOVS", "MOVSB", "MOVSW", "MOVSD"):
@@ -575,23 +645,37 @@ class VirtualCPU:
             src, dst, cnt = self.regs[1], self.regs[0], self.regs[2]
             if 0 <= src < len(self.memory) and 0 <= dst < len(self.memory):
                 self.memory[dst] = self.memory[src]
-            self.regs[0] += 1; self.regs[1] += 1; self.regs[2] = max(0, cnt - 1)
+            self.regs[0] += 1
+            self.regs[1] += 1
+            self.regs[2] = max(0, cnt - 1)
         elif op in ("STOS", "STOSB", "STOSD"):
             dst = self.regs[0]
-            if 0 <= dst < len(self.memory): self.memory[dst] = self.regs[1]
-            self.regs[0] += 1; self.regs[2] = max(0, self.regs[2] - 1)
+            if 0 <= dst < len(self.memory):
+                self.memory[dst] = self.regs[1]
+            self.regs[0] += 1
+            self.regs[2] = max(0, self.regs[2] - 1)
         elif op in ("LODS", "LODSB", "LODSD"):
             src = self.regs[1]
-            if 0 <= src < len(self.memory): self.regs[0] = self.memory[src]
-            self.regs[1] += 1; self.regs[2] = max(0, self.regs[2] - 1)
+            if 0 <= src < len(self.memory):
+                self.regs[0] = self.memory[src]
+            self.regs[1] += 1
+            self.regs[2] = max(0, self.regs[2] - 1)
         elif op in ("SCAS", "SCASB", "SCASD"):
             # Compare R0 with memory[R1]
             v = self.memory[self.regs[1]] if 0 <= self.regs[1] < len(self.memory) else 0
-            self._set_flags(self.regs[0] - v); self.regs[1] += 1; self.regs[2] = max(0, self.regs[2] - 1)
+            self._set_flags(self.regs[0] - v)
+            self.regs[1] += 1
+            self.regs[2] = max(0, self.regs[2] - 1)
         elif op in ("CMPS", "CMPSB", "CMPSD"):
-            v1 = self.memory[self.regs[0]] if 0 <= self.regs[0] < len(self.memory) else 0
-            v2 = self.memory[self.regs[1]] if 0 <= self.regs[1] < len(self.memory) else 0
-            self._set_flags(v1 - v2); self.regs[0] += 1; self.regs[1] += 1
+            v1 = (
+                self.memory[self.regs[0]] if 0 <= self.regs[0] < len(self.memory) else 0
+            )
+            v2 = (
+                self.memory[self.regs[1]] if 0 <= self.regs[1] < len(self.memory) else 0
+            )
+            self._set_flags(v1 - v2)
+            self.regs[0] += 1
+            self.regs[1] += 1
         elif op == "REP":
             # REP prefix: repeat next instr R2 times (simplified: just note it)
             pass
@@ -600,12 +684,15 @@ class VirtualCPU:
 
         # ── Stack extras ────────────────────────────────────────────────────
         elif op == "PUSHA":
-            for r in self.regs[:8]: self.stack.append(r)
+            for r in self.regs[:8]:
+                self.stack.append(r)
         elif op == "POPA":
             vals = [self.stack.pop() if self.stack else 0 for _ in range(8)]
-            for i, v in enumerate(reversed(vals)): self.regs[i] = v
+            for i, v in enumerate(reversed(vals)):
+                self.regs[i] = v
         elif op == "PUSHAD":
-            for r in self.regs: self.stack.append(r)
+            for r in self.regs:
+                self.stack.append(r)
         elif op == "POPAD":
             vals = [self.stack.pop() if self.stack else 0 for _ in range(16)]
             self.regs[:] = list(reversed(vals))
@@ -613,40 +700,51 @@ class VirtualCPU:
         # ── Loop instruction ────────────────────────────────────────────────
         elif op == "LOOP":
             self.regs[0] -= 1  # decrement R0 (acting as CX)
-            if self.regs[0] != 0: self._jump(a[0])
+            if self.regs[0] != 0:
+                self._jump(a[0])
         elif op == "LOOPE" or op == "LOOPZ":
             self.regs[0] -= 1
-            if self.regs[0] != 0 and self.flags["Z"]: self._jump(a[0])
+            if self.regs[0] != 0 and self.flags["Z"]:
+                self._jump(a[0])
         elif op == "LOOPNE" or op == "LOOPNZ":
             self.regs[0] -= 1
-            if self.regs[0] != 0 and not self.flags["Z"]: self._jump(a[0])
+            if self.regs[0] != 0 and not self.flags["Z"]:
+                self._jump(a[0])
 
         # ── Floating-point (software FPU, f-stack in regs 8-15) ─────────────
         elif op == "FINIT":
             # Clear float registers
-            for i in range(8, 16): self.regs[i] = 0
+            for i in range(8, 16):
+                self.regs[i] = 0
             self._fstack: list[float] = []
         elif op == "FLD":
-            if not hasattr(self, "_fstack"): self._fstack = []
+            if not hasattr(self, "_fstack"):
+                self._fstack = []
             v = float(self._reg_get(a[0]))
             self._fstack.append(v)
         elif op == "FILD":
-            if not hasattr(self, "_fstack"): self._fstack = []
+            if not hasattr(self, "_fstack"):
+                self._fstack = []
             self._fstack.append(float(self._val(a[0])))
         elif op == "FLDPI":
-            if not hasattr(self, "_fstack"): self._fstack = []
+            if not hasattr(self, "_fstack"):
+                self._fstack = []
             self._fstack.append(_math.pi)
         elif op == "FLDL2E":
-            if not hasattr(self, "_fstack"): self._fstack = []
+            if not hasattr(self, "_fstack"):
+                self._fstack = []
             self._fstack.append(_math.log2(_math.e))
         elif op == "FLDLN2":
-            if not hasattr(self, "_fstack"): self._fstack = []
+            if not hasattr(self, "_fstack"):
+                self._fstack = []
             self._fstack.append(_math.log(2))
         elif op == "FLDZ":
-            if not hasattr(self, "_fstack"): self._fstack = []
+            if not hasattr(self, "_fstack"):
+                self._fstack = []
             self._fstack.append(0.0)
         elif op == "FLD1":
-            if not hasattr(self, "_fstack"): self._fstack = []
+            if not hasattr(self, "_fstack"):
+                self._fstack = []
             self._fstack.append(1.0)
         elif op == "FST":
             if hasattr(self, "_fstack") and self._fstack:
@@ -662,16 +760,20 @@ class VirtualCPU:
                 self._reg_set(a[0], int(self._fstack.pop()))
         elif op == "FADD":
             if hasattr(self, "_fstack") and len(self._fstack) >= 2:
-                b, a2 = self._fstack.pop(), self._fstack.pop(); self._fstack.append(a2 + b)
+                b, a2 = self._fstack.pop(), self._fstack.pop()
+                self._fstack.append(a2 + b)
         elif op == "FSUB":
             if hasattr(self, "_fstack") and len(self._fstack) >= 2:
-                b, a2 = self._fstack.pop(), self._fstack.pop(); self._fstack.append(a2 - b)
+                b, a2 = self._fstack.pop(), self._fstack.pop()
+                self._fstack.append(a2 - b)
         elif op == "FSUBR":
             if hasattr(self, "_fstack") and len(self._fstack) >= 2:
-                b, a2 = self._fstack.pop(), self._fstack.pop(); self._fstack.append(b - a2)
+                b, a2 = self._fstack.pop(), self._fstack.pop()
+                self._fstack.append(b - a2)
         elif op == "FMUL":
             if hasattr(self, "_fstack") and len(self._fstack) >= 2:
-                b, a2 = self._fstack.pop(), self._fstack.pop(); self._fstack.append(a2 * b)
+                b, a2 = self._fstack.pop(), self._fstack.pop()
+                self._fstack.append(a2 * b)
         elif op == "FDIV":
             if hasattr(self, "_fstack") and len(self._fstack) >= 2:
                 b, a2 = self._fstack.pop(), self._fstack.pop()
@@ -698,7 +800,8 @@ class VirtualCPU:
                 self._fstack += [_math.sin(v), _math.cos(v)]
         elif op == "FPATAN":
             if hasattr(self, "_fstack") and len(self._fstack) >= 2:
-                b, a2 = self._fstack.pop(), self._fstack.pop(); self._fstack.append(_math.atan2(a2, b))
+                b, a2 = self._fstack.pop(), self._fstack.pop()
+                self._fstack.append(_math.atan2(a2, b))
         elif op == "FABS":
             if hasattr(self, "_fstack") and self._fstack:
                 self._fstack.append(abs(self._fstack.pop()))
@@ -719,18 +822,24 @@ class VirtualCPU:
             if hasattr(self, "_fstack") and len(self._fstack) >= 2:
                 x, y = self._fstack.pop(), self._fstack.pop()
                 self._fstack.append(y * _math.log2(x) if x > 0 else float("nan"))
-        elif op == "FLDCW":   pass   # control-word stub
-        elif op == "FSTCW":   pass
-        elif op == "FNSTSW":  pass
-        elif op == "FWAIT":   pass
-        elif op == "FNOP":    pass
-        elif op == "FXCH":    # swap top two float stack items
+        elif op == "FLDCW":
+            pass  # control-word stub
+        elif op == "FSTCW":
+            pass
+        elif op == "FNSTSW":
+            pass
+        elif op == "FWAIT":
+            pass
+        elif op == "FNOP":
+            pass
+        elif op == "FXCH":  # swap top two float stack items
             if hasattr(self, "_fstack") and len(self._fstack) >= 2:
                 self._fstack[-1], self._fstack[-2] = self._fstack[-2], self._fstack[-1]
         elif op == "FCOMPP" or op == "FCOMP" or op == "FCOM":
             if hasattr(self, "_fstack") and len(self._fstack) >= 2:
                 a2, b = self._fstack[-1], self._fstack[-2]
-                self.flags["Z"] = a2 == b; self.flags["N"] = a2 < b
+                self.flags["Z"] = a2 == b
+                self.flags["N"] = a2 < b
         elif op == "FPRINT":  # Time Warp extension
             if hasattr(self, "_fstack") and self._fstack:
                 self._emit(str(self._fstack[-1]))
@@ -738,53 +847,80 @@ class VirtualCPU:
         # ── I/O ─────────────────────────────────────────────────────────────
         elif op in ("IN", "INB"):
             # Read from port (stub — push 0)
-            if a: self._reg_set(a[0], 0)
+            if a:
+                self._reg_set(a[0], 0)
         elif op in ("OUT", "OUTB"):
             # Write to port (stub — print)
-            if len(a) >= 2: self._emit(f"PORT[{self._val(a[0])}]={self._val(a[1])}")
+            if len(a) >= 2:
+                self._emit(f"PORT[{self._val(a[0])}]={self._val(a[1])}")
         elif op == "SYSCALL":
             # Simplified syscall: R0=syscall number
             sc = self.regs[0]
-            if sc == 1:             # print integer in R1
+            if sc == 1:  # print integer in R1
                 self._emit(str(self.regs[1]))
-            elif sc == 2:           # read integer → R1
-                raw = self.interpreter.request_input("asm> ") if hasattr(self.interpreter,"request_input") else "0"
-                try: self.regs[1] = int(raw or "0")
-                except: self.regs[1] = 0
-            elif sc == 3:           # print char in R1
+            elif sc == 2:  # read integer → R1
+                raw = (
+                    self.interpreter.request_input("asm> ")
+                    if hasattr(self.interpreter, "request_input")
+                    else "0"
+                )
+                try:
+                    self.regs[1] = int(raw or "0")
+                except:
+                    self.regs[1] = 0
+            elif sc == 3:  # print char in R1
                 self._emit(chr(self.regs[1] & 0xFF))
-            elif sc == 4:           # halt
+            elif sc == 4:  # halt
                 raise HaltException()
-        elif op == "SYSENTER": pass
-        elif op == "SYSEXIT":  pass
+        elif op == "SYSENTER":
+            pass
+        elif op == "SYSEXIT":
+            pass
         elif op == "CPUID":
             # Stub: set R0..R3 to fake CPU info
-            self.regs[0] = 0x756E6547   # "Genu"
-            self.regs[1] = 0x49656E69   # "ineI"
-            self.regs[2] = 0x6C65746E   # "ntel"
+            self.regs[0] = 0x756E6547  # "Genu"
+            self.regs[1] = 0x49656E69  # "ineI"
+            self.regs[2] = 0x6C65746E  # "ntel"
             self.regs[3] = 1
 
         # ── Miscellaneous ───────────────────────────────────────────────────
         elif op == "BSWAP":
             # Byte swap 32-bit register
             v = self._reg_get(a[0]) & 0xFFFFFFFF
-            r = ((v & 0xFF) << 24) | (((v >> 8) & 0xFF) << 16) | (((v >> 16) & 0xFF) << 8) | ((v >> 24) & 0xFF)
+            r = (
+                ((v & 0xFF) << 24)
+                | (((v >> 8) & 0xFF) << 16)
+                | (((v >> 16) & 0xFF) << 8)
+                | ((v >> 24) & 0xFF)
+            )
             self._reg_set(a[0], r)
         elif op == "NOOP":
             pass
         elif op in ("ENTER", "LEAVE"):
-            pass   # stack-frame stubs
+            pass  # stack-frame stubs
         elif op in ("INT", "INT3", "INTO"):
-            if a and a[0] == "3": raise HaltException()  # INT3 = breakpoint
+            if a and a[0] == "3":
+                raise HaltException()  # INT3 = breakpoint
         elif op == "IRET":
-            if self.call_stack: self.ip = self.call_stack.pop()
+            if self.call_stack:
+                self.ip = self.call_stack.pop()
         elif op == "ALIGN":
             pass  # assembler directive
         elif op in ("DB", "DW", "DD", "DQ", "RES", "RESB", "RESW", "RESD"):
             pass  # data definition stubs (handled in _parse for named defs)
         elif op == "_DATA":
             pass  # placeholder for parsed data definitions
-        elif op in ("SECTION", ".TEXT", ".DATA", ".BSS", "ORG", "BITS", "CPU", "USE32", "USE64"):
+        elif op in (
+            "SECTION",
+            ".TEXT",
+            ".DATA",
+            ".BSS",
+            "ORG",
+            "BITS",
+            "CPU",
+            "USE32",
+            "USE64",
+        ):
             pass  # assembler directives
         elif op in ("GLOBAL", "EXTERN", "EXPORT"):
             pass  # symbol visibility stubs
@@ -810,7 +946,8 @@ class VirtualCPU:
         elif op == "DUMP":
             self._emit(f"Regs: {self.regs!r}")
         elif op == "DUMPF":
-            if hasattr(self, "_fstack"): self._emit(f"FStack: {self._fstack!r}")
+            if hasattr(self, "_fstack"):
+                self._emit(f"FStack: {self._fstack!r}")
         else:
             # Unknown instruction (e.g. macro invocation) — skip silently
             pass
@@ -821,14 +958,38 @@ class VirtualCPU:
 
     # x86 named register mapping (EAX→R0, EBX→R1, ECX→R2, EDX→R3, etc.)
     _X86_REGS: dict[str, int] = {
-        "EAX": 0, "AX": 0, "AL": 0, "AH": 0,
-        "EBX": 1, "BX": 1, "BL": 1, "BH": 1,
-        "ECX": 2, "CX": 2, "CL": 2, "CH": 2,
-        "EDX": 3, "DX": 3, "DL": 3, "DH": 3,
-        "ESP": 4, "SP": 4, "EBP": 5, "BP": 5,
-        "ESI": 6, "SI": 6, "EDI": 7, "DI": 7,
-        "RAX": 0, "RBX": 1, "RCX": 2, "RDX": 3,
-        "RSP": 4, "RBP": 5, "RSI": 6, "RDI": 7,
+        "EAX": 0,
+        "AX": 0,
+        "AL": 0,
+        "AH": 0,
+        "EBX": 1,
+        "BX": 1,
+        "BL": 1,
+        "BH": 1,
+        "ECX": 2,
+        "CX": 2,
+        "CL": 2,
+        "CH": 2,
+        "EDX": 3,
+        "DX": 3,
+        "DL": 3,
+        "DH": 3,
+        "ESP": 4,
+        "SP": 4,
+        "EBP": 5,
+        "BP": 5,
+        "ESI": 6,
+        "SI": 6,
+        "EDI": 7,
+        "DI": 7,
+        "RAX": 0,
+        "RBX": 1,
+        "RCX": 2,
+        "RDX": 3,
+        "RSP": 4,
+        "RBP": 5,
+        "RSI": 6,
+        "RDI": 7,
     }
 
     def _reg_index(self, name: str) -> int:
@@ -900,10 +1061,10 @@ class VirtualCPU:
         v = int(value) if isinstance(value, float) else value
         self.flags["Z"] = v == 0
         self.flags["N"] = v < 0
-        self.flags["S"] = v < 0                                    # sign flag
+        self.flags["S"] = v < 0  # sign flag
         self.flags["C"] = (v > 0xFFFFFFFF) or (v < -0x80000000)  # naive carry/borrow
         self.flags["O"] = (v > 0x7FFFFFFF) or (v < -0x80000000)  # overflow
-        self.flags["P"] = bin(v & 0xFF).count("1") % 2 == 0       # parity even
+        self.flags["P"] = bin(v & 0xFF).count("1") % 2 == 0  # parity even
 
     def _jump(self, label: str):
         label = label.upper()

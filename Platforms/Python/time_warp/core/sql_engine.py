@@ -29,7 +29,6 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-
 # ---------------------------------------------------------------------------
 # Shared in-process databases (name → sqlite3.Connection)
 # ---------------------------------------------------------------------------
@@ -59,9 +58,9 @@ def _open_db(name: str) -> sqlite3.Connection:
 
 def list_databases() -> List[str]:
     """Return names of all currently known/open databases."""
-    names = sorted(set(list(_connections.keys())) | {
-        p.stem for p in _DB_DIR.glob("*.db")
-    })
+    names = sorted(
+        set(list(_connections.keys())) | {p.stem for p in _DB_DIR.glob("*.db")}
+    )
     return names if names else [_SYSTEM_DB]
 
 
@@ -163,6 +162,7 @@ def _translate_tsql(sql: str) -> str:
     def _convert_repl(m: re.Match) -> str:
         typ = m.group(1)
         return "CAST( "  # expr follows, we close at next matching paren
+
     # Simple regex won't balance parens; do a token scan for multi-arg CONVERT
     sql = _rewrite_convert(sql)
 
@@ -266,6 +266,7 @@ def _rewrite_charindex(sql: str) -> str:
 # System stored procedures
 # ---------------------------------------------------------------------------
 
+
 def _exec_sp_help(conn: sqlite3.Connection, arg: str) -> str:
     """sp_help [table_name]"""
     lines: List[str] = []
@@ -274,7 +275,7 @@ def _exec_sp_help(conn: sqlite3.Connection, arg: str) -> str:
         try:
             cur = conn.execute(
                 "SELECT name, type FROM sqlite_master WHERE name = ? COLLATE NOCASE",
-                (arg,)
+                (arg,),
             )
             row = cur.fetchone()
             if not row:
@@ -329,13 +330,21 @@ def _exec_sp_columns(conn: sqlite3.Connection, arg: str) -> str:
     return "\n".join(lines) + "\n"
 
 
-_SYS_PROCS = {"sp_help", "sp_helpdb", "sp_helptable", "sp_columns",
-               "sp_helptext", "sp_spaceused", "sp_who"}
+_SYS_PROCS = {
+    "sp_help",
+    "sp_helpdb",
+    "sp_helptable",
+    "sp_columns",
+    "sp_helptext",
+    "sp_spaceused",
+    "sp_who",
+}
 
 
 # ---------------------------------------------------------------------------
 # Main SQL Session
 # ---------------------------------------------------------------------------
+
 
 class SQLSession:
     """A single user SQL session (per InterpreterThread run).
@@ -423,7 +432,9 @@ class SQLSession:
                 elif c == "/" and i + 1 < len(batch) and batch[i + 1] == "*":
                     # Block comment
                     i += 2
-                    while i < len(batch) - 1 and not (batch[i] == "*" and batch[i + 1] == "/"):
+                    while i < len(batch) - 1 and not (
+                        batch[i] == "*" and batch[i + 1] == "/"
+                    ):
                         i += 1
                     i += 2
                     continue
@@ -605,9 +616,9 @@ class SQLSession:
 
     def _handle_declare(self, stmt: str) -> None:
         m = re.match(
-            r"DECLARE\s+(@\w+)\s+(?:AS\s+)?(\w+(?:\s*\([^)]*\))?)"
-            r"(?:\s*=\s*(.+))?",
-            stmt, re.I
+            r"DECLARE\s+(@\w+)\s+(?:AS\s+)?(\w+(?:\s*\([^)]*\))?)" r"(?:\s*=\s*(.+))?",
+            stmt,
+            re.I,
         )
         if m:
             name, _type, init = m.group(1), m.group(2), m.group(3)
@@ -644,34 +655,34 @@ class SQLSession:
         elif proc == "sp_helptext":
             # Try to retrieve stored proc / view text from sqlite_master
             cur = self._conn.execute(
-                "SELECT sql FROM sqlite_master WHERE name = ? COLLATE NOCASE",
-                (arg,)
+                "SELECT sql FROM sqlite_master WHERE name = ? COLLATE NOCASE", (arg,)
             )
             row = cur.fetchone()
             self._emit(row[0] if row else f"❌ '{arg}' not found.")
         elif proc == "sp_spaceused":
             self._emit("(Space usage not applicable in educational mode)")
         elif proc == "sp_who":
-            self._emit("spid  status   loginname  hostname  cmd\n"
-                       "1     running  sa         TIMEWARP  SELECT")
+            self._emit(
+                "spid  status   loginname  hostname  cmd\n"
+                "1     running  sa         TIMEWARP  SELECT"
+            )
         else:
             # Try calling as user-defined procedure stored in sqlite_master
             cur = self._conn.execute(
                 "SELECT sql FROM sqlite_master WHERE name = ? AND type = 'trigger' COLLATE NOCASE",
-                (proc,)
+                (proc,),
             )
             row = cur.fetchone()
             if row:
-                self._emit(f"(Procedure '{proc}' body stored; execution not fully simulated)")
+                self._emit(
+                    f"(Procedure '{proc}' body stored; execution not fully simulated)"
+                )
             else:
                 self._emit(f"❌ Could not find stored procedure '{proc}'.")
 
     def _handle_if_exists(self, stmt: str) -> None:
         """IF [NOT] EXISTS (subquery) [BEGIN] body [END]"""
-        m = re.match(
-            r"IF\s+(NOT\s+)?EXISTS\s*\(([^)]+)\)\s*(.+)",
-            stmt, re.I | re.S
-        )
+        m = re.match(r"IF\s+(NOT\s+)?EXISTS\s*\(([^)]+)\)\s*(.+)", stmt, re.I | re.S)
         if not m:
             return
         neg = bool(m.group(1))
@@ -763,6 +774,7 @@ class SQLSession:
 
     def _substitute_vars(self, s: str) -> str:
         """Replace @varname with its value in expression string."""
+
         def repl(m: re.Match) -> str:
             key = m.group(0).upper()
             # Skip @@system variables
@@ -779,6 +791,7 @@ class SQLSession:
                 except (ValueError, TypeError):
                     return f"'{val}'"
             return str(val)
+
         return re.sub(r"@\w+", repl, s)
 
     # ------------------------------------------------------------------ core SQL execution
@@ -805,7 +818,9 @@ class SQLSession:
 
             # Capture @@IDENTITY for INSERT
             if re.match(r"INSERT\s+", stmt.strip(), re.I):
-                self._identity = self._conn.execute("SELECT last_insert_rowid()").fetchone()[0]
+                self._identity = self._conn.execute(
+                    "SELECT last_insert_rowid()"
+                ).fetchone()[0]
 
         except sqlite3.OperationalError as e:
             err_str = str(e)
@@ -832,7 +847,9 @@ class SQLSession:
         widths = [len(str(n)) for n in col_names]
         for row in rows:
             for i, cell in enumerate(row):
-                widths[i] = max(widths[i], len(str(cell) if cell is not None else "NULL"))
+                widths[i] = max(
+                    widths[i], len(str(cell) if cell is not None else "NULL")
+                )
         # Header
         header = "  ".join(str(n).ljust(widths[i]) for i, n in enumerate(col_names))
         divider = "  ".join("-" * w for w in widths)
@@ -868,6 +885,7 @@ class SQLSession:
 # ---------------------------------------------------------------------------
 # Module-level shortcut used by language executors
 # ---------------------------------------------------------------------------
+
 
 def create_session() -> SQLSession:
     """Create a fresh SQL session (call once per program run)."""

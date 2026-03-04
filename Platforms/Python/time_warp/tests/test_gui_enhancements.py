@@ -38,6 +38,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 try:
     import PySide6.QtCore  # noqa: F401 — import-time check only
     import PySide6.QtWidgets as _qtw  # noqa: F401
+
     # Verify we can actually create/obtain a QApplication before committing.
     _app_check = _qtw.QApplication.instance() or _qtw.QApplication(sys.argv[:1])
     del _qtw, _app_check
@@ -80,10 +81,12 @@ class TestCommandPalette:
 
     def test_import(self):
         from time_warp.ui.command_palette import CommandPalette
+
         assert CommandPalette is not None
 
     def test_construction(self, qapp):
         from time_warp.ui.command_palette import CommandPalette
+
         palette = CommandPalette()
         assert palette is not None
         assert palette.results_list is not None
@@ -147,11 +150,13 @@ class TestCoachMarkManager:
 
     def test_import(self):
         from time_warp.ui.coach_marks import CoachMarkManager, CoachMarkOverlay
+
         assert CoachMarkManager is not None
         assert CoachMarkOverlay is not None
 
     def test_steps_defined(self):
         from time_warp.ui.coach_marks import CoachMarkManager
+
         assert len(CoachMarkManager.STEPS) >= 4
 
     def test_should_show_initially(self):
@@ -196,7 +201,8 @@ class TestCoachMarkManager:
         central = QWidget()
 
         class FakeWin:
-            def centralWidget(self): return central
+            def centralWidget(self):
+                return central
 
         mgr = CoachMarkManager(FakeWin())
         mgr._step_index = 1
@@ -217,11 +223,13 @@ class TestMinimapWidget:
 
     def test_class_exists(self):
         from time_warp.ui.editor import MinimapWidget
+
         assert MinimapWidget is not None
         assert MinimapWidget.MINIMAP_WIDTH == 80
 
     def test_enable_disable(self, qapp):
         from time_warp.ui.editor import CodeEditor
+
         editor = CodeEditor()
         assert editor.is_minimap_enabled() is False
         assert editor.minimap.isHidden()
@@ -237,6 +245,7 @@ class TestMinimapWidget:
 
     def test_minimap_creation(self, qapp):
         from time_warp.ui.editor import CodeEditor, MinimapWidget
+
         editor = CodeEditor()
         assert isinstance(editor.minimap, MinimapWidget)
         editor.deleteLater()
@@ -252,12 +261,14 @@ class TestCanvasToolbar:
 
     def test_toolbar_created(self, qapp):
         from time_warp.ui.canvas import TurtleCanvas
+
         canvas = TurtleCanvas()
         assert hasattr(canvas, "_canvas_toolbar")
         canvas.deleteLater()
 
     def test_zoom_in(self, qapp):
         from time_warp.ui.canvas import TurtleCanvas
+
         canvas = TurtleCanvas()
         initial_zoom = canvas.zoom
         canvas._zoom_in()
@@ -266,6 +277,7 @@ class TestCanvasToolbar:
 
     def test_zoom_out(self, qapp):
         from time_warp.ui.canvas import TurtleCanvas
+
         canvas = TurtleCanvas()
         canvas._zoom_in()  # start at 1.25
         canvas._zoom_out()
@@ -274,6 +286,7 @@ class TestCanvasToolbar:
 
     def test_reset_view(self, qapp):
         from time_warp.ui.canvas import TurtleCanvas
+
         canvas = TurtleCanvas()
         canvas.zoom = 5.0
         canvas.offset_x = 200.0
@@ -287,6 +300,7 @@ class TestCanvasToolbar:
     def test_fit_to_screen_no_lines(self, qapp):
         """fit_to_screen with no lines should reset to default."""
         from time_warp.ui.canvas import TurtleCanvas
+
         canvas = TurtleCanvas()
         canvas.zoom = 3.0
         canvas._fit_to_screen()
@@ -301,8 +315,12 @@ class TestCanvasToolbar:
         canvas = TurtleCanvas()
         canvas.resize(400, 400)
         canvas.lines = [
-            TurtleLine(start_x=0, start_y=0, end_x=100, end_y=0, color=(255, 0, 0), width=1),
-            TurtleLine(start_x=0, start_y=0, end_x=0, end_y=100, color=(0, 255, 0), width=1),
+            TurtleLine(
+                start_x=0, start_y=0, end_x=100, end_y=0, color=(255, 0, 0), width=1
+            ),
+            TurtleLine(
+                start_x=0, start_y=0, end_x=0, end_y=100, color=(0, 255, 0), width=1
+            ),
         ]
         canvas._fit_to_screen()
         # Zoom should have been calculated (not default 1.0)
@@ -311,6 +329,7 @@ class TestCanvasToolbar:
 
     def test_zoom_capped_at_maximum(self, qapp):
         from time_warp.ui.canvas import TurtleCanvas
+
         canvas = TurtleCanvas()
         canvas.zoom = 20.0
         canvas._zoom_in()
@@ -319,6 +338,7 @@ class TestCanvasToolbar:
 
     def test_zoom_capped_at_minimum(self, qapp):
         from time_warp.ui.canvas import TurtleCanvas
+
         canvas = TurtleCanvas()
         canvas.zoom = 0.06
         canvas._zoom_out()
@@ -338,6 +358,7 @@ class TestTabDotIndicator:
         """Setting modified=True should add ● to the tab title."""
         from time_warp.ui.main_window import MainWindow
         from PySide6.QtWidgets import QTabWidget, QWidget
+
         win = MainWindow.__new__(MainWindow)
         # Minimal stub
         win.editor_tabs = QTabWidget()
@@ -355,6 +376,7 @@ class TestTabDotIndicator:
         """Setting modified=False should remove ● from the tab title."""
         from time_warp.ui.main_window import MainWindow
         from PySide6.QtWidgets import QTabWidget, QWidget
+
         win = MainWindow.__new__(MainWindow)
         win.editor_tabs = QTabWidget()
         win.editor_tabs.addTab(QWidget(), "Untitled ●")
@@ -378,12 +400,14 @@ class TestCursorContext:
 
     def _make_editor_with_content(self, text: str):
         from time_warp.ui.editor import CodeEditor
+
         editor = CodeEditor()
         editor.setPlainText(text)
         return editor
 
     def test_def_function_detected(self, qapp):
         from time_warp.ui.main_window import MainWindow
+
         win = MainWindow.__new__(MainWindow)
         editor = self._make_editor_with_content("def my_function():\n    pass\n")
         # Position cursor inside the function body
@@ -396,6 +420,7 @@ class TestCursorContext:
 
     def test_no_context_returns_empty(self, qapp):
         from time_warp.ui.main_window import MainWindow
+
         win = MainWindow.__new__(MainWindow)
         editor = self._make_editor_with_content("x = 1\ny = 2\n")
         cursor = editor.textCursor()
@@ -405,6 +430,7 @@ class TestCursorContext:
 
     def test_subroutine_detected(self, qapp):
         from time_warp.ui.main_window import MainWindow
+
         win = MainWindow.__new__(MainWindow)
         code = "SUB MyRoutine\n  PRINT 1\nEND SUB\n"
         editor = self._make_editor_with_content(code)
@@ -427,13 +453,16 @@ class TestRunHistory:
     def _make_window_stub(self):
         """Create minimal MainWindow-like stub (no real Qt window)."""
         from time_warp.ui.main_window import MainWindow
+
         win = MainWindow.__new__(MainWindow)
         win._run_history = []
         from PySide6.QtCore import QSettings
+
         win.settings = QSettings("TimeWarp", "TestIDE")
         win.settings.remove("run_history")
         win._run_history_menu = None  # suppress menu build
         from unittest.mock import MagicMock
+
         win.statusbar = MagicMock()
         win.language_combo = MagicMock()
         win.editor_tabs = MagicMock()
@@ -446,6 +475,7 @@ class TestRunHistory:
 
     def test_save_run_history(self):
         from time_warp.core.interpreter import Language
+
         win = self._make_window_stub()
         win._save_run_history("PRINT 42", Language.BASIC)
         assert len(win._run_history) == 1
@@ -455,6 +485,7 @@ class TestRunHistory:
 
     def test_run_history_max_10(self):
         from time_warp.core.interpreter import Language
+
         win = self._make_window_stub()
         for i in range(15):
             win._save_run_history(f"PRINT {i}", Language.BASIC)
@@ -463,6 +494,7 @@ class TestRunHistory:
 
     def test_clear_run_history(self):
         from time_warp.core.interpreter import Language
+
         win = self._make_window_stub()
         win._save_run_history("PRINT 1", Language.BASIC)
         win._clear_run_history()
@@ -471,6 +503,7 @@ class TestRunHistory:
 
     def test_load_from_history(self):
         from time_warp.core.interpreter import Language
+
         win = self._make_window_stub()
         entry = {"code": "PRINT HI", "language": "BASIC", "snippet": "PRINT HI"}
         win._load_run_from_history(entry)
@@ -522,6 +555,7 @@ class TestOutputTabRouting:
 
     def test_clear_all_output(self, qapp):
         from unittest.mock import MagicMock
+
         win = self._make_routing_setup(qapp)
         win.output = MagicMock()
         win.errors_log.setPlainText("some error")
@@ -571,6 +605,7 @@ class TestInlineErrorUnderlines:
     def test_none_editor_no_crash(self, qapp):
         """Passing None for editor should not raise."""
         from time_warp.ui.main_window import MainWindow
+
         win = MainWindow.__new__(MainWindow)
         win._underline_error_lines_in_editor(None, {1})  # should not raise
 
@@ -677,7 +712,9 @@ class TestAccessibilityPreset:
 
         fake_theme_manager = MagicMock()
         fake_theme_manager.get_theme_names.return_value = [
-            "Dracula", "Solarized Light", "Spring"
+            "Dracula",
+            "Solarized Light",
+            "Spring",
         ]
         win.theme_manager = fake_theme_manager
 

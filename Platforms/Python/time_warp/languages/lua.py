@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def execute_lua(interpreter: "Interpreter", source: str, turtle: "TurtleState") -> str:
     """Execute a complete Lua program and return all output as a string."""
     env = LuaEnvironment(interpreter, turtle)
@@ -28,6 +29,7 @@ def execute_lua(interpreter: "Interpreter", source: str, turtle: "TurtleState") 
 # ---------------------------------------------------------------------------
 # Environment
 # ---------------------------------------------------------------------------
+
 
 class LuaEnvironment:
     def __init__(self, interpreter: "Interpreter", turtle: "TurtleState"):
@@ -40,16 +42,18 @@ class LuaEnvironment:
         self._setup_stdlib()
 
     def _setup_stdlib(self):
-        self._globals.update({
-            "math": LuaMathLib(),
-            "string": LuaStringLib(),
-            "table": LuaTableLib(),
-            "io": LuaIOLib(self),
-            "os": LuaOSLib(),
-            "coroutine": LuaCoroutineLib(),
-            "package": {"path": "."},
-            "_VERSION": "Lua 5.4",
-        })
+        self._globals.update(
+            {
+                "math": LuaMathLib(),
+                "string": LuaStringLib(),
+                "table": LuaTableLib(),
+                "io": LuaIOLib(self),
+                "os": LuaOSLib(),
+                "coroutine": LuaCoroutineLib(),
+                "package": {"path": "."},
+                "_VERSION": "Lua 5.4",
+            }
+        )
 
     def _emit(self, text: str):
         self._output.append(str(text))
@@ -110,7 +114,9 @@ class LuaEnvironment:
                 continue
             # Merge multi-line table constructors: accumulate until braces balance.
             # Only merge when no block-introducing keyword starts the line.
-            _block_kw = re.match(r"^(if|for|while|repeat|function|local\s+function)\b", line)
+            _block_kw = re.match(
+                r"^(if|for|while|repeat|function|local\s+function)\b", line
+            )
             if not _block_kw:
                 brace_depth = line.count("{") - line.count("}")
                 if brace_depth > 0:
@@ -215,7 +221,9 @@ class LuaEnvironment:
             parts.append(remaining)
         return parts if parts else [text.strip()]
 
-    def _collect_block_to_end(self, lines: list[str], start: int) -> tuple[list[str], int]:
+    def _collect_block_to_end(
+        self, lines: list[str], start: int
+    ) -> tuple[list[str], int]:
         """Collect lines until matching 'end', handling nesting."""
         depth = 1
         i = start
@@ -223,11 +231,15 @@ class LuaEnvironment:
         while i < len(lines):
             stripped = lines[i].strip()
             # Single-line constructs like "if COND then STMT end" don't change depth
-            if re.match(r"^(if|for|while)\b", stripped) and re.search(r"\bend\s*$", stripped):
+            if re.match(r"^(if|for|while)\b", stripped) and re.search(
+                r"\bend\s*$", stripped
+            ):
                 # Self-contained line — depth unchanged
                 pass
             else:
-                if re.match(r"^(if|for|while|do|function)\b", stripped) or re.match(r"^local\s+function\b", stripped):
+                if re.match(r"^(if|for|while|do|function)\b", stripped) or re.match(
+                    r"^local\s+function\b", stripped
+                ):
                     depth += 1
                 if re.match(r"^end\b", stripped):
                     depth -= 1
@@ -255,7 +267,9 @@ class LuaEnvironment:
                     executed = True
                     # Single-line if: "if COND then STMT end"
                     if is_single_line:
-                        body_text = inline[:-4].strip() if inline.endswith(" end") else ""
+                        body_text = (
+                            inline[:-4].strip() if inline.endswith(" end") else ""
+                        )
                         if body_text:
                             self._exec_inline(body_text)
                         i += 1
@@ -284,7 +298,9 @@ class LuaEnvironment:
                     self._exec_block(block)
             elif m_elseif and not executed:
                 cond = self._eval_expr(m_elseif.group(1))
-                inline_elif = m_elseif.group(2).strip() if m_elseif.lastindex >= 2 else ""
+                inline_elif = (
+                    m_elseif.group(2).strip() if m_elseif.lastindex >= 2 else ""
+                )
                 if cond and cond != 0 and cond is not None and cond is not False:
                     executed = True
                     if inline_elif:
@@ -335,13 +351,19 @@ class LuaEnvironment:
         line = lines[start].strip()
 
         # Numeric for: for i = start, limit [, step] do [inline_body end]
-        m = re.match(r"^for\s+(\w+)\s*=\s*(.+?),\s*(.+?)(?:,\s*(.+?))?\s+do\s*(.*)$", line)
+        m = re.match(
+            r"^for\s+(\w+)\s*=\s*(.+?),\s*(.+?)(?:,\s*(.+?))?\s+do\s*(.*)$", line
+        )
         # Generic for: for k, v in pairs(t) do [inline_body end]
         m2 = None if m else re.match(r"^for\s+(.+?)\s+in\s+(.+?)\s+do\s*(.*)", line)
 
         # Check for single-line form: "for ... do STMT end"
         inline_body = None
-        tail_src = (m.group(5) if m else m2.group(3) if m2 else "").strip() if (m or m2) else ""
+        tail_src = (
+            (m.group(5) if m else m2.group(3) if m2 else "").strip()
+            if (m or m2)
+            else ""
+        )
         if tail_src and re.search(r"\bend\s*$", tail_src):
             stmt = re.sub(r"\bend\s*$", "", tail_src).strip()
             if stmt:
@@ -497,7 +519,9 @@ class LuaEnvironment:
                 else:
                     vals.append(v)
             for i_v, vn in enumerate(var_names):
-                self._assign(vn.strip(), vals[i_v] if i_v < len(vals) else None, local=True)
+                self._assign(
+                    vn.strip(), vals[i_v] if i_v < len(vals) else None, local=True
+                )
             return
 
         # var = expr (assignment -- but not ==)
@@ -551,10 +575,14 @@ class LuaEnvironment:
         # String literal
         m = re.match(r'^"((?:[^"\\]|\\.)*)"$', expr)
         if m:
-            return m.group(1).replace("\\n", "\n").replace("\\t", "\t").replace('\\"', '"')
+            return (
+                m.group(1).replace("\\n", "\n").replace("\\t", "\t").replace('\\"', '"')
+            )
         m = re.match(r"^'((?:[^'\\]|\\.)*)'$", expr)
         if m:
-            return m.group(1).replace("\\n", "\n").replace("\\t", "\t").replace("\\'", "'")
+            return (
+                m.group(1).replace("\\n", "\n").replace("\\t", "\t").replace("\\'", "'")
+            )
         # Long string [[...]]
         m = re.match(r"^\[\[(.+?)\]\]$", expr, re.DOTALL)
         if m:
@@ -646,12 +674,28 @@ class LuaEnvironment:
 
     def _parse_expr(self, expr: str) -> Any:
         """Try to parse binary-operator expressions."""
-        for op in [" or ", " and ", "==", "~=", "<=", ">=", "<", ">",
-                   " .. ", "+", "-", "*", "//", "/", "%", "^"]:
+        for op in [
+            " or ",
+            " and ",
+            "==",
+            "~=",
+            "<=",
+            ">=",
+            "<",
+            ">",
+            " .. ",
+            "+",
+            "-",
+            "*",
+            "//",
+            "/",
+            "%",
+            "^",
+        ]:
             idx = _find_operator(expr, op)
             if idx != -1:
                 lhs = self._eval_expr(expr[:idx].strip())
-                rhs = self._eval_expr(expr[idx + len(op):].strip())
+                rhs = self._eval_expr(expr[idx + len(op) :].strip())
                 return _apply_op(lhs, op.strip(), rhs)
         return None
 
@@ -667,25 +711,70 @@ class LuaEnvironment:
             "tostring": lambda a: _lua_tostring(a[0]) if a else "nil",
             "tonumber": lambda a: _to_number(a[0]) if a else None,
             "type": lambda a: _lua_type(a[0]) if a else "nil",
-            "ipairs": lambda a: list(enumerate(a[0] if isinstance(a[0], list) else list(a[0].values()), 1)) if a and isinstance(a[0], (list, dict)) else [],
-            "pairs": lambda a: list(a[0].items() if isinstance(a[0], dict) else enumerate(a[0], 1)) if a else [],
-            "next": lambda a: next(iter(a[0].items())) if a and isinstance(a[0], dict) and a[0] else None,
-            "rawget": lambda a: a[0].get(a[1]) if len(a) >= 2 and isinstance(a[0], dict) else None,
-            "rawset": lambda a: _lua_rawset(a[0], a[1], a[2]) if len(a) >= 3 and isinstance(a[0], dict) else None,
+            "ipairs": lambda a: (
+                list(
+                    enumerate(
+                        a[0] if isinstance(a[0], list) else list(a[0].values()), 1
+                    )
+                )
+                if a and isinstance(a[0], (list, dict))
+                else []
+            ),
+            "pairs": lambda a: (
+                list(a[0].items() if isinstance(a[0], dict) else enumerate(a[0], 1))
+                if a
+                else []
+            ),
+            "next": lambda a: (
+                next(iter(a[0].items()))
+                if a and isinstance(a[0], dict) and a[0]
+                else None
+            ),
+            "rawget": lambda a: (
+                a[0].get(a[1]) if len(a) >= 2 and isinstance(a[0], dict) else None
+            ),
+            "rawset": lambda a: (
+                _lua_rawset(a[0], a[1], a[2])
+                if len(a) >= 3 and isinstance(a[0], dict)
+                else None
+            ),
             "rawequal": lambda a: a[0] is a[1] if len(a) >= 2 else False,
             "rawlen": lambda a: len(a[0]) if a else 0,
-            "unpack": lambda a: a[0] if a and isinstance(a[0], list) else (list(a[0]) if a and isinstance(a[0], dict) else a),
+            "unpack": lambda a: (
+                a[0]
+                if a and isinstance(a[0], list)
+                else (list(a[0]) if a and isinstance(a[0], dict) else a)
+            ),
             "table.unpack": lambda a: a[0] if a and isinstance(a[0], list) else a,
-            "select": lambda a: len(a) - 1 if a and a[0] == "#" else (args[int(a[0])] if len(a) > 1 else None),
-            "assert": lambda a: a[0] if (a and a[0] is not None and a[0] is not False) else (_ for _ in ()).throw(LuaError(str(a[1]) if len(a) > 1 else "assertion failed")),
-            "error": lambda a: (_ for _ in ()).throw(LuaError(str(a[0]) if a else "error")),
-            "print": lambda a: self._emit("\t".join(_lua_tostring(v) for v in a)) or None,
-            "require": lambda a: self._emit(f"ℹ️ require('{a[0]}') not supported in sandbox") or None,
+            "select": lambda a: (
+                len(a) - 1
+                if a and a[0] == "#"
+                else (args[int(a[0])] if len(a) > 1 else None)
+            ),
+            "assert": lambda a: (
+                a[0]
+                if (a and a[0] is not None and a[0] is not False)
+                else (_ for _ in ()).throw(
+                    LuaError(str(a[1]) if len(a) > 1 else "assertion failed")
+                )
+            ),
+            "error": lambda a: (_ for _ in ()).throw(
+                LuaError(str(a[0]) if a else "error")
+            ),
+            "print": lambda a: self._emit("\t".join(_lua_tostring(v) for v in a))
+            or None,
+            "require": lambda a: self._emit(
+                f"ℹ️ require('{a[0]}') not supported in sandbox"
+            )
+            or None,
             "pcall": lambda a: self._lua_pcall(a),
             "xpcall": lambda a: self._lua_xpcall(a),
-            "load": lambda a: (lambda src: LuaLoadFunction(str(a[0]), self))(a[0]) if a else None,
+            "load": lambda a: (
+                (lambda src: LuaLoadFunction(str(a[0]), self))(a[0]) if a else None
+            ),
             "loadstring": lambda a: LuaLoadFunction(str(a[0]), self) if a else None,
-            "dofile": lambda a: self._emit("ℹ️ dofile not supported in sandbox") or None,
+            "dofile": lambda a: self._emit("ℹ️ dofile not supported in sandbox")
+            or None,
             "collectgarbage": lambda a: 0,
             "setmetatable": lambda a: a[0] if a else None,
             "getmetatable": lambda a: None,
@@ -693,13 +782,25 @@ class LuaEnvironment:
             "getfenv": lambda a: {},
             "module": lambda a: None,
             "newproxy": lambda a: {},
-            "string.format": lambda a: a[0] % tuple(a[1:]) if len(a) > 1 else str(a[0]) if a else "",
-            "math.random": lambda a: self._resolve("math").random(a[0] if a else None, a[1] if len(a) > 1 else None),
+            "string.format": lambda a: (
+                a[0] % tuple(a[1:]) if len(a) > 1 else str(a[0]) if a else ""
+            ),
+            "math.random": lambda a: self._resolve("math").random(
+                a[0] if a else None, a[1] if len(a) > 1 else None
+            ),
             "math.randomseed": lambda a: None,
             "math.huge": lambda a: float("inf"),
             "math.pi": lambda a: math.pi,
-            "math.tointeger": lambda a: int(a[0]) if a and isinstance(a[0], (int, float)) and float(a[0]).is_integer() else None,
-            "math.type": lambda a: "integer" if isinstance(a[0], int) else ("float" if isinstance(a[0], float) else "fail") if a else "fail",
+            "math.tointeger": lambda a: (
+                int(a[0])
+                if a and isinstance(a[0], (int, float)) and float(a[0]).is_integer()
+                else None
+            ),
+            "math.type": lambda a: (
+                "integer"
+                if isinstance(a[0], int)
+                else ("float" if isinstance(a[0], float) else "fail") if a else "fail"
+            ),
         }
         if name in builtins:
             return builtins[name](args)
@@ -764,6 +865,7 @@ class LuaEnvironment:
 # Standard library stubs
 # ---------------------------------------------------------------------------
 
+
 class LuaMathLib:
     pi = math.pi
     huge = float("inf")
@@ -775,6 +877,7 @@ class LuaMathLib:
 
     def random(self, a=None, b=None):
         import random as _random
+
         if a is None:
             return _random.random()
         if b is None:
@@ -783,60 +886,101 @@ class LuaMathLib:
 
     def randomseed(self, seed=None):
         import random as _random
+
         _random.seed(seed)
 
     def type(self, x):
-        if isinstance(x, int): return "integer"
-        if isinstance(x, float): return "float"
+        if isinstance(x, int):
+            return "integer"
+        if isinstance(x, float):
+            return "float"
         return "fail"
 
     def tointeger(self, x):
-        if isinstance(x, int): return x
-        if isinstance(x, float) and x.is_integer(): return int(x)
+        if isinstance(x, int):
+            return x
+        if isinstance(x, float) and x.is_integer():
+            return int(x)
         return None
 
-    def fmod(self, x, y): return math.fmod(x, y)
-    def modf(self, x): return math.modf(x)
-    def max(self, *a): return max(a)
-    def min(self, *a): return min(a)
-    def abs(self, x): return abs(x)
+    def fmod(self, x, y):
+        return math.fmod(x, y)
+
+    def modf(self, x):
+        return math.modf(x)
+
+    def max(self, *a):
+        return max(a)
+
+    def min(self, *a):
+        return min(a)
+
+    def abs(self, x):
+        return abs(x)
 
 
 class LuaStringLib:
-    def len(self, s): return len(s)
+    def len(self, s):
+        return len(s)
+
     def sub(self, s, i, j=None):
         if j is None:
-            return s[i-1:]
-        return s[i-1:j]
-    def upper(self, s): return s.upper()
-    def lower(self, s): return s.lower()
-    def rep(self, s, n): return s * int(n)
-    def reverse(self, s): return s[::-1]
-    def byte(self, s, i=1): return ord(s[i-1]) if s else 0
-    def char(self, *args): return "".join(chr(int(a)) for a in args)
+            return s[i - 1 :]
+        return s[i - 1 : j]
+
+    def upper(self, s):
+        return s.upper()
+
+    def lower(self, s):
+        return s.lower()
+
+    def rep(self, s, n):
+        return s * int(n)
+
+    def reverse(self, s):
+        return s[::-1]
+
+    def byte(self, s, i=1):
+        return ord(s[i - 1]) if s else 0
+
+    def char(self, *args):
+        return "".join(chr(int(a)) for a in args)
+
     def find(self, s, pattern, init=1, plain=False):
         if plain:
-            idx = s.find(pattern, init-1)
-            if idx == -1: return None
-            return idx+1, idx+len(pattern)
-        m = re.search(pattern, s[init-1:])
-        if m: return m.start()+init, m.end()+init-1
+            idx = s.find(pattern, init - 1)
+            if idx == -1:
+                return None
+            return idx + 1, idx + len(pattern)
+        m = re.search(pattern, s[init - 1 :])
+        if m:
+            return m.start() + init, m.end() + init - 1
         return None
-    def format(self, fmt, *args): return fmt % args if args else fmt
+
+    def format(self, fmt, *args):
+        return fmt % args if args else fmt
+
     def gsub(self, s, pattern, repl, n=None):
         count = [0]
+
         def replacer(m):
-            if n and count[0] >= n: return m.group(0)
+            if n and count[0] >= n:
+                return m.group(0)
             count[0] += 1
-            if callable(repl): return str(repl(m.group(0)))
+            if callable(repl):
+                return str(repl(m.group(0)))
             return repl
+
         result = re.sub(pattern, replacer, s)
         return result, count[0]
+
     def match(self, s, pattern, init=1):
-        m = re.match(pattern, s[init-1:])
-        if not m: return None
+        m = re.match(pattern, s[init - 1 :])
+        if not m:
+            return None
         groups = m.groups()
         return groups[0] if len(groups) == 1 else (groups if groups else m.group(0))
+
     def gmatch(self, s, pattern):
         return re.findall(pattern, s)
 
@@ -878,13 +1022,14 @@ class LuaTableLib:
         if isinstance(tbl, list):
             if comp and callable(comp):
                 import functools
+
                 tbl.sort(key=functools.cmp_to_key(lambda a, b: comp(a, b)))
             else:
                 tbl.sort()
 
     def move(self, a1, f, e, t, a2=None):
         target = a2 if a2 is not None else a1
-        chunk = (a1 if isinstance(a1, list) else list(a1.values()))[int(f)-1:int(e)]
+        chunk = (a1 if isinstance(a1, list) else list(a1.values()))[int(f) - 1 : int(e)]
         for i, v in enumerate(chunk):
             if isinstance(target, list):
                 idx = int(t) - 1 + i
@@ -897,7 +1042,7 @@ class LuaTableLib:
 
     def unpack(self, tbl, i=1, j=None):
         if isinstance(tbl, list):
-            return tbl[int(i)-1:j]
+            return tbl[int(i) - 1 : j]
         return list(tbl.values()) if isinstance(tbl, dict) else []
 
     def pack(self, *args):
@@ -917,7 +1062,11 @@ class LuaIOLib:
         self.env._emit("".join(str(a) for a in args))
 
     def read(self, fmt="*l"):
-        return self.env.interpreter.request_input("lua> ") if hasattr(self.env.interpreter, "request_input") else ""
+        return (
+            self.env.interpreter.request_input("lua> ")
+            if hasattr(self.env.interpreter, "request_input")
+            else ""
+        )
 
     def lines(self, filename=None):
         if filename:
@@ -959,8 +1108,10 @@ class LuaFileHandle:
         if fmt in ("*l", "l"):
             return self._f.readline().rstrip("\n")
         if fmt in ("*n", "n"):
-            try: return float(self._f.readline())
-            except: return None
+            try:
+                return float(self._f.readline())
+            except:
+                return None
         if fmt in ("*a", "a"):
             return self._f.read()
         return self._f.readline()
@@ -984,22 +1135,33 @@ class LuaFileHandle:
 class LuaOSLib:
     def time(self, *a):
         import time as _time
+
         return int(_time.time())
 
     def clock(self):
         import time as _time
+
         return _time.process_time()
 
     def date(self, fmt="%c", t=None):
         import time as _time
+
         t = t or _time.time()
         if fmt.startswith("!"):
             fmt = fmt[1:]
         if fmt == "*t":
             lt = _time.localtime(t)
-            return {"year": lt.tm_year, "month": lt.tm_mon, "day": lt.tm_mday,
-                    "hour": lt.tm_hour, "min": lt.tm_min, "sec": lt.tm_sec,
-                    "wday": lt.tm_wday+1, "yday": lt.tm_yday, "isdst": lt.tm_isdst}
+            return {
+                "year": lt.tm_year,
+                "month": lt.tm_mon,
+                "day": lt.tm_mday,
+                "hour": lt.tm_hour,
+                "min": lt.tm_min,
+                "sec": lt.tm_sec,
+                "wday": lt.tm_wday + 1,
+                "yday": lt.tm_yday,
+                "isdst": lt.tm_isdst,
+            }
         return _time.strftime(fmt, _time.localtime(t)) if fmt else _time.ctime(t)
 
     def difftime(self, t2, t1):
@@ -1010,6 +1172,7 @@ class LuaOSLib:
 
     def getenv(self, name):
         import os as _os
+
         return _os.environ.get(name)
 
     def execute(self, cmd=None):
@@ -1017,11 +1180,13 @@ class LuaOSLib:
 
     def tmpname(self):
         import tempfile
+
         return tempfile.mktemp()
 
     def rename(self, old, new):
         try:
             import os as _os
+
             _os.rename(old, new)
             return True
         except OSError as e:
@@ -1030,6 +1195,7 @@ class LuaOSLib:
     def remove(self, name):
         try:
             import os as _os
+
             _os.remove(name)
             return True
         except OSError as e:
@@ -1038,16 +1204,19 @@ class LuaOSLib:
 
 class LuaCoroutineLib:
     """Simplified coroutine stub — full coroutines need Python greenlets/native async."""
+
     def create(self, f):
         return LuaCoroutine(f)
 
     def wrap(self, f):
         co = LuaCoroutine(f)
+
         def wrapper(*args):
             ok, val = co.resume(*args)
             if not ok:
                 raise LuaError(val)
             return val
+
         return wrapper
 
     def resume(self, co, *args):
@@ -1107,6 +1276,7 @@ class LuaYield(Exception):
 
 class LuaLoadFunction:
     """Result of load()/loadstring() — callable chunk."""
+
     def __init__(self, src: str, env: "LuaEnvironment"):
         self.src = src
         self.env = env
@@ -1122,8 +1292,11 @@ class LuaLoadFunction:
 # User-defined function
 # ---------------------------------------------------------------------------
 
+
 class LuaFunction:
-    def __init__(self, name: str, params: list[str], body: list[str], env: "LuaEnvironment"):
+    def __init__(
+        self, name: str, params: list[str], body: list[str], env: "LuaEnvironment"
+    ):
         self.name = name
         self.params = params
         self.body = body
@@ -1148,12 +1321,15 @@ class LuaFunction:
 # Exceptions
 # ---------------------------------------------------------------------------
 
+
 class LuaError(Exception):
     pass
+
 
 class LuaReturn(Exception):
     def __init__(self, value):
         self.value = value
+
 
 class LuaBreak(Exception):
     pass
@@ -1162,6 +1338,7 @@ class LuaBreak(Exception):
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _lua_rawset(d: dict, key: Any, value: Any) -> dict:
     """Set key in dict and return the dict (rawset semantics)."""
@@ -1244,9 +1421,9 @@ def _find_operator(expr: str, op: str) -> int:
             depth += 1
         elif ch in ")]}":
             depth -= 1
-        elif depth == 0 and expr[i:i+len(op)] == op:
+        elif depth == 0 and expr[i : i + len(op)] == op:
             # Avoid matching -- comment prefix as subtraction
-            if op == "-" and i > 0 and expr[i-1] == "-":
+            if op == "-" and i > 0 and expr[i - 1] == "-":
                 pass
             else:
                 return i
@@ -1259,21 +1436,36 @@ def _apply_op(lhs: Any, op: str, rhs: Any) -> Any:
         if isinstance(lhs, str) or isinstance(rhs, str):
             return str(lhs) + str(rhs)
         return lhs + rhs
-    if op == "-": return lhs - rhs
-    if op == "*": return lhs * rhs
-    if op == "/": return lhs / rhs if rhs else 0
-    if op == "//": return lhs // rhs if rhs else 0
-    if op == "%": return lhs % rhs if rhs else 0
-    if op == "^": return lhs ** rhs
-    if op == "..": return str(lhs) + str(rhs)
-    if op == "==": return lhs == rhs
-    if op == "~=": return lhs != rhs
-    if op == "<": return lhs < rhs
-    if op == ">": return lhs > rhs
-    if op == "<=": return lhs <= rhs
-    if op == ">=": return lhs >= rhs
-    if op == "and": return rhs if lhs else lhs
-    if op == "or": return lhs if lhs else rhs
+    if op == "-":
+        return lhs - rhs
+    if op == "*":
+        return lhs * rhs
+    if op == "/":
+        return lhs / rhs if rhs else 0
+    if op == "//":
+        return lhs // rhs if rhs else 0
+    if op == "%":
+        return lhs % rhs if rhs else 0
+    if op == "^":
+        return lhs**rhs
+    if op == "..":
+        return str(lhs) + str(rhs)
+    if op == "==":
+        return lhs == rhs
+    if op == "~=":
+        return lhs != rhs
+    if op == "<":
+        return lhs < rhs
+    if op == ">":
+        return lhs > rhs
+    if op == "<=":
+        return lhs <= rhs
+    if op == ">=":
+        return lhs >= rhs
+    if op == "and":
+        return rhs if lhs else lhs
+    if op == "or":
+        return lhs if lhs else rhs
     return None
 
 
@@ -1287,11 +1479,18 @@ def _to_number(v: Any) -> Any:
 
 
 def _lua_type(v: Any) -> str:
-    if v is None: return "nil"
-    if isinstance(v, bool): return "boolean"
-    if isinstance(v, int): return "number"
-    if isinstance(v, float): return "number"
-    if isinstance(v, str): return "string"
-    if isinstance(v, dict): return "table"
-    if callable(v): return "function"
+    if v is None:
+        return "nil"
+    if isinstance(v, bool):
+        return "boolean"
+    if isinstance(v, int):
+        return "number"
+    if isinstance(v, float):
+        return "number"
+    if isinstance(v, str):
+        return "string"
+    if isinstance(v, dict):
+        return "table"
+    if callable(v):
+        return "function"
     return "userdata"

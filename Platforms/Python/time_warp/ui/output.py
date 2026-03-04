@@ -273,7 +273,7 @@ class OutputPanel(QTextEdit):
     line_clicked = Signal(int)  # emitted when a line-number link is clicked
 
     # Regex to find line-number references in error messages
-    _LINE_REF_RE = re.compile(r'((?:at\s+)?line\s+\d+)', re.IGNORECASE)
+    _LINE_REF_RE = re.compile(r"((?:at\s+)?line\s+\d+)", re.IGNORECASE)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -407,6 +407,7 @@ class OutputPanel(QTextEdit):
 
     def _search_prev(self):
         from PySide6.QtGui import QTextDocument  # noqa: PLC0415
+
         text = self._search_field.text()
         if text:
             found = self.find(text, QTextDocument.FindFlag.FindBackward)
@@ -865,7 +866,7 @@ class OutputPanel(QTextEdit):
             for part in parts:
                 if self._LINE_REF_RE.fullmatch(part):
                     # Extract the numeric part from e.g. "line 42" / "at line 5"
-                    num_m = re.search(r'\d+', part)
+                    num_m = re.search(r"\d+", part)
                     if num_m:
                         link_fmt = QTextCharFormat(base_fmt)
                         link_fmt.setAnchor(True)

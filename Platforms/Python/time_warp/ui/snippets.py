@@ -386,132 +386,528 @@ LOGO_SNIPPETS: List[CodeSnippet] = [
 
 def _s(name: str, desc: str, code: str, lang: str, cat: str) -> CodeSnippet:
     """Shorthand constructor for CodeSnippet."""
-    return CodeSnippet(name=name, description=desc, code=code, language=lang, category=cat)
+    return CodeSnippet(
+        name=name, description=desc, code=code, language=lang, category=cat
+    )
 
 
 _C = "C"
 _FORTH = "FORTH"
 
 _C_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World",     "Print Hello World",     '#include <stdio.h>\nint main() {\n    printf("Hello, World!\\n");\n    return 0;\n}\n', _C, "Basics"),
-    _s("FOR loop",        "Standard for loop",     '#include <stdio.h>\nint main() {\n    for (int i = 0; i < 10; i++) {\n        printf("%d\\n", i);\n    }\n    return 0;\n}\n', _C, "Control Flow"),
-    _s("Function",        "Define and call",       '#include <stdio.h>\nint square(int n) { return n * n; }\nint main() {\n    printf("%d\\n", square(7));\n    return 0;\n}\n', _C, "Functions"),
-    _s("Array",           "Declare and iterate",   '#include <stdio.h>\nint main() {\n    int arr[] = {1,2,3,4,5};\n    for (int i = 0; i < 5; i++)\n        printf("%d ", arr[i]);\n    printf("\\n");\n    return 0;\n}\n', _C, "Data"),
-    _s("String copy",     "strcpy / strcmp",       '#include <stdio.h>\n#include <string.h>\nint main() {\n    char src[] = "Hello";\n    char dst[20];\n    strcpy(dst, src);\n    printf("%s\\n", dst);\n    return 0;\n}\n', _C, "Strings"),
-    _s("Struct",          "Define a struct",       '#include <stdio.h>\ntypedef struct { int x; int y; } Point;\nint main() {\n    Point p = {10, 20};\n    printf("%d %d\\n", p.x, p.y);\n    return 0;\n}\n', _C, "Data"),
+    _s(
+        "Hello World",
+        "Print Hello World",
+        '#include <stdio.h>\nint main() {\n    printf("Hello, World!\\n");\n    return 0;\n}\n',
+        _C,
+        "Basics",
+    ),
+    _s(
+        "FOR loop",
+        "Standard for loop",
+        '#include <stdio.h>\nint main() {\n    for (int i = 0; i < 10; i++) {\n        printf("%d\\n", i);\n    }\n    return 0;\n}\n',
+        _C,
+        "Control Flow",
+    ),
+    _s(
+        "Function",
+        "Define and call",
+        '#include <stdio.h>\nint square(int n) { return n * n; }\nint main() {\n    printf("%d\\n", square(7));\n    return 0;\n}\n',
+        _C,
+        "Functions",
+    ),
+    _s(
+        "Array",
+        "Declare and iterate",
+        '#include <stdio.h>\nint main() {\n    int arr[] = {1,2,3,4,5};\n    for (int i = 0; i < 5; i++)\n        printf("%d ", arr[i]);\n    printf("\\n");\n    return 0;\n}\n',
+        _C,
+        "Data",
+    ),
+    _s(
+        "String copy",
+        "strcpy / strcmp",
+        '#include <stdio.h>\n#include <string.h>\nint main() {\n    char src[] = "Hello";\n    char dst[20];\n    strcpy(dst, src);\n    printf("%s\\n", dst);\n    return 0;\n}\n',
+        _C,
+        "Strings",
+    ),
+    _s(
+        "Struct",
+        "Define a struct",
+        '#include <stdio.h>\ntypedef struct { int x; int y; } Point;\nint main() {\n    Point p = {10, 20};\n    printf("%d %d\\n", p.x, p.y);\n    return 0;\n}\n',
+        _C,
+        "Data",
+    ),
 ]
 
 _PASCAL_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World",      "Print Hello World",    "PROGRAM Hello;\nBEGIN\n  WRITELN('Hello, World!');\nEND.\n", "PASCAL", "Basics"),
-    _s("FOR loop",         "FOR..DO loop",         "PROGRAM Counting;\nVAR I: Integer;\nBEGIN\n  FOR I := 1 TO 10 DO\n    WRITELN(I);\nEND.\n", "PASCAL", "Control Flow"),
-    _s("WHILE loop",       "WHILE..DO",            "PROGRAM Loop;\nVAR X: Integer;\nBEGIN\n  X := 0;\n  WHILE X < 5 DO BEGIN\n    WRITELN(X);\n    X := X + 1;\n  END;\nEND.\n", "PASCAL", "Control Flow"),
-    _s("Procedure",        "Procedure with param", "PROGRAM Procs;\nPROCEDURE Greet(Name: String);\nBEGIN\n  WRITELN('Hello, ', Name);\nEND;\nBEGIN\n  Greet('World');\nEND.\n", "PASCAL", "Functions"),
-    _s("Function",         "Function returning val","PROGRAM Funcs;\nFUNCTION Square(N: Integer): Integer;\nBEGIN\n  Square := N * N;\nEND;\nBEGIN\n  WRITELN(Square(7));\nEND.\n", "PASCAL", "Functions"),
-    _s("RECORD type",      "Record with fields",   "PROGRAM Recs;\nTYPE TPoint = RECORD\n  X: Integer;\n  Y: Integer;\nEND;\nVAR P: TPoint;\nBEGIN\n  P.X := 10;\n  P.Y := 20;\n  WRITELN(P.X, ' ', P.Y);\nEND.\n", "PASCAL", "Data"),
+    _s(
+        "Hello World",
+        "Print Hello World",
+        "PROGRAM Hello;\nBEGIN\n  WRITELN('Hello, World!');\nEND.\n",
+        "PASCAL",
+        "Basics",
+    ),
+    _s(
+        "FOR loop",
+        "FOR..DO loop",
+        "PROGRAM Counting;\nVAR I: Integer;\nBEGIN\n  FOR I := 1 TO 10 DO\n    WRITELN(I);\nEND.\n",
+        "PASCAL",
+        "Control Flow",
+    ),
+    _s(
+        "WHILE loop",
+        "WHILE..DO",
+        "PROGRAM Loop;\nVAR X: Integer;\nBEGIN\n  X := 0;\n  WHILE X < 5 DO BEGIN\n    WRITELN(X);\n    X := X + 1;\n  END;\nEND.\n",
+        "PASCAL",
+        "Control Flow",
+    ),
+    _s(
+        "Procedure",
+        "Procedure with param",
+        "PROGRAM Procs;\nPROCEDURE Greet(Name: String);\nBEGIN\n  WRITELN('Hello, ', Name);\nEND;\nBEGIN\n  Greet('World');\nEND.\n",
+        "PASCAL",
+        "Functions",
+    ),
+    _s(
+        "Function",
+        "Function returning val",
+        "PROGRAM Funcs;\nFUNCTION Square(N: Integer): Integer;\nBEGIN\n  Square := N * N;\nEND;\nBEGIN\n  WRITELN(Square(7));\nEND.\n",
+        "PASCAL",
+        "Functions",
+    ),
+    _s(
+        "RECORD type",
+        "Record with fields",
+        "PROGRAM Recs;\nTYPE TPoint = RECORD\n  X: Integer;\n  Y: Integer;\nEND;\nVAR P: TPoint;\nBEGIN\n  P.X := 10;\n  P.Y := 20;\n  WRITELN(P.X, ' ', P.Y);\nEND.\n",
+        "PASCAL",
+        "Data",
+    ),
 ]
 
 _PROLOG_SNIPPETS: List[CodeSnippet] = [
-    _s("Facts & query",   "Parent/ancestor KB",    "parent(tom, bob).\nparent(bob, ann).\nancestor(X, Y) :- parent(X, Y).\nancestor(X, Y) :- parent(X, Z), ancestor(Z, Y).\n?- ancestor(tom, ann).\n", "PROLOG", "Basics"),
-    _s("List member",     "member/2",              "?- member(X, [1,2,3]).\n", "PROLOG", "Lists"),
-    _s("Findall",         "Collect all solutions", "color(red). color(green). color(blue).\n?- findall(X, color(X), Colors).\n", "PROLOG", "Control"),
-    _s("Arithmetic",      "Arithmetic eval",       "?- X is 3 + 4 * 2.\n", "PROLOG", "Basics"),
-    _s("Between",         "Generate integers",     "?- between(1, 5, X).\n", "PROLOG", "Basics"),
-    _s("Append",          "List concatenation",    "?- append([a,b],[c,d], R).\n", "PROLOG", "Lists"),
+    _s(
+        "Facts & query",
+        "Parent/ancestor KB",
+        "parent(tom, bob).\nparent(bob, ann).\nancestor(X, Y) :- parent(X, Y).\nancestor(X, Y) :- parent(X, Z), ancestor(Z, Y).\n?- ancestor(tom, ann).\n",
+        "PROLOG",
+        "Basics",
+    ),
+    _s("List member", "member/2", "?- member(X, [1,2,3]).\n", "PROLOG", "Lists"),
+    _s(
+        "Findall",
+        "Collect all solutions",
+        "color(red). color(green). color(blue).\n?- findall(X, color(X), Colors).\n",
+        "PROLOG",
+        "Control",
+    ),
+    _s("Arithmetic", "Arithmetic eval", "?- X is 3 + 4 * 2.\n", "PROLOG", "Basics"),
+    _s("Between", "Generate integers", "?- between(1, 5, X).\n", "PROLOG", "Basics"),
+    _s(
+        "Append",
+        "List concatenation",
+        "?- append([a,b],[c,d], R).\n",
+        "PROLOG",
+        "Lists",
+    ),
 ]
 
 _FORTH_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World",     "Print greeting",        ': GREETING  ." Hello, World!" CR ;\nGREETING\n', _FORTH, "Basics"),
-    _s("Square word",     "Double-times word",     ': SQUARE  DUP * ;\n5 SQUARE .\n', _FORTH, "Words"),
-    _s("Factorial",       "Recursive factorial",   ': FACT  DUP 1 <= IF DROP 1 ELSE DUP 1 - RECURSE * THEN ;\n5 FACT .\n', _FORTH, "Words"),
-    _s("DO loop",         "Counted loop",          ': COUNTDOWN  11 1 DO I . LOOP ;\nCOUNTDOWN\n', _FORTH, "Control Flow"),
-    _s("Stack ops",       "DUP SWAP DROP",         '10 20 30\nDUP .\nSWAP .\nDROP\n', _FORTH, "Stack"),
-    _s("DEFER / IS",      "Deferred execution",    'DEFER ACTION\n: HELLO  ." Hello" CR ;\n: GOODBYE  ." Goodbye" CR ;\n\' HELLO IS ACTION\nACTION\n\' GOODBYE IS ACTION\nACTION\n', _FORTH, "Advanced"),
+    _s(
+        "Hello World",
+        "Print greeting",
+        ': GREETING  ." Hello, World!" CR ;\nGREETING\n',
+        _FORTH,
+        "Basics",
+    ),
+    _s(
+        "Square word",
+        "Double-times word",
+        ": SQUARE  DUP * ;\n5 SQUARE .\n",
+        _FORTH,
+        "Words",
+    ),
+    _s(
+        "Factorial",
+        "Recursive factorial",
+        ": FACT  DUP 1 <= IF DROP 1 ELSE DUP 1 - RECURSE * THEN ;\n5 FACT .\n",
+        _FORTH,
+        "Words",
+    ),
+    _s(
+        "DO loop",
+        "Counted loop",
+        ": COUNTDOWN  11 1 DO I . LOOP ;\nCOUNTDOWN\n",
+        _FORTH,
+        "Control Flow",
+    ),
+    _s(
+        "Stack ops", "DUP SWAP DROP", "10 20 30\nDUP .\nSWAP .\nDROP\n", _FORTH, "Stack"
+    ),
+    _s(
+        "DEFER / IS",
+        "Deferred execution",
+        'DEFER ACTION\n: HELLO  ." Hello" CR ;\n: GOODBYE  ." Goodbye" CR ;\n\' HELLO IS ACTION\nACTION\n\' GOODBYE IS ACTION\nACTION\n',
+        _FORTH,
+        "Advanced",
+    ),
 ]
 
 _HASKELL_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World",       "IO putStrLn",          'main :: IO ()\nmain = putStrLn "Hello, World!"\n', "HASKELL", "Basics"),
-    _s("Recursive factorial","Pattern matching",     'factorial :: Int -> Int\nfactorial 0 = 1\nfactorial n = n * factorial (n - 1)\n\nmain :: IO ()\nmain = print (factorial 10)\n', "HASKELL", "Recursion"),
-    _s("Map & filter",      "List operations",      'main :: IO ()\nmain = do\n  let nums = [1..10]\n  print $ map (*2) $ filter even nums\n', "HASKELL", "Lists"),
-    _s("List comprehension","Guards",               'main :: IO ()\nmain = print [x^2 | x <- [1..5]]\n', "HASKELL", "Lists"),
-    _s("where clause",      "Local binding",        'hypotenuse :: Double -> Double -> Double\nhypotenuse a b = sqrt s\n  where\n    s = a*a + b*b\n\nmain :: IO ()\nmain = print (hypotenuse 3 4)\n', "HASKELL", "Functions"),
+    _s(
+        "Hello World",
+        "IO putStrLn",
+        'main :: IO ()\nmain = putStrLn "Hello, World!"\n',
+        "HASKELL",
+        "Basics",
+    ),
+    _s(
+        "Recursive factorial",
+        "Pattern matching",
+        "factorial :: Int -> Int\nfactorial 0 = 1\nfactorial n = n * factorial (n - 1)\n\nmain :: IO ()\nmain = print (factorial 10)\n",
+        "HASKELL",
+        "Recursion",
+    ),
+    _s(
+        "Map & filter",
+        "List operations",
+        "main :: IO ()\nmain = do\n  let nums = [1..10]\n  print $ map (*2) $ filter even nums\n",
+        "HASKELL",
+        "Lists",
+    ),
+    _s(
+        "List comprehension",
+        "Guards",
+        "main :: IO ()\nmain = print [x^2 | x <- [1..5]]\n",
+        "HASKELL",
+        "Lists",
+    ),
+    _s(
+        "where clause",
+        "Local binding",
+        "hypotenuse :: Double -> Double -> Double\nhypotenuse a b = sqrt s\n  where\n    s = a*a + b*b\n\nmain :: IO ()\nmain = print (hypotenuse 3 4)\n",
+        "HASKELL",
+        "Functions",
+    ),
 ]
 
 _JS_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World",     "console.log",           'console.log("Hello, World!");\n', "JAVASCRIPT", "Basics"),
-    _s("Arrow function",  "Arrow fn syntax",       'const square = n => n * n;\nconsole.log(square(7));\n', "JAVASCRIPT", "Functions"),
-    _s("Array methods",   "filter + map",          'const nums = [1,2,3,4,5];\nconst result = nums.filter(n => n % 2 === 0).map(n => n * 10);\nconsole.log(result);\n', "JAVASCRIPT", "Arrays"),
-    _s("Destructuring",   "Array destructure",     'const [a, b, c] = [10, 20, 30];\nconsole.log(a + b + c);\n', "JAVASCRIPT", "Syntax"),
-    _s("Template literal","String interpolation",  'const name = "World";\nconsole.log(`Hello, ${name}!`);\n', "JAVASCRIPT", "Strings"),
-    _s("Object literal",  "Key-value pairs",       'const person = { name: "Alice", age: 30 };\nconsole.log(person.name, person.age);\n', "JAVASCRIPT", "Objects"),
+    _s(
+        "Hello World",
+        "console.log",
+        'console.log("Hello, World!");\n',
+        "JAVASCRIPT",
+        "Basics",
+    ),
+    _s(
+        "Arrow function",
+        "Arrow fn syntax",
+        "const square = n => n * n;\nconsole.log(square(7));\n",
+        "JAVASCRIPT",
+        "Functions",
+    ),
+    _s(
+        "Array methods",
+        "filter + map",
+        "const nums = [1,2,3,4,5];\nconst result = nums.filter(n => n % 2 === 0).map(n => n * 10);\nconsole.log(result);\n",
+        "JAVASCRIPT",
+        "Arrays",
+    ),
+    _s(
+        "Destructuring",
+        "Array destructure",
+        "const [a, b, c] = [10, 20, 30];\nconsole.log(a + b + c);\n",
+        "JAVASCRIPT",
+        "Syntax",
+    ),
+    _s(
+        "Template literal",
+        "String interpolation",
+        'const name = "World";\nconsole.log(`Hello, ${name}!`);\n',
+        "JAVASCRIPT",
+        "Strings",
+    ),
+    _s(
+        "Object literal",
+        "Key-value pairs",
+        'const person = { name: "Alice", age: 30 };\nconsole.log(person.name, person.age);\n',
+        "JAVASCRIPT",
+        "Objects",
+    ),
 ]
 
 _PYTHON_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World",     "print statement",       'print("Hello, World!")\n', "PYTHON", "Basics"),
-    _s("FOR loop",        "range iteration",       'for i in range(10):\n    print(i)\n', "PYTHON", "Control Flow"),
-    _s("List comprehension","Compact list",        'squares = [x**2 for x in range(1, 6)]\nprint(squares)\n', "PYTHON", "Lists"),
-    _s("Function",        "def and return",        'def greet(name):\n    return f"Hello, {name}!"\n\nprint(greet("World"))\n', "PYTHON", "Functions"),
-    _s("Class",           "OOP class",             'class Dog:\n    def __init__(self, name):\n        self.name = name\n    def bark(self):\n        print(f"{self.name} says woof!")\n\ndog = Dog("Rex")\ndog.bark()\n', "PYTHON", "OOP"),
-    _s("Try/except",      "Error handling",        'try:\n    x = 1 / 0\nexcept ZeroDivisionError as e:\n    print(f"Error: {e}")\n', "PYTHON", "Error Handling"),
+    _s(
+        "Hello World", "print statement", 'print("Hello, World!")\n', "PYTHON", "Basics"
+    ),
+    _s(
+        "FOR loop",
+        "range iteration",
+        "for i in range(10):\n    print(i)\n",
+        "PYTHON",
+        "Control Flow",
+    ),
+    _s(
+        "List comprehension",
+        "Compact list",
+        "squares = [x**2 for x in range(1, 6)]\nprint(squares)\n",
+        "PYTHON",
+        "Lists",
+    ),
+    _s(
+        "Function",
+        "def and return",
+        'def greet(name):\n    return f"Hello, {name}!"\n\nprint(greet("World"))\n',
+        "PYTHON",
+        "Functions",
+    ),
+    _s(
+        "Class",
+        "OOP class",
+        'class Dog:\n    def __init__(self, name):\n        self.name = name\n    def bark(self):\n        print(f"{self.name} says woof!")\n\ndog = Dog("Rex")\ndog.bark()\n',
+        "PYTHON",
+        "OOP",
+    ),
+    _s(
+        "Try/except",
+        "Error handling",
+        'try:\n    x = 1 / 0\nexcept ZeroDivisionError as e:\n    print(f"Error: {e}")\n',
+        "PYTHON",
+        "Error Handling",
+    ),
 ]
 
 _SCHEME_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World",     "display + newline",     '(display "Hello, World!") (newline)\n', "SCHEME", "Basics"),
-    _s("Factorial",       "Recursive define",      '(define (factorial n)\n  (if (<= n 1) 1\n      (* n (factorial (- n 1)))))\n(display (factorial 10)) (newline)\n', "SCHEME", "Recursion"),
-    _s("Map",             "List mapping",          '(display (map (lambda (x) (* x x)) \'(1 2 3 4 5)))\n(newline)\n', "SCHEME", "Lists"),
-    _s("Let binding",     "Local variables",       '(let ((x 10) (y 20))\n  (display (+ x y))\n  (newline))\n', "SCHEME", "Basics"),
-    _s("Cond",            "Multi-branch cond",     '(define (sign n)\n  (cond ((> n 0) "positive")\n        ((< n 0) "negative")\n        (else "zero")))\n(display (sign -5)) (newline)\n', "SCHEME", "Control Flow"),
+    _s(
+        "Hello World",
+        "display + newline",
+        '(display "Hello, World!") (newline)\n',
+        "SCHEME",
+        "Basics",
+    ),
+    _s(
+        "Factorial",
+        "Recursive define",
+        "(define (factorial n)\n  (if (<= n 1) 1\n      (* n (factorial (- n 1)))))\n(display (factorial 10)) (newline)\n",
+        "SCHEME",
+        "Recursion",
+    ),
+    _s(
+        "Map",
+        "List mapping",
+        "(display (map (lambda (x) (* x x)) '(1 2 3 4 5)))\n(newline)\n",
+        "SCHEME",
+        "Lists",
+    ),
+    _s(
+        "Let binding",
+        "Local variables",
+        "(let ((x 10) (y 20))\n  (display (+ x y))\n  (newline))\n",
+        "SCHEME",
+        "Basics",
+    ),
+    _s(
+        "Cond",
+        "Multi-branch cond",
+        '(define (sign n)\n  (cond ((> n 0) "positive")\n        ((< n 0) "negative")\n        (else "zero")))\n(display (sign -5)) (newline)\n',
+        "SCHEME",
+        "Control Flow",
+    ),
 ]
 
 _LUA_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World",     "print statement",       'print("Hello, World!")\n', "LUA", "Basics"),
-    _s("FOR loop",        "Numeric for",           'for i = 1, 10 do\n  print(i)\nend\n', "LUA", "Control Flow"),
-    _s("Function",        "Function definition",   'function square(n)\n  return n * n\nend\nprint(square(7))\n', "LUA", "Functions"),
-    _s("Table",           "Array-like table",      'local t = {10, 20, 30, 40, 50}\nfor i, v in ipairs(t) do\n  print(i, v)\nend\n', "LUA", "Data"),
-    _s("String ops",      "String methods",        'local s = "Hello, World!"\nprint(#s)\nprint(string.upper(s))\nprint(string.sub(s, 1, 5))\n', "LUA", "Strings"),
-    _s("Class table",     "OOP via tables",        'Animal = {}\nAnimal.__index = Animal\nfunction Animal.new(name)\n  return setmetatable({name=name}, Animal)\nend\nfunction Animal:speak()\n  print(self.name .. " makes a sound")\nend\nlocal a = Animal.new("Dog")\na:speak()\n', "LUA", "OOP"),
+    _s("Hello World", "print statement", 'print("Hello, World!")\n', "LUA", "Basics"),
+    _s(
+        "FOR loop",
+        "Numeric for",
+        "for i = 1, 10 do\n  print(i)\nend\n",
+        "LUA",
+        "Control Flow",
+    ),
+    _s(
+        "Function",
+        "Function definition",
+        "function square(n)\n  return n * n\nend\nprint(square(7))\n",
+        "LUA",
+        "Functions",
+    ),
+    _s(
+        "Table",
+        "Array-like table",
+        "local t = {10, 20, 30, 40, 50}\nfor i, v in ipairs(t) do\n  print(i, v)\nend\n",
+        "LUA",
+        "Data",
+    ),
+    _s(
+        "String ops",
+        "String methods",
+        'local s = "Hello, World!"\nprint(#s)\nprint(string.upper(s))\nprint(string.sub(s, 1, 5))\n',
+        "LUA",
+        "Strings",
+    ),
+    _s(
+        "Class table",
+        "OOP via tables",
+        'Animal = {}\nAnimal.__index = Animal\nfunction Animal.new(name)\n  return setmetatable({name=name}, Animal)\nend\nfunction Animal:speak()\n  print(self.name .. " makes a sound")\nend\nlocal a = Animal.new("Dog")\na:speak()\n',
+        "LUA",
+        "OOP",
+    ),
 ]
 
 _COBOL_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World",     "DISPLAY statement",     "IDENTIFICATION DIVISION.\nPROGRAM-ID. HELLO.\nPROCEDURE DIVISION.\n    DISPLAY 'Hello, World!'.\n    STOP RUN.\n", "COBOL", "Basics"),
-    _s("Arithmetic",      "COMPUTE verb",          "IDENTIFICATION DIVISION.\nPROGRAM-ID. ARITH.\nDATA DIVISION.\nWORKING-STORAGE SECTION.\n  01 A PIC 9(4) VALUE 100.\n  01 B PIC 9(4) VALUE 250.\n  01 C PIC 9(4).\nPROCEDURE DIVISION.\n  COMPUTE C = A + B.\n  DISPLAY C.\n  STOP RUN.\n", "COBOL", "Arithmetic"),
-    _s("PERFORM loop",    "PERFORM VARYING",       "IDENTIFICATION DIVISION.\nPROGRAM-ID. LOOP.\nDATA DIVISION.\nWORKING-STORAGE SECTION.\n  01 IDX PIC 9(2).\nPROCEDURE DIVISION.\n  PERFORM VARYING IDX FROM 1 BY 1 UNTIL IDX > 5\n    DISPLAY IDX\n  END-PERFORM.\n  STOP RUN.\n", "COBOL", "Control Flow"),
+    _s(
+        "Hello World",
+        "DISPLAY statement",
+        "IDENTIFICATION DIVISION.\nPROGRAM-ID. HELLO.\nPROCEDURE DIVISION.\n    DISPLAY 'Hello, World!'.\n    STOP RUN.\n",
+        "COBOL",
+        "Basics",
+    ),
+    _s(
+        "Arithmetic",
+        "COMPUTE verb",
+        "IDENTIFICATION DIVISION.\nPROGRAM-ID. ARITH.\nDATA DIVISION.\nWORKING-STORAGE SECTION.\n  01 A PIC 9(4) VALUE 100.\n  01 B PIC 9(4) VALUE 250.\n  01 C PIC 9(4).\nPROCEDURE DIVISION.\n  COMPUTE C = A + B.\n  DISPLAY C.\n  STOP RUN.\n",
+        "COBOL",
+        "Arithmetic",
+    ),
+    _s(
+        "PERFORM loop",
+        "PERFORM VARYING",
+        "IDENTIFICATION DIVISION.\nPROGRAM-ID. LOOP.\nDATA DIVISION.\nWORKING-STORAGE SECTION.\n  01 IDX PIC 9(2).\nPROCEDURE DIVISION.\n  PERFORM VARYING IDX FROM 1 BY 1 UNTIL IDX > 5\n    DISPLAY IDX\n  END-PERFORM.\n  STOP RUN.\n",
+        "COBOL",
+        "Control Flow",
+    ),
 ]
 
 _BRAINFUCK_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World",     "Classic BF hello",      '++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.\n', "BRAINFUCK", "Classics"),
+    _s(
+        "Hello World",
+        "Classic BF hello",
+        "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.\n",
+        "BRAINFUCK",
+        "Classics",
+    ),
 ]
 
 _FORTRAN_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World",     "PRINT statement",       "PROGRAM hello\n  IMPLICIT NONE\n  PRINT *, 'Hello, World!'\nEND PROGRAM hello\n", "FORTRAN", "Basics"),
-    _s("DO loop",         "Counted DO loop",       "PROGRAM counting\n  IMPLICIT NONE\n  INTEGER :: i\n  DO i = 1, 10\n    PRINT *, i\n  END DO\nEND PROGRAM counting\n", "FORTRAN", "Control Flow"),
-    _s("Function",        "FUNCTION definition",   "PROGRAM funcs\n  IMPLICIT NONE\n  INTEGER :: n\n  n = 7\n  PRINT *, n * n\nEND PROGRAM funcs\n", "FORTRAN", "Functions"),
-    _s("Array",           "Array declaration",     "PROGRAM arrays\n  IMPLICIT NONE\n  INTEGER, DIMENSION(5) :: arr\n  INTEGER :: i\n  DO i = 1, 5\n    arr(i) = i * i\n    PRINT *, arr(i)\n  END DO\nEND PROGRAM arrays\n", "FORTRAN", "Data"),
+    _s(
+        "Hello World",
+        "PRINT statement",
+        "PROGRAM hello\n  IMPLICIT NONE\n  PRINT *, 'Hello, World!'\nEND PROGRAM hello\n",
+        "FORTRAN",
+        "Basics",
+    ),
+    _s(
+        "DO loop",
+        "Counted DO loop",
+        "PROGRAM counting\n  IMPLICIT NONE\n  INTEGER :: i\n  DO i = 1, 10\n    PRINT *, i\n  END DO\nEND PROGRAM counting\n",
+        "FORTRAN",
+        "Control Flow",
+    ),
+    _s(
+        "Function",
+        "FUNCTION definition",
+        "PROGRAM funcs\n  IMPLICIT NONE\n  INTEGER :: n\n  n = 7\n  PRINT *, n * n\nEND PROGRAM funcs\n",
+        "FORTRAN",
+        "Functions",
+    ),
+    _s(
+        "Array",
+        "Array declaration",
+        "PROGRAM arrays\n  IMPLICIT NONE\n  INTEGER, DIMENSION(5) :: arr\n  INTEGER :: i\n  DO i = 1, 5\n    arr(i) = i * i\n    PRINT *, arr(i)\n  END DO\nEND PROGRAM arrays\n",
+        "FORTRAN",
+        "Data",
+    ),
 ]
 
 _REXX_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World",     "SAY statement",         "SAY 'Hello, World!'\n", "REXX", "Basics"),
-    _s("DO loop",         "DO..END loop",          "DO i = 1 TO 10\n  SAY i\nEND\n", "REXX", "Control Flow"),
-    _s("IF statement",    "IF..THEN..ELSE",        "x = 5\nIF x > 3 THEN\n  SAY 'big'\nELSE\n  SAY 'small'\nEND\n", "REXX", "Control Flow"),
+    _s("Hello World", "SAY statement", "SAY 'Hello, World!'\n", "REXX", "Basics"),
+    _s(
+        "DO loop",
+        "DO..END loop",
+        "DO i = 1 TO 10\n  SAY i\nEND\n",
+        "REXX",
+        "Control Flow",
+    ),
+    _s(
+        "IF statement",
+        "IF..THEN..ELSE",
+        "x = 5\nIF x > 3 THEN\n  SAY 'big'\nELSE\n  SAY 'small'\nEND\n",
+        "REXX",
+        "Control Flow",
+    ),
 ]
 
 _SMALLTALK_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World",     "Transcript show",       "Transcript show: 'Hello, World!'; nl.\n", "SMALLTALK", "Basics"),
-    _s("FOR loop",        "timesRepeat",           "1 to: 10 do: [:i | Transcript show: i printString; nl].\n", "SMALLTALK", "Control Flow"),
+    _s(
+        "Hello World",
+        "Transcript show",
+        "Transcript show: 'Hello, World!'; nl.\n",
+        "SMALLTALK",
+        "Basics",
+    ),
+    _s(
+        "FOR loop",
+        "timesRepeat",
+        "1 to: 10 do: [:i | Transcript show: i printString; nl].\n",
+        "SMALLTALK",
+        "Control Flow",
+    ),
 ]
 
 _HYPERTALK_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World",     "put statement",         "put \"Hello, World!\"\n", "HYPERTALK", "Basics"),
-    _s("IF statement",    "if..then..else",        "if x > 3 then\n  put \"big\"\nelse\n  put \"small\"\nend if\n", "HYPERTALK", "Control Flow"),
+    _s("Hello World", "put statement", 'put "Hello, World!"\n', "HYPERTALK", "Basics"),
+    _s(
+        "IF statement",
+        "if..then..else",
+        'if x > 3 then\n  put "big"\nelse\n  put "small"\nend if\n',
+        "HYPERTALK",
+        "Control Flow",
+    ),
 ]
 
 _SQL_SNIPPETS: List[CodeSnippet] = [
-    _s("SELECT all",      "SELECT * FROM",         "SELECT * FROM employees;\n", "SQL", "Queries"),
-    _s("SELECT WHERE",    "Filtered query",        "SELECT first_name, last_name FROM employees WHERE department = 'HR';\n", "SQL", "Queries"),
-    _s("CREATE TABLE",    "Table definition",      "CREATE TABLE employees (\n    id INT PRIMARY KEY,\n    first_name VARCHAR(50),\n    last_name VARCHAR(50),\n    department VARCHAR(50)\n);\n", "SQL", "DDL"),
-    _s("INSERT",          "Insert row",            "INSERT INTO employees (id, first_name, last_name, department)\nVALUES (1, 'Alice', 'Smith', 'Engineering');\n", "SQL", "DML"),
-    _s("UPDATE",          "Update rows",           "UPDATE employees SET department = 'Management' WHERE id = 1;\n", "SQL", "DML"),
-    _s("DELETE",          "Delete rows",           "DELETE FROM employees WHERE department = 'Temp';\n", "SQL", "DML"),
-    _s("JOIN",            "INNER JOIN",            "SELECT e.first_name, d.name\nFROM employees e\nINNER JOIN departments d ON e.department_id = d.id;\n", "SQL", "Queries"),
+    _s("SELECT all", "SELECT * FROM", "SELECT * FROM employees;\n", "SQL", "Queries"),
+    _s(
+        "SELECT WHERE",
+        "Filtered query",
+        "SELECT first_name, last_name FROM employees WHERE department = 'HR';\n",
+        "SQL",
+        "Queries",
+    ),
+    _s(
+        "CREATE TABLE",
+        "Table definition",
+        "CREATE TABLE employees (\n    id INT PRIMARY KEY,\n    first_name VARCHAR(50),\n    last_name VARCHAR(50),\n    department VARCHAR(50)\n);\n",
+        "SQL",
+        "DDL",
+    ),
+    _s(
+        "INSERT",
+        "Insert row",
+        "INSERT INTO employees (id, first_name, last_name, department)\nVALUES (1, 'Alice', 'Smith', 'Engineering');\n",
+        "SQL",
+        "DML",
+    ),
+    _s(
+        "UPDATE",
+        "Update rows",
+        "UPDATE employees SET department = 'Management' WHERE id = 1;\n",
+        "SQL",
+        "DML",
+    ),
+    _s(
+        "DELETE",
+        "Delete rows",
+        "DELETE FROM employees WHERE department = 'Temp';\n",
+        "SQL",
+        "DML",
+    ),
+    _s(
+        "JOIN",
+        "INNER JOIN",
+        "SELECT e.first_name, d.name\nFROM employees e\nINNER JOIN departments d ON e.department_id = d.id;\n",
+        "SQL",
+        "Queries",
+    ),
 ]
 
 

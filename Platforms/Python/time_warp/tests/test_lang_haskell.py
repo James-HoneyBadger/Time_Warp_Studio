@@ -1,6 +1,5 @@
 """Comprehensive tests for the Haskell language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors
@@ -124,7 +123,9 @@ class TestFunctions:
         assert has(out, "7")
 
     def test_recursive(self):
-        out = hs("fact n = if n <= 1 then 1 else n * fact (n - 1)\nmain = print (fact 5)")
+        out = hs(
+            "fact n = if n <= 1 then 1 else n * fact (n - 1)\nmain = print (fact 5)"
+        )
         assert has(out, "120")
 
     def test_where_clause(self):

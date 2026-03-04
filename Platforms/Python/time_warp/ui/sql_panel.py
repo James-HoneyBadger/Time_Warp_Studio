@@ -47,6 +47,7 @@ if TYPE_CHECKING:
 # T-SQL Syntax Highlighter
 # ---------------------------------------------------------------------------
 
+
 class TSQLHighlighter(QSyntaxHighlighter):
     """Basic T-SQL colorizer for the SQL editor."""
 
@@ -77,12 +78,14 @@ class TSQLHighlighter(QSyntaxHighlighter):
         kw_fmt = QTextCharFormat()
         kw_fmt.setForeground(kw_color)
         kw_fmt.setFontWeight(QFont.Bold)
-        self._rules.append((
-            __import__("re").compile(
-                rf"\b({'|'.join(keywords.split('|'))})\b", __import__("re").I
-            ),
-            kw_fmt,
-        ))
+        self._rules.append(
+            (
+                __import__("re").compile(
+                    rf"\b({'|'.join(keywords.split('|'))})\b", __import__("re").I
+                ),
+                kw_fmt,
+            )
+        )
 
         types = (
             "INT|SMALLINT|TINYINT|BIGINT|BIT|FLOAT|REAL|DECIMAL|NUMERIC|"
@@ -92,10 +95,12 @@ class TSQLHighlighter(QSyntaxHighlighter):
         )
         tp_fmt = QTextCharFormat()
         tp_fmt.setForeground(type_color)
-        self._rules.append((
-            __import__("re").compile(rf"\b({types})\b", __import__("re").I),
-            tp_fmt,
-        ))
+        self._rules.append(
+            (
+                __import__("re").compile(rf"\b({types})\b", __import__("re").I),
+                tp_fmt,
+            )
+        )
 
         fns = (
             "COUNT|SUM|AVG|MIN|MAX|UPPER|LOWER|LEN|LTRIM|RTRIM|TRIM|"
@@ -107,26 +112,32 @@ class TSQLHighlighter(QSyntaxHighlighter):
         )
         fn_fmt = QTextCharFormat()
         fn_fmt.setForeground(fn_color)
-        self._rules.append((
-            __import__("re").compile(rf"\b({fns})\s*\(", __import__("re").I),
-            fn_fmt,
-        ))
+        self._rules.append(
+            (
+                __import__("re").compile(rf"\b({fns})\s*\(", __import__("re").I),
+                fn_fmt,
+            )
+        )
 
         # @@globals
         glob_fmt = QTextCharFormat()
         glob_fmt.setForeground(op_color)
-        self._rules.append((
-            __import__("re").compile(r"@@\w+", __import__("re").I),
-            glob_fmt,
-        ))
+        self._rules.append(
+            (
+                __import__("re").compile(r"@@\w+", __import__("re").I),
+                glob_fmt,
+            )
+        )
 
         # @variables
         var_fmt = QTextCharFormat()
         var_fmt.setForeground(QColor("#E06C75") if dark else QColor("#E45649"))
-        self._rules.append((
-            __import__("re").compile(r"@\w+"),
-            var_fmt,
-        ))
+        self._rules.append(
+            (
+                __import__("re").compile(r"@\w+"),
+                var_fmt,
+            )
+        )
 
         # String literals
         str_fmt = QTextCharFormat()
@@ -154,6 +165,7 @@ class TSQLHighlighter(QSyntaxHighlighter):
 # SQL execution thread
 # ---------------------------------------------------------------------------
 
+
 class SQLRunThread(QThread):
     result_ready = Signal(str)
     rows_ready = Signal(list, list)  # column_names, rows
@@ -172,6 +184,7 @@ class SQLRunThread(QThread):
             for stmt in reversed(stmts):
                 if stmt.upper().lstrip().startswith("SELECT"):
                     from ..core.sql_engine import _translate_tsql
+
                     translated = _translate_tsql(stmt)
                     conn = self._session._conn
                     cur = conn.execute(translated)
@@ -187,6 +200,7 @@ class SQLRunThread(QThread):
 # ---------------------------------------------------------------------------
 # Database Tree
 # ---------------------------------------------------------------------------
+
 
 class DatabaseTree(QTreeWidget):
     def __init__(self, parent=None):
@@ -239,6 +253,7 @@ class DatabaseTree(QTreeWidget):
 # Main SQL Workbench Panel
 # ---------------------------------------------------------------------------
 
+
 class SQLPanel(QWidget):
     """Dockable SQL Server Workbench panel."""
 
@@ -259,7 +274,9 @@ class SQLPanel(QWidget):
         # Toolbar
         toolbar = QToolBar()
         toolbar.setMovable(False)
-        toolbar.setIconSize(__import__("PySide6.QtCore", fromlist=["QSize"]).QSize(16, 16))
+        toolbar.setIconSize(
+            __import__("PySide6.QtCore", fromlist=["QSize"]).QSize(16, 16)
+        )
 
         act_execute = QAction("▶ Execute (F5)", self)
         act_execute.setShortcut(QKeySequence("F5"))
@@ -419,9 +436,7 @@ class SQLPanel(QWidget):
             return
         if data[0] == "table":
             _, db, table = data
-            self._editor.setPlainText(
-                f"USE {db}\nGO\nSELECT TOP 100 * FROM [{table}]"
-            )
+            self._editor.setPlainText(f"USE {db}\nGO\nSELECT TOP 100 * FROM [{table}]")
         elif data[0] == "db":
             _, db = data
             self._editor.setPlainText(f"USE {db}\nGO\nEXEC sp_help")
@@ -431,7 +446,10 @@ class SQLPanel(QWidget):
     def apply_theme(self, theme_name: str) -> None:
         """Apply a basic dark/light theme to the panel."""
         dark = "dark" in theme_name.lower() or theme_name.lower() in (
-            "dracula", "monokai", "ocean", "solarized dark"
+            "dracula",
+            "monokai",
+            "ocean",
+            "solarized dark",
         )
         self._highlighter = TSQLHighlighter(self._editor.document(), dark=dark)
         if dark:

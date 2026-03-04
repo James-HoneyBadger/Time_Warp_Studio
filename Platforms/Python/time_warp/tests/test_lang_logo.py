@@ -1,6 +1,5 @@
 """Comprehensive tests for the Logo language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors, first_error

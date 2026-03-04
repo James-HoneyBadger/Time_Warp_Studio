@@ -44,7 +44,11 @@ def execute_pilot(
 
     # REMARK (and REM) are comment lines — ignore
     cmd_upper = cmd.upper()
-    if cmd_upper.startswith("REMARK") or cmd_upper.startswith("REM ") or cmd_upper == "REM":
+    if (
+        cmd_upper.startswith("REMARK")
+        or cmd_upper.startswith("REM ")
+        or cmd_upper == "REM"
+    ):
         return ""
 
     # ── Long-form keyword mapping ────────────────────────────────────────
@@ -68,7 +72,7 @@ def execute_pilot(
     }
     for keyword, letter in _LONGFORM_MAP.items():
         if cmd_upper == keyword or cmd_upper.startswith(keyword + " "):
-            rest_text = cmd[len(keyword):].strip()
+            rest_text = cmd[len(keyword) :].strip()
             # For COMPUTE, normalise "var value" → "var = value" if no "="
             if letter == "C" and "=" not in rest_text and " " in rest_text:
                 parts = rest_text.split(None, 1)
@@ -116,6 +120,7 @@ def execute_pilot(
     if cmd_type == "T":
         # Substitute $variable and #variable references with their values
         import re as _re_t
+
         def _subst_var_t(m):
             vn = m.group(1)
             val = None
@@ -135,8 +140,9 @@ def execute_pilot(
                     return str(int(val))
                 return str(val)
             return m.group(0)
-        rest = _re_t.sub(r'\$([A-Za-z_][A-Za-z0-9_]*)', _subst_var_t, rest)
-        rest = _re_t.sub(r'#([A-Za-z_][A-Za-z0-9_]*)', _subst_var_t, rest)
+
+        rest = _re_t.sub(r"\$([A-Za-z_][A-Za-z0-9_]*)", _subst_var_t, rest)
+        rest = _re_t.sub(r"#([A-Za-z_][A-Za-z0-9_]*)", _subst_var_t, rest)
         text = interpreter.interpolate_text(rest)
         interpreter.output.append(text)
         return text + "\n"
@@ -148,7 +154,11 @@ def execute_pilot(
             var_name = prompt_text[1:].strip().upper() + "$"
         else:
             var_name = "ANSWER$"
-        display_prompt = (prompt_text + " ") if prompt_text and not prompt_text.startswith("$") else "? "
+        display_prompt = (
+            (prompt_text + " ")
+            if prompt_text and not prompt_text.startswith("$")
+            else "? "
+        )
         # Start async input request — store as string
         interpreter.start_input_request(display_prompt, var_name, is_numeric=False)
         return ""
@@ -202,6 +212,7 @@ def execute_pilot(
 
         # Substitute $variable references with their values
         import re as _re
+
         def _subst_var(m):
             vn = m.group(1)
             val = None
@@ -214,7 +225,8 @@ def execute_pilot(
                     return str(int(val))
                 return str(val)
             return m.group(0)
-        expr = _re.sub(r'\$([A-Za-z_][A-Za-z0-9_]*)', _subst_var, expr)
+
+        expr = _re.sub(r"\$([A-Za-z_][A-Za-z0-9_]*)", _subst_var, expr)
 
         try:
             validate_variable_name(var_name, allow_suffix=True)

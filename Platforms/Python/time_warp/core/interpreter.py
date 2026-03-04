@@ -629,11 +629,21 @@ class Interpreter:
             return
         # Other whole-program languages: store lines without line-number parsing
         _WHOLE_PROGRAM = {
-            Language.LUA, Language.SCHEME, Language.COBOL, Language.BRAINFUCK,
-            Language.ASSEMBLY, Language.JAVASCRIPT, Language.FORTRAN,
-            Language.REXX, Language.SMALLTALK, Language.HYPERTALK,
-            Language.HASKELL, Language.APL,
-            Language.SQL, Language.JCL, Language.CICS,
+            Language.LUA,
+            Language.SCHEME,
+            Language.COBOL,
+            Language.BRAINFUCK,
+            Language.ASSEMBLY,
+            Language.JAVASCRIPT,
+            Language.FORTRAN,
+            Language.REXX,
+            Language.SMALLTALK,
+            Language.HYPERTALK,
+            Language.HASKELL,
+            Language.APL,
+            Language.SQL,
+            Language.JCL,
+            Language.CICS,
             Language.SQR,
         }
         if language in _WHOLE_PROGRAM:
@@ -1036,7 +1046,9 @@ class Interpreter:
             if isinstance(e, (KeyboardInterrupt, SystemExit)):
                 raise
             # BASIC ON ERROR GOTO handler
-            if self.language.name == "BASIC" and getattr(self, "_basic_error_handler_line", 0):
+            if self.language.name == "BASIC" and getattr(
+                self, "_basic_error_handler_line", 0
+            ):
                 handler_line = self._basic_error_handler_line  # type: ignore[attr-defined]
                 if handler_line in self.line_number_map:
                     # Store ERR/ERL pseudo-variables for the error handler
@@ -1044,7 +1056,9 @@ class Interpreter:
                     self.variables["ERR"] = 1  # generic error code
                     self.variables["ERL"] = float(self.current_line + 1)
                     # Store the error number from the current line's BASIC number
-                    if self.program_lines and self.current_line < len(self.program_lines):
+                    if self.program_lines and self.current_line < len(
+                        self.program_lines
+                    ):
                         line_label, _ = self.program_lines[self.current_line]
                         if line_label is not None:
                             self._basic_error_line = line_label  # type: ignore[attr-defined]
@@ -1093,10 +1107,21 @@ class Interpreter:
             # Python runs whole-program via execute(); individual lines are no-op
             output = ""
         elif self.language in (
-            Language.LUA, Language.SCHEME, Language.COBOL, Language.BRAINFUCK,
-            Language.ASSEMBLY, Language.JAVASCRIPT, Language.FORTRAN, Language.REXX,
-            Language.SMALLTALK, Language.HYPERTALK, Language.HASKELL, Language.APL,
-            Language.SQL, Language.JCL, Language.CICS,
+            Language.LUA,
+            Language.SCHEME,
+            Language.COBOL,
+            Language.BRAINFUCK,
+            Language.ASSEMBLY,
+            Language.JAVASCRIPT,
+            Language.FORTRAN,
+            Language.REXX,
+            Language.SMALLTALK,
+            Language.HYPERTALK,
+            Language.HASKELL,
+            Language.APL,
+            Language.SQL,
+            Language.JCL,
+            Language.CICS,
         ):
             # Whole-program languages: individual lines are no-op
             output = ""
@@ -1151,6 +1176,7 @@ class Interpreter:
         """
         # Expand UDT field references: VAR.FIELD → numeric value
         import re as _re
+
         def _expand_udt(m):
             obj_name = m.group(1).upper()
             field_name = m.group(2).upper()
@@ -1163,10 +1189,13 @@ class Interpreter:
                 except (TypeError, ValueError):
                     return "0"
             return m.group(0)
+
         if "." in expr:
             expr = _re.sub(
                 r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)\b",
-                _expand_udt, expr)
+                _expand_udt,
+                expr,
+            )
         # Build numeric variables from typed stores using base names
         num_vars: Dict[str, float] = {}
         for k, v in self.int_variables.items():
@@ -1195,7 +1224,9 @@ class Interpreter:
                     saved = {}
                     for i_p, pname in enumerate(p_list):
                         saved[pname] = ev.variables.get(pname)
-                        ev.variables[pname] = float(args[i_p]) if i_p < len(args) else 0.0
+                        ev.variables[pname] = (
+                            float(args[i_p]) if i_p < len(args) else 0.0
+                        )
                     result = ev.evaluate(b_expr)
                     # Restore
                     for pname in p_list:
@@ -1204,7 +1235,9 @@ class Interpreter:
                         else:
                             ev.variables.pop(pname, None)
                     return result
+
                 return _fn
+
             evaluator.FUNCTIONS[fn_name] = _make_fn(params, body_expr, evaluator)
         return evaluator.evaluate(expr)
 

@@ -1,6 +1,5 @@
 """Comprehensive tests for the REXX language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors
@@ -105,7 +104,9 @@ class TestConditional:
         assert has(out, "small")
 
     def test_nested_if(self):
-        out = rexx('x = 5\nIF x > 3 THEN\n  IF x > 10 THEN\n    SAY "huge"\n  ELSE\n    SAY "medium"\n  END\nEND')
+        out = rexx(
+            'x = 5\nIF x > 3 THEN\n  IF x > 10 THEN\n    SAY "huge"\n  ELSE\n    SAY "medium"\n  END\nEND'
+        )
         assert has(out, "medium")
 
 
@@ -128,7 +129,9 @@ class TestDoLoop:
         assert has(out, "0") and has(out, "2")
 
     def test_do_forever_leave(self):
-        out = rexx("i = 0\nDO FOREVER\n  IF i >= 3 THEN LEAVE\n  SAY i\n  i = i + 1\nEND")
+        out = rexx(
+            "i = 0\nDO FOREVER\n  IF i >= 3 THEN LEAVE\n  SAY i\n  i = i + 1\nEND"
+        )
         assert has(out, "0") and has(out, "2") and not has(out, "3")
 
     def test_iterate(self):
@@ -217,10 +220,7 @@ class TestNumericBuiltins:
 
 class TestProcedures:
     def test_call_internal(self):
-        out = rexx(
-            "CALL greet\nEXIT\n"
-            'greet:\n  SAY "hello"\n  RETURN'
-        )
+        out = rexx("CALL greet\nEXIT\n" 'greet:\n  SAY "hello"\n  RETURN')
         assert has(out, "hello")
 
 

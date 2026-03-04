@@ -7,7 +7,6 @@ from typing import List, Optional
 
 from .interpreter import Language
 
-
 # Regex to match quoted string literals in BASIC
 _BASIC_STRING_RE = re.compile(r'"[^"]*"')
 

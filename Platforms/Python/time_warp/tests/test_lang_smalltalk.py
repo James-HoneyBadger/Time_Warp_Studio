@@ -1,6 +1,5 @@
 """Comprehensive tests for the Smalltalk language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors
@@ -97,7 +96,9 @@ class TestConditionals:
         assert has(out, "no")
 
     def test_ifTrue_ifFalse(self):
-        out = st("1 > 3 ifTrue: [Transcript showCr: 'yes'] ifFalse: [Transcript showCr: 'no'].")
+        out = st(
+            "1 > 3 ifTrue: [Transcript showCr: 'yes'] ifFalse: [Transcript showCr: 'no']."
+        )
         assert has(out, "no")
 
 
@@ -117,8 +118,7 @@ class TestLoops:
 
     def test_whileTrue(self):
         out = st(
-            "| i |\ni := 0.\n"
-            "[i < 3] whileTrue: [Transcript showCr: i. i := i + 1]."
+            "| i |\ni := 0.\n" "[i < 3] whileTrue: [Transcript showCr: i. i := i + 1]."
         )
         assert has(out, "0") and has(out, "2")
 

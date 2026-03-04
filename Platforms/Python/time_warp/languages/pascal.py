@@ -144,7 +144,9 @@ def _call_func_inline(
             if pname in interpreter.variables:
                 existed = True
                 old_val = interpreter.variables[pname]
-        backups.append({"key": var_key, "is_str": suf == "$", "existed": existed, "old": old_val})
+        backups.append(
+            {"key": var_key, "is_str": suf == "$", "existed": existed, "old": old_val}
+        )
 
         # Bind parameter value
         val: Any = "" if suf == "$" else 0
@@ -221,6 +223,7 @@ def _call_func_inline(
 def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
     """Evaluate a Pascal expression, expanding Pascal built-in functions first."""
     import math as _math
+
     expr = expr.strip()
 
     # String functions that return strings – handle specially
@@ -234,7 +237,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
             ln = int(interpreter.evaluate_expression(len_e))
         except Exception:
             pos, ln = 0, 0
-        return s[pos:pos + ln]
+        return s[pos : pos + ln]
 
     # POS(sub, s) — returns integer
     m = re.match(r"^POS\s*\((.+),\s*(.+)\)$", expr, re.IGNORECASE)
@@ -273,7 +276,9 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
     # CONCAT(s1, s2, ...)
     m = re.match(r"^CONCAT\s*\((.+)\)$", expr, re.IGNORECASE)
     if m:
-        return "".join(_eval_str(interpreter, a.strip()) for a in _split_args(m.group(1)))
+        return "".join(
+            _eval_str(interpreter, a.strip()) for a in _split_args(m.group(1))
+        )
 
     # STRINGOFCHAR(c, n)
     m = re.match(r"^STRINGOFCHAR\s*\((.+),\s*(.+)\)$", expr, re.IGNORECASE)
@@ -321,6 +326,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
     m = re.match(r"^RANDOM\s*\((.+)\)$", expr, re.IGNORECASE)
     if m:
         import random as _rand
+
         try:
             n = int(interpreter.evaluate_expression(m.group(1).strip()))
             return _rand.randint(0, n - 1)
@@ -330,6 +336,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
     # RANDOM (no args)
     if re.match(r"^RANDOM\s*$", expr, re.IGNORECASE):
         import random as _rand
+
         return _rand.random()
 
     # SQR(x)
@@ -345,7 +352,9 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
     m = re.match(r"^FRAC\s*\((.+)\)$", expr, re.IGNORECASE)
     if m:
         try:
-            return _math.modf(float(interpreter.evaluate_expression(m.group(1).strip())))[0]
+            return _math.modf(
+                float(interpreter.evaluate_expression(m.group(1).strip()))
+            )[0]
         except Exception:
             return 0.0
 
@@ -387,8 +396,14 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
         fn = m.group(1).upper()
         try:
             v = float(interpreter.evaluate_expression(m.group(2).strip()))
-            funcs = {"SQRT": _math.sqrt, "SIN": _math.sin, "COS": _math.cos,
-                     "ARCTAN": _math.atan, "EXP": _math.exp, "LN": _math.log}
+            funcs = {
+                "SQRT": _math.sqrt,
+                "SIN": _math.sin,
+                "COS": _math.cos,
+                "ARCTAN": _math.atan,
+                "EXP": _math.exp,
+                "LN": _math.log,
+            }
             return funcs[fn](v)
         except Exception:
             return 0.0
@@ -491,7 +506,11 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
         return interpreter.variables[up]
 
     # Record field access: var.field
-    field_m = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)$", expr, re.IGNORECASE)
+    field_m = re.match(
+        r"^([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)$",
+        expr,
+        re.IGNORECASE,
+    )
     if field_m:
         rec_name = field_m.group(1).upper()
         field_name = field_m.group(2).upper()
@@ -501,6 +520,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
 
     # Translate Pascal operators to Python equivalents
     pyexpr = expr
+
     # Expand record field accesses like p.x → actual value before further processing
     def _field_replacer(m_field):
         rec_name = m_field.group(1).upper()
@@ -510,8 +530,12 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
             v = rec[field_name]
             return str(int(v)) if isinstance(v, float) and v == int(v) else str(v)
         return m_field.group(0)
-    pyexpr = re.sub(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)\b",
-                    _field_replacer, pyexpr)
+
+    pyexpr = re.sub(
+        r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)\b",
+        _field_replacer,
+        pyexpr,
+    )
     # Replace Pascal operators (word-boundary aware, case-insensitive)
     pyexpr = re.sub(r"\bdiv\b", "//", pyexpr, flags=re.IGNORECASE)
     pyexpr = re.sub(r"\bmod\b", "%", pyexpr, flags=re.IGNORECASE)
@@ -1031,7 +1055,7 @@ def _handle_if_then(interpreter: "Interpreter", cond_expr: str) -> str:
     except (ValueError, TypeError, ZeroDivisionError):
         cond_v = 0
 
-    is_single_then = (begin_idx is None)
+    is_single_then = begin_idx is None
     # Determine the last line of the whole IF construct
     last_line = else_end if else_end is not None else then_end
 
@@ -1039,11 +1063,19 @@ def _handle_if_then(interpreter: "Interpreter", cond_expr: str) -> str:
         if is_single_then and else_end is not None:
             # Push a marker so that after executing then_start, we skip ELSE
             interpreter.pascal_block_stack.append(
-                {"type": "if_single", "end": then_end, "skip_to": (else_end or then_end) + 1}
+                {
+                    "type": "if_single",
+                    "end": then_end,
+                    "skip_to": (else_end or then_end) + 1,
+                }
             )
         elif not is_single_then and else_end is not None:
             interpreter.pascal_block_stack.append(
-                {"type": "if", "end": then_end, "skip_else_to": (else_end or then_end) + 1}
+                {
+                    "type": "if",
+                    "end": then_end,
+                    "skip_else_to": (else_end or then_end) + 1,
+                }
             )
         interpreter.current_line = then_start - 1
     else:
@@ -1080,7 +1112,7 @@ def _handle_while_do(interpreter: "Interpreter", cond_expr: str) -> str:
     if not cond_v:
         interpreter.current_line = body_end
         return ""
-    is_single = (begin_idx is None)
+    is_single = begin_idx is None
     interpreter.pascal_block_stack.append(
         {
             "type": "while",
@@ -1182,7 +1214,7 @@ def _handle_for(
             interpreter.current_line = body_end
         return ""
 
-    is_single = (begin_idx is None)
+    is_single = begin_idx is None
 
     if is_single:
         # Execute single-statement body inline to avoid end-of-program issues
@@ -1235,7 +1267,9 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
     has_brace_close = "}" in raw
     has_paren_open = "(*" in raw
     has_paren_close = "*)" in raw
-    if (has_brace_open and not has_brace_close) or (has_paren_open and not has_paren_close):
+    if (has_brace_open and not has_brace_close) or (
+        has_paren_open and not has_paren_close
+    ):
         interpreter._pascal_in_block_comment = True
         return ""
 
@@ -1278,7 +1312,11 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
             interpreter.pascal_block_stack.pop()
             interpreter.current_line = skip_to - 1
             return ""
-        if ttype == "for" and top.get("single", False) and interpreter.current_line > top.get("end", -1):
+        if (
+            ttype == "for"
+            and top.get("single", False)
+            and interpreter.current_line > top.get("end", -1)
+        ):
             # Increment and check loop variable
             var_name = top["var"]
             step = top["step"]
@@ -1294,7 +1332,11 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
             else:
                 interpreter.pascal_block_stack.pop()
             return ""
-        if ttype == "while" and top.get("single", False) and interpreter.current_line > top.get("end", -1):
+        if (
+            ttype == "while"
+            and top.get("single", False)
+            and interpreter.current_line > top.get("end", -1)
+        ):
             try:
                 cond_v = _pascal_eval_expr(interpreter, top.get("cond", "0"))
             except (ValueError, TypeError, ZeroDivisionError):
@@ -1556,14 +1598,23 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
             while scan_line < len(interpreter.program_lines):
                 _, scan_cmd = interpreter.program_lines[scan_line]
                 sc = scan_cmd.strip().upper().rstrip(";")
-                if sc in ("END", "END.", "END;") or sc.startswith("END{") or sc == "END":
+                if (
+                    sc in ("END", "END.", "END;")
+                    or sc.startswith("END{")
+                    or sc == "END"
+                ):
                     interpreter.current_line = scan_line
                     break
                 # Field declaration: name1, name2: Type;
-                fm = re.match(r"^\s*([A-Za-z_][A-Za-z0-9_,\s]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)\s*;?\s*$",
-                              scan_cmd, re.IGNORECASE)
+                fm = re.match(
+                    r"^\s*([A-Za-z_][A-Za-z0-9_,\s]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)\s*;?\s*$",
+                    scan_cmd,
+                    re.IGNORECASE,
+                )
                 if fm:
-                    fnames = [n.strip().upper() for n in fm.group(1).split(",") if n.strip()]
+                    fnames = [
+                        n.strip().upper() for n in fm.group(1).split(",") if n.strip()
+                    ]
                     ftype = fm.group(2).upper()
                     for fn in fnames:
                         fields[fn] = ftype
@@ -1647,7 +1698,10 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
         for raw in names.split(","):
             name = raw.strip().upper()
             # If type is a known record type, create a dict-based struct
-            if hasattr(interpreter, "pascal_record_types") and type_name in interpreter.pascal_record_types:
+            if (
+                hasattr(interpreter, "pascal_record_types")
+                and type_name in interpreter.pascal_record_types
+            ):
                 fields = interpreter.pascal_record_types[type_name]
                 rec = {}
                 for fname, ftype in fields.items():
@@ -1755,7 +1809,11 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
                         elif isinstance(_val, float) and _val == int(_val):
                             out_parts.append(str(int(_val)))
                         else:
-                            out_parts.append(f"{_val:g}" if isinstance(_val, (int, float)) else str(_val))
+                            out_parts.append(
+                                f"{_val:g}"
+                                if isinstance(_val, (int, float))
+                                else str(_val)
+                            )
                     except (
                         ValueError,
                         TypeError,
@@ -1817,7 +1875,9 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
         return ""
 
     # Str(val, s)
-    m = re.match(r"^STR\s*\((.+),\s*([A-Za-z_][A-Za-z0-9_]*)\)\s*$", upcmd_strip, re.IGNORECASE)
+    m = re.match(
+        r"^STR\s*\((.+),\s*([A-Za-z_][A-Za-z0-9_]*)\)\s*$", upcmd_strip, re.IGNORECASE
+    )
     if m:
         try:
             v = interpreter.evaluate_expression(m.group(1).strip())
@@ -1828,10 +1888,22 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
         return ""
 
     # Val(s, var, code)
-    m = re.match(r"^VAL\s*\((.+),\s*([A-Za-z_][A-Za-z0-9_]*),\s*([A-Za-z_][A-Za-z0-9_]*)\)\s*$", upcmd_strip, re.IGNORECASE)
+    m = re.match(
+        r"^VAL\s*\((.+),\s*([A-Za-z_][A-Za-z0-9_]*),\s*([A-Za-z_][A-Za-z0-9_]*)\)\s*$",
+        upcmd_strip,
+        re.IGNORECASE,
+    )
     if m:
-        s_expr, num_var, code_var = m.group(1).strip(), m.group(2).upper(), m.group(3).upper()
-        s = _unquote(s_expr).strip() if s_expr.startswith(("'", '"')) else str(interpreter.string_variables.get(s_expr.upper() + "$", s_expr))
+        s_expr, num_var, code_var = (
+            m.group(1).strip(),
+            m.group(2).upper(),
+            m.group(3).upper(),
+        )
+        s = (
+            _unquote(s_expr).strip()
+            if s_expr.startswith(("'", '"'))
+            else str(interpreter.string_variables.get(s_expr.upper() + "$", s_expr))
+        )
         try:
             v = float(s.strip())
             interpreter.set_typed_variable(num_var, v)
@@ -1841,9 +1913,21 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
         return ""
 
     # Insert(sub, dest, pos)
-    m = re.match(r"^INSERT\s*\((.+),\s*([A-Za-z_][A-Za-z0-9_]*),\s*(.+)\)\s*$", upcmd_strip, re.IGNORECASE)
+    m = re.match(
+        r"^INSERT\s*\((.+),\s*([A-Za-z_][A-Za-z0-9_]*),\s*(.+)\)\s*$",
+        upcmd_strip,
+        re.IGNORECASE,
+    )
     if m:
-        sub = _unquote(m.group(1).strip()) if m.group(1).strip().startswith(("'", '"')) else str(interpreter.string_variables.get(m.group(1).strip().upper() + "$", m.group(1).strip()))
+        sub = (
+            _unquote(m.group(1).strip())
+            if m.group(1).strip().startswith(("'", '"'))
+            else str(
+                interpreter.string_variables.get(
+                    m.group(1).strip().upper() + "$", m.group(1).strip()
+                )
+            )
+        )
         dest_var = m.group(2).upper()
         try:
             pos = int(interpreter.evaluate_expression(m.group(3).strip())) - 1
@@ -1854,7 +1938,11 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
         return ""
 
     # Delete(s, pos, len)
-    m = re.match(r"^DELETE\s*\(([A-Za-z_][A-Za-z0-9_]*),\s*(.+),\s*(.+)\)\s*$", upcmd_strip, re.IGNORECASE)
+    m = re.match(
+        r"^DELETE\s*\(([A-Za-z_][A-Za-z0-9_]*),\s*(.+),\s*(.+)\)\s*$",
+        upcmd_strip,
+        re.IGNORECASE,
+    )
     if m:
         vname, pos_e, len_e = m.group(1).upper(), m.group(2).strip(), m.group(3).strip()
         try:
@@ -1863,11 +1951,15 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
         except Exception:
             return ""
         s = interpreter.string_variables.get(vname + "$", "")
-        interpreter.string_variables[vname + "$"] = s[:pos] + s[pos + ln:]
+        interpreter.string_variables[vname + "$"] = s[:pos] + s[pos + ln :]
         return ""
 
     # SetLength(s, n)
-    m = re.match(r"^SETLENGTH\s*\(([A-Za-z_][A-Za-z0-9_]*),\s*(.+)\)\s*$", upcmd_strip, re.IGNORECASE)
+    m = re.match(
+        r"^SETLENGTH\s*\(([A-Za-z_][A-Za-z0-9_]*),\s*(.+)\)\s*$",
+        upcmd_strip,
+        re.IGNORECASE,
+    )
     if m:
         vname = m.group(1).upper()
         try:
@@ -1886,10 +1978,20 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
         raise StopIteration
 
     # AssignFile/Assign
-    m = re.match(r"^(?:ASSIGNFILE|ASSIGN)\s*\(([A-Za-z_][A-Za-z0-9_]*),\s*(.+)\)\s*$", upcmd_strip, re.IGNORECASE)
+    m = re.match(
+        r"^(?:ASSIGNFILE|ASSIGN)\s*\(([A-Za-z_][A-Za-z0-9_]*),\s*(.+)\)\s*$",
+        upcmd_strip,
+        re.IGNORECASE,
+    )
     if m:
         fvar, fname_expr = m.group(1).upper(), m.group(2).strip()
-        fname = _unquote(fname_expr) if fname_expr.startswith(("'", '"')) else str(interpreter.string_variables.get(fname_expr.upper() + "$", fname_expr))
+        fname = (
+            _unquote(fname_expr)
+            if fname_expr.startswith(("'", '"'))
+            else str(
+                interpreter.string_variables.get(fname_expr.upper() + "$", fname_expr)
+            )
+        )
         if not hasattr(interpreter, "_pascal_files"):
             interpreter._pascal_files = {}
         interpreter._pascal_files[fvar] = {"name": fname, "handle": None, "mode": None}
@@ -1935,7 +2037,9 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
         return ""
 
     # CloseFile/Close(f)
-    m = re.match(r"^(?:CLOSEFILE|CLOSE)\s*\(([A-Za-z_][A-Za-z0-9_]*)\)\s*$", upcmd_strip)
+    m = re.match(
+        r"^(?:CLOSEFILE|CLOSE)\s*\(([A-Za-z_][A-Za-z0-9_]*)\)\s*$", upcmd_strip
+    )
     if m:
         fvar = m.group(1).upper()
         pf = getattr(interpreter, "_pascal_files", {}).get(fvar)
@@ -1953,13 +2057,21 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
         return ""
 
     # FillChar(dest, count, val)
-    m = re.match(r"^FILLCHAR\s*\(([A-Za-z_][A-Za-z0-9_]*),\s*(.+),\s*(.+)\)\s*$", upcmd_strip, re.IGNORECASE)
+    m = re.match(
+        r"^FILLCHAR\s*\(([A-Za-z_][A-Za-z0-9_]*),\s*(.+),\s*(.+)\)\s*$",
+        upcmd_strip,
+        re.IGNORECASE,
+    )
     if m:
         vname = m.group(1).upper()
         try:
             count = int(interpreter.evaluate_expression(m.group(2).strip()))
             val_e = m.group(3).strip()
-            char = chr(int(interpreter.evaluate_expression(val_e))) if not val_e.startswith(("'", '"')) else _unquote(val_e)[0]
+            char = (
+                chr(int(interpreter.evaluate_expression(val_e)))
+                if not val_e.startswith(("'", '"'))
+                else _unquote(val_e)[0]
+            )
         except Exception:
             count, char = 0, "\x00"
         interpreter.string_variables[vname + "$"] = char * count
@@ -1967,7 +2079,11 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
 
     # ── Bare built-in function call used as statement (e.g. SetLength, Str)
     # already handled; catch remaining known identifiers
-    m = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*(?:\((.*)?\))?\s*;?\s*$", upcmd_strip, re.IGNORECASE)
+    m = re.match(
+        r"^([A-Za-z_][A-Za-z0-9_]*)\s*(?:\((.*)?\))?\s*;?\s*$",
+        upcmd_strip,
+        re.IGNORECASE,
+    )
     if m:
         fname = m.group(1).upper()
         fargs = m.group(2) or ""

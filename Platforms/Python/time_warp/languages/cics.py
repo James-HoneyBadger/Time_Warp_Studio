@@ -52,6 +52,7 @@ if TYPE_CHECKING:
 # Public API
 # ---------------------------------------------------------------------------
 
+
 def execute_cics(
     interpreter: "Interpreter",
     source: str,
@@ -66,8 +67,10 @@ def execute_cics(
 # CICS condition codes
 # ---------------------------------------------------------------------------
 
+
 class CICSCondition(Exception):
     """Raised when a CICS exceptional condition occurs."""
+
     def __init__(self, cond: str, resp: int = 0):
         self.cond = cond.upper()
         self.resp = resp
@@ -76,6 +79,7 @@ class CICSCondition(Exception):
 
 class CICSReturn(Exception):
     """Raised by EXEC CICS RETURN to end the task."""
+
     def __init__(self, transid: str = "", commarea: str = ""):
         self.transid = transid
         self.commarea = commarea
@@ -87,16 +91,29 @@ class CICSAbend(Exception):
 
 
 _CICS_RESP: Dict[str, int] = {
-    "NORMAL": 0, "NOTFND": 13, "DUPREC": 14, "DUPKEY": 15, "INVREQ": 16,
-    "IOERR": 17, "NOSPACE": 18, "NOTOPEN": 19, "ENDFILE": 20,
-    "ILLOGIC": 21, "LENGERR": 22, "QZERO": 23, "MAPFAIL": 36,
-    "PGMIDERR": 27, "TRANSIDERR": 28, "TERMERR": 81,
+    "NORMAL": 0,
+    "NOTFND": 13,
+    "DUPREC": 14,
+    "DUPKEY": 15,
+    "INVREQ": 16,
+    "IOERR": 17,
+    "NOSPACE": 18,
+    "NOTOPEN": 19,
+    "ENDFILE": 20,
+    "ILLOGIC": 21,
+    "LENGERR": 22,
+    "QZERO": 23,
+    "MAPFAIL": 36,
+    "PGMIDERR": 27,
+    "TRANSIDERR": 28,
+    "TERMERR": 81,
 }
 
 
 # ---------------------------------------------------------------------------
 # BMS Map simulation
 # ---------------------------------------------------------------------------
+
 
 class BmsMap:
     """Extremely simplified BMS map (fixed 24×80 terminal model)."""
@@ -137,6 +154,7 @@ class BmsMap:
 # ---------------------------------------------------------------------------
 # CICS execution environment
 # ---------------------------------------------------------------------------
+
 
 class CICSEnvironment:
     """Simulates a CICS task/transaction execution environment."""
@@ -198,7 +216,9 @@ class CICSEnvironment:
         # Print CICS banner
         self._emit("=" * 60)
         self._emit("  CICS/TS 1.3 (Time Warp Studio Educational Simulation)")
-        self._emit(f"  TRANSID={self._transid}  TERMINAL={self._terminal}  USERID={self._userid}")
+        self._emit(
+            f"  TRANSID={self._transid}  TERMINAL={self._terminal}  USERID={self._userid}"
+        )
         self._emit("=" * 60)
         self._emit("")
 
@@ -284,7 +304,8 @@ class CICSEnvironment:
                     break
                 m = re.match(
                     r"\s*0?1\s+([\w-]+)\s+PIC\s+([X9]+(?:\([^)]+\))?)\s*(?:VALUE\s+(.*?))?\.?\s*$",
-                    line, re.I
+                    line,
+                    re.I,
                 )
                 if m:
                     vname, pic, init_val = m.group(1), m.group(2), m.group(3)
@@ -302,7 +323,8 @@ class CICSEnvironment:
             if in_ws:
                 m = re.match(
                     r"\s*0?1\s+([\w-]+)\s+PIC\s+([X9]+(?:\([^)]+\))?)\s*(?:VALUE\s+(.*?))?\.?\s*$",
-                    line, re.I
+                    line,
+                    re.I,
                 )
                 if m:
                     vname, pic, init_val = m.group(1), m.group(2), m.group(3)
@@ -350,7 +372,7 @@ class CICSEnvironment:
 
         # DISPLAY
         if upper.startswith("DISPLAY "):
-            val = line[8:].strip().strip('"\'').rstrip(".")
+            val = line[8:].strip().strip("\"'").rstrip(".")
             self._screen_write(self._resolve(val))
             return
 
@@ -397,15 +419,21 @@ class CICSEnvironment:
         if m:
             dst_name = m.group(1).strip().upper()
             expr_str = m.group(2).strip()
+
             # Substitute variable names with their numeric values
             def _var_sub(vm):
                 vn = vm.group(0).upper()
                 v = self._vars.get(vn, vn)
                 return str(v)
+
             expr_resolved = re.sub(r"[A-Za-z][\w-]*", _var_sub, expr_str)
             try:
                 result = eval(expr_resolved, {"__builtins__": {}}, {})
-                self._vars[dst_name] = str(int(result)) if isinstance(result, float) and result == int(result) else str(result)
+                self._vars[dst_name] = (
+                    str(int(result))
+                    if isinstance(result, float) and result == int(result)
+                    else str(result)
+                )
             except Exception:
                 pass
             return
@@ -556,7 +584,9 @@ class CICSEnvironment:
             if fname.upper() not in self._files:
                 self._files[fname.upper()] = {}
             self._files[fname.upper()][key] = self._resolve(frm)
-            self._emit(f"  WRITE FILE({fname}) RIDFLD({key}) FROM('{self._resolve(frm)}')")
+            self._emit(
+                f"  WRITE FILE({fname}) RIDFLD({key}) FROM('{self._resolve(frm)}')"
+            )
 
     def _cics_rewrite(self, opts: Dict[str, str]) -> None:
         fname = self._get_opt(opts, "FILE")
@@ -698,8 +728,11 @@ class CICSEnvironment:
 
     def _exec_if(self, line: str) -> None:
         """Very simple IF condition THEN ... [ELSE ...] END-IF."""
-        m = re.match(r"IF\s+(.+?)\s+THEN\s+(.+?)(?:\s+ELSE\s+(.+?))?(?:\s+END-IF)?\.?\s*$",
-                     line, re.I)
+        m = re.match(
+            r"IF\s+(.+?)\s+THEN\s+(.+?)(?:\s+ELSE\s+(.+?))?(?:\s+END-IF)?\.?\s*$",
+            line,
+            re.I,
+        )
         if not m:
             return
         cond = m.group(1).strip()

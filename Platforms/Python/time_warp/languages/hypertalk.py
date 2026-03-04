@@ -34,7 +34,9 @@ if TYPE_CHECKING:
     from ..core.turtle_state import TurtleState
 
 
-def execute_hypertalk(interpreter: "Interpreter", source: str, turtle: "TurtleState") -> str:
+def execute_hypertalk(
+    interpreter: "Interpreter", source: str, turtle: "TurtleState"
+) -> str:
     """Execute a HyperTalk program and return all output."""
     env = HyperTalkEnvironment(interpreter, turtle)
     return env.run(source)
@@ -97,7 +99,9 @@ class HyperTalkEnvironment:
                 self._handler_params[name] = params
                 body = []
                 i += 1
-                while i < len(lines) and not re.match(r"^\s*end\s+" + re.escape(name), lines[i], re.IGNORECASE):
+                while i < len(lines) and not re.match(
+                    r"^\s*end\s+" + re.escape(name), lines[i], re.IGNORECASE
+                ):
                     body.append(lines[i])
                     i += 1
                 self._handlers[name] = body
@@ -117,7 +121,9 @@ class HyperTalkEnvironment:
                 # Skip to matching "end name"
                 name = m.group(1).lower()
                 i += 1
-                while i < end and not re.match(r"^end\s+" + re.escape(name), lines[i].strip(), re.IGNORECASE):
+                while i < end and not re.match(
+                    r"^end\s+" + re.escape(name), lines[i].strip(), re.IGNORECASE
+                ):
                     i += 1
                 i += 1
                 continue
@@ -141,7 +147,9 @@ class HyperTalkEnvironment:
         stmt_lower = stmt.lower()
 
         # PUT value INTO/AFTER/BEFORE var
-        m = re.match(r"^put\s+(.+?)\s+(into|after|before)\s+(\w+)$", stmt, re.IGNORECASE)
+        m = re.match(
+            r"^put\s+(.+?)\s+(into|after|before)\s+(\w+)$", stmt, re.IGNORECASE
+        )
         if m:
             val = str(self._eval(m.group(1).strip()))
             op = m.group(2).lower()
@@ -241,7 +249,10 @@ class HyperTalkEnvironment:
 
         # Assignment: var = expr or var is expr
         m = re.match(r"^(\w+)\s*[=:]\s*(.+)$", stmt)
-        if m and not re.match(r"^(if|put|get|set|answer|say|ask|repeat|on|end|global|return|exit)\b", stmt_lower):
+        if m and not re.match(
+            r"^(if|put|get|set|answer|say|ask|repeat|on|end|global|return|exit)\b",
+            stmt_lower,
+        ):
             self._set_var(m.group(1), self._eval(m.group(2).strip()))
             return None
 
@@ -253,7 +264,9 @@ class HyperTalkEnvironment:
             if name in self._handlers:
                 # Bind arguments to handler parameter names
                 params = self._handler_params.get(name, [])
-                arg_vals = [a.strip() for a in args_str.split(",")] if args_str.strip() else []
+                arg_vals = (
+                    [a.strip() for a in args_str.split(",")] if args_str.strip() else []
+                )
                 # If single arg with spaces and multiple params, split by space
                 if len(arg_vals) == 1 and len(params) > 1 and " " in arg_vals[0]:
                     arg_vals = arg_vals[0].split()
@@ -282,7 +295,11 @@ class HyperTalkEnvironment:
                         else_end = i
                     else:
                         then_end = i
-                    return (then_end, (else_start, else_end) if else_start else None, i + 1)
+                    return (
+                        then_end,
+                        (else_start, else_end) if else_start else None,
+                        i + 1,
+                    )
                 depth -= 1
             elif s == "else" and depth == 0:
                 then_end = i
@@ -303,7 +320,11 @@ class HyperTalkEnvironment:
                     break
             return ("GOTO", end_i + 1)
 
-        m = re.match(r"^repeat\s+with\s+(\w+)\s*=\s*(.+?)\s+to\s+(.+?)(?:\s+by\s+(.+))?$", stmt, re.IGNORECASE)
+        m = re.match(
+            r"^repeat\s+with\s+(\w+)\s*=\s*(.+?)\s+to\s+(.+?)(?:\s+by\s+(.+))?$",
+            stmt,
+            re.IGNORECASE,
+        )
         if m:
             var = m.group(1)
             frm = int(float(self._eval(m.group(2).strip())))
@@ -345,7 +366,9 @@ class HyperTalkEnvironment:
             return ("GOTO", end_i + 1)
 
         # repeat forever
-        if re.match(r"^repeat\s*$", stmt, re.IGNORECASE) or re.match(r"^repeat\s+forever$", stmt, re.IGNORECASE):
+        if re.match(r"^repeat\s*$", stmt, re.IGNORECASE) or re.match(
+            r"^repeat\s+forever$", stmt, re.IGNORECASE
+        ):
             count = 0
             while count < 100000:
                 r = self._exec_lines(lines, body_start, end_i)
@@ -380,7 +403,7 @@ class HyperTalkEnvironment:
             return ""
         # String
         if expr.startswith('"') or expr.startswith("'"):
-            return expr.strip('"\'')
+            return expr.strip("\"'")
         # Number
         try:
             return int(expr)
@@ -433,7 +456,9 @@ class HyperTalkEnvironment:
             items = str(self._eval(m.group(2).strip())).split(",")
             return items[idx].strip() if 0 <= idx < len(items) else ""
 
-        m = re.match(r"^the\s+(?:number\s+of\s+)?chars?\s+(?:in|of)\s+(.+)$", expr, re.IGNORECASE)
+        m = re.match(
+            r"^the\s+(?:number\s+of\s+)?chars?\s+(?:in|of)\s+(.+)$", expr, re.IGNORECASE
+        )
         if m:
             return len(str(self._eval(m.group(1).strip())))
 
@@ -441,7 +466,9 @@ class HyperTalkEnvironment:
         if m:
             return len(str(self._eval(m.group(1).strip())))
 
-        m = re.match(r"^the\s+(?:number\s+of\s+)?words?\s+(?:in|of)\s+(.+)$", expr, re.IGNORECASE)
+        m = re.match(
+            r"^the\s+(?:number\s+of\s+)?words?\s+(?:in|of)\s+(.+)$", expr, re.IGNORECASE
+        )
         if m:
             return len(str(self._eval(m.group(1).strip())).split())
 
@@ -458,7 +485,11 @@ class HyperTalkEnvironment:
             return str(self._eval(parts[0].strip())) + str(self._eval(parts[1].strip()))
         if "&&" in expr:
             parts = expr.split("&&", 1)
-            return str(self._eval(parts[0].strip())) + " " + str(self._eval(parts[1].strip()))
+            return (
+                str(self._eval(parts[0].strip()))
+                + " "
+                + str(self._eval(parts[1].strip()))
+            )
 
         # Arithmetic using Python
         for op in [" is ", " is not ", " mod ", " div ", " contains ", " is in "]:
@@ -485,6 +516,7 @@ class HyperTalkEnvironment:
             name = m_.group(0).lower()
             val = self._get_var(name)
             return str(val)
+
         pyexpr = re.sub(r"[A-Za-z_]\w*", sub_var, expr)
         pyexpr = pyexpr.replace("^", "**")
         try:
@@ -517,7 +549,9 @@ class HyperTalkEnvironment:
             "trunc": lambda: int(a0),
             "length": lambda: len(str(args[0])),
             "random": lambda: random.randint(1, int(a0)) if a0 else random.random(),
-            "offset": lambda: str(args[1]).find(str(args[0])) + 1 if len(args) > 1 else 0,
+            "offset": lambda: (
+                str(args[1]).find(str(args[0])) + 1 if len(args) > 1 else 0
+            ),
             "max": lambda: max(float(a) for a in args),
             "min": lambda: min(float(a) for a in args),
             "value": lambda: self._eval(str(args[0])),

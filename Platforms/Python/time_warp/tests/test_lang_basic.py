@@ -1,6 +1,5 @@
 """Comprehensive tests for the BASIC language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors, first_error
@@ -91,7 +90,7 @@ class TestInput:
         assert has(out, "7")
 
     def test_input_string(self):
-        out = bas('10 INPUT A$\n20 PRINT A$', input_val="hello")
+        out = bas("10 INPUT A$\n20 PRINT A$", input_val="hello")
         assert has(out, "hello")
 
     def test_input_with_prompt(self):
@@ -120,12 +119,7 @@ class TestIf:
         assert has(out, "no")
 
     def test_block_if_true(self):
-        src = (
-            "10 X = 1\n"
-            "20 IF X = 1 THEN\n"
-            '30 PRINT "ok"\n'
-            "40 END IF"
-        )
+        src = "10 X = 1\n" "20 IF X = 1 THEN\n" '30 PRINT "ok"\n' "40 END IF"
         out = bas(src)
         assert has(out, "ok")
 
@@ -151,12 +145,7 @@ class TestGotoGosub:
     """GOTO, GOSUB, RETURN."""
 
     def test_goto(self):
-        src = (
-            '10 PRINT "A"\n'
-            "20 GOTO 40\n"
-            '30 PRINT "B"\n'
-            '40 PRINT "C"'
-        )
+        src = '10 PRINT "A"\n' "20 GOTO 40\n" '30 PRINT "B"\n' '40 PRINT "C"'
         out = bas(src)
         assert has(out, "A", "C")
         assert not has(out, "B")
@@ -201,13 +190,7 @@ class TestWhileWend:
     """WHILE...WEND loop."""
 
     def test_while_wend(self):
-        src = (
-            "10 X = 0\n"
-            "20 WHILE X < 3\n"
-            "30 X = X + 1\n"
-            "40 WEND\n"
-            "50 PRINT X"
-        )
+        src = "10 X = 0\n" "20 WHILE X < 3\n" "30 X = X + 1\n" "40 WEND\n" "50 PRINT X"
         out = bas(src)
         assert has(out, "3")
 
@@ -234,22 +217,14 @@ class TestDoLoop:
 
     def test_do_loop_until(self):
         src = (
-            "10 X = 0\n"
-            "20 DO\n"
-            "30 X = X + 1\n"
-            "40 LOOP UNTIL X = 3\n"
-            "50 PRINT X"
+            "10 X = 0\n" "20 DO\n" "30 X = X + 1\n" "40 LOOP UNTIL X = 3\n" "50 PRINT X"
         )
         out = bas(src)
         assert has(out, "3")
 
     def test_do_while_loop(self):
         src = (
-            "10 X = 0\n"
-            "20 DO WHILE X < 2\n"
-            "30 X = X + 1\n"
-            "40 LOOP\n"
-            "50 PRINT X"
+            "10 X = 0\n" "20 DO WHILE X < 2\n" "30 X = X + 1\n" "40 LOOP\n" "50 PRINT X"
         )
         out = bas(src)
         assert has(out, "2")
@@ -283,20 +258,12 @@ class TestArrays:
     """DIM and array operations."""
 
     def test_dim_numeric(self):
-        src = (
-            "10 DIM A(5)\n"
-            "20 A(0) = 99\n"
-            "30 PRINT A(0)"
-        )
+        src = "10 DIM A(5)\n" "20 A(0) = 99\n" "30 PRINT A(0)"
         out = bas(src)
         assert has(out, "99")
 
     def test_dim_string_array(self):
-        src = (
-            '10 DIM N$(3)\n'
-            '20 N$(0) = "hi"\n'
-            "30 PRINT N$(0)"
-        )
+        src = "10 DIM N$(3)\n" '20 N$(0) = "hi"\n' "30 PRINT N$(0)"
         out = bas(src)
         assert has(out, "hi")
 
@@ -584,7 +551,7 @@ class TestMultiStatement:
     """Multiple statements on one line separated by colon."""
 
     def test_colon_separator(self):
-        out = bas('10 X = 1 : Y = 2 : PRINT X + Y')
+        out = bas("10 X = 1 : Y = 2 : PRINT X + Y")
         assert has(out, "3")
 
 

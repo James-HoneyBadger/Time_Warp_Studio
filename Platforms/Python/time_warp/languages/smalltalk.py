@@ -22,7 +22,9 @@ if TYPE_CHECKING:
     from ..core.turtle_state import TurtleState
 
 
-def execute_smalltalk(interpreter: "Interpreter", source: str, turtle: "TurtleState") -> str:
+def execute_smalltalk(
+    interpreter: "Interpreter", source: str, turtle: "TurtleState"
+) -> str:
     """Execute a Smalltalk program and return all output."""
     env = SmalltalkEnvironment(interpreter, turtle)
     return env.run(source)
@@ -62,14 +64,17 @@ class SmalltalkEnvironment:
             def showCr_(text):
                 output.append(str(text))
                 return text
+
             @staticmethod
             def show_(text):
                 output.append(str(text))
                 return text
+
             @staticmethod
             def print_(obj):
                 output.append(repr(obj))
                 return obj
+
             @staticmethod
             def nl():
                 output.append("")
@@ -91,7 +96,7 @@ class SmalltalkEnvironment:
         stmts = []
         current = []
         depth_sq = 0  # [ ] depth
-        depth_p = 0   # ( ) depth
+        depth_p = 0  # ( ) depth
         in_str = False
         in_comment = False
         i = 0
@@ -203,11 +208,16 @@ class SmalltalkEnvironment:
             return None
 
         # Nil / true / false
-        if expr == "nil": return None
-        if expr == "true": return True
-        if expr == "false": return False
-        if expr == "self": return env.get("self")
-        if expr == "super": return env.get("self")
+        if expr == "nil":
+            return None
+        if expr == "true":
+            return True
+        if expr == "false":
+            return False
+        if expr == "self":
+            return env.get("self")
+        if expr == "super":
+            return env.get("self")
 
         # String literal
         m = re.match(r"^'((?:[^']|'')*)'$", expr)
@@ -274,11 +284,29 @@ class SmalltalkEnvironment:
             return kw_result
 
         # Binary message: receiver + arg
-        for op in ["~~", "=", "~=", "<", ">", "<=", ">=", "+", "-", "*", "/", "//", "\\\\", "@", ",", "->", "**"]:
+        for op in [
+            "~~",
+            "=",
+            "~=",
+            "<",
+            ">",
+            "<=",
+            ">=",
+            "+",
+            "-",
+            "*",
+            "/",
+            "//",
+            "\\\\",
+            "@",
+            ",",
+            "->",
+            "**",
+        ]:
             idx = _find_op(expr, op)
             if idx > 0:
                 recv = self._eval_expr(expr[:idx].strip(), env)
-                arg = self._eval_expr(expr[idx + len(op):].strip(), env)
+                arg = self._eval_expr(expr[idx + len(op) :].strip(), env)
                 return self._send_binary(recv, op, arg)
 
         # Unary messages (chained): recv msg1 msg2
@@ -359,9 +387,11 @@ class SmalltalkEnvironment:
             return abs(recv)
         if msg == "sqrt":
             import math
+
             return math.sqrt(recv)
         if msg == "factorial":
             import math
+
             return math.factorial(int(recv))
         if msg == "asFloat":
             return float(recv)
@@ -403,19 +433,32 @@ class SmalltalkEnvironment:
         return None
 
     def _send_binary(self, recv: Any, op: str, arg: Any) -> Any:
-        if op == "+": return recv + arg
-        if op == "-": return recv - arg
-        if op == "*": return recv * arg
-        if op == "/": return recv / arg
-        if op == "//": return recv // arg
-        if op == "\\\\": return recv % arg
-        if op == "**": return recv ** arg
-        if op == "=": return recv == arg
-        if op == "~=": return recv != arg
-        if op == "<": return recv < arg
-        if op == ">": return recv > arg
-        if op == "<=": return recv <= arg
-        if op == ">=": return recv >= arg
+        if op == "+":
+            return recv + arg
+        if op == "-":
+            return recv - arg
+        if op == "*":
+            return recv * arg
+        if op == "/":
+            return recv / arg
+        if op == "//":
+            return recv // arg
+        if op == "\\\\":
+            return recv % arg
+        if op == "**":
+            return recv**arg
+        if op == "=":
+            return recv == arg
+        if op == "~=":
+            return recv != arg
+        if op == "<":
+            return recv < arg
+        if op == ">":
+            return recv > arg
+        if op == "<=":
+            return recv <= arg
+        if op == ">=":
+            return recv >= arg
         if op == ",":
             if isinstance(recv, str):
                 return str(recv) + str(arg)
@@ -538,7 +581,11 @@ class SmalltalkEnvironment:
             cond_block = recv
             body_block = args[0]
             count = 0
-            while isinstance(cond_block, STBlock) and cond_block.value([]) and count < 100000:
+            while (
+                isinstance(cond_block, STBlock)
+                and cond_block.value([])
+                and count < 100000
+            ):
                 if isinstance(body_block, STBlock):
                     body_block.value([])
                 count += 1
@@ -547,7 +594,11 @@ class SmalltalkEnvironment:
             cond_block = recv
             body_block = args[0]
             count = 0
-            while isinstance(cond_block, STBlock) and not cond_block.value([]) and count < 100000:
+            while (
+                isinstance(cond_block, STBlock)
+                and not cond_block.value([])
+                and count < 100000
+            ):
                 if isinstance(body_block, STBlock):
                     body_block.value([])
                 count += 1
@@ -576,7 +627,9 @@ class SmalltalkEnvironment:
             block = args[2]
             i = recv
             count = 0
-            while (step > 0 and i <= end_val or step < 0 and i >= end_val) and count < 100000:
+            while (
+                step > 0 and i <= end_val or step < 0 and i >= end_val
+            ) and count < 100000:
                 if isinstance(block, STBlock):
                     block.value([i])
                 i += step
@@ -606,16 +659,24 @@ class SmalltalkEnvironment:
             block = args[0]
             if isinstance(recv, (list, STOrderedCollection)):
                 items = recv if isinstance(recv, list) else recv._items
-                return [block.value([i]) if isinstance(block, STBlock) else i for i in items]
+                return [
+                    block.value([i]) if isinstance(block, STBlock) else i for i in items
+                ]
         if selector == "select:":
             block = args[0]
             if isinstance(recv, (list, STOrderedCollection)):
                 items = recv if isinstance(recv, list) else recv._items
-                return [i for i in items if isinstance(block, STBlock) and block.value([i])]
+                return [
+                    i for i in items if isinstance(block, STBlock) and block.value([i])
+                ]
         if selector == "inject:into:":
             acc = args[0]
             block = args[1]
-            items = recv if isinstance(recv, list) else (recv._items if isinstance(recv, STOrderedCollection) else [])
+            items = (
+                recv
+                if isinstance(recv, list)
+                else (recv._items if isinstance(recv, STOrderedCollection) else [])
+            )
             for item in items:
                 if isinstance(block, STBlock):
                     acc = block.value([acc, item])
@@ -686,7 +747,7 @@ class SmalltalkEnvironment:
         # String
         if selector == "copyFrom:to:":
             if isinstance(recv, (str, list)):
-                return recv[int(args[0])-1:int(args[1])]
+                return recv[int(args[0]) - 1 : int(args[1])]
         if selector == "indexOf:":
             if isinstance(recv, str):
                 idx = recv.find(str(args[0]))
@@ -714,11 +775,11 @@ class SmalltalkEnvironment:
 class STBlock:
     def __init__(self, body: str, env: dict, interp: "SmalltalkEnvironment"):
         self.body = body
-        self.env = env       # share the same dict — closures see mutations
+        self.env = env  # share the same dict — closures see mutations
         self.interp = interp
 
     def value(self, args: list) -> Any:
-        env = self.env        # use the shared env directly
+        env = self.env  # use the shared env directly
         # Parse block args: [:x :y | body]
         m = re.match(r"^\s*((?::\w+\s*)+)\|(.*)", self.body, re.DOTALL)
         if m:
@@ -796,7 +857,7 @@ def _find_op(expr: str, op: str) -> int:
             depth += 1
         elif ch in ")]}":
             depth -= 1
-        elif depth == 0 and expr[i:i+len(op)] == op:
+        elif depth == 0 and expr[i : i + len(op)] == op:
             if i > 0:
                 return i
         i += 1

@@ -348,7 +348,11 @@ class RexxEnvironment:
         upper = stmt.upper()
 
         # DO i = start TO end [BY step]
-        m = re.match(r"^DO\s+(\w+)\s*=\s*(.+?)\s+TO\s+(.+?)(?:\s+BY\s+(.+))?\s*$", stmt, re.IGNORECASE)
+        m = re.match(
+            r"^DO\s+(\w+)\s*=\s*(.+?)\s+TO\s+(.+?)(?:\s+BY\s+(.+))?\s*$",
+            stmt,
+            re.IGNORECASE,
+        )
         if m:
             var = m.group(1).upper()
             frm = self._eval(m.group(2).strip())
@@ -533,6 +537,7 @@ class RexxEnvironment:
             result = self._call_builtin(m.group(1).upper(), m.group(2))
             if result is not None:
                 return result
+
         # Arithmetic using Python — try BEFORE concatenation
         def replace_m(m_):
             name = m_.group(0)
@@ -546,6 +551,7 @@ class RexxEnvironment:
                 if resolved != upper:
                     return str(resolved)
             return name
+
         pyexpr = re.sub(r"[A-Za-z_]\w*(?:\.\w+)*", replace_m, expr)
         pyexpr = pyexpr.replace("\\\\", " not ")
         pyexpr = pyexpr.replace("&&", " and ")
@@ -587,53 +593,220 @@ class RexxEnvironment:
         import math as _math
         import random as _random
         import datetime as _datetime
-        raw_args_str = args_str
-        args = [self._eval(a.strip()) for a in args_str.split(",") if a.strip() or args_str]
 
-        def s0() -> str: return str(args[0]) if args else ""
-        def s1() -> str: return str(args[1]) if len(args) > 1 else ""
+        raw_args_str = args_str
+        args = [
+            self._eval(a.strip()) for a in args_str.split(",") if a.strip() or args_str
+        ]
+
+        def s0() -> str:
+            return str(args[0]) if args else ""
+
+        def s1() -> str:
+            return str(args[1]) if len(args) > 1 else ""
+
         def n0() -> float:
-            try: return float(args[0]) if args else 0
-            except (ValueError, TypeError): return 0
+            try:
+                return float(args[0]) if args else 0
+            except (ValueError, TypeError):
+                return 0
+
         def n1() -> float:
-            try: return float(args[1]) if len(args) > 1 else 0
-            except (ValueError, TypeError): return 0
+            try:
+                return float(args[1]) if len(args) > 1 else 0
+            except (ValueError, TypeError):
+                return 0
 
         builtins: dict[str, Any] = {
             # -- String functions --
             "LENGTH": lambda: len(s0()),
-            "SUBSTR": lambda: (str(args[0])[int(args[1])-1 : (int(args[2]) + int(args[1]) - 1) if len(args) > 2 else None]) if args else "",
-            "LEFT": lambda: str(args[0])[:int(args[1])].ljust(int(args[1])) if len(args) > 1 else s0(),
-            "RIGHT": lambda: str(args[0])[-int(args[1]):].rjust(int(args[1])) if len(args) > 1 else s0(),
-            "STRIP": lambda: (s0().strip(str(args[2])) if len(args) > 2 else (s0().lstrip() if len(args) > 1 and str(args[1]).upper() == "L" else (s0().rstrip() if len(args) > 1 and str(args[1]).upper() == "T" else s0().strip()))),
+            "SUBSTR": lambda: (
+                (
+                    str(args[0])[
+                        int(args[1])
+                        - 1 : (
+                            (int(args[2]) + int(args[1]) - 1) if len(args) > 2 else None
+                        )
+                    ]
+                )
+                if args
+                else ""
+            ),
+            "LEFT": lambda: (
+                str(args[0])[: int(args[1])].ljust(int(args[1]))
+                if len(args) > 1
+                else s0()
+            ),
+            "RIGHT": lambda: (
+                str(args[0])[-int(args[1]) :].rjust(int(args[1]))
+                if len(args) > 1
+                else s0()
+            ),
+            "STRIP": lambda: (
+                s0().strip(str(args[2]))
+                if len(args) > 2
+                else (
+                    s0().lstrip()
+                    if len(args) > 1 and str(args[1]).upper() == "L"
+                    else (
+                        s0().rstrip()
+                        if len(args) > 1 and str(args[1]).upper() == "T"
+                        else s0().strip()
+                    )
+                )
+            ),
             "UPPER": lambda: s0().upper(),
             "LOWER": lambda: s0().lower(),
             "REVERSE": lambda: s0()[::-1],
             "POS": lambda: str(args[1]).find(str(args[0])) + 1 if len(args) > 1 else 0,
-            "LASTPOS": lambda: (str(args[1]).rfind(str(args[0])) + 1) if len(args) > 1 else 0,
+            "LASTPOS": lambda: (
+                (str(args[1]).rfind(str(args[0])) + 1) if len(args) > 1 else 0
+            ),
             "CHAROUT": lambda: (s0(), "")[1],  # no-op output
             "CHARIN": lambda: "",
-            "WORD": lambda: (str(args[0]).split()[int(args[1])-1] if len(args) > 1 and len(str(args[0]).split()) >= int(args[1]) else ""),
+            "WORD": lambda: (
+                str(args[0]).split()[int(args[1]) - 1]
+                if len(args) > 1 and len(str(args[0]).split()) >= int(args[1])
+                else ""
+            ),
             "WORDS": lambda: len(s0().split()),
-            "WORDPOS": lambda: (str(args[1]).split().index(str(args[0])) + 1) if len(args) > 1 and str(args[0]) in str(args[1]).split() else 0,
-            "WORDLENGTH": lambda: len(str(args[0]).split()[int(args[1])-1]) if len(args) > 1 and len(str(args[0]).split()) >= int(args[1]) else 0,
-            "SUBWORD": lambda: " ".join(str(args[0]).split()[int(args[1])-1 : (int(args[1])-1 + int(args[2])) if len(args) > 2 else None]) if len(args) > 1 else "",
-            "DELSTR": lambda: (str(args[0])[:int(args[1])-1] + str(args[0])[int(args[1])-1+int(args[2]):]) if len(args) > 2 else str(args[0]),
-            "DELWORD": lambda: " ".join(w for i, w in enumerate(str(args[0]).split(), 1) if not (int(args[1]) <= i < int(args[1]) + (int(args[2]) if len(args) > 2 else 1))) if len(args) > 1 else s0(),
-            "INSERT": lambda: (str(args[1])[:int(args[2])] + str(args[0]).ljust(int(args[3]) if len(args) > 3 else len(str(args[0]))) + str(args[1])[int(args[2]):]) if len(args) > 2 else s0(),
-            "OVERLAY": lambda: (str(args[1])[:int(args[2])-1] + str(args[0]).ljust(int(args[3]) if len(args) > 3 else len(str(args[0])))[:int(args[3]) if len(args) > 3 else len(str(args[0]))] + str(args[1])[int(args[2])-1+int(args[3] if len(args) > 3 else len(str(args[0]))):]) if len(args) > 1 else s0(),
+            "WORDPOS": lambda: (
+                (str(args[1]).split().index(str(args[0])) + 1)
+                if len(args) > 1 and str(args[0]) in str(args[1]).split()
+                else 0
+            ),
+            "WORDLENGTH": lambda: (
+                len(str(args[0]).split()[int(args[1]) - 1])
+                if len(args) > 1 and len(str(args[0]).split()) >= int(args[1])
+                else 0
+            ),
+            "SUBWORD": lambda: (
+                " ".join(
+                    str(args[0]).split()[
+                        int(args[1])
+                        - 1 : (
+                            (int(args[1]) - 1 + int(args[2])) if len(args) > 2 else None
+                        )
+                    ]
+                )
+                if len(args) > 1
+                else ""
+            ),
+            "DELSTR": lambda: (
+                (
+                    str(args[0])[: int(args[1]) - 1]
+                    + str(args[0])[int(args[1]) - 1 + int(args[2]) :]
+                )
+                if len(args) > 2
+                else str(args[0])
+            ),
+            "DELWORD": lambda: (
+                " ".join(
+                    w
+                    for i, w in enumerate(str(args[0]).split(), 1)
+                    if not (
+                        int(args[1])
+                        <= i
+                        < int(args[1]) + (int(args[2]) if len(args) > 2 else 1)
+                    )
+                )
+                if len(args) > 1
+                else s0()
+            ),
+            "INSERT": lambda: (
+                (
+                    str(args[1])[: int(args[2])]
+                    + str(args[0]).ljust(
+                        int(args[3]) if len(args) > 3 else len(str(args[0]))
+                    )
+                    + str(args[1])[int(args[2]) :]
+                )
+                if len(args) > 2
+                else s0()
+            ),
+            "OVERLAY": lambda: (
+                (
+                    str(args[1])[: int(args[2]) - 1]
+                    + str(args[0]).ljust(
+                        int(args[3]) if len(args) > 3 else len(str(args[0]))
+                    )[: int(args[3]) if len(args) > 3 else len(str(args[0]))]
+                    + str(args[1])[
+                        int(args[2])
+                        - 1
+                        + int(args[3] if len(args) > 3 else len(str(args[0]))) :
+                    ]
+                )
+                if len(args) > 1
+                else s0()
+            ),
             "COPIES": lambda: str(args[0]) * int(args[1]) if len(args) > 1 else "",
-            "SPACE": lambda: (" " * (int(args[1]) if len(args) > 1 else 1)).join(s0().split()),
-            "CENTER": lambda: str(args[0]).center(int(args[1])) if len(args) > 1 else s0(),
-            "CENTRE": lambda: str(args[0]).center(int(args[1])) if len(args) > 1 else s0(),
-            "JUSTIFY": lambda: str(args[0]).center(int(args[1])) if len(args) > 1 else s0(),
-            "TRANSLATE": lambda: (s0().translate(str.maketrans(str(args[2]), str(args[1])[:len(str(args[2]))])) if len(args) > 2 else s0().upper()),
-            "COMPARE": lambda: (0 if str(args[0]) == str(args[1]) else next((i+1 for i, (a,b) in enumerate(zip(str(args[0]), str(args[1]))) if a != b), min(len(str(args[0])), len(str(args[1]))) + 1)) if len(args) > 1 else 0,
-            "ABBREV": lambda: (1 if str(args[1]).upper().startswith(str(args[0]).upper()) and len(str(args[1])) >= (int(args[2]) if len(args) > 2 else 0) else 0) if len(args) > 1 else 0,
-            "XRANGE": lambda: "".join(chr(c) for c in range(ord(str(args[0])[0]) if args else 0, ord(str(args[1])[0])+1 if len(args) > 1 else 256)),
-            "VERIFY": lambda: next((i+1 for i, c in enumerate(str(args[0])) if c in str(args[1])), 0) if len(args) > 1 else 0,
-            "CHANGESTR": lambda: str(args[2]).replace(str(args[0]), str(args[1])) if len(args) > 2 else s0(),
-            "COUNTSTR": lambda: str(args[1]).count(str(args[0])) if len(args) > 1 else 0,
+            "SPACE": lambda: (" " * (int(args[1]) if len(args) > 1 else 1)).join(
+                s0().split()
+            ),
+            "CENTER": lambda: (
+                str(args[0]).center(int(args[1])) if len(args) > 1 else s0()
+            ),
+            "CENTRE": lambda: (
+                str(args[0]).center(int(args[1])) if len(args) > 1 else s0()
+            ),
+            "JUSTIFY": lambda: (
+                str(args[0]).center(int(args[1])) if len(args) > 1 else s0()
+            ),
+            "TRANSLATE": lambda: (
+                s0().translate(
+                    str.maketrans(str(args[2]), str(args[1])[: len(str(args[2]))])
+                )
+                if len(args) > 2
+                else s0().upper()
+            ),
+            "COMPARE": lambda: (
+                (
+                    0
+                    if str(args[0]) == str(args[1])
+                    else next(
+                        (
+                            i + 1
+                            for i, (a, b) in enumerate(zip(str(args[0]), str(args[1])))
+                            if a != b
+                        ),
+                        min(len(str(args[0])), len(str(args[1]))) + 1,
+                    )
+                )
+                if len(args) > 1
+                else 0
+            ),
+            "ABBREV": lambda: (
+                (
+                    1
+                    if str(args[1]).upper().startswith(str(args[0]).upper())
+                    and len(str(args[1])) >= (int(args[2]) if len(args) > 2 else 0)
+                    else 0
+                )
+                if len(args) > 1
+                else 0
+            ),
+            "XRANGE": lambda: "".join(
+                chr(c)
+                for c in range(
+                    ord(str(args[0])[0]) if args else 0,
+                    ord(str(args[1])[0]) + 1 if len(args) > 1 else 256,
+                )
+            ),
+            "VERIFY": lambda: (
+                next(
+                    (i + 1 for i, c in enumerate(str(args[0])) if c in str(args[1])), 0
+                )
+                if len(args) > 1
+                else 0
+            ),
+            "CHANGESTR": lambda: (
+                str(args[2]).replace(str(args[0]), str(args[1]))
+                if len(args) > 2
+                else s0()
+            ),
+            "COUNTSTR": lambda: (
+                str(args[1]).count(str(args[0])) if len(args) > 1 else 0
+            ),
             # -- Conversion functions --
             "B2X": lambda: hex(int(s0(), 2))[2:].upper() if s0() else "0",
             "X2B": lambda: bin(int(s0(), 16))[2:].zfill(len(s0()) * 4) if s0() else "0",
@@ -671,11 +844,18 @@ class RexxEnvironment:
             "VALUE": lambda: self._get_var(s0()),
             # -- System functions --
             "DATE": lambda: _datetime.date.today().strftime(
-                "%d %b %Y" if not args or str(args[0]).upper() in ("N", "NORMAL") else
-                ("%d/%m/%Y" if str(args[0]).upper() in ("E", "EUROPEAN") else
-                 _datetime.date.today().strftime("%Y-%m-%d"))),
+                "%d %b %Y"
+                if not args or str(args[0]).upper() in ("N", "NORMAL")
+                else (
+                    "%d/%m/%Y"
+                    if str(args[0]).upper() in ("E", "EUROPEAN")
+                    else _datetime.date.today().strftime("%Y-%m-%d")
+                )
+            ),
             "TIME": lambda: _datetime.datetime.now().strftime("%H:%M:%S"),
-            "RANDOM": lambda: _random.randint(int(n0()) if args else 0, int(n1()) if len(args) > 1 else 999),
+            "RANDOM": lambda: _random.randint(
+                int(n0()) if args else 0, int(n1()) if len(args) > 1 else 999
+            ),
             "QUEUED": lambda: 0,
             "CONDITION": lambda: "",
             "ERRORTEXT": lambda: "",
@@ -713,6 +893,7 @@ class RexxEnvironment:
         """Execute a T-SQL statement from REXX and return output."""
         try:
             from ..core.sql_engine import SQLSession
+
             sess = getattr(self.interpreter, "sql_session", None)
             if sess is None:
                 sess = SQLSession()

@@ -26,7 +26,9 @@ TAPE_SIZE = 30_000
 MAX_STEPS = 10_000_000
 
 
-def execute_brainfuck(interpreter: "Interpreter", source: str, turtle: "TurtleState") -> str:
+def execute_brainfuck(
+    interpreter: "Interpreter", source: str, turtle: "TurtleState"
+) -> str:
     """Execute a complete Brainfuck program and return all output."""
     # Strip all non-Brainfuck characters
     code = "".join(c for c in source if c in "><+-.,[]")
@@ -49,8 +51,8 @@ def execute_brainfuck(interpreter: "Interpreter", source: str, turtle: "TurtleSt
         return f"❌ Brainfuck: unmatched '[' at position {stack[-1]}"
 
     tape = bytearray(TAPE_SIZE)
-    dp = 0          # data pointer
-    ip = 0          # instruction pointer
+    dp = 0  # data pointer
+    ip = 0  # instruction pointer
     output_chars: list[str] = []
     steps = 0
     input_buffer: list[int] = []
@@ -58,7 +60,9 @@ def execute_brainfuck(interpreter: "Interpreter", source: str, turtle: "TurtleSt
     while ip < len(code):
         steps += 1
         if steps > MAX_STEPS:
-            output_chars.append(f"\n❌ Brainfuck: execution limit ({MAX_STEPS} steps) exceeded")
+            output_chars.append(
+                f"\n❌ Brainfuck: execution limit ({MAX_STEPS} steps) exceeded"
+            )
             break
 
         ch = code[ip]

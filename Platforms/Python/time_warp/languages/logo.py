@@ -550,7 +550,9 @@ def _logo_map(
     if template is None:
         return "❌ MAP requires [template] [list]\n"
 
-    items_list = _logo_parse_list_literal(rest) if rest.startswith("[") else rest.split()
+    items_list = (
+        _logo_parse_list_literal(rest) if rest.startswith("[") else rest.split()
+    )
     if items_list is None:
         return "❌ MAP requires a list argument\n"
 
@@ -576,7 +578,9 @@ def _logo_filter(
     if template is None:
         return "❌ FILTER requires [predicate] [list]\n"
 
-    items_list = _logo_parse_list_literal(rest) if rest.startswith("[") else rest.split()
+    items_list = (
+        _logo_parse_list_literal(rest) if rest.startswith("[") else rest.split()
+    )
     if items_list is None:
         return "❌ FILTER requires a list argument\n"
 
@@ -591,7 +595,10 @@ def _logo_filter(
         try:
             truthy = float(result_stripped) != 0
         except (ValueError, TypeError):
-            truthy = bool(result_stripped) and result_stripped.upper() not in ("FALSE", "0")
+            truthy = bool(result_stripped) and result_stripped.upper() not in (
+                "FALSE",
+                "0",
+            )
         if truthy:
             kept.append(item)
     return "[" + " ".join(kept) + "]\n"
@@ -608,7 +615,9 @@ def _logo_reduce(
     if template is None:
         return "❌ REDUCE requires [template] [list]\n"
 
-    items_list = _logo_parse_list_literal(rest) if rest.startswith("[") else rest.split()
+    items_list = (
+        _logo_parse_list_literal(rest) if rest.startswith("[") else rest.split()
+    )
     if items_list is None or len(items_list) < 1:
         return "❌ REDUCE requires a non-empty list\n"
 
@@ -621,7 +630,9 @@ def _logo_reduce(
     acc: Any = _to_val(items_list[0])
     for item in items_list[1:]:
         val = _to_val(item)
-        result = _logo_run_template(interpreter, template, turtle, {"?1": acc, "?2": val})
+        result = _logo_run_template(
+            interpreter, template, turtle, {"?1": acc, "?2": val}
+        )
         try:
             acc = float(result.strip())
         except (ValueError, TypeError):
@@ -1953,14 +1964,16 @@ def _logo_while(
     brackets = []
     i = 0
     while i < len(command) and len(brackets) < 2:
-        if command[i] == '[':
+        if command[i] == "[":
             depth = 0
             start = i
             while i < len(command):
-                if command[i] == '[': depth += 1
-                elif command[i] == ']': depth -= 1
+                if command[i] == "[":
+                    depth += 1
+                elif command[i] == "]":
+                    depth -= 1
                 if depth == 0:
-                    brackets.append(command[start + 1: i])
+                    brackets.append(command[start + 1 : i])
                     break
                 i += 1
         i += 1
@@ -1996,14 +2009,16 @@ def _logo_until(
     brackets = []
     i = 0
     while i < len(command) and len(brackets) < 2:
-        if command[i] == '[':
+        if command[i] == "[":
             depth = 0
             start = i
             while i < len(command):
-                if command[i] == '[': depth += 1
-                elif command[i] == ']': depth -= 1
+                if command[i] == "[":
+                    depth += 1
+                elif command[i] == "]":
+                    depth -= 1
                 if depth == 0:
-                    brackets.append(command[start + 1: i])
+                    brackets.append(command[start + 1 : i])
                     break
                 i += 1
         i += 1
@@ -2033,7 +2048,7 @@ def _logo_until(
 def _logo_local(interpreter: "Interpreter", args: list) -> str:
     """LOCAL varname ... - Declare local variables (initialised to 0)."""
     for name in args:
-        var_name = name.lstrip(':').upper()
+        var_name = name.lstrip(":").upper()
         if var_name not in interpreter.variables:
             interpreter.variables[var_name] = 0
     return ""

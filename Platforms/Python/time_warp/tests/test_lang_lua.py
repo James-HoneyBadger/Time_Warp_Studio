@@ -1,6 +1,5 @@
 """Comprehensive tests for the Lua language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors, first_error
@@ -191,7 +190,9 @@ class TestControlFlow:
         assert has(out, "no")
 
     def test_if_elseif(self):
-        out = lua('local x = 2\nif x == 1 then\n  print("one")\nelseif x == 2 then\n  print("two")\nelse\n  print("other")\nend')
+        out = lua(
+            'local x = 2\nif x == 1 then\n  print("one")\nelseif x == 2 then\n  print("two")\nelse\n  print("other")\nend'
+        )
         assert has(out, "two")
 
     def test_while(self):
@@ -211,7 +212,9 @@ class TestControlFlow:
         assert has(out, "0") and has(out, "4") and has(out, "10")
 
     def test_for_in_ipairs(self):
-        out = lua('local t = {"a", "b", "c"}\nfor i, v in ipairs(t) do\n  print(i, v)\nend')
+        out = lua(
+            'local t = {"a", "b", "c"}\nfor i, v in ipairs(t) do\n  print(i, v)\nend'
+        )
         assert has(out, "a") and has(out, "c")
 
     def test_break(self):
@@ -226,7 +229,9 @@ class TestControlFlow:
 
 class TestFunctions:
     def test_define_and_call(self):
-        out = lua('function greet(name)\n  return "Hello " .. name\nend\nprint(greet("World"))')
+        out = lua(
+            'function greet(name)\n  return "Hello " .. name\nend\nprint(greet("World"))'
+        )
         assert has(out, "Hello World")
 
     def test_local_function(self):
@@ -234,11 +239,15 @@ class TestFunctions:
         assert has(out, "10")
 
     def test_multiple_returns(self):
-        out = lua("function swap(a, b)\n  return b, a\nend\nlocal x, y = swap(1, 2)\nprint(x, y)")
+        out = lua(
+            "function swap(a, b)\n  return b, a\nend\nlocal x, y = swap(1, 2)\nprint(x, y)"
+        )
         assert has(out, "2") and has(out, "1")
 
     def test_recursive(self):
-        out = lua("function fact(n)\n  if n <= 1 then return 1 end\n  return n * fact(n - 1)\nend\nprint(fact(5))")
+        out = lua(
+            "function fact(n)\n  if n <= 1 then return 1 end\n  return n * fact(n - 1)\nend\nprint(fact(5))"
+        )
         assert has(out, "120")
 
     def test_anonymous(self):
@@ -292,7 +301,7 @@ class TestMath:
 
 class TestTypes:
     def test_type_number(self):
-        out = lua('print(type(42))')
+        out = lua("print(type(42))")
         assert has(out, "number")
 
     def test_type_string(self):
@@ -352,7 +361,7 @@ class TestErrors:
         assert has(out, "nil") or no_errors(out)
 
     def test_runtime_error(self):
-        out = lua('local x = 1 / 0\nprint(x)')
+        out = lua("local x = 1 / 0\nprint(x)")
         assert len(out) > 0  # May produce inf or error
 
 
@@ -365,7 +374,9 @@ class TestIpairsFix:
     """for i, v in ipairs(t) correctly unpacks index and value."""
 
     def test_ipairs_index_value(self):
-        out = lua('local t = {10, 20, 30}\nfor i, v in ipairs(t) do\n  print(i, v)\nend')
+        out = lua(
+            "local t = {10, 20, 30}\nfor i, v in ipairs(t) do\n  print(i, v)\nend"
+        )
         assert has(out, "1", "10")
         assert has(out, "3", "30")
 
@@ -379,11 +390,13 @@ class TestInlineFor:
     """Regression: single-line for ... do BODY end should work."""
 
     def test_inline_ipairs_for(self):
-        out = lua('local t={4,5,6}\nlocal s=0\nfor i,v in ipairs(t) do s=s+v end\nprint(s)')
+        out = lua(
+            "local t={4,5,6}\nlocal s=0\nfor i,v in ipairs(t) do s=s+v end\nprint(s)"
+        )
         assert has(out, "15")
 
     def test_inline_numeric_for(self):
-        out = lua('local s=0\nfor i=1,5 do s=s+i end\nprint(s)')
+        out = lua("local s=0\nfor i=1,5 do s=s+i end\nprint(s)")
         assert has(out, "15")
 
 
@@ -391,5 +404,7 @@ class TestInlineFunction:
     """Regression: single-line function with if/return should work."""
 
     def test_inline_recursive_function(self):
-        out = lua('function fact(n) if n<=1 then return 1 end return n*fact(n-1) end\nprint(fact(5))')
+        out = lua(
+            "function fact(n) if n<=1 then return 1 end return n*fact(n-1) end\nprint(fact(5))"
+        )
         assert has(out, "120")

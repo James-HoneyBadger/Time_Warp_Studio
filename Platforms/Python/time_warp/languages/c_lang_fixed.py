@@ -35,9 +35,7 @@ _ARRAY_DECL_RE = re.compile(
     r"([A-Za-z_][A-Za-z0-9_]*)\s*\[(\d+)\]"
     r"(?:\s*=\s*\{([^}]*)\})?\s*;?\s*$",
 )
-_ASSIGN_RE = re.compile(
-    r"^\s*([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?)\s*=\s*(.+);?\s*$"
-)
+_ASSIGN_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*(?:\[[^\]]*\])?)\s*=\s*(.+);?\s*$")
 _PRINTF_RE = re.compile(r"^\s*printf\s*\((.*)\)\s*;?\s*$", re.IGNORECASE)
 _SCANF_RE = re.compile(r"^\s*scanf\s*\((.*)\)\s*;?\s*$", re.IGNORECASE)
 _IF_RE = re.compile(r"^\s*if\s*\((.*)\)\s*\{?\s*$", re.IGNORECASE)
@@ -203,9 +201,13 @@ def _exec_c_side_effect_expr(interpreter: "Interpreter", expr: str) -> bool:
             rval = _c_eval_expr(interpreter, norm)
         except (ValueError, TypeError, ZeroDivisionError):
             rval = 0
-        ops = {"+": lambda a, b: a + b, "-": lambda a, b: a - b,
-               "*": lambda a, b: a * b, "/": lambda a, b: a // b if b else 0,
-               "%": lambda a, b: a % b if b else 0}
+        ops = {
+            "+": lambda a, b: a + b,
+            "-": lambda a, b: a - b,
+            "*": lambda a, b: a * b,
+            "/": lambda a, b: a // b if b else 0,
+            "%": lambda a, b: a % b if b else 0,
+        }
         new_val = ops[op](cur, rval)
         suf = None
         if name + "%" in interpreter.int_variables:
@@ -433,108 +435,303 @@ import time as _ctime
 
 _C_STDLIB: Dict[str, Any] = {
     # ── string.h ──────────────────────────────────────────────────────────
-    "strlen":    lambda args, interp: len(_c_str(args[0], interp)) if args else 0,
-    "strcmp":    lambda args, interp: (0 if _c_str(args[0], interp) == _c_str(args[1], interp) else (-1 if _c_str(args[0], interp) < _c_str(args[1], interp) else 1)) if len(args) >= 2 else 0,
-    "strncmp":   lambda args, interp: (0 if _c_str(args[0], interp)[:int(_c_num(args[2], interp))] == _c_str(args[1], interp)[:int(_c_num(args[2], interp))] else -1) if len(args) >= 3 else 0,
-    "strcasecmp": lambda args, interp: (0 if _c_str(args[0], interp).lower() == _c_str(args[1], interp).lower() else -1) if len(args) >= 2 else 0,
-    "strchr":    lambda args, interp: (_c_str(args[0], interp).find(chr(int(_c_num(args[1], interp)))) + 1 or 0) if len(args) >= 2 else 0,
-    "strrchr":   lambda args, interp: (_c_str(args[0], interp).rfind(chr(int(_c_num(args[1], interp)))) + 1 or 0) if len(args) >= 2 else 0,
-    "strstr":    lambda args, interp: (_c_str(args[0], interp).find(_c_str(args[1], interp)) + 1 or 0) if len(args) >= 2 else 0,
-    "strpbrk":   lambda args, interp: next((i + 1 for i, c in enumerate(_c_str(args[0], interp)) if c in _c_str(args[1], interp)), 0) if len(args) >= 2 else 0,
-    "strspn":    lambda args, interp: (lambda s, a: len(s) - len(s.lstrip(''.join(set(a)))))(_c_str(args[0], interp), _c_str(args[1], interp)) if len(args) >= 2 else 0,
-    "strcspn":   lambda args, interp: next((i for i, c in enumerate(_c_str(args[0], interp)) if c in _c_str(args[1], interp)), len(_c_str(args[0], interp))) if len(args) >= 2 else 0,
-    "strtok":    lambda args, interp: _c_str(args[0], interp).split(_c_str(args[1], interp))[0] if len(args) >= 2 and _c_str(args[0], interp) else None,
-    "toupper":   lambda args, interp: ord(_c_str(args[0], interp).upper()[0]) if args and _c_str(args[0], interp) else int(_c_num(args[0], interp)) - 32 if args else 0,
-    "tolower":   lambda args, interp: ord(_c_str(args[0], interp).lower()[0]) if args and isinstance(_c_num(args[0], interp), str) else int(_c_num(args[0], interp)) + 32 if args else 0,
+    "strlen": lambda args, interp: len(_c_str(args[0], interp)) if args else 0,
+    "strcmp": lambda args, interp: (
+        (
+            0
+            if _c_str(args[0], interp) == _c_str(args[1], interp)
+            else (-1 if _c_str(args[0], interp) < _c_str(args[1], interp) else 1)
+        )
+        if len(args) >= 2
+        else 0
+    ),
+    "strncmp": lambda args, interp: (
+        (
+            0
+            if _c_str(args[0], interp)[: int(_c_num(args[2], interp))]
+            == _c_str(args[1], interp)[: int(_c_num(args[2], interp))]
+            else -1
+        )
+        if len(args) >= 3
+        else 0
+    ),
+    "strcasecmp": lambda args, interp: (
+        (
+            0
+            if _c_str(args[0], interp).lower() == _c_str(args[1], interp).lower()
+            else -1
+        )
+        if len(args) >= 2
+        else 0
+    ),
+    "strchr": lambda args, interp: (
+        (_c_str(args[0], interp).find(chr(int(_c_num(args[1], interp)))) + 1 or 0)
+        if len(args) >= 2
+        else 0
+    ),
+    "strrchr": lambda args, interp: (
+        (_c_str(args[0], interp).rfind(chr(int(_c_num(args[1], interp)))) + 1 or 0)
+        if len(args) >= 2
+        else 0
+    ),
+    "strstr": lambda args, interp: (
+        (_c_str(args[0], interp).find(_c_str(args[1], interp)) + 1 or 0)
+        if len(args) >= 2
+        else 0
+    ),
+    "strpbrk": lambda args, interp: (
+        next(
+            (
+                i + 1
+                for i, c in enumerate(_c_str(args[0], interp))
+                if c in _c_str(args[1], interp)
+            ),
+            0,
+        )
+        if len(args) >= 2
+        else 0
+    ),
+    "strspn": lambda args, interp: (
+        (lambda s, a: len(s) - len(s.lstrip("".join(set(a)))))(
+            _c_str(args[0], interp), _c_str(args[1], interp)
+        )
+        if len(args) >= 2
+        else 0
+    ),
+    "strcspn": lambda args, interp: (
+        next(
+            (
+                i
+                for i, c in enumerate(_c_str(args[0], interp))
+                if c in _c_str(args[1], interp)
+            ),
+            len(_c_str(args[0], interp)),
+        )
+        if len(args) >= 2
+        else 0
+    ),
+    "strtok": lambda args, interp: (
+        _c_str(args[0], interp).split(_c_str(args[1], interp))[0]
+        if len(args) >= 2 and _c_str(args[0], interp)
+        else None
+    ),
+    "toupper": lambda args, interp: (
+        ord(_c_str(args[0], interp).upper()[0])
+        if args and _c_str(args[0], interp)
+        else int(_c_num(args[0], interp)) - 32 if args else 0
+    ),
+    "tolower": lambda args, interp: (
+        ord(_c_str(args[0], interp).lower()[0])
+        if args and isinstance(_c_num(args[0], interp), str)
+        else int(_c_num(args[0], interp)) + 32 if args else 0
+    ),
     # ── ctype.h ───────────────────────────────────────────────────────────
-    "isalpha":   lambda args, interp: 1 if args and chr(int(_c_num(args[0], interp))).isalpha() else 0,
-    "isdigit":   lambda args, interp: 1 if args and chr(int(_c_num(args[0], interp))).isdigit() else 0,
-    "isalnum":   lambda args, interp: 1 if args and chr(int(_c_num(args[0], interp))).isalnum() else 0,
-    "isspace":   lambda args, interp: 1 if args and chr(int(_c_num(args[0], interp))).isspace() else 0,
-    "isupper":   lambda args, interp: 1 if args and chr(int(_c_num(args[0], interp))).isupper() else 0,
-    "islower":   lambda args, interp: 1 if args and chr(int(_c_num(args[0], interp))).islower() else 0,
-    "ispunct":   lambda args, interp: 1 if args and chr(int(_c_num(args[0], interp))) in '!"#$%&\'()*+,-./:;<=>?@[\\]^_`{|}~' else 0,
-    "isprint":   lambda args, interp: 1 if args and chr(int(_c_num(args[0], interp))).isprintable() else 0,
-    "iscntrl":   lambda args, interp: 1 if args and ord(chr(int(_c_num(args[0], interp)))) < 32 else 0,
-    "isxdigit":  lambda args, interp: 1 if args and chr(int(_c_num(args[0], interp))) in "0123456789abcdefABCDEF" else 0,
+    "isalpha": lambda args, interp: (
+        1 if args and chr(int(_c_num(args[0], interp))).isalpha() else 0
+    ),
+    "isdigit": lambda args, interp: (
+        1 if args and chr(int(_c_num(args[0], interp))).isdigit() else 0
+    ),
+    "isalnum": lambda args, interp: (
+        1 if args and chr(int(_c_num(args[0], interp))).isalnum() else 0
+    ),
+    "isspace": lambda args, interp: (
+        1 if args and chr(int(_c_num(args[0], interp))).isspace() else 0
+    ),
+    "isupper": lambda args, interp: (
+        1 if args and chr(int(_c_num(args[0], interp))).isupper() else 0
+    ),
+    "islower": lambda args, interp: (
+        1 if args and chr(int(_c_num(args[0], interp))).islower() else 0
+    ),
+    "ispunct": lambda args, interp: (
+        1
+        if args
+        and chr(int(_c_num(args[0], interp))) in "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+        else 0
+    ),
+    "isprint": lambda args, interp: (
+        1 if args and chr(int(_c_num(args[0], interp))).isprintable() else 0
+    ),
+    "iscntrl": lambda args, interp: (
+        1 if args and ord(chr(int(_c_num(args[0], interp)))) < 32 else 0
+    ),
+    "isxdigit": lambda args, interp: (
+        1
+        if args and chr(int(_c_num(args[0], interp))) in "0123456789abcdefABCDEF"
+        else 0
+    ),
     # ── stdlib.h ──────────────────────────────────────────────────────────
-    "atoi":      lambda args, interp: int(_c_str(args[0], interp).strip().split()[0].rstrip(",. ")) if args else 0,
-    "atof":      lambda args, interp: float(_c_str(args[0], interp).strip()) if args else 0.0,
-    "atol":      lambda args, interp: int(_c_str(args[0], interp).strip()) if args else 0,
-    "strtol":    lambda args, interp: int(_c_str(args[0], interp).strip(), int(_c_num(args[2], interp)) if len(args) > 2 else 10) if args else 0,
-    "strtod":    lambda args, interp: float(_c_str(args[0], interp).strip()) if args else 0.0,
-    "abs":       lambda args, interp: abs(int(_c_num(args[0], interp))) if args else 0,
-    "labs":      lambda args, interp: abs(int(_c_num(args[0], interp))) if args else 0,
-    "rand":      lambda args, interp: _crand.randint(0, 32767),
-    "srand":     lambda args, interp: (_crand.seed(int(_c_num(args[0], interp))) if args else _crand.seed()) or 0,
-    "exit":      lambda args, interp: (_ for _ in ()).throw(StopIteration),
-    "getenv":    lambda args, interp: "",
-    "system":    lambda args, interp: 0,
-    "malloc":    lambda args, interp: 1,
-    "calloc":    lambda args, interp: 1,
-    "realloc":   lambda args, interp: 1,
-    "free":      lambda args, interp: 0,
-    "qsort":     lambda args, interp: None,
-    "bsearch":   lambda args, interp: 0,
-    "NULL":      lambda args, interp: 0,
+    "atoi": lambda args, interp: (
+        int(_c_str(args[0], interp).strip().split()[0].rstrip(",. ")) if args else 0
+    ),
+    "atof": lambda args, interp: (
+        float(_c_str(args[0], interp).strip()) if args else 0.0
+    ),
+    "atol": lambda args, interp: int(_c_str(args[0], interp).strip()) if args else 0,
+    "strtol": lambda args, interp: (
+        int(
+            _c_str(args[0], interp).strip(),
+            int(_c_num(args[2], interp)) if len(args) > 2 else 10,
+        )
+        if args
+        else 0
+    ),
+    "strtod": lambda args, interp: (
+        float(_c_str(args[0], interp).strip()) if args else 0.0
+    ),
+    "abs": lambda args, interp: abs(int(_c_num(args[0], interp))) if args else 0,
+    "labs": lambda args, interp: abs(int(_c_num(args[0], interp))) if args else 0,
+    "rand": lambda args, interp: _crand.randint(0, 32767),
+    "srand": lambda args, interp: (
+        _crand.seed(int(_c_num(args[0], interp))) if args else _crand.seed()
+    )
+    or 0,
+    "exit": lambda args, interp: (_ for _ in ()).throw(StopIteration),
+    "getenv": lambda args, interp: "",
+    "system": lambda args, interp: 0,
+    "malloc": lambda args, interp: 1,
+    "calloc": lambda args, interp: 1,
+    "realloc": lambda args, interp: 1,
+    "free": lambda args, interp: 0,
+    "qsort": lambda args, interp: None,
+    "bsearch": lambda args, interp: 0,
+    "NULL": lambda args, interp: 0,
     # ── math.h ────────────────────────────────────────────────────────────
-    "sqrt":   lambda args, interp: _cmath.sqrt(float(_c_num(args[0], interp))) if args else 0.0,
-    "cbrt":   lambda args, interp: _cmath.cbrt(float(_c_num(args[0], interp))) if args else 0.0,
-    "ceil":   lambda args, interp: float(_cmath.ceil(float(_c_num(args[0], interp)))) if args else 0.0,
-    "floor":  lambda args, interp: float(_cmath.floor(float(_c_num(args[0], interp)))) if args else 0.0,
-    "round":  lambda args, interp: float(round(float(_c_num(args[0], interp)))) if args else 0.0,
-    "trunc":  lambda args, interp: float(_cmath.trunc(float(_c_num(args[0], interp)))) if args else 0.0,
-    "fabs":   lambda args, interp: abs(float(_c_num(args[0], interp))) if args else 0.0,
-    "fmod":   lambda args, interp: _cmath.fmod(float(_c_num(args[0], interp)), float(_c_num(args[1], interp))) if len(args) >= 2 else 0.0,
-    "pow":    lambda args, interp: _cmath.pow(float(_c_num(args[0], interp)), float(_c_num(args[1], interp))) if len(args) >= 2 else 0.0,
-    "exp":    lambda args, interp: _cmath.exp(float(_c_num(args[0], interp))) if args else 1.0,
-    "exp2":   lambda args, interp: 2.0 ** float(_c_num(args[0], interp)) if args else 1.0,
-    "log":    lambda args, interp: _cmath.log(float(_c_num(args[0], interp))) if args else 0.0,
-    "log2":   lambda args, interp: _cmath.log2(float(_c_num(args[0], interp))) if args else 0.0,
-    "log10":  lambda args, interp: _cmath.log10(float(_c_num(args[0], interp))) if args else 0.0,
-    "sin":    lambda args, interp: _cmath.sin(float(_c_num(args[0], interp))) if args else 0.0,
-    "cos":    lambda args, interp: _cmath.cos(float(_c_num(args[0], interp))) if args else 1.0,
-    "tan":    lambda args, interp: _cmath.tan(float(_c_num(args[0], interp))) if args else 0.0,
-    "asin":   lambda args, interp: _cmath.asin(float(_c_num(args[0], interp))) if args else 0.0,
-    "acos":   lambda args, interp: _cmath.acos(float(_c_num(args[0], interp))) if args else 0.0,
-    "atan":   lambda args, interp: _cmath.atan(float(_c_num(args[0], interp))) if args else 0.0,
-    "atan2":  lambda args, interp: _cmath.atan2(float(_c_num(args[0], interp)), float(_c_num(args[1], interp))) if len(args) >= 2 else 0.0,
-    "sinh":   lambda args, interp: _cmath.sinh(float(_c_num(args[0], interp))) if args else 0.0,
-    "cosh":   lambda args, interp: _cmath.cosh(float(_c_num(args[0], interp))) if args else 1.0,
-    "tanh":   lambda args, interp: _cmath.tanh(float(_c_num(args[0], interp))) if args else 0.0,
-    "hypot":  lambda args, interp: _cmath.hypot(float(_c_num(args[0], interp)), float(_c_num(args[1], interp))) if len(args) >= 2 else 0.0,
-    "ldexp":  lambda args, interp: _cmath.ldexp(float(_c_num(args[0], interp)), int(_c_num(args[1], interp))) if len(args) >= 2 else 0.0,
-    "frexp":  lambda args, interp: _cmath.frexp(float(_c_num(args[0], interp)))[0] if args else 0.0,
+    "sqrt": lambda args, interp: (
+        _cmath.sqrt(float(_c_num(args[0], interp))) if args else 0.0
+    ),
+    "cbrt": lambda args, interp: (
+        _cmath.cbrt(float(_c_num(args[0], interp))) if args else 0.0
+    ),
+    "ceil": lambda args, interp: (
+        float(_cmath.ceil(float(_c_num(args[0], interp)))) if args else 0.0
+    ),
+    "floor": lambda args, interp: (
+        float(_cmath.floor(float(_c_num(args[0], interp)))) if args else 0.0
+    ),
+    "round": lambda args, interp: (
+        float(round(float(_c_num(args[0], interp)))) if args else 0.0
+    ),
+    "trunc": lambda args, interp: (
+        float(_cmath.trunc(float(_c_num(args[0], interp)))) if args else 0.0
+    ),
+    "fabs": lambda args, interp: abs(float(_c_num(args[0], interp))) if args else 0.0,
+    "fmod": lambda args, interp: (
+        _cmath.fmod(float(_c_num(args[0], interp)), float(_c_num(args[1], interp)))
+        if len(args) >= 2
+        else 0.0
+    ),
+    "pow": lambda args, interp: (
+        _cmath.pow(float(_c_num(args[0], interp)), float(_c_num(args[1], interp)))
+        if len(args) >= 2
+        else 0.0
+    ),
+    "exp": lambda args, interp: (
+        _cmath.exp(float(_c_num(args[0], interp))) if args else 1.0
+    ),
+    "exp2": lambda args, interp: 2.0 ** float(_c_num(args[0], interp)) if args else 1.0,
+    "log": lambda args, interp: (
+        _cmath.log(float(_c_num(args[0], interp))) if args else 0.0
+    ),
+    "log2": lambda args, interp: (
+        _cmath.log2(float(_c_num(args[0], interp))) if args else 0.0
+    ),
+    "log10": lambda args, interp: (
+        _cmath.log10(float(_c_num(args[0], interp))) if args else 0.0
+    ),
+    "sin": lambda args, interp: (
+        _cmath.sin(float(_c_num(args[0], interp))) if args else 0.0
+    ),
+    "cos": lambda args, interp: (
+        _cmath.cos(float(_c_num(args[0], interp))) if args else 1.0
+    ),
+    "tan": lambda args, interp: (
+        _cmath.tan(float(_c_num(args[0], interp))) if args else 0.0
+    ),
+    "asin": lambda args, interp: (
+        _cmath.asin(float(_c_num(args[0], interp))) if args else 0.0
+    ),
+    "acos": lambda args, interp: (
+        _cmath.acos(float(_c_num(args[0], interp))) if args else 0.0
+    ),
+    "atan": lambda args, interp: (
+        _cmath.atan(float(_c_num(args[0], interp))) if args else 0.0
+    ),
+    "atan2": lambda args, interp: (
+        _cmath.atan2(float(_c_num(args[0], interp)), float(_c_num(args[1], interp)))
+        if len(args) >= 2
+        else 0.0
+    ),
+    "sinh": lambda args, interp: (
+        _cmath.sinh(float(_c_num(args[0], interp))) if args else 0.0
+    ),
+    "cosh": lambda args, interp: (
+        _cmath.cosh(float(_c_num(args[0], interp))) if args else 1.0
+    ),
+    "tanh": lambda args, interp: (
+        _cmath.tanh(float(_c_num(args[0], interp))) if args else 0.0
+    ),
+    "hypot": lambda args, interp: (
+        _cmath.hypot(float(_c_num(args[0], interp)), float(_c_num(args[1], interp)))
+        if len(args) >= 2
+        else 0.0
+    ),
+    "ldexp": lambda args, interp: (
+        _cmath.ldexp(float(_c_num(args[0], interp)), int(_c_num(args[1], interp)))
+        if len(args) >= 2
+        else 0.0
+    ),
+    "frexp": lambda args, interp: (
+        _cmath.frexp(float(_c_num(args[0], interp)))[0] if args else 0.0
+    ),
     # ── time.h ────────────────────────────────────────────────────────────
-    "time":    lambda args, interp: int(_ctime.time()),
-    "clock":   lambda args, interp: int(_ctime.process_time() * 1000000),
-    "difftime": lambda args, interp: float(_c_num(args[0], interp)) - float(_c_num(args[1], interp)) if len(args) >= 2 else 0.0,
+    "time": lambda args, interp: int(_ctime.time()),
+    "clock": lambda args, interp: int(_ctime.process_time() * 1000000),
+    "difftime": lambda args, interp: (
+        float(_c_num(args[0], interp)) - float(_c_num(args[1], interp))
+        if len(args) >= 2
+        else 0.0
+    ),
     # ── stdio.h ───────────────────────────────────────────────────────────
-    "putchar": lambda args, interp: (interp.log_output(chr(int(_c_num(args[0], interp)))) if args else None) or int(_c_num(args[0], interp)) if args else -1,
-    "getchar": lambda args, interp: ord(interp.request_input("") [0]) if hasattr(interp, "request_input") else -1,
-    "puts":    lambda args, interp: (interp.log_output(_c_str(args[0], interp) + "\n") if args else None) or 0,
-    "fputs":   lambda args, interp: 0,
-    "fclose":  lambda args, interp: 0,
-    "feof":    lambda args, interp: 0,
-    "rewind":  lambda args, interp: 0,
-    "fflush":  lambda args, interp: 0,
+    "putchar": lambda args, interp: (
+        (interp.log_output(chr(int(_c_num(args[0], interp)))) if args else None)
+        or int(_c_num(args[0], interp))
+        if args
+        else -1
+    ),
+    "getchar": lambda args, interp: (
+        ord(interp.request_input("")[0]) if hasattr(interp, "request_input") else -1
+    ),
+    "puts": lambda args, interp: (
+        interp.log_output(_c_str(args[0], interp) + "\n") if args else None
+    )
+    or 0,
+    "fputs": lambda args, interp: 0,
+    "fclose": lambda args, interp: 0,
+    "feof": lambda args, interp: 0,
+    "rewind": lambda args, interp: 0,
+    "fflush": lambda args, interp: 0,
     # ── Misc C99/identifiers ──────────────────────────────────────────────
-    "INT_MAX":    lambda args, interp: 2147483647,
-    "INT_MIN":    lambda args, interp: -2147483648,
-    "UINT_MAX":   lambda args, interp: 4294967295,
-    "LONG_MAX":   lambda args, interp: 9223372036854775807,
-    "FLT_MAX":    lambda args, interp: 3.4028235e+38,
-    "DBL_MAX":    lambda args, interp: 1.7976931348623157e+308,
-    "M_PI":       lambda args, interp: _cmath.pi,
-    "M_E":        lambda args, interp: _cmath.e,
-    "M_SQRT2":    lambda args, interp: _cmath.sqrt(2),
-    "M_LN2":      lambda args, interp: _cmath.log(2),
-    "M_LN10":     lambda args, interp: _cmath.log(10),
+    "INT_MAX": lambda args, interp: 2147483647,
+    "INT_MIN": lambda args, interp: -2147483648,
+    "UINT_MAX": lambda args, interp: 4294967295,
+    "LONG_MAX": lambda args, interp: 9223372036854775807,
+    "FLT_MAX": lambda args, interp: 3.4028235e38,
+    "DBL_MAX": lambda args, interp: 1.7976931348623157e308,
+    "M_PI": lambda args, interp: _cmath.pi,
+    "M_E": lambda args, interp: _cmath.e,
+    "M_SQRT2": lambda args, interp: _cmath.sqrt(2),
+    "M_LN2": lambda args, interp: _cmath.log(2),
+    "M_LN10": lambda args, interp: _cmath.log(10),
 }
+
 
 def _c_str(expr_or_val: str, interpreter: "Interpreter") -> str:
     """Resolve a C expression to a string."""
-    if isinstance(expr_or_val, str) and (expr_or_val.startswith('"') or expr_or_val.startswith("'")):
+    if isinstance(expr_or_val, str) and (
+        expr_or_val.startswith('"') or expr_or_val.startswith("'")
+    ):
         return _unquote(expr_or_val)
     if isinstance(expr_or_val, str):
         up = expr_or_val.strip().upper()
@@ -598,8 +795,8 @@ def _c_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
                 break
     if ternary_q > 0 and ternary_c > ternary_q:
         cond_s = expr[:ternary_q].strip()
-        true_s = expr[ternary_q + 1:ternary_c].strip()
-        false_s = expr[ternary_c + 1:].strip()
+        true_s = expr[ternary_q + 1 : ternary_c].strip()
+        false_s = expr[ternary_c + 1 :].strip()
         try:
             cond_val = _c_eval_expr(interpreter, cond_s)
         except Exception:
@@ -619,7 +816,9 @@ def _c_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
         return len(result)
 
     # snprintf(buf, n, fmt, ...)
-    m = re.match(r"^snprintf\s*\(\s*([A-Za-z_]\w*)\s*,\s*\d+\s*,\s*(.+)\)$", expr, re.IGNORECASE)
+    m = re.match(
+        r"^snprintf\s*\(\s*([A-Za-z_]\w*)\s*,\s*\d+\s*,\s*(.+)\)$", expr, re.IGNORECASE
+    )
     if m:
         buf_name = m.group(1).upper()
         rest_args = _split_args(m.group(2))
@@ -628,17 +827,23 @@ def _c_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
         return len(result)
 
     # strcpy(dest, src) / strncpy(dest, src, n)
-    m = re.match(r"^str(?:n)?cpy\s*\(([A-Za-z_]\w*),\s*(.+?)(?:,\s*.+?)?\)$", expr, re.IGNORECASE)
+    m = re.match(
+        r"^str(?:n)?cpy\s*\(([A-Za-z_]\w*),\s*(.+?)(?:,\s*.+?)?\)$", expr, re.IGNORECASE
+    )
     if m:
         dest, src = m.group(1).upper(), m.group(2).strip()
         interpreter.string_variables[dest + "$"] = _c_str(src, interpreter)
         return 1
 
     # strcat(dest, src) / strncat(dest, src, n)
-    m = re.match(r"^str(?:n)?cat\s*\(([A-Za-z_]\w*),\s*(.+?)(?:,\s*.+?)?\)$", expr, re.IGNORECASE)
+    m = re.match(
+        r"^str(?:n)?cat\s*\(([A-Za-z_]\w*),\s*(.+?)(?:,\s*.+?)?\)$", expr, re.IGNORECASE
+    )
     if m:
         dest, src = m.group(1).upper(), m.group(2).strip()
-        interpreter.string_variables[dest + "$"] = interpreter.string_variables.get(dest + "$", "") + _c_str(src, interpreter)
+        interpreter.string_variables[dest + "$"] = interpreter.string_variables.get(
+            dest + "$", ""
+        ) + _c_str(src, interpreter)
         return 1
 
     # strcpy as void statement
@@ -649,7 +854,9 @@ def _c_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
         return 1
 
     # memset(dest, c, n)
-    m = re.match(r"^memset\s*\(([A-Za-z_]\w*)\s*,\s*(.+),\s*(.+)\)$", expr, re.IGNORECASE)
+    m = re.match(
+        r"^memset\s*\(([A-Za-z_]\w*)\s*,\s*(.+),\s*(.+)\)$", expr, re.IGNORECASE
+    )
     if m:
         dest, c_e, n_e = m.group(1).upper(), m.group(2).strip(), m.group(3).strip()
         try:
@@ -661,7 +868,11 @@ def _c_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
         return 1
 
     # memcpy(dest, src, n) / memmove(dest, src, n)
-    m = re.match(r"^mem(?:cpy|move)\s*\(([A-Za-z_]\w*)\s*,\s*(.+),\s*(.+)\)$", expr, re.IGNORECASE)
+    m = re.match(
+        r"^mem(?:cpy|move)\s*\(([A-Za-z_]\w*)\s*,\s*(.+),\s*(.+)\)$",
+        expr,
+        re.IGNORECASE,
+    )
     if m:
         dest, src = m.group(1).upper(), m.group(2).strip()
         interpreter.string_variables[dest + "$"] = _c_str(src, interpreter)
@@ -695,7 +906,9 @@ def _c_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
     expr_repl = expr
     while "rand(" in expr_repl.lower():
         rnum = str(_crand.randint(0, 32767))
-        expr_repl = re.sub(r"rand\s*\([^)]*\)", rnum, expr_repl, count=1, flags=re.IGNORECASE)
+        expr_repl = re.sub(
+            r"rand\s*\([^)]*\)", rnum, expr_repl, count=1, flags=re.IGNORECASE
+        )
 
     # Replace array indexing  arr[idx]  with the actual stored value
     def _resolve_arr(m_arr):
@@ -1148,9 +1361,7 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
         if target_line is None:
             target_line = default_line
         if target_line is not None:
-            interpreter.c_block_stack.append(
-                {"type": "switch", "end": end_idx}
-            )
+            interpreter.c_block_stack.append({"type": "switch", "end": end_idx})
             interpreter.current_line = target_line
         else:
             interpreter.current_line = end_idx
@@ -1390,10 +1601,28 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
     if m:
         fname = m.group(1).lower()
         # Handle known void stdlib calls
-        if fname in ("strcpy", "strncpy", "strcat", "strncat", "memset", "memcpy",
-                     "memmove", "srand", "exit", "free", "qsort", "sprintf",
-                     "snprintf", "printf", "puts", "fputs", "fclose", "fflush",
-                     "rewind", "memset"):
+        if fname in (
+            "strcpy",
+            "strncpy",
+            "strcat",
+            "strncat",
+            "memset",
+            "memcpy",
+            "memmove",
+            "srand",
+            "exit",
+            "free",
+            "qsort",
+            "sprintf",
+            "snprintf",
+            "printf",
+            "puts",
+            "fputs",
+            "fclose",
+            "fflush",
+            "rewind",
+            "memset",
+        ):
             _c_eval_expr(interpreter, cmd.rstrip(";"))
             return ""
         if fname in _C_STDLIB:

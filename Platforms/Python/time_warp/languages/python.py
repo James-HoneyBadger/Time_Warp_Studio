@@ -31,38 +31,119 @@ if TYPE_CHECKING:
 
 _SAFE_BUILTINS = {
     # Built-in types
-    "bool", "int", "float", "str", "bytes", "bytearray",
-    "list", "tuple", "set", "frozenset", "dict",
-    "complex", "range", "slice", "type", "object",
+    "bool",
+    "int",
+    "float",
+    "str",
+    "bytes",
+    "bytearray",
+    "list",
+    "tuple",
+    "set",
+    "frozenset",
+    "dict",
+    "complex",
+    "range",
+    "slice",
+    "type",
+    "object",
     # I/O helpers
-    "print", "input", "len", "repr", "format",
+    "print",
+    "input",
+    "len",
+    "repr",
+    "format",
     # Itertools-style
-    "enumerate", "zip", "map", "filter", "reversed", "sorted",
-    "iter", "next", "any", "all", "sum", "min", "max",
+    "enumerate",
+    "zip",
+    "map",
+    "filter",
+    "reversed",
+    "sorted",
+    "iter",
+    "next",
+    "any",
+    "all",
+    "sum",
+    "min",
+    "max",
     # Conversion / inspection
-    "abs", "round", "chr", "ord", "bin", "oct", "hex",
-    "hash", "id", "callable", "isinstance", "issubclass",
-    "hasattr", "getattr", "setattr", "delattr", "vars", "dir",
+    "abs",
+    "round",
+    "chr",
+    "ord",
+    "bin",
+    "oct",
+    "hex",
+    "hash",
+    "id",
+    "callable",
+    "isinstance",
+    "issubclass",
+    "hasattr",
+    "getattr",
+    "setattr",
+    "delattr",
+    "vars",
+    "dir",
     # Misc
-    "staticmethod", "classmethod", "property", "super",
-    "NotImplemented", "Ellipsis",
+    "staticmethod",
+    "classmethod",
+    "property",
+    "super",
+    "NotImplemented",
+    "Ellipsis",
     # Exceptions (commonly needed)
-    "Exception", "ValueError", "TypeError", "KeyError",
-    "IndexError", "AttributeError", "NameError",
-    "ZeroDivisionError", "StopIteration", "RuntimeError",
-    "OverflowError", "NotImplementedError", "AssertionError",
-    "ArithmeticError", "LookupError", "IOError",
+    "Exception",
+    "ValueError",
+    "TypeError",
+    "KeyError",
+    "IndexError",
+    "AttributeError",
+    "NameError",
+    "ZeroDivisionError",
+    "StopIteration",
+    "RuntimeError",
+    "OverflowError",
+    "NotImplementedError",
+    "AssertionError",
+    "ArithmeticError",
+    "LookupError",
+    "IOError",
     # Truth constants
-    "True", "False", "None",
+    "True",
+    "False",
+    "None",
 }
 
-_BLOCKED_MODULES = frozenset({
-    "os", "sys", "subprocess", "socket", "shutil", "pathlib",
-    "importlib", "builtins", "ctypes", "multiprocessing",
-    "threading", "signal", "pty", "atexit", "gc",
-    "inspect", "ast", "dis", "code", "codeop",
-    "pkgutil", "importlib", "site", "sysconfig",
-})
+_BLOCKED_MODULES = frozenset(
+    {
+        "os",
+        "sys",
+        "subprocess",
+        "socket",
+        "shutil",
+        "pathlib",
+        "importlib",
+        "builtins",
+        "ctypes",
+        "multiprocessing",
+        "threading",
+        "signal",
+        "pty",
+        "atexit",
+        "gc",
+        "inspect",
+        "ast",
+        "dis",
+        "code",
+        "codeop",
+        "pkgutil",
+        "importlib",
+        "site",
+        "sysconfig",
+    }
+)
 
 
 def _make_safe_builtins(output_buffer: StringIO, input_fn) -> dict:
@@ -88,9 +169,20 @@ def _make_safe_builtins(output_buffer: StringIO, input_fn) -> dict:
     safe["__build_class__"] = builtins.__build_class__
 
     # Provide safe __import__ — only allow a curated set
-    _ALLOWED_IMPORTS = {"math", "random", "string", "re", "json",
-                        "collections", "itertools", "functools",
-                        "datetime", "time", "decimal", "fractions"}
+    _ALLOWED_IMPORTS = {
+        "math",
+        "random",
+        "string",
+        "re",
+        "json",
+        "collections",
+        "itertools",
+        "functools",
+        "datetime",
+        "time",
+        "decimal",
+        "fractions",
+    }
 
     def _safe_import(name, *args, **kwargs):
         base = name.split(".")[0]
@@ -261,6 +353,7 @@ def execute_python(
     def _sql_connect(db: str = "master"):
         """Return a lightweight SQL connection handle for the named database."""
         from ..core.sql_engine import SQLSession
+
         sess = SQLSession()
         if db and db != "master":
             sess._switch_db(db)
@@ -284,6 +377,7 @@ def execute_python(
     def _sql_query(query: str, db: str = "master"):
         """Execute a SELECT and return a list of dicts (one per row)."""
         from ..core.sql_engine import _translate_tsql
+
         sess = getattr(interpreter, "sql_session", None) or _sql_connect(db)
         try:
             cur = sess._conn.execute(_translate_tsql(query))
@@ -303,8 +397,7 @@ def execute_python(
         exec(compile(source, "<sandbox>", "exec"), safe_globals)  # noqa: S102
     except SyntaxError as exc:
         return (
-            f"❌ SyntaxError on line {exc.lineno}: {exc.msg}\n"
-            f"   {exc.text or ''}"
+            f"❌ SyntaxError on line {exc.lineno}: {exc.msg}\n" f"   {exc.text or ''}"
         )
     except Exception as exc:  # pylint: disable=broad-except
         tb = traceback.extract_tb(exc.__traceback__)
@@ -312,9 +405,7 @@ def execute_python(
         user_frames = [f for f in tb if f.filename == "<sandbox>"]
         if user_frames:
             last = user_frames[-1]
-            return (
-                f"❌ {type(exc).__name__} on line {last.lineno}: {exc}\n"
-            )
+            return f"❌ {type(exc).__name__} on line {last.lineno}: {exc}\n"
         return f"❌ {type(exc).__name__}: {exc}\n"
 
     return output_buf.getvalue()

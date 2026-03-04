@@ -1,6 +1,5 @@
 """Comprehensive tests for the SQL language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors
@@ -127,19 +126,11 @@ class TestDDLDML:
 
 class TestVariables:
     def test_declare_set_print(self):
-        out = sql(
-            "DECLARE @x INT\n"
-            "SET @x = 42\n"
-            "PRINT @x"
-        )
+        out = sql("DECLARE @x INT\n" "SET @x = 42\n" "PRINT @x")
         assert has(out, "42")
 
     def test_declare_string(self):
-        out = sql(
-            "DECLARE @s VARCHAR(50)\n"
-            "SET @s = 'Hello'\n"
-            "PRINT @s"
-        )
+        out = sql("DECLARE @s VARCHAR(50)\n" "SET @s = 'Hello'\n" "PRINT @s")
         assert has(out, "Hello")
 
 

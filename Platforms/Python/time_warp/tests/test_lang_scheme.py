@@ -1,6 +1,5 @@
 """Comprehensive tests for the Scheme language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors, first_error
@@ -226,10 +225,7 @@ class TestLists:
         assert has(out, "3") and has(out, "1")
 
     def test_map(self):
-        out = scm(
-            "(define (double x) (* x 2))"
-            "(display (map double (list 1 2 3)))"
-        )
+        out = scm("(define (double x) (* x 2))" "(display (map double (list 1 2 3)))")
         assert has(out, "2") and has(out, "6")
 
     def test_filter(self):
@@ -305,11 +301,7 @@ class TestComparison:
 
 class TestIteration:
     def test_do_loop(self):
-        out = scm(
-            "(do ((i 0 (+ i 1)))"
-            "    ((= i 3))"
-            "  (display i))"
-        )
+        out = scm("(do ((i 0 (+ i 1)))" "    ((= i 3))" "  (display i))")
         assert has(out, "0") and has(out, "2")
 
     def test_begin(self):

@@ -20,25 +20,39 @@ from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple
 
 from PySide6.QtCore import (
-    QRect, QSize, Qt, QTimer, Signal,
+    QRect,
+    QSize,
+    Qt,
+    QTimer,
+    Signal,
 )
 from PySide6.QtGui import (
-    QColor, QFont, QFontDatabase, QFontMetrics, QKeyEvent,
-    QPainter, QPen, QResizeEvent,
+    QColor,
+    QFont,
+    QFontDatabase,
+    QFontMetrics,
+    QKeyEvent,
+    QPainter,
+    QPen,
+    QResizeEvent,
 )
 from PySide6.QtWidgets import (
-    QLabel, QMainWindow,
-    QStatusBar, QToolBar, QVBoxLayout, QWidget,
+    QLabel,
+    QMainWindow,
+    QStatusBar,
+    QToolBar,
+    QVBoxLayout,
+    QWidget,
 )
 
 # ---------------------------------------------------------------------------
 # Screen geometry constants
 # ---------------------------------------------------------------------------
-ROWS = 24          # visible rows (row 25 = OIA)
-COLS = 80          # columns
-OIA_ROW = 24       # 0-based OIA row index (25th row)
-TOTAL_ROWS = 25    # including OIA
-BUFFER_SIZE = ROWS * COLS   # address space 0-1919
+ROWS = 24  # visible rows (row 25 = OIA)
+COLS = 80  # columns
+OIA_ROW = 24  # 0-based OIA row index (25th row)
+TOTAL_ROWS = 25  # including OIA
+BUFFER_SIZE = ROWS * COLS  # address space 0-1919
 
 # ---------------------------------------------------------------------------
 # 3270 Attribute byte model (EBCDIC attribute character layout)
@@ -50,30 +64,32 @@ BUFFER_SIZE = ROWS * COLS   # address space 0-1919
 #   Bit 3-2 : Display intensity  00=normal 01=bright 10=zero-suppress 11=dark
 #   Bit 1   : MDT (Modified Data Tag) – set when operator modifies field
 
+
 class Attr:
     """3270 field attribute constants."""
+
     # Protection
     UNPROTECTED = 0x00
-    PROTECTED   = 0x20
+    PROTECTED = 0x20
     # Numeric
-    ALPHA       = 0x00
-    NUMERIC     = 0x10
+    ALPHA = 0x00
+    NUMERIC = 0x10
     # Intensity
-    NORMAL      = 0x00
-    BRIGHT      = 0x08
-    ZERO        = 0x04   # display as blanks
-    DARK        = 0x0C   # non-display
+    NORMAL = 0x00
+    BRIGHT = 0x08
+    ZERO = 0x04  # display as blanks
+    DARK = 0x0C  # non-display
     # MDT
-    MDT         = 0x01
+    MDT = 0x01
 
-    PROT_NORMAL   = PROTECTED | NORMAL
-    PROT_BRIGHT   = PROTECTED | BRIGHT
-    PROT_DARK     = PROTECTED | DARK
+    PROT_NORMAL = PROTECTED | NORMAL
+    PROT_BRIGHT = PROTECTED | BRIGHT
+    PROT_DARK = PROTECTED | DARK
     UNPROT_NORMAL = UNPROTECTED | NORMAL
     UNPROT_BRIGHT = UNPROTECTED | BRIGHT
-    UNPROT_DARK   = UNPROTECTED | DARK   # non-display (password fields)
-    UNPROT_NUM    = UNPROTECTED | NUMERIC
-    SKIP          = PROTECTED | DARK   # autoskip
+    UNPROT_DARK = UNPROTECTED | DARK  # non-display (password fields)
+    UNPROT_NUM = UNPROTECTED | NUMERIC
+    SKIP = PROTECTED | DARK  # autoskip
 
     @staticmethod
     def is_protected(a: int) -> bool:
@@ -105,67 +121,68 @@ class Attr:
 # ---------------------------------------------------------------------------
 class Color3270:
     """IBM 3279 standard field colours (mapped into Qt colours)."""
+
     # Phosphor modes
     GREEN_PHOSPHOR = "green"
     AMBER_PHOSPHOR = "amber"
-    WHITE_PAPER    = "paper"
+    WHITE_PAPER = "paper"
 
     _green = {
-        "bg":             QColor(0x00, 0x10, 0x00),
-        "fg_normal":      QColor(0x33, 0xCC, 0x33),
-        "fg_bright":      QColor(0x88, 0xFF, 0x88),
-        "fg_dark":        QColor(0x00, 0x40, 0x00),
-        "cursor":         QColor(0x33, 0xFF, 0x33),
-        "oia_bg":         QColor(0x00, 0x20, 0x00),
-        "oia_text":       QColor(0x00, 0xBB, 0x00),
+        "bg": QColor(0x00, 0x10, 0x00),
+        "fg_normal": QColor(0x33, 0xCC, 0x33),
+        "fg_bright": QColor(0x88, 0xFF, 0x88),
+        "fg_dark": QColor(0x00, 0x40, 0x00),
+        "cursor": QColor(0x33, 0xFF, 0x33),
+        "oia_bg": QColor(0x00, 0x20, 0x00),
+        "oia_text": QColor(0x00, 0xBB, 0x00),
         # field colours
-        "blue":           QColor(0x77, 0xBB, 0xFF),
-        "red":            QColor(0xFF, 0x55, 0x55),
-        "pink":           QColor(0xFF, 0x99, 0xFF),
-        "green":          QColor(0x33, 0xCC, 0x33),
-        "turquoise":      QColor(0x55, 0xFF, 0xFF),
-        "yellow":         QColor(0xFF, 0xFF, 0x55),
-        "white":          QColor(0xFF, 0xFF, 0xFF),
-        "neutral":        QColor(0x33, 0xCC, 0x33),
+        "blue": QColor(0x77, 0xBB, 0xFF),
+        "red": QColor(0xFF, 0x55, 0x55),
+        "pink": QColor(0xFF, 0x99, 0xFF),
+        "green": QColor(0x33, 0xCC, 0x33),
+        "turquoise": QColor(0x55, 0xFF, 0xFF),
+        "yellow": QColor(0xFF, 0xFF, 0x55),
+        "white": QColor(0xFF, 0xFF, 0xFF),
+        "neutral": QColor(0x33, 0xCC, 0x33),
     }
     _amber = {
-        "bg":             QColor(0x10, 0x08, 0x00),
-        "fg_normal":      QColor(0xCC, 0x88, 0x00),
-        "fg_bright":      QColor(0xFF, 0xCC, 0x44),
-        "fg_dark":        QColor(0x44, 0x22, 0x00),
-        "cursor":         QColor(0xFF, 0xAA, 0x00),
-        "oia_bg":         QColor(0x20, 0x10, 0x00),
-        "oia_text":       QColor(0xCC, 0x77, 0x00),
-        "blue":           QColor(0x77, 0xBB, 0xFF),
-        "red":            QColor(0xFF, 0x55, 0x55),
-        "pink":           QColor(0xFF, 0x99, 0xFF),
-        "green":          QColor(0x33, 0xCC, 0x33),
-        "turquoise":      QColor(0x55, 0xFF, 0xFF),
-        "yellow":         QColor(0xFF, 0xFF, 0x55),
-        "white":          QColor(0xFF, 0xFF, 0xFF),
-        "neutral":        QColor(0xCC, 0x88, 0x00),
+        "bg": QColor(0x10, 0x08, 0x00),
+        "fg_normal": QColor(0xCC, 0x88, 0x00),
+        "fg_bright": QColor(0xFF, 0xCC, 0x44),
+        "fg_dark": QColor(0x44, 0x22, 0x00),
+        "cursor": QColor(0xFF, 0xAA, 0x00),
+        "oia_bg": QColor(0x20, 0x10, 0x00),
+        "oia_text": QColor(0xCC, 0x77, 0x00),
+        "blue": QColor(0x77, 0xBB, 0xFF),
+        "red": QColor(0xFF, 0x55, 0x55),
+        "pink": QColor(0xFF, 0x99, 0xFF),
+        "green": QColor(0x33, 0xCC, 0x33),
+        "turquoise": QColor(0x55, 0xFF, 0xFF),
+        "yellow": QColor(0xFF, 0xFF, 0x55),
+        "white": QColor(0xFF, 0xFF, 0xFF),
+        "neutral": QColor(0xCC, 0x88, 0x00),
     }
     _paper = {
-        "bg":             QColor(0xF5, 0xF5, 0xE8),
-        "fg_normal":      QColor(0x00, 0x00, 0x00),
-        "fg_bright":      QColor(0x00, 0x00, 0x88),
-        "fg_dark":        QColor(0xCC, 0xCC, 0xCC),
-        "cursor":         QColor(0x00, 0x00, 0xFF),
-        "oia_bg":         QColor(0xDD, 0xDD, 0xCC),
-        "oia_text":       QColor(0x00, 0x00, 0x00),
-        "blue":           QColor(0x00, 0x00, 0xBB),
-        "red":            QColor(0xCC, 0x00, 0x00),
-        "pink":           QColor(0xAA, 0x00, 0xAA),
-        "green":          QColor(0x00, 0x88, 0x00),
-        "turquoise":      QColor(0x00, 0x88, 0x88),
-        "yellow":         QColor(0x88, 0x88, 0x00),
-        "white":          QColor(0x44, 0x44, 0x44),
-        "neutral":        QColor(0x00, 0x00, 0x00),
+        "bg": QColor(0xF5, 0xF5, 0xE8),
+        "fg_normal": QColor(0x00, 0x00, 0x00),
+        "fg_bright": QColor(0x00, 0x00, 0x88),
+        "fg_dark": QColor(0xCC, 0xCC, 0xCC),
+        "cursor": QColor(0x00, 0x00, 0xFF),
+        "oia_bg": QColor(0xDD, 0xDD, 0xCC),
+        "oia_text": QColor(0x00, 0x00, 0x00),
+        "blue": QColor(0x00, 0x00, 0xBB),
+        "red": QColor(0xCC, 0x00, 0x00),
+        "pink": QColor(0xAA, 0x00, 0xAA),
+        "green": QColor(0x00, 0x88, 0x00),
+        "turquoise": QColor(0x00, 0x88, 0x88),
+        "yellow": QColor(0x88, 0x88, 0x00),
+        "white": QColor(0x44, 0x44, 0x44),
+        "neutral": QColor(0x00, 0x00, 0x00),
     }
     _palettes = {
         GREEN_PHOSPHOR: _green,
         AMBER_PHOSPHOR: _amber,
-        WHITE_PAPER:    _paper,
+        WHITE_PAPER: _paper,
     }
 
     @classmethod
@@ -178,10 +195,10 @@ class Color3270:
 # ---------------------------------------------------------------------------
 @dataclass
 class Cell:
-    char: str  = " "    # displayed character (space for attribute/null)
-    attr: int  = Attr.UNPROT_NORMAL
-    is_attr: bool = False   # True = this cell IS an attribute byte
-    ext_color: Optional[str] = None   # extended colour override (3279)
+    char: str = " "  # displayed character (space for attribute/null)
+    attr: int = Attr.UNPROT_NORMAL
+    is_attr: bool = False  # True = this cell IS an attribute byte
+    ext_color: Optional[str] = None  # extended colour override (3279)
 
 
 # ---------------------------------------------------------------------------
@@ -192,7 +209,7 @@ class Screen3270:
 
     def __init__(self):
         self.cells: List[Cell] = [Cell() for _ in range(BUFFER_SIZE)]
-        self.cursor: int = 0   # linear buffer address
+        self.cursor: int = 0  # linear buffer address
         self._reset()
 
     def _reset(self):
@@ -302,8 +319,14 @@ class Screen3270:
                 result.append((i, start, "".join(data).rstrip()))
         return result
 
-    def write_string(self, row: int, col: int, text: str,
-                     attr: int = Attr.PROT_BRIGHT, color: str | None = None):
+    def write_string(
+        self,
+        row: int,
+        col: int,
+        text: str,
+        attr: int = Attr.PROT_BRIGHT,
+        color: str | None = None,
+    ):
         """Convenience: write a string starting at (row, col)."""
         addr = self.addr(row, col)
         for ch in text:
@@ -316,8 +339,9 @@ class Screen3270:
             c.ext_color = color
             addr += 1
 
-    def place_field(self, row: int, col: int, attr: int,
-                    width: int = 0, color: str | None = None):
+    def place_field(
+        self, row: int, col: int, attr: int, width: int = 0, color: str | None = None
+    ):
         """Place an attribute byte and blank the field following it."""
         a = self.addr(row, col)
         self.set_attribute(a, attr)
@@ -345,12 +369,13 @@ class Screen3270:
 # ---------------------------------------------------------------------------
 class OIA:
     """Manages the 25th line status display."""
+
     def __init__(self):
         self.inhibited = False
         self.insert_mode = False
         self.message = ""
         self.system_lock = False
-        self.connection = "A"       # connection indicator
+        self.connection = "A"  # connection indicator
         self.lu_name = "TWRP01  "  # Logical Unit name
 
     def render(self) -> str:
@@ -391,7 +416,8 @@ class Terminal3278(QWidget):
         aid_key(key_name, field_data)  – emitted when operator presses an AID key
         status_changed(msg)             – OIA message changed
     """
-    aid_key = Signal(str, list)         # (key, [(attr_addr, field_addr, value)…])
+
+    aid_key = Signal(str, list)  # (key, [(attr_addr, field_addr, value)…])
     status_changed = Signal(str)
 
     def __init__(self, parent=None, phosphor: str = Color3270.GREEN_PHOSPHOR):
@@ -422,8 +448,14 @@ class Terminal3278(QWidget):
     def _init_font(self):
         """Try IBM 3270 fonts, fall back to Courier."""
         preferred = [
-            "IBM 3270", "IBM 3270 Semi-Narrow", "3270", "Courier New",
-            "Courier", "Lucida Console", "DejaVu Sans Mono", "Monospace",
+            "IBM 3270",
+            "IBM 3270 Semi-Narrow",
+            "3270",
+            "Courier New",
+            "Courier",
+            "Lucida Console",
+            "DejaVu Sans Mono",
+            "Monospace",
         ]
         families = QFontDatabase.families()
         chosen = "Courier New"
@@ -491,18 +523,22 @@ class Terminal3278(QWidget):
         s.write_string(0, (80 - len(title)) // 2, title, Attr.PROT_BRIGHT, "turquoise")
         s.write_string(1, 0, " " * 80, Attr.PROT_NORMAL)
         subtitle = "CICS/TS  V5.6   TRANSACTION PROCESSING FACILITY"
-        s.write_string(1, (80 - len(subtitle)) // 2, subtitle, Attr.PROT_BRIGHT, "yellow")
+        s.write_string(
+            1, (80 - len(subtitle)) // 2, subtitle, Attr.PROT_BRIGHT, "yellow"
+        )
         s.write_string(2, 0, "=" * 80, Attr.PROT_BRIGHT, "turquoise")
         # Logon fields
-        s.write_string(5, 2,  "USERID   :", Attr.PROT_BRIGHT, "green")
+        s.write_string(5, 2, "USERID   :", Attr.PROT_BRIGHT, "green")
         s.place_field(5, 12, Attr.UNPROT_NORMAL, 8, "turquoise")
-        s.write_string(7, 2,  "PASSWORD :", Attr.PROT_BRIGHT, "green")
+        s.write_string(7, 2, "PASSWORD :", Attr.PROT_BRIGHT, "green")
         s.place_field(7, 12, Attr.UNPROT_DARK, 8, "turquoise")
-        s.write_string(9, 2,  "TERMINAL :", Attr.PROT_NORMAL, "yellow")
+        s.write_string(9, 2, "TERMINAL :", Attr.PROT_NORMAL, "yellow")
         s.write_string(9, 13, "TW3278  ", Attr.PROT_NORMAL, "yellow")
         s.write_string(11, 2, "SYSTEM   :", Attr.PROT_NORMAL, "yellow")
         s.write_string(11, 13, "TIMEWRP01", Attr.PROT_NORMAL, "yellow")
-        s.write_string(14, 2, "PF3=LOGOFF   PF9=MSGS   ENTER=LOGON", Attr.PROT_DIM, "blue")
+        s.write_string(
+            14, 2, "PF3=LOGOFF   PF9=MSGS   ENTER=LOGON", Attr.PROT_DIM, "blue"
+        )
         s.write_string(23, 0, "=" * 80, Attr.PROT_BRIGHT, "turquoise")
         # Place cursor at userid field
         self.screen.cursor = Screen3270.addr(5, 13)
@@ -515,13 +551,20 @@ class Terminal3278(QWidget):
         self.oia.message = ""
         self.update()
 
-    def write_text(self, row: int, col: int, text: str,
-                   attr: int = Attr.PROT_BRIGHT, color: str | None = None):
+    def write_text(
+        self,
+        row: int,
+        col: int,
+        text: str,
+        attr: int = Attr.PROT_BRIGHT,
+        color: str | None = None,
+    ):
         self.screen.write_string(row, col, text, attr, color)
         self.update()
 
-    def define_field(self, row: int, col: int, attr: int, width: int,
-                     color: str | None = None):
+    def define_field(
+        self, row: int, col: int, attr: int, width: int, color: str | None = None
+    ):
         self.screen.place_field(row, col, attr, width, color)
         self.update()
 
@@ -564,12 +607,12 @@ class Terminal3278(QWidget):
                     attr = getattr(Attr, attr_name, Attr.UNPROT_NORMAL)
                     self.screen.place_field(row, col, attr, length)
                     if initial.strip():
-                        self.screen.write_string(row, col + 1, initial,
-                                                 Attr.UNPROT_NORMAL)
+                        self.screen.write_string(
+                            row, col + 1, initial, Attr.UNPROT_NORMAL
+                        )
             else:
                 if raw:
-                    self.screen.write_string(line_no, 0, raw[:COLS],
-                                             Attr.PROT_BRIGHT)
+                    self.screen.write_string(line_no, 0, raw[:COLS], Attr.PROT_BRIGHT)
         self.update()
 
     # -- Painting --
@@ -591,7 +634,7 @@ class Terminal3278(QWidget):
 
                 # Determine governing attribute
                 if cell.is_attr:
-                    continue   # attribute cells are invisible
+                    continue  # attribute cells are invisible
 
                 attr = screen._attr_at(addr)
                 # Pick colour
@@ -621,23 +664,23 @@ class Terminal3278(QWidget):
                 x = 2 + col * cw
 
                 # Cursor rendering (block cursor)
-                is_cursor = (addr == cursor_addr)
+                is_cursor = addr == cursor_addr
                 if is_cursor and self._cursor_blink_on:
                     p.fillRect(QRect(x, y, cw, ch), pal["cursor"])
                     p.setPen(pal["bg"])
                 else:
                     p.setPen(fg)
 
-                p.drawText(QRect(x, y, cw, ch),
-                           Qt.AlignLeft | Qt.AlignVCenter, ch_draw)
+                p.drawText(QRect(x, y, cw, ch), Qt.AlignLeft | Qt.AlignVCenter, ch_draw)
 
         # OIA row
         oia_y = 2 + ROWS * ch
         p.fillRect(QRect(0, oia_y - 2, self.width(), ch + 4), pal["oia_bg"])
         oia_text = self.oia.render()
         p.setPen(pal["oia_text"])
-        p.drawText(QRect(2, oia_y, COLS * cw, ch),
-                   Qt.AlignLeft | Qt.AlignVCenter, oia_text)
+        p.drawText(
+            QRect(2, oia_y, COLS * cw, ch), Qt.AlignLeft | Qt.AlignVCenter, oia_text
+        )
 
         # Separator line
         p.setPen(QPen(pal["fg_normal"], 1))
@@ -827,7 +870,7 @@ class Terminal3278(QWidget):
 # ---------------------------------------------------------------------------
 # Attr addendum – PROT_DIM missing in class above
 # ---------------------------------------------------------------------------
-Attr.PROT_DIM = Attr.PROTECTED | 0x00   # alias for normal protected
+Attr.PROT_DIM = Attr.PROTECTED | 0x00  # alias for normal protected
 
 
 # ---------------------------------------------------------------------------
@@ -838,6 +881,7 @@ class Terminal3278Window(QMainWindow):
     Full application window containing the 3278 terminal widget,
     a toolbar for phosphor switching + font size, and an OIA status bar.
     """
+
     def __init__(self, parent=None, title: str = "IBM 3278 Terminal — CICS"):
         super().__init__(parent)
         self.setWindowTitle(title)
@@ -861,34 +905,54 @@ class Terminal3278Window(QMainWindow):
     def _build_toolbar(self):
         tb = QToolBar("3278 Controls")
         tb.setMovable(False)
-        tb.setStyleSheet("QToolBar { background: #111; border: none; } "
-                         "QToolButton { color: #0f0; background: #111; "
-                         "border: 1px solid #040; padding: 3px 6px; margin: 1px; }"
-                         "QToolButton:hover { background: #030; }")
+        tb.setStyleSheet(
+            "QToolBar { background: #111; border: none; } "
+            "QToolButton { color: #0f0; background: #111; "
+            "border: 1px solid #040; padding: 3px 6px; margin: 1px; }"
+            "QToolButton:hover { background: #030; }"
+        )
         self.addToolBar(tb)
 
-        tb.addAction("🟢 Green", lambda: self.terminal.set_phosphor(Color3270.GREEN_PHOSPHOR))
-        tb.addAction("🟡 Amber", lambda: self.terminal.set_phosphor(Color3270.AMBER_PHOSPHOR))
-        tb.addAction("📄 Paper", lambda: self.terminal.set_phosphor(Color3270.WHITE_PAPER))
+        tb.addAction(
+            "🟢 Green", lambda: self.terminal.set_phosphor(Color3270.GREEN_PHOSPHOR)
+        )
+        tb.addAction(
+            "🟡 Amber", lambda: self.terminal.set_phosphor(Color3270.AMBER_PHOSPHOR)
+        )
+        tb.addAction(
+            "📄 Paper", lambda: self.terminal.set_phosphor(Color3270.WHITE_PAPER)
+        )
         tb.addSeparator()
-        tb.addAction("Font-",  lambda: self.terminal.set_font_size(
-            max(8, self.terminal._font.pointSize() - 1)))
-        tb.addAction("Font+",  lambda: self.terminal.set_font_size(
-            min(24, self.terminal._font.pointSize() + 1)))
+        tb.addAction(
+            "Font-",
+            lambda: self.terminal.set_font_size(
+                max(8, self.terminal._font.pointSize() - 1)
+            ),
+        )
+        tb.addAction(
+            "Font+",
+            lambda: self.terminal.set_font_size(
+                min(24, self.terminal._font.pointSize() + 1)
+            ),
+        )
         tb.addSeparator()
         tb.addAction("CLEAR", lambda: self.terminal._fire_aid("CLEAR"))
         tb.addAction("ENTER", lambda: self.terminal._fire_aid("ENTER"))
         # PF key quick-buttons
         for pf in (1, 2, 3, 4, 9, 12):
-            tb.addAction(f"PF{pf}", (lambda n=pf: lambda: self.terminal._fire_aid(f"PF{n}"))())
+            tb.addAction(
+                f"PF{pf}", (lambda n=pf: lambda: self.terminal._fire_aid(f"PF{n}"))()
+            )
         tb.addSeparator()
         tb.addAction("PA1", lambda: self.terminal._fire_aid("PA1"))
         tb.addAction("PA2", lambda: self.terminal._fire_aid("PA2"))
 
     def _build_statusbar(self):
         sb = QStatusBar()
-        sb.setStyleSheet("QStatusBar { background: #050; color: #0f0; "
-                         "border-top: 1px solid #030; font-family: Courier New; }")
+        sb.setStyleSheet(
+            "QStatusBar { background: #050; color: #0f0; "
+            "border-top: 1px solid #030; font-family: Courier New; }"
+        )
         self.setStatusBar(sb)
         self._sb_label = QLabel("READY")
         self._sb_label.setStyleSheet("color: #0f0; font-family: Courier New;")

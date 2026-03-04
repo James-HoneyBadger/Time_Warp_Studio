@@ -112,7 +112,9 @@ class TurtleCanvas(
         toolbar_layout.addWidget(_btn("⊡", "Fit to Screen", self._fit_to_screen))
         self._anim_btn = _btn("▶", "Play / Pause Animation", self._toggle_animation)
         toolbar_layout.addWidget(self._anim_btn)
-        toolbar_layout.addWidget(_btn("📋", "Copy to Clipboard", self._copy_to_clipboard))
+        toolbar_layout.addWidget(
+            _btn("📋", "Copy to Clipboard", self._copy_to_clipboard)
+        )
 
         self._canvas_toolbar.adjustSize()
         self._canvas_toolbar.raise_()
@@ -311,7 +313,9 @@ class TurtleCanvas(
         painter.drawEllipse(QPointF(0, 0), 5, 5)
 
         # Draw turtle lines (use animation slice when player is active)
-        visible_lines = self.lines[:self._anim_frame] if self._anim_running else self.lines
+        visible_lines = (
+            self.lines[: self._anim_frame] if self._anim_running else self.lines
+        )
         for line in visible_lines:
             color = QColor(line.color[0], line.color[1], line.color[2])
             # Adjust pen width inversely to zoom so it stays visible at all

@@ -13,19 +13,19 @@ class ForthExecutor:
         self.interpreter = interpreter
         self.stack: List[Any] = []
         self.return_stack: List[Any] = []
-        self.fstack: List[float] = []          # floating-point stack
+        self.fstack: List[float] = []  # floating-point stack
         self.dictionary: Dict[str, Callable] = {}
-        self.memory: List[int] = [0] * 65536   # 64K cells
-        self.here: int = 0                     # next free memory address
+        self.memory: List[int] = [0] * 65536  # 64K cells
+        self.here: int = 0  # next free memory address
         self.compiling = False
         self.new_word_name = ""
         self.new_word_definition: List[str] = []
         self.output_buffer = ""
         self.turtle: Optional["TurtleState"] = None
-        self.base: int = 10                    # numeric base
+        self.base: int = 10  # numeric base
         self.constants: Dict[str, Any] = {}
-        self.values: Dict[str, Any] = {}       # VALUE words
-        self.deferred: Dict[str, str] = {}     # DEFER words (name -> word name)
+        self.values: Dict[str, Any] = {}  # VALUE words
+        self.deferred: Dict[str, str] = {}  # DEFER words (name -> word name)
 
         self._init_dictionary()
 
@@ -180,7 +180,7 @@ class ForthExecutor:
         d["BYE"] = self._bye
         d["INCLUDE"] = self._include  # stub
         d["REQUIRE"] = self._include  # stub
-        d["MS"] = self._ms           # millisecond delay stub
+        d["MS"] = self._ms  # millisecond delay stub
         d["HERE"] = self._here_word
         d["ALLOT"] = self._allot_word
 
@@ -191,7 +191,7 @@ class ForthExecutor:
         d["FILL"] = self._fill
         d["CMOVE"] = self._cmove
         d["CMOVE>"] = self._cmove_up
-        d["CHAR"] = self._char_word   # handled in token loop but alias too
+        d["CHAR"] = self._char_word  # handled in token loop but alias too
         d["+PLACE"] = self._plus_place
 
         # ── Graphics (Time Warp extensions) ───────────────────────────────
@@ -224,10 +224,12 @@ class ForthExecutor:
     # ── Stack manipulation ──────────────────────────────────────────────
 
     def _dup(self):
-        if self.stack: self.stack.append(self.stack[-1])
+        if self.stack:
+            self.stack.append(self.stack[-1])
 
     def _drop(self):
-        if self.stack: self.stack.pop()
+        if self.stack:
+            self.stack.pop()
 
     def _swap(self):
         if len(self.stack) >= 2:
@@ -235,7 +237,8 @@ class ForthExecutor:
             self.stack += [a, b]
 
     def _over(self):
-        if len(self.stack) >= 2: self.stack.append(self.stack[-2])
+        if len(self.stack) >= 2:
+            self.stack.append(self.stack[-2])
 
     def _rot(self):
         if len(self.stack) >= 3:
@@ -249,7 +252,9 @@ class ForthExecutor:
 
     def _nip(self):
         if len(self.stack) >= 2:
-            a = self.stack.pop(); self.stack.pop(); self.stack.append(a)
+            a = self.stack.pop()
+            self.stack.pop()
+            self.stack.append(a)
 
     def _tuck(self):
         if len(self.stack) >= 2:
@@ -257,21 +262,31 @@ class ForthExecutor:
             self.stack += [a, b, a]
 
     def _2dup(self):
-        if len(self.stack) >= 2: self.stack += [self.stack[-2], self.stack[-1]]
+        if len(self.stack) >= 2:
+            self.stack += [self.stack[-2], self.stack[-1]]
 
     def _2drop(self):
-        if len(self.stack) >= 2: self.stack.pop(); self.stack.pop()
+        if len(self.stack) >= 2:
+            self.stack.pop()
+            self.stack.pop()
 
     def _2swap(self):
         if len(self.stack) >= 4:
-            d, c, b, a = self.stack.pop(), self.stack.pop(), self.stack.pop(), self.stack.pop()
+            d, c, b, a = (
+                self.stack.pop(),
+                self.stack.pop(),
+                self.stack.pop(),
+                self.stack.pop(),
+            )
             self.stack += [c, d, a, b]
 
     def _2over(self):
-        if len(self.stack) >= 4: self.stack += [self.stack[-4], self.stack[-3]]
+        if len(self.stack) >= 4:
+            self.stack += [self.stack[-4], self.stack[-3]]
 
     def _qdup(self):
-        if self.stack and self.stack[-1] != 0: self.stack.append(self.stack[-1])
+        if self.stack and self.stack[-1] != 0:
+            self.stack.append(self.stack[-1])
 
     def _depth(self):
         self.stack.append(len(self.stack))
@@ -279,7 +294,8 @@ class ForthExecutor:
     def _pick(self):
         if self.stack:
             n = self.stack.pop()
-            if 0 <= n < len(self.stack): self.stack.append(self.stack[-(n + 1)])
+            if 0 <= n < len(self.stack):
+                self.stack.append(self.stack[-(n + 1)])
 
     def _roll(self):
         if self.stack:
@@ -292,16 +308,20 @@ class ForthExecutor:
     # ── Return stack ───────────────────────────────────────────────────
 
     def _to_r(self):
-        if self.stack: self.return_stack.append(self.stack.pop())
+        if self.stack:
+            self.return_stack.append(self.stack.pop())
 
     def _from_r(self):
-        if self.return_stack: self.stack.append(self.return_stack.pop())
+        if self.return_stack:
+            self.stack.append(self.return_stack.pop())
 
     def _r_fetch(self):
-        if self.return_stack: self.stack.append(self.return_stack[-1])
+        if self.return_stack:
+            self.stack.append(self.return_stack[-1])
 
     def _rdrop(self):
-        if self.return_stack: self.return_stack.pop()
+        if self.return_stack:
+            self.return_stack.pop()
 
     def _2_to_r(self):
         if len(self.stack) >= 2:
@@ -318,44 +338,58 @@ class ForthExecutor:
     def _dot(self):
         if self.stack:
             v = self.stack.pop()
-            self.output_buffer += (f"{v:0X} " if self.base == 16 else
-                                   f"{v:0b} " if self.base == 2  else
-                                   f"{v:0o} " if self.base == 8  else
-                                   f"{v} ")
+            self.output_buffer += (
+                f"{v:0X} "
+                if self.base == 16
+                else (
+                    f"{v:0b} "
+                    if self.base == 2
+                    else f"{v:0o} " if self.base == 8 else f"{v} "
+                )
+            )
 
     def _dot_s(self):
-        self.output_buffer += f"<{len(self.stack)}> " + " ".join(map(str, self.stack)) + " "
+        self.output_buffer += (
+            f"<{len(self.stack)}> " + " ".join(map(str, self.stack)) + " "
+        )
 
     def _cr(self):
         self.interpreter.log_output(self.output_buffer)
         self.output_buffer = ""
 
     def _emit(self):
-        if self.stack: self.output_buffer += chr(self.stack.pop() & 0xFF)
+        if self.stack:
+            self.output_buffer += chr(self.stack.pop() & 0xFF)
 
     def _space(self):
         self.output_buffer += " "
 
     def _spaces(self):
-        if self.stack: self.output_buffer += " " * max(0, int(self.stack.pop()))
+        if self.stack:
+            self.output_buffer += " " * max(0, int(self.stack.pop()))
 
     def _type(self):
         # ( caddr u -- ) print u characters from c-addr (here: addr is index)
         if len(self.stack) >= 2:
-            u = self.stack.pop(); addr = self.stack.pop()
+            u = self.stack.pop()
+            addr = self.stack.pop()
             chars = []
             for off in range(u):
                 a = addr + off
-                if 0 <= a < len(self.memory): chars.append(chr(self.memory[a] & 0xFF))
+                if 0 <= a < len(self.memory):
+                    chars.append(chr(self.memory[a] & 0xFF))
             self.output_buffer += "".join(chars)
 
     def _udot(self):
-        if self.stack: self.output_buffer += f"{self.stack.pop() & 0xFFFFFFFF} "
+        if self.stack:
+            self.output_buffer += f"{self.stack.pop() & 0xFFFFFFFF} "
 
     def _dot_r(self):
         if len(self.stack) >= 2:
-            w = self.stack.pop(); n = self.stack.pop()
-            s = str(n); self.output_buffer += s.rjust(w)
+            w = self.stack.pop()
+            n = self.stack.pop()
+            s = str(n)
+            self.output_buffer += s.rjust(w)
 
     def _question(self):
         if self.stack:
@@ -373,7 +407,8 @@ class ForthExecutor:
 
     def _sub(self):
         if len(self.stack) >= 2:
-            b, a = self.stack.pop(), self.stack.pop(); self.stack.append(a - b)
+            b, a = self.stack.pop(), self.stack.pop()
+            self.stack.append(a - b)
         else:
             self.interpreter.log_output("❌ Stack underflow")
 
@@ -385,19 +420,24 @@ class ForthExecutor:
 
     def _div(self):
         if len(self.stack) >= 2:
-            b = self.stack.pop(); a = self.stack.pop()
+            b = self.stack.pop()
+            a = self.stack.pop()
             self.stack.append(0 if b == 0 else int(a / b))
 
     def _mod(self):
         if len(self.stack) >= 2:
-            b = self.stack.pop(); a = self.stack.pop()
+            b = self.stack.pop()
+            a = self.stack.pop()
             self.stack.append(0 if b == 0 else a % b)
 
     def _divmod(self):
         if len(self.stack) >= 2:
-            b = self.stack.pop(); a = self.stack.pop()
-            if b == 0: self.stack += [0, 0]
-            else: self.stack += [a % b, int(a / b)]
+            b = self.stack.pop()
+            a = self.stack.pop()
+            if b == 0:
+                self.stack += [0, 0]
+            else:
+                self.stack += [a % b, int(a / b)]
 
     def _muldiv(self):
         if len(self.stack) >= 3:
@@ -407,98 +447,139 @@ class ForthExecutor:
     def _muldivmod(self):
         if len(self.stack) >= 3:
             c, b, a = self.stack.pop(), self.stack.pop(), self.stack.pop()
-            p = a * b; self.stack += [p % c, p // c] if c else [0, 0]
+            p = a * b
+            self.stack += [p % c, p // c] if c else [0, 0]
 
     def _abs(self):
-        if self.stack: self.stack.append(abs(self.stack.pop()))
+        if self.stack:
+            self.stack.append(abs(self.stack.pop()))
 
     def _negate(self):
-        if self.stack: self.stack.append(-self.stack.pop())
+        if self.stack:
+            self.stack.append(-self.stack.pop())
 
     def _max(self):
-        if len(self.stack) >= 2: b, a = self.stack.pop(), self.stack.pop(); self.stack.append(max(a, b))
+        if len(self.stack) >= 2:
+            b, a = self.stack.pop(), self.stack.pop()
+            self.stack.append(max(a, b))
 
     def _min(self):
-        if len(self.stack) >= 2: b, a = self.stack.pop(), self.stack.pop(); self.stack.append(min(a, b))
+        if len(self.stack) >= 2:
+            b, a = self.stack.pop(), self.stack.pop()
+            self.stack.append(min(a, b))
 
     def _1plus(self):
-        if self.stack: self.stack[-1] += 1
+        if self.stack:
+            self.stack[-1] += 1
 
     def _1minus(self):
-        if self.stack: self.stack[-1] -= 1
+        if self.stack:
+            self.stack[-1] -= 1
 
     def _2plus(self):
-        if self.stack: self.stack[-1] += 2
+        if self.stack:
+            self.stack[-1] += 2
 
     def _2minus(self):
-        if self.stack: self.stack[-1] -= 2
+        if self.stack:
+            self.stack[-1] -= 2
 
     def _2mul(self):
-        if self.stack: self.stack[-1] *= 2
+        if self.stack:
+            self.stack[-1] *= 2
 
     def _2div(self):
-        if self.stack: self.stack[-1] //= 2
+        if self.stack:
+            self.stack[-1] //= 2
 
     def _lshift(self):
-        if len(self.stack) >= 2: n, u = self.stack.pop(), self.stack.pop(); self.stack.append(u << n)
+        if len(self.stack) >= 2:
+            n, u = self.stack.pop(), self.stack.pop()
+            self.stack.append(u << n)
 
     def _rshift(self):
-        if len(self.stack) >= 2: n, u = self.stack.pop(), self.stack.pop(); self.stack.append(u >> n)
+        if len(self.stack) >= 2:
+            n, u = self.stack.pop(), self.stack.pop()
+            self.stack.append(u >> n)
 
     def _madd(self):
-        if len(self.stack) >= 2: n, d = self.stack.pop(), self.stack.pop(); self.stack.append(d + n)
+        if len(self.stack) >= 2:
+            n, d = self.stack.pop(), self.stack.pop()
+            self.stack.append(d + n)
 
     # ── Comparisons ────────────────────────────────────────────────────
 
     def _eq(self):
-        if len(self.stack) >= 2: self.stack.append(-1 if self.stack.pop() == self.stack.pop() else 0)
+        if len(self.stack) >= 2:
+            self.stack.append(-1 if self.stack.pop() == self.stack.pop() else 0)
 
     def _ne(self):
-        if len(self.stack) >= 2: self.stack.append(0 if self.stack.pop() == self.stack.pop() else -1)
+        if len(self.stack) >= 2:
+            self.stack.append(0 if self.stack.pop() == self.stack.pop() else -1)
 
     def _lt(self):
-        if len(self.stack) >= 2: b, a = self.stack.pop(), self.stack.pop(); self.stack.append(-1 if a < b else 0)
+        if len(self.stack) >= 2:
+            b, a = self.stack.pop(), self.stack.pop()
+            self.stack.append(-1 if a < b else 0)
 
     def _gt(self):
-        if len(self.stack) >= 2: b, a = self.stack.pop(), self.stack.pop(); self.stack.append(-1 if a > b else 0)
+        if len(self.stack) >= 2:
+            b, a = self.stack.pop(), self.stack.pop()
+            self.stack.append(-1 if a > b else 0)
 
     def _le(self):
-        if len(self.stack) >= 2: b, a = self.stack.pop(), self.stack.pop(); self.stack.append(-1 if a <= b else 0)
+        if len(self.stack) >= 2:
+            b, a = self.stack.pop(), self.stack.pop()
+            self.stack.append(-1 if a <= b else 0)
 
     def _ge(self):
-        if len(self.stack) >= 2: b, a = self.stack.pop(), self.stack.pop(); self.stack.append(-1 if a >= b else 0)
+        if len(self.stack) >= 2:
+            b, a = self.stack.pop(), self.stack.pop()
+            self.stack.append(-1 if a >= b else 0)
 
     def _0eq(self):
-        if self.stack: self.stack.append(-1 if self.stack.pop() == 0 else 0)
+        if self.stack:
+            self.stack.append(-1 if self.stack.pop() == 0 else 0)
 
     def _0lt(self):
-        if self.stack: self.stack.append(-1 if self.stack.pop() < 0 else 0)
+        if self.stack:
+            self.stack.append(-1 if self.stack.pop() < 0 else 0)
 
     def _0gt(self):
-        if self.stack: self.stack.append(-1 if self.stack.pop() > 0 else 0)
+        if self.stack:
+            self.stack.append(-1 if self.stack.pop() > 0 else 0)
 
     def _0ne(self):
-        if self.stack: self.stack.append(-1 if self.stack.pop() != 0 else 0)
+        if self.stack:
+            self.stack.append(-1 if self.stack.pop() != 0 else 0)
 
     def _ult(self):
-        if len(self.stack) >= 2: b, a = self.stack.pop(), self.stack.pop(); self.stack.append(-1 if (a & 0xFFFFFFFF) < (b & 0xFFFFFFFF) else 0)
+        if len(self.stack) >= 2:
+            b, a = self.stack.pop(), self.stack.pop()
+            self.stack.append(-1 if (a & 0xFFFFFFFF) < (b & 0xFFFFFFFF) else 0)
 
     def _ugt(self):
-        if len(self.stack) >= 2: b, a = self.stack.pop(), self.stack.pop(); self.stack.append(-1 if (a & 0xFFFFFFFF) > (b & 0xFFFFFFFF) else 0)
+        if len(self.stack) >= 2:
+            b, a = self.stack.pop(), self.stack.pop()
+            self.stack.append(-1 if (a & 0xFFFFFFFF) > (b & 0xFFFFFFFF) else 0)
 
     # ── Logic / bitwise ────────────────────────────────────────────────
 
     def _and(self):
-        if len(self.stack) >= 2: self.stack.append(self.stack.pop() & self.stack.pop())
+        if len(self.stack) >= 2:
+            self.stack.append(self.stack.pop() & self.stack.pop())
 
     def _or(self):
-        if len(self.stack) >= 2: self.stack.append(self.stack.pop() | self.stack.pop())
+        if len(self.stack) >= 2:
+            self.stack.append(self.stack.pop() | self.stack.pop())
 
     def _xor(self):
-        if len(self.stack) >= 2: self.stack.append(self.stack.pop() ^ self.stack.pop())
+        if len(self.stack) >= 2:
+            self.stack.append(self.stack.pop() ^ self.stack.pop())
 
     def _invert(self):
-        if self.stack: self.stack.append(~self.stack.pop())
+        if self.stack:
+            self.stack.append(~self.stack.pop())
 
     def _true(self):
         self.stack.append(-1)
@@ -507,7 +588,8 @@ class ForthExecutor:
         self.stack.append(0)
 
     def _not(self):
-        if self.stack: self.stack.append(-1 if self.stack.pop() == 0 else 0)
+        if self.stack:
+            self.stack.append(-1 if self.stack.pop() == 0 else 0)
 
     # ── Memory ─────────────────────────────────────────────────────────
 
@@ -518,18 +600,24 @@ class ForthExecutor:
 
     def _store(self):
         if len(self.stack) >= 2:
-            addr = self.stack.pop(); val = self.stack.pop()
-            if 0 <= addr < len(self.memory): self.memory[addr] = val
+            addr = self.stack.pop()
+            val = self.stack.pop()
+            if 0 <= addr < len(self.memory):
+                self.memory[addr] = val
 
     def _cfetch(self):
         if self.stack:
             addr = self.stack.pop()
-            self.stack.append(self.memory[addr] & 0xFF if 0 <= addr < len(self.memory) else 0)
+            self.stack.append(
+                self.memory[addr] & 0xFF if 0 <= addr < len(self.memory) else 0
+            )
 
     def _cstore(self):
         if len(self.stack) >= 2:
-            addr = self.stack.pop(); val = self.stack.pop()
-            if 0 <= addr < len(self.memory): self.memory[addr] = val & 0xFF
+            addr = self.stack.pop()
+            val = self.stack.pop()
+            if 0 <= addr < len(self.memory):
+                self.memory[addr] = val & 0xFF
 
     def _2fetch(self):
         if self.stack:
@@ -539,14 +627,19 @@ class ForthExecutor:
 
     def _2store(self):
         if len(self.stack) >= 3:
-            addr = self.stack.pop(); hi = self.stack.pop(); lo = self.stack.pop()
+            addr = self.stack.pop()
+            hi = self.stack.pop()
+            lo = self.stack.pop()
             if 0 <= addr + 1 < len(self.memory):
-                self.memory[addr] = lo; self.memory[addr + 1] = hi
+                self.memory[addr] = lo
+                self.memory[addr + 1] = hi
 
     def _plus_store(self):
         if len(self.stack) >= 2:
-            addr = self.stack.pop(); n = self.stack.pop()
-            if 0 <= addr < len(self.memory): self.memory[addr] += n
+            addr = self.stack.pop()
+            n = self.stack.pop()
+            if 0 <= addr < len(self.memory):
+                self.memory[addr] += n
 
     def _variable(self):
         pass  # handled in execute_tokens
@@ -554,13 +647,17 @@ class ForthExecutor:
     # ── Floating-point ─────────────────────────────────────────────────
 
     def _fadd(self):
-        if len(self.fstack) >= 2: self.fstack.append(self.fstack.pop() + self.fstack.pop())
+        if len(self.fstack) >= 2:
+            self.fstack.append(self.fstack.pop() + self.fstack.pop())
 
     def _fsub(self):
-        if len(self.fstack) >= 2: b, a = self.fstack.pop(), self.fstack.pop(); self.fstack.append(a - b)
+        if len(self.fstack) >= 2:
+            b, a = self.fstack.pop(), self.fstack.pop()
+            self.fstack.append(a - b)
 
     def _fmul(self):
-        if len(self.fstack) >= 2: self.fstack.append(self.fstack.pop() * self.fstack.pop())
+        if len(self.fstack) >= 2:
+            self.fstack.append(self.fstack.pop() * self.fstack.pop())
 
     def _fdiv(self):
         if len(self.fstack) >= 2:
@@ -568,94 +665,133 @@ class ForthExecutor:
             self.fstack.append(a / b if b else float("nan"))
 
     def _fdup(self):
-        if self.fstack: self.fstack.append(self.fstack[-1])
+        if self.fstack:
+            self.fstack.append(self.fstack[-1])
 
     def _fdrop(self):
-        if self.fstack: self.fstack.pop()
+        if self.fstack:
+            self.fstack.pop()
 
     def _fswap(self):
-        if len(self.fstack) >= 2: a, b = self.fstack.pop(), self.fstack.pop(); self.fstack += [a, b]
+        if len(self.fstack) >= 2:
+            a, b = self.fstack.pop(), self.fstack.pop()
+            self.fstack += [a, b]
 
     def _fover(self):
-        if len(self.fstack) >= 2: self.fstack.append(self.fstack[-2])
+        if len(self.fstack) >= 2:
+            self.fstack.append(self.fstack[-2])
 
     def _fnegate(self):
-        if self.fstack: self.fstack.append(-self.fstack.pop())
+        if self.fstack:
+            self.fstack.append(-self.fstack.pop())
 
     def _fabs(self):
-        if self.fstack: self.fstack.append(abs(self.fstack.pop()))
+        if self.fstack:
+            self.fstack.append(abs(self.fstack.pop()))
 
     def _fmax(self):
-        if len(self.fstack) >= 2: b, a = self.fstack.pop(), self.fstack.pop(); self.fstack.append(max(a, b))
+        if len(self.fstack) >= 2:
+            b, a = self.fstack.pop(), self.fstack.pop()
+            self.fstack.append(max(a, b))
 
     def _fmin(self):
-        if len(self.fstack) >= 2: b, a = self.fstack.pop(), self.fstack.pop(); self.fstack.append(min(a, b))
+        if len(self.fstack) >= 2:
+            b, a = self.fstack.pop(), self.fstack.pop()
+            self.fstack.append(min(a, b))
 
     def _fsqrt(self):
-        if self.fstack: self.fstack.append(_fmath.sqrt(abs(self.fstack.pop())))
+        if self.fstack:
+            self.fstack.append(_fmath.sqrt(abs(self.fstack.pop())))
 
     def _fsin(self):
-        if self.fstack: self.fstack.append(_fmath.sin(self.fstack.pop()))
+        if self.fstack:
+            self.fstack.append(_fmath.sin(self.fstack.pop()))
 
     def _fcos(self):
-        if self.fstack: self.fstack.append(_fmath.cos(self.fstack.pop()))
+        if self.fstack:
+            self.fstack.append(_fmath.cos(self.fstack.pop()))
 
     def _ftan(self):
-        if self.fstack: self.fstack.append(_fmath.tan(self.fstack.pop()))
+        if self.fstack:
+            self.fstack.append(_fmath.tan(self.fstack.pop()))
 
     def _fasin(self):
-        if self.fstack: self.fstack.append(_fmath.asin(self.fstack.pop()))
+        if self.fstack:
+            self.fstack.append(_fmath.asin(self.fstack.pop()))
 
     def _facos(self):
-        if self.fstack: self.fstack.append(_fmath.acos(self.fstack.pop()))
+        if self.fstack:
+            self.fstack.append(_fmath.acos(self.fstack.pop()))
 
     def _fatan(self):
-        if self.fstack: self.fstack.append(_fmath.atan(self.fstack.pop()))
+        if self.fstack:
+            self.fstack.append(_fmath.atan(self.fstack.pop()))
 
     def _fatan2(self):
-        if len(self.fstack) >= 2: b, a = self.fstack.pop(), self.fstack.pop(); self.fstack.append(_fmath.atan2(a, b))
+        if len(self.fstack) >= 2:
+            b, a = self.fstack.pop(), self.fstack.pop()
+            self.fstack.append(_fmath.atan2(a, b))
 
     def _fexp(self):
-        if self.fstack: self.fstack.append(_fmath.exp(self.fstack.pop()))
+        if self.fstack:
+            self.fstack.append(_fmath.exp(self.fstack.pop()))
 
     def _fln(self):
-        if self.fstack: v = self.fstack.pop(); self.fstack.append(_fmath.log(v) if v > 0 else float("nan"))
+        if self.fstack:
+            v = self.fstack.pop()
+            self.fstack.append(_fmath.log(v) if v > 0 else float("nan"))
 
     def _flog(self):
-        if self.fstack: v = self.fstack.pop(); self.fstack.append(_fmath.log10(v) if v > 0 else float("nan"))
+        if self.fstack:
+            v = self.fstack.pop()
+            self.fstack.append(_fmath.log10(v) if v > 0 else float("nan"))
 
     def _ffloor(self):
-        if self.fstack: self.fstack.append(float(_fmath.floor(self.fstack.pop())))
+        if self.fstack:
+            self.fstack.append(float(_fmath.floor(self.fstack.pop())))
 
     def _fround(self):
-        if self.fstack: self.fstack.append(float(round(self.fstack.pop())))
+        if self.fstack:
+            self.fstack.append(float(round(self.fstack.pop())))
 
     def _ftrunc(self):
-        if self.fstack: self.fstack.append(float(_fmath.trunc(self.fstack.pop())))
+        if self.fstack:
+            self.fstack.append(float(_fmath.trunc(self.fstack.pop())))
 
     def _feq(self):
-        if len(self.fstack) >= 2: b, a = self.fstack.pop(), self.fstack.pop(); self.stack.append(-1 if a == b else 0)
+        if len(self.fstack) >= 2:
+            b, a = self.fstack.pop(), self.fstack.pop()
+            self.stack.append(-1 if a == b else 0)
 
     def _flt(self):
-        if len(self.fstack) >= 2: b, a = self.fstack.pop(), self.fstack.pop(); self.stack.append(-1 if a < b else 0)
+        if len(self.fstack) >= 2:
+            b, a = self.fstack.pop(), self.fstack.pop()
+            self.stack.append(-1 if a < b else 0)
 
     def _fgt(self):
-        if len(self.fstack) >= 2: b, a = self.fstack.pop(), self.fstack.pop(); self.stack.append(-1 if a > b else 0)
+        if len(self.fstack) >= 2:
+            b, a = self.fstack.pop(), self.fstack.pop()
+            self.stack.append(-1 if a > b else 0)
 
     def _fdot(self):
-        if self.fstack: self.output_buffer += f"{self.fstack.pop():.6G} "
+        if self.fstack:
+            self.output_buffer += f"{self.fstack.pop():.6G} "
 
     def _f0eq(self):
-        if self.fstack: self.stack.append(-1 if self.fstack.pop() == 0.0 else 0)
+        if self.fstack:
+            self.stack.append(-1 if self.fstack.pop() == 0.0 else 0)
 
     def _f0lt(self):
-        if self.fstack: self.stack.append(-1 if self.fstack.pop() < 0.0 else 0)
+        if self.fstack:
+            self.stack.append(-1 if self.fstack.pop() < 0.0 else 0)
 
     def _s_to_f(self):
-        if self.stack: self.fstack.append(float(self.stack.pop()))
+        if self.stack:
+            self.fstack.append(float(self.stack.pop()))
 
     def _f_to_s(self):
-        if self.fstack: self.stack.append(int(self.fstack.pop()))
+        if self.fstack:
+            self.stack.append(int(self.fstack.pop()))
 
     def _d_to_f(self):
         if len(self.stack) >= 2:
@@ -680,7 +816,8 @@ class ForthExecutor:
     def _accept(self):
         # ( caddr +n1 -- +n2 ) read up to n1 chars into caddr
         if len(self.stack) >= 2:
-            n1 = self.stack.pop(); addr = self.stack.pop()
+            n1 = self.stack.pop()
+            addr = self.stack.pop()
             raw = ""
             if hasattr(self.interpreter, "request_input"):
                 raw = self.interpreter.request_input("") or ""
@@ -716,7 +853,7 @@ class ForthExecutor:
 
     def _words(self):
         words = sorted(self.dictionary.keys())
-        chunks = [words[i:i+8] for i in range(0, len(words), 8)]
+        chunks = [words[i : i + 8] for i in range(0, len(words), 8)]
         for chunk in chunks:
             self.interpreter.log_output("  ".join(f"{w:<12}" for w in chunk))
 
@@ -727,7 +864,8 @@ class ForthExecutor:
         pass
 
     def _ms(self):
-        if self.stack: self.stack.pop()  # discard milliseconds, no actual delay
+        if self.stack:
+            self.stack.pop()  # discard milliseconds, no actual delay
 
     def _here_word(self):
         self.stack.append(self.here)
@@ -749,9 +887,22 @@ class ForthExecutor:
     def _compare(self):
         # ( caddr1 u1 caddr2 u2 -- n )
         if len(self.stack) >= 4:
-            u2, a2, u1, a1 = self.stack.pop(), self.stack.pop(), self.stack.pop(), self.stack.pop()
-            s1 = "".join(chr(self.memory[a1 + i] & 0xFF) for i in range(u1) if a1+i < len(self.memory))
-            s2 = "".join(chr(self.memory[a2 + i] & 0xFF) for i in range(u2) if a2+i < len(self.memory))
+            u2, a2, u1, a1 = (
+                self.stack.pop(),
+                self.stack.pop(),
+                self.stack.pop(),
+                self.stack.pop(),
+            )
+            s1 = "".join(
+                chr(self.memory[a1 + i] & 0xFF)
+                for i in range(u1)
+                if a1 + i < len(self.memory)
+            )
+            s2 = "".join(
+                chr(self.memory[a2 + i] & 0xFF)
+                for i in range(u2)
+                if a2 + i < len(self.memory)
+            )
             self.stack.append(0 if s1 == s2 else (-1 if s1 < s2 else 1))
 
     def _move_mem(self):
@@ -765,7 +916,8 @@ class ForthExecutor:
         if len(self.stack) >= 3:
             ch, u, addr = self.stack.pop(), self.stack.pop(), self.stack.pop()
             for i in range(u):
-                if 0 <= addr + i < len(self.memory): self.memory[addr + i] = ch & 0xFF
+                if 0 <= addr + i < len(self.memory):
+                    self.memory[addr + i] = ch & 0xFF
 
     def _cmove(self):
         if len(self.stack) >= 3:
@@ -790,35 +942,58 @@ class ForthExecutor:
     # ── Graphics ───────────────────────────────────────────────────────
 
     def _fd(self):
-        if self.stack and self.turtle: self.turtle.forward(self.stack.pop())
+        if self.stack and self.turtle:
+            self.turtle.forward(self.stack.pop())
 
     def _bk(self):
-        if self.stack and self.turtle: self.turtle.back(self.stack.pop())
+        if self.stack and self.turtle:
+            self.turtle.back(self.stack.pop())
 
     def _rt(self):
-        if self.stack and self.turtle: self.turtle.right(self.stack.pop())
+        if self.stack and self.turtle:
+            self.turtle.right(self.stack.pop())
 
     def _lt_turn(self):
-        if self.stack and self.turtle: self.turtle.left(self.stack.pop())
+        if self.stack and self.turtle:
+            self.turtle.left(self.stack.pop())
 
     def _pu(self):
-        if self.turtle: self.turtle.penup()
+        if self.turtle:
+            self.turtle.penup()
 
     def _pd(self):
-        if self.turtle: self.turtle.pendown()
+        if self.turtle:
+            self.turtle.pendown()
 
     def _home(self):
-        if self.turtle: self.turtle.home()
+        if self.turtle:
+            self.turtle.home()
 
     def _clean(self):
-        if self.turtle: self.turtle.clear()
+        if self.turtle:
+            self.turtle.clear()
 
     def _pen(self):
         if self.stack and self.turtle:
             color_idx = int(self.stack.pop())
-            color_map = {0:"BLACK",1:"RED",2:"GREEN",3:"BLUE",4:"YELLOW",
-                         5:"CYAN",6:"MAGENTA",7:"WHITE",8:"ORANGE",9:"PURPLE",
-                         10:"BROWN",11:"PINK",12:"GRAY",13:"LIME",14:"NAVY",15:"TEAL"}
+            color_map = {
+                0: "BLACK",
+                1: "RED",
+                2: "GREEN",
+                3: "BLUE",
+                4: "YELLOW",
+                5: "CYAN",
+                6: "MAGENTA",
+                7: "WHITE",
+                8: "ORANGE",
+                9: "PURPLE",
+                10: "BROWN",
+                11: "PINK",
+                12: "GRAY",
+                13: "LIME",
+                14: "NAVY",
+                15: "TEAL",
+            }
             self.turtle.pencolor(color_map.get(color_idx, "WHITE"))
 
     def _xcor(self):
@@ -839,13 +1014,16 @@ class ForthExecutor:
     def _color(self):
         if self.stack and self.turtle:
             c = self.stack.pop()
-            if isinstance(c, str): self.turtle.pencolor(c)
-            else: self._pen()
+            if isinstance(c, str):
+                self.turtle.pencolor(c)
+            else:
+                self._pen()
 
     def _circle(self):
         if self.stack and self.turtle:
             r = self.stack.pop()
-            if hasattr(self.turtle, "circle"): self.turtle.circle(r)
+            if hasattr(self.turtle, "circle"):
+                self.turtle.circle(r)
             else:
                 for _ in range(36):
                     self.turtle.forward(r * _fmath.pi * 2 / 36)
@@ -860,15 +1038,19 @@ class ForthExecutor:
                 self.turtle.right(ang / steps)
 
     def _fill_gfx(self):
-        if self.stack and self.turtle: self.stack.pop()  # stub
+        if self.stack and self.turtle:
+            self.stack.pop()  # stub
 
     def _dot_gfx(self):
         if len(self.stack) >= 2 and self.turtle:
-            x = self.stack.pop(); y = self.stack.pop()
-            if hasattr(self.turtle, "goto"): self.turtle.goto(y, x)
+            x = self.stack.pop()
+            y = self.stack.pop()
+            if hasattr(self.turtle, "goto"):
+                self.turtle.goto(y, x)
 
     def _label(self):
-        if self.stack: self.output_buffer += str(self.stack.pop())
+        if self.stack:
+            self.output_buffer += str(self.stack.pop())
 
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
     # execute_tokens — main interpreter loop
@@ -885,8 +1067,10 @@ class ForthExecutor:
                 if token == ";":
                     self.compiling = False
                     definition = list(self.new_word_definition)
+
                     def new_word_func(d=tuple(definition)):
                         self.execute_tokens(list(d))
+
                     self.dictionary[self.new_word_name] = new_word_func
                     self.interpreter.log_output(f"✅ Defined {self.new_word_name}")
                 else:
@@ -911,7 +1095,10 @@ class ForthExecutor:
                 if i + 1 < len(tokens) and self.stack:
                     name = tokens[i + 1].upper()
                     val = self.stack.pop()
-                    def const_fn(v=val): self.stack.append(v)
+
+                    def const_fn(v=val):
+                        self.stack.append(v)
+
                     self.dictionary[name] = const_fn
                     i += 2
                 else:
@@ -924,7 +1111,10 @@ class ForthExecutor:
                 if i + 1 < len(tokens) and self.stack:
                     name = tokens[i + 1].upper()
                     self.values[name] = self.stack.pop()
-                    def val_fn(n=name): self.stack.append(self.values[n])
+
+                    def val_fn(n=name):
+                        self.stack.append(self.values[n])
+
                     self.dictionary[name] = val_fn
                     i += 2
                 else:
@@ -947,12 +1137,16 @@ class ForthExecutor:
                 if i + 1 < len(tokens):
                     def_name = tokens[i + 1].upper()
                     self.deferred[def_name] = None
+
                     def deferred_fn(n=def_name):
                         target = self.deferred.get(n)
                         if target and target in self.dictionary:
                             self.dictionary[target]()
                         else:
-                            self.interpreter.log_output(f"❌ {n} is not yet assigned (IS not called)")
+                            self.interpreter.log_output(
+                                f"❌ {n} is not yet assigned (IS not called)"
+                            )
+
                     self.dictionary[def_name] = deferred_fn
                     i += 2
                 else:
@@ -976,10 +1170,12 @@ class ForthExecutor:
                         target = None
                     if target is not None:
                         self.deferred[def_name] = target
+
                         def deferred_fn(n=def_name):
                             t = self.deferred.get(n)
                             if t and t in self.dictionary:
                                 self.dictionary[t]()
+
                         self.dictionary[def_name] = deferred_fn
                     i += 2
                 else:
@@ -992,8 +1188,12 @@ class ForthExecutor:
                     var_name = tokens[i + 1].upper()
                     addr = self.here
                     self.here += 1
-                    if addr < len(self.memory): self.memory[addr] = 0
-                    def var_func(a=addr): self.stack.append(a)
+                    if addr < len(self.memory):
+                        self.memory[addr] = 0
+
+                    def var_func(a=addr):
+                        self.stack.append(a)
+
                     self.dictionary[var_name] = var_func
                     i += 2
                 else:
@@ -1011,14 +1211,18 @@ class ForthExecutor:
 
             # ── CELLS (n -- n*cell-size, cell=1 in our model) ────────────
             if token_upper == "CELLS":
-                i += 1; continue  # each cell is 1 unit in our model
+                i += 1
+                continue  # each cell is 1 unit in our model
 
             # ── CREATE name ───────────────────────────────────────────────
             if token_upper == "CREATE":
                 if i + 1 < len(tokens):
                     cname = tokens[i + 1].upper()
                     addr = self.here
-                    def create_fn(a=addr): self.stack.append(a)
+
+                    def create_fn(a=addr):
+                        self.stack.append(a)
+
                     self.dictionary[cname] = create_fn
                     i += 2
                 else:
@@ -1049,57 +1253,76 @@ class ForthExecutor:
             if token_upper == "IF":
                 if not self.stack:
                     self.interpreter.log_output("❌ Stack underflow for IF")
-                    i += 1; continue
+                    i += 1
+                    continue
                 cond = self.stack.pop()
                 if cond == 0:
-                    depth = 1; advance = i + 1
+                    depth = 1
+                    advance = i + 1
                     while advance < len(tokens):
                         t = tokens[advance].upper()
-                        if t == "IF": depth += 1
+                        if t == "IF":
+                            depth += 1
                         elif t == "THEN":
                             depth -= 1
-                            if depth == 0: break
-                        elif t == "ELSE" and depth == 1: break
+                            if depth == 0:
+                                break
+                        elif t == "ELSE" and depth == 1:
+                            break
                         advance += 1
                     i = advance
-                i += 1; continue
+                i += 1
+                continue
 
             if token_upper == "ELSE":
-                depth = 1; advance = i + 1
+                depth = 1
+                advance = i + 1
                 while advance < len(tokens):
                     t = tokens[advance].upper()
-                    if t == "IF": depth += 1
+                    if t == "IF":
+                        depth += 1
                     elif t == "THEN":
                         depth -= 1
-                        if depth == 0: break
+                        if depth == 0:
+                            break
                     advance += 1
-                i = advance + 1; continue
+                i = advance + 1
+                continue
 
             if token_upper == "THEN":
-                i += 1; continue
+                i += 1
+                continue
 
             # ── DO / ?DO / LOOP / +LOOP / LEAVE / I / J ──────────────────
             if token_upper == "DO":
                 if len(self.stack) < 2:
                     self.interpreter.log_output("❌ Stack underflow for DO")
-                    i += 1; continue
-                start = self.stack.pop(); limit = self.stack.pop()
+                    i += 1
+                    continue
+                start = self.stack.pop()
+                limit = self.stack.pop()
                 self.return_stack += [limit, start, i]
-                i += 1; continue
+                i += 1
+                continue
 
             if token_upper == "?DO":
                 if len(self.stack) < 2:
-                    i += 1; continue
-                start = self.stack.pop(); limit = self.stack.pop()
+                    i += 1
+                    continue
+                start = self.stack.pop()
+                limit = self.stack.pop()
                 if start == limit:
                     # skip to LOOP/+LOOP
-                    depth2 = 1; advance = i + 1
+                    depth2 = 1
+                    advance = i + 1
                     while advance < len(tokens):
                         t = tokens[advance].upper()
-                        if t in ("DO", "?DO"): depth2 += 1
+                        if t in ("DO", "?DO"):
+                            depth2 += 1
                         elif t in ("LOOP", "+LOOP"):
                             depth2 -= 1
-                            if depth2 == 0: break
+                            if depth2 == 0:
+                                break
                         advance += 1
                     i = advance + 1
                 else:
@@ -1110,7 +1333,8 @@ class ForthExecutor:
             if token_upper == "LOOP":
                 if len(self.return_stack) < 3:
                     self.interpreter.log_output("❌ Return stack underflow for LOOP")
-                    i += 1; continue
+                    i += 1
+                    continue
                 loop_start = self.return_stack.pop()
                 index = self.return_stack.pop()
                 limit = self.return_stack.pop()
@@ -1124,7 +1348,8 @@ class ForthExecutor:
 
             if token_upper == "+LOOP":
                 if len(self.return_stack) < 3 or not self.stack:
-                    i += 1; continue
+                    i += 1
+                    continue
                 step = self.stack.pop()
                 loop_start = self.return_stack.pop()
                 index = self.return_stack.pop()
@@ -1141,64 +1366,84 @@ class ForthExecutor:
             if token_upper == "LEAVE":
                 # Skip to matching LOOP/+LOOP
                 if len(self.return_stack) >= 3:
-                    self.return_stack.pop(); self.return_stack.pop(); self.return_stack.pop()
-                depth3 = 1; advance = i + 1
+                    self.return_stack.pop()
+                    self.return_stack.pop()
+                    self.return_stack.pop()
+                depth3 = 1
+                advance = i + 1
                 while advance < len(tokens):
                     t = tokens[advance].upper()
-                    if t in ("DO", "?DO"): depth3 += 1
+                    if t in ("DO", "?DO"):
+                        depth3 += 1
                     elif t in ("LOOP", "+LOOP"):
                         depth3 -= 1
-                        if depth3 == 0: break
+                        if depth3 == 0:
+                            break
                     advance += 1
-                i = advance + 1; continue
+                i = advance + 1
+                continue
 
             if token_upper == "I":
-                if len(self.return_stack) >= 2: self.stack.append(self.return_stack[-2])
-                else: self.interpreter.log_output("❌ I outside DO loop")
-                i += 1; continue
+                if len(self.return_stack) >= 2:
+                    self.stack.append(self.return_stack[-2])
+                else:
+                    self.interpreter.log_output("❌ I outside DO loop")
+                i += 1
+                continue
 
             if token_upper == "J":
-                if len(self.return_stack) >= 5: self.stack.append(self.return_stack[-5])
-                else: self.interpreter.log_output("❌ J: no outer loop")
-                i += 1; continue
+                if len(self.return_stack) >= 5:
+                    self.stack.append(self.return_stack[-5])
+                else:
+                    self.interpreter.log_output("❌ J: no outer loop")
+                i += 1
+                continue
 
             # ── BEGIN / UNTIL / WHILE / REPEAT / AGAIN ────────────────────
             if token_upper == "BEGIN":
                 self.return_stack.append(i)  # save BEGIN position
-                i += 1; continue
+                i += 1
+                continue
 
             if token_upper == "AGAIN":
                 if self.return_stack:
                     i = self.return_stack[-1] + 1
-                else: i += 1
+                else:
+                    i += 1
                 continue
 
             if token_upper == "UNTIL":
                 if not self.stack or not self.return_stack:
-                    i += 1; continue
+                    i += 1
+                    continue
                 cond = self.stack.pop()
                 if cond == 0:
                     i = self.return_stack[-1] + 1  # loop back
                 else:
-                    self.return_stack.pop()          # exit loop
+                    self.return_stack.pop()  # exit loop
                     i += 1
                 continue
 
             if token_upper == "WHILE":
                 if not self.stack:
-                    i += 1; continue
+                    i += 1
+                    continue
                 cond = self.stack.pop()
                 if cond == 0:
                     # Exit: skip to REPEAT
-                    depth4 = 1; advance = i + 1
+                    depth4 = 1
+                    advance = i + 1
                     while advance < len(tokens):
                         t = tokens[advance].upper()
-                        if t == "BEGIN": depth4 += 1
+                        if t == "BEGIN":
+                            depth4 += 1
                         elif t == "REPEAT":
                             depth4 -= 1
-                            if depth4 == 0: break
+                            if depth4 == 0:
+                                break
                         advance += 1
-                    if self.return_stack: self.return_stack.pop()
+                    if self.return_stack:
+                        self.return_stack.pop()
                     i = advance + 1
                 else:
                     i += 1
@@ -1207,7 +1452,8 @@ class ForthExecutor:
             if token_upper == "REPEAT":
                 if self.return_stack:
                     i = self.return_stack[-1] + 1  # back to BEGIN
-                else: i += 1
+                else:
+                    i += 1
                 continue
 
             # ── EXIT (leave current word) ─────────────────────────────────
@@ -1221,32 +1467,38 @@ class ForthExecutor:
                     self.output_buffer += inner[:-1]
                 else:
                     self.output_buffer += inner + " "
-                i += 1; continue
+                i += 1
+                continue
 
             # ── S" ... " (push addr, len) ─────────────────────────────────
             if token_upper.startswith('S"'):
                 inner = token[2:]
-                if inner.endswith('"'): inner = inner[:-1]
+                if inner.endswith('"'):
+                    inner = inner[:-1]
                 addr = self.here
                 for c in inner:
                     if self.here < len(self.memory):
-                        self.memory[self.here] = ord(c); self.here += 1
+                        self.memory[self.here] = ord(c)
+                        self.here += 1
                 self.stack += [addr, len(inner)]
-                i += 1; continue
+                i += 1
+                continue
 
             # ── Floating-point literal (e.g. 3.14  -1.5e10) ──────────────
             try:
                 if "." in token or "e" in token.lower():
                     fval = float(token)
                     self.fstack.append(fval)
-                    i += 1; continue
+                    i += 1
+                    continue
             except ValueError:
                 pass
 
             # ── Dictionary lookup ─────────────────────────────────────────
             if token_upper in self.dictionary:
                 self.dictionary[token_upper]()
-                i += 1; continue
+                i += 1
+                continue
 
             # ── Integer literal ───────────────────────────────────────────
             try:
@@ -1259,21 +1511,28 @@ class ForthExecutor:
                 else:
                     val = int(token)
                 self.stack.append(val)
-                i += 1; continue
+                i += 1
+                continue
             except ValueError:
                 pass
 
             # ── Hex literal with $ prefix ─────────────────────────────────
             if token.startswith("$"):
                 try:
-                    self.stack.append(int(token[1:], 16)); i += 1; continue
-                except ValueError: pass
+                    self.stack.append(int(token[1:], 16))
+                    i += 1
+                    continue
+                except ValueError:
+                    pass
 
             # ── Binary literal with % prefix ─────────────────────────────
             if token.startswith("%"):
                 try:
-                    self.stack.append(int(token[1:], 2)); i += 1; continue
-                except ValueError: pass
+                    self.stack.append(int(token[1:], 2))
+                    i += 1
+                    continue
+                except ValueError:
+                    pass
 
             self.interpreter.log_output(f"❌ Unknown word: {token}")
             i += 1

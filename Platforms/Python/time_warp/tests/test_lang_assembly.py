@@ -1,6 +1,5 @@
 """Comprehensive tests for the Assembly language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors, first_error
@@ -128,9 +127,7 @@ class TestConditionalJumps:
 
 class TestJmp:
     def test_jmp(self):
-        out = asm(
-            'JMP skip\nPRINT "skipped"\nskip:\nPRINT "reached"\nHALT'
-        )
+        out = asm('JMP skip\nPRINT "skipped"\nskip:\nPRINT "reached"\nHALT')
         assert has(out, "reached") and not has(out, "skipped")
 
 
@@ -159,10 +156,7 @@ class TestStack:
 
 class TestSubroutines:
     def test_call_ret(self):
-        out = asm(
-            "CALL sub\nPRINT R0\nHALT\n"
-            "sub:\nMOV R0, 99\nRET"
-        )
+        out = asm("CALL sub\nPRINT R0\nHALT\n" "sub:\nMOV R0, 99\nRET")
         assert has(out, "99")
 
 
@@ -267,7 +261,7 @@ class TestDataLabels:
     """Regression: data labels without colons plus DB/DW strings."""
 
     def test_db_string_and_prints(self):
-        src = "section .data\nmsg DB \"Hello\",0\nsection .text\nPRINTS msg\nHALT"
+        src = 'section .data\nmsg DB "Hello",0\nsection .text\nPRINTS msg\nHALT'
         out = asm(src)
         assert no_errors(out)
         assert has(out, "Hello")

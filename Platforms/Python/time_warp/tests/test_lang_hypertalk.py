@@ -1,6 +1,5 @@
 """Comprehensive tests for the HyperTalk language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors
@@ -43,7 +42,7 @@ class TestOutput:
 
 class TestVariables:
     def test_put_into(self):
-        out = ht('put 42 into x\nanswer x')
+        out = ht("put 42 into x\nanswer x")
         assert has(out, "42")
 
     def test_put_string(self):
@@ -128,11 +127,15 @@ class TestRepeat:
         assert has(out, "1") and has(out, "3")
 
     def test_repeat_while(self):
-        out = ht("put 0 into i\nrepeat while i < 3\n  answer i\n  put i + 1 into i\nend repeat")
+        out = ht(
+            "put 0 into i\nrepeat while i < 3\n  answer i\n  put i + 1 into i\nend repeat"
+        )
         assert has(out, "0") and has(out, "2")
 
     def test_repeat_until(self):
-        out = ht("put 0 into i\nrepeat until i >= 3\n  answer i\n  put i + 1 into i\nend repeat")
+        out = ht(
+            "put 0 into i\nrepeat until i >= 3\n  answer i\n  put i + 1 into i\nend repeat"
+        )
         assert has(out, "0") and has(out, "2")
 
 
@@ -143,17 +146,11 @@ class TestRepeat:
 
 class TestHandlers:
     def test_handler(self):
-        out = ht(
-            'on greet\n  answer "hello"\nend greet\n'
-            "greet"
-        )
+        out = ht('on greet\n  answer "hello"\nend greet\n' "greet")
         assert has(out, "hello")
 
     def test_handler_with_param(self):
-        out = ht(
-            "on double n\n  answer n * 2\nend double\n"
-            "double 5"
-        )
+        out = ht("on double n\n  answer n * 2\nend double\n" "double 5")
         assert has(out, "10")
 
 

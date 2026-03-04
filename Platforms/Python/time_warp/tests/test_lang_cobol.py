@@ -1,6 +1,5 @@
 """Comprehensive tests for the COBOL language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors
@@ -28,10 +27,7 @@ class TestDisplay:
         assert has(out, "42")
 
     def test_display_variable(self):
-        out = cob(
-            '01 WS-NAME PIC X(10) VALUE "Alice".\n'
-            "DISPLAY WS-NAME."
-        )
+        out = cob('01 WS-NAME PIC X(10) VALUE "Alice".\n' "DISPLAY WS-NAME.")
         assert has(out, "Alice")
 
     def test_display_multiple(self):
@@ -46,24 +42,15 @@ class TestDisplay:
 
 class TestDataDeclarations:
     def test_pic_x(self):
-        out = cob(
-            '01 WS-STR PIC X(5) VALUE "Hello".\n'
-            "DISPLAY WS-STR."
-        )
+        out = cob('01 WS-STR PIC X(5) VALUE "Hello".\n' "DISPLAY WS-STR.")
         assert has(out, "Hello")
 
     def test_pic_9(self):
-        out = cob(
-            "01 WS-NUM PIC 9(3) VALUE 42.\n"
-            "DISPLAY WS-NUM."
-        )
+        out = cob("01 WS-NUM PIC 9(3) VALUE 42.\n" "DISPLAY WS-NUM.")
         assert has(out, "42")
 
     def test_pic_sv9(self):
-        out = cob(
-            "01 WS-DEC PIC 9V99 VALUE 3.14.\n"
-            "DISPLAY WS-DEC."
-        )
+        out = cob("01 WS-DEC PIC 9V99 VALUE 3.14.\n" "DISPLAY WS-DEC.")
         assert no_errors(out)
 
 
@@ -74,19 +61,11 @@ class TestDataDeclarations:
 
 class TestMove:
     def test_move_literal(self):
-        out = cob(
-            "01 WS-X PIC 9(3).\n"
-            "MOVE 42 TO WS-X.\n"
-            "DISPLAY WS-X."
-        )
+        out = cob("01 WS-X PIC 9(3).\n" "MOVE 42 TO WS-X.\n" "DISPLAY WS-X.")
         assert has(out, "42")
 
     def test_move_string(self):
-        out = cob(
-            '01 WS-S PIC X(10).\n'
-            'MOVE "Hello" TO WS-S.\n'
-            "DISPLAY WS-S."
-        )
+        out = cob("01 WS-S PIC X(10).\n" 'MOVE "Hello" TO WS-S.\n' "DISPLAY WS-S.")
         assert has(out, "Hello")
 
     def test_move_variable(self):
@@ -146,19 +125,11 @@ class TestArithmetic:
         assert has(out, "5")
 
     def test_compute(self):
-        out = cob(
-            "01 WS-X PIC 9(3).\n"
-            "COMPUTE WS-X = 2 + 3 * 4.\n"
-            "DISPLAY WS-X."
-        )
+        out = cob("01 WS-X PIC 9(3).\n" "COMPUTE WS-X = 2 + 3 * 4.\n" "DISPLAY WS-X.")
         assert no_errors(out)
 
     def test_add_simple(self):
-        out = cob(
-            "01 WS-A PIC 9(3) VALUE 10.\n"
-            "ADD 5 TO WS-A.\n"
-            "DISPLAY WS-A."
-        )
+        out = cob("01 WS-A PIC 9(3) VALUE 10.\n" "ADD 5 TO WS-A.\n" "DISPLAY WS-A.")
         assert has(out, "15")
 
 
@@ -169,10 +140,7 @@ class TestArithmetic:
 
 class TestConditional:
     def test_if_true(self):
-        out = cob(
-            "01 WS-X PIC 9(3) VALUE 5.\n"
-            'IF WS-X > 3\n  DISPLAY "yes"\nEND-IF.'
-        )
+        out = cob("01 WS-X PIC 9(3) VALUE 5.\n" 'IF WS-X > 3\n  DISPLAY "yes"\nEND-IF.')
         assert has(out, "yes")
 
     def test_if_else(self):
@@ -214,10 +182,7 @@ class TestPerform:
         assert has(out, "1") and has(out, "3")
 
     def test_perform_paragraph(self):
-        out = cob(
-            "PERFORM SHOW-MSG.\nSTOP RUN.\n"
-            'SHOW-MSG.\n  DISPLAY "hello".'
-        )
+        out = cob("PERFORM SHOW-MSG.\nSTOP RUN.\n" 'SHOW-MSG.\n  DISPLAY "hello".')
         assert has(out, "hello")
 
 

@@ -1,6 +1,5 @@
 """Comprehensive tests for the C language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors
@@ -13,13 +12,7 @@ L = Language.C
 
 def c(body: str, **kw) -> list[str]:
     """Wrap *body* in a minimal C main() and execute."""
-    source = (
-        "#include <stdio.h>\n"
-        "int main() {\n"
-        f"{body}\n"
-        "return 0;\n"
-        "}"
-    )
+    source = "#include <stdio.h>\n" "int main() {\n" f"{body}\n" "return 0;\n" "}"
     return run(source, L, **kw)
 
 
@@ -153,41 +146,26 @@ class TestIfElse:
     """if/else control flow."""
 
     def test_if_true(self):
-        out = c(
-            'int x = 1;\n'
-            'if (x == 1) {\n'
-            '    printf("yes\\n");\n'
-            '}'
-        )
+        out = c("int x = 1;\n" "if (x == 1) {\n" '    printf("yes\\n");\n' "}")
         assert has(out, "yes")
 
     def test_if_false(self):
-        out = c(
-            'int x = 0;\n'
-            'if (x == 1) {\n'
-            '    printf("yes\\n");\n'
-            '}'
-        )
+        out = c("int x = 0;\n" "if (x == 1) {\n" '    printf("yes\\n");\n' "}")
         assert not has(out, "yes")
 
     def test_if_else(self):
         out = c(
-            'int x = 0;\n'
-            'if (x == 1) {\n'
+            "int x = 0;\n"
+            "if (x == 1) {\n"
             '    printf("yes\\n");\n'
-            '} else {\n'
+            "} else {\n"
             '    printf("no\\n");\n'
-            '}'
+            "}"
         )
         assert has(out, "no")
 
     def test_if_greater_than(self):
-        out = c(
-            'int x = 10;\n'
-            'if (x > 5) {\n'
-            '    printf("big\\n");\n'
-            '}'
-        )
+        out = c("int x = 10;\n" "if (x > 5) {\n" '    printf("big\\n");\n' "}")
         assert has(out, "big")
 
 
@@ -201,21 +179,21 @@ class TestWhile:
 
     def test_while_loop(self):
         out = c(
-            'int i = 0;\n'
-            'while (i < 3) {\n'
+            "int i = 0;\n"
+            "while (i < 3) {\n"
             '    printf("%d\\n", i);\n'
-            '    i++;\n'
-            '}'
+            "    i++;\n"
+            "}"
         )
         assert has(out, "0", "1", "2")
 
     def test_while_false_skip(self):
         out = c(
-            'int i = 10;\n'
-            'while (i < 3) {\n'
+            "int i = 10;\n"
+            "while (i < 3) {\n"
             '    printf("loop\\n");\n'
-            '    i++;\n'
-            '}\n'
+            "    i++;\n"
+            "}\n"
             'printf("done\\n");'
         )
         assert has(out, "done")
@@ -231,19 +209,15 @@ class TestFor:
     """for loop."""
 
     def test_for_loop(self):
-        out = c(
-            'for (int i = 0; i < 3; i++) {\n'
-            '    printf("%d\\n", i);\n'
-            '}'
-        )
+        out = c("for (int i = 0; i < 3; i++) {\n" '    printf("%d\\n", i);\n' "}")
         assert has(out, "0", "1", "2")
 
     def test_for_loop_step(self):
         out = c(
-            'int i;\n'
-            'for (i = 0; i < 10; i = i + 3) {\n'
+            "int i;\n"
+            "for (i = 0; i < 10; i = i + 3) {\n"
             '    printf("%d\\n", i);\n'
-            '}'
+            "}"
         )
         assert has(out, "0", "3", "6", "9")
 
@@ -258,21 +232,21 @@ class TestDoWhile:
 
     def test_do_while(self):
         out = c(
-            'int i = 0;\n'
-            'do {\n'
+            "int i = 0;\n"
+            "do {\n"
             '    printf("%d\\n", i);\n'
-            '    i++;\n'
-            '} while (i < 3);'
+            "    i++;\n"
+            "} while (i < 3);"
         )
         assert has(out, "0", "1", "2")
 
     def test_do_while_runs_once(self):
         out = c(
-            'int i = 10;\n'
-            'do {\n'
+            "int i = 10;\n"
+            "do {\n"
             '    printf("once\\n");\n'
-            '    i++;\n'
-            '} while (i < 3);'
+            "    i++;\n"
+            "} while (i < 3);"
         )
         assert has(out, "once")
 
@@ -287,14 +261,14 @@ class TestBreakContinue:
 
     def test_break(self):
         out = c(
-            'int i = 0;\n'
-            'while (i < 10) {\n'
-            '    if (i == 3) {\n'
-            '        break;\n'
-            '    }\n'
+            "int i = 0;\n"
+            "while (i < 10) {\n"
+            "    if (i == 3) {\n"
+            "        break;\n"
+            "    }\n"
             '    printf("%d\\n", i);\n'
-            '    i++;\n'
-            '}'
+            "    i++;\n"
+            "}"
         )
         assert has(out, "0", "1", "2")
         assert not has(out, "3")
@@ -371,7 +345,7 @@ class TestStdlib:
 
     def test_malloc_free(self):
         """malloc/free are simulated – just no errors."""
-        out = c('int x = malloc(100);\nfree(x);')
+        out = c("int x = malloc(100);\nfree(x);")
         assert no_errors(out) or len(out) == 0
 
 
@@ -396,17 +370,13 @@ class TestStringH:
         assert no_errors(out)  # Should be non-zero
 
     def test_strcpy(self):
-        src = (
-            'char dest[20];\n'
-            'strcpy(dest, "hello");\n'
-            'printf("%s\\n", dest);'
-        )
+        src = "char dest[20];\n" 'strcpy(dest, "hello");\n' 'printf("%s\\n", dest);'
         out = c(src)
         assert has(out, "hello")
 
     def test_strcat(self):
         src = (
-            'char dest[20];\n'
+            "char dest[20];\n"
             'strcpy(dest, "hello");\n'
             'strcat(dest, " world");\n'
             'printf("%s\\n", dest);'
@@ -419,11 +389,7 @@ class TestStringH:
         assert has(out, "0")
 
     def test_memset(self):
-        src = (
-            'char buf[10];\n'
-            'memset(buf, 65, 5);\n'
-            'printf("%s\\n", buf);'
-        )
+        src = "char buf[10];\n" "memset(buf, 65, 5);\n" 'printf("%s\\n", buf);'
         out = c(src)
         assert has(out, "AAAAA")
 
@@ -488,24 +454,24 @@ class TestComments:
 
     def test_block_comment(self):
         src = (
-            '#include <stdio.h>\n'
-            '/* block comment */\n'
-            'int main() {\n'
+            "#include <stdio.h>\n"
+            "/* block comment */\n"
+            "int main() {\n"
             'printf("ok\\n");\n'
-            'return 0;\n'
-            '}'
+            "return 0;\n"
+            "}"
         )
         out = run(src, L)
         assert has(out, "ok")
 
     def test_include_ignored(self):
         src = (
-            '#include <stdio.h>\n'
-            '#include <stdlib.h>\n'
-            'int main() {\n'
+            "#include <stdio.h>\n"
+            "#include <stdlib.h>\n"
+            "int main() {\n"
             'printf("ok\\n");\n'
-            'return 0;\n'
-            '}'
+            "return 0;\n"
+            "}"
         )
         out = run(src, L)
         assert has(out, "ok")
@@ -524,7 +490,7 @@ class TestReturn:
         assert has(out, "before")
 
     def test_return_with_value(self):
-        out = c('return 42;')
+        out = c("return 42;")
         assert no_errors(out) or len(out) == 0
 
 
@@ -567,13 +533,13 @@ class TestCharArrays:
 
     def test_char_array_init(self):
         src = (
-            '#include <stdio.h>\n'
-            'int main() {\n'
-            'char name[20];\n'
+            "#include <stdio.h>\n"
+            "int main() {\n"
+            "char name[20];\n"
             'strcpy(name, "World");\n'
             'printf("Hello %s\\n", name);\n'
-            'return 0;\n'
-            '}'
+            "return 0;\n"
+            "}"
         )
         out = run(src, L)
         assert has(out, "Hello World")
@@ -589,26 +555,26 @@ class TestNestedFlow:
 
     def test_if_inside_while(self):
         out = c(
-            'int i = 0;\n'
-            'while (i < 5) {\n'
-            '    if (i == 2) {\n'
+            "int i = 0;\n"
+            "while (i < 5) {\n"
+            "    if (i == 2) {\n"
             '        printf("found\\n");\n'
-            '    }\n'
-            '    i++;\n'
-            '}'
+            "    }\n"
+            "    i++;\n"
+            "}"
         )
         assert has(out, "found")
 
     def test_while_inside_if(self):
         out = c(
-            'int x = 1;\n'
-            'if (x == 1) {\n'
-            '    int i = 0;\n'
-            '    while (i < 2) {\n'
+            "int x = 1;\n"
+            "if (x == 1) {\n"
+            "    int i = 0;\n"
+            "    while (i < 2) {\n"
             '        printf("%d\\n", i);\n'
-            '        i++;\n'
-            '    }\n'
-            '}'
+            "        i++;\n"
+            "    }\n"
+            "}"
         )
         assert has(out, "0", "1")
 
@@ -622,7 +588,7 @@ class TestEdgeCases:
     """Edge cases and error handling."""
 
     def test_empty_main(self):
-        src = '#include <stdio.h>\nint main() {\nreturn 0;\n}'
+        src = "#include <stdio.h>\nint main() {\nreturn 0;\n}"
         out = run(src, L)
         assert no_errors(out) or len(out) == 0
 
@@ -632,12 +598,7 @@ class TestEdgeCases:
         assert no_errors(out) or len(out) == 0
 
     def test_multiple_declarations(self):
-        out = c(
-            'int a = 1;\n'
-            'int b = 2;\n'
-            'int c = a + b;\n'
-            'printf("%d\\n", c);'
-        )
+        out = c("int a = 1;\n" "int b = 2;\n" "int c = a + b;\n" 'printf("%d\\n", c);')
         assert has(out, "3")
 
     def test_semicolons_ignored(self):
@@ -655,11 +616,15 @@ class TestSwitchCase:
     """switch/case control flow."""
 
     def test_switch_matches_case(self):
-        out = c('int x = 2;\nswitch (x) {\ncase 1: printf("one\\n"); break;\ncase 2: printf("two\\n"); break;\ndefault: printf("other\\n"); break;\n}')
+        out = c(
+            'int x = 2;\nswitch (x) {\ncase 1: printf("one\\n"); break;\ncase 2: printf("two\\n"); break;\ndefault: printf("other\\n"); break;\n}'
+        )
         assert has(out, "two")
 
     def test_switch_default(self):
-        out = c('int x = 9;\nswitch (x) {\ncase 1: printf("one\\n"); break;\ndefault: printf("default\\n"); break;\n}')
+        out = c(
+            'int x = 9;\nswitch (x) {\ncase 1: printf("one\\n"); break;\ndefault: printf("default\\n"); break;\n}'
+        )
         assert has(out, "default")
 
 
@@ -689,11 +654,15 @@ class TestArrays:
     """C array declarations and element access."""
 
     def test_array_declare_and_set(self):
-        out = c('int a[3];\na[0] = 10;\na[1] = 20;\na[2] = 30;\nprintf("%d %d %d\\n", a[0], a[1], a[2]);')
+        out = c(
+            'int a[3];\na[0] = 10;\na[1] = 20;\na[2] = 30;\nprintf("%d %d %d\\n", a[0], a[1], a[2]);'
+        )
         assert has(out, "10", "20", "30")
 
     def test_array_multi_statement(self):
-        out = c('int a[3];\na[0] = 10; a[1] = 20; a[2] = 30;\nprintf("%d %d %d\\n", a[0], a[1], a[2]);')
+        out = c(
+            'int a[3];\na[0] = 10; a[1] = 20; a[2] = 30;\nprintf("%d %d %d\\n", a[0], a[1], a[2]);'
+        )
         assert has(out, "10", "20", "30")
 
 

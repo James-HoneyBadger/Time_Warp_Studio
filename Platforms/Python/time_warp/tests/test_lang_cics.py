@@ -1,6 +1,5 @@
 """Comprehensive tests for the CICS language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, ok, has, no_errors
@@ -29,8 +28,7 @@ class TestDisplay:
 
     def test_display_variable(self):
         out = cics(
-            "       01 WS-NAME PIC X(10) VALUE 'Alice'.\n"
-            "       DISPLAY WS-NAME."
+            "       01 WS-NAME PIC X(10) VALUE 'Alice'.\n" "       DISPLAY WS-NAME."
         )
         assert has(out, "Alice")
 
@@ -77,16 +75,12 @@ class TestMove:
 class TestDataDeclarations:
     def test_pic_x(self):
         out = cics(
-            "       01 WS-STR PIC X(5) VALUE 'Hello'.\n"
-            "       DISPLAY WS-STR."
+            "       01 WS-STR PIC X(5) VALUE 'Hello'.\n" "       DISPLAY WS-STR."
         )
         assert has(out, "Hello")
 
     def test_pic_9(self):
-        out = cics(
-            "       01 WS-NUM PIC 9(3) VALUE 42.\n"
-            "       DISPLAY WS-NUM."
-        )
+        out = cics("       01 WS-NUM PIC 9(3) VALUE 42.\n" "       DISPLAY WS-NUM.")
         assert has(out, "42")
 
 
@@ -106,7 +100,9 @@ class TestPerform:
         assert has(out, "hello")
 
     def test_perform_times(self):
-        out = cics("       PERFORM 3 TIMES\n           DISPLAY 'X'\n       END-PERFORM.")
+        out = cics(
+            "       PERFORM 3 TIMES\n           DISPLAY 'X'\n       END-PERFORM."
+        )
         assert has(out, "X")
 
 
@@ -200,10 +196,7 @@ class TestConditionals:
 
 class TestBanner:
     def test_program_produces_output(self):
-        out = cics(
-            "       DISPLAY 'Hello CICS'.\n"
-            "       EXEC CICS RETURN END-EXEC."
-        )
+        out = cics("       DISPLAY 'Hello CICS'.\n" "       EXEC CICS RETURN END-EXEC.")
         # CICS programs typically produce banner output
         assert len(out) > 0
 

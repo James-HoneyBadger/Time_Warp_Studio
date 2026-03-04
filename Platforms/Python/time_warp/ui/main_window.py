@@ -419,7 +419,9 @@ class MainWindow(QMainWindow):
         # Gather content
         editor = self.get_current_editor()
         code_text = editor.toPlainText() if editor else ""
-        output_text = self.output.toPlainText() if hasattr(self.output, "toPlainText") else ""
+        output_text = (
+            self.output.toPlainText() if hasattr(self.output, "toPlainText") else ""
+        )
 
         # Detect language label
         lang_name = "Unknown"
@@ -428,6 +430,7 @@ class MainWindow(QMainWindow):
 
         import datetime
         import html as _html
+
         timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
         def _esc(s: str) -> str:
@@ -621,7 +624,9 @@ class MainWindow(QMainWindow):
                 parent = QTreeWidgetItem(tree, [lang_name, ""])
                 parent.setExpanded(True)
                 lang_nodes[lang_name] = parent
-            item = QTreeWidgetItem(lang_nodes[lang_name], [ex.title, ex.difficulty.value])
+            item = QTreeWidgetItem(
+                lang_nodes[lang_name], [ex.title, ex.difficulty.value]
+            )
             item.setData(0, Qt.UserRole, ex)
         splitter.addWidget(tree)
 
@@ -631,8 +636,14 @@ class MainWindow(QMainWindow):
         splitter.setSizes([260, 440])
         layout.addWidget(splitter)
 
-        from PySide6.QtWidgets import QDialogButtonBox  # noqa: F811  # type: ignore[attr-defined]
-        btns = QDialogButtonBox(QDialogButtonBox.StandardButton.Open | QDialogButtonBox.StandardButton.Cancel)
+        from PySide6.QtWidgets import (
+            QDialogButtonBox,
+        )  # noqa: F811  # type: ignore[attr-defined]
+
+        btns = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Open
+            | QDialogButtonBox.StandardButton.Cancel
+        )
         btns.accepted.connect(dlg.accept)
         btns.rejected.connect(dlg.reject)
         layout.addWidget(btns)
@@ -712,8 +723,12 @@ class MainWindow(QMainWindow):
         layout.addWidget(close_btns)
 
         def _run_comparison():
-            l1 = Language.__members__.get(lang1_combo.currentText().upper(), Language.BASIC)
-            l2 = Language.__members__.get(lang2_combo.currentText().upper(), Language.BASIC)
+            l1 = Language.__members__.get(
+                lang1_combo.currentText().upper(), Language.BASIC
+            )
+            l2 = Language.__members__.get(
+                lang2_combo.currentText().upper(), Language.BASIC
+            )
             try:
                 from ..core.interpreter import Interpreter as _Interp
                 from ..graphics.turtle_state import TurtleState as _TS
@@ -1620,7 +1635,9 @@ class MainWindow(QMainWindow):
         self._minimap_action = QAction("🗺 Show &Minimap", self)
         self._minimap_action.setCheckable(True)
         self._minimap_action.setChecked(False)
-        self._minimap_action.setStatusTip("Toggle the code minimap on the right edge of the editor")
+        self._minimap_action.setStatusTip(
+            "Toggle the code minimap on the right edge of the editor"
+        )
         self._minimap_action.triggered.connect(self._toggle_minimap)
         view_menu.addAction(self._minimap_action)
 
@@ -1827,7 +1844,9 @@ class MainWindow(QMainWindow):
         # Run button with history dropdown
         self._run_tool_btn = QToolButton()
         self._run_tool_btn.setText("🚀 Run")
-        self._run_tool_btn.setToolTip("Run the current program (Ctrl+R)\nClick ▼ for run history")
+        self._run_tool_btn.setToolTip(
+            "Run the current program (Ctrl+R)\nClick ▼ for run history"
+        )
         self._run_tool_btn.setStatusTip("Execute the code in the current editor")
         self._run_tool_btn.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
         self._run_tool_btn.setStyleSheet("""
@@ -1947,12 +1966,28 @@ class MainWindow(QMainWindow):
 
     # Language name → status-bar emoji
     _LANG_EMOJI: dict = {
-        "Logo": "🐢", "BASIC": "🔢", "PILOT": "✈️", "Pascal": "🏗️",
-        "Forth": "📚", "C": "⚙️", "Prolog": "🧠", "Haskell": "λ",
-        "APL": "∇", "Lua": "🌙", "Scheme": "λ", "COBOL": "🏢",
-        "Brainfuck": "🧨", "Assembly": "🔩", "JavaScript": "🌐",
-        "Fortran": "🔬", "REXX": "📜", "Smalltalk": "💬",
-        "HyperTalk": "💡", "SQL": "🗄", "JCL": "🖨️", "CICS": "🖥",
+        "Logo": "🐢",
+        "BASIC": "🔢",
+        "PILOT": "✈️",
+        "Pascal": "🏗️",
+        "Forth": "📚",
+        "C": "⚙️",
+        "Prolog": "🧠",
+        "Haskell": "λ",
+        "APL": "∇",
+        "Lua": "🌙",
+        "Scheme": "λ",
+        "COBOL": "🏢",
+        "Brainfuck": "🧨",
+        "Assembly": "🔩",
+        "JavaScript": "🌐",
+        "Fortran": "🔬",
+        "REXX": "📜",
+        "Smalltalk": "💬",
+        "HyperTalk": "💡",
+        "SQL": "🗄",
+        "JCL": "🖨️",
+        "CICS": "🖥",
         "SQR": "📊",
     }
 
@@ -2375,6 +2410,7 @@ class MainWindow(QMainWindow):
         """Handle execution errors for AI assistance and editor navigation."""
         # Parse line number from error message (e.g. 'line 5', 'Line 5:', 'at line 5')
         import re as _re
+
         line_match = _re.search(r"(?:line|Line)\s+(\d+)", error)
         if line_match:
             err_line = int(line_match.group(1))
@@ -3646,17 +3682,24 @@ class MainWindow(QMainWindow):
             if hasattr(self, "breadcrumb_label"):
                 current_idx = self.editor_tabs.currentIndex()
                 lang = self.tab_languages.get(current_idx, Language.BASIC)
-                lang_name = lang.friendly_name() if hasattr(lang, "friendly_name") else str(lang)
+                lang_name = (
+                    lang.friendly_name()
+                    if hasattr(lang, "friendly_name")
+                    else str(lang)
+                )
                 # Find nearest function/procedure name above cursor
                 context = self._get_cursor_context(editor, cursor)
                 if context:
-                    self.breadcrumb_label.setText(f"{lang_name}  ›  {context}  ›  Ln {line}")
+                    self.breadcrumb_label.setText(
+                        f"{lang_name}  ›  {context}  ›  Ln {line}"
+                    )
                 else:
                     self.breadcrumb_label.setText(f"{lang_name}  ›  Ln {line}")
 
     def _get_cursor_context(self, editor, cursor) -> str:
         """Return the name of the nearest function/procedure above the cursor."""
         import re as _re
+
         patterns = [
             r"^\s*(?:def|function|sub|procedure|to|subroutine)\s+([A-Za-z_][A-Za-z0-9_]*)",
         ]
@@ -4163,7 +4206,9 @@ class MainWindow(QMainWindow):
                 break
 
         layout.addWidget(combo)
-        buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         buttons.accepted.connect(dlg.accept)
         buttons.rejected.connect(dlg.reject)
         layout.addWidget(buttons)
@@ -4257,7 +4302,11 @@ class MainWindow(QMainWindow):
 
     def _save_run_history(self, code: str, language: Language):
         """Save a run to the history list and persist to QSettings."""
-        lang_name = language.friendly_name() if hasattr(language, "friendly_name") else str(language)
+        lang_name = (
+            language.friendly_name()
+            if hasattr(language, "friendly_name")
+            else str(language)
+        )
         first_line = code.split("\n", 1)[0].strip()
         entry = {
             "snippet": first_line or code[:60],
@@ -4332,12 +4381,12 @@ class MainWindow(QMainWindow):
         preview.setReadOnly(True)
         preview.setFont(QFont("Courier New", 11))
         _SAMPLE = (
-            'REM Time Warp Studio — Theme Preview\n'
+            "REM Time Warp Studio — Theme Preview\n"
             '10 LET greeting$ = "Hello, World!"\n'
-            '20 FOR I = 1 TO 5\n'
+            "20 FOR I = 1 TO 5\n"
             '30   PRINT I; ") "; greeting$\n'
-            '40 NEXT I\n'
-            '50 END\n'
+            "40 NEXT I\n"
+            "50 END\n"
         )
         preview.setPlainText(_SAMPLE)
         layout.addWidget(preview)
@@ -4367,7 +4416,8 @@ class MainWindow(QMainWindow):
                 break
 
         buttons = QDialogButtonBox(
-            QDialogButtonBox.StandardButton.Apply | QDialogButtonBox.StandardButton.Close
+            QDialogButtonBox.StandardButton.Apply
+            | QDialogButtonBox.StandardButton.Close
         )
         buttons.button(QDialogButtonBox.StandardButton.Apply).clicked.connect(on_apply)
         buttons.rejected.connect(dlg.reject)
@@ -4426,7 +4476,9 @@ class MainWindow(QMainWindow):
             if not block.isValid():
                 continue
             cursor = QTextCursor(block)
-            cursor.movePosition(QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.KeepAnchor)
+            cursor.movePosition(
+                QTextCursor.MoveOperation.EndOfLine, QTextCursor.MoveMode.KeepAnchor
+            )
 
             fmt = QTextCharFormat()
             fmt.setUnderlineStyle(QTextCharFormat.UnderlineStyle.WaveUnderline)
@@ -4450,4 +4502,3 @@ class MainWindow(QMainWindow):
         else:
             self._coach_marks = CoachMarkManager(self)
             self._coach_marks.start(force=True)
-

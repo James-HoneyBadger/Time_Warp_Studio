@@ -1,6 +1,5 @@
 """Comprehensive tests for the Python language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, first_error
@@ -250,7 +249,9 @@ class TestControlFlow:
         assert has(out, "no")
 
     def test_elif(self):
-        out = py('x = 2\nif x == 1:\n    print("one")\nelif x == 2:\n    print("two")\nelse:\n    print("other")')
+        out = py(
+            'x = 2\nif x == 1:\n    print("one")\nelif x == 2:\n    print("two")\nelse:\n    print("other")'
+        )
         assert has(out, "two")
 
     def test_for_range(self):
@@ -293,7 +294,9 @@ class TestFunctions:
         assert has(out, "10")
 
     def test_recursive(self):
-        out = py("def fact(n):\n    return 1 if n <= 1 else n * fact(n-1)\nprint(fact(5))")
+        out = py(
+            "def fact(n):\n    return 1 if n <= 1 else n * fact(n-1)\nprint(fact(5))"
+        )
         assert has(out, "120")
 
     def test_args(self):
@@ -416,12 +419,7 @@ class TestExceptions:
         assert has(out, "caught")
 
     def test_try_finally(self):
-        out = py(
-            "try:\n"
-            "    x = 1\n"
-            "finally:\n"
-            "    print('done')"
-        )
+        out = py("try:\n" "    x = 1\n" "finally:\n" "    print('done')")
         assert has(out, "done")
 
 

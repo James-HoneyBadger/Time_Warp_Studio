@@ -1,6 +1,5 @@
 """Comprehensive tests for the Pascal language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors
@@ -156,9 +155,7 @@ class TestForLoop:
         assert has(out, "3") and has(out, "2") and has(out, "1")
 
     def test_for_block(self):
-        out = pas(
-            "var i: integer;\nfor i := 1 to 2 do\nbegin\nwriteln(i);\nend"
-        )
+        out = pas("var i: integer;\nfor i := 1 to 2 do\nbegin\nwriteln(i);\nend")
         assert has(out, "1") and has(out, "2")
 
 
@@ -214,15 +211,11 @@ class TestCase:
 
 class TestProceduresAndFunctions:
     def test_procedure_call(self):
-        out = pas(
-            "procedure greet;\nbegin\nwriteln('hello');\nend;\ngreet;"
-        )
+        out = pas("procedure greet;\nbegin\nwriteln('hello');\nend;\ngreet;")
         assert has(out, "hello")
 
     def test_procedure_with_param(self):
-        out = pas(
-            "procedure show(n: integer);\nbegin\nwriteln(n);\nend;\nshow(42);"
-        )
+        out = pas("procedure show(n: integer);\nbegin\nwriteln(n);\nend;\nshow(42);")
         assert has(out, "42")
 
     def test_function_return(self):

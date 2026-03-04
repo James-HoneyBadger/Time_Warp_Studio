@@ -1,6 +1,5 @@
 """Comprehensive tests for the PILOT language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors, first_error
@@ -146,14 +145,7 @@ class TestJump:
     """J: unconditional jump to label."""
 
     def test_jump_to_label(self):
-        src = (
-            "T:Start\n"
-            "J:*SKIP\n"
-            "T:Skipped\n"
-            "*SKIP\n"
-            "T:End\n"
-            "E:"
-        )
+        src = "T:Start\n" "J:*SKIP\n" "T:Skipped\n" "*SKIP\n" "T:End\n" "E:"
         out = pil(src)
         assert has(out, "Start", "End")
         assert not has(out, "Skipped")
@@ -195,15 +187,7 @@ class TestReturn:
     """S: and R: for subroutine calls and returns."""
 
     def test_subroutine_call_and_return(self):
-        src = (
-            "T:Main\n"
-            "S:*SUB1\n"
-            "T:Back\n"
-            "E:\n"
-            "*SUB1\n"
-            "T:InSub\n"
-            "R:"
-        )
+        src = "T:Main\n" "S:*SUB1\n" "T:Back\n" "E:\n" "*SUB1\n" "T:InSub\n" "R:"
         out = pil(src)
         assert has(out, "Main", "InSub", "Back")
 
@@ -217,14 +201,7 @@ class TestBranch:
     """B: conditional branch (condition=label)."""
 
     def test_branch_true(self):
-        src = (
-            "C:#X = 1\n"
-            "B:#X=*DEST\n"
-            "T:Skipped\n"
-            "*DEST\n"
-            "T:Branched\n"
-            "E:"
-        )
+        src = "C:#X = 1\n" "B:#X=*DEST\n" "T:Skipped\n" "*DEST\n" "T:Branched\n" "E:"
         out = pil(src)
         assert has(out, "Branched")
 

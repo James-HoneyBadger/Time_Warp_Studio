@@ -19,6 +19,7 @@ EXAMPLES = pathlib.Path(__file__).resolve().parents[4] / "Examples"
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
+
 def _load(lang_dir: str, filename: str) -> str:
     """Read an example file and return its contents."""
     path = EXAMPLES / lang_dir / filename
@@ -26,14 +27,16 @@ def _load(lang_dir: str, filename: str) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def _run_demo(lang_dir: str, filename: str, language: Language,
-              input_val: str = "4") -> list[str]:
+def _run_demo(
+    lang_dir: str, filename: str, language: Language, input_val: str = "4"
+) -> list[str]:
     """Load and run a demo program, returning output lines."""
     source = _load(lang_dir, filename)
     return run(source, language, input_val=input_val)
 
 
 # ── BASIC ────────────────────────────────────────────────────────────────────
+
 
 class TestBasicDemo:
     def test_runs(self):
@@ -71,6 +74,7 @@ class TestBasicDemo:
 
 # ── PILOT ────────────────────────────────────────────────────────────────────
 
+
 class TestPilotDemo:
     def test_runs(self):
         out = _run_demo("pilot", "hello.pilot", Language.PILOT, input_val="YES")
@@ -103,6 +107,7 @@ class TestPilotDemo:
 
 # ── Logo ─────────────────────────────────────────────────────────────────────
 
+
 class TestLogoDemo:
     def test_runs(self):
         out = _run_demo("logo", "hello.logo", Language.LOGO)
@@ -130,6 +135,7 @@ class TestLogoDemo:
 
 
 # ── C ────────────────────────────────────────────────────────────────────────
+
 
 class TestCDemo:
     def test_runs(self):
@@ -167,6 +173,7 @@ class TestCDemo:
 
 # ── Pascal ───────────────────────────────────────────────────────────────────
 
+
 class TestPascalDemo:
     def test_runs(self):
         out = _run_demo("pascal", "hello.pas", Language.PASCAL)
@@ -203,6 +210,7 @@ class TestPascalDemo:
 
 # ── Prolog ───────────────────────────────────────────────────────────────────
 
+
 class TestPrologDemo:
     def test_runs(self):
         out = _run_demo("prolog", "hello.pl", Language.PROLOG)
@@ -226,6 +234,7 @@ class TestPrologDemo:
 
 
 # ── Forth ────────────────────────────────────────────────────────────────────
+
 
 class TestForthDemo:
     def test_runs(self):
@@ -254,6 +263,7 @@ class TestForthDemo:
 
 
 # ── Python ───────────────────────────────────────────────────────────────────
+
 
 class TestPythonDemo:
     def test_runs(self):
@@ -291,6 +301,7 @@ class TestPythonDemo:
 
 # ── Lua ──────────────────────────────────────────────────────────────────────
 
+
 class TestLuaDemo:
     def test_runs(self):
         out = _run_demo("lua", "hello.lua", Language.LUA)
@@ -327,6 +338,7 @@ class TestLuaDemo:
 
 # ── Scheme ───────────────────────────────────────────────────────────────────
 
+
 class TestSchemeDemo:
     def test_runs(self):
         out = _run_demo("scheme", "hello.scm", Language.SCHEME)
@@ -359,6 +371,7 @@ class TestSchemeDemo:
 
 # ── COBOL ────────────────────────────────────────────────────────────────────
 
+
 class TestCobolDemo:
     def test_runs(self):
         out = _run_demo("cobol", "hello.cob", Language.COBOL)
@@ -387,6 +400,7 @@ class TestCobolDemo:
 
 # ── Brainfuck ────────────────────────────────────────────────────────────────
 
+
 class TestBrainfuckDemo:
     def test_runs(self):
         out = _run_demo("brainfuck", "hello.bf", Language.BRAINFUCK)
@@ -398,6 +412,7 @@ class TestBrainfuckDemo:
 
 
 # ── Assembly ─────────────────────────────────────────────────────────────────
+
 
 class TestAssemblyDemo:
     def test_runs(self):
@@ -431,6 +446,7 @@ class TestAssemblyDemo:
 
 # ── JavaScript ───────────────────────────────────────────────────────────────
 
+
 class TestJavaScriptDemo:
     def test_runs(self):
         out = _run_demo("javascript", "hello.js", Language.JAVASCRIPT)
@@ -463,6 +479,7 @@ class TestJavaScriptDemo:
 
 # ── FORTRAN ──────────────────────────────────────────────────────────────────
 
+
 class TestFortranDemo:
     def test_runs(self):
         out = _run_demo("fortran", "hello.f77", Language.FORTRAN)
@@ -490,6 +507,7 @@ class TestFortranDemo:
 
 
 # ── REXX ─────────────────────────────────────────────────────────────────────
+
 
 class TestRexxDemo:
     def test_runs(self):
@@ -519,6 +537,7 @@ class TestRexxDemo:
 
 # ── Smalltalk ────────────────────────────────────────────────────────────────
 
+
 class TestSmalltalkDemo:
     def test_runs(self):
         out = _run_demo("smalltalk", "hello.st", Language.SMALLTALK)
@@ -547,6 +566,7 @@ class TestSmalltalkDemo:
 
 # ── HyperTalk ────────────────────────────────────────────────────────────────
 
+
 class TestHyperTalkDemo:
     def test_runs(self):
         out = _run_demo("hypertalk", "hello.htalk", Language.HYPERTALK)
@@ -570,6 +590,7 @@ class TestHyperTalkDemo:
 
 
 # ── Haskell ──────────────────────────────────────────────────────────────────
+
 
 class TestHaskellDemo:
     def test_runs(self):
@@ -599,6 +620,7 @@ class TestHaskellDemo:
 
 # ── APL ──────────────────────────────────────────────────────────────────────
 
+
 class TestAplDemo:
     def test_runs(self):
         out = _run_demo("apl", "hello.apl", Language.APL)
@@ -627,6 +649,7 @@ class TestAplDemo:
 
 # ── SQL ──────────────────────────────────────────────────────────────────────
 
+
 class TestSqlDemo:
     def test_runs(self):
         out = _run_demo("sql", "hello.sql", Language.SQL)
@@ -651,6 +674,7 @@ class TestSqlDemo:
 
 # ── JCL ──────────────────────────────────────────────────────────────────────
 
+
 class TestJclDemo:
     def test_runs(self):
         out = _run_demo("jcl", "hello.jcl", Language.JCL)
@@ -662,6 +686,7 @@ class TestJclDemo:
 
 
 # ── CICS ─────────────────────────────────────────────────────────────────────
+
 
 class TestCicsDemo:
     def test_runs(self):
@@ -682,6 +707,7 @@ class TestCicsDemo:
 
 
 # ── SQR ──────────────────────────────────────────────────────────────────────
+
 
 class TestSqrDemo:
     def test_runs(self):

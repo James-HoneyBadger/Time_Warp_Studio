@@ -1,6 +1,5 @@
 """Comprehensive tests for the FORTRAN language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, has, no_errors
@@ -20,11 +19,15 @@ def fort(source: str, **kw) -> list[str]:
 
 class TestOutput:
     def test_write_string(self):
-        out = fort("      PROGRAM HELLO\n      WRITE(*,*) 'Hello World'\n      STOP\n      END")
+        out = fort(
+            "      PROGRAM HELLO\n      WRITE(*,*) 'Hello World'\n      STOP\n      END"
+        )
         assert has(out, "Hello World")
 
     def test_print_string(self):
-        out = fort("      PROGRAM HELLO\n      PRINT *, 'Test Output'\n      STOP\n      END")
+        out = fort(
+            "      PROGRAM HELLO\n      PRINT *, 'Test Output'\n      STOP\n      END"
+        )
         assert has(out, "Test Output")
 
     def test_write_number(self):

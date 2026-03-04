@@ -1,6 +1,5 @@
 """Comprehensive tests for the JCL language executor."""
 
-
 from time_warp.core.interpreter import Language
 
 from .conftest_lang import run, ok, no_errors
@@ -24,10 +23,7 @@ class TestJobCard:
         assert no_errors(out) or ok(out)
 
     def test_job_with_step(self):
-        out = jcl(
-            "//HELLO   JOB (ACCT),'HELLO',CLASS=A\n"
-            "//STEP1   EXEC PGM=IEFBR14"
-        )
+        out = jcl("//HELLO   JOB (ACCT),'HELLO',CLASS=A\n" "//STEP1   EXEC PGM=IEFBR14")
         assert no_errors(out) or ok(out)
 
 
@@ -38,10 +34,7 @@ class TestJobCard:
 
 class TestExecPgm:
     def test_iefbr14(self):
-        out = jcl(
-            "//TEST    JOB (ACCT),'TEST',CLASS=A\n"
-            "//STEP1   EXEC PGM=IEFBR14"
-        )
+        out = jcl("//TEST    JOB (ACCT),'TEST',CLASS=A\n" "//STEP1   EXEC PGM=IEFBR14")
         assert no_errors(out)
 
     def test_iebgener(self):
@@ -144,10 +137,7 @@ class TestComments:
 
 class TestJES2:
     def test_jes2_banner(self):
-        out = jcl(
-            "//HELLO   JOB (ACCT),'HELLO',CLASS=A\n"
-            "//STEP1   EXEC PGM=IEFBR14"
-        )
+        out = jcl("//HELLO   JOB (ACCT),'HELLO',CLASS=A\n" "//STEP1   EXEC PGM=IEFBR14")
         # JCL typically produces JES2 banner/job output
         assert len(out) > 0 or no_errors(out)
 
