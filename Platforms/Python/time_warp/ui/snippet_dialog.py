@@ -56,6 +56,7 @@ class SnippetDialog(QDialog):
             "BRAINFUCK", "ASSEMBLY", "JAVASCRIPT", "FORTRAN", "REXX",
             "SMALLTALK", "HYPERTALK", "HASKELL", "APL",
             "SQL", "JCL", "CICS",
+            "PASCAL", "C", "PROLOG", "FORTH",
         ])
         self.language_combo.setCurrentText(self.language)
         self.language_combo.currentTextChanged.connect(self._on_language_changed)

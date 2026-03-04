@@ -6,11 +6,12 @@
 
 import copy
 import os
+import re
 import threading
 import time
 
 from PySide6.QtCore import QSettings, Qt, QThread, QTimer, Signal
-from PySide6.QtGui import QColor, QFont, QTextCharFormat, QTextCursor
+from PySide6.QtGui import QColor, QFont, QKeySequence, QTextCharFormat, QTextCursor
 from PySide6.QtWidgets import (
     QHBoxLayout,
     QInputDialog,
@@ -18,6 +19,7 @@ from PySide6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QTextEdit,
+    QVBoxLayout,
     QWidget,
 )
 
@@ -104,6 +106,7 @@ class InterpreterThread(QThread):
         self.breakpoints = breakpoints or set()
         self.debug_step_granularity = debug_step_granularity
         self._had_error = False
+        self.step_delay_ms: int = 0  # 0 = no throttle
 
     def run(self):
         """Run interpreter in background."""
@@ -143,6 +146,8 @@ class InterpreterThread(QThread):
             def on_output(text):
                 if not self.should_stop:
                     self.output_ready.emit(text, "normal")
+                    if self.step_delay_ms > 0:
+                        time.sleep(self.step_delay_ms / 1000.0)
 
             self.interp.output_callback = on_output
 
@@ -265,6 +270,10 @@ class OutputPanel(QTextEdit):
     output_streamed = Signal(str, str)  # (text, type)
     turtle_state_changed = Signal(object)
     turtle_state_reset = Signal()
+    line_clicked = Signal(int)  # emitted when a line-number link is clicked
+
+    # Regex to find line-number references in error messages
+    _LINE_REF_RE = re.compile(r'((?:at\s+)?line\s+\d+)', re.IGNORECASE)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -293,6 +302,14 @@ class OutputPanel(QTextEdit):
         # Qt automatically drops the oldest blocks when the limit is exceeded.
         self.document().setMaximumBlockCount(5000)
 
+        # Per-output-line execution delay (for speed throttle slider, 0 = no delay)
+        self._step_delay_ms: int = 0
+
+        # Live variable watch timer — polls interpreter state while a program is running
+        self._live_watch_timer = QTimer(self)
+        self._live_watch_timer.setInterval(500)  # poll every 500 ms
+        self._live_watch_timer.timeout.connect(self._poll_live_variables)
+
         # Repaint throttle: coalesce rapid turtle-move signals into at most
         # ~30 repaints per second so a tight Logo loop can't flood the queue.
         self._paint_pending = False
@@ -301,6 +318,115 @@ class OutputPanel(QTextEdit):
         self._paint_timer.setInterval(33)  # ~30 fps
         self._paint_timer.timeout.connect(self._flush_paint)
         self._paint_turtle: object = None
+
+        # Search bar (Ctrl+F) — hidden by default
+        self._search_bar = self._create_search_bar()
+        self._search_bar.setVisible(False)
+        # We can't add child widgets to a QTextEdit directly; expose it for the
+        # wrapping widget to embed.  See OutputPanelContainer below.
+
+    def _create_search_bar(self) -> QWidget:
+        """Build the collapsible search toolbar."""
+        bar = QWidget()
+        bar.setFixedHeight(32)
+        layout = QHBoxLayout(bar)
+        layout.setContentsMargins(4, 2, 4, 2)
+        layout.setSpacing(4)
+        layout.addWidget(QLabel("🔍"))
+        self._search_field = QLineEdit()
+        self._search_field.setPlaceholderText("Search output…")
+        self._search_field.returnPressed.connect(self._search_next)
+        self._search_field.textChanged.connect(self._search_highlight)
+        layout.addWidget(self._search_field)
+        btn_next = QPushButton("▼")
+        btn_next.setFixedWidth(28)
+        btn_next.setToolTip("Find next")
+        btn_next.clicked.connect(self._search_next)
+        layout.addWidget(btn_next)
+        btn_prev = QPushButton("▲")
+        btn_prev.setFixedWidth(28)
+        btn_prev.setToolTip("Find previous")
+        btn_prev.clicked.connect(self._search_prev)
+        layout.addWidget(btn_prev)
+        self._search_count_label = QLabel("")
+        layout.addWidget(self._search_count_label)
+        btn_close = QPushButton("✕")
+        btn_close.setFixedWidth(24)
+        btn_close.setToolTip("Close search bar (Esc)")
+        btn_close.clicked.connect(self._hide_search_bar)
+        layout.addWidget(btn_close)
+        return bar
+
+    def _show_search_bar(self):
+        self._search_bar.setVisible(True)
+        self._search_field.setFocus()
+        self._search_field.selectAll()
+
+    def _hide_search_bar(self):
+        self._search_bar.setVisible(False)
+        self.setFocus()
+        # Clear extra highlights
+        self._clear_search_highlights()
+        self._search_count_label.setText("")
+
+    def _clear_search_highlights(self):
+        fmt = QTextCharFormat()
+        cursor = self.textCursor()
+        cursor.select(QTextCursor.SelectionType.Document)
+        cursor.setCharFormat(fmt)
+        cursor.clearSelection()
+        self.setTextCursor(cursor)
+
+    def _search_highlight(self, text: str):
+        """Highlight all occurrences in yellow."""
+        self._clear_search_highlights()
+        if not text:
+            self._search_count_label.setText("")
+            return
+        highlight_fmt = QTextCharFormat()
+        highlight_fmt.setBackground(QColor("#FFD700"))
+        highlight_fmt.setForeground(QColor("black"))
+        count = 0
+        cursor = self.document().find(text)
+        while not cursor.isNull():
+            cursor.mergeCharFormat(highlight_fmt)
+            count += 1
+            cursor = self.document().find(text, cursor)
+        self._search_count_label.setText(f"{count} match{'es' if count != 1 else ''}")
+
+    def _search_next(self):
+        text = self._search_field.text()
+        if text:
+            found = self.find(text)
+            if not found:
+                # wrap around
+                cursor = self.textCursor()
+                cursor.movePosition(QTextCursor.MoveOperation.Start)
+                self.setTextCursor(cursor)
+                self.find(text)
+
+    def _search_prev(self):
+        from PySide6.QtGui import QTextDocument  # noqa: PLC0415
+        text = self._search_field.text()
+        if text:
+            found = self.find(text, QTextDocument.FindFlag.FindBackward)
+            if not found:
+                cursor = self.textCursor()
+                cursor.movePosition(QTextCursor.MoveOperation.End)
+                self.setTextCursor(cursor)
+                self.find(text, QTextDocument.FindFlag.FindBackward)
+
+    def keyPressEvent(self, event):
+        """Override keyPressEvent to intercept Ctrl+F and Escape."""
+        if event.matches(QKeySequence.StandardKey.Find):
+            self._show_search_bar()
+            event.accept()
+            return
+        if event.key() == Qt.Key.Key_Escape and self._search_bar.isVisible():
+            self._hide_search_bar()
+            event.accept()
+            return
+        super().keyPressEvent(event)
 
     def _flush_paint(self):
         """Perform the deferred canvas repaint (runs on the main thread)."""
@@ -425,6 +551,7 @@ class OutputPanel(QTextEdit):
             breakpoints,
             debug_step_granularity,
         )
+        self.exec_thread.step_delay_ms = self._step_delay_ms
         self.exec_thread.output_ready.connect(self.on_output)
         self.exec_thread.error_occurred.connect(self.on_error)
         self.exec_thread.execution_complete.connect(
@@ -478,6 +605,8 @@ class OutputPanel(QTextEdit):
 
         # Start the thread after connecting signals.
         self.exec_thread.start()
+        # Start live variable polling while the program is running
+        self._live_watch_timer.start()
 
     def _forward_debug_paused(self, line, variables):
         """Forward a pause event from the interpreter thread.
@@ -509,6 +638,21 @@ class OutputPanel(QTextEdit):
         if frame_id is None:
             return None
         return self._debug_turtle_frames.get(frame_id)
+
+    def set_step_delay(self, ms: int) -> None:
+        """Set per-output-line delay (0 = no throttle, max 500 ms)."""
+        self._step_delay_ms = max(0, min(ms, 500))
+        if self.exec_thread is not None:
+            self.exec_thread.step_delay_ms = self._step_delay_ms
+
+    def _poll_live_variables(self) -> None:
+        """Emit variables_updated with the current interpreter state while running."""
+        if self.exec_thread and self.exec_thread.interp:
+            try:
+                variables = self.exec_thread.interp.get_variables()
+                self.variables_updated.emit(variables)
+            except Exception:  # pylint: disable=broad-except
+                pass
 
     def resume_execution(self):
         """Resume execution."""
@@ -666,6 +810,7 @@ class OutputPanel(QTextEdit):
 
     def _on_execution_complete(self, canvas, turtle):
         """Handle completion and notify listeners."""
+        self._live_watch_timer.stop()
         try:
             self.on_complete(canvas, turtle)
         except Exception:  # pylint: disable=broad-except
@@ -686,25 +831,58 @@ class OutputPanel(QTextEdit):
         """Check if execution is running."""
         return self.exec_thread and self.exec_thread.isRunning()
 
+    def mousePressEvent(self, event):
+        """Detect clicks on line-number hyperlinks in error output."""
+        if event.button() == Qt.LeftButton:
+            anchor = self.anchorAt(event.position().toPoint())
+            if anchor.startswith("line:"):
+                try:
+                    line = int(anchor.split(":", 1)[1])
+                    self.line_clicked.emit(line)
+                except (ValueError, IndexError):
+                    pass
+        super().mousePressEvent(event)
+
     def append_colored(self, text, color_type="normal"):
-        """Append colored text."""
+        """Append colored text, with clickable line references in errors."""
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.End)
 
-        # Create format
-        fmt = QTextCharFormat()
-
+        # Base format
+        base_fmt = QTextCharFormat()
         if color_type == "error":
-            fmt.setForeground(QColor(255, 100, 100))  # Red
+            base_fmt.setForeground(QColor(255, 100, 100))  # Red
         elif color_type == "warning":
-            fmt.setForeground(QColor(255, 200, 100))  # Orange
+            base_fmt.setForeground(QColor(255, 200, 100))  # Orange
         elif color_type == "success":
-            fmt.setForeground(QColor(100, 255, 100))  # Green
+            base_fmt.setForeground(QColor(100, 255, 100))  # Green
         elif color_type == "info":
-            fmt.setForeground(QColor(100, 200, 255))  # Blue
+            base_fmt.setForeground(QColor(100, 200, 255))  # Blue
 
-        cursor.setCharFormat(fmt)
-        cursor.insertText(text + "\n")
+        # For error output, make line-number references into clickable links
+        if color_type == "error":
+            parts = self._LINE_REF_RE.split(text)
+            for part in parts:
+                if self._LINE_REF_RE.fullmatch(part):
+                    # Extract the numeric part from e.g. "line 42" / "at line 5"
+                    num_m = re.search(r'\d+', part)
+                    if num_m:
+                        link_fmt = QTextCharFormat(base_fmt)
+                        link_fmt.setAnchor(True)
+                        link_fmt.setAnchorHref(f"line:{num_m.group()}")
+                        link_fmt.setForeground(QColor(100, 210, 255))
+                        link_fmt.setFontUnderline(True)
+                        cursor.setCharFormat(link_fmt)
+                        cursor.insertText(part)
+                        continue
+                cursor.setCharFormat(base_fmt)
+                cursor.insertText(part)
+            # Reset format and add newline
+            cursor.setCharFormat(QTextCharFormat())
+            cursor.insertText("\n")
+        else:
+            cursor.setCharFormat(base_fmt)
+            cursor.insertText(text + "\n")
 
         # Auto-scroll
         self.setTextCursor(cursor)
@@ -915,3 +1093,21 @@ class ImmediateModePanel(QWidget):
             self.turtle.on_change = self._on_turtle_change
         self._send_output("🔄 State cleared", "info")
         self.variables_updated.emit({})
+
+
+class OutputPanelContainer(QWidget):
+    """Wrapper that embeds OutputPanel with a collapsible search bar at the top."""
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.output_panel = OutputPanel(self)
+        # Insert search bar at top (hidden initially)
+        layout.addWidget(self.output_panel._search_bar)
+        layout.addWidget(self.output_panel)
+
+    def __getattr__(self, name: str):
+        """Delegate all attribute lookups to the embedded OutputPanel."""
+        return getattr(self.output_panel, name)

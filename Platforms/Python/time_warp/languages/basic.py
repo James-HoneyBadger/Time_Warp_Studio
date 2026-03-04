@@ -15,6 +15,26 @@ if TYPE_CHECKING:
 # Import string evaluator for string functions
 from ..utils.string_evaluator import StringExpressionEvaluator
 
+
+def _basic_eval_expr(interpreter: "Interpreter", expr: str) -> float:
+    """Pre-process UDT field references, then delegate to evaluate_expression."""
+    # Replace VAR.FIELD references in expression with their numeric values
+    def _field_sub(m):
+        obj_name = m.group(1).upper()
+        field_name = m.group(2).upper()
+        obj = interpreter.variables.get(obj_name)
+        if isinstance(obj, dict):
+            val = obj.get(field_name, 0)
+            try:
+                v = float(val)
+                return str(int(v)) if v == int(v) else str(v)
+            except (TypeError, ValueError):
+                return str(val)
+        return m.group(0)
+    expanded = re.sub(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)\b",
+                      _field_sub, expr)
+    return interpreter.evaluate_expression(expanded)
+
 # Runtime imports moved inside functions to avoid circular imports
 
 # Import pre-compiled patterns module for future optimization
@@ -334,6 +354,11 @@ def execute_basic(
         return _basic_system(interpreter, _strip_comment(command[7:]))
     if cmd.startswith("DIM "):
         return _basic_dim(interpreter, _strip_comment(command[4:]))
+    # TYPE typename / END TYPE — user defined type (VB-classic)
+    if cmd.startswith("TYPE ") and not cmd.startswith("TYPE$"):
+        return _basic_type_def(interpreter, _strip_comment(command[5:]))
+    if cmd in ("END TYPE", "ENDTYPE"):
+        return ""  # handled inside _basic_type_def by scanning
     if "=" in cmd and not cmd.startswith("IF ") and not cmd.startswith("FOR ") and not cmd.startswith("DEF FN"):
         return _basic_let(interpreter, _strip_comment(command))
     if cmd.startswith("COLOR "):
@@ -452,6 +477,18 @@ def execute_basic(
         return _basic_in(interpreter, _strip_comment(command[3:]))
     if cmd.startswith("SHELL "):
         return _basic_shell(interpreter, _strip_comment(command[6:]))
+    # ── Error handling ─────────────────────────────────────────────────
+    # ON ERROR GOTO <line>  — set error handler line
+    if cmd.startswith("ON ERROR GOTO"):
+        return _basic_on_error_goto(interpreter, _strip_comment(command[13:]))
+    if cmd == "ON ERROR":
+        # synonym for ON ERROR GOTO 0 — disable handler
+        interpreter._basic_error_handler_line = 0  # type: ignore[attr-defined]
+        return ""
+    if cmd.startswith("RESUME NEXT"):
+        return _basic_resume_next(interpreter)
+    if cmd.startswith("RESUME"):
+        return _basic_resume(interpreter, _strip_comment(command[6:]))
     # SQL embedded in BASIC:  EXEC SQL <T-SQL statement>
     if cmd.startswith("EXEC SQL "):
         return _basic_exec_sql(interpreter, command[9:].strip())
@@ -708,6 +745,23 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
         except (ValueError, TypeError) as e:
             return f"❌ Invalid array index or value: {e}\n"
 
+    # Check for field assignment: VAR.FIELD = EXPR
+    if "." in var_name:
+        dot_idx = var_name.index(".")
+        obj_name = var_name[:dot_idx]
+        field_name = var_name[dot_idx + 1:]
+        obj = interpreter.variables.get(obj_name)
+        if isinstance(obj, dict):
+            if field_name.endswith("$"):
+                obj[field_name] = str(expr).strip('"').strip("'")
+            else:
+                try:
+                    obj[field_name] = interpreter.evaluate_expression(expr)
+                except (ValueError, TypeError):
+                    obj[field_name] = 0
+            return ""
+        return f"❌ {obj_name} is not a user-defined type instance\n"
+
     try:
         validate_variable_name(var_name, allow_suffix=True)
 
@@ -899,6 +953,51 @@ def _basic_goto(interpreter: "Interpreter", args: str) -> str:
         return f"❌ Invalid line number: {target}\n"
     except (KeyError, IndexError) as e:
         return f"❌ Error in GOTO: {e}\n"
+    return ""
+
+
+def _basic_on_error_goto(interpreter: "Interpreter", args: str) -> str:
+    """ON ERROR GOTO <line> — set error handler, or 0 to disable."""
+    target = args.strip()
+    if not target:
+        return "❌ ON ERROR GOTO requires a line number\n"
+    try:
+        line_num = int(target)
+    except ValueError:
+        return f"❌ Invalid line number for ON ERROR GOTO: {target}\n"
+    if line_num == 0:
+        interpreter._basic_error_handler_line = 0  # type: ignore[attr-defined]
+    else:
+        if line_num not in interpreter.line_number_map:
+            return f"❌ ON ERROR GOTO {line_num}: line not found\n"
+        interpreter._basic_error_handler_line = line_num  # type: ignore[attr-defined]
+    return ""
+
+
+def _basic_resume(interpreter: "Interpreter", args: str) -> str:
+    """RESUME [<line>] — return to the line that caused the error."""
+    target = args.strip()
+    if target and target.isdigit():
+        # RESUME <line> — jump to specific line
+        line_num = int(target)
+        if line_num not in interpreter.line_number_map:
+            return f"❌ RESUME {line_num}: line not found\n"
+        interpreter.current_line = interpreter.line_number_map[line_num]
+        return ""
+    # RESUME with no args: re-execute the error line
+    err_line = getattr(interpreter, "_basic_error_line", None)
+    if err_line is not None and err_line in interpreter.line_number_map:
+        interpreter.current_line = interpreter.line_number_map[err_line]
+    return ""
+
+
+def _basic_resume_next(interpreter: "Interpreter") -> str:
+    """RESUME NEXT — continue from the line after the one that errored."""
+    err_line = getattr(interpreter, "_basic_error_line", None)
+    if err_line is not None and err_line in interpreter.line_number_map:
+        target_idx = interpreter.line_number_map[err_line] + 1
+        if target_idx < len(interpreter.program_lines):
+            interpreter.current_line = target_idx
     return ""
 
 
@@ -1862,8 +1961,46 @@ def _basic_call(interpreter: "Interpreter", args: str) -> str:
     return ""
 
 
+def _basic_type_def(interpreter: "Interpreter", args: str) -> str:
+    """TYPE typename ... END TYPE - Define a user-defined type (VB-classic)."""
+    import re as _re
+    type_name = args.strip().upper()
+    if not type_name:
+        return "❌ TYPE requires a name\n"
+    if not hasattr(interpreter, "basic_types"):
+        interpreter.basic_types = {}
+    fields = {}
+    # Scan forward through program_lines to collect field declarations
+    scan_line = interpreter.current_line + 1
+    while scan_line < len(interpreter.program_lines):
+        _, line_text = interpreter.program_lines[scan_line]
+        ln_up = line_text.strip().upper()
+        # Handle "NNN END TYPE" (numbered lines) or plain "END TYPE"
+        # Strip leading line number if present
+        stripped = _re.sub(r"^\d+\s+", "", line_text.strip())
+        stripped_up = stripped.upper()
+        if stripped_up in ("END TYPE", "ENDTYPE") or ln_up in ("END TYPE", "ENDTYPE"):
+            interpreter.current_line = scan_line
+            break
+        # Field declaration: fieldname AS type
+        fm = _re.match(r"^\s*([A-Za-z_][A-Za-z0-9_]*\$?)\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)\s*$",
+                       stripped, _re.IGNORECASE)
+        if fm:
+            fname = fm.group(1).strip().upper()
+            ftype = fm.group(2).strip().upper()
+            if ftype == "STRING":
+                fields[fname] = ""
+            elif ftype == "BOOLEAN":
+                fields[fname] = False
+            else:
+                fields[fname] = 0.0
+        scan_line += 1
+    interpreter.basic_types[type_name] = fields
+    return ""
+
+
 def _basic_dim(interpreter: "Interpreter", args: str) -> str:
-    """DIM variable[(dimensions)] - Declare array"""
+    """DIM variable[(dimensions)] [AS type] - Declare array or typed variable"""
     # pylint: disable=import-outside-toplevel
     from ..logging_config import get_logger
     from ..utils.validators import (
@@ -1877,6 +2014,20 @@ def _basic_dim(interpreter: "Interpreter", args: str) -> str:
     parts = args.split(",")
     for part in parts:
         part = part.strip()
+        # DIM varname AS typename — user-defined type instance
+        import re as _re
+        as_m = _re.match(r"^([A-Za-z_][A-Za-z0-9_]*\$?)\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)$",
+                         part, _re.IGNORECASE)
+        if as_m:
+            var_name = as_m.group(1).strip().upper()
+            type_name = as_m.group(2).strip().upper()
+            basic_types = getattr(interpreter, "basic_types", {})
+            if type_name in basic_types:
+                # Create an instance (copy of default field values)
+                interpreter.variables[var_name] = dict(basic_types[type_name])
+            else:
+                interpreter.variables[var_name] = {}
+            continue
         if "(" not in part or not part.endswith(")"):
             logger.error("DIM: Invalid syntax '%s'", part)
             return f"❌ Invalid DIM syntax: {part}\n"

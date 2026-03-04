@@ -1035,6 +1035,22 @@ class Interpreter:
             # Re-raise critical system signals rather than silently swallowing
             if isinstance(e, (KeyboardInterrupt, SystemExit)):
                 raise
+            # BASIC ON ERROR GOTO handler
+            if self.language.name == "BASIC" and getattr(self, "_basic_error_handler_line", 0):
+                handler_line = self._basic_error_handler_line  # type: ignore[attr-defined]
+                if handler_line in self.line_number_map:
+                    # Store ERR/ERL pseudo-variables for the error handler
+                    self._basic_error_line = self.current_line + 1  # type: ignore[attr-defined]
+                    self.variables["ERR"] = 1  # generic error code
+                    self.variables["ERL"] = float(self.current_line + 1)
+                    # Store the error number from the current line's BASIC number
+                    if self.program_lines and self.current_line < len(self.program_lines):
+                        line_label, _ = self.program_lines[self.current_line]
+                        if line_label is not None:
+                            self._basic_error_line = line_label  # type: ignore[attr-defined]
+                            self.variables["ERL"] = float(line_label)
+                    self.current_line = self.line_number_map[handler_line]
+                    return True  # treat as handled
             error_msg = f"❌ Error at line {self.current_line + 1}: {e}"
             syntax_error = check_syntax_mistakes(command)
             if syntax_error:
@@ -1133,6 +1149,24 @@ class Interpreter:
 
         Uses safe expression evaluator (no eval/exec)
         """
+        # Expand UDT field references: VAR.FIELD → numeric value
+        import re as _re
+        def _expand_udt(m):
+            obj_name = m.group(1).upper()
+            field_name = m.group(2).upper()
+            obj = self.variables.get(obj_name)
+            if isinstance(obj, dict):
+                val = obj.get(field_name, 0)
+                try:
+                    v = float(val)
+                    return str(int(v)) if v == int(v) else str(v)
+                except (TypeError, ValueError):
+                    return "0"
+            return m.group(0)
+        if "." in expr:
+            expr = _re.sub(
+                r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)\b",
+                _expand_udt, expr)
         # Build numeric variables from typed stores using base names
         num_vars: Dict[str, float] = {}
         for k, v in self.int_variables.items():

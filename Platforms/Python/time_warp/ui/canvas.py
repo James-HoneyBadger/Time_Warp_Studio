@@ -8,7 +8,7 @@
 
 import math
 
-from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtCore import QPointF, QRectF, Qt, QTimer
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -18,7 +18,7 @@ from PySide6.QtGui import (
     QPen,
     QWheelEvent,
 )
-from PySide6.QtWidgets import QHBoxLayout, QPushButton, QWidget
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QPushButton, QWidget
 
 from .screen_modes import ModeType, ScreenMode, ScreenModeManager
 
@@ -50,6 +50,14 @@ class TurtleCanvas(
         # Screen mode support
         self.screen_mode_manager = ScreenModeManager()
         self.screen_mode_enabled = False  # When True, simulate retro resolution
+
+        # Animation player state
+        self._anim_running = False
+        self._anim_frame = 0
+        self._anim_timer = QTimer(self)
+        self._anim_timer.setInterval(30)  # ~33 fps
+        self._anim_timer.timeout.connect(self._anim_step)
+        self._anim_btn: QPushButton | None = None  # set in toolbar setup
 
         # Minimum size — small enough to allow the splitter to resize freely
         self.setMinimumSize(200, 200)
@@ -102,6 +110,9 @@ class TurtleCanvas(
         toolbar_layout.addWidget(_btn("⊖", "Zoom Out  (-)", self._zoom_out))
         toolbar_layout.addWidget(_btn("⊙", "Reset View", self._reset_view))
         toolbar_layout.addWidget(_btn("⊡", "Fit to Screen", self._fit_to_screen))
+        self._anim_btn = _btn("▶", "Play / Pause Animation", self._toggle_animation)
+        toolbar_layout.addWidget(self._anim_btn)
+        toolbar_layout.addWidget(_btn("📋", "Copy to Clipboard", self._copy_to_clipboard))
 
         self._canvas_toolbar.adjustSize()
         self._canvas_toolbar.raise_()
@@ -169,6 +180,52 @@ class TurtleCanvas(
         self.offset_y = cy * self.zoom
         self.update()
 
+    # ------------------------------------------------------------------
+    # Animation player
+    # ------------------------------------------------------------------
+
+    def _toggle_animation(self):
+        """Start or pause step-through animation of turtle lines."""
+        if self._anim_running:
+            self._anim_timer.stop()
+            self._anim_running = False
+            if self._anim_btn:
+                self._anim_btn.setText("▶")
+        else:
+            # Restart from beginning if finished
+            if self._anim_frame >= len(self.lines):
+                self._anim_frame = 0
+            self._anim_running = True
+            self._anim_timer.start()
+            if self._anim_btn:
+                self._anim_btn.setText("⏸")
+
+    def _anim_step(self):
+        """Advance animation by one frame."""
+        if self._anim_frame < len(self.lines):
+            self._anim_frame += 1
+            self.update()
+        else:
+            self._anim_timer.stop()
+            self._anim_running = False
+            if self._anim_btn:
+                self._anim_btn.setText("▶")
+
+    # ------------------------------------------------------------------
+    # Clipboard copy
+    # ------------------------------------------------------------------
+
+    def _copy_to_clipboard(self):
+        """Render canvas to a QImage and copy it to the system clipboard."""
+        w, h = max(self.width(), 1), max(self.height(), 1)
+        image = QImage(w, h, QImage.Format.Format_ARGB32)
+        image.fill(self.bg_color)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self._render_to_painter(painter, w, h)
+        painter.end()
+        QApplication.clipboard().setImage(image)
+
     def set_screen_mode(self, mode: ScreenMode):
         """Set the current screen mode for rendering."""
         self.screen_mode_manager.set_mode(mode.mode_number)
@@ -184,6 +241,13 @@ class TurtleCanvas(
         """Set turtle state and repaint."""
         self.turtle = turtle
         self.lines = turtle.lines.copy()
+
+        # Reset animation state when new turtle data arrives
+        self._anim_timer.stop()
+        self._anim_running = False
+        self._anim_frame = len(self.lines)  # show all by default
+        if self._anim_btn:
+            self._anim_btn.setText("▶")
 
         # Adopt background color from turtle state if available
         try:
@@ -246,8 +310,9 @@ class TurtleCanvas(
         painter.setPen(pen)
         painter.drawEllipse(QPointF(0, 0), 5, 5)
 
-        # Draw turtle lines
-        for line in self.lines:
+        # Draw turtle lines (use animation slice when player is active)
+        visible_lines = self.lines[:self._anim_frame] if self._anim_running else self.lines
+        for line in visible_lines:
             color = QColor(line.color[0], line.color[1], line.color[2])
             # Adjust pen width inversely to zoom so it stays visible at all
             # zoom levels

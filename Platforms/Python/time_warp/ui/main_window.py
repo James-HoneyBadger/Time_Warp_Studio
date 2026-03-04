@@ -39,6 +39,7 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QPlainTextEdit,
     QPushButton,
+    QSlider,
     QSplitter,
     QStatusBar,
     QTabWidget,
@@ -59,7 +60,7 @@ from .crt_effect import CRTEffectOverlay
 from .debug_panel import DebugPanel
 from .editor import CodeEditor
 from .feature_integration import FeatureIntegrationManager
-from .output import ImmediateModePanel, OutputPanel
+from .output import ImmediateModePanel, OutputPanel, OutputPanelContainer
 from .screen_modes import ScreenModeManager
 from .themes import ThemeManager
 from .variable_inspector import VariableInspector
@@ -404,6 +405,70 @@ class MainWindow(QMainWindow):
                 self.statusbar.showMessage(f"Exported to {filepath}", 3000)
             else:
                 self.statusbar.showMessage("Export failed", 3000)
+
+    def _export_session_html(self, _checked: bool = False):
+        """Export the current session (code + output) as a self-contained HTML file."""
+        filepath, _ = QFileDialog.getSaveFileName(
+            self, "Export Session as HTML", "", "HTML Files (*.html);;All Files (*)"
+        )
+        if not filepath:
+            return
+        if not filepath.lower().endswith((".html", ".htm")):
+            filepath += ".html"
+
+        # Gather content
+        editor = self.get_current_editor()
+        code_text = editor.toPlainText() if editor else ""
+        output_text = self.output.toPlainText() if hasattr(self.output, "toPlainText") else ""
+
+        # Detect language label
+        lang_name = "Unknown"
+        if hasattr(self, "language_combo"):
+            lang_name = self.language_combo.currentText().replace("💻 ", "")
+
+        import datetime
+        import html as _html
+        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        def _esc(s: str) -> str:
+            return _html.escape(s)
+
+        html_content = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Time Warp Studio Session — {_esc(lang_name)}</title>
+<style>
+  body {{ font-family: system-ui, sans-serif; background: #1e1e2e; color: #cdd6f4;
+         margin: 0; padding: 1.5rem; }}
+  h1   {{ font-size: 1.4rem; color: #89b4fa; margin-bottom: .25rem; }}
+  .meta {{ font-size: .8rem; color: #6c7086; margin-bottom: 1.5rem; }}
+  h2   {{ font-size: 1rem; color: #a6e3a1; margin: 1.2rem 0 .4rem; }}
+  pre  {{ background: #181825; border: 1px solid #313244; border-radius: 6px;
+         padding: 1rem; overflow-x: auto; white-space: pre-wrap; word-break: break-word;
+         font-family: "Fira Code", "Courier New", monospace; font-size: .9rem;
+         line-height: 1.5; }}
+  .code {{ color: #cba6f7; }}
+  .output {{ color: #a6e3a1; }}
+</style>
+</head>
+<body>
+<h1>🕹️ Time Warp Studio Session</h1>
+<div class="meta">Language: <strong>{_esc(lang_name)}</strong> &nbsp;|&nbsp; Exported: {_esc(timestamp)}</div>
+<h2>📝 Source Code</h2>
+<pre class="code">{_esc(code_text)}</pre>
+<h2>📤 Output</h2>
+<pre class="output">{_esc(output_text)}</pre>
+</body>
+</html>
+"""
+        try:
+            with open(filepath, "w", encoding="utf-8") as fh:
+                fh.write(html_content)
+            self.statusbar.showMessage(f"Session exported to {filepath}", 4000)
+        except OSError as exc:
+            self.statusbar.showMessage(f"Export failed: {exc}", 4000)
 
     def _print_code(self, _checked: bool = False):
         """Print the current code."""
@@ -1041,7 +1106,8 @@ class MainWindow(QMainWindow):
         """)
 
         # Output panel
-        self.output = OutputPanel(self)
+        _output_container = OutputPanelContainer(self)
+        self.output = _output_container.output_panel
         # Connect output panel signals
         self.output.variables_updated.connect(self.on_variables_updated)
         self.output.execution_stats.connect(self.on_execution_stats)
@@ -1063,7 +1129,7 @@ class MainWindow(QMainWindow):
         self.output_sub_tabs.setStyleSheet("""
             QTabBar::tab { padding: 4px 10px; min-height: 20px; }
         """)
-        self.output_sub_tabs.addTab(self.output, "📝 Console")
+        self.output_sub_tabs.addTab(_output_container, "📝 Console")
 
         # Errors sub-tab
         self.errors_log = QPlainTextEdit()
@@ -1177,6 +1243,11 @@ class MainWindow(QMainWindow):
         export_svg_action = QAction("Export Graphics to &SVG...", self)
         export_svg_action.triggered.connect(self._export_to_svg)
         export_menu.addAction(export_svg_action)
+
+        export_html_action = QAction("Export Session as &HTML...", self)
+        export_html_action.setShortcut("Ctrl+Shift+H")
+        export_html_action.triggered.connect(self._export_session_html)
+        export_menu.addAction(export_html_action)
 
         file_menu.addSeparator()
 
@@ -1807,6 +1878,10 @@ class MainWindow(QMainWindow):
         stop_btn.setToolTip("Stop the running program (Shift+F5)")
         stop_btn.setStatusTip("Interrupt execution")
 
+        snippet_btn = toolbar.addAction("📋 Snippets", self._show_snippet_dialog)
+        snippet_btn.setToolTip("Browse and insert code snippets (Ctrl+Shift+I)")
+        snippet_btn.setStatusTip("Open the per-language snippet library")
+
         toolbar.addSeparator()
 
         # Canvas/Output controls group
@@ -1840,6 +1915,35 @@ class MainWindow(QMainWindow):
             "Applies 18pt font, high-contrast theme, and disables CRT effects"
         )
         access_btn.setStatusTip("Apply large-print accessible theme")
+
+        toolbar.addSeparator()
+
+        # ── Speed throttle ────────────────────────────────────────────────
+        # A compact slider that adds a per-output-line delay so educational
+        # demos can be slowed down to make each step visible.
+        toolbar.addWidget(QLabel(" 🐢 Speed: "))
+        self._speed_slider = QSlider(Qt.Horizontal)
+        self._speed_slider.setRange(0, 500)
+        self._speed_slider.setValue(0)
+        self._speed_slider.setFixedWidth(100)
+        self._speed_slider.setToolTip(
+            "Execution speed throttle\n"
+            "0 = full speed  |  500 = 500 ms per output line\n"
+            "Drag right to slow the program down"
+        )
+        self._speed_slider.setStatusTip(
+            "Slow execution down — useful for step-by-step educational demos"
+        )
+        self._speed_label = QLabel("0 ms")
+        self._speed_label.setFixedWidth(48)
+
+        def _on_speed_changed(val: int) -> None:
+            self._speed_label.setText(f"{val} ms")
+            self.output.set_step_delay(val)
+
+        self._speed_slider.valueChanged.connect(_on_speed_changed)
+        toolbar.addWidget(self._speed_slider)
+        toolbar.addWidget(self._speed_label)
 
     # Language name → status-bar emoji
     _LANG_EMOJI: dict = {

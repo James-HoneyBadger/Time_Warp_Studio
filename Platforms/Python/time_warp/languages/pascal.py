@@ -55,6 +55,10 @@ _ASSIGN_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:=\s*(.+);?\s*$")
 _ASSIGN_ARRAY_RE = re.compile(
     r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\[(.+)\]\s*:=\s*(.+);?\s*$"
 )
+# Field assignment: var.field := expr
+_ASSIGN_FIELD_RE = re.compile(
+    r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)\s*:=\s*(.+);?\s*$"
+)
 
 _WRITE_RE = re.compile(
     r"^\s*(writeln|write)\s*\((.*)\)\s*;?\s*$",
@@ -408,6 +412,76 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
         if info and info.get("is_func"):
             return _call_func_inline(interpreter, fname, m.group(2).strip(), info)
 
+    # ── SysUtils / CRT built-in functions ────────────────────────────────────
+    # INTTOSTR(n)
+    m = re.match(r"^INTTOSTR\s*\((.+)\)$", expr, re.IGNORECASE)
+    if m:
+        try:
+            return str(int(interpreter.evaluate_expression(m.group(1).strip())))
+        except Exception:
+            return "0"
+
+    # STRTOINT(s) / STRTOINTDEF(s, default)
+    m = re.match(r"^STRTOINTDEF\s*\((.+),\s*(.+)\)$", expr, re.IGNORECASE)
+    if m:
+        try:
+            return int(interpreter.evaluate_expression(m.group(1).strip()))
+        except Exception:
+            try:
+                return int(interpreter.evaluate_expression(m.group(2).strip()))
+            except Exception:
+                return 0
+
+    m = re.match(r"^STRTOINT\s*\((.+)\)$", expr, re.IGNORECASE)
+    if m:
+        s = _eval_str(interpreter, m.group(1).strip())
+        try:
+            return int(s)
+        except ValueError:
+            return 0
+
+    # STRTOFLOAT(s)
+    m = re.match(r"^STRTOFLOAT\s*\((.+)\)$", expr, re.IGNORECASE)
+    if m:
+        s = _eval_str(interpreter, m.group(1).strip())
+        try:
+            return float(s)
+        except ValueError:
+            return 0.0
+
+    # FLOATTOSTR(f)
+    m = re.match(r"^FLOATTOSTR\s*\((.+)\)$", expr, re.IGNORECASE)
+    if m:
+        try:
+            v = float(interpreter.evaluate_expression(m.group(1).strip()))
+            return str(v)
+        except Exception:
+            return "0"
+
+    # FORMAT(fmt, [args]) — simplified: replace %d/%s/%f placeholders
+    m = re.match(r"^FORMAT\s*\((.+)\)$", expr, re.IGNORECASE)
+    if m:
+        inner = m.group(1).strip()
+        arg_list = _split_args(inner)
+        if arg_list:
+            fmt_str = _eval_str(interpreter, arg_list[0])
+            vals = []
+            for a in arg_list[1:]:
+                # strip [...] array syntax if present
+                a = a.strip().strip("[]")
+                if a:
+                    try:
+                        vals.append(interpreter.evaluate_expression(a))
+                    except Exception:
+                        vals.append(a)
+            try:
+                # Replace Pascal-style %d/%s/%f with Python equivalents
+                result = re.sub(r"%\d*(?:\.\d+)?[dsfg]", "{}", fmt_str)
+                return result.format(*vals)
+            except Exception:
+                return fmt_str
+        return ""
+
     # Fallthrough – translate Pascal operators to Python and evaluate
     # Resolve string variables first
     up = expr.strip().upper()
@@ -416,8 +490,28 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
     if up in interpreter.variables:
         return interpreter.variables[up]
 
+    # Record field access: var.field
+    field_m = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)$", expr, re.IGNORECASE)
+    if field_m:
+        rec_name = field_m.group(1).upper()
+        field_name = field_m.group(2).upper()
+        rec = interpreter.variables.get(rec_name)
+        if isinstance(rec, dict):
+            return rec.get(field_name, 0)
+
     # Translate Pascal operators to Python equivalents
     pyexpr = expr
+    # Expand record field accesses like p.x → actual value before further processing
+    def _field_replacer(m_field):
+        rec_name = m_field.group(1).upper()
+        field_name = m_field.group(2).upper()
+        rec = interpreter.variables.get(rec_name)
+        if isinstance(rec, dict) and field_name in rec:
+            v = rec[field_name]
+            return str(int(v)) if isinstance(v, float) and v == int(v) else str(v)
+        return m_field.group(0)
+    pyexpr = re.sub(r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)\b",
+                    _field_replacer, pyexpr)
     # Replace Pascal operators (word-boundary aware, case-insensitive)
     pyexpr = re.sub(r"\bdiv\b", "//", pyexpr, flags=re.IGNORECASE)
     pyexpr = re.sub(r"\bmod\b", "%", pyexpr, flags=re.IGNORECASE)
@@ -1310,11 +1404,18 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
             return _handle_proc_call(interpreter, name, arg_str)
 
     upcmd = cmd.upper().rstrip(";").strip()
-    if (
-        upcmd in ("BEGIN", "END", "END.", "PROGRAM", "USES", "VAR", "TYPE", "ELSE")
-        or upcmd.startswith("USES ")
-        or upcmd.startswith("PROGRAM ")
-    ):
+    if upcmd in ("BEGIN", "END", "END.", "PROGRAM", "USES", "VAR", "TYPE", "ELSE"):
+        return ""
+    if upcmd.startswith("USES ") or upcmd == "USES":
+        # Parse the units list and activate stubs for known units
+        units_str = upcmd[4:].strip().rstrip(";")
+        units = [u.strip() for u in units_str.split(",") if u.strip()]
+        if not hasattr(interpreter, "pascal_units"):
+            interpreter.pascal_units = set()  # type: ignore[attr-defined]
+        for unit in units:
+            interpreter.pascal_units.add(unit)
+        return ""
+    if upcmd.startswith("PROGRAM "):
         return ""
 
     # IF ... THEN begin ... end [ELSE begin ... end]
@@ -1442,15 +1543,39 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
             interpreter.arrays[name] = [0.0] * 100  # default flat array
         return ""
 
-    # Type definitions — ignore (store in pascal_types if needed)
+    # Type definitions — parse RECORD, ignore others
     if _TYPE_DEF_RE.match(cmd):
+        m_td = _TYPE_DEF_RE.match(cmd)
+        if m_td and m_td.group(2).upper() == "RECORD":
+            rec_name = m_td.group(1).upper()
+            # Scan ahead for field declarations until END
+            if not hasattr(interpreter, "pascal_record_types"):
+                interpreter.pascal_record_types = {}
+            fields = {}
+            scan_line = interpreter.current_line + 1
+            while scan_line < len(interpreter.program_lines):
+                _, scan_cmd = interpreter.program_lines[scan_line]
+                sc = scan_cmd.strip().upper().rstrip(";")
+                if sc in ("END", "END.", "END;") or sc.startswith("END{") or sc == "END":
+                    interpreter.current_line = scan_line
+                    break
+                # Field declaration: name1, name2: Type;
+                fm = re.match(r"^\s*([A-Za-z_][A-Za-z0-9_,\s]*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)\s*;?\s*$",
+                              scan_cmd, re.IGNORECASE)
+                if fm:
+                    fnames = [n.strip().upper() for n in fm.group(1).split(",") if n.strip()]
+                    ftype = fm.group(2).upper()
+                    for fn in fnames:
+                        fields[fn] = ftype
+                scan_line += 1
+            interpreter.pascal_record_types[rec_name] = fields
         return ""
 
     # Const Declaration
     if _CONST_RE.match(cmd):
         return ""
 
-    # Type definitions: Name = array/record/... — treated as no-op
+    # Type definitions: Name = array/record/... — treated as no-op (second guard)
     if _TYPE_DEF_RE.match(cmd):
         return ""
 
@@ -1518,9 +1643,41 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
     m = _VAR_CUSTOM_TYPE_RE.match(cmd)
     if m:
         names = m.group(1)
+        type_name = m.group(2).upper() if m.group(2) else ""
         for raw in names.split(","):
             name = raw.strip().upper()
-            interpreter.variables[name] = 0.0
+            # If type is a known record type, create a dict-based struct
+            if hasattr(interpreter, "pascal_record_types") and type_name in interpreter.pascal_record_types:
+                fields = interpreter.pascal_record_types[type_name]
+                rec = {}
+                for fname, ftype in fields.items():
+                    ftype_up = ftype.upper()
+                    if ftype_up in ("STRING", "CHAR"):
+                        rec[fname] = ""
+                    elif ftype_up in ("BOOLEAN"):
+                        rec[fname] = False
+                    else:
+                        rec[fname] = 0.0
+                interpreter.variables[name] = rec
+                if not hasattr(interpreter, "pascal_types"):
+                    interpreter.pascal_types = {}
+                interpreter.pascal_types[name] = "#RECORD#"
+            else:
+                interpreter.variables[name] = 0.0
+        return ""
+
+    m = _ASSIGN_FIELD_RE.match(cmd)
+    if m:
+        var_name = m.group(1).upper()
+        field_name = m.group(2).upper()
+        expr = m.group(3).rstrip(";").strip()
+        rec = interpreter.variables.get(var_name)
+        if isinstance(rec, dict):
+            try:
+                val = _pascal_eval_expr(interpreter, expr)
+            except (ValueError, TypeError, ZeroDivisionError):
+                val = 0
+            rec[field_name] = val
         return ""
 
     m = _ASSIGN_RE.match(cmd)

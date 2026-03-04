@@ -751,7 +751,9 @@ def _solve_goals_cut(
         template = _substitute_term(template, env)
         bag_var_sub = _substitute_term(bag_var, env)
         goal_parsed = _parse_body_goals(goal_term)
-        solutions = _solve_goals(kb, goal_parsed, env.copy())
+        # Use an isolated kb copy so cut inside the goal doesn't escape
+        findall_kb = {**kb, "cut_active": False}
+        solutions = _solve_goals(findall_kb, goal_parsed, env.copy())
         bag_items = [_substitute_term(template, sol) for sol in solutions]
         # Build prolog list
         bag_list = "[]"
@@ -767,7 +769,9 @@ def _solve_goals_cut(
         template, goal_term, bag_var = args
         template = _substitute_term(template, env)
         goal_parsed = _parse_body_goals(goal_term)
-        solutions = _solve_goals(kb, goal_parsed, env.copy())
+        # Isolated kb copy so cut doesn't escape
+        bagof_kb = {**kb, "cut_active": False}
+        solutions = _solve_goals(bagof_kb, goal_parsed, env.copy())
         if not solutions:
             return []
         bag_items = [_substitute_term(template, sol) for sol in solutions]
@@ -780,7 +784,9 @@ def _solve_goals_cut(
         template, goal_term, bag_var = args
         template = _substitute_term(template, env)
         goal_parsed = _parse_body_goals(goal_term)
-        solutions = _solve_goals(kb, goal_parsed, env.copy())
+        # Isolated kb copy so cut doesn't escape
+        setof_kb = {**kb, "cut_active": False}
+        solutions = _solve_goals(setof_kb, goal_parsed, env.copy())
         if not solutions:
             return []
         bag_items = list(dict.fromkeys(_substitute_term(template, sol) for sol in solutions))
@@ -945,6 +951,57 @@ def _solve_goals_cut(
         flat_str = "[" + ",".join(flat_items) + "]"
         e = _unify(args[1], flat_str, env.copy())
         return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    if pred in ("sum_list", "sumlist") and len(args) == 2:
+        lst_sub = _substitute_term(args[0], env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            try:
+                total = sum(float(x) for x in items)
+                total_str = str(int(total)) if total == int(total) else str(total)
+                e = _unify(args[1], total_str, env.copy())
+                return _solve_goals_cut(kb, rest, e) if e is not None else []
+            except (ValueError, TypeError):
+                pass
+        return []
+
+    if pred == "max_list" and len(args) == 2:
+        lst_sub = _substitute_term(args[0], env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            try:
+                mx = max(float(x) for x in items)
+                mx_str = str(int(mx)) if mx == int(mx) else str(mx)
+                e = _unify(args[1], mx_str, env.copy())
+                return _solve_goals_cut(kb, rest, e) if e is not None else []
+            except (ValueError, TypeError):
+                pass
+        return []
+
+    if pred == "min_list" and len(args) == 2:
+        lst_sub = _substitute_term(args[0], env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [x.strip() for x in lst_sub.strip("[]").split(",") if x.strip() and x.strip() != "[]"]
+            try:
+                mn = min(float(x) for x in items)
+                mn_str = str(int(mn)) if mn == int(mn) else str(mn)
+                e = _unify(args[1], mn_str, env.copy())
+                return _solve_goals_cut(kb, rest, e) if e is not None else []
+            except (ValueError, TypeError):
+                pass
+        return []
+
+    if pred == "numlist" and len(args) == 3:
+        low_s = _substitute_term(args[0], env)
+        high_s = _substitute_term(args[1], env)
+        try:
+            low, high = int(float(low_s)), int(float(high_s))
+            lst = "[" + ",".join(str(i) for i in range(low, high + 1)) + "]"
+            e = _unify(args[2], lst, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        except (ValueError, TypeError):
+            pass
+        return []
 
     if pred == "between" and len(args) == 3:
         low_s = _substitute_term(args[0], env)

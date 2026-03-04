@@ -52,6 +52,8 @@ class FortranEnvironment:
         self._format_stmts: dict[str, str] = {}
         self._file_units: dict[int, dict] = {}
         self._implicit_none = False
+        self._declared_vars: set[str] = set()   # explicit declarations for IMPLICIT NONE
+        self._func_return_types: dict[str, str] = {}  # function name -> return type
 
     def _emit(self, text: str):
         self._output.append(str(text))
@@ -165,6 +167,10 @@ class FortranEnvironment:
             func_m = re.match(r"^(?:(?:INTEGER|REAL|DOUBLE\s+PRECISION|CHARACTER|LOGICAL)\s+)?FUNCTION\s+(\w+)\s*\(", stmt)
             if func_m:
                 self._functions[func_m.group(1)] = len(self._lines)
+                # Record the return type for typed functions
+                type_m = re.match(r"^(INTEGER|REAL|DOUBLE\s+PRECISION|CHARACTER|LOGICAL)\s+FUNCTION", stmt)
+                if type_m:
+                    self._func_return_types[func_m.group(1).upper()] = type_m.group(1).upper()
 
             fmt_m = re.match(r"^FORMAT\s*\((.+)\)\s*$", stmt)
             if fmt_m and label:
@@ -628,8 +634,10 @@ class FortranEnvironment:
                 am = re.match(r"^(\w+)\s*\((\d+)\)$", item)
                 if am:
                     self._vars[am.group(1).upper()] = ["" for _ in range(int(am.group(2)))]
+                    self._declared_vars.add(am.group(1).upper())
                 elif item:
                     self._vars[item.upper()] = " " * width
+                    self._declared_vars.add(item.upper())
             return
         m = re.match(r"^(?:INTEGER|REAL|LOGICAL|DOUBLE\s+PRECISION|COMPLEX|BYTE)\s+(.+)$", decl_body)
         if m:
@@ -652,8 +660,10 @@ class FortranEnvironment:
                     for d in dims:
                         total *= d
                     self._vars[am.group(1).upper()] = [0] * total
+                    self._declared_vars.add(am.group(1).upper())
                 elif item:
                     self._vars[item.upper()] = init_val if init_val is not None else (0 if is_int else 0.0)
+                    self._declared_vars.add(item.upper())
 
     def _skip_to_enddo(self, start: int) -> int:
         """Skip DO body until END DO / ENDDO / matching labeled DO end."""
@@ -929,6 +939,42 @@ class FortranEnvironment:
                 for x in arg:
                     result_p *= float(x)
                 return result_p
+            # User-defined function call
+            if fn in self._functions:
+                func_start = self._functions[fn]
+                # Push args as parameter variables (positional)
+                saved_vars = dict(self._vars)
+                # Parse the FUNCTION header to get param names
+                _, func_header = self._lines[func_start]
+                param_m = re.match(r"^(?:(?:INTEGER|REAL|DOUBLE\s+PRECISION|CHARACTER|LOGICAL)\s+)?FUNCTION\s+\w+\s*\(([^)]*)\)", func_header)
+                if param_m:
+                    params = [p.strip().upper() for p in param_m.group(1).split(",") if p.strip()]
+                    for pname, pval in zip(params, args_evaled):
+                        self._vars[pname] = pval
+                # Initialize result variable (same name as function)
+                self._vars[fn] = 0
+                self._call_stack.append(-1)  # -1 = return to caller
+                try:
+                    self._exec_from(func_start + 1)
+                except Exception:
+                    pass
+                if self._call_stack and self._call_stack[-1] == -1:
+                    self._call_stack.pop()
+                result_val = self._vars.get(fn, 0)
+                # Coerce return type if declared
+                ret_type = self._func_return_types.get(fn)
+                if ret_type == "INTEGER":
+                    try:
+                        result_val = int(float(result_val))
+                    except (ValueError, TypeError):
+                        result_val = 0
+                elif ret_type in ("REAL", "DOUBLE PRECISION"):
+                    try:
+                        result_val = float(result_val)
+                    except (ValueError, TypeError):
+                        result_val = 0.0
+                self._vars = saved_vars
+                return result_val
         # Fallback: variable look-up with subscript support
         # Subscripted array: NAME(i1[,i2])
         ma = re.match(r"^(\w+)\s*\((.+)\)$", expr)
@@ -953,6 +999,12 @@ class FortranEnvironment:
                 return self._named_constants[upper]
             if upper in self._vars:
                 return self._vars[upper]
+            # IMPLICIT NONE enforcement for simple token lookups
+            if (self._implicit_none and not upper.lstrip("-").isdigit()
+                    and upper not in self._functions
+                    and upper not in self._subroutines
+                    and upper not in (".TRUE.", ".FALSE.")):
+                self._emit(f"❌ IMPLICIT NONE: variable '{expr}' used but not declared")
         # Build Python expression substituting variables
         def replace_var(m_):
             name = m_.group(0)
@@ -962,6 +1014,14 @@ class FortranEnvironment:
             # Check named constants first
             if upper in self._named_constants:
                 return str(self._named_constants[upper])
+            # IMPLICIT NONE enforcement
+            if (self._implicit_none
+                    and upper not in self._vars
+                    and upper not in self._named_constants
+                    and upper not in self._functions
+                    and upper not in self._subroutines
+                    and not upper.lstrip("-").replace(".", "").isdigit()):
+                self._emit(f"❌ IMPLICIT NONE: '{name}' used but not declared")
             val = self._vars.get(upper, self._vars.get(name))
             if val is not None and not isinstance(val, list):
                 return str(val)

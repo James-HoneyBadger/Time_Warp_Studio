@@ -443,7 +443,10 @@ class HaskellEvaluator:
             body = m.group(1).strip()
             where_str = m.group(2).strip()
             local = self.scope.copy()
-            for binding in where_str.split(";"):
+            # Split bindings by semicolons or newlines, supporting multi-line where blocks
+            import re as _re2
+            raw_bindings = _re2.split(r";|\n", where_str)
+            for binding in raw_bindings:
                 bm = re.match(r"^\s*(\w+)\s*=\s*(.+)$", binding.strip())
                 if bm:
                     local[bm.group(1)] = HaskellEvaluator(self.env, local).eval(bm.group(2).strip())

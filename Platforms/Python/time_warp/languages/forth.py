@@ -25,6 +25,7 @@ class ForthExecutor:
         self.base: int = 10                    # numeric base
         self.constants: Dict[str, Any] = {}
         self.values: Dict[str, Any] = {}       # VALUE words
+        self.deferred: Dict[str, str] = {}     # DEFER words (name -> word name)
 
         self._init_dictionary()
 
@@ -936,6 +937,50 @@ class ForthExecutor:
                 if i + 1 < len(tokens) and self.stack:
                     name = tokens[i + 1].upper()
                     self.values[name] = self.stack.pop()
+                    i += 2
+                else:
+                    i += 1
+                continue
+
+            # ── DEFER name ────────────────────────────────────────────────
+            if token_upper == "DEFER":
+                if i + 1 < len(tokens):
+                    def_name = tokens[i + 1].upper()
+                    self.deferred[def_name] = None
+                    def deferred_fn(n=def_name):
+                        target = self.deferred.get(n)
+                        if target and target in self.dictionary:
+                            self.dictionary[target]()
+                        else:
+                            self.interpreter.log_output(f"❌ {n} is not yet assigned (IS not called)")
+                    self.dictionary[def_name] = deferred_fn
+                    i += 2
+                else:
+                    self.interpreter.log_output("❌ DEFER requires name")
+                    i += 1
+                continue
+
+            # ── IS name (assign deferred word) ─────────────────────────────
+            if token_upper == "IS":
+                if i + 1 < len(tokens):
+                    def_name = tokens[i + 1].upper()
+                    # The TOS should be the execution token — in our model
+                    # we accept a quoted word name on the stack as a string,
+                    # but more commonly IS follows a word name directly.
+                    # Support: ' WORD IS DEFERRED or string token on stack.
+                    if self.stack and isinstance(self.stack[-1], str):
+                        target = self.stack.pop().upper()
+                    else:
+                        # Try to use an xt (integer address) — fall back to
+                        # the previous token as the word to bind.
+                        target = None
+                    if target is not None:
+                        self.deferred[def_name] = target
+                        def deferred_fn(n=def_name):
+                            t = self.deferred.get(n)
+                            if t and t in self.dictionary:
+                                self.dictionary[t]()
+                        self.dictionary[def_name] = deferred_fn
                     i += 2
                 else:
                     i += 1

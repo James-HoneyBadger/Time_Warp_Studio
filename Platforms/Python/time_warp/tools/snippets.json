@@ -1,0 +1,94 @@
+{
+  "BASIC": [
+    {"name": "Hello World",           "code": "10 PRINT \"Hello, World!\"\n20 END\n"},
+    {"name": "FOR loop",              "code": "10 FOR I = 1 TO 10\n20   PRINT I\n30 NEXT I\n"},
+    {"name": "WHILE loop",            "code": "10 X = 0\n20 WHILE X < 5\n30   PRINT X\n40   X = X + 1\n50 WEND\n"},
+    {"name": "IF / THEN / ELSE",      "code": "10 X = 5\n20 IF X > 3 THEN PRINT \"big\" ELSE PRINT \"small\"\n"},
+    {"name": "INPUT statement",       "code": "10 INPUT \"Enter a number: \"; N\n20 PRINT \"You entered\"; N\n"},
+    {"name": "Subroutine / GOSUB",    "code": "10 GOSUB 100\n20 END\n100 PRINT \"Subroutine\"\n110 RETURN\n"},
+    {"name": "Array declaration",     "code": "10 DIM A(10)\n20 FOR I = 1 TO 10\n30   A(I) = I * 2\n40 NEXT I\n"},
+    {"name": "String functions",      "code": "10 S$ = \"Hello\"\n20 PRINT LEN(S$), LEFT$(S$,3), RIGHT$(S$,2), MID$(S$,2,3)\n"}
+  ],
+  "Logo": [
+    {"name": "Square",                "code": "REPEAT 4 [ FORWARD 100 RIGHT 90 ]\n"},
+    {"name": "Triangle",              "code": "REPEAT 3 [ FORWARD 100 RIGHT 120 ]\n"},
+    {"name": "Circle",                "code": "REPEAT 360 [ FORWARD 1 RIGHT 1 ]\n"},
+    {"name": "Spiral",                "code": "REPEAT 50 [ FORWARD REPCOUNT * 3 RIGHT 91 ]\n"},
+    {"name": "Procedure definition",  "code": "TO SQUARE :SIZE\n  REPEAT 4 [ FORWARD :SIZE RIGHT 90 ]\nEND\nSQUARE 100\n"},
+    {"name": "Nested procedure",      "code": "TO FLOWER :SIZE\n  REPEAT 36 [ SQUARE :SIZE RIGHT 10 ]\nEND\nTO SQUARE :S\n  REPEAT 4 [ FORWARD :S RIGHT 90 ]\nEND\nFLOWER 50\n"},
+    {"name": "Color drawing",         "code": "SETPENCOLOR 2\nREPEAT 4 [ FORWARD 80 RIGHT 90 ]\n"},
+    {"name": "WHILE loop",            "code": "MAKE \"X 0\nWHILE [ :X < 10 ] [\n  PRINT :X\n  MAKE \"X :X + 1\n]\n"}
+  ],
+  "Pascal": [
+    {"name": "Hello World",           "code": "PROGRAM Hello;\nBEGIN\n  WRITELN('Hello, World!');\nEND.\n"},
+    {"name": "FOR loop",              "code": "PROGRAM Counting;\nVAR I: Integer;\nBEGIN\n  FOR I := 1 TO 10 DO\n    WRITELN(I);\nEND.\n"},
+    {"name": "WHILE loop",            "code": "PROGRAM Loop;\nVAR X: Integer;\nBEGIN\n  X := 0;\n  WHILE X < 5 DO BEGIN\n    WRITELN(X);\n    X := X + 1;\n  END;\nEND.\n"},
+    {"name": "Procedure",             "code": "PROGRAM Procs;\nPROCEDURE Greet(Name: String);\nBEGIN\n  WRITELN('Hello, ', Name);\nEND;\nBEGIN\n  Greet('World');\nEND.\n"},
+    {"name": "Function",              "code": "PROGRAM Funcs;\nFUNCTION Square(N: Integer): Integer;\nBEGIN\n  Square := N * N;\nEND;\nBEGIN\n  WRITELN(Square(7));\nEND.\n"},
+    {"name": "RECORD type",           "code": "PROGRAM Recs;\nTYPE TPoint = RECORD\n  X: Integer;\n  Y: Integer;\nEND;\nVAR P: TPoint;\nBEGIN\n  P.X := 10;\n  P.Y := 20;\n  WRITELN(P.X, ' ', P.Y);\nEND.\n"}
+  ],
+  "Prolog": [
+    {"name": "Facts and query",       "code": "parent(tom, bob).\nparent(bob, ann).\nancestor(X, Y) :- parent(X, Y).\nancestor(X, Y) :- parent(X, Z), ancestor(Z, Y).\n?- ancestor(tom, ann).\n"},
+    {"name": "List operations",       "code": "?- length([1,2,3], L).\n?- append([a,b],[c,d], R).\n?- member(X, [1,2,3]).\n"},
+    {"name": "Arithmetic",            "code": "?- X is 3 + 4 * 2.\n?- Y is max(10, 20).\n"},
+    {"name": "Findall",               "code": "color(red). color(green). color(blue).\n?- findall(X, color(X), Colors).\n"},
+    {"name": "Between",               "code": "?- between(1, 5, X).\n"}
+  ],
+  "Forth": [
+    {"name": "Hello World",           "code": ": GREETING  .\" Hello, World!\" CR ;\nGREETING\n"},
+    {"name": "Square word",           "code": ": SQUARE  DUP * ;\n5 SQUARE .\n"},
+    {"name": "Factorial",             "code": ": FACT  DUP 1 <= IF DROP 1 ELSE DUP 1 - RECURSE * THEN ;\n5 FACT .\n"},
+    {"name": "Stack operations",      "code": "10 20 30  \\ Three items on stack\nDUP .   \\ Duplicate top\nSWAP .  \\ Swap top two\nDROP    \\ Remove top\n"},
+    {"name": "DO loop",               "code": ": COUNTDOWN  11 1 DO I . LOOP ;\nCOUNTDOWN\n"},
+    {"name": "DEFER / IS",            "code": "DEFER ACTION\n: HELLO  .\" Hello\" CR ;\n: GOODBYE  .\" Goodbye\" CR ;\n' HELLO IS ACTION\nACTION\n' GOODBYE IS ACTION\nACTION\n"}
+  ],
+  "C": [
+    {"name": "Hello World",           "code": "#include <stdio.h>\nint main() {\n    printf(\"Hello, World!\\n\");\n    return 0;\n}\n"},
+    {"name": "FOR loop",              "code": "#include <stdio.h>\nint main() {\n    for (int i = 0; i < 10; i++) {\n        printf(\"%d\\n\", i);\n    }\n    return 0;\n}\n"},
+    {"name": "Function",              "code": "#include <stdio.h>\nint square(int n) { return n * n; }\nint main() {\n    printf(\"%d\\n\", square(7));\n    return 0;\n}\n"},
+    {"name": "Array",                 "code": "#include <stdio.h>\nint main() {\n    int arr[] = {1,2,3,4,5};\n    for (int i = 0; i < 5; i++)\n        printf(\"%d \", arr[i]);\n    printf(\"\\n\");\n    return 0;\n}\n"}
+  ],
+  "PILOT": [
+    {"name": "Hello World",           "code": "T:Hello, World!\nEND\n"},
+    {"name": "Accept and respond",    "code": "T:What is your name?\nA:*name\nT:Hello, *name!\nEND\n"},
+    {"name": "Match example",         "code": "T:Type YES or NO:\nA:\nM:YES\nTY:You said yes!\nMN:TN:You said no.\nEND\n"}
+  ],
+  "Haskell": [
+    {"name": "Hello World",           "code": "main :: IO ()\nmain = putStrLn \"Hello, World!\"\n"},
+    {"name": "Map and filter",        "code": "main :: IO ()\nmain = do\n  let nums = [1..10]\n  print $ map (*2) $ filter even nums\n"},
+    {"name": "Recursive factorial",   "code": "factorial :: Int -> Int\nfactorial 0 = 1\nfactorial n = n * factorial (n - 1)\n\nmain :: IO ()\nmain = print (factorial 10)\n"},
+    {"name": "List comprehension",    "code": "main :: IO ()\nmain = print [x^2 | x <- [1..5]]\n"}
+  ],
+  "JavaScript": [
+    {"name": "Hello World",           "code": "console.log(\"Hello, World!\");\n"},
+    {"name": "Arrow function",        "code": "const square = n => n * n;\nconsole.log(square(7));\n"},
+    {"name": "Array methods",         "code": "const nums = [1,2,3,4,5];\nconst evens = nums.filter(n => n % 2 === 0);\nconsole.log(evens);\n"},
+    {"name": "Destructuring",         "code": "const [a, b, c] = [10, 20, 30];\nconsole.log(a + b + c);\n"},
+    {"name": "Template literal",      "code": "const name = \"World\";\nconsole.log(`Hello, ${name}!`);\n"}
+  ],
+  "Scheme": [
+    {"name": "Hello World",           "code": "(display \"Hello, World!\") (newline)\n"},
+    {"name": "Recursive factorial",   "code": "(define (factorial n)\n  (if (<= n 1) 1\n      (* n (factorial (- n 1)))))\n(display (factorial 10)) (newline)\n"},
+    {"name": "Map and filter",        "code": "(display (map (lambda (x) (* x x)) '(1 2 3 4 5)))\n(newline)\n"},
+    {"name": "Let binding",           "code": "(let ((x 10) (y 20))\n  (display (+ x y))\n  (newline))\n"}
+  ],
+  "Lua": [
+    {"name": "Hello World",           "code": "print(\"Hello, World!\")\n"},
+    {"name": "FOR loop",              "code": "for i = 1, 10 do\n  print(i)\nend\n"},
+    {"name": "Function",              "code": "function square(n)\n  return n * n\nend\nprint(square(7))\n"},
+    {"name": "Table (array)",         "code": "local t = {10, 20, 30, 40, 50}\nfor i, v in ipairs(t) do\n  print(i, v)\nend\n"}
+  ],
+  "Fortran": [
+    {"name": "Hello World",           "code": "PROGRAM hello\n  IMPLICIT NONE\n  PRINT *, 'Hello, World!'\nEND PROGRAM hello\n"},
+    {"name": "DO loop",               "code": "PROGRAM counting\n  IMPLICIT NONE\n  INTEGER :: i\n  DO i = 1, 10\n    PRINT *, i\n  END DO\nEND PROGRAM counting\n"},
+    {"name": "Function",              "code": "PROGRAM funcs\n  IMPLICIT NONE\n  INTEGER :: square\n  PRINT *, square(7)\nCONTAINS\n  INTEGER FUNCTION square(n)\n    INTEGER, INTENT(IN) :: n\n    square = n * n\n  END FUNCTION square\nEND PROGRAM funcs\n"}
+  ],
+  "Brainfuck": [
+    {"name": "Hello World",           "code": "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.\n"},
+    {"name": "Count to 10 (output as chars)", "code": "++++++++++ sets cell 0 to 10\n[\n  >+        increment cell 1\n  <-        decrement cell 0\n]\n>. output cell 1 (ASCII 10 = newline)\n"}
+  ],
+  "COBOL": [
+    {"name": "Hello World",           "code": "IDENTIFICATION DIVISION.\nPROGRAM-ID. HELLO.\nPROCEDURE DIVISION.\n    DISPLAY 'Hello, World!'.\n    STOP RUN.\n"},
+    {"name": "Arithmetic",            "code": "IDENTIFICATION DIVISION.\nPROGRAM-ID. ARITH.\nDATA DIVISION.\nWORKING-STORAGE SECTION.\n  01 A PIC 9(4) VALUE 100.\n  01 B PIC 9(4) VALUE 250.\n  01 C PIC 9(4).\nPROCEDURE DIVISION.\n  COMPUTE C = A + B.\n  DISPLAY C.\n  STOP RUN.\n"}
+  ]
+}

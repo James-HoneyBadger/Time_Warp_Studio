@@ -415,7 +415,218 @@ def _execute_single_logo_command(
     if cmd_name == "REM":
         # REM is a BASIC-style comment - skip the line
         return ""
+    # -- Higher-order list primitives -----------------------------------------
+    # FOREACH list [template]   — iterate list; :? is current element
+    if cmd_name == "FOREACH":
+        return _logo_foreach(interpreter, turtle, command)
+    # MAP [template] list       — return transformed list
+    if cmd_name == "MAP":
+        return _logo_map(interpreter, turtle, command)
+    # FILTER [template] list    — return filtered list
+    if cmd_name == "FILTER":
+        return _logo_filter(interpreter, turtle, command)
+    # REDUCE [template] list    — fold list left; :?1 and :?2 are operands
+    if cmd_name == "REDUCE":
+        return _logo_reduce(interpreter, turtle, command)
+    # WHILE / UNTIL loops
+    if cmd_name == "WHILE":
+        return _logo_while(interpreter, turtle, command)
+    if cmd_name == "UNTIL":
+        return _logo_until(interpreter, turtle, command)
+    # LOCAL varname - declare a local variable in current scope
+    if cmd_name == "LOCAL":
+        return _logo_local(interpreter, args)
     return f"❌ Unknown Logo command: {cmd_name}\n"
+
+
+def _logo_parse_list_literal(token: str) -> Optional[List[str]]:
+    """Parse a Logo list literal [a b c] into a list of string tokens."""
+    t = token.strip()
+    if t.startswith("[") and t.endswith("]"):
+        inner = t[1:-1].strip()
+        return inner.split() if inner else []
+    return None
+
+
+def _logo_run_template(
+    interpreter: "Interpreter",
+    template: str,
+    turtle: Optional["TurtleState"],
+    local_vars: dict,
+) -> str:
+    """Run a Logo template with local variable bindings, restoring them after."""
+    old_values = {}
+    for var, val in local_vars.items():
+        old_values[var] = interpreter.variables.get(var)
+        interpreter.variables[var] = val
+    try:
+        return execute_logo(interpreter, template, turtle)
+    finally:
+        for var, old_val in old_values.items():
+            if old_val is None:
+                interpreter.variables.pop(var, None)
+            else:
+                interpreter.variables[var] = old_val
+
+
+def _logo_extract_list_and_template(command: str) -> tuple:
+    """Extract [template] and list from a command string.
+
+    Returns (template_str, list_str_remaining_args) or (None, None) on error.
+    """
+    # Find the bracketed template
+    start = command.find("[")
+    if start == -1:
+        return None, None
+    depth = 0
+    end = start
+    for i, ch in enumerate(command[start:], start):
+        if ch == "[":
+            depth += 1
+        elif ch == "]":
+            depth -= 1
+            if depth == 0:
+                end = i
+                break
+    template = command[start + 1 : end].strip()
+    rest = command[end + 1 :].strip()
+    return template, rest
+
+
+def _logo_foreach(
+    interpreter: "Interpreter",
+    turtle: Optional["TurtleState"],
+    command: str,
+) -> str:
+    """FOREACH list [template] — execute template for each list element."""
+    # Parse: FOREACH [list] [template]  or  FOREACH :var [template]
+    # First argument is the data list; second is the template.
+    cmd_upper = command.upper().lstrip()
+    # Skip command name
+    after_cmd = command[command.upper().find("FOREACH") + 7 :].strip()
+
+    # Collect list and template - find two bracket-delimited tokens
+    brackets = []
+    i = 0
+    while i < len(after_cmd) and len(brackets) < 2:
+        if after_cmd[i] == "[":
+            depth = 0
+            j = i
+            while j < len(after_cmd):
+                if after_cmd[j] == "[":
+                    depth += 1
+                elif after_cmd[j] == "]":
+                    depth -= 1
+                    if depth == 0:
+                        brackets.append(after_cmd[i + 1 : j].strip())
+                        i = j
+                        break
+                j += 1
+        i += 1
+
+    if len(brackets) < 2:
+        return "❌ FOREACH requires [list] [template]\n"
+
+    items = brackets[0].split()
+    template = brackets[1]
+    output = ""
+    for item in items:
+        try:
+            val = float(item)
+        except ValueError:
+            val = item  # type: ignore[assignment]
+        output += _logo_run_template(interpreter, template, turtle, {"?": val})
+    return output
+
+
+def _logo_map(
+    interpreter: "Interpreter",
+    turtle: Optional["TurtleState"],
+    command: str,
+) -> str:
+    """MAP [template] list — return new list by applying template to each element."""
+    after_cmd = command[command.upper().find("MAP") + 3 :].strip()
+    template, rest = _logo_extract_list_and_template(after_cmd)
+    if template is None:
+        return "❌ MAP requires [template] [list]\n"
+
+    items_list = _logo_parse_list_literal(rest) if rest.startswith("[") else rest.split()
+    if items_list is None:
+        return "❌ MAP requires a list argument\n"
+
+    results = []
+    for item in items_list:
+        try:
+            val: Any = float(item)
+        except ValueError:
+            val = item
+        result = _logo_run_template(interpreter, template, turtle, {"?": val})
+        results.append(result.strip())
+    return "[" + " ".join(results) + "]\n"
+
+
+def _logo_filter(
+    interpreter: "Interpreter",
+    turtle: Optional["TurtleState"],
+    command: str,
+) -> str:
+    """FILTER [predicate] list — return list of elements where predicate is true."""
+    after_cmd = command[command.upper().find("FILTER") + 6 :].strip()
+    template, rest = _logo_extract_list_and_template(after_cmd)
+    if template is None:
+        return "❌ FILTER requires [predicate] [list]\n"
+
+    items_list = _logo_parse_list_literal(rest) if rest.startswith("[") else rest.split()
+    if items_list is None:
+        return "❌ FILTER requires a list argument\n"
+
+    kept = []
+    for item in items_list:
+        try:
+            val: Any = float(item)
+        except ValueError:
+            val = item
+        result = _logo_run_template(interpreter, template, turtle, {"?": val})
+        result_stripped = result.strip()
+        try:
+            truthy = float(result_stripped) != 0
+        except (ValueError, TypeError):
+            truthy = bool(result_stripped) and result_stripped.upper() not in ("FALSE", "0")
+        if truthy:
+            kept.append(item)
+    return "[" + " ".join(kept) + "]\n"
+
+
+def _logo_reduce(
+    interpreter: "Interpreter",
+    turtle: Optional["TurtleState"],
+    command: str,
+) -> str:
+    """REDUCE [template] list — fold list; :?1 is accumulator, :?2 is element."""
+    after_cmd = command[command.upper().find("REDUCE") + 6 :].strip()
+    template, rest = _logo_extract_list_and_template(after_cmd)
+    if template is None:
+        return "❌ REDUCE requires [template] [list]\n"
+
+    items_list = _logo_parse_list_literal(rest) if rest.startswith("[") else rest.split()
+    if items_list is None or len(items_list) < 1:
+        return "❌ REDUCE requires a non-empty list\n"
+
+    def _to_val(s: str) -> Any:
+        try:
+            return float(s)
+        except ValueError:
+            return s
+
+    acc: Any = _to_val(items_list[0])
+    for item in items_list[1:]:
+        val = _to_val(item)
+        result = _logo_run_template(interpreter, template, turtle, {"?1": acc, "?2": val})
+        try:
+            acc = float(result.strip())
+        except (ValueError, TypeError):
+            acc = result.strip()
+    return str(acc) + "\n"
 
 
 def _logo_eval_arg(interpreter: "Interpreter", arg: str) -> float:
@@ -1730,6 +1941,102 @@ def _logo_ifelse(
     if condition != 0:
         return execute_logo(interpreter, true_block, turtle)
     return execute_logo(interpreter, false_block, turtle)
+
+
+def _logo_while(
+    interpreter: "Interpreter",
+    turtle: Optional["TurtleState"],
+    command: str,
+) -> str:
+    """WHILE [condition] [body] - Loop while condition is true."""
+    # Find the two bracketed groups
+    brackets = []
+    i = 0
+    while i < len(command) and len(brackets) < 2:
+        if command[i] == '[':
+            depth = 0
+            start = i
+            while i < len(command):
+                if command[i] == '[': depth += 1
+                elif command[i] == ']': depth -= 1
+                if depth == 0:
+                    brackets.append(command[start + 1: i])
+                    break
+                i += 1
+        i += 1
+    if len(brackets) < 2:
+        return "❌ WHILE requires [condition] [body]\n"
+    cond_text = brackets[0].strip()
+    body_text = brackets[1].strip()
+    output_parts = []
+    max_iters = 10000
+    for _ in range(max_iters):
+        if not interpreter.running:
+            break
+        try:
+            cond_val = _logo_eval_expr_str(interpreter, cond_text)
+        except (ValueError, TypeError, ZeroDivisionError):
+            return f"❌ WHILE: invalid condition '{cond_text}'\n"
+        if cond_val == 0:
+            break
+        result = execute_logo(interpreter, body_text, turtle)
+        if result:
+            output_parts.append(result)
+        if not interpreter.running:
+            break
+    return "".join(output_parts)
+
+
+def _logo_until(
+    interpreter: "Interpreter",
+    turtle: Optional["TurtleState"],
+    command: str,
+) -> str:
+    """UNTIL [condition] [body] - Loop until condition becomes true."""
+    brackets = []
+    i = 0
+    while i < len(command) and len(brackets) < 2:
+        if command[i] == '[':
+            depth = 0
+            start = i
+            while i < len(command):
+                if command[i] == '[': depth += 1
+                elif command[i] == ']': depth -= 1
+                if depth == 0:
+                    brackets.append(command[start + 1: i])
+                    break
+                i += 1
+        i += 1
+    if len(brackets) < 2:
+        return "❌ UNTIL requires [condition] [body]\n"
+    cond_text = brackets[0].strip()
+    body_text = brackets[1].strip()
+    output_parts = []
+    max_iters = 10000
+    for _ in range(max_iters):
+        if not interpreter.running:
+            break
+        try:
+            cond_val = _logo_eval_expr_str(interpreter, cond_text)
+        except (ValueError, TypeError, ZeroDivisionError):
+            return f"❌ UNTIL: invalid condition '{cond_text}'\n"
+        if cond_val != 0:
+            break
+        result = execute_logo(interpreter, body_text, turtle)
+        if result:
+            output_parts.append(result)
+        if not interpreter.running:
+            break
+    return "".join(output_parts)
+
+
+def _logo_local(interpreter: "Interpreter", args: list) -> str:
+    """LOCAL varname ... - Declare local variables (initialised to 0)."""
+    for name in args:
+        var_name = name.lstrip(':').upper()
+        if var_name not in interpreter.variables:
+            interpreter.variables[var_name] = 0
+    return ""
 
 
 def _logo_forever(

@@ -174,6 +174,41 @@ class TailCall:
         self.env = env
 
 
+def _syntax_match(pattern, use, literals, bindings):
+    """Match a syntax-rules pattern against a use form; populate bindings."""
+    if isinstance(pattern, Symbol):
+        name = str(pattern)
+        if name in literals:
+            return isinstance(use, Symbol) and str(use) == name
+        if name == "_":
+            return True  # wildcard
+        # Pattern variable: bind unconditionally
+        bindings[name] = use
+        return True
+    if isinstance(pattern, list) and isinstance(use, list):
+        if len(pattern) != len(use):
+            return False
+        for p, u in zip(pattern, use):
+            sub = {}
+            if not _syntax_match(p, u, literals, sub):
+                return False
+            bindings.update(sub)
+        return True
+    return pattern == use
+
+
+def _syntax_expand(template, bindings):
+    """Recursively expand a template substituting pattern variables."""
+    if isinstance(template, Symbol):
+        name = str(template)
+        return bindings.get(name, template)
+    if isinstance(template, list):
+        return [_syntax_expand(t, bindings) for t in template]
+    return template
+
+
+
+
 # ---------------------------------------------------------------------------
 # Environment
 # ---------------------------------------------------------------------------
@@ -426,9 +461,29 @@ class SchemeEnvironment:
                     new_env[formals] = [exp]
             return TailCall(["begin"] + expr[3:], new_env)
 
-        # define-syntax / syntax-rules: stub — macros not supported, silently skip
-        if head == Symbol("define-syntax") or head == Symbol("syntax-rules"):
+        # define-syntax with syntax-rules: basic pattern-matching macros
+        if head == Symbol("define-syntax"):
+            macro_name = expr[1]
+            transformer = expr[2]
+            if (isinstance(transformer, list) and transformer
+                    and transformer[0] == Symbol("syntax-rules")):
+                # syntax-rules: (syntax-rules (literals) (pattern template) ...)
+                literals = [str(x) for x in transformer[1]] if isinstance(transformer[1], list) else []
+                rules = transformer[2:]  # list of (pattern template) pairs
+                def make_macro(rules_=rules, literals_=literals):
+                    def apply_macro(use, env_=env):
+                        for rule in rules_:
+                            pattern, template = rule[0], rule[1]
+                            bindings = {}
+                            if _syntax_match(pattern, use, literals_, bindings):
+                                return self.eval_expr(_syntax_expand(template, bindings), env_)
+                        raise SchemeError(f"No matching syntax-rules pattern for {use}")
+                    apply_macro._is_syntax_macro = True
+                    return apply_macro
+                env[macro_name] = make_macro()
             return None
+        if head == Symbol("syntax-rules"):
+            return None  # standalone syntax-rules returns None
         if head == Symbol("let-syntax") or head == Symbol("letrec-syntax"):
             return TailCall(["begin"] + expr[2:], env) if len(expr) > 2 else None
 
@@ -512,6 +567,13 @@ class SchemeEnvironment:
 
         # Procedure call
         proc = self.eval_expr(head, env)
+        # Syntax macros receive the raw unevaluated expression
+        if callable(proc) and getattr(proc, '_is_syntax_macro', False):
+            result = proc(expr, env)
+            # Tail-call the expanded result if it's a list form
+            if isinstance(result, list):
+                return TailCall(result, env)
+            return result
         args = [self.eval_expr(a, env) for a in expr[1:]]
 
         if callable(proc) and not isinstance(proc, SchemeProc):
