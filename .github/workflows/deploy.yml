@@ -73,8 +73,34 @@ jobs:
     name: Pre-deployment Tests
     runs-on: ubuntu-latest
     needs: context
+    env:
+      QT_QPA_PLATFORM: offscreen
+      DISPLAY: ':99'
     steps:
       - uses: actions/checkout@v4
+
+      - name: Install Qt system dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            libxkbcommon-x11-0 \
+            libxcb-icccm4 \
+            libxcb-image0 \
+            libxcb-keysyms1 \
+            libxcb-randr0 \
+            libxcb-render-util0 \
+            libxcb-xinerama0 \
+            libxcb-xfixes0 \
+            libxcb-cursor0 \
+            libgl1 \
+            libegl1 \
+            libdbus-1-3 \
+            libfontconfig1 \
+            libglib2.0-0 \
+            xvfb
+
+      - name: Start Xvfb
+        run: Xvfb :99 -screen 0 1024x768x24 &
 
       - name: Set up Python ${{ env.PYTHON_VERSION }}
         uses: actions/setup-python@v5
@@ -85,12 +111,12 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -e "Platforms/Python[dev]"
-          pip install pytest-asyncio
+          pip install pytest-asyncio pytest-html
 
       - name: Run test suite
         working-directory: Platforms/Python
         run: |
-          pytest time_warp/tests/ -v \
+          pytest time_warp/tests/ \
             --ignore=time_warp/tests/test_api_integration.py \
             --ignore=time_warp/tests/test_websocket_integration.py \
             --ignore=time_warp/tests/test_multiplayer_integration.py \
