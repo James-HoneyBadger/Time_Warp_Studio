@@ -59,6 +59,7 @@ dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
     "pytest-mock>=3.11.0",
+    "pytest-html>=4.0.0",
     "black>=23.7.0",
     "flake8>=6.1.0",
     "mypy>=1.5.0",

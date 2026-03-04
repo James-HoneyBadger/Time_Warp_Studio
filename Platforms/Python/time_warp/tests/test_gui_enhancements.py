@@ -31,6 +31,20 @@ import pytest
 # ---------------------------------------------------------------------------
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
+# ---------------------------------------------------------------------------
+# Skip the entire module if PySide6 is unavailable or cannot initialise.
+# ---------------------------------------------------------------------------
+try:
+    import PySide6.QtCore  # noqa: F401 — import-time check only
+    _PYSIDE6_AVAILABLE = True
+except (ImportError, RuntimeError):
+    _PYSIDE6_AVAILABLE = False
+
+pytestmark = pytest.mark.skipif(
+    not _PYSIDE6_AVAILABLE,
+    reason="PySide6 is not available in this environment",
+)
+
 
 # ---------------------------------------------------------------------------
 # Fixtures
