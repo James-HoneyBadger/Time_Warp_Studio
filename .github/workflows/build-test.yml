@@ -20,7 +20,7 @@ jobs:
     
     env:
       QT_QPA_PLATFORM: offscreen
-      DISPLAY: ':99'
+      LIBGL_ALWAYS_SOFTWARE: '1'
 
     steps:
       - uses: actions/checkout@v4
@@ -30,26 +30,13 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install -y \
-            libxkbcommon-x11-0 \
-            libxcb-icccm4 \
-            libxcb-image0 \
-            libxcb-keysyms1 \
-            libxcb-randr0 \
-            libxcb-render-util0 \
-            libxcb-xinerama0 \
-            libxcb-xfixes0 \
-            libxcb-cursor0 \
             libgl1 \
             libegl1 \
             libdbus-1-3 \
             libfontconfig1 \
             libglib2.0-0 \
-            xvfb
+            libxkbcommon0
 
-      - name: Start Xvfb (Ubuntu)
-        if: runner.os == 'Linux'
-        run: Xvfb :99 -screen 0 1024x768x24 &
-      
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v5
         with:
@@ -64,14 +51,14 @@ jobs:
         working-directory: ${{ github.workspace }}
       
       - name: Run full test suite
+        shell: bash
         run: |
           cd Platforms/Python
           python -m pytest time_warp/tests/ -v \
             --cov=time_warp \
             --cov-report=xml \
             --cov-report=term-missing \
-            --html=test_report.html \
-            --self-contained-html
+            --tb=long
         working-directory: ${{ github.workspace }}
       
       - name: Upload coverage to Codecov
@@ -132,6 +119,7 @@ jobs:
 
     env:
       QT_QPA_PLATFORM: offscreen
+      LIBGL_ALWAYS_SOFTWARE: '1'
 
     steps:
       - uses: actions/checkout@v4
@@ -140,18 +128,12 @@ jobs:
         run: |
           sudo apt-get update -y
           sudo apt-get install -y \
-            libxkbcommon-x11-0 \
-            libxcb-icccm4 \
-            libxcb-image0 \
-            libxcb-keysyms1 \
-            libxcb-randr0 \
-            libxcb-render-util0 \
-            libxcb-xinerama0 \
-            libxcb-xfixes0 \
-            libxcb-cursor0 \
             libgl1 \
             libegl1 \
-            libglib2.0-0
+            libdbus-1-3 \
+            libfontconfig1 \
+            libglib2.0-0 \
+            libxkbcommon0
       
       - name: Set up Python
         uses: actions/setup-python@v5
