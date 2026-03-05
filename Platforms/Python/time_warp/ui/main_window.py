@@ -11,9 +11,12 @@
    * :class:`~.mixins.HelpDocsMixin`
 """
 
+import logging
 import re
 import time
 from pathlib import Path
+
+logger = logging.getLogger(__name__)
 
 # pylint: disable=no-name-in-module
 from PySide6.QtCore import QSettings, QSize, Qt, QTimer
@@ -413,7 +416,7 @@ class MainWindow(
                 # First time running after wizard was already done
                 QTimer.singleShot(800, self._coach_marks.start)
         except Exception:  # pylint: disable=broad-except
-            pass  # Onboarding must never crash the IDE
+            logger.debug("Onboarding/coach-mark init failed", exc_info=True)
 
     # ---- Examples browser ----
 
@@ -2045,7 +2048,7 @@ class MainWindow(
             if hint and hint.strip() and hint.strip() != error.strip():
                 self.output.append(f"\n💡 Hint: {hint}")
         except Exception:  # pylint: disable=broad-except
-            pass
+            logger.debug("Error generating enhanced error hint", exc_info=True)
 
         ai_panel = self.feature_manager.get_feature_panel("ai_assistant")
         if ai_panel and hasattr(ai_panel, "set_error_context"):

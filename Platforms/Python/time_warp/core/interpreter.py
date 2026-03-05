@@ -9,9 +9,12 @@ Time Warp interpreter for executing code in multiple languages
 # interpreter into smaller classes would be a large architecture change.
 # pylint: disable=too-many-public-methods
 
+import logging
 import re
 import threading
 import time
+
+logger = logging.getLogger(__name__)
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import (
@@ -414,7 +417,7 @@ class Interpreter:
             try:
                 fh.close()
             except Exception:  # pylint: disable=broad-exception-caught
-                pass
+                logger.debug("Error closing file handle during reset", exc_info=True)
         self.open_files.clear()
         self.last_input = ""
         self.pending_input = None
