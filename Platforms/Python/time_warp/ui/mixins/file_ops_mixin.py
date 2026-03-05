@@ -60,7 +60,7 @@ class FileOperationsMixin:
 
     def load_file(self, filename):
         """Load file into current tab."""
-        from ..core.interpreter import Language
+        from ...core.interpreter import Language
 
         try:
             with open(filename, "r", encoding="utf-8") as f:

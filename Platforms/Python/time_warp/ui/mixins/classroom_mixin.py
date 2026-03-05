@@ -74,7 +74,7 @@ class ClassroomMixin:
 
     def export_classroom_bundle(self, name: str, description: str):
         """Export a classroom bundle from open tabs."""
-        from ..core.interpreter import Language
+        from ...core.interpreter import Language
 
         files = {}
         for i in range(self.editor_tabs.count()):
@@ -120,7 +120,7 @@ class ClassroomMixin:
 
     def import_classroom_bundle(self, path: str):
         """Import a classroom bundle and open its files."""
-        from ..core.interpreter import Language
+        from ...core.interpreter import Language
 
         bundle = self.classroom_mode.import_bundle(Path(path))
         if not bundle:
@@ -189,7 +189,7 @@ class ClassroomMixin:
 
     def _apply_lesson_code(self, language_name: str, code: str):
         """Load lesson starter code into the current editor."""
-        from ..core.interpreter import Language
+        from ...core.interpreter import Language
 
         editor = self.get_current_editor()
         if not editor:
