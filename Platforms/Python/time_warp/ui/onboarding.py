@@ -118,6 +118,10 @@ class OnboardingDialog(QDialog):
         self.skip_checkbox = QCheckBox("Don't show this again")
         button_layout.addWidget(self.skip_checkbox)
 
+        self.skip_button = QPushButton("Skip Tutorial")
+        self.skip_button.clicked.connect(self._skip_tutorial)
+        button_layout.addWidget(self.skip_button)
+
         button_layout.addStretch()
 
         self.back_button = QPushButton("← Back")
@@ -274,11 +278,21 @@ class OnboardingDialog(QDialog):
         """Show hint for current step."""
         self.hint_label.setVisible(True)
 
+    def _skip_tutorial(self):
+        """Skip the tutorial and close dialog."""
+        self.tutorial_finished.emit()
+        self.accept()
+
     def _finish_tutorial(self):
         """Finish tutorial and close dialog."""
         self.step_completed.emit(self.steps[self.current_step_index].step_id)
         self.tutorial_finished.emit()
         self.accept()
+
+    def reject(self):
+        """Handle Escape key / window close button."""
+        self.tutorial_finished.emit()
+        super().reject()
 
     def should_skip_onboarding(self) -> bool:
         """Check if user wants to skip onboarding."""

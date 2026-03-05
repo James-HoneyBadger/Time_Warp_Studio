@@ -410,7 +410,9 @@ class MainWindow(
             if self._onboarding_manager.should_show_onboarding():
                 dlg = OnboardingDialog(self)
                 dlg.exec()
-                self._onboarding_manager.mark_tutorial_completed()
+                self._onboarding_manager.mark_tutorial_completed(
+                    skip=dlg.should_skip_onboarding()
+                )
                 # After the wizard, show the coach-mark tour with a short delay
                 if self._coach_marks:
                     QTimer.singleShot(800, lambda: self._coach_marks.start(force=True))
