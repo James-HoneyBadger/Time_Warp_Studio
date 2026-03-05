@@ -70,7 +70,9 @@ def main():
         sys.exit(1)
 
     # Setup logging (INFO level for normal use, can be overridden)
-    log_file = Path.home() / ".time_warp" / "logs" / "ide.log"
+    from time_warp.core.config import LOGS_DIR
+
+    log_file = LOGS_DIR / "ide.log"
     setup_logging(log_level=logging.INFO, log_file=log_file)
 
     logger = get_logger(__name__)

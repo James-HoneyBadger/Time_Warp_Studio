@@ -7,6 +7,8 @@ orient new users to the key areas of the IDE.
 # pylint: disable=no-name-in-module
 
 from PySide6.QtCore import QRect, QSettings, Qt, QTimer
+
+from ..core.config import QSETTINGS_APP, QSETTINGS_ORG
 from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QDialog,
@@ -223,12 +225,12 @@ class CoachMarkManager:
 
     def should_show(self) -> bool:
         """Return True if the tour has not yet been completed."""
-        s = QSettings("TimeWarp", "IDE")
+        s = QSettings(QSETTINGS_ORG, QSETTINGS_APP)
         return not s.value(self.SETTINGS_KEY, False, type=bool)
 
     def mark_shown(self):
         """Persist that the tour has been shown."""
-        s = QSettings("TimeWarp", "IDE")
+        s = QSettings(QSETTINGS_ORG, QSETTINGS_APP)
         s.setValue(self.SETTINGS_KEY, True)
 
     def start(self, force: bool = False):

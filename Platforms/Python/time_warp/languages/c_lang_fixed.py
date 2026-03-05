@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
-
+    from ..graphics.turtle_state import TurtleState
 
 _DECL_RE = re.compile(
     r"^\s*(int|long|float|double|char)\s+"
@@ -1170,7 +1170,7 @@ def _handle_close_brace(interpreter: "Interpreter") -> str:
     return ""
 
 
-def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
+def execute_c(interpreter: "Interpreter", command: str, turtle: "TurtleState") -> str:
     """Execute a single C-like command line."""
     _ensure_c_stack(interpreter)
     # Track multiline block-comment state on the interpreter instance
@@ -1225,7 +1225,7 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
             for part in parts:
                 part = part.strip()
                 if part:
-                    r = execute_c(interpreter, part)
+                    r = execute_c(interpreter, part, turtle)
                     if r:
                         results.append(r)
             return "\n".join(results) if results else ""
@@ -1376,7 +1376,7 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
             for part in _split_case_stmts(rest):
                 part = part.strip()
                 if part:
-                    r = execute_c(interpreter, part)
+                    r = execute_c(interpreter, part, turtle)
                     if r:
                         results.append(r)
             return "\n".join(results) if results else ""
@@ -1390,7 +1390,7 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
             for part in _split_case_stmts(rest):
                 part = part.strip()
                 if part:
-                    r = execute_c(interpreter, part)
+                    r = execute_c(interpreter, part, turtle)
                     if r:
                         results.append(r)
             return "\n".join(results) if results else ""
@@ -1461,7 +1461,7 @@ def execute_c(interpreter: "Interpreter", command: str, _turtle=None) -> str:
                 # Execute the inline body (strip trailing semicolon)
                 body_cmd = rest.rstrip(";").strip()
                 if body_cmd:
-                    res = execute_c(interpreter, body_cmd)
+                    res = execute_c(interpreter, body_cmd, turtle)
                     if res:
                         # ensure printed values flow into interpreter output
                         try:

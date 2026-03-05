@@ -917,7 +917,9 @@ class ImmediateModePanel(QWidget):
         self._repl_thread = None  # Background thread for REPL execution
 
         # Command history — loaded from persistent settings
-        _s = QSettings("TimeWarp", "IDE")
+        from ..core.config import QSETTINGS_APP, QSETTINGS_ORG
+
+        _s = QSettings(QSETTINGS_ORG, QSETTINGS_APP)
         saved_history = _s.value("repl_history", [])
         self.command_history = list(saved_history) if saved_history else []
         self.history_index = -1
@@ -1047,7 +1049,9 @@ class ImmediateModePanel(QWidget):
         if not self.command_history or self.command_history[-1] != command:
             self.command_history.append(command)
         self.history_index = -1
-        _s = QSettings("TimeWarp", "IDE")
+        from ..core.config import QSETTINGS_APP, QSETTINGS_ORG
+
+        _s = QSettings(QSETTINGS_ORG, QSETTINGS_APP)
         _s.setValue("repl_history", self.command_history[-200:])
 
         # Show command in output

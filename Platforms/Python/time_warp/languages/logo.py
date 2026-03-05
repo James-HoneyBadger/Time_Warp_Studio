@@ -181,7 +181,7 @@ def _split_logo_commands(
 def execute_logo(
     interpreter: "Interpreter",
     command: str,
-    turtle: Optional["TurtleState"] = None,
+    turtle: "TurtleState",
 ) -> str:
     """
     Executes a Logo command string.

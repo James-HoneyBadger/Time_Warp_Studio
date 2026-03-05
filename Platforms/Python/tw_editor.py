@@ -360,7 +360,9 @@ class TWEditorWindow(QMainWindow):
 def main():
     """Entry point for TW Editor."""
     # Setup logging
-    log_file = Path.home() / ".time_warp" / "logs" / "tw_editor.log"
+    from time_warp.core.config import LOGS_DIR
+
+    log_file = LOGS_DIR / "tw_editor.log"
     setup_logging(log_level=logging.INFO, log_file=log_file)
 
     app = QApplication(sys.argv)

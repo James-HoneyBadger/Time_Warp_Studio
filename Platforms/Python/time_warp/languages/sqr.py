@@ -100,7 +100,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
-    from ..core.turtle_state import TurtleState  # noqa: F401
+    from ..graphics.turtle_state import TurtleState  # noqa: F401
 
 
 # ---------------------------------------------------------------------------

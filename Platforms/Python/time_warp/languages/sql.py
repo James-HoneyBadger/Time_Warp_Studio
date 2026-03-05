@@ -26,7 +26,7 @@ from ..core.sql_engine import SQLSession, _connections
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
-    from ..core.turtle_state import TurtleState
+    from ..graphics.turtle_state import TurtleState
 
 
 def execute_sql(

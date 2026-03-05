@@ -48,7 +48,9 @@ class TurtleGallery:
 
     def __init__(self, gallery_dir: Path | None = None):
         if gallery_dir is None:
-            gallery_dir = Path.home() / ".Time_Warp" / "gallery"
+            from ..core.config import GALLERY_DIR
+
+            gallery_dir = GALLERY_DIR
         self.gallery_dir = gallery_dir
         self.gallery_dir.mkdir(parents=True, exist_ok=True)
 

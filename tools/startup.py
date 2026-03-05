@@ -128,7 +128,7 @@ class ConfigurationManager:
 
     def __init__(self, config_path: Optional[str] = None):
         if config_path is None:
-            self.config_path = Path.home() / ".Time_Warp" / "config.json"
+            self.config_path = Path.home() / ".time_warp" / "config.json"
         else:
             self.config_path = Path(config_path)
 

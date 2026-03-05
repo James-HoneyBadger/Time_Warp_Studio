@@ -19,9 +19,10 @@ _LOGGERS = {}
 
 def _ensure_log_dir() -> Path:
     """Ensure log directory exists and return its path."""
-    log_dir = Path.home() / ".time_warp" / "logs"
-    log_dir.mkdir(parents=True, exist_ok=True)
-    return log_dir
+    from ..core.config import LOGS_DIR
+
+    LOGS_DIR.mkdir(parents=True, exist_ok=True)
+    return LOGS_DIR
 
 
 def get_logger(name: str) -> logging.Logger:

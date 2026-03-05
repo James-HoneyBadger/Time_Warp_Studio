@@ -55,7 +55,9 @@ class AssetLibrary:
     def __init__(self, library_path: Optional[Path] = None):
         """Initialize asset library."""
         if library_path is None:
-            library_path = Path.home() / ".time_warp" / "assets"
+            from .config import ASSETS_DIR
+
+            library_path = ASSETS_DIR
 
         self.library_path = Path(library_path)
         self.library_path.mkdir(parents=True, exist_ok=True)

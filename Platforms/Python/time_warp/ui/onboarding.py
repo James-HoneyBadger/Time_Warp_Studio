@@ -290,7 +290,9 @@ class OnboardingManager:
 
     def __init__(self, config_dir: Path | None = None):
         if config_dir is None:
-            config_dir = Path.home() / ".Time_Warp"
+            from ..core.config import APP_DATA_DIR
+
+            config_dir = APP_DATA_DIR
         self.config_dir = config_dir
         self.config_dir.mkdir(parents=True, exist_ok=True)
         self.config_file = self.config_dir / "onboarding.json"

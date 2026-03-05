@@ -26,7 +26,9 @@ class DataLogger:
     def __init__(self, max_memory_entries: int = 1000):
         self.max_memory_entries = max_memory_entries
         self.data_buffer: Dict[str, deque] = {}
-        self.log_directory = Path.home() / ".time_warp" / "hardware_logs"
+        from ...core.config import HARDWARE_LOGS_DIR
+
+        self.log_directory = HARDWARE_LOGS_DIR
         self.log_directory.mkdir(parents=True, exist_ok=True)
 
         # Current session data

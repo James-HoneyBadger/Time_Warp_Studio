@@ -22,7 +22,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
-
+    from ..graphics.turtle_state import TurtleState
 
 _FACT_RE = re.compile(r"^\s*([a-z][a-z0-9_]*)\s*\((.+)\)\s*\.\s*$")
 _RULE_PART1 = r"^\s*([a-z][a-z0-9_]*)\s*"
@@ -1499,7 +1499,7 @@ def _solve(
     return solutions
 
 
-def execute_prolog(interpreter: "Interpreter", command: str, _turtle) -> str:
+def execute_prolog(interpreter: "Interpreter", command: str, turtle: "TurtleState") -> str:
     """Execute Prolog language command."""
     raw_cmd = command.strip()
 

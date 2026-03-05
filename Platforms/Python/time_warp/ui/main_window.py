@@ -146,8 +146,10 @@ class MainWindow(
     def __init__(self):
         super().__init__()
 
+        from ..core.config import QSETTINGS_APP, QSETTINGS_ORG
+
         # Settings for persistence
-        self.settings = QSettings("TimeWarp", "IDE")
+        self.settings = QSettings(QSETTINGS_ORG, QSETTINGS_APP)
 
         # Theme manager
         self.theme_manager = ThemeManager()

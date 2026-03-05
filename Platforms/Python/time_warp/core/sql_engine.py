@@ -29,11 +29,13 @@ import threading
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from .config import DATABASES_DIR
+
 # ---------------------------------------------------------------------------
 # Shared in-process databases (name → sqlite3.Connection)
 # ---------------------------------------------------------------------------
 
-_DB_DIR = Path.home() / ".Time_Warp" / "databases"
+_DB_DIR = DATABASES_DIR
 _DB_DIR.mkdir(parents=True, exist_ok=True)
 
 _connections: Dict[str, sqlite3.Connection] = {}

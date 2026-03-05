@@ -1585,9 +1585,9 @@ def reset_forth():
     _forth_executor = None
 
 
-def execute_forth(interpreter: "Interpreter", command: str, _turtle=None) -> str:
+def execute_forth(interpreter: "Interpreter", command: str, turtle: "TurtleState") -> str:
     global _forth_executor
     if _forth_executor is None or _forth_executor.interpreter != interpreter:
         _forth_executor = ForthExecutor(interpreter)
-    _forth_executor.execute_line(command, _turtle)
+    _forth_executor.execute_line(command, turtle)
     return ""

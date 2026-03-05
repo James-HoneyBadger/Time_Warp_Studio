@@ -21,7 +21,9 @@ class ProgressTracker:
 
     def __init__(self, root: Optional[Path] = None):
         self.root = root or self._find_repo_root()
-        self.state_path = Path.home() / ".time_warp" / "progress.json"
+        from ..core.config import PROGRESS_JSON
+
+        self.state_path = PROGRESS_JSON
         self.state: Dict[str, List[str]] = {
             "completed_tutorials": [],
             "completed_examples": [],

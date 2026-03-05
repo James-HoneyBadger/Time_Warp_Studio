@@ -39,8 +39,9 @@ class TestLogoExecutor:
 
     def test_execute_logo_splits_multiple_commands(self):
         interpreter = Interpreter()
+        turtle = TurtleState()
 
-        output = execute_logo(interpreter, 'MAKE "A 10 PRINT :A')
+        output = execute_logo(interpreter, 'MAKE "A 10 PRINT :A', turtle)
 
         assert output == "10.0\n"
         assert interpreter.variables["A"] == 10.0

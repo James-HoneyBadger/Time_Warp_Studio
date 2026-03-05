@@ -51,7 +51,9 @@ class ClassroomMode:
 
     def __init__(self):
         self.presentation_mode = PresentationMode()
-        self.bundles_dir = Path.home() / ".time_warp" / "bundles"
+        from ..core.config import BUNDLES_DIR
+
+        self.bundles_dir = BUNDLES_DIR
         self._ensure_bundle_dir()
 
     def _ensure_bundle_dir(self) -> None:

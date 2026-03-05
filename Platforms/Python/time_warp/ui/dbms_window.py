@@ -1590,7 +1590,9 @@ class BackupRestoreTab(QWidget):
             elif "SQLite" in fmt:
                 import shutil
 
-                db_dir = Path.home() / ".Time_Warp" / "databases"
+                from ...core.config import DATABASES_DIR
+
+                db_dir = DATABASES_DIR
                 src = db_dir / f"{db}.db"
                 if src.exists():
                     shutil.copy2(str(src), path)
@@ -1723,7 +1725,9 @@ class ServerInfoTab(QWidget):
             sqlite_ver = cur.fetchone()[0]
             lines.append("")
             lines.append(f"SQLite engine: {sqlite_ver}")
-            db_dir = Path.home() / ".Time_Warp" / "databases"
+            from ...core.config import DATABASES_DIR
+
+            db_dir = DATABASES_DIR
             db_file = db_dir / f"{db}.db"
             if db_file.exists():
                 sz = db_file.stat().st_size
@@ -1868,7 +1872,9 @@ class DBMSWindow(QMainWindow):
         )
         if reply != QMessageBox.Yes:
             return
-        db_dir = Path.home() / ".Time_Warp" / "databases"
+        from ...core.config import DATABASES_DIR
+
+        db_dir = DATABASES_DIR
         db_file = db_dir / f"{db}.db"
         if db_file.exists():
             db_file.unlink()

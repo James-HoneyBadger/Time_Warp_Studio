@@ -16,7 +16,7 @@ from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
-
+    from ..graphics.turtle_state import TurtleState
 
 _VAR_RE = re.compile(
     r"^\s*(?:var\s+)?(.+):\s*(integer|longint|real|string|char|boolean|byte|word|shortint|double)\s*;?\s*$",
@@ -1247,7 +1247,7 @@ def _handle_for(
     return ""
 
 
-def execute_pascal(interpreter: "Interpreter", command: str, turtle) -> str:
+def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleState") -> str:
     """Execute Pascal language command."""
     # Track multi-line block comments {  ...  } and (*  ...  *)
     if not hasattr(interpreter, "_pascal_in_block_comment"):

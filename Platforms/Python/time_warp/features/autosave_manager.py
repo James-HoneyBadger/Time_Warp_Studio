@@ -34,7 +34,9 @@ class FileHistory:
     def __init__(self, file_path: Path):
         self.file_path = file_path
         self.versions: List[FileVersion] = []
-        self.history_dir = Path.home() / ".time_warp" / "history"
+        from ..core.config import HISTORY_DIR
+
+        self.history_dir = HISTORY_DIR
         self._ensure_history_dir()
 
     def _ensure_history_dir(self) -> None:

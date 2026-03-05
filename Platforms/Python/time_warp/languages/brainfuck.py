@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
-    from ..core.turtle_state import TurtleState
+    from ..graphics.turtle_state import TurtleState
 
 TAPE_SIZE = 30_000
 MAX_STEPS = 10_000_000

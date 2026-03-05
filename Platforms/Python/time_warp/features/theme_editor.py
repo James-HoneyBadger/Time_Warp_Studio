@@ -157,7 +157,11 @@ class ThemeManager:
 
     def __init__(self, themes_dir: Optional[Path] = None):
         self.themes: Dict[str, Theme] = {}
-        self.themes_dir = themes_dir or Path.home() / ".time_warp" / "themes"
+        if themes_dir is None:
+            from ..core.config import THEMES_DIR
+
+            themes_dir = THEMES_DIR
+        self.themes_dir = themes_dir
         self.current_theme_id = "dracula"
         self._load_builtin_themes()
         self._load_custom_themes()
