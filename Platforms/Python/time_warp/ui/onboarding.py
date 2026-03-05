@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from PySide6.QtCore import Signal
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QDialog,
@@ -50,7 +50,9 @@ class OnboardingDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Welcome to Time Warp Studio")
         self.setMinimumSize(700, 500)
-        self.setModal(False)
+        self.setWindowFlags(
+            self.windowFlags() | Qt.WindowCloseButtonHint
+        )
 
         self.current_step_index = 0
         self.steps = self._create_tutorial_steps()
