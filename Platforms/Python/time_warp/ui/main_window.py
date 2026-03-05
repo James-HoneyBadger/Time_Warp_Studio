@@ -796,7 +796,7 @@ class MainWindow(
 
     def setup_ui(self):
         """Setup main UI layout."""
-        self.setWindowTitle("🎨 Time Warp Studio v7.0.0 - Python Edition")
+        self.setWindowTitle("🎨 Time Warp Studio v8.0.0 - Python Edition")
         self.setMinimumSize(900, 600)
 
         # Set main window style
@@ -2284,7 +2284,7 @@ class MainWindow(
 
     def update_title(self):
         """Update window title."""
-        title = "Time Warp Studio v7.0.0"
+        title = "Time Warp Studio v8.0.0"
 
         current_info = self.get_current_tab_info()
         if current_info["file"]:

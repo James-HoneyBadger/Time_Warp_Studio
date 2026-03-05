@@ -577,7 +577,7 @@ pip install --upgrade -e Platforms/Python
 ### Stay on Specific Version
 
 ```bash
-git checkout v7.0.0  # Release tag
+git checkout v8.0.0  # Release tag
 git checkout main     # Latest development
 ```
 

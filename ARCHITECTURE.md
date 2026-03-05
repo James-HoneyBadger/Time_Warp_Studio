@@ -1,6 +1,6 @@
 # Architecture Guide
 
-**Time Warp Studio v7.0.0 — System Design and Implementation**
+**Time Warp Studio v8.0.0 — System Design and Implementation**
 
 ---
 
@@ -40,7 +40,7 @@ Time Warp Studio is a desktop IDE built with:
 - Thread-safe queues for execution communication
 
 **Modularity**:
-- 7 independent language modules (easily extensible)
+- 24 independent language modules (easily extensible)
 - Feature panels loaded dynamically
 - Theme system completely separate from core logic
 
