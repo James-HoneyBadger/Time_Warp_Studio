@@ -405,22 +405,13 @@ class MainWindow(
     # ---- Onboarding ----
 
     def _maybe_show_onboarding(self):
-        """Show first-run onboarding wizard if not yet completed."""
-        try:
-            if self._onboarding_manager.should_show_onboarding():
-                dlg = OnboardingDialog(self)
-                dlg.exec()
-                self._onboarding_manager.mark_tutorial_completed(
-                    skip=dlg.should_skip_onboarding()
-                )
-                # After the wizard, show the coach-mark tour with a short delay
-                if self._coach_marks:
-                    QTimer.singleShot(800, lambda: self._coach_marks.start(force=True))
-            elif self._coach_marks and self._coach_marks.should_show():
-                # First time running after wizard was already done
-                QTimer.singleShot(800, self._coach_marks.start)
-        except Exception:  # pylint: disable=broad-except
-            logger.debug("Onboarding/coach-mark init failed", exc_info=True)
+        """Show first-run onboarding wizard if not yet completed.
+
+        NOTE: Onboarding and coach-mark overlays are disabled until their
+        UI issues are resolved.  The method is kept so the call-site in
+        __init__ does not need to change.
+        """
+        return
 
     # ---- Examples browser ----
 
