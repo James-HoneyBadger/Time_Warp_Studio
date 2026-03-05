@@ -664,7 +664,10 @@ def _logo_eval_arg(interpreter: "Interpreter", arg: str) -> float:
     Raises:
         ValueError: If argument cannot be evaluated
     """
-    if arg.startswith(":"):
+    # Only treat as a simple variable when the arg is a bare :VAR reference
+    # (no spaces, no operators).  Expressions like ":R / :CURVE" must go
+    # through the full expression evaluator.
+    if arg.startswith(":") and " " not in arg:
         var_name = arg[1:].upper()
         if var_name not in interpreter.variables:
             raise ValueError(f"Undefined variable: {arg}")
