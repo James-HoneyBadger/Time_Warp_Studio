@@ -77,34 +77,43 @@ jobs:
           python -c "from time_warp.core.interpreter import Interpreter, Language; print('time_warp core OK')" || echo "time_warp core import FAILED"
         working-directory: ${{ github.workspace }}/Platforms/Python
 
+      - name: Check test collection
+        shell: bash
+        run: |
+          python -m pytest time_warp/tests/ --collect-only -q 2>&1 | tail -20
+        working-directory: ${{ github.workspace }}/Platforms/Python
+        continue-on-error: true
+
       - name: Run full test suite
         shell: bash
         run: |
-          cd Platforms/Python
-          python -m pytest time_warp/tests/ -v \
-            --cov=time_warp \
-            --cov-report=xml \
-            --cov-report=term-missing \
-            --tb=long
-        working-directory: ${{ github.workspace }}
+          python -m pytest time_warp/tests/ -v --tb=short 2>&1 | tee "$RUNNER_TEMP/pytest_output.txt"
+          _pytest_exit=${PIPESTATUS[0]}
+          exit $_pytest_exit
+        working-directory: ${{ github.workspace }}/Platforms/Python
       
       - name: Show failure details
         if: failure()
         shell: bash
         run: |
-          echo "=== FAILURE DIAGNOSTICS ===" >> $GITHUB_STEP_SUMMARY
-          echo "OS: ${{ matrix.os }}, Python: ${{ matrix.python-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "## Failure Diagnostics" >> $GITHUB_STEP_SUMMARY
+          echo "**OS:** ${{ matrix.os }} | **Python:** ${{ matrix.python-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Last 150 lines of pytest output" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          tail -150 "$RUNNER_TEMP/pytest_output.txt" 2>/dev/null >> $GITHUB_STEP_SUMMARY || echo 'No pytest output captured' >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### PySide6 import test" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          python -c "import PySide6.QtCore; print('PySide6', PySide6.__version__, 'OK')" 2>&1 >> $GITHUB_STEP_SUMMARY || echo "PySide6 FAILED" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Installed packages" >> $GITHUB_STEP_SUMMARY
           echo '```' >> $GITHUB_STEP_SUMMARY
-          pip list 2>/dev/null >> $GITHUB_STEP_SUMMARY || true
+          pip list 2>/dev/null | grep -E 'pytest|coverage|PySide|Pillow|requests' >> $GITHUB_STEP_SUMMARY || true
           echo '```' >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Python compileall check" >> $GITHUB_STEP_SUMMARY
-          echo '```' >> $GITHUB_STEP_SUMMARY
-          python -m compileall Platforms/Python/time_warp/ -q 2>&1 | head -50 >> $GITHUB_STEP_SUMMARY || true
-          echo '```' >> $GITHUB_STEP_SUMMARY
-        working-directory: ${{ github.workspace }}
+        working-directory: ${{ github.workspace }}/Platforms/Python
       
       - name: Upload coverage to Codecov
         if: matrix.os == 'ubuntu-latest' && matrix.python-version == '3.13'
