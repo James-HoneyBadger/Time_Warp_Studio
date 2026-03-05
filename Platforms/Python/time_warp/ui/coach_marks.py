@@ -32,7 +32,9 @@ class CoachMarkOverlay(QWidget):
         super().__init__(parent)
         self.setAttribute(Qt.WA_TransparentForMouseEvents, False)
         self.setAttribute(Qt.WA_TranslucentBackground, True)
-        self.setWindowFlags(Qt.SubWindow)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.SubWindow)
+        self.setFocusPolicy(Qt.StrongFocus)
+        self.raise_()
 
         self._target_rect: QRect = QRect()
         self._callout_title: str = ""
@@ -99,6 +101,24 @@ class CoachMarkOverlay(QWidget):
             }
         """)
         self._panel.adjustSize()
+
+    # ------------------------------------------------------------------
+    # Input events
+    # ------------------------------------------------------------------
+
+    def mousePressEvent(self, event):
+        """Click outside the panel closes the overlay."""
+        if not self._panel.geometry().contains(event.pos()):
+            self._close_btn.click()
+        else:
+            super().mousePressEvent(event)
+
+    def keyPressEvent(self, event):
+        """Escape closes the overlay."""
+        if event.key() == Qt.Key_Escape:
+            self._close_btn.click()
+        else:
+            super().keyPressEvent(event)
 
     # ------------------------------------------------------------------
     # Visual update
@@ -249,6 +269,8 @@ class CoachMarkManager:
         self._overlay._prev_btn.clicked.connect(self._prev_step)
         self._overlay._close_btn.clicked.connect(self._close)
         self._overlay.show()
+        self._overlay.raise_()
+        self._overlay.setFocus()
         self._show_step()
 
     # ------------------------------------------------------------------
