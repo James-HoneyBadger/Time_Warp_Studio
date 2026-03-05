@@ -15,12 +15,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
 
 # ---------------------------------------------------------------------------
-# Prevent collection of integration tests that require services unavailable
-# in standard CI.  This is a belt-and-suspenders backup to the --ignore
-# entries in pyproject.toml addopts.
+# Prevent collection of test files requiring unavailable dependencies.
+# Add paths here for any tests that need optional packages not in [dev].
 # ---------------------------------------------------------------------------
-collect_ignore = [
-    "time_warp/tests/test_api_integration.py",
-    "time_warp/tests/test_websocket_integration.py",
-    "time_warp/tests/test_multiplayer_integration.py",
-]
+collect_ignore: list[str] = []
