@@ -73,7 +73,7 @@ def main():
     from time_warp.core.config import LOGS_DIR
 
     log_file = LOGS_DIR / "ide.log"
-    setup_logging(log_level=logging.INFO, log_file=log_file)
+    setup_logging(level="INFO", log_file=str(log_file))
 
     logger = get_logger(__name__)
     logger.info("Time Warp Studio starting")

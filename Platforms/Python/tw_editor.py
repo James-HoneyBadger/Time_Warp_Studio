@@ -363,7 +363,7 @@ def main():
     from time_warp.core.config import LOGS_DIR
 
     log_file = LOGS_DIR / "tw_editor.log"
-    setup_logging(log_level=logging.INFO, log_file=log_file)
+    setup_logging(level="INFO", log_file=str(log_file))
 
     app = QApplication(sys.argv)
     app.setApplicationName("TW Editor")
