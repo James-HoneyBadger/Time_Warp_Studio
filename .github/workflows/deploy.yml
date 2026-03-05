@@ -116,10 +116,7 @@ jobs:
       - name: Run test suite
         working-directory: Platforms/Python
         run: |
-          pytest time_warp/tests/ \
-            --ignore=time_warp/tests/test_api_integration.py \
-            --ignore=time_warp/tests/test_websocket_integration.py \
-            --ignore=time_warp/tests/test_multiplayer_integration.py \
+          pytest time_warp/tests/ --no-cov \
             --junit-xml=test-results.xml -q
 
       - name: Upload test results

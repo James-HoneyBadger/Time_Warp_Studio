@@ -16,7 +16,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, macos-latest, windows-latest]
-        python-version: ['3.10', '3.11', '3.12', '3.13']
+        python-version: ['3.11', '3.12', '3.13']
     
     env:
       QT_QPA_PLATFORM: offscreen
@@ -87,7 +87,7 @@ jobs:
       - name: Run full test suite
         shell: bash
         run: |
-          python -m pytest time_warp/tests/ -v --tb=short 2>&1 | tee "$RUNNER_TEMP/pytest_output.txt"
+          python -m pytest time_warp/tests/ -v --tb=short --no-cov 2>&1 | tee "$RUNNER_TEMP/pytest_output.txt"
           _pytest_exit=${PIPESTATUS[0]}
           exit $_pytest_exit
         working-directory: ${{ github.workspace }}/Platforms/Python

@@ -44,3 +44,11 @@ build/
 *.dll
 *.exe
 *.pdb
+
+# Test / coverage artifacts
+.coverage
+coverage.xml
+htmlcov/
+test-results*.xml
+test_report.html
+test_reports/

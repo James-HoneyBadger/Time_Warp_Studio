@@ -149,9 +149,6 @@ python_classes = ["Test*"]
 python_functions = ["test_*"]
 addopts = [
     "--strict-markers",
-    "--cov=time_warp",
-    "--cov-report=term-missing",
-    "--cov-report=xml",
 ]
 markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
