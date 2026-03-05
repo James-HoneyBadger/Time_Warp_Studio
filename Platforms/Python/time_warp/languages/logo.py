@@ -25,7 +25,7 @@ logger = get_logger(__name__)
 # Compiled regex patterns for performance
 _VAR_PATTERN = re.compile(r":([A-Za-z_][A-Za-z0-9_]*)")
 _RANDOM_PATTERN = re.compile(r"RANDOM\s+([A-Za-z0-9_.]+)", re.IGNORECASE)
-_BRACKET_PATTERN = re.compile(r'\[|\]|"[^\s]*|[^\[\]\s]+')
+_BRACKET_PATTERN = re.compile(r'\[|\]|"[^\s\[\]]*|[^\[\]\s]+')
 
 # Color name to RGB mapping
 COLOR_NAMES = {
@@ -37,6 +37,17 @@ COLOR_NAMES = {
     "YELLOW": (255, 255, 0),
     "CYAN": (0, 255, 255),
     "MAGENTA": (255, 0, 255),
+    "PINK": (255, 192, 203),
+    "ORANGE": (255, 165, 0),
+    "PURPLE": (128, 0, 128),
+    "BROWN": (139, 69, 19),
+    "LIME": (0, 255, 0),
+    "NAVY": (0, 0, 128),
+    "TEAL": (0, 128, 128),
+    "MAROON": (128, 0, 0),
+    "OLIVE": (128, 128, 0),
+    "SILVER": (192, 192, 192),
+    "GOLD": (255, 215, 0),
     "GRAY": (128, 128, 128),
     "GREY": (128, 128, 128),
 }
@@ -994,6 +1005,40 @@ def _logo_setpencolor(
     return _logo_setcolor(interpreter, turtle, args)
 
 
+# Reporter functions whose return value can be used as an argument
+_LOGO_REPORTERS = {
+    "SUM", "DIFFERENCE", "PRODUCT", "QUOTIENT", "RANDOM",
+    "WORD", "LIST", "SENTENCE", "FIRST", "LAST", "BUTFIRST", "BUTLAST",
+    "ITEM", "THING",
+}
+
+
+def _resolve_color_arg(
+    interpreter: "Interpreter",
+    args: List[str],
+) -> str:
+    """Resolve a color argument that may be a variable, reporter, or literal."""
+    # Reporter function as argument (e.g. SETPENCOLOR ITEM :IDX :COLORS)
+    if args[0].upper() in _LOGO_REPORTERS:
+        result = execute_logo(interpreter, " ".join(args), None)
+        result = result.strip()
+        if result.startswith("❌"):
+            return result
+        return result.strip('"')
+
+    # Variable reference (e.g. SETPENCOLOR :CLR)
+    token = args[0].strip().strip('"')
+    if token.startswith(":"):
+        var_name = token[1:].upper()
+        if var_name in interpreter.variables:
+            return str(interpreter.variables[var_name]).strip('"')
+        if var_name in interpreter.string_variables:
+            return interpreter.string_variables[var_name].strip('"')
+        return token  # fallback – unresolved
+
+    return token
+
+
 def _logo_setcolor(
     interpreter: "Interpreter",
     turtle: Optional["TurtleState"],
@@ -1001,11 +1046,20 @@ def _logo_setcolor(
 ) -> str:
     if not args:
         return "❌ SETCOLOR requires color\n"
+    if turtle is None:
+        return "❌ Graphics not available for this command\n"
+
+    # Check for reporter / variable that resolves to a single color
+    if len(args) >= 1 and (args[0].upper() in _LOGO_REPORTERS or args[0].startswith(":")):
+        color_str = _resolve_color_arg(interpreter, args)
+        if color_str.startswith("❌"):
+            return color_str
+        turtle.pencolor(color_str)
+        return ""
+
     if len(args) == 1:
         # Named color or hex
         color_str = args[0].strip().strip('"')
-        if turtle is None:
-            return "❌ Graphics not available for this command\n"
         turtle.pencolor(color_str)
     elif len(args) == 3:
         # RGB values
@@ -1013,8 +1067,6 @@ def _logo_setcolor(
             r = int(_logo_eval_arg(interpreter, args[0]))
             g = int(_logo_eval_arg(interpreter, args[1]))
             b = int(_logo_eval_arg(interpreter, args[2]))
-            if turtle is None:
-                return "❌ Graphics not available for this command\n"
             turtle.setcolor(r, g, b)
         except ValueError:
             return "❌ SETCOLOR RGB values must be integers\n"
@@ -1030,13 +1082,23 @@ def _logo_setbgcolor(
 ) -> str:
     if not args:
         return "❌ SETBGCOLOR requires color\n"
+    if turtle is None:
+        return "❌ Graphics not available for this command\n"
+
+    # Resolve reporter / variable arguments
+    if len(args) >= 1 and (args[0].upper() in _LOGO_REPORTERS or args[0].startswith(":")):
+        color_str = _resolve_color_arg(interpreter, args)
+        if color_str.startswith("❌"):
+            return color_str
+        if color_str.upper() in COLOR_NAMES:
+            turtle.setbgcolor(*COLOR_NAMES[color_str.upper()])
+            return ""
+        return "❌ SETBGCOLOR only supports named colors for now\n"
+
     if len(args) == 1:
         # Named color or hex
         color_str = args[0].strip().strip('"')
-        # For bgcolor, we only support RGB for now, but could extend
         if color_str.upper() in COLOR_NAMES:
-            if turtle is None:
-                return "❌ Graphics not available for this command\n"
             turtle.setbgcolor(*COLOR_NAMES[color_str.upper()])
         else:
             return "❌ SETBGCOLOR only supports named colors for now\n"
@@ -1046,8 +1108,6 @@ def _logo_setbgcolor(
             r = int(_logo_eval_arg(interpreter, args[0]))
             g = int(_logo_eval_arg(interpreter, args[1]))
             b = int(_logo_eval_arg(interpreter, args[2]))
-            if turtle is None:
-                return "❌ Graphics not available for this command\n"
             turtle.setbgcolor(r, g, b)
         except ValueError:
             return "❌ SETBGCOLOR RGB values must be integers\n"
@@ -1743,7 +1803,7 @@ def _logo_item(interpreter: "Interpreter", args: List[str]) -> str:
         return "❌ ITEM requires index and thing\n"
 
     try:
-        index = int(interpreter.evaluate_expression(consumed[0])) - 1  # 1-indexed
+        index = int(_logo_eval_expr_str(interpreter, consumed[0])) - 1  # 1-indexed
     except (ValueError, TypeError):
         return "❌ Invalid index\n"
 
