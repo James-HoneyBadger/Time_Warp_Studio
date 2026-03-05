@@ -37,11 +37,7 @@ os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 # ---------------------------------------------------------------------------
 try:
     import PySide6.QtCore  # noqa: F401 — import-time check only
-    import PySide6.QtWidgets as _qtw  # noqa: F401
-
-    # Verify we can actually create/obtain a QApplication before committing.
-    _app_check = _qtw.QApplication.instance() or _qtw.QApplication(sys.argv[:1])
-    del _qtw, _app_check
+    import PySide6.QtWidgets  # noqa: F401 — import-time check only
     _PYSIDE6_AVAILABLE = True
 except Exception:  # noqa: BLE001 — any failure means Qt is unusable here
     _PYSIDE6_AVAILABLE = False

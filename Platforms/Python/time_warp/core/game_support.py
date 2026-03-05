@@ -14,7 +14,7 @@ try:
     from PySide6.QtMultimedia import QSoundEffect
 
     SOUND_AVAILABLE = True
-except ImportError:
+except Exception:  # ImportError or RuntimeError if Qt multimedia plugin missing
     SOUND_AVAILABLE = False
 
 
