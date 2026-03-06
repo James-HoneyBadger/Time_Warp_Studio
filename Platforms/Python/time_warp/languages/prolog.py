@@ -25,10 +25,12 @@ if TYPE_CHECKING:
     from ..graphics.turtle_state import TurtleState
 
 _FACT_RE = re.compile(r"^\s*([a-z][a-z0-9_]*)\s*\((.+)\)\s*\.\s*$")
+_FACT0_RE = re.compile(r"^\s*([a-z][a-z0-9_]*)\s*\.\s*$")
 _RULE_PART1 = r"^\s*([a-z][a-z0-9_]*)\s*"
 _RULE_PART2 = r"\((.+)\)\s*:-\s*(.+)\s*\.\s*$"
 _RULE_PATTERN = _RULE_PART1 + _RULE_PART2
 _RULE_RE = re.compile(_RULE_PATTERN)
+_RULE0_RE = re.compile(r"^\s*([a-z][a-z0-9_]*)\s*:-\s*(.+)\s*\.\s*$")
 _QUERY_RE = re.compile(r"^\s*\?-\s*([a-z][a-z0-9_]*)\s*\((.+)\)\s*\.\s*$")
 
 
@@ -1403,6 +1405,13 @@ def _solve_goals_cut(
 
 
 def _rename_vars_in_term(term: str, suffix: str) -> str:
+    # Don't rename variables inside quoted strings
+    stripped = term.strip()
+    if (stripped.startswith("'") and stripped.endswith("'")) or (
+        stripped.startswith('"') and stripped.endswith('"')
+    ):
+        return term
+
     def replace(match):
         v = match.group(0)
         if v == "_":
@@ -1503,14 +1512,47 @@ def execute_prolog(interpreter: "Interpreter", command: str, turtle: "TurtleStat
     """Execute Prolog language command."""
     raw_cmd = command.strip()
 
-    # Handle comments immediately if they are the only thing on the line
-    if raw_cmd.startswith("%") or raw_cmd.startswith("/*"):
+    # Handle single-line % comments
+    if raw_cmd.startswith("%"):
         return ""
+
+    # Strip inline % comments (not inside quotes)
+    pct_idx = raw_cmd.find("%")
+    if pct_idx > 0:
+        # Simple check: not inside quotes
+        in_quote = False
+        for i, ch in enumerate(raw_cmd[:pct_idx]):
+            if ch == "'":
+                in_quote = not in_quote
+        if not in_quote:
+            raw_cmd = raw_cmd[:pct_idx].strip()
+
+    # Strip inline /* ... */ block comments
+    while "/*" in raw_cmd and "*/" in raw_cmd:
+        start = raw_cmd.index("/*")
+        end = raw_cmd.index("*/", start + 2)
+        raw_cmd = (raw_cmd[:start] + raw_cmd[end + 2:]).strip()
+
+    # Track multi-line block comments
+    _ensure_kb(interpreter)
+    if interpreter.prolog_kb.get("_in_block_comment", False):
+        if "*/" in raw_cmd:
+            raw_cmd = raw_cmd[raw_cmd.index("*/") + 2:].strip()
+            interpreter.prolog_kb["_in_block_comment"] = False
+            if not raw_cmd:
+                return ""
+        else:
+            return ""  # still inside block comment
+    if "/*" in raw_cmd:
+        # Block comment starts but doesn't end on this line
+        if "*/" not in raw_cmd:
+            interpreter.prolog_kb["_in_block_comment"] = True
+            raw_cmd = raw_cmd[:raw_cmd.index("/*")].strip()
+            if not raw_cmd:
+                return ""
 
     if not raw_cmd:
         return ""
-
-    _ensure_kb(interpreter)
 
     # Section handling
     upper_cmd = raw_cmd.upper()
@@ -1620,6 +1662,13 @@ def execute_prolog(interpreter: "Interpreter", command: str, turtle: "TurtleStat
     if cmd.startswith(":-"):
         directive_body = cmd[2:].strip()
         if directive_body:
+            # Handle :- dynamic pred/arity declarations (no-op for our interpreter)
+            if re.match(r"^dynamic\b", directive_body, re.IGNORECASE):
+                return ""  # accept but ignore dynamic declarations
+            # Handle :- discontiguous, :- module, :- use_module, etc.
+            if re.match(r"^(discontiguous|module|use_module|ensure_loaded|style_check)\b",
+                        directive_body, re.IGNORECASE):
+                return ""  # accept but ignore these directives
             goals = _parse_body_goals(directive_body)
             interpreter.prolog_kb["cut_active"] = False
             sols = _solve_goals(interpreter.prolog_kb, goals, {})
@@ -1637,11 +1686,33 @@ def execute_prolog(interpreter: "Interpreter", command: str, turtle: "TurtleStat
         )
         return ""
 
+    # Zero-arity rule: name :- body.
+    m = _RULE0_RE.match(cmd_with_dot)
+    if m:
+        hp, body = m.groups()
+        interpreter.prolog_kb["rules"].append(
+            (
+                hp.lower(),
+                [],
+                _parse_body_goals(body),
+            )
+        )
+        return ""
+
     # Fact
     m = _FACT_RE.match(cmd_with_dot)
     if m:
         pred, args = m.groups()
         key = (pred.lower(), _parse_terms(args))
+        if key not in interpreter.prolog_kb["facts"]:
+            interpreter.prolog_kb["facts"].append(key)
+        return ""
+
+    # Zero-arity fact: name.
+    m = _FACT0_RE.match(cmd_with_dot)
+    if m:
+        pred = m.group(1)
+        key = (pred.lower(), [])
         if key not in interpreter.prolog_kb["facts"]:
             interpreter.prolog_kb["facts"].append(key)
         return ""

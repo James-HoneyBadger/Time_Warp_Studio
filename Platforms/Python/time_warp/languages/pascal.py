@@ -24,7 +24,7 @@ _VAR_RE = re.compile(
 )
 _VAR_ARRAY_RE = re.compile(
     (
-        r"^\s*(?:var\s+)?(.+):\s*array\s*\[\s*(\d+)\.\.(\d+)\s*\]\s*of\s*"
+        r"^\s*(?:var\s+)?(.+):\s*array\s*\[\s*(\w+)\.\.(\w+)\s*\]\s*of\s*"
         r"(integer|longint|real|string|char|boolean|byte|word|shortint|double)\s*;?\s*$"
     ),
     re.IGNORECASE,
@@ -426,6 +426,19 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
         info = interpreter.pascal_procs.get(fname)
         if info and info.get("is_func"):
             return _call_func_inline(interpreter, fname, m.group(2).strip(), info)
+
+    # Array element access: NAME(idx) — return raw value (may be string)
+    m_arr = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*\((.+)\)$", expr, re.IGNORECASE)
+    if m_arr:
+        arr_name = m_arr.group(1).upper()
+        if arr_name in interpreter.arrays:
+            try:
+                idx = int(interpreter.evaluate_expression(m_arr.group(2).strip()))
+                arr = interpreter.arrays[arr_name]
+                if 0 <= idx < len(arr):
+                    return arr[idx]
+            except Exception:  # noqa: BLE001
+                pass
 
     # ── SysUtils / CRT built-in functions ────────────────────────────────────
     # INTTOSTR(n)
@@ -1561,15 +1574,22 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
     # Array Declaration
     m = _VAR_ARRAY_RE.match(cmd)
     if m:
-        names, start_idx, end_idx, t = m.groups()
-        start_idx = int(start_idx)
-        end_idx = int(end_idx)
+        names, start_raw, end_raw, t = m.groups()
+        # Resolve constant names or literal integers for bounds
+        try:
+            start_idx = int(start_raw)
+        except ValueError:
+            start_idx = int(interpreter.variables.get(start_raw.upper(), 0))
+        try:
+            end_idx = int(end_raw)
+        except ValueError:
+            end_idx = int(interpreter.variables.get(end_raw.upper(), 0))
         size = end_idx + 1
         if size <= 0:
             return "❌ Error: Invalid array size"
 
         suf: str | None = _suffix_for_type(t)
-        default_val = 0.0
+        default_val: str | float = "" if suf == "$" else 0.0
 
         for raw in names.split(","):
             name = raw.strip().upper()
@@ -1658,7 +1678,6 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
             return "❌ Error: Invalid array index"
 
         val_expr = val_expr.rstrip(";").strip()
-        val_expr = val_expr.replace("[", "(").replace("]", ")")
 
         if name not in interpreter.arrays:
             return "❌ Error: Array not declared"
@@ -1667,10 +1686,18 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
         if idx < 0 or idx >= len(arr):
             return "❌ Error: Array index out of bounds"
 
-        try:
-            val = interpreter.evaluate_expression(val_expr)
-        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
-            val = 0.0
+        # Handle string literals directly before evaluate_expression
+        stripped = val_expr
+        if (stripped.startswith("'") and stripped.endswith("'")) or (
+            stripped.startswith('"') and stripped.endswith('"')
+        ):
+            val = stripped[1:-1]
+        else:
+            val_expr = val_expr.replace("[", "(").replace("]", ")")
+            try:
+                val = interpreter.evaluate_expression(val_expr)
+            except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+                val = 0.0
 
         arr[idx] = val
         return ""
@@ -1791,21 +1818,41 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
             if a.strip().startswith('"') or a.strip().startswith("'"):
                 out_parts.append(_unquote(a))
             else:
-                up = a.strip().upper()
+                # Strip Pascal format specifiers :width:decimals from end
+                fmt_width = 0
+                fmt_dec = -1
+                raw_a = a.strip()
+                fmt_m = re.match(
+                    r"^(.+?)\s*:\s*(\d+)\s*:\s*(\d+)\s*$", raw_a
+                )
+                if fmt_m:
+                    raw_a = fmt_m.group(1)
+                    fmt_width = int(fmt_m.group(2))
+                    fmt_dec = int(fmt_m.group(3))
+                else:
+                    fmt_m2 = re.match(r"^(.+?)\s*:\s*(\d+)\s*$", raw_a)
+                    if fmt_m2:
+                        raw_a = fmt_m2.group(1)
+                        fmt_width = int(fmt_m2.group(2))
+                up = raw_a.strip().upper()
                 if up + "$" in interpreter.string_variables:
                     out_parts.append(interpreter.string_variables[up + "$"])
                 elif up in interpreter.variables:
                     v = interpreter.variables[up]
-                    if isinstance(v, float) and v == int(v):
+                    if fmt_dec >= 0:
+                        out_parts.append(f"{v:.{fmt_dec}f}")
+                    elif isinstance(v, float) and v == int(v):
                         out_parts.append(str(int(v)))
                     else:
                         out_parts.append(f"{v:g}")
                 else:
                     try:
-                        expr_fixed = a.replace("[", "(").replace("]", ")")
+                        expr_fixed = raw_a.replace("[", "(").replace("]", ")")
                         _val = _pascal_eval_expr(interpreter, expr_fixed)
                         if isinstance(_val, str):
                             out_parts.append(_val)
+                        elif fmt_dec >= 0 and isinstance(_val, (int, float)):
+                            out_parts.append(f"{_val:.{fmt_dec}f}")
                         elif isinstance(_val, float) and _val == int(_val):
                             out_parts.append(str(int(_val)))
                         else:

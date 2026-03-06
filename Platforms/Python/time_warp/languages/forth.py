@@ -1073,6 +1073,9 @@ class ForthExecutor:
 
                     self.dictionary[self.new_word_name] = new_word_func
                     self.interpreter.log_output(f"✅ Defined {self.new_word_name}")
+                elif token.upper() == "RECURSE":
+                    # RECURSE compiles a self-reference to the word being defined
+                    self.new_word_definition.append(self.new_word_name)
                 else:
                     self.new_word_definition.append(token)
                 i += 1

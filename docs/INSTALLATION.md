@@ -462,15 +462,15 @@ Press **Ctrl+Enter** to run. Should see output in console.
 
 ### After Installation
 
-1. **Read [USER_GUIDE.md](docs/USER_GUIDE.md)** - Learn IDE features
-2. **Explore [Examples/](Examples/)** - Study example programs
-3. **Try [LANGUAGE_GUIDE.md](docs/LANGUAGE_GUIDE.md)** - Learn language syntax
-4. **Read [TURTLE_GRAPHICS.md](docs/TURTLE_GRAPHICS.md)** - Learn graphics
+1. **Read [USER_GUIDE.md](USER_GUIDE.md)** - Learn IDE features
+2. **Explore [Examples/](../Examples/)** - Study example programs
+3. **Try [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md)** - Learn language syntax
+4. **Read [Turtle Graphics](guides/04-turtle-graphics.md)** - Learn graphics
 
 ### Getting Help
 
-- **Questions**: Check [FAQ.md](docs/FAQ.md)
-- **Problems**: See [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
+- **Questions**: Check [FAQ](reference/faq.md)
+- **Problems**: See [Troubleshooting](guides/08-troubleshooting.md)
 - **Issues**: Report on GitHub Issues
 - **Email**: james@honey-badger.org
 
@@ -587,8 +587,8 @@ git checkout main     # Latest development
 
 You're ready to use Time Warp Studio. 
 
-👉 **Next**: Read [USER_GUIDE.md](docs/USER_GUIDE.md) to learn the IDE
-👉 **Examples**: Check [Examples/](Examples/) for sample programs
-👉 **Help**: See [FAQ.md](docs/FAQ.md) for common questions
+👉 **Next**: Read [USER_GUIDE.md](USER_GUIDE.md) to learn the IDE
+👉 **Examples**: Check [Examples/](../Examples/) for sample programs
+👉 **Help**: See [FAQ](reference/faq.md) for common questions
 
 **Happy coding!** 🚀

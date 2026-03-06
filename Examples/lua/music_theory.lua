@@ -87,8 +87,7 @@ end
 
 local function printScale(root, scaleName, useFlat)
   local notes = buildScale(root, scaleName, useFlat)
-  io.write(string.format("  %-8s %-20s → ", root:upper(), scaleName))
-  print(table.concat(notes, "  "))
+  print(string.format("  %-8s %-20s → %s", root:upper(), scaleName, table.concat(notes, "  ")))
 end
 
 -- ──────────────────────────────────────────────────────────────
@@ -135,8 +134,7 @@ end
 local function printChord(root, chordType, useFlat)
   local notes = buildChord(root, chordType, useFlat)
   local name = root:upper() .. (chordType or "")
-  io.write(string.format("  %-10s → ", name))
-  print(table.concat(notes, "  "))
+  print(string.format("  %-10s → %s", name, table.concat(notes, "  ")))
 end
 
 -- ──────────────────────────────────────────────────────────────
@@ -168,12 +166,14 @@ local function diatonicChords(root, scaleName, useFlat)
     else quality = "?"
     end
 
+    local cname = note:upper() .. quality
+    local cnotes = {note, third, fifth}
     table.insert(result, {
       degree  = ROMAN[i],
       root    = note,
       quality = quality,
-      name    = note:upper() .. quality,
-      notes   = {note, third, fifth},
+      name    = cname,
+      notes   = cnotes,
     })
   end
   return result
@@ -203,9 +203,7 @@ local function playProgression(root, scaleName, progName, useFlat)
   for _, deg in ipairs(degrees) do
     if deg <= #chords then
       local ch = chords[deg]
-      io.write(string.format("    %s%-6s [%s]", ch.degree, "", ch.name))
-      io.write(" → " .. table.concat(ch.notes, " "))
-      print()
+      print(string.format("    %s  [%s] → %s", ch.degree, ch.name, table.concat(ch.notes, " ")))
     end
   end
   print()
@@ -282,22 +280,22 @@ end
 print("\n── DIATONIC CHORDS: C MAJOR ────────────────────────────────────")
 local dchords = diatonicChords("C", "major", false)
 for _, ch in ipairs(dchords) do
-  print(string.format("  %s  %-10s → %s", ch.degree, ch.name,
-        table.concat(ch.notes, "  ")))
+  local nstr = table.concat(ch.notes, "  ")
+  print(string.format("  %s  %-10s → %s", ch.degree, ch.name, nstr))
 end
 
 print("\n── DIATONIC CHORDS: A MINOR ────────────────────────────────────")
 local aminor_chords = diatonicChords("A", "natural_minor", false)
 for _, ch in ipairs(aminor_chords) do
-  print(string.format("  %s  %-10s → %s", ch.degree, ch.name,
-        table.concat(ch.notes, "  ")))
+  local nstr = table.concat(ch.notes, "  ")
+  print(string.format("  %s  %-10s → %s", ch.degree, ch.name, nstr))
 end
 
 -- Progressions
 print("\n── COMMON PROGRESSIONS ─────────────────────────────────────────")
 playProgression("G", "major", "I-V-vi-IV", false)
 playProgression("D", "major", "ii-V-I",    false)
-playProgression("E", "natural_minor", "i-VI-III-VII", false)
+playProgression("C", "major", "I-vi-IV-V", false)
 
 -- Interval calculator
 print("── INTERVAL CALCULATOR ─────────────────────────────────────────")

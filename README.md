@@ -265,9 +265,8 @@ Browse 220+ more examples in the [Examples/](Examples/) directory or through **F
 
 | Document | Description |
 |----------|-------------|
-| [LAUNCH_GUIDE.md](LAUNCH_GUIDE.md) | Quick-start walkthrough |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System design and technical details |
-| [INSTALLATION.md](INSTALLATION.md) | Detailed installation instructions |
+| [INSTALLATION.md](docs/INSTALLATION.md) | Detailed installation instructions |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
 
 ### Guides (in `docs/guides/`)
@@ -329,8 +328,6 @@ Time_Warp_Studio/
 ├── run.sh                         # Shell wrapper for Linux/macOS
 ├── README.md                      # This file
 ├── ARCHITECTURE.md                # System design document
-├── LAUNCH_GUIDE.md                # Quick-start guide
-├── INSTALLATION.md                # Installation details
 ├── CONTRIBUTING.md                # Contributor guide
 ├── LICENSE                        # MIT License
 │

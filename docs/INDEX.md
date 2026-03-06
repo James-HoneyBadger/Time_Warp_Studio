@@ -2,7 +2,7 @@
 
 Welcome to the complete Time Warp Studio documentation! This is your central hub for learning to use the IDE, mastering programming languages, and building amazing projects.
 
-> **New to Time Warp Studio?** Start with [Getting Started Guide](guides/01-getting-started.md) or [Quick Start](../LAUNCH_GUIDE.md)
+> **New to Time Warp Studio?** Start with the [Getting Started Guide](guides/01-getting-started.md)
 
 ---
 
@@ -12,7 +12,7 @@ Start here if you're new to Time Warp Studio:
 
 - **[Installation & Setup](guides/01-getting-started.md)** - Install, configure, and launch the IDE
 - **[IDE Basics](guides/02-ide-basics.md)** - Learn the interface, menus, and keyboard shortcuts
-- **[Quick Start](../LAUNCH_GUIDE.md)** - Get running in 2 minutes with first program
+- **[Installation](INSTALLATION.md)** - Detailed installation instructions for all platforms
 
 ---
 
@@ -227,6 +227,10 @@ Browse 220+ example programs organized by language:
 ```
 docs/
 ├── INDEX.md (you are here)
+├── INSTALLATION.md
+├── DEBUGGER_GUIDE.md
+├── LANGUAGE_GUIDE.md
+├── USER_GUIDE.md
 ├── guides/
 │   ├── 01-getting-started.md
 │   ├── 02-ide-basics.md
@@ -236,23 +240,22 @@ docs/
 │   ├── 07-shortcuts.md
 │   └── 08-troubleshooting.md
 ├── tutorials/
-│   ├── basic.md
-│   ├── pilot.md
-│   ├── logo.md
-│   ├── c.md
-│   ├── pascal.md
-│   ├── prolog.md
-│   ├── python.md
-│   └── forth.md
+│   ├── apl.md, assembly.md, basic.md, brainfuck.md
+│   ├── c.md, cics.md, cobol.md, forth.md
+│   ├── fortran.md, haskell.md, hypertalk.md
+│   ├── javascript.md, jcl.md, logo.md, lua.md
+│   ├── pascal.md, pilot.md, prolog.md, python.md
+│   ├── rexx.md, scheme.md, smalltalk.md
+│   └── sql.md, sqr.md
 └── reference/
     └── faq.md
 ```
 
 ---
 
-**Last Updated:** February 2026  
-**Version:** 7.0.0+  
-**License:** Apache 2.0
+**Last Updated:** March 2026  
+**Version:** 8.0.0  
+**License:** MIT
 
 ## How to Use This Documentation
 
@@ -313,7 +316,7 @@ This documentation is maintained alongside Time Warp Studio development. If you 
 
 - **Time Warp Studio** v8.0.0
 - **Python Edition** (PySide6)
-- **Last Updated** January 2025
+- **Last Updated** March 2026
 
 ## Need More Help?
 

@@ -1,16 +1,12 @@
 /* =====================================================
    TECH SUPPORT EXPERT SYSTEM in Prolog
    A rule-based diagnostic system for computer problems.
-   Demonstrates: rule chaining, interactive queries,
-   hypothesis testing, meta-programming, assert.
+   Demonstrates: rule chaining, facts, assert, write.
    ===================================================== */
 
-/* ─── SYMPTOM DATABASE ────────────────────────────────── */
-
+/* Symptom database */
 :- dynamic symptom/1.
 :- dynamic confirmed/1.
-
-/* ─── DIAGNOSTIC RULES ────────────────────────────────── */
 
 /* Network problems */
 diagnosis(no_internet) :-
@@ -44,114 +40,67 @@ diagnosis(malware) :-
     has(unexpected_popups),
     has(antivirus_disabled).
 
-/* Storage problems */
 diagnosis(disk_full) :-
-    has(cannot_save_files),
+    has(system_slow),
+    has(disk_space_low),
     has(error_message_disk_full).
 
-diagnosis(disk_failure) :-
-    has(clicking_sound),
-    has(files_corrupted).
-
-/* Display problems */
-diagnosis(driver_crash) :-
-    has(blank_screen),
-    \+ has(no_power).
-
+/* Hardware problems */
 diagnosis(overheating) :-
-    has(sudden_shutdown),
-    has(fan_loud),
+    has(random_shutdown),
+    has(system_slow),
     has(hot_to_touch).
 
-/* Boot problems */
 diagnosis(boot_file_missing) :-
     has(wont_boot),
     has(missing_os_message).
 
 diagnosis(hardware_failure) :-
     has(wont_boot),
-    has(beep_codes),
     \+ has(missing_os_message).
 
-/* ─── SYMPTOM CHECKING ─────────────────────────────────── */
+/* Symptom checking */
+has(Symptom) :- confirmed(Symptom).
+has(Symptom) :- symptom(Symptom).
 
-has(Symptom) :-
-    confirmed(Symptom), !.
-has(Symptom) :-
-    \+ symptom(Symptom),
-    ask(Symptom).
-
-ask(Symptom) :-
-    write('  Do you have this symptom: '),
-    write(Symptom),
-    write('? (yes/no): '),
-    read(Answer),
-    process_answer(Answer, Symptom).
-
-process_answer(yes, Symptom) :-
-    assert(confirmed(Symptom)).
-process_answer(no, Symptom) :-
-    assert(symptom(Symptom)),
-    fail.
-
-/* ─── SOLUTIONS DATABASE ─────────────────────────────── */
-
+/* Solutions database */
 solution(no_internet,
-    ['Check router power and cables',
-     'Restart your router and modem',
-     'Check network adapter settings',
+    ['Check cable connections',
+     'Restart router/modem',
      'Run network troubleshooter']).
 
 solution(dns_problem,
-    ['Change DNS to 8.8.8.8 (Google DNS)',
-     'Flush DNS: ipconfig /flushdns',
-     'Check router DNS settings',
+    ['Flush DNS cache',
+     'Switch to Google DNS 8.8.8.8',
      'Try using 1.1.1.1 (Cloudflare)']).
 
 solution(wifi_password_wrong,
-    ['Verify WiFi password is correct',
-     'Forget network and reconnect',
-     'Check CAPS LOCK when entering password',
+    ['Verify WiFi password',
+     'Forget and reconnect to network',
      'Reset WiFi password on router']).
 
 solution(high_cpu_usage,
-    ['Open Task Manager and check processes',
-     'End high-CPU processes',
-     'Update or reinstall problematic software',
+    ['Open Task Manager',
+     'End resource-heavy processes',
      'Check for scheduled tasks running']).
 
 solution(memory_shortage,
     ['Close unused applications',
-     'Increase virtual memory/page file',
-     'Consider adding more RAM',
+     'Add more RAM',
      'Check for memory leaks with tools']).
 
 solution(malware,
-    ['Run antivirus scan immediately',
-     'Boot into Safe Mode and scan',
-     'Use Malwarebytes removal tool',
+    ['Run full antivirus scan',
+     'Boot in Safe Mode and scan',
      'Consider system restore/reinstall']).
 
 solution(disk_full,
-    ['Delete temporary files (Disk Cleanup)',
-     'Uninstall unused applications',
-     'Move files to external storage',
-     'Empty recycle bin']).
-
-solution(disk_failure,
-    ['Backup data immediately!',
-     'Run SMART diagnostics',
-     'Replace hard drive ASAP',
-     'Use data recovery software if needed']).
-
-solution(driver_crash,
-    ['Restart in Safe Mode',
-     'Uninstall and reinstall video drivers',
-     'Roll back recent driver update',
-     'Check Device Manager for errors']).
+    ['Empty Recycle Bin',
+     'Run Disk Cleanup',
+     'Move large files to external drive']).
 
 solution(overheating,
-    ['Clean dust from fans and vents',
+    ['Clean dust from vents',
      'Ensure adequate ventilation',
      'Replace thermal paste on CPU',
      'Check fan operation in BIOS']).
@@ -168,33 +117,37 @@ solution(hardware_failure,
      'Check all cable connections',
      'POST test with minimum hardware']).
 
-/* ─── PRINT SOLUTION ─────────────────────────────────── */
+/* Print solution steps */
+print_steps([]).
+print_steps([H|T]) :-
+    write('    - '), write(H), nl,
+    print_steps(T).
 
 print_solution(Problem) :-
     solution(Problem, Steps),
     write(''), nl,
     write('  DIAGNOSIS: '), write(Problem), nl,
-    write('  ─────────────────────────────'), nl,
+    write('  ───────────────────────────────'), nl,
     write('  RECOMMENDED SOLUTIONS:'), nl,
-    forall(member(Step, Steps),
-           (write('    • '), write(Step), nl)).
+    print_steps(Steps).
 
-/* ─── MAIN DIAGNOSIS PROCEDURE ──────────────────────── */
-
+/* Diagnosis runner */
 diagnose :-
-    write('  Running diagnosis...'), nl,
-    (   diagnosis(Problem)
-    ->  print_solution(Problem)
-    ;   write('  Could not determine problem.'), nl,
-        write('  Please contact technical support.'), nl
-    ).
+    diagnosis(Problem),
+    print_solution(Problem).
+
+/* List all diagnoses using fail-driven loop */
+print_all_diagnoses :-
+    diagnosis(P),
+    write('  - '), write(P), nl,
+    fail.
+print_all_diagnoses.
 
 diagnose_all :-
     write('  All detected diagnoses:'), nl,
-    forall(diagnosis(P), (write('  - '), write(P), nl)).
+    print_all_diagnoses.
 
-/* ─── DEMO RUN ──────────────────────────────────────── */
-
+/* Demo run */
 :- write('╔══════════════════════════════════════╗'), nl.
 :- write('║   TECH SUPPORT EXPERT SYSTEM v1.0   ║'), nl.
 :- write('╚══════════════════════════════════════╝'), nl.
@@ -205,9 +158,6 @@ diagnose_all :-
 :- assert(confirmed(system_slow)).
 :- assert(confirmed(unexpected_popups)).
 :- assert(confirmed(antivirus_disabled)).
-:- assert(symptom(fan_loud)).
-:- assert(symptom(cpu_usage_over_90)).
-:- assert(symptom(hard_drive_thrashing)).
 
 :- diagnose_all.
 :- diagnose.

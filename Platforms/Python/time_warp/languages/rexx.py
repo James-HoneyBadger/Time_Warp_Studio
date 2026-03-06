@@ -477,6 +477,14 @@ class RexxEnvironment:
 
     def _call_sub(self, name: str, args_str: str):
         if name not in self._subroutines:
+            # Fall back to built-in functions for CALL <builtin>
+            try:
+                result = self._call_builtin(name, args_str)
+                if result is not None:
+                    self._it = str(result)
+                return
+            except Exception:
+                pass
             raise RexxError(f"Unknown subroutine: {name}")
         old_it = self._it
         self._vars["ARG"] = args_str

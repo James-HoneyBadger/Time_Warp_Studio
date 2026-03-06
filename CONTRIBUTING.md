@@ -338,7 +338,7 @@ pytest --cov=time_warp --cov-report=html tests/
 - `ARCHITECTURE.md` - If internal change
 - `docs/USER_GUIDE.md` - If UI change
 - `docs/LANGUAGE_GUIDE.md` - If language syntax
-- `docs/TROUBLESHOOTING.md` - If known issue
+- `docs/guides/08-troubleshooting.md` - If known issue
 
 ### Documentation Standard
 

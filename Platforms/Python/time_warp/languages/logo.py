@@ -1154,10 +1154,11 @@ def _logo_setpenwidth(
         Status or error message
     """
     try:
-        validate_arg_count(args, 1, "SETPENWIDTH")
         width_expr = " ".join(args)
+        if not width_expr:
+            return "❌ SETPENWIDTH requires a width argument\n"
         width = _logo_eval_expr_str(interpreter, width_expr)
-        validate_range(int(width), 1, 100, "pen width")
+        width = max(1, min(100, int(width)))  # clamp to valid range
         if turtle is None:
             return "❌ Graphics not available for this command\n"
         turtle.setpenwidth(width)

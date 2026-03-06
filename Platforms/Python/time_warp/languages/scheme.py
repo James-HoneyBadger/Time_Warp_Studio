@@ -926,6 +926,11 @@ class SchemeEnvironment:
                         lambda acc, x: f(x, acc), lst, init
                     )
                 )(),
+                "fold-left": lambda f, init, lst: (
+                    lambda: __import__("functools").reduce(
+                        lambda acc, x: f(acc, x), lst, init
+                    )
+                )(),
                 "fold-right": lambda f, init, lst: (
                     lambda: __import__("functools").reduce(
                         lambda x, acc: f(x, acc), reversed(lst), init

@@ -1,217 +1,108 @@
 // ═══════════════════════════════════════════════════════════════
-//  DATA STRUCTURES LIBRARY — JavaScript Implementation
-//  Stack, Queue, LinkedList, BST, HashTable, MinHeap, Graph
-//  Compatible with educational JS interpreter.
+//  DATA STRUCTURES — JavaScript Demo
+//  Demonstrates: arrays, stack/queue patterns, sorting, searching
 // ═══════════════════════════════════════════════════════════════
 
-// ─── STACK ─────────────────────────────────────────────────────
-class Stack {
-    constructor() {
-        this._data = [];
-    }
-    push(item) { this._data.push(item); }
-    pop() { return this._data.pop(); }
-    peek() { return this._data[this._data.length - 1]; }
-    isEmpty() { return this._data.length === 0; }
-    size() { return this._data.length; }
-    toString() { return 'Stack[' + this._data.slice().reverse().join(' -> ') + ']'; }
-}
+console.log("== ARRAY-BASED STACK (LIFO) ==");
+let stack = [];
+stack.push(10);
+stack.push(20);
+stack.push(30);
+console.log("Pushed 10, 20, 30");
+let popped = stack.pop();
+console.log(`Popped: ${popped}`);
+console.log(`Stack size: ${stack.length}`);
+console.log("");
 
-// ─── QUEUE ─────────────────────────────────────────────────────
-class Queue {
-    constructor() {
-        this._data = [];
-        this._head = 0;
-    }
-    enqueue(item) { this._data.push(item); }
-    dequeue() {
-        if (this.isEmpty()) { return undefined; }
-        const val = this._data[this._head];
-        this._head += 1;
-        return val;
-    }
-    front() { return this._data[this._head]; }
-    isEmpty() { return this._head >= this._data.length; }
-    size() { return this._data.length - this._head; }
-}
+console.log("== ARRAY-BASED QUEUE (FIFO) ==");
+let queue = [];
+queue.push("A");
+queue.push("B");
+queue.push("C");
+console.log("Enqueued A, B, C");
+let dequeued = queue.shift();
+console.log(`Dequeued: ${dequeued}`);
+console.log(`Queue size: ${queue.length}`);
+console.log("");
 
-// ─── DOUBLY LINKED LIST ────────────────────────────────────────
-class ListNode {
-    constructor(val) {
-        this.val = val;
-        this.prev = null;
-        this.next = null;
-    }
-}
-
-class DoublyLinkedList {
-    constructor() {
-        this._head = null;
-        this._tail = null;
-        this._size = 0;
-    }
-    append(val) {
-        const node = new ListNode(val);
-        if (!this._tail) {
-            this._head = node;
-            this._tail = node;
-        } else {
-            node.prev = this._tail;
-            this._tail.next = node;
-            this._tail = node;
-        }
-        this._size += 1;
-    }
-    toArray() {
-        const arr = [];
-        let cur = this._head;
-        while (cur) {
-            arr.push(cur.val);
-            cur = cur.next;
-        }
-        return arr;
-    }
-    size() { return this._size; }
-}
-
-// ─── BINARY SEARCH TREE ────────────────────────────────────────
-class BSTNode {
-    constructor(val) {
-        this.val = val;
-        this.left = null;
-        this.right = null;
-    }
-}
-
-class BST {
-    constructor() {
-        this._root = null;
-    }
-    insert(val) {
-        this._root = this._insertNode(this._root, val);
-    }
-    _insertNode(node, val) {
-        if (!node) { return new BSTNode(val); }
-        if (val < node.val) {
-            node.left = this._insertNode(node.left, val);
-        } else if (val > node.val) {
-            node.right = this._insertNode(node.right, val);
-        }
-        return node;
-    }
-    contains(val) {
-        return this._containsNode(this._root, val);
-    }
-    _containsNode(node, val) {
-        if (!node) { return false; }
-        if (val === node.val) { return true; }
-        if (val < node.val) {
-            return this._containsNode(node.left, val);
-        }
-        return this._containsNode(node.right, val);
-    }
-    inOrder() {
-        const result = [];
-        this._inOrderNode(this._root, result);
-        return result;
-    }
-    _inOrderNode(node, result) {
-        if (node) {
-            this._inOrderNode(node.left, result);
-            result.push(node.val);
-            this._inOrderNode(node.right, result);
+console.log("== BUBBLE SORT ==");
+let nums = [64, 34, 25, 12, 22, 11, 90];
+let n = nums.length;
+for (let i = 0; i < n; i++) {
+    for (let j = 0; j < n - i - 1; j++) {
+        if (nums[j] > nums[j + 1]) {
+            let temp = nums[j];
+            nums[j] = nums[j + 1];
+            nums[j + 1] = temp;
         }
     }
 }
+console.log(`Sorted: ${nums.join(", ")}`);
+console.log("");
 
-// ─── HASH TABLE ────────────────────────────────────────────────
-class HashTable {
-    constructor(capacity) {
-        if (!capacity) { capacity = 53; }
-        this._capacity = capacity;
-        this._buckets = [];
-        for (let i = 0; i < capacity; i++) {
-            this._buckets.push([]);
-        }
-        this._size = 0;
+console.log("== BINARY SEARCH ==");
+let sorted = [2, 5, 8, 12, 16, 23, 38, 56, 72, 91];
+let target = 23;
+let lo = 0;
+let hi = sorted.length - 1;
+let found = -1;
+while (lo <= hi) {
+    let mid = Math.floor((lo + hi) / 2);
+    if (sorted[mid] === target) {
+        found = mid;
+        break;
+    } else if (sorted[mid] < target) {
+        lo = mid + 1;
+    } else {
+        hi = mid - 1;
     }
-    _hash(key) {
-        let h = 0;
-        const s = String(key);
-        for (let i = 0; i < s.length; i++) {
-            h = (h * 31 + s.charCodeAt(i)) % this._capacity;
-        }
-        return h;
-    }
-    set(key, value) {
-        const idx = this._hash(key);
-        const bucket = this._buckets[idx];
-        for (let i = 0; i < bucket.length; i++) {
-            if (bucket[i][0] === key) {
-                bucket[i][1] = value;
-                return;
-            }
-        }
-        bucket.push([key, value]);
-        this._size += 1;
-    }
-    get(key) {
-        const idx = this._hash(key);
-        const bucket = this._buckets[idx];
-        for (let i = 0; i < bucket.length; i++) {
-            if (bucket[i][0] === key) { return bucket[i][1]; }
-        }
-        return undefined;
-    }
-    size() { return this._size; }
 }
+console.log(`Target ${target} found at index ${found}`);
+console.log("");
 
-// ─── DEMO ──────────────────────────────────────────────────────
-function runDemo() {
-    console.log('=== STACK ===');
-    const stack = new Stack();
-    stack.push(10);
-    stack.push(20);
-    stack.push(30);
-    console.log('Push 10,20,30 -> ' + stack.toString());
-    console.log('Pop: ' + stack.pop());
-    console.log('Peek: ' + stack.peek());
-
-    console.log('\n=== QUEUE ===');
-    const queue = new Queue();
-    queue.enqueue('a');
-    queue.enqueue('b');
-    queue.enqueue('c');
-    console.log('Dequeue: ' + queue.dequeue());
-    console.log('Front: ' + queue.front());
-    console.log('Size: ' + queue.size());
-
-    console.log('\n=== LINKED LIST ===');
-    const list = new DoublyLinkedList();
-    list.append(1);
-    list.append(2);
-    list.append(3);
-    console.log('List: ' + list.toArray().join(' <-> '));
-    console.log('Size: ' + list.size());
-
-    console.log('\n=== BST ===');
-    const bst = new BST();
-    const vals = [5, 3, 7, 1, 4, 6, 9];
-    for (let i = 0; i < vals.length; i++) {
-        bst.insert(vals[i]);
-    }
-    console.log('In-order: ' + bst.inOrder().join(', '));
-    console.log('Contains 4: ' + bst.contains(4));
-    console.log('Contains 8: ' + bst.contains(8));
-
-    console.log('\n=== HASH TABLE ===');
-    const ht = new HashTable();
-    ht.set('name', 'Alice');
-    ht.set('age', 30);
-    ht.set('city', 'NYC');
-    console.log('name -> ' + ht.get('name'));
-    console.log('age  -> ' + ht.get('age'));
-    console.log('size -> ' + ht.size());
+console.log("== SET OPERATIONS ==");
+let setA = [1, 2, 3, 4, 5];
+let setB = [3, 4, 5, 6, 7];
+let union = [];
+let i;
+for (i = 0; i < setA.length; i++) {
+    union.push(setA[i]);
 }
+for (i = 0; i < setB.length; i++) {
+    let exists = false;
+    for (let j = 0; j < union.length; j++) {
+        if (union[j] === setB[i]) { exists = true; }
+    }
+    if (!exists) { union.push(setB[i]); }
+}
+let inter = [];
+for (i = 0; i < setA.length; i++) {
+    for (let j = 0; j < setB.length; j++) {
+        if (setA[i] === setB[j]) { inter.push(setA[i]); }
+    }
+}
+console.log(`Union: ${union.join(", ")}`);
+console.log(`Intersection: ${inter.join(", ")}`);
+console.log("");
 
-runDemo();
+console.log("== FREQUENCY COUNTER ==");
+let words = ["apple", "banana", "apple", "cherry", "banana", "apple"];
+let unique = [];
+let counts = [];
+for (i = 0; i < words.length; i++) {
+    let idx = -1;
+    for (let j = 0; j < unique.length; j++) {
+        if (unique[j] === words[i]) { idx = j; }
+    }
+    if (idx === -1) {
+        unique.push(words[i]);
+        counts.push(1);
+    } else {
+        counts[idx] = counts[idx] + 1;
+    }
+}
+for (i = 0; i < unique.length; i++) {
+    console.log(`  ${unique[i]}: ${counts[i]}`);
+}
+console.log("");
+console.log("Data structures demo complete.");

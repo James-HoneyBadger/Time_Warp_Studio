@@ -169,7 +169,7 @@ User settings stored in `~/.Time_Warp/config.json`:
 
 For detailed development information, see:
 - [Architecture Guide](../../ARCHITECTURE.md) - System design and extending the IDE
-- [Launch Guide](../../LAUNCH_GUIDE.md) - Setup and first use
+- [Getting Started](../../docs/guides/01-getting-started.md) - Setup and first use
 - [Full Documentation](../../docs/) - Complete documentation
 
 ---
@@ -239,7 +239,7 @@ The following platforms are archived but remain in the repository for reference:
 
 - **Main README:** [../../README.md](../../README.md)
 - **Architecture Guide:** [../../ARCHITECTURE.md](../../ARCHITECTURE.md)
-- **Launch Guide:** [../../LAUNCH_GUIDE.md](../../LAUNCH_GUIDE.md)
+- **Getting Started:** [../../docs/guides/01-getting-started.md](../../docs/guides/01-getting-started.md)
 - **Documentation Index:** [../../docs/INDEX.md](../../docs/INDEX.md)
 - **Examples:** [../../Examples/README.md](../../Examples/README.md)
 

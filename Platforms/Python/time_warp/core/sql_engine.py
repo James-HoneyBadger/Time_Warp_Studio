@@ -93,8 +93,12 @@ _TYPE_MAP = {
     r"\bNCHAR\b": "CHAR",
 }
 
-# IDENTITY(seed, increment) → handled specially below
-_IDENTITY_RE = re.compile(r"\bIDENTITY\s*\(\s*\d+\s*,\s*\d+\s*\)", re.I)
+# IDENTITY(seed, increment) or GENERATED ALWAYS AS IDENTITY → handled specially below
+_IDENTITY_RE = re.compile(
+    r"\bGENERATED\s+ALWAYS\s+AS\s+IDENTITY\b"
+    r"|\bIDENTITY\s*\(\s*\d+\s*,\s*\d+\s*\)",
+    re.I,
+)
 # TOP n  → LIMIT n  (simple cases)
 _TOP_RE = re.compile(r"\bSELECT\s+TOP\s+(\d+)\s+", re.I)
 # ISNULL(a, b) → COALESCE(a, b)

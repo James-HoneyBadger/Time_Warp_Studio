@@ -286,12 +286,12 @@ class SmalltalkEnvironment:
         # Binary message: receiver + arg
         for op in [
             "~~",
-            "=",
             "~=",
-            "<",
-            ">",
             "<=",
             ">=",
+            "<",
+            ">",
+            "=",
             "+",
             "-",
             "*",

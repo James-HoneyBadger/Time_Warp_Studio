@@ -1,135 +1,116 @@
 10  REM ================================================
 20  REM  STATISTICS CALCULATOR - Science Tool
-30  REM  Enter a data set; get mean, median, mode,
-40  REM  standard deviation, quartiles, histogram.
-50  REM  A genuinely useful statistical analysis tool.
-60  REM ================================================
-70  DIM DATA(100)
-80  N = 0
-90  PRINT "╔══════════════════════════════════╗"
-100 PRINT "║    STATISTICS CALCULATOR v1.0    ║"
-110 PRINT "║   Mean · Median · Mode · StdDev  ║"
-120 PRINT "╚══════════════════════════════════╝"
-130 PRINT ""
-140 PRINT "Enter data values one at a time."
-150 PRINT "Type 0 when finished (or press Enter with nothing)."
-160 PRINT ""
-170 MORE = 1
-180 WHILE MORE = 1
-190   PRINT "Value "; N+1; ": ";
-200   INPUT V
-210   IF V = 0 AND N > 0 THEN MORE = 0 : GOTO 240
-220   N = N + 1
-230   DATA(N) = V
-240 WEND
-250 IF N < 2 THEN PRINT "Need at least 2 values." : END
-260 GOSUB 9000
-270 PRINT ""
-280 PRINT "╔══════════════════════════════════════════╗"
-290 PRINT "║            ANALYSIS RESULTS              ║"
-300 PRINT "╚══════════════════════════════════════════╝"
-310 PRINT ""
-320 PRINT "  Count:        "; N
-330 PRINT "  Sum:          "; SUM_VAL
-340 PRINT "  Mean:         "; MEAN_VAL
-350 PRINT "  Minimum:      "; MIN_VAL
-360 PRINT "  Maximum:      "; MAX_VAL
-370 PRINT "  Range:        "; MAX_VAL - MIN_VAL
-380 PRINT "  Median:       "; MEDIAN_VAL
-390 PRINT "  Std Deviation:"; STDDEV_VAL
-390 PRINT "  Variance:     "; VARIANCE_VAL
-400 PRINT "  Q1 (25th):    "; Q1_VAL
-410 PRINT "  Q3 (75th):    "; Q3_VAL
-420 PRINT "  IQR:          "; Q3_VAL - Q1_VAL
-430 PRINT ""
-440 GOSUB 5000
-450 PRINT ""
-460 GOSUB 6000
-470 END
-
-1000 REM Sort array using bubble sort
+30  REM  Computes mean, median, mode, standard deviation,
+40  REM  quartiles, histogram, and frequency table.
+50  REM ================================================
+60  DIM NUMS(100)
+70  PRINT "╔══════════════════════════════════╗"
+80  PRINT "║    STATISTICS CALCULATOR v1.0    ║"
+90  PRINT "║   Mean · Median · Mode · StdDev  ║"
+100 PRINT "╚══════════════════════════════════╝"
+110 PRINT ""
+120 REM ── Load sample data set ──
+130 NUMS(1) = 85 : NUMS(2) = 92 : NUMS(3) = 78
+140 NUMS(4) = 90 : NUMS(5) = 85 : NUMS(6) = 67
+150 NUMS(7) = 95 : NUMS(8) = 72 : NUMS(9) = 88
+160 NUMS(10) = 85 : NUMS(11) = 91 : NUMS(12) = 76
+170 NUMS(13) = 83 : NUMS(14) = 69 : NUMS(15) = 94
+180 N = 15
+190 PRINT "  Sample data set ("; N; " values):"
+200 FOR I = 1 TO N
+210   PRINT "    "; NUMS(I);
+220 NEXT I
+230 PRINT ""
+240 PRINT ""
+250 GOSUB 9000
+260 PRINT "╔══════════════════════════════════════════╗"
+270 PRINT "║            ANALYSIS RESULTS              ║"
+280 PRINT "╚══════════════════════════════════════════╝"
+290 PRINT ""
+300 PRINT "  Count:          "; N
+310 PRINT "  Sum:            "; SUM_VAL
+320 PRINT "  Mean:           "; MEAN_VAL
+330 PRINT "  Minimum:        "; MIN_VAL
+340 PRINT "  Maximum:        "; MAX_VAL
+350 PRINT "  Range:          "; MAX_VAL - MIN_VAL
+360 PRINT "  Median:         "; MEDIAN_VAL
+370 PRINT "  Std Deviation:  "; STDDEV_VAL
+380 PRINT "  Variance:       "; VARIANCE_VAL
+390 PRINT "  Q1 (25th):      "; Q1_VAL
+400 PRINT "  Q3 (75th):      "; Q3_VAL
+410 PRINT "  IQR:            "; Q3_VAL - Q1_VAL
+420 PRINT ""
+430 GOSUB 5000
+440 PRINT ""
+450 GOSUB 6000
+460 END
+1000 REM ── Bubble sort ──
 1010 FOR I = 1 TO N - 1
 1020   FOR J = 1 TO N - I
-1030     IF DATA(J) > DATA(J+1) THEN TEMP = DATA(J) : DATA(J) = DATA(J+1) : DATA(J+1) = TEMP
+1030     IF NUMS(J) > NUMS(J+1) THEN TEMP = NUMS(J) : NUMS(J) = NUMS(J+1) : NUMS(J+1) = TEMP
 1040   NEXT J
 1050 NEXT I
 1060 RETURN
-
-5000 REM ============================
-5010 REM  ASCII HISTOGRAM
-5020 REM ============================
-5030 PRINT "  HISTOGRAM:"
-5040 PRINT "  ──────────"
-5050 BINS = 5
-5060 BIN_W = (MAX_VAL - MIN_VAL) / BINS
-5070 IF BIN_W = 0 THEN BIN_W = 1
-5080 FOR B = 0 TO BINS - 1
-5090   BIN_LO = MIN_VAL + B * BIN_W
-5100   BIN_HI = BIN_LO + BIN_W
-5110   COUNT = 0
-5120   FOR I = 1 TO N
-5130     IF DATA(I) >= BIN_LO AND DATA(I) < BIN_HI THEN COUNT = COUNT + 1
-5140   NEXT I
-5150   REM Last bin is inclusive
-5160   IF B = BINS - 1 THEN FOR I = 1 TO N : IF DATA(I) = MAX_VAL THEN COUNT = COUNT + 1 : NEXT I
-5170   BARS$ = ""
-5180   FOR K = 1 TO COUNT : BARS$ = BARS$ + "█" : NEXT K
-5190   PRINT "  "; INT(BIN_LO); "-"; INT(BIN_HI); " |"; BARS$; " "; COUNT
-5200 NEXT B
-5210 RETURN
-
-6000 REM ============================
-6010 REM  FREQUENCY / MODE
-6020 REM ============================
-6030 PRINT "  FREQUENCY TABLE (top values):"
-6040 PRINT "  Value   Frequency"
-6050 PRINT "  ────────────────"
-6060 MAX_FREQ = 0
-6070 FOR I = 1 TO N
-6080   IF DATA(I) = -999 THEN GOTO 6130
-6090   FREQ = 1
-6100   FOR J = I+1 TO N
-6110     IF DATA(J) = DATA(I) THEN FREQ = FREQ + 1
-6120   NEXT J
-6130   PRINT "  "; DATA(I); "        "; FREQ
-6140   IF FREQ > MAX_FREQ THEN MAX_FREQ = FREQ : MODE_VAL = DATA(I)
-6150   REM Mark processed duplicates
-6160   FOR J = I+1 TO N
-6170     IF DATA(J) = DATA(I) THEN DATA(J) = -999
-6180   NEXT J
-6190 NEXT I
-6200 PRINT ""
-6210 PRINT "  Mode: "; MODE_VAL; " (appears "; MAX_FREQ; " times)"
-6220 RETURN
-
-9000 REM ============================
-9010 REM  COMPUTE ALL STATS
-9020 REM ============================
-9030 REM Sort first
-9040 GOSUB 1000
-9050 REM Sum and Min/Max
-9060 SUM_VAL = 0
-9070 MIN_VAL = DATA(1)
-9080 MAX_VAL = DATA(1)
-9090 FOR I = 1 TO N
-9100   SUM_VAL = SUM_VAL + DATA(I)
-9110   IF DATA(I) < MIN_VAL THEN MIN_VAL = DATA(I)
-9120   IF DATA(I) > MAX_VAL THEN MAX_VAL = DATA(I)
-9130 NEXT I
-9140 MEAN_VAL = SUM_VAL / N
-9150 REM Median
-9160 IF N MOD 2 = 1 THEN MEDIAN_VAL = DATA(INT(N/2) + 1)
-9170 IF N MOD 2 = 0 THEN MEDIAN_VAL = (DATA(N/2) + DATA(N/2 + 1)) / 2
-9180 REM Variance / StdDev
-9190 SS = 0
-9200 FOR I = 1 TO N
-9210   SS = SS + (DATA(I) - MEAN_VAL) ^ 2
-9220 NEXT I
-9230 VARIANCE_VAL = SS / N
-9240 STDDEV_VAL = SQR(VARIANCE_VAL)
-9250 REM Quartiles
-9260 Q1_IDX = INT(N * 0.25) + 1
-9270 Q3_IDX = INT(N * 0.75) + 1
-9280 Q1_VAL = DATA(Q1_IDX)
-9290 Q3_VAL = DATA(Q3_IDX)
-9300 RETURN
+5000 REM ── ASCII Histogram ──
+5010 PRINT "  HISTOGRAM:"
+5020 PRINT "  ──────────"
+5030 BINS = 5
+5040 BIN_W = (MAX_VAL - MIN_VAL) / BINS
+5050 IF BIN_W = 0 THEN BIN_W = 1
+5060 FOR B = 0 TO BINS - 1
+5070   BIN_LO = MIN_VAL + B * BIN_W
+5080   BIN_HI = BIN_LO + BIN_W
+5090   COUNT = 0
+5100   FOR I = 1 TO N
+5110     IF NUMS(I) >= BIN_LO AND NUMS(I) < BIN_HI THEN COUNT = COUNT + 1
+5120   NEXT I
+5130   IF B = BINS - 1 THEN FOR I = 1 TO N : IF NUMS(I) = MAX_VAL THEN COUNT = COUNT + 1 : NEXT I
+5140   BARS$ = ""
+5150   FOR K = 1 TO COUNT : BARS$ = BARS$ + "█" : NEXT K
+5160   PRINT "  "; INT(BIN_LO); "-"; INT(BIN_HI); " |"; BARS$; " "; COUNT
+5170 NEXT B
+5180 RETURN
+6000 REM ── Frequency / Mode ──
+6010 PRINT "  FREQUENCY TABLE:"
+6020 PRINT "  Value   Frequency"
+6030 PRINT "  ────────────────"
+6040 MAX_FREQ = 0
+6050 FOR I = 1 TO N
+6060   IF NUMS(I) = -999 THEN GOTO 6120
+6070   FREQ = 1
+6080   FOR J = I+1 TO N
+6090     IF NUMS(J) = NUMS(I) THEN FREQ = FREQ + 1
+6100   NEXT J
+6110   PRINT "  "; NUMS(I); "        "; FREQ
+6120   IF FREQ > MAX_FREQ THEN MAX_FREQ = FREQ : MODE_VAL = NUMS(I)
+6130   FOR J = I+1 TO N
+6140     IF NUMS(J) = NUMS(I) THEN NUMS(J) = -999
+6150   NEXT J
+6160 NEXT I
+6170 PRINT ""
+6180 PRINT "  Mode: "; MODE_VAL; " (appears "; MAX_FREQ; " times)"
+6190 RETURN
+9000 REM ── Compute all stats ──
+9010 GOSUB 1000
+9020 SUM_VAL = 0
+9030 MIN_VAL = NUMS(1)
+9040 MAX_VAL = NUMS(1)
+9050 FOR I = 1 TO N
+9060   SUM_VAL = SUM_VAL + NUMS(I)
+9070   IF NUMS(I) < MIN_VAL THEN MIN_VAL = NUMS(I)
+9080   IF NUMS(I) > MAX_VAL THEN MAX_VAL = NUMS(I)
+9090 NEXT I
+9100 MEAN_VAL = SUM_VAL / N
+9110 IF N MOD 2 = 1 THEN MEDIAN_VAL = NUMS(INT(N/2) + 1)
+9120 IF N MOD 2 = 0 THEN MEDIAN_VAL = (NUMS(N/2) + NUMS(N/2 + 1)) / 2
+9130 SS = 0
+9140 FOR I = 1 TO N
+9150   SS = SS + (NUMS(I) - MEAN_VAL) ^ 2
+9160 NEXT I
+9170 VARIANCE_VAL = SS / N
+9180 STDDEV_VAL = SQR(VARIANCE_VAL)
+9190 Q1_IDX = INT(N * 0.25) + 1
+9200 Q3_IDX = INT(N * 0.75) + 1
+9210 Q1_VAL = NUMS(Q1_IDX)
+9220 Q3_VAL = NUMS(Q3_IDX)
+9230 RETURN

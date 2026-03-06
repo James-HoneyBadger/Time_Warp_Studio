@@ -102,13 +102,15 @@
            (cons (car b) (merge a (cdr b))))))
   (define (split lst)
     (if (or (null? lst) (null? (cdr lst)))
-        (values lst '())
-        (let-values (((s1 s2) (split (cddr lst))))
-          (values (cons (car lst) s1)
-                  (cons (cadr lst) s2)))))
+        (list lst '())
+        (let ((rest-split (split (cddr lst))))
+          (list (cons (car lst) (car rest-split))
+                (cons (cadr lst) (cadr rest-split))))))
   (if (or (null? lst) (null? (cdr lst)))
       lst
-      (let-values (((left right) (split lst)))
+      (let* ((halves (split lst))
+             (left  (car halves))
+             (right (cadr halves)))
         (merge (mergesort left) (mergesort right)))))
 
 ;;; ─── MEMOIZATION ──────────────────────────────────────────
@@ -117,9 +119,9 @@
     (lambda args
       (let ((cached (assoc args cache)))
         (if cached
-            (cdr cached)
+            (cadr cached)
             (let ((result (apply f args)))
-              (set! cache (cons (cons args result) cache))
+              (set! cache (cons (list args result) cache))
               result))))))
 
 (define fib-memo

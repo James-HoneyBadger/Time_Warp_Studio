@@ -27,6 +27,38 @@ if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
     from ..graphics.turtle_state import TurtleState
 
+# Intrinsic function names — exempt from IMPLICIT NONE undeclared checks
+_FORTRAN_INTRINSICS = {
+    "ABS", "IABS", "DABS", "CABS",
+    "SQRT", "DSQRT", "CSQRT",
+    "INT", "IFIX", "IDINT", "AINT", "ANINT", "NINT", "DINT",
+    "REAL", "FLOAT", "SNGL", "DBLE", "DFLOAT", "CMPLX", "DCMPLX",
+    "SIN", "DSIN", "COS", "DCOS", "TAN", "DTAN",
+    "ASIN", "DASIN", "ACOS", "DACOS", "ATAN", "DATAN", "ATAN2", "DATAN2",
+    "SIND", "COSD", "TAND",
+    "SINH", "DSINH", "COSH", "DCOSH", "TANH", "DTANH",
+    "EXP", "DEXP", "CEXP", "LOG", "ALOG", "DLOG", "LOG10", "ALOG10", "DLOG10", "LOG2",
+    "MAX", "MAX0", "MAX1", "AMAX0", "AMAX1", "DMAX1",
+    "MIN", "MIN0", "MIN1", "AMIN0", "AMIN1", "DMIN1",
+    "MOD", "AMOD", "DMOD", "MODULO",
+    "SIGN", "DSIGN", "ISIGN",
+    "DIM", "DDIM", "IDIM",
+    "DPROD",
+    "CEILING", "FLOOR",
+    "NOT", "IAND", "IOR", "IEOR", "ISHFT", "IBITS", "BTEST", "IBSET", "IBCLR",
+    "LEN", "LEN_TRIM", "TRIM", "ADJUSTL", "ADJUSTR", "INDEX", "SCAN", "VERIFY",
+    "CHAR", "ICHAR", "IACHAR", "ACHAR",
+    "LGE", "LGT", "LLE", "LLT",
+    "BIT_SIZE", "HUGE", "TINY", "EPSILON", "KIND",
+    "SELECTED_INT_KIND", "SELECTED_REAL_KIND",
+    "ALLOCATED", "PRESENT", "UBOUND", "LBOUND", "SIZE", "SHAPE",
+    "CONJG", "AIMAG", "DIMAG",
+    "WRITE", "READ", "PRINT",
+    # Fortran comparison operators (appear as identifier-like tokens)
+    "EQ", "NE", "LT", "LE", "GT", "GE", "AND", "OR", "NOT",
+    "TRUE", "FALSE",
+}
+
 
 def execute_fortran(
     interpreter: "Interpreter", source: str, turtle: "TurtleState"
@@ -384,6 +416,36 @@ class FortranEnvironment:
 
         # FORMAT statement — already parsed, skip
         if re.match(r"^FORMAT\s*\(", stmt):
+            return None
+
+        # EXTERNAL name1, name2, ... — declare external function names
+        m = re.match(r"^EXTERNAL\s+(.+)$", stmt)
+        if m:
+            for name in m.group(1).split(","):
+                name = name.strip().upper()
+                if name:
+                    self._declared_vars.add(name)
+                    self._functions[name] = -1  # mark as known function
+            return None
+
+        # DIMENSION array declarations
+        m = re.match(r"^DIMENSION\s+(.+)$", stmt)
+        if m:
+            for item in m.group(1).split(","):
+                am = re.match(r"^(\w+)\s*\(", item.strip())
+                if am:
+                    name = am.group(1).upper()
+                    self._declared_vars.add(name)
+                    if name not in self._vars:
+                        self._vars[name] = []
+            return None
+
+        # SAVE — preserve local variables across calls (no-op for interpreter)
+        if re.match(r"^SAVE\b", stmt):
+            return None
+
+        # INTRINSIC — declare intrinsic function usage (no-op)
+        if re.match(r"^INTRINSIC\b", stmt):
             return None
 
         # FUNCTION header — skip body
@@ -1098,7 +1160,10 @@ class FortranEnvironment:
                 and not upper.lstrip("-").isdigit()
                 and upper not in self._functions
                 and upper not in self._subroutines
+                and upper not in self._declared_vars
+                and upper not in _FORTRAN_INTRINSICS
                 and upper not in (".TRUE.", ".FALSE.")
+                and not upper.endswith("D0")
             ):
                 self._emit(f"❌ IMPLICIT NONE: variable '{expr}' used but not declared")
 
@@ -1118,7 +1183,10 @@ class FortranEnvironment:
                 and upper not in self._named_constants
                 and upper not in self._functions
                 and upper not in self._subroutines
+                and upper not in self._declared_vars
+                and upper not in _FORTRAN_INTRINSICS
                 and not upper.lstrip("-").replace(".", "").isdigit()
+                and not upper.endswith("D0")
             ):
                 self._emit(f"❌ IMPLICIT NONE: '{name}' used but not declared")
             val = self._vars.get(upper, self._vars.get(name))

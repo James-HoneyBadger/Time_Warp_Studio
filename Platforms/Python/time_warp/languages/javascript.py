@@ -1467,10 +1467,10 @@ def _translate_line(line: str) -> str:
         sm = re.search(rf"\b{re.escape(var)}\s*\+=\s*(-?\d+)", s)
         step = sm.group(1) if sm else "1"
         if cm:
-            limit = cm.group(2).strip()
+            limit = _translate_expr(cm.group(2).strip())
             if cm.group(1) == "<=":
                 limit = f"({limit})+1"
-            return pfx + f"for {var} in range({start}, {limit}, {step}):"
+            return pfx + f"for {var} in range({_translate_expr(start)}, {limit}, {step}):"
         return pfx + f"for {var} in range(0, 100):  # TODO"
 
     m = re.match(r"^for\s*\(\s*(?:var|let|const)?\s*(.+?)\s+of\s+(.+?)\s*\)\s*\{?$", s)
@@ -1762,6 +1762,7 @@ def _translate_expr(expr: str) -> str:
 
     # push → append (JSArray handles it)
     expr = re.sub(r"\.push\(", ".append(", expr)
+    expr = re.sub(r"\.shift\(\)", ".pop(0)", expr)
     expr = re.sub(r"\.unshift\(", ".insert(0, ", expr)
     # .indexOf → .find for strings only (not after ] or ) which are JSArray contexts)
     expr = re.sub(r"(?<![)\]])\.indexOf\(", ".find(", expr)

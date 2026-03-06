@@ -120,10 +120,14 @@ class LuaEnvironment:
             if not _block_kw:
                 brace_depth = line.count("{") - line.count("}")
                 if brace_depth > 0:
-                    merged = [line]
+                    merged = [_strip_lua_comment(line)]
                     i += 1
                     while i < len(lines) and brace_depth > 0:
                         nxt = lines[i].strip()
+                        if nxt.startswith("--"):
+                            i += 1
+                            continue
+                        nxt = _strip_lua_comment(nxt)
                         merged.append(nxt)
                         brace_depth += nxt.count("{") - nxt.count("}")
                         i += 1
@@ -594,6 +598,35 @@ class LuaEnvironment:
             return int(expr)
         except ValueError:
             pass
+        # String length #
+        if expr.startswith("#"):
+            v = self._eval_expr(expr[1:].strip())
+            if isinstance(v, str):
+                return len(v)
+            if isinstance(v, (list, dict)):
+                return len(v)
+            return 0
+        # Parenthesized expression: (expr) — strip outer parens and evaluate
+        if expr.startswith("(") and expr.endswith(")"):
+            # Verify the parens are actually matching (not e.g. (a)+(b))
+            depth = 0
+            matched = True
+            for ci, ch in enumerate(expr):
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth -= 1
+                if depth == 0 and ci < len(expr) - 1:
+                    matched = False
+                    break
+            if matched:
+                return self._eval_expr(expr[1:-1].strip())
+        # Binary operators (handle lowest precedence first)
+        # Must be checked BEFORE unary minus/not so that e.g. "-x > 1" is
+        # parsed as "(-x) > 1" rather than "-(x > 1)".
+        result = self._parse_expr(expr)
+        if result is not None:
+            return result
         # Unary not
         m = re.match(r"^not\s+(.+)$", expr)
         if m:
@@ -603,19 +636,6 @@ class LuaEnvironment:
         if m:
             val = self._eval_expr(m.group(1))
             return -val if val is not None else 0
-        # String length #
-        if expr.startswith("#"):
-            v = self._eval_expr(expr[1:].strip())
-            if isinstance(v, str):
-                return len(v)
-            if isinstance(v, (list, dict)):
-                return len(v)
-            return 0
-        # Binary operators (handle lowest precedence first)
-        # We use a simple tokeniser for +, -, *, /, //, %, ^, .., comparisons, and/or
-        result = self._parse_expr(expr)
-        if result is not None:
-            return result
         # Function call: name(args)
         m = re.match(r"^([\w.]+)\s*\((.*)?\)$", expr)
         if m:
@@ -1424,6 +1444,9 @@ def _find_operator(expr: str, op: str) -> int:
         elif depth == 0 and expr[i : i + len(op)] == op:
             # Avoid matching -- comment prefix as subtraction
             if op == "-" and i > 0 and expr[i - 1] == "-":
+                pass
+            # Leading '-' is unary, not binary subtraction
+            elif op == "-" and i == 0:
                 pass
             else:
                 return i

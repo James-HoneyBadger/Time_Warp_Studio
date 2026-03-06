@@ -143,8 +143,8 @@ class VirtualCPU:
             stmt = re.sub(r";.*$", "", raw).strip()
             if not stmt:
                 continue
-            # Label definition  (label: [instr])
-            m = re.match(r"^(\w+)\s*:\s*(.*)$", stmt)
+            # Label definition  (label: [instr]) — supports dot-prefixed local labels
+            m = re.match(r"^(\.?\w+)\s*:\s*(.*)$", stmt)
             if m:
                 self.labels[m.group(1).upper()] = line_no
                 remainder = m.group(2).strip()
@@ -265,12 +265,22 @@ class VirtualCPU:
             self._reg_set(a[0], r)
             self._set_flags(r)
         elif op == "DIV":
-            v = self._val(a[1])
-            if v == 0:
-                raise AsmError("Division by zero")
-            r = self._reg_get(a[0]) // v
-            self._reg_set(a[0], r)
-            self._set_flags(r)
+            # x86-style: single-operand DIV divides RAX by operand
+            if len(a) == 1:
+                divisor = self._val(a[0])
+                if divisor == 0:
+                    raise AsmError("Division by zero")
+                dividend = self._reg_get("RAX")
+                self._reg_set("RAX", dividend // divisor)
+                self._reg_set("RDX", dividend % divisor)
+                self._set_flags(dividend // divisor)
+            else:
+                v = self._val(a[1])
+                if v == 0:
+                    raise AsmError("Division by zero")
+                r = self._reg_get(a[0]) // v
+                self._reg_set(a[0], r)
+                self._set_flags(r)
         elif op == "MOD":
             v = self._val(a[1])
             if v == 0:

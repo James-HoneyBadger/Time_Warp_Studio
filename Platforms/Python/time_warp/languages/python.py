@@ -182,6 +182,16 @@ def _make_safe_builtins(output_buffer: StringIO, input_fn) -> dict:
         "time",
         "decimal",
         "fractions",
+        "typing",
+        "base64",
+        "hashlib",
+        "textwrap",
+        "enum",
+        "dataclasses",
+        "abc",
+        "copy",
+        "operator",
+        "statistics",
     }
 
     def _safe_import(name, *args, **kwargs):

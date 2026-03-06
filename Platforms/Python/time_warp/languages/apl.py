@@ -153,8 +153,8 @@ class APLEnvironment:
                 i += 1
                 continue
 
-            # ⎕← expr  (display)
-            m = re.match(r"^⎕←\s*(.+)$", line)
+            # ⎕← expr  (display) — allow optional space: ⎕ ← expr
+            m = re.match(r"^⎕\s*←\s*(.+)$", line)
             if m:
                 val = self._eval_expr(m.group(1).strip())
                 self._emit(_apl_format(val))
@@ -242,7 +242,17 @@ class APLEnvironment:
     # Expression evaluator
     # ------------------------------------------------------------------
 
+    # Map common Unicode look-alikes to canonical APL glyphs
+    _CHAR_NORMALIZE: dict[str, str] = {
+        "ρ": "⍴",  # Greek rho → APL rho (reshape)
+        "ι": "⍳",  # Greek iota → APL iota (index)
+        "∼": "~",   # fullwidth tilde → ASCII tilde
+    }
+
     def _eval_expr(self, expr: str) -> Any:
+        for src, dst in self._CHAR_NORMALIZE.items():
+            if src in expr:
+                expr = expr.replace(src, dst)
         expr = expr.strip()
         if not expr:
             return None
@@ -295,8 +305,8 @@ class APLEnvironment:
             self._vars[m.group(1)] = val
             return val
 
-        # ⎕← output
-        m = re.match(r"^⎕←\s*(.+)$", expr)
+        # ⎕← output — allow optional space: ⎕ ← expr
+        m = re.match(r"^⎕\s*←\s*(.+)$", expr)
         if m:
             val = self._eval_expr(m.group(1).strip())
             self._emit(_apl_format(val))
@@ -642,6 +652,8 @@ _DYADIC_FUNS = set(
 
 def _apl_tokenize(expr: str) -> list[str]:
     """Tokenize APL expression into symbols and atoms."""
+    # Normalize Greek look-alike characters to canonical APL glyphs
+    expr = expr.replace("ρ", "⍴").replace("ι", "⍳")
     tokens = []
     i = 0
     while i < len(expr):
