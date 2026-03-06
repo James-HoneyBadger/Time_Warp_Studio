@@ -1,4 +1,0 @@
-[console_scripts]
-time-warp = time_warp_ide:main
-time-warp-ide = time_warp_ide:main
-tw-editor = tw_editor:main

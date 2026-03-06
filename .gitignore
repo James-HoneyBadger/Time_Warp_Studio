@@ -7,9 +7,10 @@ __pycache__/
 .venv/
 .env/
 
-# Mypy and Pyright
+# Mypy, Pyright, Ruff caches
 .mypy_cache/
 .pytype/
+.ruff_cache/
 
 # VS Code
 .vscode/
@@ -37,8 +38,6 @@ build/
 *.egg-info/
 
 # Build artifacts
-dist/
-build/
 *.so
 *.dylib
 *.dll
@@ -52,3 +51,14 @@ htmlcov/
 test-results*.xml
 test_report.html
 test_reports/
+test_output*.txt
+test_graphics_failures.txt
+
+# Debug scripts (temporary)
+debug_*.py
+
+# Generated files
+DIRECTORY_TREE.txt
+
+# Broken pip artifacts (files named like version specifiers)
+=*
