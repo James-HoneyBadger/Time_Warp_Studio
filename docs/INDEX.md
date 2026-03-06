@@ -315,7 +315,6 @@ This documentation is maintained alongside Time Warp Studio development. If you 
 ## Version Information
 
 - **Time Warp Studio** v8.0.0
-- **Python Edition** (PySide6)
 - **Last Updated** March 2026
 
 ## Need More Help?

@@ -186,7 +186,7 @@ class HelpDocsMixin:
         QMessageBox.about(
             self,
             "About Time Warp Studio",
-            "<h2>Time Warp Studio - Python Edition</h2>"
+            "<h2>Time Warp Studio</h2>"
             "<p>Version 8.0.0 — Advanced Features Release</p>"
             "<p>Educational programming environment supporting:</p>"
             "<ul>"

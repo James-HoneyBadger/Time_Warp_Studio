@@ -794,7 +794,7 @@ class MainWindow(
 
     def setup_ui(self):
         """Setup main UI layout."""
-        self.setWindowTitle("🎨 Time Warp Studio v8.0.0 - Python Edition")
+        self.setWindowTitle("🎨 Time Warp Studio v8.0.0")
         self.setMinimumSize(900, 600)
 
         # Set main window style
