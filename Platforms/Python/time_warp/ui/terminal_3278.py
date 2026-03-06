@@ -447,6 +447,8 @@ class Terminal3278(QWidget):
     # -- Font initialization --
     def _init_font(self):
         """Try IBM 3270 fonts, fall back to Courier."""
+        from PySide6.QtWidgets import QApplication
+
         preferred = [
             "IBM 3270",
             "IBM 3270 Semi-Narrow",
@@ -457,7 +459,7 @@ class Terminal3278(QWidget):
             "DejaVu Sans Mono",
             "Monospace",
         ]
-        families = QFontDatabase.families()
+        families = QFontDatabase.families() if QApplication.instance() else []
         chosen = "Courier New"
         for name in preferred:
             if any(name.lower() in f.lower() for f in families):

@@ -523,9 +523,13 @@ class ThemeManager:
         self.current_theme_name = "Dracula"
 
     def _get_monospace_fonts(self) -> List[str]:
-        """Get list of available monospace fonts."""
-        font_db = QFontDatabase()
-        monospace_fonts = []
+        """Get list of available monospace fonts.
+
+        Falls back to a static list when called before QApplication
+        has been constructed (QFontDatabase requires a running
+        QGuiApplication).
+        """
+        from PySide6.QtWidgets import QApplication
 
         # Preferred programming fonts (check if available)
         preferred = [
@@ -542,6 +546,14 @@ class ThemeManager:
             "Courier New",
             "Monospace",
         ]
+
+        if QApplication.instance() is None:
+            # No QGuiApplication yet — return the preferred list as-is
+            # to avoid a fatal abort from QFontDatabase.
+            return preferred
+
+        font_db = QFontDatabase()
+        monospace_fonts = []
 
         all_families = font_db.families()
 
