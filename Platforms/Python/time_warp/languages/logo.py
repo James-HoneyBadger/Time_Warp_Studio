@@ -111,6 +111,14 @@ LOGO_COMMANDS = {
     "OP",
     "FOREVER",
     "REM",
+    "WHILE",
+    "UNTIL",
+    "FOREACH",
+    "MAP",
+    "FILTER",
+    "REDUCE",
+    "LOCAL",
+    "THING",
     # "REPCOUNT", # Reporter
 }
 
@@ -138,6 +146,9 @@ def _split_logo_commands(
     current_command = []
     bracket_depth = 0
     in_to_block = False
+    # Track procedure names defined within this text so the splitter
+    # recognises them as command starts on later lines.
+    local_procedures: set = set()
 
     # Tokenize: brackets, quoted strings, or other words
     # Handle "WORD (quote at start)
@@ -163,6 +174,10 @@ def _split_logo_commands(
                     in_to_block = True
                 elif token.upper() == "END" and in_to_block:
                     current_command.append(token)
+                    # Extract the procedure name (second token: TO <name> ...)
+                    to_tokens = " ".join(current_command).split()
+                    if len(to_tokens) >= 2:
+                        local_procedures.add(to_tokens[1].upper())
                     commands.append(" ".join(current_command))
                     current_command = []
                     in_to_block = False
@@ -173,9 +188,13 @@ def _split_logo_commands(
                 continue
 
             is_command = token.upper() in LOGO_COMMANDS
-            if not is_command and interpreter and bracket_depth == 0:
-                # Check if it's a user-defined procedure
-                is_command = token.upper() in interpreter.logo_procedures
+            if not is_command and bracket_depth == 0:
+                upper = token.upper()
+                # Check locally-defined procedures and interpreter state
+                if upper in local_procedures:
+                    is_command = True
+                elif interpreter and upper in interpreter.logo_procedures:
+                    is_command = True
 
             if bracket_depth == 0 and is_command:
                 if current_command:
@@ -1322,11 +1341,11 @@ def _parse_logo_commands(body: str) -> List[str]:
             i += 1
             continue
 
-        # Check if this line starts a bracketed command
-        if "[" in line and "]" not in line:
-            # Multi-line bracketed command - collect until closing bracket
+        # Check if brackets are unbalanced (more [ than ]) — multi-line
+        bracket_count = line.count("[") - line.count("]")
+        if bracket_count > 0:
+            # Multi-line bracketed command - collect until balanced
             cmd_lines = [line]
-            bracket_count = line.count("[") - line.count("]")
             i += 1
             while i < len(lines) and bracket_count > 0:
                 next_line = lines[i].strip()
@@ -1335,7 +1354,7 @@ def _parse_logo_commands(body: str) -> List[str]:
                 i += 1
             commands.append("\n".join(cmd_lines))
         else:
-            # Single line command
+            # Single line command (brackets balanced or none)
             commands.append(line)
             i += 1
 
