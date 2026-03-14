@@ -30,6 +30,20 @@ def execute_brainfuck(
     interpreter: "Interpreter", source: str, turtle: "TurtleState"
 ) -> str:
     """Execute a complete Brainfuck program and return all output."""
+    try:
+        return _execute_brainfuck_inner(interpreter, source, turtle)
+    except RecursionError:
+        return "❌ Brainfuck error: Maximum recursion depth exceeded\n"
+    except MemoryError:
+        return "❌ Brainfuck error: Out of memory\n"
+    except Exception as exc:
+        return f"❌ Brainfuck error: {exc}\n"
+
+
+def _execute_brainfuck_inner(
+    interpreter: "Interpreter", source: str, turtle: "TurtleState"
+) -> str:
+    """Core Brainfuck execution logic."""
     # Strip all non-Brainfuck characters
     code = "".join(c for c in source if c in "><+-.,[]")
     if not code:

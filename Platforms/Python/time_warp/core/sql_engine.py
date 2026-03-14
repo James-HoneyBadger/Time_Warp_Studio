@@ -728,7 +728,7 @@ class SQLSession:
                 self._exec_statement(sub.strip())
 
     def _eval_condition(self, expr: str) -> bool:
-        """Very simple T-SQL condition evaluator."""
+        """Simple T-SQL condition evaluator (no eval)."""
         # EXISTS(subquery)
         m = re.match(r"EXISTS\s*\((.+)\)", expr, re.I | re.S)
         if m:
@@ -737,12 +737,33 @@ class SQLSession:
                 return cur.fetchone() is not None
             except Exception:
                 return False
-        # @var comparison
+        # @var comparison via SQLite SELECT
         expr2 = self._substitute_vars(expr)
         try:
-            return bool(eval(expr2, {"__builtins__": {}}, {}))
+            sql = f"SELECT CASE WHEN ({expr2}) THEN 1 ELSE 0 END"
+            row = self._conn.execute(sql).fetchone()
+            return bool(row and row[0])
         except Exception:
-            return False
+            pass
+        # Fallback: try safe numeric comparison
+        for op in ("<>", "!=", ">=", "<=", "=", ">", "<"):
+            if op in expr2:
+                parts = expr2.split(op, 1)
+                if len(parts) == 2:
+                    try:
+                        lhs = float(parts[0].strip().strip("'"))
+                        rhs = float(parts[1].strip().strip("'"))
+                        ops = {
+                            "<>": lhs != rhs, "!=": lhs != rhs,
+                            ">=": lhs >= rhs, "<=": lhs <= rhs,
+                            "=": lhs == rhs, ">": lhs > rhs,
+                            "<": lhs < rhs,
+                        }
+                        return ops.get(op, False)
+                    except (ValueError, TypeError):
+                        pass
+                break
+        return False
 
     def _eval_expr(self, expr: str) -> str:
         """Evaluate a simple T-SQL expression (string, int, @var)."""
@@ -762,11 +783,17 @@ class SQLSession:
         # String literal
         if expr2.startswith("'") and expr2.endswith("'"):
             return expr2[1:-1]
-        # Numeric
+        # Numeric — safe evaluation via ExpressionEvaluator
         try:
-            v = eval(expr2, {"__builtins__": {}}, {})  # noqa: S307
+            from ..utils.expression_evaluator import ExpressionEvaluator
+
+            evaluator = ExpressionEvaluator()
+            v = evaluator.evaluate(expr2)
+            # Return int-like floats as ints for cleaner output
+            if isinstance(v, float) and v == int(v):
+                return str(int(v))
             return str(v)
-        except Exception:
+        except (ValueError, ZeroDivisionError, TypeError):
             pass
         # Try evaluating via SQLite SELECT (handles LEN, UPPER, LOWER, etc.)
         try:

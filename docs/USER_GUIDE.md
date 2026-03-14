@@ -37,7 +37,7 @@ Time Warp Studio provides a unified development environment with:
 When you launch Time Warp Studio:
 
 1. IDE initializes (2-5 seconds)
-2. Config folder created at `~/.Time_Warp/`
+2. Config folder created at `~/.time_warp/`
 3. Default theme applied (Dracula)
 4. All 14 feature panels available
 5. IDE ready for coding
@@ -239,7 +239,7 @@ Or copy from Examples:
 File → Examples [Ctrl+E]
 ```
 
-Browse 86+ working examples.
+Browse 69 working examples.
 
 ---
 
@@ -399,7 +399,7 @@ The Canvas displays turtle graphics output in real-time.
 - View execution timeline
 
 **Examples Browser**
-- Browse 86+ working programs
+- Browse 69 working programs
 - Copy and modify examples
 - Learn from code
 
@@ -470,16 +470,12 @@ The Canvas displays turtle graphics output in real-time.
 View → Theme → [Select theme]
 ```
 
-8 built-in themes:
+23 built-in themes:
 
-1. **Dracula** - Dark with purple
-2. **Monokai** - Classic code editor
-3. **Solarized Dark** - Low contrast
-4. **Ocean** - Blue palette
-5. **Spring** - Green/pastels
-6. **Sunset** - Warm oranges
-7. **Candy** - Bright pastels
-8. **Forest** - Deep greens
+**Dark**: Dracula, Monokai, VS Code Dark, GitHub Dark, Nord, One Dark Pro, Solarized Dark, Ocean
+**Light**: VS Code Light, GitHub Light, Solarized Light, Spring
+**High Contrast**: High Contrast Dark, High Contrast Light
+**Retro CRT**: Amber Monochrome, Green Monochrome, IBM PC CGA, Commodore 64, Apple II, DOS Blue, ZX Spectrum
 
 ### Customizing Editor
 
@@ -494,7 +490,7 @@ Via Edit menu or Feature Panels → Settings:
 
 ### Theme Persistence
 
-Your theme choice automatically saved to `~/.Time_Warp/config.json` and restored on next launch.
+Your theme choice automatically saved to `~/.time_warp/config.json` and restored on next launch.
 
 ---
 
@@ -561,7 +557,7 @@ Your theme choice automatically saved to `~/.Time_Warp/config.json` and restored
 - **Show Console** [Toggle]
 - **Show Canvas** [Toggle]
 - **Show Panels** [Toggle]
-- **Theme** - Select theme (8 options)
+- **Theme** - Select theme (23 options)
 - **Zoom In** [Ctrl+Plus]
 - **Zoom Out** [Ctrl+Minus]
 - **Reset Zoom** [Ctrl+0]

@@ -64,7 +64,7 @@ echo ""
 echo -e "${BLUE}➤${NC} Checking Python installation..."
 if ! command -v python3 &> /dev/null; then
     echo -e "${RED}✗ Python 3 is not installed${NC}"
-    echo "  Please install Python 3.8 or later from https://python.org"
+    echo "  Please install Python 3.10 or later from https://python.org"
     exit 1
 fi
 

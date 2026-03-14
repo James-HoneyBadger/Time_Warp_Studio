@@ -20,11 +20,11 @@ Time Warp Studio is a desktop educational programming environment built with Pyt
 
 ### Is Time Warp Studio free?
 
-Yes! Time Warp Studio is open source and completely free under the Apache 2.0 license.
+Yes! Time Warp Studio is open source and completely free under the MIT license.
 
 ### Can I use Time Warp Studio commercially?
 
-Yes. The Apache 2.0 license permits commercial use. See LICENSE file for details.
+Yes. The MIT license permits commercial use. See LICENSE file for details.
 
 ---
 
@@ -71,13 +71,32 @@ Yes! Works on both Intel and Apple Silicon Macs.
 
 ### What languages does Time Warp support?
 
-- **BASIC** - Classic BASIC language
-- **Logo** - Turtle graphics and drawing
-- **PILOT** - Computer-based instruction
-- **C** - C language
-- **Pascal** - Structured programming
-- **Prolog** - Logic programming
-- **Forth** - Stack-based programming
+- **BASIC** - Classic BASIC language (1964)
+- **PILOT** - Computer-based instruction (1962)
+- **Logo** - Turtle graphics and drawing (1967)
+- **C** - Systems programming (1972)
+- **Pascal** - Structured programming (1970)
+- **Prolog** - Logic programming (1972)
+- **Forth** - Stack-based programming (1970)
+- **Python** - Modern scripting (1991)
+- **Lua** - Lightweight scripting (1993)
+- **Scheme** - Functional/Lisp (1975)
+- **COBOL** - Business data processing (1959)
+- **Brainfuck** - Esoteric computing (1993)
+- **Assembly** - x86 low-level programming
+- **JavaScript** - Web scripting (1995)
+- **Fortran** - Scientific computing (1957)
+- **REXX** - Mainframe scripting (1979)
+- **Smalltalk** - Object-oriented programming (1972)
+- **HyperTalk** - Event-driven scripting (1987)
+- **Haskell** - Functional programming (1990)
+- **APL** - Array programming (1966)
+- **SQL** - Database queries (T-SQL dialect)
+- **JCL** - Mainframe job control (1964)
+- **CICS** - Transaction processing (1968)
+- **SQR** - Report writing (1984)
+- **CICS** - Mainframe transactions
+- **SQR** - Report generation
 
 ### Can I save my programs?
 
@@ -148,7 +167,7 @@ See [Logo Tutorial](tutorials/logo.md) and [Turtle Graphics Guide](guides/04-tur
 
 ### Can I use other languages for graphics?
 
-Currently graphics are built into Logo. Python, C, etc. support text output but not graphics in Time Warp.
+Yes! BASIC has turtle graphics support (SCREEN, LINE, CIRCLE, PSET, PAINT commands), and Python programs can use the turtle API. Logo remains the primary graphics language.
 
 ### How do I change colors?
 
@@ -165,7 +184,7 @@ Colors 0-7 are: Black, Red, Green, Yellow, Blue, Magenta, Cyan, White
 
 ### Can I save graphics as images?
 
-Currently, graphics are displayed in the IDE canvas but not automatically saved as images. You can take screenshots.
+Yes! Use File → Export to save graphics as PNG or SVG. You can also copy the canvas to clipboard.
 
 ---
 
@@ -177,12 +196,15 @@ Currently, Time Warp uses built-in functionality only. Integration of external l
 
 ### Is there a debugger?
 
-Time Warp provides:
-- Error messages with line numbers
-- Variable inspection through PRINT
-- Step-by-step execution (using PRINT statements)
+Yes! Time Warp includes a full debugger with:
+- Breakpoints (click gutter or Ctrl+B)
+- Step Into, Step Over, Step Out
+- Variable watch panel
+- Call stack inspection
+- Execution timeline with forward/backward stepping
+- Variable diff between frames
 
-Full debugging tools are planned.
+See the [Debugger Guide](../../docs/DEBUGGER_GUIDE.md) for full details.
 
 ### Can I import/use other files?
 
@@ -212,7 +234,7 @@ Theme preference is saved automatically.
 
 ### Where are settings stored?
 
-Settings saved in `~/.Time_Warp/config.json`:
+Settings saved in `~/.time_warp/config.json`:
 - Theme preference
 - Font size
 - Recent files
@@ -222,7 +244,7 @@ You can edit this file directly (careful with syntax!).
 
 ### Can I change the font?
 
-Currently, font is fixed. Font selection is planned for future versions.
+Yes! Go to Settings → Font to choose from available monospace fonts and adjust the font size. You can also use Ctrl+= and Ctrl+- to change font size.
 
 ---
 
@@ -280,7 +302,7 @@ See [ARCHITECTURE.md](../../ARCHITECTURE.md#adding-a-new-language) for detailed 
 
 ### Can I use Time Warp Studio code in my project?
 
-Yes, under Apache 2.0 license terms. See LICENSE file.
+Yes, under MIT license terms. See LICENSE file.
 
 ---
 
@@ -308,12 +330,11 @@ Limited by your computer's RAM. Most programs use minimal memory.
 
 ### What's planned for next version?
 
-- Full debugger with breakpoints
-- Project management system
-- Integrated version control
-- More language support
-- Graphics export to images
-- Online code sharing
+- Multi-file project management
+- Integrated version control (Git)
+- Online code sharing & collaboration
+- Plugin/extension architecture
+- Additional language tutorials and lessons
 
 ### How can I suggest features?
 

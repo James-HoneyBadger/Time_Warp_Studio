@@ -234,7 +234,7 @@ When something goes wrong, the IDE shows clear error messages:
 
 ### Settings
 
-Settings stored in `~/.Time_Warp/config.json`:
+Settings stored in `~/.time_warp/config.json`:
 - Current theme preference
 - Font size setting
 - Recent files list

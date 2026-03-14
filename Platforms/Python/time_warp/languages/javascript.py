@@ -1471,7 +1471,7 @@ def _translate_line(line: str) -> str:
             if cm.group(1) == "<=":
                 limit = f"({limit})+1"
             return pfx + f"for {var} in range({_translate_expr(start)}, {limit}, {step}):"
-        return pfx + f"for {var} in range(0, 100):  # TODO"
+        return pfx + f"for {var} in range(0, {_translate_expr(start)}, 100):"
 
     m = re.match(r"^for\s*\(\s*(?:var|let|const)?\s*(.+?)\s+of\s+(.+?)\s*\)\s*\{?$", s)
     if m:

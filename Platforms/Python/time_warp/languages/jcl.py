@@ -44,8 +44,15 @@ def execute_jcl(
     turtle: "TurtleState",
 ) -> str:
     """Execute a JCL job stream and return spool output."""
-    env = JCLEnvironment(interpreter, turtle)
-    return env.run(source)
+    try:
+        env = JCLEnvironment(interpreter, turtle)
+        return env.run(source)
+    except RecursionError:
+        return "❌ JCL error: Maximum recursion depth exceeded\n"
+    except MemoryError:
+        return "❌ JCL error: Out of memory\n"
+    except Exception as exc:
+        return f"❌ JCL error: {exc}\n"
 
 
 # ---------------------------------------------------------------------------

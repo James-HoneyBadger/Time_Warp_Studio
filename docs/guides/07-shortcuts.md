@@ -81,7 +81,7 @@ Master Time Warp Studio with these keyboard shortcuts. Use them to work faster a
 | Shortcut | Action |
 |----------|--------|
 | **Ctrl+/** | Toggle comment (selected code) |
-| **Ctrl+B** | Toggle sidebar |
+| **Ctrl+B** | Toggle breakpoint |
 | **Ctrl+J** | Toggle terminal/output |
 | **Ctrl+T** | Toggle turtle canvas |
 | **Ctrl+M** | Maximize editor |

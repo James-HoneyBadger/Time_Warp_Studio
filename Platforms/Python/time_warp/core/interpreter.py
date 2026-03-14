@@ -68,6 +68,44 @@ if TYPE_CHECKING:
     from .debugger import ExecutionFrame, ExecutionTimeline
 
 
+# ---------------------------------------------------------------------------
+# Single source of truth for whole-program languages.
+# These languages are executed as a complete source block (not line-by-line).
+# When adding a new whole-program language:
+#   1. Add its Language enum member
+#   2. Add a mapping here (Language -> executor function)
+#   3. No other dispatch tables need updating.
+# ---------------------------------------------------------------------------
+_WHOLE_PROGRAM_EXECUTORS: Dict["Language", Callable] = {}  # populated after Language enum
+
+
+def _init_whole_program_executors() -> Dict["Language", Callable]:
+    """Build the dict after the Language enum is defined (avoids forward ref)."""
+    return {
+        Language.LUA: execute_lua,
+        Language.SCHEME: execute_scheme,
+        Language.COBOL: execute_cobol,
+        Language.BRAINFUCK: execute_brainfuck,
+        Language.ASSEMBLY: execute_assembly,
+        Language.JAVASCRIPT: execute_javascript,
+        Language.FORTRAN: execute_fortran,
+        Language.REXX: execute_rexx,
+        Language.SMALLTALK: execute_smalltalk,
+        Language.HYPERTALK: execute_hypertalk,
+        Language.HASKELL: execute_haskell,
+        Language.APL: execute_apl,
+        Language.SQL: execute_sql,
+        Language.JCL: execute_jcl,
+        Language.CICS: execute_cics,
+        Language.SQR: execute_sqr,
+    }
+
+@dataclass
+class JumpResult:
+    """Holds jump target metadata returned alongside ExecutionResult.JUMP"""
+    line: int
+
+
 class ExecutionResult(Enum):
     """Control flow result from executing a command"""
 
@@ -76,16 +114,23 @@ class ExecutionResult(Enum):
     JUMP = auto()
     WAIT_FOR_INPUT = auto()
 
-    def __init__(self, value):
-        self._value_ = value
-        self.jump_line: Optional[int] = None
-
     @classmethod
-    def jump(cls, line: int):
-        """Create a Jump result with target line"""
-        result = cls.JUMP
-        result.jump_line = line
-        return result
+    def jump(cls, line: int) -> Tuple["ExecutionResult", JumpResult]:
+        """Create a Jump result with target line.
+
+        Returns a (ExecutionResult.JUMP, JumpResult) tuple so the enum
+        singleton is never mutated.
+        """
+        return (cls.JUMP, JumpResult(line=line))
+
+
+@dataclass
+class ScreenConfig:
+    """Mutable screen configuration (separate from the ScreenMode enum)."""
+    cols: int = 80
+    rows: int = 25
+    width: int = 800
+    height: int = 600
 
 
 class ScreenMode(Enum):
@@ -93,13 +138,6 @@ class ScreenMode(Enum):
 
     TEXT = auto()
     GRAPHICS = auto()
-
-    def __init__(self, value):
-        self._value_ = value
-        self.cols: int = 80
-        self.rows: int = 25
-        self.width: int = 800
-        self.height: int = 600
 
 
 class Language(Enum):
@@ -203,6 +241,10 @@ class Language(Enum):
         return names.get(self, "Unknown")
 
 
+# Now that Language enum is defined, populate the whole-program executor map.
+_WHOLE_PROGRAM_EXECUTORS = _init_whole_program_executors()
+
+
 @dataclass
 class ForContext:
     """FOR loop context for BASIC"""
@@ -268,6 +310,37 @@ class Interpreter:
         # keep the initialization explicit and readable rather than
         # splitting into many helper methods.
         # pylint: disable=too-many-statements
+
+        # I/O handling — these are set once and preserved across reset()
+        self.input_callback: Optional[Callable[[str], str]] = None
+        self.output_callback: Optional[Callable[[str], None]] = None
+
+        # INKEY$ support
+        self.inkey_callback: Optional[Callable[[], Optional[str]]] = None
+
+        # Debugging state — persistent across resets
+        self.debug_mode: bool = False
+        self.debug_event = threading.Event()
+        self.debug_callback: DebugCallback | None = None
+        self.debug_frame_callback: DebugFrameCallback | None = None
+        self.debug_timeline: "ExecutionTimeline | None" = None
+        self.debug_step_granularity: str = "line"
+        self.breakpoints: set = set()
+
+        # Language mode
+        self.language = Language.BASIC
+
+        # Initialise all resettable state
+        self._init_state()
+
+    def _init_state(self):
+        """Initialise (or re-initialise) all resettable interpreter state.
+
+        Called by both ``__init__`` and ``reset`` so the attribute set
+        is always in sync.
+        """
+        # pylint: disable=too-many-statements
+
         # Core state
         # Aggregate numeric variables (base name → float) for back-compat
         self.variables: Dict[str, float] = {}
@@ -304,21 +377,25 @@ class Interpreter:
         self.stored_condition: Optional[bool] = None
         self.running: bool = True  # Program execution flag
         self.subroutine_stack: List[int] = []  # For PILOT S:/R: commands
+        # Close any existing open file handles before resetting
+        for fh in getattr(self, "open_files", {}).values():
+            try:
+                fh.close()
+            except Exception:  # pylint: disable=broad-exception-caught
+                logger.debug("Error closing file handle during reset", exc_info=True)
         self.open_files: Dict[str, TextIO] = {}  # For PILOT F: commands
 
-        # I/O handling
-        self.input_callback: Optional[Callable[[str], str]] = None
-        self.output_callback: Optional[Callable[[str], None]] = None
+        # I/O state (callbacks preserved, transient state reset)
         self.last_input: str = ""
         self.pending_input: Optional[InputRequest] = None
         self.pending_resume_line: Optional[int] = None
 
-        # INKEY$ support
-        self.inkey_callback: Optional[Callable[[], Optional[str]]] = None
+        # INKEY$ transient state
         self.last_key_pressed: Optional[str] = None
 
         # Screen state
         self.screen_mode = ScreenMode.GRAPHICS
+        self.screen_config = ScreenConfig()
         self.text_lines: List[str] = []
         self.cursor_row: int = 0
         self.cursor_col: int = 0
@@ -361,91 +438,22 @@ class Interpreter:
             []
         )  # C block tracking for control flow
 
-        # Debugging state
-        self.debug_mode: bool = False
-        self.debug_event = threading.Event()
-        self.debug_callback: DebugCallback | None = None
-        self.debug_frame_callback: DebugFrameCallback | None = None
-        self.debug_timeline: "ExecutionTimeline | None" = None
-        self.debug_step_granularity: str = "line"
-        self.breakpoints: set = set()
+        # Debug transient state
         self.step_mode: bool = False
+        self.debug_event.clear()
 
-        # Language mode
-        self.language = Language.BASIC
         # Default type mapping
         self._reset_type_defaults()
 
     def reset(self):
-        """Reset interpreter state"""
-        self.variables.clear()
-        self.int_variables.clear()
-        self.long_variables.clear()
-        self.single_variables.clear()
-        self.double_variables.clear()
-        self.string_variables.clear()
-        self.arrays.clear()
-        self.string_arrays.clear()
-        self.logo_lists.clear()
-        self.logo_arrays.clear()
-        self.property_lists.clear()
-        self.logo_procedures.clear()
-        self.logo_procedure_params.clear()
-        self.output.clear()
-        self.text_lines.clear()
-        self.program_lines.clear()
-        self.current_line = 0
-        self.labels.clear()
-        self.line_number_map.clear()
-        self.gosub_stack.clear()
-        self.for_stack.clear()
-        self.match_flag = False
-        self.last_match_set = False
-        self.stored_condition = None
-        self.cursor_row = 0
-        self.step_mode = False
-        self.running = True
-        # Ensure debugger starts in a paused-clear state; do not auto-resume
-        self.debug_event.clear()
-        self.cursor_col = 0
-        self.logo_procedures.clear()
-        # PILOT-specific reset
-        self.last_match_succeeded = False
-        self.subroutine_stack.clear()
-        # Close any open file handles before clearing
-        for fh in self.open_files.values():
-            try:
-                fh.close()
-            except Exception:  # pylint: disable=broad-exception-caught
-                logger.debug("Error closing file handle during reset", exc_info=True)
-        self.open_files.clear()
-        self.last_input = ""
-        self.pending_input = None
-        self.pending_resume_line = None
-        # BASIC-specific reset
-        self.basic_while_stack.clear()
-        self.basic_do_stack.clear()
-        self.basic_select_expression = ""
-        self.basic_in_select = False
-        self.basic_in_sub = False
-        self.basic_in_function = False
-        self.basic_subs.clear()
-        self.basic_functions.clear()
-        self.basic_call_stack.clear()
-        self.data_values.clear()
-        self.data_pointer = 0
-        # Prolog-specific reset
-        self.prolog_kb.clear()
-        # Pascal-specific reset
-        self.pascal_procs.clear()
-        self.pascal_types.clear()
-        self.pascal_block_stack.clear()
-        self.pascal_call_stack.clear()
-        # C-specific reset
-        self.c_block_stack.clear()
-        # Forth-specific reset
+        """Reset interpreter state.
+
+        Delegates to ``_init_state`` to guarantee attribute parity
+        with ``__init__``.  Forth global state is also cleared.
+        """
+        self._init_state()
+        # Forth-specific reset (global singleton)
         reset_forth()
-        self._reset_type_defaults()
 
     # ---------- Typed variable support ----------
     def _reset_type_defaults(self):
@@ -631,25 +639,7 @@ class Interpreter:
                 self.program_lines.append((idx + 1, line))
             return
         # Other whole-program languages: store lines without line-number parsing
-        _WHOLE_PROGRAM = {
-            Language.LUA,
-            Language.SCHEME,
-            Language.COBOL,
-            Language.BRAINFUCK,
-            Language.ASSEMBLY,
-            Language.JAVASCRIPT,
-            Language.FORTRAN,
-            Language.REXX,
-            Language.SMALLTALK,
-            Language.HYPERTALK,
-            Language.HASKELL,
-            Language.APL,
-            Language.SQL,
-            Language.JCL,
-            Language.CICS,
-            Language.SQR,
-        }
-        if language in _WHOLE_PROGRAM:
+        if language in _WHOLE_PROGRAM_EXECUTORS:
             for idx, line in enumerate(lines):
                 self.program_lines.append((idx + 1, line))
             return
@@ -871,27 +861,9 @@ class Interpreter:
             return self.output.copy()
 
         # Whole-program languages: run the full source, not line-by-line
-        _WHOLE_PROGRAM_LANGS = {
-            Language.LUA: execute_lua,
-            Language.SCHEME: execute_scheme,
-            Language.COBOL: execute_cobol,
-            Language.BRAINFUCK: execute_brainfuck,
-            Language.ASSEMBLY: execute_assembly,
-            Language.JAVASCRIPT: execute_javascript,
-            Language.FORTRAN: execute_fortran,
-            Language.REXX: execute_rexx,
-            Language.SMALLTALK: execute_smalltalk,
-            Language.HYPERTALK: execute_hypertalk,
-            Language.HASKELL: execute_haskell,
-            Language.APL: execute_apl,
-            Language.SQL: execute_sql,
-            Language.JCL: execute_jcl,
-            Language.CICS: execute_cics,
-            Language.SQR: execute_sqr,
-        }
-        if self.language in _WHOLE_PROGRAM_LANGS:
+        if self.language in _WHOLE_PROGRAM_EXECUTORS:
             source = getattr(self, "program_source", "")
-            fn = _WHOLE_PROGRAM_LANGS[self.language]
+            fn = _WHOLE_PROGRAM_EXECUTORS[self.language]
             output_text = fn(self, source, turtle)
             for line in output_text.splitlines(keepends=True):
                 self.log_output(line.rstrip("\n"))
@@ -1048,6 +1020,13 @@ class Interpreter:
             # Re-raise critical system signals rather than silently swallowing
             if isinstance(e, (KeyboardInterrupt, SystemExit)):
                 raise
+            # Handle resource exhaustion explicitly
+            if isinstance(e, RecursionError):
+                self.log_output(f"❌ Error at line {self.current_line + 1}: Maximum recursion depth exceeded")
+                return False
+            if isinstance(e, MemoryError):
+                self.log_output(f"❌ Error at line {self.current_line + 1}: Out of memory")
+                return False
             # BASIC ON ERROR GOTO handler
             if self.language.name == "BASIC" and getattr(
                 self, "_basic_error_handler_line", 0
@@ -1109,23 +1088,7 @@ class Interpreter:
         elif self.language == Language.PYTHON:
             # Python runs whole-program via execute(); individual lines are no-op
             output = ""
-        elif self.language in (
-            Language.LUA,
-            Language.SCHEME,
-            Language.COBOL,
-            Language.BRAINFUCK,
-            Language.ASSEMBLY,
-            Language.JAVASCRIPT,
-            Language.FORTRAN,
-            Language.REXX,
-            Language.SMALLTALK,
-            Language.HYPERTALK,
-            Language.HASKELL,
-            Language.APL,
-            Language.SQL,
-            Language.JCL,
-            Language.CICS,
-        ):
+        elif self.language in _WHOLE_PROGRAM_EXECUTORS:
             # Whole-program languages: individual lines are no-op
             output = ""
         else:
@@ -1178,8 +1141,6 @@ class Interpreter:
         Uses safe expression evaluator (no eval/exec)
         """
         # Expand UDT field references: VAR.FIELD → numeric value
-        import re as _re
-
         def _expand_udt(m):
             obj_name = m.group(1).upper()
             field_name = m.group(2).upper()
@@ -1194,7 +1155,7 @@ class Interpreter:
             return m.group(0)
 
         if "." in expr:
-            expr = _re.sub(
+            expr = re.sub(
                 r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)\b",
                 _expand_udt,
                 expr,

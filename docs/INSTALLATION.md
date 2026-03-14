@@ -153,7 +153,7 @@ pip install -e Platforms/Python
 
 ```bash
 # Test import
-python -c "from time_warp.core.interpreter import TimeWarpInterpreter; print('✅ Installation successful')"
+python -c "from time_warp.core.interpreter import Interpreter; print('✅ Installation successful')"
 
 # Run IDE
 python Platforms/Python/time_warp_ide.py
@@ -411,7 +411,7 @@ echo $VIRTUAL_ENV  # Linux/macOS
 echo %VIRTUAL_ENV%  # Windows
 
 # 3. Check imports work
-python -c "from time_warp.core.interpreter import TimeWarpInterpreter; print('✅ TimeWarpInterpreter imports!')"
+python -c "from time_warp.core.interpreter import Interpreter; print('✅ Interpreter imports!')"
 
 # 4. Check PySide6 installed
 python -c "from PySide6.QtWidgets import QApplication; print('✅ PySide6 imports!')"
@@ -422,7 +422,7 @@ python Platforms/Python/time_warp_ide.py
 
 Expected output:
 ```
-✅ TimeWarpInterpreter imports!
+✅ Interpreter imports!
 ✅ PySide6 imports!
 ```
 
@@ -491,7 +491,7 @@ rm -rf Time_Warp_Studio  # Linux/macOS
 rmdir /s Time_Warp_Studio  # Windows
 
 # 3. Remove config (optional)
-rm -rf ~/.Time_Warp      # Linux/macOS
+rm -rf ~/.time_warp      # Linux/macOS
 rmdir %USERPROFILE%\.Time_Warp  # Windows
 ```
 
@@ -530,7 +530,7 @@ Time_Warp_Studio/
 ├── Platforms/Python/time_warp_ide.py  # Main entry point
 ├── Examples/                          # Demo programs
 ├── docs/                              # Documentation
-├── ~/.Time_Warp/                      # User config (after first run)
+├── ~/.time_warp/                      # User config (after first run)
 └── venv/                              # Virtual environment
 ```
 

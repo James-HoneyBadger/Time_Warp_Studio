@@ -41,12 +41,20 @@ def execute_sql(
     session = SQLSession(fresh_db)
     # Make session accessible for cross-language SQL (COBOL EXEC SQL, etc.)
     interpreter.sql_session = session
-    result = session.run_script(source)
-    # Clean up the ephemeral connection so it doesn't accumulate in memory
-    conn = _connections.pop(fresh_db, None)
-    if conn is not None:
-        try:
-            conn.close()
-        except Exception:
-            pass
+    try:
+        result = session.run_script(source)
+    except RecursionError:
+        return "❌ SQL error: Maximum recursion depth exceeded\n"
+    except MemoryError:
+        return "❌ SQL error: Out of memory\n"
+    except Exception as exc:
+        return f"❌ SQL error: {exc}\n"
+    finally:
+        # Clean up the ephemeral connection so it doesn't accumulate in memory
+        conn = _connections.pop(fresh_db, None)
+        if conn is not None:
+            try:
+                conn.close()
+            except Exception:
+                pass
     return result if result.strip() else "(No output)"

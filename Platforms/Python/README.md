@@ -49,7 +49,7 @@ The **desktop implementation** of Time Warp Studio provides a native application
 
 ### Educational Features
 
-- 📚 **34 Example Programs**: All language styles and difficulty levels
+- 📚 **69 Example Programs**: All language styles and difficulty levels
 - 📖 **Comprehensive Docs**: Turtle graphics reference and guides
 - 💡 **Safe Execution**: Timeout protection and iteration limits
 - 🧪 **Full Test Suite**: Verified correctness of all commands
@@ -64,7 +64,7 @@ The **desktop implementation** of Time Warp Studio provides a native application
 
 ### Prerequisites
 
-- **Python 3.8 or higher**
+- **Python 3.10 or higher**
 - **PySide6** for GUI (or tkinter as fallback)
 - **Pillow** for image processing (optional)
 
@@ -346,7 +346,7 @@ suggestion = hints.get_suggestion('FORWRD', ['FORWARD', 'BACKWARD'])
 | Error Hints | ✅ Complete | 100% |
 | PySide6 GUI | ✅ Complete | 100% |
 | Theme System | ✅ Complete | 100% |
-| Example Programs | ✅ Complete | 34 programs |
+| Example Programs | ✅ Complete | 69 programs |
 | Test Suite | ⏳ In Progress | 60% |
 | Documentation | ⏳ In Progress | 70% |
 

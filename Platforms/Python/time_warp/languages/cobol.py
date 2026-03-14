@@ -131,21 +131,8 @@ class CobolEnvironment:
     @staticmethod
     def _upper_preserve_strings(line: str) -> str:
         """Uppercase COBOL keywords but preserve quoted string content."""
-        result: list[str] = []
-        in_str = False
-        qchar = ""
-        for ch in line:
-            if in_str:
-                result.append(ch)
-                if ch == qchar:
-                    in_str = False
-            elif ch in ('"', "'"):
-                in_str = True
-                qchar = ch
-                result.append(ch)
-            else:
-                result.append(ch.upper())
-        return "".join(result)
+        from .lang_utils import upper_preserve_strings
+        return upper_preserve_strings(line)
 
     # ------------------------------------------------------------------
     # Division parser
@@ -1127,20 +1114,24 @@ class CobolEnvironment:
             return self._vars.get(expr, expr)
 
     def _arith(self, expr: str) -> Any:
-        """Evaluate simple arithmetic expression using Python eval."""
+        """Evaluate simple arithmetic expression safely."""
+        from ..utils.expression_evaluator import ExpressionEvaluator
 
-        # Translate COBOL names to Python
-        def replace(m):
-            name = m.group(0)
-            if name in self._vars:
-                return str(self._vars[name])
-            return name
+        # Build variable dict with numeric values for the evaluator
+        num_vars: dict[str, float] = {}
+        for k, v in self._vars.items():
+            try:
+                num_vars[k] = float(v)
+            except (TypeError, ValueError):
+                pass
+        # Also handle hyphenated COBOL names by replacing with underscores
+        cleaned = re.sub(r"([A-Za-z][\w-]*)", lambda m: m.group(0).replace("-", "_"), expr)
+        clean_vars = {k.replace("-", "_"): v for k, v in num_vars.items()}
 
-        pyexpr = re.sub(r"[\w-]+", replace, expr)
-        pyexpr = pyexpr.replace("**", "**")
+        evaluator = ExpressionEvaluator(variables=clean_vars)
         try:
-            return eval(pyexpr, {"__builtins__": {}})  # noqa: S307
-        except Exception:
+            return evaluator.evaluate(cleaned)
+        except (ValueError, ZeroDivisionError):
             return 0
 
     def _eval_cond(self, cond: str) -> bool:

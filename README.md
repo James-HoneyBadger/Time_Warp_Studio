@@ -66,7 +66,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Code Editor** — Syntax highlighting, line numbers, and auto-indentation per language
 - **Output Console** — Program results, error messages, and interactive input
 - **Graphics Canvas** — Real-time turtle graphics rendering with zoom and pan
-- **Theme System** — 8 built-in themes (Dracula, Monokai, Solarized Dark, Ocean, Spring, Sunset, Candy, Forest)
+- **Theme System** — 23 built-in themes (Dracula, Monokai, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized, retro CRT, and more)
 - **14 Feature Panels** — Lessons, AI Assistant, Error Explainer, Examples Browser, Turtle Inspector, Debugger, and more
 
 ### Turtle Graphics
@@ -88,7 +88,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Lesson System** — Step-by-step guided instruction with auto-verification
 - **AI Assistant** — Intelligent code suggestions and explanations
 - **Error Explainer** — Human-readable explanations of programming errors
-- **Examples Browser** — 220+ example programs across all 24 languages
+- **Examples Browser** — 68 example programs across all 24 languages
 - **Achievements** — Gamified progress tracking
 
 ---
@@ -255,7 +255,7 @@ GREET
 5 3 + . CR
 ```
 
-Browse 220+ more examples in the [Examples/](Examples/) directory or through **File → Examples** in the IDE.
+Browse 68 more examples in the [Examples/](Examples/) directory or through **File → Examples** in the IDE.
 
 ---
 
@@ -370,18 +370,18 @@ Time_Warp_Studio/
 │       ├── features/              # Lessons, autosave, etc.
 │       ├── cloud/                 # Cloud sync services
 │       ├── debugging/             # Integrated debugger
-│       └── tests/                 # Test suite (28 tests)
+│       └── tests/                 # Test suite (34 tests)
 │
-├── Examples/                      # 220+ example programs across 24 languages
-│   ├── basic/      (18)  ├── logo/       (17)  ├── pilot/      (14)
-│   ├── c/          (12)  ├── pascal/     (10)  ├── prolog/     (10)
-│   ├── cobol/      (10)  ├── sqr/        (10)  ├── fortran/    (10)
-│   ├── haskell/    (10)  ├── javascript/ (10)  ├── assembly/   (11)
-│   ├── apl/         (7)  ├── hypertalk/   (7)  ├── brainfuck/   (6)
-│   ├── forth/       (5)  ├── lua/         (5)  ├── rexx/        (5)
-│   ├── scheme/      (5)  ├── smalltalk/   (5)  ├── python/      (5)
-│   ├── sql/         (5)  ├── cics/        (5)  ├── jcl/         (5)
-│   └── demo/        (8)  # cross-language showcases
+├── Examples/                      # 68 example programs across 24 languages
+│   ├── basic/       (4)  ├── logo/        (4)  ├── pilot/       (2)
+│   ├── c/           (4)  ├── pascal/      (3)  ├── prolog/      (3)
+│   ├── cobol/       (4)  ├── sqr/         (3)  ├── fortran/     (2)
+│   ├── haskell/     (2)  ├── javascript/  (3)  ├── assembly/    (2)
+│   ├── apl/         (2)  ├── hypertalk/   (2)  ├── brainfuck/   (2)
+│   ├── forth/       (2)  ├── lua/         (3)  ├── rexx/        (2)
+│   ├── scheme/      (3)  ├── smalltalk/   (2)  ├── python/      (4)
+│   ├── sql/         (3)  ├── cics/        (3)  ├── jcl/         (4)
+│   └── demo/        (1)  # cross-language showcases
 │
 ├── docs/                          # Documentation
 │   ├── INDEX.md                   # Documentation index
@@ -391,7 +391,6 @@ Time_Warp_Studio/
 │
 ├── Scripts/                       # Build and utility scripts
 ├── tools/                         # Development tools
-├── config/                        # Configuration files
 └── .github/                       # GitHub CI/CD configuration
 ```
 
@@ -415,7 +414,7 @@ python Platforms/Python/time_warp_ide.py
 ### What Happens on Startup
 
 1. All 24 language interpreters are initialized
-2. Configuration is loaded from `~/.Time_Warp/config.json`
+2. Configuration is loaded from `~/.time_warp/config.json`
 3. The main IDE window opens with editor, canvas, and output panels
 4. Your last theme and settings are restored
 
@@ -450,7 +449,7 @@ PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
 RUN_BACKEND_INTEGRATION=1 PYTHONPATH=Platforms/Python pytest Platforms/backend/tests -q
 ```
 
-**Current status:** 28 tests passing across language executor and graphics test modules.
+**Current status:** 500+ tests passing across 36 test modules covering all 24 language executors, graphics, GUI, and interpreter tests.
 
 ---
 

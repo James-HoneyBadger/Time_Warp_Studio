@@ -1592,5 +1592,14 @@ def execute_forth(interpreter: "Interpreter", command: str, turtle: "TurtleState
     global _forth_executor
     if _forth_executor is None or _forth_executor.interpreter != interpreter:
         _forth_executor = ForthExecutor(interpreter)
-    _forth_executor.execute_line(command, turtle)
-    return ""
+    try:
+        _forth_executor.execute_line(command, turtle)
+    except RecursionError:
+        return "❌ Forth error: Maximum recursion depth exceeded\n"
+    except MemoryError:
+        return "❌ Forth error: Out of memory\n"
+    except Exception as exc:
+        return f"❌ Forth error: {exc}\n"
+    result = _forth_executor.output_buffer
+    _forth_executor.output_buffer = ""
+    return result

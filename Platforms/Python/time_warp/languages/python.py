@@ -329,27 +329,30 @@ def execute_python(
         def color(self, *args):
             """Set pen (and optionally fill) colour. Mirrors stdlib turtle.color()."""
             if len(args) == 1:
-                turtle.color = args[0]
+                turtle.setcolor(args[0])
             elif len(args) >= 2:
-                # first arg = pen colour, second = fill colour (store as pen)
-                turtle.color = args[0]
-                turtle._fill_color = args[1]  # type: ignore[attr-defined]
+                # first arg = pen colour, second = fill colour
+                turtle.setcolor(args[0])
+                resolved = turtle.resolve_color(args[1])
+                if resolved:
+                    turtle.pen_color = resolved
 
         def fillcolor(self, *args):
             """Set fill colour independently."""
             if len(args) == 1:
-                turtle._fill_color = args[0]  # type: ignore[attr-defined]
+                resolved = turtle.resolve_color(args[0])
+                if resolved:
+                    turtle.pen_color = resolved
             elif len(args) == 3:
-                turtle._fill_color = "#{:02x}{:02x}{:02x}".format(*[int(v) for v in args])  # type: ignore[attr-defined]
+                turtle.pen_color = (int(args[0]), int(args[1]), int(args[2]))
 
         def begin_fill(self):
             """Mark the start of a fill shape."""
-            turtle._filling = True  # type: ignore[attr-defined]
-            turtle._fill_points = []  # type: ignore[attr-defined]
+            turtle.begin_fill()
 
         def end_fill(self):
             """Close and fill the current shape."""
-            turtle._filling = False  # type: ignore[attr-defined]
+            turtle.end_fill()
 
         def write(self, text, *_args, **_kwargs):
             """Write text at current turtle position (logged to output)."""

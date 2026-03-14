@@ -202,7 +202,7 @@ pylint time_warp/ --disable=all --enable=fatal
 mypy time_warp/ --strict
 
 # Run specific component tests
-pytest tests/test_core_interpreter.py -v
+pytest Platforms/Python/time_warp/tests/test_interpreter.py -v
 ```
 
 All must pass before submitting PR.
@@ -276,7 +276,7 @@ python test_runner.py --basic
 python test_runner.py --comprehensive
 
 # Specific file
-pytest tests/test_basic.py -v
+pytest Platforms/Python/time_warp/tests/test_lang_basic.py -v
 
 # With coverage
 pytest --cov=time_warp tests/ --cov-report=html
@@ -290,26 +290,28 @@ Tests go in `tests/` directory:
 # File: tests/test_my_feature.py
 
 import pytest
-from time_warp.languages.basic import BasicExecutor
-from time_warp.core.interpreter import TimeWarpInterpreter
+from time_warp.core.interpreter import Interpreter
+from time_warp.graphics.turtle_state import TurtleState
 
 class TestMyFeature:
     """Test my new feature"""
-    
+
     def setup_method(self):
         """Setup before each test"""
-        self.interpreter = TimeWarpInterpreter()
-        self.basic = self.interpreter.basic
-    
+        self.interpreter = Interpreter()
+        self.turtle = TurtleState()
+
     def test_feature_works(self):
         """Test that feature works"""
-        result = self.basic.execute_command("PRINT 5 / 2")
-        assert "2" in result  # Integer division
-    
+        self.interpreter.load_program('PRINT 5 / 2', 'BASIC')
+        result = self.interpreter.execute(self.turtle)
+        assert "2" in "\n".join(result)
+
     def test_feature_edge_case(self):
         """Test edge case"""
-        with pytest.raises(ZeroDivisionError):
-            self.basic.execute_command("PRINT 5 / 0")
+        self.interpreter.load_program('PRINT 5 / 0', 'BASIC')
+        result = self.interpreter.execute(self.turtle)
+        assert any("\u274c" in line for line in result)
 ```
 
 ### Test Coverage
@@ -367,26 +369,27 @@ Want to add a new language executor? Follow these steps:
 File: `Platforms/Python/time_warp/languages/newlang.py`
 
 ```python
-from . import LanguageExecutor
+from __future__ import annotations
+from typing import TYPE_CHECKING
 
-class NewLangExecutor(LanguageExecutor):
-    """Executor for NewLang language"""
-    
-    def __init__(self, interpreter):
-        self.interpreter = interpreter
-    
-    def execute_command(self, command: str) -> str:
-        """Execute command in NewLang"""
-        try:
-            # Parse and execute
-            result = self._parse_and_execute(command)
-            return f"✅ {result}\n"
-        except Exception as e:
-            return f"❌ Error: {e}\n"
-    
-    def _parse_and_execute(self, command: str):
-        """Parse and execute"""
-        pass
+if TYPE_CHECKING:
+    from ..core.interpreter import Interpreter
+    from ..graphics.turtle_state import TurtleState
+
+def execute_newlang(interpreter: Interpreter, source: str, turtle: TurtleState) -> str:
+    """Executor for NewLang language."""
+    output_lines = []
+    try:
+        # Parse and execute
+        result = _parse_and_execute(source)
+        output_lines.append(f"✅ {result}")
+    except Exception as e:
+        output_lines.append(f"❌ Error: {e}")
+    return "\n".join(output_lines) + "\n"
+
+def _parse_and_execute(source: str) -> str:
+    """Parse and execute."""
+    pass
 ```
 
 ### 2. Register Executor
@@ -394,37 +397,34 @@ class NewLangExecutor(LanguageExecutor):
 File: `Platforms/Python/time_warp/core/interpreter.py`
 
 ```python
-from .languages.newlang import NewLangExecutor
-
-class TimeWarpInterpreter:
-    def __init__(self):
-        # ... existing executors
-        self.newlang = NewLangExecutor(self)
+from ..languages.newlang import execute_newlang
+# Add Language.NEWLANG enum member
+# Add entry in _WHOLE_PROGRAM_EXECUTORS dict
 ```
 
 ### 3. Add Auto-Detection
 
-In `execute()` method:
+Add to `Language.from_extension()` in `core/interpreter.py`:
 
 ```python
-def execute(self, code: str, language: Language = None):
-    if language == Language.NEWLANG or code.startswith("%%"):
-        return self.newlang.execute_command(code)
-    # ... rest of detection
+".nlg": cls.NEWLANG,
 ```
 
 ### 4. Create Tests
 
-File: `tests/test_newlang.py`
+File: `Platforms/Python/time_warp/tests/test_newlang.py`
 
 ```python
+from .conftest_lang import run, ok, has, no_errors
+
 class TestNewLang:
     """Test NewLang executor"""
     
     def test_hello_world(self):
         """Test basic output"""
-        # Write tests
-        pass
+        out = run('print "Hello"', "NEWLANG")
+        assert has(out, "Hello")
+        assert no_errors(out)
 ```
 
 ### 5. Add Examples
@@ -499,7 +499,7 @@ Time_Warp_Studio/
 │   ├── time_warp_ide.py          # Main entry point
 │   ├── time_warp/
 │   │   ├── core/                 # Interpreter, debugger
-│   │   ├── languages/            # 7 executors
+│   │   ├── languages/            # 24 executors
 │   │   ├── ui/                   # PySide6 UI
 │   │   ├── graphics/             # Turtle graphics
 │   │   ├── features/             # Feature panels

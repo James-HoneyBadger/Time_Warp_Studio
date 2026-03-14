@@ -9,7 +9,7 @@ Settings are accessed through the **View → Settings** menu or by:
 2. Select **Settings**
 3. Configure options as desired
 
-Settings are automatically saved to `~/.Time_Warp/config.json`.
+Settings are automatically saved to `~/.time_warp/config.json`.
 
 ## Display Settings
 
@@ -403,7 +403,7 @@ Restore all settings to factory defaults:
 
 ## Settings File Format
 
-Settings are stored in `~/.Time_Warp/config.json`:
+Settings are stored in `~/.time_warp/config.json`:
 
 ```json
 {
@@ -424,7 +424,7 @@ You can edit this file directly in a text editor.
 ## Troubleshooting Settings
 
 **Problem:** Settings won't save
-- **Solution:** Check that `~/.Time_Warp/` directory exists and is writable
+- **Solution:** Check that `~/.time_warp/` directory exists and is writable
 - **Solution:** Try exporting and importing settings
 
 **Problem:** IDE looks wrong after changing theme

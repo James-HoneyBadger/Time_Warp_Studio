@@ -417,7 +417,9 @@ class MainWindow(
 
     def _show_examples_browser(self, _checked: bool = False):
         """Show the examples browser dialog."""
-        examples_dir = Path(__file__).parent.parent.parent.parent.parent / "Examples"
+        from ..core.config import EXAMPLES_DIR
+
+        examples_dir = EXAMPLES_DIR
         browser = ExamplesBrowser(examples_dir)
         browser.scan_examples()
 
@@ -900,6 +902,8 @@ class MainWindow(
         self.editor_tabs.setTabsClosable(True)
         self.editor_tabs.tabCloseRequested.connect(self.close_tab)
         self.editor_tabs.currentChanged.connect(self.on_tab_changed)
+        self.editor_tabs.setAccessibleName("Editor Tabs")
+        self.editor_tabs.setAccessibleDescription("Code editor tab group")
         self.editor_tabs.setStyleSheet("""
             QTabWidget {
                 background-color: palette(base);
@@ -917,6 +921,8 @@ class MainWindow(
 
         # Immediate mode panel (REPL) - below editor
         self.immediate_mode = ImmediateModePanel(self)
+        self.immediate_mode.setAccessibleName("REPL Command Line")
+        self.immediate_mode.setAccessibleDescription("Interactive command prompt for immediate code execution")
         # Hard floor so the REPL bar can never be dragged to nothing
         self.immediate_mode.setMinimumHeight(44)
         left_splitter.addWidget(self.immediate_mode)
@@ -941,6 +947,8 @@ class MainWindow(
         # Output panel
         _output_container = OutputPanelContainer(self)
         self.output = _output_container.output_panel
+        self.output.setAccessibleName("Program Output")
+        self.output.setAccessibleDescription("Displays program execution output")
         # Connect output panel signals
         self.output.variables_updated.connect(self.on_variables_updated)
         self.output.execution_stats.connect(self.on_execution_stats)
@@ -948,6 +956,8 @@ class MainWindow(
 
         # Turtle canvas
         self.canvas = TurtleCanvas(self)
+        self.canvas.setAccessibleName("Turtle Graphics Canvas")
+        self.canvas.setAccessibleDescription("Drawing surface for turtle graphics output")
 
         # Combine Output and Graphics in a persistent vertical split so both
         # panels are always visible — no tab-flipping when a program draws.
@@ -968,6 +978,7 @@ class MainWindow(
         self.errors_log = QPlainTextEdit()
         self.errors_log.setReadOnly(True)
         self.errors_log.setFont(QFont("Courier New", 10))
+        self.errors_log.setAccessibleName("Error Log")
         self.errors_log.setPlaceholderText("Errors and warnings appear here…")
         self.output_sub_tabs.addTab(self.errors_log, "❌ Errors")
 
@@ -975,6 +986,7 @@ class MainWindow(
         self.turtle_log = QPlainTextEdit()
         self.turtle_log.setReadOnly(True)
         self.turtle_log.setFont(QFont("Courier New", 10))
+        self.turtle_log.setAccessibleName("Turtle Command Log")
         self.turtle_log.setPlaceholderText("Turtle 🐢 commands appear here…")
         self.output_sub_tabs.addTab(self.turtle_log, "🐢 Turtle Log")
 
@@ -994,10 +1006,12 @@ class MainWindow(
 
         # Variable inspector
         self.variable_inspector = VariableInspector(self)
+        self.variable_inspector.setAccessibleName("Variable Inspector")
         self.right_tabs.addTab(self.variable_inspector, "🔍 Variables")
 
         # Debug panel
         self.debug_panel = DebugPanel(self)
+        self.debug_panel.setAccessibleName("Debug Panel")
         self.right_tabs.addTab(self.debug_panel, "🐛 Debug")
         self._connect_debug_signals()
 
@@ -1415,8 +1429,6 @@ class MainWindow(
 
         view_menu.addSeparator()
 
-        view_menu.addSeparator()
-
         # Focus mode
         self._focus_mode_action = QAction("🎯 &Focus Mode", self)
         self._focus_mode_action.setShortcut("Ctrl+Shift+F11")
@@ -1532,6 +1544,38 @@ class MainWindow(
         logo_help = QAction("Logo Commands", self)
         logo_help.triggered.connect(lambda: self.show_language_help("logo"))
         lang_help_menu.addAction(logo_help)
+
+        lang_help_menu.addSeparator()
+
+        # All remaining languages (alphabetical)
+        for lang_name, lang_key in [
+            ("APL", "apl"),
+            ("Assembly", "assembly"),
+            ("Brainfuck", "brainfuck"),
+            ("C", "c"),
+            ("CICS", "cics"),
+            ("COBOL", "cobol"),
+            ("Forth", "forth"),
+            ("Fortran", "fortran"),
+            ("Haskell", "haskell"),
+            ("HyperTalk", "hypertalk"),
+            ("JavaScript", "javascript"),
+            ("JCL", "jcl"),
+            ("Lua", "lua"),
+            ("Pascal", "pascal"),
+            ("Prolog", "prolog"),
+            ("Python", "python"),
+            ("REXX", "rexx"),
+            ("Scheme", "scheme"),
+            ("Smalltalk", "smalltalk"),
+            ("SQL", "sql"),
+            ("SQR", "sqr"),
+        ]:
+            action = QAction(f"{lang_name} Reference", self)
+            action.triggered.connect(
+                lambda checked=False, k=lang_key: self.show_language_help(k)
+            )
+            lang_help_menu.addAction(action)
 
         help_menu.addSeparator()
 
@@ -1791,6 +1835,7 @@ class MainWindow(
         "Forth": "📚",
         "C": "⚙️",
         "Prolog": "🧠",
+        "Python": "🐍",
         "Haskell": "λ",
         "APL": "∇",
         "Lua": "🌙",

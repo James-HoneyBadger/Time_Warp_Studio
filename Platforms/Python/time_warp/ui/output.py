@@ -285,6 +285,14 @@ class OutputPanel(QTextEdit):
         font = QFont("Courier New", 11)
         self.setFont(font)
 
+        # Semantic colors (defaults — overridden by apply_theme_colors)
+        self._theme_colors = {
+            "error": QColor(255, 100, 100),
+            "warning": QColor(255, 200, 100),
+            "success": QColor(100, 255, 100),
+            "info": QColor(100, 200, 255),
+        }
+
         # Execution thread
         self.exec_thread = None
 
@@ -305,6 +313,14 @@ class OutputPanel(QTextEdit):
         # Per-output-line execution delay (for speed throttle slider, 0 = no delay)
         self._step_delay_ms: int = 0
 
+    def apply_theme_colors(self, theme):
+        """Update semantic output colors from a Theme dataclass."""
+        self._theme_colors = {
+            "error": QColor(getattr(theme, "error_color", "#ff6464")),
+            "warning": QColor(getattr(theme, "warning_color", "#ffc864")),
+            "success": QColor(getattr(theme, "success_color", "#64ff64")),
+            "info": QColor(getattr(theme, "info_color", "#64c8ff")),
+        }
         # Live variable watch timer — polls interpreter state while a program is running
         self._live_watch_timer = QTimer(self)
         self._live_watch_timer.setInterval(500)  # poll every 500 ms
@@ -851,14 +867,8 @@ class OutputPanel(QTextEdit):
 
         # Base format
         base_fmt = QTextCharFormat()
-        if color_type == "error":
-            base_fmt.setForeground(QColor(255, 100, 100))  # Red
-        elif color_type == "warning":
-            base_fmt.setForeground(QColor(255, 200, 100))  # Orange
-        elif color_type == "success":
-            base_fmt.setForeground(QColor(100, 255, 100))  # Green
-        elif color_type == "info":
-            base_fmt.setForeground(QColor(100, 200, 255))  # Blue
+        if color_type in self._theme_colors:
+            base_fmt.setForeground(self._theme_colors[color_type])
 
         # For error output, make line-number references into clickable links
         if color_type == "error":

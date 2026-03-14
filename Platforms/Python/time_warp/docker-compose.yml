@@ -6,7 +6,7 @@ services:
     container_name: time_warp_postgres
     environment:
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}
       POSTGRES_DB: time_warp
     ports:
       - "5432:5432"
@@ -37,7 +37,7 @@ services:
       dockerfile: Dockerfile
     container_name: time_warp_server
     environment:
-      DATABASE_URL: postgresql+asyncpg://postgres:password@postgres:5432/time_warp
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:?required}@postgres:5432/time_warp
       REDIS_URL: redis://redis:6379/0
       HOST: 0.0.0.0
       PORT: 8000

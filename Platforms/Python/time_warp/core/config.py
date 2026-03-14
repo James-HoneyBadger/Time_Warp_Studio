@@ -19,6 +19,11 @@ from pathlib import Path
 # All user data lives under  ~/.time_warp  (lowercase, dotfile).
 APP_DATA_DIR: Path = Path.home() / ".time_warp"
 
+# ---- project root (source tree) ------------------------------------------
+# Resolved relative to this file: config.py -> core/ -> time_warp/ -> Python/ -> Platforms/ -> repo root
+PROJECT_ROOT: Path = Path(__file__).resolve().parent.parent.parent.parent.parent
+EXAMPLES_DIR: Path = PROJECT_ROOT / "Examples"
+
 # ---- sub-directories -----------------------------------------------------
 LOGS_DIR: Path = APP_DATA_DIR / "logs"
 DATABASES_DIR: Path = APP_DATA_DIR / "databases"

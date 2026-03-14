@@ -212,8 +212,56 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
         # Language-specific keywords and patterns
         self._setup_language_patterns(language)
 
+    def _compile_patterns(self):
+        """Pre-compile all regex patterns for fast highlighting.
+
+        Builds a single compiled keyword regex from the keyword list
+        and compiles each token-type pattern once.  Called at the end
+        of ``_setup_language_patterns`` so ``highlightBlock`` never
+        has to call ``re.compile`` or ``re.escape`` at paint time.
+        """
+        # Build a single alternation pattern for all keywords
+        if self.keywords:
+            escaped = [re.escape(kw) for kw in self.keywords]
+            joined = "|".join(escaped)
+            # Case-sensitive languages should match keywords exactly
+            _case_sensitive_langs = {
+                Language.C, Language.PYTHON, Language.JAVASCRIPT,
+                Language.HASKELL, Language.LUA, Language.SCHEME,
+                Language.PROLOG, Language.SMALLTALK, Language.ASSEMBLY,
+            }
+            kw_flags = 0 if getattr(self, '_current_language', None) in _case_sensitive_langs else re.IGNORECASE
+            self._keyword_re = re.compile(
+                rf"\b({joined})\b", kw_flags
+            )
+        else:
+            self._keyword_re = None
+
+        _flag = re.MULTILINE | re.DOTALL
+        self._comment_re = (
+            re.compile(self.comment_pattern, _flag)
+            if self.comment_pattern
+            else None
+        )
+        self._string_re = (
+            re.compile(self.string_pattern) if self.string_pattern else None
+        )
+        self._number_re = (
+            re.compile(self.number_pattern) if self.number_pattern else None
+        )
+        self._operator_re = (
+            re.compile(self.operator_pattern) if self.operator_pattern else None
+        )
+        self._function_re = (
+            re.compile(self.function_pattern) if self.function_pattern else None
+        )
+        self._variable_re = (
+            re.compile(self.variable_pattern) if self.variable_pattern else None
+        )
+
     def _setup_language_patterns(self, language):
         """Setup syntax patterns for the specified language."""
+        self._current_language = language
         if language == Language.PILOT:
             self.keywords = [
                 "T:",
@@ -1540,9 +1588,48 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             self.function_pattern = r"\bEXEC\s+CICS\b"
             self.variable_pattern = r"\b[A-Z][A-Z0-9-]*\b"
 
+        elif language == Language.SQR:
+            self.keywords = [
+                "BEGIN-PROGRAM", "END-PROGRAM",
+                "BEGIN-PROCEDURE", "END-PROCEDURE",
+                "BEGIN-HEADING", "END-HEADING",
+                "BEGIN-FOOTING", "END-FOOTING",
+                "BEGIN-REPORT", "END-REPORT",
+                "BEGIN-SETUP", "END-SETUP",
+                "BEGIN-SQL", "END-SQL",
+                "BEGIN-SELECT", "END-SELECT",
+                "PRINT", "DISPLAY", "SHOW", "STOP",
+                "LET", "MOVE", "GET", "PUT", "ADD", "SUBTRACT",
+                "MULTIPLY", "DIVIDE", "CONCAT", "UNSTRING",
+                "IF", "ELSE", "END-IF", "EVALUATE", "WHEN",
+                "WHILE", "END-WHILE", "DO", "BREAK",
+                "INPUT", "OPEN", "CLOSE", "READ", "WRITE",
+                "STRING", "DATE", "DATEADD", "DATEDIFF",
+                "UPPER", "LOWER", "SUBSTR", "LENGTH",
+                "TO_NUMBER", "TO_CHAR", "EDIT", "ENCODE",
+                "SELECT", "FROM", "WHERE", "ORDER", "BY",
+                "GROUP", "HAVING", "INSERT", "UPDATE", "DELETE",
+                "CREATE", "TABLE", "AND", "OR", "NOT",
+                "INTO", "VALUES", "SET", "NULL", "AS",
+                "DECLARE-VARIABLE",
+                "NEW-PAGE", "POSITION", "COLUMNS",
+                "NEXT-LISTING", "ALTER-PRINTER",
+                "DO", "CALL", "RETURN",
+            ]
+            self.comment_pattern = r"!.*$"
+            self.string_pattern = r"'[^']*'"
+            self.number_pattern = r"\b\d+\.?\d*\b"
+            self.operator_pattern = r"[=<>()+\-*/&|]"
+            self.function_pattern = r"\b(?:BEGIN-PROCEDURE|END-PROCEDURE)\b"
+            self.variable_pattern = r"[$#&]\w+"
+
         else:
             # Default to BASIC
             self._setup_language_patterns(Language.BASIC)
+            return  # _compile_patterns already called by recursive call
+
+        # Pre-compile all patterns for fast highlighting
+        self._compile_patterns()
 
     def set_language(self, language):
         """Set the syntax highlighting language."""
@@ -1550,66 +1637,68 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
         self.rehighlight()
 
     def highlightBlock(self, text):
-        """Highlight a single block of text for syntax patterns.
+        """Highlight a single block of text using pre-compiled patterns.
 
-        The method implements language-specific highlighting and may be large
-        because it enumerates many token types and patterns.
+        All regex patterns are compiled once in ``_compile_patterns``
+        so this hot path never calls ``re.compile`` or ``re.escape``.
         """
         # pylint: disable=too-many-branches
-        # (docstring moved earlier; keep implementation-only block)
-        # Keywords
-        if hasattr(self, "keywords"):
-            for keyword in self.keywords:
-                pattern = r"\b" + re.escape(keyword) + r"\b"
-                for match in re.finditer(pattern, text, re.IGNORECASE):
-                    start = match.start()
-                    length = match.end() - match.start()
-                    self.setFormat(start, length, self.keyword_format)
+
+        # Keywords — single compiled alternation pattern
+        kw_re = getattr(self, "_keyword_re", None)
+        if kw_re is not None:
+            for match in kw_re.finditer(text):
+                self.setFormat(
+                    match.start(), match.end() - match.start(), self.keyword_format
+                )
 
         # Comments
-        if hasattr(self, "comment_pattern") and self.comment_pattern:
-            for match in re.finditer(
-                self.comment_pattern, text, re.MULTILINE | re.DOTALL
-            ):
-                start = match.start()
-                length = match.end() - start
-                self.setFormat(start, length, self.comment_format)
+        cmt_re = getattr(self, "_comment_re", None)
+        if cmt_re is not None:
+            for match in cmt_re.finditer(text):
+                self.setFormat(
+                    match.start(), match.end() - match.start(), self.comment_format
+                )
 
         # Strings
-        if hasattr(self, "string_pattern") and self.string_pattern:
-            for match in re.finditer(self.string_pattern, text):
-                start = match.start()
-                length = match.end() - start
-                self.setFormat(start, length, self.string_format)
+        str_re = getattr(self, "_string_re", None)
+        if str_re is not None:
+            for match in str_re.finditer(text):
+                self.setFormat(
+                    match.start(), match.end() - match.start(), self.string_format
+                )
 
         # Numbers
-        if hasattr(self, "number_pattern") and self.number_pattern:
-            for match in re.finditer(self.number_pattern, text):
-                start = match.start()
-                length = match.end() - start
-                self.setFormat(start, length, self.number_format)
+        num_re = getattr(self, "_number_re", None)
+        if num_re is not None:
+            for match in num_re.finditer(text):
+                self.setFormat(
+                    match.start(), match.end() - match.start(), self.number_format
+                )
 
         # Operators
-        if hasattr(self, "operator_pattern") and self.operator_pattern:
-            for match in re.finditer(self.operator_pattern, text):
-                start = match.start()
-                length = match.end() - start
-                self.setFormat(start, length, self.operator_format)
+        op_re = getattr(self, "_operator_re", None)
+        if op_re is not None:
+            for match in op_re.finditer(text):
+                self.setFormat(
+                    match.start(), match.end() - match.start(), self.operator_format
+                )
 
         # Functions
-        if hasattr(self, "function_pattern") and self.function_pattern:
-            for match in re.finditer(self.function_pattern, text):
+        fn_re = getattr(self, "_function_re", None)
+        if fn_re is not None:
+            for match in fn_re.finditer(text):
+                self.setFormat(
+                    match.start(), match.end() - match.start(), self.function_format
+                )
+
+        # Variables — skip if already formatted as keyword/function
+        var_re = getattr(self, "_variable_re", None)
+        if var_re is not None:
+            for match in var_re.finditer(text):
                 start = match.start()
                 length = match.end() - start
-                self.setFormat(start, length, self.function_format)
-
-        # Variables
-        if hasattr(self, "variable_pattern") and self.variable_pattern:
-            for match in re.finditer(self.variable_pattern, text):
-                # Skip if it's already highlighted as a keyword or function
-                start = match.start()
-                length = match.end() - match.start()
-                if not self.format(start).fontWeight() == QFont.Bold:
+                if self.format(start).fontWeight() != QFont.Bold:
                     self.setFormat(start, length, self.variable_format)
 
 

@@ -566,7 +566,8 @@ class SchemeEnvironment:
             clauses = var_clauses[1:]
             body = expr[2:]
             try:
-                return TailCall(["begin"] + body, env)
+                result = self.eval_expr(["begin"] + body, env)
+                return result
             except SchemeError as exc:
                 handler_env = Env(outer=env)
                 handler_env[var] = str(exc)
@@ -697,9 +698,6 @@ class SchemeEnvironment:
                 "map": lambda f, *lsts: [f(*args) for args in zip(*lsts)],
                 "for-each": lambda f, *lsts: [f(*args) for args in zip(*lsts)] and None,
                 "filter": lambda f, lst: [x for x in lst if _scheme_truthy(f(x))],
-                "apply": lambda f, *a: f(
-                    *(list(a[-1]) if isinstance(a[-1], list) else [a[-1]])
-                ),
                 "assoc": lambda k, lst: next(
                     (p for p in lst if isinstance(p, list) and p and p[0] == k), False
                 ),
@@ -712,18 +710,6 @@ class SchemeEnvironment:
                 "memq": lambda k, lst: (sub := [x for x in lst if x is k])
                 and sub
                 or False,
-                "cadr": lambda a: a[1],
-                "caddr": lambda a: a[2],
-                "caar": lambda a: a[0][0],
-                "cadar": lambda a: a[1][0],
-                "number->string": lambda n, r=10: (
-                    str(int(n))
-                    if r == 10
-                    else format(int(n), "b" if r == 2 else "o" if r == 8 else "x")
-                ),
-                "string->number": lambda s, r=10: (
-                    int(s, r) if "." not in s else float(s)
-                ),
                 "string->symbol": Symbol,
                 "symbol->string": str,
                 "string-length": len,
@@ -786,27 +772,6 @@ class SchemeEnvironment:
                 ),
                 "infinite?": lambda x: isinstance(x, float) and abs(x) == float("inf"),
                 "nan?": lambda x: isinstance(x, float) and x != x,
-                "gcd": lambda *a: (
-                    (
-                        lambda lst: (
-                            lst[0]
-                            if len(lst) == 1
-                            else __import__("math").gcd(
-                                int(lst[0]), int(_product(lst[1:]))
-                            )
-                        )
-                    )(list(a))
-                    if a
-                    else 0
-                ),
-                "lcm": lambda *a: (
-                    (
-                        lambda lst: abs(int(lst[0]) * int(lst[1]))
-                        // __import__("math").gcd(abs(int(lst[0])), abs(int(lst[1])))
-                    )(list(a))
-                    if len(list(a)) >= 2
-                    else (abs(int(list(a)[0])) if a else 1)
-                ),
                 "floor/": lambda a, b: (a // b, a % b),
                 "truncate/": lambda a, b: (int(a / b), a - int(a / b) * b),
                 "floor-quotient": lambda a, b: a // b,
@@ -1041,9 +1006,7 @@ class SchemeEnvironment:
                 "cdddr": lambda a: a[3:],
                 "caadr": lambda a: a[1][0],
                 "cdadr": lambda a: a[1][1:],
-                "caddr": lambda a: a[2],
                 "cadar": lambda a: a[0][1],
-                "caddr": lambda a: a[2],
                 "cadddr": lambda a: a[3],
                 "cddddr": lambda a: a[4:],
                 "first": lambda a: a[0],

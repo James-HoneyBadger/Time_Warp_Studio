@@ -55,33 +55,19 @@ Location: `Platforms/Python/time_warp/core/interpreter.py`
 Core dispatcher managing all 24 language executors:
 
 ```python
-class TimeWarpInterpreter:
+class Interpreter:
     def __init__(self):
-        # Initialize all 24 language executors
-        self.basic      = BasicExecutor(self)
-        self.logo       = LogoExecutor(self)
-        self.pilot      = PilotExecutor(self)
-        self.c_lang     = CExecutor(self)
-        self.pascal     = PascalExecutor(self)
-        self.prolog     = PrologExecutor(self)
-        self.forth      = ForthExecutor(self)
-        self.python     = PythonExecutor(self)
-        self.javascript = JavaScriptExecutor(self)
-        self.lua        = LuaExecutor(self)
-        self.haskell    = HaskellExecutor(self)
-        self.rexx       = RexxExecutor(self)
-        self.scheme     = SchemeExecutor(self)
-        self.smalltalk  = SmalltalkExecutor(self)
-        self.brainfuck  = BrainfuckExecutor(self)
-        self.cobol      = CobolExecutor(self)
-        self.fortran    = FortranExecutor(self)
-        self.assembly   = AssemblyExecutor(self)
-        self.apl        = AplExecutor(self)
-        self.hypertalk  = HyperTalkExecutor(self)
-        self.jcl        = JclExecutor(self)
-        self.cics       = CicsExecutor(self)
-        self.sql        = SqlExecutor(self)
-        self.sqr        = SqrExecutor(self)
+        # Language executors are functions, not class instances.
+        # Line-by-line executors (7 languages):
+        #   execute_basic, execute_pilot, execute_logo,
+        #   execute_c, execute_pascal, execute_prolog, execute_forth
+        #
+        # Whole-program executors (17 languages) registered in:
+        #   _WHOLE_PROGRAM_EXECUTORS dict
+        #   (Lua, Scheme, COBOL, Brainfuck, Assembly, JavaScript,
+        #    Fortran, REXX, Smalltalk, HyperTalk, Haskell, APL,
+        #    SQL, JCL, CICS, SQR, Python)
+        pass
 ```
 
 ### Core Methods
@@ -121,16 +107,13 @@ UI updates console and canvas
 
 ### Architecture Pattern
 
-Each language follows stateless pattern:
+Each language follows a stateless **function** pattern:
 
 ```python
-class BasicExecutor(LanguageExecutor):
-    def __init__(self, interpreter):
-        self.interpreter = interpreter
-    
-    def execute_command(self, command: str) -> str:
-        # Parse and execute
-        return output_with_emoji_prefix
+def execute_basic(interpreter: Interpreter, command: str, turtle: TurtleState) -> str:
+    """Execute a single BASIC command; return output text."""
+    # Parse and execute
+    return output_with_emoji_prefix
 ```
 
 ### Key Design Rule
@@ -141,11 +124,13 @@ class BasicExecutor(LanguageExecutor):
 - ❌ Modify main window
 
 **Language executors CAN:**
-- ✅ Track internal state (variables, turtle position)
+- ✅ Read/write interpreter state (variables, turtle position)
 - ✅ Return strings as output
-- ✅ Reference the interpreter
+- ✅ Access the interpreter and turtle state objects
 
-### The 7 Supported Languages
+### The 24 Supported Languages
+
+**Line-by-line executors** (parsed per statement):
 
 #### 1. BASIC
 
@@ -216,6 +201,14 @@ Features:
 - Integer arithmetic
 
 Status: Experimental
+
+**Whole-program executors** (17 languages):
+
+Python, Lua, Scheme, COBOL, Brainfuck, Assembly, JavaScript, Fortran,
+REXX, Smalltalk, HyperTalk, Haskell, APL, SQL, JCL, CICS, SQR.
+
+Each receives the full source text and returns output. Registered in
+`_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.
 
 ---
 
@@ -397,13 +390,15 @@ Update UI (console, canvas, variables)
 Qt signal/slot pattern for thread-safe communication:
 
 ```python
-# Signal definitions
-state_changed = pyqtSignal(dict)  # Full state update
-output_received = pyqtSignal(str)
-error_received = pyqtSignal(str)
+# Signal definitions (PySide6)
+from PySide6.QtCore import Signal, Slot
+
+state_changed = Signal(dict)  # Full state update
+output_received = Signal(str)
+error_received = Signal(str)
 
 # Slots (received in main thread)
-@pyqtSlot(dict)
+@Slot(dict)
 def on_state_changed(self, state):
     # Update all UI components
     pass
@@ -418,25 +413,30 @@ def on_state_changed(self, state):
 1. Create `languages/newlang.py`:
 
 ```python
-from . import LanguageExecutor
+from __future__ import annotations
+from typing import TYPE_CHECKING
 
-class NewLangExecutor(LanguageExecutor):
-    def __init__(self, interpreter):
-        self.interpreter = interpreter
-    
-    def execute_command(self, command: str) -> str:
-        try:
-            # Parse and execute
-            return "✅ Result\n"
-        except Exception as e:
-            return f"❌ {e}\n"
+if TYPE_CHECKING:
+    from ..core.interpreter import Interpreter
+    from ..graphics.turtle_state import TurtleState
+
+def execute_newlang(interpreter: Interpreter, source: str, turtle: TurtleState) -> str:
+    """Execute NewLang source code."""
+    output_lines = []
+    try:
+        # Parse and execute source
+        output_lines.append("✅ Result")
+    except Exception as e:
+        output_lines.append(f"❌ {e}")
+    return "\n".join(output_lines) + "\n"
 ```
 
 2. Register in `core/interpreter.py`:
 
 ```python
-from .languages.newlang import NewLangExecutor
-self.newlang = NewLangExecutor(self)
+from ..languages.newlang import execute_newlang
+# Add Language.NEWLANG enum member
+# Add entry in _init_whole_program_executors()
 ```
 
 3. Add detection in `execute()` method
@@ -511,7 +511,7 @@ All code execution happens in worker thread.
 
 ### Config File
 
-Location: `~/.Time_Warp/config.json`
+Location: `~/.time_warp/config.json`
 
 Contains:
 - Theme preference
@@ -532,7 +532,7 @@ Contains:
 
 ### Theme System
 
-8 built-in themes:
+23 built-in themes:
 - Dracula - Purple dark theme
 - Monokai - Classic editor
 - Solarized Dark - Low contrast
@@ -568,7 +568,7 @@ Custom themes can be created and saved.
 - `themes.py` - Theme application
 
 ### Tools (`tools/`)
-- `theme.py` - Theme definitions (8 themes)
+- `theme.py` - Theme definitions (23 themes)
 - `startup.py` - Startup sequence manager
 
 ---

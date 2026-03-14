@@ -28,6 +28,10 @@ class TurtleCanvas(
 ):  # pylint: disable=invalid-name,too-many-instance-attributes,unused-argument
     """Canvas for rendering turtle graphics with retro screen mode support."""
 
+    # Zoom limits — single source of truth
+    _ZOOM_MIN = 0.05
+    _ZOOM_MAX = 24.0
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -137,12 +141,12 @@ class TurtleCanvas(
 
     def _zoom_in(self):
         """Increase canvas zoom by 25%."""
-        self.zoom = min(self.zoom * 1.25, 24.0)
+        self.zoom = min(self.zoom * 1.25, self._ZOOM_MAX)
         self.update()
 
     def _zoom_out(self):
         """Decrease canvas zoom by 20%."""
-        self.zoom = max(self.zoom / 1.25, 0.05)
+        self.zoom = max(self.zoom / 1.25, self._ZOOM_MIN)
         self.update()
 
     def _reset_view(self):
@@ -645,7 +649,7 @@ class TurtleCanvas(
             self.zoom /= 1.1
 
         # Clamp zoom
-        self.zoom = max(0.1, min(10.0, self.zoom))
+        self.zoom = max(self._ZOOM_MIN, min(self._ZOOM_MAX, self.zoom))
 
         self.update()
 

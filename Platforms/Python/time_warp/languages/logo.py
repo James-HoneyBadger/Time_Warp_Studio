@@ -823,7 +823,6 @@ def _logo_forward(
     except ValidationError as e:
         return f"❌ {e}\n"
     except ValueError as e:
-        print(f"DEBUG: FORWARD error: {e}")
         logger.error("FORWARD error: %s", e)
         return f"❌ {e}\n"
 

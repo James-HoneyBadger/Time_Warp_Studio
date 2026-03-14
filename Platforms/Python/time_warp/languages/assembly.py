@@ -106,21 +106,8 @@ class VirtualCPU:
     @staticmethod
     def _upper_preserve_strings(line: str) -> str:
         """Uppercase mnemonics/registers but preserve quoted string literals."""
-        result: list[str] = []
-        in_str = False
-        qchar = ""
-        for ch in line:
-            if in_str:
-                result.append(ch)
-                if ch == qchar:
-                    in_str = False
-            elif ch in ('"', "'"):
-                in_str = True
-                qchar = ch
-                result.append(ch)
-            else:
-                result.append(ch.upper())
-        return "".join(result)
+        from .lang_utils import upper_preserve_strings
+        return upper_preserve_strings(line)
 
     def _parse(self, source: str):
         line_no = 0

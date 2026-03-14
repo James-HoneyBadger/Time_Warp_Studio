@@ -82,7 +82,7 @@ Start here if you're new to Time Warp Studio:
 Deep dives into specific IDE features:
 
 - **[Turtle Graphics](guides/04-turtle-graphics.md)** - Master Logo turtle graphics, colors, and animations
-- **[Settings & Themes](guides/06-settings.md)** - Customize appearance with 8 themes or create your own
+- **[Settings & Themes](guides/06-settings.md)** - Customize appearance with 23 themes or create your own
 - **[Keyboard Shortcuts](guides/07-shortcuts.md)** - Speed up your workflow with essential shortcuts
 - **[Lesson System](guides/03-lessons.md)** - Use structured lessons with checkpoints and verification
 
@@ -120,7 +120,7 @@ PRINT "Hello, World!"
 **Recommended Path:**
 1. [Logo Tutorial](tutorials/logo.md) - Learn Logo basics
 2. [Turtle Graphics Guide](guides/04-turtle-graphics.md) - Advanced turtle techniques
-3. Open **File → Examples → logo/** to see 17 examples
+3. Open **File → Examples → logo/** to see 4 examples
 4. Try examples like `02_squares.logo`, `05_trees.logo`
 
 **First Turtle Program:**
@@ -133,7 +133,7 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 **Recommended Resources:**
 1. [Classroom Mode Guide](guides/06-settings.md) - Presentation and assignment features
 2. [Lesson System Guide](guides/03-lessons.md) - Create structured lessons
-3. [Examples Browser](guides/01-getting-started.md#examples) - 220+ ready-made programs
+3. [Examples Browser](guides/01-getting-started.md#examples) - 69 ready-made programs
 4. See [ARCHITECTURE.md](../ARCHITECTURE.md) for extending features
 
 ### For Advanced Users
@@ -148,35 +148,35 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 
 ## 📁 Examples
 
-Browse 220+ example programs organized by language:
+Browse 68 example programs organized by language:
 
 | Directory | Count | Level | Purpose |
 |-----------|-------|-------|---------|
-| `basic/` | 18 | Beginner | Learn BASIC fundamentals |
-| `logo/` | 17 | Beginner-Intermediate | Turtle graphics and recursion |
-| `pilot/` | 14 | Beginner-Intermediate | Interactive instruction |
-| `assembly/` | 11 | Advanced | x86 low-level programming |
-| `c/` | 12 | Intermediate | Systems programming |
-| `cobol/` | 10 | Intermediate | Business data processing |
-| `sqr/` | 10 | Intermediate | Report generation |
-| `fortran/` | 10 | Intermediate | Scientific computing |
-| `haskell/` | 10 | Advanced | Functional programming |
-| `javascript/` | 10 | Intermediate | Scripting |
-| `pascal/` | 10 | Intermediate | Structured programming |
-| `prolog/` | 10 | Advanced | Logic programming |
-| `apl/` | 7 | Advanced | Array programming |
-| `hypertalk/` | 7 | Intermediate | Event-driven scripting |
-| `brainfuck/` | 6 | Advanced | Esoteric computing |
-| `cics/` | 5 | Advanced | Mainframe transactions |
-| `forth/` | 5 | Advanced | Stack-based programming |
-| `jcl/` | 5 | Intermediate | Mainframe job control |
-| `lua/` | 5 | Beginner-Intermediate | Scripting |
-| `python/` | 5 | Beginner-Intermediate | Modern scripting |
-| `rexx/` | 5 | Intermediate | Mainframe scripting |
-| `scheme/` | 5 | Intermediate-Advanced | Functional/Lisp |
-| `smalltalk/` | 5 | Intermediate | Object-oriented |
-| `sql/` | 5 | Intermediate | Database queries |
-| `demo/` | 8 | All | Cross-language showcases |
+| `basic/` | 4 | Beginner | Learn BASIC fundamentals |
+| `logo/` | 4 | Beginner-Intermediate | Turtle graphics and recursion |
+| `pilot/` | 2 | Beginner-Intermediate | Interactive instruction |
+| `assembly/` | 2 | Advanced | x86 low-level programming |
+| `c/` | 4 | Intermediate | Systems programming |
+| `cobol/` | 4 | Intermediate | Business data processing |
+| `sqr/` | 3 | Intermediate | Report generation |
+| `fortran/` | 2 | Intermediate | Scientific computing |
+| `haskell/` | 2 | Advanced | Functional programming |
+| `javascript/` | 3 | Intermediate | Scripting |
+| `pascal/` | 3 | Intermediate | Structured programming |
+| `prolog/` | 3 | Advanced | Logic programming |
+| `apl/` | 2 | Advanced | Array programming |
+| `hypertalk/` | 2 | Intermediate | Event-driven scripting |
+| `brainfuck/` | 2 | Advanced | Esoteric computing |
+| `cics/` | 3 | Advanced | Mainframe transactions |
+| `forth/` | 2 | Advanced | Stack-based programming |
+| `jcl/` | 4 | Intermediate | Mainframe job control |
+| `lua/` | 3 | Beginner-Intermediate | Scripting |
+| `python/` | 4 | Beginner-Intermediate | Modern scripting |
+| `rexx/` | 2 | Intermediate | Mainframe scripting |
+| `scheme/` | 3 | Intermediate-Advanced | Functional/Lisp |
+| `smalltalk/` | 2 | Intermediate | Object-oriented |
+| `sql/` | 3 | Intermediate | Database queries |
+| `demo/` | 1 | All | Cross-language showcases |
 
 **How to use examples:**
 1. Press **Ctrl+E** or **File → Examples**
@@ -199,11 +199,11 @@ Browse 220+ example programs organized by language:
 
 ### Customize theme
 - File → Settings → Themes
-- 8 built-in themes + custom theme editor
+- 23 built-in themes + custom theme editor
 
 ### Use autosave
 - Enabled by default
-- Auto-saves every 30 seconds to `~/.Time_Warp/`
+- Auto-saves every 30 seconds to `~/.time_warp/`
 - Keep up to 20 versions per file
 
 ### Follow a lesson

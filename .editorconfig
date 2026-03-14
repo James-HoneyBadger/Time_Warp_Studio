@@ -1,0 +1,51 @@
+# EditorConfig helps maintain consistent coding styles across editors
+# https://editorconfig.org
+
+root = true
+
+[*]
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+charset = utf-8
+
+[*.py]
+indent_style = space
+indent_size = 4
+max_line_length = 88
+
+[*.{js,ts,json,yml,yaml}]
+indent_style = space
+indent_size = 2
+
+[*.md]
+trim_trailing_whitespace = false
+indent_style = space
+indent_size = 2
+
+[*.{bas,pilot,logo}]
+indent_style = space
+indent_size = 2
+
+[*.{c,h}]
+indent_style = space
+indent_size = 4
+
+[*.{pas,pascal}]
+indent_style = space
+indent_size = 2
+
+[*.{f,f77,f90}]
+indent_style = space
+indent_size = 6
+
+[*.{sh,bash}]
+indent_style = space
+indent_size = 2
+
+[Makefile]
+indent_style = tab
+
+[Dockerfile]
+indent_style = space
+indent_size = 4

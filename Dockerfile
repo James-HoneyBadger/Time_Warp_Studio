@@ -1,15 +1,15 @@
 # Multi-stage Docker build for Time Warp Studio
 
 # Stage 1: Build Python backend
-FROM python:3.11-slim as backend-builder
+FROM python:3.12-slim as backend-builder
 WORKDIR /app
 COPY Platforms/Python/requirements.txt ./
 RUN pip install --user --no-cache-dir -r requirements.txt
 COPY Platforms/Python/ ./
-RUN python -m py_compile core/*.py handlers/*.py || true
+RUN python -m py_compile time_warp/core/*.py || true
 
 # Stage 2: Production runtime
-FROM python:3.11-slim
+FROM python:3.12-slim
 LABEL maintainer="Time Warp Studio <james@honey-badger.org>"
 LABEL version="8.0.0"
 LABEL description="Time Warp Studio - Educational Multi-Language Programming Environment"

@@ -101,6 +101,7 @@ class ExpressionEvaluator:
         self.arrays = arrays or {}
         self.string_variables = string_variables or {}
         self.token_cache: Dict[str, List[Token]] = {}
+        self._TOKEN_CACHE_MAX = 1024
 
         # Add LEN support for strings
         self.FUNCTIONS["LEN"] = len
@@ -127,6 +128,8 @@ class ExpressionEvaluator:
             tokens = self.token_cache[expr]
         else:
             tokens = self._tokenize(expr)
+            if len(self.token_cache) >= self._TOKEN_CACHE_MAX:
+                self.token_cache.clear()
             self.token_cache[expr] = tokens
 
         rpn = self._to_rpn(tokens)
@@ -154,7 +157,7 @@ class ExpressionEvaluator:
                 i += 1
                 continue
 
-            # Numbers
+            # Numbers (decimal, hex &H prefix, 0x prefix, octal 0o prefix)
             if ch.isdigit() or ch == ".":
                 num_str = ""
                 while i < len(expr) and (expr[i].isdigit() or expr[i] == "."):
@@ -162,6 +165,32 @@ class ExpressionEvaluator:
                     i += 1
                 tokens.append(Token(Token.Type.NUMBER, float(num_str)))
                 continue
+
+            if ch == "&" and i + 1 < len(expr) and expr[i + 1].upper() == "H":
+                # BASIC hex literal: &HFF
+                i += 2  # skip &H
+                hex_str = ""
+                while i < len(expr) and expr[i] in "0123456789abcdefABCDEF":
+                    hex_str += expr[i]
+                    i += 1
+                if hex_str:
+                    tokens.append(Token(Token.Type.NUMBER, float(int(hex_str, 16))))
+                    continue
+                raise ValueError("Invalid hex literal")
+
+            if ch == "0" and i + 1 < len(expr) and expr[i + 1].lower() in ("x", "o"):
+                prefix = expr[i + 1].lower()
+                i += 2  # skip 0x / 0o
+                lit = ""
+                valid = "0123456789abcdefABCDEF" if prefix == "x" else "01234567"
+                while i < len(expr) and expr[i] in valid:
+                    lit += expr[i]
+                    i += 1
+                if lit:
+                    base = 16 if prefix == "x" else 8
+                    tokens.append(Token(Token.Type.NUMBER, float(int(lit, base))))
+                    continue
+                raise ValueError(f"Invalid 0{prefix} literal")
 
             # Variables and functions
             if ch.isalpha() or ch == "_":
@@ -196,7 +225,7 @@ class ExpressionEvaluator:
                 continue
 
             # Operators
-            if ch in "+-*/%^":
+            if ch in "+-*/%^\\":
                 # Check if this is a unary operator
                 prev_token = tokens[-1] if tokens else None
                 is_unary = (
@@ -213,6 +242,9 @@ class ExpressionEvaluator:
                 if is_unary and ch in "+-":
                     # Unary plus/minus
                     tokens.append(Token(Token.Type.OPERATOR, f"u{ch}"))
+                elif ch == "\\":
+                    # BASIC integer division
+                    tokens.append(Token(Token.Type.OPERATOR, "\\"))
                 else:
                     tokens.append(Token(Token.Type.OPERATOR, ch))
                 i += 1
@@ -276,6 +308,7 @@ class ExpressionEvaluator:
             "-": 1,
             "*": 2,
             "/": 2,
+            "\\": 2,
             "%": 2,
             "MOD": 2,
             "^": 3,
@@ -431,10 +464,14 @@ class ExpressionEvaluator:
                         if b == 0:
                             raise ValueError("Division by zero (MOD)")
                         result = a % b
+                    elif op == "\\":
+                        if b == 0:
+                            raise ValueError("Division by zero (integer division)")
+                        result = float(int(a) // int(b))
                     elif op == "AND":
-                        result = 1.0 if (a and b) else 0.0
+                        result = float(int(a) & int(b))
                     elif op == "OR":
-                        result = 1.0 if (a or b) else 0.0
+                        result = float(int(a) | int(b))
                     elif op == "^":
                         result = a**b
                     elif op == "<":

@@ -278,7 +278,7 @@ Cannot open file: Permission denied
 
 **Solution:**
 1. Close and reopen IDE
-2. Check file ~/.Time_Warp/config.json exists
+2. Check file ~/.time_warp/config.json exists
 3. Delete config to reset to defaults
 
 ### Text Too Small/Large

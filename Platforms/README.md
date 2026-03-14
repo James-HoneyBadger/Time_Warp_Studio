@@ -43,9 +43,9 @@ Python/
 │   │   └── forth.py              # Forth language (experimental)
 │   ├── features/
 │   │   ├── lesson_system.py      # Structured lessons with checkpoints
-│   │   ├── examples_browser.py   # Searchable example catalog (86+)
+│   │   ├── examples_browser.py   # Searchable example catalog (69)
 │   │   ├── turtle_preview.py     # Live Logo code preview
-│   │   ├── theme_editor.py       # Custom theme creation (8 built-in)
+│   │   ├── theme_editor.py       # Custom theme creation (23 built-in)
 │   │   ├── autosave_manager.py   # Background autosave with versioning
 │   │   └── classroom_mode.py     # Presentation and assignment tools
 │   ├── ui/
@@ -79,12 +79,12 @@ Python/
 
 **Learning Tools:**
 - 📚 Lesson System - Step-by-step guided lessons with checkpoints
-- 📖 Examples Browser - Searchable catalog of 86+ example programs
+- 📖 Examples Browser - Searchable catalog of 69 example programs
 - 🐢 Turtle Preview - Live visualization while coding
 
 **Productivity:**
 - 💾 Autosave - Background saving with version history (20 versions/file)
-- 🎨 Theme Editor - 8 built-in themes + custom theme creation
+- 🎨 Theme Editor - 23 built-in themes + custom theme creation
 - 🏫 Classroom Mode - Presentation mode and assignment distribution
 
 **Development:**
@@ -151,7 +151,7 @@ python time_warp_ide.py --dir /path/to/projects
 
 ### Configuration
 
-User settings stored in `~/.Time_Warp/config.json`:
+User settings stored in `~/.time_warp/config.json`:
 
 ```json
 {

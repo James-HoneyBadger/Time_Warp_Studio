@@ -139,7 +139,7 @@ install_python_deps() {
         
         print_success "Python dependencies installed"
     else
-        print_error "Python 3 not found. Please install Python 3.8 or higher."
+        print_error "Python 3 not found. Please install Python 3.10 or higher."
         exit 1
     fi
 }

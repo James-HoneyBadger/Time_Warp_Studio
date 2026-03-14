@@ -11,8 +11,8 @@ Supported subset:
 - Cut `!` for pruning alternatives (commits choices in current rule)
 
 Limitations:
-- No lists/structures
-- Queries limited to a single predicate (no multi-goal query syntax)
+- Limited list/structure support (basic [H|T] unification)
+- Multi-goal queries supported; some advanced features missing
 """
 
 from __future__ import annotations

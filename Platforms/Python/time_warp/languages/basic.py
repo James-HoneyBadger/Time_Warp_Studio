@@ -43,8 +43,8 @@ def _basic_eval_expr(interpreter: "Interpreter", expr: str) -> float:
 
 # Runtime imports moved inside functions to avoid circular imports
 
-# Import pre-compiled patterns module for future optimization
-# from .parser_patterns import BASIC_PATTERNS, EXPRESSION_PATTERNS
+# NOTE: parser_patterns.py provides pre-compiled regex patterns that could
+# replace the inline patterns below. Currently unused pending integration.
 
 # Compiled regex patterns for performance (optimized for BASIC parsing)
 _PRINT_PATTERN = re.compile(r'"([^"]*)"[;,]?\s*(.+)')
@@ -149,7 +149,7 @@ def _resolve_string_value(interpreter: "Interpreter", expr: str) -> "str | None"
 
             evaluator = StringExpressionEvaluator(
                 interpreter.string_variables,
-                interpreter.numeric_variables,
+                interpreter.variables,
             )
             return str(evaluator.evaluate(expr))
         except Exception:
@@ -1197,13 +1197,13 @@ def _basic_screen(
                     rows = int(rows_str)
                     validate_range(cols, 40, 120, "columns")
                     validate_range(rows, 20, 50, "rows")
-                    interpreter.screen_mode.cols = cols
-                    interpreter.screen_mode.rows = rows
+                    interpreter.screen_config.cols = cols
+                    interpreter.screen_config.rows = rows
                 except ValidationError as e:
                     return f"❌ {e}\n"
             cols, rows = (
-                interpreter.screen_mode.cols,
-                interpreter.screen_mode.rows,
+                interpreter.screen_config.cols,
+                interpreter.screen_config.rows,
             )
             logger.info("Set TEXT mode (%sx%s)", cols, rows)
             return f"🎨 Text mode ({cols}x{rows})\n"
@@ -1218,13 +1218,13 @@ def _basic_screen(
                     height = int(height_str)
                     validate_range(width, 320, 1920, "width")
                     validate_range(height, 200, 1200, "height")
-                    interpreter.screen_mode.width = width
-                    interpreter.screen_mode.height = height
+                    interpreter.screen_config.width = width
+                    interpreter.screen_config.height = height
                 except ValidationError as e:
                     return f"❌ {e}\n"
             width, height = (
-                interpreter.screen_mode.width,
-                interpreter.screen_mode.height,
+                interpreter.screen_config.width,
+                interpreter.screen_config.height,
             )
             logger.info("Set GRAPHICS mode (%sx%s)", width, height)
             return f"🎨 Graphics mode ({width}x{height})\n"

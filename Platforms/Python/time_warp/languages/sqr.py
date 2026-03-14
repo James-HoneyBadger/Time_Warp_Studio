@@ -121,6 +121,12 @@ def execute_sqr(
     try:
         env = SQREnvironment(interpreter)
         return env.run(source)
+    except RecursionError:
+        return "❌ SQR error: Maximum recursion depth exceeded\n"
+    except MemoryError:
+        return "❌ SQR error: Out of memory\n"
+    except Exception as exc:
+        return f"❌ SQR error: {exc}\n"
     finally:
         sys.setrecursionlimit(old_limit)
 

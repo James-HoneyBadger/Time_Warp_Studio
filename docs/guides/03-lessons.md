@@ -487,7 +487,7 @@ Expected:   "Hello, Alice!" (no space)
 **Issue:** Progress not saved from previous session.
 
 **Solution:**
-1. Progress is auto-saved to `~/.Time_Warp/config.json`
+1. Progress is auto-saved to `~/.time_warp/config.json`
 2. Check if file was recently modified
 3. Verify write permissions on home directory
 4. Restart the IDE to reload progress

@@ -40,6 +40,11 @@ class Theme:
     menu_bg: str | None = None  # Falls back to background if None
     menu_fg: str | None = None  # Falls back to foreground if None
     border_color: str | None = None  # Falls back to line_number_bg if None
+    # Semantic output colors (used by output panel & debug panel)
+    error_color: str = "#ff6464"  # Red — error messages
+    warning_color: str = "#ffc864"  # Orange — warnings
+    success_color: str = "#64ff64"  # Green — success messages
+    info_color: str = "#64c8ff"  # Blue — informational
 
 
 class ThemeManager:
@@ -362,6 +367,59 @@ class ThemeManager:
                 menu_bg="#ffffff",
                 menu_fg="#000000",
                 border_color="#0078d7",
+            ),
+            # === ACCESSIBILITY THEMES ===
+            "Dyslexia Friendly": Theme(
+                name="Dyslexia Friendly",
+                background="#fdf6e3",
+                foreground="#000000",
+                editor_bg="#fdf6e3",
+                editor_fg="#000000",
+                line_number_bg="#f5eed6",
+                line_number_fg="#93a1a1",
+                keyword="#268bd2",
+                comment="#93a1a1",
+                string="#2aa198",
+                number="#d33682",
+                operator="#586e75",
+                function="#b58900",
+                variable="#6c71c4",
+                selection_bg="#b58900",
+                selection_fg="#fdf6e3",
+                canvas_bg="#fdf6e3",
+                menu_bg="#f5eed6",
+                menu_fg="#000000",
+                border_color="#b58900",
+                error_color="#dc322f",
+                warning_color="#cb4b16",
+                success_color="#859900",
+                info_color="#268bd2",
+            ),
+            "Accessible Dark Blue": Theme(
+                name="Accessible Dark Blue",
+                background="#002240",
+                foreground="#e0e0e0",
+                editor_bg="#002240",
+                editor_fg="#e0e0e0",
+                line_number_bg="#001a33",
+                line_number_fg="#7cb8bb",
+                keyword="#00d9ff",
+                comment="#7cb8bb",
+                string="#ffb454",
+                number="#b4fa72",
+                operator="#e0e0e0",
+                function="#00d9ff",
+                variable="#b4fa72",
+                selection_bg="#005a8c",
+                selection_fg="#ffffff",
+                canvas_bg="#002240",
+                menu_bg="#001a33",
+                menu_fg="#e0e0e0",
+                border_color="#005a8c",
+                error_color="#ff6b6b",
+                warning_color="#ffd93d",
+                success_color="#6bcf7f",
+                info_color="#00d9ff",
             ),
             # === RETRO CRT THEMES ===
             "Amber Monochrome": Theme(
@@ -875,6 +933,9 @@ class ThemeManager:
                     border: none;
                 }}
             """)
+            # Push semantic colors into the output panel
+            if hasattr(output, "apply_theme_colors"):
+                output.apply_theme_colors(theme)
 
         # Apply to canvas
         if canvas:
