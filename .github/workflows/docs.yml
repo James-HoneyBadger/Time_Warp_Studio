@@ -25,7 +25,7 @@ jobs:
           test -f docs/INDEX.md
           test -f docs/USER_GUIDE.md
           test -f docs/LANGUAGE_GUIDE.md
-          test -f docs/FAQ.md
+          test -f docs/reference/faq.md
           test -d docs/guides
           test -d docs/reference
           test -d docs/tutorials
