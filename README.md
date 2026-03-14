@@ -5,7 +5,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![PySide6](https://img.shields.io/badge/PySide6-Qt6-green)](https://wiki.qt.io/Qt_for_Python)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-8.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-8.1.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **24 programming languages** spanning six decades of computing history into a single, modern IDE. Built with Python and PySide6 (Qt6), it provides an integrated platform for learning programming concepts, exploring turtle graphics, and working through structured lessons.
 
@@ -66,7 +66,9 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Code Editor** — Syntax highlighting, line numbers, and auto-indentation per language
 - **Output Console** — Program results, error messages, and interactive input
 - **Graphics Canvas** — Real-time turtle graphics rendering with zoom and pan
-- **Theme System** — 23 built-in themes (Dracula, Monokai, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized, retro CRT, and more)
+- **Theme System** — 25 built-in themes (Dracula, Monokai, Catppuccin Mocha, Gruvbox Dark, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized, retro CRT, and more)
+- **Find & Replace** — Advanced search with regex, case sensitivity, whole word matching, and live match highlighting
+- **Auto-Completion** — Context-aware completions from language keywords and document identifiers
 - **14 Feature Panels** — Lessons, AI Assistant, Error Explainer, Examples Browser, Turtle Inspector, Debugger, and more
 
 ### Turtle Graphics
@@ -88,7 +90,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Lesson System** — Step-by-step guided instruction with auto-verification
 - **AI Assistant** — Intelligent code suggestions and explanations
 - **Error Explainer** — Human-readable explanations of programming errors
-- **Examples Browser** — 68 example programs across all 24 languages
+- **Examples Browser** — 93 example programs across all 24 languages
 - **Achievements** — Gamified progress tracking
 
 ---
@@ -255,7 +257,7 @@ GREET
 5 3 + . CR
 ```
 
-Browse 68 more examples in the [Examples/](Examples/) directory or through **File → Examples** in the IDE.
+Browse 93 more examples in the [Examples/](Examples/) directory or through **File → Examples** in the IDE.
 
 ---
 
@@ -372,15 +374,15 @@ Time_Warp_Studio/
 │       ├── debugging/             # Integrated debugger
 │       └── tests/                 # Test suite (34 tests)
 │
-├── Examples/                      # 68 example programs across 24 languages
-│   ├── basic/       (4)  ├── logo/        (4)  ├── pilot/       (2)
-│   ├── c/           (4)  ├── pascal/      (3)  ├── prolog/      (3)
-│   ├── cobol/       (4)  ├── sqr/         (3)  ├── fortran/     (2)
-│   ├── haskell/     (2)  ├── javascript/  (3)  ├── assembly/    (2)
-│   ├── apl/         (2)  ├── hypertalk/   (2)  ├── brainfuck/   (2)
-│   ├── forth/       (2)  ├── lua/         (3)  ├── rexx/        (2)
-│   ├── scheme/      (3)  ├── smalltalk/   (2)  ├── python/      (4)
-│   ├── sql/         (3)  ├── cics/        (3)  ├── jcl/         (4)
+├── Examples/                      # 93 example programs across 24 languages
+│   ├── basic/       (5)  ├── logo/        (5)  ├── pilot/       (3)
+│   ├── c/           (5)  ├── pascal/      (4)  ├── prolog/      (4)
+│   ├── cobol/       (5)  ├── sqr/         (4)  ├── fortran/     (3)
+│   ├── haskell/     (3)  ├── javascript/  (4)  ├── assembly/    (3)
+│   ├── apl/         (3)  ├── hypertalk/   (3)  ├── brainfuck/   (3)
+│   ├── forth/       (3)  ├── lua/         (4)  ├── rexx/        (3)
+│   ├── scheme/      (4)  ├── smalltalk/   (3)  ├── python/      (5)
+│   ├── sql/         (4)  ├── cics/        (4)  ├── jcl/         (5)
 │   └── demo/        (1)  # cross-language showcases
 │
 ├── docs/                          # Documentation
@@ -449,7 +451,7 @@ PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
 RUN_BACKEND_INTEGRATION=1 PYTHONPATH=Platforms/Python pytest Platforms/backend/tests -q
 ```
 
-**Current status:** 500+ tests passing across 36 test modules covering all 24 language executors, graphics, GUI, and interpreter tests.
+**Current status:** 500+ tests passing across 36+ test modules covering all 24 language executors, graphics, GUI, and interpreter tests.
 
 ---
 
@@ -490,7 +492,7 @@ Licensed under the **[MIT License](LICENSE)**.
 
 - **Repository:** [github.com/James-HoneyBadger/Time_Warp_Studio](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 - **Maintainer:** James Temple — james@honey-badger.org
-- **Version:** 8.0.0
+- **Version:** 8.1.0
 
 ---
 

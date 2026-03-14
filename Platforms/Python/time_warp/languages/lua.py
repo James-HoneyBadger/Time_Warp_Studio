@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import math
 import re
+import threading
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -1130,7 +1131,7 @@ class LuaFileHandle:
         if fmt in ("*n", "n"):
             try:
                 return float(self._f.readline())
-            except:
+            except (ValueError, TypeError):
                 return None
         if fmt in ("*a", "a"):
             return self._f.read()
@@ -1223,13 +1224,22 @@ class LuaOSLib:
 
 
 class LuaCoroutineLib:
-    """Simplified coroutine stub — full coroutines need Python greenlets/native async."""
+    """Thread-based coroutine library with proper yield/resume cycling.
+
+    Each coroutine body runs in its own daemon thread.  ``yield`` blocks the
+    coroutine thread until the next ``resume`` wakes it, and ``resume`` blocks
+    the caller until the coroutine yields or returns.  A 5-second timeout
+    prevents deadlocks in educational programs.
+    """
+
+    def __init__(self):
+        self._current: LuaCoroutine | None = None
 
     def create(self, f):
-        return LuaCoroutine(f)
+        return LuaCoroutine(f, self)
 
     def wrap(self, f):
-        co = LuaCoroutine(f)
+        co = LuaCoroutine(f, self)
 
         def wrapper(*args):
             ok, val = co.resume(*args)
@@ -1245,7 +1255,10 @@ class LuaCoroutineLib:
         return False, "cannot resume non-coroutine"
 
     def yield_(self, *args):
-        raise LuaYield(args)
+        co = self._current
+        if co is None:
+            raise LuaError("cannot yield from main thread")
+        return co._yield_impl(*args)
 
     def status(self, co):
         if isinstance(co, LuaCoroutine):
@@ -1253,10 +1266,10 @@ class LuaCoroutineLib:
         return "dead"
 
     def isyieldable(self):
-        return False
+        return self._current is not None
 
     def running(self):
-        return None, True
+        return self._current, self._current is not None
 
     def __getattr__(self, name):
         if name == "yield":
@@ -1265,28 +1278,94 @@ class LuaCoroutineLib:
 
 
 class LuaCoroutine:
-    def __init__(self, f):
-        self.f = f
-        self.status = "suspended"
-        self._result = None
+    """A single coroutine backed by a daemon thread."""
 
-    def resume(self, *args):
+    _TIMEOUT = 5.0  # seconds – prevents infinite hangs in student code
+
+    def __init__(self, f, lib: LuaCoroutineLib):
+        self.f = f
+        self.lib = lib
+        self.status = "suspended"
+        self._thread: threading.Thread | None = None
+        self._resume_event = threading.Event()
+        self._yield_event = threading.Event()
+        self._resume_args: tuple = ()
+        self._yield_values: tuple = ()
+        self._return_value: Any = None
+        self._error: str | None = None
+        self._started = False
+
+    def resume(self, *args) -> tuple:
         if self.status == "dead":
             return False, "cannot resume dead coroutine"
+        if self.status == "running":
+            return False, "cannot resume running coroutine"
+
+        self._resume_args = args
+        prev_co = self.lib._current
+        self.lib._current = self
         self.status = "running"
+
+        if not self._started:
+            self._started = True
+            self._yield_event.clear()
+            self._thread = threading.Thread(target=self._run, daemon=True)
+            self._thread.start()
+        else:
+            self._yield_event.clear()
+            self._resume_event.set()
+
+        # Block until coroutine yields or finishes
+        self._yield_event.wait(timeout=self._TIMEOUT)
+        self.lib._current = prev_co
+
+        if self._error is not None:
+            self.status = "dead"
+            return False, self._error
+
+        if self.status == "dead":
+            return True, self._return_value
+
+        # Yielded
+        vals = self._yield_values
+        if len(vals) == 0:
+            return (True, None)
+        if len(vals) == 1:
+            return (True, vals[0])
+        return (True, *vals)
+
+    def _run(self):
+        """Coroutine body — executes in a daemon thread."""
         try:
-            if callable(self.f):
-                result = self.f(*args)
-            else:
-                result = None
+            result = self.f(*self._resume_args) if callable(self.f) else None
+            self._return_value = result
             self.status = "dead"
-            return True, result
-        except LuaYield as y:
-            self.status = "suspended"
-            return True, y.values[0] if y.values else None
+        except LuaYield:
+            # Fallback: raised by old-style code — treat as dead
+            self.status = "dead"
+        except LuaError as e:
+            self._error = str(e)
+            self.status = "dead"
         except Exception as e:
+            self._error = str(e)
             self.status = "dead"
-            return False, str(e)
+        finally:
+            self._yield_event.set()
+
+    def _yield_impl(self, *values):
+        """Block the coroutine thread until the next resume."""
+        self.status = "suspended"
+        self._yield_values = values
+        self._resume_event.clear()
+        self._yield_event.set()      # signal caller's resume()
+        self._resume_event.wait(timeout=self._TIMEOUT)  # sleep until resumed
+        self.status = "running"
+        args = self._resume_args
+        if len(args) == 0:
+            return None
+        if len(args) == 1:
+            return args[0]
+        return args
 
 
 class LuaYield(Exception):

@@ -1194,14 +1194,17 @@ class FortranEnvironment:
         pyexpr = re.sub(r"\.NOT\.", " not ", pyexpr)
         pyexpr = re.sub(r"\.EQV\.", "==", pyexpr)
         pyexpr = re.sub(r"\.NEQV\.", "!=", pyexpr)
+        # Reject expressions with suspicious characters (security hardening)
+        if not re.match(r"^[\d\s+\-*/%().a-zA-Z_,<>=!&|~^'\"]+$", pyexpr):
+            return 0
         try:
-            return eval(
+            return eval(  # noqa: S307
                 pyexpr,
                 {
                     "__builtins__": {},
                     "abs": abs,
                     "int": int,
-                    "float": float,  # noqa: S307
+                    "float": float,
                     "round": round,
                     "math": math,
                 },

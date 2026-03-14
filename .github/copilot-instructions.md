@@ -141,7 +141,7 @@ Simulation-first design in `core/hardware_simulator.py` (not yet wired into main
 - Canvas clearing happens in main UI, not executor
 
 ### Theme System
-`ui/themes.py` defines 23 themes (Dracula, Monokai, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized, plus retro CRT themes). Persisted via QSettings. Apply via `ThemeManager.apply_theme()`.
+`ui/themes.py` defines 25 themes (Dracula, Monokai, Catppuccin Mocha, Gruvbox Dark, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized, plus retro CRT themes). Persisted via QSettings. Apply via `ThemeManager.apply_theme()`.
 
 ## Common Pitfalls
 
@@ -172,7 +172,7 @@ Platforms/Python/
     ui/                     - 30+ UI modules
       main_window.py        - PySide6 main window (uses 6 mixins)
       editor.py             - Code editor + minimap + line numbers
-      themes.py             - Theme manager (23 themes)
+      themes.py             - Theme manager (25 themes)
       canvas.py             - Turtle graphics canvas
       output.py             - Output panel + interpreter threads
       debug_panel.py        - Debug controls/watch/call-stack
@@ -185,7 +185,7 @@ Platforms/Python/
       error_hints.py        - Syntax error suggestions
       validators.py         - Input validation helpers
     tests/                  - 34 test files
-Examples/                   - ~68 demo programs across all languages
+Examples/                   - ~93 demo programs across all languages
 test_runner.py              - Test orchestration with HTML reports
 test_all_demos.py           - Standalone demo verifier
 ```
@@ -205,7 +205,7 @@ Optional: `pyfirmata` (Arduino), `RPi.GPIO` (Raspberry Pi), `openai`, `librosa`
 - **Interpreter**: Main interpreter class handling command dispatch and execution
 - **Language Executors**: 24 executor functions in `time_warp/languages/`
 - **UI Components**: Qt-based UI (`ui/main_window.py`) with editor, canvas, and turtle controls
-- **Theme System**: `ui/themes.py` with 23 themes and persistent configuration
+- **Theme System**: `ui/themes.py` with 25 themes and persistent configuration
 - **Graphics Canvas**: Unified drawing surface in `ui/canvas.py` for all turtle graphics output
 - **Debugger**: Step-through debugger with execution timeline in `core/debugger.py`
 

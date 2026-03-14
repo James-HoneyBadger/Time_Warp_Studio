@@ -8,12 +8,12 @@ standard-library coverage:
   - try/catch/finally/throw
   - Array (full prototype), String (full prototype), Number, Math, Date
   - Map, Set, WeakMap, WeakSet
-  - JSON, console, RegExp (basic), Promise stubs
+  - JSON, console, RegExp (basic), Promise (synchronous simulation)
   - Template literals
   - Object.keys/values/entries/assign/freeze/create
   - typeof, instanceof, ternary, nullish coalescing (??)
-  - async/await (stub — runs synchronously)
-  - Symbol (stub)
+  - async/await (runs synchronously -- educational simulation)
+  - Symbol (unique identifiers, Symbol.iterator, Symbol.for)
 """
 
 from __future__ import annotations
@@ -380,11 +380,11 @@ class JSNumber(metaclass=_NumberMeta):
                 return 0
             try:
                 return int(x)
-            except:
+            except (ValueError, TypeError, OverflowError):
                 pass
             try:
                 return float(x)
-            except:
+            except (ValueError, TypeError, OverflowError):
                 return float("nan")
         return x if isinstance(x, (int, float)) else 0
 
@@ -538,7 +538,7 @@ class JSJSON:
 
         try:
             return _json.dumps(conv(obj), indent=indent, ensure_ascii=False)
-        except:
+        except Exception:
             return '""'
 
     @staticmethod
@@ -573,7 +573,7 @@ class JSDate:
                         ).timestamp()
                         * 1000
                     )
-                except:
+                except (ValueError, TypeError, AttributeError):
                     self._ms = float("nan")
             else:
                 self._ms = _time.time() * 1000
@@ -695,7 +695,7 @@ class JSDate:
             return int(
                 _dt.datetime.fromisoformat(s.replace("Z", "+00:00")).timestamp() * 1000
             )
-        except:
+        except (ValueError, TypeError, AttributeError):
             return float("nan")
 
     @staticmethod
@@ -853,7 +853,7 @@ class JSRegExp:
             fl |= re.DOTALL
         try:
             self._re = re.compile(pattern, fl)
-        except:
+        except re.error:
             self._re = re.compile(re.escape(pattern), fl)
         self.global_flag = "g" in flags_str
         self.lastIndex = 0
@@ -898,10 +898,12 @@ class JSSymbol:
     def for_key(k):
         return JSSymbol(k)
 
-    iterator: "JSSymbol | None" = None  # placeholder
+    iterator: "JSSymbol | None" = None  # well-known Symbol.iterator
 
 
 JSSymbol.iterator = JSSymbol("Symbol.iterator")
+JSSymbol.hasInstance = JSSymbol("Symbol.hasInstance")
+JSSymbol.toPrimitive = JSSymbol("Symbol.toPrimitive")
 
 
 class JSPromise:
@@ -1171,14 +1173,14 @@ def _parse_int(s, base=10):
         valid = "0123456789abcdefghijklmnopqrstuvwxyz"[:base]
         n = "".join(c for c in s.lower() if c in valid)
         return int(n, base) if n else float("nan")
-    except:
+    except (ValueError, TypeError, OverflowError):
         return float("nan")
 
 
 def _parse_float(s):
     try:
         return float(str(s).strip())
-    except:
+    except (ValueError, TypeError, OverflowError):
         return float("nan")
 
 
@@ -1198,8 +1200,7 @@ def _js_to_py(source: str) -> str:
     source = re.sub(r"/\*.*?\*/", " ", source, flags=re.DOTALL)
     # BigInt literals: 42n → 42
     source = re.sub(r"\b(\d+)n\b", r"\1", source)
-    # Symbol('x') → 'x'  (simplified stub)
-    source = re.sub(r"\bSymbol\([^)]*\)", '"symbol"', source)
+    # Symbol calls routed to JSSymbol class at runtime (no transpile rewrite needed)
     # Expand single-line blocks before line-by-line translation (two passes for nested)
     source = _expand_one_liners(source)
     source = _expand_one_liners(source)

@@ -1,0 +1,149 @@
+-- Quiz Builder — Interactive Quiz System in HyperTalk
+-- Demonstrates: variables, repeat loops, if/then/else,
+-- put/get, functions, math operations, add/subtract
+
+on startUp
+  -- Quiz configuration
+  put 0 into score
+  put 0 into totalQuestions
+  put "" into playerName
+
+  put "╔══════════════════════════════════════╗" & return & \
+      "║   🎓 HyperTalk Quiz Builder         ║" & return & \
+      "╚══════════════════════════════════════╝"
+
+  put empty & return & "Welcome to the Quiz Builder!"
+
+  -- Section 1: Math Quiz
+  put return & "━━━ Section 1: Math ━━━"
+
+  -- Question 1
+  add 1 to totalQuestions
+  put return & "Q1: What is 7 × 8?"
+  put 7 * 8 into correctAnswer
+  put "Answer: " & correctAnswer
+
+  if correctAnswer = 56 then
+    put "✅ Correct!"
+    add 1 to score
+  else
+    put "❌ Wrong!"
+  end if
+
+  -- Question 2
+  add 1 to totalQuestions
+  put return & "Q2: What is 144 / 12?"
+  put 144 / 12 into correctAnswer
+  put "Answer: " & correctAnswer
+
+  if correctAnswer = 12 then
+    put "✅ Correct!"
+    add 1 to score
+  end if
+
+  -- Question 3: Square root
+  add 1 to totalQuestions
+  put return & "Q3: What is sqrt(256)?"
+  put sqrt(256) into answer
+  put "Answer: " & answer
+
+  if answer = 16 then
+    put "✅ Correct!"
+    add 1 to score
+  end if
+
+  -- Section 2: String Operations
+  put return & return & "━━━ Section 2: Strings ━━━"
+
+  add 1 to totalQuestions
+  put "Q4: Number of characters in 'HyperCard':"
+  put the number of chars of "HyperCard" into charCount
+  put "Answer: " & charCount & " characters"
+
+  if charCount = 9 then
+    put "✅ Correct!"
+    add 1 to score
+  end if
+
+  add 1 to totalQuestions
+  put return & "Q5: Number of words in 'Time Warp Studio':"
+  put the number of words of "Time Warp Studio" into wordCount
+  put "Answer: " & wordCount & " words"
+
+  if wordCount = 3 then
+    put "✅ Correct!"
+    add 1 to score
+  end if
+
+  -- Section 3: Logic
+  put return & return & "━━━ Section 3: Logic ━━━"
+
+  add 1 to totalQuestions
+  put "Q6: Is 17 a prime number?"
+  put true into isPrime
+  repeat with d = 2 to 4
+    if 17 mod d = 0 then
+      put false into isPrime
+    end if
+  end repeat
+
+  if isPrime then
+    put "Answer: Yes, 17 is prime ✅"
+    add 1 to score
+  else
+    put "Answer: No ❌"
+  end if
+
+  -- Section 4: Series
+  put return & return & "━━━ Section 4: Computation ━━━"
+
+  add 1 to totalQuestions
+  put "Q7: Sum of 1 to 10:"
+  put 0 into total
+  repeat with i = 1 to 10
+    add i to total
+  end repeat
+  put "Answer: " & total
+
+  if total = 55 then
+    put "✅ Correct! (Gauss would be proud)"
+    add 1 to score
+  end if
+
+  add 1 to totalQuestions
+  put return & "Q8: 10th Fibonacci number:"
+  put 1 into fib1
+  put 1 into fib2
+  repeat with i = 3 to 10
+    put fib1 + fib2 into temp
+    put fib2 into fib1
+    put temp into fib2
+  end repeat
+  put "Answer: " & fib2
+
+  if fib2 = 55 then
+    put "✅ Correct!"
+    add 1 to score
+  end if
+
+  -- Results
+  put return & return & "╔══════════════════════════════════════╗"
+  put "║           📊 Quiz Results            ║"
+  put "╚══════════════════════════════════════╝"
+  put return & "  Score: " & score & " / " & totalQuestions
+
+  put round(score / totalQuestions * 100) into percentage
+  put "  Percentage: " & percentage & "%"
+
+  if percentage >= 90 then
+    put "  Grade: A — Excellent! 🌟"
+  else if percentage >= 75 then
+    put "  Grade: B — Good work! 👍"
+  else if percentage >= 60 then
+    put "  Grade: C — Keep practising!"
+  else
+    put "  Grade: Try again!"
+  end if
+
+  put return & "Thanks for taking the quiz! 🎓"
+end startUp

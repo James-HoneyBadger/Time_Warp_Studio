@@ -1,0 +1,96 @@
+REMARK ═══════════════════════════════════════════
+REMARK   PILOT Typing Speed Test
+REMARK   Tests how accurately users can type phrases
+REMARK   Demonstrates M:, C:, T:, A:, and J: commands
+REMARK ═══════════════════════════════════════════
+
+T:╔══════════════════════════════════════════╗
+T:║       ⌨️  TYPING SPEED TEST  ⌨️          ║
+T:╚══════════════════════════════════════════╝
+T:
+T:You will be shown phrases to type exactly.
+T:Your accuracy will be scored after each one.
+T:
+C:SCORE = 0
+C:TOTAL = 0
+C:ROUND = 1
+
+*ROUND1
+C:TOTAL = TOTAL + 1
+T:
+T:━━━ Round $ROUND ━━━
+T:Type this phrase exactly:
+T:  "the quick brown fox"
+T:
+A:
+M:the quick brown fox
+TY:✅ Perfect match!
+TN:❌ Not quite — keep trying!
+CY:SCORE = SCORE + 1
+C:ROUND = ROUND + 1
+
+*ROUND2
+C:TOTAL = TOTAL + 1
+T:
+T:━━━ Round $ROUND ━━━
+T:Type this phrase:
+T:  "hello world 2025"
+T:
+A:
+M:hello world 2025
+TY:✅ Correct!
+TN:❌ Almost — watch the numbers!
+CY:SCORE = SCORE + 1
+C:ROUND = ROUND + 1
+
+*ROUND3
+C:TOTAL = TOTAL + 1
+T:
+T:━━━ Round $ROUND ━━━
+T:Type this phrase:
+T:  "practice makes perfect"
+T:
+A:
+M:practice makes perfect
+TY:✅ Nailed it!
+TN:❌ Close! Check your spelling.
+CY:SCORE = SCORE + 1
+C:ROUND = ROUND + 1
+
+*ROUND4
+C:TOTAL = TOTAL + 1
+T:
+T:━━━ Round $ROUND ━━━
+T:Now a harder one:
+T:  "PILOT is a teaching language"
+T:
+A:
+M:PILOT is a teaching language
+TY:✅ Excellent typing!
+TN:❌ Case matters — try again next time.
+CY:SCORE = SCORE + 1
+C:ROUND = ROUND + 1
+
+*ROUND5
+C:TOTAL = TOTAL + 1
+T:
+T:━━━ Round $ROUND ━━━
+T:Final challenge:
+T:  "Time Warp Studio rocks"
+T:
+A:
+M:Time Warp Studio rocks
+TY:✅ You're a typing champion!
+TN:❌ So close!
+CY:SCORE = SCORE + 1
+
+*RESULTS
+T:
+T:╔══════════════════════════════════════════╗
+T:║            📊 FINAL RESULTS             ║
+T:╚══════════════════════════════════════════╝
+T:
+T:Score: $SCORE out of $TOTAL
+T:
+T:Thanks for practising your typing!
+E:

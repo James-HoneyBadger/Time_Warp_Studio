@@ -1,8 +1,42 @@
 """
 PILOT language executor for Time Warp Studio.
+
 Handles PILOT-specific commands and syntax.
+
+Supported commands:
+    T:  Type (print text, supports $var interpolation and \\t tabs)
+    A:  Accept (input, A:$VAR or A: for ANSWER$)
+    M:  Match (pattern match with *, ? wildcards; sets $LEFT/$MATCH/$RIGHT)
+    C:  Compute (assignment with expressions and string functions)
+    J:  Jump to label
+    U:  Use variable / alias for C:
+    P:  Pause (wait for Enter)
+    B:  Branch (conditional jump)
+    S:  Subroutine call
+    R:  Return from subroutine
+    G:  Graphics (turtle commands: FD, BK, LT, RT, CIRCLE, ARC, FILL,
+        SETXY, HIDETURTLE, SHOWTURTLE, SETHEADING, TEXT, DOT, STAMP, ...)
+    F:  File operations (OPEN, CLOSE, READ, WRITE)
+    D:  Delay in seconds
+    L:  Link/Load (lesson chaining)
+    E:  End program
+    H:  Hint (educational feedback message)
+
+Conditional suffixes:
+    TY: / TN:  Execute only if last M: matched / didn't match
+    (works with any command letter)
+
+String functions (usable in C: expressions):
+    LEN(s), UPPER(s), LOWER(s), TRIM(s), LEFT(s,n), RIGHT(s,n),
+    MID(s,start,len), CONCAT(a,b), REVERSE(s), REPLACE(s,old,new)
+
+Match variables (set automatically by M:):
+    $LEFT   Text before the matched portion
+    $MATCH  The matched text itself
+    $RIGHT  Text after the matched portion
 """
 
+import math
 import re
 import time
 from typing import TYPE_CHECKING
@@ -68,7 +102,10 @@ def execute_pilot(
         "GRAPHIC": "G",
         "FILE": "F",
         "DELAY": "D",
-        "LINK": "S",
+        "LINK": "L",
+        "HINT": "H",
+        "LOAD": "L",
+        "NO": "N",
     }
     for keyword, letter in _LONGFORM_MAP.items():
         if cmd_upper == keyword or cmd_upper.startswith(keyword + " "):
@@ -119,30 +156,9 @@ def execute_pilot(
 
     if cmd_type == "T":
         # Substitute $variable and #variable references with their values
-        import re as _re_t
-
-        def _subst_var_t(m):
-            vn = m.group(1)
-            val = None
-            vnu = vn.upper()
-            # Check string variables first (e.g. ANSWER$)
-            if vnu + "$" in interpreter.string_variables:
-                val = interpreter.string_variables[vnu + "$"]
-            elif vn + "$" in interpreter.string_variables:
-                val = interpreter.string_variables[vn + "$"]
-            # Then check general variables
-            elif vn in interpreter.variables:
-                val = interpreter.variables[vn]
-            elif vnu in interpreter.variables:
-                val = interpreter.variables[vnu]
-            if val is not None:
-                if isinstance(val, float) and val == int(val):
-                    return str(int(val))
-                return str(val)
-            return m.group(0)
-
-        rest = _re_t.sub(r"\$([A-Za-z_][A-Za-z0-9_]*)", _subst_var_t, rest)
-        rest = _re_t.sub(r"#([A-Za-z_][A-Za-z0-9_]*)", _subst_var_t, rest)
+        rest = _substitute_variables(interpreter, rest)
+        # Support tab characters: \t or TAB
+        rest = rest.replace("\\t", "\t")
         text = interpreter.interpolate_text(rest)
         interpreter.output.append(text)
         return text + "\n"
@@ -167,30 +183,43 @@ def execute_pilot(
         if not pattern:
             interpreter.last_match_succeeded = False
             return ""
-        last_input = str(interpreter.last_input).strip().upper()
+        last_input = str(interpreter.last_input).strip()
+        last_input_upper = last_input.upper()
 
         # PILOT M: command matches against comma-separated alternatives
         # M:YES,YEAH,YEP,Y means match if input equals any of these
-        alternatives = [p.strip().upper() for p in pattern.split(",")]
+        alternatives = [p.strip() for p in pattern.split(",")]
 
-        # Check each alternative - support wildcards with *
+        # Check each alternative - support * and ? wildcards
+        # Also supports substring matching (SuperPILOT behaviour)
         interpreter.last_match_succeeded = False
         for alt in alternatives:
-            if "*" in alt:
+            alt_upper = alt.upper()
+            if "*" in alt or "?" in alt:
                 # Convert wildcard pattern to regex
-                # Escape special regex chars, then replace escaped * with .*
-                escaped_alt = re.escape(alt)
-                regex_pattern = "^" + escaped_alt.replace(r"\*", ".*") + "$"
+                escaped = re.escape(alt_upper)
+                regex_pat = (
+                    "^" + escaped.replace(r"\*", ".*").replace(r"\?", ".") + "$"
+                )
                 try:
-                    if re.match(regex_pattern, last_input, re.IGNORECASE):
+                    m = re.match(regex_pat, last_input_upper, re.IGNORECASE)
+                    if m:
                         interpreter.last_match_succeeded = True
+                        _set_match_vars(interpreter, last_input, 0, len(last_input))
                         break
                 except re.error:
                     pass
             else:
-                # Exact match (case-insensitive)
-                if last_input == alt:
+                # Exact match first
+                if last_input_upper == alt_upper:
                     interpreter.last_match_succeeded = True
+                    _set_match_vars(interpreter, last_input, 0, len(last_input))
+                    break
+                # Substring match (SuperPILOT-style)
+                pos = last_input_upper.find(alt_upper)
+                if pos >= 0:
+                    interpreter.last_match_succeeded = True
+                    _set_match_vars(interpreter, last_input, pos, len(alt))
                     break
         return ""
     if cmd_type == "Y":
@@ -211,28 +240,21 @@ def execute_pilot(
             return "❌ C: requires variable name\n"
 
         # Substitute $variable references with their values
-        import re as _re
+        expr = _substitute_variables(interpreter, expr)
 
-        def _subst_var(m):
-            vn = m.group(1)
-            val = None
-            if vn in interpreter.variables:
-                val = interpreter.variables[vn]
-            elif vn.upper() in interpreter.variables:
-                val = interpreter.variables[vn.upper()]
-            if val is not None:
-                if isinstance(val, float) and val == int(val):
-                    return str(int(val))
-                return str(val)
-            return m.group(0)
-
-        expr = _re.sub(r"\$([A-Za-z_][A-Za-z0-9_]*)", _subst_var, expr)
+        # Evaluate string functions first (LEN, UPPER, etc.)
+        expr = _eval_string_functions(interpreter, expr)
 
         try:
             validate_variable_name(var_name, allow_suffix=True)
-            result = interpreter.evaluate_expression(expr)
-            interpreter.variables[var_name.upper()] = result
-            logger.debug("PILOT C: %s = %s", var_name, result)
+            # If the expression evaluates to a string, store in string vars
+            if var_name.upper().endswith("$"):
+                interpreter.string_variables[var_name.upper()] = str(expr)
+                logger.debug("PILOT C: %s = %s", var_name, expr)
+            else:
+                result = interpreter.evaluate_expression(expr)
+                interpreter.variables[var_name.upper()] = result
+                logger.debug("PILOT C: %s = %s", var_name, result)
         except ValidationError as e:
             return f"❌ {e}\n"
         except (ValueError, TypeError, ZeroDivisionError) as e:
@@ -308,6 +330,28 @@ def execute_pilot(
             return "❌ D: requires numeric delay in seconds\n"
         return ""
     if cmd_type == "L":
+        # L: Link/Load — lesson chaining
+        lesson = rest.strip()
+        if lesson:
+            interpreter.output.append(f"📎 Lesson link: {lesson}")
+            # Store the lesson reference for the IDE to pick up
+            interpreter.variables["_LESSON_LINK"] = lesson
+            return f"📎 Lesson link: {lesson}\n"
+        return ""
+    if cmd_type == "H":
+        # H: Hint — educational feedback message
+        hint_text = rest.strip()
+        if hint_text:
+            hint_text = _substitute_variables(interpreter, hint_text)
+            hint_text = interpreter.interpolate_text(hint_text)
+            msg = f"💡 Hint: {hint_text}"
+            interpreter.output.append(msg)
+            return msg + "\n"
+        return ""
+    if cmd_type == "N":
+        # N: No-match action — execute rest as T: if last match failed
+        if not interpreter.last_match_succeeded:
+            return execute_pilot(interpreter, f"T:{rest}", turtle)
         return ""
     if cmd_type == "E":
         interpreter.running = False
@@ -433,6 +477,70 @@ def _pilot_graphics_command(
             turtle.setpenwidth(width)
         except (ValueError, TypeError):
             return "❌ G: Invalid width\n"
+    elif cmd in ("SETHEADING", "SETH"):
+        if not arg_str:
+            return "❌ G: SETHEADING requires angle\n"
+        try:
+            angle = eval_arg(arg_str)
+            turtle.setheading(angle)
+        except (ValueError, TypeError):
+            return "❌ G: Invalid angle\n"
+    elif cmd in ("HIDETURTLE", "HT"):
+        turtle.hideturtle()
+    elif cmd in ("SHOWTURTLE", "ST"):
+        turtle.showturtle()
+    elif cmd == "ARC":
+        # ARC radius extent
+        if "," in arg_str:
+            args = arg_str.split(",")
+        else:
+            args = arg_str.split()
+        if len(args) < 2:
+            return "❌ G: ARC requires radius and extent\n"
+        try:
+            radius = eval_arg(args[0])
+            extent = eval_arg(args[1])
+            turtle.circle(radius, extent)
+        except (ValueError, TypeError):
+            return "❌ G: Invalid ARC parameters\n"
+    elif cmd == "FILL":
+        # Fill last closed shape with current pen colour
+        r, g, b = turtle.color
+        turtle.fill_last_shape((r, g, b))
+    elif cmd == "DOT":
+        # Draw a filled dot at current position
+        radius = 3
+        if arg_str:
+            try:
+                radius = max(1, int(eval_arg(arg_str)))
+            except (ValueError, TypeError):
+                pass
+        turtle.circle(radius)
+    elif cmd == "STAMP":
+        # Draw turtle shape at current position (simulate with small triangle)
+        x, y = turtle.x, turtle.y
+        heading = turtle.heading
+        turtle.pendown()
+        for _i in range(3):
+            turtle.forward(10)
+            turtle.right(120)
+        turtle.setheading(heading)
+        turtle.goto(x, y)
+    elif cmd == "TEXT":
+        # TEXT string — output text string (for labelling graphics)
+        if arg_str:
+            text_msg = _substitute_variables(interpreter, arg_str)
+            interpreter.output.append(f"📝 {text_msg}")
+            return f"📝 {text_msg}\n"
+        return ""
+    elif cmd == "SPEED":
+        # SPEED 0-10 — set turtle speed (stored for IDE)
+        if arg_str:
+            try:
+                spd = max(0, min(10, int(eval_arg(arg_str))))
+                interpreter.variables["_TURTLE_SPEED"] = spd
+            except (ValueError, TypeError):
+                return "❌ G: Invalid speed\n"
     else:
         return f"❌ Unknown graphics command: {cmd}\n"
 
@@ -563,3 +671,167 @@ def _pilot_file_command(interpreter: "Interpreter", command: str) -> str:
         return f"❌ Unknown file operation: {operation}\n"
 
     return ""
+
+
+# ── Helper functions ─────────────────────────────────────────────────────
+
+
+def _substitute_variables(interpreter: "Interpreter", text: str) -> str:
+    """Replace $VAR and #VAR references with their values."""
+
+    def _subst(m: re.Match) -> str:
+        vn = m.group(1)
+        vnu = vn.upper()
+        val = None
+        # Check string variables first
+        if vnu + "$" in interpreter.string_variables:
+            val = interpreter.string_variables[vnu + "$"]
+        elif vn + "$" in interpreter.string_variables:
+            val = interpreter.string_variables[vn + "$"]
+        # Then numeric variables
+        elif vn in interpreter.variables:
+            val = interpreter.variables[vn]
+        elif vnu in interpreter.variables:
+            val = interpreter.variables[vnu]
+        if val is not None:
+            if isinstance(val, float) and val == int(val):
+                return str(int(val))
+            return str(val)
+        return m.group(0)
+
+    text = re.sub(r"\$([A-Za-z_][A-Za-z0-9_]*)", _subst, text)
+    text = re.sub(r"#([A-Za-z_][A-Za-z0-9_]*)", _subst, text)
+    return text
+
+
+def _set_match_vars(
+    interpreter: "Interpreter", full_input: str, pos: int, length: int
+) -> None:
+    """Set $LEFT, $MATCH, $RIGHT after a successful M: match."""
+    interpreter.string_variables["LEFT$"] = full_input[:pos]
+    interpreter.string_variables["MATCH$"] = full_input[pos : pos + length]
+    interpreter.string_variables["RIGHT$"] = full_input[pos + length :]
+
+
+def _eval_string_functions(interpreter: "Interpreter", expr: str) -> str:
+    """Evaluate built-in string functions in a C: expression.
+
+    Supported:
+        LEN(s)            → length of string
+        UPPER(s)          → uppercase
+        LOWER(s)          → lowercase
+        TRIM(s)           → strip whitespace
+        REVERSE(s)        → reverse string
+        LEFT(s,n)         → first n characters
+        RIGHT(s,n)        → last n characters
+        MID(s,start,len)  → substring
+        CONCAT(a,b)       → concatenation
+        REPLACE(s,old,new)→ string replacement
+    """
+
+    def _resolve_arg(arg: str) -> str:
+        """Resolve a function argument to its string value."""
+        arg = arg.strip()
+        # Quoted string
+        if (arg.startswith('"') and arg.endswith('"')) or (
+            arg.startswith("'") and arg.endswith("'")
+        ):
+            return arg[1:-1]
+        # Variable reference
+        au = arg.upper()
+        if au + "$" in interpreter.string_variables:
+            return str(interpreter.string_variables[au + "$"])
+        if au in interpreter.string_variables:
+            return str(interpreter.string_variables[au])
+        if au in interpreter.variables:
+            v = interpreter.variables[au]
+            if isinstance(v, float) and v == int(v):
+                return str(int(v))
+            return str(v)
+        return arg
+
+    def _resolve_num(arg: str) -> int:
+        """Resolve a function argument to an integer."""
+        arg = arg.strip()
+        au = arg.upper()
+        if au in interpreter.variables:
+            return int(interpreter.variables[au])
+        return int(arg)
+
+    # Process known string functions (case-insensitive)
+    func_re = re.compile(
+        r"\b(LEN|UPPER|LOWER|TRIM|REVERSE|LEFT|RIGHT|MID|CONCAT|REPLACE)"
+        r"\s*\(([^)]*)\)",
+        re.IGNORECASE,
+    )
+
+    def _replace_func(m: re.Match) -> str:
+        fn = m.group(1).upper()
+        raw_args = m.group(2)
+        # Split args carefully (respect quoted strings)
+        args = _split_func_args(raw_args)
+        try:
+            if fn == "LEN":
+                return str(len(_resolve_arg(args[0])))
+            if fn == "UPPER":
+                return _resolve_arg(args[0]).upper()
+            if fn == "LOWER":
+                return _resolve_arg(args[0]).lower()
+            if fn == "TRIM":
+                return _resolve_arg(args[0]).strip()
+            if fn == "REVERSE":
+                return _resolve_arg(args[0])[::-1]
+            if fn == "LEFT":
+                s = _resolve_arg(args[0])
+                n = _resolve_num(args[1])
+                return s[:n]
+            if fn == "RIGHT":
+                s = _resolve_arg(args[0])
+                n = _resolve_num(args[1])
+                return s[-n:] if n > 0 else ""
+            if fn == "MID":
+                s = _resolve_arg(args[0])
+                start = _resolve_num(args[1])
+                length = _resolve_num(args[2]) if len(args) > 2 else len(s)
+                return s[start : start + length]
+            if fn == "CONCAT":
+                return _resolve_arg(args[0]) + _resolve_arg(args[1])
+            if fn == "REPLACE":
+                s = _resolve_arg(args[0])
+                old = _resolve_arg(args[1])
+                new = _resolve_arg(args[2])
+                return s.replace(old, new)
+        except (IndexError, ValueError, TypeError):
+            return m.group(0)  # Return original on error
+        return m.group(0)
+
+    return func_re.sub(_replace_func, expr)
+
+
+def _split_func_args(raw: str) -> list:
+    """Split function arguments respecting quoted strings."""
+    args: list[str] = []
+    current: list[str] = []
+    in_quote = ""
+    depth = 0
+    for ch in raw:
+        if ch in ("\"", "'") and not in_quote:
+            in_quote = ch
+            current.append(ch)
+        elif ch == in_quote:
+            in_quote = ""
+            current.append(ch)
+        elif ch == "(" and not in_quote:
+            depth += 1
+            current.append(ch)
+        elif ch == ")" and not in_quote:
+            depth -= 1
+            current.append(ch)
+        elif ch == "," and not in_quote and depth == 0:
+            args.append("".join(current))
+            current = []
+        else:
+            current.append(ch)
+    if current:
+        args.append("".join(current))
+    return args

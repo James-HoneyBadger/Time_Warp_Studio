@@ -23,6 +23,7 @@ from PySide6.QtGui import (
     QTextDocument,
 )
 from PySide6.QtWidgets import (
+    QCheckBox,
     QCompleter,
     QDialog,
     QHBoxLayout,
@@ -1729,11 +1730,12 @@ class _WhitespaceHighlighter(QSyntaxHighlighter):
 
 
 class FindDialog(QDialog):
-    """Find & Replace dialog."""
+    """Enhanced Find & Replace dialog with regex, case, and whole-word options."""
 
     def __init__(self, parent):
         super().__init__(parent)
         self.editor = parent
+        self._extra_selections: list = []
         self.setup_ui()
 
     def setup_ui(self):
@@ -1746,6 +1748,7 @@ class FindDialog(QDialog):
         search_layout.addWidget(QLabel("Find:   "))
         self.search_field = QLineEdit()
         self.search_field.returnPressed.connect(self.find_next)
+        self.search_field.textChanged.connect(self._on_text_changed)
         search_layout.addWidget(self.search_field)
         layout.addLayout(search_layout)
 
@@ -1755,6 +1758,22 @@ class FindDialog(QDialog):
         self.replace_field = QLineEdit()
         replace_layout.addWidget(self.replace_field)
         layout.addLayout(replace_layout)
+
+        # Options row
+        options_layout = QHBoxLayout()
+        self.case_check = QCheckBox("Match Case")
+        self.word_check = QCheckBox("Whole Word")
+        self.regex_check = QCheckBox("Regex")
+        self.case_check.stateChanged.connect(self._on_text_changed)
+        self.word_check.stateChanged.connect(self._on_text_changed)
+        self.regex_check.stateChanged.connect(self._on_text_changed)
+        options_layout.addWidget(self.case_check)
+        options_layout.addWidget(self.word_check)
+        options_layout.addWidget(self.regex_check)
+        self.match_label = QLabel("")
+        options_layout.addStretch()
+        options_layout.addWidget(self.match_label)
+        layout.addLayout(options_layout)
 
         # Find buttons
         find_btn_layout = QHBoxLayout()
@@ -1783,20 +1802,141 @@ class FindDialog(QDialog):
         layout.addLayout(replace_btn_layout)
 
         self.setLayout(layout)
-        self.setMinimumWidth(380)
+        self.setMinimumWidth(420)
 
+    # ------------------------------------------------------------------
+    def _build_find_flags(self) -> QTextDocument.FindFlags:
+        """Build Qt find flags from checkbox states."""
+        flags = QTextDocument.FindFlags()
+        if self.case_check.isChecked():
+            flags |= QTextDocument.FindCaseSensitively
+        if self.word_check.isChecked():
+            flags |= QTextDocument.FindWholeWords
+        return flags
+
+    def _regex_pattern(self) -> re.Pattern | None:
+        """Compile search text as regex if regex mode is on."""
+        text = self.search_field.text()
+        if not text:
+            return None
+        try:
+            flags_re = 0 if self.case_check.isChecked() else re.IGNORECASE
+            if self.word_check.isChecked():
+                text = rf"\b{text}\b"
+            return re.compile(text, flags_re)
+        except re.error:
+            return None
+
+    def _on_text_changed(self):
+        """Update match count and highlight all occurrences live."""
+        count = self._highlight_all()
+        if self.search_field.text():
+            self.match_label.setText(f"{count} match{'es' if count != 1 else ''}")
+        else:
+            self.match_label.setText("")
+
+    def _highlight_all(self) -> int:
+        """Highlight every occurrence in the editor and return count."""
+        highlight_color = QColor(255, 210, 80, 100)
+        selections = []
+        text = self.search_field.text()
+        if not text:
+            self.editor.setExtraSelections(selections)
+            self._extra_selections = selections
+            return 0
+
+        doc = self.editor.document()
+        full_text = doc.toPlainText()
+
+        if self.regex_check.isChecked():
+            pat = self._regex_pattern()
+            if pat is None:
+                self.editor.setExtraSelections([])
+                self._extra_selections = []
+                return 0
+            for m in pat.finditer(full_text):
+                sel = QTextEdit.ExtraSelection()
+                cursor = QTextCursor(doc)
+                cursor.setPosition(m.start())
+                cursor.setPosition(m.end(), QTextCursor.KeepAnchor)
+                fmt = QTextCharFormat()
+                fmt.setBackground(QBrush(highlight_color))
+                sel.format = fmt
+                sel.cursor = cursor
+                selections.append(sel)
+        else:
+            flags_qt = self._build_find_flags()
+            cursor = QTextCursor(doc)
+            while True:
+                cursor = doc.find(text, cursor, flags_qt)
+                if cursor.isNull():
+                    break
+                sel = QTextEdit.ExtraSelection()
+                fmt = QTextCharFormat()
+                fmt.setBackground(QBrush(highlight_color))
+                sel.format = fmt
+                sel.cursor = cursor
+                selections.append(sel)
+
+        self._extra_selections = selections
+        self.editor.setExtraSelections(selections)
+        return len(selections)
+
+    # ------------------------------------------------------------------
     def find_next(self):
         """Find next occurrence."""
         text = self.search_field.text()
-        if text:
-            self.editor.find(text)
+        if not text:
+            return
+        if self.regex_check.isChecked():
+            self._find_regex(forward=True)
+        else:
+            self.editor.find(text, self._build_find_flags())
 
     def find_previous(self):
         """Find previous occurrence."""
         text = self.search_field.text()
-        if text:
-            self.editor.find(text, QTextDocument.FindBackward)
+        if not text:
+            return
+        if self.regex_check.isChecked():
+            self._find_regex(forward=False)
+        else:
+            self.editor.find(
+                text, self._build_find_flags() | QTextDocument.FindBackward
+            )
 
+    def _find_regex(self, forward: bool = True):
+        """Navigate to next/previous regex match."""
+        pat = self._regex_pattern()
+        if pat is None:
+            return
+        full_text = self.editor.document().toPlainText()
+        cursor = self.editor.textCursor()
+        pos = cursor.position()
+        matches = list(pat.finditer(full_text))
+        if not matches:
+            return
+        if forward:
+            for m in matches:
+                if m.start() > pos:
+                    self._select_match(m)
+                    return
+            self._select_match(matches[0])  # wrap
+        else:
+            for m in reversed(matches):
+                if m.end() < pos:
+                    self._select_match(m)
+                    return
+            self._select_match(matches[-1])  # wrap
+
+    def _select_match(self, m: re.Match):
+        """Select a regex match in the editor."""
+        cursor = QTextCursor(self.editor.document())
+        cursor.setPosition(m.start())
+        cursor.setPosition(m.end(), QTextCursor.KeepAnchor)
+        self.editor.setTextCursor(cursor)
+
+    # ------------------------------------------------------------------
     def replace_one(self):
         """Replace current selection if it matches, then find next."""
         find_text = self.search_field.text()
@@ -1804,10 +1944,20 @@ class FindDialog(QDialog):
         if not find_text:
             return
         cursor = self.editor.textCursor()
-        if cursor.hasSelection() and cursor.selectedText() == find_text:
-            cursor.insertText(replace_text)
-            self.editor.setTextCursor(cursor)
-        self.editor.find(find_text)
+        if cursor.hasSelection():
+            selected = cursor.selectedText()
+            if self.regex_check.isChecked():
+                pat = self._regex_pattern()
+                if pat and pat.fullmatch(selected):
+                    cursor.insertText(pat.sub(replace_text, selected))
+                    self.editor.setTextCursor(cursor)
+            else:
+                cmp_a = selected if self.case_check.isChecked() else selected.lower()
+                cmp_b = find_text if self.case_check.isChecked() else find_text.lower()
+                if cmp_a == cmp_b:
+                    cursor.insertText(replace_text)
+                    self.editor.setTextCursor(cursor)
+        self.find_next()
 
     def replace_all(self):
         """Replace all occurrences; returns count replaced."""
@@ -1816,17 +1966,42 @@ class FindDialog(QDialog):
         if not find_text:
             return 0
         doc = self.editor.document()
+
+        if self.regex_check.isChecked():
+            pat = self._regex_pattern()
+            if pat is None:
+                return 0
+            full = doc.toPlainText()
+            new_text, count = pat.subn(replace_text, full)
+            if count:
+                cursor = QTextCursor(doc)
+                cursor.beginEditBlock()
+                cursor.select(QTextCursor.Document)
+                cursor.insertText(new_text)
+                cursor.endEditBlock()
+            self._on_text_changed()
+            self.match_label.setText(f"Replaced {count}")
+            return count
+
         cursor = QTextCursor(doc)
         cursor.beginEditBlock()
+        flags_qt = self._build_find_flags()
         count = 0
         while True:
-            cursor = doc.find(find_text, cursor)
+            cursor = doc.find(find_text, cursor, flags_qt)
             if cursor.isNull():
                 break
             cursor.insertText(replace_text)
             count += 1
         cursor.endEditBlock()
+        self._on_text_changed()
+        self.match_label.setText(f"Replaced {count}")
         return count
+
+    def closeEvent(self, event):
+        """Clear highlights when dialog closes."""
+        self.editor.setExtraSelections([])
+        super().closeEvent(event)
 
 
 class CodeEditor(QPlainTextEdit):
@@ -2023,10 +2198,24 @@ class CodeEditor(QPlainTextEdit):
         self._update_completer(language)
 
     def _update_completer(self, language):
-        """Update completer with keywords for the language."""
+        """Update completer with keywords for the language.
+
+        Combines the language's keywords with identifiers found in the
+        current document so the popup also offers user-defined names.
+        """
         # Get keywords from highlighter
         temp_highlighter = SimpleSyntaxHighlighter(None, language)
-        keywords = temp_highlighter.keywords
+        keywords = list(temp_highlighter.keywords)
+
+        # Collect identifiers already in the document (words ≥ 3 chars)
+        doc_text = self.toPlainText()
+        if doc_text:
+            idents = set(re.findall(r"\b[A-Za-z_]\w{2,}\b", doc_text))
+            # Merge, avoiding duplicates (case-insensitive)
+            kw_lower = {k.lower() for k in keywords}
+            for ident in sorted(idents):
+                if ident.lower() not in kw_lower:
+                    keywords.append(ident)
 
         # Set completer model
         model = QStringListModel(keywords)

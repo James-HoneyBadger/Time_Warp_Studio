@@ -266,7 +266,6 @@ def execute_basic(
             return "".join(outputs)
 
     cmd = command.upper()
-    # print(f"DEBUG: EXEC {cmd}")
 
     # ── Block IF skip-mode ────────────────────────────────────────────────
     # When a block IF condition was false we skip lines until ELSE / END IF.
@@ -1112,7 +1111,6 @@ def _basic_gosub(interpreter: "Interpreter", args: str) -> str:
     try:
         line_num = validate_numeric(target, param_name="line number")
         interpreter.gosub_stack.append(interpreter.current_line)
-        # print(f"DEBUG: GOSUB pushing {interpreter.current_line}, jumping to {line_num}")
         interpreter.jump_to_line_number(int(line_num))
         logger.debug("GOSUB to line %s", int(line_num))
     except ValidationError as e:
@@ -2101,8 +2099,6 @@ def _basic_read(interpreter: "Interpreter", args: str) -> str:
 
         val_str = interpreter.data_values[interpreter.data_pointer]
         interpreter.data_pointer += 1
-
-        # print(f"DEBUG: READ {var_name} = {val_str}")
 
         try:
             # Try to parse as number

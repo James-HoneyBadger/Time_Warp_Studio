@@ -863,7 +863,7 @@ class VirtualCPU:
                 )
                 try:
                     self.regs[1] = int(raw or "0")
-                except:
+                except (ValueError, TypeError):
                     self.regs[1] = 0
             elif sc == 3:  # print char in R1
                 self._emit(chr(self.regs[1] & 0xFF))

@@ -14,6 +14,8 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Any, Dict, List, Tuple
 
+from ..utils.expression_evaluator import ExpressionEvaluator
+
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
     from ..graphics.turtle_state import TurtleState
@@ -575,8 +577,14 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
     for kw in ("and", "or", "not", "True", "False", "None"):
         pyexpr = pyexpr.replace(repr(kw), kw)
 
+    # Use safe ExpressionEvaluator instead of eval()
     try:
-        return eval(pyexpr)  # noqa: S307
+        safe_eval = ExpressionEvaluator(
+            variables={k: v for k, v in interpreter.variables.items()
+                       if isinstance(v, (int, float))},
+            string_variables=dict(interpreter.string_variables),
+        )
+        return safe_eval.evaluate(pyexpr)
     except Exception:
         pass
 

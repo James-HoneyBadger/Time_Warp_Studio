@@ -16,10 +16,20 @@ Supports:
   ask prompt   -- input (stores in "it")
   global var   -- declare global
   return value
-  exit to HyperCard / exit repeat  -- stop
+  exit to HyperCard / exit repeat / next repeat  -- flow control
+  add n to var / subtract n from var
+  multiply var by n / divide var by n
+  do expression  -- runtime evaluation
+  wait n seconds / wait n ticks
+  sort container by expression
+  visual effect name [speed]  -- display transition name
   Arithmetic: +, -, *, /, mod, div, ^, **
+  Comparisons: =, <>, <, >, <=, >=, is, is not, contains, is in
   String: char i of x, word i of x, line i of x, item i of x
+  Chunk ranges: char i to j of x, word i to j of x
+  Built-in properties: the date, the time, the ticks, the seconds
   Functions: sin, cos, sqrt, abs, round, trunc, random, length, offset
+             numToChar, charToNum, max, min, average, sum, the result
 """
 
 from __future__ import annotations
@@ -27,6 +37,8 @@ from __future__ import annotations
 import math
 import random
 import re
+import time as _time
+from datetime import datetime as _datetime
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -214,6 +226,10 @@ class HyperTalkEnvironment:
             return ("RETURN", retval)
 
         # EXIT
+        if re.match(r"^exit\s+repeat\b", stmt_lower):
+            return ("BREAK", None)
+        if re.match(r"^next\s+repeat\b", stmt_lower):
+            return ("CONTINUE", None)
         if re.match(r"^exit\b", stmt_lower):
             raise HTExit()
 
@@ -246,6 +262,94 @@ class HyperTalkEnvironment:
         # REPEAT n TIMES / WITH / WHILE / UNTIL / forever
         if re.match(r"^repeat\b", stmt_lower):
             return self._exec_repeat(stmt, lines, ip, block_end)
+
+        # ADD n TO var
+        m = re.match(r"^add\s+(.+?)\s+to\s+(\w+)$", stmt, re.IGNORECASE)
+        if m:
+            val = _to_num(self._eval(m.group(1).strip()))
+            var = m.group(2)
+            self._set_var(var, _to_num(self._get_var(var)) + val)
+            return None
+
+        # SUBTRACT n FROM var
+        m = re.match(r"^subtract\s+(.+?)\s+from\s+(\w+)$", stmt, re.IGNORECASE)
+        if m:
+            val = _to_num(self._eval(m.group(1).strip()))
+            var = m.group(2)
+            self._set_var(var, _to_num(self._get_var(var)) - val)
+            return None
+
+        # MULTIPLY var BY n
+        m = re.match(r"^multiply\s+(\w+)\s+by\s+(.+)$", stmt, re.IGNORECASE)
+        if m:
+            var = m.group(1)
+            val = _to_num(self._eval(m.group(2).strip()))
+            self._set_var(var, _to_num(self._get_var(var)) * val)
+            return None
+
+        # DIVIDE var BY n
+        m = re.match(r"^divide\s+(\w+)\s+by\s+(.+)$", stmt, re.IGNORECASE)
+        if m:
+            var = m.group(1)
+            val = _to_num(self._eval(m.group(2).strip()))
+            if val == 0:
+                self._emit("❌ Division by zero")
+                return None
+            self._set_var(var, _to_num(self._get_var(var)) / val)
+            return None
+
+        # DO expression (runtime evaluation of a string as HyperTalk)
+        m = re.match(r"^do\s+(.+)$", stmt, re.IGNORECASE)
+        if m:
+            code = str(self._eval(m.group(1).strip()))
+            for do_line in code.splitlines():
+                do_line = do_line.strip()
+                if do_line:
+                    self._exec_stmt(do_line, lines, ip, block_end)
+            return None
+
+        # WAIT n SECONDS/TICKS (informational only in educational context)
+        m = re.match(r"^wait\s+(.+?)\s+(seconds?|ticks?)$", stmt, re.IGNORECASE)
+        if m:
+            val = _to_num(self._eval(m.group(1).strip()))
+            unit = m.group(2).lower()
+            if unit.startswith("tick"):
+                val = val / 60  # 60 ticks per second
+            self._emit(f"ℹ️ Waited {val:.1f} seconds")
+            return None
+
+        # VISUAL EFFECT (display effect name)
+        m = re.match(r"^visual\s+effect\s+(.+)$", stmt, re.IGNORECASE)
+        if m:
+            self._emit(f"🎨 Visual effect: {m.group(1).strip()}")
+            return None
+
+        # SORT container
+        m = re.match(
+            r"^sort\s+(?:the\s+)?(?:lines\s+of\s+)?(\w+)(?:\s+(ascending|descending|numeric|text))?$",
+            stmt,
+            re.IGNORECASE,
+        )
+        if m:
+            var = m.group(1)
+            mode = (m.group(2) or "text").lower()
+            val = str(self._get_var(var))
+            items = val.split("\n") if "\n" in val else val.split(",")
+            items = [i.strip() for i in items if i.strip()]
+            if mode == "numeric":
+                items.sort(key=lambda x: _to_num(x))
+            elif mode == "descending":
+                items.sort(reverse=True)
+            else:
+                items.sort()
+            sep = "\n" if "\n" in val else ","
+            self._set_var(var, sep.join(items))
+            return None
+
+        # BEEP
+        if stmt_lower.strip() == "beep":
+            self._emit("🔔 Beep!")
+            return None
 
         # Assignment: var = expr or var is expr
         m = re.match(r"^(\w+)\s*[=:]\s*(.+)$", stmt)
@@ -318,6 +422,8 @@ class HyperTalkEnvironment:
                 r = self._exec_lines(lines, body_start, end_i)
                 if isinstance(r, tuple) and r[0] == "BREAK":
                     break
+                if isinstance(r, tuple) and r[0] == "CONTINUE":
+                    continue
             return ("GOTO", end_i + 1)
 
         m = re.match(
@@ -339,6 +445,10 @@ class HyperTalkEnvironment:
                 r = self._exec_lines(lines, body_start, end_i)
                 if isinstance(r, tuple) and r[0] == "BREAK":
                     break
+                if isinstance(r, tuple) and r[0] == "CONTINUE":
+                    i += step
+                    count += 1
+                    continue
                 i += step
                 count += 1
             return ("GOTO", end_i + 1)
@@ -351,6 +461,9 @@ class HyperTalkEnvironment:
                 r = self._exec_lines(lines, body_start, end_i)
                 if isinstance(r, tuple) and r[0] == "BREAK":
                     break
+                if isinstance(r, tuple) and r[0] == "CONTINUE":
+                    count += 1
+                    continue
                 count += 1
             return ("GOTO", end_i + 1)
 
@@ -362,6 +475,9 @@ class HyperTalkEnvironment:
                 r = self._exec_lines(lines, body_start, end_i)
                 if isinstance(r, tuple) and r[0] == "BREAK":
                     break
+                if isinstance(r, tuple) and r[0] == "CONTINUE":
+                    count += 1
+                    continue
                 count += 1
             return ("GOTO", end_i + 1)
 
@@ -431,7 +547,62 @@ class HyperTalkEnvironment:
         if expr.lower() == "cr":
             return "\n"
 
+        # Built-in properties: the date, the time, the ticks, the seconds
+        if expr.lower().startswith("the "):
+            prop = expr[4:].strip().lower()
+            if prop == "date":
+                return _datetime.now().strftime("%m/%d/%Y")
+            if prop in ("short date", "abbrev date", "abbreviated date"):
+                return _datetime.now().strftime("%m/%d/%y")
+            if prop in ("long date", "long date"):
+                return _datetime.now().strftime("%A, %B %d, %Y")
+            if prop == "time":
+                return _datetime.now().strftime("%I:%M %p")
+            if prop in ("long time",):
+                return _datetime.now().strftime("%I:%M:%S %p")
+            if prop == "seconds":
+                return int(_time.time())
+            if prop == "ticks":
+                return int(_time.time() * 60)
+            if prop == "result":
+                return self._it
+            if prop == "target":
+                return "card button 1"
+            if prop == "random":
+                return random.randint(1, 100)
+            m_of = re.match(
+                r"number\s+of\s+(chars?|words?|lines?|items?)\s+(?:of|in)\s+(.+)",
+                prop,
+                re.IGNORECASE,
+            )
+            if m_of:
+                kind = m_of.group(1).lower().rstrip("s")
+                val = str(self._eval(m_of.group(2).strip()))
+                if kind == "char":
+                    return len(val)
+                if kind == "word":
+                    return len(val.split())
+                if kind == "line":
+                    return len(val.splitlines()) if val else 0
+                if kind == "item":
+                    return len(val.split(","))
+                return 0
+
         # Property access: char i of str
+        m = re.match(r"^char(?:acter)?\s+(\d+)\s+to\s+(\d+)\s+of\s+(.+)$", expr, re.IGNORECASE)
+        if m:
+            i = int(m.group(1)) - 1
+            j = int(m.group(2))
+            s = str(self._eval(m.group(3).strip()))
+            return s[max(0, i):min(j, len(s))]
+
+        m = re.match(r"^word\s+(\d+)\s+to\s+(\d+)\s+of\s+(.+)$", expr, re.IGNORECASE)
+        if m:
+            i = int(m.group(1)) - 1
+            j = int(m.group(2))
+            words = str(self._eval(m.group(3).strip())).split()
+            return " ".join(words[max(0, i):min(j, len(words))])
+
         m = re.match(r"^char(?:acter)?\s+(\d+)\s+of\s+(.+)$", expr, re.IGNORECASE)
         if m:
             idx = int(m.group(1)) - 1
@@ -557,6 +728,15 @@ class HyperTalkEnvironment:
             "value": lambda: self._eval(str(args[0])),
             "numtochar": lambda: chr(int(a0)),
             "chartonum": lambda: ord(str(args[0])[0]) if args[0] else 0,
+            "average": lambda: sum(float(a) for a in args) / len(args) if args else 0,
+            "sum": lambda: sum(float(a) for a in args),
+            "ln": lambda: math.log(a0),
+            "log2": lambda: math.log2(a0),
+            "exp": lambda: math.exp(a0),
+            "exp1": lambda: math.exp(a0),
+            "atan": lambda: math.degrees(math.atan(a0)),
+            "annuity": lambda: (1 - (1 + float(args[0])) ** (-float(args[1]))) / float(args[0]) if len(args) > 1 else 0,
+            "compound": lambda: (1 + float(args[0])) ** float(args[1]) if len(args) > 1 else 0,
         }
         fn = fns.get(name)
         if fn:

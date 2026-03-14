@@ -1,0 +1,85 @@
+; Spirograph — Mathematical Art Generator
+; Draws hypotrochoid and epitrochoid curves
+; Demonstrates turtle graphics, loops, and trigonometry
+
+; === Setup ===
+PENUP
+HOME
+SETPENWIDTH 2
+
+; --- Draw a hypotrochoid pattern ---
+; Parameters: outer radius R, inner radius r, distance d
+MAKE "R 100
+MAKE "r 63
+MAKE "d 75
+
+; Calculate colour cycle
+SETPENCOLOR 80 160 255
+
+PENDOWN
+MAKE "t 0
+MAKE "steps 720
+MAKE "first 1
+
+REPEAT :steps [
+  MAKE "angle :t * 3.14159 / 180
+
+  ; Hypotrochoid equations: x = (R-r)*cos(t) + d*cos((R-r)*t/r)
+  ;                         y = (R-r)*sin(t) - d*sin((R-r)*t/r)
+  MAKE "diff :R - :r
+  MAKE "ratio :diff * :angle / :r
+
+  MAKE "x :diff * COS :angle + :d * COS :ratio
+  MAKE "y :diff * SIN :angle - :d * SIN :ratio
+
+  IFELSE :first = 1 [
+    PENUP
+    SETXY :x :y
+    PENDOWN
+    MAKE "first 0
+  ] [
+    SETXY :x :y
+  ]
+
+  ; Cycle pen colour through rainbow
+  MAKE "red 127 + 128 * SIN :angle
+  MAKE "green 127 + 128 * SIN :angle + 2.094
+  MAKE "blue 127 + 128 * SIN :angle + 4.189
+  SETPENCOLOR INT :red INT :green INT :blue
+
+  MAKE "t :t + 1
+]
+
+; --- Draw concentric star pattern in the centre ---
+PENUP
+HOME
+PENDOWN
+SETPENWIDTH 1
+
+MAKE "points 12
+MAKE "outerR 30
+MAKE "innerR 15
+
+REPEAT :points [
+  MAKE "a1 REPCOUNT * 360 / :points
+  MAKE "a2 :a1 + 180 / :points
+
+  MAKE "x1 :outerR * SIN :a1
+  MAKE "y1 :outerR * COS :a1
+  MAKE "x2 :innerR * SIN :a2
+  MAKE "y2 :innerR * COS :a2
+
+  SETPENCOLOR 255 215 0
+  PENUP
+  HOME
+  PENDOWN
+  SETXY :x1 :y1
+  SETXY :x2 :y2
+]
+
+PENUP
+HOME
+HIDETURTLE
+
+PRINT [Spirograph art complete!]
+PRINT [Hypotrochoid: R=100 r=63 d=75]

@@ -1237,7 +1237,6 @@ def _logo_if(
 
     try:
         condition = _logo_eval_expr_str(interpreter, condition_str)
-        # print(f"DEBUG: IF condition '{condition_str}' -> {condition}")
     except (ValueError, TypeError, ZeroDivisionError):
         return f"❌ Invalid IF condition: {condition_str}\n"
 
@@ -1422,8 +1421,6 @@ def _logo_call_procedure(
 
     # Map args to params
     num_params = len(params)
-
-    # DEBUG
     depth = interpreter.variables.get("__RECURSION_DEPTH__", 0)
     interpreter.variables["__RECURSION_DEPTH__"] = depth + 1
 

@@ -12,6 +12,14 @@ Simulates OS/390 / z/OS JCL job processing:
   //*                            (comment)
   //         DD   (continuation)
   /*                             (end of inline data)
+  // SET     NAME=value          (symbolic parameter assignment)
+  // IF      (cond) THEN         (conditional execution)
+  // ELSE
+  // ENDIF
+  // JCLLIB  ORDER=(lib1,lib2)   (procedure library search order)
+  //name     PROC [params]       (inline procedure definition)
+  //         PEND                 (end inline procedure)
+  // INCLUDE MEMBER=name         (include member simulation)
 
 Built-in program simulation (PGM=):
   IEBGENER   — copy input DD to output DD
@@ -20,6 +28,8 @@ Built-in program simulation (PGM=):
   SORT       — simulate sort with SORT FIELDS, RECORD definitions
   COBTEST    — run COBOL programs (calls COBOL executor)
   IKJEFT01   — TSO/REXX batch (calls REXX executor if SOURCE DD present)
+  IEBCOPY    — dataset copy simulation
+  IEHPROGM   — dataset management simulation
   USER-PGM   — any user program name → echo its PARM
 """
 
@@ -172,7 +182,11 @@ def _emit_stmt(line: str, stmts: List[_JCLStatement]) -> None:
         name = m.group(1)
         oper = m.group(2).upper()
         params = (m.group(3) or "").strip()
-        stmts.append(_JCLStatement(name, oper, params, line))
+        # Recognize conditionals and control statements
+        if oper in ("IF", "ELSE", "ENDIF", "SET", "JCLLIB", "INCLUDE", "PROC", "PEND"):
+            stmts.append(_JCLStatement(name, oper, params, line))
+        else:
+            stmts.append(_JCLStatement(name, oper, params, line))
     else:
         stmts.append(_JCLStatement("", "UNKNOWN", line, line))
 
@@ -194,6 +208,9 @@ class JCLEnvironment:
         self._return_codes: Dict[str, int] = {}  # step → RC
         self._job_name = "TWJOB001"
         self._job_desc = "Time Warp JCL Job"
+        self._symbols: Dict[str, str] = {}  # SET symbolic parameters
+        self._procs: Dict[str, List[_JCLStatement]] = {}  # inline PROC definitions
+        self._jcllib: List[str] = []  # JCLLIB ORDER library list
 
     # ------------------------------------------------------------------ output
 
@@ -231,10 +248,77 @@ class JCLEnvironment:
         i = 1
         while i < len(stmts):
             stmt = stmts[i]
+
+            # SET symbolic parameter
+            if stmt.oper == "SET":
+                m_set = re.match(r"(\w+)\s*=\s*(.+)", stmt.params)
+                if m_set:
+                    self._symbols[m_set.group(1).upper()] = m_set.group(2).strip()
+                i += 1
+                continue
+
+            # JCLLIB ORDER
+            if stmt.oper == "JCLLIB":
+                m_lib = re.match(r"ORDER\s*=\s*\(([^)]+)\)", stmt.params, re.IGNORECASE)
+                if m_lib:
+                    self._jcllib = [l.strip() for l in m_lib.group(1).split(",")]
+                    self._emit(f"IEF212I JCLLIB ORDER: {', '.join(self._jcllib)}")
+                i += 1
+                continue
+
+            # INCLUDE MEMBER
+            if stmt.oper == "INCLUDE":
+                m_inc = re.match(r"MEMBER\s*=\s*(\w+)", stmt.params, re.IGNORECASE)
+                if m_inc:
+                    self._emit(f"IEF236I INCLUDE MEMBER={m_inc.group(1)} PROCESSED")
+                i += 1
+                continue
+
+            # Inline PROC definition
+            if stmt.oper == "PROC":
+                proc_name = stmt.name.upper()
+                proc_body: List[_JCLStatement] = []
+                i += 1
+                while i < len(stmts) and stmts[i].oper != "PEND":
+                    proc_body.append(stmts[i])
+                    i += 1
+                if i < len(stmts):
+                    i += 1  # skip PEND
+                self._procs[proc_name] = proc_body
+                self._emit(f"IEF236I PROC {proc_name} CATALOGED ({len(proc_body)} statements)")
+                continue
+
+            # IF/THEN/ELSE/ENDIF conditional execution
+            if stmt.oper == "IF":
+                cond_result = self._eval_jcl_condition(stmt.params)
+                # Find matching ELSE/ENDIF
+                then_stmts, else_stmts, end_idx = self._scan_if_block(stmts, i + 1)
+                if cond_result:
+                    self._emit(f"IEF272I IF CONDITION TRUE — executing THEN path")
+                    for ts in then_stmts:
+                        if ts.oper == "EXEC":
+                            step_end = self._find_step_end(stmts, stmts.index(ts) + 1)
+                            dd_s = [s for s in stmts[stmts.index(ts) + 1:step_end] if s.oper in ("DD", "_DATA_")]
+                            rc = self._run_step(ts, dd_s, stmts)
+                            self._return_codes[ts.name] = rc
+                else:
+                    self._emit(f"IEF272I IF CONDITION FALSE — executing ELSE path")
+                    for es in else_stmts:
+                        if es.oper == "EXEC":
+                            step_end = self._find_step_end(stmts, stmts.index(es) + 1)
+                            dd_s = [s for s in stmts[stmts.index(es) + 1:step_end] if s.oper in ("DD", "_DATA_")]
+                            rc = self._run_step(es, dd_s, stmts)
+                            self._return_codes[es.name] = rc
+                i = end_idx
+                continue
+
             if stmt.oper == "EXEC":
+                # Resolve symbolic parameters in params
+                resolved_params = self._resolve_symbols(stmt.params)
+                resolved_stmt = _JCLStatement(stmt.name, stmt.oper, resolved_params, stmt.raw)
                 step_end = self._find_step_end(stmts, i + 1)
                 dd_stmts = stmts[i + 1 : step_end]
-                rc = self._run_step(stmt, dd_stmts, stmts)
+                rc = self._run_step(resolved_stmt, dd_stmts, stmts)
                 self._return_codes[stmt.name] = rc
                 i = step_end
             elif stmt.oper == "_DATA_":
@@ -305,8 +389,17 @@ class JCLEnvironment:
         elif pgm_upper == "IKJEFT01":
             rc = self._pgm_ikjeft01(step_dds, all_stmts, parm)
         elif proc:
-            self._emit(f"IEF385I   {proc:8s} -- PROCEDURE SIMULATION NOT AVAILABLE")
-            rc = 4
+            # Check inline PROC catalog first
+            if proc.upper() in self._procs:
+                proc_body = self._procs[proc.upper()]
+                self._emit(f"IEF385I   {proc:8s} -- EXECUTING INLINE PROCEDURE")
+                for ps in proc_body:
+                    if ps.oper == "EXEC":
+                        inner_rc = self._run_step(ps, [], all_stmts)
+                        rc = max(rc, inner_rc)
+            else:
+                self._emit(f"IEF385I   {proc:8s} -- PROCEDURE NOT FOUND IN CATALOG")
+                rc = 4
         else:
             self._emit(f"IEF285I   {pgm:8s} -- PROGRAM EXECUTED  PARM='{parm}'")
             rc = 0
@@ -421,6 +514,65 @@ class JCLEnvironment:
         return 8
 
     # ------------------------------------------------------------------ helpers
+
+    def _resolve_symbols(self, text: str) -> str:
+        """Replace &SYMBOL references with their SET values."""
+        def repl(m):
+            sym = m.group(1).upper()
+            return self._symbols.get(sym, m.group(0))
+        return re.sub(r"&(\w+)\.?", repl, text)
+
+    def _eval_jcl_condition(self, params: str) -> bool:
+        """Evaluate a JCL IF condition like (STEP1.RC = 0) THEN."""
+        cond = re.sub(r"\bTHEN\b", "", params, flags=re.IGNORECASE).strip()
+        cond = cond.strip("()")
+
+        # step.RC comparison
+        m = re.match(r"(\w+)\.RC\s*(=|<>|<|>|<=|>=|NE|EQ|LT|GT|LE|GE)\s*(\d+)", cond, re.IGNORECASE)
+        if m:
+            step = m.group(1).upper()
+            op = m.group(2).upper()
+            val = int(m.group(3))
+            rc = self._return_codes.get(step, 0)
+            ops = {"=": rc == val, "EQ": rc == val, "<>": rc != val, "NE": rc != val,
+                   "<": rc < val, "LT": rc < val, ">": rc > val, "GT": rc > val,
+                   "<=": rc <= val, "LE": rc <= val, ">=": rc >= val, "GE": rc >= val}
+            return ops.get(op, False)
+
+        # ABEND check
+        if re.search(r"ABEND\b", cond, re.IGNORECASE):
+            return False  # no abends in simulation
+
+        # Default: true
+        return True
+
+    def _scan_if_block(
+        self, stmts: List[_JCLStatement], start: int
+    ) -> tuple[List[_JCLStatement], List[_JCLStatement], int]:
+        """Scan IF/ELSE/ENDIF block. Returns (then_stmts, else_stmts, endif_idx+1)."""
+        then_stmts: List[_JCLStatement] = []
+        else_stmts: List[_JCLStatement] = []
+        in_else = False
+        depth = 0
+        i = start
+        while i < len(stmts):
+            s = stmts[i]
+            if s.oper == "IF":
+                depth += 1
+            elif s.oper == "ENDIF":
+                if depth == 0:
+                    return then_stmts, else_stmts, i + 1
+                depth -= 1
+            elif s.oper == "ELSE" and depth == 0:
+                in_else = True
+                i += 1
+                continue
+            if in_else:
+                else_stmts.append(s)
+            else:
+                then_stmts.append(s)
+            i += 1
+        return then_stmts, else_stmts, len(stmts)
 
     def _get_inline_data(
         self,
