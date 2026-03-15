@@ -1,0 +1,12 @@
+# .pre-commit-config.yaml
+# Run `pre-commit install` once to activate hooks in this repo.
+# Then `pre-commit run --all-files` to lint everything.
+repos:
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.4.4
+    hooks:
+      - id: ruff
+        args: [--fix, --exit-non-zero-on-fix]
+        types_or: [python, pyi]
+      - id: ruff-format
+        types_or: [python, pyi]

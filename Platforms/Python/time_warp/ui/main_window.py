@@ -54,6 +54,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..core.interpreter import Language
+from .tab_state import TabState
 from .canvas import TurtleCanvas
 from .coach_marks import CoachMarkManager
 from .collaboration_client import CollaborationClient
@@ -167,10 +168,9 @@ class MainWindow(
         self._pre_presentation_menu_visible = None
         self._pre_presentation_was_fullscreen = None
 
-        # Current file tracking (will be per tab)
-        self.tab_files = {}  # tab_index -> filename
-        self.tab_modified = {}  # tab_index -> bool
-        self.tab_languages = {}  # tab_index -> Language
+        # Current file tracking — single dict of TabState per tab index.
+        # Use self._ts(idx) to get-or-create a TabState for any index.
+        self._tab_states: dict = {}
 
         # Dialog UI elements (initialized in respective methods)
         self.server_input = None
@@ -272,32 +272,35 @@ class MainWindow(
             return self.editor_tabs.widget(current_index)
         return None
 
+    def _ts(self, idx: int) -> TabState:
+        """Get or create the TabState for *idx*."""
+        if idx not in self._tab_states:
+            self._tab_states[idx] = TabState()
+        return self._tab_states[idx]
+
     def get_current_tab_info(self):
         """Get info for current tab."""
         current_index = self.editor_tabs.currentIndex()
         if current_index >= 0:
-            lang = self.tab_languages.get(current_index, Language.BASIC)
-            return {
-                "file": self.tab_files.get(current_index),
-                "modified": self.tab_modified.get(current_index, False),
-                "language": lang,
-            }
+            s = self._ts(current_index)
+            return {"file": s.file, "modified": s.modified, "language": s.language}
         return {"file": None, "modified": False, "language": Language.BASIC}
 
     def set_current_tab_info(self, file=None, modified=None, language=None):
         """Set info for current tab."""
         current_index = self.editor_tabs.currentIndex()
         if current_index >= 0:
+            s = self._ts(current_index)
             if file is not None:
-                self.tab_files[current_index] = file
+                s.file = file
             if modified is not None:
-                old_modified = self.tab_modified.get(current_index, False)
-                self.tab_modified[current_index] = modified
+                old_modified = s.modified
+                s.modified = modified
                 # Update tab title dot indicator when modified state changes
                 if modified != old_modified:
                     self._update_tab_title_indicator(current_index, modified)
             if language is not None:
-                self.tab_languages[current_index] = language
+                s.language = language
             self.update_title()
 
     def _update_tab_title_indicator(self, index: int, modified: bool):
@@ -337,9 +340,7 @@ class MainWindow(
         self.editor_tabs.setCurrentIndex(tab_index)
 
         # Initialize tab info
-        self.tab_files[tab_index] = None
-        self.tab_modified[tab_index] = False
-        self.tab_languages[tab_index] = language
+        self._tab_states[tab_index] = TabState(file=None, modified=False, language=language)
 
         self._refresh_project_runner_tabs()
 
@@ -382,7 +383,7 @@ class MainWindow(
 
         # Get current language
         current_idx = self.editor_tabs.currentIndex()
-        language = self.tab_languages.get(current_idx, Language.BASIC)
+        language = self._ts(current_idx).language
         lang_name = language.name if hasattr(language, "name") else "BASIC"
 
         dialog = SnippetDialog(lang_name, self)
@@ -412,6 +413,76 @@ class MainWindow(
         __init__ does not need to change.
         """
         return
+
+    # ---- Welcome tab ----
+
+    def _maybe_show_welcome_tab(self):
+        """Insert a read-only Welcome tab on first run (or when preference set).
+
+        The tab is inserted at position 0 so it is visible immediately.
+        Closing it or creating any new file removes it permanently for the
+        current session.
+        """
+        # Only show when no file was opened via CLI args and
+        # the user hasn't disabled the welcome screen.
+        show = self.settings.value("show_welcome", True)
+        if show in (False, "false", "0", 0):
+            return
+
+        welcome = QTextBrowser()
+        welcome.setReadOnly(True)
+        welcome.setOpenExternalLinks(False)
+        welcome.setHtml(self._welcome_html())
+        welcome.setStyleSheet("QTextBrowser { background: palette(base); color: palette(text); border: none; }")
+
+        idx = self.editor_tabs.insertTab(0, welcome, "🏠 Welcome")
+        self.editor_tabs.setCurrentIndex(idx)
+        # Mark the tab so close_tab can clean up without prompting
+        self._tab_states[idx] = TabState(file=None, modified=False)
+
+    def _welcome_html(self) -> str:
+        """Return the HTML content for the Welcome tab."""
+        langs = ", ".join([
+            "BASIC", "Logo", "Python", "Pascal", "C", "Forth", "PILOT",
+            "Prolog", "Lua", "Scheme", "COBOL", "JavaScript", "Fortran",
+            "REXX", "Smalltalk", "HyperTalk", "Haskell", "APL",
+            "SQL", "JCL", "CICS", "SQR", "Assembly", "Brainfuck",
+        ])
+        return f"""
+<html><body style="font-family: 'Segoe UI', sans-serif; margin: 24px; line-height: 1.6;">
+<h1 style="color: #bd93f9;">&#127775; Welcome to Time Warp Studio</h1>
+<p style="font-size: 14px; color: #f8f8f2;">
+  An educational multi-language programming environment for exploring
+  <b>24 programming languages</b> side-by-side with live turtle graphics.
+</p>
+<hr style="border: 1px solid #44475a;"/>
+
+<h2 style="color: #8be9fd;">&#128640; Quick Start</h2>
+<ul style="font-size: 13px;">
+  <li><b>Ctrl+N</b> — New file &nbsp;|&nbsp; <b>Ctrl+O</b> — Open file &nbsp;|&nbsp; <b>Ctrl+R</b> — Run program</li>
+  <li>Pick a language from the toolbar combo, type your code, press <b>Ctrl+R</b>.</li>
+  <li>Browse ready-made examples via <b>Help → Browse Examples…</b></li>
+  <li>Press <b>Ctrl+?</b> to show all keyboard shortcuts.</li>
+  <li>Press <b>F1</b> while editing for context-sensitive language help.</li>
+</ul>
+
+<h2 style="color: #8be9fd;">&#128187; Supported Languages</h2>
+<p style="font-size: 13px; color: #f8f8f2;">{langs}</p>
+
+<h2 style="color: #8be9fd;">&#128736; Features</h2>
+<ul style="font-size: 13px;">
+  <li>Turtle graphics canvas with zoom, pan, animation playback, and PNG export</li>
+  <li>Step-through debugger with breakpoints and variable inspection</li>
+  <li>25 editor themes, CRT retro effects, and focus mode</li>
+  <li>SQL workbench with transactions and full DDL support</li>
+  <li>CICS 3278 terminal emulator</li>
+</ul>
+
+<p style="font-size: 11px; color: #6272a4; margin-top: 32px;">
+  Close this tab to start coding, or press <b>Ctrl+N</b> to open a blank editor.
+  To disable this screen go to <i>Settings → Show Welcome Tab</i>.
+</p>
+</body></html>"""
 
     # ---- Examples browser ----
 
@@ -487,7 +558,7 @@ class MainWindow(
                         lang = ex.language
                         editor.set_language(lang)
                         idx = self.editor_tabs.currentIndex()
-                        self.tab_languages[idx] = lang
+                        self._ts(idx).language = lang
                         self.editor_tabs.setTabText(idx, ex.title)
                         self.statusbar.showMessage(f"Opened example: {ex.title}", 3000)
 
@@ -620,7 +691,7 @@ class MainWindow(
             return
 
         current_idx = self.editor_tabs.currentIndex()
-        language = self.tab_languages.get(current_idx, Language.BASIC)
+        language = self._ts(current_idx).language
         lang_name = language.name if hasattr(language, "name") else "BASIC"
 
         code = ed.toPlainText()
@@ -687,27 +758,24 @@ class MainWindow(
             # Build new tab metadata maps for all tabs except the one
             # being closed. Doing this BEFORE removing the tab avoids
             # losing information when indices shift.
-            new_tab_files = {}
-            new_tab_modified = {}
-            new_tab_languages = {}
+            new_states = {}
 
             new_idx = 0
             for i in range(self.editor_tabs.count()):
                 if i == index:
                     continue
-                new_tab_files[new_idx] = self.tab_files.get(i)
-                new_tab_modified[new_idx] = self.tab_modified.get(i, False)
-                default_language = self.tab_languages.get(i, Language.BASIC)
-                new_tab_languages[new_idx] = default_language
+                new_states[new_idx] = self._tab_states.get(i, TabState())
                 new_idx += 1
 
-            # Remove the tab widget
+            # Remove the tab widget. Block signals so the currentChanged
+            # signal doesn't fire while _tab_states is being rebuilt,
+            # which would cause on_tab_changed to read a stale index.
+            self.editor_tabs.blockSignals(True)
             self.editor_tabs.removeTab(index)
+            self.editor_tabs.blockSignals(False)
 
-            # Replace the internal maps with the reindexed versions
-            self.tab_files = new_tab_files
-            self.tab_modified = new_tab_modified
-            self.tab_languages = new_tab_languages
+            # Replace the internal map with the reindexed version
+            self._tab_states = new_states
 
             if new_idx == 0:
                 # Ensure we always have at least one editor open
@@ -718,7 +786,10 @@ class MainWindow(
     def on_tab_changed(self, index):
         """Handle tab change."""
         if index >= 0:
-            language = self.tab_languages.get(index, Language.BASIC)
+            # Guard against stale index arriving after a tab was closed
+            if index not in self._tab_states:
+                return
+            language = self._ts(index).language
 
             # Update language combo (if it exists)
             if hasattr(self, "language_combo"):
@@ -778,8 +849,8 @@ class MainWindow(
 
     def check_save_changes_for_tab(self, tab_index):
         """Check if tab has unsaved changes and prompt to save."""
-        if self.tab_modified.get(tab_index, False):
-            filename = self.tab_files.get(tab_index, "Untitled")
+        if self._ts(tab_index).modified:
+            filename = self._ts(tab_index).file or "Untitled"
             reply = QMessageBox.question(
                 self,
                 "Unsaved Changes",
@@ -912,8 +983,9 @@ class MainWindow(
             }
         """)
 
-        # Create initial tab
+        # Create initial tab + welcome page
         self.new_file()
+        self._maybe_show_welcome_tab()
 
         left_splitter.addWidget(self.editor_tabs)
         # Editor expands, REPL bar stays fixed-ish
@@ -1197,6 +1269,14 @@ class MainWindow(
         self.stop_action.triggered.connect(self.stop_program)
         run_menu.addAction(self.stop_action)
 
+        self.run_selection_action = QAction("Run &Selection", self)
+        self.run_selection_action.setShortcut("Ctrl+Shift+R")
+        self.run_selection_action.setToolTip(
+            "Run the currently selected text (Ctrl+Shift+R)"
+        )
+        self.run_selection_action.triggered.connect(self.run_selection)
+        run_menu.addAction(self.run_selection_action)
+
         run_menu.addSeparator()
 
         clear_output_action = QAction("Clear &Output", self)
@@ -1427,6 +1507,11 @@ class MainWindow(
         self.flicker_action.triggered.connect(self._update_crt_settings)
         crt_menu.addAction(self.flicker_action)
 
+        crt_menu.addSeparator()
+        crt_settings_action = QAction("⚙️ CRT &Settings…", self)
+        crt_settings_action.triggered.connect(self._show_crt_settings)
+        crt_menu.addAction(crt_settings_action)
+
         view_menu.addSeparator()
 
         # Focus mode
@@ -1512,9 +1597,14 @@ class MainWindow(
 
         # Documentation
         user_manual_action = QAction("&User Manual", self)
-        user_manual_action.setShortcut("F1")
         user_manual_action.triggered.connect(self.show_user_manual)
         help_menu.addAction(user_manual_action)
+
+        # F1 → context-sensitive language help
+        f1_action = QAction("&Context Help (F1)", self)
+        f1_action.setShortcut("F1")
+        f1_action.triggered.connect(self._show_contextual_help)
+        help_menu.addAction(f1_action)
 
         quick_ref_action = QAction("&Quick Reference", self)
         quick_ref_action.triggered.connect(self.show_quick_reference)
@@ -1595,6 +1685,14 @@ class MainWindow(
         tour_action.setStatusTip("Replay the interactive coach-mark walkthrough")
         tour_action.triggered.connect(self._start_coach_marks_tour)
         help_menu.addAction(tour_action)
+
+        help_menu.addSeparator()
+
+        shortcuts_action = QAction("⌨️ &Keyboard Shortcuts…", self)
+        shortcuts_action.setShortcut("Ctrl+?")
+        shortcuts_action.setStatusTip("Show all keyboard shortcuts in a searchable table")
+        shortcuts_action.triggered.connect(self._show_keyboard_shortcuts)
+        help_menu.addAction(shortcuts_action)
 
         # Collaboration features are disabled in this distribution. The
         # Collaboration menu is omitted to avoid exposing disabled
@@ -1947,6 +2045,10 @@ class MainWindow(
             self.run_action.setEnabled(True)
             self.stop_action.setEnabled(False)
 
+            # Update tab run indicator for the current tab
+            current_idx = self.editor_tabs.currentIndex()
+            self._set_tab_run_indicator(current_idx, "done")
+
             # Clean up debug state if debugging ended
             if self._is_debugging:
                 self._is_debugging = False
@@ -1958,6 +2060,72 @@ class MainWindow(
                     editor.clear_current_line()
 
             self.statusbar.showMessage("Execution complete")
+
+    def _set_tab_run_indicator(self, idx: int, state: str) -> None:
+        """Update the tab title badge to reflect execution state.
+
+        Args:
+            idx:   Tab index.
+            state: ``"running"`` | ``"done"`` | ``"error"`` | ``"clear"``.
+        """
+        if not hasattr(self, "editor_tabs") or idx < 0:
+            return
+        if idx >= self.editor_tabs.count():
+            return
+        s = self._ts(idx)
+        title = self.editor_tabs.tabText(idx)
+        # Strip any existing indicator prefix (emoji up to first space)
+        for prefix in ("⚙️ ", "✅ ", "❌ "):
+            if title.startswith(prefix):
+                title = title[len(prefix):]
+                break
+        if state == "running":
+            s.running = True
+            new_title = f"⚙️ {title}"
+        elif state == "done":
+            s.running = False
+            new_title = f"✅ {title}"
+        elif state == "error":
+            s.running = False
+            new_title = f"❌ {title}"
+        else:
+            s.running = False
+            new_title = title
+        self.editor_tabs.setTabText(idx, new_title)
+        # Clear the done/error indicator after 4 s to avoid clutter
+        if state in ("done", "error"):
+            QTimer.singleShot(4000, lambda: self._set_tab_run_indicator(idx, "clear"))
+
+    def run_selection(self):
+        """Run only the currently selected text in the editor."""
+        editor = self.get_current_editor()
+        if not editor:
+            return
+
+        if self.output.is_running():
+            self.statusbar.showMessage("Program already running")
+            return
+
+        cursor = editor.textCursor()
+        # QPlainTextEdit uses U+2029 (paragraph separator) in selectedText();
+        # replace with standard newlines for the interpreter.
+        selected = cursor.selectedText().replace("\u2029", "\n").strip()
+        if not selected:
+            self.statusbar.showMessage("No selection to run")
+            return
+
+        current_info = self.get_current_tab_info()
+        language = current_info["language"]
+        self.output.set_language(language)
+        try:
+            self.right_tabs.setCurrentWidget(self.output_canvas_pane)
+        except AttributeError:
+            pass
+
+        self.run_action.setEnabled(False)
+        self.stop_action.setEnabled(True)
+        self.statusbar.showMessage("Running selection")
+        self.output.run_program(selected, self.canvas, debug_mode=False)
 
     def run_program(self):
         """Run the current editor contents in the output panel."""
@@ -2006,6 +2174,10 @@ class MainWindow(
         self.run_action.setEnabled(False)
         self.stop_action.setEnabled(True)
         self.statusbar.showMessage("Running program")
+
+        # Show run indicator on current tab
+        current_idx = self.editor_tabs.currentIndex()
+        self._set_tab_run_indicator(current_idx, "running")
 
         # Clear any error highlights from the previous run
         editor = self.get_current_editor()
@@ -2101,6 +2273,10 @@ class MainWindow(
 
         if self._project_run_active:
             self.stop_project_run()
+
+        # Show error indicator on the active tab
+        current_idx = self.editor_tabs.currentIndex()
+        self._set_tab_run_indicator(current_idx, "error")
 
     def _get_current_line_context(self) -> str:
         """Get the current editor line for error context."""
@@ -2266,7 +2442,7 @@ class MainWindow(
         if self._project_run_options.get("clear_canvas"):
             self.canvas.clear()
 
-        language = self.tab_languages.get(tab_index, Language.BASIC)
+        language = self._ts(tab_index).language
         self.output.set_language(language)
         self.editor_tabs.setCurrentIndex(tab_index)
 
@@ -2282,7 +2458,7 @@ class MainWindow(
         tabs = []
         for i in range(self.editor_tabs.count()):
             title = self.editor_tabs.tabText(i)
-            language = self.tab_languages.get(i, Language.BASIC)
+            language = self._ts(i).language
             tabs.append(
                 {
                     "index": i,
@@ -2343,7 +2519,7 @@ class MainWindow(
     def check_save_changes(self):
         """Check all tabs for unsaved changes before closing."""
         for i in range(self.editor_tabs.count()):
-            modified = self.tab_modified.get(i, False)
+            modified = self._ts(i).modified
             if not modified:
                 continue
             # Switch to the tab so the user can see what file we're asking about
@@ -2424,6 +2600,30 @@ class MainWindow(
     # -- add_recent_file / update_recent_files_menu live in FileOperationsMixin --
     # -- Help / docs / about methods live in HelpDocsMixin --
 
+    def _show_contextual_help(self):
+        """F1 — show language-specific help for the currently active language."""
+        current_idx = self.tab_widget.currentIndex()
+        lang = self._ts(current_idx).language
+        # Map Language enum to help key used by show_language_help
+        lang_key = lang.name.lower().replace("_", "") if lang else None
+        # Some names differ from help keys; build explicit overrides
+        _overrides = {
+            "c": "c",
+            "c_lang": "c",
+            "javascript": "javascript",
+            "hypertalk": "hypertalk",
+            "brainfuck": "brainfuck",
+        }
+        key = _overrides.get(lang_key, lang_key) if lang_key else None
+        if key and hasattr(self, "show_language_help"):
+            try:
+                self.show_language_help(key)
+                return
+            except Exception:
+                pass
+        # Fallback to user manual
+        self.show_user_manual()
+
     def restore_state(self):
         """Restore window state from settings."""
         geometry = self.settings.value("geometry")
@@ -2472,7 +2672,7 @@ class MainWindow(
             # Update breadcrumb: show language context around cursor
             if hasattr(self, "breadcrumb_label"):
                 current_idx = self.editor_tabs.currentIndex()
-                lang = self.tab_languages.get(current_idx, Language.BASIC)
+                lang = self._ts(current_idx).language
                 lang_name = (
                     lang.friendly_name()
                     if hasattr(lang, "friendly_name")
@@ -2565,6 +2765,62 @@ class MainWindow(
         )
         self.crt_overlay.set_flicker(self.flicker_action.isChecked())
 
+    def _show_crt_settings(self):
+        """Open a CRT settings dialog with intensity sliders."""
+        from PySide6.QtWidgets import (
+            QDialog, QDialogButtonBox, QFormLayout, QSlider,
+        )
+        from PySide6.QtCore import Qt
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("⚙️ CRT Effect Settings")
+        dlg.setMinimumWidth(360)
+        form = QFormLayout(dlg)
+
+        def _slider(lo, hi, val):
+            s = QSlider(Qt.Orientation.Horizontal)
+            s.setRange(lo, hi)
+            s.setValue(val)
+            return s
+
+        sl_scan = _slider(0, 100, int(getattr(self.crt_overlay, "_scanline_intensity", 0.15) * 100))
+        sl_glow = _slider(0, 100, int(getattr(self.crt_overlay, "_glow_intensity", 0.10) * 100))
+        sl_curv = _slider(0, 100, int(getattr(self.crt_overlay, "_curvature_amount", 0.02) * 1000))
+        sl_vign = _slider(0, 100, int(getattr(self.crt_overlay, "_vignette_intensity", 0.30) * 100))
+
+        form.addRow("Scanline Intensity (%):", sl_scan)
+        form.addRow("Phosphor Glow (%):", sl_glow)
+        form.addRow("Curvature (‰):", sl_curv)
+        form.addRow("Vignette (%):", sl_vign)
+
+        buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        form.addRow(buttons)
+
+        def _apply():
+            self.crt_overlay.set_scanlines(
+                self.scanlines_action.isChecked(),
+                intensity=sl_scan.value() / 100.0,
+                spacing=2,
+            )
+            self.crt_overlay.set_glow(
+                self.glow_action.isChecked(),
+                intensity=sl_glow.value() / 100.0,
+            )
+            self.crt_overlay.set_curvature(
+                self.curvature_action.isChecked(),
+                amount=sl_curv.value() / 1000.0,
+            )
+            self.crt_overlay.set_vignette(
+                self.vignette_action.isChecked(),
+                intensity=sl_vign.value() / 100.0,
+            )
+
+        buttons.accepted.connect(lambda: (_apply(), dlg.accept()))
+        buttons.rejected.connect(dlg.reject)
+        dlg.exec()
+
     def resizeEvent(self, event):  # pylint: disable=invalid-name
         """Handle window resize - update CRT overlay."""
         super().resizeEvent(event)
@@ -2631,7 +2887,7 @@ class MainWindow(
 
         # Select current language
         current_idx = self.editor_tabs.currentIndex()
-        current_lang = self.tab_languages.get(current_idx, Language.BASIC)
+        current_lang = self._ts(current_idx).language
         for i in range(combo.count()):
             if combo.itemData(i) == current_lang:
                 combo.setCurrentIndex(i)
@@ -2872,7 +3128,7 @@ class MainWindow(
 
         current_idx = self.editor_tabs.currentIndex()
         code = current_editor.toPlainText()
-        language = self.tab_languages.get(current_idx, Language.BASIC)
+        language = self._ts(current_idx).language
         title = f"[split] {self.editor_tabs.tabText(current_idx)}"
 
         self.create_new_tab(title, code, language)
@@ -2934,3 +3190,99 @@ class MainWindow(
         else:
             self._coach_marks = CoachMarkManager(self)
             self._coach_marks.start(force=True)
+
+    # ===================================================================
+    # GUI Enhancement: keyboard shortcut overlay (Ctrl+?)
+    # ===================================================================
+
+    _SHORTCUTS_TABLE = [
+        # (Category, Shortcut, Description)
+        ("File", "Ctrl+N", "New file"),
+        ("File", "Ctrl+O", "Open file"),
+        ("File", "Ctrl+S", "Save file"),
+        ("File", "Ctrl+Shift+S", "Save As…"),
+        ("File", "Ctrl+H", "Version history"),
+        ("File", "Ctrl+P", "Print code"),
+        ("Edit", "Ctrl+Z", "Undo"),
+        ("Edit", "Ctrl+Y / Ctrl+Shift+Z", "Redo"),
+        ("Edit", "Ctrl+X", "Cut"),
+        ("Edit", "Ctrl+C", "Copy"),
+        ("Edit", "Ctrl+V", "Paste"),
+        ("Edit", "Ctrl+F", "Find…"),
+        ("Edit", "Ctrl+Shift+F", "Format code"),
+        ("Edit", "Ctrl+Shift+I", "Insert snippet…"),
+        ("Run", "Ctrl+R", "Run program"),
+        ("Run", "Ctrl+Shift+R", "Run selection"),
+        ("Run", "Ctrl+Shift+F5", "Stop execution"),
+        ("Debug", "F5", "Start debugging"),
+        ("Debug", "Shift+F5", "Stop debugging"),
+        ("Debug", "Ctrl+F5", "Continue"),
+        ("Debug", "F10", "Step over"),
+        ("Debug", "F11", "Step into"),
+        ("Debug", "Shift+F11", "Step out"),
+        ("Debug", "F9", "Toggle breakpoint"),
+        ("Debug", "Ctrl+Shift+F9", "Clear all breakpoints"),
+        ("View", "Ctrl+Shift+P", "Command palette"),
+        ("View", "Ctrl+Shift+L", "Language picker"),
+        ("View", "Ctrl+\\", "Split editor right"),
+        ("View", "Ctrl++", "Zoom in"),
+        ("View", "Ctrl+-", "Zoom out"),
+        ("View", "Ctrl+Shift+F11", "Focus / distraction-free mode"),
+        ("Tools", "Ctrl+Shift+Q", "SQL Workbench"),
+        ("Tools", "Ctrl+Shift+D", "Database Manager"),
+        ("Tools", "Ctrl+Shift+C", "CICS Terminal"),
+        ("Help", "F1", "Context-sensitive language help"),
+        ("Help", "Ctrl+?", "Show keyboard shortcuts (this dialog)"),
+        ("Help", "Ctrl+Shift+H", "Export session as HTML"),
+    ]
+
+    def _show_keyboard_shortcuts(self, _checked: bool = False):
+        """Open a searchable keyboard-shortcut reference dialog."""
+        from PySide6.QtWidgets import (  # type: ignore[attr-defined]
+            QDialog,
+            QHBoxLayout,
+            QLineEdit,
+            QTableWidget,
+            QTableWidgetItem,
+            QVBoxLayout,
+            QDialogButtonBox,
+            QHeaderView,
+        )
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("⌨️ Keyboard Shortcuts")
+        dlg.setMinimumSize(600, 450)
+        layout = QVBoxLayout(dlg)
+
+        search = QLineEdit()
+        search.setPlaceholderText("Filter shortcuts…")
+        layout.addWidget(search)
+
+        table = QTableWidget()
+        table.setColumnCount(3)
+        table.setHorizontalHeaderLabels(["Category", "Shortcut", "Action"])
+        table.horizontalHeader().setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+        table.setEditTriggers(QTableWidget.EditTrigger.NoEditTriggers)
+        table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
+        table.setAlternatingRowColors(True)
+
+        def _populate(query: str = ""):
+            table.setRowCount(0)
+            query_lower = query.lower()
+            for cat, shortcut, desc in self._SHORTCUTS_TABLE:
+                if query_lower and query_lower not in (cat + shortcut + desc).lower():
+                    continue
+                row = table.rowCount()
+                table.insertRow(row)
+                table.setItem(row, 0, QTableWidgetItem(cat))
+                table.setItem(row, 1, QTableWidgetItem(shortcut))
+                table.setItem(row, 2, QTableWidgetItem(desc))
+
+        _populate()
+        search.textChanged.connect(_populate)
+        layout.addWidget(table)
+
+        btns = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+        btns.rejected.connect(dlg.accept)
+        layout.addWidget(btns)
+        dlg.exec()

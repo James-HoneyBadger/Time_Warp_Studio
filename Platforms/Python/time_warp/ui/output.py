@@ -313,14 +313,6 @@ class OutputPanel(QTextEdit):
         # Per-output-line execution delay (for speed throttle slider, 0 = no delay)
         self._step_delay_ms: int = 0
 
-    def apply_theme_colors(self, theme):
-        """Update semantic output colors from a Theme dataclass."""
-        self._theme_colors = {
-            "error": QColor(getattr(theme, "error_color", "#ff6464")),
-            "warning": QColor(getattr(theme, "warning_color", "#ffc864")),
-            "success": QColor(getattr(theme, "success_color", "#64ff64")),
-            "info": QColor(getattr(theme, "info_color", "#64c8ff")),
-        }
         # Live variable watch timer — polls interpreter state while a program is running
         self._live_watch_timer = QTimer(self)
         self._live_watch_timer.setInterval(500)  # poll every 500 ms
@@ -340,6 +332,15 @@ class OutputPanel(QTextEdit):
         self._search_bar.setVisible(False)
         # We can't add child widgets to a QTextEdit directly; expose it for the
         # wrapping widget to embed.  See OutputPanelContainer below.
+
+    def apply_theme_colors(self, theme):
+        """Update semantic output colors from a Theme dataclass."""
+        self._theme_colors = {
+            "error": QColor(getattr(theme, "error_color", "#ff6464")),
+            "warning": QColor(getattr(theme, "warning_color", "#ffc864")),
+            "success": QColor(getattr(theme, "success_color", "#64ff64")),
+            "info": QColor(getattr(theme, "info_color", "#64c8ff")),
+        }
 
     def _create_search_bar(self) -> QWidget:
         """Build the collapsible search toolbar."""
@@ -556,7 +557,8 @@ class OutputPanel(QTextEdit):
             if old.isRunning():
                 old.stop()
                 old.quit()
-                old.wait(500)  # brief wait; won't block UI noticeably
+                # Do not call wait() here — it blocks the main/UI thread.
+                # Schedule deletion after the thread naturally finishes.
             old.deleteLater()
 
         self.exec_thread = InterpreterThread(
@@ -728,6 +730,9 @@ class OutputPanel(QTextEdit):
 
         if ok:
             # Provide input
+            if interp is None:
+                self.append_colored("\n❌ Input cancelled: interpreter unavailable", "error")
+                return
             interp.provide_input(text)
             # Resume execution
             self._start_thread(code, turtle, lang, interp)

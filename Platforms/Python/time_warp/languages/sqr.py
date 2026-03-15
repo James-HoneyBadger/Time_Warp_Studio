@@ -95,7 +95,6 @@ from __future__ import annotations
 import datetime
 import math
 import re
-import warnings
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
@@ -540,11 +539,8 @@ class SQREnvironment:
         rows = self._tables.get(table_name or "", [])
         if not rows and table_name:
             # Try to find in sql_engine if available
-            try:
-                if hasattr(self._interp, "sql_session") and self._interp.sql_session:
-                    pass  # future: query real session
-            except Exception:
-                pass
+            if hasattr(self._interp, "sql_session") and self._interp.sql_session:
+                pass  # future: query real session
 
         self._rowcount = 0
         self._vars["#rowcount"] = 0.0
@@ -975,19 +971,19 @@ class SQREnvironment:
                     flags=re.IGNORECASE,
                 )
 
-        # Replace SQR operators
-        subst = re.sub(r"\bmod\b", "%", subst, flags=re.IGNORECASE)
-        subst = re.sub(r"\band\b", " and ", subst, flags=re.IGNORECASE)
-        subst = re.sub(r"\bor\b", " or ", subst, flags=re.IGNORECASE)
-        subst = re.sub(r"\bnot\b", " not ", subst, flags=re.IGNORECASE)
+        # Replace SQR operators to match ExpressionEvaluator syntax
+        subst = re.sub(r"\bmod\b", "MOD", subst, flags=re.IGNORECASE)
+        subst = re.sub(r"\band\b", "AND", subst, flags=re.IGNORECASE)
+        subst = re.sub(r"\bor\b", "OR", subst, flags=re.IGNORECASE)
+        subst = re.sub(r"\bnot\b", "NOT", subst, flags=re.IGNORECASE)
         subst = subst.replace("<>", "!=")
 
         try:
-            with warnings.catch_warnings():
-                warnings.simplefilter("ignore", SyntaxWarning)
-                result = eval(subst, {"__builtins__": {}}, {})  # noqa: S307
-            return result
-        except Exception:
+            from ..utils.expression_evaluator import ExpressionEvaluator
+
+            evaluator = ExpressionEvaluator(variables={})
+            return evaluator.evaluate(subst)
+        except (ValueError, TypeError, ZeroDivisionError):
             return subst  # return unevaluated if parse fails
 
     def _eval_function(self, fn: str, args_str: str) -> Any:
@@ -1132,7 +1128,7 @@ class SQREnvironment:
                     elif unit == "day":
                         d += datetime.timedelta(days=n)
                     return d.strftime("%Y-%m-%d")
-                except Exception:
+                except (ValueError, OverflowError):
                     return _str(0)
             case "extract":
                 # extract(unit from date)  handled as expression-level

@@ -114,7 +114,7 @@ class FileOperationsMixin:
         if editor is None:
             return False
 
-        filename = self.tab_files.get(current_index)
+        filename = self._ts(current_index).file
         if not filename:
             return self.save_tab_as(current_index)
 
@@ -149,7 +149,7 @@ class FileOperationsMixin:
         if editor is None:
             return False
 
-        filename = self.tab_files.get(tab_index)
+        filename = self._ts(tab_index).file
         if not filename:
             return self.save_tab_as(tab_index)
 
@@ -197,8 +197,8 @@ class FileOperationsMixin:
             with open(filename, "w", encoding="utf-8") as f:
                 f.write(editor.toPlainText())
 
-            self.tab_files[tab_index] = filename
-            self.tab_modified[tab_index] = False
+            self._ts(tab_index).file = filename
+            self._ts(tab_index).modified = False
             self.editor_tabs.setTabText(tab_index, Path(filename).name)
             self.set_current_tab_info(file=filename, modified=False)
             self.add_recent_file(filename)

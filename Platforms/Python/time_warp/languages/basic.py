@@ -573,7 +573,7 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
         if _has_string_concat(item_trim):
             _is_string_expr = True
         elif re.search(
-            r"\b(STR|CHR|MID|LEFT|RIGHT|INSTR|UPPER|LOWER|TRIM|STRING)\$?\s*\(",
+            r"\b(STR|CHR|MID|LEFT|RIGHT|INSTR|UPPER|LOWER|TRIM|LTRIM|RTRIM|SPACE|STRING)\$?\s*\(",
             item_upper,
         ):
             _is_string_expr = True
@@ -656,6 +656,10 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
                 "UPPER(",
                 "LOWER(",
                 "TRIM(",
+                "LTRIM(",
+                "RTRIM(",
+                "SPACE(",
+                "SPACE$(",
                 "STR(",
                 "VAL(",
             ]

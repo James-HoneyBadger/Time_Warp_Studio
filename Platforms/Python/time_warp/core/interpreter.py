@@ -245,6 +245,41 @@ class Language(Enum):
 _WHOLE_PROGRAM_EXECUTORS = _init_whole_program_executors()
 
 
+class LanguageRegistry:
+    """Lightweight registry providing a stable API over _WHOLE_PROGRAM_EXECUTORS.
+
+    Usage:
+        registry = LanguageRegistry()
+        fn = registry.get_executor(Language.LUA)   # may return None for line-by-line langs
+        langs = registry.languages()               # all whole-program language keys
+        registry.register(Language.MY_LANG, my_fn) # add/override at runtime
+    """
+
+    def __init__(self) -> None:
+        self._executors: Dict[Language, Callable] = dict(_WHOLE_PROGRAM_EXECUTORS)
+
+    def register(self, language: "Language", executor: Callable) -> None:
+        """Register or override an executor for a language."""
+        self._executors[language] = executor
+        _WHOLE_PROGRAM_EXECUTORS[language] = executor  # keep module-level dict in sync
+
+    def get_executor(self, language: "Language") -> Optional[Callable]:
+        """Return executor for *language*, or None if it is a line-by-line language."""
+        return self._executors.get(language)
+
+    def languages(self) -> list:
+        """Return list of languages handled by whole-program executors."""
+        return list(self._executors.keys())
+
+    def is_whole_program(self, language: "Language") -> bool:
+        """Return True if *language* is handled as a complete source block."""
+        return language in self._executors
+
+
+# Module-level singleton — available for introspection and plugin registration.
+language_registry = LanguageRegistry()
+
+
 @dataclass
 class ForContext:
     """FOR loop context for BASIC"""

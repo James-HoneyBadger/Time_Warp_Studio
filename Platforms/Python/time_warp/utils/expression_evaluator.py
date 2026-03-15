@@ -83,12 +83,19 @@ class ExpressionEvaluator:
         "EXP": math.exp,
         "LOG": math.log,
         "LOG10": math.log10,
+        "LOG2": math.log2,
         "INT": math.floor,  # Truncates toward negative infinity
         "FIX": lambda x: math.floor(x) if x >= 0 else math.ceil(x),
         "SGN": lambda x: 1 if x > 0 else (-1 if x < 0 else 0),
         "RAND": random.random,
         "RND": random.random,  # Turbo BASIC alias
         "RANDOM": lambda x: float(random.randrange(int(x))) if x > 0 else 0.0,
+        # BASIC rounding: CINT rounds to nearest integer (vs INT which floors)
+        "CINT": lambda x: float(round(x)),
+        # VAL converts a string or number to float (string→numeric in BASIC)
+        "VAL": lambda x: (
+            float(str(x).strip()) if str(x).strip() else 0.0
+        ),
     }
 
     def __init__(
@@ -467,7 +474,8 @@ class ExpressionEvaluator:
                     elif op == "\\":
                         if b == 0:
                             raise ValueError("Division by zero (integer division)")
-                        result = float(int(a) // int(b))
+                        # BASIC integer division truncates toward zero (not floor)
+                        result = float(int(int(a) / int(b)))
                     elif op == "AND":
                         result = float(int(a) & int(b))
                     elif op == "OR":
@@ -505,13 +513,8 @@ class ExpressionEvaluator:
                     stack.append(array[index])
                     continue
 
-                if func_name not in self.FUNCTIONS:
-                    raise ValueError(f"Unknown function: {func_name}")
-
-                func = self.FUNCTIONS[func_name]
-
-                # Handle functions with special arities
-                if func_name in ("MIN", "MAX", "POW"):
+                # Handle 2-argument functions first (before FUNCTIONS dict lookup)
+                if func_name in ("MIN", "MAX", "POW", "ATAN2"):
                     if len(stack) < 2:
                         raise ValueError(f"{func_name} requires 2 arguments")
                     b = stack.pop()
@@ -520,10 +523,20 @@ class ExpressionEvaluator:
                         result = min(a, b)
                     elif func_name == "MAX":
                         result = max(a, b)
+                    elif func_name == "ATAN2":
+                        result = math.atan2(a, b)
                     else:  # POW
                         result = a**b
                     stack.append(result)
-                elif func_name in ("RAND", "RND"):
+                    continue
+
+                if func_name not in self.FUNCTIONS:
+                    raise ValueError(f"Unknown function: {func_name}")
+
+                func = self.FUNCTIONS[func_name]
+
+                # Handle functions with special arities
+                if func_name in ("RAND", "RND"):
                     # Optional arg for BASIC compatibility
                     if stack and isinstance(stack[-1], (int, float)):
                         stack.pop()

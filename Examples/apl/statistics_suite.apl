@@ -37,7 +37,7 @@ VAR ← (+/(SCORES-MEAN)*2)÷N
 ⍝ "────────────────"
 
 ⍝ Month-over-month growth
-GROWTH ← 100×(1↓SALES-¯1↓SALES)÷¯1↓SALES
+GROWTH ← 100×((1↓SALES)-(¯1↓SALES))÷¯1↓SALES
 ⍝ "Growth rates (%):" GROWTH
 
 ⍝ Cumulative sales

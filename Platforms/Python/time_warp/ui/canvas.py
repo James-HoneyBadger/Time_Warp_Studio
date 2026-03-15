@@ -7,8 +7,9 @@
 # pylint: disable=no-name-in-module
 
 import math
+import os
 
-from PySide6.QtCore import QPointF, QRectF, Qt, QTimer
+from PySide6.QtCore import QPointF, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -18,7 +19,15 @@ from PySide6.QtGui import (
     QPen,
     QWheelEvent,
 )
-from PySide6.QtWidgets import QApplication, QHBoxLayout, QPushButton, QWidget
+from PySide6.QtWidgets import (
+    QApplication,
+    QFileDialog,
+    QHBoxLayout,
+    QLabel,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
 
 from .screen_modes import ModeType, ScreenMode, ScreenModeManager
 
@@ -27,6 +36,9 @@ class TurtleCanvas(
     QWidget
 ):  # pylint: disable=invalid-name,too-many-instance-attributes,unused-argument
     """Canvas for rendering turtle graphics with retro screen mode support."""
+
+    # Emitted whenever the turtle position/heading changes (for status strip)
+    turtle_position_changed = Signal(float, float, float)  # x, y, heading
 
     # Zoom limits — single source of truth
     _ZOOM_MIN = 0.05
@@ -51,6 +63,9 @@ class TurtleCanvas(
         # Background color
         self.bg_color = QColor(40, 42, 54)  # Dracula background
 
+        # Grid overlay
+        self._grid_enabled = False
+
         # Screen mode support
         self.screen_mode_manager = ScreenModeManager()
         self.screen_mode_enabled = False  # When True, simulate retro resolution
@@ -65,6 +80,10 @@ class TurtleCanvas(
 
         # Minimum size — small enough to allow the splitter to resize freely
         self.setMinimumSize(200, 200)
+
+        # Outer container: toolbar + canvas + position strip
+        # (We expose self as the canvas widget; the wrapper is in _build_wrapper)
+        self._pos_label: QLabel | None = None
 
         # Overlay toolbar (zoom / reset controls)
         self._setup_canvas_toolbar()
@@ -119,7 +138,21 @@ class TurtleCanvas(
         toolbar_layout.addWidget(
             _btn("📋", "Copy to Clipboard", self._copy_to_clipboard)
         )
+        toolbar_layout.addWidget(
+            _btn("💾", "Save PNG…", self._save_png)
+        )
+        self._grid_btn = _btn("⋯", "Toggle Grid Overlay", self._toggle_grid)
+        self._grid_btn.setCheckable(True)
+        toolbar_layout.addWidget(self._grid_btn)
 
+        # Position strip below canvas
+        self._pos_label = QLabel("x: 0  y: 0  ∠: 0°")
+        self._pos_label.setStyleSheet(
+            "QLabel { background: rgba(20,20,30,160); color: #8be9fd; "
+            "padding: 1px 6px; font-size: 10px; font-family: 'Courier New'; "
+            "border-top: 1px solid rgba(255,255,255,0.15); }"
+        )
+        self._pos_label.setFixedHeight(18)
         self._canvas_toolbar.adjustSize()
         self._canvas_toolbar.raise_()
 
@@ -129,6 +162,10 @@ class TurtleCanvas(
             tb = self._canvas_toolbar
             tb.adjustSize()
             tb.move(self.width() - tb.width() - 4, 4)
+        if hasattr(self, "_pos_label") and self._pos_label:
+            lbl = self._pos_label
+            lbl.setGeometry(0, self.height() - lbl.height(), self.width(), lbl.height())
+            lbl.raise_()
 
     def resizeEvent(self, event):
         """Reposition overlay toolbar on resize."""
@@ -218,6 +255,47 @@ class TurtleCanvas(
                 self._anim_btn.setText("▶")
 
     # ------------------------------------------------------------------
+    # PNG save to file
+    # ------------------------------------------------------------------
+
+    def _save_png(self):
+        """Render canvas to a PNG file chosen by the user."""
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Canvas as PNG",
+            os.path.expanduser("~"),
+            "PNG Images (*.png);;All Files (*)",
+        )
+        if not filename:
+            return
+        if not filename.lower().endswith(".png"):
+            filename += ".png"
+        w, h = max(self.width(), 1), max(self.height(), 1)
+        image = QImage(w, h, QImage.Format.Format_ARGB32)
+        image.fill(self.bg_color)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self._render_to_painter(painter, w, h)
+        painter.end()
+        image.save(filename, "PNG")
+
+    # ------------------------------------------------------------------
+    # Grid overlay toggle
+    # ------------------------------------------------------------------
+
+    def _toggle_grid(self):
+        """Toggle the coordinate grid overlay."""
+        self._grid_enabled = not self._grid_enabled
+        self.update()
+
+    def toggle_grid(self, enabled: bool) -> None:
+        """Programmatically enable or disable the grid overlay."""
+        self._grid_enabled = enabled
+        if hasattr(self, "_grid_btn"):
+            self._grid_btn.setChecked(enabled)
+        self.update()
+
+    # ------------------------------------------------------------------
     # Clipboard copy
     # ------------------------------------------------------------------
 
@@ -243,6 +321,27 @@ class TurtleCanvas(
         self.screen_mode_enabled = enabled
         self.update()
 
+    def _draw_grid(self, painter: QPainter):
+        """Draw a coordinate grid at 50-unit spacing (in turtle coords)."""
+        grid_color = QColor(80, 80, 100, 60)
+        label_color = QColor(120, 120, 140, 180)
+        pen = QPen(grid_color, 0.5 / max(self.zoom, 0.01))
+        pen.setStyle(Qt.PenStyle.DotLine)
+        painter.setPen(pen)
+        spacing = 50
+        half = 2000
+        for v in range(-half, half + spacing, spacing):
+            painter.drawLine(v, -half, v, half)  # vertical
+            painter.drawLine(-half, v, half, v)  # horizontal
+        # Labels (drawn in scaled coords, small font)
+        font = QFont("Courier", int(8 / max(self.zoom, 0.01)))
+        painter.setFont(font)
+        painter.setPen(QPen(label_color))
+        for v in range(-half, half + spacing, spacing * 2):
+            if v != 0:
+                painter.drawText(QPointF(v + 2, 10), str(v))
+                painter.drawText(QPointF(4, -v + 3), str(v))
+
     def set_turtle_state(self, turtle):
         """Set turtle state and repaint."""
         self.turtle = turtle
@@ -265,6 +364,15 @@ class TurtleCanvas(
 
         # Use repaint() instead of update() to force immediate redraw
         self.repaint()
+
+        # Update position strip and emit signal
+        if hasattr(turtle, "x") and hasattr(turtle, "y") and hasattr(turtle, "heading"):
+            x = round(float(turtle.x), 1)
+            y = round(float(turtle.y), 1)
+            h = round(float(turtle.heading), 1)
+            if hasattr(self, "_pos_label") and self._pos_label:
+                self._pos_label.setText(f"x: {x}  y: {y}  ∠: {h}°")
+            self.turtle_position_changed.emit(x, y, h)
 
     def clear(self):
         """Clear canvas."""
@@ -316,6 +424,10 @@ class TurtleCanvas(
         painter.setPen(pen)
         painter.drawEllipse(QPointF(0, 0), 5, 5)
 
+        # Optional coordinate grid
+        if self._grid_enabled:
+            self._draw_grid(painter)
+
         # Draw turtle lines (use animation slice when player is active)
         visible_lines = (
             self.lines[: self._anim_frame] if self._anim_running else self.lines
@@ -323,10 +435,8 @@ class TurtleCanvas(
         for line in visible_lines:
             color = QColor(line.color[0], line.color[1], line.color[2])
             # Adjust pen width inversely to zoom so it stays visible at all
-            # zoom levels
-            adjusted_width = (
-                line.width / max(self.zoom, 0.1) if self.zoom != 0 else line.width
-            )
+            # zoom levels. Zoom is always in [0.05, 24.0] so division is safe.
+            adjusted_width = line.width / max(self.zoom, 0.1)
             pen = QPen(color, adjusted_width)
             pen.setCapStyle(Qt.PenCapStyle.RoundCap)
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)

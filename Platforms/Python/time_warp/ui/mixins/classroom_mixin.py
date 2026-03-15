@@ -81,11 +81,11 @@ class ClassroomMixin:
             editor = self.editor_tabs.widget(i)
             if not editor:
                 continue
-            filename = self.tab_files.get(i)
+            filename = self._ts(i).file
             if filename:
                 file_key = Path(filename).name
             else:
-                language = self.tab_languages.get(i, Language.BASIC)
+                language = self._ts(i).language
                 ext = self._language_extension(language)
                 file_key = f"untitled_{i + 1}{ext}"
             files[file_key] = editor.toPlainText()

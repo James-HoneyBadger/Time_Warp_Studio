@@ -466,6 +466,9 @@ def _execute_single_logo_command(
     # LOCAL varname - declare a local variable in current scope
     if cmd_name == "LOCAL":
         return _logo_local(interpreter, args)
+    # Screen boundary modes (standard UCBLogo)
+    if cmd_name in ("WINDOW", "WRAP", "FENCE"):
+        return _logo_set_screen_mode(turtle, cmd_name)
     return f"❌ Unknown Logo command: {cmd_name}\n"
 
 
@@ -2131,6 +2134,21 @@ def _logo_local(interpreter: "Interpreter", args: list) -> str:
         if var_name not in interpreter.variables:
             interpreter.variables[var_name] = 0
     return ""
+
+
+def _logo_set_screen_mode(
+    turtle: Optional["TurtleState"], mode: str
+) -> str:
+    """WINDOW / WRAP / FENCE — set turtle boundary handling mode.
+
+    WINDOW: turtle can move beyond the visible area (infinite canvas).
+    WRAP:   turtle wraps around edges (torus topology).
+    FENCE:  turtle stops at the canvas boundary with an error.
+    """
+    if turtle is None:
+        return "❌ Graphics not available\n"
+    turtle.screen_mode = mode.lower()  # type: ignore[attr-defined]
+    return f"ℹ️ Screen mode: {mode}\n"
 
 
 def _logo_forever(

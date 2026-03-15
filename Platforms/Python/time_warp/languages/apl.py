@@ -295,7 +295,7 @@ class APLEnvironment:
                 pass
 
         # Parenthesised
-        if expr.startswith("(") and expr.endswith(")"):
+        if _is_balanced_parens(expr):
             return self._eval_expr(expr[1:-1].strip())
 
         # Assignment: name ← expr
@@ -325,6 +325,25 @@ class APLEnvironment:
         if not expr:
             return None
 
+        # Array subscript: NAME[index_expr]  (e.g. SORTED[⌈N÷2])
+        m = re.match(r"^(\w+)\[(.+)\]$", expr)
+        if m:
+            arr_name = m.group(1)
+            idx_expr = m.group(2).strip()
+            arr = self._vars.get(arr_name)
+            if isinstance(arr, list):
+                idx = self._eval_expr(idx_expr)
+                # Unwrap 1-element list index
+                if isinstance(idx, list) and len(idx) == 1:
+                    idx = idx[0]
+                try:
+                    i = int(idx) - 1  # APL is 1-indexed
+                    if 0 <= i < len(arr):
+                        return arr[i]
+                    return 0
+                except (ValueError, TypeError):
+                    pass
+
         # Number
         try:
             return int(expr)
@@ -347,7 +366,7 @@ class APLEnvironment:
             return m.group(1).replace("''", "'")
 
         # Parenthesised
-        if expr.startswith("(") and expr.endswith(")"):
+        if _is_balanced_parens(expr):
             inner = expr[1:-1].strip()
             # Could be a vector: (1 2 3)
             if " " in inner and re.match(r"^[¯\d.\s]+$", inner):
@@ -423,10 +442,12 @@ class APLEnvironment:
         """Apply monadic (unary) APL function."""
         if isinstance(arr, list):
             if fn == "⍳":
-                # ⍳ of a vector = indices of array
-                if isinstance(arr, list):
-                    return list(range(1, len(arr) + 1))
-                return list(range(1, int(arr) + 1))
+                # ⍳ of a scalar n = 1..n; ⍳ of a 1-element vector [n] = 1..n
+                # (⍳⍴V is the common idiom for index vector of V)
+                if len(arr) == 1 and isinstance(arr[0], (int, float)):
+                    return list(range(1, int(arr[0]) + 1))
+                # ⍳ of a multi-element vector = indices 1..≢arr
+                return list(range(1, len(arr) + 1))
             if fn in ("+", "-", "×", "÷", "*", "⌈", "⌊", "!", "≢", "|"):
                 return [self._apply_monadic(fn, x) for x in arr]
             if fn == "⌽":
@@ -557,9 +578,17 @@ class APLEnvironment:
             r_list = right if isinstance(right, list) else [right]
             return l_list + r_list
         if fn == "↑":
-            return right[: int(left)] if isinstance(right, list) else right
+            # Positive: take from front; negative: take from end
+            n = int(left)
+            if not isinstance(right, list):
+                right = [right]
+            return right[:n] if n >= 0 else right[n:]
         if fn == "↓":
-            return right[int(left) :] if isinstance(right, list) else right
+            # Positive: drop from front; negative: drop from end
+            n = int(left)
+            if not isinstance(right, list):
+                right = [right]
+            return right[n:] if n >= 0 else right[:n]
         if fn == "⌹":
             # Simple: scalar inverse
             return 1 / right if right else 0
@@ -689,6 +718,19 @@ def _apl_tokenize(expr: str) -> list[str]:
             tokens.append(expr[i:j])
             i = j
             continue
+        # APL high-minus (¯) followed by digit = negative number literal
+        if ch == "¯" and i + 1 < len(expr) and (expr[i + 1].isdigit() or expr[i + 1] == "."):
+            j = i + 1
+            while j < len(expr) and (
+                expr[j].isdigit()
+                or expr[j] == "."
+                or expr[j] == "E"
+                or (expr[j] == "-" and j > 0 and expr[j - 1] == "E")
+            ):
+                j += 1
+            tokens.append(expr[i:j])
+            i = j
+            continue
         # APL symbol
         if ord(ch) > 127:
             # Check for compound: fn/ fn\ fn⌿
@@ -700,8 +742,7 @@ def _apl_tokenize(expr: str) -> list[str]:
             continue
         # Number (possibly negative ¯)
         if (
-            ch == "¯"
-            or ch.isdigit()
+            ch.isdigit()
             or (ch == "." and i + 1 < len(expr) and expr[i + 1].isdigit())
         ):
             j = i + 1
@@ -720,6 +761,19 @@ def _apl_tokenize(expr: str) -> list[str]:
             j = i + 1
             while j < len(expr) and (expr[j].isalnum() or expr[j] == "_"):
                 j += 1
+            # Check for subscript: NAME[...]
+            if j < len(expr) and expr[j] == "[":
+                depth = 1
+                k = j + 1
+                while k < len(expr) and depth > 0:
+                    if expr[k] == "[":
+                        depth += 1
+                    elif expr[k] == "]":
+                        depth -= 1
+                    k += 1
+                tokens.append(expr[i:k])
+                i = k
+                continue
             # Check for reduce/scan suffix
             while j < len(expr) and expr[j] in "/\\⌿":
                 j += 1
@@ -740,6 +794,21 @@ def _apl_tokenize(expr: str) -> list[str]:
         tokens.append(ch)
         i += 1
     return tokens
+
+
+def _is_balanced_parens(expr: str) -> bool:
+    """Return True if expr is wrapped in a single balanced outer pair of parentheses."""
+    if not (expr.startswith("(") and expr.endswith(")")):
+        return False
+    depth = 0
+    for i, ch in enumerate(expr):
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+        if depth == 0 and i < len(expr) - 1:
+            return False  # outer ( closed before end of string
+    return depth == 0
 
 
 def _apl_num(s: str) -> Any:

@@ -167,8 +167,14 @@ class StringExpressionEvaluator:
             return self._func_tab(args)
         elif func_name == "SPC":
             return self._func_spc(args)
+        elif func_name == "SPACE":
+            return self._func_space(args)
         elif func_name == "STRING":
             return self._func_string_fn(args)
+        elif func_name == "LTRIM":
+            return self._func_ltrim(args)
+        elif func_name == "RTRIM":
+            return self._func_rtrim(args)
         else:
             raise ValueError(f"Unknown string function: {func_name}")
 
@@ -395,18 +401,9 @@ class StringExpressionEvaluator:
 
         # Try evaluating as a simple arithmetic expression with variable substitution
         try:
-            expr_str = args[0].strip()
-            # Substitute numeric variables into the expression
-            for vname, vval in sorted(
-                self.numeric_variables.items(), key=lambda x: -len(x[0])
-            ):
-                expr_str = re.sub(
-                    r"\b" + re.escape(vname) + r"\b",
-                    str(vval),
-                    expr_str,
-                    flags=re.IGNORECASE,
-                )
-            num = float(eval(expr_str, {"__builtins__": {}}, {}))  # noqa: S307
+            from .expression_evaluator import ExpressionEvaluator
+            evaluator = ExpressionEvaluator(variables=self.numeric_variables)
+            num = evaluator.evaluate(args[0].strip())
             if num == int(num):
                 return str(int(num))
             return str(num)
@@ -516,6 +513,24 @@ class StringExpressionEvaluator:
     def _func_spc(self, args: list) -> str:
         """SPC(n) - Return n spaces."""
         return self._func_tab(args)
+
+    def _func_space(self, args: list) -> str:
+        """SPACE$(n) - Return n spaces."""
+        return self._func_tab(args)
+
+    def _func_ltrim(self, args: list) -> str:
+        """LTRIM$(s) - Remove leading spaces."""
+        if len(args) < 1:
+            raise ValueError("LTRIM requires 1 argument")
+        val = self._evaluate_arg(args[0])
+        return str(val).lstrip()
+
+    def _func_rtrim(self, args: list) -> str:
+        """RTRIM$(s) - Remove trailing spaces."""
+        if len(args) < 1:
+            raise ValueError("RTRIM requires 1 argument")
+        val = self._evaluate_arg(args[0])
+        return str(val).rstrip()
 
     def _func_string_fn(self, args: list) -> str:
         """STRING$(n, char) - Return n copies of character."""

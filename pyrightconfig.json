@@ -9,10 +9,18 @@
     ".venv",
     "archive",
     "docs",
-    "Platforms/Python/time_warp/tests"
+    "htmlcov",
+    "packaging",
+    "tools",
+    "Platforms/Python/time_warp/tests",
+    "Platforms/Python/time_warp/ui",
+    "Platforms/Python/time_warp/hardware",
+    "Platforms/Python/time_warp/benchmarks",
+    "Platforms/Python/time_warp/analytics",
+    "Platforms/Python/time_warp/ai",
+    "Platforms/Python/tw_editor.py"
   ],
   "ignore": [
-    "Platforms/Python/time_warp/ui/*.py",
     "Platforms/Python/time_warp/tests",
     "Platforms/Python/tw_editor.py"
   ],
