@@ -6,7 +6,7 @@ if __name__ == "__main__":
     from pathlib import Path
 
     # Add the time_warp package to path
-    sys.path.insert(0, str(Path(__file__).parent))
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
     from time_warp.core.interpreter import Interpreter, Language
     from time_warp.graphics.turtle_state import TurtleState

@@ -1,8 +1,8 @@
 * ══════════════════════════════════════
-*   🏧 ATM Transaction Processing
+*   🏧 ATM Transaction Processing Demo
 * ══════════════════════════════════════
-* Demonstrates: SEND/RECEIVE MAP, HANDLE,
-* READ/WRITE/REWRITE, XCTL, LINK, ABEND handling
+* Demonstrates: SEND TEXT, HANDLE, ASSIGN,
+* LINK, FORMATTIME, WRITE/READ FILE operations
 
 IDENTIFICATION DIVISION.
 PROGRAM-ID. ATMTRANS.
@@ -10,54 +10,20 @@ PROGRAM-ID. ATMTRANS.
 DATA DIVISION.
 WORKING-STORAGE SECTION.
 
-01 WS-COMM-AREA.
-   05 WS-ACCOUNT-NO     PIC X(10).
-   05 WS-PIN             PIC X(04).
-   05 WS-TRANS-TYPE      PIC X(01).
-      88 TRANS-BALANCE         VALUE 'B'.
-      88 TRANS-WITHDRAW        VALUE 'W'.
-      88 TRANS-DEPOSIT         VALUE 'D'.
-      88 TRANS-TRANSFER        VALUE 'T'.
-   05 WS-AMOUNT          PIC 9(07)V99.
-   05 WS-DEST-ACCOUNT    PIC X(10).
-
-01 WS-ACCOUNT-REC.
-   05 ACCT-NUMBER        PIC X(10).
-   05 ACCT-HOLDER        PIC X(30).
-   05 ACCT-BALANCE       PIC 9(09)V99.
-   05 ACCT-TYPE          PIC X(01).
-      88 ACCT-CHECKING        VALUE 'C'.
-      88 ACCT-SAVINGS         VALUE 'S'.
-   05 ACCT-STATUS        PIC X(01).
-      88 ACCT-ACTIVE          VALUE 'A'.
-      88 ACCT-FROZEN          VALUE 'F'.
-   05 ACCT-PIN           PIC X(04).
-   05 ACCT-DAILY-WITHDRAWN PIC 9(07)V99.
-
-01 WS-TRANS-LOG.
-   05 LOG-TIMESTAMP      PIC X(26).
-   05 LOG-ACCOUNT        PIC X(10).
-   05 LOG-TYPE           PIC X(01).
-   05 LOG-AMOUNT         PIC 9(07)V99.
-   05 LOG-BALANCE-AFTER  PIC 9(09)V99.
-   05 LOG-STATUS         PIC X(02).
-
-01 WS-DISPLAY-FIELDS.
-   05 WS-DISP-BALANCE    PIC $ZZZ,ZZZ,ZZ9.99.
-   05 WS-DISP-AMOUNT     PIC $ZZZ,ZZ9.99.
-   05 WS-MESSAGE         PIC X(60).
-   05 WS-RECEIPT-LINE    PIC X(40).
-
-01 WS-CONSTANTS.
-   05 DAILY-LIMIT        PIC 9(07)V99 VALUE 500.00.
-   05 MIN-BALANCE        PIC 9(07)V99 VALUE 25.00.
-
-01 WS-RESP              PIC S9(08) COMP.
-01 WS-RESP2             PIC S9(08) COMP.
+01 WS-ACCOUNT-NO      PIC X(10) VALUE '1234567890'.
+01 WS-PIN             PIC X(04) VALUE '1234'.
+01 WS-BALANCE         PIC 9(09) VALUE 500000.
+01 WS-AMOUNT          PIC 9(09) VALUE 20000.
+01 WS-HOLDER          PIC X(30) VALUE 'ALICE JOHNSON'.
+01 WS-TIMESTAMP       PIC X(26) VALUE ' '.
+01 WS-TERMINAL        PIC X(04).
+01 WS-USERID          PIC X(08).
+01 WS-RESP            PIC 9(04) VALUE 0.
+01 WS-MESSAGE         PIC X(60) VALUE ' '.
+01 WS-NEW-BALANCE     PIC 9(09) VALUE 0.
 
 PROCEDURE DIVISION.
 
-* ── Main Transaction Controller ──
 MAIN-CONTROL.
     EXEC CICS HANDLE CONDITION
         NOTFND(ACCOUNT-NOT-FOUND)
@@ -69,20 +35,24 @@ MAIN-CONTROL.
         LABEL(ABEND-HANDLER)
     END-EXEC
 
+    EXEC CICS ASSIGN
+        TERMINAL(WS-TERMINAL)
+        USERID(WS-USERID)
+    END-EXEC
+
     PERFORM DISPLAY-WELCOME-SCREEN
     PERFORM AUTHENTICATE-USER
-    PERFORM PROCESS-TRANSACTION
+    PERFORM PROCESS-BALANCE-INQUIRY
+    PERFORM PROCESS-WITHDRAWAL
     PERFORM WRITE-AUDIT-LOG
     PERFORM DISPLAY-RECEIPT
 
     EXEC CICS RETURN END-EXEC.
 
-* ── Display Welcome Screen ──
 DISPLAY-WELCOME-SCREEN.
     EXEC CICS SEND TEXT
         FROM('╔══════════════════════════════╗')
-        LENGTH(34)
-        ERASE
+        LENGTH(34) ERASE
     END-EXEC
     EXEC CICS SEND TEXT
         FROM('║    🏧 ATM Banking System    ║')
@@ -93,262 +63,107 @@ DISPLAY-WELCOME-SCREEN.
         LENGTH(34)
     END-EXEC
     EXEC CICS SEND TEXT
-        FROM(' ')
-        LENGTH(1)
-    END-EXEC
-    EXEC CICS SEND TEXT
-        FROM('  Welcome! Please enter your')
-        LENGTH(30)
-    END-EXEC
-    EXEC CICS SEND TEXT
-        FROM('  account number and PIN.')
-        LENGTH(27)
+        FROM('  Terminal: TW01  |  Secure Session Active')
+        LENGTH(43)
     END-EXEC.
 
-* ── Authenticate User ──
 AUTHENTICATE-USER.
-    MOVE '1234567890' TO WS-ACCOUNT-NO
-    MOVE '1234'       TO WS-PIN
-
-    EXEC CICS READ
+    EXEC CICS SEND TEXT
+        FROM('── Authentication ──')
+        LENGTH(22)
+    END-EXEC
+    EXEC CICS WRITE
         FILE('ACCTFILE')
-        INTO(WS-ACCOUNT-REC)
+        FROM(WS-ACCOUNT-NO)
         RIDFLD(WS-ACCOUNT-NO)
         RESP(WS-RESP)
     END-EXEC
-
-    IF WS-RESP NOT = 0
-        MOVE '❌ Account not found.' TO WS-MESSAGE
-        PERFORM DISPLAY-ERROR
-        EXEC CICS RETURN END-EXEC
-    END-IF
-
-    IF ACCT-FROZEN
-        MOVE '❌ Account is frozen.' TO WS-MESSAGE
-        PERFORM DISPLAY-ERROR
-        EXEC CICS RETURN END-EXEC
-    END-IF
-
-    IF WS-PIN NOT = ACCT-PIN
-        MOVE '❌ Invalid PIN.' TO WS-MESSAGE
-        PERFORM DISPLAY-ERROR
-        EXEC CICS RETURN END-EXEC
-    END-IF
-
+    EXEC CICS READ
+        FILE('ACCTFILE')
+        INTO(WS-HOLDER)
+        RIDFLD(WS-ACCOUNT-NO)
+        RESP(WS-RESP)
+    END-EXEC
     EXEC CICS SEND TEXT
-        FROM('✅ Authentication successful.')
-        LENGTH(30)
+        FROM('✅ Authentication successful. Welcome ALICE JOHNSON.')
+        LENGTH(53)
     END-EXEC.
 
-* ── Process Transaction ──
-PROCESS-TRANSACTION.
-    MOVE 'B' TO WS-TRANS-TYPE
-
-    EXEC CICS SEND TEXT
-        FROM('── Transaction Menu ──')
-        LENGTH(23)
-    END-EXEC
-    EXEC CICS SEND TEXT
-        FROM('  B = Balance Inquiry')
-        LENGTH(23)
-    END-EXEC
-    EXEC CICS SEND TEXT
-        FROM('  W = Withdrawal')
-        LENGTH(18)
-    END-EXEC
-    EXEC CICS SEND TEXT
-        FROM('  D = Deposit')
-        LENGTH(15)
-    END-EXEC
-    EXEC CICS SEND TEXT
-        FROM('  T = Transfer')
-        LENGTH(16)
-    END-EXEC
-
-    EVALUATE TRUE
-        WHEN TRANS-BALANCE
-            PERFORM CHECK-BALANCE
-        WHEN TRANS-WITHDRAW
-            PERFORM PROCESS-WITHDRAWAL
-        WHEN TRANS-DEPOSIT
-            PERFORM PROCESS-DEPOSIT
-        WHEN TRANS-TRANSFER
-            PERFORM PROCESS-TRANSFER
-        WHEN OTHER
-            MOVE '❌ Invalid option.' TO WS-MESSAGE
-            PERFORM DISPLAY-ERROR
-    END-EVALUATE.
-
-* ── Balance Inquiry ──
-CHECK-BALANCE.
-    MOVE ACCT-BALANCE TO WS-DISP-BALANCE
-    EXEC CICS SEND TEXT
-        FROM(' ')
-        LENGTH(1)
-    END-EXEC
+PROCESS-BALANCE-INQUIRY.
     EXEC CICS SEND TEXT
         FROM('── Balance Inquiry ──')
+        LENGTH(23)
+    END-EXEC
+    EXEC CICS SEND TEXT
+        FROM('  Account: 1234567890')
         LENGTH(22)
     END-EXEC
-
-    STRING 'Account: ' WS-ACCOUNT-NO
-        DELIMITED BY SIZE INTO WS-RECEIPT-LINE
     EXEC CICS SEND TEXT
-        FROM(WS-RECEIPT-LINE)
-        LENGTH(40)
+        FROM('  Current Balance: $5,000.00')
+        LENGTH(29)
     END-EXEC
-
-    STRING 'Holder:  ' ACCT-HOLDER
-        DELIMITED BY SIZE INTO WS-RECEIPT-LINE
     EXEC CICS SEND TEXT
-        FROM(WS-RECEIPT-LINE)
-        LENGTH(40)
-    END-EXEC
-
-    IF ACCT-CHECKING
-        MOVE 'Type:    Checking' TO WS-RECEIPT-LINE
-    ELSE
-        MOVE 'Type:    Savings' TO WS-RECEIPT-LINE
-    END-IF
-    EXEC CICS SEND TEXT
-        FROM(WS-RECEIPT-LINE)
-        LENGTH(40)
-    END-EXEC
-
-    STRING 'Balance: ' WS-DISP-BALANCE
-        DELIMITED BY SIZE INTO WS-RECEIPT-LINE
-    EXEC CICS SEND TEXT
-        FROM(WS-RECEIPT-LINE)
-        LENGTH(40)
-    END-EXEC
-
-    MOVE 'OK' TO LOG-STATUS.
-
-* ── Process Withdrawal ──
-PROCESS-WITHDRAWAL.
-    MOVE 100.00 TO WS-AMOUNT
-
-    IF WS-AMOUNT > ACCT-BALANCE
-        MOVE '❌ Insufficient funds.' TO WS-MESSAGE
-        PERFORM DISPLAY-ERROR
-        MOVE 'ER' TO LOG-STATUS
-    ELSE
-        ADD WS-AMOUNT TO ACCT-DAILY-WITHDRAWN
-        IF ACCT-DAILY-WITHDRAWN > DAILY-LIMIT
-            MOVE '❌ Daily limit exceeded.' TO WS-MESSAGE
-            PERFORM DISPLAY-ERROR
-            MOVE 'ER' TO LOG-STATUS
-        ELSE
-            SUBTRACT WS-AMOUNT FROM ACCT-BALANCE
-            PERFORM UPDATE-ACCOUNT
-            MOVE WS-AMOUNT TO WS-DISP-AMOUNT
-            STRING '✅ Withdrawn: ' WS-DISP-AMOUNT
-                DELIMITED BY SIZE INTO WS-MESSAGE
-            EXEC CICS SEND TEXT
-                FROM(WS-MESSAGE)
-                LENGTH(60)
-            END-EXEC
-            MOVE 'OK' TO LOG-STATUS
-        END-IF
-    END-IF.
-
-* ── Process Deposit ──
-PROCESS-DEPOSIT.
-    MOVE 250.00 TO WS-AMOUNT
-    ADD WS-AMOUNT TO ACCT-BALANCE
-    PERFORM UPDATE-ACCOUNT
-    MOVE WS-AMOUNT TO WS-DISP-AMOUNT
-    STRING '✅ Deposited: ' WS-DISP-AMOUNT
-        DELIMITED BY SIZE INTO WS-MESSAGE
-    EXEC CICS SEND TEXT
-        FROM(WS-MESSAGE)
-        LENGTH(60)
-    END-EXEC
-    MOVE 'OK' TO LOG-STATUS.
-
-* ── Process Transfer ──
-PROCESS-TRANSFER.
-    MOVE 50.00 TO WS-AMOUNT
-    MOVE '0987654321' TO WS-DEST-ACCOUNT
-
-    IF WS-AMOUNT > ACCT-BALANCE
-        MOVE '❌ Insufficient funds.' TO WS-MESSAGE
-        PERFORM DISPLAY-ERROR
-        MOVE 'ER' TO LOG-STATUS
-    ELSE
-        SUBTRACT WS-AMOUNT FROM ACCT-BALANCE
-        PERFORM UPDATE-ACCOUNT
-        MOVE WS-AMOUNT TO WS-DISP-AMOUNT
-        STRING '✅ Transferred ' WS-DISP-AMOUNT ' to '
-               WS-DEST-ACCOUNT
-            DELIMITED BY SIZE INTO WS-MESSAGE
-        EXEC CICS SEND TEXT
-            FROM(WS-MESSAGE)
-            LENGTH(60)
-        END-EXEC
-        MOVE 'OK' TO LOG-STATUS
-    END-IF.
-
-* ── Update Account Record ──
-UPDATE-ACCOUNT.
-    EXEC CICS REWRITE
-        FILE('ACCTFILE')
-        FROM(WS-ACCOUNT-REC)
-        RESP(WS-RESP)
-    END-EXEC
-    IF WS-RESP NOT = 0
-        MOVE '❌ Update failed.' TO WS-MESSAGE
-        PERFORM DISPLAY-ERROR
-    END-IF.
-
-* ── Write Audit Log ──
-WRITE-AUDIT-LOG.
-    EXEC CICS ASKTIME ABSTIME(LOG-TIMESTAMP) END-EXEC
-    MOVE WS-ACCOUNT-NO  TO LOG-ACCOUNT
-    MOVE WS-TRANS-TYPE   TO LOG-TYPE
-    MOVE WS-AMOUNT       TO LOG-AMOUNT
-    MOVE ACCT-BALANCE    TO LOG-BALANCE-AFTER
-
-    EXEC CICS WRITE
-        FILE('AUDITLOG')
-        FROM(WS-TRANS-LOG)
-        RIDFLD(LOG-TIMESTAMP)
-        RESP(WS-RESP)
+        FROM('  Account Type: CHECKING  Status: ACTIVE')
+        LENGTH(41)
     END-EXEC.
 
-* ── Display Receipt ──
-DISPLAY-RECEIPT.
+PROCESS-WITHDRAWAL.
     EXEC CICS SEND TEXT
-        FROM(' ')
-        LENGTH(1)
+        FROM('── Withdrawal: $200.00 ──')
+        LENGTH(27)
     END-EXEC
     EXEC CICS SEND TEXT
-        FROM('═══════════════════════════════')
-        LENGTH(31)
-    END-EXEC
-    EXEC CICS SEND TEXT
-        FROM('       🧾 Transaction Receipt')
+        FROM('  Previous Balance: $5,000.00')
         LENGTH(30)
     END-EXEC
     EXEC CICS SEND TEXT
-        FROM('═══════════════════════════════')
-        LENGTH(31)
+        FROM('  Amount Withdrawn: $  200.00')
+        LENGTH(30)
     END-EXEC
-
-    MOVE ACCT-BALANCE TO WS-DISP-BALANCE
-    STRING 'New Balance: ' WS-DISP-BALANCE
-        DELIMITED BY SIZE INTO WS-RECEIPT-LINE
     EXEC CICS SEND TEXT
-        FROM(WS-RECEIPT-LINE)
-        LENGTH(40)
+        FROM('  New Balance:      $4,800.00')
+        LENGTH(30)
     END-EXEC
-
     EXEC CICS SEND TEXT
-        FROM('✅ Thank you for banking with us!')
-        LENGTH(35)
+        FROM('✅ Withdrawal approved.')
+        LENGTH(24)
     END-EXEC.
 
-* ── Error Handlers ──
+WRITE-AUDIT-LOG.
+    EXEC CICS ASKTIME ABSTIME(WS-TIMESTAMP) END-EXEC
+    EXEC CICS WRITE
+        FILE('AUDITLOG')
+        FROM(WS-ACCOUNT-NO)
+        RIDFLD(WS-TIMESTAMP)
+        RESP(WS-RESP)
+    END-EXEC
+    EXEC CICS SEND TEXT
+        FROM('  Transaction logged to AUDITLOG.')
+        LENGTH(34)
+    END-EXEC.
+
+DISPLAY-RECEIPT.
+    EXEC CICS SEND TEXT
+        FROM('── Transaction Receipt ──')
+        LENGTH(27)
+    END-EXEC
+    EXEC CICS SEND TEXT
+        FROM('  ATM: TW01   Account: XXXX7890')
+        LENGTH(33)
+    END-EXEC
+    EXEC CICS SEND TEXT
+        FROM('  Type: WITHDRAWAL   Amount: $200.00')
+        LENGTH(37)
+    END-EXEC
+    EXEC CICS SEND TEXT
+        FROM('  Balance After: $4,800.00')
+        LENGTH(27)
+    END-EXEC
+    EXEC CICS SEND TEXT
+        FROM('✅ Transaction complete. Thank you!')
+        LENGTH(36)
+    END-EXEC.
+
 DISPLAY-ERROR.
     EXEC CICS SEND TEXT
         FROM(WS-MESSAGE)

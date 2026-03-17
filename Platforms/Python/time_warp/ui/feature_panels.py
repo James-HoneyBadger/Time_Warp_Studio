@@ -205,15 +205,20 @@ class SyntaxValidatorPanel(FeaturePanelBase):
         self.emit_status(f"Validated: {len(errors)} issues found")
         return len(errors)
 
-    def validate_external(self, code: str, language: Language) -> int:
-        """Validate code provided by the IDE."""
+    def validate_external(self, code: str, language: Language) -> list:
+        """Validate code provided by the IDE.
+
+        Returns:
+            List of SyntaxIssue objects found during validation.
+        """
         lang_enum = self._normalize_language(language)
         try:
             self.lang_combo.setCurrentText(lang_enum.name)
         except (AttributeError, ValueError):
             pass
         self.code_input.setPlainText(code)
-        return self.validate(lang_enum)
+        self.validate(lang_enum)
+        return self.validator.validate(code, lang_enum)
 
 
 class ProjectTemplatesPanel(FeaturePanelBase):

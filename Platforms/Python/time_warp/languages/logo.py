@@ -27,6 +27,25 @@ _VAR_PATTERN = re.compile(r":([A-Za-z_][A-Za-z0-9_]*)")
 _RANDOM_PATTERN = re.compile(r"RANDOM\s+([A-Za-z0-9_.]+)", re.IGNORECASE)
 _BRACKET_PATTERN = re.compile(r'\[|\]|"[^\s\[\]]*|[^\[\]\s]+')
 
+# Pattern to convert Logo prefix math function calls to parenthesised form.
+# e.g. "COS angle" or "INT red" → "COS(angle)" / "INT(red)" so that the
+# expression evaluator (which only recognises FUNC( syntax) can handle them.
+_PREFIX_FUNC_PATTERN = re.compile(
+    r"\b(ACOS|ASIN|ATAN|CEIL|CINT|COS|COSH|EXP|FIX|FLOOR|"
+    r"INT|LOG10|LOG2|LOG|ROUND|SGN|SIN|SINH|SQR|SQRT|TAN|TANH)\b"
+    r"(?!\s*\()"                                  # not already parenthesised
+    r"\s+([A-Za-z_][A-Za-z0-9_]*|\d+\.?\d*|\.\d+)",  # single identifier or number
+    re.IGNORECASE,
+)
+
+# Set of math function names that take a single prefix argument (used for
+# grouping multi-token RGB arguments in SETPENCOLOR / SETCOLOR).
+_MATH_PREFIX_FUNCS: frozenset = frozenset([
+    "ACOS", "ASIN", "ATAN", "CEIL", "CINT", "COS", "COSH", "EXP",
+    "FIX", "FLOOR", "INT", "LOG10", "LOG2", "LOG", "ROUND", "SGN",
+    "SIN", "SINH", "SQR", "SQRT", "TAN", "TANH",
+])
+
 # Color name to RGB mapping
 COLOR_NAMES = {
     "BLACK": (0, 0, 0),
@@ -776,6 +795,11 @@ def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
     # Only handles simple cases without nested parentheses
     expr_norm = _handle_prefix_mult(expr_norm)
 
+    # Convert Logo prefix math function calls to parenthesised form so the
+    # expression evaluator can recognise them.  e.g. "COS angle" → "COS(angle)",
+    # "128 * SIN angle + 2.094" → "128 * SIN(angle) + 2.094".
+    expr_norm = _PREFIX_FUNC_PATTERN.sub(r"\1(\2)", expr_norm)
+
     # Replace = with == for Python eval, but protect >=, <=, !=
     # First replace >= with __GE__, <= with __LE__, <> with __NE__
     expr_norm = (
@@ -1063,6 +1087,35 @@ def _resolve_color_arg(
     return token
 
 
+def _group_rgb_args(args: List[str]) -> List[str]:
+    """Group a flat token list into 3 evaluatable expression strings for RGB.
+
+    Handles cases like ``["INT", ":red", "INT", ":green", "INT", ":blue"]``
+    where each colour component is expressed as a prefix-function call.
+    Also supports simple infix arithmetic continuations, e.g.
+    ``["128", "*", ":r", "+", "10", ...]``.
+    """
+    groups: List[str] = []
+    ops = {"+", "-", "*", "/", "%", "^"}
+    i = 0
+    while i < len(args) and len(groups) < 3:
+        tokens: List[str] = []
+        tok = args[i]
+        tokens.append(tok)
+        i += 1
+        # If this token is a known prefix math function, grab its argument
+        if tok.upper() in _MATH_PREFIX_FUNCS and i < len(args):
+            tokens.append(args[i])
+            i += 1
+        # Consume any operator-operand continuations (infix arithmetic)
+        while i < len(args) and args[i] in ops and i + 1 < len(args):
+            tokens.append(args[i])
+            tokens.append(args[i + 1])
+            i += 2
+        groups.append(" ".join(tokens))
+    return groups
+
+
 def _logo_setcolor(
     interpreter: "Interpreter",
     turtle: Optional["TurtleState"],
@@ -1085,12 +1138,16 @@ def _logo_setcolor(
         # Named color or hex
         color_str = args[0].strip().strip('"')
         turtle.pencolor(color_str)
-    elif len(args) == 3:
-        # RGB values
+    elif len(args) >= 3:
+        # RGB values — may be 3 plain tokens or multi-token prefix expressions
+        # like ["INT", ":red", "INT", ":green", "INT", ":blue"]
+        rgb = args if len(args) == 3 else _group_rgb_args(args)
+        if len(rgb) != 3:
+            return "❌ SETCOLOR requires 1 color name/hex or 3 RGB values\n"
         try:
-            r = int(_logo_eval_arg(interpreter, args[0]))
-            g = int(_logo_eval_arg(interpreter, args[1]))
-            b = int(_logo_eval_arg(interpreter, args[2]))
+            r = max(0, min(255, int(_logo_eval_arg(interpreter, rgb[0]))))
+            g = max(0, min(255, int(_logo_eval_arg(interpreter, rgb[1]))))
+            b = max(0, min(255, int(_logo_eval_arg(interpreter, rgb[2]))))
             turtle.setcolor(r, g, b)
         except ValueError:
             return "❌ SETCOLOR RGB values must be integers\n"
@@ -1126,12 +1183,15 @@ def _logo_setbgcolor(
             turtle.setbgcolor(*COLOR_NAMES[color_str.upper()])
         else:
             return "❌ SETBGCOLOR only supports named colors for now\n"
-    elif len(args) == 3:
-        # RGB values
+    elif len(args) >= 3:
+        # RGB values — may be multi-token prefix expressions
+        rgb = args if len(args) == 3 else _group_rgb_args(args)
+        if len(rgb) != 3:
+            return "❌ SETBGCOLOR requires 1 color name or 3 RGB values\n"
         try:
-            r = int(_logo_eval_arg(interpreter, args[0]))
-            g = int(_logo_eval_arg(interpreter, args[1]))
-            b = int(_logo_eval_arg(interpreter, args[2]))
+            r = max(0, min(255, int(_logo_eval_arg(interpreter, rgb[0]))))
+            g = max(0, min(255, int(_logo_eval_arg(interpreter, rgb[1]))))
+            b = max(0, min(255, int(_logo_eval_arg(interpreter, rgb[2]))))
             turtle.setbgcolor(r, g, b)
         except ValueError:
             return "❌ SETBGCOLOR RGB values must be integers\n"

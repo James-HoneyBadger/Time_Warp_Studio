@@ -15,15 +15,13 @@
       (let ((bindings (car env)))
         (let ((found (assoc name bindings)))
           (if found
-              (cdr found)
+              (cadr found)
               (env-lookup (cadr env) name))))))
 
 (define (env-set! env name val)
-  (let ((bindings (car env)))
-    (let ((found (assoc name bindings)))
-      (if found
-          (set-cdr! found val)
-          (set-car! env (cons (cons name val) bindings))))))
+  ; Always prepend a new (name val) binding — assoc finds the first match,
+  ; so later definitions shadow earlier ones correctly.
+  (set-car! env (cons (list name val) (car env))))
 
 ; --- Evaluator ---
 (define (my-eval expr env)

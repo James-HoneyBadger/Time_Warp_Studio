@@ -60,6 +60,12 @@ debug_*.py
 
 # Generated files
 DIRECTORY_TREE.txt
+*.pdf
+
+# IDE / editor swap files
+*.swp
+*.swo
+*~
 
 # Broken pip artifacts (files named like version specifiers)
 =*

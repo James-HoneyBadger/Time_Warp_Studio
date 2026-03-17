@@ -16,7 +16,6 @@ class EventEmitter {
             this.listeners.set(event, []);
         }
         this.listeners.get(event).push(callback);
-        return this;  // chainable
     }
 
     once(event, callback) {
@@ -61,7 +60,7 @@ class Logger {
     }
 
     log(level, message) {
-        let entry = { time: Date.now(), level, message, source: this.name };
+        let entry = { time: Date.now(), level: level, message: message, source: this.name };
         this.entries.push(entry);
         console.log("[" + level.toUpperCase() + "] " + this.name + ": " + message);
     }
@@ -80,27 +79,32 @@ console.log("");
 let bus = new EventEmitter();
 let logger = new Logger("App");
 
-// Register event handlers
-bus.on("user:login", function(user) {
+// Register event handlers using named functions
+function onUserLogin1(user) {
     logger.log("info", "User logged in: " + user.name);
-    return { status: "ok", user: user.name };
-});
+}
 
-bus.on("user:login", function(user) {
+function onUserLogin2(user) {
     logger.log("info", "Setting up session for: " + user.name);
-});
+}
 
-bus.once("user:login", function(user) {
+function onUserLoginOnce(user) {
     logger.log("info", "Welcome message sent to: " + user.name + " (first time only)");
-});
+}
 
-bus.on("data:update", function(data) {
+function onDataUpdate(data) {
     logger.log("info", "Data updated: " + data.key + " = " + data.value);
-});
+}
 
-bus.on("error", function(err) {
+function onError(err) {
     logger.log("error", "Error occurred: " + err.message);
-});
+}
+
+bus.on("user:login", onUserLogin1);
+bus.on("user:login", onUserLogin2);
+bus.once("user:login", onUserLoginOnce);
+bus.on("data:update", onDataUpdate);
+bus.on("error", onError);
 
 // Emit events
 console.log("── Simulating user login ──");
@@ -118,16 +122,16 @@ bus.emit("error", { message: "Connection timeout", code: 408 });
 
 // Listener counts
 console.log("\n── Listener Statistics ──");
-console.log("  user:login listeners: " + bus.listenerCount("user:login"));
-console.log("  data:update listeners: " + bus.listenerCount("data:update"));
-console.log("  error listeners: " + bus.listenerCount("error"));
+console.log("  user:login listeners: " + String(bus.listenerCount("user:login")));
+console.log("  data:update listeners: " + String(bus.listenerCount("data:update")));
+console.log("  error listeners: " + String(bus.listenerCount("error")));
 
 // Log summary
 console.log("\n── Log Entries ──");
 let entries = logger.getEntries();
 for (let i = 0; i < entries.length; i++) {
     let e = entries[i];
-    console.log("  " + (i + 1) + ". [" + e.level + "] " + e.message);
+    console.log("  " + String(i + 1) + ". [" + e.level + "] " + e.message);
 }
 
 // Symbol usage

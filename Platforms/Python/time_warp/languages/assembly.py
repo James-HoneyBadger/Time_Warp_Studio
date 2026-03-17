@@ -133,14 +133,25 @@ class VirtualCPU:
             # Label definition  (label: [instr]) — supports dot-prefixed local labels
             m = re.match(r"^(\.?\w+)\s*:\s*(.*)$", stmt)
             if m:
-                self.labels[m.group(1).upper()] = line_no
+                label = m.group(1).upper()
+                self.labels[label] = line_no
                 remainder = m.group(2).strip()
                 if remainder:
-                    op, args = self._split_instr(
-                        self._upper_preserve_strings(remainder)
-                    )
-                    self.instructions.append((op, args))
-                    line_no += 1
+                    # If remainder is a data directive, register as a data label too
+                    ddf = re.match(r"^(DB|DW|DD|DQ)\b\s*(.*)", remainder, re.IGNORECASE)
+                    if ddf:
+                        directive = ddf.group(1).upper()
+                        data_args = ddf.group(2).strip()
+                        self.data_labels[label] = self._data_ptr
+                        self._store_data(label, directive, data_args)
+                        self.instructions.append(("_DATA", ""))
+                        line_no += 1
+                    else:
+                        op, args = self._split_instr(
+                            self._upper_preserve_strings(remainder)
+                        )
+                        self.instructions.append((op, args))
+                        line_no += 1
                 continue
             # EQU / RESB / RESD / RESW directives — define constants; skip for virtual CPU
             if re.match(r"^(\w+)\s+(EQU|RESB|RESW|RESD|RESQ)\b", stmt, re.IGNORECASE):
@@ -238,7 +249,18 @@ class VirtualCPU:
         elif op == "HALT":
             raise HaltException()
         elif op == "MOV":
-            self._reg_set(a[0], self._val(a[1]))
+            dst = a[0].strip()
+            src = a[1].strip()
+            if dst.startswith("[") and dst.endswith("]"):
+                # MOV [addr], reg — store register to memory
+                addr = self._mem_addr(dst)
+                self.memory[addr] = self._reg_get(src) & 0xFF
+            elif src.startswith("[") and src.endswith("]"):
+                # MOV reg, [addr] — load from memory into register
+                addr = self._mem_addr(src)
+                self._reg_set(dst, self.memory[addr])
+            else:
+                self._reg_set(dst, self._val(src))
         elif op == "ADD":
             r = self._reg_get(a[0]) + self._val(a[1])
             self._reg_set(a[0], r)
@@ -847,8 +869,10 @@ class VirtualCPU:
             if a:
                 self._reg_set(a[0], 0)
         elif op in ("OUT", "OUTB"):
-            # Write to port (stub — print)
-            if len(a) >= 2:
+            if len(a) == 1:
+                # OUT reg — print register value as ASCII character
+                self._emit(chr(self._val(a[0]) & 0xFF))
+            elif len(a) >= 2:
                 self._emit(f"PORT[{self._val(a[0])}]={self._val(a[1])}")
         elif op == "SYSCALL":
             # Simplified syscall: R0=syscall number
@@ -955,6 +979,16 @@ class VirtualCPU:
 
     # x86 named register mapping (EAX→R0, EBX→R1, ECX→R2, EDX→R3, etc.)
     _X86_REGS: dict[str, int] = {
+        # Single-letter 8-bit educational registers (A, B, C, D, E, H, L)
+        "A": 0,
+        "B": 1,
+        "C": 2,
+        "D": 3,
+        "E": 4,
+        "H": 5,
+        "L": 6,
+        "F": 7,
+        # x86 named registers
         "EAX": 0,
         "AX": 0,
         "AL": 0,
@@ -1043,11 +1077,23 @@ class VirtualCPU:
 
     def _mem_addr(self, operand: str) -> int:
         operand = operand.strip()
-        # [Rx] or [123]
+        # [Rx] or [123] or [label+reg]
         m = re.match(r"^\[(.+)\]$", operand)
         if m:
             inner = m.group(1).strip()
-            addr = self._val(inner)
+            # Handle "label + reg" or "label + offset" expressions
+            plus_m = re.match(r"^([A-Za-z_]\w*)\s*\+\s*(.+)$", inner)
+            if plus_m:
+                base_name = plus_m.group(1).upper()
+                offset_str = plus_m.group(2).strip()
+                if base_name in self.data_labels:
+                    base = self.data_labels[base_name]
+                    offset = int(self._val(offset_str))
+                    addr = base + offset
+                else:
+                    addr = self._val(inner)
+            else:
+                addr = self._val(inner)
         else:
             addr = self._val(operand)
         if not 0 <= addr < len(self.memory):

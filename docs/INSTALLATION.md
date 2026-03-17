@@ -1,594 +1,413 @@
-# Installation Guide for Time Warp Studio
+# Installation Guide — Time Warp Studio
 
-Complete step-by-step instructions for installing Time Warp Studio on Windows, macOS, and Linux.
-
----
-
-## System Requirements
-
-### Minimum Requirements
-
-- **OS**: Windows 10+, macOS 10.13+, or Linux (Ubuntu 20.04+, Fedora 33+, etc.)
-- **Python**: 3.10 or higher
-- **RAM**: 2GB minimum (4GB recommended)
-- **Disk**: 500MB free space
-- **CPU**: 64-bit processor with SSE3/SSE4.1/SSE4.2 support
-
-### Optional Hardware
-
-- **GPU**: Recommended for smooth graphics (integrated GPU sufficient)
-- **Display**: 1920x1080 minimum (1920x1080+ recommended)
-
-### CPU Feature Check
-
-If you get "Illegal instruction" errors, your CPU lacks required features:
-
-```bash
-# Linux: Check CPU flags
-grep -E 'ssse3|sse4_1|sse4_2|popcnt' /proc/cpuinfo
-
-# macOS: Most Macs have required features
-sysctl -a | grep machdep.cpu.features
-```
-
-Virtual machines (QEMU with TCG) may not support these features. Use KVM or nested virtualization.
+This guide covers every way to install or run Time Warp Studio, from a
+one-command standalone installer to Docker containers and developer setups.
 
 ---
 
-## Installation Methods
+## Table of Contents
 
-### Method 1: Quick Install (Recommended)
+1. [Standalone Install (Recommended)](#1-standalone-install-recommended)
+2. [System Requirements](#2-system-requirements)
+3. [Developer / Portable Install](#3-developer--portable-install)
+4. [Docker Install](#4-docker-install)
+5. [Troubleshooting](#5-troubleshooting)
+6. [Updating & Uninstalling](#6-updating--uninstalling)
+7. [Quick Reference](#7-quick-reference)
 
-Fastest way to get started:
+---
 
-#### Linux/macOS
+## 1. Standalone Install (Recommended)
+
+`install.sh` in the project root turns Time Warp Studio into a **fully
+self-contained application** on Linux. After running it you can launch the
+IDE from a terminal **or** from **Applications ▸ Development ▸ Time Warp
+Studio** — no virtual environment activation, no `cd`, just run it.
+
+The installer:
+- Copies all application files to a dedicated directory
+- Creates an isolated Python virtual environment with all dependencies
+- Writes a shell launcher (`time-warp-studio`) onto your `PATH`
+- Registers a `.desktop` file so the IDE appears in your applications menu
+- Re-running the installer **upgrades / overwrites** the existing version
+
+### 1.1 Prerequisites
+
+| Requirement | Minimum | Check |
+|---|---|---|
+| Linux distro | Any modern distro with a desktop environment | — |
+| Python | 3.10+ | `python3 --version` |
+| pip | any | `python3 -m pip --version` |
+| venv | any | `python3 -m venv --help` |
+
+Install missing prerequisites:
 
 ```bash
-# 1. Clone repository
+# Fedora / RHEL / CentOS
+sudo dnf install python3 python3-pip
+
+# Ubuntu / Debian
+sudo apt update && sudo apt install python3 python3-pip python3-venv
+```
+
+### 1.2 System-wide install (all users, recommended)
+
+Installs to `/opt/time-warp-studio` and creates `/usr/local/bin/time-warp-studio`.
+Requires sudo / root.
+
+```bash
+# Clone (or download a release archive) and enter the directory
 git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
 cd Time_Warp_Studio
 
-# 2. Create virtual environment
+# Run the installer as root
+sudo ./install.sh
+```
+
+When it finishes you will see:
+
+```
+════════════════════════════════════════════════════
+  Time Warp Studio 8.x.x — Installed!
+════════════════════════════════════════════════════
+
+  Start from terminal:   time-warp-studio
+  Start from menu:       Applications ▸ Development ▸ Time Warp Studio
+  Installed to:          /opt/time-warp-studio
+```
+
+Launch it immediately:
+
+```bash
+time-warp-studio
+```
+
+Or open your desktop's application launcher and look under **Development**.
+
+### 1.3 Per-user install (current user only, no sudo)
+
+Installs to `~/.local/share/time-warp-studio` and creates
+`~/.local/bin/time-warp-studio`.
+
+```bash
+cd Time_Warp_Studio
+./install.sh --user
+```
+
+> **PATH note**: If `~/.local/bin` is not yet on your `PATH` the installer
+> will warn you.  Add this line to `~/.bashrc` (or `~/.profile`):
+>
+> ```bash
+> export PATH="$HOME/.local/bin:$PATH"
+> ```
+>
+> Then reload:  `source ~/.bashrc`
+
+### 1.4 Upgrading an existing installation
+
+Re-run the installer with `--upgrade` to wipe and recreate the Python venv
+(ensures you get the latest dependency versions).  Without `--upgrade` the
+installer still syncs all application files but reuses the existing venv.
+
+```bash
+# Upgrade a system-wide install
+sudo ./install.sh --upgrade
+
+# Upgrade a per-user install
+./install.sh --user --upgrade
+```
+
+Without the `--upgrade` flag (incremental sync, faster):
+
+```bash
+sudo ./install.sh          # system
+./install.sh --user        # per-user
+```
+
+### 1.5 What the installer creates
+
+```
+System-wide                        Per-user
+─────────────────────────────────  ─────────────────────────────────────────
+/opt/time-warp-studio/             ~/.local/share/time-warp-studio/
+  Platforms/Python/…               (same layout)
+  Examples/…
+  .venv/                           # isolated Python environment
+  install.sh                       # re-runnable for upgrades
+
+/usr/local/bin/time-warp-studio    ~/.local/bin/time-warp-studio
+  (shell launcher script)          (shell launcher script)
+
+/usr/share/applications/           ~/.local/share/applications/
+  time-warp-studio.desktop         time-warp-studio.desktop
+
+/usr/share/icons/hicolor/          ~/.local/share/icons/hicolor/
+  256x256/apps/                    256x256/apps/
+  time-warp-studio.png             time-warp-studio.png
+```
+
+### 1.6 install.sh full option reference
+
+```
+Usage: ./install.sh [OPTIONS]
+
+Options:
+  (none)         System-wide install into /opt  (requires sudo)
+  --user         Per-user install into ~/.local  (no sudo needed)
+  --upgrade      Wipe and recreate the Python venv, reinstall all deps
+  --uninstall    Remove Time Warp Studio completely (see §6)
+  --help         Show help and exit
+
+Examples:
+  sudo ./install.sh                   # fresh system install
+  sudo ./install.sh --upgrade         # upgrade system install
+  ./install.sh --user                 # fresh per-user install
+  ./install.sh --user --upgrade       # upgrade per-user install
+  sudo ./install.sh --uninstall       # remove system install
+  ./install.sh --user --uninstall     # remove per-user install
+```
+
+---
+
+## 2. System Requirements
+
+### Minimum
+
+| Item | Requirement |
+|---|---|
+| OS | Linux (Ubuntu 20.04+, Fedora 33+, Arch, or any modern distro) |
+| Python | 3.10 or newer |
+| RAM | 2 GB (4 GB recommended) |
+| Disk | 600 MB free |
+| CPU | 64-bit with SSE3 / SSE4.1 / SSE4.2 / POPCNT support |
+| Display | Any X11 or Wayland desktop |
+
+> **Virtual machine note**: QEMU/KVM using TCG (software emulation) may
+> lack the SSE4.2 instruction needed by PySide6.  Enable KVM acceleration or
+> pass `+sse4.2` to the QEMU CPU flags.
+
+### Check CPU features
+
+```bash
+grep -E 'ssse3|sse4_1|sse4_2|popcnt' /proc/cpuinfo | head -1
+```
+
+All four flags must be present.
+
+---
+
+## 3. Developer / Portable Install
+
+Use this if you want to run directly from the source tree (no system install).
+
+```bash
+# 1. Clone
+git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
+cd Time_Warp_Studio
+
+# 2. Create a virtual environment
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate        # Windows: venv\Scripts\activate
 
 # 3. Install dependencies
-pip install -e Platforms/Python
-
-# 4. Run IDE
-python Platforms/Python/time_warp_ide.py
-```
-
-#### Windows
-
-```cmd
-# 1. Clone repository
-git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
-cd Time_Warp_Studio
-
-# 2. Create virtual environment
-python -m venv venv
-venv\Scripts\activate
-
-# 3. Install dependencies
-pip install -e Platforms\Python
-
-# 4. Run IDE
-python Platforms\Python\time_warp_ide.py
-```
-
-### Method 2: Traditional Setup
-
-More control over installation:
-
-#### Step 1: Install Python
-
-**Windows:**
-1. Download Python 3.10+ from [python.org](https://www.python.org/downloads/)
-2. Run installer
-3. **IMPORTANT**: Check "Add Python to PATH"
-4. Click "Install Now"
-
-**macOS:**
-```bash
-# Using Homebrew (recommended)
-brew install python@3.11
-
-# Or using official installer from python.org
-```
-
-**Linux:**
-```bash
-# Ubuntu/Debian
-sudo apt-get update
-sudo apt-get install python3.10 python3.10-venv python3-pip
-
-# Fedora
-sudo dnf install python3.10 python3-pip
-
-# Arch
-sudo pacman -S python
-```
-
-#### Step 2: Clone Repository
-
-```bash
-git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
-cd Time_Warp_Studio
-```
-
-#### Step 3: Create Virtual Environment
-
-```bash
-# Linux/macOS
-python3 -m venv venv
-source venv/bin/activate
-
-# Windows
-python -m venv venv
-venv\Scripts\activate
-```
-
-Your prompt should now show `(venv)` prefix.
-
-#### Step 4: Upgrade pip
-
-```bash
 pip install --upgrade pip
-```
+pip install "PySide6>=6.5.0" "Pillow>=10.0.0"
 
-#### Step 5: Install Core Dependencies
-
-```bash
-pip install PySide6>=6.4.0 Pillow>=10.0.0
-```
-
-#### Step 6: Install Time Warp
-
-```bash
-pip install -e Platforms/Python
-```
-
-#### Step 7: Verify Installation
-
-```bash
-# Test import
-python -c "from time_warp.core.interpreter import Interpreter; print('✅ Installation successful')"
-
-# Run IDE
+# 4. Launch
 python Platforms/Python/time_warp_ide.py
+```
+
+Or use the smart launcher which handles the venv automatically:
+
+```bash
+python run.py
+```
+
+For contributors, install the full development stack:
+
+```bash
+pip install pytest pytest-cov pytest-mock ruff black
+python test_runner.py --comprehensive
 ```
 
 ---
 
-## Installation Troubleshooting
+## 4. Docker Install
 
-### Python Not Found
+Runs the IDE in a container — best compatibility for unusual hardware.
 
-**Problem**: `python: command not found` or `'python' is not recognized`
+### Prerequisites
 
-**Solution**:
+- Docker installed and running
+- An X11 display (Linux desktop or XQuartz on macOS)
 
-```bash
-# Linux/macOS - Use python3
-python3 -m venv venv
-source venv/bin/activate
-python3 --version
-
-# Windows - Install from python.org
-# Make sure to check "Add Python to PATH" during installation
-# Restart terminal after installation
-python --version
-```
-
-### Virtual Environment Not Activating
-
-**Problem**: `(venv)` prefix doesn't appear in prompt
-
-**Solution**:
+### Build and run
 
 ```bash
-# Linux/macOS - Check command
-source venv/bin/activate  # Not: source venv/bin/activate.sh
-
-# Windows - Check command
-venv\Scripts\activate  # Not: activate.bat
-
-# If still not working, check venv exists
-ls venv         # Linux/macOS
-dir venv        # Windows
-```
-
-### pip Install Fails
-
-**Problem**: `error: externally-managed-environment`
-
-**Solution**:
-```bash
-# This means you're not in a virtual environment
-# Make sure (venv) appears in your prompt
-
-# Linux/macOS
-source venv/bin/activate
-
-# Windows
-venv\Scripts\activate
-
-# Then retry
-pip install -e Platforms/Python
-```
-
-### PySide6 Installation Issues
-
-**Problem**: PySide6 fails to install
-
-**Solution**:
-
-```bash
-# Update pip, setuptools, wheel
-pip install --upgrade pip setuptools wheel
-
-# Install specific PySide6 version
-pip install PySide6==6.4.2
-
-# If still fails, check Python version
-python --version  # Should be 3.10+
-```
-
-**Linux-specific**:
-```bash
-# Install Qt development libraries
-sudo apt-get install qt6-base-dev qt6-qml-dev  # Ubuntu
-sudo dnf install qt6-devel                      # Fedora
-```
-
-### "Illegal Instruction" When Running IDE
-
-**Problem**: Program crashes with "Illegal instruction"
-
-**Solution**: Your CPU lacks required features (SSSE3/SSE4.1/SSE4.2)
-
-```bash
-# Check CPU features
-grep -E 'ssse3|sse4_1|sse4_2|popcnt' /proc/cpuinfo
-
-# If missing, you need:
-# - Different hardware, OR
-# - Use Docker container (see Method 3), OR
-# - Compile custom PySide6 build without SIMD
-```
-
-### Qt xcb Platform Plugin Error
-
-**Problem**:
-- `qt.qpa.plugin: From 6.5.0, xcb-cursor0 or libxcb-cursor0 is needed`
-- `Could not load the Qt platform plugin "xcb"`
-
-**Cause**: Required Linux X11 runtime libraries for Qt are missing.
-
-**Solution**:
-
-```bash
-# Ubuntu/Debian
-sudo apt-get update
-sudo apt-get install -y libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 libxcb-keysyms1 libxcb-render-util0
-
-# Fedora
-sudo dnf install xcb-util-cursor libxkbcommon-x11 xcb-util-wm xcb-util-keysyms xcb-util-renderutil
-
-# Arch/Arch Linux ARM
-sudo pacman -S xcb-util-cursor libxkbcommon-x11 xcb-util-wm xcb-util-keysyms xcb-util-renderutil
-```
-
-Then verify Qt import and relaunch:
-
-```bash
-python -c "from PySide6.QtWidgets import QApplication; print('✅ PySide6 imports!')"
-python Platforms/Python/time_warp_ide.py
-```
-
-### Git Not Found
-
-**Problem**: `git: command not found`
-
-**Solution**:
-
-```bash
-# Windows: Download from git-scm.com
-# Or use GitHub Desktop
-
-# Linux
-sudo apt-get install git      # Ubuntu
-sudo dnf install git          # Fedora
-
-# macOS
-brew install git
-```
-
-### Permission Denied (Linux)
-
-**Problem**: `Permission denied` when running script
-
-**Solution**:
-
-```bash
-chmod +x Platforms/Python/time_warp_ide.py
-python Platforms/Python/time_warp_ide.py
-```
-
----
-
-### Method 3: Docker Installation
-
-Run Time Warp Studio in a container (best compatibility):
-
-#### Prerequisites
-
-- Install Docker: [docker.com/get-docker](https://www.docker.com/get-docker/)
-- ~2GB disk space for container image
-
-#### Steps
-
-```bash
-# 1. Clone repository
-git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
-cd Time_Warp_Studio
-
-# 2. Build image
+# Build (takes a few minutes first time)
 docker build -t time-warp-studio .
 
-# 3. Run container (with display support)
-
-# Linux
+# Run on Linux (shares your X display)
+xhost +local:docker
 docker run -it --rm \
-  -e DISPLAY=$DISPLAY \
+  -e DISPLAY="$DISPLAY" \
   -v /tmp/.X11-unix:/tmp/.X11-unix \
-  -v $(pwd)/Examples:/app/Examples \
+  -v "$(pwd)/Examples":/app/Examples \
   time-warp-studio
 
-# macOS
+# Run on macOS (requires XQuartz)
 docker run -it --rm \
   -e DISPLAY=host.docker.internal:0 \
-  -v $(pwd)/Examples:/app/Examples \
-  time-warp-studio
-
-# Windows (PowerShell)
-docker run -it --rm `
-  -v ${PWD}\Examples:C:\app\Examples `
+  -v "$(pwd)/Examples":/app/Examples \
   time-warp-studio
 ```
 
-#### Docker Issues
+---
 
-**No Display**:
+## 5. Troubleshooting
+
+### IDE doesn't appear in the Applications menu
+
 ```bash
-# Allow Docker to display windows
-xhost +local:docker  # Linux
+# Restart the desktop database
+update-desktop-database ~/.local/share/applications   # per-user install
+sudo update-desktop-database /usr/share/applications  # system install
 
-# Or use VNC for remote display
+# Or log out and log back in
+```
+
+### `time-warp-studio: command not found`
+
+- **System install**: `/usr/local/bin` should already be on `PATH`.
+  Check with `echo $PATH`.
+- **Per-user install**: Add `~/.local/bin` to your PATH:
+  ```bash
+  echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
+  source ~/.bashrc
+  ```
+
+### "Illegal instruction" crash
+
+Your CPU (or VM) is missing SSE4.2.  See §2 for the check command.
+
+### `qt.qpa.plugin: Could not load "xcb"`
+
+Missing X11 runtime libraries:
+
+```bash
+# Ubuntu / Debian
+sudo apt install libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 \
+                 libxcb-keysyms1 libxcb-render-util0
+
+# Fedora
+sudo dnf install xcb-util-cursor libxkbcommon-x11 xcb-util-wm \
+                 xcb-util-keysyms xcb-util-renderutil
+```
+
+### PySide6 fails to install into the venv
+
+```bash
+# Force-reinstall with a clean venv
+sudo ./install.sh --upgrade        # system install
+./install.sh --user --upgrade      # per-user install
+```
+
+### Dependencies out of date after a new release
+
+```bash
+sudo ./install.sh --upgrade        # system
+./install.sh --user --upgrade      # per-user
 ```
 
 ---
 
-### Method 4: Development Installation
+## 6. Updating & Uninstalling
 
-For contributors modifying source code:
+### Update to a new version
 
-```bash
-# 1. Fork and clone
-git clone https://github.com/YOUR_USERNAME/Time_Warp_Studio.git
-cd Time_Warp_Studio
-
-# 2. Create environment
-python3 -m venv venv
-source venv/bin/activate  # Linux/macOS or: venv\Scripts\activate (Windows)
-
-# 3. Install editable + dev dependencies
-pip install -e Platforms/Python[dev]
-
-# 4. Install development tools
-pip install black flake8 pylint mypy pytest pytest-cov
-
-# 5. Run tests to verify
-python test_runner.py --basic
-```
-
-This installs the project in "editable" mode so changes to source files immediately affect the running IDE.
-
----
-
-## Verification
-
-### Verify Successful Installation
-
-```bash
-# 1. Check Python version
-python --version
-# Output: Python 3.10.x or higher
-
-# 2. Check virtual environment active
-echo $VIRTUAL_ENV  # Linux/macOS
-echo %VIRTUAL_ENV%  # Windows
-
-# 3. Check imports work
-python -c "from time_warp.core.interpreter import Interpreter; print('✅ Interpreter imports!')"
-
-# 4. Check PySide6 installed
-python -c "from PySide6.QtWidgets import QApplication; print('✅ PySide6 imports!')"
-
-# 5. Run IDE
-python Platforms/Python/time_warp_ide.py
-```
-
-Expected output:
-```
-✅ Interpreter imports!
-✅ PySide6 imports!
-```
-
-Then IDE window should appear.
-
----
-
-## First Launch
-
-### Launch IDE
+Pull the latest source, then re-run the installer:
 
 ```bash
 cd Time_Warp_Studio
-source venv/bin/activate  # Linux/macOS: venv\Scripts\activate on Windows
-python Platforms/Python/time_warp_ide.py
+git pull
+
+sudo ./install.sh --upgrade        # system install
+# or
+./install.sh --user --upgrade      # per-user install
 ```
 
-### Initial Setup
+The `--upgrade` flag forces a complete dependency reinstall.
+Without it the sync is faster (application files only; venv kept as-is).
 
-1. **Language Selection**: Choose from BASIC, Logo, PILOT, C, Pascal, Prolog, Forth
-2. **Load Example**: File > Example > Choose program
-3. **Run Program**: Click Run or press Ctrl+Enter
-4. **Explore UI**: Check menus and feature panels
-
-### Connection Test
-
-In editor, try BASIC:
-```basic
-PRINT "Hello from Time Warp!"
-```
-
-Press **Ctrl+Enter** to run. Should see output in console.
-
----
-
-## Next Steps
-
-### After Installation
-
-1. **Read [USER_GUIDE.md](USER_GUIDE.md)** - Learn IDE features
-2. **Explore [Examples/](../Examples/)** - Study example programs
-3. **Try [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md)** - Learn language syntax
-4. **Read [Turtle Graphics](guides/04-turtle-graphics.md)** - Learn graphics
-
-### Getting Help
-
-- **Questions**: Check [FAQ](reference/faq.md)
-- **Problems**: See [Troubleshooting](guides/08-troubleshooting.md)
-- **Issues**: Report on GitHub Issues
-- **Email**: james@honey-badger.org
-
----
-
-## Uninstallation
-
-### Remove Time Warp Studio
+### Uninstall completely
 
 ```bash
-# 1. Remove virtual environment
-rm -rf venv              # Linux/macOS
-rmdir /s venv            # Windows
+sudo ./install.sh --uninstall      # removes system install
+./install.sh --user --uninstall    # removes per-user install
+```
 
-# 2. Remove cloned repo (optional)
-cd ..
-rm -rf Time_Warp_Studio  # Linux/macOS
-rmdir /s Time_Warp_Studio  # Windows
+This removes:
+- The application directory (`/opt/time-warp-studio` or `~/.local/share/time-warp-studio`)
+- The shell launcher
+- The `.desktop` menu entry
+- The icon
 
-# 3. Remove config (optional)
-rm -rf ~/.time_warp      # Linux/macOS
-rmdir %USERPROFILE%\.Time_Warp  # Windows
+User settings stored in `~/.time_warp/` are **not** removed.
+Delete them manually if desired:
+
+```bash
+rm -rf ~/.time_warp
 ```
 
 ---
 
-## Quick Reference
+## 7. Quick Reference
 
-### Common Commands
+### Launching
+
+| Method | Command |
+|---|---|
+| Terminal (system or per-user install) | `time-warp-studio` |
+| Desktop menu | Applications ▸ Development ▸ Time Warp Studio |
+| From source tree | `python Platforms/Python/time_warp_ide.py` |
+| Smart launcher (handles venv) | `python run.py` |
+
+### Installer commands
+
+| Task | Command |
+|---|---|
+| System install | `sudo ./install.sh` |
+| Per-user install | `./install.sh --user` |
+| System upgrade | `sudo ./install.sh --upgrade` |
+| Per-user upgrade | `./install.sh --user --upgrade` |
+| System uninstall | `sudo ./install.sh --uninstall` |
+| Per-user uninstall | `./install.sh --user --uninstall` |
+
+### File locations after install
+
+| Item | System install | Per-user install |
+|---|---|---|
+| Application | `/opt/time-warp-studio/` | `~/.local/share/time-warp-studio/` |
+| Launcher | `/usr/local/bin/time-warp-studio` | `~/.local/bin/time-warp-studio` |
+| Desktop entry | `/usr/share/applications/time-warp-studio.desktop` | `~/.local/share/applications/time-warp-studio.desktop` |
+| Icon | `/usr/share/icons/hicolor/256x256/apps/time-warp-studio.png` | `~/.local/share/icons/hicolor/256x256/apps/time-warp-studio.png` |
+| User config | `~/.time_warp/` | `~/.time_warp/` |
+
+### Test the installation
 
 ```bash
-# Activate virtual environment
-source venv/bin/activate    # Linux/macOS
-venv\Scripts\activate       # Windows
+# Verify the IDE imports are working
+/opt/time-warp-studio/.venv/bin/python -c \
+  "from time_warp.core.interpreter import Interpreter; print('✅ OK')"
 
-# Deactivate virtual environment
-deactivate
-
-# Run IDE
-python Platforms/Python/time_warp_ide.py
-
-# Run tests
-python test_runner.py --basic       # Quick tests
-python test_runner.py --comprehensive  # Full suite
-
-# Check Python version
-python --version
-
-# List installed packages
-pip list
-```
-
-### Useful Paths
-
-```
-Time_Warp_Studio/
-├── Platforms/Python/time_warp_ide.py  # Main entry point
-├── Examples/                          # Demo programs
-├── docs/                              # Documentation
-├── ~/.time_warp/                      # User config (after first run)
-└── venv/                              # Virtual environment
+# Run the full demo test suite (from the source directory)
+python test_all_demos.py
 ```
 
 ---
 
-## Hardware Notes
+*For more information see [USER_GUIDE.md](USER_GUIDE.md),
+[LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md), and the guides in [docs/guides/](guides/).*
 
-### Recommended Specifications
-
-For smooth experience:
-
-- **CPU**: Intel i5/i7 or AMD Ryzen 5/7+ (2020 or newer)
-- **RAM**: 8GB+ (4GB minimum works)
-- **GPU**: Dedicated GPU for graphics (integrated OK)
-- **Display**: 1920x1080+ at 60Hz+
-- **Storage**: SSD preferred (500MB minimum)
-
-### Performance Tips
-
-1. **Close other apps** - Frees system RAM
-2. **Use native window manager** - Avoid Wayland if possible
-3. **Check CPU features** - Run `grep SSSE3 /proc/cpuinfo` on Linux
-4. **Update GPU drivers** - Latest drivers improve performance
-5. **Use wired connection** - For remote/Docker setups
 
 ---
-
-## Getting Latest Updates
-
-### Check for Updates
-
-```bash
-cd Time_Warp_Studio
-git status
-```
-
-### Update to Latest
-
-```bash
-git pull origin main
-pip install --upgrade -e Platforms/Python
-```
-
-### Stay on Specific Version
-
-```bash
-git checkout v8.0.0  # Release tag
-git checkout main     # Latest development
-```
-
----
-
-## Installation Complete!
-
-You're ready to use Time Warp Studio. 
-
-👉 **Next**: Read [USER_GUIDE.md](USER_GUIDE.md) to learn the IDE
-👉 **Examples**: Check [Examples/](../Examples/) for sample programs
-👉 **Help**: See [FAQ](reference/faq.md) for common questions
-
-**Happy coding!** 🚀

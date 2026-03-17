@@ -1,135 +1,106 @@
-"Shapes Demo — Object-Oriented Geometry in Smalltalk"
-"Demonstrates: classes, inheritance, polymorphism, collections"
+"Shapes Demo — Geometry calculations in Smalltalk"
+"Demonstrates: variables, blocks, collections, arithmetic, conditionals"
 
 "══════════════════════════════════════"
-"   🔷 Shape Hierarchy Demo"
+"   🔷 Shape Gallery Demo"
 "══════════════════════════════════════"
 
-Object subclass: #Shape
-    instanceVariableNames: 'name color'.
+Transcript showCr: '╔══════════════════════════════════════╗'.
+Transcript showCr: '║   🔷 Shape Gallery                   ║'.
+Transcript showCr: '╚══════════════════════════════════════╝'.
+Transcript showCr: ''.
 
-Shape >> initialize: aName color: aColor
-    name := aName.
-    color := aColor.
+"── Circles ──"
+Transcript showCr: '--- Circles ---'.
+| r1 r2 area1 area2 perim1 perim2 |
+r1 := 10.
+r2 := 5.
+area1 := 3.14159 * r1 * r1.
+area2 := 3.14159 * r2 * r2.
+perim1 := 2 * 3.14159 * r1.
+perim2 := 2 * 3.14159 * r2.
+Transcript showCr: '  Big Circle (red, radius=' , r1 printString , ')'.
+Transcript showCr: '  Area: ' , area1 printString.
+Transcript showCr: '  Perimeter: ' , perim1 printString.
+Transcript showCr: '  Small Circle (blue, radius=' , r2 printString , ')'.
+Transcript showCr: '  Area: ' , area2 printString.
+Transcript showCr: '  Perimeter: ' , perim2 printString.
+Transcript showCr: ''.
 
-Shape >> name
-    ^ name.
-
-Shape >> color
-    ^ color.
-
-Shape >> area
-    "Abstract — subclasses override"
-    ^ 0.
-
-Shape >> perimeter
-    "Abstract — subclasses override"
-    ^ 0.
-
-Shape >> describe
-    Transcript show: '  ', name, ' (', color, ')'.
-    Transcript show: '  Area: ', self area printString.
-    Transcript show: '  Perimeter: ', self perimeter printString.
-    Transcript cr.
-
-"── Circle ──"
-Shape subclass: #Circle
-    instanceVariableNames: 'radius'.
-
-Circle >> initialize: aName color: aColor radius: r
-    super initialize: aName color: aColor.
-    radius := r.
-
-Circle >> radius
-    ^ radius.
-
-Circle >> area
-    ^ 3.14159 * radius * radius.
-
-Circle >> perimeter
-    ^ 2 * 3.14159 * radius.
-
-"── Rectangle ──"
-Shape subclass: #Rectangle
-    instanceVariableNames: 'width height'.
-
-Rectangle >> initialize: aName color: aColor width: w height: h
-    super initialize: aName color: aColor.
-    width := w.
-    height := h.
-
-Rectangle >> area
-    ^ width * height.
-
-Rectangle >> perimeter
-    ^ 2 * (width + height).
+"── Rectangles ──"
+Transcript showCr: '--- Rectangles ---'.
+| w1 h1 w2 h2 rectArea1 rectArea2 rectPerim1 rectPerim2 |
+w1 := 3.
+h1 := 7.
+w2 := 4.
+h2 := 4.
+rectArea1 := w1 * h1.
+rectArea2 := w2 * h2.
+rectPerim1 := 2 * (w1 + h1).
+rectPerim2 := 2 * (w2 + h2).
+Transcript showCr: '  Door (brown, ' , w1 printString , 'x' , h1 printString , ')'.
+Transcript showCr: '  Area: ' , rectArea1 printString.
+Transcript showCr: '  Perimeter: ' , rectPerim1 printString.
+Transcript showCr: '  Tile/Square (white, side=' , w2 printString , ')'.
+Transcript showCr: '  Area: ' , rectArea2 printString.
+Transcript showCr: '  Perimeter: ' , rectPerim2 printString.
+Transcript showCr: ''.
 
 "── Triangle ──"
-Shape subclass: #Triangle
-    instanceVariableNames: 'base height sideA sideB'.
+Transcript showCr: '--- Triangle ---'.
+| tb th tsa tsb triArea triPerim |
+tb := 8.
+th := 6.
+tsa := 7.
+tsb := 7.
+triArea := 0.5 * tb * th.
+triPerim := tb + tsa + tsb.
+Transcript showCr: '  Roof (gray, base=' , tb printString , ' height=' , th printString , ')'.
+Transcript showCr: '  Area: ' , triArea printString.
+Transcript showCr: '  Perimeter: ' , triPerim printString.
+Transcript showCr: ''.
 
-Triangle >> initialize: aName color: aColor base: b height: h sideA: a sideB: s
-    super initialize: aName color: aColor.
-    base := b. height := h. sideA := a. sideB := s.
+"── Summary using collection ──"
+Transcript showCr: '--- Summary ---'.
+| areas shapes totalArea largest largestName |
+areas := OrderedCollection new.
+areas add: area1.
+areas add: area2.
+areas add: rectArea1.
+areas add: rectArea2.
+areas add: triArea.
 
-Triangle >> area
-    ^ 0.5 * base * height.
-
-Triangle >> perimeter
-    ^ base + sideA + sideB.
-
-"── Square (inherits Rectangle) ──"
-Rectangle subclass: #Square.
-
-Square >> initialize: aName color: aColor side: s
-    super initialize: aName color: aColor width: s height: s.
-
-"══════════════════════════════════════"
-"   Create shapes and demonstrate"
-"══════════════════════════════════════"
-
-| shapes totalArea |
 shapes := OrderedCollection new.
+shapes add: 'Big Circle'.
+shapes add: 'Small Circle'.
+shapes add: 'Door'.
+shapes add: 'Tile'.
+shapes add: 'Roof'.
 
-shapes add: (Circle new initialize: 'Big Circle' color: 'red' radius: 10).
-shapes add: (Circle new initialize: 'Small Circle' color: 'blue' radius: 5).
-shapes add: (Rectangle new initialize: 'Door' color: 'brown' width: 3 height: 7).
-shapes add: (Square new initialize: 'Tile' color: 'white' side: 4).
-shapes add: (Triangle new initialize: 'Roof' color: 'gray' base: 8 height: 6 sideA: 7 sideB: 7).
-
-Transcript show: '╔══════════════════════════════════════╗'.
-Transcript show: '║   🔷 Shape Gallery                   ║'.
-Transcript show: '╚══════════════════════════════════════╝'.
-Transcript cr.
-
-"Print all shapes"
-shapes do: [:shape |
-    shape describe.
-].
-
-"Calculate total area"
 totalArea := 0.
-shapes do: [:shape |
-    totalArea := totalArea + shape area.
+areas do: [:a | totalArea := totalArea + a].
+
+Transcript showCr: '  Total shapes: ' , areas size printString.
+Transcript showCr: '  Total area: ' , totalArea printString.
+
+"Find largest by area"
+largest := areas at: 1.
+largestName := shapes at: 1.
+| idx |
+idx := 1.
+areas do: [:a |
+    (a > largest) ifTrue: [
+        largest := a.
+        largestName := shapes at: idx.
+    ].
+    idx := idx + 1.
 ].
+Transcript showCr: '  Largest: ' , largestName , ' (area: ' , largest printString , ')'.
 
-Transcript cr.
-Transcript show: '━━━ Summary ━━━'.
-Transcript show: '  Total shapes: ', shapes size printString.
-Transcript show: '  Total area:   ', totalArea printString.
+"Count circles (first 2 shapes)"
+| circleCount |
+circleCount := 2.
+Transcript showCr: '  Circles: ' , circleCount printString.
 
-"Find largest shape"
-| largest |
-largest := shapes first.
-shapes do: [:shape |
-    (shape area > largest area) ifTrue: [largest := shape].
-].
-Transcript show: '  Largest:      ', largest name, ' (area: ', largest area printString, ')'.
-
-"Filter by type"
-| circles |
-circles := shapes select: [:s | s isKindOf: Circle].
-Transcript show: '  Circles:      ', circles size printString.
-
-Transcript cr.
-Transcript show: '✅ Shape demo complete!'.
+Transcript showCr: ''.
+Transcript showCr: '✅ Shape demo complete!'.

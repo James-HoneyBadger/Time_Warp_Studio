@@ -247,7 +247,7 @@ class MainWindow(
 
         # Apply theme to current editor
         current_editor = self.get_current_editor()
-        if current_editor:
+        if current_editor and hasattr(current_editor, "highlighter"):
             theme_name = self.settings.value("theme", "Dracula")
             self.theme_manager.apply_theme(
                 theme_name,
@@ -2195,14 +2195,34 @@ class MainWindow(
         panel = self.feature_manager.get_feature_panel("syntax_validator")
         if panel and hasattr(panel, "validate_external"):
             issues = panel.validate_external(code, language)
-            if issues > 0:
-                choice = QMessageBox.question(
-                    self,
-                    "Syntax Issues Detected",
-                    (f"Syntax Validator found {issues} issues. " "Run anyway?"),
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
-                    QMessageBox.StandardButton.No,
+            if issues:
+                # Build a readable list of errors for the dialog
+                details = []
+                for issue in issues[:20]:  # Cap at 20 to keep dialog manageable
+                    sev = issue.severity.value if hasattr(issue.severity, "value") else str(issue.severity)
+                    details.append(f"Line {issue.line} [{sev}]: {issue.message}")
+                if len(issues) > 20:
+                    details.append(f"... and {len(issues) - 20} more issues")
+                detail_text = "\n".join(details)
+
+                msg = QMessageBox(self)
+                msg.setIcon(QMessageBox.Icon.Warning)
+                msg.setWindowTitle("Syntax Issues Detected")
+                msg.setText(f"Syntax Validator found {len(issues)} issue(s):")
+                msg.setDetailedText(detail_text)
+                msg.setInformativeText("Run anyway?")
+                msg.setStandardButtons(
+                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
                 )
+                msg.setDefaultButton(QMessageBox.StandardButton.No)
+                choice = msg.exec()
+
+                # Show the validator panel so the user can review all issues
+                dock = self.feature_manager.dock_widgets.get("syntax_validator")
+                if dock:
+                    dock.setVisible(True)
+                    dock.raise_()
+
                 return choice == QMessageBox.StandardButton.Yes
         return True
 

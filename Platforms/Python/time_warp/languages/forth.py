@@ -200,7 +200,9 @@ class ForthExecutor:
         d["BK"] = self._bk
         d["BACK"] = self._bk
         d["RT"] = self._rt
+        d["RIGHT"] = self._rt
         d["LT"] = self._lt_turn
+        d["LEFT"] = self._lt_turn
         d["PU"] = self._pu
         d["PENUP"] = self._pu
         d["PD"] = self._pd
@@ -210,7 +212,13 @@ class ForthExecutor:
         d["CLEARSCREEN"] = self._clean
         d["CS"] = self._clean
         d["PEN"] = self._pen
-        d["SETPENCOLOR"] = self._pen
+        d["SETPENCOLOR"] = self._setpencolor_rgb
+        d["SETPENWIDTH"] = self._setpenwidth
+        d["SETXY"] = self._setxy
+        d["HIDETURTLE"] = self._hideturtle
+        d["HT"] = self._hideturtle
+        d["SHOWTURTLE"] = self._showturtle
+        d["ST"] = self._showturtle
         d["XCOR"] = self._xcor
         d["YCOR"] = self._ycor
         d["HEADING"] = self._heading
@@ -995,6 +1003,38 @@ class ForthExecutor:
                 15: "TEAL",
             }
             self.turtle.pencolor(color_map.get(color_idx, "WHITE"))
+
+    def _setpencolor_rgb(self):
+        """SETPENCOLOR with 3 RGB values on the stack: b g r SETPENCOLOR"""
+        if self.turtle is None:
+            return
+        if len(self.stack) >= 3:
+            b = max(0, min(255, int(self.stack.pop())))
+            g = max(0, min(255, int(self.stack.pop())))
+            r = max(0, min(255, int(self.stack.pop())))
+            self.turtle.setcolor(r, g, b)
+        elif len(self.stack) == 1:
+            self._pen()
+
+    def _setpenwidth(self):
+        if self.stack and self.turtle:
+            w = max(1, min(100, int(self.stack.pop())))
+            if hasattr(self.turtle, "setpenwidth"):
+                self.turtle.setpenwidth(w)
+
+    def _setxy(self):
+        if len(self.stack) >= 2 and self.turtle:
+            y = self.stack.pop()
+            x = self.stack.pop()
+            self.turtle.goto(x, y)
+
+    def _hideturtle(self):
+        if self.turtle:
+            self.turtle.hideturtle()
+
+    def _showturtle(self):
+        if self.turtle:
+            self.turtle.showturtle()
 
     def _xcor(self):
         if self.turtle:

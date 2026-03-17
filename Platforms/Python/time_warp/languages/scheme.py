@@ -883,6 +883,12 @@ class SchemeEnvironment:
                 "last-pair": lambda lst: [lst[-1]] if lst else [],
                 "list-head": lambda lst, k: lst[: int(k)],
                 "zip": lambda *lsts: [list(x) for x in zip(*lsts)],
+                # Mutation
+                "set-car!": lambda lst, val: lst.__setitem__(0, val) or None,
+                "set-cdr!": lambda lst, val: (
+                    lst.__setitem__(slice(1, None), val if isinstance(val, list) else [val])
+                    or None
+                ),
                 "reduce": lambda f, init, lst: (
                     lambda: __import__("functools").reduce(f, lst, init)
                 )(),

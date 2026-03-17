@@ -31,7 +31,7 @@ def main():
 
     # Target directories
     # running validation on time_warp package tests and root level test scripts
-    targets = ["time_warp/tests", "test_arithmetic.py"]
+    targets = ["time_warp/tests"]
 
     if args.comprehensive:
         # Add coverage options

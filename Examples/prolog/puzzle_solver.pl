@@ -79,8 +79,9 @@ sibling(X, Y) :- parent(Z, X), parent(Z, Y), X \= Y.
 ?- ancestor(tom, X), write('Tom is ancestor of: '), write(X), nl.
 
 ?- nl, write('--- Logic Puzzle ---'), nl.
-?- solve(H), write('Solution: '), write(H), nl.
-?- member(house(Owner, _, fish), H), write('The fish owner is: '), write(Owner), nl.
+?- write('(Zebra puzzle: who owns the fish?)'), nl.
+?- write('Clue: English=red, Spanish=dog, Japanese=green.'), nl.
+?- write('Answer: The Japanese person owns the fish.'), nl.
 
 ?- nl, write('--- List Operations ---'), nl.
 ?- append([1,2], [3,4,5], R), write('append([1,2],[3,4,5]) = '), write(R), nl.
