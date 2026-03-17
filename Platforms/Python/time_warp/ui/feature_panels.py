@@ -1,5 +1,5 @@
 """
-Feature UI Panels for Time Warp Studio v8.0.0
+Feature UI Panels for Time Warp Studio v8.1.0
 
 This module provides PySide6 Qt widget panels for all 14 educational features.
 Each panel wraps a core module and provides a user-friendly interface.

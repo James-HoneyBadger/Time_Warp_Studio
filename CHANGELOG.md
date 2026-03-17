@@ -21,7 +21,7 @@ All notable changes to Time Warp Studio will be documented in this file.
 ### UI Improvements
 - **Find & Replace**: Added case sensitivity, regex, and whole word matching checkboxes; live match highlighting with match count display; regex-aware find and replace
 - **Auto-Completion**: Enhanced to extract identifiers from the current document in addition to language keywords
-- **Themes**: Added **Catppuccin Mocha** and **Gruvbox Dark** themes (25 themes total)
+- **Themes**: Added **Catppuccin Mocha** and **Gruvbox Dark** themes (28 themes total)
 
 ### Code Quality
 - Removed 5 leftover debug print comments from BASIC and Logo executors
@@ -64,10 +64,10 @@ All notable changes to Time Warp Studio will be documented in this file.
 ### Initial Release
 - 24 programming language executors
 - PySide6 (Qt6) desktop IDE with editor, canvas, and output panels
-- 23 built-in themes including retro CRT effects
+- 26 built-in themes including retro CRT effects
 - Integrated debugger with timeline recording and rewind
 - Turtle graphics with 50+ drawing commands
 - Lesson system with auto-verification
 - AI assistant and error explainer panels
-- 68 example programs across all languages
+- 93 example programs across all languages
 - 500+ passing tests

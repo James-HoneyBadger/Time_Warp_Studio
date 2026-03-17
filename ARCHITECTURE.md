@@ -1,6 +1,6 @@
 # Architecture Guide
 
-**Time Warp Studio v8.0.0 — System Design and Implementation**
+**Time Warp Studio v8.1.0 — System Design and Implementation**
 
 ---
 
@@ -466,20 +466,18 @@ self.action_show_new.triggered.connect(self.new_panel.show)
 
 ### Adding a Theme
 
-1. Define in `tools/theme.py`:
+1. Define in `ui/themes.py` by adding a new `Theme(...)` entry to the themes dict:
 
 ```python
-THEME_CUSTOM = {
-    "name": "Custom",
-    "colors": {
-        "background": "#ffffff",
-        "foreground": "#000000",
-        # ... colors for all UI elements
-    }
-}
+"My Custom": Theme(
+    bg="#1e1e2e",
+    fg="#cdd6f4",
+    accent="#89b4fa",
+    # ... colors for all UI elements
+),
 ```
 
-2. Add to THEMES list - automatically available in menu
+2. The theme is automatically available in the theme menu
 
 ---
 
@@ -532,24 +530,24 @@ Contains:
 
 ### Theme System
 
-23 built-in themes:
-- Dracula - Purple dark theme
-- Monokai - Classic editor
-- Solarized Dark - Low contrast
-- Ocean - Blue palette
-- Spring - Green/pastels
-- Sunset - Warm oranges
-- Candy - Bright pastels
-- Forest - Deep greens
+28 built-in themes organized by category:
 
-Custom themes can be created and saved.
+**Dark (11):** Dracula, Monokai, VS Code Dark, GitHub Dark, Nord, One Dark Pro, Solarized Dark, Ocean, Catppuccin Mocha, Gruvbox Dark, Tokyo Night
+
+**Light (6):** Gruvbox Light, Catppuccin Latte, VS Code Light, GitHub Light, Solarized Light, Spring
+
+**Specialty (2):** High Contrast Dark, High Contrast Light
+
+**Accessibility (2):** Dyslexia Friendly, Accessible Dark Blue
+
+**Retro CRT (7):** Amber Monochrome, Green Monochrome, IBM PC CGA, Commodore 64, Apple II, DOS Blue, ZX Spectrum
 
 ---
 
 ## Module Overview
 
 ### Core (`core/`)
-- `interpreter.py` - Main dispatcher (1100+ lines)
+- `interpreter.py` - Main dispatcher (1400+ lines)
 - `game_support.py` - Game state and timers
 - `accessibility.py` - Accessibility features
 - `ai_assistant.py` - AI code suggestions
@@ -568,8 +566,9 @@ Custom themes can be created and saved.
 - `themes.py` - Theme application
 
 ### Tools (`tools/`)
-- `theme.py` - Theme definitions (23 themes)
+- `deploy.sh` - Deployment script
 - `startup.py` - Startup sequence manager
+- `wasm.mk` - WebAssembly build rules
 
 ---
 

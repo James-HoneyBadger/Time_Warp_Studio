@@ -54,7 +54,7 @@ Python/
 │   │   ├── editor.py             # Code editor with syntax highlighting
 │   │   └── canvas.py             # Turtle graphics rendering canvas
 │   └── tests/
-│       └── [4 test files]        # Comprehensive pytest suite (55 tests)
+│       └── [41 test files]       # Comprehensive pytest suite (1,700+ tests)
 ├── requirements.txt              # Production dependencies
 ├── requirements-dev.txt          # Development dependencies
 ├── test_runner.py                # Test orchestration with reporting
@@ -79,7 +79,7 @@ Python/
 
 **Learning Tools:**
 - 📚 Lesson System - Step-by-step guided lessons with checkpoints
-- 📖 Examples Browser - Searchable catalog of 69 example programs
+- 📖 Examples Browser - Searchable catalog of 93 example programs
 - 🐢 Turtle Preview - Live visualization while coding
 
 **Productivity:**

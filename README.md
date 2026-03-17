@@ -318,7 +318,7 @@ Browse 93 more examples in the [Examples/](Examples/) directory or through **Fil
 |----------|-------------|
 | [FAQ](docs/reference/faq.md) | Frequently asked questions |
 | [Documentation Index](docs/INDEX.md) | Full documentation listing |
-| [Examples README](Examples/README.md) | Example programs guide |
+| [Examples Catalog](Examples/CATALOG.md) | Example programs catalog |
 
 ---
 
@@ -370,9 +370,8 @@ Time_Warp_Studio/
 │       │   └── feature_panels.py  # 14 feature panels
 │       ├── graphics/              # Turtle graphics engine
 │       ├── features/              # Lessons, autosave, etc.
-│       ├── cloud/                 # Cloud sync services
 │       ├── debugging/             # Integrated debugger
-│       └── tests/                 # Test suite (34 tests)
+│       └── tests/                 # Test suite (41 test files)
 │
 ├── Examples/                      # 93 example programs across 24 languages
 │   ├── basic/       (5)  ├── logo/        (5)  ├── pilot/       (3)
@@ -426,7 +425,7 @@ python Platforms/Python/time_warp_ide.py
 |--------|---------------|
 | Startup time | 2–5 seconds |
 | Memory usage | 200–300 MB |
-| Codebase | 56,000+ lines across 126 Python modules |
+| Codebase | 56,000+ lines across 130+ Python modules |
 
 ---
 
@@ -451,7 +450,7 @@ PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
 RUN_BACKEND_INTEGRATION=1 PYTHONPATH=Platforms/Python pytest Platforms/backend/tests -q
 ```
 
-**Current status:** 500+ tests passing across 36+ test modules covering all 24 language executors, graphics, GUI, and interpreter tests.
+**Current status:** 1,700+ tests passing across 41 test modules covering all 24 language executors, graphics, GUI, and interpreter tests.
 
 ---
 

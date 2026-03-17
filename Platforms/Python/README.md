@@ -41,7 +41,7 @@ The **desktop implementation** of Time Warp Studio provides a native application
 - 🎨 **Modern PySide6 UI**: Professional desktop interface
 - 🐢 **Interactive Canvas**: Zoom/pan turtle graphics with coordinate axes
 - 📝 **Code Editor**: Syntax highlighting and line numbers
-- 🎨 **23 Themes**: Dark, Light, Dracula, Monokai, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized Dark/Light, Ocean, Spring, retro (CGA, C64, Apple II, DOS Blue, ZX Spectrum), and more
+- 🎨 **28 Themes**: Dark, Light, Dracula, Monokai, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized Dark/Light, Ocean, Spring, retro (CGA, C64, Apple II, DOS Blue, ZX Spectrum), High Contrast, Accessibility, and more
 - 📁 **File Management**: Open/save with recent files history
 - ▶️ **Execution Controls**: Run (F5), Stop (Shift+F5), Clear
 - 📊 **Output Panel**: Colored text with emoji indicators
@@ -49,7 +49,7 @@ The **desktop implementation** of Time Warp Studio provides a native application
 
 ### Educational Features
 
-- 📚 **69 Example Programs**: All language styles and difficulty levels
+- 📚 **93 Example Programs**: All language styles and difficulty levels
 - 📖 **Comprehensive Docs**: Turtle graphics reference and guides
 - 💡 **Safe Execution**: Timeout protection and iteration limits
 - 🧪 **Full Test Suite**: Verified correctness of all commands
@@ -127,7 +127,7 @@ python time_warp_ide.py
 - 🐢 Interactive turtle graphics canvas with zoom/pan
 - 📊 Multi-tab output panel (Text + Graphics)
 - 💾 File operations with recent files menu
-- 🌈 23 beautiful color themes (dark, light, retro, modern with syntax highlighting for all)
+- 🌈 28 beautiful color themes (dark, light, retro, modern with syntax highlighting for all)
 - ⚡ Run/Stop execution with real-time feedback
 - 🎯 Auto-switch to Graphics tab when drawing
 
@@ -208,7 +208,7 @@ time_warp/
     ├── main_window.py         # PySide6 main window
     ├── canvas.py              # Turtle graphics canvas
     ├── code_editor.py         # Syntax-aware editor
-    └── theme_manager.py       # Theme system (23 themes)
+    └── themes.py              # Theme system (28 themes)
 ```
 
 **Key Design:** Time Warp is a **unified environment** - BASIC, PILOT, and Logo commands work together in a single program. The `interpreter.py` engine handles all three syntaxes seamlessly.

@@ -17,39 +17,43 @@ Settings are automatically saved to `~/.time_warp/config.json`.
 
 Change the IDE appearance with built-in themes:
 
-**Available Themes:**
+**Available Themes (28):**
 
-1. **Dracula** - Dark theme with purple and pink accents
-   - Excellent for night coding
-   - Easy on the eyes for long sessions
+**Dark Themes:**
+- **Dracula** — Purple and pink accents, excellent for night coding
+- **Monokai** — Classic bright syntax colors on dark background
+- **VS Code Dark** — Familiar dark theme from Visual Studio Code
+- **GitHub Dark** — GitHub's dark color scheme
+- **Nord** — Arctic, north-bluish color palette
+- **One Dark Pro** — Atom editor's popular dark theme
+- **Solarized Dark** — Science-backed low-contrast dark theme
+- **Ocean** — Blue-based calming dark theme
+- **Catppuccin Mocha** — Warm pastel dark theme
+- **Gruvbox Dark** — Retro groove warm dark theme
+- **Tokyo Night** — Clean dark theme inspired by Tokyo city lights
 
-2. **Monokai** - Dark background with bright syntax colors
-   - Popular in professional editors
-   - High contrast for clarity
+**Light Themes:**
+- **Gruvbox Light** — Retro groove warm light theme
+- **Catppuccin Latte** — Warm pastel light theme
+- **VS Code Light** — Familiar light theme from Visual Studio Code
+- **GitHub Light** — GitHub's light color scheme
+- **Solarized Light** — Science-backed low-contrast light theme
+- **Spring** — Fresh, vibrant light theme for daytime use
 
-3. **Solarized Dark** - Science-backed dark theme
-   - Reduced eye strain
-   - Balanced colors
+**Accessibility Themes:**
+- **High Contrast Dark** — Maximum contrast dark theme
+- **High Contrast Light** — Maximum contrast light theme
+- **Dyslexia Friendly** — Optimized fonts and spacing for readability
+- **Accessible Dark Blue** — High-contrast blue dark theme
 
-4. **Ocean** - Blue-based dark theme
-   - Calming color palette
-   - Good for focused work
-
-5. **Spring** - Light, vibrant theme
-   - Great for daytime use
-   - Fresh, energetic feel
-
-6. **Sunset** - Warm, orange/red tones
-   - Comfortable for evening work
-   - Stylish appearance
-
-7. **Candy** - Bright, playful colors
-   - Fun for learning environments
-   - High visibility
-
-8. **Forest** - Green-based natural theme
-   - Restful to the eyes
-   - Unique appearance
+**Retro CRT Themes:**
+- **Amber Monochrome** — Classic amber phosphor terminal look
+- **Green Monochrome** — Classic green phosphor terminal look
+- **IBM PC CGA** — 1980s IBM PC Color Graphics Adapter colors
+- **Commodore 64** — The iconic C64 blue-and-white palette
+- **Apple II** — Apple II green-screen aesthetic
+- **DOS Blue** — MS-DOS text mode blue screen
+- **ZX Spectrum** — ZX Spectrum bright color palette
 
 **How to Change Theme:**
 

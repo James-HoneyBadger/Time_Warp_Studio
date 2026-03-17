@@ -1,10 +1,10 @@
 """
 Time Warp Studio - Python Implementation
 Educational programming environment supporting 24 languages
-Aligned with Time Warp Studio v8.0.0 release
+Aligned with Time Warp Studio v8.1.0 release
 """
 
-__version__ = "8.0.0"
+__version__ = "8.1.0"
 __author__ = "James-HoneyBadger"
 
 from typing import TYPE_CHECKING, Any
