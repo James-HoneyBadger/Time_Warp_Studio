@@ -69,3 +69,4 @@ DIRECTORY_TREE.txt
 
 # Broken pip artifacts (files named like version specifiers)
 =*
+*.log

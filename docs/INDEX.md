@@ -81,6 +81,7 @@ Start here if you're new to Time Warp Studio:
 
 Deep dives into specific IDE features:
 
+- **[Debugger Guide](DEBUGGER_GUIDE.md)** - Step-through debugging with timeline recording and rewind
 - **[Turtle Graphics](guides/04-turtle-graphics.md)** - Master Logo turtle graphics, colors, and animations
 - **[Settings & Themes](guides/06-settings.md)** - Customize appearance with 28 themes or create your own
 - **[Keyboard Shortcuts](guides/07-shortcuts.md)** - Speed up your workflow with essential shortcuts
@@ -236,6 +237,7 @@ docs/
 │   ├── 02-ide-basics.md
 │   ├── 03-lessons.md
 │   ├── 04-turtle-graphics.md
+│   ├── 05-debugger.md
 │   ├── 06-settings.md
 │   ├── 07-shortcuts.md
 │   └── 08-troubleshooting.md

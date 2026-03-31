@@ -1,6 +1,8 @@
 """
-Core interpreter for Time Warp Studio
-Time Warp interpreter for executing code in multiple languages
+Core interpreter for Time Warp Studio.
+
+Central dispatcher for 24 language executors. Manages execution state,
+variable storage, and turtle graphics coordination.
 """
 
 # The interpreter is intentionally large and exposes many public methods
@@ -13,18 +15,6 @@ import logging
 import re
 import threading
 import time
-
-# Enhanced logging for structured error handling
-
-# Structured logging setup
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("interpreter.log"),
-        logging.StreamHandler()
-    ]
-)
 
 logger = logging.getLogger(__name__)
 from dataclasses import dataclass

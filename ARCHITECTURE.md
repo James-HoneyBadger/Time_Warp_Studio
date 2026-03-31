@@ -560,28 +560,71 @@ Contains:
 ## Module Overview
 
 ### Core (`core/`)
-- `interpreter.py` - Main dispatcher (1400+ lines)
-- `game_support.py` - Game state and timers
-- `accessibility.py` - Accessibility features
-- `ai_assistant.py` - AI code suggestions
-- `chat_service.py` - Chat integration
-- Support modules (analytics, collaboration, etc.)
+- `interpreter.py` — Main dispatcher (~1,500 lines, 24 language executors)
+- `debugger.py` — Step-through debugger with execution timeline and rewind
+- `sql_engine.py` — SQLite-backed T-SQL compatibility layer
+- `orchestrator.py` — System integration and component registry
+- `config.py` — Canonical paths (`~/.time_warp/`) and settings
+- `hardware_simulator.py` — Simulation-first IoT hardware support
+- `plugin_system.py` — Plugin architecture (future extensibility)
+- `game_support.py` — Game state, timers, and input handling
+- `accessibility.py` — Accessibility features and screen reader support
+- `ai_assistant.py` — AI-powered code suggestions
+- `ai_suggestions.py` — Contextual suggestion engine
+- `cloud_storage.py` — Cloud file storage (optional)
+- `hardware_integration.py` — Physical hardware bridging (optional)
+- Support modules (analytics, collaboration, chat, etc.)
 
 ### Languages (`languages/`)
-- `basic.py`, `logo.py`, `pilot.py`, `c_lang_fixed.py`, `pascal.py`, `prolog.py`, `forth.py`
+- `base.py` — Executor protocol definition
+- **Line-by-line executors (7):** `basic.py`, `pilot.py`, `logo.py`, `c_lang_fixed.py`, `pascal.py`, `prolog.py`, `forth.py`
+- **Whole-program executors (17):** `python.py`, `lua.py`, `scheme.py`, `cobol.py`, `brainfuck.py`, `assembly.py`, `javascript.py`, `fortran.py`, `rexx.py`, `smalltalk.py`, `hypertalk.py`, `haskell.py`, `apl.py`, `sql.py`, `jcl.py`, `cics.py`, `sqr.py`
+- `lang_utils.py`, `parser_patterns.py` — Shared parsing utilities
 
 ### UI (`ui/`)
-- `main_window.py` - Main IDE window (3300+ lines)
-- `editor.py` - Code editor
-- `canvas.py` - Graphics canvas
-- `output.py` - Console output
-- `feature_panels.py` - 14 specialized panels
-- `themes.py` - Theme application
+- `main_window.py` — Main IDE window (6 mixins, 3,300+ lines)
+- `editor.py` — Code editor with syntax highlighting and minimap
+- `canvas.py` — Turtle graphics canvas with zoom/pan
+- `output.py` — Console output with interpreter threads
+- `themes.py` — 28-theme manager (dark, light, retro CRT, accessibility)
+- `debug_panel.py` — Debugger controls, watch, and call-stack
+- `command_palette.py` — Ctrl+Shift+P command palette
+- `feature_panels.py` — 14 dynamic feature panels
+- `mixins/` — Collaboration, classroom, debug, export, file ops, help
+
+### Graphics (`graphics/`)
+- `turtle_state.py` — Turtle position, heading, pen state (~600 lines)
+- `art_toolkit.py` — Drawing primitives and shapes
+- `pixel_canvas.py` — Pixel-level canvas operations
+- `turtle_gallery.py` — Pre-built turtle art examples
+
+### Features (`features/`)
+- `lesson_system.py` — Step-by-step lessons with checkpoints
+- `examples_browser.py` — Searchable 93-program catalog
+- `turtle_preview.py` — Live Logo code preview
+- `theme_editor.py` — Custom theme creation
+- `autosave_manager.py` — Background autosave with versioning
+- `achievements.py` — Gamified progress tracking
+- `classroom_mode.py` — Teaching and presentation tools
+- `reference_search.py` — Quick documentation lookup
+
+### Utils (`utils/`)
+- `expression_evaluator.py` — Safe math eval (hand-written parser, no `eval()`)
+- `string_evaluator.py` — String expression evaluation
+- `error_hints.py` — Syntax error suggestions
+- `validators.py` — Input validation helpers
+- `code_formatter.py` — Code formatting utilities
+- `logging_config.py` — Structured logging setup
+
+### Tests (`tests/`)
+- 41+ test files covering all 24 language executors, graphics, GUI, and interpreter
+- `conftest.py`, `conftest_lang.py` — Shared fixtures and helpers
+- `test_runner.py` — Orchestration with HTML coverage reports
 
 ### Tools (`tools/`)
-- `deploy.sh` - Deployment script
-- `startup.py` - Startup sequence manager
-- `wasm.mk` - WebAssembly build rules
+- `deploy.sh` — Deployment automation
+- `startup.py` — Startup sequence manager
+- `wasm.mk` — WebAssembly build rules (experimental)
 
 ---
 
@@ -619,9 +662,11 @@ Contains:
 
 ```bash
 pytest tests/ -v                           # Run tests
-python test_runner.py --comprehensive     # Full suite
+python test_runner.py --comprehensive     # Full suite with coverage reports
+python test_runner.py --basic             # Quick smoke tests
+python test_runner.py --parallel          # Parallel execution (pytest-xdist)
 black --check .                            # Check formatting
-flake8 time_warp                          # Linting
+ruff check time_warp                       # Fast linting
 mypy time_warp --strict                   # Type check
 ```
 
@@ -637,6 +682,8 @@ mypy time_warp --strict                   # Type check
 ---
 
 **For more details:**
-- [README.md](README.md) - Project overview
-- [CONTRIBUTING.md](CONTRIBUTING.md) - Contributing
+- [README.md](README.md) — Project overview and quick start
+- [CONTRIBUTING.md](CONTRIBUTING.md) — Contribution guidelines
+- [CHANGELOG.md](CHANGELOG.md) — Version history
+- [ROADMAP.md](ROADMAP.md) — Development roadmap
 - Source: `Platforms/Python/time_warp/`

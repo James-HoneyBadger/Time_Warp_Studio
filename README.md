@@ -66,7 +66,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Code Editor** — Syntax highlighting, line numbers, and auto-indentation per language
 - **Output Console** — Program results, error messages, and interactive input
 - **Graphics Canvas** — Real-time turtle graphics rendering with zoom and pan
-- **Theme System** — 25 built-in themes (Dracula, Monokai, Catppuccin Mocha, Gruvbox Dark, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized, retro CRT, and more)
+- **Theme System** — 28 built-in themes (Dracula, Monokai, Catppuccin Mocha, Gruvbox Dark, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized, retro CRT, and more)
 - **Find & Replace** — Advanced search with regex, case sensitivity, whole word matching, and live match highlighting
 - **Auto-Completion** — Context-aware completions from language keywords and document identifiers
 - **14 Feature Panels** — Lessons, AI Assistant, Error Explainer, Examples Browser, Turtle Inspector, Debugger, and more
@@ -328,71 +328,77 @@ Browse 93 more examples in the [Examples/](Examples/) directory or through **Fil
 Time_Warp_Studio/
 ├── run.py                         # Smart launcher (auto-setup + launch)
 ├── run.sh                         # Shell wrapper for Linux/macOS
+├── Makefile                       # Build automation targets
+├── Dockerfile                     # Production container image
+├── docker-compose.yml             # Multi-service orchestration
+│
 ├── README.md                      # This file
 ├── ARCHITECTURE.md                # System design document
+├── CHANGELOG.md                   # Version history and release notes
 ├── CONTRIBUTING.md                # Contributor guide
+├── ROADMAP.md                     # Development roadmap (Q2–Q4 2026)
+├── SECURITY.md                    # Vulnerability reporting policy
 ├── LICENSE                        # MIT License
 │
 ├── Platforms/Python/              # Main application source
 │   ├── time_warp_ide.py           # IDE entry point
+│   ├── test_runner.py             # Test orchestration with HTML reports
 │   └── time_warp/
 │       ├── core/                  # Interpreter engine and services
-│       │   └── interpreter.py     # Central command dispatcher
+│       │   ├── interpreter.py     # Central command dispatcher (~1,500 lines)
+│       │   ├── debugger.py        # Step-through debugger with timeline
+│       │   ├── sql_engine.py      # SQLite-backed T-SQL compatibility
+│       │   ├── orchestrator.py    # System integration / component registry
+│       │   └── config.py          # Canonical paths (~/.time_warp/)
 │       ├── languages/             # 24 language executors
+│       │   ├── base.py            # Executor protocol definition
 │       │   ├── basic.py           # BASIC with Turbo graphics
 │       │   ├── logo.py            # Logo turtle graphics
 │       │   ├── pilot.py           # PILOT CAI system
-│       │   ├── c_lang_fixed.py    # C language subset
-│       │   ├── pascal.py          # Pascal programming
-│       │   ├── prolog.py          # Prolog logic engine
-│       │   ├── forth.py           # Forth stack machine
-│       │   ├── python.py          # Python sandbox executor
-│       │   ├── lua.py             # Lua scripting
-│       │   ├── javascript.py      # JavaScript interpreter
-│       │   ├── haskell.py         # Haskell functional
-│       │   ├── scheme.py          # Scheme/Lisp dialect
-│       │   ├── smalltalk.py       # Smalltalk OO
-│       │   ├── rexx.py            # REXX scripting
-│       │   ├── brainfuck.py       # Brainfuck esoteric
-│       │   ├── cobol.py           # COBOL business
-│       │   ├── fortran.py         # Fortran scientific
-│       │   ├── assembly.py        # x86 Assembly
-│       │   ├── apl.py             # APL array language
-│       │   ├── hypertalk.py       # HyperTalk
-│       │   ├── jcl.py             # JCL mainframe
-│       │   ├── cics.py            # CICS transactions
-│       │   ├── sql.py             # SQL queries
-│       │   └── sqr.py             # SQR reporting
-│       ├── ui/                    # PySide6 UI components
-│       │   ├── main_window.py     # Main IDE window
-│       │   ├── editor.py          # Code editor widget
-│       │   ├── canvas.py          # Graphics canvas
-│       │   └── feature_panels.py  # 14 feature panels
-│       ├── graphics/              # Turtle graphics engine
-│       ├── features/              # Lessons, autosave, etc.
-│       ├── debugging/             # Integrated debugger
-│       └── tests/                 # Test suite (41 test files)
+│       │   ├── python.py          # Python sandboxed executor
+│       │   └── ...                # 20 more language executors
+│       ├── ui/                    # PySide6 (Qt6) UI components
+│       │   ├── main_window.py     # Main IDE window (6 mixins)
+│       │   ├── editor.py          # Code editor with syntax highlighting
+│       │   ├── canvas.py          # Turtle graphics canvas
+│       │   ├── themes.py          # 28-theme manager
+│       │   ├── output.py          # Output panel + interpreter threads
+│       │   ├── debug_panel.py     # Debugger controls/watch/call-stack
+│       │   ├── command_palette.py # Ctrl+Shift+P command palette
+│       │   ├── feature_panels.py  # 14 dynamic feature panels
+│       │   └── mixins/            # Collaboration, classroom, debug, etc.
+│       ├── graphics/              # Turtle state and rendering
+│       │   └── turtle_state.py    # Position, heading, pen state (~600 lines)
+│       ├── features/              # Lessons, autosave, achievements, etc.
+│       ├── utils/                 # Expression evaluator, error hints, etc.
+│       └── tests/                 # 41+ test files (1,700+ tests)
 │
 ├── Examples/                      # 93 example programs across 24 languages
-│   ├── basic/       (5)  ├── logo/        (5)  ├── pilot/       (3)
-│   ├── c/           (5)  ├── pascal/      (4)  ├── prolog/      (4)
-│   ├── cobol/       (5)  ├── sqr/         (4)  ├── fortran/     (3)
-│   ├── haskell/     (3)  ├── javascript/  (4)  ├── assembly/    (3)
-│   ├── apl/         (3)  ├── hypertalk/   (3)  ├── brainfuck/   (3)
-│   ├── forth/       (3)  ├── lua/         (4)  ├── rexx/        (3)
-│   ├── scheme/      (4)  ├── smalltalk/   (3)  ├── python/      (5)
-│   ├── sql/         (4)  ├── cics/        (4)  ├── jcl/         (5)
-│   └── demo/        (1)  # cross-language showcases
+│   ├── CATALOG.md                 # Searchable example index
+│   ├── basic/ (5)   logo/ (5)     pilot/ (3)    c/ (5)
+│   ├── pascal/ (4)  prolog/ (4)   cobol/ (5)    sqr/ (4)
+│   ├── fortran/ (3) haskell/ (3)  javascript/ (4) assembly/ (3)
+│   ├── apl/ (3)     hypertalk/ (3) brainfuck/ (3) forth/ (3)
+│   ├── lua/ (4)     rexx/ (3)    scheme/ (4)   smalltalk/ (3)
+│   ├── python/ (5)  sql/ (4)     cics/ (4)     jcl/ (5)
+│   └── demo/ (2)    # Cross-language showcases
+│
+├── HB_Banking/                    # Banking/ERP demo application
+│   ├── main.py                    # CLI entry point
+│   ├── gui_main.py                # PySide6 GUI
+│   └── modules/                   # Accounts, transactions, reports
 │
 ├── docs/                          # Documentation
-│   ├── INDEX.md                   # Documentation index
-│   ├── guides/                    # How-to guides
-│   ├── tutorials/                 # Language tutorials
-│   └── reference/                 # FAQ and reference
+│   ├── INDEX.md                   # Documentation hub
+│   ├── guides/                    # 8 progressive how-to guides
+│   ├── tutorials/                 # 24 language-specific tutorials
+│   └── reference/                 # FAQ and reference material
 │
-├── Scripts/                       # Build and utility scripts
-├── tools/                         # Development tools
-└── .github/                       # GitHub CI/CD configuration
+├── Scripts/                       # Build, launch, and utility scripts
+├── tools/                         # Deployment and startup tools
+├── docker/                        # Nginx, supervisord, health checks
+├── packaging/linux/               # Desktop shortcut and icon
+└── .github/                       # CI/CD workflows (10) and templates
 ```
 
 ---

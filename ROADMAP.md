@@ -1,76 +1,85 @@
-# Community Contribution Roadmap
+# Development Roadmap
 
 ## Vision
-Time Warp Studio aims to be the leading educational IDE for learning programming languages. To achieve this, we welcome contributions from the community to enhance features, fix bugs, and expand the platform.
 
-## Contribution Areas
+Time Warp Studio is an educational desktop IDE for learning 24 programming languages spanning six decades of computing history. This roadmap outlines planned improvements and contribution opportunities.
 
-### 1. Language Support
-- Add new language executors.
-- Improve existing language support.
-- Add more demo programs for each language.
+---
 
-### 2. UI/UX Enhancements
-- Improve accessibility features.
-- Add new themes and layouts.
-- Enhance the debugging experience.
+## Current Release: v9.0.0 (March 2026)
 
-### 3. Performance Optimization
-- Optimize turtle graphics rendering.
-- Improve interpreter execution speed.
-- Reduce memory usage.
+- 24 language executors with turtle graphics integration
+- Step-through debugger with execution timeline and rewind
+- 28 built-in themes (dark, light, retro CRT, accessibility)
+- 93 example programs across all languages
+- Lesson system with auto-verification
+- AI-powered code suggestions and error explanations
+- 14 dynamic feature panels
 
-### 4. Testing and Quality Assurance
-- Write unit tests for uncovered areas.
-- Add fuzz testing for more languages.
-- Enhance performance benchmarks.
+---
 
-### 5. Documentation
-- Expand the user guide.
-- Add tutorials for new features.
-- Improve developer documentation.
+## Near-Term (Q2 2026)
 
-### 6. Community Engagement
-- Organize hackathons and coding challenges.
-- Create a forum for discussions and support.
-- Publish a monthly newsletter with updates.
+### Language Improvements
+- Expand COBOL executor: `PERFORM VARYING`, table handling, `EVALUATE`
+- Add HyperTalk container navigation (`go to card`, `find`)
+- Improve Prolog cut/negation and built-in predicates
 
-## Milestones
+### IDE Enhancements
+- Code folding for all languages
+- Split editor view (side-by-side files)
+- Persistent breakpoints across sessions
+- Export turtle graphics as SVG/PNG
 
-### Q2 2026
-- Add support for 3 new languages.
-- Release a GUI-based debugger.
-- Reach 90% test coverage.
+### Quality
+- Increase test coverage to 90%+
+- Add property-based testing for expression evaluator
+- Performance benchmarks for all executors
 
-### Q3 2026
-- Launch a plugin marketplace.
-- Add IoT hardware integration.
-- Organize the first Time Warp Studio hackathon.
+---
 
-### Q4 2026
-- Reach 100% test coverage.
-- Publish 50+ tutorials and demos.
-- Release a mobile version of the IDE.
+## Mid-Term (Q3–Q4 2026)
+
+### New Languages (Candidates)
+- **Ruby** — Object-oriented scripting
+- **Erlang** — Concurrent/functional programming
+- **Rust** — Systems programming with ownership model
+
+### Plugin System
+- Plugin API for third-party language executors
+- Custom panel registration
+- Theme marketplace
+
+### Hardware Integration
+- Raspberry Pi GPIO simulation and bridging
+- Arduino serial communication via `pyfirmata`
+- Sensor data visualization in canvas
+
+### Collaboration
+- Shared editing sessions (local network)
+- Classroom assignment distribution and collection
+
+---
+
+## Long-Term (2027+)
+
+### Platform Expansion
+- WebAssembly build for browser-based version (experimental)
+- Flatpak/Snap packaging for Linux distribution
+
+### Advanced Features
+- Multi-file project support with file tree
+- Integrated terminal emulator
+- Language interop (call one language from another)
+- Recording and playback of coding sessions
+
+---
 
 ## How to Contribute
 
-1. **Fork the Repository**
-   - Clone your fork and create a new branch for your changes.
+1. **Fork** the repository and create a feature branch
+2. Read [CONTRIBUTING.md](CONTRIBUTING.md) for code style and PR guidelines
+3. Check [open issues](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues) for `good first issue` labels
+4. Submit a pull request with a clear description
 
-2. **Follow the Guidelines**
-   - Read the [CONTRIBUTING.md](CONTRIBUTING.md) file.
-   - Ensure your code adheres to the style guide.
-
-3. **Submit a Pull Request**
-   - Provide a clear description of your changes.
-   - Link to any related issues.
-
-4. **Engage with the Community**
-   - Review other pull requests.
-   - Participate in discussions.
-
-## Contact
-For questions or suggestions, reach out to us at [support@timewarpstudio.org](mailto:support@timewarpstudio.org).
-
----
-Together, we can make Time Warp Studio the best educational IDE for everyone!
+**Maintainer:** James Temple — [james@honey-badger.org](mailto:james@honey-badger.org)

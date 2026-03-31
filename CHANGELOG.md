@@ -3,7 +3,33 @@
 All notable changes to Time Warp Studio will be documented in this file.
 
 ## [9.0.0] - 2026-03-28
-- Major updates including fuzz testing, CI enhancements, and language pack installation.
+
+### Security
+- **Dockerfile**: Removed hardcoded `DATABASE_URL` and `REDIS_URL` credentials; environment variables now injected at runtime
+- **Dockerfile.backend**: Added non-root `appuser` (UID 1000) with `USER` directive
+- **Docker build stages**: Fixed lowercase `as` to uppercase `AS` per Dockerfile best practices
+- **Docker Compose**: Removed deprecated `version` fields from `docker-compose.yml` and `docker/docker-compose.backend.yml`
+
+### Code Quality
+- **Interpreter**: Fixed 25 type annotation errors in `core/interpreter.py`
+  - `__init__` signature now uses `Optional[Language] = None`
+  - All instance attributes declared before `_init_state()` call
+  - Added null guards for optional attributes
+  - `execute()` accepts `TurtleState | None` with lazy creation
+  - Removed unused `datetime` import
+- **Version label**: Updated Dockerfile `VERSION` label from 8.0.0 to 9.0.0
+
+### Documentation
+- **ARCHITECTURE.md**: Rewrote Module Overview with all subpackages (core, languages, UI, graphics, features, utils, tests, tools)
+- **README.md**: Fixed theme count (25→28), rewrote project structure tree to match actual layout
+- **docs/INDEX.md**: Added missing Debugger Guide link in Feature Guides section
+- **CHANGELOG.md**: Expanded 9.0.0 entry with detailed change descriptions
+- **ROADMAP.md**: Rewrote with concrete milestones replacing generic filler content
+
+### Infrastructure
+- Added `*.log` pattern to `.gitignore`
+- Removed stray `interpreter.log` files from repository
+- Updated GitHub repository description and topics via API
 
 ## [8.1.0] - 2025-06-15
 
