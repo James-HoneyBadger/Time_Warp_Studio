@@ -2106,9 +2106,23 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
             pf["handle"] = None
         return ""
 
-    # New(p) / Dispose(p) — stub (no pointer arithmetic)
+    # New(p) / Dispose(p) — simple pointer simulation
     m = re.match(r"^(?:NEW|DISPOSE)\s*\(([A-Za-z_][A-Za-z0-9_]*)\)\s*$", upcmd_strip)
     if m:
+        var_name = m.group(1).upper()
+        if not hasattr(interpreter, "pascal_heap"):
+            interpreter.pascal_heap = {}  # type: ignore[attr-defined]
+        if upcmd_strip.startswith("NEW"):
+            # Allocate a new "pointer" (just a unique integer)
+            addr = len(interpreter.pascal_heap) + 1
+            interpreter.pascal_heap[addr] = None  # Placeholder for data
+            interpreter.set_typed_variable(var_name, addr)
+        elif upcmd_strip.startswith("DISPOSE"):
+            # Free the pointer
+            addr = interpreter.get_numeric_value(var_name)
+            if addr and addr in interpreter.pascal_heap:
+                del interpreter.pascal_heap[addr]
+            interpreter.set_typed_variable(var_name, 0)
         return ""
 
     # FillChar(dest, count, val)

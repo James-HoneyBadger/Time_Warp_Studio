@@ -39,7 +39,7 @@ class TWEditorWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("TW Editor v8.1.0 - Time Warp Studio")
+        self.setWindowTitle("TW Editor v9.0.0 - Time Warp Studio")
         self.resize(1024, 768)
 
         # Current file path
@@ -61,9 +61,11 @@ class TWEditorWindow(QMainWindow):
 
         # Language Selector in Toolbar
         lang_label = QLabel("  Language: ")
+        lang_label.setMinimumWidth(100)  # Ensure label is wide enough for clear text
         self.toolbar.addWidget(lang_label)
 
         self.lang_combo = QComboBox()
+        self.lang_combo.setMinimumWidth(150)  # Ensure dropdown is wide enough for all languages
         for lang in Language:
             self.lang_combo.addItem(lang.name, lang)
         self.lang_combo.currentIndexChanged.connect(self.on_language_changed)
@@ -78,6 +80,7 @@ class TWEditorWindow(QMainWindow):
         # Status Bar
         self.status_bar = QStatusBar()
         self.setStatusBar(self.status_bar)
+        self.status_bar.setMinimumHeight(25)  # Ensure status bar text is readable
         self.status_bar.showMessage("Ready")
 
         # Initialize Menus and Actions
@@ -213,7 +216,7 @@ class TWEditorWindow(QMainWindow):
         if self.maybe_save():
             self.editor.clear()
             self.current_file = None
-            self.setWindowTitle("Untitled - TW Editor v8.1.0")
+            self.setWindowTitle("Untitled - TW Editor v9.0.0")
             self.status_bar.showMessage("New file created")
 
     def open_file(self):
@@ -238,7 +241,7 @@ class TWEditorWindow(QMainWindow):
             text = path.read_text(encoding="utf-8")
             self.editor.setPlainText(text)
             self.current_file = file_path
-            self.setWindowTitle(f"{path.name} - TW Editor v8.1.0")
+            self.setWindowTitle(f"{path.name} - TW Editor v9.0.0")
             self.status_bar.showMessage(f"Loaded {file_path}")
 
             # Auto-detect language

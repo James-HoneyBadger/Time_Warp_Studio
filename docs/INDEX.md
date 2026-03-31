@@ -253,8 +253,64 @@ docs/
 
 ---
 
+## 🛠️ Examples and Tutorials Index
+
+Explore example programs and tutorials for all supported languages:
+
+- **[APL Examples](../Examples/apl/)** - Matrix operations, statistics, and more
+- **[Assembly Examples](../Examples/assembly/)** - String operations, showcases
+- **[BASIC Examples](../Examples/basic/)** - Adventure games, budget trackers
+- **[Brainfuck Examples](../Examples/brainfuck/)** - Fibonacci, Hello World
+- **[C Examples](../Examples/c/)** - Sorting algorithms, RPN calculator
+- **[COBOL Examples](../Examples/cobol/)** - Payroll processing, inventory control
+- **[CICS Examples](../Examples/cics/)** - ATM transactions, order entry
+- **[Forth Examples](../Examples/forth/)** - Stack-based programming
+- **[Fortran Examples](../Examples/fortran/)** - Numerical methods, scientific computing
+- **[Haskell Examples](../Examples/haskell/)** - Functional programming
+- **[Hypertalk Examples](../Examples/hypertalk/)** - HyperCard scripting
+- **[JavaScript Examples](../Examples/javascript/)** - Web scripting basics
+- **[JCL Examples](../Examples/jcl/)** - Job control language
+- **[Logo Examples](../Examples/logo/)** - Turtle graphics
+- **[Lua Examples](../Examples/lua/)** - Lightweight scripting
+- **[Pascal Examples](../Examples/pascal/)** - Structured programming
+- **[Pilot Examples](../Examples/pilot/)** - Instructional programming
+- **[Prolog Examples](../Examples/prolog/)** - Logic programming
+- **[Python Examples](../Examples/python/)** - General-purpose scripting
+- **[REXX Examples](../Examples/rexx/)** - Scripting for IBM systems
+- **[Scheme Examples](../Examples/scheme/)** - Lisp-family functional programming
+- **[Smalltalk Examples](../Examples/smalltalk/)** - Object-oriented programming
+- **[SQL Examples](../Examples/sql/)** - Database queries
+- **[SQR Examples](../Examples/sqr/)** - Reporting language
+
+---
+
+## 📖 Unified Documentation Index
+
+### Core Guides
+
+- **[Getting Started](guides/01-getting-started.md)** - Install and launch the IDE
+- **[IDE Basics](guides/02-ide-basics.md)** - Interface and shortcuts
+- **[Lessons](guides/03-lessons.md)** - Learn programming step-by-step
+- **[Turtle Graphics](guides/04-turtle-graphics.md)** - Visual programming
+- **[Debugger Guide](guides/05-debugger.md)** - Debugging tools
+- **[Settings](guides/06-settings.md)** - Customize your IDE
+- **[Shortcuts](guides/07-shortcuts.md)** - Keyboard shortcuts
+- **[Troubleshooting](guides/08-troubleshooting.md)** - Solve common issues
+
+### Tutorials and Examples
+
+- **[Examples Catalog](../Examples/CATALOG.md)** - Explore example programs
+- **[Programming Tutorials](#📚-programming-languages)** - Learn supported languages
+
+### Reference
+
+- **[FAQ](reference/faq.md)** - Frequently asked questions
+- **[Installation](INSTALLATION.md)** - Detailed setup instructions
+
+---
+
 **Last Updated:** March 2026  
-**Version:** 8.0.0  
+**Version:** 9.0.0  
 **License:** MIT
 
 ## How to Use This Documentation
@@ -314,7 +370,7 @@ This documentation is maintained alongside Time Warp Studio development. If you 
 
 ## Version Information
 
-- **Time Warp Studio** v8.1.0
+- **Time Warp Studio** v9.0.0
 - **Last Updated** March 2026
 
 ## Need More Help?

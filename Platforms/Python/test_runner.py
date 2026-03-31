@@ -16,6 +16,12 @@ def main():
     parser.add_argument(
         "--comprehensive", action="store_true", help="Run full suite with coverage"
     )
+    parser.add_argument(
+        "--parallel",
+        action="store_true",
+        help="Run tests in parallel using pytest-xdist",
+    )
+
     args = parser.parse_args()
 
     # Ensure we are in the correct directory
@@ -40,6 +46,7 @@ def main():
                 "--cov=time_warp",
                 "--cov-report=html:test_reports/html",
                 "--cov-report=term",
+                "--cov-report=xml:test_reports/coverage.xml",  # Added XML report for CI integration
                 "-v",
             ]
         )
@@ -52,6 +59,11 @@ def main():
         # Basic mode
         print("🚀 Running basic smoke tests...")
         # Could limit to specific markers if we had them, e.g. -m "not slow"
+
+    if args.parallel:
+        cmd.append("-n")
+        cmd.append("auto")  # Automatically determine the number of parallel workers
+        print("⚡ Running tests in parallel mode...")
 
     cmd.extend(targets)
 

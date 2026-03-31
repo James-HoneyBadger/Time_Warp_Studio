@@ -85,6 +85,9 @@ from .cics_panel import CICSPanel
 from ..features.examples_browser import ExamplesBrowser
 from ..utils.error_hints import get_enhanced_error_message
 
+# Fix: Import CustomUILayouts for custom UI layout management
+from .custom_layouts import CustomUILayouts
+
 # pylint: enable=no-name-in-module
 
 
@@ -217,10 +220,13 @@ class MainWindow(
         # Feature integration manager
         self.feature_manager = FeatureIntegrationManager(self)
 
+        # Initialize custom UI layouts manager
+        self.ui_layout_manager = CustomUILayouts()
+
         # Setup UI
         self.setup_ui()
-        self.create_menus()
         self.create_toolbar()
+        self.create_menus()
         self.create_statusbar()
 
         # Setup feature panels and integration
@@ -867,7 +873,7 @@ class MainWindow(
 
     def setup_ui(self):
         """Setup main UI layout."""
-        self.setWindowTitle("🎨 Time Warp Studio v8.1.0")
+        self.setWindowTitle("🎨 Time Warp Studio v9.0.0")
         self.setMinimumSize(900, 600)
 
         # Set main window style
@@ -1126,10 +1132,9 @@ class MainWindow(
         new_action.triggered.connect(self.new_file)
         file_menu.addAction(new_action)
 
-        open_action = QAction("&Open...", self)
-        open_action.setShortcut(QKeySequence.Open)
-        open_action.triggered.connect(self.open_file)
-        file_menu.addAction(open_action)
+        open_btn = self.toolbar.addAction("📂 Open", self.open_file)
+        open_btn.setToolTip("Open an existing file (Ctrl+O)")
+        open_btn.setStatusTip("Open a file from disk")
 
         save_action = QAction("&Save", self)
         save_action.setShortcut(QKeySequence.Save)
@@ -1610,10 +1615,6 @@ class MainWindow(
         quick_ref_action.triggered.connect(self.show_quick_reference)
         help_menu.addAction(quick_ref_action)
 
-        prog_guide_action = QAction("&Programming Guide", self)
-        prog_guide_action.triggered.connect(self.show_programming_guide)
-        help_menu.addAction(prog_guide_action)
-
         doc_index_action = QAction("Documentation &Index", self)
         doc_index_action.triggered.connect(self.show_doc_index)
         help_menu.addAction(doc_index_action)
@@ -1700,14 +1701,14 @@ class MainWindow(
 
     def create_toolbar(self):
         """Create toolbar with enhanced button styling."""
-        toolbar = QToolBar("Main Toolbar")
-        toolbar.setObjectName("MainToolbar")  # Avoid Qt warning
-        toolbar.setMovable(False)
-        toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
-        toolbar.setIconSize(toolbar.iconSize())  # Use default icon size
+        self.toolbar = QToolBar("Main Toolbar")
+        self.toolbar.setObjectName("MainToolbar")  # Avoid Qt warning
+        self.toolbar.setMovable(False)
+        self.toolbar.setToolButtonStyle(Qt.ToolButtonTextBesideIcon)
+        self.toolbar.setIconSize(self.toolbar.iconSize())  # Use default icon size
         # Toolbar height for better button appearance
-        toolbar.setMinimumHeight(44)
-        toolbar.setStyleSheet("""
+        self.toolbar.setMinimumHeight(44)
+        self.toolbar.setStyleSheet("""
             QToolBar {
                 background-color: palette(window);
                 border-bottom: 2px solid palette(highlight);
@@ -1740,26 +1741,26 @@ class MainWindow(
                 background-color: transparent;
             }
         """)
-        self.addToolBar(toolbar)
+        self.addToolBar(self.toolbar)
 
         # Add common actions with enhanced styling and better organization
         # File operations group
-        new_btn = toolbar.addAction("📄 New", self.new_file)
+        new_btn = self.toolbar.addAction("📄 New", self.new_file)
         new_btn.setToolTip("Create a new file (Ctrl+N)")
         new_btn.setStatusTip("Create a new editor tab")
 
-        open_btn = toolbar.addAction("📂 Open", self.open_file)
+        open_btn = self.toolbar.addAction("📂 Open", self.open_file)
         open_btn.setToolTip("Open an existing file (Ctrl+O)")
         open_btn.setStatusTip("Open a file from disk")
 
-        save_btn = toolbar.addAction("💾 Save", self.save_file)
+        save_btn = self.toolbar.addAction("💾 Save", self.save_file)
         save_btn.setToolTip("Save the current file (Ctrl+S)")
         save_btn.setStatusTip("Save changes to disk")
 
-        toolbar.addSeparator()
+        self.toolbar.addSeparator()
 
         # Language selector
-        toolbar.addWidget(QLabel(" Language: "))
+        self.toolbar.addWidget(QLabel(" Language: "))
         self.language_combo = QComboBox()
         tooltip_text = "Select programming language for current tab"
         self.language_combo.setToolTip(tooltip_text)
@@ -1796,9 +1797,9 @@ class MainWindow(
             self.language_combo.addItem(f"💻 {lang.friendly_name()}", lang)
 
         self.language_combo.currentIndexChanged.connect(self.on_language_changed)
-        toolbar.addWidget(self.language_combo)
+        self.toolbar.addWidget(self.language_combo)
 
-        toolbar.addSeparator()
+        self.toolbar.addSeparator()
 
         # Execution controls group
         # Run button with history dropdown
@@ -1825,6 +1826,7 @@ class MainWindow(
                 background-color: palette(highlight);
                 color: palette(highlighted-text);
                 border: 1px solid palette(highlight);
+                border-radius: 5px;
             }
             QToolButton::menu-button {
                 border-left: 1px solid palette(dark);
@@ -1836,71 +1838,71 @@ class MainWindow(
         self._run_tool_btn.clicked.connect(self.run_program)
         # Populate with persisted history
         self._populate_run_history_menu()
-        toolbar.addWidget(self._run_tool_btn)
+        self.toolbar.addWidget(self._run_tool_btn)
 
         # Debug toolbar buttons
-        self.debug_btn = toolbar.addAction("🐛 Debug", self.start_debug)
+        self.debug_btn = self.toolbar.addAction("🐛 Debug", self.start_debug)
         self.debug_btn.setToolTip("Start debugging (F5)")
         self.debug_btn.setStatusTip("Start debugging with breakpoints")
 
-        self.continue_btn = toolbar.addAction("▶️ Continue", self.debug_continue)
+        self.continue_btn = self.toolbar.addAction("▶️ Continue", self.debug_continue)
         self.continue_btn.setToolTip("Continue execution (F5)")
         self.continue_btn.setStatusTip("Resume execution from breakpoint")
         self.continue_btn.setEnabled(False)
 
-        self.step_btn = toolbar.addAction("↓ Step", self.debug_step_into)
+        self.step_btn = self.toolbar.addAction("↓ Step", self.debug_step_into)
         self.step_btn.setToolTip("Step into (F11)")
         self.step_btn.setStatusTip("Execute one line and enter functions")
         self.step_btn.setEnabled(False)
 
-        stop_btn = toolbar.addAction("⏹️ Stop", self.stop_program)
+        stop_btn = self.toolbar.addAction("⏹️ Stop", self.stop_program)
         stop_btn.setToolTip("Stop the running program (Shift+F5)")
         stop_btn.setStatusTip("Interrupt execution")
 
-        snippet_btn = toolbar.addAction("📋 Snippets", self._show_snippet_dialog)
+        snippet_btn = self.toolbar.addAction("📋 Snippets", self._show_snippet_dialog)
         snippet_btn.setToolTip("Browse and insert code snippets (Ctrl+Shift+I)")
         snippet_btn.setStatusTip("Open the per-language snippet library")
 
-        toolbar.addSeparator()
+        self.toolbar.addSeparator()
 
         # Canvas/Output controls group
-        clear_output_btn = toolbar.addAction(
+        clear_output_btn = self.toolbar.addAction(
             "🗑️ Clear",
             self._clear_all_output,
         )
         clear_output_btn.setToolTip("Clear the output panel")
         clear_output_btn.setStatusTip("Clear all output text")
 
-        clear_canvas_btn = toolbar.addAction(
+        clear_canvas_btn = self.toolbar.addAction(
             "🎨 Canvas",
             self.canvas.clear,
         )
         clear_canvas_btn.setToolTip("Clear the graphics canvas")
         clear_canvas_btn.setStatusTip("Clear all graphics drawings")
 
-        toolbar.addSeparator()
+        self.toolbar.addSeparator()
 
         # Database / SQL group
-        sql_btn = toolbar.addAction("🗄 SQL", self._show_sql_workbench)
+        sql_btn = self.toolbar.addAction("🗄 SQL", self._show_sql_workbench)
         sql_btn.setToolTip("Open SQL Workbench (Ctrl+Shift+Q)")
         sql_btn.setStatusTip("Open the embedded SQL Server 2000 workbench")
 
-        toolbar.addSeparator()
+        self.toolbar.addSeparator()
 
         # Accessibility preset — one click applies large font + high-contrast theme
-        access_btn = toolbar.addAction("♿ A+", self._apply_accessibility_preset)
+        access_btn = self.toolbar.addAction("♿ A+", self._apply_accessibility_preset)
         access_btn.setToolTip(
             "Accessibility Preset\n"
             "Applies 18pt font, high-contrast theme, and disables CRT effects"
         )
         access_btn.setStatusTip("Apply large-print accessible theme")
 
-        toolbar.addSeparator()
+        self.toolbar.addSeparator()
 
         # ── Speed throttle ────────────────────────────────────────────────
         # A compact slider that adds a per-output-line delay so educational
         # demos can be slowed down to make each step visible.
-        toolbar.addWidget(QLabel(" 🐢 Speed: "))
+        self.toolbar.addWidget(QLabel(" 🐢 Speed: "))
         self._speed_slider = QSlider(Qt.Horizontal)
         self._speed_slider.setRange(0, 500)
         self._speed_slider.setValue(0)
@@ -1921,8 +1923,8 @@ class MainWindow(
             self.output.set_step_delay(val)
 
         self._speed_slider.valueChanged.connect(_on_speed_changed)
-        toolbar.addWidget(self._speed_slider)
-        toolbar.addWidget(self._speed_label)
+        self.toolbar.addWidget(self._speed_slider)
+        self.toolbar.addWidget(self._speed_label)
 
     # Language name → status-bar emoji
     _LANG_EMOJI: dict = {
@@ -2523,7 +2525,7 @@ class MainWindow(
 
     def update_title(self):
         """Update window title."""
-        title = "Time Warp Studio v8.1.0"
+        title = "Time Warp Studio v9.0.0"
 
         current_info = self.get_current_tab_info()
         if current_info["file"]:
@@ -3306,3 +3308,29 @@ class MainWindow(
         btns.rejected.connect(dlg.accept)
         layout.addWidget(btns)
         dlg.exec()
+
+    # Placeholder for live collaboration feature
+    class CollaborationManager:
+        """Manages real-time collaboration sessions."""
+        def __init__(self):
+            self.active_sessions = {}
+
+        def start_session(self, session_id: str, user: str):
+            self.active_sessions[session_id] = [user]
+            print(f"Collaboration session {session_id} started by {user}.")
+
+        def join_session(self, session_id: str, user: str):
+            if session_id in self.active_sessions:
+                self.active_sessions[session_id].append(user)
+                print(f"{user} joined session {session_id}.")
+            else:
+                print(f"Session {session_id} does not exist.")
+
+        def end_session(self, session_id: str):
+            if session_id in self.active_sessions:
+                del self.active_sessions[session_id]
+                print(f"Collaboration session {session_id} ended.")
+
+    # Example integration point
+    # collaboration_manager = CollaborationManager()
+    # collaboration_manager.start_session("12345", "Alice")

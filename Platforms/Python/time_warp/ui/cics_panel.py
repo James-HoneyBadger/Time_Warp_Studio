@@ -118,11 +118,13 @@ class CICSPanel(QWidget):
             "font-weight:bold; background:#1a3a1a; color:#0f0; "
             "border:1px solid #0a0; padding:4px 10px;"
         )
+        run_btn.setMinimumSize(100, 30)  # Ensure button is large enough for text
         run_btn.clicked.connect(self._run)
         ctrl_row.addWidget(run_btn)
 
         clear_btn = QPushButton("🗑 Clear")
         clear_btn.clicked.connect(self._clear_all)
+        clear_btn.setMinimumSize(100, 30)  # Ensure button is large enough for text
         ctrl_row.addWidget(clear_btn)
 
         self._template_combo = QComboBox()
@@ -138,6 +140,7 @@ class CICSPanel(QWidget):
                 "Multi-Map App",
             ]
         )
+        self._template_combo.setMinimumWidth(200)  # Ensure dropdown is wide enough for all options
         self._template_combo.currentIndexChanged.connect(self._load_template)
         ctrl_row.addWidget(self._template_combo)
         ctrl_row.addStretch()

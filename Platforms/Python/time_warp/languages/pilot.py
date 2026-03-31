@@ -356,6 +356,54 @@ def execute_pilot(
     if cmd_type == "E":
         interpreter.running = False
         return ""
+    # --- Full Logo command and block blending ---
+    try:
+        from .logo import LOGO_COMMANDS, execute_logo
+    except ImportError:
+        LOGO_COMMANDS = set()
+        execute_logo = None
+
+    def is_logo_line(line: str) -> bool:
+        if not line.strip():
+            return False
+        first = line.strip().split()[0].upper()
+        if first in LOGO_COMMANDS or first in {"MAKE", "REPEAT", "TO", "END", "IFELSE", "IF", "FOREACH", "MAP", "FILTER", "REDUCE", "WHILE", "UNTIL"}:
+            return True
+        if line.strip().startswith("MAKE ") or line.strip().startswith(":") or line.strip().startswith('"'):
+            return True
+        if "[" in line or "]" in line:
+            return True
+        if line.strip().startswith(";"):
+            return True
+        return False
+
+    # If the rest is likely Logo, or contains Logo block syntax, forward to Logo executor
+    if is_logo_line(rest) and execute_logo:
+        return execute_logo(interpreter, rest, turtle)
+
+    # If the line is not recognized as PILOT, but is not empty, try to accumulate a Logo block
+    if execute_logo and rest.strip():
+        if any(kw in rest.upper() for kw in ["REPEAT", "TO", "FOREACH", "MAP", "FILTER", "REDUCE", "WHILE", "UNTIL"]):
+            block_lines = [rest]
+            open_brackets = rest.count("[") - rest.count("]")
+            interpreter._logo_block_buffer = getattr(interpreter, "_logo_block_buffer", [])
+            interpreter._logo_block_buffer.extend(block_lines)
+            if open_brackets > 0:
+                return ""
+            else:
+                block = "\n".join(interpreter._logo_block_buffer)
+                interpreter._logo_block_buffer = []
+                return execute_logo(interpreter, block, turtle)
+        if hasattr(interpreter, "_logo_block_buffer") and interpreter._logo_block_buffer:
+            interpreter._logo_block_buffer.append(rest)
+            open_brackets = sum(l.count("[") - l.count("]") for l in interpreter._logo_block_buffer)
+            if open_brackets > 0:
+                return ""
+            else:
+                block = "\n".join(interpreter._logo_block_buffer)
+                interpreter._logo_block_buffer = []
+                return execute_logo(interpreter, block, turtle)
+
     return f"❌ Unknown PILOT command: {cmd_type}:\n"
 
 

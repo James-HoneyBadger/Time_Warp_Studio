@@ -23,7 +23,7 @@ set -euo pipefail
 
 # ── Version ──────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VERSION="$(cat "$SCRIPT_DIR/VERSION" 2>/dev/null || echo "8.1.0")"
+VERSION="$(cat "$SCRIPT_DIR/VERSION" 2>/dev/null || echo "9.0.0")"
 APP_NAME="time-warp-studio"
 APP_DISPLAY_NAME="Time Warp Studio"
 
@@ -357,4 +357,3 @@ else
     echo -e "  ${BOLD}Upgrade later:${RESET}         sudo $APP_DIR/install.sh --upgrade"
     echo -e "  ${BOLD}Uninstall:${RESET}             sudo $APP_DIR/install.sh --uninstall"
 fi
-echo ""

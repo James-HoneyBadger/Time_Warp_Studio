@@ -283,7 +283,7 @@ class CollaborationClient:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-            uri = f"ws://{self.server_host}:{self.server_port}"
+            uri = f"wss://{self.server_host}:{self.server_port}"
 
             # Connect to server
             loop.run_until_complete(self._connect_websocket(uri))

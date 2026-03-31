@@ -32,6 +32,14 @@ from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger(__name__)
 
+from .hardware_integration import HardwareIntegration
+from .ai_suggestions import AISuggestions
+
+# Initialize hardware integration manager
+hardware_manager = HardwareIntegration()
+# Initialize AI suggestions manager
+ai_suggestions_manager = AISuggestions()
+
 
 class PluginInfo:
     """Metadata and runtime state for a single plugin."""
@@ -220,3 +228,39 @@ class PluginManager:
             ):
                 return attr
         return None
+
+
+# Plugin system for extensibility
+class PluginManager:
+    """Manages plugins for extending IDE functionality."""
+    def __init__(self):
+        self.plugins = {}
+
+    def load_plugin(self, plugin_name: str, plugin_module):
+        """Load a plugin by name and module."""
+        self.plugins[plugin_name] = plugin_module
+        print(f"Plugin {plugin_name} loaded.")
+
+    def unload_plugin(self, plugin_name: str):
+        """Unload a plugin by name."""
+        if plugin_name in self.plugins:
+            del self.plugins[plugin_name]
+            print(f"Plugin {plugin_name} unloaded.")
+        else:
+            print(f"Plugin {plugin_name} not found.")
+
+    def execute_plugin(self, plugin_name: str, *args, **kwargs):
+        """Execute a plugin's main function."""
+        if plugin_name in self.plugins:
+            plugin = self.plugins[plugin_name]
+            if hasattr(plugin, "main"):
+                plugin.main(*args, **kwargs)
+            else:
+                print(f"Plugin {plugin_name} has no main function.")
+        else:
+            print(f"Plugin {plugin_name} not found.")
+
+# Example usage
+# plugin_manager = PluginManager()
+# plugin_manager.load_plugin("example_plugin", example_module)
+# plugin_manager.execute_plugin("example_plugin", arg1, arg2)

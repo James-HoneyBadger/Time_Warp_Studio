@@ -14,6 +14,18 @@ import re
 import threading
 import time
 
+# Enhanced logging for structured error handling
+
+# Structured logging setup
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler("interpreter.log"),
+        logging.StreamHandler()
+    ]
+)
+
 logger = logging.getLogger(__name__)
 from dataclasses import dataclass
 from enum import Enum, auto
@@ -57,6 +69,9 @@ from ..languages.sqr import execute_sqr
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
 from ..utils.expression_evaluator import ExpressionEvaluator
+
+# Hardware simulation
+from .hardware_simulator import HardwareSimulator
 
 # Compact aliases used for debug callback annotations in this module.
 # Using a short alias keeps signatures readable while still being typed.
@@ -340,10 +355,11 @@ class Interpreter:
     # non-alphanumeric or end
     PILOT_VAR_PATTERN = re.compile(r"#([A-Z_][A-Z0-9_]*)", re.IGNORECASE)
 
-    def __init__(self):
+    def __init__(self, language: Optional[Language] = None):
         # The __init__ constructs a large amount of interpreter state;
         # keep the initialization explicit and readable rather than
         # splitting into many helper methods.
+        self.language = language
         # pylint: disable=too-many-statements
 
         # I/O handling — these are set once and preserved across reset()
@@ -363,7 +379,75 @@ class Interpreter:
         self.breakpoints: set = set()
 
         # Language mode
-        self.language = Language.BASIC
+        self.language = language
+
+        # Hardware simulation
+        self.hardware = HardwareSimulator()
+
+        # Declare all resettable attributes so the type checker sees them
+        # in __init__. Actual values are set by _init_state().
+        self.variables: Dict[str, float] = {}
+        self.int_variables: Dict[str, int] = {}
+        self.long_variables: Dict[str, int] = {}
+        self.single_variables: Dict[str, float] = {}
+        self.double_variables: Dict[str, float] = {}
+        self.string_variables: Dict[str, str] = {}
+        self.arrays: Dict[str, List[float]] = {}
+        self.string_arrays: Dict[str, List[str]] = {}
+        self.logo_lists: Dict[str, List[str]] = {}
+        self.logo_arrays: Dict[str, Dict[int, object]] = {}
+        self.property_lists: Dict[str, Dict[str, object]] = {}
+        self.logo_procedures: Dict[str, str] = {}
+        self.logo_procedure_params: Dict[str, List[str]] = {}
+        self.output: List[str] = []
+        self.program_lines: List[Tuple[Optional[int], str]] = []
+        self.current_line: int = 0
+        self.labels: Dict[str, int] = {}
+        self.line_number_map: Dict[int, int] = {}
+        self.gosub_stack: List[int] = []
+        self.for_stack: List[ForContext] = []
+        self.match_flag: bool = False
+        self.last_match_set: bool = False
+        self.last_match_succeeded: bool = False
+        self.stored_condition: Optional[bool] = None
+        self.running: bool = True
+        self.subroutine_stack: List[int] = []
+        self.open_files: Dict[str, TextIO] = {}
+        self.last_input: str = ""
+        self.pending_input: Optional[InputRequest] = None
+        self.pending_resume_line: Optional[int] = None
+        self.last_key_pressed: Optional[str] = None
+        self.screen_mode = ScreenMode.GRAPHICS
+        self.screen_config = ScreenConfig()
+        self.text_lines: List[str] = []
+        self.cursor_row: int = 0
+        self.cursor_col: int = 0
+        self.basic_while_stack: List[int] = []
+        self.basic_do_stack: List[Tuple[int, str]] = []
+        self.basic_select_expression: str = ""
+        self.basic_in_select: bool = False
+        self.basic_in_sub: bool = False
+        self.basic_in_function: bool = False
+        self.basic_subs: Dict[str, Dict] = {}
+        self.basic_functions: Dict[str, Dict] = {}
+        self.basic_call_stack: List[Dict] = []
+        self.data_values: List[str] = []
+        self.data_pointer: int = 0
+        self.memory: Dict[int, int] = {}
+        self.ports: Dict[int, int] = {}
+        self.last_music_data: Optional[bytes] = None
+        self.prolog_kb: Dict[str, Any] = {}
+        self.pascal_procs: Dict[str, Dict[str, Any]] = {}
+        self.pascal_types: Dict[str, str] = {}
+        self.pascal_block_stack: List[Dict[str, Any]] = []
+        self.pascal_call_stack: List[Dict[str, Any]] = []
+        self.c_block_stack: List[Dict[str, Any]] = []
+        self.step_mode: bool = False
+        self._basic_error_handler_line: int = 0
+        self._basic_error_line: int = 0
+        self._logo_turtle: Optional["TurtleState"] = None
+        self.program_source: str = ""
+        self.default_type_map: Dict[str, str] = {}
 
         # Initialise all resettable state
         self._init_state()
@@ -477,6 +561,16 @@ class Interpreter:
         self.step_mode: bool = False
         self.debug_event.clear()
 
+        # BASIC ON ERROR GOTO handler state
+        self._basic_error_handler_line: int = 0
+        self._basic_error_line: int = 0
+
+        # Logo turtle reference (set during _execute_line)
+        self._logo_turtle: Optional["TurtleState"] = None
+
+        # Program source (set by load_program / run helper)
+        self.program_source: str = ""
+
         # Default type mapping
         self._reset_type_defaults()
 
@@ -493,7 +587,7 @@ class Interpreter:
     # ---------- Typed variable support ----------
     def _reset_type_defaults(self):
         """Initialize default type map to DOUBLE for A-Z."""
-        self.default_type_map: Dict[str, str] = {
+        self.default_type_map = {
             chr(c): "double" for c in range(ord("A"), ord("Z") + 1)
         }
 
@@ -648,9 +742,12 @@ class Interpreter:
         self.line_number_map.clear()
 
         # Keep original source for Python sandbox execution
-        self.program_source: str = program_text
+        self.program_source = program_text
 
-        self._load_from_lines(lines, language or self.language)
+        effective_lang = language or self.language
+        if effective_lang is None:
+            raise ValueError("No language set for interpreter")
+        self._load_from_lines(lines, effective_lang)
 
         # Collect BASIC DATA values after lines are populated
         if self.language == Language.BASIC:
@@ -872,7 +969,7 @@ class Interpreter:
         self.logo_procedure_params[proc_name] = params
         return proc_name
 
-    def execute(self, turtle: "TurtleState") -> List[str]:
+    def execute(self, turtle: "TurtleState | None" = None) -> List[str]:
         """
         Execute loaded program with timeout and iteration protection
 
@@ -890,6 +987,9 @@ class Interpreter:
         # Python is run as a complete block, not line-by-line
         if self.language == Language.PYTHON:
             source = getattr(self, "program_source", "")
+            if turtle is None:
+                from ..graphics.turtle_state import TurtleState as _TS
+                turtle = _TS()
             output_text = execute_python(self, source, turtle)
             for line in output_text.splitlines(keepends=True):
                 self.log_output(line.rstrip("\n"))
@@ -899,6 +999,9 @@ class Interpreter:
         if self.language in _WHOLE_PROGRAM_EXECUTORS:
             source = getattr(self, "program_source", "")
             fn = _WHOLE_PROGRAM_EXECUTORS[self.language]
+            if turtle is None:
+                from ..graphics.turtle_state import TurtleState as _TS
+                turtle = _TS()
             output_text = fn(self, source, turtle)
             for line in output_text.splitlines(keepends=True):
                 self.log_output(line.rstrip("\n"))
@@ -908,6 +1011,9 @@ class Interpreter:
         iterations, start_time = self._setup_runtime()
 
         # Execute main loop with error recovery and debugging hooks
+        if turtle is None:
+            from ..graphics.turtle_state import TurtleState as _TS
+            turtle = _TS()
         iterations = self._run_and_collect(turtle, iterations, start_time)
 
         # Finalize and emit any warnings/output
@@ -1063,13 +1169,13 @@ class Interpreter:
                 self.log_output(f"❌ Error at line {self.current_line + 1}: Out of memory")
                 return False
             # BASIC ON ERROR GOTO handler
-            if self.language.name == "BASIC" and getattr(
-                self, "_basic_error_handler_line", 0
+            if self.language is not None and self.language.name == "BASIC" and getattr(
+                self, "_basic_error_handler_line", None
             ):
-                handler_line = self._basic_error_handler_line  # type: ignore[attr-defined]
+                handler_line = self._basic_error_handler_line
                 if handler_line in self.line_number_map:
                     # Store ERR/ERL pseudo-variables for the error handler
-                    self._basic_error_line = self.current_line + 1  # type: ignore[attr-defined]
+                    self._basic_error_line = self.current_line + 1
                     self.variables["ERR"] = 1  # generic error code
                     self.variables["ERL"] = float(self.current_line + 1)
                     # Store the error number from the current line's BASIC number
@@ -1078,7 +1184,7 @@ class Interpreter:
                     ):
                         line_label, _ = self.program_lines[self.current_line]
                         if line_label is not None:
-                            self._basic_error_line = line_label  # type: ignore[attr-defined]
+                            self._basic_error_line = line_label
                             self.variables["ERL"] = float(line_label)
                     self.current_line = self.line_number_map[handler_line]
                     return True  # treat as handled
@@ -1425,3 +1531,26 @@ class Interpreter:
         vars_dict.update(self.variables)
         # Add arrays and other state if needed
         return vars_dict
+
+
+# Refactor: Split language-specific logic into separate modules
+# Create a LanguageExecutor class to encapsulate executor logic
+
+class LanguageExecutor:
+    def __init__(self, name: str, execute_fn: Callable):
+        self.name = name
+        self.execute_fn = execute_fn
+
+    def execute(self, interpreter, source, turtle):
+        return self.execute_fn(interpreter, source, turtle)
+
+# Example usage:
+# python_executor = LanguageExecutor("Python", execute_python)
+# result = python_executor.execute(interpreter, source, turtle)
+
+
+def run(source: str, language: Language, turtle: "TurtleState | None" = None) -> str:
+    """Execute source code for a given language and return the output."""
+    interpreter = Interpreter(language=language)
+    interpreter.program_source = source
+    return "\n".join(interpreter.execute(turtle=turtle))

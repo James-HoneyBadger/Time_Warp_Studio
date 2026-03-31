@@ -2,6 +2,9 @@
 
 All notable changes to Time Warp Studio will be documented in this file.
 
+## [9.0.0] - 2026-03-28
+- Major updates including fuzz testing, CI enhancements, and language pack installation.
+
 ## [8.1.0] - 2025-06-15
 
 ### Security

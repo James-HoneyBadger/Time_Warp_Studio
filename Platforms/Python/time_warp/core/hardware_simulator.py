@@ -344,6 +344,57 @@ class HardwareSimulator:
                 {"type": event_type, "timestamp": time.time(), "data": data}
             )
 
+    def out(self, port: int, value: int) -> bool:
+        """Write value to I/O port (for BASIC OUT/Assembly OUT)."""
+        # Map port to device if possible
+        device_id = f"port_{port}"
+        if device_id not in self.devices:
+            self.add_device(device_id, HardwareType.GENERIC_ACTUATOR, port)
+
+        success = self.set_device_value(device_id, float(value))
+        if success:
+            self._log_event("port_out", {"port": port, "value": value})
+        return success
+
+    def inp(self, port: int) -> int:
+        """Read value from I/O port (for BASIC INP/Assembly IN)."""
+        device_id = f"port_{port}"
+        if device_id not in self.devices:
+            # Create a default device if not exists
+            self.add_device(device_id, HardwareType.GENERIC_SENSOR, port)
+
+        reading = self.read_sensor(device_id)
+        if reading:
+            value = int(reading.value)
+            self._log_event("port_in", {"port": port, "value": value})
+            return value
+        return 0  # Default value
+
+    def poke(self, address: int, value: int) -> bool:
+        """Write to memory address (for BASIC POKE)."""
+        # Simulate memory write
+        device_id = f"memory_{address}"
+        if device_id not in self.devices:
+            self.add_device(device_id, HardwareType.GENERIC_ACTUATOR, -1)
+
+        success = self.set_device_value(device_id, float(value))
+        if success:
+            self._log_event("memory_poke", {"address": address, "value": value})
+        return success
+
+    def peek(self, address: int) -> int:
+        """Read from memory address (for BASIC PEEK)."""
+        device_id = f"memory_{address}"
+        if device_id not in self.devices:
+            self.add_device(device_id, HardwareType.GENERIC_SENSOR, -1)
+
+        reading = self.read_sensor(device_id)
+        if reading:
+            value = int(reading.value)
+            self._log_event("memory_peek", {"address": address, "value": value})
+            return value
+        return 0  # Default value
+
 
 class RobotSimulator:
     """High-level robot simulator for navigation and control."""

@@ -1,6 +1,6 @@
 # Architecture Guide
 
-**Time Warp Studio v8.1.0 — System Design and Implementation**
+**Time Warp Studio v9.0.0 — System Design and Implementation**
 
 ---
 
@@ -483,25 +483,38 @@ self.action_show_new.triggered.connect(self.new_panel.show)
 
 ## Threading Model
 
-### Single-Threaded UI, Multi-Threaded Execution
+Time Warp Studio employs a multi-threaded architecture to ensure responsive UI interactions while executing potentially long-running code. Below is an overview of the threading model:
 
-```
-┌──────────────────────┐
-│ Qt Main Event Loop   │
-│ - User input         │
-│ - UI rendering       │
-│ - Signal processing  │
-└──────────────────────┘
-        ↕ (signals/slots)
-┌──────────────────────┐
-│ Execution Thread     │
-│ - Run interpreter    │
-│ - Emit results       │
-└──────────────────────┘
-```
+### Key Threads
 
-All UI updates happen in main thread via slots.
-All code execution happens in worker thread.
+1. **Main Thread (UI)**:
+   - Handles all user interactions, including editor updates, canvas rendering, and menu actions.
+   - Ensures that the application remains responsive during execution.
+
+2. **Interpreter Thread**:
+   - Executes user code in a separate thread to prevent blocking the UI.
+   - Communicates with the main thread via thread-safe queues.
+
+3. **Worker Threads**:
+   - Used for auxiliary tasks such as file I/O, syntax highlighting, and background processing.
+
+### Communication
+
+- **Thread-Safe Queues**:
+  - The `queue.Queue` module is used for passing messages between threads.
+  - Ensures safe and efficient communication without race conditions.
+
+- **Signals and Slots**:
+  - PySide6's signal-slot mechanism is used for notifying the UI of execution results or errors.
+
+### Safeguards
+
+- **Deadlock Prevention**:
+  - All long-running tasks are offloaded to worker threads.
+  - The main thread never waits indefinitely for a response.
+
+- **Error Handling**:
+  - Exceptions in worker threads are captured and reported back to the main thread.
 
 ---
 

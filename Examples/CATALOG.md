@@ -5,6 +5,37 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 
 ---
 
+## Index of Examples
+
+### Quick Links
+
+- **[APL](#apl)** - Array programming
+- **[Assembly](#assembly-x86-style-simulation)** - Low-level programming
+- **[BASIC](#basic-gw-basic-qbasic-style)** - Educational programming
+- **[Brainfuck](#brainfuck)** - Minimalistic esolang
+- **[C](#c)** - Systems programming
+- **[COBOL](#cobol)** - Business applications
+- **[CICS](#cics)** - Transaction processing
+- **[Forth](#forth)** - Stack-based programming
+- **[Fortran](#fortran)** - Scientific computing
+- **[Haskell](#haskell)** - Functional programming
+- **[Hypertalk](#hypertalk)** - HyperCard scripting
+- **[JavaScript](#javascript)** - Web scripting
+- **[JCL](#jcl)** - Job control language
+- **[Logo](#logo)** - Turtle graphics
+- **[Lua](#lua)** - Lightweight scripting
+- **[Pascal](#pascal)** - Structured programming
+- **[Pilot](#pilot)** - Instructional programming
+- **[Prolog](#prolog)** - Logic programming
+- **[Python](#python)** - General-purpose scripting
+- **[REXX](#rexx)** - IBM scripting
+- **[Scheme](#scheme)** - Lisp-family functional programming
+- **[Smalltalk](#smalltalk)** - Object-oriented programming
+- **[SQL](#sql)** - Database queries
+- **[SQR](#sqr)** - Reporting language
+
+---
+
 ## APL
 
 | File | Description |

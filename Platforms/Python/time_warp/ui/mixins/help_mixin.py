@@ -187,7 +187,7 @@ class HelpDocsMixin:
             self,
             "About Time Warp Studio",
             "<h2>Time Warp Studio</h2>"
-            "<p>Version 8.0.0 — Advanced Features Release</p>"
+            "<p>Version 9.0.0</p>"
             "<p>Educational programming environment supporting:</p>"
             "<ul>"
             "<li>24 programming languages</li>"

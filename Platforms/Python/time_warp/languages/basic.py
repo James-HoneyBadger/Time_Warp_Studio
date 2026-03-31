@@ -152,7 +152,7 @@ def _resolve_string_value(interpreter: "Interpreter", expr: str) -> "str | None"
                 interpreter.variables,
             )
             return str(evaluator.evaluate(expr))
-        except Exception:
+        except (ValueError, TypeError, AttributeError, KeyError) as e:
             return None
 
     return None
@@ -507,6 +507,64 @@ def execute_basic(
 
         _rng.seed()
         return ""
+    # --- Full Logo command and block blending ---
+    try:
+        from .logo import LOGO_COMMANDS, execute_logo
+    except ImportError:
+        LOGO_COMMANDS = set()
+        execute_logo = None
+
+    # Helper: detect if a line or block is likely Logo
+    def is_logo_line(line: str) -> bool:
+        if not line.strip():
+            return False
+        first = line.strip().split()[0].upper()
+        # Allow MAKE, REPEAT, TO, and any LOGO_COMMANDS
+        if first in LOGO_COMMANDS or first in {"MAKE", "REPEAT", "TO", "END", "IFELSE", "IF", "FOREACH", "MAP", "FILTER", "REDUCE", "WHILE", "UNTIL"}:
+            return True
+        # Allow Logo variable assignment (MAKE, :, ")
+        if line.strip().startswith("MAKE ") or line.strip().startswith(":") or line.strip().startswith('"'):
+            return True
+        # Allow bracketed blocks
+        if "[" in line or "]" in line:
+            return True
+        # Allow Logo comments (;) and variable usage
+        if line.strip().startswith(";"):
+            return True
+        return False
+
+    # If the line is likely Logo, or contains Logo block syntax, forward to Logo executor
+    if is_logo_line(command) and execute_logo:
+        return execute_logo(interpreter, command, turtle)
+
+    # If the line is not recognized as BASIC, but is not empty, try to accumulate a Logo block
+    if execute_logo and command.strip():
+        # Try to detect start of a Logo block (e.g., REPEAT ... [ ... ])
+        if any(kw in command.upper() for kw in ["REPEAT", "TO", "FOREACH", "MAP", "FILTER", "REDUCE", "WHILE", "UNTIL"]):
+            # Accumulate lines until block end (matching brackets)
+            block_lines = [command]
+            open_brackets = command.count("[") - command.count("]")
+            interpreter._logo_block_buffer = getattr(interpreter, "_logo_block_buffer", [])
+            interpreter._logo_block_buffer.extend(block_lines)
+            if open_brackets > 0:
+                # Wait for more lines in the block
+                return ""
+            else:
+                # Block is complete, send to Logo
+                block = "\n".join(interpreter._logo_block_buffer)
+                interpreter._logo_block_buffer = []
+                return execute_logo(interpreter, block, turtle)
+        # If already accumulating a Logo block
+        if hasattr(interpreter, "_logo_block_buffer") and interpreter._logo_block_buffer:
+            interpreter._logo_block_buffer.append(command)
+            open_brackets = sum(l.count("[") - l.count("]") for l in interpreter._logo_block_buffer)
+            if open_brackets > 0:
+                return ""
+            else:
+                block = "\n".join(interpreter._logo_block_buffer)
+                interpreter._logo_block_buffer = []
+                return execute_logo(interpreter, block, turtle)
+
     return f"❌ Unknown BASIC command: {command}\n"
 
 
@@ -2599,11 +2657,10 @@ def _basic_poke(interpreter: "Interpreter", args: str) -> str:
             logger.error("POKE: Value out of range: %s", value)
             return "❌ POKE value must be 0-255\n"
 
-        # Store in simulated memory
-        if not hasattr(interpreter, "memory"):
-            interpreter.memory = {}
-
-        interpreter.memory[address] = value
+        # Store in simulated memory via hardware simulator
+        success = interpreter.hardware.poke(address, value)
+        if not success:
+            return "❌ POKE failed\n"
         logger.debug("POKE: Wrote %s to address {address}", value)
         return ""
 
@@ -2639,11 +2696,8 @@ def _basic_peek(interpreter: "Interpreter", args: str) -> str:
             logger.error("PEEK: Address out of range: %s", address)
             return f"❌ PEEK address must be 0-65535: got {address}\n"
 
-        # Retrieve from simulated memory (default to 0)
-        if not hasattr(interpreter, "memory"):
-            interpreter.memory = {}
-
-        value = interpreter.memory.get(address, 0)
+        # Retrieve from simulated memory via hardware simulator
+        value = interpreter.hardware.peek(address)
         logger.debug("PEEK: Read %s from address {address}", value)
 
         # This is typically used in expressions like: X = PEEK(address)
@@ -2701,11 +2755,10 @@ def _basic_out(interpreter: "Interpreter", args: str) -> str:
             logger.error("OUT: Value out of range: %s", value)
             return "❌ OUT value must be 0-255\n"
 
-        # Store in simulated ports
-        if not hasattr(interpreter, "ports"):
-            interpreter.ports = {}
-
-        interpreter.ports[port] = value
+        # Store in simulated ports via hardware simulator
+        success = interpreter.hardware.out(port, value)
+        if not success:
+            return "❌ OUT failed\n"
         logger.debug("OUT: Wrote %s to port {port}", value)
         return ""
 
@@ -2741,11 +2794,8 @@ def _basic_in(interpreter: "Interpreter", args: str) -> str:
             logger.error("IN: Port out of range: %s", port)
             return f"❌ IN port must be 0-65535: got {port}\n"
 
-        # Retrieve from simulated ports (default to 0)
-        if not hasattr(interpreter, "ports"):
-            interpreter.ports = {}
-
-        value = interpreter.ports.get(port, 0)
+        # Retrieve from simulated ports via hardware simulator
+        value = interpreter.hardware.inp(port)
         logger.debug("IN: Read %s from port {port}", value)
 
         # This is typically used in expressions like: X = IN(port)

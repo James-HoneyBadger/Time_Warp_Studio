@@ -72,6 +72,7 @@ class FileOperationsMixin:
             current_editor = self.get_current_editor()
             if (
                 current_editor
+                and hasattr(current_editor, "set_language")
                 and not self.get_current_tab_info()["modified"]
                 and not self.get_current_tab_info()["file"]
             ):

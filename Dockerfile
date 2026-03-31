@@ -1,7 +1,7 @@
 # Multi-stage Docker build for Time Warp Studio
 
 # Stage 1: Build Python backend
-FROM python:3.12-slim as backend-builder
+FROM python:3.12-slim AS backend-builder
 WORKDIR /app
 COPY Platforms/Python/requirements.txt ./
 RUN pip install --user --no-cache-dir -r requirements.txt
@@ -11,7 +11,7 @@ RUN python -m py_compile time_warp/core/*.py || true
 # Stage 2: Production runtime
 FROM python:3.12-slim
 LABEL maintainer="Time Warp Studio <james@honey-badger.org>"
-LABEL version="8.0.0"
+LABEL version="9.0.0"
 LABEL description="Time Warp Studio - Educational Multi-Language Programming Environment"
 
 # Install runtime dependencies
@@ -49,9 +49,10 @@ ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     PORT=8000 \
     WORKERS=4 \
-    DATABASE_URL=postgresql://timewarp:timewarp@db:5432/timewarp \
-    REDIS_URL=redis://cache:6379/0 \
     DEBUG=false
+# DATABASE_URL and REDIS_URL must be provided at runtime via
+# docker-compose environment, .env file, or secrets manager.
+# Do not bake credentials into the image.
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \

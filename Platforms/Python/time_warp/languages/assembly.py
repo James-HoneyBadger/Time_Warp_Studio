@@ -535,14 +535,18 @@ class VirtualCPU:
         elif op in ("JNS",):  # no sign
             if not self.flags["N"]:
                 self._jump(a[0])
-        elif op in ("JO",):  # overflow — stub: treat as never
-            pass
-        elif op in ("JNO",):  # no overflow — stub: always jump
-            self._jump(a[0])
-        elif op in ("JP", "JPE"):  # parity even — stub
-            pass
-        elif op in ("JNP", "JPO"):  # parity odd — stub: always jump
-            self._jump(a[0])
+        elif op in ("JO",):  # overflow
+            if self.flags["O"]:
+                self._jump(a[0])
+        elif op in ("JNO",):  # no overflow
+            if not self.flags["O"]:
+                self._jump(a[0])
+        elif op in ("JP", "JPE"):  # parity even
+            if self.flags["P"]:
+                self._jump(a[0])
+        elif op in ("JNP", "JPO"):  # parity odd
+            if not self.flags["P"]:
+                self._jump(a[0])
         elif op in ("JCXZ", "JECXZ", "JRCXZ"):  # jump if CX=0
             if self.regs[0] == 0:
                 self._jump(a[0])
