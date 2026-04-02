@@ -18,11 +18,21 @@ from PySide6.QtWidgets import (
 )
 
 if TYPE_CHECKING:
-    pass
+    from PySide6.QtWidgets import QWidget
+
+    _HelpMixinBase = QWidget
+else:
+    _HelpMixinBase = object
 
 
-class HelpDocsMixin:
-    """Help / documentation methods mixed into MainWindow."""
+class HelpDocsMixin(_HelpMixinBase):
+    """Help / documentation methods mixed into MainWindow.
+
+    Uses a conditional base (``QWidget`` for type checkers, ``object``
+    at runtime) so that static analysers accept ``self`` where Qt
+    dialogs expect a ``QWidget``, without interfering with shiboken's
+    C++ object initialisation.
+    """
 
     def _get_docs_path(self) -> Path:
         """Get path to the docs directory."""

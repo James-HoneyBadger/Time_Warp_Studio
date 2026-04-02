@@ -27,9 +27,9 @@ EXAMPLES_DIR = os.path.join(ROOT, "Examples")
 # Files that require interactive input — skip or note
 INTERACTIVE_FILES = {
     "adventure.bas",      # INPUT prompts
-    "budget_tracker.bas", # INPUT prompts
+    "budget_tracker.bas",  # INPUT prompts
     "hangman.pas",        # readln
-    "history_quiz.pilot", # ACCEPT
+    "history_quiz.pilot",  # ACCEPT
     "task_manager.py",    # input()
     "quiz_game.scm",      # interactive
     "contact_stack.ht",   # HyperTalk interactive
@@ -118,10 +118,10 @@ def main():
     results = {"OK": [], "ERRORS": [], "LOAD_ERROR": [], "EXEC_ERROR": [],
                "EMPTY": [], "TIMEOUT": [], "INTERACTIVE": []}
 
-    print(f"\n{'='*70}")
-    print(f"  Time Warp Studio — Demo Program Verification")
+    print(f"\n{'=' * 70}")
+    print("  Time Warp Studio — Demo Program Verification")
     print(f"  {len(demos)} programs to test")
-    print(f"{'='*70}\n")
+    print(f"{'=' * 70}\n")
 
     for lang_dir, fname, fpath in demos:
         label = f"{lang_dir}/{fname}"
@@ -138,7 +138,7 @@ def main():
         results[status].append(label)
 
         if status == "OK":
-            out_count = len([l for l in output if l.strip()])
+            out_count = len([line for line in output if line.strip()])
             print(f"  ✅ {label:45s} OK ({out_count} lines, {elapsed:.2f}s)")
         elif status == "EMPTY":
             print(f"  ⚠️  {label:45s} EMPTY OUTPUT ({elapsed:.2f}s)")
@@ -169,9 +169,9 @@ def main():
             print(f"  ⏭  {label:45s} SKIPPED: {exc}")
 
     # Summary
-    print(f"\n{'='*70}")
-    print(f"  RESULTS SUMMARY")
-    print(f"{'='*70}")
+    print(f"\n{'=' * 70}")
+    print("  RESULTS SUMMARY")
+    print(f"{'=' * 70}")
     print(f"  ✅ OK:          {len(results['OK'])}")
     print(f"  ⚠️  Empty:       {len(results['EMPTY'])}")
     print(f"  ❌ Errors:      {len(results['ERRORS'])}")
@@ -185,19 +185,19 @@ def main():
     print(f"\n  Total tested: {total_tested}  |  Pass: {total_pass}  |  Fail: {total_tested - total_pass}")
 
     if results["ERRORS"]:
-        print(f"\n  FILES WITH ERRORS:")
+        print("\n  FILES WITH ERRORS:")
         for f in results["ERRORS"]:
             print(f"    - {f}")
     if results["LOAD_ERROR"]:
-        print(f"\n  FILES WITH LOAD ERRORS:")
+        print("\n  FILES WITH LOAD ERRORS:")
         for f in results["LOAD_ERROR"]:
             print(f"    - {f}")
     if results["EXEC_ERROR"]:
-        print(f"\n  FILES WITH EXEC ERRORS:")
+        print("\n  FILES WITH EXEC ERRORS:")
         for f in results["EXEC_ERROR"]:
             print(f"    - {f}")
     if results["TIMEOUT"]:
-        print(f"\n  FILES WITH TIMEOUTS:")
+        print("\n  FILES WITH TIMEOUTS:")
         for f in results["TIMEOUT"]:
             print(f"    - {f}")
 

@@ -2,6 +2,8 @@
 #  Python Comprehensive Demo - Time Warp Studio
 # =============================================
 
+import math
+
 # --- Hello World ---
 print("===== HELLO WORLD =====")
 print("Welcome to Python!")
@@ -84,16 +86,21 @@ print()
 
 # --- Functions ---
 print("===== FUNCTIONS =====")
+
+
 def factorial(n):
     if n <= 1:
         return 1
     return n * factorial(n - 1)
 
+
 print(f"5! = {factorial(5)}")
 print(f"10! = {factorial(10)}")
 
+
 def greet(name, greeting="Hello"):
     return f"{greeting}, {name}!"
+
 
 print(greet("World"))
 print(greet("Python", "Welcome"))
@@ -101,7 +108,12 @@ print()
 
 # --- Lambda and Higher-Order ---
 print("===== LAMBDA & MAP/FILTER =====")
-double = lambda x: x * 2
+
+
+def double(x):
+    return x * 2
+
+
 print(f"double(5) = {double(5)}")
 print(f"map: {list(map(lambda x: x**2, range(5)))}")
 print(f"filter: {list(filter(lambda x: x > 3, range(8)))}")
@@ -109,12 +121,16 @@ print()
 
 # --- Classes ---
 print("===== CLASSES =====")
+
+
 class Animal:
     def __init__(self, name, sound):
         self.name = name
         self.sound = sound
+
     def speak(self):
         return f"{self.name} says {self.sound}"
+
 
 dog = Animal("Rex", "Woof")
 cat = Animal("Whiskers", "Meow")
@@ -132,7 +148,6 @@ print()
 
 # --- Math ---
 print("===== MATH =====")
-import math
 print(f"sqrt(16) = {math.sqrt(16)}")
 print(f"pi = {math.pi}")
 print(f"factorial(6) = {math.factorial(6)}")

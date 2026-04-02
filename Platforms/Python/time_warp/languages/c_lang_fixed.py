@@ -17,8 +17,11 @@ Notes:
 
 from __future__ import annotations
 
+import math as _cmath
 import random
+import random as _crand
 import re
+import time as _ctime
 from typing import TYPE_CHECKING, Any, Dict, List
 
 if TYPE_CHECKING:
@@ -429,9 +432,6 @@ def _ensure_c_stack(interpreter: "Interpreter"):
 # ---------------------------------------------------------------------------
 # C standard library built-in function table
 # ---------------------------------------------------------------------------
-import math as _cmath
-import random as _crand
-import time as _ctime
 
 _C_STDLIB: Dict[str, Any] = {
     # ── string.h ──────────────────────────────────────────────────────────

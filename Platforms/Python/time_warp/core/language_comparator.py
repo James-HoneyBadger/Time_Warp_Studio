@@ -155,8 +155,15 @@ T: It's negative or zero.
             LanguageComparison with results
         """
         # Execute both
-        result1 = self.interpreter.execute(code1, language1)
-        result2 = self.interpreter.execute(code2, language2)
+        self.interpreter.language = language1
+        self.interpreter.load_program(code1)
+        output1_lines = self.interpreter.execute()
+        result1 = {"output": "\n".join(output1_lines), "execution_time": 0.0}
+
+        self.interpreter.language = language2
+        self.interpreter.load_program(code2)
+        output2_lines = self.interpreter.execute()
+        result2 = {"output": "\n".join(output2_lines), "execution_time": 0.0}
 
         # Parse results
         output1 = result1.get("output", "")
@@ -385,9 +392,9 @@ class ComparisonRenderer:
         """Render comparison as plain text."""
         lines = []
         lines.append("=" * 70)
-        lines.append(f"LANGUAGE COMPARISON: {
-                comparison.language1.value} vs {
-                comparison.language2.value}")
+        lang1 = comparison.language1.value
+        lang2 = comparison.language2.value
+        lines.append(f"LANGUAGE COMPARISON: {lang1} vs {lang2}")
         lines.append("=" * 70)
         lines.append("")
 

@@ -146,7 +146,6 @@ class CobolEnvironment:
             return
 
         division = None
-        section = None
         para_name = None
         para_lines: list[str] = []
 
@@ -888,13 +887,13 @@ class CobolEnvironment:
             self._emit(f"ℹ️  SQL: {inner.strip()[:60]}")
             return
         if re.match(r"^OPEN\b", sql_upper_strip):
-            self._emit(f"ℹ️  SQL cursor opened")
+            self._emit("ℹ️  SQL cursor opened")
             return
         if re.match(r"^CLOSE\b", sql_upper_strip):
-            self._emit(f"ℹ️  SQL cursor closed")
+            self._emit("ℹ️  SQL cursor closed")
             return
         if re.match(r"^FETCH\b", sql_upper_strip):
-            self._emit(f"ℹ️  SQL: fetch complete")
+            self._emit("ℹ️  SQL: fetch complete")
             return
         # Skip INCLUDE / BEGIN DECLARE SECTION / END DECLARE SECTION
         if re.match(
@@ -959,9 +958,9 @@ class CobolEnvironment:
             # If INTO target given and result contains a value, store it
             if into_var and result.strip():
                 lines = [
-                    l
-                    for l in result.strip().splitlines()
-                    if l.strip() and not l.startswith("-")
+                    line
+                    for line in result.strip().splitlines()
+                    if line.strip() and not line.startswith("-")
                 ]
                 if len(lines) >= 2:  # header + row
                     self._vars[into_var] = (

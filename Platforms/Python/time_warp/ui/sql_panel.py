@@ -54,7 +54,7 @@ class TSQLHighlighter(QSyntaxHighlighter):
     def __init__(self, document: QTextDocument, dark: bool = True):
         super().__init__(document)
         self._rules: List[tuple] = []
-        fg = QColor("#ABB2BF") if dark else QColor("#383A42")
+        QColor("#ABB2BF") if dark else QColor("#383A42")
         kw_color = QColor("#C678DD") if dark else QColor("#A626A4")
         fn_color = QColor("#61AFEF") if dark else QColor("#4078F2")
         str_color = QColor("#98C379") if dark else QColor("#50A14F")
@@ -230,7 +230,7 @@ class DatabaseTree(QTreeWidget):
                             cur2 = conn.execute(f'PRAGMA table_info("{tbl}")')
                             for col in cur2.fetchall():
                                 col_name, col_type = col[1], col[2] or "TEXT"
-                                col_item = QTreeWidgetItem(
+                                QTreeWidgetItem(
                                     tbl_item, [f"    ▸ {col_name}  ({col_type})"]
                                 )
                         except Exception:

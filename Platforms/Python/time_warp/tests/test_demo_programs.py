@@ -102,13 +102,13 @@ def test_demo_program(filepath: Path, language: Language):
     output = interp.execute(turtle)
 
     # output is a list of strings — join for inspection
-    full_output = "\n".join(output)
+    "\n".join(output)
 
     # Allow empty output (some programs only draw graphics)
     # but if there IS output, not every single line should be an error
     if output:
-        error_lines = [l for l in output if l.startswith("❌")]
-        non_error_lines = [l for l in output if not l.startswith("❌")]
+        error_lines = [line for line in output if line.startswith("❌")]
+        non_error_lines = [line for line in output if not line.startswith("❌")]
         # If *all* output lines are errors, that's a test failure
         if error_lines and not non_error_lines:
             pytest.fail(

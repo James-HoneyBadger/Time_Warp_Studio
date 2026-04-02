@@ -140,8 +140,8 @@ class BmsMap:
         """Return a plain-text representation of the map."""
         lines = [f"  ╔{'═' * self.COLS}╗"]
         screen = [list(" " * self.COLS) for _ in range(self.ROWS)]
-        for fname, (r, c, l) in self._fields.items():
-            val = self._field_data.get(fname, "").ljust(l)[:l]
+        for fname, (r, c, length) in self._fields.items():
+            val = self._field_data.get(fname, "").ljust(length)[:length]
             for i, ch in enumerate(val):
                 if c + i < self.COLS:
                     screen[r][c + i] = ch
@@ -294,7 +294,7 @@ class CICSEnvironment:
     def _parse_working_storage(self, lines: List[str]) -> None:
         """Extract 01-level PIC variables from WORKING-STORAGE SECTION or top-level."""
         in_ws = False
-        has_ws_section = any("WORKING-STORAGE SECTION" in l.upper() for l in lines)
+        has_ws_section = any("WORKING-STORAGE SECTION" in line.upper() for line in lines)
         # If no explicit section headers, treat all 01-level PIC lines as data
         if not has_ws_section:
             for line in lines:
@@ -308,7 +308,7 @@ class CICSEnvironment:
                     re.I,
                 )
                 if m:
-                    vname, pic, init_val = m.group(1), m.group(2), m.group(3)
+                    vname, _, init_val = m.group(1), m.group(2), m.group(3)
                     init_val = (init_val or "").strip().strip("'\".").rstrip(".")
                     self._vars[vname.upper()] = init_val if init_val else ""
             return
@@ -327,7 +327,7 @@ class CICSEnvironment:
                     re.I,
                 )
                 if m:
-                    vname, pic, init_val = m.group(1), m.group(2), m.group(3)
+                    vname, _, init_val = m.group(1), m.group(2), m.group(3)
                     init_val = (init_val or "").strip().strip("'\".").rstrip(".")
                     self._vars[vname.upper()] = init_val if init_val else ""
 
@@ -602,7 +602,7 @@ class CICSEnvironment:
 
     def _cics_link(self, opts: Dict[str, str]) -> None:
         prog = self._get_opt(opts, "PROGRAM")
-        comm = self._get_opt(opts, "COMMAREA")
+        self._get_opt(opts, "COMMAREA")
         self._emit(f"  LINK PROGRAM({prog}) — simulated (no external programs loaded)")
 
     def _cics_xctl(self, opts: Dict[str, str]) -> None:

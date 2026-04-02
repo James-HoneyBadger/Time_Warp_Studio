@@ -393,8 +393,7 @@ if __name__ == "__main__":
     print("🚀 Initializing Time Warp Studio...")
     report = orchestrator.initialize_system()
 
-    print(f"✅ Initialization completed in {
-            report.initialization_time_seconds:.2f}s")
+    print(f"✅ Initialization completed in {report.initialization_time_seconds:.2f}s")
     print(f"✅ Components initialized: {report.components_initialized}")
     if report.components_failed > 0:
         print(f"⚠️  Components failed: {report.components_failed}")

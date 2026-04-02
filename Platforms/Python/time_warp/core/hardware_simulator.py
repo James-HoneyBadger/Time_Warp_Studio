@@ -254,7 +254,11 @@ class HardwareSimulator:
 
     def get_all_device_status(self) -> List[Dict[str, Any]]:
         """Get status of all devices."""
-        return [self.get_device_status(device_id) for device_id in self.devices]
+        return [
+            status
+            for device_id in self.devices
+            if (status := self.get_device_status(device_id)) is not None
+        ]
 
     def get_sensor_history(
         self, sensor_id: str, limit: Optional[int] = None

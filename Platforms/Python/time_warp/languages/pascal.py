@@ -182,12 +182,12 @@ def _call_func_inline(
     for line_idx in range(info["start"], info["end"]):
         _, line_text = interpreter.program_lines[line_idx]
         if line_text.strip():
-            execute_pascal(interpreter, line_text.strip(), None)
+            execute_pascal(interpreter, line_text.strip(), None)  # type: ignore[arg-type]
     interpreter.current_line = saved_line
 
     # Read return value: function assigns to its own name
     if fsuf == "$":
-        result = interpreter.string_variables.get(fvar_key, "")
+        result: Any = interpreter.string_variables.get(fvar_key, "")
     else:
         result = interpreter.get_numeric_value(fname)
         if result is None:
@@ -398,7 +398,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
         fn = m.group(1).upper()
         try:
             v = float(interpreter.evaluate_expression(m.group(2).strip()))
-            funcs = {
+            funcs: Dict[str, Any] = {
                 "SQRT": _math.sqrt,
                 "SIN": _math.sin,
                 "COS": _math.cos,
@@ -495,15 +495,15 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
         arg_list = _split_args(inner)
         if arg_list:
             fmt_str = _eval_str(interpreter, arg_list[0])
-            vals = []
-            for a in arg_list[1:]:
+            vals: List[Any] = []
+            for fmt_arg in arg_list[1:]:
                 # strip [...] array syntax if present
-                a = a.strip().strip("[]")
-                if a:
+                fmt_arg = fmt_arg.strip().strip("[]")
+                if fmt_arg:
                     try:
-                        vals.append(interpreter.evaluate_expression(a))
+                        vals.append(interpreter.evaluate_expression(fmt_arg))
                     except Exception:
-                        vals.append(a)
+                        vals.append(fmt_arg)
             try:
                 # Replace Pascal-style %d/%s/%f with Python equivalents
                 result = re.sub(r"%\d*(?:\.\d+)?[dsfg]", "{}", fmt_str)
@@ -1271,15 +1271,13 @@ def _handle_for(
 def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleState") -> str:
     """Execute Pascal language command."""
     # Track multi-line block comments {  ...  } and (*  ...  *)
-    if not hasattr(interpreter, "_pascal_in_block_comment"):
-        interpreter._pascal_in_block_comment = False
 
     raw = command.strip()
 
     # If currently inside a block comment, look for the closing delimiter
-    if interpreter._pascal_in_block_comment:
+    if interpreter.pascal_in_block_comment:
         if "}" in raw or "*)" in raw:
-            interpreter._pascal_in_block_comment = False
+            interpreter.pascal_in_block_comment = False
         return ""
 
     # Check if this line opens a block comment that spans multiple lines
@@ -1291,7 +1289,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
     if (has_brace_open and not has_brace_close) or (
         has_paren_open and not has_paren_close
     ):
-        interpreter._pascal_in_block_comment = True
+        interpreter.pascal_in_block_comment = True
         return ""
 
     # Strip inline Pascal comments {...} and (* ... *) for control-flow parsing
@@ -1473,8 +1471,6 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
         # Parse the units list and activate stubs for known units
         units_str = upcmd[4:].strip().rstrip(";")
         units = [u.strip() for u in units_str.split(",") if u.strip()]
-        if not hasattr(interpreter, "pascal_units"):
-            interpreter.pascal_units = set()  # type: ignore[attr-defined]
         for unit in units:
             interpreter.pascal_units.add(unit)
         return ""
@@ -1585,9 +1581,9 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
         names, start_raw, end_raw, t = m.groups()
         # Resolve constant names or literal integers for bounds
         try:
-            start_idx = int(start_raw)
+            int(start_raw)
         except ValueError:
-            start_idx = int(interpreter.variables.get(start_raw.upper(), 0))
+            int(interpreter.variables.get(start_raw.upper(), 0))
         try:
             end_idx = int(end_raw)
         except ValueError:
@@ -1596,12 +1592,12 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
         if size <= 0:
             return "❌ Error: Invalid array size"
 
-        suf: str | None = _suffix_for_type(t)
-        default_val: str | float = "" if suf == "$" else 0.0
+        arr_suf: str | None = _suffix_for_type(t)
+        default_val: str | float = "" if arr_suf == "$" else 0.0
 
         for raw in names.split(","):
             name = raw.strip().upper()
-            interpreter.arrays[name] = [default_val] * size
+            interpreter.arrays[name] = [default_val] * size  # type: ignore[list-item]
         return ""
 
     # 2D array or complex array declarations — create a flat array as best effort
@@ -1619,9 +1615,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
         if m_td and m_td.group(2).upper() == "RECORD":
             rec_name = m_td.group(1).upper()
             # Scan ahead for field declarations until END
-            if not hasattr(interpreter, "pascal_record_types"):
-                interpreter.pascal_record_types = {}
-            fields = {}
+            fields: Dict[str, str] = {}
             scan_line = interpreter.current_line + 1
             while scan_line < len(interpreter.program_lines):
                 _, scan_cmd = interpreter.program_lines[scan_line]
@@ -1738,7 +1732,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
                 and type_name in interpreter.pascal_record_types
             ):
                 fields = interpreter.pascal_record_types[type_name]
-                rec = {}
+                rec: Dict[str, Any] = {}
                 for fname, ftype in fields.items():
                     ftype_up = ftype.upper()
                     if ftype_up in ("STRING", "CHAR"):
@@ -1747,7 +1741,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
                         rec[fname] = False
                     else:
                         rec[fname] = 0.0
-                interpreter.variables[name] = rec
+                interpreter.variables[name] = rec  # type: ignore[assignment]
                 if not hasattr(interpreter, "pascal_types"):
                     interpreter.pascal_types = {}
                 interpreter.pascal_types[name] = "#RECORD#"
@@ -1760,7 +1754,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
         var_name = m.group(1).upper()
         field_name = m.group(2).upper()
         expr = m.group(3).rstrip(";").strip()
-        rec = interpreter.variables.get(var_name)
+        rec = interpreter.variables.get(var_name)  # type: ignore[assignment]
         if isinstance(rec, dict):
             try:
                 val = _pascal_eval_expr(interpreter, expr)
@@ -1827,7 +1821,6 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
                 out_parts.append(_unquote(a))
             else:
                 # Strip Pascal format specifiers :width:decimals from end
-                fmt_width = 0
                 fmt_dec = -1
                 raw_a = a.strip()
                 fmt_m = re.match(
@@ -1835,13 +1828,13 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
                 )
                 if fmt_m:
                     raw_a = fmt_m.group(1)
-                    fmt_width = int(fmt_m.group(2))
+                    int(fmt_m.group(2))  # validate width
                     fmt_dec = int(fmt_m.group(3))
                 else:
                     fmt_m2 = re.match(r"^(.+?)\s*:\s*(\d+)\s*$", raw_a)
                     if fmt_m2:
                         raw_a = fmt_m2.group(1)
-                        fmt_width = int(fmt_m2.group(2))
+                        int(fmt_m2.group(2))  # validate width
                 up = raw_a.strip().upper()
                 if up + "$" in interpreter.string_variables:
                     out_parts.append(interpreter.string_variables[up + "$"])
@@ -2047,19 +2040,17 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
                 interpreter.string_variables.get(fname_expr.upper() + "$", fname_expr)
             )
         )
-        if not hasattr(interpreter, "_pascal_files"):
-            interpreter._pascal_files = {}
-        interpreter._pascal_files[fvar] = {"name": fname, "handle": None, "mode": None}
+        interpreter.pascal_files[fvar] = {"name": fname, "handle": None, "mode": None}
         return ""
 
     # Reset(f) / Reset(f, recsize)
     m = re.match(r"^RESET\s*\(([A-Za-z_][A-Za-z0-9_]*)[^)]*\)\s*$", upcmd_strip)
     if m:
         fvar = m.group(1).upper()
-        pf = getattr(interpreter, "_pascal_files", {}).get(fvar)
+        pf = interpreter.pascal_files.get(fvar)
         if pf:
             try:
-                pf["handle"] = open(pf["name"], "r")
+                pf["handle"] = open(pf["name"], "r", encoding="utf-8")
                 pf["mode"] = "r"
             except OSError as e:
                 return f"❌ {e}"
@@ -2069,10 +2060,10 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
     m = re.match(r"^REWRITE\s*\(([A-Za-z_][A-Za-z0-9_]*)\)\s*$", upcmd_strip)
     if m:
         fvar = m.group(1).upper()
-        pf = getattr(interpreter, "_pascal_files", {}).get(fvar)
+        pf = interpreter.pascal_files.get(fvar)
         if pf:
             try:
-                pf["handle"] = open(pf["name"], "w")
+                pf["handle"] = open(pf["name"], "w", encoding="utf-8")
                 pf["mode"] = "w"
             except OSError as e:
                 return f"❌ {e}"
@@ -2082,10 +2073,10 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
     m = re.match(r"^APPEND\s*\(([A-Za-z_][A-Za-z0-9_]*)\)\s*$", upcmd_strip)
     if m:
         fvar = m.group(1).upper()
-        pf = getattr(interpreter, "_pascal_files", {}).get(fvar)
+        pf = interpreter.pascal_files.get(fvar)
         if pf:
             try:
-                pf["handle"] = open(pf["name"], "a")
+                pf["handle"] = open(pf["name"], "a", encoding="utf-8")
                 pf["mode"] = "a"
             except OSError as e:
                 return f"❌ {e}"
@@ -2097,7 +2088,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
     )
     if m:
         fvar = m.group(1).upper()
-        pf = getattr(interpreter, "_pascal_files", {}).get(fvar)
+        pf = interpreter.pascal_files.get(fvar)
         if pf and pf.get("handle"):
             try:
                 pf["handle"].close()
@@ -2110,8 +2101,6 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
     m = re.match(r"^(?:NEW|DISPOSE)\s*\(([A-Za-z_][A-Za-z0-9_]*)\)\s*$", upcmd_strip)
     if m:
         var_name = m.group(1).upper()
-        if not hasattr(interpreter, "pascal_heap"):
-            interpreter.pascal_heap = {}  # type: ignore[attr-defined]
         if upcmd_strip.startswith("NEW"):
             # Allocate a new "pointer" (just a unique integer)
             addr = len(interpreter.pascal_heap) + 1
@@ -2119,9 +2108,9 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
             interpreter.set_typed_variable(var_name, addr)
         elif upcmd_strip.startswith("DISPOSE"):
             # Free the pointer
-            addr = interpreter.get_numeric_value(var_name)
-            if addr and addr in interpreter.pascal_heap:
-                del interpreter.pascal_heap[addr]
+            addr_val = interpreter.get_numeric_value(var_name)
+            if addr_val is not None and int(addr_val) in interpreter.pascal_heap:
+                del interpreter.pascal_heap[int(addr_val)]
             interpreter.set_typed_variable(var_name, 0)
         return ""
 
@@ -2159,9 +2148,9 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
         # Writeln/Write to file: Write(f, ...)
         if fname in ("WRITE", "WRITELN") and fargs:
             args = _split_args(fargs)
-            if args and args[0].upper() in getattr(interpreter, "_pascal_files", {}):
+            if args and args[0].upper() in interpreter.pascal_files:
                 fvar = args[0].upper()
-                pf = interpreter._pascal_files[fvar]
+                pf = interpreter.pascal_files[fvar]
                 parts = []
                 for a in args[1:]:
                     a = a.strip()

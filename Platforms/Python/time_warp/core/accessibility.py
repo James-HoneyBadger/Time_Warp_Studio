@@ -195,19 +195,11 @@ class ScreenReaderSupport:
     @staticmethod
     def describe_turtle_graphics(turtle_state: Dict) -> str:
         """Create accessible description of turtle state."""
-        return f"Turtle at position {
-                turtle_state.get(
-                    'x',
-                    0)}, {
-                turtle_state.get(
-                    'y',
-                    0)} " f"facing {
-                        turtle_state.get(
-                            'angle',
-                            0)} degrees, " f"pen is {
-                                'down' if turtle_state.get(
-                                    'pen_down',
-                                    True) else 'up'}"
+        x = turtle_state.get('x', 0)
+        y = turtle_state.get('y', 0)
+        angle = turtle_state.get('angle', 0)
+        pen = 'down' if turtle_state.get('pen_down', True) else 'up'
+        return f"Turtle at position {x}, {y} facing {angle} degrees, pen is {pen}"
 
 
 class TextToSpeechEngine:

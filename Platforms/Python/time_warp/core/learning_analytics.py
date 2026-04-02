@@ -362,10 +362,8 @@ class LearningAnalytics:
             bar_segment = "█" * int(info["confidence"] * 10) + "░" * (
                 10 - int(info["confidence"] * 10)
             )
-            report += f"\n{
-                concept:20} [{bar_segment}] {
-                info['confidence'] *
-                100:3.0f}% ({level})"
+            pct = info['confidence'] * 100
+            report += f"\n{concept:20} [{bar_segment}] {pct:3.0f}% ({level})"
 
         # Error analysis
         error_analysis = self.get_error_analysis()

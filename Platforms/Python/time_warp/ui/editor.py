@@ -210,6 +210,16 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
 
         self.variable_format = QTextCharFormat()
 
+        # Pre-compiled regex patterns (populated by _compile_patterns)
+        self._keyword_re: re.Pattern | None = None
+        self._comment_re: re.Pattern | None = None
+        self._string_re: re.Pattern | None = None
+        self._number_re: re.Pattern | None = None
+        self._operator_re: re.Pattern | None = None
+        self._function_re: re.Pattern | None = None
+        self._variable_re: re.Pattern | None = None
+        self._current_language = None
+
         # Language-specific keywords and patterns
         self._setup_language_patterns(language)
 
@@ -1805,13 +1815,13 @@ class FindDialog(QDialog):
         self.setMinimumWidth(420)
 
     # ------------------------------------------------------------------
-    def _build_find_flags(self) -> QTextDocument.FindFlags:
+    def _build_find_flags(self) -> QTextDocument.FindFlag:
         """Build Qt find flags from checkbox states."""
-        flags = QTextDocument.FindFlags()
+        flags = QTextDocument.FindFlag(0)
         if self.case_check.isChecked():
-            flags |= QTextDocument.FindCaseSensitively
+            flags |= QTextDocument.FindFlag.FindCaseSensitively
         if self.word_check.isChecked():
-            flags |= QTextDocument.FindWholeWords
+            flags |= QTextDocument.FindFlag.FindWholeWords
         return flags
 
     def _regex_pattern(self) -> re.Pattern | None:
@@ -1838,7 +1848,7 @@ class FindDialog(QDialog):
     def _highlight_all(self) -> int:
         """Highlight every occurrence in the editor and return count."""
         highlight_color = QColor(255, 210, 80, 100)
-        selections = []
+        selections: list[QTextEdit.ExtraSelection] = []
         text = self.search_field.text()
         if not text:
             self.editor.setExtraSelections(selections)
@@ -1858,7 +1868,7 @@ class FindDialog(QDialog):
                 sel = QTextEdit.ExtraSelection()
                 cursor = QTextCursor(doc)
                 cursor.setPosition(m.start())
-                cursor.setPosition(m.end(), QTextCursor.KeepAnchor)
+                cursor.setPosition(m.end(), QTextCursor.MoveMode.KeepAnchor)
                 fmt = QTextCharFormat()
                 fmt.setBackground(QBrush(highlight_color))
                 sel.format = fmt
@@ -1902,7 +1912,7 @@ class FindDialog(QDialog):
             self._find_regex(forward=False)
         else:
             self.editor.find(
-                text, self._build_find_flags() | QTextDocument.FindBackward
+                text, self._build_find_flags() | QTextDocument.FindFlag.FindBackward
             )
 
     def _find_regex(self, forward: bool = True):
@@ -1933,7 +1943,7 @@ class FindDialog(QDialog):
         """Select a regex match in the editor."""
         cursor = QTextCursor(self.editor.document())
         cursor.setPosition(m.start())
-        cursor.setPosition(m.end(), QTextCursor.KeepAnchor)
+        cursor.setPosition(m.end(), QTextCursor.MoveMode.KeepAnchor)
         self.editor.setTextCursor(cursor)
 
     # ------------------------------------------------------------------
@@ -2146,7 +2156,7 @@ class CodeEditor(QPlainTextEdit):
                 )
                 sel.cursor = c
                 sel.format = fmt
-                sel._bracket_match = True  # type: ignore[attr-defined]
+                sel._bracket_match = True  # type: ignore[attr-defined]  # pylint: disable=protected-access
                 selections.append(sel)
 
         self.setExtraSelections(selections)

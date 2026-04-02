@@ -5,6 +5,7 @@ import subprocess
 import os
 import sys
 
+
 def launch_hb_banking():
     """Launch HB Banking ERP GUI."""
     hb_main = os.path.join(os.path.dirname(__file__), '..', 'main.py')
@@ -13,6 +14,7 @@ def launch_hb_banking():
         print("HB Banking ERP launched successfully.")
     except Exception as e:
         print(f"Failed to launch HB Banking ERP: {e}")
+
 
 def get_erp_status():
     """Get basic ERP system status for Time Warp Studio."""
@@ -29,6 +31,7 @@ def get_erp_status():
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
 
 def perform_admin_task(task_name, **kwargs):
     """Allow Time Warp Studio to perform admin tasks."""
@@ -48,6 +51,7 @@ def perform_admin_task(task_name, **kwargs):
             return f"Unknown task: {task_name}"
     except Exception as e:
         return f"Task failed: {e}"
+
 
 if __name__ == "__main__":
     launch_hb_banking()

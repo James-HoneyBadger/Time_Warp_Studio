@@ -34,7 +34,7 @@ def run(source: str, language: Language, *, input_val: str = "4") -> list[str]:
 
 def ok(output: list[str]) -> bool:
     """True when there is at least some non-error output."""
-    non_err = [l for l in output if not l.startswith("❌")]
+    non_err = [line for line in output if not line.startswith("❌")]
     return len(non_err) > 0
 
 
@@ -46,12 +46,12 @@ def has(output: list[str], *fragments: str) -> bool:
 
 def no_errors(output: list[str]) -> bool:
     """True when NO line in *output* starts with the error emoji."""
-    return not any(l.startswith("❌") for l in output)
+    return not any(line.startswith("❌") for line in output)
 
 
 def first_error(output: list[str]) -> str | None:
     """Return the first error line or None."""
-    for l in output:
-        if l.startswith("❌"):
-            return l
+    for line in output:
+        if line.startswith("❌"):
+            return line
     return None

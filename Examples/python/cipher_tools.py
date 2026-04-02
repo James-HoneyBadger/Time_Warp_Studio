@@ -9,11 +9,11 @@
 ╚══════════════════════════════════════════════════════╝
 """
 import string
-import math
 import base64
 from collections import Counter
 
 # ─── UTILITIES ───────────────────────────────────────────
+
 
 def clean(text: str) -> str:
     """Remove non-alpha characters and uppercase."""
@@ -140,16 +140,16 @@ def rail_fence_decode(text: str, rails: int) -> str:
 # ─── MORSE CODE ─────────────────────────────────────────
 
 MORSE = {
-    'A': '.-',   'B': '-...',  'C': '-.-.',  'D': '-..',
-    'E': '.',    'F': '..-.',  'G': '--.',   'H': '....',
-    'I': '..',   'J': '.---',  'K': '-.-',   'L': '.-..',
-    'M': '--',   'N': '-.',    'O': '---',   'P': '.--.',
-    'Q': '--.-', 'R': '.-.',   'S': '...',   'T': '-',
-    'U': '..-',  'V': '...-',  'W': '.--',   'X': '-..-',
+    'A': '.-', 'B': '-...', 'C': '-.-.', 'D': '-..',
+    'E': '.', 'F': '..-.', 'G': '--.', 'H': '....',
+    'I': '..', 'J': '.---', 'K': '-.-', 'L': '.-..',
+    'M': '--', 'N': '-.', 'O': '---', 'P': '.--.',
+    'Q': '--.-', 'R': '.-.', 'S': '...', 'T': '-',
+    'U': '..-', 'V': '...-', 'W': '.--', 'X': '-..-',
     'Y': '-.--', 'Z': '--..',
     '0': '-----', '1': '.----', '2': '..---', '3': '...--',
     '4': '....-', '5': '.....', '6': '-....', '7': '--...',
-    '8': '---..',  '9': '----.',
+    '8': '---..', '9': '----.',
     ' ': '/'
 }
 MORSE_REV = {v: k for k, v in MORSE.items()}
@@ -207,9 +207,9 @@ class SubstitutionCipher:
 # ─── DEMO ────────────────────────────────────────────────
 
 def print_section(title: str):
-    print(f"\n{'═'*55}")
+    print(f"\n{'═' * 55}")
     print(f"  {title}")
-    print(f"{'─'*55}")
+    print(f"{'─' * 55}")
 
 
 def demo():
@@ -272,7 +272,7 @@ def demo():
     sc = SubstitutionCipher("PYTHON")
     enc = sc.encode("Hello World")
     dec = sc.decode(enc)
-    print(f"  Key: PYTHON")
+    print("  Key: PYTHON")
     print(f"  Cipher alphabet: {sc.key}")
     print(f"  Encoded: {enc}")
     print(f"  Decoded: {dec}")

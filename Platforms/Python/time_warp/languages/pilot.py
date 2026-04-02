@@ -36,10 +36,9 @@ Match variables (set automatically by M:):
     $RIGHT  Text after the matched portion
 """
 
-import math
 import re
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Optional
 
 from ..logging_config import get_logger
 from ..utils.validators import (
@@ -357,11 +356,13 @@ def execute_pilot(
         interpreter.running = False
         return ""
     # --- Full Logo command and block blending ---
+    _execute_logo: Optional[Any] = None
     try:
-        from .logo import LOGO_COMMANDS, execute_logo
+        from .logo import LOGO_COMMANDS, execute_logo as _imported_logo
+
+        _execute_logo = _imported_logo
     except ImportError:
         LOGO_COMMANDS = set()
-        execute_logo = None
 
     def is_logo_line(line: str) -> bool:
         if not line.strip():
@@ -378,31 +379,31 @@ def execute_pilot(
         return False
 
     # If the rest is likely Logo, or contains Logo block syntax, forward to Logo executor
-    if is_logo_line(rest) and execute_logo:
-        return execute_logo(interpreter, rest, turtle)
+    if is_logo_line(rest) and _execute_logo:
+        return _execute_logo(interpreter, rest, turtle)
 
     # If the line is not recognized as PILOT, but is not empty, try to accumulate a Logo block
-    if execute_logo and rest.strip():
+    if _execute_logo and rest.strip():
         if any(kw in rest.upper() for kw in ["REPEAT", "TO", "FOREACH", "MAP", "FILTER", "REDUCE", "WHILE", "UNTIL"]):
             block_lines = [rest]
             open_brackets = rest.count("[") - rest.count("]")
-            interpreter._logo_block_buffer = getattr(interpreter, "_logo_block_buffer", [])
-            interpreter._logo_block_buffer.extend(block_lines)
+            interpreter.logo_block_buffer = getattr(interpreter, "logo_block_buffer", [])
+            interpreter.logo_block_buffer.extend(block_lines)
             if open_brackets > 0:
                 return ""
             else:
-                block = "\n".join(interpreter._logo_block_buffer)
-                interpreter._logo_block_buffer = []
-                return execute_logo(interpreter, block, turtle)
-        if hasattr(interpreter, "_logo_block_buffer") and interpreter._logo_block_buffer:
-            interpreter._logo_block_buffer.append(rest)
-            open_brackets = sum(l.count("[") - l.count("]") for l in interpreter._logo_block_buffer)
+                block = "\n".join(interpreter.logo_block_buffer)
+                interpreter.logo_block_buffer = []
+                return _execute_logo(interpreter, block, turtle)
+        if hasattr(interpreter, "logo_block_buffer") and interpreter.logo_block_buffer:
+            interpreter.logo_block_buffer.append(rest)
+            open_brackets = sum(line.count("[") - line.count("]") for line in interpreter.logo_block_buffer)
             if open_brackets > 0:
                 return ""
             else:
-                block = "\n".join(interpreter._logo_block_buffer)
-                interpreter._logo_block_buffer = []
-                return execute_logo(interpreter, block, turtle)
+                block = "\n".join(interpreter.logo_block_buffer)
+                interpreter.logo_block_buffer = []
+                return _execute_logo(interpreter, block, turtle)
 
     return f"❌ Unknown PILOT command: {cmd_type}:\n"
 
@@ -553,7 +554,7 @@ def _pilot_graphics_command(
             return "❌ G: Invalid ARC parameters\n"
     elif cmd == "FILL":
         # Fill last closed shape with current pen colour
-        r, g, b = turtle.color
+        r, g, b = turtle.pen_color
         turtle.fill_last_shape((r, g, b))
     elif cmd == "DOT":
         # Draw a filled dot at current position

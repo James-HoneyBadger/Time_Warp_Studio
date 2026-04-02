@@ -14,6 +14,7 @@ import json
 
 # ─── DATA MODEL ─────────────────────────────────────────
 
+
 class Task:
     """A single task with rich metadata."""
 
@@ -158,20 +159,20 @@ class TaskManager:
             "done": done,
             "pending": pending,
             "overdue": overdue_c,
-            "completion_rate": f"{done/max(1,total)*100:.1f}%",
+            "completion_rate": f"{done / max(1, total) * 100:.1f}%",
             "by_project": by_proj,
         }
 
     def print_list(self, tasks: list[Task] | None = None, title: str = "TASKS"):
         src = tasks if tasks is not None else self.tasks
-        print(f"\n{'═'*60}")
+        print(f"\n{'═' * 60}")
         print(f"  {title} ({len(src)} items)")
-        print(f"{'─'*60}")
+        print(f"{'─' * 60}")
         if not src:
             print("  (none)")
         for t in self.sorted_by_priority(src):
             print(" ", t)
-        print(f"{'═'*60}")
+        print(f"{'═' * 60}")
 
     def print_summary(self):
         s = self.summary()

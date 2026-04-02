@@ -11,7 +11,8 @@ Features:
 - Integration with the editor for inline suggestions.
 """
 
-from typing import List, Dict
+from typing import List
+
 
 class AISuggestions:
     """Class to manage AI-powered code suggestions."""
@@ -53,6 +54,7 @@ class AISuggestions:
             suggestion (str): The suggestion to apply.
         """
         print(f"✅ Applied suggestion: {suggestion}")
+
 
 # Example usage
 if __name__ == "__main__":

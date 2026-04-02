@@ -13,7 +13,7 @@ from typing import TYPE_CHECKING
 
 from PySide6.QtGui import QTextDocument
 from PySide6.QtPrintSupport import QPrinter
-from PySide6.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtWidgets import QFileDialog
 
 if TYPE_CHECKING:
     from ..collaboration_client import CollaborationOperation  # noqa: F401
@@ -74,7 +74,6 @@ class ClassroomMixin:
 
     def export_classroom_bundle(self, name: str, description: str):
         """Export a classroom bundle from open tabs."""
-        from ...core.interpreter import Language
 
         files = {}
         for i in range(self.editor_tabs.count()):
@@ -147,7 +146,7 @@ class ClassroomMixin:
         if not editor:
             return
 
-        from ..collaboration_client import CollaborationOperation
+        from ..collaboration_client import CollaborationOperation  # noqa: F811
 
         operation = CollaborationOperation(
             id=uuid.uuid4().hex,

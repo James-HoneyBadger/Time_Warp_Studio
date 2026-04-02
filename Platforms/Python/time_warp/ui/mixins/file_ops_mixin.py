@@ -7,17 +7,43 @@ from __future__ import annotations
 
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 if TYPE_CHECKING:
+    from PySide6.QtCore import QSettings
+    from PySide6.QtWidgets import QStatusBar, QTabWidget, QWidget
+
     from ..editor import CodeEditor  # noqa: F401
 
+    _FileOpsMixinBase = QWidget
+else:
+    _FileOpsMixinBase = object
 
-class FileOperationsMixin:
-    """File I/O methods mixed into MainWindow."""
+
+class FileOperationsMixin(_FileOpsMixinBase):
+    """File I/O methods mixed into MainWindow.
+
+    Uses a conditional base (``QWidget`` for type checkers, ``object``
+    at runtime) so that static analysers accept ``self`` where Qt
+    dialogs expect a ``QWidget``, without interfering with shiboken's
+    C++ object initialisation.
+
+    Attributes below are provided by the host ``MainWindow`` class at
+    runtime; they are declared here only so that static type-checkers
+    can verify usage within the mixin.
+    """
+
+    editor_tabs: QTabWidget
+    statusbar: QStatusBar
+    settings: QSettings
+
+    # These methods are defined on MainWindow; stubs keep the checker happy.
+    def create_new_tab(self, *args: Any, **kwargs: Any) -> None: ...  # noqa: E704
+    def set_current_tab_info(self, **kwargs: Any) -> None: ...  # noqa: E704
+    def _ts(self, index: int) -> Any: ...  # noqa: E704
 
     def new_file(self):
         """Create new file."""
@@ -146,7 +172,7 @@ class FileOperationsMixin:
         if tab_index < 0 or tab_index >= self.editor_tabs.count():
             return False
 
-        editor = self.editor_tabs.widget(tab_index)
+        editor: Any = self.editor_tabs.widget(tab_index)
         if editor is None:
             return False
 
@@ -175,11 +201,11 @@ class FileOperationsMixin:
         if tab_index < 0 or tab_index >= self.editor_tabs.count():
             return False
 
-        editor = self.editor_tabs.widget(tab_index)
+        editor: Any = self.editor_tabs.widget(tab_index)
         if editor is None:
             return False
 
-        last_dir = self.settings.value("last_dir", str(Path.home()))
+        last_dir = str(self.settings.value("last_dir", str(Path.home())))
 
         filename, _ = QFileDialog.getSaveFileName(
             self,

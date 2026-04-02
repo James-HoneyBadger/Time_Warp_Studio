@@ -1,6 +1,6 @@
 # Time Warp Studio
 
-**Educational Multi-Language Programming Environment with Integrated IDE, Debugger, and Turtle Graphics**
+## Educational Multi-Language Programming Environment with Integrated IDE, Debugger, and Turtle Graphics
 
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![PySide6](https://img.shields.io/badge/PySide6-Qt6-green)](https://wiki.qt.io/Qt_for_Python)
@@ -35,7 +35,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 24 languages spanning six decades of computing history:
 
 | Language | Paradigm | Era | Status |
-|----------|----------|-----|--------|
+| --- | --- | --- | --- |
 | **BASIC** | Imperative / Educational | 1964 | Complete |
 | **Logo** | Turtle Graphics / Educational | 1967 | Complete |
 | **PILOT** | Computer-Aided Instruction | 1969 | Complete |
@@ -98,7 +98,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 ## 📋 Requirements
 
 | Requirement | Minimum | Recommended |
-|-------------|---------|-------------|
+| --- | --- | --- |
 | **Python** | 3.10 | 3.12+ |
 | **PySide6** | Any recent | Latest |
 | **Pillow** | 10.0.0 | Latest |
@@ -185,7 +185,7 @@ FOR I = 1 TO 5
 NEXT I
 ```
 
-4. Press **Ctrl+R** (or click **Run**)
+1. Press **Ctrl+R** (or click **Run**)
 
 You'll see the output in the console panel below the editor.
 
@@ -266,7 +266,7 @@ Browse 93 more examples in the [Examples/](Examples/) directory or through **Fil
 ### Quick References
 
 | Document | Description |
-|----------|-------------|
+| --- | --- |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | System design and technical details |
 | [INSTALLATION.md](docs/INSTALLATION.md) | Detailed installation instructions |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
@@ -274,7 +274,7 @@ Browse 93 more examples in the [Examples/](Examples/) directory or through **Fil
 ### Guides (in `docs/guides/`)
 
 | Guide | Description |
-|-------|-------------|
+| --- | --- |
 | [Getting Started](docs/guides/01-getting-started.md) | First steps with the IDE |
 | [IDE Basics](docs/guides/02-ide-basics.md) | Editor, menus, and panels |
 | [Lessons](docs/guides/03-lessons.md) | Working through guided lessons |
@@ -286,7 +286,7 @@ Browse 93 more examples in the [Examples/](Examples/) directory or through **Fil
 ### Language Tutorials (in `docs/tutorials/`)
 
 | Tutorial | Description |
-|----------|-------------|
+| --- | --- |
 | [BASIC](docs/tutorials/basic.md) | BASIC programming with graphics |
 | [Logo](docs/tutorials/logo.md) | Turtle graphics programming |
 | [PILOT](docs/tutorials/pilot.md) | Interactive lesson creation |
@@ -315,7 +315,7 @@ Browse 93 more examples in the [Examples/](Examples/) directory or through **Fil
 ### Reference
 
 | Document | Description |
-|----------|-------------|
+| --- | --- |
 | [FAQ](docs/reference/faq.md) | Frequently asked questions |
 | [Documentation Index](docs/INDEX.md) | Full documentation listing |
 | [Examples Catalog](Examples/CATALOG.md) | Example programs catalog |
@@ -324,7 +324,7 @@ Browse 93 more examples in the [Examples/](Examples/) directory or through **Fil
 
 ## 🗂️ Project Structure
 
-```
+```text
 Time_Warp_Studio/
 ├── run.py                         # Smart launcher (auto-setup + launch)
 ├── run.sh                         # Shell wrapper for Linux/macOS
@@ -428,7 +428,7 @@ python Platforms/Python/time_warp_ide.py
 ### Performance
 
 | Metric | Typical Value |
-|--------|---------------|
+| --- | --- |
 | Startup time | 2–5 seconds |
 | Memory usage | 200–300 MB |
 | Codebase | 56,000+ lines across 130+ Python modules |
@@ -466,21 +466,27 @@ We welcome contributions! Here's how to get started:
 
 1. **Fork** the repository
 2. **Clone** your fork and create a feature branch:
+
    ```bash
    git checkout -b feature/my-improvement
    ```
+
 3. **Set up** the development environment:
+
    ```bash
    python -m venv .venv
    source .venv/bin/activate
    pip install -r Platforms/Python/requirements.txt
    ```
+
 4. **Make** your changes following [PEP 8](https://peps.python.org/pep-0008/) style
 5. **Test** that all tests pass:
+
    ```bash
-  pytest -q
-  python Platforms/Python/test_runner.py --basic
+   pytest -q
+   python Platforms/Python/test_runner.py --basic
    ```
+
 6. **Commit** with a clear message and submit a pull request
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
@@ -496,7 +502,7 @@ Licensed under the **[MIT License](LICENSE)**.
 ## 🔗 Resources
 
 - **Repository:** [github.com/James-HoneyBadger/Time_Warp_Studio](https://github.com/James-HoneyBadger/Time_Warp_Studio)
-- **Maintainer:** James Temple — james@honey-badger.org
+- **Maintainer:** James Temple — <james@honey-badger.org>
 - **Version:** 9.0.0
 
 ---

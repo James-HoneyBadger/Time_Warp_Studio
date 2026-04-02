@@ -6,7 +6,6 @@ TW Editor - Standalone Code Editor for Time Warp Languages.
 Features syntax highlighting, formatting, and basic editing capabilities.
 """
 
-import logging
 import sys
 from pathlib import Path
 

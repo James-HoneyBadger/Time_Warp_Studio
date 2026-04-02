@@ -1,9 +1,10 @@
-import pytest
-from time_warp.benchmarks.performance_benchmarks import BenchmarkRunner
-from time_warp.core.interpreter import run, Language
-from time_warp.tests.helpers import no_errors
+from time_warp.benchmarks.performance_benchmarks import BenchmarkRunner  # type: ignore[import-not-found]  # pylint: disable=import-error
+from time_warp.core.interpreter import run, Language  # type: ignore[import-not-found]  # pylint: disable=import-error
+from time_warp.tests.helpers import no_errors  # type: ignore[import-not-found]  # pylint: disable=import-error
 
 # @pytest.mark.performance
+
+
 class TestPerformanceBenchmarks:
     def test_language_execution_speed(self):
         """Benchmark execution speed for all supported languages."""

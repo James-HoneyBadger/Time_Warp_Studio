@@ -13,7 +13,6 @@ from ..logging_config import get_logger
 from ..utils.validators import (
     ValidationError,
     validate_arg_count,
-    validate_range,
 )
 
 if TYPE_CHECKING:
@@ -553,7 +552,7 @@ def _logo_foreach(
     """FOREACH list [template] — execute template for each list element."""
     # Parse: FOREACH [list] [template]  or  FOREACH :var [template]
     # First argument is the data list; second is the template.
-    cmd_upper = command.upper().lstrip()
+    command.upper().lstrip()
     # Skip command name
     after_cmd = command[command.upper().find("FOREACH") + 7 :].strip()
 

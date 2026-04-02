@@ -83,6 +83,7 @@ class VirtualCPU:
         self._data_ptr = 0  # next free byte in memory for data
         self.instructions: list[tuple[str, str]] = []  # (opcode, args_str)
         self.ip = 0
+        self._fstack: list[float] = []
 
     def _emit(self, text: str):
         self._output.append(str(text))
@@ -183,7 +184,6 @@ class VirtualCPU:
         """Parse DB/DW data and store in memory + data_strings."""
         # Collect all data items (strings, numbers)
         text_parts: list[str] = []
-        addr = self._data_ptr
         i = 0
         while i < len(args):
             c = args[i]
@@ -389,9 +389,9 @@ class VirtualCPU:
             self.turtle.right(self._val(a[0]))
         elif op == "PEN":
             if a and a[0] == "UP":
-                self.turtle.pen_up()
+                self.turtle.penup()
             elif a and a[0] == "DOWN":
-                self.turtle.pen_down()
+                self.turtle.pendown()
 
         # ── Shift / Rotate ───────────────────────────────────────────────────
         elif op in ("SHL", "SAL"):
@@ -463,15 +463,11 @@ class VirtualCPU:
             r = abs(self._reg_get(a[0]))
             self._reg_set(a[0], r)
         elif op == "CBRT":
-            import math as _m
-
             v = self._reg_get(a[0])
-            r = int(_m.cbrt(v) if v >= 0 else -_m.cbrt(-v))
+            r = int(_math.cbrt(v) if v >= 0 else -_math.cbrt(-v))
             self._reg_set(a[0], r)
         elif op == "SQRT_INT":
-            import math as _m
-
-            r = int(_m.sqrt(max(0, self._reg_get(a[0]))))
+            r = int(_math.sqrt(max(0, self._reg_get(a[0]))))
             self._reg_set(a[0], r)
 
         # ── Data movement extensions ─────────────────────────────────────────
@@ -665,22 +661,22 @@ class VirtualCPU:
         # ── String/memory block ops ─────────────────────────────────────────
         elif op in ("MOVS", "MOVSB", "MOVSW", "MOVSD"):
             # Move memory[R1] → memory[R0], R1++, R0++, R2--
-            src, dst, cnt = self.regs[1], self.regs[0], self.regs[2]
-            if 0 <= src < len(self.memory) and 0 <= dst < len(self.memory):
-                self.memory[dst] = self.memory[src]
+            msrc, mdst, mcnt = self.regs[1], self.regs[0], self.regs[2]
+            if 0 <= msrc < len(self.memory) and 0 <= mdst < len(self.memory):
+                self.memory[mdst] = self.memory[msrc]
             self.regs[0] += 1
             self.regs[1] += 1
-            self.regs[2] = max(0, cnt - 1)
+            self.regs[2] = max(0, mcnt - 1)
         elif op in ("STOS", "STOSB", "STOSD"):
-            dst = self.regs[0]
-            if 0 <= dst < len(self.memory):
-                self.memory[dst] = self.regs[1]
+            sdst = self.regs[0]
+            if 0 <= sdst < len(self.memory):
+                self.memory[sdst] = self.regs[1]
             self.regs[0] += 1
             self.regs[2] = max(0, self.regs[2] - 1)
         elif op in ("LODS", "LODSB", "LODSD"):
-            src = self.regs[1]
-            if 0 <= src < len(self.memory):
-                self.regs[0] = self.memory[src]
+            lsrc = self.regs[1]
+            if 0 <= lsrc < len(self.memory):
+                self.regs[0] = self.memory[lsrc]
             self.regs[1] += 1
             self.regs[2] = max(0, self.regs[2] - 1)
         elif op in ("SCAS", "SCASB", "SCASD"):
@@ -739,97 +735,83 @@ class VirtualCPU:
             # Clear float registers
             for i in range(8, 16):
                 self.regs[i] = 0
-            self._fstack: list[float] = []
+            self._fstack = []
         elif op == "FLD":
-            if not hasattr(self, "_fstack"):
-                self._fstack = []
-            v = float(self._reg_get(a[0]))
-            self._fstack.append(v)
+            fv = float(self._reg_get(a[0]))
+            self._fstack.append(fv)
         elif op == "FILD":
-            if not hasattr(self, "_fstack"):
-                self._fstack = []
             self._fstack.append(float(self._val(a[0])))
         elif op == "FLDPI":
-            if not hasattr(self, "_fstack"):
-                self._fstack = []
             self._fstack.append(_math.pi)
         elif op == "FLDL2E":
-            if not hasattr(self, "_fstack"):
-                self._fstack = []
             self._fstack.append(_math.log2(_math.e))
         elif op == "FLDLN2":
-            if not hasattr(self, "_fstack"):
-                self._fstack = []
             self._fstack.append(_math.log(2))
         elif op == "FLDZ":
-            if not hasattr(self, "_fstack"):
-                self._fstack = []
             self._fstack.append(0.0)
         elif op == "FLD1":
-            if not hasattr(self, "_fstack"):
-                self._fstack = []
             self._fstack.append(1.0)
         elif op == "FST":
-            if hasattr(self, "_fstack") and self._fstack:
+            if self._fstack:
                 self._reg_set(a[0], int(self._fstack[-1]))
         elif op == "FSTP":
-            if hasattr(self, "_fstack") and self._fstack:
+            if self._fstack:
                 self._reg_set(a[0], int(self._fstack.pop()))
         elif op == "FIST":
-            if hasattr(self, "_fstack") and self._fstack:
+            if self._fstack:
                 self._reg_set(a[0], int(self._fstack[-1]))
         elif op == "FISTP":
-            if hasattr(self, "_fstack") and self._fstack:
+            if self._fstack:
                 self._reg_set(a[0], int(self._fstack.pop()))
         elif op == "FADD":
-            if hasattr(self, "_fstack") and len(self._fstack) >= 2:
+            if len(self._fstack) >= 2:
                 b, a2 = self._fstack.pop(), self._fstack.pop()
                 self._fstack.append(a2 + b)
         elif op == "FSUB":
-            if hasattr(self, "_fstack") and len(self._fstack) >= 2:
+            if len(self._fstack) >= 2:
                 b, a2 = self._fstack.pop(), self._fstack.pop()
                 self._fstack.append(a2 - b)
         elif op == "FSUBR":
-            if hasattr(self, "_fstack") and len(self._fstack) >= 2:
+            if len(self._fstack) >= 2:
                 b, a2 = self._fstack.pop(), self._fstack.pop()
                 self._fstack.append(b - a2)
         elif op == "FMUL":
-            if hasattr(self, "_fstack") and len(self._fstack) >= 2:
+            if len(self._fstack) >= 2:
                 b, a2 = self._fstack.pop(), self._fstack.pop()
                 self._fstack.append(a2 * b)
         elif op == "FDIV":
-            if hasattr(self, "_fstack") and len(self._fstack) >= 2:
+            if len(self._fstack) >= 2:
                 b, a2 = self._fstack.pop(), self._fstack.pop()
                 self._fstack.append(a2 / b if b else float("nan"))
         elif op == "FDIVR":
-            if hasattr(self, "_fstack") and len(self._fstack) >= 2:
+            if len(self._fstack) >= 2:
                 b, a2 = self._fstack.pop(), self._fstack.pop()
                 self._fstack.append(b / a2 if a2 else float("nan"))
         elif op == "FSQRT":
-            if hasattr(self, "_fstack") and self._fstack:
+            if self._fstack:
                 self._fstack.append(_math.sqrt(abs(self._fstack.pop())))
         elif op == "FSIN":
-            if hasattr(self, "_fstack") and self._fstack:
+            if self._fstack:
                 self._fstack.append(_math.sin(self._fstack.pop()))
         elif op == "FCOS":
-            if hasattr(self, "_fstack") and self._fstack:
+            if self._fstack:
                 self._fstack.append(_math.cos(self._fstack.pop()))
         elif op == "FTAN":
-            if hasattr(self, "_fstack") and self._fstack:
+            if self._fstack:
                 self._fstack.append(_math.tan(self._fstack.pop()))
         elif op == "FSINCOS":
-            if hasattr(self, "_fstack") and self._fstack:
-                v = self._fstack.pop()
-                self._fstack += [_math.sin(v), _math.cos(v)]
+            if self._fstack:
+                fv = self._fstack.pop()
+                self._fstack += [_math.sin(fv), _math.cos(fv)]
         elif op == "FPATAN":
-            if hasattr(self, "_fstack") and len(self._fstack) >= 2:
+            if len(self._fstack) >= 2:
                 b, a2 = self._fstack.pop(), self._fstack.pop()
                 self._fstack.append(_math.atan2(a2, b))
         elif op == "FABS":
-            if hasattr(self, "_fstack") and self._fstack:
+            if self._fstack:
                 self._fstack.append(abs(self._fstack.pop()))
         elif op == "FCHS":
-            if hasattr(self, "_fstack") and self._fstack:
+            if self._fstack:
                 self._fstack.append(-self._fstack.pop())
         elif op == "FRNDINT":
             if hasattr(self, "_fstack") and self._fstack:
@@ -1067,7 +1049,7 @@ class VirtualCPU:
         except ValueError:
             pass
         try:
-            return float(operand)  # float immediate (e.g. 3.14)
+            return int(float(operand))  # float immediate (e.g. 3.14) truncated to int
         except ValueError:
             pass
         # Resolve data labels to memory addresses

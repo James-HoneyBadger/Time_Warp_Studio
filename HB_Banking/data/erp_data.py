@@ -4,11 +4,14 @@ import os
 
 DB_PATH = os.path.join(os.path.dirname(__file__), 'erp_demo.db')
 
+
 def get_connection():
     return sqlite3.connect(DB_PATH)
 
+
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
+
 
 def authenticate_user(username, password):
     try:
@@ -20,6 +23,7 @@ def authenticate_user(username, password):
         print(f"Authentication error: {e}")
         return None
 
+
 def get_accounts(user_id=None):
     with get_connection() as conn:
         cur = conn.cursor()
@@ -29,6 +33,7 @@ def get_accounts(user_id=None):
             cur.execute("SELECT id, account_number, account_type, balance, status FROM accounts WHERE status='active'")
         return cur.fetchall()
 
+
 def get_budgets(user_id=None):
     with get_connection() as conn:
         cur = conn.cursor()
@@ -37,6 +42,7 @@ def get_budgets(user_id=None):
         else:
             cur.execute("SELECT id, year, category, budgeted_amount, spent_amount FROM budgets")
         return cur.fetchall()
+
 
 def get_transactions(account_id=None, user_id=None):
     with get_connection() as conn:
@@ -55,11 +61,13 @@ def get_transactions(account_id=None, user_id=None):
             cur.execute("SELECT id, date, description, amount, category FROM transactions")
         return cur.fetchall()
 
+
 def get_users():
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute("SELECT id, username, role, email FROM users")
         return cur.fetchall()
+
 
 def add_user(username, password, role, email=""):
     with get_connection() as conn:
@@ -69,11 +77,13 @@ def add_user(username, password, role, email=""):
         conn.commit()
         return cur.lastrowid
 
+
 def update_account_balance(account_id, amount):
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute("UPDATE accounts SET balance = balance + ? WHERE id=?", (amount, account_id))
         conn.commit()
+
 
 def add_transaction(account_id, description, amount, category="Other", reference=""):
     with get_connection() as conn:
@@ -83,12 +93,14 @@ def add_transaction(account_id, description, amount, category="Other", reference
         conn.commit()
         return cur.lastrowid
 
+
 def log_audit(user_id, action, table_name, record_id, old_value="", new_value=""):
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute("INSERT INTO audit_log (user_id, action, table_name, record_id, old_value, new_value) VALUES (?, ?, ?, ?, ?, ?)",
                     (user_id, action, table_name, record_id, old_value, new_value))
         conn.commit()
+
 
 def get_loans(user_id=None):
     with get_connection() as conn:
@@ -104,6 +116,7 @@ def get_loans(user_id=None):
             cur.execute("SELECT id, loan_amount, interest_rate, term_months, monthly_payment, remaining_balance FROM loans")
         return cur.fetchall()
 
+
 def add_loan(account_id, loan_amount, interest_rate, term_months):
     """Add a new loan."""
     monthly_payment = (loan_amount * (interest_rate / 100 / 12)) / (1 - (1 + interest_rate / 100 / 12) ** (-term_months))
@@ -114,6 +127,7 @@ def add_loan(account_id, loan_amount, interest_rate, term_months):
         conn.commit()
         return cur.lastrowid
 
+
 def make_loan_payment(loan_id, payment_amount):
     """Make a payment on a loan."""
     with get_connection() as conn:
@@ -122,11 +136,11 @@ def make_loan_payment(loan_id, payment_amount):
         row = cur.fetchone()
         if not row:
             return False
-        
+
         remaining_balance, monthly_payment = row
         if payment_amount > remaining_balance:
             payment_amount = remaining_balance
-        
+
         new_balance = remaining_balance - payment_amount
         cur.execute("UPDATE loans SET remaining_balance = ? WHERE id = ?", (new_balance, loan_id))
         conn.commit()

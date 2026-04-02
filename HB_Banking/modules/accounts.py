@@ -1,9 +1,8 @@
 """
 Account management module for HB Banking ERP
 """
-import sqlite3
-import os
 from ..data.erp_data import get_connection, log_audit
+
 
 def open_account(user_id, account_number, account_type, initial_balance=0.0, interest_rate=0.0):
     with get_connection() as conn:
@@ -16,6 +15,7 @@ def open_account(user_id, account_number, account_type, initial_balance=0.0, int
         print(f"Account {account_number} opened for user {user_id}.")
         return account_id
 
+
 def close_account(user_id, account_id):
     with get_connection() as conn:
         cur = conn.cursor()
@@ -26,6 +26,7 @@ def close_account(user_id, account_id):
             print(f"Account {account_id} closed.")
         else:
             print("Account not found or not owned by user.")
+
 
 def update_account(user_id, account_id, new_type=None, new_balance=None, new_rate=None):
     with get_connection() as conn:
@@ -50,6 +51,7 @@ def update_account(user_id, account_id, new_type=None, new_balance=None, new_rat
                 print(f"Account {account_id} updated.")
             else:
                 print("Account not found or not owned by user.")
+
 
 def get_account_details(account_id):
     with get_connection() as conn:

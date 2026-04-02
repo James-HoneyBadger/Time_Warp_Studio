@@ -6,12 +6,11 @@ orient new users to the key areas of the IDE.
 
 # pylint: disable=no-name-in-module
 
-from PySide6.QtCore import QRect, QSettings, Qt, QTimer
+from PySide6.QtCore import QRect, QSettings, Qt
 
 from ..core.config import QSETTINGS_APP, QSETTINGS_ORG
 from PySide6.QtGui import QColor, QFont, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
-    QDialog,
     QHBoxLayout,
     QLabel,
     QPushButton,

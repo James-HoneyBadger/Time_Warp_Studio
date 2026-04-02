@@ -1,9 +1,9 @@
 """
 Reporting module for HB Banking ERP
 """
-import sqlite3
 from datetime import datetime, timedelta
 from ..data.erp_data import get_connection
+
 
 def generate_account_statement(account_id, start_date=None, end_date=None):
     """Generate account statement for a date range."""
@@ -37,6 +37,7 @@ def generate_account_statement(account_id, start_date=None, end_date=None):
 
         return list(reversed(statement))
 
+
 def generate_budget_report(user_id, year=2026):
     """Generate budget vs actual spending report."""
     with get_connection() as conn:
@@ -48,6 +49,7 @@ def generate_budget_report(user_id, year=2026):
             WHERE b.user_id = ? AND b.year = ?
         """, (user_id, year))
         return cur.fetchall()
+
 
 def generate_income_expense_report(user_id, start_date=None, end_date=None):
     """Generate income vs expense report."""
@@ -77,6 +79,7 @@ def generate_income_expense_report(user_id, start_date=None, end_date=None):
             'period': f"{start_date} to {end_date}"
         }
 
+
 def generate_loan_report(user_id=None):
     """Generate loan summary report."""
     with get_connection() as conn:
@@ -91,6 +94,7 @@ def generate_loan_report(user_id=None):
         else:
             cur.execute("SELECT loan_amount, interest_rate, term_months, monthly_payment, remaining_balance FROM loans")
         return cur.fetchall()
+
 
 def export_report_to_csv(data, filename, headers):
     """Export report data to CSV."""

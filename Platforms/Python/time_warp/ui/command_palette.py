@@ -6,8 +6,7 @@ window, triggered by Ctrl+Shift+P.
 
 # pylint: disable=no-name-in-module
 
-from PySide6.QtCore import Qt, QStringListModel
-from PySide6.QtGui import QKeySequence
+from PySide6.QtCore import Qt
 from PySide6.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -16,7 +15,6 @@ from PySide6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QVBoxLayout,
-    QWidget,
 )
 
 

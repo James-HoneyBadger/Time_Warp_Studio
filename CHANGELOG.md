@@ -5,12 +5,14 @@ All notable changes to Time Warp Studio will be documented in this file.
 ## [9.0.0] - 2026-03-28
 
 ### Security
+
 - **Dockerfile**: Removed hardcoded `DATABASE_URL` and `REDIS_URL` credentials; environment variables now injected at runtime
 - **Dockerfile.backend**: Added non-root `appuser` (UID 1000) with `USER` directive
 - **Docker build stages**: Fixed lowercase `as` to uppercase `AS` per Dockerfile best practices
 - **Docker Compose**: Removed deprecated `version` fields from `docker-compose.yml` and `docker/docker-compose.backend.yml`
 
 ### Code Quality
+
 - **Interpreter**: Fixed 25 type annotation errors in `core/interpreter.py`
   - `__init__` signature now uses `Optional[Language] = None`
   - All instance attributes declared before `_init_state()` call
@@ -20,6 +22,7 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **Version label**: Updated Dockerfile `VERSION` label from 8.0.0 to 9.0.0
 
 ### Documentation
+
 - **ARCHITECTURE.md**: Rewrote Module Overview with all subpackages (core, languages, UI, graphics, features, utils, tests, tools)
 - **README.md**: Fixed theme count (25→28), rewrote project structure tree to match actual layout
 - **docs/INDEX.md**: Added missing Debugger Guide link in Feature Guides section
@@ -27,6 +30,7 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **ROADMAP.md**: Rewrote with concrete milestones replacing generic filler content
 
 ### Infrastructure
+
 - Added `*.log` pattern to `.gitignore`
 - Removed stray `interpreter.log` files from repository
 - Updated GitHub repository description and topics via API
@@ -34,6 +38,7 @@ All notable changes to Time Warp Studio will be documented in this file.
 ## [8.1.0] - 2025-06-15
 
 ### Security
+
 - **Pascal executor**: Replaced unsafe `eval()` with `ExpressionEvaluator` for safe math expression evaluation
 - **Fortran executor**: Added character whitelist regex guard before sandboxed eval
 - **JavaScript executor**: Fixed 8 bare `except:` clauses with specific exception types (`ValueError`, `TypeError`, `KeyError`, etc.)
@@ -41,6 +46,7 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **Assembly executor**: Fixed bare `except:` clause with `(ValueError, TypeError)`
 
 ### Interpreter Enhancements
+
 - **HyperTalk**: Added `add/subtract/multiply/divide` math commands, `do`, `wait`, `visual effect`, `sort`, `beep`, `exit repeat`, `next repeat`, chunk expression ranges (`char i to j of`), built-in properties (`the date`, `the time`, `the ticks`, `the random`), new math functions (`average`, `sum`, `ln`, `log2`, `exp`, `atan`, `annuity`, `compound`)
 - **JCL**: Added `SET` symbolic parameters with `&symbol` resolution, `IF/THEN/ELSE/ENDIF` conditionals with return code comparison, inline `PROC/PEND` definitions, `JCLLIB ORDER`, `INCLUDE MEMBER`
 - **PILOT**: Added `?` single-character wildcard and substring matching (SuperPILOT), match variables (`$LEFT`, `$MATCH`, `$RIGHT`), string functions (`LEN`, `UPPER`, `LOWER`, `TRIM`, `LEFT`, `RIGHT`, `MID`, `CONCAT`, `REPLACE`, `REVERSE`), enhanced graphics commands (`SETHEADING`, `HIDETURTLE`, `SHOWTURTLE`, `ARC`, `FILL`, `DOT`, `STAMP`, `TEXT`, `SPEED`), `H:` hint and `N:` no-match commands, tab support in `T:`
@@ -48,15 +54,18 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **JavaScript**: Added `Symbol.hasInstance` and `Symbol.toPrimitive` support, fixed Symbol transpiler stripping
 
 ### UI Improvements
+
 - **Find & Replace**: Added case sensitivity, regex, and whole word matching checkboxes; live match highlighting with match count display; regex-aware find and replace
 - **Auto-Completion**: Enhanced to extract identifiers from the current document in addition to language keywords
 - **Themes**: Added **Catppuccin Mocha** and **Gruvbox Dark** themes (28 themes total)
 
 ### Code Quality
+
 - Removed 5 leftover debug print comments from BASIC and Logo executors
 - All bare `except:` clauses replaced with specific exception types
 
 ### Demo Programs (25 new examples)
+
 - **BASIC**: Maze generator with recursive backtracking
 - **Logo**: Spirograph / hypotrochoid mathematical art
 - **PILOT**: Typing speed tutor
@@ -83,6 +92,7 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **SQR**: Employee directory report
 
 ### Documentation
+
 - Updated README with v8.1.0 features, corrected example counts (93 total)
 - Created CHANGELOG.md
 
@@ -91,6 +101,7 @@ All notable changes to Time Warp Studio will be documented in this file.
 ## [8.0.0] - 2025-06-01
 
 ### Initial Release
+
 - 24 programming language executors
 - PySide6 (Qt6) desktop IDE with editor, canvas, and output panels
 - 26 built-in themes including retro CRT effects

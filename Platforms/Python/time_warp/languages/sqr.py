@@ -528,12 +528,11 @@ class SQREnvironment:
 
         # Identify table name from FROM clause
         table_name: Optional[str] = None
-        where_clause: Optional[str] = None
         if from_line:
             m = re.match(r"from\s+(\S+)(?:\s+where\s+(.+))?", from_line, re.IGNORECASE)
             if m:
                 table_name = m.group(1).lower()
-                where_clause = m.group(2)
+                m.group(2)
 
         # Get rows from simulated table store
         rows = self._tables.get(table_name or "", [])

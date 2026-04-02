@@ -92,10 +92,12 @@ Deep dives into specific IDE features:
 ## 📖 Reference & Support
 
 ### Quick Reference
+
 - **[Keyboard Shortcuts](guides/07-shortcuts.md)** - All available shortcuts and their actions
 - **[FAQ](reference/faq.md)** - 70+ frequently asked questions with answers
 
 ### Troubleshooting
+
 - **[Troubleshooting Guide](guides/08-troubleshooting.md)** - Solutions for common issues
 - **[Architecture Guide](../ARCHITECTURE.md)** - Project structure and design decisions
 
@@ -106,12 +108,14 @@ Deep dives into specific IDE features:
 ### For Complete Beginners
 
 **Recommended Path:**
+
 1. [Getting Started Guide](guides/01-getting-started.md) - Setup and basic navigation
 2. [IDE Basics](guides/02-ide-basics.md) - Understand the interface
 3. [BASIC Tutorial](tutorials/basic.md) - Learn fundamental programming
 4. [Examples Browser](guides/01-getting-started.md#examples) - Run and modify examples
 
 **First Program to Try:**
+
 ```basic
 PRINT "Hello, World!"
 ```
@@ -119,12 +123,14 @@ PRINT "Hello, World!"
 ### For Learning Graphics
 
 **Recommended Path:**
+
 1. [Logo Tutorial](tutorials/logo.md) - Learn Logo basics
 2. [Turtle Graphics Guide](guides/04-turtle-graphics.md) - Advanced turtle techniques
 3. Open **File → Examples → logo/** to see 5 examples
 4. Try examples like `02_squares.logo`, `05_trees.logo`
 
 **First Turtle Program:**
+
 ```logo
 REPEAT 4 [FORWARD 100 RIGHT 90]
 ```
@@ -132,6 +138,7 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 ### For Teaching/Classroom Use
 
 **Recommended Resources:**
+
 1. [Classroom Mode Guide](guides/06-settings.md) - Presentation and assignment features
 2. [Lesson System Guide](guides/03-lessons.md) - Create structured lessons
 3. [Examples Browser](guides/01-getting-started.md#examples) - 93 ready-made programs
@@ -140,6 +147,7 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 ### For Advanced Users
 
 **Topics:**
+
 - Custom themes: [Settings & Themes](guides/06-settings.md)
 - Adding languages: [ARCHITECTURE.md](../ARCHITECTURE.md#adding-a-new-language)
 - Contributing: [README.md](../README.md#contributing)
@@ -152,7 +160,7 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 Browse 93 example programs organized by language:
 
 | Directory | Count | Level | Purpose |
-|-----------|-------|-------|---------|
+| --------- | ----- | ----- | ------- |
 | `basic/` | 5 | Beginner | Learn BASIC fundamentals |
 | `logo/` | 5 | Beginner-Intermediate | Turtle graphics and recursion |
 | `pilot/` | 3 | Beginner-Intermediate | Interactive instruction |
@@ -180,6 +188,7 @@ Browse 93 example programs organized by language:
 | `demo/` | 2 | All | Cross-language showcases |
 
 **How to use examples:**
+
 1. Press **Ctrl+E** or **File → Examples**
 2. Browse by language and difficulty
 3. Click **Load** to open in editor
@@ -190,24 +199,29 @@ Browse 93 example programs organized by language:
 ## 🔧 Common Tasks
 
 ### Run a program
+
 1. Open file (Ctrl+O) or create new (Ctrl+N)
 2. Type or paste code
 3. Press Ctrl+R or click Run
 
 ### Change language
+
 - Use Language dropdown (top right of editor)
 - Or File → New → [Language]
 
 ### Customize theme
+
 - File → Settings → Themes
 - 28 built-in themes + custom theme editor
 
 ### Use autosave
+
 - Enabled by default
 - Auto-saves every 30 seconds to `~/.time_warp/`
 - Keep up to 20 versions per file
 
 ### Follow a lesson
+
 - File → Lessons
 - Select lesson from catalog
 - Complete checkpoints with auto-verification
@@ -225,7 +239,7 @@ Browse 93 example programs organized by language:
 
 ## 📚 Complete File Index
 
-```
+```text
 docs/
 ├── INDEX.md (you are here)
 ├── INSTALLATION.md
@@ -337,7 +351,7 @@ This documentation is maintained alongside Time Warp Studio development. If you 
 ### Common File Extensions
 
 | Language | Extension | Example |
-|----------|-----------|---------|
+| -------- | --------- | ------- |
 | BASIC | `.bas` | `program.bas` |
 | PILOT | `.pilot` | `lesson.pilot` |
 | Logo | `.logo` | `graphics.logo` |

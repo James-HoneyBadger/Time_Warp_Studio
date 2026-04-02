@@ -653,7 +653,7 @@ class JSDate:
     def toISOString(self):
         return (
             self._dt().strftime("%Y-%m-%dT%H:%M:%S.")
-            + f"{self._dt().microsecond//1000:03d}Z"
+            + f"{self._dt().microsecond // 1000:03d}Z"
         )
 
     def toDateString(self):
@@ -758,7 +758,7 @@ class JSMap:
         [fn(v, k, self) for k, v in self._d.items()]
 
     def __repr__(self):
-        return f"Map({{{', '.join(f'{k!r}: {v!r}' for k,v in self._d.items())}}})"
+        return f"Map({{{', '.join(f'{k!r}: {v!r}' for k, v in self._d.items())}}})"
 
 
 class JSSet:
@@ -1053,8 +1053,8 @@ class JSEnvironment:
                     else None
                 )
             )
-            time = staticmethod(lambda l="": None)
-            timeEnd = staticmethod(lambda l="": None)
+            time = staticmethod(lambda label="": None)
+            timeEnd = staticmethod(lambda label="": None)
             group = staticmethod(lambda *a: None)
             groupEnd = staticmethod(lambda: None)
 

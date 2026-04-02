@@ -158,7 +158,6 @@ class TestCoachMarkManager:
     def test_should_show_initially(self):
         """should_show() reads from QSettings; we can just verify it's callable."""
         from time_warp.ui.coach_marks import CoachMarkManager
-        from PySide6.QtWidgets import QMainWindow
 
         # Create a minimal stand-in for main window
         class FakeWin:
@@ -498,7 +497,6 @@ class TestRunHistory:
         win.settings.remove("run_history")
 
     def test_load_from_history(self):
-        from time_warp.core.interpreter import Language
 
         win = self._make_window_stub()
         entry = {"code": "PRINT HI", "language": "BASIC", "snippet": "PRINT HI"}
@@ -519,7 +517,6 @@ class TestOutputTabRouting:
         """Create a minimal setup to test routing logic."""
         from time_warp.ui.main_window import MainWindow
         from PySide6.QtWidgets import QPlainTextEdit
-        from unittest.mock import MagicMock
 
         win = MainWindow.__new__(MainWindow)
         win.errors_log = QPlainTextEdit()
@@ -619,7 +616,7 @@ class TestSplitEditor:
         from time_warp.ui.main_window import MainWindow
         from time_warp.ui.editor import CodeEditor
         from time_warp.core.interpreter import Language
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import MagicMock
         from PySide6.QtWidgets import QTabWidget
 
         win = MainWindow.__new__(MainWindow)
@@ -699,7 +696,7 @@ class TestAccessibilityPreset:
     def test_preset_calls_font_and_theme(self, qapp):
         """_apply_accessibility_preset should call change_font_size and change_theme."""
         from time_warp.ui.main_window import MainWindow
-        from unittest.mock import MagicMock, patch
+        from unittest.mock import MagicMock
 
         win = MainWindow.__new__(MainWindow)
         win.statusbar = MagicMock()

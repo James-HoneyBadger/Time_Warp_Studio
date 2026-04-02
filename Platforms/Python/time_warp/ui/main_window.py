@@ -12,11 +12,8 @@
 """
 
 import logging
-import re
 import time
 from pathlib import Path
-
-logger = logging.getLogger(__name__)
 
 # pylint: disable=no-name-in-module
 from PySide6.QtCore import QSettings, QSize, Qt, QTimer
@@ -40,7 +37,6 @@ from PySide6.QtWidgets import (
     QMenu,
     QMessageBox,
     QPlainTextEdit,
-    QPushButton,
     QSlider,
     QSplitter,
     QStatusBar,
@@ -71,14 +67,14 @@ from .mixins import (
     FileOperationsMixin,
     HelpDocsMixin,
 )
-from .output import ImmediateModePanel, OutputPanel, OutputPanelContainer
+from .output import ImmediateModePanel, OutputPanelContainer
 from .screen_modes import ScreenModeManager
 from .themes import ThemeManager
 from .variable_inspector import VariableInspector
 from ..features.classroom_mode import ClassroomMode
 from ..features.autosave_manager import AutosaveManager
 from .focus_mode import FocusModeManager
-from .onboarding import OnboardingDialog, OnboardingManager
+from .onboarding import OnboardingManager
 from .sql_panel import SQLPanel
 from .dbms_window import DBMSWindow
 from .cics_panel import CICSPanel
@@ -89,6 +85,8 @@ from ..utils.error_hints import get_enhanced_error_message
 from .custom_layouts import CustomUILayouts
 
 # pylint: enable=no-name-in-module
+
+logger = logging.getLogger(__name__)
 
 
 class ResizableTabWidget(QTabWidget):
@@ -3262,7 +3260,6 @@ class MainWindow(
         """Open a searchable keyboard-shortcut reference dialog."""
         from PySide6.QtWidgets import (  # type: ignore[attr-defined]
             QDialog,
-            QHBoxLayout,
             QLineEdit,
             QTableWidget,
             QTableWidgetItem,
@@ -3312,6 +3309,7 @@ class MainWindow(
     # Placeholder for live collaboration feature
     class CollaborationManager:
         """Manages real-time collaboration sessions."""
+
         def __init__(self):
             self.active_sessions = {}
 

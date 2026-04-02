@@ -2,7 +2,6 @@
 Integration test: COBOL/CICS/JCL/SQL bank account manager demo
 Ensures SQL schema is loaded, then runs COBOL demo and checks output.
 """
-import os
 from time_warp.core.interpreter import Language
 from time_warp.core.config import EXAMPLES_DIR
 from .conftest_lang import run, has
@@ -12,6 +11,7 @@ COBOL_DEMO = EXAMPLES_DIR / "cobol" / "bank_account_manager.cob"
 
 L_SQL = Language.SQL
 L_COBOL = Language.COBOL
+
 
 def test_cobol_sql_demo():
     # Step 1: Load SQL schema

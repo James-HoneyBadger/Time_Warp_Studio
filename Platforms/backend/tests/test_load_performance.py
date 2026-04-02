@@ -6,13 +6,11 @@ Tests system performance under concurrent user load
 import asyncio
 import os
 import time
-import random
 import statistics
 from typing import List, Dict, Any
 import pytest
 from httpx import AsyncClient
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine
 
 
 if os.getenv("RUN_BACKEND_INTEGRATION") != "1":
@@ -174,7 +172,7 @@ class TestConcurrentUsers:
 
                         if resp.status_code != 200:
                             metrics.record_error()
-                    except Exception as e:
+                    except Exception:
                         metrics.record_error()
 
                 # Send messages
@@ -195,7 +193,7 @@ class TestConcurrentUsers:
 
                         if resp.status_code != 201:
                             metrics.record_error()
-                    except Exception as e:
+                    except Exception:
                         metrics.record_error()
             else:
                 metrics.record_error()
@@ -318,7 +316,7 @@ class TestNetworkResilience:
     async def test_connection_timeout_handling(self, client: AsyncClient):
         """Test timeout handling"""
         try:
-            resp = await client.get(
+            await client.get(
                 'http://localhost:9999/fake',
                 timeout=0.1,
             )
@@ -334,9 +332,8 @@ class TestDatabasePerformance:
     async def test_operation_insert_performance(self):
         """Test inserting operations into database"""
         # Should be < 50ms per insert
-        from sqlalchemy.ext.asyncio import create_async_engine
 
-        engine = create_async_engine('sqlite+aiosqlite:///:memory:')
+        create_async_engine('sqlite+aiosqlite:///:memory:')
 
         metrics = PerformanceMetrics()
         metrics.start_time = time.time()
@@ -408,7 +405,7 @@ class TestOTEnginePerformance:
         ops = [{'type': 'insert', 'position': i, 'content': f'text_{i}'} for i in range(100)]
 
         start = time.time()
-        result = engine.compose(ops)
+        engine.compose(ops)
         latency = (time.time() - start) * 1000
         metrics.record_latency(latency)
 

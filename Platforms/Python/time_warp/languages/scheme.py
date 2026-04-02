@@ -522,7 +522,7 @@ class SchemeEnvironment:
 
         if head == Symbol("define-record-type"):
             # Simplified R7RS record types
-            type_name = expr[1]
+            expr[1]
             constructor_spec = expr[2]
             predicate = expr[3]
             fields = expr[4:]
@@ -806,8 +806,6 @@ class SchemeEnvironment:
                 "log": lambda x, b=None: (
                     math.log(x, b) if b is not None else math.log(x)
                 ),
-                "floor": math.floor,
-                "ceiling": math.ceil,
                 "truncate": math.trunc,
                 "square": lambda x: x * x,
                 "exact-integer-sqrt": lambda x: (

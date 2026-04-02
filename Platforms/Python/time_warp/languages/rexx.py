@@ -63,7 +63,7 @@ class RexxEnvironment:
 
     def run(self, source: str) -> str:
         try:
-            self.lines = [l.rstrip() for l in source.splitlines()]
+            self.lines = [line.rstrip() for line in source.splitlines()]
             self._scan_subroutines()
             self._exec_block(0, len(self.lines))
         except RexxExit:
@@ -344,8 +344,8 @@ class RexxEnvironment:
         """Execute a DO block. Scan forward for matching END."""
         # Find matching END
         do_end = self._find_do_end(ip + 1)
-        body_lines_idx = list(range(ip + 1, do_end))
-        upper = stmt.upper()
+        list(range(ip + 1, do_end))
+        stmt.upper()
 
         # DO i = start TO end [BY step]
         m = re.match(
@@ -486,7 +486,6 @@ class RexxEnvironment:
             except Exception:
                 pass
             raise RexxError(f"Unknown subroutine: {name}")
-        old_it = self._it
         self._vars["ARG"] = args_str
         # Find end of subroutine
         start = self._subroutines[name]
@@ -602,7 +601,6 @@ class RexxEnvironment:
         import random as _random
         import datetime as _datetime
 
-        raw_args_str = args_str
         args = [
             self._eval(a.strip()) for a in args_str.split(",") if a.strip() or args_str
         ]

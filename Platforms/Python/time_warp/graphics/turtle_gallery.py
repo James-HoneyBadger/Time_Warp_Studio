@@ -173,16 +173,14 @@ class TurtleGallery:
         svg_path = filepath.with_suffix(".svg")
 
         # SVG header
+        w = metadata.canvas_width
+        h = metadata.canvas_height
         svg_lines = [
-            f'<svg width="{
-                metadata.canvas_width}" height="{
-                metadata.canvas_height}" ' 'xmlns="http://www.w3.org/2000/svg">',
+            f'<svg width="{w}" height="{h}" '
+            'xmlns="http://www.w3.org/2000/svg">',
             '  <rect width="100%" height="100%" fill="white"/>',
-            f'  <g transform="translate({
-                metadata.canvas_width /
-                2}, ' f'{
-                    metadata.canvas_height /
-                    2}) scale(1, -1)">',
+            f'  <g transform="translate({w / 2}, '
+            f'{h / 2}) scale(1, -1)">',
         ]
 
         # Draw paths

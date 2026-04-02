@@ -1,16 +1,15 @@
 """
 User authentication and role management for HB Banking ERP
 """
-import sqlite3
-import hashlib
-import os
 from ..data.erp_data import get_connection, hash_password as hp
+
 
 def authenticate(username, password):
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute("SELECT id, role FROM users WHERE username=? AND password_hash=?", (username, hp(password)))
         return cur.fetchone()  # (id, role) or None
+
 
 def add_user(username, password, role, email=""):
     with get_connection() as conn:
@@ -19,6 +18,7 @@ def add_user(username, password, role, email=""):
                     (username, hp(password), role, email))
         conn.commit()
         return cur.lastrowid
+
 
 def change_password(user_id, old_password, new_password):
     with get_connection() as conn:
@@ -31,6 +31,7 @@ def change_password(user_id, old_password, new_password):
             return True
     return False
 
+
 def get_user_permissions(role):
     """Return permissions based on role."""
     permissions = {
@@ -40,6 +41,7 @@ def get_user_permissions(role):
         'user': ['read']
     }
     return permissions.get(role, ['read'])
+
 
 if __name__ == "__main__":
     # Test authentication

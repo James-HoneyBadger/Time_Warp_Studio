@@ -26,7 +26,6 @@ from __future__ import annotations
 import re
 import sqlite3
 import threading
-from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from .config import DATABASES_DIR
@@ -166,7 +165,7 @@ def _translate_tsql(sql: str) -> str:
 
     # CONVERT(type, expr) → CAST(expr AS type)
     def _convert_repl(m: re.Match) -> str:
-        typ = m.group(1)
+        m.group(1)
         return "CAST( "  # expr follows, we close at next matching paren
 
     # Simple regex won't balance parens; do a token scan for multi-arg CONVERT
@@ -627,7 +626,7 @@ class SQLSession:
             re.I,
         )
         if m:
-            name, _type, init = m.group(1), m.group(2), m.group(3)
+            name, _, init = m.group(1), m.group(2), m.group(3)
             self._vars[name.upper()] = self._eval_expr(init) if init else None
 
     def _handle_set(self, stmt: str) -> None:

@@ -1,6 +1,5 @@
 """Tests for time_warp.core.debugger module."""
 
-import time
 
 from time_warp.core.debugger import (
     ExecutionFrame,

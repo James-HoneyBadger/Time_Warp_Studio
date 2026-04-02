@@ -7,6 +7,10 @@
 Shows how to integrate hardware visualization into the IDE
 """
 
+from time_warp.hardware.ui import create_hardware_control_panel
+from time_warp.hardware import get_hardware_manager
+from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
+from PySide6.QtCore import QTimer
 import sys
 import time
 from pathlib import Path
@@ -14,12 +18,8 @@ from pathlib import Path
 # Ensure the time_warp package is importable
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "Platforms" / "Python"))
 
-from PySide6.QtCore import QTimer
-from PySide6.QtWidgets import QApplication, QMainWindow, QVBoxLayout, QWidget
 
 # Import Time Warp hardware components
-from time_warp.hardware import get_hardware_manager
-from time_warp.hardware.ui import create_hardware_control_panel
 
 
 class HardwareDemoWindow(QMainWindow):

@@ -5,8 +5,8 @@ This module provides accessibility enhancements for the Time Warp Studio UI.
 Features include high-contrast mode and font size adjustments.
 """
 
-from PySide6.QtGui import QFont
 from PySide6.QtWidgets import QShortcut, QKeySequence, QMainWindow
+
 
 class AccessibilityFeatures:
     """Class to manage accessibility features."""
@@ -49,9 +49,10 @@ class AccessibilityFeatures:
         self.main_window.setFont(font)
         print("🔍 Font size decreased.")
 
+
 # Example usage
 if __name__ == "__main__":
-    from PySide6.QtWidgets import QApplication, QMainWindow
+    from PySide6.QtWidgets import QApplication, QMainWindow as QMainWindow  # noqa: F811
     import sys
 
     app = QApplication(sys.argv)

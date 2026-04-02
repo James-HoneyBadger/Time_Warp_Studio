@@ -1214,12 +1214,12 @@ class ForthExecutor:
                     if target is not None:
                         self.deferred[def_name] = target
 
-                        def deferred_fn(n=def_name):
+                        def deferred_is_fn(n=def_name):
                             t = self.deferred.get(n)
                             if t and t in self.dictionary:
                                 self.dictionary[t]()
 
-                        self.dictionary[def_name] = deferred_fn
+                        self.dictionary[def_name] = deferred_is_fn
                     i += 2
                 else:
                     i += 1

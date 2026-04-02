@@ -283,12 +283,10 @@ class Screen3270:
     def next_unprotected(self, addr: int) -> int:
         """Return address of first char of next unprotected field."""
         n = BUFFER_SIZE
-        seen_attr = False
         for i in range(1, n + 1):
             pos = (addr + i) % n
             c = self.cells[pos]
             if c.is_attr:
-                seen_attr = True
                 if not Attr.is_protected(c.attr) and not Attr.is_dark(c.attr):
                     # Return the character position right after this attr
                     return (pos + 1) % n

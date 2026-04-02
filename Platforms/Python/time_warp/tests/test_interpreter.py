@@ -101,7 +101,8 @@ class TestInitResetParity:
         assert interp.current_line == 0
 
     def test_reset_preserves_callbacks(self, interp):
-        cb = lambda _: "test"
+        def cb(_):
+            return "test"
         interp.input_callback = cb
         interp.reset()
         assert interp.input_callback is cb

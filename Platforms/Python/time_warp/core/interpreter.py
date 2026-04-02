@@ -15,8 +15,6 @@ import logging
 import re
 import threading
 import time
-
-logger = logging.getLogger(__name__)
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import (
@@ -26,34 +24,35 @@ from typing import (
     Dict,
     List,
     Optional,
+    Set,
     TextIO,
     Tuple,
 )
 
 # Import language executors
+from ..languages.apl import execute_apl
+from ..languages.assembly import execute_assembly
 from ..languages.basic import execute_basic
+from ..languages.brainfuck import execute_brainfuck
 from ..languages.c_lang_fixed import execute_c
+from ..languages.cics import execute_cics
+from ..languages.cobol import execute_cobol
 from ..languages.forth import execute_forth, reset_forth
+from ..languages.fortran import execute_fortran
+from ..languages.haskell import execute_haskell
+from ..languages.hypertalk import execute_hypertalk
+from ..languages.javascript import execute_javascript
+from ..languages.jcl import execute_jcl
 from ..languages.logo import execute_logo
+from ..languages.lua import execute_lua
 from ..languages.pascal import execute_pascal
 from ..languages.pilot import execute_pilot
 from ..languages.prolog import execute_prolog
 from ..languages.python import execute_python
-from ..languages.lua import execute_lua
-from ..languages.scheme import execute_scheme
-from ..languages.cobol import execute_cobol
-from ..languages.brainfuck import execute_brainfuck
-from ..languages.assembly import execute_assembly
-from ..languages.javascript import execute_javascript
-from ..languages.fortran import execute_fortran
 from ..languages.rexx import execute_rexx
+from ..languages.scheme import execute_scheme
 from ..languages.smalltalk import execute_smalltalk
-from ..languages.hypertalk import execute_hypertalk
-from ..languages.haskell import execute_haskell
-from ..languages.apl import execute_apl
 from ..languages.sql import execute_sql
-from ..languages.jcl import execute_jcl
-from ..languages.cics import execute_cics
 from ..languages.sqr import execute_sqr
 
 # Project utilities and language executors
@@ -62,6 +61,8 @@ from ..utils.expression_evaluator import ExpressionEvaluator
 
 # Hardware simulation
 from .hardware_simulator import HardwareSimulator
+
+logger = logging.getLogger(__name__)
 
 # Compact aliases used for debug callback annotations in this module.
 # Using a short alias keeps signatures readable while still being typed.
@@ -104,6 +105,7 @@ def _init_whole_program_executors() -> Dict["Language", Callable]:
         Language.CICS: execute_cics,
         Language.SQR: execute_sqr,
     }
+
 
 @dataclass
 class JumpResult:
@@ -376,7 +378,7 @@ class Interpreter:
 
         # Declare all resettable attributes so the type checker sees them
         # in __init__. Actual values are set by _init_state().
-        self.variables: Dict[str, float] = {}
+        self.variables: Dict[str, Any] = {}
         self.int_variables: Dict[str, int] = {}
         self.long_variables: Dict[str, int] = {}
         self.single_variables: Dict[str, float] = {}
@@ -431,10 +433,20 @@ class Interpreter:
         self.pascal_types: Dict[str, str] = {}
         self.pascal_block_stack: List[Dict[str, Any]] = []
         self.pascal_call_stack: List[Dict[str, Any]] = []
+        self.pascal_in_block_comment: bool = False
+        self.pascal_units: Set[str] = set()
+        self.pascal_record_types: Dict[str, Dict[str, str]] = {}
+        self.pascal_files: Dict[str, Dict[str, Any]] = {}
+        self.pascal_heap: Dict[int, Any] = {}
         self.c_block_stack: List[Dict[str, Any]] = []
         self.step_mode: bool = False
-        self._basic_error_handler_line: int = 0
-        self._basic_error_line: int = 0
+        self.basic_user_fns: Dict[str, Any] = {}
+        self.basic_if_stack: List[Dict] = []
+        self.logo_block_buffer: List[str] = []
+        self.sql_session: Optional[Any] = None
+        self.basic_types: Dict[str, Dict] = {}
+        self.basic_error_handler_line: int = 0
+        self.basic_error_line: int = 0
         self._logo_turtle: Optional["TurtleState"] = None
         self.program_source: str = ""
         self.default_type_map: Dict[str, str] = {}
@@ -451,9 +463,7 @@ class Interpreter:
         # pylint: disable=too-many-statements
 
         # Core state
-        # Aggregate numeric variables (base name → float) for back-compat
-        self.variables: Dict[str, float] = {}
-        # Typed variable stores
+        self.variables: Dict[str, Any] = {}
         self.int_variables: Dict[str, int] = {}
         self.long_variables: Dict[str, int] = {}
         self.single_variables: Dict[str, float] = {}
@@ -541,6 +551,11 @@ class Interpreter:
         # Pascal block tracking
         self.pascal_block_stack: List[Dict[str, Any]] = []
         self.pascal_call_stack: List[Dict[str, Any]] = []  # Pascal call stack
+        self.pascal_in_block_comment: bool = False
+        self.pascal_units: Set[str] = set()
+        self.pascal_record_types: Dict[str, Dict[str, str]] = {}
+        self.pascal_files: Dict[str, Dict[str, Any]] = {}
+        self.pascal_heap: Dict[int, Any] = {}
 
         # C-specific state
         self.c_block_stack: List[Dict[str, Any]] = (
@@ -552,8 +567,15 @@ class Interpreter:
         self.debug_event.clear()
 
         # BASIC ON ERROR GOTO handler state
-        self._basic_error_handler_line: int = 0
-        self._basic_error_line: int = 0
+        self.basic_error_handler_line: int = 0
+        self.basic_error_line: int = 0
+
+        # BASIC language-specific state
+        self.basic_user_fns: Dict[str, Any] = {}
+        self.basic_if_stack: List[Dict] = []
+        self.logo_block_buffer: List[str] = []
+        self.sql_session: Optional[Any] = None
+        self.basic_types: Dict[str, Dict] = {}
 
         # Logo turtle reference (set during _execute_line)
         self._logo_turtle: Optional["TurtleState"] = None
@@ -1160,12 +1182,12 @@ class Interpreter:
                 return False
             # BASIC ON ERROR GOTO handler
             if self.language is not None and self.language.name == "BASIC" and getattr(
-                self, "_basic_error_handler_line", None
+                self, "basic_error_handler_line", None
             ):
-                handler_line = self._basic_error_handler_line
+                handler_line = self.basic_error_handler_line
                 if handler_line in self.line_number_map:
                     # Store ERR/ERL pseudo-variables for the error handler
-                    self._basic_error_line = self.current_line + 1
+                    self.basic_error_line = self.current_line + 1
                     self.variables["ERR"] = 1  # generic error code
                     self.variables["ERL"] = float(self.current_line + 1)
                     # Store the error number from the current line's BASIC number
@@ -1174,7 +1196,7 @@ class Interpreter:
                     ):
                         line_label, _ = self.program_lines[self.current_line]
                         if line_label is not None:
-                            self._basic_error_line = line_label
+                            self.basic_error_line = line_label
                             self.variables["ERL"] = float(line_label)
                     self.current_line = self.line_number_map[handler_line]
                     return True  # treat as handled
@@ -1310,7 +1332,7 @@ class Interpreter:
             string_variables=self.string_variables.copy(),
         )
         # Register BASIC DEF FN user-defined functions
-        user_fns = getattr(self, "_basic_user_fns", {})
+        user_fns = getattr(self, "basic_user_fns", {})
         for fn_name, (params, body_expr) in user_fns.items():
             # Create a closure that evaluates the body with params substituted
             def _make_fn(p_list, b_expr, ev):

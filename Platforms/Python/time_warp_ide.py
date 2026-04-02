@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Time Warp Studio - Entry point for desktop application."""
 
-import logging
 import os
 import sys
 from pathlib import Path

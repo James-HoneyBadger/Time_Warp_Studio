@@ -56,13 +56,16 @@ DEFAULT_PALETTE_16 = {
 # Optimization: Precompute sine and cosine values for common angles
 PRECOMPUTED_TRIG = {angle: (math.sin(math.radians(angle)), math.cos(math.radians(angle))) for angle in range(0, 360)}
 
+
 def optimized_sin(angle: float) -> float:
     """Retrieve precomputed sine value for an angle."""
     return PRECOMPUTED_TRIG[int(angle) % 360][0]
 
+
 def optimized_cos(angle: float) -> float:
     """Retrieve precomputed cosine value for an angle."""
     return PRECOMPUTED_TRIG[int(angle) % 360][1]
+
 
 @dataclass
 class TurtleLine:

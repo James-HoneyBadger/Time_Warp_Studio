@@ -6,11 +6,12 @@ import sys
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QLabel, QPushButton, QVBoxLayout, QWidget,
     QDialog, QFormLayout, QLineEdit, QDialogButtonBox, QMessageBox, QTableWidget, QTableWidgetItem, QTabWidget,
-    QHBoxLayout, QComboBox, QSpinBox, QDoubleSpinBox, QTextEdit, QGroupBox
+    QHBoxLayout, QComboBox, QSpinBox, QDoubleSpinBox, QTextEdit, QGroupBox, QListWidget
 )
 from PySide6.QtCore import Qt
 from .data import erp_data
 from .modules import accounts, transactions, reports
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -40,35 +41,35 @@ class MainWindow(QMainWindow):
     def create_login_widget(self):
         widget = QWidget()
         layout = QVBoxLayout()
-        
+
         title = QLabel("HB Banking ERP Suite")
         title.setStyleSheet("font-size: 24px; font-weight: bold;")
         layout.addWidget(title, alignment=Qt.AlignCenter)
-        
+
         form_group = QGroupBox("Login")
         form_layout = QFormLayout()
-        
+
         self.username_input = QLineEdit()
         self.password_input = QLineEdit()
         self.password_input.setEchoMode(QLineEdit.Password)
-        
+
         form_layout.addRow("Username:", self.username_input)
         form_layout.addRow("Password:", self.password_input)
-        
+
         login_btn = QPushButton("Login")
         login_btn.clicked.connect(self.attempt_login)
-        
+
         form_layout.addRow(login_btn)
         form_group.setLayout(form_layout)
         layout.addWidget(form_group, alignment=Qt.AlignCenter)
-        
+
         widget.setLayout(layout)
         return widget
 
     def attempt_login(self):
         username = self.username_input.text()
         password = self.password_input.text()
-        
+
         result = erp_data.authenticate_user(username, password)
         if result:
             self.user_id, self.user_role = result
@@ -79,77 +80,77 @@ class MainWindow(QMainWindow):
 
     def show_main_interface(self):
         self.main_tabs = QTabWidget()
-        
+
         # Accounts tab
         self.accounts_tab = self.create_accounts_tab()
         self.main_tabs.addTab(self.accounts_tab, "Accounts")
-        
+
         # Transactions tab
         self.transactions_tab = self.create_transactions_tab()
         self.main_tabs.addTab(self.transactions_tab, "Transactions")
-        
+
         # Budgets tab
         self.budgets_tab = self.create_budgets_tab()
         self.main_tabs.addTab(self.budgets_tab, "Budgets")
-        
+
         # Reports tab
         self.reports_tab = self.create_reports_tab()
         self.main_tabs.addTab(self.reports_tab, "Reports")
-        
+
         # Loans tab
         self.loans_tab = self.create_loans_tab()
         self.main_tabs.addTab(self.loans_tab, "Loans")
-        
+
         # Admin tab (only for admin)
         if self.user_role == 'admin':
             self.admin_tab = self.create_admin_tab()
             self.main_tabs.addTab(self.admin_tab, "Admin")
-        
+
         # Profile tab for all users
         self.profile_tab = self.create_profile_tab()
         self.main_tabs.addTab(self.profile_tab, "Profile")
-        
+
         self.setCentralWidget(self.main_tabs)
         self.refresh_data()
 
     def create_accounts_tab(self):
         widget = QWidget()
         layout = QVBoxLayout()
-        
+
         # Accounts table
         self.accounts_table = QTableWidget()
         self.accounts_table.setColumnCount(5)
         self.accounts_table.setHorizontalHeaderLabels(["ID", "Account Number", "Type", "Balance", "Status"])
         layout.addWidget(self.accounts_table)
-        
+
         # Buttons
         btn_layout = QHBoxLayout()
-        
+
         deposit_btn = QPushButton("Deposit")
         deposit_btn.clicked.connect(self.show_deposit_dialog)
         btn_layout.addWidget(deposit_btn)
-        
+
         withdraw_btn = QPushButton("Withdraw")
         withdraw_btn.clicked.connect(self.show_withdraw_dialog)
         btn_layout.addWidget(withdraw_btn)
-        
+
         transfer_btn = QPushButton("Transfer")
         transfer_btn.clicked.connect(self.show_transfer_dialog)
         btn_layout.addWidget(transfer_btn)
-        
+
         if self.user_role == 'admin':
             open_btn = QPushButton("Open Account")
             open_btn.clicked.connect(self.show_open_account_dialog)
             btn_layout.addWidget(open_btn)
-            
+
             interest_btn = QPushButton("Calculate Interest")
             interest_btn.clicked.connect(self.calculate_interest)
             btn_layout.addWidget(interest_btn)
-        
+
         refresh_btn = QPushButton("Refresh")
         refresh_btn.clicked.connect(self.refresh_accounts)
         btn_layout.addWidget(refresh_btn)
-        
+
         layout.addLayout(btn_layout)
         widget.setLayout(layout)
         return widget
@@ -157,59 +158,59 @@ class MainWindow(QMainWindow):
     def create_transactions_tab(self):
         widget = QWidget()
         layout = QVBoxLayout()
-        
+
         self.transactions_table = QTableWidget()
         self.transactions_table.setColumnCount(5)
         self.transactions_table.setHorizontalHeaderLabels(["Date", "Description", "Amount", "Category", "Account"])
         layout.addWidget(self.transactions_table)
-        
+
         refresh_btn = QPushButton("Refresh Transactions")
         refresh_btn.clicked.connect(self.refresh_transactions)
         layout.addWidget(refresh_btn)
-        
+
         widget.setLayout(layout)
         return widget
 
     def create_budgets_tab(self):
         widget = QWidget()
         layout = QVBoxLayout()
-        
+
         self.budgets_table = QTableWidget()
         self.budgets_table.setColumnCount(4)
         self.budgets_table.setHorizontalHeaderLabels(["Category", "Budgeted", "Spent", "Remaining"])
         layout.addWidget(self.budgets_table)
-        
+
         refresh_btn = QPushButton("Refresh Budgets")
         refresh_btn.clicked.connect(self.refresh_budgets)
         layout.addWidget(refresh_btn)
-        
+
         widget.setLayout(layout)
         return widget
 
     def create_loans_tab(self):
         widget = QWidget()
         layout = QVBoxLayout()
-        
+
         self.loans_table = QTableWidget()
         self.loans_table.setColumnCount(6)
         self.loans_table.setHorizontalHeaderLabels(["Loan ID", "Amount", "Interest Rate", "Term", "Monthly Payment", "Remaining Balance"])
         layout.addWidget(self.loans_table)
-        
+
         btn_layout = QHBoxLayout()
-        
+
         payment_btn = QPushButton("Make Payment")
         payment_btn.clicked.connect(self.show_loan_payment_dialog)
         btn_layout.addWidget(payment_btn)
-        
+
         if self.user_role == 'admin':
             new_loan_btn = QPushButton("New Loan")
             new_loan_btn.clicked.connect(self.show_new_loan_dialog)
             btn_layout.addWidget(new_loan_btn)
-        
+
         refresh_btn = QPushButton("Refresh Loans")
         refresh_btn.clicked.connect(self.refresh_loans)
         btn_layout.addWidget(refresh_btn)
-        
+
         layout.addLayout(btn_layout)
         widget.setLayout(layout)
         return widget
@@ -217,97 +218,97 @@ class MainWindow(QMainWindow):
     def create_reports_tab(self):
         widget = QWidget()
         layout = QVBoxLayout()
-        
+
         report_layout = QHBoxLayout()
-        
+
         stmt_btn = QPushButton("Account Statement")
         stmt_btn.clicked.connect(self.generate_statement)
         report_layout.addWidget(stmt_btn)
-        
+
         budget_btn = QPushButton("Budget Report")
         budget_btn.clicked.connect(self.generate_budget_report)
         report_layout.addWidget(budget_btn)
-        
+
         income_btn = QPushButton("Income/Expense")
         income_btn.clicked.connect(self.generate_income_report)
         report_layout.addWidget(income_btn)
-        
+
         layout.addLayout(report_layout)
-        
+
         self.report_output = QTextEdit()
         self.report_output.setReadOnly(True)
         layout.addWidget(self.report_output)
-        
+
         widget.setLayout(layout)
         return widget
 
     def create_profile_tab(self):
         widget = QWidget()
         layout = QVBoxLayout()
-        
+
         profile_group = QGroupBox("User Profile")
         profile_layout = QFormLayout()
-        
+
         # Display current user info
         username_label = QLabel(self.logged_in_user)
         profile_layout.addRow("Username:", username_label)
-        
+
         role_label = QLabel(self.user_role.title())
         profile_layout.addRow("Role:", role_label)
-        
+
         # Password change
         password_group = QGroupBox("Change Password")
         password_layout = QFormLayout()
-        
+
         self.current_password_input = QLineEdit()
         self.current_password_input.setEchoMode(QLineEdit.Password)
         password_layout.addRow("Current Password:", self.current_password_input)
-        
+
         self.new_password_input = QLineEdit()
         self.new_password_input.setEchoMode(QLineEdit.Password)
         password_layout.addRow("New Password:", self.new_password_input)
-        
+
         self.confirm_password_input = QLineEdit()
         self.confirm_password_input.setEchoMode(QLineEdit.Password)
         password_layout.addRow("Confirm Password:", self.confirm_password_input)
-        
+
         change_btn = QPushButton("Change Password")
         change_btn.clicked.connect(self.change_password)
         password_layout.addRow(change_btn)
-        
+
         password_group.setLayout(password_layout)
-        
+
         layout.addWidget(profile_group)
         layout.addWidget(password_group)
         layout.addStretch()
-        
+
         widget.setLayout(layout)
         return widget
 
     def create_admin_tab(self):
         widget = QWidget()
         layout = QVBoxLayout()
-        
+
         admin_layout = QHBoxLayout()
-        
+
         users_btn = QPushButton("Manage Users")
         users_btn.clicked.connect(self.show_user_management)
         admin_layout.addWidget(users_btn)
-        
+
         health_btn = QPushButton("System Health")
         health_btn.clicked.connect(self.show_system_health)
         admin_layout.addWidget(health_btn)
-        
+
         backup_btn = QPushButton("Backup Database")
         backup_btn.clicked.connect(self.backup_database)
         admin_layout.addWidget(backup_btn)
-        
+
         layout.addLayout(admin_layout)
-        
+
         self.admin_output = QTextEdit()
         self.admin_output.setReadOnly(True)
         layout.addWidget(self.admin_output)
-        
+
         widget.setLayout(layout)
         return widget
 
@@ -361,27 +362,27 @@ class MainWindow(QMainWindow):
         dialog = QDialog(self)
         dialog.setWindowTitle("Deposit")
         layout = QFormLayout()
-        
+
         account_combo = QComboBox()
         accounts = erp_data.get_accounts(self.user_id)
         for acc in accounts:
             account_combo.addItem(f"{acc[1]} ({acc[2]})", acc[0])
-        
+
         amount_input = QDoubleSpinBox()
         amount_input.setMaximum(1000000)
         amount_input.setPrefix("$")
-        
+
         desc_input = QLineEdit("Deposit")
-        
+
         layout.addRow("Account:", account_combo)
         layout.addRow("Amount:", amount_input)
         layout.addRow("Description:", desc_input)
-        
+
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(lambda: self.process_deposit(account_combo.currentData(), amount_input.value(), desc_input.text(), dialog))
         buttons.rejected.connect(dialog.reject)
         layout.addRow(buttons)
-        
+
         dialog.setLayout(layout)
         dialog.exec()
 
@@ -398,27 +399,27 @@ class MainWindow(QMainWindow):
         dialog = QDialog(self)
         dialog.setWindowTitle("Withdraw")
         layout = QFormLayout()
-        
+
         account_combo = QComboBox()
         accounts = erp_data.get_accounts(self.user_id)
         for acc in accounts:
             account_combo.addItem(f"{acc[1]} ({acc[2]}) - Balance: ${acc[3]:.2f}", acc[0])
-        
+
         amount_input = QDoubleSpinBox()
         amount_input.setMaximum(1000000)
         amount_input.setPrefix("$")
-        
+
         desc_input = QLineEdit("Withdrawal")
-        
+
         layout.addRow("Account:", account_combo)
         layout.addRow("Amount:", amount_input)
         layout.addRow("Description:", desc_input)
-        
+
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(lambda: self.process_withdraw(account_combo.currentData(), amount_input.value(), desc_input.text(), dialog))
         buttons.rejected.connect(dialog.reject)
         layout.addRow(buttons)
-        
+
         dialog.setLayout(layout)
         dialog.exec()
 
@@ -435,30 +436,30 @@ class MainWindow(QMainWindow):
         dialog = QDialog(self)
         dialog.setWindowTitle("Transfer")
         layout = QFormLayout()
-        
+
         from_combo = QComboBox()
         to_combo = QComboBox()
         accounts = erp_data.get_accounts(self.user_id)
         for acc in accounts:
             from_combo.addItem(f"{acc[1]} ({acc[2]}) - Balance: ${acc[3]:.2f}", acc[0])
             to_combo.addItem(f"{acc[1]} ({acc[2]})", acc[0])
-        
+
         amount_input = QDoubleSpinBox()
         amount_input.setMaximum(1000000)
         amount_input.setPrefix("$")
-        
+
         desc_input = QLineEdit("Transfer")
-        
+
         layout.addRow("From Account:", from_combo)
         layout.addRow("To Account:", to_combo)
         layout.addRow("Amount:", amount_input)
         layout.addRow("Description:", desc_input)
-        
+
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(lambda: self.process_transfer(from_combo.currentData(), to_combo.currentData(), amount_input.value(), desc_input.text(), dialog))
         buttons.rejected.connect(dialog.reject)
         layout.addRow(buttons)
-        
+
         dialog.setLayout(layout)
         dialog.exec()
 
@@ -477,33 +478,33 @@ class MainWindow(QMainWindow):
     def show_open_account_dialog(self):
         if self.user_role != 'admin':
             return
-        
+
         dialog = QDialog(self)
         dialog.setWindowTitle("Open New Account")
         layout = QFormLayout()
-        
+
         user_combo = QComboBox()
         users = erp_data.get_users()
         for user in users:
             user_combo.addItem(f"{user[1]} ({user[2]})", user[0])
-        
+
         account_input = QLineEdit()
         type_combo = QComboBox()
         type_combo.addItems(["Checking", "Savings", "Credit Card", "Loan"])
-        
+
         balance_input = QDoubleSpinBox()
         balance_input.setPrefix("$")
-        
+
         layout.addRow("User:", user_combo)
         layout.addRow("Account Number:", account_input)
         layout.addRow("Account Type:", type_combo)
         layout.addRow("Initial Balance:", balance_input)
-        
+
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(lambda: self.process_open_account(user_combo.currentData(), account_input.text(), type_combo.currentText(), balance_input.value(), dialog))
         buttons.rejected.connect(dialog.reject)
         layout.addRow(buttons)
-        
+
         dialog.setLayout(layout)
         dialog.exec()
 
@@ -537,7 +538,7 @@ class MainWindow(QMainWindow):
         if not accounts:
             self.report_output.setText("No accounts found.")
             return
-        
+
         account_id = accounts[0][0]
         statement = reports.generate_account_statement(account_id)
         text = "ACCOUNT STATEMENT\n\n"
@@ -564,7 +565,7 @@ class MainWindow(QMainWindow):
         dialog = QDialog(self)
         dialog.setWindowTitle("Make Loan Payment")
         layout = QFormLayout()
-        
+
         loan_combo = QComboBox()
         loans = erp_data.get_loans(self.user_id)
         for loan in loans:
@@ -573,19 +574,19 @@ class MainWindow(QMainWindow):
             else:
                 loan_id, amount, rate, term, payment, balance, account_num = loan
             loan_combo.addItem(f"Loan {loan_id} - Balance: ${balance:.2f}", loan_id)
-        
+
         amount_input = QDoubleSpinBox()
         amount_input.setMaximum(100000)
         amount_input.setPrefix("$")
-        
+
         layout.addRow("Loan:", loan_combo)
         layout.addRow("Payment Amount:", amount_input)
-        
+
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(lambda: self.process_loan_payment(loan_combo.currentData(), amount_input.value(), dialog))
         buttons.rejected.connect(dialog.reject)
         layout.addRow(buttons)
-        
+
         dialog.setLayout(layout)
         dialog.exec()
 
@@ -603,40 +604,40 @@ class MainWindow(QMainWindow):
     def show_new_loan_dialog(self):
         if self.user_role != 'admin':
             return
-        
+
         dialog = QDialog(self)
         dialog.setWindowTitle("Create New Loan")
         layout = QFormLayout()
-        
+
         account_combo = QComboBox()
         accounts = erp_data.get_accounts()
         for acc in accounts:
             account_combo.addItem(f"{acc[1]} ({acc[2]})", acc[0])
-        
+
         amount_input = QDoubleSpinBox()
         amount_input.setMaximum(1000000)
         amount_input.setPrefix("$")
-        
+
         rate_input = QDoubleSpinBox()
         rate_input.setMaximum(50)
         rate_input.setSuffix("%")
         rate_input.setValue(5.0)
-        
+
         term_input = QSpinBox()
         term_input.setMinimum(1)
         term_input.setMaximum(360)
         term_input.setValue(60)
-        
+
         layout.addRow("Account:", account_combo)
         layout.addRow("Loan Amount:", amount_input)
         layout.addRow("Interest Rate:", rate_input)
         layout.addRow("Term (months):", term_input)
-        
+
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(lambda: self.process_new_loan(account_combo.currentData(), amount_input.value(), rate_input.value(), term_input.value(), dialog))
         buttons.rejected.connect(dialog.reject)
         layout.addRow(buttons)
-        
+
         dialog.setLayout(layout)
         dialog.exec()
 
@@ -653,19 +654,19 @@ class MainWindow(QMainWindow):
         current = self.current_password_input.text()
         new = self.new_password_input.text()
         confirm = self.confirm_password_input.text()
-        
+
         if not current or not new or not confirm:
             QMessageBox.warning(self, "Error", "All password fields are required.")
             return
-        
+
         if new != confirm:
             QMessageBox.warning(self, "Error", "New passwords do not match.")
             return
-        
+
         if len(new) < 6:
             QMessageBox.warning(self, "Error", "Password must be at least 6 characters.")
             return
-        
+
         try:
             from ..security.auth import change_password
             if change_password(self.user_id, current, new):
@@ -679,19 +680,30 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Error", f"Password change failed: {e}")
 
     def show_user_management(self):
-        # Simple user list for admin
+        dialog = QDialog(self)
+        dialog.setWindowTitle("User Management")
+        layout = QVBoxLayout()
+
+        # User list
         users = erp_data.get_users()
-        text = "USER MANAGEMENT\n\n"
+        user_list = QListWidget()
         for user in users:
-            text += f"ID: {user[0]}, Username: {user[1]}, Role: {user[2]}, Email: {user[3]}\n"
-        self.admin_output.setText(text)
+            user_list.addItem(f"{user[1]} ({user[2]}) - {user[3]}")
+        layout.addWidget(user_list)
+
+        # Add user button
+        add_btn = QPushButton("Add User")
+        add_btn.clicked.connect(self.show_add_user_dialog)
+        layout.addWidget(add_btn)
+
+        dialog.setLayout(layout)
+        dialog.exec()
 
     def show_system_health(self):
         from admin.admin_tools import system_health_check
-        # Capture print output
         import io
         from contextlib import redirect_stdout
-        
+
         f = io.StringIO()
         with redirect_stdout(f):
             system_health_check()
@@ -711,77 +723,39 @@ class MainWindow(QMainWindow):
     def show_maintenance_dialog(self):
         QMessageBox.information(self, "Maintenance", "Use the Admin tab for maintenance operations.")
 
-    def show_user_management(self):
-        dialog = QDialog(self)
-        dialog.setWindowTitle("User Management")
-        layout = QVBoxLayout()
-        
-        # User list
-        users = erp_data.get_users()
-        user_list = QListWidget()
-        for user in users:
-            user_list.addItem(f"{user[1]} ({user[2]}) - {user[3]}")
-        layout.addWidget(user_list)
-        
-        # Add user button
-        add_btn = QPushButton("Add User")
-        add_btn.clicked.connect(self.show_add_user_dialog)
-        layout.addWidget(add_btn)
-        
-        dialog.setLayout(layout)
-        dialog.exec()
-
     def show_add_user_dialog(self):
         dialog = QDialog(self)
         dialog.setWindowTitle("Add New User")
         layout = QFormLayout()
-        
+
         username_input = QLineEdit()
         password_input = QLineEdit()
         password_input.setEchoMode(QLineEdit.Password)
         role_combo = QComboBox()
         role_combo.addItems(["user", "teller", "admin"])
         email_input = QLineEdit()
-        
+
         layout.addRow("Username:", username_input)
         layout.addRow("Password:", password_input)
         layout.addRow("Role:", role_combo)
         layout.addRow("Email:", email_input)
-        
+
         buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
         buttons.accepted.connect(lambda: self.process_add_user(username_input.text(), password_input.text(), role_combo.currentText(), email_input.text(), dialog))
         buttons.rejected.connect(dialog.reject)
         layout.addRow(buttons)
-        
+
         dialog.setLayout(layout)
         dialog.exec()
 
     def process_add_user(self, username, password, role, email, dialog):
         try:
             from data.erp_data import add_user
-            user_id = add_user(username, password, role, email)
+            add_user(username, password, role, email)
             dialog.accept()
             QMessageBox.information(self, "Success", f"User '{username}' added successfully.")
         except Exception as e:
             QMessageBox.warning(self, "Error", f"Failed to add user: {e}")
-
-    def show_system_health(self):
-        from admin.admin_tools import system_health_check
-        import io
-        from contextlib import redirect_stdout
-        
-        f = io.StringIO()
-        with redirect_stdout(f):
-            system_health_check()
-        self.admin_output.setText(f.getvalue())
-
-    def backup_database(self):
-        from maintenance.backup_db import backup_database
-        try:
-            path = backup_database()
-            QMessageBox.information(self, "Success", f"Backup created at {path}")
-        except Exception as e:
-            QMessageBox.warning(self, "Error", f"Backup failed: {e}")
 
 
 if __name__ == "__main__":
@@ -790,7 +764,7 @@ if __name__ == "__main__":
         window = MainWindow()
         window.show()
         sys.exit(app.exec())
-    except Exception as e:
+    except Exception:
         import traceback
         print("❌ Exception occurred in ERP GUI:")
         traceback.print_exc()

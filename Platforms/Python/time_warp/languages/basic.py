@@ -145,14 +145,12 @@ def _resolve_string_value(interpreter: "Interpreter", expr: str) -> "str | None"
     # String function call: LEFT$(...), MID$(...), etc.
     if "$(" in expr_upper:
         try:
-            from ..utils.string_evaluator import StringExpressionEvaluator
-
             evaluator = StringExpressionEvaluator(
                 interpreter.string_variables,
                 interpreter.variables,
             )
             return str(evaluator.evaluate(expr))
-        except (ValueError, TypeError, AttributeError, KeyError) as e:
+        except (ValueError, TypeError, AttributeError, KeyError):
             return None
 
     return None
@@ -228,9 +226,9 @@ def _basic_def_fn(interpreter: "Interpreter", command: str) -> str:
     params = [p.strip().upper() for p in m.group(2).split(",") if p.strip()]
     body_expr = m.group(3).strip()
     # Store on interpreter for later use by evaluate_expression
-    if not hasattr(interpreter, "_basic_user_fns"):
-        interpreter._basic_user_fns = {}
-    interpreter._basic_user_fns[fn_name] = (params, body_expr)
+    if not hasattr(interpreter, "basic_user_fns"):
+        interpreter.basic_user_fns = {}
+    interpreter.basic_user_fns[fn_name] = (params, body_expr)
     return ""
 
 
@@ -269,11 +267,11 @@ def execute_basic(
 
     # ── Block IF skip-mode ────────────────────────────────────────────────
     # When a block IF condition was false we skip lines until ELSE / END IF.
-    if not hasattr(interpreter, "_basic_if_stack"):
-        interpreter._basic_if_stack = []  # list of dicts
+    if not hasattr(interpreter, "basic_if_stack"):
+        interpreter.basic_if_stack = []  # list of dicts
 
-    if interpreter._basic_if_stack:
-        top = interpreter._basic_if_stack[-1]
+    if interpreter.basic_if_stack:
+        top = interpreter.basic_if_stack[-1]
         # Skipping mode — only react to structural keywords at the correct depth
         if top.get("skip"):
             # Track nested IFs so we don't pop early
@@ -287,7 +285,7 @@ def execute_basic(
                 if depth > 0:
                     top["depth"] = depth - 1
                     return ""
-                interpreter._basic_if_stack.pop()
+                interpreter.basic_if_stack.pop()
                 return ""
             if cmd == "ELSE" and depth == 0:
                 # Found matching ELSE — stop skipping (run ELSE branch)
@@ -296,7 +294,7 @@ def execute_basic(
             return ""  # skip this line
         # We are in a block IF executing (not skipping) — handle END IF / ELSE
         if cmd in ("ENDIF", "END IF"):
-            interpreter._basic_if_stack.pop()
+            interpreter.basic_if_stack.pop()
             return ""
         if cmd == "ELSE":
             # We already executed the THEN branch; skip to END IF
@@ -492,7 +490,7 @@ def execute_basic(
         return _basic_on_error_goto(interpreter, _strip_comment(command[13:]))
     if cmd == "ON ERROR":
         # synonym for ON ERROR GOTO 0 — disable handler
-        interpreter._basic_error_handler_line = 0  # type: ignore[attr-defined]
+        interpreter.basic_error_handler_line = 0
         return ""
     if cmd.startswith("RESUME NEXT"):
         return _basic_resume_next(interpreter)
@@ -508,11 +506,13 @@ def execute_basic(
         _rng.seed()
         return ""
     # --- Full Logo command and block blending ---
+    _execute_logo: Optional[Any] = None
     try:
-        from .logo import LOGO_COMMANDS, execute_logo
+        from .logo import LOGO_COMMANDS, execute_logo as _imported_logo
+
+        _execute_logo = _imported_logo
     except ImportError:
         LOGO_COMMANDS = set()
-        execute_logo = None
 
     # Helper: detect if a line or block is likely Logo
     def is_logo_line(line: str) -> bool:
@@ -534,36 +534,36 @@ def execute_basic(
         return False
 
     # If the line is likely Logo, or contains Logo block syntax, forward to Logo executor
-    if is_logo_line(command) and execute_logo:
-        return execute_logo(interpreter, command, turtle)
+    if is_logo_line(command) and _execute_logo:
+        return _execute_logo(interpreter, command, turtle)
 
     # If the line is not recognized as BASIC, but is not empty, try to accumulate a Logo block
-    if execute_logo and command.strip():
+    if _execute_logo and command.strip():
         # Try to detect start of a Logo block (e.g., REPEAT ... [ ... ])
         if any(kw in command.upper() for kw in ["REPEAT", "TO", "FOREACH", "MAP", "FILTER", "REDUCE", "WHILE", "UNTIL"]):
             # Accumulate lines until block end (matching brackets)
             block_lines = [command]
             open_brackets = command.count("[") - command.count("]")
-            interpreter._logo_block_buffer = getattr(interpreter, "_logo_block_buffer", [])
-            interpreter._logo_block_buffer.extend(block_lines)
+            interpreter.logo_block_buffer = getattr(interpreter, "logo_block_buffer", [])
+            interpreter.logo_block_buffer.extend(block_lines)
             if open_brackets > 0:
                 # Wait for more lines in the block
                 return ""
             else:
                 # Block is complete, send to Logo
-                block = "\n".join(interpreter._logo_block_buffer)
-                interpreter._logo_block_buffer = []
-                return execute_logo(interpreter, block, turtle)
+                block = "\n".join(interpreter.logo_block_buffer)
+                interpreter.logo_block_buffer = []
+                return _execute_logo(interpreter, block, turtle)
         # If already accumulating a Logo block
-        if hasattr(interpreter, "_logo_block_buffer") and interpreter._logo_block_buffer:
-            interpreter._logo_block_buffer.append(command)
-            open_brackets = sum(l.count("[") - l.count("]") for l in interpreter._logo_block_buffer)
+        if hasattr(interpreter, "logo_block_buffer") and interpreter.logo_block_buffer:
+            interpreter.logo_block_buffer.append(command)
+            open_brackets = sum(line.count("[") - line.count("]") for line in interpreter.logo_block_buffer)
             if open_brackets > 0:
                 return ""
             else:
-                block = "\n".join(interpreter._logo_block_buffer)
-                interpreter._logo_block_buffer = []
-                return execute_logo(interpreter, block, turtle)
+                block = "\n".join(interpreter.logo_block_buffer)
+                interpreter.logo_block_buffer = []
+                return _execute_logo(interpreter, block, turtle)
 
     return f"❌ Unknown BASIC command: {command}\n"
 
@@ -747,8 +747,8 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
             elif item_upper in interpreter.variables:
                 # Determine preferred type from defaults using public API
                 _base, t = interpreter.get_var_base_and_type(item_upper)
-                val = interpreter.variables[item_upper]
-                out_items.append(_format_numeric(val, t))
+                num_val = interpreter.variables[item_upper]
+                out_items.append(_format_numeric(float(num_val), t))
             else:
                 # Try to evaluate as expression
                 try:
@@ -813,9 +813,9 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
             # Numeric array
             val = interpreter.evaluate_expression(expr)
             if array_name in interpreter.arrays:
-                arr = interpreter.arrays[array_name]
-                if 0 <= idx < len(arr):
-                    arr[idx] = val
+                num_arr = interpreter.arrays[array_name]
+                if 0 <= idx < len(num_arr):
+                    num_arr[idx] = val
                     return ""
                 return f"❌ Array index out of bounds: {idx}\n"
             return f"❌ Array not defined: {array_name}\n"
@@ -989,9 +989,9 @@ def _basic_if(
 
     # Block IF: nothing after THEN → multi-line
     if not then_part:
-        if not hasattr(interpreter, "_basic_if_stack"):
-            interpreter._basic_if_stack = []
-        interpreter._basic_if_stack.append(
+        if not hasattr(interpreter, "basic_if_stack"):
+            interpreter.basic_if_stack = []
+        interpreter.basic_if_stack.append(
             {
                 "skip": not condition_true,
                 "depth": 0,
@@ -1045,11 +1045,11 @@ def _basic_on_error_goto(interpreter: "Interpreter", args: str) -> str:
     except ValueError:
         return f"❌ Invalid line number for ON ERROR GOTO: {target}\n"
     if line_num == 0:
-        interpreter._basic_error_handler_line = 0  # type: ignore[attr-defined]
+        interpreter.basic_error_handler_line = 0
     else:
         if line_num not in interpreter.line_number_map:
             return f"❌ ON ERROR GOTO {line_num}: line not found\n"
-        interpreter._basic_error_handler_line = line_num  # type: ignore[attr-defined]
+        interpreter.basic_error_handler_line = line_num
     return ""
 
 
@@ -1064,7 +1064,7 @@ def _basic_resume(interpreter: "Interpreter", args: str) -> str:
         interpreter.current_line = interpreter.line_number_map[line_num]
         return ""
     # RESUME with no args: re-execute the error line
-    err_line = getattr(interpreter, "_basic_error_line", None)
+    err_line = getattr(interpreter, "basic_error_line", None)
     if err_line is not None and err_line in interpreter.line_number_map:
         interpreter.current_line = interpreter.line_number_map[err_line]
     return ""
@@ -1072,7 +1072,7 @@ def _basic_resume(interpreter: "Interpreter", args: str) -> str:
 
 def _basic_resume_next(interpreter: "Interpreter") -> str:
     """RESUME NEXT — continue from the line after the one that errored."""
-    err_line = getattr(interpreter, "_basic_error_line", None)
+    err_line = getattr(interpreter, "basic_error_line", None)
     if err_line is not None and err_line in interpreter.line_number_map:
         target_idx = interpreter.line_number_map[err_line] + 1
         if target_idx < len(interpreter.program_lines):
@@ -1559,7 +1559,7 @@ def _basic_pset(i: "Interpreter", args: str, t: "TurtleState") -> str:
     """
     # Parse (x, y)[, color]
     match = re.match(
-        r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)" r"(?:\s*,\s*(.+))?",
+        r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)(?:\s*,\s*(.+))?",
         args,
     )
 
@@ -1598,7 +1598,7 @@ def _basic_preset(i: "Interpreter", args: str, t: "TurtleState") -> str:
     """
     # Parse (x, y)[, color]
     match = re.match(
-        r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)" r"(?:\s*,\s*(.+))?",
+        r"\(\s*([^,]+)\s*,\s*([^,]+)\s*\)(?:\s*,\s*(.+))?",
         args,
     )
 
@@ -2042,14 +2042,12 @@ def _basic_call(interpreter: "Interpreter", args: str) -> str:
 
 def _basic_type_def(interpreter: "Interpreter", args: str) -> str:
     """TYPE typename ... END TYPE - Define a user-defined type (VB-classic)."""
-    import re as _re
-
     type_name = args.strip().upper()
     if not type_name:
         return "❌ TYPE requires a name\n"
     if not hasattr(interpreter, "basic_types"):
         interpreter.basic_types = {}
-    fields = {}
+    fields: dict[str, Any] = {}
     # Scan forward through program_lines to collect field declarations
     scan_line = interpreter.current_line + 1
     while scan_line < len(interpreter.program_lines):
@@ -2057,16 +2055,16 @@ def _basic_type_def(interpreter: "Interpreter", args: str) -> str:
         ln_up = line_text.strip().upper()
         # Handle "NNN END TYPE" (numbered lines) or plain "END TYPE"
         # Strip leading line number if present
-        stripped = _re.sub(r"^\d+\s+", "", line_text.strip())
+        stripped = re.sub(r"^\d+\s+", "", line_text.strip())
         stripped_up = stripped.upper()
         if stripped_up in ("END TYPE", "ENDTYPE") or ln_up in ("END TYPE", "ENDTYPE"):
             interpreter.current_line = scan_line
             break
         # Field declaration: fieldname AS type
-        fm = _re.match(
+        fm = re.match(
             r"^\s*([A-Za-z_][A-Za-z0-9_]*\$?)\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)\s*$",
             stripped,
-            _re.IGNORECASE,
+            re.IGNORECASE,
         )
         if fm:
             fname = fm.group(1).strip().upper()
@@ -2098,12 +2096,10 @@ def _basic_dim(interpreter: "Interpreter", args: str) -> str:
     for part in parts:
         part = part.strip()
         # DIM varname AS typename — user-defined type instance
-        import re as _re
-
-        as_m = _re.match(
+        as_m = re.match(
             r"^([A-Za-z_][A-Za-z0-9_]*\$?)\s+AS\s+([A-Za-z_][A-Za-z0-9_]*)$",
             part,
-            _re.IGNORECASE,
+            re.IGNORECASE,
         )
         if as_m:
             var_name = as_m.group(1).strip().upper()

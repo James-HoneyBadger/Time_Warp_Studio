@@ -14,6 +14,7 @@ Supported Features:
 
 from typing import Optional
 
+
 class HardwareIntegration:
     """Class to manage hardware and IoT integration."""
 
@@ -59,6 +60,7 @@ class HardwareIntegration:
             data (Optional[dict]): Simulated data for the device.
         """
         print(f"🐢 Simulating device '{name}' with data: {data}")
+
 
 # Example usage
 if __name__ == "__main__":

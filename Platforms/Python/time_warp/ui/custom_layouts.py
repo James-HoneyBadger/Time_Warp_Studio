@@ -10,8 +10,8 @@ Features:
 - Save and load custom layouts.
 """
 
-from typing import Dict
 import json
+
 
 class CustomUILayouts:
     """Class to manage customizable UI layouts."""
@@ -63,6 +63,7 @@ class CustomUILayouts:
             print(f"✅ Layouts imported from '{file_path}'.")
         except FileNotFoundError:
             print(f"❌ File '{file_path}' not found.")
+
 
 # Example usage
 if __name__ == "__main__":

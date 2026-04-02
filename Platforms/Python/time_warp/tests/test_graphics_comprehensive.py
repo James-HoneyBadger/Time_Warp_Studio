@@ -16,7 +16,6 @@ Covers:
 import json
 import math
 import tempfile
-from pathlib import Path
 
 import pytest
 
@@ -49,8 +48,6 @@ from time_warp.graphics.art_toolkit import (  # type: ignore[import-not-found]
 )
 from time_warp.graphics.turtle_gallery import (  # type: ignore[import-not-found]
     TurtleGallery,
-    DrawingMetadata,
-    DrawingStep,
     create_share_link,
 )
 from time_warp.core.interpreter import Interpreter  # type: ignore[import-not-found]

@@ -57,7 +57,6 @@ class SmalltalkEnvironment:
 
     def _setup_globals(self):
         output = self._output
-        env = self
 
         class _Transcript:
             @staticmethod
@@ -97,7 +96,6 @@ class SmalltalkEnvironment:
         current = []
         depth_sq = 0  # [ ] depth
         depth_p = 0  # ( ) depth
-        in_str = False
         in_comment = False
         i = 0
         while i < len(source):
@@ -176,7 +174,7 @@ class SmalltalkEnvironment:
         # Class definition: Object subclass: #Name instanceVariableNames: '...'
         m = re.match(r"^(\w+)\s+subclass:\s*#(\w+)\s*(.*)", stmt, re.DOTALL)
         if m:
-            superclass_name = m.group(1)
+            m.group(1)
             class_name = m.group(2)
             rest = m.group(3)
             ivar_m = re.search(r"instanceVariableNames:\s*'([^']*)'", rest)

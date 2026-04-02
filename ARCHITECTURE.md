@@ -1,6 +1,6 @@
 # Architecture Guide
 
-**Time Warp Studio v9.0.0 — System Design and Implementation**
+## Time Warp Studio v9.0.0 — System Design and Implementation
 
 ---
 
@@ -22,6 +22,7 @@
 ## Overview
 
 Time Warp Studio is a desktop IDE built with:
+
 - **Backend**: Python 3.10+ with PySide6 (Qt6)
 - **Architecture**: Single-process, multi-threaded desktop application
 - **Core Pattern**: Central interpreter with stateless language executors
@@ -30,16 +31,19 @@ Time Warp Studio is a desktop IDE built with:
 ### Design Philosophy
 
 **State Management**:
+
 - UI owns all state (editor content, canvas, variables)
 - Language executors are stateless command processors
 - Results returned as text strings with emoji prefixes
 
 **Safety**:
+
 - No use of `eval()` for expression evaluation
 - Protected math expression evaluator
 - Thread-safe queues for execution communication
 
 **Modularity**:
+
 - 24 independent language modules (easily extensible)
 - Feature panels loaded dynamically
 - Theme system completely separate from core logic
@@ -72,13 +76,15 @@ class Interpreter:
 
 ### Core Methods
 
-**execute(code: str, language: Language) -> ExecutionResult**
+#### execute(code: str, language: Language) -> ExecutionResult
+
 - Main entry point for code execution
 - Routes to appropriate executor based on language
 - Captures output and errors
 - Returns structured result with emoji prefix
 
 Output Prefixes:
+
 - `❌` Execution error
 - `✅` Success
 - `ℹ️` Information message
@@ -87,7 +93,7 @@ Output Prefixes:
 
 ### Execution Flow
 
-```
+```text
 User Code
     ↓
 UI calls: interpreter.execute(code, language)
@@ -119,11 +125,13 @@ def execute_basic(interpreter: Interpreter, command: str, turtle: TurtleState) -
 ### Key Design Rule
 
 **Language executors MUST NOT:**
+
 - ❌ Store UI widget references
 - ❌ Update canvas directly
 - ❌ Modify main window
 
 **Language executors CAN:**
+
 - ✅ Read/write interpreter state (variables, turtle position)
 - ✅ Return strings as output
 - ✅ Access the interpreter and turtle state objects
@@ -135,6 +143,7 @@ def execute_basic(interpreter: Interpreter, command: str, turtle: TurtleState) -
 #### 1. BASIC
 
 Features:
+
 - Variables and arrays (DIM statement)
 - Control flow (IF/ELSE, FOR, WHILE, DO...LOOP)
 - Subroutines (GOSUB/RETURN)
@@ -144,6 +153,7 @@ Features:
 #### 2. LOGO
 
 Features:  
+
 - Turtle graphics (FORWARD, BACKWARD, RIGHT, LEFT)
 - Pen control (PENUP, PENDOWN)
 - Shapes (CIRCLE, RECTANGLE, POLYGON)
@@ -151,6 +161,7 @@ Features:
 - Recursion support
 
 Turtle State Tracking:
+
 - Position: `x`, `y` (-400 to 400 logical coords)
 - Heading: `angle` (0-360 degrees)
 - Pen: `pen_down`, `pen_color`, `pen_width`
@@ -158,6 +169,7 @@ Turtle State Tracking:
 #### 3. PILOT
 
 Features:
+
 - T-units: Text output
 - A-units: Answer input validation
 - J-units: Conditional jumps
@@ -166,6 +178,7 @@ Features:
 #### 4. C
 
 Features:
+
 - Basic C syntax (variables, functions)
 - stdio (printf, scanf)
 - Standard math library
@@ -176,6 +189,7 @@ Status: Experimental
 #### 5. Pascal
 
 Features:
+
 - Structured programming
 - Type declarations, procedures, functions
 - Control structures (IF, FOR, WHILE, REPEAT)
@@ -185,6 +199,7 @@ Status: Experimental
 #### 6. Prolog
 
 Features:
+
 - Facts and rules
 - Unification and backtracking
 - List operations
@@ -195,6 +210,7 @@ Status: Experimental
 #### 7. Forth
 
 Features:
+
 - Stack operations (DUP, SWAP, DROP)
 - Word definitions (: WORD ... ;)
 - Control structures (IF...THEN, DO...LOOP)
@@ -216,7 +232,7 @@ Each receives the full source text and returns output. Registered in
 
 ### Main Components
 
-```
+```text
 MainWindow
 ├── MenuBar (File, Edit, Run, Debug, View, Help)
 ├── Central Widget
@@ -234,12 +250,14 @@ MainWindow
 ### Editor & Canvas
 
 **CodeEditor** (`ui/editor.py`):
+
 - Syntax highlighting per language
 - Real-time validation
 - Line numbers, code folding
 - Find/Replace functionality
 
 **Canvas** (`ui/canvas.py`):
+
 - Qt-based graphics rendering
 - Zoom (0.1x to 5.0x) and pan support
 - Renders turtle graphics in real-time
@@ -248,6 +266,7 @@ MainWindow
 ### 14 Feature Panels
 
 Specialized development tools accessible via tabs:
+
 1. Lesson Mode - Step-by-step guided instruction
 2. AI Assistant - Code suggestions
 3. Error Explainer - Understand errors
@@ -292,7 +311,7 @@ class TurtleState:
 
 ### Canvas Coordinate System
 
-```
+```text
      -400    0    400
   300 ┌─────┬──────┐
       │     │      │
@@ -308,17 +327,20 @@ Angle: 0°=East, 90°=North, 180°=West, 270°=South
 ### Drawing Operations
 
 Movement:
+
 - FORWARD, BACKWARD - Move and optionally draw
 - RIGHT, LEFT - Rotate turtle
 - SETPOSITION - Absolute move
 
 Drawing:
+
 - PENUP, PENDOWN - Control drawing
 - LINE - Draw line
 - CIRCLE - Draw circle
 - POINT - Draw single pixel
 
 Style:
+
 - SETCOLOR - Change pen color
 - SETWIDTH - Change pen width
 - CLEAR - Erase canvas
@@ -339,6 +361,7 @@ Style:
 ### Timeline Recording
 
 Each execution step stored with:
+
 - Step number
 - Line number
 - Command executed
@@ -363,7 +386,7 @@ Each execution step stored with:
 
 ### Execution Pipeline
 
-```
+```text
 User Code in Editor
         ↓
 [User clicks Run]
@@ -431,7 +454,7 @@ def execute_newlang(interpreter: Interpreter, source: str, turtle: TurtleState) 
     return "\n".join(output_lines) + "\n"
 ```
 
-2. Register in `core/interpreter.py`:
+1. Register in `core/interpreter.py`:
 
 ```python
 from ..languages.newlang import execute_newlang
@@ -439,11 +462,11 @@ from ..languages.newlang import execute_newlang
 # Add entry in _init_whole_program_executors()
 ```
 
-3. Add detection in `execute()` method
+1. Add detection in `execute()` method
 
-4. Create examples in `Examples/newlang/`
+1. Create examples in `Examples/newlang/`
 
-5. Write tests in `tests/test_newlang.py`
+1. Write tests in `tests/test_newlang.py`
 
 ### Adding a Feature Panel
 
@@ -456,7 +479,7 @@ self.new_panel = NewPanel()
 self.tabs.addTab(self.new_panel, "New Panel")
 ```
 
-3. Add menu toggle in View menu:
+1. Add menu toggle in View menu:
 
 ```python
 self.action_show_new = self.menu_view.addAction("New Panel")
@@ -477,7 +500,7 @@ self.action_show_new.triggered.connect(self.new_panel.show)
 ),
 ```
 
-2. The theme is automatically available in the theme menu
+1. The theme is automatically available in the theme menu
 
 ---
 
@@ -488,14 +511,17 @@ Time Warp Studio employs a multi-threaded architecture to ensure responsive UI i
 ### Key Threads
 
 1. **Main Thread (UI)**:
+
    - Handles all user interactions, including editor updates, canvas rendering, and menu actions.
    - Ensures that the application remains responsive during execution.
 
 2. **Interpreter Thread**:
+
    - Executes user code in a separate thread to prevent blocking the UI.
    - Communicates with the main thread via thread-safe queues.
 
 3. **Worker Threads**:
+
    - Used for auxiliary tasks such as file I/O, syntax highlighting, and background processing.
 
 ### Communication
@@ -525,6 +551,7 @@ Time Warp Studio employs a multi-threaded architecture to ensure responsive UI i
 Location: `~/.time_warp/config.json`
 
 Contains:
+
 - Theme preference
 - Editor settings (font, size)
 - Canvas settings
@@ -560,6 +587,7 @@ Contains:
 ## Module Overview
 
 ### Core (`core/`)
+
 - `interpreter.py` — Main dispatcher (~1,500 lines, 24 language executors)
 - `debugger.py` — Step-through debugger with execution timeline and rewind
 - `sql_engine.py` — SQLite-backed T-SQL compatibility layer
@@ -576,12 +604,14 @@ Contains:
 - Support modules (analytics, collaboration, chat, etc.)
 
 ### Languages (`languages/`)
+
 - `base.py` — Executor protocol definition
 - **Line-by-line executors (7):** `basic.py`, `pilot.py`, `logo.py`, `c_lang_fixed.py`, `pascal.py`, `prolog.py`, `forth.py`
 - **Whole-program executors (17):** `python.py`, `lua.py`, `scheme.py`, `cobol.py`, `brainfuck.py`, `assembly.py`, `javascript.py`, `fortran.py`, `rexx.py`, `smalltalk.py`, `hypertalk.py`, `haskell.py`, `apl.py`, `sql.py`, `jcl.py`, `cics.py`, `sqr.py`
 - `lang_utils.py`, `parser_patterns.py` — Shared parsing utilities
 
 ### UI (`ui/`)
+
 - `main_window.py` — Main IDE window (6 mixins, 3,300+ lines)
 - `editor.py` — Code editor with syntax highlighting and minimap
 - `canvas.py` — Turtle graphics canvas with zoom/pan
@@ -593,12 +623,14 @@ Contains:
 - `mixins/` — Collaboration, classroom, debug, export, file ops, help
 
 ### Graphics (`graphics/`)
+
 - `turtle_state.py` — Turtle position, heading, pen state (~600 lines)
 - `art_toolkit.py` — Drawing primitives and shapes
 - `pixel_canvas.py` — Pixel-level canvas operations
 - `turtle_gallery.py` — Pre-built turtle art examples
 
 ### Features (`features/`)
+
 - `lesson_system.py` — Step-by-step lessons with checkpoints
 - `examples_browser.py` — Searchable 93-program catalog
 - `turtle_preview.py` — Live Logo code preview
@@ -609,6 +641,7 @@ Contains:
 - `reference_search.py` — Quick documentation lookup
 
 ### Utils (`utils/`)
+
 - `expression_evaluator.py` — Safe math eval (hand-written parser, no `eval()`)
 - `string_evaluator.py` — String expression evaluation
 - `error_hints.py` — Syntax error suggestions
@@ -617,11 +650,13 @@ Contains:
 - `logging_config.py` — Structured logging setup
 
 ### Tests (`tests/`)
+
 - 41+ test files covering all 24 language executors, graphics, GUI, and interpreter
 - `conftest.py`, `conftest_lang.py` — Shared fixtures and helpers
 - `test_runner.py` — Orchestration with HTML coverage reports
 
 ### Tools (`tools/`)
+
 - `deploy.sh` — Deployment automation
 - `startup.py` — Startup sequence manager
 - `wasm.mk` — WebAssembly build rules (experimental)
@@ -631,17 +666,20 @@ Contains:
 ## Performance Characteristics
 
 ### Startup
+
 - Cold start: 2-5 seconds
 - Theme loading: 0.5 seconds
 - Interpreter init: 1 second
 - UI rendering: 0.5 seconds
 
 ### Execution
+
 - BASIC: ~1000 statements/second
 - Logo: 100+ turtle commands/second
 - Debugger overhead: ~10% slower
 
 ### Memory
+
 - Base: 200-300 MB
 - Per file: +5-10 MB
 - Large graphics: +50-100 MB per 1000 commands
@@ -682,6 +720,7 @@ mypy time_warp --strict                   # Type check
 ---
 
 **For more details:**
+
 - [README.md](README.md) — Project overview and quick start
 - [CONTRIBUTING.md](CONTRIBUTING.md) — Contribution guidelines
 - [CHANGELOG.md](CHANGELOG.md) — Version history

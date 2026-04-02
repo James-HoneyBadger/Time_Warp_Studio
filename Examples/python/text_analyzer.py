@@ -6,8 +6,6 @@ word frequency, and produces an ASCII word-cloud style display.
 """
 
 import re
-import math
-import string
 from collections import Counter
 from typing import List, Dict, Tuple
 
@@ -17,29 +15,33 @@ from typing import List, Dict, Tuple
 # ──────────────────────────────────────────────────────────────
 
 STOP_WORDS = {
-    'the','a','an','and','or','but','in','on','at','to','for',
-    'of','with','by','from','up','about','into','through','during',
-    'is','are','was','were','be','been','being','have','has','had',
-    'do','does','did','will','would','shall','should','may','might',
-    'must','can','could','that','this','these','those','it','its',
-    'i','you','he','she','we','they','me','him','her','us','them',
-    'my','your','his','our','their','what','which','who','how','when',
-    'where','if','then','than','so','as','not','no','nor'
+    'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+    'of', 'with', 'by', 'from', 'up', 'about', 'into', 'through', 'during',
+    'is', 'are', 'was', 'were', 'be', 'been', 'being', 'have', 'has', 'had',
+    'do', 'does', 'did', 'will', 'would', 'shall', 'should', 'may', 'might',
+    'must', 'can', 'could', 'that', 'this', 'these', 'those', 'it', 'its',
+    'i', 'you', 'he', 'she', 'we', 'they', 'me', 'him', 'her', 'us', 'them',
+    'my', 'your', 'his', 'our', 'their', 'what', 'which', 'who', 'how', 'when',
+    'where', 'if', 'then', 'than', 'so', 'as', 'not', 'no', 'nor'
 }
+
 
 def tokenize(text: str) -> List[str]:
     """Split text into lowercase word tokens, stripping punctuation."""
     return re.findall(r"[a-z']+", text.lower())
 
+
 def sentences(text: str) -> List[str]:
     """Split text into sentences."""
     return [s.strip() for s in re.split(r'[.!?]+', text) if s.strip()]
+
 
 def syllable_count(word: str) -> int:
     """Estimate syllables in a word using vowel-group heuristic."""
     word = word.lower().rstrip('e')
     count = len(re.findall(r'[aeiou]+', word))
     return max(1, count)
+
 
 def count_syllables_in_text(text: str) -> int:
     return sum(syllable_count(w) for w in tokenize(text))
@@ -55,24 +57,26 @@ def flesch_reading_ease(text: str) -> float:
     Higher = easier to read. ~60-70 is plain English.
     FRE = 206.835 - 1.015*(words/sentences) - 84.6*(syllables/words)
     """
-    words     = tokenize(text)
-    sents     = sentences(text)
-    sylls     = count_syllables_in_text(text)
-    nw, ns    = len(words), max(1, len(sents))
-    asl       = nw / ns                   # avg sentence length
-    asw       = sylls / max(1, nw)        # avg syllables per word
+    words = tokenize(text)
+    sents = sentences(text)
+    sylls = count_syllables_in_text(text)
+    nw, ns = len(words), max(1, len(sents))
+    asl = nw / ns                   # avg sentence length
+    asw = sylls / max(1, nw)        # avg syllables per word
     return round(206.835 - 1.015 * asl - 84.6 * asw, 1)
+
 
 def flesch_kincaid_grade(text: str) -> float:
     """
     Flesch-Kincaid Grade Level.
     FK = 0.39*(words/sentences) + 11.8*(syllables/words) - 15.59
     """
-    words  = tokenize(text)
-    sents  = sentences(text)
-    sylls  = count_syllables_in_text(text)
+    words = tokenize(text)
+    sents = sentences(text)
+    sylls = count_syllables_in_text(text)
     nw, ns = len(words), max(1, len(sents))
     return round(0.39 * (nw / ns) + 11.8 * (sylls / max(1, nw)) - 15.59, 1)
+
 
 def gunning_fog(text: str) -> float:
     """
@@ -80,12 +84,13 @@ def gunning_fog(text: str) -> float:
     GF = 0.4 * ((words/sentences) + 100*(complex_words/words))
     Complex: 3+ syllables
     """
-    words    = tokenize(text)
-    sents    = sentences(text)
-    nw       = len(words)
-    ns       = max(1, len(sents))
+    words = tokenize(text)
+    sents = sentences(text)
+    nw = len(words)
+    ns = max(1, len(sents))
     complex_ = sum(1 for w in words if syllable_count(w) >= 3)
     return round(0.4 * (nw / ns + 100 * complex_ / max(1, nw)), 1)
+
 
 def coleman_liau(text: str) -> float:
     """
@@ -96,18 +101,22 @@ def coleman_liau(text: str) -> float:
     """
     words = tokenize(text)
     sents = sentences(text)
-    nw    = max(1, len(words))
+    nw = max(1, len(words))
     chars = sum(len(w) for w in words)
-    L     = (chars / nw) * 100
-    S     = (len(sents) / nw) * 100
+    L = (chars / nw) * 100
+    S = (len(sents) / nw) * 100
     return round(0.0588 * L - 0.296 * S - 15.8, 1)
 
 
 def grade_to_label(grade: float) -> str:
-    if grade < 6:   return "Elementary"
-    if grade < 9:   return "Middle School"
-    if grade < 13:  return "High School"
-    if grade < 16:  return "College"
+    if grade < 6:
+        return "Elementary"
+    if grade < 9:
+        return "Middle School"
+    if grade < 13:
+        return "High School"
+    if grade < 16:
+        return "College"
     return "Graduate"
 
 
@@ -124,23 +133,25 @@ def word_frequency(text: str,
         words = [w for w in words if w not in STOP_WORDS and len(w) > 1]
     return Counter(words).most_common(top_n)
 
+
 def vocabulary_richness(text: str) -> Dict[str, float]:
     """
     Type-Token Ratio (TTR) and related vocabulary richness metrics.
     TTR = unique_words / total_words  (1.0 = every word is unique)
     """
-    tokens  = tokenize(text)
-    types   = set(tokens)
-    n       = len(tokens)
-    nt      = len(types)
-    hapax   = sum(1 for w, c in Counter(tokens).items() if c == 1)
+    tokens = tokenize(text)
+    types = set(tokens)
+    n = len(tokens)
+    nt = len(types)
+    hapax = sum(1 for w, c in Counter(tokens).items() if c == 1)
     return {
-        'total_words':   n,
-        'unique_words':  nt,
-        'ttr':           round(nt / max(1, n), 4),
+        'total_words': n,
+        'unique_words': nt,
+        'ttr': round(nt / max(1, n), 4),
         'hapax_legomena': hapax,   # words appearing exactly once
-        'hapax_ratio':   round(hapax / max(1, n), 4),
+        'hapax_ratio': round(hapax / max(1, n), 4),
     }
+
 
 def avg_word_length(text: str) -> float:
     words = tokenize(text)
@@ -152,16 +163,16 @@ def avg_word_length(text: str) -> float:
 # ──────────────────────────────────────────────────────────────
 
 def sentence_stats(text: str) -> Dict:
-    sents  = sentences(text)
-    words  = [tokenize(s) for s in sents]
-    lens   = [len(w) for w in words if w]
+    sents = sentences(text)
+    words = [tokenize(s) for s in sents]
+    lens = [len(w) for w in words if w]
     if not lens:
         return {}
     return {
         'sentence_count': len(lens),
-        'avg_length':     round(sum(lens) / len(lens), 1),
-        'min_length':     min(lens),
-        'max_length':     max(lens),
+        'avg_length': round(sum(lens) / len(lens), 1),
+        'min_length': min(lens),
+        'max_length': max(lens),
         'longest_sentence': sents[lens.index(max(lens))][:80] + '...',
         'shortest_sentence': sents[lens.index(min(lens))],
     }
@@ -181,15 +192,15 @@ def ascii_word_cloud(text: str, width: int = 72, rows: int = 8) -> str:
         return "(no significant words found)"
 
     max_count = freq[0][1]
-    lines     = []
+    lines = []
 
     # Sort by word length for visual variety
     display = [(w, c) for w, c in freq[:35]]
     display.sort(key=lambda x: (-x[1], len(x[0])))
 
     # Build rows by filling left-to-right
-    row_buf  = ""
-    line_no  = 0
+    row_buf = ""
+    line_no = 0
     for word, count in display:
         tier = count / max_count
         if tier > 0.7:
@@ -218,7 +229,7 @@ def ascii_word_cloud(text: str, width: int = 72, rows: int = 8) -> str:
 
     border = '┌' + '─' * width + '┐'
     bottom = '└' + '─' * width + '┘'
-    body   = '\n'.join('│' + line.ljust(width) + '│' for line in lines)
+    body = '\n'.join('│' + line.ljust(width) + '│' for line in lines)
     return border + '\n' + body + '\n' + bottom
 
 
@@ -228,8 +239,8 @@ def ascii_word_cloud(text: str, width: int = 72, rows: int = 8) -> str:
 
 def top_bigrams(text: str, top_n: int = 15) -> List[Tuple[str, int]]:
     """Find most common two-word phrases (bigrams)."""
-    words  = [w for w in tokenize(text) if w not in STOP_WORDS and len(w) > 2]
-    bigrams = [(words[i] + ' ' + words[i+1]) for i in range(len(words)-1)]
+    words = [w for w in tokenize(text) if w not in STOP_WORDS and len(w) > 2]
+    bigrams = [(words[i] + ' ' + words[i + 1]) for i in range(len(words) - 1)]
     return Counter(bigrams).most_common(top_n)
 
 
@@ -239,7 +250,7 @@ def top_bigrams(text: str, top_n: int = 15) -> List[Tuple[str, int]]:
 
 def analyze(text: str, title: str = "Text Analysis") -> None:
     """Run all analyses and print a formatted report."""
-    sep  = '═' * 72
+    sep = '═' * 72
     sep2 = '─' * 72
 
     print(f"\n{sep}")
@@ -247,10 +258,10 @@ def analyze(text: str, title: str = "Text Analysis") -> None:
     print(sep)
 
     # Basic stats
-    words  = tokenize(text)
-    sents  = sentences(text)
-    chars  = len(text.replace(' ',''))
-    paras  = [p.strip() for p in text.split('\n\n') if p.strip()]
+    words = tokenize(text)
+    sents = sentences(text)
+    chars = len(text.replace(' ', ''))
+    paras = [p.strip() for p in text.split('\n\n') if p.strip()]
 
     print(f"\n{'DOCUMENT STATISTICS':}")
     print(sep2)
@@ -280,10 +291,10 @@ def analyze(text: str, title: str = "Text Analysis") -> None:
     print(f"  Hapax Ratio:            {vr['hapax_ratio']:>10.4f}")
 
     # Readability
-    fre  = flesch_reading_ease(text)
-    fkg  = flesch_kincaid_grade(text)
-    gf   = gunning_fog(text)
-    cli  = coleman_liau(text)
+    fre = flesch_reading_ease(text)
+    fkg = flesch_kincaid_grade(text)
+    gf = gunning_fog(text)
+    cli = coleman_liau(text)
     print(f"\n{'READABILITY SCORES':}")
     print(sep2)
     print(f"  Flesch Reading Ease:    {fre:>10.1f}  /100  (higher=easier)")
@@ -300,7 +311,7 @@ def analyze(text: str, title: str = "Text Analysis") -> None:
     print(sep2)
     max_c = top[0][1] if top else 1
     for i, (word, count) in enumerate(top, 1):
-        bar  = '█' * int(count / max_c * 30)
+        bar = '█' * int(count / max_c * 30)
         print(f"  {i:>2}. {word:<20} {count:>4}  {bar}")
 
     # Top bigrams

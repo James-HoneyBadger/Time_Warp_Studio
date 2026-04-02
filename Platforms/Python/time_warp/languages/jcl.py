@@ -261,7 +261,7 @@ class JCLEnvironment:
             if stmt.oper == "JCLLIB":
                 m_lib = re.match(r"ORDER\s*=\s*\(([^)]+)\)", stmt.params, re.IGNORECASE)
                 if m_lib:
-                    self._jcllib = [l.strip() for l in m_lib.group(1).split(",")]
+                    self._jcllib = [item.strip() for item in m_lib.group(1).split(",")]
                     self._emit(f"IEF212I JCLLIB ORDER: {', '.join(self._jcllib)}")
                 i += 1
                 continue
@@ -294,7 +294,7 @@ class JCLEnvironment:
                 # Find matching ELSE/ENDIF
                 then_stmts, else_stmts, end_idx = self._scan_if_block(stmts, i + 1)
                 if cond_result:
-                    self._emit(f"IEF272I IF CONDITION TRUE — executing THEN path")
+                    self._emit("IEF272I IF CONDITION TRUE — executing THEN path")
                     for ts in then_stmts:
                         if ts.oper == "EXEC":
                             step_end = self._find_step_end(stmts, stmts.index(ts) + 1)
@@ -302,7 +302,7 @@ class JCLEnvironment:
                             rc = self._run_step(ts, dd_s, stmts)
                             self._return_codes[ts.name] = rc
                 else:
-                    self._emit(f"IEF272I IF CONDITION FALSE — executing ELSE path")
+                    self._emit("IEF272I IF CONDITION FALSE — executing ELSE path")
                     for es in else_stmts:
                         if es.oper == "EXEC":
                             step_end = self._find_step_end(stmts, stmts.index(es) + 1)
@@ -468,8 +468,8 @@ class JCLEnvironment:
         if in_data:
             sorted_lines = sorted(in_data.splitlines())
             self._sysout("-- SORT OUTPUT (SORTOUT) --")
-            for l in sorted_lines:
-                self._sysout(l)
+            for line in sorted_lines:
+                self._sysout(line)
             self._emit(f"SORT COMPLETED OK — {len(sorted_lines)} records sorted.")
         else:
             self._emit("SORT COMPLETED OK — No SORTIN data provided.")

@@ -1,9 +1,8 @@
 """
 Transaction processing module for HB Banking ERP
 """
-import sqlite3
-from datetime import datetime
 from ..data.erp_data import get_connection, update_account_balance, add_transaction, log_audit
+
 
 def deposit(user_id, account_id, amount, description="Deposit", category="Deposit"):
     if amount <= 0:
@@ -13,6 +12,7 @@ def deposit(user_id, account_id, amount, description="Deposit", category="Deposi
     txn_id = add_transaction(account_id, description, amount, category)
     log_audit(user_id, 'CREATE', 'transactions', txn_id, '', f'Deposit {amount}')
     print(f"Deposited {amount} to account {account_id}.")
+
 
 def withdraw(user_id, account_id, amount, description="Withdrawal", category="Withdrawal"):
     if amount <= 0:
@@ -30,17 +30,18 @@ def withdraw(user_id, account_id, amount, description="Withdrawal", category="Wi
     log_audit(user_id, 'CREATE', 'transactions', txn_id, '', f'Withdrawal {amount}')
     print(f"Withdrew {amount} from account {account_id}.")
 
+
 def calculate_interest(account_id, days=30):
     """Calculate and apply interest to savings accounts."""
     from ..data.erp_data import get_connection, add_transaction, log_audit
-    
+
     with get_connection() as conn:
         cur = conn.cursor()
         cur.execute("SELECT a.balance, a.interest_rate, u.id FROM accounts a JOIN users u ON a.user_id = u.id WHERE a.id = ? AND a.account_type = 'Savings'", (account_id,))
         row = cur.fetchone()
         if not row:
             return 0
-        
+
         balance, rate, user_id = row
         if balance > 0 and rate > 0:
             interest = balance * (rate / 100) * (days / 365)
@@ -49,9 +50,7 @@ def calculate_interest(account_id, days=30):
                 log_audit(user_id, 'CREATE', 'transactions', 0, '', f'Interest {interest:.2f} on account {account_id}')
                 return interest
     return 0
-    log_audit(user_id, 'CREATE', 'transactions', txn_id_out, '', f'Transfer out {amount}')
-    log_audit(user_id, 'CREATE', 'transactions', txn_id_in, '', f'Transfer in {amount}')
-    print(f"Transferred {amount} from account {from_account_id} to {to_account_id}.")
+
 
 def get_transaction_history(account_id, limit=50):
     with get_connection() as conn:

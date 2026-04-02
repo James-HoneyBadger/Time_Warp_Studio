@@ -1621,7 +1621,7 @@ class BackupRestoreTab(QWidget):
                             (
                                 "NULL"
                                 if v is None
-                                else f"'{str(v).replace(chr(39), chr(39)*2)}'"
+                                else f"'{str(v).replace(chr(39), chr(39) * 2)}'"
                             )
                             for v in row
                         )

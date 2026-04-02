@@ -11,9 +11,10 @@ Features:
 """
 
 from PySide6.QtWidgets import (
-    QWidget, QVBoxLayout, QLabel, QPushButton, QColorDialog, QFontDialog, QHBoxLayout
+    QWidget, QVBoxLayout, QLabel, QPushButton, QColorDialog, QFontDialog
 )
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import QFont
+
 
 class ThemeEditor(QWidget):
     """Class to manage the GUI-based theme editor."""
@@ -104,6 +105,7 @@ class ThemeEditor(QWidget):
         self.setStyleSheet("background-color: #ffffff; color: #000000;")
         self.setFont(QFont("Arial", 10))
         print("🔄 Theme reset to default.")
+
 
 # Example usage
 if __name__ == "__main__":

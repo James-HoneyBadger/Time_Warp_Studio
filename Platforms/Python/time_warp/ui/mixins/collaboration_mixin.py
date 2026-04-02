@@ -8,8 +8,6 @@ processing incoming operations.
 from __future__ import annotations
 
 import getpass
-import time
-import uuid
 from typing import TYPE_CHECKING
 
 from PySide6.QtWidgets import (
@@ -24,7 +22,6 @@ from PySide6.QtWidgets import (
 )
 
 if TYPE_CHECKING:
-    from pathlib import Path
 
     from ..collaboration_client import CollaborationOperation  # noqa: F401
 

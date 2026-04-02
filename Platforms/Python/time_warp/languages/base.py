@@ -43,7 +43,7 @@ class LanguageExecutor(Protocol):
         Error lines are prefixed with ``❌``, info with ``ℹ️``, etc.
     """
 
-    def __call__(
+    def __call__(  # noqa: E704
         self,
         interpreter: Interpreter,
         source: str,

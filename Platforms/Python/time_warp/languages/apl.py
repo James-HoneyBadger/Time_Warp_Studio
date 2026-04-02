@@ -520,9 +520,9 @@ class APLEnvironment:
                     right = right * len(left)
                 else:
                     raise APLError(f"Length mismatch: {len(left)} vs {len(right)}")
-            return [self._apply_dyadic(fn, l, r) for l, r in zip(left, right)]
+            return [self._apply_dyadic(fn, lv, rv) for lv, rv in zip(left, right)]
         elif isinstance(left, list):
-            return [self._apply_dyadic(fn, l, right) for l in left]
+            return [self._apply_dyadic(fn, lv, right) for lv in left]
         elif isinstance(right, list):
             return [self._apply_dyadic(fn, left, r) for r in right]
         # Scalars

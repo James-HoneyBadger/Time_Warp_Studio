@@ -2,11 +2,11 @@
 """
 Simple test script for HB Banking ERP
 """
+from data.erp_data import authenticate_user, get_connection
 import sys
 import os
 sys.path.insert(0, os.path.dirname(__file__))
 
-from data.erp_data import authenticate_user, get_connection
 
 def test_auth():
     print("Testing authentication...")
@@ -19,6 +19,7 @@ def test_auth():
     except Exception as e:
         print(f"❌ Error: {e}")
 
+
 def test_db():
     print("Testing database connection...")
     try:
@@ -29,6 +30,7 @@ def test_db():
             print(f"✅ Database OK, {count} users found")
     except Exception as e:
         print(f"❌ Database error: {e}")
+
 
 if __name__ == "__main__":
     test_db()

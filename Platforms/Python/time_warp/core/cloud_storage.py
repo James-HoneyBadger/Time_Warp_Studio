@@ -1,6 +1,7 @@
 # Cloud storage integration
 class CloudStorageManager:
     """Handles cloud-based project storage and syncing."""
+
     def __init__(self):
         self.connected = False
 
