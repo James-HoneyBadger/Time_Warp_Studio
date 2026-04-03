@@ -23,7 +23,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'pip'
       
       - name: Install dependencies
@@ -64,7 +64,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
           cache: 'pip'
       
       - name: Install dependencies
@@ -167,7 +167,7 @@ jobs:
       
       - name: Run Snyk security scan
         if: ${{ env.SNYK_TOKEN != '' }}
-        uses: snyk/actions/python-3.11@master  # no stable tag available
+        uses: snyk/actions/python-3.10@master  # no stable tag available
         continue-on-error: true
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
@@ -183,7 +183,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       
       - name: Check Python dependencies
         run: |
