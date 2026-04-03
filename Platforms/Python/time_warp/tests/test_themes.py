@@ -1,7 +1,7 @@
 """
 Unit tests for ThemeManager and Theme data structures.
 
-Verifies that all 21 themes are defined with the required fields,
+Verifies that all 28 themes are defined with the required fields,
 that get_theme() resolves correctly, and that apply_theme() does not raise
 when called without a live QApplication.
 """
@@ -16,10 +16,10 @@ from time_warp.ui.themes import Theme  # type: ignore[import-not-found]
 
 # theme_manager fixture is provided by conftest.py
 
-EXPECTED_THEME_COUNT = 21
+EXPECTED_THEME_COUNT = 28
 
 EXPECTED_THEME_NAMES = [
-    # Modern Dark (8)
+    # Modern Dark (10)
     "Dracula",
     "Monokai",
     "VS Code Dark",
@@ -28,14 +28,21 @@ EXPECTED_THEME_NAMES = [
     "One Dark Pro",
     "Solarized Dark",
     "Ocean",
-    # Light (4)
+    "Catppuccin Mocha",
+    "Gruvbox Dark",
+    "Tokyo Night",
+    # Light (5)
+    "Gruvbox Light",
+    "Catppuccin Latte",
     "VS Code Light",
     "GitHub Light",
     "Solarized Light",
     "Spring",
-    # High Contrast (2)
+    # High Contrast / Accessibility (3)
     "High Contrast Dark",
     "High Contrast Light",
+    "Dyslexia Friendly",
+    "Accessible Dark Blue",
     # Retro / CRT (7)
     "Amber Monochrome",
     "Green Monochrome",
@@ -128,8 +135,9 @@ class TestApplyThemeNoQt:
     def test_apply_theme_with_mocked_qt(self, theme_manager):
         """apply_theme with mocked Qt classes should not raise."""
         import time_warp.ui.themes as themes_module  # type: ignore[import-not-found]
+        mock_app = MagicMock()
         with (
-            patch.object(themes_module.QApplication, "instance", return_value=None),
+            patch.object(themes_module.QApplication, "instance", return_value=mock_app),
             patch.object(themes_module, "QPalette", return_value=MagicMock()),
             patch.object(themes_module, "QColor", return_value=MagicMock()),
         ):
@@ -141,8 +149,9 @@ class TestApplyThemeNoQt:
     def test_apply_all_themes_with_mocked_qt(self, theme_manager):
         """Every theme should survive apply_theme with mocked Qt."""
         import time_warp.ui.themes as themes_module  # type: ignore[import-not-found]
+        mock_app = MagicMock()
         with (
-            patch.object(themes_module.QApplication, "instance", return_value=None),
+            patch.object(themes_module.QApplication, "instance", return_value=mock_app),
             patch.object(themes_module, "QPalette", return_value=MagicMock()),
             patch.object(themes_module, "QColor", return_value=MagicMock()),
         ):

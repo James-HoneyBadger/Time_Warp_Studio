@@ -616,12 +616,14 @@ class TestSplitEditor:
         from time_warp.ui.main_window import MainWindow
         from time_warp.ui.editor import CodeEditor
         from time_warp.core.interpreter import Language
+        from time_warp.ui.tab_state import TabState
         from unittest.mock import MagicMock
         from PySide6.QtWidgets import QTabWidget
 
         win = MainWindow.__new__(MainWindow)
         win.tab_languages = {0: Language.BASIC}
         win.editor_tabs = QTabWidget()
+        win._tab_states = {0: TabState(language=Language.BASIC)}
 
         editor = CodeEditor()
         editor.setPlainText("PRINT 42")
@@ -779,6 +781,8 @@ class TestLanguagePicker:
         win = FakeWin()
         win.editor_tabs = QTabWidget()
         win.tab_languages = {0: Language.BASIC}
+        win._tab_states = {}
+        win._ts = MainWindow._ts.__get__(win, FakeWin)
         win.language_combo = MagicMock()
         win.language_combo.count.return_value = len(list(Language))
         win.language_combo.itemData = lambda i: list(Language)[i]

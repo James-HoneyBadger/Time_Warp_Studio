@@ -512,6 +512,18 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
                 return fmt_str
         return ""
 
+    # Handle string concatenation with + operator (check before simple literal)
+    if "+" in expr and ("'" in expr or '"' in expr):
+        parts = _split_string_concat(expr)
+        if parts is not None:
+            return "".join(_eval_str(interpreter, p.strip()) for p in parts)
+
+    # Handle simple string literals directly
+    if (expr.startswith("'") and expr.endswith("'")) or (
+        expr.startswith('"') and expr.endswith('"')
+    ):
+        return _unquote(expr)
+
     # Fallthrough – translate Pascal operators to Python and evaluate
     # Resolve string variables first
     up = expr.strip().upper()
@@ -552,7 +564,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
         pyexpr,
     )
     # Replace Pascal operators (word-boundary aware, case-insensitive)
-    pyexpr = re.sub(r"\bdiv\b", "//", pyexpr, flags=re.IGNORECASE)
+    pyexpr = re.sub(r"\bdiv\b", "\\\\", pyexpr, flags=re.IGNORECASE)
     pyexpr = re.sub(r"\bmod\b", "%", pyexpr, flags=re.IGNORECASE)
     pyexpr = re.sub(r"\band\b", " and ", pyexpr, flags=re.IGNORECASE)
     pyexpr = re.sub(r"\bor\b", " or ", pyexpr, flags=re.IGNORECASE)
@@ -603,6 +615,37 @@ def _eval_str(interpreter: "Interpreter", expr: str) -> str:
     if isinstance(result, str):
         return result
     return str(result) if result is not None else ""
+
+
+def _split_string_concat(expr: str):
+    """Split a string concatenation expression like "'AB' + 'CD'" into parts.
+
+    Returns a list of sub-expressions or None if not a valid string concat.
+    """
+    parts = []
+    current = ""
+    in_quote = False
+    quote_char = None
+    for ch in expr:
+        if in_quote:
+            current += ch
+            if ch == quote_char:
+                in_quote = False
+        elif ch in ("'", '"'):
+            in_quote = True
+            quote_char = ch
+            current += ch
+        elif ch == "+" and not in_quote:
+            if current.strip():
+                parts.append(current.strip())
+            current = ""
+        else:
+            current += ch
+    if current.strip():
+        parts.append(current.strip())
+    if len(parts) < 2:
+        return None
+    return parts
 
 
 def _is_begin(line: str) -> bool:
@@ -1784,7 +1827,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
             else:
                 val = _pascal_eval_expr(interpreter, expr)
         except (ValueError, TypeError, ZeroDivisionError):
-            val = "" if suf == "$" else 0
+            val = _unquote(expr) if suf == "$" else 0
         # Handle by-reference parameter aliasing
         var_key = up + (suf or "#")
         if hasattr(interpreter, "pascal_call_stack") and interpreter.pascal_call_stack:

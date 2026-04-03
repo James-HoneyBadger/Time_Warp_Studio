@@ -50,7 +50,7 @@ class ExecutionTimeline:
     def __init__(self):
         """Initialize timeline recorder."""
         self.frames: List[ExecutionFrame] = []
-        self.current_frame_index = 0
+        self.current_frame_index = -1
         self.is_recording = False
         self.breakpoints: set = set()  # Set of line numbers
         self.variables_history: Dict[str, List[VariableSnapshot]] = {}
@@ -61,7 +61,7 @@ class ExecutionTimeline:
     def start_recording(self):
         """Start recording execution frames."""
         self.frames.clear()
-        self.current_frame_index = 0
+        self.current_frame_index = -1
         self.is_recording = True
         self.state = ExecutionState.RUNNING
         self.variables_history.clear()
@@ -145,6 +145,26 @@ class ExecutionTimeline:
         self.state = ExecutionState.RUNNING
         self.pause_requested = False
         self._trigger_callbacks("resumed")
+
+    def add_frame(self, frame: ExecutionFrame):
+        """Add an execution frame directly."""
+        self.frames.append(frame)
+        self.current_frame_index = len(self.frames) - 1
+
+    def is_at_end(self) -> bool:
+        """Check if timeline has no frames to examine."""
+        return len(self.frames) == 0
+
+    def go_to_frame(self, index: int):
+        """Jump to a specific frame index."""
+        if 0 <= index < len(self.frames):
+            self.current_frame_index = index
+
+    def clear(self):
+        """Clear all frames and reset timeline."""
+        self.frames.clear()
+        self.current_frame_index = -1
+        self.variables_history.clear()
 
     def step_forward(self):
         """Move to next frame."""
