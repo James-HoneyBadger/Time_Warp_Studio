@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
-from .interpreter import Interpreter, Language
+from ..core.interpreter import Interpreter, Language
 
 
 class ComparisonMode(Enum):

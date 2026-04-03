@@ -593,6 +593,9 @@ Contains:
 - `sql_engine.py` — SQLite-backed T-SQL compatibility layer
 - `orchestrator.py` — System integration and component registry
 - `config.py` — Canonical paths (`~/.time_warp/`) and settings
+
+### Features (`features/`)
+
 - `hardware_simulator.py` — Simulation-first IoT hardware support
 - `plugin_system.py` — Plugin architecture (future extensibility)
 - `game_support.py` — Game state, timers, and input handling
@@ -601,7 +604,7 @@ Contains:
 - `ai_suggestions.py` — Contextual suggestion engine
 - `cloud_storage.py` — Cloud file storage (optional)
 - `hardware_integration.py` — Physical hardware bridging (optional)
-- Support modules (analytics, collaboration, chat, etc.)
+- Lessons, autosave, achievements, classroom mode, examples browser, etc.
 
 ### Languages (`languages/`)
 
@@ -655,11 +658,10 @@ Contains:
 - `conftest.py`, `conftest_lang.py` — Shared fixtures and helpers
 - `test_runner.py` — Orchestration with HTML coverage reports
 
-### Tools (`tools/`)
+### Scripts (`Scripts/`)
 
-- `deploy.sh` — Deployment automation
-- `startup.py` — Startup sequence manager
-- `wasm.mk` — WebAssembly build rules (experimental)
+Build, launch, deploy, and utility scripts — including `deploy.sh`, `startup.py`,
+`wasm.mk`, `build_native.sh`, `generate_icon.py`, and IDE launchers.
 
 ---
 
@@ -700,9 +702,9 @@ Contains:
 
 ```bash
 pytest tests/ -v                           # Run tests
-python test_runner.py --comprehensive     # Full suite with coverage reports
-python test_runner.py --basic             # Quick smoke tests
-python test_runner.py --parallel          # Parallel execution (pytest-xdist)
+python Platforms/Python/test_runner.py --comprehensive     # Full suite with coverage reports
+python Platforms/Python/test_runner.py --basic             # Quick smoke tests
+python Platforms/Python/test_runner.py --parallel          # Parallel execution (pytest-xdist)
 black --check .                            # Check formatting
 ruff check time_warp                       # Fast linting
 mypy time_warp --strict                   # Type check

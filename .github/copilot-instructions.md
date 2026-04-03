@@ -65,23 +65,23 @@ python run.py
 
 ```bash
 # Comprehensive suite with coverage
-python test_runner.py --comprehensive
+python Platforms/Python/test_runner.py --comprehensive
 
 # Quick smoke tests
-python test_runner.py --basic
+python Platforms/Python/test_runner.py --basic
 
 # Component-specific
 pytest Platforms/Python/time_warp/tests/test_basic_executor.py -v
 pytest Platforms/Python/time_warp/tests/test_logo_graphics.py -v
 
 # All demo programs (standalone, 15s timeout per file)
-python test_all_demos.py
+python tests/test_all_demos.py
 ```
 
 **Test Organization:**
 - `test_*.py` = unit tests for components (41 test files in `time_warp/tests/`)
-- `test_runner.py` = orchestrator with HTML reports -> `test_reports/`
-- `test_all_demos.py` = standalone demo verifier (subprocess per file)
+- `Platforms/Python/test_runner.py` = orchestrator with HTML reports -> `test_reports/`
+- `tests/test_all_demos.py` = standalone demo verifier (subprocess per file)
 - `conftest_lang.py` = shared `run()`, `ok()`, `has()`, `no_errors()` test helpers
 
 ### Adding a New Language
@@ -155,6 +155,7 @@ Simulation-first design in `core/hardware_simulator.py` (not yet wired into main
 ```
 Platforms/Python/
   time_warp_ide.py          - Primary entry point (PySide6)
+  test_runner.py            - Test orchestration with HTML reports
   time_warp/
     core/
       interpreter.py        - Central interpreter (~1400 lines)
@@ -162,6 +163,7 @@ Platforms/Python/
       debugger.py           - Execution timeline / step-through debugger
       sql_engine.py         - SQLite-backed T-SQL compatibility layer
       config.py             - Canonical paths (~/.time_warp/)
+    features/               - Feature modules (AI, collaboration, games, etc.)
     languages/              - 24 language executors
       base.py               - Protocol definition
       basic.py, pilot.py, logo.py, c_lang_fixed.py, pascal.py,
@@ -185,9 +187,10 @@ Platforms/Python/
       error_hints.py        - Syntax error suggestions
       validators.py         - Input validation helpers
     tests/                  - 41 test files
+docker/                     - Dockerfiles, nginx, supervisord configs
+tests/                      - Root-level integration tests
 Examples/                   - ~93 demo programs across all languages
-test_runner.py              - Test orchestration with HTML reports
-test_all_demos.py           - Standalone demo verifier
+extras/HB_Banking/          - Optional banking/ERP demo application
 ```
 
 ## Dependencies
@@ -264,14 +267,14 @@ DEVELOPMENT RULES:
 
 ### Testing
 
-See `test_runner.py --help` for testing options:
+See `Platforms/Python/test_runner.py --help` for testing options:
 
 ```bash
 # Run comprehensive test suite
-python test_runner.py --comprehensive
+python Platforms/Python/test_runner.py --comprehensive
 
 # Run quick smoke tests
-python test_runner.py --basic
+python Platforms/Python/test_runner.py --basic
 ```
 
 FOLDER CREATION RULES:

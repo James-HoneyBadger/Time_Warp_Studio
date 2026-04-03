@@ -11,7 +11,7 @@ import threading
 
 import pytest
 
-from time_warp.core.async_support import (  # type: ignore[import-not-found]
+from time_warp.features.async_support import (  # type: ignore[import-not-found]
     AsyncInterpreterRunner,
     get_async_runner,
 )

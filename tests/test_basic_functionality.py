@@ -4,7 +4,7 @@ Simple test to check if Time Warp Studio interpreter works.
 """
 import sys
 import os
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'Platforms', 'Python'))
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(__file__)), 'Platforms', 'Python'))
 
 try:
     from time_warp.core.interpreter import Interpreter

@@ -662,19 +662,19 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
         # Handle TIME$ - current time as HH:MM:SS
         elif item_upper == "TIME$":
             # pylint: disable=import-outside-toplevel
-            from ..core.game_support import get_game_state
+            from ..features.game_support import get_game_state
 
             out_items.append(get_game_state().get_time_string())
         # Handle DATE$ - current date as MM-DD-YYYY
         elif item_upper == "DATE$":
             # pylint: disable=import-outside-toplevel
-            from ..core.game_support import get_game_state
+            from ..features.game_support import get_game_state
 
             out_items.append(get_game_state().get_date_string())
         # Handle TIMER - seconds since midnight
         elif item_upper == "TIMER":
             # pylint: disable=import-outside-toplevel
-            from ..core.game_support import get_game_state
+            from ..features.game_support import get_game_state
 
             out_items.append(str(int(get_game_state().get_timer_value())))
         # Handle string variables (end with $) or string array elements
@@ -851,14 +851,14 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
                 interpreter.set_typed_variable(var_name, interpreter.get_inkey())
             elif expr_upper == "TIME$":
                 # pylint: disable=import-outside-toplevel
-                from ..core.game_support import get_game_state
+                from ..features.game_support import get_game_state
 
                 interpreter.set_typed_variable(
                     var_name, get_game_state().get_time_string()
                 )
             elif expr_upper == "DATE$":
                 # pylint: disable=import-outside-toplevel
-                from ..core.game_support import get_game_state
+                from ..features.game_support import get_game_state
 
                 interpreter.set_typed_variable(
                     var_name, get_game_state().get_date_string()
@@ -883,7 +883,7 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
         # Handle TIMER special variable
         if expr_upper == "TIMER":
             # pylint: disable=import-outside-toplevel
-            from ..core.game_support import get_game_state
+            from ..features.game_support import get_game_state
 
             interpreter.set_typed_variable(var_name, get_game_state().get_timer_value())
             logger.debug("LET %s = TIMER", var_name)
@@ -2258,7 +2258,7 @@ def _basic_end(interpreter: "Interpreter") -> str:
 def _basic_beep(_interpreter: "Interpreter") -> str:
     """BEEP - Play system beep sound."""
     # pylint: disable=import-outside-toplevel
-    from ..core.game_support import get_game_state
+    from ..features.game_support import get_game_state
 
     game = get_game_state()
     game.sound.beep()
@@ -2272,7 +2272,7 @@ def _basic_sound(interpreter: "Interpreter", args: str) -> str:
     duration: clock ticks (18.2 ticks = 1 second)
     """
     # pylint: disable=import-outside-toplevel
-    from ..core.game_support import get_game_state
+    from ..features.game_support import get_game_state
 
     parts = args.split(",")
     if len(parts) < 2:
@@ -2298,7 +2298,7 @@ def _basic_speed(
 ) -> str:
     """SPEED n - Set turtle animation speed (0=fastest, 10=slowest)."""
     # pylint: disable=import-outside-toplevel
-    from ..core.game_support import get_game_state
+    from ..features.game_support import get_game_state
 
     try:
         speed = int(args.strip())
@@ -2323,7 +2323,7 @@ def _basic_sprite(interpreter: "Interpreter", args: str) -> str:
     SPRITE name, OFF - Remove sprite
     """
     # pylint: disable=import-outside-toplevel
-    from ..core.game_support import get_game_state
+    from ..features.game_support import get_game_state
 
     parts = [p.strip() for p in args.split(",")]
     if len(parts) < 2:
@@ -2361,7 +2361,7 @@ def _basic_on_timer(_interpreter: "Interpreter", args: str) -> str:
     n = interval in seconds
     """
     # pylint: disable=import-outside-toplevel
-    from ..core.game_support import get_game_state
+    from ..features.game_support import get_game_state
 
     # Parse: ON TIMER(n) GOSUB line
     pattern = r"\((\d+(?:\.\d+)?)\)\s*GOSUB\s*(\d+)"
@@ -2383,7 +2383,7 @@ def _basic_on_timer(_interpreter: "Interpreter", args: str) -> str:
 def _basic_timer_on(_interpreter: "Interpreter") -> str:
     """TIMER ON - Enable timer events."""
     # pylint: disable=import-outside-toplevel
-    from ..core.game_support import get_game_state
+    from ..features.game_support import get_game_state
 
     game = get_game_state()
     game.timer.enable_interval(1, True)
@@ -2393,7 +2393,7 @@ def _basic_timer_on(_interpreter: "Interpreter") -> str:
 def _basic_timer_off(_interpreter: "Interpreter") -> str:
     """TIMER OFF - Disable timer events."""
     # pylint: disable=import-outside-toplevel
-    from ..core.game_support import get_game_state
+    from ..features.game_support import get_game_state
 
     game = get_game_state()
     game.timer.enable_interval(1, False)
@@ -2414,7 +2414,7 @@ def _basic_play(_interpreter: "Interpreter", args: str) -> str:
         PLAY "O4 C E G >C"       - Octave 4, then up an octave
     """
     # pylint: disable=import-outside-toplevel
-    from ..core.music import get_music_player
+    from ..features.music import get_music_player
 
     # Remove quotes if present
     mml = args.strip()
@@ -2444,7 +2444,7 @@ def _basic_say(_interpreter: "Interpreter", args: str) -> str:
         SAY message$
     """
     # pylint: disable=import-outside-toplevel
-    from ..core.speech import get_synthesizer
+    from ..features.speech import get_synthesizer
 
     # Remove quotes if present
     text = args.strip()
@@ -2475,7 +2475,7 @@ def _basic_shape(interpreter: "Interpreter", args: str, turtle: "TurtleState") -
         SHAPE HEART, 30, 1     - Filled heart, size 30
     """
     # pylint: disable=import-outside-toplevel
-    from ..core.shapes import get_shape_library
+    from ..features.shapes import get_shape_library
 
     parts = [p.strip() for p in args.split(",")]
     if len(parts) < 2:
@@ -2541,7 +2541,7 @@ def _basic_particle(interpreter: "Interpreter", args: str) -> str:
         PARTICLE EXPLOSION, 100, 100, 2    - Double intensity
     """
     # pylint: disable=import-outside-toplevel
-    from ..core.particles import get_particle_system
+    from ..features.particles import get_particle_system
 
     parts = [p.strip() for p in args.split(",")]
     if len(parts) < 3:
@@ -2581,7 +2581,7 @@ def _basic_fractal(interpreter: "Interpreter", args: str, turtle: "TurtleState")
         FRACTAL PLANT, 5, 8    - Plant with 5 iterations, step size 8
     """
     # pylint: disable=import-outside-toplevel
-    from ..core.fractals import get_fractal_generator
+    from ..features.fractals import get_fractal_generator
 
     parts = [p.strip() for p in args.split(",")]
     if not parts or not parts[0]:
@@ -2846,7 +2846,7 @@ def _basic_joyinit(_interpreter: "Interpreter") -> str:
         STRIG(n) - Button n state (0 or 1)
     """
     # pylint: disable=import-outside-toplevel
-    from ..core.gamepad import get_gamepad_manager
+    from ..features.gamepad import get_gamepad_manager
 
     try:
         manager = get_gamepad_manager()

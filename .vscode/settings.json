@@ -41,11 +41,7 @@
     "Platforms/Python/time_warp/ui/**",
     "Platforms/Python/time_warp/hardware/**",
     "Platforms/Python/time_warp/tests/**",
-    "Platforms/Python/time_warp/benchmarks/**",
-    "Platforms/Python/time_warp/analytics/**",
-    "Platforms/Python/time_warp/ai/**",
     "packaging/**",
-    "tools/**",
     "docs/**"
   ],
   "python.analysis.indexing": true,

@@ -55,7 +55,7 @@ class AssetLibrary:
     def __init__(self, library_path: Optional[Path] = None):
         """Initialize asset library."""
         if library_path is None:
-            from .config import ASSETS_DIR
+            from ..core.config import ASSETS_DIR
 
             library_path = ASSETS_DIR
 

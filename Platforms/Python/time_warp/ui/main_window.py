@@ -742,7 +742,7 @@ class MainWindow(
     def _show_sound_effects(self, _checked: bool = False):
         """Show available sound effects."""
         # pylint: disable=import-outside-toplevel
-        from ..core.music import get_sound_effects
+        from ..features.music import get_sound_effects
 
         effects = get_sound_effects()
         effect_list = effects.list_effects()

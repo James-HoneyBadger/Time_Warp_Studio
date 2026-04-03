@@ -1,4 +1,4 @@
-from time_warp.benchmarks.performance_benchmarks import BenchmarkRunner  # type: ignore[import-not-found]  # pylint: disable=import-error
+from time_warp.features.performance_benchmarks import BenchmarkRunner  # type: ignore[import-not-found]  # pylint: disable=import-error
 from time_warp.core.interpreter import run, Language  # type: ignore[import-not-found]  # pylint: disable=import-error
 from time_warp.tests.helpers import no_errors  # type: ignore[import-not-found]  # pylint: disable=import-error
 

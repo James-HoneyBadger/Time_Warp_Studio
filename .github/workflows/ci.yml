@@ -101,4 +101,4 @@ jobs:
           pip install -r Platforms/Python/requirements.txt
           pip install -e Platforms/Python
       - name: Validate all demo programs
-        run: python test_all_demos.py
+        run: python tests/test_all_demos.py

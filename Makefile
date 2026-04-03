@@ -31,16 +31,16 @@ run-safe: ## Launch via smart launcher (handles venv + deps)
 # Testing
 # ---------------------------------------------------------------------------
 test: ## Run quick smoke tests
-	$(PYTHON) test_runner.py --basic
+	$(PYTHON) Platforms/Python/test_runner.py --basic
 
 test-comprehensive: ## Run full test suite with coverage
-	$(PYTHON) test_runner.py --comprehensive
+	$(PYTHON) Platforms/Python/test_runner.py --comprehensive
 
 test-unit: ## Run pytest directly
 	$(PYTHON) -m pytest $(TESTS) -v --tb=short
 
 demos: ## Verify all demo programs
-	$(PYTHON) test_all_demos.py
+	$(PYTHON) tests/test_all_demos.py
 
 # ---------------------------------------------------------------------------
 # Code Quality
@@ -58,7 +58,7 @@ typecheck: ## Run pyright type checking
 # Docker
 # ---------------------------------------------------------------------------
 docker: ## Build Docker image
-	docker build -t time-warp-studio .
+	docker build -f docker/Dockerfile.main -t time-warp-studio .
 
 docker-up: ## Start Docker Compose stack
 	docker compose up -d

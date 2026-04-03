@@ -98,7 +98,7 @@ pip install -r Platforms/Python/requirements-dev.txt
 python Platforms/Python/time_warp_ide.py
 
 # Run tests
-python test_runner.py --basic
+python Platforms/Python/test_runner.py --basic
 ```
 
 Both should work without errors.
@@ -193,7 +193,7 @@ git commit -m "Fixed stuff"
 
 ```bash
 # Run test suite
-python test_runner.py --comprehensive
+python Platforms/Python/test_runner.py --comprehensive
 
 # Check code style
 black --check .
@@ -270,10 +270,10 @@ Requested by Issue #42 - BASIC language completeness.
 
 ```bash
 # Quick tests
-python test_runner.py --basic
+python Platforms/Python/test_runner.py --basic
 
 # Comprehensive
-python test_runner.py --comprehensive
+python Platforms/Python/test_runner.py --comprehensive
 
 # Specific file
 pytest Platforms/Python/time_warp/tests/test_lang_basic.py -v
@@ -454,7 +454,7 @@ git fetch origin
 git rebase origin/main
 
 # 2. Run full test suite
-python test_runner.py --comprehensive
+python Platforms/Python/test_runner.py --comprehensive
 
 # 3. Check code style
 black --check .
@@ -502,8 +502,7 @@ Time_Warp_Studio/
 │   │   ├── languages/            # 24 executors
 │   │   ├── ui/                   # PySide6 UI
 │   │   ├── graphics/             # Turtle graphics
-│   │   ├── features/             # Feature panels
-│   │   └── tools/                # Utilities
+│   │   └── features/             # Extended features and utilities
 │   ├── tests/                    # Test suite
 │   └── requirements.txt          # Dependencies
 ├── Examples/                     # Example programs

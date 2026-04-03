@@ -222,7 +222,7 @@ time_warp/
 python test_all_turtle_commands.py
 
 # Test basic functionality
-python test_basic_functionality.py
+python ../../tests/test_basic_functionality.py
 
 # Test IDE components
 python test_ide.py

@@ -16,7 +16,7 @@ Each plugin is a sub-directory containing:
 
 Usage::
 
-    from time_warp.core.plugin_system import PluginManager
+    from time_warp.features.plugin_system import PluginManager
     mgr = PluginManager(ide_instance=window)
     mgr.discover_plugins()          # scans plugins/ directory
     loaded = mgr.get_loaded_plugins()

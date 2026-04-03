@@ -60,7 +60,7 @@ from ..utils.error_hints import check_syntax_mistakes, suggest_command
 from ..utils.expression_evaluator import ExpressionEvaluator
 
 # Hardware simulation
-from .hardware_simulator import HardwareSimulator
+from ..features.hardware_simulator import HardwareSimulator
 
 logger = logging.getLogger(__name__)
 

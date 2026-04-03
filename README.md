@@ -329,7 +329,6 @@ Time_Warp_Studio/
 ├── run.py                         # Smart launcher (auto-setup + launch)
 ├── run.sh                         # Shell wrapper for Linux/macOS
 ├── Makefile                       # Build automation targets
-├── Dockerfile                     # Production container image
 ├── docker-compose.yml             # Multi-service orchestration
 │
 ├── README.md                      # This file
@@ -369,7 +368,7 @@ Time_Warp_Studio/
 │       │   └── mixins/            # Collaboration, classroom, debug, etc.
 │       ├── graphics/              # Turtle state and rendering
 │       │   └── turtle_state.py    # Position, heading, pen state (~600 lines)
-│       ├── features/              # Lessons, autosave, achievements, etc.
+│       ├── features/              # Lessons, autosave, achievements, games, etc.
 │       ├── utils/                 # Expression evaluator, error hints, etc.
 │       └── tests/                 # 41+ test files (1,700+ tests)
 │
@@ -383,10 +382,14 @@ Time_Warp_Studio/
 │   ├── python/ (5)  sql/ (4)     cics/ (4)     jcl/ (5)
 │   └── demo/ (2)    # Cross-language showcases
 │
-├── HB_Banking/                    # Banking/ERP demo application
+├── extras/HB_Banking/             # Optional banking/ERP demo application
 │   ├── main.py                    # CLI entry point
 │   ├── gui_main.py                # PySide6 GUI
 │   └── modules/                   # Accounts, transactions, reports
+│
+├── tests/                         # Root-level integration tests
+│   ├── test_all_demos.py          # Standalone demo verifier
+│   └── test_basic_functionality.py # Quick smoke test
 │
 ├── docs/                          # Documentation
 │   ├── INDEX.md                   # Documentation hub
@@ -394,9 +397,8 @@ Time_Warp_Studio/
 │   ├── tutorials/                 # 24 language-specific tutorials
 │   └── reference/                 # FAQ and reference material
 │
-├── Scripts/                       # Build, launch, and utility scripts
-├── tools/                         # Deployment and startup tools
-├── docker/                        # Nginx, supervisord, health checks
+├── Scripts/                       # Build, launch, deploy, and utility scripts
+├── docker/                        # Dockerfiles, nginx, supervisord, health checks
 ├── packaging/linux/               # Desktop shortcut and icon
 └── .github/                       # CI/CD workflows (10) and templates
 ```

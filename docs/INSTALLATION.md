@@ -227,7 +227,7 @@ For contributors, install the full development stack:
 
 ```bash
 pip install pytest pytest-cov pytest-mock ruff black
-python test_runner.py --comprehensive
+python Platforms/Python/test_runner.py --comprehensive
 ```
 
 ---
@@ -245,7 +245,7 @@ Runs the IDE in a container — best compatibility for unusual hardware.
 
 ```bash
 # Build (takes a few minutes first time)
-docker build -t time-warp-studio .
+docker build -f docker/Dockerfile.main -t time-warp-studio .
 
 # Run on Linux (shares your X display)
 xhost +local:docker
@@ -401,7 +401,7 @@ rm -rf ~/.time_warp
   "from time_warp.core.interpreter import Interpreter; print('✅ OK')"
 
 # Run the full demo test suite (from the source directory)
-python test_all_demos.py
+python tests/test_all_demos.py
 ```
 
 ---

@@ -27,7 +27,7 @@ __pycache__/
 *.zip
 
 # Development tools and binaries
-tools/swiftly
+Scripts/swiftly
 
 # Visual Studio
 .vs/

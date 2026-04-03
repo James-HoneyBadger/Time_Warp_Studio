@@ -44,7 +44,7 @@ services:
   api:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: docker/Dockerfile.main
     container_name: timewarp-api
     environment:
       PYTHONUNBUFFERED: 1

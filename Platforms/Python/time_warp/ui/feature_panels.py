@@ -37,27 +37,27 @@ from PySide6.QtWidgets import (
 )
 
 from ..core.interpreter import Language
-from ..core.accessibility import AccessibilityManager
-from ..core.asset_library import AssetLibrary
-from ..core.collaboration import LocalCollaborationSession, SessionManager
 from ..core.debugger import CodeDebugger
-from ..core.ai_assistant import LocalAIAssistant
-from ..core.executable_exporter import ExecutableExporter
-from ..core.execution_replay import (
+from ..features.accessibility import AccessibilityManager
+from ..features.achievements import ProgressTracker
+from ..features.ai_assistant import LocalAIAssistant
+from ..features.asset_library import AssetLibrary
+from ..features.classroom_mode import ClassroomMode
+from ..features.collaboration import LocalCollaborationSession, SessionManager
+from ..features.executable_exporter import ExecutableExporter
+from ..features.execution_replay import (
     ExecutionReplayPlayer,
     VisualizationRecorder,
 )
-from ..core.hardware_simulator import HardwareSimulator
-from ..core.language_comparator import MultiLanguageComparator
-from ..core.learning_analytics import LearningAnalytics
-from ..core.peer_review import CodeReviewSession
-from ..core.performance_profiler import PerformanceProfiler
-from ..core.project_templates import TemplateLibrary
-from ..core.syntax_validator import SyntaxValidator
+from ..features.hardware_simulator import HardwareSimulator
+from ..features.language_comparator import MultiLanguageComparator
+from ..features.learning_analytics import LearningAnalytics
 from ..features.lesson_system import LessonManager, LessonStatus
-from ..features.classroom_mode import ClassroomMode
+from ..features.peer_review import CodeReviewSession
+from ..features.performance_profiler import PerformanceProfiler
+from ..features.project_templates import TemplateLibrary
 from ..features.reference_search import ReferenceIndex
-from ..features.achievements import ProgressTracker
+from ..features.syntax_validator import SyntaxValidator
 from ..utils.error_hints import get_enhanced_error_message
 
 

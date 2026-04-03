@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import List, Optional
 
-from .interpreter import Language
+from ..core.interpreter import Language
 
 # Regex to match quoted string literals in BASIC
 _BASIC_STRING_RE = re.compile(r'"[^"]*"')

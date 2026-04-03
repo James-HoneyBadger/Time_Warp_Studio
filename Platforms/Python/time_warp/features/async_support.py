@@ -88,7 +88,7 @@ class AsyncInterpreterRunner:
     ) -> None:
         """Worker executed in a background thread."""
         try:
-            from .interpreter import Interpreter, Language
+            from ..core.interpreter import Interpreter, Language
             from ..graphics.turtle_state import TurtleState
 
             interp = Interpreter()

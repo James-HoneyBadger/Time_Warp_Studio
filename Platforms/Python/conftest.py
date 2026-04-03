@@ -18,4 +18,6 @@ os.environ.setdefault("LIBGL_ALWAYS_SOFTWARE", "1")
 # Prevent collection of test files requiring unavailable dependencies.
 # Add paths here for any tests that need optional packages not in [dev].
 # ---------------------------------------------------------------------------
-collect_ignore: list[str] = []
+collect_ignore: list[str] = [
+    "time_warp/tests/backend",
+]
