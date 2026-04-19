@@ -84,6 +84,54 @@ class FileOperationsMixin(_FileOpsMixinBase):
             self.settings.setValue("last_dir", str(Path(filename).parent))
             self.load_file(filename)
 
+    def open_project_folder(self):
+        """Open a project folder in the explorer."""
+        default_dir = self.settings.value(
+            "project_explorer/root_path",
+            self.settings.value("last_dir", str(Path.home())),
+        )
+
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Open Project Folder",
+            str(default_dir),
+            options=QFileDialog.Option.DontUseNativeDialog,
+        )
+        if directory:
+            self.open_project_root(directory)
+
+    def open_project_root(self, root_path) -> bool:
+        """Open a specific folder as the current project root."""
+        path = Path(root_path).expanduser()
+        if path.is_file():
+            path = path.parent
+
+        if not path.exists() or not path.is_dir():
+            QMessageBox.warning(
+                self,
+                "Project Folder Not Found",
+                f"Could not open project folder:\n{path}",
+            )
+            return False
+
+        normalized = str(path.resolve())
+        self.settings.setValue("last_dir", normalized)
+
+        if hasattr(self, "_remember_project_root"):
+            self._remember_project_root(normalized)
+
+        panel = None
+        if hasattr(self, "feature_manager"):
+            panel = self.feature_manager.get_feature_panel("project_explorer")
+            self.feature_manager.toggle_feature_panel("project_explorer", visible=True)
+
+        if panel and hasattr(panel, "set_root_path"):
+            panel.set_root_path(normalized)
+
+        if hasattr(self, "statusbar"):
+            self.statusbar.showMessage(f"Opened project: {normalized}")
+        return True
+
     def load_file(self, filename):
         """Load file into current tab."""
         from ...core.interpreter import Language
@@ -124,6 +172,8 @@ class FileOperationsMixin(_FileOpsMixinBase):
 
             self.output.set_language(language)
             self.add_recent_file(filename)
+            if hasattr(self, "_remember_project_root"):
+                self._remember_project_root(str(Path(filename).parent))
             self.statusbar.showMessage(f"Loaded: {filename}")
 
         except (OSError, UnicodeDecodeError) as e:
@@ -275,3 +325,29 @@ class FileOperationsMixin(_FileOpsMixinBase):
                 action = QAction(Path(filename).name, self)
                 action.triggered.connect(partial(self.load_file, filename))
                 self.recent_menu.addAction(action)
+
+    def update_recent_projects_menu(self):
+        """Update recent project roots menu."""
+        if not hasattr(self, "recent_projects_menu"):
+            return
+
+        self.recent_projects_menu.clear()
+        recent = self.settings.value("project_explorer/recent_paths", [])
+        if isinstance(recent, str):
+            recent = [recent] if recent else []
+        elif not isinstance(recent, list):
+            recent = list(recent) if recent else []
+
+        recent = [path for path in recent if Path(path).exists()]
+
+        if not recent:
+            action = QAction("No recent projects", self)
+            action.setEnabled(False)
+            self.recent_projects_menu.addAction(action)
+            return
+
+        for root_path in recent:
+            action = QAction(Path(root_path).name or root_path, self)
+            action.setStatusTip(root_path)
+            action.triggered.connect(partial(self.open_project_root, root_path))
+            self.recent_projects_menu.addAction(action)

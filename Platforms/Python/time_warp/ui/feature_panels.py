@@ -1,14 +1,16 @@
 """
 Feature UI Panels for Time Warp Studio v9.0.0
 
-This module provides PySide6 Qt widget panels for all 14 educational features.
-Each panel wraps a core module and provides a user-friendly interface.
+This module provides PySide6 Qt widget panels for the IDE's educational and
+workflow features. Each panel wraps a core module and provides a user-friendly
+interface.
 """
 
 # PySide6 symbols are provided at runtime; silence pylint import resolution
 # errors for these modules in this file.
 # pylint: disable=no-name-in-module
 
+from pathlib import Path
 from typing import Optional
 
 from PySide6.QtCore import Qt, Signal, QTimer
@@ -31,6 +33,8 @@ from PySide6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QTextEdit,
+    QTreeWidget,
+    QTreeWidgetItem,
     QVBoxLayout,
     QWidget,
     QSlider,
@@ -315,6 +319,153 @@ class ProjectTemplatesPanel(FeaturePanelBase):
         self.emit_status(f"Creating project from {template.name}...")
 
 
+class LearningHubPanel(FeaturePanelBase):
+    """Central launcher for lessons, challenges, remixing, and tutor tools."""
+
+    open_feature_requested = Signal(str)
+    challenge_requested = Signal(str, str)
+    remix_requested = Signal()
+    tutor_requested = Signal()
+    export_markdown_requested = Signal()
+    export_bundle_requested = Signal(str, str)
+
+    CHALLENGES = [
+        {
+            "title": "BASIC Hello Challenge",
+            "language": "BASIC",
+            "goal": "Print a friendly greeting and run it successfully.",
+            "starter": 'PRINT "Hello from Time Warp Studio!"\n',
+        },
+        {
+            "title": "Logo Square Challenge",
+            "language": "LOGO",
+            "goal": "Use turtle graphics to draw a square.",
+            "starter": 'REPEAT 4 [FD 50 RT 90]\n',
+        },
+        {
+            "title": "Python Loop Challenge",
+            "language": "PYTHON",
+            "goal": "Use a loop to print the numbers 1 through 5.",
+            "starter": 'for i in range(1, 6):\n    print(i)\n',
+        },
+        {
+            "title": "SQL Table Challenge",
+            "language": "SQL",
+            "goal": "Create a table and insert one record.",
+            "starter": (
+                'CREATE TABLE students (id INT, name TEXT);\n'
+                "INSERT INTO students VALUES (1, 'Ada');\n"
+                'SELECT * FROM students;\n'
+            ),
+        },
+    ]
+
+    def __init__(self):
+        super().__init__("Learning Hub")
+        self._setup_ui()
+        self._update_challenge_preview()
+
+    def _setup_ui(self):
+        """Build the learning hub interface."""
+        layout = self.layout_main
+
+        intro = QLabel(
+            "Launch guided lessons, try quick challenges, remix examples, "
+            "and open the tutor from one place."
+        )
+        intro.setWordWrap(True)
+        layout.addWidget(intro)
+
+        quick_row = QHBoxLayout()
+        for label, feature_id in [
+            ("Project Explorer", "project_explorer"),
+            ("Lesson Mode", "lesson_mode"),
+            ("Timeline Replay", "execution_replay"),
+            ("Achievements", "achievements"),
+            ("Quick Reference", "quick_reference"),
+        ]:
+            btn = QPushButton(label)
+            btn.clicked.connect(
+                lambda _checked=False, fid=feature_id: self.open_feature_requested.emit(fid)
+            )
+            quick_row.addWidget(btn)
+        layout.addLayout(quick_row)
+
+        layout.addWidget(QLabel("Featured Challenge"))
+        self.challenge_combo = QComboBox()
+        for challenge in self.CHALLENGES:
+            self.challenge_combo.addItem(challenge["title"])
+        self.challenge_combo.currentIndexChanged.connect(self._update_challenge_preview)
+        layout.addWidget(self.challenge_combo)
+
+        self.challenge_preview = QTextEdit()
+        self.challenge_preview.setReadOnly(True)
+        self.challenge_preview.setMaximumHeight(180)
+        layout.addWidget(self.challenge_preview)
+
+        challenge_row = QHBoxLayout()
+        start_btn = QPushButton("Start Challenge")
+        start_btn.clicked.connect(self._start_selected_challenge)
+        challenge_row.addWidget(start_btn)
+
+        remix_btn = QPushButton("Remix Current Tab")
+        remix_btn.clicked.connect(self.remix_requested.emit)
+        challenge_row.addWidget(remix_btn)
+
+        tutor_btn = QPushButton("Tutor Me")
+        tutor_btn.clicked.connect(self.tutor_requested.emit)
+        challenge_row.addWidget(tutor_btn)
+        layout.addLayout(challenge_row)
+
+        export_group = QGroupBox("Teacher Tools")
+        export_layout = QFormLayout(export_group)
+        self.lesson_name = QLineEdit("Guided Lesson")
+        export_layout.addRow("Lesson name:", self.lesson_name)
+        self.lesson_desc = QLineEdit("Practice pack generated from the IDE")
+        export_layout.addRow("Description:", self.lesson_desc)
+        layout.addWidget(export_group)
+
+        export_row = QHBoxLayout()
+        export_md_btn = QPushButton("Export Lesson Notes")
+        export_md_btn.clicked.connect(self.export_markdown_requested.emit)
+        export_row.addWidget(export_md_btn)
+
+        export_bundle_btn = QPushButton("Export Bundle")
+        export_bundle_btn.clicked.connect(self._emit_export_bundle)
+        export_row.addWidget(export_bundle_btn)
+        layout.addLayout(export_row)
+
+    def _selected_challenge(self) -> dict:
+        """Return the currently selected challenge payload."""
+        index = self.challenge_combo.currentIndex()
+        if index < 0 or index >= len(self.CHALLENGES):
+            return self.CHALLENGES[0]
+        return self.CHALLENGES[index]
+
+    def _update_challenge_preview(self):
+        """Show the selected challenge details."""
+        challenge = self._selected_challenge()
+        preview = (
+            f"Language: {challenge['language']}\n"
+            f"Goal: {challenge['goal']}\n\n"
+            "Starter code:\n"
+            f"{challenge['starter']}"
+        )
+        self.challenge_preview.setText(preview)
+
+    def _start_selected_challenge(self):
+        """Emit the selected challenge so the IDE can open it."""
+        challenge = self._selected_challenge()
+        self.challenge_requested.emit(challenge["language"], challenge["starter"])
+        self.emit_status(f"Loaded challenge: {challenge['title']}")
+
+    def _emit_export_bundle(self):
+        """Emit a bundle export request with entered metadata."""
+        name = self.lesson_name.text().strip() or "Guided Lesson"
+        description = self.lesson_desc.text().strip() or ""
+        self.export_bundle_requested.emit(name, description)
+
+
 class LessonModePanel(FeaturePanelBase):
     """UI for guided lessons with checkpoints and hints."""
 
@@ -535,6 +686,228 @@ class LessonModePanel(FeaturePanelBase):
             "checkpoint_title": checkpoint.title if checkpoint else "",
             "checkpoint_description": checkpoint.description if checkpoint else "",
         }
+
+
+class ProjectExplorerPanel(FeaturePanelBase):
+    """Browse the current workspace and open files quickly."""
+
+    open_file_requested = Signal(str)
+    root_path_changed = Signal(str)
+    FILE_PATH_ROLE = Qt.ItemDataRole.UserRole
+    MAX_RECENT_PATHS = 8
+    IGNORED_DIR_NAMES = {
+        ".git",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".venv",
+        "__pycache__",
+        "node_modules",
+    }
+    CODE_EXTENSIONS = {
+        ".apl",
+        ".asm",
+        ".bas",
+        ".bf",
+        ".c",
+        ".cbl",
+        ".cics",
+        ".cob",
+        ".f",
+        ".for",
+        ".f77",
+        ".forth",
+        ".fs",
+        ".hs",
+        ".htalk",
+        ".jcl",
+        ".js",
+        ".logo",
+        ".lua",
+        ".pas",
+        ".pilot",
+        ".pl",
+        ".pro",
+        ".prolog",
+        ".py",
+        ".rex",
+        ".rexx",
+        ".scm",
+        ".sqr",
+        ".sqc",
+        ".sql",
+        ".st",
+        ".txt",
+        ".md",
+    }
+
+    def __init__(self):
+        super().__init__("Project Explorer")
+        self._root_path = Path.cwd()
+        self.recent_paths: list[str] = []
+        self._setup_ui()
+        self.refresh_tree()
+
+    def _setup_ui(self):
+        """Setup explorer UI."""
+        recent_row = QHBoxLayout()
+        recent_row.addWidget(QLabel("Recent:"))
+        self.recent_combo = QComboBox()
+        self.recent_combo.currentTextChanged.connect(self._on_recent_selected)
+        recent_row.addWidget(self.recent_combo)
+
+        browse_btn = QPushButton("Browse")
+        browse_btn.clicked.connect(self._browse_for_root)
+        recent_row.addWidget(browse_btn)
+        self.layout_main.addLayout(recent_row)
+
+        path_row = QHBoxLayout()
+        path_row.addWidget(QLabel("Root:"))
+        self.path_input = QLineEdit(str(self._root_path))
+        self.path_input.editingFinished.connect(self._on_path_entered)
+        path_row.addWidget(self.path_input)
+
+        refresh_btn = QPushButton("Refresh")
+        refresh_btn.clicked.connect(self.refresh_tree)
+        path_row.addWidget(refresh_btn)
+        self.layout_main.addLayout(path_row)
+
+        self.file_tree = QTreeWidget()
+        self.file_tree.setHeaderLabels(["Name", "Type"])
+        self.file_tree.itemDoubleClicked.connect(self._open_selected_item)
+        self.layout_main.addWidget(self.file_tree)
+
+    def set_recent_paths(self, paths: list[str]):
+        """Replace the recent project root list with normalized paths."""
+        self.recent_paths = []
+        for path_str in paths:
+            self._add_recent_path(path_str, update_combo=False)
+        self._sync_recent_combo()
+
+    def set_root_path(self, root_path: str):
+        """Set the root path shown in the explorer."""
+        path = self._normalize_root_path(root_path)
+        if path is None:
+            self.emit_status(f"Path not found: {root_path}")
+            return
+
+        self._root_path = path
+        self.path_input.setText(str(path))
+        self._add_recent_path(str(path))
+        self.refresh_tree()
+        self.root_path_changed.emit(str(path))
+
+    def _normalize_root_path(self, root_path: str | Path) -> Path | None:
+        """Normalize a root path, accepting files by using their parent."""
+        path = Path(root_path).expanduser()
+        if path.is_file():
+            path = path.parent
+        if not path.exists() or not path.is_dir():
+            return None
+        try:
+            return path.resolve()
+        except OSError:
+            return path
+
+    def _add_recent_path(self, root_path: str, update_combo: bool = True):
+        """Add a root path to the recent-project list."""
+        path = self._normalize_root_path(root_path)
+        if path is None:
+            return
+
+        normalized = str(path)
+        if normalized in self.recent_paths:
+            self.recent_paths.remove(normalized)
+        self.recent_paths.insert(0, normalized)
+        self.recent_paths = self.recent_paths[: self.MAX_RECENT_PATHS]
+
+        if update_combo:
+            self._sync_recent_combo()
+
+    def _sync_recent_combo(self):
+        """Refresh the recent paths dropdown."""
+        self.recent_combo.blockSignals(True)
+        self.recent_combo.clear()
+        self.recent_combo.addItems(self.recent_paths)
+        if self.recent_paths:
+            self.recent_combo.setCurrentText(str(self._root_path))
+        self.recent_combo.blockSignals(False)
+
+    def _browse_for_root(self):
+        """Prompt for a project root directory."""
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Select Project Folder",
+            str(self._root_path),
+        )
+        if directory:
+            self.set_root_path(directory)
+
+    def _on_recent_selected(self, value: str):
+        """Switch to a recent root when the selection changes."""
+        if value:
+            self.set_root_path(value)
+
+    def _on_path_entered(self):
+        """Handle user-entered path changes."""
+        self.set_root_path(self.path_input.text())
+
+    def refresh_tree(self):
+        """Refresh the visible workspace tree."""
+        self.file_tree.clear()
+        if not self._root_path.exists():
+            self.emit_status("Workspace path is unavailable")
+            return
+
+        for child in self._iter_visible_children(self._root_path):
+            item = self._create_tree_item(child)
+            if item is not None:
+                self.file_tree.addTopLevelItem(item)
+
+        self.file_tree.expandToDepth(1)
+        self.emit_status(f"Loaded project tree: {self._root_path}")
+
+    def _iter_visible_children(self, path: Path) -> list[Path]:
+        """Return safely sorted child paths for a directory."""
+        try:
+            return sorted(path.iterdir(), key=lambda p: (p.is_file(), p.name.lower()))
+        except OSError:
+            return []
+
+    def _should_show_file(self, path: Path) -> bool:
+        """Return whether a file should be shown in the explorer."""
+        if path.name.startswith("."):
+            return False
+        if path.is_dir():
+            return path.name not in self.IGNORED_DIR_NAMES
+        return path.suffix.lower() in self.CODE_EXTENSIONS
+
+    def _create_tree_item(self, path: Path) -> QTreeWidgetItem | None:
+        """Create a tree item recursively for a path."""
+        if not self._should_show_file(path):
+            return None
+
+        label = f"📁 {path.name}" if path.is_dir() else path.name
+        item_type = "Folder" if path.is_dir() else path.suffix.lower().lstrip(".") or "file"
+        item = QTreeWidgetItem([label, item_type])
+        item.setData(0, self.FILE_PATH_ROLE, str(path))
+
+        if path.is_dir():
+            for child in self._iter_visible_children(path):
+                child_item = self._create_tree_item(child)
+                if child_item is not None:
+                    item.addChild(child_item)
+        return item
+
+    def _open_selected_item(self, item: QTreeWidgetItem, _column: int):
+        """Open the selected file when a leaf item is activated."""
+        path_str = item.data(0, self.FILE_PATH_ROLE)
+        if not path_str:
+            return
+
+        path = Path(path_str)
+        if path.is_file():
+            self.open_file_requested.emit(str(path))
+            self.emit_status(f"Opening {path.name}")
 
 
 class ProjectRunnerPanel(FeaturePanelBase):
@@ -1556,6 +1929,20 @@ class AIAssistantPanel(FeaturePanelBase):
         self.layout_main.addWidget(QLabel("Question:"))
         self.layout_main.addWidget(self.query_input)
 
+        tutor_row = QHBoxLayout()
+        explain_btn = QPushButton("Explain Loops")
+        explain_btn.clicked.connect(lambda: self._load_topic("loops"))
+        tutor_row.addWidget(explain_btn)
+
+        fix_btn = QPushButton("Check Syntax")
+        fix_btn.clicked.connect(lambda: self.set_code_context("BASIC", self.query_input.text()))
+        tutor_row.addWidget(fix_btn)
+
+        kb_btn = QPushButton("Load Knowledge Base")
+        kb_btn.clicked.connect(self.load_knowledge)
+        tutor_row.addWidget(kb_btn)
+        self.layout_main.addLayout(tutor_row)
+
         # Response display
         self.response_display = QTextEdit()
         self.response_display.setReadOnly(True)
@@ -1567,10 +1954,17 @@ class AIAssistantPanel(FeaturePanelBase):
         self.layout_main.addWidget(QLabel("Suggestions:"))
         self.layout_main.addWidget(self.suggestions_list)
 
-        # Load knowledge button
-        kb_btn = QPushButton("Load Knowledge Base")
-        kb_btn.clicked.connect(self.load_knowledge)
-        self.layout_main.addWidget(kb_btn)
+    def _load_topic(self, topic: str):
+        """Load a built-in tutoring topic."""
+        suggestion = self.ai.suggest_code(topic)
+        self.response_display.setText(suggestion.explanation)
+        self._set_suggestions(suggestion.alternatives or [f"Try a {topic} example"]) 
+
+    def _set_suggestions(self, items: list[str]):
+        """Refresh the list of visible suggestions."""
+        self.suggestions_list.clear()
+        for item in items:
+            self.suggestions_list.addItem(item)
 
     def ask_question(self):
         """Ask AI assistant a question."""
@@ -1580,6 +1974,10 @@ class AIAssistantPanel(FeaturePanelBase):
 
         response = self.ai.query(query)
         self.response_display.setText(response)
+        self._set_suggestions([
+            "Ask about loops, conditionals, arrays, or functions",
+            "Use Tutor Me from the Learning Hub for code-specific hints",
+        ])
         self.emit_status(f"AI responded to: {query[:30]}...")
 
     def load_knowledge(self):
@@ -1587,10 +1985,57 @@ class AIAssistantPanel(FeaturePanelBase):
         self.ai.load_knowledge_base()
         self.emit_status("Knowledge base loaded")
 
+    def set_code_context(self, language: str, code: str):
+        """Provide beginner-friendly tutor guidance for the current code."""
+        normalized = (language or "BASIC").upper()
+        source = (code or "").strip()
+
+        if not source:
+            self.response_display.setText(
+                "Start by writing a few lines of code, then ask the tutor for hints."
+            )
+            self._set_suggestions([
+                "Write a print statement",
+                "Try a loop example",
+                "Open a challenge from the Learning Hub",
+            ])
+            return
+
+        hints = [f"Language detected: {normalized}"]
+        lower = source.lower()
+        if "for " in lower or "repeat" in lower or "while" in lower:
+            hints.append("You are using a loop. Check the body indentation or bracket structure.")
+        if "print" in lower or "select" in lower:
+            hints.append("Your program already produces output. Run it and compare the result with your goal.")
+        if normalized == "LOGO":
+            hints.append("For turtle drawings, use REPEAT blocks to reduce repetition.")
+        elif normalized == "PYTHON":
+            hints.append("Python relies on indentation, so keep nested blocks aligned.")
+        elif normalized == "BASIC":
+            hints.append("BASIC works well when you build the program one small step at a time.")
+        elif normalized == "SQL":
+            hints.append("SQL tasks often follow CREATE, INSERT, then SELECT to verify results.")
+
+        syntax_help = self.ai.fix_syntax(source)
+        message = "Tutor summary:\n\n" + "\n".join(f"• {hint}" for hint in hints)
+        message += "\n\nSyntax coach:\n" + syntax_help.explanation
+        self.response_display.setText(message)
+        self._set_suggestions([
+            "Run the code and compare output",
+            "Simplify one step at a time",
+            "Open Quick Reference for syntax examples",
+        ])
+        self.emit_status("AI tutor updated for current code")
+
     def set_error_context(self, error_message: str):
         """Provide an error context for quick help."""
         suggestion = self.ai.explain_error(error_message)
         self.response_display.setText(suggestion.explanation)
+        self._set_suggestions([
+            "Check the highlighted line",
+            "Look for missing quotes or brackets",
+            "Try the Syntax Validator panel",
+        ])
         self.emit_status("AI generated an error explanation")
 
 
@@ -1909,6 +2354,8 @@ __all__ = [
     "AchievementsPanel",
     "SyntaxValidatorPanel",
     "ProjectTemplatesPanel",
+    "LearningHubPanel",
+    "ProjectExplorerPanel",
     "ProjectRunnerPanel",
     "TurtleInspectorPanel",
     "DebuggerPanel",

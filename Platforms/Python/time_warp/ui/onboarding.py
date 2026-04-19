@@ -50,11 +50,10 @@ class OnboardingDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle("Welcome to Time Warp Studio")
         self.setMinimumSize(700, 500)
-        self.setWindowFlags(
-            self.windowFlags() | Qt.WindowCloseButtonHint
-        )
+        self.setWindowFlags(self.windowFlags() | Qt.WindowCloseButtonHint)
 
         self.current_step_index = 0
+        self.completion_state = "in_progress"
         self.steps = self._create_tutorial_steps()
 
         self._setup_ui()
@@ -147,8 +146,8 @@ class OnboardingDialog(QDialog):
             OnboardingStep(
                 step_id="welcome",
                 title="Welcome to Time Warp Studio!",
-                description="Time Warp Studio is an educational multi-language "
-                "programming environment with BASIC, PILOT, and Logo.",
+                description="Time Warp Studio is an educational programming "
+                "environment for 24 classic and modern languages.",
                 instructions=[
                     "This tutorial will guide you through the IDE",
                     "You can skip steps or exit at any time",
@@ -234,8 +233,9 @@ class OnboardingDialog(QDialog):
         step = self.steps[self.current_step_index]
 
         self.title_label.setText(step.title)
+        progress_pct = int(((self.current_step_index + 1) / len(self.steps)) * 100)
         self.progress_label.setText(
-            f"Step {self.current_step_index + 1} of {len(self.steps)}"
+            f"Step {self.current_step_index + 1} of {len(self.steps)} • {progress_pct}% complete"
         )
         self.description_label.setText(step.description)
 
@@ -246,7 +246,7 @@ class OnboardingDialog(QDialog):
         instructions_html = f"<ul>{instructions_items}</ul>"
         self.instructions_text.setHtml(instructions_html)
 
-        self.task_label.setText(f"✅ {step.task_description}")
+        self.task_label.setText(f"🎯 {step.task_description}")
 
         # Hint
         self.hint_label.setVisible(False)
@@ -282,17 +282,21 @@ class OnboardingDialog(QDialog):
 
     def _skip_tutorial(self):
         """Skip the tutorial and close dialog."""
+        self.completion_state = "skipped"
         self.tutorial_finished.emit()
         self.accept()
 
     def _finish_tutorial(self):
         """Finish tutorial and close dialog."""
+        self.completion_state = "completed"
         self.step_completed.emit(self.steps[self.current_step_index].step_id)
         self.tutorial_finished.emit()
         self.accept()
 
     def reject(self):
         """Handle Escape key / window close button."""
+        if self.completion_state == "in_progress":
+            self.completion_state = "dismissed"
         self.tutorial_finished.emit()
         super().reject()
 
@@ -316,6 +320,7 @@ class OnboardingManager:
         self.completed_steps: set[str] = set()
         self.tutorial_completed = False
         self.skip_onboarding = False
+        self.last_result = "new"
 
         self._load_state()
 
@@ -328,6 +333,7 @@ class OnboardingManager:
                     self.completed_steps = set(data.get("completed_steps", []))
                     self.tutorial_completed = data.get("tutorial_completed", False)
                     self.skip_onboarding = data.get("skip_onboarding", False)
+                    self.last_result = data.get("last_result", "new")
             except (json.JSONDecodeError, OSError):
                 pass
 
@@ -337,6 +343,7 @@ class OnboardingManager:
             "completed_steps": list(self.completed_steps),
             "tutorial_completed": self.tutorial_completed,
             "skip_onboarding": self.skip_onboarding,
+            "last_result": self.last_result,
         }
 
         with open(self.config_file, "w", encoding="utf-8") as f:
@@ -355,6 +362,24 @@ class OnboardingManager:
         """Mark tutorial as completed."""
         self.tutorial_completed = True
         self.skip_onboarding = skip
+        self.last_result = "skipped" if skip else "completed"
+        self._save_state()
+
+    def record_result(self, completion_state: str, skip_requested: bool = False):
+        """Persist the outcome of the onboarding dialog."""
+        self.last_result = completion_state
+
+        if completion_state == "completed":
+            self.mark_tutorial_completed(skip=skip_requested)
+            return
+
+        if completion_state == "skipped":
+            self.mark_tutorial_completed(skip=True)
+            return
+
+        if skip_requested:
+            self.skip_onboarding = True
+
         self._save_state()
 
     def reset_onboarding(self):
@@ -362,4 +387,5 @@ class OnboardingManager:
         self.completed_steps.clear()
         self.tutorial_completed = False
         self.skip_onboarding = False
+        self.last_result = "new"
         self._save_state()

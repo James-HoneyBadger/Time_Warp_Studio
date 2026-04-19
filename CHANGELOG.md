@@ -2,6 +2,16 @@
 
 All notable changes to Time Warp Studio will be documented in this file.
 
+## [Unreleased] - 2026-04-19
+
+### UI & Learning Experience
+
+- Added a new Learning Hub with guided challenge launchers, remix actions, quick access to reference material, and one-click tutor help
+- Added a Project Explorer with recent-project tracking, persistent workspace roots, and direct file opening from the IDE
+- Added File menu and toolbar actions for opening project folders and revisiting recent projects
+- Improved the AI Assistant with beginner-friendly tutor summaries for the current code context
+- Updated welcome/help surfaces to highlight the new learning and project workflows
+
 ## [9.0.0] - 2026-03-28
 
 ### Security
@@ -104,10 +114,10 @@ All notable changes to Time Warp Studio will be documented in this file.
 
 - 24 programming language executors
 - PySide6 (Qt6) desktop IDE with editor, canvas, and output panels
-- 26 built-in themes including retro CRT effects
+- 28 built-in themes including retro CRT and accessibility options
 - Integrated debugger with timeline recording and rewind
 - Turtle graphics with 50+ drawing commands
 - Lesson system with auto-verification
 - AI assistant and error explainer panels
-- 93 example programs across all languages
-- 500+ passing tests
+- 97 example programs across all languages
+- Comprehensive automated test suite

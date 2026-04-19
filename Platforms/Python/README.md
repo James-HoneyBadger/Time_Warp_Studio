@@ -49,7 +49,7 @@ The **desktop implementation** of Time Warp Studio provides a native application
 
 ### Educational Features
 
-- 📚 **93 Example Programs**: All language styles and difficulty levels
+- 📚 **97 Example Programs**: All language styles and difficulty levels
 - 📖 **Comprehensive Docs**: Turtle graphics reference and guides
 - 💡 **Safe Execution**: Timeout protection and iteration limits
 - 🧪 **Full Test Suite**: Verified correctness of all commands

@@ -69,7 +69,8 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Theme System** — 28 built-in themes (Dracula, Monokai, Catppuccin Mocha, Gruvbox Dark, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized, retro CRT, and more)
 - **Find & Replace** — Advanced search with regex, case sensitivity, whole word matching, and live match highlighting
 - **Auto-Completion** — Context-aware completions from language keywords and document identifiers
-- **14 Feature Panels** — Lessons, AI Assistant, Error Explainer, Examples Browser, Turtle Inspector, Debugger, and more
+- **Learning Hub & Project Explorer** — Guided challenges, remix workflows, recent projects, and workspace browsing
+- **16+ Feature Panels** — Lessons, AI Assistant, Error Explainer, Turtle Inspector, Debugger, classroom tools, and more
 
 ### Turtle Graphics
 
@@ -90,7 +91,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Lesson System** — Step-by-step guided instruction with auto-verification
 - **AI Assistant** — Intelligent code suggestions and explanations
 - **Error Explainer** — Human-readable explanations of programming errors
-- **Examples Browser** — 93 example programs across all 24 languages
+- **Examples Browser** — 97 example programs across all 24 languages
 - **Achievements** — Gamified progress tracking
 
 ---
@@ -372,7 +373,7 @@ Time_Warp_Studio/
 │       ├── utils/                 # Expression evaluator, error hints, etc.
 │       └── tests/                 # 41+ test files (1,700+ tests)
 │
-├── Examples/                      # 93 example programs across 24 languages
+├── Examples/                      # 97 example programs across 24 languages
 │   ├── CATALOG.md                 # Searchable example index
 │   ├── basic/ (5)   logo/ (5)     pilot/ (3)    c/ (5)
 │   ├── pascal/ (4)  prolog/ (4)   cobol/ (5)    sqr/ (4)

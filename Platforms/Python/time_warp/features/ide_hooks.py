@@ -25,18 +25,21 @@ class IDEComponentInitializer:
     def initialize_marketplace(self) -> bool:
         """Initialize marketplace component"""
         try:
-            from integration.integration_manager import (
+            from .integration_manager import (
                 MarketplaceIntegration,
+                bootstrap_integration,
             )
-            from marketplace.plugin_marketplace import MarketplaceService
+            from .plugin_marketplace import MarketplaceService
 
+            manager = bootstrap_integration(marketplace=True, debugger=False, ai=False)
             service = MarketplaceService()
-            integration = MarketplaceIntegration()
+            integration = MarketplaceIntegration(manager)
             integration.initialize()
 
             self.components["marketplace"] = {
                 "service": service,
                 "integration": integration,
+                "manager": manager,
                 "status": "ready",
             }
 
@@ -49,18 +52,18 @@ class IDEComponentInitializer:
     def initialize_debugger(self) -> bool:
         """Initialize debugger component"""
         try:
-            from debugging.integrated_debugger import (
-                DebuggerEngine,
-            )
-            from integration.integration_manager import DebuggerIntegration
+            from .integrated_debugger import DebuggerEngine
+            from .integration_manager import DebuggerIntegration, bootstrap_integration
 
-            engine = DebuggerEngine()
-            integration = DebuggerIntegration()
+            manager = bootstrap_integration(marketplace=False, debugger=True, ai=False)
+            integration = DebuggerIntegration(manager)
             integration.initialize()
+            engine = integration.debugger_engine or DebuggerEngine()
 
             self.components["debugger"] = {
                 "engine": engine,
                 "integration": integration,
+                "manager": manager,
                 "sessions": {},
                 "status": "ready",
             }
@@ -74,29 +77,31 @@ class IDEComponentInitializer:
     def initialize_ai_intelligence(self) -> bool:
         """Initialize AI intelligence component"""
         try:
-            from ai.intelligence_engine import (
+            from .integration_manager import AIIntegration, bootstrap_integration
+            from .intelligence_engine import (
                 BugDetectionEngine,
                 CodeCompletionEngine,
-                CodeReviewEngine,
                 LearningPathGenerator,
-                OptimizationAnalyzer,
+                PerformanceOptimizationAdvisor,
+                ReviewInsightEngine,
             )
-            from integration.integration_manager import AIIntegration
 
+            manager = bootstrap_integration(marketplace=False, debugger=False, ai=True)
             engines = {
                 "completion": CodeCompletionEngine(),
                 "bug_detection": BugDetectionEngine(),
-                "review": CodeReviewEngine(),
+                "review": ReviewInsightEngine(),
                 "learning": LearningPathGenerator(),
-                "optimization": OptimizationAnalyzer(),
+                "optimization": PerformanceOptimizationAdvisor(),
             }
 
-            integration = AIIntegration()
+            integration = AIIntegration(manager)
             integration.initialize()
 
-            self.components["ai"] = {
+            self.components["ai_intelligence"] = {
                 "engines": engines,
                 "integration": integration,
+                "manager": manager,
                 "status": "ready",
             }
 
@@ -109,9 +114,7 @@ class IDEComponentInitializer:
     def initialize_beta_testing(self) -> bool:
         """Initialize beta testing framework"""
         try:
-            from testing.beta_testing_framework import (
-                BetaTestingManager,
-            )
+            from .beta_testing_framework import BetaTestingManager
 
             manager = BetaTestingManager()
 
@@ -131,13 +134,11 @@ class IDEComponentInitializer:
     def initialize_integration_manager(self) -> bool:
         """Initialize central integration manager"""
         try:
-            from integration.integration_manager import (
-                IntegrationManager,
-                bootstrap_integration,
-            )
+            from .integration_manager import IntegrationManager, bootstrap_integration
 
-            manager = IntegrationManager()
-            bootstrap_integration(manager)
+            manager = bootstrap_integration()
+            if not isinstance(manager, IntegrationManager):
+                manager = IntegrationManager()
 
             self.components["integration_manager"] = manager
 
@@ -212,7 +213,12 @@ class IDEEventRouter:
         """Handle plugin installation"""
         marketplace = self.initializer.get_component("marketplace")
         if marketplace:
-            marketplace["service"].install_plugin(plugin_id)
+            integration = marketplace.get("integration")
+            service = marketplace.get("service")
+            if integration and hasattr(integration, "install_plugin"):
+                integration.install_plugin(plugin_id, "latest", "local-user")
+            elif service and hasattr(service, "install_plugin"):
+                service.install_plugin(plugin_id)
             self.emit_event("marketplace:installed", plugin_id=plugin_id)
 
     # Debugger events
@@ -227,7 +233,11 @@ class IDEEventRouter:
         """Handle debug session start"""
         debugger = self.initializer.get_component("debugger")
         if debugger:
-            session = debugger["engine"].start_debug_session(session_id)
+            engine = debugger["engine"]
+            if hasattr(engine, "start_debug_session"):
+                session = engine.start_debug_session(session_id)
+            else:
+                session = engine.start_session(session_id, "unknown")
             debugger["sessions"][session_id] = session
             self.emit_event("debugger:session_started", session=session)
 
@@ -235,13 +245,13 @@ class IDEEventRouter:
         """Handle debug step (into/over/out)"""
         debugger = self.initializer.get_component("debugger")
         if debugger and session_id in debugger["sessions"]:
-            session = debugger["sessions"][session_id]
+            engine = debugger["engine"]
             if step_type == "into":
-                session.step_into()
+                engine.step_into()
             elif step_type == "over":
-                session.step_over()
+                engine.step_over()
             elif step_type == "out":
-                session.step_out()
+                engine.step_out()
             self.emit_event("debugger:stepped", step_type=step_type)
 
     # AI events
@@ -263,7 +273,11 @@ class IDEEventRouter:
         """Request code optimization"""
         ai = self.initializer.get_component("ai_intelligence")
         if ai:
-            optimizations = ai["engines"]["optimization"].analyze_code(code, language)
+            optimizer = ai["engines"]["optimization"]
+            if hasattr(optimizer, "analyze_performance"):
+                optimizations = optimizer.analyze_performance(code)
+            else:
+                optimizations = optimizer.analyze_code(code, language)
             self.emit_event("ai:optimizations", optimizations=optimizations)
 
 
@@ -276,7 +290,7 @@ class MarketplaceIntegrationMixin:
     def init_marketplace_ui(self):
         """Initialize marketplace UI components"""
         try:
-            from ui.phase_vii_x_panels import MarketplacePanel
+            from ..ui.phase_vii_x_panels import MarketplacePanel
 
             self.marketplace_panel = MarketplacePanel()
             marketplace = self.initializer.get_component("marketplace")
@@ -301,7 +315,7 @@ class DebuggerIntegrationMixin:
     def init_debugger_ui(self):
         """Initialize debugger UI components"""
         try:
-            from ui.phase_vii_x_panels import DebuggerPanel
+            from ..ui.phase_vii_x_panels import DebuggerPanel
 
             self.debugger_panel = DebuggerPanel()
 
@@ -333,7 +347,7 @@ class AIIntegrationMixin:
     def init_ai_ui(self):
         """Initialize AI intelligence UI components"""
         try:
-            from ui.phase_vii_x_panels import AISuggestionsPanel
+            from ..ui.phase_vii_x_panels import AISuggestionsPanel
 
             self.ai_panel = AISuggestionsPanel()
             ai = self.initializer.get_component("ai_intelligence")
@@ -355,7 +369,7 @@ class PerformanceMonitoringMixin:
     def init_performance_monitor_ui(self):
         """Initialize performance monitor UI"""
         try:
-            from ui.phase_vii_x_panels import PerformanceMonitorPanel
+            from ..ui.phase_vii_x_panels import PerformanceMonitorPanel
 
             self.performance_panel = PerformanceMonitorPanel()
 
@@ -368,7 +382,10 @@ class PerformanceMonitoringMixin:
 
     def start_performance_monitoring(self):
         """Start periodic performance metric updates"""
-        from PyQt5.QtCore import QTimer
+        try:
+            from PySide6.QtCore import QTimer
+        except ImportError:
+            from PyQt5.QtCore import QTimer
 
         timer = QTimer(self)
         timer.timeout.connect(self.update_performance_metrics)
@@ -483,7 +500,7 @@ def track_performance(component_name: str):
 
             manager = self.initializer.get_component("integration_manager")
             if manager:
-                from integration.integration_manager import PerformanceMetric
+                from .integration_manager import PerformanceMetric
 
                 metric = PerformanceMetric(
                     component=component_name,

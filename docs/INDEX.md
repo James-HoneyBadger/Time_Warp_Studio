@@ -82,6 +82,8 @@ Start here if you're new to Time Warp Studio:
 Deep dives into specific IDE features:
 
 - **[Debugger Guide](DEBUGGER_GUIDE.md)** - Step-through debugging with timeline recording and rewind
+- **Learning Hub** - Launch challenges, remix examples, and open the tutor from the toolbar
+- **Project Explorer** - Open project folders and switch between workspace files quickly
 - **[Turtle Graphics](guides/04-turtle-graphics.md)** - Master Logo turtle graphics, colors, and animations
 - **[Settings & Themes](guides/06-settings.md)** - Customize appearance with 28 themes or create your own
 - **[Keyboard Shortcuts](guides/07-shortcuts.md)** - Speed up your workflow with essential shortcuts
@@ -157,7 +159,7 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 
 ## 📁 Examples
 
-Browse 93 example programs organized by language:
+Browse 97 example programs organized by language:
 
 | Directory | Count | Level | Purpose |
 | --------- | ----- | ----- | ------- |

@@ -9,6 +9,50 @@ import subprocess
 import sys
 from pathlib import Path
 
+UNIT_TEST_TARGETS = ["time_warp/tests"]
+INTEGRATION_TEST_TARGETS = ["../../tests/test_basic_functionality.py"]
+DEMO_TEST_TARGETS = ["../../tests/test_all_demos.py"]
+
+
+def resolve_test_targets(args) -> list[str]:
+    """Resolve the pytest targets for the selected run mode."""
+    targets: list[str] = []
+
+    targets.extend(UNIT_TEST_TARGETS)
+
+    if args.comprehensive or args.all or args.integration:
+        targets.extend(INTEGRATION_TEST_TARGETS)
+
+    if args.comprehensive or args.all or args.demos:
+        targets.extend(DEMO_TEST_TARGETS)
+
+    # Deduplicate while preserving order.
+    return list(dict.fromkeys(targets))
+
+
+def build_pytest_command(args, targets: list[str]) -> list[str]:
+    """Build the pytest command for the selected options."""
+    cmd = [sys.executable, "-m", "pytest"]
+
+    if args.comprehensive:
+        cmd.extend(
+            [
+                "--cov=time_warp",
+                "--cov-report=html:test_reports/html",
+                "--cov-report=term",
+                "--cov-report=xml:test_reports/coverage.xml",
+                "-v",
+            ]
+        )
+    elif args.basic and not (args.integration or args.demos or args.all):
+        cmd.extend(["-m", "not slow and not integration and not performance"])
+
+    if args.parallel:
+        cmd.extend(["-n", "auto"])
+
+    cmd.extend(targets)
+    return cmd
+
 
 def main():
     parser = argparse.ArgumentParser(description="Time Warp Studio Test Runner")
@@ -21,6 +65,16 @@ def main():
         action="store_true",
         help="Run tests in parallel using pytest-xdist",
     )
+    parser.add_argument("--unit", action="store_true", help="Run unit tests")
+    parser.add_argument(
+        "--integration", action="store_true", help="Include root integration tests"
+    )
+    parser.add_argument(
+        "--demos", action="store_true", help="Include demo-program validation tests"
+    )
+    parser.add_argument(
+        "--all", action="store_true", help="Run unit, integration, and demo tests"
+    )
 
     args = parser.parse_args()
 
@@ -32,40 +86,23 @@ def main():
 
         os.chdir(script_dir)
 
-    # Base pytest command
-    cmd = [sys.executable, "-m", "pytest"]
-
-    # Target directories
-    # running validation on time_warp package tests and root level test scripts
-    targets = ["time_warp/tests"]
+    targets = resolve_test_targets(args)
+    cmd = build_pytest_command(args, targets)
 
     if args.comprehensive:
-        # Add coverage options
-        cmd.extend(
-            [
-                "--cov=time_warp",
-                "--cov-report=html:test_reports/html",
-                "--cov-report=term",
-                "--cov-report=xml:test_reports/coverage.xml",  # Added XML report for CI integration
-                "-v",
-            ]
-        )
-
-        # Ensure report dir exists
         Path("test_reports").mkdir(exist_ok=True)
-
         print("📊 Running comprehensive tests with coverage...")
+    elif args.all:
+        print("🧪 Running complete validation suite...")
+    elif args.integration or args.demos:
+        print("🔎 Running unit tests with extended validation...")
     else:
-        # Basic mode
         print("🚀 Running basic smoke tests...")
-        # Could limit to specific markers if we had them, e.g. -m "not slow"
 
     if args.parallel:
-        cmd.append("-n")
-        cmd.append("auto")  # Automatically determine the number of parallel workers
         print("⚡ Running tests in parallel mode...")
 
-    cmd.extend(targets)
+    print(f"ℹ️  Targets: {', '.join(targets)}")
 
     result = subprocess.run(cmd)
 

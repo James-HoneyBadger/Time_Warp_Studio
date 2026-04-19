@@ -367,7 +367,7 @@ class LearningAnalytics:
 
         # Error analysis
         error_analysis = self.get_error_analysis()
-        report += """
+        report += f"""
 
 ═══════════════════════════════════════════════════════════
 ERROR ANALYSIS
@@ -379,10 +379,10 @@ Total Errors Encountered: {error_analysis['total_errors']}
         if error_analysis["most_common"]:
             report += "\nMost Common Errors:\n"
             for i, error in enumerate(error_analysis["most_common"], 1):
-                report += f"  {i}. {
-                    error['message']} ({
-                    error['category']}) - {
-                    error['count']} times\n"
+                report += (
+                    f"  {i}. {error['message']} "
+                    f"({error['category']}) - {error['count']} times\n"
+                )
 
         # Recommendations
         report += """

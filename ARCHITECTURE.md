@@ -635,7 +635,7 @@ Contains:
 ### Features (`features/`)
 
 - `lesson_system.py` — Step-by-step lessons with checkpoints
-- `examples_browser.py` — Searchable 93-program catalog
+- `examples_browser.py` — Searchable 97-program catalog
 - `turtle_preview.py` — Live Logo code preview
 - `theme_editor.py` — Custom theme creation
 - `autosave_manager.py` — Background autosave with versioning

@@ -470,11 +470,12 @@ The Canvas displays turtle graphics output in real-time.
 View → Theme → [Select theme]
 ```
 
-23 built-in themes:
+28 built-in themes:
 
-**Dark**: Dracula, Monokai, VS Code Dark, GitHub Dark, Nord, One Dark Pro, Solarized Dark, Ocean
-**Light**: VS Code Light, GitHub Light, Solarized Light, Spring
+**Dark**: Dracula, Monokai, VS Code Dark, GitHub Dark, Nord, One Dark Pro, Solarized Dark, Ocean, Catppuccin Mocha, Gruvbox Dark, Tokyo Night
+**Light**: Gruvbox Light, Catppuccin Latte, VS Code Light, GitHub Light, Solarized Light, Spring
 **High Contrast**: High Contrast Dark, High Contrast Light
+**Accessibility**: Dyslexia Friendly, Accessible Dark Blue
 **Retro CRT**: Amber Monochrome, Green Monochrome, IBM PC CGA, Commodore 64, Apple II, DOS Blue, ZX Spectrum
 
 ### Customizing Editor

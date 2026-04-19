@@ -1,6 +1,6 @@
 # Examples Catalog
 
-A reference guide to the ~93 example programs included with **Time Warp Studio**.
+A reference guide to the 97 example programs included with **Time Warp Studio**.
 Open any file via **File → Open** or by browsing the `Examples/` folder.
 
 ---
@@ -304,4 +304,4 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 
 ---
 
-*Total: ~93 example programs across 24 languages.*
+*Total: 97 example programs across 24 languages.*

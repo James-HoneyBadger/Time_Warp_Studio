@@ -74,7 +74,7 @@ from .variable_inspector import VariableInspector
 from ..features.classroom_mode import ClassroomMode
 from ..features.autosave_manager import AutosaveManager
 from .focus_mode import FocusModeManager
-from .onboarding import OnboardingManager
+from .onboarding import OnboardingDialog, OnboardingManager
 from .sql_panel import SQLPanel
 from .dbms_window import DBMSWindow
 from .cics_panel import CICSPanel
@@ -231,7 +231,9 @@ class MainWindow(
         self.feature_manager.setup_features()
         self.output.execution_complete.connect(self.on_execution_complete)
         self._connect_lesson_signals()
+        self._connect_learning_hub_signals()
         self._connect_project_runner_signals()
+        self._connect_project_explorer_signals()
         self._connect_turtle_inspector_signals()
         self._connect_classroom_signals()
         self._connect_reference_signals()
@@ -410,13 +412,20 @@ class MainWindow(
     # ---- Onboarding ----
 
     def _maybe_show_onboarding(self):
-        """Show first-run onboarding wizard if not yet completed.
+        """Show first-run onboarding wizard if not yet completed."""
+        if not self._onboarding_manager.should_show_onboarding():
+            return
 
-        NOTE: Onboarding and coach-mark overlays are disabled until their
-        UI issues are resolved.  The method is kept so the call-site in
-        __init__ does not need to change.
-        """
-        return
+        try:
+            dialog = OnboardingDialog(self)
+            dialog.step_completed.connect(self._onboarding_manager.mark_step_completed)
+            dialog.exec()
+            self._onboarding_manager.record_result(
+                dialog.completion_state,
+                skip_requested=dialog.should_skip_onboarding(),
+            )
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Onboarding unavailable for this session: %s", exc)
 
     # ---- Welcome tab ----
 
@@ -463,9 +472,11 @@ class MainWindow(
 
 <h2 style="color: #8be9fd;">&#128640; Quick Start</h2>
 <ul style="font-size: 13px;">
-  <li><b>Ctrl+N</b> — New file &nbsp;|&nbsp; <b>Ctrl+O</b> — Open file &nbsp;|&nbsp; <b>Ctrl+R</b> — Run program</li>
+  <li><b>Ctrl+N</b> — New file &nbsp;|&nbsp; <b>Ctrl+O</b> — Open file &nbsp;|&nbsp; <b>Ctrl+Shift+O</b> — Open project folder</li>
   <li>Pick a language from the toolbar combo, type your code, press <b>Ctrl+R</b>.</li>
+  <li>Open <b>🎓 Learning Hub</b> from the toolbar for challenges, remixing, and tutor help.</li>
   <li>Browse ready-made examples via <b>Help → Browse Examples…</b></li>
+  <li>Use the new <b>Project Explorer</b> to switch between files in a workspace.</li>
   <li>Press <b>Ctrl+?</b> to show all keyboard shortcuts.</li>
   <li>Press <b>F1</b> while editing for context-sensitive language help.</li>
 </ul>
@@ -477,7 +488,7 @@ class MainWindow(
 <ul style="font-size: 13px;">
   <li>Turtle graphics canvas with zoom, pan, animation playback, and PNG export</li>
   <li>Step-through debugger with breakpoints and variable inspection</li>
-  <li>25 editor themes, CRT retro effects, and focus mode</li>
+  <li>28 editor themes, CRT retro effects, project browsing, and focus mode</li>
   <li>SQL workbench with transactions and full DDL support</li>
   <li>CICS 3278 terminal emulator</li>
 </ul>
@@ -1134,6 +1145,22 @@ class MainWindow(
         open_btn.setToolTip("Open an existing file (Ctrl+O)")
         open_btn.setStatusTip("Open a file from disk")
 
+        open_project_action = QAction("Open Project &Folder...", self)
+        open_project_action.setShortcut("Ctrl+Shift+O")
+        open_project_action.triggered.connect(self.open_project_folder)
+        file_menu.addAction(open_project_action)
+
+        open_project_btn = self.toolbar.addAction("🗂 Project", self.open_project_folder)
+        open_project_btn.setToolTip("Open a project folder (Ctrl+Shift+O)")
+        open_project_btn.setStatusTip("Browse a workspace folder")
+
+        learn_btn = self.toolbar.addAction(
+            "🎓 Learn",
+            lambda: self.feature_manager.toggle_feature_panel("learning_hub", visible=True),
+        )
+        learn_btn.setToolTip("Open the Learning Hub")
+        learn_btn.setStatusTip("Launch lessons, challenges, and tutor tools")
+
         save_action = QAction("&Save", self)
         save_action.setShortcut(QKeySequence.Save)
         save_action.triggered.connect(self.save_file)
@@ -1149,7 +1176,10 @@ class MainWindow(
 
         file_menu.addSeparator()
 
-        # Recent files submenu
+        # Recent project/file submenus
+        self.recent_projects_menu = file_menu.addMenu("Recent Projects")
+        self.update_recent_projects_menu()
+
         self.recent_menu = file_menu.addMenu("Recent Files")
         self.update_recent_files_menu()
 
@@ -2325,6 +2355,76 @@ class MainWindow(
                 lambda: self.export_lesson_session("pdf")
             )
 
+    def _connect_learning_hub_signals(self):
+        """Connect the central learning hub to existing IDE features."""
+        panel = self.feature_manager.get_feature_panel("learning_hub")
+        if not panel:
+            return
+        if hasattr(panel, "open_feature_requested"):
+            panel.open_feature_requested.connect(self._open_learning_resource)
+        if hasattr(panel, "challenge_requested"):
+            panel.challenge_requested.connect(self._load_challenge_from_hub)
+        if hasattr(panel, "remix_requested"):
+            panel.remix_requested.connect(self._remix_current_tab)
+        if hasattr(panel, "tutor_requested"):
+            panel.tutor_requested.connect(self._launch_ai_tutor_on_current_code)
+        if hasattr(panel, "export_markdown_requested"):
+            panel.export_markdown_requested.connect(
+                lambda: self.export_lesson_session("markdown")
+            )
+        if hasattr(panel, "export_bundle_requested"):
+            panel.export_bundle_requested.connect(self.export_classroom_bundle)
+
+    def _open_learning_resource(self, feature_id: str):
+        """Open a hub-selected panel or built-in help view."""
+        if feature_id == "quick_reference":
+            self._show_quick_reference()
+            return
+        self.feature_manager.toggle_feature_panel(feature_id, visible=True)
+
+    def _load_challenge_from_hub(self, language_name: str, starter_code: str):
+        """Create a new tab from a featured learning challenge."""
+        language = getattr(Language, language_name.upper(), Language.BASIC)
+        title = f"{language_name.title()} Challenge"
+        self.create_new_tab(title=title, content=starter_code, language=language)
+        self.feature_manager.toggle_feature_panel("lesson_mode", visible=True)
+        self.statusbar.showMessage(f"Challenge loaded: {title}", 3000)
+
+    def _remix_current_tab(self):
+        """Duplicate the current tab so learners can safely experiment."""
+        editor = self.get_current_editor()
+        current_index = self.editor_tabs.currentIndex()
+        if editor is None or current_index < 0:
+            self.create_new_tab(title="Remix", content="", language=Language.BASIC)
+            self.statusbar.showMessage("Opened a blank remix tab", 3000)
+            return
+
+        language = self._ts(current_index).language
+        title = self.editor_tabs.tabText(current_index).replace(" ●", "") or "Untitled"
+        self.create_new_tab(
+            title=f"Remix - {title}",
+            content=editor.toPlainText(),
+            language=language,
+        )
+        self.set_current_tab_info(modified=True, language=language)
+        self.statusbar.showMessage("Created a remix copy of the current tab", 3000)
+
+    def _launch_ai_tutor_on_current_code(self):
+        """Open the AI tutor with the active code context."""
+        panel = self.feature_manager.get_feature_panel("ai_assistant")
+        self.feature_manager.toggle_feature_panel("ai_assistant", visible=True)
+        editor = self.get_current_editor()
+        current_index = self.editor_tabs.currentIndex()
+        language = Language.BASIC
+        code = ""
+        if current_index >= 0:
+            language = self._ts(current_index).language
+        if editor is not None:
+            code = editor.toPlainText()
+        if panel and hasattr(panel, "set_code_context"):
+            panel.set_code_context(language.name if hasattr(language, "name") else "BASIC", code)
+        self.statusbar.showMessage("AI tutor opened for the current tab", 3000)
+
     def _connect_project_runner_signals(self):
         """Connect project runner panel signals to the main window."""
         panel = self.feature_manager.get_feature_panel("project_runner")
@@ -2337,6 +2437,63 @@ class MainWindow(
         if hasattr(panel, "refresh_requested"):
             panel.refresh_requested.connect(self._refresh_project_runner_tabs)
         self._refresh_project_runner_tabs()
+
+    def _connect_project_explorer_signals(self):
+        """Connect the project explorer panel to file loading."""
+        panel = self.feature_manager.get_feature_panel("project_explorer")
+        if not panel:
+            return
+        if hasattr(panel, "open_file_requested"):
+            panel.open_file_requested.connect(self.load_file)
+        if hasattr(panel, "root_path_changed"):
+            panel.root_path_changed.connect(self._remember_project_root)
+
+        recent_paths = self.settings.value("project_explorer/recent_paths", [])
+        if isinstance(recent_paths, str):
+            recent_paths = [recent_paths] if recent_paths else []
+        elif not isinstance(recent_paths, list):
+            recent_paths = list(recent_paths) if recent_paths else []
+
+        if hasattr(panel, "set_recent_paths"):
+            panel.set_recent_paths(recent_paths)
+        self.update_recent_projects_menu()
+
+        initial_root = self.settings.value(
+            "project_explorer/root_path",
+            self.settings.value("last_dir", str(Path.cwd())),
+        )
+        if hasattr(panel, "set_root_path"):
+            panel.set_root_path(str(initial_root))
+
+    def _remember_project_root(self, root_path: str):
+        """Persist recent project roots and keep the explorer synchronized."""
+        path = Path(root_path).expanduser()
+        if path.is_file():
+            path = path.parent
+        if not path.exists() or not path.is_dir():
+            return
+
+        normalized = str(path.resolve())
+        recent_paths = self.settings.value("project_explorer/recent_paths", [])
+        if isinstance(recent_paths, str):
+            recent_paths = [recent_paths] if recent_paths else []
+        elif not isinstance(recent_paths, list):
+            recent_paths = list(recent_paths) if recent_paths else []
+
+        if normalized in recent_paths:
+            recent_paths.remove(normalized)
+        recent_paths.insert(0, normalized)
+        recent_paths = recent_paths[:8]
+
+        self.settings.setValue("project_explorer/root_path", normalized)
+        self.settings.setValue("project_explorer/recent_paths", recent_paths)
+        self.settings.setValue("last_dir", normalized)
+
+        panel = self.feature_manager.get_feature_panel("project_explorer")
+        if panel and hasattr(panel, "set_recent_paths"):
+            panel.set_recent_paths(recent_paths)
+
+        self.update_recent_projects_menu()
 
     def _connect_turtle_inspector_signals(self):
         """Connect turtle inspector panel to output events."""

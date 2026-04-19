@@ -11,7 +11,7 @@ Time Warp Studio is an educational desktop IDE for learning 24 programming langu
 - 24 language executors with turtle graphics integration
 - Step-through debugger with execution timeline and rewind
 - 28 built-in themes (dark, light, retro CRT, accessibility)
-- 93 example programs across all languages
+- 97 example programs across all languages
 - Lesson system with auto-verification
 - AI-powered code suggestions and error explanations
 - 14 dynamic feature panels

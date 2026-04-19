@@ -12,7 +12,7 @@ from typing import Dict, Optional
 
 from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
-from PySide6.QtWidgets import QDockWidget, QWidget
+from PySide6.QtWidgets import QDockWidget, QLabel, QVBoxLayout, QWidget
 
 from .feature_panels import (
     AccessibilityPanel,
@@ -28,10 +28,12 @@ from .feature_panels import (
     ExportableExporterPanel,
     HardwareSimulatorPanel,
     LanguageComparatorPanel,
+    LearningHubPanel,
     LessonModePanel,
     LearningAnalyticsPanel,
     PeerReviewPanel,
     PerformanceProfilerPanel,
+    ProjectExplorerPanel,
     ProjectRunnerPanel,
     ProjectTemplatesPanel,
     SyntaxValidatorPanel,
@@ -44,6 +46,12 @@ class FeatureIntegrationManager:
 
     # Phase 1 features (5)
     PHASE_1_FEATURES = [
+        (
+            "Learning Hub",
+            "learning_hub",
+            LearningHubPanel,
+            "challenges, remixing, and tutor tools",
+        ),
         (
             "Lesson Mode",
             "lesson_mode",
@@ -85,6 +93,12 @@ class FeatureIntegrationManager:
 
     # Phase 2 features (10)
     PHASE_2_FEATURES = [
+        (
+            "Project Explorer",
+            "project_explorer",
+            ProjectExplorerPanel,
+            "browse workspace files",
+        ),
         (
             "Project Runner",
             "project_runner",
@@ -199,6 +213,15 @@ class FeatureIntegrationManager:
         ),
     ]
 
+    EXPERIMENTAL_FEATURE_IDS = {
+        "collaboration_tool",
+        "ai_assistant",
+        "hardware_simulator",
+        "peer_review_tool",
+        "execution_replay",
+        "learning_analytics",
+    }
+
     def __init__(self, main_window):
         """Initialize feature integration manager.
 
@@ -209,6 +232,7 @@ class FeatureIntegrationManager:
         self.feature_panels: Dict[str, QWidget] = {}
         self.dock_widgets: Dict[str, QDockWidget] = {}
         self.feature_actions: Dict[str, QAction] = {}
+        self.feature_metadata: Dict[str, Dict[str, object]] = {}
 
     def setup_features(self):
         """Setup all features in the IDE.
@@ -228,26 +252,54 @@ class FeatureIntegrationManager:
         # Connect feature status signals to IDE
         self._connect_feature_signals()
 
+    def _create_unavailable_placeholder(
+        self,
+        feature_name: str,
+        description: str,
+        reason: str,
+    ) -> QWidget:
+        """Create a lightweight placeholder for unavailable features."""
+        placeholder = QWidget()
+        placeholder.setWindowTitle(f"{feature_name} (Not Available)")
+        placeholder.setProperty("feature_available", False)
+
+        layout = QVBoxLayout(placeholder)
+        title = QLabel(f"{feature_name} is currently unavailable")
+        title.setWordWrap(True)
+        layout.addWidget(title)
+
+        detail = QLabel(f"{description}\n\nReason: {reason}")
+        detail.setWordWrap(True)
+        layout.addWidget(detail)
+
+        layout.addStretch()
+        return placeholder
+
     def _create_feature_panels(self):
         """Create instances of all feature panels."""
         all_features = self.PHASE_1_FEATURES + self.PHASE_2_FEATURES
 
-        for feature_name, feature_id, panel_class, _ in all_features:
+        for feature_name, feature_id, panel_class, description in all_features:
             if panel_class is None:
                 continue  # Skip features without UI panels
 
+            self.feature_metadata[feature_id] = {
+                "name": feature_name,
+                "description": description,
+                "available": True,
+                "experimental": feature_id in self.EXPERIMENTAL_FEATURE_IDS,
+            }
+
             try:
-                # Create panel instance with error handling
                 try:
                     panel = panel_class()
                 except TypeError:
-                    # If panel requires arguments, create with empty init
                     panel = QWidget()
                     panel.setWindowTitle(feature_name)
 
+                panel.setProperty("feature_available", True)
                 self.feature_panels[feature_id] = panel
 
-                # Create dock widget for panel
                 dock = QDockWidget(f"🎯 {feature_name}", self.main_window)
                 dock.setWidget(panel)
                 dock.setObjectName(feature_id)
@@ -256,16 +308,21 @@ class FeatureIntegrationManager:
                     | Qt.DockWidgetArea.BottomDockWidgetArea
                     | Qt.DockWidgetArea.LeftDockWidgetArea
                 )
-                dock.setVisible(False)  # Hidden by default
+                dock.setVisible(False)
 
                 self.dock_widgets[feature_id] = dock
                 self.main_window.addDockWidget(Qt.RightDockWidgetArea, dock)
 
             except (TypeError, ValueError) as e:
                 print(f"❌ Error creating {feature_name} panel: {e}")
-                # Create placeholder widget even if panel fails
-                placeholder = QWidget()
-                placeholder.setWindowTitle(f"{feature_name} (Not Available)")
+                self.feature_metadata[feature_id]["available"] = False
+                self.feature_metadata[feature_id]["reason"] = str(e)
+
+                placeholder = self._create_unavailable_placeholder(
+                    feature_name,
+                    description,
+                    str(e),
+                )
                 self.feature_panels[feature_id] = placeholder
 
                 dock = QDockWidget(f"🎯 {feature_name}", self.main_window)
@@ -332,24 +389,44 @@ class FeatureIntegrationManager:
             features: List of (name, id, class, description) tuples
         """
         for feature_name, feature_id, panel_class, description in features:
+            metadata = self.feature_metadata.get(feature_id, {})
+            is_experimental = bool(metadata.get("experimental", False))
+            is_available = bool(metadata.get("available", panel_class is not None))
+            reason = str(metadata.get("reason", "Not included in this build"))
+
             if panel_class is None:
-                # Show as disabled for Phase 3 features
                 action = QAction(
-                    f"{feature_name} ({description})",
+                    f"⏳ {feature_name} (Coming Soon — {description})",
                     self.main_window,
                 )
                 action.setEnabled(False)
+                action.setToolTip("Planned for a future release")
+            elif not is_available:
+                action = QAction(
+                    f"⚠ {feature_name} (Not Available)",
+                    self.main_window,
+                )
+                action.setEnabled(False)
+                action.setToolTip(reason)
             else:
-                # Create checkable action for toggleable panels
-                action = QAction(f"✓ {feature_name}", self.main_window)
+                label = f"✓ {feature_name}"
+                if is_experimental:
+                    label = f"🧪 {feature_name}"
+
+                action = QAction(label, self.main_window)
                 action.setCheckable(True)
                 action.setChecked(False)
+                action.setToolTip(description)
                 action.triggered.connect(
                     lambda checked, fid=feature_id: self.toggle_feature_panel(fid)
                 )
 
             self.feature_actions[feature_id] = action
             menu.addAction(action)
+
+    def _is_feature_available(self, feature_id: str) -> bool:
+        """Return whether a feature is currently available for activation."""
+        return bool(self.feature_metadata.get(feature_id, {}).get("available", True))
 
     def toggle_feature_panel(self, feature_id: str, visible: Optional[bool] = None):
         """Toggle visibility of a feature panel.
@@ -365,15 +442,30 @@ class FeatureIntegrationManager:
         panel = self.feature_panels.get(feature_id)
 
         if visible is None:
-            visible = not dock.isVisible()
+            visible = not bool(dock.property("requested_visible"))
 
-        dock.setVisible(visible)
+        if visible and not self._is_feature_available(feature_id):
+            dock.setProperty("requested_visible", False)
+            dock.hide()
+            if feature_id in self.feature_actions:
+                self.feature_actions[feature_id].setChecked(False)
+            reason = self.feature_metadata.get(feature_id, {}).get(
+                "reason", "Feature is not available in this build"
+            )
+            self.main_window.statusbar.showMessage(f"⚠ {reason}", 2500)
+            return
 
-        # Update action state
+        dock.setProperty("requested_visible", bool(visible))
+        if visible:
+            if hasattr(self.main_window, "show") and not self.main_window.isVisible():
+                self.main_window.show()
+            dock.show()
+        else:
+            dock.hide()
+
         if feature_id in self.feature_actions:
-            self.feature_actions[feature_id].setChecked(visible)
+            self.feature_actions[feature_id].setChecked(bool(visible))
 
-        # Update status bar
         if panel and hasattr(panel, "status_changed"):
             if visible:
                 status = f"✓ {panel.__class__.__name__} activated"
@@ -382,13 +474,20 @@ class FeatureIntegrationManager:
             self.main_window.statusbar.showMessage(status, 2000)
 
     def show_all_features(self):
-        """Show all feature panels."""
+        """Show all available feature panels."""
+        shown = 0
+        skipped = 0
         for feature_id in self.dock_widgets:
-            self.toggle_feature_panel(feature_id, visible=True)
-        self.main_window.statusbar.showMessage(
-            "✓ All features shown",
-            2000,
-        )
+            if self._is_feature_available(feature_id):
+                self.toggle_feature_panel(feature_id, visible=True)
+                shown += 1
+            else:
+                skipped += 1
+
+        msg = f"✓ Shown {shown} available feature panel(s)"
+        if skipped:
+            msg += f" • {skipped} unavailable"
+        self.main_window.statusbar.showMessage(msg, 2000)
 
     def hide_all_features(self):
         """Hide all feature panels."""
@@ -482,7 +581,8 @@ class FeatureIntegrationManager:
                 for info in self.PHASE_1_FEATURES + self.PHASE_2_FEATURES
                 if info[1] == fid
             ]
-            if self.dock_widgets[feature_id].isVisible()
+            if bool(self.dock_widgets[feature_id].property("requested_visible"))
+            and self._is_feature_available(feature_id)
         ]
 
         if not active_features:
@@ -508,9 +608,16 @@ class FeatureIntegrationManager:
         """
         config = {}
         for feature_id, dock in self.dock_widgets.items():
+            geometry = dock.geometry()
             config[feature_id] = {
-                "visible": dock.isVisible(),
-                "geometry": dock.geometry(),
+                "visible": bool(dock.property("requested_visible"))
+                and self._is_feature_available(feature_id),
+                "geometry": {
+                    "x": geometry.x(),
+                    "y": geometry.y(),
+                    "width": geometry.width(),
+                    "height": geometry.height(),
+                },
             }
         return config
 
@@ -523,4 +630,12 @@ class FeatureIntegrationManager:
         for feature_id, state in config.items():
             if feature_id in self.dock_widgets:
                 dock = self.dock_widgets[feature_id]
-                dock.setVisible(state.get("visible", False))
+                geometry = state.get("geometry", {})
+                if isinstance(geometry, dict) and hasattr(dock, "setGeometry"):
+                    dock.setGeometry(
+                        geometry.get("x", 0),
+                        geometry.get("y", 0),
+                        geometry.get("width", 400),
+                        geometry.get("height", 300),
+                    )
+                self.toggle_feature_panel(feature_id, visible=state.get("visible", False))

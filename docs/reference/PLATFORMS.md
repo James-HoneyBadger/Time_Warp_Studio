@@ -43,9 +43,9 @@ Python/
 │   │   └── forth.py              # Forth language (experimental)
 │   ├── features/
 │   │   ├── lesson_system.py      # Structured lessons with checkpoints
-│   │   ├── examples_browser.py   # Searchable example catalog (69)
+│   │   ├── examples_browser.py   # Searchable example catalog (97)
 │   │   ├── turtle_preview.py     # Live Logo code preview
-│   │   ├── theme_editor.py       # Custom theme creation (23 built-in)
+│   │   ├── theme_editor.py       # Custom theme creation (28 built-in)
 │   │   ├── autosave_manager.py   # Background autosave with versioning
 │   │   └── classroom_mode.py     # Presentation and assignment tools
 │   ├── ui/
@@ -79,12 +79,12 @@ Python/
 
 **Learning Tools:**
 - 📚 Lesson System - Step-by-step guided lessons with checkpoints
-- 📖 Examples Browser - Searchable catalog of 93 example programs
+- 📖 Examples Browser - Searchable catalog of 97 example programs
 - 🐢 Turtle Preview - Live visualization while coding
 
 **Productivity:**
 - 💾 Autosave - Background saving with version history (20 versions/file)
-- 🎨 Theme Editor - 23 built-in themes + custom theme creation
+- 🎨 Theme Editor - 28 built-in themes + custom theme creation
 - 🏫 Classroom Mode - Presentation mode and assignment distribution
 
 **Development:**
@@ -131,8 +131,8 @@ pytest tests/ --cov=time_warp --cov-report=html
 ```
 
 **Current Status:**
-- ✅ 55+ unit tests passing
-- ✅ All major components tested
+- ✅ Comprehensive pytest suite in place
+- ✅ All major components covered by automated checks
 - ✅ Coverage reporting available
 - ✅ CI/CD integration ready
 

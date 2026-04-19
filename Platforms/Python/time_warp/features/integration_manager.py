@@ -150,7 +150,7 @@ class IntegrationManager:
                         data={"component_id": component_id, "error": str(e)},
                     )
                 )
-                self.logger.error("Failed to initialize %s: {e}", component_id)
+                self.logger.error("Failed to initialize %s: %s", component_id, e)
                 return False
 
     def get_component_status(self, component_id: str) -> Optional[ComponentMetadata]:
@@ -250,10 +250,7 @@ class MarketplaceIntegration:
     def initialize(self):
         """Initialize marketplace integration"""
         try:
-            from marketplace.plugin_marketplace import (
-                InstallationService,
-                MarketplaceService,
-            )
+            from .plugin_marketplace import InstallationService, MarketplaceService
 
             self.marketplace_service = MarketplaceService()
             self.installation_service = InstallationService()
@@ -321,14 +318,14 @@ class DebuggerIntegration:
     def initialize(self):
         """Initialize debugger integration"""
         try:
-            from debugging.integrated_debugger import (
+            from .integrated_debugger import (
                 DebugConsole,
                 DebuggerEngine,
                 PerformanceProfiler,
             )
 
             self.debugger_engine = DebuggerEngine()
-            self.debug_console = DebugConsole()
+            self.debug_console = DebugConsole(self.debugger_engine)
             self.profiler = PerformanceProfiler()
 
             self.logger.info("Debugger services initialized")
@@ -387,7 +384,7 @@ class AIIntegration:
     def initialize(self):
         """Initialize AI services"""
         try:
-            from ai.intelligence_engine import (
+            from .intelligence_engine import (
                 BugDetectionEngine,
                 CodeCompletionEngine,
                 LearningPathGenerator,

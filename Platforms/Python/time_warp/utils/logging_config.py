@@ -79,6 +79,8 @@ def setup_logging(
     # Determine log file path
     if log_file is None:
         log_file = str(_ensure_log_dir() / "ide.log")
+    else:
+        Path(log_file).expanduser().parent.mkdir(parents=True, exist_ok=True)
 
     # Create formatters for different profiles
     if profile == "development":
