@@ -30,19 +30,14 @@ from typing import (
 )
 
 # Import language executors
-from ..languages.apl import execute_apl
-from ..languages.assembly import execute_assembly
 from ..languages.basic import execute_basic
 from ..languages.brainfuck import execute_brainfuck
 from ..languages.c_lang_fixed import execute_c
-from ..languages.cics import execute_cics
-from ..languages.cobol import execute_cobol
 from ..languages.forth import execute_forth, reset_forth
-from ..languages.fortran import execute_fortran
 from ..languages.haskell import execute_haskell
+from ..languages.perl import execute_perl
 from ..languages.hypertalk import execute_hypertalk
 from ..languages.javascript import execute_javascript
-from ..languages.jcl import execute_jcl
 from ..languages.logo import execute_logo
 from ..languages.lua import execute_lua
 from ..languages.pascal import execute_pascal
@@ -52,8 +47,9 @@ from ..languages.python import execute_python
 from ..languages.rexx import execute_rexx
 from ..languages.scheme import execute_scheme
 from ..languages.smalltalk import execute_smalltalk
-from ..languages.sql import execute_sql
-from ..languages.sqr import execute_sqr
+from ..languages.ruby import execute_ruby
+from ..languages.erlang import execute_erlang
+from ..languages.rust import execute_rust
 
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
@@ -90,20 +86,16 @@ def _init_whole_program_executors() -> Dict["Language", Callable]:
     return {
         Language.LUA: execute_lua,
         Language.SCHEME: execute_scheme,
-        Language.COBOL: execute_cobol,
         Language.BRAINFUCK: execute_brainfuck,
-        Language.ASSEMBLY: execute_assembly,
         Language.JAVASCRIPT: execute_javascript,
-        Language.FORTRAN: execute_fortran,
         Language.REXX: execute_rexx,
         Language.SMALLTALK: execute_smalltalk,
         Language.HYPERTALK: execute_hypertalk,
         Language.HASKELL: execute_haskell,
-        Language.APL: execute_apl,
-        Language.SQL: execute_sql,
-        Language.JCL: execute_jcl,
-        Language.CICS: execute_cics,
-        Language.SQR: execute_sqr,
+        Language.RUBY: execute_ruby,
+        Language.ERLANG: execute_erlang,
+        Language.RUST: execute_rust,
+        Language.PERL: execute_perl,
     }
 
 
@@ -160,20 +152,16 @@ class Language(Enum):
     PYTHON = auto()
     LUA = auto()
     SCHEME = auto()
-    COBOL = auto()
     BRAINFUCK = auto()
-    ASSEMBLY = auto()
     JAVASCRIPT = auto()
-    FORTRAN = auto()
     REXX = auto()
     SMALLTALK = auto()
     HYPERTALK = auto()
     HASKELL = auto()
-    APL = auto()
-    SQL = auto()
-    JCL = auto()
-    CICS = auto()
-    SQR = auto()
+    RUBY = auto()
+    ERLANG = auto()
+    RUST = auto()
+    PERL = auto()
 
     @classmethod
     def from_extension(cls, ext: str) -> "Language":
@@ -195,25 +183,17 @@ class Language(Enum):
             ".lua": cls.LUA,
             ".scm": cls.SCHEME,
             ".rkt": cls.SCHEME,
-            ".cob": cls.COBOL,
-            ".cbl": cls.COBOL,
             ".bf": cls.BRAINFUCK,
-            ".asm": cls.ASSEMBLY,
-            ".s": cls.ASSEMBLY,
             ".js": cls.JAVASCRIPT,
-            ".f77": cls.FORTRAN,
-            ".for": cls.FORTRAN,
             ".rex": cls.REXX,
             ".rexx": cls.REXX,
             ".st": cls.SMALLTALK,
             ".htalk": cls.HYPERTALK,
             ".hs": cls.HASKELL,
-            ".apl": cls.APL,
-            ".sql": cls.SQL,
-            ".jcl": cls.JCL,
-            ".cics": cls.CICS,
-            ".sqr": cls.SQR,
-            ".sqc": cls.SQR,
+            ".rb": cls.RUBY,
+            ".erl": cls.ERLANG,
+            ".hrl": cls.ERLANG,
+            ".rs": cls.RUST,
         }
         return mapping.get(ext, cls.BASIC)
 
@@ -230,20 +210,15 @@ class Language(Enum):
             Language.PYTHON: "Python",
             Language.LUA: "Lua",
             Language.SCHEME: "Scheme",
-            Language.COBOL: "COBOL",
             Language.BRAINFUCK: "Brainfuck",
-            Language.ASSEMBLY: "Assembly",
             Language.JAVASCRIPT: "JavaScript",
-            Language.FORTRAN: "FORTRAN 77",
             Language.REXX: "REXX",
             Language.SMALLTALK: "Smalltalk",
             Language.HYPERTALK: "HyperTalk",
             Language.HASKELL: "Haskell",
-            Language.APL: "APL",
-            Language.SQL: "SQL Server",
-            Language.JCL: "JCL",
-            Language.CICS: "CICS",
-            Language.SQR: "SQR",
+            Language.RUBY: "Ruby",
+            Language.ERLANG: "Erlang",
+            Language.RUST: "Rust",
         }
         return names.get(self, "Unknown")
 
@@ -443,7 +418,6 @@ class Interpreter:
         self.basic_user_fns: Dict[str, Any] = {}
         self.basic_if_stack: List[Dict] = []
         self.logo_block_buffer: List[str] = []
-        self.sql_session: Optional[Any] = None
         self.basic_types: Dict[str, Dict] = {}
         self.basic_error_handler_line: int = 0
         self.basic_error_line: int = 0
@@ -574,7 +548,6 @@ class Interpreter:
         self.basic_user_fns: Dict[str, Any] = {}
         self.basic_if_stack: List[Dict] = []
         self.logo_block_buffer: List[str] = []
-        self.sql_session: Optional[Any] = None
         self.basic_types: Dict[str, Dict] = {}
 
         # Logo turtle reference (set during _execute_line)
@@ -981,6 +954,74 @@ class Interpreter:
         self.logo_procedure_params[proc_name] = params
         return proc_name
 
+    def _execute_python_debug(self, source: str, turtle: "TurtleState") -> str:
+        """Execute Python source with line-by-line debug stepping via sys.settrace.
+
+        Installs a trace function that pauses on each source line when
+        step_mode is True or a breakpoint is hit.  The interpreter's
+        existing debug_callback / debug_event / debug_timeline machinery is
+        reused so the UI update path is identical to the BASIC debugger.
+        """
+        import sys as _sys
+
+        source_lines = source.splitlines()
+        interp = self  # capture self for the closure
+
+        def _tracer(frame, event, arg):  # noqa: ANN001
+            if event != "line":
+                return _tracer
+            # Only trace user's sandboxed code, not stdlib/helpers
+            if frame.f_code.co_filename != "<sandbox>":
+                return _tracer
+            if not interp.running:
+                raise SystemExit(0)  # clean exit — caught by exec wrapper
+
+            line_no = frame.f_lineno
+            # Build variables snapshot: skip private names, callables, modules
+            raw = dict(frame.f_locals)
+            variables = {
+                k: v for k, v in raw.items()
+                if not k.startswith("_")
+                and not callable(v)
+                and not hasattr(v, "__module__")  # filter modules
+            }
+
+            # Record to timeline
+            line_content = (
+                source_lines[line_no - 1].strip()
+                if 1 <= line_no <= len(source_lines)
+                else ""
+            )
+            if interp.debug_timeline:
+                frame_obj = interp.debug_timeline.record_frame(
+                    line=line_no,
+                    line_content=line_content,
+                    variables=variables,
+                    stack_depth=0,
+                )
+                if interp.debug_frame_callback and frame_obj is not None:
+                    interp.debug_frame_callback(frame_obj)  # pylint: disable=not-callable
+
+            # Pause if stepping or breakpoint
+            if interp.step_mode or line_no in interp.breakpoints:
+                if interp.debug_callback:
+                    interp.debug_callback(line_no, variables)  # pylint: disable=not-callable
+                interp.debug_event.wait(timeout=300)
+                interp.debug_event.clear()
+                if not interp.running:
+                    raise SystemExit(0)
+
+            return _tracer
+
+        _sys.settrace(_tracer)
+        try:
+            output_text = execute_python(self, source, turtle)
+        except SystemExit:
+            output_text = ""
+        finally:
+            _sys.settrace(None)
+        return output_text
+
     def execute(self, turtle: "TurtleState | None" = None) -> List[str]:
         """
         Execute loaded program with timeout and iteration protection
@@ -1002,7 +1043,10 @@ class Interpreter:
             if turtle is None:
                 from ..graphics.turtle_state import TurtleState as _TS
                 turtle = _TS()
-            output_text = execute_python(self, source, turtle)
+            if self.debug_mode:
+                output_text = self._execute_python_debug(source, turtle)
+            else:
+                output_text = execute_python(self, source, turtle)
             for line in output_text.splitlines(keepends=True):
                 self.log_output(line.rstrip("\n"))
             return self.output.copy()
@@ -1014,9 +1058,21 @@ class Interpreter:
             if turtle is None:
                 from ..graphics.turtle_state import TurtleState as _TS
                 turtle = _TS()
+            if self.debug_mode:
+                self.log_output(
+                    f"ℹ️ Debug step-through is not supported for "
+                    f"{self.language.name}. Running in observation mode."
+                )
             output_text = fn(self, source, turtle)
             for line in output_text.splitlines(keepends=True):
                 self.log_output(line.rstrip("\n"))
+            if self.debug_mode and self.debug_timeline:
+                # Emit one aggregate frame for whole-program completion
+                self.debug_timeline.record_frame(
+                    line=len(source.splitlines()),
+                    line_content="<execution complete>",
+                    variables=self.get_variables(),
+                )
             return self.output.copy()
 
         # Setup runtime (fresh run detection, counters, timer)
@@ -1068,6 +1124,9 @@ class Interpreter:
             for idx, statement in enumerate(statements):
                 if self._should_break_statement(statement, physical_line, idx):
                     self._do_debug_pause(physical_line)
+                    # Stop was called while paused — exit immediately.
+                    if not self.running:
+                        break
 
                 self._check_timeout(start_time)
                 iterations += 1
@@ -1119,7 +1178,9 @@ class Interpreter:
         if self.debug_callback:
             # pylint: disable=not-callable
             self.debug_callback(line_number, self.get_variables())
-        self.debug_event.wait()
+        # Use a timeout so the thread is never permanently blocked if the UI
+        # fails to resume (e.g. window closed, crash, or stop_debug called).
+        self.debug_event.wait(timeout=300)
         self.debug_event.clear()
 
     def _record_debug_frame(
@@ -1529,6 +1590,33 @@ class Interpreter:
     def pause_execution(self):
         """Pause execution at the next line"""
         self.step_mode = True
+
+    @property
+    def call_stack(self) -> List[tuple]:
+        """Return a language-appropriate call stack for the debug UI.
+
+        Returns a list of (line_number, name) tuples, most recent last.
+        """
+        if self.language == Language.BASIC:
+            result = []
+            for frame in self.basic_call_stack:
+                line = frame.get("return_line", 0) if isinstance(frame, dict) else 0
+                name = frame.get("name", "SUB") if isinstance(frame, dict) else str(frame)
+                result.append((line, name))
+            if self.gosub_stack:
+                for ret_line in self.gosub_stack:
+                    result.append((ret_line, "GOSUB"))
+            return result
+        if self.language == Language.PASCAL:
+            return [
+                (f.get("line", 0), f.get("name", "procedure"))
+                for f in self.pascal_call_stack
+                if isinstance(f, dict)
+            ]
+        # For other line-by-line languages, use gosub_stack
+        if self.gosub_stack:
+            return [(ret_line, "GOSUB") for ret_line in self.gosub_stack]
+        return []
 
     def get_variables(self) -> Dict[str, Any]:
         """Get all current variables for debugging"""

@@ -1,5 +1,5 @@
 """
-Feature UI Panels for Time Warp Studio v9.0.0
+Feature UI Panels for Time Warp Studio v10.0.0
 
 This module provides PySide6 Qt widget panels for the IDE's educational and
 workflow features. Each panel wraps a core module and provides a user-friendly
@@ -10,6 +10,7 @@ interface.
 # errors for these modules in this file.
 # pylint: disable=no-name-in-module
 
+import json
 from pathlib import Path
 from typing import Optional
 
@@ -114,19 +115,12 @@ class SyntaxValidatorPanel(FeaturePanelBase):
                 "PYTHON",
                 "LUA",
                 "SCHEME",
-                "COBOL",
                 "BRAINFUCK",
-                "ASSEMBLY",
                 "JAVASCRIPT",
-                "FORTRAN",
                 "REXX",
                 "SMALLTALK",
                 "HYPERTALK",
                 "HASKELL",
-                "APL",
-                "SQL",
-                "JCL",
-                "CICS",
             ]
         )
         lang_layout.addWidget(self.lang_combo)
@@ -166,20 +160,12 @@ class SyntaxValidatorPanel(FeaturePanelBase):
                 "PYTHON": Language.PYTHON,
                 "LUA": Language.LUA,
                 "SCHEME": Language.SCHEME,
-                "COBOL": Language.COBOL,
                 "BRAINFUCK": Language.BRAINFUCK,
-                "ASSEMBLY": Language.ASSEMBLY,
                 "JAVASCRIPT": Language.JAVASCRIPT,
-                "FORTRAN": Language.FORTRAN,
                 "REXX": Language.REXX,
                 "SMALLTALK": Language.SMALLTALK,
                 "HYPERTALK": Language.HYPERTALK,
                 "HASKELL": Language.HASKELL,
-                "APL": Language.APL,
-                "SQL": Language.SQL,
-                "SQL SERVER": Language.SQL,
-                "JCL": Language.JCL,
-                "CICS": Language.CICS,
             }
             return mapping.get(cleaned, Language.BASIC)
         return Language.BASIC
@@ -348,16 +334,6 @@ class LearningHubPanel(FeaturePanelBase):
             "goal": "Use a loop to print the numbers 1 through 5.",
             "starter": 'for i in range(1, 6):\n    print(i)\n',
         },
-        {
-            "title": "SQL Table Challenge",
-            "language": "SQL",
-            "goal": "Create a table and insert one record.",
-            "starter": (
-                'CREATE TABLE students (id INT, name TEXT);\n'
-                "INSERT INTO students VALUES (1, 'Ada');\n"
-                'SELECT * FROM students;\n'
-            ),
-        },
     ]
 
     def __init__(self):
@@ -380,6 +356,7 @@ class LearningHubPanel(FeaturePanelBase):
         for label, feature_id in [
             ("Project Explorer", "project_explorer"),
             ("Lesson Mode", "lesson_mode"),
+            ("Lesson Authoring", "lesson_authoring"),
             ("Timeline Replay", "execution_replay"),
             ("Achievements", "achievements"),
             ("Quick Reference", "quick_reference"),
@@ -464,6 +441,168 @@ class LearningHubPanel(FeaturePanelBase):
         name = self.lesson_name.text().strip() or "Guided Lesson"
         description = self.lesson_desc.text().strip() or ""
         self.export_bundle_requested.emit(name, description)
+
+
+class LessonAuthoringPanel(FeaturePanelBase):
+    """Create custom lessons and checkpoints directly in the IDE."""
+
+    lesson_created = Signal(dict)
+
+    def __init__(self):
+        super().__init__("Lesson Authoring")
+        self._checkpoints: list[dict] = []
+        self._setup_ui()
+        self._update_preview()
+
+    def _setup_ui(self):
+        """Build the lesson authoring interface."""
+        intro = QLabel(
+            "Create your own guided lesson with checkpoints, hints, and solutions."
+        )
+        intro.setWordWrap(True)
+        self.layout_main.addWidget(intro)
+
+        lesson_group = QGroupBox("Lesson Details")
+        lesson_form = QFormLayout(lesson_group)
+        self.lesson_title_input = QLineEdit("New Lesson")
+        self.lesson_title_input.textChanged.connect(self._update_preview)
+        lesson_form.addRow("Title:", self.lesson_title_input)
+
+        self.lesson_description_input = QTextEdit()
+        self.lesson_description_input.setMaximumHeight(70)
+        self.lesson_description_input.textChanged.connect(self._update_preview)
+        lesson_form.addRow("Description:", self.lesson_description_input)
+
+        self.language_combo = QComboBox()
+        self.language_combo.addItems(
+            ["basic", "logo", "pilot", "python", "javascript", "c"]
+        )
+        self.language_combo.currentTextChanged.connect(self._update_preview)
+        lesson_form.addRow("Language:", self.language_combo)
+
+        self.difficulty_combo = QComboBox()
+        self.difficulty_combo.addItems(["beginner", "intermediate", "advanced"])
+        self.difficulty_combo.currentTextChanged.connect(self._update_preview)
+        lesson_form.addRow("Difficulty:", self.difficulty_combo)
+        self.layout_main.addWidget(lesson_group)
+
+        checkpoint_group = QGroupBox("Checkpoint Builder")
+        checkpoint_layout = QVBoxLayout(checkpoint_group)
+        checkpoint_form = QFormLayout()
+
+        self.checkpoint_title_input = QLineEdit()
+        checkpoint_form.addRow("Checkpoint title:", self.checkpoint_title_input)
+
+        self.checkpoint_description_input = QLineEdit()
+        checkpoint_form.addRow("Description:", self.checkpoint_description_input)
+
+        self.expected_output_input = QLineEdit()
+        checkpoint_form.addRow("Expected output:", self.expected_output_input)
+
+        self.hints_input = QLineEdit()
+        self.hints_input.setPlaceholderText("Separate hints with | characters")
+        checkpoint_form.addRow("Hints:", self.hints_input)
+
+        checkpoint_layout.addLayout(checkpoint_form)
+
+        checkpoint_layout.addWidget(QLabel("Starter code:"))
+        self.starter_code_input = QTextEdit()
+        self.starter_code_input.setMaximumHeight(90)
+        checkpoint_layout.addWidget(self.starter_code_input)
+
+        checkpoint_layout.addWidget(QLabel("Solution:"))
+        self.solution_input = QTextEdit()
+        self.solution_input.setMaximumHeight(90)
+        checkpoint_layout.addWidget(self.solution_input)
+
+        add_checkpoint_btn = QPushButton("Add Checkpoint")
+        add_checkpoint_btn.clicked.connect(self._add_checkpoint)
+        checkpoint_layout.addWidget(add_checkpoint_btn)
+
+        self.layout_main.addWidget(checkpoint_group)
+
+        self.checkpoint_list = QListWidget()
+        self.layout_main.addWidget(QLabel("Lesson checkpoints:"))
+        self.layout_main.addWidget(self.checkpoint_list)
+
+        action_row = QHBoxLayout()
+        preview_btn = QPushButton("Preview JSON")
+        preview_btn.clicked.connect(self._update_preview)
+        action_row.addWidget(preview_btn)
+
+        register_btn = QPushButton("Add to Lesson Mode")
+        register_btn.clicked.connect(self._register_lesson)
+        action_row.addWidget(register_btn)
+        self.layout_main.addLayout(action_row)
+
+        self.preview_output = QTextEdit()
+        self.preview_output.setReadOnly(True)
+        self.layout_main.addWidget(self.preview_output)
+
+    def _normalize_hints(self) -> list[str]:
+        """Return cleaned checkpoint hints from the text field."""
+        raw_hints = self.hints_input.text().replace("\n", "|")
+        return [hint.strip() for hint in raw_hints.split("|") if hint.strip()]
+
+    def _collect_checkpoint_payload(self) -> dict | None:
+        """Collect the current checkpoint editor values."""
+        title = self.checkpoint_title_input.text().strip()
+        if not title:
+            self.preview_output.setPlainText("Add a checkpoint title before saving it.")
+            return None
+
+        return {
+            "title": title,
+            "description": self.checkpoint_description_input.text().strip(),
+            "starter_code": self.starter_code_input.toPlainText(),
+            "expected_output": self.expected_output_input.text().strip(),
+            "hints": self._normalize_hints(),
+            "solution": self.solution_input.toPlainText(),
+        }
+
+    def _build_lesson_payload(self) -> dict:
+        """Build a serializable lesson definition from current UI state."""
+        title = self.lesson_title_input.text().strip() or "Custom Lesson"
+        lesson_id = LessonManager._slugify_lesson_id(title)
+        return {
+            "id": lesson_id,
+            "title": title,
+            "description": self.lesson_description_input.toPlainText().strip(),
+            "language": self.language_combo.currentText().strip().lower(),
+            "difficulty": self.difficulty_combo.currentText().strip().lower(),
+            "checkpoints": list(self._checkpoints),
+        }
+
+    def _update_preview(self):
+        """Refresh the JSON preview for the current lesson."""
+        payload = self._build_lesson_payload()
+        self.preview_output.setPlainText(json.dumps(payload, indent=2))
+
+    def _add_checkpoint(self):
+        """Append the current checkpoint to the lesson draft."""
+        checkpoint = self._collect_checkpoint_payload()
+        if checkpoint is None:
+            return
+
+        self._checkpoints.append(checkpoint)
+        self.checkpoint_list.addItem(
+            f"{len(self._checkpoints)}. {checkpoint['title']}"
+        )
+        self._update_preview()
+        self.emit_status(f"Checkpoint added: {checkpoint['title']}")
+
+    def _register_lesson(self):
+        """Emit the authored lesson so the IDE can register it."""
+        if not self._checkpoints:
+            self.preview_output.setPlainText(
+                "Add at least one checkpoint before registering the lesson."
+            )
+            return
+
+        payload = self._build_lesson_payload()
+        self.preview_output.setPlainText(json.dumps(payload, indent=2))
+        self.lesson_created.emit(payload)
+        self.emit_status(f"Lesson drafted: {payload['title']}")
 
 
 class LessonModePanel(FeaturePanelBase):
@@ -665,6 +804,18 @@ class LessonModePanel(FeaturePanelBase):
         else:
             self.hint_output.setText("❌ Output did not match. Try again.")
 
+    def add_custom_lesson(self, lesson_data: dict):
+        """Register a custom-authored lesson and select it in the list."""
+        lesson = self.lesson_manager.import_lesson_data(lesson_data)
+        self._load_lessons()
+        for index in range(self.lesson_list.count()):
+            item = self.lesson_list.item(index)
+            if item.data(Qt.ItemDataRole.UserRole) == lesson.id:
+                self.lesson_list.setCurrentItem(item)
+                break
+        self.emit_status(f"Custom lesson added: {lesson.title}")
+        return lesson
+
     def get_session_snapshot(self) -> dict:
         """Return summary details for export."""
         lesson = self.lesson_manager.current_lesson
@@ -704,22 +855,14 @@ class ProjectExplorerPanel(FeaturePanelBase):
         "node_modules",
     }
     CODE_EXTENSIONS = {
-        ".apl",
-        ".asm",
         ".bas",
         ".bf",
         ".c",
-        ".cbl",
-        ".cics",
-        ".cob",
         ".f",
-        ".for",
-        ".f77",
         ".forth",
         ".fs",
         ".hs",
         ".htalk",
-        ".jcl",
         ".js",
         ".logo",
         ".lua",
@@ -732,9 +875,6 @@ class ProjectExplorerPanel(FeaturePanelBase):
         ".rex",
         ".rexx",
         ".scm",
-        ".sqr",
-        ".sqc",
-        ".sql",
         ".st",
         ".txt",
         ".md",
@@ -1958,7 +2098,7 @@ class AIAssistantPanel(FeaturePanelBase):
         """Load a built-in tutoring topic."""
         suggestion = self.ai.suggest_code(topic)
         self.response_display.setText(suggestion.explanation)
-        self._set_suggestions(suggestion.alternatives or [f"Try a {topic} example"]) 
+        self._set_suggestions(suggestion.alternatives or [f"Try a {topic} example"])
 
     def _set_suggestions(self, items: list[str]):
         """Refresh the list of visible suggestions."""
@@ -2013,8 +2153,6 @@ class AIAssistantPanel(FeaturePanelBase):
             hints.append("Python relies on indentation, so keep nested blocks aligned.")
         elif normalized == "BASIC":
             hints.append("BASIC works well when you build the program one small step at a time.")
-        elif normalized == "SQL":
-            hints.append("SQL tasks often follow CREATE, INSERT, then SELECT to verify results.")
 
         syntax_help = self.ai.fix_syntax(source)
         message = "Tutor summary:\n\n" + "\n".join(f"• {hint}" for hint in hints)
@@ -2348,6 +2486,7 @@ class PeerReviewPanel(FeaturePanelBase):
 # Export all panels
 __all__ = [
     "LessonModePanel",
+    "LessonAuthoringPanel",
     "ErrorExplainerPanel",
     "ClassroomModePanel",
     "ReferenceSearchPanel",

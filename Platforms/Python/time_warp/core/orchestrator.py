@@ -65,7 +65,7 @@ class ComponentInfo:
 class SystemInfo:
     """Overall system information"""
 
-    version: str = "9.0.0"
+    version: str = "10.0.0"
     status: SystemStatus = SystemStatus.INITIALIZING
     uptime_seconds: int = 0
     started_at: datetime = field(default_factory=utc_now)
@@ -198,20 +198,12 @@ class SystemOrchestrator:
                 "Python",
                 "Lua",
                 "Scheme",
-                "COBOL",
                 "Brainfuck",
-                "Assembly",
                 "JavaScript",
-                "Fortran",
                 "REXX",
                 "Smalltalk",
                 "HyperTalk",
                 "Haskell",
-                "APL",
-                "SQL",
-                "JCL",
-                "CICS",
-                "SQR",
             ]
 
             # Initialize components

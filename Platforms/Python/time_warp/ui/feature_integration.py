@@ -29,13 +29,11 @@ from .feature_panels import (
     HardwareSimulatorPanel,
     LanguageComparatorPanel,
     LearningHubPanel,
+    LessonAuthoringPanel,
     LessonModePanel,
     LearningAnalyticsPanel,
     PeerReviewPanel,
     PerformanceProfilerPanel,
-    ProjectExplorerPanel,
-    ProjectRunnerPanel,
-    ProjectTemplatesPanel,
     SyntaxValidatorPanel,
     TurtleInspectorPanel,
 )
@@ -59,6 +57,12 @@ class FeatureIntegrationManager:
             "guided checkpoints",
         ),
         (
+            "Lesson Authoring",
+            "lesson_authoring",
+            LessonAuthoringPanel,
+            "build custom lessons",
+        ),
+        (
             "Error Explainer",
             "error_explainer",
             ErrorExplainerPanel,
@@ -69,12 +73,6 @@ class FeatureIntegrationManager:
             "syntax_validator",
             SyntaxValidatorPanel,
             "real-time error detection",
-        ),
-        (
-            "Project Templates",
-            "project_templates",
-            ProjectTemplatesPanel,
-            "starter templates",
         ),
         (
             "Timeline Debugger",
@@ -93,18 +91,6 @@ class FeatureIntegrationManager:
 
     # Phase 2 features (10)
     PHASE_2_FEATURES = [
-        (
-            "Project Explorer",
-            "project_explorer",
-            ProjectExplorerPanel,
-            "browse workspace files",
-        ),
-        (
-            "Project Runner",
-            "project_runner",
-            ProjectRunnerPanel,
-            "multi-tab runs",
-        ),
         (
             "Classroom Mode",
             "classroom_mode",

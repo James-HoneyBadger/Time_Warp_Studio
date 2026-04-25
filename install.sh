@@ -23,7 +23,7 @@ set -euo pipefail
 
 # ── Version ──────────────────────────────────────────────────────────────────
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VERSION="$(cat "$SCRIPT_DIR/VERSION" 2>/dev/null || echo "9.0.0")"
+VERSION="$(cat "$SCRIPT_DIR/VERSION" 2>/dev/null || echo "10.0.0")"
 APP_NAME="time-warp-studio"
 APP_DISPLAY_NAME="Time Warp Studio"
 

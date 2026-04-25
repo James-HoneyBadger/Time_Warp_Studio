@@ -753,30 +753,6 @@ _LUA_SNIPPETS: List[CodeSnippet] = [
     ),
 ]
 
-_COBOL_SNIPPETS: List[CodeSnippet] = [
-    _s(
-        "Hello World",
-        "DISPLAY statement",
-        "IDENTIFICATION DIVISION.\nPROGRAM-ID. HELLO.\nPROCEDURE DIVISION.\n    DISPLAY 'Hello, World!'.\n    STOP RUN.\n",
-        "COBOL",
-        "Basics",
-    ),
-    _s(
-        "Arithmetic",
-        "COMPUTE verb",
-        "IDENTIFICATION DIVISION.\nPROGRAM-ID. ARITH.\nDATA DIVISION.\nWORKING-STORAGE SECTION.\n  01 A PIC 9(4) VALUE 100.\n  01 B PIC 9(4) VALUE 250.\n  01 C PIC 9(4).\nPROCEDURE DIVISION.\n  COMPUTE C = A + B.\n  DISPLAY C.\n  STOP RUN.\n",
-        "COBOL",
-        "Arithmetic",
-    ),
-    _s(
-        "PERFORM loop",
-        "PERFORM VARYING",
-        "IDENTIFICATION DIVISION.\nPROGRAM-ID. LOOP.\nDATA DIVISION.\nWORKING-STORAGE SECTION.\n  01 IDX PIC 9(2).\nPROCEDURE DIVISION.\n  PERFORM VARYING IDX FROM 1 BY 1 UNTIL IDX > 5\n    DISPLAY IDX\n  END-PERFORM.\n  STOP RUN.\n",
-        "COBOL",
-        "Control Flow",
-    ),
-]
-
 _BRAINFUCK_SNIPPETS: List[CodeSnippet] = [
     _s(
         "Hello World",
@@ -864,52 +840,6 @@ _HYPERTALK_SNIPPETS: List[CodeSnippet] = [
     ),
 ]
 
-_SQL_SNIPPETS: List[CodeSnippet] = [
-    _s("SELECT all", "SELECT * FROM", "SELECT * FROM employees;\n", "SQL", "Queries"),
-    _s(
-        "SELECT WHERE",
-        "Filtered query",
-        "SELECT first_name, last_name FROM employees WHERE department = 'HR';\n",
-        "SQL",
-        "Queries",
-    ),
-    _s(
-        "CREATE TABLE",
-        "Table definition",
-        "CREATE TABLE employees (\n    id INT PRIMARY KEY,\n    first_name VARCHAR(50),\n    last_name VARCHAR(50),\n    department VARCHAR(50)\n);\n",
-        "SQL",
-        "DDL",
-    ),
-    _s(
-        "INSERT",
-        "Insert row",
-        "INSERT INTO employees (id, first_name, last_name, department)\nVALUES (1, 'Alice', 'Smith', 'Engineering');\n",
-        "SQL",
-        "DML",
-    ),
-    _s(
-        "UPDATE",
-        "Update rows",
-        "UPDATE employees SET department = 'Management' WHERE id = 1;\n",
-        "SQL",
-        "DML",
-    ),
-    _s(
-        "DELETE",
-        "Delete rows",
-        "DELETE FROM employees WHERE department = 'Temp';\n",
-        "SQL",
-        "DML",
-    ),
-    _s(
-        "JOIN",
-        "INNER JOIN",
-        "SELECT e.first_name, d.name\nFROM employees e\nINNER JOIN departments d ON e.department_id = d.id;\n",
-        "SQL",
-        "Queries",
-    ),
-]
-
 
 class SnippetLibrary:
     """Manager for code snippets."""
@@ -922,19 +852,12 @@ class SnippetLibrary:
             "PYTHON": _PYTHON_SNIPPETS.copy(),
             "LUA": _LUA_SNIPPETS.copy(),
             "SCHEME": _SCHEME_SNIPPETS.copy(),
-            "COBOL": _COBOL_SNIPPETS.copy(),
             "BRAINFUCK": _BRAINFUCK_SNIPPETS.copy(),
-            "ASSEMBLY": [],
             "JAVASCRIPT": _JS_SNIPPETS.copy(),
-            "FORTRAN": _FORTRAN_SNIPPETS.copy(),
             "REXX": _REXX_SNIPPETS.copy(),
             "SMALLTALK": _SMALLTALK_SNIPPETS.copy(),
             "HYPERTALK": _HYPERTALK_SNIPPETS.copy(),
             "HASKELL": _HASKELL_SNIPPETS.copy(),
-            "APL": [],
-            "SQL": _SQL_SNIPPETS.copy(),
-            "JCL": [],
-            "CICS": [],
             "PASCAL": _PASCAL_SNIPPETS.copy(),
             "C": _C_SNIPPETS.copy(),
             "PROLOG": _PROLOG_SNIPPETS.copy(),

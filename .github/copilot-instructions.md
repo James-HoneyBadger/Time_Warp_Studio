@@ -2,15 +2,15 @@
 
 **Project:** Time Warp Studio - Educational multi-language programming environment  
 **Maintainer:** James Temple <james@honey-badger.org>  
-**Last Updated:** March 2026
+**Last Updated:** April 2026
 
 ---
 
 ## Project Overview
 
-Time Warp Studio is an educational desktop programming environment built with Python and PySide6 (Qt6) that provides a unified IDE for learning 24 programming languages with integrated turtle graphics.
+Time Warp Studio is an educational desktop programming environment built with Python and PySide6 (Qt6) that provides a unified IDE for learning **20 programming languages** with integrated turtle graphics.
 
-**Supported Languages:** BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Python, Lua, Scheme, COBOL, Brainfuck, Assembly, JavaScript, Fortran, REXX, Smalltalk, HyperTalk, Haskell, APL, SQL, JCL, CICS, SQR.
+**Supported Languages:** BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Python, Lua, Scheme, Brainfuck, JavaScript, REXX, Smalltalk, HyperTalk, Haskell, Erlang, Ruby, Rust, Perl.
 
 **Current State:** Native desktop application (Python/PySide6) - single actively maintained version.
 
@@ -21,7 +21,7 @@ Time Warp Studio is an educational desktop programming environment built with Py
 - **Desktop Application (Python/PySide6)** — primary and only maintained version
     - Entry point: `Platforms/Python/time_warp_ide.py`
     - Core: `Platforms/Python/time_warp/core/interpreter.py`
-    - Languages: 24 executors in `Platforms/Python/time_warp/languages/`
+    - Languages: 20 executors in `Platforms/Python/time_warp/languages/`
     - UI: PySide6 (Qt6) with modern desktop interface (30+ UI modules)
     - All UI state (editor, canvas, themes) managed by main application
 
@@ -38,7 +38,7 @@ def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) 
 ```
 
 **Two execution modes:**
-- **Whole-program executors** (17 languages): Receive the entire source as a string. Registered in `_WHOLE_PROGRAM_EXECUTORS` dict in `core/interpreter.py`.
+- **Whole-program executors** (13 languages): Receive the entire source as a string. Registered in `_WHOLE_PROGRAM_EXECUTORS` dict in `core/interpreter.py`. These are: Python, Lua, Scheme, Brainfuck, JavaScript, REXX, Smalltalk, HyperTalk, Haskell, Erlang, Ruby, Rust, Perl.
 - **Line-by-line executors** (7 languages: BASIC, PILOT, Logo, C, Pascal, Prolog, Forth): The interpreter iterates lines and calls the executor per statement.
 
 When adding a new whole-program language, only one dict needs updating: `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.

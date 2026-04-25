@@ -60,6 +60,23 @@ _CLOSE_BRACE_WITH_TRAILING_WHILE_RE = re.compile(
 _SWITCH_RE = re.compile(r"^\s*switch\s*\((.*)\)\s*\{?\s*$", re.IGNORECASE)
 _CASE_RE = re.compile(r"^\s*case\s+(.+?)\s*:\s*(.*)?$", re.IGNORECASE)
 _DEFAULT_RE = re.compile(r"^\s*default\s*:\s*(.*)?$", re.IGNORECASE)
+_STRUCT_DEF_RE = re.compile(
+    r"^\s*(?:typedef\s+)?struct\s+([A-Za-z_][A-Za-z0-9_]*)\s*\{\s*$", re.IGNORECASE
+)
+_STRUCT_END_RE = re.compile(
+    r"^\s*\}\s*([A-Za-z_][A-Za-z0-9_]*)?\s*;?\s*$", re.IGNORECASE
+)
+_STRUCT_VAR_RE = re.compile(
+    r"^\s*(?:struct\s+)?([A-Za-z_][A-Za-z0-9_]*)\s+([A-Za-z_][A-Za-z0-9_]*)\s*;?\s*$",
+    re.IGNORECASE,
+)
+_TYPEDEF_RE = re.compile(
+    r"^\s*typedef\s+(int|long|float|double|char|unsigned)\s+([A-Za-z_][A-Za-z0-9_]*)\s*;?\s*$",
+    re.IGNORECASE,
+)
+_STRUCT_FIELD_ASSIGN_RE = re.compile(
+    r"^\s*([A-Za-z_][A-Za-z0-9_]*)\.(\w+)\s*=\s*(.+);?\s*$"
+)
 
 
 def _split_case_stmts(text: str) -> List[str]:
@@ -772,6 +789,15 @@ def _c_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
     if not expr:
         return 0
 
+    # Struct field access: var.field
+    m_field = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)$", expr)
+    if m_field:
+        var_name = m_field.group(1).upper()
+        field_name = m_field.group(2).upper()
+        rec = interpreter.variables.get(var_name)
+        if isinstance(rec, dict) and field_name in rec:
+            return rec[field_name]
+
     # Ternary operator: cond ? true_val : false_val
     # Find ? and : at depth 0
     ternary_q = -1
@@ -929,6 +955,24 @@ def _c_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
     expr_repl = re.sub(
         r"([A-Za-z_][A-Za-z0-9_]*)\s*\[\s*([^\]]+?)\s*\]",
         _resolve_arr,
+        expr_repl,
+    )
+
+    # Replace struct field accesses var.field with their values
+    def _resolve_field(mf: re.Match) -> str:
+        var_n = mf.group(1).upper()
+        field_n = mf.group(2).upper()
+        rec = interpreter.variables.get(var_n)
+        if isinstance(rec, dict) and field_n in rec:
+            v = rec[field_n]
+            if isinstance(v, str):
+                return f'"{v}"'
+            return str(v)
+        return mf.group(0)
+
+    expr_repl = re.sub(
+        r"([A-Za-z_][A-Za-z0-9_]*)\.([A-Za-z_][A-Za-z0-9_]*)",
+        _resolve_field,
         expr_repl,
     )
 
@@ -1567,6 +1611,84 @@ def execute_c(interpreter: "Interpreter", command: str, turtle: "TurtleState") -
         return _scanf(interpreter, m.group(1))
 
     # Comments and braces
+    # struct/union type definition: struct Point { int x; int y; }
+    if _STRUCT_DEF_RE.match(cmd):
+        m = _STRUCT_DEF_RE.match(cmd)
+        struct_name = m.group(1).upper()
+        if not hasattr(interpreter, "c_struct_defs"):
+            interpreter.c_struct_defs = {}
+        fields: Dict[str, str] = {}
+        j = interpreter.current_line + 1
+        lines = interpreter.program_lines
+        while j < len(lines):
+            s = lines[j][1].strip()
+            # End of struct body
+            if s.startswith("}"):
+                interpreter.current_line = j
+                break
+            # Field declaration: int x; or int x, y;
+            fm = re.match(
+                r"^(int|long|float|double|char)\s+([^;]+);?\s*$", s, re.IGNORECASE
+            )
+            if fm:
+                ftype, fname_list = fm.group(1), fm.group(2)
+                for fn in fname_list.split(","):
+                    fn = fn.strip().lstrip("*")
+                    if fn:
+                        fields[fn.upper()] = ftype.upper()
+            j += 1
+        interpreter.c_struct_defs[struct_name] = fields
+        return ""
+
+    # typedef scalar: typedef int MyInt;
+    if _TYPEDEF_RE.match(cmd):
+        m = _TYPEDEF_RE.match(cmd)
+        if not hasattr(interpreter, "c_typedefs"):
+            interpreter.c_typedefs = {}
+        interpreter.c_typedefs[m.group(2).upper()] = m.group(1).upper()
+        return ""
+
+    # struct variable declaration: struct Point p; or Point p; (typedef)
+    if _STRUCT_VAR_RE.match(cmd):
+        m = _STRUCT_VAR_RE.match(cmd)
+        type_name = m.group(1).upper()
+        var_name = m.group(2).upper()
+        # Avoid matching 'int x;' again
+        if type_name not in ("INT", "LONG", "FLOAT", "DOUBLE", "CHAR", "VOID",
+                              "UNSIGNED", "SIGNED", "SHORT", "CONST", "STATIC",
+                              "RETURN", "BREAK", "CONTINUE", "ELSE", "CASE",
+                              "DEFAULT", "SWITCH", "WHILE", "FOR", "DO", "IF"):
+            struct_defs = getattr(interpreter, "c_struct_defs", {})
+            if type_name in struct_defs:
+                # Create a dict-based struct instance
+                fields = struct_defs[type_name]
+                rec: Dict[str, Any] = {}
+                for fn, ft in fields.items():
+                    rec[fn] = "" if ft in ("CHAR",) else 0.0
+                interpreter.variables[var_name] = rec
+                return ""
+            # Check typedefs
+            typedefs = getattr(interpreter, "c_typedefs", {})
+            if type_name in typedefs:
+                suf = _suffix_for_type(typedefs[type_name])
+                interpreter.set_typed_variable(var_name + suf, 0)
+                return ""
+
+    # struct field assignment: p.x = expr;
+    m = _STRUCT_FIELD_ASSIGN_RE.match(cmd)
+    if m:
+        var_name = m.group(1).upper()
+        field_name = m.group(2).upper()
+        expr = m.group(3).rstrip(";").strip()
+        rec = interpreter.variables.get(var_name)
+        if isinstance(rec, dict) and field_name in rec:
+            try:
+                val = _c_eval_expr(interpreter, expr)
+            except (ValueError, TypeError, ZeroDivisionError):
+                val = 0
+            rec[field_name] = val
+            return ""
+
     # Recognize C++ style line comments and braces/parentheses
     if cmd.startswith("//") or cmd in ("{", "(", ")"):
         return ""

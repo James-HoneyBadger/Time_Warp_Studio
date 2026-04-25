@@ -96,7 +96,6 @@ class DebugMixin:
         self.debug_panel.clear_output_stream()
         self.debug_panel.clear_timeline()
         self.output.clear_debug_timeline()
-        self.debug_panel.clear_timeline()
 
     def stop_debug(self):
         """Stop debugging."""
@@ -161,7 +160,8 @@ class DebugMixin:
         self.debug_panel.update_variables(variables)
 
         # Update variable inspector
-        self.variable_inspector.update_variables(variables)
+        if hasattr(self, "variable_inspector"):
+            self.variable_inspector.update_variables(variables)
 
         # Update turtle state in debug panel
         turtle_state = self._get_turtle_state_snapshot()
@@ -171,8 +171,10 @@ class DebugMixin:
         # Get call stack from interpreter if available
         if self.output.exec_thread and self.output.exec_thread.interp:
             interp = self.output.exec_thread.interp
-            if hasattr(interp, "call_stack"):
+            try:
                 self.debug_panel.update_call_stack(interp.call_stack)
+            except Exception:  # pylint: disable=broad-except
+                pass
 
         self.statusbar.showMessage(f"🔴 Paused at line {line}")
 
@@ -187,7 +189,8 @@ class DebugMixin:
         if editor and line:
             editor.set_current_line(line)
 
-        self.variable_inspector.update_variables(variables)
+        if hasattr(self, "variable_inspector"):
+            self.variable_inspector.update_variables(variables)
         if hasattr(self, "debug_panel"):
             self.debug_panel.update_variables(variables)
 

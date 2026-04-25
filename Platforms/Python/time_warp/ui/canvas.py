@@ -11,12 +11,18 @@ import os
 
 from PySide6.QtCore import QPointF, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import (
+    QBrush,
     QColor,
     QFont,
     QImage,
+    QLinearGradient,
     QMouseEvent,
     QPainter,
+    QPainterPath,
     QPen,
+    QPolygonF,
+    QRadialGradient,
+    QTransform,
     QWheelEvent,
 )
 from PySide6.QtWidgets import (
@@ -139,6 +145,9 @@ class TurtleCanvas(
         )
         toolbar_layout.addWidget(
             _btn("💾", "Save PNG…", self._save_png)
+        )
+        toolbar_layout.addWidget(
+            _btn("🖼", "Export SVG…", self._save_svg)
         )
         self._grid_btn = _btn("⋯", "Toggle Grid Overlay", self._toggle_grid)
         self._grid_btn.setCheckable(True)
@@ -278,6 +287,29 @@ class TurtleCanvas(
         painter.end()
         image.save(filename, "PNG")
 
+    def _save_svg(self):
+        """Render canvas to an SVG file chosen by the user."""
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Canvas as SVG",
+            os.path.expanduser("~"),
+            "SVG Images (*.svg);;All Files (*)",
+        )
+        if not filename:
+            return
+        if not filename.lower().endswith(".svg"):
+            filename += ".svg"
+        w, h = max(self.width(), 1), max(self.height(), 1)
+        ok = self.export_to_svg(filename, w, h)
+        if not ok:
+            from PySide6.QtWidgets import QMessageBox
+            QMessageBox.warning(
+                self,
+                "SVG Export Failed",
+                "SVG export requires the PySide6-QtSvg module.\n"
+                "Install it with: pip install PySide6",
+            )
+
     # ------------------------------------------------------------------
     # Grid overlay toggle
     # ------------------------------------------------------------------
@@ -393,8 +425,15 @@ class TurtleCanvas(
             self._paint_normal_mode(painter)
 
     def _paint_normal_mode(self, painter: QPainter):
-        """Paint in normal high-resolution mode."""
+        """Paint in normal high-resolution / SVGA mode."""
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+
+        # SVGA virtual canvas — draw a bordered screen
+        svga_active = self.turtle and getattr(self.turtle, "svga_mode", False)
+        if svga_active:
+            self._paint_svga_mode(painter)
+            return
 
         # Fill background
         painter.fillRect(self.rect(), self.bg_color)
@@ -448,13 +487,81 @@ class TurtleCanvas(
                 int(line.end_y),
             )
 
-        # Draw turtle shapes if available
+        # Draw turtle shapes if available (sorted by z_order)
         if self.turtle and hasattr(self.turtle, "shapes"):
             self._draw_turtle_shapes(painter)
 
         # Draw turtle cursor if present
         if self.turtle and self.turtle.visible:
             self._draw_turtle_cursor(painter)
+
+    # ------------------------------------------------------------------
+    # SVGA mode renderer (800×600 virtual canvas, full quality)
+    # ------------------------------------------------------------------
+
+    def _paint_svga_mode(self, painter: QPainter):
+        """Render an 800×600 (or custom-res) virtual SVGA canvas."""
+        vw = getattr(self.turtle, "svga_width", 800)
+        vh = getattr(self.turtle, "svga_height", 600)
+
+        canvas_w = self.width()
+        canvas_h = self.height()
+        scale_x = canvas_w / vw
+        scale_y = canvas_h / vh
+        scale = min(scale_x, scale_y) * 0.95
+        scaled_w = vw * scale
+        scaled_h = vh * scale
+        ox = (canvas_w - scaled_w) / 2
+        oy = (canvas_h - scaled_h) / 2
+
+        # Outer chrome / bezel
+        painter.fillRect(self.rect(), QColor(20, 20, 28))
+        painter.setPen(QPen(QColor(80, 80, 110), 2))
+        painter.drawRect(int(ox - 3), int(oy - 3),
+                         int(scaled_w + 6), int(scaled_h + 6))
+        # Resolution label
+        painter.setFont(QFont("Courier", 8))
+        painter.setPen(QColor(80, 80, 100))
+        painter.drawText(int(ox), int(oy) - 8, f"SVGA {vw}×{vh}")
+
+        # Virtual screen background
+        painter.fillRect(QRectF(ox, oy, scaled_w, scaled_h), self.bg_color)
+
+        # Clip to virtual screen
+        painter.save()
+        from PySide6.QtCore import QRect
+        painter.setClipRect(QRectF(ox, oy, scaled_w, scaled_h))
+
+        # Transform: virtual (0,0) = top-left → turtle (0,0) = centre
+        painter.translate(ox + scaled_w / 2, oy + scaled_h / 2)
+        painter.scale(scale, -scale)
+
+        # Grid
+        if self._grid_enabled:
+            self._draw_grid(painter)
+
+        # Lines
+        for line in self.lines:
+            color = QColor(line.color[0], line.color[1], line.color[2])
+            pen = QPen(color, line.width / scale)
+            pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+            pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+            painter.setPen(pen)
+            painter.drawLine(
+                int(line.start_x), int(line.start_y),
+                int(line.end_x), int(line.end_y),
+            )
+
+        # Shapes (sorted by z_order)
+        if self.turtle and hasattr(self.turtle, "shapes"):
+            self._draw_turtle_shapes(painter)
+
+        # Turtle cursor
+        if self.turtle and self.turtle.visible:
+            self._draw_turtle_cursor(painter)
+
+        painter.restore()
+
 
     def _paint_retro_mode(self, painter: QPainter):
         """Paint with retro screen mode simulation (pixelated)."""
@@ -647,12 +754,55 @@ class TurtleCanvas(
         painter.drawLine(int(right_x), int(right_y), int(tip_x), int(tip_y))
 
     def _draw_turtle_shapes(self, painter: QPainter):
-        """Draw high-level turtle shapes (point, line, rect, polygon, ellipse, text)."""
+        """Draw high-level turtle shapes, sorted by z_order."""
         if not hasattr(self.turtle, "shapes"):
             return
 
-        for shape in self.turtle.shapes:
+        # Sort by z_order (stable sort preserves insertion order for equal values)
+        shapes = sorted(self.turtle.shapes, key=lambda s: getattr(s, "z_order", 0))
+        for shape in shapes:
             self._draw_single_shape(painter, shape)
+
+    # ------------------------------------------------------------------
+    # Gradient brush builder helpers
+    # ------------------------------------------------------------------
+
+    def _make_gradient_brush(self, grad, rect: QRectF) -> QBrush:
+        """Build a QBrush from a TurtleGradient descriptor."""
+        if grad.kind == "radial":
+            qg = QRadialGradient(
+                QPointF(grad.cx, grad.cy),
+                grad.radius,
+            )
+        else:  # linear
+            qg = QLinearGradient(
+                QPointF(grad.x1, grad.y1),
+                QPointF(grad.x2, grad.y2),
+            )
+        for pos, rgb in grad.stops:
+            qg.setColorAt(max(0.0, min(1.0, pos)), QColor(rgb[0], rgb[1], rgb[2]))
+        return QBrush(qg)
+
+    @staticmethod
+    def _apply_pen_style(pen: QPen, shape) -> None:
+        """Apply dash, cap, and join from shape attributes."""
+        cap_map = {
+            "round": Qt.PenCapStyle.RoundCap,
+            "flat": Qt.PenCapStyle.FlatCap,
+            "square": Qt.PenCapStyle.SquareCap,
+        }
+        join_map = {
+            "round": Qt.PenJoinStyle.RoundJoin,
+            "miter": Qt.PenJoinStyle.MiterJoin,
+            "bevel": Qt.PenJoinStyle.BevelJoin,
+        }
+        if getattr(shape, "pen_dash", None):
+            pen.setStyle(Qt.PenStyle.CustomDashLine)
+            pen.setDashPattern(shape.pen_dash)
+        cap = getattr(shape, "pen_cap", "round")
+        pen.setCapStyle(cap_map.get(cap, Qt.PenCapStyle.RoundCap))
+        join = getattr(shape, "pen_join", "round")
+        pen.setJoinStyle(join_map.get(join, Qt.PenJoinStyle.RoundJoin))
 
     def _draw_single_shape(self, painter: QPainter, shape):
         """Draw a single turtle shape."""
@@ -660,60 +810,110 @@ class TurtleCanvas(
         color = QColor(shape.color[0], shape.color[1], shape.color[2])
 
         if shape_type == "point":
-            # Single pixel/point
             if len(shape.points) > 0:
                 x, y = shape.points[0]
                 painter.fillRect(int(x) - 1, int(y) - 1, 2, 2, color)
 
         elif shape_type == "line":
-            # Two-point line
             if len(shape.points) >= 2:
                 pen = QPen(color, shape.width)
-                pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-                pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+                self._apply_pen_style(pen, shape)
                 painter.setPen(pen)
                 x1, y1 = shape.points[0]
                 x2, y2 = shape.points[1]
                 painter.drawLine(int(x1), int(y1), int(x2), int(y2))
 
+        elif shape_type == "bezier":
+            # Cubic Bezier: points[0]=start, points[1]=end; control_points=[cp1, cp2]
+            if len(shape.points) >= 2 and shape.control_points and len(shape.control_points) >= 2:
+                pen = QPen(color, shape.width)
+                self._apply_pen_style(pen, shape)
+                painter.setPen(pen)
+                painter.setBrush(Qt.BrushStyle.NoBrush)
+                path = QPainterPath()
+                sx, sy = shape.points[0]
+                ex, ey = shape.points[1]
+                cp1x, cp1y = shape.control_points[0]
+                cp2x, cp2y = shape.control_points[1]
+                path.moveTo(sx, sy)
+                path.cubicTo(cp1x, cp1y, cp2x, cp2y, ex, ey)
+                painter.drawPath(path)
+
         elif shape_type == "rect":
-            # Rectangle (outline and/or fill)
             if len(shape.points) >= 2:
                 x1, y1 = shape.points[0]
                 x2, y2 = shape.points[1]
                 rect = QRectF(min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1))
                 if shape.fill_color:
-                    fill = QColor(
-                        shape.fill_color[0], shape.fill_color[1], shape.fill_color[2]
-                    )
+                    fill = QColor(shape.fill_color[0], shape.fill_color[1], shape.fill_color[2])
                     painter.fillRect(rect, fill)
                 pen = QPen(color, shape.width)
+                self._apply_pen_style(pen, shape)
                 painter.setPen(pen)
                 painter.drawRect(rect)
 
-        elif shape_type == "polygon":
-            # Closed polygon
-            if len(shape.points) >= 3:
-                from PySide6.QtGui import QPolygonF
+        elif shape_type == "rect_gradient":
+            # Rectangle with gradient fill
+            if len(shape.points) >= 4:
+                xs = [p[0] for p in shape.points]
+                ys = [p[1] for p in shape.points]
+                rect = QRectF(min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys))
+                if shape.gradient:
+                    brush = self._make_gradient_brush(shape.gradient, rect)
+                    painter.setBrush(brush)
+                    if shape.width > 0:
+                        pen = QPen(color, shape.width)
+                        self._apply_pen_style(pen, shape)
+                        painter.setPen(pen)
+                    else:
+                        painter.setPen(Qt.PenStyle.NoPen)
+                    painter.drawRect(rect)
+                    painter.setBrush(Qt.BrushStyle.NoBrush)
 
+        elif shape_type == "ellipse_gradient":
+            # Ellipse with gradient fill
+            if len(shape.points) >= 2:
+                cx, cy = shape.points[0]
+                rx, ry = shape.points[1]
+                rect = QRectF(cx - rx, cy - ry, 2 * rx, 2 * ry)
+                if shape.gradient:
+                    brush = self._make_gradient_brush(shape.gradient, rect)
+                    painter.setBrush(brush)
+                    if shape.width > 0:
+                        pen = QPen(color, shape.width)
+                        self._apply_pen_style(pen, shape)
+                        painter.setPen(pen)
+                    else:
+                        painter.setPen(Qt.PenStyle.NoPen)
+                    painter.drawEllipse(rect)
+                    painter.setBrush(Qt.BrushStyle.NoBrush)
+
+        elif shape_type == "polygon":
+            if len(shape.points) >= 3:
                 poly = QPolygonF([QPointF(x, y) for x, y in shape.points])
-                if shape.fill_color:
-                    fill = QColor(
-                        shape.fill_color[0], shape.fill_color[1], shape.fill_color[2]
-                    )
+                grad = getattr(shape, "gradient", None)
+                if grad:
+                    xs = [p[0] for p in shape.points]
+                    ys = [p[1] for p in shape.points]
+                    rect = QRectF(min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys))
+                    brush = self._make_gradient_brush(grad, rect)
+                    painter.setBrush(brush)
+                    painter.drawPolygon(poly)
+                    painter.setBrush(Qt.BrushStyle.NoBrush)
+                elif shape.fill_color:
+                    fill = QColor(shape.fill_color[0], shape.fill_color[1], shape.fill_color[2])
                     painter.setBrush(fill)
                     painter.drawPolygon(poly)
                     painter.setBrush(Qt.BrushStyle.NoBrush)
                 pen = QPen(color, shape.width)
+                self._apply_pen_style(pen, shape)
                 painter.setPen(pen)
                 painter.drawPolygon(poly)
 
         elif shape_type == "polyline":
-            # Open polyline
             if len(shape.points) >= 2:
                 pen = QPen(color, shape.width)
-                pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-                pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+                self._apply_pen_style(pen, shape)
                 painter.setPen(pen)
                 for i in range(len(shape.points) - 1):
                     x1, y1 = shape.points[i]
@@ -721,30 +921,78 @@ class TurtleCanvas(
                     painter.drawLine(int(x1), int(y1), int(x2), int(y2))
 
         elif shape_type == "ellipse":
-            # Ellipse (center and radii)
             if len(shape.points) >= 2:
                 x, y = shape.points[0]
                 rx, ry = shape.points[1]
                 rect = QRectF(x - rx, y - ry, 2 * rx, 2 * ry)
-                if shape.fill_color:
-                    fill = QColor(
-                        shape.fill_color[0], shape.fill_color[1], shape.fill_color[2]
-                    )
+                grad = getattr(shape, "gradient", None)
+                if grad:
+                    brush = self._make_gradient_brush(grad, rect)
+                    painter.setBrush(brush)
+                    painter.drawEllipse(rect)
+                    painter.setBrush(Qt.BrushStyle.NoBrush)
+                elif shape.fill_color:
+                    fill = QColor(shape.fill_color[0], shape.fill_color[1], shape.fill_color[2])
                     painter.setBrush(fill)
                     painter.drawEllipse(rect)
                     painter.setBrush(Qt.BrushStyle.NoBrush)
                 pen = QPen(color, shape.width)
+                self._apply_pen_style(pen, shape)
                 painter.setPen(pen)
                 painter.drawEllipse(rect)
 
+        elif shape_type == "sprite":
+            self._draw_sprite_shape(painter, shape)
+
         elif shape_type == "text":
-            # Text label
             if len(shape.points) > 0 and shape.text:
                 x, y = shape.points[0]
                 font = QFont("Courier New", shape.font_size)
                 painter.setFont(font)
                 painter.setPen(color)
                 painter.drawText(int(x), int(y), shape.text)
+
+    def _draw_sprite_shape(self, painter: QPainter, shape):
+        """Render a sprite shape with transform support."""
+        if not self.turtle:
+            return
+        sprites = getattr(self.turtle, "sprites", {})
+        sname = getattr(shape, "sprite_name", None)
+        if not sname or sname not in sprites:
+            return
+
+        sprite = sprites[sname]
+        if not shape.points:
+            return
+        sx, sy = shape.points[0]
+
+        # Build a QImage from pixel data
+        img = QImage(sprite.width, sprite.height, QImage.Format.Format_ARGB32)
+        img.fill(Qt.GlobalColor.transparent)
+        for row_idx, row in enumerate(sprite.pixels):
+            for col_idx, pixel in enumerate(row):
+                if pixel is not None:
+                    qc = QColor(pixel[0], pixel[1], pixel[2], 255)
+                    img.setPixelColor(col_idx, row_idx, qc)
+
+        painter.save()
+        # Move to sprite anchor
+        painter.translate(sx, sy)
+        # In turtle coords Y is already flipped by the parent transform;
+        # un-flip for the image blit so pixels render upright
+        painter.scale(
+            getattr(shape, "scale_x", 1.0),
+            -getattr(shape, "scale_y", 1.0),
+        )
+        rot = getattr(shape, "rotation", 0.0)
+        if rot:
+            painter.rotate(rot)
+        # Offset by hotspot
+        hx = sprite.hotspot_x
+        hy = sprite.hotspot_y
+        painter.drawImage(QPointF(-hx, -hy + sprite.height), img)
+        painter.restore()
+
 
     def wheelEvent(self, event: QWheelEvent):
         """Handle zoom with mouse wheel."""

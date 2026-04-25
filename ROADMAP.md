@@ -2,19 +2,23 @@
 
 ## Vision
 
-Time Warp Studio is an educational desktop IDE for learning 24 programming languages spanning six decades of computing history. This roadmap outlines planned improvements and contribution opportunities.
+Time Warp Studio is an educational desktop IDE for learning **20 programming languages** spanning six decades of computing history. This roadmap outlines planned improvements and contribution opportunities.
 
 ---
 
-## Current Release: v9.0.0 (March 2026)
+## Current Release: v10.0.0 (April 2026)
 
-- 24 language executors with turtle graphics integration
+- **20 language executors** — added Perl 5 (scalars/arrays/hashes, regex, subroutines, turtle graphics); Ruby, Erlang, Rust also added this cycle
+- **SVGA graphics mode** — 800×600 virtual canvas with anti-aliasing, zoom/pan, and pixel-accurate rendering
+- **Vector graphics** — cubic Bezier curves, gradient-filled shapes (linear & radial), dash pen styles, Z-ordered layers
+- **Sprite system** — define named pixel-art sprites via `define_sprite()`, stamp/animate with rotation and scale
+- **Enhanced MML sound engine** — ADSR envelopes per note, 4-channel polyphonic mixing, pulse waveform (duty cycle), white-noise waveform, chord notation `[CEG]`, `@W`/`@D`/`@P`/`@C` MML extensions
+- Ruby, Erlang, Rust language executors with turtle graphics integration
 - Step-through debugger with execution timeline and rewind
 - 28 built-in themes (dark, light, retro CRT, accessibility)
-- 97 example programs across all languages
 - Lesson system with auto-verification
 - AI-powered code suggestions and error explanations
-- 14 dynamic feature panels
+- Learning Hub with guided challenges and Project Explorer
 
 ---
 
@@ -45,9 +49,9 @@ Time Warp Studio is an educational desktop IDE for learning 24 programming langu
 
 ### New Languages (Candidates)
 
-- **Ruby** — Object-oriented scripting
-- **Erlang** — Concurrent/functional programming
-- **Rust** — Systems programming with ownership model
+- **Tcl** — scripting and embeddable extension language
+- **PostScript** — page-description / stack-based graphics
+- **LISP** — classic AI / symbolic computation
 
 ### Plugin System
 

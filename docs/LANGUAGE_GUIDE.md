@@ -1,6 +1,6 @@
 # Language Guide - Time Warp Studio
 
-Complete reference for all **24 programming languages** supported by Time Warp Studio.
+Complete reference for all **20 programming languages** supported by Time Warp Studio.
 
 ---
 
@@ -14,19 +14,19 @@ Complete reference for all **24 programming languages** supported by Time Warp S
 ### Systems & Structured
 4. [C](#c)
 5. [Pascal](#pascal)
-6. [Fortran](#fortran)
-7. [Assembly](#assembly)
 
 ### Functional & Declarative
-8. [Prolog](#prolog)
-9. [Haskell](#haskell)
-10. [Scheme](#scheme)
+6. [Prolog](#prolog)
+7. [Haskell](#haskell)
+8. [Scheme](#scheme)
 
 ### Scripting & General-Purpose
-11. [Python](#python)
-12. [JavaScript](#javascript)
-13. [Lua](#lua)
-14. [REXX](#rexx)
+9. [Python](#python)
+10. [JavaScript](#javascript)
+11. [Lua](#lua)
+12. [REXX](#rexx)
+13. [Perl](#perl)
+14. [Ruby](#ruby)
 
 ### Stack & Concatenative
 15. [Forth](#forth)
@@ -34,23 +34,15 @@ Complete reference for all **24 programming languages** supported by Time Warp S
 ### Object-Oriented
 16. [Smalltalk](#smalltalk)
 
-### Array & Mathematical
-17. [APL](#apl)
-
-### Business & Mainframe
-18. [COBOL](#cobol)
-19. [JCL](#jcl)
-20. [CICS](#cics)
-21. [SQR](#sqr)
-
-### Data
-22. [SQL](#sql)
+### Concurrent & Systems
+17. [Erlang](#erlang)
+18. [Rust](#rust)
 
 ### Event-Driven
-23. [HyperTalk](#hypertalk)
+19. [HyperTalk](#hypertalk)
 
 ### Esoteric
-24. [Brainfuck](#brainfuck)
+20. [Brainfuck](#brainfuck)
 
 ---
 

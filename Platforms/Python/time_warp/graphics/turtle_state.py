@@ -6,8 +6,8 @@ for Logo-style graphics across all 24 language executors.
 """
 
 import math
-from dataclasses import dataclass
-from typing import Callable, List, Optional, Tuple
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Optional, Tuple
 
 # Color name to RGB mapping
 COLOR_NAMES = {
@@ -85,6 +85,36 @@ class TurtleLine:
 
 
 @dataclass
+class TurtleGradient:
+    """Gradient descriptor for shape fills."""
+
+    kind: str  # "linear" or "radial"
+    stops: List[Tuple[float, Tuple[int, int, int]]]  # (position 0..1, RGB)
+    # Linear: start/end points in turtle coords
+    x1: float = 0.0
+    y1: float = 0.0
+    x2: float = 100.0
+    y2: float = 0.0
+    # Radial: centre + radius
+    cx: float = 0.0
+    cy: float = 0.0
+    radius: float = 100.0
+
+
+@dataclass
+class TurtleSprite:
+    """A named, reusable bitmap sprite defined as a pixel grid."""
+
+    name: str
+    width: int
+    height: int
+    # pixels[row][col] = (r, g, b) or None (transparent)
+    pixels: List[List[Optional[Tuple[int, int, int]]]]
+    hotspot_x: int = 0   # pivot point (pixels from left)
+    hotspot_y: int = 0   # pivot point (pixels from top)
+
+
+@dataclass
 class TurtleShape:
     """Generic shape for higher-level drawing primitives."""
 
@@ -96,6 +126,17 @@ class TurtleShape:
     text: Optional[str] = None
     font_size: int = 12
     align: str = "left"
+    # Vector / SVGA extensions
+    gradient: Optional[TurtleGradient] = None      # gradient fill (overrides fill_color)
+    z_order: int = 0                                # painter order (lower = behind)
+    rotation: float = 0.0                           # degrees (for sprites)
+    scale_x: float = 1.0
+    scale_y: float = 1.0
+    sprite_name: Optional[str] = None              # reference into TurtleState.sprites
+    pen_dash: Optional[List[float]] = None          # dash pattern [on, off, ...]
+    pen_cap: str = "round"                          # "round", "flat", "square"
+    pen_join: str = "round"                         # "round", "miter", "bevel"
+    control_points: Optional[List[Tuple[float, float]]] = None  # for bezier
 
 
 class TurtleState:  # pylint: disable=too-many-instance-attributes
@@ -130,6 +171,14 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
         self._last_fillable_shape_index: Optional[int] = None
         self._filling: bool = False
         self._fill_start_line_index: int = 0
+        # SVGA / sprite extensions
+        self.svga_mode: bool = False           # True = 800×600 virtual canvas
+        self.svga_width: int = 800
+        self.svga_height: int = 600
+        self.sprites: dict[str, TurtleSprite] = {}         # sprite definitions
+        self._pen_dash: Optional[List[float]] = None
+        self._pen_cap: str = "round"
+        self._pen_join: str = "round"
 
     @property
     def angle(self) -> float:
@@ -605,3 +654,263 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
             return max(0, min(255, int(value)))
         except (TypeError, ValueError):
             return 0
+
+    # ------------------------------------------------------------------
+    # SVGA resolution mode
+    # ------------------------------------------------------------------
+
+    def set_svga_mode(self, width: int = 800, height: int = 600) -> None:
+        """Enable Super-VGA virtual canvas mode.
+
+        In this mode the canvas renders a fixed-resolution virtual screen
+        (default 800×600) with full anti-aliasing and crisp pixel mapping.
+        The turtle coordinate origin (0,0) maps to the centre of the screen.
+        """
+        self.svga_mode = True
+        self.svga_width = max(320, int(width))
+        self.svga_height = max(200, int(height))
+        self.canvas_width = float(self.svga_width)
+        self.canvas_height = float(self.svga_height)
+        self._notify_change()
+
+    def clear_svga_mode(self) -> None:
+        """Return to unlimited-canvas (logical-coordinate) mode."""
+        self.svga_mode = False
+        self._notify_change()
+
+    # ------------------------------------------------------------------
+    # Pen style helpers
+    # ------------------------------------------------------------------
+
+    def set_pen_style(
+        self,
+        dash: Optional[List[float]] = None,
+        cap: str = "round",
+        join: str = "round",
+    ) -> None:
+        """Set advanced pen styling.
+
+        Args:
+            dash: Dash pattern as [on_len, off_len, ...] or None for solid.
+            cap:  Line cap style — 'round', 'flat', or 'square'.
+            join: Line join style — 'round', 'miter', or 'bevel'.
+        """
+        self._pen_dash = dash
+        self._pen_cap = cap if cap in ("round", "flat", "square") else "round"
+        self._pen_join = join if join in ("round", "miter", "bevel") else "round"
+        self._notify_change()
+
+    # ------------------------------------------------------------------
+    # Vector drawing: Bezier curves
+    # ------------------------------------------------------------------
+
+    def bezier_curve(
+        self,
+        cp1x: float, cp1y: float,
+        cp2x: float = 0.0, cp2y: float = 0.0,
+        end_x: float = 0.0, end_y: float = 0.0,
+        color: Optional[Tuple[int, int, int]] = None,
+        width: Optional[float] = None,
+    ) -> None:
+        """Draw a cubic Bezier curve from the current turtle position.
+
+        For a quadratic curve supply only cp1x/cp1y as the single control
+        point and set cp2x/cp2y equal to end_x/end_y.
+
+        Args:
+            cp1x, cp1y: First control point.
+            cp2x, cp2y: Second control point (same as end for quadratic).
+            end_x, end_y: End point.
+            color: Stroke colour (defaults to pen_color).
+            width: Stroke width (defaults to pen_width).
+        """
+        bc = color or self.pen_color
+        bw = width if width is not None else self.pen_width
+        self.shapes.append(
+            TurtleShape(
+                shape_type="bezier",
+                points=[(self.x, self.y), (end_x, end_y)],
+                color=bc,
+                width=bw,
+                control_points=[(cp1x, cp1y), (cp2x, cp2y)],
+                pen_dash=self._pen_dash,
+                pen_cap=self._pen_cap,
+                pen_join=self._pen_join,
+            )
+        )
+        if self.pen_down:
+            # Also advance turtle position to end point
+            self.x = end_x
+            self.y = end_y
+        self._notify_change()
+
+    # ------------------------------------------------------------------
+    # Vector drawing: gradient fills
+    # ------------------------------------------------------------------
+
+    def draw_rect_gradient(
+        self,
+        x1: float, y1: float, x2: float, y2: float,
+        stops: List[Tuple[float, Tuple[int, int, int]]],
+        kind: str = "linear",
+        border_color: Optional[Tuple[int, int, int]] = None,
+        width: Optional[float] = None,
+    ) -> None:
+        """Draw a rectangle with a gradient fill.
+
+        Args:
+            x1, y1, x2, y2: Rectangle corners.
+            stops: List of (position, rgb) pairs, e.g. [(0.0, (255,0,0)), (1.0, (0,0,255))].
+            kind: 'linear' (left→right) or 'radial' (centre outward).
+            border_color: Outline colour (None = no outline).
+            width: Outline width.
+        """
+        grad = TurtleGradient(
+            kind=kind,
+            stops=stops,
+            x1=x1, y1=y1, x2=x2, y2=y2,
+            cx=(x1 + x2) / 2, cy=(y1 + y2) / 2,
+            radius=max(abs(x2 - x1), abs(y2 - y1)) / 2,
+        )
+        points = [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
+        bc = border_color or self.pen_color
+        bw = width if width is not None else self.pen_width
+        self.shapes.append(
+            TurtleShape(
+                shape_type="rect_gradient",
+                points=points,
+                color=bc,
+                width=bw if border_color else 0.0,
+                gradient=grad,
+            )
+        )
+        self._last_fillable_shape_index = len(self.shapes) - 1
+        self._notify_change()
+
+    def draw_ellipse_gradient(
+        self,
+        cx: float, cy: float, rx: float, ry: float,
+        stops: List[Tuple[float, Tuple[int, int, int]]],
+        border_color: Optional[Tuple[int, int, int]] = None,
+        width: Optional[float] = None,
+    ) -> None:
+        """Draw an ellipse with a radial gradient fill."""
+        grad = TurtleGradient(
+            kind="radial",
+            stops=stops,
+            cx=cx, cy=cy, radius=max(rx, ry),
+        )
+        bc = border_color or self.pen_color
+        bw = width if width is not None else self.pen_width
+        self.shapes.append(
+            TurtleShape(
+                shape_type="ellipse_gradient",
+                points=[(cx, cy), (rx, ry)],
+                color=bc,
+                width=bw if border_color else 0.0,
+                gradient=grad,
+            )
+        )
+        self._last_fillable_shape_index = len(self.shapes) - 1
+        self._notify_change()
+
+    # ------------------------------------------------------------------
+    # Sprite management
+    # ------------------------------------------------------------------
+
+    def define_sprite(
+        self,
+        name: str,
+        pixel_rows: List[str],
+        palette: Optional[Dict[str, Tuple[int, int, int]]] = None,
+        transparent_char: str = ".",
+        hotspot_x: int = 0,
+        hotspot_y: int = 0,
+    ) -> None:
+        """Define a named sprite from a list of string rows.
+
+        Each character in a row maps to a colour via *palette*.  '.' (or
+        *transparent_char*) means transparent.
+
+        Example::
+
+            turtle.define_sprite("ship", [
+                "..W..",
+                ".WWW.",
+                "WWWWW",
+                ".W.W.",
+            ], palette={"W": (255, 255, 255)})
+        """
+        pal = palette or {}
+        height = len(pixel_rows)
+        width = max((len(r) for r in pixel_rows), default=0)
+        pixels: List[List[Optional[Tuple[int, int, int]]]] = []
+        for row_str in pixel_rows:
+            row: List[Optional[Tuple[int, int, int]]] = []
+            for ch in row_str.ljust(width):
+                if ch == transparent_char:
+                    row.append(None)
+                elif ch in pal:
+                    row.append(pal[ch])
+                else:
+                    # Try to look up in COLOR_NAMES by single-char shorthand
+                    row.append(None)
+            pixels.append(row)
+        self.sprites[name] = TurtleSprite(
+            name=name,
+            width=width,
+            height=height,
+            pixels=pixels,
+            hotspot_x=hotspot_x,
+            hotspot_y=hotspot_y,
+        )
+
+    def place_sprite(
+        self,
+        name: str,
+        x: float,
+        y: float,
+        scale: float = 1.0,
+        rotation: float = 0.0,
+        z_order: int = 0,
+        scale_x: float = 1.0,
+        scale_y: float = 1.0,
+    ) -> None:
+        """Place a sprite on the canvas.
+
+        Args:
+            name:     Sprite name (must have been defined via define_sprite).
+            x, y:     Position in turtle coordinates.
+            scale:    Uniform scale multiplier (shorthand; overridden by scale_x/y).
+            rotation: Rotation in degrees (clockwise).
+            z_order:  Painting order; higher numbers paint on top.
+            scale_x:  Horizontal scale (default = scale).
+            scale_y:  Vertical scale (default = scale).
+        """
+        if scale != 1.0:
+            scale_x = scale_x if scale_x != 1.0 else scale
+            scale_y = scale_y if scale_y != 1.0 else scale
+        self.shapes.append(
+            TurtleShape(
+                shape_type="sprite",
+                points=[(x, y)],
+                color=self.pen_color,
+                width=0.0,
+                sprite_name=name,
+                rotation=rotation,
+                scale_x=scale_x,
+                scale_y=scale_y,
+                z_order=z_order,
+            )
+        )
+        self._notify_change()
+
+    def move_sprite(self, name: str, dx: float, dy: float) -> None:
+        """Translate the *last* placed instance of a named sprite."""
+        for shape in reversed(self.shapes):
+            if shape.shape_type == "sprite" and shape.sprite_name == name:
+                x, y = shape.points[0]
+                shape.points[0] = (x + dx, y + dy)
+                self._notify_change()
+                return
+

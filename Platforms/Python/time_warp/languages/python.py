@@ -360,51 +360,6 @@ def execute_python(
 
     safe_globals["turtle"] = _Turtle()
 
-    # ── SQL Server 2000 integration ──────────────────────────────────────
-    # Provide sql_execute() and sql_connect() so students can run T-SQL
-    # from Python programs just like they would with a real DB connection.
-    def _sql_connect(db: str = "master"):
-        """Return a lightweight SQL connection handle for the named database."""
-        from ..core.sql_engine import SQLSession
-
-        sess = SQLSession()
-        if db and db != "master":
-            sess._switch_db(db)
-        # Store on interpreter so other languages can share the session
-        interpreter.sql_session = sess
-        return sess
-
-    def _sql_execute(query: str, db: str = "master"):
-        """Execute a T-SQL statement and return output as a string.
-
-        Example::
-
-            result = sql_execute("SELECT TOP 5 * FROM Students")
-            print(result)
-        """
-        sess = getattr(interpreter, "sql_session", None) or _sql_connect(db)
-        output = sess.run_statement(query)
-        output_buf.write(output + "\n")
-        return output
-
-    def _sql_query(query: str, db: str = "master"):
-        """Execute a SELECT and return a list of dicts (one per row)."""
-        from ..core.sql_engine import _translate_tsql
-
-        sess = getattr(interpreter, "sql_session", None) or _sql_connect(db)
-        try:
-            cur = sess._conn.execute(_translate_tsql(query))
-            if cur.description:
-                cols = [d[0] for d in cur.description]
-                return [dict(zip(cols, row)) for row in cur.fetchall()]
-        except Exception as e:
-            output_buf.write(f"❌ sql_query error: {e}\n")
-        return []
-
-    safe_globals["sql_execute"] = _sql_execute
-    safe_globals["sql_query"] = _sql_query
-    safe_globals["sql_connect"] = _sql_connect
-    # ─────────────────────────────────────────────────────────────────────
 
     try:
         exec(compile(source, "<sandbox>", "exec"), safe_globals)  # noqa: S102

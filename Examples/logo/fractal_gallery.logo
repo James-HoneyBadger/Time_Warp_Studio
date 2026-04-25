@@ -1,0 +1,196 @@
+; ============================================================
+;  FRACTAL GALLERY — Mathematical Art in Logo
+;  Koch Snowflake * Sierpinski Triangle * Dragon Curve
+;  Golden Spiral * Hilbert-like Space Filler
+;  Time Warp Studio — Logo Language Showcase
+; ============================================================
+
+; ===== KOCH SNOWFLAKE =====
+TO KOCHSIDE :LEN :DEPTH
+  IFELSE :DEPTH = 0 [
+    FORWARD :LEN
+  ] [
+    KOCHSIDE (:LEN / 3) (:DEPTH - 1)
+    LEFT 60
+    KOCHSIDE (:LEN / 3) (:DEPTH - 1)
+    RIGHT 120
+    KOCHSIDE (:LEN / 3) (:DEPTH - 1)
+    LEFT 60
+    KOCHSIDE (:LEN / 3) (:DEPTH - 1)
+  ]
+END
+
+TO SNOWFLAKE :LEN :DEPTH
+  REPEAT 3 [
+    KOCHSIDE :LEN :DEPTH
+    RIGHT 120
+  ]
+END
+
+; ===== SIERPINSKI TRIANGLE =====
+TO SIERP :SIZE :DEPTH
+  IFELSE :DEPTH = 0 [
+    REPEAT 3 [ FORWARD :SIZE RIGHT 120 ]
+  ] [
+    SIERP (:SIZE / 2) (:DEPTH - 1)
+    FORWARD (:SIZE / 2)
+    SIERP (:SIZE / 2) (:DEPTH - 1)
+    BACK (:SIZE / 2)
+    LEFT 60
+    FORWARD (:SIZE / 2)
+    RIGHT 60
+    SIERP (:SIZE / 2) (:DEPTH - 1)
+    LEFT 60
+    BACK (:SIZE / 2)
+    RIGHT 60
+  ]
+END
+
+; ===== TREE FRACTAL =====
+TO BRANCH :LEN :ANGLE :SHRINK :DEPTH
+  IF :DEPTH = 0 [STOP]
+  FORWARD :LEN
+  LEFT :ANGLE
+  BRANCH (:LEN * :SHRINK) :ANGLE :SHRINK (:DEPTH - 1)
+  RIGHT (:ANGLE * 2)
+  BRANCH (:LEN * :SHRINK) :ANGLE :SHRINK (:DEPTH - 1)
+  LEFT :ANGLE
+  BACK :LEN
+END
+
+; ===== ROSE CURVE =====
+TO ROSE :RADIUS :PETALS
+  MAKE "step 0
+  MAKE "first 1
+  REPEAT 720 [
+    MAKE "angle :step * 3.14159 / 180
+    MAKE "r :RADIUS * ABS (SIN (:PETALS * :angle))
+    MAKE "xpos :r * COS :angle
+    MAKE "ypos :r * SIN :angle
+    IFELSE :first = 1 [
+      PENUP
+      SETXY :xpos :ypos
+      PENDOWN
+      MAKE "first 0
+    ] [
+      SETXY :xpos :ypos
+    ]
+    MAKE "step :step + 1
+  ]
+END
+
+; ===== GOLDEN SPIRAL =====
+TO GOLDSPIRAL :MAXR
+  MAKE "t 0
+  MAKE "phi 1.61803
+  PENUP
+  HOME
+  PENDOWN
+  REPEAT 800 [
+    MAKE "angle :t * 3.14159 / 180
+    MAKE "r (:MAXR * :phi ^ (:angle / 6.28318))
+    MAKE "xpos :r * COS :angle
+    MAKE "ypos :r * SIN :angle
+    SETXY :xpos :ypos
+    MAKE "t :t + 1
+  ]
+END
+
+; ===== STAR POLYGON =====
+TO STARPOLY :SIDES :SKIP :SIZE
+  REPEAT :SIDES [
+    FORWARD :SIZE
+    RIGHT (360 * :SKIP / :SIDES)
+  ]
+END
+
+; ===== MAIN GALLERY =====
+PRINT "============================================================"
+PRINT "  FRACTAL GALLERY — Mathematical Art in Logo"
+PRINT "============================================================"
+PRINT "  Drawing five mathematical masterpieces..."
+PRINT
+
+; --- Figure 1: Koch Snowflake (top-left area) ---
+PRINT "  [1/5] Koch Snowflake — infinite perimeter, finite area"
+CLEARSCREEN
+HIDETURTLE
+SETPENWIDTH 2
+SETPENCOLOR "CYAN"
+PENUP
+SETXY -120 80
+SETHEADING 0
+PENDOWN
+SNOWFLAKE 240 4
+PENUP
+
+; --- Figure 2: Sierpinski Triangle ---
+PRINT "  [2/5] Sierpinski Triangle — self-similar at every scale"
+CLEARSCREEN
+SETPENCOLOR "LIME"
+SETPENWIDTH 1
+PENUP
+SETXY -110 -70
+SETHEADING 0
+PENDOWN
+SIERP 220 5
+PENUP
+
+; --- Figure 3: Fractal Tree ---
+PRINT "  [3/5] Fractal Tree — recursive branching in nature"
+CLEARSCREEN
+SETPENCOLOR "ORANGE"
+SETPENWIDTH 2
+PENUP
+SETXY 0 -160
+SETHEADING 90
+PENDOWN
+BRANCH 90 28 0.68 9
+PENUP
+
+; --- Figure 4: 8-Petal Rose Curve ---
+PRINT "  [4/5] Rose Curve — r = cos(n*theta), n=4 gives 8 petals"
+CLEARSCREEN
+SETPENCOLOR "MAGENTA"
+SETPENWIDTH 2
+HOME
+PENDOWN
+ROSE 140 4
+PENUP
+
+; --- Figure 5: Golden Spiral ---
+PRINT "  [5/5] Golden Spiral — logarithmic spiral with phi base"
+CLEARSCREEN
+SETPENCOLOR "GOLD"
+SETPENWIDTH 2
+HOME
+GOLDSPIRAL 120
+PENUP
+
+; --- Bonus: Star polygon showcase ---
+PRINT "  [+]   Star Polygon Showcase — {n/k} regular star polygons"
+CLEARSCREEN
+PENUP
+HOME
+SETHEADING 90
+
+SETPENCOLOR "CYAN"    SETPENWIDTH 2
+SETXY -180 -60        PENDOWN  STARPOLY 7 2 55   PENUP   ; {7/2} heptagram
+
+SETPENCOLOR "GOLD"    SETPENWIDTH 2
+SETXY -60 -60         PENDOWN  STARPOLY 8 3 50   PENUP   ; {8/3} octagram
+
+SETPENCOLOR "MAGENTA" SETPENWIDTH 2
+SETXY 60 -60          PENDOWN  STARPOLY 9 4 48   PENUP   ; {9/4} nonagram
+
+SETPENCOLOR "LIME"    SETPENWIDTH 2
+SETXY 180 -60         PENDOWN  STARPOLY 11 4 45  PENUP   ; {11/4} hendecagram
+
+PENUP
+HOME
+SHOWTURTLE
+
+PRINT
+PRINT "  Gallery complete!"
+PRINT "  Six pieces drawn — Koch, Sierpinski, Tree, Rose, Spiral, Stars"
+PRINT "============================================================"

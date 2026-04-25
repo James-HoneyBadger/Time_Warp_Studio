@@ -1,41 +1,39 @@
-# Release Checklist - Time Warp Studio v5.0.1
+# Release Checklist - Time Warp Studio v10.0.0
 
 ## Pre-Release Tasks
 
 ### Version Updates
 
-- [ ] Update product version to **4.0.0** in:
-  - `Platforms/Python/pyproject.toml`
+- [ ] Update product version to **10.0.0** in:
   - `Platforms/Python/time_warp/__init__.py`
   - `Platforms/Python/time_warp/ui/main_window.py`
-  - `Platforms/Python/README.md`
-  - `Platforms/Browser/package.json`, `index.html`, `js/app*.js`, `js/ui.js`
-  - `Platforms/DOS/src/timewarp_dos.c`
-  - `Scripts/install.sh`, `Scripts/install-user.sh`
-  - Root `README.md` and key docs in `Docs/`
+  - `Scripts/startup.py`
+  - `Scripts/build_native.sh`
+  - `Scripts/install-user.sh`
+  - `install.sh` (fallback echo)
+  - `VERSION` (canonical)
+  - Root `README.md` and key docs
 
 ### Testing
 
 - [ ] `python test_runner.py --basic`
 - [ ] `python test_runner.py --comprehensive`
 - [ ] Manual smoke test of Python IDE (launch, open example, run turtle program)
-- [ ] Manual smoke test of Browser build (`Platforms/Browser/index.html`)
-- [ ] Manual smoke test of DOS interpreter (verify banner shows v5.0.1)
 
 ### Documentation
 
-- [ ] Update `Docs/misc/RELEASE_NOTES.md` with 4.0.0 entry
-- [ ] Refresh documentation footers (FAQ, quick reference, index)
-- [ ] Ensure screenshots or captions reference v5.0.1 where applicable
+- [ ] Update `CHANGELOG.md` with new version entry
+  - [ ] Refresh documentation footers (FAQ, quick reference, index)
+  - [ ] Ensure screenshots or captions reference v10.0.0 where applicable
 - [ ] Run spell check / link validation for key documents
 
 ## GitHub Preparation
 
 ### Repository
 
-- [ ] Create release branch `release/v5.0.1`
+- [ ] Create release branch `release/v10.0.0`
 - [ ] Merge final changes and ensure `main` is up to date
-- [ ] Tag commit: `git tag -a v5.0.1 -m "Time Warp Studio v5.0.1"`
+- [ ] Tag commit: `git tag -a v10.0.0 -m "Time Warp Studio v10.0.0"`
 - [ ] Push branch and tag to origin
 
 ### Release Assets
@@ -49,16 +47,16 @@
 - [ ] Collect artifacts from `Platforms/Browser` if publishing web bundle
 - [ ] Package refreshed examples (optional)
   ```bash
-  tar -czf time-warp-examples-v5.0.1.tar.gz Examples/
+  tar -czf time-warp-examples-v10.0.0.tar.gz Examples/
   ```
 
 - [ ] Generate checksums for uploaded files (optional)
 
 ### GitHub Release Page
 
-- [ ] Create new release from tag `v5.0.1`
-- [ ] Title: `Time Warp Studio v5.0.1`
-- [ ] Paste highlights from `Docs/misc/RELEASE_NOTES.md`
+- [ ] Create new release from tag `v10.0.0`
+- [ ] Title: `Time Warp Studio v10.0.0`
+- [ ] Paste highlights from `CHANGELOG.md`
 - [ ] Attach wheel, source tarball, examples archive, and any supplemental assets
 - [ ] Mark release as latest and publish
 

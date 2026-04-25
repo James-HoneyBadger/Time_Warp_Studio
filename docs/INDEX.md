@@ -28,8 +28,6 @@ Start here if you're new to Time Warp Studio:
 
 - **[C Reference](tutorials/c.md)** - Systems programming and low-level concepts
 - **[Pascal Guide](tutorials/pascal.md)** - Structured programming with strong typing
-- **[Fortran Tutorial](tutorials/fortran.md)** - Scientific computing and numerical methods
-- **[Assembly Guide](tutorials/assembly.md)** - x86 low-level programming
 
 ### Functional & Declarative Languages
 
@@ -43,6 +41,8 @@ Start here if you're new to Time Warp Studio:
 - **[JavaScript Tutorial](tutorials/javascript.md)** - Web-era scripting
 - **[Lua Tutorial](tutorials/lua.md)** - Lightweight embeddable scripting
 - **[REXX Tutorial](tutorials/rexx.md)** - IBM mainframe scripting language
+- **[Perl Tutorial](tutorials/perl.md)** - Text-processing and scripting language
+- **[Ruby Tutorial](tutorials/ruby.md)** - Object-oriented scripting language
 
 ### Stack & Concatenative
 
@@ -52,20 +52,10 @@ Start here if you're new to Time Warp Studio:
 
 - **[Smalltalk Tutorial](tutorials/smalltalk.md)** - The original object-oriented language
 
-### Array & Mathematical
+### Concurrent & Systems
 
-- **[APL Tutorial](tutorials/apl.md)** - Array programming with symbolic notation
-
-### Business & Mainframe Languages
-
-- **[COBOL Tutorial](tutorials/cobol.md)** - Business data processing language
-- **[JCL Tutorial](tutorials/jcl.md)** - IBM Job Control Language
-- **[CICS Tutorial](tutorials/cics.md)** - IBM CICS transaction processing
-- **[SQR Tutorial](tutorials/sqr.md)** - Oracle/PeopleSoft report generation
-
-### Data Languages
-
-- **[SQL Tutorial](tutorials/sql.md)** - Relational database queries and manipulation
+- **[Erlang Tutorial](tutorials/erlang.md)** - Concurrent / functional programming
+- **[Rust Tutorial](tutorials/rust.md)** - Systems programming with memory safety
 
 ### Event-Driven
 
@@ -159,35 +149,29 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 
 ## 📁 Examples
 
-Browse 97 example programs organized by language:
+Browse 67 example programs organized by language:
 
 | Directory | Count | Level | Purpose |
 | --------- | ----- | ----- | ------- |
 | `basic/` | 5 | Beginner | Learn BASIC fundamentals |
-| `logo/` | 5 | Beginner-Intermediate | Turtle graphics and recursion |
-| `pilot/` | 3 | Beginner-Intermediate | Interactive instruction |
-| `assembly/` | 3 | Advanced | x86 low-level programming |
-| `c/` | 5 | Intermediate | Systems programming |
-| `cobol/` | 5 | Intermediate | Business data processing |
-| `sqr/` | 4 | Intermediate | Report generation |
-| `fortran/` | 3 | Intermediate | Scientific computing |
-| `haskell/` | 3 | Advanced | Functional programming |
-| `javascript/` | 4 | Intermediate | Scripting |
-| `pascal/` | 4 | Intermediate | Structured programming |
-| `prolog/` | 4 | Advanced | Logic programming |
-| `apl/` | 3 | Advanced | Array programming |
-| `hypertalk/` | 3 | Intermediate | Event-driven scripting |
 | `brainfuck/` | 3 | Advanced | Esoteric computing |
-| `cics/` | 4 | Advanced | Mainframe transactions |
+| `c/` | 5 | Intermediate | Systems programming |
+| `erlang/` | 2 | Advanced | Concurrent functional programming |
 | `forth/` | 3 | Advanced | Stack-based programming |
-| `jcl/` | 5 | Intermediate | Mainframe job control |
+| `haskell/` | 3 | Advanced | Functional programming |
+| `hypertalk/` | 3 | Intermediate | Event-driven scripting |
+| `javascript/` | 4 | Intermediate | Scripting |
+| `logo/` | 5 | Beginner-Intermediate | Turtle graphics and recursion |
 | `lua/` | 4 | Beginner-Intermediate | Scripting |
+| `pascal/` | 4 | Intermediate | Structured programming |
+| `pilot/` | 3 | Beginner-Intermediate | Interactive instruction |
+| `prolog/` | 4 | Advanced | Logic programming |
 | `python/` | 5 | Beginner-Intermediate | Modern scripting |
 | `rexx/` | 3 | Intermediate | Mainframe scripting |
+| `ruby/` | 2 | Intermediate | Dynamic object-oriented programming |
+| `rust/` | 2 | Intermediate | Systems programming with memory safety |
 | `scheme/` | 4 | Intermediate-Advanced | Functional/Lisp |
 | `smalltalk/` | 3 | Intermediate | Object-oriented |
-| `sql/` | 4 | Intermediate | Database queries |
-| `demo/` | 2 | All | Cross-language showcases |
 
 **How to use examples:**
 
@@ -258,13 +242,12 @@ docs/
 │   ├── 07-shortcuts.md
 │   └── 08-troubleshooting.md
 ├── tutorials/
-│   ├── apl.md, assembly.md, basic.md, brainfuck.md
-│   ├── c.md, cics.md, cobol.md, forth.md
-│   ├── fortran.md, haskell.md, hypertalk.md
-│   ├── javascript.md, jcl.md, logo.md, lua.md
-│   ├── pascal.md, pilot.md, prolog.md, python.md
-│   ├── rexx.md, scheme.md, smalltalk.md
-│   └── sql.md, sqr.md
+│   ├── basic.md, brainfuck.md, c.md
+│   ├── erlang.md, forth.md, haskell.md, hypertalk.md
+│   ├── javascript.md, logo.md, lua.md, pascal.md
+│   ├── pilot.md, prolog.md, python.md, rexx.md
+│   ├── ruby.md, rust.md, scheme.md, smalltalk.md
+│   └── (20 tutorials total)
 └── reference/
     └── faq.md
 ```
@@ -275,30 +258,25 @@ docs/
 
 Explore example programs and tutorials for all supported languages:
 
-- **[APL Examples](../Examples/apl/)** - Matrix operations, statistics, and more
-- **[Assembly Examples](../Examples/assembly/)** - String operations, showcases
 - **[BASIC Examples](../Examples/basic/)** - Adventure games, budget trackers
 - **[Brainfuck Examples](../Examples/brainfuck/)** - Fibonacci, Hello World
 - **[C Examples](../Examples/c/)** - Sorting algorithms, RPN calculator
-- **[COBOL Examples](../Examples/cobol/)** - Payroll processing, inventory control
-- **[CICS Examples](../Examples/cics/)** - ATM transactions, order entry
+- **[Erlang Examples](../Examples/erlang/)** - Pattern matching, concurrent programming
 - **[Forth Examples](../Examples/forth/)** - Stack-based programming
-- **[Fortran Examples](../Examples/fortran/)** - Numerical methods, scientific computing
 - **[Haskell Examples](../Examples/haskell/)** - Functional programming
-- **[Hypertalk Examples](../Examples/hypertalk/)** - HyperCard scripting
+- **[HyperTalk Examples](../Examples/hypertalk/)** - HyperCard scripting
 - **[JavaScript Examples](../Examples/javascript/)** - Web scripting basics
-- **[JCL Examples](../Examples/jcl/)** - Job control language
 - **[Logo Examples](../Examples/logo/)** - Turtle graphics
 - **[Lua Examples](../Examples/lua/)** - Lightweight scripting
 - **[Pascal Examples](../Examples/pascal/)** - Structured programming
-- **[Pilot Examples](../Examples/pilot/)** - Instructional programming
+- **[PILOT Examples](../Examples/pilot/)** - Instructional programming
 - **[Prolog Examples](../Examples/prolog/)** - Logic programming
 - **[Python Examples](../Examples/python/)** - General-purpose scripting
 - **[REXX Examples](../Examples/rexx/)** - Scripting for IBM systems
+- **[Ruby Examples](../Examples/ruby/)** - Dynamic object-oriented programming
+- **[Rust Examples](../Examples/rust/)** - Systems programming with memory safety
 - **[Scheme Examples](../Examples/scheme/)** - Lisp-family functional programming
 - **[Smalltalk Examples](../Examples/smalltalk/)** - Object-oriented programming
-- **[SQL Examples](../Examples/sql/)** - Database queries
-- **[SQR Examples](../Examples/sqr/)** - Reporting language
 
 ---
 
@@ -388,8 +366,8 @@ This documentation is maintained alongside Time Warp Studio development. If you 
 
 ## Version Information
 
-- **Time Warp Studio** v9.0.0
-- **Last Updated** March 2026
+- **Time Warp Studio** v10.0.0
+- **Last Updated** April 2026
 
 ## Need More Help?
 

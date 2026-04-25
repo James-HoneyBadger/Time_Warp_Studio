@@ -208,20 +208,12 @@ class ClassroomMixin:
             "python": Language.PYTHON,
             "lua": Language.LUA,
             "scheme": Language.SCHEME,
-            "cobol": Language.COBOL,
             "brainfuck": Language.BRAINFUCK,
-            "assembly": Language.ASSEMBLY,
             "javascript": Language.JAVASCRIPT,
-            "fortran": Language.FORTRAN,
             "rexx": Language.REXX,
             "smalltalk": Language.SMALLTALK,
             "hypertalk": Language.HYPERTALK,
             "haskell": Language.HASKELL,
-            "apl": Language.APL,
-            "sql": Language.SQL,
-            "sql server": Language.SQL,
-            "jcl": Language.JCL,
-            "cics": Language.CICS,
         }
         lang = language_map.get(language_name.lower(), Language.BASIC)
 

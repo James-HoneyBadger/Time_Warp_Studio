@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v9.0.0 — System Design and Implementation
+## Time Warp Studio v10.0.0 — System Design and Implementation
 
 ---
 
@@ -44,7 +44,7 @@ Time Warp Studio is a desktop IDE built with:
 
 **Modularity**:
 
-- 24 independent language modules (easily extensible)
+- 20 independent language modules (easily extensible)
 - Feature panels loaded dynamically
 - Theme system completely separate from core logic
 
@@ -56,7 +56,7 @@ Time Warp Studio is a desktop IDE built with:
 
 Location: `Platforms/Python/time_warp/core/interpreter.py`
 
-Core dispatcher managing all 24 language executors:
+Core dispatcher managing all 20 language executors:
 
 ```python
 class Interpreter:
@@ -66,11 +66,11 @@ class Interpreter:
         #   execute_basic, execute_pilot, execute_logo,
         #   execute_c, execute_pascal, execute_prolog, execute_forth
         #
-        # Whole-program executors (17 languages) registered in:
+        # Whole-program executors (13 languages) registered in:
         #   _WHOLE_PROGRAM_EXECUTORS dict
-        #   (Lua, Scheme, COBOL, Brainfuck, Assembly, JavaScript,
-        #    Fortran, REXX, Smalltalk, HyperTalk, Haskell, APL,
-        #    SQL, JCL, CICS, SQR, Python)
+        #   (Python, Lua, Scheme, Brainfuck, JavaScript,
+        #    REXX, Smalltalk, HyperTalk, Haskell,
+        #    Ruby, Erlang, Rust, Perl)
         pass
 ```
 
@@ -136,7 +136,7 @@ def execute_basic(interpreter: Interpreter, command: str, turtle: TurtleState) -
 - ✅ Return strings as output
 - ✅ Access the interpreter and turtle state objects
 
-### The 24 Supported Languages
+### The 20 Supported Languages
 
 **Line-by-line executors** (parsed per statement):
 
@@ -218,10 +218,10 @@ Features:
 
 Status: Experimental
 
-**Whole-program executors** (17 languages):
+**Whole-program executors** (13 languages):
 
-Python, Lua, Scheme, COBOL, Brainfuck, Assembly, JavaScript, Fortran,
-REXX, Smalltalk, HyperTalk, Haskell, APL, SQL, JCL, CICS, SQR.
+Python, Lua, Scheme, Brainfuck, JavaScript,
+REXX, Smalltalk, HyperTalk, Haskell, Ruby, Erlang, Rust, Perl.
 
 Each receives the full source text and returns output. Registered in
 `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.
@@ -588,7 +588,7 @@ Contains:
 
 ### Core (`core/`)
 
-- `interpreter.py` — Main dispatcher (~1,500 lines, 24 language executors)
+- `interpreter.py` — Main dispatcher (~1,500 lines, 20 language executors)
 - `debugger.py` — Step-through debugger with execution timeline and rewind
 - `sql_engine.py` — SQLite-backed T-SQL compatibility layer
 - `orchestrator.py` — System integration and component registry
@@ -661,7 +661,7 @@ Contains:
 ### Scripts (`Scripts/`)
 
 Build, launch, deploy, and utility scripts — including `deploy.sh`, `startup.py`,
-`wasm.mk`, `build_native.sh`, `generate_icon.py`, and IDE launchers.
+`build_native.sh`, `generate_icon.py`, and IDE launchers.
 
 ---
 

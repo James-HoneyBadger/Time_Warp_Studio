@@ -1,0 +1,217 @@
+; ============================================================
+; GEOMETRIC ARTISTRY — Logo Language Showcase
+; Islamic star patterns, Celtic knots, geometric mandalas
+; Time Warp Studio — Logo Language Demo
+; ============================================================
+
+; --- Helper: Star polygon ---
+TO STAR :N :SIZE
+  REPEAT :N [
+    FORWARD :SIZE
+    RIGHT (180 - (180 * (:N - 2) / :N)) / 1
+    FORWARD :SIZE
+    RIGHT (360 / :N)
+  ]
+END
+
+; --- Draw a regular polygon ---
+TO POLYGON :SIDES :SIZE
+  REPEAT :SIDES [
+    FORWARD :SIZE
+    RIGHT (360 / :SIDES)
+  ]
+END
+
+; --- 8-pointed star (Islamic star motif) ---
+TO STAR8 :SIZE
+  REPEAT 8 [
+    FORWARD :SIZE
+    RIGHT 135
+    FORWARD :SIZE
+    LEFT 90
+  ]
+END
+
+; --- Hexagonal tile ---
+TO HEXAGON :SIZE
+  REPEAT 6 [
+    FORWARD :SIZE
+    RIGHT 60
+  ]
+END
+
+; --- Recursive snowflake arm ---
+TO SNOWFLAKE_ARM :SIZE :DEPTH
+  IFELSE :DEPTH = 0 [
+    FORWARD :SIZE
+  ] [
+    SNOWFLAKE_ARM (:SIZE / 3) (:DEPTH - 1)
+    LEFT 60
+    SNOWFLAKE_ARM (:SIZE / 3) (:DEPTH - 1)
+    RIGHT 120
+    SNOWFLAKE_ARM (:SIZE / 3) (:DEPTH - 1)
+    LEFT 60
+    SNOWFLAKE_ARM (:SIZE / 3) (:DEPTH - 1)
+  ]
+END
+
+; --- Full Koch snowflake ---
+TO SNOWFLAKE :SIZE :DEPTH
+  REPEAT 3 [
+    SNOWFLAKE_ARM :SIZE :DEPTH
+    RIGHT 120
+  ]
+END
+
+; --- Islamic 6-star tiling unit ---
+TO ISLAMIC_UNIT :SIZE
+  REPEAT 6 [
+    FORWARD :SIZE
+    RIGHT 60
+    FORWARD :SIZE
+    LEFT 120
+    FORWARD :SIZE
+    RIGHT 60
+  ]
+END
+
+; --- Spirograph rosette ---
+TO ROSETTE :PETALS :PETAL_SIZE
+  MAKE "ANGLE (360 / :PETALS)
+  REPEAT :PETALS [
+    POLYGON 20 :PETAL_SIZE
+    RIGHT :ANGLE
+  ]
+END
+
+; --- Concentric squares (optical art) ---
+TO OP_ART :LAYERS :SIZE :STEP
+  MAKE "S :SIZE
+  REPEAT :LAYERS [
+    POLYGON 4 :S
+    RIGHT 5
+    PENUP
+    FORWARD 4
+    PENDOWN
+    MAKE "S (:S - :STEP)
+    IF :S < 5 [ STOP ]
+  ]
+END
+
+; --- Star of David (two triangles) ---
+TO STAR_DAVID :SIZE
+  SETPENCOLOR 0 100 255
+  POLYGON 3 :SIZE
+  RIGHT 60
+  FORWARD (:SIZE / 2)
+  LEFT 30
+  SETPENCOLOR 255 200 0
+  POLYGON 3 :SIZE
+END
+
+; ============================================================
+; MAIN PROGRAM
+; ============================================================
+
+PRINT "GEOMETRIC ARTISTRY — Logo Showcase"
+PRINT "Drawing 6 geometric patterns with turtle graphics"
+PRINT ""
+
+; ---- Pattern 1: Koch Snowflake ----
+PRINT "Pattern 1: Koch Snowflake (depth 3)"
+CLEARSCREEN
+SETPENCOLOR 100 180 255
+PENUP
+SETXY -90 80
+PENDOWN
+SNOWFLAKE 180 3
+
+; ---- Pattern 2: Islamic 8-star grid ----
+PRINT "Pattern 2: Islamic 8-pointed Star Grid"
+CLEARSCREEN
+PENUP
+SETXY -120 -60
+PENDOWN
+REPEAT 3 [
+  MAKE "COL 0
+  REPEAT 3 [
+    SETPENCOLOR 220 160 0
+    STAR8 35
+    PENUP
+    FORWARD 78
+    PENDOWN
+    MAKE "COL (:COL + 1)
+  ]
+  PENUP
+  SETXY (-120 + 0) (-60 + 78)
+  PENDOWN
+]
+
+; ---- Pattern 3: Rosette mandala ----
+PRINT "Pattern 3: 12-petal Rosette Mandala"
+CLEARSCREEN
+PENUP
+SETXY 0 0
+PENDOWN
+SETPENCOLOR 255 80 120
+ROSETTE 12 45
+SETPENCOLOR 80 200 255
+ROSETTE 8 60
+SETPENCOLOR 255 220 0
+ROSETTE 6 30
+
+; ---- Pattern 4: Hexagonal tiling ----
+PRINT "Pattern 4: Hexagonal Tiling"
+CLEARSCREEN
+SETPENCOLOR 60 200 100
+MAKE "ROW 0
+REPEAT 4 [
+  PENUP
+  IFELSE (:ROW MOD 2) = 0 [
+    SETXY -140 (-90 + (:ROW * 52))
+  ] [
+    SETXY -112 (-90 + (:ROW * 52))
+  ]
+  PENDOWN
+  REPEAT 5 [
+    HEXAGON 30
+    PENUP
+    FORWARD 52
+    RIGHT 0
+    FORWARD 0
+    PENDOWN
+  ]
+  MAKE "ROW (:ROW + 1)
+]
+
+; ---- Pattern 5: Optical art (nested squares) ----
+PRINT "Pattern 5: Optical Art — Nested Rotating Squares"
+CLEARSCREEN
+PENUP
+SETXY 0 0
+PENDOWN
+SETPENCOLOR 255 120 0
+OP_ART 18 160 8
+
+; ---- Pattern 6: Compound star mandala ----
+PRINT "Pattern 6: Compound Star Mandala"
+CLEARSCREEN
+MAKE "I 0
+REPEAT 12 [
+  SETPENCOLOR (200 - :I * 10) (:I * 20) 200
+  POLYGON 5 80
+  RIGHT 30
+  MAKE "I (:I + 1)
+]
+
+; Draw center
+SETPENCOLOR 255 255 0
+REPEAT 8 [
+  FORWARD 30
+  BACK 30
+  RIGHT 45
+]
+
+PRINT ""
+PRINT "All 6 geometric patterns complete!"
+PRINT "Koch snowflake * Islamic stars * Rosette * Hexagons * Op-art * Mandala"

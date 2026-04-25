@@ -43,9 +43,10 @@ class TestLanguageEnum:
         names = {lang.name for lang in Language}
         expected = {
             "BASIC", "PILOT", "LOGO", "C", "PROLOG", "PASCAL", "FORTH",
-            "PYTHON", "LUA", "SCHEME", "COBOL", "BRAINFUCK", "ASSEMBLY",
-            "JAVASCRIPT", "FORTRAN", "REXX", "SMALLTALK", "HYPERTALK",
-            "HASKELL", "APL", "SQL", "JCL", "CICS", "SQR",
+            "PYTHON", "LUA", "SCHEME", "BRAINFUCK",
+            "JAVASCRIPT", "REXX", "SMALLTALK", "HYPERTALK",
+            "HASKELL",
+            "RUBY", "ERLANG", "RUST", "PERL",
         }
         assert expected == names
 
@@ -66,25 +67,13 @@ class TestLanguageEnum:
             ".lua": Language.LUA,
             ".scm": Language.SCHEME,
             ".rkt": Language.SCHEME,
-            ".cob": Language.COBOL,
-            ".cbl": Language.COBOL,
             ".bf": Language.BRAINFUCK,
-            ".asm": Language.ASSEMBLY,
-            ".s": Language.ASSEMBLY,
             ".js": Language.JAVASCRIPT,
-            ".f77": Language.FORTRAN,
-            ".for": Language.FORTRAN,
             ".rex": Language.REXX,
             ".rexx": Language.REXX,
             ".st": Language.SMALLTALK,
             ".htalk": Language.HYPERTALK,
             ".hs": Language.HASKELL,
-            ".apl": Language.APL,
-            ".sql": Language.SQL,
-            ".jcl": Language.JCL,
-            ".cics": Language.CICS,
-            ".sqr": Language.SQR,
-            ".sqc": Language.SQR,
         }
         for ext, expected in cases.items():
             assert Language.from_extension(ext) is expected, (
@@ -98,7 +87,6 @@ class TestLanguageEnum:
     def test_from_extension_case_insensitive(self):
         assert Language.from_extension(".BAS") is Language.BASIC
         assert Language.from_extension(".LOGO") is Language.LOGO
-        assert Language.from_extension(".SQL") is Language.SQL
         assert Language.from_extension(".PY") is Language.PYTHON
 
     def test_friendly_names(self):
@@ -113,20 +101,12 @@ class TestLanguageEnum:
             Language.PYTHON: "Python",
             Language.LUA: "Lua",
             Language.SCHEME: "Scheme",
-            Language.COBOL: "COBOL",
             Language.BRAINFUCK: "Brainfuck",
-            Language.ASSEMBLY: "Assembly",
             Language.JAVASCRIPT: "JavaScript",
-            Language.FORTRAN: "FORTRAN 77",
             Language.REXX: "REXX",
             Language.SMALLTALK: "Smalltalk",
             Language.HYPERTALK: "HyperTalk",
             Language.HASKELL: "Haskell",
-            Language.APL: "APL",
-            Language.SQL: "SQL Server",
-            Language.JCL: "JCL",
-            Language.CICS: "CICS",
-            Language.SQR: "SQR",
         }
         for lang, expected_name in cases.items():
             assert lang.friendly_name() == expected_name

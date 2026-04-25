@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "time_warp_ide"
-version = "8.0.0"
-description = "Educational programming environment for BASIC, PILOT, Logo, Pascal, and Prolog"
+version = "10.0.0"
+description = "Educational programming environment for 20 programming languages with integrated turtle graphics"
 readme = "README.md"
 requires-python = ">=3.10"
 license = {text = "MIT"}

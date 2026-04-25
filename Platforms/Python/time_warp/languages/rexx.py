@@ -882,9 +882,6 @@ class RexxEnvironment:
                 return result if result is not None else ""
             except Exception:
                 return ""
-        # SQL() external function: SQL("SELECT ...") → result string
-        if name == "SQL":
-            return self._call_sql(s0())
         return None
 
     def _is_num(self, s: str) -> bool:
@@ -894,23 +891,6 @@ class RexxEnvironment:
             return True
         except (ValueError, TypeError):
             return False
-
-    def _call_sql(self, query: str) -> str:
-        """Execute a T-SQL statement from REXX and return output."""
-        try:
-            from ..core.sql_engine import SQLSession
-
-            sess = getattr(self.interpreter, "sql_session", None)
-            if sess is None:
-                sess = SQLSession()
-                self.interpreter.sql_session = sess
-            result = sess.run_statement(query)
-            self._emit(result)
-            return result
-        except Exception as e:
-            msg = f"❌ REXX SQL error: {e}"
-            self._emit(msg)
-            return msg
 
 
 class RexxExit(Exception):

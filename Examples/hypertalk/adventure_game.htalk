@@ -1,0 +1,407 @@
+-- ============================================================
+-- ADVENTURE GAME — HyperTalk Language Showcase
+-- Complete text adventure with rooms, items, combat, puzzles
+-- Time Warp Studio — HyperTalk Language Demo
+-- ============================================================
+
+-- ===== GLOBALS =====
+global playerName, playerHP, playerMaxHP, playerGold
+global playerRoom, playerHasTorch, playerHasSword, playerHasKey
+global playerHasPotion, dragonAlive, gateOpen, gameOver
+global questionsRight, roomsVisited, itemsFound
+
+on initialize
+  put "Adventurer" into playerName
+  put 100 into playerMaxHP
+  put 100 into playerHP
+  put 30 into playerGold
+  put "entrance" into playerRoom
+  put false into playerHasTorch
+  put false into playerHasSword
+  put false into playerHasKey
+  put false into playerHasPotion
+  put true into dragonAlive
+  put false into gateOpen
+  put false into gameOver
+  put 0 into questionsRight
+  put 0 into roomsVisited
+  put 0 into itemsFound
+end initialize
+
+-- ===== HP BAR =====
+
+on hpBar hp maxHp
+  put "" into bar
+  put floor(hp * 20 / maxHp) into filled
+  repeat with i = 1 to 20
+    if i <= filled then
+      put bar & "█" into bar
+    else
+      put bar & "░" into bar
+    end if
+  end repeat
+  return "[" & bar & "] " & hp & "/" & maxHp
+end hpBar
+
+-- ===== ROOM DESCRIPTIONS =====
+
+on describeRoom room
+  if room = "entrance" then
+    answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    answer "DUNGEON ENTRANCE"
+    answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    answer "You stand before a crumbling stone archway."
+    answer "Cold wind carries the smell of damp earth and rust."
+    answer ""
+    answer "You see: a rusty iron door to the NORTH"
+    answer "         a pile of rubble to the EAST"
+    answer ""
+    answer "Items here: a flickering TORCH"
+  end if
+  if room = "hallway" then
+    answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    answer "HALLWAY OF WHISPERS"
+    answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    answer "Ancient tapestries line the walls. Torches guttered."
+    answer "Strange writing is carved above each door."
+    answer ""
+    answer "NORTH: Treasury Gate (locked)"
+    answer "EAST:  Armory"
+    answer "SOUTH: Entrance"
+    answer "WEST:  Library"
+    answer ""
+    answer "Items here: a golden KEY on a hook"
+  end if
+  if room = "armory" then
+    answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    answer "THE ARMORY"
+    answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    answer "Rusted weapons hang from the walls. A skeleton sits"
+    answer "in the corner clutching an old shield."
+    if not playerHasSword then
+      answer ""
+      answer "A gleaming SWORD is mounted on the wall!"
+    end if
+    answer ""
+    answer "WEST: Hallway"
+  end if
+  if room = "library" then
+    answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    answer "THE ANCIENT LIBRARY"
+    answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    answer "Row upon row of crumbling books. Dust motes float."
+    answer "A lectern holds an open tome of riddles."
+    answer ""
+    answer "Solve the riddle to earn a POTION..."
+    answer ""
+    answer "EAST: Hallway"
+  end if
+  if room = "treasury" then
+    answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    answer "THE TREASURY"
+    answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    answer "Gold coins litter the floor. In the center:"
+    if dragonAlive then
+      answer "AN ANCIENT DRAGON sleeps on a pile of treasure!"
+      answer "Its scales glitter with an eerie light..."
+    else
+      answer "The dragon lies defeated. The treasure is YOURS!"
+      answer "Coins: 1,000,000 gold pieces (you're rich!)"
+    end if
+    answer ""
+    answer "SOUTH: Hallway"
+  end if
+end describeRoom
+
+-- ===== PUZZLE: RIDDLES =====
+
+on riddleChallenge
+  answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  answer "THE BOOK OF RIDDLES"
+  answer "Answer all 3 riddles correctly for a healing potion."
+  answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  answer ""
+
+  put 0 into score
+
+  -- Riddle 1
+  answer "Riddle 1: I speak without a mouth and hear without ears."
+  answer "          I have no body, but I come alive with the wind."
+  answer "          What am I?"
+  answer ""
+  answer "Your answer (one word):"
+  put "echo" into answer1
+
+  if answer1 = "echo" or answer1 = "Echo" or answer1 = "ECHO" then
+    answer "✓ Correct! An ECHO indeed."
+    add 1 to score
+  else
+    answer "✗ The answer was: ECHO"
+  end if
+
+  -- Riddle 2
+  answer ""
+  answer "Riddle 2: The more you take, the more you leave behind."
+  answer "          What am I?"
+  answer ""
+  answer "Your answer:"
+  put "footsteps" into answer2
+
+  if answer2 = "footsteps" or answer2 = "Footsteps" or answer2 = "steps" or answer2 = "Steps" then
+    answer "✓ Correct! FOOTSTEPS!"
+    add 1 to score
+  else
+    answer "✗ The answer was: FOOTSTEPS"
+  end if
+
+  -- Riddle 3
+  answer ""
+  answer "Riddle 3: I have cities, but no houses live there."
+  answer "          I have mountains but no trees grow there."
+  answer "          I have water, but no fish swim there."
+  answer "          I have roads, but no cars drive there."
+  answer "          What am I?"
+  answer ""
+  answer "Your answer:"
+  put "map" into answer3
+
+  if answer3 = "map" or answer3 = "Map" or answer3 = "MAP" then
+    answer "✓ Correct! A MAP!"
+    add 1 to score
+  else
+    answer "✗ The answer was: A MAP"
+  end if
+
+  add score to questionsRight
+
+  answer ""
+  if score = 3 then
+    answer "★★★ Perfect score! A glowing POTION appears!"
+    put true into playerHasPotion
+    add 1 to itemsFound
+  else if score = 2 then
+    answer "★★  Two correct! A half-potion appears..."
+    put true into playerHasPotion
+    add 1 to itemsFound
+  else
+    answer "★   Only " & score & "/3. No reward this time."
+  end if
+end riddleChallenge
+
+-- ===== COMBAT =====
+
+on fightDragon
+  answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  answer "⚔  DRAGON BATTLE! ⚔"
+  answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  answer ""
+
+  put 200 into dragonHP
+  put 1 into round
+
+  if not playerHasSword then
+    answer "You have no weapon! Fighting barehanded..."
+  end if
+
+  repeat while dragonHP > 0 and playerHP > 0
+    -- Player attacks
+    if playerHasSword then
+      put random(25) + 15 into playerDmg
+    else
+      put random(10) + 3 into playerDmg
+    end if
+    subtract playerDmg from dragonHP
+    if dragonHP < 0 then
+      put 0 into dragonHP
+    end if
+
+    answer "Round " & round & ":"
+    answer "  You strike for " & playerDmg & " damage!"
+    answer "  Dragon HP: " & dragonHP & "/200"
+
+    if dragonHP <= 0 then
+      exit repeat
+    end if
+
+    -- Dragon attacks
+    put random(30) + 10 into dragonDmg
+    subtract dragonDmg from playerHP
+    if playerHP < 0 then
+      put 0 into playerHP
+    end if
+    answer "  Dragon breathes fire for " & dragonDmg & " damage!"
+    answer "  Your HP: " & hpBar(playerHP, playerMaxHP)
+
+    -- Use potion if low
+    if playerHP < 30 and playerHasPotion then
+      add 50 to playerHP
+      if playerHP > playerMaxHP then
+        put playerMaxHP into playerHP
+      end if
+      put false into playerHasPotion
+      answer "  You drink your healing potion! HP: " & playerHP
+    end if
+
+    add 1 to round
+    answer ""
+  end repeat
+
+  if playerHP > 0 then
+    put false into dragonAlive
+    add 500 to playerGold
+    answer "★★★ THE DRAGON IS DEFEATED! ★★★"
+    answer "You claim the dragon's hoard! +500 gold!"
+  else
+    answer "The dragon's fire consumes you..."
+    answer "GAME OVER — but your legend will be sung!"
+    put true into gameOver
+  end if
+end fightDragon
+
+-- ===== GAME WORLD =====
+
+on playAdventure
+  answer "╔══════════════════════════════════════════════════╗"
+  answer "║           DUNGEON ADVENTURE                     ║"
+  answer "║     A HyperTalk Interactive Adventure           ║"
+  answer "╚══════════════════════════════════════════════════╝"
+  answer ""
+  answer "You are: " & playerName
+  answer "HP: " & hpBar(playerHP, playerMaxHP)
+  answer "Gold: " & playerGold
+  answer ""
+  answer "Your quest: Defeat the Ancient Dragon and claim the treasure!"
+  answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  answer ""
+
+  -- Visit entrance
+  add 1 to roomsVisited
+  describeRoom(playerRoom)
+  answer ""
+
+  -- Pick up torch
+  answer "You take the torch. It casts long shadows on the walls."
+  put true into playerHasTorch
+  add 1 to itemsFound
+  answer "  → Torch added to inventory"
+  answer ""
+
+  -- Move to hallway
+  answer "You push through the iron door (NORTH)..."
+  put "hallway" into playerRoom
+  add 1 to roomsVisited
+  answer ""
+  describeRoom(playerRoom)
+  answer ""
+
+  -- Pick up key
+  answer "You grab the golden KEY from the hook."
+  put true into playerHasKey
+  add 1 to itemsFound
+  answer "  → Key added to inventory"
+  answer ""
+
+  -- Visit library for riddles
+  answer "You venture into the LIBRARY (WEST)..."
+  put "library" into playerRoom
+  add 1 to roomsVisited
+  answer ""
+  describeRoom(playerRoom)
+  answer ""
+  riddleChallenge()
+  answer ""
+
+  -- Return to hallway
+  answer "You return to the HALLWAY (EAST)..."
+  put "hallway" into playerRoom
+  answer ""
+
+  -- Visit armory
+  answer "You explore the ARMORY (EAST)..."
+  put "armory" into playerRoom
+  add 1 to roomsVisited
+  answer ""
+  describeRoom(playerRoom)
+  answer ""
+
+  -- Get sword
+  answer "You lift the sword from the wall. It's surprisingly light!"
+  put true into playerHasSword
+  add 1 to itemsFound
+  answer "  → Enchanted Sword added to inventory"
+  answer ""
+
+  -- Return to hallway
+  answer "Back to the HALLWAY (WEST)..."
+  put "hallway" into playerRoom
+
+  -- Unlock treasury gate
+  answer "You use the KEY on the Treasury Gate... *CLICK*"
+  put true into gateOpen
+  answer "The gate swings open! Path to the TREASURY is clear!"
+  answer ""
+
+  -- Final status before boss
+  answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  answer "STATUS BEFORE THE FINAL BATTLE:"
+  answer "  HP:      " & hpBar(playerHP, playerMaxHP)
+  answer "  Gold:    " & playerGold
+  answer "  Sword:   " & playerHasSword
+  answer "  Torch:   " & playerHasTorch
+  answer "  Potion:  " & playerHasPotion
+  answer "  Rooms visited: " & roomsVisited
+  answer "  Items found:   " & itemsFound
+  answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  answer ""
+
+  -- Enter treasury and fight dragon
+  answer "You step into the TREASURY (NORTH)..."
+  put "treasury" into playerRoom
+  add 1 to roomsVisited
+  answer ""
+  describeRoom(playerRoom)
+  answer ""
+
+  fightDragon()
+  answer ""
+
+  -- Final results
+  answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  if not gameOver then
+    answer "   ★  QUEST COMPLETE!  ★"
+    answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+    answer ""
+    answer "FINAL STATS:"
+    answer "  Gold collected:  " & playerGold
+    answer "  Riddles correct: " & questionsRight & "/3"
+    answer "  Rooms explored:  " & roomsVisited
+    answer "  Items found:     " & itemsFound
+    answer "  Final HP:        " & playerHP & "/" & playerMaxHP
+    answer ""
+    -- Calculate score
+    put playerGold + questionsRight * 100 + roomsVisited * 50 + playerHP * 2 into finalScore
+    answer "FINAL SCORE: " & finalScore
+    if finalScore > 1500 then
+      answer "Rank: ★★★ LEGENDARY HERO!"
+    else if finalScore > 1000 then
+      answer "Rank: ★★  MASTER ADVENTURER"
+    else
+      answer "Rank: ★   BRAVE WARRIOR"
+    end if
+  else
+    answer "   ☠  GAME OVER  ☠"
+    answer "Your valor will be remembered, " & playerName & "."
+  end if
+  answer "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+  answer ""
+  answer "HyperTalk Adventure Demo Complete!"
+  answer "Handlers | Globals | Repeat | If/Then | Answer | Math"
+end playAdventure
+
+-- ===== LAUNCH =====
+on run
+  initialize()
+  playAdventure()
+end run
+
+run()

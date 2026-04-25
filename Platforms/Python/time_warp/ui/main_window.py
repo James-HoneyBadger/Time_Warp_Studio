@@ -75,9 +75,6 @@ from ..features.classroom_mode import ClassroomMode
 from ..features.autosave_manager import AutosaveManager
 from .focus_mode import FocusModeManager
 from .onboarding import OnboardingDialog, OnboardingManager
-from .sql_panel import SQLPanel
-from .dbms_window import DBMSWindow
-from .cics_panel import CICSPanel
 from ..features.examples_browser import ExamplesBrowser
 from ..utils.error_hints import get_enhanced_error_message
 
@@ -188,11 +185,6 @@ class MainWindow(
         self._debug_step_granularity = "line"
         self._last_debug_timeline = None
 
-        # Project runner state
-        self._project_run_queue = []
-        self._project_run_active = False
-        self._project_run_options = {}
-
         # Retro features
         self.screen_mode_manager = ScreenModeManager()
         self.crt_enabled = False
@@ -231,9 +223,8 @@ class MainWindow(
         self.feature_manager.setup_features()
         self.output.execution_complete.connect(self.on_execution_complete)
         self._connect_lesson_signals()
+        self._connect_lesson_authoring_signals()
         self._connect_learning_hub_signals()
-        self._connect_project_runner_signals()
-        self._connect_project_explorer_signals()
         self._connect_turtle_inspector_signals()
         self._connect_classroom_signals()
         self._connect_reference_signals()
@@ -348,8 +339,6 @@ class MainWindow(
         # Initialize tab info
         self._tab_states[tab_index] = TabState(file=None, modified=False, language=language)
 
-        self._refresh_project_runner_tabs()
-
         return tab_index
 
     def _on_breakpoint_toggled(self, _line: int):
@@ -457,26 +446,26 @@ class MainWindow(
         """Return the HTML content for the Welcome tab."""
         langs = ", ".join([
             "BASIC", "Logo", "Python", "Pascal", "C", "Forth", "PILOT",
-            "Prolog", "Lua", "Scheme", "COBOL", "JavaScript", "Fortran",
-            "REXX", "Smalltalk", "HyperTalk", "Haskell", "APL",
-            "SQL", "JCL", "CICS", "SQR", "Assembly", "Brainfuck",
+            "Prolog", "Lua", "Scheme", "JavaScript",
+            "REXX", "Smalltalk", "HyperTalk", "Haskell",
+            "Brainfuck",
+            "Ruby", "Erlang", "Rust",
         ])
         return f"""
 <html><body style="font-family: 'Segoe UI', sans-serif; margin: 24px; line-height: 1.6;">
 <h1 style="color: #bd93f9;">&#127775; Welcome to Time Warp Studio</h1>
 <p style="font-size: 14px; color: #f8f8f2;">
   An educational multi-language programming environment for exploring
-  <b>24 programming languages</b> side-by-side with live turtle graphics.
+  <b>21 programming languages</b> side-by-side with live turtle graphics.
 </p>
 <hr style="border: 1px solid #44475a;"/>
 
 <h2 style="color: #8be9fd;">&#128640; Quick Start</h2>
 <ul style="font-size: 13px;">
-  <li><b>Ctrl+N</b> — New file &nbsp;|&nbsp; <b>Ctrl+O</b> — Open file &nbsp;|&nbsp; <b>Ctrl+Shift+O</b> — Open project folder</li>
+  <li><b>Ctrl+N</b> — New file &nbsp;|&nbsp; <b>Ctrl+O</b> — Open file</li>
   <li>Pick a language from the toolbar combo, type your code, press <b>Ctrl+R</b>.</li>
   <li>Open <b>🎓 Learning Hub</b> from the toolbar for challenges, remixing, and tutor help.</li>
   <li>Browse ready-made examples via <b>Help → Browse Examples…</b></li>
-  <li>Use the new <b>Project Explorer</b> to switch between files in a workspace.</li>
   <li>Press <b>Ctrl+?</b> to show all keyboard shortcuts.</li>
   <li>Press <b>F1</b> while editing for context-sensitive language help.</li>
 </ul>
@@ -488,9 +477,8 @@ class MainWindow(
 <ul style="font-size: 13px;">
   <li>Turtle graphics canvas with zoom, pan, animation playback, and PNG export</li>
   <li>Step-through debugger with breakpoints and variable inspection</li>
-  <li>28 editor themes, CRT retro effects, project browsing, and focus mode</li>
+  <li>28 editor themes, CRT retro effects, and focus mode</li>
   <li>SQL workbench with transactions and full DDL support</li>
-  <li>CICS 3278 terminal emulator</li>
 </ul>
 
 <p style="font-size: 11px; color: #6272a4; margin-top: 32px;">
@@ -659,43 +647,6 @@ class MainWindow(
         run_btn.clicked.connect(_run_comparison)
         dlg.exec()
 
-    def _show_sql_workbench(self, _checked: bool = False):
-        """Switch to the SQL Workbench tab in the right panel."""
-        for i in range(self.right_tabs.count()):
-            if "SQL" in self.right_tabs.tabText(i).upper():
-                self.right_tabs.setCurrentIndex(i)
-                if hasattr(self, "sql_status_label"):
-                    self.sql_status_label.setText("🗄 SQL: online")
-                    self.sql_status_label.setStyleSheet("""
-                        QLabel {
-                            background-color: #2a5;
-                            color: white;
-                            padding: 2px 6px;
-                            border-radius: 3px;
-                            border: 1px solid #1a4;
-                            font-size: 11px;
-                        }
-                    """)
-                return
-        # Fallback: panel may not exist yet
-        self.statusBar().showMessage("SQL Workbench panel not found.")
-
-    def _show_dbms_window(self, _checked: bool = False):
-        """Open the full DBMS Manager window."""
-        if not hasattr(self, "_dbms_window") or self._dbms_window is None:
-            self._dbms_window = DBMSWindow(parent=self)
-        self._dbms_window.show()
-        self._dbms_window.raise_()
-        self._dbms_window.activateWindow()
-
-    def _show_cics_terminal(self, _checked: bool = False):
-        """Show the CICS 3278 Terminal panel in right_tabs."""
-        for i in range(self.right_tabs.count()):
-            if "CICS" in self.right_tabs.tabText(i).upper():
-                self.right_tabs.setCurrentIndex(i)
-                return
-        self.statusBar().showMessage("CICS Terminal panel not found.")
-
     def _format_code(self, _checked: bool = False):
         """Format the current code."""
         # pylint: disable=import-outside-toplevel
@@ -796,8 +747,6 @@ class MainWindow(
                 # Ensure we always have at least one editor open
                 self.new_file()
 
-            self._refresh_project_runner_tabs()
-
     def on_tab_changed(self, index):
         """Handle tab change."""
         if index >= 0:
@@ -823,8 +772,6 @@ class MainWindow(
 
             # Update title
             self.update_title()
-
-        self._refresh_project_runner_tabs()
 
     def on_language_changed(self, index=None):
         """Handle language selection change."""
@@ -882,7 +829,7 @@ class MainWindow(
 
     def setup_ui(self):
         """Setup main UI layout."""
-        self.setWindowTitle("🎨 Time Warp Studio v9.0.0")
+        self.setWindowTitle("🎨 Time Warp Studio v10.0.0")
         self.setMinimumSize(900, 600)
 
         # Set main window style
@@ -1102,13 +1049,6 @@ class MainWindow(
         self.right_tabs.addTab(self.debug_panel, "🐛 Debug")
         self._connect_debug_signals()
 
-        # SQL Workbench panel
-        self.sql_panel = SQLPanel(self)
-        self.right_tabs.addTab(self.sql_panel, "🗄 SQL")
-
-        # CICS 3278 Terminal panel
-        self.cics_panel = CICSPanel(self, parent=self)
-        self.right_tabs.addTab(self.cics_panel, "🖥 CICS")
 
         splitter.addWidget(self.right_tabs)
         # Left (editor) gets 3 parts, right (output/canvas) gets 2 parts on resize
@@ -1145,15 +1085,6 @@ class MainWindow(
         open_btn.setToolTip("Open an existing file (Ctrl+O)")
         open_btn.setStatusTip("Open a file from disk")
 
-        open_project_action = QAction("Open Project &Folder...", self)
-        open_project_action.setShortcut("Ctrl+Shift+O")
-        open_project_action.triggered.connect(self.open_project_folder)
-        file_menu.addAction(open_project_action)
-
-        open_project_btn = self.toolbar.addAction("🗂 Project", self.open_project_folder)
-        open_project_btn.setToolTip("Open a project folder (Ctrl+Shift+O)")
-        open_project_btn.setStatusTip("Browse a workspace folder")
-
         learn_btn = self.toolbar.addAction(
             "🎓 Learn",
             lambda: self.feature_manager.toggle_feature_panel("learning_hub", visible=True),
@@ -1175,10 +1106,6 @@ class MainWindow(
         file_menu.addAction(save_as_action)
 
         file_menu.addSeparator()
-
-        # Recent project/file submenus
-        self.recent_projects_menu = file_menu.addMenu("Recent Projects")
-        self.update_recent_projects_menu()
 
         self.recent_menu = file_menu.addMenu("Recent Files")
         self.update_recent_files_menu()
@@ -1594,24 +1521,6 @@ class MainWindow(
         # Tools menu
         tools_menu = menubar.addMenu("&Tools")
 
-        sql_wb_action = QAction("🗄 &SQL Workbench", self)
-        sql_wb_action.setShortcut("Ctrl+Shift+Q")
-        sql_wb_action.setStatusTip("Open the SQL Server 2000 workbench panel")
-        sql_wb_action.triggered.connect(self._show_sql_workbench)
-        tools_menu.addAction(sql_wb_action)
-
-        dbms_action = QAction("🗃 &Database Manager (DBMS)", self)
-        dbms_action.setShortcut("Ctrl+Shift+D")
-        dbms_action.setStatusTip("Open the full DBMS management window")
-        dbms_action.triggered.connect(self._show_dbms_window)
-        tools_menu.addAction(dbms_action)
-
-        cics_action = QAction("🖥 &CICS Terminal (IBM 3278)", self)
-        cics_action.setShortcut("Ctrl+Shift+C")
-        cics_action.setStatusTip("Open IBM 3278 CICS terminal emulator")
-        cics_action.triggered.connect(self._show_cics_terminal)
-        tools_menu.addAction(cics_action)
-
         tools_menu.addSeparator()
 
         compare_action = QAction("⚖️ &Compare Languages...", self)
@@ -1668,27 +1577,22 @@ class MainWindow(
 
         # All remaining languages (alphabetical)
         for lang_name, lang_key in [
-            ("APL", "apl"),
-            ("Assembly", "assembly"),
             ("Brainfuck", "brainfuck"),
             ("C", "c"),
-            ("CICS", "cics"),
-            ("COBOL", "cobol"),
+            ("Erlang", "erlang"),
             ("Forth", "forth"),
-            ("Fortran", "fortran"),
             ("Haskell", "haskell"),
             ("HyperTalk", "hypertalk"),
             ("JavaScript", "javascript"),
-            ("JCL", "jcl"),
             ("Lua", "lua"),
             ("Pascal", "pascal"),
             ("Prolog", "prolog"),
             ("Python", "python"),
             ("REXX", "rexx"),
+            ("Ruby", "ruby"),
+            ("Rust", "rust"),
             ("Scheme", "scheme"),
             ("Smalltalk", "smalltalk"),
-            ("SQL", "sql"),
-            ("SQR", "sqr"),
         ]:
             action = QAction(f"{lang_name} Reference", self)
             action.triggered.connect(
@@ -1965,21 +1869,13 @@ class MainWindow(
         "Prolog": "🧠",
         "Python": "🐍",
         "Haskell": "λ",
-        "APL": "∇",
         "Lua": "🌙",
         "Scheme": "λ",
-        "COBOL": "🏢",
         "Brainfuck": "🧨",
-        "Assembly": "🔩",
         "JavaScript": "🌐",
-        "Fortran": "🔬",
         "REXX": "📜",
         "Smalltalk": "💬",
         "HyperTalk": "💡",
-        "SQL": "🗄",
-        "JCL": "🖨️",
-        "CICS": "🖥",
-        "SQR": "📊",
     }
 
     def _lang_badge_text(self, language) -> str:
@@ -2284,9 +2180,6 @@ class MainWindow(
 
         self._maybe_record_example_progress()
 
-        if self._project_run_active:
-            self._run_next_project_tab()
-
     def on_execution_error(self, error: str):
         """Handle execution errors for AI assistance and editor navigation."""
         # Parse line number from error message (e.g. 'line 5', 'Line 5:', 'at line 5')
@@ -2321,9 +2214,6 @@ class MainWindow(
             context = self._get_current_line_context()
             explainer_panel.set_error_context(error, context)
 
-        if self._project_run_active:
-            self.stop_project_run()
-
         # Show error indicator on the active tab
         current_idx = self.editor_tabs.currentIndex()
         self._set_tab_run_indicator(current_idx, "error")
@@ -2355,6 +2245,13 @@ class MainWindow(
                 lambda: self.export_lesson_session("pdf")
             )
 
+    def _connect_lesson_authoring_signals(self):
+        """Connect custom lesson authoring into Lesson Mode."""
+        panel = self.feature_manager.get_feature_panel("lesson_authoring")
+        if not panel or not hasattr(panel, "lesson_created"):
+            return
+        panel.lesson_created.connect(self._register_custom_lesson)
+
     def _connect_learning_hub_signals(self):
         """Connect the central learning hub to existing IDE features."""
         panel = self.feature_manager.get_feature_panel("learning_hub")
@@ -2374,6 +2271,21 @@ class MainWindow(
             )
         if hasattr(panel, "export_bundle_requested"):
             panel.export_bundle_requested.connect(self.export_classroom_bundle)
+
+    def _register_custom_lesson(self, lesson_data: dict):
+        """Register a custom-authored lesson with the lesson panel."""
+        panel = self.feature_manager.get_feature_panel("lesson_mode")
+        if not panel or not hasattr(panel, "add_custom_lesson"):
+            self.statusbar.showMessage("Lesson mode not available", 3000)
+            return
+        try:
+            lesson = panel.add_custom_lesson(lesson_data)
+        except ValueError as exc:
+            self.statusbar.showMessage(f"Could not add lesson: {exc}", 4000)
+            return
+
+        self.feature_manager.toggle_feature_panel("lesson_mode", visible=True)
+        self.statusbar.showMessage(f"Custom lesson ready: {lesson.title}", 3000)
 
     def _open_learning_resource(self, feature_id: str):
         """Open a hub-selected panel or built-in help view."""
@@ -2424,76 +2336,6 @@ class MainWindow(
         if panel and hasattr(panel, "set_code_context"):
             panel.set_code_context(language.name if hasattr(language, "name") else "BASIC", code)
         self.statusbar.showMessage("AI tutor opened for the current tab", 3000)
-
-    def _connect_project_runner_signals(self):
-        """Connect project runner panel signals to the main window."""
-        panel = self.feature_manager.get_feature_panel("project_runner")
-        if not panel:
-            return
-        if hasattr(panel, "run_requested"):
-            panel.run_requested.connect(self.start_project_run)
-        if hasattr(panel, "stop_requested"):
-            panel.stop_requested.connect(self.stop_project_run)
-        if hasattr(panel, "refresh_requested"):
-            panel.refresh_requested.connect(self._refresh_project_runner_tabs)
-        self._refresh_project_runner_tabs()
-
-    def _connect_project_explorer_signals(self):
-        """Connect the project explorer panel to file loading."""
-        panel = self.feature_manager.get_feature_panel("project_explorer")
-        if not panel:
-            return
-        if hasattr(panel, "open_file_requested"):
-            panel.open_file_requested.connect(self.load_file)
-        if hasattr(panel, "root_path_changed"):
-            panel.root_path_changed.connect(self._remember_project_root)
-
-        recent_paths = self.settings.value("project_explorer/recent_paths", [])
-        if isinstance(recent_paths, str):
-            recent_paths = [recent_paths] if recent_paths else []
-        elif not isinstance(recent_paths, list):
-            recent_paths = list(recent_paths) if recent_paths else []
-
-        if hasattr(panel, "set_recent_paths"):
-            panel.set_recent_paths(recent_paths)
-        self.update_recent_projects_menu()
-
-        initial_root = self.settings.value(
-            "project_explorer/root_path",
-            self.settings.value("last_dir", str(Path.cwd())),
-        )
-        if hasattr(panel, "set_root_path"):
-            panel.set_root_path(str(initial_root))
-
-    def _remember_project_root(self, root_path: str):
-        """Persist recent project roots and keep the explorer synchronized."""
-        path = Path(root_path).expanduser()
-        if path.is_file():
-            path = path.parent
-        if not path.exists() or not path.is_dir():
-            return
-
-        normalized = str(path.resolve())
-        recent_paths = self.settings.value("project_explorer/recent_paths", [])
-        if isinstance(recent_paths, str):
-            recent_paths = [recent_paths] if recent_paths else []
-        elif not isinstance(recent_paths, list):
-            recent_paths = list(recent_paths) if recent_paths else []
-
-        if normalized in recent_paths:
-            recent_paths.remove(normalized)
-        recent_paths.insert(0, normalized)
-        recent_paths = recent_paths[:8]
-
-        self.settings.setValue("project_explorer/root_path", normalized)
-        self.settings.setValue("project_explorer/recent_paths", recent_paths)
-        self.settings.setValue("last_dir", normalized)
-
-        panel = self.feature_manager.get_feature_panel("project_explorer")
-        if panel and hasattr(panel, "set_recent_paths"):
-            panel.set_recent_paths(recent_paths)
-
-        self.update_recent_projects_menu()
 
     def _connect_turtle_inspector_signals(self):
         """Connect turtle inspector panel to output events."""
@@ -2576,75 +2418,6 @@ class MainWindow(
         self.stop_action.setEnabled(False)
         self.statusbar.showMessage("Stopped")
         # debug pause handling removed
-        if self._project_run_active:
-            self.stop_project_run()
-
-    def start_project_run(self, tab_indices: list, options: dict):
-        """Start executing a project run across multiple tabs."""
-        if self.output.is_running():
-            self.statusbar.showMessage("Program already running")
-            return
-        self._project_run_queue = list(tab_indices)
-        self._project_run_active = True
-        self._project_run_options = options or {}
-        self.statusbar.showMessage("🚀 Running project...")
-        self._run_next_project_tab()
-
-    def stop_project_run(self):
-        """Stop project execution and clear queue."""
-        self._project_run_queue = []
-        self._project_run_active = False
-        self._project_run_options = {}
-        self.statusbar.showMessage("Project run stopped")
-
-    def _run_next_project_tab(self):
-        """Run the next tab in the project queue."""
-        if not self._project_run_queue:
-            self._project_run_active = False
-            self.statusbar.showMessage("Project run complete")
-            return
-
-        tab_index = self._project_run_queue.pop(0)
-        if tab_index < 0 or tab_index >= self.editor_tabs.count():
-            self._run_next_project_tab()
-            return
-
-        editor = self.editor_tabs.widget(tab_index)
-        if not editor:
-            self._run_next_project_tab()
-            return
-
-        if self._project_run_options.get("clear_output"):
-            self.output.clear()
-        if self._project_run_options.get("clear_canvas"):
-            self.canvas.clear()
-
-        language = self._ts(tab_index).language
-        self.output.set_language(language)
-        self.editor_tabs.setCurrentIndex(tab_index)
-
-        code = editor.toPlainText()
-        self.output.run_program(code, self.canvas, debug_mode=False)
-
-    def _refresh_project_runner_tabs(self):
-        """Update project runner panel with open tabs."""
-        panel = self.feature_manager.get_feature_panel("project_runner")
-        if not panel or not hasattr(panel, "update_tabs"):
-            return
-
-        tabs = []
-        for i in range(self.editor_tabs.count()):
-            title = self.editor_tabs.tabText(i)
-            language = self._ts(i).language
-            tabs.append(
-                {
-                    "index": i,
-                    "title": title,
-                    "language": language.friendly_name(),
-                }
-            )
-
-        panel.update_tabs(tabs)
 
     def on_variables_updated(self, variables):
         """Handle variables update from interpreter."""
@@ -2680,7 +2453,7 @@ class MainWindow(
 
     def update_title(self):
         """Update window title."""
-        title = "Time Warp Studio v9.0.0"
+        title = "Time Warp Studio v10.0.0"
 
         current_info = self.get_current_tab_info()
         if current_info["file"]:
@@ -2736,12 +2509,6 @@ class MainWindow(
         # Save theme preference
         self.settings.setValue("theme", theme_name)
         self.statusBar().showMessage(f"Theme changed to: {theme_name}")
-        if hasattr(self, "sql_panel"):
-            self.sql_panel.apply_theme(theme_name)
-        if hasattr(self, "cics_panel"):
-            self.cics_panel.apply_theme(theme_name)
-        if hasattr(self, "_dbms_window") and self._dbms_window:
-            self._dbms_window.apply_theme(theme_name)
 
     def change_font_family(self, font_family):
         """Change editor font family."""
@@ -3088,6 +2855,21 @@ class MainWindow(
                         break
 
     # ===================================================================
+    # GUI Enhancement: SQL workbench launcher
+    # ===================================================================
+
+    def _show_sql_workbench(self, _checked: bool = False):
+        """Open the SQL workbench by switching the language to SQL and focusing the editor."""
+        from .dialogs import show_info_dialog  # noqa: F401 – imported lazily
+        # Switch editor language to SQL so the user can write SQL immediately
+        for i in range(self.language_combo.count()):
+            if str(self.language_combo.itemData(i)).upper() == "SQL":
+                self.language_combo.setCurrentIndex(i)
+                break
+        self.editor.setFocus()
+        self.statusbar.showMessage("🗄 SQL Workbench ready – write SQL and press F5 to run")
+
+    # ===================================================================
     # GUI Enhancement: accessibility preset
     # ===================================================================
 
@@ -3407,7 +3189,6 @@ class MainWindow(
         ("View", "Ctrl+Shift+F11", "Focus / distraction-free mode"),
         ("Tools", "Ctrl+Shift+Q", "SQL Workbench"),
         ("Tools", "Ctrl+Shift+D", "Database Manager"),
-        ("Tools", "Ctrl+Shift+C", "CICS Terminal"),
         ("Help", "F1", "Context-sensitive language help"),
         ("Help", "Ctrl+?", "Show keyboard shortcuts (this dialog)"),
         ("Help", "Ctrl+Shift+H", "Export session as HTML"),

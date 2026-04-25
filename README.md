@@ -5,9 +5,9 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![PySide6](https://img.shields.io/badge/PySide6-Qt6-green)](https://wiki.qt.io/Qt_for_Python)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-9.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-10.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
-Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **24 programming languages** spanning six decades of computing history into a single, modern IDE. Built with Python and PySide6 (Qt6), it provides an integrated platform for learning programming concepts, exploring turtle graphics, and working through structured lessons.
+Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **20 programming languages** spanning six decades of computing history into a single, modern IDE. Built with Python and PySide6 (Qt6), it provides an integrated platform for learning programming concepts, exploring vector turtle graphics, and working through structured lessons.
 
 ---
 
@@ -32,34 +32,30 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 
 ### Multi-Language Support
 
-24 languages spanning six decades of computing history:
+20 languages spanning six decades of computing history:
 
-| Language | Paradigm | Era | Status |
+| Language | Paradigm | Era | Execution Mode |
 | --- | --- | --- | --- |
-| **BASIC** | Imperative / Educational | 1964 | Complete |
-| **Logo** | Turtle Graphics / Educational | 1967 | Complete |
-| **PILOT** | Computer-Aided Instruction | 1969 | Complete |
-| **C** | Systems / Procedural | 1972 | Complete |
-| **Forth** | Stack-based / Concatenative | 1970 | Complete |
-| **Pascal** | Structured / Educational | 1970 | Complete |
-| **Prolog** | Logic / Declarative | 1972 | Complete |
-| **SQL** | Relational / Query | 1974 | Complete |
-| **Smalltalk** | Object-Oriented | 1980 | Complete |
-| **APL** | Array / Mathematical | 1966 | Complete |
-| **Assembly** | Low-level / x86 | 1950s | Complete |
-| **Brainfuck** | Esoteric / Turing | 1993 | Complete |
-| **CICS** | Mainframe / Transaction | 1969 | Complete |
-| **COBOL** | Business / Data | 1959 | Complete |
-| **Fortran** | Scientific / Numeric | 1957 | Complete |
-| **Haskell** | Functional / Typed | 1990 | Complete |
-| **HyperTalk** | Event-driven / English | 1987 | Complete |
-| **JavaScript** | Scripting / Web | 1995 | Complete |
-| **JCL** | Job Control / Mainframe | 1964 | Complete |
-| **Lua** | Scripting / Embedded | 1993 | Complete |
-| **Python** | Multi-paradigm / Modern | 1991 | Complete |
-| **REXX** | Scripting / Mainframe | 1979 | Complete |
-| **Scheme** | Functional / Lisp | 1975 | Complete |
-| **SQR** | Report / Database | 1980s | Complete |
+| **BASIC** | Imperative / Educational | 1964 | Line-by-line |
+| **Logo** | Turtle Graphics / Educational | 1967 | Line-by-line |
+| **PILOT** | Computer-Aided Instruction | 1969 | Line-by-line |
+| **C** | Systems / Procedural | 1972 | Line-by-line |
+| **Forth** | Stack-based / Concatenative | 1970 | Line-by-line |
+| **Pascal** | Structured / Educational | 1970 | Line-by-line |
+| **Prolog** | Logic / Declarative | 1972 | Line-by-line |
+| **Brainfuck** | Esoteric / Turing | 1993 | Whole-program |
+| **Erlang** | Concurrent / Functional | 1986 | Whole-program |
+| **Haskell** | Functional / Typed | 1990 | Whole-program |
+| **HyperTalk** | Event-driven / English | 1987 | Whole-program |
+| **JavaScript** | Scripting / Web | 1995 | Whole-program |
+| **Lua** | Scripting / Embedded | 1993 | Whole-program |
+| **Perl** | Scripting / Text-processing | 1987 | Whole-program |
+| **Python** | Multi-paradigm / Modern | 1991 | Whole-program |
+| **REXX** | Scripting / Mainframe | 1979 | Whole-program |
+| **Ruby** | Object-Oriented / Scripting | 1995 | Whole-program |
+| **Rust** | Systems / Memory-safe | 2015 | Whole-program |
+| **Scheme** | Functional / Lisp | 1975 | Whole-program |
+| **Smalltalk** | Object-Oriented | 1980 | Whole-program |
 
 ### Integrated IDE
 
@@ -72,12 +68,16 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Learning Hub & Project Explorer** — Guided challenges, remix workflows, recent projects, and workspace browsing
 - **16+ Feature Panels** — Lessons, AI Assistant, Error Explainer, Turtle Inspector, Debugger, classroom tools, and more
 
-### Turtle Graphics
+### Turtle Graphics & Vector Graphics
 
 - Native turtle support with position, heading, and pen state tracking
-- 50+ drawing commands across Logo and BASIC
+- 50+ drawing commands across Logo, BASIC, Perl, Python, and more
 - Real-time rendering with Qt painter, zoom/pan controls
-- Cross-language graphics support (Logo and Turbo BASIC)
+- **SVGA mode** — 800×600 (or custom) virtual canvas with crisp anti-aliased rendering
+- **Vector shapes** — cubic Bezier curves, gradient-filled rectangles and ellipses
+- **Sprite system** — define named pixel-art sprites, stamp and animate them with rotation and scaling
+- **Advanced pen styles** — dash patterns, configurable cap and join styles, Z-ordering
+- Cross-language graphics support (Logo, Turbo BASIC, Perl, Python)
 
 ### Advanced Debugger
 
@@ -91,7 +91,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Lesson System** — Step-by-step guided instruction with auto-verification
 - **AI Assistant** — Intelligent code suggestions and explanations
 - **Error Explainer** — Human-readable explanations of programming errors
-- **Examples Browser** — 97 example programs across all 24 languages
+- **Examples Browser** — example programs across all 20 languages
 - **Achievements** — Gamified progress tracking
 
 ---
@@ -258,7 +258,7 @@ GREET
 5 3 + . CR
 ```
 
-Browse 93 more examples in the [Examples/](Examples/) directory or through **File → Examples** in the IDE.
+Browse more examples in the [Examples/](Examples/) directory or through **File → Examples** in the IDE.
 
 ---
 
@@ -303,15 +303,10 @@ Browse 93 more examples in the [Examples/](Examples/) directory or through **Fil
 | [REXX](docs/tutorials/rexx.md) | Mainframe scripting language |
 | [Forth](docs/tutorials/forth.md) | Stack-based programming |
 | [Brainfuck](docs/tutorials/brainfuck.md) | Esoteric Turing-complete language |
-| [COBOL](docs/tutorials/cobol.md) | Business data processing |
-| [Fortran](docs/tutorials/fortran.md) | Scientific computing |
-| [Assembly](docs/tutorials/assembly.md) | x86 low-level programming |
-| [APL](docs/tutorials/apl.md) | Array programming language |
 | [HyperTalk](docs/tutorials/hypertalk.md) | Event-driven scripting |
-| [JCL](docs/tutorials/jcl.md) | IBM Job Control Language |
-| [CICS](docs/tutorials/cics.md) | IBM Transaction processing |
-| [SQL](docs/tutorials/sql.md) | Relational database queries |
-| [SQR](docs/tutorials/sqr.md) | Structured Query reporting |
+| [Erlang](docs/tutorials/erlang.md) | Concurrent / functional programming |
+| [Ruby](docs/tutorials/ruby.md) | Object-oriented scripting |
+| [Rust](docs/tutorials/rust.md) | Systems programming with ownership |
 
 ### Reference
 
@@ -350,13 +345,13 @@ Time_Warp_Studio/
 │       │   ├── sql_engine.py      # SQLite-backed T-SQL compatibility
 │       │   ├── orchestrator.py    # System integration / component registry
 │       │   └── config.py          # Canonical paths (~/.time_warp/)
-│       ├── languages/             # 24 language executors
+│       ├── languages/             # 20 language executors
 │       │   ├── base.py            # Executor protocol definition
 │       │   ├── basic.py           # BASIC with Turbo graphics
 │       │   ├── logo.py            # Logo turtle graphics
 │       │   ├── pilot.py           # PILOT CAI system
 │       │   ├── python.py          # Python sandboxed executor
-│       │   └── ...                # 20 more language executors
+│       │   └── ...                # 16 more language executors
 │       ├── ui/                    # PySide6 (Qt6) UI components
 │       │   ├── main_window.py     # Main IDE window (6 mixins)
 │       │   ├── editor.py          # Code editor with syntax highlighting
@@ -373,15 +368,13 @@ Time_Warp_Studio/
 │       ├── utils/                 # Expression evaluator, error hints, etc.
 │       └── tests/                 # 41+ test files (1,700+ tests)
 │
-├── Examples/                      # 97 example programs across 24 languages
+├── Examples/                      # 107 example programs across 20 languages
 │   ├── CATALOG.md                 # Searchable example index
-│   ├── basic/ (5)   logo/ (5)     pilot/ (3)    c/ (5)
-│   ├── pascal/ (4)  prolog/ (4)   cobol/ (5)    sqr/ (4)
-│   ├── fortran/ (3) haskell/ (3)  javascript/ (4) assembly/ (3)
-│   ├── apl/ (3)     hypertalk/ (3) brainfuck/ (3) forth/ (3)
-│   ├── lua/ (4)     rexx/ (3)    scheme/ (4)   smalltalk/ (3)
-│   ├── python/ (5)  sql/ (4)     cics/ (4)     jcl/ (5)
-│   └── demo/ (2)    # Cross-language showcases
+│   ├── basic/ (7)   logo/ (7)     pilot/ (5)    c/ (7)
+│   ├── pascal/ (6)  prolog/ (6)   python/ (8)   forth/ (5)
+│   ├── haskell/ (5) javascript/ (6) hypertalk/ (5) brainfuck/ (4)
+│   ├── lua/ (6)     rexx/ (5)    scheme/ (6)   smalltalk/ (5)
+│   └── erlang/ (4)  ruby/ (4)    rust/ (4)     perl/ (2)
 │
 ├── extras/HB_Banking/             # Optional banking/ERP demo application
 │   ├── main.py                    # CLI entry point
@@ -395,7 +388,7 @@ Time_Warp_Studio/
 ├── docs/                          # Documentation
 │   ├── INDEX.md                   # Documentation hub
 │   ├── guides/                    # 8 progressive how-to guides
-│   ├── tutorials/                 # 24 language-specific tutorials
+│   └── tutorials/                 # 19 language-specific tutorials
 │   └── reference/                 # FAQ and reference material
 │
 ├── Scripts/                       # Build, launch, deploy, and utility scripts
@@ -423,7 +416,7 @@ python Platforms/Python/time_warp_ide.py
 
 ### What Happens on Startup
 
-1. All 24 language interpreters are initialized
+1. All 20 language executors are initialized
 2. Configuration is loaded from `~/.time_warp/config.json`
 3. The main IDE window opens with editor, canvas, and output panels
 4. Your last theme and settings are restored
@@ -454,12 +447,9 @@ python Platforms/Python/test_runner.py --basic
 
 # Full package tests directly via pytest
 PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
-
-# Optional backend load/security suites (require backend services)
-RUN_BACKEND_INTEGRATION=1 PYTHONPATH=Platforms/Python pytest Platforms/backend/tests -q
 ```
 
-**Current status:** 1,700+ tests passing across 41 test modules covering all 24 language executors, graphics, GUI, and interpreter tests.
+**Current status:** 1,700+ tests passing across 50+ test modules covering all 20 language executors, graphics, GUI, and interpreter tests.
 
 ---
 
@@ -506,13 +496,13 @@ Licensed under the **[MIT License](LICENSE)**.
 
 - **Repository:** [github.com/James-HoneyBadger/Time_Warp_Studio](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 - **Maintainer:** James Temple — <james@honey-badger.org>
-- **Version:** 9.0.0
+- **Version:** 10.0.0
 
 ---
 
 ## 🙏 Acknowledgments
 
-Time Warp Studio honors the educational legacy of BASIC, Logo, PILOT, COBOL, Fortran, APL, and other pioneering programming languages spanning six decades of computing history, while providing a modern IDE experience for today's learners. Special thanks to the open-source communities behind Python, PySide6/Qt, and the many educators who continue to champion accessible programming education.
+Time Warp Studio honors the educational legacy of BASIC, Logo, PILOT, Forth, Prolog, Scheme, and other pioneering programming languages spanning six decades of computing history, while providing a modern IDE experience for today's learners. Special thanks to the open-source communities behind Python, PySide6/Qt, and the many educators who continue to champion accessible programming education.
 
 ---
 

@@ -1,0 +1,362 @@
+-- ============================================================
+-- SCIENTIFIC CALCULATOR — HyperTalk Language Showcase
+-- Arithmetic, trigonometry, unit conversion, history log
+-- Time Warp Studio — HyperTalk Language Demo
+-- ============================================================
+
+on startUp
+  put "============================================================" & return
+  put "  SCIENTIFIC CALCULATOR — HyperTalk Showcase" & return
+  put "  Arithmetic, Trig, Unit Conversion, History" & return
+  put "============================================================" & return
+  put "" & return
+
+  -- Initialize history
+  global calcHistory
+  global historyCount
+  put "" into calcHistory
+  put 0 into historyCount
+
+  answer "Scientific Calculator started!"
+  put "" & return
+
+  call runDemo
+end startUp
+
+-- ============================================================
+-- HISTORY MANAGEMENT
+-- ============================================================
+
+on addToHistory expr result
+  global calcHistory
+  global historyCount
+  add 1 to historyCount
+  put calcHistory & historyCount & ": " & expr & " = " & result & return into calcHistory
+end addToHistory
+
+on showHistory
+  global calcHistory
+  global historyCount
+  put "--- Calculation History (" & historyCount & " entries) ---" & return
+  put calcHistory & return
+end showHistory
+
+-- ============================================================
+-- BASIC ARITHMETIC
+-- ============================================================
+
+on calc_add a b
+  put a + b into result
+  call addToHistory, (a & " + " & b), result
+  return result
+end calc_add
+
+on calc_sub a b
+  put a - b into result
+  call addToHistory, (a & " - " & b), result
+  return result
+end calc_sub
+
+on calc_mul a b
+  put a * b into result
+  call addToHistory, (a & " × " & b), result
+  return result
+end calc_mul
+
+on calc_div a b
+  if b = 0 then
+    put "Error: division by zero" into result
+    return result
+  end if
+  put a / b into result
+  call addToHistory, (a & " ÷ " & b), result
+  return result
+end calc_div
+
+-- ============================================================
+-- POWER AND ROOTS
+-- ============================================================
+
+on calc_power base exp
+  put base ^ exp into result
+  call addToHistory, (base & " ^ " & exp), result
+  return result
+end calc_power
+
+on calc_sqrt n
+  if n < 0 then
+    return "Error: sqrt of negative"
+  end if
+  put sqrt(n) into result
+  call addToHistory, ("sqrt(" & n & ")"), result
+  return result
+end calc_sqrt
+
+on calc_factorial n
+  if n < 0 then
+    return "Error: factorial of negative"
+  end if
+  if n > 20 then
+    return "Error: too large (>20)"
+  end if
+  put 1 into result
+  repeat with i = 2 to n
+    multiply result by i
+  end repeat
+  call addToHistory, (n & "!"), result
+  return result
+end calc_factorial
+
+-- ============================================================
+-- TRIGONOMETRY (arguments in degrees)
+-- ============================================================
+
+on deg_to_rad deg
+  put deg * 3.14159265358979 / 180 into result
+  return result
+end deg_to_rad
+
+on calc_sin deg
+  put deg_to_rad(deg) into r
+  put sin(r) into result
+  call addToHistory, ("sin(" & deg & "°)"), result
+  return result
+end calc_sin
+
+on calc_cos deg
+  put deg_to_rad(deg) into r
+  put cos(r) into result
+  call addToHistory, ("cos(" & deg & "°)"), result
+  return result
+end calc_cos
+
+on calc_tan deg
+  put deg_to_rad(deg) into r
+  put sin(r) / cos(r) into result
+  call addToHistory, ("tan(" & deg & "°)"), result
+  return result
+end calc_tan
+
+-- ============================================================
+-- LOGARITHMS
+-- ============================================================
+
+on calc_log2 n
+  if n <= 0 then return "Error: log of non-positive"
+  -- log base 2: ln(n) / ln(2)
+  put ln(n) / ln(2) into result
+  call addToHistory, ("log2(" & n & ")"), result
+  return result
+end calc_log2
+
+on calc_log10 n
+  if n <= 0 then return "Error: log of non-positive"
+  put ln(n) / ln(10) into result
+  call addToHistory, ("log10(" & n & ")"), result
+  return result
+end calc_log10
+
+on calc_ln n
+  if n <= 0 then return "Error: ln of non-positive"
+  put ln(n) into result
+  call addToHistory, ("ln(" & n & ")"), result
+  return result
+end calc_ln
+
+-- ============================================================
+-- UNIT CONVERSIONS
+-- ============================================================
+
+on convert_celsius_to_fahrenheit c
+  put c * 9 / 5 + 32 into result
+  call addToHistory, (c & "°C → °F"), result
+  return result
+end convert_celsius_to_fahrenheit
+
+on convert_fahrenheit_to_celsius f
+  put (f - 32) * 5 / 9 into result
+  call addToHistory, (f & "°F → °C"), result
+  return result
+end convert_fahrenheit_to_celsius
+
+on convert_miles_to_km miles
+  put miles * 1.60934 into result
+  call addToHistory, (miles & " mi → km"), result
+  return result
+end convert_miles_to_km
+
+on convert_km_to_miles km
+  put km / 1.60934 into result
+  call addToHistory, (km & " km → mi"), result
+  return result
+end convert_km_to_miles
+
+on convert_kg_to_lbs kg
+  put kg * 2.20462 into result
+  call addToHistory, (kg & " kg → lbs"), result
+  return result
+end convert_kg_to_lbs
+
+on convert_lbs_to_kg lbs
+  put lbs / 2.20462 into result
+  call addToHistory, (lbs & " lbs → kg"), result
+  return result
+end convert_lbs_to_kg
+
+on convert_feet_to_meters feet
+  put feet * 0.3048 into result
+  call addToHistory, (feet & " ft → m"), result
+  return result
+end convert_feet_to_meters
+
+on convert_liters_to_gallons liters
+  put liters * 0.264172 into result
+  call addToHistory, (liters & " L → gal"), result
+  return result
+end convert_liters_to_gallons
+
+-- ============================================================
+-- STATISTICAL FUNCTIONS
+-- ============================================================
+
+on calc_mean vals
+  put the number of items in vals into n
+  put 0 into total
+  repeat with i = 1 to n
+    add item i of vals to total
+  end repeat
+  put total / n into result
+  call addToHistory, ("mean(" & vals & ")"), result
+  return result
+end calc_mean
+
+on calc_max vals
+  put item 1 of vals into result
+  put the number of items in vals into n
+  repeat with i = 2 to n
+    if item i of vals > result then
+      put item i of vals into result
+    end if
+  end repeat
+  return result
+end calc_max
+
+on calc_min vals
+  put item 1 of vals into result
+  put the number of items in vals into n
+  repeat with i = 2 to n
+    if item i of vals < result then
+      put item i of vals into result
+    end if
+  end repeat
+  return result
+end calc_min
+
+-- ============================================================
+-- MAIN DEMO RUNNER
+-- ============================================================
+
+on runDemo
+  put "SECTION 1: BASIC ARITHMETIC" & return
+  put "------------------------------------------------------------" & return
+
+  put "  47 + 38 = " & calc_add(47, 38) & return
+  put "  256 - 184 = " & calc_sub(256, 184) & return
+  put "  17 × 13 = " & calc_mul(17, 13) & return
+  put "  1024 ÷ 32 = " & calc_div(1024, 32) & return
+  put "  100 ÷ 0 = " & calc_div(100, 0) & return
+  put "" & return
+
+  put "SECTION 2: POWERS AND ROOTS" & return
+  put "------------------------------------------------------------" & return
+
+  put "  2^10 = " & calc_power(2, 10) & return
+  put "  3^7 = " & calc_power(3, 7) & return
+  put "  sqrt(144) = " & calc_sqrt(144) & return
+  put "  sqrt(2) = " & calc_sqrt(2) & return
+  put "  sqrt(-1) = " & calc_sqrt(-1) & return
+  put "" & return
+
+  put "SECTION 3: FACTORIALS" & return
+  put "------------------------------------------------------------" & return
+
+  repeat with n = 0 to 12
+    put "  " & n & "! = " & calc_factorial(n) & return
+  end repeat
+  put "" & return
+
+  put "SECTION 4: TRIGONOMETRY" & return
+  put "------------------------------------------------------------" & return
+
+  put "  Angle   sin        cos        tan" & return
+  put "  ------  ---------  ---------  ---------" & return
+
+  repeat with deg = 0 to 360 step 30
+    put calc_sin(deg) into s
+    put calc_cos(deg) into c
+    put "  " & deg & "°: sin=" & s & " cos=" & c & return
+  end repeat
+  put "" & return
+
+  -- Special angles
+  put "  sin(30°) = " & calc_sin(30) & " (expected 0.5)" & return
+  put "  cos(60°) = " & calc_cos(60) & " (expected 0.5)" & return
+  put "  sin(90°) = " & calc_sin(90) & " (expected 1.0)" & return
+  put "  cos(0°)  = " & calc_cos(0) & " (expected 1.0)" & return
+  put "  tan(45°) = " & calc_tan(45) & " (expected 1.0)" & return
+  put "" & return
+
+  put "SECTION 5: LOGARITHMS" & return
+  put "------------------------------------------------------------" & return
+
+  put "  log2(1024) = " & calc_log2(1024) & " (expected 10)" & return
+  put "  log10(100) = " & calc_log10(100) & " (expected 2)" & return
+  put "  log10(1000) = " & calc_log10(1000) & " (expected 3)" & return
+  put "  ln(e) ≈ " & calc_ln(2.71828) & " (expected ~1.0)" & return
+  put "  ln(1) = " & calc_ln(1) & " (expected 0)" & return
+  put "" & return
+
+  put "SECTION 6: UNIT CONVERSIONS" & return
+  put "------------------------------------------------------------" & return
+
+  put "  Temperature:" & return
+  put "    0°C = " & convert_celsius_to_fahrenheit(0) & "°F" & return
+  put "    100°C = " & convert_celsius_to_fahrenheit(100) & "°F" & return
+  put "    212°F = " & convert_fahrenheit_to_celsius(212) & "°C" & return
+  put "    -40°F = " & convert_fahrenheit_to_celsius(-40) & "°C (same in both!)" & return
+  put "" & return
+
+  put "  Distance:" & return
+  put "    1 mile = " & convert_miles_to_km(1) & " km" & return
+  put "    100 km = " & convert_km_to_miles(100) & " miles" & return
+  put "    6 feet = " & convert_feet_to_meters(6) & " m" & return
+  put "" & return
+
+  put "  Mass:" & return
+  put "    70 kg = " & convert_kg_to_lbs(70) & " lbs" & return
+  put "    150 lbs = " & convert_lbs_to_kg(150) & " kg" & return
+  put "" & return
+
+  put "  Volume:" & return
+  put "    1 liter = " & convert_liters_to_gallons(1) & " gallons" & return
+  put "" & return
+
+  put "SECTION 7: STATISTICS" & return
+  put "------------------------------------------------------------" & return
+
+  put "  Scores: 72,85,91,68,79,88,94,76,83,90" & return
+  put calc_mean("72,85,91,68,79,88,94,76,83,90") into m
+  put "  Mean: " & m & return
+  put "  Max: " & calc_max("72,85,91,68,79,88,94,76,83,90") & return
+  put "  Min: " & calc_min("72,85,91,68,79,88,94,76,83,90") & return
+  put "" & return
+
+  put "SECTION 8: HISTORY LOG" & return
+  put "------------------------------------------------------------" & return
+  call showHistory
+
+  put "============================================================" & return
+  put "  Scientific Calculator complete!" & return
+  put "  Arithmetic * Trig * Log * Unit Conversion * Statistics" & return
+  put "============================================================" & return
+end runDemo

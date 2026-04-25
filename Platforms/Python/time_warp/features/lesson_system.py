@@ -116,6 +116,87 @@ class LessonManager:
         """Register a lesson."""
         self.lessons[lesson.id] = lesson
 
+    @staticmethod
+    def _slugify_lesson_id(title: str) -> str:
+        """Create a safe lesson identifier from a title."""
+        cleaned = "".join(ch.lower() if ch.isalnum() else "_" for ch in title)
+        while "__" in cleaned:
+            cleaned = cleaned.replace("__", "_")
+        return cleaned.strip("_") or "custom_lesson"
+
+    def _unique_lesson_id(self, base_id: str) -> str:
+        """Ensure the lesson identifier is unique within the manager."""
+        if base_id not in self.lessons:
+            return base_id
+
+        suffix = 2
+        candidate = f"{base_id}_{suffix}"
+        while candidate in self.lessons:
+            suffix += 1
+            candidate = f"{base_id}_{suffix}"
+        return candidate
+
+    def import_lesson_data(self, data: dict) -> Lesson:
+        """Build and register a lesson from serializable data."""
+        title = str(data.get("title", "Custom Lesson")).strip() or "Custom Lesson"
+        lesson_id = str(data.get("id") or self._slugify_lesson_id(title))
+        if lesson_id in self.lessons and self.lessons[lesson_id].title != title:
+            lesson_id = self._unique_lesson_id(lesson_id)
+
+        checkpoint_defs = data.get("checkpoints") or []
+        checkpoints: List[Checkpoint] = []
+        for item in checkpoint_defs:
+            hints = item.get("hints", [])
+            if isinstance(hints, str):
+                hints = [hint.strip() for hint in hints.split("|") if hint.strip()]
+            checkpoints.append(
+                Checkpoint(
+                    title=str(item.get("title", "Checkpoint")).strip() or "Checkpoint",
+                    description=str(item.get("description", "")).strip(),
+                    starter_code=str(item.get("starter_code", "")),
+                    expected_output=str(item.get("expected_output", "")),
+                    hints=list(hints),
+                    solution=str(item.get("solution", "")),
+                )
+            )
+
+        if not checkpoints:
+            raise ValueError("Lesson must include at least one checkpoint")
+
+        lesson = Lesson(
+            id=lesson_id,
+            title=title,
+            description=str(data.get("description", "")).strip(),
+            language=str(data.get("language", "basic")).strip().lower() or "basic",
+            difficulty=str(data.get("difficulty", "beginner")).strip().lower()
+            or "beginner",
+            checkpoints=checkpoints,
+        )
+        self.add_lesson(lesson)
+        return lesson
+
+    def export_lesson_data(self, lesson_id: str) -> dict:
+        """Return a lesson as plain serializable data."""
+        lesson = self.lessons[lesson_id]
+        return {
+            "id": lesson.id,
+            "title": lesson.title,
+            "description": lesson.description,
+            "language": lesson.language,
+            "difficulty": lesson.difficulty,
+            "checkpoints": [
+                {
+                    "title": checkpoint.title,
+                    "description": checkpoint.description,
+                    "starter_code": checkpoint.starter_code,
+                    "expected_output": checkpoint.expected_output,
+                    "hints": list(checkpoint.hints),
+                    "solution": checkpoint.solution,
+                }
+                for checkpoint in lesson.checkpoints
+            ],
+        }
+
     def start_lesson(self, lesson_id: str) -> bool:
         """Start a lesson."""
         if lesson_id not in self.lessons:

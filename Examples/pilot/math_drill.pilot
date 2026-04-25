@@ -1,0 +1,379 @@
+*MATH DRILL — PILOT Language Showcase
+*Arithmetic flashcards with scoring and difficulty levels
+*Time Warp Studio — PILOT Language Demo
+*============================================================
+T:╔══════════════════════════════════════════════════════╗
+T:║         MATH DRILL — Arithmetic Flashcards          ║
+T:║     Addition  Subtraction  Multiplication  Division  ║
+T:╚══════════════════════════════════════════════════════╝
+T:
+T:Welcome to Math Drill! You will get 20 arithmetic problems.
+T:Each correct answer scores points. Try to get them all right!
+T:
+C: SCORE = 0
+C: TOTAL = 0
+C: STREAK = 0
+C: MAXSTREAK = 0
+
+*============================================================
+*SECTION 1: ADDITION (5 questions)
+*============================================================
+T:━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+T:SECTION 1 — ADDITION
+T:━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+T:
+
+T:Q1: What is 47 + 38?
+A:
+M: 85
+TY:✓ Correct! 47 + 38 = 85
+TN:✗ Incorrect. 47 + 38 = 85
+JY: *ADD_SCORE
+C: STREAK = 0
+J: *Q2
+*ADD_SCORE
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q2
+C: TOTAL = TOTAL + 1
+
+T:Q2: What is 256 + 184?
+A:
+M: 440
+TY:✓ Correct! 256 + 184 = 440
+TN:✗ Incorrect. 256 + 184 = 440
+JY: *ADD_SCORE2
+C: STREAK = 0
+J: *Q3
+*ADD_SCORE2
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q3
+C: TOTAL = TOTAL + 1
+
+T:Q3: What is 1,089 + 2,347?
+A:
+M: 3436
+TY:✓ Correct! 1089 + 2347 = 3436
+TN:✗ Incorrect. 1089 + 2347 = 3436
+JY: *ADD_SCORE3
+C: STREAK = 0
+J: *Q4
+*ADD_SCORE3
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q4
+C: TOTAL = TOTAL + 1
+
+T:Q4: What is 999 + 1?
+A:
+M: 1000
+TY:✓ Correct! This classic carries all the way!
+TN:✗ Incorrect. 999 + 1 = 1000
+JY: *ADD_SCORE4
+C: STREAK = 0
+J: *Q5
+*ADD_SCORE4
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q5
+C: TOTAL = TOTAL + 1
+
+T:Q5: What is 3,762 + 4,895?
+A:
+M: 8657
+TY:✓ Excellent! 3762 + 4895 = 8657
+TN:✗ Incorrect. 3762 + 4895 = 8657
+JY: *ADD_SCORE5
+C: STREAK = 0
+J: *SUBTRACTION
+*ADD_SCORE5
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*SUBTRACTION
+C: TOTAL = TOTAL + 1
+
+*============================================================
+*SECTION 2: SUBTRACTION (5 questions)
+*============================================================
+T:
+T:━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+T:SECTION 2 — SUBTRACTION
+T:━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+T:
+
+T:Q6: What is 100 - 37?
+A:
+M: 63
+TY:✓ Correct! 100 - 37 = 63
+TN:✗ Incorrect. 100 - 37 = 63
+JY: *SUB6
+C: STREAK = 0
+J: *Q7
+*SUB6
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q7
+C: TOTAL = TOTAL + 1
+
+T:Q7: What is 500 - 248?
+A:
+M: 252
+TY:✓ Correct! 500 - 248 = 252
+TN:✗ Incorrect. 500 - 248 = 252
+JY: *SUB7
+C: STREAK = 0
+J: *Q8
+*SUB7
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q8
+C: TOTAL = TOTAL + 1
+
+T:Q8: What is 1000 - 1?
+A:
+M: 999
+TY:✓ Correct!
+TN:✗ Incorrect. 1000 - 1 = 999
+JY: *SUB8
+C: STREAK = 0
+J: *Q9
+*SUB8
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q9
+C: TOTAL = TOTAL + 1
+
+T:Q9: What is 2,048 - 1,024?
+A:
+M: 1024
+TY:✓ Powers of 2! 2048 - 1024 = 1024
+TN:✗ Incorrect. 2048 - 1024 = 1024 (these are powers of 2!)
+JY: *SUB9
+C: STREAK = 0
+J: *Q10
+*SUB9
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q10
+C: TOTAL = TOTAL + 1
+
+T:Q10: What is 10,000 - 7,348?
+A:
+M: 2652
+TY:✓ Correct! 10000 - 7348 = 2652
+TN:✗ Incorrect. 10000 - 7348 = 2652
+JY: *SUB10
+C: STREAK = 0
+J: *MULTIPLICATION
+*SUB10
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*MULTIPLICATION
+C: TOTAL = TOTAL + 1
+
+*============================================================
+*SECTION 3: MULTIPLICATION (5 questions)
+*============================================================
+T:
+T:━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+T:SECTION 3 — MULTIPLICATION
+T:━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+T:
+
+T:Q11: What is 7 x 8?
+A:
+M: 56
+TY:✓ Correct! 7 × 8 = 56
+TN:✗ Incorrect. 7 × 8 = 56  (7×7=49, add 7 = 56)
+JY: *MUL11
+C: STREAK = 0
+J: *Q12
+*MUL11
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q12
+C: TOTAL = TOTAL + 1
+
+T:Q12: What is 12 x 12?
+A:
+M: 144
+TY:✓ 12 squared = 144!
+TN:✗ Incorrect. 12 × 12 = 144
+JY: *MUL12
+C: STREAK = 0
+J: *Q13
+*MUL12
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q13
+C: TOTAL = TOTAL + 1
+
+T:Q13: What is 15 x 15?
+A:
+M: 225
+TY:✓ Correct! 15² = 225. Tip: n² = (n-5)(n+5) + 25
+TN:✗ Incorrect. 15 × 15 = 225
+JY: *MUL13
+C: STREAK = 0
+J: *Q14
+*MUL13
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q14
+C: TOTAL = TOTAL + 1
+
+T:Q14: What is 24 x 25?
+A:
+M: 600
+TY:✓ Correct! 24 × 25 = 24 × 100/4 = 2400/4 = 600
+TN:✗ Incorrect. 24 × 25 = 600 (tip: multiply by 100, divide by 4)
+JY: *MUL14
+C: STREAK = 0
+J: *Q15
+*MUL14
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q15
+C: TOTAL = TOTAL + 1
+
+T:Q15: What is 99 x 99?
+A:
+M: 9801
+TY:✓ Brilliant! 99 × 99 = (100-1)² = 10000 - 200 + 1 = 9801
+TN:✗ Incorrect. 99 × 99 = 9801. Use (100-1)² = 10000-200+1
+JY: *MUL15
+C: STREAK = 0
+J: *DIVISION
+*MUL15
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*DIVISION
+C: TOTAL = TOTAL + 1
+
+*============================================================
+*SECTION 4: DIVISION (5 questions)
+*============================================================
+T:
+T:━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+T:SECTION 4 — DIVISION
+T:━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+T:
+
+T:Q16: What is 144 / 12?
+A:
+M: 12
+TY:✓ Correct! 144 ÷ 12 = 12
+TN:✗ Incorrect. 144 ÷ 12 = 12
+JY: *DIV16
+C: STREAK = 0
+J: *Q17
+*DIV16
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q17
+C: TOTAL = TOTAL + 1
+
+T:Q17: What is 1000 / 8?
+A:
+M: 125
+TY:✓ Correct! 1000 ÷ 8 = 125
+TN:✗ Incorrect. 1000 ÷ 8 = 125
+JY: *DIV17
+C: STREAK = 0
+J: *Q18
+*DIV17
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q18
+C: TOTAL = TOTAL + 1
+
+T:Q18: What is 576 / 24?
+A:
+M: 24
+TY:✓ Correct! 576 ÷ 24 = 24. So 24 × 24 = 576!
+TN:✗ Incorrect. 576 ÷ 24 = 24
+JY: *DIV18
+C: STREAK = 0
+J: *Q19
+*DIV18
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q19
+C: TOTAL = TOTAL + 1
+
+T:Q19: What is 2,916 / 36?
+A:
+M: 81
+TY:✓ Correct! 2916 ÷ 36 = 81
+TN:✗ Incorrect. 2916 ÷ 36 = 81
+JY: *DIV19
+C: STREAK = 0
+J: *Q20
+*DIV19
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*Q20
+C: TOTAL = TOTAL + 1
+
+T:Q20: What is 10,000 / 125?
+A:
+M: 80
+TY:✓ Correct! 10000 ÷ 125 = 80 (125 = 1000/8, so × 8/1000)
+TN:✗ Incorrect. 10000 ÷ 125 = 80
+JY: *DIV20
+C: STREAK = 0
+J: *RESULTS
+*DIV20
+C: SCORE = SCORE + 10
+C: STREAK = STREAK + 1
+IF STREAK > MAXSTREAK THEN C: MAXSTREAK = STREAK
+*RESULTS
+C: TOTAL = TOTAL + 1
+
+*============================================================
+*FINAL RESULTS
+*============================================================
+T:
+T:━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+T:MATH DRILL COMPLETE!
+T:━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+C: CORRECT = SCORE / 10
+C: PCT = CORRECT * 100 / 20
+T:Score:
+C: DISPLAY_SCORE = SCORE
+T:Correct answers:
+C: DISPLAY_CORRECT = CORRECT
+T:Percentage:
+C: DISPLAY_PCT = PCT
+T:Best streak:
+C: DISPLAY_STREAK = MAXSTREAK
+T:
+IF PCT = 100 THEN T:Grade: A+  ★★★ PERFECT SCORE! Outstanding!
+IF PCT >= 90 THEN T:Grade: A   ★★★ Excellent!
+IF PCT >= 80 THEN T:Grade: B   ★★  Very good!
+IF PCT >= 70 THEN T:Grade: C   ★   Good work!
+IF PCT >= 60 THEN T:Grade: D   Keep practicing!
+IF PCT < 60 THEN T:Grade: F   Review your arithmetic!
+T:
+T:━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+E:

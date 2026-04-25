@@ -248,10 +248,17 @@ class InterpreterThread(QThread):
                 self.execution_complete.emit()
 
     def stop(self):
-        """Request thread to stop."""
+        """Request thread to stop.
+
+        Sets running=False AND unblocks any pending debug_event.wait() so the
+        interpreter thread is never permanently hung when stopped while paused.
+        """
         self.should_stop = True
         if self.interp:
             self.interp.running = False
+            # Unblock the thread if it is waiting in _do_debug_pause or the
+            # Python settrace debug tracer.
+            self.interp.debug_event.set()
 
 
 class OutputPanel(QTextEdit):
@@ -1023,19 +1030,12 @@ class ImmediateModePanel(QWidget):
             Language.PYTHON: "PY>",
             Language.LUA: "LUA>",
             Language.SCHEME: "SCM>",
-            Language.COBOL: "COBOL>",
             Language.BRAINFUCK: "BF>",
-            Language.ASSEMBLY: "ASM>",
             Language.JAVASCRIPT: "JS>",
-            Language.FORTRAN: "F77>",
             Language.REXX: "REXX>",
             Language.SMALLTALK: "ST>",
             Language.HYPERTALK: "HTALK>",
             Language.HASKELL: "HS>",
-            Language.APL: "APL>",
-            Language.SQL: "SQL>",
-            Language.JCL: "JCL>",
-            Language.CICS: "CICS>",
         }
         self.prompt_label.setText(prompts.get(language, "CMD>"))
 

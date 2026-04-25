@@ -200,8 +200,8 @@ class OnboardingDialog(QDialog):
                 step_id="languages",
                 title="Multiple Languages",
                 description="Time Warp supports BASIC, PILOT, Logo, "
-                "Pascal, Prolog, C, Python, Lua, Scheme, COBOL, "
-                "Assembly, JavaScript, FORTRAN, REXX, Smalltalk, "
+                "Pascal, Prolog, C, Python, Lua, Scheme, "
+                "Brainfuck, JavaScript, REXX, Smalltalk, "
                 "HyperTalk, Haskell, APL, and Brainfuck.",
                 instructions=[
                     "Language is auto-detected from file extension",

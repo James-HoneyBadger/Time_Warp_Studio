@@ -239,7 +239,8 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             _case_sensitive_langs = {
                 Language.C, Language.PYTHON, Language.JAVASCRIPT,
                 Language.HASKELL, Language.LUA, Language.SCHEME,
-                Language.PROLOG, Language.SMALLTALK, Language.ASSEMBLY,
+                Language.PROLOG, Language.SMALLTALK,
+                Language.RUBY, Language.ERLANG, Language.RUST,
             }
             kw_flags = 0 if getattr(self, '_current_language', None) in _case_sensitive_langs else re.IGNORECASE
             self._keyword_re = re.compile(
@@ -824,86 +825,6 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             )
             self.variable_pattern = r"\b[A-Za-z!?<>/+\-*_.][A-Za-z0-9!?<>/+\-*_.]*\b"
 
-        elif language == Language.COBOL:
-            self.keywords = [
-                "IDENTIFICATION",
-                "ENVIRONMENT",
-                "DATA",
-                "PROCEDURE",
-                "DIVISION",
-                "PROGRAM-ID",
-                "WORKING-STORAGE",
-                "SECTION",
-                "PARAGRAPH",
-                "MOVE",
-                "ADD",
-                "SUBTRACT",
-                "MULTIPLY",
-                "DIVIDE",
-                "COMPUTE",
-                "DISPLAY",
-                "ACCEPT",
-                "PERFORM",
-                "VARYING",
-                "UNTIL",
-                "IF",
-                "THEN",
-                "ELSE",
-                "END-IF",
-                "EVALUATE",
-                "WHEN",
-                "END-EVALUATE",
-                "STOP",
-                "RUN",
-                "GO",
-                "TO",
-                "THRU",
-                "TIMES",
-                "OPEN",
-                "CLOSE",
-                "READ",
-                "WRITE",
-                "REWRITE",
-                "DELETE",
-                "PIC",
-                "PICTURE",
-                "VALUE",
-                "IS",
-                "ZERO",
-                "ZEROS",
-                "ZEROES",
-                "SPACE",
-                "SPACES",
-                "QUOTE",
-                "QUOTES",
-                "ALL",
-                "BY",
-                "GIVING",
-                "FROM",
-                "INTO",
-                "OF",
-                "ON",
-                "SIZE",
-                "ERROR",
-                "NOT",
-                "AND",
-                "OR",
-                "TRUE",
-                "FALSE",
-                "01",
-                "05",
-                "10",
-                "15",
-                "77",
-                "88",
-            ]
-            self.comment_pattern = r"^\s*\*.*$"
-            self.string_pattern = r'"[^"]*"|\'[^\']*\''
-            self.number_pattern = r"\b\d+\.?\d*\b"
-            self.operator_pattern = r"[+\-*/=<>]"
-            self.function_pattern = r"^\s+(\w+)\s*\."
-            self.variable_pattern = r"\b[A-Z][A-Z0-9\-]*\b"
-
         elif language == Language.BRAINFUCK:
             self.keywords = []
             self.comment_pattern = r"[^+\-<>\.,\[\]\n]+"
@@ -912,57 +833,6 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             self.operator_pattern = r"[+\-<>\.,\[\]]"
             self.function_pattern = None
             self.variable_pattern = None
-
-        elif language == Language.ASSEMBLY:
-            self.keywords = [
-                "MOV",
-                "ADD",
-                "SUB",
-                "MUL",
-                "DIV",
-                "MOD",
-                "AND",
-                "OR",
-                "XOR",
-                "NOT",
-                "INC",
-                "DEC",
-                "CMP",
-                "PUSH",
-                "POP",
-                "CALL",
-                "RET",
-                "LOAD",
-                "STORE",
-                "JMP",
-                "JE",
-                "JNE",
-                "JG",
-                "JL",
-                "JGE",
-                "JLE",
-                "PRINT",
-                "INPUT",
-                "HALT",
-                "NOP",
-                "FORWARD",
-                "FWD",
-                "BACKWARD",
-                "BCK",
-                "LEFT",
-                "LFT",
-                "RIGHT",
-                "RGT",
-                "PEN",
-                "UP",
-                "DOWN",
-            ]
-            self.comment_pattern = r";.*$"
-            self.string_pattern = r'"[^"]*"'
-            self.number_pattern = r"\b0[xX][0-9a-fA-F]+\b|\b0[bB][01]+\b|\b\d+\b"
-            self.operator_pattern = r"[,:\[\]]"
-            self.function_pattern = r"^([A-Za-z_][A-Za-z0-9_]*):"
-            self.variable_pattern = r"\bR\d+\b|\b[A-Za-z_][A-Za-z0-9_]*\b"
 
         elif language == Language.JAVASCRIPT:
             self.keywords = [
@@ -1043,73 +913,6 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             self.operator_pattern = r"[+\-*/=<>!&|%^~?:.]"
             self.function_pattern = r"\bfunction\s*([A-Za-z_$][A-Za-z0-9_$]*)|([A-Za-z_$][A-Za-z0-9_$]*)\s*=>\s*"
             self.variable_pattern = r"\b[A-Za-z_$][A-Za-z0-9_$]*\b"
-
-        elif language == Language.FORTRAN:
-            self.keywords = [
-                "PROGRAM",
-                "END",
-                "STOP",
-                "PAUSE",
-                "RETURN",
-                "CONTINUE",
-                "INTEGER",
-                "REAL",
-                "DOUBLE",
-                "PRECISION",
-                "COMPLEX",
-                "LOGICAL",
-                "CHARACTER",
-                "DIMENSION",
-                "COMMON",
-                "EQUIVALENCE",
-                "EXTERNAL",
-                "IF",
-                "THEN",
-                "ELSE",
-                "ELSEIF",
-                "ENDIF",
-                "DO",
-                "GOTO",
-                "CALL",
-                "SUBROUTINE",
-                "FUNCTION",
-                "WRITE",
-                "READ",
-                "PRINT",
-                "FORMAT",
-                "OPEN",
-                "CLOSE",
-                "INQUIRE",
-                "REWIND",
-                "BACKSPACE",
-                "ENDFILE",
-                ".TRUE.",
-                ".FALSE.",
-                ".AND.",
-                ".OR.",
-                ".NOT.",
-                ".EQ.",
-                ".NE.",
-                ".LT.",
-                ".GT.",
-                ".LE.",
-                ".GE.",
-                "SQRT",
-                "ABS",
-                "INT",
-                "REAL",
-                "SIN",
-                "COS",
-                "TAN",
-                "EXP",
-                "LOG",
-            ]
-            self.comment_pattern = r"^[Cc*].*$"
-            self.string_pattern = r"'[^']*'"
-            self.number_pattern = r"\b\d+\.?\d*(?:[EeDd][+-]?\d+)?\b"
-            self.operator_pattern = r"[+\-*/=()]"
-            self.function_pattern = r"\bSUBROUTINE\s+(\w+)|\bFUNCTION\s+(\w+)"
-            self.variable_pattern = r"\b[A-Za-z][A-Za-z0-9]{0,5}\b"
 
         elif language == Language.REXX:
             self.keywords = [
@@ -1378,261 +1181,76 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             self.function_pattern = r"^([a-z][A-Za-z0-9_']*)\s+"
             self.variable_pattern = r"\b[a-zA-Z][A-Za-z0-9_']*\b"
 
-        elif language == Language.APL:
-            self.keywords = []  # APL uses symbols, not word keywords
-            self.comment_pattern = r"⍝.*$"
-            self.string_pattern = r"'[^']*'"
-            self.number_pattern = r"¯?\d+\.?\d*(?:[eE][+-]?\d+)?\b"
-            self.operator_pattern = r"[⍳⍴⌽⍉⌈⌊⍋⍒∊≡≢←⎕↑↓,/\\⌿+\-×÷*!=<>≤≥≠&|~?]"
-            self.function_pattern = r"\b(\w+)\s*←\s*\{"
-            self.variable_pattern = r"\b[A-Za-z_][A-Za-z0-9_]*\b"
-
-        elif language == Language.SQL:
+        elif language == Language.RUBY:
             self.keywords = [
-                "SELECT",
-                "FROM",
-                "WHERE",
-                "JOIN",
-                "INNER",
-                "LEFT",
-                "RIGHT",
-                "FULL",
-                "OUTER",
-                "ON",
-                "AS",
-                "INSERT",
-                "INTO",
-                "VALUES",
-                "UPDATE",
-                "SET",
-                "DELETE",
-                "CREATE",
-                "DROP",
-                "ALTER",
-                "TABLE",
-                "VIEW",
-                "DATABASE",
-                "INDEX",
-                "PROCEDURE",
-                "FUNCTION",
-                "TRIGGER",
-                "EXEC",
-                "EXECUTE",
-                "DECLARE",
-                "BEGIN",
-                "END",
-                "COMMIT",
-                "ROLLBACK",
-                "TRANSACTION",
-                "IF",
-                "ELSE",
-                "WHILE",
-                "RETURN",
-                "PRINT",
-                "GO",
-                "USE",
-                "EXISTS",
-                "NOT",
-                "AND",
-                "OR",
-                "IN",
-                "LIKE",
-                "BETWEEN",
-                "IS",
-                "NULL",
-                "TOP",
-                "ORDER",
-                "BY",
-                "GROUP",
-                "HAVING",
-                "DISTINCT",
-                "UNION",
-                "ALL",
-                "CASE",
-                "WHEN",
-                "THEN",
-                "WITH",
-                "PRIMARY",
-                "FOREIGN",
-                "KEY",
-                "REFERENCES",
-                "CONSTRAINT",
-                "IDENTITY",
-                "DEFAULT",
-                "UNIQUE",
-                "CHECK",
-                "CASCADE",
+                "def", "class", "module", "end", "do", "yield", "return",
+                "if", "elsif", "else", "unless", "then", "case", "when",
+                "while", "until", "for", "in", "loop", "next", "break",
+                "begin", "rescue", "ensure", "raise", "retry",
+                "self", "super", "nil", "true", "false",
+                "and", "or", "not", "defined?",
+                "require", "require_relative", "include", "extend",
+                "attr_accessor", "attr_reader", "attr_writer",
+                "puts", "print", "p", "pp", "gets",
+                "new", "initialize", "public", "private", "protected",
+                "lambda", "proc", "block_given?",
             ]
-            self.comment_pattern = r"--.*$|/\*.*?\*/"
-            self.string_pattern = r"'(?:[^']|'')*'"
+            self.comment_pattern = r"#.*$"
+            self.string_pattern = (
+                r'"(?:[^"\\]|\\.)*"|'
+                r"'(?:[^'\\]|\\.)*'"
+            )
             self.number_pattern = r"\b\d+\.?\d*\b"
-            self.operator_pattern = r"[@=<>!+\-*/]+"
-            self.function_pattern = r"\b(COUNT|SUM|AVG|MIN|MAX|LEN|ISNULL|GETDATE|CONVERT|CAST|COALESCE|NULLIF|CHARINDEX|SUBSTRING|UPPER|LOWER|LTRIM|RTRIM|REPLACE)\s*\("
-            self.variable_pattern = r"@{1,2}[A-Za-z_][A-Za-z0-9_]*"
+            self.operator_pattern = r"[+\-*/%=<>!&|^~?:.]|\.\.|=>"
+            self.function_pattern = r"^\s*def\s+(\w+[!?]?)"
+            self.variable_pattern = r"\b@@?\w+|\$\w+|[A-Z][A-Z0-9_]*\b"
 
-        elif language == Language.JCL:
+        elif language == Language.ERLANG:
             self.keywords = [
-                "JOB",
-                "EXEC",
-                "DD",
-                "PROC",
-                "PEND",
-                "SET",
-                "PGM",
-                "PROC",
-                "COND",
-                "REGION",
-                "TIME",
-                "CLASS",
-                "MSGCLASS",
-                "MSGLEVEL",
-                "NOTIFY",
-                "UNIT",
-                "SPACE",
-                "DCB",
-                "DISP",
-                "DSN",
-                "DSNAME",
-                "SYSOUT",
-                "DUMMY",
-                "BLKSIZE",
-                "RECFM",
-                "LRECL",
-                "TRACKS",
-                "CYLINDERS",
-                "TRK",
-                "CYL",
-                "OLD",
-                "NEW",
-                "SHR",
-                "MOD",
-                "CATLG",
-                "DELETE",
-                "KEEP",
-                "PASS",
+                "module", "export", "import", "define", "record",
+                "if", "case", "of", "end", "receive", "after",
+                "begin", "try", "catch", "throw", "error",
+                "when", "fun", "let", "in", "query",
+                "and", "andalso", "or", "orelse", "not", "xor",
+                "div", "rem", "band", "bor", "bxor", "bnot", "bsl", "bsr",
+                "true", "false", "undefined", "ok", "error",
+                "spawn", "send", "self", "node", "register",
+                "lists", "io", "string", "math", "maps", "erlang",
             ]
-            self.comment_pattern = r"//\*.*$"
-            self.string_pattern = r"'[^']*'"
-            self.number_pattern = r"\b\d+\b"
-            self.operator_pattern = r"[=,()]"
-            self.function_pattern = r"^//\S+"
-            self.variable_pattern = r"\b[A-Z#@$][A-Z0-9#@$]{0,7}\b"
+            self.comment_pattern = r"%.*$"
+            self.string_pattern = r'"(?:[^"\\]|\\.)*"'
+            self.number_pattern = r"\b\d+(?:\.\d+)?\b"
+            self.operator_pattern = r"[+\-*/<>=!|&]|->|<-|\|"
+            self.function_pattern = r"^(\w+)\s*\("
+            self.variable_pattern = r"\b[A-Z_][A-Za-z0-9_]*\b"
 
-        elif language == Language.CICS:
+        elif language == Language.RUST:
             self.keywords = [
-                "EXEC",
-                "CICS",
-                "END-EXEC",
-                "SEND",
-                "RECEIVE",
-                "READ",
-                "READNEXT",
-                "WRITE",
-                "REWRITE",
-                "DELETE",
-                "BROWSE",
-                "STARTBR",
-                "READNEXT",
-                "ENDBR",
-                "LINK",
-                "XCTL",
-                "RETURN",
-                "ABEND",
-                "HANDLE",
-                "CONDITION",
-                "IGNORE",
-                "ASSIGN",
-                "GETMAIN",
-                "FREEMAIN",
-                "ENQ",
-                "DEQ",
-                "SYNCPOINT",
-                "DELAY",
-                "ASKTIME",
-                "FORMATTIME",
-                "RETRIEVE",
-                "SET",
-                "INQUIRE",
-                "PUT",
-                "TEXT",
-                "MAP",
-                "MAPSET",
-                "TERMINAL",
-                "INTO",
-                "FROM",
-                "LENGTH",
-                "TRANSID",
-                "COMMAREA",
-                "FLENGTH",
-                "DATASET",
-                "RIDFLD",
-                "KEYLENGTH",
-                "GENERIC",
-                "NOTFND",
-                "DUPKEY",
-                "ENDFILE",
-                "ERROR",
-                "PGMIDERR",
-                "INVREQ",
-                # COBOL verbs
-                "MOVE",
-                "DISPLAY",
-                "PERFORM",
-                "IF",
-                "ELSE",
-                "END-IF",
-                "STOP",
-                "RUN",
-                "GOBACK",
-                "COMPUTE",
-                "ADD",
-                "SUBTRACT",
-                "MULTIPLY",
-                "DIVIDE",
-                "INITIALIZE",
-                "EVALUATE",
+                "fn", "let", "mut", "const", "static", "struct", "enum",
+                "impl", "trait", "type", "use", "mod", "pub", "crate",
+                "extern", "super", "self", "Self",
+                "if", "else", "match", "loop", "while", "for", "in",
+                "return", "break", "continue",
+                "true", "false", "None", "Some", "Ok", "Err",
+                "async", "await", "move", "ref", "where", "dyn", "box",
+                "as", "unsafe", "macro_rules",
+                "i8", "i16", "i32", "i64", "i128", "isize",
+                "u8", "u16", "u32", "u64", "u128", "usize",
+                "f32", "f64", "bool", "char", "str", "String",
+                "Vec", "HashMap", "HashSet", "Option", "Result",
+                "println", "print", "eprintln", "format", "vec",
+                "assert", "assert_eq", "assert_ne", "panic", "todo",
+                "unimplemented", "unreachable", "dbg",
             ]
-            self.comment_pattern = r"\*.*$"
-            self.string_pattern = r"'[^']*'"
-            self.number_pattern = r"\b\d+\b"
-            self.operator_pattern = r"[=<>()+\-*/]"
-            self.function_pattern = r"\bEXEC\s+CICS\b"
-            self.variable_pattern = r"\b[A-Z][A-Z0-9-]*\b"
-
-        elif language == Language.SQR:
-            self.keywords = [
-                "BEGIN-PROGRAM", "END-PROGRAM",
-                "BEGIN-PROCEDURE", "END-PROCEDURE",
-                "BEGIN-HEADING", "END-HEADING",
-                "BEGIN-FOOTING", "END-FOOTING",
-                "BEGIN-REPORT", "END-REPORT",
-                "BEGIN-SETUP", "END-SETUP",
-                "BEGIN-SQL", "END-SQL",
-                "BEGIN-SELECT", "END-SELECT",
-                "PRINT", "DISPLAY", "SHOW", "STOP",
-                "LET", "MOVE", "GET", "PUT", "ADD", "SUBTRACT",
-                "MULTIPLY", "DIVIDE", "CONCAT", "UNSTRING",
-                "IF", "ELSE", "END-IF", "EVALUATE", "WHEN",
-                "WHILE", "END-WHILE", "DO", "BREAK",
-                "INPUT", "OPEN", "CLOSE", "READ", "WRITE",
-                "STRING", "DATE", "DATEADD", "DATEDIFF",
-                "UPPER", "LOWER", "SUBSTR", "LENGTH",
-                "TO_NUMBER", "TO_CHAR", "EDIT", "ENCODE",
-                "SELECT", "FROM", "WHERE", "ORDER", "BY",
-                "GROUP", "HAVING", "INSERT", "UPDATE", "DELETE",
-                "CREATE", "TABLE", "AND", "OR", "NOT",
-                "INTO", "VALUES", "SET", "NULL", "AS",
-                "DECLARE-VARIABLE",
-                "NEW-PAGE", "POSITION", "COLUMNS",
-                "NEXT-LISTING", "ALTER-PRINTER",
-                "DO", "CALL", "RETURN",
-            ]
-            self.comment_pattern = r"!.*$"
-            self.string_pattern = r"'[^']*'"
-            self.number_pattern = r"\b\d+\.?\d*\b"
-            self.operator_pattern = r"[=<>()+\-*/&|]"
-            self.function_pattern = r"\b(?:BEGIN-PROCEDURE|END-PROCEDURE)\b"
-            self.variable_pattern = r"[$#&]\w+"
+            self.comment_pattern = r"//.*$"
+            self.string_pattern = (
+                r'"(?:[^"\\]|\\.)*"|'
+                r"r#*\".*?\"#*"
+            )
+            self.number_pattern = r"\b\d+(?:\.\d+)?(?:[a-z0-9]+)?\b"
+            self.operator_pattern = r"[+\-*/%=<>!&|^?:;,.]|->|=>|::|\.{2}=?"
+            self.function_pattern = r"^\s*(?:pub\s+)?(?:async\s+)?fn\s+(\w+)"
+            self.variable_pattern = r"\b[a-z_][a-z0-9_]*\b"
 
         else:
             # Default to BASIC

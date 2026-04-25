@@ -92,6 +92,10 @@ _WHILE_DO_RE = re.compile(
     r"^\s*while\s+(.+)\s+do\s*;?\s*$",
     re.IGNORECASE,
 )
+_WITH_DO_RE = re.compile(
+    r"^\s*with\s+([A-Za-z_][A-Za-z0-9_]*)\s+do\s*;?\s*$",
+    re.IGNORECASE,
+)
 _REPEAT_RE = re.compile(r"^\s*repeat\s*$", re.IGNORECASE)
 _UNTIL_RE = re.compile(r"^\s*until\s+(.+)\s*;?\s*$", re.IGNORECASE)
 _FOR_RE = re.compile(
@@ -1190,6 +1194,61 @@ def _handle_while_do(interpreter: "Interpreter", cond_expr: str) -> str:
     return ""
 
 
+def _handle_with_do(
+    interpreter: "Interpreter", rec_name: str, turtle: "TurtleState"
+) -> str:
+    """Handle WITH <record> DO ... END — push field aliases into scope."""
+    rec = interpreter.variables.get(rec_name)
+    if not isinstance(rec, dict):
+        return f"❌ Error: '{rec_name}' is not a record variable"
+    # Find BEGIN...END body
+    start = interpreter.current_line + 1
+    # Skip optional BEGIN on same or next line
+    if start < len(interpreter.program_lines):
+        next_line = interpreter.program_lines[start][1].strip().upper().rstrip(";")
+        if next_line == "BEGIN":
+            start += 1
+    # Find matching END
+    depth = 1
+    j = start
+    while j < len(interpreter.program_lines):
+        s = interpreter.program_lines[j][1].strip().upper().rstrip(";")
+        if s == "BEGIN":
+            depth += 1
+        elif s in ("END", "END."):
+            depth -= 1
+            if depth == 0:
+                break
+        j += 1
+    end = j  # exclusive body range is [start, end)
+    # Execute body with record fields temporarily merged into variable scope
+    old_aliases: dict[str, Any] = {}
+    for fname, fval in rec.items():
+        old_aliases[fname] = interpreter.variables.get(fname)
+        interpreter.variables[fname] = fval
+    saved_line = interpreter.current_line
+    interpreter.current_line = start - 1
+    output_parts: list[str] = []
+    while interpreter.current_line < end - 1:
+        interpreter.current_line += 1
+        line_no, stmt = interpreter.program_lines[interpreter.current_line]
+        result = _execute_pascal_statement(interpreter, stmt, turtle)
+        if result:
+            output_parts.append(result)
+    # Write back modified fields
+    for fname in rec:
+        if fname in interpreter.variables:
+            rec[fname] = interpreter.variables[fname]
+    # Restore shadowed variables
+    for fname, old_val in old_aliases.items():
+        if old_val is None:
+            interpreter.variables.pop(fname, None)
+        else:
+            interpreter.variables[fname] = old_val
+    interpreter.current_line = end  # skip to END line
+    return "".join(output_parts)
+
+
 def _handle_repeat(interpreter: "Interpreter") -> str:
     """Handle REPEAT block start until its matching UNTIL line."""
     j = interpreter.current_line + 1
@@ -1545,6 +1604,12 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
     m = _UNTIL_RE.match(cmd)
     if m and getattr(interpreter, "pascal_block_stack", []):
         return _handle_until(interpreter, m.group(1).strip())
+
+    # WITH <record> DO begin ... end
+    m = _WITH_DO_RE.match(cmd)
+    if m:
+        rec_name = m.group(1).upper()
+        return _handle_with_do(interpreter, rec_name, turtle)
 
     # FOR i := a TO/DOWNTO b DO begin ... end
     m = _FOR_RE.match(cmd)

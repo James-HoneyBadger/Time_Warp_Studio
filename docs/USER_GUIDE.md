@@ -145,7 +145,7 @@ Quick access to 10 most recently opened files.
 
 ## Selecting a Language
 
-Programs can be written in **24 different languages**:
+Programs can be written in **20 different languages**:
 
 ### Auto-Detection
 
@@ -172,23 +172,19 @@ Dropdown also available in top toolbar.
 | **Forth** | .f / .4th | Stack-based | 1970 |
 | **Pascal** | .pas | Structured | 1970 |
 | **Prolog** | .pro | Logic/Declarative | 1972 |
-| **SQL** | .sql | Relational/Query | 1974 |
-| **Smalltalk** | .st | Object-Oriented | 1980 |
-| **APL** | .apl | Array/Mathematical | 1966 |
-| **Assembly** | .asm / .s | Low-level | 1950s |
+| **Python** | .py | Multi-paradigm | 1991 |
+| **Lua** | .lua | Scripting/Embedded | 1993 |
+| **Scheme** | .scm | Functional/Lisp | 1975 |
 | **Brainfuck** | .bf | Esoteric/Turing | 1993 |
-| **CICS** | .cics | Mainframe/Transaction | 1969 |
-| **COBOL** | .cob | Business/Data | 1959 |
-| **Fortran** | .f90 / .for | Scientific/Numeric | 1957 |
+| **Erlang** | .erl | Concurrent/Functional | 1986 |
 | **Haskell** | .hs | Functional/Typed | 1990 |
 | **HyperTalk** | .ht | Event-driven | 1987 |
 | **JavaScript** | .js | Scripting/Web | 1995 |
-| **JCL** | .jcl | Mainframe Job Control | 1964 |
-| **Lua** | .lua | Scripting/Embedded | 1993 |
-| **Python** | .py | Multi-paradigm | 1991 |
+| **Perl** | .pl / .pm | Scripting/Text-processing | 1987 |
 | **REXX** | .rex | Scripting/Mainframe | 1979 |
-| **Scheme** | .scm | Functional/Lisp | 1975 |
-| **SQR** | .sqr | Report/Database | 1980s |
+| **Ruby** | .rb | Object-Oriented/Scripting | 1995 |
+| **Rust** | .rs | Systems/Memory-safe | 2015 |
+| **Smalltalk** | .st | Object-Oriented | 1980 |
 
 ---
 
@@ -622,7 +618,7 @@ Your theme choice automatically saved to `~/.time_warp/config.json` and restored
 ---
 
 **For language-specific help, see:**
-- [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Syntax for all 24 languages
+- [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Syntax for all 20 languages
 - [DEBUGGER_GUIDE.md](DEBUGGER_GUIDE.md) - Using the debugger
 - [TURTLE_GRAPHICS.md](TURTLE_GRAPHICS.md) - Graphics programming
 - [FAQ.md](FAQ.md) - Frequently asked questions

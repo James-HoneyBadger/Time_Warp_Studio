@@ -496,9 +496,6 @@ def execute_basic(
         return _basic_resume_next(interpreter)
     if cmd.startswith("RESUME"):
         return _basic_resume(interpreter, _strip_comment(command[6:]))
-    # SQL embedded in BASIC:  EXEC SQL <T-SQL statement>
-    if cmd.startswith("EXEC SQL "):
-        return _basic_exec_sql(interpreter, command[9:].strip())
     # RANDOMIZE [TIMER] — seed the random number generator
     if cmd.startswith("RANDOMIZE"):
         import random as _rng
@@ -1663,20 +1660,6 @@ def _basic_system(_interpreter: "Interpreter", _args: str) -> str:
     # In an IDE environment, this might just reset
     _interpreter.reset()
     return "ℹ️ Returned to system prompt\n"
-
-
-def _basic_exec_sql(interpreter: "Interpreter", query: str) -> str:
-    """EXEC SQL <query> — Execute a T-SQL statement from BASIC."""
-    try:
-        from ..core.sql_engine import SQLSession
-
-        sess = getattr(interpreter, "sql_session", None)
-        if sess is None:
-            sess = SQLSession()
-            interpreter.sql_session = sess
-        return sess.run_statement(query)
-    except Exception as e:
-        return f"❌ SQL error: {e}\n"
 
 
 def _find_matching_wend(interpreter: "Interpreter", start_idx: int) -> int:

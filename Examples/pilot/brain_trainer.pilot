@@ -1,0 +1,429 @@
+*start
+T: ╔══════════════════════════════════════════════════╗
+T: ║   SCIENCE & MATH BRAIN TRAINER — PILOT Program  ║
+T: ║   Time Warp Studio Educational Showcase         ║
+T: ╚══════════════════════════════════════════════════╝
+T:
+T: Test your knowledge across five subjects:
+T:   Mathematics, Physics, Biology, Chemistry, Astronomy
+T:
+T: Type your answer after each question.
+T: Type HINT for a clue. Type QUIT to exit.
+T:
+C: SCORE = 0
+C: TOTAL = 0
+C: HINTS_USED = 0
+J: *math1
+
+*math1
+C: TOTAL = TOTAL + 1
+T:
+T: ──────────────────────────────────────────────────
+T: [MATHEMATICS] Question 1 of 15
+T: ──────────────────────────────────────────────────
+T: What is the value of pi to 5 decimal places?
+T: (Format: X.XXXXX)
+A: $ANSWER
+M: HINT
+TY: J: *hint_math1
+M: 3.14159, 3.14159265
+TY: J: *correct
+J: *wrong_math1
+
+*hint_math1
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: pi = circumference / diameter for ANY circle.
+T: It starts with 3.14...
+J: *math1
+
+*wrong_math1
+T: Not quite! pi = 3.14159 (π is an irrational constant)
+T: Greek letter π is the ratio of circumference to diameter.
+J: *math2
+
+*math2
+C: TOTAL = TOTAL + 1
+T:
+T: [MATHEMATICS] Question 2 of 15
+T: ──────────────────────────────────────────────────
+T: What is 2 to the power of 10?
+A: $ANSWER
+M: HINT
+TY: J: *hint_math2
+M: 1024
+TY: J: *correct
+J: *wrong_math2
+
+*hint_math2
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: 2^10 = 2^8 * 2^2 = 256 * 4
+J: *math2
+
+*wrong_math2
+T: The answer is 1024. This is why kilobytes = 1024 bytes!
+J: *math3
+
+*math3
+C: TOTAL = TOTAL + 1
+T:
+T: [MATHEMATICS] Question 3 of 15
+T: ──────────────────────────────────────────────────
+T: What is the sum of angles in a triangle?
+T: (Enter the number of degrees)
+A: $ANSWER
+M: HINT
+TY: J: *hint_math3
+M: 180, 180 degrees
+TY: J: *correct
+J: *wrong_math3
+
+*hint_math3
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: Think about what happens when you tear off the
+T: corners of a triangle and line them up in a row.
+J: *math3
+
+*wrong_math3
+T: 180 degrees. This is true for ALL triangles on flat surfaces!
+T: On a curved surface (like a sphere) the answer is different.
+J: *phys1
+
+*phys1
+C: TOTAL = TOTAL + 1
+T:
+T: [PHYSICS] Question 4 of 15
+T: ──────────────────────────────────────────────────
+T: What is the speed of light in a vacuum?
+T: (Approximate — answer in km/s or 300000)
+A: $ANSWER
+M: HINT
+TY: J: *hint_phys1
+M: 300000, 299792, 299792458, 3×10^8, 3x10^8
+TY: J: *correct
+J: *wrong_phys1
+
+*hint_phys1
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: It takes light about 8 minutes to travel from the
+T: Sun to Earth (150 million km). Calculate!
+J: *phys1
+
+*wrong_phys1
+T: ~300,000 km/s or 299,792,458 m/s exactly.
+T: Einstein showed this is the cosmic speed limit!
+J: *phys2
+
+*phys2
+C: TOTAL = TOTAL + 1
+T:
+T: [PHYSICS] Question 5 of 15
+T: ──────────────────────────────────────────────────
+T: F = ma. If mass = 5 kg and acceleration = 3 m/s²,
+T: what is the force in Newtons?
+A: $ANSWER
+M: HINT
+TY: J: *hint_phys2
+M: 15, 15 N, 15 Newtons
+TY: J: *correct
+J: *wrong_phys2
+
+*hint_phys2
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: Force = mass × acceleration. Just multiply!
+J: *phys2
+
+*wrong_phys2
+T: 15 Newtons. Newton's Second Law: F = m × a = 5 × 3 = 15 N
+J: *phys3
+
+*phys3
+C: TOTAL = TOTAL + 1
+T:
+T: [PHYSICS] Question 6 of 15
+T: ──────────────────────────────────────────────────
+T: What particle has no electric charge?
+T: (Name the subatomic particle)
+A: $ANSWER
+M: HINT
+TY: J: *hint_phys3
+M: neutron, Neutron, NEUTRON
+TY: J: *correct
+J: *wrong_phys3
+
+*hint_phys3
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: An atom's nucleus contains two types of particles.
+T: Protons have + charge. The other one has...?
+J: *phys3
+
+*wrong_phys3
+T: Neutron! Protons (+), electrons (-), neutrons (no charge).
+T: Neutrons add mass without changing the atom's charge.
+J: *bio1
+
+*bio1
+C: TOTAL = TOTAL + 1
+T:
+T: [BIOLOGY] Question 7 of 15
+T: ──────────────────────────────────────────────────
+T: What molecule carries genetic information in cells?
+A: $ANSWER
+M: HINT
+TY: J: *hint_bio1
+M: DNA, dna, D.N.A.
+TY: J: *correct
+J: *wrong_bio1
+
+*hint_bio1
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: It forms a double helix. Watson and Crick
+T: discovered its structure in 1953.
+J: *bio1
+
+*wrong_bio1
+T: DNA — Deoxyribonucleic Acid. The blueprint of life!
+T: It contains 4 bases: Adenine, Thymine, Guanine, Cytosine.
+J: *bio2
+
+*bio2
+C: TOTAL = TOTAL + 1
+T:
+T: [BIOLOGY] Question 8 of 15
+T: ──────────────────────────────────────────────────
+T: How many chromosomes does a normal human cell have?
+A: $ANSWER
+M: HINT
+TY: J: *hint_bio2
+M: 46, 46 chromosomes
+TY: J: *correct
+J: *wrong_bio2
+
+*hint_bio2
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: Chromosomes come in pairs. Humans have 23 pairs.
+T: 23 × 2 = ?
+J: *bio2
+
+*wrong_bio2
+T: 46 chromosomes (23 pairs). Sex cells (gametes) have 23.
+J: *chem1
+
+*chem1
+C: TOTAL = TOTAL + 1
+T:
+T: [CHEMISTRY] Question 9 of 15
+T: ──────────────────────────────────────────────────
+T: What is the chemical symbol for gold?
+A: $ANSWER
+M: HINT
+TY: J: *hint_chem1
+M: Au, AU, au
+TY: J: *correct
+J: *wrong_chem1
+
+*hint_chem1
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: Gold comes from the Latin word "Aurum".
+J: *chem1
+
+*wrong_chem1
+T: Au — from Latin "Aurum". Gold has atomic number 79.
+T: That's why the periodic table symbol looks different!
+J: *chem2
+
+*chem2
+C: TOTAL = TOTAL + 1
+T:
+T: [CHEMISTRY] Question 10 of 15
+T: ──────────────────────────────────────────────────
+T: Water is H₂O. How many atoms are in one water molecule?
+A: $ANSWER
+M: HINT
+TY: J: *hint_chem2
+M: 3, three, 3 atoms
+TY: J: *correct
+J: *wrong_chem2
+
+*hint_chem2
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: H₂O means 2 hydrogen + 1 oxygen. Count them!
+J: *chem2
+
+*wrong_chem2
+T: 3 atoms! 2 hydrogen + 1 oxygen = 3 atoms per molecule.
+J: *astro1
+
+*astro1
+C: TOTAL = TOTAL + 1
+T:
+T: [ASTRONOMY] Question 11 of 15
+T: ──────────────────────────────────────────────────
+T: What is the closest star to our Sun?
+A: $ANSWER
+M: HINT
+TY: J: *hint_astro1
+M: Proxima Centauri, proxima centauri, proxima
+TY: J: *correct
+J: *wrong_astro1
+
+*hint_astro1
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: It's in the Alpha Centauri system, 4.24 light-years away.
+J: *astro1
+
+*wrong_astro1
+T: Proxima Centauri — 4.24 light-years away.
+T: At light speed, it would take 4.24 years to get there!
+J: *astro2
+
+*astro2
+C: TOTAL = TOTAL + 1
+T:
+T: [ASTRONOMY] Question 12 of 15
+T: ──────────────────────────────────────────────────
+T: How many planets are in our solar system?
+A: $ANSWER
+M: HINT
+TY: J: *hint_astro2
+M: 8, eight
+TY: J: *correct
+J: *wrong_astro2
+
+*hint_astro2
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: Pluto was reclassified as a "dwarf planet" in 2006.
+T: Count Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune.
+J: *astro2
+
+*wrong_astro2
+T: 8 planets! Pluto was reclassified in 2006.
+T: My Very Eager Mother Just Served Us Nachos (mnemonic)
+J: *astro3
+
+*astro3
+C: TOTAL = TOTAL + 1
+T:
+T: [ASTRONOMY] Question 13 of 15
+T: ──────────────────────────────────────────────────
+T: What is a light-year?
+T: (Hint: it measures distance, not time — what distance?)
+A: $ANSWER
+M: HINT
+TY: J: *hint_astro3
+M: distance, the distance light travels in a year, distance light travels
+TY: J: *correct
+J: *wrong_astro3
+
+*hint_astro3
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: Think about what "light" and "year" mean separately.
+J: *astro3
+
+*wrong_astro3
+T: A light-year is the DISTANCE light travels in one year.
+T: About 9.46 trillion kilometres (9.46 × 10^12 km)!
+J: *bonus1
+
+*bonus1
+C: TOTAL = TOTAL + 1
+T:
+T: [BONUS] Question 14 of 15
+T: ──────────────────────────────────────────────────
+T: What famous equation did Einstein derive from E=mc²?
+T: (Just type 'E equals mc squared' or E=mc^2)
+A: $ANSWER
+M: HINT
+TY: J: *hint_bonus1
+M: E=mc2, E=mc^2, E equals mc squared, mass energy equivalence
+TY: J: *correct
+J: *wrong_bonus1
+
+*hint_bonus1
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: Energy = mass × (speed of light)²
+J: *bonus1
+
+*wrong_bonus1
+T: E=mc² — mass and energy are interchangeable!
+T: c is the speed of light (~3×10⁸ m/s), so a tiny mass
+T: holds an enormous amount of energy.
+J: *bonus2
+
+*bonus2
+C: TOTAL = TOTAL + 1
+T:
+T: [BONUS] Question 15 of 15
+T: ──────────────────────────────────────────────────
+T: What is the only even prime number?
+A: $ANSWER
+M: HINT
+TY: J: *hint_bonus2
+M: 2, two
+TY: J: *correct
+J: *wrong_bonus2
+
+*hint_bonus2
+C: HINTS_USED = HINTS_USED + 1
+T: Hint: Every even number greater than 2 is divisible by 2,
+T: so it can't be prime. What about 2 itself?
+J: *bonus2
+
+*wrong_bonus2
+T: The number 2! It's divisible only by 1 and itself.
+T: Every other even number is divisible by 2, making it composite.
+J: *results
+
+*correct
+C: SCORE = SCORE + 1
+T: ✓ CORRECT! Well done!
+J: *next
+
+*next
+J: *results
+
+*results
+T:
+T: ══════════════════════════════════════════════════
+T: ║              FINAL RESULTS                     ║
+T: ══════════════════════════════════════════════════
+T:
+T: Your score:
+C: PCT = SCORE * 100 / TOTAL
+T: $SCORE out of $TOTAL correct
+T: Percentage: $PCT%
+T: Hints used: $HINTS_USED
+T:
+M: *
+B: SCORE >= 13 = *genius
+B: SCORE >= 10 = *excellent
+B: SCORE >= 7 = *good
+J: *needs_work
+
+*genius
+T: ⭐⭐⭐ GENIUS LEVEL! Outstanding performance!
+T: You have an exceptional grasp of science and mathematics.
+T: Consider a career in research or education!
+J: *end
+
+*excellent
+T: ⭐⭐ EXCELLENT! You know your science and math!
+T: A few more reviews and you'll ace every test.
+J: *end
+
+*good
+T: ⭐ GOOD WORK! Solid foundation in place.
+T: Keep studying — you're on the right track!
+J: *end
+
+*needs_work
+T: Keep practicing! Every expert was once a beginner.
+T: Review the topics you missed and try again.
+J: *end
+
+*end
+T:
+T: Thank you for using the Science & Math Brain Trainer!
+T: Built with PILOT — Programmed Inquiry, Learning Or Teaching
+T: Time Warp Studio Educational Demo
+T: ══════════════════════════════════════════════════
+E:
