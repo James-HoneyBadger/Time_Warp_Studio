@@ -376,11 +376,6 @@ Time_Warp_Studio/
 │   ├── lua/ (6)     rexx/ (5)    scheme/ (6)   smalltalk/ (5)
 │   └── erlang/ (4)  ruby/ (4)    rust/ (4)     perl/ (2)
 │
-├── extras/HB_Banking/             # Optional banking/ERP demo application
-│   ├── main.py                    # CLI entry point
-│   ├── gui_main.py                # PySide6 GUI
-│   └── modules/                   # Accounts, transactions, reports
-│
 ├── tests/                         # Root-level integration tests
 │   ├── test_all_demos.py          # Standalone demo verifier
 │   └── test_basic_functionality.py # Quick smoke test

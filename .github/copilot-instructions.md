@@ -190,7 +190,6 @@ Platforms/Python/
 docker/                     - Dockerfiles, nginx, supervisord configs
 tests/                      - Root-level integration tests
 Examples/                   - ~93 demo programs across all languages
-extras/HB_Banking/          - Optional banking/ERP demo application
 ```
 
 ## Dependencies
