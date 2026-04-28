@@ -1136,6 +1136,31 @@ class JSEnvironment:
         g["globalThis"] = g
         g["window"] = g
         g["self"] = g
+        # Restrict builtins to a safe allowlist.  The transpiler emits Python
+        # that needs certain builtins (len, range, isinstance, __build_class__
+        # for classes, etc.) but we must block dangerous ones like __import__,
+        # eval, exec, open, compile, breakpoint, etc.
+        _SAFE_BUILTINS = (
+            "abs", "all", "any", "bin", "bool", "callable", "chr", "dict",
+            "divmod", "enumerate", "filter", "float", "format", "frozenset",
+            "getattr", "hasattr", "hash", "hex", "id", "int", "isinstance",
+            "issubclass", "iter", "len", "list", "map", "max", "min", "next",
+            "object", "oct", "ord", "pow", "print", "range", "repr",
+            "reversed", "round", "set", "setattr", "slice", "sorted", "str",
+            "sum", "tuple", "type", "zip",
+            # Required by Python's class machinery used in transpiled JS classes
+            "__build_class__", "__name__",
+            # Exception types used by transpiled try/catch
+            "Exception", "TypeError", "ValueError", "AttributeError",
+            "KeyError", "IndexError", "RuntimeError", "StopIteration",
+            "NotImplementedError", "OverflowError", "ZeroDivisionError",
+        )
+        import builtins as _builtins_mod
+        g["__builtins__"] = {
+            k: getattr(_builtins_mod, k)
+            for k in _SAFE_BUILTINS
+            if hasattr(_builtins_mod, k)
+        }
         return g
 
     def run(self, source: str) -> str:

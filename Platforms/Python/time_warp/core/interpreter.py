@@ -50,6 +50,9 @@ from ..languages.smalltalk import execute_smalltalk
 from ..languages.ruby import execute_ruby
 from ..languages.erlang import execute_erlang
 from ..languages.rust import execute_rust
+from ..languages.assembly import execute_assembly
+from ..languages.fortran import execute_fortran
+from ..languages.sqr import execute_sqr
 
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
@@ -96,6 +99,9 @@ def _init_whole_program_executors() -> Dict["Language", Callable]:
         Language.ERLANG: execute_erlang,
         Language.RUST: execute_rust,
         Language.PERL: execute_perl,
+        Language.ASSEMBLY: execute_assembly,
+        Language.FORTRAN: execute_fortran,
+        Language.SQR: execute_sqr,
     }
 
 
@@ -162,6 +168,9 @@ class Language(Enum):
     ERLANG = auto()
     RUST = auto()
     PERL = auto()
+    ASSEMBLY = auto()
+    FORTRAN = auto()
+    SQR = auto()
 
     @classmethod
     def from_extension(cls, ext: str) -> "Language":
@@ -194,6 +203,16 @@ class Language(Enum):
             ".erl": cls.ERLANG,
             ".hrl": cls.ERLANG,
             ".rs": cls.RUST,
+            ".pl": cls.PERL,
+            ".pm": cls.PERL,
+            ".asm": cls.ASSEMBLY,
+            ".s": cls.ASSEMBLY,
+            ".nasm": cls.ASSEMBLY,
+            ".f90": cls.FORTRAN,
+            ".f95": cls.FORTRAN,
+            ".for": cls.FORTRAN,
+            ".fortran": cls.FORTRAN,
+            ".sqr": cls.SQR,
         }
         return mapping.get(ext, cls.BASIC)
 
@@ -219,6 +238,10 @@ class Language(Enum):
             Language.RUBY: "Ruby",
             Language.ERLANG: "Erlang",
             Language.RUST: "Rust",
+            Language.PERL: "Perl",
+            Language.ASSEMBLY: "Assembly",
+            Language.FORTRAN: "FORTRAN",
+            Language.SQR: "SQR",
         }
         return names.get(self, "Unknown")
 

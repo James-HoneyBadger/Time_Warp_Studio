@@ -37,7 +37,7 @@ test-comprehensive: ## Run full test suite with coverage
 	$(PYTHON) Platforms/Python/test_runner.py --comprehensive
 
 test-unit: ## Run pytest directly
-	$(PYTHON) -m pytest $(TESTS) -v --tb=short
+	$(if $(wildcard .venv/bin/python),.venv/bin/python,$(PYTHON)) -m pytest $(TESTS) -v --tb=short
 
 demos: ## Verify all demo programs
 	$(PYTHON) tests/test_all_demos.py
