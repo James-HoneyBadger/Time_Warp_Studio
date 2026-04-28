@@ -47,6 +47,7 @@ class TestLanguageEnum:
             "JAVASCRIPT", "REXX", "SMALLTALK", "HYPERTALK",
             "HASKELL",
             "RUBY", "ERLANG", "RUST", "PERL",
+            "ASSEMBLY", "FORTRAN", "SQR",
         }
         assert expected == names
 

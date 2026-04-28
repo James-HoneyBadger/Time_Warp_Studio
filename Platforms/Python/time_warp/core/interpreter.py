@@ -203,7 +203,6 @@ class Language(Enum):
             ".erl": cls.ERLANG,
             ".hrl": cls.ERLANG,
             ".rs": cls.RUST,
-            ".pl": cls.PERL,
             ".pm": cls.PERL,
             ".asm": cls.ASSEMBLY,
             ".s": cls.ASSEMBLY,
