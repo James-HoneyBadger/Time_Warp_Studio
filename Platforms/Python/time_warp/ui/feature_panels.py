@@ -157,15 +157,10 @@ class SyntaxValidatorPanel(FeaturePanelBase):
                 "C": Language.C,
                 "FORTH": Language.FORTH,
                 "PROLOG": Language.PROLOG,
-                "PYTHON": Language.PYTHON,
                 "LUA": Language.LUA,
-                "SCHEME": Language.SCHEME,
                 "BRAINFUCK": Language.BRAINFUCK,
                 "JAVASCRIPT": Language.JAVASCRIPT,
-                "REXX": Language.REXX,
-                "SMALLTALK": Language.SMALLTALK,
                 "HYPERTALK": Language.HYPERTALK,
-                "HASKELL": Language.HASKELL,
             }
             return mapping.get(cleaned, Language.BASIC)
         return Language.BASIC

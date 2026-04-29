@@ -52,8 +52,8 @@ def test_tab_state_running_flag():
 
 def test_tab_state_language_field():
     from ..core.interpreter import Language
-    ts = TabState(language=Language.PYTHON)
-    assert ts.language == Language.PYTHON
+    ts = TabState(language=Language.LUA)
+    assert ts.language == Language.LUA
 
 
 def test_tab_state_independence():

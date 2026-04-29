@@ -45,14 +45,9 @@ class TestLanguageEnum:
             (".pas", Language.PASCAL),
             (".pl", Language.PROLOG),
             (".f", Language.FORTH),
-            (".py", Language.PYTHON),
             (".lua", Language.LUA),
-            (".scm", Language.SCHEME),
             (".bf", Language.BRAINFUCK),
             (".js", Language.JAVASCRIPT),
-            (".rexx", Language.REXX),
-            (".st", Language.SMALLTALK),
-            (".hs", Language.HASKELL),
         ],
     )
     def test_from_extension(self, ext, expected):
@@ -143,10 +138,10 @@ class TestExecution:
         blob = "\n".join(out).upper()
         assert "HELLO LOGO" in blob
 
-    def test_python_whole_program(self, interp, turtle):
-        interp.load_program("print('Python works')", language=Language.PYTHON)
+    def test_lua_whole_program(self, interp, turtle):
+        interp.load_program("print('Lua works')", language=Language.LUA)
         out = interp.execute(turtle)
-        assert any("Python works" in line for line in out)
+        assert any("Lua works" in line for line in out)
 
     def test_brainfuck_hello(self, interp, turtle):
         # Simple: output ASCII 65 = 'A'

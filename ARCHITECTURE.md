@@ -56,7 +56,7 @@ Time Warp Studio is a desktop IDE built with:
 
 Location: `Platforms/Python/time_warp/core/interpreter.py`
 
-Core dispatcher managing all 20 language executors:
+Core dispatcher managing all 12 language executors:
 
 ```python
 class Interpreter:
@@ -66,11 +66,9 @@ class Interpreter:
         #   execute_basic, execute_pilot, execute_logo,
         #   execute_c, execute_pascal, execute_prolog, execute_forth
         #
-        # Whole-program executors (13 languages) registered in:
+        # Whole-program executors (5 languages) registered in:
         #   _WHOLE_PROGRAM_EXECUTORS dict
-        #   (Python, Lua, Scheme, Brainfuck, JavaScript,
-        #    REXX, Smalltalk, HyperTalk, Haskell,
-        #    Ruby, Erlang, Rust, Perl)
+        #   (Lua, Brainfuck, JavaScript, HyperTalk, Erlang)
         pass
 ```
 
@@ -136,7 +134,7 @@ def execute_basic(interpreter: Interpreter, command: str, turtle: TurtleState) -
 - ✅ Return strings as output
 - ✅ Access the interpreter and turtle state objects
 
-### The 20 Supported Languages
+### The 12 Supported Languages
 
 **Line-by-line executors** (parsed per statement):
 
@@ -218,10 +216,9 @@ Features:
 
 Status: Experimental
 
-**Whole-program executors** (13 languages):
+**Whole-program executors** (5 languages):
 
-Python, Lua, Scheme, Brainfuck, JavaScript,
-REXX, Smalltalk, HyperTalk, Haskell, Ruby, Erlang, Rust, Perl.
+Lua, Brainfuck, JavaScript, HyperTalk, Erlang.
 
 Each receives the full source text and returns output. Registered in
 `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.
@@ -588,7 +585,7 @@ Contains:
 
 ### Core (`core/`)
 
-- `interpreter.py` — Main dispatcher (~1,500 lines, 20 language executors)
+- `interpreter.py` — Main dispatcher (~1,500 lines, 12 language executors)
 - `debugger.py` — Step-through debugger with execution timeline and rewind
 - `sql_engine.py` — SQLite-backed T-SQL compatibility layer
 - `orchestrator.py` — System integration and component registry
@@ -610,7 +607,7 @@ Contains:
 
 - `base.py` — Executor protocol definition
 - **Line-by-line executors (7):** `basic.py`, `pilot.py`, `logo.py`, `c_lang_fixed.py`, `pascal.py`, `prolog.py`, `forth.py`
-- **Whole-program executors (17):** `python.py`, `lua.py`, `scheme.py`, `cobol.py`, `brainfuck.py`, `assembly.py`, `javascript.py`, `fortran.py`, `rexx.py`, `smalltalk.py`, `hypertalk.py`, `haskell.py`, `apl.py`, `sql.py`, `jcl.py`, `cics.py`, `sqr.py`
+- **Whole-program executors (5):** `lua.py`, `brainfuck.py`, `javascript.py`, `hypertalk.py`, `erlang.py`
 - `lang_utils.py`, `parser_patterns.py` — Shared parsing utilities
 
 ### UI (`ui/`)
@@ -654,7 +651,7 @@ Contains:
 
 ### Tests (`tests/`)
 
-- 41+ test files covering all 24 language executors, graphics, GUI, and interpreter
+- 41+ test files covering all 12 language executors, graphics, GUI, and interpreter
 - `conftest.py`, `conftest_lang.py` — Shared fixtures and helpers
 - `test_runner.py` — Orchestration with HTML coverage reports
 

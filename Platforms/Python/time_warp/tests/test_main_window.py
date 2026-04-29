@@ -64,17 +64,10 @@ class TestLanguageEnum:
             ".f": Language.FORTH,
             ".fs": Language.FORTH,
             ".forth": Language.FORTH,
-            ".py": Language.PYTHON,
             ".lua": Language.LUA,
-            ".scm": Language.SCHEME,
-            ".rkt": Language.SCHEME,
             ".bf": Language.BRAINFUCK,
             ".js": Language.JAVASCRIPT,
-            ".rex": Language.REXX,
-            ".rexx": Language.REXX,
-            ".st": Language.SMALLTALK,
             ".htalk": Language.HYPERTALK,
-            ".hs": Language.HASKELL,
         }
         for ext, expected in cases.items():
             assert Language.from_extension(ext) is expected, (
@@ -88,7 +81,6 @@ class TestLanguageEnum:
     def test_from_extension_case_insensitive(self):
         assert Language.from_extension(".BAS") is Language.BASIC
         assert Language.from_extension(".LOGO") is Language.LOGO
-        assert Language.from_extension(".PY") is Language.PYTHON
 
     def test_friendly_names(self):
         cases = {
@@ -99,15 +91,10 @@ class TestLanguageEnum:
             Language.PROLOG: "Prolog",
             Language.PASCAL: "Pascal",
             Language.FORTH: "Forth",
-            Language.PYTHON: "Python",
             Language.LUA: "Lua",
-            Language.SCHEME: "Scheme",
             Language.BRAINFUCK: "Brainfuck",
             Language.JAVASCRIPT: "JavaScript",
-            Language.REXX: "REXX",
-            Language.SMALLTALK: "Smalltalk",
             Language.HYPERTALK: "HyperTalk",
-            Language.HASKELL: "Haskell",
         }
         for lang, expected_name in cases.items():
             assert lang.friendly_name() == expected_name
@@ -198,9 +185,9 @@ class TestTabBoundsGuard:
         return tab_languages[index]
 
     def test_valid_index_returns_language(self):
-        tab_languages = {0: Language.BASIC, 1: Language.PYTHON}
+        tab_languages = {0: Language.BASIC, 1: Language.LUA}
         assert self._on_tab_changed_guarded(0, tab_languages) is Language.BASIC
-        assert self._on_tab_changed_guarded(1, tab_languages) is Language.PYTHON
+        assert self._on_tab_changed_guarded(1, tab_languages) is Language.LUA
 
     def test_stale_index_returns_none(self):
         tab_languages = {0: Language.BASIC}

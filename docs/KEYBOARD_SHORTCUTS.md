@@ -23,9 +23,12 @@ Press **Ctrl+?** inside the IDE to open the searchable shortcuts overlay.
 
 | Shortcut | Action |
 |----------|--------|
-| F5 | Run program |
-| Ctrl+F5 | Run with input |
-| Shift+F5 | Stop execution |
+| Ctrl+R | Run program |
+| Ctrl+Shift+R | Run selection |
+| F5 | Start debugging |
+| Ctrl+F5 | Continue debugging |
+| Shift+F5 | Stop debugging |
+| Ctrl+Shift+F5 | Stop execution |
 | F9 | Toggle breakpoint |
 
 ---

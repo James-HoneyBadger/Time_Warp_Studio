@@ -10,7 +10,7 @@ This guide provides solutions to common issues encountered while using Time Warp
 - **Cause**: Missing dependencies or incompatible Python version.
 - **Solution**:
   1. Ensure Python 3.10+ is installed.
-  2. Run `pip install -r requirements.txt` to install dependencies.
+  2. Run `pip install -r Platforms/Python/requirements.txt` to install dependencies.
   3. Check for error messages in the terminal.
 
 ### UI Elements Not Displaying Correctly

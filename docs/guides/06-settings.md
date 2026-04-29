@@ -144,26 +144,16 @@ Choose the default programming language:
 - **Forth** - Stack-based programming
 
 **Modern:**
-- **Python** - General-purpose scripting
 - **JavaScript** - Web & general-purpose scripting
 - **Lua** - Lightweight embeddable scripting
-- **Haskell** - Purely functional programming
-- **Scheme** - Minimalist Lisp dialect
-- **Smalltalk** - Message-passing OOP
 
-**Mainframe & Enterprise:**
-- **COBOL** - Business data processing
-- **REXX** - IBM scripting language
-- **Fortran** - Scientific computing
-- **JCL** - IBM Job Control Language
-- **CICS** - Transaction processing
-- **SQL** - Relational database queries
-- **SQR** - Report generation
+**Concurrent & Functional:**
+- **Erlang** - Concurrent functional programming
 
-**Esoteric & Historical:**
-- **Assembly** - x86-64 machine code
-- **APL** - Array programming language
+**Event-Driven:**
 - **HyperTalk** - HyperCard scripting
+
+**Esoteric:**
 - **Brainfuck** - Minimalist esoteric language
 
 The selected language is remembered between sessions.

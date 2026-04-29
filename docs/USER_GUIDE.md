@@ -39,7 +39,7 @@ When you launch Time Warp Studio:
 1. IDE initializes (2-5 seconds)
 2. Config folder created at `~/.time_warp/`
 3. Default theme applied (Dracula)
-4. All 14 feature panels available
+4. All 24 feature panels available
 5. IDE ready for coding
 
 ---
@@ -115,7 +115,7 @@ Creates empty file with default language (BASIC).
 File → Open [Ctrl+O]
 ```
 
-File browser opens. Select any supported source file (`.bas`, `.py`, `.lua`, `.js`, `.c`, `.pas`, `.logo`, `.hs`, `.scm`, `.st`, `.rex`, `.pro`, `.f`, `.cob`, `.f90`, `.asm`, `.apl`, `.sql`, `.sqr`, `.bf`, `.jcl`, `.cics`, `.ht`, `.pilot`).
+File browser opens. Select any supported source file (`.bas`, `.lua`, `.js`, `.c`, `.pas`, `.logo`, `.pro`, `.f`, `.bf`, `.ht`, `.pilot`, `.erl`).
 
 ### Saving Your Work
 
@@ -145,7 +145,7 @@ Quick access to 10 most recently opened files.
 
 ## Selecting a Language
 
-Programs can be written in **20 different languages**:
+Programs can be written in **23 different languages**:
 
 ### Auto-Detection
 
@@ -169,22 +169,14 @@ Dropdown also available in top toolbar.
 | **Logo** | .logo | Turtle Graphics | 1967 |
 | **PILOT** | .pilot | Interactive Teaching | 1969 |
 | **C** | .c | Systems/Procedural | 1972 |
-| **Forth** | .f / .4th | Stack-based | 1970 |
+| **Forth** | .f / .fs | Stack-based | 1970 |
 | **Pascal** | .pas | Structured | 1970 |
 | **Prolog** | .pro | Logic/Declarative | 1972 |
-| **Python** | .py | Multi-paradigm | 1991 |
-| **Lua** | .lua | Scripting/Embedded | 1993 |
-| **Scheme** | .scm | Functional/Lisp | 1975 |
 | **Brainfuck** | .bf | Esoteric/Turing | 1993 |
 | **Erlang** | .erl | Concurrent/Functional | 1986 |
-| **Haskell** | .hs | Functional/Typed | 1990 |
-| **HyperTalk** | .ht | Event-driven | 1987 |
+| **HyperTalk** | .htalk | Event-driven | 1987 |
 | **JavaScript** | .js | Scripting/Web | 1995 |
-| **Perl** | .pl / .pm | Scripting/Text-processing | 1987 |
-| **REXX** | .rex | Scripting/Mainframe | 1979 |
-| **Ruby** | .rb | Object-Oriented/Scripting | 1995 |
-| **Rust** | .rs | Systems/Memory-safe | 2015 |
-| **Smalltalk** | .st | Object-Oriented | 1980 |
+| **Lua** | .lua | Scripting/Embedded | 1993 |
 
 ---
 
@@ -618,7 +610,7 @@ Your theme choice automatically saved to `~/.time_warp/config.json` and restored
 ---
 
 **For language-specific help, see:**
-- [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Syntax for all 20 languages
+- [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Syntax for all 12 languages
 - [DEBUGGER_GUIDE.md](DEBUGGER_GUIDE.md) - Using the debugger
 - [TURTLE_GRAPHICS.md](TURTLE_GRAPHICS.md) - Graphics programming
 - [FAQ.md](FAQ.md) - Frequently asked questions

@@ -1,6 +1,6 @@
 # Examples Catalog
 
-A reference guide to the 107 example programs included with **Time Warp Studio**.
+A reference guide to the example programs included with **Time Warp Studio**.
 Open any file via **File → Open** or by browsing the `Examples/` folder.
 
 ---
@@ -14,7 +14,6 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 - **[C](#c)** - Systems programming
 - **[Erlang](#erlang)** - Concurrent functional programming
 - **[Forth](#forth)** - Stack-based programming
-- **[Haskell](#haskell)** - Functional programming
 - **[HyperTalk](#hypertalk)** - HyperCard scripting
 - **[JavaScript](#javascript)** - Web scripting
 - **[Logo](#logo)** - Turtle graphics
@@ -22,12 +21,6 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 - **[Pascal](#pascal)** - Structured programming
 - **[PILOT](#pilot-programmed-inquiry-learning-or-teaching)** - Instructional programming
 - **[Prolog](#prolog)** - Logic programming
-- **[Python](#python)** - General-purpose scripting
-- **[REXX](#rexx)** - IBM scripting
-- **[Ruby](#ruby)** - Dynamic object-oriented programming
-- **[Rust](#rust)** - Systems programming with memory safety
-- **[Scheme](#scheme)** - Lisp-family functional programming
-- **[Smalltalk](#smalltalk)** - Object-oriented programming
 
 ---
 
@@ -90,18 +83,6 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 | `forth/turtle_art.forth` | Turtle graphics using Forth words |
 | `forth/mathematical_wonders.forth` | **SHOWCASE** — Prime sieve, Fibonacci, Pi via Leibniz, Towers of Hanoi, turtle spirals |
 | `forth/cellular_automata.forth` | **SHOWCASE** — 1D elementary cellular automata: Rule 30, 90, 110, 184 with CREATE/ALLOT arrays |
-
----
-
-## Haskell
-
-| File | Description |
-|------|-------------|
-| `haskell/hello.hs` | Hello World — putStrLn and IO monad |
-| `haskell/functional_showcase.hs` | map, filter, fold, list comprehensions |
-| `haskell/parser_combinator.hs` | Toy parser combinator library |
-| `haskell/functional_masterpiece.hs` | **SHOWCASE** — Expression parser, type classes, Church numerals, infinite streams, Y combinator |
-| `haskell/morse_code.hs` | **SHOWCASE** — Morse encoder/decoder with binary tree, timing analysis, round-trip verification |
 
 ---
 
@@ -193,91 +174,5 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 | `prolog/knowledge_engine.pl` | **SHOWCASE** — Animal ontology, genealogy KB, graph coloring, meta-reasoning |
 | `prolog/family_genealogy.pl` | **SHOWCASE** — 4-generation family tree (22 members), relationship inference: cousins, ancestors, distances |
 
----
-
-## Python
-
-| File | Description |
-|------|-------------|
-| `python/hello.py` | Hello World — print() |
-| `python/cipher_tools.py` | Caesar, Vigenère, ROT13 ciphers |
-| `python/fractal_explorer.py` | Turtle-based fractal drawing |
-| `python/task_manager.py` | CLI task manager with persistence |
-| `python/text_analyzer.py` | Word frequency, readability metrics |
-| `python/lsystem_turtle.py` | **SHOWCASE** — L-System fractals: Koch, Sierpinski, Dragon curve, Hilbert, Barnsley Fern |
-| `python/statistics_suite.py` | **SHOWCASE** — Statistical analysis: mean/median/mode/quartiles/skewness, z-scores, turtle bar chart |
-
----
-
-## REXX
-
-| File | Description |
-|------|-------------|
-| `rexx/hello.rex` | Hello World — say |
-| `rexx/sysadmin_toolkit.rexx` | System administration utilities |
-| `rexx/text_processor.rexx` | Text manipulation with REXX stem variables |
-| `rexx/data_analyzer.rexx` | **SHOWCASE** — Word frequency, statistics, string toolkit, ROT13, Fibonacci, prime sieve |
-| `rexx/number_systems.rexx` | **SHOWCASE** — Base conversion (bin/oct/hex/36), Roman numerals, bitwise ops, palindromic numbers |
-
----
-
-## Scheme
-
-| File | Description |
-|------|-------------|
-| `scheme/hello.scm` | Hello World — display + newline |
-| `scheme/functional_toolkit.scm` | Higher-order functions, currying, Y combinator |
-| `scheme/metacircular.scm` | Metacircular evaluator (Scheme in Scheme) |
-| `scheme/quiz_game.scm` | Interactive quiz using tail recursion |
-| `scheme/puzzle_solver.scm` | **SHOWCASE** — 8-Queens (92 solutions), Y combinator, lazy streams, CPS, call/cc, BST |
-| `scheme/lambda_calculus.scm` | **SHOWCASE** — Lambda calculus: Church encoding, beta reduction, Y combinator, SKI combinators |
-
----
-
-## Smalltalk
-
-| File | Description |
-|------|-------------|
-| `smalltalk/hello.st` | Hello World — Transcript show: |
-| `smalltalk/bank_system.st` | Bank account class with inheritance |
-| `smalltalk/shapes_demo.st` | Shape hierarchy with polymorphism |
-| `smalltalk/design_patterns.st` | **SHOWCASE** — Observer, Strategy, Composite, Command patterns; collections deep-dive |
-| `smalltalk/ascii_patterns.st` | **SHOWCASE** — Pascal's triangle, number spiral, diamonds, checkerboard, Sierpinski, multiplication table |
-
----
-
-## Ruby
-
-| File | Description |
-|------|-------------|
-| `ruby/hello.rb` | Hello World — puts and basic syntax |
-| `ruby/oop_demo.rb` | Classes, inheritance, and mixins |
-| `ruby/ecosystem_simulation.rb` | **SHOWCASE** — Lotka-Volterra predator-prey simulation, 50-year ASCII population charts |
-| `ruby/word_games.rb` | **SHOWCASE** — Anagram finder, Scrabble scorer, palindrome checker, word frequency, edit distance |
-
----
-
-## Rust
-
-| File | Description |
-|------|-------------|
-| `rust/hello.rs` | Hello World — fn main and println! |
-| `rust/structs.rs` | Structs, impl blocks, and ownership |
-| `rust/algorithms_library.rs` | **SHOWCASE** — Generic Stack/Queue, BST enum, sorting, HashMap, number theory, statistics |
-| `rust/game_of_life.rs` | **SHOWCASE** — Conway's Game of Life: Grid struct/impl, 7 patterns, toroidal grid, period detection |
-
----
-
----
-
-## Perl
-
-| File | Description |
-|------|-------------|
-| `perl/dna_analyzer.pl` | **SHOWCASE** — DNA translation, ORF finder, GC content, regex motif search, k-mer analysis |
-| `perl/text_analytics.pl` | **SHOWCASE** — Flesch-Kincaid readability, word frequency, bigrams/trigrams, concordance, sentence stats |
-
----
-
-*Total: 107 example programs across 20 languages.*
+*Total: example programs across 12 languages.*
 *Files marked **SHOWCASE** are full-featured demo applications.*

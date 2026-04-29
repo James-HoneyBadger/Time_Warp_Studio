@@ -1027,15 +1027,10 @@ class ImmediateModePanel(QWidget):
             Language.BASIC: "READY>",
             Language.PILOT: "PILOT>",
             Language.LOGO: "LOGO>",
-            Language.PYTHON: "PY>",
             Language.LUA: "LUA>",
-            Language.SCHEME: "SCM>",
             Language.BRAINFUCK: "BF>",
             Language.JAVASCRIPT: "JS>",
-            Language.REXX: "REXX>",
-            Language.SMALLTALK: "ST>",
             Language.HYPERTALK: "HTALK>",
-            Language.HASKELL: "HS>",
         }
         self.prompt_label.setText(prompts.get(language, "CMD>"))
 

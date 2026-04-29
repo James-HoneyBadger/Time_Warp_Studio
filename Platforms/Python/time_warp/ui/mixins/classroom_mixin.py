@@ -205,15 +205,10 @@ class ClassroomMixin:
             "pascal": Language.PASCAL,
             "prolog": Language.PROLOG,
             "forth": Language.FORTH,
-            "python": Language.PYTHON,
             "lua": Language.LUA,
-            "scheme": Language.SCHEME,
             "brainfuck": Language.BRAINFUCK,
             "javascript": Language.JAVASCRIPT,
-            "rexx": Language.REXX,
-            "smalltalk": Language.SMALLTALK,
             "hypertalk": Language.HYPERTALK,
-            "haskell": Language.HASKELL,
         }
         lang = language_map.get(language_name.lower(), Language.BASIC)
 

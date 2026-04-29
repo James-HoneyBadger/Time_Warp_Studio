@@ -262,43 +262,6 @@ class TestForthDemo:
         assert has(out, "DONE")
 
 
-# ── Python ───────────────────────────────────────────────────────────────────
-
-
-class TestPythonDemo:
-    def test_runs(self):
-        out = _run_demo("python", "hello.py", Language.PYTHON)
-        assert ok(out)
-
-    def test_hello(self):
-        out = _run_demo("python", "hello.py", Language.PYTHON)
-        assert has(out, "HELLO WORLD", "Welcome to Python")
-
-    def test_variables(self):
-        out = _run_demo("python", "hello.py", Language.PYTHON)
-        assert has(out, "VARIABLES")
-
-    def test_lists(self):
-        out = _run_demo("python", "hello.py", Language.PYTHON)
-        assert has(out, "LISTS")
-
-    def test_functions(self):
-        out = _run_demo("python", "hello.py", Language.PYTHON)
-        assert has(out, "FUNCTIONS", "120")
-
-    def test_classes(self):
-        out = _run_demo("python", "hello.py", Language.PYTHON)
-        assert has(out, "CLASSES", "Rex says Woof")
-
-    def test_done(self):
-        out = _run_demo("python", "hello.py", Language.PYTHON)
-        assert has(out, "DONE")
-
-    def test_no_errors(self):
-        out = _run_demo("python", "hello.py", Language.PYTHON)
-        assert no_errors(out)
-
-
 # ── Lua ──────────────────────────────────────────────────────────────────────
 
 
@@ -336,39 +299,6 @@ class TestLuaDemo:
         assert no_errors(out)
 
 
-# ── Scheme ───────────────────────────────────────────────────────────────────
-
-
-class TestSchemeDemo:
-    def test_runs(self):
-        out = _run_demo("scheme", "hello.scm", Language.SCHEME)
-        assert ok(out)
-
-    def test_hello(self):
-        out = _run_demo("scheme", "hello.scm", Language.SCHEME)
-        assert has(out, "HELLO WORLD", "Welcome to Scheme")
-
-    def test_arithmetic(self):
-        out = _run_demo("scheme", "hello.scm", Language.SCHEME)
-        assert has(out, "ARITHMETIC", "13", "1024")
-
-    def test_functions(self):
-        out = _run_demo("scheme", "hello.scm", Language.SCHEME)
-        assert has(out, "FUNCTIONS", "120")
-
-    def test_lists(self):
-        out = _run_demo("scheme", "hello.scm", Language.SCHEME)
-        assert has(out, "LISTS")
-
-    def test_done(self):
-        out = _run_demo("scheme", "hello.scm", Language.SCHEME)
-        assert has(out, "DONE")
-
-    def test_no_errors(self):
-        out = _run_demo("scheme", "hello.scm", Language.SCHEME)
-        assert no_errors(out)
-
-
 # ── Brainfuck ────────────────────────────────────────────────────────────────
 
 
@@ -380,39 +310,6 @@ class TestBrainfuckDemo:
     def test_output(self):
         out = _run_demo("brainfuck", "hello.bf", Language.BRAINFUCK)
         assert has(out, "Hello World")
-
-
-# ── Assembly ─────────────────────────────────────────────────────────────────
-
-
-class TestAssemblyDemo:
-    def test_runs(self):
-        out = _run_demo("assembly", "hello.asm", Language.ASSEMBLY)
-        assert ok(out)
-
-    def test_hello(self):
-        out = _run_demo("assembly", "hello.asm", Language.ASSEMBLY)
-        assert has(out, "HELLO WORLD", "Welcome to Assembly")
-
-    def test_arithmetic(self):
-        out = _run_demo("assembly", "hello.asm", Language.ASSEMBLY)
-        assert has(out, "ARITHMETIC")
-
-    def test_conditionals(self):
-        out = _run_demo("assembly", "hello.asm", Language.ASSEMBLY)
-        assert has(out, "CONDITIONALS", "equal")
-
-    def test_subroutines(self):
-        out = _run_demo("assembly", "hello.asm", Language.ASSEMBLY)
-        assert has(out, "SUBROUTINES")
-
-    def test_done(self):
-        out = _run_demo("assembly", "hello.asm", Language.ASSEMBLY)
-        assert has(out, "DONE")
-
-    def test_no_errors(self):
-        out = _run_demo("assembly", "hello.asm", Language.ASSEMBLY)
-        assert no_errors(out)
 
 
 # ── JavaScript ───────────────────────────────────────────────────────────────
@@ -448,93 +345,6 @@ class TestJavaScriptDemo:
         assert no_errors(out)
 
 
-# ── FORTRAN ──────────────────────────────────────────────────────────────────
-
-
-class TestFortranDemo:
-    def test_runs(self):
-        out = _run_demo("fortran", "hello.f77", Language.FORTRAN)
-        assert ok(out)
-
-    def test_hello(self):
-        out = _run_demo("fortran", "hello.f77", Language.FORTRAN)
-        assert has(out, "HELLO WORLD", "Welcome to FORTRAN")
-
-    def test_variables(self):
-        out = _run_demo("fortran", "hello.f77", Language.FORTRAN)
-        assert has(out, "VARIABLES")
-
-    def test_arithmetic(self):
-        out = _run_demo("fortran", "hello.f77", Language.FORTRAN)
-        assert has(out, "ARITHMETIC")
-
-    def test_subroutine(self):
-        out = _run_demo("fortran", "hello.f77", Language.FORTRAN)
-        assert has(out, "SUBROUTINE", "Hello from subroutine")
-
-    def test_done(self):
-        out = _run_demo("fortran", "hello.f77", Language.FORTRAN)
-        assert has(out, "DONE")
-
-
-# ── REXX ─────────────────────────────────────────────────────────────────────
-
-
-class TestRexxDemo:
-    def test_runs(self):
-        out = _run_demo("rexx", "hello.rex", Language.REXX)
-        assert ok(out)
-
-    def test_hello(self):
-        out = _run_demo("rexx", "hello.rex", Language.REXX)
-        assert has(out, "HELLO WORLD", "Welcome to REXX")
-
-    def test_strings(self):
-        out = _run_demo("rexx", "hello.rex", Language.REXX)
-        assert has(out, "STRINGS", "5")
-
-    def test_loops(self):
-        out = _run_demo("rexx", "hello.rex", Language.REXX)
-        assert has(out, "DO LOOP")
-
-    def test_procedures(self):
-        out = _run_demo("rexx", "hello.rex", Language.REXX)
-        assert has(out, "PROCEDURES", "Hello from procedure")
-
-    def test_done(self):
-        out = _run_demo("rexx", "hello.rex", Language.REXX)
-        assert has(out, "DONE")
-
-
-# ── Smalltalk ────────────────────────────────────────────────────────────────
-
-
-class TestSmalltalkDemo:
-    def test_runs(self):
-        out = _run_demo("smalltalk", "hello.st", Language.SMALLTALK)
-        assert ok(out)
-
-    def test_hello(self):
-        out = _run_demo("smalltalk", "hello.st", Language.SMALLTALK)
-        assert has(out, "HELLO WORLD", "Welcome to Smalltalk")
-
-    def test_arithmetic(self):
-        out = _run_demo("smalltalk", "hello.st", Language.SMALLTALK)
-        assert has(out, "VARIABLES")
-
-    def test_conditionals(self):
-        out = _run_demo("smalltalk", "hello.st", Language.SMALLTALK)
-        assert has(out, "CONDITIONALS")
-
-    def test_loops(self):
-        out = _run_demo("smalltalk", "hello.st", Language.SMALLTALK)
-        assert has(out, "LOOPS")
-
-    def test_done(self):
-        out = _run_demo("smalltalk", "hello.st", Language.SMALLTALK)
-        assert has(out, "DONE")
-
-
 # ── HyperTalk ────────────────────────────────────────────────────────────────
 
 
@@ -558,33 +368,3 @@ class TestHyperTalkDemo:
     def test_done(self):
         out = _run_demo("hypertalk", "hello.htalk", Language.HYPERTALK)
         assert has(out, "DONE")
-
-
-# ── Haskell ──────────────────────────────────────────────────────────────────
-
-
-class TestHaskellDemo:
-    def test_runs(self):
-        out = _run_demo("haskell", "hello.hs", Language.HASKELL)
-        assert ok(out)
-
-    def test_hello(self):
-        out = _run_demo("haskell", "hello.hs", Language.HASKELL)
-        assert has(out, "HELLO WORLD", "Welcome to Haskell")
-
-    def test_arithmetic(self):
-        out = _run_demo("haskell", "hello.hs", Language.HASKELL)
-        assert has(out, "ARITHMETIC", "13")
-
-    def test_functions(self):
-        out = _run_demo("haskell", "hello.hs", Language.HASKELL)
-        assert has(out, "FUNCTIONS")
-
-    def test_lists(self):
-        out = _run_demo("haskell", "hello.hs", Language.HASKELL)
-        assert has(out, "LISTS")
-
-    def test_done(self):
-        out = _run_demo("haskell", "hello.hs", Language.HASKELL)
-        assert has(out, "DONE")
-

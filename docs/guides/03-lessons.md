@@ -329,26 +329,16 @@ Each supported language has lessons:
 - Forth (4+ lessons)
 
 **Modern Languages:**
-- Python (5+ lessons)
 - JavaScript (5+ lessons)
 - Lua (4+ lessons)
-- Haskell (4+ lessons)
-- Scheme (4+ lessons)
-- Smalltalk (4+ lessons)
 
-**Mainframe & Enterprise:**
-- COBOL (4+ lessons)
-- REXX (4+ lessons)
-- Fortran (4+ lessons)
-- JCL (3+ lessons)
-- CICS (3+ lessons)
-- SQL (4+ lessons)
-- SQR (3+ lessons)
+**Concurrent & Functional:**
+- Erlang (4+ lessons)
 
-**Esoteric & Historical:**
-- Assembly (4+ lessons)
-- APL (4+ lessons)
+**Event-Driven:**
 - HyperTalk (3+ lessons)
+
+**Esoteric:**
 - Brainfuck (3+ lessons)
 
 ### By Topic

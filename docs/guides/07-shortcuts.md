@@ -62,8 +62,11 @@ Master Time Warp Studio with these keyboard shortcuts. Use them to work faster a
 | Shortcut | Action |
 |----------|--------|
 | **Ctrl+R** | Run program |
-| **Ctrl+Shift+R** | Run with input file |
-| **Ctrl+K** | Stop program |
+| **Ctrl+Shift+R** | Run selection |
+| **Ctrl+Shift+F5** | Stop execution |
+| **F5** | Start debugging |
+| **Shift+F5** | Stop debugging |
+| **Ctrl+F5** | Continue debugging |
 | **Ctrl+L** | Clear output |
 
 ## IDE Navigation
@@ -73,7 +76,7 @@ Master Time Warp Studio with these keyboard shortcuts. Use them to work faster a
 | **Ctrl+P** | Open file palette |
 | **Ctrl+Shift+P** | Open command palette |
 | **F1** | Show help |
-| **F5** | Toggle debugger (if available) |
+| **F5** | Start debugging |
 | **F9** | Toggle breakpoint (if available) |
 
 ## View and Display

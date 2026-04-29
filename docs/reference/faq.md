@@ -8,7 +8,7 @@ Quick answers to common questions about Time Warp Studio.
 
 ### What is Time Warp Studio?
 
-Time Warp Studio is a desktop educational programming environment built with Python and PySide6 (Qt6) that combines classic and modern programming languages in a single application. It supports 24 languages — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Python, JavaScript, Lua, Haskell, REXX, Scheme, Smalltalk, Brainfuck, COBOL, Fortran, Assembly, APL, HyperTalk, JCL, CICS, SQL, and SQR — with integrated turtle graphics.
+Time Warp Studio is a desktop educational programming environment built with Python and PySide6 (Qt6) that combines classic and modern programming languages in a single application. It supports 12 languages — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, Erlang, HyperTalk, JavaScript, and Lua — with integrated turtle graphics.
 
 ### Who should use Time Warp Studio?
 
@@ -72,31 +72,17 @@ Yes! Works on both Intel and Apple Silicon Macs.
 ### What languages does Time Warp support?
 
 - **BASIC** - Classic BASIC language (1964)
-- **PILOT** - Computer-based instruction (1962)
+- **PILOT** - Computer-based instruction (1969)
 - **Logo** - Turtle graphics and drawing (1967)
 - **C** - Systems programming (1972)
 - **Pascal** - Structured programming (1970)
 - **Prolog** - Logic programming (1972)
 - **Forth** - Stack-based programming (1970)
-- **Python** - Modern scripting (1991)
 - **Lua** - Lightweight scripting (1993)
-- **Scheme** - Functional/Lisp (1975)
-- **COBOL** - Business data processing (1959)
 - **Brainfuck** - Esoteric computing (1993)
-- **Assembly** - x86 low-level programming
 - **JavaScript** - Web scripting (1995)
-- **Fortran** - Scientific computing (1957)
-- **REXX** - Mainframe scripting (1979)
-- **Smalltalk** - Object-oriented programming (1972)
 - **HyperTalk** - Event-driven scripting (1987)
-- **Haskell** - Functional programming (1990)
-- **APL** - Array programming (1966)
-- **SQL** - Database queries (T-SQL dialect)
-- **JCL** - Mainframe job control (1964)
-- **CICS** - Transaction processing (1968)
-- **SQR** - Report writing (1984)
-- **CICS** - Mainframe transactions
-- **SQR** - Report generation
+- **Erlang** - Concurrent/functional programming (1986)
 
 ### Can I save my programs?
 

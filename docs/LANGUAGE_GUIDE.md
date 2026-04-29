@@ -1,6 +1,6 @@
 # Language Guide - Time Warp Studio
 
-Complete reference for all **20 programming languages** supported by Time Warp Studio.
+Complete reference for all **12 programming languages** supported by Time Warp Studio.
 
 ---
 
@@ -17,32 +17,22 @@ Complete reference for all **20 programming languages** supported by Time Warp S
 
 ### Functional & Declarative
 6. [Prolog](#prolog)
-7. [Haskell](#haskell)
-8. [Scheme](#scheme)
-
-### Scripting & General-Purpose
-9. [Python](#python)
-10. [JavaScript](#javascript)
-11. [Lua](#lua)
-12. [REXX](#rexx)
-13. [Perl](#perl)
-14. [Ruby](#ruby)
 
 ### Stack & Concatenative
-15. [Forth](#forth)
+7. [Forth](#forth)
 
-### Object-Oriented
-16. [Smalltalk](#smalltalk)
+### Scripting & General-Purpose
+8. [JavaScript](#javascript)
+9. [Lua](#lua)
 
-### Concurrent & Systems
-17. [Erlang](#erlang)
-18. [Rust](#rust)
+### Concurrent & Functional
+10. [Erlang](#erlang)
 
 ### Event-Driven
-19. [HyperTalk](#hypertalk)
+11. [HyperTalk](#hypertalk)
 
 ### Esoteric
-20. [Brainfuck](#brainfuck)
+12. [Brainfuck](#brainfuck)
 
 ---
 
@@ -689,41 +679,6 @@ COUNTDOWN           \ Prints 10 9 8 7 6 5 4 3 2 1
 
 ---
 
-## Python
-
-Modern, multi-paradigm language executed in a safe sandbox.
-
-```python
-# Variables and output
-name = "Alice"
-age = 30
-print(f"Hello, {name}! You are {age} years old.")
-
-# Functions
-def factorial(n):
-    return 1 if n <= 1 else n * factorial(n - 1)
-
-for i in range(1, 8):
-    print(f"{i}! = {factorial(i)}")
-
-# List comprehension
-squares = [x**2 for x in range(1, 11)]
-print(squares)
-
-# Classes
-class Dog:
-    def __init__(self, name):
-        self.name = name
-    def speak(self):
-        return f"{self.name} says Woof!"
-
-print(Dog("Rex").speak())
-```
-
-**File extension:** `.py`
-
----
-
 ## JavaScript
 
 Web-era scripting language with first-class functions.
@@ -807,279 +762,6 @@ print(c(), c(), c())
 
 ---
 
-## REXX
-
-Classic IBM mainframe scripting language, also available on Unix.
-
-```rexx
-/* REXX program */
-SAY "Hello from REXX!"
-name = "Alice"
-SAY "Welcome," name"!"
-
-/* DO loop */
-DO i = 1 TO 5
-    SAY "Count:" i
-END
-
-/* Subroutine */
-CALL Greet "World"
-
-/* Built-in functions */
-msg = "Hello World"
-SAY "Length:" LENGTH(msg)
-SAY "Upper:" UPPER(msg)
-SAY "Words:" WORDS(msg)
-EXIT
-
-Greet:
-    ARG who
-    SAY "Hello," who"!"
-    RETURN
-```
-
-**File extension:** `.rex`
-
----
-
-## Haskell
-
-Pure functional language with strong static typing.
-
-```haskell
--- Functions
-factorial :: Int -> Int
-factorial 0 = 1
-factorial n = n * factorial (n - 1)
-
--- List operations
-evens = filter even [1..20]
-squares = map (^2) [1..10]
-sumList = foldl (+) 0
-
--- Main
-main :: IO ()
-main = do
-    putStrLn "Hello from Haskell!"
-    print (map factorial [1..8])
-    putStrLn $ "Evens up to 20: " ++ show evens
-    putStrLn $ "Sum 1..100 = " ++ show (sumList [1..100])
-
-    -- Where clause
-    let result = compute 5 3
-    print result
-  where
-    compute x y = x^2 + 2*x*y + y^2
-```
-
-**File extension:** `.hs`
-
----
-
-## Scheme
-
-Minimalist Lisp dialect emphasizing functional purity and tail calls.
-
-```scheme
-;; Define and call functions
-(define (factorial n)
-  (if (<= n 1) 1 (* n (factorial (- n 1)))))
-
-(display (factorial 10)) (newline)
-
-;; Higher-order functions
-(define nums '(1 2 3 4 5 6 7 8 9 10))
-(display (filter odd? nums)) (newline)
-(display (map (lambda (x) (* x x)) nums)) (newline)
-
-;; Let binding and recursion
-(let loop ((i 0) (a 0) (b 1))
-  (when (< i 10)
-    (display a) (display " ")
-    (loop (+ i 1) b (+ a b))))
-(newline)
-
-;; Named let
-(define (sum-to n)
-  (let loop ((i n) (acc 0))
-    (if (= i 0) acc (loop (- i 1) (+ acc i)))))
-(display (sum-to 100)) (newline)
-```
-
-**File extension:** `.scm`
-
----
-
-## Smalltalk
-
-The original object-oriented language; everything is an object.
-
-```smalltalk
-| x coll |
-Transcript showCr: 'Hello from Smalltalk!'.
-
-"Arithmetic"
-x := 6 factorial.
-Transcript showCr: '6! = ' , x printString.
-
-"Collection"
-coll := OrderedCollection new.
-1 to: 5 do: [:i | coll add: i * i].
-Transcript showCr: 'Squares: ' , coll printString.
-
-"Conditionals"
-| n |
-n := 42.
-(n even)
-    ifTrue:  [Transcript showCr: n printString , ' is even']
-    ifFalse: [Transcript showCr: n printString , ' is odd'].
-
-"Block as value"
-| adder |
-adder := [:a :b | a + b].
-Transcript showCr: 'adder(3,4) = ' , (adder value: 3 value: 4) printString.
-```
-
-**File extension:** `.st`
-
----
-
-## APL
-
-Array-oriented language with unique mathematical symbols.
-
-```apl
-⍝ APL Examples
-⍝ Simple arithmetic
-2 + 3
-10 × 5
-
-⍝ Array operations
-1 2 3 4 5
-+/ 1 2 3 4 5        ⍝ Sum: 15
-×/ 1 2 3 4 5        ⍝ Product: 120
-⌈/ 3 1 4 1 5 9 2 6  ⍝ Max: 9
-⌊/ 3 1 4 1 5 9 2 6  ⍝ Min: 1
-
-⍝ Iota (range)
-⍳10
-
-⍝ Outer product
-2 3 4 ∘.× 1 2 3
-```
-
-**File extension:** `.apl`
-
----
-
-## COBOL
-
-Business-oriented language, dominant in financial and government systems.
-
-```cobol
-       IDENTIFICATION DIVISION.
-       PROGRAM-ID. HELLO.
-
-       DATA DIVISION.
-       WORKING-STORAGE SECTION.
-       01 WS-NAME       PIC X(20) VALUE 'World'.
-       01 WS-COUNTER    PIC 9(3)  VALUE 0.
-       01 WS-TOTAL      PIC 9(6)  VALUE 0.
-
-       PROCEDURE DIVISION.
-       MAIN-PARA.
-           DISPLAY 'Hello, ' WS-NAME '!'.
-
-           PERFORM VARYING WS-COUNTER FROM 1 BY 1
-               UNTIL WS-COUNTER > 5
-               DISPLAY 'Count: ' WS-COUNTER
-           END-PERFORM.
-
-           PERFORM VARYING WS-COUNTER FROM 1 BY 1
-               UNTIL WS-COUNTER > 100
-               ADD WS-COUNTER TO WS-TOTAL
-           END-PERFORM.
-           DISPLAY 'Sum 1..100 = ' WS-TOTAL.
-
-           STOP RUN.
-```
-
-**File extension:** `.cob`
-
----
-
-## Fortran
-
-The first high-level programming language; excels at numeric computing.
-
-```fortran
-PROGRAM HELLO
-    IMPLICIT NONE
-    INTEGER :: i, n
-    REAL :: sum, x
-
-    PRINT *, 'Hello from Fortran!'
-
-    ! Sum 1 to 10
-    sum = 0.0
-    DO i = 1, 10
-        sum = sum + i
-    END DO
-    PRINT *, 'Sum 1..10 =', sum
-
-    ! Factorial function
-    n = 10
-    PRINT *, n, '! =', factorial(n)
-
-    CONTAINS
-
-    INTEGER FUNCTION factorial(n)
-        INTEGER, INTENT(IN) :: n
-        INTEGER :: k
-        factorial = 1
-        DO k = 2, n
-            factorial = factorial * k
-        END DO
-    END FUNCTION factorial
-
-END PROGRAM HELLO
-```
-
-**File extension:** `.f90`
-
----
-
-## Assembly
-
-x86 assembly language — closest to the hardware.
-
-```asm
-; x86 Assembly - Hello World
-section .data
-    msg db 'Hello from Assembly!', 0x0A
-    len equ $ - msg
-
-section .text
-    global _start
-
-_start:
-    ; Write to stdout
-    mov eax, 4        ; sys_write
-    mov ebx, 1        ; stdout
-    mov ecx, msg      ; buffer
-    mov edx, len      ; length
-    int 0x80
-
-    ; Exit
-    mov eax, 1        ; sys_exit
-    xor ebx, ebx      ; return 0
-    int 0x80
-```
-
-**File extension:** `.asm`
-
----
-
 ## HyperTalk
 
 Apple HyperCard's English-like scripting language (1987).
@@ -1112,149 +794,6 @@ end if
 
 ---
 
-## JCL
-
-IBM Job Control Language — controls batch job execution on mainframes.
-
-```jcl
-//TWJOB01  JOB (ACCT),'HELLO WORLD',CLASS=A,MSGCLASS=X
-//*
-//* Simple JCL job step
-//*
-//STEP01   EXEC PGM=IEBGENER
-//SYSPRINT DD  SYSOUT=*
-//SYSIN    DD  DUMMY
-//SYSUT1   DD  *
-Hello from JCL!
-Time Warp Studio Mainframe Demo
-/*
-//SYSUT2   DD  SYSOUT=*
-```
-
-Key JCL statements:
-- `//jobname JOB` — defines a job
-- `//stepname EXEC PGM=` — executes a program
-- `//ddname DD` — defines a dataset (file)
-- `SYSOUT=*` — print output to console
-- `/*` — end of in-stream data
-
-**File extension:** `.jcl`
-
----
-
-## CICS
-
-IBM CICS (Customer Information Control System) — mainframe transaction processing.
-
-```cics
-       IDENTIFICATION DIVISION.
-       PROGRAM-ID. HELLOCICS.
-       DATA DIVISION.
-       WORKING-STORAGE SECTION.
-       01 WS-MSG PIC X(40) VALUE 'Hello from CICS!'.
-
-       PROCEDURE DIVISION.
-       MAIN-LOGIC.
-           EXEC CICS SEND TEXT
-               FROM(WS-MSG)
-               ERASE
-           END-EXEC
-
-           DISPLAY 'Transaction complete.'.
-           EXEC CICS RETURN END-EXEC
-           STOP RUN.
-```
-
-Key CICS commands:
-- `EXEC CICS SEND TEXT` — send text to terminal
-- `EXEC CICS RECEIVE MAP` — receive BMS map input
-- `EXEC CICS READ FILE` — read VSAM record
-- `EXEC CICS RETURN` — end transaction
-- `EXEC CICS ASSIGN` — get system information
-
-**File extension:** `.cics`
-
----
-
-## SQL
-
-Structured Query Language for relational databases.
-
-```sql
--- Create and populate a table
-CREATE TABLE students (
-    id    INT PRIMARY KEY,
-    name  VARCHAR(50),
-    grade INT
-);
-
-INSERT INTO students VALUES (1, 'Alice', 95);
-INSERT INTO students VALUES (2, 'Bob',   82);
-INSERT INTO students VALUES (3, 'Carol', 91);
-INSERT INTO students VALUES (4, 'Dave',  74);
-
--- Query with ORDER BY
-SELECT name, grade FROM students ORDER BY grade DESC;
-
--- Aggregate functions
-SELECT AVG(grade) AS average,
-       MAX(grade) AS highest,
-       MIN(grade) AS lowest
-FROM students;
-
--- Conditional (CASE)
-SELECT name,
-    CASE WHEN grade >= 90 THEN 'A'
-         WHEN grade >= 80 THEN 'B'
-         ELSE 'C'
-    END AS letter
-FROM students;
-```
-
-**File extension:** `.sql`
-
----
-
-## SQR
-
-Structured Query Reporter — Oracle/PeopleSoft report-generation language.
-
-```sqr
-begin-program
-    do main
-end-program
-
-begin-procedure main
-    display 'Hello from SQR!'
-
-    let $name = 'World'
-    display 'Hello, ' noline
-    display $name
-
-    let #total = 0
-    let #i = 1
-    while #i <= 10
-        let #total = #total + #i
-        let #i = #i + 1
-    end-while
-
-    display 'Sum 1..10 = ' noline
-    display #total
-
-    do print-report
-end-procedure
-
-begin-procedure print-report
-    print 'SQR Report' (+1, 1)
-    print '----------' (+1, 1)
-    print 'Time Warp Studio' (+1, 1)
-end-procedure
-```
-
-**File extension:** `.sqr`
-
----
-
 ## Brainfuck
 
 Esoteric Turing-complete language with 8 commands. Ideal for understanding computation fundamentals.
@@ -1282,6 +821,32 @@ Hello World in Brainfuck:
 
 ---
 
+## Erlang
+
+Concurrent functional language (1986) with actor-model message passing.
+
+```erlang
+-module(hello).
+-export([start/0]).
+
+start() ->
+    io:format("Hello from Erlang!~n"),
+    Pid = spawn(fun worker/0),
+    Pid ! {self(), "ping"},
+    receive
+        {_, Msg} -> io:format("Received: ~s~n", [Msg])
+    end.
+
+worker() ->
+    receive
+        {From, "ping"} -> From ! {self(), "pong"}
+    end.
+```
+
+**File extension:** `.erl`
+
+---
+
 ## Language Selection
 
 To select which language your code uses:
@@ -1295,24 +860,12 @@ To select which language your code uses:
 | `.pilot` | PILOT |
 | `.c` | C |
 | `.pas` | Pascal |
-| `.pro` | Prolog |
-| `.f` or `.4th` | Forth |
-| `.py` | Python |
+| `.pro` or `.pl` or `.prolog` | Prolog |
+| `.f` or `.fs` or `.forth` | Forth |
 | `.js` | JavaScript |
 | `.lua` | Lua |
-| `.rex` | REXX |
-| `.hs` | Haskell |
-| `.scm` | Scheme |
-| `.st` | Smalltalk |
-| `.apl` | APL |
-| `.cob` or `.cobol` | COBOL |
-| `.f90` or `.for` | Fortran |
-| `.asm` or `.s` | Assembly |
-| `.jcl` | JCL |
-| `.cics` | CICS |
-| `.sql` | SQL |
-| `.sqr` | SQR |
-| `.ht` | HyperTalk |
+| `.erl` | Erlang |
+| `.htalk` | HyperTalk |
 | `.bf` | Brainfuck |
 
 2. **Menu Selection**: Use the Language dropdown in the toolbar

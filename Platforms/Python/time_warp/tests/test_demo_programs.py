@@ -40,17 +40,10 @@ _EXT_TO_LANG = {
     ".f": Language.FORTH,
     ".fs": Language.FORTH,
     ".forth": Language.FORTH,
-    ".py": Language.PYTHON,
     ".lua": Language.LUA,
-    ".scm": Language.SCHEME,
-    ".rkt": Language.SCHEME,
     ".bf": Language.BRAINFUCK,
     ".js": Language.JAVASCRIPT,
-    ".rex": Language.REXX,
-    ".rexx": Language.REXX,
-    ".st": Language.SMALLTALK,
     ".htalk": Language.HYPERTALK,
-    ".hs": Language.HASKELL,
 }
 
 

@@ -8,9 +8,9 @@
 
 ## Project Overview
 
-Time Warp Studio is an educational desktop programming environment built with Python and PySide6 (Qt6) that provides a unified IDE for learning **20 programming languages** with integrated turtle graphics.
+Time Warp Studio is an educational desktop programming environment built with Python and PySide6 (Qt6) that provides a unified IDE for learning **12 programming languages** with integrated turtle graphics.
 
-**Supported Languages:** BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Python, Lua, Scheme, Brainfuck, JavaScript, REXX, Smalltalk, HyperTalk, Haskell, Erlang, Ruby, Rust, Perl.
+**Supported Languages:** BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, JavaScript, Lua, HyperTalk, Erlang.
 
 **Current State:** Native desktop application (Python/PySide6) - single actively maintained version.
 
@@ -21,7 +21,7 @@ Time Warp Studio is an educational desktop programming environment built with Py
 - **Desktop Application (Python/PySide6)** — primary and only maintained version
     - Entry point: `Platforms/Python/time_warp_ide.py`
     - Core: `Platforms/Python/time_warp/core/interpreter.py`
-    - Languages: 20 executors in `Platforms/Python/time_warp/languages/`
+    - Languages: 12 executors in `Platforms/Python/time_warp/languages/`
     - UI: PySide6 (Qt6) with modern desktop interface (30+ UI modules)
     - All UI state (editor, canvas, themes) managed by main application
 
@@ -38,7 +38,7 @@ def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) 
 ```
 
 **Two execution modes:**
-- **Whole-program executors** (13 languages): Receive the entire source as a string. Registered in `_WHOLE_PROGRAM_EXECUTORS` dict in `core/interpreter.py`. These are: Python, Lua, Scheme, Brainfuck, JavaScript, REXX, Smalltalk, HyperTalk, Haskell, Erlang, Ruby, Rust, Perl.
+- **Whole-program executors** (5 languages): Receive the entire source as a string. Registered in `_WHOLE_PROGRAM_EXECUTORS` dict in `core/interpreter.py`. These are: Lua, Brainfuck, JavaScript, HyperTalk, Erlang.
 - **Line-by-line executors** (7 languages: BASIC, PILOT, Logo, C, Pascal, Prolog, Forth): The interpreter iterates lines and calls the executor per statement.
 
 When adding a new whole-program language, only one dict needs updating: `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.
@@ -164,13 +164,10 @@ Platforms/Python/
       sql_engine.py         - SQLite-backed T-SQL compatibility layer
       config.py             - Canonical paths (~/.time_warp/)
     features/               - Feature modules (AI, collaboration, games, etc.)
-    languages/              - 24 language executors
+    languages/              - 12 language executors
       base.py               - Protocol definition
       basic.py, pilot.py, logo.py, c_lang_fixed.py, pascal.py,
-      prolog.py, forth.py, python.py, lua.py, scheme.py, cobol.py,
-      brainfuck.py, assembly.py, javascript.py, fortran.py, rexx.py,
-      smalltalk.py, hypertalk.py, haskell.py, apl.py, sql.py, jcl.py,
-      cics.py, sqr.py
+      prolog.py, forth.py, lua.py, brainfuck.py, javascript.py, hypertalk.py, erlang.py
     ui/                     - 30+ UI modules
       main_window.py        - PySide6 main window (uses 6 mixins)
       editor.py             - Code editor + minimap + line numbers
@@ -205,7 +202,7 @@ Optional: `pyfirmata` (Arduino), `RPi.GPIO` (Raspberry Pi), `openai`, `librosa`
 ### Key Components
 
 - **Interpreter**: Main interpreter class handling command dispatch and execution
-- **Language Executors**: 24 executor functions in `time_warp/languages/`
+- **Language Executors**: 12 executor functions in `time_warp/languages/`
 - **UI Components**: Qt-based UI (`ui/main_window.py`) with editor, canvas, and turtle controls
 - **Theme System**: `ui/themes.py` with 28 themes and persistent configuration
 - **Graphics Canvas**: Unified drawing surface in `ui/canvas.py` for all turtle graphics output

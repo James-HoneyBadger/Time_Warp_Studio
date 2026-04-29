@@ -5,9 +5,9 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![PySide6](https://img.shields.io/badge/PySide6-Qt6-green)](https://wiki.qt.io/Qt_for_Python)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-10.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-10.1.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
-Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **20 programming languages** spanning six decades of computing history into a single, modern IDE. Built with Python and PySide6 (Qt6), it provides an integrated platform for learning programming concepts, exploring vector turtle graphics, and working through structured lessons.
+Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **12 programming languages** spanning six decades of computing history into a single, modern IDE. Built with Python and PySide6 (Qt6), it provides an integrated platform for learning programming concepts, exploring vector turtle graphics, and working through structured lessons.
 
 ---
 
@@ -32,7 +32,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 
 ### Multi-Language Support
 
-20 languages spanning six decades of computing history:
+12 languages spanning six decades of computing history:
 
 | Language | Paradigm | Era | Execution Mode |
 | --- | --- | --- | --- |
@@ -45,17 +45,9 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 | **Prolog** | Logic / Declarative | 1972 | Line-by-line |
 | **Brainfuck** | Esoteric / Turing | 1993 | Whole-program |
 | **Erlang** | Concurrent / Functional | 1986 | Whole-program |
-| **Haskell** | Functional / Typed | 1990 | Whole-program |
 | **HyperTalk** | Event-driven / English | 1987 | Whole-program |
 | **JavaScript** | Scripting / Web | 1995 | Whole-program |
 | **Lua** | Scripting / Embedded | 1993 | Whole-program |
-| **Perl** | Scripting / Text-processing | 1987 | Whole-program |
-| **Python** | Multi-paradigm / Modern | 1991 | Whole-program |
-| **REXX** | Scripting / Mainframe | 1979 | Whole-program |
-| **Ruby** | Object-Oriented / Scripting | 1995 | Whole-program |
-| **Rust** | Systems / Memory-safe | 2015 | Whole-program |
-| **Scheme** | Functional / Lisp | 1975 | Whole-program |
-| **Smalltalk** | Object-Oriented | 1980 | Whole-program |
 
 ### Integrated IDE
 
@@ -71,13 +63,13 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 ### Turtle Graphics & Vector Graphics
 
 - Native turtle support with position, heading, and pen state tracking
-- 50+ drawing commands across Logo, BASIC, Perl, Python, and more
+- 50+ drawing commands across Logo, BASIC, Forth, and more
 - Real-time rendering with Qt painter, zoom/pan controls
 - **SVGA mode** — 800×600 (or custom) virtual canvas with crisp anti-aliased rendering
 - **Vector shapes** — cubic Bezier curves, gradient-filled rectangles and ellipses
 - **Sprite system** — define named pixel-art sprites, stamp and animate them with rotation and scaling
 - **Advanced pen styles** — dash patterns, configurable cap and join styles, Z-ordering
-- Cross-language graphics support (Logo, Turbo BASIC, Perl, Python)
+- Cross-language graphics support (Logo, Turbo BASIC, Forth, Erlang)
 
 ### Advanced Debugger
 
@@ -91,7 +83,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Lesson System** — Step-by-step guided instruction with auto-verification
 - **AI Assistant** — Intelligent code suggestions and explanations
 - **Error Explainer** — Human-readable explanations of programming errors
-- **Examples Browser** — example programs across all 20 languages
+- **Examples Browser** — example programs across all 12 languages
 - **Achievements** — Gamified progress tracking
 
 ---
@@ -294,19 +286,12 @@ Browse more examples in the [Examples/](Examples/) directory or through **File �
 | [C](docs/tutorials/c.md) | C language basics |
 | [Pascal](docs/tutorials/pascal.md) | Structured programming |
 | [Prolog](docs/tutorials/prolog.md) | Logic programming |
-| [Python](docs/tutorials/python.md) | Modern scripting & sandboxed execution |
 | [Lua](docs/tutorials/lua.md) | Lightweight scripting language |
 | [JavaScript](docs/tutorials/javascript.md) | Scripting in the browser era |
-| [Haskell](docs/tutorials/haskell.md) | Pure functional programming |
-| [Scheme](docs/tutorials/scheme.md) | Lisp-family functional programming |
-| [Smalltalk](docs/tutorials/smalltalk.md) | Object-oriented programming |
-| [REXX](docs/tutorials/rexx.md) | Mainframe scripting language |
 | [Forth](docs/tutorials/forth.md) | Stack-based programming |
 | [Brainfuck](docs/tutorials/brainfuck.md) | Esoteric Turing-complete language |
 | [HyperTalk](docs/tutorials/hypertalk.md) | Event-driven scripting |
 | [Erlang](docs/tutorials/erlang.md) | Concurrent / functional programming |
-| [Ruby](docs/tutorials/ruby.md) | Object-oriented scripting |
-| [Rust](docs/tutorials/rust.md) | Systems programming with ownership |
 
 ### Reference
 
@@ -345,13 +330,13 @@ Time_Warp_Studio/
 │       │   ├── sql_engine.py      # SQLite-backed T-SQL compatibility
 │       │   ├── orchestrator.py    # System integration / component registry
 │       │   └── config.py          # Canonical paths (~/.time_warp/)
-│       ├── languages/             # 20 language executors
+│       ├── languages/             # 12 language executors
 │       │   ├── base.py            # Executor protocol definition
 │       │   ├── basic.py           # BASIC with Turbo graphics
 │       │   ├── logo.py            # Logo turtle graphics
 │       │   ├── pilot.py           # PILOT CAI system
 │       │   ├── python.py          # Python sandboxed executor
-│       │   └── ...                # 16 more language executors
+│       │   └── ...                # 19 more language executors
 │       ├── ui/                    # PySide6 (Qt6) UI components
 │       │   ├── main_window.py     # Main IDE window (6 mixins)
 │       │   ├── editor.py          # Code editor with syntax highlighting
@@ -360,21 +345,20 @@ Time_Warp_Studio/
 │       │   ├── output.py          # Output panel + interpreter threads
 │       │   ├── debug_panel.py     # Debugger controls/watch/call-stack
 │       │   ├── command_palette.py # Ctrl+Shift+P command palette
-│       │   ├── feature_panels.py  # 14 dynamic feature panels
+│       │   ├── feature_panels.py  # 24 dynamic feature panels
 │       │   └── mixins/            # Collaboration, classroom, debug, etc.
 │       ├── graphics/              # Turtle state and rendering
 │       │   └── turtle_state.py    # Position, heading, pen state (~600 lines)
 │       ├── features/              # Lessons, autosave, achievements, games, etc.
 │       ├── utils/                 # Expression evaluator, error hints, etc.
-│       └── tests/                 # 41+ test files (1,700+ tests)
+│       └── tests/                 # 41 test files
 │
-├── Examples/                      # 107 example programs across 20 languages
+├── Examples/                      # example programs across 12 languages
 │   ├── CATALOG.md                 # Searchable example index
-│   ├── basic/ (7)   logo/ (7)     pilot/ (5)    c/ (7)
-│   ├── pascal/ (6)  prolog/ (6)   python/ (8)   forth/ (5)
-│   ├── haskell/ (5) javascript/ (6) hypertalk/ (5) brainfuck/ (4)
-│   ├── lua/ (6)     rexx/ (5)    scheme/ (6)   smalltalk/ (5)
-│   └── erlang/ (4)  ruby/ (4)    rust/ (4)     perl/ (2)
+│   ├── basic/ logo/ pilot/ c/
+│   ├── pascal/ prolog/ forth/
+│   ├── javascript/ lua/ hypertalk/
+│   ├── brainfuck/ erlang/
 │
 ├── tests/                         # Root-level integration tests
 │   ├── test_all_demos.py          # Standalone demo verifier
@@ -383,7 +367,7 @@ Time_Warp_Studio/
 ├── docs/                          # Documentation
 │   ├── INDEX.md                   # Documentation hub
 │   ├── guides/                    # 8 progressive how-to guides
-│   └── tutorials/                 # 19 language-specific tutorials
+│   └── tutorials/                 # 12 language-specific tutorials
 │   └── reference/                 # FAQ and reference material
 │
 ├── Scripts/                       # Build, launch, deploy, and utility scripts
@@ -411,7 +395,7 @@ python Platforms/Python/time_warp_ide.py
 
 ### What Happens on Startup
 
-1. All 20 language executors are initialized
+1. All 12 language executors are initialized
 2. Configuration is loaded from `~/.time_warp/config.json`
 3. The main IDE window opens with editor, canvas, and output panels
 4. Your last theme and settings are restored
@@ -444,7 +428,7 @@ python Platforms/Python/test_runner.py --basic
 PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
 ```
 
-**Current status:** 1,700+ tests passing across 50+ test modules covering all 20 language executors, graphics, GUI, and interpreter tests.
+**Current status:** Tests passing across test modules covering all 12 language executors, graphics, GUI, and interpreter tests.
 
 ---
 
@@ -497,7 +481,7 @@ Licensed under the **[MIT License](LICENSE)**.
 
 ## 🙏 Acknowledgments
 
-Time Warp Studio honors the educational legacy of BASIC, Logo, PILOT, Forth, Prolog, Scheme, and other pioneering programming languages spanning six decades of computing history, while providing a modern IDE experience for today's learners. Special thanks to the open-source communities behind Python, PySide6/Qt, and the many educators who continue to champion accessible programming education.
+Time Warp Studio honors the educational legacy of BASIC, Logo, PILOT, Forth, Prolog, and other pioneering programming languages spanning six decades of computing history, while providing a modern IDE experience for today's learners. Special thanks to the open-source communities behind Python, PySide6/Qt, and the many educators who continue to champion accessible programming education.
 
 ---
 

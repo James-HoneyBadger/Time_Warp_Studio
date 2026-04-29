@@ -15,13 +15,13 @@ class TestPerformanceBenchmarks:
             result = run("PRINT 1 + 1", Language.BASIC)
             assert no_errors(result)
 
-        def benchmark_python():
-            # Simulate Python execution
-            result = run("print(1 + 1)", Language.PYTHON)
+        def benchmark_lua():
+            # Simulate Lua execution
+            result = run("print(1 + 1)", Language.LUA)
             assert no_errors(result)
 
         runner.run_benchmark("basic_execution", benchmark_basic)
-        runner.run_benchmark("python_execution", benchmark_python)
+        runner.run_benchmark("lua_execution", benchmark_lua)
 
     def test_memory_usage(self):
         """Benchmark memory usage during execution."""

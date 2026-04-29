@@ -20,9 +20,9 @@ class FuzzTestExecutors:
             result = run(source, Language.LOGO)
             assert no_errors(result), f"Fuzz test failed for Logo: {source}"
 
-    def test_fuzz_python(self):
-        """Fuzz test for Python language executor."""
+    def test_fuzz_lua(self):
+        """Fuzz test for Lua language executor."""
         for _ in range(100):
             source = fuzzing.generate_random_python_code()
-            result = run(source, Language.PYTHON)
-            assert no_errors(result), f"Fuzz test failed for Python: {source}"
+            result = run(source, Language.LUA)
+            assert no_errors(result), f"Fuzz test failed for Lua: {source}"
