@@ -238,7 +238,7 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             # Case-sensitive languages should match keywords exactly
             _case_sensitive_langs = {
                 Language.C, Language.JAVASCRIPT,
-                Language.LUA, Language.ERLANG,
+                Language.LUA, Language.ERLANG, Language.LISP,
             }
             kw_flags = 0 if getattr(self, '_current_language', None) in _case_sensitive_langs else re.IGNORECASE
             self._keyword_re = re.compile(
@@ -808,6 +808,32 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             self.operator_pattern = r"[+\-*/<>=!|&]|->|<-|\|"
             self.function_pattern = r"^(\w+)\s*\("
             self.variable_pattern = r"\b[A-Z_][A-Za-z0-9_]*\b"
+
+        elif language == Language.LISP:
+            self.keywords = [
+                "define", "lambda", "let", "let*", "letrec", "letrec*",
+                "if", "cond", "case", "and", "or", "not", "when", "unless",
+                "begin", "do", "quote", "quasiquote", "unquote",
+                "set!", "define-syntax", "syntax-rules", "define-record-type",
+                "values", "call-with-values", "call/cc",
+                "call-with-current-continuation", "dynamic-wind",
+                "apply", "map", "for-each", "filter", "reduce",
+                "cons", "car", "cdr", "list", "append", "reverse",
+                "display", "newline", "write", "print", "format",
+                "null?", "pair?", "list?", "number?", "string?", "symbol?",
+                "boolean?", "procedure?", "zero?", "positive?", "negative?",
+                "eq?", "eqv?", "equal?",
+                "#t", "#f",
+                "forward", "backward", "right", "left", "penup", "pendown",
+                "home", "setpos", "color", "clearscreen",
+            ]
+            self.comment_pattern = r";.*$|#\|[\s\S]*?\|#"
+            self.string_pattern = r'"[^"\\]*(?:\\.[^"\\]*)*"'
+            self.number_pattern = r"[-+]?(?:\d+\.\d*|\.\d+|\d+)(?:[eE][-+]?\d+)?\b|#[bodxBODX][0-9a-fA-F]+"
+            self.operator_pattern = r"[+\-*/=<>!?]"
+            self.function_pattern = r"\(\s*(define|lambda)\s+\(?(\w+)"
+            self.variable_pattern = r"\b[a-z][a-z0-9\-_!?]*\b"
+
         else:
             # Default to BASIC
             self._setup_language_patterns(Language.BASIC)

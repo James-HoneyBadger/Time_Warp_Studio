@@ -14,6 +14,8 @@ Supports:
   answer text  -- display text (appended to output)
   say text     -- print
   ask prompt   -- input (stores in "it")
+  find [whole|partial|string|chars|word] text [in container]
+  go [to] card/next/prev/first/last  -- navigation (logged, no-op in desktop)
   global var   -- declare global
   return value
   exit to HyperCard / exit repeat / next repeat  -- flow control
@@ -90,6 +92,12 @@ class HyperTalkEnvironment:
             lines = source.splitlines()
             self._scan_handlers(lines)
             self._exec_lines(lines, 0, len(lines))
+            # Auto-call entry-point handlers if nothing else was called explicitly
+            if not self._output:
+                for auto_name in ("startup", "run", "rundemo", "main"):
+                    if auto_name in self._handlers:
+                        self._exec_lines(self._handlers[auto_name], 0, len(self._handlers[auto_name]))
+                        break
         except HTExit:
             pass
         except HTError as e:
@@ -219,6 +227,36 @@ class HyperTalkEnvironment:
                 self._it = ""
             return None
 
+        # FIND [whole | partial | string | chars] <text> [in <field>]
+        # Sets 'it' to the found text (or empty string if not found).
+        m = re.match(
+            r"^find\s+(?:(?:whole|partial|string|chars|word)\s+)?"
+            r"(.+?)(?:\s+in\s+(\w+))?$",
+            stmt, re.IGNORECASE,
+        )
+        if m:
+            needle = str(self._eval(m.group(1).strip())).strip('"\'')
+            container_name = m.group(2)
+            haystack = (
+                str(self._get_var(container_name)) if container_name else
+                "\n".join(str(s) for s in self._output)
+            )
+            idx = haystack.lower().find(needle.lower())
+            if idx >= 0:
+                self._it = haystack[idx: idx + len(needle)]
+                self._emit(f"ℹ️ Found: {needle!r}")
+            else:
+                self._it = ""
+                self._emit(f"ℹ️ Not found: {needle!r}")
+            return None
+
+        # GO TO CARD <name or number> / GO [BACK|NEXT|PREV|FIRST|LAST]
+        m = re.match(r"^go(?:\s+to)?\s+(.+)$", stmt, re.IGNORECASE)
+        if m:
+            dest = m.group(1).strip().lower()
+            self._emit(f"ℹ️ Navigation: go to {dest}")
+            return None
+
         # RETURN
         m = re.match(r"^return\s*(.*)", stmt, re.IGNORECASE)
         if m:
@@ -243,19 +281,27 @@ class HyperTalkEnvironment:
                 else_m = re.match(r"^(.+?)\s+else\s+(.+)$", inline, re.IGNORECASE)
                 if else_m:
                     if cond:
-                        self._exec_stmt(else_m.group(1).strip(), lines, ip, block_end)
+                        r = self._exec_stmt(else_m.group(1).strip(), lines, ip, block_end)
                     else:
-                        self._exec_stmt(else_m.group(2).strip(), lines, ip, block_end)
+                        r = self._exec_stmt(else_m.group(2).strip(), lines, ip, block_end)
+                    if isinstance(r, tuple) and r[0] in ("BREAK", "CONTINUE", "RETURN"):
+                        return r
                 else:
                     if cond:
-                        self._exec_stmt(inline, lines, ip, block_end)
+                        r = self._exec_stmt(inline, lines, ip, block_end)
+                        if isinstance(r, tuple) and r[0] in ("BREAK", "CONTINUE", "RETURN"):
+                            return r
             else:
                 # Block if
                 then_end, else_range, after = self._scan_if(lines, ip + 1)
                 if cond:
-                    self._exec_lines(lines, ip + 1, then_end)
+                    r = self._exec_lines(lines, ip + 1, then_end)
+                    if isinstance(r, tuple) and r[0] in ("BREAK", "CONTINUE", "RETURN"):
+                        return r
                 elif else_range:
-                    self._exec_lines(lines, else_range[0], else_range[1])
+                    r = self._exec_lines(lines, else_range[0], else_range[1])
+                    if isinstance(r, tuple) and r[0] in ("BREAK", "CONTINUE", "RETURN"):
+                        return r
                 return ("GOTO", after)
             return None
 
@@ -360,11 +406,23 @@ class HyperTalkEnvironment:
             self._set_var(m.group(1), self._eval(m.group(2).strip()))
             return None
 
+        # CALL handler [args] — synonym for direct handler invocation
+        m = re.match(r"^call\s+(\w+)(?:\s+(.*))?$", stmt, re.IGNORECASE)
+        if m:
+            return self._exec_stmt(
+                (m.group(1) + (" " + m.group(2) if m.group(2) else "")).strip(),
+                lines, ip, block_end
+            )
+
         # Call handler
-        m = re.match(r"^(\w+)(?:\s+(.*))?$", stmt)
+        m = re.match(r"^(\w+)(?:\s+(.*)|\s*\(([^)]*)\))?$", stmt)
         if m:
             name = m.group(1).lower()
-            args_str = m.group(2) or ""
+            # Support "foo(args)" or "foo args" syntax
+            if m.group(3) is not None:
+                args_str = m.group(3).strip()
+            else:
+                args_str = m.group(2) or ""
             if name in self._handlers:
                 # Bind arguments to handler parameter names
                 params = self._handler_params.get(name, [])
@@ -427,7 +485,7 @@ class HyperTalkEnvironment:
             return ("GOTO", end_i + 1)
 
         m = re.match(
-            r"^repeat\s+with\s+(\w+)\s*=\s*(.+?)\s+to\s+(.+?)(?:\s+by\s+(.+))?$",
+            r"^repeat\s+with\s+(\w+)\s*=\s*(.+?)\s+to\s+(.+?)(?:\s+(?:by|step)\s+(.+))?$",
             stmt,
             re.IGNORECASE,
         )
@@ -517,9 +575,25 @@ class HyperTalkEnvironment:
         expr = expr.strip()
         if not expr:
             return ""
-        # String
+        # String literal (quoted string — only if no operator follows the closing quote)
         if expr.startswith('"') or expr.startswith("'"):
-            return expr.strip("\"'")
+            q = expr[0]
+            end = expr.find(q, 1)
+            if end != -1:
+                literal = expr[1:end]
+                remainder = expr[end + 1:].strip()
+                if not remainder:
+                    return literal
+                # There's more after the closing quote — handle as concatenation/expression
+                # by treating the string literal as the left side
+                if remainder.startswith("&"):
+                    return literal + str(self._eval(remainder[1:].strip()))
+                # If it starts with & or other operators, fall through
+                # Otherwise just return the literal
+                return literal
+            else:
+                # No closing quote — return as-is stripped
+                return expr.strip(q)
         # Number
         try:
             return int(expr)
@@ -662,6 +736,25 @@ class HyperTalkEnvironment:
                 + str(self._eval(parts[1].strip()))
             )
 
+        # Comparisons (handle before mod/div to get correct precedence)
+        # e.g. "17 mod d = 0" → lhs="17 mod d", rhs="0"
+        for cmp_op, cmp_fn in [
+            (" >= ", lambda a, b: _to_num(a) >= _to_num(b)),
+            (" <= ", lambda a, b: _to_num(a) <= _to_num(b)),
+            (" <> ", lambda a, b: str(a) != str(b)),
+            (" != ", lambda a, b: str(a) != str(b)),
+            (" > ", lambda a, b: _to_num(a) > _to_num(b)),
+            (" < ", lambda a, b: _to_num(a) < _to_num(b)),
+            (" = ", lambda a, b: str(a) == str(b)),
+        ]:
+            idx = expr.find(cmp_op)
+            if idx > 0:
+                lhs_s = expr[:idx].strip()
+                rhs_s = expr[idx + len(cmp_op):].strip()
+                lhs = self._eval(lhs_s)
+                rhs = self._eval(rhs_s)
+                return cmp_fn(lhs, rhs)
+
         # Arithmetic using Python
         for op in [" is ", " is not ", " mod ", " div ", " contains ", " is in "]:
             if op in expr.lower():
@@ -683,12 +776,23 @@ class HyperTalkEnvironment:
                     return str(lhs) in str(rhs)
 
         # Python eval for arithmetic
+        # First substitute any embedded function calls (e.g. random(25) + 15)
+        def sub_fn_call(m_):
+            fn_name = m_.group(1).lower()
+            args_str = m_.group(2)
+            r = self._call_fn(fn_name, args_str)
+            if r is not None:
+                return str(r)
+            return m_.group(0)
+
+        expr_sub = re.sub(r"([A-Za-z_]\w*)\s*\(([^()]*)\)", sub_fn_call, expr)
+
         def sub_var(m_):
             name = m_.group(0).lower()
             val = self._get_var(name)
             return str(val)
 
-        pyexpr = re.sub(r"[A-Za-z_]\w*", sub_var, expr)
+        pyexpr = re.sub(r"[A-Za-z_]\w*", sub_var, expr_sub)
         pyexpr = pyexpr.replace("^", "**")
         try:
             return eval(pyexpr, {"__builtins__": {}})  # noqa: S307

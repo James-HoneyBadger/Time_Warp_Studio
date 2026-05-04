@@ -27,14 +27,14 @@ _VAR_RE = re.compile(
 _VAR_ARRAY_RE = re.compile(
     (
         r"^\s*(?:var\s+)?(.+):\s*array\s*\[\s*(\w+)\.\.(\w+)\s*\]\s*of\s*"
-        r"(integer|longint|real|string|char|boolean|byte|word|shortint|double)\s*;?\s*$"
+        r"(integer|longint|real|string(?:\s*\[\s*\d+\s*\])?|char|boolean|byte|word|shortint|double)\s*;?\s*$"
     ),
     re.IGNORECASE,
 )
-# 2D array declarations and custom type declarations — treated as simple
-# variable setup (flatten 2D to 1D, custom types default to real)
+# 2D array declarations and custom type arrays — treated as simple list setup
+# Also handles: array[N..M] of CustomType  (creates array of record dicts)
 _VAR_ARRAY_2D_RE = re.compile(
-    r"^\s*(?:var\s+)?(.+):\s*array\s*\[.+\]\s*of\s*\w+\s*;?\s*$",
+    r"^\s*(?:var\s+)?(.+):\s*array\s*\[(.+)\]\s*of\s*([\w][\w\s\[\]]*)\s*;?\s*$",
     re.IGNORECASE,
 )
 # Type definition line: e.g. "TIntArray = array[1..MAX] of Integer;"
@@ -44,7 +44,7 @@ _TYPE_DEF_RE = re.compile(
 )
 # Catch-all variable declaration with unknown/custom type
 _VAR_CUSTOM_TYPE_RE = re.compile(
-    r"^\s*(?:var\s+)?([A-Za-z_][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_]*)*):\s*([A-Za-z_][A-Za-z0-9_]*)\s*;?\s*$",
+    r"^\s*(?:var\s+)?([A-Za-z_][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_]*)*)\s*:\s*([A-Za-z_][A-Za-z0-9_]*)\s*;?\s*$",
     re.IGNORECASE,
 )
 _VAR_KEYWORD_RE = re.compile(r"^\s*var\s*$", re.IGNORECASE)
@@ -56,6 +56,10 @@ _CONST_DEF_RE = re.compile(
 _ASSIGN_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*:=\s*(.+);?\s*$")
 _ASSIGN_ARRAY_RE = re.compile(
     r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\[(.+)\]\s*:=\s*(.+);?\s*$"
+)
+# Array-of-record field assignment: arr[idx].field := expr
+_ASSIGN_ARR_FIELD_RE = re.compile(
+    r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*\[(.+)\]\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)\s*:=\s*(.+);?\s*$"
 )
 # Field assignment: var.field := expr
 _ASSIGN_FIELD_RE = re.compile(
@@ -81,28 +85,64 @@ _GOTOXY_RE = re.compile(r"^\s*gotoxy\s*\((.+),(.+)\)\s*;?\s*$", re.IGNORECASE)
 _RANDOMIZE_RE = re.compile(r"^\s*randomize\s*;?\s*$", re.IGNORECASE)
 
 _IF_THEN_RE = re.compile(
-    r"^\s*if\s+(.+)\s+then\s*;?\s*$",
+    r"^\s*if\s+(.+?)\s+then\s*(begin\s*)?;?\s*$",
+    re.IGNORECASE,
+)
+# IF one-liner: if cond then begin stmts end [;]
+_IF_ONELINER_RE = re.compile(
+    r"^\s*if\s+(.+?)\s+then\s+begin\s+(.+?)\s+end\s*;?\s*$",
+    re.IGNORECASE,
+)
+# IF...THEN...ELSE inline: if cond then stmt1 else stmt2;
+_IF_INLINE_RE = re.compile(
+    r"^\s*if\s+(.+?)\s+then\s+(.+?)\s+else\s+(.+?)\s*;?\s*$",
+    re.IGNORECASE,
+)
+# IF...THEN inline (no else): if cond then stmt;
+_IF_THEN_INLINE_RE = re.compile(
+    r"^\s*if\s+(.+?)\s+then\s+([^;]+)\s*;?\s*$",
     re.IGNORECASE,
 )
 _ELSE_RE = re.compile(
     r"^\s*else\s*;?\s*$",
     re.IGNORECASE,
 )
+# ELSE one-liner: else begin stmts end [;]
+_ELSE_ONELINER_RE = re.compile(
+    r"^\s*else\s+begin\s+(.+?)\s+end\s*;?\s*$",
+    re.IGNORECASE,
+)
+# ELSE-IF one-liner: else if cond then begin stmts end [;]
+_ELSE_IF_ONELINER_RE = re.compile(
+    r"^\s*else\s+if\s+(.+?)\s+then\s+begin\s+(.+?)\s+end\s*;?\s*$",
+    re.IGNORECASE,
+)
+# ELSE-IF multi-line: else if cond then [begin]
+_ELSE_IF_RE = re.compile(
+    r"^\s*else\s+if\s+(.+?)\s+then\s*(begin\s*)?;?\s*$",
+    re.IGNORECASE,
+)
 _WHILE_DO_RE = re.compile(
-    r"^\s*while\s+(.+)\s+do\s*;?\s*$",
+    r"^\s*while\s+(.+?)\s+do\s*(begin\s*)?;?\s*$",
     re.IGNORECASE,
 )
 _WITH_DO_RE = re.compile(
-    r"^\s*with\s+([A-Za-z_][A-Za-z0-9_]*)\s+do\s*;?\s*$",
+    r"^\s*with\s+([A-Za-z_][A-Za-z0-9_]*)\s+do\s*(begin\s*)?;?\s*$",
     re.IGNORECASE,
 )
 _REPEAT_RE = re.compile(r"^\s*repeat\s*$", re.IGNORECASE)
 _UNTIL_RE = re.compile(r"^\s*until\s+(.+)\s*;?\s*$", re.IGNORECASE)
 _FOR_RE = re.compile(
     (
-        r"^\s*for\s+([A-Za-z_][A-Za-z0-9_]*)\s*:=\s*(.+)\s+"
-        + r"(to|downto)\s+(.+)\s+do\s*$"
+        r"^\s*for\s+([A-Za-z_][A-Za-z0-9_]*)\s*:=\s*(.+?)\s+"
+        + r"(to|downto)\s+(.+?)\s+do\s*(begin|)\s*$"
     ),
+    re.IGNORECASE,
+)
+# FOR with inline single statement: for x := a to b do stmt;
+_FOR_INLINE_RE = re.compile(
+    r"^\s*for\s+([A-Za-z_][A-Za-z0-9_]*)\s*:=\s*(.+?)\s+"
+    r"(to|downto)\s+(.+?)\s+do\s+(.+)\s*;\s*$",
     re.IGNORECASE,
 )
 _CASE_RE = re.compile(r"^\s*case\s+(.+)\s+of\s*$", re.IGNORECASE)
@@ -120,6 +160,47 @@ _FUNC_RE = re.compile(
     re.IGNORECASE,
 )
 _CALL_RE = re.compile(r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*(?:\((.*)\))?\s*;\s*$")
+
+
+def _split_pascal_stmts(cmd: str) -> List[str]:
+    """Split a Pascal line on ';' that are outside single-quoted strings AND
+    outside parentheses. Returns a list of non-empty stripped statements.
+    Only splits when the result has 2+ meaningful parts.
+    """
+    parts: List[str] = []
+    current: List[str] = []
+    in_str = False
+    depth = 0  # paren depth — don't split ; inside (...)
+    for ch in cmd:
+        if ch == "'" and not in_str:
+            in_str = True
+            current.append(ch)
+        elif ch == "'" and in_str:
+            in_str = False
+            current.append(ch)
+        elif not in_str and ch == "(":
+            depth += 1
+            current.append(ch)
+        elif not in_str and ch == ")":
+            depth -= 1
+            current.append(ch)
+        elif ch == ";" and not in_str and depth == 0:
+            part = "".join(current).strip()
+            if part:
+                parts.append(part)
+            current = []
+        else:
+            current.append(ch)
+    # trailing part (no final ;)
+    part = "".join(current).strip()
+    if part:
+        parts.append(part)
+    # Only return split result if we actually have multiple parts
+    if len(parts) > 1:
+        return parts
+    # Return the original as-is (preserving any trailing ;) so it can match
+    # single-statement regexes that expect a trailing semicolon
+    return [cmd]
 
 
 def _ensure_pascal_stack(interpreter: "Interpreter"):
@@ -183,11 +264,40 @@ def _call_func_inline(
 
     # Execute function body lines inline
     saved_line = interpreter.current_line
-    for line_idx in range(info["start"], info["end"]):
-        _, line_text = interpreter.program_lines[line_idx]
-        if line_text.strip():
-            execute_pascal(interpreter, line_text.strip(), None)  # type: ignore[arg-type]
-    interpreter.current_line = saved_line
+    saved_stack = interpreter.pascal_block_stack[:]
+    interpreter.pascal_block_stack = []
+    # First execute any var declarations between function header and begin
+    var_start = info.get("var_start")
+    begin_idx_info = info.get("begin_idx")
+    try:
+        if var_start is not None and begin_idx_info is not None:
+            for vi in range(var_start, begin_idx_info):
+                _, vline = interpreter.program_lines[vi]
+                if vline.strip():
+                    execute_pascal(interpreter, vline.strip(), None)  # type: ignore[arg-type]
+        # Use same control-flow loop as main interpreter (respects for/while jumps)
+        # Pattern: read at current_line, execute, then auto-advance OR stay (if jumped)
+        interpreter.current_line = info["start"]  # start at first body line
+        end_line: int = info["end"]
+        _iter_count = 0
+        while interpreter.current_line < end_line and _iter_count < 1000000:
+            _iter_count += 1
+            _physical = interpreter.current_line
+            if interpreter.current_line < len(interpreter.program_lines):
+                _, line_text = interpreter.program_lines[interpreter.current_line]
+                if line_text.strip():
+                    try:
+                        execute_pascal(interpreter, line_text.strip(), None)  # type: ignore[arg-type]
+                    except Exception:  # noqa: BLE001
+                        pass  # Errors are logged; continue execution
+            if interpreter.current_line == _physical:
+                # Execution did not jump — auto-advance to next line
+                interpreter.current_line += 1
+            # If current_line was changed by execute_pascal (for-loop jump, etc.),
+            # the while condition will re-evaluate from the new position.
+    finally:
+        interpreter.pascal_block_stack = saved_stack
+        interpreter.current_line = saved_line
 
     # Read return value: function assigns to its own name
     if fsuf == "$":
@@ -231,6 +341,12 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
     import math as _math
 
     expr = expr.strip()
+
+    # Boolean literals
+    if expr.upper() == "TRUE":
+        return True
+    if expr.upper() == "FALSE":
+        return False
 
     # String functions that return strings – handle specially
     # COPY(s, pos, len)
@@ -296,19 +412,45 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
             n = 0
         return c[0] * n if c else ""
 
-    # ORD(c)
-    m = re.match(r"^ORD\s*\((.+)\)$", expr, re.IGNORECASE)
-    if m:
-        s = _eval_str(interpreter, m.group(1).strip())
-        return ord(s[0]) if s else 0
+    # ORD(c) — only when the entire expression is a single ORD() call
+    # Use balanced-paren scan to avoid greedily matching "ord(c) - ord('A')"
+    _ord_m = re.match(r"^ORD\s*\(", expr, re.IGNORECASE)
+    if _ord_m:
+        _start = _ord_m.end() - 1  # position of '('
+        _depth = 0
+        _end = -1
+        for _ci, _ch in enumerate(expr[_start:], _start):
+            if _ch == "(":
+                _depth += 1
+            elif _ch == ")":
+                _depth -= 1
+                if _depth == 0:
+                    _end = _ci
+                    break
+        if _end == len(expr) - 1:  # closing ) is at the very end
+            inner = expr[_start + 1:_end].strip()
+            s = _eval_str(interpreter, inner)
+            return ord(s[0]) if s else 0
 
-    # CHR(n)
-    m = re.match(r"^CHR\s*\((.+)\)$", expr, re.IGNORECASE)
-    if m:
-        try:
-            return chr(int(interpreter.evaluate_expression(m.group(1).strip())))
-        except Exception:
-            return "\x00"
+    # CHR(n) — only when the entire expression is a single CHR() call
+    _chr_m = re.match(r"^CHR\s*\(", expr, re.IGNORECASE)
+    if _chr_m:
+        _start = _chr_m.end() - 1
+        _depth = 0
+        _end = -1
+        for _ci, _ch in enumerate(expr[_start:], _start):
+            if _ch == "(":
+                _depth += 1
+            elif _ch == ")":
+                _depth -= 1
+                if _depth == 0:
+                    _end = _ci
+                    break
+        if _end == len(expr) - 1:
+            try:
+                return chr(int(_pascal_eval_expr(interpreter, expr[_start + 1:_end].strip())))
+            except Exception:
+                return "\x00"
 
     # SUCC(n) / PRED(n)
     m = re.match(r"^(SUCC|PRED)\s*\((.+)\)$", expr, re.IGNORECASE)
@@ -445,6 +587,15 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
                     return arr[idx]
             except Exception:  # noqa: BLE001
                 pass
+        elif arr_name + "$" in interpreter.string_variables:
+            # Pascal string character indexing: s[idx] is 1-based
+            try:
+                idx = int(_pascal_eval_expr(interpreter, m_arr.group(2).strip()))
+                s_val = interpreter.string_variables[arr_name + "$"]
+                if 1 <= idx <= len(s_val):
+                    return s_val[idx - 1]
+            except Exception:  # noqa: BLE001
+                pass
 
     # ── SysUtils / CRT built-in functions ────────────────────────────────────
     # INTTOSTR(n)
@@ -516,17 +667,21 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
                 return fmt_str
         return ""
 
-    # Handle string concatenation with + operator (check before simple literal)
-    if "+" in expr and ("'" in expr or '"' in expr):
-        parts = _split_string_concat(expr)
-        if parts is not None:
-            return "".join(_eval_str(interpreter, p.strip()) for p in parts)
-
-    # Handle simple string literals directly
-    if (expr.startswith("'") and expr.endswith("'")) or (
-        expr.startswith('"') and expr.endswith('"')
-    ):
-        return _unquote(expr)
+    # Handle simple string literals directly (but not string concatenations like 'A'+'B')
+    if expr and expr[0] in ("'", '"'):
+        q = expr[0]
+        # Scan to find closing quote (skip escaped '' pairs)
+        i = 1
+        while i < len(expr):
+            if expr[i] == q:
+                if i + 1 < len(expr) and expr[i + 1] == q:
+                    i += 2  # Pascal escaped quote ''
+                else:
+                    if i == len(expr) - 1:
+                        return _unquote(expr)  # it's a single literal
+                    break  # closing quote is NOT at end → not a simple literal
+            else:
+                i += 1
 
     # Fallthrough – translate Pascal operators to Python and evaluate
     # Resolve string variables first
@@ -577,7 +732,106 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
     # Single '=' that isn't '<=' or '>=' or '<>' or '!=' → '=='
     pyexpr = re.sub(r"(?<![<>!=])=(?!=)", "==", pyexpr)
 
-    # Replace Pascal variable names with their values in the expression
+    # Expand array accesses before variable replacement.
+    # First: NAME[idx].FIELD (record-array field access, e.g. Students[i].Score)
+    def _arr_field_replacer(m_af):
+        arr_name = m_af.group(1).upper()
+        idx_expr = m_af.group(2).strip()
+        field_name = m_af.group(3).upper()
+        if arr_name in interpreter.arrays:
+            try:
+                idx = int(_pascal_eval_expr(interpreter, idx_expr))
+                arr = interpreter.arrays[arr_name]
+                if 0 < idx < len(arr):
+                    rec = arr[idx]
+                    if isinstance(rec, dict) and field_name in rec:
+                        v = rec[field_name]
+                        if isinstance(v, float) and v == int(v):
+                            return str(int(v))
+                        return str(v) if not isinstance(v, str) else repr(v)
+            except Exception:
+                pass
+        return m_af.group(0)
+
+    pyexpr = re.sub(
+        r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\[([^\]]+)\]\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)\b",
+        _arr_field_replacer,
+        pyexpr,
+    )
+
+    # Second: NAME[idx] (simple array access, e.g. A[i], Guessed[k])
+    def _arr_replacer(m_a):
+        arr_name = m_a.group(1).upper()
+        idx_expr = m_a.group(2).strip()
+        if arr_name in interpreter.arrays:
+            try:
+                idx = int(_pascal_eval_expr(interpreter, idx_expr))
+                arr = interpreter.arrays[arr_name]
+                if 0 < idx < len(arr):
+                    val = arr[idx]
+                    if isinstance(val, (int, float)):
+                        return str(int(val)) if isinstance(val, float) and val == int(val) else str(val)
+                    if isinstance(val, bool):
+                        return "True" if val else "False"
+                    if isinstance(val, str):
+                        return repr(val)
+            except Exception:
+                pass
+        return m_a.group(0)
+
+    pyexpr = re.sub(
+        r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\[([^\]]+)\]",
+        _arr_replacer,
+        pyexpr,
+    )
+
+    # Handle NAME(idx) patterns — these arise from the [ → ( substitution in _ASSIGN_RE.
+    # Must be expanded before _var_replacer to avoid mangling e.g. 'ABC'(1).
+    # ONLY replaces when NAME is a known array or string variable; leaves function calls intact.
+    def _parens_indexed_replacer(m_pi):
+        pname = m_pi.group(1).upper()
+        idx_expr_raw = m_pi.group(2).strip()
+        # Ignore known Pascal built-ins and Python keywords
+        if pname in ("CHR", "ORD", "LENGTH", "COPY", "POS", "CONCAT", "UPCASE",
+                     "SUCC", "PRED", "SQRT", "ABS", "ROUND", "TRUNC", "INT",
+                     "MAX", "MIN", "ODD", "SQR", "LN", "EXP", "INTTOSTR",
+                     "STRTOINT", "STRTOINTDEF", "STRTOFLOAT", "FLOATTOSTR",
+                     "UPPERCASE", "LOWERCASE", "TRIM"):
+            return m_pi.group(0)
+        # Only handle known arrays or string variables
+        if pname + "$" in interpreter.string_variables:
+            try:
+                idx = int(_pascal_eval_expr(interpreter, idx_expr_raw))
+                sv = interpreter.string_variables[pname + "$"]
+                if 1 <= idx <= len(sv):
+                    return repr(sv[idx - 1])
+            except Exception:
+                pass
+            return m_pi.group(0)
+        if pname in interpreter.arrays:
+            try:
+                idx = int(_pascal_eval_expr(interpreter, idx_expr_raw))
+                arr = interpreter.arrays[pname]
+                if 0 < idx < len(arr):
+                    val = arr[idx]
+                    if isinstance(val, str):
+                        return repr(val)
+                    return str(int(val)) if isinstance(val, float) and val == int(val) else str(val)
+            except Exception:
+                pass
+            return m_pi.group(0)
+        # Check if it's a user-defined function
+        if hasattr(interpreter, "pascal_procs"):
+            info = interpreter.pascal_procs.get(pname)
+            if info and info.get("is_func"):
+                return m_pi.group(0)  # leave as-is for user-func handling below
+        return m_pi.group(0)
+
+    pyexpr = re.sub(
+        r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\(([^)]+)\)",
+        _parens_indexed_replacer,
+        pyexpr,
+    )
     def _var_replacer(m_inner):
         vname = m_inner.group(0).upper()
         if vname + "$" in interpreter.string_variables:
@@ -592,6 +846,99 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
     # Clean up stray Python keywords that leaked through replacement
     for kw in ("and", "or", "not", "True", "False", "None"):
         pyexpr = pyexpr.replace(repr(kw), kw)
+
+    # Pre-evaluate ord('X') / ord(char_var) → integer so chr() can then work
+    def _ord_replacer(m_ord):
+        inner = m_ord.group(1).strip()
+        # Already-substituted char variable: repr('X') = "'X'" (len 3)
+        if (inner.startswith("'") and inner.endswith("'") and len(inner) == 3) or \
+           (inner.startswith('"') and inner.endswith('"') and len(inner) == 3):
+            return str(ord(inner[1]))
+        # May still be a variable name (not yet substituted)
+        vup = inner.upper()
+        if vup + "$" in interpreter.string_variables:
+            sv = interpreter.string_variables[vup + "$"]
+            if sv:
+                return str(ord(sv[0]))
+        # Numeric literal (shouldn't normally appear, but handle gracefully)
+        try:
+            return str(int(float(inner)))
+        except (ValueError, TypeError):
+            pass
+        return m_ord.group(0)
+
+    pyexpr = re.sub(r"\bord\s*\(([^)]*)\)", _ord_replacer, pyexpr, flags=re.IGNORECASE)
+
+    # Pre-evaluate chr(numeric_expr) → quoted char literal.
+    # Uses balanced-paren scanning to handle nested parens like chr((x-y+13)%26+65).
+    def _eval_chr_calls(s: str) -> str:
+        out: list[str] = []
+        i = 0
+        _safe_ev = ExpressionEvaluator(
+            variables={k: v for k, v in interpreter.variables.items()
+                       if isinstance(v, (int, float))},
+        )
+        while i < len(s):
+            # Case-insensitive 'chr(' that is not part of an identifier
+            if s[i:i+4].lower() == "chr(" and (i == 0 or not s[i - 1].isalnum() and s[i - 1] != "_"):
+                start = i + 4  # position after 'chr('
+                depth = 1
+                j = start
+                while j < len(s) and depth > 0:
+                    if s[j] == "(":
+                        depth += 1
+                    elif s[j] == ")":
+                        depth -= 1
+                    j += 1
+                inner = s[start:j - 1]
+                try:
+                    n = int(_safe_ev.evaluate(inner))
+                    out.append(repr(chr(n)))
+                except Exception:
+                    out.append(s[i:j])  # keep original if evaluation fails
+                i = j
+            else:
+                out.append(s[i])
+                i += 1
+        return "".join(out)
+
+    pyexpr = _eval_chr_calls(pyexpr)
+
+    # Replace string literal comparisons with boolean integer results
+    # e.g., "'A' >= 'A'" → "1", "'A' > 'Z'" → "0"
+    # This allows ExpressionEvaluator (math-only) to handle boolean conditions.
+    _CMP_OPS: dict = {">=": ">=", "<=": "<=", ">": ">", "<": "<",
+                      "==": "==", "!=": "!=", "<>": "!="}
+
+    def _str_cmp_replacer(m_sc: re.Match) -> str:
+        lhs_raw, op_raw, rhs_raw = m_sc.group(1), m_sc.group(2), m_sc.group(3)
+        try:
+            lv = _unquote(lhs_raw.strip())
+            rv = _unquote(rhs_raw.strip())
+            py_op = _CMP_OPS.get(op_raw, op_raw)
+            _op_fns = {">=": lambda a, b: a >= b, "<=": lambda a, b: a <= b,
+                       ">": lambda a, b: a > b, "<": lambda a, b: a < b,
+                       "==": lambda a, b: a == b, "!=": lambda a, b: a != b}
+            fn = _op_fns.get(py_op)
+            if fn is not None:
+                return "1" if fn(lv, rv) else "0"
+        except Exception:
+            pass
+        return m_sc.group(0)
+
+    pyexpr = re.sub(
+        r"(\"[^\"]*\"|'[^']*')\s*(>=|<=|<>|>|<|==|!=)\s*(\"[^\"]*\"|'[^']*')",
+        _str_cmp_replacer,
+        pyexpr,
+    )
+
+    # Try string concatenation on the substituted pyexpr (handles "'' + 'A'" etc.)
+    # ExpressionEvaluator is math-only and throws on single-quoted strings.
+    _str_parts = _split_string_concat(pyexpr)
+    if _str_parts and all(
+        p.strip().startswith(("'", '"')) for p in _str_parts
+    ):
+        return "".join(_unquote(p.strip()) for p in _str_parts)
 
     # Use safe ExpressionEvaluator instead of eval()
     try:
@@ -625,11 +972,13 @@ def _split_string_concat(expr: str):
     """Split a string concatenation expression like "'AB' + 'CD'" into parts.
 
     Returns a list of sub-expressions or None if not a valid string concat.
+    Respects paren depth — does NOT split on '+' inside function-call parens.
     """
     parts = []
     current = ""
     in_quote = False
     quote_char = None
+    paren_depth = 0
     for ch in expr:
         if in_quote:
             current += ch
@@ -639,7 +988,13 @@ def _split_string_concat(expr: str):
             in_quote = True
             quote_char = ch
             current += ch
-        elif ch == "+" and not in_quote:
+        elif ch == "(" and not in_quote:
+            paren_depth += 1
+            current += ch
+        elif ch == ")" and not in_quote:
+            paren_depth -= 1
+            current += ch
+        elif ch == "+" and not in_quote and paren_depth == 0:
             if current.strip():
                 parts.append(current.strip())
             current = ""
@@ -655,6 +1010,11 @@ def _split_string_concat(expr: str):
 def _is_begin(line: str) -> bool:
     u = line.strip().upper()
     return u == "BEGIN"
+
+
+def _ends_with_begin(line: str) -> bool:
+    """True if the line ends with the 'begin' keyword (e.g. 'if x then begin')."""
+    return bool(re.search(r"\bbegin\s*$", line, re.IGNORECASE))
 
 
 def _is_end(line: str) -> bool:
@@ -726,12 +1086,81 @@ def _find_end_for_begin(interpreter: "Interpreter", begin_idx: int) -> int:
         s = interpreter.program_lines[j][1]
         if _is_begin(s):
             depth += 1
+        elif _ends_with_begin(s):
+            # Inline 'begin' on a control-flow line (e.g. 'for ... do begin')
+            depth += 1
         if _is_end(s):
             depth -= 1
             if depth == 0:
                 return j
         j += 1
     return begin_idx
+
+
+def _find_end_for_inline_begin(interpreter: "Interpreter", inline_begin_idx: int) -> int:
+    """Find the matching END for a begin that appears inline at end of a control-flow line
+    (e.g. 'if x then begin' or 'for i := 0 to n do begin').
+    Scans from inline_begin_idx+1, counting ALL nested begins (both standalone 'begin'
+    lines and inline '... then begin' / '... do begin' / 'else begin' lines)."""
+    depth = 1  # We already have one open 'begin' on the inline line
+    j = inline_begin_idx + 1
+    while j < len(interpreter.program_lines):
+        s = interpreter.program_lines[j][1]
+        # Count standalone begin OR any line ending with 'begin'
+        if _is_begin(s) or _ends_with_begin(s):
+            depth += 1
+        if _is_end(s):
+            depth -= 1
+            if depth == 0:
+                return j
+        j += 1
+    return inline_begin_idx
+
+
+def _find_else_chain_end(interpreter: "Interpreter", first_else_idx: int) -> int:
+    """Given the index of the first 'else' or 'else if' line of an IF-ELSE chain,
+    scan forward and return the index of the LAST BODY LINE in the entire chain.
+    (The last 'end' for block bodies, or the last single-stmt line for inline bodies.)
+
+    This is used so that skip targets correctly skip the entire else chain.
+    """
+    lines = interpreter.program_lines
+    j = first_else_idx
+    while j < len(lines):
+        s = lines[j][1].strip()
+        if not s:
+            j += 1
+            continue
+        if re.match(r"^\s*else\b", s, re.IGNORECASE):
+            # "else if ... then begin" → find end, then check for chained else
+            if re.match(r"^\s*else\s+if\b", s, re.IGNORECASE) and _ends_with_begin(s):
+                end_j = _find_end_for_inline_begin(interpreter, j)
+                j = end_j + 1
+                continue
+            # "else if ... then" (no begin) — single stmt body on next line
+            elif re.match(r"^\s*else\s+if\b", s, re.IGNORECASE):
+                nxt = _find_next_statement(interpreter, j)
+                if nxt is not None:
+                    j = nxt + 1
+                    continue
+                break
+            # "else begin ... end"
+            elif _ends_with_begin(s):
+                end_j = _find_end_for_inline_begin(interpreter, j)
+                return end_j
+            # "else stmt_on_same_line" (inline single stmt)
+            elif re.match(r"^\s*else\s+\S", s, re.IGNORECASE):
+                return j
+            # Standalone "else" keyword — body is on the next line
+            else:
+                nxt = _find_next_statement(interpreter, j)
+                if nxt is not None:
+                    return nxt  # The body line itself
+                return j
+        else:
+            # No more else — return the last line we encountered
+            return j - 1
+    return j - 1
 
 
 def _parse_case_blocks(interpreter: "Interpreter", case_idx: int):
@@ -896,6 +1325,8 @@ def _handle_procedure_def(
         "end": end_idx,
         "is_func": False,
         "params": params,
+        "var_start": interpreter.current_line + 1,
+        "begin_idx": begin_idx,
     }
     interpreter.current_line = end_idx
     return ""
@@ -922,6 +1353,8 @@ def _handle_function_def(
         "end": end_idx,
         "is_func": True,
         "params": params,
+        "var_start": interpreter.current_line + 1,  # first line after function header
+        "begin_idx": begin_idx,
     }
     # Track return type for function identifier variable
     if not hasattr(interpreter, "pascal_types"):
@@ -1041,6 +1474,14 @@ def _handle_proc_call(
             "aliases": aliases,
         }
     )
+    # Execute var declarations between procedure header and begin
+    var_start = info.get("var_start")
+    begin_idx_info = info.get("begin_idx")
+    if var_start is not None and begin_idx_info is not None:
+        for vi in range(var_start, begin_idx_info):
+            _, vline = interpreter.program_lines[vi]
+            if vline.strip():
+                execute_pascal(interpreter, vline.strip(), None)  # type: ignore[arg-type]
     interpreter.current_line = info["start"] - 1
     return ""
 
@@ -1082,22 +1523,30 @@ def _handle_case_statement(interpreter: "Interpreter", expr: str) -> str:
     return ""
 
 
-def _handle_if_then(interpreter: "Interpreter", cond_expr: str) -> str:
+def _handle_if_then(interpreter: "Interpreter", cond_expr: str, *, has_inline_begin: bool = False) -> str:
     """Handle IF ... THEN [ELSE] with BEGIN...END blocks or single statements."""
     header_idx = interpreter.current_line
-    begin_idx = _find_begin_forward(interpreter, header_idx)
 
-    if begin_idx is not None:
-        # Block body: BEGIN ... END
-        then_start = begin_idx + 1
-        then_end = _find_end_for_begin(interpreter, begin_idx)
+    if has_inline_begin:
+        # 'begin' was on the same line as the IF; body starts at next line,
+        # and we scan for the matching end from there.
+        begin_idx = header_idx  # treat current line as the begin container
+        then_start = header_idx + 1
+        then_end = _find_end_for_inline_begin(interpreter, header_idx)
     else:
-        # Single-statement body
-        stmt_idx = _find_next_statement(interpreter, header_idx)
-        if stmt_idx is None:
-            return "❌ Error: IF requires a statement body"
-        then_start = stmt_idx
-        then_end = stmt_idx
+        begin_idx = _find_begin_forward(interpreter, header_idx)
+        if begin_idx is not None:
+            # Block body: BEGIN ... END
+            then_start = begin_idx + 1
+            then_end = _find_end_for_begin(interpreter, begin_idx)
+        else:
+            # Single-statement body
+            stmt_idx = _find_next_statement(interpreter, header_idx)
+            if stmt_idx is None:
+                return "❌ Error: IF requires a statement body"
+            then_start = stmt_idx
+            then_end = stmt_idx
+
 
     # Check optional ELSE after then block
     j = then_end + 1
@@ -1106,17 +1555,37 @@ def _handle_if_then(interpreter: "Interpreter", cond_expr: str) -> str:
         j += 1
     else_start = None
     else_end = None
-    if j < len(lines) and _ELSE_RE.match(lines[j][1]):
-        else_begin_idx = _find_begin_forward(interpreter, j)
-        if else_begin_idx is not None:
-            else_start = else_begin_idx + 1
-            else_end = _find_end_for_begin(interpreter, else_begin_idx)
+    _else_line = lines[j][1] if j < len(lines) else ""
+    # Recognize: 'else', 'else if ...', 'else begin...end', 'else begin', 'else stmt;'
+    is_else_line = j < len(lines) and bool(re.match(r"^\s*else\b", _else_line, re.IGNORECASE))
+    if is_else_line:
+        # One-liner: else begin stmts end
+        if _ELSE_ONELINER_RE.match(_else_line) or _ELSE_IF_ONELINER_RE.match(_else_line):
+            else_start = j
+            else_end = j
+        # else if ... (else-if one-liner or block)
+        elif re.match(r"^\s*else\s+if\b", _else_line, re.IGNORECASE):
+            else_start = j
+            else_end = j
+        # else begin (inline begin on else line, body on next lines)
+        elif _ends_with_begin(_else_line):
+            else_start = j + 1
+            else_end = _find_end_for_inline_begin(interpreter, j)
+        elif _ELSE_RE.match(_else_line):
+            # Standalone 'else' — look for its body
+            else_begin_idx = _find_begin_forward(interpreter, j)
+            if else_begin_idx is not None:
+                else_start = else_begin_idx + 1
+                else_end = _find_end_for_begin(interpreter, else_begin_idx)
+            else:
+                else_stmt = _find_next_statement(interpreter, j)
+                if else_stmt is not None:
+                    else_start = else_stmt
+                    else_end = else_stmt
         else:
-            # Single-statement else
-            else_stmt = _find_next_statement(interpreter, j)
-            if else_stmt is not None:
-                else_start = else_stmt
-                else_end = else_stmt
+            # else stmt; (single statement on same line as else keyword)
+            else_start = j
+            else_end = j
 
     try:
         cond_v = _pascal_eval_expr(interpreter, cond_expr)
@@ -1127,6 +1596,12 @@ def _handle_if_then(interpreter: "Interpreter", cond_expr: str) -> str:
     # Determine the last line of the whole IF construct
     last_line = else_end if else_end is not None else then_end
 
+    # When else_start == j (the else-header line is the else itself, e.g. "else if"),
+    # compute the full else-chain end so skip_else_to goes past the entire chain.
+    _else_chain_end = else_end
+    if else_start is not None and else_start == j:
+        _else_chain_end = _find_else_chain_end(interpreter, j)
+
     if cond_v:
         if is_single_then and else_end is not None:
             # Push a marker so that after executing then_start, we skip ELSE
@@ -1134,7 +1609,7 @@ def _handle_if_then(interpreter: "Interpreter", cond_expr: str) -> str:
                 {
                     "type": "if_single",
                     "end": then_end,
-                    "skip_to": (else_end or then_end) + 1,
+                    "skip_to": (_else_chain_end or then_end) + 1,
                 }
             )
         elif not is_single_then and else_end is not None:
@@ -1142,7 +1617,10 @@ def _handle_if_then(interpreter: "Interpreter", cond_expr: str) -> str:
                 {
                     "type": "if",
                     "end": then_end,
-                    "skip_else_to": (else_end or then_end) + 1,
+                    # skip_else_to uses "-1 semantics" in the END handler.
+                    # We need skip_else_to - 1 = first line after the else chain.
+                    # So skip_else_to = _else_chain_end + 2.
+                    "skip_else_to": (_else_chain_end or then_end) + 2,
                 }
             )
         interpreter.current_line = then_start - 1
@@ -1152,11 +1630,20 @@ def _handle_if_then(interpreter: "Interpreter", cond_expr: str) -> str:
                 # For single-statement else, no special handling needed
                 # unless there was a single then body that needs skipping
                 pass
-            interpreter.current_line = else_start - 1
+            # Jump directly to else_start:
+            # - If else_start == j (e.g. "else if ..."), line_changed jumps to j
+            # - If else_start > j (body after "else begin" or standalone "else"),
+            #   jump directly to the first body line (skip the else/begin header)
+            interpreter.current_line = else_start
         else:
-            # Skip past the entire then body (main loop won't auto-increment
-            # when line_changed is True, so point one past the body)
-            interpreter.current_line = last_line + 1
+            # Skip past the entire then body.
+            # When has_inline_begin is True, point TO last_line so the main loop
+            # processes the 'end;' line — this lets enclosing FOR/WHILE blocks
+            # detect their own end marker. For standard block IF, point one past.
+            if has_inline_begin:
+                interpreter.current_line = last_line
+            else:
+                interpreter.current_line = last_line + 1
     return ""
 
 
@@ -1284,8 +1771,10 @@ def _handle_until(interpreter: "Interpreter", cond_expr: str) -> str:
     if cond_v:
         interpreter.pascal_block_stack.pop()
     else:
+        # Jump back to the first statement inside the REPEAT block,
+        # skipping the 'repeat' keyword to avoid pushing a new frame.
         _start = top.get("start", interpreter.current_line)
-        interpreter.current_line = _start - 1
+        interpreter.current_line = _start
     return ""
 
 
@@ -1296,6 +1785,7 @@ def _handle_for(
     dirw: str,
     expr_end: str,
     turtle: Any = None,
+    inline_begin: str = "",
 ) -> str:
     """
     Handle FOR ... TO/DOWNTO ... DO with a required BEGIN ... END block.
@@ -1314,21 +1804,29 @@ def _handle_for(
     if hasattr(interpreter, "pascal_types"):
         suf = interpreter.pascal_types.get(up)
     interpreter.set_typed_variable(up + (suf or "#"), start_val)
-    begin_idx = _find_begin_forward(interpreter, interpreter.current_line)
-    if begin_idx is not None:
-        end_idx = _find_end_for_begin(interpreter, begin_idx)
+    if inline_begin.strip().lower() == "begin":
+        # begin is on the FOR's own line; find matching end from there
+        begin_idx = interpreter.current_line
+        end_idx = _find_end_for_inline_begin(interpreter, begin_idx)
         body_start = begin_idx + 1
         body_end = end_idx
     else:
-        # Single-statement body (no BEGIN ... END)
-        stmt_idx = _find_next_statement(interpreter, interpreter.current_line)
-        if stmt_idx is None:
-            return "❌ Error: FOR requires a statement body"
-        body_start = stmt_idx
-        body_end = stmt_idx  # single line
+        begin_idx = _find_begin_forward(interpreter, interpreter.current_line)
+        if begin_idx is not None:
+            end_idx = _find_end_for_begin(interpreter, begin_idx)
+            body_start = begin_idx + 1
+            body_end = end_idx
+        else:
+            # Single-statement body (no BEGIN ... END)
+            stmt_idx = _find_next_statement(interpreter, interpreter.current_line)
+            if stmt_idx is None:
+                return "❌ Error: FOR requires a statement body"
+            body_start = stmt_idx
+            body_end = stmt_idx  # single line
+            begin_idx = None
     step = 1 if dirw.lower() == "to" else -1
-    # Check initial condition
-    cur = interpreter.get_numeric_value(up) or 0
+    # Check initial condition using the typed variable (same suffix as stored)
+    cur = interpreter.get_numeric_value(up + (suf or "#")) or 0
     ok = cur <= limit_val if step > 0 else cur >= limit_val
     if not ok:
         if begin_idx is None:
@@ -1342,6 +1840,31 @@ def _handle_for(
     if is_single:
         # Execute single-statement body inline to avoid end-of-program issues
         stmt_text = interpreter.program_lines[body_start][1]
+        # If the single-statement body starts a block (e.g. 'if cond then begin'),
+        # use a mini-loop that correctly handles conditional jumps each iteration.
+        if _ends_with_begin(stmt_text):
+            block_end_idx = _find_end_for_inline_begin(interpreter, body_start)
+            results: List[str] = []
+            loop_count = 0
+            while ok and loop_count < 100000:
+                j = body_start
+                while j <= block_end_idx:
+                    interpreter.current_line = j
+                    r = execute_pascal(interpreter, interpreter.program_lines[j][1], turtle)
+                    if r:
+                        results.append(r)
+                    new_j = interpreter.current_line
+                    if new_j != j:
+                        j = new_j
+                    else:
+                        j += 1
+                cur += step
+                interpreter.set_typed_variable(up + (suf or "#"), cur)
+                ok = cur <= limit_val if step > 0 else cur >= limit_val
+                loop_count += 1
+            interpreter.current_line = block_end_idx + 1
+            return "".join(results)
+
         results: List[str] = []
         loop_count = 0
         while ok and loop_count < 100000:
@@ -1361,6 +1884,7 @@ def _handle_for(
             "start": body_start,
             "end": body_end,
             "var": up,
+            "suf": suf or "#",
             "limit": limit_val,
             "step": step,
             "single": False,
@@ -1368,6 +1892,45 @@ def _handle_for(
     )
     interpreter.current_line = body_start - 1
     return ""
+
+
+def _handle_for_inline(
+    interpreter: "Interpreter",
+    name: str,
+    expr_start: str,
+    dirw: str,
+    expr_end: str,
+    stmt: str,
+    turtle: Any = None,
+) -> str:
+    """Handle FOR i := a TO b DO single_stmt; (no BEGIN...END)."""
+    up = name.upper()
+    try:
+        start_val = _pascal_eval_expr(interpreter, expr_start)
+    except (ValueError, TypeError, ZeroDivisionError):
+        start_val = 0
+    try:
+        limit_val = _pascal_eval_expr(interpreter, expr_end)
+    except (ValueError, TypeError, ZeroDivisionError):
+        limit_val = 0
+    suf = None
+    if hasattr(interpreter, "pascal_types"):
+        suf = interpreter.pascal_types.get(up)
+    interpreter.set_typed_variable(up + (suf or "#"), start_val)
+    step = 1 if dirw.lower() == "to" else -1
+    cur = start_val
+    ok = cur <= limit_val if step > 0 else cur >= limit_val
+    results: List[str] = []
+    loop_count = 0
+    while ok and loop_count < 100000:
+        result = execute_pascal(interpreter, stmt, turtle)
+        if result:
+            results.append(result)
+        cur += step
+        interpreter.set_typed_variable(up + (suf or "#"), cur)
+        ok = cur <= limit_val if step > 0 else cur >= limit_val
+        loop_count += 1
+    return "".join(results)
 
 
 def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleState") -> str:
@@ -1398,6 +1961,20 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
     cmd = re.sub(r"\{.*?\}|\(\*.*?\*\)", "", command).strip()
     if not cmd:
         return ""
+
+    # Handle multiple statements on one line, e.g.:
+    #   Students[1].Name := 'Alice'; Students[1].Score := 97;
+    # Split on ';' that are outside single-quoted strings.
+    # Only split if there are 2+ non-empty parts.
+    if ";" in cmd:
+        parts = _split_pascal_stmts(cmd)
+        if len(parts) > 1:
+            results: List[str] = []
+            for part in parts:
+                r = execute_pascal(interpreter, part, turtle)
+                if r:
+                    results.append(r)
+            return "".join(results)
 
     # Handle inline CASE label bodies: "2: writeln('two');" → execute body
     m_case_inline = _CASE_LABEL_INLINE_RE.match(cmd)
@@ -1431,7 +2008,9 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
         if ttype == "if_single" and interpreter.current_line > top.get("end", -1):
             skip_to = top.get("skip_to", interpreter.current_line)
             interpreter.pascal_block_stack.pop()
-            interpreter.current_line = skip_to - 1
+            # skip_to is the first line to execute after the IF construct.
+            # Use direct jump (line_changed=True will prevent auto-increment).
+            interpreter.current_line = skip_to
             return ""
         if (
             ttype == "for"
@@ -1494,16 +2073,18 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
                 if not isinstance(var, str):
                     interpreter.pascal_block_stack.pop()
                     return ""
+                _suf = top.get("suf", "#")
                 step = top.get("step", 1)
-                cur = interpreter.get_numeric_value(var) or 0
-                interpreter.set_typed_variable(var, cur + step)
+                cur = interpreter.get_numeric_value(var + _suf) or 0
+                interpreter.set_typed_variable(var + _suf, cur + step)
                 # Check limit
-                val: Any = interpreter.get_numeric_value(var) or 0
+                val: Any = interpreter.get_numeric_value(var + _suf) or 0
                 limit = top.get("limit", 0)
                 ok = val <= limit if step > 0 else val >= limit
                 if ok:
                     _start = int(top.get("start") or interpreter.current_line)
-                    interpreter.current_line = _start - 1
+                    # Jump directly to body_start (line_changed=True, no auto-increment)
+                    interpreter.current_line = _start
                 else:
                     interpreter.pascal_block_stack.pop()
             elif top.get("type") == "case":
@@ -1569,6 +2150,54 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
     upcmd = cmd.upper().rstrip(";").strip()
     if upcmd in ("BEGIN", "END", "END.", "PROGRAM", "USES", "VAR", "TYPE", "ELSE"):
         return ""
+
+    # Inline else stmt: "else <stmt>" where the else was already processed by
+    # _handle_if_then (else_start == j) and the body is on the same line.
+    # Strip the "else " prefix and execute just the stmt.
+    m_inline_else = re.match(r"^\s*else\s+(.+)$", cmd, re.IGNORECASE)
+    if m_inline_else and not re.match(r"^\s*else\s+(if|begin)\b", cmd, re.IGNORECASE):
+        return execute_pascal(interpreter, m_inline_else.group(1).strip(), turtle)
+
+    # ELSE one-liner: else begin stmts end;
+    m = _ELSE_ONELINER_RE.match(cmd)
+    if m:
+        stmts_raw = m.group(1).strip()
+        out_parts = []
+        for stmt in stmts_raw.split(";"):
+            s = stmt.strip()
+            if s:
+                r = execute_pascal(interpreter, s + ";", turtle)
+                if r:
+                    out_parts.append(r)
+        return "".join(out_parts)
+
+    # ELSE-IF one-liner: else if cond then begin stmts end;
+    m = _ELSE_IF_ONELINER_RE.match(cmd)
+    if m:
+        cond_expr = m.group(1).strip()
+        stmts_raw = m.group(2).strip()
+        try:
+            cond_v = _pascal_eval_expr(interpreter, cond_expr)
+        except (ValueError, TypeError, ZeroDivisionError):
+            cond_v = 0
+        if cond_v:
+            out_parts = []
+            for stmt in stmts_raw.split(";"):
+                s = stmt.strip()
+                if s:
+                    r = execute_pascal(interpreter, s + ";", turtle)
+                    if r:
+                        out_parts.append(r)
+            return "".join(out_parts)
+        return ""
+
+    # ELSE-IF multi-line: else if cond then [begin]  (body on following lines)
+    m = _ELSE_IF_RE.match(cmd)
+    if m:
+        cond_expr = m.group(1).strip()
+        has_inline_begin = bool(m.group(2))
+        return _handle_if_then(interpreter, cond_expr, has_inline_begin=has_inline_begin)
+
     if upcmd.startswith("USES ") or upcmd == "USES":
         # Parse the units list and activate stubs for known units
         units_str = upcmd[4:].strip().rstrip(";")
@@ -1580,10 +2209,98 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
         return ""
 
     # IF ... THEN begin ... end [ELSE begin ... end]
+    # IF...THEN...ELSE inline: if cond then stmt1 else stmt2;
+    m = _IF_INLINE_RE.match(cmd)
+    if m:
+        cond_expr = m.group(1).strip()
+        then_body = m.group(2).strip()
+        else_body = m.group(3).strip()
+        # Make sure neither body is just 'begin' (that would be a block, not inline)
+        if then_body.lower() != "begin" and else_body.lower() != "begin":
+            try:
+                cond_v = _pascal_eval_expr(interpreter, cond_expr)
+            except (ValueError, TypeError, ZeroDivisionError):
+                cond_v = 0
+            if cond_v:
+                return execute_pascal(interpreter, then_body + ";", turtle)
+            else:
+                return execute_pascal(interpreter, else_body + ";", turtle)
+
+    # IF one-liner: if cond then begin stmts end;
+    m = _IF_ONELINER_RE.match(cmd)
+    if m:
+        cond_expr = m.group(1).strip()
+        stmts_raw = m.group(2).strip()
+        try:
+            cond_v = _pascal_eval_expr(interpreter, cond_expr)
+        except (ValueError, TypeError, ZeroDivisionError):
+            cond_v = 0
+        if cond_v:
+            out_parts = []
+            for stmt in stmts_raw.split(";"):
+                s = stmt.strip()
+                if s:
+                    r = execute_pascal(interpreter, s + ";", turtle)
+                    if r:
+                        out_parts.append(r)
+            return "".join(out_parts)
+        return ""
+
     m = _IF_THEN_RE.match(cmd)
     if m:
         cond_expr = m.group(1).strip()
-        return _handle_if_then(interpreter, cond_expr)
+        has_inline_begin = bool(m.group(2))  # 'begin' was on the same line as IF
+        return _handle_if_then(interpreter, cond_expr, has_inline_begin=has_inline_begin)
+
+    # IF...THEN inline (no else, no begin): if cond then stmt;
+    m = _IF_THEN_INLINE_RE.match(cmd)
+    if m:
+        cond_expr = m.group(1).strip()
+        then_body = m.group(2).strip()
+        # Only treat as inline if body is not 'begin'
+        if then_body.lower() != "begin":
+            # Look ahead: if the very next non-blank line is an 'else', we have a
+            # multi-line if/else where only the then-body is inline.
+            header_idx = interpreter.current_line
+            next_idx = _find_next_statement(interpreter, header_idx)
+            has_following_else = (
+                next_idx is not None
+                and re.match(r"^\s*else\b", interpreter.program_lines[next_idx][1], re.IGNORECASE)
+            )
+            try:
+                cond_v = _pascal_eval_expr(interpreter, cond_expr)
+            except (ValueError, TypeError, ZeroDivisionError):
+                cond_v = 0
+            if has_following_else:
+                # Compute else chain end so we can skip it when condition is True
+                j_else = next_idx
+                _else_line = interpreter.program_lines[j_else][1]
+                if re.match(r"^\s*else\s+if\b", _else_line, re.IGNORECASE) or _else_line.strip().lower() == "else":
+                    # Chain starting here — use _find_else_chain_end
+                    else_chain_end = _find_else_chain_end(interpreter, j_else)
+                elif _ends_with_begin(_else_line):
+                    else_chain_end = _find_end_for_inline_begin(interpreter, j_else)
+                else:
+                    # else stmt; on same line
+                    else_chain_end = j_else
+                if cond_v:
+                    result = execute_pascal(interpreter, then_body + ";", turtle)
+                    # Push if_single frame to skip else on next line
+                    interpreter.pascal_block_stack.append({
+                        "type": "if_single",
+                        "end": header_idx,
+                        "skip_to": else_chain_end + 1,
+                    })
+                    return result
+                else:
+                    # Condition False: jump to else
+                    interpreter.current_line = j_else
+                    return ""
+            else:
+                if cond_v:
+                    return execute_pascal(interpreter, then_body + ";", turtle)
+                return ""
+
 
     # WHILE ... DO begin ... end
     m = _WHILE_DO_RE.match(cmd)
@@ -1611,11 +2328,18 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
         rec_name = m.group(1).upper()
         return _handle_with_do(interpreter, rec_name, turtle)
 
-    # FOR i := a TO/DOWNTO b DO begin ... end
+    # FOR i := a TO/DOWNTO b DO begin ... end  (also handles "do begin" on same line)
     m = _FOR_RE.match(cmd)
     if m:
-        name, expr_start, dirw, expr_end = m.groups()
-        return _handle_for(interpreter, name, expr_start, dirw, expr_end, turtle)
+        name, expr_start, dirw, expr_end, inline_begin = m.groups()
+        return _handle_for(interpreter, name, expr_start.strip(), dirw, expr_end.strip(), turtle, inline_begin=inline_begin)
+
+    # FOR i := a TO/DOWNTO b DO single_stmt;  (inline body, no BEGIN)
+    m = _FOR_INLINE_RE.match(cmd)
+    if m:
+        name, expr_start, dirw, expr_end, inline_stmt = m.groups()
+        return _handle_for_inline(interpreter, name, expr_start.strip(), dirw,
+                                  expr_end.strip(), inline_stmt.strip(), turtle)
 
     if _VAR_KEYWORD_RE.match(cmd):
         return ""
@@ -1712,9 +2436,53 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
     m = _VAR_ARRAY_2D_RE.match(cmd)
     if m:
         names = m.group(1)
+        bounds_str = m.group(2).strip()
+        elem_type = m.group(3).strip().upper().split("[")[0].strip()  # strip string[N] -> STRING
+        # Determine array size from bounds if possible (e.g. "1..10" or "0..MAX-1")
+        size = 100
+        bound_m = re.match(r"(\w+)\.\.(\w+)", bounds_str)
+        if bound_m:
+            try:
+                lo = int(bound_m.group(1))
+                hi_s = bound_m.group(2)
+                # Try to resolve constant
+                hi = int(hi_s) if hi_s.isdigit() else None
+                if hi is None and hasattr(interpreter, "variables"):
+                    hi = int(interpreter.variables.get(hi_s.upper(), 0))
+                if hi is not None:
+                    size = max(1, hi - lo + 2)
+            except (ValueError, TypeError):
+                pass
         for raw in names.split(","):
             name = raw.strip().upper()
-            interpreter.arrays[name] = [0.0] * 100  # default flat array
+            # If element type is a known record, create array of record dicts
+            if (
+                hasattr(interpreter, "pascal_record_types")
+                and elem_type in interpreter.pascal_record_types
+            ):
+                fields = interpreter.pascal_record_types[elem_type]
+                def _make_rec(flds):
+                    r: Dict[str, Any] = {}
+                    for fn, ft in flds.items():
+                        ftu = ft.upper()
+                        if ftu in ("STRING", "CHAR"):
+                            r[fn] = ""
+                        elif ftu == "BOOLEAN":
+                            r[fn] = False
+                        else:
+                            r[fn] = 0.0
+                    return r
+                interpreter.arrays[name] = [_make_rec(fields) for _ in range(size)]
+                if not hasattr(interpreter, "pascal_types"):
+                    interpreter.pascal_types = {}
+                interpreter.pascal_types[name] = "#ARRAY_RECORD#"
+            elif elem_type in ("STRING", "CHAR"):
+                interpreter.arrays[name] = [""] * size
+                if not hasattr(interpreter, "pascal_types"):
+                    interpreter.pascal_types = {}
+                interpreter.pascal_types[name] = "#ARRAY_STR#"
+            else:
+                interpreter.arrays[name] = [0.0] * size
         return ""
 
     # Type definitions — parse RECORD, ignore others
@@ -1783,7 +2551,7 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
         name = name.upper()
         idx_expr = idx_expr.replace("[", "(").replace("]", ")")
         try:
-            idx = int(interpreter.evaluate_expression(idx_expr))
+            idx = int(_pascal_eval_expr(interpreter, idx_expr))
         except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
             return "❌ Error: Invalid array index"
 
@@ -1857,6 +2625,31 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
                 interpreter.variables[name] = 0.0
         return ""
 
+    m = _ASSIGN_ARR_FIELD_RE.match(cmd)
+    if m:
+        arr_name = m.group(1).upper()
+        idx_expr = m.group(2).strip()
+        field_name = m.group(3).upper()
+        val_expr = m.group(4).rstrip(";").strip()
+        if arr_name in interpreter.arrays:
+            try:
+                idx = int(_pascal_eval_expr(interpreter, idx_expr))
+                arr = interpreter.arrays[arr_name]
+                if 0 < idx < len(arr):
+                    rec = arr[idx]
+                    if not isinstance(rec, dict):
+                        arr[idx] = {}
+                        rec = arr[idx]
+                    try:
+                        val = _pascal_eval_expr(interpreter, val_expr)
+                    except (ValueError, TypeError, ZeroDivisionError):
+                        val = _unquote(val_expr) if val_expr.startswith("'") else 0
+                    rec[field_name] = val
+                    return ""
+            except Exception:
+                pass
+        return ""
+
     m = _ASSIGN_FIELD_RE.match(cmd)
     if m:
         var_name = m.group(1).upper()
@@ -1888,11 +2681,14 @@ def execute_pascal(interpreter: "Interpreter", command: str, turtle: "TurtleStat
                 if isinstance(result, str):
                     val = result
                 else:
-                    val = _unquote(expr)
+                    val = _eval_str(interpreter, expr)
             else:
                 val = _pascal_eval_expr(interpreter, expr)
         except (ValueError, TypeError, ZeroDivisionError):
-            val = _unquote(expr) if suf == "$" else 0
+            try:
+                val = _eval_str(interpreter, expr) if suf == "$" else 0
+            except Exception:  # noqa: BLE001
+                val = "" if suf == "$" else 0
         # Handle by-reference parameter aliasing
         var_key = up + (suf or "#")
         if hasattr(interpreter, "pascal_call_stack") and interpreter.pascal_call_stack:

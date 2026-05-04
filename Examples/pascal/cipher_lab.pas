@@ -172,8 +172,7 @@ begin
     if freq[idx] > freq[max_idx] then max_idx := idx;
   top_letter := chr(max_idx + ord('A'));
   writeln('  Most frequent: ''', top_letter, ''' (', freq[max_idx], ' times)');
-  writeln('  Caesar shift guess (if most freq maps to E): ',
-          (max_idx - 4 + 26) mod 26);
+  writeln('  Caesar shift guess (if most freq maps to E): ', (max_idx - 4 + 26) mod 26);
 end;
 
 { ===== CAESAR BRUTE FORCE ===== }

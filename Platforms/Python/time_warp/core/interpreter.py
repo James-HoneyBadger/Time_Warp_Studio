@@ -42,6 +42,7 @@ from ..languages.pascal import execute_pascal
 from ..languages.pilot import execute_pilot
 from ..languages.prolog import execute_prolog
 from ..languages.erlang import execute_erlang
+from ..languages.lisp import execute_lisp
 
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
@@ -81,6 +82,7 @@ def _init_whole_program_executors() -> Dict["Language", Callable]:
         Language.JAVASCRIPT: execute_javascript,
         Language.HYPERTALK: execute_hypertalk,
         Language.ERLANG: execute_erlang,
+        Language.LISP: execute_lisp,
     }
 
 
@@ -139,6 +141,7 @@ class Language(Enum):
     JAVASCRIPT = auto()
     HYPERTALK = auto()
     ERLANG = auto()
+    LISP = auto()
 
     @classmethod
     def from_extension(cls, ext: str) -> "Language":
@@ -162,6 +165,10 @@ class Language(Enum):
             ".htalk": cls.HYPERTALK,
             ".erl": cls.ERLANG,
             ".hrl": cls.ERLANG,
+            ".lisp": cls.LISP,
+            ".scm": cls.LISP,
+            ".rkt": cls.LISP,
+            ".ss": cls.LISP,
         }
         return mapping.get(ext, cls.BASIC)
 
@@ -180,6 +187,7 @@ class Language(Enum):
             Language.JAVASCRIPT: "JavaScript",
             Language.HYPERTALK: "HyperTalk",
             Language.ERLANG: "Erlang",
+            Language.LISP: "LISP/Scheme",
         }
         return names.get(self, "Unknown")
 

@@ -137,27 +137,53 @@ def upgrade_pip(venv_python: Path) -> bool:
         return True
 
 
+CORE_DEPS = ["PySide6>=6.5.0", "Pillow>=10.0.0"]
+
+
 def install_dependencies(venv_python: Path) -> bool:
-    """Install project dependencies"""
-    if not REQUIREMENTS_FILE.exists():
-        print_warning(f"Requirements file not found: {REQUIREMENTS_FILE}")
+    """Install project dependencies.
+
+    Installs core GUI deps first (always required), then attempts the full
+    requirements.txt.  If the full install fails (e.g. asyncpg compilation
+    issues on some platforms), the launcher continues with just the core deps
+    so the desktop IDE can still start.
+    """
+    # Step 1 – always install core desktop deps
+    print_info("Installing core dependencies (PySide6, Pillow)...")
+    try:
+        subprocess.run(
+            [str(venv_python), "-m", "pip", "install", "--upgrade"] + CORE_DEPS,
+            check=True,
+            capture_output=True,
+            timeout=180,
+        )
+        print_success("Core dependencies installed")
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
+        print_error(f"Failed to install core dependencies: {e}")
         return False
 
-    print_info(f"Installing dependencies from {REQUIREMENTS_FILE.name}...")
+    # Step 2 – try full requirements.txt (optional extras for collaboration etc.)
+    if not REQUIREMENTS_FILE.exists():
+        return True  # core deps are enough
+
+    print_info(f"Installing optional dependencies from {REQUIREMENTS_FILE.name}...")
     try:
         subprocess.run(
             [str(venv_python), "-m", "pip", "install", "-r", str(REQUIREMENTS_FILE)],
             check=True,
+            capture_output=True,
             timeout=300,
         )
-        print_success("Dependencies installed")
-        return True
-    except subprocess.CalledProcessError as e:
-        print_error(f"Failed to install dependencies: {e}")
-        return False
+        print_success("All dependencies installed")
+    except subprocess.CalledProcessError:
+        print_warning(
+            "Some optional dependencies failed to install "
+            "(backend/collaboration features may be unavailable). "
+            "The desktop IDE will still work."
+        )
     except subprocess.TimeoutExpired:
-        print_error("Dependency installation timed out")
-        return False
+        print_warning("Optional dependency installation timed out — continuing.")
+    return True
 
 
 def verify_ide_script() -> bool:

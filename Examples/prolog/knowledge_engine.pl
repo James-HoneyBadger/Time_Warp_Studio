@@ -194,7 +194,15 @@ borders(germany, poland).
 borders(germany, austria).
 borders(usa, canada).
 borders(usa, mexico).
-borders(X, Y) :- borders(Y, X).  /* symmetric */
+/* Symmetric reverse facts */
+borders(germany, france).
+borders(spain, france).
+borders(italy, france).
+borders(netherlands, germany).
+borders(poland, germany).
+borders(austria, germany).
+borders(canada, usa).
+borders(mexico, usa).
 
 /* ===== RULES AND QUERIES ===== */
 
@@ -297,7 +305,9 @@ generation(A, D, N) :-
 ?- writeln('  Safe coloring: no two bordering European countries same color').
 ?- writeln('  (3-coloring for france, germany, spain, italy)').
 
-color(red). color(blue). color(green).
+color(red).
+color(blue).
+color(green).
 
 different(X, Y) :- X \= Y.
 

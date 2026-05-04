@@ -134,7 +134,7 @@ class LuaEnvironment:
                         i += 1
                     line = " ".join(merged)
                     # Execute merged line and continue (do not fall into block dispatch)
-                    self._exec_stmt(line)
+                    self._exec_inline(line)
                     continue
             # Multi-line if
             if re.match(r"^if\b", line):
@@ -472,7 +472,7 @@ class LuaEnvironment:
 
     def _define_function(self, lines: list[str], start: int) -> int:
         line = lines[start].strip()
-        m = re.match(r"^(?:local\s+)?function\s+(\w+)\s*\((.*?)\)\s*(.*)", line)
+        m = re.match(r"^(?:local\s+)?function\s+([\w.:]+)\s*\((.*?)\)\s*(.*)", line)
         # Check for single-line function: function f(x) return x*2 end
         inline_body = None
         if m and m.group(3):
@@ -489,8 +489,30 @@ class LuaEnvironment:
             body, end_i = self._collect_block_to_end(lines, i)
         if m:
             fname = m.group(1)
-            params = [p.strip() for p in m.group(2).split(",") if p.strip()]
-            self._globals[fname] = LuaFunction(fname, params, body, self)
+            params_raw = [p.strip() for p in m.group(2).split(",") if p.strip()]
+            # Handle self parameter for method syntax  function Obj:method(...)
+            if ":" in fname:
+                parts = fname.split(":", 1)
+                obj_name = parts[0]
+                method_name = parts[1]
+                params_raw = ["self"] + params_raw
+                obj = self._resolve(obj_name)
+                if isinstance(obj, dict):
+                    obj[method_name] = LuaFunction(fname, params_raw, body, self)
+                else:
+                    self._globals[fname] = LuaFunction(fname, params_raw, body, self)
+            elif "." in fname:
+                parts = fname.split(".", 1)
+                obj_name = parts[0]
+                field_name = parts[1]
+                obj = self._resolve(obj_name)
+                fn = LuaFunction(fname, params_raw, body, self)
+                if isinstance(obj, dict):
+                    obj[field_name] = fn
+                else:
+                    self._globals[fname] = fn
+            else:
+                self._globals[fname] = LuaFunction(fname, params_raw, body, self)
         return end_i
 
     # ------------------------------------------------------------------
@@ -638,17 +660,34 @@ class LuaEnvironment:
             val = self._eval_expr(m.group(1))
             return -val if val is not None else 0
         # Function call: name(args)
-        m = re.match(r"^([\w.]+)\s*\((.*)?\)$", expr)
+        m = re.match(r"^([\w.]+)\s*\((.*)?\)$", expr, re.DOTALL)
         if m:
             return self._call_function(m.group(1), m.group(2) or "")
         # Method call: obj:method(args)
-        m = re.match(r"^(\w+):(\w+)\s*\((.*)?\)$", expr)
+        m = re.match(r"^(\w+):(\w+)\s*\((.*)?\)$", expr, re.DOTALL)
         if m:
             obj = self._resolve(m.group(1))
             method = m.group(2)
-            if hasattr(obj, method):
-                args = self._eval_call_args(m.group(3) or "")
-                return getattr(obj, method)(*args)
+            call_args = self._eval_call_args(m.group(3) or "")
+            if obj is not None:
+                if hasattr(obj, method):
+                    return getattr(obj, method)(*call_args)
+                if isinstance(obj, dict):
+                    fn3 = obj.get(method)
+                    if fn3 is None and "__index" in obj:
+                        idx = obj["__index"]
+                        if isinstance(idx, dict):
+                            fn3 = idx.get(method)
+                    if fn3 is None and "__mt__" in obj:
+                        mt = obj["__mt__"]
+                        if isinstance(mt, dict):
+                            idx2 = mt.get("__index", mt)
+                            if isinstance(idx2, dict):
+                                fn3 = idx2.get(method)
+                    if isinstance(fn3, LuaFunction):
+                        return fn3.call([obj] + call_args)
+                    if callable(fn3):
+                        return fn3(obj, *call_args)
         # Table access: t[k] or t.field
         m = re.match(r"^(\w+)\[(.+)\]$", expr)
         if m:
@@ -723,7 +762,22 @@ class LuaEnvironment:
     def _eval_call_args(self, args_str: str) -> list:
         if not args_str.strip():
             return []
-        return [self._eval_expr(a.strip()) for a in _split_commas(args_str)]
+        result = []
+        for a in _split_commas(args_str):
+            a = a.strip()
+            if a == "...":
+                varargs = self._resolve("...")
+                if isinstance(varargs, list):
+                    result.extend(varargs)
+                elif varargs is not None:
+                    result.append(varargs)
+            else:
+                v = self._eval_expr(a)
+                if isinstance(v, tuple):
+                    result.extend(v)
+                else:
+                    result.append(v)
+        return result
 
     def _call_function(self, name: str, args_str: str) -> Any:
         # Built-in functions
@@ -797,7 +851,7 @@ class LuaEnvironment:
             "dofile": lambda a: self._emit("ℹ️ dofile not supported in sandbox")
             or None,
             "collectgarbage": lambda a: 0,
-            "setmetatable": lambda a: a[0] if a else None,
+            "setmetatable": lambda a: _lua_setmetatable(a),
             "getmetatable": lambda a: None,
             "setfenv": lambda a: None,
             "getfenv": lambda a: {},
@@ -829,8 +883,15 @@ class LuaEnvironment:
         if "." in name:
             parts = name.split(".", 1)
             obj = self._resolve(parts[0])
-            if obj is not None and hasattr(obj, parts[1]):
-                return getattr(obj, parts[1])(*args)
+            if obj is not None:
+                if hasattr(obj, parts[1]):
+                    return getattr(obj, parts[1])(*args)
+                if isinstance(obj, dict) and parts[1] in obj:
+                    fn2 = obj[parts[1]]
+                    if isinstance(fn2, LuaFunction):
+                        return fn2.call(args)
+                    if callable(fn2):
+                        return fn2(*args)
         # User-defined function
         fn = self._resolve(name)
         if isinstance(fn, LuaFunction):
@@ -1403,8 +1464,14 @@ class LuaFunction:
 
     def call(self, args: list) -> Any:
         frame: dict[str, Any] = {}
+        vararg_start = None
         for i, p in enumerate(self.params):
+            if p == "...":
+                vararg_start = i
+                break
             frame[p] = args[i] if i < len(args) else None
+        if vararg_start is not None:
+            frame["..."] = args[vararg_start:]
         self.env._call_stack.append(frame)
         result = None
         try:
@@ -1443,6 +1510,17 @@ def _lua_rawset(d: dict, key: Any, value: Any) -> dict:
     """Set key in dict and return the dict (rawset semantics)."""
     d[key] = value
     return d
+
+
+def _lua_setmetatable(a: list) -> Any:
+    """setmetatable(table, metatable) — attach __mt__ and copy __index."""
+    if not a:
+        return None
+    tbl = a[0]
+    mt = a[1] if len(a) > 1 else None
+    if isinstance(tbl, dict) and isinstance(mt, dict):
+        tbl["__mt__"] = mt
+    return tbl
 
 
 def _lua_tostring(v: Any) -> str:

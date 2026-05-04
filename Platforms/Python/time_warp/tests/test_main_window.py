@@ -43,11 +43,9 @@ class TestLanguageEnum:
         names = {lang.name for lang in Language}
         expected = {
             "BASIC", "PILOT", "LOGO", "C", "PROLOG", "PASCAL", "FORTH",
-            "PYTHON", "LUA", "SCHEME", "BRAINFUCK",
-            "JAVASCRIPT", "REXX", "SMALLTALK", "HYPERTALK",
-            "HASKELL",
-            "RUBY", "ERLANG", "RUST", "PERL",
-            "ASSEMBLY", "FORTRAN", "SQR",
+            "LUA", "BRAINFUCK",
+            "JAVASCRIPT", "HYPERTALK",
+            "ERLANG", "LISP",
         }
         assert expected == names
 

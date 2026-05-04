@@ -162,13 +162,13 @@ print()
 -- Pattern 1: Spirographs
 print("Drawing Pattern 1: Spirograph collection...")
 print("  Hypotrochoid with R=5, r=3, d=5 (5-petal spirograph)")
-spirograph(5, 3, 5, 3000, 20, 255, 80, 80)
+spirograph(5, 3, 5, 300, 20, 255, 80, 80)
 
 print("  Hypotrochoid with R=5, r=1, d=3 (star spirograph)")
-spirograph(5, 1, 3, 3000, 20, 80, 200, 255)
+spirograph(5, 1, 3, 300, 20, 80, 200, 255)
 
 print("  Epitrochoid with R=3, r=1, d=5 (outer spirograph)")
-epitrochoid(3, 1, 5, 3000, 15, 180, 80, 255)
+epitrochoid(3, 1, 5, 300, 15, 180, 80, 255)
 
 -- Pattern 2: Rose Curves
 print()
@@ -176,34 +176,34 @@ print("Drawing Pattern 2: Rose Curves r = cos(n*theta)...")
 turtle.setxy(0, 0)
 
 print("  3-petal rose (n=3)")
-rose_curve(3, 120, 3000, 255, 100, 150)
+rose_curve(3, 120, 300, 255, 100, 150)
 
 print("  5-petal rose (n=5)")
-rose_curve(5, 100, 5000, 100, 255, 100)
+rose_curve(5, 100, 500, 100, 255, 100)
 
 print("  8-petal rose (n=4, 2n=8 petals)")
-rose_curve(4, 90, 4000, 255, 200, 50)
+rose_curve(4, 90, 400, 255, 200, 50)
 
 -- Pattern 3: Lissajous figures
 print()
 print("Drawing Pattern 3: Lissajous Figures...")
 print("  Lissajous 3:2 (delta=90°) — figure-8 variant")
-lissajous(150, 120, 3, 2, 90, 3000, 50, 220, 255)
+lissajous(150, 120, 3, 2, 90, 300, 50, 220, 255)
 
 print("  Lissajous 5:4 (delta=45°)")
-lissajous(130, 100, 5, 4, 45, 5000, 255, 180, 80)
+lissajous(130, 100, 5, 4, 45, 500, 255, 180, 80)
 
 print("  Lissajous 7:6 (delta=30°)")
-lissajous(110, 90, 7, 6, 30, 7000, 200, 80, 255)
+lissajous(110, 90, 7, 6, 30, 700, 200, 80, 255)
 
 -- Pattern 4: Archimedean spirals
 print()
 print("Drawing Pattern 4: Archimedean Spirals...")
 print("  Expanding spiral (a=0, b=2, 8 turns)")
-spiral(0, 2, 8, 4000, 200, 100, 255)
+spiral(0, 2, 8, 400, 200, 100, 255)
 
 print("  Tight spiral (a=5, b=3, 12 turns)")
-spiral(5, 3, 12, 6000, 100, 200, 200)
+spiral(5, 3, 12, 600, 100, 200, 200)
 
 -- Pattern 5: Star polygons
 print()
@@ -234,8 +234,8 @@ for ci, col in ipairs(colors) do
   turtle.penup()
   turtle.setxy(0, 0)
   turtle.pendown()
-  for i = 0, 2000 do
-    local theta = i * 4 * PI / 2000
+  for i = 0, 200 do
+    local theta = i * 4 * PI / 200
     local r = 1.5 * theta
     local x = r * cos(theta + offset)
     local y = r * sin(theta + offset)

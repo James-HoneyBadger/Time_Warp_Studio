@@ -14,6 +14,8 @@ class ForthExecutor:
         self.stack: List[Any] = []
         self.return_stack: List[Any] = []
         self.fstack: List[float] = []  # floating-point stack
+        self.fmem: Dict[int, float] = {}  # float variable storage
+        self.fhere: int = 100000  # float memory addresses start here
         self.dictionary: Dict[str, Callable] = {}
         self.memory: List[int] = [0] * 65536  # 64K cells
         self.here: int = 0  # next free memory address
@@ -165,10 +167,16 @@ class ForthExecutor:
         d["PI"] = self._fpi
         d["FLIT"] = self._flit
 
+        # ── Float variable words ──────────────────────────────────────────
+        d["F@"] = self._ffetch
+        d["F!"] = self._fstore
+        d["F+!"] = self._fplus_store
+
         # ── I/O ───────────────────────────────────────────────────────────
         d["KEY"] = self._key
         d["ACCEPT"] = self._accept
         d["WORD"] = self._word
+        d["BL"] = lambda: self.stack.append(32)  # ASCII space
 
         # ── System ────────────────────────────────────────────────────────
         d["BASE"] = self._push_base_addr
@@ -228,6 +236,8 @@ class ForthExecutor:
         d["FILL"] = self._fill_gfx
         d["DOT"] = self._dot_gfx
         d["LABEL"] = self._label
+        d["BEGIN-FILL"] = self._begin_fill_gfx
+        d["END-FILL"] = self._end_fill_gfx
 
     # ── Stack manipulation ──────────────────────────────────────────────
 
@@ -697,6 +707,24 @@ class ForthExecutor:
         if self.fstack:
             self.fstack.append(abs(self.fstack.pop()))
 
+    def _ffetch(self):
+        """F@ — ( addr -- ) ( -- f ) fetch float from fmem at addr on int stack."""
+        if self.stack:
+            addr = self.stack.pop()
+            self.fstack.append(self.fmem.get(addr, 0.0))
+
+    def _fstore(self):
+        """F! — ( addr -- ) ( f -- ) store float to fmem at addr on int stack."""
+        if self.stack and self.fstack:
+            addr = self.stack.pop()
+            self.fmem[addr] = self.fstack.pop()
+
+    def _fplus_store(self):
+        """F+! — ( addr -- ) ( f -- ) add float to fmem at addr."""
+        if self.stack and self.fstack:
+            addr = self.stack.pop()
+            self.fmem[addr] = self.fmem.get(addr, 0.0) + self.fstack.pop()
+
     def _fmax(self):
         if len(self.fstack) >= 2:
             b, a = self.fstack.pop(), self.fstack.pop()
@@ -868,12 +896,42 @@ class ForthExecutor:
     def _bye(self):
         raise StopIteration
 
+    def _load_include_file(self, filename: str) -> None:
+        """Load and execute a Forth source file (sandboxed to .forth/.f/.4th/.fth)."""
+        import os
+        safe_ext = ('.forth', '.f', '.4th', '.fth')
+        basename = os.path.basename(filename)  # prevent path traversal
+        if not any(basename.lower().endswith(ext) for ext in safe_ext):
+            self.interpreter.log_output(f"❌ INCLUDE: only .forth/.f/.4th/.fth files supported")
+            return
+        paths_to_try = [
+            filename,
+            os.path.join(os.getcwd(), filename),
+            os.path.join(os.getcwd(), basename),
+        ]
+        for path in paths_to_try:
+            if os.path.isfile(path):
+                try:
+                    with open(path, 'r', encoding='utf-8', errors='replace') as fh:
+                        code = fh.read()
+                    self.interpreter.log_output(f"ℹ️ Including {basename}")
+                    for line in code.splitlines():
+                        self.execute_line(line, self.turtle)
+                    return
+                except OSError as exc:
+                    self.interpreter.log_output(f"❌ INCLUDE: could not read {basename}: {exc}")
+                    return
+        self.interpreter.log_output(f"❌ INCLUDE: file not found: {filename}")
+
     def _include(self):
-        pass
+        """Fallback for INCLUDE when called without stream context."""
+        self.interpreter.log_output("ℹ️ INCLUDE requires a filename token (e.g. INCLUDE myfile.forth)")
 
     def _ms(self):
+        """MS — simulated millisecond delay (consumes n from stack)."""
         if self.stack:
-            self.stack.pop()  # discard milliseconds, no actual delay
+            n = self.stack.pop()
+            self.interpreter.log_output(f"ℹ️ MS: {int(n)}ms delay (simulated)")
 
     def _here_word(self):
         self.stack.append(self.here)
@@ -1078,8 +1136,19 @@ class ForthExecutor:
                 self.turtle.right(ang / steps)
 
     def _fill_gfx(self):
-        if self.stack and self.turtle:
-            self.stack.pop()  # stub
+        """FILL — end a fill region and render the filled polygon."""
+        if self.turtle:
+            self.turtle.end_fill()
+
+    def _begin_fill_gfx(self):
+        """BEGIN-FILL — start recording path for a filled polygon."""
+        if self.turtle:
+            self.turtle.begin_fill()
+
+    def _end_fill_gfx(self):
+        """END-FILL — close and render the filled polygon."""
+        if self.turtle:
+            self.turtle.end_fill()
 
     def _dot_gfx(self):
         if len(self.stack) >= 2 and self.turtle:
@@ -1244,6 +1313,24 @@ class ForthExecutor:
                     i += 1
                 continue
 
+            # ── FVARIABLE name ─────────────────────────────────────────────
+            if token_upper == "FVARIABLE":
+                if i + 1 < len(tokens):
+                    fvar_name = tokens[i + 1].upper()
+                    faddr = self.fhere
+                    self.fhere += 1
+                    self.fmem[faddr] = 0.0
+
+                    def fvar_func(a=faddr):
+                        self.stack.append(a)
+
+                    self.dictionary[fvar_name] = fvar_func
+                    i += 2
+                else:
+                    self.interpreter.log_output("❌ FVARIABLE requires name")
+                    i += 1
+                continue
+
             # ── ALLOT ─────────────────────────────────────────────────────
             if token_upper == "ALLOT":
                 if self.stack:
@@ -1286,7 +1373,9 @@ class ForthExecutor:
             if token_upper == "[CHAR]":
                 if i + 1 < len(tokens):
                     s = tokens[i + 1]
-                    self.new_word_definition.append(str(ord(s[0]) if s else 0))
+                    char_val = ord(s[0]) if s else 0
+                    # [CHAR] is a compile-time word, but when executed push onto stack
+                    self.stack.append(char_val)
                     i += 2
                 else:
                     i += 1
@@ -1536,6 +1625,35 @@ class ForthExecutor:
                     continue
             except ValueError:
                 pass
+
+            # ── INCLUDE / REQUIRE filename ────────────────────────────────
+            if token_upper in ("INCLUDE", "REQUIRE"):
+                if i + 1 < len(tokens):
+                    self._load_include_file(tokens[i + 1])
+                    i += 2
+                else:
+                    self.interpreter.log_output("❌ INCLUDE requires a filename")
+                    i += 1
+                continue
+
+            # ── WORD c ( -- caddr ) parse next token as counted string ────
+            if token_upper == "WORD":
+                delim = self.stack.pop() if self.stack else 32  # delimiter (BL=32)
+                if i + 1 < len(tokens):
+                    word = tokens[i + 1]
+                    i += 2
+                else:
+                    word = ""
+                    i += 1
+                addr = self.here
+                self.memory[addr] = min(len(word), 255)
+                self.here += 1
+                for ch in word:
+                    if self.here < len(self.memory):
+                        self.memory[self.here] = ord(ch)
+                        self.here += 1
+                self.stack.append(addr)
+                continue
 
             # ── Dictionary lookup ─────────────────────────────────────────
             if token_upper in self.dictionary:

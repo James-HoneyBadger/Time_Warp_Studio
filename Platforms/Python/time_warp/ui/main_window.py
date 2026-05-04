@@ -398,6 +398,15 @@ class MainWindow(
         self._focus_mode.toggle_focus_mode()
         self._focus_mode_action.setChecked(self._focus_mode.is_focus_mode)
 
+    def keyPressEvent(self, event):
+        """Allow Escape to exit focus mode."""
+        # pylint: disable=import-outside-toplevel
+        from PySide6.QtCore import Qt
+        if event.key() == Qt.Key_Escape and self._focus_mode.is_focus_mode:
+            self._toggle_focus_mode()
+            return
+        super().keyPressEvent(event)
+
     # ---- Onboarding ----
 
     def _maybe_show_onboarding(self):

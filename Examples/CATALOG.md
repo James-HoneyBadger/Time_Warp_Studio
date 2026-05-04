@@ -108,6 +108,8 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 | `javascript/todo_app.js` | In-memory to-do list with CRUD |
 | `javascript/algorithm_masterclass.js` | **SHOWCASE** — BST, graph BFS/DFS, heap sort, currying, generators, infinite primes |
 | `javascript/mandelbrot.js` | **SHOWCASE** — ASCII Mandelbrot set, Julia sets, Burning Ship, Tricorn; zoom views; density gradient |
+| `javascript/functional.js` | **SHOWCASE** — Higher-order functions, closures, memoization, partial application, pipelines, group-by |
+| `javascript/async_patterns.js` | Async patterns — callbacks, promise chains, error-first style, badge/user pipelines |
 
 ---
 

@@ -47,12 +47,15 @@ CREATE NEXTTAPE WIDTH ALLOT
 
 \ --- Apply rule to single cell position ---
 : STEP-CELL ( pos rule -- )
-  OVER 1 - TAPE@   \ left neighbor
-  OVER TAPE@       \ center
-  OVER 1 + TAPE@   \ right neighbor
-  4 PICK COMPUTE-PATTERN  \ pattern (0-7)
-  SWAP RSHIFT 1 AND       \ (rule >> pattern) & 1
-  -ROT NEXT! DROP ;        \ store to nexttape
+  OVER >R              \ save pos to return stack; stack: pos rule
+  SWAP                 \ rule pos
+  DUP 1 - TAPE@       \ rule pos left
+  OVER TAPE@           \ rule pos left center
+  OVER 1 + TAPE@       \ rule pos left center right
+  COMPUTE-PATTERN      \ rule pos pattern
+  NIP                  \ rule pattern  (drop pos)
+  RSHIFT 1 AND         \ newval  (rule >> pattern & 1)
+  R> NEXT! ;           \ NEXT![pos] = newval
 
 \ --- Advance one generation using given rule ---
 : STEP-GENERATION ( rule -- )

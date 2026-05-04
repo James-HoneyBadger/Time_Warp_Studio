@@ -886,6 +886,24 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
             logger.debug("LET %s = TIMER", var_name)
             return ""
 
+        # Handle string expressions assigned to non-$ variables (BASIC quirk)
+        if expr.startswith('"'):
+            # String literal or string concatenation like "" or "█" or VAR + "x"
+            string_eval = StringExpressionEvaluator(
+                string_variables=interpreter.string_variables,
+                numeric_variables=interpreter.variables,
+                string_arrays=getattr(interpreter, "string_arrays", {}),
+                numeric_arrays=interpreter.arrays,
+            )
+            try:
+                str_result = string_eval.evaluate(expr)
+                interpreter.set_typed_variable(var_name, str(str_result))
+                return ""
+            except Exception:  # noqa: BLE001
+                # Simple literal fallback
+                interpreter.set_typed_variable(var_name, expr.strip('"'))
+                return ""
+
         try:
             result = interpreter.evaluate_expression(expr)
             interpreter.set_typed_variable(var_name, result)
@@ -901,7 +919,11 @@ def _basic_let(interpreter: "Interpreter", args: str) -> str:
                     numeric_arrays=interpreter.arrays,
                 )
                 str_result = string_eval.evaluate(expr)
-                interpreter.set_typed_variable(var_name, float(str_result))
+                # If it looks like a string result, store as string
+                try:
+                    interpreter.set_typed_variable(var_name, float(str_result))
+                except (ValueError, TypeError):
+                    interpreter.set_typed_variable(var_name, str(str_result))
             except (ValueError, TypeError, ZeroDivisionError):
                 logger.error("LET evaluation error: %s", e)
                 return f"❌ Error in LET: {e} (expr: '{expr}')\n"

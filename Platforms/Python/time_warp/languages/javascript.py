@@ -71,6 +71,12 @@ _null = _JSNull()
 class _JsDict(dict):
     """Dict subclass supporting JS-style dot access."""
 
+    def __getitem__(self, key):
+        try:
+            return super().__getitem__(key)
+        except KeyError:
+            return _undefined
+
     def __getattr__(self, key):
         try:
             return self[key]
@@ -85,6 +91,67 @@ class _JsDict(dict):
             del self[key]
         except KeyError:
             pass
+
+
+def _js_add(a, b):
+    """JS-style addition: if either operand is a string, coerce both to strings."""
+    if isinstance(a, str) or isinstance(b, str):
+        return _js_str(a) + _js_str(b)
+    return a + b
+
+
+def _js_toFixed(val, digits):
+    """JS Number.toFixed() — format float to fixed decimal places, return string."""
+    try:
+        return f"{float(val):.{int(digits)}f}"
+    except Exception:
+        return str(val)
+
+
+def _js_toPrecision(val, digits):
+    """JS Number.toPrecision() — format to significant digits, return string."""
+    try:
+        return f"{float(val):.{int(digits)}g}"
+    except Exception:
+        return str(val)
+
+
+class _JSNumber(int):
+    """Numeric type that supports JS-style string coercion with +."""
+
+    def __new__(cls, v=0):
+        try:
+            return super().__new__(cls, int(v))
+        except (TypeError, ValueError):
+            return super().__new__(cls, 0)
+
+    def _wrap(self, result):
+        if isinstance(result, int) and not isinstance(result, bool):
+            return _JSNumber(result)
+        return result
+
+    def __add__(self, other):
+        if isinstance(other, str):
+            return _js_str(self) + other
+        return self._wrap(super().__add__(other))
+
+    def __radd__(self, other):
+        if isinstance(other, str):
+            return other + _js_str(self)
+        return self._wrap(super().__radd__(other))
+
+    def __sub__(self, other): return self._wrap(super().__sub__(other))
+    def __rsub__(self, other): return self._wrap(int.__sub__(other, self))
+    def __mul__(self, other): return self._wrap(super().__mul__(other))
+    def __rmul__(self, other): return self._wrap(super().__rmul__(other))
+    def __floordiv__(self, other): return self._wrap(super().__floordiv__(other))
+    def __mod__(self, other): return self._wrap(super().__mod__(other))
+
+    def __repr__(self):
+        return str(int(self))
+
+    def __str__(self):
+        return str(int(self))
 
 
 def _js_str(v) -> str:
@@ -129,6 +196,16 @@ def _js_typeof(v) -> str:
 
 
 class JSArray(list):
+    def __getitem__(self, key):
+        if isinstance(key, float):
+            key = int(key)
+        return super().__getitem__(key)
+
+    def __setitem__(self, key, val):
+        if isinstance(key, float):
+            key = int(key)
+        super().__setitem__(key, val)
+
     @property
     def length(self):
         return len(self)
@@ -233,8 +310,18 @@ class JSArray(list):
         return acc
 
     def forEach(self, fn):
+        import inspect as _inspect
+        try:
+            nargs = len(_inspect.signature(fn).parameters)
+        except (ValueError, TypeError):
+            nargs = 3
         for i, x in enumerate(self):
-            fn(x, i, self)
+            if nargs == 1:
+                fn(x)
+            elif nargs == 2:
+                fn(x, i)
+            else:
+                fn(x, i, self)
 
     def some(self, fn):
         return any(fn(x) for x in self)
@@ -671,6 +758,12 @@ class JSDate:
     def toLocaleTimeString(self):
         return self._dt().strftime("%H:%M:%S")
 
+    @classmethod
+    def now(cls):
+        """Date.now() — returns current time as milliseconds since epoch."""
+        import time as _t
+        return int(_t.time() * 1000)
+
     def toLocaleString(self):
         return str(self._dt())
 
@@ -714,6 +807,46 @@ class JSDate:
 
 
 # ━━━━━━━━━━━━━━━━━━━━━━ Map / Set / WeakMap / WeakSet ━━━━━━━━━━━━━━━━━━━
+
+
+def _js_array_from(iterable_or_len, map_fn=None):
+    """Implement JS Array.from(arrayLike, mapFn)."""
+    if isinstance(iterable_or_len, _JsDict):
+        length = iterable_or_len.get("length", 0)
+        try:
+            length = int(length)
+        except (TypeError, ValueError):
+            length = 0
+        items = [_undefined] * length
+    else:
+        try:
+            items = list(iterable_or_len)
+        except TypeError:
+            items = []
+    if map_fn is not None and callable(map_fn):
+        try:
+            result = JSArray(map_fn(v, i) for i, v in enumerate(items))
+        except TypeError:
+            result = JSArray(map_fn(v) for v in items)
+    else:
+        result = JSArray(items)
+    return result
+
+
+def _js_re_replace(s: object, pattern: str, flags: str, repl: str) -> str:
+    """Implement JS str.replace(/pattern/flags, repl) for strings."""
+    import re as _re
+    s = str(s)
+    py_flags = 0
+    if "i" in flags: py_flags |= _re.IGNORECASE
+    if "m" in flags: py_flags |= _re.MULTILINE
+    if "s" in flags: py_flags |= _re.DOTALL
+    try:
+        count = 0 if "g" in flags else 1
+        return _re.sub(pattern, str(repl), s, count=count, flags=py_flags)
+    except _re.error:
+        # Fall back to literal replacement
+        return s.replace(pattern, str(repl))
 
 
 class JSMap:
@@ -1128,14 +1261,39 @@ class JSEnvironment:
                 "JSArray": JSArray,
                 "JSMap": JSMap,
                 "JSSet": JSSet,
+                "JSDate": JSDate,
                 "_JsDict": _JsDict,
                 "_js_typeof": _js_typeof,
                 "_undefined": _undefined,
+                "_js_add": _js_add,
+                "_js_toFixed": _js_toFixed,
+                "_js_toPrecision": _js_toPrecision,
+                "_JSNumber": _JSNumber,
+                "_js_array_from": _js_array_from,
+                "_js_re_replace": _js_re_replace,
             }
         )
         g["globalThis"] = g
         g["window"] = g
         g["self"] = g
+        # Override len to return _JSNumber (JS-compatible numeric type)
+        import builtins as _builtins_mod
+        import inspect as _inspect_mod
+        _orig_len = _builtins_mod.len
+        def _js_len(x):
+            if callable(x) and not isinstance(x, (list, str, dict, tuple, set)):
+                try:
+                    sig = _inspect_mod.signature(x)
+                    return _JSNumber(sum(1 for p in sig.parameters.values()
+                                        if p.default is _inspect_mod.Parameter.empty
+                                        and p.kind not in (
+                                            _inspect_mod.Parameter.VAR_POSITIONAL,
+                                            _inspect_mod.Parameter.VAR_KEYWORD)))
+                except (ValueError, TypeError):
+                    return _JSNumber(0)
+            return _JSNumber(_orig_len(x))
+        g["len"] = _js_len
+        g["sorted"] = lambda it, **kw: JSArray(sorted(it, **kw))
         # Restrict builtins to a safe allowlist.  The transpiler emits Python
         # that needs certain builtins (len, range, isinstance, __build_class__
         # for classes, etc.) but we must block dangerous ones like __import__,
@@ -1219,23 +1377,649 @@ class _JSTranslationError(Exception):
 JSTranslationError = _JSTranslationError  # public alias
 
 
+def _join_continuation_lines(source: str) -> str:
+    """Join lines that are continuation of standalone object literals spanning multiple lines.
+    
+    Handles:
+      return {         → join until matching }
+          a: 1,
+      }
+    But NOT block openers (function/class/if/for/while/do/else/try/catch/=>/method defs).
+    """
+    _BLOCK_OPENER = re.compile(
+        r"\b(?:function|class|if|else|for|while|do|try|catch|finally|switch)\b|=>"
+        r"|\b\w+\s*\("  # method/function definition: name( ... ) {
+    )
+    
+    lines = source.split("\n")
+    result: list[str] = []
+    i = 0
+    
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.rstrip()
+        sline = stripped.lstrip()
+        
+        # Handle bare `{` scope blocks — join and de-indent (Python has no bare blocks)
+        if sline == "{":
+            # Collect lines until matching `}`
+            depth = 1
+            inner_lines = []
+            j = i + 1
+            in_str2, str_ch2, esc2 = False, "", False
+            while j < len(lines) and depth > 0:
+                cont = lines[j]
+                cont_s = cont.strip()
+                for ch in cont_s:
+                    if esc2: esc2 = False
+                    elif in_str2:
+                        if ch == "\\": esc2 = True
+                        elif ch == str_ch2: in_str2 = False
+                    elif ch in ('"', "'", "`"): in_str2, str_ch2 = True, ch
+                    elif ch in ("{", "(", "["): depth += 1
+                    elif ch in ("}", ")", "]"): depth -= 1
+                if depth > 0:
+                    inner_lines.append(cont)
+                j += 1
+            # De-indent inner lines by finding minimum indent
+            non_empty = [l for l in inner_lines if l.strip()]
+            if non_empty:
+                min_indent = min(len(l) - len(l.lstrip()) for l in non_empty)
+                result.extend(l[min_indent:] if len(l) > min_indent else l for l in inner_lines)
+            i = j
+            continue
+
+        # Don't join if: line is just "{", or contains block keywords, or method def
+        if (stripped.endswith("{") and not sline.startswith("//") 
+                and sline != "{"  # bare opening brace = block  
+                and not _BLOCK_OPENER.search(stripped)):
+            # Peek at next non-empty line to check if it looks like object content
+            # Object content: "key: value" or "identifier" (shorthand) but NOT "const/let/var/return/if"
+            _next_i = i + 1
+            while _next_i < len(lines) and not lines[_next_i].strip():
+                _next_i += 1
+            _next_line = lines[_next_i].strip() if _next_i < len(lines) else ""
+            _STMT_OPENER = re.compile(r"^(?:const|let|var|return|if|for|while|throw|break|continue|switch)\b")
+            if _STMT_OPENER.match(_next_line):
+                result.append(line)
+                i += 1
+                continue
+            # This is a multi-line object literal — join until we close the brace
+            depth = 1
+            joined = [stripped]
+            i += 1
+            in_str, str_ch = False, ""
+            escaped = False
+            while i < len(lines) and depth > 0:
+                cont = lines[i]
+                cont_s = cont.strip()
+                if cont_s.startswith("//"):
+                    i += 1
+                    continue
+                for ch in cont_s:
+                    if escaped:
+                        escaped = False
+                        continue
+                    if in_str:
+                        if ch == "\\": escaped = True
+                        elif ch == str_ch: in_str = False
+                    elif ch in ('"', "'", "`"):
+                        in_str, str_ch = True, ch
+                    elif ch in ("{", "(", "["):
+                        depth += 1
+                    elif ch in ("}", ")", "]"):
+                        depth -= 1
+                joined.append(cont_s)
+                i += 1
+            result.append(" ".join(joined))
+            continue
+        
+        # Also join lines that have an unclosed { within them (not ending with {)
+        # e.g. "return { n, mean,   ← unclosed"
+        if not sline.startswith("//") and not _BLOCK_OPENER.search(stripped) and "{" in stripped:
+            # Count net brace depth for this line
+            _depth = 0
+            _in_str, _str_ch, _esc = False, "", False
+            for ch in stripped:
+                if _esc: _esc = False
+                elif _in_str:
+                    if ch == "\\": _esc = True
+                    elif ch == _str_ch: _in_str = False
+                elif ch in ('"', "'", "`"): _in_str, _str_ch = True, ch
+                elif ch == "{": _depth += 1
+                elif ch == "}": _depth -= 1
+            if _depth > 0:
+                # Unclosed brace — join continuation lines
+                joined = [stripped]
+                depth = _depth
+                i += 1
+                in_str, str_ch = False, ""
+                escaped = False
+                while i < len(lines) and depth > 0:
+                    cont = lines[i]
+                    cont_s = cont.strip()
+                    if cont_s.startswith("//"):
+                        i += 1
+                        continue
+                    for ch in cont_s:
+                        if escaped: escaped = False
+                        elif in_str:
+                            if ch == "\\": escaped = True
+                            elif ch == str_ch: in_str = False
+                        elif ch in ('"', "'", "`"): in_str, str_ch = True, ch
+                        elif ch in ("{", "(", "["): depth += 1
+                        elif ch in ("}", ")", "]"): depth -= 1
+                    joined.append(cont_s)
+                    i += 1
+                result.append(" ".join(joined))
+                continue
+        
+        result.append(line)
+        i += 1
+    
+    return "\n".join(result)
+
+
+def _join_braceless_bodies(source: str) -> str:
+    """Join braceless bodies after for/while/if onto the same line.
+    
+    Handles cases like:
+        for (...)
+            if (...) { body }
+    →   for (...) if (...) { body }
+    """
+    _BLOCK_HDR = re.compile(r"^\s*(?:for|while|if)\s*\(")
+    lines = source.split("\n")
+    result: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        stripped = line.rstrip()
+        # Control header without trailing {
+        if (_BLOCK_HDR.match(line) and not stripped.rstrip().endswith("{")
+                and not stripped.rstrip().endswith("}")):
+            j = i + 1
+            while j < len(lines) and not lines[j].strip():
+                j += 1
+            if j < len(lines):
+                next_s = lines[j].strip()
+                next_indent = len(lines[j]) - len(lines[j].lstrip())
+                cur_indent = len(line) - len(line.lstrip())
+                if next_indent > cur_indent and next_s and not next_s.startswith("//"):
+                    result.append(stripped.rstrip() + " " + next_s)
+                    i = j + 1
+                    continue
+        result.append(line)
+        i += 1
+    return "\n".join(result)
+
+
+def _join_ternary_continuations(source: str) -> str:
+    """Join multi-line ternary expressions and arrow continuations."""
+    lines = source.split("\n")
+    result: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        j = i + 1
+        while j < len(lines) and not lines[j].strip():
+            j += 1
+        if j < len(lines):
+            next_stripped = lines[j].strip()
+            # Ternary continuation
+            if next_stripped.startswith(("?", ":")):
+                joined = [line.rstrip()]
+                while j < len(lines) and lines[j].strip().startswith(("?", ":")):
+                    joined.append(lines[j].strip())
+                    j += 1
+                result.append(" ".join(joined))
+                i = j
+                continue
+            # Arrow body continuation: line ends with => (body on next line, no {)
+            stripped_cur = line.rstrip()
+            if stripped_cur.endswith("=>") and not next_stripped.startswith("{"):
+                result.append(stripped_cur + " " + next_stripped)
+                i = j + 1
+                continue
+        result.append(line)
+        i += 1
+    return "\n".join(result)
+
+
+def _join_method_chains(source: str) -> str:
+    """Join method chain continuations (.methodName on next line) onto previous line.
+    
+    For method chains with multi-line arrow callbacks (.method(param => { body })),
+    hoists the callback to a named function and rewrites inline.
+    """
+    lines = source.split("\n")
+    result: list[str] = []
+    _mc_counter = [0]
+
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        
+        j = i + 1
+        while j < len(lines) and not lines[j].strip():
+            j += 1
+        
+        if j < len(lines):
+            next_stripped = lines[j].strip()
+            if next_stripped.startswith(".") and not next_stripped.startswith("..."):
+                # Collect all chained .method calls
+                chain_lines = []
+                k = j
+                while (k < len(lines) and lines[k].strip().startswith(".")
+                       and not lines[k].strip().startswith("...")):
+                    chain_lines.append(lines[k].strip())
+                    k += 1
+                
+                # Check if any chain line opens a multi-line block
+                has_block_chain = any(re.search(r"=>\s*\{", cl) for cl in chain_lines)
+                
+                if has_block_chain:
+                    # Process chain lines, hoisting multi-line callbacks
+                    base_line = line.rstrip()
+                    ind = " " * (len(line) - len(line.lstrip()))
+                    hoisted_fns: list[str] = []
+                    translated_chain: list[str] = []
+                    
+                    ci = j
+                    while (ci < len(lines) and lines[ci].strip().startswith(".")
+                           and not lines[ci].strip().startswith("...")):
+                        chain_line = lines[ci].strip()
+                        if re.search(r"=>\s*\{", chain_line):
+                            # Multi-line callback: hoist it
+                            m = re.match(r"^(\.\w+\()\s*(.+?)\s*=>\s*\{$", chain_line)
+                            if m:
+                                _mc_counter[0] += 1
+                                fn_name = f"_cb{_mc_counter[0]}"
+                                params = m.group(2)
+                                body_lines_raw = []
+                                ci += 1
+                                depth = 1
+                                while ci < len(lines) and depth > 0:
+                                    bl = lines[ci]
+                                    bl_s = bl.strip()
+                                    for ch in bl_s:
+                                        if ch == "{": depth += 1
+                                        elif ch == "}": depth -= 1
+                                    if depth > 0:
+                                        body_lines_raw.append(bl)
+                                    ci += 1
+                                # Preserve relative indentation
+                                non_empty = [l for l in body_lines_raw if l.strip()]
+                                if non_empty:
+                                    min_ind = min(len(l) - len(l.lstrip()) for l in non_empty)
+                                else:
+                                    min_ind = 0
+                                body_lines = [
+                                    f"{ind}    {l[min_ind:]}" if l.strip() else ""
+                                    for l in body_lines_raw
+                                ]
+                                # Accumulate hoisted function
+                                hoisted_fns.append(f"{ind}function {fn_name}({params}) {{")
+                                for bl in body_lines:
+                                    hoisted_fns.append(bl)
+                                hoisted_fns.append(f"{ind}}}")
+                                translated_chain.append(f"{m.group(1)}{fn_name})")
+                            else:
+                                translated_chain.append(chain_line)
+                                ci += 1
+                        else:
+                            translated_chain.append(chain_line)
+                            ci += 1
+                    
+                    # Emit: hoisted fns, then base.chain1.chain2...
+                    result.extend(hoisted_fns)
+                    result.append(base_line + " " + " ".join(translated_chain))
+                    i = ci
+                    continue
+                else:
+                    # Simple method chain — join all onto one line
+                    joined = [line.rstrip()]
+                    for cl in chain_lines:
+                        joined.append(cl)
+                    result.append(" ".join(joined))
+                    i = k
+                    continue
+        
+        result.append(line)
+        i += 1
+    return "\n".join(result)
+
+
+def _hoist_inline_callbacks(source: str) -> str:
+    """Hoist inline multi-statement arrow callbacks with balanced-paren scanning."""
+    _hcb_counter = [0]
+    lines = source.split("\n")
+    result: list[str] = []
+    
+    for line in lines:
+        if "=>" not in line or "{" not in line:
+            result.append(line)
+            continue
+        
+        ind = " " * (len(line) - len(line.lstrip()))
+        s = line.strip()
+        # Find all (params) => { body } patterns in line using balanced scanning
+        out_chars = list(s)
+        hoisted: list[str] = []
+        i = 0
+        n = len(s)
+        in_str = False
+        str_ch = ""
+        new_s = []
+        
+        while i < n:
+            ch = s[i]
+            if in_str:
+                new_s.append(ch)
+                if ch == "\\" and i + 1 < n:
+                    new_s.append(s[i+1])
+                    i += 2
+                    continue
+                if ch == str_ch:
+                    in_str = False
+                i += 1
+                continue
+            if ch in ('"', "'", "`"):
+                in_str, str_ch = True, ch
+                new_s.append(ch)
+                i += 1
+                continue
+            # Detect `=> {` pattern
+            if s[i:i+3] == "=> " and i > 0:
+                # Scan backwards to find the opening ( for the params
+                j = len(new_s) - 1
+                while j >= 0 and new_s[j] in (" ", "\t"):
+                    j -= 1
+                j_close_paren = j  # position of closing )
+                if j >= 0 and new_s[j] == ")":
+                    # Find matching (
+                    depth = 1
+                    j -= 1
+                    while j >= 0 and depth > 0:
+                        if new_s[j] == ")": depth += 1
+                        elif new_s[j] == "(": depth -= 1
+                        j -= 1
+                    j += 1  # j now points to opening (
+                    params = "".join(new_s[j+1:j_close_paren])  # between ( and )
+                    prefix = "".join(new_s[:j])
+                    
+                    # Check for block: => { body }
+                    k = i + 2  # skip '=> '
+                    while k < n and s[k] == " ": k += 1
+                    if k < n and s[k] == "{":
+                        # Find matching }
+                        k += 1
+                        body_start = k
+                        depth2 = 1
+                        while k < n and depth2 > 0:
+                            if s[k] == "{": depth2 += 1
+                            elif s[k] == "}": depth2 -= 1
+                            k += 1
+                        if depth2 != 0:
+                            # No matching } on this line — skip hoisting
+                            new_s.append(ch)
+                            i += 1
+                            continue
+                        body = s[body_start:k-1].strip().rstrip(";")
+                        _hcb_counter[0] += 1
+                        fn_name = f"_icb{_hcb_counter[0]}"
+                        hoisted.append(f"{ind}function {fn_name}({params}) {{ {body} }}")
+                        new_s = list(prefix) + list(fn_name)
+                        i = k
+                        continue
+            new_s.append(ch)
+            i += 1
+        
+        for h in hoisted:
+            result.append(h)
+        result.append(ind + "".join(new_s).lstrip())
+    return "\n".join(result)
+
+
 def _js_to_py(source: str) -> str:
     if source.startswith("#!"):
         source = "//" + source[2:]
     source = re.sub(r"/\*.*?\*/", " ", source, flags=re.DOTALL)
+    # Convert JS regex literals in .replace() calls to Python-compatible calls
+    # e.g. str.replace(/ /g, '') → _js_re_replace(str, ' ', 'g', '')
+    def _sub_js_regex_replace(m: re.Match) -> str:
+        pre = m.group(1)   # expression before .replace(
+        pattern = m.group(2)
+        flags = m.group(3)
+        repl = m.group(4)  # replacement string (without closing paren)
+        return f"_js_re_replace({pre}, {pattern!r}, {flags!r}, {repl})"
+    source = re.sub(
+        r"([A-Za-z_\w.)\]'\"]+)\.replace\(/([^/]*)/([gimsuy]*)\s*,\s*([^)]*)\)",
+        _sub_js_regex_replace,
+        source,
+    )
     # BigInt literals: 42n → 42
     source = re.sub(r"\b(\d+)n\b", r"\1", source)
+    # yield* → yield from (JS generator delegation)
+    source = re.sub(r"\byield\s*\*", "yield from", source)
+    # gen.next().value → next(gen) (JS generator iteration)
+    source = re.sub(r"(\w+)\.next\(\)\.value", r"next(\1)", source)
+    # str.split('') — JS splits into chars; Python split("") raises ValueError
+    # Replace `.split('')` / `.split("")` with `._jssplit("")` marker, handled post-translate
+    source = re.sub(r"\.split\s*\(\s*(?:''|\"\")\s*\)", "._jssplitchars()", source)
     # Symbol calls routed to JSSymbol class at runtime (no transpile rewrite needed)
+    # Join multi-line object/array literals into single lines
+    source = _join_continuation_lines(source)
+    # Pre-join method chain continuations (.method on next line) before expansion
+    source = _join_method_chains(source)
+    # Hoist inline multi-statement arrow callbacks: (params) => { stmts }
+    source = _hoist_inline_callbacks(source)
+    # Join multi-line ternary continuations (? and : on their own lines)
+    source = _join_ternary_continuations(source)
     # Expand single-line blocks before line-by-line translation (two passes for nested)
     source = _expand_one_liners(source)
     source = _expand_one_liners(source)
+    # Join braceless for/while/if bodies onto same line as the header
+    source = _join_braceless_bodies(source)
+    # Reset anonymous return-function counter
+    _rfa_counter[0] = 0
     lines = source.splitlines()
     out = []
     for line in lines:
         out.append(_translate_line(line))
     # Post-process: fix switch/case indentation
     out = _fix_switch_indent(out)
-    return "\n".join(out)
+    # Post-process: inject 'return name' after return-function blocks
+    out = _inject_return_fns(out)
+    # Post-process: fix self.xxx default args in methods
+    out = _fix_self_defaults(out)
+    # Post-process: add 'append = push' alias to user classes with a push() method
+    out = _add_push_alias(out)
+    # Post-process: inject global declarations for module-level names modified in functions
+    out = _inject_global_decls(out)
+    # Post-process: fix destructured lambda params: lambda [a, b]: → lambda _d: (lambda a, b: ...)(*_d)
+    result_str = "\n".join(out)
+    if "lambda [" in result_str:
+        def _fix_destructured_lambda(expr: str) -> str:
+            """Replace lambda [a, b]: body with lambda _dst: (lambda a, b: body)(*_dst)."""
+            def _replace(m: re.Match) -> str:
+                params = m.group(1)
+                body_raw = m.group(2)
+                # Find end of lambda body: stop at the first ) that takes depth to -1
+                depth = 0
+                body_end = len(body_raw)
+                in_str = False; str_ch = ""
+                for ci, ch in enumerate(body_raw):
+                    if in_str:
+                        if ch == str_ch: in_str = False
+                        continue
+                    if ch in ('"', "'"):
+                        in_str = True; str_ch = ch; continue
+                    if ch == "(": depth += 1
+                    elif ch == ")":
+                        if depth == 0:
+                            body_end = ci; break
+                        depth -= 1
+                body = body_raw[:body_end]
+                suffix = body_raw[body_end:]
+                return f"lambda _dst: (lambda {params}: {body})(*_dst){suffix}"
+            # Work line by line to avoid cross-line matches
+            out_lines = []
+            for ln in expr.split("\n"):
+                if "lambda [" in ln:
+                    ln = re.sub(r"lambda \[([^\]]+)\]: (.+)", _replace, ln)
+                out_lines.append(ln)
+            return "\n".join(out_lines)
+        result_str = _fix_destructured_lambda(result_str)
+    # Replace ._jssplitchars() sentinel — handles str.split('') → list(str)
+    # Match any expression ending before ._jssplitchars() and wrap it in list()
+    # We use a heuristic: replace foo._jssplitchars() with JSArray(list(foo))
+    # and for chained calls like foo.bar()._jssplitchars() do the same
+    def _fix_jssplitchars(line: str) -> str:
+        if "._jssplitchars()" not in line:
+            return line
+        # Find each occurrence and replace by scanning backward for the expression
+        result = []
+        i = 0
+        sentinel = "._jssplitchars()"
+        while i < len(line):
+            idx = line.find(sentinel, i)
+            if idx < 0:
+                result.append(line[i:])
+                break
+            # Everything before idx is the expression; find its start
+            # by scanning backward for a balanced paren start or identifier start
+            pre = line[i:idx]
+            # scan backward to find expression start
+            j = len(pre) - 1
+            depth = 0
+            while j >= 0:
+                ch = pre[j]
+                if ch == ')': depth += 1
+                elif ch == '(': 
+                    if depth == 0: break
+                    depth -= 1
+                elif ch in (' ', '\t', '=', ',', '(', '+', '-', '*', '/', ':', '[', '{') and depth == 0:
+                    break
+                j -= 1
+            j += 1
+            before_expr = pre[:j]
+            expr_part = pre[j:]
+            result.append(f"{before_expr}JSArray(list({expr_part}))")
+            i = idx + len(sentinel)
+        return "".join(result)
+    result_str = "\n".join(_fix_jssplitchars(line) for line in result_str.split("\n"))
+    return result_str
+
+
+def _fix_self_defaults(lines: list[str]) -> list[str]:
+    """Fix 'def method(self, param=self.xxx, ...)' default args.
+    
+    Python doesn't allow self.xxx as default parameter values.
+    Converts: def method(self, param=self.xxx): body
+    To:       def method(self, param=_undefined):
+                  if param is _undefined: param = self.xxx
+                  body
+    """
+    result: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        # Check for method def with self. in defaults
+        m = re.match(r"^(\s*)def (\w+)\(self(.*)\):\s*$", line)
+        if m and "self." in m.group(3):
+            indent = m.group(1)
+            fn_name = m.group(2)
+            params_str = m.group(3)
+            # Find all param=self.xxx patterns and replace with param=_undefined
+            inits: list[str] = []
+            def _fix_param(pm: re.Match) -> str:
+                name = pm.group(1)
+                val = pm.group(2)
+                inits.append(f"{indent}    if {name} is _undefined: {name} = {val}")
+                return f"{name}=_undefined"
+            new_params = re.sub(r"(\w+)\s*=\s*(self\.\w+)", _fix_param, params_str)
+            result.append(f"{indent}def {fn_name}(self{new_params}):")
+            for init_line in inits:
+                result.append(init_line)
+            i += 1
+            continue
+        result.append(line)
+        i += 1
+    return result
+
+
+def _add_push_alias(lines: list[str]) -> list[str]:
+    """For user-defined classes with a 'push' method, add 'append = push' alias.
+    
+    This allows code like stack.append(x) (generated from stack.push(x))
+    to work on user classes that define a push() method.
+    Inserts 'append = push' as a class-level attribute after the push method body.
+    """
+    result: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        result.append(line)
+        # Detect 'def push(' inside a class (indented method definition)
+        m = re.match(r"^(\s+)def push\(", line)
+        if m:
+            method_indent = m.group(1)
+            class_indent = method_indent[:-4] if len(method_indent) >= 4 else ""
+            body_indent = method_indent + "    "
+            # Skip the body of push (collect until we hit a line at method_indent or less)
+            i += 1
+            while i < len(lines):
+                bl = lines[i]
+                stripped = bl.lstrip()
+                curr_indent_len = len(bl) - len(stripped)
+                if stripped and curr_indent_len <= len(method_indent):
+                    break
+                result.append(bl)
+                i += 1
+            # Now insert 'append = push' at class-level indentation
+            result.append(f"{method_indent}append = push")
+            continue
+        i += 1
+    return result
+
+
+# Counter for anonymous return-function names (reset per _js_to_py call)
+_rfa_counter: list[int] = [0]
+
+
+def _inject_return_fns(lines: list[str]) -> list[str]:
+    """Post-process: after 'def name(): # __RETURN_FN__name__' blocks,
+    inject 'return name' when the block closes (indentation drops).
+    Also handles IIFEs: 'def _iifeN(): # __IIFE__var__fn__'
+    → after block injects 'var = _iifeN()'."""
+    result: list[str] = []
+    stack: list[tuple[int, str, str]] = []  # (def_indent, fn_name, inject_stmt)
+
+    for line in lines:
+        stripped = line.lstrip()
+        # Flush any pending injects when indentation drops back
+        if stripped and stack:
+            line_indent = len(line) - len(stripped)
+            while stack and line_indent <= stack[-1][0]:
+                inject_indent = " " * stack[-1][0]
+                result.append(f"{inject_indent}{stack[-1][2]}")
+                stack.pop()
+        result.append(line)
+        # Detect return-function block opener: def name(): # __RETURN_FN__name__
+        m = re.match(r"^(\s*)def (\w+)\(.*\):  # __RETURN_FN__\2__$", line)
+        if m:
+            stack.append((len(m.group(1)), m.group(2), f"return {m.group(2)}"))
+            continue
+        # Detect IIFE block opener: def _iifeN(): # __IIFE__var___iifeN__
+        m2 = re.match(r"^(\s*)def (_iife\d+)\(\):  # __IIFE__(\w+)__\2__$", line)
+        if m2:
+            stack.append((len(m2.group(1)), m2.group(2), f"{m2.group(3)} = {m2.group(2)}()"))
+
+    # Flush anything remaining
+    for indent_level, _, inject_stmt in reversed(stack):
+        result.append(f"{' ' * indent_level}{inject_stmt}")
+    return result
 
 
 def _fix_switch_indent(lines: list[str]) -> list[str]:
@@ -1289,6 +2073,62 @@ def _fix_switch_indent(lines: list[str]) -> list[str]:
         else:
             result.append(line)
 
+    return result
+
+
+def _inject_global_decls(lines: list[str]) -> list[str]:
+    """Inject 'global name' declarations in function/method bodies.
+
+    Collects names assigned at module level (indent=0), then for each
+    function/method body, if those names are assigned inside, adds
+    'global name' at the start of the function body.
+    """
+    # Collect module-level names (simple assignments at indent 0)
+    module_names: set[str] = set()
+    for line in lines:
+        if not line or line[0] == ' ':
+            continue
+        # Match simple assignment: name = ... (not class/def/if/for/...)
+        m = re.match(r'^([a-zA-Z_]\w*)\s*(?:[+\-*/|&^%]=|=(?!=))', line)
+        if m and m.group(1) not in ('class', 'def', 'if', 'for', 'while', 'return', 'import', 'from'):
+            module_names.add(m.group(1))
+
+    if not module_names:
+        return lines
+
+    result: list[str] = []
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        result.append(line)
+        # Detect function/method start
+        stripped = line.lstrip()
+        indent = len(line) - len(stripped)
+        if stripped.startswith('def ') and stripped.endswith(':'):
+            # Scan the body for assignments to module-level names
+            body_start = i + 1
+            body_indent = indent + 4
+            j = body_start
+            used_globals: set[str] = set()
+            while j < len(lines):
+                bl = lines[j]
+                bstripped = bl.lstrip()
+                if not bstripped:
+                    j += 1
+                    continue
+                cur_ind = len(bl) - len(bstripped)
+                if cur_ind <= indent:
+                    break
+                # Check for assignment to a module-level name
+                m = re.match(r'^([a-zA-Z_]\w*)\s*(?:[+\-*/|&^%]=|=(?!=))', bstripped)
+                if m and m.group(1) in module_names:
+                    used_globals.add(m.group(1))
+                j += 1
+            # Insert global declarations after def line, at body_indent
+            pfx = ' ' * body_indent
+            for name in sorted(used_globals):
+                result.append(pfx + f'global {name}')
+        i += 1
     return result
 
 
@@ -1352,6 +2192,26 @@ def _try_expand_line(s: str) -> str:
         lines_in_body = [b.strip() for b in body.split(";") if b.strip()]
         body_str = "\n  ".join(lines_in_body)
         return f"{m.group(1)} {{\n  {body_str}\n}}"
+    # for (...) stmt  (no braces, inline body)
+    # Only match when the body is a simple statement (not starting another block)
+    def _for_inline_body(s):
+        # Find the closing ) of the for(...)
+        if not s.startswith("for"):
+            return None
+        i2 = s.index("(")
+        depth = 1; j2 = i2 + 1
+        while j2 < len(s) and depth > 0:
+            if s[j2] == "(": depth += 1
+            elif s[j2] == ")": depth -= 1
+            j2 += 1
+        rest = s[j2:].strip().rstrip(";")
+        if rest and not rest.startswith("{"):
+            header = s[:j2]
+            return f"{header} {{\n  {rest}\n}}"
+        return None
+    expanded = _for_inline_body(s)
+    if expanded:
+        return expanded
     # while (...) { ... }
     m = re.match(r"^(while\s*\(.+?\))\s*\{\s*(.+?)\s*\}$", s)
     if m:
@@ -1448,6 +2308,69 @@ def _strip_inline_comment(s: str) -> str:
     return "".join(res).rstrip()
 
 
+def _add_undefined_defaults(params: str) -> str:
+    """Add =_undefined defaults to params that don't already have defaults.
+    e.g. 'a, b=1, c' -> 'a=_undefined, b=1, c=_undefined'
+    Needed so JS-style calls with fewer args than params don't raise TypeError.
+    Skips *args params (rest params).
+    """
+    if not params.strip():
+        return params
+    parts = _split_decl_commas(params)
+    result = []
+    saw_default = False
+    for p in parts:
+        p = p.strip()
+        if p.startswith('*') or '=' in p:
+            if '=' in p and not p.startswith('*'):
+                saw_default = True
+            result.append(p)
+        else:
+            result.append(f"{p}=_undefined")
+            saw_default = True
+    return ", ".join(result)
+
+
+def _split_decl_commas(s: str) -> list:
+    """Split a multi-variable declaration body on commas at depth 0.
+    e.g. 'a = 1, b = 2' -> ['a = 1', 'b = 2']
+    """
+    parts, depth, current = [], 0, []
+    in_str, str_char = False, ""
+    i = 0
+    while i < len(s):
+        ch = s[i]
+        if in_str:
+            current.append(ch)
+            if ch == "\\" and i + 1 < len(s):
+                current.append(s[i + 1])
+                i += 2
+                continue
+            if ch == str_char:
+                in_str = False
+        elif ch in ('"', "'", "`"):
+            in_str = True
+            str_char = ch
+            current.append(ch)
+        elif ch in ('(', '[', '{'):
+            depth += 1
+            current.append(ch)
+        elif ch in (')', ']', '}'):
+            depth -= 1
+            current.append(ch)
+        elif ch == ',' and depth == 0:
+            parts.append(''.join(current).strip())
+            current = []
+            i += 1
+            continue
+        else:
+            current.append(ch)
+        i += 1
+    if current:
+        parts.append(''.join(current).strip())
+    return parts
+
+
 def _translate_line(line: str) -> str:
     stripped = line.rstrip()
     if not stripped.strip():
@@ -1464,6 +2387,9 @@ def _translate_line(line: str) -> str:
         return ""
     if s.strip() in ("{", "}"):
         return ""
+    # IIFE closing: })() or })(); — the actual call is injected by _inject_return_fns
+    if re.match(r"^\}\s*\)\s*\(\s*\)\s*;?$", s):
+        return ""
 
     # } while (...) — do-while terminator (must be BEFORE } stripping)
     m = re.match(r"^\}\s*while\s*\((.+)\)\s*;?$", s)
@@ -1476,7 +2402,13 @@ def _translate_line(line: str) -> str:
     # Declarations
     m = re.match(r"^(?:var|let|const)\s+(.*)", s)
     if m:
-        s = m.group(1)
+        decl_body = m.group(1)
+        # Multi-variable declaration: let a = 1, b = 2  → a = 1\nb = 2
+        # Split only on commas that are not inside brackets/parens
+        decls = _split_decl_commas(decl_body)
+        if len(decls) > 1:
+            return "\n".join(_translate_line(pfx + d.strip()) for d in decls)
+        s = decl_body
 
     # strip async/await
     s = re.sub(r"^async\s+", "", s)
@@ -1484,20 +2416,57 @@ def _translate_line(line: str) -> str:
 
     # ── for loops ─────────────────────────────────────────────────────────
     m = re.match(
-        r"^for\s*\(\s*(?:var|let|const)?\s*(\w+)\s*=\s*(.+?);\s*.+?;\s*.+?\s*\)\s*\{?$",
+        r"^for\s*\(\s*(?:var|let|const)?\s*(\w+)\s*=\s*(.+?);\s*(.+?);\s*(.+?)\s*\)\s*\{?$",
         s,
     )
     if m:
         var, start = m.group(1), m.group(2).strip()
-        cm = re.search(rf"\b{re.escape(var)}\s*(<=|<)\s*(.+?)\s*[;)]", s + ")")
+        cond_raw = m.group(3).strip()
         sm = re.search(rf"\b{re.escape(var)}\s*\+=\s*(-?\d+)", s)
-        step = sm.group(1) if sm else "1"
-        if cm:
-            limit = _translate_expr(cm.group(2).strip())
-            if cm.group(1) == "<=":
+        sm_dec = re.search(rf"\b{re.escape(var)}\s*-=\s*(-?\d+)", s)
+        is_decrement = re.search(rf"\b{re.escape(var)}--", s) or sm_dec
+        step = sm.group(1) if sm else ("1" if not is_decrement else "-1")
+        if is_decrement and sm_dec:
+            step = f"-{sm_dec.group(1)}"
+        # Check if condition is a simple linear bound: `var <= expr` or `var < expr`
+        cm_simple = re.match(rf"^{re.escape(var)}\s*(<=|<)\s*(.+)$", cond_raw)
+        cm_dec_simple = re.match(rf"^{re.escape(var)}\s*(>=|>)\s*(.+)$", cond_raw)
+        if cm_simple:
+            limit = _translate_expr(cm_simple.group(2).strip())
+            if cm_simple.group(1) == "<=":
                 limit = f"({limit})+1"
             return pfx + f"for {var} in range({_translate_expr(start)}, {limit}, {step}):"
-        return pfx + f"for {var} in range(0, {_translate_expr(start)}, 100):"
+        if cm_dec_simple:
+            limit = _translate_expr(cm_dec_simple.group(2).strip())
+            if cm_dec_simple.group(1) == ">":
+                limit = f"({limit})+1"
+            return pfx + f"for {var} in range({_translate_expr(start)}, {limit}-1, {step}):"
+        # Check for `var * var <= n` → range(start, int(n**0.5)+1, step)
+        cm_sq = re.match(rf"^{re.escape(var)}\s*\*\s*{re.escape(var)}\s*(<=|<)\s*(.+)$", cond_raw)
+        if cm_sq:
+            limit_expr = _translate_expr(cm_sq.group(2).strip())
+            if cm_sq.group(1) == "<=":
+                limit = f"int(({limit_expr})**0.5)+1"
+            else:
+                limit = f"int(({limit_expr})**0.5)"
+            return pfx + f"for {var} in range({_translate_expr(start)}, {limit}, {step}):"
+        # Fallback: emit while loop with condition
+        py_cond = _translate_expr(cond_raw)
+        return pfx + f"for {var} in (lambda: (x for x in __import__('itertools').count({_translate_expr(start)}, {step}) if True))():\n{pfx}    if not ({py_cond}): break"
+
+
+    # Single-line for-of with inline body: for (const x of xs) body
+    m = re.match(r"^for\s*\(\s*(?:var|let|const)?\s*(.+?)\s+of\s+([^)]+?)\s*\)\s+(.+)$", s)
+    if m and not m.group(3).strip().startswith("{"):
+        # Verify the iterable (group 2) has balanced parens; if not, the regex grabbed a wrong )
+        iter_candidate = m.group(2).strip()
+        if iter_candidate.count("(") == iter_candidate.count(")"):
+            lhs = m.group(1).strip()
+            rhs = _translate_expr(iter_candidate)
+            body = _translate_line(pfx + "    " + m.group(3).strip())
+            if lhs.startswith("[") and lhs.endswith("]"):
+                lhs = lhs[1:-1]
+            return pfx + f"for {lhs} in {rhs}:\n{body}"
 
     m = re.match(r"^for\s*\(\s*(?:var|let|const)?\s*(.+?)\s+of\s+(.+?)\s*\)\s*\{?$", s)
     if m:
@@ -1512,6 +2481,13 @@ def _translate_line(line: str) -> str:
         return pfx + f"for {m.group(1)} in {_translate_expr(m.group(2).strip())}:"
 
     # while
+    # Single-line while with inline body: while (cond) stmt
+    m = re.match(r"^while\s*\(([^)]+)\)\s+(.+)$", s)
+    if m:
+        cond = _translate_expr(m.group(1).strip())
+        body = _translate_line(pfx + "    " + m.group(2).strip())
+        return pfx + f"while {cond}:\n{body}"
+
     m = re.match(r"^while\s*\((.+)\)\s*\{?$", s)
     if m:
         return pfx + f"while {_translate_expr(m.group(1).strip())}:"
@@ -1566,7 +2542,9 @@ def _translate_line(line: str) -> str:
         )
     if re.match(r"^constructor\s*\(", s):
         m2 = re.match(r"^constructor\s*\(([^)]*)\)\s*\{?$", s)
-        return pfx + f"def __init__(self, {m2.group(1) if m2 else ''}):"
+        raw_params = m2.group(1) if m2 else ''
+        params = _add_undefined_defaults(raw_params)
+        return pfx + f"def __init__(self, {params}):"
 
     # function
     m = re.match(r"^(?:async\s+)?function\s*\*?\s*(\w+)\s*\(([^)]*)\)\s*\{?$", s)
@@ -1583,21 +2561,35 @@ def _translate_line(line: str) -> str:
                 else:
                     new_parts.append(p)
             params = ", ".join(new_parts)
+        params = _add_undefined_defaults(params)
         result = pfx + f"def {m.group(1)}({params}):"
         if rest_param:
             result += f"\n{pfx}  {rest_param} = JSArray({rest_param})"
         return result
 
     # arrow: name = (...) => { or name = (...) => expr
+    # First detect IIFE: name = (() => { — immediately invoked function expression
+    m = re.match(r"^(\w+)\s*=\s*\(\s*\(\s*\)\s*=>\s*\{?$", s)
+    if m:
+        _rfa_counter[0] += 1
+        iife_name = f"_iife{_rfa_counter[0]}"
+        var_name = m.group(1)
+        # Generate def _iifeN(): ... and will inject var_name = _iifeN() after block
+        return pfx + f"def {iife_name}():  # __IIFE__{var_name}__{iife_name}__"
     m = re.match(r"^(\w+)\s*=\s*(?:async\s+)?\(([^)]*)\)\s*=>\s*\{?$", s)
     if m:
-        return pfx + f"def {m.group(1)}({m.group(2)}):"
+        params = re.sub(r"\.\.\.(\w+)", r"*\1", m.group(2))
+        return pfx + f"def {m.group(1)}({params}):"
     m = re.match(r"^(\w+)\s*=\s*(?:async\s+)?\(([^)]*)\)\s*=>\s*(.+)$", s)
     if m:
+        params = re.sub(r"\.\.\.(\w+)", r"*\1", m.group(2))
         return (
             pfx
-            + f"def {m.group(1)}({m.group(2)}): return {_translate_expr(m.group(3))}"
+            + f"def {m.group(1)}({params}): return {_translate_expr(m.group(3))}"
         )
+    m = re.match(r"^(\w+)\s*=\s*(?:async\s+)?(\w+)\s*=>\s*\{?$", s)
+    if m:
+        return pfx + f"def {m.group(1)}({m.group(2)}):"
     m = re.match(r"^(\w+)\s*=\s*(?:async\s+)?(\w+)\s*=>\s*(.+)$", s)
     if m:
         return (
@@ -1609,6 +2601,23 @@ def _translate_line(line: str) -> str:
         return pfx + f"def {m.group(1)}({m.group(2)}):"
 
     # return / throw
+    # return function name(params) { — named inner function returned from block
+    m = re.match(r"^return\s+function\s+(\w+)\s*\(([^)]*)\)\s*\{?$", s)
+    if m:
+        name = m.group(1)
+        params = re.sub(r"\.\.\.(\w+)", r"*\1", m.group(2))
+        params = _add_undefined_defaults(params)
+        sig = f"{name}({params})" if params else f"{name}()"
+        return pfx + f"def {sig}:  # __RETURN_FN__{name}__"
+    # return (...args) => { — anonymous function returned as block
+    m = re.match(r"^return\s+\(([^)]*)\)\s*=>\s*\{?$", s)
+    if m:
+        params = re.sub(r"\.\.\.(\w+)", r"*\1", m.group(1))
+        params = _add_undefined_defaults(params)
+        _rfa_counter[0] += 1
+        name = f"_rfa{_rfa_counter[0]}"
+        sig = f"{name}({params})" if params else f"{name}()"
+        return pfx + f"def {sig}:  # __RETURN_FN__{name}__"
     m = re.match(r"^return\s*(.*)", s)
     if m:
         v = m.group(1).strip()
@@ -1623,28 +2632,49 @@ def _translate_line(line: str) -> str:
         return pfx + f"nonlocal {m.group(1)}"
 
     # Class method: name(params) { — not if/for/while/function etc.
-    m = re.match(r"^(\w+)\s*\(([^)]*)\)\s*\{$", s)
-    if m and m.group(1) not in (
-        "if",
-        "for",
-        "while",
-        "switch",
-        "catch",
-        "function",
-        "return",
+    # Use balanced-paren matching to find the params (handles nested parens)
+    _meth_m = re.match(r"^(\w+)\s*\(", s)
+    if _meth_m and _meth_m.group(1) not in (
+        "if", "for", "while", "switch", "catch", "function", "return",
     ):
-        params = m.group(2).strip()
-        # Handle rest parameters: ...name → *name
-        if "..." in params:
-            parts = [p.strip() for p in params.split(",")]
-            params = ", ".join(f"*{p[3:]}" if p.startswith("...") else p for p in parts)
-        if params:
-            return pfx + f"def {m.group(1)}(self, {params}):"
-        else:
-            return pfx + f"def {m.group(1)}(self):"
+        _name = _meth_m.group(1)
+        _rest = s[_meth_m.end():]
+        # find balanced closing paren
+        _depth, _idx = 1, 0
+        for _ch in _rest:
+            if _ch == "(": _depth += 1
+            elif _ch == ")": _depth -= 1
+            if _depth == 0: break
+            _idx += 1
+        _after = _rest[_idx + 1:].strip()
+        if _after == "{":
+            params = _rest[:_idx].strip()
+            # Translate default parameter values (e.g. new Set() → JSSet())
+            def _translate_param_defaults(params_str: str) -> str:
+                out = []
+                for part in _split_decl_commas(params_str):
+                    part = part.strip()
+                    if "=" in part:
+                        pname, _, pdefault = part.partition("=")
+                        pdefault = _translate_expr(pdefault.strip())
+                        out.append(f"{pname.strip()} = {pdefault}")
+                    else:
+                        out.append(part)
+                return ", ".join(out)
+            params = _translate_param_defaults(params)
+            # Handle rest parameters: ...name → *name
+            if "..." in params:
+                parts = [p.strip() for p in params.split(",")]
+                params = ", ".join(f"*{p[3:]}" if p.startswith("...") else p for p in parts)
+            params = _add_undefined_defaults(params)
+            if params:
+                return pfx + f"def {_name}(self, {params}):"
+            else:
+                return pfx + f"def {_name}(self):"
 
     # this → self
     s = s.replace("this.", "self.")
+    s = re.sub(r"\bthis\b", "self", s)
     # super
     s = re.sub(r"\bsuper\(\)", "super().__init__()", s)
 
@@ -1666,9 +2696,13 @@ def _translate_inline_arrows(expr: str) -> str:
     Does NOT handle multi-line arrow bodies (those are handled at line level).
     """
     # (params) => expr  (not followed by {)
+    def _fix_lambda_params(params_str: str) -> str:
+        """Convert ...rest → *rest in lambda params."""
+        parts = [p.strip() for p in params_str.split(",")]
+        return ", ".join(f"*{p[3:]}" if p.strip().startswith("...") else p for p in parts)
     expr = re.sub(
         r"(?<!\w)\(([^)]*)\)\s*=>\s*(?!\{)([^,]+?)(?=[,;)\]]|$)",
-        lambda m: f"lambda {m.group(1).strip()}: {m.group(2).strip()}",
+        lambda m: f"lambda {_fix_lambda_params(m.group(1).strip())}: {m.group(2).strip()}",
         expr,
     )
     # single param arrow:  word => expr  (not followed by {)
@@ -1680,6 +2714,133 @@ def _translate_inline_arrows(expr: str) -> str:
     return expr
 
 
+def _fix_method_to_function(expr: str, method_name: str) -> str:
+    """Convert expr._method_name(args) → _method_name(expr, args) by finding the expression start."""
+    pattern = f".{method_name}("
+    result = []
+    i = 0
+    while i < len(expr):
+        pos = expr.find(pattern, i)
+        if pos == -1:
+            result.append(expr[i:])
+            break
+        # Find args end (closing paren)
+        args_start = pos + len(pattern)
+        depth = 1
+        k = args_start
+        in_str, str_ch, esc = False, "", False
+        while k < len(expr) and depth > 0:
+            ch = expr[k]
+            if esc: esc = False
+            elif in_str:
+                if ch == "\\": esc = True
+                elif ch == str_ch: in_str = False
+            elif ch in ('"', "'", "`"): in_str, str_ch = True, ch
+            elif ch == "(": depth += 1
+            elif ch == ")": depth -= 1
+            if depth > 0: k += 1
+            else: break
+        args = expr[args_start:k]
+        # Find start of expression before .method_name
+        j = pos
+        while j > i:
+            if expr[j-1] == ")":
+                depth2 = 1
+                m = j - 2
+                while m >= i and depth2 > 0:
+                    if expr[m] == ")": depth2 += 1
+                    elif expr[m] == "(": depth2 -= 1
+                    m -= 1
+                j = m + 1
+                while j > i and (expr[j-1].isalnum() or expr[j-1] in "_."):
+                    j -= 1
+            elif expr[j-1].isalnum() or expr[j-1] in "_.":
+                while j > i and (expr[j-1].isalnum() or expr[j-1] in "_."):
+                    j -= 1
+            else:
+                break
+        sub_expr = expr[j:pos]
+        sep = ", " if args else ""
+        result.append(expr[i:j])
+        result.append(f"{method_name}({sub_expr}{sep}{args})")
+        i = k + 1
+    return "".join(result)
+
+
+def _fix_length_calls(expr: str) -> str:
+    """Replace expr.length with len(expr) by scanning for .length and finding the corresponding start."""
+    result = []
+    i = 0
+    while i < len(expr):
+        pos = expr.find('.length', i)
+        if pos == -1:
+            result.append(expr[i:])
+            break
+        end = pos + 7
+        # Ensure it's a word boundary (not .lengthOf etc.)
+        if end < len(expr) and (expr[end].isalnum() or expr[end] == '_'):
+            result.append(expr[i:end])
+            i = end
+            continue
+        # Find start of the expression before .length by scanning backward
+        j = pos
+        # First, scan back through chained calls like a.b().c().length
+        while j > i:
+            if expr[j-1] == ')':
+                # Find matching open paren
+                depth = 1
+                k = j - 2
+                while k >= i and depth > 0:
+                    if expr[k] == ')': depth += 1
+                    elif expr[k] == '(': depth -= 1
+                    k -= 1
+                j = k + 1  # j now points to the '('
+                # Scan back through method/object name (word chars and dots)
+                while j > i and (expr[j-1].isalnum() or expr[j-1] in '_.'):
+                    j -= 1
+            elif expr[j-1] == ']':
+                # Find matching open bracket
+                depth = 1
+                k = j - 2
+                while k >= i and depth > 0:
+                    if expr[k] == ']': depth += 1
+                    elif expr[k] == '[': depth -= 1
+                    k -= 1
+                j = k + 1
+                while j > i and (expr[j-1].isalnum() or expr[j-1] in '_.'):
+                    j -= 1
+            elif expr[j-1] == '"':
+                # String literal
+                k = j - 2
+                while k >= i and expr[k] != '"':
+                    k -= 1
+                j = k
+                break
+            elif expr[j-1] == "'":
+                k = j - 2
+                while k >= i and expr[k] != "'":
+                    k -= 1
+                j = k
+                break
+            elif expr[j-1] == '\x00':
+                # STR placeholder \x00STRn\x00 — scan to opening \x00
+                k = j - 2
+                while k >= i and expr[k] != '\x00':
+                    k -= 1
+                j = k
+                break
+            elif expr[j-1].isalnum() or expr[j-1] in '_.':
+                while j > i and (expr[j-1].isalnum() or expr[j-1] in '_.'):
+                    j -= 1
+            else:
+                break
+        sub_expr = expr[j:pos]
+        result.append(expr[i:j])
+        result.append(f"len({sub_expr})")
+        i = end
+    return "".join(result)
+
+
 def _translate_expr(expr: str) -> str:
     if not expr:
         return expr
@@ -1687,12 +2848,41 @@ def _translate_expr(expr: str) -> str:
     # Inline arrow functions (before other transforms)
     expr = _translate_inline_arrows(expr)
 
+    # Protect string literals from transformations
+    _str_placeholders: list[str] = []
+    def _save_str(m: re.Match) -> str:
+        _str_placeholders.append(m.group(0))
+        return f"\x00STR{len(_str_placeholders)-1}\x00"
+    # Protect double-quoted strings
+    expr = re.sub(r'"(?:[^"\\]|\\.)*"', _save_str, expr)
+    # Protect single-quoted strings (not template literals)
+    expr = re.sub(r"'(?:[^'\\]|\\.)*'", _save_str, expr)
+
     # Template literals
     def tl(m):
         inner = m.group(1)
+        # Restore protected string placeholders in the template literal content
+        def _restore_in_tl(m2: re.Match) -> str:
+            idx = int(m2.group(1))
+            if idx < len(_str_placeholders):
+                return _str_placeholders[idx]
+            return m2.group(0)
+        inner = re.sub(r"\x00STR(\d+)\x00", _restore_in_tl, inner)
+        # Convert ${expr} to {expr}
         inner = re.sub(r"\$\{(.+?)\}", r"{\1}", inner)
-        inner = inner.replace("\\", "\\\\").replace("'", "\\'")
-        return f"f'{inner}'"
+        # Escape " chars that appear in the TEXT parts (outside {}) of the f-string
+        # to avoid breaking the double-quoted f-string delimiter
+        parts = re.split(r"(\{[^}]*\})", inner)
+        new_parts = []
+        for part in parts:
+            if part.startswith("{") and part.endswith("}"):
+                new_parts.append(part)  # inside {}, keep " as-is
+            else:
+                new_parts.append(part.replace('"', '\\"'))
+        inner = "".join(new_parts)
+        # Use double-quoted f-string to avoid escaping single quotes
+        inner = inner.replace("\\`", "`")
+        return f'f"{inner}"'
 
     expr = re.sub(r"`([^`]*)`", tl, expr)
 
@@ -1729,7 +2919,10 @@ def _translate_expr(expr: str) -> str:
         expr = "\n".join(lines)
 
     expr = expr.replace("this.", "self.")
+    expr = re.sub(r"\bthis\b", "self", expr)
     expr = re.sub(r"\bsuper\(\)", "super().__init__()", expr)
+    # Array.from(...) — 'from' is a Python keyword so must be renamed
+    expr = re.sub(r"\bArray\.from\b", "_js_array_from", expr)
     expr = re.sub(r"\bnew\s+(?:JSArray|Array)\b", "JSArray", expr)
     expr = re.sub(r"\bnew\s+(?:Map|JSMap)\b", "JSMap", expr)
     expr = re.sub(r"\bnew\s+(?:Set|JSSet)\b", "JSSet", expr)
@@ -1741,6 +2934,10 @@ def _translate_expr(expr: str) -> str:
     # String / Array method translations
     expr = re.sub(r"\.toUpperCase\(\)", ".upper()", expr)
     expr = re.sub(r"\.toLowerCase\(\)", ".lower()", expr)
+    expr = re.sub(r"\.toFixed\((\d+)\)", r"._js_toFixed(\1)", expr)
+    expr = _fix_method_to_function(expr, "_js_toFixed")
+    expr = re.sub(r"\.toPrecision\((\d+)\)", r"._js_toPrecision(\1)", expr)
+    expr = _fix_method_to_function(expr, "_js_toPrecision")
     expr = re.sub(r"\.trim\(\)", ".strip()", expr)
     expr = re.sub(r"\.trimStart\(\)", ".lstrip()", expr)
     expr = re.sub(r"\.trimEnd\(\)", ".rstrip()", expr)
@@ -1763,33 +2960,49 @@ def _translate_expr(expr: str) -> str:
     # .includes() for strings/arrays
     expr = re.sub(r"(\w+)\.includes\(([^)]+)\)", r"(\2 in \1)", expr)
     expr = re.sub(r'("[^"]*"|\'[^\']*\')\.includes\(([^)]+)\)', r"(\2 in \1)", expr)
+    # Also handle string placeholders: \x00STRn\x00.includes(...)
+    expr = re.sub(r"(\x00STR\d+\x00)\.includes\(([^)]+)\)", r"(\2 in \1)", expr)
     # .repeat() for strings
     expr = re.sub(r"\.repeat\(([^)]+)\)", r" * \1", expr)
 
-    # .length → len() — handle all patterns
-    expr = re.sub(r'("[^"]*"|\'[^\']*\')\.length\b', r"len(\1)", expr)
-    expr = re.sub(r"(\[[^\]]*\])\.length\b", r"len(\1)", expr)
-    expr = re.sub(r"(\w+)\.length\b", r"len(\1)", expr)
-    expr = re.sub(r"\(([^)]+)\)\.length\b", r"len(\1)", expr)
+    # .length → len() — robust handler for all expression forms
+    expr = _fix_length_calls(expr)
 
     # Convert array literals that call methods to JSArray
+    # Use negative lookbehind to avoid matching subscripts (obj[key].method)
     expr = re.sub(
-        r"(\[[^\]]*\])\.(map|filter|reduce|forEach|some|every|find|findIndex|sort|reverse|join|indexOf|includes|concat|slice)\(",
+        r"(?<!\w)(\[[^\]]*\])\.(map|filter|reduce|forEach|some|every|find|findIndex|sort|reverse|join|indexOf|includes|concat|slice)\(",
         r"JSArray(\1).\2(",
         expr,
     )
 
     # Convert variable-based array method calls to JSArray: a.map( → JSArray(a).map(
+    # Also handle subscripted access: obj[key].filter( → JSArray(obj[key]).filter(
+    # Use a pattern that captures the full dotted path before .method(
+    # but not function call results like foo().filter( (handled by JSArray runtime method)
     expr = re.sub(
-        r"\b([A-Za-z_]\w*)\.(map|filter|reduce|forEach|some|every|find|findIndex|sort|reverse|join|indexOf|concat|flat|flatMap)\(",
+        r"\b([A-Za-z_][\w.]*\[[^\]]*\])\.(map|filter|reduce|reduceRight|forEach|some|every|find|findIndex|sort|reverse|join|indexOf|concat|flat|flatMap)\(",
         r"JSArray(\1).\2(",
         expr,
     )
-
-    # push → append (JSArray handles it)
+    # Match full dotted paths like arr, self._todos, obj.prop
+    expr = re.sub(
+        r"\b((?:[A-Za-z_]\w*\.)*[A-Za-z_]\w*)\.(map|filter|reduce|reduceRight|forEach|some|every|find|findIndex|sort|reverse|join|indexOf|concat|flat|flatMap)\(",
+        r"JSArray(\1).\2(",
+        expr,
+    )
     expr = re.sub(r"\.push\(", ".append(", expr)
     expr = re.sub(r"\.shift\(\)", ".pop(0)", expr)
     expr = re.sub(r"\.unshift\(", ".insert(0, ", expr)
+    # Wrap function-call results with JSArray when calling array methods
+    # e.g. obj.method().join(', ') → JSArray(obj.method()).join(', ')
+    # Use [^(),]* to avoid matching outer function calls (only the direct caller)
+    # Exclude bare built-in names like sort(), filter() that are already methods
+    expr = re.sub(
+        r"(\b(?!sort\b|filter\b|map\b|forEach\b|reduce\b|reverse\b)\w[\w.]*\([^()]*\))\.(join|sort|reverse|filter|map|forEach|reduce|reduceRight|indexOf|includes|concat|flat|flatMap|some|every)\(",
+        r"JSArray(\1).\2(",
+        expr,
+    )
     # .indexOf → .find for strings only (not after ] or ) which are JSArray contexts)
     expr = re.sub(r"(?<![)\]])\.indexOf\(", ".find(", expr)
 
@@ -1805,6 +3018,22 @@ def _translate_expr(expr: str) -> str:
     # Assignment ops
     expr = re.sub(r"^(\w+)\+\+$", r"\1 += 1", expr)
     expr = re.sub(r"^(\w+)--$", r"\1 -= 1", expr)
+    # Expression-level post/pre increment: var++ → (var := var + 1) - 1, ++var → (var := var + 1)
+    # Only translate when not a standalone statement (i.e., there's surrounding content)
+    def _translate_increments(e: str) -> str:
+        # post-increment: var++ (not at start of full expr with nothing before)
+        e = re.sub(r"(?<!\+)(\b\w+)\+\+(?!\+)", lambda m: f"({m.group(1)} := {m.group(1)} + 1) - 1", e)
+        # post-decrement: var-- (not at start)
+        e = re.sub(r"(?<!-)(\b\w+)--(?!-)", lambda m: f"({m.group(1)} := {m.group(1)} - 1) + 1", e)
+        # pre-increment: ++var
+        e = re.sub(r"\+\+(\b\w+)", lambda m: f"({m.group(1)} := {m.group(1)} + 1)", e)
+        # pre-decrement: --var
+        e = re.sub(r"--(\b\w+)", lambda m: f"({m.group(1)} := {m.group(1)} - 1)", e)
+        return e
+    if "++" in expr or ("--" in expr and not re.match(r"^(\w+)--$", expr)):
+        # Don't transform standalone i++ / i-- (already handled above)
+        if not re.match(r"^\w+\+\+$", expr) and not re.match(r"^\w+--$", expr):
+            expr = _translate_increments(expr)
     for op in (
         "+=",
         "-=",
@@ -1823,27 +3052,86 @@ def _translate_expr(expr: str) -> str:
         expr = re.sub(rf"^(\w+)\s*{re.escape(op)}\s*(.+)$", rf"\1 {py_op} \2", expr)
 
     # Ternary: a ? b : c — try to detect and rewrite
-    # Only attempt if there's exactly one ? and one : at top level
-    if "?" in expr and ":" in expr:
+    # Process recursively: handle ternary inside parens/brackets too
+    def _apply_ternary(s: str) -> str:
+        """Apply ternary translation at top level of s."""
+        if "?" not in s or ":" not in s:
+            return s
         depth = 0
         qi = ci = -1
-        for idx, ch in enumerate(expr):
-            if ch in "([{":
+        arrow_at_depth0 = False
+        for idx2, ch2 in enumerate(s):
+            if ch2 in "([{":
                 depth += 1
-            elif ch in ")]}":
+            elif ch2 in ")]}":
                 depth -= 1
-            elif ch == "?" and depth == 0 and qi == -1:
-                qi = idx
-            elif ch == ":" and depth == 0 and ci == -1 and qi != -1:
-                ci = idx
+            elif ch2 == "=" and depth == 0 and idx2 + 1 < len(s) and s[idx2 + 1] == ">":
+                arrow_at_depth0 = True
+            elif ch2 == "?" and depth == 0 and qi == -1:
+                if arrow_at_depth0:
+                    return s  # Arrow before ?: don't mangle
+                # If there's a lambda in the condition (before ?), bail
+                cond_str = s[:idx2]
+                if "lambda" in cond_str:
+                    return s
+                qi = idx2
+            elif ch2 == ":" and depth == 0 and ci == -1 and qi != -1:
+                ci = idx2
         if qi != -1 and ci != -1 and qi < ci:
-            cond = expr[:qi].strip()
-            tv = expr[qi + 1 : ci].strip()
-            fv = expr[ci + 1 :].strip()
-            expr = f"({tv}) if ({cond}) else ({fv})"
+            cond = s[:qi].strip()
+            tv = s[qi + 1 : ci].strip()
+            fv = s[ci + 1 :].strip()
+            return f"({tv}) if ({cond}) else ({fv})"
+        return s
+
+    if "?" in expr and ":" in expr:
+        # First try top-level ternary
+        result_expr = _apply_ternary(expr)
+        if result_expr != expr:
+            expr = result_expr
+        else:
+            # Recursively process ternary inside balanced parens
+            def _translate_inner_ternary(s: str) -> str:
+                out = []
+                i2 = 0
+                n2 = len(s)
+                while i2 < n2:
+                    if s[i2] == "(":
+                        # find matching )
+                        d2 = 1
+                        j2 = i2 + 1
+                        while j2 < n2 and d2 > 0:
+                            if s[j2] == "(": d2 += 1
+                            elif s[j2] == ")": d2 -= 1
+                            j2 += 1
+                        inner2 = s[i2 + 1 : j2 - 1]
+                        inner2 = _translate_inner_ternary(inner2)
+                        inner2 = _apply_ternary(inner2)
+                        out.append("(" + inner2 + ")")
+                        i2 = j2
+                    else:
+                        out.append(s[i2])
+                        i2 += 1
+                return "".join(out)
+            expr = _translate_inner_ternary(expr)
+
+    # Translate ternary inside lambda bodies: lambda params: TERNARY
+    def _fix_lambda_body_ternary(s: str) -> str:
+        """Find 'lambda ...: body' and apply ternary to body if it contains ?."""
+        return re.sub(
+            r"(lambda [^:]+: )(.+)",
+            lambda m: m.group(1) + _apply_ternary(m.group(2)) if "?" in m.group(2) else m.group(0),
+            s,
+        )
+    if "lambda" in expr and "?" in expr:
+        expr = _fix_lambda_body_ternary(expr)
 
     # Convert JS object literals: {key: val} → _JsDict({"key": val})
     expr = _fix_object_literals(expr)
+
+    # Restore protected string literals (reverse order to handle nested placeholders)
+    for idx in range(len(_str_placeholders) - 1, -1, -1):
+        expr = expr.replace(f"\x00STR{idx}\x00", _str_placeholders[idx])
 
     return expr
 
@@ -1879,10 +3167,26 @@ def _fix_object_literals(expr: str) -> str:
                     depth -= 1
                 j += 1
             inner = expr[i + 1 : j - 1]
-            # Check if it looks like an object literal (has identifier: pattern)
-            if re.search(r"(?:^|,)\s*(\w+)\s*:", inner) and not re.search(
-                r"\bfor\b|\bif\b", inner
+            # Check if it looks like an object literal (has identifier: pattern or empty)
+            inner_stripped = inner.strip()
+            if (inner_stripped == "" or re.search(r"(?:^|,)\s*(\w+)\s*:", inner)) and not re.search(
+                r"\bfor\b|\bif\b|\blambda\b", inner
             ):
+                # Expand shorthand properties BEFORE quoting keys
+                # A shorthand property is: (start or ,) identifier (not followed by :)
+                def _expand_shorthand_prop(inner_s: str) -> str:
+                    """Expand shorthand {a, b: c} → {"a": a, "b": c}"""
+                    parts = []
+                    # Split on commas at depth 0, respecting strings
+                    for prop in _split_decl_commas(inner_s):
+                        prop = prop.strip()
+                        # Check if it's a bare identifier (shorthand property)
+                        if re.match(r'^[A-Za-z_]\w*$', prop):
+                            parts.append(f'"{prop}": {prop}')
+                        else:
+                            parts.append(prop)
+                    return ", ".join(parts)
+                inner = _expand_shorthand_prop(inner)
                 # Quote unquoted keys
                 inner = re.sub(r"(?<![\"'\w])(\w+)\s*:", r'"\1":', inner)
                 result.append(f"_JsDict({{{inner}}})")

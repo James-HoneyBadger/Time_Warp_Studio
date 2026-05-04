@@ -170,9 +170,23 @@ def _split_logo_commands(
 
     # Tokenize: brackets, quoted strings, or other words
     # Handle "WORD (quote at start)
-    tokens = _BRACKET_PATTERN.findall(text)
+    # Use finditer to track whether each token appears at the start of a new
+    # logical line (i.e., preceded by a newline in the original text).  This
+    # prevents user-defined procedure names that appear mid-line (e.g. inside a
+    # PRINT string like PRINT "Koch Snowflake") from incorrectly triggering a
+    # new-command split.
+    token_matches = list(_BRACKET_PATTERN.finditer(text))
+    token_starts_line = []
+    for idx, m in enumerate(token_matches):
+        if idx == 0:
+            token_starts_line.append(True)
+        else:
+            between = text[token_matches[idx - 1].end() : m.start()]
+            token_starts_line.append("\n" in between)
+    tokens = [m.group() for m in token_matches]
 
-    for token in tokens:
+    for tok_idx, token in enumerate(tokens):
+        at_line_start = token_starts_line[tok_idx]
         if token == "[":
             bracket_depth += 1
             current_command.append(token)
@@ -208,10 +222,14 @@ def _split_logo_commands(
             is_command = token.upper() in LOGO_COMMANDS
             if not is_command and bracket_depth == 0:
                 upper = token.upper()
-                # Check locally-defined procedures and interpreter state
-                if upper in local_procedures:
+                # Check locally-defined procedures and interpreter state.
+                # Only treat a user-defined procedure name as a command-start
+                # when it occurs at the beginning of a new line in the source.
+                # This prevents mid-line occurrences (e.g. inside PRINT strings)
+                # from being split off as separate commands.
+                if upper in local_procedures and at_line_start:
                     is_command = True
-                elif interpreter and upper in interpreter.logo_procedures:
+                elif interpreter and upper in interpreter.logo_procedures and at_line_start:
                     is_command = True
 
             if bracket_depth == 0 and is_command:
@@ -799,6 +817,15 @@ def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
     # "128 * SIN angle + 2.094" → "128 * SIN(angle) + 2.094".
     expr_norm = _PREFIX_FUNC_PATTERN.sub(r"\1(\2)", expr_norm)
 
+    # Remove spaces between known function names and opening parentheses.
+    # Logo allows "ABS (x)" / "SIN (expr)" but the evaluator requires "ABS(x)".
+    expr_norm = re.sub(
+        r"\b(ABS|SIN|COS|TAN|ASIN|ACOS|ATAN|SINH|COSH|TANH|SQRT|SQR|"
+        r"FLOOR|CEIL|EXP|LOG|LOG10|LOG2|INT|ROUND|SGN|MIN|MAX|POW|LEN)\s+\(",
+        r"\1(",
+        expr_norm,
+    )
+
     # Replace = with == for Python eval, but protect >=, <=, !=
     # First replace >= with __GE__, <= with __LE__, <> with __NE__
     expr_norm = (
@@ -1136,6 +1163,12 @@ def _logo_setcolor(
     if len(args) == 1:
         # Named color or hex
         color_str = args[0].strip().strip('"')
+        turtle.pencolor(color_str)
+    elif len(args) >= 1 and args[0].startswith('"'):
+        # Quoted color name — complete in itself; ignore any trailing tokens
+        # (which can appear when multiple commands are written on one line:
+        # e.g. ``SETPENCOLOR "white STAR5 4``)
+        color_str = args[0].strip('"')
         turtle.pencolor(color_str)
     elif len(args) >= 3:
         # RGB values — may be 3 plain tokens or multi-token prefix expressions

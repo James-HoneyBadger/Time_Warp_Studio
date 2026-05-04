@@ -136,8 +136,6 @@ print_pairs([[X,Y]|T]) :-
 % MAIN PROGRAM — Run queries and display results
 % ============================================================
 
-:- initialization(main).
-
 main :-
     write('============================================================'), nl,
     write('  FAMILY GENEALOGY — Prolog Showcase'), nl,
@@ -238,3 +236,5 @@ main :-
     write('  Genealogy analysis complete!'), nl,
     write('  Inference engine derived all relationships from parent/2'), nl,
     write('============================================================'), nl.
+
+:- initialization(main).

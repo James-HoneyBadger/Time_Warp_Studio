@@ -210,6 +210,24 @@ def _unify(x: str, y: str, env: Dict[str, str]) -> Optional[Dict[str, str]]:
         e = env.copy()
         e[y] = x
         return e
+
+    # Compound term unification: f(A,B,...) with f(X,Y,...)
+    comp_x = re.match(r"^([a-z][a-zA-Z0-9_]*)\((.+)\)$", x)
+    comp_y = re.match(r"^([a-z][a-zA-Z0-9_]*)\((.+)\)$", y)
+    if comp_x and comp_y:
+        if comp_x.group(1) != comp_y.group(1):
+            return None  # different functors
+        args_x = list(_parse_terms(comp_x.group(2)))
+        args_y = list(_parse_terms(comp_y.group(2)))
+        if len(args_x) != len(args_y):
+            return None
+        cur_env = env
+        for ax, ay in zip(args_x, args_y):
+            cur_env = _unify(ax, ay, cur_env)
+            if cur_env is None:
+                return None
+        return cur_env
+
     # Ground terms: case-insensitive match
     return env if x.lower() == y.lower() else None
 
@@ -239,6 +257,11 @@ def _parse_single_goal(text: str) -> Tuple[str, Tuple[str, ...]]:
     if t == "!":
         return ("!", tuple())
 
+    # Negation-as-failure: \+(Goal) or not(Goal)
+    naf_m = re.match(r"^(?:\\\\?\+|not)\s*\((.+)\)$", t, re.IGNORECASE)
+    if naf_m:
+        return ("\\+", (naf_m.group(1).strip(),))
+
     # Handle infix 'is'
     # Pattern: Term is Expression
     # Term can be a Variable or a Number/Atom
@@ -246,48 +269,41 @@ def _parse_single_goal(text: str) -> Tuple[str, Tuple[str, ...]]:
     if is_match:
         return ("is", (is_match.group(1), is_match.group(2).strip()))
 
-    # Handle infix '\='
+    # Handle infix arithmetic comparisons with arbitrary expressions
+    # Order matters: longer operators first (=:=, =\=, \==, >=, =<, >, <, \=, ==)
+    for op_str, pred_name in [
+        ("=:=", "=:="),
+        ("=\\=", "=\\="),
+        ("\\==", "\\=="),
+        ("\\=", "\\="),
+        ("==", "=="),
+        (">=", ">="),
+        ("=<", "=<"),
+        (">", ">"),
+        ("<", "<"),
+    ]:
+        idx = t.find(op_str)
+        if idx > 0:
+            lhs = t[:idx].strip()
+            rhs = t[idx + len(op_str):].strip()
+            if lhs and rhs:
+                # Make sure we didn't split inside parens/brackets
+                if lhs.count("(") == lhs.count(")") and lhs.count("[") == lhs.count("]"):
+                    return (pred_name, (lhs, rhs))
+
+    # Legacy simple comparisons (kept for backward compat with bare var names)
     neq_match = re.match(r"^([a-zA-Z0-9_]+)\s*\\=\s*([a-zA-Z0-9_]+)$", t)
     if neq_match:
         return ("neq", (neq_match.group(1), neq_match.group(2)))
 
-    # Handle infix comparison operators: <, >, <=, >=, =
-    # Order matters: check >= and <= before > and <
-
-    # >=
-    ge_match = re.match(r"^([a-zA-Z0-9_]+)\s*>=\s*([a-zA-Z0-9_]+)$", t)
-    if ge_match:
-        return ("ge", (ge_match.group(1), ge_match.group(2)))
-
-    # <=
-    le_match = re.match(r"^([a-zA-Z0-9_]+)\s*<=\s*([a-zA-Z0-9_]+)$", t)
-    if le_match:
-        return ("le", (le_match.group(1), le_match.group(2)))
-
-    # >
-    gt_match = re.match(r"^([a-zA-Z0-9_]+)\s*>\s*([a-zA-Z0-9_]+)$", t)
-    if gt_match:
-        return ("gt", (gt_match.group(1), gt_match.group(2)))
-
-    # <
-    lt_match = re.match(r"^([a-zA-Z0-9_]+)\s*<\s*([a-zA-Z0-9_]+)$", t)
-    if lt_match:
-        return ("lt", (lt_match.group(1), lt_match.group(2)))
-
-    # = (unification)
-    eq_match = re.match(r"^([a-zA-Z0-9_]+)\s*=\s*([a-zA-Z0-9_]+)$", t)
-    if eq_match:
-        return ("eq", (eq_match.group(1), eq_match.group(2)))
-
-    # Handle infix =:= (arithmetic equality)
-    eqe_match = re.match(r"^(.+?)\s*=:=\s*(.+)$", t)
-    if eqe_match:
-        return ("=:=", (eqe_match.group(1).strip(), eqe_match.group(2).strip()))
-
-    # Handle infix =\= (arithmetic inequality)
-    ane_match = re.match(r"^(.+?)\s*=\\=\s*(.+)$", t)
-    if ane_match:
-        return ("=\\=", (ane_match.group(1).strip(), ane_match.group(2).strip()))
+    # = (unification) — handles variables, atoms, compound terms, and lists
+    eq_match2 = re.match(r"^(.+?)\s*=\s*(.+)$", t)
+    if eq_match2 and "=:=" not in t and "=\\=" not in t and "\\=" not in t:
+        lhs = eq_match2.group(1).strip()
+        rhs = eq_match2.group(2).strip()
+        # Make sure we didn't accidentally split inside a compound (balanced check)
+        if lhs.count("(") == lhs.count(")") and lhs.count("[") == lhs.count("]"):
+            return ("eq", (lhs, rhs))
 
     # Compound term: functor(args...) with balanced parens
     fm = re.match(r"^([a-z][a-z0-9_]*)\s*\(", t)
@@ -869,6 +885,35 @@ def _solve_goals_cut(
         e = _unify(result_var, result, env.copy())
         return _solve_goals_cut(kb, rest, e) if e is not None else []
 
+    # ── maplist/2: maplist(Goal, List) ────────────────────────────────────────
+    if pred == "maplist" and len(args) == 2:
+        goal_template = _substitute_term(args[0], env)
+        list_term = _substitute_term(args[1], env)
+        # Parse list into elements
+        elements: List[str] = []
+        tmp = list_term.strip()
+        if tmp == "[]":
+            elements = []
+        elif tmp.startswith("[") and tmp.endswith("]"):
+            inner = tmp[1:-1]
+            elements = [e.strip() for e in inner.split(",") if e.strip()]
+        else:
+            return []  # not a list
+        # Apply goal to each element
+        cur_envs = [env.copy()]
+        for elem in elements:
+            call_goal = f"{goal_template}({elem})"
+            parsed = _parse_body_goals(call_goal)
+            next_envs = []
+            for e2 in cur_envs:
+                next_envs.extend(_solve_goals(kb, parsed, e2))
+            if not next_envs:
+                return []
+            cur_envs = next_envs
+        if cur_envs:
+            return _solve_goals_cut(kb, rest, cur_envs[0])
+        return []
+
     # ── Type checking predicates ───────────────────────────────────────────────
     if pred == "var" and len(args) == 1:
         a_sub = _substitute_term(args[0], env)
@@ -1372,6 +1417,88 @@ def _solve_goals_cut(
         e = _unify(args[1], f"'{t_sub}'", env.copy())
         return _solve_goals_cut(kb, rest, e) if e is not None else []
 
+    # ── format/2 and format/1 ─────────────────────────────────────────────────
+    if pred in ("format", "writef") and args:
+        fmt_str = _substitute_term(args[0], env).strip('"\'')
+        fmt_args = [_substitute_term(a, env).strip('"\'') for a in args[1:]] if len(args) > 1 else []
+        # Handle ~w, ~d, ~a, ~n format directives
+        idx2 = 0
+        result_chars: list[str] = []
+        i2 = 0
+        while i2 < len(fmt_str):
+            if fmt_str[i2] == "~" and i2 + 1 < len(fmt_str):
+                ch = fmt_str[i2 + 1]
+                if ch in ("w", "d", "a", "p"):
+                    result_chars.append(str(fmt_args[idx2]) if idx2 < len(fmt_args) else "")
+                    idx2 += 1
+                    i2 += 2
+                elif ch == "n":
+                    result_chars.append("\n")
+                    i2 += 2
+                elif ch == "t":
+                    result_chars.append("\t")
+                    i2 += 2
+                else:
+                    result_chars.append(fmt_str[i2])
+                    i2 += 1
+            else:
+                result_chars.append(fmt_str[i2])
+                i2 += 1
+        output_text = "".join(result_chars).rstrip("\n")
+        if interpreter:
+            for line in output_text.split("\n"):
+                interpreter.output.append(line)
+        return _solve_goals_cut(kb, rest, env)
+
+    # ── string_concat/3 ───────────────────────────────────────────────────────
+    if pred == "string_concat" and len(args) == 3:
+        a_sub = _substitute_term(args[0], env).strip("'\"")
+        b_sub = _substitute_term(args[1], env).strip("'\"")
+        result = a_sub + b_sub
+        e = _unify(args[2], result, env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    # ── number_string/2, number_codes/2, number_chars/2 ──────────────────────
+    if pred == "number_string" and len(args) == 2:
+        a_sub = _substitute_term(args[0], env)
+        b_sub = _substitute_term(args[1], env)
+        if not _is_var(a_sub):
+            e = _unify(b_sub, a_sub, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        if not _is_var(b_sub):
+            e = _unify(a_sub, b_sub.strip("'\""), env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    # ── split_string/4 ────────────────────────────────────────────────────────
+    if pred == "split_string" and len(args) == 4:
+        s_sub = _substitute_term(args[0], env).strip("'\"")
+        sep_sub = _substitute_term(args[1], env).strip("'\"")
+        pad_sub = _substitute_term(args[2], env).strip("'\"")
+        result_var = args[3]
+        import re as _re2
+        parts = _re2.split("[" + _re2.escape(sep_sub) + "]", s_sub) if sep_sub else list(s_sub)
+        parts = [p.strip(pad_sub) for p in parts]
+        lst = "[" + ",".join(f'"{p}"' for p in parts) + "]"
+        e = _unify(result_var, lst, env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    # ── string_length/2, string_lower/2, string_upper/2 ──────────────────────
+    if pred == "string_length" and len(args) == 2:
+        s_sub = _substitute_term(args[0], env).strip("'\"")
+        e = _unify(args[1], str(len(s_sub)), env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    if pred == "string_lower" and len(args) == 2:
+        s_sub = _substitute_term(args[0], env).strip("'\"")
+        e = _unify(args[1], s_sub.lower(), env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
+    if pred == "string_upper" and len(args) == 2:
+        s_sub = _substitute_term(args[0], env).strip("'\"")
+        e = _unify(args[1], s_sub.upper(), env.copy())
+        return _solve_goals_cut(kb, rest, e) if e is not None else []
+
     # Regular predicate: resolve all matches and respect cut propagation
     prune_here = False
 
@@ -1669,6 +1796,13 @@ def execute_prolog(interpreter: "Interpreter", command: str, turtle: "TurtleStat
             if re.match(r"^(discontiguous|module|use_module|ensure_loaded|style_check)\b",
                         directive_body, re.IGNORECASE):
                 return ""  # accept but ignore these directives
+            # Handle :- initialization(Goal) — call Goal as a goal
+            init_m = re.match(r"^initialization\((.+)\)\s*$", directive_body, re.IGNORECASE)
+            if init_m:
+                directive_body = init_m.group(1).strip()
+            # Handle :- meta_predicate ... (no-op)
+            if re.match(r"^meta_predicate\b", directive_body, re.IGNORECASE):
+                return ""
             goals = _parse_body_goals(directive_body)
             interpreter.prolog_kb["cut_active"] = False
             sols = _solve_goals(interpreter.prolog_kb, goals, {})

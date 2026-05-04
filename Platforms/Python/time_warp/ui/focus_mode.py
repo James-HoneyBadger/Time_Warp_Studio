@@ -53,82 +53,87 @@ class FocusModeManager(QObject):
     def _save_and_hide_ui_elements(self):
         """Hide non-essential UI elements and save their states."""
         self.saved_states.clear()
+        mw = self.main_window
 
         # Hide menu bar
-        if hasattr(self.main_window, "menuBar"):
-            menu_bar = self.main_window.menuBar()
+        if hasattr(mw, "menuBar"):
+            menu_bar = mw.menuBar()
             if menu_bar:
                 self.saved_states["menuBar"] = menu_bar.isVisible()
                 menu_bar.setVisible(False)
 
         # Hide status bar
-        if hasattr(self.main_window, "statusBar"):
-            status_bar = self.main_window.statusBar()
+        if hasattr(mw, "statusBar"):
+            status_bar = mw.statusBar()
             if status_bar:
                 self.saved_states["statusBar"] = status_bar.isVisible()
                 status_bar.setVisible(False)
 
         # Hide toolbars
-        if hasattr(self.main_window, "findChildren"):
+        if hasattr(mw, "findChildren"):
             # pylint: disable=import-outside-toplevel
             from PySide6.QtWidgets import QToolBar
 
-            toolbars = self.main_window.findChildren(QToolBar)
+            toolbars = mw.findChildren(QToolBar)
             for i, toolbar in enumerate(toolbars):
                 key = f"toolbar_{i}"
                 self.saved_states[key] = toolbar.isVisible()
                 toolbar.setVisible(False)
 
-        # Hide dock widgets (keep only editor and output)
-        if hasattr(self.main_window, "findChildren"):
-            # pylint: disable=import-outside-toplevel
-            from PySide6.QtWidgets import QDockWidget
+        # Hide the right panel (output / canvas / debug / variables)
+        if hasattr(mw, "right_tabs"):
+            self.saved_states["right_tabs"] = mw.right_tabs.isVisible()
+            mw.right_tabs.setVisible(False)
 
-            docks = self.main_window.findChildren(QDockWidget)
-            for i, dock in enumerate(docks):
-                # Keep essential docks visible
-                if "output" in dock.windowTitle().lower():
-                    continue
+        # Hide the REPL / immediate-mode bar
+        if hasattr(mw, "immediate_mode"):
+            self.saved_states["immediate_mode"] = mw.immediate_mode.isVisible()
+            mw.immediate_mode.setVisible(False)
 
-                key = f"dock_{i}"
-                self.saved_states[key] = dock.isVisible()
-                dock.setVisible(False)
+        # Enter fullscreen
+        self.saved_states["was_maximized"] = mw.isMaximized()
+        mw.showFullScreen()
 
     def _restore_ui_elements(self):
         """Restore UI elements to their saved states."""
+        mw = self.main_window
+
         # Restore menu bar
-        if hasattr(self.main_window, "menuBar"):
-            menu_bar = self.main_window.menuBar()
+        if hasattr(mw, "menuBar"):
+            menu_bar = mw.menuBar()
             if menu_bar and "menuBar" in self.saved_states:
                 menu_bar.setVisible(self.saved_states["menuBar"])
 
         # Restore status bar
-        if hasattr(self.main_window, "statusBar"):
-            status_bar = self.main_window.statusBar()
+        if hasattr(mw, "statusBar"):
+            status_bar = mw.statusBar()
             if status_bar and "statusBar" in self.saved_states:
                 status_bar.setVisible(self.saved_states["statusBar"])
 
         # Restore toolbars
-        if hasattr(self.main_window, "findChildren"):
+        if hasattr(mw, "findChildren"):
             # pylint: disable=import-outside-toplevel
             from PySide6.QtWidgets import QToolBar
 
-            toolbars = self.main_window.findChildren(QToolBar)
+            toolbars = mw.findChildren(QToolBar)
             for i, toolbar in enumerate(toolbars):
                 key = f"toolbar_{i}"
                 if key in self.saved_states:
                     toolbar.setVisible(self.saved_states[key])
 
-        # Restore dock widgets
-        if hasattr(self.main_window, "findChildren"):
-            # pylint: disable=import-outside-toplevel
-            from PySide6.QtWidgets import QDockWidget
+        # Restore right panel
+        if hasattr(mw, "right_tabs") and "right_tabs" in self.saved_states:
+            mw.right_tabs.setVisible(self.saved_states["right_tabs"])
 
-            docks = self.main_window.findChildren(QDockWidget)
-            for i, dock in enumerate(docks):
-                key = f"dock_{i}"
-                if key in self.saved_states:
-                    dock.setVisible(self.saved_states[key])
+        # Restore REPL bar
+        if hasattr(mw, "immediate_mode") and "immediate_mode" in self.saved_states:
+            mw.immediate_mode.setVisible(self.saved_states["immediate_mode"])
+
+        # Restore window mode
+        if self.saved_states.get("was_maximized"):
+            mw.showMaximized()
+        else:
+            mw.showNormal()
 
         self.saved_states.clear()
 

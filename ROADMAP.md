@@ -6,7 +6,7 @@ Time Warp Studio is an educational desktop IDE for learning **12 programming lan
 
 ---
 
-## Current Release: v10.1.0 (April 2026)
+## Current Release: v10.2.0 (May 2026)
 
 - **12 language executors** — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Lua, Brainfuck, JavaScript, HyperTalk, Erlang
 - **SVGA graphics mode** — 800×600 virtual canvas with anti-aliasing, zoom/pan, and pixel-accurate rendering
@@ -18,6 +18,9 @@ Time Warp Studio is an educational desktop IDE for learning **12 programming lan
 - Lesson system with auto-verification
 - AI-powered code suggestions and error explanations
 - Learning Hub with guided challenges and Project Explorer
+- HyperTalk `find` and `go to card` navigation commands
+- Prolog `\+` negation-as-failure parsing, extended built-ins (`format/2`, `split_string/4`, `string_concat/3`, etc.)
+- 70 passing demo programs (0 timeouts)
 
 ---
 
@@ -26,15 +29,15 @@ Time Warp Studio is an educational desktop IDE for learning **12 programming lan
 ### Language Improvements
 
 - Expand COBOL executor: `PERFORM VARYING`, table handling, `EVALUATE`
-- Add HyperTalk container navigation (`go to card`, `find`)
-- Improve Prolog cut/negation and built-in predicates
+- ✅ Add HyperTalk container navigation (`go to card`, `find`) — **done in v10.2.0**
+- ✅ Improve Prolog cut/negation and built-in predicates — **done in v10.2.0**
 
 ### IDE Enhancements
 
 - Code folding for all languages
 - Split editor view (side-by-side files)
 - Persistent breakpoints across sessions
-- Export turtle graphics as SVG/PNG
+- Export turtle graphics as SVG/PNG *(SVG export added in v10.0.0)*
 
 ### Quality
 

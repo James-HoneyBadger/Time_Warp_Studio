@@ -180,7 +180,7 @@ main() ->
     io:format("    ~w~n~n", [Primes100]),
 
     io:format("  Primality spot checks:~n"),
-    Tests = [2, 7, 11, 13, 17, 97, 100, 101, 997, 1000, 7919],
+    Tests = [2, 7, 11, 13, 17, 97, 100, 101, 997],
     lists:foreach(fun(N) ->
         io:format("    ~5w: ~s~n", [N, case is_prime(N) of true -> "prime"; false -> "composite" end])
     end, Tests),
@@ -223,7 +223,7 @@ main() ->
     %% --- Section 5: Perfect, abundant, deficient ---
     io:format("SECTION 5: PERFECT, ABUNDANT, DEFICIENT NUMBERS~n"),
     io:format("------------------------------------------------------------~n"),
-    Range = lists:seq(1, 50),
+    Range = lists:seq(1, 30),
     Perfect   = [N || N <- Range, is_perfect(N)],
     Abundant  = [N || N <- Range, is_abundant(N)],
     Deficient = [N || N <- Range, is_deficient(N)],
@@ -232,11 +232,11 @@ main() ->
     io:format("  Deficient(sigma(n)<2n):   ~w~n~n", [Deficient]),
 
     %% --- Section 6: Amicable pairs ---
-    io:format("SECTION 6: AMICABLE PAIRS (up to 2000)~n"),
+    io:format("SECTION 6: AMICABLE PAIRS (up to 300)~n"),
     io:format("------------------------------------------------------------~n"),
-    Amicable = find_amicable_pairs(2000),
+    Amicable = find_amicable_pairs(300),
     case Amicable of
-        [] -> io:format("  None found up to 2000~n~n");
+        [] -> io:format("  None found up to 300~n~n");
         _ ->
             lists:foreach(fun({A, B}) ->
                 io:format("  (~w, ~w): σ(~w)=~w, σ(~w)=~w~n",

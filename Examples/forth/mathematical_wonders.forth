@@ -16,6 +16,9 @@
 \ Max of two
 : MAX2  ( a b -- max ) 2DUP < IF SWAP THEN DROP ;
 
+\ 4DUP ( a b c d -- a b c d a b c d )
+: 4DUP  3 PICK 3 PICK 3 PICK 3 PICK ;
+
 \ ===== PRIME SIEVE =====
 \ Uses a VARIABLE array to sieve primes up to 200
 
@@ -27,18 +30,18 @@ VARIABLE SIEVE-LIMIT
   0 SIEVE C!
   0 SIEVE 1 + C! ;
 
-: SIEVE-MARK   ( p -- )
-  DUP * BEGIN DUP SIEVE-LIMIT @ <= WHILE
+: SIEVE-MARK   ( p -- p )
+  DUP DUP * BEGIN DUP SIEVE-LIMIT @ <= WHILE
     0 OVER SIEVE + C!
     OVER +
   REPEAT
-  2DROP ;
+  DROP ;
 
 : BUILD-SIEVE   ( limit -- )
   SIEVE-LIMIT !
   SIEVE-CLEAR
   2 BEGIN DUP DUP * SIEVE-LIMIT @ <= WHILE
-    SIEVE OVER + C@ IF SIEVE-MARK ELSE DROP THEN
+    SIEVE OVER + C@ IF SIEVE-MARK THEN
     1+
   REPEAT DROP ;
 
@@ -145,9 +148,9 @@ VARIABLE HANOI-MOVES
   0 HANOI-MOVES !
   CR ." Towers of Hanoi with " DUP . ." disks:" CR
   ." (Pegs: 1=Source, 2=Target, 3=Auxiliary)" CR
-  DUP 4 > IF
-    CR ." [Showing first few moves for " . ." disks]" CR
-    ." Total moves required = 2^n - 1 = " 3 . CR
+  DUP 3 > IF
+    CR ." [Formula for " . ." disks]" CR
+    ." Total moves required = 2^n - 1" CR
   ELSE
     1 2 3 HANOI2
     CR ." Total moves: " HANOI-MOVES @ . CR
