@@ -61,7 +61,7 @@ class HyperTalkEnvironment:
         self.interpreter = interpreter
         self.turtle = turtle
         self._output: list[str] = []
-        self._vars: dict[str, Any] = {}
+        self._vars: dict[str, Any] = {"_card_count": 1, "_current_card": 1}
         self._globals: dict[str, Any] = {}
         self._handlers: dict[str, list[str]] = {}
         self._handler_params: dict[str, list[str]] = {}
@@ -89,14 +89,17 @@ class HyperTalkEnvironment:
 
     def run(self, source: str) -> str:
         try:
+            # Join line continuations (¬ or \ at end of line)
+            source = re.sub(r'[ \t]*[¬\\][ \t]*\n[ \t]*', ' ', source)
             lines = source.splitlines()
             self._scan_handlers(lines)
+            output_before = len(self._output)
             self._exec_lines(lines, 0, len(lines))
-            # Auto-call entry-point handlers if nothing else was called explicitly
-            if not self._output:
-                for auto_name in ("startup", "run", "rundemo", "main"):
-                    if auto_name in self._handlers:
-                        self._exec_lines(self._handlers[auto_name], 0, len(self._handlers[auto_name]))
+            # Auto-call entry-point handler if no top-level output was produced
+            if len(self._output) == output_before:
+                for ep in ("startup", "openstack", "opencard", "run", "main", "initialize"):
+                    if ep in self._handlers:
+                        self._exec_lines(self._handlers[ep], 0, len(self._handlers[ep]))
                         break
         except HTExit:
             pass
@@ -109,7 +112,7 @@ class HyperTalkEnvironment:
     def _scan_handlers(self, lines: list[str]):
         i = 0
         while i < len(lines):
-            m = re.match(r"^\s*on\s+(\w+)(.*)$", lines[i], re.IGNORECASE)
+            m = re.match(r"^\s*(?:on|function)\s+(\w+)(.*)$", lines[i], re.IGNORECASE)
             if m:
                 name = m.group(1).lower()
                 params = [p.strip() for p in m.group(2).strip().split(",") if p.strip()]
@@ -135,8 +138,8 @@ class HyperTalkEnvironment:
                 i += 1
                 continue
 
-            # Skip on...end handler blocks in main flow
-            m = re.match(r"^on\s+(\w+)", line, re.IGNORECASE)
+            # Skip on/function...end handler blocks in main flow
+            m = re.match(r"^(?:on|function)\s+(\w+)", line, re.IGNORECASE)
             if m:
                 # Skip to matching "end name"
                 name = m.group(1).lower()
@@ -165,6 +168,94 @@ class HyperTalkEnvironment:
 
     def _exec_stmt(self, stmt: str, lines: list[str], ip: int, block_end: int) -> Any:
         stmt_lower = stmt.lower()
+
+        # ELSE IF — strip "else" prefix (used in else-if chains)
+        m = re.match(r"^else\s+(if\s+.+)$", stmt, re.IGNORECASE)
+        if m:
+            return self._exec_stmt(m.group(1), lines, ip, block_end)
+
+        # CALL handlerName [, arg1, arg2, ...]
+        m = re.match(r"^call\s+(\w+)(?:\s*,\s*(.+))?$", stmt, re.IGNORECASE)
+        if m:
+            name_c = m.group(1).lower()
+            args_str_c = (m.group(2) or "").strip()
+            if name_c in self._handlers:
+                params_c = self._handler_params.get(name_c, [])
+                arg_vals_c = self._split_args(args_str_c) if args_str_c else []
+                saved_c = dict(self._vars)
+                for pi, pname in enumerate(params_c):
+                    hval: Any = self._eval(arg_vals_c[pi]) if pi < len(arg_vals_c) else None
+                    self._set_var(pname, hval)
+                result_c = self._exec_lines(self._handlers[name_c], 0, len(self._handlers[name_c]))
+                self._vars = saved_c
+                if result_c is not None:
+                    self._it = result_c
+            return None
+
+        # GO TO CARD / navigation
+        m = re.match(r"^go\s+(?:to\s+)?(.+)$", stmt, re.IGNORECASE)
+        if m:
+            dest = m.group(1).strip().lower()
+            total = max(1, int(float(self._get_var("_card_count") or 1)))
+            current = max(1, int(float(self._get_var("_current_card") or 1)))
+            dm = re.match(r"^card\s+(.+)$", dest, re.IGNORECASE)
+            if dm:
+                try:
+                    new_card = int(float(self._eval(dm.group(1).strip())))
+                    self._set_var("_current_card", max(1, min(new_card, total)))
+                except Exception:
+                    pass
+            elif re.match(r"^first\b", dest, re.IGNORECASE):
+                self._set_var("_current_card", 1)
+            elif re.match(r"^last\b", dest, re.IGNORECASE):
+                self._set_var("_current_card", total)
+            elif re.match(r"^next\b", dest, re.IGNORECASE):
+                self._set_var("_current_card", min(current + 1, total))
+            elif re.match(r"^prev(?:ious)?\b", dest, re.IGNORECASE):
+                self._set_var("_current_card", max(current - 1, 1))
+            return None
+
+        # FIND text
+        m = re.match(r"^find\s+(.+)$", stmt, re.IGNORECASE)
+        if m:
+            self._emit(f"ℹ️ Find: {self._eval(m.group(1).strip())}")
+            return None
+
+        # FLASH n
+        m = re.match(r"^flash\s+(\d+)$", stmt, re.IGNORECASE)
+        if m:
+            self._emit(f"✨ Flash {m.group(1)}")
+            return None
+
+        # DOMENU menuItem
+        m = re.match(r"^doMenu\s+(.+)$", stmt, re.IGNORECASE)
+        if m:
+            return None  # silently ignore menu operations
+
+        # STUBS: select, print, delete, save, ask file
+        if re.match(r"^(?:select|print|delete|save)\b", stmt_lower):
+            return None
+        if re.match(r"^ask\s+file\b", stmt_lower):
+            self._it = ""
+            return None
+
+        # PUT value INTO/AFTER/BEFORE field "name"
+        m = re.match(
+            r'^put\s+(.+?)\s+(into|after|before)\s+field\s+["\']([^"\']+)["\']$',
+            stmt, re.IGNORECASE
+        )
+        if m:
+            val = str(self._eval(m.group(1).strip()))
+            op = m.group(2).lower()
+            fld = "_field_" + re.sub(r"\W+", "_", m.group(3).lower())
+            cur = str(self._get_var(fld))
+            if op == "into":
+                self._set_var(fld, val)
+            elif op == "after":
+                self._set_var(fld, cur + val)
+            elif op == "before":
+                self._set_var(fld, val + cur)
+            return None
 
         # PUT value INTO/AFTER/BEFORE var
         m = re.match(
@@ -211,18 +302,34 @@ class HyperTalkEnvironment:
                     self._globals[v] = ""
             return None
 
+        # ANSWER expr WITH btn1 [OR btn2 ...] — dialog with buttons
+        m = re.match(r"^(?:answer|say)\s+(.+?)\s+with\s+(.+?)(?:\s+or\s+.+)?$", stmt, re.IGNORECASE)
+        if m:
+            self._emit(str(self._eval(m.group(1).strip())))
+            self._it = str(self._eval(m.group(2).strip()))
+            return None
+
         # ANSWER / SAY
         m = re.match(r"^(?:answer|say)\s+(.+)$", stmt, re.IGNORECASE)
         if m:
             self._emit(str(self._eval(m.group(1).strip())))
             return None
 
-        # ASK
+        # ASK expr [WITH default]
+        m = re.match(r"^ask\s+(.+?)\s+with\s+(.+)$", stmt, re.IGNORECASE)
+        if m:
+            default = str(self._eval(m.group(2).strip()))
+            if hasattr(self.interpreter, "request_input"):
+                self._it = self.interpreter.request_input(str(self._eval(m.group(1).strip())))
+            else:
+                self._it = default
+            return None
+
+        # ASK (plain)
         m = re.match(r"^ask\s+(.+)$", stmt, re.IGNORECASE)
         if m:
-            prompt = str(self._eval(m.group(1).strip()))
             if hasattr(self.interpreter, "request_input"):
-                self._it = self.interpreter.request_input(prompt)
+                self._it = self.interpreter.request_input(str(self._eval(m.group(1).strip())))
             else:
                 self._it = ""
             return None
@@ -392,10 +499,38 @@ class HyperTalkEnvironment:
             self._set_var(var, sep.join(items))
             return None
 
-        # BEEP
+        # BEEP [n]
+        m = re.match(r"^beep\s+(\d+)$", stmt, re.IGNORECASE)
+        if m:
+            for _ in range(min(int(m.group(1)), 5)):
+                self._emit("🔔 Beep!")
+            return None
+
+        # BEEP (single)
         if stmt_lower.strip() == "beep":
             self._emit("🔔 Beep!")
             return None
+
+        # Function call as statement: name() or name(args)
+        m = re.match(r"^(\w+)\s*\((.*)\)\s*$", stmt)
+        if m and not re.match(
+            r"^(if|put|get|set|answer|say|ask|repeat|on|function|end|global|return|exit|call|beep|flash|find|go|do|wait|sort|visual|add|subtract|multiply|divide)\b",
+            stmt_lower,
+        ):
+            fn_name_s = m.group(1).lower()
+            fn_args_s = m.group(2).strip()
+            if fn_name_s in self._handlers:
+                params_s = self._handler_params.get(fn_name_s, [])
+                arg_vals_s = self._split_args(fn_args_s) if fn_args_s else []
+                saved_s = dict(self._vars)
+                for pi, pname in enumerate(params_s):
+                    hval = self._eval(arg_vals_s[pi]) if pi < len(arg_vals_s) else None
+                    self._set_var(pname, hval)
+                result_s = self._exec_lines(self._handlers[fn_name_s], 0, len(self._handlers[fn_name_s]))
+                self._vars = saved_s
+                if isinstance(result_s, tuple) and result_s[0] == "RETURN":
+                    self._it = result_s[1]
+                return None
 
         # Assignment: var = expr or var is expr
         m = re.match(r"^(\w+)\s*[=:]\s*(.+)$", stmt)
@@ -432,10 +567,13 @@ class HyperTalkEnvironment:
                 # If single arg with spaces and multiple params, split by space
                 if len(arg_vals) == 1 and len(params) > 1 and " " in arg_vals[0]:
                     arg_vals = arg_vals[0].split()
+                # Handlers share caller scope (HyperTalk convention); don't save/restore vars
                 for pi, pname in enumerate(params):
-                    hval: Any = self._eval(arg_vals[pi]) if pi < len(arg_vals) else None
+                    hval = self._eval(arg_vals[pi]) if pi < len(arg_vals) else None
                     self._set_var(pname, hval)
-                self._exec_lines(self._handlers[name], 0, len(self._handlers[name]))
+                result_h = self._exec_lines(self._handlers[name], 0, len(self._handlers[name]))
+                if result_h is not None:
+                    self._it = result_h
                 return None
 
         return None
@@ -463,9 +601,10 @@ class HyperTalkEnvironment:
                         i + 1,
                     )
                 depth -= 1
-            elif s == "else" and depth == 0:
+            elif re.match(r"^else\b", s) and depth == 0 and else_start is None:
                 then_end = i
-                else_start = i + 1
+                # else-if: start AT this line so it executes as "if ..."
+                else_start = i if re.match(r"^else\s+if\b", s, re.IGNORECASE) else i + 1
             i += 1
         return (len(lines), None, len(lines))
 
@@ -575,25 +714,22 @@ class HyperTalkEnvironment:
         expr = expr.strip()
         if not expr:
             return ""
-        # String literal (quoted string — only if no operator follows the closing quote)
+        # String literal (possibly followed by & concatenation)
         if expr.startswith('"') or expr.startswith("'"):
             q = expr[0]
-            end = expr.find(q, 1)
-            if end != -1:
-                literal = expr[1:end]
-                remainder = expr[end + 1:].strip()
-                if not remainder:
-                    return literal
-                # There's more after the closing quote — handle as concatenation/expression
-                # by treating the string literal as the left side
-                if remainder.startswith("&"):
-                    return literal + str(self._eval(remainder[1:].strip()))
-                # If it starts with & or other operators, fall through
-                # Otherwise just return the literal
-                return literal
-            else:
-                # No closing quote — return as-is stripped
-                return expr.strip(q)
+            end_idx = expr.find(q, 1)
+            if end_idx < 0:
+                # Unclosed string — return everything after the opening quote
+                return expr[1:]
+            val = expr[1:end_idx]
+            rest = expr[end_idx + 1:].strip()
+            if not rest:
+                return val  # simple string literal
+            if rest.startswith("&&"):
+                return val + " " + str(self._eval(rest[2:].strip()))
+            if rest.startswith("&"):
+                return val + str(self._eval(rest[1:].strip()))
+            return val  # ignore other trailing content
         # Number
         try:
             return int(expr)
@@ -620,6 +756,30 @@ class HyperTalkEnvironment:
             return "\t"
         if expr.lower() == "cr":
             return "\n"
+        if expr.lower() == "quote":
+            return '"'
+
+        # field "fieldName" expression
+        m = re.match(r'^field\s+["\']([^"\']+)["\']$', expr, re.IGNORECASE)
+        if m:
+            fld = "_field_" + re.sub(r"\W+", "_", m.group(1).lower())
+            return self._get_var(fld)
+
+        # month of / day of (date chunk extraction)
+        m = re.match(r"^month\s+of\s+(.+)$", expr, re.IGNORECASE)
+        if m:
+            date_str = str(self._eval(m.group(1).strip()))
+            try:
+                return date_str.split("/")[0]
+            except Exception:
+                return "0"
+        m = re.match(r"^day\s+of\s+(.+)$", expr, re.IGNORECASE)
+        if m:
+            date_str = str(self._eval(m.group(1).strip()))
+            try:
+                return date_str.split("/")[1]
+            except Exception:
+                return "0"
 
         # Built-in properties: the date, the time, the ticks, the seconds
         if expr.lower().startswith("the "):
@@ -644,6 +804,15 @@ class HyperTalkEnvironment:
                 return "card button 1"
             if prop == "random":
                 return random.randint(1, 100)
+            # number of cards in the stack
+            if re.match(r"^number\s+of\s+cards?\b", prop, re.IGNORECASE):
+                return max(1, int(float(self._get_var("_card_count") or 1)))
+            # number of this card
+            if re.match(r"^number\s+of\s+this\s+card\b", prop, re.IGNORECASE):
+                return max(1, int(float(self._get_var("_current_card") or 1)))
+            # modified / modified of this stack -> False in simulation
+            if "modified" in prop:
+                return False
             m_of = re.match(
                 r"number\s+of\s+(chars?|words?|lines?|items?)\s+(?:of|in)\s+(.+)",
                 prop,
@@ -662,45 +831,62 @@ class HyperTalkEnvironment:
                     return len(val.split(","))
                 return 0
 
-        # Property access: char i of str
-        m = re.match(r"^char(?:acter)?\s+(\d+)\s+to\s+(\d+)\s+of\s+(.+)$", expr, re.IGNORECASE)
+        # Property access: chars? i to j of str (variable or literal index)
+        m = re.match(r"^chars?(?:acter)?s?\s+(\w+)\s+to\s+(\w+)\s+of\s+(.+)$", expr, re.IGNORECASE)
         if m:
-            i = int(m.group(1)) - 1
-            j = int(m.group(2))
+            try:
+                ci = int(float(self._eval(m.group(1)))) - 1
+                cj = int(float(self._eval(m.group(2))))
+            except (TypeError, ValueError):
+                ci, cj = 0, 0
             s = str(self._eval(m.group(3).strip()))
-            return s[max(0, i):min(j, len(s))]
+            return s[max(0, ci):min(cj, len(s))]
 
-        m = re.match(r"^word\s+(\d+)\s+to\s+(\d+)\s+of\s+(.+)$", expr, re.IGNORECASE)
+        m = re.match(r"^word\s+(\w+)\s+to\s+(\w+)\s+of\s+(.+)$", expr, re.IGNORECASE)
         if m:
-            i = int(m.group(1)) - 1
-            j = int(m.group(2))
+            try:
+                ci = int(float(self._eval(m.group(1)))) - 1
+                cj = int(float(self._eval(m.group(2))))
+            except (TypeError, ValueError):
+                ci, cj = 0, 0
             words = str(self._eval(m.group(3).strip())).split()
-            return " ".join(words[max(0, i):min(j, len(words))])
+            return " ".join(words[max(0, ci):min(cj, len(words))])
 
-        m = re.match(r"^char(?:acter)?\s+(\d+)\s+of\s+(.+)$", expr, re.IGNORECASE)
+        m = re.match(r"^chars?(?:acter)?s?\s+(\w+)\s+of\s+(.+)$", expr, re.IGNORECASE)
         if m:
-            idx = int(m.group(1)) - 1
+            try:
+                idx = int(float(self._eval(m.group(1)))) - 1
+            except (TypeError, ValueError):
+                idx = 0
             s = str(self._eval(m.group(2).strip()))
             return s[idx] if 0 <= idx < len(s) else ""
 
-        m = re.match(r"^word\s+(\d+)\s+of\s+(.+)$", expr, re.IGNORECASE)
+        m = re.match(r"^word\s+(\w+)\s+of\s+(.+)$", expr, re.IGNORECASE)
         if m:
-            idx = int(m.group(1)) - 1
+            try:
+                idx = int(float(self._eval(m.group(1)))) - 1
+            except (TypeError, ValueError):
+                idx = 0
             words = str(self._eval(m.group(2).strip())).split()
             return words[idx] if 0 <= idx < len(words) else ""
 
-        m = re.match(r"^line\s+(\d+)\s+of\s+(.+)$", expr, re.IGNORECASE)
+        m = re.match(r"^line\s+(\w+)\s+of\s+(.+)$", expr, re.IGNORECASE)
         if m:
-            idx = int(m.group(1)) - 1
+            try:
+                idx = int(float(self._eval(m.group(1)))) - 1
+            except (TypeError, ValueError):
+                idx = 0
             lines_ = str(self._eval(m.group(2).strip())).splitlines()
             return lines_[idx] if 0 <= idx < len(lines_) else ""
 
-        m = re.match(r"^item\s+(\d+)\s+of\s+(.+)$", expr, re.IGNORECASE)
+        m = re.match(r"^item\s+(\w+)\s+of\s+(.+)$", expr, re.IGNORECASE)
         if m:
-            idx = int(m.group(1)) - 1
+            try:
+                idx = int(float(self._eval(m.group(1)))) - 1
+            except (TypeError, ValueError):
+                idx = 0
             items = str(self._eval(m.group(2).strip())).split(",")
             return items[idx].strip() if 0 <= idx < len(items) else ""
-
         m = re.match(
             r"^the\s+(?:number\s+of\s+)?chars?\s+(?:in|of)\s+(.+)$", expr, re.IGNORECASE
         )
@@ -717,17 +903,27 @@ class HyperTalkEnvironment:
         if m:
             return len(str(self._eval(m.group(1).strip())).split())
 
-        # Function call: name(args)
-        m = re.match(r"^(\w+)\s*\((.+)\)$", expr)
+        # Function call: name(args) or name() — verify parens are balanced
+        m = re.match(r"^(\w+)\s*\(", expr)
         if m:
-            result = self._call_fn(m.group(1).lower(), m.group(2))
-            if result is not None:
-                return result
+            call_args_start = m.end()  # index just after the opening '('
+            depth = 1
+            close_pos = -1
+            for ci, c in enumerate(expr[call_args_start:], call_args_start):
+                if c == "(":
+                    depth += 1
+                elif c == ")":
+                    depth -= 1
+                if depth == 0:
+                    close_pos = ci
+                    break
+            if close_pos == len(expr) - 1:  # matching ')' is the last char → whole expr is a call
+                args_content = expr[call_args_start:close_pos]
+                result = self._call_fn(m.group(1).lower(), args_content)
+                if result is not None:
+                    return result
 
-        # Concatenation: expr & expr
-        if "&" in expr:
-            parts = expr.split("&", 1)
-            return str(self._eval(parts[0].strip())) + str(self._eval(parts[1].strip()))
+        # Concatenation: expr & expr (check && first to avoid splitting inside &&)
         if "&&" in expr:
             parts = expr.split("&&", 1)
             return (
@@ -735,6 +931,9 @@ class HyperTalkEnvironment:
                 + " "
                 + str(self._eval(parts[1].strip()))
             )
+        if "&" in expr:
+            parts = expr.split("&", 1)
+            return str(self._eval(parts[0].strip())) + str(self._eval(parts[1].strip()))
 
         # Comparisons (handle before mod/div to get correct precedence)
         # e.g. "17 mod d = 0" → lhs="17 mod d", rhs="0"
@@ -776,23 +975,26 @@ class HyperTalkEnvironment:
                     return str(lhs) in str(rhs)
 
         # Python eval for arithmetic
-        # First substitute any embedded function calls (e.g. random(25) + 15)
-        def sub_fn_call(m_):
-            fn_name = m_.group(1).lower()
-            args_str = m_.group(2)
-            r = self._call_fn(fn_name, args_str)
-            if r is not None:
-                return str(r)
+        # First substitute function calls (e.g. random(25), sin(x)) with their values
+        def sub_fn_call(m_: re.Match) -> str:
+            fn_n = m_.group(1).lower()
+            fn_a = m_.group(2)
+            # Avoid substituting keywords used as identifiers
+            if fn_n in ("if", "on", "function", "end", "repeat", "while", "until"):
+                return m_.group(0)
+            result_fn = self._call_fn(fn_n, fn_a)
+            if result_fn is not None:
+                return str(result_fn)
             return m_.group(0)
 
-        expr_sub = re.sub(r"([A-Za-z_]\w*)\s*\(([^()]*)\)", sub_fn_call, expr)
+        pyexpr = re.sub(r"([A-Za-z_]\w*)\s*\(([^)]*)\)", sub_fn_call, expr)
 
-        def sub_var(m_):
+        def sub_var(m_: re.Match) -> str:
             name = m_.group(0).lower()
             val = self._get_var(name)
             return str(val)
 
-        pyexpr = re.sub(r"[A-Za-z_]\w*", sub_var, expr_sub)
+        pyexpr = re.sub(r"[A-Za-z_]\w*", sub_var, pyexpr)
         pyexpr = pyexpr.replace("^", "**")
         try:
             return eval(pyexpr, {"__builtins__": {}})  # noqa: S307
@@ -801,7 +1003,70 @@ class HyperTalkEnvironment:
 
         return self._get_var(expr)
 
-    def _eval_cond(self, cond: str) -> bool:
+    def _eval_cond(self, cond: str) -> bool:  # noqa: C901
+        cond = cond.strip()
+
+        # NOT prefix
+        if re.match(r"^not\s+", cond, re.IGNORECASE):
+            return not self._eval_cond(cond[4:].strip())
+
+        # AND: split on first top-level 'and' (case-insensitive, whole word)
+        m = re.search(r"\band\b", cond, re.IGNORECASE)
+        if m:
+            return self._eval_cond(cond[:m.start()]) and self._eval_cond(cond[m.end():])
+
+        # OR: split on first top-level 'or' (case-insensitive, whole word)
+        m = re.search(r"\bor\b", cond, re.IGNORECASE)
+        if m:
+            return self._eval_cond(cond[:m.start()]) or self._eval_cond(cond[m.end():])
+
+        # Handle comparison operators before _eval can misparse compound expressions
+        # Check multi-char operators first to avoid splitting > from >=
+        for cmp_op, fn in [
+            (">=", lambda a, b: _to_num(a) >= _to_num(b)),
+            ("<=", lambda a, b: _to_num(a) <= _to_num(b)),
+            ("<>", lambda a, b: str(a).lower() != str(b).lower()),
+            ("!=", lambda a, b: str(a).lower() != str(b).lower()),
+        ]:
+            if cmp_op in cond:
+                parts = cond.split(cmp_op, 1)
+                if len(parts) == 2:
+                    lhs = self._eval(parts[0].strip())
+                    rhs = self._eval(parts[1].strip())
+                    try:
+                        return fn(lhs, rhs)
+                    except Exception:
+                        return str(lhs).lower() == str(rhs).lower()
+        # < and > (not preceded or followed by another < > = !)
+        for cmp_op, fn in [  # type: ignore[assignment]
+            ("<", lambda a, b: _to_num(a) < _to_num(b)),
+            (">", lambda a, b: _to_num(a) > _to_num(b)),
+        ]:
+            idx = cond.find(cmp_op)
+            if idx >= 0:
+                before = cond[idx - 1] if idx > 0 else ""
+                after = cond[idx + 1] if idx + 1 < len(cond) else ""
+                if before not in ("<", ">", "!") and after not in ("=", ">"):
+                    lhs = self._eval(cond[:idx].strip())
+                    rhs = self._eval(cond[idx + 1:].strip())
+                    try:
+                        return fn(lhs, rhs)  # type: ignore[operator]
+                    except Exception:
+                        return False
+        # = (equality — in condition context = is always equality)
+        if "=" in cond:
+            idx = cond.index("=")
+            before = cond[idx - 1] if idx > 0 else ""
+            after = cond[idx + 1] if idx + 1 < len(cond) else ""
+            if before not in ("<", ">", "!", "=") and after != "=":
+                lhs = self._eval(cond[:idx].strip())
+                rhs = self._eval(cond[idx + 1:].strip())
+                if str(lhs).lower() == str(rhs).lower():
+                    return True
+                try:
+                    return float(lhs) == float(rhs)  # type: ignore[arg-type]
+                except (TypeError, ValueError):
+                    return False
         val = self._eval(cond)
         if isinstance(val, bool):
             return val
@@ -812,8 +1077,13 @@ class HyperTalkEnvironment:
         return bool(val)
 
     def _call_fn(self, name: str, args_str: str) -> Any:
-        args = [self._eval(a.strip()) for a in args_str.split(",")]
-        a0 = float(args[0]) if args else 0
+        # Use smart split for user-defined handlers; simple split for builtins
+        raw_parts = self._split_args(args_str) if args_str.strip() else []
+        args = [self._eval(a) for a in raw_parts] if raw_parts else []
+        try:
+            a0 = float(args[0]) if args else 0
+        except (TypeError, ValueError):
+            a0 = 0
         fns: dict[str, Any] = {
             "sin": lambda: math.sin(math.radians(a0)),
             "cos": lambda: math.cos(math.radians(a0)),
@@ -822,6 +1092,10 @@ class HyperTalkEnvironment:
             "abs": lambda: abs(a0),
             "round": lambda: round(a0),
             "trunc": lambda: int(a0),
+            "floor": lambda: math.floor(a0),
+            "ceil": lambda: math.ceil(a0),
+            "ceiling": lambda: math.ceil(a0),
+            "integer": lambda: int(a0),
             "length": lambda: len(str(args[0])),
             "random": lambda: random.randint(1, int(a0)) if a0 else random.random(),
             "offset": lambda: (
@@ -836,6 +1110,7 @@ class HyperTalkEnvironment:
             "sum": lambda: sum(float(a) for a in args),
             "ln": lambda: math.log(a0),
             "log2": lambda: math.log2(a0),
+            "log10": lambda: math.log10(a0),
             "exp": lambda: math.exp(a0),
             "exp1": lambda: math.exp(a0),
             "atan": lambda: math.degrees(math.atan(a0)),
@@ -848,7 +1123,50 @@ class HyperTalkEnvironment:
                 return fn()
             except Exception:
                 return 0
+
+        # User-defined handler called as a function
+        if name in self._handlers:
+            params_h = self._handler_params.get(name, [])
+            saved_h = dict(self._vars)
+            for pi, pname in enumerate(params_h):
+                hval: Any = args[pi] if pi < len(args) else None
+                self._set_var(pname, hval)
+            result_h = self._exec_lines(self._handlers[name], 0, len(self._handlers[name]))
+            self._vars = saved_h
+            if result_h is not None:
+                return result_h
+            return self._it
+
         return None
+
+    def _split_args(self, args_str: str) -> list[str]:
+        """Split argument string at top-level commas (not inside strings/parens)."""
+        result: list[str] = []
+        depth = 0
+        in_str: str | None = None
+        current: list[str] = []
+        for c in args_str:
+            if in_str:
+                current.append(c)
+                if c == in_str:
+                    in_str = None
+            elif c in ('"', "'"):
+                in_str = c
+                current.append(c)
+            elif c in ("(", "["):
+                depth += 1
+                current.append(c)
+            elif c in (")", "]"):
+                depth -= 1
+                current.append(c)
+            elif c == "," and depth == 0:
+                result.append("".join(current).strip())
+                current = []
+            else:
+                current.append(c)
+        if current:
+            result.append("".join(current).strip())
+        return [a for a in result if a]
 
 
 def _to_num(val: Any) -> float:

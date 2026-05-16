@@ -22,7 +22,6 @@ from __future__ import annotations
 
 import math
 import re
-import time
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
@@ -122,17 +121,6 @@ class _Pid:
         return f"<{self.pid_id}.0.0>"
 
 
-def _to_hashable(val: Any) -> Any:
-    """Convert a value to something hashable for use as a dict key."""
-    if isinstance(val, list):
-        return tuple(_to_hashable(x) for x in val)
-    if isinstance(val, dict):
-        return tuple(sorted((_to_hashable(k), _to_hashable(v)) for k, v in val.items()))
-    if isinstance(val, _Tuple):
-        return tuple(_to_hashable(x) for x in val)
-    return val  # int, float, str, bool, _Atom, None are already hashable
-
-
 def _erl_repr(val: Any) -> str:
     """Convert a Python value to Erlang representation string."""
     if val is None or val == _Atom("undefined"):
@@ -172,7 +160,6 @@ class ErlangEnvironment:
         self._exported: List[Tuple[str, int]] = []
         self._self_pid = _Pid("self")
         self._pids: Dict[str, _Pid] = {}
-        self._memo: Dict[Tuple, Any] = {}  # memoization cache for pure functions
 
     def _emit(self, text: str) -> None:
         self._output.append(text)
@@ -183,7 +170,6 @@ class ErlangEnvironment:
 
     def run(self, source: str) -> str:
         """Parse module and execute main/0 or start/0."""
-        self._deadline = time.time() + 30.0  # 30-second execution limit
         try:
             self._parse(source)
             # Try to call start/0 first, then main/0
@@ -207,16 +193,13 @@ class ErlangEnvironment:
             self._emit(f"❌ Runtime error: {e}\n")
         return "".join(self._output)
 
-    # ------------------------------------------------------------------
-    # Parser
-    # ------------------------------------------------------------------
-
     def _strip_comments(self, source: str) -> str:
-        """Strip Erlang % comments from source, preserving string contents."""
-        result = []
+        """Remove Erlang single-line comments (%...) but not inside strings."""
+        result: List[str] = []
         in_string = False
         i = 0
-        while i < len(source):
+        n = len(source)
+        while i < n:
             ch = source[i]
             if ch == '"' and not in_string:
                 in_string = True
@@ -225,8 +208,8 @@ class ErlangEnvironment:
                 in_string = False
                 result.append(ch)
             elif ch == '%' and not in_string:
-                # Skip to end of line
-                while i < len(source) and source[i] != '\n':
+                # Skip to end of line (preserve the newline itself)
+                while i < n and source[i] != '\n':
                     i += 1
                 continue
             else:
@@ -234,11 +217,13 @@ class ErlangEnvironment:
             i += 1
         return ''.join(result)
 
+    # ------------------------------------------------------------------
+    # Parser
+    # ------------------------------------------------------------------
+
     def _parse(self, source: str) -> None:
         """Parse Erlang source: extract module, exports, and function defs."""
-        # Strip Python-style # comments at the top of files
-        source = re.sub(r"^#[^\n]*", "", source, flags=re.MULTILINE)
-        # Remove Erlang % comments (preserving string contents)
+        # Remove single-line comments (% ... ) but not inside strings
         source = self._strip_comments(source)
         # Split into top-level forms at ". " or ".\n" or ".%"
         forms = self._split_forms(source)
@@ -294,65 +279,71 @@ class ErlangEnvironment:
 
     def _parse_function(self, form: str) -> None:
         """Parse a function definition and add clauses."""
-        # Strip leading comment lines (% ...) before the function definition
-        lines = form.splitlines()
-        non_comment = []
-        for line in lines:
-            stripped = line.strip()
-            if stripped.startswith('%') or not stripped:
-                continue
-            non_comment.append(line)
-        form = "\n".join(non_comment).strip()
-        if not form:
-            return
         # May contain multiple clauses separated by ;
         clauses = self._split_clauses(form)
         for clause in clauses:
             self._parse_clause(clause)
 
     def _split_clauses(self, form: str) -> List[str]:
-        """Split function clauses (separated by ;), tracking fun/case/begin/receive...end depth."""
-        clauses = []
+        """Split function clauses (separated by ;).
+
+        Tracks bracket depth AND case/if/begin/receive/try...end keyword depth
+        to avoid splitting on ; inside nested block expressions.
+        """
+        _BLOCK_OPENERS = frozenset({"case", "if", "begin", "receive", "try"})
+
+        clauses: List[str] = []
         current: List[str] = []
-        depth = 0
+        bracket_depth = 0
         kw_depth = 0
         in_string = False
         i = 0
-        _KW_OPENERS = frozenset(("fun", "begin", "case", "receive", "if"))
-        while i < len(form):
+        n = len(form)
+
+        while i < n:
             ch = form[i]
+
             if ch == '"':
                 in_string = not in_string
                 current.append(ch)
                 i += 1
                 continue
-            if not in_string:
-                # Check for keyword at word boundary
-                if ch.isalpha() and (i == 0 or (not form[i-1].isalnum() and form[i-1] != '_')):
-                    for kw in ("begin", "receive", "fun", "case", "end", "if"):
-                        end_i = i + len(kw)
-                        if form[i:end_i] == kw and (end_i >= len(form) or (not form[end_i].isalnum() and form[end_i] != '_')):
-                            if kw == "end":
-                                kw_depth = max(0, kw_depth - 1)
-                            elif kw == "fun":
-                                rest = form[end_i:].lstrip()
-                                is_ref = bool(re.match(r'^[\w:]+\s*/\s*\d+', rest))
-                                if not is_ref:
-                                    kw_depth += 1
-                            elif kw in _KW_OPENERS:
-                                kw_depth += 1
-                            break
-                if ch in ('(', '[', '{'):
-                    depth += 1
-                elif ch in (')', ']', '}'):
-                    depth -= 1
-                elif ch == ';' and depth == 0 and kw_depth == 0:
-                    clauses.append("".join(current).strip())
-                    current = []
-                    i += 1
-                    continue
+
+            if in_string:
+                current.append(ch)
+                i += 1
+                continue
+
+            # Bracket tracking
+            if ch in ('(', '[', '{'):
+                bracket_depth += 1
+            elif ch in (')', ']', '}'):
+                bracket_depth -= 1
+            elif ch == ';' and bracket_depth == 0 and kw_depth == 0:
+                clauses.append("".join(current).strip())
+                current = []
+                i += 1
+                continue
+            elif ch.isalpha() or ch == '_':
+                # Extract word token
+                j = i
+                while j < n and (form[j].isalnum() or form[j] == '_'):
+                    j += 1
+                word = form[i:j]
+                # Only recognise as keyword at word boundary (not mid-identifier)
+                prev_is_word = i > 0 and (form[i - 1].isalnum() or form[i - 1] == '_')
+                if not prev_is_word:
+                    if word == "end":
+                        kw_depth = max(0, kw_depth - 1)
+                    elif word in _BLOCK_OPENERS:
+                        kw_depth += 1
+                current.append(form[i:j])
+                i = j
+                continue
+
             current.append(ch)
             i += 1
+
         if current:
             clauses.append("".join(current).strip())
         return clauses
@@ -384,58 +375,139 @@ class ErlangEnvironment:
         """Split comma-separated pattern args."""
         return self._split_commas(s)
 
-    def _split_body(self, s: str) -> List[str]:
-        """Split body expressions at commas (top-level)."""
-        return self._split_commas(s)
+    def _eval_guard(self, guard_str: str, bindings: Dict[str, Any]) -> bool:
+        """Evaluate an Erlang guard sequence.
 
-    def _split_commas(self, s: str) -> List[str]:
-        """Split at commas, respecting brackets, strings, and fun/begin/case/if/receive...end blocks."""
-        parts = []
+        Comma = AND (all conditions must be true).
+        Semicolon = OR (any semicolon-separated group with all ANDs true).
+        """
+        for or_group in guard_str.split(";"):
+            or_group = or_group.strip()
+            if not or_group:
+                continue
+            and_conds = self._split_commas(or_group)
+            try:
+                if all(self._truthy(self._eval_expr(c.strip(), bindings)) for c in and_conds):
+                    return True
+            except Exception:
+                pass
+        return False
+
+    def _split_body(self, s: str) -> List[str]:
+        """Split body expressions at commas, respecting brackets, strings, and
+        keyword blocks (case/if/begin/receive/try/fun...end).
+
+        Unlike _split_commas, this also tracks Erlang keyword block depth so
+        that commas inside case branches are not treated as body separators.
+        """
+        _SIMPLE_OPENERS = frozenset({"case", "if", "begin", "receive", "try"})
+        parts: List[str] = []
         current: List[str] = []
-        depth = 0       # bracket depth: (, [, {
-        kw_depth = 0    # keyword block depth: fun/begin/case/receive/if ... end
+        bracket_depth = 0
+        kw_depth = 0
         in_string = False
         i = 0
-        _OPENERS = frozenset(("fun", "begin", "case", "receive"))
-        while i < len(s):
+        n = len(s)
+        while i < n:
             ch = s[i]
             if ch == '"':
                 in_string = not in_string
                 current.append(ch)
                 i += 1
                 continue
-            if not in_string:
-                # Check for keyword at word boundary
-                if ch.isalpha() and (i == 0 or not s[i-1].isalnum() and s[i-1] != '_'):
-                    # Check for block openers/closers
-                    for kw in ("begin", "receive", "fun", "case", "end", "if"):
-                        end_i = i + len(kw)
-                        if s[i:end_i] == kw and (end_i >= len(s) or not s[end_i].isalnum() and s[end_i] != '_'):
-                            if kw == "end":
-                                kw_depth = max(0, kw_depth - 1)
-                            elif kw == "fun":
-                                # Only treat as block opener if it's a closure (has '->'), not a fun name/arity ref
-                                # fun name/arity — no 'end' needed; fun(...) -> ... end — needs 'end'
-                                rest = s[end_i:].lstrip()
-                                is_ref = bool(re.match(r'^[\w:]+\s*/\s*\d+', rest))
-                                if not is_ref:
-                                    kw_depth += 1
-                            elif kw in _OPENERS:
-                                kw_depth += 1
-                            # "if" is ambiguous — only count it as block opener if followed by newline/space then guard
-                            # For simplicity, count all "if" at depth 0 as block
-                            elif kw == "if":
-                                kw_depth += 1
-                            break
-                if ch in ('(', '[', '{'):
-                    depth += 1
-                elif ch in (')', ']', '}'):
-                    depth -= 1
-                elif ch == ',' and depth == 0 and kw_depth == 0:
-                    parts.append("".join(current).strip())
-                    current = []
-                    i += 1
-                    continue
+            if in_string:
+                current.append(ch)
+                i += 1
+                continue
+            # Bracket tracking
+            if ch in ('(', '[', '{'):
+                bracket_depth += 1
+            elif ch in (')', ']', '}'):
+                bracket_depth -= 1
+            elif ch == ',' and bracket_depth == 0 and kw_depth == 0:
+                parts.append("".join(current).strip())
+                current = []
+                i += 1
+                continue
+            elif ch.isalpha() or ch == '_':
+                # Extract full word token
+                j = i
+                while j < n and (s[j].isalnum() or s[j] == '_'):
+                    j += 1
+                word = s[i:j]
+                prev_is_word = i > 0 and (s[i - 1].isalnum() or s[i - 1] == '_')
+                if not prev_is_word:
+                    if word == "end":
+                        kw_depth = max(0, kw_depth - 1)
+                    elif word in _SIMPLE_OPENERS:
+                        kw_depth += 1
+                    elif word == "fun":
+                        # Only lambda forms (fun(...) -> ... end) need kw_depth;
+                        # fun Name/Arity references do not have a matching end.
+                        k = j
+                        while k < n and s[k] in (' ', '\t', '\n', '\r'):
+                            k += 1
+                        if k < n and s[k] == '(':
+                            kw_depth += 1
+                current.append(s[i:j])
+                i = j
+                continue
+            current.append(ch)
+            i += 1
+        if current:
+            parts.append("".join(current).strip())
+        return [p for p in parts if p]
+
+    def _split_commas(self, s: str) -> List[str]:
+        """Split at commas, respecting brackets, strings, and fun...end blocks."""
+        _SIMPLE_OPENERS = frozenset({"case", "if", "begin", "receive", "try"})
+        parts: List[str] = []
+        current: List[str] = []
+        depth = 0
+        kw_depth = 0
+        in_string = False
+        i = 0
+        n = len(s)
+        while i < n:
+            ch = s[i]
+            if ch == '"':
+                in_string = not in_string
+                current.append(ch)
+                i += 1
+                continue
+            if in_string:
+                current.append(ch)
+                i += 1
+                continue
+            if ch in ('(', '[', '{'):
+                depth += 1
+            elif ch in (')', ']', '}'):
+                depth -= 1
+            elif ch == ',' and depth == 0 and kw_depth == 0:
+                parts.append("".join(current).strip())
+                current = []
+                i += 1
+                continue
+            elif ch.isalpha() or ch == '_':
+                j = i
+                while j < n and (s[j].isalnum() or s[j] == '_'):
+                    j += 1
+                word = s[i:j]
+                prev_is_word = i > 0 and (s[i - 1].isalnum() or s[i - 1] == '_')
+                if not prev_is_word:
+                    if word == "end":
+                        kw_depth = max(0, kw_depth - 1)
+                    elif word in _SIMPLE_OPENERS:
+                        kw_depth += 1
+                    elif word == "fun":
+                        k = j
+                        while k < n and s[k] in (' ', '\t', '\n', '\r'):
+                            k += 1
+                        if k < n and s[k] == '(':
+                            kw_depth += 1
+                current.append(s[i:j])
+                i = j
+                continue
             current.append(ch)
             i += 1
         if current:
@@ -448,23 +520,11 @@ class ErlangEnvironment:
 
     def _call_function(self, name: str, args: List[Any], env: Optional[Dict[str, Any]] = None) -> Any:
         """Call an Erlang function by name and args."""
-        if hasattr(self, '_deadline') and time.time() > self._deadline:
-            raise _ErlangError("execution time limit exceeded")
         arity = len(args)
         key = (name, arity)
 
         if key not in self._functions:
             raise _ErlangError(f"undefined function {name}/{arity}")
-
-        # Memoization: cache pure function results (no output side effects)
-        try:
-            memo_key = (name, arity, tuple(_to_hashable(a) for a in args))
-            if memo_key in self._memo:
-                return self._memo[memo_key]
-            use_memo = True
-        except TypeError:
-            use_memo = False
-            memo_key = None
 
         clauses = self._functions[key]
         for patterns, guard_str, body_exprs in clauses:
@@ -476,15 +536,12 @@ class ErlangEnvironment:
                     self._match_pattern(pat.strip(), arg, bindings)
                 # Check guard
                 if guard_str:
-                    if not self._truthy(self._eval_expr(guard_str.strip(), bindings)):
+                    if not self._eval_guard(guard_str.strip(), bindings):
                         raise _PatternMatchError("guard failed")
-                # Execute body — check if output grows (impure function)
-                pre_len = len(self._output)
+                # Execute body
                 result = None
                 for expr in body_exprs:
                     result = self._eval_expr(expr.strip(), bindings)
-                if use_memo and len(self._output) == pre_len:
-                    self._memo[memo_key] = result
                 return result
             except _PatternMatchError:
                 continue
@@ -515,9 +572,7 @@ class ErlangEnvironment:
         # Atom
         if re.match(r"^[a-z][a-zA-Z0-9_@]*$", pattern):
             atom = _Atom(pattern)
-            # Also accept Python booleans as Erlang atoms true/false
-            bool_match = (pattern == "true" and value is True) or (pattern == "false" and value is False)
-            if not bool_match and value != atom and value != pattern:
+            if value != atom and value != pattern:
                 raise _PatternMatchError(f"atom {pattern} != {value}")
             return
 
@@ -596,6 +651,52 @@ class ErlangEnvironment:
     # Expression evaluator
     # ------------------------------------------------------------------
 
+    def _find_close_paren(self, s: str, open_pos: int) -> int:
+        """Find the position of ')' matching '(' at open_pos.
+
+        Respects nesting depth and skips over quoted strings.
+        Returns -1 if no matching paren is found.
+        """
+        depth = 0
+        in_string = False
+        for i in range(open_pos, len(s)):
+            c = s[i]
+            if c == '"':
+                in_string = not in_string
+            if not in_string:
+                if c == '(':
+                    depth += 1
+                elif c == ')':
+                    depth -= 1
+                    if depth == 0:
+                        return i
+        return -1
+
+    def _find_op_at_depth0(self, expr: str, op: str) -> int:
+        """Find the last occurrence of *op* at bracket/string depth 0, not at position 0.
+
+        Searches right-to-left (last occurrence) for left-associativity.
+        Returns the index of the operator or -1 if not found.
+        """
+        n = len(expr)
+        op_len = len(op)
+        depth = 0
+        in_string = False
+        last_pos = -1
+        for i in range(n):
+            ch = expr[i]
+            if ch == '"':
+                in_string = not in_string
+            if not in_string:
+                if ch in ('(', '[', '{'):
+                    depth += 1
+                elif ch in (')', ']', '}'):
+                    depth -= 1
+                elif depth == 0 and i > 0:  # i > 0 avoids unary +/- at start
+                    if expr[i:i + op_len] == op:
+                        last_pos = i
+        return last_pos
+
     def _eval_expr(self, expr: str, bindings: Dict[str, Any]) -> Any:
         """Evaluate an Erlang expression string."""
         expr = expr.strip()
@@ -636,6 +737,21 @@ class ErlangEnvironment:
                 return bindings[expr]
             raise _ErlangError(f"unbound variable: {expr}")
 
+        # Pattern match / assignment: Var = Expr  (multiline-safe)
+        m = re.match(r"^([A-Z_][A-Za-z0-9_]*)\s*=\s*(.+)$", expr, re.DOTALL)
+        if m:
+            val = self._eval_expr(m.group(2).strip(), bindings)
+            self._match_pattern(m.group(1), val, bindings)
+            return val
+
+        # Complex-pattern match: {A,B} = Expr  or  [H|T] = Expr
+        # Must come BEFORE bare tuple/list evals to avoid misparse
+        m = re.match(r"^(\{[^{}]*\}|\[[^\[\]]*\])\s*=\s*(.+)$", expr, re.DOTALL)
+        if m:
+            val = self._eval_expr(m.group(2).strip(), bindings)
+            self._match_pattern(m.group(1).strip(), val, bindings)
+            return val
+
         # Tuple {E1, E2, ...}
         if expr.startswith("{") and expr.endswith("}"):
             inner = expr[1:-1].strip()
@@ -644,41 +760,23 @@ class ErlangEnvironment:
             elems = [self._eval_expr(e.strip(), bindings) for e in self._split_commas(inner)]
             return _Tuple(*elems)
 
-        # List comprehension [Expr || Generator, ...]  -- must precede generic list check
-        m = re.match(r"^\[\s*(.+?)\s*\|\|\s*(.+)\s*\]$", expr, re.DOTALL)
-        if m:
-            return self._eval_list_comp(m.group(1), m.group(2), bindings)
-
-        # List [E1, E2, ...] or [H|T]
+        # List comprehension [Expr || Generator, ...] — depth-aware to avoid false
+        # matches when || appears inside nested brackets like [P | f([X || ...])]
         if expr.startswith("[") and expr.endswith("]"):
+            inner = expr[1:-1]
+            lc_idx = self._find_op_at_depth0(inner, "||")
+            if lc_idx >= 0:
+                return self._eval_list_comp(inner[:lc_idx].strip(), inner[lc_idx + 2:].strip(), bindings)
             return self._eval_list(expr, bindings)
 
-        # Parenthesised — only if the opening ( at pos 0 matches the final )
+        # Parenthesised — verify the outer ( and ) actually match each other
         if expr.startswith("(") and expr.endswith(")"):
-            close = self._find_matching_paren(expr, 0)
-            if close == len(expr) - 1:
+            if self._find_close_paren(expr, 0) == len(expr) - 1:
                 return self._eval_expr(expr[1:-1], bindings)
 
         # Map #{K => V, ...}
         if expr.startswith("#{") and expr.endswith("}"):
             return self._eval_map(expr, bindings)
-
-        # Pattern match / assignment: Var = Expr  (= not followed by < or > or :)
-        m = re.match(r"^([A-Z_][A-Za-z0-9_]*)\s*=(?![<>:/=])\s*(.+)$", expr, re.DOTALL)
-        if m:
-            val = self._eval_expr(m.group(2).strip(), bindings)
-            self._match_pattern(m.group(1), val, bindings)
-            return val
-
-        # Tuple/list pattern match: {A,B} = Expr or [H|T] = Expr
-        if expr.startswith("{") or expr.startswith("["):
-            eq_pos = self._find_pattern_eq(expr)
-            if eq_pos is not None:
-                pat_s = expr[:eq_pos].strip()
-                rhs_s = expr[eq_pos+1:].strip()
-                val = self._eval_expr(rhs_s, bindings)
-                self._match_pattern(pat_s, val, bindings)
-                return val
 
         # case Expr of Clauses end
         m = re.match(r"^case\s+(.+?)\s+of\s+(.+)\s+end$", expr, re.DOTALL)
@@ -701,260 +799,124 @@ class ErlangEnvironment:
                     return False
                 return self._truthy(self._eval_expr(parts[1].strip(), bindings))
 
-        # Prefix 'not' operator: not <expr>
-        if expr.startswith("not "):
-            return not self._truthy(self._eval_expr(expr[4:].strip(), bindings))
+        for op in (" or ", " and ", " not ", " xor "):
+            if op in expr or expr.startswith("not "):
+                break
 
-        # fun(Args) [when Guard] -> Body end  (anonymous function)
-        # Also handles multi-clause: fun(A) -> B; (C) -> D end
-        # And named references: fun name/arity  or  fun mod:name/arity
-        # Handle fun name/arity and fun mod:name/arity WITHOUT end
-        nm_bare = re.match(r"^fun\s+(\w+)/(\d+)$", expr)
-        if nm_bare:
-            fname_ref = nm_bare.group(1)
-            arity_ref = int(nm_bare.group(2))
-            def _make_named_ref_bare(fn, ar, bl):
-                def _named(*args):
-                    if len(args) == ar:
-                        return self._dispatch(fn, list(args), bl)
-                    raise _ErlangError(f"fun {fn}/{ar}: arity mismatch")
-                return _named
-            return _make_named_ref_bare(fname_ref, arity_ref, dict(bindings))
-        qm_bare = re.match(r"^fun\s+(\w+):(\w+)/(\d+)$", expr)
-        if qm_bare:
-            mod_ref, fn_ref, ar_ref = qm_bare.group(1), qm_bare.group(2), int(qm_bare.group(3))
-            def _make_qual_ref_bare(mod, fn, ar, bl):
-                def _qual(*args):
-                    if len(args) == ar:
-                        return self._call_bif(mod, fn, list(args))
-                    raise _ErlangError(f"fun {mod}:{fn}/{ar}: arity mismatch")
-                return _qual
-            return _make_qual_ref_bare(mod_ref, fn_ref, ar_ref, dict(bindings))
-
-        m = re.match(r"^fun\b(.+)\bend$", expr, re.DOTALL)
+        # Module:function(Args) call — use balanced-paren finder to support nested calls
+        m = re.match(r"^(\w+)\s*:\s*(\w+)\s*\(", expr)
         if m:
-            inner = m.group(1).strip()
-            # Named function reference: fun name/arity
-            nm = re.match(r"^(\w+)/(\d+)$", inner)
-            if nm:
-                fname_ref = nm.group(1)
-                arity_ref = int(nm.group(2))
-                def _make_named_ref(fn, ar, bl):
-                    def _named(*args):
-                        if len(args) == ar:
-                            return self._dispatch(fn, list(args), bl)
-                        raise _ErlangError(f"fun {fn}/{ar}: arity mismatch")
-                    return _named
-                return _make_named_ref(fname_ref, arity_ref, dict(bindings))
-            # Qualified: fun mod:name/arity
-            qm = re.match(r"^(\w+):(\w+)/(\d+)$", inner)
-            if qm:
-                mod_ref, fn_ref, ar_ref = qm.group(1), qm.group(2), int(qm.group(3))
-                def _make_qual_ref(mod, fn, ar, bl):
-                    def _qual(*args):
-                        if len(args) == ar:
-                            return self._call_bif(mod, fn, list(args))
-                        raise _ErlangError(f"fun {mod}:{fn}/{ar}: arity mismatch")
-                    return _qual
-                return _make_qual_ref(mod_ref, fn_ref, ar_ref, dict(bindings))
-            # One or more clauses: (Args) -> Body  [; (Args2) -> Body2 ...]
-            clauses = self._split_fun_clauses(inner)
-            parsed_clauses = []
-            for clause in clauses:
-                cm = re.match(r"^\(([^)]*)\)\s*(?:when\s+(.+?))?\s*->\s*(.+)$", clause.strip(), re.DOTALL)
-                if cm:
-                    params_str = cm.group(1).strip()
-                    guard_s = cm.group(2)
-                    body_s = cm.group(3).strip()
-                    params = self._split_commas(params_str) if params_str else []
-                    parsed_clauses.append((params, guard_s, body_s))
-            if parsed_clauses:
-                outer_b = dict(bindings)
-                def _make_closure(cls, ob):
-                    def _closure(*args):
-                        for params, guard_s, body_s in cls:
-                            local = dict(ob)
-                            try:
-                                if len(params) != len(args):
-                                    raise _PatternMatchError("arity")
-                                for p, a in zip(params, list(args)):
-                                    self._match_pattern(p.strip(), a, local)
-                                if guard_s:
-                                    if not self._truthy(self._eval_expr(guard_s.strip(), local)):
-                                        raise _PatternMatchError("guard")
-                                result = _ok
-                                for expr_s in self._split_body(body_s):
-                                    result = self._eval_expr(expr_s.strip(), local)
-                                return result
-                            except _PatternMatchError:
-                                continue
-                        raise _ErlangError(f"fun: no matching clause for args {args}")
-                    return _closure
-                return _make_closure(parsed_clauses, outer_b)
-            return _ok
+            paren_start = expr.index("(", m.start(2))
+            paren_end = self._find_close_paren(expr, paren_start)
+            if paren_end == len(expr) - 1:
+                mod = m.group(1)
+                func = m.group(2)
+                args_str = expr[paren_start + 1:paren_end].strip()
+                args = [self._eval_expr(a.strip(), bindings) for a in self._split_commas(args_str)] if args_str else []
+                return self._call_bif(mod, func, args)
 
-        # Module:function(Args) call — bracket-aware parsing
-        mod_call = self._try_parse_mod_call(expr)
-        if mod_call is not None:
-            mod, func, args_str = mod_call
-            args = [self._eval_expr(a.strip(), bindings) for a in self._split_commas(args_str)] if args_str.strip() else []
-            return self._call_bif(mod, func, args)
+        # Function call: name(Args) — use balanced-paren finder to support nested calls
+        m = re.match(r"^(\w+)\s*\(", expr)
+        if m:
+            paren_start = expr.index("(", m.start(1))
+            paren_end = self._find_close_paren(expr, paren_start)
+            if paren_end == len(expr) - 1:
+                fname = m.group(1)
+                args_str = expr[paren_start + 1:paren_end].strip()
+                args = [self._eval_expr(a.strip(), bindings) for a in self._split_commas(args_str)] if args_str else []
+                return self._dispatch(fname, args, bindings)
 
-        # Function call: name(Args) — bracket-aware
-        bare_call = self._try_parse_bare_call(expr)
-        if bare_call is not None:
-            fname, args_str = bare_call
-            args = [self._eval_expr(a.strip(), bindings) for a in self._split_commas(args_str)] if args_str.strip() else []
-            return self._dispatch(fname, args, bindings)
+        # fun Name/Arity  — function reference (must come before binary ops to avoid
+        # searching for operators like rem/div inside the lambda body)
+        m = re.match(r"^fun\s+(\w+)\s*/\s*(\d+)$", expr)
+        if m:
+            fname_ref = m.group(1)
+            arity_ref = int(m.group(2))
+            env_ref = self
+            def _fun_ref(*call_args, _fn=fname_ref, _ar=arity_ref, _env=env_ref):
+                return _env._call_function(_fn, list(call_args), None)
+            return _fun_ref
 
-        # List concatenation: Expr1 ++ Expr2 (depth-aware split)
-        pp = self._split_at_op(expr, "++")
-        if pp is not None:
-            lv = self._eval_expr(pp[0], bindings)
-            rv = self._eval_expr(pp[1], bindings)
-            if isinstance(lv, list) and isinstance(rv, list):
-                return lv + rv
-            return lv
+        # fun Module:Name/Arity  — module-qualified function reference
+        m = re.match(r"^fun\s+(\w+)\s*:\s*(\w+)\s*/\s*(\d+)$", expr)
+        if m:
+            mod_ref, fname_ref = m.group(1), m.group(2)
+            env_ref = self
+            def _modfun_ref(*call_args, _m=mod_ref, _f=fname_ref, _env=env_ref):
+                return _env._call_bif(_m, _f, list(call_args))
+            return _modfun_ref
 
-        # Arithmetic operators involving function calls: split at div/rem/+/-/*/
-        for op_str, py_op in ((" div ", "//"), (" rem ", "%"), (" + ", "+"), (" - ", "-"), (" * ", "*"), (" / ", "/")):
-            pp = self._split_at_op(expr, op_str)
-            if pp is not None:
-                lv = self._eval_expr(pp[0], bindings)
-                rv = self._eval_expr(pp[1], bindings)
-                try:
-                    if py_op == "//":
-                        return int(lv) // int(rv)
-                    elif py_op == "%":
-                        return int(lv) % int(rv)
-                    elif py_op == "+":
-                        if isinstance(lv, list) and isinstance(rv, list):
-                            return lv + rv
-                        return lv + rv
-                    elif py_op == "-":
-                        return lv - rv
-                    elif py_op == "*":
-                        return lv * rv
-                    elif py_op == "/":
-                        return lv / rv
-                except Exception:
-                    pass
+        # fun(Params) -> Body end  — anonymous function (lambda)
+        m = re.match(r"^fun\s*\(([^)]*)\)\s*->\s*(.+)\s+end$", expr, re.DOTALL)
+        if m:
+            params_str = m.group(1).strip()
+            body_str = m.group(2).strip()
+            params = [p.strip() for p in self._split_commas(params_str)] if params_str else []
+            body_exprs = self._split_body(body_str)
+            env_ref = self
+            captured = dict(bindings)
+            def _lambda(*call_args, _params=params, _body=body_exprs, _env=env_ref, _cap=captured):
+                b = dict(_cap)
+                for p, a in zip(_params, call_args):
+                    _env._match_pattern(p, a, b)
+                result = None
+                for be in _body:
+                    result = _env._eval_expr(be.strip(), b)
+                return result
+            return _lambda
+
+        # Recursive binary arithmetic — handles expressions like "N * fact(N - 1)"
+        # Operators are checked lowest-precedence-first.
+        # Comparison ops (lowest precedence) — return _Atom("true"/"false") so
+        # that case/if guards work correctly (case X =:= Y of true -> ...)
+        for op_sym, op_fn in [
+            (" =:= ", lambda a, b: _true_atom if a == b else _false_atom),
+            (" =/= ", lambda a, b: _true_atom if a != b else _false_atom),
+            (" /= ", lambda a, b: _true_atom if a != b else _false_atom),
+            (" == ", lambda a, b: _true_atom if a == b else _false_atom),
+            (" >= ", lambda a, b: _true_atom if a >= b else _false_atom),
+            (" =< ", lambda a, b: _true_atom if a <= b else _false_atom),
+            (" > ", lambda a, b: _true_atom if a > b else _false_atom),
+            (" < ", lambda a, b: _true_atom if a < b else _false_atom),
+        ]:
+            idx = self._find_op_at_depth0(expr, op_sym)
+            if idx >= 0:
+                left = self._eval_expr(expr[:idx].strip(), bindings)
+                right = self._eval_expr(expr[idx + len(op_sym):].strip(), bindings)
+                return op_fn(left, right)
+
+        # List ops (below additive precedence)
+        for op_sym, op_fn in [
+            (" ++ ", lambda a, b: (a if isinstance(a, list) else []) + (b if isinstance(b, list) else [])),
+            (" -- ", lambda a, b: [x for x in (a if isinstance(a, list) else []) if x not in (b if isinstance(b, list) else [])]),
+        ]:
+            idx = self._find_op_at_depth0(expr, op_sym)
+            if idx >= 0:
+                left = self._eval_expr(expr[:idx].strip(), bindings)
+                right = self._eval_expr(expr[idx + len(op_sym):].strip(), bindings)
+                return op_fn(left, right)
+
+        for op_sym, op_fn in [(" + ", lambda a, b: a + b), (" - ", lambda a, b: a - b)]:
+            idx = self._find_op_at_depth0(expr, op_sym)
+            if idx >= 0:
+                left = self._eval_expr(expr[:idx].strip(), bindings)
+                right = self._eval_expr(expr[idx + len(op_sym):].strip(), bindings)
+                return op_fn(left, right)
+
+        for op_sym, op_fn in [
+            (" * ", lambda a, b: a * b),
+            (" / ", lambda a, b: a / b),
+            (" div ", lambda a, b: int(a) // int(b)),
+            (" rem ", lambda a, b: int(a) % int(b)),
+        ]:
+            idx = self._find_op_at_depth0(expr, op_sym)
+            if idx >= 0:
+                left = self._eval_expr(expr[:idx].strip(), bindings)
+                right = self._eval_expr(expr[idx + len(op_sym):].strip(), bindings)
+                return op_fn(left, right)
 
         # Arithmetic / comparison via Python eval
         return self._safe_eval(expr, bindings)
-
-    def _find_pattern_eq(self, expr: str) -> Optional[int]:
-        """Find position of '=' at depth 0 not part of ==, =<, =:=, =/=. Returns index or None."""
-        depth, in_str = 0, False
-        for i, c in enumerate(expr):
-            if c == '"':
-                in_str = not in_str
-            if in_str:
-                continue
-            if c in ('(', '[', '{'):
-                depth += 1
-            elif c in (')', ']', '}'):
-                depth -= 1
-            elif c == '=' and depth == 0:
-                # check not ==, =<, =:=, =/=
-                next_c = expr[i+1] if i+1 < len(expr) else ''
-                if next_c not in ('=', '<', ':', '/'):
-                    return i
-        return None
-
-    def _split_at_op(self, expr: str, op: str) -> Optional[tuple]:
-        """Find rightmost occurrence of op at bracket depth 0, return (left, right) or None."""
-        depth, in_str = 0, False
-        i = len(expr) - 1
-        while i >= 0:
-            c = expr[i]
-            if c == '"':
-                in_str = not in_str
-            if not in_str:
-                if c in (')', ']', '}'):
-                    depth += 1
-                elif c in ('(', '[', '{'):
-                    depth -= 1
-                elif depth == 0 and i + len(op) <= len(expr) and expr[i:i+len(op)] == op:
-                    return (expr[:i].strip(), expr[i+len(op):].strip())
-            i -= 1
-        return None
-
-    def _split_fun_clauses(self, s: str) -> List[str]:
-        """Split fun clauses at ';' at bracket depth 0, respecting if/case/begin/receive...end blocks."""
-        parts, current, depth, in_str = [], [], 0, False
-        kw_depth = 0
-        i = 0
-        _KW_OPENERS = frozenset(("fun", "begin", "case", "receive", "if"))
-        while i < len(s):
-            ch = s[i]
-            if ch == '"':
-                in_str = not in_str
-            if not in_str:
-                if ch.isalpha() and (i == 0 or (not s[i-1].isalnum() and s[i-1] != '_')):
-                    for kw in ("begin", "receive", "fun", "case", "end", "if"):
-                        end_i = i + len(kw)
-                        if s[i:end_i] == kw and (end_i >= len(s) or (not s[end_i].isalnum() and s[end_i] != '_')):
-                            if kw == "end":
-                                kw_depth = max(0, kw_depth - 1)
-                            elif kw == "fun":
-                                rest = s[end_i:].lstrip()
-                                is_ref = bool(re.match(r'^[\w:]+\s*/\s*\d+', rest))
-                                if not is_ref:
-                                    kw_depth += 1
-                            elif kw in _KW_OPENERS:
-                                kw_depth += 1
-                            break
-                if ch in ('(', '[', '{'):
-                    depth += 1
-                elif ch in (')', ']', '}'):
-                    depth -= 1
-                elif ch == ';' and depth == 0 and kw_depth == 0:
-                    parts.append(''.join(current).strip())
-                    current = []
-                    i += 1
-                    continue
-            current.append(ch)
-            i += 1
-        if current:
-            parts.append(''.join(current).strip())
-        return [p for p in parts if p]
-
-    def _find_matching_paren(self, s: str, start: int) -> int:
-        """Return index of the ')' matching '(' at position start."""
-        depth = 0
-        for i in range(start, len(s)):
-            if s[i] == '(':
-                depth += 1
-            elif s[i] == ')':
-                depth -= 1
-                if depth == 0:
-                    return i
-        return len(s) - 1
-
-    def _try_parse_mod_call(self, expr: str) -> Optional[Tuple[str, str, str]]:
-        """Try to parse 'mod:func(args)' handling nested parens."""
-        m = re.match(r"^(\w+)\s*:\s*(\w+)\s*\(", expr)
-        if not m:
-            return None
-        mod, func = m.group(1), m.group(2)
-        paren_start = m.end() - 1
-        paren_end = self._find_matching_paren(expr, paren_start)
-        if paren_end == len(expr) - 1:
-            return (mod, func, expr[paren_start + 1:paren_end])
-        return None
-
-    def _try_parse_bare_call(self, expr: str) -> Optional[Tuple[str, str]]:
-        """Try to parse 'func(args)' handling nested parens."""
-        m = re.match(r"^([A-Za-z_]\w*)\s*\(", expr)
-        if not m:
-            return None
-        fname = m.group(1)
-        paren_start = m.end() - 1
-        paren_end = self._find_matching_paren(expr, paren_start)
-        if paren_end == len(expr) - 1:
-            return (fname, expr[paren_start + 1:paren_end])
-        return None
 
     def _eval_list(self, expr: str, bindings: Dict[str, Any]) -> List[Any]:
         inner = expr[1:-1].strip()
@@ -987,7 +949,7 @@ class ErlangEnvironment:
             b = dict(bindings)
             try:
                 self._match_pattern(pat, value, b)
-                if guard and not self._truthy(self._eval_expr(guard, b)):
+                if guard and not self._eval_guard(guard, b):
                     continue
                 result = None
                 for bexpr in body_exprs:
@@ -1002,43 +964,20 @@ class ErlangEnvironment:
         raw_clauses = []
         current: List[str] = []
         depth = 0
-        kw_depth = 0
         in_string = False
-        i = 0
-        _KW_OPENERS = frozenset(("fun", "begin", "case", "receive", "if"))
-        while i < len(s):
-            ch = s[i]
+        for ch in s:
             if ch == '"':
                 in_string = not in_string
-                current.append(ch)
-                i += 1
-                continue
             if not in_string:
-                if ch.isalpha() and (i == 0 or (not s[i-1].isalnum() and s[i-1] != '_')):
-                    for kw in ("begin", "receive", "fun", "case", "end", "if"):
-                        end_i = i + len(kw)
-                        if s[i:end_i] == kw and (end_i >= len(s) or (not s[end_i].isalnum() and s[end_i] != '_')):
-                            if kw == "end":
-                                kw_depth = max(0, kw_depth - 1)
-                            elif kw == "fun":
-                                rest = s[end_i:].lstrip()
-                                is_ref = bool(re.match(r'^[\w:]+\s*/\s*\d+', rest))
-                                if not is_ref:
-                                    kw_depth += 1
-                            elif kw in _KW_OPENERS:
-                                kw_depth += 1
-                            break
                 if ch in ('(', '[', '{'):
                     depth += 1
                 elif ch in (')', ']', '}'):
                     depth -= 1
-                elif ch == ';' and depth == 0 and kw_depth == 0:
+                elif ch == ';' and depth == 0:
                     raw_clauses.append("".join(current).strip())
                     current = []
-                    i += 1
                     continue
             current.append(ch)
-            i += 1
         if current:
             raw_clauses.append("".join(current).strip())
 
@@ -1059,7 +998,7 @@ class ErlangEnvironment:
             if m:
                 guard = m.group(1).strip()
                 body = m.group(2).strip()
-                if guard == "true" or self._truthy(self._eval_expr(guard, bindings)):
+                if guard == "true" or self._eval_guard(guard, bindings):
                     body_exprs = self._split_commas(body)
                     result = None
                     for be in body_exprs:
@@ -1086,8 +1025,6 @@ class ErlangEnvironment:
             result = []
             if isinstance(lst, list):
                 for item in lst:
-                    if hasattr(self, '_deadline') and time.time() > self._deadline:
-                        raise _ErlangError("execution time limit exceeded")
                     b = dict(bindings)
                     try:
                         self._match_pattern(pat, item, b)
@@ -1112,18 +1049,14 @@ class ErlangEnvironment:
         """Dispatch a call: BIF, module function, or user function."""
         arity = len(args)
 
-        # Callable variable in bindings (e.g. a fun stored in a variable)
-        if fname in bindings and callable(bindings[fname]):
-            return bindings[fname](*args)
-
         # BIFs
         bif_result = self._call_bif_bare(fname, args)
-        if bif_result is not ErlangEnvironment._UNSET:
+        if bif_result is not self._UNSET:
             return bif_result
 
-        # User function — always use fresh bindings (no caller scope leakage)
+        # User function — always create a fresh scope; don't leak caller bindings
         if (fname, arity) in self._functions:
-            return self._call_function(fname, args)
+            return self._call_function(fname, args, None)
 
         raise _ErlangError(f"undefined function {fname}/{arity}")
 
@@ -1149,74 +1082,90 @@ class ErlangEnvironment:
             return _ok
 
         if mod == "lists":
-            # Higher-order: lists:map(Fun, List), filter(Fun, List), etc.
-            if func in ("map", "filter", "foreach", "any", "all") and callable(a0):
+            # Functions where a0 is NOT a list (Fun-first or integer-first)
+            if func == "seq":
+                start, stop = int(a0), int(a1)
+                step = int(args[2]) if len(args) > 2 else 1
+                return list(range(start, stop + 1, step))
+            if func in ("map", "foreach") and callable(a0):
                 lst = a1 if isinstance(a1, list) else []
-                if func == "map":
-                    return [a0(x) for x in lst]
-                if func == "filter":
-                    return [x for x in lst if self._truthy(a0(x))]
-                if func == "foreach":
-                    for x in lst:
-                        a0(x)
-                    return _ok
-                if func == "any":
-                    return any(self._truthy(a0(x)) for x in lst)
-                if func == "all":
-                    return all(self._truthy(a0(x)) for x in lst)
+                result = [a0(x) for x in lst]
+                return [] if func == "foreach" else result
+            if func == "filter" and callable(a0):
+                lst = a1 if isinstance(a1, list) else []
+                return [x for x in lst if a0(x)]
             if func == "foldl" and callable(a0):
-                # foldl(Fun, Acc, List) — Fun(Elem, Acc) -> NewAcc
-                lst = args[2] if len(args) > 2 and isinstance(args[2], list) else []
+                lst = args[2] if len(args) > 2 else []
+                if not isinstance(lst, list):
+                    lst = []
                 acc = a1
                 for x in lst:
                     acc = a0(x, acc)
                 return acc
             if func == "foldr" and callable(a0):
-                lst = args[2] if len(args) > 2 and isinstance(args[2], list) else []
+                lst = args[2] if len(args) > 2 else []
+                if not isinstance(lst, list):
+                    lst = []
                 acc = a1
                 for x in reversed(lst):
                     acc = a0(x, acc)
                 return acc
-            if func == "sort":
-                if callable(a0) and isinstance(a1, list):
-                    import functools as _functools
-                    return sorted(a1, key=_functools.cmp_to_key(
-                        lambda x, y: -1 if self._truthy(a0(x, y)) else 1))
-                lst = a0 if isinstance(a0, list) else []
-                try:
-                    return sorted(lst)
-                except TypeError:
-                    return lst
-            if func == "msort":
-                lst = a0 if isinstance(a0, list) else []
-                try:
-                    return sorted(lst)
-                except TypeError:
-                    return lst
-            # Non-list-first operations (args are not necessarily lists)
-            if func == "seq":
-                start, stop = int(a0), int(a1)
-                step = int(args[2]) if len(args) > 2 else 1
-                return list(range(start, stop + 1, step))
-            if func == "duplicate":
-                n, val = int(a0), a1
-                return [val] * n
-            if func == "nth":
-                idx, lst = int(a0), a1
-                return lst[idx - 1] if isinstance(lst, list) and 1 <= idx <= len(lst) else _Atom("undefined")
             if func == "member":
                 val, lst = a0, a1
                 return val in (lst if isinstance(lst, list) else [])
+            if func == "nth":
+                idx, lst = int(a0), a1
+                return lst[idx - 1] if isinstance(lst, list) and 1 <= idx <= len(lst) else _Atom("undefined")
+            if func == "duplicate":
+                n, val = int(a0), a1
+                return [val] * n
             if func == "split":
                 n, lst = int(a0), a1
                 if isinstance(lst, list):
                     return _Tuple(lst[:n], lst[n:])
                 return _Tuple([], [])
-            # List-first operations
+            if func == "delete":
+                val, lst = a0, a1
+                if isinstance(lst, list):
+                    result = lst[:]
+                    try:
+                        result.remove(val)
+                    except ValueError:
+                        pass
+                    return result
+                return []
+            if func == "zip":
+                if isinstance(a0, list) and isinstance(a1, list):
+                    return [_Tuple(x, y) for x, y in zip(a0, a1)]
+                return []
+            # Remaining functions require a0 to be a list
             if not isinstance(a0, list):
                 return []
+            if func == "map" and callable(a1):
+                return [a1(x) for x in a0]
+            if func == "filter" and callable(a1):
+                return [x for x in a0 if a1(x)]
+            if func == "foreach" and callable(a1):
+                for x in a0:
+                    a1(x)
+                return _ok
+            if func == "foldl" and callable(a1):
+                acc = args[2] if len(args) > 2 else 0
+                for x in a0:
+                    acc = a1(x, acc)
+                return acc
+            if func == "foldr" and callable(a1):
+                acc = args[2] if len(args) > 2 else 0
+                for x in reversed(a0):
+                    acc = a1(x, acc)
+                return acc
             if func == "reverse":
                 return list(reversed(a0))
+            if func == "sort":
+                try:
+                    return sorted(a0)
+                except TypeError:
+                    return a0
             if func == "append":
                 if isinstance(a1, list):
                     return a0 + a1
@@ -1235,12 +1184,6 @@ class ErlangEnvironment:
                             result.append(item)
                 flatten(a0)
                 return result
-            if func == "member":
-                val, lst = a0, a1
-                return val in (lst if isinstance(lst, list) else [])
-            if func == "nth":
-                idx, lst = int(a0), a1
-                return lst[idx - 1] if isinstance(lst, list) and 1 <= idx <= len(lst) else _Atom("undefined")
             if func == "last":
                 return a0[-1] if a0 else _Atom("undefined")
             if func == "sum":
@@ -1249,10 +1192,6 @@ class ErlangEnvironment:
                 return max(a0) if a0 else _Atom("undefined")
             if func == "min":
                 return min(a0) if a0 else _Atom("undefined")
-            if func == "zip":
-                if isinstance(a1, list):
-                    return [_Tuple(x, y) for x, y in zip(a0, a1)]
-                return []
             if func == "unzip":
                 if a0:
                     firsts = [t[0] for t in a0 if isinstance(t, _Tuple)]
@@ -1273,30 +1212,9 @@ class ErlangEnvironment:
                     if x not in seen:
                         seen.append(x)
                 return seen
-            if func == "delete":
-                val, lst = a0, a1
-                if isinstance(lst, list):
-                    result = lst[:]
-                    try:
-                        result.remove(val)
-                    except ValueError:
-                        pass
-                    return result
-                return []
             return a0 if isinstance(a0, list) else []
 
         if mod == "string":
-            if func == "join":
-                sep = str(a1) if a1 else ""
-                lst = a0 if isinstance(a0, list) else [a0]
-                parts = []
-                for x in lst:
-                    if isinstance(x, list):
-                        # Erlang char-list: join chars
-                        parts.append("".join(chr(c) if isinstance(c, int) else str(c) for c in x))
-                    else:
-                        parts.append(str(x))
-                return sep.join(parts)
             if not isinstance(a0, str):
                 a0 = str(a0)
             if func == "to_upper":
@@ -1435,7 +1353,7 @@ class ErlangEnvironment:
         if fname == "float":
             return float(a0) if isinstance(a0, (int, float)) else 0.0
         if fname == "integer_to_list":
-            return str(int(a0)) if a0 is not None else ""
+            return list(str(a0)) if a0 is not None else []
         if fname == "list_to_integer":
             try:
                 if isinstance(a0, list):
@@ -1520,7 +1438,7 @@ class ErlangEnvironment:
             self._io_format(args)
             return _ok
 
-        return ErlangEnvironment._UNSET
+        return self._UNSET
 
     def _io_format(self, args: List[Any]) -> None:
         """Implement io:format/2 with ~w, ~p, ~s, ~n, ~i format directives."""
@@ -1538,58 +1456,6 @@ class ErlangEnvironment:
         param_idx = 0
         while i < len(fmt):
             if fmt[i] == "~" and i + 1 < len(fmt):
-                # Handle ~.Nf, ~Nf precision formats
-                j = i + 1
-                if j < len(fmt) and fmt[j] == '.':
-                    j += 1
-                while j < len(fmt) and fmt[j].isdigit():
-                    j += 1
-                if j < len(fmt) and fmt[j] in ('f', 'e') and j > i + 1:
-                    # precision float format like ~.2f or ~6.2f
-                    precision_str = fmt[i+1:j]  # e.g. ".2" or "6.2" or "2"
-                    directive = fmt[j]
-                    prec = 2  # default
-                    if '.' in precision_str:
-                        prec = int(precision_str.split('.')[-1]) if precision_str.split('.')[-1] else 2
-                    elif precision_str.isdigit():
-                        prec = int(precision_str)
-                    i = j + 1
-                    if param_idx < len(params):
-                        val = params[param_idx]
-                        try:
-                            fval = float(val)
-                            if directive == 'f':
-                                result.append(f"{fval:.{prec}f}")
-                            else:
-                                result.append(f"{fval:.{prec}e}")
-                        except (TypeError, ValueError):
-                            result.append(str(val))
-                        param_idx += 1
-                    continue
-                # Check for ~Nd, ~Nw, ~Ns width/precision prefix (e.g. ~5w, ~4s, ~8d)
-                j2 = i + 1
-                while j2 < len(fmt) and fmt[j2].isdigit():
-                    j2 += 1
-                if j2 > i + 1 and j2 < len(fmt) and fmt[j2] in ('w', 'p', 's', 'd', 'i', 'a'):
-                    # Width-prefixed directive: skip width (just format without padding for now)
-                    directive = fmt[j2]
-                    i = j2 + 1
-                    if directive in ('w', 'p', 'a'):
-                        if param_idx < len(params):
-                            result.append(_erl_repr(params[param_idx]))
-                            param_idx += 1
-                    elif directive == 's':
-                        if param_idx < len(params):
-                            v = params[param_idx]
-                            result.append(str(v) if not isinstance(v, list) else "".join(chr(c) if isinstance(c, int) else str(c) for c in v))
-                            param_idx += 1
-                    elif directive == 'd':
-                        if param_idx < len(params):
-                            result.append(str(int(params[param_idx])))
-                            param_idx += 1
-                    elif directive == 'i':
-                        param_idx += 1
-                    continue
                 directive = fmt[i + 1]
                 i += 2
                 if directive == "n":

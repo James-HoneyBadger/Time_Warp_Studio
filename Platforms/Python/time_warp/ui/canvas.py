@@ -86,6 +86,9 @@ class TurtleCanvas(
         # Minimum size — small enough to allow the splitter to resize freely
         self.setMinimumSize(200, 200)
 
+        # Accept keyboard focus so arrow / zoom keys work when canvas is clicked
+        self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+
         # Outer container: toolbar + canvas + position strip
         # (We expose self as the canvas widget; the wrapper is in _build_wrapper)
         self._pos_label: QLabel | None = None
@@ -1038,6 +1041,40 @@ class TurtleCanvas(
             self.panning = False
             self.last_pan_pos = None
             self.setCursor(Qt.CursorShape.ArrowCursor)
+
+    def keyPressEvent(self, event):
+        """Handle keyboard zoom and pan.
+
+        +/=  — zoom in          -    — zoom out
+        0/R  — reset view       F    — fit to screen
+        Arrow keys — pan by 20 px (hold Shift for 5 px fine control)
+        """
+        key = event.key()
+        fine = event.modifiers() & Qt.KeyboardModifier.ShiftModifier
+        step = 5 if fine else 20
+
+        if key in (Qt.Key.Key_Plus, Qt.Key.Key_Equal):
+            self._zoom_in()
+        elif key == Qt.Key.Key_Minus:
+            self._zoom_out()
+        elif key in (Qt.Key.Key_0, Qt.Key.Key_R):
+            self._reset_view()
+        elif key == Qt.Key.Key_F:
+            self._fit_to_screen()
+        elif key == Qt.Key.Key_Left:
+            self.offset_x -= step
+            self.update()
+        elif key == Qt.Key.Key_Right:
+            self.offset_x += step
+            self.update()
+        elif key == Qt.Key.Key_Up:
+            self.offset_y -= step
+            self.update()
+        elif key == Qt.Key.Key_Down:
+            self.offset_y += step
+            self.update()
+        else:
+            super().keyPressEvent(event)
 
     def reset_view(self):
         """Reset zoom and pan."""

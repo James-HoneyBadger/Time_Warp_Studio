@@ -2136,6 +2136,12 @@ def _basic_dim(interpreter: "Interpreter", args: str) -> str:
                 logger.error("DIM: Negative array dimension for %s", name_part)
                 return f"❌ Array dimension must be non-negative: {size}\n"
 
+            # Guard against arrays that would exhaust memory
+            _MAX_ARRAY_SIZE = 65535
+            if size > _MAX_ARRAY_SIZE:
+                logger.error("DIM: Array dimension %s exceeds limit for %s", size, name_part)
+                return f"❌ Array too large: {size} (max {_MAX_ARRAY_SIZE})\n"
+
             # Create array — string arrays (ending with $) store strings,
             # numeric arrays store floats.
             if name_part.endswith("$"):

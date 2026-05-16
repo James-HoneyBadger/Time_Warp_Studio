@@ -2,13 +2,16 @@
 
 All notable changes to Time Warp Studio will be documented in this file.
 
-## [10.2.0] - 2026-05-03
+## [10.2.0] - 2026-05-16
 
 ### Bug Fixes
 
 - **HyperTalk executor** (`languages/hypertalk.py`):
   - Fixed `BREAK`/`CONTINUE`/`RETURN` signals not propagating out of `if...end if` blocks — `exit repeat` inside an `if` block no longer causes the enclosing `repeat while` loop to run all 100,000 iterations
   - Fixed compound arithmetic expressions with embedded function calls (e.g. `put random(25) + 15 into var`) — the Python-eval fallback now pre-substitutes function calls before evaluation, so `random(n) + k` evaluates correctly
+  - Fixed `_call_fn` RETURN value handling: `_exec_lines` unwraps `("RETURN", val)` tuples before returning, so call sites now check `if result is not None` instead of the tuple wrapper. User-defined functions now correctly return their computed values.
+  - Fixed greedy function-call regex: replaced `^(\w+)\s*\((.*)\)$` with a balanced-parenthesis scan so expressions like `sin(r) / cos(r)` are no longer misidentified as a single function call.
+  - Wrapped `float(args[0])` in `try/except` to prevent `ValueError` when a built-in receives a non-numeric first argument.
 - **Erlang executor** — fixed boolean pattern matching: atoms `true`/`false` in `case` clauses now match Python `True`/`False` from built-in functions like `is_prime/1`
 - **Erlang executor** — fixed `_split_fun_clauses` infinite loop caused by semicolons inside `if...end` blocks being incorrectly treated as clause separators; keyword-depth tracking (`if/case/begin/receive...end`) now prevents this
 
@@ -17,7 +20,7 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **`Examples/erlang/number_theory.erl`** — reduced amicable-pairs search range (2000→300) and perfect-numbers loop (1..50→1..30) to complete within the 15-second test budget
 - **`Examples/forth/mathematical_wonders.forth`** — fixed `SIEVE-MARK` stack corruption (`DUP *` → `DUP DUP *`), removed erroneous `ELSE DROP` in `BUILD-SIEVE`, added `4DUP` word definition, added `FVARIABLE`/`F@`/`F!`/`F+!` support to the Forth executor, reduced Hanoi threshold to avoid deep Python recursion
 - **`Examples/lua/turtle_patterns.lua`** — reduced all spiral/curve step counts 10× (3000→300, 5000→500, etc.)
-- **`Examples/hypertalk/adventure_game.htalk`** — resolved via the two HyperTalk executor bug fixes above
+- **`Examples/hypertalk/adventure_game.htalk`** — resolved via the HyperTalk executor bug fixes above
 
 ### New Language Features
 
@@ -146,15 +149,12 @@ All notable changes to Time Warp Studio will be documented in this file.
 ### Security
 
 - **Pascal executor**: Replaced unsafe `eval()` with `ExpressionEvaluator` for safe math expression evaluation
-- **Fortran executor**: Added character whitelist regex guard before sandboxed eval
 - **JavaScript executor**: Fixed 8 bare `except:` clauses with specific exception types (`ValueError`, `TypeError`, `KeyError`, etc.)
 - **Lua executor**: Fixed bare `except:` clause with specific exception types
-- **Assembly executor**: Fixed bare `except:` clause with `(ValueError, TypeError)`
 
 ### Interpreter Enhancements
 
 - **HyperTalk**: Added `add/subtract/multiply/divide` math commands, `do`, `wait`, `visual effect`, `sort`, `beep`, `exit repeat`, `next repeat`, chunk expression ranges (`char i to j of`), built-in properties (`the date`, `the time`, `the ticks`, `the random`), new math functions (`average`, `sum`, `ln`, `log2`, `exp`, `atan`, `annuity`, `compound`)
-- **JCL**: Added `SET` symbolic parameters with `&symbol` resolution, `IF/THEN/ELSE/ENDIF` conditionals with return code comparison, inline `PROC/PEND` definitions, `JCLLIB ORDER`, `INCLUDE MEMBER`
 - **PILOT**: Added `?` single-character wildcard and substring matching (SuperPILOT), match variables (`$LEFT`, `$MATCH`, `$RIGHT`), string functions (`LEN`, `UPPER`, `LOWER`, `TRIM`, `LEFT`, `RIGHT`, `MID`, `CONCAT`, `REPLACE`, `REVERSE`), enhanced graphics commands (`SETHEADING`, `HIDETURTLE`, `SHOWTURTLE`, `ARC`, `FILL`, `DOT`, `STAMP`, `TEXT`, `SPEED`), `H:` hint and `N:` no-match commands, tab support in `T:`
 - **Lua**: Replaced stub coroutine implementation with threading-based yield/resume cycling using `threading.Event` synchronization with 5-second timeout
 - **JavaScript**: Added `Symbol.hasInstance` and `Symbol.toPrimitive` support, fixed Symbol transpiler stripping
@@ -170,7 +170,7 @@ All notable changes to Time Warp Studio will be documented in this file.
 - Removed 5 leftover debug print comments from BASIC and Logo executors
 - All bare `except:` clauses replaced with specific exception types
 
-### Demo Programs (25 new examples)
+### Demo Programs (new examples)
 
 - **BASIC**: Maze generator with recursive backtracking
 - **Logo**: Spirograph / hypotrochoid mathematical art
@@ -179,27 +179,14 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **Pascal**: Number guessing game
 - **Prolog**: Logic puzzle solver with unification
 - **Forth**: Geometric turtle art
-- **Python**: Fractal explorer (Mandelbrot, Sierpinski, Dragon curve)
-- **Lua**: Traffic light state machine
-- **Scheme**: Metacircular evaluator
-- **COBOL**: Sales report generator
 - **Brainfuck**: Fibonacci sequence generator
-- **Assembly**: String processing toolkit
 - **JavaScript**: Pub/Sub event system
-- **Fortran**: Projectile motion physics simulator
-- **REXX**: String manipulation toolkit
-- **Smalltalk**: OOP geometry shapes hierarchy
 - **HyperTalk**: Interactive quiz builder
-- **Haskell**: Parser combinator library
-- **APL**: Statistical analysis suite
-- **SQL**: School database with complex queries
-- **JCL**: Quarterly data migration job
-- **CICS**: ATM transaction processing
-- **SQR**: Employee directory report
+- **Lua**: Traffic light state machine
 
 ### Documentation
 
-- Updated README with v8.1.0 features, corrected example counts (93 total)
+- Updated README with v8.1.0 features
 - Created CHANGELOG.md
 
 ---
@@ -208,12 +195,12 @@ All notable changes to Time Warp Studio will be documented in this file.
 
 ### Initial Release
 
-- 24 programming language executors
+- 12 programming language executors: BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, JavaScript, Lua, HyperTalk, Erlang
 - PySide6 (Qt6) desktop IDE with editor, canvas, and output panels
-- 28 built-in themes including retro CRT and accessibility options
+- 26 built-in themes including retro CRT and accessibility options
 - Integrated debugger with timeline recording and rewind
 - Turtle graphics with 50+ drawing commands
 - Lesson system with auto-verification
 - AI assistant and error explainer panels
-- 97 example programs across all languages
+- Initial example programs across all 12 languages
 - Comprehensive automated test suite

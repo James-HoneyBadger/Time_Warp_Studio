@@ -176,5 +176,5 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 | `prolog/knowledge_engine.pl` | **SHOWCASE** — Animal ontology, genealogy KB, graph coloring, meta-reasoning |
 | `prolog/family_genealogy.pl` | **SHOWCASE** — 4-generation family tree (22 members), relationship inference: cousins, ancestors, distances |
 
-*Total: example programs across 12 languages.*
+*Total: 68 example programs across 12 languages.*
 *Files marked **SHOWCASE** are full-featured demo applications.*

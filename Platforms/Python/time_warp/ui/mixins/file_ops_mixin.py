@@ -59,19 +59,19 @@ class FileOperationsMixin(_FileOpsMixinBase):
             self,
             "Open File",
             last_dir,
-            "Time Warp Files (*.bas *.pilot *.logo *.c *.pas *.pro *.f *.py *.lua *.scm *.rkt *.bf *.js *.rex *.rexx *.st *.htalk *.hs *.rb *.erl *.rs);;"
+            "Time Warp Files (*.bas *.pilot *.logo *.c *.pas *.pro *.pl *.prolog *.f *.fs *.forth *.lua *.bf *.js *.htalk *.ht *.erl *.hrl);;"
             "BASIC Files (*.bas);;"
             "PILOT Files (*.pilot);;"
             "Logo Files (*.logo);;"
-            "Python Files (*.py);;"
+            "C Files (*.c);;"
+            "Pascal Files (*.pas);;"
+            "Prolog Files (*.pro *.pl *.prolog);;"
+            "Forth Files (*.f *.fs *.forth);;"
             "Lua Files (*.lua);;"
-            "Scheme Files (*.scm *.rkt);;"
             "Brainfuck Files (*.bf);;"
             "JavaScript Files (*.js);;"
-            "REXX Files (*.rex *.rexx);;"
-            "Smalltalk Files (*.st);;"
-            "HyperTalk Files (*.htalk);;"
-            "Haskell Files (*.hs);;"
+            "HyperTalk Files (*.htalk *.ht);;"
+            "Erlang Files (*.erl *.hrl);;"
             "All Files (*.*)",
             options=QFileDialog.Option.DontUseNativeDialog,
         )
@@ -123,6 +123,11 @@ class FileOperationsMixin(_FileOpsMixinBase):
             self.add_recent_file(filename)
             self.statusbar.showMessage(f"Loaded: {filename}")
 
+            # Restore persisted breakpoints for this file
+            editor = self.get_current_editor()
+            if editor and hasattr(self, "_load_breakpoints_for_file"):
+                self._load_breakpoints_for_file(filename, editor)
+
         except (OSError, UnicodeDecodeError) as e:
             QMessageBox.critical(
                 self, "Error Loading File", f"Could not load file:\n{e}"
@@ -154,6 +159,9 @@ class FileOperationsMixin(_FileOpsMixinBase):
                 f.write(editor.toPlainText())
             self.set_current_tab_info(file=filename, modified=False)
             self.statusbar.showMessage(f"Saved: {filename}")
+            # Persist breakpoints under the new/existing path
+            if hasattr(self, "_save_breakpoints_for_current_file"):
+                self._save_breakpoints_for_current_file()
             return True
         except OSError as e:
             QMessageBox.critical(

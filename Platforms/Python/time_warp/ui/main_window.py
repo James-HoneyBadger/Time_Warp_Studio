@@ -73,6 +73,7 @@ from .themes import ThemeManager
 from .variable_inspector import VariableInspector
 from ..features.classroom_mode import ClassroomMode
 from ..features.autosave_manager import AutosaveManager
+from ..features.plugin_system import PluginManager
 from .focus_mode import FocusModeManager
 from .onboarding import OnboardingDialog, OnboardingManager
 from ..features.examples_browser import ExamplesBrowser
@@ -342,8 +343,36 @@ class MainWindow(
         return tab_index
 
     def _on_breakpoint_toggled(self, _line: int):
-        """Handle breakpoint toggle from editor."""
+        """Handle breakpoint toggle from editor — persist to QSettings."""
         self._update_breakpoints_display()
+        self._save_breakpoints_for_current_file()
+
+    # ------------------------------------------------------------------
+    # Breakpoint persistence helpers
+    # ------------------------------------------------------------------
+
+    def _bp_settings_key(self, filepath: str) -> str:
+        """Return the QSettings key used to store breakpoints for a file."""
+        return f"breakpoints/{filepath}"
+
+    def _save_breakpoints_for_current_file(self):
+        """Persist the current editor's breakpoints under the file's path."""
+        info = self.get_current_tab_info()
+        filepath = info.get("file") if info else None
+        if not filepath:
+            return
+        editor = self.get_current_editor()
+        if editor is None:
+            return
+        lines = sorted(editor.get_breakpoints())
+        self.settings.setValue(self._bp_settings_key(filepath), lines)
+
+    def _load_breakpoints_for_file(self, filepath: str, editor) -> None:
+        """Restore persisted breakpoints into *editor* for the given file."""
+        raw = self.settings.value(self._bp_settings_key(filepath), [])
+        lines = {int(n) for n in raw if str(n).isdigit()} if raw else set()
+        if lines:
+            editor.set_breakpoints(lines)
 
     # -- small helpers used by menu actions (keeps lambdas short) --
     def _editor_undo(self, _checked: bool = False):
@@ -682,6 +711,54 @@ class MainWindow(
             ed.setTextCursor(cursor)
 
         self.statusbar.showMessage(msg, 3000)
+
+    def _show_plugin_manager(self, _checked: bool = False):
+        """Show the Plugin Manager dialog listing discovered plugins."""
+        import os  # pylint: disable=import-outside-toplevel
+
+        # Resolve the plugins/ directory relative to the project root
+        plugins_dir = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            "plugins",
+        )
+
+        mgr = PluginManager(ide_instance=self)
+        plugins = mgr.discover_plugins(plugins_dir)
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("🔌 Plugin Manager")
+        dlg.resize(520, 360)
+        layout = QVBoxLayout(dlg)
+
+        from PySide6.QtWidgets import QLabel as _QLabel, QListWidget as _QLW  # pylint: disable=import-outside-toplevel
+
+        if plugins:
+            header = _QLabel(f"<b>{len(plugins)} plugin(s) discovered</b> in <code>{plugins_dir}</code>")
+        else:
+            header = _QLabel(
+                f"No plugins found in <code>{plugins_dir}</code>.<br>"
+                "Drop a plugin folder there to install it."
+            )
+        header.setWordWrap(True)
+        layout.addWidget(header)
+
+        if plugins:
+            lw = _QLW()
+            for p in plugins:
+                status = "✅" if p.loaded else "❌"
+                label = f"{status}  {p.name}  v{p.version}"
+                if p.description:
+                    label += f" — {p.description}"
+                if p.error:
+                    label += f"  [{p.error}]"
+                lw.addItem(label)
+            layout.addWidget(lw)
+
+        from PySide6.QtWidgets import QDialogButtonBox as _DBB  # pylint: disable=import-outside-toplevel
+        btns = _DBB(_DBB.StandardButton.Close)
+        btns.rejected.connect(dlg.reject)
+        layout.addWidget(btns)
+        dlg.exec()
 
     def _toggle_profiler(self, checked: bool):
         """Toggle performance profiling."""
@@ -1543,6 +1620,12 @@ class MainWindow(
         format_tool_action.triggered.connect(self._format_code)
         tools_menu.addAction(format_tool_action)
 
+        tools_menu.addSeparator()
+
+        plugin_mgr_action = QAction("🔌 &Plugin Manager...", self)
+        plugin_mgr_action.triggered.connect(self._show_plugin_manager)
+        tools_menu.addAction(plugin_mgr_action)
+
         # Help menu (last menu item)
         help_menu = menubar.addMenu("&Help")
 
@@ -1590,18 +1673,11 @@ class MainWindow(
             ("C", "c"),
             ("Erlang", "erlang"),
             ("Forth", "forth"),
-            ("Haskell", "haskell"),
             ("HyperTalk", "hypertalk"),
             ("JavaScript", "javascript"),
             ("Lua", "lua"),
             ("Pascal", "pascal"),
             ("Prolog", "prolog"),
-            ("Python", "python"),
-            ("REXX", "rexx"),
-            ("Ruby", "ruby"),
-            ("Rust", "rust"),
-            ("Scheme", "scheme"),
-            ("Smalltalk", "smalltalk"),
         ]:
             action = QAction(f"{lang_name} Reference", self)
             action.triggered.connect(
@@ -2209,8 +2285,8 @@ class MainWindow(
         try:
             context = self._get_current_line_context()
             hint = get_enhanced_error_message(error, context)
-            if hint and hint.strip() and hint.strip() != error.strip():
-                self.output.append(f"\n💡 Hint: {hint}")
+            if hint and hint.strip():
+                self.output.append(hint)
         except Exception:  # pylint: disable=broad-except
             logger.debug("Error generating enhanced error hint", exc_info=True)
 

@@ -1258,6 +1258,9 @@ class CodeEditor(QPlainTextEdit):
         # was just accepted (popup hides before keyPressEvent guard runs).
         self._completing = False
 
+        # Track current language for comment-prefix lookup
+        self._language = Language.BASIC
+
         # Initialize completer with default language
         self._update_completer(Language.BASIC)
 
@@ -1399,6 +1402,7 @@ class CodeEditor(QPlainTextEdit):
 
     def set_language(self, language):
         """Set the syntax highlighting language."""
+        self._language = language
         # Re-create highlighter with new language
         self.highlighter = SimpleSyntaxHighlighter(self.document(), language)
         # Force re-highlight
@@ -1406,6 +1410,162 @@ class CodeEditor(QPlainTextEdit):
 
         # Update completer with language keywords
         self._update_completer(language)
+
+    # Comment prefix for each supported language
+    _COMMENT_PREFIXES = {
+        Language.BASIC: "REM ",
+        Language.PILOT: "R: ",
+        Language.LOGO: "; ",
+        Language.C: "// ",
+        Language.PASCAL: "// ",
+        Language.PROLOG: "% ",
+        Language.FORTH: "\\ ",
+        Language.LUA: "-- ",
+        Language.JAVASCRIPT: "// ",
+        Language.HYPERTALK: "-- ",
+        Language.ERLANG: "% ",
+    }
+
+    def toggle_comment(self):
+        """Toggle line comments on the current line or selected lines."""
+        prefix = self._COMMENT_PREFIXES.get(self._language)
+        if prefix is None:
+            return  # Language has no single-line comment (e.g. Brainfuck)
+
+        cursor = self.textCursor()
+        doc = self.document()
+
+        # Determine start/end blocks for the selection
+        sel_start = cursor.selectionStart()
+        sel_end = cursor.selectionEnd()
+
+        c_start = QTextCursor(doc)
+        c_start.setPosition(sel_start)
+        c_start.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+
+        c_end = QTextCursor(doc)
+        c_end.setPosition(sel_end)
+        # Don't include a line whose only selected portion is its start
+        if c_end.atBlockStart() and sel_end > sel_start:
+            c_end.movePosition(QTextCursor.MoveOperation.PreviousBlock)
+        c_end.movePosition(QTextCursor.MoveOperation.EndOfBlock)
+
+        # Collect affected blocks
+        blocks = []
+        c = QTextCursor(doc)
+        c.setPosition(c_start.position())
+        while True:
+            blocks.append(c.block())
+            if c.position() >= c_end.position():
+                break
+            if not c.movePosition(QTextCursor.MoveOperation.NextBlock):
+                break
+
+        prefix_stripped = prefix.rstrip()
+        # Determine whether all non-empty lines already start with prefix
+        all_commented = all(
+            b.text().lstrip().startswith(prefix_stripped)
+            for b in blocks
+            if b.text().strip()
+        )
+
+        cursor.beginEditBlock()
+        for block in blocks:
+            text = block.text()
+            stripped = text.lstrip()
+            indent = len(text) - len(stripped)
+            c2 = QTextCursor(doc)
+            c2.setPosition(block.position() + indent)
+            if all_commented:
+                if stripped.startswith(prefix):
+                    c2.movePosition(
+                        QTextCursor.MoveOperation.Right,
+                        QTextCursor.MoveMode.KeepAnchor,
+                        len(prefix),
+                    )
+                    c2.removeSelectedText()
+                elif stripped.startswith(prefix_stripped):
+                    c2.movePosition(
+                        QTextCursor.MoveOperation.Right,
+                        QTextCursor.MoveMode.KeepAnchor,
+                        len(prefix_stripped),
+                    )
+                    c2.removeSelectedText()
+            else:
+                if stripped and not stripped.startswith(prefix_stripped):
+                    c2.insertText(prefix)
+        cursor.endEditBlock()
+
+    def duplicate_line(self):
+        """Duplicate the current line (or selected text)."""
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            text = cursor.selectedText()
+            end_pos = cursor.selectionEnd()
+            cursor.setPosition(end_pos)
+            cursor.insertText(text)
+        else:
+            cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+            cursor.movePosition(
+                QTextCursor.MoveOperation.EndOfBlock,
+                QTextCursor.MoveMode.KeepAnchor,
+            )
+            line = cursor.selectedText()
+            cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
+            cursor.insertText("\n" + line)
+        self.setTextCursor(cursor)
+
+    def move_line_up(self):
+        """Move the current line one position up."""
+        cursor = self.textCursor()
+        if not cursor.block().previous().isValid():
+            return
+        col = cursor.positionInBlock()
+        cursor.beginEditBlock()
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+        cursor.movePosition(
+            QTextCursor.MoveOperation.EndOfBlock,
+            QTextCursor.MoveMode.KeepAnchor,
+        )
+        line_text = cursor.selectedText()
+        cursor.removeSelectedText()
+        cursor.deletePreviousChar()  # remove the newline separating blocks
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+        cursor.insertText(line_text + "\n")
+        cursor.movePosition(QTextCursor.MoveOperation.PreviousBlock)
+        cursor.movePosition(
+            QTextCursor.MoveOperation.Right,
+            QTextCursor.MoveMode.MoveAnchor,
+            min(col, len(line_text)),
+        )
+        cursor.endEditBlock()
+        self.setTextCursor(cursor)
+
+    def move_line_down(self):
+        """Move the current line one position down."""
+        cursor = self.textCursor()
+        if not cursor.block().next().isValid():
+            return
+        col = cursor.positionInBlock()
+        cursor.beginEditBlock()
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+        cursor.movePosition(
+            QTextCursor.MoveOperation.EndOfBlock,
+            QTextCursor.MoveMode.KeepAnchor,
+        )
+        line_text = cursor.selectedText()
+        cursor.removeSelectedText()
+        cursor.deleteChar()  # remove trailing newline
+        cursor.movePosition(QTextCursor.MoveOperation.EndOfBlock)
+        cursor.insertText("\n" + line_text)
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock)
+        cursor.movePosition(
+            QTextCursor.MoveOperation.Right,
+            QTextCursor.MoveMode.MoveAnchor,
+            min(col, len(line_text)),
+        )
+        cursor.endEditBlock()
+        self.setTextCursor(cursor)
 
     def _update_completer(self, language):
         """Update completer with keywords for the language.
@@ -1800,7 +1960,7 @@ class CodeEditor(QPlainTextEdit):
         """Return True if the minimap is currently visible."""
         return self._minimap_enabled
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event):  # pylint: disable=too-many-return-statements
         """Handle key press events for auto-completion and auto-indent."""
         if self.completer.popup().isVisible():
             if event.key() in (
@@ -1824,12 +1984,40 @@ class CodeEditor(QPlainTextEdit):
             self._handle_auto_indent()
             return
 
+        mods = event.modifiers()
+
+        # Ctrl+/ → toggle line comment
+        if event.key() == Qt.Key.Key_Slash and mods == Qt.KeyboardModifier.ControlModifier:
+            self.toggle_comment()
+            return
+
+        # Ctrl+D → duplicate current line / selection
+        if event.key() == Qt.Key.Key_D and mods == Qt.KeyboardModifier.ControlModifier:
+            self.duplicate_line()
+            return
+
+        # Alt+Up → move line up
+        if event.key() == Qt.Key.Key_Up and mods == Qt.KeyboardModifier.AltModifier:
+            self.move_line_up()
+            return
+
+        # Alt+Down → move line down
+        if event.key() == Qt.Key.Key_Down and mods == Qt.KeyboardModifier.AltModifier:
+            self.move_line_down()
+            return
+
+        # Ctrl+Space → manually invoke autocomplete
+        if event.key() == Qt.Key.Key_Space and mods == Qt.KeyboardModifier.ControlModifier:
+            self._show_completer(min_prefix=1)
+            return
+
         # Call parent implementation first
         super().keyPressEvent(event)
 
         # Check for completion trigger
         cursor = self.textCursor()
         if cursor.hasSelection():
+            self.completer.popup().hide()
             return
 
         # Get the text under cursor
@@ -1837,18 +2025,50 @@ class CodeEditor(QPlainTextEdit):
         prefix = cursor.selectedText()
 
         if len(prefix) >= 2:  # Start completing after 2 characters
-            if self.completer.completionPrefix() != prefix:
-                self.completer.setCompletionPrefix(prefix)
-                popup = self.completer.popup()
-                idx = self.completer.completionModel().index(0, 0)
-                popup.setCurrentIndex(idx)
+            self._show_completer(min_prefix=2)
+        else:
+            self.completer.popup().hide()
 
-                cr = self.cursorRect()
-                cr.setWidth(
-                    popup.sizeHintForColumn(0)
-                    + popup.verticalScrollBar().sizeHint().width()
-                )
-                self.completer.complete(cr)
+    def _show_completer(self, min_prefix: int = 2) -> None:
+        """Show the autocomplete popup for the word under the cursor.
+
+        Refreshes user-defined identifiers in the model before displaying,
+        so newly typed names appear in suggestions immediately.
+
+        Args:
+            min_prefix: minimum prefix length required to show the popup.
+        """
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.StartOfWord, QTextCursor.KeepAnchor)
+        prefix = cursor.selectedText()
+
+        if len(prefix) < min_prefix:
+            self.completer.popup().hide()
+            return
+
+        # Live-refresh document identifiers (avoids full highlighter rebuild)
+        doc_text = self.toPlainText()
+        if doc_text:
+            idents = sorted(set(re.findall(r"\b[A-Za-z_]\w{2,}\b", doc_text)))
+            current_words = self.completer.model().stringList() if self.completer.model() else []
+            # Add any new identifiers not already in the model
+            kw_lower = {w.lower() for w in current_words}
+            new_entries = [i for i in idents if i.lower() not in kw_lower]
+            if new_entries:
+                self.completer.model().setStringList(current_words + new_entries)
+
+        if self.completer.completionPrefix() != prefix:
+            self.completer.setCompletionPrefix(prefix)
+            popup = self.completer.popup()
+            idx = self.completer.completionModel().index(0, 0)
+            popup.setCurrentIndex(idx)
+
+        cr = self.cursorRect()
+        popup = self.completer.popup()
+        cr.setWidth(
+            popup.sizeHintForColumn(0) + popup.verticalScrollBar().sizeHint().width()
+        )
+        self.completer.complete(cr)
 
     def _handle_auto_indent(self):
         """Handle auto-indentation on Enter/Return key."""

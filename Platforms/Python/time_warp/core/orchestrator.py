@@ -186,7 +186,7 @@ class SystemOrchestrator:
         start_time = utc_now()
 
         try:
-            # Set default supported languages
+            # Set supported languages (matches the 12 implemented executors)
             self.system_info.supported_languages = [
                 "BASIC",
                 "PILOT",
@@ -195,15 +195,11 @@ class SystemOrchestrator:
                 "Prolog",
                 "C",
                 "Forth",
-                "Python",
-                "Lua",
-                "Scheme",
                 "Brainfuck",
                 "JavaScript",
-                "REXX",
-                "Smalltalk",
+                "Lua",
                 "HyperTalk",
-                "Haskell",
+                "Erlang",
             ]
 
             # Initialize components

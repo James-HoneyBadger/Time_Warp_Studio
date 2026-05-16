@@ -323,19 +323,22 @@ def get_enhanced_error_message(error: str, context: str = "") -> str:
 
     Args:
         error: Original error message
-        context: Optional context (line of code, etc.)
+        context: Optional context (line of code that caused the error)
 
     Returns:
-        Enhanced error message with suggestions
+        Enhanced error message with suggestions, or empty string if nothing
+        to add beyond the bare error text.
     """
-    enhanced = f"❌ Error: {error}"
+    parts: list[str] = []
 
-    # Try to extract command from context
     if context:
+        # Show the offending source line
+        parts.append(f"    {context.rstrip()}")
+
         # Check for syntax mistakes
         syntax_error = check_syntax_mistakes(context)
         if syntax_error:
-            enhanced += f"\n   💡 {syntax_error}"
+            parts.append(f"💡 {syntax_error}")
 
         # Try to suggest command corrections
         words = context.upper().strip().split()
@@ -343,6 +346,6 @@ def get_enhanced_error_message(error: str, context: str = "") -> str:
             first_word = words[0].rstrip(":")
             suggestion = suggest_command(first_word)
             if suggestion:
-                enhanced += f"\n   💡 Did you mean '{suggestion}'?"
+                parts.append(f"💡 Did you mean '{suggestion}'?")
 
-    return enhanced
+    return "\n".join(parts) if parts else ""
