@@ -2,13 +2,13 @@
 
 ## Vision
 
-Time Warp Studio is an educational desktop IDE for learning **13 programming languages** spanning six decades of computing history. This roadmap outlines planned improvements and contribution opportunities.
+Time Warp Studio is an educational desktop IDE for learning **16 programming languages** spanning seven decades of computing history. This roadmap outlines planned improvements and contribution opportunities.
 
 ---
 
 ## Current Release: v10.2.0 (May 2026)
 
-- **13 language executors** — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Lua, Brainfuck, JavaScript, HyperTalk, Erlang, LISP/Scheme
+- **16 language executors** — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Lua, Brainfuck, JavaScript, HyperTalk, Erlang, LISP/Scheme, COBOL, Tcl, PostScript
 - **SVGA graphics mode** — 800×600 virtual canvas with anti-aliasing, zoom/pan, and pixel-accurate rendering
 - **Vector graphics** — cubic Bezier curves, gradient-filled shapes (linear & radial), dash pen styles, Z-ordered layers
 - **Sprite system** — define named pixel-art sprites via `define_sprite()`, stamp/animate with rotation and scale
@@ -49,11 +49,17 @@ Time Warp Studio is an educational desktop IDE for learning **13 programming lan
 
 ## Mid-Term (Q3–Q4 2026)
 
-### New Languages (Candidates)
+### New Languages (Completed in v10.2.0)
 
-- **Tcl** — scripting and embeddable extension language
-- **PostScript** — page-description / stack-based graphics
-- **LISP** — classic AI / symbolic computation
+- ✅ **Tcl** — scripting and embeddable extension language — **done**
+- ✅ **PostScript** — page-description / stack-based graphics — **done**
+- ✅ **LISP/Scheme** — classic AI / symbolic computation — **done**
+- ✅ **COBOL** — business data processing — **done**
+
+### New Languages (Candidates for v10.3+)
+
+- **Ruby** — dynamic, object-oriented scripting
+- **Python (sandboxed)** — modern scripting with stdlib access
 
 ### Plugin System
 

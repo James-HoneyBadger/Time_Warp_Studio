@@ -12,15 +12,19 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 - **[BASIC](#basic-gw-basic--qbasic-style)** - Educational programming
 - **[Brainfuck](#brainfuck)** - Minimalistic esolang
 - **[C](#c)** - Systems programming
+- **[COBOL](#cobol)** - Business data processing
 - **[Erlang](#erlang)** - Concurrent functional programming
 - **[Forth](#forth)** - Stack-based programming
 - **[HyperTalk](#hypertalk)** - HyperCard scripting
 - **[JavaScript](#javascript)** - Web scripting
+- **[LISP/Scheme](#lispscheme)** - Functional / symbolic computation
 - **[Logo](#logo)** - Turtle graphics
 - **[Lua](#lua)** - Lightweight scripting
 - **[Pascal](#pascal)** - Structured programming
 - **[PILOT](#pilot-programmed-inquiry-learning-or-teaching)** - Instructional programming
+- **[PostScript](#postscript)** - Stack-based page description
 - **[Prolog](#prolog)** - Logic programming
+- **[Tcl](#tcl)** - Embeddable scripting
 
 ---
 
@@ -68,8 +72,9 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 | File | Description |
 |------|-------------|
 | `erlang/hello.erl` | Hello World — io:format and module declaration |
-| `erlang/pattern_match.erl` | Pattern matching and recursive functions |
-| `erlang/actor_bank.erl` | **SHOWCASE** — Actor-style bank simulation, state machines, list comprehensions, prime sieve |
+| `erlang/pattern_match.erl` | Pattern matching and recursive functions || `erlang/binary_strings.erl` | Binary strings, bytes, and bitstring operations |
+| `erlang/functional_patterns.erl` | Higher-order functions, list comprehensions, closures |
+| `erlang/algorithms.erl` | Classic algorithms in functional style || `erlang/actor_bank.erl` | **SHOWCASE** — Actor-style bank simulation, state machines, list comprehensions, prime sieve |
 | `erlang/number_theory.erl` | **SHOWCASE** — Primes, sieve, GCD/LCM, Euler's totient, amicable numbers, modular arithmetic, CRT, Collatz |
 
 ---
@@ -176,5 +181,59 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 | `prolog/knowledge_engine.pl` | **SHOWCASE** — Animal ontology, genealogy KB, graph coloring, meta-reasoning |
 | `prolog/family_genealogy.pl` | **SHOWCASE** — 4-generation family tree (22 members), relationship inference: cousins, ancestors, distances |
 
-*Total: 68 example programs across 12 languages.*
+---
+
+## COBOL
+
+| File | Description |
+|------|-------------|
+| `cobol/hello.cob` | Hello World — IDENTIFICATION DIVISION, DISPLAY |
+| `cobol/counter.cob` | Counter demo with PERFORM and UNTIL |
+| `cobol/fibonacci.cob` | Fibonacci sequence via iterative PERFORM |
+| `cobol/grade_calculator.cob` | Numeric grade to letter grade conversion |
+| `cobol/grade_table.cob` | Grade table with formatted report output |
+| `cobol/multiplication_table.cob` | 10×10 multiplication table using nested PERFORM |
+| `cobol/string_operations.cob` | String inspect, move, concatenation operations |
+| `cobol/bank_account.cob` | **SHOWCASE** — Bank account simulation: deposit, withdraw, balance enquiry, interest |
+
+---
+
+## LISP/Scheme
+
+| File | Description |
+|------|-------------|
+| `lisp/hello.scm` | Hello World — display, newline, arithmetic, string operations |
+| `lisp/recursion.scm` | Recursive algorithms with accumulator pattern and tail-call optimisation |
+| `lisp/list_processing.scm` | map, filter, fold, quasiquote, association lists, sorting |
+| `lisp/data_structures.scm` | Closures as objects, vectors, association lists, records |
+| `lisp/turtle_art.scm` | **SHOWCASE** — Turtle graphics via recursion: fractals, spirals, geometric patterns |
+
+---
+
+## PostScript
+
+| File | Description |
+|------|-------------|
+| `postscript/hello.ps` | Hello World — stack-based output |
+| `postscript/arithmetic.ps` | Arithmetic operators and stack manipulation |
+| `postscript/counter.ps` | Variables and loops with def and repeat |
+| `postscript/fibonacci.ps` | Fibonacci sequence on the operand stack |
+| `postscript/loops.ps` | for, repeat, and loop constructs |
+| `postscript/strings.ps` | String operations: concat, search, length |
+| `postscript/sorting.ps` | **SHOWCASE** — Bubble sort with array operations and stack discipline |
+
+---
+
+## Tcl
+
+| File | Description |
+|------|-------------|
+| `tcl/hello.tcl` | Hello World — set and puts |
+| `tcl/fibonacci.tcl` | Fibonacci sequence via proc and recursion |
+| `tcl/fizzbuzz.tcl` | FizzBuzz from 1 to 30 |
+| `tcl/lists_and_strings.tcl` | List operations: lappend, lsort, string commands |
+| `tcl/procedures.tcl` | Procedures, arguments, and factorial recursion |
+| `tcl/sorting.tcl` | **SHOWCASE** — Bubble sort and selection sort with array manipulation |
+
+*Total: 104 example programs across 16 languages.*
 *Files marked **SHOWCASE** are full-featured demo applications.*

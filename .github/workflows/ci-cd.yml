@@ -12,90 +12,15 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
-  # ===== LINT & CODE QUALITY =====
-  
-  lint-backend:
-    runs-on: ubuntu-latest
-    name: Lint Python Backend
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-      
-      - name: Install dependencies
-        run: |
-          pip install -e "Platforms/Python[dev]"
-          pip install ruff
-      
-      - name: Lint (ruff — critical errors)
-        run: ruff check --select=E9,F63,F7,F82 --output-format=github Platforms/Python/time_warp/
-      
-      - name: Lint (ruff — full suite)
-        run: ruff check --output-format=github Platforms/Python/time_warp/
-
-  # ===== TESTING =====
-  
-  test-backend:
-    runs-on: ubuntu-latest
-    name: Test Python Backend
-    env:
-      QT_QPA_PLATFORM: offscreen
-      LIBGL_ALWAYS_SOFTWARE: '1'
-    
-    steps:
-      - uses: actions/checkout@v4
-      
-      - name: Install Qt system dependencies
-        run: |
-          sudo apt-get update -y
-          sudo apt-get install -y \
-            libgl1 libegl1 libdbus-1-3 libfontconfig1 libglib2.0-0 \
-            libxkbcommon0 libxkbcommon-x11-0 \
-            libxcb1 libxcb-icccm4 libxcb-image0 libxcb-keysyms1 \
-            libxcb-randr0 libxcb-render-util0 libxcb-shape0 \
-            libxcb-xkb1 libxcb-cursor0
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-          cache: 'pip'
-      
-      - name: Install dependencies
-        run: |
-          pip install -e "Platforms/Python[dev]"
-      
-      - name: Run pytest
-        working-directory: Platforms/Python
-        run: |
-          pytest time_warp/tests/ -v --tb=short \
-            --cov=time_warp --cov-report=xml --cov-report=html \
-            --junit-xml=test-results.xml
-      
-      - name: Upload coverage reports
-        uses: codecov/codecov-action@v4
-        with:
-          files: ./Platforms/Python/coverage.xml
-          flags: backend
-          fail_ci_if_error: false
-      
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: backend-test-results
-          path: Platforms/Python/test-results.xml
+  # ===== NOTE =====
+  # Lint and unit tests run in ci.yml (matrix Python 3.10–3.13 + coverage).
+  # This pipeline handles Docker build, security scanning, and docs deployment.
 
   # ===== BUILD =====
   
   build-docker:
     runs-on: ubuntu-latest
     name: Build Docker Image
-    needs: [ lint-backend, test-backend ]
     permissions:
       contents: read
       packages: write
@@ -193,7 +118,6 @@ jobs:
   publish-docs:
     runs-on: ubuntu-latest
     name: Publish Documentation
-    needs: [ test-backend ]
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     continue-on-error: true
     permissions:
@@ -226,13 +150,13 @@ jobs:
   build-status:
     runs-on: ubuntu-latest
     name: Build Status Check
-    needs: [ lint-backend, test-backend ]
+    needs: [ build-docker ]
     if: always()
     steps:
       - name: Check build status
         run: |
-          if [ "${{ needs.test-backend.result }}" != "success" ]; then
-            echo "Tests failed!"
+          if [ "${{ needs.build-docker.result }}" != "success" ]; then
+            echo "Docker build failed!"
             exit 1
           fi
           echo "Build passed!"
