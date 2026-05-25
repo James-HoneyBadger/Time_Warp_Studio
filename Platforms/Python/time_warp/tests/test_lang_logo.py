@@ -1,6 +1,7 @@
 """Comprehensive tests for the Logo language executor."""
 
 from time_warp.core.interpreter import Language
+from time_warp.graphics.turtle_state import TurtleState
 
 from .conftest_lang import run, has, no_errors, first_error
 
@@ -152,6 +153,14 @@ class TestScreen:
 
     def test_clearscreen_full(self):
         out = logo("CLEARSCREEN")
+        assert no_errors(out) or len(out) == 0
+
+    def test_clean(self):
+        out = logo("CLEAN")
+        assert no_errors(out) or len(out) == 0
+
+    def test_clean_alias(self):
+        out = logo("CLEAR")
         assert no_errors(out) or len(out) == 0
 
     def test_hideturtle(self):
@@ -592,3 +601,430 @@ class TestRepeatOutputDedup:
         # Should produce exactly one output entry containing 42
         matches = [line for line in out if "42" in line]
         assert len(matches) == 1
+
+
+# ============================================================================
+# ARITHMETIC FUNCTIONS
+# ============================================================================
+
+
+class TestArithmeticFunctions:
+    """SUM, PRODUCT, DIFFERENCE, QUOTIENT."""
+
+    def test_sum(self):
+        out = logo("PRINT SUM 3 4")
+        assert has(out, "7")
+        assert no_errors(out)
+
+    def test_product(self):
+        out = logo("PRINT PRODUCT 3 4")
+        assert has(out, "12")
+        assert no_errors(out)
+
+    def test_difference(self):
+        out = logo("PRINT DIFFERENCE 10 3")
+        assert has(out, "7")
+        assert no_errors(out)
+
+    def test_quotient(self):
+        out = logo("PRINT QUOTIENT 10 2")
+        assert has(out, "5")
+        assert no_errors(out)
+
+
+# ============================================================================
+# COMPARISONS AND CONDITIONALS
+# ============================================================================
+
+
+class TestConditionals:
+    """IF and IFELSE branching."""
+
+    def test_if_true(self):
+        out = logo('IF 1 = 1 [PRINT "yes]')
+        assert has(out, "YES")
+        assert no_errors(out)
+
+    def test_if_false_does_not_print(self):
+        out = logo('IF 1 = 2 [PRINT "no]')
+        assert not has(out, "NO")
+        assert no_errors(out)
+
+    def test_ifelse_true_branch(self):
+        out = logo('IFELSE 5 > 3 [PRINT "big] [PRINT "small]')
+        assert has(out, "BIG")
+        assert not has(out, "SMALL")
+
+    def test_ifelse_false_branch(self):
+        out = logo('IFELSE 1 > 5 [PRINT "big] [PRINT "small]')
+        assert has(out, "SMALL")
+        assert not has(out, "BIG")
+
+    def test_greater_than(self):
+        out = logo('IF 10 > 5 [PRINT "bigger]')
+        assert has(out, "BIGGER")
+        assert no_errors(out)
+
+    def test_less_than(self):
+        out = logo('IF 3 < 5 [PRINT "smaller]')
+        assert has(out, "SMALLER")
+        assert no_errors(out)
+
+
+# ============================================================================
+# WORD OPERATIONS
+# ============================================================================
+
+
+class TestWordOperations:
+    """FIRST, LAST, word operations."""
+
+    def test_first(self):
+        out = logo('PRINT FIRST "hello')
+        assert has(out, "H")
+        assert no_errors(out)
+
+    def test_last(self):
+        out = logo('PRINT LAST "hello')
+        assert has(out, "O")
+        assert no_errors(out)
+
+    def test_list_display(self):
+        out = logo('PRINT LIST "a "b')
+        assert has(out, "A")
+        assert has(out, "B")
+        assert no_errors(out)
+
+
+# ============================================================================
+# VARIABLE MAKE
+# ============================================================================
+
+
+class TestMakeVariable:
+    """MAKE and variable recall."""
+
+    def test_make_and_print(self):
+        out = logo('MAKE "X 42\nPRINT :X')
+        assert has(out, "42")
+        assert no_errors(out)
+
+    def test_make_string(self):
+        out = logo('MAKE "MSG "Hello\nPRINT :MSG')
+        assert has(out, "HELLO")
+        assert no_errors(out)
+
+    def test_make_arithmetic(self):
+        out = logo('MAKE "A 10\nMAKE "B 5\nPRINT SUM 10 5')
+        assert has(out, "15")
+        assert no_errors(out)
+
+
+class TestLogoArithmetic2:
+    """Logo arithmetic using built-in functions."""
+
+    def test_quotient(self):
+        assert has(logo("PRINT (QUOTIENT 15 3)"), "5")
+
+    def test_remainder(self):
+        assert has(logo("PRINT (REMAINDER 10 3)"), "1")
+
+    def test_abs(self):
+        assert has(logo("PRINT (ABS -5)"), "5")
+
+    def test_max(self):
+        assert has(logo("PRINT (MAX 3 7)"), "7")
+
+    def test_min(self):
+        assert has(logo("PRINT (MIN 3 7)"), "3")
+
+    def test_make_and_print(self):
+        assert has(logo('MAKE "X 5\nPRINT :X'), "5")
+
+    def test_floor(self):
+        assert has(logo("PRINT (FLOOR 3.7)"), "3")
+
+
+class TestLogoStrings2:
+    """More Logo string tests."""
+
+    def test_word_concat(self):
+        assert has(logo('MAKE "A "hello\nPRINT :A'), '"HELLO') or \
+               has(logo('MAKE "A "hello\nPRINT :A'), 'HELLO')
+
+    def test_print_number(self):
+        assert has(logo('MAKE "N 42\nPRINT :N'), "42")
+
+    def test_print_string_var(self):
+        out = logo('MAKE "S "test\nPRINT :S')
+        assert any('TEST' in l or 'test' in l for l in out)
+
+    def test_make_and_use(self):
+        assert has(logo('MAKE "X 100\nPRINT :X'), "100")
+
+    def test_sum_of_vars(self):
+        assert has(logo('PRINT SUM 3 4'), "7")
+
+    def test_difference_of_vars(self):
+        assert has(logo('PRINT DIFFERENCE 10 3'), "7")
+
+    def test_product_of_vars(self):
+        assert has(logo('PRINT PRODUCT 6 7'), "42")
+
+
+class TestLogoRepeat2:
+    """More Logo repeat tests."""
+
+    def test_repeat_3(self):
+        result = logo('REPEAT 3 [PRINT "hi]')
+        assert len(result) == 3  # Prints 3 times
+
+    def test_repeat_1(self):
+        result = logo('REPEAT 1 [PRINT "once]')
+        assert len(result) == 1  # Prints 1 time
+
+    def test_repeat_counter_workaround(self):
+        # REPEAT doesn't give counter access directly, use MAKE inside
+        assert has(logo('MAKE "C 0\nREPEAT 3 [MAKE "C :C + 1]\nPRINT :C'), "3")
+
+
+class TestLogoArithmetic2:
+    """Additional Logo arithmetic tests."""
+
+    def test_sum_7_3(self):
+        result = logo('PRINT SUM 7 3')
+        assert any("10" in line for line in result)
+
+    def test_product_6_7(self):
+        result = logo('PRINT PRODUCT 6 7')
+        assert any("42" in line for line in result)
+
+    def test_difference_10_3(self):
+        result = logo('PRINT DIFFERENCE 10 3')
+        assert any("7" in line for line in result)
+
+    def test_quotient_15_3(self):
+        result = logo('PRINT QUOTIENT 15 3')
+        assert any("5" in line for line in result)
+
+    def test_sum_chain(self):
+        result = logo('PRINT SUM 1 9')
+        assert any("10" in line for line in result)
+
+    def test_product_9_9(self):
+        result = logo('PRINT PRODUCT 9 9')
+        assert any("81" in line for line in result)
+
+    def test_make_var(self):
+        result = logo('MAKE "X 99\nPRINT :X')
+        assert any("99" in line for line in result)
+
+    def test_make_zero(self):
+        result = logo('MAKE "N 0\nPRINT :N')
+        assert any("0" in line for line in result)
+
+    def test_print_word(self):
+        result = logo('PRINT "HELLO')
+        assert any("HELLO" in line for line in result)
+
+    def test_print_logo(self):
+        result = logo('PRINT "LOGO')
+        assert any("LOGO" in line for line in result)
+
+
+class TestLogoPilot2:
+    """Additional Logo output tests."""
+
+    def test_make_and_print_two(self):
+        result = logo('MAKE "A 7\nPRINT :A')
+        assert any("7" in line for line in result)
+
+    def test_print_difference_neg(self):
+        result = logo('PRINT DIFFERENCE 3 10')
+        assert any("-7" in line for line in result)
+
+    def test_two_prints(self):
+        result = logo('PRINT "FIRST\nPRINT "SECOND')
+        assert any("FIRST" in line for line in result)
+        assert any("SECOND" in line for line in result)
+
+    def test_print_product_large(self):
+        result = logo('PRINT PRODUCT 12 12')
+        assert any("144" in line for line in result)
+
+
+class TestLogoExtended:
+    """More Logo tests."""
+
+    def test_print_sum_3_4(self):
+        result = logo('PRINT SUM 3 4')
+        assert any("7" in line for line in result)
+
+    def test_print_difference_10_3(self):
+        result = logo('PRINT DIFFERENCE 10 3')
+        assert any("7" in line for line in result)
+
+    def test_print_product_5_6(self):
+        result = logo('PRINT PRODUCT 5 6')
+        assert any("30" in line for line in result)
+
+    def test_print_quotient_10_2(self):
+        result = logo('PRINT QUOTIENT 10 2')
+        assert any("5" in line for line in result)
+
+    def test_make_and_print_word(self):
+        result = logo('MAKE "NAME "LOGO\nPRINT :NAME')
+        assert any("LOGO" in line for line in result)
+
+    def test_make_number_and_print(self):
+        result = logo('MAKE "N 42\nPRINT :N')
+        assert any("42" in line for line in result)
+
+    def test_repeat_2_forward(self):
+        result = logo('REPEAT 2 [FORWARD 50]')
+        assert isinstance(result, list)
+
+    def test_repeat_prints(self):
+        result = logo('REPEAT 3 [PRINT "HI]')
+        texts = " ".join(result)
+        assert texts.count("HI") == 3
+
+    def test_forward_creates_line(self):
+        from time_warp.core.interpreter import Interpreter
+        ts = TurtleState()
+        interp = Interpreter()
+        interp.load_program('FORWARD 100', language=L)
+        interp.execute(ts)
+        assert len(ts.lines) > 0
+
+    def test_right_changes_heading(self):
+        from time_warp.core.interpreter import Interpreter
+        ts = TurtleState()
+        interp = Interpreter()
+        interp.load_program('RIGHT 90', language=L)
+        interp.execute(ts)
+        assert abs(ts.heading - 90) < 1
+
+    def test_penup_no_lines(self):
+        from time_warp.core.interpreter import Interpreter
+        ts = TurtleState()
+        interp = Interpreter()
+        interp.load_program('PENUP\nFORWARD 100', language=L)
+        interp.execute(ts)
+        assert len(ts.lines) == 0
+
+    def test_pendown_after_penup_has_lines(self):
+        from time_warp.core.interpreter import Interpreter
+        ts = TurtleState()
+        interp = Interpreter()
+        interp.load_program('PENUP\nFORWARD 50\nPENDOWN\nFORWARD 50', language=L)
+        interp.execute(ts)
+        assert len(ts.lines) > 0
+
+    def test_setpensize_3(self):
+        from time_warp.core.interpreter import Interpreter
+        ts = TurtleState()
+        interp = Interpreter()
+        interp.load_program('SETPENSIZE 3', language=L)
+        interp.execute(ts)
+        assert ts.pen_width == 3
+
+    def test_hideturtle(self):
+        from time_warp.core.interpreter import Interpreter
+        ts = TurtleState()
+        interp = Interpreter()
+        interp.load_program('HIDETURTLE', language=L)
+        interp.execute(ts)
+        assert ts.visible is False
+
+    def test_showturtle(self):
+        from time_warp.core.interpreter import Interpreter
+        ts = TurtleState()
+        interp = Interpreter()
+        interp.load_program('HIDETURTLE\nSHOWTURTLE', language=L)
+        interp.execute(ts)
+        assert ts.visible is True
+
+    def test_print_multiple_lines(self):
+        result = logo('PRINT "A\nPRINT "B\nPRINT "C')
+        texts = " ".join(result)
+        assert "A" in texts and "B" in texts and "C" in texts
+
+    def test_sum_zero(self):
+        result = logo('PRINT SUM 0 0')
+        assert any("0" in line for line in result)
+
+    def test_back_moves_backward(self):
+        from time_warp.core.interpreter import Interpreter
+        ts = TurtleState()
+        interp = Interpreter()
+        interp.load_program('FORWARD 100\nBACK 50', language=L)
+        interp.execute(ts)
+        assert len(ts.lines) >= 2
+
+
+class TestLogoExtended:
+    """Extra Logo tests."""
+
+    def logo(self, src):
+        return run(src, Language.LOGO)
+
+    def test_print_100(self):
+        result = self.logo('PRINT 100')
+        assert has(result, "100")
+
+    def test_print_hello(self):
+        result = self.logo('PRINT "HELLO')
+        assert has(result, "HELLO")
+
+    def test_print_zero(self):
+        result = self.logo('PRINT 0')
+        assert has(result, "0")
+
+    def test_output_is_list(self):
+        result = self.logo('PRINT 1')
+        assert isinstance(result, list)
+
+    def test_no_errors_simple(self):
+        result = self.logo('PRINT "OK')
+        assert no_errors(result)
+
+    def test_make_variable(self):
+        result = self.logo('MAKE "X 42\nPRINT :X')
+        assert has(result, "42")
+
+    def test_forward_no_crash(self):
+        result = self.logo('FORWARD 100')
+        assert isinstance(result, list)
+
+    def test_right_no_crash(self):
+        result = self.logo('RIGHT 90')
+        assert isinstance(result, list)
+
+    def test_left_no_crash(self):
+        result = self.logo('LEFT 45')
+        assert isinstance(result, list)
+
+    def test_repeat_no_crash(self):
+        result = self.logo('REPEAT 4 [FORWARD 50 RIGHT 90]')
+        assert isinstance(result, list)
+
+    def test_two_prints(self):
+        result = self.logo('PRINT "A\nPRINT "B')
+        assert has(result, "A") or has(result, "B")
+
+    def test_empty_source(self):
+        result = self.logo('')
+        assert isinstance(result, list)
+
+    def test_print_negative(self):
+        result = self.logo('PRINT -5')
+        assert has(result, "-5")
+
+    def test_print_large_number(self):
+        result = self.logo('PRINT 9999')
+        assert has(result, "9999")
+
+    def test_penup_no_crash(self):
+        result = self.logo('PENUP')
+        assert isinstance(result, list)

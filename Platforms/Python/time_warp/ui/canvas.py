@@ -22,7 +22,6 @@ from PySide6.QtGui import (
     QPen,
     QPolygonF,
     QRadialGradient,
-    QTransform,
     QWheelEvent,
 )
 from PySide6.QtWidgets import (
@@ -37,9 +36,7 @@ from PySide6.QtWidgets import (
 from .screen_modes import ModeType, ScreenMode, ScreenModeManager
 
 
-class TurtleCanvas(
-    QWidget
-):  # pylint: disable=invalid-name,too-many-instance-attributes,unused-argument
+class TurtleCanvas(QWidget):  # pylint: disable=invalid-name,too-many-instance-attributes,unused-argument
     """Canvas for rendering turtle graphics with retro screen mode support."""
 
     # Emitted whenever the turtle position/heading changes (for status strip)
@@ -146,12 +143,8 @@ class TurtleCanvas(
         toolbar_layout.addWidget(
             _btn("📋", "Copy to Clipboard", self._copy_to_clipboard)
         )
-        toolbar_layout.addWidget(
-            _btn("💾", "Save PNG…", self._save_png)
-        )
-        toolbar_layout.addWidget(
-            _btn("🖼", "Export SVG…", self._save_svg)
-        )
+        toolbar_layout.addWidget(_btn("💾", "Save PNG…", self._save_png))
+        toolbar_layout.addWidget(_btn("🖼", "Export SVG…", self._save_svg))
         self._grid_btn = _btn("⋯", "Toggle Grid Overlay", self._toggle_grid)
         self._grid_btn.setCheckable(True)
         toolbar_layout.addWidget(self._grid_btn)
@@ -306,6 +299,7 @@ class TurtleCanvas(
         ok = self.export_to_svg(filename, w, h)
         if not ok:
             from PySide6.QtWidgets import QMessageBox
+
             QMessageBox.warning(
                 self,
                 "SVG Export Failed",
@@ -520,8 +514,7 @@ class TurtleCanvas(
         # Outer chrome / bezel
         painter.fillRect(self.rect(), QColor(20, 20, 28))
         painter.setPen(QPen(QColor(80, 80, 110), 2))
-        painter.drawRect(int(ox - 3), int(oy - 3),
-                         int(scaled_w + 6), int(scaled_h + 6))
+        painter.drawRect(int(ox - 3), int(oy - 3), int(scaled_w + 6), int(scaled_h + 6))
         # Resolution label
         painter.setFont(QFont("Courier", 8))
         painter.setPen(QColor(80, 80, 100))
@@ -532,7 +525,6 @@ class TurtleCanvas(
 
         # Clip to virtual screen
         painter.save()
-        from PySide6.QtCore import QRect
         painter.setClipRect(QRectF(ox, oy, scaled_w, scaled_h))
 
         # Transform: virtual (0,0) = top-left → turtle (0,0) = centre
@@ -551,8 +543,10 @@ class TurtleCanvas(
             pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
             painter.setPen(pen)
             painter.drawLine(
-                int(line.start_x), int(line.start_y),
-                int(line.end_x), int(line.end_y),
+                int(line.start_x),
+                int(line.start_y),
+                int(line.end_x),
+                int(line.end_y),
             )
 
         # Shapes (sorted by z_order)
@@ -564,7 +558,6 @@ class TurtleCanvas(
             self._draw_turtle_cursor(painter)
 
         painter.restore()
-
 
     def _paint_retro_mode(self, painter: QPainter):
         """Paint with retro screen mode simulation (pixelated)."""
@@ -828,7 +821,11 @@ class TurtleCanvas(
 
         elif shape_type == "bezier":
             # Cubic Bezier: points[0]=start, points[1]=end; control_points=[cp1, cp2]
-            if len(shape.points) >= 2 and shape.control_points and len(shape.control_points) >= 2:
+            if (
+                len(shape.points) >= 2
+                and shape.control_points
+                and len(shape.control_points) >= 2
+            ):
                 pen = QPen(color, shape.width)
                 self._apply_pen_style(pen, shape)
                 painter.setPen(pen)
@@ -848,7 +845,9 @@ class TurtleCanvas(
                 x2, y2 = shape.points[1]
                 rect = QRectF(min(x1, x2), min(y1, y2), abs(x2 - x1), abs(y2 - y1))
                 if shape.fill_color:
-                    fill = QColor(shape.fill_color[0], shape.fill_color[1], shape.fill_color[2])
+                    fill = QColor(
+                        shape.fill_color[0], shape.fill_color[1], shape.fill_color[2]
+                    )
                     painter.fillRect(rect, fill)
                 pen = QPen(color, shape.width)
                 self._apply_pen_style(pen, shape)
@@ -898,13 +897,17 @@ class TurtleCanvas(
                 if grad:
                     xs = [p[0] for p in shape.points]
                     ys = [p[1] for p in shape.points]
-                    rect = QRectF(min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys))
+                    rect = QRectF(
+                        min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)
+                    )
                     brush = self._make_gradient_brush(grad, rect)
                     painter.setBrush(brush)
                     painter.drawPolygon(poly)
                     painter.setBrush(Qt.BrushStyle.NoBrush)
                 elif shape.fill_color:
-                    fill = QColor(shape.fill_color[0], shape.fill_color[1], shape.fill_color[2])
+                    fill = QColor(
+                        shape.fill_color[0], shape.fill_color[1], shape.fill_color[2]
+                    )
                     painter.setBrush(fill)
                     painter.drawPolygon(poly)
                     painter.setBrush(Qt.BrushStyle.NoBrush)
@@ -935,7 +938,9 @@ class TurtleCanvas(
                     painter.drawEllipse(rect)
                     painter.setBrush(Qt.BrushStyle.NoBrush)
                 elif shape.fill_color:
-                    fill = QColor(shape.fill_color[0], shape.fill_color[1], shape.fill_color[2])
+                    fill = QColor(
+                        shape.fill_color[0], shape.fill_color[1], shape.fill_color[2]
+                    )
                     painter.setBrush(fill)
                     painter.drawEllipse(rect)
                     painter.setBrush(Qt.BrushStyle.NoBrush)
@@ -995,7 +1000,6 @@ class TurtleCanvas(
         hy = sprite.hotspot_y
         painter.drawImage(QPointF(-hx, -hy + sprite.height), img)
         painter.restore()
-
 
     def wheelEvent(self, event: QWheelEvent):
         """Handle zoom with mouse wheel."""

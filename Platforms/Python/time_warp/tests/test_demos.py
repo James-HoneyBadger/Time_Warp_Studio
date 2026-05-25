@@ -368,3 +368,141 @@ class TestHyperTalkDemo:
     def test_done(self):
         out = _run_demo("hypertalk", "hello.htalk", Language.HYPERTALK)
         assert has(out, "DONE")
+
+
+# ── Erlang ────────────────────────────────────────────────────────────────────
+
+
+class TestErlangDemo:
+    def test_runs(self):
+        out = _run_demo("erlang", "hello.erl", Language.ERLANG)
+        assert ok(out)
+
+    def test_hello(self):
+        out = _run_demo("erlang", "hello.erl", Language.ERLANG)
+        assert has(out, "Hello, World!")
+
+    def test_no_errors(self):
+        out = _run_demo("erlang", "hello.erl", Language.ERLANG)
+        assert no_errors(out)
+
+    def test_factorials(self):
+        out = _run_demo("erlang", "hello.erl", Language.ERLANG)
+        assert has(out, "Factorials")
+
+    def test_numbers(self):
+        out = _run_demo("erlang", "hello.erl", Language.ERLANG)
+        assert has(out, "Numbers")
+
+
+# ── LISP/Scheme ───────────────────────────────────────────────────────────────
+
+
+class TestLispDemo:
+    def test_runs(self):
+        out = _run_demo("lisp", "hello.scm", Language.LISP)
+        assert ok(out)
+
+    def test_hello(self):
+        out = _run_demo("lisp", "hello.scm", Language.LISP)
+        assert has(out, "Hello, World!")
+
+    def test_no_errors(self):
+        out = _run_demo("lisp", "hello.scm", Language.LISP)
+        assert no_errors(out)
+
+    def test_arithmetic(self):
+        out = _run_demo("lisp", "hello.scm", Language.LISP)
+        assert has(out, "Arithmetic")
+
+    def test_strings(self):
+        out = _run_demo("lisp", "hello.scm", Language.LISP)
+        assert has(out, "Strings")
+
+
+class TestDemosExtended:
+    """Additional demo program tests."""
+
+    def test_basic_hello_is_list(self):
+        out = _run_demo("basic", "hello.bas", Language.BASIC)
+        assert isinstance(out, list)
+
+    def test_basic_hello_not_none(self):
+        out = _run_demo("basic", "hello.bas", Language.BASIC)
+        assert out is not None
+
+    def test_logo_hello_is_list(self):
+        out = _run_demo("logo", "hello.logo", Language.LOGO)
+        assert isinstance(out, list)
+
+    def test_logo_hello_not_none(self):
+        out = _run_demo("logo", "hello.logo", Language.LOGO)
+        assert out is not None
+
+    def test_lua_hello_is_list(self):
+        out = _run_demo("lua", "hello.lua", Language.LUA)
+        assert isinstance(out, list)
+
+    def test_lua_hello_not_none(self):
+        out = _run_demo("lua", "hello.lua", Language.LUA)
+        assert out is not None
+
+    def test_js_hello_is_list(self):
+        out = _run_demo("javascript", "hello.js", Language.JAVASCRIPT)
+        assert isinstance(out, list)
+
+    def test_lisp_hello_is_list(self):
+        out = _run_demo("lisp", "hello.scm", Language.LISP)
+        assert isinstance(out, list)
+
+    def test_brainfuck_hello_is_list(self):
+        out = _run_demo("brainfuck", "hello.bf", Language.BRAINFUCK)
+        assert isinstance(out, list)
+
+    def test_forth_hello_is_list(self):
+        out = _run_demo("forth", "hello.f", Language.FORTH)
+        assert isinstance(out, list)
+
+
+class TestDemosExtended2:
+    """Second round of additional demo program tests."""
+
+    def test_logo_hello_is_list(self):
+        out = _run_demo("logo", "hello.logo", Language.LOGO)
+        assert isinstance(out, list)
+
+    def test_pascal_hello_is_list(self):
+        out = _run_demo("pascal", "hello.pas", Language.PASCAL)
+        assert isinstance(out, list)
+
+    def test_prolog_hello_is_list(self):
+        out = _run_demo("prolog", "hello.pl", Language.PROLOG)
+        assert isinstance(out, list)
+
+    def test_pilot_hello_is_list(self):
+        out = _run_demo("pilot", "hello.pilot", Language.PILOT)
+        assert isinstance(out, list)
+
+    def test_hypertalk_hello_is_list(self):
+        out = _run_demo("hypertalk", "hello.htalk", Language.HYPERTALK)
+        assert isinstance(out, list)
+
+    def test_c_hello_is_list(self):
+        out = _run_demo("c", "hello.c", Language.C)
+        assert isinstance(out, list)
+
+    def test_lua_hello_not_none(self):
+        out = _run_demo("lua", "hello.lua", Language.LUA)
+        assert out is not None
+
+    def test_js_hello_not_none(self):
+        out = _run_demo("javascript", "hello.js", Language.JAVASCRIPT)
+        assert out is not None
+
+    def test_erlang_hello_not_none(self):
+        out = _run_demo("erlang", "hello.erl", Language.ERLANG)
+        assert out is not None
+
+    def test_brainfuck_hello_not_none(self):
+        out = _run_demo("brainfuck", "hello.bf", Language.BRAINFUCK)
+        assert out is not None

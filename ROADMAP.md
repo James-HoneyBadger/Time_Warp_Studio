@@ -2,13 +2,13 @@
 
 ## Vision
 
-Time Warp Studio is an educational desktop IDE for learning **12 programming languages** spanning six decades of computing history. This roadmap outlines planned improvements and contribution opportunities.
+Time Warp Studio is an educational desktop IDE for learning **13 programming languages** spanning six decades of computing history. This roadmap outlines planned improvements and contribution opportunities.
 
 ---
 
 ## Current Release: v10.2.0 (May 2026)
 
-- **12 language executors** — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Lua, Brainfuck, JavaScript, HyperTalk, Erlang
+- **13 language executors** — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Lua, Brainfuck, JavaScript, HyperTalk, Erlang, LISP/Scheme
 - **SVGA graphics mode** — 800×600 virtual canvas with anti-aliasing, zoom/pan, and pixel-accurate rendering
 - **Vector graphics** — cubic Bezier curves, gradient-filled shapes (linear & radial), dash pen styles, Z-ordered layers
 - **Sprite system** — define named pixel-art sprites via `define_sprite()`, stamp/animate with rotation and scale

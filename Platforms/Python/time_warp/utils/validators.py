@@ -38,7 +38,7 @@ def validate_arg_count(
     if isinstance(expected, int):
         if arg_count != expected:
             raise ValidationError(
-                f"{command_name} expects {expected} argument(s), " f"got {arg_count}"
+                f"{command_name} expects {expected} argument(s), got {arg_count}"
             )
     elif isinstance(expected, tuple):
         min_count, max_count = expected

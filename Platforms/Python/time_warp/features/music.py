@@ -31,7 +31,7 @@ NOTE_MAP = {
 
 DEFAULT_TEMPO = 120
 DEFAULT_OCTAVE = 4
-DEFAULT_LENGTH = 4   # Quarter note
+DEFAULT_LENGTH = 4  # Quarter note
 DEFAULT_VOLUME = 10  # 0-15 scale
 SAMPLE_RATE = 44100
 
@@ -48,7 +48,9 @@ class ADSREnvelope:
     sustain_level: float = 0.7
     release_ms: float = 30.0
 
-    def apply(self, samples: List[float], sample_rate: int, note_duration_ms: float) -> List[float]:
+    def apply(
+        self, samples: List[float], sample_rate: int, note_duration_ms: float
+    ) -> List[float]:
         """Return a new list with the envelope applied."""
         n = len(samples)
         if n == 0:
@@ -80,11 +82,11 @@ class ADSREnvelope:
 class MusicNote:
     """Represents a single musical note or rest."""
 
-    frequency: float      # Hz, 0 for rest
-    duration_ms: int      # Duration in milliseconds
-    volume: float         # 0.0 to 1.0
-    waveform: str = "square"   # 'square','sine','triangle','sawtooth','pulse','noise'
-    duty: float = 0.5          # Pulse duty cycle (0.0–1.0)
+    frequency: float  # Hz, 0 for rest
+    duration_ms: int  # Duration in milliseconds
+    volume: float  # 0.0 to 1.0
+    waveform: str = "square"  # 'square','sine','triangle','sawtooth','pulse','noise'
+    duty: float = 0.5  # Pulse duty cycle (0.0–1.0)
     adsr: Optional[ADSREnvelope] = None
 
 
@@ -239,14 +241,14 @@ class MMLParser:
                 while i < len(mml) and mml[i] != "]":
                     c = mml[i]
                     if c in "ABCDEFG":
-                        n = c
+                        note_char = c
                         i += 1
                         sharp = flat = False
                         if i < len(mml) and mml[i] in "#+-":
                             sharp = mml[i] in "#+"
                             flat = mml[i] == "-"
                             i += 1
-                        chord_notes_raw.append((n, sharp, flat))
+                        chord_notes_raw.append((note_char, sharp, flat))
                     else:
                         i += 1
                 if i < len(mml) and mml[i] == "]":
@@ -455,7 +457,9 @@ class MusicPlayer:
 
         # Apply ADSR envelope
         if note.adsr:
-            samples = note.adsr.apply(samples, self.sample_rate, float(note.duration_ms))
+            samples = note.adsr.apply(
+                samples, self.sample_rate, float(note.duration_ms)
+            )
 
         return samples
 
@@ -482,7 +486,14 @@ class MusicPlayer:
         for note in notes:
             is_chord_member = note.waveform.startswith("chord:")
             # Use per-note waveform or global fallback
-            if note.waveform in ("square", "sine", "triangle", "sawtooth", "pulse", "noise"):
+            if note.waveform in (
+                "square",
+                "sine",
+                "triangle",
+                "sawtooth",
+                "pulse",
+                "noise",
+            ):
                 pass  # already set
             elif not is_chord_member:
                 note.waveform = waveform
@@ -497,7 +508,9 @@ class MusicPlayer:
                     for ch_samples in chord_buffer:
                         overlap = min(len(all_samples), len(ch_samples))
                         for k in range(overlap):
-                            all_samples[-overlap + k] += ch_samples[k] * note.volume * 0.3
+                            all_samples[-overlap + k] += (
+                                ch_samples[k] * note.volume * 0.3
+                            )
                     chord_buffer.clear()
                 scaled = [s * note.volume * 0.3 for s in raw]
                 all_samples.extend(scaled)
@@ -613,27 +626,27 @@ class SoundEffectsLibrary:
 
     def get_effect(self, name: str) -> Optional[bytes]:
         effects = {
-            "LASER":    "T200 O6 L32 E D C B A G F E D C",
-            "EXPLOSION":"T180 O2 L16 N30 N28 N26 N24 N22 N20 N18 N16 N14 N12",
-            "POWERUP":  "T200 O4 L16 C E G >C E G >C",
-            "COIN":     "T200 O6 L16 B >E",
-            "JUMP":     "T200 O3 L32 C D E F G A B >C D E",
-            "HURT":     "T150 O3 L8 E- D C",
+            "LASER": "T200 O6 L32 E D C B A G F E D C",
+            "EXPLOSION": "T180 O2 L16 N30 N28 N26 N24 N22 N20 N18 N16 N14 N12",
+            "POWERUP": "T200 O4 L16 C E G >C E G >C",
+            "COIN": "T200 O6 L16 B >E",
+            "JUMP": "T200 O3 L32 C D E F G A B >C D E",
+            "HURT": "T150 O3 L8 E- D C",
             "GAMEOVER": "T80 O3 L4 E D C <B L2 <A",
-            "LEVELUP":  "T160 O4 L16 C E G >C <G E C E G >C E G >C",
-            "BEEP":     "T120 O5 L16 A",
-            "ERROR":    "T100 O3 L8 A- A- R4 A-",
-            "SUCCESS":  "T140 O4 L8 C E G >C",
-            "MENU":     "T180 O5 L32 A R A",
-            "BLIP":     "T200 O6 L64 C",
-            "WARP":     "T200 O4 L32 C D E F G A B >C D E F G A B >C",
-            "ALARM":    "T200 O5 L16 A R A R A R A R A R A R A R A R",
-            "PICKUP":   "T200 O5 L32 E G >C",
+            "LEVELUP": "T160 O4 L16 C E G >C <G E C E G >C E G >C",
+            "BEEP": "T120 O5 L16 A",
+            "ERROR": "T100 O3 L8 A- A- R4 A-",
+            "SUCCESS": "T140 O4 L8 C E G >C",
+            "MENU": "T180 O5 L32 A R A",
+            "BLIP": "T200 O6 L64 C",
+            "WARP": "T200 O4 L32 C D E F G A B >C D E F G A B >C",
+            "ALARM": "T200 O5 L16 A R A R A R A R A R A R A R A R",
+            "PICKUP": "T200 O5 L32 E G >C",
             # Extended effects using new waveforms
-            "DRONE":    "@W2 T60 O2 L1 C",      # triangle drone
-            "BUZZ":     "@W4 @P30 T160 O5 L8 A A A A",  # pulse buzz
-            "STATIC":   "@W5 T200 L32 N60 N60 N60 N60",  # noise burst
-            "BEEP2":    "@W1 T140 O5 L8 [CE]",   # sine chord beep
+            "DRONE": "@W2 T60 O2 L1 C",  # triangle drone
+            "BUZZ": "@W4 @P30 T160 O5 L8 A A A A",  # pulse buzz
+            "STATIC": "@W5 T200 L32 N60 N60 N60 N60",  # noise burst
+            "BEEP2": "@W1 T140 O5 L8 [CE]",  # sine chord beep
         }
         mml = effects.get(name.upper())
         if mml:
@@ -642,10 +655,26 @@ class SoundEffectsLibrary:
 
     def list_effects(self) -> List[str]:
         return [
-            "LASER", "EXPLOSION", "POWERUP", "COIN", "JUMP", "HURT",
-            "GAMEOVER", "LEVELUP", "BEEP", "ERROR", "SUCCESS", "MENU",
-            "BLIP", "WARP", "ALARM", "PICKUP",
-            "DRONE", "BUZZ", "STATIC", "BEEP2",
+            "LASER",
+            "EXPLOSION",
+            "POWERUP",
+            "COIN",
+            "JUMP",
+            "HURT",
+            "GAMEOVER",
+            "LEVELUP",
+            "BEEP",
+            "ERROR",
+            "SUCCESS",
+            "MENU",
+            "BLIP",
+            "WARP",
+            "ALARM",
+            "PICKUP",
+            "DRONE",
+            "BUZZ",
+            "STATIC",
+            "BEEP2",
         ]
 
 
@@ -668,4 +697,3 @@ def get_sound_effects() -> SoundEffectsLibrary:
     if _sound_effects is None:
         _sound_effects = SoundEffectsLibrary()
     return _sound_effects
-

@@ -1,0 +1,54 @@
+name: time-warp-studio
+version: '10.2.0'
+summary: Educational multi-language programming environment
+description: |
+  Time Warp Studio is an educational desktop IDE supporting 13 programming
+  languages (BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, JavaScript, Lua,
+  Erlang, HyperTalk, Brainfuck, LISP/Scheme) with integrated turtle graphics,
+  syntax highlighting, a step-through debugger, and 90+ example programs.
+
+grade: stable
+confinement: strict
+base: core22
+
+apps:
+  time-warp-studio:
+    command: bin/launcher.sh
+    extensions: [gnome]
+    plugs:
+      - home
+      - desktop
+      - desktop-legacy
+      - wayland
+      - x11
+      - unity7
+      - opengl
+    environment:
+      PYTHONPATH: $SNAP/lib/python3/dist-packages
+      QT_QPA_PLATFORMTHEME: gtk3
+
+parts:
+  time-warp-studio:
+    plugin: python
+    source: .
+    python-requirements:
+      - Platforms/Python/requirements.txt
+    override-build: |
+      craftctl default
+      mkdir -p $CRAFTCTL_PART_INSTALL/share/time-warp-studio
+      cp -r Examples $CRAFTCTL_PART_INSTALL/share/time-warp-studio/
+      cp -r Platforms/Python/time_warp $CRAFTCTL_PART_INSTALL/lib/
+      install -Dm644 packaging/linux/time-warp-ide.desktop \
+        $CRAFTCTL_PART_INSTALL/usr/share/applications/time-warp-studio.desktop
+      install -Dm644 packaging/linux/icon.png \
+        $CRAFTCTL_PART_INSTALL/usr/share/icons/hicolor/256x256/apps/time-warp-studio.png
+
+  launcher:
+    plugin: nil
+    override-build: |
+      mkdir -p $CRAFTCTL_PART_INSTALL/bin
+      cat > $CRAFTCTL_PART_INSTALL/bin/launcher.sh << 'EOF'
+      #!/bin/bash
+      exec python3 $SNAP/Platforms/Python/time_warp_ide.py "$@"
+      EOF
+      chmod +x $CRAFTCTL_PART_INSTALL/bin/launcher.sh

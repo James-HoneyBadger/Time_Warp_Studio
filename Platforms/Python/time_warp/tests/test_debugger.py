@@ -420,3 +420,1022 @@ def test_timeline_records_variable_changes():
     assert frame_after_line2 is not None
     assert frame_after_line2.variables.get("X") in (8, 8.0, "8", "8.0")
 
+
+# ---------------------------------------------------------------------------
+# Additional timeline tests
+# ---------------------------------------------------------------------------
+
+
+def test_timeline_frame_count():
+    """Timeline accumulates correct number of frames."""
+    tl = ExecutionTimeline()
+    tl.start_recording()
+    for i in range(5):
+        frame = ExecutionFrame(
+            line=i + 1,
+            line_content=f"LINE {i + 1}",
+            variables={"I": i},
+            state=ExecutionState.RUNNING,
+        )
+        tl.add_frame(frame)
+    assert len(tl.frames) == 5
+
+
+def test_timeline_clear():
+    """Clearing timeline removes all frames."""
+    tl = ExecutionTimeline()
+    tl.start_recording()
+    tl.add_frame(
+        ExecutionFrame(
+            line=1, line_content="test", variables={}, state=ExecutionState.RUNNING
+        )
+    )
+    tl.clear()
+    assert len(tl.frames) == 0
+
+
+def test_variable_snapshot_equality():
+    """VariableSnapshot stores name and value."""
+    snap = VariableSnapshot(name="X", value=42, type_name="int", line=1, timestamp=0)
+    assert snap.name == "X"
+    assert snap.value == 42
+
+
+def test_execution_frame_state():
+    """ExecutionFrame records the state."""
+    frame = ExecutionFrame(
+        line=5, line_content="PRINT X", variables={"X": 10}, state=ExecutionState.RUNNING
+    )
+    assert frame.line == 5
+    assert frame.state == ExecutionState.RUNNING
+    assert frame.variables["X"] == 10
+
+
+def test_debug_mode_toggle():
+    """Setting debug mode on/off changes interpreter state."""
+    interp = Interpreter()
+    interp.set_debug_mode(True)
+    assert interp.debug_mode is True
+    interp.set_debug_mode(False)
+    assert interp.debug_mode is False
+
+
+def test_breakpoint_add_remove():
+    """Adding and removing breakpoints modifies the breakpoints set."""
+    interp = Interpreter()
+    interp.add_breakpoint(5)
+    interp.add_breakpoint(10)
+    assert 5 in interp.breakpoints
+    assert 10 in interp.breakpoints
+    interp.remove_breakpoint(5)
+    assert 5 not in interp.breakpoints
+    assert 10 in interp.breakpoints
+
+
+def test_timeline_get_variable_history_empty():
+    """get_variable_history returns empty list for unknown variable."""
+    tl = ExecutionTimeline()
+    hist = tl.get_variable_history("UNKNOWN_VAR")
+    assert hist == []
+
+
+def test_execution_state_values():
+    """All expected execution states exist."""
+    assert ExecutionState.RUNNING is not None
+    assert ExecutionState.PAUSED is not None
+    assert ExecutionState.STOPPED is not None
+
+
+
+class TestExecutionTimelineNavigation:
+    """Tests for timeline navigation methods."""
+
+    def _build_timeline(self, n=3):
+        tl = ExecutionTimeline()
+        tl.start_recording()
+        for i in range(n):
+            frame = ExecutionFrame(
+                line=i + 1,
+                line_content=f"LINE {i + 1}",
+                variables={"X": i},
+                state=ExecutionState.RUNNING,
+            )
+            tl.add_frame(frame)
+        return tl
+
+    def test_initial_index_at_end(self):
+        tl = self._build_timeline(3)
+        assert tl.current_frame_index == 2
+
+    def test_is_at_end_false_after_backward(self):
+        tl = self._build_timeline(3)
+        tl.step_backward()
+        assert not tl.is_at_end()
+
+    def test_step_backward_changes_index(self):
+        tl = self._build_timeline(3)
+        tl.step_backward()
+        assert tl.current_frame_index == 1
+
+    def test_step_forward_after_backward(self):
+        tl = self._build_timeline(3)
+        tl.step_backward()
+        tl.step_forward()
+        assert tl.current_frame_index == 2
+
+    def test_go_to_frame_zero(self):
+        tl = self._build_timeline(3)
+        tl.go_to_frame(0)
+        assert tl.current_frame_index == 0
+
+    def test_go_to_frame_middle(self):
+        tl = self._build_timeline(3)
+        tl.go_to_frame(1)
+        assert tl.current_frame_index == 1
+
+    def test_get_current_frame_line(self):
+        tl = self._build_timeline(3)
+        tl.go_to_frame(0)
+        cf = tl.get_current_frame()
+        assert cf is not None
+        assert cf.line == 1
+
+    def test_toggle_breakpoint_adds(self):
+        tl = ExecutionTimeline()
+        tl.toggle_breakpoint(5)
+        assert 5 in tl.breakpoints
+
+    def test_toggle_breakpoint_removes(self):
+        tl = ExecutionTimeline()
+        tl.toggle_breakpoint(5)
+        tl.toggle_breakpoint(5)
+        assert 5 not in tl.breakpoints
+
+    def test_execution_flow_correct(self):
+        tl = self._build_timeline(3)
+        assert tl.get_execution_flow() == [1, 2, 3]
+
+    def test_stop_recording_sets_flag(self):
+        tl = ExecutionTimeline()
+        tl.start_recording()
+        assert tl.is_recording
+        tl.stop_recording()
+        assert not tl.is_recording
+
+    def test_timeline_export_has_frames_key(self):
+        tl = self._build_timeline(2)
+        data = tl.export_timeline_json()
+        assert "frames" in data
+
+    def test_timeline_export_frame_count(self):
+        tl = self._build_timeline(2)
+        data = tl.export_timeline_json()
+        assert len(data["frames"]) == 2
+
+
+class TestDebuggerTimeline2:
+    """Extended ExecutionTimeline tests."""
+
+    def _build(self, n):
+        tl = ExecutionTimeline()
+        tl.start_recording()
+        for i in range(1, n + 1):
+            tl.record_frame(i, f"LINE {i}", {"I": i}, [])
+        tl.stop_recording()
+        return tl
+
+    def test_frames_count(self):
+        tl = self._build(5)
+        assert len(tl.frames) == 5
+
+    def test_execution_flow_values(self):
+        tl = self._build(3)
+        assert tl.get_execution_flow() == [1, 2, 3]
+
+    def test_step_forward_moves_to_first(self):
+        tl = self._build(3)
+        tl.step_forward()
+        frame = tl.get_current_frame()
+        assert frame.line == 1
+
+    def test_step_forward_twice(self):
+        tl = self._build(3)
+        tl.step_forward()
+        tl.step_forward()
+        frame = tl.get_current_frame()
+        assert frame.line == 2
+
+    def test_step_backward_from_second(self):
+        tl = self._build(3)
+        tl.step_forward()
+        tl.step_forward()
+        tl.step_backward()
+        frame = tl.get_current_frame()
+        assert frame.line == 1
+
+    def test_go_to_frame_second(self):
+        tl = self._build(3)
+        tl.go_to_frame(1)
+        frame = tl.get_current_frame()
+        assert frame.line == 2
+
+    def test_variable_history_length(self):
+        tl = self._build(3)
+        history = tl.get_variable_history('I')
+        assert len(history) == 3
+
+    def test_variable_history_values(self):
+        tl = self._build(3)
+        history = tl.get_variable_history('I')
+        assert history[0].value == 1
+        assert history[1].value == 2
+        assert history[2].value == 3
+
+    def test_clear_removes_frames(self):
+        tl = self._build(3)
+        tl.clear()
+        assert len(tl.frames) == 0
+
+    def test_is_recording_after_stop(self):
+        tl = self._build(2)
+        assert tl.is_recording is False
+
+    def test_is_recording_during(self):
+        tl = ExecutionTimeline()
+        tl.start_recording()
+        assert tl.is_recording is True
+        tl.stop_recording()
+
+    def test_breakpoint_set(self):
+        tl = ExecutionTimeline()
+        tl.set_breakpoint(10)
+        assert 10 in tl.breakpoints
+
+    def test_breakpoint_remove(self):
+        tl = ExecutionTimeline()
+        tl.set_breakpoint(10)
+        tl.remove_breakpoint(10)
+        assert 10 not in tl.breakpoints
+
+    def test_toggle_adds(self):
+        tl = ExecutionTimeline()
+        tl.toggle_breakpoint(7)
+        assert 7 in tl.breakpoints
+
+    def test_toggle_removes(self):
+        tl = ExecutionTimeline()
+        tl.toggle_breakpoint(7)
+        tl.toggle_breakpoint(7)
+        assert 7 not in tl.breakpoints
+
+    def test_export_has_frames(self):
+        tl = self._build(2)
+        data = tl.export_timeline_json()
+        assert "frames" in data
+
+    def test_export_frame_count_matches(self):
+        tl = self._build(4)
+        data = tl.export_timeline_json()
+        assert len(data["frames"]) == 4
+
+    def test_frame_line_content(self):
+        tl = self._build(2)
+        tl.go_to_frame(0)
+        frame = tl.get_current_frame()
+        assert "LINE 1" in frame.line_content
+
+    def test_empty_flow_when_no_frames(self):
+        tl = ExecutionTimeline()
+        assert tl.get_execution_flow() == []
+
+
+class TestDebuggerTimeline3:
+    """More ExecutionTimeline tests."""
+
+    def _build(self, n: int):
+        tl = ExecutionTimeline()
+        tl.start_recording()
+        for i in range(n):
+            tl.add_frame(ExecutionFrame(
+                line=i + 1,
+                line_content=f"LINE {i+1}",
+                variables={"I": i},
+                state=ExecutionState.RUNNING,
+            ))
+        return tl
+
+    def test_6_frames(self):
+        tl = self._build(6)
+        assert len(tl.frames) == 6
+
+    def test_10_frames(self):
+        tl = self._build(10)
+        assert len(tl.frames) == 10
+
+    def test_go_to_last(self):
+        tl = self._build(5)
+        tl.go_to_frame(4)
+        assert tl.current_frame_index == 4
+
+    def test_go_to_first(self):
+        tl = self._build(5)
+        tl.go_to_frame(4)
+        tl.go_to_frame(0)
+        assert tl.current_frame_index == 0
+
+    def test_step_forward_5_times(self):
+        tl = self._build(5)
+        tl.go_to_frame(0)
+        for _ in range(4):
+            tl.step_forward()
+        assert tl.current_frame_index == 4
+
+    def test_step_backward_5_times(self):
+        tl = self._build(5)
+        tl.go_to_frame(4)
+        for _ in range(4):
+            tl.step_backward()
+        assert tl.current_frame_index == 0
+
+    def test_frame_vars_recorded(self):
+        tl = self._build(3)
+        tl.go_to_frame(2)
+        frame = tl.get_current_frame()
+        assert frame.variables == {"I": 2}
+
+    def test_frame_line_content(self):
+        tl = self._build(3)
+        tl.go_to_frame(1)
+        frame = tl.get_current_frame()
+        assert "LINE 2" in frame.line_content
+
+    def test_clear_resets_to_zero(self):
+        tl = self._build(5)
+        tl.clear()
+        assert len(tl.frames) == 0
+
+    def test_clear_resets_index(self):
+        tl = self._build(5)
+        tl.go_to_frame(4)
+        tl.clear()
+        assert tl.current_frame_index == -1
+
+    def test_export_3_frames(self):
+        tl = self._build(3)
+        data = tl.export_timeline_json()
+        assert len(data["frames"]) == 3
+
+    def test_execution_flow_non_empty(self):
+        tl = self._build(3)
+        flow = tl.get_execution_flow()
+        assert len(flow) == 3
+
+    def test_breakpoint_set_removes(self):
+        tl = ExecutionTimeline()
+        tl.toggle_breakpoint(5)
+        tl.remove_breakpoint(5)
+        assert len(tl.breakpoints) == 0
+
+    def test_multiple_breakpoints(self):
+        tl = ExecutionTimeline()
+        for i in [1, 3, 5, 7, 9]:
+            tl.toggle_breakpoint(i)
+        assert len(tl.breakpoints) == 5
+
+    def test_is_recording_after_start(self):
+        tl = ExecutionTimeline()
+        tl.start_recording()
+        assert tl.is_recording is True
+
+
+class TestDebuggerTimeline4:
+    """Even more ExecutionTimeline tests."""
+
+    def _build(self, n: int):
+        tl = ExecutionTimeline()
+        tl.start_recording()
+        for i in range(n):
+            tl.add_frame(ExecutionFrame(
+                line=i + 1,
+                line_content=f"STMT {i+1}",
+                variables={"N": i * 2},
+                state=ExecutionState.RUNNING,
+            ))
+        return tl
+
+    def test_20_frames(self):
+        tl = self._build(20)
+        assert len(tl.frames) == 20
+
+    def test_go_to_middle_frame(self):
+        tl = self._build(10)
+        tl.go_to_frame(5)
+        assert tl.current_frame_index == 5
+
+    def test_variables_at_frame_3(self):
+        tl = self._build(5)
+        tl.go_to_frame(3)
+        frame = tl.get_current_frame()
+        assert frame.variables["N"] == 6
+
+    def test_line_at_frame_0_is_1(self):
+        tl = self._build(5)
+        tl.go_to_frame(0)
+        frame = tl.get_current_frame()
+        assert frame.line == 1
+
+    def test_line_at_frame_4_is_5(self):
+        tl = self._build(5)
+        tl.go_to_frame(4)
+        frame = tl.get_current_frame()
+        assert frame.line == 5
+
+    def test_export_json_has_frames_key(self):
+        tl = self._build(3)
+        data = tl.export_timeline_json()
+        assert "frames" in data
+
+    def test_two_timelines_independent(self):
+        tl1 = self._build(3)
+        tl2 = self._build(7)
+        assert len(tl1.frames) == 3
+        assert len(tl2.frames) == 7
+
+    def test_breakpoint_toggle_twice_removes(self):
+        tl = ExecutionTimeline()
+        tl.toggle_breakpoint(10)
+        tl.toggle_breakpoint(10)
+        assert 10 not in tl.breakpoints
+
+    def test_stop_recording(self):
+        tl = ExecutionTimeline()
+        tl.start_recording()
+        tl.stop_recording()
+        assert tl.is_recording is False
+
+    def test_empty_timeline_get_flow(self):
+        tl = ExecutionTimeline()
+        flow = tl.get_execution_flow()
+        assert isinstance(flow, list)
+
+    def test_step_forward_at_end_no_crash(self):
+        tl = self._build(3)
+        tl.go_to_frame(2)
+        tl.step_forward()  # already at end
+        assert tl.current_frame_index == 2
+
+    def test_step_backward_at_start_no_crash(self):
+        tl = self._build(3)
+        tl.go_to_frame(0)
+        tl.step_backward()  # already at start
+        assert tl.current_frame_index == 0
+
+    def test_frame_state_is_running(self):
+        tl = self._build(2)
+        tl.go_to_frame(0)
+        frame = tl.get_current_frame()
+        assert frame.state == ExecutionState.RUNNING
+
+
+class TestDebuggerTimeline5:
+    """Fifth round of debugger timeline tests."""
+
+    def _make_frame(self, line=1, state=ExecutionState.RUNNING):
+        return ExecutionFrame(line=line, line_content="", state=state)
+
+    def _build(self, n):
+        tl = ExecutionTimeline()
+        for i in range(n):
+            tl.add_frame(self._make_frame(line=i + 1))
+        return tl
+
+    def test_empty_timeline_length(self):
+        tl = ExecutionTimeline()
+        assert len(tl.frames) == 0
+
+    def test_single_frame_length(self):
+        tl = self._build(1)
+        assert len(tl.frames) == 1
+
+    def test_five_frames_length(self):
+        tl = self._build(5)
+        assert len(tl.frames) == 5
+
+    def test_go_to_last_frame(self):
+        tl = self._build(4)
+        tl.go_to_frame(3)
+        assert tl.current_frame_index == 3
+
+    def test_get_frame_by_index(self):
+        tl = self._build(3)
+        tl.go_to_frame(1)
+        frame = tl.get_current_frame()
+        assert frame.line == 2
+
+    def test_frame_state_stopped(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(ExecutionFrame(line=1, line_content="", state=ExecutionState.STOPPED))
+        tl.go_to_frame(0)
+        assert tl.get_current_frame().state == ExecutionState.STOPPED
+
+    def test_frame_state_paused(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(ExecutionFrame(line=1, line_content="", state=ExecutionState.PAUSED))
+        tl.go_to_frame(0)
+        assert tl.get_current_frame().state == ExecutionState.PAUSED
+
+    def test_frame_state_finished(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(ExecutionFrame(line=5, line_content="", state=ExecutionState.FINISHED))
+        tl.go_to_frame(0)
+        assert tl.get_current_frame().state == ExecutionState.FINISHED
+
+    def test_frame_variables_stored(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(ExecutionFrame(line=1, line_content="", state=ExecutionState.RUNNING, variables={"x": 42}))
+        tl.go_to_frame(0)
+        assert tl.get_current_frame().variables.get("x") == 42
+
+    def test_step_forward_increments(self):
+        tl = self._build(3)
+        tl.go_to_frame(0)
+        tl.step_forward()
+        assert tl.current_frame_index == 1
+
+
+class TestDebuggerTimeline6:
+    """Sixth round of debugger timeline tests."""
+
+    def _make_frame(self, line=1, state=ExecutionState.RUNNING):
+        return ExecutionFrame(line=line, line_content="", state=state)
+
+    def _build(self, n):
+        tl = ExecutionTimeline()
+        for i in range(n):
+            tl.add_frame(self._make_frame(line=i + 1))
+        return tl
+
+    def test_frame_line_number(self):
+        f = self._make_frame(line=7)
+        assert f.line == 7
+
+    def test_frame_state(self):
+        f = self._make_frame(state=ExecutionState.PAUSED)
+        assert f.state == ExecutionState.PAUSED
+
+    def test_timeline_length(self):
+        tl = self._build(4)
+        assert len(tl.frames) == 4
+
+    def test_go_to_last_frame(self):
+        tl = self._build(5)
+        tl.go_to_frame(4)
+        assert tl.current_frame_index == 4
+
+    def test_go_to_first_frame(self):
+        tl = self._build(5)
+        tl.go_to_frame(0)
+        assert tl.current_frame_index == 0
+
+    def test_step_back_decrements(self):
+        tl = self._build(3)
+        tl.go_to_frame(2)
+        tl.step_backward()
+        assert tl.current_frame_index == 1
+
+    def test_step_forward_then_back(self):
+        tl = self._build(3)
+        tl.go_to_frame(0)
+        tl.step_forward()
+        tl.step_backward()
+        assert tl.current_frame_index == 0
+
+    def test_current_frame_returns_frame(self):
+        tl = self._build(2)
+        tl.go_to_frame(1)
+        frame = tl.get_current_frame()
+        assert frame is not None
+
+    def test_empty_timeline_frames_empty(self):
+        tl = ExecutionTimeline()
+        assert len(tl.frames) == 0
+
+    def test_add_then_clear(self):
+        tl = self._build(3)
+        tl.clear()
+        assert len(tl.frames) == 0
+
+
+class TestDebuggerTimeline7:
+    """Seventh round of debugger timeline tests."""
+
+    def _make_frame(self, line=1, state=ExecutionState.RUNNING):
+        return ExecutionFrame(line=line, line_content="", state=state)
+
+    def _build(self, n):
+        tl = ExecutionTimeline()
+        for i in range(n):
+            tl.add_frame(self._make_frame(line=i + 1))
+        return tl
+
+    def test_build_ten_frames(self):
+        tl = self._build(10)
+        assert len(tl.frames) == 10
+
+    def test_frames_list_type(self):
+        tl = self._build(2)
+        assert isinstance(tl.frames, list)
+
+    def test_frame_state_running(self):
+        f = self._make_frame(state=ExecutionState.RUNNING)
+        assert f.state == ExecutionState.RUNNING
+
+    def test_frame_state_paused(self):
+        f = self._make_frame(state=ExecutionState.PAUSED)
+        assert f.state == ExecutionState.PAUSED
+
+    def test_go_to_first_frame(self):
+        tl = self._build(3)
+        tl.go_to_frame(0)
+        assert tl.get_current_frame() is not None
+
+    def test_go_to_last_frame(self):
+        tl = self._build(5)
+        tl.go_to_frame(4)
+        assert tl.get_current_frame() is not None
+
+    def test_clear_removes_all(self):
+        tl = self._build(5)
+        tl.clear()
+        assert tl.frames == []
+
+    def test_timeline_not_none(self):
+        tl = ExecutionTimeline()
+        assert tl is not None
+
+    def test_frame_line_positive(self):
+        f = self._make_frame(line=99)
+        assert f.line > 0
+
+    def test_add_single_frame(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._make_frame(line=1))
+        assert len(tl.frames) == 1
+
+
+class TestDebuggerTimeline8:
+    """Eighth round of debugger timeline tests."""
+
+    def _make_frame(self, line=1, state=ExecutionState.RUNNING):
+        return ExecutionFrame(line=line, line_content="", state=state)
+
+    def _build(self, n):
+        tl = ExecutionTimeline()
+        for i in range(1, n + 1):
+            tl.add_frame(self._make_frame(i))
+        return tl
+
+    def test_build_five_frames(self):
+        tl = self._build(5)
+        assert len(tl.frames) == 5
+
+    def test_build_fifteen_frames(self):
+        tl = self._build(15)
+        assert len(tl.frames) == 15
+
+    def test_frame_line_numbers_sequential(self):
+        tl = self._build(3)
+        assert tl.frames[0].line == 1
+        assert tl.frames[1].line == 2
+        assert tl.frames[2].line == 3
+
+    def test_clear_after_many(self):
+        tl = self._build(20)
+        tl.clear()
+        assert len(tl.frames) == 0
+
+    def test_current_frame_after_goto(self):
+        tl = self._build(5)
+        tl.go_to_frame(3)
+        f = tl.get_current_frame()
+        assert f is not None
+
+    def test_add_paused_frame(self):
+        tl = ExecutionTimeline()
+        f = self._make_frame(7, ExecutionState.PAUSED)
+        tl.add_frame(f)
+        assert tl.frames[0].state == ExecutionState.PAUSED
+
+    def test_single_frame_not_empty(self):
+        tl = self._build(1)
+        assert len(tl.frames) == 1
+
+    def test_two_timelines_independent(self):
+        tl1 = self._build(3)
+        tl2 = self._build(7)
+        tl1.clear()
+        assert len(tl2.frames) == 7
+
+    def test_add_frame_returns_none(self):
+        tl = ExecutionTimeline()
+        result = tl.add_frame(self._make_frame(1))
+        assert result is None
+
+    def test_frames_list_grows(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._make_frame(1))
+        tl.add_frame(self._make_frame(2))
+        assert len(tl.frames) == 2
+
+
+class TestDebuggerTimeline9:
+    """Ninth round of debugger timeline tests."""
+
+    def _make_frame(self, line=1, state=ExecutionState.RUNNING):
+        return ExecutionFrame(line=line, line_content="", state=state)
+
+    def test_empty_timeline(self):
+        tl = ExecutionTimeline()
+        assert len(tl.frames) == 0
+
+    def test_add_one_frame(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._make_frame(1))
+        assert len(tl.frames) == 1
+
+    def test_add_two_frames(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._make_frame(1))
+        tl.add_frame(self._make_frame(2))
+        assert len(tl.frames) == 2
+
+    def test_add_ten_frames(self):
+        tl = ExecutionTimeline()
+        for i in range(10):
+            tl.add_frame(self._make_frame(i + 1))
+        assert len(tl.frames) == 10
+
+    def test_clear_resets(self):
+        tl = ExecutionTimeline()
+        for i in range(5):
+            tl.add_frame(self._make_frame(i + 1))
+        tl.clear()
+        assert len(tl.frames) == 0
+
+    def test_current_frame_after_add(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._make_frame(7))
+        f = tl.get_current_frame()
+        assert f is not None
+
+    def test_frame_line_number(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._make_frame(42))
+        assert tl.frames[-1].line == 42
+
+    def test_two_timelines_independent(self):
+        t1 = ExecutionTimeline()
+        t2 = ExecutionTimeline()
+        t1.add_frame(self._make_frame(1))
+        assert len(t2.frames) == 0
+
+    def test_add_returns_none(self):
+        tl = ExecutionTimeline()
+        result = tl.add_frame(self._make_frame(1))
+        assert result is None
+
+    def test_paused_frame(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._make_frame(1, ExecutionState.PAUSED))
+        assert len(tl.frames) == 1
+
+
+class TestDebuggerTimeline10:
+    """Tenth round of debugger timeline tests."""
+
+    def _make_frame(self, line=1, state=ExecutionState.RUNNING):
+        return ExecutionFrame(line=line, line_content="", state=state)
+
+    def test_empty_timeline(self):
+        tl = ExecutionTimeline()
+        assert len(tl.frames) == 0
+
+    def test_add_one_frame(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._make_frame(1))
+        assert len(tl.frames) == 1
+
+    def test_add_two_frames(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._make_frame(1))
+        tl.add_frame(self._make_frame(2))
+        assert len(tl.frames) == 2
+
+    def test_clear_timeline(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._make_frame(1))
+        tl.clear()
+        assert len(tl.frames) == 0
+
+    def test_frame_line_number(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._make_frame(5))
+        assert tl.frames[0].line == 5
+
+    def test_frame_state_running(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._make_frame(1, ExecutionState.RUNNING))
+        assert tl.frames[0].state == ExecutionState.RUNNING
+
+    def test_frame_state_paused(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._make_frame(1, ExecutionState.PAUSED))
+        assert tl.frames[0].state == ExecutionState.PAUSED
+
+    def test_goto_frame(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._make_frame(1))
+        tl.add_frame(self._make_frame(2))
+        tl.go_to_frame(0)
+        assert tl.get_current_frame().line == 1
+
+    def test_add_returns_none(self):
+        tl = ExecutionTimeline()
+        result = tl.add_frame(self._make_frame(1))
+        assert result is None
+
+    def test_frames_list_type(self):
+        tl = ExecutionTimeline()
+        assert isinstance(tl.frames, list)
+
+
+class TestDebuggerTimeline11:
+    """Eleventh round of debugger timeline tests."""
+
+    def _frame(self, line=1):
+        return ExecutionFrame(line=line, line_content="")
+
+    def test_empty_timeline(self):
+        tl = ExecutionTimeline()
+        assert len(tl.frames) == 0
+
+    def test_add_frame(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._frame())
+        assert len(tl.frames) == 1
+
+    def test_add_two_frames(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._frame(1))
+        tl.add_frame(self._frame(2))
+        assert len(tl.frames) == 2
+
+    def test_clear_timeline(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._frame())
+        tl.clear()
+        assert len(tl.frames) == 0
+
+    def test_current_frame_is_none(self):
+        tl = ExecutionTimeline()
+        assert tl.get_current_frame() is None
+
+    def test_frame_state_after_add(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(ExecutionFrame(line=5, line_content="", state=ExecutionState.PAUSED))
+        assert tl.frames[0].state == ExecutionState.PAUSED
+
+    def test_goto_valid_frame(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._frame(1))
+        tl.go_to_frame(0)
+        assert tl.get_current_frame() is not None
+
+    def test_frames_is_list(self):
+        tl = ExecutionTimeline()
+        assert isinstance(tl.frames, list)
+
+    def test_add_returns_none(self):
+        tl = ExecutionTimeline()
+        result = tl.add_frame(self._frame())
+        assert result is None
+
+    def test_frame_line_number(self):
+        tl = ExecutionTimeline()
+        tl.add_frame(self._frame(10))
+        assert tl.frames[0].line == 10
+
+
+class TestDebuggerTimeline12:
+    """Twelfth extended round of debugger timeline tests."""
+
+    def test_create_timeline(self):
+        from time_warp.core.debugger import ExecutionTimeline
+        tl = ExecutionTimeline()
+        assert tl is not None
+
+    def test_start_empty(self):
+        from time_warp.core.debugger import ExecutionTimeline
+        tl = ExecutionTimeline()
+        assert len(tl.frames) == 0
+
+    def test_add_frame(self):
+        from time_warp.core.debugger import ExecutionTimeline, ExecutionFrame
+        tl = ExecutionTimeline()
+        tl.add_frame(ExecutionFrame(line=1, line_content=""))
+        assert len(tl.frames) == 1
+
+    def test_add_three_frames(self):
+        from time_warp.core.debugger import ExecutionTimeline, ExecutionFrame
+        tl = ExecutionTimeline()
+        for i in range(3):
+            tl.add_frame(ExecutionFrame(line=i, line_content=""))
+        assert len(tl.frames) == 3
+
+    def test_clear_frames(self):
+        from time_warp.core.debugger import ExecutionTimeline, ExecutionFrame
+        tl = ExecutionTimeline()
+        tl.add_frame(ExecutionFrame(line=1, line_content=""))
+        tl.clear()
+        assert len(tl.frames) == 0
+
+    def test_frame_line_attr(self):
+        from time_warp.core.debugger import ExecutionFrame
+        f = ExecutionFrame(line=5, line_content="x = 1")
+        assert f.line == 5
+
+    def test_frame_content_attr(self):
+        from time_warp.core.debugger import ExecutionFrame
+        f = ExecutionFrame(line=1, line_content="hello")
+        assert f.line_content == "hello"
+
+    def test_two_timelines(self):
+        from time_warp.core.debugger import ExecutionTimeline
+        tl1, tl2 = ExecutionTimeline(), ExecutionTimeline()
+        assert tl1 is not tl2
+
+    def test_current_frame_empty(self):
+        from time_warp.core.debugger import ExecutionTimeline
+        tl = ExecutionTimeline()
+        assert tl.get_current_frame() is None
+
+    def test_add_five_frames(self):
+        from time_warp.core.debugger import ExecutionTimeline, ExecutionFrame
+        tl = ExecutionTimeline()
+        for i in range(5):
+            tl.add_frame(ExecutionFrame(line=i, line_content=""))
+        assert len(tl.frames) == 5
+
+
+class TestDebuggerTimeline13:
+    def test_create(self):
+        from time_warp.core.debugger import ExecutionTimeline
+        assert ExecutionTimeline() is not None
+
+    def test_empty_frames(self):
+        from time_warp.core.debugger import ExecutionTimeline
+        assert len(ExecutionTimeline().frames) == 0
+
+    def test_add_one(self):
+        from time_warp.core.debugger import ExecutionTimeline, ExecutionFrame
+        tl = ExecutionTimeline()
+        tl.add_frame(ExecutionFrame(line=1, line_content=""))
+        assert len(tl.frames) == 1
+
+    def test_add_five(self):
+        from time_warp.core.debugger import ExecutionTimeline, ExecutionFrame
+        tl = ExecutionTimeline()
+        for i in range(5):
+            tl.add_frame(ExecutionFrame(line=i, line_content=""))
+        assert len(tl.frames) == 5
+
+    def test_clear(self):
+        from time_warp.core.debugger import ExecutionTimeline, ExecutionFrame
+        tl = ExecutionTimeline()
+        tl.add_frame(ExecutionFrame(line=1, line_content=""))
+        tl.clear()
+        assert len(tl.frames) == 0
+
+    def test_frame_line(self):
+        from time_warp.core.debugger import ExecutionFrame
+        assert ExecutionFrame(line=7, line_content="").line == 7
+
+    def test_frame_content(self):
+        from time_warp.core.debugger import ExecutionFrame
+        assert ExecutionFrame(line=1, line_content="foo").line_content == "foo"
+
+    def test_current_none(self):
+        from time_warp.core.debugger import ExecutionTimeline
+        assert ExecutionTimeline().get_current_frame() is None
+
+    def test_two_timelines(self):
+        from time_warp.core.debugger import ExecutionTimeline
+        t1, t2 = ExecutionTimeline(), ExecutionTimeline()
+        assert t1 is not t2
+
+    def test_add_ten(self):
+        from time_warp.core.debugger import ExecutionTimeline, ExecutionFrame
+        tl = ExecutionTimeline()
+        for i in range(10):
+            tl.add_frame(ExecutionFrame(line=i, line_content=""))
+        assert len(tl.frames) == 10

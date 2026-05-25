@@ -312,7 +312,9 @@ class AnalyticsEngine:
             status=(
                 "healthy"
                 if error_rate < 5
-                else "degraded" if error_rate < 15 else "critical"
+                else "degraded"
+                if error_rate < 15
+                else "critical"
             ),
         )
 
@@ -340,9 +342,9 @@ class AlertingSystem:
             self._create_alert(
                 "error",
                 "High Latency Detected",
-                f'P99 latency is {
-                    perf_stats.p99_latency_ms:.0f}ms (threshold: {
-                    self.thresholds["p99_latency_ms"]}ms)',
+                f"P99 latency is {perf_stats.p99_latency_ms:.0f}ms (threshold: {
+                    self.thresholds['p99_latency_ms']
+                }ms)",
             )
 
         # Check error rate
@@ -351,9 +353,9 @@ class AlertingSystem:
             self._create_alert(
                 "warning",
                 "High Error Rate",
-                f'Error rate is {
-                    health.error_rate_percent:.1f}% (threshold: {
-                    self.thresholds["error_rate_percent"]}%)',
+                f"Error rate is {health.error_rate_percent:.1f}% (threshold: {
+                    self.thresholds['error_rate_percent']
+                }%)",
             )
 
     def _create_alert(self, severity: str, title: str, message: str) -> None:

@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-10.2.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
-Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **12 programming languages** spanning six decades of computing history into a single, modern IDE. Built with Python and PySide6 (Qt6), it provides an integrated platform for learning programming concepts, exploring vector turtle graphics, and working through structured lessons.
+Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **13 programming languages** spanning six decades of computing history into a single, modern IDE. Built with Python and PySide6 (Qt6), it provides an integrated platform for learning programming concepts, exploring vector turtle graphics, and working through structured lessons.
 
 ---
 
@@ -32,7 +32,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 
 ### Multi-Language Support
 
-12 languages spanning six decades of computing history:
+13 languages spanning six decades of computing history:
 
 | Language | Paradigm | Era | Execution Mode |
 | --- | --- | --- | --- |
@@ -48,6 +48,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 | **HyperTalk** | Event-driven / English | 1987 | Whole-program |
 | **JavaScript** | Scripting / Web | 1995 | Whole-program |
 | **Lua** | Scripting / Embedded | 1993 | Whole-program |
+| **LISP/Scheme** | Functional / Educational | 1958 | Whole-program |
 
 ### Integrated IDE
 

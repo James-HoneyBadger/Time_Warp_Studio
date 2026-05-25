@@ -1,0 +1,40 @@
+% sorting_algorithms.ps - Bubble sort demonstration in PostScript
+
+/print_array {
+    % print_array arr len --
+    /len exch def
+    /arr exch def
+    ([) print
+    0 1 len 1 sub {
+        /i exch def
+        arr i get ==
+        i len 1 sub lt { (, ) print } if
+    } for
+    (]) =
+} def
+
+% Create an array
+/data [64 34 25 12 22 11 90] def
+/n data length def
+
+(Bubble Sort in PostScript) =
+(Original: ) print
+data n print_array
+
+% Bubble sort
+0 1 n 2 sub {
+    /i exch def
+    0 1 n i 2 sub sub {
+        /j exch def
+        data j get data j 1 add get gt {
+            % swap
+            /tmp data j get def
+            data j data j 1 add get put
+            data j 1 add tmp put
+        } if
+    } for
+} for
+
+(Sorted:   ) print
+data n print_array
+(Done.) =

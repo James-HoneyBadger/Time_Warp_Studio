@@ -1,0 +1,19 @@
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. COUNTER-DEMO.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+           01 WS-COUNT  PIC 9(4) VALUE 1.
+           01 WS-LIMIT  PIC 9(4) VALUE 10.
+           01 WS-SUM    PIC 9(6) VALUE 0.
+
+       PROCEDURE DIVISION.
+       MAIN-PARA.
+           PERFORM COUNT-LOOP VARYING WS-COUNT FROM 1 BY 1
+               UNTIL WS-COUNT > WS-LIMIT.
+           DISPLAY "Sum 1 to 10 = " WS-SUM.
+           STOP RUN.
+
+       COUNT-LOOP.
+           ADD WS-COUNT TO WS-SUM.
+           DISPLAY "Count: " WS-COUNT.

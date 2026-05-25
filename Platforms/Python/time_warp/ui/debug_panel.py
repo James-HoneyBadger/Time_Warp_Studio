@@ -6,6 +6,7 @@
 from PySide6.QtCore import QSize, Qt, Signal
 from PySide6.QtGui import QFont, QTextCursor
 from PySide6.QtWidgets import (
+    QCheckBox,
     QComboBox,
     QFrame,
     QFormLayout,
@@ -38,6 +39,7 @@ class DebugToolbar(QFrame):
     continue_execution = Signal()
     pause_execution = Signal()
     step_granularity_changed = Signal(str)
+    break_on_error_changed = Signal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -108,6 +110,14 @@ class DebugToolbar(QFrame):
         self.step_mode_combo.addItem("Statement", "statement")
         self.step_mode_combo.currentIndexChanged.connect(self._emit_step_granularity)
         layout.addWidget(self.step_mode_combo)
+
+        layout.addSpacing(10)
+
+        # Break-on-error toggle
+        self.break_on_error_cb = QCheckBox("Break on error")
+        self.break_on_error_cb.setToolTip("Pause debugger when any runtime error occurs")
+        self.break_on_error_cb.toggled.connect(self.break_on_error_changed.emit)
+        layout.addWidget(self.break_on_error_cb)
 
         # Pause/Continue
         self.pause_btn = QToolButton()
@@ -301,13 +311,23 @@ class WatchPanel(QWidget):
 
     def _evaluate_expression(self, expr: str) -> str:
         """Evaluate a watch expression against current variables."""
-        # Simple variable lookup - could be extended for expressions
-        expr_upper = expr.upper()
-        if expr_upper in self._variables:
-            return str(self._variables[expr_upper])
-        if expr in self._variables:
-            return str(self._variables[expr])
-        return "<not found>"
+        variables = getattr(self, "_variables", {})
+        # Build a case-insensitive namespace from variables
+        namespace = {k.upper(): v for k, v in variables.items()}
+        namespace.update(variables)
+        # First try direct variable lookup (case-insensitive)
+        if expr.upper() in namespace:
+            return str(namespace[expr.upper()])
+        # Try evaluating as an expression in the variable namespace
+        try:
+            result = eval(expr, {"__builtins__": {}}, namespace)  # noqa: S307
+            return str(result)
+        except NameError:
+            return "<undefined>"
+        except ZeroDivisionError:
+            return "❌ division by zero"
+        except Exception as exc:  # noqa: BLE001
+            return f"❌ {exc}"
 
     def _update_display(self):
         """Update the watch table display."""
@@ -654,6 +674,7 @@ class DebugPanel(QWidget):
     timeline_frame_selected = Signal(object)
     export_timeline_requested = Signal()
     step_granularity_changed = Signal(str)
+    break_on_error_changed = Signal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -781,6 +802,7 @@ class DebugPanel(QWidget):
         self.toolbar.step_granularity_changed.connect(
             self.step_granularity_changed.emit
         )
+        self.toolbar.break_on_error_changed.connect(self.break_on_error_changed.emit)
 
     def set_debugging(self, is_debugging: bool):
         """Update UI for debugging state."""

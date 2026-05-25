@@ -6,7 +6,7 @@ for Logo-style graphics across all 24 language executors.
 """
 
 import math
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
 
 # Color name to RGB mapping
@@ -54,7 +54,10 @@ DEFAULT_PALETTE_16 = {
 }
 
 # Optimization: Precompute sine and cosine values for common angles
-PRECOMPUTED_TRIG = {angle: (math.sin(math.radians(angle)), math.cos(math.radians(angle))) for angle in range(0, 360)}
+PRECOMPUTED_TRIG = {
+    angle: (math.sin(math.radians(angle)), math.cos(math.radians(angle)))
+    for angle in range(0, 360)
+}
 
 
 def optimized_sin(angle: float) -> float:
@@ -110,8 +113,8 @@ class TurtleSprite:
     height: int
     # pixels[row][col] = (r, g, b) or None (transparent)
     pixels: List[List[Optional[Tuple[int, int, int]]]]
-    hotspot_x: int = 0   # pivot point (pixels from left)
-    hotspot_y: int = 0   # pivot point (pixels from top)
+    hotspot_x: int = 0  # pivot point (pixels from left)
+    hotspot_y: int = 0  # pivot point (pixels from top)
 
 
 @dataclass
@@ -127,15 +130,15 @@ class TurtleShape:
     font_size: int = 12
     align: str = "left"
     # Vector / SVGA extensions
-    gradient: Optional[TurtleGradient] = None      # gradient fill (overrides fill_color)
-    z_order: int = 0                                # painter order (lower = behind)
-    rotation: float = 0.0                           # degrees (for sprites)
+    gradient: Optional[TurtleGradient] = None  # gradient fill (overrides fill_color)
+    z_order: int = 0  # painter order (lower = behind)
+    rotation: float = 0.0  # degrees (for sprites)
     scale_x: float = 1.0
     scale_y: float = 1.0
-    sprite_name: Optional[str] = None              # reference into TurtleState.sprites
-    pen_dash: Optional[List[float]] = None          # dash pattern [on, off, ...]
-    pen_cap: str = "round"                          # "round", "flat", "square"
-    pen_join: str = "round"                         # "round", "miter", "bevel"
+    sprite_name: Optional[str] = None  # reference into TurtleState.sprites
+    pen_dash: Optional[List[float]] = None  # dash pattern [on, off, ...]
+    pen_cap: str = "round"  # "round", "flat", "square"
+    pen_join: str = "round"  # "round", "miter", "bevel"
     control_points: Optional[List[Tuple[float, float]]] = None  # for bezier
 
 
@@ -172,10 +175,10 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
         self._filling: bool = False
         self._fill_start_line_index: int = 0
         # SVGA / sprite extensions
-        self.svga_mode: bool = False           # True = 800×600 virtual canvas
+        self.svga_mode: bool = False  # True = 800×600 virtual canvas
         self.svga_width: int = 800
         self.svga_height: int = 600
-        self.sprites: dict[str, TurtleSprite] = {}         # sprite definitions
+        self.sprites: dict[str, TurtleSprite] = {}  # sprite definitions
         self._pen_dash: Optional[List[float]] = None
         self._pen_cap: str = "round"
         self._pen_join: str = "round"
@@ -706,9 +709,12 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
 
     def bezier_curve(
         self,
-        cp1x: float, cp1y: float,
-        cp2x: float = 0.0, cp2y: float = 0.0,
-        end_x: float = 0.0, end_y: float = 0.0,
+        cp1x: float,
+        cp1y: float,
+        cp2x: float = 0.0,
+        cp2y: float = 0.0,
+        end_x: float = 0.0,
+        end_y: float = 0.0,
         color: Optional[Tuple[int, int, int]] = None,
         width: Optional[float] = None,
     ) -> None:
@@ -750,7 +756,10 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
 
     def draw_rect_gradient(
         self,
-        x1: float, y1: float, x2: float, y2: float,
+        x1: float,
+        y1: float,
+        x2: float,
+        y2: float,
         stops: List[Tuple[float, Tuple[int, int, int]]],
         kind: str = "linear",
         border_color: Optional[Tuple[int, int, int]] = None,
@@ -768,8 +777,12 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
         grad = TurtleGradient(
             kind=kind,
             stops=stops,
-            x1=x1, y1=y1, x2=x2, y2=y2,
-            cx=(x1 + x2) / 2, cy=(y1 + y2) / 2,
+            x1=x1,
+            y1=y1,
+            x2=x2,
+            y2=y2,
+            cx=(x1 + x2) / 2,
+            cy=(y1 + y2) / 2,
             radius=max(abs(x2 - x1), abs(y2 - y1)) / 2,
         )
         points = [(x1, y1), (x2, y1), (x2, y2), (x1, y2)]
@@ -789,7 +802,10 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
 
     def draw_ellipse_gradient(
         self,
-        cx: float, cy: float, rx: float, ry: float,
+        cx: float,
+        cy: float,
+        rx: float,
+        ry: float,
         stops: List[Tuple[float, Tuple[int, int, int]]],
         border_color: Optional[Tuple[int, int, int]] = None,
         width: Optional[float] = None,
@@ -798,7 +814,9 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
         grad = TurtleGradient(
             kind="radial",
             stops=stops,
-            cx=cx, cy=cy, radius=max(rx, ry),
+            cx=cx,
+            cy=cy,
+            radius=max(rx, ry),
         )
         bc = border_color or self.pen_color
         bw = width if width is not None else self.pen_width
@@ -913,4 +931,3 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
                 shape.points[0] = (x + dx, y + dy)
                 self._notify_change()
                 return
-

@@ -18,15 +18,21 @@ class AccessibilityFeatures:
     def _apply_accessibility_features(self):
         """Apply accessibility features to the main window."""
         # High-contrast mode toggle
-        self.high_contrast_shortcut = QShortcut(QKeySequence("Ctrl+H"), self.main_window)
+        self.high_contrast_shortcut = QShortcut(
+            QKeySequence("Ctrl+H"), self.main_window
+        )
         self.high_contrast_shortcut.activated.connect(self._toggle_high_contrast)
 
         # Increase font size
-        self.increase_font_shortcut = QShortcut(QKeySequence("Ctrl++"), self.main_window)
+        self.increase_font_shortcut = QShortcut(
+            QKeySequence("Ctrl++"), self.main_window
+        )
         self.increase_font_shortcut.activated.connect(self._increase_font_size)
 
         # Decrease font size
-        self.decrease_font_shortcut = QShortcut(QKeySequence("Ctrl+-"), self.main_window)
+        self.decrease_font_shortcut = QShortcut(
+            QKeySequence("Ctrl+-"), self.main_window
+        )
         self.decrease_font_shortcut.activated.connect(self._decrease_font_size)
 
     def _toggle_high_contrast(self):

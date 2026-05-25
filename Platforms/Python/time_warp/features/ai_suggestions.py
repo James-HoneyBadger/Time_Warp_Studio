@@ -67,7 +67,9 @@ class AISuggestions:
         if stripped.startswith("for "):
             suggestions.append(f"{indent}print(item)")
         if "class " in code:
-            suggestions.append(f"{indent}def __repr__(self):\n{indent}    return self.__class__.__name__")
+            suggestions.append(
+                f"{indent}def __repr__(self):\n{indent}    return self.__class__.__name__"
+            )
         if not suggestions:
             suggestions.extend(
                 [
@@ -91,7 +93,7 @@ class AISuggestions:
             [
                 'IF X > 0 THEN PRINT "POSITIVE"',
                 'INPUT "NAME"; N$',
-                'GOSUB 100',
+                "GOSUB 100",
             ]
         )
         return suggestions
@@ -100,7 +102,7 @@ class AISuggestions:
         return [
             "REPEAT 4 [FD 50 RT 90]",
             "PU SETPOS [0 0] PD",
-            "SETPENCOLOR \"BLUE",
+            'SETPENCOLOR "BLUE',
             "REPEAT 36 [FD 10 RT 10]",
         ]
 

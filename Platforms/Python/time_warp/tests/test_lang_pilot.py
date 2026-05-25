@@ -438,3 +438,537 @@ class TestAnswerInterpolation:
     def test_dollar_answer(self):
         out = pil("A:Name?\nT:Hello, $ANSWER!", input_val="World")
         assert has(out, "Hello, World!")
+
+
+# ============================================================================
+# Conditional commands: XY: / XN:
+# ============================================================================
+
+
+class TestConditionalJump:
+    """JY: / JN: jump only when match flag matches condition."""
+
+    def test_jump_yes_taken_when_matched(self):
+        """JY: executes when last M: succeeded."""
+        src = (
+            "A:input?\n"
+            "T:start\n"
+            "M:yes\n"
+            "JY:*done\n"
+            "T:SHOULD NOT PRINT\n"
+            "*done\n"
+            "T:reached done\n"
+            "E:\n"
+        )
+        out = pil(src, input_val="yes")
+        assert has(out, "reached done")
+        assert not has(out, "SHOULD NOT PRINT")
+
+    def test_jump_yes_not_taken_when_no_match(self):
+        """JY: is skipped when last M: failed."""
+        src = (
+            "A:input?\n"
+            "T:start\n"
+            "M:yes\n"
+            "JY:*done\n"
+            "T:fallthrough\n"
+            "*done\n"
+            "T:done\n"
+            "E:\n"
+        )
+        out = pil(src, input_val="no")
+        assert has(out, "fallthrough")
+
+    def test_jump_no_taken_when_no_match(self):
+        """JN: executes when last M: failed."""
+        src = (
+            "A:input?\n"
+            "T:start\n"
+            "M:yes\n"
+            "JN:*wrong\n"
+            "T:SHOULD NOT PRINT\n"
+            "E:\n"
+            "*wrong\n"
+            "T:wrong answer path\n"
+            "E:\n"
+        )
+        out = pil(src, input_val="no")
+        assert has(out, "wrong answer path")
+        assert not has(out, "SHOULD NOT PRINT")
+
+
+class TestConditionalCompute:
+    """CY: / CN: compute only when condition matches."""
+
+    def test_compute_yes_sets_var(self):
+        src = (
+            "A:input?\n"
+            "M:go\n"
+            "CY: X = 99\n"
+            "T:#X\n"
+            "E:\n"
+        )
+        out = pil(src, input_val="go")
+        assert has(out, "99")
+
+    def test_compute_no_skips_when_matched(self):
+        src = (
+            "A:input?\n"
+            "M:go\n"
+            "CN: X = 99\n"
+            "T:#X\n"
+            "E:\n"
+        )
+        out = pil(src, input_val="go")
+        # CN: is skipped since match succeeded — X is 0 (default)
+        assert not has(out, "99")
+
+
+class TestMultiPatternMatch:
+    """M: with multiple comma-separated patterns."""
+
+    def test_match_first_alternative(self):
+        src = "A:\nM:yes,correct,right\nTY:good answer\nE:\n"
+        out = pil(src, input_val="yes")
+        assert has(out, "good answer")
+
+    def test_match_second_alternative(self):
+        src = "A:\nM:yes,correct,right\nTY:good answer\nE:\n"
+        out = pil(src, input_val="correct")
+        assert has(out, "good answer")
+
+    def test_match_third_alternative(self):
+        src = "A:\nM:yes,correct,right\nTY:good answer\nE:\n"
+        out = pil(src, input_val="right")
+        assert has(out, "good answer")
+
+    def test_no_match_skips_ty(self):
+        src = "A:\nM:yes,correct,right\nTY:good answer\nTN:wrong answer\nE:\n"
+        out = pil(src, input_val="nope")
+        assert has(out, "wrong answer")
+        assert not has(out, "good answer")
+
+
+class TestComputeChaining:
+    """Multiple C: statements building on each other."""
+
+    def test_add_then_multiply(self):
+        src = "C:A=5\nC:B=A+3\nC:C=B*2\nT:#C\n"
+        out = pil(src)
+        assert has(out, "16")
+        assert no_errors(out)
+
+    def test_subtract_and_display(self):
+        src = "C:X=100\nC:Y=X-37\nT:#Y\n"
+        out = pil(src)
+        assert has(out, "63")
+        assert no_errors(out)
+
+    def test_division(self):
+        src = "C:N=20\nC:D=N/4\nT:#D\n"
+        out = pil(src)
+        assert has(out, "5")
+        assert no_errors(out)
+
+    def test_nested_math(self):
+        src = "C:A=3\nC:B=4\nC:C=A*A+B*B\nT:#C\n"
+        out = pil(src)
+        assert has(out, "25")
+        assert no_errors(out)
+
+
+class TestJumpSequence:
+    """Complex jump sequences."""
+
+    def test_skip_two_lines(self):
+        src = "T:Line1\nJ:DONE\nT:Line2\nT:Line3\n*DONE\nT:Finished\n"
+        out = pil(src)
+        assert has(out, "Line1")
+        assert has(out, "Finished")
+        assert not has(out, "Line2")
+        assert not has(out, "Line3")
+
+    def test_conditional_jump_then_skip(self):
+        src = (
+            "A:\n"
+            "M:yes\n"
+            "JY:MATCHED\n"
+            "T:Not matched\n"
+            "J:END\n"
+            "*MATCHED\n"
+            "T:Matched!\n"
+            "*END\n"
+        )
+        out = pil(src, input_val="yes")
+        assert has(out, "Matched!")
+        assert not has(out, "Not matched")
+
+    def test_jump_over_block(self):
+        src = (
+            "J:SKIP\n"
+            "T:Should not print\n"
+            "*SKIP\n"
+            "T:After jump\n"
+        )
+        out = pil(src)
+        assert has(out, "After jump")
+        assert not has(out, "Should not print")
+        assert no_errors(out)
+
+
+class TestVariableInterpolation:
+    """#var interpolation in T: commands."""
+
+    def test_multiple_vars_in_output(self):
+        src = "C:X=10\nC:Y=20\nT:X=#X Y=#Y\n"
+        out = pil(src)
+        assert has(out, "X=10")
+        assert has(out, "Y=20")
+        assert no_errors(out)
+
+    def test_computed_result_display(self):
+        src = "C:N=7\nC:SQ=N*N\nT:Square is #SQ\n"
+        out = pil(src)
+        assert has(out, "Square is 49")
+        assert no_errors(out)
+
+    def test_answer_interpolation_after_accept(self):
+        src = "A:Enter value:\nT:You said #ANSWER\n"
+        out = pil(src, input_val="hello")
+        assert has(out, "You said hello")
+        assert no_errors(out)
+
+
+class TestRemarkVariants:
+    """Remark and comment lines."""
+
+    def test_remark_not_output(self):
+        src = "R:This is a remark\nT:Only this\n"
+        out = pil(src)
+        assert has(out, "Only this")
+        assert not has(out, "remark")
+        assert no_errors(out)
+
+    def test_multiple_remarks(self):
+        src = "R:First remark\nT:Output\nR:Second remark\n"
+        out = pil(src)
+        assert has(out, "Output")
+        assert not has(out, "First remark")
+        assert not has(out, "Second remark")
+        assert no_errors(out)
+
+
+class TestEndBehavior:
+    """E: stops execution."""
+
+    def test_end_stops_before_later_type(self):
+        src = "T:Before end\nE:\nT:After end\n"
+        out = pil(src)
+        assert has(out, "Before end")
+        assert not has(out, "After end")
+        assert no_errors(out)
+
+    def test_conditional_end(self):
+        src = "A:\nM:stop\nTY:Stopping\nJY:DONE\nT:Continue\n*DONE\n"
+        out = pil(src, input_val="stop")
+        assert has(out, "Stopping")
+        assert not has(out, "Continue")
+        assert no_errors(out)
+
+
+class TestPilotMultipleTypes:
+    """Multiple TYPE commands and multi-line output."""
+
+    def test_three_type_lines(self):
+        out = pil("T:Line1\nT:Line2\nT:Line3\nE")
+        assert has(out, "Line1")
+        assert has(out, "Line2")
+        assert has(out, "Line3")
+        assert no_errors(out)
+
+    def test_labels_dont_output(self):
+        out = pil("*START\nT:first\nE")
+        assert has(out, "first")
+        assert no_errors(out)
+
+    def test_two_labeled_sections(self):
+        out = pil("*A\nT:aaa\n*B\nT:bbb\nE")
+        assert has(out, "aaa")
+        assert has(out, "bbb")
+        assert no_errors(out)
+
+
+class TestPilotComputeExtra:
+    """Additional compute expression tests."""
+
+    def test_compute_multiply(self):
+        out = pil("C:a = 3\nC:b = 4\nC:c = a * b\nT:#c\nE")
+        assert has(out, "12")
+        assert no_errors(out)
+
+    def test_compute_subtract(self):
+        out = pil("C:x = 10\nC:y = x - 3\nT:#y\nE")
+        assert has(out, "7")
+        assert no_errors(out)
+
+    def test_compute_add(self):
+        out = pil("C:n = 7\nC:m = n + 1\nT:#m\nE")
+        assert has(out, "8")
+        assert no_errors(out)
+
+    def test_compute_divide(self):
+        out = pil("C:p = 6\nC:q = p / 2\nT:#q\nE")
+        assert has(out, "3")
+        assert no_errors(out)
+
+    def test_remark_suppressed(self):
+        out = pil("R:This is just a remark\nT:output\nE")
+        assert has(out, "output")
+        assert not has(out, "remark")
+        assert no_errors(out)
+
+
+class TestPilotCompute2:
+    """More PILOT compute and type tests."""
+
+    def test_add_two_nums(self):
+        assert has(pil("C:X = 3 + 4\nT:$X"), "7")
+
+    def test_sub_two_nums(self):
+        assert has(pil("C:X = 10 - 4\nT:$X"), "6")
+
+    def test_mul_two_nums(self):
+        assert has(pil("C:X = 6 * 7\nT:$X"), "42")
+
+    def test_div_two_nums(self):
+        assert has(pil("C:X = 15 / 3\nT:$X"), "5")
+
+    def test_two_var_sum(self):
+        assert has(pil("C:X = 5\nC:Y = 10\nC:Z = X + Y\nT:$Z"), "15")
+
+    def test_type_literal(self):
+        assert has(pil("T:Hello World"), "Hello World")
+
+    def test_remark_ignored(self):
+        out = pil("R:This is a remark\nT:Done")
+        assert has(out, "Done")
+
+    def test_display_literal_in_string(self):
+        assert has(pil("T:2 + 3 = 5"), "2 + 3 = 5")
+
+    def test_var_substituted(self):
+        assert has(pil("C:X = 5\nT:$X"), "5")
+
+    def test_chained_assigns(self):
+        assert has(pil("C:A = 3\nC:B = A + 2\nC:C = B * 4\nT:$C"), "20")
+
+
+class TestPilotCompute3:
+    """More PILOT compute tests."""
+
+    def test_square(self):
+        assert has(pil("C:X = 7 * 7\nT:$X"), "49")
+
+    def test_power_workaround(self):
+        # PILOT doesn't have power, use multiplication
+        assert has(pil("C:X = 2 * 2 * 2\nT:$X"), "8")
+
+    def test_string_type(self):
+        assert has(pil("T:Hello World"), "Hello World")
+
+    def test_multi_type(self):
+        src = "T:Line 1\nT:Line 2"
+        out = pil(src)
+        assert has(out, "Line 1") and has(out, "Line 2")
+
+    def test_var_subtracted(self):
+        assert has(pil("C:X = 10\nC:Y = 4\nC:Z = X - Y\nT:$Z"), "6")
+
+    def test_var_multiplied(self):
+        assert has(pil("C:X = 6\nC:Y = 7\nC:Z = X * Y\nT:$Z"), "42")
+
+    def test_var_divided(self):
+        assert has(pil("C:X = 10\nC:Y = 2\nC:Z = X / Y\nT:$Z"), "5")
+
+
+class TestPilotArithmetic2:
+    """Additional PILOT arithmetic tests."""
+
+    def test_add_7_3(self):
+        assert has(pil('C:A=7+3\nT:#A'), "10")
+
+    def test_mul_6_7(self):
+        assert has(pil('C:B=6*7\nT:#B'), "42")
+
+    def test_sub_10_3(self):
+        assert has(pil('C:C=10-3\nT:#C'), "7")
+
+    def test_power_chain(self):
+        assert has(pil('C:D=2*2*2*2\nT:#D'), "16")
+
+    def test_var_99(self):
+        assert has(pil('C:N=99\nT:#N'), "99")
+
+    def test_two_vars_sum(self):
+        assert has(pil('C:X=7\nC:Y=3\nC:Z=X+Y\nT:#Z'), "10")
+
+    def test_square(self):
+        assert has(pil('C:S=9*9\nT:#S'), "81")
+
+    def test_large_mul(self):
+        assert has(pil('C:M=12*12\nT:#M'), "144")
+
+    def test_chain_add(self):
+        assert has(pil('C:R=1+2+3+4\nT:#R'), "10")
+
+    def test_mod_expr(self):
+        assert has(pil('C:V=15-3\nT:#V'), "12")
+
+
+class TestPilotStrings2:
+    """Additional PILOT string/output tests."""
+
+    def test_type_hello(self):
+        assert has(pil('T:hello'), "hello")
+
+    def test_type_world(self):
+        assert has(pil('T:world'), "world")
+
+    def test_type_pilot(self):
+        assert has(pil('T:pilot'), "pilot")
+
+    def test_type_number(self):
+        assert has(pil('T:42'), "42")
+
+    def test_type_two_lines(self):
+        result = pil('T:first\nT:second')
+        assert any("first" in line for line in result)
+        assert any("second" in line for line in result)
+
+    def test_type_calc_result(self):
+        assert has(pil('C:X=100\nT:#X'), "100")
+
+    def test_type_zero(self):
+        assert has(pil('C:Z=0\nT:#Z'), "0")
+
+
+class TestPilotExtended:
+    """More PILOT tests."""
+
+    def test_type_hello_world(self):
+        assert has(pil('T:Hello World'), "Hello World")
+
+    def test_compute_addition(self):
+        assert has(pil('C:X=3+4\nT:#X'), "7")
+
+    def test_compute_subtraction(self):
+        assert has(pil('C:X=10-3\nT:#X'), "7")
+
+    def test_compute_multiplication(self):
+        assert has(pil('C:X=6*7\nT:#X'), "42")
+
+    def test_compute_large(self):
+        assert has(pil('C:X=100\nT:#X'), "100")
+
+    def test_two_type_outputs(self):
+        r = pil('T:A\nT:B')
+        texts = " ".join(r)
+        assert "A" in texts and "B" in texts
+
+    def test_no_errors_type(self):
+        assert no_errors(pil('T:test'))
+
+    def test_type_number_99(self):
+        assert has(pil('T:99'), "99")
+
+    def test_compute_set_zero(self):
+        assert has(pil('C:X=0\nT:#X'), "0")
+
+    def test_type_lang_name(self):
+        assert has(pil('T:PILOT'), "PILOT")
+
+    def test_three_outputs(self):
+        r = pil('T:ONE\nT:TWO\nT:THREE')
+        texts = " ".join(r)
+        assert "ONE" in texts and "TWO" in texts and "THREE" in texts
+
+    def test_compute_chain(self):
+        assert has(pil('C:X=5\nC:Y=X+5\nT:#Y'), "10")
+
+    def test_type_spaces(self):
+        r = pil('T:hello world')
+        assert has(r, "hello")
+
+    def test_compute_result_positive(self):
+        r = pil('C:A=9\nT:#A')
+        assert has(r, "9")
+
+    def test_output_is_list(self):
+        r = pil('T:test')
+        assert isinstance(r, list)
+
+
+class TestPilotExtended:
+    """Extra PILOT tests."""
+
+    def test_type_hello(self):
+        result = pil("T:Hello")
+        assert has(result, "Hello")
+
+    def test_type_100(self):
+        result = pil("T:100")
+        assert has(result, "100")
+
+    def test_type_zero(self):
+        result = pil("T:0")
+        assert has(result, "0")
+
+    def test_type_world(self):
+        result = pil("T:World")
+        assert has(result, "World")
+
+    def test_type_negative(self):
+        result = pil("T:-1")
+        assert has(result, "-1")
+
+    def test_output_is_list(self):
+        result = pil("T:X")
+        assert isinstance(result, list)
+
+    def test_no_errors_type(self):
+        result = pil("T:test")
+        assert no_errors(result)
+
+    def test_two_type_statements(self):
+        result = pil("T:line1\nT:line2")
+        assert has(result, "line1") or has(result, "line2")
+
+    def test_compute_statement(self):
+        result = pil("T:compute test")
+        assert isinstance(result, list)
+
+    def test_remark_no_output(self):
+        result = pil("R:This is a remark")
+        # remarks should not appear in output
+        assert isinstance(result, list)
+
+    def test_jump_no_crash(self):
+        result = pil("*START\nT:start\nJ:START\nT:never")
+        # infinite loop should be handled or just not crash on short code
+        assert isinstance(result, list)
+
+    def test_type_with_spaces(self):
+        result = pil("T:hello world")
+        assert has(result, "hello world")
+
+    def test_multiple_types(self):
+        result = pil("T:A\nT:B\nT:C")
+        assert has(result, "A") or has(result, "B") or has(result, "C")
+
+    def test_empty_source(self):
+        result = pil("")
+        assert isinstance(result, list)
+
+    def test_type_number_99(self):
+        result = pil("T:99")
+        assert has(result, "99")

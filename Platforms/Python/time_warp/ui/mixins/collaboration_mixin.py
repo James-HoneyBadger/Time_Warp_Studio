@@ -22,7 +22,6 @@ from PySide6.QtWidgets import (
 )
 
 if TYPE_CHECKING:
-
     from ..collaboration_client import CollaborationOperation  # noqa: F401
 
 

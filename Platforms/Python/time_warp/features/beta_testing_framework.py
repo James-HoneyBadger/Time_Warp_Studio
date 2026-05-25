@@ -286,9 +286,9 @@ class ABTestFramework:
 
     def __init__(self):
         self.tests: Dict[str, ABTest] = {}
-        self.user_assignments: Dict[str, Dict[str, str]] = (
-            {}
-        )  # user_id -> test_id -> variant
+        self.user_assignments: Dict[
+            str, Dict[str, str]
+        ] = {}  # user_id -> test_id -> variant
         self.logger = logging.getLogger(__name__)
 
     def create_test(self, ab_test: ABTest) -> str:

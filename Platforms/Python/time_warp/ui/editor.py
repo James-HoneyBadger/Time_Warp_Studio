@@ -64,7 +64,7 @@ class LineNumberArea(QWidget):
 
     def mousePressEvent(self, event: QMouseEvent):
         """Handle mouse click to toggle breakpoints."""
-        if event.button() == Qt.MouseButton.LeftButton:
+        if event.button() in (Qt.MouseButton.LeftButton, Qt.MouseButton.RightButton):
             # Calculate which line was clicked
             block = self.editor.firstVisibleBlock()
             top = (
@@ -73,17 +73,30 @@ class LineNumberArea(QWidget):
                 .top()
             )
 
+            line_number = None
             while block.isValid():
                 block_top = top
                 block_bottom = block_top + self.editor.blockBoundingRect(block).height()
 
                 if block_top <= event.position().y() < block_bottom:
                     line_number = block.blockNumber() + 1
-                    self.editor.toggle_breakpoint(line_number)
                     break
 
                 block = block.next()
                 top = block_bottom
+
+            if line_number is not None:
+                click_x = event.position().x()
+                fold_col_start = self.width() - 12
+                if (
+                    event.button() == Qt.MouseButton.LeftButton
+                    and click_x >= fold_col_start
+                ):
+                    self.editor.toggle_fold(line_number)
+                elif event.button() == Qt.MouseButton.LeftButton:
+                    self.editor.toggle_breakpoint(line_number)
+                else:
+                    self.editor._show_breakpoint_condition_dialog(line_number)
 
         super().mousePressEvent(event)
 
@@ -237,21 +250,26 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             joined = "|".join(escaped)
             # Case-sensitive languages should match keywords exactly
             _case_sensitive_langs = {
-                Language.C, Language.JAVASCRIPT,
-                Language.LUA, Language.ERLANG, Language.LISP,
+                Language.C,
+                Language.JAVASCRIPT,
+                Language.LUA,
+                Language.ERLANG,
+                Language.LISP,
+                Language.TCL,
+                Language.POSTSCRIPT,
             }
-            kw_flags = 0 if getattr(self, '_current_language', None) in _case_sensitive_langs else re.IGNORECASE
-            self._keyword_re = re.compile(
-                rf"\b({joined})\b", kw_flags
+            kw_flags = (
+                0
+                if getattr(self, "_current_language", None) in _case_sensitive_langs
+                else re.IGNORECASE
             )
+            self._keyword_re = re.compile(rf"\b({joined})\b", kw_flags)
         else:
             self._keyword_re = None
 
         _flag = re.MULTILINE | re.DOTALL
         self._comment_re = (
-            re.compile(self.comment_pattern, _flag)
-            if self.comment_pattern
-            else None
+            re.compile(self.comment_pattern, _flag) if self.comment_pattern else None
         )
         self._string_re = (
             re.compile(self.string_pattern) if self.string_pattern else None
@@ -792,15 +810,57 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
 
         elif language == Language.ERLANG:
             self.keywords = [
-                "module", "export", "import", "define", "record",
-                "if", "case", "of", "end", "receive", "after",
-                "begin", "try", "catch", "throw", "error",
-                "when", "fun", "let", "in", "query",
-                "and", "andalso", "or", "orelse", "not", "xor",
-                "div", "rem", "band", "bor", "bxor", "bnot", "bsl", "bsr",
-                "true", "false", "undefined", "ok", "error",
-                "spawn", "send", "self", "node", "register",
-                "lists", "io", "string", "math", "maps", "erlang",
+                "module",
+                "export",
+                "import",
+                "define",
+                "record",
+                "if",
+                "case",
+                "of",
+                "end",
+                "receive",
+                "after",
+                "begin",
+                "try",
+                "catch",
+                "throw",
+                "error",
+                "when",
+                "fun",
+                "let",
+                "in",
+                "query",
+                "and",
+                "andalso",
+                "or",
+                "orelse",
+                "not",
+                "xor",
+                "div",
+                "rem",
+                "band",
+                "bor",
+                "bxor",
+                "bnot",
+                "bsl",
+                "bsr",
+                "true",
+                "false",
+                "undefined",
+                "ok",
+                "error",
+                "spawn",
+                "send",
+                "self",
+                "node",
+                "register",
+                "lists",
+                "io",
+                "string",
+                "math",
+                "maps",
+                "erlang",
             ]
             self.comment_pattern = r"%.*$"
             self.string_pattern = r'"(?:[^"\\]|\\.)*"'
@@ -811,21 +871,76 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
 
         elif language == Language.LISP:
             self.keywords = [
-                "define", "lambda", "let", "let*", "letrec", "letrec*",
-                "if", "cond", "case", "and", "or", "not", "when", "unless",
-                "begin", "do", "quote", "quasiquote", "unquote",
-                "set!", "define-syntax", "syntax-rules", "define-record-type",
-                "values", "call-with-values", "call/cc",
-                "call-with-current-continuation", "dynamic-wind",
-                "apply", "map", "for-each", "filter", "reduce",
-                "cons", "car", "cdr", "list", "append", "reverse",
-                "display", "newline", "write", "print", "format",
-                "null?", "pair?", "list?", "number?", "string?", "symbol?",
-                "boolean?", "procedure?", "zero?", "positive?", "negative?",
-                "eq?", "eqv?", "equal?",
-                "#t", "#f",
-                "forward", "backward", "right", "left", "penup", "pendown",
-                "home", "setpos", "color", "clearscreen",
+                "define",
+                "lambda",
+                "let",
+                "let*",
+                "letrec",
+                "letrec*",
+                "if",
+                "cond",
+                "case",
+                "and",
+                "or",
+                "not",
+                "when",
+                "unless",
+                "begin",
+                "do",
+                "quote",
+                "quasiquote",
+                "unquote",
+                "set!",
+                "define-syntax",
+                "syntax-rules",
+                "define-record-type",
+                "values",
+                "call-with-values",
+                "call/cc",
+                "call-with-current-continuation",
+                "dynamic-wind",
+                "apply",
+                "map",
+                "for-each",
+                "filter",
+                "reduce",
+                "cons",
+                "car",
+                "cdr",
+                "list",
+                "append",
+                "reverse",
+                "display",
+                "newline",
+                "write",
+                "print",
+                "format",
+                "null?",
+                "pair?",
+                "list?",
+                "number?",
+                "string?",
+                "symbol?",
+                "boolean?",
+                "procedure?",
+                "zero?",
+                "positive?",
+                "negative?",
+                "eq?",
+                "eqv?",
+                "equal?",
+                "#t",
+                "#f",
+                "forward",
+                "backward",
+                "right",
+                "left",
+                "penup",
+                "pendown",
+                "home",
+                "setpos",
+                "color",
+                "clearscreen",
             ]
             self.comment_pattern = r";.*$|#\|[\s\S]*?\|#"
             self.string_pattern = r'"[^"\\]*(?:\\.[^"\\]*)*"'
@@ -833,6 +948,244 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             self.operator_pattern = r"[+\-*/=<>!?]"
             self.function_pattern = r"\(\s*(define|lambda)\s+\(?(\w+)"
             self.variable_pattern = r"\b[a-z][a-z0-9\-_!?]*\b"
+
+        elif language == Language.COBOL:
+            self.keywords = [
+                "IDENTIFICATION",
+                "ENVIRONMENT",
+                "DATA",
+                "PROCEDURE",
+                "DIVISION",
+                "SECTION",
+                "PROGRAM-ID",
+                "AUTHOR",
+                "WORKING-STORAGE",
+                "FILE",
+                "LINKAGE",
+                "PERFORM",
+                "VARYING",
+                "FROM",
+                "BY",
+                "UNTIL",
+                "TIMES",
+                "IF",
+                "ELSE",
+                "END-IF",
+                "EVALUATE",
+                "WHEN",
+                "OTHER",
+                "END-EVALUATE",
+                "MOVE",
+                "TO",
+                "ADD",
+                "SUBTRACT",
+                "MULTIPLY",
+                "DIVIDE",
+                "COMPUTE",
+                "GIVING",
+                "REMAINDER",
+                "DISPLAY",
+                "ACCEPT",
+                "STOP",
+                "RUN",
+                "GO",
+                "GOTO",
+                "INITIALIZE",
+                "INSPECT",
+                "TALLYING",
+                "REPLACING",
+                "STRING",
+                "INTO",
+                "DELIMITED",
+                "PIC",
+                "PICTURE",
+                "VALUE",
+                "IS",
+                "SPACES",
+                "ZEROS",
+                "ALL",
+                "88",
+                "COPY",
+                "CALL",
+                "EXIT",
+                "PARAGRAPH",
+                "01",
+                "02",
+                "03",
+                "04",
+                "05",
+                "10",
+                "77",
+            ]
+            self.comment_pattern = r"^\*.*$"
+            self.string_pattern = r'"[^"]*"|\'[^\']*\''
+            self.number_pattern = r"\b\d+(?:\.\d+)?\b"
+            self.operator_pattern = r"[=<>+\-*/]"
+            self.function_pattern = r"^\s{6,}\w[\w-]*\."
+            self.variable_pattern = r"\b[A-Z][A-Z0-9\-]*\b"
+
+        elif language == Language.TCL:
+            self.keywords = [
+                "proc",
+                "return",
+                "if",
+                "elseif",
+                "else",
+                "while",
+                "for",
+                "foreach",
+                "break",
+                "continue",
+                "switch",
+                "default",
+                "set",
+                "unset",
+                "incr",
+                "append",
+                "lappend",
+                "lindex",
+                "llength",
+                "lrange",
+                "lsort",
+                "lreverse",
+                "list",
+                "puts",
+                "gets",
+                "expr",
+                "eval",
+                "source",
+                "package",
+                "catch",
+                "error",
+                "global",
+                "upvar",
+                "namespace",
+                "string",
+                "format",
+                "regexp",
+                "regsub",
+                "scan",
+                "array",
+                "info",
+                "rename",
+                "interp",
+                "forward",
+                "fd",
+                "backward",
+                "bk",
+                "left",
+                "lt",
+                "right",
+                "rt",
+                "penup",
+                "pu",
+                "pendown",
+                "pd",
+                "setheading",
+                "setxy",
+                "home",
+                "clearscreen",
+            ]
+            self.comment_pattern = r"#.*$"
+            self.string_pattern = r'"[^"\\]*(?:\\.[^"\\]*)*"|\{[^{}]*\}'
+            self.number_pattern = r"\b\d+(?:\.\d+)?\b"
+            self.operator_pattern = r"[+\-*/=<>!|&]"
+            self.function_pattern = r"\bproc\s+(\w+)"
+            self.variable_pattern = r"\$\w+"
+
+        elif language == Language.POSTSCRIPT:
+            self.keywords = [
+                "def",
+                "load",
+                "bind",
+                "exch",
+                "dup",
+                "pop",
+                "copy",
+                "roll",
+                "clear",
+                "count",
+                "mark",
+                "cleartomark",
+                "counttomark",
+                "if",
+                "ifelse",
+                "for",
+                "repeat",
+                "loop",
+                "forall",
+                "exec",
+                "exit",
+                "stop",
+                "quit",
+                "add",
+                "sub",
+                "mul",
+                "div",
+                "mod",
+                "abs",
+                "neg",
+                "ceiling",
+                "floor",
+                "round",
+                "truncate",
+                "sqrt",
+                "exp",
+                "ln",
+                "eq",
+                "ne",
+                "lt",
+                "le",
+                "gt",
+                "ge",
+                "and",
+                "or",
+                "not",
+                "xor",
+                "true",
+                "false",
+                "null",
+                "dict",
+                "begin",
+                "end",
+                "currentdict",
+                "systemdict",
+                "string",
+                "array",
+                "get",
+                "put",
+                "length",
+                "type",
+                "moveto",
+                "lineto",
+                "rlineto",
+                "rmoveto",
+                "arc",
+                "curveto",
+                "closepath",
+                "newpath",
+                "stroke",
+                "fill",
+                "clip",
+                "gsave",
+                "grestore",
+                "translate",
+                "rotate",
+                "scale",
+                "setlinewidth",
+                "setdash",
+                "setgray",
+                "setrgbcolor",
+                "show",
+                "showpage",
+                "currentpoint",
+            ]
+            self.comment_pattern = r"%.*$"
+            self.string_pattern = r"\([^)\\]*(?:\\.[^)\\]*)*\)"
+            self.number_pattern = r"[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?\b"
+            self.operator_pattern = r"[/{}[\]]"
+            self.function_pattern = r"/(\w+)\s+\{"
+            self.variable_pattern = r"/[A-Za-z_]\w*"
 
         else:
             # Default to BASIC
@@ -1235,12 +1588,17 @@ class CodeEditor(QPlainTextEdit):
 
         # Breakpoints set (line numbers with breakpoints)
         self._breakpoints = set()
+        # Conditional breakpoint expressions: line -> expression string
+        self._breakpoint_conditions: dict[int, str] = {}
 
         # Error lines set (line numbers with errors)
         self._error_lines = set()
 
         # Current execution line (for debugging highlight)
         self._current_line = 0
+
+        # Code folding state
+        self._folded_regions: dict[int, int] = {}  # {start_line: end_line}
 
         # Line number area
         self.line_number_area = LineNumberArea(self)
@@ -1257,6 +1615,8 @@ class CodeEditor(QPlainTextEdit):
         # Flag set by insert_completion so keyPressEvent knows a completion
         # was just accepted (popup hides before keyPressEvent guard runs).
         self._completing = False
+        # Maps "Name [snip]" → snippet code body; populated by _update_completer
+        self._snippet_completions: dict[str, str] = {}
 
         # Track current language for comment-prefix lookup
         self._language = Language.BASIC
@@ -1424,6 +1784,10 @@ class CodeEditor(QPlainTextEdit):
         Language.JAVASCRIPT: "// ",
         Language.HYPERTALK: "-- ",
         Language.ERLANG: "% ",
+        Language.LISP: "; ",
+        Language.COBOL: "* ",
+        Language.TCL: "# ",
+        Language.POSTSCRIPT: "% ",
     }
 
     def toggle_comment(self):
@@ -1572,6 +1936,7 @@ class CodeEditor(QPlainTextEdit):
 
         Combines the language's keywords with identifiers found in the
         current document so the popup also offers user-defined names.
+        Snippets from SnippetLibrary are added with a [snip] suffix.
         """
         # Get keywords from highlighter
         temp_highlighter = SimpleSyntaxHighlighter(None, language)
@@ -1587,15 +1952,28 @@ class CodeEditor(QPlainTextEdit):
                 if ident.lower() not in kw_lower:
                     keywords.append(ident)
 
+        # Add snippets for this language
+        self._snippet_completions: dict[str, str] = {}
+        try:
+            from .snippets import SnippetLibrary as _SL
+
+            lang_name = language.name if hasattr(language, "name") else "BASIC"
+            for snip in _SL().get_snippets(lang_name):
+                display = f"{snip.name} [snip]"
+                self._snippet_completions[display] = snip.code
+                keywords.append(display)
+        except Exception:  # noqa: BLE001
+            pass
+
         # Set completer model
         model = QStringListModel(keywords)
         self.completer.setModel(model)
 
     def line_number_area_width(self):
-        """Calculate width of line number area (includes breakpoint gutter)."""
+        """Calculate width of line number area (includes breakpoint gutter and fold column)."""
         digits = len(str(max(1, self.blockCount())))
-        # Add 20px for breakpoint markers
-        space = 20 + 3 + self.fontMetrics().horizontalAdvance("9") * digits
+        # 20px for breakpoint markers + 3px padding + char width * digits + 12px fold column
+        space = 20 + 3 + self.fontMetrics().horizontalAdvance("9") * digits + 12
         return space
 
     def update_line_number_area_width(self, _):
@@ -1708,11 +2086,37 @@ class CodeEditor(QPlainTextEdit):
                 painter.drawText(
                     20,  # Offset for breakpoint gutter
                     int(top),
-                    self.line_number_area.width() - 25,
+                    self.line_number_area.width()
+                    - 25
+                    - 12,  # Leave room for fold column
                     font_height,
                     Qt.AlignRight,
                     number,
                 )
+
+                # Draw fold triangle in rightmost 12px column
+                fold_range = self._get_fold_range(line_num)
+                if fold_range is not None:
+                    fold_x = self.line_number_area.width() - 10
+                    fold_cy = int(top) + font_height // 2
+                    tri_sz = 4
+                    painter.setPen(fg_color)
+                    painter.setBrush(QBrush(fg_color))
+                    if line_num in self._folded_regions:
+                        # ▶ collapsed — triangle pointing right
+                        pts = [
+                            QPoint(fold_x - tri_sz, fold_cy - tri_sz),
+                            QPoint(fold_x + tri_sz, fold_cy),
+                            QPoint(fold_x - tri_sz, fold_cy + tri_sz),
+                        ]
+                    else:
+                        # ▼ expanded — triangle pointing down
+                        pts = [
+                            QPoint(fold_x - tri_sz, fold_cy - tri_sz),
+                            QPoint(fold_x + tri_sz, fold_cy - tri_sz),
+                            QPoint(fold_x, fold_cy + tri_sz),
+                        ]
+                    painter.drawPolygon(QPolygon(pts))
 
             block = block.next()
             top = bottom
@@ -1794,6 +2198,80 @@ class CodeEditor(QPlainTextEdit):
         self.line_number_area.update()
         self.breakpoint_toggled.emit(line)
 
+    # ── Code folding ──────────────────────────────────────────────────────
+
+    def _get_fold_range(self, start_line: int) -> tuple[int, int] | None:
+        """Return (start_line, end_line) if start_line is foldable, else None.
+
+        A line is foldable when the immediately following non-blank line has
+        greater indentation.  The fold region extends until the indentation
+        drops back to or below the starting level.
+        """
+        doc = self.document()
+        total = doc.blockCount()
+        if start_line < 1 or start_line >= total:
+            return None
+
+        start_block = doc.findBlockByLineNumber(start_line - 1)
+        start_text = start_block.text()
+        start_indent = len(start_text) - len(start_text.lstrip())
+
+        # Find the first non-blank line after start_line
+        child_block = start_block.next()
+        while child_block.isValid() and not child_block.text().strip():
+            child_block = child_block.next()
+        if not child_block.isValid():
+            return None
+
+        child_indent = len(child_block.text()) - len(child_block.text().lstrip())
+        if child_indent <= start_indent:
+            return None  # No deeper content — not foldable
+
+        # Scan forward to find where indentation returns to start level
+        end_block = child_block
+        scan = child_block.next()
+        while scan.isValid():
+            text = scan.text()
+            if text.strip():  # non-blank
+                indent = len(text) - len(text.lstrip())
+                if indent <= start_indent:
+                    break
+                end_block = scan
+            scan = scan.next()
+
+        end_line = end_block.blockNumber() + 1
+        if end_line <= start_line:
+            return None
+        return (start_line, end_line)
+
+    def toggle_fold(self, line: int):
+        """Collapse or expand a foldable block at *line*."""
+        fold_range = self._get_fold_range(line)
+        if fold_range is None:
+            return
+        start_line, end_line = fold_range
+        doc = self.document()
+        if line in self._folded_regions:
+            # Expand: show all hidden blocks
+            block = doc.findBlockByLineNumber(start_line)  # line after header
+            while block.isValid() and block.blockNumber() + 1 <= end_line:
+                block.setVisible(True)
+                block = block.next()
+            del self._folded_regions[line]
+        else:
+            # Collapse: hide lines start_line+1 .. end_line
+            block = doc.findBlockByLineNumber(start_line)  # first hidden line
+            while block.isValid() and block.blockNumber() + 1 <= end_line:
+                block.setVisible(False)
+                block = block.next()
+            self._folded_regions[line] = end_line
+
+        # Force layout and gutter repaint
+        self.document().markContentsDirty(0, len(self.toPlainText()))
+        self.update_line_number_area_width(0)
+        self.line_number_area.update()
+        self.viewport().update()
+
     def add_breakpoint(self, line: int):
         """Add a breakpoint at the specified line."""
         if line not in self._breakpoints:
@@ -1818,9 +2296,42 @@ class CodeEditor(QPlainTextEdit):
         return self._breakpoints.copy()
 
     def set_breakpoints(self, breakpoints: set):
-        """Set breakpoints from a set of line numbers."""
+        """Replace the entire breakpoint set."""
         self._breakpoints = set(breakpoints)
         self.line_number_area.update()
+
+    def get_breakpoint_condition(self, line: int) -> str:
+        """Return the condition expression for a breakpoint, or ''."""
+        return self._breakpoint_conditions.get(line, "")
+
+    def set_breakpoint_condition(self, line: int, condition: str) -> None:
+        """Attach a condition expression to a breakpoint."""
+        if condition:
+            self._breakpoint_conditions[line] = condition.strip()
+        else:
+            self._breakpoint_conditions.pop(line, None)
+        self.line_number_area.update()
+
+    def _show_breakpoint_condition_dialog(self, line: int) -> None:
+        """Right-click on gutter: show dialog to set/clear a breakpoint condition."""
+        from PySide6.QtWidgets import QInputDialog
+
+        current_condition = self._breakpoint_conditions.get(line, "")
+
+        # Ensure a breakpoint exists at this line first
+        if line not in self._breakpoints:
+            self.add_breakpoint(line)
+
+        condition, ok = QInputDialog.getText(
+            self,
+            f"Breakpoint Condition — Line {line}",
+            "Break when (leave blank for unconditional):",
+            text=current_condition,
+        )
+        if ok:
+            self.set_breakpoint_condition(line, condition.strip())
+            # Emit so the main window can pass the condition to the debugger
+            self.breakpoint_toggled.emit(line)
 
     def has_breakpoint(self, line: int) -> bool:
         """Check if a line has a breakpoint."""
@@ -1899,9 +2410,25 @@ class CodeEditor(QPlainTextEdit):
             self.centerCursor()
 
     def insert_completion(self, completion):
-        """Insert the selected completion."""
+        """Insert the selected completion (or expand a snippet)."""
         self._completing = True
         cursor = self.textCursor()
+
+        # Check if it's a snippet entry
+        snippet_code = getattr(self, "_snippet_completions", {}).get(completion)
+        if snippet_code is not None:
+            # Remove the typed prefix, then insert the full snippet body
+            prefix_len = len(self.completer.completionPrefix())
+            if prefix_len:
+                cursor.movePosition(
+                    QTextCursor.Left, QTextCursor.KeepAnchor, prefix_len
+                )
+                cursor.removeSelectedText()
+            cursor.insertText(snippet_code)
+            self.setTextCursor(cursor)
+            return
+
+        # Normal keyword completion: append only the characters still needed
         extra = len(completion) - len(self.completer.completionPrefix())
         cursor.movePosition(QTextCursor.Left)
         cursor.movePosition(QTextCursor.EndOfWord)
@@ -1987,7 +2514,10 @@ class CodeEditor(QPlainTextEdit):
         mods = event.modifiers()
 
         # Ctrl+/ → toggle line comment
-        if event.key() == Qt.Key.Key_Slash and mods == Qt.KeyboardModifier.ControlModifier:
+        if (
+            event.key() == Qt.Key.Key_Slash
+            and mods == Qt.KeyboardModifier.ControlModifier
+        ):
             self.toggle_comment()
             return
 
@@ -2007,9 +2537,72 @@ class CodeEditor(QPlainTextEdit):
             return
 
         # Ctrl+Space → manually invoke autocomplete
-        if event.key() == Qt.Key.Key_Space and mods == Qt.KeyboardModifier.ControlModifier:
+        if (
+            event.key() == Qt.Key.Key_Space
+            and mods == Qt.KeyboardModifier.ControlModifier
+        ):
             self._show_completer(min_prefix=1)
             return
+
+        # Ctrl+Shift+[ → fold current block
+        ctrl_shift = (
+            Qt.KeyboardModifier.ControlModifier | Qt.KeyboardModifier.ShiftModifier
+        )
+        if event.key() == Qt.Key.Key_BracketLeft and mods == ctrl_shift:
+            line = self.textCursor().blockNumber() + 1
+            if line not in self._folded_regions:
+                self.toggle_fold(line)
+            return
+
+        # Ctrl+Shift+] → unfold current block
+        if event.key() == Qt.Key.Key_BracketRight and mods == ctrl_shift:
+            line = self.textCursor().blockNumber() + 1
+            if line in self._folded_regions:
+                self.toggle_fold(line)
+            return
+
+        # Auto-close brackets/quotes (only when no selection, no modifier)
+        _auto_pairs = {
+            Qt.Key.Key_ParenLeft: ("(", ")"),
+            Qt.Key.Key_BracketLeft: ("[", "]"),
+            Qt.Key.Key_BraceLeft: ("{", "}"),
+            Qt.Key.Key_QuoteDbl: ('"', '"'),
+            Qt.Key.Key_Apostrophe: ("'", "'"),
+        }
+        _close_chars = {")", "]", "}", '"', "'"}
+
+        if (
+            not mods or mods == Qt.KeyboardModifier.NoModifier
+        ) and event.key() in _auto_pairs:
+            cursor = self.textCursor()
+            open_ch, close_ch = _auto_pairs[event.key()]
+            if not cursor.hasSelection():
+                pos = cursor.position()
+                # Insert open + close, then move cursor between them
+                cursor.insertText(open_ch + close_ch)
+                cursor.setPosition(pos + 1)
+                self.setTextCursor(cursor)
+                return
+
+        # Auto-skip closing bracket if next char is already the closing bracket
+        _close_key_map = {
+            Qt.Key.Key_ParenRight: ")",
+            Qt.Key.Key_BracketRight: "]",
+            Qt.Key.Key_BraceRight: "}",
+        }
+        if (
+            not mods or mods == Qt.KeyboardModifier.NoModifier
+        ) and event.key() in _close_key_map:
+            cursor = self.textCursor()
+            if not cursor.hasSelection():
+                pos = cursor.position()
+                if (
+                    pos < len(self.toPlainText())
+                    and self.toPlainText()[pos] == _close_key_map[event.key()]
+                ):
+                    cursor.setPosition(pos + 1)
+                    self.setTextCursor(cursor)
+                    return
 
         # Call parent implementation first
         super().keyPressEvent(event)
@@ -2050,7 +2643,9 @@ class CodeEditor(QPlainTextEdit):
         doc_text = self.toPlainText()
         if doc_text:
             idents = sorted(set(re.findall(r"\b[A-Za-z_]\w{2,}\b", doc_text)))
-            current_words = self.completer.model().stringList() if self.completer.model() else []
+            current_words = (
+                self.completer.model().stringList() if self.completer.model() else []
+            )
             # Add any new identifiers not already in the model
             kw_lower = {w.lower() for w in current_words}
             new_entries = [i for i in idents if i.lower() not in kw_lower]

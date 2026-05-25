@@ -1,6 +1,6 @@
 # Language Guide - Time Warp Studio
 
-Complete reference for all **12 programming languages** supported by Time Warp Studio.
+Complete reference for all **13 programming languages** supported by Time Warp Studio.
 
 ---
 

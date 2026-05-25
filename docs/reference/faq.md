@@ -8,7 +8,7 @@ Quick answers to common questions about Time Warp Studio.
 
 ### What is Time Warp Studio?
 
-Time Warp Studio is a desktop educational programming environment built with Python and PySide6 (Qt6) that combines classic and modern programming languages in a single application. It supports 12 languages — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, Erlang, HyperTalk, JavaScript, and Lua — with integrated turtle graphics.
+Time Warp Studio is a desktop educational programming environment built with Python and PySide6 (Qt6) that combines classic and modern programming languages in a single application. It supports 13 languages — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, Erlang, HyperTalk, JavaScript, Lua, and LISP/Scheme — with integrated turtle graphics.
 
 ### Who should use Time Warp Studio?
 

@@ -624,4 +624,6 @@ class FeatureIntegrationManager:
                         geometry.get("width", 400),
                         geometry.get("height", 300),
                     )
-                self.toggle_feature_panel(feature_id, visible=state.get("visible", False))
+                self.toggle_feature_panel(
+                    feature_id, visible=state.get("visible", False)
+                )

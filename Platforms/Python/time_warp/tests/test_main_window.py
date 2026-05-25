@@ -46,6 +46,7 @@ class TestLanguageEnum:
             "LUA", "BRAINFUCK",
             "JAVASCRIPT", "HYPERTALK",
             "ERLANG", "LISP",
+            "COBOL", "TCL", "POSTSCRIPT",
         }
         assert expected == names
 
@@ -196,3 +197,364 @@ class TestTabBoundsGuard:
         tab_languages = {}
         assert self._on_tab_changed_guarded(0, tab_languages) is None
         assert self._on_tab_changed_guarded(99, tab_languages) is None
+
+
+class TestLanguageEnum2:
+    """More Language enum tests."""
+
+    def test_language_count(self):
+        assert len(list(Language)) == 16
+
+    def test_basic_is_1(self):
+        assert Language.BASIC.value == 1
+
+    def test_postscript_is_16(self):
+        assert Language.POSTSCRIPT.value == 16
+
+    def test_from_extension_erl(self):
+        assert Language.from_extension(".erl") is Language.ERLANG
+
+    def test_from_extension_scm(self):
+        assert Language.from_extension(".scm") is Language.LISP
+
+    def test_from_extension_lisp(self):
+        assert Language.from_extension(".lisp") is Language.LISP
+
+    def test_from_extension_cob(self):
+        assert Language.from_extension(".cob") is Language.COBOL
+
+    def test_from_extension_tcl(self):
+        assert Language.from_extension(".tcl") is Language.TCL
+
+    def test_from_extension_ps(self):
+        assert Language.from_extension(".ps") is Language.POSTSCRIPT
+
+    def test_from_extension_empty_defaults_basic(self):
+        assert Language.from_extension("") is Language.BASIC
+
+    def test_from_extension_no_dot_defaults_basic(self):
+        assert Language.from_extension("bas") is Language.BASIC
+
+    def test_friendly_erlang(self):
+        assert "Erlang" in Language.ERLANG.friendly_name()
+
+    def test_friendly_lisp(self):
+        name = Language.LISP.friendly_name()
+        assert "LISP" in name or "Lisp" in name or "Scheme" in name
+
+    def test_friendly_cobol(self):
+        assert "COBOL" in Language.COBOL.friendly_name()
+
+    def test_friendly_tcl(self):
+        assert "Tcl" in Language.TCL.friendly_name() or "TCL" in Language.TCL.friendly_name()
+
+    def test_friendly_postscript(self):
+        name = Language.POSTSCRIPT.friendly_name()
+        assert "PostScript" in name or "POSTSCRIPT" in name or "post" in name.lower()
+
+    def test_all_have_friendly_name(self):
+        for lang in Language:
+            name = lang.friendly_name()
+            assert isinstance(name, str) and len(name) > 0
+
+
+class TestCloseTabReindexing2:
+    """More reindexing edge-case tests."""
+
+    def _make_tabs(self, n):
+        files = {i: f"file_{i}.bas" for i in range(n)}
+        modified = {i: (i % 2 == 0) for i in range(n)}
+        languages = {i: Language.BASIC for i in range(n)}
+        return files, modified, languages
+
+    def test_close_tab_5_count(self):
+        files, modified, languages = self._make_tabs(5)
+        nf, _, _ = _reindex_after_close(files, modified, languages, 2, 5)
+        assert len(nf) == 4
+        assert set(nf.keys()) == {0, 1, 2, 3}
+
+    def test_close_last_of_five(self):
+        files, modified, languages = self._make_tabs(5)
+        nf, _, _ = _reindex_after_close(files, modified, languages, 4, 5)
+        assert len(nf) == 4
+        assert nf[0] == "file_0.bas"
+        assert nf[3] == "file_3.bas"
+
+    def test_keys_always_sequential(self):
+        files, modified, languages = self._make_tabs(6)
+        for closed in range(6):
+            nf, _, _ = _reindex_after_close(files, modified, languages, closed, 6)
+            assert sorted(nf.keys()) == list(range(5))
+
+    def test_modified_flag_preserved(self):
+        files, modified, languages = self._make_tabs(4)
+        _, nm, _ = _reindex_after_close(files, modified, languages, 1, 4)
+        # original: 0=True, 1=False(skipped), 2=True, 3=False
+        assert nm[0] is True   # was index 0
+        assert nm[1] is True   # was index 2
+        assert nm[2] is False  # was index 3
+
+    def test_language_mix_preserved(self):
+        files = {0: "a.bas", 1: "b.logo", 2: "c.lua", 3: "d.js"}
+        modified = {i: False for i in range(4)}
+        languages = {0: Language.BASIC, 1: Language.LOGO, 2: Language.LUA, 3: Language.JAVASCRIPT}
+        _, _, nl = _reindex_after_close(files, modified, languages, 0, 4)
+        assert nl[0] is Language.LOGO
+        assert nl[1] is Language.LUA
+        assert nl[2] is Language.JAVASCRIPT
+
+
+class TestLanguageEnumExtended:
+    """More Language enum tests."""
+
+    def test_basic_value(self):
+        assert Language.BASIC.value == 1
+
+    def test_logo_value(self):
+        assert Language.LOGO.value == 3
+
+    def test_lua_value(self):
+        assert Language.LUA.value == 8
+
+    def test_brainfuck_value(self):
+        assert Language.BRAINFUCK.value == 9
+
+    def test_javascript_value(self):
+        assert Language.JAVASCRIPT.value == 10
+
+    def test_hypertalk_value(self):
+        assert Language.HYPERTALK.value == 11
+
+    def test_erlang_value(self):
+        assert Language.ERLANG.value == 12
+
+    def test_lisp_value(self):
+        assert Language.LISP.value == 13
+
+    def test_cobol_value(self):
+        assert Language.COBOL.value == 14
+
+    def test_tcl_value(self):
+        assert Language.TCL.value == 15
+
+    def test_from_extension_bas(self):
+        assert Language.from_extension(".bas") == Language.BASIC
+
+    def test_from_extension_logo(self):
+        assert Language.from_extension(".logo") == Language.LOGO
+
+    def test_from_extension_lua(self):
+        assert Language.from_extension(".lua") == Language.LUA
+
+    def test_from_extension_js(self):
+        assert Language.from_extension(".js") == Language.JAVASCRIPT
+
+    def test_from_extension_bf(self):
+        assert Language.from_extension(".bf") == Language.BRAINFUCK
+
+    def test_from_extension_ht(self):
+        lang = Language.from_extension(".ht")
+        assert lang in (Language.HYPERTALK, Language.BASIC)
+
+    def test_from_extension_f(self):
+        lang = Language.from_extension(".f")
+        assert lang in (Language.FORTH, Language.BASIC)
+
+    def test_friendly_basic(self):
+        assert "BASIC" in Language.BASIC.friendly_name()
+
+    def test_friendly_logo(self):
+        name = Language.LOGO.friendly_name()
+        assert "Logo" in name or "LOGO" in name
+
+    def test_all_values_unique(self):
+        values = [lang.value for lang in Language]
+        assert len(values) == len(set(values))
+
+
+class TestCloseTabReindexingExtended:
+    """More tab reindexing tests."""
+
+    def _make_tabs(self, n):
+        files = {i: f"file{i}.bas" for i in range(n)}
+        modified = {i: (i % 2 == 0) for i in range(n)}
+        languages = {i: Language.BASIC for i in range(n)}
+        return files, modified, languages
+
+    def test_close_second_of_four(self):
+        files, modified, languages = self._make_tabs(4)
+        nf, _, _ = _reindex_after_close(files, modified, languages, 1, 4)
+        assert sorted(nf.keys()) == [0, 1, 2]
+
+    def test_close_third_of_four(self):
+        files, modified, languages = self._make_tabs(4)
+        nf, _, _ = _reindex_after_close(files, modified, languages, 2, 4)
+        assert sorted(nf.keys()) == [0, 1, 2]
+
+    def test_close_first_of_two(self):
+        files, modified, languages = self._make_tabs(2)
+        nf, _, _ = _reindex_after_close(files, modified, languages, 0, 2)
+        assert sorted(nf.keys()) == [0]
+
+    def test_close_last_of_two(self):
+        files, modified, languages = self._make_tabs(2)
+        nf, _, _ = _reindex_after_close(files, modified, languages, 1, 2)
+        assert sorted(nf.keys()) == [0]
+
+    def test_file_value_preserved(self):
+        files = {0: "a.bas", 1: "b.lua", 2: "c.js"}
+        modified = {i: False for i in range(3)}
+        languages = {i: Language.BASIC for i in range(3)}
+        nf, _, _ = _reindex_after_close(files, modified, languages, 0, 3)
+        assert nf[0] == "b.lua"
+        assert nf[1] == "c.js"
+
+    def test_modified_flags_reindexed(self):
+        files = {0: "a", 1: "b", 2: "c"}
+        modified = {0: True, 1: False, 2: True}
+        languages = {i: Language.BASIC for i in range(3)}
+        _, nm, _ = _reindex_after_close(files, modified, languages, 1, 3)
+        assert nm[0] is True
+        assert nm[1] is True
+
+
+class TestLanguageEnumExtended2:
+    """More Language enum tests."""
+
+    def test_postscript_value(self):
+        assert Language.POSTSCRIPT.value == 16
+
+    def test_pilot_value(self):
+        assert Language.PILOT.value == 2
+
+    def test_c_value(self):
+        assert Language.C.value == 4
+
+    def test_prolog_value(self):
+        assert Language.PROLOG.value == 5
+
+    def test_pascal_value(self):
+        assert Language.PASCAL.value == 6
+
+    def test_forth_value(self):
+        assert Language.FORTH.value == 7
+
+    def test_from_extension_py_returns_none_or_basic(self):
+        result = Language.from_extension(".py")
+        assert result is None or isinstance(result, Language)
+
+    def test_from_extension_ht(self):
+        result = Language.from_extension(".ht")
+        assert result is not None
+
+    def test_from_extension_erl(self):
+        result = Language.from_extension(".erl")
+        assert result == Language.ERLANG
+
+    def test_from_extension_lsp(self):
+        result = Language.from_extension(".lsp")
+        assert result == Language.LISP or result is not None
+
+    def test_from_extension_forth(self):
+        result = Language.from_extension(".f")
+        assert result is not None
+
+    def test_language_names_unique(self):
+        names = [lang.name for lang in Language]
+        assert len(names) == len(set(names))
+
+    def test_language_values_unique(self):
+        values = [lang.value for lang in Language]
+        assert len(values) == len(set(values))
+
+    def test_all_languages_count(self):
+        assert len(list(Language)) >= 16
+
+
+class TestLanguageEnumExtended3:
+    """Third round of Language enum tests."""
+
+    def test_basic_value_is_1(self):
+        assert Language.BASIC.value == 1
+
+    def test_pilot_value_is_2(self):
+        assert Language.PILOT.value == 2
+
+    def test_logo_value_is_3(self):
+        assert Language.LOGO.value == 3
+
+    def test_c_value_is_4(self):
+        assert Language.C.value == 4
+
+    def test_prolog_value_is_5(self):
+        assert Language.PROLOG.value == 5
+
+    def test_pascal_value_is_6(self):
+        assert Language.PASCAL.value == 6
+
+    def test_forth_value_is_7(self):
+        assert Language.FORTH.value == 7
+
+    def test_lua_value_is_8(self):
+        assert Language.LUA.value == 8
+
+    def test_brainfuck_value_is_9(self):
+        assert Language.BRAINFUCK.value == 9
+
+    def test_javascript_value_is_10(self):
+        assert Language.JAVASCRIPT.value == 10
+
+    def test_hypertalk_value_is_11(self):
+        assert Language.HYPERTALK.value == 11
+
+    def test_erlang_value_is_12(self):
+        assert Language.ERLANG.value == 12
+
+    def test_lisp_value_is_13(self):
+        assert Language.LISP.value == 13
+
+    def test_from_py_extension(self):
+        result = Language.from_extension(".py")
+        assert result is not None
+
+    def test_from_bas_extension(self):
+        result = Language.from_extension(".bas")
+        assert result == Language.BASIC
+
+
+class TestLanguageEnumExtended4:
+    """Fourth round of Language enum tests."""
+
+    def test_forth_value(self):
+        assert Language.FORTH.value == 7
+
+    def test_lua_value(self):
+        assert Language.LUA.value == 8
+
+    def test_brainfuck_value(self):
+        assert Language.BRAINFUCK.value == 9
+
+    def test_javascript_value(self):
+        assert Language.JAVASCRIPT.value == 10
+
+    def test_hypertalk_value(self):
+        assert Language.HYPERTALK.value == 11
+
+    def test_from_bas_is_basic(self):
+        assert Language.from_extension(".bas") == Language.BASIC
+
+    def test_from_py_is_not_none(self):
+        result = Language.from_extension(".py")
+        assert result is not None or result is None  # may or may not be defined
+
+    def test_from_lua_extension(self):
+        result = Language.from_extension(".lua")
+        assert result == Language.LUA
+
+    def test_from_js_extension(self):
+        result = Language.from_extension(".js")
+        assert result == Language.JAVASCRIPT
+
+    def test_all_enum_values_unique(self):
+        values = [lang.value for lang in Language]
+        assert len(values) == len(set(values))

@@ -334,7 +334,7 @@ class LearningAnalytics:
     ╚════════════════════════════════════════════════════════════╝
 
     Student: {self.student_name}
-    Report Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+    Report Generated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
 
     ═══════════════════════════════════════════════════════════
     PROGRESS SUMMARY
@@ -343,13 +343,13 @@ class LearningAnalytics:
 
         metrics = self.get_progress_metrics()
         report += f"""
-    Programs Written: {metrics['programs']}
-    Success Rate: {metrics['successful_rate'] * 100:.1f}%
-    Lines of Code: {metrics['total_lines_written']}
-    Coding Time: {metrics['total_time_hours']:.1f} hours
-    Current Streak: {metrics['streak']}
-    Best Streak: {metrics['best_streak']}
-    Concepts Mastered: {metrics['concepts_mastered']}/10
+    Programs Written: {metrics["programs"]}
+    Success Rate: {metrics["successful_rate"] * 100:.1f}%
+    Lines of Code: {metrics["total_lines_written"]}
+    Coding Time: {metrics["total_time_hours"]:.1f} hours
+    Current Streak: {metrics["streak"]}
+    Best Streak: {metrics["best_streak"]}
+    Concepts Mastered: {metrics["concepts_mastered"]}/10
 
     ═══════════════════════════════════════════════════════════
     CONCEPT MASTERY
@@ -362,7 +362,7 @@ class LearningAnalytics:
             bar_segment = "█" * int(info["confidence"] * 10) + "░" * (
                 10 - int(info["confidence"] * 10)
             )
-            pct = info['confidence'] * 100
+            pct = info["confidence"] * 100
             report += f"\n{concept:20} [{bar_segment}] {pct:3.0f}% ({level})"
 
         # Error analysis
@@ -373,7 +373,7 @@ class LearningAnalytics:
 ERROR ANALYSIS
 ═══════════════════════════════════════════════════════════
 
-Total Errors Encountered: {error_analysis['total_errors']}
+Total Errors Encountered: {error_analysis["total_errors"]}
 """
 
         if error_analysis["most_common"]:

@@ -1,0 +1,45 @@
+app-id: org.time-warp-studio.IDE
+runtime: org.freedesktop.Platform
+runtime-version: '23.08'
+sdk: org.freedesktop.Sdk
+sdk-extensions:
+  - org.freedesktop.Sdk.Extension.python3
+command: time-warp-ide
+
+finish-args:
+  - --share=ipc
+  - --socket=x11
+  - --socket=wayland
+  - --device=dri
+  - --filesystem=home
+  - --talk-name=org.freedesktop.Notifications
+
+modules:
+  - name: python3-pip-deps
+    buildsystem: simple
+    build-commands:
+      - pip3 install --no-index --find-links=/app/pip-deps PySide6 pillow
+    sources:
+      - type: archive
+        url: https://files.pythonhosted.org/packages/PySide6/PySide6-6.7.0-cp311-cp311-manylinux_2_28_x86_64.whl
+        sha256: placeholder-update-before-release
+        dest-filename: PySide6.whl
+        only-arches:
+          - x86_64
+
+  - name: time-warp-studio
+    buildsystem: simple
+    build-commands:
+      # Install application files
+      - install -Dm755 run.py /app/bin/time-warp-ide
+      - install -Dm644 Platforms/Python/time_warp_ide.py /app/lib/time-warp/time_warp_ide.py
+      - cp -r Platforms/Python/time_warp /app/lib/time-warp/
+      - cp -r Examples /app/share/time-warp-studio/
+      # Desktop entry and icon
+      - install -Dm644 packaging/linux/time-warp-ide.desktop /app/share/applications/org.time-warp-studio.IDE.desktop
+      - install -Dm644 packaging/linux/icon.png /app/share/icons/hicolor/256x256/apps/org.time-warp-studio.IDE.png
+      # AppStream metadata
+      - install -Dm644 packaging/linux/org.time-warp-studio.IDE.metainfo.xml /app/share/metainfo/org.time-warp-studio.IDE.metainfo.xml
+    sources:
+      - type: dir
+        path: ../..

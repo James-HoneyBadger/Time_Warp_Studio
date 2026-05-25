@@ -159,7 +159,6 @@ def execute_pilot(
         # Support tab characters: \t or TAB
         rest = rest.replace("\\t", "\t")
         text = interpreter.interpolate_text(rest)
-        interpreter.output.append(text)
         return text + "\n"
     if cmd_type == "A":
         prompt_text = rest.strip() if rest.strip() else ""
@@ -197,9 +196,7 @@ def execute_pilot(
             if "*" in alt or "?" in alt:
                 # Convert wildcard pattern to regex
                 escaped = re.escape(alt_upper)
-                regex_pat = (
-                    "^" + escaped.replace(r"\*", ".*").replace(r"\?", ".") + "$"
-                )
+                regex_pat = "^" + escaped.replace(r"\*", ".*").replace(r"\?", ".") + "$"
                 try:
                     m = re.match(regex_pat, last_input_upper, re.IGNORECASE)
                     if m:
@@ -275,7 +272,6 @@ def execute_pilot(
             return "❌ U: requires variable name\n"
         value = interpreter.variables.get(var_name, "")
         text = str(value)
-        interpreter.output.append(text)
         return text + "\n"
     if cmd_type == "P":
         # P: Pause - wait for user to press Enter
@@ -332,7 +328,6 @@ def execute_pilot(
         # L: Link/Load — lesson chaining
         lesson = rest.strip()
         if lesson:
-            interpreter.output.append(f"📎 Lesson link: {lesson}")
             # Store the lesson reference for the IDE to pick up
             interpreter.variables["_LESSON_LINK"] = lesson
             return f"📎 Lesson link: {lesson}\n"
@@ -344,7 +339,6 @@ def execute_pilot(
             hint_text = _substitute_variables(interpreter, hint_text)
             hint_text = interpreter.interpolate_text(hint_text)
             msg = f"💡 Hint: {hint_text}"
-            interpreter.output.append(msg)
             return msg + "\n"
         return ""
     if cmd_type == "N":
@@ -368,9 +362,26 @@ def execute_pilot(
         if not line.strip():
             return False
         first = line.strip().split()[0].upper()
-        if first in LOGO_COMMANDS or first in {"MAKE", "REPEAT", "TO", "END", "IFELSE", "IF", "FOREACH", "MAP", "FILTER", "REDUCE", "WHILE", "UNTIL"}:
+        if first in LOGO_COMMANDS or first in {
+            "MAKE",
+            "REPEAT",
+            "TO",
+            "END",
+            "IFELSE",
+            "IF",
+            "FOREACH",
+            "MAP",
+            "FILTER",
+            "REDUCE",
+            "WHILE",
+            "UNTIL",
+        }:
             return True
-        if line.strip().startswith("MAKE ") or line.strip().startswith(":") or line.strip().startswith('"'):
+        if (
+            line.strip().startswith("MAKE ")
+            or line.strip().startswith(":")
+            or line.strip().startswith('"')
+        ):
             return True
         if "[" in line or "]" in line:
             return True
@@ -384,10 +395,24 @@ def execute_pilot(
 
     # If the line is not recognized as PILOT, but is not empty, try to accumulate a Logo block
     if _execute_logo and rest.strip():
-        if any(kw in rest.upper() for kw in ["REPEAT", "TO", "FOREACH", "MAP", "FILTER", "REDUCE", "WHILE", "UNTIL"]):
+        if any(
+            kw in rest.upper()
+            for kw in [
+                "REPEAT",
+                "TO",
+                "FOREACH",
+                "MAP",
+                "FILTER",
+                "REDUCE",
+                "WHILE",
+                "UNTIL",
+            ]
+        ):
             block_lines = [rest]
             open_brackets = rest.count("[") - rest.count("]")
-            interpreter.logo_block_buffer = getattr(interpreter, "logo_block_buffer", [])
+            interpreter.logo_block_buffer = getattr(
+                interpreter, "logo_block_buffer", []
+            )
             interpreter.logo_block_buffer.extend(block_lines)
             if open_brackets > 0:
                 return ""
@@ -397,7 +422,10 @@ def execute_pilot(
                 return _execute_logo(interpreter, block, turtle)
         if hasattr(interpreter, "logo_block_buffer") and interpreter.logo_block_buffer:
             interpreter.logo_block_buffer.append(rest)
-            open_brackets = sum(line.count("[") - line.count("]") for line in interpreter.logo_block_buffer)
+            open_brackets = sum(
+                line.count("[") - line.count("]")
+                for line in interpreter.logo_block_buffer
+            )
             if open_brackets > 0:
                 return ""
             else:
@@ -579,7 +607,6 @@ def _pilot_graphics_command(
         # TEXT string — output text string (for labelling graphics)
         if arg_str:
             text_msg = _substitute_variables(interpreter, arg_str)
-            interpreter.output.append(f"📝 {text_msg}")
             return f"📝 {text_msg}\n"
         return ""
     elif cmd == "SPEED":
@@ -864,7 +891,7 @@ def _split_func_args(raw: str) -> list:
     in_quote = ""
     depth = 0
     for ch in raw:
-        if ch in ("\"", "'") and not in_quote:
+        if ch in ('"', "'") and not in_quote:
             in_quote = ch
             current.append(ch)
         elif ch == in_quote:

@@ -144,10 +144,9 @@ class SystemOrchestrator:
         self.status_callbacks: List[Callable[[SystemStatus], None]] = []
 
         # Initialize Python/environment info
-        self.system_info.python_version = f"{
-            sys.version_info.major}.{
-            sys.version_info.minor}.{
-            sys.version_info.micro}"
+        self.system_info.python_version = f"{sys.version_info.major}.{
+            sys.version_info.minor
+        }.{sys.version_info.micro}"
 
     def register_component(
         self,
@@ -211,9 +210,7 @@ class SystemOrchestrator:
                         component_info.status = ComponentStatus.READY
                         component_info.last_initialized = utc_now()
                     self.initialization_report.components_initialized += 1
-                except (
-                    Exception
-                ) as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+                except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                     self.initialization_report.errors.append(f"{name}: {str(e)}")
                     self.initialization_report.components_failed += 1
                     component_info = self.system_info.components.get(name)
@@ -253,9 +250,7 @@ class SystemOrchestrator:
                 try:
                     shutdown_handler = self.registry.shutdown_handlers[name]
                     shutdown_handler()
-                except (
-                    Exception
-                ) as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+                except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                     self.initialization_report.warnings.append(
                         f"Error shutting down {name}: {str(e)}"
                     )
@@ -299,9 +294,7 @@ class SystemOrchestrator:
         for callback in self.status_callbacks:
             try:
                 callback(status)
-            except (
-                Exception
-            ) as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+            except Exception as e:  # noqa: BLE001  # pylint: disable=broad-exception-caught
                 print(f"Error in status callback: {e}")
 
 

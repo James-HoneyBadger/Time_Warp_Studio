@@ -24,6 +24,7 @@ class CloudStorageManager:
         else:
             print("Not connected to cloud storage.")
 
+
 # Example usage
 # cloud_manager = CloudStorageManager()
 # cloud_manager.connect({"api_key": "example"})

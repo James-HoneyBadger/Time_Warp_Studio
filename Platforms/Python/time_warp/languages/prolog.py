@@ -285,10 +285,12 @@ def _parse_single_goal(text: str) -> Tuple[str, Tuple[str, ...]]:
         idx = t.find(op_str)
         if idx > 0:
             lhs = t[:idx].strip()
-            rhs = t[idx + len(op_str):].strip()
+            rhs = t[idx + len(op_str) :].strip()
             if lhs and rhs:
                 # Make sure we didn't split inside parens/brackets
-                if lhs.count("(") == lhs.count(")") and lhs.count("[") == lhs.count("]"):
+                if lhs.count("(") == lhs.count(")") and lhs.count("[") == lhs.count(
+                    "]"
+                ):
                     return (pred_name, (lhs, rhs))
 
     # Legacy simple comparisons (kept for backward compat with bare var names)
@@ -499,7 +501,7 @@ def _eval_math(expr: str, env: Dict[str, str]) -> Optional[float]:
             "float": float,
             "max": max,
             "min": min,
-            "sign": lambda x: (1.0 if x > 0 else (-1.0 if x < 0 else 0.0)),
+            "sign": lambda x: 1.0 if x > 0 else (-1.0 if x < 0 else 0.0),
         }
         return float(eval(expr_sub, allowed_names, {}))  # noqa: S307
     except (ValueError, TypeError, SyntaxError, ZeroDivisionError, NameError):
@@ -1368,6 +1370,203 @@ def _solve_goals_cut(
             pass
         return _solve_goals_cut(kb, rest, env)
 
+    # ── List set operations ────────────────────────────────────────────────────
+    if pred == "delete" and len(args) == 3:
+        lst_sub = _substitute_term(args[0], env)
+        elem_sub = _substitute_term(args[1], env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
+            filtered = [x for x in items if x != elem_sub]
+            result = "[" + ",".join(filtered) + "]" if filtered else "[]"
+            e = _unify(args[2], result, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "select" and len(args) == 3:
+        # select(Elem, List, Rest) — non-deterministic
+        elem_sub = _substitute_term(args[0], env)
+        lst_sub = _substitute_term(args[1], env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
+            out2: list = []
+            for i2, item in enumerate(items):
+                e = _unify(elem_sub, item, env.copy())
+                if e is not None:
+                    rest_items = items[:i2] + items[i2 + 1 :]
+                    rest_lst = "[" + ",".join(rest_items) + "]" if rest_items else "[]"
+                    e2 = _unify(args[2], rest_lst, e)
+                    if e2 is not None:
+                        out2.extend(_solve_goals_cut(kb, rest, e2))
+            return out2
+        return []
+
+    if pred == "intersection" and len(args) == 3:
+        l1 = _substitute_term(args[0], env)
+        l2 = _substitute_term(args[1], env)
+        if not _is_var(l1) and not _is_var(l2):
+            items1 = [
+                x.strip()
+                for x in l1.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
+            items2 = {
+                x.strip()
+                for x in l2.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            }
+            inter = [x for x in items1 if x in items2]
+            result = "[" + ",".join(inter) + "]" if inter else "[]"
+            e = _unify(args[2], result, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "subtract" and len(args) == 3:
+        l1 = _substitute_term(args[0], env)
+        l2 = _substitute_term(args[1], env)
+        if not _is_var(l1) and not _is_var(l2):
+            items1 = [
+                x.strip()
+                for x in l1.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
+            items2 = {
+                x.strip()
+                for x in l2.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            }
+            diff = [x for x in items1 if x not in items2]
+            result = "[" + ",".join(diff) + "]" if diff else "[]"
+            e = _unify(args[2], result, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "union" and len(args) == 3:
+        l1 = _substitute_term(args[0], env)
+        l2 = _substitute_term(args[1], env)
+        if not _is_var(l1) and not _is_var(l2):
+            items1 = [
+                x.strip()
+                for x in l1.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
+            items2 = [
+                x.strip()
+                for x in l2.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
+            seen: set = set()
+            combined = []
+            for x in items1 + items2:
+                if x not in seen:
+                    seen.add(x)
+                    combined.append(x)
+            result = "[" + ",".join(combined) + "]" if combined else "[]"
+            e = _unify(args[2], result, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "string_chars" and len(args) == 2:
+        a_sub = _substitute_term(args[0], env)
+        b_sub = _substitute_term(args[1], env)
+        if not _is_var(a_sub):
+            s = a_sub.strip("'\"")
+            char_list = "[" + ",".join(f"'{c}'" for c in s) + "]" if s else "[]"
+            e = _unify(b_sub, char_list, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        if not _is_var(b_sub):
+            chars = [
+                x.strip().strip("'\"")
+                for x in b_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
+            atom = "".join(chars)
+            e = _unify(a_sub, f"'{atom}'", env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "atom_number" and len(args) == 2:
+        a_sub = _substitute_term(args[0], env)
+        n_sub = _substitute_term(args[1], env)
+        if not _is_var(a_sub):
+            try:
+                num_val = float(a_sub.strip("'\""))
+                num_str = str(int(num_val)) if num_val == int(num_val) else str(num_val)
+                e = _unify(n_sub, num_str, env.copy())
+                return _solve_goals_cut(kb, rest, e) if e is not None else []
+            except (ValueError, TypeError):
+                return []
+        if not _is_var(n_sub):
+            e = _unify(a_sub, f"'{n_sub}'", env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "max_member" and len(args) == 2:
+        lst_sub = _substitute_term(args[1], env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
+            try:
+                max_v = max(items, key=lambda x: float(x))
+                e = _unify(args[0], max_v, env.copy())
+                return _solve_goals_cut(kb, rest, e) if e is not None else []
+            except (ValueError, TypeError):
+                return []
+        return []
+
+    if pred == "min_member" and len(args) == 2:
+        lst_sub = _substitute_term(args[1], env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
+            try:
+                min_v = min(items, key=lambda x: float(x))
+                e = _unify(args[0], min_v, env.copy())
+                return _solve_goals_cut(kb, rest, e) if e is not None else []
+            except (ValueError, TypeError):
+                return []
+        return []
+
+    if pred == "last" and len(args) == 2:
+        # last/2: last(List, Elem) — already handled above, but add fallback
+        lst_sub = _substitute_term(args[0], env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
+            if items:
+                e = _unify(args[1], items[-1], env.copy())
+                return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
+    if pred == "reverse" and len(args) == 2:
+        lst_sub = _substitute_term(args[0], env)
+        if not _is_var(lst_sub) and lst_sub.startswith("["):
+            items = [
+                x.strip()
+                for x in lst_sub.strip("[]").split(",")
+                if x.strip() and x.strip() != "[]"
+            ]
+            result = "[" + ",".join(reversed(items)) + "]" if items else "[]"
+            e = _unify(args[1], result, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
     # ── Control predicates ─────────────────────────────────────────────────────
     if pred == "true":
         return _solve_goals_cut(kb, rest, env)
@@ -1419,8 +1618,12 @@ def _solve_goals_cut(
 
     # ── format/2 and format/1 ─────────────────────────────────────────────────
     if pred in ("format", "writef") and args:
-        fmt_str = _substitute_term(args[0], env).strip('"\'')
-        fmt_args = [_substitute_term(a, env).strip('"\'') for a in args[1:]] if len(args) > 1 else []
+        fmt_str = _substitute_term(args[0], env).strip("\"'")
+        fmt_args = (
+            [_substitute_term(a, env).strip("\"'") for a in args[1:]]
+            if len(args) > 1
+            else []
+        )
         # Handle ~w, ~d, ~a, ~n format directives
         idx2 = 0
         result_chars: list[str] = []
@@ -1429,7 +1632,9 @@ def _solve_goals_cut(
             if fmt_str[i2] == "~" and i2 + 1 < len(fmt_str):
                 ch = fmt_str[i2 + 1]
                 if ch in ("w", "d", "a", "p"):
-                    result_chars.append(str(fmt_args[idx2]) if idx2 < len(fmt_args) else "")
+                    result_chars.append(
+                        str(fmt_args[idx2]) if idx2 < len(fmt_args) else ""
+                    )
                     idx2 += 1
                     i2 += 2
                 elif ch == "n":
@@ -1477,7 +1682,12 @@ def _solve_goals_cut(
         pad_sub = _substitute_term(args[2], env).strip("'\"")
         result_var = args[3]
         import re as _re2
-        parts = _re2.split("[" + _re2.escape(sep_sub) + "]", s_sub) if sep_sub else list(s_sub)
+
+        parts = (
+            _re2.split("[" + _re2.escape(sep_sub) + "]", s_sub)
+            if sep_sub
+            else list(s_sub)
+        )
         parts = [p.strip(pad_sub) for p in parts]
         lst = "[" + ",".join(f'"{p}"' for p in parts) + "]"
         e = _unify(result_var, lst, env.copy())
@@ -1635,7 +1845,9 @@ def _solve(
     return solutions
 
 
-def execute_prolog(interpreter: "Interpreter", command: str, turtle: "TurtleState") -> str:
+def execute_prolog(
+    interpreter: "Interpreter", command: str, turtle: "TurtleState"
+) -> str:
     """Execute Prolog language command."""
     raw_cmd = command.strip()
 
@@ -1658,13 +1870,13 @@ def execute_prolog(interpreter: "Interpreter", command: str, turtle: "TurtleStat
     while "/*" in raw_cmd and "*/" in raw_cmd:
         start = raw_cmd.index("/*")
         end = raw_cmd.index("*/", start + 2)
-        raw_cmd = (raw_cmd[:start] + raw_cmd[end + 2:]).strip()
+        raw_cmd = (raw_cmd[:start] + raw_cmd[end + 2 :]).strip()
 
     # Track multi-line block comments
     _ensure_kb(interpreter)
     if interpreter.prolog_kb.get("_in_block_comment", False):
         if "*/" in raw_cmd:
-            raw_cmd = raw_cmd[raw_cmd.index("*/") + 2:].strip()
+            raw_cmd = raw_cmd[raw_cmd.index("*/") + 2 :].strip()
             interpreter.prolog_kb["_in_block_comment"] = False
             if not raw_cmd:
                 return ""
@@ -1674,7 +1886,7 @@ def execute_prolog(interpreter: "Interpreter", command: str, turtle: "TurtleStat
         # Block comment starts but doesn't end on this line
         if "*/" not in raw_cmd:
             interpreter.prolog_kb["_in_block_comment"] = True
-            raw_cmd = raw_cmd[:raw_cmd.index("/*")].strip()
+            raw_cmd = raw_cmd[: raw_cmd.index("/*")].strip()
             if not raw_cmd:
                 return ""
 
@@ -1793,11 +2005,16 @@ def execute_prolog(interpreter: "Interpreter", command: str, turtle: "TurtleStat
             if re.match(r"^dynamic\b", directive_body, re.IGNORECASE):
                 return ""  # accept but ignore dynamic declarations
             # Handle :- discontiguous, :- module, :- use_module, etc.
-            if re.match(r"^(discontiguous|module|use_module|ensure_loaded|style_check)\b",
-                        directive_body, re.IGNORECASE):
+            if re.match(
+                r"^(discontiguous|module|use_module|ensure_loaded|style_check)\b",
+                directive_body,
+                re.IGNORECASE,
+            ):
                 return ""  # accept but ignore these directives
             # Handle :- initialization(Goal) — call Goal as a goal
-            init_m = re.match(r"^initialization\((.+)\)\s*$", directive_body, re.IGNORECASE)
+            init_m = re.match(
+                r"^initialization\((.+)\)\s*$", directive_body, re.IGNORECASE
+            )
             if init_m:
                 directive_body = init_m.group(1).strip()
             # Handle :- meta_predicate ... (no-op)

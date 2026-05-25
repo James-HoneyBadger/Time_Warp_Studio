@@ -15,6 +15,7 @@ standard-library coverage:
   - async/await (runs synchronously -- educational simulation)
   - Symbol (unique identifiers, Symbol.iterator, Symbol.for)
 """
+# pylint: disable=line-too-long
 
 from __future__ import annotations
 
@@ -140,12 +141,23 @@ class _JSNumber(int):
             return other + _js_str(self)
         return self._wrap(super().__radd__(other))
 
-    def __sub__(self, other): return self._wrap(super().__sub__(other))
-    def __rsub__(self, other): return self._wrap(int.__sub__(other, self))
-    def __mul__(self, other): return self._wrap(super().__mul__(other))
-    def __rmul__(self, other): return self._wrap(super().__rmul__(other))
-    def __floordiv__(self, other): return self._wrap(super().__floordiv__(other))
-    def __mod__(self, other): return self._wrap(super().__mod__(other))
+    def __sub__(self, other):
+        return self._wrap(super().__sub__(other))
+
+    def __rsub__(self, other):
+        return self._wrap(int.__sub__(other, self))
+
+    def __mul__(self, other):
+        return self._wrap(super().__mul__(other))
+
+    def __rmul__(self, other):
+        return self._wrap(super().__rmul__(other))
+
+    def __floordiv__(self, other):
+        return self._wrap(super().__floordiv__(other))
+
+    def __mod__(self, other):
+        return self._wrap(super().__mod__(other))
 
     def __repr__(self):
         return str(int(self))
@@ -225,7 +237,7 @@ class JSArray(list):
             self.insert(0, x)
         return len(self)
 
-    def splice(self, start, delete_count=None, *items):
+    def splice(self, start, delete_count=None, *items):  # pylint: disable=keyword-arg-before-vararg
         if delete_count is None:
             delete_count = len(self) - start
         start = max(0, start) if start >= 0 else max(0, len(self) + start)
@@ -241,7 +253,10 @@ class JSArray(list):
     def concat_js(self, *others):
         r = JSArray(self)
         for o in others:
-            r.extend(o) if isinstance(o, list) else r.append(o)
+            if isinstance(o, list):
+                r.extend(o)
+            else:
+                r.append(o)
         return r
 
     concat = concat_js
@@ -311,6 +326,7 @@ class JSArray(list):
 
     def forEach(self, fn):
         import inspect as _inspect
+
         try:
             nargs = len(_inspect.signature(fn).parameters)
         except (ValueError, TypeError):
@@ -331,7 +347,7 @@ class JSArray(list):
 
     def sort(self, fn=None):
         if fn is None:
-            list.sort(self, key=lambda x: _js_str(x))
+            list.sort(self, key=_js_str)
         else:
             import functools
 
@@ -347,11 +363,12 @@ class JSArray(list):
 
         def _f(a, d):
             for x in a:
-                (
-                    (r.extend if (isinstance(x, list) and d > 0) else r.append)(x)
-                    if not isinstance(x, list)
-                    else _f(x, d - 1) if d > 0 else r.append(x)
-                )
+                if not isinstance(x, list):
+                    r.append(x)
+                elif d > 0:
+                    _f(x, d - 1)
+                else:
+                    r.append(x)
 
         _f(self, depth)
         return r
@@ -360,7 +377,10 @@ class JSArray(list):
         r = JSArray()
         for i, x in enumerate(self):
             m = fn(x, i, self)
-            r.extend(m) if isinstance(m, list) else r.append(m)
+            if isinstance(m, list):
+                r.extend(m)
+            else:
+                r.append(m)
         return r
 
     def fill(self, v, start=0, end=None):
@@ -448,12 +468,16 @@ class _NumberMeta(type):
     isNaN = staticmethod(lambda x: isinstance(x, float) and x != x)
     isFinite = staticmethod(lambda x: isinstance(x, (int, float)) and _math.isfinite(x))
     isInteger = staticmethod(
-        lambda x: isinstance(x, int)
-        or (isinstance(x, float) and x == int(x) and _math.isfinite(x))
+        lambda x: (
+            isinstance(x, int)
+            or (isinstance(x, float) and x == int(x) and _math.isfinite(x))
+        )
     )
     isSafeInteger = staticmethod(
-        lambda x: isinstance(x, int)
-        or (isinstance(x, float) and x == int(x) and abs(x) <= 9007199254740991)
+        lambda x: (
+            isinstance(x, int)
+            or (isinstance(x, float) and x == int(x) and abs(x) <= 9007199254740991)
+        )
     )
     parseFloat = staticmethod(lambda s: float(str(s).strip()))
     parseInt = staticmethod(lambda s, b=10: _parse_int(s, b))
@@ -518,12 +542,13 @@ class JSMath:
     acosh = staticmethod(_math.acosh)
     atanh = staticmethod(_math.atanh)
     hypot = staticmethod(_math.hypot)
-    sign = staticmethod(lambda x: (1 if x > 0 else -1 if x < 0 else 0))
+    sign = staticmethod(lambda x: 1 if x > 0 else -1 if x < 0 else 0)
     trunc = staticmethod(_math.trunc)
     fround = staticmethod(float)
     imul = staticmethod(
-        lambda a, b: ((int(a) * int(b)) & 0xFFFFFFFF)
-        - (((int(a) * int(b)) & 0x80000000) << 1)
+        lambda a, b: (
+            ((int(a) * int(b)) & 0xFFFFFFFF) - (((int(a) * int(b)) & 0x80000000) << 1)
+        )
     )
     clz32 = staticmethod(
         lambda x: (32 - (int(x) & 0xFFFFFFFF).bit_length()) if x else 32
@@ -761,7 +786,8 @@ class JSDate:
     @classmethod
     def now(cls):
         """Date.now() — returns current time as milliseconds since epoch."""
-        import time as _t
+        import time as _t  # pylint: disable=reimported
+
         return int(_t.time() * 1000)
 
     def toLocaleString(self):
@@ -775,10 +801,6 @@ class JSDate:
 
     def __str__(self):
         return self.toString()
-
-    @staticmethod
-    def now():
-        return int(_time.time() * 1000)
 
     @staticmethod
     def parse(s):
@@ -809,6 +831,29 @@ class JSDate:
 # ━━━━━━━━━━━━━━━━━━━━━━ Map / Set / WeakMap / WeakSet ━━━━━━━━━━━━━━━━━━━
 
 
+def _js_opt_chain(obj, *attrs):
+    """Helper for optional chaining: obj?.attr1?.attr2 ... Returns _undefined if any is null/undefined."""
+    cur = obj
+    for attr in attrs:
+        if cur is _undefined or cur is _null or cur is None:
+            return _undefined
+        if isinstance(attr, str):
+            try:
+                cur = getattr(cur, attr)
+            except AttributeError:
+                try:
+                    cur = cur[attr]
+                except (KeyError, TypeError):
+                    return _undefined
+        else:
+            # numeric index
+            try:
+                cur = cur[attr]
+            except (KeyError, IndexError, TypeError):
+                return _undefined
+    return cur
+
+
 def _js_array_from(iterable_or_len, map_fn=None):
     """Implement JS Array.from(arrayLike, mapFn)."""
     if isinstance(iterable_or_len, _JsDict):
@@ -835,12 +880,16 @@ def _js_array_from(iterable_or_len, map_fn=None):
 
 def _js_re_replace(s: object, pattern: str, flags: str, repl: str) -> str:
     """Implement JS str.replace(/pattern/flags, repl) for strings."""
-    import re as _re
+    import re as _re  # pylint: disable=reimported
+
     s = str(s)
     py_flags = 0
-    if "i" in flags: py_flags |= _re.IGNORECASE
-    if "m" in flags: py_flags |= _re.MULTILINE
-    if "s" in flags: py_flags |= _re.DOTALL
+    if "i" in flags:
+        py_flags |= _re.IGNORECASE
+    if "m" in flags:
+        py_flags |= _re.MULTILINE
+    if "s" in flags:
+        py_flags |= _re.DOTALL
     try:
         count = 0 if "g" in flags else 1
         return _re.sub(pattern, str(repl), s, count=count, flags=py_flags)
@@ -888,7 +937,8 @@ class JSMap:
         return JSArray(JSArray([k, v]) for k, v in self._d.items())
 
     def forEach(self, fn):
-        [fn(v, k, self) for k, v in self._d.items()]
+        for k, v in self._d.items():
+            fn(v, k, self)
 
     def __repr__(self):
         return f"Map({{{', '.join(f'{k!r}: {v!r}' for k, v in self._d.items())}}})"
@@ -930,7 +980,8 @@ class JSSet:
         return JSArray(JSArray([k, k]) for k in self._d)
 
     def forEach(self, fn):
-        [fn(v, v, self) for v in self._d]
+        for v in self._d:
+            fn(v, v, self)
 
     def __repr__(self):
         return f"Set({{{', '.join(repr(k) for k in self._d)}}})"
@@ -1000,7 +1051,7 @@ class JSRegExp:
             return _null
         r = JSArray([m.group(0)] + list(m.groups()))
         r.index = m.start()
-        r.input = s
+        r.input = s  # pylint: disable=attribute-defined-outside-init
         return r
 
     def __repr__(self):
@@ -1032,6 +1083,8 @@ class JSSymbol:
         return JSSymbol(k)
 
     iterator: "JSSymbol | None" = None  # well-known Symbol.iterator
+    hasInstance: "JSSymbol | None" = None  # well-known Symbol.hasInstance
+    toPrimitive: "JSSymbol | None" = None  # well-known Symbol.toPrimitive
 
 
 JSSymbol.iterator = JSSymbol("Symbol.iterator")
@@ -1039,7 +1092,7 @@ JSSymbol.hasInstance = JSSymbol("Symbol.hasInstance")
 JSSymbol.toPrimitive = JSSymbol("Symbol.toPrimitive")
 
 
-class JSPromise:
+class JSPromise:  # pylint: disable=protected-access
     def __init__(self, executor=None):
         self._val = _undefined
         self._err = _undefined
@@ -1173,7 +1226,8 @@ class JSEnvironment:
             @staticmethod
             def table(o):
                 if isinstance(o, list):
-                    [captured.append(f"  {i}: {x}") for i, x in enumerate(o)]
+                    for i, x in enumerate(o):
+                        captured.append(f"  {i}: {x}")
                 else:
                     captured.append(repr(o))
 
@@ -1193,12 +1247,13 @@ class JSEnvironment:
 
         tc = [0]
 
-        def _sto(fn, ms=0, *a):
+        def _sto(fn, ms=0, *a):  # pylint: disable=keyword-arg-before-vararg
             tc[0] += 1
-            (fn(*a) if callable(fn) else None)
+            if callable(fn):
+                fn(*a)
             return tc[0]
 
-        def _sin(fn, ms=0, *a):
+        def _sin(fn, ms=0, *a):  # pylint: disable=keyword-arg-before-vararg
             tc[0] += 1
             return tc[0]
 
@@ -1237,8 +1292,8 @@ class JSEnvironment:
                 "decodeURIComponent": lambda s: re.sub(
                     r"%([0-9A-Fa-f]{2})", lambda m: chr(int(m.group(1), 16)), str(s)
                 ),
-                "encodeURI": lambda s: str(s),
-                "decodeURI": lambda s: str(s),
+                "encodeURI": str,
+                "decodeURI": str,
                 "alert": lambda msg: captured.append(_js_str(msg)),
                 "prompt": lambda msg="": (
                     interp.request_input(str(msg))
@@ -1254,6 +1309,7 @@ class JSEnvironment:
                 "queueMicrotask": lambda fn: fn() if callable(fn) else None,
                 "requestAnimationFrame": lambda fn: fn(0) if callable(fn) else None,
                 "cancelAnimationFrame": lambda _: None,
+                "structuredClone": lambda v: __import__("copy").deepcopy(v),
                 "undefined": _undefined,
                 "null": _null,
                 "NaN": float("nan"),
@@ -1271,6 +1327,7 @@ class JSEnvironment:
                 "_JSNumber": _JSNumber,
                 "_js_array_from": _js_array_from,
                 "_js_re_replace": _js_re_replace,
+                "_js_opt_chain": _js_opt_chain,
             }
         )
         g["globalThis"] = g
@@ -1279,19 +1336,29 @@ class JSEnvironment:
         # Override len to return _JSNumber (JS-compatible numeric type)
         import builtins as _builtins_mod
         import inspect as _inspect_mod
+
         _orig_len = _builtins_mod.len
+
         def _js_len(x):
             if callable(x) and not isinstance(x, (list, str, dict, tuple, set)):
                 try:
                     sig = _inspect_mod.signature(x)
-                    return _JSNumber(sum(1 for p in sig.parameters.values()
-                                        if p.default is _inspect_mod.Parameter.empty
-                                        and p.kind not in (
-                                            _inspect_mod.Parameter.VAR_POSITIONAL,
-                                            _inspect_mod.Parameter.VAR_KEYWORD)))
+                    return _JSNumber(
+                        sum(
+                            1
+                            for p in sig.parameters.values()
+                            if p.default is _inspect_mod.Parameter.empty
+                            and p.kind
+                            not in (
+                                _inspect_mod.Parameter.VAR_POSITIONAL,
+                                _inspect_mod.Parameter.VAR_KEYWORD,
+                            )
+                        )
+                    )
                 except (ValueError, TypeError):
                     return _JSNumber(0)
             return _JSNumber(_orig_len(x))
+
         g["len"] = _js_len
         g["sorted"] = lambda it, **kw: JSArray(sorted(it, **kw))
         # Restrict builtins to a safe allowlist.  The transpiler emits Python
@@ -1299,21 +1366,75 @@ class JSEnvironment:
         # for classes, etc.) but we must block dangerous ones like __import__,
         # eval, exec, open, compile, breakpoint, etc.
         _SAFE_BUILTINS = (
-            "abs", "all", "any", "bin", "bool", "callable", "chr", "dict",
-            "divmod", "enumerate", "filter", "float", "format", "frozenset",
-            "getattr", "hasattr", "hash", "hex", "id", "int", "isinstance",
-            "issubclass", "iter", "len", "list", "map", "max", "min", "next",
-            "object", "oct", "ord", "pow", "print", "range", "repr",
-            "reversed", "round", "set", "setattr", "slice", "sorted", "str",
-            "sum", "tuple", "type", "zip",
+            "abs",
+            "all",
+            "any",
+            "bin",
+            "bool",
+            "callable",
+            "chr",
+            "dict",
+            "divmod",
+            "enumerate",
+            "filter",
+            "float",
+            "format",
+            "frozenset",
+            "getattr",
+            "hasattr",
+            "hash",
+            "hex",
+            "id",
+            "int",
+            "isinstance",
+            "issubclass",
+            "iter",
+            "len",
+            "list",
+            "map",
+            "max",
+            "min",
+            "next",
+            "object",
+            "oct",
+            "ord",
+            "pow",
+            "print",
+            "range",
+            "repr",
+            "reversed",
+            "round",
+            "set",
+            "setattr",
+            "slice",
+            "sorted",
+            "str",
+            "sum",
+            "tuple",
+            "type",
+            "zip",
             # Required by Python's class machinery used in transpiled JS classes
-            "__build_class__", "__name__",
+            "__build_class__",
+            "__name__",
+            # property() required for transpiled getter/setter methods
+            "property",
+            "staticmethod",
+            "classmethod",
             # Exception types used by transpiled try/catch
-            "Exception", "TypeError", "ValueError", "AttributeError",
-            "KeyError", "IndexError", "RuntimeError", "StopIteration",
-            "NotImplementedError", "OverflowError", "ZeroDivisionError",
+            "Exception",
+            "TypeError",
+            "ValueError",
+            "AttributeError",
+            "KeyError",
+            "IndexError",
+            "RuntimeError",
+            "StopIteration",
+            "NotImplementedError",
+            "OverflowError",
+            "ZeroDivisionError",
         )
-        import builtins as _builtins_mod
+        import builtins as _builtins_mod  # pylint: disable=reimported
+
         g["__builtins__"] = {
             k: getattr(_builtins_mod, k)
             for k in _SAFE_BUILTINS
@@ -1326,7 +1447,7 @@ class JSEnvironment:
         try:
             g = self._build_globals(captured)
             py_code = _js_to_py(source)
-            exec(py_code, g)  # noqa: S102
+            exec(py_code, g)  # noqa: S102  # pylint: disable=exec-used
         except StopIteration:
             pass
         except _JSTranslationError as e:
@@ -1379,7 +1500,7 @@ JSTranslationError = _JSTranslationError  # public alias
 
 def _join_continuation_lines(source: str) -> str:
     """Join lines that are continuation of standalone object literals spanning multiple lines.
-    
+
     Handles:
       return {         → join until matching }
           a: 1,
@@ -1390,16 +1511,16 @@ def _join_continuation_lines(source: str) -> str:
         r"\b(?:function|class|if|else|for|while|do|try|catch|finally|switch)\b|=>"
         r"|\b\w+\s*\("  # method/function definition: name( ... ) {
     )
-    
+
     lines = source.split("\n")
     result: list[str] = []
     i = 0
-    
+
     while i < len(lines):
         line = lines[i]
         stripped = line.rstrip()
         sline = stripped.lstrip()
-        
+
         # Handle bare `{` scope blocks — join and de-indent (Python has no bare blocks)
         if sline == "{":
             # Collect lines until matching `}`
@@ -1411,35 +1532,49 @@ def _join_continuation_lines(source: str) -> str:
                 cont = lines[j]
                 cont_s = cont.strip()
                 for ch in cont_s:
-                    if esc2: esc2 = False
+                    if esc2:
+                        esc2 = False
                     elif in_str2:
-                        if ch == "\\": esc2 = True
-                        elif ch == str_ch2: in_str2 = False
-                    elif ch in ('"', "'", "`"): in_str2, str_ch2 = True, ch
-                    elif ch in ("{", "(", "["): depth += 1
-                    elif ch in ("}", ")", "]"): depth -= 1
+                        if ch == "\\":
+                            esc2 = True
+                        elif ch == str_ch2:
+                            in_str2 = False
+                    elif ch in ('"', "'", "`"):
+                        in_str2, str_ch2 = True, ch
+                    elif ch in ("{", "(", "["):
+                        depth += 1
+                    elif ch in ("}", ")", "]"):
+                        depth -= 1
                 if depth > 0:
                     inner_lines.append(cont)
                 j += 1
             # De-indent inner lines by finding minimum indent
-            non_empty = [l for l in inner_lines if l.strip()]
+            non_empty = [ln for ln in inner_lines if ln.strip()]
             if non_empty:
-                min_indent = min(len(l) - len(l.lstrip()) for l in non_empty)
-                result.extend(l[min_indent:] if len(l) > min_indent else l for l in inner_lines)
+                min_indent = min(len(ln) - len(ln.lstrip()) for ln in non_empty)
+                result.extend(
+                    ln[min_indent:] if len(ln) > min_indent else ln
+                    for ln in inner_lines
+                )
             i = j
             continue
 
         # Don't join if: line is just "{", or contains block keywords, or method def
-        if (stripped.endswith("{") and not sline.startswith("//") 
-                and sline != "{"  # bare opening brace = block  
-                and not _BLOCK_OPENER.search(stripped)):
+        if (
+            stripped.endswith("{")
+            and not sline.startswith("//")
+            and sline != "{"  # bare opening brace = block
+            and not _BLOCK_OPENER.search(stripped)
+        ):
             # Peek at next non-empty line to check if it looks like object content
             # Object content: "key: value" or "identifier" (shorthand) but NOT "const/let/var/return/if"
             _next_i = i + 1
             while _next_i < len(lines) and not lines[_next_i].strip():
                 _next_i += 1
             _next_line = lines[_next_i].strip() if _next_i < len(lines) else ""
-            _STMT_OPENER = re.compile(r"^(?:const|let|var|return|if|for|while|throw|break|continue|switch)\b")
+            _STMT_OPENER = re.compile(
+                r"^(?:const|let|var|return|if|for|while|throw|break|continue|switch)\b"
+            )
             if _STMT_OPENER.match(_next_line):
                 result.append(line)
                 i += 1
@@ -1461,8 +1596,10 @@ def _join_continuation_lines(source: str) -> str:
                         escaped = False
                         continue
                     if in_str:
-                        if ch == "\\": escaped = True
-                        elif ch == str_ch: in_str = False
+                        if ch == "\\":
+                            escaped = True
+                        elif ch == str_ch:
+                            in_str = False
                     elif ch in ('"', "'", "`"):
                         in_str, str_ch = True, ch
                     elif ch in ("{", "(", "["):
@@ -1473,21 +1610,31 @@ def _join_continuation_lines(source: str) -> str:
                 i += 1
             result.append(" ".join(joined))
             continue
-        
+
         # Also join lines that have an unclosed { within them (not ending with {)
         # e.g. "return { n, mean,   ← unclosed"
-        if not sline.startswith("//") and not _BLOCK_OPENER.search(stripped) and "{" in stripped:
+        if (
+            not sline.startswith("//")
+            and not _BLOCK_OPENER.search(stripped)
+            and "{" in stripped
+        ):
             # Count net brace depth for this line
             _depth = 0
             _in_str, _str_ch, _esc = False, "", False
             for ch in stripped:
-                if _esc: _esc = False
+                if _esc:
+                    _esc = False
                 elif _in_str:
-                    if ch == "\\": _esc = True
-                    elif ch == _str_ch: _in_str = False
-                elif ch in ('"', "'", "`"): _in_str, _str_ch = True, ch
-                elif ch == "{": _depth += 1
-                elif ch == "}": _depth -= 1
+                    if ch == "\\":
+                        _esc = True
+                    elif ch == _str_ch:
+                        _in_str = False
+                elif ch in ('"', "'", "`"):
+                    _in_str, _str_ch = True, ch
+                elif ch == "{":
+                    _depth += 1
+                elif ch == "}":
+                    _depth -= 1
             if _depth > 0:
                 # Unclosed brace — join continuation lines
                 joined = [stripped]
@@ -1502,27 +1649,33 @@ def _join_continuation_lines(source: str) -> str:
                         i += 1
                         continue
                     for ch in cont_s:
-                        if escaped: escaped = False
+                        if escaped:
+                            escaped = False
                         elif in_str:
-                            if ch == "\\": escaped = True
-                            elif ch == str_ch: in_str = False
-                        elif ch in ('"', "'", "`"): in_str, str_ch = True, ch
-                        elif ch in ("{", "(", "["): depth += 1
-                        elif ch in ("}", ")", "]"): depth -= 1
+                            if ch == "\\":
+                                escaped = True
+                            elif ch == str_ch:
+                                in_str = False
+                        elif ch in ('"', "'", "`"):
+                            in_str, str_ch = True, ch
+                        elif ch in ("{", "(", "["):
+                            depth += 1
+                        elif ch in ("}", ")", "]"):
+                            depth -= 1
                     joined.append(cont_s)
                     i += 1
                 result.append(" ".join(joined))
                 continue
-        
+
         result.append(line)
         i += 1
-    
+
     return "\n".join(result)
 
 
 def _join_braceless_bodies(source: str) -> str:
     """Join braceless bodies after for/while/if onto the same line.
-    
+
     Handles cases like:
         for (...)
             if (...) { body }
@@ -1536,8 +1689,11 @@ def _join_braceless_bodies(source: str) -> str:
         line = lines[i]
         stripped = line.rstrip()
         # Control header without trailing {
-        if (_BLOCK_HDR.match(line) and not stripped.rstrip().endswith("{")
-                and not stripped.rstrip().endswith("}")):
+        if (
+            _BLOCK_HDR.match(line)
+            and not stripped.rstrip().endswith("{")
+            and not stripped.rstrip().endswith("}")
+        ):
             j = i + 1
             while j < len(lines) and not lines[j].strip():
                 j += 1
@@ -1588,7 +1744,7 @@ def _join_ternary_continuations(source: str) -> str:
 
 def _join_method_chains(source: str) -> str:
     """Join method chain continuations (.methodName on next line) onto previous line.
-    
+
     For method chains with multi-line arrow callbacks (.method(param => { body })),
     hoists the callback to a named function and rewrites inline.
     """
@@ -1599,35 +1755,41 @@ def _join_method_chains(source: str) -> str:
     i = 0
     while i < len(lines):
         line = lines[i]
-        
+
         j = i + 1
         while j < len(lines) and not lines[j].strip():
             j += 1
-        
+
         if j < len(lines):
             next_stripped = lines[j].strip()
             if next_stripped.startswith(".") and not next_stripped.startswith("..."):
                 # Collect all chained .method calls
                 chain_lines = []
                 k = j
-                while (k < len(lines) and lines[k].strip().startswith(".")
-                       and not lines[k].strip().startswith("...")):
+                while (
+                    k < len(lines)
+                    and lines[k].strip().startswith(".")
+                    and not lines[k].strip().startswith("...")
+                ):
                     chain_lines.append(lines[k].strip())
                     k += 1
-                
+
                 # Check if any chain line opens a multi-line block
                 has_block_chain = any(re.search(r"=>\s*\{", cl) for cl in chain_lines)
-                
+
                 if has_block_chain:
                     # Process chain lines, hoisting multi-line callbacks
                     base_line = line.rstrip()
                     ind = " " * (len(line) - len(line.lstrip()))
                     hoisted_fns: list[str] = []
                     translated_chain: list[str] = []
-                    
+
                     ci = j
-                    while (ci < len(lines) and lines[ci].strip().startswith(".")
-                           and not lines[ci].strip().startswith("...")):
+                    while (
+                        ci < len(lines)
+                        and lines[ci].strip().startswith(".")
+                        and not lines[ci].strip().startswith("...")
+                    ):
                         chain_line = lines[ci].strip()
                         if re.search(r"=>\s*\{", chain_line):
                             # Multi-line callback: hoist it
@@ -1643,23 +1805,29 @@ def _join_method_chains(source: str) -> str:
                                     bl = lines[ci]
                                     bl_s = bl.strip()
                                     for ch in bl_s:
-                                        if ch == "{": depth += 1
-                                        elif ch == "}": depth -= 1
+                                        if ch == "{":
+                                            depth += 1
+                                        elif ch == "}":
+                                            depth -= 1
                                     if depth > 0:
                                         body_lines_raw.append(bl)
                                     ci += 1
                                 # Preserve relative indentation
-                                non_empty = [l for l in body_lines_raw if l.strip()]
+                                non_empty = [ln for ln in body_lines_raw if ln.strip()]
                                 if non_empty:
-                                    min_ind = min(len(l) - len(l.lstrip()) for l in non_empty)
+                                    min_ind = min(
+                                        len(ln) - len(ln.lstrip()) for ln in non_empty
+                                    )
                                 else:
                                     min_ind = 0
                                 body_lines = [
-                                    f"{ind}    {l[min_ind:]}" if l.strip() else ""
-                                    for l in body_lines_raw
+                                    f"{ind}    {ln[min_ind:]}" if ln.strip() else ""
+                                    for ln in body_lines_raw
                                 ]
                                 # Accumulate hoisted function
-                                hoisted_fns.append(f"{ind}function {fn_name}({params}) {{")
+                                hoisted_fns.append(
+                                    f"{ind}function {fn_name}({params}) {{"
+                                )
                                 for bl in body_lines:
                                     hoisted_fns.append(bl)
                                 hoisted_fns.append(f"{ind}}}")
@@ -1670,7 +1838,7 @@ def _join_method_chains(source: str) -> str:
                         else:
                             translated_chain.append(chain_line)
                             ci += 1
-                    
+
                     # Emit: hoisted fns, then base.chain1.chain2...
                     result.extend(hoisted_fns)
                     result.append(base_line + " " + " ".join(translated_chain))
@@ -1684,7 +1852,7 @@ def _join_method_chains(source: str) -> str:
                     result.append(" ".join(joined))
                     i = k
                     continue
-        
+
         result.append(line)
         i += 1
     return "\n".join(result)
@@ -1695,29 +1863,28 @@ def _hoist_inline_callbacks(source: str) -> str:
     _hcb_counter = [0]
     lines = source.split("\n")
     result: list[str] = []
-    
+
     for line in lines:
         if "=>" not in line or "{" not in line:
             result.append(line)
             continue
-        
+
         ind = " " * (len(line) - len(line.lstrip()))
         s = line.strip()
         # Find all (params) => { body } patterns in line using balanced scanning
-        out_chars = list(s)
         hoisted: list[str] = []
         i = 0
         n = len(s)
         in_str = False
         str_ch = ""
         new_s = []
-        
+
         while i < n:
             ch = s[i]
             if in_str:
                 new_s.append(ch)
                 if ch == "\\" and i + 1 < n:
-                    new_s.append(s[i+1])
+                    new_s.append(s[i + 1])
                     i += 2
                     continue
                 if ch == str_ch:
@@ -1730,7 +1897,7 @@ def _hoist_inline_callbacks(source: str) -> str:
                 i += 1
                 continue
             # Detect `=> {` pattern
-            if s[i:i+3] == "=> " and i > 0:
+            if s[i : i + 3] == "=> " and i > 0:
                 # Scan backwards to find the opening ( for the params
                 j = len(new_s) - 1
                 while j >= 0 and new_s[j] in (" ", "\t"):
@@ -1741,40 +1908,47 @@ def _hoist_inline_callbacks(source: str) -> str:
                     depth = 1
                     j -= 1
                     while j >= 0 and depth > 0:
-                        if new_s[j] == ")": depth += 1
-                        elif new_s[j] == "(": depth -= 1
+                        if new_s[j] == ")":
+                            depth += 1
+                        elif new_s[j] == "(":
+                            depth -= 1
                         j -= 1
                     j += 1  # j now points to opening (
-                    params = "".join(new_s[j+1:j_close_paren])  # between ( and )
+                    params = "".join(new_s[j + 1 : j_close_paren])  # between ( and )
                     prefix = "".join(new_s[:j])
-                    
+
                     # Check for block: => { body }
                     k = i + 2  # skip '=> '
-                    while k < n and s[k] == " ": k += 1
+                    while k < n and s[k] == " ":
+                        k += 1
                     if k < n and s[k] == "{":
                         # Find matching }
                         k += 1
                         body_start = k
                         depth2 = 1
                         while k < n and depth2 > 0:
-                            if s[k] == "{": depth2 += 1
-                            elif s[k] == "}": depth2 -= 1
+                            if s[k] == "{":
+                                depth2 += 1
+                            elif s[k] == "}":
+                                depth2 -= 1
                             k += 1
                         if depth2 != 0:
                             # No matching } on this line — skip hoisting
                             new_s.append(ch)
                             i += 1
                             continue
-                        body = s[body_start:k-1].strip().rstrip(";")
+                        body = s[body_start : k - 1].strip().rstrip(";")
                         _hcb_counter[0] += 1
                         fn_name = f"_icb{_hcb_counter[0]}"
-                        hoisted.append(f"{ind}function {fn_name}({params}) {{ {body} }}")
+                        hoisted.append(
+                            f"{ind}function {fn_name}({params}) {{ {body} }}"
+                        )
                         new_s = list(prefix) + list(fn_name)
                         i = k
                         continue
             new_s.append(ch)
             i += 1
-        
+
         for h in hoisted:
             result.append(h)
         result.append(ind + "".join(new_s).lstrip())
@@ -1785,14 +1959,16 @@ def _js_to_py(source: str) -> str:
     if source.startswith("#!"):
         source = "//" + source[2:]
     source = re.sub(r"/\*.*?\*/", " ", source, flags=re.DOTALL)
+
     # Convert JS regex literals in .replace() calls to Python-compatible calls
     # e.g. str.replace(/ /g, '') → _js_re_replace(str, ' ', 'g', '')
     def _sub_js_regex_replace(m: re.Match) -> str:
-        pre = m.group(1)   # expression before .replace(
+        pre = m.group(1)  # expression before .replace(
         pattern = m.group(2)
         flags = m.group(3)
         repl = m.group(4)  # replacement string (without closing paren)
         return f"_js_re_replace({pre}, {pattern!r}, {flags!r}, {repl})"
+
     source = re.sub(
         r"([A-Za-z_\w.)\]'\"]+)\.replace\(/([^/]*)/([gimsuy]*)\s*,\s*([^)]*)\)",
         _sub_js_regex_replace,
@@ -1840,29 +2016,38 @@ def _js_to_py(source: str) -> str:
     # Post-process: fix destructured lambda params: lambda [a, b]: → lambda _d: (lambda a, b: ...)(*_d)
     result_str = "\n".join(out)
     if "lambda [" in result_str:
+
         def _fix_destructured_lambda(expr: str) -> str:
             """Replace lambda [a, b]: body with lambda _dst: (lambda a, b: body)(*_dst)."""
+
             def _replace(m: re.Match) -> str:
                 params = m.group(1)
                 body_raw = m.group(2)
                 # Find end of lambda body: stop at the first ) that takes depth to -1
                 depth = 0
                 body_end = len(body_raw)
-                in_str = False; str_ch = ""
+                in_str = False
+                str_ch = ""
                 for ci, ch in enumerate(body_raw):
                     if in_str:
-                        if ch == str_ch: in_str = False
+                        if ch == str_ch:
+                            in_str = False
                         continue
                     if ch in ('"', "'"):
-                        in_str = True; str_ch = ch; continue
-                    if ch == "(": depth += 1
+                        in_str = True
+                        str_ch = ch
+                        continue
+                    if ch == "(":
+                        depth += 1
                     elif ch == ")":
                         if depth == 0:
-                            body_end = ci; break
+                            body_end = ci
+                            break
                         depth -= 1
                 body = body_raw[:body_end]
                 suffix = body_raw[body_end:]
                 return f"lambda _dst: (lambda {params}: {body})(*_dst){suffix}"
+
             # Work line by line to avoid cross-line matches
             out_lines = []
             for ln in expr.split("\n"):
@@ -1870,7 +2055,9 @@ def _js_to_py(source: str) -> str:
                     ln = re.sub(r"lambda \[([^\]]+)\]: (.+)", _replace, ln)
                 out_lines.append(ln)
             return "\n".join(out_lines)
+
         result_str = _fix_destructured_lambda(result_str)
+
     # Replace ._jssplitchars() sentinel — handles str.split('') → list(str)
     # Match any expression ending before ._jssplitchars() and wrap it in list()
     # We use a heuristic: replace foo._jssplitchars() with JSArray(list(foo))
@@ -1895,11 +2082,16 @@ def _js_to_py(source: str) -> str:
             depth = 0
             while j >= 0:
                 ch = pre[j]
-                if ch == ')': depth += 1
-                elif ch == '(': 
-                    if depth == 0: break
+                if ch == ")":
+                    depth += 1
+                elif ch == "(":
+                    if depth == 0:
+                        break
                     depth -= 1
-                elif ch in (' ', '\t', '=', ',', '(', '+', '-', '*', '/', ':', '[', '{') and depth == 0:
+                elif (
+                    ch in (" ", "\t", "=", ",", "(", "+", "-", "*", "/", ":", "[", "{")
+                    and depth == 0
+                ):
                     break
                 j -= 1
             j += 1
@@ -1908,13 +2100,14 @@ def _js_to_py(source: str) -> str:
             result.append(f"{before_expr}JSArray(list({expr_part}))")
             i = idx + len(sentinel)
         return "".join(result)
+
     result_str = "\n".join(_fix_jssplitchars(line) for line in result_str.split("\n"))
     return result_str
 
 
 def _fix_self_defaults(lines: list[str]) -> list[str]:
     """Fix 'def method(self, param=self.xxx, ...)' default args.
-    
+
     Python doesn't allow self.xxx as default parameter values.
     Converts: def method(self, param=self.xxx): body
     To:       def method(self, param=_undefined):
@@ -1933,11 +2126,13 @@ def _fix_self_defaults(lines: list[str]) -> list[str]:
             params_str = m.group(3)
             # Find all param=self.xxx patterns and replace with param=_undefined
             inits: list[str] = []
+
             def _fix_param(pm: re.Match) -> str:
                 name = pm.group(1)
                 val = pm.group(2)
                 inits.append(f"{indent}    if {name} is _undefined: {name} = {val}")
                 return f"{name}=_undefined"
+
             new_params = re.sub(r"(\w+)\s*=\s*(self\.\w+)", _fix_param, params_str)
             result.append(f"{indent}def {fn_name}(self{new_params}):")
             for init_line in inits:
@@ -1951,7 +2146,7 @@ def _fix_self_defaults(lines: list[str]) -> list[str]:
 
 def _add_push_alias(lines: list[str]) -> list[str]:
     """For user-defined classes with a 'push' method, add 'append = push' alias.
-    
+
     This allows code like stack.append(x) (generated from stack.push(x))
     to work on user classes that define a push() method.
     Inserts 'append = push' as a class-level attribute after the push method body.
@@ -1965,8 +2160,6 @@ def _add_push_alias(lines: list[str]) -> list[str]:
         m = re.match(r"^(\s+)def push\(", line)
         if m:
             method_indent = m.group(1)
-            class_indent = method_indent[:-4] if len(method_indent) >= 4 else ""
-            body_indent = method_indent + "    "
             # Skip the body of push (collect until we hit a line at method_indent or less)
             i += 1
             while i < len(lines):
@@ -2014,7 +2207,9 @@ def _inject_return_fns(lines: list[str]) -> list[str]:
         # Detect IIFE block opener: def _iifeN(): # __IIFE__var___iifeN__
         m2 = re.match(r"^(\s*)def (_iife\d+)\(\):  # __IIFE__(\w+)__\2__$", line)
         if m2:
-            stack.append((len(m2.group(1)), m2.group(2), f"{m2.group(3)} = {m2.group(2)}()"))
+            stack.append(
+                (len(m2.group(1)), m2.group(2), f"{m2.group(3)} = {m2.group(2)}()")
+            )
 
     # Flush anything remaining
     for indent_level, _, inject_stmt in reversed(stack):
@@ -2086,11 +2281,20 @@ def _inject_global_decls(lines: list[str]) -> list[str]:
     # Collect module-level names (simple assignments at indent 0)
     module_names: set[str] = set()
     for line in lines:
-        if not line or line[0] == ' ':
+        if not line or line[0] == " ":
             continue
         # Match simple assignment: name = ... (not class/def/if/for/...)
-        m = re.match(r'^([a-zA-Z_]\w*)\s*(?:[+\-*/|&^%]=|=(?!=))', line)
-        if m and m.group(1) not in ('class', 'def', 'if', 'for', 'while', 'return', 'import', 'from'):
+        m = re.match(r"^([a-zA-Z_]\w*)\s*(?:[+\-*/|&^%]=|=(?!=))", line)
+        if m and m.group(1) not in (
+            "class",
+            "def",
+            "if",
+            "for",
+            "while",
+            "return",
+            "import",
+            "from",
+        ):
             module_names.add(m.group(1))
 
     if not module_names:
@@ -2104,7 +2308,7 @@ def _inject_global_decls(lines: list[str]) -> list[str]:
         # Detect function/method start
         stripped = line.lstrip()
         indent = len(line) - len(stripped)
-        if stripped.startswith('def ') and stripped.endswith(':'):
+        if stripped.startswith("def ") and stripped.endswith(":"):
             # Scan the body for assignments to module-level names
             body_start = i + 1
             body_indent = indent + 4
@@ -2120,14 +2324,14 @@ def _inject_global_decls(lines: list[str]) -> list[str]:
                 if cur_ind <= indent:
                     break
                 # Check for assignment to a module-level name
-                m = re.match(r'^([a-zA-Z_]\w*)\s*(?:[+\-*/|&^%]=|=(?!=))', bstripped)
+                m = re.match(r"^([a-zA-Z_]\w*)\s*(?:[+\-*/|&^%]=|=(?!=))", bstripped)
                 if m and m.group(1) in module_names:
                     used_globals.add(m.group(1))
                 j += 1
             # Insert global declarations after def line, at body_indent
-            pfx = ' ' * body_indent
+            pfx = " " * body_indent
             for name in sorted(used_globals):
-                result.append(pfx + f'global {name}')
+                result.append(pfx + f"global {name}")
         i += 1
     return result
 
@@ -2192,6 +2396,7 @@ def _try_expand_line(s: str) -> str:
         lines_in_body = [b.strip() for b in body.split(";") if b.strip()]
         body_str = "\n  ".join(lines_in_body)
         return f"{m.group(1)} {{\n  {body_str}\n}}"
+
     # for (...) stmt  (no braces, inline body)
     # Only match when the body is a simple statement (not starting another block)
     def _for_inline_body(s):
@@ -2199,16 +2404,20 @@ def _try_expand_line(s: str) -> str:
         if not s.startswith("for"):
             return None
         i2 = s.index("(")
-        depth = 1; j2 = i2 + 1
+        depth = 1
+        j2 = i2 + 1
         while j2 < len(s) and depth > 0:
-            if s[j2] == "(": depth += 1
-            elif s[j2] == ")": depth -= 1
+            if s[j2] == "(":
+                depth += 1
+            elif s[j2] == ")":
+                depth -= 1
             j2 += 1
         rest = s[j2:].strip().rstrip(";")
         if rest and not rest.startswith("{"):
             header = s[:j2]
             return f"{header} {{\n  {rest}\n}}"
         return None
+
     expanded = _for_inline_body(s)
     if expanded:
         return expanded
@@ -2318,16 +2527,14 @@ def _add_undefined_defaults(params: str) -> str:
         return params
     parts = _split_decl_commas(params)
     result = []
-    saw_default = False
     for p in parts:
         p = p.strip()
-        if p.startswith('*') or '=' in p:
-            if '=' in p and not p.startswith('*'):
-                saw_default = True
+        if p.startswith("*") or "=" in p:
+            if "=" in p and not p.startswith("*"):
+                pass
             result.append(p)
         else:
             result.append(f"{p}=_undefined")
-            saw_default = True
     return ", ".join(result)
 
 
@@ -2352,14 +2559,14 @@ def _split_decl_commas(s: str) -> list:
             in_str = True
             str_char = ch
             current.append(ch)
-        elif ch in ('(', '[', '{'):
+        elif ch in ("(", "[", "{"):
             depth += 1
             current.append(ch)
-        elif ch in (')', ']', '}'):
+        elif ch in (")", "]", "}"):
             depth -= 1
             current.append(ch)
-        elif ch == ',' and depth == 0:
-            parts.append(''.join(current).strip())
+        elif ch == "," and depth == 0:
+            parts.append("".join(current).strip())
             current = []
             i += 1
             continue
@@ -2367,7 +2574,7 @@ def _split_decl_commas(s: str) -> list:
             current.append(ch)
         i += 1
     if current:
-        parts.append(''.join(current).strip())
+        parts.append("".join(current).strip())
     return parts
 
 
@@ -2435,28 +2642,41 @@ def _translate_line(line: str) -> str:
             limit = _translate_expr(cm_simple.group(2).strip())
             if cm_simple.group(1) == "<=":
                 limit = f"({limit})+1"
-            return pfx + f"for {var} in range({_translate_expr(start)}, {limit}, {step}):"
+            return (
+                pfx + f"for {var} in range({_translate_expr(start)}, {limit}, {step}):"
+            )
         if cm_dec_simple:
             limit = _translate_expr(cm_dec_simple.group(2).strip())
             if cm_dec_simple.group(1) == ">":
                 limit = f"({limit})+1"
-            return pfx + f"for {var} in range({_translate_expr(start)}, {limit}-1, {step}):"
+            return (
+                pfx
+                + f"for {var} in range({_translate_expr(start)}, {limit}-1, {step}):"
+            )
         # Check for `var * var <= n` → range(start, int(n**0.5)+1, step)
-        cm_sq = re.match(rf"^{re.escape(var)}\s*\*\s*{re.escape(var)}\s*(<=|<)\s*(.+)$", cond_raw)
+        cm_sq = re.match(
+            rf"^{re.escape(var)}\s*\*\s*{re.escape(var)}\s*(<=|<)\s*(.+)$", cond_raw
+        )
         if cm_sq:
             limit_expr = _translate_expr(cm_sq.group(2).strip())
             if cm_sq.group(1) == "<=":
                 limit = f"int(({limit_expr})**0.5)+1"
             else:
                 limit = f"int(({limit_expr})**0.5)"
-            return pfx + f"for {var} in range({_translate_expr(start)}, {limit}, {step}):"
+            return (
+                pfx + f"for {var} in range({_translate_expr(start)}, {limit}, {step}):"
+            )
         # Fallback: emit while loop with condition
         py_cond = _translate_expr(cond_raw)
-        return pfx + f"for {var} in (lambda: (x for x in __import__('itertools').count({_translate_expr(start)}, {step}) if True))():\n{pfx}    if not ({py_cond}): break"
-
+        return (
+            pfx
+            + f"for {var} in (lambda: (x for x in __import__('itertools').count({_translate_expr(start)}, {step}) if True))():\n{pfx}    if not ({py_cond}): break"
+        )
 
     # Single-line for-of with inline body: for (const x of xs) body
-    m = re.match(r"^for\s*\(\s*(?:var|let|const)?\s*(.+?)\s+of\s+([^)]+?)\s*\)\s+(.+)$", s)
+    m = re.match(
+        r"^for\s*\(\s*(?:var|let|const)?\s*(.+?)\s+of\s+([^)]+?)\s*\)\s+(.+)$", s
+    )
     if m and not m.group(3).strip().startswith("{"):
         # Verify the iterable (group 2) has balanced parens; if not, the regex grabbed a wrong )
         iter_candidate = m.group(2).strip()
@@ -2542,9 +2762,29 @@ def _translate_line(line: str) -> str:
         )
     if re.match(r"^constructor\s*\(", s):
         m2 = re.match(r"^constructor\s*\(([^)]*)\)\s*\{?$", s)
-        raw_params = m2.group(1) if m2 else ''
+        raw_params = m2.group(1) if m2 else ""
         params = _add_undefined_defaults(raw_params)
         return pfx + f"def __init__(self, {params}):"
+
+    # getter: get name() {  →  @property \n def name(self):
+    m = re.match(r"^get\s+(\w+)\s*\(\s*\)\s*\{?$", s)
+    if m:
+        prop = m.group(1)
+        return pfx + f"@property\n{pfx}def {prop}(self):"
+
+    # setter: set name(val) {  →  @name.setter \n def name(self, val):
+    m = re.match(r"^set\s+(\w+)\s*\(([^)]*)\)\s*\{?$", s)
+    if m:
+        prop = m.group(1)
+        param = m.group(2).strip() or "value"
+        return pfx + f"@{prop}.setter\n{pfx}def {prop}(self, {param}):"
+
+    # static method: static name(params) {  →  @staticmethod \n def name(params):
+    m = re.match(r"^static\s+(\w+)\s*\(([^)]*)\)\s*\{?$", s)
+    if m:
+        name = m.group(1)
+        params = _add_undefined_defaults(m.group(2).strip())
+        return pfx + f"@staticmethod\n{pfx}def {name}({params}):"
 
     # function
     m = re.match(r"^(?:async\s+)?function\s*\*?\s*(\w+)\s*\(([^)]*)\)\s*\{?$", s)
@@ -2583,10 +2823,7 @@ def _translate_line(line: str) -> str:
     m = re.match(r"^(\w+)\s*=\s*(?:async\s+)?\(([^)]*)\)\s*=>\s*(.+)$", s)
     if m:
         params = re.sub(r"\.\.\.(\w+)", r"*\1", m.group(2))
-        return (
-            pfx
-            + f"def {m.group(1)}({params}): return {_translate_expr(m.group(3))}"
-        )
+        return pfx + f"def {m.group(1)}({params}): return {_translate_expr(m.group(3))}"
     m = re.match(r"^(\w+)\s*=\s*(?:async\s+)?(\w+)\s*=>\s*\{?$", s)
     if m:
         return pfx + f"def {m.group(1)}({m.group(2)}):"
@@ -2635,20 +2872,30 @@ def _translate_line(line: str) -> str:
     # Use balanced-paren matching to find the params (handles nested parens)
     _meth_m = re.match(r"^(\w+)\s*\(", s)
     if _meth_m and _meth_m.group(1) not in (
-        "if", "for", "while", "switch", "catch", "function", "return",
+        "if",
+        "for",
+        "while",
+        "switch",
+        "catch",
+        "function",
+        "return",
     ):
         _name = _meth_m.group(1)
-        _rest = s[_meth_m.end():]
+        _rest = s[_meth_m.end() :]
         # find balanced closing paren
         _depth, _idx = 1, 0
         for _ch in _rest:
-            if _ch == "(": _depth += 1
-            elif _ch == ")": _depth -= 1
-            if _depth == 0: break
+            if _ch == "(":
+                _depth += 1
+            elif _ch == ")":
+                _depth -= 1
+            if _depth == 0:
+                break
             _idx += 1
-        _after = _rest[_idx + 1:].strip()
+        _after = _rest[_idx + 1 :].strip()
         if _after == "{":
             params = _rest[:_idx].strip()
+
             # Translate default parameter values (e.g. new Set() → JSSet())
             def _translate_param_defaults(params_str: str) -> str:
                 out = []
@@ -2661,11 +2908,14 @@ def _translate_line(line: str) -> str:
                     else:
                         out.append(part)
                 return ", ".join(out)
+
             params = _translate_param_defaults(params)
             # Handle rest parameters: ...name → *name
             if "..." in params:
                 parts = [p.strip() for p in params.split(",")]
-                params = ", ".join(f"*{p[3:]}" if p.startswith("...") else p for p in parts)
+                params = ", ".join(
+                    f"*{p[3:]}" if p.startswith("...") else p for p in parts
+                )
             params = _add_undefined_defaults(params)
             if params:
                 return pfx + f"def {_name}(self, {params}):"
@@ -2695,14 +2945,20 @@ def _translate_inline_arrows(expr: str) -> str:
       x => expr        →  lambda x: expr
     Does NOT handle multi-line arrow bodies (those are handled at line level).
     """
+
     # (params) => expr  (not followed by {)
     def _fix_lambda_params(params_str: str) -> str:
         """Convert ...rest → *rest in lambda params."""
         parts = [p.strip() for p in params_str.split(",")]
-        return ", ".join(f"*{p[3:]}" if p.strip().startswith("...") else p for p in parts)
+        return ", ".join(
+            f"*{p[3:]}" if p.strip().startswith("...") else p for p in parts
+        )
+
     expr = re.sub(
         r"(?<!\w)\(([^)]*)\)\s*=>\s*(?!\{)([^,]+?)(?=[,;)\]]|$)",
-        lambda m: f"lambda {_fix_lambda_params(m.group(1).strip())}: {m.group(2).strip()}",
+        lambda m: (
+            f"lambda {_fix_lambda_params(m.group(1).strip())}: {m.group(2).strip()}"
+        ),
         expr,
     )
     # single param arrow:  word => expr  (not followed by {)
@@ -2731,31 +2987,41 @@ def _fix_method_to_function(expr: str, method_name: str) -> str:
         in_str, str_ch, esc = False, "", False
         while k < len(expr) and depth > 0:
             ch = expr[k]
-            if esc: esc = False
+            if esc:
+                esc = False
             elif in_str:
-                if ch == "\\": esc = True
-                elif ch == str_ch: in_str = False
-            elif ch in ('"', "'", "`"): in_str, str_ch = True, ch
-            elif ch == "(": depth += 1
-            elif ch == ")": depth -= 1
-            if depth > 0: k += 1
-            else: break
+                if ch == "\\":
+                    esc = True
+                elif ch == str_ch:
+                    in_str = False
+            elif ch in ('"', "'", "`"):
+                in_str, str_ch = True, ch
+            elif ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+            if depth > 0:
+                k += 1
+            else:
+                break
         args = expr[args_start:k]
         # Find start of expression before .method_name
         j = pos
         while j > i:
-            if expr[j-1] == ")":
+            if expr[j - 1] == ")":
                 depth2 = 1
                 m = j - 2
                 while m >= i and depth2 > 0:
-                    if expr[m] == ")": depth2 += 1
-                    elif expr[m] == "(": depth2 -= 1
+                    if expr[m] == ")":
+                        depth2 += 1
+                    elif expr[m] == "(":
+                        depth2 -= 1
                     m -= 1
                 j = m + 1
-                while j > i and (expr[j-1].isalnum() or expr[j-1] in "_."):
+                while j > i and (expr[j - 1].isalnum() or expr[j - 1] in "_."):
                     j -= 1
-            elif expr[j-1].isalnum() or expr[j-1] in "_.":
-                while j > i and (expr[j-1].isalnum() or expr[j-1] in "_."):
+            elif expr[j - 1].isalnum() or expr[j - 1] in "_.":
+                while j > i and (expr[j - 1].isalnum() or expr[j - 1] in "_."):
                     j -= 1
             else:
                 break
@@ -2772,13 +3038,13 @@ def _fix_length_calls(expr: str) -> str:
     result = []
     i = 0
     while i < len(expr):
-        pos = expr.find('.length', i)
+        pos = expr.find(".length", i)
         if pos == -1:
             result.append(expr[i:])
             break
         end = pos + 7
         # Ensure it's a word boundary (not .lengthOf etc.)
-        if end < len(expr) and (expr[end].isalnum() or expr[end] == '_'):
+        if end < len(expr) and (expr[end].isalnum() or expr[end] == "_"):
             result.append(expr[i:end])
             i = end
             continue
@@ -2786,51 +3052,55 @@ def _fix_length_calls(expr: str) -> str:
         j = pos
         # First, scan back through chained calls like a.b().c().length
         while j > i:
-            if expr[j-1] == ')':
+            if expr[j - 1] == ")":
                 # Find matching open paren
                 depth = 1
                 k = j - 2
                 while k >= i and depth > 0:
-                    if expr[k] == ')': depth += 1
-                    elif expr[k] == '(': depth -= 1
+                    if expr[k] == ")":
+                        depth += 1
+                    elif expr[k] == "(":
+                        depth -= 1
                     k -= 1
                 j = k + 1  # j now points to the '('
                 # Scan back through method/object name (word chars and dots)
-                while j > i and (expr[j-1].isalnum() or expr[j-1] in '_.'):
+                while j > i and (expr[j - 1].isalnum() or expr[j - 1] in "_."):
                     j -= 1
-            elif expr[j-1] == ']':
+            elif expr[j - 1] == "]":
                 # Find matching open bracket
                 depth = 1
                 k = j - 2
                 while k >= i and depth > 0:
-                    if expr[k] == ']': depth += 1
-                    elif expr[k] == '[': depth -= 1
+                    if expr[k] == "]":
+                        depth += 1
+                    elif expr[k] == "[":
+                        depth -= 1
                     k -= 1
                 j = k + 1
-                while j > i and (expr[j-1].isalnum() or expr[j-1] in '_.'):
+                while j > i and (expr[j - 1].isalnum() or expr[j - 1] in "_."):
                     j -= 1
-            elif expr[j-1] == '"':
+            elif expr[j - 1] == '"':
                 # String literal
                 k = j - 2
                 while k >= i and expr[k] != '"':
                     k -= 1
                 j = k
                 break
-            elif expr[j-1] == "'":
+            elif expr[j - 1] == "'":
                 k = j - 2
                 while k >= i and expr[k] != "'":
                     k -= 1
                 j = k
                 break
-            elif expr[j-1] == '\x00':
+            elif expr[j - 1] == "\x00":
                 # STR placeholder \x00STRn\x00 — scan to opening \x00
                 k = j - 2
-                while k >= i and expr[k] != '\x00':
+                while k >= i and expr[k] != "\x00":
                     k -= 1
                 j = k
                 break
-            elif expr[j-1].isalnum() or expr[j-1] in '_.':
-                while j > i and (expr[j-1].isalnum() or expr[j-1] in '_.'):
+            elif expr[j - 1].isalnum() or expr[j - 1] in "_.":
+                while j > i and (expr[j - 1].isalnum() or expr[j - 1] in "_."):
                     j -= 1
             else:
                 break
@@ -2850,9 +3120,11 @@ def _translate_expr(expr: str) -> str:
 
     # Protect string literals from transformations
     _str_placeholders: list[str] = []
+
     def _save_str(m: re.Match) -> str:
         _str_placeholders.append(m.group(0))
-        return f"\x00STR{len(_str_placeholders)-1}\x00"
+        return f"\x00STR{len(_str_placeholders) - 1}\x00"
+
     # Protect double-quoted strings
     expr = re.sub(r'"(?:[^"\\]|\\.)*"', _save_str, expr)
     # Protect single-quoted strings (not template literals)
@@ -2861,12 +3133,14 @@ def _translate_expr(expr: str) -> str:
     # Template literals
     def tl(m):
         inner = m.group(1)
+
         # Restore protected string placeholders in the template literal content
         def _restore_in_tl(m2: re.Match) -> str:
             idx = int(m2.group(1))
             if idx < len(_str_placeholders):
                 return _str_placeholders[idx]
             return m2.group(0)
+
         inner = re.sub(r"\x00STR(\d+)\x00", _restore_in_tl, inner)
         # Convert ${expr} to {expr}
         inner = re.sub(r"\$\{(.+?)\}", r"{\1}", inner)
@@ -3018,18 +3292,28 @@ def _translate_expr(expr: str) -> str:
     # Assignment ops
     expr = re.sub(r"^(\w+)\+\+$", r"\1 += 1", expr)
     expr = re.sub(r"^(\w+)--$", r"\1 -= 1", expr)
+
     # Expression-level post/pre increment: var++ → (var := var + 1) - 1, ++var → (var := var + 1)
     # Only translate when not a standalone statement (i.e., there's surrounding content)
     def _translate_increments(e: str) -> str:
         # post-increment: var++ (not at start of full expr with nothing before)
-        e = re.sub(r"(?<!\+)(\b\w+)\+\+(?!\+)", lambda m: f"({m.group(1)} := {m.group(1)} + 1) - 1", e)
+        e = re.sub(
+            r"(?<!\+)(\b\w+)\+\+(?!\+)",
+            lambda m: f"({m.group(1)} := {m.group(1)} + 1) - 1",
+            e,
+        )
         # post-decrement: var-- (not at start)
-        e = re.sub(r"(?<!-)(\b\w+)--(?!-)", lambda m: f"({m.group(1)} := {m.group(1)} - 1) + 1", e)
+        e = re.sub(
+            r"(?<!-)(\b\w+)--(?!-)",
+            lambda m: f"({m.group(1)} := {m.group(1)} - 1) + 1",
+            e,
+        )
         # pre-increment: ++var
         e = re.sub(r"\+\+(\b\w+)", lambda m: f"({m.group(1)} := {m.group(1)} + 1)", e)
         # pre-decrement: --var
         e = re.sub(r"--(\b\w+)", lambda m: f"({m.group(1)} := {m.group(1)} - 1)", e)
         return e
+
     if "++" in expr or ("--" in expr and not re.match(r"^(\w+)--$", expr)):
         # Don't transform standalone i++ / i-- (already handled above)
         if not re.match(r"^\w+\+\+$", expr) and not re.match(r"^\w+--$", expr):
@@ -3101,8 +3385,10 @@ def _translate_expr(expr: str) -> str:
                         d2 = 1
                         j2 = i2 + 1
                         while j2 < n2 and d2 > 0:
-                            if s[j2] == "(": d2 += 1
-                            elif s[j2] == ")": d2 -= 1
+                            if s[j2] == "(":
+                                d2 += 1
+                            elif s[j2] == ")":
+                                d2 -= 1
                             j2 += 1
                         inner2 = s[i2 + 1 : j2 - 1]
                         inner2 = _translate_inner_ternary(inner2)
@@ -3113,6 +3399,7 @@ def _translate_expr(expr: str) -> str:
                         out.append(s[i2])
                         i2 += 1
                 return "".join(out)
+
             expr = _translate_inner_ternary(expr)
 
     # Translate ternary inside lambda bodies: lambda params: TERNARY
@@ -3120,9 +3407,14 @@ def _translate_expr(expr: str) -> str:
         """Find 'lambda ...: body' and apply ternary to body if it contains ?."""
         return re.sub(
             r"(lambda [^:]+: )(.+)",
-            lambda m: m.group(1) + _apply_ternary(m.group(2)) if "?" in m.group(2) else m.group(0),
+            lambda m: (
+                m.group(1) + _apply_ternary(m.group(2))
+                if "?" in m.group(2)
+                else m.group(0)
+            ),
             s,
         )
+
     if "lambda" in expr and "?" in expr:
         expr = _fix_lambda_body_ternary(expr)
 
@@ -3169,9 +3461,9 @@ def _fix_object_literals(expr: str) -> str:
             inner = expr[i + 1 : j - 1]
             # Check if it looks like an object literal (has identifier: pattern or empty)
             inner_stripped = inner.strip()
-            if (inner_stripped == "" or re.search(r"(?:^|,)\s*(\w+)\s*:", inner)) and not re.search(
-                r"\bfor\b|\bif\b|\blambda\b", inner
-            ):
+            if (
+                inner_stripped == "" or re.search(r"(?:^|,)\s*(\w+)\s*:", inner)
+            ) and not re.search(r"\bfor\b|\bif\b|\blambda\b", inner):
                 # Expand shorthand properties BEFORE quoting keys
                 # A shorthand property is: (start or ,) identifier (not followed by :)
                 def _expand_shorthand_prop(inner_s: str) -> str:
@@ -3181,11 +3473,12 @@ def _fix_object_literals(expr: str) -> str:
                     for prop in _split_decl_commas(inner_s):
                         prop = prop.strip()
                         # Check if it's a bare identifier (shorthand property)
-                        if re.match(r'^[A-Za-z_]\w*$', prop):
+                        if re.match(r"^[A-Za-z_]\w*$", prop):
                             parts.append(f'"{prop}": {prop}')
                         else:
                             parts.append(prop)
                     return ", ".join(parts)
+
                 inner = _expand_shorthand_prop(inner)
                 # Quote unquoted keys
                 inner = re.sub(r"(?<![\"'\w])(\w+)\s*:", r'"\1":', inner)

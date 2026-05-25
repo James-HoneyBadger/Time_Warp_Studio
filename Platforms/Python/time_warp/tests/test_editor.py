@@ -245,3 +245,207 @@ class TestStringEvaluator:
     def test_unknown_function_raises(self):
         with pytest.raises(ValueError, match="Unknown string function"):
             self.eval("BOGUS(1)")
+
+
+class TestExpressionEvaluatorVariables:
+    """Tests for ExpressionEvaluator with variables."""
+
+    def eval(self, expr, variables=None):
+        return ExpressionEvaluator(variables=variables or {}).evaluate(expr)
+
+    def test_single_var(self):
+        assert self.eval("X", {"X": 7}) == 7.0
+
+    def test_two_vars_sum(self):
+        assert self.eval("X + Y", {"X": 5, "Y": 3}) == 8.0
+
+    def test_two_vars_product(self):
+        assert self.eval("X * Y", {"X": 4, "Y": 6}) == 24.0
+
+    def test_var_power(self):
+        assert self.eval("X ^ 2", {"X": 5}) == 25.0
+
+    def test_var_in_function(self):
+        assert self.eval("SQR(X)", {"X": 9}) == 3.0
+
+    def test_var_negative(self):
+        assert self.eval("ABS(X)", {"X": -10}) == 10.0
+
+    def test_var_int_function(self):
+        assert self.eval("INT(X)", {"X": 3.9}) == 3.0
+
+    def test_var_subtraction(self):
+        assert self.eval("X - Y", {"X": 10, "Y": 3}) == 7.0
+
+    def test_var_division(self):
+        assert self.eval("X / Y", {"X": 10, "Y": 2}) == 5.0
+
+    def test_var_complex_expr(self):
+        assert self.eval("X * X + Y * Y", {"X": 3, "Y": 4}) == 25.0
+
+    def test_sin_zero(self):
+        assert self.eval("SIN(0)") == 0.0
+
+    def test_cos_zero(self):
+        assert self.eval("COS(0)") == 1.0
+
+    def test_log_e(self):
+        result = self.eval("LOG(2.718281828)")
+        assert abs(result - 1.0) < 0.001
+
+    def test_nested_abs(self):
+        assert self.eval("ABS(-5) + ABS(-3)") == 8.0
+
+    def test_int_truncates_positive(self):
+        assert self.eval("INT(7.9)") == 7.0
+
+    def test_int_truncates_negative(self):
+        assert self.eval("INT(-7.1)") == -8.0
+
+
+class TestStringEvaluatorExtra:
+    """Extra StringEvaluator tests."""
+
+    def se(self, svars=None, nvars=None):
+        return StringEvaluator(
+            string_variables=svars or {},
+            numeric_variables=nvars or {},
+        )
+
+    def eval(self, expr, svars=None, nvars=None):
+        return self.se(svars, nvars).evaluate(expr)
+
+    def test_len_empty(self):
+        assert self.eval('LEN("")') == "0"
+
+    def test_left_zero(self):
+        assert self.eval('LEFT("hello", 0)') == ""
+
+    def test_right_full(self):
+        assert self.eval('RIGHT("hello", 5)') == "hello"
+
+    def test_mid_start_1(self):
+        assert self.eval('MID("hello", 1, 2)') == "he"
+
+    def test_upper_already_upper(self):
+        assert self.eval('UPPER("HELLO")') == "HELLO"
+
+    def test_lower_already_lower(self):
+        assert self.eval('LOWER("hello")') == "hello"
+
+    def test_trim_no_spaces(self):
+        assert self.eval('TRIM("hi")') == "hi"
+
+    def test_space_zero(self):
+        assert self.eval("SPACE(0)") == ""
+
+    def test_str_float(self):
+        assert self.eval("STR(3.14)") == "3.14"
+
+    def test_chr_z(self):
+        assert self.eval("CHR(90)") == "Z"
+
+    def test_asc_lower(self):
+        assert self.eval('ASC("a")') == "97"
+
+    def test_string_variable_concat(self):
+        result = self.eval('A$ & B$', svars={"A$": "foo", "B$": "bar"})
+        assert result == "foobar"
+
+    def test_instr_at_start(self):
+        assert self.eval('INSTR("hello", "he")') == "1"
+
+    def test_instr_empty_needle(self):
+        result = self.eval('INSTR("hello", "")')
+        assert result in ("0", "1")  # implementations differ
+
+
+class TestExpressionEvaluatorExtended:
+    """More expression evaluator tests."""
+
+    def eval(self, expr, variables=None):
+        return ExpressionEvaluator(variables=variables or {}).evaluate(expr)
+
+    def test_add_floats(self):
+        assert self.eval("1.5 + 1.5") == 3.0
+
+    def test_subtract_floats(self):
+        assert self.eval("5.5 - 2.5") == 3.0
+
+    def test_multiply_by_zero(self):
+        assert self.eval("9999 * 0") == 0.0
+
+    def test_divide_exact(self):
+        assert self.eval("100 / 4") == 25.0
+
+    def test_power_zero(self):
+        assert self.eval("5 ^ 0") == 1.0
+
+    def test_power_one(self):
+        assert self.eval("7 ^ 1") == 7.0
+
+    def test_nested_parens_deep(self):
+        assert self.eval("((2 + 3) * (4 - 1))") == 15.0
+
+    def test_variable_in_expr(self):
+        assert self.eval("N + 1", {"N": 9.0}) == 10.0
+
+    def test_two_variables(self):
+        assert self.eval("A + B", {"A": 3.0, "B": 4.0}) == 7.0
+
+    def test_abs_positive(self):
+        assert self.eval("ABS(5)") == 5.0
+
+    def test_abs_negative(self):
+        assert self.eval("ABS(-7)") == 7.0
+
+    def test_int_truncates(self):
+        assert self.eval("INT(9.9)") == 9.0
+
+    def test_sqr_4(self):
+        assert self.eval("SQR(4)") == 2.0
+
+    def test_sqr_25(self):
+        assert self.eval("SQR(25)") == 5.0
+
+    def test_equal_true(self):
+        assert self.eval("3 = 3") != 0
+
+    def test_not_equal(self):
+        assert self.eval("3 <> 4") != 0
+
+
+class TestStringEvaluatorExtended:
+    """More string evaluator tests."""
+
+    def eval(self, expr, svars=None, nvars=None):
+        return StringEvaluator(
+            string_variables=svars or {}, numeric_variables=nvars or {}
+        ).evaluate(expr)
+
+    def test_string_literal(self):
+        assert self.eval('"hello"') == "hello"
+
+    def test_concat_literals(self):
+        assert self.eval('"foo" + "bar"') == "foobar"
+
+    def test_left_2(self):
+        assert self.eval('LEFT("hello", 2)') == "he"
+
+    def test_right_2(self):
+        assert self.eval('RIGHT("hello", 2)') == "lo"
+
+    def test_mid_2_3(self):
+        assert self.eval('MID("hello", 2, 3)') == "ell"
+
+    def test_ucase(self):
+        assert self.eval('UCASE("hello")') == "HELLO"
+
+    def test_lcase(self):
+        assert self.eval('LCASE("HELLO")') == "hello"
+
+    def test_len_function(self):
+        assert self.eval('LEN("hello")') == "5"
+
+    def test_str_var(self):
+        assert self.eval('X$', svars={"X$": "world"}) == "world"

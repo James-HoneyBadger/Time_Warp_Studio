@@ -64,7 +64,9 @@ class TWEditorWindow(QMainWindow):
         self.toolbar.addWidget(lang_label)
 
         self.lang_combo = QComboBox()
-        self.lang_combo.setMinimumWidth(150)  # Ensure dropdown is wide enough for all languages
+        self.lang_combo.setMinimumWidth(
+            150
+        )  # Ensure dropdown is wide enough for all languages
         for lang in Language:
             self.lang_combo.addItem(lang.name, lang)
         self.lang_combo.currentIndexChanged.connect(self.on_language_changed)
@@ -268,8 +270,7 @@ class TWEditorWindow(QMainWindow):
             self,
             "Save File",
             "",
-            "Time Warp Files (*.bas *.pilot *.logo *.pas *.pl *.f *.c)"
-            ";;All Files (*)",
+            "Time Warp Files (*.bas *.pilot *.logo *.pas *.pl *.f *.c);;All Files (*)",
         )
         if file_path:
             return self.save_to_path(file_path)

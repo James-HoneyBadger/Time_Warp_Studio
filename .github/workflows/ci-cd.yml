@@ -29,15 +29,13 @@ jobs:
       - name: Install dependencies
         run: |
           pip install -e "Platforms/Python[dev]"
+          pip install ruff
       
-      - name: Run Black formatter check
-        run: black --check Platforms/Python/time_warp/ --diff || true
+      - name: Lint (ruff — critical errors)
+        run: ruff check --select=E9,F63,F7,F82 --output-format=github Platforms/Python/time_warp/
       
-      - name: Run Flake8 linter
-        run: flake8 Platforms/Python/time_warp/ --max-line-length=120 --count --statistics || true
-      
-      - name: Run MyPy type checker
-        run: mypy Platforms/Python/time_warp/ --ignore-missing-imports || true
+      - name: Lint (ruff — full suite)
+        run: ruff check --output-format=github Platforms/Python/time_warp/
 
   # ===== TESTING =====
   

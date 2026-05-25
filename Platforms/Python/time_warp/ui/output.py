@@ -158,9 +158,7 @@ class InterpreterThread(QThread):
                 try:
                     import sys
 
-                    message = (
-                        "[THREAD] Turtle changed! " f"{len(self.turtle.lines)} lines"
-                    )
+                    message = f"[THREAD] Turtle changed! {len(self.turtle.lines)} lines"
                     if _DEBUG:  # pragma: no cover
                         print(message, file=sys.stderr)
                 except (BrokenPipeError, OSError):
@@ -738,7 +736,9 @@ class OutputPanel(QTextEdit):
         if ok:
             # Provide input
             if interp is None:
-                self.append_colored("\n❌ Input cancelled: interpreter unavailable", "error")
+                self.append_colored(
+                    "\n❌ Input cancelled: interpreter unavailable", "error"
+                )
                 return
             interp.provide_input(text)
             # Resume execution
@@ -812,11 +812,11 @@ class OutputPanel(QTextEdit):
             ),
             (
                 "unknown command",
-                ("Check spelling of commands. " "Use language-specific syntax."),
+                ("Check spelling of commands. Use language-specific syntax."),
             ),
             (
                 "unknown keyword",
-                ("Check spelling of commands. " "Use language-specific syntax."),
+                ("Check spelling of commands. Use language-specific syntax."),
             ),
             (
                 "invalid expression",

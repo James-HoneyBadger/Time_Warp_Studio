@@ -1,0 +1,23 @@
+%!PS-Adobe-3.0
+% Loop demos in PostScript
+
+% for loop: 1 to 5
+(Counting:) =
+1 1 5 {
+    =
+} for
+
+% repeat
+(Repeating:) =
+3 {
+    (Hello!) =
+} repeat
+
+% Nested loops: multiplication table
+1 1 3 {
+    /i exch def
+    1 1 3 {
+        /j exch def
+        i j mul =
+    } for
+} for

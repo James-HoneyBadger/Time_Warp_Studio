@@ -836,20 +836,19 @@ class LuaEnvironment:
             "error": lambda a: (_ for _ in ()).throw(
                 LuaError(str(a[0]) if a else "error")
             ),
-            "print": lambda a: self._emit("\t".join(_lua_tostring(v) for v in a))
-            or None,
-            "require": lambda a: self._emit(
-                f"ℹ️ require('{a[0]}') not supported in sandbox"
-            )
-            or None,
+            "print": lambda a: (
+                self._emit("\t".join(_lua_tostring(v) for v in a)) or None
+            ),
+            "require": lambda a: (
+                self._emit(f"ℹ️ require('{a[0]}') not supported in sandbox") or None
+            ),
             "pcall": lambda a: self._lua_pcall(a),
             "xpcall": lambda a: self._lua_xpcall(a),
             "load": lambda a: (
                 (lambda src: LuaLoadFunction(str(a[0]), self))(a[0]) if a else None
             ),
             "loadstring": lambda a: LuaLoadFunction(str(a[0]), self) if a else None,
-            "dofile": lambda a: self._emit("ℹ️ dofile not supported in sandbox")
-            or None,
+            "dofile": lambda a: self._emit("ℹ️ dofile not supported in sandbox") or None,
             "collectgarbage": lambda a: 0,
             "setmetatable": lambda a: _lua_setmetatable(a),
             "getmetatable": lambda a: None,
@@ -858,7 +857,7 @@ class LuaEnvironment:
             "module": lambda a: None,
             "newproxy": lambda a: {},
             "string.format": lambda a: (
-                a[0] % tuple(a[1:]) if len(a) > 1 else str(a[0]) if a else ""
+                self._resolve("string").format(a[0], *a[1:]) if a else ""
             ),
             "math.random": lambda a: self._resolve("math").random(
                 a[0] if a else None, a[1] if len(a) > 1 else None
@@ -874,7 +873,9 @@ class LuaEnvironment:
             "math.type": lambda a: (
                 "integer"
                 if isinstance(a[0], int)
-                else ("float" if isinstance(a[0], float) else "fail") if a else "fail"
+                else ("float" if isinstance(a[0], float) else "fail")
+                if a
+                else "fail"
             ),
         }
         if name in builtins:
@@ -1105,7 +1106,15 @@ class LuaTableLib:
             if comp and callable(comp):
                 import functools
 
-                tbl.sort(key=functools.cmp_to_key(lambda a, b: comp(a, b)))
+                # Lua comp(a,b) returns true if a < b; convert to cmp-style (-1/0/1)
+                def _cmp(a, b):
+                    if comp(a, b):
+                        return -1
+                    if comp(b, a):
+                        return 1
+                    return 0
+
+                tbl.sort(key=functools.cmp_to_key(_cmp))
             else:
                 tbl.sort()
 
@@ -1418,7 +1427,7 @@ class LuaCoroutine:
         self.status = "suspended"
         self._yield_values = values
         self._resume_event.clear()
-        self._yield_event.set()      # signal caller's resume()
+        self._yield_event.set()  # signal caller's resume()
         self._resume_event.wait(timeout=self._TIMEOUT)  # sleep until resumed
         self.status = "running"
         args = self._resume_args

@@ -32,18 +32,39 @@ _BRACKET_PATTERN = re.compile(r'\[|\]|"[^\s\[\]]*|[^\[\]\s]+')
 _PREFIX_FUNC_PATTERN = re.compile(
     r"\b(ACOS|ASIN|ATAN|CEIL|CINT|COS|COSH|EXP|FIX|FLOOR|"
     r"INT|LOG10|LOG2|LOG|ROUND|SGN|SIN|SINH|SQR|SQRT|TAN|TANH)\b"
-    r"(?!\s*\()"                                  # not already parenthesised
+    r"(?!\s*\()"  # not already parenthesised
     r"\s+([A-Za-z_][A-Za-z0-9_]*|\d+\.?\d*|\.\d+)",  # single identifier or number
     re.IGNORECASE,
 )
 
 # Set of math function names that take a single prefix argument (used for
 # grouping multi-token RGB arguments in SETPENCOLOR / SETCOLOR).
-_MATH_PREFIX_FUNCS: frozenset = frozenset([
-    "ACOS", "ASIN", "ATAN", "CEIL", "CINT", "COS", "COSH", "EXP",
-    "FIX", "FLOOR", "INT", "LOG10", "LOG2", "LOG", "ROUND", "SGN",
-    "SIN", "SINH", "SQR", "SQRT", "TAN", "TANH",
-])
+_MATH_PREFIX_FUNCS: frozenset = frozenset(
+    [
+        "ACOS",
+        "ASIN",
+        "ATAN",
+        "CEIL",
+        "CINT",
+        "COS",
+        "COSH",
+        "EXP",
+        "FIX",
+        "FLOOR",
+        "INT",
+        "LOG10",
+        "LOG2",
+        "LOG",
+        "ROUND",
+        "SGN",
+        "SIN",
+        "SINH",
+        "SQR",
+        "SQRT",
+        "TAN",
+        "TANH",
+    ]
+)
 
 # Color name to RGB mapping
 COLOR_NAMES = {
@@ -88,6 +109,7 @@ LOGO_COMMANDS = {
     "CLEARSCREEN",
     "CS",
     "CLEAR",
+    "CLEAN",
     "HIDETURTLE",
     "HT",
     "SHOWTURTLE",
@@ -138,6 +160,18 @@ LOGO_COMMANDS = {
     "LOCAL",
     "THING",
     # "REPCOUNT", # Reporter
+    "STAMP",
+    "STAMPCLEAN",
+    "TEXTSIZE",
+    "SETLABELHEIGHT",
+    "DOT",
+    "PENPAINT",
+    "PPT",
+    "PENERASE",
+    "PE",
+    "PENREVERSE",
+    "PX",
+    "PENMODE",
 }
 
 
@@ -229,7 +263,11 @@ def _split_logo_commands(
                 # from being split off as separate commands.
                 if upper in local_procedures and at_line_start:
                     is_command = True
-                elif interpreter and upper in interpreter.logo_procedures and at_line_start:
+                elif (
+                    interpreter
+                    and upper in interpreter.logo_procedures
+                    and at_line_start
+                ):
                     is_command = True
 
             if bracket_depth == 0 and is_command:
@@ -300,6 +338,7 @@ def _execute_single_logo_command(
         "CLEARSCREEN",
         "CS",
         "CLEAR",
+        "CLEAN",
         "HIDETURTLE",
         "HT",
         "SHOWTURTLE",
@@ -355,7 +394,14 @@ def _execute_single_logo_command(
             return "❌ Graphics not available for this command\n"
         turtle.home()
         return ""
-    if cmd_name in ["CLEARSCREEN", "CS", "CLEAR"]:
+    if cmd_name in ["CLEARSCREEN", "CS"]:
+        # UCBLogo: CS sends turtle home AND clears the screen
+        if turtle is None:
+            return "❌ Graphics not available for this command\n"
+        turtle.reset()
+        return ""
+    if cmd_name in ["CLEAN", "CLEAR"]:
+        # UCBLogo: CLEAN clears the screen without moving the turtle
         if turtle is None:
             return "❌ Graphics not available for this command\n"
         turtle.clear()
@@ -505,6 +551,30 @@ def _execute_single_logo_command(
     # Screen boundary modes (standard UCBLogo)
     if cmd_name in ("WINDOW", "WRAP", "FENCE"):
         return _logo_set_screen_mode(turtle, cmd_name)
+    # Turtle stamp / dot / textsize
+    if cmd_name in ("STAMP", "STAMPCLEAN"):
+        return _logo_stamp(interpreter, turtle)
+    if cmd_name in ("TEXTSIZE", "SETLABELHEIGHT"):
+        return _logo_textsize(interpreter, args)
+    if cmd_name == "DOT":
+        return _logo_dot(interpreter, turtle, args)
+    # Pen modes
+    if cmd_name in ("PENPAINT", "PPT"):
+        if turtle is not None:
+            turtle.pendown()
+        return ""
+    if cmd_name in ("PENERASE", "PE"):
+        # Erase mode: pen stays "down" logically but we note the mode
+        if turtle is not None:
+            interpreter.logo_pen_mode = "erase"
+        return ""
+    if cmd_name in ("PENREVERSE", "PX"):
+        if turtle is not None:
+            interpreter.logo_pen_mode = "reverse"
+        return ""
+    if cmd_name == "PENMODE":
+        mode = getattr(interpreter, "logo_pen_mode", "paint")
+        return mode + "\n"
     return f"❌ Unknown Logo command: {cmd_name}\n"
 
 
@@ -1081,9 +1151,20 @@ def _logo_setpencolor(
 
 # Reporter functions whose return value can be used as an argument
 _LOGO_REPORTERS = {
-    "SUM", "DIFFERENCE", "PRODUCT", "QUOTIENT", "RANDOM",
-    "WORD", "LIST", "SENTENCE", "FIRST", "LAST", "BUTFIRST", "BUTLAST",
-    "ITEM", "THING",
+    "SUM",
+    "DIFFERENCE",
+    "PRODUCT",
+    "QUOTIENT",
+    "RANDOM",
+    "WORD",
+    "LIST",
+    "SENTENCE",
+    "FIRST",
+    "LAST",
+    "BUTFIRST",
+    "BUTLAST",
+    "ITEM",
+    "THING",
 }
 
 
@@ -1153,7 +1234,9 @@ def _logo_setcolor(
         return "❌ Graphics not available for this command\n"
 
     # Check for reporter / variable that resolves to a single color
-    if len(args) >= 1 and (args[0].upper() in _LOGO_REPORTERS or args[0].startswith(":")):
+    if len(args) >= 1 and (
+        args[0].upper() in _LOGO_REPORTERS or args[0].startswith(":")
+    ):
         color_str = _resolve_color_arg(interpreter, args)
         if color_str.startswith("❌"):
             return color_str
@@ -1199,7 +1282,9 @@ def _logo_setbgcolor(
         return "❌ Graphics not available for this command\n"
 
     # Resolve reporter / variable arguments
-    if len(args) >= 1 and (args[0].upper() in _LOGO_REPORTERS or args[0].startswith(":")):
+    if len(args) >= 1 and (
+        args[0].upper() in _LOGO_REPORTERS or args[0].startswith(":")
+    ):
         color_str = _resolve_color_arg(interpreter, args)
         if color_str.startswith("❌"):
             return color_str
@@ -2228,9 +2313,7 @@ def _logo_local(interpreter: "Interpreter", args: list) -> str:
     return ""
 
 
-def _logo_set_screen_mode(
-    turtle: Optional["TurtleState"], mode: str
-) -> str:
+def _logo_set_screen_mode(turtle: Optional["TurtleState"], mode: str) -> str:
     """WINDOW / WRAP / FENCE — set turtle boundary handling mode.
 
     WINDOW: turtle can move beyond the visible area (infinite canvas).
@@ -2449,13 +2532,109 @@ def _logo_label(
     # Import TurtleShape to create a text shape at turtle position
     from ..graphics.turtle_state import TurtleShape
 
+    font_size = getattr(interpreter, "logo_font_size", 12)
     turtle.shapes.append(
         TurtleShape(
             shape_type="text",
             points=[(turtle.x, turtle.y)],
             color=turtle.pen_color,
             text=text,
-            font_size=12,
+            font_size=font_size,
+        )
+    )
+    turtle._notify_change()  # pylint: disable=protected-access
+    return ""
+
+
+def _logo_stamp(
+    interpreter: "Interpreter",
+    turtle: Optional["TurtleState"],
+) -> str:
+    """STAMP — stamp a copy of the turtle shape at the current position."""
+    if turtle is None:
+        return ""
+    import math
+    from ..graphics.turtle_state import TurtleShape
+
+    # Draw a small filled triangle (like the turtle cursor) at current pos
+    x, y = turtle.x, turtle.y
+    heading_rad = math.radians(turtle.heading)
+    size = 10.0
+    # Triangle pointing in the heading direction
+    tip = (x + size * math.sin(heading_rad), y - size * math.cos(heading_rad))
+    left = (
+        x + size * 0.5 * math.sin(heading_rad + math.radians(140)),
+        y - size * 0.5 * math.cos(heading_rad + math.radians(140)),
+    )
+    right = (
+        x + size * 0.5 * math.sin(heading_rad - math.radians(140)),
+        y - size * 0.5 * math.cos(heading_rad - math.radians(140)),
+    )
+    turtle.shapes.append(
+        TurtleShape(
+            shape_type="polygon",
+            points=[tip, left, right],
+            color=turtle.pen_color,
+            fill_color=turtle.pen_color,
+        )
+    )
+    turtle._notify_change()  # pylint: disable=protected-access
+    return f"🐢 Stamped at ({x:.1f}, {y:.1f})\n"
+
+
+def _logo_textsize(
+    interpreter: "Interpreter",
+    args: list,
+) -> str:
+    """TEXTSIZE n — set the font size for subsequent LABEL commands."""
+    if not args:
+        return "❌ TEXTSIZE requires a size argument\n"
+    try:
+        size = int(_logo_eval_arg(interpreter, args[0]))
+        if size < 1 or size > 200:
+            return "❌ TEXTSIZE must be between 1 and 200\n"
+        interpreter.logo_font_size = size
+        return ""
+    except (ValueError, TypeError):
+        return f"❌ TEXTSIZE: invalid size '{args[0]}'\n"
+
+
+def _logo_dot(
+    interpreter: "Interpreter",
+    turtle: Optional["TurtleState"],
+    args: list,
+) -> str:
+    """DOT [size] — draw a dot at the current turtle position."""
+    if turtle is None:
+        return ""
+    from ..graphics.turtle_state import TurtleShape
+
+    # Optional size argument (default = pen width * 2 or 4)
+    size = turtle.pen_width * 2 if turtle.pen_width > 1 else 4
+    if args:
+        try:
+            size = float(_logo_eval_arg(interpreter, args[0]))
+        except (ValueError, TypeError):
+            pass
+    r = size / 2.0
+    x, y = turtle.x, turtle.y
+    # Approximate a dot as a small circle (polygon with many segments)
+    import math
+
+    n_segs = 16
+    pts = [
+        (
+            x + r * math.cos(math.radians(i * 360 / n_segs)),
+            y + r * math.sin(math.radians(i * 360 / n_segs)),
+        )
+        for i in range(n_segs)
+    ]
+    turtle.shapes.append(
+        TurtleShape(
+            shape_type="polygon",
+            points=pts,
+            color=turtle.pen_color,
+            fill_color=turtle.pen_color,
         )
     )
     turtle._notify_change()  # pylint: disable=protected-access

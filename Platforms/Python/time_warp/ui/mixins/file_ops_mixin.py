@@ -80,7 +80,6 @@ class FileOperationsMixin(_FileOpsMixinBase):
             self.settings.setValue("last_dir", str(Path(filename).parent))
             self.load_file(filename)
 
-
     def load_file(self, filename):
         """Load file into current tab."""
         from ...core.interpreter import Language
@@ -280,5 +279,3 @@ class FileOperationsMixin(_FileOpsMixinBase):
                 action = QAction(Path(filename).name, self)
                 action.triggered.connect(partial(self.load_file, filename))
                 self.recent_menu.addAction(action)
-
-

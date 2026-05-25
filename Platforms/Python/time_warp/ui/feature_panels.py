@@ -321,13 +321,13 @@ class LearningHubPanel(FeaturePanelBase):
             "title": "Logo Square Challenge",
             "language": "LOGO",
             "goal": "Use turtle graphics to draw a square.",
-            "starter": 'REPEAT 4 [FD 50 RT 90]\n',
+            "starter": "REPEAT 4 [FD 50 RT 90]\n",
         },
         {
             "title": "Python Loop Challenge",
             "language": "PYTHON",
             "goal": "Use a loop to print the numbers 1 through 5.",
-            "starter": 'for i in range(1, 6):\n    print(i)\n',
+            "starter": "for i in range(1, 6):\n    print(i)\n",
         },
     ]
 
@@ -358,7 +358,9 @@ class LearningHubPanel(FeaturePanelBase):
         ]:
             btn = QPushButton(label)
             btn.clicked.connect(
-                lambda _checked=False, fid=feature_id: self.open_feature_requested.emit(fid)
+                lambda _checked=False, fid=feature_id: self.open_feature_requested.emit(
+                    fid
+                )
             )
             quick_row.addWidget(btn)
         layout.addLayout(quick_row)
@@ -580,9 +582,7 @@ class LessonAuthoringPanel(FeaturePanelBase):
             return
 
         self._checkpoints.append(checkpoint)
-        self.checkpoint_list.addItem(
-            f"{len(self._checkpoints)}. {checkpoint['title']}"
-        )
+        self.checkpoint_list.addItem(f"{len(self._checkpoints)}. {checkpoint['title']}")
         self._update_preview()
         self.emit_status(f"Checkpoint added: {checkpoint['title']}")
 
@@ -1022,7 +1022,9 @@ class ProjectExplorerPanel(FeaturePanelBase):
             return None
 
         label = f"📁 {path.name}" if path.is_dir() else path.name
-        item_type = "Folder" if path.is_dir() else path.suffix.lower().lstrip(".") or "file"
+        item_type = (
+            "Folder" if path.is_dir() else path.suffix.lower().lstrip(".") or "file"
+        )
         item = QTreeWidgetItem([label, item_type])
         item.setData(0, self.FILE_PATH_ROLE, str(path))
 
@@ -2070,7 +2072,9 @@ class AIAssistantPanel(FeaturePanelBase):
         tutor_row.addWidget(explain_btn)
 
         fix_btn = QPushButton("Check Syntax")
-        fix_btn.clicked.connect(lambda: self.set_code_context("BASIC", self.query_input.text()))
+        fix_btn.clicked.connect(
+            lambda: self.set_code_context("BASIC", self.query_input.text())
+        )
         tutor_row.addWidget(fix_btn)
 
         kb_btn = QPushButton("Load Knowledge Base")
@@ -2109,10 +2113,12 @@ class AIAssistantPanel(FeaturePanelBase):
 
         response = self.ai.query(query)
         self.response_display.setText(response)
-        self._set_suggestions([
-            "Ask about loops, conditionals, arrays, or functions",
-            "Use Tutor Me from the Learning Hub for code-specific hints",
-        ])
+        self._set_suggestions(
+            [
+                "Ask about loops, conditionals, arrays, or functions",
+                "Use Tutor Me from the Learning Hub for code-specific hints",
+            ]
+        )
         self.emit_status(f"AI responded to: {query[:30]}...")
 
     def load_knowledge(self):
@@ -2129,46 +2135,58 @@ class AIAssistantPanel(FeaturePanelBase):
             self.response_display.setText(
                 "Start by writing a few lines of code, then ask the tutor for hints."
             )
-            self._set_suggestions([
-                "Write a print statement",
-                "Try a loop example",
-                "Open a challenge from the Learning Hub",
-            ])
+            self._set_suggestions(
+                [
+                    "Write a print statement",
+                    "Try a loop example",
+                    "Open a challenge from the Learning Hub",
+                ]
+            )
             return
 
         hints = [f"Language detected: {normalized}"]
         lower = source.lower()
         if "for " in lower or "repeat" in lower or "while" in lower:
-            hints.append("You are using a loop. Check the body indentation or bracket structure.")
+            hints.append(
+                "You are using a loop. Check the body indentation or bracket structure."
+            )
         if "print" in lower or "select" in lower:
-            hints.append("Your program already produces output. Run it and compare the result with your goal.")
+            hints.append(
+                "Your program already produces output. Run it and compare the result with your goal."
+            )
         if normalized == "LOGO":
             hints.append("For turtle drawings, use REPEAT blocks to reduce repetition.")
         elif normalized == "PYTHON":
             hints.append("Python relies on indentation, so keep nested blocks aligned.")
         elif normalized == "BASIC":
-            hints.append("BASIC works well when you build the program one small step at a time.")
+            hints.append(
+                "BASIC works well when you build the program one small step at a time."
+            )
 
         syntax_help = self.ai.fix_syntax(source)
         message = "Tutor summary:\n\n" + "\n".join(f"• {hint}" for hint in hints)
         message += "\n\nSyntax coach:\n" + syntax_help.explanation
         self.response_display.setText(message)
-        self._set_suggestions([
-            "Run the code and compare output",
-            "Simplify one step at a time",
-            "Open Quick Reference for syntax examples",
-        ])
+        self._set_suggestions(
+            [
+                "Run the code and compare output",
+                "Simplify one step at a time",
+                "Open Quick Reference for syntax examples",
+            ]
+        )
         self.emit_status("AI tutor updated for current code")
 
     def set_error_context(self, error_message: str):
         """Provide an error context for quick help."""
         suggestion = self.ai.explain_error(error_message)
         self.response_display.setText(suggestion.explanation)
-        self._set_suggestions([
-            "Check the highlighted line",
-            "Look for missing quotes or brackets",
-            "Try the Syntax Validator panel",
-        ])
+        self._set_suggestions(
+            [
+                "Check the highlighted line",
+                "Look for missing quotes or brackets",
+                "Try the Syntax Validator panel",
+            ]
+        )
         self.emit_status("AI generated an error explanation")
 
 

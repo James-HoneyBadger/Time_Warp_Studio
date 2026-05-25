@@ -57,6 +57,7 @@ class _PatternMatchError(_ErlangError):
 
 class _Atom:
     """Erlang atom (lowercase symbol)."""
+
     _cache: Dict[str, "_Atom"] = {}
 
     def __new__(cls, name: str) -> "_Atom":
@@ -90,6 +91,7 @@ _false_atom = _Atom("false")
 
 class _Tuple:
     """Erlang tuple."""
+
     def __init__(self, *elements: Any):
         self.elements = tuple(elements)
 
@@ -109,6 +111,7 @@ class _Tuple:
 
 class _Pid:
     """Simulated Erlang PID."""
+
     _counter = 0
 
     def __init__(self, name: str = ""):
@@ -138,6 +141,15 @@ def _erl_repr(val: Any) -> str:
         return "#{" + pairs + "}"
     if isinstance(val, _Pid):
         return repr(val)
+    if isinstance(val, bytes):
+        try:
+            # If all printable ASCII, show as string binary
+            text = val.decode("latin-1")
+            if all(32 <= ord(c) < 127 for c in text):
+                return f'<<"{text}">>'
+        except Exception:
+            pass
+        return "<<" + ", ".join(str(b) for b in val) + ">>"
     if isinstance(val, str):
         return f'"{val}"'
     return str(val)
@@ -155,7 +167,9 @@ class ErlangEnvironment:
         self.interpreter = interpreter
         self.turtle = turtle
         self._output: List[str] = []
-        self._functions: Dict[Tuple[str, int], List[Tuple[List[str], Optional[str], List[str]]]] = {}
+        self._functions: Dict[
+            Tuple[str, int], List[Tuple[List[str], Optional[str], List[str]]]
+        ] = {}
         self._module_name: Optional[str] = None
         self._exported: List[Tuple[str, int]] = []
         self._self_pid = _Pid("self")
@@ -181,7 +195,7 @@ class ErlangEnvironment:
                     break
             if not called:
                 # If there are no-arg exported functions, call first one
-                for (fname, arity) in self._exported:
+                for fname, arity in self._exported:
                     if arity == 0 and (fname, 0) in self._functions:
                         self._call_function(fname, [])
                         break
@@ -207,15 +221,15 @@ class ErlangEnvironment:
             elif ch == '"' and in_string:
                 in_string = False
                 result.append(ch)
-            elif ch == '%' and not in_string:
+            elif ch == "%" and not in_string:
                 # Skip to end of line (preserve the newline itself)
-                while i < n and source[i] != '\n':
+                while i < n and source[i] != "\n":
                     i += 1
                 continue
             else:
                 result.append(ch)
             i += 1
-        return ''.join(result)
+        return "".join(result)
 
     # ------------------------------------------------------------------
     # Parser
@@ -263,9 +277,15 @@ class ErlangEnvironment:
             elif ch == '"' and in_string:
                 in_string = False
                 current.append(ch)
-            elif ch == '.' and not in_string:
+            elif ch == "." and not in_string:
                 # Dot ending a form: followed by whitespace/EOF/comment
-                if i + 1 >= len(source) or source[i + 1] in (' ', '\t', '\n', '\r', '%'):
+                if i + 1 >= len(source) or source[i + 1] in (
+                    " ",
+                    "\t",
+                    "\n",
+                    "\r",
+                    "%",
+                ):
                     forms.append("".join(current).strip())
                     current = []
                 else:
@@ -315,23 +335,23 @@ class ErlangEnvironment:
                 continue
 
             # Bracket tracking
-            if ch in ('(', '[', '{'):
+            if ch in ("(", "[", "{"):
                 bracket_depth += 1
-            elif ch in (')', ']', '}'):
+            elif ch in (")", "]", "}"):
                 bracket_depth -= 1
-            elif ch == ';' and bracket_depth == 0 and kw_depth == 0:
+            elif ch == ";" and bracket_depth == 0 and kw_depth == 0:
                 clauses.append("".join(current).strip())
                 current = []
                 i += 1
                 continue
-            elif ch.isalpha() or ch == '_':
+            elif ch.isalpha() or ch == "_":
                 # Extract word token
                 j = i
-                while j < n and (form[j].isalnum() or form[j] == '_'):
+                while j < n and (form[j].isalnum() or form[j] == "_"):
                     j += 1
                 word = form[i:j]
                 # Only recognise as keyword at word boundary (not mid-identifier)
-                prev_is_word = i > 0 and (form[i - 1].isalnum() or form[i - 1] == '_')
+                prev_is_word = i > 0 and (form[i - 1].isalnum() or form[i - 1] == "_")
                 if not prev_is_word:
                     if word == "end":
                         kw_depth = max(0, kw_depth - 1)
@@ -352,8 +372,7 @@ class ErlangEnvironment:
         """Parse one function clause: name(Patterns) [when Guard] -> Body."""
         # Match: funcname(patterns) [when guard] -> body
         m = re.match(
-            r"^(\w+)\s*\(([^)]*)\)\s*(?:when\s+(.+?))?\s*->\s*(.+)$",
-            clause, re.DOTALL
+            r"^(\w+)\s*\(([^)]*)\)\s*(?:when\s+(.+?))?\s*->\s*(.+)$", clause, re.DOTALL
         )
         if not m:
             return
@@ -387,7 +406,10 @@ class ErlangEnvironment:
                 continue
             and_conds = self._split_commas(or_group)
             try:
-                if all(self._truthy(self._eval_expr(c.strip(), bindings)) for c in and_conds):
+                if all(
+                    self._truthy(self._eval_expr(c.strip(), bindings))
+                    for c in and_conds
+                ):
                     return True
             except Exception:
                 pass
@@ -420,22 +442,22 @@ class ErlangEnvironment:
                 i += 1
                 continue
             # Bracket tracking
-            if ch in ('(', '[', '{'):
+            if ch in ("(", "[", "{"):
                 bracket_depth += 1
-            elif ch in (')', ']', '}'):
+            elif ch in (")", "]", "}"):
                 bracket_depth -= 1
-            elif ch == ',' and bracket_depth == 0 and kw_depth == 0:
+            elif ch == "," and bracket_depth == 0 and kw_depth == 0:
                 parts.append("".join(current).strip())
                 current = []
                 i += 1
                 continue
-            elif ch.isalpha() or ch == '_':
+            elif ch.isalpha() or ch == "_":
                 # Extract full word token
                 j = i
-                while j < n and (s[j].isalnum() or s[j] == '_'):
+                while j < n and (s[j].isalnum() or s[j] == "_"):
                     j += 1
                 word = s[i:j]
-                prev_is_word = i > 0 and (s[i - 1].isalnum() or s[i - 1] == '_')
+                prev_is_word = i > 0 and (s[i - 1].isalnum() or s[i - 1] == "_")
                 if not prev_is_word:
                     if word == "end":
                         kw_depth = max(0, kw_depth - 1)
@@ -445,9 +467,9 @@ class ErlangEnvironment:
                         # Only lambda forms (fun(...) -> ... end) need kw_depth;
                         # fun Name/Arity references do not have a matching end.
                         k = j
-                        while k < n and s[k] in (' ', '\t', '\n', '\r'):
+                        while k < n and s[k] in (" ", "\t", "\n", "\r"):
                             k += 1
-                        if k < n and s[k] == '(':
+                        if k < n and s[k] == "(":
                             kw_depth += 1
                 current.append(s[i:j])
                 i = j
@@ -479,21 +501,21 @@ class ErlangEnvironment:
                 current.append(ch)
                 i += 1
                 continue
-            if ch in ('(', '[', '{'):
+            if ch in ("(", "[", "{"):
                 depth += 1
-            elif ch in (')', ']', '}'):
+            elif ch in (")", "]", "}"):
                 depth -= 1
-            elif ch == ',' and depth == 0 and kw_depth == 0:
+            elif ch == "," and depth == 0 and kw_depth == 0:
                 parts.append("".join(current).strip())
                 current = []
                 i += 1
                 continue
-            elif ch.isalpha() or ch == '_':
+            elif ch.isalpha() or ch == "_":
                 j = i
-                while j < n and (s[j].isalnum() or s[j] == '_'):
+                while j < n and (s[j].isalnum() or s[j] == "_"):
                     j += 1
                 word = s[i:j]
-                prev_is_word = i > 0 and (s[i - 1].isalnum() or s[i - 1] == '_')
+                prev_is_word = i > 0 and (s[i - 1].isalnum() or s[i - 1] == "_")
                 if not prev_is_word:
                     if word == "end":
                         kw_depth = max(0, kw_depth - 1)
@@ -501,9 +523,9 @@ class ErlangEnvironment:
                         kw_depth += 1
                     elif word == "fun":
                         k = j
-                        while k < n and s[k] in (' ', '\t', '\n', '\r'):
+                        while k < n and s[k] in (" ", "\t", "\n", "\r"):
                             k += 1
-                        if k < n and s[k] == '(':
+                        if k < n and s[k] == "(":
                             kw_depth += 1
                 current.append(s[i:j])
                 i = j
@@ -518,7 +540,9 @@ class ErlangEnvironment:
     # Function execution
     # ------------------------------------------------------------------
 
-    def _call_function(self, name: str, args: List[Any], env: Optional[Dict[str, Any]] = None) -> Any:
+    def _call_function(
+        self, name: str, args: List[Any], env: Optional[Dict[str, Any]] = None
+    ) -> Any:
         """Call an Erlang function by name and args."""
         arity = len(args)
         key = (name, arity)
@@ -552,7 +576,9 @@ class ErlangEnvironment:
     # Pattern matching
     # ------------------------------------------------------------------
 
-    def _match_pattern(self, pattern: str, value: Any, bindings: Dict[str, Any]) -> None:
+    def _match_pattern(
+        self, pattern: str, value: Any, bindings: Dict[str, Any]
+    ) -> None:
         """Match a value against a pattern, updating bindings. Raises _PatternMatchError on failure."""
         pattern = pattern.strip()
 
@@ -564,7 +590,9 @@ class ErlangEnvironment:
         if re.match(r"^[A-Z_][A-Za-z0-9_]*$", pattern):
             if pattern in bindings:
                 if bindings[pattern] != value:
-                    raise _PatternMatchError(f"variable {pattern} already bound to {bindings[pattern]}, cannot bind to {value}")
+                    raise _PatternMatchError(
+                        f"variable {pattern} already bound to {bindings[pattern]}, cannot bind to {value}"
+                    )
             else:
                 bindings[pattern] = value
             return
@@ -602,7 +630,7 @@ class ErlangEnvironment:
             inner = pattern[1:-1].strip()
             sub_pats = self._split_commas(inner)
             if len(sub_pats) != len(value.elements):
-                raise _PatternMatchError(f"tuple size mismatch")
+                raise _PatternMatchError("tuple size mismatch")
             for sp, sv in zip(sub_pats, value.elements):
                 self._match_pattern(sp.strip(), sv, bindings)
             return
@@ -625,18 +653,63 @@ class ErlangEnvironment:
             else:
                 sub_pats = self._split_commas(inner)
                 if len(sub_pats) != len(value):
-                    raise _PatternMatchError(f"list length mismatch")
+                    raise _PatternMatchError("list length mismatch")
                 for sp, sv in zip(sub_pats, value):
                     self._match_pattern(sp.strip(), sv, bindings)
             return
 
-        # Pattern with = (alias pattern): Pat = Expr
+        # Binary pattern: <<>>  or  <<H:8, T/binary>>  etc.
+        if pattern.startswith("<<") and pattern.endswith(">>"):
+            if not isinstance(value, bytes):
+                raise _PatternMatchError(f"not a binary: {value}")
+            inner = pattern[2:-2].strip()
+            if not inner:
+                if value:
+                    raise _PatternMatchError("expected empty binary")
+                return
+            # Parse segments: Var:Size/Type
+            segments = self._split_commas(inner)
+            pos = 0
+            for seg in segments:
+                seg = seg.strip()
+                # Var/binary — matches rest as bytes
+                if re.match(r"^[A-Z_][A-Za-z0-9_]*/binary$", seg):
+                    vname = seg.split("/")[0].strip()
+                    self._match_pattern(vname, value[pos:], bindings)
+                    pos = len(value)
+                    continue
+                # Var:N  or  Var:N/Type
+                m2 = re.match(r"^([A-Z_][A-Za-z0-9_]*):(\d+)(?:/\w+)?$", seg)
+                if m2:
+                    vname = m2.group(1)
+                    size_bits = int(m2.group(2))
+                    size_bytes = (size_bits + 7) // 8
+                    chunk = value[pos : pos + size_bytes]
+                    if len(chunk) < size_bytes:
+                        raise _PatternMatchError("binary too short")
+                    int_val = int.from_bytes(chunk, "big")
+                    self._match_pattern(vname, int_val, bindings)
+                    pos += size_bytes
+                    continue
+                # Plain integer literal
+                if re.match(r"^\d+$", seg):
+                    if pos >= len(value) or value[pos] != int(seg):
+                        raise _PatternMatchError("binary byte mismatch")
+                    pos += 1
+                    continue
+                # Variable (1 byte)
+                if re.match(r"^[A-Z_][A-Za-z0-9_]*$", seg):
+                    if pos >= len(value):
+                        raise _PatternMatchError("binary too short")
+                    self._match_pattern(seg, value[pos], bindings)
+                    pos += 1
+            return
         if "=" in pattern:
             parts = pattern.split("=", 1)
             evaled = self._eval_expr(parts[1].strip(), bindings)
             self._match_pattern(parts[0].strip(), value, bindings)
             if evaled != value:
-                raise _PatternMatchError(f"alias mismatch")
+                raise _PatternMatchError("alias mismatch")
             return
 
         # Fall-through: evaluate as expression and compare
@@ -664,9 +737,9 @@ class ErlangEnvironment:
             if c == '"':
                 in_string = not in_string
             if not in_string:
-                if c == '(':
+                if c == "(":
                     depth += 1
-                elif c == ')':
+                elif c == ")":
                     depth -= 1
                     if depth == 0:
                         return i
@@ -688,12 +761,12 @@ class ErlangEnvironment:
             if ch == '"':
                 in_string = not in_string
             if not in_string:
-                if ch in ('(', '[', '{'):
+                if ch in ("(", "[", "{"):
                     depth += 1
-                elif ch in (')', ']', '}'):
+                elif ch in (")", "]", "}"):
                     depth -= 1
                 elif depth == 0 and i > 0:  # i > 0 avoids unary +/- at start
-                    if expr[i:i + op_len] == op:
+                    if expr[i : i + op_len] == op:
                         last_pos = i
         return last_pos
 
@@ -752,12 +825,18 @@ class ErlangEnvironment:
             self._match_pattern(m.group(1).strip(), val, bindings)
             return val
 
+        # Binary/bitstring literal: <<...>>
+        if expr.startswith("<<") and expr.endswith(">>"):
+            return self._eval_binary(expr[2:-2].strip(), bindings)
+
         # Tuple {E1, E2, ...}
         if expr.startswith("{") and expr.endswith("}"):
             inner = expr[1:-1].strip()
             if not inner:
                 return _Tuple()
-            elems = [self._eval_expr(e.strip(), bindings) for e in self._split_commas(inner)]
+            elems = [
+                self._eval_expr(e.strip(), bindings) for e in self._split_commas(inner)
+            ]
             return _Tuple(*elems)
 
         # List comprehension [Expr || Generator, ...] — depth-aware to avoid false
@@ -766,7 +845,9 @@ class ErlangEnvironment:
             inner = expr[1:-1]
             lc_idx = self._find_op_at_depth0(inner, "||")
             if lc_idx >= 0:
-                return self._eval_list_comp(inner[:lc_idx].strip(), inner[lc_idx + 2:].strip(), bindings)
+                return self._eval_list_comp(
+                    inner[:lc_idx].strip(), inner[lc_idx + 2 :].strip(), bindings
+                )
             return self._eval_list(expr, bindings)
 
         # Parenthesised — verify the outer ( and ) actually match each other
@@ -787,6 +868,11 @@ class ErlangEnvironment:
         m = re.match(r"^if\s+(.+)\s+end$", expr, re.DOTALL)
         if m:
             return self._eval_if(m.group(1), bindings)
+
+        # try Exprs [of Clauses] catch Patterns [after AfterExprs] end
+        m = re.match(r"^try\s+(.+)\s+end$", expr, re.DOTALL)
+        if m:
+            return self._eval_try(m.group(1), bindings)
 
         # Binary operations
         for op in (" orelse ", " andalso "):
@@ -811,8 +897,15 @@ class ErlangEnvironment:
             if paren_end == len(expr) - 1:
                 mod = m.group(1)
                 func = m.group(2)
-                args_str = expr[paren_start + 1:paren_end].strip()
-                args = [self._eval_expr(a.strip(), bindings) for a in self._split_commas(args_str)] if args_str else []
+                args_str = expr[paren_start + 1 : paren_end].strip()
+                args = (
+                    [
+                        self._eval_expr(a.strip(), bindings)
+                        for a in self._split_commas(args_str)
+                    ]
+                    if args_str
+                    else []
+                )
                 return self._call_bif(mod, func, args)
 
         # Function call: name(Args) — use balanced-paren finder to support nested calls
@@ -822,8 +915,15 @@ class ErlangEnvironment:
             paren_end = self._find_close_paren(expr, paren_start)
             if paren_end == len(expr) - 1:
                 fname = m.group(1)
-                args_str = expr[paren_start + 1:paren_end].strip()
-                args = [self._eval_expr(a.strip(), bindings) for a in self._split_commas(args_str)] if args_str else []
+                args_str = expr[paren_start + 1 : paren_end].strip()
+                args = (
+                    [
+                        self._eval_expr(a.strip(), bindings)
+                        for a in self._split_commas(args_str)
+                    ]
+                    if args_str
+                    else []
+                )
                 return self._dispatch(fname, args, bindings)
 
         # fun Name/Arity  — function reference (must come before binary ops to avoid
@@ -833,8 +933,10 @@ class ErlangEnvironment:
             fname_ref = m.group(1)
             arity_ref = int(m.group(2))
             env_ref = self
+
             def _fun_ref(*call_args, _fn=fname_ref, _ar=arity_ref, _env=env_ref):
                 return _env._call_function(_fn, list(call_args), None)
+
             return _fun_ref
 
         # fun Module:Name/Arity  — module-qualified function reference
@@ -842,8 +944,10 @@ class ErlangEnvironment:
         if m:
             mod_ref, fname_ref = m.group(1), m.group(2)
             env_ref = self
+
             def _modfun_ref(*call_args, _m=mod_ref, _f=fname_ref, _env=env_ref):
                 return _env._call_bif(_m, _f, list(call_args))
+
             return _modfun_ref
 
         # fun(Params) -> Body end  — anonymous function (lambda)
@@ -851,11 +955,22 @@ class ErlangEnvironment:
         if m:
             params_str = m.group(1).strip()
             body_str = m.group(2).strip()
-            params = [p.strip() for p in self._split_commas(params_str)] if params_str else []
+            params = (
+                [p.strip() for p in self._split_commas(params_str)]
+                if params_str
+                else []
+            )
             body_exprs = self._split_body(body_str)
             env_ref = self
             captured = dict(bindings)
-            def _lambda(*call_args, _params=params, _body=body_exprs, _env=env_ref, _cap=captured):
+
+            def _lambda(
+                *call_args,
+                _params=params,
+                _body=body_exprs,
+                _env=env_ref,
+                _cap=captured,
+            ):
                 b = dict(_cap)
                 for p, a in zip(_params, call_args):
                     _env._match_pattern(p, a, b)
@@ -863,6 +978,7 @@ class ErlangEnvironment:
                 for be in _body:
                     result = _env._eval_expr(be.strip(), b)
                 return result
+
             return _lambda
 
         # Recursive binary arithmetic — handles expressions like "N * fact(N - 1)"
@@ -882,25 +998,38 @@ class ErlangEnvironment:
             idx = self._find_op_at_depth0(expr, op_sym)
             if idx >= 0:
                 left = self._eval_expr(expr[:idx].strip(), bindings)
-                right = self._eval_expr(expr[idx + len(op_sym):].strip(), bindings)
+                right = self._eval_expr(expr[idx + len(op_sym) :].strip(), bindings)
                 return op_fn(left, right)
 
         # List ops (below additive precedence)
         for op_sym, op_fn in [
-            (" ++ ", lambda a, b: (a if isinstance(a, list) else []) + (b if isinstance(b, list) else [])),
-            (" -- ", lambda a, b: [x for x in (a if isinstance(a, list) else []) if x not in (b if isinstance(b, list) else [])]),
+            (
+                " ++ ",
+                lambda a, b: (
+                    (a if isinstance(a, list) else [])
+                    + (b if isinstance(b, list) else [])
+                ),
+            ),
+            (
+                " -- ",
+                lambda a, b: [
+                    x
+                    for x in (a if isinstance(a, list) else [])
+                    if x not in (b if isinstance(b, list) else [])
+                ],
+            ),
         ]:
             idx = self._find_op_at_depth0(expr, op_sym)
             if idx >= 0:
                 left = self._eval_expr(expr[:idx].strip(), bindings)
-                right = self._eval_expr(expr[idx + len(op_sym):].strip(), bindings)
+                right = self._eval_expr(expr[idx + len(op_sym) :].strip(), bindings)
                 return op_fn(left, right)
 
         for op_sym, op_fn in [(" + ", lambda a, b: a + b), (" - ", lambda a, b: a - b)]:
             idx = self._find_op_at_depth0(expr, op_sym)
             if idx >= 0:
                 left = self._eval_expr(expr[:idx].strip(), bindings)
-                right = self._eval_expr(expr[idx + len(op_sym):].strip(), bindings)
+                right = self._eval_expr(expr[idx + len(op_sym) :].strip(), bindings)
                 return op_fn(left, right)
 
         for op_sym, op_fn in [
@@ -912,7 +1041,7 @@ class ErlangEnvironment:
             idx = self._find_op_at_depth0(expr, op_sym)
             if idx >= 0:
                 left = self._eval_expr(expr[:idx].strip(), bindings)
-                right = self._eval_expr(expr[idx + len(op_sym):].strip(), bindings)
+                right = self._eval_expr(expr[idx + len(op_sym) :].strip(), bindings)
                 return op_fn(left, right)
 
         # Arithmetic / comparison via Python eval
@@ -924,7 +1053,9 @@ class ErlangEnvironment:
             return []
         if "|" in inner:
             head_s, tail_s = inner.split("|", 1)
-            head = [self._eval_expr(h.strip(), bindings) for h in self._split_commas(head_s)]
+            head = [
+                self._eval_expr(h.strip(), bindings) for h in self._split_commas(head_s)
+            ]
             tail = self._eval_expr(tail_s.strip(), bindings)
             if isinstance(tail, list):
                 return head + tail
@@ -942,7 +1073,9 @@ class ErlangEnvironment:
                 result[k] = v
         return result
 
-    def _eval_case(self, subject_str: str, clauses_str: str, bindings: Dict[str, Any]) -> Any:
+    def _eval_case(
+        self, subject_str: str, clauses_str: str, bindings: Dict[str, Any]
+    ) -> Any:
         value = self._eval_expr(subject_str.strip(), bindings)
         clauses = self._split_case_clauses(clauses_str)
         for pat, guard, body_exprs in clauses:
@@ -969,11 +1102,11 @@ class ErlangEnvironment:
             if ch == '"':
                 in_string = not in_string
             if not in_string:
-                if ch in ('(', '[', '{'):
+                if ch in ("(", "[", "{"):
                     depth += 1
-                elif ch in (')', ']', '}'):
+                elif ch in (")", "]", "}"):
                     depth -= 1
-                elif ch == ';' and depth == 0:
+                elif ch == ";" and depth == 0:
                     raw_clauses.append("".join(current).strip())
                     current = []
                     continue
@@ -1006,12 +1139,130 @@ class ErlangEnvironment:
                     return result
         raise _ErlangError("no if clause matched")
 
-    def _eval_list_comp(self, expr_str: str, generators_str: str, bindings: Dict[str, Any]) -> List[Any]:
+    def _eval_try(self, inner: str, bindings: Dict[str, Any]) -> Any:
+        """Evaluate Erlang try...catch...end / try...of...catch...end.
+
+        Handles:
+          try Exprs catch [Class:]Pat [when Guard] -> Body; ... end
+          try Exprs of Clauses catch [Class:]Pat [when Guard] -> Body; ... end
+          try Exprs catch ... after AfterExprs end (after block evaluated last)
+        """
+        # Strip optional 'after AfterExprs' from the end
+        after_exprs: Optional[str] = None
+        after_m = re.search(r"\bafter\b(.+)$", inner, re.DOTALL)
+        if after_m:
+            after_exprs = after_m.group(1).strip()
+            inner = inner[: after_m.start()].strip()
+
+        # Split on 'catch' keyword at depth 0
+        catch_idx = self._find_keyword_at_depth0(inner, "catch")
+        of_idx = self._find_keyword_at_depth0(inner, "of")
+
+        if catch_idx < 0:
+            # No catch — just evaluate the try body (after 'of' is optional)
+            try_body = inner if of_idx < 0 else inner[:of_idx].strip()
+            try:
+                result = self._eval_body(try_body, bindings)
+            except (_ErlangError, Exception):
+                result = _ok
+            if after_exprs:
+                self._eval_body(after_exprs, bindings)
+            return result
+
+        try_body = inner[:catch_idx].strip()
+        catch_body = inner[catch_idx + len("catch") :].strip()
+
+        # If there's an 'of' section: try Exprs of Clauses catch ...
+        of_body: Optional[str] = None
+        if of_idx >= 0 and of_idx < catch_idx:
+            try_body_raw = inner[:of_idx].strip()
+            of_body = inner[of_idx + len("of") : catch_idx].strip()
+            try_body = try_body_raw
+
+        try:
+            result = self._eval_body(try_body, bindings)
+            if of_body:
+                # Match result against of-clauses (like case)
+                result = self._eval_case_body(of_body, result, bindings)
+        except Exception as exc:
+            # Find matching catch clause
+            caught_val = str(exc)
+            catch_clauses = [c.strip() for c in catch_body.split(";") if c.strip()]
+            matched = False
+            for clause in catch_clauses:
+                m = re.match(r"^(.+?)\s*->\s*(.+)$", clause, re.DOTALL)
+                if not m:
+                    continue
+                pat = m.group(1).strip()
+                body = m.group(2).strip()
+                # Class:Pattern syntax
+                colon_m = re.match(r"^(\w+)\s*:\s*(.+)$", pat)
+                b = dict(bindings)
+                try:
+                    if colon_m:
+                        # bind the reason part
+                        self._match_pattern(colon_m.group(2), caught_val, b)
+                    else:
+                        self._match_pattern(pat, caught_val, b)
+                    result = self._eval_body(body, b)
+                    matched = True
+                    break
+                except (_PatternMatchError, _ErlangError):
+                    continue
+            if not matched:
+                result = _ok  # no matching catch clause; swallow error
+        if after_exprs:
+            self._eval_body(after_exprs, bindings)
+        return result
+
+    def _eval_body(self, body_str: str, bindings: Dict[str, Any]) -> Any:
+        """Evaluate a comma-separated body of expressions, returning the last value."""
+        exprs = self._split_body(body_str)
+        result = None
+        for be in exprs:
+            result = self._eval_expr(be.strip(), bindings)
+        return result
+
+    def _eval_case_body(
+        self, clauses_str: str, value: Any, bindings: Dict[str, Any]
+    ) -> Any:
+        """Evaluate Erlang case clauses against a value (used by try...of)."""
+        return self._eval_case(f"{_erl_repr(value)}", clauses_str, bindings)
+
+    def _find_keyword_at_depth0(self, s: str, keyword: str) -> int:
+        """Find first occurrence of a standalone keyword at bracket/string depth 0."""
+        pattern = re.compile(r"\b" + re.escape(keyword) + r"\b")
+        depth = 0
+        in_str = False
+        i = 0
+        while i < len(s):
+            ch = s[i]
+            if ch == '"' and not in_str:
+                in_str = True
+            elif ch == '"' and in_str:
+                in_str = False
+            elif not in_str:
+                if ch in ("(", "[", "{"):
+                    depth += 1
+                elif ch in (")", "]", "}"):
+                    depth -= 1
+                elif depth == 0:
+                    m = pattern.match(s, i)
+                    if m:
+                        return i
+            i += 1
+        return -1
+
+    def _eval_list_comp(
+        self, expr_str: str, generators_str: str, bindings: Dict[str, Any]
+    ) -> List[Any]:
         """Evaluate [Expr || Gen, ...] list comprehension."""
         gens = self._split_commas(generators_str)
         return self._eval_comp_inner(expr_str.strip(), gens, dict(bindings))
 
-    def _eval_comp_inner(self, expr_str: str, gens: List[str], bindings: Dict[str, Any]) -> List[Any]:
+    def _eval_comp_inner(
+        self, expr_str: str, gens: List[str], bindings: Dict[str, Any]
+    ) -> List[Any]:
         if not gens:
             return [self._eval_expr(expr_str, bindings)]
         gen = gens[0].strip()
@@ -1115,7 +1366,11 @@ class ErlangEnvironment:
                 return val in (lst if isinstance(lst, list) else [])
             if func == "nth":
                 idx, lst = int(a0), a1
-                return lst[idx - 1] if isinstance(lst, list) and 1 <= idx <= len(lst) else _Atom("undefined")
+                return (
+                    lst[idx - 1]
+                    if isinstance(lst, list) and 1 <= idx <= len(lst)
+                    else _Atom("undefined")
+                )
             if func == "duplicate":
                 n, val = int(a0), a1
                 return [val] * n
@@ -1138,6 +1393,32 @@ class ErlangEnvironment:
                 if isinstance(a0, list) and isinstance(a1, list):
                     return [_Tuple(x, y) for x, y in zip(a0, a1)]
                 return []
+            if func == "any" and callable(a0):
+                lst = a1 if isinstance(a1, list) else []
+                return any(self._truthy(a0(x)) for x in lst)
+            if func == "all" and callable(a0):
+                lst = a1 if isinstance(a1, list) else []
+                return all(self._truthy(a0(x)) for x in lst)
+            if func == "takewhile" and callable(a0):
+                lst = a1 if isinstance(a1, list) else []
+                result = []
+                for x in lst:
+                    if self._truthy(a0(x)):
+                        result.append(x)
+                    else:
+                        break
+                return result
+            if func == "dropwhile" and callable(a0):
+                lst = a1 if isinstance(a1, list) else []
+                i = 0
+                while i < len(lst) and self._truthy(a0(lst[i])):
+                    i += 1
+                return lst[i:]
+            if func == "partition" and callable(a0):
+                lst = a1 if isinstance(a1, list) else []
+                yes = [x for x in lst if self._truthy(a0(x))]
+                no = [x for x in lst if not self._truthy(a0(x))]
+                return _Tuple(yes, no)
             # Remaining functions require a0 to be a list
             if not isinstance(a0, list):
                 return []
@@ -1176,12 +1457,14 @@ class ErlangEnvironment:
                 return result
             if func == "flatten":
                 result = []
+
                 def flatten(lst):
                     for item in lst:
                         if isinstance(item, list):
                             flatten(item)
                         else:
                             result.append(item)
+
                 flatten(a0)
                 return result
             if func == "last":
@@ -1212,9 +1495,20 @@ class ErlangEnvironment:
                     if x not in seen:
                         seen.append(x)
                 return seen
+            if func == "enumerate":
+                lst = a0 if isinstance(a0, list) else []
+                return [_Tuple(i + 1, x) for i, x in enumerate(lst)]
+            if func == "sum":
+                lst = a0 if isinstance(a0, list) else []
+                return sum(x for x in lst if isinstance(x, (int, float)))
             return a0 if isinstance(a0, list) else []
 
         if mod == "string":
+            # join/2 needs a0 as a list — handle before the str() coercion
+            if func == "join":
+                sep = str(a1) if a1 is not None else ""
+                items = a0 if isinstance(a0, list) else [a0]
+                return sep.join(str(x) for x in items)
             if not isinstance(a0, str):
                 a0 = str(a0)
             if func == "to_upper":
@@ -1228,16 +1522,16 @@ class ErlangEnvironment:
             if func == "substr":
                 start = int(a1) - 1 if a1 else 0
                 n = int(args[2]) if len(args) > 2 else len(a0)
-                return a0[start:start + n]
+                return a0[start : start + n]
             if func == "split":
                 sep = str(a1) if a1 else " "
                 return a0.split(sep)
             if func == "strip":
                 return a0.strip()
             if func == "left":
-                return a0[:int(a1)] if a1 else a0
+                return a0[: int(a1)] if a1 else a0
             if func == "right":
-                return a0[-int(a1):] if a1 else a0
+                return a0[-int(a1) :] if a1 else a0
             if func == "tokens":
                 separators = str(a1) if a1 else " "
                 return [t for t in re.split(f"[{re.escape(separators)}]+", a0) if t]
@@ -1293,12 +1587,51 @@ class ErlangEnvironment:
                 return {}
             if func == "get":
                 k, d = a0, a1
-                return d.get(k, args[2] if len(args) > 2 else _Atom("undefined")) if isinstance(d, dict) else _Atom("undefined")
+                return (
+                    d.get(k, args[2] if len(args) > 2 else _Atom("undefined"))
+                    if isinstance(d, dict)
+                    else _Atom("undefined")
+                )
+            if func == "find":
+                k, d = a0, a1
+                if isinstance(d, dict) and k in d:
+                    return _Tuple(_ok, d[k])
+                return _Atom("error")
             if func == "put":
                 k, v, d = a0, a1, args[2] if len(args) > 2 else {}
                 result = dict(d) if isinstance(d, dict) else {}
                 result[k] = v
                 return result
+            if func == "update":
+                k, v, d = a0, a1, args[2] if len(args) > 2 else {}
+                if not isinstance(d, dict) or k not in d:
+                    raise _ErlangError(f"badkey: {_erl_repr(k)}")
+                result = dict(d)
+                result[k] = v
+                return result
+            if func == "remove":
+                k, d = a0, a1
+                if not isinstance(d, dict):
+                    return {}
+                result = dict(d)
+                result.pop(k, None)
+                return result
+            if func == "merge":
+                m1 = a0 if isinstance(a0, dict) else {}
+                m2 = a1 if isinstance(a1, dict) else {}
+                return {**m1, **m2}
+            if func == "to_list":
+                if isinstance(a0, dict):
+                    return [_Tuple(k, v) for k, v in a0.items()]
+                return []
+            if func == "from_list":
+                if isinstance(a0, list):
+                    result = {}
+                    for item in a0:
+                        if isinstance(item, _Tuple) and len(item) == 2:
+                            result[item[0]] = item[1]
+                    return result
+                return {}
             if func == "keys":
                 return list(a0.keys()) if isinstance(a0, dict) else []
             if func == "values":
@@ -1307,6 +1640,22 @@ class ErlangEnvironment:
                 return len(a0) if isinstance(a0, dict) else 0
             if func == "is_key":
                 return a0 in a1 if isinstance(a1, dict) else False
+            if func == "map" and callable(a0):
+                if isinstance(a1, dict):
+                    return {k: a0(k, v) for k, v in a1.items()}
+                return {}
+            if func == "filter" and callable(a0):
+                if isinstance(a1, dict):
+                    return {k: v for k, v in a1.items() if a0(k, v)}
+                return {}
+            if func == "fold" and callable(a0):
+                # maps:fold(Fun, Acc0, Map) — Fun(K, V, AccIn) -> AccOut
+                acc = a1
+                d = args[2] if len(args) > 2 else {}
+                if isinstance(d, dict):
+                    for k, v in d.items():
+                        acc = a0(k, v, acc)
+                return acc
             return {}
 
         # Turtle module
@@ -1385,6 +1734,76 @@ class ErlangEnvironment:
             return isinstance(a0, _Tuple)
         if fname == "is_binary":
             return isinstance(a0, (str, bytes))
+        if fname == "byte_size":
+            if isinstance(a0, bytes):
+                return len(a0)
+            if isinstance(a0, str):
+                return len(a0.encode("utf-8"))
+            return 0
+        if fname == "bit_size":
+            if isinstance(a0, bytes):
+                return len(a0) * 8
+            if isinstance(a0, str):
+                return len(a0.encode("utf-8")) * 8
+            return 0
+        if fname == "binary_to_list":
+            if isinstance(a0, bytes):
+                return list(a0)
+            if isinstance(a0, str):
+                return list(a0.encode("latin-1"))
+            return []
+        if fname == "list_to_binary":
+            if isinstance(a0, list):
+                try:
+                    return bytes(int(x) & 0xFF for x in a0)
+                except (TypeError, ValueError):
+                    return b""
+            return b""
+        if fname == "binary_to_atom":
+            if isinstance(a0, bytes):
+                return _Atom(a0.decode("utf-8", errors="replace"))
+            return _Atom(str(a0))
+        if fname == "binary_to_integer":
+            try:
+                s = a0.decode("utf-8") if isinstance(a0, bytes) else str(a0)
+                return int(s, int(a1) if a1 is not None else 10)
+            except (ValueError, TypeError):
+                raise _ErlangError("badarg: binary_to_integer")
+        if fname == "integer_to_binary":
+            return str(a0).encode("utf-8") if a0 is not None else b""
+        if fname == "binary_to_float":
+            try:
+                s = a0.decode("utf-8") if isinstance(a0, bytes) else str(a0)
+                return float(s)
+            except (ValueError, TypeError):
+                raise _ErlangError("badarg: binary_to_float")
+        if fname == "float_to_binary":
+            return str(float(a0) if a0 is not None else 0.0).encode("utf-8")
+        if fname == "binary_part":
+            a2 = args[2] if len(args) > 2 else None
+            if isinstance(a0, bytes) and isinstance(a1, int) and isinstance(a2, int):
+                return a0[a1 : a1 + a2]
+            return b""
+        if fname == "split_binary":
+            if isinstance(a0, bytes) and isinstance(a1, int):
+                return _Tuple(a0[:a1], a0[a1:])
+            return _Tuple(b"", b"")
+        if fname == "iolist_to_binary":
+
+            def _flatten(x: Any) -> bytes:
+                if isinstance(x, bytes):
+                    return x
+                if isinstance(x, int):
+                    return bytes([x & 0xFF])
+                if isinstance(x, str):
+                    return x.encode("latin-1")
+                if isinstance(x, list):
+                    return b"".join(_flatten(i) for i in x)
+                return b""
+
+            return _flatten(a0)
+        if fname == "is_bitstring":
+            return isinstance(a0, bytes)
         if fname == "is_boolean":
             return isinstance(a0, bool) or a0 in (_true_atom, _false_atom)
         if fname == "is_pid":
@@ -1422,9 +1841,11 @@ class ErlangEnvironment:
             return _Atom("nonode@nohost")
         if fname == "make_ref":
             import uuid
+
             return f"#Ref<{uuid.uuid4()}>"
         if fname == "now":
             import time as _time
+
             t = int(_time.time() * 1_000_000)
             mega = t // 1_000_000_000_000
             sec = (t // 1_000_000) % 1_000_000
@@ -1445,7 +1866,9 @@ class ErlangEnvironment:
         if not args:
             return
         fmt = args[0]
-        params = list(args[1]) if len(args) > 1 and isinstance(args[1], list) else args[1:]
+        params = (
+            list(args[1]) if len(args) > 1 and isinstance(args[1], list) else args[1:]
+        )
 
         if not isinstance(fmt, str):
             self._emit(_erl_repr(fmt))
@@ -1469,7 +1892,13 @@ class ErlangEnvironment:
                 elif directive == "s":
                     if param_idx < len(params):
                         v = params[param_idx]
-                        result.append(str(v) if not isinstance(v, list) else "".join(chr(c) if isinstance(c, int) else str(c) for c in v))
+                        result.append(
+                            str(v)
+                            if not isinstance(v, list)
+                            else "".join(
+                                chr(c) if isinstance(c, int) else str(c) for c in v
+                            )
+                        )
                         param_idx += 1
                 elif directive == "d":
                     if param_idx < len(params):
@@ -1494,6 +1923,63 @@ class ErlangEnvironment:
                 i += 1
 
         self._emit("".join(result))
+
+    def _eval_binary(self, inner: str, bindings: Dict[str, Any]) -> bytes:
+        """Evaluate a binary literal <<inner>> to Python bytes."""
+        if not inner:
+            return b""
+        # String segment: <<"hello">>
+        m = re.match(r'^"(.*)"$', inner)
+        if m:
+            return m.group(1).encode("latin-1")
+        result = bytearray()
+        for part in self._split_commas(inner):
+            part = part.strip()
+            if not part:
+                continue
+            # V/binary or V/utf8 — append as bytes
+            slash_m = re.match(
+                r"^(.+?)/(binary|utf8|utf16|utf32)$", part, re.IGNORECASE
+            )
+            if slash_m:
+                val = self._eval_expr(slash_m.group(1).strip(), bindings)
+                if isinstance(val, bytes):
+                    result.extend(val)
+                elif isinstance(val, str):
+                    enc = (
+                        slash_m.group(2)
+                        .lower()
+                        .replace("utf8", "utf-8")
+                        .replace("utf16", "utf-16-be")
+                        .replace("utf32", "utf-32-be")
+                    )
+                    result.extend(val.encode(enc))
+                elif isinstance(val, int):
+                    result.append(val & 0xFF)
+                continue
+            # V:Size  or  V:Size/Type
+            colon_m = re.match(r"^(.+):(\d+)(?:/\w+)?$", part)
+            if colon_m:
+                val = self._eval_expr(colon_m.group(1).strip(), bindings)
+                size_bits = int(colon_m.group(2))
+                size_bytes = (size_bits + 7) // 8
+                n = int(val) if isinstance(val, (int, float)) else 0
+                try:
+                    result.extend(n.to_bytes(size_bytes, "big"))
+                except OverflowError:
+                    result.extend(
+                        (n & ((1 << size_bits) - 1)).to_bytes(size_bytes, "big")
+                    )
+                continue
+            # Plain integer or variable
+            val = self._eval_expr(part, bindings)
+            if isinstance(val, int):
+                result.append(val & 0xFF)
+            elif isinstance(val, str) and len(val) == 1:
+                result.append(ord(val))
+            elif isinstance(val, bytes):
+                result.extend(val)
+        return bytes(result)
 
     def _call_turtle(self, func: str, args: List[Any]) -> Any:
         """Handle turtle:* calls for graphics."""
@@ -1542,11 +2028,22 @@ class ErlangEnvironment:
                 py = re.sub(rf"\b{re.escape(k)}\b", repr(v), py)
 
         try:
-            result = eval(py, {"__builtins__": {}}, {  # noqa: S307
-                "abs": abs, "round": round, "int": int, "float": float,
-                "min": min, "max": max, "len": len, "True": True, "False": False,
-                "None": None,
-            })
+            result = eval(
+                py,
+                {"__builtins__": {}},
+                {  # noqa: S307
+                    "abs": abs,
+                    "round": round,
+                    "int": int,
+                    "float": float,
+                    "min": min,
+                    "max": max,
+                    "len": len,
+                    "True": True,
+                    "False": False,
+                    "None": None,
+                },
+            )
             return result
         except Exception:
             return _ok

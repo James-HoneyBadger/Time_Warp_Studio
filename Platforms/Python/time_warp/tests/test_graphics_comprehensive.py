@@ -1199,3 +1199,93 @@ class TestLogoErrorHandling:
         t = TurtleState()
         result = execute_logo(interp, "XYZZY", t)
         assert "❌" in result or "Unknown" in result
+
+
+class TestTurtleStateExtended:
+    """More TurtleState tests."""
+
+    def test_default_x(self):
+        t = TurtleState()
+        assert t.x == 0.0
+
+    def test_default_y(self):
+        t = TurtleState()
+        assert t.y == 0.0
+
+    def test_default_angle(self):
+        t = TurtleState()
+        assert t.angle == 0.0
+
+    def test_default_pen_down(self):
+        t = TurtleState()
+        assert t.pen_down is True
+
+    def test_default_visible(self):
+        t = TurtleState()
+        assert t.visible is True
+
+    def test_default_lines_empty(self):
+        t = TurtleState()
+        assert t.lines == []
+
+    def test_pen_up_sets_false(self):
+        t = TurtleState()
+        t.pen_down = False
+        assert t.pen_down is False
+
+    def test_forward_moves_y(self):
+        t = TurtleState()
+        t.forward(100)
+        assert not (math.isclose(t.x, 0) and math.isclose(t.y, 0))
+
+    def test_right_sets_angle(self):
+        t = TurtleState()
+        t.right(90)
+        assert math.isclose(t.angle % 360, 90, abs_tol=1e-5)
+
+    def test_left_sets_angle(self):
+        t = TurtleState()
+        t.left(90)
+        assert math.isclose(t.angle % 360, 270, abs_tol=1e-5)
+
+    def test_home_resets(self):
+        t = TurtleState()
+        t.forward(100)
+        t.home()
+        assert math.isclose(t.x, 0, abs_tol=1e-5)
+        assert math.isclose(t.y, 0, abs_tol=1e-5)
+
+    def test_clear_removes_lines(self):
+        t = TurtleState()
+        t.forward(50)
+        t.clear()
+        assert t.lines == []
+
+    def test_penup_stops_lines(self):
+        t = TurtleState()
+        t.penup()
+        t.forward(50)
+        assert t.lines == []
+
+    def test_pendown_allows_lines(self):
+        t = TurtleState()
+        t.penup()
+        t.pendown()
+        t.forward(50)
+        assert len(t.lines) > 0
+
+    def test_width_set(self):
+        t = TurtleState()
+        t.pen_width = 5
+        assert t.pen_width == 5
+
+    def test_hideturtle_visible_false(self):
+        t = TurtleState()
+        t.hideturtle()
+        assert t.visible is False
+
+    def test_showturtle_visible_true(self):
+        t = TurtleState()
+        t.hideturtle()
+        t.showturtle()
+        assert t.visible is True

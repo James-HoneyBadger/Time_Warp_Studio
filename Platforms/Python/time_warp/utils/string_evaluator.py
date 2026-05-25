@@ -175,6 +175,20 @@ class StringExpressionEvaluator:
             return self._func_ltrim(args)
         elif func_name == "RTRIM":
             return self._func_rtrim(args)
+        elif func_name in ("LCASE", "LCASES"):
+            return self._func_lower(args)
+        elif func_name in ("UCASE", "UCASES"):
+            return self._func_upper(args)
+        elif func_name == "LPAD":
+            return self._func_lpad(args)
+        elif func_name == "RPAD":
+            return self._func_rpad(args)
+        elif func_name == "FORMAT":
+            return self._func_format(args)
+        elif func_name == "ENVIRON":
+            return self._func_environ(args)
+        elif func_name == "REPEAT":
+            return self._func_repeat(args)
         else:
             raise ValueError(f"Unknown string function: {func_name}")
 
@@ -402,6 +416,7 @@ class StringExpressionEvaluator:
         # Try evaluating as a simple arithmetic expression with variable substitution
         try:
             from .expression_evaluator import ExpressionEvaluator
+
             evaluator = ExpressionEvaluator(variables=self.numeric_variables)
             num = evaluator.evaluate(args[0].strip())
             if num == int(num):
@@ -544,3 +559,92 @@ class StringExpressionEvaluator:
             return str(c)[0:1] * max(0, n)
         except (ValueError, TypeError):
             return ""
+
+    def _func_lpad(self, args: list) -> str:
+        """LPAD$(s, n [, ch]) - Left-pad string to width n with ch (default space)."""
+        if len(args) < 2:
+            raise ValueError("LPAD requires at least 2 arguments")
+        s = str(self._evaluate_arg(args[0]))
+        try:
+            n = int(float(self._evaluate_arg(args[1])))
+        except (ValueError, TypeError):
+            n = 0
+        ch = " "
+        if len(args) >= 3:
+            c_val = self._evaluate_arg(args[2])
+            if c_val:
+                ch = str(c_val)[0]
+        return s.rjust(max(len(s), n), ch)
+
+    def _func_rpad(self, args: list) -> str:
+        """RPAD$(s, n [, ch]) - Right-pad string to width n with ch (default space)."""
+        if len(args) < 2:
+            raise ValueError("RPAD requires at least 2 arguments")
+        s = str(self._evaluate_arg(args[0]))
+        try:
+            n = int(float(self._evaluate_arg(args[1])))
+        except (ValueError, TypeError):
+            n = 0
+        ch = " "
+        if len(args) >= 3:
+            c_val = self._evaluate_arg(args[2])
+            if c_val:
+                ch = str(c_val)[0]
+        return s.ljust(max(len(s), n), ch)
+
+    def _func_format(self, args: list) -> str:
+        """FORMAT$(fmt, val ...) - printf-style formatting."""
+        if not args:
+            return ""
+        fmt = str(self._evaluate_arg(args[0]))
+        vals = []
+        for a in args[1:]:
+            v = self._evaluate_arg(a)
+            vals.append(v)
+
+        # Replace ### patterns with Python format specs
+        # e.g. "###.##" -> "{:6.2f}"
+        def _convert_mask(m: re.Match) -> str:
+            mask = m.group(0)
+            if "." in mask:
+                parts = mask.split(".")
+                width = len(parts[0].replace("-", "").replace("+", ""))
+                prec = len(parts[1])
+                sign = "-" if mask.startswith("-") else ""
+                return f"%{sign}{width}.{prec}f"
+            else:
+                width = len(mask.replace("-", ""))
+                return f"%{width}d"
+
+        # Try to use fmt as a Python format string directly
+        try:
+            result = fmt % tuple(vals)
+            return result
+        except (TypeError, ValueError):
+            pass
+        # Try converting # masks
+        try:
+            converted = re.sub(r"[#\-\+]+(?:\.[#]+)?", _convert_mask, fmt)
+            return converted % tuple(vals)
+        except (TypeError, ValueError):
+            return str(vals[0]) if vals else fmt
+
+    def _func_environ(self, args: list) -> str:
+        """ENVIRON$(name) - Return OS environment variable or empty string."""
+        import os
+
+        if not args:
+            return ""
+        name = str(self._evaluate_arg(args[0]))
+        return os.environ.get(name, "")
+
+    def _func_repeat(self, args: list) -> str:
+        """REPEAT$(s, n) - Repeat string n times."""
+        if len(args) < 2:
+            raise ValueError("REPEAT requires 2 arguments")
+        s = str(self._evaluate_arg(args[0]))
+        try:
+            n = int(float(self._evaluate_arg(args[1])))
+        except (ValueError, TypeError):
+            n = 0
+        return s * max(0, n)

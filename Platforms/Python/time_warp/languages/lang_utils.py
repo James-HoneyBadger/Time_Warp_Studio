@@ -161,6 +161,7 @@ class StructuredError(LanguageError):
 # Tokenizer helpers
 # ---------------------------------------------------------------------------
 
+
 def tokenize(line: str) -> list[str]:
     """Split *line* into tokens, respecting quoted strings.
 
@@ -197,6 +198,7 @@ def tokenize(line: str) -> list[str]:
 # ---------------------------------------------------------------------------
 # Loop/stack helpers
 # ---------------------------------------------------------------------------
+
 
 class LoopStack:
     """Generic stack for tracking nested loop contexts.
@@ -316,6 +318,7 @@ def did_you_mean(name: str, candidates: list[str], max_dist: int = 2) -> str | N
     >>> did_you_mean("PRNT", ["PRINT", "INPUT", "LET"])
     'PRINT'
     """
+
     def _dist(a: str, b: str) -> int:
         if a == b:
             return 0

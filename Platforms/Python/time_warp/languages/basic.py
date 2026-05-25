@@ -305,6 +305,9 @@ def execute_basic(
 
     if cmd.startswith("REM") or cmd.startswith("'"):
         return ""
+    # PRINT USING must be checked before plain PRINT
+    if cmd.startswith("PRINT USING "):
+        return _basic_print_using(interpreter, _strip_comment(command[12:]))
     if cmd.startswith("PRINT ") or cmd == "PRINT":
         args = command[6:] if len(command) > 6 else ""
         return _basic_print(interpreter, _strip_comment(args))
@@ -366,6 +369,7 @@ def execute_basic(
         and not cmd.startswith("IF ")
         and not cmd.startswith("FOR ")
         and not cmd.startswith("DEF FN")
+        and not cmd.startswith("CONST ")
     ):
         return _basic_let(interpreter, _strip_comment(command))
     if cmd.startswith("COLOR "):
@@ -406,6 +410,12 @@ def execute_basic(
         return _basic_read(interpreter, _strip_comment(command[5:]))
     if cmd.startswith("RESTORE"):
         return _basic_restore(interpreter, _strip_comment(command[7:]))
+    if cmd.startswith("SWAP "):
+        return _basic_swap(interpreter, _strip_comment(command[5:]))
+    if cmd.startswith("ERASE "):
+        return _basic_erase(interpreter, _strip_comment(command[6:]))
+    if cmd.startswith("CONST "):
+        return _basic_const(interpreter, _strip_comment(command[6:]))
     # Type default declarations
     if cmd.startswith("DEFINT "):
         interpreter.set_default_type_for_spec(
@@ -500,8 +510,39 @@ def execute_basic(
     if cmd.startswith("RANDOMIZE"):
         import random as _rng
 
-        _rng.seed()
+        rest_rand = cmd[9:].strip()
+        if rest_rand.startswith("TIMER"):
+            import time as _t
+
+            _rng.seed(int(_t.time() * 1000))
+        elif rest_rand:
+            try:
+                _rng.seed(int(interpreter.evaluate_expression(rest_rand)))
+            except (ValueError, TypeError):
+                _rng.seed()
+        else:
+            _rng.seed()
         return ""
+    # SLEEP n — pause for n seconds (in IDE context, just annotate output)
+    if cmd.startswith("SLEEP"):
+        rest_sleep = cmd[5:].strip()
+        if rest_sleep:
+            try:
+                secs = float(interpreter.evaluate_expression(rest_sleep))
+                return f"ℹ️ SLEEP {secs:.1f}s\n"
+            except (ValueError, TypeError):
+                pass
+        return "ℹ️ SLEEP\n"
+    # ── HARDWARE commands ─────────────────────────────────────────────────
+    # HARDWARE DEVICE ADD <id> <type> [PIN <n>]
+    # HARDWARE SENSOR READ <id>               → prints reading
+    # HARDWARE PIN SET <id> <value>           → set device value
+    # HARDWARE PIN GET <id>                   → get device value
+    # HARDWARE STATUS                         → list all devices
+    # HARDWARE ENV SET <key> <value>          → set environment variable
+    # HARDWARE ENV GET <key>                  → print environment variable
+    if cmd.startswith("HARDWARE "):
+        return _basic_hardware(interpreter, command[9:].strip())
     # --- Full Logo command and block blending ---
     _execute_logo: Optional[Any] = None
     try:
@@ -517,10 +558,27 @@ def execute_basic(
             return False
         first = line.strip().split()[0].upper()
         # Allow MAKE, REPEAT, TO, and any LOGO_COMMANDS
-        if first in LOGO_COMMANDS or first in {"MAKE", "REPEAT", "TO", "END", "IFELSE", "IF", "FOREACH", "MAP", "FILTER", "REDUCE", "WHILE", "UNTIL"}:
+        if first in LOGO_COMMANDS or first in {
+            "MAKE",
+            "REPEAT",
+            "TO",
+            "END",
+            "IFELSE",
+            "IF",
+            "FOREACH",
+            "MAP",
+            "FILTER",
+            "REDUCE",
+            "WHILE",
+            "UNTIL",
+        }:
             return True
         # Allow Logo variable assignment (MAKE, :, ")
-        if line.strip().startswith("MAKE ") or line.strip().startswith(":") or line.strip().startswith('"'):
+        if (
+            line.strip().startswith("MAKE ")
+            or line.strip().startswith(":")
+            or line.strip().startswith('"')
+        ):
             return True
         # Allow bracketed blocks
         if "[" in line or "]" in line:
@@ -537,11 +595,25 @@ def execute_basic(
     # If the line is not recognized as BASIC, but is not empty, try to accumulate a Logo block
     if _execute_logo and command.strip():
         # Try to detect start of a Logo block (e.g., REPEAT ... [ ... ])
-        if any(kw in command.upper() for kw in ["REPEAT", "TO", "FOREACH", "MAP", "FILTER", "REDUCE", "WHILE", "UNTIL"]):
+        if any(
+            kw in command.upper()
+            for kw in [
+                "REPEAT",
+                "TO",
+                "FOREACH",
+                "MAP",
+                "FILTER",
+                "REDUCE",
+                "WHILE",
+                "UNTIL",
+            ]
+        ):
             # Accumulate lines until block end (matching brackets)
             block_lines = [command]
             open_brackets = command.count("[") - command.count("]")
-            interpreter.logo_block_buffer = getattr(interpreter, "logo_block_buffer", [])
+            interpreter.logo_block_buffer = getattr(
+                interpreter, "logo_block_buffer", []
+            )
             interpreter.logo_block_buffer.extend(block_lines)
             if open_brackets > 0:
                 # Wait for more lines in the block
@@ -554,7 +626,10 @@ def execute_basic(
         # If already accumulating a Logo block
         if hasattr(interpreter, "logo_block_buffer") and interpreter.logo_block_buffer:
             interpreter.logo_block_buffer.append(command)
-            open_brackets = sum(line.count("[") - line.count("]") for line in interpreter.logo_block_buffer)
+            open_brackets = sum(
+                line.count("[") - line.count("]")
+                for line in interpreter.logo_block_buffer
+            )
             if open_brackets > 0:
                 return ""
             else:
@@ -699,7 +774,7 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
             else:
                 out_items.append("")  # Undefined string variable is empty
         # Handle string functions (LEN, LEFT, RIGHT, MID, INSTR, UPPER, LOWER,
-        # TRIM, STR, VAL)
+        # TRIM, STR, VAL, LPAD, RPAD, FORMAT, LCASE, UCASE, ENVIRON, REPEAT)
         elif any(
             item_upper.startswith(func)
             for func in [
@@ -710,11 +785,26 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
                 "INSTR(",
                 "UPPER(",
                 "LOWER(",
+                "LCASE(",
+                "LCASE$(",
+                "UCASE(",
+                "UCASE$(",
                 "TRIM(",
                 "LTRIM(",
                 "RTRIM(",
+                "LPAD(",
+                "LPAD$(",
+                "RPAD(",
+                "RPAD$(",
+                "FORMAT(",
+                "FORMAT$(",
+                "ENVIRON(",
+                "ENVIRON$(",
+                "REPEAT(",
+                "REPEAT$(",
                 "SPACE(",
                 "SPACE$(",
+                "STRING$(",
                 "STR(",
                 "VAL(",
             ]
@@ -1097,6 +1187,115 @@ def _basic_resume_next(interpreter: "Interpreter") -> str:
         if target_idx < len(interpreter.program_lines):
             interpreter.current_line = target_idx
     return ""
+
+
+def _basic_hardware(interpreter: "Interpreter", args: str) -> str:
+    """Handle HARDWARE <sub-command> from BASIC.
+
+    Supported sub-commands:
+      DEVICE ADD <id> <type> [PIN <n>]
+      SENSOR READ <id>
+      PIN SET <id> <value>
+      PIN GET <id>
+      STATUS
+      ENV SET <key> <value>
+      ENV GET <key>
+    """
+    hw = getattr(interpreter, "hardware", None)
+    if hw is None:
+        return "❌ Hardware simulator not available\n"
+
+    sub = args.upper()
+
+    # ── DEVICE ADD ────────────────────────────────────────────────────────
+    if sub.startswith("DEVICE ADD "):
+        parts = args[11:].split()
+        if len(parts) < 2:
+            return "❌ HARDWARE DEVICE ADD requires <id> <type>\n"
+        dev_id, dev_type_str = parts[0], parts[1].upper()
+
+        pin = None
+        if "PIN" in [p.upper() for p in parts]:
+            try:
+                pin_idx = [p.upper() for p in parts].index("PIN")
+                pin = int(parts[pin_idx + 1])
+            except (IndexError, ValueError):
+                return "❌ HARDWARE DEVICE ADD PIN requires a number\n"
+
+        from ..features.hardware_simulator import HardwareType
+
+        type_map = {t.name: t for t in HardwareType}
+        if dev_type_str not in type_map:
+            names = ", ".join(type_map.keys())
+            return f"❌ Unknown hardware type '{dev_type_str}'. Available: {names}\n"
+
+        hw.add_device(dev_id, type_map[dev_type_str], pin if pin is not None else 0)
+        return f"ℹ️ Hardware device '{dev_id}' ({dev_type_str}) added\n"
+
+    # ── SENSOR READ ──────────────────────────────────────────────────────
+    if sub.startswith("SENSOR READ "):
+        dev_id = args[12:].strip()
+        reading = hw.read_sensor(dev_id)
+        if reading is None:
+            return f"❌ No device '{dev_id}' or it has no sensor reading\n"
+        return f"ℹ️ {dev_id}: {reading.value} {reading.unit} (simulated={reading.is_simulated})\n"
+
+    # ── PIN SET ──────────────────────────────────────────────────────────
+    if sub.startswith("PIN SET "):
+        parts = args[8:].split()
+        if len(parts) < 2:
+            return "❌ HARDWARE PIN SET requires <id> <value>\n"
+        dev_id = parts[0]
+        try:
+            value = float(parts[1])
+        except ValueError:
+            return f"❌ HARDWARE PIN SET value must be numeric, got '{parts[1]}'\n"
+        hw.set_device_value(dev_id, value)
+        return f"ℹ️ {dev_id} set to {value}\n"
+
+    # ── PIN GET ──────────────────────────────────────────────────────────
+    if sub.startswith("PIN GET "):
+        dev_id = args[8:].strip()
+        status = hw.get_device_status(dev_id)
+        if status is None:
+            return f"❌ No device '{dev_id}'\n"
+        return f"ℹ️ {dev_id} = {status.get('current_value', 'N/A')}\n"
+
+    # ── STATUS ────────────────────────────────────────────────────────────
+    if sub.strip() == "STATUS":
+        all_status = hw.get_all_device_status()
+        if not all_status:
+            return "ℹ️ No hardware devices registered\n"
+        lines_out = ["ℹ️ Hardware devices:"]
+        for info in all_status:
+            lines_out.append(
+                f"  {info.get('device_id', '?')}: type={info.get('type', '?')} "
+                f"active={info.get('is_active', '?')} "
+                f"value={info.get('current_value', '?')}"
+            )
+        return "\n".join(lines_out) + "\n"
+
+    # ── ENV SET ──────────────────────────────────────────────────────────
+    if sub.startswith("ENV SET "):
+        parts = args[8:].split(None, 1)
+        if len(parts) < 2:
+            return "❌ HARDWARE ENV SET requires <key> <value>\n"
+        key, val_str = parts[0], parts[1]
+        try:
+            value: float | str = float(val_str)
+        except ValueError:
+            value = val_str
+        hw.set_environment(**{key.lower(): value})
+        return f"ℹ️ Environment '{key}' = {value}\n"
+
+    # ── ENV GET ──────────────────────────────────────────────────────────
+    if sub.startswith("ENV GET "):
+        key = args[8:].strip()
+        env = hw.get_environment()
+        val = env.get(key.lower(), "not set")
+        return f"ℹ️ Environment '{key}' = {val}\n"
+
+    return f"❌ Unknown HARDWARE sub-command: {args}\n"
 
 
 def _basic_for(interpreter: "Interpreter", args: str) -> str:
@@ -2139,7 +2338,9 @@ def _basic_dim(interpreter: "Interpreter", args: str) -> str:
             # Guard against arrays that would exhaust memory
             _MAX_ARRAY_SIZE = 65535
             if size > _MAX_ARRAY_SIZE:
-                logger.error("DIM: Array dimension %s exceeds limit for %s", size, name_part)
+                logger.error(
+                    "DIM: Array dimension %s exceeds limit for %s", size, name_part
+                )
                 return f"❌ Array too large: {size} (max {_MAX_ARRAY_SIZE})\n"
 
             # Create array — string arrays (ending with $) store strings,
@@ -2870,3 +3071,230 @@ def _basic_joyinit(_interpreter: "Interpreter") -> str:
         return "❌ No gamepad backend available (install pygame or inputs)\n"
     except (ImportError, RuntimeError) as e:
         return f"❌ JOYINIT error: {e}\n"
+
+
+# ---------------------------------------------------------------------------
+# SWAP var1, var2
+# ---------------------------------------------------------------------------
+
+
+def _basic_swap(interpreter: "Interpreter", args: str) -> str:
+    """SWAP var1, var2 — exchange the values of two variables."""
+    parts = args.split(",", 1)
+    if len(parts) != 2:
+        return "❌ SWAP requires two variable names separated by a comma\n"
+    v1 = parts[0].strip().upper()
+    v2 = parts[1].strip().upper()
+
+    # Numeric variables
+    in_num1 = v1 in interpreter.variables
+    in_num2 = v2 in interpreter.variables
+    # String variables
+    in_str1 = v1 in interpreter.string_variables
+    in_str2 = v2 in interpreter.string_variables
+
+    if in_num1 or in_num2:
+        a = interpreter.variables.get(v1, 0)
+        b = interpreter.variables.get(v2, 0)
+        interpreter.variables[v1] = b
+        interpreter.variables[v2] = a
+        return ""
+    if in_str1 or in_str2:
+        a = interpreter.string_variables.get(v1, "")
+        b = interpreter.string_variables.get(v2, "")
+        interpreter.string_variables[v1] = b
+        interpreter.string_variables[v2] = a
+        return ""
+    # If neither exists, swap numeric (both treated as 0)
+    interpreter.variables[v1] = 0
+    interpreter.variables[v2] = 0
+    return ""
+
+
+# ---------------------------------------------------------------------------
+# ERASE arrayname[, arrayname2 ...]
+# ---------------------------------------------------------------------------
+
+
+def _basic_erase(interpreter: "Interpreter", args: str) -> str:
+    """ERASE arr — reinitialize (clear) one or more arrays."""
+    for name in args.split(","):
+        arr_name = name.strip().upper()
+        if not arr_name:
+            continue
+        if arr_name in interpreter.arrays:
+            arr = interpreter.arrays[arr_name]
+            # Reset all elements to 0 (numeric) or "" (string)
+            if arr_name.endswith("$"):
+                interpreter.arrays[arr_name] = [""] * len(arr)
+            else:
+                interpreter.arrays[arr_name] = [0] * len(arr)
+    return ""
+
+
+# ---------------------------------------------------------------------------
+# CONST name = value
+# ---------------------------------------------------------------------------
+
+
+def _basic_const(interpreter: "Interpreter", args: str) -> str:
+    """CONST name = value — declare a named constant."""
+    if "=" not in args:
+        return "❌ CONST syntax error: expected '='\n"
+    name_part, val_part = args.split("=", 1)
+    const_name = name_part.strip().upper()
+    val_str = val_part.strip()
+
+    if not const_name:
+        return "❌ CONST requires a name\n"
+
+    # Evaluate the value
+    is_string_const = const_name.endswith("$")
+    if is_string_const:
+        # String constant: strip surrounding quotes
+        if val_str.startswith('"') and val_str.endswith('"'):
+            interpreter.string_variables[const_name] = val_str[1:-1]
+        else:
+            try:
+                result = interpreter.interpolate_text(val_str)
+                interpreter.string_variables[const_name] = result
+            except Exception:  # noqa: BLE001
+                interpreter.string_variables[const_name] = val_str
+    else:
+        try:
+            value = interpreter.evaluate_expression(val_str)
+            interpreter.variables[const_name] = value
+        except (ValueError, TypeError, ZeroDivisionError):
+            return f"❌ CONST: cannot evaluate '{val_str}'\n"
+    return ""
+
+
+# ---------------------------------------------------------------------------
+# PRINT USING format$; expr [, expr ...]
+# ---------------------------------------------------------------------------
+
+
+def _basic_print_using(interpreter: "Interpreter", args: str) -> str:
+    """PRINT USING fmt; expr ... — formatted output.
+
+    Format codes (GW-BASIC / QuickBASIC subset):
+        #  — digit placeholder
+        .  — decimal point
+        +  — leading plus/minus sign
+        -  — trailing minus sign for negatives
+        $$  — leading dollar sign
+        **  — fill with asterisks
+        ,   — thousands separator (in numeric field)
+        !  — single character of a string
+        \\  — n-character string field (backslash pairs)
+        &  — variable-length string field
+    """
+    # Split on first semicolon to get format string and expressions
+    sep = args.find(";")
+    if sep == -1:
+        return "❌ PRINT USING: missing ';' separator\n"
+
+    fmt_part = args[:sep].strip()
+    expr_part = args[sep + 1 :].strip()
+
+    # Evaluate format string
+    if fmt_part.startswith('"') and fmt_part.endswith('"'):
+        fmt_str = fmt_part[1:-1]
+    elif fmt_part in interpreter.string_variables:
+        fmt_str = interpreter.string_variables[fmt_part.upper()]
+    else:
+        try:
+            fmt_str = str(interpreter.interpolate_text(fmt_part))
+        except Exception:  # noqa: BLE001
+            fmt_str = fmt_part
+
+    # Collect expressions
+    expressions = [e.strip() for e in expr_part.split(",") if e.strip()]
+
+    output_parts = []
+    expr_idx = 0
+
+    i = 0
+    while i < len(fmt_str):
+        ch = fmt_str[i]
+        if expr_idx >= len(expressions):
+            # No more expressions — output remainder of format string literally
+            output_parts.append(fmt_str[i:])
+            break
+
+        # --- Numeric field: starts with # or + or - or $ or *
+        if ch in "#+-$*" or (ch == "," and i == 0):
+            # Scan to find the full numeric format token
+            j = i
+            has_decimal = False
+            while j < len(fmt_str) and fmt_str[j] in "#.,+-$* ":
+                if fmt_str[j] == ".":
+                    has_decimal = True
+                j += 1
+            field = fmt_str[i:j]
+
+            try:
+                val = float(interpreter.evaluate_expression(expressions[expr_idx]))
+            except (ValueError, TypeError, ZeroDivisionError):
+                val = 0.0
+            expr_idx += 1
+
+            # Count decimal places
+            if has_decimal:
+                dot_pos = field.index(".")
+                decimal_places = len(field) - dot_pos - 1
+                formatted = f"{val:.{decimal_places}f}"
+            else:
+                formatted = f"{val:.0f}"
+
+            # Apply width from # count
+            hash_count = field.count("#")
+            if hash_count > len(formatted.lstrip("+-")):
+                formatted = formatted.rjust(hash_count + (1 if val < 0 else 0))
+
+            output_parts.append(formatted)
+            i = j
+
+        # --- String field: ! (one char), & (full string), \...\
+        elif ch == "!":
+            val_str = _pu_get_string(interpreter, expressions[expr_idx])
+            expr_idx += 1
+            output_parts.append(val_str[:1] if val_str else " ")
+            i += 1
+
+        elif ch == "&":
+            val_str = _pu_get_string(interpreter, expressions[expr_idx])
+            expr_idx += 1
+            output_parts.append(val_str)
+            i += 1
+
+        elif ch == "\\" and i + 1 < len(fmt_str) and fmt_str[i + 1] == "\\":
+            # Find closing \\
+            end = fmt_str.find("\\", i + 1)
+            if end == -1:
+                end = i + 2
+            width = end - i + 1
+            val_str = _pu_get_string(interpreter, expressions[expr_idx])
+            expr_idx += 1
+            output_parts.append(val_str[:width].ljust(width))
+            i = end + 1
+
+        else:
+            output_parts.append(ch)
+            i += 1
+
+    return "".join(output_parts) + "\n"
+
+
+def _pu_get_string(interpreter: "Interpreter", expr: str) -> str:
+    """Helper: evaluate *expr* as a string for PRINT USING."""
+    expr = expr.strip()
+    if expr.startswith('"') and expr.endswith('"'):
+        return expr[1:-1]
+    key = expr.upper()
+    if key in interpreter.string_variables:
+        return interpreter.string_variables[key]
+    try:
+        return interpreter.interpolate_text(expr)
+    except Exception:  # noqa: BLE001
+        return expr

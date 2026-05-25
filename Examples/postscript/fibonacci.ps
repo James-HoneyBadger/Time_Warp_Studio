@@ -1,0 +1,17 @@
+%!PS-Adobe-3.0
+% Fibonacci sequence in PostScript
+
+/fibonacci {
+    dup 1 le {
+        % base case: return n
+    } {
+        dup 1 sub fibonacci
+        exch 2 sub fibonacci
+        add
+    } ifelse
+} def
+
+0 1 10 {
+    dup (fib = ) print
+    fibonacci =
+} for

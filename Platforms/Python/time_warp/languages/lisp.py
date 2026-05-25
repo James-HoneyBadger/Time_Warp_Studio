@@ -183,12 +183,14 @@ def _read_all(source: str) -> list[Any]:
 # Data types
 # ---------------------------------------------------------------------------
 
+
 class SchemeError(Exception):
     pass
 
 
 class _Symbol(str):
     """Interned symbol type — identity is equality."""
+
     _pool: dict[str, "_Symbol"] = {}
 
     def __new__(cls, name: str) -> "_Symbol":
@@ -207,6 +209,7 @@ def _SYM(name: str) -> _Symbol:
 
 class SchemeCell:
     """Lisp cons cell."""
+
     __slots__ = ("car", "cdr")
 
     def __init__(self, car: Any, cdr: Any):
@@ -228,6 +231,7 @@ class SchemeCell:
 
 class SchemeChar:
     """Character type."""
+
     def __init__(self, ch: str):
         self.ch = ch
 
@@ -252,6 +256,7 @@ class SchemeChar:
 
 class SchemeVector:
     """Mutable vector."""
+
     def __init__(self, items: list):
         self.items = list(items)
 
@@ -262,6 +267,7 @@ class SchemeVector:
 
 class SchemeProcedure:
     """User-defined lambda."""
+
     __slots__ = ("params", "rest_param", "body", "env", "name")
 
     def __init__(self, params, rest_param, body, env, name="lambda"):
@@ -277,6 +283,7 @@ class SchemeProcedure:
 
 class SchemeMacro:
     """syntax-rules macro."""
+
     __slots__ = ("keywords", "rules", "def_env")
 
     def __init__(self, keywords, rules, def_env):
@@ -290,6 +297,7 @@ class SchemeMacro:
 
 class _Nil:
     """The empty list ()."""
+
     _inst = None
 
     def __new__(cls):
@@ -309,6 +317,7 @@ class _Nil:
 
 _NIL = _Nil()
 
+
 # Tail-call thunk
 class _Thunk:
     __slots__ = ("expr", "env")
@@ -321,6 +330,7 @@ class _Thunk:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _list_to_cells(items: list) -> Any:
     result: Any = _NIL
@@ -348,7 +358,12 @@ def _scheme_repr(x: Any) -> str:
     if isinstance(x, _Symbol):
         return str(x)
     if isinstance(x, str):
-        s = x.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\t", "\\t")
+        s = (
+            x.replace("\\", "\\\\")
+            .replace('"', '\\"')
+            .replace("\n", "\\n")
+            .replace("\t", "\\t")
+        )
         return f'"{s}"'
     if isinstance(x, SchemeChar):
         return repr(x)
@@ -397,8 +412,10 @@ def _display_list(cell: SchemeCell, display: bool = False) -> str:
 # Environment
 # ---------------------------------------------------------------------------
 
+
 class SchemeEnv:
     """Lexical environment frame."""
+
     __slots__ = ("_bindings", "_parent")
 
     def __init__(self, parent: "SchemeEnv | None" = None):
@@ -434,7 +451,7 @@ class SchemeEnv:
         for p, a in zip(params, args):
             child.define(p, a)
         if rest is not None:
-            child.define(rest, _list_to_cells(list(args[len(params):])))
+            child.define(rest, _list_to_cells(list(args[len(params) :])))
         elif len(args) != len(params):
             raise SchemeError(
                 f"arity mismatch: expected {len(params)} args, got {len(args)}"
@@ -445,6 +462,7 @@ class SchemeEnv:
 # ---------------------------------------------------------------------------
 # Evaluator
 # ---------------------------------------------------------------------------
+
 
 class SchemeInterpreter:
     def __init__(self, output_fn, turtle=None):
@@ -477,7 +495,9 @@ class SchemeInterpreter:
             return env.lookup(str(expr))
 
         # Self-evaluating
-        if expr is _NIL or isinstance(expr, (bool, int, float, str, SchemeChar, SchemeVector)):
+        if expr is _NIL or isinstance(
+            expr, (bool, int, float, str, SchemeChar, SchemeVector)
+        ):
             return expr
         if expr is None:
             return _NIL
@@ -525,7 +545,11 @@ class SchemeInterpreter:
                     if test_val is not False:
                         if len(cl) == 1:
                             return test_val
-                        if len(cl) == 3 and isinstance(cl[1], _Symbol) and str(cl[1]) == "=>":
+                        if (
+                            len(cl) == 3
+                            and isinstance(cl[1], _Symbol)
+                            and str(cl[1]) == "=>"
+                        ):
                             proc = self.eval(cl[2], env)
                             return self._apply(proc, [test_val])
                         return _Thunk(_list_to_cells([_SYM("begin")] + cl[1:]), env)
@@ -544,8 +568,12 @@ class SchemeInterpreter:
                     if isinstance(datum, _Symbol) and str(datum) == "else":
                         return _Thunk(_list_to_cells([_SYM("begin")] + cl[1:]), env)
                     datums = _cells_to_list(datum)
-                    if any(self._eqv(key, self.eval(_list_to_cells([_SYM("quote"), d]), env))
-                           for d in datums):
+                    if any(
+                        self._eqv(
+                            key, self.eval(_list_to_cells([_SYM("quote"), d]), env)
+                        )
+                        for d in datums
+                    ):
                         return _Thunk(_list_to_cells([_SYM("begin")] + cl[1:]), env)
                 return _NIL
 
@@ -694,7 +722,9 @@ class SchemeInterpreter:
                     if test_val is not False:
                         if len(test_clause) == 1:
                             return _NIL
-                        return _Thunk(_list_to_cells([_SYM("begin")] + test_clause[1:]), child)
+                        return _Thunk(
+                            _list_to_cells([_SYM("begin")] + test_clause[1:]), child
+                        )
                     for cmd in commands:
                         self.eval(cmd, child)
                     new_vals = [self.eval(step, child) for _, _, step in vars_steps]
@@ -717,6 +747,29 @@ class SchemeInterpreter:
             if name == "define-record-type":
                 return self._define_record(args_cell, env)
 
+            if name == "parameterize":
+                # (parameterize ((param expr) ...) body ...)
+                args_lst = _cells_to_list(args_cell)
+                bindings, body = args_lst[0], args_lst[1:]
+                bindings_lst = _cells_to_list(bindings)
+                saved = []
+                for b in bindings_lst:
+                    bl = _cells_to_list(b)
+                    param = self.eval(bl[0], env)
+                    new_val = self.eval(bl[1], env)
+                    cell = getattr(param, "_param_cell", None)
+                    if cell is not None:
+                        saved.append((cell, cell[0]))
+                        cell[0] = new_val
+                try:
+                    result = _NIL
+                    for expr_b in body:
+                        result = self.eval(expr_b, env)
+                    return result
+                finally:
+                    for cell, old_val in reversed(saved):
+                        cell[0] = old_val
+
             if name == "values":
                 vals = [self.eval(v, env) for v in _cells_to_list(args_cell)]
                 return _list_to_cells(vals)
@@ -726,7 +779,11 @@ class SchemeInterpreter:
                 producer = self.eval(args[0], env)
                 consumer = self.eval(args[1], env)
                 produced = self._apply(producer, [])
-                vals = _cells_to_list(produced) if isinstance(produced, SchemeCell) else [produced]
+                vals = (
+                    _cells_to_list(produced)
+                    if isinstance(produced, SchemeCell)
+                    else [produced]
+                )
                 return self._apply(consumer, vals)
 
         # ── Macro expansion ──────────────────────────────────────────────
@@ -754,9 +811,8 @@ class SchemeInterpreter:
         """Apply proc to args (no TCO — use for non-tail positions)."""
         if isinstance(proc, SchemeProcedure):
             child = proc.env.extend(proc.params, proc.rest_param, args)
-            result = _NIL
             for s in proc.body[:-1]:
-                result = self.eval(s, child)
+                self.eval(s, child)
             return self.eval(proc.body[-1], child)
         if callable(proc):
             return proc(*args)
@@ -772,11 +828,19 @@ class SchemeInterpreter:
             if str(head) == "unquote":
                 if depth == 0:
                     return self.eval(tmpl.cdr.car, env)
-                return _list_to_cells([_SYM("unquote"),
-                                       self._expand_quasiquote(tmpl.cdr.car, env, depth - 1)])
+                return _list_to_cells(
+                    [
+                        _SYM("unquote"),
+                        self._expand_quasiquote(tmpl.cdr.car, env, depth - 1),
+                    ]
+                )
             if str(head) == "quasiquote":
-                return _list_to_cells([_SYM("quasiquote"),
-                                       self._expand_quasiquote(tmpl.cdr.car, env, depth + 1)])
+                return _list_to_cells(
+                    [
+                        _SYM("quasiquote"),
+                        self._expand_quasiquote(tmpl.cdr.car, env, depth + 1),
+                    ]
+                )
         # Check for unquote-splicing in head position
         if isinstance(head, SchemeCell) and isinstance(head.car, _Symbol):
             if str(head.car) == "unquote-splicing":
@@ -799,7 +863,7 @@ class SchemeInterpreter:
     # ── Macro expansion ───────────────────────────────────────────────────
 
     def _expand_macro(self, macro: SchemeMacro, form: Any) -> Any:
-        form_list = list(form)  # iterate pairs
+        list(form)  # iterate pairs
         form_items = []
         node = form
         while isinstance(node, SchemeCell):
@@ -829,12 +893,16 @@ class SchemeInterpreter:
         while pi < len(pat):
             p = pat[pi]
             # ellipsis pattern
-            if pi + 1 < len(pat) and isinstance(pat[pi + 1], _Symbol) and str(pat[pi + 1]) == "...":
+            if (
+                pi + 1 < len(pat)
+                and isinstance(pat[pi + 1], _Symbol)
+                and str(pat[pi + 1]) == "..."
+            ):
                 sym = str(p) if isinstance(p, _Symbol) else None
                 matched = []
                 while fi < len(form):
                     sub: dict[str, Any] = {}
-                    if sym and not (sym in keywords):
+                    if sym and sym not in keywords:
                         matched.append(form[fi])
                         fi += 1
                     else:
@@ -882,18 +950,24 @@ class SchemeInterpreter:
             while isinstance(node, SchemeCell):
                 item = node.car
                 rest = node.cdr
-                if isinstance(rest, SchemeCell) and isinstance(rest.car, _Symbol) and str(rest.car) == "...":
+                if (
+                    isinstance(rest, SchemeCell)
+                    and isinstance(rest.car, _Symbol)
+                    and str(rest.car) == "..."
+                ):
                     # Expand the repeated pattern
                     if isinstance(item, _Symbol) and str(item) in bindings:
                         expanded = bindings[str(item)]
-                        for x in (expanded if expanded is not _NIL else []):
+                        for x in expanded if expanded is not _NIL else []:
                             items.append(x)
                     node = rest.cdr
                     continue
                 items.append(self._instantiate_template(item, bindings))
                 node = rest
             # Build result
-            result: Any = self._instantiate_template(node, bindings) if node is not _NIL else _NIL
+            result: Any = (
+                self._instantiate_template(node, bindings) if node is not _NIL else _NIL
+            )
             for x in reversed(items):
                 result = SchemeCell(x, result)
             return result
@@ -936,7 +1010,10 @@ class SchemeInterpreter:
             env.define(getter_name, lambda r, fn=fname: r._fields[fn])
             if len(fsl) > 2:
                 setter_name = str(fsl[2])
-                env.define(setter_name, lambda r, v, fn=fname: r._fields.update({fn: v}) or _NIL)
+                env.define(
+                    setter_name,
+                    lambda r, v, fn=fname: r._fields.update({fn: v}) or _NIL,
+                )
         return _SYM(type_name)
 
     # ── eqv? ─────────────────────────────────────────────────────────────
@@ -944,7 +1021,7 @@ class SchemeInterpreter:
     def _eqv(self, a: Any, b: Any) -> bool:
         if a is b:
             return True
-        if type(a) != type(b):
+        if type(a) is not type(b):
             return False
         return a == b
 
@@ -952,8 +1029,6 @@ class SchemeInterpreter:
 
     def _setup_builtins(self):
         e = self._global_env
-        T = True
-        F = False
 
         def _num(x):
             if isinstance(x, bool):
@@ -970,17 +1045,37 @@ class SchemeInterpreter:
                 for a in args[1:]:
                     result = op(result, _num(a))
                 return result
+
             fn.__name__ = op_name
             return fn
 
         # Arithmetic
         import operator as _op
+
         e.define("+", _arith("+", _op.add, 0))
         e.define("*", _arith("*", _op.mul, 1))
-        e.define("-", lambda *args: _num(args[0]) if len(args) == 1 else
-                 _arith("-", _op.sub, 0)(*args))
-        e.define("/", lambda *args: _num(args[0]) if len(args) == 1 else
-                 _arith("/", lambda a, b: a // b if isinstance(a, int) and isinstance(b, int) and a % b == 0 else a / b, 1)(*args))
+        e.define(
+            "-",
+            lambda *args: (
+                _num(args[0]) if len(args) == 1 else _arith("-", _op.sub, 0)(*args)
+            ),
+        )
+        e.define(
+            "/",
+            lambda *args: (
+                _num(args[0])
+                if len(args) == 1
+                else _arith(
+                    "/",
+                    lambda a, b: (
+                        a // b
+                        if isinstance(a, int) and isinstance(b, int) and a % b == 0
+                        else a / b
+                    ),
+                    1,
+                )(*args)
+            ),
+        )
         e.define("quotient", lambda a, b: int(_num(a) / _num(b)))
         e.define("remainder", lambda a, b: int(_num(a)) % int(_num(b)))
         e.define("modulo", lambda a, b: int(_num(a)) % int(_num(b)))
@@ -997,9 +1092,18 @@ class SchemeInterpreter:
         e.define("lcm", lambda *args: _lcm_list([int(_num(a)) for a in args]))
         e.define("exact->inexact", lambda a: float(_num(a)))
         e.define("inexact->exact", lambda a: int(_num(a)))
-        e.define("number->string", lambda a, *rest: str(int(_num(a))) if not rest else
-                 _num_to_str(int(_num(a)), int(_num(rest[0]))))
-        e.define("string->number", lambda s, *rest: _str_to_num(s, int(_num(rest[0])) if rest else 10))
+        e.define(
+            "number->string",
+            lambda a, *rest: (
+                str(int(_num(a)))
+                if not rest
+                else _num_to_str(int(_num(a)), int(_num(rest[0])))
+            ),
+        )
+        e.define(
+            "string->number",
+            lambda s, *rest: _str_to_num(s, int(_num(rest[0])) if rest else 10),
+        )
         e.define("zero?", lambda a: _num(a) == 0)
         e.define("positive?", lambda a: _num(a) > 0)
         e.define("negative?", lambda a: _num(a) < 0)
@@ -1007,7 +1111,9 @@ class SchemeInterpreter:
         e.define("even?", lambda a: int(_num(a)) % 2 == 0)
         e.define("exact?", lambda a: isinstance(_num(a), int))
         e.define("inexact?", lambda a: isinstance(_num(a), float))
-        e.define("number?", lambda a: isinstance(a, (int, float)) and not isinstance(a, bool))
+        e.define(
+            "number?", lambda a: isinstance(a, (int, float)) and not isinstance(a, bool)
+        )
 
         # Math
         e.define("sin", lambda a: math.sin(_num(a)))
@@ -1015,50 +1121,110 @@ class SchemeInterpreter:
         e.define("tan", lambda a: math.tan(_num(a)))
         e.define("asin", lambda a: math.asin(_num(a)))
         e.define("acos", lambda a: math.acos(_num(a)))
-        e.define("atan", lambda a, *b: math.atan2(_num(a), _num(b[0])) if b else math.atan(_num(a)))
-        e.define("log", lambda a, *b: math.log(_num(a), _num(b[0])) if b else math.log(_num(a)))
+        e.define(
+            "atan",
+            lambda a, *b: math.atan2(_num(a), _num(b[0])) if b else math.atan(_num(a)),
+        )
+        e.define(
+            "log",
+            lambda a, *b: math.log(_num(a), _num(b[0])) if b else math.log(_num(a)),
+        )
         e.define("exp", lambda a: math.exp(_num(a)))
-        e.define("floor/", lambda a, b: _list_to_cells([math.floor(_num(a) / _num(b)),
-                                                          int(_num(a)) % int(_num(b))]))
+        e.define(
+            "floor/",
+            lambda a, b: _list_to_cells(
+                [math.floor(_num(a) / _num(b)), int(_num(a)) % int(_num(b))]
+            ),
+        )
 
         # Comparison
-        e.define("=",  lambda *a: all(_num(a[i]) == _num(a[i+1]) for i in range(len(a)-1)))
-        e.define("<",  lambda *a: all(_num(a[i]) <  _num(a[i+1]) for i in range(len(a)-1)))
-        e.define(">",  lambda *a: all(_num(a[i]) >  _num(a[i+1]) for i in range(len(a)-1)))
-        e.define("<=", lambda *a: all(_num(a[i]) <= _num(a[i+1]) for i in range(len(a)-1)))
-        e.define(">=", lambda *a: all(_num(a[i]) >= _num(a[i+1]) for i in range(len(a)-1)))
+        e.define(
+            "=", lambda *a: all(_num(a[i]) == _num(a[i + 1]) for i in range(len(a) - 1))
+        )
+        e.define(
+            "<", lambda *a: all(_num(a[i]) < _num(a[i + 1]) for i in range(len(a) - 1))
+        )
+        e.define(
+            ">", lambda *a: all(_num(a[i]) > _num(a[i + 1]) for i in range(len(a) - 1))
+        )
+        e.define(
+            "<=",
+            lambda *a: all(_num(a[i]) <= _num(a[i + 1]) for i in range(len(a) - 1)),
+        )
+        e.define(
+            ">=",
+            lambda *a: all(_num(a[i]) >= _num(a[i + 1]) for i in range(len(a) - 1)),
+        )
 
         # Boolean
         e.define("not", lambda a: a is False)
         e.define("boolean?", lambda a: isinstance(a, bool))
 
         # Equality
-        e.define("eq?",    lambda a, b: a is b or (isinstance(a, _Symbol) and isinstance(b, _Symbol) and str(a) == str(b)))
-        e.define("eqv?",   lambda a, b: self._eqv(a, b))
+        e.define(
+            "eq?",
+            lambda a, b: (
+                a is b
+                or (
+                    isinstance(a, _Symbol)
+                    and isinstance(b, _Symbol)
+                    and str(a) == str(b)
+                )
+            ),
+        )
+        e.define("eqv?", lambda a, b: self._eqv(a, b))
         e.define("equal?", lambda a, b: _scheme_repr(a) == _scheme_repr(b))
 
         # Pairs / Lists
         e.define("cons", lambda a, b: SchemeCell(a, b))
-        e.define("car",  lambda p: p.car if isinstance(p, SchemeCell) else (_ for _ in ()).throw(SchemeError(f"car: not a pair: {_scheme_repr(p)}")))
-        e.define("cdr",  lambda p: p.cdr if isinstance(p, SchemeCell) else (_ for _ in ()).throw(SchemeError(f"cdr: not a pair: {_scheme_repr(p)}")))
+        e.define(
+            "car",
+            lambda p: (
+                p.car
+                if isinstance(p, SchemeCell)
+                else (_ for _ in ()).throw(
+                    SchemeError(f"car: not a pair: {_scheme_repr(p)}")
+                )
+            ),
+        )
+        e.define(
+            "cdr",
+            lambda p: (
+                p.cdr
+                if isinstance(p, SchemeCell)
+                else (_ for _ in ()).throw(
+                    SchemeError(f"cdr: not a pair: {_scheme_repr(p)}")
+                )
+            ),
+        )
         e.define("set-car!", lambda p, v: _setcar(p, v))
         e.define("set-cdr!", lambda p, v: _setcdr(p, v))
         e.define("pair?", lambda a: isinstance(a, SchemeCell))
         e.define("null?", lambda a: a is _NIL)
         e.define("list?", lambda a: _is_proper_list(a))
-        e.define("list",  lambda *args: _list_to_cells(list(args)))
+        e.define("list", lambda *args: _list_to_cells(list(args)))
         e.define("length", lambda a: len(_cells_to_list(a)))
         e.define("append", lambda *args: _append(*args))
         e.define("reverse", lambda a: _list_to_cells(list(reversed(_cells_to_list(a)))))
         e.define("list-tail", lambda lst, k: _list_tail(lst, int(k)))
-        e.define("list-ref",  lambda lst, k: _cells_to_list(lst)[int(k)])
+        e.define("list-ref", lambda lst, k: _cells_to_list(lst)[int(k)])
         e.define("list-copy", lambda a: _list_to_cells(_cells_to_list(a)))
-        e.define("assoc",  lambda k, lst: _assoc(k, lst, lambda a, b: _scheme_repr(a) == _scheme_repr(b)))
-        e.define("assq",   lambda k, lst: _assoc(k, lst, lambda a, b: a is b))
-        e.define("assv",   lambda k, lst: _assoc(k, lst, self._eqv))
-        e.define("member", lambda k, lst: _member(k, lst, lambda a, b: _scheme_repr(a) == _scheme_repr(b)))
-        e.define("memq",   lambda k, lst: _member(k, lst, lambda a, b: a is b))
-        e.define("memv",   lambda k, lst: _member(k, lst, self._eqv))
+        e.define(
+            "assoc",
+            lambda k, lst: _assoc(
+                k, lst, lambda a, b: _scheme_repr(a) == _scheme_repr(b)
+            ),
+        )
+        e.define("assq", lambda k, lst: _assoc(k, lst, lambda a, b: a is b))
+        e.define("assv", lambda k, lst: _assoc(k, lst, self._eqv))
+        e.define(
+            "member",
+            lambda k, lst: _member(
+                k, lst, lambda a, b: _scheme_repr(a) == _scheme_repr(b)
+            ),
+        )
+        e.define("memq", lambda k, lst: _member(k, lst, lambda a, b: a is b))
+        e.define("memv", lambda k, lst: _member(k, lst, self._eqv))
         e.define("list->vector", lambda lst: SchemeVector(_cells_to_list(lst)))
         e.define("vector->list", lambda v: _list_to_cells(list(v.items)))
 
@@ -1071,43 +1237,100 @@ class SchemeInterpreter:
         e.define("apply", lambda proc, *args: self._apply(proc, _apply_args(args)))
         e.define("map", lambda proc, *lsts: _list_to_cells(_map(self, proc, lsts)))
         e.define("for-each", lambda proc, *lsts: _for_each(self, proc, lsts))
-        e.define("filter", lambda pred, lst: _list_to_cells([x for x in _cells_to_list(lst)
-                                                              if self._apply(pred, [x]) is not False]))
+        e.define(
+            "filter",
+            lambda pred, lst: _list_to_cells(
+                [x for x in _cells_to_list(lst) if self._apply(pred, [x]) is not False]
+            ),
+        )
         e.define("reduce", lambda fn, init, lst: _reduce(self, fn, init, lst))
-        e.define("fold-left",  lambda fn, init, lst: _fold_left(self, fn, init, lst))
+        e.define("fold-left", lambda fn, init, lst: _fold_left(self, fn, init, lst))
         e.define("fold-right", lambda fn, init, lst: _fold_right(self, fn, init, lst))
-        e.define("for-all",  lambda pred, lst: all(self._apply(pred, [x]) is not False
-                                                   for x in _cells_to_list(lst)))
-        e.define("exists",   lambda pred, lst: any(self._apply(pred, [x]) is not False
-                                                   for x in _cells_to_list(lst)))
+        e.define(
+            "for-all",
+            lambda pred, lst: all(
+                self._apply(pred, [x]) is not False for x in _cells_to_list(lst)
+            ),
+        )
+        e.define(
+            "exists",
+            lambda pred, lst: any(
+                self._apply(pred, [x]) is not False for x in _cells_to_list(lst)
+            ),
+        )
         e.define("sort", lambda lst, cmp=None: _scheme_sort(self, lst, cmp))
+        e.define("list-sort", lambda cmp, lst: _scheme_sort(self, lst, cmp))
+        e.define(
+            "iota",
+            lambda count, *rest: _list_to_cells(
+                [
+                    _num(rest[0] if rest else 0)
+                    + i * _num(rest[1] if len(rest) > 1 else 1)
+                    for i in range(int(_num(count)))
+                ]
+            ),
+        )
 
         # Strings
         e.define("string?", lambda a: isinstance(a, str))
-        e.define("string=?", lambda *a: all(a[i] == a[i+1] for i in range(len(a)-1)))
-        e.define("string<?", lambda *a: all(a[i] < a[i+1] for i in range(len(a)-1)))
-        e.define("string>?", lambda *a: all(a[i] > a[i+1] for i in range(len(a)-1)))
-        e.define("string<=?", lambda *a: all(a[i] <= a[i+1] for i in range(len(a)-1)))
-        e.define("string>=?", lambda *a: all(a[i] >= a[i+1] for i in range(len(a)-1)))
+        e.define(
+            "string=?", lambda *a: all(a[i] == a[i + 1] for i in range(len(a) - 1))
+        )
+        e.define("string<?", lambda *a: all(a[i] < a[i + 1] for i in range(len(a) - 1)))
+        e.define("string>?", lambda *a: all(a[i] > a[i + 1] for i in range(len(a) - 1)))
+        e.define(
+            "string<=?", lambda *a: all(a[i] <= a[i + 1] for i in range(len(a) - 1))
+        )
+        e.define(
+            "string>=?", lambda *a: all(a[i] >= a[i + 1] for i in range(len(a) - 1))
+        )
         e.define("string-ci=?", lambda a, b: a.lower() == b.lower())
-        e.define("string",  lambda *chars: "".join(c.ch if isinstance(c, SchemeChar) else str(c) for c in chars))
+        e.define(
+            "string",
+            lambda *chars: "".join(
+                c.ch if isinstance(c, SchemeChar) else str(c) for c in chars
+            ),
+        )
         e.define("string-length", lambda s: len(s))
-        e.define("string-ref",    lambda s, i: SchemeChar(s[int(i)]))
-        e.define("substring",     lambda s, a, *b: s[int(a):int(b[0]) if b else None])
+        e.define("string-ref", lambda s, i: SchemeChar(s[int(i)]))
+        e.define("substring", lambda s, a, *b: s[int(a) : int(b[0]) if b else None])
         e.define("string-append", lambda *args: "".join(args))
-        e.define("string->list",  lambda s: _list_to_cells([SchemeChar(c) for c in s]))
-        e.define("list->string",  lambda lst: "".join(c.ch if isinstance(c, SchemeChar) else str(c) for c in _cells_to_list(lst)))
-        e.define("string-copy",   lambda s: s)
-        e.define("string-upcase",   lambda s: s.upper())
+        e.define("string->list", lambda s: _list_to_cells([SchemeChar(c) for c in s]))
+        e.define(
+            "list->string",
+            lambda lst: "".join(
+                c.ch if isinstance(c, SchemeChar) else str(c)
+                for c in _cells_to_list(lst)
+            ),
+        )
+        e.define("string-copy", lambda s: s)
+        e.define("string-upcase", lambda s: s.upper())
         e.define("string-downcase", lambda s: s.lower())
         e.define("string-contains", lambda s, sub: s.find(sub) >= 0)
-        e.define("number->string", lambda n, *r: _num_to_str(int(_num(n)), int(_num(r[0])) if r else 10))
+        e.define(
+            "string-for-each",
+            lambda proc, s, *rest: (
+                [self._apply(proc, [SchemeChar(c)]) for c in s] and _NIL
+            ),
+        )
+        e.define(
+            "string-index", lambda s, pred, *rest: _string_index(self, s, pred, rest)
+        )
+        e.define(
+            "string-replace",
+            lambda s1, s2, start, end: s1[: int(start)] + s2 + s1[int(end) :],
+        )
+        e.define("string-contains-ci", lambda s, sub: s.lower().find(sub.lower()) >= 0)
+        e.define(
+            "number->string",
+            lambda n, *r: _num_to_str(int(_num(n)), int(_num(r[0])) if r else 10),
+        )
         e.define("string->symbol", lambda s: _SYM(s))
         e.define("symbol->string", lambda s: str(s))
         e.define("string->number", _str_to_num)
-        e.define("string-split",  lambda s, sep=" ": _list_to_cells(s.split(sep)))
-        e.define("string-join",   lambda lst, sep=" ": sep.join(_cells_to_list(lst)))
-        e.define("string-trim",   lambda s, *_: s.strip())
+        e.define("string-split", lambda s, sep=" ": _list_to_cells(s.split(sep)))
+        e.define("string-join", lambda lst, sep=" ": sep.join(_cells_to_list(lst)))
+        e.define("string-trim", lambda s, *_: s.strip())
         e.define("format", lambda dest, fmt, *args: self._format(dest, fmt, args))
         e.define("number-format", lambda n, *_: str(n))
 
@@ -1116,121 +1339,233 @@ class SchemeInterpreter:
         e.define("char->integer", lambda c: ord(c.ch))
         e.define("integer->char", lambda n: SchemeChar(chr(int(n))))
         e.define("char-alphabetic?", lambda c: c.ch.isalpha())
-        e.define("char-numeric?",    lambda c: c.ch.isdigit())
+        e.define("char-numeric?", lambda c: c.ch.isdigit())
         e.define("char-whitespace?", lambda c: c.ch.isspace())
         e.define("char-upper-case?", lambda c: c.ch.isupper())
         e.define("char-lower-case?", lambda c: c.ch.islower())
-        e.define("char-upcase",      lambda c: SchemeChar(c.ch.upper()))
-        e.define("char-downcase",    lambda c: SchemeChar(c.ch.lower()))
-        e.define("char=?",  lambda a, b: a.ch == b.ch)
-        e.define("char<?",  lambda a, b: a.ch < b.ch)
-        e.define("char>?",  lambda a, b: a.ch > b.ch)
+        e.define("char-upcase", lambda c: SchemeChar(c.ch.upper()))
+        e.define("char-downcase", lambda c: SchemeChar(c.ch.lower()))
+        e.define("char=?", lambda a, b: a.ch == b.ch)
+        e.define("char<?", lambda a, b: a.ch < b.ch)
+        e.define("char>?", lambda a, b: a.ch > b.ch)
         e.define("char<=?", lambda a, b: a.ch <= b.ch)
         e.define("char>=?", lambda a, b: a.ch >= b.ch)
 
         # Vectors
-        e.define("vector?",    lambda a: isinstance(a, SchemeVector))
-        e.define("vector",     lambda *args: SchemeVector(list(args)))
-        e.define("make-vector", lambda n, *fill: SchemeVector([(fill[0] if fill else 0)] * int(n)))
-        e.define("vector-ref",  lambda v, i: v.items[int(i)])
+        e.define("vector?", lambda a: isinstance(a, SchemeVector))
+        e.define("vector", lambda *args: SchemeVector(list(args)))
+        e.define(
+            "make-vector",
+            lambda n, *fill: SchemeVector([(fill[0] if fill else 0)] * int(n)),
+        )
+        e.define("vector-ref", lambda v, i: v.items[int(i)])
         e.define("vector-set!", lambda v, i, x: _vector_set(v, int(i), x))
         e.define("vector-length", lambda v: len(v.items))
-        e.define("vector-fill!", lambda v, x: v.items.__setitem__(slice(None), [x]*len(v.items)) or _NIL)
+        e.define(
+            "vector-fill!",
+            lambda v, x: v.items.__setitem__(slice(None), [x] * len(v.items)) or _NIL,
+        )
         e.define("vector->list", lambda v: _list_to_cells(v.items))
-        e.define("list->vector",  lambda lst: SchemeVector(_cells_to_list(lst)))
-        e.define("vector-copy",   lambda v, *s: SchemeVector(v.items[int(s[0]) if s else 0:
-                                                                       int(s[1]) if len(s) > 1 else None]))
+        e.define("list->vector", lambda lst: SchemeVector(_cells_to_list(lst)))
+        e.define(
+            "vector-copy",
+            lambda v, *s: SchemeVector(
+                v.items[int(s[0]) if s else 0 : int(s[1]) if len(s) > 1 else None]
+            ),
+        )
 
         # I/O
-        e.define("display",  lambda x, *_: self._print(_scheme_display(x), newline=False))
-        e.define("write",    lambda x, *_: self._print(_scheme_repr(x), newline=False))
-        e.define("newline",  lambda *_: self._print("", newline=True))
-        e.define("print",    lambda *args: self._print(" ".join(_scheme_display(a) for a in args), newline=True))
-        e.define("println",  lambda *args: self._print(" ".join(_scheme_display(a) for a in args), newline=True))
+        e.define(
+            "display", lambda x, *_: self._print(_scheme_display(x), newline=False)
+        )
+        e.define("write", lambda x, *_: self._print(_scheme_repr(x), newline=False))
+        e.define("newline", lambda *_: self._print("", newline=True))
+        e.define(
+            "print",
+            lambda *args: self._print(
+                " ".join(_scheme_display(a) for a in args), newline=True
+            ),
+        )
+        e.define(
+            "println",
+            lambda *args: self._print(
+                " ".join(_scheme_display(a) for a in args), newline=True
+            ),
+        )
         e.define("write-string", lambda s, *_: self._print(s, newline=False))
-        e.define("read",     lambda *_: _NIL)  # stub
-        e.define("read-line", lambda *_: "")   # stub
+        e.define("read", lambda *_: _NIL)  # stub
+        e.define("read-line", lambda *_: "")  # stub
         e.define("eof-object?", lambda _: False)
 
         # Type predicates
         e.define("procedure?", lambda a: callable(a) or isinstance(a, SchemeProcedure))
-        e.define("symbol?",    lambda a: isinstance(a, _Symbol))
-        e.define("integer?",   lambda a: isinstance(a, int) and not isinstance(a, bool))
-        e.define("real?",      lambda a: isinstance(a, (int, float)) and not isinstance(a, bool))
-        e.define("rational?",  lambda a: isinstance(a, (int, float)) and not isinstance(a, bool))
-        e.define("complex?",   lambda a: isinstance(a, (int, float)) and not isinstance(a, bool))
-        e.define("port?",      lambda a: False)
+        e.define("symbol?", lambda a: isinstance(a, _Symbol))
+        e.define("integer?", lambda a: isinstance(a, int) and not isinstance(a, bool))
+        e.define(
+            "real?", lambda a: isinstance(a, (int, float)) and not isinstance(a, bool)
+        )
+        e.define(
+            "rational?",
+            lambda a: isinstance(a, (int, float)) and not isinstance(a, bool),
+        )
+        e.define(
+            "complex?",
+            lambda a: isinstance(a, (int, float)) and not isinstance(a, bool),
+        )
+        e.define("port?", lambda a: False)
 
         # Control
-        e.define("error", lambda msg, *args: (_ for _ in ()).throw(SchemeError(
-            str(msg) + ("" if not args else ": " + " ".join(_scheme_repr(a) for a in args)))))
+        e.define(
+            "error",
+            lambda msg, *args: (_ for _ in ()).throw(
+                SchemeError(
+                    str(msg)
+                    + (
+                        ""
+                        if not args
+                        else ": " + " ".join(_scheme_repr(a) for a in args)
+                    )
+                )
+            ),
+        )
         e.define("call/cc", lambda proc: self._call_cc(proc))
         e.define("call-with-current-continuation", lambda proc: self._call_cc(proc))
-        e.define("dynamic-wind", lambda before, thunk, after: _dynamic_wind(self, before, thunk, after))
-        e.define("with-exception-handler",
-                 lambda handler, thunk: self._with_exception_handler(handler, thunk))
-        e.define("raise", lambda obj: (_ for _ in ()).throw(SchemeError(_scheme_display(obj))))
-        e.define("raise-continuable", lambda obj: (_ for _ in ()).throw(SchemeError(_scheme_display(obj))))
+        e.define(
+            "dynamic-wind",
+            lambda before, thunk, after: _dynamic_wind(self, before, thunk, after),
+        )
+        e.define(
+            "with-exception-handler",
+            lambda handler, thunk: self._with_exception_handler(handler, thunk),
+        )
+        e.define(
+            "raise",
+            lambda obj: (_ for _ in ()).throw(SchemeError(_scheme_display(obj))),
+        )
+        e.define(
+            "raise-continuable",
+            lambda obj: (_ for _ in ()).throw(SchemeError(_scheme_display(obj))),
+        )
         e.define("guard", _NIL)  # simplified — handled as special form if needed
 
+        # Parameters (R7RS dynamic bindings)
+        # A parameter is a callable: (param) → current value, (param new-val) → sets it.
+        # We tag it with ._param_cell = [value] so parameterize can mutate the cell.
+        e.define(
+            "make-parameter",
+            lambda val, *conv: _make_parameter(val, conv[0] if conv else None),
+        )
+        # parameterize is handled in the special form evaluator
+
+        # String ports (R7RS)
+        e.define("open-output-string", lambda: [""])  # mutable string accumulator
+        e.define("get-output-string", lambda port: port[0])
+        e.define(
+            "write-string",
+            lambda s, *port: port[0].__setitem__(0, port[0][0] + s) if port else _NIL,
+        )
+        e.define("open-input-string", lambda s: iter(s))
+        e.define(
+            "with-output-to-string", lambda thunk: self._with_output_to_string(thunk)
+        )
+
         # Misc
-        e.define("void",       lambda *_: _NIL)
-        e.define("gensym",     lambda *p: _SYM(f"__g{id(object())}"))
-        e.define("make-string",lambda n, *c: (c[0].ch if c else "\x00") * int(n))
-        e.define("pi",  math.pi)
-        e.define("e",   math.e)
+        e.define("void", lambda *_: _NIL)
+        e.define("gensym", lambda *p: _SYM(f"__g{id(object())}"))
+        e.define("make-string", lambda n, *c: (c[0].ch if c else "\x00") * int(n))
+        e.define("pi", math.pi)
+        e.define("e", math.e)
         e.define("nan", float("nan"))
         e.define("inf", float("inf"))
         e.define("*pi*", math.pi)
-        e.define("*e*",  math.e)
+        e.define("*e*", math.e)
 
         # Hash tables (simplified using dict)
-        e.define("make-hash-table",  lambda *_: {})
-        e.define("hash-table-set!",  lambda h, k, v: h.__setitem__(_scheme_repr(k), v) or _NIL)
-        e.define("hash-table-ref",   lambda h, k, *d: h.get(_scheme_repr(k), d[0] if d else _NIL))
-        e.define("hash-table-delete!", lambda h, k: h.pop(_scheme_repr(k), _NIL) and _NIL)
-        e.define("hash-table->alist", lambda h: _list_to_cells(
-            [_list_to_cells([_parse_atom(k), v]) for k, v in h.items()]))
-        e.define("hash-table-keys", lambda h: _list_to_cells([_parse_atom(k) for k in h]))
+        e.define("make-hash-table", lambda *_: {})
+        e.define(
+            "hash-table-set!", lambda h, k, v: h.__setitem__(_scheme_repr(k), v) or _NIL
+        )
+        e.define(
+            "hash-table-ref",
+            lambda h, k, *d: h.get(_scheme_repr(k), d[0] if d else _NIL),
+        )
+        e.define(
+            "hash-table-delete!", lambda h, k: h.pop(_scheme_repr(k), _NIL) and _NIL
+        )
+        e.define(
+            "hash-table->alist",
+            lambda h: _list_to_cells(
+                [_list_to_cells([_parse_atom(k), v]) for k, v in h.items()]
+            ),
+        )
+        e.define(
+            "hash-table-keys", lambda h: _list_to_cells([_parse_atom(k) for k in h])
+        )
         e.define("hash-table-values", lambda h: _list_to_cells(list(h.values())))
 
         # Turtle graphics
         if self._turtle is not None:
             t = self._turtle
-            e.define("forward",  lambda n: t.forward(float(n)))
+            e.define("forward", lambda n: t.forward(float(n)))
             e.define("backward", lambda n: t.forward(-float(n)))
-            e.define("fd",       lambda n: t.forward(float(n)))
-            e.define("bk",       lambda n: t.forward(-float(n)))
-            e.define("right",    lambda n: t.right(float(n)))
-            e.define("left",     lambda n: t.left(float(n)))
-            e.define("rt",       lambda n: t.right(float(n)))
-            e.define("lt",       lambda n: t.left(float(n)))
-            e.define("penup",    lambda *_: t.penup())
-            e.define("pendown",  lambda *_: t.pendown())
-            e.define("pu",       lambda *_: t.penup())
-            e.define("pd",       lambda *_: t.pendown())
-            e.define("home",     lambda *_: t.home())
-            e.define("setpos",   lambda x, y: t.goto(float(x), float(y)))
-            e.define("setx",     lambda x: t.goto(float(x), t.y))
-            e.define("sety",     lambda y: t.goto(t.x, float(y)))
+            e.define("fd", lambda n: t.forward(float(n)))
+            e.define("bk", lambda n: t.forward(-float(n)))
+            e.define("right", lambda n: t.right(float(n)))
+            e.define("left", lambda n: t.left(float(n)))
+            e.define("rt", lambda n: t.right(float(n)))
+            e.define("lt", lambda n: t.left(float(n)))
+            e.define("penup", lambda *_: t.penup())
+            e.define("pendown", lambda *_: t.pendown())
+            e.define("pu", lambda *_: t.penup())
+            e.define("pd", lambda *_: t.pendown())
+            e.define("home", lambda *_: t.home())
+            e.define("setpos", lambda x, y: t.goto(float(x), float(y)))
+            e.define("setx", lambda x: t.goto(float(x), t.y))
+            e.define("sety", lambda y: t.goto(t.x, float(y)))
             e.define("setheading", lambda a: t.setheading(float(a)))
             e.define("hideturtle", lambda *_: None)
             e.define("showturtle", lambda *_: None)
             e.define("pencolor", lambda r, g, b: t.setcolor(int(r), int(g), int(b)))
-            e.define("color",    lambda r, g, b: t.setcolor(int(r), int(g), int(b)))
-            e.define("bgcolor",  lambda *_: None)
+            e.define("color", lambda r, g, b: t.setcolor(int(r), int(g), int(b)))
+            e.define("bgcolor", lambda *_: None)
             e.define("clearscreen", lambda *_: t.reset())
-            e.define("cs",       lambda *_: t.reset())
-            e.define("circle",   lambda r, *_: _draw_circle(t, float(r)))
-            e.define("xcor",     lambda: t.x)
-            e.define("ycor",     lambda: t.y)
-            e.define("heading",  lambda: t.heading)
+            e.define("cs", lambda *_: t.reset())
+            e.define("circle", lambda r, *_: _draw_circle(t, float(r)))
+            e.define("xcor", lambda: t.x)
+            e.define("ycor", lambda: t.y)
+            e.define("heading", lambda: t.heading)
         else:
             # Stub turtle functions when no canvas
-            for name in ["forward","backward","fd","bk","right","left","rt","lt",
-                         "penup","pendown","pu","pd","home","setpos","setx","sety",
-                         "setheading","hideturtle","showturtle","pencolor","color",
-                         "bgcolor","clearscreen","cs","circle","xcor","ycor","heading"]:
+            for name in [
+                "forward",
+                "backward",
+                "fd",
+                "bk",
+                "right",
+                "left",
+                "rt",
+                "lt",
+                "penup",
+                "pendown",
+                "pu",
+                "pd",
+                "home",
+                "setpos",
+                "setx",
+                "sety",
+                "setheading",
+                "hideturtle",
+                "showturtle",
+                "pencolor",
+                "color",
+                "bgcolor",
+                "clearscreen",
+                "cs",
+                "circle",
+                "xcor",
+                "ycor",
+                "heading",
+            ]:
                 e.define(name, lambda *_: _NIL)
 
     # ── I/O ───────────────────────────────────────────────────────────────
@@ -1313,10 +1648,26 @@ class SchemeInterpreter:
         except SchemeError as e:
             return self._apply(handler, [str(e)])
 
+    def _with_output_to_string(self, thunk) -> str:
+        """Capture all (display/write/newline) output during thunk into a string."""
+        captured: list[str] = []
+        old_output = self._output
+
+        def capture(s: str) -> None:
+            captured.append(s)
+
+        self._output = capture
+        try:
+            self._apply(thunk, [])
+        finally:
+            self._output = old_output
+        return "".join(captured)
+
 
 # ---------------------------------------------------------------------------
 # Environment (top-level runner)
 # ---------------------------------------------------------------------------
+
 
 class SchemeEnvironment:
     def __init__(self, interpreter: "Interpreter", turtle: "TurtleState"):
@@ -1351,6 +1702,7 @@ class SchemeEnvironment:
 # ---------------------------------------------------------------------------
 # Standard library helpers
 # ---------------------------------------------------------------------------
+
 
 def _parse_params(params_cell: Any) -> tuple[list[str], str | None]:
     """Parse (a b . rest) into (['a','b'], 'rest')."""
@@ -1454,14 +1806,17 @@ def _member(key, lst, eq_fn) -> Any:
 
 
 def _map(interp: SchemeInterpreter, proc, lsts) -> list:
-    lists = [_cells_to_list(l) for l in lsts]
-    return [interp._apply(proc, [l[i] for l in lists]) for i in range(min(len(l) for l in lists))]
+    lists = [_cells_to_list(lst) for lst in lsts]
+    return [
+        interp._apply(proc, [lst[i] for lst in lists])
+        for i in range(min(len(lst) for lst in lists))
+    ]
 
 
 def _for_each(interp: SchemeInterpreter, proc, lsts) -> Any:
-    lists = [_cells_to_list(l) for l in lsts]
-    for i in range(min(len(l) for l in lists)):
-        interp._apply(proc, [l[i] for l in lists])
+    lists = [_cells_to_list(lst) for lst in lsts]
+    for i in range(min(len(lst) for lst in lists)):
+        interp._apply(proc, [lst[i] for lst in lists])
     return _NIL
 
 
@@ -1491,12 +1846,17 @@ def _scheme_sort(interp, lst, cmp=None) -> Any:
     items = _cells_to_list(lst)
     if cmp is None or cmp is _NIL:
         import functools
-        items_sorted = sorted(items, key=lambda x: x if isinstance(x, (int, float)) else str(x))
+
+        items_sorted = sorted(
+            items, key=lambda x: x if isinstance(x, (int, float)) else str(x)
+        )
     else:
         import functools
+
         def key_fn(a, b):
             r = interp._apply(cmp, [a, b])
             return -1 if r is not False else 1
+
         items_sorted = sorted(items, key=functools.cmp_to_key(key_fn))
     return _list_to_cells(items_sorted)
 
@@ -1512,10 +1872,36 @@ def _apply_args(args) -> list:
 
 def _cxr_combos():
     """Generate combinations for caar, cadr, ... cdddr etc."""
-    combos = ["aa", "ad", "da", "dd",
-              "aaa", "aad", "ada", "add", "daa", "dad", "dda", "ddd",
-              "aaaa", "aaad", "aada", "aadd", "adaa", "adad", "adda", "addd",
-              "daaa", "daad", "dada", "dadd", "ddaa", "ddad", "ddda", "dddd"]
+    combos = [
+        "aa",
+        "ad",
+        "da",
+        "dd",
+        "aaa",
+        "aad",
+        "ada",
+        "add",
+        "daa",
+        "dad",
+        "dda",
+        "ddd",
+        "aaaa",
+        "aaad",
+        "aada",
+        "aadd",
+        "adaa",
+        "adad",
+        "adda",
+        "addd",
+        "daaa",
+        "daad",
+        "dada",
+        "dadd",
+        "ddaa",
+        "ddad",
+        "ddda",
+        "dddd",
+    ]
     return combos
 
 
@@ -1528,6 +1914,7 @@ def _make_cxr(combo: str):
             else:
                 x = x.cdr
         return x
+
     fn.__name__ = f"c{combo}r"
     return fn
 
@@ -1594,9 +1981,51 @@ def _dynamic_wind(interp, before, thunk, after):
     return result
 
 
+def _num(x: Any) -> Any:
+    """Validate and return a numeric value, raising SchemeError otherwise."""
+    if isinstance(x, bool):
+        raise SchemeError(f"not a number: {_scheme_repr(x)}")
+    if not isinstance(x, (int, float)):
+        raise SchemeError(f"not a number: {_scheme_repr(x)}")
+    return x
+
+
+def _string_index(interp, s: str, pred, rest) -> Any:
+    """(string-index s pred [start [end]]) → index or #f."""
+    start = int(_num(rest[0])) if rest else 0
+    end = int(_num(rest[1])) if len(rest) > 1 else len(s)
+    for i in range(start, end):
+        if interp._apply(pred, [SchemeChar(s[i])]) is not False:
+            return i
+    return False
+
+
+def _make_parameter(val: Any, converter=None) -> Any:
+    """Return a callable parameter object.
+
+    ``(param)``        → current value
+    ``(param new-val)`` → set current value, return old value
+    ``.param_cell``    → mutable [value] list used by ``parameterize``
+    """
+    if converter is not None:
+        val = converter(val)
+    cell: list = [val]
+
+    def param_proc(*args):
+        if not args:
+            return cell[0]
+        new_val = args[0] if converter is None else converter(args[0])
+        old, cell[0] = cell[0], new_val
+        return old
+
+    param_proc._param_cell = cell  # type: ignore[attr-defined]
+    return param_proc
+
+
 def _draw_circle(turtle, radius: float):
     """Draw a circle approximated by polygon steps."""
     import math as _math
+
     steps = max(36, int(abs(radius) * 2))
     angle = 360.0 / steps
     dist = 2 * _math.pi * abs(radius) / steps

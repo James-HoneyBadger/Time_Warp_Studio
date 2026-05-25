@@ -46,6 +46,9 @@ class DebugMixin:
         self.debug_panel.step_granularity_changed.connect(
             self._set_debug_step_granularity
         )
+        self.debug_panel.break_on_error_changed.connect(
+            self._set_break_on_error
+        )
         self.output.debug_timeline_ready.connect(self._on_debug_timeline_ready)
 
     def _goto_line(self, line: int):
@@ -201,6 +204,11 @@ class DebugMixin:
     def _set_debug_step_granularity(self, granularity: str):
         """Update debug stepping granularity for the next session."""
         self._debug_step_granularity = granularity
+
+    def _set_break_on_error(self, enabled: bool):
+        """Toggle break-on-error on the interpreter."""
+        if hasattr(self, "interpreter") and self.interpreter is not None:
+            self.interpreter.set_break_on_error(enabled)
 
     def _on_debug_timeline_ready(self, timeline):
         """Capture latest debug timeline."""

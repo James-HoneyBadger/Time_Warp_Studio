@@ -1,0 +1,21 @@
+%!PS-Adobe-3.0
+% Arithmetic and stack demo in PostScript
+
+% Basic arithmetic
+3 4 add =          % 7
+10 3 sub =         % 7
+6 7 mul =          % 42
+22 7 div =         % 3.14...
+
+% Stack operations
+1 2 3
+(Stack before exch: ) print
+pstack
+exch
+(Stack after exch: ) print
+pstack
+clear
+
+% Math functions
+16 sqrt =          % 4.0
+2 10 exp =         % 1024.0

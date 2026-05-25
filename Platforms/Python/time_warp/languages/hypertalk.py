@@ -90,14 +90,21 @@ class HyperTalkEnvironment:
     def run(self, source: str) -> str:
         try:
             # Join line continuations (¬ or \ at end of line)
-            source = re.sub(r'[ \t]*[¬\\][ \t]*\n[ \t]*', ' ', source)
+            source = re.sub(r"[ \t]*[¬\\][ \t]*\n[ \t]*", " ", source)
             lines = source.splitlines()
             self._scan_handlers(lines)
             output_before = len(self._output)
             self._exec_lines(lines, 0, len(lines))
             # Auto-call entry-point handler if no top-level output was produced
             if len(self._output) == output_before:
-                for ep in ("startup", "openstack", "opencard", "run", "main", "initialize"):
+                for ep in (
+                    "startup",
+                    "openstack",
+                    "opencard",
+                    "run",
+                    "main",
+                    "initialize",
+                ):
                     if ep in self._handlers:
                         self._exec_lines(self._handlers[ep], 0, len(self._handlers[ep]))
                         break
@@ -184,9 +191,13 @@ class HyperTalkEnvironment:
                 arg_vals_c = self._split_args(args_str_c) if args_str_c else []
                 saved_c = dict(self._vars)
                 for pi, pname in enumerate(params_c):
-                    hval: Any = self._eval(arg_vals_c[pi]) if pi < len(arg_vals_c) else None
+                    hval: Any = (
+                        self._eval(arg_vals_c[pi]) if pi < len(arg_vals_c) else None
+                    )
                     self._set_var(pname, hval)
-                result_c = self._exec_lines(self._handlers[name_c], 0, len(self._handlers[name_c]))
+                result_c = self._exec_lines(
+                    self._handlers[name_c], 0, len(self._handlers[name_c])
+                )
                 self._vars = saved_c
                 if result_c is not None:
                     self._it = result_c
@@ -242,7 +253,8 @@ class HyperTalkEnvironment:
         # PUT value INTO/AFTER/BEFORE field "name"
         m = re.match(
             r'^put\s+(.+?)\s+(into|after|before)\s+field\s+["\']([^"\']+)["\']$',
-            stmt, re.IGNORECASE
+            stmt,
+            re.IGNORECASE,
         )
         if m:
             val = str(self._eval(m.group(1).strip()))
@@ -303,7 +315,11 @@ class HyperTalkEnvironment:
             return None
 
         # ANSWER expr WITH btn1 [OR btn2 ...] — dialog with buttons
-        m = re.match(r"^(?:answer|say)\s+(.+?)\s+with\s+(.+?)(?:\s+or\s+.+)?$", stmt, re.IGNORECASE)
+        m = re.match(
+            r"^(?:answer|say)\s+(.+?)\s+with\s+(.+?)(?:\s+or\s+.+)?$",
+            stmt,
+            re.IGNORECASE,
+        )
         if m:
             self._emit(str(self._eval(m.group(1).strip())))
             self._it = str(self._eval(m.group(2).strip()))
@@ -320,7 +336,9 @@ class HyperTalkEnvironment:
         if m:
             default = str(self._eval(m.group(2).strip()))
             if hasattr(self.interpreter, "request_input"):
-                self._it = self.interpreter.request_input(str(self._eval(m.group(1).strip())))
+                self._it = self.interpreter.request_input(
+                    str(self._eval(m.group(1).strip()))
+                )
             else:
                 self._it = default
             return None
@@ -329,7 +347,9 @@ class HyperTalkEnvironment:
         m = re.match(r"^ask\s+(.+)$", stmt, re.IGNORECASE)
         if m:
             if hasattr(self.interpreter, "request_input"):
-                self._it = self.interpreter.request_input(str(self._eval(m.group(1).strip())))
+                self._it = self.interpreter.request_input(
+                    str(self._eval(m.group(1).strip()))
+                )
             else:
                 self._it = ""
             return None
@@ -339,18 +359,20 @@ class HyperTalkEnvironment:
         m = re.match(
             r"^find\s+(?:(?:whole|partial|string|chars|word)\s+)?"
             r"(.+?)(?:\s+in\s+(\w+))?$",
-            stmt, re.IGNORECASE,
+            stmt,
+            re.IGNORECASE,
         )
         if m:
-            needle = str(self._eval(m.group(1).strip())).strip('"\'')
+            needle = str(self._eval(m.group(1).strip())).strip("\"'")
             container_name = m.group(2)
             haystack = (
-                str(self._get_var(container_name)) if container_name else
-                "\n".join(str(s) for s in self._output)
+                str(self._get_var(container_name))
+                if container_name
+                else "\n".join(str(s) for s in self._output)
             )
             idx = haystack.lower().find(needle.lower())
             if idx >= 0:
-                self._it = haystack[idx: idx + len(needle)]
+                self._it = haystack[idx : idx + len(needle)]
                 self._emit(f"ℹ️ Found: {needle!r}")
             else:
                 self._it = ""
@@ -388,15 +410,23 @@ class HyperTalkEnvironment:
                 else_m = re.match(r"^(.+?)\s+else\s+(.+)$", inline, re.IGNORECASE)
                 if else_m:
                     if cond:
-                        r = self._exec_stmt(else_m.group(1).strip(), lines, ip, block_end)
+                        r = self._exec_stmt(
+                            else_m.group(1).strip(), lines, ip, block_end
+                        )
                     else:
-                        r = self._exec_stmt(else_m.group(2).strip(), lines, ip, block_end)
+                        r = self._exec_stmt(
+                            else_m.group(2).strip(), lines, ip, block_end
+                        )
                     if isinstance(r, tuple) and r[0] in ("BREAK", "CONTINUE", "RETURN"):
                         return r
                 else:
                     if cond:
                         r = self._exec_stmt(inline, lines, ip, block_end)
-                        if isinstance(r, tuple) and r[0] in ("BREAK", "CONTINUE", "RETURN"):
+                        if isinstance(r, tuple) and r[0] in (
+                            "BREAK",
+                            "CONTINUE",
+                            "RETURN",
+                        ):
                             return r
             else:
                 # Block if
@@ -526,7 +556,9 @@ class HyperTalkEnvironment:
                 for pi, pname in enumerate(params_s):
                     hval = self._eval(arg_vals_s[pi]) if pi < len(arg_vals_s) else None
                     self._set_var(pname, hval)
-                result_s = self._exec_lines(self._handlers[fn_name_s], 0, len(self._handlers[fn_name_s]))
+                result_s = self._exec_lines(
+                    self._handlers[fn_name_s], 0, len(self._handlers[fn_name_s])
+                )
                 self._vars = saved_s
                 if isinstance(result_s, tuple) and result_s[0] == "RETURN":
                     self._it = result_s[1]
@@ -546,7 +578,9 @@ class HyperTalkEnvironment:
         if m:
             return self._exec_stmt(
                 (m.group(1) + (" " + m.group(2) if m.group(2) else "")).strip(),
-                lines, ip, block_end
+                lines,
+                ip,
+                block_end,
             )
 
         # Call handler
@@ -571,7 +605,9 @@ class HyperTalkEnvironment:
                 for pi, pname in enumerate(params):
                     hval = self._eval(arg_vals[pi]) if pi < len(arg_vals) else None
                     self._set_var(pname, hval)
-                result_h = self._exec_lines(self._handlers[name], 0, len(self._handlers[name]))
+                result_h = self._exec_lines(
+                    self._handlers[name], 0, len(self._handlers[name])
+                )
                 if result_h is not None:
                     self._it = result_h
                 return None
@@ -722,7 +758,7 @@ class HyperTalkEnvironment:
                 # Unclosed string — return everything after the opening quote
                 return expr[1:]
             val = expr[1:end_idx]
-            rest = expr[end_idx + 1:].strip()
+            rest = expr[end_idx + 1 :].strip()
             if not rest:
                 return val  # simple string literal
             if rest.startswith("&&"):
@@ -832,7 +868,11 @@ class HyperTalkEnvironment:
                 return 0
 
         # Property access: chars? i to j of str (variable or literal index)
-        m = re.match(r"^chars?(?:acter)?s?\s+(\w+)\s+to\s+(\w+)\s+of\s+(.+)$", expr, re.IGNORECASE)
+        m = re.match(
+            r"^chars?(?:acter)?s?\s+(\w+)\s+to\s+(\w+)\s+of\s+(.+)$",
+            expr,
+            re.IGNORECASE,
+        )
         if m:
             try:
                 ci = int(float(self._eval(m.group(1)))) - 1
@@ -840,7 +880,7 @@ class HyperTalkEnvironment:
             except (TypeError, ValueError):
                 ci, cj = 0, 0
             s = str(self._eval(m.group(3).strip()))
-            return s[max(0, ci):min(cj, len(s))]
+            return s[max(0, ci) : min(cj, len(s))]
 
         m = re.match(r"^word\s+(\w+)\s+to\s+(\w+)\s+of\s+(.+)$", expr, re.IGNORECASE)
         if m:
@@ -850,7 +890,7 @@ class HyperTalkEnvironment:
             except (TypeError, ValueError):
                 ci, cj = 0, 0
             words = str(self._eval(m.group(3).strip())).split()
-            return " ".join(words[max(0, ci):min(cj, len(words))])
+            return " ".join(words[max(0, ci) : min(cj, len(words))])
 
         m = re.match(r"^chars?(?:acter)?s?\s+(\w+)\s+of\s+(.+)$", expr, re.IGNORECASE)
         if m:
@@ -917,7 +957,9 @@ class HyperTalkEnvironment:
                 if depth == 0:
                     close_pos = ci
                     break
-            if close_pos == len(expr) - 1:  # matching ')' is the last char → whole expr is a call
+            if (
+                close_pos == len(expr) - 1
+            ):  # matching ')' is the last char → whole expr is a call
                 args_content = expr[call_args_start:close_pos]
                 result = self._call_fn(m.group(1).lower(), args_content)
                 if result is not None:
@@ -949,7 +991,7 @@ class HyperTalkEnvironment:
             idx = expr.find(cmp_op)
             if idx > 0:
                 lhs_s = expr[:idx].strip()
-                rhs_s = expr[idx + len(cmp_op):].strip()
+                rhs_s = expr[idx + len(cmp_op) :].strip()
                 lhs = self._eval(lhs_s)
                 rhs = self._eval(rhs_s)
                 return cmp_fn(lhs, rhs)
@@ -1013,12 +1055,16 @@ class HyperTalkEnvironment:
         # AND: split on first top-level 'and' (case-insensitive, whole word)
         m = re.search(r"\band\b", cond, re.IGNORECASE)
         if m:
-            return self._eval_cond(cond[:m.start()]) and self._eval_cond(cond[m.end():])
+            return self._eval_cond(cond[: m.start()]) and self._eval_cond(
+                cond[m.end() :]
+            )
 
         # OR: split on first top-level 'or' (case-insensitive, whole word)
         m = re.search(r"\bor\b", cond, re.IGNORECASE)
         if m:
-            return self._eval_cond(cond[:m.start()]) or self._eval_cond(cond[m.end():])
+            return self._eval_cond(cond[: m.start()]) or self._eval_cond(
+                cond[m.end() :]
+            )
 
         # Handle comparison operators before _eval can misparse compound expressions
         # Check multi-char operators first to avoid splitting > from >=
@@ -1048,7 +1094,7 @@ class HyperTalkEnvironment:
                 after = cond[idx + 1] if idx + 1 < len(cond) else ""
                 if before not in ("<", ">", "!") and after not in ("=", ">"):
                     lhs = self._eval(cond[:idx].strip())
-                    rhs = self._eval(cond[idx + 1:].strip())
+                    rhs = self._eval(cond[idx + 1 :].strip())
                     try:
                         return fn(lhs, rhs)  # type: ignore[operator]
                     except Exception:
@@ -1060,7 +1106,7 @@ class HyperTalkEnvironment:
             after = cond[idx + 1] if idx + 1 < len(cond) else ""
             if before not in ("<", ">", "!", "=") and after != "=":
                 lhs = self._eval(cond[:idx].strip())
-                rhs = self._eval(cond[idx + 1:].strip())
+                rhs = self._eval(cond[idx + 1 :].strip())
                 if str(lhs).lower() == str(rhs).lower():
                     return True
                 try:
@@ -1114,8 +1160,14 @@ class HyperTalkEnvironment:
             "exp": lambda: math.exp(a0),
             "exp1": lambda: math.exp(a0),
             "atan": lambda: math.degrees(math.atan(a0)),
-            "annuity": lambda: (1 - (1 + float(args[0])) ** (-float(args[1]))) / float(args[0]) if len(args) > 1 else 0,
-            "compound": lambda: (1 + float(args[0])) ** float(args[1]) if len(args) > 1 else 0,
+            "annuity": lambda: (
+                (1 - (1 + float(args[0])) ** (-float(args[1]))) / float(args[0])
+                if len(args) > 1
+                else 0
+            ),
+            "compound": lambda: (
+                (1 + float(args[0])) ** float(args[1]) if len(args) > 1 else 0
+            ),
         }
         fn = fns.get(name)
         if fn:
@@ -1131,7 +1183,9 @@ class HyperTalkEnvironment:
             for pi, pname in enumerate(params_h):
                 hval: Any = args[pi] if pi < len(args) else None
                 self._set_var(pname, hval)
-            result_h = self._exec_lines(self._handlers[name], 0, len(self._handlers[name]))
+            result_h = self._exec_lines(
+                self._handlers[name], 0, len(self._handlers[name])
+            )
             self._vars = saved_h
             if result_h is not None:
                 return result_h

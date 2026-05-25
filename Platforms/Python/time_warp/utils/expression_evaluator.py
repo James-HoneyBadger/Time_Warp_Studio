@@ -93,9 +93,7 @@ class ExpressionEvaluator:
         # BASIC rounding: CINT rounds to nearest integer (vs INT which floors)
         "CINT": lambda x: float(round(x)),
         # VAL converts a string or number to float (string→numeric in BASIC)
-        "VAL": lambda x: (
-            float(str(x).strip()) if str(x).strip() else 0.0
-        ),
+        "VAL": lambda x: float(str(x).strip()) if str(x).strip() else 0.0,
     }
 
     def __init__(

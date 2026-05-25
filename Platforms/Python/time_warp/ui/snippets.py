@@ -38,26 +38,14 @@ BASIC_SNIPPETS: List[CodeSnippet] = [
     CodeSnippet(
         name="WHILE Loop",
         description="WHILE...WEND loop",
-        code=(
-            "10 X = 1\n"
-            "20 WHILE X <= 10\n"
-            "30   PRINT X\n"
-            "40   X = X + 1\n"
-            "50 WEND"
-        ),
+        code=("10 X = 1\n20 WHILE X <= 10\n30   PRINT X\n40   X = X + 1\n50 WEND"),
         language="BASIC",
         category="Control Flow",
     ),
     CodeSnippet(
         name="DO...LOOP UNTIL",
         description="DO...LOOP with UNTIL condition",
-        code=(
-            "10 X = 1\n"
-            "20 DO\n"
-            "30   PRINT X\n"
-            "40   X = X + 1\n"
-            "50 LOOP UNTIL X > 10"
-        ),
+        code=("10 X = 1\n20 DO\n30   PRINT X\n40   X = X + 1\n50 LOOP UNTIL X > 10"),
         language="BASIC",
         category="Control Flow",
     ),
@@ -91,7 +79,7 @@ BASIC_SNIPPETS: List[CodeSnippet] = [
     CodeSnippet(
         name="Input Example",
         description="Get user input",
-        code=('10 INPUT "What is your name? "; NAME$\n' '20 PRINT "Hello, "; NAME$'),
+        code=('10 INPUT "What is your name? "; NAME$\n20 PRINT "Hello, "; NAME$'),
         language="BASIC",
         category="Input/Output",
     ),
@@ -129,10 +117,7 @@ BASIC_SNIPPETS: List[CodeSnippet] = [
         name="Random Number",
         description="Generate random numbers",
         code=(
-            "10 FOR I = 1 TO 5\n"
-            "20   R = INT(RND * 100) + 1\n"
-            "30   PRINT R\n"
-            "40 NEXT I"
+            "10 FOR I = 1 TO 5\n20   R = INT(RND * 100) + 1\n30   PRINT R\n40 NEXT I"
         ),
         language="BASIC",
         category="Math",
@@ -153,10 +138,7 @@ BASIC_SNIPPETS: List[CodeSnippet] = [
         name="Circle Drawing",
         description="Draw circles on screen",
         code=(
-            "10 CLS\n"
-            "20 CIRCLE (0, 0), 50\n"
-            "30 CIRCLE (0, 0), 75\n"
-            "40 CIRCLE (0, 0), 100"
+            "10 CLS\n20 CIRCLE (0, 0), 50\n30 CIRCLE (0, 0), 75\n40 CIRCLE (0, 0), 100"
         ),
         language="BASIC",
         category="Graphics",
@@ -199,9 +181,7 @@ BASIC_SNIPPETS: List[CodeSnippet] = [
     CodeSnippet(
         name="Sound Effect",
         description="Play sound effects",
-        code=(
-            "10 BEEP\n" "20 SOUND 440, 10\n" "30 SOUND 880, 10\n" "40 SOUND 1320, 10"
-        ),
+        code=("10 BEEP\n20 SOUND 440, 10\n30 SOUND 880, 10\n40 SOUND 1320, 10"),
         language="BASIC",
         category="Sound",
     ),
@@ -219,14 +199,7 @@ PILOT_SNIPPETS: List[CodeSnippet] = [
     CodeSnippet(
         name="Question/Answer",
         description="Simple quiz pattern",
-        code=(
-            "T:What is 2 + 2?\n"
-            "A:\n"
-            "M:4,four\n"
-            "TY:Correct!\n"
-            "TN:The answer is 4.\n"
-            "E:"
-        ),
+        code=("T:What is 2 + 2?\nA:\nM:4,four\nTY:Correct!\nTN:The answer is 4.\nE:"),
         language="PILOT",
         category="Basics",
     ),

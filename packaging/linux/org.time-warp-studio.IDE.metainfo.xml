@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.time-warp-studio.IDE</id>
+  <name>Time Warp Studio</name>
+  <summary>Educational multi-language programming environment</summary>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <description>
+    <p>
+      Time Warp Studio is an educational desktop programming environment that provides
+      a unified IDE for learning 13 programming languages with integrated turtle graphics.
+    </p>
+    <p>Supported languages include:</p>
+    <ul>
+      <li>BASIC, PILOT, Logo</li>
+      <li>C, Pascal, Prolog, Forth</li>
+      <li>JavaScript, Lua, Erlang</li>
+      <li>HyperTalk, Brainfuck, LISP/Scheme</li>
+    </ul>
+    <p>Features syntax highlighting, turtle graphics, a step-through debugger, 28 color themes,
+       and 90+ example programs.</p>
+  </description>
+  <categories>
+    <category>Development</category>
+    <category>Education</category>
+  </categories>
+  <keywords>
+    <keyword>programming</keyword>
+    <keyword>education</keyword>
+    <keyword>BASIC</keyword>
+    <keyword>Logo</keyword>
+    <keyword>Pascal</keyword>
+    <keyword>turtle graphics</keyword>
+  </keywords>
+  <launchable type="desktop-id">org.time-warp-studio.IDE.desktop</launchable>
+  <url type="homepage">https://github.com/james-honey-badger/time-warp-studio</url>
+  <url type="bugtracker">https://github.com/james-honey-badger/time-warp-studio/issues</url>
+  <screenshots>
+    <screenshot type="default">
+      <caption>Main IDE with syntax highlighting and turtle canvas</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="10.2.0" date="2026-04-01">
+      <description>
+        <p>v10.2.0 — Added COBOL, TCL, PostScript language executors; Erlang binary syntax; Pascal file I/O; auto-close brackets; editor enhancements.</p>
+      </description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1"/>
+  <developer_name>James Temple</developer_name>
+</component>

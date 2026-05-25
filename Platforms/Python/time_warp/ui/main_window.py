@@ -78,6 +78,7 @@ from .focus_mode import FocusModeManager
 from .onboarding import OnboardingDialog, OnboardingManager
 from ..features.examples_browser import ExamplesBrowser
 from ..utils.error_hints import get_enhanced_error_message
+from ..core.project_manager import ProjectManager, PROJECT_EXTENSION
 
 # Fix: Import CustomUILayouts for custom UI layout management
 from .custom_layouts import CustomUILayouts
@@ -94,6 +95,11 @@ class ResizableTabWidget(QTabWidget):
     tab page hints, forcing the window to stay huge even when large pages are
     hidden.  This subclass returns a small fixed minimum so the splitter and
     window can shrink freely; the current page drives the preferred size hint.
+
+    Additional features:
+    - Drag-drop tab reordering (setMovable) with automatic state-map sync
+    - Middle-click closes a tab
+    - Right-click context menu: Close, Close Others, Close All, Duplicate, Copy Path
     """
 
     _TAB_BAR_MARGIN = 8  # extra pixels above/below tab bar text
@@ -110,6 +116,117 @@ class ResizableTabWidget(QTabWidget):
         w = max(sh.width(), 100) if sh.width() > 0 else 400
         h = (max(sh.height(), 100) if sh.height() > 0 else 300) + bar_h
         return QSize(w, h)
+
+    # ------------------------------------------------------------------
+    # Enhanced tab bar
+    # ------------------------------------------------------------------
+
+    def _setup_tab_bar(self, main_window):
+        """Call once after construction to enable enhanced tab features."""
+        self._main_window = main_window
+        bar = self.tabBar()
+        bar.setMovable(True)
+        bar.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+        bar.customContextMenuRequested.connect(self._on_tab_context_menu)
+        self.tabBar().tabMoved.connect(self._on_tab_moved)
+
+    def mousePressEvent(self, event):  # type: ignore[override]
+        """Middle-click closes the tab under the cursor."""
+        if event.button() == Qt.MouseButton.MiddleButton:
+            idx = self.tabBar().tabAt(event.position().toPoint())
+            if idx >= 0:
+                mw = getattr(self, "_main_window", None)
+                if mw:
+                    mw.close_tab(idx)
+                    return
+        super().mousePressEvent(event)
+
+    def _on_tab_moved(self, from_idx: int, to_idx: int):
+        """Synchronise ``_tab_states`` when the user drags tabs."""
+        mw = getattr(self, "_main_window", None)
+        if mw is None:
+            return
+        states = mw._tab_states
+        moved = states.pop(from_idx, None)
+        if moved is None:
+            return
+        # Shift all indices between from_idx and to_idx
+        if from_idx < to_idx:
+            for i in range(from_idx, to_idx):
+                states[i] = states.pop(i + 1, TabState())
+        else:
+            for i in range(from_idx, to_idx, -1):
+                states[i] = states.pop(i - 1, TabState())
+        states[to_idx] = moved
+
+    def _on_tab_context_menu(self, pos):
+        """Show a context menu for the right-clicked tab."""
+        from PySide6.QtWidgets import QApplication, QMenu
+
+        idx = self.tabBar().tabAt(pos)
+        if idx < 0:
+            return
+        mw = getattr(self, "_main_window", None)
+        if mw is None:
+            return
+
+        menu = QMenu(self)
+
+        close_action = menu.addAction("Close Tab")
+        close_action.triggered.connect(lambda: mw.close_tab(idx))
+
+        close_others = menu.addAction("Close Other Tabs")
+        close_others.triggered.connect(lambda: self._close_others(idx, mw))
+
+        close_all = menu.addAction("Close All Tabs")
+        close_all.triggered.connect(lambda: self._close_all(mw))
+
+        menu.addSeparator()
+
+        dup_action = menu.addAction("Duplicate Tab")
+        dup_action.triggered.connect(lambda: self._duplicate_tab(idx, mw))
+
+        menu.addSeparator()
+
+        info = mw._tab_states.get(idx)
+        filepath = info.file if info else None
+        copy_path = menu.addAction("Copy File Path")
+        copy_path.setEnabled(bool(filepath))
+        if filepath:
+            copy_path.triggered.connect(
+                lambda: QApplication.clipboard().setText(filepath)
+            )
+
+        menu.exec(self.tabBar().mapToGlobal(pos))
+
+    def _close_others(self, keep_idx: int, mw):
+        """Close all tabs except the one at *keep_idx*."""
+        # Iterate from the end to avoid index shifting problems
+        for i in range(self.count() - 1, -1, -1):
+            if i != keep_idx:
+                mw.close_tab(i)
+                # After closing, keep_idx shifts down if i < keep_idx
+                if i < keep_idx:
+                    keep_idx -= 1
+
+    def _close_all(self, mw):
+        """Close all tabs."""
+        for i in range(self.count() - 1, -1, -1):
+            mw.close_tab(i)
+
+    def _duplicate_tab(self, idx: int, mw):
+        """Open a copy of the tab at *idx* in a new tab."""
+        editor = self.widget(idx)
+        if editor is None:
+            return
+        info = mw._tab_states.get(idx)
+        if info is None:
+            return
+        content = editor.toPlainText()
+        title = self.tabText(idx) + " (copy)"
+        new_idx = mw.create_new_tab(title, content, info.language)
+        mw.set_current_tab_info(file=None, modified=True, language=info.language)
+        _ = new_idx  # used implicitly by create_new_tab setting current
 
 
 class MainWindow(
@@ -186,15 +303,34 @@ class MainWindow(
         self._debug_step_granularity = "line"
         self._last_debug_timeline = None
 
+        # Split editor state
+        self._active_pane: str = "primary"  # "primary" | "secondary"
+
         # Retro features
         self.screen_mode_manager = ScreenModeManager()
         self.crt_enabled = False
 
         # Autosave and version history
-        self._autosave_manager = AutosaveManager(autosave_interval=300)
+        _autosave_secs = int(self.settings.value("autosave_interval", 120))
+        _autosave_enabled = self.settings.value("autosave_enabled", True)
+        self._autosave_manager = AutosaveManager(autosave_interval=_autosave_secs)
+        self._autosave_manager.set_autosave_enabled(
+            _autosave_enabled in (True, "true", "1", 1)
+        )
+        self._autosave_timer = QTimer(self)
+        self._autosave_timer.setInterval(30_000)  # check every 30 s
+        self._autosave_timer.timeout.connect(self._do_autosave)
+        if self._autosave_manager.autosave_enabled:
+            self._autosave_timer.start()
 
         # Focus mode
         self._focus_mode = FocusModeManager(self)
+
+        # Project manager
+        self._project_manager = ProjectManager()
+        self._current_project = None
+        self._current_project_path: str | None = None
+        self._restore_recent_projects()
 
         # Onboarding (first-run wizard)
         self._onboarding_manager = OnboardingManager()
@@ -264,13 +400,115 @@ class MainWindow(
             pass
 
     def get_current_editor(self):
-        """Get the currently active editor."""
+        """Get the currently active editor (respects split-pane focus)."""
+        if getattr(self, "_active_pane", "primary") == "secondary" and hasattr(
+            self, "_editor_tabs_b"
+        ):
+            idx = self._editor_tabs_b.currentIndex()
+            if idx >= 0:
+                return self._editor_tabs_b.widget(idx)
         current_index = self.editor_tabs.currentIndex()
         if current_index >= 0:
             return self.editor_tabs.widget(current_index)
         return None
 
-    def _ts(self, idx: int) -> TabState:
+    # ------------------------------------------------------------------
+    # Split editor view
+    # ------------------------------------------------------------------
+
+    def _set_active_pane(self, pane: str) -> None:
+        """Mark *pane* ('primary'|'secondary') as the focused editing pane."""
+        self._active_pane = pane
+
+    def open_split_editor(self) -> None:
+        """Activate split view: show secondary pane and open current file there."""
+        if not hasattr(self, "_editor_tabs_b"):
+            return
+        if self._editor_tabs_b.isVisible():
+            # Already split — just bring focus to secondary pane
+            self._editor_tabs_b.setFocus()
+            self._active_pane = "secondary"
+            return
+
+        # Show secondary pane at 50/50
+        self._editor_tabs_b.show()
+        total = self._editor_h_splitter.width()
+        half = max(total // 2, 200)
+        self._editor_h_splitter.setSizes([half, half])
+        self._active_pane = "secondary"
+
+        # Open current file in the secondary pane (read-only mirror)
+        editor = self.editor_tabs.widget(self.editor_tabs.currentIndex())
+        if editor is not None:
+            info = self._ts(self.editor_tabs.currentIndex())
+            self._open_in_secondary(info.file, editor.toPlainText(), info.language)
+        else:
+            self._open_new_in_secondary()
+
+    def close_split_editor(self) -> None:
+        """Collapse the secondary pane and return to single-pane mode."""
+        if not hasattr(self, "_editor_tabs_b"):
+            return
+        self._editor_tabs_b.hide()
+        # Clear all tabs in secondary to free resources
+        while self._editor_tabs_b.count():
+            w = self._editor_tabs_b.widget(0)
+            self._editor_tabs_b.removeTab(0)
+            if w:
+                w.deleteLater()
+        self._editor_tabs_b.clear()
+        self._active_pane = "primary"
+        self.editor_tabs.setFocus()
+
+    def _split_editor_right(self) -> None:
+        """Duplicate the current tab as a new primary tab (legacy split helper)."""
+        current_index = self.editor_tabs.currentIndex()
+        if current_index < 0:
+            return
+        editor = self.editor_tabs.widget(current_index)
+        if editor is None:
+            return
+        content = editor.toPlainText()
+        info = self._ts(current_index)
+        from pathlib import Path  # pylint: disable=import-outside-toplevel
+
+        title_base = Path(info.file).name if info.file else "untitled"
+        self.create_new_tab(f"[split] {title_base}", content, info.language)
+
+    def _open_in_secondary(self, filepath, content: str, language) -> None:
+        """Create a new editor tab in the secondary pane with *content*."""
+        from .editor import CodeEditor  # pylint: disable=import-outside-toplevel
+
+        ed = CodeEditor(self)
+        ed.setPlainText(content)
+        if language is not None:
+            ed.set_language(language)
+        label = Path(filepath).name if filepath else "untitled"
+        idx = self._editor_tabs_b.addTab(ed, f"[{label}]")
+        self._editor_tabs_b.setCurrentIndex(idx)
+        self._editor_tabs_b.setTabToolTip(idx, str(filepath) if filepath else "")
+
+    def _open_new_in_secondary(self) -> None:
+        """Open a blank editor in the secondary pane."""
+        from .editor import CodeEditor  # pylint: disable=import-outside-toplevel
+
+        ed = CodeEditor(self)
+        idx = self._editor_tabs_b.addTab(ed, "[new]")
+        self._editor_tabs_b.setCurrentIndex(idx)
+
+    def _close_split_tab(self, idx: int) -> None:
+        """Close a tab in the secondary pane; close pane when last tab removed."""
+        w = self._editor_tabs_b.widget(idx)
+        self._editor_tabs_b.removeTab(idx)
+        if w:
+            w.deleteLater()
+        if self._editor_tabs_b.count() == 0:
+            self.close_split_editor()
+
+    def _on_split_tab_changed(self, _idx: int) -> None:
+        self._active_pane = "secondary"
+
+    def _ts(self, idx: int) -> "TabState":
         """Get or create the TabState for *idx*."""
         if idx not in self._tab_states:
             self._tab_states[idx] = TabState()
@@ -338,14 +576,25 @@ class MainWindow(
         self.editor_tabs.setCurrentIndex(tab_index)
 
         # Initialize tab info
-        self._tab_states[tab_index] = TabState(file=None, modified=False, language=language)
+        self._tab_states[tab_index] = TabState(
+            file=None, modified=False, language=language
+        )
 
         return tab_index
 
-    def _on_breakpoint_toggled(self, _line: int):
-        """Handle breakpoint toggle from editor — persist to QSettings."""
+    def _on_breakpoint_toggled(self, line: int):
+        """Handle breakpoint toggle from editor — persist and sync to debugger."""
         self._update_breakpoints_display()
         self._save_breakpoints_for_current_file()
+        # Sync condition (if any) to the execution timeline debugger
+        if hasattr(self, "timeline"):
+            editor = self.get_current_editor()
+            if editor and hasattr(editor, "get_breakpoint_condition"):
+                condition = editor.get_breakpoint_condition(line)
+                if line in editor.get_breakpoints():
+                    self.timeline.set_breakpoint(line, condition or None)
+                else:
+                    self.timeline.remove_breakpoint(line)
 
     # ------------------------------------------------------------------
     # Breakpoint persistence helpers
@@ -418,6 +667,77 @@ class MainWindow(
                 if ed:
                     ed.insertPlainText(code)
 
+    def _show_find_in_files(self, _checked: bool = False):
+        """Show (or raise) the Find in Files dialog."""
+        from .find_in_files import FindInFilesDialog
+
+        if not hasattr(self, "_find_in_files_dlg") or self._find_in_files_dlg is None:
+            self._find_in_files_dlg = FindInFilesDialog(self)
+        self._find_in_files_dlg.show_with_selection()
+        self._find_in_files_dlg.raise_()
+        self._find_in_files_dlg.activateWindow()
+
+    # ------------------------------------------------------------------
+    # Auto-save
+    # ------------------------------------------------------------------
+
+    def _do_autosave(self):
+        """Called by the auto-save timer — saves all modified, named tabs."""
+        if not self._autosave_manager.autosave_enabled:
+            return
+        for i in range(self.editor_tabs.count()):
+            info = self._tab_states.get(i)
+            if info is None or not info.modified or not info.file:
+                continue
+            editor = self.editor_tabs.widget(i)
+            if editor is None:
+                continue
+            from pathlib import Path as _Path
+
+            fpath = _Path(info.file)
+            content = editor.toPlainText()
+            if self._autosave_manager.autosave_file(fpath, content):
+                # Mark as clean and update tab title
+                info.modified = False
+                tab_title = fpath.name
+                self.editor_tabs.setTabText(i, tab_title)
+
+    def _open_autosave_preferences(self, _checked: bool = False):
+        """Open a small dialog to configure auto-save."""
+        from PySide6.QtWidgets import QCheckBox, QDialog, QFormLayout, QSpinBox
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle("Auto-Save Preferences")
+        dlg.setModal(True)
+        form = QFormLayout(dlg)
+
+        enabled_cb = QCheckBox("Enable auto-save")
+        enabled_cb.setChecked(self._autosave_manager.autosave_enabled)
+        form.addRow(enabled_cb)
+
+        interval_spin = QSpinBox()
+        interval_spin.setRange(10, 3600)
+        interval_spin.setSuffix(" s")
+        interval_spin.setValue(self._autosave_manager.autosave_interval)
+        form.addRow("Interval:", interval_spin)
+
+        btn_box = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
+        btn_box.accepted.connect(dlg.accept)
+        btn_box.rejected.connect(dlg.reject)
+        form.addRow(btn_box)
+
+        if dlg.exec():
+            self._autosave_manager.set_autosave_enabled(enabled_cb.isChecked())
+            self._autosave_manager.set_autosave_interval(interval_spin.value())
+            self.settings.setValue("autosave_enabled", enabled_cb.isChecked())
+            self.settings.setValue("autosave_interval", interval_spin.value())
+            if enabled_cb.isChecked():
+                self._autosave_timer.start()
+            else:
+                self._autosave_timer.stop()
+
     # -- Export / print methods live in ExportMixin --
 
     # ---- Focus mode ----
@@ -431,6 +751,7 @@ class MainWindow(
         """Allow Escape to exit focus mode."""
         # pylint: disable=import-outside-toplevel
         from PySide6.QtCore import Qt
+
         if event.key() == Qt.Key_Escape and self._focus_mode.is_focus_mode:
             self._toggle_focus_mode()
             return
@@ -473,7 +794,9 @@ class MainWindow(
         welcome.setReadOnly(True)
         welcome.setOpenExternalLinks(False)
         welcome.setHtml(self._welcome_html())
-        welcome.setStyleSheet("QTextBrowser { background: palette(base); color: palette(text); border: none; }")
+        welcome.setStyleSheet(
+            "QTextBrowser { background: palette(base); color: palette(text); border: none; }"
+        )
 
         idx = self.editor_tabs.insertTab(0, welcome, "🏠 Welcome")
         self.editor_tabs.setCurrentIndex(idx)
@@ -482,13 +805,29 @@ class MainWindow(
 
     def _welcome_html(self) -> str:
         """Return the HTML content for the Welcome tab."""
-        langs = ", ".join([
-            "BASIC", "Logo", "Python", "Pascal", "C", "Forth", "PILOT",
-            "Prolog", "Lua", "Scheme", "JavaScript",
-            "REXX", "Smalltalk", "HyperTalk", "Haskell",
-            "Brainfuck",
-            "Ruby", "Erlang", "Rust",
-        ])
+        langs = ", ".join(
+            [
+                "BASIC",
+                "Logo",
+                "Python",
+                "Pascal",
+                "C",
+                "Forth",
+                "PILOT",
+                "Prolog",
+                "Lua",
+                "Scheme",
+                "JavaScript",
+                "REXX",
+                "Smalltalk",
+                "HyperTalk",
+                "Haskell",
+                "Brainfuck",
+                "Ruby",
+                "Erlang",
+                "Rust",
+            ]
+        )
         return f"""
 <html><body style="font-family: 'Segoe UI', sans-serif; margin: 24px; line-height: 1.6;">
 <h1 style="color: #bd93f9;">&#127775; Welcome to Time Warp Studio</h1>
@@ -540,7 +879,12 @@ class MainWindow(
         dlg.setMinimumSize(700, 500)
         layout = QVBoxLayout(dlg)
 
-        from PySide6.QtWidgets import QTreeWidget, QTreeWidgetItem, QSplitter, QTextBrowser  # type: ignore[attr-defined]  # noqa: F401
+        from PySide6.QtWidgets import (
+            QTreeWidget,
+            QTreeWidgetItem,
+            QSplitter,
+            QTextBrowser,
+        )  # type: ignore[attr-defined]  # noqa: F401
 
         splitter = QSplitter()
 
@@ -718,7 +1062,9 @@ class MainWindow(
 
         # Resolve the plugins/ directory relative to the project root
         plugins_dir = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))),
+            os.path.dirname(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            ),
             "plugins",
         )
 
@@ -733,7 +1079,9 @@ class MainWindow(
         from PySide6.QtWidgets import QLabel as _QLabel, QListWidget as _QLW  # pylint: disable=import-outside-toplevel
 
         if plugins:
-            header = _QLabel(f"<b>{len(plugins)} plugin(s) discovered</b> in <code>{plugins_dir}</code>")
+            header = _QLabel(
+                f"<b>{len(plugins)} plugin(s) discovered</b> in <code>{plugins_dir}</code>"
+            )
         else:
             header = _QLabel(
                 f"No plugins found in <code>{plugins_dir}</code>.<br>"
@@ -755,6 +1103,7 @@ class MainWindow(
             layout.addWidget(lw)
 
         from PySide6.QtWidgets import QDialogButtonBox as _DBB  # pylint: disable=import-outside-toplevel
+
         btns = _DBB(_DBB.StandardButton.Close)
         btns.rejected.connect(dlg.reject)
         layout.addWidget(btns)
@@ -772,7 +1121,7 @@ class MainWindow(
         else:
             session = profiler.end_session()
             if session:
-                msg = f"⏱️ Profiling stopped: " f"{session.total_lines_executed} lines"
+                msg = f"⏱️ Profiling stopped: {session.total_lines_executed} lines"
                 self.statusbar.showMessage(msg, 3000)
 
     def _show_profile_report(self, _checked: bool = False):
@@ -902,8 +1251,7 @@ class MainWindow(
             reply = QMessageBox.question(
                 self,
                 "Unsaved Changes",
-                f"'{filename}' has been modified.\n"
-                "Do you want to save your changes?",
+                f"'{filename}' has been modified.\nDo you want to save your changes?",
                 QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel,
                 QMessageBox.Save,
             )
@@ -1023,6 +1371,7 @@ class MainWindow(
         self.editor_tabs.currentChanged.connect(self.on_tab_changed)
         self.editor_tabs.setAccessibleName("Editor Tabs")
         self.editor_tabs.setAccessibleDescription("Code editor tab group")
+        self.editor_tabs._setup_tab_bar(self)
         self.editor_tabs.setStyleSheet("""
             QTabWidget {
                 background-color: palette(base);
@@ -1035,14 +1384,43 @@ class MainWindow(
         self.new_file()
         self._maybe_show_welcome_tab()
 
-        left_splitter.addWidget(self.editor_tabs)
+        # Editor split container (horizontal splitter housing primary + secondary panes)
+        self._editor_h_splitter = QSplitter(Qt.Orientation.Horizontal)
+        self._editor_h_splitter.setChildrenCollapsible(False)
+        self._editor_h_splitter.setHandleWidth(5)
+        self._editor_h_splitter.addWidget(self.editor_tabs)
+
+        # Secondary editor pane (hidden until split is activated)
+        self._editor_tabs_b = ResizableTabWidget()
+        self._editor_tabs_b.setTabsClosable(True)
+        self._editor_tabs_b.tabCloseRequested.connect(self._close_split_tab)
+        self._editor_tabs_b.currentChanged.connect(self._on_split_tab_changed)
+        self._editor_tabs_b._setup_tab_bar(self)
+        self._editor_tabs_b.setStyleSheet(self.editor_tabs.styleSheet())
+        self._editor_tabs_b.hide()
+        self._editor_h_splitter.addWidget(self._editor_tabs_b)
+        # Primary pane takes all space initially
+        self._editor_h_splitter.setStretchFactor(0, 1)
+        self._editor_h_splitter.setStretchFactor(1, 1)
+
+        # Focus tracking: clicking secondary pane marks it active
+        self._editor_tabs_b.currentChanged.connect(
+            lambda _: self._set_active_pane("secondary")
+        )
+        self.editor_tabs.currentChanged.connect(
+            lambda _: self._set_active_pane("primary")
+        )
+
+        left_splitter.addWidget(self._editor_h_splitter)
         # Editor expands, REPL bar stays fixed-ish
         left_splitter.setStretchFactor(0, 1)
 
         # Immediate mode panel (REPL) - below editor
         self.immediate_mode = ImmediateModePanel(self)
         self.immediate_mode.setAccessibleName("REPL Command Line")
-        self.immediate_mode.setAccessibleDescription("Interactive command prompt for immediate code execution")
+        self.immediate_mode.setAccessibleDescription(
+            "Interactive command prompt for immediate code execution"
+        )
         # Hard floor so the REPL bar can never be dragged to nothing
         self.immediate_mode.setMinimumHeight(44)
         left_splitter.addWidget(self.immediate_mode)
@@ -1077,7 +1455,9 @@ class MainWindow(
         # Turtle canvas
         self.canvas = TurtleCanvas(self)
         self.canvas.setAccessibleName("Turtle Graphics Canvas")
-        self.canvas.setAccessibleDescription("Drawing surface for turtle graphics output")
+        self.canvas.setAccessibleDescription(
+            "Drawing surface for turtle graphics output"
+        )
 
         # Combine Output and Graphics in a persistent vertical split so both
         # panels are always visible — no tab-flipping when a program draws.
@@ -1135,7 +1515,6 @@ class MainWindow(
         self.right_tabs.addTab(self.debug_panel, "🐛 Debug")
         self._connect_debug_signals()
 
-
         splitter.addWidget(self.right_tabs)
         # Left (editor) gets 3 parts, right (output/canvas) gets 2 parts on resize
         splitter.setStretchFactor(0, 3)
@@ -1173,7 +1552,9 @@ class MainWindow(
 
         learn_btn = self.toolbar.addAction(
             "🎓 Learn",
-            lambda: self.feature_manager.toggle_feature_panel("learning_hub", visible=True),
+            lambda: self.feature_manager.toggle_feature_panel(
+                "learning_hub", visible=True
+            ),
         )
         learn_btn.setToolTip("Open the Learning Hub")
         learn_btn.setStatusTip("Launch lessons, challenges, and tutor tools")
@@ -1193,8 +1574,27 @@ class MainWindow(
 
         file_menu.addSeparator()
 
+        # Project management
+        new_project_action = QAction("New &Project...", self)
+        new_project_action.triggered.connect(self._new_project)
+        file_menu.addAction(new_project_action)
+
+        open_project_action = QAction("Open Project...", self)
+        open_project_action.setShortcut("Ctrl+Shift+O")
+        open_project_action.triggered.connect(self._open_project)
+        file_menu.addAction(open_project_action)
+
+        save_project_action = QAction("Save Project", self)
+        save_project_action.triggered.connect(self._save_project)
+        file_menu.addAction(save_project_action)
+
+        file_menu.addSeparator()
+
         self.recent_menu = file_menu.addMenu("Recent Files")
         self.update_recent_files_menu()
+
+        self.recent_projects_menu = file_menu.addMenu("Recent Projects")
+        self._update_recent_projects_menu()
 
         file_menu.addSeparator()
 
@@ -1234,6 +1634,14 @@ class MainWindow(
         version_history_action.setShortcut("Ctrl+H")
         version_history_action.triggered.connect(self._show_version_history)
         file_menu.addAction(version_history_action)
+
+        file_menu.addSeparator()
+
+        prefs_action = QAction("⚙️ &Preferences…", self)
+        prefs_action.setShortcut("Ctrl+,")
+        prefs_action.setStatusTip("Configure auto-save and other settings")
+        prefs_action.triggered.connect(self._open_autosave_preferences)
+        file_menu.addAction(prefs_action)
 
         file_menu.addSeparator()
 
@@ -1284,6 +1692,12 @@ class MainWindow(
             )
         )
         edit_menu.addAction(find_action)
+
+        find_in_files_action = QAction("Find in &Files…", self)
+        find_in_files_action.setShortcut("Ctrl+Alt+F")
+        find_in_files_action.setStatusTip("Search all open tabs and project files")
+        find_in_files_action.triggered.connect(self._show_find_in_files)
+        edit_menu.addAction(find_in_files_action)
 
         edit_menu.addSeparator()
 
@@ -1404,6 +1818,14 @@ class MainWindow(
         theme_preview_action.setStatusTip("Browse and preview all available themes")
         theme_preview_action.triggered.connect(self._show_theme_preview_dialog)
         theme_menu.addAction(theme_preview_action)
+
+        # Theme editor
+        theme_edit_action = QAction("✏️ &Edit Current Theme…", self)
+        theme_edit_action.setStatusTip(
+            "Open the theme editor to customise colours and save a new theme"
+        )
+        theme_edit_action.triggered.connect(self._open_theme_editor)
+        theme_menu.addAction(theme_edit_action)
         theme_menu.addSeparator()
 
         theme_group = QActionGroup(self)
@@ -1435,7 +1857,7 @@ class MainWindow(
             is_current = font_family == self.theme_manager.current_font_family
             font_action.setChecked(is_current)
             font_action.triggered.connect(
-                lambda checked, family=font_family: (self.change_font_family(family))
+                lambda checked, family=font_family: self.change_font_family(family)
             )
             self.font_family_group.addAction(font_action)
             font_family_menu.addAction(font_action)
@@ -1557,6 +1979,21 @@ class MainWindow(
         crt_settings_action = QAction("⚙️ CRT &Settings…", self)
         crt_settings_action.triggered.connect(self._show_crt_settings)
         crt_menu.addAction(crt_settings_action)
+
+        view_menu.addSeparator()
+
+        # Split editor view
+        split_action = QAction("⬜ &Split Editor Right", self)
+        split_action.setShortcut("Ctrl+\\")
+        split_action.setStatusTip("Open a second editor pane side by side (split view)")
+        split_action.triggered.connect(self.open_split_editor)
+        view_menu.addAction(split_action)
+
+        close_split_action = QAction("✖ &Close Split", self)
+        close_split_action.setShortcut("Ctrl+Shift+\\")
+        close_split_action.setStatusTip("Close the secondary editor pane")
+        close_split_action.triggered.connect(self.close_split_editor)
+        view_menu.addAction(close_split_action)
 
         view_menu.addSeparator()
 
@@ -1708,7 +2145,9 @@ class MainWindow(
 
         shortcuts_action = QAction("⌨️ &Keyboard Shortcuts…", self)
         shortcuts_action.setShortcut("Ctrl+?")
-        shortcuts_action.setStatusTip("Show all keyboard shortcuts in a searchable table")
+        shortcuts_action.setStatusTip(
+            "Show all keyboard shortcuts in a searchable table"
+        )
         shortcuts_action.triggered.connect(self._show_keyboard_shortcuts)
         help_menu.addAction(shortcuts_action)
 
@@ -2088,7 +2527,7 @@ class MainWindow(
         # Strip any existing indicator prefix (emoji up to first space)
         for prefix in ("⚙️ ", "✅ ", "❌ "):
             if title.startswith(prefix):
-                title = title[len(prefix):]
+                title = title[len(prefix) :]
                 break
         if state == "running":
             s.running = True
@@ -2166,10 +2605,7 @@ class MainWindow(
             choice = QMessageBox.warning(
                 self,
                 "Large Program Warning",
-                (
-                    "This program is very large and may slow down the IDE. "
-                    "Run anyway?"
-                ),
+                ("This program is very large and may slow down the IDE. Run anyway?"),
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,
             )
@@ -2210,7 +2646,11 @@ class MainWindow(
                 # Build a readable list of errors for the dialog
                 details = []
                 for issue in issues[:20]:  # Cap at 20 to keep dialog manageable
-                    sev = issue.severity.value if hasattr(issue.severity, "value") else str(issue.severity)
+                    sev = (
+                        issue.severity.value
+                        if hasattr(issue.severity, "value")
+                        else str(issue.severity)
+                    )
                     details.append(f"Line {issue.line} [{sev}]: {issue.message}")
                 if len(issues) > 20:
                     details.append(f"... and {len(issues) - 20} more issues")
@@ -2259,11 +2699,41 @@ class MainWindow(
         """Handle completion from the output panel."""
         self.check_execution_complete()
 
+        # Parse output text for ❌ [line N] error markers and annotate editor
+        self._apply_output_error_markers()
+
         lesson_panel = self.feature_manager.get_feature_panel("lesson_mode")
         if lesson_panel and hasattr(lesson_panel, "handle_execution_output"):
             lesson_panel.handle_execution_output(self.output.toPlainText())
 
         self._maybe_record_example_progress()
+
+    def _apply_output_error_markers(self):
+        """Scan the output panel for ❌ [line N] patterns and annotate the editor."""
+        import re as _re
+
+        editor = self.get_current_editor()
+        if not editor:
+            return
+
+        output_text = self.output.toPlainText()
+        # Match patterns:  ❌ [line 5] ...  or  ❌ Error at line 5: ...
+        pattern = _re.compile(
+            r"❌.*?(?:\[line\s+(\d+)\]|at\s+line\s+(\d+))", _re.IGNORECASE
+        )
+        error_lines: set[int] = set()
+        for match in pattern.finditer(output_text):
+            for grp in match.groups():
+                if grp is not None:
+                    try:
+                        error_lines.add(int(grp))
+                    except ValueError:
+                        pass
+                    break
+
+        if error_lines:
+            editor.set_error_lines(error_lines)
+            self._underline_error_lines_in_editor(editor, error_lines)
 
     def on_execution_error(self, error: str):
         """Handle execution errors for AI assistance and editor navigation."""
@@ -2419,7 +2889,9 @@ class MainWindow(
         if editor is not None:
             code = editor.toPlainText()
         if panel and hasattr(panel, "set_code_context"):
-            panel.set_code_context(language.name if hasattr(language, "name") else "BASIC", code)
+            panel.set_code_context(
+                language.name if hasattr(language, "name") else "BASIC", code
+            )
         self.statusbar.showMessage("AI tutor opened for the current tab", 3000)
 
     def _connect_turtle_inspector_signals(self):
@@ -2797,7 +3269,10 @@ class MainWindow(
     def _show_crt_settings(self):
         """Open a CRT settings dialog with intensity sliders."""
         from PySide6.QtWidgets import (
-            QDialog, QDialogButtonBox, QFormLayout, QSlider,
+            QDialog,
+            QDialogButtonBox,
+            QFormLayout,
+            QSlider,
         )
         from PySide6.QtCore import Qt
 
@@ -2812,10 +3287,18 @@ class MainWindow(
             s.setValue(val)
             return s
 
-        sl_scan = _slider(0, 100, int(getattr(self.crt_overlay, "_scanline_intensity", 0.15) * 100))
-        sl_glow = _slider(0, 100, int(getattr(self.crt_overlay, "_glow_intensity", 0.10) * 100))
-        sl_curv = _slider(0, 100, int(getattr(self.crt_overlay, "_curvature_amount", 0.02) * 1000))
-        sl_vign = _slider(0, 100, int(getattr(self.crt_overlay, "_vignette_intensity", 0.30) * 100))
+        sl_scan = _slider(
+            0, 100, int(getattr(self.crt_overlay, "_scanline_intensity", 0.15) * 100)
+        )
+        sl_glow = _slider(
+            0, 100, int(getattr(self.crt_overlay, "_glow_intensity", 0.10) * 100)
+        )
+        sl_curv = _slider(
+            0, 100, int(getattr(self.crt_overlay, "_curvature_amount", 0.02) * 1000)
+        )
+        sl_vign = _slider(
+            0, 100, int(getattr(self.crt_overlay, "_vignette_intensity", 0.30) * 100)
+        )
 
         form.addRow("Scanline Intensity (%):", sl_scan)
         form.addRow("Phosphor Glow (%):", sl_glow)
@@ -2946,13 +3429,16 @@ class MainWindow(
     def _show_sql_workbench(self, _checked: bool = False):
         """Open the SQL workbench by switching the language to SQL and focusing the editor."""
         from .dialogs import show_info_dialog  # noqa: F401 – imported lazily
+
         # Switch editor language to SQL so the user can write SQL immediately
         for i in range(self.language_combo.count()):
             if str(self.language_combo.itemData(i)).upper() == "SQL":
                 self.language_combo.setCurrentIndex(i)
                 break
         self.editor.setFocus()
-        self.statusbar.showMessage("🗄 SQL Workbench ready – write SQL and press F5 to run")
+        self.statusbar.showMessage(
+            "🗄 SQL Workbench ready – write SQL and press F5 to run"
+        )
 
     # ===================================================================
     # GUI Enhancement: accessibility preset
@@ -3094,6 +3580,19 @@ class MainWindow(
     # GUI Enhancement: theme preview dialog
     # ===================================================================
 
+    def _open_theme_editor(self, _checked: bool = False):
+        """Open the theme editor dialog for the current theme."""
+        from .theme_editor import open_theme_editor
+
+        saved = open_theme_editor(
+            self.theme_manager,
+            base_theme_name=self.theme_manager.current_theme_name,
+            parent=self,
+        )
+        if saved:
+            self.change_theme(saved)
+            self.statusbar.showMessage(f"🎨 Theme '{saved}' saved and applied")
+
     def _show_theme_preview_dialog(self, _checked: bool = False):
         """Display a dialog showing a live preview of each theme."""
         dlg = QDialog(self)
@@ -3226,6 +3725,120 @@ class MainWindow(
     # ===================================================================
     # GUI Enhancement: coach marks
     # ===================================================================
+
+    # ===================================================================
+    # Project management
+    # ===================================================================
+
+    def _restore_recent_projects(self) -> None:
+        """Load persisted recent-project list from QSettings."""
+        raw = self.settings.value("recent_projects", [])
+        paths = raw if isinstance(raw, list) else [raw] if raw else []
+        self._project_manager.load_recent_from_list(paths)
+
+    def _persist_recent_projects(self) -> None:
+        """Save recent-project list to QSettings."""
+        self.settings.setValue("recent_projects", self._project_manager.recent_projects)
+
+    def _update_recent_projects_menu(self) -> None:
+        """Rebuild the Recent Projects sub-menu."""
+        menu = getattr(self, "recent_projects_menu", None)
+        if menu is None:
+            return
+        menu.clear()
+        for path in self._project_manager.recent_projects:
+            action = QAction(path, self)
+            action.setData(path)
+            action.triggered.connect(
+                lambda checked=False, p=path: self._open_project_from_path(p)
+            )
+            menu.addAction(action)
+        if not self._project_manager.recent_projects:
+            empty = QAction("(no recent projects)", self)
+            empty.setEnabled(False)
+            menu.addAction(empty)
+
+    def _new_project(self) -> None:
+        """Create a new project via a simple dialog."""
+        from PySide6.QtWidgets import QFileDialog, QInputDialog
+
+        name, ok = QInputDialog.getText(self, "New Project", "Project name:")
+        if not ok or not name.strip():
+            return
+
+        directory = QFileDialog.getExistingDirectory(
+            self, "Choose Project Directory", str(Path.home())
+        )
+        if not directory:
+            return
+
+        project = self._project_manager.create(name.strip(), directory)
+        proj_path = self._project_manager.default_project_path(directory, name.strip())
+        self._project_manager.save(project, proj_path)
+
+        self._current_project = project
+        self._current_project_path = proj_path
+        self._persist_recent_projects()
+        self._update_recent_projects_menu()
+        self.statusbar.showMessage(f"Project '{name}' created at {proj_path}")
+
+    def _open_project(self) -> None:
+        """Show a file chooser and open the selected project."""
+        from PySide6.QtWidgets import QFileDialog
+
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            "Open Project",
+            str(Path.home()),
+            f"Time Warp Projects (*{PROJECT_EXTENSION});;All Files (*)",
+        )
+        if path:
+            self._open_project_from_path(path)
+
+    def _open_project_from_path(self, path: str) -> None:
+        """Open a project from a known file path."""
+        try:
+            project = self._project_manager.load(path)
+        except (FileNotFoundError, ValueError) as exc:
+            QMessageBox.critical(self, "Cannot Open Project", str(exc))
+            return
+
+        self._current_project = project
+        self._current_project_path = path
+        self._persist_recent_projects()
+        self._update_recent_projects_menu()
+        self.statusbar.showMessage(f"Project '{project.name}' loaded")
+
+        # Open the main file if it exists
+        project_dir = str(Path(path).parent)
+        main_rel = project.main_file or (project.files[0].path if project.files else "")
+        if main_rel:
+            abs_path = str(Path(project_dir) / main_rel)
+            if Path(abs_path).is_file():
+                self.load_file(abs_path)
+
+    def _save_project(self) -> None:
+        """Save the current project."""
+        if self._current_project is None:
+            self.statusbar.showMessage("No project open — use 'New Project' first")
+            return
+
+        if self._current_project_path is None:
+            from PySide6.QtWidgets import QFileDialog
+
+            path, _ = QFileDialog.getSaveFileName(
+                self,
+                "Save Project",
+                str(Path.home()),
+                f"Time Warp Projects (*{PROJECT_EXTENSION})",
+            )
+            if not path:
+                return
+            self._current_project_path = path
+
+        self._project_manager.save(self._current_project, self._current_project_path)
+        self._persist_recent_projects()
+        self.statusbar.showMessage(f"Project saved to {self._current_project_path}")
 
     def _start_coach_marks_tour(self, _checked: bool = False):
         """Force-start the interactive guided tour."""

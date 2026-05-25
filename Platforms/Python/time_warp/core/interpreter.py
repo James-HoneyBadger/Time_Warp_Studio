@@ -15,6 +15,7 @@ import logging
 import re
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as _FuturesTimeoutError
 from dataclasses import dataclass
 from enum import Enum, auto
 from typing import (
@@ -43,6 +44,9 @@ from ..languages.pilot import execute_pilot
 from ..languages.prolog import execute_prolog
 from ..languages.erlang import execute_erlang
 from ..languages.lisp import execute_lisp
+from ..languages.cobol import execute_cobol
+from ..languages.tcl import execute_tcl
+from ..languages.postscript import execute_postscript
 
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
@@ -71,7 +75,9 @@ if TYPE_CHECKING:
 #   2. Add a mapping here (Language -> executor function)
 #   3. No other dispatch tables need updating.
 # ---------------------------------------------------------------------------
-_WHOLE_PROGRAM_EXECUTORS: Dict["Language", Callable] = {}  # populated after Language enum
+_WHOLE_PROGRAM_EXECUTORS: Dict[
+    "Language", Callable
+] = {}  # populated after Language enum
 
 
 def _init_whole_program_executors() -> Dict["Language", Callable]:
@@ -83,12 +89,16 @@ def _init_whole_program_executors() -> Dict["Language", Callable]:
         Language.HYPERTALK: execute_hypertalk,
         Language.ERLANG: execute_erlang,
         Language.LISP: execute_lisp,
+        Language.COBOL: execute_cobol,
+        Language.TCL: execute_tcl,
+        Language.POSTSCRIPT: execute_postscript,
     }
 
 
 @dataclass
 class JumpResult:
     """Holds jump target metadata returned alongside ExecutionResult.JUMP"""
+
     line: int
 
 
@@ -113,6 +123,7 @@ class ExecutionResult(Enum):
 @dataclass
 class ScreenConfig:
     """Mutable screen configuration (separate from the ScreenMode enum)."""
+
     cols: int = 80
     rows: int = 25
     width: int = 800
@@ -142,6 +153,9 @@ class Language(Enum):
     HYPERTALK = auto()
     ERLANG = auto()
     LISP = auto()
+    COBOL = auto()
+    TCL = auto()
+    POSTSCRIPT = auto()
 
     @classmethod
     def from_extension(cls, ext: str) -> "Language":
@@ -169,6 +183,11 @@ class Language(Enum):
             ".scm": cls.LISP,
             ".rkt": cls.LISP,
             ".ss": cls.LISP,
+            ".cob": cls.COBOL,
+            ".cbl": cls.COBOL,
+            ".cpy": cls.COBOL,
+            ".tcl": cls.TCL,
+            ".ps": cls.POSTSCRIPT,
         }
         return mapping.get(ext, cls.BASIC)
 
@@ -188,6 +207,9 @@ class Language(Enum):
             Language.HYPERTALK: "HyperTalk",
             Language.ERLANG: "Erlang",
             Language.LISP: "LISP/Scheme",
+            Language.COBOL: "COBOL",
+            Language.TCL: "Tcl",
+            Language.POSTSCRIPT: "PostScript",
         }
         return names.get(self, "Unknown")
 
@@ -201,7 +223,7 @@ class LanguageRegistry:
 
     Usage:
         registry = LanguageRegistry()
-        fn = registry.get_executor(Language.LUA)   # may return None for line-by-line langs
+        fn = registry.get_executor(Language.LUA)  # or None for line-by-line langs
         langs = registry.languages()               # all whole-program language keys
         registry.register(Language.MY_LANG, my_fn) # add/override at runtime
     """
@@ -313,6 +335,7 @@ class Interpreter:
         self.debug_timeline: "ExecutionTimeline | None" = None
         self.debug_step_granularity: str = "line"
         self.breakpoints: set = set()
+        self.break_on_error: bool = False  # pause debugger when an error occurs
 
         # Language mode
         self.language = language
@@ -501,9 +524,9 @@ class Interpreter:
         self.pascal_heap: Dict[int, Any] = {}
 
         # C-specific state
-        self.c_block_stack: List[Dict[str, Any]] = (
-            []
-        )  # C block tracking for control flow
+        self.c_block_stack: List[
+            Dict[str, Any]
+        ] = []  # C block tracking for control flow
 
         # Debug transient state
         self.step_mode: bool = False
@@ -938,13 +961,22 @@ class Interpreter:
             fn = _WHOLE_PROGRAM_EXECUTORS[self.language]
             if turtle is None:
                 from ..graphics.turtle_state import TurtleState as _TS
+
                 turtle = _TS()
             if self.debug_mode:
                 self.log_output(
                     f"ℹ️ Debug step-through is not supported for "
                     f"{self.language.name}. Running in observation mode."
                 )
-            output_text = fn(self, source, turtle)
+            try:
+                with ThreadPoolExecutor(max_workers=1) as _pool:
+                    _future = _pool.submit(fn, self, source, turtle)
+                    output_text = _future.result(timeout=self.MAX_EXECUTION_TIME)
+            except _FuturesTimeoutError:
+                _t = self.MAX_EXECUTION_TIME
+                output_text = f"❌ Error: Execution timeout ({_t}s exceeded)\n"
+            except Exception as _exc:  # noqa: BLE001
+                output_text = f"❌ Runtime error: {_exc}\n"
             for line in output_text.splitlines(keepends=True):
                 self.log_output(line.rstrip("\n"))
             if self.debug_mode and self.debug_timeline:
@@ -962,6 +994,7 @@ class Interpreter:
         # Execute main loop with error recovery and debugging hooks
         if turtle is None:
             from ..graphics.turtle_state import TurtleState as _TS
+
             turtle = _TS()
         iterations = self._run_and_collect(turtle, iterations, start_time)
 
@@ -1052,6 +1085,18 @@ class Interpreter:
         if self.step_mode:
             return True
         if line_number in self.breakpoints and statement_index == 0:
+            # Check conditional breakpoint — skip pause if condition is False
+            if self.debug_timeline is not None:
+                condition = self.debug_timeline.breakpoint_conditions.get(line_number)
+                if condition:
+                    try:
+                        variables = self.get_variables()
+                        should_pause = bool(
+                            eval(condition, {"__builtins__": {}}, variables)  # noqa: S307  # pylint: disable=eval-used
+                        )
+                    except Exception:  # noqa: BLE001
+                        should_pause = True  # pause on evaluation error
+                    return should_pause
             return True
         return False
 
@@ -1117,14 +1162,21 @@ class Interpreter:
                 raise
             # Handle resource exhaustion explicitly
             if isinstance(e, RecursionError):
-                self.log_output(f"❌ Error at line {self.current_line + 1}: Maximum recursion depth exceeded")
+                self.log_output(
+                    f"❌ Error at line {self.current_line + 1}: "
+                    "Maximum recursion depth exceeded"
+                )
                 return False
             if isinstance(e, MemoryError):
-                self.log_output(f"❌ Error at line {self.current_line + 1}: Out of memory")
+                self.log_output(
+                    f"❌ Error at line {self.current_line + 1}: Out of memory"
+                )
                 return False
             # BASIC ON ERROR GOTO handler
-            if self.language is not None and self.language.name == "BASIC" and getattr(
-                self, "basic_error_handler_line", None
+            if (
+                self.language is not None
+                and self.language.name == "BASIC"
+                and getattr(self, "basic_error_handler_line", None)
             ):
                 handler_line = self.basic_error_handler_line
                 if handler_line in self.line_number_map:
@@ -1152,7 +1204,43 @@ class Interpreter:
                 if suggestion:
                     error_msg += f"\n   💡 Did you mean '{suggestion}'?"
             self.log_output(error_msg)
+            # Break-on-error: pause debugger at the offending line
+            if self.debug_mode and self.break_on_error:
+                self._do_debug_pause(self.current_line + 1)
             return False
+
+    @property
+    def source_line_no(self) -> int:
+        """Return the 1-based source line number for the current execution position.
+
+        For BASIC programs this returns the BASIC line number (e.g. 10, 20, 30).
+        For other languages this returns the 1-based line index.
+        """
+        if self.program_lines and self.current_line < len(self.program_lines):
+            basic_num, _ = self.program_lines[self.current_line]
+            if basic_num is not None:
+                return basic_num
+        return self.current_line + 1
+
+    def _inject_line_number(self, output: str) -> str:
+        """Inject the current source line number into ❌ error lines that lack one.
+
+        Lines already containing '[line N]' or 'at line N' are left unchanged.
+        """
+        if not output or "❌" not in output:
+            return output
+        display_line = self.source_line_no
+        result = []
+        for line in output.split("\n"):
+            if (
+                line.startswith("❌")
+                and "[line " not in line
+                and "at line " not in line
+            ):
+                result.append(f"❌ [line {display_line}] {line[1:].lstrip()}")
+            else:
+                result.append(line)
+        return "\n".join(result)
 
     def _execute_line(self, command: str, turtle: "TurtleState") -> str:
         """Execute a single line and return output text.
@@ -1186,6 +1274,8 @@ class Interpreter:
         else:
             raise ValueError(f"Unsupported language: {self.language}")
 
+        # Inject source line number into error messages for editor annotation
+        output = self._inject_line_number(output)
         self.log_output(output)
         return output
 
@@ -1232,6 +1322,7 @@ class Interpreter:
 
         Uses safe expression evaluator (no eval/exec)
         """
+
         # Expand UDT field references: VAR.FIELD → numeric value
         def _expand_udt(m):
             obj_name = m.group(1).upper()
@@ -1425,6 +1516,10 @@ class Interpreter:
         """Enable or disable debug mode"""
         self.debug_mode = enabled
 
+    def set_break_on_error(self, enabled: bool):
+        """Enable or disable break-on-error: pauses debugger when any error occurs."""
+        self.break_on_error = enabled
+
     def set_debug_callback(self, callback: DebugCallback):
         """Set callback for debug events."""
         self.debug_callback = callback
@@ -1479,7 +1574,9 @@ class Interpreter:
             result = []
             for frame in self.basic_call_stack:
                 line = frame.get("return_line", 0) if isinstance(frame, dict) else 0
-                name = frame.get("name", "SUB") if isinstance(frame, dict) else str(frame)
+                name = (
+                    frame.get("name", "SUB") if isinstance(frame, dict) else str(frame)
+                )
                 result.append((line, name))
             if self.gosub_stack:
                 for ret_line in self.gosub_stack:
@@ -1514,6 +1611,7 @@ class Interpreter:
 # Refactor: Split language-specific logic into separate modules
 # Create a LanguageExecutor class to encapsulate executor logic
 
+
 class LanguageExecutor:
     def __init__(self, name: str, execute_fn: Callable):
         self.name = name
@@ -1521,6 +1619,7 @@ class LanguageExecutor:
 
     def execute(self, interpreter, source, turtle):
         return self.execute_fn(interpreter, source, turtle)
+
 
 # Example usage:
 # python_executor = LanguageExecutor("Python", execute_python)

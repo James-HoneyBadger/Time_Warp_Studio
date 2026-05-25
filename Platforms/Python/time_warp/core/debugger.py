@@ -53,6 +53,7 @@ class ExecutionTimeline:
         self.current_frame_index = -1
         self.is_recording = False
         self.breakpoints: set = set()  # Set of line numbers
+        self.breakpoint_conditions: Dict[int, str] = {}  # line -> condition expr
         self.variables_history: Dict[str, List[VariableSnapshot]] = {}
         self.state = ExecutionState.STOPPED
         self.pause_requested = False
@@ -112,9 +113,19 @@ class ExecutionTimeline:
             )
             self.variables_history[var_name].append(snapshot)
 
-        # Check for breakpoints
+        # Check for breakpoints (conditional or unconditional)
         if line in self.breakpoints:
-            self.pause_at_line(line)
+            condition = self.breakpoint_conditions.get(line)
+            should_pause = True
+            if condition:
+                try:
+                    should_pause = bool(
+                        eval(condition, {"__builtins__": {}}, variables)
+                    )  # noqa: S307
+                except Exception:  # pylint: disable=broad-exception-caught
+                    should_pause = True  # pause on evaluation error
+            if should_pause:
+                self.pause_at_line(line)
 
         self._trigger_callbacks("frame_recorded", frame)
 
@@ -178,14 +189,27 @@ class ExecutionTimeline:
             self.current_frame_index -= 1
             self._trigger_callbacks("stepped", self.frames[self.current_frame_index])
 
-    def set_breakpoint(self, line: int):
-        """Set a breakpoint at a line."""
+    def set_breakpoint(self, line: int, condition: str | None = None):
+        """Set a breakpoint at a line.
+
+        Args:
+            line: 1-based source line number.
+            condition: Optional Python expression evaluated in the frame's
+                variable namespace.  The breakpoint only pauses execution
+                when the expression evaluates to a truthy value.  If the
+                expression raises an exception, execution is paused anyway.
+        """
         self.breakpoints.add(line)
+        if condition:
+            self.breakpoint_conditions[line] = condition.strip()
+        else:
+            self.breakpoint_conditions.pop(line, None)
         self._trigger_callbacks("breakpoint_set", line)
 
     def remove_breakpoint(self, line: int):
         """Remove a breakpoint."""
         self.breakpoints.discard(line)
+        self.breakpoint_conditions.pop(line, None)
         self._trigger_callbacks("breakpoint_removed", line)
 
     def toggle_breakpoint(self, line: int):

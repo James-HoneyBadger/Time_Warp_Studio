@@ -60,9 +60,7 @@ class LocalAIAssistant:
             "C": 'for (int i = 1; i <= 10; i++) printf("%d\\n", i);',
         },
         "conditionals": {
-            "BASIC": (
-                'IF x > 5 THEN\n  PRINT "Greater"\nELSE\n' '  PRINT "Less"\nEND IF'
-            ),
+            "BASIC": ('IF x > 5 THEN\n  PRINT "Greater"\nELSE\n  PRINT "Less"\nEND IF'),
             "LOGO": 'IF :x > 5 [PRINT "Greater"] [PRINT "Less"]',
             "PASCAL": 'if x > 5 then WriteLn("Greater") else WriteLn("Less");',
             "C": 'if (x > 5) printf("Greater\\n"); else printf("Less\\n");',
@@ -75,12 +73,11 @@ class LocalAIAssistant:
         },
         "functions": {
             "BASIC": (
-                'SUB greet(name$)\n  PRINT "Hello " name$\nEND SUB\n'
-                'CALL greet("World")'
+                'SUB greet(name$)\n  PRINT "Hello " name$\nEND SUB\nCALL greet("World")'
             ),
-            "LOGO": ("TO square :size\n  REPEAT 4 " "[FORWARD :size RIGHT 90]\nEND"),
+            "LOGO": ("TO square :size\n  REPEAT 4 [FORWARD :size RIGHT 90]\nEND"),
             "PASCAL": (
-                "procedure greet(name: string); " 'begin WriteLn("Hello " + name); end;'
+                'procedure greet(name: string); begin WriteLn("Hello " + name); end;'
             ),
             "C": 'void greet(char *name) { printf("Hello %s\\n", name); }',
         },
@@ -108,7 +105,7 @@ class LocalAIAssistant:
         "divide by zero": {
             "pattern": "divide by zero",
             "suggestion": (
-                "Add a check before division: IF divisor = 0 THEN PRINT " '"Error"'
+                'Add a check before division: IF divisor = 0 THEN PRINT "Error"'
             ),
             "example": "IF x <> 0 THEN result = y / x",
         },
@@ -260,11 +257,10 @@ class LocalAIAssistant:
                 "different values to it throughout your program."
             ),
             "array": (
-                "An array is a list of values. Access items by index "
-                "(0, 1, 2, etc.)."
+                "An array is a list of values. Access items by index (0, 1, 2, etc.)."
             ),
             "function": (
-                "A function is reusable code. Define it once, call it many " "times."
+                "A function is reusable code. Define it once, call it many times."
             ),
             "conditional": (
                 "IF statements make decisions. "
@@ -371,9 +367,7 @@ class LocalAIAssistant:
         # Generic error handling
         return {
             "meaning": "An error occurred during execution.",
-            "fix": (
-                "Check the error message for clues. Read the code line by " "line."
-            ),
+            "fix": ("Check the error message for clues. Read the code line by line."),
             "confidence": 0.5,
             "alternatives": [],
         }
@@ -389,8 +383,7 @@ class LocalAIAssistant:
             issues.append(
                 {
                     "issue": (
-                        "Unclosed IF statement (found "
-                        f"{open_if} IF, {close_if} ENDIF)"
+                        f"Unclosed IF statement (found {open_if} IF, {close_if} ENDIF)"
                     ),
                     "suggestion": "Add ENDIF at the end of IF blocks",
                     "fixed": code,  # Would need to add actual fix
@@ -404,8 +397,7 @@ class LocalAIAssistant:
             issues.append(
                 {
                     "issue": (
-                        "Unclosed FOR loop (found "
-                        f"{for_count} FOR, {next_count} NEXT)"
+                        f"Unclosed FOR loop (found {for_count} FOR, {next_count} NEXT)"
                     ),
                     "suggestion": "Add NEXT at the end of FOR loops",
                 }
@@ -441,8 +433,7 @@ class LocalAIAssistant:
                         "description": f"Repeated code found {count} times",
                         "impact": "HIGH - Extract to function",
                         "suggestion": (
-                            "Move this repeated code to a subroutine: "
-                            f"{line[:40]}..."
+                            f"Move this repeated code to a subroutine: {line[:40]}..."
                         ),
                     }
                 )
@@ -480,9 +471,7 @@ class LocalAIAssistant:
 
         # Error queries
         if "error" in msg_lower or "bug" in msg_lower or "fix" in msg_lower:
-            return (
-                "Share your error message and code snippet, and I'll help " "debug it!"
-            )
+            return "Share your error message and code snippet, and I'll help debug it!"
 
         # Concept queries
         if "what is" in msg_lower or "explain" in msg_lower:
@@ -541,7 +530,7 @@ class RemoteAIAssistant:
             return response.choices[0].message.content
 
         except ImportError:
-            return "OpenAI library not installed. Install with: " "pip install openai"
+            return "OpenAI library not installed. Install with: pip install openai"
         except (ValueError, RuntimeError) as exc:
             return f"API error: {str(exc)}"
 

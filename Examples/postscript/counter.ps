@@ -1,0 +1,11 @@
+% Simple counter to demonstrate PostScript variables and loops
+/count 0 def
+
+(Counting to 10:) =
+1 1 10 {
+    /count exch def
+    (  ) print count ==
+} for
+
+(Final count: ) print count ==
+(Done.) =

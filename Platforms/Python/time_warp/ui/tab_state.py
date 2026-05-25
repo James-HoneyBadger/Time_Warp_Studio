@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 def _default_language():
     """Deferred default to avoid circular imports at module load time."""
     from ..core.interpreter import Language  # pylint: disable=import-outside-toplevel
+
     return Language.BASIC
 
 

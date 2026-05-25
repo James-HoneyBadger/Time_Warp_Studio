@@ -1,0 +1,43 @@
+% strings.ps - String operations in PostScript
+
+(String Operations in PostScript) =
+
+% String length
+/s (Hello, World!) def
+(String: ) print s =
+(Length: ) print s length ==
+
+% String copy and concatenation
+/s1 (Hello) def
+/s2 (, PostScript!) def
+/combined s1 length s2 length add string def
+combined 0 s1 putinterval
+combined s1 length s2 putinterval
+(Concat: ) print combined =
+
+% String search
+/haystack (The quick brown fox) def
+/needle (quick) def
+(Search for 'quick': ) print
+haystack needle search {
+    pop pop
+    (Found!) =
+} {
+    (Not found) =
+} ifelse
+
+% Convert number to string
+/num 42 def
+(Number ) print num ==
+(As string: ) print num 10 string cvs =
+
+% String comparison
+/a (apple) def
+/b (banana) def
+a b eq {
+    (Strings are equal) =
+} {
+    (Strings differ) =
+} ifelse
+
+(Done.) =

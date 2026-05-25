@@ -362,7 +362,9 @@ class ForthExecutor:
                 else (
                     f"{v:0b} "
                     if self.base == 2
-                    else f"{v:0o} " if self.base == 8 else f"{v} "
+                    else f"{v:0o} "
+                    if self.base == 8
+                    else f"{v} "
                 )
             )
 
@@ -899,10 +901,13 @@ class ForthExecutor:
     def _load_include_file(self, filename: str) -> None:
         """Load and execute a Forth source file (sandboxed to .forth/.f/.4th/.fth)."""
         import os
-        safe_ext = ('.forth', '.f', '.4th', '.fth')
+
+        safe_ext = (".forth", ".f", ".4th", ".fth")
         basename = os.path.basename(filename)  # prevent path traversal
         if not any(basename.lower().endswith(ext) for ext in safe_ext):
-            self.interpreter.log_output(f"❌ INCLUDE: only .forth/.f/.4th/.fth files supported")
+            self.interpreter.log_output(
+                "❌ INCLUDE: only .forth/.f/.4th/.fth files supported"
+            )
             return
         paths_to_try = [
             filename,
@@ -912,20 +917,24 @@ class ForthExecutor:
         for path in paths_to_try:
             if os.path.isfile(path):
                 try:
-                    with open(path, 'r', encoding='utf-8', errors='replace') as fh:
+                    with open(path, "r", encoding="utf-8", errors="replace") as fh:
                         code = fh.read()
                     self.interpreter.log_output(f"ℹ️ Including {basename}")
                     for line in code.splitlines():
                         self.execute_line(line, self.turtle)
                     return
                 except OSError as exc:
-                    self.interpreter.log_output(f"❌ INCLUDE: could not read {basename}: {exc}")
+                    self.interpreter.log_output(
+                        f"❌ INCLUDE: could not read {basename}: {exc}"
+                    )
                     return
         self.interpreter.log_output(f"❌ INCLUDE: file not found: {filename}")
 
     def _include(self):
         """Fallback for INCLUDE when called without stream context."""
-        self.interpreter.log_output("ℹ️ INCLUDE requires a filename token (e.g. INCLUDE myfile.forth)")
+        self.interpreter.log_output(
+            "ℹ️ INCLUDE requires a filename token (e.g. INCLUDE myfile.forth)"
+        )
 
     def _ms(self):
         """MS — simulated millisecond delay (consumes n from stack)."""
@@ -1248,7 +1257,7 @@ class ForthExecutor:
             if token_upper == "DEFER":
                 if i + 1 < len(tokens):
                     def_name = tokens[i + 1].upper()
-                    self.deferred[def_name] = None
+                    self.deferred[def_name] = ""  # unresolved; IS reassigns
 
                     def deferred_fn(n=def_name):
                         target = self.deferred.get(n)
@@ -1638,7 +1647,8 @@ class ForthExecutor:
 
             # ── WORD c ( -- caddr ) parse next token as counted string ────
             if token_upper == "WORD":
-                delim = self.stack.pop() if self.stack else 32  # delimiter (BL=32)
+                if self.stack:
+                    self.stack.pop()  # delimiter BL=32; unused in token-based parsing
                 if i + 1 < len(tokens):
                     word = tokens[i + 1]
                     i += 2
@@ -1742,12 +1752,14 @@ _forth_executor = None
 
 def reset_forth():
     """Reset the global Forth executor so state doesn't leak between runs."""
-    global _forth_executor
+    global _forth_executor  # pylint: disable=global-statement
     _forth_executor = None
 
 
-def execute_forth(interpreter: "Interpreter", command: str, turtle: "TurtleState") -> str:
-    global _forth_executor
+def execute_forth(
+    interpreter: "Interpreter", command: str, turtle: "TurtleState"
+) -> str:
+    global _forth_executor  # pylint: disable=global-statement
     if _forth_executor is None or _forth_executor.interpreter != interpreter:
         _forth_executor = ForthExecutor(interpreter)
     try:
