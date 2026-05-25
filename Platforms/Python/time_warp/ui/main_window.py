@@ -70,6 +70,7 @@ from .mixins import (
 )
 from .output import ImmediateModePanel, OutputPanelContainer
 from .screen_modes import ScreenModeManager
+from .terminal_widget import TerminalWidget
 from .themes import ThemeManager
 from .variable_inspector import VariableInspector
 from ..features.classroom_mode import ClassroomMode
@@ -432,6 +433,12 @@ class MainWindow(
 
         # Check for updates in the background (5 s delay so startup is snappy)
         QTimer.singleShot(5000, self._start_update_check)
+
+        # Ctrl+` shortcut → focus / switch to the Terminal tab
+        _terminal_shortcut = QAction("Focus Terminal", self)
+        _terminal_shortcut.setShortcut("Ctrl+`")
+        _terminal_shortcut.triggered.connect(self._focus_terminal)
+        self.addAction(_terminal_shortcut)
 
         # Apply theme to current editor
         current_editor = self.get_current_editor()
@@ -1576,6 +1583,14 @@ class MainWindow(
         self.turtle_log.setAccessibleName("Turtle Command Log")
         self.turtle_log.setPlaceholderText("Turtle 🐢 commands appear here…")
         self.output_sub_tabs.addTab(self.turtle_log, "🐢 Turtle Log")
+
+        # Integrated terminal tab
+        self.terminal_widget = TerminalWidget(
+            cwd=str(Path(__file__).parents[4]),  # project root
+            parent=self,
+        )
+        self.output_sub_tabs.addTab(self.terminal_widget, "💻 Terminal")
+        self.output_sub_tabs.currentChanged.connect(self._on_output_tab_changed)
 
         self.output_canvas_pane.addWidget(self.output_sub_tabs)
         self.output_canvas_pane.addWidget(self.canvas)
@@ -3432,6 +3447,20 @@ class MainWindow(
     # ===================================================================
     # GUI Enhancement: tabbed output routing
     # ===================================================================
+
+    def _on_output_tab_changed(self, index: int) -> None:
+        """Focus the terminal input when the Terminal tab becomes active."""
+        widget = self.output_sub_tabs.widget(index)
+        if isinstance(widget, TerminalWidget):
+            widget.focus_input()
+
+    def _focus_terminal(self) -> None:
+        """Ctrl+` — switch to the Terminal sub-tab and focus the input."""
+        for i in range(self.output_sub_tabs.count()):
+            if isinstance(self.output_sub_tabs.widget(i), TerminalWidget):
+                self.output_sub_tabs.setCurrentIndex(i)
+                self.output_sub_tabs.widget(i).focus_input()  # type: ignore[union-attr]
+                break
 
     def _route_output_to_subtabs(self, text: str, output_type: str):
         """Route streamed output lines to the Errors and Turtle Log sub-tabs."""

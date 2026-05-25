@@ -89,9 +89,34 @@ def main():
     app.setOrganizationName("TimeWarp")
     app.setOrganizationDomain("timewarp.edu")
 
+    # Retro boot screen (opt-in: only shown when a CRT theme was last used
+    # OR when the env var TWS_BOOT_SCREEN is set for testing).
+    from PySide6.QtCore import QSettings
+    from time_warp.ui.boot_screen import RetroBootScreen
+    _settings = QSettings("TimeWarp", "Time Warp Studio")
+    _theme = _settings.value("theme", "")
+    _crt_themes = {"Amber CRT", "Green CRT", "C64", "Apple II", "Retro Green", "Retro Amber"}
+    _show_boot = (
+        str(_theme) in _crt_themes
+        or os.environ.get("TWS_BOOT_SCREEN", "")
+    )
+    _crt_flavour = "amber" if "Amber" in str(_theme) else \
+                   "green" if "Green" in str(_theme) else \
+                   "c64" if "C64" in str(_theme) else "default"
+
+    if _show_boot:
+        _boot = RetroBootScreen(crt_flavour=_crt_flavour)
+        _boot.show()
+        _boot.start()
+
     # Create main window
     window = MainWindow()
-    window.show()
+
+    if _show_boot:
+        _boot.finished.connect(window.show)
+        _boot.finished.connect(_boot.close)
+    else:
+        window.show()
 
     # If a file was passed as argument, open it
     if len(sys.argv) > 1:

@@ -127,6 +127,10 @@ class FileOperationsMixin(_FileOpsMixinBase):
             if editor and hasattr(self, "_load_breakpoints_for_file"):
                 self._load_breakpoints_for_file(filename, editor)
 
+            # Keep terminal cwd in sync with opened file's directory
+            if hasattr(self, "terminal_widget"):
+                self.terminal_widget.set_cwd(str(Path(filename).parent))
+
         except (OSError, UnicodeDecodeError) as e:
             QMessageBox.critical(
                 self, "Error Loading File", f"Could not load file:\n{e}"
