@@ -29,6 +29,7 @@ from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
     QLabel,
+    QMessageBox,
     QPushButton,
     QWidget,
 )
@@ -79,6 +80,14 @@ class TurtleCanvas(QWidget):  # pylint: disable=invalid-name,too-many-instance-a
         self._anim_timer.setInterval(30)  # ~33 fps
         self._anim_timer.timeout.connect(self._anim_step)
         self._anim_btn: QPushButton | None = None  # set in toolbar setup
+
+        # GIF recording state
+        self._recording = False
+        self._record_frames: list = []   # list of QImage frames
+        self._record_timer = QTimer(self)
+        self._record_timer.setInterval(100)  # 10 fps
+        self._record_timer.timeout.connect(self._capture_record_frame)
+        self._record_btn: QPushButton | None = None  # set in toolbar setup
 
         # Minimum size — small enough to allow the splitter to resize freely
         self.setMinimumSize(200, 200)
@@ -148,6 +157,12 @@ class TurtleCanvas(QWidget):  # pylint: disable=invalid-name,too-many-instance-a
         self._grid_btn = _btn("⋯", "Toggle Grid Overlay", self._toggle_grid)
         self._grid_btn.setCheckable(True)
         toolbar_layout.addWidget(self._grid_btn)
+
+        # GIF recording
+        self._record_btn = _btn("⏺", "Record GIF…", self._toggle_gif_recording)
+        self._record_btn.setCheckable(True)
+        self._record_btn.setToolTip("Start/stop recording canvas as animated GIF (requires Pillow)")
+        toolbar_layout.addWidget(self._record_btn)
 
         # Position strip below canvas
         self._pos_label = QLabel("x: 0  y: 0  ∠: 0°")
@@ -298,8 +313,6 @@ class TurtleCanvas(QWidget):  # pylint: disable=invalid-name,too-many-instance-a
         w, h = max(self.width(), 1), max(self.height(), 1)
         ok = self.export_to_svg(filename, w, h)
         if not ok:
-            from PySide6.QtWidgets import QMessageBox
-
             QMessageBox.warning(
                 self,
                 "SVG Export Failed",
@@ -324,10 +337,106 @@ class TurtleCanvas(QWidget):  # pylint: disable=invalid-name,too-many-instance-a
         self.update()
 
     # ------------------------------------------------------------------
+    # GIF Recording
+    # ------------------------------------------------------------------
+
+    def _toggle_gif_recording(self):
+        """Start or stop GIF recording."""
+        if self._recording:
+            self._stop_gif_recording()
+        else:
+            self._start_gif_recording()
+
+    def _start_gif_recording(self):
+        """Begin capturing frames for an animated GIF."""
+        self._record_frames.clear()
+        self._recording = True
+        if self._record_btn:
+            self._record_btn.setToolTip("Stop recording and save GIF")
+            self._record_btn.setStyleSheet(
+                self._TOOLBAR_BTN_STYLE + " QPushButton { color: #ff5555; }"
+            )
+        self._record_timer.start()
+
+    def _stop_gif_recording(self):
+        """Stop recording and prompt to save the GIF."""
+        self._recording = False
+        self._record_timer.stop()
+        if self._record_btn:
+            self._record_btn.setChecked(False)
+            self._record_btn.setToolTip("Record GIF…")
+            self._record_btn.setStyleSheet(self._TOOLBAR_BTN_STYLE)
+        if not self._record_frames:
+            return
+        self._save_gif()
+
+    def _capture_record_frame(self):
+        """Capture the current canvas state as one GIF frame."""
+        w, h = max(self.width(), 1), max(self.height(), 1)
+        image = QImage(w, h, QImage.Format.Format_ARGB32)
+        image.fill(self.bg_color)
+        painter = QPainter(image)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self._render_to_painter(painter, w, h)
+        painter.end()
+        self._record_frames.append(image)
+
+    def _save_gif(self):
+        """Convert captured QImage frames to an animated GIF using Pillow."""
+        try:
+            from PIL import Image  # type: ignore[import]
+        except ImportError:
+            QMessageBox.warning(
+                self,
+                "Pillow Not Installed",
+                "The Pillow package is required for GIF export.\n"
+                "Install it with:  pip install pillow",
+            )
+            return
+
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Save Animated GIF",
+            os.path.expanduser("~/turtle_recording.gif"),
+            "GIF Images (*.gif);;All Files (*)",
+        )
+        if not filename:
+            return
+        if not filename.lower().endswith(".gif"):
+            filename += ".gif"
+
+        # Convert QImages to PIL Images
+        pil_frames: list = []
+        for qimg in self._record_frames:
+            qimg = qimg.convertToFormat(QImage.Format.Format_RGBA8888)
+            width, height = qimg.width(), qimg.height()
+            ptr = qimg.constBits()
+            arr = bytes(ptr)[:width * height * 4]
+            pil_img = Image.frombytes("RGBA", (width, height), arr)
+            pil_frames.append(pil_img.convert("P", palette=Image.Palette.ADAPTIVE))
+
+        if not pil_frames:
+            return
+
+        try:
+            pil_frames[0].save(
+                filename,
+                save_all=True,
+                append_images=pil_frames[1:],
+                loop=0,
+                duration=100,  # 10 fps → 100ms per frame
+                optimize=True,
+            )
+            self._record_frames.clear()
+        except Exception as exc:  # noqa: BLE001
+            QMessageBox.warning(self, "GIF Save Failed", str(exc))
+
+    # ------------------------------------------------------------------
     # Clipboard copy
     # ------------------------------------------------------------------
 
     def _copy_to_clipboard(self):
+        """Render canvas to a QImage and copy it to the system clipboard."""
         """Render canvas to a QImage and copy it to the system clipboard."""
         w, h = max(self.width(), 1), max(self.height(), 1)
         image = QImage(w, h, QImage.Format.Format_ARGB32)
