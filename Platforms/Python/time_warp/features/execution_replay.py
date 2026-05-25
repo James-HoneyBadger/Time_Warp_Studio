@@ -1,7 +1,9 @@
 """Visual execution replay for understanding algorithms."""
 
+import json
 from dataclasses import dataclass
 from enum import Enum
+from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 
@@ -132,6 +134,63 @@ class VisualizationRecorder:
                 for f in self.frames
             ],
         }
+
+    def save_twreplay(self, path: str | Path) -> None:
+        """Serialize all recorded frames to a ``.twreplay`` JSON file.
+
+        The file format is a superset of :meth:`export_animation` with a
+        ``format_version`` header so future loaders can migrate old files.
+
+        Args:
+            path: Destination file path (should end in ``.twreplay``).
+        """
+        payload: Dict[str, Any] = {
+            "format_version": 1,
+            "timestamp": __import__("datetime").datetime.now(
+                __import__("datetime").timezone.utc
+            ).isoformat(),
+            **self.export_animation(),
+        }
+        Path(path).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    @classmethod
+    def load_twreplay(cls, path: str | Path) -> "VisualizationRecorder":
+        """Load a previously saved ``.twreplay`` file.
+
+        Returns a new :class:`VisualizationRecorder` populated with the
+        stored frames, ready for playback.
+
+        Args:
+            path: Path to a ``.twreplay`` file.
+
+        Raises:
+            ValueError: If the file contains an unsupported format version.
+            json.JSONDecodeError: If the file is not valid JSON.
+        """
+        raw = json.loads(Path(path).read_text(encoding="utf-8"))
+        if raw.get("format_version", 1) != 1:
+            raise ValueError(
+                f"Unsupported .twreplay format version: {raw['format_version']}"
+            )
+        recorder = cls()
+        recorder.frames = []
+        for item in raw.get("frames", []):
+            try:
+                viz_type = VisualizationType(item["type"])
+            except (KeyError, ValueError):
+                viz_type = VisualizationType.VARIABLE_STATE
+            recorder.frames.append(
+                VisualizationFrame(
+                    frame_index=item.get("index", len(recorder.frames)),
+                    line_no=item.get("line", 0),
+                    visualization_type=viz_type,
+                    data=item.get("data", {}),
+                    variables=item.get("variables", {}),
+                    timestamp=item.get("timestamp", 0.0),
+                    description=item.get("description", ""),
+                )
+            )
+        return recorder
 
 
 class ArrayVisualizer:

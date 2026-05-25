@@ -16,7 +16,8 @@ import time
 from pathlib import Path
 
 # pylint: disable=no-name-in-module
-from PySide6.QtCore import QSettings, QSize, Qt, QTimer
+from PySide6.QtCore import QSettings, QSize, Qt, QThread, QTimer
+from PySide6.QtCore import Signal as _Signal
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
@@ -87,6 +88,56 @@ from .custom_layouts import CustomUILayouts
 
 logger = logging.getLogger(__name__)
 
+# ---- Background update checker -----------------------------------------------
+
+_GITHUB_RELEASES_URL = (
+    "https://api.github.com/repos/James-HoneyBadger/Time_Warp_Studio/releases/latest"
+)
+_VERSION_FILE = Path(__file__).parents[4] / "VERSION"
+
+
+def _read_local_version() -> str:
+    """Return the current version string from the VERSION file."""
+    try:
+        return _VERSION_FILE.read_text(encoding="utf-8").strip()
+    except OSError:
+        return "0.0.0"
+
+
+def _version_tuple(v: str) -> tuple:
+    """Convert 'X.Y.Z' to (X, Y, Z) integers for comparison."""
+    try:
+        return tuple(int(p) for p in v.lstrip("v").split(".")[:3])
+    except ValueError:
+        return (0, 0, 0)
+
+
+class _UpdateCheckerThread(QThread):
+    """Checks GitHub releases API and emits a signal when a newer version exists."""
+
+    update_available = _Signal(str, str)  # (latest_version, release_url)
+
+    def run(self) -> None:
+        try:
+            import urllib.request
+            import json as _json
+            req = urllib.request.Request(
+                _GITHUB_RELEASES_URL,
+                headers={"User-Agent": "Time-Warp-Studio-UpdateChecker/1.0"},
+            )
+            with urllib.request.urlopen(req, timeout=8) as resp:  # noqa: S310
+                data = _json.loads(resp.read())
+            tag: str = data.get("tag_name", "").lstrip("v")
+            url: str = data.get("html_url", _GITHUB_RELEASES_URL)
+            local = _read_local_version()
+            if tag and _version_tuple(tag) > _version_tuple(local):
+                self.update_available.emit(tag, url)
+        except Exception:  # noqa: BLE001
+            # Network errors / missing package are silently ignored
+            pass
+
+
+# ------------------------------------------------------------------------------
 
 class ResizableTabWidget(QTabWidget):
     """QTabWidget whose minimum/size hints reflect only the current page.
@@ -378,6 +429,9 @@ class MainWindow(
 
         # Show first-run onboarding after UI settles
         QTimer.singleShot(600, self._maybe_show_onboarding)
+
+        # Check for updates in the background (5 s delay so startup is snappy)
+        QTimer.singleShot(5000, self._start_update_check)
 
         # Apply theme to current editor
         current_editor = self.get_current_editor()
@@ -765,7 +819,34 @@ class MainWindow(
 
     # ---- Onboarding ----
 
+    def _start_update_check(self) -> None:
+        """Spawn a background thread to check the GitHub releases API."""
+        # Skip if the user has disabled update checks
+        if self.settings.value("check_for_updates", True) in (False, "false", "0", 0):
+            return
+        self._update_thread = _UpdateCheckerThread()
+        self._update_thread.update_available.connect(self._on_update_available)
+        self._update_thread.start()
+
+    def _on_update_available(self, latest_version: str, release_url: str) -> None:
+        """Show an update banner in the status bar."""
+        if not hasattr(self, "statusbar"):
+            return
+        label = QLabel(f"🆕 Update v{latest_version} available — <a href='{release_url}'>view release</a>")
+        label.setOpenExternalLinks(True)
+        label.setStyleSheet("""
+            QLabel {
+                background-color: #2d6a2d;
+                color: #ccffcc;
+                padding: 2px 8px;
+                border-radius: 3px;
+                font-size: 11px;
+            }
+        """)
+        self.statusbar.addWidget(label)
+
     def _maybe_show_onboarding(self):
+        """Show first-run onboarding wizard if not yet completed."""
         """Show first-run onboarding wizard if not yet completed."""
         if not self._onboarding_manager.should_show_onboarding():
             return

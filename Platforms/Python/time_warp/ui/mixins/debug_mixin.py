@@ -43,6 +43,7 @@ class DebugMixin:
             self._on_timeline_frame_selected
         )
         self.debug_panel.export_timeline_requested.connect(self.export_debug_timeline)
+        self.debug_panel.export_replay_requested.connect(self._export_timeline_as_twreplay)
         self.debug_panel.step_granularity_changed.connect(
             self._set_debug_step_granularity
         )
@@ -233,6 +234,32 @@ class DebugMixin:
             self.statusbar.showMessage("Debug timeline exported")
         except OSError:
             self.statusbar.showMessage("Failed to export timeline")
+
+    def _export_timeline_as_twreplay(self):
+        """Export current debug timeline as a .twreplay file."""
+        if not self._last_debug_timeline:
+            self.statusbar.showMessage("No debug timeline to export")
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Execution Replay",
+            "execution_replay.twreplay",
+            "Time Warp Replay (*.twreplay);;All Files (*)",
+        )
+        if not path:
+            return
+        import datetime as _dt
+        timeline_data = self._last_debug_timeline.export_timeline_json()
+        payload = {
+            "format_version": 1,
+            "timestamp": _dt.datetime.now(_dt.timezone.utc).isoformat(),
+            **timeline_data,
+        }
+        try:
+            Path(path).write_text(json.dumps(payload, indent=2), encoding="utf-8")
+            self.statusbar.showMessage(f"Replay saved: {Path(path).name}", 3000)
+        except OSError as exc:
+            self.statusbar.showMessage(f"Failed to save replay: {exc}")
 
     def _on_debug_output_stream(self, text: str, _output_type: str):
         """Forward output stream into the debug panel."""

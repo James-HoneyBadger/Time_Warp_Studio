@@ -40,6 +40,7 @@ class DebugToolbar(QFrame):
     pause_execution = Signal()
     step_granularity_changed = Signal(str)
     break_on_error_changed = Signal(bool)
+    export_replay = Signal()  # Emitted when the user clicks "Export Replay"
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -160,6 +161,14 @@ class DebugToolbar(QFrame):
 
         layout.addStretch()
 
+        # Export replay
+        self.export_replay_btn = QToolButton()
+        self.export_replay_btn.setText("💾 Export Replay")
+        self.export_replay_btn.setToolTip("Save execution timeline as a .twreplay file")
+        self.export_replay_btn.setEnabled(False)
+        self.export_replay_btn.clicked.connect(self.export_replay.emit)
+        layout.addWidget(self.export_replay_btn)
+
         # Status label
         self.status_label = QLabel("Ready")
         self.status_label.setStyleSheet("""
@@ -185,6 +194,9 @@ class DebugToolbar(QFrame):
         self.start_btn.setEnabled(not is_debugging)
         self.stop_btn.setEnabled(is_debugging)
         self.pause_btn.setEnabled(is_debugging and not self._is_paused)
+        # Enable export only when a session has finished (frames may exist)
+        if not is_debugging:
+            self.export_replay_btn.setEnabled(True)
 
         if is_debugging:
             self.status_label.setText("🟢 Running")
@@ -673,6 +685,7 @@ class DebugPanel(QWidget):
     goto_line = Signal(int)
     timeline_frame_selected = Signal(object)
     export_timeline_requested = Signal()
+    export_replay_requested = Signal()  # .twreplay export from toolbar button
     step_granularity_changed = Signal(str)
     break_on_error_changed = Signal(bool)
 
@@ -803,6 +816,7 @@ class DebugPanel(QWidget):
             self.step_granularity_changed.emit
         )
         self.toolbar.break_on_error_changed.connect(self.break_on_error_changed.emit)
+        self.toolbar.export_replay.connect(self.export_replay_requested.emit)
 
     def set_debugging(self, is_debugging: bool):
         """Update UI for debugging state."""
