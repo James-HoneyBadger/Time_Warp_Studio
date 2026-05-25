@@ -127,7 +127,7 @@ class MinimapWidget(QWidget):
         return QSize(self.MINIMAP_WIDTH, 0)
 
     def paintEvent(self, event):  # pylint: disable=unused-argument
-        """Paint a miniaturised version of the document."""
+        """Paint a miniaturised version of the document using syntax colours."""
         painter = QPainter(self)
         palette = self.editor.palette()
         bg = palette.color(QPalette.Base).darker(115)
@@ -137,23 +137,62 @@ class MinimapWidget(QWidget):
         block_count = max(doc.blockCount(), 1)
         h = self.height()
         line_h = h / block_count
+        mw = self.MINIMAP_WIDTH
+
+        # Fallback colour used for unstyled text
+        _default_fg = palette.color(QPalette.Text)
+        _default_fg.setAlphaF(0.55)
 
         block = doc.firstBlock()
         y = 0.0
         while block.isValid() and y < h:
             text = block.text()
+            bar_h = max(1.0, line_h * 0.8)
+
             if text.strip():
-                bar_w = min(len(text) * 0.45, self.MINIMAP_WIDTH - 6)
-                bar_h = max(1.0, line_h * 0.8)
-                stripped = text.lstrip()
-                if stripped.startswith(("#", "//", ";", "REM ", "--")):
-                    color = QColor(100, 180, 100)
-                elif stripped[:1].upper() in ("D", "F", "S"):
-                    # Rough heuristic for def/function/sub/TO blocks
-                    color = QColor(150, 120, 200)
+                # Try to read QTextLayout format ranges (set by the highlighter)
+                layout = block.layout()
+                fmt_ranges = layout.formats() if layout else []
+
+                if fmt_ranges:
+                    # Render each format range as a proportionally-wide
+                    # coloured segment in the minimap bar.
+                    char_w = min(0.45, (mw - 6) / max(len(text), 1))
+                    indent = len(text) - len(text.lstrip())
+                    x_base = 3.0 + indent * char_w
+
+                    # Fill default colour for the whole bar first
+                    total_bar_w = min(len(text) * char_w, mw - 6)
+                    painter.fillRect(
+                        QRectF(x_base, y, total_bar_w, bar_h), _default_fg
+                    )
+
+                    for fr in fmt_ranges:
+                        fg = fr.format.foreground()
+                        if not fg.isOpaque() and fg.style() == Qt.BrushStyle.NoBrush:
+                            continue
+                        color = fg.color()
+                        if not color.isValid():
+                            continue
+                        color.setAlphaF(0.75)
+                        seg_x = x_base + fr.start * char_w
+                        seg_w = fr.length * char_w
+                        if seg_x + seg_w > mw - 2:
+                            seg_w = max(0.0, mw - 2 - seg_x)
+                        if seg_w > 0:
+                            painter.fillRect(QRectF(seg_x, y, seg_w, bar_h), color)
                 else:
-                    color = QColor(160, 165, 170)
-                painter.fillRect(QRectF(3.0, y, bar_w, bar_h), color)
+                    # No highlighter data: use the previous heuristic approach
+                    bar_w = min(len(text) * 0.45, mw - 6)
+                    stripped = text.lstrip()
+                    if stripped.startswith(("#", "//", ";", "REM ", "--")):
+                        color = QColor(100, 180, 100, 160)
+                    elif stripped[:1].upper() in ("D", "F", "S"):
+                        color = QColor(150, 120, 200, 160)
+                    else:
+                        color = QColor(160, 165, 170, 140)
+                    painter.fillRect(QRectF(3.0, y, bar_w, bar_h), color)
+
             block = block.next()
             y += line_h
 
