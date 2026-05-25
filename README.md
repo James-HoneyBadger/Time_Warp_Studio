@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-10.2.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
-Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **16 programming languages** spanning seven decades of computing history into a single, modern IDE. Built with Python and PySide6 (Qt6), it provides an integrated platform for learning programming concepts, exploring vector turtle graphics, and working through structured lessons.
+Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **20 programming languages** spanning seven decades of computing history into a single, modern IDE. Built with Python and PySide6 (Qt6), it provides an integrated platform for learning programming concepts, exploring vector turtle graphics, and working through structured lessons.
 
 ---
 
@@ -32,7 +32,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 
 ### Multi-Language Support
 
-19 languages spanning seven decades of computing history:
+20 languages spanning seven decades of computing history:
 
 | Language | Paradigm | Era | Execution Mode |
 | --- | --- | --- | --- |
@@ -55,6 +55,8 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 | **Haskell** | Purely Functional / Lazy | 1990 | Whole-program |
 | **Ruby** | Object-oriented / Scripting | 1995 | Whole-program |
 | **Python** | Multi-paradigm / Educational | 1991 | Whole-program |
+| **6502 Assembly** | Machine / Educational | 1975 | Whole-program |
+| **6502 Assembly** | Machine / Educational | 1975 | Whole-program |
 
 ### Integrated IDE
 
@@ -90,7 +92,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Lesson System** — Step-by-step guided instruction with auto-verification
 - **AI Assistant** — Intelligent code suggestions and explanations
 - **Error Explainer** — Human-readable explanations of programming errors
-- **Examples Browser** — example programs across all 19 languages
+- **Examples Browser** — example programs across all 20 languages
 - **Achievements** — Gamified progress tracking
 
 ---
@@ -337,7 +339,7 @@ Time_Warp_Studio/
 │       │   ├── sql_engine.py      # SQLite-backed T-SQL compatibility
 │       │   ├── orchestrator.py    # System integration / component registry
 │       │   └── config.py          # Canonical paths (~/.time_warp/)
-│       ├── languages/             # 19 language executors
+│       ├── languages/             # 20 language executors
 │       │   ├── base.py            # Executor protocol definition
 │       │   ├── basic.py           # BASIC with Turbo graphics
 │       │   ├── logo.py            # Logo turtle graphics
@@ -360,7 +362,7 @@ Time_Warp_Studio/
 │       ├── utils/                 # Expression evaluator, error hints, etc.
 │       └── tests/                 # 41 test files
 │
-├── Examples/                      # 119 example programs across 19 languages
+├── Examples/                      # 124 example programs across 20 languages
 │   ├── CATALOG.md                 # Searchable example index
 │   ├── basic/ logo/ pilot/ c/
 │   ├── pascal/ prolog/ forth/
@@ -403,7 +405,7 @@ python Platforms/Python/time_warp_ide.py
 
 ### What Happens on Startup
 
-1. All 19 language executors are initialized
+1. All 20 language executors are initialized
 2. Configuration is loaded from `~/.time_warp/config.json`
 3. The main IDE window opens with editor, canvas, and output panels
 4. Your last theme and settings are restored
@@ -436,7 +438,7 @@ python Platforms/Python/test_runner.py --basic
 PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
 ```
 
-**Current status:** Tests passing across test modules covering all 19 language executors, graphics, GUI, and interpreter tests.
+**Current status:** Tests passing across test modules covering all 20 language executors, graphics, GUI, and interpreter tests.
 
 ---
 

@@ -50,6 +50,7 @@ from ..languages.postscript import execute_postscript
 from ..languages.ruby import execute_ruby
 from ..languages.python_lang import execute_python_lang
 from ..languages.haskell import execute_haskell
+from ..languages.asm6502 import execute_asm6502
 
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
@@ -98,6 +99,7 @@ def _init_whole_program_executors() -> Dict["Language", Callable]:
         Language.RUBY: execute_ruby,
         Language.PYTHON_LANG: execute_python_lang,
         Language.HASKELL: execute_haskell,
+        Language.ASM6502: execute_asm6502,
     }
 
 
@@ -165,6 +167,7 @@ class Language(Enum):
     RUBY = auto()
     PYTHON_LANG = auto()
     HASKELL = auto()
+    ASM6502 = auto()
 
     @classmethod
     def from_extension(cls, ext: str) -> "Language":
@@ -201,6 +204,9 @@ class Language(Enum):
             ".py": cls.PYTHON_LANG,
             ".hs": cls.HASKELL,
             ".lhs": cls.HASKELL,
+            ".asm": cls.ASM6502,
+            ".s": cls.ASM6502,
+            ".a65": cls.ASM6502,
         }
         return mapping.get(ext, cls.BASIC)
 
@@ -226,6 +232,7 @@ class Language(Enum):
             Language.RUBY: "Ruby",
             Language.PYTHON_LANG: "Python",
             Language.HASKELL: "Haskell",
+            Language.ASM6502: "6502 Assembly",
         }
         return names.get(self, "Unknown")
 

@@ -9,6 +9,7 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 
 ### Quick Links
 
+- **[6502 Assembly](#6502-assembly)** - Machine / educational
 - **[BASIC](#basic-gw-basic--qbasic-style)** - Educational programming
 - **[Brainfuck](#brainfuck)** - Minimalistic esolang
 - **[C](#c)** - Systems programming
@@ -27,6 +28,19 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 - **[Python](#python)** - General-purpose (sandboxed)
 - **[Ruby](#ruby)** - Dynamic object-oriented scripting
 - **[Tcl](#tcl)** - Embeddable scripting
+- **[Haskell](#haskell)** - Purely functional programming
+
+---
+
+## 6502 Assembly
+
+| File | Description |
+|------|-------------|
+| `asm6502/hello.asm` | Hello World — character and string output via ROM calls |
+| `asm6502/counting.asm` | Counting loops — 1-10, 10-1 countdown, even numbers using INX/BNE |
+| `asm6502/fibonacci.asm` | Fibonacci — zero-page variables, 8-bit arithmetic, loop with INC/CMP |
+| `asm6502/registers.asm` | **SHOWCASE** — arithmetic (ADC/SBC/ASL/LSR), bitwise (AND/ORA/EOR), transfers |
+| `asm6502/subroutines.asm` | Subroutines — JSR/RTS, stack (PHA/PLA), nested calls |
 
 ---
 
@@ -274,5 +288,5 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 
 ---
 
-*Total: 119 example programs across 19 languages.*
+*Total: 124 example programs across 20 languages.*
 *Files marked **SHOWCASE** are full-featured demo applications.*
