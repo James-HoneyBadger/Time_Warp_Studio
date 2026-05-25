@@ -145,6 +145,7 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 | `logo/spirograph.logo` | Spirograph curves using nested REPEAT |
 | `logo/fractal_gallery.logo` | **SHOWCASE** — Koch snowflake, Sierpinski triangle, fractal tree, rose curve, golden spiral |
 | `logo/geometric_artistry.logo` | **SHOWCASE** — Koch snowflake grid, Islamic 8-star, rosette mandala, hexagonal tiling, optical art |
+| `logo/turtle_3d.logo` | **SHOWCASE** — 3D turtle: helix, starburst, spiral using PITCH, ROLL, ENABLE3D |
 
 ---
 
@@ -288,5 +289,5 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 
 ---
 
-*Total: 124 example programs across 20 languages.*
+*Total: 125 example programs across 20 languages.*
 *Files marked **SHOWCASE** are full-featured demo applications.*

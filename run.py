@@ -13,6 +13,7 @@ Usage:
     python run.py              # Run normally
     python run.py --fresh      # Force fresh venv
     python run.py --skip-setup # Skip dependency check
+    python run.py --install-plugin /path/to/my_plugin  # Install plugin
     python run.py --help       # Show help
 """
 
@@ -287,6 +288,30 @@ def run_ide(venv_python: Path) -> bool:
         return False
 
 
+def _install_plugin(plugin_path: Path) -> None:
+    """Copy a plugin directory into the workspace plugins/ directory."""
+    if not plugin_path.exists():
+        print_error(f"Plugin path does not exist: {plugin_path}")
+        sys.exit(1)
+    if not plugin_path.is_dir():
+        print_error(f"Plugin path must be a directory: {plugin_path}")
+        sys.exit(1)
+
+    plugins_dir = PROJECT_ROOT / "plugins"
+    plugins_dir.mkdir(exist_ok=True)
+
+    dest = plugins_dir / plugin_path.name
+    if dest.exists():
+        print_warning(f"Plugin '{plugin_path.name}' already installed at {dest}")
+        print_warning("Remove it manually first if you want to reinstall.")
+        sys.exit(1)
+
+    import shutil
+    shutil.copytree(str(plugin_path), str(dest))
+    print_success(f"Plugin '{plugin_path.name}' installed to {dest}")
+    print_info("Restart Time Warp Studio to activate the plugin.")
+
+
 def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(
@@ -306,8 +331,18 @@ def main():
         action="store_true",
         help="Run with system Python (not recommended)",
     )
+    parser.add_argument(
+        "--install-plugin",
+        metavar="PLUGIN_PATH",
+        help="Install a plugin by copying its directory to plugins/ and exit",
+    )
 
     args = parser.parse_args()
+
+    # Handle --install-plugin before any venv setup
+    if args.install_plugin:
+        _install_plugin(Path(args.install_plugin))
+        return
 
     print_header("⏰ Time Warp Studio Launcher")
 

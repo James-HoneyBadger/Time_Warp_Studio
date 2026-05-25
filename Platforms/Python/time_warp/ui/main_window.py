@@ -382,7 +382,13 @@ class MainWindow(
         # Apply theme to current editor
         current_editor = self.get_current_editor()
         if current_editor and hasattr(current_editor, "highlighter"):
-            theme_name = self.settings.value("theme", "Dracula")
+            # Use saved theme if the user has explicitly set one; otherwise
+            # auto-detect from the OS color scheme.
+            saved_theme = self.settings.value("theme", None)
+            if saved_theme is None:
+                theme_name = self.theme_manager.detect_os_theme()
+            else:
+                theme_name = saved_theme
             self.theme_manager.apply_theme(
                 theme_name,
                 editor=current_editor,

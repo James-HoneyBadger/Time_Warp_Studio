@@ -768,6 +768,39 @@ class ThemeManager:
         """Get theme by name."""
         return self.themes.get(name, self.themes["Dracula"])
 
+    def detect_os_theme(self) -> str:
+        """Return the preferred theme name based on the OS color scheme.
+
+        Uses Qt 6.5+ ``QStyleHints.colorScheme()`` when available, then
+        falls back to the ``darkdetect`` package, then defaults to "Dracula".
+
+        Returns one of the theme names registered in ``self.themes``.
+        """
+        # Qt 6.5+ native detection
+        try:
+            from PySide6.QtCore import Qt
+            hints = QApplication.styleHints()
+            if hasattr(hints, "colorScheme"):
+                scheme = hints.colorScheme()
+                if scheme == Qt.ColorScheme.Light:
+                    return "GitHub Light"
+                if scheme == Qt.ColorScheme.Dark:
+                    return "Dracula"
+        except Exception:  # noqa: BLE001
+            pass
+
+        # Fallback: darkdetect library (optional dependency)
+        try:
+            import darkdetect  # type: ignore[import]
+            if darkdetect.isLight():
+                return "GitHub Light"
+            return "Dracula"
+        except ImportError:
+            pass
+
+        # Final fallback — dark by default
+        return "Dracula"
+
     def apply_theme(
         self,
         name: str,
