@@ -47,6 +47,9 @@ from ..languages.lisp import execute_lisp
 from ..languages.cobol import execute_cobol
 from ..languages.tcl import execute_tcl
 from ..languages.postscript import execute_postscript
+from ..languages.ruby import execute_ruby
+from ..languages.python_lang import execute_python_lang
+from ..languages.haskell import execute_haskell
 
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
@@ -92,6 +95,9 @@ def _init_whole_program_executors() -> Dict["Language", Callable]:
         Language.COBOL: execute_cobol,
         Language.TCL: execute_tcl,
         Language.POSTSCRIPT: execute_postscript,
+        Language.RUBY: execute_ruby,
+        Language.PYTHON_LANG: execute_python_lang,
+        Language.HASKELL: execute_haskell,
     }
 
 
@@ -156,6 +162,9 @@ class Language(Enum):
     COBOL = auto()
     TCL = auto()
     POSTSCRIPT = auto()
+    RUBY = auto()
+    PYTHON_LANG = auto()
+    HASKELL = auto()
 
     @classmethod
     def from_extension(cls, ext: str) -> "Language":
@@ -188,6 +197,10 @@ class Language(Enum):
             ".cpy": cls.COBOL,
             ".tcl": cls.TCL,
             ".ps": cls.POSTSCRIPT,
+            ".rb": cls.RUBY,
+            ".py": cls.PYTHON_LANG,
+            ".hs": cls.HASKELL,
+            ".lhs": cls.HASKELL,
         }
         return mapping.get(ext, cls.BASIC)
 
@@ -210,6 +223,9 @@ class Language(Enum):
             Language.COBOL: "COBOL",
             Language.TCL: "Tcl",
             Language.POSTSCRIPT: "PostScript",
+            Language.RUBY: "Ruby",
+            Language.PYTHON_LANG: "Python",
+            Language.HASKELL: "Haskell",
         }
         return names.get(self, "Unknown")
 

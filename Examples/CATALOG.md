@@ -24,6 +24,8 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 - **[PILOT](#pilot-programmed-inquiry-learning-or-teaching)** - Instructional programming
 - **[PostScript](#postscript)** - Stack-based page description
 - **[Prolog](#prolog)** - Logic programming
+- **[Python](#python)** - General-purpose (sandboxed)
+- **[Ruby](#ruby)** - Dynamic object-oriented scripting
 - **[Tcl](#tcl)** - Embeddable scripting
 
 ---
@@ -235,5 +237,42 @@ Open any file via **File → Open** or by browsing the `Examples/` folder.
 | `tcl/procedures.tcl` | Procedures, arguments, and factorial recursion |
 | `tcl/sorting.tcl` | **SHOWCASE** — Bubble sort and selection sort with array manipulation |
 
-*Total: 104 example programs across 16 languages.*
+---
+
+## Ruby
+
+| File | Description |
+|------|-------------|
+| `ruby/hello.rb` | Hello World — string interpolation, iterators, string methods |
+| `ruby/fibonacci.rb` | Fibonacci sequence — recursive, iterative, and memoised approaches |
+| `ruby/classes_demo.rb` | OOP showcase — classes, inheritance, modules, attr_accessor, class methods |
+| `ruby/data_processing.rb` | **SHOWCASE** — Arrays, hashes, enumerable methods (sort_by, group_by, tally, select) |
+| `ruby/turtle_art.rb` | Turtle graphics — colourful spiral using nested square drawing |
+
+---
+
+## Python
+
+| File | Description |
+|------|-------------|
+| `python/hello.py` | Hello World — f-strings, loops, dicts, basic operations |
+| `python/algorithms.py` | Sorting and searching — bubble sort, merge sort, binary search, Sieve of Eratosthenes |
+| `python/list_comprehensions.py` | **SHOWCASE** — List/dict/set comprehensions, map/filter/reduce, functional patterns |
+| `python/turtle_art.py` | Turtle graphics — concentric polygons with colour cycling |
+
+---
+
+## Haskell
+
+| File | Description |
+|------|-------------|
+| `haskell/hello.hs` | Hello World — do-notation, putStrLn, string concatenation |
+| `haskell/list_processing.hs` | **SHOWCASE** — map, filter, fold, zip, list comprehensions, Pythagorean triples |
+| `haskell/recursion.hs` | Pattern matching — factorial, Fibonacci, custom list functions, quicksort, mergesort |
+| `haskell/higher_order.hs` | Higher-order functions — composition, currying, flip, const, zipWith, any/all |
+| `haskell/algorithms.hs` | Algorithms — primes, GCD/LCM, Collatz, Caesar cipher, run-length encoding |
+
+---
+
+*Total: 119 example programs across 19 languages.*
 *Files marked **SHOWCASE** are full-featured demo applications.*
