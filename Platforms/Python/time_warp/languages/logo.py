@@ -365,6 +365,21 @@ def _execute_single_logo_command(
         "END",
         "ARC",
         "FILLED",
+        "PITCH",
+        "ROLL",
+        "YAW",
+        "TILTUP",
+        "TILTDOWN",
+        "UPWARD",
+        "DOWNWARD",
+        "UP",
+        "DOWN",
+        "ENABLE3D",
+        "3DON",
+        "DISABLE3D",
+        "3DOFF",
+        "2DON",
+        "TILTROLL",
     }
     if turtle is None and cmd_name in needs_turtle:
         return "❌ Graphics not available for this command"
@@ -575,6 +590,86 @@ def _execute_single_logo_command(
     if cmd_name == "PENMODE":
         mode = getattr(interpreter, "logo_pen_mode", "paint")
         return mode + "\n"
+
+    # ------------------------------------------------------------------
+    # 3D turtle commands
+    # ------------------------------------------------------------------
+    if cmd_name in ("ENABLE3D", "3DON"):
+        if turtle is not None:
+            turtle.enable_3d()
+        return "🐢 3D turtle mode enabled\n"
+
+    if cmd_name in ("DISABLE3D", "3DOFF", "2DON"):
+        if turtle is not None:
+            turtle.disable_3d()
+        return "🐢 2D turtle mode restored\n"
+
+    if cmd_name == "PITCH":
+        if turtle is None:
+            return "❌ PITCH requires turtle\n"
+        if not args:
+            return "❌ PITCH requires an angle\n"
+        val = _logo_num(interpreter, args[0])
+        if isinstance(val, str):
+            return val
+        if not turtle.is_3d:
+            turtle.enable_3d()
+        turtle.pitch(float(val))
+        return ""
+
+    if cmd_name in ("ROLL", "TILTROLL"):
+        if turtle is None:
+            return "❌ ROLL requires turtle\n"
+        if not args:
+            return "❌ ROLL requires an angle\n"
+        val = _logo_num(interpreter, args[0])
+        if isinstance(val, str):
+            return val
+        if not turtle.is_3d:
+            turtle.enable_3d()
+        turtle.roll(float(val))
+        return ""
+
+    if cmd_name in ("YAW",):
+        # YAW is just RIGHT in 3D context
+        if turtle is None:
+            return "❌ YAW requires turtle\n"
+        if not args:
+            return "❌ YAW requires an angle\n"
+        val = _logo_num(interpreter, args[0])
+        if isinstance(val, str):
+            return val
+        if not turtle.is_3d:
+            turtle.enable_3d()
+        turtle.right(float(val))
+        return ""
+
+    if cmd_name in ("TILTUP", "UPWARD", "UP"):
+        if turtle is None:
+            return "❌ TILTUP requires turtle\n"
+        angle = 45.0
+        if args:
+            val = _logo_num(interpreter, args[0])
+            if not isinstance(val, str):
+                angle = float(val)
+        if not turtle.is_3d:
+            turtle.enable_3d()
+        turtle.pitch(angle)
+        return ""
+
+    if cmd_name in ("TILTDOWN", "DOWNWARD", "DOWN"):
+        if turtle is None:
+            return "❌ TILTDOWN requires turtle\n"
+        angle = 45.0
+        if args:
+            val = _logo_num(interpreter, args[0])
+            if not isinstance(val, str):
+                angle = float(val)
+        if not turtle.is_3d:
+            turtle.enable_3d()
+        turtle.pitch(-angle)
+        return ""
+
     return f"❌ Unknown Logo command: {cmd_name}\n"
 
 

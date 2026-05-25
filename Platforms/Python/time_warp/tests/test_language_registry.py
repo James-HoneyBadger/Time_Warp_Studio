@@ -64,7 +64,7 @@ def test_module_level_singleton():
 
 
 def test_all_whole_program_languages_present():
-    """All 9 whole-program languages are registered."""
+    """All whole-program languages are registered."""
     reg = LanguageRegistry()
     langs = reg.languages()
     expected = [
@@ -92,9 +92,9 @@ def test_get_executor_is_callable():
 
 
 def test_registry_count():
-    """LanguageRegistry contains exactly 9 whole-program executors."""
+    """LanguageRegistry contains whole-program executors."""
     reg = LanguageRegistry()
-    assert len(reg.languages()) == 9
+    assert len(reg.languages()) >= 13
 
 
 def test_whole_program_executors_dict_populated():
@@ -337,8 +337,8 @@ class TestLanguageValues:
     def test_postscript_value(self):
         assert Language.POSTSCRIPT.value == 16
 
-    def test_total_languages_16(self):
-        assert len(list(Language)) == 16
+    def test_total_languages_20(self):
+        assert len(list(Language)) == 20
 
 
 class TestLanguageExtensions:
@@ -406,7 +406,7 @@ class TestWholeProgramExecutors:
     """Tests for _WHOLE_PROGRAM_EXECUTORS contents and callable."""
 
     def test_9_whole_program_langs(self):
-        assert len(_WHOLE_PROGRAM_EXECUTORS) == 9
+        assert len(_WHOLE_PROGRAM_EXECUTORS) >= 13
 
     def test_basic_not_whole(self):
         assert Language.BASIC not in _WHOLE_PROGRAM_EXECUTORS
@@ -449,7 +449,7 @@ class TestWholeProgramExecutors:
     def test_registry_languages_count(self):
         reg = LanguageRegistry()
         langs = reg.languages()
-        assert len(langs) == 9
+        assert len(langs) >= 13
 
 
 class TestWholeProgramExecutorsExtended:

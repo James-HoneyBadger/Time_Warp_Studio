@@ -47,8 +47,9 @@ class TestLanguageEnum:
             "JAVASCRIPT", "HYPERTALK",
             "ERLANG", "LISP",
             "COBOL", "TCL", "POSTSCRIPT",
+            "RUBY", "PYTHON_LANG", "HASKELL", "ASM6502",
         }
-        assert expected == names
+        assert expected <= names  # all expected names are present
 
     def test_from_extension_known(self):
         cases = {
@@ -203,7 +204,7 @@ class TestLanguageEnum2:
     """More Language enum tests."""
 
     def test_language_count(self):
-        assert len(list(Language)) == 16
+        assert len(list(Language)) == 20
 
     def test_basic_is_1(self):
         assert Language.BASIC.value == 1

@@ -1,0 +1,66 @@
+; 3D Turtle Helix in Logo
+; Demonstrates 3D turtle commands: ENABLE3D, PITCH, ROLL, FORWARD/RIGHT
+; Draws a 3D helix projected onto the 2D canvas with perspective
+
+ENABLE3D
+SETPENWIDTH 2
+
+; ---- Draw a 3D helix ----
+; The helix winds upward (in the Z direction after pitching)
+; by combining forward motion with small pitch steps
+
+TO HELIX :steps :step_size :pitch_angle :turn_angle
+  SETCOLOR [100 200 255]
+  REPEAT :steps [
+    FORWARD :step_size
+    RIGHT :turn_angle
+    PITCH :pitch_angle
+  ]
+END
+
+; ---- Draw a 3D star burst (all arms radiating in 3D) ----
+TO STARBURST3D :arms :arm_length
+  SETCOLOR [255 180 50]
+  MAKE "i 0
+  REPEAT :arms [
+    PENDOWN
+    FORWARD :arm_length
+    PENUP
+    BACK :arm_length
+    RIGHT (360 / :arms)
+    PITCH (180 / :arms)
+  ]
+END
+
+; ---- Draw a 3D spiral square ----
+TO SPIRAL3D :size :shrink :turns
+  SETCOLOR [100 255 100]
+  MAKE "s :size
+  REPEAT :turns [
+    FORWARD :s
+    RIGHT 90
+    PITCH 5
+    MAKE "s (:s - :shrink)
+    IF :s < 2 [ STOP ]
+  ]
+END
+
+; Main program
+CLEARSCREEN
+SETBGCOLOR [5 10 25]
+PENUP
+SETPOSITION [-100 -150]
+PENDOWN
+HELIX 60 15 3 18
+
+PENUP
+SETPOSITION [80 -50]
+PENDOWN
+STARBURST3D 8 80
+
+PENUP
+SETPOSITION [-120 80]
+PENDOWN
+SPIRAL3D 100 2 40
+
+PRINT [3D Turtle demo complete!]

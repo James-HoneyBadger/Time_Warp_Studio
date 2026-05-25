@@ -70,6 +70,44 @@ def optimized_cos(angle: float) -> float:
     return PRECOMPUTED_TRIG[int(angle) % 360][1]
 
 
+# ---------------------------------------------------------------------------
+# 3D projection helpers
+# ---------------------------------------------------------------------------
+
+_PERSPECTIVE_D: float = 400.0  # distance from eye to projection plane
+
+
+def _rotate_vec(
+    v: List[float], axis: List[float], angle_deg: float
+) -> List[float]:
+    """Rotate vector v around unit axis by angle_deg (Rodrigues' formula)."""
+    angle = math.radians(angle_deg)
+    c, s = math.cos(angle), math.sin(angle)
+    ax, ay, az = axis
+    vx, vy, vz = v
+    dot = ax * vx + ay * vy + az * vz
+    cx = ay * vz - az * vy
+    cy = az * vx - ax * vz
+    cz = ax * vy - ay * vx
+    return [
+        vx * c + cx * s + ax * dot * (1 - c),
+        vy * c + cy * s + ay * dot * (1 - c),
+        vz * c + cz * s + az * dot * (1 - c),
+    ]
+
+
+def _project_3d(x: float, y: float, z: float) -> tuple[float, float]:
+    """Simple perspective projection of 3D point to 2D canvas coordinates.
+
+    The eye is at z = -_PERSPECTIVE_D; projection plane is z = 0.
+    Returns (canvas_x, canvas_y) with Y-axis pointing up (canvas.py flips it).
+    """
+    denom = 1.0 + z / _PERSPECTIVE_D if _PERSPECTIVE_D > 0 else 1.0
+    if abs(denom) < 1e-6:
+        denom = 1e-6
+    return x / denom, y / denom
+
+
 @dataclass
 class TurtleLine:
     """
@@ -182,6 +220,14 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
         self._pen_dash: Optional[List[float]] = None
         self._pen_cap: str = "round"
         self._pen_join: str = "round"
+        # 3D turtle extension (off by default)
+        self.is_3d: bool = False
+        self.z: float = 0.0
+        # Orientation basis vectors (unit vectors, right-hand system)
+        # Initial: facing "north" (+Y), left is -X, local-up is +Z (out of screen)
+        self._hv: List[float] = [0.0, 1.0, 0.0]   # heading (forward) vector
+        self._lv: List[float] = [-1.0, 0.0, 0.0]  # left vector
+        self._uv: List[float] = [0.0, 0.0, 1.0]   # turtle's local up vector
 
     @property
     def angle(self) -> float:
@@ -231,7 +277,11 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
             self.on_change()  # pylint: disable=not-callable
 
     def forward(self, distance: float) -> None:
-        """Move forward, drawing if pen is down"""
+        """Move forward, drawing if pen is down.
+        In 3D mode, moves along the heading vector and projects to canvas."""
+        if self.is_3d:
+            self._forward_3d(distance)
+            return
         rad = math.radians(self.heading)
         old_x = self.x
         old_y = self.y
@@ -268,15 +318,72 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
         self.forward(-distance)
 
     def left(self, angle: float) -> None:
-        """Turn left (degrees)"""
+        """Turn left (degrees). In 3D mode rotates around local-up vector."""
+        if self.is_3d:
+            self._hv = _rotate_vec(self._hv, self._uv, angle)
+            self._lv = _rotate_vec(self._lv, self._uv, angle)
         self.heading -= angle
         self.heading = self.heading % 360.0
         self._notify_change()
 
     def right(self, angle: float) -> None:
-        """Turn right (degrees)"""
+        """Turn right (degrees). In 3D mode rotates around local-up vector."""
+        if self.is_3d:
+            self._hv = _rotate_vec(self._hv, self._uv, -angle)
+            self._lv = _rotate_vec(self._lv, self._uv, -angle)
         self.heading += angle
         self.heading = self.heading % 360.0
+        self._notify_change()
+
+    # ------------------------------------------------------------------
+    # 3D turtle methods
+    # ------------------------------------------------------------------
+
+    def enable_3d(self) -> None:
+        """Switch to 3D turtle mode. Resets orientation to face +Y."""
+        self.is_3d = True
+        self.z = 0.0
+        self._hv = [0.0, 1.0, 0.0]
+        self._lv = [-1.0, 0.0, 0.0]
+        self._uv = [0.0, 0.0, 1.0]
+
+    def disable_3d(self) -> None:
+        """Switch back to 2D turtle mode."""
+        self.is_3d = False
+        self.z = 0.0
+
+    def pitch(self, angle: float) -> None:
+        """Pitch up (positive) or down (negative) by angle degrees.
+        Rotates heading and local-up around the right vector (+pitch = nose up)."""
+        if not self.is_3d:
+            return
+        right_vec = [-self._lv[0], -self._lv[1], -self._lv[2]]
+        self._hv = _rotate_vec(self._hv, right_vec, angle)
+        self._uv = _rotate_vec(self._uv, right_vec, angle)
+        self._notify_change()
+
+    def roll(self, angle: float) -> None:
+        """Roll clockwise (positive) or counterclockwise (negative) by angle degrees.
+        Rotates left and local-up around the heading vector."""
+        if not self.is_3d:
+            return
+        self._lv = _rotate_vec(self._lv, self._hv, angle)
+        self._uv = _rotate_vec(self._uv, self._hv, angle)
+        self._notify_change()
+
+    def _forward_3d(self, distance: float) -> None:
+        """Move in 3D space and project to 2D canvas."""
+        old_x, old_y = self.x, self.y
+        old_z = self.z
+        self.x += self._hv[0] * distance
+        self.y += self._hv[1] * distance
+        self.z += self._hv[2] * distance
+        if self.pen_down:
+            px1, py1 = _project_3d(old_x, old_y, old_z)
+            px2, py2 = _project_3d(self.x, self.y, self.z)
+            self.lines.append(
+                TurtleLine(px1, py1, px2, py2, self.pen_color, self.pen_width)
+            )
         self._notify_change()
 
     def goto(self, x: float, y: float) -> None:
