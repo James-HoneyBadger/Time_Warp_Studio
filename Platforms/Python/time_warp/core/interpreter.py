@@ -59,6 +59,9 @@ from ..utils.expression_evaluator import ExpressionEvaluator
 # Hardware simulation
 from ..features.hardware_simulator import HardwareSimulator
 
+# Sandbox execution (subprocess isolation + resource limits)
+from .sandbox import is_sandbox_available, run_in_sandbox
+
 logger = logging.getLogger(__name__)
 
 # Compact aliases used for debug callback annotations in this module.
@@ -240,6 +243,21 @@ class Language(Enum):
 # Now that Language enum is defined, populate the whole-program executor map.
 _WHOLE_PROGRAM_EXECUTORS = _init_whole_program_executors()
 
+# Languages whose executors are safe to run in a subprocess sandbox.
+# These produce only text output and do not use the live turtle canvas.
+# Turtle-capable languages (Lua, JavaScript, HyperTalk, Python) are excluded
+# and run in a thread instead, so turtle graphics work as usual.
+_SANDBOXABLE_LANGUAGES: frozenset[Language] = frozenset({
+    Language.BRAINFUCK,
+    Language.ERLANG,
+    Language.HASKELL,
+    Language.LISP,
+    Language.COBOL,
+    Language.TCL,
+    Language.POSTSCRIPT,
+    Language.RUBY,
+    Language.ASM6502,
+})
 
 class LanguageRegistry:
     """Lightweight registry providing a stable API over _WHOLE_PROGRAM_EXECUTORS.
@@ -991,15 +1009,33 @@ class Interpreter:
                     f"ℹ️ Debug step-through is not supported for "
                     f"{self.language.name}. Running in observation mode."
                 )
-            try:
-                with ThreadPoolExecutor(max_workers=1) as _pool:
-                    _future = _pool.submit(fn, self, source, turtle)
-                    output_text = _future.result(timeout=self.MAX_EXECUTION_TIME)
-            except _FuturesTimeoutError:
-                _t = self.MAX_EXECUTION_TIME
-                output_text = f"❌ Error: Execution timeout ({_t}s exceeded)\n"
-            except Exception as _exc:  # noqa: BLE001
-                output_text = f"❌ Runtime error: {_exc}\n"
+
+            # Use subprocess sandbox for text-only languages when available
+            _use_sandbox = (
+                self.language in _SANDBOXABLE_LANGUAGES
+                and is_sandbox_available()
+                and not getattr(self, "disable_sandbox", False)
+            )
+            if _use_sandbox:
+                output_text, _vars = run_in_sandbox(
+                    self.language.name,
+                    source,
+                    timeout=self.MAX_EXECUTION_TIME,
+                    variables=self.get_variables(),
+                )
+                # Merge any variable updates returned by the sandbox
+                for k, v in _vars.items():
+                    self.variables[k] = v
+            else:
+                try:
+                    with ThreadPoolExecutor(max_workers=1) as _pool:
+                        _future = _pool.submit(fn, self, source, turtle)
+                        output_text = _future.result(timeout=self.MAX_EXECUTION_TIME)
+                except _FuturesTimeoutError:
+                    _t = self.MAX_EXECUTION_TIME
+                    output_text = f"❌ Error: Execution timeout ({_t}s exceeded)\n"
+                except Exception as _exc:  # noqa: BLE001
+                    output_text = f"❌ Runtime error: {_exc}\n"
             for line in output_text.splitlines(keepends=True):
                 self.log_output(line.rstrip("\n"))
             if self.debug_mode and self.debug_timeline:
