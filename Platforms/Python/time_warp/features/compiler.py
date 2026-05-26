@@ -97,7 +97,7 @@ int main() {
 
     # Generate final C code
     generated = "\n".join(c_code_lines)
-    return c_template.format(generated_code=generated)
+    return c_template.replace("{generated_code}", generated)
 
 
 def _var_to_index(var_name: str) -> int:
