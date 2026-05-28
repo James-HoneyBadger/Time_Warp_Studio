@@ -47,7 +47,7 @@ class CustomUILayouts:
         Args:
             file_path (str): The file path to save the layouts.
         """
-        with open(file_path, "w") as file:
+        with open(file_path, "w", encoding="utf-8") as file:
             json.dump(self.saved_layouts, file, indent=4)
         print(f"✅ Layouts exported to '{file_path}'.")
 
@@ -58,7 +58,7 @@ class CustomUILayouts:
             file_path (str): The file path to load the layouts from.
         """
         try:
-            with open(file_path, "r") as file:
+            with open(file_path, "r", encoding="utf-8") as file:
                 self.saved_layouts = json.load(file)
             print(f"✅ Layouts imported from '{file_path}'.")
         except FileNotFoundError:
