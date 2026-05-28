@@ -10,11 +10,17 @@ Provides:
 - Marketplace analytics
 """
 
+import json
+import logging
+import sqlite3
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from enum import Enum
-from typing import Dict, List, Optional
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 
 def utc_now() -> datetime:
@@ -181,14 +187,205 @@ class PluginTemplate:
 
 
 class MarketplaceService:
-    """Central marketplace management"""
+    """Central marketplace management with SQLite-backed persistence."""
 
-    def __init__(self):
+    # ------------------------------------------------------------------
+    # Serialisation helpers
+    # ------------------------------------------------------------------
+
+    @staticmethod
+    def _to_json(obj: object) -> str:
+        def _default(o: object) -> object:
+            if isinstance(o, Enum):
+                return o.value
+            if isinstance(o, datetime):
+                return o.isoformat()
+            raise TypeError(f"Unserializable: {type(o)}")
+
+        import dataclasses as _dc
+        return json.dumps(_dc.asdict(obj), default=_default)  # type: ignore[call-overload]
+
+    @staticmethod
+    def _from_dict(klass: type, d: dict) -> Any:
+        """Reconstruct a dataclass from a JSON-loaded dict.
+        Filters to only valid field names and restores Enum/datetime types."""
+        import dataclasses as _dc
+        valid = {f.name: f for f in _dc.fields(klass)}  # type: ignore[arg-type]
+        kwargs: dict = {}
+        for name, fld in valid.items():
+            if name not in d:
+                continue
+            val = d[name]
+            # Resolve type annotation string to actual type
+            ann = fld.type if not isinstance(fld.type, str) else None
+            ann_str = fld.type if isinstance(fld.type, str) else str(fld.type)
+            if val is None:
+                kwargs[name] = None
+            elif "datetime" in ann_str and isinstance(val, str):
+                try:
+                    kwargs[name] = datetime.fromisoformat(val)
+                except (ValueError, TypeError):
+                    kwargs[name] = utc_now()
+            elif ann is not None and "Enum" in type(ann).__name__:
+                kwargs[name] = ann(val)  # type: ignore[call-arg]
+            else:
+                # Try to coerce Enums by checking if the class is an Enum subclass
+                try:
+                    if ann is not None and issubclass(ann, Enum):
+                        kwargs[name] = ann(val)  # type: ignore[call-arg]
+                    else:
+                        kwargs[name] = val
+                except (TypeError, ValueError):
+                    kwargs[name] = val
+        return klass(**kwargs)  # type: ignore[call-arg]
+
+    @staticmethod
+    def _dt(val: Optional[str]) -> Optional[datetime]:
+        if val is None:
+            return None
+        try:
+            return datetime.fromisoformat(val)
+        except (ValueError, TypeError):
+            return None
+
+    # ------------------------------------------------------------------
+    def __init__(self, db_path: Optional[Path] = None) -> None:
+        if db_path is None:
+            try:
+                from ..core.config import DATABASES_DIR
+                DATABASES_DIR.mkdir(parents=True, exist_ok=True)
+                db_path = DATABASES_DIR / "marketplace.db"
+            except Exception:
+                db_path = Path.home() / ".time_warp" / "marketplace.db"
+                db_path.parent.mkdir(parents=True, exist_ok=True)
+
+        self._db_path = db_path
         self.listings: Dict[str, PluginListing] = {}
         self.reviews: Dict[str, List[PluginReview]] = {}
         self.releases: Dict[str, List[PluginRelease]] = {}
         self.developers: Dict[str, DeveloperProfile] = {}
         self.templates: Dict[str, PluginTemplate] = {}
+
+        self._init_db()
+        self._load_from_db()
+
+    # ------------------------------------------------------------------
+    # Database layer
+    # ------------------------------------------------------------------
+
+    def _conn(self) -> sqlite3.Connection:
+        return sqlite3.connect(self._db_path)
+
+    def _init_db(self) -> None:
+        """Create tables if they do not already exist."""
+        with self._conn() as con:
+            con.executescript("""
+                CREATE TABLE IF NOT EXISTS listings
+                    (id TEXT PRIMARY KEY, data TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS reviews
+                    (id TEXT PRIMARY KEY, plugin_id TEXT NOT NULL, data TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS releases
+                    (id TEXT PRIMARY KEY, plugin_id TEXT NOT NULL, data TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS developers
+                    (user_id TEXT PRIMARY KEY, data TEXT NOT NULL);
+                CREATE TABLE IF NOT EXISTS templates
+                    (id TEXT PRIMARY KEY, data TEXT NOT NULL);
+            """)
+
+    def _save_listing(self, listing: PluginListing) -> None:
+        with self._conn() as con:
+            con.execute(
+                "INSERT OR REPLACE INTO listings (id, data) VALUES (?, ?)",
+                (listing.id, self._to_json(listing)),
+            )
+
+    def _save_review(self, review: PluginReview) -> None:
+        with self._conn() as con:
+            con.execute(
+                "INSERT OR REPLACE INTO reviews (id, plugin_id, data) VALUES (?, ?, ?)",
+                (review.id, review.plugin_id, self._to_json(review)),
+            )
+
+    def _save_release(self, release: PluginRelease) -> None:
+        with self._conn() as con:
+            con.execute(
+                "INSERT OR REPLACE INTO releases (id, plugin_id, data) VALUES (?, ?, ?)",
+                (release.id, release.plugin_id, self._to_json(release)),
+            )
+
+    def _save_developer(self, dev: DeveloperProfile) -> None:
+        with self._conn() as con:
+            con.execute(
+                "INSERT OR REPLACE INTO developers (user_id, data) VALUES (?, ?)",
+                (dev.user_id, self._to_json(dev)),
+            )
+
+    def _save_template(self, template: PluginTemplate) -> None:
+        with self._conn() as con:
+            con.execute(
+                "INSERT OR REPLACE INTO templates (id, data) VALUES (?, ?)",
+                (template.id, self._to_json(template)),
+            )
+
+    def _load_from_db(self) -> None:
+        """Deserialise all rows from the database into in-memory dicts."""
+        try:
+            with self._conn() as con:
+                self._load_listings(con)
+                self._load_reviews(con)
+                self._load_releases(con)
+                self._load_developers(con)
+                self._load_templates(con)
+        except Exception:
+            logger.exception("Failed to load marketplace data from %s", self._db_path)
+
+    def _load_listings(self, con: sqlite3.Connection) -> None:
+        for (_id, data_str) in con.execute("SELECT id, data FROM listings"):
+            try:
+                listing = self._from_dict(PluginListing, json.loads(data_str))
+                self.listings[listing.id] = listing  # type: ignore[union-attr]
+            except Exception:
+                logger.warning("Skipping malformed listing row %s", _id)
+
+    def _load_reviews(self, con: sqlite3.Connection) -> None:
+        for (_id, _plugin_id, data_str) in con.execute(
+            "SELECT id, plugin_id, data FROM reviews"
+        ):
+            try:
+                review = self._from_dict(PluginReview, json.loads(data_str))
+                self.reviews.setdefault(review.plugin_id, []).append(review)  # type: ignore[union-attr]
+            except Exception:
+                logger.warning("Skipping malformed review row %s", _id)
+
+    def _load_releases(self, con: sqlite3.Connection) -> None:
+        for (_id, _plugin_id, data_str) in con.execute(
+            "SELECT id, plugin_id, data FROM releases"
+        ):
+            try:
+                release = self._from_dict(PluginRelease, json.loads(data_str))
+                self.releases.setdefault(release.plugin_id, []).append(release)  # type: ignore[union-attr]
+            except Exception:
+                logger.warning("Skipping malformed release row %s", _id)
+
+    def _load_developers(self, con: sqlite3.Connection) -> None:
+        for (user_id, data_str) in con.execute("SELECT user_id, data FROM developers"):
+            try:
+                dev = self._from_dict(DeveloperProfile, json.loads(data_str))
+                self.developers[dev.user_id] = dev  # type: ignore[union-attr]
+            except Exception:
+                logger.warning("Skipping malformed developer row %s", user_id)
+
+    def _load_templates(self, con: sqlite3.Connection) -> None:
+        for (_id, data_str) in con.execute("SELECT id, data FROM templates"):
+            try:
+                tmpl = self._from_dict(PluginTemplate, json.loads(data_str))
+                self.templates[tmpl.id] = tmpl  # type: ignore[union-attr]
+            except Exception:
+                logger.warning("Skipping malformed template row %s", _id)
+
+    # ------------------------------------------------------------------
+    # Business methods
+    # ------------------------------------------------------------------
 
     def publish_plugin(
         self,
@@ -208,6 +405,7 @@ class MarketplaceService:
             status=PublishStatus.REVIEW,
         )
         self.listings[listing.id] = listing
+        self._save_listing(listing)
         return listing
 
     def approve_plugin(self, plugin_id: str) -> bool:
@@ -216,6 +414,7 @@ class MarketplaceService:
         if listing:
             listing.status = PublishStatus.APPROVED
             listing.published_at = utc_now()
+            self._save_listing(listing)
             return True
         return False
 
@@ -281,6 +480,7 @@ class MarketplaceService:
             self.reviews[plugin_id] = []
 
         self.reviews[plugin_id].append(review)
+        self._save_review(review)
 
         # Update plugin rating
         self._update_plugin_rating(plugin_id)
@@ -310,12 +510,14 @@ class MarketplaceService:
             self.releases[plugin_id] = []
 
         self.releases[plugin_id].append(release)
+        self._save_release(release)
 
         # Update listing
         listing = self.listings.get(plugin_id)
         if listing:
             listing.version = version
             listing.updated_at = utc_now()
+            self._save_listing(listing)
 
         return release
 
@@ -329,6 +531,7 @@ class MarketplaceService:
         """Register as plugin developer"""
         profile = DeveloperProfile(user_id=user_id, username=username, email=email)
         self.developers[user_id] = profile
+        self._save_developer(profile)
         return profile
 
     def get_developer_profile(self, user_id: str) -> Optional[DeveloperProfile]:
@@ -343,6 +546,7 @@ class MarketplaceService:
             name=name, description=description, category=category, code=code
         )
         self.templates[template.id] = template
+        self._save_template(template)
         return template
 
     def get_templates(

@@ -6,7 +6,7 @@ Create, customize, and share editor themes.
 import json
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 
 @dataclass
@@ -83,7 +83,7 @@ class Theme:
 class ThemeManager:
     """Manage themes and presets."""
 
-    BUILTIN_THEMES = {
+    BUILTIN_THEMES: Dict[str, Any] = {
         "dracula": {
             "name": "Dracula",
             "description": "Dark theme with vibrant colors",
@@ -186,7 +186,7 @@ class ThemeManager:
 
         for theme_file in self.themes_dir.glob("*.json"):
             try:
-                data = json.loads(theme_file.read_text())
+                data = json.loads(theme_file.read_text(encoding="utf-8"))
                 theme = Theme.from_dict(data)
                 self.themes[theme.id] = theme
             except (ValueError, TypeError):
@@ -201,7 +201,7 @@ class ThemeManager:
 
         try:
             theme_file = self.themes_dir / f"{theme.id}.json"
-            theme_file.write_text(json.dumps(theme.to_dict(), indent=2))
+            theme_file.write_text(json.dumps(theme.to_dict(), indent=2), encoding="utf-8")
             self.themes[theme.id] = theme
             return True
         except (ValueError, TypeError):

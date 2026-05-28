@@ -56,7 +56,7 @@ class EventType(Enum):
 class Metric:
     """Single metric data point"""
 
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     metric_type: MetricType = MetricType.EXECUTION
     value: float = 0.0
     unit: str = ""
@@ -67,7 +67,7 @@ class Metric:
 class Event:
     """System event"""
 
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     event_type: EventType = EventType.CODE_RUN
     user_id: Optional[str] = None
     data: Dict = field(default_factory=dict)
@@ -100,14 +100,14 @@ class UserMetrics:
     avg_execution_time_ms: float = 0.0
     favorite_language: str = ""
     languages_used: Dict[str, int] = field(default_factory=dict)  # language -> count
-    last_active: datetime = field(default_factory=datetime.utcnow)
+    last_active: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass
 class SystemHealth:
     """System health status"""
 
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     cpu_usage_percent: float = 0.0
     memory_usage_mb: float = 0.0
     memory_available_mb: float = 0.0
@@ -127,7 +127,7 @@ class Alert:
     title: str = ""
     message: str = ""
     metric: Optional[Metric] = None
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     acknowledged: bool = False
 
 
@@ -147,7 +147,7 @@ class MetricsCollector:
         metric_type: MetricType,
         value: float,
         unit: str = "",
-        tags: Dict[str, str] = None,
+        tags: Optional[Dict[str, str]] = None,
     ) -> None:
         """Record a metric"""
         metric = Metric(
@@ -160,7 +160,7 @@ class MetricsCollector:
         self,
         event_type: EventType,
         user_id: Optional[str] = None,
-        data: Dict | None = None,
+        data: Dict | None = None,  # pylint: disable=redefined-outer-name
     ) -> None:
         """Record an event"""
         event = Event(event_type=event_type, user_id=user_id, data=data or {})
@@ -171,7 +171,7 @@ class MetricsCollector:
         self, metric_type: Optional[MetricType] = None, hours: int = 1
     ) -> List[Metric]:
         """Get metrics for time period"""
-        cutoff = datetime.utcnow() - timedelta(hours=hours)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
 
         result = [m for m in self.metrics if m.timestamp >= cutoff]
 
@@ -187,7 +187,7 @@ class MetricsCollector:
         hours: int = 24,
     ) -> List[Event]:
         """Get events for time period"""
-        cutoff = datetime.utcnow() - timedelta(hours=hours)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=hours)
 
         result = [e for e in self.events if e.timestamp >= cutoff]
 
@@ -201,12 +201,12 @@ class MetricsCollector:
 
     def _cleanup_old_metrics(self) -> None:
         """Remove metrics older than retention period"""
-        cutoff = datetime.utcnow() - timedelta(hours=self.retention_hours)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=self.retention_hours)
         self.metrics = [m for m in self.metrics if m.timestamp >= cutoff]
 
     def _cleanup_old_events(self) -> None:
         """Remove events older than retention period"""
-        cutoff = datetime.utcnow() - timedelta(hours=self.retention_hours)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=self.retention_hours)
         self.events = [e for e in self.events if e.timestamp >= cutoff]
 
 
@@ -271,13 +271,13 @@ class AnalyticsEngine:
         avg_time = total_time / len(execution_times) if execution_times else 0
 
         # Count languages used
-        languages_used = defaultdict(int)
+        languages_used: defaultdict[str, int] = defaultdict(int)
         for e in events:
             if e.event_type == EventType.CODE_RUN and "language" in e.data:
                 languages_used[e.data["language"]] += 1
 
         favorite_language = (
-            max(languages_used, key=languages_used.get) if languages_used else ""
+            max(languages_used, key=lambda k: languages_used[k]) if languages_used else ""
         )
 
         return UserMetrics(
@@ -290,7 +290,7 @@ class AnalyticsEngine:
             favorite_language=favorite_language,
             languages_used=dict(languages_used),
             last_active=(
-                max([e.timestamp for e in events]) if events else datetime.utcnow()
+                max([e.timestamp for e in events]) if events else datetime.now(timezone.utc)
             ),
         )
 

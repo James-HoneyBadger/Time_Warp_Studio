@@ -40,6 +40,7 @@ import math
 import random
 import re
 import time as _time
+import warnings
 from datetime import datetime as _datetime
 from typing import TYPE_CHECKING, Any
 
@@ -449,36 +450,36 @@ class HyperTalkEnvironment:
         # ADD n TO var
         m = re.match(r"^add\s+(.+?)\s+to\s+(\w+)$", stmt, re.IGNORECASE)
         if m:
-            val = _to_num(self._eval(m.group(1).strip()))
+            num = _to_num(self._eval(m.group(1).strip()))
             var = m.group(2)
-            self._set_var(var, _to_num(self._get_var(var)) + val)
+            self._set_var(var, _to_num(self._get_var(var)) + num)
             return None
 
         # SUBTRACT n FROM var
         m = re.match(r"^subtract\s+(.+?)\s+from\s+(\w+)$", stmt, re.IGNORECASE)
         if m:
-            val = _to_num(self._eval(m.group(1).strip()))
+            num = _to_num(self._eval(m.group(1).strip()))
             var = m.group(2)
-            self._set_var(var, _to_num(self._get_var(var)) - val)
+            self._set_var(var, _to_num(self._get_var(var)) - num)
             return None
 
         # MULTIPLY var BY n
         m = re.match(r"^multiply\s+(\w+)\s+by\s+(.+)$", stmt, re.IGNORECASE)
         if m:
             var = m.group(1)
-            val = _to_num(self._eval(m.group(2).strip()))
-            self._set_var(var, _to_num(self._get_var(var)) * val)
+            num = _to_num(self._eval(m.group(2).strip()))
+            self._set_var(var, _to_num(self._get_var(var)) * num)
             return None
 
         # DIVIDE var BY n
         m = re.match(r"^divide\s+(\w+)\s+by\s+(.+)$", stmt, re.IGNORECASE)
         if m:
             var = m.group(1)
-            val = _to_num(self._eval(m.group(2).strip()))
-            if val == 0:
+            num = _to_num(self._eval(m.group(2).strip()))
+            if num == 0:
                 self._emit("❌ Division by zero")
                 return None
-            self._set_var(var, _to_num(self._get_var(var)) / val)
+            self._set_var(var, _to_num(self._get_var(var)) / num)
             return None
 
         # DO expression (runtime evaluation of a string as HyperTalk)
@@ -494,11 +495,11 @@ class HyperTalkEnvironment:
         # WAIT n SECONDS/TICKS (informational only in educational context)
         m = re.match(r"^wait\s+(.+?)\s+(seconds?|ticks?)$", stmt, re.IGNORECASE)
         if m:
-            val = _to_num(self._eval(m.group(1).strip()))
+            num = _to_num(self._eval(m.group(1).strip()))
             unit = m.group(2).lower()
             if unit.startswith("tick"):
-                val = val / 60  # 60 ticks per second
-            self._emit(f"ℹ️ Waited {val:.1f} seconds")
+                num = num / 60  # 60 ticks per second
+            self._emit(f"ℹ️ Waited {num:.1f} seconds")
             return None
 
         # VISUAL EFFECT (display effect name)
@@ -520,7 +521,7 @@ class HyperTalkEnvironment:
             items = val.split("\n") if "\n" in val else val.split(",")
             items = [i.strip() for i in items if i.strip()]
             if mode == "numeric":
-                items.sort(key=lambda x: _to_num(x))
+                items.sort(key=_to_num)
             elif mode == "descending":
                 items.sort(reverse=True)
             else:
@@ -1039,7 +1040,9 @@ class HyperTalkEnvironment:
         pyexpr = re.sub(r"[A-Za-z_]\w*", sub_var, pyexpr)
         pyexpr = pyexpr.replace("^", "**")
         try:
-            return eval(pyexpr, {"__builtins__": {}})  # noqa: S307
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", SyntaxWarning)
+                return eval(pyexpr, {"__builtins__": {}})  # noqa: S307  # type: ignore[misc]  # pylint: disable=eval-used
         except Exception:
             pass
 

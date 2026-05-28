@@ -6,9 +6,9 @@ Time Warp Studio is an educational desktop IDE for learning **16 programming lan
 
 ---
 
-## Current Release: v10.2.0 (May 2026)
+## Current Release: v11.0.0 (June 2026)
 
-- **16 language executors** — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Lua, Brainfuck, JavaScript, HyperTalk, Erlang, LISP/Scheme, COBOL, Tcl, PostScript
+- **18 language executors** — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Lua, Brainfuck, JavaScript, HyperTalk, Erlang, LISP/Scheme, COBOL, Tcl, PostScript, Ruby, Python (sandboxed)
 - **SVGA graphics mode** — 800×600 virtual canvas with anti-aliasing, zoom/pan, and pixel-accurate rendering
 - **Vector graphics** — cubic Bezier curves, gradient-filled shapes (linear & radial), dash pen styles, Z-ordered layers
 - **Sprite system** — define named pixel-art sprites via `define_sprite()`, stamp/animate with rotation and scale
@@ -58,8 +58,8 @@ Time Warp Studio is an educational desktop IDE for learning **16 programming lan
 
 ### New Languages (Candidates for v10.3+)
 
-- **Ruby** — dynamic, object-oriented scripting
-- **Python (sandboxed)** — modern scripting with stdlib access
+- ✅ **Ruby** — dynamic, object-oriented scripting — **done in v11.0.0**
+- ✅ **Python (sandboxed)** — modern scripting with stdlib access — **done in v11.0.0**
 
 ### Plugin System
 

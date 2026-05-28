@@ -107,6 +107,7 @@ class RubyStopExecution(Exception):
 
 class RubySymbol:
     _cache: dict[str, "RubySymbol"] = {}
+    name: str  # declared here so type checkers know about the attribute
 
     def __new__(cls, name: str) -> "RubySymbol":
         if name not in cls._cache:
@@ -134,7 +135,7 @@ class RubyRange:
         self.stop = stop
         self.exclusive = exclusive
 
-    def _to_list(self) -> list:
+    def to_list(self) -> list:
         if isinstance(self.start, int) and isinstance(self.stop, int):
             end = self.stop if not self.exclusive else self.stop - 1
             return list(range(self.start, end + 1))
@@ -149,7 +150,7 @@ class RubyRange:
         return f"({self.start!r}{op}{self.stop!r})"
 
     def __contains__(self, item: Any) -> bool:
-        lst = self._to_list()
+        lst = self.to_list()
         return item in lst
 
 
@@ -265,6 +266,13 @@ class RubyEnvironment:
         elif name and name[0].isupper():
             self._constants[name] = value
         elif local and self._scopes:
+            # Ruby closure semantics: if the variable exists in an outer scope,
+            # update it there rather than shadowing with a new local binding.
+            for frame in reversed(self._scopes):
+                if name in frame:
+                    frame[name] = value
+                    return
+            # Not found anywhere — create in innermost scope.
             self._scopes[-1][name] = value
         else:
             self._globals[name] = value
@@ -330,24 +338,26 @@ class RubyEnvironment:
 
         # Remove inline comments (naive — not inside strings)
         stmt_no_comment = _strip_inline_comment(stmt)
+        # For block-opening patterns we only need to match the first line.
+        first_line_nc = stmt_no_comment.split("\n")[0].rstrip()
 
         # ----- class definition -----
-        m = re.match(r"^class\s+([A-Z]\w*)(?:\s*<\s*([A-Z]\w*))?\s*$", stmt_no_comment)
+        m = re.match(r"^class\s+([A-Z]\w*)(?:\s*<\s*([A-Z]\w*))?\s*$", first_line_nc)
         if m:
             return self._exec_class_def(m.group(1), m.group(2), stmt)
 
         # ----- module definition -----
-        m = re.match(r"^module\s+([A-Z]\w*)\s*$", stmt_no_comment)
+        m = re.match(r"^module\s+([A-Z]\w*)\s*$", first_line_nc)
         if m:
             return self._exec_module_def(m.group(1), stmt)
 
         # ----- method definition -----
-        m = re.match(r"^def\s+(\w+[\?!]?)\s*(?:\((.*?)\))?\s*$", stmt_no_comment)
+        m = re.match(r"^def\s+(\w+[\?!]?)\s*(?:\((.*?)\))?\s*$", first_line_nc)
         if m:
             return self._exec_def(m.group(1), m.group(2) or "", stmt)
 
         # ----- class method def -----
-        m = re.match(r"^def\s+self\.(\w+[\?!]?)\s*(?:\((.*?)\))?\s*$", stmt_no_comment)
+        m = re.match(r"^def\s+self\.(\w+[\?!]?)\s*(?:\((.*?)\))?\s*$", first_line_nc)
         if m and self._current_class:
             return self._exec_class_method_def(m.group(1), m.group(2) or "", stmt)
 
@@ -358,9 +368,9 @@ class RubyEnvironment:
             return self._exec_if_block(stmt)
 
         # ----- while / until -----
-        m = re.match(r"^(while|until)\s+(.+)$", stmt_no_comment)
+        m = re.match(r"^(while|until)\s+([^\n]+)", stmt_no_comment)
         if m:
-            return self._exec_while(m.group(1), m.group(2), stmt)
+            return self._exec_while(m.group(1), m.group(2).strip(), stmt)
 
         # ----- for x in range/array -----
         m = re.match(r"^for\s+(\w+)\s+in\s+(.+)$", stmt_no_comment)
@@ -384,17 +394,68 @@ class RubyEnvironment:
         # ----- return -----
         m = re.match(r"^return(?:\s+(.+))?$", stmt_no_comment)
         if m:
-            val = self._eval(m.group(1)) if m.group(1) else NIL
+            expr = m.group(1) or ""
+            mod = _find_modifier_keyword(expr)
+            # Handle: return if COND / return unless COND (no value, modifier only)
+            if mod is None:
+                m2 = re.match(r"^(if|unless)\s+(.+)$", expr)
+                if m2:
+                    kw, cond = m2.group(1), m2.group(2)
+                    cond_val = _is_truthy(self._eval(cond))
+                    if (kw == "if" and cond_val) or (kw == "unless" and not cond_val):
+                        raise _ReturnSignal(NIL)
+                    return NIL
+            if mod:
+                lhs, kw, cond = mod
+                cond_val = _is_truthy(self._eval(cond))
+                if (kw == "if" and cond_val) or (kw == "unless" and not cond_val):
+                    raise _ReturnSignal(self._eval(lhs))
+                return NIL
+            val = self._eval(expr) if expr else NIL
             raise _ReturnSignal(val)
 
         # ----- break / next -----
         m = re.match(r"^break(?:\s+(.+))?$", stmt_no_comment)
         if m:
-            val = self._eval(m.group(1)) if m.group(1) else NIL
+            expr = m.group(1) or ""
+            mod = _find_modifier_keyword(expr)
+            # Handle: break if COND / break unless COND (no value, modifier only)
+            if mod is None:
+                m2 = re.match(r"^(if|unless)\s+(.+)$", expr)
+                if m2:
+                    kw, cond = m2.group(1), m2.group(2)
+                    cond_val = _is_truthy(self._eval(cond))
+                    if (kw == "if" and cond_val) or (kw == "unless" and not cond_val):
+                        raise _BreakSignal(NIL)
+                    return NIL
+            if mod:
+                lhs, kw, cond = mod
+                cond_val = _is_truthy(self._eval(cond))
+                if (kw == "if" and cond_val) or (kw == "unless" and not cond_val):
+                    raise _BreakSignal(self._eval(lhs))
+                return NIL
+            val = self._eval(expr) if expr else NIL
             raise _BreakSignal(val)
         m = re.match(r"^next(?:\s+(.+))?$", stmt_no_comment)
         if m:
-            val = self._eval(m.group(1)) if m.group(1) else NIL
+            expr = m.group(1) or ""
+            mod = _find_modifier_keyword(expr)
+            # Handle: next if COND / next unless COND (no value, modifier only)
+            if mod is None:
+                m2 = re.match(r"^(if|unless)\s+(.+)$", expr)
+                if m2:
+                    kw, cond = m2.group(1), m2.group(2)
+                    cond_val = _is_truthy(self._eval(cond))
+                    if (kw == "if" and cond_val) or (kw == "unless" and not cond_val):
+                        raise _NextSignal(NIL)
+                    return NIL
+            if mod:
+                lhs, kw, cond = mod
+                cond_val = _is_truthy(self._eval(cond))
+                if (kw == "if" and cond_val) or (kw == "unless" and not cond_val):
+                    raise _NextSignal(self._eval(lhs))
+                return NIL
+            val = self._eval(expr) if expr else NIL
             raise _NextSignal(val)
 
         # ----- puts / print / p / pp -----
@@ -408,14 +469,34 @@ class RubyEnvironment:
             return self._exec_printf(m.group(1))
 
         # ----- assignment: var = expr -----
-        m = re.match(r"^([@$]?\w+|\$\w+|[A-Z]\w*)\s*([\+\-\*\/\%]?=(?!=))\s*(.+)$", stmt)
-        if m and m.group(2) in ("=", "+=", "-=", "*=", "/=", "%=", "**="):
+        m = re.match(r"^([@$]?\w+|\$\w+|[A-Z]\w*)\s*([\+\-\*\/\%]?=(?!=)|\|\|=|&&=)\s*(.+)$", stmt, re.DOTALL)
+        if m and m.group(2) in ("=", "+=", "-=", "*=", "/=", "%=", "**=", "||=", "&&="):
             return self._exec_assign(m.group(1), m.group(2), m.group(3))
 
-        # ----- method_call.attr_writer = -----
-        m = re.match(r"^(\w+)\[(.+)\]\s*=\s*(.+)$", stmt)
+        # ----- index assignment: var[key] = expr / var[key] op= expr -----
+        m = re.match(r"^(\w+)\[(.+)\]\s*([\+\-\*\/\%]?=(?!=)|\|\|=|&&=)\s*(.+)$", stmt, re.DOTALL)
+        if m and m.group(3) in ("=", "+=", "-=", "*=", "/=", "%=", "||=", "&&="):
+            return self._exec_index_assign(m.group(1), m.group(2), m.group(4), m.group(3))
+
+        # ----- generic modifier if/unless: STMT if COND / STMT unless COND -----
+        mod = _find_modifier_keyword(stmt_no_comment)
+        if mod:
+            body, kw, cond = mod
+            cond_val = _is_truthy(self._eval(cond))
+            if (kw == "if" and cond_val) or (kw == "unless" and not cond_val):
+                return self._exec_stmt(body)
+            return NIL
+
+        # ----- var << expr: string append (must store result back for immutable str) -----
+        m = re.match(r"^([@$]?\w+)\s*<<\s*(.+)$", stmt_no_comment, re.DOTALL)
         if m:
-            return self._exec_index_assign(m.group(1), m.group(2), m.group(3))
+            var_name = m.group(1)
+            rhs_expr = m.group(2).strip()
+            current = self._get_var(var_name)
+            if isinstance(current, str):
+                new_val = current + _ruby_to_s(self._eval(rhs_expr))
+                self._set_var(var_name, new_val)
+                return new_val
 
         # ----- any expression (method call, etc.) -----
         return self._eval(stmt)
@@ -578,6 +659,20 @@ class RubyEnvironment:
     # ------------------------------------------------------------------
 
     def _exec_assign(self, name: str, op: str, expr: str) -> Any:
+        if op == "||=":
+            current = self._get_var(name)
+            if _is_truthy(current):
+                return current
+            value = self._eval(expr)
+            self._set_var(name, value)
+            return value
+        if op == "&&=":
+            current = self._get_var(name)
+            if not _is_truthy(current):
+                return current
+            value = self._eval(expr)
+            self._set_var(name, value)
+            return value
         value = self._eval(expr)
         if op != "=":
             current = self._get_var(name)
@@ -586,15 +681,44 @@ class RubyEnvironment:
         self._set_var(name, value)
         return value
 
-    def _exec_index_assign(self, name: str, key_expr: str, val_expr: str) -> Any:
+    def _exec_index_assign(self, name: str, key_expr: str, val_expr: str, op: str = "=") -> Any:
         obj = self._get_var(name)
         key = self._eval(key_expr)
+        if op in ("||=", "&&="):
+            # Conditional assignment
+            if isinstance(obj, list) and isinstance(key, int):
+                n = len(obj)
+                real_idx = key if key >= 0 else n + key
+                current = obj[real_idx] if 0 <= real_idx < n else NIL
+            elif isinstance(obj, dict):
+                current = obj.get(key, NIL)
+            else:
+                current = NIL
+            if op == "||=" and _is_truthy(current):
+                return current
+            if op == "&&=" and not _is_truthy(current):
+                return current
         val = self._eval(val_expr)
+        if op not in ("=", "||=", "&&="):
+            # Compound assignment: get current value then apply operator
+            if isinstance(obj, list) and isinstance(key, int):
+                n = len(obj)
+                real_idx = key if key >= 0 else n + key
+                current = obj[real_idx] if 0 <= real_idx < n else NIL
+            elif isinstance(obj, dict):
+                current = obj.get(key, NIL)
+            else:
+                current = NIL
+            val = _apply_op(current, op[0], val)
         if isinstance(obj, list):
             if isinstance(key, int):
-                while len(obj) <= key:
+                n = len(obj)
+                real_idx = key if key >= 0 else n + key
+                if real_idx < 0:
+                    return NIL  # out of range
+                while len(obj) <= real_idx:
                     obj.append(NIL)
-                obj[key] = val
+                obj[real_idx] = val
         elif isinstance(obj, dict):
             obj[key] = val
         return val
@@ -708,15 +832,17 @@ class RubyEnvironment:
             return -self._eval(expr[1:])
 
         # binary operators (low precedence, split on rightmost op outside parens)
-        for op in ("||", "&&", "or ", "and ", "==", "!=", "<=>",
-                   ">=", "<=", ">", "<",
-                   "+", "-", "*", "**", "/", "%"):
-            idx = _rfind_op(expr, op)
-            if idx != -1:
-                left = expr[:idx].strip()
-                right = expr[idx + len(op):].strip()
-                if left and right:
-                    return self._eval_binop(left, op.strip(), right)
+        # Skip for multi-line expressions (blocks/method calls spanning lines)
+        if "\n" not in expr:
+            for op in ("||", "&&", "or ", "and ", "==", "!=", "<=>",
+                       ">=", "<=", ">", "<",
+                       "<<", "+", "-", "*", "**", "/", "%"):
+                idx = _rfind_op(expr, op)
+                if idx != -1:
+                    left = expr[:idx].strip()
+                    right = expr[idx + len(op):].strip()
+                    if left and right:
+                        return self._eval_binop(left, op.strip(), right)
 
         # Method chain or single method call
         return self._eval_expr(expr)
@@ -731,10 +857,18 @@ class RubyEnvironment:
                 result.append({"n": "\n", "t": "\t", "r": "\r", '"': '"', "\\": "\\"}.get(esc, raw[i + 1]))
                 i += 2
             elif raw[i : i + 2] == "#{":
-                j = raw.index("}", i + 2)
-                inner = raw[i + 2 : j]
+                # Find matching closing } respecting nested braces
+                depth = 1
+                j = i + 2
+                while j < len(raw) and depth > 0:
+                    if raw[j] == "{":
+                        depth += 1
+                    elif raw[j] == "}":
+                        depth -= 1
+                    j += 1
+                inner = raw[i + 2 : j - 1]
                 result.append(_ruby_to_s(self._eval(inner)))
-                i = j + 1
+                i = j
             else:
                 result.append(raw[i])
                 i += 1
@@ -811,6 +945,22 @@ class RubyEnvironment:
         if re.match(r"^[@$]\w+$", expr):
             return self._get_var(expr)
 
+        # Array/hash subscript access: name[idx]
+        m = re.match(r"^([@$]?\w+)\[(.+)\]$", expr)
+        if m:
+            container = self._get_var(m.group(1))
+            idx = self._eval(m.group(2).strip())
+            if isinstance(container, list):
+                if isinstance(idx, int):
+                    n = len(container)
+                    # Support negative indices like Ruby
+                    real_idx = idx if idx >= 0 else n + idx
+                    return container[real_idx] if 0 <= real_idx < n else NIL
+                return NIL
+            if isinstance(container, dict):
+                return container.get(idx, NIL)
+            return NIL
+
         # Method chain: receiver.method(args)
         dot = _find_dot(expr)
         if dot != -1:
@@ -823,13 +973,43 @@ class RubyEnvironment:
 
     def _eval_method_chain(self, receiver: Any, rest: str) -> Any:  # noqa: C901
         """Evaluate remaining method chain after the first dot."""
-        # Split off first method call
-        m = re.match(r"^(\w+[\?!]?)\s*(?:\(([^)]*)\))?\s*(?:\.(.+))?$", rest, re.DOTALL)
+        # Extract method name and optional explicit (args).
+        # The remainder may contain a trailing {...} or do...end block and/or
+        # a further .method chain — we don't need to capture those here because
+        # _call_method receives the full `rest` string and uses _extract_block
+        # to find any block.
+        m = re.match(r"^(\w+[\?!]?)\s*(?:\(([^)]*)\))?", rest)
         if not m:
             return NIL
         method_name = m.group(1)
         args_str = m.group(2) or ""
-        tail = m.group(3) or ""
+        after_args = rest[m.end():]
+
+        # Look for a tail chain: anything after the optional block
+        tail = ""
+        stripped_after = after_args.strip()
+        if stripped_after.startswith("{"):
+            # Inline {..} block — skip to the closing }
+            depth = 0
+            for ci, ch in enumerate(stripped_after):
+                if ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        tail_part = stripped_after[ci + 1:].strip()
+                        if tail_part.startswith("."):
+                            tail = tail_part[1:]
+                        break
+        elif re.match(r"do\b", stripped_after):
+            # do...end block — find the closing end
+            end_m = re.search(r"\bend\s*$", stripped_after, re.MULTILINE)
+            if end_m:
+                tail_part = stripped_after[end_m.end():].strip()
+                if tail_part.startswith("."):
+                    tail = tail_part[1:]
+        elif stripped_after.startswith("."):
+            tail = stripped_after[1:]
 
         result = self._call_method(receiver, method_name, args_str, rest)
 
@@ -883,7 +1063,7 @@ class RubyEnvironment:
             if isinstance(v, list):
                 return v
             if isinstance(v, RubyRange):
-                return v._to_list()
+                return v.to_list()
             return [v] if v is not NIL else []
         if name == "sprintf" or name == "format":
             if args:
@@ -1017,7 +1197,7 @@ class RubyEnvironment:
         fn = fns.get(name)
         if fn and args:
             try:
-                return fn(*args)
+                return fn(*args)  # type: ignore[operator]
             except Exception:
                 return 0.0
         return NIL
@@ -1097,12 +1277,10 @@ class RubyEnvironment:
             n = int(args[0]) if args else 1
             return [receiver // n, receiver % n]
         if name == "gcd":
-            import math as _m
-            return _m.gcd(receiver, int(args[0])) if args else receiver
+            return math.gcd(receiver, int(args[0])) if args else receiver
         if name == "lcm":
-            import math as _m
-            a, b = receiver, int(args[0]) if args else 1
-            return abs(a * b) // _m.gcd(a, b) if b else 0
+            n = int(args[0]) if args else 1
+            return (abs(receiver * n) // math.gcd(receiver, n)) if n else 0
         if name == "pow":
             return receiver ** int(args[0]) if args else receiver
         if name in ("inspect", "pretty_print"):
@@ -1328,7 +1506,8 @@ class RubyEnvironment:
         if name == "each_with_object":
             obj = args[0] if args else {}
             for item in list(receiver):
-                self._call_block(block, [item, obj]) if block else None
+                if block:
+                    self._call_block(block, [item, obj])
             return obj
         if name == "map" or name == "collect":
             if not block:
@@ -1605,15 +1784,18 @@ class RubyEnvironment:
             return (args[0] if args else None) in receiver.values()
         if name == "each" or name == "each_pair":
             for k, v in list(receiver.items()):
-                self._call_block(block, [k, v]) if block else None
+                if block:
+                    self._call_block(block, [k, v])
             return receiver
         if name == "each_key":
             for k in list(receiver.keys()):
-                self._call_block(block, [k]) if block else None
+                if block:
+                    self._call_block(block, [k])
             return receiver
         if name == "each_value":
             for v in list(receiver.values()):
-                self._call_block(block, [v]) if block else None
+                if block:
+                    self._call_block(block, [v])
             return receiver
         if name == "map" or name == "collect":
             if not block:
@@ -1728,7 +1910,7 @@ class RubyEnvironment:
     def _call_range_method(
         self, receiver: RubyRange, name: str, args: list, block: "RubyProc | None"
     ) -> Any:
-        lst = receiver._to_list()
+        lst = receiver.to_list()
         if name == "each":
             for x in lst:
                 try:
@@ -1785,16 +1967,23 @@ class RubyEnvironment:
         if block is None:
             return NIL
         bindings = dict(block.closure)
+        # Ruby auto-splatting: if block expects multiple params but receives
+        # a single array/tuple argument, destructure the array into params.
+        effective_args = args
+        if len(args) == 1 and isinstance(args[0], (list, tuple)) and len(block.params) > 1:
+            effective_args = list(args[0])
         for i, param in enumerate(block.params):
             param = param.strip()
             if param:
-                bindings[param] = args[i] if i < len(args) else NIL
+                bindings[param] = effective_args[i] if i < len(effective_args) else NIL
         self._push_scope(bindings)
         try:
             stmts = _split_statements(block.body)
             return self._exec_stmts(stmts)
         except _ReturnSignal as r:
             return r.value
+        except _NextSignal as n:
+            return n.value
         finally:
             self._pop_scope()
 
@@ -1863,7 +2052,10 @@ class RubyEnvironment:
 
     def _try_turtle(self, name: str, args: list) -> Any:
         t = self.turtle
-        n = float(args[0]) if args else 0
+        try:
+            n = float(args[0]) if args else 0
+        except (TypeError, ValueError):
+            n = 0
         if name == "forward" or name == "fd":
             t.forward(n)
             return NIL
@@ -1877,10 +2069,10 @@ class RubyEnvironment:
             t.left(n)
             return NIL
         if name == "penup" or name == "pu":
-            t.pen_up()
+            t.penup()
             return NIL
         if name == "pendown" or name == "pd":
-            t.pen_down()
+            t.pendown()
             return NIL
         if name == "home":
             t.home()
@@ -1889,7 +2081,7 @@ class RubyEnvironment:
             t.reset()
             return NIL
         if name == "setheading":
-            t.set_heading(n)
+            t.setheading(n)
             return NIL
         if name == "setpos" or name == "goto":
             x = float(args[0]) if args else 0
@@ -1899,12 +2091,12 @@ class RubyEnvironment:
         if name == "color":
             if len(args) >= 3:
                 r, g, b = int(args[0]), int(args[1]), int(args[2])
-                t.set_color(r, g, b)
+                t.pencolor((r, g, b))
             elif args:
-                t.set_color_name(_ruby_to_s(args[0]))
+                t.pencolor(_ruby_to_s(args[0]))
             return NIL
         if name == "pensize" or name == "width":
-            t.set_pen_width(int(n))
+            t.setpenwidth(int(n))
             return NIL
         return _UNSET
 
@@ -1916,7 +2108,7 @@ class RubyEnvironment:
         if isinstance(val, list):
             return val
         if isinstance(val, RubyRange):
-            return val._to_list()
+            return val.to_list()
         if isinstance(val, dict):
             return [[k, v] for k, v in val.items()]
         if isinstance(val, str):
@@ -2019,6 +2211,8 @@ def _apply_op(lv: Any, op: str, rv: Any) -> Any:
             if isinstance(lv, list):
                 lv.append(rv)
                 return lv
+            if isinstance(lv, str):
+                return lv + _ruby_to_s(rv)
             return lv << rv
         if op == ">>":
             return lv >> rv
@@ -2038,8 +2232,8 @@ def _apply_op(lv: Any, op: str, rv: Any) -> Any:
             return lv ^ rv
     except (TypeError, ZeroDivisionError) as e:
         if "division" in str(e).lower() or "zero" in str(e).lower():
-            raise RubyError("ZeroDivisionError: divided by 0")
-        raise RubyError(f"TypeError: {e}")
+            raise RubyError("ZeroDivisionError: divided by 0") from e
+        raise RubyError(f"TypeError: {e}") from e
     return NIL
 
 
@@ -2191,9 +2385,61 @@ def _rfind_op(expr: str, op: str) -> int:
             if op == ">" and i > 0 and expr[i - 1] == "-":
                 i += 1
                 continue
+            # Avoid matching a lone * when it is part of **
+            if op == "*" and (
+                (i > 0 and expr[i - 1] == "*") or (end < len(expr) and expr[end] == "*")
+            ):
+                i += 1
+                continue
+            # Avoid matching a lone < when it is part of << (append operator)
+            if op == "<" and (
+                (i > 0 and expr[i - 1] == "<") or (end < len(expr) and expr[end] == "<")
+            ):
+                i += 1
+                continue
+            # Avoid matching a lone > when it is part of >>
+            if op == ">" and end < len(expr) and expr[end] == ">":
+                i += 1
+                continue
             last = i
         i += 1
     return last
+
+
+def _find_modifier_keyword(expr: str) -> tuple[str, str, str] | None:
+    """Scan *expr* left-to-right at bracket-depth 0 and return the last
+    (lhs, keyword, rhs) triple where keyword is 'if' or 'unless'.
+    Returns ``None`` when no modifier keyword is found."""
+    depth = 0
+    in_str = False
+    str_char = ""
+    result = None
+    i = 0
+    while i < len(expr):
+        ch = expr[i]
+        if in_str:
+            if ch == "\\" and i + 1 < len(expr):
+                i += 2
+                continue
+            if ch == str_char:
+                in_str = False
+        elif ch in ('"', "'"):
+            in_str = True
+            str_char = ch
+        elif ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif depth == 0:
+            for kw in (" if ", " unless "):
+                if expr[i : i + len(kw)] == kw:
+                    lhs = expr[:i].strip()
+                    rhs = expr[i + len(kw) :].strip()
+                    if lhs and rhs:
+                        result = (lhs, kw.strip(), rhs)
+                    break
+        i += 1
+    return result
 
 
 def _strip_inline_comment(line: str) -> str:
@@ -2269,25 +2515,66 @@ def _parse_params(params_str: str) -> tuple[list[str], dict[str, str]]:
     return params, defaults
 
 
-def _split_statements(source: str) -> list[str]:  # noqa: C901
-    """Split Ruby source into top-level statements (respecting block nesting)."""
-    stmts: list[str] = []
-    lines = source.splitlines()
-    current: list[str] = []
+def _split_on_semicolons(line: str) -> list[str]:
+    """Split a single line on ; separators outside strings/brackets."""
+    parts = []
     depth = 0
     in_str = False
     str_char = ""
+    current: list[str] = []
     i = 0
+    while i < len(line):
+        ch = line[i]
+        if in_str:
+            current.append(ch)
+            if ch == "\\" and i + 1 < len(line):
+                i += 1
+                current.append(line[i])
+            elif ch == str_char:
+                in_str = False
+        elif ch in ('"', "'"):
+            in_str = True
+            str_char = ch
+            current.append(ch)
+        elif ch in ("(", "[", "{"):
+            depth += 1
+            current.append(ch)
+        elif ch in (")", "]", "}"):
+            depth = max(0, depth - 1)
+            current.append(ch)
+        elif ch == ";" and depth == 0:
+            part = "".join(current).strip()
+            if part:
+                parts.append(part)
+            current = []
+        else:
+            current.append(ch)
+        i += 1
+    part = "".join(current).strip()
+    if part:
+        parts.append(part)
+    return parts
 
-    block_openers = re.compile(
-        r"^(if|unless|while|until|for|begin|def|class|module|do|case)\b"
-        r"|\bdo\s*(?:\|.*\|)?\s*$"
-    )
-    block_closers = re.compile(r"^end\b")
-    one_liner_opener = re.compile(
-        r"^(if|unless|while|until)\b.+\bthen\b|"
-        r"^(if|unless|while|until)\b.+(?<!end)\s*$"
-    )
+
+def _split_statements(source: str) -> list[str]:  # noqa: C901
+    """Split Ruby source into top-level statements (respecting block nesting)."""
+    stmts: list[str] = []
+    # Pre-expand ; separators into separate lines
+    raw_lines = source.splitlines()
+    lines: list[str] = []
+    for raw_line in raw_lines:
+        parts = _split_on_semicolons(raw_line)
+        if len(parts) <= 1:
+            lines.append(raw_line)
+        else:
+            indent = len(raw_line) - len(raw_line.lstrip())
+            prefix = raw_line[:indent]
+            for p in parts:
+                lines.append(prefix + p)
+    current: list[str] = []
+    depth = 0
+    paren_depth = 0  # tracks unclosed ( [ {
+    i = 0
 
     while i < len(lines):
         line = lines[i]
@@ -2295,8 +2582,30 @@ def _split_statements(source: str) -> list[str]:  # noqa: C901
         stripped_nc = _strip_inline_comment(stripped)
 
         if not stripped or stripped.startswith("#"):
-            if depth > 0:
+            if depth > 0 or paren_depth > 0:
                 current.append(line)
+            i += 1
+            continue
+
+        # Update paren/bracket/brace depth for this line
+        # (count outside strings only)
+        _in_s = False
+        _sc = ""
+        for ch in stripped_nc:
+            if _in_s:
+                if ch == _sc:
+                    _in_s = False
+            elif ch in ('"', "'"):
+                _in_s = True
+                _sc = ch
+            elif ch in ("(", "[", "{"):
+                paren_depth += 1
+            elif ch in (")", "]", "}"):
+                paren_depth = max(0, paren_depth - 1)
+
+        # If inside an unfinished literal expression, keep accumulating
+        if paren_depth > 0:
+            current.append(line)
             i += 1
             continue
 
@@ -2336,34 +2645,50 @@ def _split_statements(source: str) -> list[str]:  # noqa: C901
     return [s.strip() for s in stmts if s.strip()]
 
 
+def _count_block_openers(stripped: str, is_opener_line: bool = False) -> int:
+    """Count block-opening keywords on a line, excluding modifier forms.
+
+    Modifier ``if``/``unless``/``while``/``until`` (appearing mid-line after
+    an expression) do NOT open a block and must not be counted.  We detect
+    block-form by requiring these keywords to start the (stripped) line.
+    ``do`` is always a block opener UNLESS it sits on the same line as a
+    ``while``/``for``/``until`` that already opens the block.
+    ``for``/``begin``/``def``/``class``/``module``/``case`` are always block
+    openers wherever they appear, but are only meaningful at line-start in
+    practice.
+    """
+    # Block form: these keywords only open a block at the start of the line
+    line_starts_block = bool(re.match(
+        r"^\s*(if|unless|while|until|for|begin|def|class|module|case)\b",
+        stripped,
+    ))
+    # For opener lines the first keyword is already accounted for in the
+    # caller's depth initialisation, so don't count it a second time via 'do'.
+    is_loop_opener = bool(re.match(r"^\s*(while|until|for)\b", stripped))
+    # 'do' counts as a block opener only when it is NOT the trailing 'do' of a
+    # while/for/until line (which would cause double-counting).
+    do_count = 0 if is_loop_opener else len(re.findall(r"\bdo\b", stripped))
+    return (1 if line_starts_block else 0) + do_count
+
+
 def _extract_body(full_stmt: str, opener: str, closer: str = "end") -> str:
     """Extract the body lines between opener and end."""
     lines = full_stmt.splitlines()
     # Skip first line (the opener line)
     body_lines = []
     depth = 0
-    started = False
 
     for i, line in enumerate(lines):
         stripped = _strip_inline_comment(line.strip())
         if i == 0:
-            # First line: count additional opens on the opener line
-            opens = len(re.findall(
-                r"\b(if|unless|while|until|for|begin|def|class|module|case)\b|"
-                r"\bdo\b",
-                stripped,
-            ))
-            # The opener itself counts as 1 open
-            depth = opens  # additional nested blocks on opener line
-            started = True
+            # First line is the opener (e.g. "def foo" / "class Foo" /
+            # "while x > 0 do"). Depth starts at 0, meaning "we are now
+            # inside the outermost block with no additional nesting".
+            depth = 0
             continue
 
         closes = len(re.findall(r"\bend\b", stripped))
-        opens = len(re.findall(
-            r"\b(if|unless|while|until|for|begin|def|class|module|case)\b|"
-            r"\bdo\b",
-            stripped,
-        ))
+        opens = _count_block_openers(stripped)
 
         if stripped.startswith("else") or stripped.startswith("elsif") or \
            stripped.startswith("rescue") or stripped.startswith("ensure") or \

@@ -180,7 +180,7 @@ class CloudStorageManager:
         try:
             response = requests.post(
                 "https://api.github.com/gists",
-                json=payload,
+                json=payload,  # type: ignore[arg-type]
                 headers=headers,
                 timeout=15,
             )
@@ -188,7 +188,7 @@ class CloudStorageManager:
             gist_url: str = response.json().get("html_url", "")
             # Persist the URL locally
             (self.sync_root / src.name).mkdir(parents=True, exist_ok=True)
-            (self.sync_root / src.name / "gist_url.txt").write_text(gist_url)
+            (self.sync_root / src.name / "gist_url.txt").write_text(gist_url, encoding="utf-8")
             logger.info("Gist uploaded: %s", gist_url)
             return f"✅ Gist uploaded: {gist_url}"
         except Exception as exc:  # noqa: BLE001
@@ -235,4 +235,3 @@ class CloudStorageManager:
             p for p in root.rglob("*")
             if p.is_file() and p.suffix in _SOURCE_EXTENSIONS
         ]
-

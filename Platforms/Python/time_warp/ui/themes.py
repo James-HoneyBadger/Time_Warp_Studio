@@ -697,8 +697,6 @@ class ThemeManager:
         has been constructed (QFontDatabase requires a running
         QGuiApplication).
         """
-        from PySide6.QtWidgets import QApplication
-
         # Preferred programming fonts (check if available)
         preferred = [
             "JetBrains Mono",
@@ -720,10 +718,9 @@ class ThemeManager:
             # to avoid a fatal abort from QFontDatabase.
             return preferred
 
-        font_db = QFontDatabase()
         monospace_fonts = []
 
-        all_families = font_db.families()
+        all_families = QFontDatabase.families()
 
         # Add preferred fonts that are available
         for font in preferred:
@@ -732,7 +729,7 @@ class ThemeManager:
 
         # Add other monospace fonts
         for family in all_families:
-            if font_db.isFixedPitch(family) and family not in monospace_fonts:
+            if QFontDatabase.isFixedPitch(family) and family not in monospace_fonts:
                 monospace_fonts.append(family)
 
         # Ensure we have at least one font
@@ -825,24 +822,26 @@ class ThemeManager:
         app = QApplication.instance()
         palette = QPalette()
 
-        palette.setColor(QPalette.Window, QColor(theme.background))
-        palette.setColor(QPalette.WindowText, QColor(theme.foreground))
-        palette.setColor(QPalette.Base, QColor(theme.editor_bg))
-        palette.setColor(QPalette.AlternateBase, QColor(theme.line_number_bg))
-        palette.setColor(QPalette.Text, QColor(theme.editor_fg))
-        palette.setColor(QPalette.Button, QColor(menu_bg))
-        palette.setColor(QPalette.ButtonText, QColor(menu_fg))
-        palette.setColor(QPalette.Highlight, QColor(theme.selection_bg))
-        palette.setColor(QPalette.HighlightedText, QColor(theme.selection_fg))
-        palette.setColor(QPalette.ToolTipBase, QColor(menu_bg))
-        palette.setColor(QPalette.ToolTipText, QColor(menu_fg))
-        palette.setColor(QPalette.Link, QColor(theme.keyword))
-        palette.setColor(QPalette.LinkVisited, QColor(theme.function))
+        palette.setColor(QPalette.ColorRole.Window, QColor(theme.background))
+        palette.setColor(QPalette.ColorRole.WindowText, QColor(theme.foreground))
+        palette.setColor(QPalette.ColorRole.Base, QColor(theme.editor_bg))
+        palette.setColor(QPalette.ColorRole.AlternateBase, QColor(theme.line_number_bg))
+        palette.setColor(QPalette.ColorRole.Text, QColor(theme.editor_fg))
+        palette.setColor(QPalette.ColorRole.Button, QColor(menu_bg))
+        palette.setColor(QPalette.ColorRole.ButtonText, QColor(menu_fg))
+        palette.setColor(QPalette.ColorRole.Highlight, QColor(theme.selection_bg))
+        palette.setColor(QPalette.ColorRole.HighlightedText, QColor(theme.selection_fg))
+        palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(menu_bg))
+        palette.setColor(QPalette.ColorRole.ToolTipText, QColor(menu_fg))
+        palette.setColor(QPalette.ColorRole.Link, QColor(theme.keyword))
+        palette.setColor(QPalette.ColorRole.LinkVisited, QColor(theme.function))
 
-        app.setPalette(palette)
+        if isinstance(app, QApplication):
+            app.setPalette(palette)
 
         # Apply comprehensive stylesheet for consistent UI
-        app.setStyleSheet(f"""
+        if isinstance(app, QApplication):
+            app.setStyleSheet(f"""
             QMainWindow {{
                 background-color: {theme.background};
             }}

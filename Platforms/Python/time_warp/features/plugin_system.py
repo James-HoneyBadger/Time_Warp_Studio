@@ -14,6 +14,17 @@ Each plugin is a sub-directory containing:
     ``initialize(ide_instance)`` – called once after IDE startup
     ``shutdown()``               – called when the plugin is unloaded
 
+- ``manifest.json`` (optional but recommended) declaring capabilities::
+
+    {
+        "api_version": "1.0",
+        "capabilities": ["filesystem", "network", "subprocess"]
+    }
+
+  Plugins that import dangerous modules (os, subprocess, socket, ctypes,
+  importlib) without declaring the corresponding capability are **rejected**
+  before their code is executed.
+
 Usage::
 
     from time_warp.features.plugin_system import PluginManager
@@ -24,11 +35,13 @@ Usage::
 
 from __future__ import annotations
 
+import ast
 import importlib
 import importlib.util
+import json
 import logging
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Set
 
 from .hardware_integration import HardwareIntegration
 from .ai_suggestions import AISuggestions
@@ -182,6 +195,14 @@ class PluginManager:
             directory=directory,
         )
 
+        # --- Manifest validation + capability check -----------------------
+        manifest_error = self._check_manifest(directory, plugin_path)
+        if manifest_error:
+            info.error = manifest_error
+            logger.warning("Plugin '%s' blocked: %s", name, manifest_error)
+            return info
+        # ------------------------------------------------------------------
+
         # Load the plugin class from plugin.py
         try:
             spec = importlib.util.spec_from_file_location(
@@ -215,6 +236,83 @@ class PluginManager:
             logger.warning("Error initializing plugin '%s': %s", name, exc)
 
         return info
+
+    @staticmethod
+    def _check_manifest(directory: Path, plugin_path: Path) -> Optional[str]:
+        """Return an error string if the plugin violates capability rules, else None.
+
+        Rules:
+        - If ``manifest.json`` is present, its ``capabilities`` list is read.
+        - Each dangerous module import found in ``plugin.py`` source must be
+          covered by a declared capability.  Plugins without ``manifest.json``
+          are only blocked if they import a *high-risk* module.
+        """
+        # Capability → modules it permits
+        CAPABILITY_MODULES: Dict[str, Set[str]] = {
+            "filesystem": {"os", "pathlib", "shutil", "glob", "tempfile"},
+            "network": {"socket", "http", "urllib", "requests", "httpx"},
+            "subprocess": {"subprocess", "multiprocessing"},
+            "ctypes": {"ctypes", "cffi"},
+            "importlib": {"importlib"},
+        }
+        # Modules always forbidden regardless of capabilities
+        ALWAYS_BLOCKED: Set[str] = {"ctypes", "cffi"}
+
+        # Parse declared capabilities from manifest.json
+        declared: Set[str] = set()
+        manifest_path = directory / "manifest.json"
+        if manifest_path.exists():
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                declared = set(manifest.get("capabilities", []))
+            except Exception as exc:
+                return f"manifest.json is invalid JSON: {exc}"
+
+        # Parse imports from plugin.py via AST (no code execution)
+        try:
+            source = plugin_path.read_text(encoding="utf-8")
+            tree = ast.parse(source, filename=str(plugin_path))
+        except SyntaxError as exc:
+            return f"plugin.py has a syntax error: {exc}"
+
+        imported_modules: Set[str] = set()
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Import):
+                for alias in node.names:
+                    imported_modules.add(alias.name.split(".")[0])
+            elif isinstance(node, ast.ImportFrom):
+                if node.module:
+                    imported_modules.add(node.module.split(".")[0])
+
+        # Check for always-blocked modules
+        blocked = imported_modules & ALWAYS_BLOCKED
+        if blocked:
+            return (
+                f"plugin.py imports {sorted(blocked)} which is never permitted. "
+                "Remove this import to load the plugin."
+            )
+
+        # Check capability-gated modules
+        permitted_modules: Set[str] = set()
+        for cap, mods in CAPABILITY_MODULES.items():
+            if cap in declared:
+                permitted_modules |= mods
+
+        # Modules that need a capability but lack one
+        dangerous = set()
+        for cap, mods in CAPABILITY_MODULES.items():
+            risky = imported_modules & mods - permitted_modules
+            if risky:
+                dangerous.add(f"{cap}={sorted(risky)}")
+
+        if dangerous:
+            return (
+                f"plugin.py imports modules requiring undeclared capabilities: "
+                f"{', '.join(sorted(dangerous))}. "
+                "Add them to manifest.json capabilities[] to allow."
+            )
+
+        return None
 
     @staticmethod
     def _find_plugin_class(module: Any) -> Optional[type]:

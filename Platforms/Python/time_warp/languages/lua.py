@@ -304,7 +304,7 @@ class LuaEnvironment:
             elif m_elseif and not executed:
                 cond = self._eval_expr(m_elseif.group(1))
                 inline_elif = (
-                    m_elseif.group(2).strip() if m_elseif.lastindex >= 2 else ""
+                    m_elseif.group(2).strip() if (m_elseif.lastindex or 0) >= 2 else ""
                 )
                 if cond and cond != 0 and cond is not None and cond is not False:
                     executed = True
@@ -842,15 +842,15 @@ class LuaEnvironment:
             "require": lambda a: (
                 self._emit(f"ℹ️ require('{a[0]}') not supported in sandbox") or None
             ),
-            "pcall": lambda a: self._lua_pcall(a),
-            "xpcall": lambda a: self._lua_xpcall(a),
+            "pcall": self._lua_pcall,
+            "xpcall": self._lua_xpcall,
             "load": lambda a: (
                 (lambda src: LuaLoadFunction(str(a[0]), self))(a[0]) if a else None
             ),
             "loadstring": lambda a: LuaLoadFunction(str(a[0]), self) if a else None,
             "dofile": lambda a: self._emit("ℹ️ dofile not supported in sandbox") or None,
             "collectgarbage": lambda a: 0,
-            "setmetatable": lambda a: _lua_setmetatable(a),
+            "setmetatable": _lua_setmetatable,
             "getmetatable": lambda a: None,
             "setfenv": lambda a: None,
             "getfenv": lambda a: {},
@@ -1150,7 +1150,7 @@ class LuaIOLib:
         self.stderr = self
 
     def write(self, *args):
-        self.env._emit("".join(str(a) for a in args))
+        self.env._emit("".join(str(a) for a in args))  # pylint: disable=protected-access
 
     def read(self, fmt="*l"):
         return (
@@ -1162,7 +1162,7 @@ class LuaIOLib:
     def lines(self, filename=None):
         if filename:
             try:
-                with open(filename) as f:
+                with open(filename, encoding="utf-8") as f:
                     return f.readlines()
             except OSError:
                 return []
@@ -1170,7 +1170,7 @@ class LuaIOLib:
 
     def open(self, filename, mode="r"):
         try:
-            f = open(filename, mode)
+            f = open(filename, mode, encoding="utf-8" if "b" not in mode else None)  # type: ignore[call-overload]  # noqa: WPS515
             self._open_files[filename] = f
             return LuaFileHandle(f)
         except OSError as e:
@@ -1328,7 +1328,7 @@ class LuaCoroutineLib:
         co = self._current
         if co is None:
             raise LuaError("cannot yield from main thread")
-        return co._yield_impl(*args)
+        return co._yield_impl(*args)  # pylint: disable=protected-access
 
     def status(self, co):
         if isinstance(co, LuaCoroutine):
@@ -1372,8 +1372,8 @@ class LuaCoroutine:
             return False, "cannot resume running coroutine"
 
         self._resume_args = args
-        prev_co = self.lib._current
-        self.lib._current = self
+        prev_co = self.lib._current  # pylint: disable=protected-access
+        self.lib._current = self  # pylint: disable=protected-access
         self.status = "running"
 
         if not self._started:
@@ -1387,7 +1387,7 @@ class LuaCoroutine:
 
         # Block until coroutine yields or finishes
         self._yield_event.wait(timeout=self._TIMEOUT)
-        self.lib._current = prev_co
+        self.lib._current = prev_co  # pylint: disable=protected-access
 
         if self._error is not None:
             self.status = "dead"
@@ -1481,14 +1481,14 @@ class LuaFunction:
             frame[p] = args[i] if i < len(args) else None
         if vararg_start is not None:
             frame["..."] = args[vararg_start:]
-        self.env._call_stack.append(frame)
+        self.env._call_stack.append(frame)  # pylint: disable=protected-access
         result = None
         try:
-            self.env._exec_block(self.body)
+            self.env._exec_block(self.body)  # pylint: disable=protected-access
         except LuaReturn as r:
             result = r.value
         finally:
-            self.env._call_stack.pop()
+            self.env._call_stack.pop()  # pylint: disable=protected-access
         return result
 
 

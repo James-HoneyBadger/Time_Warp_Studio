@@ -64,7 +64,7 @@ class FileHistory:
         # Save version file
         versions_dir = self._get_versions_dir()
         version_file = versions_dir / f"v{version_num}.txt"
-        version_file.write_text(content)
+        version_file.write_text(content, encoding="utf-8")
 
         # Limit history to 20 versions
         self.versions.append(version)
@@ -86,7 +86,7 @@ class FileHistory:
         version_file = versions_dir / f"v{version_num}.txt"
 
         if version_file.exists():
-            return version_file.read_text()
+            return version_file.read_text(encoding="utf-8")
         return None
 
     def restore_version(self, version_num: int) -> bool:
@@ -96,7 +96,7 @@ class FileHistory:
             return False
 
         try:
-            self.file_path.write_text(content)
+            self.file_path.write_text(content, encoding="utf-8")
             return True
         except (ValueError, TypeError):
             return False
@@ -125,7 +125,7 @@ class FileHistory:
             "file_path": str(self.file_path),
             "versions": [v.to_dict() for v in self.versions],
         }
-        history_file.write_text(json.dumps(metadata, indent=2))
+        history_file.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
 
 
 class AutosaveManager:
@@ -156,7 +156,7 @@ class AutosaveManager:
 
         try:
             # Save file
-            file_path.write_text(content)
+            file_path.write_text(content, encoding="utf-8")
             self.last_autosave[str(file_path)] = datetime.now()
 
             # Create version

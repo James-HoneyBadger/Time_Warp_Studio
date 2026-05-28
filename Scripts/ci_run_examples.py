@@ -19,7 +19,7 @@ import sys
 from pathlib import Path
 from typing import List
 
-ROOT = Path(__file__).resolve().parents[3]
+ROOT = Path(__file__).resolve().parents[1]
 EXAMPLES = ROOT / "Examples"
 SCRIPTS = Path(__file__).resolve().parent
 
@@ -74,7 +74,7 @@ def run_example(path: Path, inputs: List[str]):
         exe = Path("/tmp") / (path.stem + "-ci-bin")
         try:
             subprocess.run(
-                ["gcc", str(path), "-o", str(exe)],
+                ["gcc", str(path), "-o", str(exe), "-lm"],
                 check=True,
                 capture_output=True,
             )
@@ -98,6 +98,12 @@ def run_example(path: Path, inputs: List[str]):
             FileNotFoundError,
         ) as exc:  # fallback to interpreter
             print(f"Compiler/run failed — falling back to interpreter: {exc}")
+            code = path.read_text(encoding="utf-8")
+            interp = Interpreter()
+            turtle = TurtleState()
+            interp.reset()
+            interp.set_language(Language.from_extension(path.suffix))
+            interp.load_program(code, language=interp.language)
     else:
         code = path.read_text(encoding="utf-8")
         interp = Interpreter()

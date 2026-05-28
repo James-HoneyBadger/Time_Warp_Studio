@@ -16,6 +16,7 @@ import time
 from pathlib import Path
 
 # pylint: disable=no-name-in-module
+# pylint: disable=reimported,redefined-outer-name
 from PySide6.QtCore import QSettings, QSize, Qt, QThread, QTimer
 from PySide6.QtCore import Signal as _Signal
 from PySide6.QtGui import (
@@ -69,6 +70,7 @@ from .mixins import (
     HelpDocsMixin,
 )
 from .output import ImmediateModePanel, OutputPanelContainer
+from .project_tree import ProjectTreePanel
 from .screen_modes import ScreenModeManager
 from .terminal_widget import TerminalWidget
 from .themes import ThemeManager
@@ -155,6 +157,7 @@ class ResizableTabWidget(QTabWidget):
     """
 
     _TAB_BAR_MARGIN = 8  # extra pixels above/below tab bar text
+    _main_window: "MainWindow | None" = None  # set by _setup_tab_bar
 
     def minimumSizeHint(self) -> QSize:  # type: ignore[override]
         return QSize(100, 100)
@@ -198,7 +201,7 @@ class ResizableTabWidget(QTabWidget):
         mw = getattr(self, "_main_window", None)
         if mw is None:
             return
-        states = mw._tab_states
+        states = mw._tab_states  # pylint: disable=protected-access
         moved = states.pop(from_idx, None)
         if moved is None:
             return
@@ -240,7 +243,7 @@ class ResizableTabWidget(QTabWidget):
 
         menu.addSeparator()
 
-        info = mw._tab_states.get(idx)
+        info = mw._tab_states.get(idx)  # pylint: disable=protected-access
         filepath = info.file if info else None
         copy_path = menu.addAction("Copy File Path")
         copy_path.setEnabled(bool(filepath))
@@ -271,10 +274,10 @@ class ResizableTabWidget(QTabWidget):
         editor = self.widget(idx)
         if editor is None:
             return
-        info = mw._tab_states.get(idx)
+        info = mw._tab_states.get(idx)  # pylint: disable=protected-access
         if info is None:
             return
-        content = editor.toPlainText()
+        content = editor.toPlainText()  # type: ignore[attr-defined]
         title = self.tabText(idx) + " (copy)"
         new_idx = mw.create_new_tab(title, content, info.language)
         mw.set_current_tab_info(file=None, modified=True, language=info.language)
@@ -389,6 +392,9 @@ class MainWindow(
 
         # Command palette (Ctrl+Shift+P)
         self._command_palette: CommandPalette | None = None
+
+        # Find in files dialog
+        self._find_in_files_dlg: object = None
 
         # Coach mark onboarding tour
         self._coach_marks: CoachMarkManager | None = None
@@ -508,7 +514,7 @@ class MainWindow(
         editor = self.editor_tabs.widget(self.editor_tabs.currentIndex())
         if editor is not None:
             info = self._ts(self.editor_tabs.currentIndex())
-            self._open_in_secondary(info.file, editor.toPlainText(), info.language)
+            self._open_in_secondary(info.file, editor.toPlainText(), info.language)  # type: ignore[attr-defined]
         else:
             self._open_new_in_secondary()
 
@@ -526,21 +532,6 @@ class MainWindow(
         self._editor_tabs_b.clear()
         self._active_pane = "primary"
         self.editor_tabs.setFocus()
-
-    def _split_editor_right(self) -> None:
-        """Duplicate the current tab as a new primary tab (legacy split helper)."""
-        current_index = self.editor_tabs.currentIndex()
-        if current_index < 0:
-            return
-        editor = self.editor_tabs.widget(current_index)
-        if editor is None:
-            return
-        content = editor.toPlainText()
-        info = self._ts(current_index)
-        from pathlib import Path  # pylint: disable=import-outside-toplevel
-
-        title_base = Path(info.file).name if info.file else "untitled"
-        self.create_new_tab(f"[split] {title_base}", content, info.language)
 
     def _open_in_secondary(self, filepath, content: str, language) -> None:
         """Create a new editor tab in the secondary pane with *content*."""
@@ -575,7 +566,7 @@ class MainWindow(
     def _on_split_tab_changed(self, _idx: int) -> None:
         self._active_pane = "secondary"
 
-    def _ts(self, idx: int) -> "TabState":
+    def _ts(self, idx: int) -> "TabState":  # pyright: ignore[reportIncompatibleMethodOverride]  # pylint: disable=arguments-renamed
         """Get or create the TabState for *idx*."""
         if idx not in self._tab_states:
             self._tab_states[idx] = TabState()
@@ -589,7 +580,7 @@ class MainWindow(
             return {"file": s.file, "modified": s.modified, "language": s.language}
         return {"file": None, "modified": False, "language": Language.BASIC}
 
-    def set_current_tab_info(self, file=None, modified=None, language=None):
+    def set_current_tab_info(self, file=None, modified=None, language=None):  # pyright: ignore[reportIncompatibleMethodOverride]  # pylint: disable=arguments-differ
         """Set info for current tab."""
         current_index = self.editor_tabs.currentIndex()
         if current_index >= 0:
@@ -624,7 +615,7 @@ class MainWindow(
         else:
             tab_bar.setTabTextColor(index, QColor())  # reset to default
 
-    def create_new_tab(
+    def create_new_tab(  # pyright: ignore[reportIncompatibleMethodOverride]  # pylint: disable=arguments-differ
         self,
         title: str = "Untitled",
         content: str = "",
@@ -686,7 +677,7 @@ class MainWindow(
     def _load_breakpoints_for_file(self, filepath: str, editor) -> None:
         """Restore persisted breakpoints into *editor* for the given file."""
         raw = self.settings.value(self._bp_settings_key(filepath), [])
-        lines = {int(n) for n in raw if str(n).isdigit()} if raw else set()
+        lines = {int(n) for n in (raw or []) if str(n).isdigit()} if raw else set()  # type: ignore
         if lines:
             editor.set_breakpoints(lines)
 
@@ -738,11 +729,11 @@ class MainWindow(
         """Show (or raise) the Find in Files dialog."""
         from .find_in_files import FindInFilesDialog
 
-        if not hasattr(self, "_find_in_files_dlg") or self._find_in_files_dlg is None:
-            self._find_in_files_dlg = FindInFilesDialog(self)
-        self._find_in_files_dlg.show_with_selection()
-        self._find_in_files_dlg.raise_()
-        self._find_in_files_dlg.activateWindow()
+        if not hasattr(self, "_find_in_files_dlg") or self._find_in_files_dlg is None:  # type: ignore[has-type]
+            self._find_in_files_dlg = FindInFilesDialog(self)  # type: ignore[assignment]
+        self._find_in_files_dlg.show_with_selection()  # type: ignore[attr-defined]
+        self._find_in_files_dlg.raise_()  # type: ignore[attr-defined]
+        self._find_in_files_dlg.activateWindow()  # type: ignore[attr-defined]
 
     # ------------------------------------------------------------------
     # Auto-save
@@ -831,7 +822,7 @@ class MainWindow(
         # Skip if the user has disabled update checks
         if self.settings.value("check_for_updates", True) in (False, "false", "0", 0):
             return
-        self._update_thread = _UpdateCheckerThread()
+        self._update_thread = _UpdateCheckerThread()  # pylint: disable=attribute-defined-outside-init
         self._update_thread.update_available.connect(self._on_update_available)
         self._update_thread.start()
 
@@ -853,8 +844,6 @@ class MainWindow(
         self.statusbar.addWidget(label)
 
     def _maybe_show_onboarding(self):
-        """Show first-run onboarding wizard if not yet completed."""
-        """Show first-run onboarding wizard if not yet completed."""
         if not self._onboarding_manager.should_show_onboarding():
             return
 
@@ -989,15 +978,15 @@ class MainWindow(
         # Group by language
         lang_nodes: dict = {}
         for ex in browser.examples:
-            lang_name = ex.language.friendly_name()
+            lang_name = ex.language.value
             if lang_name not in lang_nodes:
                 parent = QTreeWidgetItem(tree, [lang_name, ""])
                 parent.setExpanded(True)
                 lang_nodes[lang_name] = parent
             item = QTreeWidgetItem(
-                lang_nodes[lang_name], [ex.title, ex.difficulty.value]
+                lang_nodes[lang_name], [ex.name, ex.difficulty.value]
             )
-            item.setData(0, Qt.UserRole, ex)
+            item.setData(0, Qt.ItemDataRole.UserRole, ex)
         splitter.addWidget(tree)
 
         preview = QTextBrowser()
@@ -1025,21 +1014,21 @@ class MainWindow(
 
         tree.itemClicked.connect(on_item_clicked)
 
-        if dlg.exec() == QDialog.Accepted:
+        if dlg.exec() == QDialog.DialogCode.Accepted:
             selected = tree.currentItem()
             if selected:
-                ex = selected.data(0, Qt.UserRole)
+                ex = selected.data(0, Qt.ItemDataRole.UserRole)
                 if ex:
                     self.create_new_tab()
                     editor = self.get_current_editor()
                     if editor:
                         editor.setPlainText(ex.code)
                         lang = ex.language
-                        editor.set_language(lang)
+                        editor.set_language(lang)  # type: ignore[arg-type]
                         idx = self.editor_tabs.currentIndex()
-                        self._ts(idx).language = lang
-                        self.editor_tabs.setTabText(idx, ex.title)
-                        self.statusbar.showMessage(f"Opened example: {ex.title}", 3000)
+                        self._ts(idx).language = Language(lang.value)  # type: ignore[call-arg]
+                        self.editor_tabs.setTabText(idx, ex.name)
+                        self.statusbar.showMessage(f"Opened example: {ex.name}", 3000)
 
     # ---- Language comparator ----
 
@@ -1465,7 +1454,7 @@ class MainWindow(
         self.editor_tabs.currentChanged.connect(self.on_tab_changed)
         self.editor_tabs.setAccessibleName("Editor Tabs")
         self.editor_tabs.setAccessibleDescription("Code editor tab group")
-        self.editor_tabs._setup_tab_bar(self)
+        self.editor_tabs._setup_tab_bar(self)  # pylint: disable=protected-access
         self.editor_tabs.setStyleSheet("""
             QTabWidget {
                 background-color: palette(base);
@@ -1489,7 +1478,7 @@ class MainWindow(
         self._editor_tabs_b.setTabsClosable(True)
         self._editor_tabs_b.tabCloseRequested.connect(self._close_split_tab)
         self._editor_tabs_b.currentChanged.connect(self._on_split_tab_changed)
-        self._editor_tabs_b._setup_tab_bar(self)
+        self._editor_tabs_b._setup_tab_bar(self)  # pylint: disable=protected-access
         self._editor_tabs_b.setStyleSheet(self.editor_tabs.styleSheet())
         self._editor_tabs_b.hide()
         self._editor_h_splitter.addWidget(self._editor_tabs_b)
@@ -1523,6 +1512,12 @@ class MainWindow(
 
         # Set left splitter sizes (85% editor, 15% immediate mode)
         left_splitter.setSizes([550, 50])
+
+        # Project file-tree panel (far left, collapsible)
+        self._project_panel = ProjectTreePanel(self)
+        self._project_panel.file_open_requested.connect(self.load_file)
+        self._project_panel.project_changed.connect(self._save_project)
+        splitter.addWidget(self._project_panel)
 
         splitter.addWidget(left_splitter)
 
@@ -2947,7 +2942,7 @@ class MainWindow(
     def _open_learning_resource(self, feature_id: str):
         """Open a hub-selected panel or built-in help view."""
         if feature_id == "quick_reference":
-            self._show_quick_reference()
+            self._show_quick_reference()  # type: ignore[attr-defined]
             return
         self.feature_manager.toggle_feature_panel(feature_id, visible=True)
 
@@ -3544,14 +3539,13 @@ class MainWindow(
 
     def _show_sql_workbench(self, _checked: bool = False):
         """Open the SQL workbench by switching the language to SQL and focusing the editor."""
-        from .dialogs import show_info_dialog  # noqa: F401 – imported lazily
 
         # Switch editor language to SQL so the user can write SQL immediately
         for i in range(self.language_combo.count()):
             if str(self.language_combo.itemData(i)).upper() == "SQL":
                 self.language_combo.setCurrentIndex(i)
                 break
-        self.editor.setFocus()
+        self.get_current_editor().setFocus()  # type: ignore[union-attr]
         self.statusbar.showMessage(
             "🗄 SQL Workbench ready – write SQL and press F5 to run"
         )
@@ -3924,6 +3918,10 @@ class MainWindow(
         self._persist_recent_projects()
         self._update_recent_projects_menu()
         self.statusbar.showMessage(f"Project '{project.name}' loaded")
+
+        # Update the project file-tree panel
+        if hasattr(self, "_project_panel"):
+            self._project_panel.load_project(project, path)
 
         # Open the main file if it exists
         project_dir = str(Path(path).parent)

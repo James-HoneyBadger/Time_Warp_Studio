@@ -259,6 +259,7 @@ _SANDBOXABLE_LANGUAGES: frozenset[Language] = frozenset({
     Language.ASM6502,
 })
 
+
 class LanguageRegistry:
     """Lightweight registry providing a stable API over _WHOLE_PROGRAM_EXECUTORS.
 
@@ -1150,6 +1151,10 @@ class Interpreter:
                 if condition:
                     try:
                         variables = self.get_variables()
+                        # Reject conditions using dunder attributes to prevent
+                        # sandbox bypass via __class__.__subclasses__() chains.
+                        if "__" in condition:
+                            raise ValueError("dunder attributes not allowed in breakpoint conditions")
                         should_pause = bool(
                             eval(condition, {"__builtins__": {}}, variables)  # noqa: S307  # pylint: disable=eval-used
                         )

@@ -2,9 +2,48 @@
 
 All notable changes to Time Warp Studio will be documented in this file.
 
-## [10.2.0] - 2026-05-16
+## [11.0.0] - 2026-06-01
+
+### Major Features
+
+- **Project File-Tree Panel** (`ui/project_tree.py`) — new `ProjectTreePanel` docked on the far left of the main window. Shows all tracked project files with language emoji icons; double-click to open in a new tab; right-click context menu: Add File, Remove from Project, Set as Main File. Auto-populates when a `.twsproj` project is opened and saves on any change.
+
+- **Plugin Manifest Validation + Capability Sandboxing** (`features/plugin_system.py`) — plugins are now scanned with `ast.parse()` (no code execution) before loading. Plugins that import dangerous modules (`ctypes`, `cffi`, `subprocess`, `socket`, etc.) without declaring the corresponding capability in a `manifest.json` file are blocked. Blocked plugins are listed with a clear error message; safe plugins load unchanged.
+
+- **Plugin Marketplace SQLite Persistence** (`features/plugin_marketplace.py`) — marketplace listings, reviews, releases, developers, and templates now survive application restarts via a SQLite database at `~/.time_warp/databases/marketplace.db`. All in-memory state is loaded from the database on startup and written on every mutation.
+
+- **Real LAN Collaboration TCP Send/Receive** (`features/collaboration.py`) — `_send_message()` now actually transmits to peers over TCP using a 4-byte length-prefixed JSON framing protocol. Host binds on port 54321; joiner connects at session join. Background `_recv_loop` threads dispatch incoming messages (code updates, cursor moves, chat, sync requests) to registered event callbacks. `disconnect()` cleanly closes all sockets.
+
+- **Student Roster + Assignment Distribution** (`features/classroom_mode.py`) — added `Student` and `StudentRoster` dataclasses, persisted to `~/.time_warp/classroom_roster.json`. New methods: `add_student()`, `remove_student()`, `save_roster()`, `distribute_assignment()` (writes bundle files to each student's work directory), and `collect_submissions()` (zips all student work into a timestamped archive in the bundles directory).
+
+- **Persistent Terminal History** (`ui/terminal_widget.py`) — shell commands are now appended to `~/.time_warp/terminal_history` (plain text, one per line). On next launch the history is pre-loaded into the up/down arrow history buffer (up to 200 entries in memory, unlimited on disk).
+
+### Previously Completed (v10.x)
+
+- **Assembly 6502 executor** (`languages/asm6502.py`) — 2-pass assembler, 64 KB virtual machine, 40+ opcodes, all addressing modes
+- **Code folding** (`ui/editor.py`) — ▼/▶ gutter glyphs, `toggle_fold()`, hides/shows QTextBlock ranges
+- **Split editor** (`ui/main_window.py`) — `QSplitter`-based dual-pane editing (View → Split Editor)
+- **COBOL enhancements** (`languages/cobol.py`) — `PERFORM VARYING`, `EVALUATE/WHEN/END-EVALUATE`, `OCCURS` table support
+
+
 
 ### Bug Fixes
+
+- **Ruby executor** (`languages/ruby.py`) — full initial implementation with extensive bug fixes:
+  - `_rfind_op` now guards against treating `<<` (append operator) as two separate `<` operators — `r << x` no longer mis-splits into `r <` and `x`
+  - `_split_statements` pre-expands semicolon-separated statements so `stmt1; stmt2` inside `{...}` blocks is correctly treated as two statements
+  - `break if COND` / `next if COND` / `return if COND` modifier-only forms now handled correctly (no left-hand value before the keyword)
+  - Negative array subscript access (`seq[-1]`, `seq[-2]`) now works via `_eval_chain`
+  - Turtle API bindings corrected: `penup()`, `pendown()`, `setheading()`, `pencolor()`, `setpenwidth()`
+  - Multi-line `do...end` blocks no longer split at binary operators (`\n` guard in `_eval`)
+  - Multi-line array/hash literals now grouped correctly via `paren_depth` tracking in `_split_statements`
+  - Assignment regex uses `re.DOTALL` so multi-line values are captured
+  - String interpolation `#{}` correctly handles nested braces via brace-depth tracking in `_eval_dstring`
+  - Block auto-splatting: `{|word, count| ...}` blocks automatically destructure single-array arguments
+  - `||=` and `&&=` compound assignment operators now supported
+  - All 5 Ruby demo programs pass; 217/217 coverage tests pass
+
+- **Python executor** (`languages/python_lang.py`) — fixed all 4 Python demo programs
 
 - **HyperTalk executor** (`languages/hypertalk.py`):
   - Fixed `BREAK`/`CONTINUE`/`RETURN` signals not propagating out of `if...end if` blocks — `exit repeat` inside an `if` block no longer causes the enclosing `repeat while` loop to run all 100,000 iterations

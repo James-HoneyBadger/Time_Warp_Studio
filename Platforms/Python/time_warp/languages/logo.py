@@ -670,6 +670,20 @@ def _execute_single_logo_command(
         turtle.pitch(-angle)
         return ""
 
+    # Handle bare expression templates starting with a variable reference or number.
+    # This supports patterns like MAP [:? * 2] or MAP [:?1 + :?2] where the template
+    # is a Logo expression, not a command.  Evaluate the whole line as an expression
+    # and return the result as a string so MAP/FILTER/REDUCE can collect it.
+    if cmd_name.startswith(":"):
+        full_expr = " ".join(words)
+        try:
+            result_val = _logo_eval_expr_str(interpreter, full_expr)
+            if result_val == int(result_val):
+                return str(int(result_val))
+            return str(result_val)
+        except (ValueError, TypeError):
+            pass
+
     return f"❌ Unknown Logo command: {cmd_name}\n"
 
 
@@ -874,6 +888,14 @@ def _logo_reduce(
     return str(acc) + "\n"
 
 
+def _logo_num(interpreter: "Interpreter", arg: str):
+    """Evaluate a Logo argument as a number; return float or an error string."""
+    try:
+        return _logo_eval_arg(interpreter, arg)
+    except (ValueError, TypeError):
+        return f"❌ Expected a number, got: {arg}\n"
+
+
 def _logo_eval_arg(interpreter: "Interpreter", arg: str) -> float:
     """Evaluate a single Logo argument (variable reference or expression).
 
@@ -963,6 +985,20 @@ def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
     Raises:
         ValueError: If expression cannot be evaluated
     """
+    # Pre-substitute template variables :?, :?1, :?2 (used in FOREACH/MAP/FILTER/REDUCE)
+    # These must be replaced with their numeric values before the standard :VAR pattern
+    # runs, because the expression evaluator tokenizer doesn't handle '?' in identifiers.
+    def _sub_template_var(m: "re.Match[str]") -> str:
+        key = m.group(1)  # '?', '?1', or '?2'
+        val = interpreter.variables.get(key, 0)
+        try:
+            fval = float(val)
+            return str(int(fval)) if fval == int(fval) else str(fval)
+        except (TypeError, ValueError):
+            return "0"
+
+    expr = re.sub(r":(\?[12]?)", _sub_template_var, expr)
+
     # Replace :VAR with VAR for evaluator
     expr_norm = _VAR_PATTERN.sub(r"\1", expr)
 

@@ -119,9 +119,13 @@ class ExecutionTimeline:
             should_pause = True
             if condition:
                 try:
+                    # Reject conditions using dunder attributes to prevent
+                    # sandbox bypass via __class__.__subclasses__() chains.
+                    if "__" in condition:
+                        raise ValueError("dunder attributes not allowed in breakpoint conditions")
                     should_pause = bool(
-                        eval(condition, {"__builtins__": {}}, variables)
-                    )  # noqa: S307
+                        eval(condition, {"__builtins__": {}}, variables)  # noqa: S307  # type: ignore[misc]  # pylint: disable=eval-used
+                    )
                 except Exception:  # pylint: disable=broad-exception-caught
                     should_pause = True  # pause on evaluation error
             if should_pause:

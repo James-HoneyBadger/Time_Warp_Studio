@@ -13,9 +13,10 @@ Supports the full Python 3 language via a restricted exec() environment:
     `setheading(deg)`, `pensize(n)`, `clear_canvas()`
 
 Security notes:
-  - __import__, __builtins__, open, exec, eval, compile, globals, locals,
+  - __builtins__, open, exec, eval, compile, globals, locals,
     vars, dir, getattr, setattr, delattr, object.__subclasses__ are blocked
   - sys, os, subprocess, socket, threading, multiprocessing are blocked
+  - __import__ is restricted to an explicit safe-module allowlist
   - Resource-bound: max iterations enforced via sys.settrace not used here;
     instead the executor relies on Python's own timeout (called from
     interpreter with MAX_EXECUTION_TIME)
@@ -26,8 +27,6 @@ from __future__ import annotations
 import io
 import math
 import random
-import re
-import sys
 import traceback
 from contextlib import redirect_stdout
 from typing import TYPE_CHECKING, Any
@@ -35,6 +34,18 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
     from ..graphics.turtle_state import TurtleState
+
+# ---------------------------------------------------------------------------
+# Allowed imports for the sandboxed executor
+# ---------------------------------------------------------------------------
+
+_ALLOWED_IMPORTS: frozenset[str] = frozenset({
+    "math", "random", "itertools", "functools", "collections",
+    "string", "json", "re", "copy", "abc", "typing",
+    "decimal", "fractions", "statistics", "heapq", "bisect",
+    "operator", "datetime", "enum", "dataclasses",
+    "collections.abc", "typing_extensions",
+})
 
 # ---------------------------------------------------------------------------
 # Public API
@@ -67,17 +78,25 @@ class PythonExecutor:
             # Compile first to catch syntax errors cleanly
             code = compile(source, "<time_warp_python>", "exec")
             with redirect_stdout(buf):
-                exec(code, sandbox)  # noqa: S102
+                exec(code, sandbox)  # noqa: S102  # type: ignore[misc]  # pylint: disable=exec-used
         except SystemExit:
             pass
         except SyntaxError as e:
-            line_info = f" (line {e.lineno})" if e.lineno else ""
+            line_info = f" (line {e.lineno})" if e.lineno else ""  # type: ignore[truthy-function]  # pylint: disable=using-constant-test
             buf.write(f"❌ SyntaxError{line_info}: {e.msg}\n")
         except Exception:
             tb_lines = traceback.format_exc().splitlines()
-            # Filter out internal frames
-            filtered = [l for l in tb_lines if "<time_warp_python>" in l or not l.startswith("  File")]
-            buf.write("❌ " + "\n".join(filtered[-3:]) + "\n")
+            # Keep only: file-ref lines for user code, and the final exception line.
+            # Exclude internal executor frames and raw source-code lines.
+            filtered = [
+                line for line in tb_lines
+                if "<time_warp_python>" in line
+                or (not line.startswith("  File") and not line.startswith("    "))
+            ]
+            # Always include the last line (ExcType: message)
+            user_lines = [line for line in filtered if line.strip()]
+            msg = "\n".join(user_lines[-3:]) if user_lines else "unknown error"
+            buf.write(f"❌ {msg}\n")
         out = buf.getvalue()
         return out if out.endswith("\n") else out + "\n"
 
@@ -107,10 +126,10 @@ class PythonExecutor:
             turtle.left(float(n))
 
         def penup() -> None:
-            turtle.pen_up()
+            turtle.penup()
 
         def pendown() -> None:
-            turtle.pen_down()
+            turtle.pendown()
 
         def home() -> None:
             turtle.home()
@@ -119,16 +138,16 @@ class PythonExecutor:
             turtle.goto(float(x), float(y))
 
         def setheading(deg: float) -> None:
-            turtle.set_heading(float(deg))
+            turtle.setheading(float(deg))
 
         def color(*args: Any) -> None:
             if len(args) >= 3:
-                turtle.set_color(int(args[0]), int(args[1]), int(args[2]))
+                turtle.setcolor(int(args[0]), int(args[1]), int(args[2]))
             elif args:
-                turtle.set_color_name(str(args[0]))
+                turtle.pencolor(str(args[0]))
 
         def pensize(n: int) -> None:
-            turtle.set_pen_width(int(n))
+            turtle.setpenwidth(float(n))
 
         def clear_canvas() -> None:
             turtle.reset()
@@ -146,6 +165,23 @@ class PythonExecutor:
         # Safe exit
         def safe_exit(code: int = 0) -> None:
             raise SystemExit(code)
+
+        # Controlled __import__ — only allows whitelisted safe modules
+        _real_import = __import__
+
+        def controlled_import(
+            name: str,
+            globs: Any = None,
+            locs: Any = None,
+            fromlist: tuple = (),
+            level: int = 0,
+        ) -> Any:
+            top = name.split(".")[0]
+            if top in _ALLOWED_IMPORTS:
+                return _real_import(name, globs, locs, fromlist, level)
+            raise ImportError(
+                f"Import of '{name}' is not allowed in the Time Warp Python sandbox"
+            )
 
         # Restricted builtins — whitelist approach
         safe_builtins: dict[str, Any] = {
@@ -191,6 +227,7 @@ class PythonExecutor:
             "NotImplemented": NotImplemented, "Ellipsis": ...,
             "exit": safe_exit, "quit": safe_exit,
             "breakpoint": lambda *a, **k: None,  # no-op
+            "__import__": controlled_import,
             "__name__": "__main__",
             "__doc__": None,
         }

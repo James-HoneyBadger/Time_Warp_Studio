@@ -10,6 +10,7 @@ from __future__ import annotations
 import os
 import re
 from collections import deque
+from pathlib import Path
 
 from PySide6.QtCore import QProcess, Qt
 from PySide6.QtGui import QFont, QKeyEvent, QTextCursor
@@ -39,11 +40,37 @@ class _HistoryLineEdit(QLineEdit):
         self._history: deque[str] = deque(maxlen=200)
         self._hist_idx: int = -1  # -1 = "current (unsaved) input"
         self._saved_input: str = ""
+        self._history_path: Path | None = None
 
     def add_to_history(self, cmd: str) -> None:
         if cmd and (not self._history or self._history[-1] != cmd):
             self._history.append(cmd)
+            self._persist_command(cmd)
         self._hist_idx = -1
+
+    def load_history_file(self, path: Path) -> None:
+        """Load command history from *path* (one command per line)."""
+        self._history_path = path
+        if path.exists():
+            try:
+                lines = path.read_text(encoding="utf-8").splitlines()
+                for line in lines:
+                    line = line.strip()
+                    if line:
+                        self._history.append(line)
+            except OSError:
+                pass
+
+    def _persist_command(self, cmd: str) -> None:
+        """Append *cmd* to the history file (create if needed)."""
+        if self._history_path is None:
+            return
+        try:
+            self._history_path.parent.mkdir(parents=True, exist_ok=True)
+            with self._history_path.open("a", encoding="utf-8") as fh:
+                fh.write(cmd + "\n")
+        except OSError:
+            pass
 
     def keyPressEvent(self, event: QKeyEvent) -> None:  # type: ignore[override]
         if event.key() == Qt.Key.Key_Up:
@@ -83,6 +110,12 @@ class TerminalWidget(QWidget):
         self._process: QProcess | None = None
 
         self._build_ui()
+        # Load persistent history after UI is built
+        try:
+            from ..core.config import APP_DATA_DIR
+            self._input.load_history_file(APP_DATA_DIR / "terminal_history")
+        except Exception:  # noqa: BLE001 — optional feature
+            pass
 
     # ------------------------------------------------------------------
     # UI construction
@@ -193,7 +226,7 @@ class TerminalWidget(QWidget):
     def _on_output(self) -> None:
         if self._process is None:
             return
-        raw = bytes(self._process.readAll()).decode("utf-8", errors="replace")
+        raw = bytes(self._process.readAll().data()).decode("utf-8", errors="replace")  # type: ignore[arg-type]
         self._append(_strip_ansi(raw))
 
     def _on_finished(self, exit_code: int, _exit_status: object) -> None:

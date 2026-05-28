@@ -73,8 +73,8 @@ class BugReport:
     attachments: List[str] = field(default_factory=list)
     reporter: str = ""
     status: str = "open"  # open, in_progress, fixed, closed
-    created_at: datetime = field(default_factory=datetime.utcnow)
-    updated_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def __post_init__(self):
         """Validate bug report"""
@@ -97,7 +97,7 @@ class UserFeedback:
     session_id: str = ""
     rating: int = 5  # 1-5 scale
     metadata: Dict[str, Any] = field(default_factory=dict)
-    created_at: datetime = field(default_factory=datetime.utcnow)
+    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     helpful_count: int = 0
 
     def __post_init__(self):
@@ -119,7 +119,7 @@ class ABTest:
     control_variant: str = ""
     test_variants: List[str] = field(default_factory=list)
     traffic_allocation: Dict[str, float] = field(default_factory=dict)
-    start_date: datetime = field(default_factory=datetime.utcnow)
+    start_date: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     end_date: Optional[datetime] = None
     results: Dict[str, Dict[str, float]] = field(default_factory=dict)
     status: str = "running"  # running, paused, completed
@@ -139,7 +139,7 @@ class UserSession:
 
     id: str = field(default_factory=lambda: str(uuid.uuid4()))
     user_id: str = ""
-    start_time: datetime = field(default_factory=datetime.utcnow)
+    start_time: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     end_time: Optional[datetime] = None
     duration_seconds: float = 0.0
     actions: List[Dict[str, Any]] = field(default_factory=list)
@@ -148,7 +148,7 @@ class UserSession:
 
     def end_session(self):
         """End session and calculate duration"""
-        self.end_time = datetime.utcnow()
+        self.end_time = datetime.now(timezone.utc)
         self.duration_seconds = (self.end_time - self.start_time).total_seconds()
 
 
@@ -271,7 +271,7 @@ class BugReporter:
         for bug in self.collector.bug_reports:
             if bug.id == bug_id:
                 bug.status = status
-                bug.updated_at = datetime.utcnow()
+                bug.updated_at = datetime.now(timezone.utc)
                 self.logger.info("Bug %s updated to {status}", bug_id)
                 return
 
@@ -339,7 +339,7 @@ class ABTestFramework:
         test = self.tests.get(test_id)
         if test:
             test.status = "completed"
-            test.end_date = datetime.utcnow()
+            test.end_date = datetime.now(timezone.utc)
             self.logger.info("A/B test completed: %s", test_id)
 
 
@@ -379,13 +379,13 @@ class SessionTracker:
         if session:
             action = {
                 "name": action_name,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "metadata": metadata or {},
             }
             session.actions.append(action)
             self.logger.debug("Action recorded: %s", action_name)
 
-    def get_session_analytics(self) -> BetaAnalytics:
+    def get_session_analytics(self) -> Optional["BetaAnalytics"]:
         """Generate session analytics"""
         if not self.sessions:
             return None
@@ -410,7 +410,7 @@ class SessionTracker:
         return BetaAnalytics(
             period_start=min(s.start_time for s in self.sessions.values()),
             period_end=max(
-                s.end_time or datetime.utcnow() for s in self.sessions.values()
+                s.end_time or datetime.now(timezone.utc) for s in self.sessions.values()
             ),
             total_users=len(set(s.user_id for s in self.sessions.values())),
             total_sessions=len(self.sessions),
@@ -453,7 +453,7 @@ class BetaTestingManager:
     def export_report(self, filepath: str):
         """Export beta testing report"""
         report = {
-            "timestamp": datetime.utcnow().isoformat(),
+            "timestamp": datetime.now(timezone.utc).isoformat(),
             "feedback_summary": self.feedback_collector.get_feedback_summary(),
             "critical_bugs": [
                 asdict(b) for b in self.bug_reporter.collector.get_critical_bugs()
@@ -485,8 +485,8 @@ class BetaTestingManager:
 class BetaTestingUI:
     """UI for beta testing feedback (console-based)"""
 
-    def __init__(self, manager: BetaTestingManager):
-        self.manager = manager
+    def __init__(self, mgr: "BetaTestingManager"):
+        self.manager = mgr
 
     def display_feedback_form(self):
         """Display feedback collection form"""

@@ -15,6 +15,7 @@ class Language(Enum):
     BASIC = "basic"
     PILOT = "pilot"
     LOGO = "logo"
+    LUA = "lua"
     PYTHON = "python"
     C = "c"
     PASCAL = "pascal"
@@ -116,7 +117,7 @@ class ExamplesBrowser:
 
                 # Read code
                 try:
-                    code = file_path.read_text()
+                    code = file_path.read_text(encoding="utf-8")
                 except (ValueError, TypeError):
                     code = ""
 

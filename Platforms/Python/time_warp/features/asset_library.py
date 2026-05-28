@@ -26,7 +26,7 @@ class Asset:
     asset_type: AssetType
     file_path: Path
     description: str = ""
-    tags: List[str] = None
+    tags: Optional[List[str]] = None
     width: int = 0
     height: int = 0
     duration: float = 0.0  # For sounds/animations
@@ -122,10 +122,10 @@ class AssetLibrary:
         for asset_name, asset_info in builtin.items():
             assets[asset_name] = Asset(
                 name=asset_name,
-                asset_type=asset_info["type"],
+                asset_type=asset_info["type"],  # type: ignore[arg-type]
                 file_path=self.library_path / asset_name,
-                description=asset_info["desc"],
-                tags=asset_info["tags"],
+                description=str(asset_info["desc"]),
+                tags=list(asset_info["tags"]),  # type: ignore
             )
 
         return assets
@@ -135,7 +135,7 @@ class AssetLibrary:
         metadata_file = self.library_path / "library.json"
         if metadata_file.exists():
             try:
-                with open(metadata_file) as f:
+                with open(metadata_file, encoding="utf-8") as f:
                     _ = json.load(f)
                     # Could load additional metadata here
             except (ValueError, TypeError):
@@ -210,7 +210,7 @@ class AssetLibrary:
     def get_assets_by_tag(self, tag: str) -> List[Asset]:
         """Get all assets with a specific tag."""
         all_assets = {**self.assets, **self._builtin_assets}
-        return [a for a in all_assets.values() if tag in a.tags]
+        return [a for a in all_assets.values() if tag in (a.tags or [])]
 
     def search_assets(self, query: str) -> List[Asset]:
         """Search assets by name or description."""
@@ -222,7 +222,7 @@ class AssetLibrary:
             if (
                 query_lower in asset.name.lower()
                 or query_lower in asset.description.lower()
-                or any(query_lower in tag for tag in asset.tags)
+                or any(query_lower in tag for tag in (asset.tags or []))
             ):
                 results.append(asset)
 
@@ -345,7 +345,7 @@ class AssetLibrary:
         manifest = {"library": self.get_library_info().__dict__, "assets": []}
 
         for asset in self.list_all():
-            manifest["assets"].append(
+            manifest["assets"].append(  # type: ignore
                 {
                     "name": asset.name,
                     "type": asset.asset_type.value,

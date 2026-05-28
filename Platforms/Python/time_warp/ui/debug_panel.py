@@ -26,6 +26,8 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..utils.expression_evaluator import ExpressionEvaluator
+
 
 class DebugToolbar(QFrame):
     """Toolbar with debug control buttons."""
@@ -330,12 +332,11 @@ class WatchPanel(QWidget):
         # First try direct variable lookup (case-insensitive)
         if expr.upper() in namespace:
             return str(namespace[expr.upper()])
-        # Try evaluating as an expression in the variable namespace
+        # Use ExpressionEvaluator for safe arithmetic evaluation
         try:
-            result = eval(expr, {"__builtins__": {}}, namespace)  # noqa: S307
+            evaluator = ExpressionEvaluator(variables=namespace)
+            result = evaluator.evaluate(expr)
             return str(result)
-        except NameError:
-            return "<undefined>"
         except ZeroDivisionError:
             return "❌ division by zero"
         except Exception as exc:  # noqa: BLE001

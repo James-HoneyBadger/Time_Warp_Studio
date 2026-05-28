@@ -11,7 +11,7 @@ Comprehensive audit covering:
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Dict, List, Optional, Tuple
 
@@ -133,7 +133,7 @@ class DependencyVulnerability:
     fixed_version: str = ""
 
     # Timeline
-    published: datetime = field(default_factory=datetime.utcnow)
+    published: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
     patched: bool = False
 
 
@@ -141,7 +141,7 @@ class DependencyVulnerability:
 class CodeQualityReport:
     """Overall code quality report"""
 
-    timestamp: datetime = field(default_factory=datetime.utcnow)
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     # Scores (0-100)
     security_score: float = 0.0
@@ -325,7 +325,7 @@ class TestCoverageAnalyzer:
     ) -> TestCoverageReport:
         """Analyze test coverage"""
 
-        report = TestCoverageReport(
+        report = TestCoverageReport(  # pylint: disable=redefined-outer-name  # pyright: ignore[reportRedefinition]
             total_lines=total_lines,
             covered_lines=covered_lines,
             functions_total=critical_functions,
@@ -414,7 +414,7 @@ class CodeAuditService:
         dependencies: Optional[List[Tuple[str, str]]] = None,
     ) -> CodeQualityReport:
         """Perform complete code audit"""
-        report = CodeQualityReport()
+        report = CodeQualityReport()  # pylint: disable=redefined-outer-name  # pyright: ignore[reportRedefinition]
 
         # Security audit
         security_issues = self.security_auditor.audit_code(code, filename)
@@ -427,7 +427,7 @@ class CodeAuditService:
             report.dependency_vulnerabilities = vulns
 
         # Maintainability analysis
-        maintainability_score, maint_issues = self.maintainability_analyzer.analyze(
+        maintainability_score, _ = self.maintainability_analyzer.analyze(
             code
         )
         report.maintainability_score = maintainability_score
@@ -460,7 +460,7 @@ class CodeAuditService:
 
         return report
 
-    def generate_audit_report(self, report: CodeQualityReport) -> str:
+    def generate_audit_report(self, report: CodeQualityReport) -> str:  # pylint: disable=redefined-outer-name  # pyright: ignore[reportRedefinition]
         """Generate human-readable audit report"""
         lines = [
             "=" * 60,
@@ -501,10 +501,10 @@ class CodeAuditService:
             ]
         )
 
-        for issue in report.performance_issues:
-            lines.append(f"[{issue.impact_priority.upper()}] {issue.title}")
-            lines.append(f"  Expected Improvement: {issue.expected_improvement:.0f}%")
-            lines.append(f"  Effort: {issue.estimated_effort_hours:.1f} hours")
+        for perf_issue in report.performance_issues:
+            lines.append(f"[{perf_issue.impact_priority.upper()}] {perf_issue.title}")
+            lines.append(f"  Expected Improvement: {perf_issue.expected_improvement:.0f}%")
+            lines.append(f"  Effort: {perf_issue.estimated_effort_hours:.1f} hours")
 
         lines.extend(
             [

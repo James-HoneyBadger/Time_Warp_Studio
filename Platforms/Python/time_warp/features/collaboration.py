@@ -1,11 +1,16 @@
 """Local collaborative programming sessions (LAN pair programming)."""
 
 import json
+import logging
 import socket
+import struct
+import threading
 import time
 from dataclasses import dataclass, field
 from enum import Enum
 from typing import Callable, Dict, List, Optional, Set, Tuple
+
+logger = logging.getLogger(__name__)
 
 
 class SessionState(Enum):
@@ -76,6 +81,8 @@ class CollaborativeMessage:
 class LocalCollaborationSession:
     """Manages local LAN-based pair programming sessions."""
 
+    TCP_PORT = 54321  # TCP port for peer-to-peer collaboration
+
     def __init__(self, username: str, user_id: Optional[str] = None):
         """Initialize collaboration session."""
         self.username = username
@@ -91,6 +98,12 @@ class LocalCollaborationSession:
         self._discovery_active = False
         self._socket: Optional[socket.socket] = None
         self._peers: Set[str] = set()
+
+        # TCP state
+        self._lock = threading.Lock()
+        self._peer_socks: List[socket.socket] = []
+        self._server_sock: Optional[socket.socket] = None
+        self._recv_threads: List[threading.Thread] = []
 
     def _generate_user_id(self) -> str:
         """Generate unique user ID."""
@@ -120,6 +133,7 @@ class LocalCollaborationSession:
             )
 
             self.state = SessionState.CONNECTED
+            self._start_tcp_server()
             self._trigger_event("session_started")
             return True
 
@@ -140,8 +154,6 @@ class LocalCollaborationSession:
 
         try:
             # Broadcast discovery message
-            import socket
-
             sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             sock.setsockopt(socket.SOL_SOCKET, socket.SO_BROADCAST, 1)
             sock.settimeout(timeout)
@@ -220,6 +232,7 @@ class LocalCollaborationSession:
 
             self.state = SessionState.CONNECTED
             self._trigger_event("session_joined")
+            self._start_tcp_client(host_ip, self.TCP_PORT)
 
             # Request full code sync
             self._send_message(MessageType.SYNC_REQUEST, {"user_id": self.user_id})
@@ -311,6 +324,24 @@ class LocalCollaborationSession:
 
         self.state = SessionState.DISCONNECTED
         self.participants.clear()
+
+        # Close all peer sockets
+        with self._lock:
+            for sock in self._peer_socks:
+                try:
+                    sock.close()
+                except OSError:
+                    pass
+            self._peer_socks.clear()
+
+        # Close server socket
+        if self._server_sock is not None:
+            try:
+                self._server_sock.close()
+            except OSError:
+                pass
+            self._server_sock = None
+
         self._trigger_event("disconnected")
 
     def export_session_log(self) -> Dict:
@@ -345,15 +376,189 @@ class LocalCollaborationSession:
         return 0
 
     def _send_message(self, msg_type: MessageType, data: Dict):
-        """Send message to peers."""
+        """Send message to connected peers and record locally."""
         message = CollaborativeMessage(
             msg_type=msg_type,
             sender_id=self.user_id,
             timestamp=time.time(),
             data=data,
         )
-
         self.message_history.append(message)
+
+        # Encode as 4-byte big-endian length prefix + UTF-8 JSON body
+        payload = json.dumps(
+            {
+                "type": msg_type.value,
+                "sender_id": self.user_id,
+                "timestamp": message.timestamp,
+                "data": data,
+            }
+        ).encode("utf-8")
+        frame = struct.pack(">I", len(payload)) + payload
+
+        with self._lock:
+            dead: List[socket.socket] = []
+            for sock in self._peer_socks:
+                try:
+                    sock.sendall(frame)
+                except OSError:
+                    dead.append(sock)
+            for sock in dead:
+                self._peer_socks.remove(sock)
+                try:
+                    sock.close()
+                except OSError:
+                    pass
+
+    # ------------------------------------------------------------------
+    # TCP server / client helpers
+    # ------------------------------------------------------------------
+
+    def _start_tcp_server(self) -> None:
+        """Bind TCP server socket and start the accept loop (host side)."""
+        try:
+            srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            srv.bind(("", self.TCP_PORT))
+            srv.listen(8)
+            self._server_sock = srv
+            t = threading.Thread(target=self._accept_loop, daemon=True)
+            t.start()
+            self._recv_threads.append(t)
+            logger.info("Collaboration TCP server listening on port %d", self.TCP_PORT)
+        except OSError as exc:
+            logger.warning("Cannot start TCP collaboration server: %s", exc)
+
+    def _start_tcp_client(self, host_ip: str, port: int) -> None:
+        """Connect to the host's TCP server (joiner side)."""
+        try:
+            conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            conn.settimeout(5)
+            conn.connect((host_ip, port))
+            conn.settimeout(None)
+            with self._lock:
+                self._peer_socks.append(conn)
+            t = threading.Thread(target=self._recv_loop, args=(conn,), daemon=True)
+            t.start()
+            self._recv_threads.append(t)
+            logger.info("Connected to collaboration host at %s:%d", host_ip, port)
+        except OSError as exc:
+            logger.warning("Cannot connect to host %s:%d: %s", host_ip, port, exc)
+            raise
+
+    def _accept_loop(self) -> None:
+        """Background thread: accept incoming TCP peer connections."""
+        assert self._server_sock is not None
+        try:
+            while True:
+                try:
+                    conn, addr = self._server_sock.accept()
+                    logger.info("Peer connected from %s", addr)
+                    with self._lock:
+                        self._peer_socks.append(conn)
+                    t = threading.Thread(target=self._recv_loop, args=(conn,), daemon=True)
+                    t.start()
+                    self._recv_threads.append(t)
+                except OSError:
+                    break
+        except Exception as exc:
+            logger.debug("Accept loop ended: %s", exc)
+
+    def _recv_loop(self, sock: socket.socket) -> None:
+        """Background thread: read length-prefixed JSON frames from *sock*."""
+        _MAX_FRAME = 1_048_576  # 1 MB safety cap
+        try:
+            while True:
+                # Read 4-byte header
+                header = b""
+                while len(header) < 4:
+                    chunk = sock.recv(4 - len(header))
+                    if not chunk:
+                        return
+                    header += chunk
+                length = struct.unpack(">I", header)[0]
+                if length > _MAX_FRAME:
+                    logger.warning("Oversized collaboration frame (%d bytes) — closing.", length)
+                    return
+                # Read body
+                body = b""
+                while len(body) < length:
+                    chunk = sock.recv(length - len(body))
+                    if not chunk:
+                        return
+                    body += chunk
+                try:
+                    msg = json.loads(body.decode("utf-8"))
+                    self._handle_incoming(msg)
+                except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+                    logger.warning("Malformed collaboration frame: %s", exc)
+        except OSError:
+            pass
+        finally:
+            try:
+                sock.close()
+            except OSError:
+                pass
+            with self._lock:
+                if sock in self._peer_socks:
+                    self._peer_socks.remove(sock)
+
+    def _handle_incoming(self, msg: dict) -> None:
+        """Dispatch an incoming TCP message to event handlers."""
+        try:
+            msg_type = MessageType(msg.get("type", ""))
+        except ValueError:
+            logger.debug("Unknown collaboration message type: %s", msg.get("type"))
+            return
+
+        sender_id = msg.get("sender_id", "unknown")
+        data = msg.get("data", {})
+        ts = float(msg.get("timestamp", time.time()))
+
+        record = CollaborativeMessage(
+            msg_type=msg_type,
+            sender_id=sender_id,
+            timestamp=ts,
+            data=data,
+        )
+        self.message_history.append(record)
+
+        if msg_type == MessageType.CODE_UPDATE:
+            change = CodeChange(
+                user_id=sender_id,
+                timestamp=ts,
+                line=int(data.get("line", 0)),
+                old_text=str(data.get("old_text", "")),
+                new_text=str(data.get("new_text", "")),
+                change_type="replace",
+            )
+            self.code_changes.append(change)
+            self._trigger_event("code_changed", change)
+
+        elif msg_type == MessageType.CURSOR_MOVE:
+            if sender_id in self.participants:
+                self.participants[sender_id].cursor_line = int(data.get("line", 0))
+                self.participants[sender_id].cursor_col = int(data.get("col", 0))
+            self._trigger_event("cursor_moved", data)
+
+        elif msg_type == MessageType.CHAT:
+            self._trigger_event("chat_message", str(data.get("content", "")))
+
+        elif msg_type == MessageType.OUTPUT:
+            self._trigger_event("output_received", str(data.get("content", "")))
+
+        elif msg_type == MessageType.DISCONNECT:
+            uid = data.get("user_id", sender_id)
+            self.participants.pop(uid, None)
+            self._trigger_event("participant_left", uid)
+
+        elif msg_type == MessageType.SYNC_REQUEST:
+            if self.is_host:
+                self._send_message(MessageType.SYNC_RESPONSE, {"code": self.shared_code})
+
+        elif msg_type == MessageType.SYNC_RESPONSE:
+            self.shared_code = str(data.get("code", ""))
+            self._trigger_event("sync_received", self.shared_code)
 
     def on_event(self, event_type: str, callback: Callable):
         """Register event callback."""
@@ -368,7 +573,7 @@ class LocalCollaborationSession:
                 try:
                     callback(*args)
                 except Exception as e:
-                    print(f"Callback error: {e}")
+                    logger.warning("Callback error: %s", e)
 
 
 class SessionManager:
