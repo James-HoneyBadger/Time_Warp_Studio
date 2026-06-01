@@ -24,7 +24,7 @@ data n print_array
 % Bubble sort
 0 1 n 2 sub {
     /i exch def
-    0 1 n i 2 sub sub {
+    0 1 n i 2 add sub {
         /j exch def
         data j get data j 1 add get gt {
             % swap

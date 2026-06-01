@@ -1,0 +1,51 @@
+-- Number Guessing Game in HyperTalk
+-- Player guesses a number between 1 and 100
+
+on mouseUp
+  put random(100) into secretNumber
+  put 0 into attempts
+  put 7 into maxAttempts
+  
+  put "I'm thinking of a number between 1 and 100." into msg
+  put msg & return & "You have " & maxAttempts & " attempts. Good luck!" after msg
+  answer msg
+  
+  repeat maxAttempts times
+    add 1 to attempts
+    ask "Attempt " & attempts & " of " & maxAttempts & ": Enter your guess (1-100):"
+    if it is empty then
+      answer "You quit the game!"
+      exit repeat
+    end if
+    
+    put it into guess
+    
+    if guess is not a number then
+      answer "Please enter a number!"
+      subtract 1 from attempts
+    else if guess < 1 or guess > 100 then
+      answer "Please guess between 1 and 100!"
+      subtract 1 from attempts
+    else if guess < secretNumber then
+      if secretNumber - guess > 20 then
+        answer "Too low! Way off — try much higher."
+      else
+        answer "Too low! Try a little higher."
+      end if
+    else if guess > secretNumber then
+      if guess - secretNumber > 20 then
+        answer "Too high! Way off — try much lower."
+      else
+        answer "Too high! Try a little lower."
+      end if
+    else
+      answer "🎉 Correct! The number was " & secretNumber & "!" & return & \
+             "You got it in " & attempts & " attempt(s)!"
+      exit repeat
+    end if
+  end repeat
+  
+  if guess ≠ secretNumber then
+    answer "Game over! The number was " & secretNumber & "."
+  end if
+end mouseUp

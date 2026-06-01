@@ -193,11 +193,12 @@ class HelpDocsMixin(_HelpMixinBase):
 
     def show_about(self):
         """Show about dialog."""
+        from time_warp import __version__
         QMessageBox.about(
             self,
             "About Time Warp Studio",
             "<h2>Time Warp Studio</h2>"
-            "<p>Version 9.0.0</p>"
+            f"<p>Version {__version__}</p>"
             "<p>Educational programming environment supporting:</p>"
             "<ul>"
             "<li>24 programming languages</li>"

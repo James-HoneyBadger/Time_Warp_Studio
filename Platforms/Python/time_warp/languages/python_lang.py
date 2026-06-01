@@ -13,10 +13,12 @@ Supports the full Python 3 language via a restricted exec() environment:
     `setheading(deg)`, `pensize(n)`, `clear_canvas()`
 
 Security notes:
-  - __builtins__, open, exec, eval, compile, globals, locals,
-    vars, dir, getattr, setattr, delattr, object.__subclasses__ are blocked
+  - open, exec, eval, compile, globals, locals, vars, dir,
+    getattr, setattr, delattr are not in the safe builtins
   - sys, os, subprocess, socket, threading, multiprocessing are blocked
   - __import__ is restricted to an explicit safe-module allowlist
+  - AST pre-check blocks access to __subclasses__ and __globals__ attributes,
+    preventing the classic object.__subclasses__() → subprocess.Popen escape
   - Resource-bound: max iterations enforced via sys.settrace not used here;
     instead the executor relies on Python's own timeout (called from
     interpreter with MAX_EXECUTION_TIME)
@@ -24,6 +26,7 @@ Security notes:
 
 from __future__ import annotations
 
+import ast as _ast
 import io
 import math
 import random
@@ -34,6 +37,31 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
     from ..graphics.turtle_state import TurtleState
+
+# ---------------------------------------------------------------------------
+# Sandbox AST safety checker
+# ---------------------------------------------------------------------------
+
+# Attribute names that can be used to escape the exec() sandbox.
+# The classic escape: object.__subclasses__() finds subprocess.Popen;
+# function.__globals__ leaks the outer Python namespace.
+_BLOCKED_ATTRIBUTES: frozenset[str] = frozenset({
+    "__subclasses__",  # object.__subclasses__() → subprocess.Popen escape
+    "__globals__",     # func.__globals__ → outer-scope namespace leak
+})
+
+
+class _SandboxChecker(_ast.NodeVisitor):
+    """AST visitor that raises SyntaxError on forbidden attribute accesses."""
+
+    def visit_Attribute(self, node: _ast.Attribute) -> None:
+        if node.attr in _BLOCKED_ATTRIBUTES:
+            raise SyntaxError(
+                f"Access to '{node.attr}' is not allowed in the Time Warp Python sandbox",
+                ("<sandbox_check>", node.lineno, node.col_offset, None),
+            )
+        self.generic_visit(node)
+
 
 # ---------------------------------------------------------------------------
 # Allowed imports for the sandboxed executor
@@ -73,10 +101,18 @@ class PythonExecutor:
 
     def run(self, source: str) -> str:
         buf = io.StringIO()
+        # AST safety pre-check — must happen before compile() / exec()
+        try:
+            tree = _ast.parse(source, "<time_warp_python>", "exec")
+            _SandboxChecker().visit(tree)
+            code = compile(tree, "<time_warp_python>", "exec")
+        except SyntaxError as e:
+            line_info = f" (line {e.lineno})" if e.lineno else ""
+            buf.write(f"❌ SyntaxError{line_info}: {e.msg}\n")
+            out = buf.getvalue()
+            return out if out.endswith("\n") else out + "\n"
         sandbox = self._build_sandbox(buf)
         try:
-            # Compile first to catch syntax errors cleanly
-            code = compile(source, "<time_warp_python>", "exec")
             with redirect_stdout(buf):
                 exec(code, sandbox)  # noqa: S102  # type: ignore[misc]  # pylint: disable=exec-used
         except SystemExit:
@@ -205,7 +241,9 @@ class PythonExecutor:
             # Collections helpers
             "iter": iter, "next": next, "slice": slice,
             "staticmethod": staticmethod, "classmethod": classmethod,
-            "property": property, "super": super, "object": object,
+            "property": property, "super": super,
+            # Class definition support
+            "__build_class__": __build_class__,
             # I/O
             "print": safe_print, "input": safe_input,
             # Exceptions

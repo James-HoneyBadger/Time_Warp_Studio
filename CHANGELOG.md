@@ -2,6 +2,74 @@
 
 All notable changes to Time Warp Studio will be documented in this file.
 
+## [13.0.0] - 2026-06-01
+
+### New Languages
+
+- **REXX executor** (`languages/rexx.py`) — full REXX interpreter (~780 lines) supporting:
+  - SAY, PULL, PUSH output/input; string concatenation with `||`
+  - IF/THEN/ELSE, DO (counted/WHILE/UNTIL/FOREVER), SELECT/WHEN/OTHERWISE
+  - LEAVE, ITERATE, EXIT; CALL/RETURN with RESULT variable
+  - PARSE VAR/VALUE WITH pattern matching; DROP, NOP, TRACE
+  - String builtins: LENGTH, SUBSTR, UPPER, LOWER, REVERSE, COPIES, STRIP, POS, CENTER, CHANGESTR, WORD, WORDS, DATATYPE
+  - Math builtins: ABS, MAX, MIN, SIGN; operators `//` (modulo), `**` (power)
+  - Turtle graphics: FORWARD, BACKWARD, LEFT, RIGHT, PENUP, PENDOWN, HOME, SETHEADING, COLOR
+  - 37/37 tests passing; 5 example programs in `Examples/rexx/`
+
+- **Smalltalk executor** (`languages/smalltalk.py`) — Smalltalk-80 interpreter (~830 lines) supporting:
+  - `Transcript show:/showCr:/print:` for output; temp variable declarations `| x y |`
+  - Assignment `:=`, conditional `ifTrue:/ifFalse:/ifTrue:ifFalse:`
+  - Iteration: `timesRepeat:`, `to:do:`, `to:by:do:`, `do:`, `whileTrue:`, `whileFalse:`
+  - Collections: `OrderedCollection new`, `add:`, `at:put:`, `select:`, `collect:`, `reject:`, `inject:into:`
+  - String messages: `,` (concat), `size`, `reversed`, `asUppercase`, `asLowercase`, `copyFrom:to:`
+  - Block closures `[...]` with correct outer-scope variable sharing
+  - Number messages: `factorial`, `sqrt`, `abs`, `max:`, `min:`, `raisedTo:`, `gcd:`
+  - Turtle graphics via `Turtle forward:`, `Turtle right:`, etc.
+  - 31/31 tests passing; 5 example programs in `Examples/smalltalk/`
+
+- **APL executor** (`languages/apl.py`) — APL interpreter (~680 lines) supporting:
+  - `⎕←` print, `←` assignment; `¯` high-minus for negative literals
+  - Monadic functions: `⍳` (iota), `⍴` (shape), `⌽` (reverse), `⍋`/`⍒` (grade), `~` (not), `|` (abs), `-`, `×`, `÷`, `*`, `⌈`, `⌊`, `⍟`, `○`, `!`
+  - Dyadic functions: `⍳` (index-of), `⍴` (reshape), `,` (catenate), `↑`/`↓` (take/drop), `+`, `-`, `×`, `÷`, `*`, `⌈`, `⌊`, `=`, `≠`, `<`, `≤`, `>`, `≥`, `∧`, `∨`, `∊` (member)
+  - Reduction `f/`, scan `f\`, inner product `+.×`, outer product `∘.f`
+  - `⎕IO`/`⎕PP` system variables; dfns `{⍵ + 1}`
+  - 36/36 (32 originally + 4 bonus) tests passing; 5 example programs in `Examples/apl/`
+
+### Syntax Highlighting
+
+- **REXX** — keyword highlighting (SAY, DO, END, IF, SELECT…), `--`/`/* */` comments, strings
+- **Smalltalk** — keyword/unary/binary message highlighting, `"..."` comment style, string literals
+- **APL** — APL glyph operator highlighting, `⍝` comment style, `¯` negative number literals
+
+## [12.0.0] - 2026-06-01
+
+### New Languages
+
+- **Perl 5 executor** (`languages/perl.py`) — full Perl 5 interpreter (~2450 lines) supporting:
+  - Scalar, array, and hash variables with proper scoping (`my`, `our`, `local`)
+  - Control flow: `if`/`elsif`/`else`/`unless`, `while`/`until`, `for`/`foreach` (C-style and range), `do...while`
+  - Statement modifiers: `print "x\n" if $cond;`, `last if $i > 3;`, `next if $i == 3;`
+  - Subroutines with `@_` argument passing, closures, and recursive calls
+  - Regular expressions: matching (`=~`), substitution (`s///`), global (`/g`), capture groups (`$1`–`$9`)
+  - String builtins: `uc`, `lc`, `length`, `substr`, `index`, `rindex`, `reverse`, `sprintf`, `chomp`, `chop`
+  - Array builtins: `push`, `pop`, `shift`, `unshift`, `splice`, `sort`, `reverse`, `map`, `grep`, `join`, `split`
+  - Hash builtins: `keys`, `values`, `each`, `exists`, `delete`
+  - Math builtins: `abs`, `int`, `sqrt`, `sin`, `cos`, `atan2`, `log`, `exp`, `rand`, `srand`
+  - Turtle graphics: `forward`, `backward`, `left`, `right`, `penup`, `pendown`, `color`, `setheading`, `home`
+  - 36/36 tests passing; 5 example programs in `Examples/perl/`
+
+### Bug Fixes
+
+- **Perl executor** — fixed 8 bugs found during test development:
+  - `$i++` incorrectly parsed as binary `+` → infinite loops in `while` and C-style `for`
+  - `_split_statements` did not split at `}` when outermost block closed → trailing statements after loops were silently dropped
+  - Statement modifier loop ran after `print`/`last`/`next`/`return` handlers → `last if $cond` treated `if` as a label
+  - `_contains_block` didn't detect unclosed string quotes → false modifier matches
+  - `"a" . "b"` matched as a single double-quoted literal by `endswith('"')` check
+  - `push @a, 3` extended array with wrong items when `@a` was expanded during arg evaluation
+  - `split(/,/, $str)` failed because `/,/` was split at the comma by `_split_by_comma`
+  - `_emit` split on `\n` eagerly → partial-line `print "$i "` calls produced separate output lines instead of accumulating
+
 ## [11.0.0] - 2026-06-01
 
 ### Major Features

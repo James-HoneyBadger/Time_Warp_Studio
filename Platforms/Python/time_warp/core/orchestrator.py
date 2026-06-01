@@ -65,7 +65,7 @@ class ComponentInfo:
 class SystemInfo:
     """Overall system information"""
 
-    version: str = "10.0.0"
+    version: str = "13.0.0"
     status: SystemStatus = SystemStatus.INITIALIZING
     uptime_seconds: int = 0
     started_at: datetime = field(default_factory=utc_now)

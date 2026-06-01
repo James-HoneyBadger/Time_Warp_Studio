@@ -90,7 +90,7 @@ When you open Time Warp Studio, you'll see:
 
 ### 1. Select a Language
 
-Click the dropdown next to the toolbar that says "Language" and select **BASIC**. Time Warp Studio supports **12 languages** in total — from BASIC and Logo to Erlang, HyperTalk, and Brainfuck.
+Click the dropdown next to the toolbar that says "Language" and select **BASIC**. Time Warp Studio supports **24 languages** in total — from BASIC and Logo to Erlang, HyperTalk, and Brainfuck.
 
 ### 2. Write Code
 
@@ -206,7 +206,7 @@ Pick a language and explore:
 - [Lua](../tutorials/lua.md) — lightweight scripting
 - [Erlang](../tutorials/erlang.md) — concurrent functional programming
 - [Brainfuck](../tutorials/brainfuck.md) — esoteric computing
-- [View all 12 language tutorials →](../LANGUAGE_GUIDE.md)
+- [View all 24 language tutorials →](../LANGUAGE_GUIDE.md)
 
 ### Run Examples
 Browse `Examples/` directory for sample programs in all languages.

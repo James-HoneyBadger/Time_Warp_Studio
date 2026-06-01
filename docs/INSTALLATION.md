@@ -68,7 +68,7 @@ When it finishes you will see:
 
 ```
 ════════════════════════════════════════════════════
-  Time Warp Studio 10.2.0 — Installed!
+  Time Warp Studio 13.0.0 — Installed!
 ════════════════════════════════════════════════════
 
   Start from terminal:   time-warp-studio

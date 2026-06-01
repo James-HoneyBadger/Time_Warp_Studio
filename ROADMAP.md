@@ -2,13 +2,13 @@
 
 ## Vision
 
-Time Warp Studio is an educational desktop IDE for learning **16 programming languages** spanning seven decades of computing history. This roadmap outlines planned improvements and contribution opportunities.
+Time Warp Studio is an educational desktop IDE for learning **24 programming languages** spanning seven decades of computing history. This roadmap outlines planned improvements and contribution opportunities.
 
 ---
 
-## Current Release: v11.0.0 (June 2026)
+## Current Release: v13.0.0 (June 2026)
 
-- **18 language executors** — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Lua, Brainfuck, JavaScript, HyperTalk, Erlang, LISP/Scheme, COBOL, Tcl, PostScript, Ruby, Python (sandboxed)
+- **24 language executors** — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Lua, Brainfuck, JavaScript, HyperTalk, Erlang, LISP/Scheme, COBOL, Tcl, PostScript, Ruby, Python (sandboxed), Haskell, 6502 Assembly, Perl 5, **REXX**, **Smalltalk**, **APL**
 - **SVGA graphics mode** — 800×600 virtual canvas with anti-aliasing, zoom/pan, and pixel-accurate rendering
 - **Vector graphics** — cubic Bezier curves, gradient-filled shapes (linear & radial), dash pen styles, Z-ordered layers
 - **Sprite system** — define named pixel-art sprites via `define_sprite()`, stamp/animate with rotation and scale
@@ -60,6 +60,10 @@ Time Warp Studio is an educational desktop IDE for learning **16 programming lan
 
 - ✅ **Ruby** — dynamic, object-oriented scripting — **done in v11.0.0**
 - ✅ **Python (sandboxed)** — modern scripting with stdlib access — **done in v11.0.0**
+- ✅ **Perl 5** — practical scripting, regex, and text processing — **done in v12.0.0**
+- ✅ **REXX** — IBM Restructured eXtended eXecutor, SAY/DO/SELECT — **done in v13.0.0**
+- ✅ **Smalltalk** — Smalltalk-80 with blocks, collections, closures — **done in v13.0.0**
+- ✅ **APL** — array programming with APL glyphs, reduction/scan — **done in v13.0.0**
 
 ### Plugin System
 

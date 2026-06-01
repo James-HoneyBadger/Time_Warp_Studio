@@ -1,6 +1,6 @@
 # Language Guide - Time Warp Studio
 
-Complete reference for all **13 programming languages** supported by Time Warp Studio.
+Complete reference for all **24 programming languages** supported by Time Warp Studio.
 
 ---
 
@@ -14,25 +14,43 @@ Complete reference for all **13 programming languages** supported by Time Warp S
 ### Systems & Structured
 4. [C](#c)
 5. [Pascal](#pascal)
+6. [6502 Assembly](#6502-assembly)
 
 ### Functional & Declarative
-6. [Prolog](#prolog)
+7. [Prolog](#prolog)
+8. [LISP/Scheme](#lispscheme)
+9. [Haskell](#haskell)
 
 ### Stack & Concatenative
-7. [Forth](#forth)
+10. [Forth](#forth)
+11. [PostScript](#postscript)
 
 ### Scripting & General-Purpose
-8. [JavaScript](#javascript)
-9. [Lua](#lua)
+12. [JavaScript](#javascript)
+13. [Lua](#lua)
+14. [Python](#python)
+15. [Ruby](#ruby)
+16. [Perl 5](#perl-5)
+17. [Tcl](#tcl)
+18. [REXX](#rexx)
+
+### Object-Oriented / Message-Passing
+19. [Smalltalk](#smalltalk)
 
 ### Concurrent & Functional
-10. [Erlang](#erlang)
+20. [Erlang](#erlang)
 
 ### Event-Driven
-11. [HyperTalk](#hypertalk)
+21. [HyperTalk](#hypertalk)
+
+### Business / Data Processing
+22. [COBOL](#cobol)
+
+### Array / Symbolic
+23. [APL](#apl)
 
 ### Esoteric
-12. [Brainfuck](#brainfuck)
+24. [Brainfuck](#brainfuck)
 
 ---
 
@@ -847,6 +865,584 @@ worker() ->
 
 ---
 
+## LISP/Scheme
+
+Classic 1958 AI / symbolic computation language. Time Warp Studio implements a Scheme-compatible subset.
+
+```scheme
+; Hello World
+(display "Hello, World!")
+(newline)
+
+; Variables
+(define x 42)
+(define name "Alice")
+
+; Arithmetic
+(display (+ 1 2 3))      ; 6
+(display (* 4 5))         ; 20
+
+; Lambda / closures
+(define square (lambda (n) (* n n)))
+(display (square 7))      ; 49
+
+; Recursion
+(define (factorial n)
+  (if (<= n 1) 1 (* n (factorial (- n 1)))))
+(display (factorial 6))   ; 720
+
+; Lists
+(define lst '(1 2 3 4 5))
+(display (car lst))       ; 1
+(display (cdr lst))       ; (2 3 4 5)
+(display (length lst))    ; 5
+
+; Map / filter
+(display (map (lambda (x) (* x x)) '(1 2 3 4 5)))
+; (1 4 9 16 25)
+```
+
+**File extensions:** `.lisp` / `.scm`
+
+---
+
+## COBOL
+
+Business-oriented language (1959) designed for data processing and report generation.
+
+```cobol
+       IDENTIFICATION DIVISION.
+       PROGRAM-ID. HELLO.
+
+       DATA DIVISION.
+       WORKING-STORAGE SECTION.
+       01 COUNTER PIC 9(3) VALUE 0.
+       01 NAME    PIC X(20) VALUE "World".
+
+       PROCEDURE DIVISION.
+       MAIN-PARA.
+           DISPLAY "Hello, " NAME
+           PERFORM VARYING COUNTER FROM 1 BY 1
+               UNTIL COUNTER > 5
+               DISPLAY "Count: " COUNTER
+           END-PERFORM
+           STOP RUN.
+```
+
+**Key clauses:**
+- `IDENTIFICATION DIVISION` — program name
+- `DATA DIVISION` — variable declarations with `PIC` pictures
+- `PROCEDURE DIVISION` — executable statements
+- `PERFORM ... VARYING` — counted loop
+- `MOVE`, `ADD`, `SUBTRACT`, `MULTIPLY`, `DIVIDE` — arithmetic verbs
+
+**File extensions:** `.cob` / `.cobol`
+
+---
+
+## Tcl
+
+Tool Command Language (1988) — a dynamic scripting and embeddable extension language.
+
+```tcl
+# Hello World
+puts "Hello, World!"
+
+# Variables
+set x 42
+set name "Alice"
+puts "Name: $name, x = $x"
+
+# Arithmetic
+set result [expr {$x * 2 + 10}]
+puts "Result: $result"
+
+# Lists
+set lst {1 2 3 4 5}
+puts "Length: [llength $lst]"
+puts "First: [lindex $lst 0]"
+
+# Control flow
+if {$x > 10} {
+    puts "Large"
+} else {
+    puts "Small"
+}
+
+# Loop
+for {set i 1} {$i <= 5} {incr i} {
+    puts "i = $i"
+}
+
+# Procedures
+proc factorial {n} {
+    if {$n <= 1} { return 1 }
+    return [expr {$n * [factorial [expr {$n - 1}]]}]
+}
+puts [factorial 6]  ;# 720
+```
+
+**File extension:** `.tcl`
+
+---
+
+## PostScript
+
+Stack-based page-description language (1982) originally created by Adobe for typesetting and graphics.
+
+```postscript
+%!PS
+% Hello World
+/Helvetica findfont 24 scalefont setfont
+100 700 moveto
+(Hello, World!) show
+showpage
+
+% Stack arithmetic
+3 4 add   % stack: 7
+2 mul      % stack: 14
+
+% Drawing
+100 100 moveto
+200 200 lineto
+stroke
+
+% Loops
+1 1 5 {
+  dup 72 mul  % i * 72
+  100 exch moveto
+  (•) show
+} for
+showpage
+```
+
+**Key concepts:** stack-based (operands precede operators), `/name` names, `def` for definitions, `{...}` code blocks.
+
+**File extension:** `.ps`
+
+---
+
+## Ruby
+
+Dynamic, expressive object-oriented scripting language (1995).
+
+```ruby
+# Hello World
+puts "Hello, World!"
+
+# Variables
+x = 42
+name = "Alice"
+
+# String interpolation
+puts "Hello, #{name}! x = #{x}"
+
+# Arrays and ranges
+arr = [1, 2, 3, 4, 5]
+puts arr.map { |n| n * n }.inspect  # [1, 4, 9, 16, 25]
+puts (1..5).sum                      # 15
+
+# Hashes
+person = { name: "Bob", age: 30 }
+puts "#{person[:name]} is #{person[:age]}"
+
+# Blocks and iterators
+[1, 2, 3].each { |i| puts i }
+5.times { |i| puts "count: #{i}" }
+
+# Methods
+def factorial(n)
+  n <= 1 ? 1 : n * factorial(n - 1)
+end
+puts factorial(6)  # 720
+
+# Classes
+class Animal
+  attr_reader :name
+  def initialize(name)
+    @name = name
+  end
+  def speak
+    "..."
+  end
+end
+
+class Dog < Animal
+  def speak
+    "Woof!"
+  end
+end
+
+d = Dog.new("Rex")
+puts "#{d.name} says #{d.speak}"
+```
+
+**File extension:** `.rb`
+
+---
+
+## Python
+
+Modern multi-paradigm educational language (1991) with sandboxed stdlib access.
+
+```python
+# Hello World
+print("Hello, World!")
+
+# Variables and types
+x = 42
+name = "Alice"
+items = [1, 2, 3, 4, 5]
+
+# F-strings
+print(f"Hello, {name}! x = {x}")
+
+# List comprehensions
+squares = [n**2 for n in range(1, 6)]
+print(squares)  # [1, 4, 9, 16, 25]
+
+# Functions
+def factorial(n):
+    return 1 if n <= 1 else n * factorial(n - 1)
+
+print(factorial(6))  # 720
+
+# Dictionaries
+person = {"name": "Bob", "age": 30}
+print(f"{person['name']} is {person['age']}")
+
+# Classes
+class Animal:
+    def __init__(self, name):
+        self.name = name
+    def speak(self):
+        return "..."
+
+class Dog(Animal):
+    def speak(self):
+        return "Woof!"
+
+d = Dog("Rex")
+print(f"{d.name} says {d.speak()}")
+
+# Turtle graphics (built-in integration)
+forward(100)
+right(90)
+color("blue")
+```
+
+**File extension:** `.py`
+
+---
+
+## Haskell
+
+Pure, lazy functional language (1990) with strong static typing.
+
+```haskell
+-- Hello World
+main = putStrLn "Hello, World!"
+
+-- Variables (immutable bindings)
+x = 42
+name = "Alice"
+
+-- Functions
+square :: Int -> Int
+square n = n * n
+
+factorial :: Integer -> Integer
+factorial 0 = 1
+factorial n = n * factorial (n - 1)
+
+-- List operations
+main = do
+  print (map square [1..5])        -- [1,4,9,16,25]
+  print (filter even [1..10])      -- [2,4,6,8,10]
+  print (foldl (+) 0 [1..10])      -- 55
+  print (factorial 6)              -- 720
+
+-- List comprehensions
+pythagorean = [(a,b,c) | c <- [1..20], a <- [1..c], b <- [a..c],
+                          a^2 + b^2 == c^2]
+
+-- Pattern matching
+describeList :: [a] -> String
+describeList [] = "empty"
+describeList [_] = "singleton"
+describeList _ = "longer list"
+```
+
+**File extension:** `.hs`
+
+---
+
+## 6502 Assembly
+
+Machine-level programming for the MOS 6502 processor (1975) — the CPU in the Apple II, Commodore 64, and NES.
+
+```asm
+; Hello World - 6502 Assembly
+    .org $0600
+
+START:
+    LDX #0          ; X = 0 (index)
+LOOP:
+    LDA MSG,X       ; load byte from MSG+X
+    BEQ DONE        ; if zero, exit
+    JSR PRINT_CHAR  ; print character in A
+    INX             ; X++
+    JMP LOOP        ; repeat
+DONE:
+    BRK             ; stop
+
+MSG: .byte "Hello, World!", 0
+
+PRINT_CHAR:
+    STA $F001       ; write to output port
+    RTS
+
+; Registers: A (accumulator), X/Y (index), SP (stack pointer)
+; Flags: N V - B D I Z C
+; Addressing modes:
+;   Immediate  LDA #$42      -- load literal
+;   Zero page  LDA $10       -- fast memory access
+;   Absolute   LDA $1234     -- full address
+;   Indexed    LDA MSG,X     -- array indexing
+;   Indirect   JMP ($FFFC)   -- vector jump
+```
+
+**Key instructions:**
+- `LDA/LDX/LDY` — load register
+- `STA/STX/STY` — store register
+- `ADC/SBC` — add/subtract with carry
+- `INX/INY/DEX/DEY` — increment/decrement index
+- `JMP/JSR/RTS` — jump / call / return
+- `BEQ/BNE/BCC/BCS/BMI/BPL` — branch on flag
+
+**File extensions:** `.asm` / `.s`
+
+---
+
+## Perl 5
+
+Practical scripting language (1987) with exceptional text-processing and regex capabilities.
+
+```perl
+#!/usr/bin/perl
+use strict;
+use warnings;
+
+# Hello World
+print "Hello, World!\n";
+
+# Variables
+my $x = 42;
+my $name = "Alice";
+my @arr = (1, 2, 3, 4, 5);
+my %hash = (name => "Bob", age => 30);
+
+# String interpolation
+print "Hello, $name! x = $x\n";
+
+# Regular expressions
+my $text = "The quick brown fox";
+if ($text =~ /(\w+) fox/) {
+    print "Adjective: $1\n";   # brown
+}
+(my $modified = $text) =~ s/fox/cat/;
+print "$modified\n";
+
+# Array operations
+my @squares = map { $_ * $_ } @arr;
+my @evens   = grep { $_ % 2 == 0 } @arr;
+print join(", ", @squares), "\n";  # 1, 4, 9, 16, 25
+
+# Subroutines
+sub factorial {
+    my ($n) = @_;
+    return $n <= 1 ? 1 : $n * factorial($n - 1);
+}
+print factorial(6), "\n";  # 720
+
+# Hash operations
+print "Name: $hash{name}, Age: $hash{age}\n";
+foreach my $key (sort keys %hash) {
+    print "$key => $hash{$key}\n";
+}
+```
+
+**File extensions:** `.pl` / `.perl`
+
+---
+
+## REXX
+
+IBM Restructured eXtended eXecutor (1979) — a highly readable procedural scripting language.
+
+```rexx
+/* Hello World */
+SAY "Hello, World!"
+
+/* Variables - no declaration needed */
+name = "Alice"
+x = 42
+SAY "Hello" name || "! x =" x
+
+/* Arithmetic */
+SAY 2 ** 10          /* 1024 */
+SAY 17 // 5          /* 2 (modulo) */
+
+/* Control flow */
+IF x > 10 THEN
+    SAY "Large"
+ELSE
+    SAY "Small"
+
+/* DO loop */
+DO i = 1 TO 5
+    SAY "Count:" i
+END
+
+/* SELECT (switch) */
+SELECT
+    WHEN x < 0 THEN SAY "negative"
+    WHEN x = 0 THEN SAY "zero"
+    OTHERWISE SAY "positive"
+END
+
+/* Subroutines */
+result = double(21)
+SAY result           /* 42 */
+
+double: PROCEDURE
+    PARSE ARG n
+    RETURN n * 2
+
+/* String builtins */
+SAY LENGTH("Hello")  /* 5 */
+SAY UPPER("hello")   /* HELLO */
+SAY SUBSTR("Hello, World!", 8, 5)  /* World */
+SAY WORD("one two three", 2)       /* two */
+```
+
+**File extensions:** `.rexx` / `.rex` / `.rxx`
+
+---
+
+## Smalltalk
+
+Smalltalk-80 (1980) — the definitive object-oriented message-passing language that inspired Java, Ruby, and Python.
+
+```smalltalk
+"Hello World"
+Transcript showCr: 'Hello, World!'.
+
+"Variables (temp declarations)"
+| x name result |
+x := 42.
+name := 'Alice'.
+Transcript showCr: 'Hello, ', name, '! x = ', x printString.
+
+"Arithmetic"
+Transcript showCr: (3 + 4) printString.       "7"
+Transcript showCr: (2 raisedTo: 10) printString. "1024"
+Transcript showCr: 6 factorial printString.   "720"
+
+"Conditionals"
+(x > 10)
+    ifTrue: [ Transcript showCr: 'Large' ]
+    ifFalse: [ Transcript showCr: 'Small' ].
+
+"Loops"
+1 to: 5 do: [ :i |
+    Transcript showCr: i printString.
+].
+
+5 timesRepeat: [ Transcript showCr: 'Hello' ].
+
+"Collections"
+| col |
+col := OrderedCollection new.
+col add: 1.
+col add: 2.
+col add: 3.
+Transcript showCr: col printString.
+
+"Block closures"
+| sum |
+sum := 0.
+#(1 2 3 4 5) do: [ :each | sum := sum + each ].
+Transcript showCr: sum printString.  "15"
+
+"select: / collect: / inject:into:"
+| evens squares total |
+evens   := #(1 2 3 4 5) select: [ :n | n \\ 2 = 0 ].
+squares := #(1 2 3 4 5) collect: [ :n | n * n ].
+total   := #(1 2 3 4 5) inject: 0 into: [ :acc :n | acc + n ].
+Transcript showCr: squares printString.  "(1 4 9 16 25 )"
+```
+
+**File extension:** `.st`
+
+---
+
+## APL
+
+A Programming Language (1966) — terse, symbolic, array-oriented. Right-to-left evaluation, no operator precedence.
+
+```apl
+⍝ Hello World
+⎕← 'Hello, World!'
+
+⍝ Variables (← assignment)
+x ← 42
+v ← 1 2 3 4 5
+
+⍝ Arithmetic (scalar extension)
+⎕← v + 10      ⍝ 11 12 13 14 15
+⎕← v × v       ⍝ 1 4 9 16 25
+
+⍝ Iota: generate sequence
+⎕← ⍳5          ⍝ 1 2 3 4 5
+
+⍝ Shape and reshape
+⎕← ⍴v          ⍝ 5
+m ← 2 3 ⍴ ⍳6   ⍝ 2×3 matrix
+⎕← m
+
+⍝ Reduction (fold)
+⎕← +/ ⍳10      ⍝ 55  (sum 1..10)
+⎕← ×/ ⍳5       ⍝ 120 (5!)
+⎕← ⌈/ 3 1 4 1 5  ⍝ 5 (maximum)
+
+⍝ Scan (running cumulative)
+⎕← +\ ⍳5       ⍝ 1 3 6 10 15
+
+⍝ Array operations
+⎕← ⌽ ⍳5        ⍝ 5 4 3 2 1 (reverse)
+⎕← 3 ↑ ⍳10     ⍝ 1 2 3     (take)
+⎕← 7 ↓ ⍳10     ⍝ 8 9 10    (drop)
+
+⍝ Inner product
+⎕← (1 2 3) +.× (4 5 6)  ⍝ 32
+
+⍝ Comparisons (return 0/1)
+⎕← (⍳5) = 3     ⍝ 0 0 1 0 0
+⎕← (⍳5) > 3     ⍝ 0 0 0 1 1
+
+⍝ Negative literals use ¯ (high-minus)
+⎕← ¯5 + 3       ⍝ ¯2
+```
+
+**Monadic functions:** `⍳` (iota), `⍴` (shape), `⌽` (reverse), `⍋`/`⍒` (grade), `~` (not), `|` (abs), `⌈` (ceiling), `⌊` (floor)
+
+**Dyadic functions:** `⍴` (reshape), `,` (catenate), `↑`/`↓` (take/drop), `∊` (member), `∧`/`∨` (and/or), `+.×` (inner product)
+
+**File extension:** `.apl`
+
+---
+
 ## Language Selection
 
 To select which language your code uses:
@@ -860,12 +1456,24 @@ To select which language your code uses:
 | `.pilot` | PILOT |
 | `.c` | C |
 | `.pas` | Pascal |
-| `.pro` or `.pl` or `.prolog` | Prolog |
-| `.f` or `.fs` or `.forth` | Forth |
+| `.asm` / `.s` | 6502 Assembly |
+| `.pro` / `.pl` / `.prolog` | Prolog |
+| `.lisp` / `.scm` | LISP/Scheme |
+| `.hs` | Haskell |
+| `.f` / `.fs` / `.forth` | Forth |
+| `.ps` | PostScript |
 | `.js` | JavaScript |
 | `.lua` | Lua |
+| `.py` | Python |
+| `.rb` | Ruby |
+| `.pl` / `.perl` | Perl 5 |
+| `.tcl` | Tcl |
+| `.rexx` / `.rex` / `.rxx` | REXX |
+| `.st` | Smalltalk |
 | `.erl` | Erlang |
 | `.htalk` | HyperTalk |
+| `.cob` / `.cobol` | COBOL |
+| `.apl` | APL |
 | `.bf` | Brainfuck |
 
 2. **Menu Selection**: Use the Language dropdown in the toolbar

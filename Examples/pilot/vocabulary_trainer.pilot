@@ -1,0 +1,58 @@
+*Vocabulary Trainer
+T:=== Vocabulary Trainer ===
+T:Learn new words and their meanings!
+T:Type the meaning of each word shown.
+T:
+T:Word 1: EPHEMERAL
+T:(Hint: How long does morning mist last?)
+A:
+M:short-lived
+M:temporary
+M:fleeting
+M:brief
+M:transient
+TY:Correct! EPHEMERAL means lasting only a short time.
+TN:EPHEMERAL means lasting only a very short time (temporary).
+T:
+T:Word 2: UBIQUITOUS
+T:(Hint: Smartphones are everywhere these days...)
+A:
+M:everywhere
+M:omnipresent
+M:widespread
+TY:Right! UBIQUITOUS means present, appearing, or found everywhere.
+TN:UBIQUITOUS means present everywhere at the same time.
+T:
+T:Word 3: VERBOSE
+T:(Hint: This lesson uses a lot of words to explain things!)
+A:
+M:wordy
+M:long-winded
+M:talkative
+M:wordy
+TY:Correct! VERBOSE means using or expressed in more words than needed.
+TN:VERBOSE means using more words than necessary.
+T:
+T:Word 4: AMBIGUOUS
+T:(Hint: "I saw her duck" — did she lower her head or did I see her pet?)
+A:
+M:unclear
+M:vague
+M:uncertain
+M:double meaning
+M:having two meanings
+TY:Well done! AMBIGUOUS means open to more than one interpretation.
+TN:AMBIGUOUS means having more than one possible meaning.
+T:
+T:Word 5: PRAGMATIC
+T:(Hint: Solving problems in a practical, real-world way)
+A:
+M:practical
+M:realistic
+M:sensible
+M:matter-of-fact
+TY:Excellent! PRAGMATIC means dealing with things practically.
+TN:PRAGMATIC means dealing with things sensibly and practically.
+T:
+T:=== Vocabulary session complete! ===
+T:Practice these words in sentences to remember them better.

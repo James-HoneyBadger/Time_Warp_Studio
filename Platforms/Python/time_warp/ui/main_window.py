@@ -437,6 +437,9 @@ class MainWindow(
         # Show first-run onboarding after UI settles
         QTimer.singleShot(600, self._maybe_show_onboarding)
 
+        # Auto-load plugins at startup (2 s delay so UI is ready first)
+        QTimer.singleShot(2000, self._load_plugins_at_startup)
+
         # Check for updates in the background (5 s delay so startup is snappy)
         QTimer.singleShot(5000, self._start_update_check)
 
@@ -1139,6 +1142,25 @@ class MainWindow(
 
         self.statusbar.showMessage(msg, 3000)
 
+    def _load_plugins_at_startup(self) -> None:
+        """Auto-load all plugins from the plugins/ directory at startup."""
+        import os  # pylint: disable=import-outside-toplevel
+
+        plugins_dir = os.path.join(
+            os.path.dirname(
+                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            ),
+            "plugins",
+        )
+        if not os.path.isdir(plugins_dir):
+            return
+        mgr = PluginManager(ide_instance=self)
+        plugins = mgr.discover_plugins(plugins_dir)
+        loaded = [p for p in plugins if p.loaded]
+        if loaded:
+            names = ", ".join(p.name for p in loaded)
+            self.status_bar.showMessage(f"🔌 Loaded {len(loaded)} plugin(s): {names}", 4000)
+
     def _show_plugin_manager(self, _checked: bool = False):
         """Show the Plugin Manager dialog listing discovered plugins."""
         import os  # pylint: disable=import-outside-toplevel
@@ -1346,7 +1368,7 @@ class MainWindow(
 
     def setup_ui(self):
         """Setup main UI layout."""
-        self.setWindowTitle("🎨 Time Warp Studio v10.0.0")
+        self.setWindowTitle(f"🎨 Time Warp Studio v{_read_local_version()}")
         self.setMinimumSize(900, 600)
 
         # Set main window style
@@ -3107,7 +3129,7 @@ class MainWindow(
 
     def update_title(self):
         """Update window title."""
-        title = "Time Warp Studio v10.0.0"
+        title = f"Time Warp Studio v{_read_local_version()}"
 
         current_info = self.get_current_tab_info()
         if current_info["file"]:

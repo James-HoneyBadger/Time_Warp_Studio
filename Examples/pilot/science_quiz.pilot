@@ -1,0 +1,37 @@
+*Science Quiz
+T:Welcome to the Science Quiz!
+T:Answer the following questions about science.
+T:
+T:Question 1: What force keeps planets in orbit around the Sun?
+A:
+M:gravity
+TY:Correct! Gravity is the force that governs planetary orbits.
+TN:That's not right. The answer is GRAVITY.
+T:
+T:Question 2: What is the chemical symbol for water?
+A:
+M:H2O
+TY:Correct! H2O is water — 2 hydrogen atoms and 1 oxygen atom.
+TN:Not quite. Water is H2O.
+T:
+T:Question 3: How many planets are in our solar system?
+A:
+M:8
+TY:Correct! There are 8 planets (Pluto was reclassified in 2006).
+TN:Not quite. There are 8 planets since Pluto was reclassified.
+T:
+T:Question 4: What gas do plants absorb during photosynthesis?
+A:
+M:carbon dioxide
+M:CO2
+TY:Correct! Plants absorb carbon dioxide (CO2) to make food.
+TN:Plants absorb CARBON DIOXIDE (CO2) during photosynthesis.
+T:
+T:Question 5: What is the speed of light (approximately, in km/s)?
+A:
+M:300000
+M:299792
+TY:Excellent! The speed of light is approximately 300,000 km/s.
+TN:The speed of light is approximately 300,000 km/s.
+T:
+T:Quiz complete! Well done for participating.

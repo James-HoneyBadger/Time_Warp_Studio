@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import math
 import re
+import sys
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
@@ -185,6 +186,7 @@ class ErlangEnvironment:
     def run(self, source: str) -> str:
         """Parse module and execute main/0 or start/0."""
         try:
+            sys.setrecursionlimit(15000)
             self._parse(source)
             # Try to call start/0 first, then main/0
             called = False
@@ -811,7 +813,8 @@ class ErlangEnvironment:
             raise _ErlangError(f"unbound variable: {expr}")
 
         # Pattern match / assignment: Var = Expr  (multiline-safe)
-        m = re.match(r"^([A-Z_][A-Za-z0-9_]*)\s*=\s*(.+)$", expr, re.DOTALL)
+        # Negative lookahead avoids matching =:=, =/=, =< which are comparison ops
+        m = re.match(r"^([A-Z_][A-Za-z0-9_]*)\s*=(?![=<:>/])\s*(.+)$", expr, re.DOTALL)
         if m:
             val = self._eval_expr(m.group(2).strip(), bindings)
             self._match_pattern(m.group(1), val, bindings)
@@ -885,9 +888,23 @@ class ErlangEnvironment:
                     return False
                 return self._truthy(self._eval_expr(parts[1].strip(), bindings))
 
-        for op in (" or ", " and ", " not ", " xor "):
-            if op in expr or expr.startswith("not "):
-                break
+        # Unary not
+        if expr.startswith("not "):
+            val = self._eval_expr(expr[4:].strip(), bindings)
+            return not self._truthy(val)
+
+        # Binary or / and / xor (lower precedence than comparisons but above not)
+        for op in (" or ", " xor ", " and "):
+            idx = self._find_op_at_depth0(expr, op)
+            if idx >= 0:
+                lv = self._eval_expr(expr[:idx].strip(), bindings)
+                rv = self._eval_expr(expr[idx + len(op):].strip(), bindings)
+                if op.strip() == "or":
+                    return self._truthy(lv) or self._truthy(rv)
+                if op.strip() == "xor":
+                    return self._truthy(lv) ^ self._truthy(rv)
+                # and
+                return self._truthy(lv) and self._truthy(rv)
 
         # Module:function(Args) call — use balanced-paren finder to support nested calls
         m = re.match(r"^(\w+)\s*:\s*(\w+)\s*\(", expr)
@@ -1309,6 +1326,10 @@ class ErlangEnvironment:
         if (fname, arity) in self._functions:
             return self._call_function(fname, args, None)
 
+        # Variable-held fun (e.g. F = fun double/1, then F(4))
+        if bindings and fname in bindings and callable(bindings[fname]):
+            return bindings[fname](*args)
+
         raise _ErlangError(f"undefined function {fname}/{arity}")
 
     _UNSET = object()
@@ -1656,6 +1677,12 @@ class ErlangEnvironment:
                     for k, v in d.items():
                         acc = a0(k, v, acc)
                 return acc
+            if func == "foreach" and callable(a0):
+                # maps:foreach(Fun, Map) — Fun(K, V) -> any
+                if isinstance(a1, dict):
+                    for k, v in a1.items():
+                        a0(k, v)
+                return _ok
             return {}
 
         # Turtle module

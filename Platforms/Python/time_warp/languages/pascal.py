@@ -122,6 +122,11 @@ _ELSE_IF_ONELINER_RE = re.compile(
     r"^\s*else\s+if\s+(.+?)\s+then\s+begin\s+(.+?)\s+end\s*;?\s*$",
     re.IGNORECASE,
 )
+# ELSE-IF inline: else if cond then stmt [;]  (body on same line, no begin/end block)
+_ELSE_IF_INLINE_RE = re.compile(
+    r"^\s*else\s+if\s+(.+?)\s+then\s+([^;]+)\s*;?\s*$",
+    re.IGNORECASE,
+)
 # ELSE-IF multi-line: else if cond then [begin]
 _ELSE_IF_RE = re.compile(
     r"^\s*else\s+if\s+(.+?)\s+then\s*(begin\s*)?;?\s*$",
@@ -160,6 +165,10 @@ _CASE_LABEL_INLINE_RE = re.compile(
     r"^\s*((?:[0-9]+(?:\.\.)[0-9]+|[0-9]+|'[^']*'|\"[^\"]*\")(?:\s*,\s*(?:[0-9]+(?:\.\.)[0-9]+|[0-9]+|'[^']*'|\"[^\"]*\"))*)\s*:\s*(.+)$"
 )
 _CASE_ELSE_RE = re.compile(r"^\s*(?:else|otherwise)\s*:?\s*$", re.IGNORECASE)
+# Match inline else/otherwise with body on the same line: "else writeln(...);"
+_CASE_ELSE_INLINE_RE = re.compile(
+    r"^\s*(?:else|otherwise)\s+(.+)$", re.IGNORECASE
+)
 _PROC_RE = re.compile(
     r"^\s*procedure\s+([A-Za-z_][A-Za-z0-9_]*)\s*(?:\((.*)\))?\s*;\s*$",
     re.IGNORECASE,
@@ -634,13 +643,26 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
         except Exception:
             return 0
 
-    # User-defined function call: NAME(args)
-    m = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*\((.+)\)$", expr, re.IGNORECASE)
+    # User-defined function call: NAME(args) — only when entire expr is one call
+    m = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*\(", expr, re.IGNORECASE)
     if m and hasattr(interpreter, "pascal_procs"):
         fname = m.group(1).upper()
         info = interpreter.pascal_procs.get(fname)
         if info and info.get("is_func"):
-            return _call_func_inline(interpreter, fname, m.group(2).strip(), info)
+            # Verify the closing ) corresponds to the opening ( of this call
+            paren_start = expr.index("(")
+            depth = 0
+            for ci, ch in enumerate(expr[paren_start:], paren_start):
+                if ch == "(":
+                    depth += 1
+                elif ch == ")":
+                    depth -= 1
+                    if depth == 0:
+                        if ci == len(expr) - 1:
+                            # Entire expr is this one function call
+                            args_str = expr[paren_start + 1 : ci].strip()
+                            return _call_func_inline(interpreter, fname, args_str, info)
+                        break  # compound expression — fall through
 
     # Array element access: NAME(idx) — return raw value (may be string)
     m_arr = re.match(r"^([A-Za-z_][A-Za-z0-9_]*)\s*\((.+)\)$", expr, re.IGNORECASE)
@@ -932,11 +954,17 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
             except Exception:
                 pass
             return m_pi.group(0)
-        # Check if it's a user-defined function
+        # Check if it's a user-defined function — evaluate it and substitute inline
         if hasattr(interpreter, "pascal_procs"):
             info = interpreter.pascal_procs.get(pname)
             if info and info.get("is_func"):
-                return m_pi.group(0)  # leave as-is for user-func handling below
+                try:
+                    result = _call_func_inline(interpreter, pname, idx_expr_raw, info)
+                    if isinstance(result, float) and result == int(result):
+                        return str(int(result))
+                    return str(result)
+                except Exception:  # noqa: BLE001
+                    pass
         return m_pi.group(0)
 
     pyexpr = re.sub(
@@ -1315,6 +1343,11 @@ def _parse_case_blocks(interpreter: "Interpreter", case_idx: int):
         if _CASE_ELSE_RE.match(s):
             current_label = "__ELSE__"
             current_begin = None
+            j += 1
+            continue
+        # Inline else: "else writeln(...);" — body is on the same line
+        if _CASE_ELSE_INLINE_RE.match(s) and not _CASE_LABEL_INLINE_RE.match(s):
+            blocks.append(("__ELSE__", j, j))
             j += 1
             continue
         # Check for inline case body: "1: writeln('x');"
@@ -2138,18 +2171,11 @@ def execute_pascal(
                     results.append(r)
             return "".join(results)
 
-    # Handle inline CASE label bodies: "2: writeln('two');" → execute body
-    m_case_inline = _CASE_LABEL_INLINE_RE.match(cmd)
-    if m_case_inline and getattr(interpreter, "pascal_block_stack", []):
-        top = interpreter.pascal_block_stack[-1]
-        if top.get("type") == "case":
-            body = m_case_inline.group(2).strip()
-            return execute_pascal(interpreter, body, turtle)
-
     _ensure_pascal_stack(interpreter)
 
-    # Handle end of single-line CASE branch by skipping to
-    # CASE end on next line
+    # Handle end of single-line CASE branch by skipping to CASE end.
+    # Must run BEFORE the inline-case-label handler so that the next
+    # branch's label line is not accidentally executed.
     if getattr(interpreter, "pascal_block_stack", []):
         top = interpreter.pascal_block_stack[-1]
         if (
@@ -2161,6 +2187,30 @@ def execute_pascal(
             interpreter.current_line = _case_end
             interpreter.pascal_block_stack.pop()
             return ""
+
+    # Handle inline CASE label bodies: "2: writeln('two');" → execute body
+    m_case_inline = _CASE_LABEL_INLINE_RE.match(cmd)
+    if m_case_inline and getattr(interpreter, "pascal_block_stack", []):
+        top = interpreter.pascal_block_stack[-1]
+        if top.get("type") == "case":
+            if interpreter.current_line == top.get("end", -1):
+                # This is the selected branch — execute it
+                body = m_case_inline.group(2).strip()
+                return execute_pascal(interpreter, body, turtle)
+            else:
+                # Non-matching branch label — skip without executing
+                return ""
+
+    # Handle inline CASE else body: "else writeln(...);" → execute body
+    m_case_else_inline = _CASE_ELSE_INLINE_RE.match(cmd)
+    if m_case_else_inline and getattr(interpreter, "pascal_block_stack", []):
+        top = interpreter.pascal_block_stack[-1]
+        if top.get("type") == "case":
+            if interpreter.current_line == top.get("end", -1):
+                body = m_case_else_inline.group(1).strip()
+                return execute_pascal(interpreter, body, turtle)
+            else:
+                return ""
 
     # Handle end of single-statement IF/FOR/WHILE body
     if getattr(interpreter, "pascal_block_stack", []):
@@ -2352,6 +2402,51 @@ def execute_pascal(
                         out_parts.append(r)
             return "".join(out_parts)
         return ""
+
+    # ELSE-IF inline: else if cond then stmt [;]  (body on same line, no begin/end)
+    m = _ELSE_IF_INLINE_RE.match(cmd)
+    if m:
+        cond_expr = m.group(1).strip()
+        then_body = m.group(2).strip()
+        if then_body.lower() != "begin":
+            header_idx = interpreter.current_line
+            next_idx = _find_next_statement(interpreter, header_idx)
+            has_following_else = next_idx is not None and re.match(
+                r"^\s*else\b", interpreter.program_lines[next_idx][1], re.IGNORECASE
+            )
+            try:
+                cond_v = _pascal_eval_expr(interpreter, cond_expr)
+            except (ValueError, TypeError, ZeroDivisionError):
+                cond_v = 0
+            if has_following_else:
+                j_else = next_idx
+                _else_line2 = interpreter.program_lines[j_else][1]
+                if (
+                    re.match(r"^\s*else\s+if\b", _else_line2, re.IGNORECASE)
+                    or _else_line2.strip().lower() == "else"
+                ):
+                    else_chain_end2 = _find_else_chain_end(interpreter, j_else)
+                elif _ends_with_begin(_else_line2):
+                    else_chain_end2 = _find_end_for_inline_begin(interpreter, j_else)
+                else:
+                    else_chain_end2 = j_else
+                if cond_v:
+                    result = execute_pascal(interpreter, then_body + ";", turtle)
+                    interpreter.pascal_block_stack.append(
+                        {
+                            "type": "if_single",
+                            "end": header_idx,
+                            "skip_to": else_chain_end2 + 1,
+                        }
+                    )
+                    return result
+                else:
+                    interpreter.current_line = j_else
+                    return ""
+            else:
+                if cond_v:
+                    return execute_pascal(interpreter, then_body + ";", turtle)
+                return ""
 
     # ELSE-IF multi-line: else if cond then [begin]  (body on following lines)
     m = _ELSE_IF_RE.match(cmd)

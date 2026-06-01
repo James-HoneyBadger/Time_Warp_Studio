@@ -115,7 +115,7 @@ Creates empty file with default language (BASIC).
 File → Open [Ctrl+O]
 ```
 
-File browser opens. Select any supported source file (`.bas`, `.lua`, `.js`, `.c`, `.pas`, `.logo`, `.pro`, `.f`, `.bf`, `.ht`, `.pilot`, `.erl`).
+File browser opens. Select any supported source file (`.bas`, `.lua`, `.js`, `.c`, `.pas`, `.logo`, `.pro`, `.f`, `.bf`, `.ht`, `.pilot`, `.erl`, `.lisp`, `.scm`, `.cob`, `.tcl`, `.ps`, `.rb`, `.py`, `.hs`, `.asm`, `.pl`, `.rexx`, `.rex`, `.rxx`, `.st`, `.apl`).
 
 ### Saving Your Work
 
@@ -145,7 +145,7 @@ Quick access to 10 most recently opened files.
 
 ## Selecting a Language
 
-Programs can be written in **23 different languages**:
+Programs can be written in **24 different languages**:
 
 ### Auto-Detection
 
@@ -165,6 +165,9 @@ Dropdown also available in top toolbar.
 
 | Language | Extension | Paradigm | Era |
 |----------|-----------|----------|-----|
+| **LISP/Scheme** | .lisp / .scm | Functional/AI | 1958 |
+| **COBOL** | .cob / .cobol | Business/Procedural | 1959 |
+| **APL** | .apl | Array/Symbolic | 1966 |
 | **BASIC** | .bas | Procedural/Educational | 1964 |
 | **Logo** | .logo | Turtle Graphics | 1967 |
 | **PILOT** | .pilot | Interactive Teaching | 1969 |
@@ -172,11 +175,20 @@ Dropdown also available in top toolbar.
 | **Forth** | .f / .fs | Stack-based | 1970 |
 | **Pascal** | .pas | Structured | 1970 |
 | **Prolog** | .pro | Logic/Declarative | 1972 |
-| **Brainfuck** | .bf | Esoteric/Turing | 1993 |
+| **6502 Assembly** | .asm | Machine/Educational | 1975 |
+| **REXX** | .rexx / .rex / .rxx | Scripting/Procedural | 1979 |
+| **Smalltalk** | .st | Object-oriented/Message | 1980 |
+| **PostScript** | .ps | Stack-based/Graphics | 1982 |
 | **Erlang** | .erl | Concurrent/Functional | 1986 |
+| **Perl 5** | .pl / .perl | Scripting/Text | 1987 |
 | **HyperTalk** | .htalk | Event-driven | 1987 |
-| **JavaScript** | .js | Scripting/Web | 1995 |
+| **Tcl** | .tcl | Scripting/Embeddable | 1988 |
+| **Haskell** | .hs | Purely Functional | 1990 |
+| **Python** | .py | Multi-paradigm | 1991 |
+| **Brainfuck** | .bf | Esoteric/Turing | 1993 |
 | **Lua** | .lua | Scripting/Embedded | 1993 |
+| **JavaScript** | .js | Scripting/Web | 1995 |
+| **Ruby** | .rb | Object-oriented/Scripting | 1995 |
 
 ---
 
@@ -610,7 +622,7 @@ Your theme choice automatically saved to `~/.time_warp/config.json` and restored
 ---
 
 **For language-specific help, see:**
-- [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Syntax for all 12 languages
+- [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Syntax for all 24 languages
 - [DEBUGGER_GUIDE.md](DEBUGGER_GUIDE.md) - Using the debugger
 - [TURTLE_GRAPHICS.md](TURTLE_GRAPHICS.md) - Graphics programming
 - [FAQ.md](FAQ.md) - Frequently asked questions

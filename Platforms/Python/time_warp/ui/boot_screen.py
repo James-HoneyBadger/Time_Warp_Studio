@@ -61,7 +61,7 @@ _TITLE_LINES = [
     "║         TIME  WARP  STUDIO           ║",
     "║                                      ║",
     "║   Educational Multi-Language IDE     ║",
-    "║          Version 10.2.0              ║",
+    "║          Version 13.0.0              ║",
     "║                                      ║",
     "╚══════════════════════════════════════╝",
 ]

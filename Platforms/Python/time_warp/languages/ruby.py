@@ -382,7 +382,7 @@ class RubyEnvironment:
             return self._exec_loop(stmt)
 
         # ----- begin/rescue block -----
-        if stmt_no_comment.strip() == "begin":
+        if first_line_nc.strip() == "begin":
             return self._exec_begin(stmt)
 
         # ----- raise -----
@@ -830,6 +830,19 @@ class RubyEnvironment:
             return not _is_truthy(self._eval(expr[1:]))
         if expr.startswith("-") and len(expr) > 1 and expr[1:].strip()[0].isalpha():
             return -self._eval(expr[1:])
+
+        # ternary operator (lowest precedence): cond ? true_val : false_val
+        if "\n" not in expr:
+            t_idx = _find_ternary_q(expr)
+            if t_idx != -1:
+                cond_s = expr[:t_idx].strip()
+                rest = expr[t_idx + 1:]
+                c_idx = _find_ternary_colon(rest)
+                if c_idx != -1:
+                    true_s = rest[:c_idx].strip()
+                    false_s = rest[c_idx + 1:].strip()
+                    cond_val = _is_truthy(self._eval(cond_s))
+                    return self._eval(true_s) if cond_val else self._eval(false_s)
 
         # binary operators (low precedence, split on rightmost op outside parens)
         # Skip for multi-line expressions (blocks/method calls spanning lines)
@@ -2350,6 +2363,66 @@ def _find_dot(expr: str) -> int:
             if i + 1 < len(expr) and expr[i + 1] == ".":
                 continue
             return i
+    return -1
+
+
+def _find_ternary_q(expr: str) -> int:
+    """Find the first '?' not inside strings/parens/brackets (ternary operator)."""
+    depth = 0
+    in_str = False
+    str_char = ""
+    i = 0
+    while i < len(expr):
+        ch = expr[i]
+        if in_str:
+            if ch == "\\" and i + 1 < len(expr):
+                i += 2
+                continue
+            if ch == str_char:
+                in_str = False
+        elif ch in ('"', "'"):
+            in_str = True
+            str_char = ch
+        elif ch in ("(", "[", "{"):
+            depth += 1
+        elif ch in (")", "]", "}"):
+            depth -= 1
+        elif depth == 0 and ch == "?":
+            # must have something on both sides; avoid symbol :foo?
+            if i > 0 and (expr[i - 1].isalnum() or expr[i - 1] in ("_", ")", "]", " ")):
+                return i
+        i += 1
+    return -1
+
+
+def _find_ternary_colon(expr: str) -> int:
+    """Find the first ':' not inside strings/parens for ternary false branch."""
+    depth = 0
+    in_str = False
+    str_char = ""
+    i = 0
+    while i < len(expr):
+        ch = expr[i]
+        if in_str:
+            if ch == "\\" and i + 1 < len(expr):
+                i += 2
+                continue
+            if ch == str_char:
+                in_str = False
+        elif ch in ('"', "'"):
+            in_str = True
+            str_char = ch
+        elif ch in ("(", "[", "{"):
+            depth += 1
+        elif ch in (")", "]", "}"):
+            depth -= 1
+        elif depth == 0 and ch == ":":
+            # skip :: and symbol :name
+            if i + 1 < len(expr) and expr[i + 1] == ":":
+                i += 2
+                continue
+            return i
+        i += 1
     return -1
 
 

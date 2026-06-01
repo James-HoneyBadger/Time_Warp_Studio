@@ -1,5 +1,5 @@
 """
-Feature UI Panels for Time Warp Studio v10.0.0
+Feature UI Panels for Time Warp Studio v13.0.0
 
 This module provides PySide6 Qt widget panels for the IDE's educational and
 workflow features. Each panel wraps a core module and provides a user-friendly

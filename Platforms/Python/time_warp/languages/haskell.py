@@ -37,7 +37,6 @@ from __future__ import annotations
 
 import math
 import re
-import textwrap
 from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
@@ -66,6 +65,18 @@ _UNSET = object()
 
 class HaskellError(Exception):
     pass
+
+
+class _HaskellIORef:
+    """Mutable cell used to simulate Data.IORef."""
+
+    __slots__ = ("val",)
+
+    def __init__(self, val: Any) -> None:
+        self.val = val
+
+    def __repr__(self) -> str:  # pragma: no cover
+        return f"IORef({self.val!r})"
 
 
 class _ReturnSignal(Exception):
@@ -117,9 +128,10 @@ class HaskellTuple:
 class HaskellFunction:
     """User-defined function (possibly with multiple clauses and guards)."""
 
-    def __init__(self, name: str):
+    def __init__(self, name: str, closure_env: dict | None = None):
         self.name = name
         self.clauses: list[dict] = []  # [{params, guards, body, where}]
+        self.closure_env: dict = closure_env or {}
 
     def add_clause(
         self,
@@ -239,24 +251,41 @@ class HaskellEnvironment:
 
             # function / value binding: name args... = body
             #   possibly followed by where clause
-            m = re.match(r"^([a-z_]\w*'?)\s*(.*?)\s*=\s*(.+)$", stripped)
+            #   Body may be empty if it continues on subsequent indented lines
+            #   Also handles guard-only definitions (no = on the header line)
+            m = re.match(r"^([a-z_]\w*'?)\s*(.*?)(?:\s*=\s*(.*))?$", stripped)
             if m:
                 func_name = m.group(1)
                 params_str = m.group(2).strip()
-                body_str = m.group(3).strip()
+                body_str = (m.group(3) or "").strip()
 
-                # Collect continuation lines (indented)
-                body_lines = [body_str]
+                # Collect continuation lines (indented), preserving relative
+                # indentation so _split_do_stmts can split do-blocks correctly.
+                # Blank lines are skipped rather than stopping collection.
+                raw_lines: list[str] = []
                 i += 1
-                while i < len(lines) and lines[i] and lines[i][0] in " \t":
-                    next_stripped = lines[i].strip()
-                    if not next_stripped or next_stripped.startswith("--"):
+                while i < len(lines):
+                    if not lines[i].strip():  # blank line — skip, don't stop
                         i += 1
                         continue
-                    body_lines.append(next_stripped)
+                    if not lines[i][0:1] or lines[i][0] not in " \t":
+                        break  # non-indented non-blank → new top-level
+                    raw_lines.append(lines[i])
                     i += 1
 
-                full_body = " ".join(body_lines)
+                if raw_lines:
+                    base_indent = min(
+                        len(l) - len(l.lstrip()) for l in raw_lines if l.strip()
+                    )
+                    normed = [body_str] + [
+                        l[base_indent:]
+                        for l in raw_lines
+                        if l.strip() and not l.strip().startswith("--")
+                    ]
+                else:
+                    normed = [body_str]
+
+                full_body = "\n".join(normed)
                 where_defs = self._extract_where(full_body)
                 if where_defs:
                     full_body = full_body[: full_body.rfind("where")].strip()
@@ -279,22 +308,81 @@ class HaskellEnvironment:
             i += 1
 
     def _extract_where(self, body: str) -> dict:
-        """Extract and parse where clause definitions."""
+        """Extract and parse where clause definitions, supporting multi-clause functions and guards."""
         where_defs: dict[str, Any] = {}
         m = re.search(r"\bwhere\b(.+)$", body, re.DOTALL)
         if not m:
             return where_defs
         where_body = m.group(1).strip()
-        for line in where_body.splitlines():
-            line = line.strip()
-            if not line or line.startswith("--"):
-                continue
+
+        def _add_clause(name: str, params: list, guards: list, clause_body: str | None) -> None:
+            if name not in where_defs:
+                if guards:
+                    fn = HaskellFunction(name)
+                    fn.add_clause(params, guards, clause_body, {})
+                    where_defs[name] = fn
+                else:
+                    where_defs[name] = {"params": params, "body": clause_body}
+            else:
+                existing = where_defs[name]
+                if isinstance(existing, dict):
+                    fn = HaskellFunction(name)
+                    fn.add_clause(existing["params"], [], existing.get("body"), {})
+                    where_defs[name] = fn
+                else:
+                    fn = where_defs[name]
+                fn.add_clause(params, guards, clause_body, {})
+
+        i = 0
+        raw_lines = [ln for ln in where_body.splitlines()
+                     if ln.strip() and not ln.strip().startswith("--")]
+        while i < len(raw_lines):
+            line = raw_lines[i].strip()
+            # Line with = : "name params = body"
             m2 = re.match(r"^(\w+'?)\s*(.*?)\s*=\s*(.+)$", line)
-            if m2:
-                where_defs[m2.group(1)] = {
-                    "params": _parse_params(m2.group(2)),
-                    "body": m2.group(3).strip(),
-                }
+            if m2 and not line.startswith("|"):
+                _add_clause(m2.group(1), _parse_params(m2.group(2).strip()),
+                            [], m2.group(3).strip())
+                i += 1
+                continue
+            # Line without = : "name params" followed by guard lines
+            m3 = re.match(r"^([a-z_]\w*'?)\s+(.+)$", line)
+            if m3 and "=" not in line:
+                name = m3.group(1)
+                params_str = m3.group(2).strip()
+                # Determine base indentation of guard lines (first | line)
+                base_indent = len(raw_lines[i]) - len(raw_lines[i].lstrip())
+                guards: list[tuple] = []
+                i += 1
+                while i < len(raw_lines):
+                    gline_raw = raw_lines[i]
+                    gline = gline_raw.strip()
+                    gm = re.match(r"^\|\s*(.+)(?<![!<>=/])\s*=(?!=)\s*(.*)$", gline)
+                    if gm:
+                        guard_cond = gm.group(1).strip()
+                        guard_body = gm.group(2).strip()
+                        i += 1
+                        # Collect continuation lines (more indented than base)
+                        while i < len(raw_lines):
+                            cont_raw = raw_lines[i]
+                            cont_stripped = cont_raw.strip()
+                            cont_indent = len(cont_raw) - len(cont_raw.lstrip())
+                            if cont_stripped and not cont_stripped.startswith("|") and cont_indent > base_indent:
+                                if guard_body:
+                                    guard_body = guard_body + " " + cont_stripped
+                                else:
+                                    guard_body = cont_stripped
+                                i += 1
+                            else:
+                                break
+                        if guard_body:
+                            guards.append((guard_cond, guard_body))
+                    else:
+                        break
+                if guards:
+                    _add_clause(name, _parse_params(params_str), guards, None)
+                continue
+            i += 1
         return where_defs
 
     # ------------------------------------------------------------------
@@ -378,24 +466,15 @@ class HaskellEnvironment:
                 i += 1
                 continue
 
-            # mapM_ / forM_ (iterate side effects)
-            m = re.match(r"^map[M_]+\s*(_?)\s+(.+?)\s+(.+)$", stmt)
-            if m:
-                fn = self._eval_expr(m.group(2), local_env)
-                lst = self._eval_expr(m.group(3), local_env)
-                for item in _to_list(lst):
-                    self._execute_io(self._call_value(fn, [item]))
-                i += 1
-                continue
-
-            # forM_ / for_ / traverse_
-            m = re.match(r"^(?:for[M_]+|traverse_?)\s+(.+?)\s+\$?\s*(.+)$", stmt)
-            if m:
-                lst = self._eval_expr(m.group(1), local_env)
-                fn_expr = m.group(2)
-                fn = self._eval_expr(fn_expr, local_env)
-                for item in _to_list(lst):
-                    self._execute_io(self._call_value(fn, [item]))
+            # mapM_ / forM_ / traverse_ (iterate side effects)
+            # Use _split_application so lambdas with spaces are parsed correctly
+            if re.match(r"^(map[M_]+|for[M_]+|traverse_?)\s+", stmt):
+                parts = _split_application(stmt)
+                if len(parts) >= 3:
+                    fn = self._eval_expr(parts[1], local_env)
+                    lst = self._eval_expr(parts[2], local_env)
+                    for item in _to_list(lst):
+                        self._execute_io(self._call_value(fn, [item]))
                 i += 1
                 continue
 
@@ -415,8 +494,12 @@ class HaskellEnvironment:
         if not expr:
             return None
 
-        # do-block
-        if expr.startswith("do"):
+        # Normalize backtick infix operators: `div` → div, `elem` → elem, etc.
+        if "`" in expr:
+            expr = re.sub(r"`(\w+)`", r" \1 ", expr).strip()
+
+        # do-block — must be exactly "do" or "do " / "do{" / "do\n" etc.
+        if expr == "do" or (expr.startswith("do") and len(expr) > 2 and expr[2] in (" ", "\t", "\n", "{")):
             rest = expr[2:].strip()
             stmts = _split_do_stmts(rest)
             local_env = dict(env)
@@ -428,10 +511,25 @@ class HaskellEnvironment:
             bindings_str = m.group(1)
             body_str = m.group(2).strip()
             local_env = dict(env)
-            for binding in bindings_str.split(";"):
-                bm = re.match(r"^(\w+'?)\s*=\s*(.+)$", binding.strip())
+            # Support both ; and newline separated bindings
+            for seg in bindings_str.replace(";", "\n").split("\n"):
+                seg = seg.strip()
+                if not seg or seg.startswith("--"):
+                    continue
+                # Tuple destructuring: (a, b) = expr
+                if seg.startswith("("):
+                    tm = re.match(r"^\(([^)]+)\)\s*=\s*(.+)$", seg, re.DOTALL)
+                    if tm:
+                        pats = [p.strip() for p in _split_comma(tm.group(1))]
+                        val = self._eval_expr(tm.group(2).strip(), local_env)
+                        items = list(val) if isinstance(val, (HaskellTuple, list, tuple)) else [val]
+                        for p, v in zip(pats, items):
+                            if p and p != "_" and re.match(r"^\w+$", p):
+                                local_env[p] = v
+                        continue
+                bm = re.match(r"^(\w+'?)\s*=\s*(.+)$", seg, re.DOTALL)
                 if bm:
-                    local_env[bm.group(1)] = self._eval_expr(bm.group(2), local_env)
+                    local_env[bm.group(1)] = self._eval_expr(bm.group(2).strip(), local_env)
             return self._eval_expr(body_str, local_env)
 
         # if-then-else
@@ -452,7 +550,7 @@ class HaskellEnvironment:
         if m:
             params_str = m.group(1).strip()
             body_str = m.group(2).strip()
-            params = params_str.split()
+            params = _split_application(params_str)
             closure = dict(env)
             return self._make_lambda(params, body_str, closure)
 
@@ -472,12 +570,52 @@ class HaskellEnvironment:
                 parts = _split_comma(inner)
                 if len(parts) >= 2:
                     return HaskellTuple(*[self._eval_expr(p, env) for p in parts])
+            # Operator sections — must be checked before fallthrough to eval(inner)
+            inner_s = inner.strip()
+            # Full operator section: (+) (*) (++) etc. → curried binary function
+            mo = re.match(r"^([+\-*/<>=!&|^]+)$", inner_s)
+            if mo:
+                op = mo.group(1)
+                return lambda a, _op=op: lambda b, _op=_op: _apply_op(a, _op, b)
+            # Right section with numeric literal: (*2) (>5) (<=10)
+            mo = re.match(r"^([+*/<>=!&|^][+*/<>=!&|^]*)\s*(-?\d+\.?\d*)$", inner_s)
+            if mo:
+                op = mo.group(1)
+                rv = float(mo.group(2)) if "." in mo.group(2) else int(mo.group(2))
+                return lambda x, _op=op, _rv=rv: _apply_op(x, _op, _rv)
+            # Left section with numeric literal: (2*) (10-)
+            mo = re.match(r"^(-?\d+\.?\d*)\s*([+\-*/<>=!&|^][+\-*/<>=!&|^]*)$", inner_s)
+            if mo and mo.group(2) != "-":  # avoid matching negative numbers like (-1)
+                lv = float(mo.group(1)) if "." in mo.group(1) else int(mo.group(1))
+                op = mo.group(2)
+                return lambda x, _op=op, _lv=lv: _apply_op(_lv, _op, x)
+            # Right section with variable: (<= x) (> x) etc. → \y -> y op x
+            mo = re.match(r"^([+\-*/<>=!&|^]+)\s+([a-z_]\w*'?)$", inner_s)
+            if mo:
+                op = mo.group(1)
+                rv = self._eval_expr(mo.group(2), env)
+                return lambda y, _op=op, _rv=rv: _apply_op(y, _op, _rv)
+            # Left section with variable: (x +) (x *) etc. → \y -> x op y
+            mo = re.match(r"^([a-z_]\w*'?)\s+([+\-*/<>=!&|^]+)$", inner_s)
+            if mo:
+                lv = self._eval_expr(mo.group(1), env)
+                op = mo.group(2)
+                return lambda y, _op=op, _lv=lv: _apply_op(_lv, _op, y)
             # Parenthesised expression
             return self._eval_expr(inner, env)
 
-        # String literal
-        if expr.startswith('"') and expr.endswith('"'):
-            return _parse_string(expr[1:-1])
+        # String literal — only if the entire expr is ONE quoted string
+        if expr.startswith('"'):
+            _i, _n = 1, len(expr)
+            while _i < _n:
+                if expr[_i] == '\\':
+                    _i += 2
+                elif expr[_i] == '"':
+                    if _i == _n - 1:
+                        return _parse_string(expr[1:-1])
+                    break  # string ends before expr end → fall through
+                else:
+                    _i += 1
 
         # Char literal
         if expr.startswith("'") and expr.endswith("'") and len(expr) in (3, 4):
@@ -519,10 +657,39 @@ class HaskellEnvironment:
         expr = expr.strip()
 
         # Operator sections
+        # Full operator section (no arg): (*) (+) (++) etc. → curried binary fn
         m = re.match(r"^\(([+\-*/<>=!&|^]+)\)$", expr)
         if m:
             op = m.group(1)
-            return lambda a, b: _apply_op(a, op, b)
+            return lambda a, _op=op: lambda b, _op=_op: _apply_op(a, _op, b)
+
+        # Right section with numeric literal: (*2) (+3) (^2) (>5) (<=10)
+        m = re.match(r"^\(([+*/<>=!&|^][+*/<>=!&|^]*)\s*(-?\d+\.?\d*)\)$", expr)
+        if m:
+            op = m.group(1)
+            rv = float(m.group(2)) if "." in m.group(2) else int(m.group(2))
+            return lambda x, _op=op, _rv=rv: _apply_op(x, _op, _rv)
+
+        # Left section with numeric literal: (2*) (3+) (10-)
+        m = re.match(r"^\((-?\d+\.?\d*)\s*([+\-*/<>=!&|^][+\-*/<>=!&|^]*)\)$", expr)
+        if m:
+            lv = float(m.group(1)) if "." in m.group(1) else int(m.group(1))
+            op = m.group(2)
+            return lambda x, _op=op, _lv=lv: _apply_op(_lv, _op, x)
+
+        # Right section with variable: (<= x) (> x) etc. → \y -> y op x
+        m = re.match(r"^\(([+\-*/<>=!&|^]+)\s+([a-z_]\w*'?)\)$", expr)
+        if m:
+            op = m.group(1)
+            rv = self._eval_expr(m.group(2), env)
+            return lambda y, _op=op, _rv=rv: _apply_op(y, _op, _rv)
+
+        # Left section with variable: (x +) (x *) etc. → \y -> x op y
+        m = re.match(r"^\(([a-z_]\w*'?)\s+([+\-*/<>=!&|^]+)\)$", expr)
+        if m:
+            lv = self._eval_expr(m.group(1), env)
+            op = m.group(2)
+            return lambda y, _op=op, _lv=lv: _apply_op(_lv, _op, y)
 
         # Infix operator: left op right
         for op in ["||", "&&", "==", "/=", "<=", ">=", "<", ">",
@@ -535,6 +702,18 @@ class HaskellEnvironment:
                 right_s = expr[idx + len(op):].strip()
                 if left_s and right_s:
                     return self._eval_binop(left_s, op.strip(), right_s, env)
+                if left_s and not right_s:
+                    # Left operator section: (expr op) → \y -> expr op y
+                    lv = self._eval_expr(left_s, env)
+                    clean_op = op.strip()
+                    return lambda y, _op=clean_op, _lv=lv: _apply_op(_lv, _op, y)
+            elif idx == 0:
+                right_s = expr[len(op):].strip()
+                if right_s:
+                    # Right operator section: (op expr) → \y -> y op expr
+                    rv = self._eval_expr(right_s, env)
+                    clean_op = op.strip()
+                    return lambda y, _op=clean_op, _rv=rv: _apply_op(y, _op, _rv)
 
         # Function application: f arg1 arg2 ...
         parts = _split_application(expr)
@@ -662,12 +841,16 @@ class HaskellEnvironment:
         if not params:
             return self._eval_expr(body, closure)
 
-        def apply(arg):
-            local_env = dict(closure)
-            local_env[params[0]] = arg
-            if len(params) == 1:
-                return self._eval_expr(body, local_env)
-            return self._make_lambda(params[1:], body, local_env)
+        def apply(arg, _params=params, _body=body, _closure=closure):
+            local_env = dict(_closure)
+            matched, bindings = _match_pattern(_params[0], arg)
+            if matched:
+                local_env.update(bindings)
+            else:
+                local_env[_params[0]] = arg
+            if len(_params) == 1:
+                return self._eval_expr(_body, local_env)
+            return self._make_lambda(_params[1:], _body, local_env)
 
         return apply
 
@@ -677,7 +860,7 @@ class HaskellEnvironment:
 
     def _call_value(self, fn: Any, args: list) -> Any:
         if isinstance(fn, HaskellFunction):
-            return self._call_haskell_fn(fn, args, {})
+            return self._call_haskell_fn(fn, args, fn.closure_env)
         if callable(fn):
             result = fn
             for a in args:
@@ -707,17 +890,6 @@ class HaskellEnvironment:
             local_env = dict(env)
             local_env[fn.name] = fn  # allow recursion
 
-            # Add where bindings
-            for w_name, w_def in where_defs.items():
-                w_params = w_def["params"]
-                w_body = w_def["body"]
-                if w_params:
-                    w_fn = HaskellFunction(w_name)
-                    w_fn.add_clause(w_params, [], w_body, {})
-                    local_env[w_name] = w_fn
-                else:
-                    local_env[w_name] = self._eval_expr(w_body, local_env)
-
             matched = True
             for param, arg in zip(params, args):
                 ok, bindings = _match_pattern(param, arg)
@@ -734,6 +906,21 @@ class HaskellEnvironment:
 
             if not matched:
                 continue
+
+            # Add where bindings AFTER param matching so they can close over bound vars
+            for w_name, w_def in where_defs.items():
+                if isinstance(w_def, HaskellFunction):
+                    # Re-wrap with current local_env as closure so the function
+                    # can see params like `shift` from the enclosing function
+                    closed_fn = HaskellFunction(w_def.name, dict(local_env))
+                    closed_fn.clauses = w_def.clauses
+                    local_env[w_name] = closed_fn
+                elif w_def["params"]:
+                    w_fn = HaskellFunction(w_name, dict(local_env))
+                    w_fn.add_clause(w_def["params"], w_def.get("guards", []), w_def["body"], dict(local_env))
+                    local_env[w_name] = w_fn
+                else:
+                    local_env[w_name] = self._eval_expr(w_def["body"], local_env)
 
             # Evaluate guards
             if guards:
@@ -790,14 +977,24 @@ class HaskellEnvironment:
         emit = self._emit
 
         # IO actions
+        def _to_str(s):
+            """Convert [Char] lists to str for output."""
+            if isinstance(s, list) and all(isinstance(c, str) and len(c) == 1 for c in s):
+                return "".join(s)
+            return str(s)
         def putStrLn(s):
-            emit(str(s))
+            sv = _to_str(s)
+            if self._output and not self._output[-1].endswith("\n"):
+                self._output[-1] += sv + "\n"
+            else:
+                emit(sv)
             return None
         def putStr(s):
+            sv = _to_str(s)
             if self._output and not self._output[-1].endswith("\n"):
-                self._output[-1] += str(s)
+                self._output[-1] += sv
             else:
-                self._output.append(str(s))
+                self._output.append(sv)
             return None
         def putChar(c):
             return putStr(c)
@@ -1075,6 +1272,10 @@ class HaskellEnvironment:
             return 0 if x == 0 else (1 if x > 0 else -1)
         def negate(x):
             return -x
+        def even(n):
+            return int(n) % 2 == 0
+        def odd(n):
+            return int(n) % 2 != 0
         def fromIntegral(x):
             return float(x)
         def toInteger(x):
@@ -1096,11 +1297,10 @@ class HaskellEnvironment:
         def rem_(a, b):
             return a - b * quot_(a, b)
         def gcd_(a, b):
-            import math as _m
-            return _m.gcd(int(a), int(b))
+            return math.gcd(int(a), int(b))
+
         def lcm_(a, b):
-            import math as _m
-            g = _m.gcd(int(a), int(b))
+            g = math.gcd(int(a), int(b))
             return abs(int(a) * int(b)) // g if g else 0
         def sqrt_(x):
             return math.sqrt(x)
@@ -1145,7 +1345,19 @@ class HaskellEnvironment:
         # Char
         def ord_(c):
             return ord(str(c)[0]) if c else 0
+
         def chr_(n):
+            return chr(int(n))
+
+        def fromEnum(x):
+            # fromEnum on Char → ordinal; on Bool/Int → int value
+            if isinstance(x, str) and len(x) == 1:
+                return ord(x)
+            if isinstance(x, bool):
+                return 1 if x else 0
+            return int(x)
+
+        def toEnum(n):
             return chr(int(n))
         def isAlpha(c):
             return str(c).isalpha()
@@ -1262,6 +1474,7 @@ class HaskellEnvironment:
             "show": show, "read": read,
             # Numeric
             "abs": abs_, "signum": signum, "negate": negate,
+            "even": even, "odd": odd,
             "fromIntegral": fromIntegral, "toInteger": toInteger,
             "floor": floor_, "ceiling": ceiling_,
             "truncate": truncate_, "round": round_,
@@ -1282,6 +1495,7 @@ class HaskellEnvironment:
             "fst": fst, "snd": snd,
             # Char
             "ord": ord_, "chr": chr_,
+            "fromEnum": fromEnum, "toEnum": toEnum,
             "isAlpha": isAlpha, "isDigit": isDigit, "isSpace": isSpace,
             "isUpper": isUpper, "isLower": isLower,
             "toUpper": toUpper, "toLower": toLower,
@@ -1306,6 +1520,235 @@ class HaskellEnvironment:
             "True": True, "False": False,
             "[]": [],
         })
+
+        # --------------- Data.IORef ---------------
+        def _newIORef(x: Any) -> HaskellIOAction:
+            return HaskellIOAction(lambda _x=x: _HaskellIORef(_x))
+
+        def _readIORef(ref: _HaskellIORef) -> HaskellIOAction:
+            return HaskellIOAction(lambda _r=ref: _r.val)
+
+        def _writeIORef(ref: _HaskellIORef) -> Any:
+            def _do_write(val: Any) -> HaskellIOAction:
+                def _act(_r=ref, _v=val):
+                    _r.val = _v
+                    return None
+                return HaskellIOAction(_act)
+            return _do_write
+
+        def _modifyIORef(ref: _HaskellIORef) -> Any:
+            def _do_mod(f: Any) -> HaskellIOAction:
+                def _act(_r=ref, _f=f):
+                    _r.val = _f(_r.val)
+                    return None
+                return HaskellIOAction(_act)
+            return _do_mod
+
+        env.update({
+            "newIORef": _newIORef,
+            "readIORef": _readIORef,
+            "writeIORef": _writeIORef,
+            "modifyIORef": _modifyIORef,
+            "modifyIORef'": _modifyIORef,  # strict version identical here
+        })
+
+        # --------------- Data.Map / Data.Map.Strict ---------------
+        def _map_fromList(pairs: list) -> dict:
+            return dict((k, v) for k, v in pairs)
+
+        def _map_fromListWith(f: Any) -> Any:
+            def _go(pairs: list) -> dict:
+                result: dict = {}
+                for k, v in pairs:
+                    if k in result:
+                        result[k] = f(result[k])(v)
+                    else:
+                        result[k] = v
+                return result
+            return _go
+
+        def _map_lookup(k: Any) -> Any:
+            def _in(m: dict):
+                return m.get(k)  # None = Nothing; value = Just value
+            return _in
+
+        def _map_findWithDefault(defval: Any) -> Any:
+            def _k(k: Any) -> Any:
+                def _m(m: dict):
+                    return m.get(k, defval)
+                return _m
+            return _k
+
+        def _map_insert(k: Any) -> Any:
+            def _v(v: Any) -> Any:
+                def _m(m: dict) -> dict:
+                    return {**m, k: v}
+                return _m
+            return _v
+
+        def _map_insertWith(f: Any) -> Any:
+            def _k(k: Any) -> Any:
+                def _v(v: Any) -> Any:
+                    def _m(m: dict) -> dict:
+                        if k in m:
+                            return {**m, k: f(v)(m[k])}
+                        return {**m, k: v}
+                    return _m
+                return _v
+            return _k
+
+        def _map_delete(k: Any) -> Any:
+            def _m(m: dict) -> dict:
+                return {kk: vv for kk, vv in m.items() if kk != k}
+            return _m
+
+        def _map_adjust(f: Any) -> Any:
+            def _k(k: Any) -> Any:
+                def _m(m: dict) -> dict:
+                    if k in m:
+                        return {**m, k: f(m[k])}
+                    return dict(m)
+                return _m
+            return _k
+
+        def _map_union(m1: dict) -> Any:
+            def _m2(m2: dict) -> dict:
+                return {**m2, **m1}  # left-biased
+            return _m2
+
+        def _map_unionWith(f: Any) -> Any:
+            def _m1(m1: dict) -> Any:
+                def _m2(m2: dict) -> dict:
+                    result = dict(m2)
+                    for k, v in m1.items():
+                        if k in result:
+                            result[k] = f(v)(result[k])
+                        else:
+                            result[k] = v
+                    return result
+                return _m2
+            return _m1
+
+        def _map_intersection(m1: dict) -> Any:
+            def _m2(m2: dict) -> dict:
+                return {k: m1[k] for k in m1 if k in m2}
+            return _m2
+
+        def _map_difference(m1: dict) -> Any:
+            def _m2(m2: dict) -> dict:
+                return {k: v for k, v in m1.items() if k not in m2}
+            return _m2
+
+        def _map_mapWithKey(f: Any) -> Any:
+            def _m(m: dict) -> dict:
+                return {k: f(k)(v) for k, v in m.items()}
+            return _m
+
+        def _map_filterWithKey(f: Any) -> Any:
+            def _m(m: dict) -> dict:
+                return {k: v for k, v in m.items() if f(k)(v)}
+            return _m
+
+        def _map_foldlWithKey(f: Any) -> Any:
+            def _z(z: Any) -> Any:
+                def _m(m: dict) -> Any:
+                    acc = z
+                    for k, v in sorted(m.items(), key=lambda x: str(x[0])):
+                        acc = f(acc)(k)(v)
+                    return acc
+                return _m
+            return _z
+
+        def _map_foldrWithKey(f: Any) -> Any:
+            def _z(z: Any) -> Any:
+                def _m(m: dict) -> Any:
+                    acc = z
+                    for k, v in reversed(sorted(m.items(), key=lambda x: str(x[0]))):
+                        acc = f(k)(v)(acc)
+                    return acc
+                return _m
+            return _z
+
+        _map_empty: dict = {}
+
+        def _map_null(m: dict) -> bool:
+            return len(m) == 0
+
+        def _map_size(m: dict) -> int:
+            return len(m)
+
+        def _map_member(k: Any) -> Any:
+            def _m(m: dict) -> bool:
+                return k in m
+            return _m
+
+        def _map_notMember(k: Any) -> Any:
+            def _m(m: dict) -> bool:
+                return k not in m
+            return _m
+
+        def _map_elems(m: dict) -> list:
+            return list(m.values())
+
+        def _map_keys(m: dict) -> list:
+            return list(m.keys())
+
+        def _map_toList(m: dict) -> list:
+            return list(m.items())
+
+        def _map_toAscList(m: dict) -> list:
+            return sorted(m.items(), key=lambda x: str(x[0]))
+
+        def _map_singleton(k: Any) -> Any:
+            def _v(v: Any) -> dict:
+                return {k: v}
+            return _v
+
+        def _map_map(f: Any) -> Any:
+            def _m(m: dict) -> dict:
+                return {k: f(v) for k, v in m.items()}
+            return _m
+
+        def _map_filter(f: Any) -> Any:
+            def _m(m: dict) -> dict:
+                return {k: v for k, v in m.items() if f(v)}
+            return _m
+
+        def _map_elems_values(m: dict) -> list:
+            return list(m.values())
+
+        _map_fns = {
+            "Map.empty": _map_empty,
+            "Map.null": _map_null,
+            "Map.size": _map_size,
+            "Map.singleton": _map_singleton,
+            "Map.fromList": _map_fromList,
+            "Map.fromListWith": _map_fromListWith,
+            "Map.toList": _map_toList,
+            "Map.toAscList": _map_toAscList,
+            "Map.elems": _map_elems,
+            "Map.keys": _map_keys,
+            "Map.lookup": _map_lookup,
+            "Map.findWithDefault": _map_findWithDefault,
+            "Map.member": _map_member,
+            "Map.notMember": _map_notMember,
+            "Map.insert": _map_insert,
+            "Map.insertWith": _map_insertWith,
+            "Map.delete": _map_delete,
+            "Map.adjust": _map_adjust,
+            "Map.union": _map_union,
+            "Map.unionWith": _map_unionWith,
+            "Map.intersection": _map_intersection,
+            "Map.difference": _map_difference,
+            "Map.map": _map_map,
+            "Map.filter": _map_filter,
+            "Map.mapWithKey": _map_mapWithKey,
+            "Map.filterWithKey": _map_filterWithKey,
+            "Map.foldlWithKey": _map_foldlWithKey,
+            "Map.foldrWithKey": _map_foldrWithKey,
+            "Map.elems": _map_elems_values,
+        }
+        env.update(_map_fns)
 
 
 # ---------------------------------------------------------------------------
@@ -1374,6 +1817,15 @@ def _apply_op(lv: Any, op: str, rv: Any) -> Any:
         if op == "++":
             if isinstance(lv, str) and isinstance(rv, str):
                 return lv + rv
+            # Handle Haskell String = [Char]: list of single chars ↔ str
+            lv_chars = isinstance(lv, list) and all(isinstance(c, str) and len(c) == 1 for c in lv)
+            rv_chars = isinstance(rv, list) and all(isinstance(c, str) and len(c) == 1 for c in rv)
+            if isinstance(lv, str) and rv_chars:
+                return lv + "".join(rv)
+            if lv_chars and isinstance(rv, str):
+                return "".join(lv) + rv
+            if lv_chars and rv_chars:
+                return "".join(lv) + "".join(rv)
             return _to_list(lv) + _to_list(rv)
         if op == ":":
             return [lv] + _to_list(rv)
@@ -1389,8 +1841,9 @@ def _apply_op(lv: Any, op: str, rv: Any) -> Any:
             a, b = int(lv), int(rv)
             return a - b * int(a / b)
         if op == "$":
-            if callable(rv):
-                return rv(lv) if False else lv
+            # f $ x = f x  (low-precedence function application)
+            if callable(lv):
+                return lv(rv)
             return lv
         if op == ".":
             # Function composition
@@ -1422,7 +1875,14 @@ def _rfind_op(expr: str, op: str) -> int:
         elif ch in (")", "]"):
             depth -= 1
         elif depth == 0 and expr[i: i + len(op)] == op:
-            last = i
+            # Skip '.' that is part of a float literal (e.g. 5.0, 3.14)
+            if op == "." and i > 0 and expr[i - 1].isdigit() and i + 1 < len(expr) and expr[i + 1].isdigit():
+                pass
+            # Skip '.' that is a qualified-name separator (e.g. Map.fromList)
+            elif op == "." and i > 0 and (expr[i - 1].isalnum() or expr[i - 1] == "_") and i + 1 < len(expr) and (expr[i + 1].isalpha() or expr[i + 1] == "_"):
+                pass
+            else:
+                last = i
         i += 1
     return last
 
@@ -1524,8 +1984,11 @@ def _parse_guards(body: str) -> list[tuple]:
     if not body.strip().startswith("|"):
         return []
     guards = []
-    for m in re.finditer(r"\|\s*(.+?)\s*=\s*(.+?)(?=\s*\||\s*$)", body):
-        guards.append((m.group(1).strip(), m.group(2).strip()))
+    for m in re.finditer(r"\|\s*(.+)(?<![!<>=/])\s*=(?!=)\s*(.+?)(?=\s*\||\s*$)", body):
+        cond = m.group(1).strip()
+        gbody = m.group(2).strip()
+        if cond and gbody:
+            guards.append((cond, gbody))
     return guards
 
 
@@ -1568,6 +2031,21 @@ def _match_pattern(pattern: str, value: Any) -> tuple[bool, dict]:
     if pattern == "[]":
         return _to_list(value) == [], {}
 
+    # List pattern: [x] [x,y] etc. — matches list of exact length
+    if pattern.startswith("[") and pattern.endswith("]"):
+        inner = pattern[1:-1].strip()
+        pats = [p.strip() for p in _split_comma(inner)] if inner else []
+        lst = _to_list(value)
+        if len(lst) != len(pats):
+            return False, {}
+        bindings: dict = {}
+        for sp, sv in zip(pats, lst):
+            ok, b = _match_pattern(sp, sv)
+            if not ok:
+                return False, {}
+            bindings.update(b)
+        return True, bindings
+
     # Cons pattern x:xs
     m = re.match(r"^(\w+):(\w+)$", pattern)
     if m:
@@ -1576,8 +2054,13 @@ def _match_pattern(pattern: str, value: Any) -> tuple[bool, dict]:
             return False, {}
         return True, {m.group(1): lst[0], m.group(2): lst[1:]}
 
-    # Tuple pattern (a, b)
+    # Tuple pattern (a, b) — or parenthesized single pattern like (_:xs)
     if pattern.startswith("(") and pattern.endswith(")"):
+        inner = pattern[1:-1].strip()
+        sub_patterns = _split_comma(inner)
+        if len(sub_patterns) == 1:
+            # Parenthesized single pattern — unwrap and re-match (e.g. (_:xs))
+            return _match_pattern(sub_patterns[0], value)
         inner = pattern[1:-1]
         sub_patterns = _split_comma(inner)
         if isinstance(value, (HaskellTuple, tuple)) and len(value) == len(sub_patterns):
@@ -1613,20 +2096,35 @@ def _match_pattern(pattern: str, value: Any) -> tuple[bool, dict]:
 
 
 def _split_do_stmts(body: str) -> list[str]:
-    """Split a do-block body into individual statements."""
+    """Split a do-block body into individual statements using Haskell layout rules."""
     if not body:
         return []
+    # Strip surrounding { } for brace-style inline do blocks
+    body = body.strip()
+    if body.startswith("{") and body.endswith("}"):
+        body = body[1:-1].strip()
     # Try to split on semicolons first (inline do-blocks)
     if ";" in body and "\n" not in body:
         return [s.strip() for s in body.split(";") if s.strip()]
     lines = body.splitlines()
     stmts = []
     current: list[str] = []
+
+    # Determine the base indentation from the first non-empty line
+    base_indent: int | None = None
+    for line in lines:
+        if line.strip():
+            base_indent = len(line) - len(line.lstrip())
+            break
+
     for line in lines:
         if not line.strip():
             continue
-        # If line starts without indentation relative to first, it's a new stmt
-        if current and not line.startswith(" ") and not line.startswith("\t"):
+        indent = len(line) - len(line.lstrip())
+        if base_indent is None:
+            base_indent = indent
+        if indent <= base_indent and current:
+            # New statement at the base indentation level
             stmts.append(" ".join(current))
             current = [line.strip()]
         else:

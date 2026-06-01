@@ -144,6 +144,7 @@ ignore_errors = true
 [tool.pytest.ini_options]
 minversion = "7.0"
 testpaths = ["time_warp/tests"]
+pythonpath = ["."]
 python_files = ["test_*.py", "*_test.py"]
 python_classes = ["Test*"]
 python_functions = ["test_*"]

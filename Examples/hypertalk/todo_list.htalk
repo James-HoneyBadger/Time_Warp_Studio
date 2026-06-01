@@ -1,0 +1,81 @@
+-- To-Do List Manager in HyperTalk
+-- Demonstrates card/field manipulation and list handling
+
+on openCard
+  put "=== To-Do List Manager ===" into field "output"
+  put empty into field "tasks"
+  showTasks
+end openCard
+
+on addTask
+  ask "Enter a new task:"
+  if it is not empty then
+    put it into newTask
+    if field "tasks" is empty then
+      put "[ ] " & newTask into field "tasks"
+    else
+      put field "tasks" & return & "[ ] " & newTask into field "tasks"
+    end if
+    showTasks
+  end if
+end addTask
+
+on completeTask
+  ask "Enter task number to complete (1, 2, 3...):"
+  if it is a number then
+    put it into taskNum
+    put line taskNum of field "tasks" into taskLine
+    if taskLine begins with "[ ]" then
+      put "[x]" & char 4 to length(taskLine) of taskLine into line taskNum of field "tasks"
+      answer "Task " & taskNum & " completed! ✓"
+    else
+      answer "Task " & taskNum & " already completed."
+    end if
+    showTasks
+  end if
+end completeTask
+
+on removeTask
+  ask "Enter task number to remove:"
+  if it is a number then
+    put it into taskNum
+    put the number of lines in field "tasks" into total
+    if taskNum >= 1 and taskNum <= total then
+      delete line taskNum of field "tasks"
+      answer "Task removed."
+      showTasks
+    end if
+  end if
+end removeTask
+
+on showTasks
+  put field "tasks" into taskText
+  put "=== Your To-Do List ===" & return into output
+  if taskText is empty then
+    put output & "(No tasks yet — add some!)" into output
+  else
+    put output & taskText into output
+    -- Count done vs pending
+    put 0 into done
+    put 0 into pending
+    repeat with i = 1 to the number of lines in taskText
+      if line i of taskText begins with "[x]" then
+        add 1 to done
+      else
+        add 1 to pending
+      end if
+    end repeat
+    put output & return & "---" into output
+    put output & return & "Done: " & done & "  Pending: " & pending into output
+  end if
+  put output into field "output"
+end showTasks
+
+-- Sample tasks to start with
+on mouseUp
+  put "[ ] Buy groceries" & return & \
+      "[ ] Write report" & return & \
+      "[x] Call dentist" & return & \
+      "[ ] Learn HyperTalk" into field "tasks"
+  showTasks
+end mouseUp

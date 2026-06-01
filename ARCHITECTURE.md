@@ -56,7 +56,7 @@ Time Warp Studio is a desktop IDE built with:
 
 Location: `Platforms/Python/time_warp/core/interpreter.py`
 
-Core dispatcher managing all 12 language executors:
+Core dispatcher managing all 24 language executors:
 
 ```python
 class Interpreter:
@@ -66,9 +66,11 @@ class Interpreter:
         #   execute_basic, execute_pilot, execute_logo,
         #   execute_c, execute_pascal, execute_prolog, execute_forth
         #
-        # Whole-program executors (5 languages) registered in:
+        # Whole-program executors (17 languages) registered in:
         #   _WHOLE_PROGRAM_EXECUTORS dict
-        #   (Lua, Brainfuck, JavaScript, HyperTalk, Erlang)
+        #   (Lua, Brainfuck, JavaScript, HyperTalk, Erlang, LISP, COBOL,
+        #    Tcl, PostScript, Ruby, Python, Haskell, 6502 Assembly, Perl 5,
+        #    REXX, Smalltalk, APL)
         pass
 ```
 
@@ -134,7 +136,7 @@ def execute_basic(interpreter: Interpreter, command: str, turtle: TurtleState) -
 - ✅ Return strings as output
 - ✅ Access the interpreter and turtle state objects
 
-### The 12 Supported Languages
+### The 24 Supported Languages
 
 **Line-by-line executors** (parsed per statement):
 
@@ -216,9 +218,10 @@ Features:
 
 Status: Experimental
 
-**Whole-program executors** (5 languages):
+**Whole-program executors** (17 languages):
 
-Lua, Brainfuck, JavaScript, HyperTalk, Erlang.
+Lua, Brainfuck, JavaScript, HyperTalk, Erlang, LISP/Scheme, COBOL, Tcl,
+PostScript, Ruby, Python, Haskell, 6502 Assembly, Perl 5, REXX, Smalltalk, APL.
 
 Each receives the full source text and returns output. Registered in
 `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.
@@ -585,7 +588,7 @@ Contains:
 
 ### Core (`core/`)
 
-- `interpreter.py` — Main dispatcher (~1,500 lines, 12 language executors)
+- `interpreter.py` — Main dispatcher (~1,500 lines, 24 language executors)
 - `debugger.py` — Step-through debugger with execution timeline and rewind
 - `sql_engine.py` — SQLite-backed T-SQL compatibility layer
 - `orchestrator.py` — System integration and component registry
@@ -607,7 +610,7 @@ Contains:
 
 - `base.py` — Executor protocol definition
 - **Line-by-line executors (7):** `basic.py`, `pilot.py`, `logo.py`, `c_lang_fixed.py`, `pascal.py`, `prolog.py`, `forth.py`
-- **Whole-program executors (5):** `lua.py`, `brainfuck.py`, `javascript.py`, `hypertalk.py`, `erlang.py`
+- **Whole-program executors (17):** `lua.py`, `brainfuck.py`, `javascript.py`, `hypertalk.py`, `erlang.py`, `lisp.py`, `cobol.py`, `tcl.py`, `postscript.py`, `ruby.py`, `python_lang.py`, `haskell.py`, `asm6502.py`, `perl.py`, `rexx.py`, `smalltalk.py`, `apl.py`
 - `lang_utils.py`, `parser_patterns.py` — Shared parsing utilities
 
 ### UI (`ui/`)
@@ -651,7 +654,7 @@ Contains:
 
 ### Tests (`tests/`)
 
-- 41+ test files covering all 12 language executors, graphics, GUI, and interpreter
+- 41+ test files covering all 24 language executors, graphics, GUI, and interpreter
 - `conftest.py`, `conftest_lang.py` — Shared fixtures and helpers
 - `test_runner.py` — Orchestration with HTML coverage reports
 

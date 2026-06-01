@@ -1,0 +1,54 @@
+-- Flashcard Study System in HyperTalk
+-- Demonstrates repeat loops, random selection, and scoring
+
+on mouseUp
+  -- Capital cities flashcard deck
+  put "France:Paris" & return & \
+      "Japan:Tokyo" & return & \
+      "Brazil:Brasília" & return & \
+      "Australia:Canberra" & return & \
+      "Egypt:Cairo" & return & \
+      "Canada:Ottawa" & return & \
+      "Germany:Berlin" & return & \
+      "India:New Delhi" into flashcards
+  
+  put the number of lines in flashcards into cardCount
+  put 0 into score
+  put 5 into rounds
+  
+  answer "Geography Flashcards!" & return & \
+         "You'll get " & rounds & " questions." & return & "Ready?"
+  
+  repeat rounds times
+    put random(cardCount) into idx
+    put line idx of flashcards into card
+    put item 1 of card into country
+    put item 2 of card into capital
+    
+    ask "What is the capital of " & country & "?"
+    put it into answer
+    
+    if answer is empty then exit repeat
+    
+    if answer = capital then
+      add 1 to score
+      answer "✅ Correct! " & capital & " is the capital of " & country
+    else
+      answer "❌ Wrong. The capital of " & country & " is " & capital
+    end if
+  end repeat
+  
+  put "Quiz Complete!" & return & \
+      "Score: " & score & " / " & rounds & return & \
+      "(" & (score * 100 / rounds) & "%) " into result
+  
+  if score = rounds then
+    put result & "🏆 Perfect score!" into result
+  else if score >= rounds * 0.7 then
+    put result & "Great job!" into result
+  else
+    put result & "Keep studying!" into result
+  end if
+  
+  answer result
+end mouseUp

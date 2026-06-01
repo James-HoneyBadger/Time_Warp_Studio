@@ -51,6 +51,10 @@ from ..languages.ruby import execute_ruby
 from ..languages.python_lang import execute_python_lang
 from ..languages.haskell import execute_haskell
 from ..languages.asm6502 import execute_asm6502
+from ..languages.perl import execute_perl
+from ..languages.rexx import execute_rexx
+from ..languages.smalltalk import execute_smalltalk
+from ..languages.apl import execute_apl
 
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
@@ -103,6 +107,10 @@ def _init_whole_program_executors() -> Dict["Language", Callable]:
         Language.PYTHON_LANG: execute_python_lang,
         Language.HASKELL: execute_haskell,
         Language.ASM6502: execute_asm6502,
+        Language.PERL: execute_perl,
+        Language.REXX: execute_rexx,
+        Language.SMALLTALK: execute_smalltalk,
+        Language.APL: execute_apl,
     }
 
 
@@ -171,6 +179,10 @@ class Language(Enum):
     PYTHON_LANG = auto()
     HASKELL = auto()
     ASM6502 = auto()
+    PERL = auto()
+    REXX = auto()
+    SMALLTALK = auto()
+    APL = auto()
 
     @classmethod
     def from_extension(cls, ext: str) -> "Language":
@@ -210,6 +222,13 @@ class Language(Enum):
             ".asm": cls.ASM6502,
             ".s": cls.ASM6502,
             ".a65": cls.ASM6502,
+            ".perl": cls.PERL,
+            ".pm": cls.PERL,
+            ".rexx": cls.REXX,
+            ".rex": cls.REXX,
+            ".rxx": cls.REXX,
+            ".st": cls.SMALLTALK,
+            ".apl": cls.APL,
         }
         return mapping.get(ext, cls.BASIC)
 
@@ -236,6 +255,10 @@ class Language(Enum):
             Language.PYTHON_LANG: "Python",
             Language.HASKELL: "Haskell",
             Language.ASM6502: "6502 Assembly",
+            Language.PERL: "Perl 5",
+            Language.REXX: "REXX",
+            Language.SMALLTALK: "Smalltalk",
+            Language.APL: "APL",
         }
         return names.get(self, "Unknown")
 

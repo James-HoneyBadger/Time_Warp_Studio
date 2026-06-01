@@ -1,0 +1,32 @@
+*Number Guessing Game
+T:=== Number Guessing Game ===
+T:I am thinking of a number between 1 and 10.
+T:Can you guess it?
+T:
+T:Hint: The number is FIVE (5)
+A:
+M:5
+M:five
+TY:CORRECT! You guessed it — the number was 5! Well done!
+JN:wrong1
+T:
+*end
+J:done
+*wrong1
+T:Not quite. Try again — is it higher or lower than your guess?
+A:
+M:5
+M:five
+TY:Yes! 5 is correct on your second attempt!
+JN:wrong2
+J:done
+*wrong2
+T:Still not right. One more chance!
+A:
+M:5
+M:five
+TY:Got it on the third try! The answer is 5.
+TN:The answer was 5. Better luck next time!
+*done
+T:
+T:Thanks for playing!
