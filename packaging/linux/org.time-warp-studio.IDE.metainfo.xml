@@ -8,17 +8,17 @@
   <description>
     <p>
       Time Warp Studio is an educational desktop programming environment that provides
-      a unified IDE for learning 13 programming languages with integrated turtle graphics.
+      a unified IDE for learning 24 programming languages with integrated turtle graphics.
     </p>
     <p>Supported languages include:</p>
     <ul>
       <li>BASIC, PILOT, Logo</li>
-      <li>C, Pascal, Prolog, Forth</li>
-      <li>JavaScript, Lua, Erlang</li>
-      <li>HyperTalk, Brainfuck, LISP/Scheme</li>
+      <li>C, Pascal, Prolog, Forth, Lua, Brainfuck</li>
+      <li>JavaScript, HyperTalk, Erlang, LISP/Scheme, COBOL, Tcl</li>
+      <li>PostScript, Ruby, Python, Haskell, 6502 Assembly, Perl, REXX, Smalltalk, APL</li>
     </ul>
     <p>Features syntax highlighting, turtle graphics, a step-through debugger, 28 color themes,
-       and 90+ example programs.</p>
+       and 110+ example programs.</p>
   </description>
   <categories>
     <category>Development</category>
@@ -41,9 +41,9 @@
     </screenshot>
   </screenshots>
   <releases>
-    <release version="10.2.0" date="2026-04-01">
+    <release version="13.0.0" date="2026-06-01">
       <description>
-        <p>v10.2.0 — Added COBOL, TCL, PostScript language executors; Erlang binary syntax; Pascal file I/O; auto-close brackets; editor enhancements.</p>
+        <p>v13.0.0 — Added REXX, Smalltalk, and APL language executors plus continued graphics, audio, and IDE improvements.</p>
       </description>
     </release>
   </releases>

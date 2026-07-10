@@ -95,10 +95,10 @@ pip install -r Platforms/Python/requirements-dev.txt
 
 ```bash
 # Run IDE
-python Platforms/Python/time_warp_ide.py
+python3 Platforms/Python/time_warp_ide.py
 
 # Run tests
-python Platforms/Python/test_runner.py --basic
+python3 Platforms/Python/smoke_test.py
 ```
 
 Both should work without errors.
@@ -193,7 +193,7 @@ git commit -m "Fixed stuff"
 
 ```bash
 # Run test suite
-python Platforms/Python/test_runner.py --comprehensive
+PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
 
 # Check code style
 black --check .
@@ -270,10 +270,10 @@ Requested by Issue #42 - BASIC language completeness.
 
 ```bash
 # Quick tests
-python Platforms/Python/test_runner.py --basic
+python3 Platforms/Python/smoke_test.py
 
 # Comprehensive
-python Platforms/Python/test_runner.py --comprehensive
+PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
 
 # Specific file
 pytest Platforms/Python/time_warp/tests/test_lang_basic.py -v
@@ -454,7 +454,7 @@ git fetch origin
 git rebase origin/main
 
 # 2. Run full test suite
-python Platforms/Python/test_runner.py --comprehensive
+PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
 
 # 3. Check code style
 black --check .

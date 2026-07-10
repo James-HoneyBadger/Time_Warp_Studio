@@ -1374,6 +1374,13 @@ def _logo_setcolor(
         turtle.pencolor(color_str)
         return ""
 
+    merged = " ".join(args).strip()
+    if merged.startswith("[") and merged.endswith("]"):
+        rgb_parts = [p for p in merged[1:-1].replace(",", " ").split() if p]
+        if len(rgb_parts) != 3:
+            return "❌ SETCOLOR requires 1 color name/hex or 3 RGB values\n"
+        args = rgb_parts
+
     if len(args) == 1:
         # Named color or hex
         color_str = args[0].strip().strip('"')
@@ -1423,6 +1430,13 @@ def _logo_setbgcolor(
             turtle.setbgcolor(*COLOR_NAMES[color_str.upper()])
             return ""
         return "❌ SETBGCOLOR only supports named colors for now\n"
+
+    merged = " ".join(args).strip()
+    if merged.startswith("[") and merged.endswith("]"):
+        rgb_parts = [p for p in merged[1:-1].replace(",", " ").split() if p]
+        if len(rgb_parts) != 3:
+            return "❌ SETBGCOLOR requires 1 color name or 3 RGB values\n"
+        args = rgb_parts
 
     if len(args) == 1:
         # Named color or hex

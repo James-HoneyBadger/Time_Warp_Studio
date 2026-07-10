@@ -16,6 +16,8 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Callable, Dict, List, Optional
 
+from .. import __version__
+
 
 def utc_now() -> datetime:
     return datetime.now(timezone.utc)
@@ -65,7 +67,7 @@ class ComponentInfo:
 class SystemInfo:
     """Overall system information"""
 
-    version: str = "13.0.0"
+    version: str = __version__
     status: SystemStatus = SystemStatus.INITIALIZING
     uptime_seconds: int = 0
     started_at: datetime = field(default_factory=utc_now)
@@ -144,9 +146,11 @@ class SystemOrchestrator:
         self.status_callbacks: List[Callable[[SystemStatus], None]] = []
 
         # Initialize Python/environment info
-        self.system_info.python_version = f"{sys.version_info.major}.{
-            sys.version_info.minor
-        }.{sys.version_info.micro}"
+        self.system_info.python_version = (
+            f"{sys.version_info.major}."
+            f"{sys.version_info.minor}."
+            f"{sys.version_info.micro}"
+        )
 
     def register_component(
         self,

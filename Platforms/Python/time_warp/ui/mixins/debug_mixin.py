@@ -323,6 +323,9 @@ class DebugMixin:
             editor = self.editor_tabs.widget(i)
             if editor and hasattr(editor, "clear_breakpoints"):
                 editor.clear_breakpoints()
+            info = self._tab_states.get(i)
+            if info and info.file:
+                self.settings.setValue(self._bp_settings_key(info.file), [])
         self._update_breakpoints_display()
         self.statusbar.showMessage("All breakpoints cleared")
 

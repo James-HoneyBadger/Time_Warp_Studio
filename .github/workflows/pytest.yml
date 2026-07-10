@@ -1,0 +1,47 @@
+name: CI — Pytest
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Run smoke tests
+        run: |
+          python Platforms/Python/smoke_test.py
+
+  tests:
+    needs: smoke
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: [3.10, 3.11, 3.12]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip setuptools wheel
+          if [ -f Platforms/Python/requirements.txt ]; then pip install -r Platforms/Python/requirements.txt || true; fi
+          if [ -f Platforms/Python/requirements-dev.txt ]; then pip install -r Platforms/Python/requirements-dev.txt; fi
+
+      - name: Run tests
+        run: |
+          pytest -q Platforms/Python/time_warp/tests

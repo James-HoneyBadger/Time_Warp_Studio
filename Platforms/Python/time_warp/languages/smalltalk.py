@@ -1222,7 +1222,8 @@ class SmalltalkEnvironment:
         """Dispatch an additional cascade message."""
         msg = msg.strip()
         # Keyword
-        kw_match = self._parse_keyword_send(receiver + " " + msg)
+        receiver_str = "Transcript" if receiver is _UNDEF else str(receiver)
+        kw_match = self._parse_keyword_send(receiver_str + " " + msg)
         if kw_match:
             _, selector, kw_args = kw_match
             return self._send_keyword(receiver, selector, kw_args)

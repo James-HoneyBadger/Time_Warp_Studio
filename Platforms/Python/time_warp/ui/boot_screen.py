@@ -27,6 +27,8 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import QApplication, QWidget
 
+from .. import __version__
+
 # Colour palettes per CRT flavour
 _PALETTES: dict[str, dict[str, QColor]] = {
     "amber": {
@@ -61,7 +63,7 @@ _TITLE_LINES = [
     "║         TIME  WARP  STUDIO           ║",
     "║                                      ║",
     "║   Educational Multi-Language IDE     ║",
-    "║          Version 13.0.0              ║",
+    f"║{f'Version {__version__}':^38}║",
     "║                                      ║",
     "╚══════════════════════════════════════╝",
 ]

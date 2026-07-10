@@ -34,7 +34,7 @@ from typing import (
 from ..languages.basic import execute_basic
 from ..languages.brainfuck import execute_brainfuck
 from ..languages.c_lang_fixed import execute_c
-from ..languages.forth import execute_forth, reset_forth
+from ..languages.forth import execute_forth
 from ..languages.hypertalk import execute_hypertalk
 from ..languages.javascript import execute_javascript
 from ..languages.logo import execute_logo
@@ -203,6 +203,7 @@ class Language(Enum):
             ".lua": cls.LUA,
             ".bf": cls.BRAINFUCK,
             ".js": cls.JAVASCRIPT,
+            ".ht": cls.HYPERTALK,
             ".htalk": cls.HYPERTALK,
             ".erl": cls.ERLANG,
             ".hrl": cls.ERLANG,
@@ -579,6 +580,8 @@ class Interpreter:
         # Pascal-specific state
         self.pascal_procs: Dict[str, Dict[str, Any]] = {}  # Pascal procedures
         self.pascal_types: Dict[str, str] = {}  # Pascal type definitions
+        self.pascal_type_aliases: Dict[str, Dict[str, Any]] = {}
+        self.pascal_type_aliases: Dict[str, Dict[str, Any]] = {}
         # Pascal block tracking
         self.pascal_block_stack: List[Dict[str, Any]] = []
         self.pascal_call_stack: List[Dict[str, Any]] = []  # Pascal call stack
@@ -620,11 +623,14 @@ class Interpreter:
         """Reset interpreter state.
 
         Delegates to ``_init_state`` to guarantee attribute parity
-        with ``__init__``.  Forth global state is also cleared.
+        with ``__init__``.  Forth state is cleared by removing the
+        interpreter-bound executor instance.
         """
         self._init_state()
-        # Forth-specific reset (global singleton)
-        reset_forth()
+        # Forth-specific reset: remove the interpreter-bound executor so the
+        # next Forth run starts with a fresh dictionary and stacks.
+        if hasattr(self, "_forth_executor"):
+            delattr(self, "_forth_executor")
 
     # ---------- Typed variable support ----------
     def _reset_type_defaults(self):
@@ -1691,6 +1697,20 @@ class Interpreter:
         vars_dict.update(self.string_variables)
         # Also include aggregate numeric (base names)
         vars_dict.update(self.variables)
+        hardware = getattr(self, "hardware", None)
+        if hardware is not None:
+            vars_dict["__hardware__"] = {
+                "environment": hardware.get_environment(),
+                "devices": {
+                    status["device_id"]: {
+                        "type": status.get("type"),
+                        "active": status.get("is_active"),
+                        "value": status.get("current_value"),
+                        "reading_count": status.get("reading_count"),
+                    }
+                    for status in hardware.get_all_device_status()
+                },
+            }
         # Add arrays and other state if needed
         return vars_dict
 

@@ -54,7 +54,7 @@ from ..features.execution_replay import (
     ExecutionReplayPlayer,
     VisualizationRecorder,
 )
-from ..features.hardware_simulator import HardwareSimulator
+from ..features.hardware_simulator import HardwareSimulator, HardwareType
 from ..features.language_comparator import MultiLanguageComparator
 from ..features.learning_analytics import LearningAnalytics
 from ..features.lesson_system import LessonManager, LessonStatus
@@ -2006,16 +2006,20 @@ class ExecutionReplayPanel(FeaturePanelBase):
 class HardwareSimulatorPanel(FeaturePanelBase):
     """UI for simulating hardware devices without physical hardware."""
 
+    simulator_changed = Signal()
+
     def __init__(self):
         super().__init__("Hardware Simulator")
         self.simulator = HardwareSimulator()
+        self._callbacks_registered = False
+        self.simulator_changed.connect(self.refresh_state)
         self.setup_ui()
+        self.refresh_state()
 
     def setup_ui(self):
         """Setup simulator panel UI."""
-        # Device selector
-        device_layout = QHBoxLayout()
-        device_layout.addWidget(QLabel("Device:"))
+        preset_layout = QHBoxLayout()
+        preset_layout.addWidget(QLabel("Preset:"))
         self.device_combo = QComboBox()
         self.device_combo.addItems(
             [
@@ -2027,14 +2031,84 @@ class HardwareSimulatorPanel(FeaturePanelBase):
             ]
         )
         self.device_combo.currentTextChanged.connect(self.change_device)
-        device_layout.addWidget(self.device_combo)
-        device_layout.addStretch()
-        self.layout_main.addLayout(device_layout)
+        preset_layout.addWidget(self.device_combo)
 
-        # Device controls
-        self.controls_layout = QVBoxLayout()
-        self.layout_main.addWidget(QLabel("Controls:"))
-        self.layout_main.addLayout(self.controls_layout)
+        add_btn = QPushButton("Add Preset")
+        add_btn.clicked.connect(self.add_selected_device)
+        preset_layout.addWidget(add_btn)
+
+        read_btn = QPushButton("Read Sensors")
+        read_btn.clicked.connect(self.read_all_sensors)
+        preset_layout.addWidget(read_btn)
+
+        refresh_btn = QPushButton("Refresh")
+        refresh_btn.clicked.connect(self.refresh_state)
+        preset_layout.addWidget(refresh_btn)
+        preset_layout.addStretch()
+        self.layout_main.addLayout(preset_layout)
+
+        self.summary_label = QLabel()
+        self.summary_label.setWordWrap(True)
+        self.layout_main.addWidget(self.summary_label)
+
+        env_group = QGroupBox("Environment")
+        env_layout = QFormLayout(env_group)
+
+        self.temperature_spin = QSpinBox()
+        self.temperature_spin.setRange(-40, 120)
+        self.temperature_spin.setSuffix(" °C")
+        env_layout.addRow("Temperature:", self.temperature_spin)
+
+        self.humidity_spin = QSpinBox()
+        self.humidity_spin.setRange(0, 100)
+        self.humidity_spin.setSuffix(" %")
+        env_layout.addRow("Humidity:", self.humidity_spin)
+
+        self.light_spin = QSpinBox()
+        self.light_spin.setRange(0, 5000)
+        self.light_spin.setSuffix(" lux")
+        env_layout.addRow("Light:", self.light_spin)
+
+        apply_env_btn = QPushButton("Apply Environment")
+        apply_env_btn.clicked.connect(self.apply_environment)
+        env_layout.addRow(apply_env_btn)
+        self.layout_main.addWidget(env_group)
+
+        self.devices_table = QTableWidget()
+        self.devices_table.setColumnCount(4)
+        self.devices_table.setHorizontalHeaderLabels(["Device", "Type", "Value", "State"])
+        self.devices_table.itemSelectionChanged.connect(self._sync_selected_device)
+        self.layout_main.addWidget(QLabel("Devices:"))
+        self.layout_main.addWidget(self.devices_table)
+
+        control_group = QGroupBox("Selected Device Controls")
+        control_layout = QFormLayout(control_group)
+        self.selected_device_label = QLabel("No device selected")
+        control_layout.addRow("Device:", self.selected_device_label)
+
+        self.device_value_spin = QSpinBox()
+        self.device_value_spin.setRange(0, 100)
+        self.device_value_spin.setSuffix(" %")
+        control_layout.addRow("Value:", self.device_value_spin)
+
+        button_row = QHBoxLayout()
+        apply_value_btn = QPushButton("Set Value")
+        apply_value_btn.clicked.connect(self.apply_selected_device_value)
+        button_row.addWidget(apply_value_btn)
+
+        activate_btn = QPushButton("Activate")
+        activate_btn.clicked.connect(self.activate_selected_device)
+        button_row.addWidget(activate_btn)
+
+        deactivate_btn = QPushButton("Deactivate")
+        deactivate_btn.clicked.connect(self.deactivate_selected_device)
+        button_row.addWidget(deactivate_btn)
+
+        read_selected_btn = QPushButton("Read Selected")
+        read_selected_btn.clicked.connect(self.read_selected_device)
+        button_row.addWidget(read_selected_btn)
+        control_layout.addRow(button_row)
+        self.layout_main.addWidget(control_group)
 
         # Sensor readings
         self.readings_table = QTableWidget()
@@ -2042,6 +2116,211 @@ class HardwareSimulatorPanel(FeaturePanelBase):
         self.readings_table.setHorizontalHeaderLabels(["Sensor", "Value", "Unit"])
         self.layout_main.addWidget(QLabel("Sensor Readings:"))
         self.layout_main.addWidget(self.readings_table)
+
+    def bind_simulator(self, simulator: HardwareSimulator) -> None:
+        """Bind the panel to the shared simulator used by execution paths."""
+        self.simulator = simulator
+        if not self._callbacks_registered:
+            for event_type in (
+                "device_added",
+                "device_removed",
+                "device_activated",
+                "device_deactivated",
+                "device_value_changed",
+                "sensor_reading",
+                "environment_changed",
+            ):
+                self.simulator.on_event(
+                    event_type,
+                    lambda *_args, _panel=self: _panel.simulator_changed.emit(),
+                )
+            self._callbacks_registered = True
+        self.refresh_state()
+
+    def add_selected_device(self) -> None:
+        """Add a preset device pack to the shared simulator."""
+        preset = self.device_combo.currentText()
+        added: list[str] = []
+
+        def ensure(device_id: str, device_type: HardwareType, pin: int) -> None:
+            if device_id not in self.simulator.devices:
+                self.simulator.add_device(device_id, device_type, pin)
+                added.append(device_id)
+
+        if preset == "Arduino UNO":
+            ensure("arduino_led", HardwareType.LED, 13)
+            ensure("arduino_temp", HardwareType.TEMPERATURE_SENSOR, 0)
+        elif preset == "Raspberry Pi":
+            ensure("pi_led", HardwareType.LED, 18)
+            ensure("pi_distance", HardwareType.DISTANCE_SENSOR, 24)
+        elif preset == "Sensor Suite":
+            ensure("temp1", HardwareType.TEMPERATURE_SENSOR, 0)
+            ensure("humidity1", HardwareType.GENERIC_SENSOR, 1)
+            ensure("light1", HardwareType.GENERIC_SENSOR, 2)
+        elif preset == "Robot Arm":
+            ensure("arm_servo", HardwareType.SERVO, 9)
+            ensure("arm_distance", HardwareType.DISTANCE_SENSOR, 10)
+        elif preset == "Smart Home Kit":
+            ensure("home_led", HardwareType.LED, 6)
+            ensure("home_temp", HardwareType.TEMPERATURE_SENSOR, 1)
+            ensure("home_motion", HardwareType.GENERIC_SENSOR, 7)
+
+        if added:
+            self.emit_status(f"Added preset devices: {', '.join(added)}")
+        else:
+            self.emit_status(f"Preset already loaded: {preset}")
+        self.refresh_state()
+
+    def read_all_sensors(self) -> None:
+        """Read all sensor-like devices in the simulator."""
+        sensor_count = 0
+        for device_id, device in self.simulator.devices.items():
+            if "sensor" in device.device_type.value or device.device_type in {
+                HardwareType.TEMPERATURE_SENSOR,
+                HardwareType.DISTANCE_SENSOR,
+            }:
+                self.simulator.read_sensor(device_id)
+                sensor_count += 1
+
+        if sensor_count:
+            self.emit_status(f"Read {sensor_count} sensor(s)")
+        else:
+            self.emit_status("No sensors available to read")
+        self.refresh_state()
+
+    def apply_environment(self) -> None:
+        """Apply the environment controls to the shared simulator."""
+        self.simulator.set_environment(
+            temperature=float(self.temperature_spin.value()),
+            humidity=float(self.humidity_spin.value()),
+            light_level=float(self.light_spin.value()),
+        )
+        self.emit_status("Environment updated")
+        self.refresh_state()
+
+    def _selected_device_id(self) -> str | None:
+        """Return the currently selected device id from the device table."""
+        row = self.devices_table.currentRow()
+        if row < 0:
+            return None
+        item = self.devices_table.item(row, 0)
+        if item is None:
+            return None
+        return item.text()
+
+    def _sync_selected_device(self) -> None:
+        """Update the control area from the currently selected device."""
+        device_id = self._selected_device_id()
+        if not device_id:
+            self.selected_device_label.setText("No device selected")
+            return
+
+        status = self.simulator.get_device_status(device_id)
+        if status is None:
+            self.selected_device_label.setText(device_id)
+            return
+
+        self.selected_device_label.setText(device_id)
+        self.device_value_spin.blockSignals(True)
+        self.device_value_spin.setValue(int(status.get("current_value", 0)))
+        self.device_value_spin.blockSignals(False)
+
+    def apply_selected_device_value(self) -> None:
+        """Set the current value for the selected device."""
+        device_id = self._selected_device_id()
+        if not device_id:
+            self.emit_status("Select a device first")
+            return
+
+        self.simulator.set_device_value(device_id, float(self.device_value_spin.value()))
+        self.emit_status(f"Set {device_id} to {self.device_value_spin.value()}")
+        self.refresh_state()
+
+    def activate_selected_device(self) -> None:
+        """Activate the selected device using the current value control."""
+        device_id = self._selected_device_id()
+        if not device_id:
+            self.emit_status("Select a device first")
+            return
+
+        self.simulator.activate_device(device_id, float(self.device_value_spin.value()))
+        self.emit_status(f"Activated {device_id}")
+        self.refresh_state()
+
+    def deactivate_selected_device(self) -> None:
+        """Deactivate the selected device."""
+        device_id = self._selected_device_id()
+        if not device_id:
+            self.emit_status("Select a device first")
+            return
+
+        self.simulator.deactivate_device(device_id)
+        self.emit_status(f"Deactivated {device_id}")
+        self.refresh_state()
+
+    def read_selected_device(self) -> None:
+        """Read the selected device when it behaves like a sensor."""
+        device_id = self._selected_device_id()
+        if not device_id:
+            self.emit_status("Select a device first")
+            return
+
+        reading = self.simulator.read_sensor(device_id)
+        if reading is None:
+            self.emit_status(f"{device_id} has no sensor reading")
+        else:
+            self.emit_status(f"Read {device_id}: {reading.value:.2f} {reading.unit}")
+        self.refresh_state()
+
+    def refresh_state(self) -> None:
+        """Refresh the device and reading tables from the shared simulator."""
+        statuses = self.simulator.get_all_device_status()
+        environment = self.simulator.get_environment()
+        selected_device = self._selected_device_id()
+
+        self.temperature_spin.blockSignals(True)
+        self.humidity_spin.blockSignals(True)
+        self.light_spin.blockSignals(True)
+        self.temperature_spin.setValue(int(environment.get("temperature", 25.0)))
+        self.humidity_spin.setValue(int(environment.get("humidity", 50.0)))
+        self.light_spin.setValue(int(environment.get("light_level", 500.0)))
+        self.temperature_spin.blockSignals(False)
+        self.humidity_spin.blockSignals(False)
+        self.light_spin.blockSignals(False)
+
+        self.devices_table.setRowCount(len(statuses))
+        for row, status in enumerate(statuses):
+            self.devices_table.setItem(row, 0, QTableWidgetItem(status["device_id"]))
+            self.devices_table.setItem(row, 1, QTableWidgetItem(status["type"]))
+            self.devices_table.setItem(
+                row,
+                2,
+                QTableWidgetItem(str(status.get("current_value", 0))),
+            )
+            state = "active" if status.get("is_active") else "idle"
+            self.devices_table.setItem(row, 3, QTableWidgetItem(state))
+            if status["device_id"] == selected_device:
+                self.devices_table.selectRow(row)
+
+        reading_rows = []
+        for status in statuses:
+            last_reading = status.get("last_reading")
+            if last_reading is not None:
+                reading_rows.append(last_reading)
+
+        self.readings_table.setRowCount(len(reading_rows))
+        for row, reading in enumerate(reading_rows):
+            self.readings_table.setItem(row, 0, QTableWidgetItem(reading.sensor_id))
+            self.readings_table.setItem(row, 1, QTableWidgetItem(f"{reading.value:.2f}"))
+            self.readings_table.setItem(row, 2, QTableWidgetItem(reading.unit))
+
+        self.summary_label.setText(
+            f"{len(statuses)} device(s) available • {len(reading_rows)} recent sensor reading(s) • "
+            f"{environment.get('temperature', 25.0):.0f} °C / "
+            f"{environment.get('humidity', 50.0):.0f}% / "
+            f"{environment.get('light_level', 500.0):.0f} lux"
+        )
+        self._sync_selected_device()
 
     def change_device(self):
         """Change simulated device."""

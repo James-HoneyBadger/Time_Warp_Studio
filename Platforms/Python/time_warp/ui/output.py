@@ -25,6 +25,7 @@ from PySide6.QtWidgets import (
 
 from ..core.debugger import ExecutionTimeline
 from ..core.interpreter import Interpreter, Language
+from ..features.hardware_simulator import HardwareSimulator
 from ..graphics.turtle_state import TurtleState
 
 # Set to True or use TWS_DEBUG=1 env var to enable verbose debug output
@@ -92,6 +93,7 @@ class InterpreterThread(QThread):
         turtle,
         language=None,
         interpreter=None,
+        hardware_simulator=None,
         debug_mode=False,
         breakpoints=None,
         debug_step_granularity="line",
@@ -102,6 +104,7 @@ class InterpreterThread(QThread):
         self.language = language
         self.should_stop = False
         self.interp = interpreter
+        self.hardware_simulator = hardware_simulator
         self.debug_mode = debug_mode
         self.breakpoints = breakpoints or set()
         self.debug_step_granularity = debug_step_granularity
@@ -115,7 +118,9 @@ class InterpreterThread(QThread):
         try:
             if self.interp is None:
                 self.interp = Interpreter()
-                self.interp.load_program(self.code, self.language)
+            if self.hardware_simulator is not None:
+                self.interp.hardware = self.hardware_simulator
+            self.interp.load_program(self.code, self.language)
 
             # Configure debugging
             self.interp.set_debug_mode(self.debug_mode)
@@ -282,6 +287,8 @@ class OutputPanel(QTextEdit):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+
+        self.hardware_simulator = HardwareSimulator()
 
         # Make read-only
         self.setReadOnly(True)
@@ -571,6 +578,7 @@ class OutputPanel(QTextEdit):
             turtle,
             language,
             interpreter,
+            self.hardware_simulator,
             debug_mode,
             breakpoints,
             debug_step_granularity,
@@ -931,7 +939,8 @@ class ImmediateModePanel(QWidget):
         super().__init__(parent)
 
         # Persistent interpreter for immediate mode
-        self.interpreter = Interpreter()
+        self.hardware_simulator = HardwareSimulator()
+        self.interpreter = self._create_interpreter()
         self.turtle = TurtleState()
         self.canvas = None
         self.output_panel = None  # Reference to main output panel
@@ -978,6 +987,12 @@ class ImmediateModePanel(QWidget):
         # Install event filter for command history navigation
         self.command_input.installEventFilter(self)
 
+    def _create_interpreter(self) -> Interpreter:
+        """Create an interpreter bound to the shared hardware simulator."""
+        interpreter = Interpreter()
+        interpreter.hardware = self.hardware_simulator
+        return interpreter
+
     def eventFilter(self, obj, event):  # pylint: disable=invalid-name
         """Handle key events for command history."""
         if obj == self.command_input and event.type() == event.Type.KeyPress:
@@ -1018,6 +1033,11 @@ class ImmediateModePanel(QWidget):
     def set_output_panel(self, output_panel):
         """Set the output panel to send results to."""
         self.output_panel = output_panel
+
+    def set_hardware_simulator(self, simulator: HardwareSimulator) -> None:
+        """Adopt the shared hardware simulator used by the main output path."""
+        self.hardware_simulator = simulator
+        self.interpreter.hardware = simulator
 
     def set_language(self, language):
         """Set the current language."""
@@ -1102,7 +1122,7 @@ class ImmediateModePanel(QWidget):
 
     def clear_state(self):
         """Clear the interpreter state (variables, etc.)."""
-        self.interpreter = Interpreter()
+        self.interpreter = self._create_interpreter()
         self.turtle = TurtleState()
         if self.canvas:
             self.turtle.on_change = self._on_turtle_change

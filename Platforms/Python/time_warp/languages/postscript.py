@@ -750,29 +750,29 @@ class PostScriptEnvironment:
         if op_lower == "moveto":
             y, x = float(self._pop()), float(self._pop())
             self._current_pos = (x, y)
-            self._turtle.pen_up()
-            self._turtle.set_pos(x, y)
-            self._turtle.pen_down()
+            self._turtle.penup()
+            self._turtle.goto(x, y)
+            self._turtle.pendown()
             return
         if op_lower == "rmoveto":
             dy, dx = float(self._pop()), float(self._pop())
             nx = self._current_pos[0] + dx
             ny = self._current_pos[1] + dy
             self._current_pos = (nx, ny)
-            self._turtle.pen_up()
-            self._turtle.set_pos(nx, ny)
-            self._turtle.pen_down()
+            self._turtle.penup()
+            self._turtle.goto(nx, ny)
+            self._turtle.pendown()
             return
         if op_lower == "lineto":
             y, x = float(self._pop()), float(self._pop())
-            self._turtle.set_pos(x, y)
+            self._turtle.goto(x, y)
             self._current_pos = (x, y)
             return
         if op_lower == "rlineto":
             dy, dx = float(self._pop()), float(self._pop())
             nx = self._current_pos[0] + dx
             ny = self._current_pos[1] + dy
-            self._turtle.set_pos(nx, ny)
+            self._turtle.goto(nx, ny)
             self._current_pos = (nx, ny)
             return
         if op_lower == "stroke":

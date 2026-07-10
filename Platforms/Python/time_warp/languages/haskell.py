@@ -498,6 +498,10 @@ class HaskellEnvironment:
         if "`" in expr:
             expr = re.sub(r"`(\w+)`", r" \1 ", expr).strip()
 
+        # Strip top-level type ascriptions in expression context.
+        # Examples: [1..5 :: Int], value :: [Suit]
+        expr = _strip_top_level_type_ascription(expr)
+
         # do-block — must be exactly "do" or "do " / "do{" / "do\n" etc.
         if expr == "do" or (expr.startswith("do") and len(expr) > 2 and expr[2] in (" ", "\t", "\n", "{")):
             rest = expr[2:].strip()
@@ -1885,6 +1889,36 @@ def _rfind_op(expr: str, op: str) -> int:
                 last = i
         i += 1
     return last
+
+
+def _strip_top_level_type_ascription(expr: str) -> str:
+    """Remove trailing top-level ':: Type' from an expression.
+
+    Keeps nested uses untouched by tracking string and bracket depth.
+    """
+    depth = 0
+    in_str = False
+    str_char = ""
+    i = 0
+    while i < len(expr) - 1:
+        ch = expr[i]
+        if in_str:
+            if ch == "\\" and i + 1 < len(expr):
+                i += 2
+                continue
+            if ch == str_char:
+                in_str = False
+        elif ch in ('"', "'"):
+            in_str = True
+            str_char = ch
+        elif ch in "([{" :
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif depth == 0 and expr[i:i + 2] == "::":
+            return expr[:i].strip()
+        i += 1
+    return expr
 
 
 def _split_application(expr: str) -> list[str]:

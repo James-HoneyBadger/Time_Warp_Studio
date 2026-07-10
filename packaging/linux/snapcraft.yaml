@@ -1,11 +1,10 @@
 name: time-warp-studio
-version: '10.2.0'
+version: '13.0.0'
 summary: Educational multi-language programming environment
 description: |
-  Time Warp Studio is an educational desktop IDE supporting 13 programming
-  languages (BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, JavaScript, Lua,
-  Erlang, HyperTalk, Brainfuck, LISP/Scheme) with integrated turtle graphics,
-  syntax highlighting, a step-through debugger, and 90+ example programs.
+  Time Warp Studio is an educational desktop IDE supporting 24 programming
+  languages with integrated turtle graphics, syntax highlighting, a
+  step-through debugger, and 110+ example programs.
 
 grade: stable
 confinement: strict

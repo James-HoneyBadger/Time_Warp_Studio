@@ -75,6 +75,7 @@ from .screen_modes import ScreenModeManager
 from .terminal_widget import TerminalWidget
 from .themes import ThemeManager
 from .variable_inspector import VariableInspector
+from .breakpoint_persistence import decode_breakpoints, encode_breakpoints
 from ..features.classroom_mode import ClassroomMode
 from ..features.autosave_manager import AutosaveManager
 from ..features.plugin_system import PluginManager
@@ -674,15 +675,23 @@ class MainWindow(
         editor = self.get_current_editor()
         if editor is None:
             return
-        lines = sorted(editor.get_breakpoints())
-        self.settings.setValue(self._bp_settings_key(filepath), lines)
+        payload = encode_breakpoints(
+            editor.get_breakpoints(),
+            {
+                line: editor.get_breakpoint_condition(line)
+                for line in editor.get_breakpoints()
+            },
+        )
+        self.settings.setValue(self._bp_settings_key(filepath), payload)
 
     def _load_breakpoints_for_file(self, filepath: str, editor) -> None:
         """Restore persisted breakpoints into *editor* for the given file."""
         raw = self.settings.value(self._bp_settings_key(filepath), [])
-        lines = {int(n) for n in (raw or []) if str(n).isdigit()} if raw else set()  # type: ignore
-        if lines:
-            editor.set_breakpoints(lines)
+        lines, conditions = decode_breakpoints(raw)
+        editor.set_breakpoints(lines)
+        for line, condition in conditions.items():
+            editor.set_breakpoint_condition(line, condition)
+        self._update_breakpoints_display()
 
     # -- small helpers used by menu actions (keeps lambdas short) --
     def _editor_undo(self, _checked: bool = False):
@@ -1621,6 +1630,7 @@ class MainWindow(
         # Connect immediate mode to output panel and canvas
         self.immediate_mode.set_canvas(self.canvas)
         self.immediate_mode.set_output_panel(self.output)
+        self.immediate_mode.set_hardware_simulator(self.output.hardware_simulator)
         self.immediate_mode.variables_updated.connect(self.on_variables_updated)
 
         # Variable inspector

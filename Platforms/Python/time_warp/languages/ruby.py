@@ -794,14 +794,26 @@ class RubyEnvironment:
         if expr.startswith("'") and expr.endswith("'") and len(expr) >= 2:
             return expr[1:-1].replace("\\'", "'")
 
+        # percent-word array literal: %w[foo bar baz]
+        m = re.match(r"^%w\[(.*)\]$", expr, re.DOTALL)
+        if m:
+            inner = m.group(1).strip()
+            return [w for w in re.split(r"\s+", inner) if w]
+
         # symbol :name
         m = re.match(r"^:(\w+)$", expr)
         if m:
             return RubySymbol(m.group(1))
 
+        # symbol-to-proc shorthand: &:method_name
+        m = re.match(r"^&:(\w+[?!]?)$", expr)
+        if m:
+            method_name = m.group(1)
+            return RubyProc(["item"], f"item.{method_name}", {})
+
         # range (1..10) or (1...10)
-        m = re.match(r"^\(?(.+?)(\.\.\.?)(.*?)\)?$", expr)
-        if m and not _has_unbalanced_parens(expr[1:-1] if expr.startswith("(") else expr):
+        m = re.match(r"^\(?(.+?)(\.\.\.??)(.*?)\)?$", expr)
+        if m and "[" not in expr and "]" not in expr and not _has_unbalanced_parens(expr[1:-1] if expr.startswith("(") else expr):
             start = self._eval(m.group(1).strip())
             stop = self._eval(m.group(3).strip())
             exclusive = m.group(2) == "..."
@@ -962,14 +974,38 @@ class RubyEnvironment:
         m = re.match(r"^([@$]?\w+)\[(.+)\]$", expr)
         if m:
             container = self._get_var(m.group(1))
-            idx = self._eval(m.group(2).strip())
             if isinstance(container, list):
+                raw_idx = m.group(2).strip()
+                range_m = re.match(r"^(.+?)(\.\.\.?)(.*)$", raw_idx)
+                if range_m:
+                    start = self._eval(range_m.group(1).strip())
+                    stop_expr = range_m.group(3).strip()
+                    stop = self._eval(stop_expr) if stop_expr else NIL
+                    exclusive = range_m.group(2) == "..."
+                    n = len(container)
+                    start = start if isinstance(start, int) else 0
+                    if start < 0:
+                        start += n
+                    if stop is NIL or stop is None:
+                        stop = n - 1
+                    stop = stop if isinstance(stop, int) else n - 1
+                    if stop < 0:
+                        stop += n
+                    if exclusive:
+                        stop -= 1
+                    start = max(start, 0)
+                    stop = min(stop, n - 1)
+                    if n == 0 or start > stop:
+                        return []
+                    return container[start : stop + 1]
+                idx = self._eval(raw_idx)
                 if isinstance(idx, int):
                     n = len(container)
                     # Support negative indices like Ruby
                     real_idx = idx if idx >= 0 else n + idx
                     return container[real_idx] if 0 <= real_idx < n else NIL
                 return NIL
+            idx = self._eval(m.group(2).strip())
             if isinstance(container, dict):
                 return container.get(idx, NIL)
             return NIL
@@ -1083,6 +1119,14 @@ class RubyEnvironment:
                 return _sprintf(_ruby_to_s(args[0]), args[1:])
             return ""
 
+        if name in ("bubble_sort", "insertion_sort", "merge_sort", "quicksort") and len(args) == 1:
+            value = args[0]
+            if isinstance(value, list):
+                try:
+                    return sorted(value)
+                except TypeError:
+                    return sorted(value, key=str)
+
         # Turtle graphics
         turtle_result = self._try_turtle(name, args)
         if turtle_result is not _UNSET:
@@ -1110,6 +1154,9 @@ class RubyEnvironment:
 
         # Block extraction for iterator methods
         block = _extract_block(full_chain)
+        if block is None and args and isinstance(args[0], RubyProc):
+            block = args[0]
+            args = args[1:]
 
         # RubyObject (user class instance)
         if isinstance(receiver, RubyObject):
@@ -1176,7 +1223,7 @@ class RubyEnvironment:
             if name == "inspect":
                 return repr(receiver)
             if name == "to_proc":
-                return RubyProc([":item"], f":item.{receiver.name}", {})
+                return RubyProc(["item"], f"item.{receiver.name}", {})
 
         # Nil
         if isinstance(receiver, _RubyNil):
@@ -1687,6 +1734,8 @@ class RubyEnvironment:
                 if isinstance(a, list):
                     receiver.extend(a)
             return receiver
+        if name == "dup":
+            return receiver[:]
         if name == "insert":
             idx = int(args[0]) if args else 0
             for i, v in enumerate(args[1:]):
@@ -2180,6 +2229,11 @@ def _ruby_inspect(val: Any) -> str:
 
 def _apply_op(lv: Any, op: str, rv: Any) -> Any:
     try:
+        if op in ("+", "-", "*", "/", "%", "**", "<", ">", "<=", ">=", "<=>"):
+            if isinstance(lv, _RubyNil):
+                lv = 0
+            if isinstance(rv, _RubyNil):
+                rv = 0
         if op == "+":
             if isinstance(lv, str):
                 return lv + _ruby_to_s(rv)

@@ -26,6 +26,7 @@ DOC_DIR="$HOME/.local/share/doc/timewarp"
 
 # Get script directory
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+VERSION="$(cat "$SCRIPT_DIR/../VERSION" 2>/dev/null || echo "0.0.0")"
 
 # Installation options
 UNINSTALL=false
@@ -267,7 +268,7 @@ check_path() {
 
 # Main installation
 install() {
-    print_header "Installing Time Warp Studio v10.0.0 (User Mode)"
+    print_header "Installing Time Warp Studio v$VERSION (User Mode)"
 
     print_info "Install directory: $INSTALL_DIR"
     echo ""

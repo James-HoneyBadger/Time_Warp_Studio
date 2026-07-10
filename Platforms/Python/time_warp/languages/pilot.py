@@ -107,8 +107,12 @@ def execute_pilot(
         "NO": "N",
     }
     for keyword, letter in _LONGFORM_MAP.items():
-        if cmd_upper == keyword or cmd_upper.startswith(keyword + " "):
-            rest_text = cmd[len(keyword) :].strip()
+        if (
+            cmd_upper == keyword
+            or cmd_upper.startswith(keyword + " ")
+            or cmd_upper.startswith(keyword + ":")
+        ):
+            rest_text = cmd[len(keyword) :].lstrip(" :").strip()
             # For COMPUTE, normalise "var value" → "var = value" if no "="
             if letter == "C" and "=" not in rest_text and " " in rest_text:
                 parts = rest_text.split(None, 1)

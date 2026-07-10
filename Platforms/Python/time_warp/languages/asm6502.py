@@ -350,6 +350,10 @@ class Assembler:
                 pc += 1
                 continue
 
+            # End-of-source marker used by many educational assemblers.
+            if token0 in (".END", "END"):
+                continue
+
             # Regular instruction
             if label:
                 self.symbols[label] = pc
@@ -551,14 +555,36 @@ class Assembler:
 
     def _parse_num(self, s: str) -> int:
         s = s.strip()
+        if s.startswith("'") and s.endswith("'") and len(s) == 3:
+            return ord(s[1])
+        # Support simple assembler expressions like "'z'+1" and "$10-1".
+        if "+" in s or "-" in s:
+            parts = re.split(r"([+-])", s)
+            if len(parts) >= 3:
+                total: Optional[int] = None
+                op = "+"
+                for part in parts:
+                    part = part.strip()
+                    if not part:
+                        continue
+                    if part in ("+", "-"):
+                        op = part
+                        continue
+                    val = self._parse_num(part)
+                    if total is None:
+                        total = val
+                    elif op == "+":
+                        total += val
+                    else:
+                        total -= val
+                if total is not None:
+                    return total
         if s.startswith("$"):
             return int(s[1:], 16)
         if s.startswith("0x") or s.startswith("0X"):
             return int(s, 16)
         if s.startswith("%"):
             return int(s[1:], 2)
-        if s.startswith("'") and s.endswith("'") and len(s) == 3:
-            return ord(s[1])
         if s.upper() in self.symbols:
             return self.symbols[s.upper()]
         try:
@@ -568,14 +594,52 @@ class Assembler:
 
     def _parse_data_bytes(self, s: str) -> list[int]:
         result = []
-        for part in s.split(","):
+        for part in self._split_csv_quoted(s):
             part = part.strip()
+            if not part:
+                continue
             if part.startswith('"') or part.startswith("'"):
                 for ch in part[1:-1]:
                     result.append(ord(ch))
             else:
                 result.append(self._parse_num(part) & 0xFF)
         return result
+
+    @staticmethod
+    def _split_csv_quoted(s: str) -> list[str]:
+        """Split CSV-style data while preserving commas inside quoted strings."""
+        parts: list[str] = []
+        buf: list[str] = []
+        quote: Optional[str] = None
+        escape = False
+
+        for ch in s:
+            if escape:
+                buf.append(ch)
+                escape = False
+                continue
+            if ch == "\\":
+                buf.append(ch)
+                escape = True
+                continue
+            if quote:
+                buf.append(ch)
+                if ch == quote:
+                    quote = None
+                continue
+            if ch in ("\"", "'"):
+                quote = ch
+                buf.append(ch)
+                continue
+            if ch == ",":
+                parts.append("".join(buf).strip())
+                buf = []
+                continue
+            buf.append(ch)
+
+        if buf:
+            parts.append("".join(buf).strip())
+        return parts
 
     def _parse_data_words(self, s: str) -> list[int]:
         return [self._parse_num(p.strip()) & 0xFFFF for p in s.split(",")]

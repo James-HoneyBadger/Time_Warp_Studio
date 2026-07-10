@@ -18,7 +18,17 @@ from datetime import datetime
 
 # ===== VERSION INFORMATION =====
 
-TIME_WARP_VERSION = "10.0.0"
+
+def _read_time_warp_version() -> str:
+    """Read the studio version from the repository VERSION file."""
+    version_file = Path(__file__).resolve().parents[1] / "VERSION"
+    try:
+        return version_file.read_text(encoding="utf-8").strip()
+    except OSError:
+        return "0.0.0"
+
+
+TIME_WARP_VERSION = _read_time_warp_version()
 MINIMUM_PYTHON_VERSION = (3, 8)
 REQUIRED_MODULES = ["PySide6", "PIL", "requests"]
 OPTIONAL_MODULES = ["pytest", "pytest-cov", "black", "mypy"]

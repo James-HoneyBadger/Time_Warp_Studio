@@ -41,15 +41,42 @@ class VariableInspector(QTableWidget):
         for row, (name, value) in enumerate(sorted_vars):
             name_item = QTableWidgetItem(str(name))
 
-            # Format value based on type
-            if isinstance(value, (list, dict, set)):
-                value_str = str(value)
-            elif isinstance(value, float):
-                value_str = f"{value:.4f}"
-            else:
-                value_str = str(value)
+            value_str = self._format_value(name, value)
 
             value_item = QTableWidgetItem(value_str)
 
             self.setItem(row, 0, name_item)
             self.setItem(row, 1, value_item)
+
+    def _format_value(self, name: str, value: Any) -> str:
+        """Format a variable value for display in the table."""
+        if name == "__hardware__" and isinstance(value, dict):
+            environment = value.get("environment", {})
+            devices = value.get("devices", {})
+            env_bits = []
+            for key in ("temperature", "humidity", "light_level"):
+                if key in environment:
+                    env_bits.append(f"{key}={environment[key]}")
+            device_lines = []
+            for device_id, info in sorted(devices.items()):
+                device_lines.append(
+                    f"{device_id}: type={info.get('type', '?')}, "
+                    f"active={info.get('active', False)}, "
+                    f"value={info.get('value', 0)}"
+                )
+            summary = [
+                "Hardware snapshot",
+                f"Environment: {', '.join(env_bits) if env_bits else 'none'}",
+                f"Devices: {len(devices)}",
+            ]
+            if device_lines:
+                summary.append("Device details:")
+                summary.extend(f"  {line}" for line in device_lines)
+            return "\n".join(summary)
+
+        # Format value based on type
+        if isinstance(value, (list, dict, set)):
+            return str(value)
+        if isinstance(value, float):
+            return f"{value:.4f}"
+        return str(value)

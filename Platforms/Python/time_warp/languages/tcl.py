@@ -287,7 +287,15 @@ class TclEnvironment:
         cmd = merged[start:].strip()
         if cmd and not cmd.startswith("#"):
             commands.append(cmd)
-        return commands
+
+        merged_commands: List[str] = []
+        for command in commands:
+            stripped = command.lstrip()
+            if stripped.startswith(("elseif", "else")) and merged_commands:
+                merged_commands[-1] = merged_commands[-1] + " " + command
+            else:
+                merged_commands.append(command)
+        return merged_commands
 
     def _exec_command(self, line: str) -> str:
         """Execute a single Tcl command and return its result."""
@@ -438,9 +446,28 @@ class TclEnvironment:
             return self._cmd_lrange(args)
         if cmd == "lappend":
             return self._cmd_lappend(args)
+        if cmd == "lrepeat":
+            return self._cmd_lrepeat(args)
+        if cmd == "lassign":
+            return self._cmd_lassign(args)
+        if cmd == "lset":
+            return self._cmd_lset(args)
         if cmd == "lsort":
-            lst = self._tcl_list(args[-1]) if args else []
-            return self._list_to_str(sorted(lst))
+            if not args:
+                return ""
+            sort_integer = "-integer" in args[:-1]
+            sort_decreasing = "-decreasing" in args[:-1]
+            lst = self._tcl_list(args[-1])
+            if sort_integer:
+                try:
+                    sorted_lst = sorted(lst, key=lambda x: int(float(x)))
+                except ValueError:
+                    sorted_lst = sorted(lst)
+            else:
+                sorted_lst = sorted(lst)
+            if sort_decreasing:
+                sorted_lst = list(reversed(sorted_lst))
+            return self._list_to_str(sorted_lst)
         if cmd == "lreverse":
             lst = self._tcl_list(args[0]) if args else []
             return self._list_to_str(list(reversed(lst)))
@@ -550,7 +577,8 @@ class TclEnvironment:
         expr = re.sub(r"\band\b", " and ", expr, flags=re.IGNORECASE)
         expr = re.sub(r"\bor\b", " or ", expr, flags=re.IGNORECASE)
         expr = re.sub(r"\bnot\b", " not ", expr, flags=re.IGNORECASE)
-        expr = expr.replace("&&", " and ").replace("||", " or ").replace("!", " not ")
+        expr = expr.replace("&&", " and ").replace("||", " or ")
+        expr = re.sub(r"!(?!=)", " not ", expr)
         expr = re.sub(
             r"\b(abs|round|int|float|sqrt|sin|cos|tan|ceil|floor|log|exp|pow)\b",
             lambda m: {
@@ -566,6 +594,7 @@ class TclEnvironment:
             }.get(m.group(1), m.group(1)),
             expr,
         )
+        expr = re.sub(r"(?<![*/])/(?![*/])", "//", expr)
 
         try:
             result = eval(
@@ -591,9 +620,9 @@ class TclEnvironment:
 
     def _cmd_incr(self, args: List[str]) -> str:
         name = args[0] if args else ""
-        step = int(args[1]) if len(args) > 1 else 1
+        step = int(float(args[1])) if len(args) > 1 else 1
         try:
-            val = int(self._get_var(name))
+            val = int(float(self._get_var(name)))
         except (_TclError, ValueError):
             val = 0
         val += step
@@ -744,7 +773,7 @@ class TclEnvironment:
             return ""
         lst = self._tcl_list(args[0])
         try:
-            idx = int(args[1])
+            idx = int(float(args[1]))
             return lst[idx] if 0 <= idx < len(lst) else ""
         except (ValueError, IndexError):
             return ""
@@ -753,8 +782,8 @@ class TclEnvironment:
         if len(args) < 3:
             return ""
         lst = self._tcl_list(args[0])
-        first = int(args[1])
-        last = int(args[2]) if args[2] != "end" else len(lst) - 1
+        first = int(float(args[1]))
+        last = int(float(args[2])) if args[2] != "end" else len(lst) - 1
         return self._list_to_str(lst[first : last + 1])
 
     def _cmd_lappend(self, args: List[str]) -> str:
@@ -765,6 +794,47 @@ class TclEnvironment:
             current = []
         current.extend(args[1:])
         val = self._list_to_str(current)
+        self._set_var(name, val)
+        return val
+
+    def _cmd_lrepeat(self, args: List[str]) -> str:
+        if len(args) < 2:
+            return ""
+        count = int(float(args[0]))
+        value = args[1]
+        return self._list_to_str([value for _ in range(max(count, 0))])
+
+    def _cmd_lassign(self, args: List[str]) -> str:
+        if len(args) < 2:
+            return ""
+        lst = self._tcl_list(args[0])
+        names = args[1:]
+        for i, name in enumerate(names):
+            if name == "":
+                continue
+            self._set_var(name, lst[i] if i < len(lst) else "")
+        return lst[len(names)] if len(lst) > len(names) else ""
+
+    def _cmd_lset(self, args: List[str]) -> str:
+        if len(args) < 3:
+            return ""
+        name = args[0]
+        try:
+            lst = self._tcl_list(self._get_var(name))
+        except _TclError:
+            lst = []
+        try:
+            idx = int(float(args[1]))
+        except ValueError:
+            return ""
+        if idx < 0:
+            idx += len(lst)
+        if idx < 0:
+            return ""
+        while len(lst) <= idx:
+            lst.append("")
+        lst[idx] = args[2]
+        val = self._list_to_str(lst)
         self._set_var(name, val)
         return val
 

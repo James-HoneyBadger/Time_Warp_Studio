@@ -133,6 +133,26 @@ def test_while_loop():
     assert has(out, "1", "2", "3")
 
 
+def test_inline_while_with_output_runs_to_completion():
+    out = pascal(
+        "program WLInline;\n"
+        "var i: integer;\n"
+        "procedure tick;\n"
+        "begin\n"
+        "  write(i);\n"
+        "  i := i + 1;\n"
+        "end;\n"
+        "begin\n"
+        "  i := 1;\n"
+        "  while i <= 3 do tick();\n"
+        "  writeln('done');\n"
+        "end."
+    )
+    assert no_errors(out)
+    assert has(out, "1", "2", "3", "done")
+    assert not any("Maximum iterations" in line for line in out)
+
+
 # ---------------------------------------------------------------------------
 # Procedures and functions
 # ---------------------------------------------------------------------------
@@ -238,6 +258,35 @@ def test_nested_if_else():
     )
     assert no_errors(out)
     assert has(out, "medium")
+
+
+def test_nested_for_with_if_begin_body_sorts():
+    out = pascal(
+        "program B;\n"
+        "type TArray = array[1..5] of Integer;\n"
+        "procedure BubbleSort(var A: TArray; N: Integer);\n"
+        "var I, J, T: Integer;\n"
+        "begin\n"
+        "  for I := 1 to N-1 do\n"
+        "  begin\n"
+        "    for J := 1 to N-I do\n"
+        "      if A[J] > A[J+1] then\n"
+        "      begin\n"
+        "        T := A[J];\n"
+        "        A[J] := A[J+1];\n"
+        "        A[J+1] := T;\n"
+        "      end;\n"
+        "  end;\n"
+        "end;\n"
+        "var A: TArray;\n"
+        "begin\n"
+        "  A[1]:=5; A[2]:=4; A[3]:=3; A[4]:=2; A[5]:=1;\n"
+        "  BubbleSort(A,5);\n"
+        "  writeln(A[1]); writeln(A[2]); writeln(A[3]); writeln(A[4]); writeln(A[5]);\n"
+        "end."
+    )
+    assert no_errors(out)
+    assert has(out, "1", "2", "3", "4", "5")
 
 
 def test_case_statement():
@@ -377,6 +426,34 @@ def test_ord_function():
     )
     assert no_errors(out)
     assert has(out, "65")
+
+
+def test_procedure_for_if_inline_does_not_loop_forever():
+    out = pascal(
+        "program T;\n"
+        "procedure PrintNums(N: Integer);\n"
+        "var I: Integer;\n"
+        "begin\n"
+        "  for I := 1 to N do\n"
+        "  begin\n"
+        "    write(I);\n"
+        "    if I < N then write(',');\n"
+        "  end;\n"
+        "  writeln;\n"
+        "end;\n"
+        "begin\n"
+        "  writeln('start');\n"
+        "  PrintNums(5);\n"
+        "  writeln('done');\n"
+        "end."
+    )
+    assert no_errors(out)
+    text = "".join(out)
+    assert "start" in text
+    assert "done" in text
+    assert "1,2,3,4,5" in text
+    assert sum(1 for line in out if "start" in line) == 1
+    assert not any("Maximum iterations" in line for line in out)
 
 
 # ---------------------------------------------------------------------------

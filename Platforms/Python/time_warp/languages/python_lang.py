@@ -72,7 +72,7 @@ _ALLOWED_IMPORTS: frozenset[str] = frozenset({
     "string", "json", "re", "copy", "abc", "typing",
     "decimal", "fractions", "statistics", "heapq", "bisect",
     "operator", "datetime", "enum", "dataclasses",
-    "collections.abc", "typing_extensions",
+    "collections.abc", "typing_extensions", "time", "__future__",
 })
 
 # ---------------------------------------------------------------------------

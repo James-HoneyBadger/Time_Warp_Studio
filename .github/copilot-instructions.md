@@ -8,9 +8,9 @@
 
 ## Project Overview
 
-Time Warp Studio is an educational desktop programming environment built with Python and PySide6 (Qt6) that provides a unified IDE for learning **13 programming languages** with integrated turtle graphics.
+Time Warp Studio is an educational desktop programming environment built with Python and PySide6 (Qt6) that provides a unified IDE for learning **24 programming languages** with integrated turtle graphics.
 
-**Supported Languages:** BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, JavaScript, Lua, HyperTalk, Erlang, LISP/Scheme.
+**Supported Languages:** BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, JavaScript, Lua, HyperTalk, Erlang, LISP/Scheme, COBOL, Tcl, PostScript, Ruby, Python, Haskell, 6502 Assembly, Perl, REXX, Smalltalk, APL.
 
 **Current State:** Native desktop application (Python/PySide6) - single actively maintained version.
 
@@ -21,7 +21,7 @@ Time Warp Studio is an educational desktop programming environment built with Py
 - **Desktop Application (Python/PySide6)** — primary and only maintained version
     - Entry point: `Platforms/Python/time_warp_ide.py`
     - Core: `Platforms/Python/time_warp/core/interpreter.py`
-    - Languages: 12 executors in `Platforms/Python/time_warp/languages/`
+    - Languages: 24 executors in `Platforms/Python/time_warp/languages/`
     - UI: PySide6 (Qt6) with modern desktop interface (30+ UI modules)
     - All UI state (editor, canvas, themes) managed by main application
 
@@ -49,10 +49,10 @@ When adding a new whole-program language, only one dict needs updating: `_WHOLE_
 
 ```bash
 # Primary method
-python Platforms/Python/time_warp_ide.py
+python3 Platforms/Python/time_warp_ide.py
 
 # Or use the smart launcher (handles venv + deps):
-python run.py
+python3 run.py
 
 # System Requirements
 # - Python 3.10+
@@ -65,10 +65,10 @@ python run.py
 
 ```bash
 # Comprehensive suite with coverage
-python Platforms/Python/test_runner.py --comprehensive
+PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
 
 # Quick smoke tests
-python Platforms/Python/test_runner.py --basic
+python3 Platforms/Python/smoke_test.py
 
 # Component-specific
 pytest Platforms/Python/time_warp/tests/test_basic_executor.py -v
@@ -80,7 +80,7 @@ python tests/test_all_demos.py
 
 **Test Organization:**
 - `test_*.py` = unit tests for components (41 test files in `time_warp/tests/`)
-- `Platforms/Python/test_runner.py` = orchestrator with HTML reports -> `test_reports/`
+- `Platforms/Python/smoke_test.py` = fast smoke test without pytest
 - `tests/test_all_demos.py` = standalone demo verifier (subprocess per file)
 - `conftest_lang.py` = shared `run()`, `ok()`, `has()`, `no_errors()` test helpers
 
@@ -197,7 +197,7 @@ Optional: `pyfirmata` (Arduino), `RPi.GPIO` (Raspberry Pi), `openai`, `librosa`
 
 ---
 
-**When in doubt:** Read `core/interpreter.py` (main dispatch logic, look for `_WHOLE_PROGRAM_EXECUTORS`) and check `test_runner.py --help` for test workflows.
+**When in doubt:** Read `core/interpreter.py` (main dispatch logic, look for `_WHOLE_PROGRAM_EXECUTORS`) and check `pytest --help` for test workflows.
 
 ### Key Components
 
@@ -246,7 +246,7 @@ COMMUNICATION RULES:
 
 ```bash
 # Primary method
-python Platforms/Python/time_warp_ide.py
+python3 Platforms/Python/time_warp_ide.py
 ```
 
 DEVELOPMENT RULES:
@@ -263,14 +263,14 @@ DEVELOPMENT RULES:
 
 ### Testing
 
-See `Platforms/Python/test_runner.py --help` for testing options:
+See `pytest --help` for testing options:
 
 ```bash
 # Run comprehensive test suite
-python Platforms/Python/test_runner.py --comprehensive
+PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
 
 # Run quick smoke tests
-python Platforms/Python/test_runner.py --basic
+python3 Platforms/Python/smoke_test.py
 ```
 
 FOLDER CREATION RULES:
@@ -307,7 +307,7 @@ Themes defined in `ui/themes.py` with color schemes applied uniformly across:
 
 TASK COMPLETION RULES:
 - Your task is complete when:
-  - Code runs without errors (`python Platforms/Python/time_warp_ide.py`)
+  - Code runs without errors (`python3 Platforms/Python/time_warp_ide.py`)
   - copilot-instructions.md file in the .github directory exists in the project
   - README.md file exists and is up to date
   - User is provided with clear instructions to debug/launch the project

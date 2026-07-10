@@ -85,7 +85,7 @@ Plugins receive the main IDE window as `ide` in `initialize()`. Through this ref
 
 ```bash
 # Copy plugin directory to plugins/ in the workspace root
-python run.py --install-plugin /path/to/my_plugin
+python3 run.py --install-plugin /path/to/my_plugin
 
 # Or just copy manually:
 cp -r /path/to/my_plugin plugins/

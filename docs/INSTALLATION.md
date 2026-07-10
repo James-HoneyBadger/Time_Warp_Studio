@@ -214,20 +214,20 @@ pip install --upgrade pip
 pip install "PySide6>=6.5.0" "Pillow>=10.0.0"
 
 # 4. Launch
-python Platforms/Python/time_warp_ide.py
+python3 Platforms/Python/time_warp_ide.py
 ```
 
 Or use the smart launcher which handles the venv automatically:
 
 ```bash
-python run.py
+python3 run.py
 ```
 
 For contributors, install the full development stack:
 
 ```bash
 pip install pytest pytest-cov pytest-mock ruff black
-python Platforms/Python/test_runner.py --comprehensive
+PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
 ```
 
 ---
@@ -369,8 +369,8 @@ rm -rf ~/.time_warp
 |---|---|
 | Terminal (system or per-user install) | `time-warp-studio` |
 | Desktop menu | Applications ▸ Development ▸ Time Warp Studio |
-| From source tree | `python Platforms/Python/time_warp_ide.py` |
-| Smart launcher (handles venv) | `python run.py` |
+| From source tree | `python3 Platforms/Python/time_warp_ide.py` |
+| Smart launcher (handles venv) | `python3 run.py` |
 
 ### Installer commands
 

@@ -1745,31 +1745,27 @@ class ForthExecutor:
             self.output_buffer = ""
 
 
-# ── Global instance ─────────────────────────────────────────────────────────
-
-_forth_executor = None
-
-
-def reset_forth():
-    """Reset the global Forth executor so state doesn't leak between runs."""
-    global _forth_executor  # pylint: disable=global-statement
-    _forth_executor = None
-
-
 def execute_forth(
     interpreter: "Interpreter", command: str, turtle: "TurtleState"
 ) -> str:
-    global _forth_executor  # pylint: disable=global-statement
-    if _forth_executor is None or _forth_executor.interpreter != interpreter:
-        _forth_executor = ForthExecutor(interpreter)
+    """Execute a Forth command using state stored on the interpreter.
+
+    Forth state is kept in interpreter attributes so multiple interpreters
+    can coexist without sharing a global executor instance.
+    """
+    attr = "_forth_executor"
+    executor = getattr(interpreter, attr, None)
+    if executor is None:
+        executor = ForthExecutor(interpreter)
+        setattr(interpreter, attr, executor)
     try:
-        _forth_executor.execute_line(command, turtle)
+        executor.execute_line(command, turtle)
     except RecursionError:
         return "❌ Forth error: Maximum recursion depth exceeded\n"
     except MemoryError:
         return "❌ Forth error: Out of memory\n"
     except Exception as exc:
         return f"❌ Forth error: {exc}\n"
-    result = _forth_executor.output_buffer
-    _forth_executor.output_buffer = ""
+    result = executor.output_buffer
+    executor.output_buffer = ""
     return result

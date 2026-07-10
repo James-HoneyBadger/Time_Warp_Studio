@@ -136,6 +136,25 @@ class LuaEnvironment:
                     # Execute merged line and continue (do not fall into block dispatch)
                     self._exec_inline(line)
                     continue
+
+            # Multi-line anonymous function assignment:
+            #   name = function(args)
+            #       ...
+            #   end
+            m_local_fn = re.match(r"^local\s+(\w+)\s*=\s*function\s*\((.*?)\)\s*$", line)
+            m_assign_fn = re.match(r"^([\w.]+(?:\[.+?\])?)\s*=\s*function\s*\((.*?)\)\s*$", line)
+            if m_local_fn or m_assign_fn:
+                params_src = (m_local_fn or m_assign_fn).group(2)
+                params = [p.strip() for p in params_src.split(",") if p.strip()]
+                body, end_i = self._collect_block_to_end(lines, i + 1)
+                fn = LuaFunction("<anon>", params, body, self)
+                if m_local_fn:
+                    self._assign(m_local_fn.group(1), fn, local=True)
+                else:
+                    self._assign_lhs_value(m_assign_fn.group(1), fn)
+                i = end_i
+                continue
+
             # Multi-line if
             if re.match(r"^if\b", line):
                 i = self._exec_if(lines, i)
@@ -425,21 +444,32 @@ class LuaEnvironment:
 
     def _exec_while(self, lines: list[str], start: int) -> int:
         line = lines[start].strip()
-        m = re.match(r"^while\s+(.+?)\s+do", line)
-        i = start + 1
-        body, end_i = self._collect_block_to_end(lines, i)
-        if m:
-            limit = 10000
-            count = 0
-            while self._lua_truthy(self._eval_expr(m.group(1))):
-                if count >= limit:
-                    self._emit("❌ Lua: while loop limit exceeded")
-                    break
-                try:
-                    self._exec_block(body)
-                except LuaBreak:
-                    break
-                count += 1
+        m = re.match(r"^while\s+(.+?)\s+do\s*(.*)$", line)
+        if not m:
+            return start + 1
+        tail = m.group(2).strip()
+        inline_body = None
+        if tail and re.search(r"\bend\s*$", tail):
+            stmt = re.sub(r"\bend\s*$", "", tail).strip()
+            if stmt:
+                inline_body = self._split_inline_stmts(stmt)
+        if inline_body is not None:
+            body = inline_body
+            end_i = start + 1
+        else:
+            i = start + 1
+            body, end_i = self._collect_block_to_end(lines, i)
+        limit = 10000
+        count = 0
+        while self._lua_truthy(self._eval_expr(m.group(1))):
+            if count >= limit:
+                self._emit("❌ Lua: while loop limit exceeded")
+                break
+            try:
+                self._exec_block(body)
+            except LuaBreak:
+                break
+            count += 1
         return end_i
 
     def _exec_repeat(self, lines: list[str], start: int) -> int:
@@ -560,22 +590,66 @@ class LuaEnvironment:
         # bare function call
         self._eval_expr(stmt)
 
+    def _resolve_path(self, path: str) -> Any:
+        parts = [p for p in path.split(".") if p]
+        if not parts:
+            return None
+        cur = self._resolve(parts[0])
+        for part in parts[1:]:
+            if isinstance(cur, dict):
+                cur = cur.get(part)
+            else:
+                cur = getattr(cur, part, None)
+            if cur is None:
+                break
+        return cur
+
+    def _assign_path(self, path: str, value: Any) -> None:
+        parts = [p for p in path.split(".") if p]
+        if len(parts) < 2:
+            self._assign(path, value)
+            return
+        parent = self._resolve(parts[0])
+        for part in parts[1:-1]:
+            if isinstance(parent, dict):
+                parent = parent.get(part)
+            else:
+                parent = getattr(parent, part, None)
+            if parent is None:
+                return
+        last = parts[-1]
+        if isinstance(parent, dict):
+            parent[last] = value
+        elif parent is not None:
+            setattr(parent, last, value)
+
+    def _assign_lhs_value(self, lhs: str, val: Any):
+        # table field: t.key or t[idx]
+        m = re.match(r"^([\w.]+)\[(.+)\]$", lhs)
+        if m:
+            tbl = self._resolve_path(m.group(1))
+            key = self._eval_expr(m.group(2))
+            if isinstance(tbl, dict):
+                tbl[key] = val
+            elif isinstance(tbl, list) and isinstance(key, int):
+                if val is None and key == len(tbl) and tbl:
+                    tbl.pop()
+                else:
+                    while key > len(tbl):
+                        tbl.append(None)
+                    if key >= 1:
+                        tbl[key - 1] = val
+            return
+        m = re.match(r"^([\w.]+)$", lhs)
+        if m:
+            if "." in lhs:
+                self._assign_path(lhs, val)
+                return
+        self._assign(lhs, val)
+
     def _do_assignment(self, lhs: str, rhs: str):
         val = self._eval_expr(rhs)
-        # table field: t.key or t[idx]
-        m = re.match(r"^(\w+)\[(.+)\]$", lhs)
-        if m:
-            tbl = self._resolve(m.group(1))
-            if isinstance(tbl, dict):
-                tbl[self._eval_expr(m.group(2))] = val
-            return
-        m = re.match(r"^(\w+)\.(\w+)$", lhs)
-        if m:
-            tbl = self._resolve(m.group(1))
-            if isinstance(tbl, dict):
-                tbl[m.group(2)] = val
-            return
-        self._assign(lhs, val)
+        self._assign_lhs_value(lhs, val)
 
     # ------------------------------------------------------------------
     # Expression evaluator
@@ -621,14 +695,6 @@ class LuaEnvironment:
             return int(expr)
         except ValueError:
             pass
-        # String length #
-        if expr.startswith("#"):
-            v = self._eval_expr(expr[1:].strip())
-            if isinstance(v, str):
-                return len(v)
-            if isinstance(v, (list, dict)):
-                return len(v)
-            return 0
         # Parenthesized expression: (expr) — strip outer parens and evaluate
         if expr.startswith("(") and expr.endswith(")"):
             # Verify the parens are actually matching (not e.g. (a)+(b))
@@ -650,6 +716,16 @@ class LuaEnvironment:
         result = self._parse_expr(expr)
         if result is not None:
             return result
+        # String/table length operator on a simple operand: #x, #(expr), #tbl[1]
+        if expr.startswith("#"):
+            target = expr[1:].strip()
+            if target:
+                v = self._eval_expr(target)
+                if isinstance(v, str):
+                    return len(v)
+                if isinstance(v, (list, dict)):
+                    return len(v)
+            return 0
         # Unary not
         m = re.match(r"^not\s+(.+)$", expr)
         if m:
@@ -663,6 +739,14 @@ class LuaEnvironment:
         m = re.match(r"^([\w.]+)\s*\((.*)?\)$", expr, re.DOTALL)
         if m:
             return self._call_function(m.group(1), m.group(2) or "")
+        # Lua call sugar: f{...} / f"str" / f'str'
+        m = re.match(
+            r"^([\w.]+)\s*(\{.*\}|\"(?:[^\"\\]|\\.)*\"|'(?:[^'\\]|\\.)*')$",
+            expr,
+            re.DOTALL,
+        )
+        if m:
+            return self._call_function(m.group(1), m.group(2))
         # Method call: obj:method(args)
         m = re.match(r"^(\w+):(\w+)\s*\((.*)?\)$", expr, re.DOTALL)
         if m:
@@ -689,9 +773,9 @@ class LuaEnvironment:
                     if callable(fn3):
                         return fn3(obj, *call_args)
         # Table access: t[k] or t.field
-        m = re.match(r"^(\w+)\[(.+)\]$", expr)
+        m = re.match(r"^([\w.]+)\[(.+)\]$", expr)
         if m:
-            tbl_val = self._resolve(m.group(1))
+            tbl_val = self._resolve_path(m.group(1))
             key = self._eval_expr(m.group(2))
             if isinstance(tbl_val, (dict, list)):
                 if isinstance(tbl_val, list) and isinstance(key, int):
@@ -699,12 +783,8 @@ class LuaEnvironment:
                 if isinstance(tbl_val, dict):
                     return tbl_val.get(key)
             return None
-        m = re.match(r"^(\w+)\.(\w+)$", expr)
-        if m:
-            obj = self._resolve(m.group(1))
-            if isinstance(obj, dict):
-                return obj.get(m.group(2))
-            return getattr(obj, m.group(2), None)
+        if re.match(r"^[A-Za-z_][A-Za-z0-9_]*(?:\.[A-Za-z_][A-Za-z0-9_]*)+$", expr):
+            return self._resolve_path(expr)
         # Table constructor {}
         if expr.startswith("{") and expr.endswith("}"):
             inner = expr[1:-1].strip()
@@ -1041,7 +1121,32 @@ class LuaStringLib:
         return None
 
     def format(self, fmt, *args):
-        return fmt % args if args else fmt
+        if not args:
+            return fmt
+
+        # Coerce nil/None for numeric conversions so demo scripts don't crash
+        # when an optional numeric field is absent.
+        spec_iter = re.finditer(r"%(?:\d+\$)?[-+# 0]*(?:\d+|\*)?(?:\.(?:\d+|\*))?[hlL]?([diuoxXfFeEgGaAcspq])", fmt)
+        coerced = list(args)
+        for idx, m in enumerate(spec_iter):
+            if idx >= len(coerced):
+                break
+            conv = m.group(1)
+            val = coerced[idx]
+            if val is None:
+                if conv in "diuoxX":
+                    coerced[idx] = 0
+                elif conv in "fFeEgGaA":
+                    coerced[idx] = 0.0
+                elif conv == "c":
+                    coerced[idx] = 0
+                else:
+                    coerced[idx] = ""
+        try:
+            return fmt % tuple(coerced)
+        except Exception:
+            # Final fallback for partially incompatible format strings.
+            return fmt % tuple("" if v is None else v for v in coerced)
 
     def gsub(self, s, pattern, repl, n=None):
         count = [0]
@@ -1156,7 +1261,7 @@ class LuaIOLib:
         return (
             self.env.interpreter.request_input("lua> ")
             if hasattr(self.env.interpreter, "request_input")
-            else ""
+            else "0"
         )
 
     def lines(self, filename=None):
@@ -1539,6 +1644,22 @@ def _lua_tostring(v: Any) -> str:
         return "true"
     if v is False:
         return "false"
+    if isinstance(v, dict):
+        mt = v.get("__mt__")
+        if isinstance(mt, dict):
+            fn = mt.get("__tostring")
+            if fn is None:
+                idx = mt.get("__index")
+                if isinstance(idx, dict):
+                    fn = idx.get("__tostring")
+            if fn is not None:
+                try:
+                    if isinstance(fn, LuaFunction):
+                        return str(fn.call([v]))
+                    if callable(fn):
+                        return str(fn(v))
+                except Exception:
+                    pass
     if isinstance(v, float) and v.is_integer():
         return str(int(v))
     return str(v)
@@ -1621,6 +1742,24 @@ def _find_operator(expr: str, op: str) -> int:
 
 
 def _apply_op(lhs: Any, op: str, rhs: Any) -> Any:
+    meta_name = {
+        "+": "__add",
+        "-": "__sub",
+        "*": "__mul",
+        "/": "__div",
+        "//": "__idiv",
+        "%": "__mod",
+        "^": "__pow",
+        "..": "__concat",
+        "==": "__eq",
+        "<": "__lt",
+        "<=": "__le",
+    }.get(op)
+    if meta_name:
+        meta_fn = _lua_get_binary_metamethod(lhs, rhs, meta_name)
+        if meta_fn is not None:
+            return _lua_call_meta(meta_fn, lhs, rhs)
+
     if op == "+":
         if isinstance(lhs, str) or isinstance(rhs, str):
             return str(lhs) + str(rhs)
@@ -1683,3 +1822,31 @@ def _lua_type(v: Any) -> str:
     if callable(v):
         return "function"
     return "userdata"
+
+
+def _lua_get_binary_metamethod(lhs: Any, rhs: Any, meta_name: str) -> Any:
+    """Return metamethod from lhs or rhs metatable, if available."""
+
+    def _lookup(v: Any) -> Any:
+        if not isinstance(v, dict):
+            return None
+        mt = v.get("__mt__")
+        if not isinstance(mt, dict):
+            return None
+        fn = mt.get(meta_name)
+        if fn is not None:
+            return fn
+        idx = mt.get("__index")
+        if isinstance(idx, dict):
+            return idx.get(meta_name)
+        return None
+
+    return _lookup(lhs) or _lookup(rhs)
+
+
+def _lua_call_meta(fn: Any, lhs: Any, rhs: Any) -> Any:
+    if isinstance(fn, LuaFunction):
+        return fn.call([lhs, rhs])
+    if callable(fn):
+        return fn(lhs, rhs)
+    return None

@@ -1,5 +1,5 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Time Warp Studio - Native Build Script
 # Builds a standalone executable for the current architecture using PyInstaller
@@ -23,12 +23,24 @@ echo "Building Time Warp Studio for $ARCH ($DEB_ARCH)"
 echo "=========================================="
 
 # 2. Setup Paths
-REPO_ROOT=$(pwd)
+SCRIPT_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
+REPO_ROOT=$(cd "$SCRIPT_DIR/.." && pwd)
 PYTHON_SOURCE="$REPO_ROOT/Platforms/Python"
 ENTRY_POINT="$PYTHON_SOURCE/time_warp_ide.py"
 DIST_DIR="$REPO_ROOT/dist/$ARCH"
 BUILD_DIR="$REPO_ROOT/build/$ARCH"
-VERSION="10.0.0"
+
+if [ ! -f "$REPO_ROOT/VERSION" ]; then
+    echo "Error: VERSION file not found at $REPO_ROOT/VERSION"
+    exit 1
+fi
+
+VERSION=$(tr -d '[:space:]' < "$REPO_ROOT/VERSION")
+
+if ! command -v pyinstaller &> /dev/null; then
+    echo "Error: pyinstaller not found in PATH. Install it before running this build."
+    exit 1
+fi
 
 # 3. Check Dependencies and Setup Venv
 # In CI environments, skip venv creation since dependencies are pre-installed
@@ -50,13 +62,18 @@ else
     echo "CI environment detected, skipping venv setup..."
 fi
 
+if [[ -z "${PYTHONPATH:-}" ]]; then
+    export PYTHONPATH="$PYTHON_SOURCE"
+else
+    export PYTHONPATH="$PYTHON_SOURCE:$PYTHONPATH"
+fi
+
 # 4. Clean previous builds
 rm -rf "$DIST_DIR" "$BUILD_DIR"
 mkdir -p "$DIST_DIR"
 
 # 5. Run PyInstaller
 # We set PYTHONPATH so PyInstaller can find the 'time_warp' package
-export PYTHONPATH="$PYTHON_SOURCE:$PYTHONPATH"
 
 ICON_PATH="$REPO_ROOT/packaging/linux/icon.png"
 ICON_ARG=""

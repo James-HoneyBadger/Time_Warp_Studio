@@ -136,6 +136,10 @@ _WHILE_DO_RE = re.compile(
     r"^\s*while\s+(.+?)\s+do\s*(begin\s*)?;?\s*$",
     re.IGNORECASE,
 )
+_WHILE_INLINE_RE = re.compile(
+    r"^\s*while\s+(.+?)\s+do\s+(.+?)\s*;?\s*$",
+    re.IGNORECASE,
+)
 _WITH_DO_RE = re.compile(
     r"^\s*with\s+([A-Za-z_][A-Za-z0-9_]*)\s+do\s*(begin\s*)?;?\s*$",
     re.IGNORECASE,
@@ -225,6 +229,45 @@ def _split_pascal_stmts(cmd: str) -> List[str]:
 def _ensure_pascal_stack(interpreter: "Interpreter"):
     if not hasattr(interpreter, "pascal_block_stack"):
         interpreter.pascal_block_stack = []
+
+
+def _pascal_array_default(
+    interpreter: "Interpreter", elem_type: str, size: int
+) -> list[Any]:
+    elem_type_up = elem_type.strip().upper().split("[")[0].strip()
+    if (
+        hasattr(interpreter, "pascal_record_types")
+        and elem_type_up in interpreter.pascal_record_types
+    ):
+        fields = interpreter.pascal_record_types[elem_type_up]
+
+        def _make_rec(flds):
+            r: Dict[str, Any] = {}
+            for fn, ft in flds.items():
+                ftu = ft.upper()
+                if ftu in ("STRING", "CHAR"):
+                    r[fn] = ""
+                elif ftu == "BOOLEAN":
+                    r[fn] = False
+                else:
+                    r[fn] = 0.0
+            return r
+
+        return [_make_rec(fields) for _ in range(size)]
+    if elem_type_up in ("STRING", "CHAR"):
+        return [""] * size
+    if elem_type_up == "BOOLEAN":
+        return [False] * size
+    return [0.0] * size
+
+
+def _pascal_array_size(interpreter: "Interpreter", bounds: str) -> int:
+    start_raw, end_raw = bounds.split("..", 1)
+    try:
+        end_idx = int(end_raw)
+    except ValueError:
+        end_idx = int(interpreter.variables.get(end_raw.upper(), 0))
+    return end_idx + 1
 
 
 def _call_func_inline(
@@ -355,11 +398,83 @@ def _call_func_inline(
     return result
 
 
+def _split_top_level_logical(expr: str, op: str) -> list[str] | None:
+    """Split expr by top-level logical operator (and/or), respecting parens/quotes.
+
+    Returns None when no top-level operator was found.
+    """
+    parts: list[str] = []
+    current: list[str] = []
+    depth = 0
+    in_single = False
+    in_double = False
+    i = 0
+    n = len(expr)
+    op_len = len(op)
+    while i < n:
+        ch = expr[i]
+        if ch == "'" and not in_double:
+            in_single = not in_single
+            current.append(ch)
+            i += 1
+            continue
+        if ch == '"' and not in_single:
+            in_double = not in_double
+            current.append(ch)
+            i += 1
+            continue
+        if not in_single and not in_double:
+            if ch == "(":
+                depth += 1
+            elif ch == ")":
+                depth -= 1
+            if depth == 0:
+                seg = expr[i : i + op_len]
+                if (
+                    seg.lower() == op
+                    and (i == 0 or not expr[i - 1].isalnum())
+                    and (i + op_len >= n or not expr[i + op_len].isalnum())
+                ):
+                    part = "".join(current).strip()
+                    if part:
+                        parts.append(part)
+                    current = []
+                    i += op_len
+                    continue
+        current.append(ch)
+        i += 1
+    tail = "".join(current).strip()
+    if tail:
+        parts.append(tail)
+    return parts if len(parts) > 1 else None
+
+
 def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
     """Evaluate a Pascal expression, expanding Pascal built-in functions first."""
     import math as _math
 
     expr = expr.strip()
+    # Normalize pointer field syntax (P^.X) to record-style field access (P.X).
+    expr = re.sub(
+        r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\^\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)",
+        r"\1.\2",
+        expr,
+    )
+
+    # Short-circuit logical OR/AND at top level so expressions like
+    # (J >= 1) and (A[J] > Key) do not evaluate out-of-range array terms.
+    parts_or = _split_top_level_logical(expr, "or")
+    if parts_or:
+        for part in parts_or:
+            if bool(_pascal_eval_expr(interpreter, part)):
+                return True
+        return False
+    parts_and = _split_top_level_logical(expr, "and")
+    if parts_and:
+        for part in parts_and:
+            if not bool(_pascal_eval_expr(interpreter, part)):
+                return False
+        return True
 
     # Boolean literals
     if expr.upper() == "TRUE":
@@ -1227,6 +1342,12 @@ def _find_begin_forward(
         if _VAR_ARRAY_RE.match(s):
             j += 1
             continue
+        if _VAR_ARRAY_2D_RE.match(s):
+            j += 1
+            continue
+        if _VAR_CUSTOM_TYPE_RE.match(s):
+            j += 1
+            continue
         if _CONST_RE.match(s):
             j += 1
             continue
@@ -1457,9 +1578,16 @@ def _parse_param_list(params: str | None) -> List[Dict[str, Any]]:
         t = type_part.strip().lower()
         suf = _suffix_for_type(t)
         byref = False
+        is_const = False
         # Detect 'var' parameters
         np = names_part.strip()
         if np.lower().startswith("var "):
+            byref = True
+            np = np[4:].strip()
+        elif np.lower().startswith("const "):
+            is_const = True
+            np = np[6:].strip()
+        elif np.lower().startswith("out "):
             byref = True
             np = np[4:].strip()
         for nm in np.split(","):
@@ -1472,6 +1600,7 @@ def _parse_param_list(params: str | None) -> List[Dict[str, Any]]:
                     "type": t,
                     "suffix": suf,
                     "byref": byref,
+                    "const": is_const,
                 }
             )
     return res
@@ -1548,10 +1677,45 @@ def _handle_proc_call(
 
     backups = []
     aliases: Dict[str, str] = {}
+    local_backups: list[dict[str, Any]] = []
+
+    def _snapshot_local(name_up: str) -> dict[str, Any]:
+        return {
+            "name": name_up,
+            "has_var": name_up in interpreter.variables,
+            "var": interpreter.variables.get(name_up),
+            "has_i": (name_up + "%") in interpreter.int_variables,
+            "i": interpreter.int_variables.get(name_up + "%"),
+            "has_l": (name_up + "&") in interpreter.long_variables,
+            "l": interpreter.long_variables.get(name_up + "&"),
+            "has_s": (name_up + "!") in interpreter.single_variables,
+            "s": interpreter.single_variables.get(name_up + "!"),
+            "has_d": (name_up + "#") in interpreter.double_variables,
+            "d": interpreter.double_variables.get(name_up + "#"),
+            "has_str": (name_up + "$") in interpreter.string_variables,
+            "str": interpreter.string_variables.get(name_up + "$"),
+            "has_arr": name_up in interpreter.arrays,
+            "arr": list(interpreter.arrays[name_up]) if name_up in interpreter.arrays and isinstance(interpreter.arrays[name_up], list) else interpreter.arrays.get(name_up),
+            "has_pt": hasattr(interpreter, "pascal_types") and name_up in interpreter.pascal_types,
+            "pt": interpreter.pascal_types.get(name_up) if hasattr(interpreter, "pascal_types") else None,
+        }
     params = info.get("params", [])
     args: List[str] = []
     if arg_str.strip():
         args = _split_args(arg_str)
+
+    def _resolve_alias_target(arg_name: str) -> str:
+        """Resolve a bare argument through active Pascal call-frame aliases."""
+        if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", arg_name):
+            return arg_name
+        if hasattr(interpreter, "pascal_call_stack"):
+            for frame in reversed(interpreter.pascal_call_stack):
+                frame_aliases = frame.get("aliases", {})
+                for local_name, target_name in frame_aliases.items():
+                    if local_name.upper() == arg_name.upper():
+                        return str(target_name)
+        return arg_name
+
     if len(args) != len(params):
         if len(params) == 0 and len(args) == 0:
             pass
@@ -1559,6 +1723,7 @@ def _handle_proc_call(
             return "❌ Error: parameter count mismatch"
     for idx, p in enumerate(params):
         pname = p["name"]
+        ptype = str(p.get("type", ""))
         suf = p["suffix"]
         var_key = pname + suf
         # Ensure parameter type is known for assignments
@@ -1566,40 +1731,72 @@ def _handle_proc_call(
             interpreter.pascal_types = {}
         interpreter.pascal_types[pname] = suf
         byref = bool(p.get("byref"))
+        is_array_like = False
+        if hasattr(interpreter, "pascal_type_aliases") and ptype.upper() in interpreter.pascal_type_aliases:
+            is_array_like = True
+        if hasattr(interpreter, "pascal_record_types") and ptype.upper() in interpreter.pascal_record_types:
+            is_array_like = True
         if byref:
             if idx >= len(args):
                 return "❌ Error: parameter count mismatch"
-            a = args[idx].strip()
+            a = _resolve_alias_target(args[idx].strip())
             if not re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", a):
                 return "❌ Error: var parameter requires variable"
             target_up = a.upper()
-            target_key = target_up + suf
-            # Initialize local mirror but do NOT backup target (allow mutation)
-            if suf == "$":
-                cur: Any = interpreter.string_variables.get(target_key, "")
+            if is_array_like and target_up in interpreter.arrays:
+                local_existed = pname in interpreter.arrays
+                local_old = list(interpreter.arrays[pname]) if local_existed else None
+                backups.append(
+                    {
+                        "key": pname,
+                        "is_array": True,
+                        "existed": local_existed,
+                        "old": local_old,
+                    }
+                )
+                interpreter.arrays[pname] = interpreter.arrays[target_up]
+                aliases[pname] = target_up
+            elif is_array_like and target_up in interpreter.variables:
+                local_existed = pname in interpreter.variables
+                local_old = interpreter.variables.get(pname)
+                backups.append(
+                    {
+                        "key": pname,
+                        "is_array": False,
+                        "existed": local_existed,
+                        "old": local_old,
+                    }
+                )
+                interpreter.variables[pname] = interpreter.variables[target_up]
+                aliases[pname] = target_up
             else:
-                cur = interpreter.get_numeric_value(target_up) or 0
-            # Backup only local param if it existed
-            local_existed = False
-            local_old: Any | None = None
-            if suf == "$":
-                if var_key in interpreter.string_variables:
-                    local_existed = True
-                    local_old = interpreter.string_variables[var_key]
-            else:
-                if pname in interpreter.variables:
-                    local_existed = True
-                    local_old = interpreter.variables[pname]
-            backups.append(
-                {
-                    "key": var_key,
-                    "is_str": suf == "$",
-                    "existed": local_existed,
-                    "old": local_old,
-                }
-            )
-            interpreter.set_typed_variable(var_key, cur)
-            aliases[var_key] = target_key
+                target_key = target_up + suf
+                # Initialize local mirror but do NOT backup target (allow mutation)
+                if suf == "$":
+                    cur: Any = interpreter.string_variables.get(target_key, "")
+                else:
+                    cur = interpreter.get_numeric_value(target_up) or 0
+                # Backup only local param if it existed
+                local_existed = False
+                local_old: Any | None = None
+                if suf == "$":
+                    if var_key in interpreter.string_variables:
+                        local_existed = True
+                        local_old = interpreter.string_variables[var_key]
+                else:
+                    if pname in interpreter.variables:
+                        local_existed = True
+                        local_old = interpreter.variables[pname]
+                backups.append(
+                    {
+                        "key": var_key,
+                        "is_str": suf == "$",
+                        "existed": local_existed,
+                        "old": local_old,
+                    }
+                )
+                interpreter.set_typed_variable(var_key, cur)
+                aliases[var_key] = target_key
         else:
             existed = False
             old_val: Any | None = None
@@ -1619,36 +1816,92 @@ def _handle_proc_call(
                     "old": old_val,
                 }
             )
-            val: Any = "" if suf == "$" else 0
             if idx < len(args):
-                a = args[idx]
-                if suf == "$":
-                    val = _unquote(a)
+                a = _resolve_alias_target(args[idx].strip())
+                if is_array_like and re.match(r"^[A-Za-z_][A-Za-z0-9_]*$", a):
+                    target_key = a.upper() + suf
+                    if a.upper() in interpreter.arrays:
+                        local_existed = pname in interpreter.arrays
+                        local_old = list(interpreter.arrays[pname]) if local_existed else None
+                        backups.append(
+                            {
+                                "key": pname,
+                                "is_array": True,
+                                "existed": local_existed,
+                                "old": local_old,
+                            }
+                        )
+                        interpreter.arrays[pname] = interpreter.arrays[a.upper()]
+                        aliases[pname] = a.upper()
+                    elif a.upper() in interpreter.variables:
+                        interpreter.set_typed_variable(var_key, interpreter.variables[a.upper()])
+                    else:
+                        interpreter.set_typed_variable(var_key, [] if ptype else 0)
                 else:
-                    try:
-                        val = interpreter.evaluate_expression(a)
-                    except (ValueError, TypeError, ZeroDivisionError):
-                        val = 0
-            interpreter.set_typed_variable(var_key, val)
+                    val: Any = "" if suf == "$" else 0
+                    if suf == "$":
+                        val = _unquote(a)
+                    else:
+                        try:
+                            val = interpreter.evaluate_expression(a)
+                        except (ValueError, TypeError, ZeroDivisionError):
+                            val = 0
+                    interpreter.set_typed_variable(var_key, val)
+            elif is_array_like:
+                interpreter.set_typed_variable(var_key, [])
 
+    # Execute var declarations between procedure header and begin
+    # Snapshot declared locals first so recursive/nested calls do not clobber
+    # caller locals that share the same variable names.
+    var_start = info.get("var_start")
+    begin_idx_info = info.get("begin_idx")
+    if var_start is not None and begin_idx_info is not None:
+        seen_local_names: set[str] = set()
+        for vi in range(var_start, begin_idx_info):
+            _, vline = interpreter.program_lines[vi]
+            s = vline.strip()
+            if not s:
+                continue
+            names_field = ""
+            m_decl = _VAR_RE.match(s)
+            if m_decl:
+                names_field = m_decl.group(1)
+            else:
+                m_arr = _VAR_ARRAY_RE.match(s)
+                if m_arr:
+                    names_field = m_arr.group(1)
+                else:
+                    m_arr2 = _VAR_ARRAY_2D_RE.match(s)
+                    if m_arr2:
+                        names_field = m_arr2.group(1)
+                    else:
+                        m_custom = _VAR_CUSTOM_TYPE_RE.match(s)
+                        if m_custom:
+                            names_field = m_custom.group(1)
+            if not names_field:
+                continue
+            for raw in names_field.split(","):
+                nup = raw.strip().upper()
+                if not nup or nup in seen_local_names:
+                    continue
+                seen_local_names.add(nup)
+                local_backups.append(_snapshot_local(nup))
+        for vi in range(var_start, begin_idx_info):
+            _, vline = interpreter.program_lines[vi]
+            if vline.strip():
+                execute_pascal(interpreter, vline.strip(), None)  # type: ignore[arg-type]
     if not hasattr(interpreter, "pascal_call_stack"):
         interpreter.pascal_call_stack = []
     interpreter.pascal_call_stack.append(
         {
             "return_to": interpreter.current_line + 1,
             "end": info["end"],
+            "block_depth": len(getattr(interpreter, "pascal_block_stack", [])),
             "backups": backups,
             "aliases": aliases,
+            "local_backups": local_backups,
         }
     )
-    # Execute var declarations between procedure header and begin
-    var_start = info.get("var_start")
-    begin_idx_info = info.get("begin_idx")
-    if var_start is not None and begin_idx_info is not None:
-        for vi in range(var_start, begin_idx_info):
-            _, vline = interpreter.program_lines[vi]
-            if vline.strip():
-                execute_pascal(interpreter, vline.strip(), None)  # type: ignore[arg-type]
     interpreter.current_line = info["start"] - 1
     return ""
 
@@ -2004,9 +2257,16 @@ def _handle_for(
     else:
         begin_idx = _find_begin_forward(interpreter, interpreter.current_line)
         if begin_idx is not None:
-            end_idx = _find_end_for_begin(interpreter, begin_idx)
-            body_start = begin_idx + 1
-            body_end = end_idx
+            _, begin_line = interpreter.program_lines[begin_idx]
+            if _is_begin(begin_line):
+                end_idx = _find_end_for_begin(interpreter, begin_idx)
+                body_start = begin_idx + 1
+                body_end = end_idx
+            else:
+                # Next statement is the body (e.g. nested FOR/IF), not a BEGIN block.
+                body_start = begin_idx
+                body_end = begin_idx
+                begin_idx = None
         else:
             # Single-statement body (no BEGIN ... END)
             stmt_idx = _find_next_statement(interpreter, interpreter.current_line)
@@ -2031,6 +2291,31 @@ def _handle_for(
     if is_single:
         # Execute single-statement body inline to avoid end-of-program issues
         stmt_text = interpreter.program_lines[body_start][1]
+        nested_begin_idx = _find_begin_forward(interpreter, body_start)
+        if nested_begin_idx is not None and nested_begin_idx > body_start:
+            nested_end_idx = _find_end_for_begin(interpreter, nested_begin_idx)
+            results: List[str] = []
+            loop_count = 0
+            while ok and loop_count < 100000:
+                j = body_start
+                while j <= nested_end_idx:
+                    interpreter.current_line = j
+                    r = execute_pascal(
+                        interpreter, interpreter.program_lines[j][1], turtle
+                    )
+                    if r:
+                        results.append(r)
+                    new_j = interpreter.current_line
+                    if new_j != j:
+                        j = new_j
+                    else:
+                        j += 1
+                cur += step
+                interpreter.set_typed_variable(up + (suf or "#"), cur)
+                ok = cur <= limit_val if step > 0 else cur >= limit_val
+                loop_count += 1
+            interpreter.current_line = nested_end_idx + 1
+            return "".join(results)
         # If the single-statement body starts a block (e.g. 'if cond then begin'),
         # use a mini-loop that correctly handles conditional jumps each iteration.
         if _ends_with_begin(stmt_text):
@@ -2156,6 +2441,13 @@ def execute_pascal(
     cmd = re.sub(r"\{.*?\}|\(\*.*?\*\)", "", command).strip()
     if not cmd:
         return ""
+
+    # Normalize pointer field syntax (P^.X) to record-style field access (P.X).
+    cmd = re.sub(
+        r"\b([A-Za-z_][A-Za-z0-9_]*)\s*\^\s*\.\s*([A-Za-z_][A-Za-z0-9_]*)",
+        r"\1.\2",
+        cmd,
+    )
 
     # Handle multiple statements on one line, e.g.:
     #   Students[1].Name := 'Alice'; Students[1].Score := 97;
@@ -2304,22 +2596,35 @@ def execute_pascal(
                 _case_end = top.get("case_end", interpreter.current_line)
                 interpreter.current_line = _case_end
                 interpreter.pascal_block_stack.pop()
-        return ""
+            return ""
+        # This END may belong to a procedure/function body rather than the
+        # current control-flow stack frame. Fall through so call-return logic
+        # can run below.
 
     # Procedure/function return: when reaching the end index
     # of a called proc, return
     if hasattr(interpreter, "pascal_call_stack") and interpreter.pascal_call_stack:
         frame = interpreter.pascal_call_stack[-1]
-        if interpreter.current_line == frame.get("end"):
+        if interpreter.current_line >= frame.get("end") and _is_end(cmd):
+            block_depth = frame.get("block_depth")
+            if isinstance(block_depth, int) and hasattr(interpreter, "pascal_block_stack"):
+                if len(interpreter.pascal_block_stack) > block_depth:
+                    interpreter.pascal_block_stack = interpreter.pascal_block_stack[:block_depth]
             backups = frame.get("backups") or []
             # Skip restoring values for by-ref parameters
             # (allow mutation to persist)
             byref_aliases = set(frame.get("aliases", {}).values())
             for b in backups:
                 key = b["key"]
+                if b.get("is_array"):
+                    if b["existed"]:
+                        interpreter.arrays[key] = b["old"]
+                    else:
+                        interpreter.arrays.pop(key, None)
+                    continue
                 if key in byref_aliases:
                     continue
-                if b["is_str"]:
+                if b.get("is_str"):
                     if b["existed"]:
                         interpreter.string_variables[key] = b["old"]
                     else:
@@ -2330,6 +2635,55 @@ def execute_pascal(
                         interpreter.variables[varname] = b["old"]
                     else:
                         interpreter.variables.pop(varname, None)
+            local_backups = frame.get("local_backups") or []
+            for lb in local_backups:
+                nup = str(lb.get("name", "")).upper()
+                if not nup:
+                    continue
+                if lb.get("has_var"):
+                    interpreter.variables[nup] = lb.get("var")
+                else:
+                    interpreter.variables.pop(nup, None)
+
+                if lb.get("has_i"):
+                    interpreter.int_variables[nup + "%"] = int(lb.get("i", 0))
+                else:
+                    interpreter.int_variables.pop(nup + "%", None)
+
+                if lb.get("has_l"):
+                    interpreter.long_variables[nup + "&"] = int(lb.get("l", 0))
+                else:
+                    interpreter.long_variables.pop(nup + "&", None)
+
+                if lb.get("has_s"):
+                    interpreter.single_variables[nup + "!"] = float(lb.get("s", 0.0))
+                else:
+                    interpreter.single_variables.pop(nup + "!", None)
+
+                if lb.get("has_d"):
+                    interpreter.double_variables[nup + "#"] = float(lb.get("d", 0.0))
+                else:
+                    interpreter.double_variables.pop(nup + "#", None)
+
+                if lb.get("has_str"):
+                    interpreter.string_variables[nup + "$"] = str(lb.get("str", ""))
+                else:
+                    interpreter.string_variables.pop(nup + "$", None)
+
+                if lb.get("has_arr"):
+                    old_arr = lb.get("arr")
+                    if isinstance(old_arr, list):
+                        interpreter.arrays[nup] = list(old_arr)
+                    else:
+                        interpreter.arrays[nup] = old_arr
+                else:
+                    interpreter.arrays.pop(nup, None)
+
+                if hasattr(interpreter, "pascal_types"):
+                    if lb.get("has_pt"):
+                        interpreter.pascal_types[nup] = lb.get("pt")
+                    else:
+                        interpreter.pascal_types.pop(nup, None)
             interpreter.pascal_call_stack.pop()
             _return_to = frame.get("return_to", interpreter.current_line)
             interpreter.current_line = _return_to
@@ -2570,7 +2924,49 @@ def execute_pascal(
                     return execute_pascal(interpreter, then_body + ";", turtle)
                 return ""
 
-    # WHILE ... DO begin ... end
+    # WHILE ... DO <stmt> and WHILE ... DO begin ... end
+    m = _WHILE_INLINE_RE.match(cmd)
+    if m and not re.match(r"^\s*while\s+.+?\s+do\s*begin\b", cmd, re.IGNORECASE):
+        cond_expr = m.group(1).strip()
+        body_stmt = m.group(2).strip()
+        out_parts: List[str] = []
+        while_line = interpreter.current_line
+        for _ in range(100000):
+            try:
+                cond_v = _pascal_eval_expr(interpreter, cond_expr)
+            except (ValueError, TypeError, ZeroDivisionError):
+                cond_v = 0
+            if not cond_v:
+                break
+            stmt_text = body_stmt if body_stmt.endswith(";") else body_stmt + ";"
+            body_out = execute_pascal(interpreter, stmt_text, turtle)
+            if body_out:
+                out_parts.append(body_out)
+            # Inline WHILE bodies can be procedure calls. In that case execute_pascal
+            # schedules the call by pushing a frame and jumping current_line.
+            # Drain that call here so this inline loop preserves Pascal semantics.
+            if (
+                hasattr(interpreter, "pascal_call_stack")
+                and interpreter.pascal_call_stack
+                and interpreter.current_line != while_line
+            ):
+                base_depth = len(interpreter.pascal_call_stack) - 1
+                for _inner in range(100000):
+                    if len(interpreter.pascal_call_stack) <= base_depth:
+                        break
+                    if interpreter.current_line >= len(interpreter.program_lines):
+                        break
+                    _physical = interpreter.current_line
+                    _, line_text = interpreter.program_lines[interpreter.current_line]
+                    if line_text.strip():
+                        nested_out = execute_pascal(interpreter, line_text.strip(), turtle)
+                        if nested_out:
+                            out_parts.append(nested_out)
+                    if interpreter.current_line == _physical:
+                        interpreter.current_line += 1
+                interpreter.current_line = while_line
+        return "".join(out_parts)
+
     m = _WHILE_DO_RE.match(cmd)
     if m:
         cond_expr = m.group(1).strip()
@@ -2694,25 +3090,15 @@ def execute_pascal(
     m = _VAR_ARRAY_RE.match(cmd)
     if m:
         names, start_raw, end_raw, t = m.groups()
-        # Resolve constant names or literal integers for bounds
-        try:
-            int(start_raw)
-        except ValueError:
-            int(interpreter.variables.get(start_raw.upper(), 0))
-        try:
-            end_idx = int(end_raw)
-        except ValueError:
-            end_idx = int(interpreter.variables.get(end_raw.upper(), 0))
-        size = end_idx + 1
+        size = _pascal_array_size(interpreter, f"{start_raw}..{end_raw}")
         if size <= 0:
             return "❌ Error: Invalid array size"
 
-        arr_suf: str | None = _suffix_for_type(t)
-        default_val: str | float = "" if arr_suf == "$" else 0.0
+        default_val = _pascal_array_default(interpreter, t, size)
 
         for raw in names.split(","):
             name = raw.strip().upper()
-            interpreter.arrays[name] = [default_val] * size  # type: ignore[list-item]
+            interpreter.arrays[name] = list(default_val)
         return ""
 
     # 2D array or complex array declarations — create a flat array as best effort
@@ -2723,56 +3109,31 @@ def execute_pascal(
         elem_type = (
             m.group(3).strip().upper().split("[")[0].strip()
         )  # strip string[N] -> STRING
-        # Determine array size from bounds if possible (e.g. "1..10" or "0..MAX-1")
         size = 100
-        bound_m = re.match(r"(\w+)\.\.(\w+)", bounds_str)
-        if bound_m:
+        if ".." in bounds_str:
             try:
-                lo = int(bound_m.group(1))
-                hi_s = bound_m.group(2)
-                # Try to resolve constant
-                hi = int(hi_s) if hi_s.isdigit() else None
-                if hi is None and hasattr(interpreter, "variables"):
-                    hi = int(interpreter.variables.get(hi_s.upper(), 0))
-                if hi is not None:
-                    size = max(1, hi - lo + 2)
-            except (ValueError, TypeError):
-                pass
+                size = _pascal_array_size(interpreter, bounds_str)
+            except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+                size = 100
         for raw in names.split(","):
             name = raw.strip().upper()
-            # If element type is a known record, create array of record dicts
-            if (
+            interpreter.arrays[name] = _pascal_array_default(interpreter, elem_type, size)
+            if not hasattr(interpreter, "pascal_types"):
+                interpreter.pascal_types = {}
+            if elem_type in ("STRING", "CHAR"):
+                interpreter.pascal_types[name] = "#ARRAY_STR#"
+            elif elem_type == "BOOLEAN":
+                interpreter.pascal_types[name] = "#ARRAY_BOOL#"
+            elif (
                 hasattr(interpreter, "pascal_record_types")
                 and elem_type in interpreter.pascal_record_types
             ):
-                fields = interpreter.pascal_record_types[elem_type]
-
-                def _make_rec(flds):
-                    r: Dict[str, Any] = {}
-                    for fn, ft in flds.items():
-                        ftu = ft.upper()
-                        if ftu in ("STRING", "CHAR"):
-                            r[fn] = ""
-                        elif ftu == "BOOLEAN":
-                            r[fn] = False
-                        else:
-                            r[fn] = 0.0
-                    return r
-
-                interpreter.arrays[name] = [_make_rec(fields) for _ in range(size)]
-                if not hasattr(interpreter, "pascal_types"):
-                    interpreter.pascal_types = {}
                 interpreter.pascal_types[name] = "#ARRAY_RECORD#"
-            elif elem_type in ("STRING", "CHAR"):
-                interpreter.arrays[name] = [""] * size
-                if not hasattr(interpreter, "pascal_types"):
-                    interpreter.pascal_types = {}
-                interpreter.pascal_types[name] = "#ARRAY_STR#"
             else:
-                interpreter.arrays[name] = [0.0] * size
+                interpreter.pascal_types[name] = "#ARRAY#"
         return ""
 
-    # Type definitions — parse RECORD, ignore others
+    # Type definitions — parse RECORD and array aliases
     if _TYPE_DEF_RE.match(cmd):
         m_td = _TYPE_DEF_RE.match(cmd)
         if m_td and m_td.group(2).upper() == "RECORD":
@@ -2805,6 +3166,22 @@ def execute_pascal(
                         fields[fn] = ftype
                 scan_line += 1
             interpreter.pascal_record_types[rec_name] = fields
+        elif m_td and m_td.group(2).lower().startswith("array"):
+            type_name = m_td.group(1).upper()
+            rhs = cmd.split("=", 1)[1].strip().rstrip(";") if "=" in cmd else ""
+            array_m = re.match(
+                r"^(?:packed\s+)?array\s*\[(.+)\]\s*of\s*(.+)$",
+                rhs,
+                re.IGNORECASE,
+            )
+            if array_m:
+                if not hasattr(interpreter, "pascal_type_aliases"):
+                    interpreter.pascal_type_aliases = {}
+                interpreter.pascal_type_aliases[type_name] = {
+                    "kind": "array",
+                    "bounds": array_m.group(1).strip(),
+                    "elem_type": array_m.group(2).strip(),
+                }
         return ""
 
     # Const Declaration
@@ -2908,6 +3285,26 @@ def execute_pascal(
                 if not hasattr(interpreter, "pascal_types"):
                     interpreter.pascal_types = {}
                 interpreter.pascal_types[name] = "#RECORD#"
+            elif (
+                hasattr(interpreter, "pascal_type_aliases")
+                and type_name in interpreter.pascal_type_aliases
+            ):
+                alias_info = interpreter.pascal_type_aliases[type_name]
+                if alias_info.get("kind") == "array":
+                    bounds = str(alias_info.get("bounds", ""))
+                    elem_type = str(alias_info.get("elem_type", ""))
+                    size = 0
+                    if ".." in bounds:
+                        try:
+                            size = _pascal_array_size(interpreter, bounds)
+                        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+                            size = 0
+                    interpreter.arrays[name] = _pascal_array_default(
+                        interpreter, elem_type, size
+                    )
+                    if not hasattr(interpreter, "pascal_types"):
+                        interpreter.pascal_types = {}
+                    interpreter.pascal_types[name] = "#ARRAY#"
             else:
                 interpreter.variables[name] = 0.0
         return ""
@@ -2955,8 +3352,6 @@ def execute_pascal(
     if m:
         name, expr = m.groups()
         expr = expr.rstrip(";").strip()
-        # Replace [] with () for array access in expression
-        expr = expr.replace("[", "(").replace("]", ")")
         up = name.upper()
         suf = None
         if hasattr(interpreter, "pascal_types"):
@@ -3179,14 +3574,25 @@ def execute_pascal(
         op = m.group(1).upper()
         inner = _split_args(m.group(2))
         vname = inner[0].strip().upper()
+        typed_vname = vname
+        if hasattr(interpreter, "pascal_types"):
+            suf = interpreter.pascal_types.get(vname)
+            if suf in ("%", "&", "!", "#"):
+                typed_vname = vname + suf
         step = 1
         if len(inner) > 1:
             try:
                 step = int(float(interpreter.evaluate_expression(inner[1].strip())))
             except Exception:
                 step = 1
-        cur = interpreter.get_numeric_value(vname) or 0
-        interpreter.set_typed_variable(vname, cur + (step if op == "INC" else -step))
+        cur = interpreter.get_numeric_value(typed_vname)
+        if cur is None:
+            cur = interpreter.get_numeric_value(vname)
+        if cur is None:
+            cur = 0
+        interpreter.set_typed_variable(
+            typed_vname, cur + (step if op == "INC" else -step)
+        )
         return ""
 
     # Str(val, s)
@@ -3290,7 +3696,31 @@ def execute_pascal(
 
     # Exit / Halt
     if upcmd_strip in ("EXIT", "HALT") or re.match(r"^HALT\s*\(.+\)$", upcmd_strip):
-        raise StopIteration
+        if getattr(interpreter, "pascal_call_stack", []):
+            if hasattr(interpreter, "pascal_block_stack"):
+                interpreter.pascal_block_stack.clear()
+            frame = interpreter.pascal_call_stack[-1]
+            interpreter.current_line = int(frame.get("end", interpreter.current_line))
+            return ""
+        interpreter.running = False
+        return ""
+
+    # Break out of nearest enclosing loop
+    if upcmd_strip == "BREAK":
+        stack = getattr(interpreter, "pascal_block_stack", [])
+        if not stack:
+            return ""
+        for idx in range(len(stack) - 1, -1, -1):
+            loop = stack[idx]
+            t = loop.get("type")
+            if t in ("for", "while", "repeat"):
+                del stack[idx:]
+                if t == "repeat":
+                    interpreter.current_line = int(loop.get("until", interpreter.current_line))
+                else:
+                    interpreter.current_line = int(loop.get("end", interpreter.current_line))
+                return ""
+        return ""
 
     # AssignFile/Assign
     m = re.match(
@@ -3369,16 +3799,10 @@ def execute_pascal(
     if m:
         var_name = m.group(1).upper()
         if upcmd_strip.startswith("NEW"):
-            # Allocate a new "pointer" (just a unique integer)
-            addr = len(interpreter.pascal_heap) + 1
-            interpreter.pascal_heap[addr] = None  # Placeholder for data
-            interpreter.set_typed_variable(var_name, addr)
+            # Allocate pointer-like storage as a record dictionary.
+            interpreter.variables[var_name] = {}
         elif upcmd_strip.startswith("DISPOSE"):
-            # Free the pointer
-            addr_val = interpreter.get_numeric_value(var_name)
-            if addr_val is not None and int(addr_val) in interpreter.pascal_heap:
-                del interpreter.pascal_heap[int(addr_val)]
-            interpreter.set_typed_variable(var_name, 0)
+            interpreter.variables[var_name] = None
         return ""
 
     # FillChar(dest, count, val)

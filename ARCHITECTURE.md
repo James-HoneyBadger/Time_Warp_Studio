@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v10.0.0 — System Design and Implementation
+## Time Warp Studio v13.0.0 — System Design and Implementation
 
 ---
 
@@ -656,7 +656,7 @@ Contains:
 
 - 41+ test files covering all 24 language executors, graphics, GUI, and interpreter
 - `conftest.py`, `conftest_lang.py` — Shared fixtures and helpers
-- `test_runner.py` — Orchestration with HTML coverage reports
+- `Platforms/Python/smoke_test.py` — Fast smoke test without pytest
 
 ### Scripts (`Scripts/`)
 
@@ -701,13 +701,11 @@ Build, launch, deploy, and utility scripts — including `deploy.sh`, `startup.p
 ### Testing
 
 ```bash
-pytest tests/ -v                           # Run tests
-python Platforms/Python/test_runner.py --comprehensive     # Full suite with coverage reports
-python Platforms/Python/test_runner.py --basic             # Quick smoke tests
-python Platforms/Python/test_runner.py --parallel          # Parallel execution (pytest-xdist)
-black --check .                            # Check formatting
-ruff check time_warp                       # Fast linting
-mypy time_warp --strict                   # Type check
+PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -v --tb=short   # Run tests
+python3 Platforms/Python/smoke_test.py                                           # Fast smoke test without pytest
+black --check .                                                                 # Check formatting
+ruff check time_warp                                                               # Fast linting
+mypy time_warp --strict                                                           # Type check
 ```
 
 ### PR Process

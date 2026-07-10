@@ -283,6 +283,14 @@ class FeatureIntegrationManager:
                     panel = QWidget()
                     panel.setWindowTitle(feature_name)
 
+                if (
+                    feature_id == "hardware_simulator"
+                    and hasattr(panel, "bind_simulator")
+                    and hasattr(self.main_window, "output")
+                    and hasattr(self.main_window.output, "hardware_simulator")
+                ):
+                    panel.bind_simulator(self.main_window.output.hardware_simulator)
+
                 panel.setProperty("feature_available", True)
                 self.feature_panels[feature_id] = panel
 

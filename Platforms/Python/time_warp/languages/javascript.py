@@ -3142,21 +3142,23 @@ def _translate_expr(expr: str) -> str:
             return m2.group(0)
 
         inner = re.sub(r"\x00STR(\d+)\x00", _restore_in_tl, inner)
-        # Convert ${expr} to {expr}
-        inner = re.sub(r"\$\{(.+?)\}", r"{\1}", inner)
-        # Escape " chars that appear in the TEXT parts (outside {}) of the f-string
-        # to avoid breaking the double-quoted f-string delimiter
-        parts = re.split(r"(\{[^}]*\})", inner)
-        new_parts = []
-        for part in parts:
-            if part.startswith("{") and part.endswith("}"):
-                new_parts.append(part)  # inside {}, keep " as-is
-            else:
-                new_parts.append(part.replace('"', '\\"'))
-        inner = "".join(new_parts)
-        # Use double-quoted f-string to avoid escaping single quotes
-        inner = inner.replace("\\`", "`")
-        return f'f"{inner}"'
+        # Convert ${expr} into Python string concatenation so embedded quotes
+        # or braces inside expressions cannot break f-string parsing.
+        parts: list[str] = []
+        cursor = 0
+        for match in re.finditer(r"\$\{(.+?)\}", inner):
+            literal = inner[cursor:match.start()]
+            if literal:
+                parts.append(repr(literal))
+            parts.append(f"str({_translate_expr(match.group(1).strip())})")
+            cursor = match.end()
+        tail = inner[cursor:]
+        if tail:
+            parts.append(repr(tail))
+        if not parts:
+            return "''"
+        inner = " + ".join(parts)
+        return inner.replace("\\`", "`")
 
     expr = re.sub(r"`([^`]*)`", tl, expr)
 

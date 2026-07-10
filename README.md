@@ -120,7 +120,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 ```bash
 git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
 cd Time_Warp_Studio
-python run.py
+python3 run.py
 ```
 
 ### Windows (PowerShell)
@@ -128,7 +128,7 @@ python run.py
 ```powershell
 git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
 cd Time_Warp_Studio
-python run.py
+python3 run.py
 ```
 
 The `run.py` launcher will automatically:
@@ -147,11 +147,11 @@ That's it — you should see the Time Warp Studio window in a few seconds.
 ### Option 1: Smart Launcher (Recommended)
 
 ```bash
-python run.py              # Auto-setup and launch
-python run.py --fresh      # Force-recreate virtual environment
-python run.py --skip-setup # Skip dependency checks (faster startup)
-python run.py --no-venv    # Use system Python (not recommended)
-python run.py --help       # Show all options
+python3 run.py              # Auto-setup and launch
+python3 run.py --fresh      # Force-recreate virtual environment
+python3 run.py --skip-setup # Skip dependency checks (faster startup)
+python3 run.py --no-venv    # Use system Python (not recommended)
+python3 run.py --help       # Show all options
 ```
 
 ### Option 2: Manual Setup
@@ -166,7 +166,7 @@ source .venv/bin/activate        # Linux/macOS
 pip install -r Platforms/Python/requirements.txt
 
 # Launch the IDE
-python Platforms/Python/time_warp_ide.py
+python3 Platforms/Python/time_warp_ide.py
 ```
 
 ### Option 3: Shell Script (Linux/macOS)
@@ -334,7 +334,7 @@ Time_Warp_Studio/
 │
 ├── Platforms/Python/              # Main application source
 │   ├── time_warp_ide.py           # IDE entry point
-│   ├── test_runner.py             # Test orchestration with HTML reports
+│   ├── smoke_test.py              # Fast smoke test without pytest
 │   └── time_warp/
 │       ├── core/                  # Interpreter engine and services
 │       │   ├── interpreter.py     # Central command dispatcher (~1,500 lines)
@@ -397,10 +397,10 @@ Time_Warp_Studio/
 
 ```bash
 # Recommended: Smart launcher
-python run.py
+python3 run.py
 
 # Direct launch (requires venv activated)
-python Platforms/Python/time_warp_ide.py
+python3 Platforms/Python/time_warp_ide.py
 
 # Shell script (Linux/macOS)
 ./run.sh
@@ -432,13 +432,10 @@ Run from the repository root:
 pytest -q
 
 # Full package suite with integrated reporting
-python Platforms/Python/test_runner.py --comprehensive
-
-# Basic smoke suite
-python Platforms/Python/test_runner.py --basic
-
-# Full package tests directly via pytest
 PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
+
+# Fast smoke test without pytest
+python3 Platforms/Python/smoke_test.py
 ```
 
 **Current status:** Tests passing across test modules covering all 24 language executors, graphics, GUI, and interpreter tests.
@@ -469,7 +466,7 @@ We welcome contributions! Here's how to get started:
 
    ```bash
    pytest -q
-   python Platforms/Python/test_runner.py --basic
+   python3 Platforms/Python/smoke_test.py
    ```
 
 6. **Commit** with a clear message and submit a pull request
@@ -488,7 +485,7 @@ Licensed under the **[MIT License](LICENSE)**.
 
 - **Repository:** [github.com/James-HoneyBadger/Time_Warp_Studio](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 - **Maintainer:** James Temple — <james@honey-badger.org>
-- **Version:** 10.0.0
+- **Version:** 13.0.0
 
 ---
 
