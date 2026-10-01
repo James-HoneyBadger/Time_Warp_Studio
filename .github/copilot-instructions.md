@@ -8,9 +8,9 @@
 
 ## Project Overview
 
-Time Warp Studio is an educational desktop programming environment built with Python and PySide6 (Qt6) that provides a unified IDE for learning **24 programming languages** with integrated turtle graphics.
+Time Warp Studio is an educational desktop programming environment built with Python and PySide6 (Qt6) that provides a unified IDE for learning **9 programming languages** with integrated turtle graphics.
 
-**Supported Languages:** BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, JavaScript, Lua, HyperTalk, Erlang, LISP/Scheme, COBOL, Tcl, PostScript, Ruby, Python, Haskell, 6502 Assembly, Perl, REXX, Smalltalk, APL.
+**Supported Languages:** BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python.
 
 **Current State:** Native desktop application (Python/PySide6) - single actively maintained version.
 
@@ -38,8 +38,8 @@ def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) 
 ```
 
 **Two execution modes:**
-- **Whole-program executors** (5 languages): Receive the entire source as a string. Registered in `_WHOLE_PROGRAM_EXECUTORS` dict in `core/interpreter.py`. These are: Lua, Brainfuck, JavaScript, HyperTalk, Erlang.
-- **Line-by-line executors** (7 languages: BASIC, PILOT, Logo, C, Pascal, Prolog, Forth): The interpreter iterates lines and calls the executor per statement.
+- **Whole-program executors** (2 active languages): Receive the entire source as a string. Registered in `_WHOLE_PROGRAM_EXECUTORS` dict in `core/interpreter.py`. These are: Brainfuck and Python.
+- **Line-by-line executors** (7 active languages: BASIC, PILOT, Logo, C, Pascal, Prolog, Forth): The interpreter iterates lines and calls the executor per statement.
 
 When adding a new whole-program language, only one dict needs updating: `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.
 
@@ -79,7 +79,7 @@ python tests/test_all_demos.py
 ```
 
 **Test Organization:**
-- `test_*.py` = unit tests for components (41 test files in `time_warp/tests/`)
+- `test_*.py` = unit tests for components (24 test files in `time_warp/tests/`)
 - `Platforms/Python/smoke_test.py` = fast smoke test without pytest
 - `tests/test_all_demos.py` = standalone demo verifier (subprocess per file)
 - `conftest_lang.py` = shared `run()`, `ok()`, `has()`, `no_errors()` test helpers
@@ -164,10 +164,10 @@ Platforms/Python/
       sql_engine.py         - SQLite-backed T-SQL compatibility layer
       config.py             - Canonical paths (~/.time_warp/)
     features/               - Feature modules (AI, collaboration, games, etc.)
-    languages/              - 12 language executors
+    languages/              - 9 language executors
       base.py               - Protocol definition
       basic.py, pilot.py, logo.py, c_lang_fixed.py, pascal.py,
-      prolog.py, forth.py, lua.py, brainfuck.py, javascript.py, hypertalk.py, erlang.py
+      prolog.py, forth.py, brainfuck.py, python_lang.py
     ui/                     - 30+ UI modules
       main_window.py        - PySide6 main window (uses 6 mixins)
       editor.py             - Code editor + minimap + line numbers
@@ -183,10 +183,10 @@ Platforms/Python/
       expression_evaluator.py - Hand-written tokenizer + recursive-descent parser
       error_hints.py        - Syntax error suggestions
       validators.py         - Input validation helpers
-    tests/                  - 41 test files
+    tests/                  - 24 test files
 docker/                     - Dockerfiles, nginx, supervisord configs
 tests/                      - Root-level integration tests
-Examples/                   - ~93 demo programs across all languages
+Examples/                   - ~72 demo programs across the 9 active languages
 ```
 
 ## Dependencies
@@ -202,7 +202,7 @@ Optional: `pyfirmata` (Arduino), `RPi.GPIO` (Raspberry Pi), `openai`, `librosa`
 ### Key Components
 
 - **Interpreter**: Main interpreter class handling command dispatch and execution
-- **Language Executors**: 12 executor functions in `time_warp/languages/`
+- **Language Executors**: 9 executor functions in `time_warp/languages/`
 - **UI Components**: Qt-based UI (`ui/main_window.py`) with editor, canvas, and turtle controls
 - **Theme System**: `ui/themes.py` with 28 themes and persistent configuration
 - **Graphics Canvas**: Unified drawing surface in `ui/canvas.py` for all turtle graphics output

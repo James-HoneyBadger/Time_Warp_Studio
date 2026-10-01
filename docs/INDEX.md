@@ -18,6 +18,9 @@ Start here if you're new to Time Warp Studio:
 
 ## 📚 Programming Languages
 
+Time Warp Studio actively supports **9 programming languages**. Each has a
+full tutorial below.
+
 ### Classic Educational
 
 - **[BASIC Tutorial](tutorials/basic.md)** - Classic BASIC with variables, loops, conditionals, and subroutines
@@ -28,52 +31,29 @@ Start here if you're new to Time Warp Studio:
 
 - **[C Reference](tutorials/c.md)** - Systems programming and low-level concepts
 - **[Pascal Guide](tutorials/pascal.md)** - Structured programming with strong typing
-- **[6502 Assembly Tutorial](tutorials/asm6502.md)** - Machine-level programming on the MOS 6502 processor
 
 ### Functional & Declarative Languages
 
 - **[Prolog Guide](tutorials/prolog.md)** - Logic programming with facts, rules, and unification
-- **[LISP/Scheme Tutorial](tutorials/lisp.md)** - Classic 1958 AI / symbolic computation language
-- **[Haskell Tutorial](tutorials/haskell.md)** - Pure, lazy functional programming with strong types
 
 ### Stack & Concatenative
 
 - **[Forth Guide](tutorials/forth.md)** - Stack-based programming and low-level operations
-- **[PostScript Tutorial](tutorials/postscript.md)** - Stack-based page-description and graphics language
 
 ### Modern Scripting Languages
 
-- **[JavaScript Tutorial](tutorials/javascript.md)** - Web-era scripting
-- **[Lua Tutorial](tutorials/lua.md)** - Lightweight embeddable scripting
 - **[Python Tutorial](tutorials/python.md)** - Modern multi-paradigm scripting with turtle graphics
-- **[Ruby Tutorial](tutorials/ruby.md)** - Dynamic, expressive object-oriented scripting
-- **[Perl 5 Tutorial](tutorials/perl.md)** - Practical scripting, regex, and text processing
-- **[Tcl Tutorial](tutorials/tcl.md)** - Tool Command Language, embeddable scripting
-- **[REXX Tutorial](tutorials/rexx.md)** - IBM Restructured eXtended eXecutor
-
-### Object-Oriented / Message-Passing
-
-- **[Smalltalk Tutorial](tutorials/smalltalk.md)** - Smalltalk-80 object-oriented message-passing
-
-### Concurrent & Functional
-
-- **[Erlang Tutorial](tutorials/erlang.md)** - Concurrent / functional programming
-
-### Event-Driven
-
-- **[HyperTalk Tutorial](tutorials/hypertalk.md)** - Apple HyperCard scripting language
-
-### Business / Data Processing
-
-- **[COBOL Tutorial](tutorials/cobol.md)** - Business-oriented data processing
-
-### Array / Symbolic
-
-- **[APL Tutorial](tutorials/apl.md)** - Array programming with APL symbols (⍳⍴+/×/)
 
 ### Esoteric Languages
 
 - **[Brainfuck Tutorial](tutorials/brainfuck.md)** - Esoteric Turing-complete language
+
+> Earlier prototypes explored additional languages (Assembly, LISP, Haskell,
+> PostScript, JavaScript, Lua, Ruby, Perl, Tcl, REXX, Smalltalk, Erlang,
+> HyperTalk, COBOL, APL). None of these have an executor in the current
+> release and their tutorials have been removed; see
+> [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) for retained reference-only syntax
+> notes.
 
 ---
 
@@ -96,7 +76,7 @@ Deep dives into specific IDE features:
 ### Quick Reference
 
 - **[Keyboard Shortcuts](guides/07-shortcuts.md)** - All available shortcuts and their actions
-- **[FAQ](reference/faq.md)** - 70+ frequently asked questions with answers
+- **[FAQ](reference/faq.md)** - 40+ frequently asked questions with answers
 
 ### Troubleshooting
 
@@ -159,34 +139,20 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 
 ## 📁 Examples
 
-Browse example programs organized by language:
+Browse example programs organized by language (only the 9 active languages
+ship with runnable examples):
 
 | Directory | Count | Level | Purpose |
 | --------- | ----- | ----- | ------- |
-| `apl/` | 5 | Intermediate-Advanced | Array programming |
-| `asm6502/` | 5 | Advanced | Machine-level programming |
-| `basic/` | 6 | Beginner | Learn BASIC fundamentals |
-| `brainfuck/` | 4 | Advanced | Esoteric computing |
-| `c/` | 7 | Intermediate | Systems programming |
-| `cobol/` | 8 | Intermediate | Business data processing |
-| `erlang/` | 5 | Advanced | Concurrent functional programming |
-| `forth/` | 5 | Advanced | Stack-based programming |
-| `haskell/` | 5 | Advanced | Pure functional programming |
-| `hypertalk/` | 3 | Intermediate | Event-driven scripting |
-| `javascript/` | 5 | Intermediate | Scripting |
-| `lisp/` | 5 | Intermediate-Advanced | Symbolic / AI programming |
-| `logo/` | 5 | Beginner-Intermediate | Turtle graphics and recursion |
-| `lua/` | 5 | Beginner-Intermediate | Scripting |
-| `pascal/` | 5 | Intermediate | Structured programming |
-| `perl/` | 5 | Intermediate | Text processing and scripting |
-| `pilot/` | 3 | Beginner-Intermediate | Interactive instruction |
-| `postscript/` | 5 | Advanced | Stack-based graphics |
-| `prolog/` | 5 | Advanced | Logic programming |
-| `python/` | 5 | Beginner-Intermediate | Multi-paradigm scripting |
-| `rexx/` | 5 | Beginner-Intermediate | Procedural scripting |
-| `ruby/` | 5 | Intermediate | Object-oriented scripting |
-| `smalltalk/` | 5 | Intermediate-Advanced | Message-passing OOP |
-| `tcl/` | 5 | Intermediate | Embeddable scripting |
+| `basic/` | 7 | Beginner | Learn BASIC fundamentals |
+| `brainfuck/` | 8 | Advanced | Esoteric computing |
+| `c/` | 8 | Intermediate | Systems programming |
+| `forth/` | 8 | Advanced | Stack-based programming |
+| `logo/` | 8 | Beginner-Intermediate | Turtle graphics and recursion |
+| `pascal/` | 8 | Intermediate | Structured programming |
+| `pilot/` | 8 | Beginner-Intermediate | Interactive instruction |
+| `prolog/` | 9 | Advanced | Logic programming |
+| `python/` | 8 | Beginner-Intermediate | Multi-paradigm scripting |
 
 **How to use examples:**
 
@@ -258,10 +224,9 @@ docs/
 │   └── 08-troubleshooting.md
 ├── tutorials/
 │   ├── basic.md, brainfuck.md, c.md
-│   ├── erlang.md, forth.md, hypertalk.md
-│   ├── javascript.md, logo.md, lua.md, pascal.md
-│   ├── pilot.md, prolog.md
-│   └── (24 tutorials total)
+│   ├── forth.md, logo.md, pascal.md
+│   ├── pilot.md, prolog.md, python.md
+│   └── (9 tutorials total, one per active language)
 └── reference/
     └── faq.md
 ```
@@ -270,32 +235,17 @@ docs/
 
 ## 🛠️ Examples and Tutorials Index
 
-Explore example programs and tutorials for all supported languages:
+Explore example programs and tutorials for the 9 active languages:
 
 - **[BASIC Examples](../Examples/basic/)** - Adventure games, budget trackers
 - **[Brainfuck Examples](../Examples/brainfuck/)** - Fibonacci, Hello World
 - **[C Examples](../Examples/c/)** - Sorting algorithms, RPN calculator
-- **[Erlang Examples](../Examples/erlang/)** - Pattern matching, concurrent programming
 - **[Forth Examples](../Examples/forth/)** - Stack-based programming
-- **[HyperTalk Examples](../Examples/hypertalk/)** - HyperCard scripting
-- **[JavaScript Examples](../Examples/javascript/)** - Web scripting basics
 - **[Logo Examples](../Examples/logo/)** - Turtle graphics
-- **[Lua Examples](../Examples/lua/)** - Lightweight scripting
 - **[Pascal Examples](../Examples/pascal/)** - Structured programming
 - **[PILOT Examples](../Examples/pilot/)** - Instructional programming
 - **[Prolog Examples](../Examples/prolog/)** - Logic programming
-- **[LISP/Scheme Examples](../Examples/lisp/)** - Symbolic AI programs
-- **[COBOL Examples](../Examples/cobol/)** - Business data processing
-- **[Tcl Examples](../Examples/tcl/)** - Scripting and automation
-- **[PostScript Examples](../Examples/postscript/)** - Stack-based graphics
-- **[Ruby Examples](../Examples/ruby/)** - Object-oriented scripting
 - **[Python Examples](../Examples/python/)** - General-purpose programs
-- **[Haskell Examples](../Examples/haskell/)** - Functional programming
-- **[6502 Assembly Examples](../Examples/asm6502/)** - Low-level processor programs
-- **[Perl 5 Examples](../Examples/perl/)** - Text processing and scripting
-- **[REXX Examples](../Examples/rexx/)** - Structured scripting
-- **[Smalltalk Examples](../Examples/smalltalk/)** - Message-passing OOP
-- **[APL Examples](../Examples/apl/)** - Array processing
 
 ---
 
@@ -324,8 +274,8 @@ Explore example programs and tutorials for all supported languages:
 
 ---
 
-**Last Updated:** June 2026  
-**Version:** 13.0.0  
+**Last Updated:** October 2026
+**Version:** 14.0.0
 **License:** MIT
 
 ## How to Use This Documentation
@@ -385,8 +335,8 @@ This documentation is maintained alongside Time Warp Studio development. If you 
 
 ## Version Information
 
-- **Time Warp Studio** v13.0.0
-- **Last Updated** June 2026
+- **Time Warp Studio** v14.0.0
+- **Last Updated** October 2026
 
 ## Need More Help?
 

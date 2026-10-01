@@ -201,7 +201,7 @@ class CoachMarkManager:
             "editor_tabs",
             "📝 Code Editor",
             "Write your programs here. Switch between multiple open files using "
-            "the tabs.  All 24 languages are supported!",
+            "the tabs.  All 9 languages are supported!",
         ),
         (
             "language_combo",

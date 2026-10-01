@@ -67,12 +67,10 @@ The toolbar contains quick-access tools:
 | Stop | Halt execution | Ctrl+Shift+R |
 | Clear | Clear output panel | Ctrl+E |
 
-**Language Options (12 total):**
+**Language Options (9 total):**
 - BASIC, Logo, PILOT — educational classics
 - C, Pascal, Forth, Prolog — structured/systems
-- JavaScript, Lua — modern scripting
-- Erlang — concurrent/functional
-- HyperTalk — event-driven
+- Python — multi-paradigm
 - Brainfuck — esoteric
 
 ### 3. Code Editor (Left Panel)

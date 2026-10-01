@@ -1,5 +1,5 @@
 """
-Feature UI Panels for Time Warp Studio v13.0.0
+Feature UI Panels for Time Warp Studio v14.0.0
 
 This module provides PySide6 Qt widget panels for the IDE's educational and
 workflow features. Each panel wraps a core module and provides a user-friendly
@@ -22,6 +22,7 @@ from PySide6.QtWidgets import (
     QFormLayout,
     QGroupBox,
     QHBoxLayout,
+    QInputDialog,
     QLabel,
     QLineEdit,
     QListWidget,
@@ -42,6 +43,7 @@ from PySide6.QtWidgets import (
 )
 
 from ..core.interpreter import Language
+from ..core.language_registry import LANGUAGE_METADATA
 from ..core.debugger import CodeDebugger
 from ..features.accessibility import AccessibilityManager
 from ..features.achievements import ProgressTracker
@@ -60,7 +62,6 @@ from ..features.learning_analytics import LearningAnalytics
 from ..features.lesson_system import LessonManager, LessonStatus
 from ..features.peer_review import CodeReviewSession
 from ..features.performance_profiler import PerformanceProfiler
-from ..features.project_templates import TemplateLibrary
 from ..features.reference_search import ReferenceIndex
 from ..features.syntax_validator import SyntaxValidator
 from ..utils.error_hints import get_enhanced_error_message
@@ -90,7 +91,7 @@ class FeaturePanelBase(QWidget):
 
 
 class SyntaxValidatorPanel(FeaturePanelBase):
-    """UI for real-time syntax validation across all 7 languages."""
+    """UI for real-time syntax validation across all 9 languages."""
 
     def __init__(self):
         super().__init__("Syntax Validator")
@@ -113,14 +114,7 @@ class SyntaxValidatorPanel(FeaturePanelBase):
                 "FORTH",
                 "PROLOG",
                 "PYTHON",
-                "LUA",
-                "SCHEME",
                 "BRAINFUCK",
-                "JAVASCRIPT",
-                "REXX",
-                "SMALLTALK",
-                "HYPERTALK",
-                "HASKELL",
             ]
         )
         lang_layout.addWidget(self.lang_combo)
@@ -157,10 +151,7 @@ class SyntaxValidatorPanel(FeaturePanelBase):
                 "C": Language.C,
                 "FORTH": Language.FORTH,
                 "PROLOG": Language.PROLOG,
-                "LUA": Language.LUA,
                 "BRAINFUCK": Language.BRAINFUCK,
-                "JAVASCRIPT": Language.JAVASCRIPT,
-                "HYPERTALK": Language.HYPERTALK,
             }
             return mapping.get(cleaned, Language.BASIC)
         return Language.BASIC
@@ -204,100 +195,6 @@ class SyntaxValidatorPanel(FeaturePanelBase):
         self.code_input.setPlainText(code)
         self.validate(lang_enum)
         return self.validator.validate(code, lang_enum)
-
-
-class ProjectTemplatesPanel(FeaturePanelBase):
-    """UI for browsing and creating projects from templates."""
-
-    def __init__(self):
-        super().__init__("Project Templates")
-        self.templates_mgr = TemplateLibrary()
-        self.setup_ui()
-
-    def setup_ui(self):
-        """Setup templates panel UI."""
-        # Category filter
-        cat_layout = QHBoxLayout()
-        cat_layout.addWidget(QLabel("Category:"))
-        self.cat_combo = QComboBox()
-        self.cat_combo.addItems(
-            [
-                "All",
-                "Game",
-                "Art Generation",
-                "Learning",
-                "Robotics",
-                "Data Visualization",
-                "Demo",
-            ]
-        )
-        self.cat_combo.currentTextChanged.connect(self.refresh_templates)
-        cat_layout.addWidget(self.cat_combo)
-        cat_layout.addStretch()
-        self.layout_main.addLayout(cat_layout)
-
-        # Templates list
-        self.templates_list = QListWidget()
-        self.templates_list.itemClicked.connect(self.on_template_selected)
-        self.layout_main.addWidget(QLabel("Available Templates:"))
-        self.layout_main.addWidget(self.templates_list)
-
-        # Template details
-        self.details_text = QTextEdit()
-        self.details_text.setReadOnly(True)
-        self.layout_main.addWidget(QLabel("Description:"))
-        self.layout_main.addWidget(self.details_text)
-
-        # Create button
-        create_btn = QPushButton("Create Project from Template")
-        create_btn.clicked.connect(self.create_project)
-        self.layout_main.addWidget(create_btn)
-
-        self.refresh_templates()
-
-    def refresh_templates(self):
-        """Refresh templates list."""
-        category_text = self.cat_combo.currentText()
-
-        # Get all templates (TemplateLibrary.get_all() returns
-        # Dict[str, Template])
-        all_templates = self.templates_mgr.get_all().values()
-
-        # Filter
-        templates = []
-        if category_text == "All":
-            templates = list(all_templates)
-        else:
-            # Map "Art Generation" -> "art_generation"
-            cat_val = category_text.lower().replace(" ", "_")
-            templates = [tpl for tpl in all_templates if tpl.category.value == cat_val]
-
-        self.templates_list.clear()
-        for tpl in templates:
-            item = QListWidgetItem(tpl.name)
-            item.setData(Qt.ItemDataRole.UserRole, tpl)
-            self.templates_list.addItem(item)
-
-    def on_template_selected(self, item):
-        """Show template details."""
-        template = item.data(Qt.ItemDataRole.UserRole)
-        self.details_text.setText(
-            template.description if template.description else "No description"
-        )
-
-    def create_project(self):
-        """Create a new project from selected template."""
-        item = self.templates_list.currentItem()
-        if not item:
-            QMessageBox.warning(
-                self,
-                "Error",
-                "Please select a template first",
-            )
-            return
-
-        template = item.data(Qt.ItemDataRole.UserRole)
-        self.emit_status(f"Creating project from {template.name}...")
 
 
 class LearningHubPanel(FeaturePanelBase):
@@ -472,7 +369,7 @@ class LessonAuthoringPanel(FeaturePanelBase):
 
         self.language_combo = QComboBox()
         self.language_combo.addItems(
-            ["basic", "logo", "pilot", "python", "javascript", "c"]
+            [meta.folder_name for meta in LANGUAGE_METADATA.values()]
         )
         self.language_combo.currentTextChanged.connect(self._update_preview)
         lesson_form.addRow("Language:", self.language_combo)
@@ -850,27 +747,10 @@ class ProjectExplorerPanel(FeaturePanelBase):
         "node_modules",
     }
     CODE_EXTENSIONS = {
-        ".bas",
-        ".bf",
-        ".c",
-        ".f",
-        ".forth",
-        ".fs",
-        ".hs",
-        ".htalk",
-        ".js",
-        ".logo",
-        ".lua",
-        ".pas",
-        ".pilot",
-        ".pl",
-        ".pro",
-        ".prolog",
-        ".py",
-        ".rex",
-        ".rexx",
-        ".scm",
-        ".st",
+        f".{extension}"
+        for metadata in LANGUAGE_METADATA.values()
+        for extension in metadata.extensions
+    } | {
         ".txt",
         ".md",
     }
@@ -2784,7 +2664,6 @@ __all__ = [
     "ReferenceSearchPanel",
     "AchievementsPanel",
     "SyntaxValidatorPanel",
-    "ProjectTemplatesPanel",
     "LearningHubPanel",
     "ProjectExplorerPanel",
     "ProjectRunnerPanel",

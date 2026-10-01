@@ -28,9 +28,8 @@ _DEFAULT_SYNC_ROOT = Path.home() / ".time_warp" / "sync"
 
 # Source file extensions to include in Gist uploads
 _SOURCE_EXTENSIONS = {
-    ".bas", ".logo", ".py", ".rb", ".lua", ".js", ".c", ".h",
-    ".pas", ".pl", ".f", ".forth", ".bf", ".erl", ".ht",
-    ".asm", ".s", ".a65", ".scm", ".lisp", ".cob", ".tcl", ".ps",
+    ".bas", ".pilot", ".logo", ".c", ".pas", ".pro", ".pl",
+    ".f", ".py", ".bf",
 }
 
 

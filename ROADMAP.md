@@ -2,13 +2,13 @@
 
 ## Vision
 
-Time Warp Studio is an educational desktop IDE for learning **24 programming languages** spanning seven decades of computing history. This roadmap outlines planned improvements and contribution opportunities.
+Time Warp Studio is an educational desktop IDE for learning **9 active programming languages**. This roadmap outlines planned improvements and contribution opportunities.
 
 ---
 
-## Current Release: v13.0.0 (June 2026)
+## Current Release: v14.0.0 (October 2026)
 
-- **24 language executors** — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Lua, Brainfuck, JavaScript, HyperTalk, Erlang, LISP/Scheme, COBOL, Tcl, PostScript, Ruby, Python (sandboxed), Haskell, 6502 Assembly, Perl 5, **REXX**, **Smalltalk**, **APL**
+- **9 active language executors** — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python
 - **SVGA graphics mode** — 800×600 virtual canvas with anti-aliasing, zoom/pan, and pixel-accurate rendering
 - **Vector graphics** — cubic Bezier curves, gradient-filled shapes (linear & radial), dash pen styles, Z-ordered layers
 - **Sprite system** — define named pixel-art sprites via `define_sprite()`, stamp/animate with rotation and scale
@@ -18,9 +18,8 @@ Time Warp Studio is an educational desktop IDE for learning **24 programming lan
 - Lesson system with auto-verification
 - AI-powered code suggestions and error explanations
 - Learning Hub with guided challenges and Project Explorer
-- HyperTalk `find` and `go to card` navigation commands
 - Prolog `\+` negation-as-failure parsing, extended built-ins (`format/2`, `split_string/4`, `string_concat/3`, etc.)
-- 70 passing demo programs (0 timeouts)
+- Example programs across all 9 active languages (0 timeouts)
 
 ---
 
@@ -28,9 +27,7 @@ Time Warp Studio is an educational desktop IDE for learning **24 programming lan
 
 ### Language Improvements
 
-- Expand COBOL executor: `PERFORM VARYING`, table handling, `EVALUATE`
-- ✅ Add HyperTalk container navigation (`go to card`, `find`) — **done in v10.2.0**
-- ✅ Improve Prolog cut/negation and built-in predicates — **done in v10.2.0**
+- Improve Prolog cut/negation and built-in predicates — **done in v10.2.0**
 
 ### IDE Enhancements
 
@@ -49,21 +46,14 @@ Time Warp Studio is an educational desktop IDE for learning **24 programming lan
 
 ## Mid-Term (Q3–Q4 2026)
 
-### New Languages (Completed in v10.2.0)
+### Previously Explored Languages (removed from active scope)
 
-- ✅ **Tcl** — scripting and embeddable extension language — **done**
-- ✅ **PostScript** — page-description / stack-based graphics — **done**
-- ✅ **LISP/Scheme** — classic AI / symbolic computation — **done**
-- ✅ **COBOL** — business data processing — **done**
-
-### New Languages (Candidates for v10.3+)
-
-- ✅ **Ruby** — dynamic, object-oriented scripting — **done in v11.0.0**
-- ✅ **Python (sandboxed)** — modern scripting with stdlib access — **done in v11.0.0**
-- ✅ **Perl 5** — practical scripting, regex, and text processing — **done in v12.0.0**
-- ✅ **REXX** — IBM Restructured eXtended eXecutor, SAY/DO/SELECT — **done in v13.0.0**
-- ✅ **Smalltalk** — Smalltalk-80 with blocks, collections, closures — **done in v13.0.0**
-- ✅ **APL** — array programming with APL glyphs, reduction/scan — **done in v13.0.0**
+The following were built and shipped in earlier releases (v10.2.0–v13.0.0)
+but have since been removed from `time_warp/languages/` and are **not part of
+the current 9-language release**: Tcl, PostScript, LISP/Scheme, COBOL, Ruby,
+sandboxed Python variant, Perl 5, REXX, Smalltalk, APL. There is no plan to
+reintroduce them in this release cycle; the active scope is intentionally
+fixed at 9 languages (see Vision above).
 
 ### Plugin System
 

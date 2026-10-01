@@ -8,7 +8,7 @@ Quick answers to common questions about Time Warp Studio.
 
 ### What is Time Warp Studio?
 
-Time Warp Studio is a desktop educational programming environment built with Python and PySide6 (Qt6) that combines classic and modern programming languages in a single application. It supports 24 languages — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Lua, Brainfuck, JavaScript, HyperTalk, Erlang, LISP/Scheme, COBOL, Tcl, PostScript, Ruby, Python, Haskell, 6502 Assembly, Perl 5, REXX, Smalltalk, and APL — with integrated turtle graphics.
+Time Warp Studio is a desktop educational programming environment built with Python and PySide6 (Qt6) that combines classic and modern programming languages in a single application. It supports 9 languages — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python — with integrated turtle graphics.
 
 ### Who should use Time Warp Studio?
 
@@ -78,23 +78,8 @@ Yes! Works on both Intel and Apple Silicon Macs.
 - **Pascal** - Structured programming (1970)
 - **Prolog** - Logic programming (1972)
 - **Forth** - Stack-based programming (1970)
-- **Lua** - Lightweight scripting (1993)
 - **Brainfuck** - Esoteric computing (1993)
-- **JavaScript** - Web scripting (1995)
-- **HyperTalk** - Event-driven scripting (1987)
-- **Erlang** - Concurrent/functional programming (1986)
-- **LISP/Scheme** - Symbolic AI language (1958)
-- **COBOL** - Business data processing (1959)
-- **Tcl** - Scripting and embedded apps (1988)
-- **PostScript** - Stack-based page description (1982)
-- **Ruby** - Object-oriented scripting (1995)
 - **Python** - General-purpose scripting (1991)
-- **Haskell** - Purely functional programming (1990)
-- **6502 Assembly** - Low-level processor language (1975)
-- **Perl 5** - Text processing and scripting (1994)
-- **REXX** - Structured scripting (1979)
-- **Smalltalk** - Message-passing OOP (1972)
-- **APL** - Array processing language (1966)
 
 ### Can I save my programs?
 

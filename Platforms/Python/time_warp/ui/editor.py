@@ -39,6 +39,49 @@ from PySide6.QtWidgets import (
 from ..core.interpreter import Language
 
 
+class GoToLineDialog(QDialog):
+    """Simple dialog to jump to a specific line number."""
+
+    def __init__(self, parent, current_line: int = 1, max_line: int = 1):
+        super().__init__(parent)
+        self.setWindowTitle("Go to Line")
+        self.setModal(True)
+        self.setMinimumWidth(250)
+
+        layout = QVBoxLayout(self)
+
+        # Label
+        layout.addWidget(QLabel(f"Jump to line (1–{max_line}):"))
+
+        # Line number input
+        self.line_input = QLineEdit()
+        self.line_input.setText(str(current_line))
+        self.line_input.selectAll()
+        layout.addWidget(self.line_input)
+
+        # Buttons
+        button_layout = QHBoxLayout()
+        self.ok_btn = QPushButton("Go")
+        self.cancel_btn = QPushButton("Cancel")
+        self.ok_btn.clicked.connect(self.accept)
+        self.cancel_btn.clicked.connect(self.reject)
+        button_layout.addWidget(self.ok_btn)
+        button_layout.addWidget(self.cancel_btn)
+        layout.addLayout(button_layout)
+
+        self.max_line = max_line
+
+    def get_line_number(self) -> int:
+        """Return the entered line number, or -1 if invalid."""
+        try:
+            line = int(self.line_input.text())
+            if 1 <= line <= self.max_line:
+                return line
+        except ValueError:
+            pass
+        return -1
+
+
 class LineNumberArea(QWidget):
     """Line number area widget with breakpoint support.
 
@@ -290,18 +333,7 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             # Case-sensitive languages should match keywords exactly
             _case_sensitive_langs = {
                 Language.C,
-                Language.JAVASCRIPT,
-                Language.LUA,
-                Language.ERLANG,
-                Language.LISP,
-                Language.TCL,
-                Language.POSTSCRIPT,
-                Language.HASKELL,
-                Language.RUBY,
                 Language.PYTHON_LANG,
-                Language.PERL,
-                Language.SMALLTALK,
-                Language.APL,
             }
             kw_flags = (
                 0
@@ -649,61 +681,6 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             self.function_pattern = r":\s+(\S+)"
             self.variable_pattern = r"\b[A-Z0-9_]+\b"
 
-        elif language == Language.LUA:
-            self.keywords = [
-                "and",
-                "break",
-                "do",
-                "else",
-                "elseif",
-                "end",
-                "false",
-                "for",
-                "function",
-                "goto",
-                "if",
-                "in",
-                "local",
-                "nil",
-                "not",
-                "or",
-                "repeat",
-                "return",
-                "then",
-                "true",
-                "until",
-                "while",
-                "print",
-                "pairs",
-                "ipairs",
-                "next",
-                "type",
-                "tostring",
-                "tonumber",
-                "string",
-                "table",
-                "math",
-                "io",
-                "os",
-                "unpack",
-                "select",
-                "pcall",
-                "xpcall",
-                "error",
-                "assert",
-                "require",
-                "rawget",
-                "rawset",
-            ]
-            self.comment_pattern = r"--.*$|--\[\[[\s\S]*?\]\]"
-            self.string_pattern = r'"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\'|\[\[[\s\S]*?\]\]'
-            self.number_pattern = (
-                r"\b0[xX][0-9a-fA-F]+\b|\b\d+\.?\d*(?:[eE][+-]?\d+)?\b"
-            )
-            self.operator_pattern = r"[+\-*/=<>~%#^&|]"
-            self.function_pattern = r"\bfunction\s+([A-Za-z_][A-Za-z0-9_.]*)"
-            self.variable_pattern = r"\b[A-Za-z_][A-Za-z0-9_]*\b"
-
         elif language == Language.BRAINFUCK:
             self.keywords = []
             self.comment_pattern = r"[^+\-<>\.,\[\]\n]+"
@@ -712,571 +689,6 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             self.operator_pattern = r"[+\-<>\.,\[\]]"
             self.function_pattern = None
             self.variable_pattern = None
-
-        elif language == Language.JAVASCRIPT:
-            self.keywords = [
-                "var",
-                "let",
-                "const",
-                "function",
-                "return",
-                "if",
-                "else",
-                "for",
-                "while",
-                "do",
-                "break",
-                "continue",
-                "switch",
-                "case",
-                "default",
-                "new",
-                "delete",
-                "typeof",
-                "instanceof",
-                "this",
-                "null",
-                "undefined",
-                "true",
-                "false",
-                "try",
-                "catch",
-                "finally",
-                "throw",
-                "class",
-                "extends",
-                "import",
-                "export",
-                "async",
-                "await",
-                "of",
-                "in",
-                "void",
-                "with",
-                "yield",
-                "static",
-                "super",
-                "console",
-                "Math",
-                "Array",
-                "Object",
-                "String",
-                "Number",
-                "Boolean",
-                "JSON",
-                "Date",
-                "RegExp",
-                "Error",
-                "Promise",
-                "Map",
-                "Set",
-                "parseInt",
-                "parseFloat",
-                "isNaN",
-                "isFinite",
-                "alert",
-                "prompt",
-                "document",
-                "window",
-                "setTimeout",
-                "setInterval",
-                "clearTimeout",
-            ]
-            self.comment_pattern = r"//.*$|/\*[\s\S]*?\*/"
-            self.string_pattern = (
-                r'`[^`]*`|"[^"\\]*(?:\\.[^"\\]*)*"|\'[^\'\\]*(?:\\.[^\'\\]*)*\''
-            )
-            self.number_pattern = (
-                r"\b0[xX][0-9a-fA-F]+\b|\b\d+\.?\d*(?:[eE][+-]?\d+)?\b"
-            )
-            self.operator_pattern = r"[+\-*/=<>!&|%^~?:.]"
-            self.function_pattern = r"\bfunction\s*([A-Za-z_$][A-Za-z0-9_$]*)|([A-Za-z_$][A-Za-z0-9_$]*)\s*=>\s*"
-            self.variable_pattern = r"\b[A-Za-z_$][A-Za-z0-9_$]*\b"
-
-        elif language == Language.HYPERTALK:
-            self.keywords = [
-                "put",
-                "into",
-                "after",
-                "before",
-                "get",
-                "set",
-                "to",
-                "if",
-                "then",
-                "else",
-                "end",
-                "repeat",
-                "with",
-                "while",
-                "until",
-                "forever",
-                "times",
-                "from",
-                "on",
-                "return",
-                "exit",
-                "pass",
-                "send",
-                "answer",
-                "ask",
-                "say",
-                "global",
-                "local",
-                "char",
-                "character",
-                "word",
-                "line",
-                "item",
-                "the",
-                "of",
-                "in",
-                "number",
-                "it",
-                "true",
-                "false",
-                "empty",
-                "space",
-                "tab",
-                "return",
-                "cr",
-                "and",
-                "or",
-                "not",
-                "is",
-                "contains",
-            ]
-            self.comment_pattern = r"--.*$"
-            self.string_pattern = r'"[^"]*"'
-            self.number_pattern = r"\b\d+\.?\d*\b"
-            self.operator_pattern = r"[+\-*/=<>&]"
-            self.function_pattern = r"^on\s+(\w+)"
-            self.variable_pattern = r"\b[A-Za-z][A-Za-z0-9]*\b"
-
-        elif language == Language.ERLANG:
-            self.keywords = [
-                "module",
-                "export",
-                "import",
-                "define",
-                "record",
-                "if",
-                "case",
-                "of",
-                "end",
-                "receive",
-                "after",
-                "begin",
-                "try",
-                "catch",
-                "throw",
-                "error",
-                "when",
-                "fun",
-                "let",
-                "in",
-                "query",
-                "and",
-                "andalso",
-                "or",
-                "orelse",
-                "not",
-                "xor",
-                "div",
-                "rem",
-                "band",
-                "bor",
-                "bxor",
-                "bnot",
-                "bsl",
-                "bsr",
-                "true",
-                "false",
-                "undefined",
-                "ok",
-                "error",
-                "spawn",
-                "send",
-                "self",
-                "node",
-                "register",
-                "lists",
-                "io",
-                "string",
-                "math",
-                "maps",
-                "erlang",
-            ]
-            self.comment_pattern = r"%.*$"
-            self.string_pattern = r'"(?:[^"\\]|\\.)*"'
-            self.number_pattern = r"\b\d+(?:\.\d+)?\b"
-            self.operator_pattern = r"[+\-*/<>=!|&]|->|<-|\|"
-            self.function_pattern = r"^(\w+)\s*\("
-            self.variable_pattern = r"\b[A-Z_][A-Za-z0-9_]*\b"
-
-        elif language == Language.LISP:
-            self.keywords = [
-                "define",
-                "lambda",
-                "let",
-                "let*",
-                "letrec",
-                "letrec*",
-                "if",
-                "cond",
-                "case",
-                "and",
-                "or",
-                "not",
-                "when",
-                "unless",
-                "begin",
-                "do",
-                "quote",
-                "quasiquote",
-                "unquote",
-                "set!",
-                "define-syntax",
-                "syntax-rules",
-                "define-record-type",
-                "values",
-                "call-with-values",
-                "call/cc",
-                "call-with-current-continuation",
-                "dynamic-wind",
-                "apply",
-                "map",
-                "for-each",
-                "filter",
-                "reduce",
-                "cons",
-                "car",
-                "cdr",
-                "list",
-                "append",
-                "reverse",
-                "display",
-                "newline",
-                "write",
-                "print",
-                "format",
-                "null?",
-                "pair?",
-                "list?",
-                "number?",
-                "string?",
-                "symbol?",
-                "boolean?",
-                "procedure?",
-                "zero?",
-                "positive?",
-                "negative?",
-                "eq?",
-                "eqv?",
-                "equal?",
-                "#t",
-                "#f",
-                "forward",
-                "backward",
-                "right",
-                "left",
-                "penup",
-                "pendown",
-                "home",
-                "setpos",
-                "color",
-                "clearscreen",
-            ]
-            self.comment_pattern = r";.*$|#\|[\s\S]*?\|#"
-            self.string_pattern = r'"[^"\\]*(?:\\.[^"\\]*)*"'
-            self.number_pattern = r"[-+]?(?:\d+\.\d*|\.\d+|\d+)(?:[eE][-+]?\d+)?\b|#[bodxBODX][0-9a-fA-F]+"
-            self.operator_pattern = r"[+\-*/=<>!?]"
-            self.function_pattern = r"\(\s*(define|lambda)\s+\(?(\w+)"
-            self.variable_pattern = r"\b[a-z][a-z0-9\-_!?]*\b"
-
-        elif language == Language.COBOL:
-            self.keywords = [
-                "IDENTIFICATION",
-                "ENVIRONMENT",
-                "DATA",
-                "PROCEDURE",
-                "DIVISION",
-                "SECTION",
-                "PROGRAM-ID",
-                "AUTHOR",
-                "WORKING-STORAGE",
-                "FILE",
-                "LINKAGE",
-                "PERFORM",
-                "VARYING",
-                "FROM",
-                "BY",
-                "UNTIL",
-                "TIMES",
-                "IF",
-                "ELSE",
-                "END-IF",
-                "EVALUATE",
-                "WHEN",
-                "OTHER",
-                "END-EVALUATE",
-                "MOVE",
-                "TO",
-                "ADD",
-                "SUBTRACT",
-                "MULTIPLY",
-                "DIVIDE",
-                "COMPUTE",
-                "GIVING",
-                "REMAINDER",
-                "DISPLAY",
-                "ACCEPT",
-                "STOP",
-                "RUN",
-                "GO",
-                "GOTO",
-                "INITIALIZE",
-                "INSPECT",
-                "TALLYING",
-                "REPLACING",
-                "STRING",
-                "INTO",
-                "DELIMITED",
-                "PIC",
-                "PICTURE",
-                "VALUE",
-                "IS",
-                "SPACES",
-                "ZEROS",
-                "ALL",
-                "88",
-                "COPY",
-                "CALL",
-                "EXIT",
-                "PARAGRAPH",
-                "01",
-                "02",
-                "03",
-                "04",
-                "05",
-                "10",
-                "77",
-            ]
-            self.comment_pattern = r"^\*.*$"
-            self.string_pattern = r'"[^"]*"|\'[^\']*\''
-            self.number_pattern = r"\b\d+(?:\.\d+)?\b"
-            self.operator_pattern = r"[=<>+\-*/]"
-            self.function_pattern = r"^\s{6,}\w[\w-]*\."
-            self.variable_pattern = r"\b[A-Z][A-Z0-9\-]*\b"
-
-        elif language == Language.TCL:
-            self.keywords = [
-                "proc",
-                "return",
-                "if",
-                "elseif",
-                "else",
-                "while",
-                "for",
-                "foreach",
-                "break",
-                "continue",
-                "switch",
-                "default",
-                "set",
-                "unset",
-                "incr",
-                "append",
-                "lappend",
-                "lindex",
-                "llength",
-                "lrange",
-                "lsort",
-                "lreverse",
-                "list",
-                "puts",
-                "gets",
-                "expr",
-                "eval",
-                "source",
-                "package",
-                "catch",
-                "error",
-                "global",
-                "upvar",
-                "namespace",
-                "string",
-                "format",
-                "regexp",
-                "regsub",
-                "scan",
-                "array",
-                "info",
-                "rename",
-                "interp",
-                "forward",
-                "fd",
-                "backward",
-                "bk",
-                "left",
-                "lt",
-                "right",
-                "rt",
-                "penup",
-                "pu",
-                "pendown",
-                "pd",
-                "setheading",
-                "setxy",
-                "home",
-                "clearscreen",
-            ]
-            self.comment_pattern = r"#.*$"
-            self.string_pattern = r'"[^"\\]*(?:\\.[^"\\]*)*"|\{[^{}]*\}'
-            self.number_pattern = r"\b\d+(?:\.\d+)?\b"
-            self.operator_pattern = r"[+\-*/=<>!|&]"
-            self.function_pattern = r"\bproc\s+(\w+)"
-            self.variable_pattern = r"\$\w+"
-
-        elif language == Language.POSTSCRIPT:
-            self.keywords = [
-                "def",
-                "load",
-                "bind",
-                "exch",
-                "dup",
-                "pop",
-                "copy",
-                "roll",
-                "clear",
-                "count",
-                "mark",
-                "cleartomark",
-                "counttomark",
-                "if",
-                "ifelse",
-                "for",
-                "repeat",
-                "loop",
-                "forall",
-                "exec",
-                "exit",
-                "stop",
-                "quit",
-                "add",
-                "sub",
-                "mul",
-                "div",
-                "mod",
-                "abs",
-                "neg",
-                "ceiling",
-                "floor",
-                "round",
-                "truncate",
-                "sqrt",
-                "exp",
-                "ln",
-                "eq",
-                "ne",
-                "lt",
-                "le",
-                "gt",
-                "ge",
-                "and",
-                "or",
-                "not",
-                "xor",
-                "true",
-                "false",
-                "null",
-                "dict",
-                "begin",
-                "end",
-                "currentdict",
-                "systemdict",
-                "string",
-                "array",
-                "get",
-                "put",
-                "length",
-                "type",
-                "moveto",
-                "lineto",
-                "rlineto",
-                "rmoveto",
-                "arc",
-                "curveto",
-                "closepath",
-                "newpath",
-                "stroke",
-                "fill",
-                "clip",
-                "gsave",
-                "grestore",
-                "translate",
-                "rotate",
-                "scale",
-                "setlinewidth",
-                "setdash",
-                "setgray",
-                "setrgbcolor",
-                "show",
-                "showpage",
-                "currentpoint",
-            ]
-            self.comment_pattern = r"%.*$"
-            self.string_pattern = r"\([^)\\]*(?:\\.[^)\\]*)*\)"
-            self.number_pattern = r"[-+]?\d+(?:\.\d+)?(?:[eE][-+]?\d+)?\b"
-            self.operator_pattern = r"[/{}[\]]"
-            self.function_pattern = r"/(\w+)\s+\{"
-            self.variable_pattern = r"/[A-Za-z_]\w*"
-
-        elif language == Language.HASKELL:
-            self.keywords = [
-                "module", "where", "import", "qualified", "as", "hiding",
-                "data", "type", "newtype", "class", "instance", "deriving",
-                "let", "in", "do", "if", "then", "else", "case", "of",
-                "forall", "infixl", "infixr", "infix",
-                "True", "False", "Nothing", "Just", "Left", "Right",
-                "IO", "Maybe", "Either", "String", "Bool", "Int", "Integer",
-                "Float", "Double", "Char", "Ord", "Eq", "Show", "Read",
-                "Num", "Integral", "Fractional", "Enum", "Monad", "Functor",
-                "return", "pure", "otherwise",
-            ]
-            self.comment_pattern = r"--.*$"
-            self.string_pattern = r'"(?:[^"\\]|\\.)*"|\'.\'' 
-            self.number_pattern = r"\b\d+\.?\d*(?:[eE][-+]?\d+)?\b"
-            self.operator_pattern = r"[=|\\:><\-+*/!@#$%^&~.]+"
-            self.function_pattern = r"^([a-z_][A-Za-z0-9_']*)\s*(?:::|[A-Za-z0-9_(\[])" 
-            self.variable_pattern = r"\b[a-z_][A-Za-z0-9_']*\b"
-
-        elif language == Language.RUBY:
-            self.keywords = [
-                "BEGIN", "END", "alias", "and", "begin", "break",
-                "case", "class", "def", "defined?", "do", "else",
-                "elsif", "end", "ensure", "false", "for", "if",
-                "in", "module", "next", "nil", "not", "or",
-                "raise", "rescue", "retry", "return", "self",
-                "super", "then", "true", "undef", "unless", "until",
-                "when", "while", "yield", "puts", "print", "p",
-                "attr_reader", "attr_writer", "attr_accessor",
-                "include", "extend", "require", "require_relative",
-                "lambda", "proc", "Integer", "Float", "String",
-                "Array", "Hash", "Symbol", "Range", "Regexp",
-            ]
-            self.comment_pattern = r"#.*$"
-            self.string_pattern = (
-                r'"(?:[^"\\]|\\.)*"|' r"'(?:[^'\\]|\\.)*'|"
-                r"%[qQ]?\{[^}]*\}|%[qQ]?\[[^\]]*\]"
-            )
-            self.number_pattern = (
-                r"\b0[xX][0-9a-fA-F]+\b|\b0[bB][01]+\b"
-                r"|\b0[oO][0-7]+\b|\b\d+\.?\d*(?:[eE][+-]?\d+)?\b"
-            )
-            self.operator_pattern = r"[+\-*/=<>!&|%^~?:.]|<<|>>"
-            self.function_pattern = r"\bdef\s+([A-Za-z_][A-Za-z0-9_?!]*)"
-            self.variable_pattern = r"@{1,2}[A-Za-z_]\w*|\$[A-Za-z_]\w*|\b[A-Za-z_]\w*[?!]?\b"
 
         elif language == Language.PYTHON_LANG:
             self.keywords = [
@@ -1304,101 +716,6 @@ class SimpleSyntaxHighlighter(QSyntaxHighlighter):
             )
             self.operator_pattern = r"[+\-*/=<>!&|%^~@:]|//|\*\*|->"
             self.function_pattern = r"\bdef\s+([A-Za-z_][A-Za-z0-9_]*)"
-            self.variable_pattern = r"\b[A-Za-z_][A-Za-z0-9_]*\b"
-
-        elif language == Language.PERL:
-            self.keywords = [
-                "if", "elsif", "else", "unless", "while", "until",
-                "for", "foreach", "do", "last", "next", "redo",
-                "sub", "return", "my", "our", "local", "use", "require",
-                "print", "say", "printf", "warn", "die", "exit",
-                "push", "pop", "shift", "unshift", "splice",
-                "keys", "values", "each", "exists", "delete",
-                "defined", "undef", "ref", "scalar", "wantarray",
-                "sort", "grep", "map", "join", "split", "reverse",
-                "chomp", "chop", "length", "index", "substr",
-                "uc", "lc", "ucfirst", "lcfirst", "chr", "ord",
-                "abs", "int", "sqrt", "sin", "cos", "atan2", "exp", "log",
-                "rand", "srand", "sprintf", "not", "and", "or", "eq", "ne",
-                "lt", "gt", "le", "ge", "cmp", "x", "qw",
-                "forward", "fd", "backward", "bk", "left", "lt",
-                "right", "rt", "penup", "pendown", "home", "clear_canvas",
-                "color", "pencolor", "setheading", "circle",
-            ]
-            self.comment_pattern = r"#.*$"
-            self.string_pattern = r'"(?:[^"\\]|\\.)*"|' + r"'(?:[^'\\]|\\.)*'"
-            self.number_pattern = r"\b0x[0-9A-Fa-f]+\b|\b0b[01]+\b|\b\d+\.?\d*(?:[eE][+-]?\d+)?\b"
-            self.operator_pattern = r"[+\-*/=<>!&|%^~.?:]|->|=>|::|\.\.|\.\.\.||//|\*\*|~~"
-            self.function_pattern = r"\bsub\s+([A-Za-z_][A-Za-z0-9_]*)"
-            self.variable_pattern = r"[\$@%][A-Za-z_][A-Za-z0-9_]*|\$[0-9]"
-
-        elif language == Language.REXX:
-            self.keywords = [
-                "SAY", "PULL", "PUSH", "PARSE", "ARG",
-                "IF", "THEN", "ELSE", "END",
-                "DO", "WHILE", "UNTIL", "FOREVER", "LEAVE", "ITERATE",
-                "SELECT", "WHEN", "OTHERWISE",
-                "CALL", "RETURN", "EXIT", "PROCEDURE",
-                "DROP", "NOP", "TRACE",
-                "UPPER", "LOWER", "SUBSTR", "LENGTH", "REVERSE",
-                "COPIES", "STRIP", "POS", "WORD", "WORDS",
-                "ABS", "MAX", "MIN", "SIGN", "DATATYPE",
-                "CENTER", "CHANGESTR",
-            ]
-            self.comment_pattern = r"--.*$|/\*[\s\S]*?\*/"
-            self.string_pattern = r"'(?:[^']|'')*'|\"(?:[^\"]|\"\")*\""
-            self.number_pattern = r"\b\d+\.?\d*(?:[Ee][+-]?\d+)?\b"
-            self.operator_pattern = r"[+\-*/=<>|!&,]|//|\*\*|\|\|"
-            self.function_pattern = r"^([A-Za-z_][A-Za-z0-9_]*):"
-            self.variable_pattern = r"\b[A-Za-z_][A-Za-z0-9_]*\b"
-
-        elif language == Language.SMALLTALK:
-            self.keywords = [
-                "true", "false", "nil", "self", "super", "thisContext",
-                "ifTrue", "ifFalse", "ifTrue:ifFalse", "ifFalse:ifTrue",
-                "whileTrue", "whileFalse", "timesRepeat",
-                "to", "do", "by", "collect", "select", "reject",
-                "inject", "into", "detect", "printString", "printNl",
-                "OrderedCollection", "Array", "Transcript",
-                "new", "add", "size", "at", "put", "remove",
-                "show", "showCr", "print", "class", "value",
-            ]
-            self.comment_pattern = r'"[^"]*"'
-            self.string_pattern = r"'(?:[^']|'')*'"
-            self.number_pattern = r"\b\d+\.?\d*\b"
-            self.operator_pattern = r"[+\-*/=<>~&@%,.|!?#]+|:=|::|:|\\.\."
-            self.function_pattern = None
-            self.variable_pattern = r"\b[a-z][A-Za-z0-9_]*\b"
-
-        elif language == Language.APL:
-            self.keywords = []
-            self.comment_pattern = r"⍝.*$"
-            self.string_pattern = r"'[^']*'"
-            self.number_pattern = r"¯?\d+\.?\d*(?:[Ee]¯?\d+)?"
-            self.operator_pattern = (
-                r"[⍳⍴⌈⌊|+×÷\*←⎕⍟○!~⌽⊖⍋⍒⍉⊃⊂∧∨=≠<≤>≥¨/\\,↑↓∊∘\.]"
-            )
-            self.function_pattern = None
-            self.variable_pattern = r"[A-Za-z_Δ⍙][A-Za-z0-9_Δ⍙]*"
-
-        elif language == Language.ASM6502:
-            self.keywords = [
-                "LDA", "LDX", "LDY", "STA", "STX", "STY",
-                "ADC", "SBC", "AND", "ORA", "EOR", "ASL", "LSR",
-                "ROL", "ROR", "INC", "INX", "INY", "DEC", "DEX",
-                "DEY", "CMP", "CPX", "CPY", "BEQ", "BNE", "BCC",
-                "BCS", "BPL", "BMI", "BVC", "BVS", "JMP", "JSR",
-                "RTS", "RTI", "PHA", "PLA", "PHP", "PLP", "TAX",
-                "TXA", "TAY", "TYA", "TXS", "TSX", "NOP", "BRK",
-                "CLC", "SEC", "CLD", "SED", "CLI", "SEI", "CLV",
-                "ORG", "BYTE", "WORD", "DEFINE", "INCLUDE",
-                ".org", ".byte", ".word", ".define", ".include",
-            ]
-            self.comment_pattern = r";.*$"
-            self.string_pattern = r'"[^"]*"'
-            self.number_pattern = r"\$[0-9A-Fa-f]+\b|%[01]+\b|\b\d+\b"
-            self.operator_pattern = r"[+\-*/=<>|&#]"
-            self.function_pattern = r"^([A-Za-z_][A-Za-z0-9_]*):"
             self.variable_pattern = r"\b[A-Za-z_][A-Za-z0-9_]*\b"
 
         else:
@@ -1870,6 +1187,28 @@ class CodeEditor(QPlainTextEdit):
         dialog = FindDialog(self)
         dialog.show()
 
+    def show_go_to_line_dialog(self):
+        """Show the Go to Line dialog and jump to the selected line."""
+        cursor = self.textCursor()
+        current_line = cursor.blockNumber() + 1
+        max_line = self.document().blockCount()
+
+        dialog = GoToLineDialog(self, current_line, max_line)
+        if dialog.exec() == QDialog.Accepted:
+            line_num = dialog.get_line_number()
+            if line_num > 0:
+                self.goto_line(line_num)
+
+    def goto_line(self, line_number: int):
+        """Navigate to a specific line (1-indexed)."""
+        line_number = max(1, min(line_number, self.document().blockCount()))
+        block = self.document().findBlockByLineNumber(line_number - 1)
+        if block.isValid():
+            cursor = QTextCursor(block)
+            self.setTextCursor(cursor)
+            self.centerCursor()
+            self.setFocus()
+
     def _on_cursor_position_changed(self):
         """Emit cursor line/col for status bar updates."""
         cursor = self.textCursor()
@@ -1985,6 +1324,11 @@ class CodeEditor(QPlainTextEdit):
         # Update completer with language keywords
         self._update_completer(language)
 
+    @property
+    def language(self):
+        """Current syntax-highlighting language for this editor."""
+        return self._language
+
     # Comment prefix for each supported language
     _COMMENT_PREFIXES = {
         Language.BASIC: "REM ",
@@ -1994,22 +1338,7 @@ class CodeEditor(QPlainTextEdit):
         Language.PASCAL: "// ",
         Language.PROLOG: "% ",
         Language.FORTH: "\\ ",
-        Language.LUA: "-- ",
-        Language.JAVASCRIPT: "// ",
-        Language.HYPERTALK: "-- ",
-        Language.ERLANG: "% ",
-        Language.LISP: "; ",
-        Language.COBOL: "* ",
-        Language.TCL: "# ",
-        Language.POSTSCRIPT: "% ",
-        Language.HASKELL: "-- ",
-        Language.RUBY: "# ",
         Language.PYTHON_LANG: "# ",
-        Language.ASM6502: "; ",
-        Language.PERL: "# ",
-        Language.REXX: "-- ",
-        Language.SMALLTALK: '" "',
-        Language.APL: "⍝ ",
     }
 
     def toggle_comment(self):
@@ -2764,6 +2093,11 @@ class CodeEditor(QPlainTextEdit):
             and mods == Qt.KeyboardModifier.ControlModifier
         ):
             self._show_completer(min_prefix=1)
+            return
+
+        # Ctrl+G → Go to Line dialog
+        if event.key() == Qt.Key.Key_G and mods == Qt.KeyboardModifier.ControlModifier:
+            self.show_go_to_line_dialog()
             return
 
         # Ctrl+Shift+[ → fold current block

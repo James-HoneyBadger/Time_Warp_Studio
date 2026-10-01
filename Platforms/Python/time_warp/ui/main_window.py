@@ -14,6 +14,7 @@
 import logging
 import time
 from pathlib import Path
+from typing import Optional
 
 # pylint: disable=no-name-in-module
 # pylint: disable=reimported,redefined-outer-name
@@ -32,13 +33,17 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
+    QFormLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
+    QListWidgetItem,
     QMainWindow,
     QMenu,
     QMessageBox,
     QPlainTextEdit,
+    QPushButton,
     QSlider,
     QSplitter,
     QStatusBar,
@@ -70,7 +75,6 @@ from .mixins import (
     HelpDocsMixin,
 )
 from .output import ImmediateModePanel, OutputPanelContainer
-from .project_tree import ProjectTreePanel
 from .screen_modes import ScreenModeManager
 from .terminal_widget import TerminalWidget
 from .themes import ThemeManager
@@ -83,7 +87,6 @@ from .focus_mode import FocusModeManager
 from .onboarding import OnboardingDialog, OnboardingManager
 from ..features.examples_browser import ExamplesBrowser
 from ..utils.error_hints import get_enhanced_error_message
-from ..core.project_manager import ProjectManager, PROJECT_EXTENSION
 
 # Fix: Import CustomUILayouts for custom UI layout management
 from .custom_layouts import CustomUILayouts
@@ -381,12 +384,6 @@ class MainWindow(
 
         # Focus mode
         self._focus_mode = FocusModeManager(self)
-
-        # Project manager
-        self._project_manager = ProjectManager()
-        self._current_project = None
-        self._current_project_path: str | None = None
-        self._restore_recent_projects()
 
         # Onboarding (first-run wizard)
         self._onboarding_manager = OnboardingManager()
@@ -889,6 +886,7 @@ class MainWindow(
         welcome.setReadOnly(True)
         welcome.setOpenExternalLinks(False)
         welcome.setHtml(self._welcome_html())
+        welcome.anchorClicked.connect(self._handle_welcome_link)
         welcome.setStyleSheet(
             "QTextBrowser { background: palette(base); color: palette(text); border: none; }"
         )
@@ -897,6 +895,18 @@ class MainWindow(
         self.editor_tabs.setCurrentIndex(idx)
         # Mark the tab so close_tab can clean up without prompting
         self._tab_states[idx] = TabState(file=None, modified=False)
+
+    def _handle_welcome_link(self, url) -> None:
+        """Handle action links embedded in the welcome tab."""
+        action = url.toString()
+        if action == "tws:new":
+            self.new_file()
+        elif action == "tws:examples":
+            self._show_examples_browser()
+        elif action == "tws:learning":
+            self.feature_manager.toggle_feature_panel("learning_hub", visible=True)
+        elif action == "tws:shortcuts":
+            self._show_keyboard_shortcuts()
 
     def _welcome_html(self) -> str:
         """Return the HTML content for the Welcome tab."""
@@ -910,17 +920,7 @@ class MainWindow(
                 "Forth",
                 "PILOT",
                 "Prolog",
-                "Lua",
-                "Scheme",
-                "JavaScript",
-                "REXX",
-                "Smalltalk",
-                "HyperTalk",
-                "Haskell",
                 "Brainfuck",
-                "Ruby",
-                "Erlang",
-                "Rust",
             ]
         )
         return f"""
@@ -928,17 +928,25 @@ class MainWindow(
 <h1 style="color: #bd93f9;">&#127775; Welcome to Time Warp Studio</h1>
 <p style="font-size: 14px; color: #f8f8f2;">
   An educational multi-language programming environment for exploring
-  <b>21 programming languages</b> side-by-side with live turtle graphics.
+  <b>9 active languages</b> with live turtle graphics.
 </p>
 <hr style="border: 1px solid #44475a;"/>
+
+<p style="font-size: 14px;">
+    <a href="tws:new">&#43; Create a program</a>
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    <a href="tws:examples">&#128218; Browse examples</a>
+    &nbsp;&nbsp;|&nbsp;&nbsp;
+    <a href="tws:learning">&#127891; Open Learning Hub</a>
+</p>
 
 <h2 style="color: #8be9fd;">&#128640; Quick Start</h2>
 <ul style="font-size: 13px;">
   <li><b>Ctrl+N</b> — New file &nbsp;|&nbsp; <b>Ctrl+O</b> — Open file</li>
   <li>Pick a language from the toolbar combo, type your code, press <b>Ctrl+R</b>.</li>
-  <li>Open <b>🎓 Learning Hub</b> from the toolbar for challenges, remixing, and tutor help.</li>
-  <li>Browse ready-made examples via <b>Help → Browse Examples…</b></li>
-  <li>Press <b>Ctrl+?</b> to show all keyboard shortcuts.</li>
+    <li>Open <b>🎓 Learning Hub</b> from the toolbar for challenges, remixing, and tutor help.</li>
+    <li>Browse ready-made examples via <b>Help → Browse Examples…</b></li>
+    <li><a href="tws:shortcuts">View keyboard shortcuts</a> or press <b>Ctrl+?</b>.</li>
   <li>Press <b>F1</b> while editing for context-sensitive language help.</li>
 </ul>
 
@@ -979,6 +987,7 @@ class MainWindow(
             QTreeWidgetItem,
             QSplitter,
             QTextBrowser,
+            QDialogButtonBox,
         )  # type: ignore[attr-defined]  # noqa: F401
 
         splitter = QSplitter()
@@ -986,19 +995,24 @@ class MainWindow(
         tree = QTreeWidget()
         tree.setHeaderLabels(["Example", "Difficulty"])
         tree.setMinimumWidth(260)
+        tree.setSelectionMode(QTreeWidget.SelectionMode.SingleSelection)
 
-        # Group by language
+        # Group by language; parent nodes are not selectable
         lang_nodes: dict = {}
+        first_example_item: Optional[QTreeWidgetItem] = None
         for ex in browser.examples:
             lang_name = ex.language.value
             if lang_name not in lang_nodes:
                 parent = QTreeWidgetItem(tree, [lang_name, ""])
                 parent.setExpanded(True)
+                parent.setFlags(parent.flags() & ~Qt.ItemFlag.ItemIsSelectable)
                 lang_nodes[lang_name] = parent
             item = QTreeWidgetItem(
                 lang_nodes[lang_name], [ex.name, ex.difficulty.value]
             )
             item.setData(0, Qt.ItemDataRole.UserRole, ex)
+            if first_example_item is None:
+                first_example_item = item
         splitter.addWidget(tree)
 
         preview = QTextBrowser()
@@ -1007,40 +1021,59 @@ class MainWindow(
         splitter.setSizes([260, 440])
         layout.addWidget(splitter)
 
-        from PySide6.QtWidgets import (
-            QDialogButtonBox,
-        )  # noqa: F811  # type: ignore[attr-defined]
-
         btns = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Open
             | QDialogButtonBox.StandardButton.Cancel
         )
-        btns.accepted.connect(dlg.accept)
         btns.rejected.connect(dlg.reject)
         layout.addWidget(btns)
 
+        def _selected_example():
+            """Return the Example attached to the current leaf item, if any."""
+            selected = tree.currentItem()
+            if selected is None:
+                return None
+            return selected.data(0, Qt.ItemDataRole.UserRole) or None
+
         def on_item_clicked(item, _column):
-            ex = item.data(0, Qt.UserRole)
+            ex = item.data(0, Qt.ItemDataRole.UserRole)
             if ex:
                 preview.setPlainText(ex.code)
+                tree.setCurrentItem(item)
 
         tree.itemClicked.connect(on_item_clicked)
 
+        def on_open():
+            ex = _selected_example()
+            if ex is None:
+                QMessageBox.information(
+                    dlg,
+                    "No Example Selected",
+                    "Please select an example program from the list.",
+                )
+                return
+            dlg.accept()
+
+        btns.accepted.connect(on_open)
+
+        if first_example_item is not None:
+            tree.setCurrentItem(first_example_item)
+            preview.setPlainText(
+                first_example_item.data(0, Qt.ItemDataRole.UserRole).code
+            )
+
         if dlg.exec() == QDialog.DialogCode.Accepted:
-            selected = tree.currentItem()
-            if selected:
-                ex = selected.data(0, Qt.ItemDataRole.UserRole)
-                if ex:
-                    self.create_new_tab()
-                    editor = self.get_current_editor()
-                    if editor:
-                        editor.setPlainText(ex.code)
-                        lang = ex.language
-                        editor.set_language(lang)  # type: ignore[arg-type]
-                        idx = self.editor_tabs.currentIndex()
-                        self._ts(idx).language = Language(lang.value)  # type: ignore[call-arg]
-                        self.editor_tabs.setTabText(idx, ex.name)
-                        self.statusbar.showMessage(f"Opened example: {ex.name}", 3000)
+            ex = _selected_example()
+            if ex:
+                self.create_new_tab()
+                editor = self.get_current_editor()
+                if editor:
+                    editor.setPlainText(ex.code)
+                    editor.set_language(ex.language)
+                    idx = self.editor_tabs.currentIndex()
+                    self._ts(idx).language = ex.language
+                    self.editor_tabs.setTabText(idx, ex.name)
+                    self.statusbar.showMessage(f"Opened example: {ex.name}", 3000)
 
     # ---- Language comparator ----
 
@@ -1322,6 +1355,9 @@ class MainWindow(
             # Update title
             self.update_title()
 
+            # Refresh document outline for the newly active tab
+            self._update_document_outline()
+
     def on_language_changed(self, index=None):
         """Handle language selection change."""
         if index is None and hasattr(self, "language_combo"):
@@ -1357,6 +1393,9 @@ class MainWindow(
             # Update status bar
             if hasattr(self, "language_label"):
                 self.language_label.setText(self._lang_badge_text(language))
+
+            # Refresh document outline for the new language
+            self._update_document_outline()
 
     def check_save_changes_for_tab(self, tab_index):
         """Check if tab has unsaved changes and prompt to save."""
@@ -1544,12 +1583,6 @@ class MainWindow(
         # Set left splitter sizes (85% editor, 15% immediate mode)
         left_splitter.setSizes([550, 50])
 
-        # Project file-tree panel (far left, collapsible)
-        self._project_panel = ProjectTreePanel(self)
-        self._project_panel.file_open_requested.connect(self.load_file)
-        self._project_panel.project_changed.connect(self._save_project)
-        splitter.addWidget(self._project_panel)
-
         splitter.addWidget(left_splitter)
 
         # Right side: Tabs for Output and Canvas
@@ -1571,6 +1604,8 @@ class MainWindow(
         self.output.variables_updated.connect(self.on_variables_updated)
         self.output.execution_stats.connect(self.on_execution_stats)
         self.output.error_occurred.connect(self.on_execution_error)
+        # Connect error line clicking to editor navigation
+        self.output.line_clicked.connect(self._on_error_line_clicked)
 
         # Turtle canvas
         self.canvas = TurtleCanvas(self)
@@ -1703,27 +1738,8 @@ class MainWindow(
 
         file_menu.addSeparator()
 
-        # Project management
-        new_project_action = QAction("New &Project...", self)
-        new_project_action.triggered.connect(self._new_project)
-        file_menu.addAction(new_project_action)
-
-        open_project_action = QAction("Open Project...", self)
-        open_project_action.setShortcut("Ctrl+Shift+O")
-        open_project_action.triggered.connect(self._open_project)
-        file_menu.addAction(open_project_action)
-
-        save_project_action = QAction("Save Project", self)
-        save_project_action.triggered.connect(self._save_project)
-        file_menu.addAction(save_project_action)
-
-        file_menu.addSeparator()
-
         self.recent_menu = file_menu.addMenu("Recent Files")
         self.update_recent_files_menu()
-
-        self.recent_projects_menu = file_menu.addMenu("Recent Projects")
-        self._update_recent_projects_menu()
 
         file_menu.addSeparator()
 
@@ -1827,6 +1843,18 @@ class MainWindow(
         find_in_files_action.setStatusTip("Search all open tabs and project files")
         find_in_files_action.triggered.connect(self._show_find_in_files)
         edit_menu.addAction(find_in_files_action)
+
+        goto_line_action = QAction("&Go to Line...", self)
+        goto_line_action.setShortcut("Ctrl+G")
+        goto_line_action.setStatusTip("Jump to a specific line (Ctrl+G)")
+        goto_line_action.triggered.connect(
+            lambda: (
+                self.get_current_editor().show_go_to_line_dialog()
+                if self.get_current_editor()
+                else None
+            )
+        )
+        edit_menu.addAction(goto_line_action)
 
         edit_menu.addSeparator()
 
@@ -2233,15 +2261,11 @@ class MainWindow(
 
         lang_help_menu.addSeparator()
 
-        # All remaining languages (alphabetical)
+        # Active language reference entries
         for lang_name, lang_key in [
             ("Brainfuck", "brainfuck"),
             ("C", "c"),
-            ("Erlang", "erlang"),
             ("Forth", "forth"),
-            ("HyperTalk", "hypertalk"),
-            ("JavaScript", "javascript"),
-            ("Lua", "lua"),
             ("Pascal", "pascal"),
             ("Prolog", "prolog"),
         ]:
@@ -2521,14 +2545,7 @@ class MainWindow(
         "C": "⚙️",
         "Prolog": "🧠",
         "Python": "🐍",
-        "Haskell": "λ",
-        "Lua": "🌙",
-        "Scheme": "λ",
         "Brainfuck": "🧨",
-        "JavaScript": "🌐",
-        "REXX": "📜",
-        "Smalltalk": "💬",
-        "HyperTalk": "💡",
     }
 
     def _lang_badge_text(self, language) -> str:
@@ -2583,6 +2600,12 @@ class MainWindow(
         """)
         self.statusbar.addPermanentWidget(self.position_label)
 
+        self.execution_status_label = QLabel()
+        self.execution_status_label.setToolTip(
+            "Current program execution state"
+        )
+        self.statusbar.addPermanentWidget(self.execution_status_label)
+
         # Breadcrumb label: language > context hint
         self.breadcrumb_label = QLabel("")
         self.breadcrumb_label.setStyleSheet("""
@@ -2610,8 +2633,25 @@ class MainWindow(
         self.sql_status_label.mousePressEvent = lambda _: self._show_sql_workbench()
         self.statusbar.addPermanentWidget(self.sql_status_label)
 
-        ready_msg = "🎉 Ready - Time Warp Studio loaded successfully!"
-        self.statusbar.showMessage(ready_msg)
+        self._set_execution_state("ready", "Ready")
+
+    def _set_execution_state(self, state: str, message: str) -> None:
+        """Update the persistent execution-state badge and status message."""
+        colors = {
+            "ready": ("palette(base)", "palette(text)"),
+            "running": ("palette(highlight)", "palette(highlighted-text)"),
+            "stopped": ("#8a5a00", "#ffffff"),
+            "error": ("#9b2c2c", "#ffffff"),
+        }
+        background, foreground = colors.get(state, colors["ready"])
+        self.execution_status_label.setText(f"● {message}")
+        self.execution_status_label.setStyleSheet(
+            "QLabel {"
+            f"background-color: {background}; color: {foreground}; "
+            "padding: 2px 8px; border-radius: 4px; font-weight: bold;"
+            "}"
+        )
+        self.statusbar.showMessage(message)
 
     # -- File I/O methods (new_file, open_file, load_file, save_file, etc.)
     # -- live in FileOperationsMixin --
@@ -2638,7 +2678,7 @@ class MainWindow(
                 if editor:
                     editor.clear_current_line()
 
-            self.statusbar.showMessage("Execution complete")
+            self._set_execution_state("ready", "Execution complete")
 
     def _set_tab_run_indicator(self, idx: int, state: str) -> None:
         """Update the tab title badge to reflect execution state.
@@ -2703,7 +2743,7 @@ class MainWindow(
 
         self.run_action.setEnabled(False)
         self.stop_action.setEnabled(True)
-        self.statusbar.showMessage("Running selection")
+        self._set_execution_state("running", "Running selection")
         self.output.run_program(selected, self.canvas, debug_mode=False)
 
     def run_program(self):
@@ -2749,7 +2789,7 @@ class MainWindow(
         # Update UI state
         self.run_action.setEnabled(False)
         self.stop_action.setEnabled(True)
-        self.statusbar.showMessage("Running program")
+        self._set_execution_state("running", "Running program")
 
         # Show run indicator on current tab
         current_idx = self.editor_tabs.currentIndex()
@@ -2831,6 +2871,9 @@ class MainWindow(
         # Parse output text for ❌ [line N] error markers and annotate editor
         self._apply_output_error_markers()
 
+        if "❌" in self.output.toPlainText():
+            self._set_execution_state("error", "Execution failed")
+
         lesson_panel = self.feature_manager.get_feature_panel("lesson_mode")
         if lesson_panel and hasattr(lesson_panel, "handle_execution_output"):
             lesson_panel.handle_execution_output(self.output.toPlainText())
@@ -2901,6 +2944,32 @@ class MainWindow(
         # Show error indicator on the active tab
         current_idx = self.editor_tabs.currentIndex()
         self._set_tab_run_indicator(current_idx, "error")
+
+    def _on_error_line_clicked(self, line_number: int):
+        """Handle click on error line reference in output panel."""
+        editor = self.get_current_editor()
+        if editor:
+            editor.goto_line(line_number)
+            # Highlight the error line in red
+            editor.set_error_line(line_number)
+            self.editor_tabs.setFocus()
+
+    def _on_outline_item_clicked(self, line_number: int):
+        """Handle click on a document outline item (procedure/function)."""
+        editor = self.get_current_editor()
+        if editor:
+            editor.goto_line(line_number)
+            self.editor_tabs.setFocus()
+
+    def _update_document_outline(self):
+        """Refresh the Document Outline panel for the current tab."""
+        panel = self.feature_manager.get_feature_panel("document_outline")
+        if not panel or not hasattr(panel, "set_editor"):
+            return
+        editor = self.get_current_editor()
+        panel.set_editor(editor)
+        if editor is not None and hasattr(editor, "language"):
+            panel.set_language(editor.language)
 
     def _get_current_line_context(self) -> str:
         """Get the current editor line for error context."""
@@ -3102,7 +3171,7 @@ class MainWindow(
         self.output.stop_execution()
         self.run_action.setEnabled(True)
         self.stop_action.setEnabled(False)
-        self.statusbar.showMessage("Stopped")
+        self._set_execution_state("stopped", "Execution stopped")
         # debug pause handling removed
 
     def on_variables_updated(self, variables):
@@ -3240,8 +3309,6 @@ class MainWindow(
         _overrides = {
             "c": "c",
             "c_lang": "c",
-            "javascript": "javascript",
-            "hypertalk": "hypertalk",
             "brainfuck": "brainfuck",
         }
         key = _overrides.get(lang_key, lang_key) if lang_key else None
@@ -3275,10 +3342,65 @@ class MainWindow(
             except (ValueError, TypeError):
                 pass
 
+        # Restore recent session tabs (modified/unsaved content)
+        self._restore_session_tabs()
+
+    def _save_session_tabs(self):
+        """Save all open tabs and their content (for crash recovery)."""
+        session_data = []
+        for i in range(self.editor_tabs.count()):
+            info = self._ts(i)
+            editor = self.editor_tabs.widget(i)
+            if editor is None:
+                continue
+            session_data.append({
+                'file': info.file or '',
+                'language': info.language.name if info.language else 'BASIC',
+                'modified': info.modified,
+                'content': editor.toPlainText() if info.modified else '',
+            })
+        self.settings.setValue("session_tabs", session_data)
+
+    def _restore_session_tabs(self):
+        """Restore tabs from the last session (offer recovery for unsaved content)."""
+        session_data = self.settings.value("session_tabs", [])
+        if not session_data:
+            return
+
+        # Check if any tabs were unsaved
+        unsaved_count = sum(1 for t in session_data if t.get('modified', False))
+
+        if unsaved_count > 0:
+            # Offer to recover unsaved tabs
+            response = QMessageBox.question(
+                self,
+                "Recover Session",
+                f"Restore {unsaved_count} unsaved tab(s) from the last session?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.Yes
+            )
+
+            if response == QMessageBox.Yes:
+                for tab_data in session_data:
+                    try:
+                        lang = Language[tab_data.get('language', 'BASIC')]
+                    except (KeyError, ValueError):
+                        lang = Language.BASIC
+
+                    title = Path(tab_data['file']).name if tab_data['file'] else 'untitled'
+                    content = tab_data.get('content', '')
+                    self.create_new_tab(title, content, lang)
+
+                    # Mark as modified if it was
+                    idx = self.editor_tabs.count() - 1
+                    if tab_data.get('modified', False):
+                        self.set_current_tab_info(file=tab_data['file'] or None, modified=True)
+
     def save_state(self):
         """Save window state to settings."""
         self.settings.setValue("geometry", self.saveGeometry())
         self.settings.setValue("windowState", self.saveState())
+        self._save_session_tabs()
 
     def closeEvent(self, event):  # pylint: disable=invalid-name
         """Handle window close."""
@@ -3867,124 +3989,6 @@ class MainWindow(
     # ===================================================================
     # GUI Enhancement: coach marks
     # ===================================================================
-
-    # ===================================================================
-    # Project management
-    # ===================================================================
-
-    def _restore_recent_projects(self) -> None:
-        """Load persisted recent-project list from QSettings."""
-        raw = self.settings.value("recent_projects", [])
-        paths = raw if isinstance(raw, list) else [raw] if raw else []
-        self._project_manager.load_recent_from_list(paths)
-
-    def _persist_recent_projects(self) -> None:
-        """Save recent-project list to QSettings."""
-        self.settings.setValue("recent_projects", self._project_manager.recent_projects)
-
-    def _update_recent_projects_menu(self) -> None:
-        """Rebuild the Recent Projects sub-menu."""
-        menu = getattr(self, "recent_projects_menu", None)
-        if menu is None:
-            return
-        menu.clear()
-        for path in self._project_manager.recent_projects:
-            action = QAction(path, self)
-            action.setData(path)
-            action.triggered.connect(
-                lambda checked=False, p=path: self._open_project_from_path(p)
-            )
-            menu.addAction(action)
-        if not self._project_manager.recent_projects:
-            empty = QAction("(no recent projects)", self)
-            empty.setEnabled(False)
-            menu.addAction(empty)
-
-    def _new_project(self) -> None:
-        """Create a new project via a simple dialog."""
-        from PySide6.QtWidgets import QFileDialog, QInputDialog
-
-        name, ok = QInputDialog.getText(self, "New Project", "Project name:")
-        if not ok or not name.strip():
-            return
-
-        directory = QFileDialog.getExistingDirectory(
-            self, "Choose Project Directory", str(Path.home())
-        )
-        if not directory:
-            return
-
-        project = self._project_manager.create(name.strip(), directory)
-        proj_path = self._project_manager.default_project_path(directory, name.strip())
-        self._project_manager.save(project, proj_path)
-
-        self._current_project = project
-        self._current_project_path = proj_path
-        self._persist_recent_projects()
-        self._update_recent_projects_menu()
-        self.statusbar.showMessage(f"Project '{name}' created at {proj_path}")
-
-    def _open_project(self) -> None:
-        """Show a file chooser and open the selected project."""
-        from PySide6.QtWidgets import QFileDialog
-
-        path, _ = QFileDialog.getOpenFileName(
-            self,
-            "Open Project",
-            str(Path.home()),
-            f"Time Warp Projects (*{PROJECT_EXTENSION});;All Files (*)",
-        )
-        if path:
-            self._open_project_from_path(path)
-
-    def _open_project_from_path(self, path: str) -> None:
-        """Open a project from a known file path."""
-        try:
-            project = self._project_manager.load(path)
-        except (FileNotFoundError, ValueError) as exc:
-            QMessageBox.critical(self, "Cannot Open Project", str(exc))
-            return
-
-        self._current_project = project
-        self._current_project_path = path
-        self._persist_recent_projects()
-        self._update_recent_projects_menu()
-        self.statusbar.showMessage(f"Project '{project.name}' loaded")
-
-        # Update the project file-tree panel
-        if hasattr(self, "_project_panel"):
-            self._project_panel.load_project(project, path)
-
-        # Open the main file if it exists
-        project_dir = str(Path(path).parent)
-        main_rel = project.main_file or (project.files[0].path if project.files else "")
-        if main_rel:
-            abs_path = str(Path(project_dir) / main_rel)
-            if Path(abs_path).is_file():
-                self.load_file(abs_path)
-
-    def _save_project(self) -> None:
-        """Save the current project."""
-        if self._current_project is None:
-            self.statusbar.showMessage("No project open — use 'New Project' first")
-            return
-
-        if self._current_project_path is None:
-            from PySide6.QtWidgets import QFileDialog
-
-            path, _ = QFileDialog.getSaveFileName(
-                self,
-                "Save Project",
-                str(Path.home()),
-                f"Time Warp Projects (*{PROJECT_EXTENSION})",
-            )
-            if not path:
-                return
-            self._current_project_path = path
-
-        self._project_manager.save(self._current_project, self._current_project_path)
-        self._persist_recent_projects()
-        self.statusbar.showMessage(f"Project saved to {self._current_project_path}")
 
     def _start_coach_marks_tour(self, _checked: bool = False):
         """Force-start the interactive guided tour."""

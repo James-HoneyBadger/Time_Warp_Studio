@@ -90,7 +90,7 @@ When you open Time Warp Studio, you'll see:
 
 ### 1. Select a Language
 
-Click the dropdown next to the toolbar that says "Language" and select **BASIC**. Time Warp Studio supports **24 languages** in total — from BASIC and Logo to Erlang, HyperTalk, and Brainfuck.
+Click the dropdown next to the toolbar that says "Language" and select **BASIC**. Time Warp Studio supports **9 languages** in total — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python.
 
 ### 2. Write Code
 
@@ -202,11 +202,9 @@ See Help menu for complete list.
 Pick a language and explore:
 - [BASIC Tutorial](../tutorials/basic.md) — start here for beginners
 - [Logo Tutorial](../tutorials/logo.md) — turtle graphics
-- [JavaScript](../tutorials/javascript.md) — web-era scripting
-- [Lua](../tutorials/lua.md) — lightweight scripting
-- [Erlang](../tutorials/erlang.md) — concurrent functional programming
+- [Python Tutorial](../tutorials/python.md) — multi-paradigm scripting
 - [Brainfuck](../tutorials/brainfuck.md) — esoteric computing
-- [View all 24 language tutorials →](../LANGUAGE_GUIDE.md)
+- [View all 9 active language tutorials →](../LANGUAGE_GUIDE.md)
 
 ### Run Examples
 Browse `Examples/` directory for sample programs in all languages.

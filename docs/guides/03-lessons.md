@@ -317,7 +317,7 @@ Go to **File → Settings → Learning Statistics** to see:
 
 ### By Language
 
-Each supported language has lessons:
+Each of the 9 active languages has lessons:
 
 **Classic Languages:**
 - BASIC (10+ lessons)
@@ -328,15 +328,8 @@ Each supported language has lessons:
 - Prolog (4+ lessons)
 - Forth (4+ lessons)
 
-**Modern Languages:**
-- JavaScript (5+ lessons)
-- Lua (4+ lessons)
-
-**Concurrent & Functional:**
-- Erlang (4+ lessons)
-
-**Event-Driven:**
-- HyperTalk (3+ lessons)
+**Modern:**
+- Python (5+ lessons)
 
 **Esoteric:**
 - Brainfuck (3+ lessons)

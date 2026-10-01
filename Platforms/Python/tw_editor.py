@@ -24,12 +24,22 @@ from PySide6.QtWidgets import (  # type: ignore[import]
     QWidget,
 )
 
+from time_warp import __version__  # type: ignore[import]
 from time_warp.core.interpreter import Language  # type: ignore[import]
+from time_warp.core.language_registry import LANGUAGE_METADATA  # type: ignore[import]
 from time_warp.logging_config import get_logger, setup_logging  # type: ignore[import]
 
 # Import Time Warp components
 from time_warp.ui.editor import CodeEditor  # type: ignore[import]
 from time_warp.utils.code_formatter import get_formatter  # type: ignore[import]
+
+
+def _file_dialog_filter() -> str:
+    """Build a QFileDialog filter string from the active language registry."""
+    all_exts = [
+        f"*.{ext}" for meta in LANGUAGE_METADATA.values() for ext in meta.extensions
+    ]
+    return f"Time Warp Files ({' '.join(all_exts)});;All Files (*)"
 
 
 class TWEditorWindow(QMainWindow):
@@ -38,7 +48,7 @@ class TWEditorWindow(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        self.setWindowTitle("TW Editor v13.0.0 - Time Warp Studio")
+        self.setWindowTitle(f"TW Editor v{__version__} - Time Warp Studio")
         self.resize(1024, 768)
 
         # Current file path
@@ -217,7 +227,7 @@ class TWEditorWindow(QMainWindow):
         if self.maybe_save():
             self.editor.clear()
             self.current_file = None
-            self.setWindowTitle("Untitled - TW Editor v13.0.0")
+            self.setWindowTitle(f"Untitled - TW Editor v{__version__}")
             self.status_bar.showMessage("New file created")
 
     def open_file(self):
@@ -227,11 +237,8 @@ class TWEditorWindow(QMainWindow):
                 self,
                 "Open File",
                 "",
-                "Time Warp Files (*.bas *.pilot *.logo *.pas *.pl *.f *.c)"
-                ";;All Files (*)",
+                _file_dialog_filter(),
             )
-            if file_path:
-                self.load_file(file_path)
             if file_path:
                 self.load_file(file_path)
 
@@ -242,7 +249,7 @@ class TWEditorWindow(QMainWindow):
             text = path.read_text(encoding="utf-8")
             self.editor.setPlainText(text)
             self.current_file = file_path
-            self.setWindowTitle(f"{path.name} - TW Editor v13.0.0")
+            self.setWindowTitle(f"{path.name} - TW Editor v{__version__}")
             self.status_bar.showMessage(f"Loaded {file_path}")
 
             # Auto-detect language
@@ -270,7 +277,7 @@ class TWEditorWindow(QMainWindow):
             self,
             "Save File",
             "",
-            "Time Warp Files (*.bas *.pilot *.logo *.pas *.pl *.f *.c);;All Files (*)",
+            _file_dialog_filter(),
         )
         if file_path:
             return self.save_to_path(file_path)
@@ -282,7 +289,7 @@ class TWEditorWindow(QMainWindow):
             path = Path(file_path)
             path.write_text(self.editor.toPlainText(), encoding="utf-8")
             self.current_file = file_path
-            self.setWindowTitle(f"{path.name} - TW Editor v13.0.0")
+            self.setWindowTitle(f"{path.name} - TW Editor v{__version__}")
             self.editor.document().setModified(False)
             self.status_bar.showMessage(f"Saved {file_path}")
 

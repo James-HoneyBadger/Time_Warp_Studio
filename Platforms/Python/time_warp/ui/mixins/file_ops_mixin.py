@@ -12,6 +12,8 @@ from typing import TYPE_CHECKING, Any
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QFileDialog, QMessageBox
 
+from ...core.language_registry import LANGUAGE_METADATA
+
 if TYPE_CHECKING:
     from PySide6.QtCore import QSettings
     from PySide6.QtWidgets import QStatusBar, QTabWidget, QWidget
@@ -21,6 +23,19 @@ if TYPE_CHECKING:
     _FileOpsMixinBase = QWidget
 else:
     _FileOpsMixinBase = object
+
+
+def _build_file_dialog_filter() -> str:
+    """Build a QFileDialog filter string from the active language registry."""
+    all_exts = [
+        f"*.{ext}" for meta in LANGUAGE_METADATA.values() for ext in meta.extensions
+    ]
+    parts = [f"Time Warp Files ({' '.join(all_exts)})"]
+    for meta in LANGUAGE_METADATA.values():
+        ext_list = " ".join(f"*.{ext}" for ext in meta.extensions)
+        parts.append(f"{meta.display_name} Files ({ext_list})")
+    parts.append("All Files (*.*)")
+    return ";;".join(parts)
 
 
 class FileOperationsMixin(_FileOpsMixinBase):
@@ -59,20 +74,7 @@ class FileOperationsMixin(_FileOpsMixinBase):
             self,
             "Open File",
             last_dir,
-            "Time Warp Files (*.bas *.pilot *.logo *.c *.pas *.pro *.pl *.prolog *.f *.fs *.forth *.lua *.bf *.js *.htalk *.ht *.erl *.hrl);;"
-            "BASIC Files (*.bas);;"
-            "PILOT Files (*.pilot);;"
-            "Logo Files (*.logo);;"
-            "C Files (*.c);;"
-            "Pascal Files (*.pas);;"
-            "Prolog Files (*.pro *.pl *.prolog);;"
-            "Forth Files (*.f *.fs *.forth);;"
-            "Lua Files (*.lua);;"
-            "Brainfuck Files (*.bf);;"
-            "JavaScript Files (*.js);;"
-            "HyperTalk Files (*.htalk *.ht);;"
-            "Erlang Files (*.erl *.hrl);;"
-            "All Files (*.*)",
+            _build_file_dialog_filter(),
             options=QFileDialog.Option.DontUseNativeDialog,
         )
 
@@ -219,7 +221,7 @@ class FileOperationsMixin(_FileOpsMixinBase):
             self,
             "Save File As",
             last_dir,
-            "Time Warp Files (*.bas *.pilot *.logo *.c *.pas *.pro *.f *.py *.lua *.scm *.bf *.js *.rex *.st *.htalk *.hs *.rb *.erl *.rs);;All Files (*.*)",
+            _build_file_dialog_filter(),
             options=QFileDialog.Option.DontUseNativeDialog,
         )
 

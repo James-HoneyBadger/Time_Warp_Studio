@@ -6,20 +6,10 @@ Searchable, tagged examples panel with quick access.
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import List, Optional
+from typing import TYPE_CHECKING, List, Optional
 
-
-class Language(Enum):
-    """Supported languages."""
-
-    BASIC = "basic"
-    PILOT = "pilot"
-    LOGO = "logo"
-    LUA = "lua"
-    PYTHON = "python"
-    C = "c"
-    PASCAL = "pascal"
-    PROLOG = "prolog"
+if TYPE_CHECKING:
+    from ..core.interpreter import Language
 
 
 class Difficulty(Enum):
@@ -62,20 +52,20 @@ class ExamplesBrowser:
 
     def scan_examples(self) -> None:
         """Scan examples directory and load metadata."""
+        from ..core.interpreter import Language
+        from ..core.language_registry import LANGUAGE_METADATA, extensions_for
+
         self.examples.clear()
 
         if not self.examples_dir.exists():
             return
 
-        # Map language folders
+        # Map language folders to the canonical extension for that language.
+        # The folder name is the source of truth; the extension is used to
+        # discover example files.
         lang_map = {
-            "basic": Language.BASIC,
-            "pilot": Language.PILOT,
-            "logo": Language.LOGO,
-            "lua": Language.LUA,
-            "c": Language.C,
-            "pascal": Language.PASCAL,
-            "prolog": Language.PROLOG,
+            metadata.folder_name: Language[language_name]
+            for language_name, metadata in LANGUAGE_METADATA.items()
         }
 
         for lang_folder in self.examples_dir.iterdir():
@@ -87,10 +77,13 @@ class ExamplesBrowser:
                 continue
 
             language = lang_map[lang_name]
+            extensions = extensions_for(language.name)
 
-            for file_path in sorted(
-                lang_folder.glob(f"*.{self._get_extension(language)}")
-            ):
+            files: List[Path] = []
+            for ext in extensions:
+                files.extend(lang_folder.glob(f"*.{ext}"))
+
+            for file_path in sorted(set(files)):
                 # Extract metadata from filename
                 stem = file_path.stem
 
@@ -133,17 +126,22 @@ class ExamplesBrowser:
                 self.examples.append(example)
 
     @staticmethod
-    def _get_extension(language: Language) -> str:
+    def _get_extension(language: "Language") -> str:
         """Get file extension for language."""
-        return {
-            Language.BASIC: "bas",
-            Language.PILOT: "pilot",
-            Language.LOGO: "logo",
-            Language.LUA: "lua",
-            Language.C: "c",
-            Language.PASCAL: "pas",
-            Language.PROLOG: "pl",
-        }.get(language, "*")
+        from ..core.language_registry import extensions_for
+
+        return extensions_for(language.name)[0]
+
+    @staticmethod
+    def _get_extensions(language: "Language") -> List[str]:
+        """Return all common extensions for a language.
+
+        Some languages use multiple extensions in the example collection
+        (e.g. Forth has both ``.forth`` and ``.f``).
+        """
+        from ..core.language_registry import extensions_for
+
+        return list(extensions_for(language.name))
 
     def search(
         self,
@@ -189,6 +187,10 @@ class ExamplesBrowser:
             if e.difficulty == Difficulty.BEGINNER and "hello" in e.tags
         ]
         return featured[:count]
+
+    def get_examples_for_language(self, language: Language) -> List[Example]:
+        """Get all examples for a specific language."""
+        return [e for e in self.examples if e.language == language]
 
     def get_language_summary(self) -> dict:
         """Get count of examples per language."""

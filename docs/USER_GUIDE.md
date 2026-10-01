@@ -39,7 +39,7 @@ When you launch Time Warp Studio:
 1. IDE initializes (2-5 seconds)
 2. Config folder created at `~/.time_warp/`
 3. Default theme applied (Dracula)
-4. All 24 feature panels available
+4. All 22 feature panels available
 5. IDE ready for coding
 
 ---
@@ -115,7 +115,7 @@ Creates empty file with default language (BASIC).
 File → Open [Ctrl+O]
 ```
 
-File browser opens. Select any supported source file (`.bas`, `.lua`, `.js`, `.c`, `.pas`, `.logo`, `.pro`, `.f`, `.bf`, `.ht`, `.pilot`, `.erl`, `.lisp`, `.scm`, `.cob`, `.tcl`, `.ps`, `.rb`, `.py`, `.hs`, `.asm`, `.pl`, `.rexx`, `.rex`, `.rxx`, `.st`, `.apl`).
+File browser opens. Select any supported source file (`.bas`, `.pilot`, `.logo`, `.c`, `.pas`, `.pl` / `.pro` / `.prolog`, `.f` / `.forth` / `.fs`, `.bf`, `.py`).
 
 ### Saving Your Work
 
@@ -145,12 +145,12 @@ Quick access to 10 most recently opened files.
 
 ## Selecting a Language
 
-Programs can be written in **24 different languages**:
+Programs can be written in **9 active languages**:
 
 ### Auto-Detection
 
 IDE automatically detects language based on:
-- **File extension**: `.bas` → BASIC, `.py` → Python, `.lua` → Lua, etc.
+- **File extension**: `.bas` → BASIC, `.py` → Python, `.logo` → Logo, etc.
 - **Explicit dropdown**: Select language from the toolbar or Run menu
 
 ### Manual Selection
@@ -165,30 +165,15 @@ Dropdown also available in top toolbar.
 
 | Language | Extension | Paradigm | Era |
 |----------|-----------|----------|-----|
-| **LISP/Scheme** | .lisp / .scm | Functional/AI | 1958 |
-| **COBOL** | .cob / .cobol | Business/Procedural | 1959 |
-| **APL** | .apl | Array/Symbolic | 1966 |
-| **BASIC** | .bas | Procedural/Educational | 1964 |
-| **Logo** | .logo | Turtle Graphics | 1967 |
-| **PILOT** | .pilot | Interactive Teaching | 1969 |
-| **C** | .c | Systems/Procedural | 1972 |
-| **Forth** | .f / .fs | Stack-based | 1970 |
-| **Pascal** | .pas | Structured | 1970 |
-| **Prolog** | .pro | Logic/Declarative | 1972 |
-| **6502 Assembly** | .asm | Machine/Educational | 1975 |
-| **REXX** | .rexx / .rex / .rxx | Scripting/Procedural | 1979 |
-| **Smalltalk** | .st | Object-oriented/Message | 1980 |
-| **PostScript** | .ps | Stack-based/Graphics | 1982 |
-| **Erlang** | .erl | Concurrent/Functional | 1986 |
-| **Perl 5** | .pl / .perl | Scripting/Text | 1987 |
-| **HyperTalk** | .htalk | Event-driven | 1987 |
-| **Tcl** | .tcl | Scripting/Embeddable | 1988 |
-| **Haskell** | .hs | Purely Functional | 1990 |
-| **Python** | .py | Multi-paradigm | 1991 |
-| **Brainfuck** | .bf | Esoteric/Turing | 1993 |
-| **Lua** | .lua | Scripting/Embedded | 1993 |
-| **JavaScript** | .js | Scripting/Web | 1995 |
-| **Ruby** | .rb | Object-oriented/Scripting | 1995 |
+| **BASIC** | .bas | Imperative / Educational | 1964 |
+| **Logo** | .logo | Turtle Graphics / Educational | 1967 |
+| **PILOT** | .pilot | Computer-Aided Instruction | 1969 |
+| **Forth** | .f / .forth / .fs | Stack-based / Concatenative | 1970 |
+| **Pascal** | .pas | Structured / Educational | 1970 |
+| **C** | .c | Systems / Procedural | 1972 |
+| **Prolog** | .pl / .pro / .prolog | Logic / Declarative | 1972 |
+| **Python** | .py | Multi-paradigm / Educational | 1991 |
+| **Brainfuck** | .bf | Esoteric / Turing | 1993 |
 
 ---
 
@@ -369,7 +354,7 @@ The Canvas displays turtle graphics output in real-time.
 
 ## Feature Panels
 
-14 specialized panels accessible via tabs at bottom right.
+22 specialized panels accessible via tabs at bottom right.
 
 ### Key Panels
 
@@ -622,7 +607,7 @@ Your theme choice automatically saved to `~/.time_warp/config.json` and restored
 ---
 
 **For language-specific help, see:**
-- [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Syntax for all 24 languages
+- [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Syntax for all 9 languages
 - [DEBUGGER_GUIDE.md](DEBUGGER_GUIDE.md) - Using the debugger
 - [TURTLE_GRAPHICS.md](TURTLE_GRAPHICS.md) - Graphics programming
 - [FAQ.md](FAQ.md) - Frequently asked questions

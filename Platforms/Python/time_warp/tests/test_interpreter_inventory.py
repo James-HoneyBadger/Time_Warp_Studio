@@ -4,6 +4,9 @@ from pathlib import Path
 import importlib.util
 import sys
 
+from time_warp.core.interpreter import Language
+from time_warp.core.language_registry import LANGUAGE_METADATA, extensions_for
+
 
 SCRIPT_PATH = Path(__file__).resolve().parents[4] / "Scripts" / "audit_interpreters.py"
 SPEC = importlib.util.spec_from_file_location("audit_interpreters", SCRIPT_PATH)
@@ -26,23 +29,8 @@ def test_inventory_covers_every_language_module():
         "prolog",
         "pascal",
         "forth",
-        "lua",
         "brainfuck",
-        "javascript",
-        "hypertalk",
-        "erlang",
-        "lisp",
-        "cobol",
-        "tcl",
-        "postscript",
-        "ruby",
         "python_lang",
-        "haskell",
-        "asm6502",
-        "perl",
-        "rexx",
-        "smalltalk",
-        "apl",
     }
 
     assert expected_modules.issubset(modules)
@@ -50,3 +38,17 @@ def test_inventory_covers_every_language_module():
     for entry in inventory:
         assert entry.executor is not None, f"Missing executor in {entry.module}"
         assert entry.symbol_count > 0, f"No symbols found in {entry.module}"
+
+
+def test_language_registry_matches_active_enum() -> None:
+    assert set(LANGUAGE_METADATA) == {language.name for language in Language}
+
+
+def test_language_registry_resolves_all_extensions() -> None:
+    for language_name, metadata in LANGUAGE_METADATA.items():
+        language = Language[language_name]
+        assert language.friendly_name() == metadata.display_name
+        assert metadata.folder_name
+        assert metadata.execution_mode in {"line", "whole"}
+        for extension in extensions_for(language_name):
+            assert Language.from_extension(f".{extension}") is language

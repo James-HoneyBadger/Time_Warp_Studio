@@ -144,14 +144,7 @@ Choose the default programming language:
 - **Forth** - Stack-based programming
 
 **Modern:**
-- **JavaScript** - Web & general-purpose scripting
-- **Lua** - Lightweight embeddable scripting
-
-**Concurrent & Functional:**
-- **Erlang** - Concurrent functional programming
-
-**Event-Driven:**
-- **HyperTalk** - HyperCard scripting
+- **Python** - Multi-paradigm scripting
 
 **Esoteric:**
 - **Brainfuck** - Minimalist esoteric language

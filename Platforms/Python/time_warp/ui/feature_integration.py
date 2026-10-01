@@ -14,6 +14,7 @@ from PySide6.QtCore import Qt
 from PySide6.QtGui import QAction
 from PySide6.QtWidgets import QDockWidget, QLabel, QVBoxLayout, QWidget
 
+from .document_outline import DocumentOutline
 from .feature_panels import (
     AccessibilityPanel,
     AIAssistantPanel,
@@ -42,7 +43,7 @@ from .feature_panels import (
 class FeatureIntegrationManager:
     """Manages integration of feature panels into main IDE window."""
 
-    # Phase 1 features (5)
+    # Phase 1 features (8)
     PHASE_1_FEATURES = [
         (
             "Learning Hub",
@@ -89,7 +90,7 @@ class FeatureIntegrationManager:
         ("Asset Library", "asset_library", AssetLibraryPanel, "game assets"),
     ]
 
-    # Phase 2 features (10)
+    # Phase 2 features (15, one without a panel — Quick Reference)
     PHASE_2_FEATURES = [
         (
             "Classroom Mode",
@@ -114,6 +115,12 @@ class FeatureIntegrationManager:
             "turtle_inspector",
             TurtleInspectorPanel,
             "turtle timeline",
+        ),
+        (
+            "Document Outline",
+            "document_outline",
+            DocumentOutline,
+            "navigate procedures and functions",
         ),
         (
             "Collaboration Tool",
@@ -290,6 +297,13 @@ class FeatureIntegrationManager:
                     and hasattr(self.main_window.output, "hardware_simulator")
                 ):
                     panel.bind_simulator(self.main_window.output.hardware_simulator)
+
+                if feature_id == "document_outline" and hasattr(
+                    panel, "item_clicked"
+                ):
+                    panel.item_clicked.connect(
+                        self.main_window._on_outline_item_clicked
+                    )
 
                 panel.setProperty("feature_available", True)
                 self.feature_panels[feature_id] = panel

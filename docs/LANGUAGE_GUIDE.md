@@ -1,56 +1,51 @@
 # Language Guide - Time Warp Studio
 
-Complete reference for all **24 programming languages** supported by Time Warp Studio.
+Time Warp Studio actively implements and ships **9 programming languages**:
+BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python. These are
+the only languages with working executors, syntax highlighting, examples, and
+test coverage in the current release.
+
+This guide also keeps syntax reference material for a set of additional
+languages that were explored in earlier prototypes but have **no executor in
+the current codebase** — they cannot be selected or run in the IDE today.
+They are kept below for historical/reference purposes only and are clearly
+marked.
 
 ---
 
 ## Table of Contents
 
-### Classic Educational
+### ✅ Active Languages (supported in this release)
 1. [BASIC](#basic)
-2. [Logo](#logo)
-3. [PILOT](#pilot)
-
-### Systems & Structured
+2. [PILOT](#pilot)
+3. [Logo](#logo)
 4. [C](#c)
 5. [Pascal](#pascal)
-6. [6502 Assembly](#6502-assembly)
+6. [Prolog](#prolog)
+7. [Forth](#forth)
+8. [Brainfuck](#brainfuck)
+9. [Python](#python)
 
-### Functional & Declarative
-7. [Prolog](#prolog)
-8. [LISP/Scheme](#lispscheme)
-9. [Haskell](#haskell)
+### 🗄️ Reference Only — Not Implemented in This Release
+The languages below have no executor in `time_warp/languages/` and cannot be
+run in Time Warp Studio. Their reference sections are retained for background
+only.
 
-### Stack & Concatenative
-10. [Forth](#forth)
-11. [PostScript](#postscript)
-
-### Scripting & General-Purpose
-12. [JavaScript](#javascript)
-13. [Lua](#lua)
-14. [Python](#python)
-15. [Ruby](#ruby)
-16. [Perl 5](#perl-5)
-17. [Tcl](#tcl)
-18. [REXX](#rexx)
-
-### Object-Oriented / Message-Passing
-19. [Smalltalk](#smalltalk)
-
-### Concurrent & Functional
-20. [Erlang](#erlang)
-
-### Event-Driven
-21. [HyperTalk](#hypertalk)
-
-### Business / Data Processing
-22. [COBOL](#cobol)
-
-### Array / Symbolic
-23. [APL](#apl)
-
-### Esoteric
-24. [Brainfuck](#brainfuck)
+10. [6502 Assembly](#6502-assembly)
+11. [LISP/Scheme](#lispscheme)
+12. [Haskell](#haskell)
+13. [PostScript](#postscript)
+14. [JavaScript](#javascript)
+15. [Lua](#lua)
+16. [Ruby](#ruby)
+17. [Perl 5](#perl-5)
+18. [Tcl](#tcl)
+19. [REXX](#rexx)
+20. [Smalltalk](#smalltalk)
+21. [Erlang](#erlang)
+22. [HyperTalk](#hypertalk)
+23. [COBOL](#cobol)
+24. [APL](#apl)
 
 ---
 

@@ -201,7 +201,7 @@ class HelpDocsMixin(_HelpMixinBase):
             f"<p>Version {__version__}</p>"
             "<p>Educational programming environment supporting:</p>"
             "<ul>"
-            "<li>24 programming languages</li>"
+            "<li>9 programming languages</li>"
             "<li>Integrated turtle graphics and canvas</li>"
             "<li>Full debugger with timeline replay</li>"
             "<li>SQL workbench, CICS terminal emulation</li>"

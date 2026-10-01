@@ -525,89 +525,6 @@ _FORTH_SNIPPETS: List[CodeSnippet] = [
     ),
 ]
 
-_HASKELL_SNIPPETS: List[CodeSnippet] = [
-    _s(
-        "Hello World",
-        "IO putStrLn",
-        'main :: IO ()\nmain = putStrLn "Hello, World!"\n',
-        "HASKELL",
-        "Basics",
-    ),
-    _s(
-        "Recursive factorial",
-        "Pattern matching",
-        "factorial :: Int -> Int\nfactorial 0 = 1\nfactorial n = n * factorial (n - 1)\n\nmain :: IO ()\nmain = print (factorial 10)\n",
-        "HASKELL",
-        "Recursion",
-    ),
-    _s(
-        "Map & filter",
-        "List operations",
-        "main :: IO ()\nmain = do\n  let nums = [1..10]\n  print $ map (*2) $ filter even nums\n",
-        "HASKELL",
-        "Lists",
-    ),
-    _s(
-        "List comprehension",
-        "Guards",
-        "main :: IO ()\nmain = print [x^2 | x <- [1..5]]\n",
-        "HASKELL",
-        "Lists",
-    ),
-    _s(
-        "where clause",
-        "Local binding",
-        "hypotenuse :: Double -> Double -> Double\nhypotenuse a b = sqrt s\n  where\n    s = a*a + b*b\n\nmain :: IO ()\nmain = print (hypotenuse 3 4)\n",
-        "HASKELL",
-        "Functions",
-    ),
-]
-
-_JS_SNIPPETS: List[CodeSnippet] = [
-    _s(
-        "Hello World",
-        "console.log",
-        'console.log("Hello, World!");\n',
-        "JAVASCRIPT",
-        "Basics",
-    ),
-    _s(
-        "Arrow function",
-        "Arrow fn syntax",
-        "const square = n => n * n;\nconsole.log(square(7));\n",
-        "JAVASCRIPT",
-        "Functions",
-    ),
-    _s(
-        "Array methods",
-        "filter + map",
-        "const nums = [1,2,3,4,5];\nconst result = nums.filter(n => n % 2 === 0).map(n => n * 10);\nconsole.log(result);\n",
-        "JAVASCRIPT",
-        "Arrays",
-    ),
-    _s(
-        "Destructuring",
-        "Array destructure",
-        "const [a, b, c] = [10, 20, 30];\nconsole.log(a + b + c);\n",
-        "JAVASCRIPT",
-        "Syntax",
-    ),
-    _s(
-        "Template literal",
-        "String interpolation",
-        'const name = "World";\nconsole.log(`Hello, ${name}!`);\n',
-        "JAVASCRIPT",
-        "Strings",
-    ),
-    _s(
-        "Object literal",
-        "Key-value pairs",
-        'const person = { name: "Alice", age: 30 };\nconsole.log(person.name, person.age);\n',
-        "JAVASCRIPT",
-        "Objects",
-    ),
-]
-
 _PYTHON_SNIPPETS: List[CodeSnippet] = [
     _s(
         "Hello World", "print statement", 'print("Hello, World!")\n', "PYTHON", "Basics"
@@ -649,83 +566,6 @@ _PYTHON_SNIPPETS: List[CodeSnippet] = [
     ),
 ]
 
-_SCHEME_SNIPPETS: List[CodeSnippet] = [
-    _s(
-        "Hello World",
-        "display + newline",
-        '(display "Hello, World!") (newline)\n',
-        "SCHEME",
-        "Basics",
-    ),
-    _s(
-        "Factorial",
-        "Recursive define",
-        "(define (factorial n)\n  (if (<= n 1) 1\n      (* n (factorial (- n 1)))))\n(display (factorial 10)) (newline)\n",
-        "SCHEME",
-        "Recursion",
-    ),
-    _s(
-        "Map",
-        "List mapping",
-        "(display (map (lambda (x) (* x x)) '(1 2 3 4 5)))\n(newline)\n",
-        "SCHEME",
-        "Lists",
-    ),
-    _s(
-        "Let binding",
-        "Local variables",
-        "(let ((x 10) (y 20))\n  (display (+ x y))\n  (newline))\n",
-        "SCHEME",
-        "Basics",
-    ),
-    _s(
-        "Cond",
-        "Multi-branch cond",
-        '(define (sign n)\n  (cond ((> n 0) "positive")\n        ((< n 0) "negative")\n        (else "zero")))\n(display (sign -5)) (newline)\n',
-        "SCHEME",
-        "Control Flow",
-    ),
-]
-
-_LUA_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World", "print statement", 'print("Hello, World!")\n', "LUA", "Basics"),
-    _s(
-        "FOR loop",
-        "Numeric for",
-        "for i = 1, 10 do\n  print(i)\nend\n",
-        "LUA",
-        "Control Flow",
-    ),
-    _s(
-        "Function",
-        "Function definition",
-        "function square(n)\n  return n * n\nend\nprint(square(7))\n",
-        "LUA",
-        "Functions",
-    ),
-    _s(
-        "Table",
-        "Array-like table",
-        "local t = {10, 20, 30, 40, 50}\nfor i, v in ipairs(t) do\n  print(i, v)\nend\n",
-        "LUA",
-        "Data",
-    ),
-    _s(
-        "String ops",
-        "String methods",
-        'local s = "Hello, World!"\nprint(#s)\nprint(string.upper(s))\nprint(string.sub(s, 1, 5))\n',
-        "LUA",
-        "Strings",
-    ),
-    _s(
-        "Class table",
-        "OOP via tables",
-        'Animal = {}\nAnimal.__index = Animal\nfunction Animal.new(name)\n  return setmetatable({name=name}, Animal)\nend\nfunction Animal:speak()\n  print(self.name .. " makes a sound")\nend\nlocal a = Animal.new("Dog")\na:speak()\n',
-        "LUA",
-        "OOP",
-    ),
-]
-
 _BRAINFUCK_SNIPPETS: List[CodeSnippet] = [
     _s(
         "Hello World",
@@ -736,84 +576,6 @@ _BRAINFUCK_SNIPPETS: List[CodeSnippet] = [
     ),
 ]
 
-_FORTRAN_SNIPPETS: List[CodeSnippet] = [
-    _s(
-        "Hello World",
-        "PRINT statement",
-        "PROGRAM hello\n  IMPLICIT NONE\n  PRINT *, 'Hello, World!'\nEND PROGRAM hello\n",
-        "FORTRAN",
-        "Basics",
-    ),
-    _s(
-        "DO loop",
-        "Counted DO loop",
-        "PROGRAM counting\n  IMPLICIT NONE\n  INTEGER :: i\n  DO i = 1, 10\n    PRINT *, i\n  END DO\nEND PROGRAM counting\n",
-        "FORTRAN",
-        "Control Flow",
-    ),
-    _s(
-        "Function",
-        "FUNCTION definition",
-        "PROGRAM funcs\n  IMPLICIT NONE\n  INTEGER :: n\n  n = 7\n  PRINT *, n * n\nEND PROGRAM funcs\n",
-        "FORTRAN",
-        "Functions",
-    ),
-    _s(
-        "Array",
-        "Array declaration",
-        "PROGRAM arrays\n  IMPLICIT NONE\n  INTEGER, DIMENSION(5) :: arr\n  INTEGER :: i\n  DO i = 1, 5\n    arr(i) = i * i\n    PRINT *, arr(i)\n  END DO\nEND PROGRAM arrays\n",
-        "FORTRAN",
-        "Data",
-    ),
-]
-
-_REXX_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World", "SAY statement", "SAY 'Hello, World!'\n", "REXX", "Basics"),
-    _s(
-        "DO loop",
-        "DO..END loop",
-        "DO i = 1 TO 10\n  SAY i\nEND\n",
-        "REXX",
-        "Control Flow",
-    ),
-    _s(
-        "IF statement",
-        "IF..THEN..ELSE",
-        "x = 5\nIF x > 3 THEN\n  SAY 'big'\nELSE\n  SAY 'small'\nEND\n",
-        "REXX",
-        "Control Flow",
-    ),
-]
-
-_SMALLTALK_SNIPPETS: List[CodeSnippet] = [
-    _s(
-        "Hello World",
-        "Transcript show",
-        "Transcript show: 'Hello, World!'; nl.\n",
-        "SMALLTALK",
-        "Basics",
-    ),
-    _s(
-        "FOR loop",
-        "timesRepeat",
-        "1 to: 10 do: [:i | Transcript show: i printString; nl].\n",
-        "SMALLTALK",
-        "Control Flow",
-    ),
-]
-
-_HYPERTALK_SNIPPETS: List[CodeSnippet] = [
-    _s("Hello World", "put statement", 'put "Hello, World!"\n', "HYPERTALK", "Basics"),
-    _s(
-        "IF statement",
-        "if..then..else",
-        'if x > 3 then\n  put "big"\nelse\n  put "small"\nend if\n',
-        "HYPERTALK",
-        "Control Flow",
-    ),
-]
-
-
 class SnippetLibrary:
     """Manager for code snippets."""
 
@@ -823,14 +585,7 @@ class SnippetLibrary:
             "PILOT": PILOT_SNIPPETS.copy(),
             "LOGO": LOGO_SNIPPETS.copy(),
             "PYTHON": _PYTHON_SNIPPETS.copy(),
-            "LUA": _LUA_SNIPPETS.copy(),
-            "SCHEME": _SCHEME_SNIPPETS.copy(),
             "BRAINFUCK": _BRAINFUCK_SNIPPETS.copy(),
-            "JAVASCRIPT": _JS_SNIPPETS.copy(),
-            "REXX": _REXX_SNIPPETS.copy(),
-            "SMALLTALK": _SMALLTALK_SNIPPETS.copy(),
-            "HYPERTALK": _HYPERTALK_SNIPPETS.copy(),
-            "HASKELL": _HASKELL_SNIPPETS.copy(),
             "PASCAL": _PASCAL_SNIPPETS.copy(),
             "C": _C_SNIPPETS.copy(),
             "PROLOG": _PROLOG_SNIPPETS.copy(),

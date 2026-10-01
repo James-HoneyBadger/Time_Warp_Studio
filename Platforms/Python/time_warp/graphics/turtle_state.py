@@ -2,7 +2,7 @@
 Turtle graphics state management for Time Warp Studio.
 
 Manages turtle position, heading, pen state, and drawing commands
-for Logo-style graphics across all 24 language executors.
+for Logo-style graphics across all 9 language executors.
 """
 
 import math

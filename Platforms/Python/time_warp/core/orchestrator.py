@@ -189,7 +189,7 @@ class SystemOrchestrator:
         start_time = utc_now()
 
         try:
-            # Set supported languages (matches the 12 implemented executors)
+            # Set supported languages (matches the active studio runtime)
             self.system_info.supported_languages = [
                 "BASIC",
                 "PILOT",
@@ -199,10 +199,7 @@ class SystemOrchestrator:
                 "C",
                 "Forth",
                 "Brainfuck",
-                "JavaScript",
-                "Lua",
-                "HyperTalk",
-                "Erlang",
+                "Python",
             ]
 
             # Initialize components

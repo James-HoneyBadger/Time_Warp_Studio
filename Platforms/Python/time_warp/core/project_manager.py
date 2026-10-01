@@ -6,11 +6,15 @@ multiple source files, run configurations, and session state.
 
 from __future__ import annotations
 
+import datetime
 import json
 import os
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ..features.project_templates import Template
 
 
 PROJECT_EXTENSION = ".twsproj"
@@ -36,6 +40,8 @@ class Project:
     files: list[ProjectFile] = field(default_factory=list)
     main_file: str = ""  # Relative path of the entry-point file
     theme: str = ""  # Last-used theme name (empty = use global)
+    created_at: str = field(default_factory=lambda: datetime.datetime.now().isoformat())
+    settings: dict[str, Any] = field(default_factory=dict)
 
     # ------------------------------------------------------------------ #
     #  Serialisation                                                       #
@@ -49,6 +55,8 @@ class Project:
             "files": [asdict(f) for f in self.files],
             "main_file": self.main_file,
             "theme": self.theme,
+            "created_at": self.created_at,
+            "settings": self.settings,
         }
 
     @classmethod
@@ -61,6 +69,8 @@ class Project:
             files=files,
             main_file=data.get("main_file", ""),
             theme=data.get("theme", ""),
+            created_at=data.get("created_at", datetime.datetime.now().isoformat()),
+            settings=data.get("settings", {}),
         )
 
 
@@ -148,6 +158,206 @@ class ProjectManager:
             json.dump(project.to_dict(), fh, indent=2)
 
         self._add_recent(path)
+
+    # ------------------------------------------------------------------ #
+    #  Project-level file operations                                       #
+    # ------------------------------------------------------------------ #
+
+    def create_file(
+        self,
+        project: Project,
+        project_dir: str,
+        relative_path: str,
+        content: str = "",
+        language: str | None = None,
+        is_main: bool = False,
+    ) -> ProjectFile:
+        """Create a new file on disk and add it to *project*.
+
+        Missing parent directories inside the project are created.
+
+        Args:
+            project: The project to modify.
+            project_dir: Root directory of the project.
+            relative_path: Path relative to the project directory.
+            content: Initial file contents.
+            language: Language enum name; inferred from extension if omitted.
+            is_main: Whether this is the primary run target.
+
+        Returns:
+            The new :class:`ProjectFile`.
+
+        Raises:
+            FileExistsError: If the target file already exists.
+            ValueError: If *relative_path* attempts to escape *project_dir*.
+        """
+        from ..core.interpreter import Language
+
+        project_path = Path(project_dir).resolve()
+        target = (project_path / relative_path).resolve()
+        if not str(target).startswith(str(project_path)):
+            raise ValueError(f"Path escapes project directory: {relative_path}")
+        if target.exists():
+            raise FileExistsError(f"File already exists: {relative_path}")
+
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+
+        if language is None:
+            language = Language.from_extension(target.suffix).name
+
+        pf = ProjectFile(path=relative_path, language=language, is_main=is_main)
+        project.files.append(pf)
+        if is_main or not project.main_file:
+            project.main_file = relative_path
+        return pf
+
+    def create_folder(
+        self, project: Project, project_dir: str, relative_path: str
+    ) -> Path:
+        """Create a new folder inside the project.
+
+        Args:
+            project: The project to modify.
+            project_dir: Root directory of the project.
+            relative_path: Path relative to the project directory.
+
+        Returns:
+            The created directory path.
+
+        Raises:
+            ValueError: If *relative_path* attempts to escape *project_dir*.
+        """
+        project_path = Path(project_dir).resolve()
+        target = (project_path / relative_path).resolve()
+        if not str(target).startswith(str(project_path)):
+            raise ValueError(f"Path escapes project directory: {relative_path}")
+        target.mkdir(parents=True, exist_ok=True)
+        return target
+
+    def rename_file(
+        self,
+        project: Project,
+        project_dir: str,
+        old_relative_path: str,
+        new_relative_path: str,
+    ) -> ProjectFile:
+        """Rename a tracked file on disk and update the project manifest.
+
+        Args:
+            project: The project to modify.
+            project_dir: Root directory of the project.
+            old_relative_path: Current relative path.
+            new_relative_path: Desired relative path.
+
+        Returns:
+            The updated :class:`ProjectFile`.
+
+        Raises:
+            FileNotFoundError: If the source file does not exist.
+            FileExistsError: If the destination file already exists.
+            ValueError: If either path attempts to escape *project_dir*.
+        """
+        project_path = Path(project_dir).resolve()
+        src = (project_path / old_relative_path).resolve()
+        dst = (project_path / new_relative_path).resolve()
+        if not str(src).startswith(str(project_path)):
+            raise ValueError(f"Path escapes project directory: {old_relative_path}")
+        if not str(dst).startswith(str(project_path)):
+            raise ValueError(f"Path escapes project directory: {new_relative_path}")
+        if not src.is_file():
+            raise FileNotFoundError(f"File not found: {old_relative_path}")
+        if dst.exists():
+            raise FileExistsError(f"File already exists: {new_relative_path}")
+
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        src.replace(dst)
+
+        from ..core.interpreter import Language
+
+        language = Language.from_extension(dst.suffix).name
+        for pf in project.files:
+            if pf.path == old_relative_path:
+                pf.path = new_relative_path
+                pf.language = language
+                if project.main_file == old_relative_path:
+                    project.main_file = new_relative_path
+                return pf
+
+        # If the file wasn't tracked, add it now.
+        return self.add_file(project, new_relative_path, language=language)
+
+    def delete_file(
+        self, project: Project, project_dir: str, relative_path: str
+    ) -> None:
+        """Delete a tracked file on disk and remove it from *project*.
+
+        Args:
+            project: The project to modify.
+            project_dir: Root directory of the project.
+            relative_path: Path relative to the project directory.
+
+        Raises:
+            FileNotFoundError: If the file does not exist.
+        """
+        project_path = Path(project_dir).resolve()
+        target = (project_path / relative_path).resolve()
+        if not str(target).startswith(str(project_path)):
+            raise ValueError(f"Path escapes project directory: {relative_path}")
+        if not target.is_file():
+            raise FileNotFoundError(f"File not found: {relative_path}")
+        target.unlink()
+        self.remove_file(project, relative_path)
+
+    def create_from_template(
+        self,
+        name: str,
+        project_dir: str,
+        template: "Template",
+    ) -> tuple[Project, str]:
+        """Create a populated project from a built-in template.
+
+        Args:
+            name: Human-readable project name.
+            project_dir: Directory to create the project in.
+            template: Template defining the starter code and language.
+
+        Returns:
+            A tuple of (project, project_file_path).
+        """
+        from ..features.project_templates import Template
+
+        project = self.create(name, project_dir)
+        safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in name)
+        filename = f"{safe_name}{self._extension_for_language(template.language)}"
+        self.create_file(
+            project,
+            project_dir,
+            filename,
+            content=template.code,
+            language=template.language,
+            is_main=True,
+        )
+        project.description = template.description
+        project_path = self.default_project_path(project_dir, name)
+        self.save(project, project_path)
+        return project, project_path
+
+    @staticmethod
+    def _extension_for_language(language: str) -> str:
+        """Return a canonical extension for a language enum name."""
+        mapping = {
+            "BASIC": ".bas",
+            "PILOT": ".pilot",
+            "LOGO": ".logo",
+            "C": ".c",
+            "PROLOG": ".pro",
+            "PASCAL": ".pas",
+            "FORTH": ".f",
+            "BRAINFUCK": ".bf",
+            "PYTHON_LANG": ".py",
+        }
+        return mapping.get(language.upper(), ".txt")
 
     # ------------------------------------------------------------------ #
     #  File list helpers                                                   #

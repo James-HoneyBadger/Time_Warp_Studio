@@ -26,7 +26,7 @@ The **desktop implementation** of Time Warp Studio provides a native application
 
 ### Language Features
 
-- ✅ **Unified Environment**: Mix BASIC, PILOT, and Logo seamlessly
+- ✅ **Unified Environment**: Mix BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python seamlessly
 - ✅ **50+ Commands**: Complete verified command set
 - ✅ **Turtle Graphics**: Full Logo compatibility with procedures
 - ✅ **Color Support**: Named colors, hex codes, and RGB values
@@ -49,7 +49,7 @@ The **desktop implementation** of Time Warp Studio provides a native application
 
 ### Educational Features
 
-- 📚 **97 Example Programs**: All language styles and difficulty levels
+- 📚 **72 Example Programs**: All language styles and difficulty levels
 - 📖 **Comprehensive Docs**: Turtle graphics reference and guides
 - 💡 **Safe Execution**: Timeout protection and iteration limits
 - 🧪 **Full Test Suite**: Verified correctness of all commands

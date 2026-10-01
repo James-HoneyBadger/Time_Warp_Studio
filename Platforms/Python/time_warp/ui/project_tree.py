@@ -38,8 +38,11 @@ from PySide6.QtWidgets import (
     QWidget,
 )
 
+from ..core.interpreter import Language
+from ..core.project_manager import ProjectFile, ProjectManager
+
 if TYPE_CHECKING:
-    from ..core.project_manager import Project, ProjectFile
+    from ..core.project_manager import Project
 
 logger = logging.getLogger(__name__)
 
@@ -51,16 +54,7 @@ _LANG_ICON: dict[str, str] = {
     "PASCAL": "📐",
     "PROLOG": "🔬",
     "FORTH": "🔢",
-    "LUA": "🌙",
     "BRAINFUCK": "🧠",
-    "JAVASCRIPT": "📜",
-    "HYPERTALK": "🍎",
-    "ERLANG": "⚡",
-    "LISP": "🔵",
-    "COBOL": "🏦",
-    "TCL": "🔧",
-    "POSTSCRIPT": "📄",
-    "ASM6502": "💾",
     "PILOT": "✈️",
 }
 
@@ -106,6 +100,12 @@ class ProjectTreePanel(QWidget):
         title_lbl.setFont(QFont(title_lbl.font().family(), 8, QFont.Weight.Bold))
         h_layout.addWidget(title_lbl)
         h_layout.addStretch()
+
+        new_file_btn = QPushButton("📝")
+        new_file_btn.setFixedSize(20, 20)
+        new_file_btn.setToolTip("New file in project")
+        new_file_btn.clicked.connect(self._new_file)
+        h_layout.addWidget(new_file_btn)
 
         add_btn = QPushButton("+")
         add_btn.setFixedSize(20, 20)
@@ -240,7 +240,17 @@ class ProjectTreePanel(QWidget):
 
         menu = QMenu(self)
 
-        add_act = QAction("Add File…", self)
+        new_file_act = QAction("New File…", self)
+        new_file_act.triggered.connect(self._new_file)
+        menu.addAction(new_file_act)
+
+        new_folder_act = QAction("New Folder…", self)
+        new_folder_act.triggered.connect(self._new_folder)
+        menu.addAction(new_folder_act)
+
+        menu.addSeparator()
+
+        add_act = QAction("Add Existing File…", self)
         add_act.triggered.connect(self._add_file)
         menu.addAction(add_act)
 
@@ -258,6 +268,16 @@ class ProjectTreePanel(QWidget):
 
             menu.addSeparator()
 
+            rename_act = QAction("Rename…", self)
+            rename_act.triggered.connect(lambda: self._rename_file(rel))
+            menu.addAction(rename_act)
+
+            delete_act = QAction("Delete", self)
+            delete_act.triggered.connect(lambda: self._delete_file(rel))
+            menu.addAction(delete_act)
+
+            menu.addSeparator()
+
             remove_act = QAction("Remove from Project", self)
             remove_act.triggered.connect(lambda: self._remove_file(rel))
             menu.addAction(remove_act)
@@ -272,8 +292,7 @@ class ProjectTreePanel(QWidget):
             self,
             "Add Files to Project",
             str(self._project_dir),
-            "Source Files (*.bas *.logo *.c *.pas *.pl *.4th *.lua *.bf *.js "
-            "*.htalk *.erl *.lisp *.cob *.tcl *.ps *.asm *.pilot *.py);;All Files (*)",
+            "Source Files (*.bas *.logo *.c *.pas *.pl *.4th *.bf *.pilot *.py);;All Files (*)",
         )
         for path in paths:
             try:
@@ -288,17 +307,104 @@ class ProjectTreePanel(QWidget):
                 continue
             if any(pf.path == rel for pf in self._project.files):
                 continue  # already tracked
-            from ..core.project_manager import ProjectFile
-            ext = Path(path).suffix.lower()
-            lang_map = {
-                ".bas": "BASIC", ".logo": "LOGO", ".c": "C", ".pas": "PASCAL",
-                ".pl": "PROLOG", ".4th": "FORTH", ".lua": "LUA", ".bf": "BRAINFUCK",
-                ".js": "JAVASCRIPT", ".htalk": "HYPERTALK", ".erl": "ERLANG",
-                ".lisp": "LISP", ".cob": "COBOL", ".tcl": "TCL", ".ps": "POSTSCRIPT",
-                ".asm": "ASM6502", ".pilot": "PILOT",
-            }
-            lang = lang_map.get(ext, "BASIC")
+            lang = Language.from_extension(Path(path).suffix).name
             self._project.files.append(ProjectFile(path=rel, language=lang))
+        self._refresh()
+        self.project_changed.emit()
+
+    def _new_file(self) -> None:
+        if self._project is None or self._project_dir is None:
+            QMessageBox.information(self, "No Project", "Open a project first.")
+            return
+        name, ok = QInputDialog.getText(
+            self,
+            "New File",
+            "File name (e.g. main.bas):",
+            text="main.bas",
+        )
+        if not ok or not name.strip():
+            return
+        rel = name.strip().replace("\\", "/")
+        if any(pf.path == rel for pf in self._project.files):
+            QMessageBox.warning(self, "Already Tracked", f"'{rel}' is already in the project.")
+            return
+        try:
+            ProjectManager().create_file(
+                self._project,
+                str(self._project_dir),
+                rel,
+                content="",
+            )
+        except FileExistsError:
+            QMessageBox.warning(self, "File Exists", f"'{rel}' already exists on disk.")
+            return
+        except ValueError as exc:
+            QMessageBox.critical(self, "Invalid Path", str(exc))
+            return
+        self._refresh()
+        self.project_changed.emit()
+        abs_path = self._abs(rel)
+        if abs_path:
+            self.file_open_requested.emit(abs_path)
+
+    def _new_folder(self) -> None:
+        if self._project is None or self._project_dir is None:
+            QMessageBox.information(self, "No Project", "Open a project first.")
+            return
+        name, ok = QInputDialog.getText(
+            self,
+            "New Folder",
+            "Folder name (e.g. src):",
+        )
+        if not ok or not name.strip():
+            return
+        rel = name.strip().replace("\\", "/")
+        try:
+            ProjectManager().create_folder(self._project, str(self._project_dir), rel)
+        except ValueError as exc:
+            QMessageBox.critical(self, "Invalid Path", str(exc))
+            return
+        self._refresh()
+
+    def _rename_file(self, rel: str) -> None:
+        if self._project is None or self._project_dir is None:
+            return
+        new_name, ok = QInputDialog.getText(
+            self,
+            "Rename File",
+            "New name:",
+            text=Path(rel).name,
+        )
+        if not ok or not new_name.strip():
+            return
+        new_rel = str(Path(rel).parent / new_name.strip()) if "/" in rel else new_name.strip()
+        try:
+            ProjectManager().rename_file(
+                self._project, str(self._project_dir), rel, new_rel
+            )
+        except (FileNotFoundError, FileExistsError, ValueError) as exc:
+            QMessageBox.critical(self, "Rename Failed", str(exc))
+            return
+        self._refresh()
+        self.project_changed.emit()
+
+    def _delete_file(self, rel: str) -> None:
+        if self._project is None or self._project_dir is None:
+            return
+        answer = QMessageBox.warning(
+            self,
+            "Delete File",
+            f"Permanently delete '{Path(rel).name}' from disk?\nThis cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel,
+            QMessageBox.StandardButton.Cancel,
+        )
+        if answer != QMessageBox.StandardButton.Yes:
+            return
+        try:
+            ProjectManager().delete_file(self._project, str(self._project_dir), rel)
+        except (FileNotFoundError, ValueError) as exc:
+            QMessageBox.critical(self, "Delete Failed", str(exc))
+            return
         self._refresh()
         self.project_changed.emit()
 

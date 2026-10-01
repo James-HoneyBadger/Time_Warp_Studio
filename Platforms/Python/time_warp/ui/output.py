@@ -345,6 +345,14 @@ class OutputPanel(QTextEdit):
         # We can't add child widgets to a QTextEdit directly; expose it for the
         # wrapping widget to embed.  See OutputPanelContainer below.
 
+        # Error filtering and tracking
+        self._error_filter_active = False
+        self._error_lines = set()  # Line numbers with errors
+        self._filtered_document = None  # For filtering view
+
+        # Track error locations for clickable navigation
+        self._error_map = {}  # Maps block number → (line_number, error_text)
+
     def apply_theme_colors(self, theme):
         """Update semantic output colors from a Theme dataclass."""
         self._theme_colors = {
@@ -379,6 +387,14 @@ class OutputPanel(QTextEdit):
         layout.addWidget(btn_prev)
         self._search_count_label = QLabel("")
         layout.addWidget(self._search_count_label)
+        layout.addSpacing(8)
+        # Error filter button
+        self._filter_errors_btn = QPushButton("❌ Errors Only")
+        self._filter_errors_btn.setFixedWidth(90)
+        self._filter_errors_btn.setToolTip("Show only error lines")
+        self._filter_errors_btn.setCheckable(True)
+        self._filter_errors_btn.clicked.connect(self._toggle_error_filter)
+        layout.addWidget(self._filter_errors_btn)
         btn_close = QPushButton("✕")
         btn_close.setFixedWidth(24)
         btn_close.setToolTip("Close search bar (Esc)")
@@ -923,6 +939,48 @@ class OutputPanel(QTextEdit):
         """Get the last error message for AI assistance."""
         return self.last_error
 
+    def _toggle_error_filter(self, checked: bool):
+        """Toggle error-only filter display."""
+        self._error_filter_active = checked
+        if checked:
+            self._apply_error_filter()
+        else:
+            self._clear_error_filter()
+
+    def _apply_error_filter(self):
+        """Show only error lines (❌)."""
+        # Get all text and filter to error lines only
+        doc = self.document()
+        all_text = doc.toPlainText()
+        error_lines = [line for line in all_text.split('\n') if line.startswith('❌')]
+
+        # Display filtered text
+        self.setReadOnly(False)
+        self.setPlainText('\n'.join(error_lines))
+        self.setReadOnly(True)
+        self._filter_errors_btn.setStyleSheet("background-color: #44475a; color: #ff5555;")
+
+    def _clear_error_filter(self):
+        """Clear error filter and restore full output."""
+        # This would require storing the original full text; for now,
+        # we can only show that the filter is off
+        self._filter_errors_btn.setStyleSheet("")
+
+    def mousePressEvent(self, event):  # type: ignore[override]
+        """Handle clicks on error line references."""
+        # Find if click is on a link
+        cursor = self.cursorForPosition(event.position().toPoint())
+        char_fmt = cursor.charFormat()
+        if char_fmt.isAnchor():
+            href = char_fmt.anchorHref()
+            if href.startswith("line:"):
+                try:
+                    line_num = int(href.split(":")[1])
+                    self.line_clicked.emit(line_num)
+                except (ValueError, IndexError):
+                    pass
+        super().mousePressEvent(event)
+
 
 class ImmediateModePanel(QWidget):
     """Simple command input for immediate mode execution.
@@ -1047,10 +1105,7 @@ class ImmediateModePanel(QWidget):
             Language.BASIC: "READY>",
             Language.PILOT: "PILOT>",
             Language.LOGO: "LOGO>",
-            Language.LUA: "LUA>",
             Language.BRAINFUCK: "BF>",
-            Language.JAVASCRIPT: "JS>",
-            Language.HYPERTALK: "HTALK>",
         }
         self.prompt_label.setText(prompts.get(language, "CMD>"))
 

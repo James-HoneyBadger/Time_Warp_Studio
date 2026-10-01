@@ -12,8 +12,8 @@ from typing import Any, List
 def upper_preserve_strings(line: str) -> str:
     """Uppercase source code but preserve quoted string literals.
 
-    Used by Assembly, COBOL, and Fortran executors to normalise keywords
-    while leaving string content untouched.
+    Used by executors that normalise keywords while leaving string content
+    untouched.
 
     >>> upper_preserve_strings('move "Hello World" to ws-name')
     'MOVE "Hello World" TO WS-NAME'

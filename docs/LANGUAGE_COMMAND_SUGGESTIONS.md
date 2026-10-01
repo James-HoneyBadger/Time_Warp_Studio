@@ -2,6 +2,12 @@
 
 This document outlines proposed enhancements to the supported languages in Time Warp Studio. These additions aim to improve the educational value and functionality of the IDE.
 
+> **Scope note:** Time Warp Studio actively ships 9 languages (BASIC, PILOT,
+> Logo, C, Pascal, Prolog, Forth, Brainfuck, Python). Sections below for Lua,
+> JavaScript, HyperTalk, Erlang, and other non-active languages are retained
+> as historical/aspirational notes only — those languages have no executor
+> in the current codebase.
+
 ## BASIC
 - **PRINT USING**: Formatted output for numbers and strings.
 - **DATA/READ/RESTORE**: Support for data-driven programs.

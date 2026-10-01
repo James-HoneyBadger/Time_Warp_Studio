@@ -44,23 +44,8 @@ def test_inventory() -> None:
         "prolog",
         "pascal",
         "forth",
-        "lua",
         "brainfuck",
-        "javascript",
-        "hypertalk",
-        "erlang",
-        "lisp",
-        "cobol",
-        "tcl",
-        "postscript",
-        "ruby",
         "python_lang",
-        "haskell",
-        "asm6502",
-        "perl",
-        "rexx",
-        "smalltalk",
-        "apl",
     }
     assert expected.issubset(modules), f"Missing modules: {expected - modules}"
 
@@ -85,26 +70,6 @@ def test_basic_execution() -> None:
     assert "Count:  3" in text
 
 
-def test_lua_execution() -> None:
-    from time_warp.core.interpreter import Interpreter, Language
-    from time_warp.graphics.turtle_state import TurtleState
-
-    interp = Interpreter(Language.LUA)
-    turtle = TurtleState()
-    interp.load_program(
-        'print("Hello from Lua")\n'
-        "for i = 1, 3 do\n"
-        "  print(\"Count: \" .. i)\n"
-        "end\n",
-        Language.LUA,
-    )
-    out = interp.execute(turtle)
-    text = "\n".join(out)
-    assert "Hello from Lua" in text
-    assert "Count: 1" in text
-    assert "Count: 3" in text
-
-
 def test_logo_turtle() -> None:
     from time_warp.core.interpreter import Interpreter, Language
     from time_warp.graphics.turtle_state import TurtleState
@@ -122,26 +87,6 @@ def test_logo_turtle() -> None:
     text = "\n".join(out)
     assert "🐢" in text or "turtle" in text.lower() or text == ""
     assert turtle.x != 0 or turtle.y != 0
-
-
-def test_javascript_execution() -> None:
-    from time_warp.core.interpreter import Interpreter, Language
-    from time_warp.graphics.turtle_state import TurtleState
-
-    interp = Interpreter(Language.JAVASCRIPT)
-    turtle = TurtleState()
-    interp.load_program(
-        'console.log("Hello from JS");\n'
-        "for (var i = 1; i <= 3; i++) {\n"
-        '  console.log("Count: " + String(i));\n'
-        "}\n",
-        Language.JAVASCRIPT,
-    )
-    out = interp.execute(turtle)
-    text = "\n".join(out)
-    assert "Hello from JS" in text
-    assert "Count: 1" in text
-    assert "Count: 3" in text
 
 
 def test_python_execution() -> None:
@@ -179,53 +124,14 @@ def test_brainfuck_execution() -> None:
     assert "Hello World!" in text or "Hi" in text
 
 
-def test_smalltalk_execution() -> None:
-    from time_warp.core.interpreter import Interpreter, Language
-    from time_warp.graphics.turtle_state import TurtleState
-
-    interp = Interpreter(Language.SMALLTALK)
-    turtle = TurtleState()
-    interp.load_program(
-        "Transcript show: 'Hello from Smalltalk'; cr.\n",
-        Language.SMALLTALK,
-    )
-    out = interp.execute(turtle)
-    text = "\n".join(out)
-    assert "Hello from Smalltalk" in text
-    assert "❌" not in text
-
-
-def test_postscript_execution() -> None:
-    from time_warp.core.interpreter import Interpreter, Language
-    from time_warp.graphics.turtle_state import TurtleState
-
-    interp = Interpreter(Language.POSTSCRIPT)
-    turtle = TurtleState()
-    interp.load_program(
-        "/Times-Roman findfont 12 scalefont setfont\n"
-        "100 100 moveto\n"
-        "(Hello from PostScript) show\n"
-        "showpage\n",
-        Language.POSTSCRIPT,
-    )
-    out = interp.execute(turtle)
-    text = "\n".join(out)
-    assert "Hello from PostScript" in text
-    assert "❌" not in text
-
-
 def main() -> int:
     tests = [
         test_imports,
         test_inventory,
         test_basic_execution,
-        test_lua_execution,
         test_logo_turtle,
-        test_javascript_execution,
         test_python_execution,
         test_brainfuck_execution,
-        test_smalltalk_execution,
-        test_postscript_execution,
     ]
     for test in tests:
         try:

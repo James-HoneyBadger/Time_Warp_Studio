@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v13.0.0 — System Design and Implementation
+## Time Warp Studio v14.0.0 — System Design and Implementation
 
 ---
 
@@ -44,7 +44,7 @@ Time Warp Studio is a desktop IDE built with:
 
 **Modularity**:
 
-- 20 independent language modules (easily extensible)
+- 9 independent language modules (easily extensible)
 - Feature panels loaded dynamically
 - Theme system completely separate from core logic
 
@@ -56,7 +56,7 @@ Time Warp Studio is a desktop IDE built with:
 
 Location: `Platforms/Python/time_warp/core/interpreter.py`
 
-Core dispatcher managing all 24 language executors:
+Core dispatcher managing all 9 active language executors:
 
 ```python
 class Interpreter:
@@ -66,11 +66,9 @@ class Interpreter:
         #   execute_basic, execute_pilot, execute_logo,
         #   execute_c, execute_pascal, execute_prolog, execute_forth
         #
-        # Whole-program executors (17 languages) registered in:
+        # Whole-program executors (2 languages) registered in:
         #   _WHOLE_PROGRAM_EXECUTORS dict
-        #   (Lua, Brainfuck, JavaScript, HyperTalk, Erlang, LISP, COBOL,
-        #    Tcl, PostScript, Ruby, Python, Haskell, 6502 Assembly, Perl 5,
-        #    REXX, Smalltalk, APL)
+        #   (Brainfuck, Python)
         pass
 ```
 
@@ -136,7 +134,7 @@ def execute_basic(interpreter: Interpreter, command: str, turtle: TurtleState) -
 - ✅ Return strings as output
 - ✅ Access the interpreter and turtle state objects
 
-### The 24 Supported Languages
+### The 9 Supported Languages
 
 **Line-by-line executors** (parsed per statement):
 
@@ -218,10 +216,7 @@ Features:
 
 Status: Experimental
 
-**Whole-program executors** (17 languages):
-
-Lua, Brainfuck, JavaScript, HyperTalk, Erlang, LISP/Scheme, COBOL, Tcl,
-PostScript, Ruby, Python, Haskell, 6502 Assembly, Perl 5, REXX, Smalltalk, APL.
+**Whole-program executors** (2 languages): Brainfuck and Python.
 
 Each receives the full source text and returns output. Registered in
 `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.
@@ -265,22 +260,27 @@ MainWindow
 
 ### 14 Feature Panels
 
-Specialized development tools accessible via tabs:
+Specialized development tools accessible via dock widgets (Phase 2 of the
+feature registry in `ui/feature_integration.py`):
 
-1. Lesson Mode - Step-by-step guided instruction
-2. AI Assistant - Code suggestions
-3. Error Explainer - Understand errors
-4. Reference Search - Quick documentation
-5. Examples Browser - Browse code examples
-6. Turtle Inspector - Visualize turtle state
-7. Debugger - Step through execution
-8. Variables Inspector - View current variables
-9. Achievements - Progress gamification
-10. Project Runner - Multi-file management
-11. Classroom Mode - Teaching features
-12. Performance Monitor - Execution profiling
-13. Settings - IDE configuration
-14. Help - Integrated documentation
+1. Classroom Mode - presentation tools
+2. Reference Search - offline docs search
+3. Achievements - progress tracking
+4. Turtle Inspector - turtle timeline
+5. Document Outline - navigate procedures and functions
+6. Collaboration Tool - pair programming
+7. Performance Profiler - hotspot detection
+8. Execution Replay - algorithm visualization
+9. Hardware Simulator - device simulation
+10. AI Assistant - knowledge-based help
+11. Executable Exporter - multi-format export
+12. Learning Analytics - progress tracking
+13. Accessibility Suite - inclusive features
+14. Peer Review Tool - code feedback
+
+Plus 8 additional Phase 1 panels (Learning Hub, Lesson Mode, Lesson
+Authoring, Error Explainer, Syntax Validator, Timeline Debugger, Language
+Comparator, Asset Library) for 22 feature panels in total.
 
 ### Menu System (53+ Items)
 
@@ -588,7 +588,7 @@ Contains:
 
 ### Core (`core/`)
 
-- `interpreter.py` — Main dispatcher (~1,500 lines, 24 language executors)
+- `interpreter.py` — Main dispatcher and 9-language registry
 - `debugger.py` — Step-through debugger with execution timeline and rewind
 - `sql_engine.py` — SQLite-backed T-SQL compatibility layer
 - `orchestrator.py` — System integration and component registry
@@ -610,7 +610,7 @@ Contains:
 
 - `base.py` — Executor protocol definition
 - **Line-by-line executors (7):** `basic.py`, `pilot.py`, `logo.py`, `c_lang_fixed.py`, `pascal.py`, `prolog.py`, `forth.py`
-- **Whole-program executors (17):** `lua.py`, `brainfuck.py`, `javascript.py`, `hypertalk.py`, `erlang.py`, `lisp.py`, `cobol.py`, `tcl.py`, `postscript.py`, `ruby.py`, `python_lang.py`, `haskell.py`, `asm6502.py`, `perl.py`, `rexx.py`, `smalltalk.py`, `apl.py`
+- **Whole-program executors (2):** `brainfuck.py`, `python_lang.py`
 - `lang_utils.py`, `parser_patterns.py` — Shared parsing utilities
 
 ### UI (`ui/`)
@@ -645,7 +645,7 @@ Contains:
 
 ### Utils (`utils/`)
 
-- `expression_evaluator.py` — Safe math eval (hand-written parser, no `eval()`)
+- `expression_evaluator.py` — Safe math evaluation (hand-written parser, no `eval()`)
 - `string_evaluator.py` — String expression evaluation
 - `error_hints.py` — Syntax error suggestions
 - `validators.py` — Input validation helpers
@@ -654,7 +654,7 @@ Contains:
 
 ### Tests (`tests/`)
 
-- 41+ test files covering all 24 language executors, graphics, GUI, and interpreter
+- Test files covering all 9 active language executors, graphics, GUI, and interpreter behavior
 - `conftest.py`, `conftest_lang.py` — Shared fixtures and helpers
 - `Platforms/Python/smoke_test.py` — Fast smoke test without pytest
 

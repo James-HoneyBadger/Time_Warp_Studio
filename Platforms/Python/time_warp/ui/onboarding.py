@@ -147,7 +147,7 @@ class OnboardingDialog(QDialog):
                 step_id="welcome",
                 title="Welcome to Time Warp Studio!",
                 description="Time Warp Studio is an educational programming "
-                "environment for 24 classic and modern languages.",
+                "environment for 9 classic and modern languages.",
                 instructions=[
                     "This tutorial will guide you through the IDE",
                     "You can skip steps or exit at any time",
@@ -200,13 +200,11 @@ class OnboardingDialog(QDialog):
                 step_id="languages",
                 title="Multiple Languages",
                 description="Time Warp supports BASIC, PILOT, Logo, "
-                "Pascal, Prolog, C, Python, Lua, Scheme, "
-                "Brainfuck, JavaScript, REXX, Smalltalk, "
-                "HyperTalk, Haskell, APL, and Brainfuck.",
+                "Pascal, Prolog, C, Python, Forth, and Brainfuck.",
                 instructions=[
                     "Language is auto-detected from file extension",
                     ".bas=BASIC  .pilot=PILOT  .logo=Logo  .py=Python",
-                    ".lua=Lua  .scm=Scheme  .js=JavaScript  .hs=Haskell",
+                    ".c=C  .pas=Pascal  .f=Forth  .bf=Brainfuck",
                     "Or use File → New to select a language",
                 ],
                 task_description="Try a PILOT program: T:Hello from PILOT!",

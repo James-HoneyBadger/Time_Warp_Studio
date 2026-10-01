@@ -2,6 +2,24 @@
 
 All notable changes to Time Warp Studio will be documented in this file.
 
+> **Scope note:** The current release actively supports **9 languages**:
+> BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python. Older
+> entries below mention additional language executors (REXX, Smalltalk, APL,
+> Perl, Ruby, COBOL, Erlang, Haskell, JavaScript, Lua, HyperTalk, PostScript,
+> LISP/Scheme, Tcl, 6502 Assembly) that were built at the time but have since
+> been removed from `time_warp/languages/` and are no longer part of the
+> product. These entries are kept as historical record only.
+
+## [14.0.0] - 2026-10-01
+
+### Editor and Workflow Improvements
+
+- Added Go to Line navigation, clickable error locations, and error-only output filtering.
+- Added a searchable document outline for supported procedure and function declarations.
+- Added recovery for unsaved editor tabs after an unexpected shutdown.
+- Made lesson authoring and file-dialog filters use the canonical nine-language registry.
+- Corrected current release documentation and package metadata to match the active language set.
+
 ## [13.0.0] - 2026-06-01
 
 ### New Languages

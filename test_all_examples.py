@@ -23,22 +23,7 @@ LANG_MAP = {
     "prolog": Language.PROLOG,
     "forth": Language.FORTH,
     "brainfuck": Language.BRAINFUCK,
-    "javascript": Language.JAVASCRIPT,
-    "lua": Language.LUA,
-    "hypertalk": Language.HYPERTALK,
-    "erlang": Language.ERLANG,
-    "lisp": Language.LISP,
-    "cobol": Language.COBOL,
-    "tcl": Language.TCL,
-    "postscript": Language.POSTSCRIPT,
-    "ruby": Language.RUBY,
     "python": Language.PYTHON_LANG,
-    "haskell": Language.HASKELL,
-    "asm6502": Language.ASM6502,
-    "perl": Language.PERL,
-    "rexx": Language.REXX,
-    "smalltalk": Language.SMALLTALK,
-    "apl": Language.APL,
 }
 
 TIMEOUT_SECONDS = 15
@@ -87,24 +72,9 @@ def main():
                     sorted(EXAMPLES_DIR.rglob("*.c")) + \
                     sorted(EXAMPLES_DIR.rglob("*.pas")) + \
                     sorted(EXAMPLES_DIR.rglob("*.pl")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.fth")) + \
+                    sorted(EXAMPLES_DIR.rglob("*.f")) + \
                     sorted(EXAMPLES_DIR.rglob("*.bf")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.js")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.lua")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.hts")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.erl")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.lisp")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.cob")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.tcl")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.ps")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.rb")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.py")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.hs")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.asm")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.pm")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.rex")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.st")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.apl"))
+                    sorted(EXAMPLES_DIR.rglob("*.py"))
     
     print(f"Testing {len(example_files)} examples...")
     print()

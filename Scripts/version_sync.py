@@ -7,6 +7,7 @@ import argparse
 import re
 import sys
 from dataclasses import dataclass
+from datetime import date
 from pathlib import Path
 
 
@@ -95,7 +96,7 @@ def main() -> int:
     )
     parser.add_argument(
         "--release-date",
-        default="2026-06-01",
+        default=date.today().isoformat(),
         help="Release date to use for AppStream metadata.",
     )
     args = parser.parse_args()

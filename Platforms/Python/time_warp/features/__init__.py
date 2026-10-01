@@ -5,7 +5,7 @@ New features: lessons, examples browser, turtle preview, theme editor, autosave,
 
 from .autosave_manager import AutosaveManager, FileHistory, FileVersion
 from .classroom_mode import ClassroomMode, PresentationMode, WorkspaceBundle
-from .examples_browser import Difficulty, Example, ExamplesBrowser, Language
+from .examples_browser import Difficulty, Example, ExamplesBrowser
 from .lesson_system import Checkpoint, Lesson, LessonManager, LessonStatus
 from .theme_editor import Theme, ThemeColors, ThemeManager
 from .turtle_preview import (
@@ -21,7 +21,6 @@ __all__ = [
     "LessonStatus",
     "ExamplesBrowser",
     "Example",
-    "Language",
     "Difficulty",
     "TurtlePreview",
     "TurtleStroke",

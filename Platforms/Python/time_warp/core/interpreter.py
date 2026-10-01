@@ -1,7 +1,7 @@
 """
 Core interpreter for Time Warp Studio.
 
-Central dispatcher for 12 language executors. Manages execution state,
+Central dispatcher for 9 language executors. Manages execution state,
 variable storage, and turtle graphics coordination.
 """
 
@@ -35,26 +35,11 @@ from ..languages.basic import execute_basic
 from ..languages.brainfuck import execute_brainfuck
 from ..languages.c_lang_fixed import execute_c
 from ..languages.forth import execute_forth
-from ..languages.hypertalk import execute_hypertalk
-from ..languages.javascript import execute_javascript
 from ..languages.logo import execute_logo
-from ..languages.lua import execute_lua
 from ..languages.pascal import execute_pascal
 from ..languages.pilot import execute_pilot
 from ..languages.prolog import execute_prolog
-from ..languages.erlang import execute_erlang
-from ..languages.lisp import execute_lisp
-from ..languages.cobol import execute_cobol
-from ..languages.tcl import execute_tcl
-from ..languages.postscript import execute_postscript
-from ..languages.ruby import execute_ruby
 from ..languages.python_lang import execute_python_lang
-from ..languages.haskell import execute_haskell
-from ..languages.asm6502 import execute_asm6502
-from ..languages.perl import execute_perl
-from ..languages.rexx import execute_rexx
-from ..languages.smalltalk import execute_smalltalk
-from ..languages.apl import execute_apl
 
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
@@ -62,6 +47,7 @@ from ..utils.expression_evaluator import ExpressionEvaluator
 
 # Hardware simulation
 from ..features.hardware_simulator import HardwareSimulator
+from .language_registry import language_name_for_extension, metadata_for
 
 # Sandbox execution (subprocess isolation + resource limits)
 from .sandbox import is_sandbox_available, run_in_sandbox
@@ -94,23 +80,8 @@ _WHOLE_PROGRAM_EXECUTORS: Dict[
 def _init_whole_program_executors() -> Dict["Language", Callable]:
     """Build the dict after the Language enum is defined (avoids forward ref)."""
     return {
-        Language.LUA: execute_lua,
         Language.BRAINFUCK: execute_brainfuck,
-        Language.JAVASCRIPT: execute_javascript,
-        Language.HYPERTALK: execute_hypertalk,
-        Language.ERLANG: execute_erlang,
-        Language.LISP: execute_lisp,
-        Language.COBOL: execute_cobol,
-        Language.TCL: execute_tcl,
-        Language.POSTSCRIPT: execute_postscript,
-        Language.RUBY: execute_ruby,
         Language.PYTHON_LANG: execute_python_lang,
-        Language.HASKELL: execute_haskell,
-        Language.ASM6502: execute_asm6502,
-        Language.PERL: execute_perl,
-        Language.REXX: execute_rexx,
-        Language.SMALLTALK: execute_smalltalk,
-        Language.APL: execute_apl,
     }
 
 
@@ -166,102 +137,17 @@ class Language(Enum):
     PROLOG = auto()
     PASCAL = auto()
     FORTH = auto()
-    LUA = auto()
     BRAINFUCK = auto()
-    JAVASCRIPT = auto()
-    HYPERTALK = auto()
-    ERLANG = auto()
-    LISP = auto()
-    COBOL = auto()
-    TCL = auto()
-    POSTSCRIPT = auto()
-    RUBY = auto()
     PYTHON_LANG = auto()
-    HASKELL = auto()
-    ASM6502 = auto()
-    PERL = auto()
-    REXX = auto()
-    SMALLTALK = auto()
-    APL = auto()
 
     @classmethod
     def from_extension(cls, ext: str) -> "Language":
         """Map file extension to Language enum."""
-        ext = ext.lower()
-        mapping = {
-            ".bas": cls.BASIC,
-            ".pilot": cls.PILOT,
-            ".logo": cls.LOGO,
-            ".c": cls.C,
-            ".pro": cls.PROLOG,
-            ".prolog": cls.PROLOG,
-            ".pl": cls.PROLOG,
-            ".pas": cls.PASCAL,
-            ".f": cls.FORTH,
-            ".fs": cls.FORTH,
-            ".forth": cls.FORTH,
-            ".lua": cls.LUA,
-            ".bf": cls.BRAINFUCK,
-            ".js": cls.JAVASCRIPT,
-            ".ht": cls.HYPERTALK,
-            ".htalk": cls.HYPERTALK,
-            ".erl": cls.ERLANG,
-            ".hrl": cls.ERLANG,
-            ".lisp": cls.LISP,
-            ".scm": cls.LISP,
-            ".rkt": cls.LISP,
-            ".ss": cls.LISP,
-            ".cob": cls.COBOL,
-            ".cbl": cls.COBOL,
-            ".cpy": cls.COBOL,
-            ".tcl": cls.TCL,
-            ".ps": cls.POSTSCRIPT,
-            ".rb": cls.RUBY,
-            ".py": cls.PYTHON_LANG,
-            ".hs": cls.HASKELL,
-            ".lhs": cls.HASKELL,
-            ".asm": cls.ASM6502,
-            ".s": cls.ASM6502,
-            ".a65": cls.ASM6502,
-            ".perl": cls.PERL,
-            ".pm": cls.PERL,
-            ".rexx": cls.REXX,
-            ".rex": cls.REXX,
-            ".rxx": cls.REXX,
-            ".st": cls.SMALLTALK,
-            ".apl": cls.APL,
-        }
-        return mapping.get(ext, cls.BASIC)
+        return cls[language_name_for_extension(ext)]
 
     def friendly_name(self) -> str:
         """Human-friendly display name for language."""
-        names = {
-            Language.BASIC: "BASIC",
-            Language.PILOT: "PILOT",
-            Language.LOGO: "Logo",
-            Language.C: "C",
-            Language.PROLOG: "Prolog",
-            Language.PASCAL: "Pascal",
-            Language.FORTH: "Forth",
-            Language.LUA: "Lua",
-            Language.BRAINFUCK: "Brainfuck",
-            Language.JAVASCRIPT: "JavaScript",
-            Language.HYPERTALK: "HyperTalk",
-            Language.ERLANG: "Erlang",
-            Language.LISP: "LISP/Scheme",
-            Language.COBOL: "COBOL",
-            Language.TCL: "Tcl",
-            Language.POSTSCRIPT: "PostScript",
-            Language.RUBY: "Ruby",
-            Language.PYTHON_LANG: "Python",
-            Language.HASKELL: "Haskell",
-            Language.ASM6502: "6502 Assembly",
-            Language.PERL: "Perl 5",
-            Language.REXX: "REXX",
-            Language.SMALLTALK: "Smalltalk",
-            Language.APL: "APL",
-        }
-        return names.get(self, "Unknown")
+        return metadata_for(self.name).display_name
 
 
 # Now that Language enum is defined, populate the whole-program executor map.
@@ -269,18 +155,9 @@ _WHOLE_PROGRAM_EXECUTORS = _init_whole_program_executors()
 
 # Languages whose executors are safe to run in a subprocess sandbox.
 # These produce only text output and do not use the live turtle canvas.
-# Turtle-capable languages (Lua, JavaScript, HyperTalk, Python) are excluded
-# and run in a thread instead, so turtle graphics work as usual.
+# Python is excluded and runs in a thread so turtle graphics continue to work.
 _SANDBOXABLE_LANGUAGES: frozenset[Language] = frozenset({
     Language.BRAINFUCK,
-    Language.ERLANG,
-    Language.HASKELL,
-    Language.LISP,
-    Language.COBOL,
-    Language.TCL,
-    Language.POSTSCRIPT,
-    Language.RUBY,
-    Language.ASM6502,
 })
 
 
@@ -289,9 +166,9 @@ class LanguageRegistry:
 
     Usage:
         registry = LanguageRegistry()
-        fn = registry.get_executor(Language.LUA)  # or None for line-by-line langs
-        langs = registry.languages()               # all whole-program language keys
-        registry.register(Language.MY_LANG, my_fn) # add/override at runtime
+        fn = registry.get_executor(Language.BRAINFUCK)  # or None for line-by-line langs
+        langs = registry.languages()                    # all whole-program language keys
+        registry.register(Language.MY_LANG, my_fn)    # add/override at runtime
     """
 
     def __init__(self) -> None:
@@ -1713,24 +1590,6 @@ class Interpreter:
             }
         # Add arrays and other state if needed
         return vars_dict
-
-
-# Refactor: Split language-specific logic into separate modules
-# Create a LanguageExecutor class to encapsulate executor logic
-
-
-class LanguageExecutor:
-    def __init__(self, name: str, execute_fn: Callable):
-        self.name = name
-        self.execute_fn = execute_fn
-
-    def execute(self, interpreter, source, turtle):
-        return self.execute_fn(interpreter, source, turtle)
-
-
-# Example usage:
-# python_executor = LanguageExecutor("Python", execute_python)
-# result = python_executor.execute(interpreter, source, turtle)
 
 
 def run(source: str, language: Language, turtle: "TurtleState | None" = None) -> str:
