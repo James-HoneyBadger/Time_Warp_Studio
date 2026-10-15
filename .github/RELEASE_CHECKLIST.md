@@ -47,11 +47,10 @@
 
 ### GitHub Release Page
 
-- [ ] Create new release from tag `vX.Y.Z`
-- [ ] Title: `Time Warp Studio vX.Y.Z`
-- [ ] Paste highlights from `CHANGELOG.md`
-- [ ] Attach wheel, source tarball, examples archive, and any supplemental assets
-- [ ] Mark release as latest and publish
+- [ ] Push the annotated tag `vX.Y.Z` from `main`; confirm the production deployment workflow succeeds
+- [ ] Verify the automatically created `Time Warp Studio vX.Y.Z` release is marked latest
+- [ ] Verify the Linux amd64 package and tarball, optional arm64 assets, Python wheel and source tarball, and `SHA256SUMS.txt` are attached
+- [ ] Confirm release notes match the `CHANGELOG.md` section for `X.Y.Z`
 
 ## Post-Release Tasks
 

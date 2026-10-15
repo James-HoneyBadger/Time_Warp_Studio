@@ -1,30 +1,30 @@
 # CI and Release Workflows
 
-Time Warp Studio is a desktop application. There is no server deployment and no container image. The repository has four GitHub Actions workflows in `.github/workflows/`.
+Time Warp Studio is a desktop application, so its deployment channels publish downloadable builds rather than a hosted web service. GitHub Environments record the preview, staging, and production deployments and link to their build or release.
 
 ## Workflows
 
 | Workflow | Trigger | What it does |
 |----------|---------|--------------|
 | `ci.yml` | Push and pull request to `main` | Runs `ruff check` on `Platforms/Python`, `pytest` on `Platforms/Python/time_warp/tests`, `Platforms/Python/smoke_test.py`, and `test_all_examples.py`. Matrix: Python 3.10, 3.12, 3.13. |
-| `build_release.yml` | Tags matching `v*`, or manual dispatch | Builds native binaries with `Scripts/build_native.sh` (PyInstaller) for Linux x86_64 and arm64. The arm64 job is `continue-on-error`. Binaries are uploaded as workflow artifacts. It does not create a GitHub Release. |
+| `build_release.yml` | Pull requests to `main`, version tags matching `v*`, or manual dispatch | Pull requests publish a short-lived x86_64 preview artifact. Manual dispatch can target preview or staging; staging is restricted to `main`. Version tags target production, build Linux x86_64 and arm64 (arm64 remains best-effort), build Python distributions, and publish a GitHub Release with checksums. |
 | `docs.yml` | Push and pull request to `main` when files under `docs/` change | Checks that the core documentation files exist. |
 | `markdown-lint.yml` | Push and pull request | Markdown lint and spell check. Both steps are `continue-on-error`. |
 
-## Release Procedure
+## Deployment Channels
 
-The release steps are manual. The full checklist is in [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
+The GitHub Environments `preview`, `staging`, and `production` are configured in repository settings. Preview is available for pull requests and manual runs. Staging is restricted to `main` and is started manually. Production is restricted to `v*` tags and publishes the GitHub Release automatically after the native build.
 
-1. Set `VERSION` and run `python3 Scripts/version_sync.py --write --release-date YYYY-MM-DD`.
-2. Add the release entry to `CHANGELOG.md`.
-3. Run `make test` and `python3 Platforms/Python/smoke_test.py`.
-4. Merge to `main` and confirm `ci.yml` passes.
-5. Create and push an annotated tag:
+1. For a pull request preview, open a pull request targeting `main`. Download the x86_64 package from the `Build Native Binaries` workflow run; the artifact is retained for 30 days.
+2. For staging, open **Actions → Build Native Binaries → Run workflow**, select `staging`, and run it from `main`. The Linux artifacts are attached to the workflow run for 30 days.
+3. For a manual preview, dispatch the same workflow with `preview`; the selected branch must not require secrets because the job builds untrusted code without them.
+4. For production, update `VERSION`, synchronize package metadata, add a release entry to `CHANGELOG.md`, run the release checks, and push an annotated `vX.Y.Z` tag from `main`:
 
    ```bash
    git tag -a vX.Y.Z -m "Time Warp Studio vX.Y.Z"
    git push origin vX.Y.Z
    ```
 
-6. `build_release.yml` runs on the tag. Download the binaries from the workflow run's artifacts.
-7. Create the GitHub Release for the tag manually and attach the binaries.
+5. `build_release.yml` builds native and Python artifacts, extracts the matching changelog section, generates `SHA256SUMS.txt`, and publishes the latest GitHub Release. The arm64 build is best-effort; x86_64 is required.
+
+The complete release checklist is in [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md). These channels publish desktop artifacts and do not host or deploy a web application.
