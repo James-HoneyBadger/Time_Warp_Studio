@@ -147,6 +147,7 @@ Features:
 - Subroutines (GOSUB/RETURN)
 - Turbo BASIC graphics
   - SCREEN, COLOR, LINE, CIRCLE, PSET, PAINT
+
 #### 2. LOGO
 
 Features:  
@@ -693,8 +694,8 @@ make typecheck   # pyright
 
 **For more details:**
 
-- [README.md](README.md) — Project overview and quick start
-- [CONTRIBUTING.md](CONTRIBUTING.md) — Contribution guidelines
-- [CHANGELOG.md](CHANGELOG.md) — Version history
+- [README.md](../README.md) — Project overview and quick start
+- [CONTRIBUTING.md](../CONTRIBUTING.md) — Contribution guidelines
+- [CHANGELOG.md](../CHANGELOG.md) — Version history
 - [ROADMAP.md](ROADMAP.md) — Development roadmap
 - Source: `Platforms/Python/time_warp/`

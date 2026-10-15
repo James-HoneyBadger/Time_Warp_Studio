@@ -51,7 +51,7 @@ time-warp-ide
 
 ## Tests
 
-See [README_TESTING.md](../../README_TESTING.md).
+See [README_TESTING.md](../../docs/README_TESTING.md).
 
 ## Package layout
 
@@ -88,6 +88,6 @@ The catalog is [Examples/CATALOG.md](../../Examples/CATALOG.md).
 - [docs/INDEX.md](../../docs/INDEX.md): documentation index
 - [docs/USER_GUIDE.md](../../docs/USER_GUIDE.md): using the IDE
 - [docs/LANGUAGE_GUIDE.md](../../docs/LANGUAGE_GUIDE.md): language reference
-- [FAQ.md](../../FAQ.md): common questions
-- [ARCHITECTURE.md](../../ARCHITECTURE.md): design
+- [FAQ.md](../../docs/FAQ.md): common questions
+- [ARCHITECTURE.md](../../docs/ARCHITECTURE.md): design
 - [CONTRIBUTING.md](../../CONTRIBUTING.md): how to contribute

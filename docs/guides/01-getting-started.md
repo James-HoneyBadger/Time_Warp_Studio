@@ -273,4 +273,4 @@ For more help, see [Troubleshooting Guide](08-troubleshooting.md).
 
 ---
 
-**Happy Programming! Questions? Check the [FAQ](../../FAQ.md) or ask for help.**
+**Happy Programming! Questions? Check the [FAQ](../FAQ.md) or ask for help.**

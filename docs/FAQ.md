@@ -1,6 +1,6 @@
 # Time Warp Studio - Frequently Asked Questions
 
-Answers to common questions about installing, running, and learning with Time Warp Studio. For full guides, see the [User Guide](docs/USER_GUIDE.md) and the [documentation index](docs/INDEX.md).
+Answers to common questions about installing, running, and learning with Time Warp Studio. For full guides, see the [User Guide](USER_GUIDE.md) and the [documentation index](INDEX.md).
 
 ---
 
@@ -30,11 +30,11 @@ Time Warp Studio is an educational desktop programming environment. It runs nine
 
 ### Which languages are supported?
 
-BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python. Each language implements a subset of its traditional form. See the [Language Guide](docs/LANGUAGE_GUIDE.md) for what each one supports.
+BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python. Each language implements a subset of its traditional form. See the [Language Guide](LANGUAGE_GUIDE.md) for what each one supports.
 
 ### Is Time Warp Studio free?
 
-Yes. It is released under the MIT License. See [LICENSE](LICENSE).
+Yes. It is released under the MIT License. See [LICENSE](../LICENSE).
 
 ### Who is it for?
 
@@ -72,11 +72,11 @@ You can also run `python3 run.py`, which sets up a virtual environment and depen
 
 ### The app crashes at startup with "Illegal instruction." What is wrong?
 
-This usually means the CPU does not support one of the instruction sets PySide6 needs. It is not a bug in your program. Try a physical machine or a VM with a newer CPU model. See [Troubleshooting](docs/TROUBLESHOOTING_GUIDE.md).
+This usually means the CPU does not support one of the instruction sets PySide6 needs. It is not a bug in your program. Try a physical machine or a VM with a newer CPU model. See [Troubleshooting](TROUBLESHOOTING_GUIDE.md).
 
 ### Does it run on Windows and macOS?
 
-See the [Installation Guide](docs/INSTALLATION.md) for platform-specific steps.
+See the [Installation Guide](INSTALLATION.md) for platform-specific steps.
 
 ---
 
@@ -85,7 +85,7 @@ See the [Installation Guide](docs/INSTALLATION.md) for platform-specific steps.
 ### Which file extensions does the Studio recognize?
 
 | Language | Extensions |
-|----------|------------|
+| -------- | ---------- |
 | BASIC | `.bas` |
 | PILOT | `.pilot` |
 | Logo | `.logo` |
@@ -152,7 +152,7 @@ It may contain an endless loop, such as a `GOTO` with no exit condition or a `wh
 
 ### Can I run a program from a lesson or example directly?
 
-Yes. Open the file from `Examples/` and press `Ctrl+R`. The [examples catalog](Examples/CATALOG.md) lists the sample programs.
+Yes. Open the file from `Examples/` and press `Ctrl+R`. The [examples catalog](../Examples/CATALOG.md) lists the sample programs.
 
 ---
 
@@ -160,35 +160,35 @@ Yes. Open the file from `Examples/` and press `Ctrl+R`. The [examples catalog](E
 
 ### What can I do in BASIC?
 
-Line-numbered programs with `PRINT`, `INPUT`, `FOR`/`NEXT`, `IF`/`THEN`, `GOTO`, `GOSUB`, and `DIM` arrays. See [basic.md](docs/tutorials/basic.md).
+Line-numbered programs with `PRINT`, `INPUT`, `FOR`/`NEXT`, `IF`/`THEN`, `GOTO`, `GOSUB`, and `DIM` arrays. See [basic.md](tutorials/basic.md).
 
 ### What about PILOT?
 
-PILOT is a simple language for interactive lessons. Commands like `T:` (type) and `A:` (accept) handle text and input. See [pilot.md](docs/tutorials/pilot.md).
+PILOT is a simple language for interactive lessons. Commands like `T:` (type) and `A:` (accept) handle text and input. See [pilot.md](tutorials/pilot.md).
 
 ### What subset of Logo is supported?
 
-Core Logo commands such as `FORWARD`, `BACK`, `RIGHT`, `LEFT`, `PENUP`, `PENDOWN`, `REPEAT`, `CLEARSCREEN`, and procedure definitions with `TO`/`END`. See [logo.md](docs/tutorials/logo.md) for the full list.
+Core Logo commands such as `FORWARD`, `BACK`, `RIGHT`, `LEFT`, `PENUP`, `PENDOWN`, `REPEAT`, `CLEARSCREEN`, and procedure definitions with `TO`/`END`. See [logo.md](tutorials/logo.md) for the full list.
 
 ### Which Logo colors can I use?
 
-Named colors, hex values, and RGB values all work with `SETPENCOLOR`. See [logo.md](docs/tutorials/logo.md) for the syntax.
+Named colors, hex values, and RGB values all work with `SETPENCOLOR`. See [logo.md](tutorials/logo.md) for the syntax.
 
 ### Is C a full C compiler?
 
-No. The C executor is an interpreter for a practical subset of C: functions, variables, loops, arrays, and `printf`. It does not compile to native code. See [c.md](docs/tutorials/c.md).
+No. The C executor is an interpreter for a practical subset of C: functions, variables, loops, arrays, and `printf`. It does not compile to native code. See [c.md](tutorials/c.md).
 
 ### What can I do in Prolog?
 
-Facts, rules, queries, and backtracking over a small knowledge base. See [prolog.md](docs/tutorials/prolog.md).
+Facts, rules, queries, and backtracking over a small knowledge base. See [prolog.md](tutorials/prolog.md).
 
 ### What can I do in Forth?
 
-Stack-based arithmetic, word definitions with `:` and `;`, and loops. Forth programs can also use turtle words. See [forth.md](docs/tutorials/forth.md).
+Stack-based arithmetic, word definitions with `:` and `;`, and loops. Forth programs can also use turtle words. See [forth.md](tutorials/forth.md).
 
 ### How does Brainfuck work here?
 
-Brainfuck runs in a whole-program executor with the eight standard commands. The `,` command prompts for input. See [brainfuck.md](docs/tutorials/brainfuck.md).
+Brainfuck runs in a whole-program executor with the eight standard commands. The `,` command prompts for input. See [brainfuck.md](tutorials/brainfuck.md).
 
 ### Can I use Python?
 
@@ -242,7 +242,7 @@ Logo, Forth, and Python have turtle commands. Check each language's tutorial for
 
 ### Does the Studio have a debugger?
 
-Yes. It supports breakpoints, stepping, a variables panel, a call stack, and an execution timeline. See the [Debugger Guide](docs/DEBUGGER_GUIDE.md).
+Yes. It supports breakpoints, stepping, a variables panel, a call stack, and an execution timeline. See the [Debugger Guide](DEBUGGER_GUIDE.md).
 
 ### How do I set a breakpoint?
 
@@ -254,7 +254,7 @@ Use Debug → Start / Continue Debugging. The program pauses at the first breakp
 
 ### What do the step commands do?
 
-Use the Debug menu for Trace Into, Step Over, and Step Out. Trace Into and Step Over currently perform the same action. See the [Debugger Guide](docs/DEBUGGER_GUIDE.md) for details.
+Use the Debug menu for Trace Into, Step Over, and Step Out. Trace Into and Step Over currently perform the same action. See the [Debugger Guide](DEBUGGER_GUIDE.md) for details.
 
 ### Can I see variable values while debugging?
 
@@ -323,7 +323,7 @@ Yes. Open File → Preferences and clear the Show Welcome checkbox. The tab retu
 
 ### Where can I find more examples?
 
-The `Examples/` folder has sample programs for each language. The [examples catalog](Examples/CATALOG.md) describes them.
+The `Examples/` folder has sample programs for each language. The [examples catalog](../Examples/CATALOG.md) describes them.
 
 ---
 
@@ -351,7 +351,7 @@ Check that the program actually moves the turtle with `penup` or `pendown` set c
 
 ### Where are the full troubleshooting steps?
 
-See the [Troubleshooting Guide](docs/TROUBLESHOOTING_GUIDE.md) and [docs/guides/08-troubleshooting.md](docs/guides/08-troubleshooting.md).
+See the [Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md) and [troubleshooting guide](guides/08-troubleshooting.md).
 
 ### How do I report a bug?
 
@@ -363,11 +363,11 @@ Open an issue on the project's GitHub repository. Include your OS, Python versio
 
 ### How can I contribute?
 
-Read [CONTRIBUTING.md](CONTRIBUTING.md) and the [architecture guide](ARCHITECTURE.md). For a new language, see [Adding a New Language](ARCHITECTURE.md#adding-a-new-language).
+Read [CONTRIBUTING.md](../CONTRIBUTING.md) and the [architecture guide](ARCHITECTURE.md). For a new language, see [Adding a New Language](ARCHITECTURE.md#adding-a-new-language).
 
 ### Where do I report a security issue?
 
-Follow the process in [SECURITY.md](SECURITY.md).
+Follow the process in [SECURITY.md](../SECURITY.md).
 
 ### Who maintains the project?
 
@@ -375,7 +375,7 @@ James Temple <james@honey-badger.org>.
 
 ### Where can I read the code of conduct?
 
-See [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md).
+See [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
 
 ### Is there a plugin system?
 
@@ -387,4 +387,4 @@ See [ROADMAP.md](ROADMAP.md).
 
 ---
 
-**Still stuck?** Start with the [User Guide](docs/USER_GUIDE.md), or open an issue on the project's GitHub repository.
+**Still stuck?** Start with the [User Guide](USER_GUIDE.md), or open an issue on the project's GitHub repository.

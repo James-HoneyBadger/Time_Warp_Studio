@@ -266,7 +266,7 @@ Browse more examples in the [Examples/](Examples/) directory or through **Help �
 
 | Document | Description |
 | --- | --- |
-| [ARCHITECTURE.md](ARCHITECTURE.md) | System design and technical details |
+| [Architecture](docs/ARCHITECTURE.md) | System design and technical details |
 | [INSTALLATION.md](docs/INSTALLATION.md) | Detailed installation instructions |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
 
@@ -299,7 +299,7 @@ Browse more examples in the [Examples/](Examples/) directory or through **Help �
 
 | Document | Description |
 | --- | --- |
-| [FAQ](FAQ.md) | Frequently asked questions |
+| [FAQ](docs/FAQ.md) | Frequently asked questions |
 | [Documentation Index](docs/INDEX.md) | Full documentation listing |
 | [Examples Catalog](Examples/CATALOG.md) | Example programs catalog |
 
@@ -315,10 +315,8 @@ Time_Warp_Studio/
 ├── test_all_examples.py           # Runs all 81 example programs
 │
 ├── README.md                      # This file
-├── ARCHITECTURE.md                # System design document
 ├── CHANGELOG.md                   # Version history and release notes
 ├── CONTRIBUTING.md                # Contributor guide
-├── ROADMAP.md                     # Development roadmap (Q2–Q4 2026)
 ├── SECURITY.md                    # Vulnerability reporting policy
 ├── LICENSE                        # MIT License
 │
@@ -359,8 +357,11 @@ Time_Warp_Studio/
 │   ├── pascal/ prolog/ forth/
 │   ├── brainfuck/ python/
 │
-├── FAQ.md                         # Frequently asked questions
 ├── docs/                          # Documentation
+│   ├── ARCHITECTURE.md            # System design document
+│   ├── FAQ.md                     # Frequently asked questions
+│   ├── README_TESTING.md          # Test setup and commands
+│   ├── ROADMAP.md                 # Development roadmap
 │   ├── INDEX.md                   # Documentation hub
 │   ├── guides/                    # 8 progressive how-to guides
 │   └── tutorials/                 # 9 language-specific tutorials

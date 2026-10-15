@@ -64,4 +64,4 @@ This guide provides solutions to common issues encountered while using Time Warp
 
 ---
 
-For further help, see the [FAQ](../FAQ.md).
+For further help, see the [FAQ](FAQ.md).

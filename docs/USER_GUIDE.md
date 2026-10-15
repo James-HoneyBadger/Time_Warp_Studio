@@ -566,5 +566,5 @@ Your theme choice is saved automatically (Qt QSettings) and restored on next lau
 - [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Syntax for all 9 languages
 - [DEBUGGER_GUIDE.md](DEBUGGER_GUIDE.md) - Using the debugger
 - [Turtle Graphics](guides/04-turtle-graphics.md) - Graphics programming
-- [FAQ](../FAQ.md) - Frequently asked questions
+- [FAQ](FAQ.md) - Frequently asked questions
 - [TROUBLESHOOTING_GUIDE.md](TROUBLESHOOTING_GUIDE.md) - Common problems

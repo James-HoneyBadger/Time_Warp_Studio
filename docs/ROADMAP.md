@@ -75,7 +75,7 @@ fixed at 9 languages (see Vision above).
 ## How to Contribute
 
 1. **Fork** the repository and create a feature branch
-2. Read [CONTRIBUTING.md](CONTRIBUTING.md) for code style and PR guidelines
+2. Read [CONTRIBUTING.md](../CONTRIBUTING.md) for code style and PR guidelines
 3. Check [open issues](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues) for `good first issue` labels
 4. Submit a pull request with a clear description
 

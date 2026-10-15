@@ -160,7 +160,7 @@ class HelpDocsMixin(_HelpMixinBase):
 
     def show_programming_guide(self):
         """Show programming guide."""
-        docs_path = self._get_docs_path().parent / "FAQ.md"
+        docs_path = self._get_docs_path() / "FAQ.md"
         self._show_help_dialog("FAQ - Frequently Asked Questions", docs_path)
 
     def show_language_help(self, language: str):

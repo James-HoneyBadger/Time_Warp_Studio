@@ -408,7 +408,7 @@ NEXT COLOR
 1. **Restart IDE** - Close and reopen
 2. **Check examples** - See working examples
 3. **Start fresh** - Create new simple program
-4. **Ask for help** - See the [FAQ](../../FAQ.md)
+4. **Ask for help** - See the [FAQ](../FAQ.md)
 
 ---
 

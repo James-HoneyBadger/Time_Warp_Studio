@@ -337,7 +337,7 @@ PYTHONPATH=Platforms/Python pytest --cov=time_warp --cov-report=html Platforms/P
 ### Files to Update
 
 - `README.md` - If user-visible change
-- `ARCHITECTURE.md` - If internal change
+- `docs/ARCHITECTURE.md` - If internal change
 - `docs/USER_GUIDE.md` - If UI change
 - `docs/LANGUAGE_GUIDE.md` - If language syntax
 - `docs/guides/08-troubleshooting.md` - If known issue
@@ -510,7 +510,7 @@ Time_Warp_Studio/
 └── [Root docs]                  # README, LICENSE, etc.
 ```
 
-See ARCHITECTURE.md for detailed structure.
+See docs/ARCHITECTURE.md for detailed structure.
 
 ---
 
@@ -543,6 +543,6 @@ Thank you for contributing!
 ---
 
 **Resources:**
-- [ARCHITECTURE.md](ARCHITECTURE.md) - Technical design
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical design
 - [README.md](README.md) - Project overview
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) - Expected behavior

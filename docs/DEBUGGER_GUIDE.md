@@ -309,4 +309,4 @@ Timeline frames are recorded while the program runs. Long programs produce long 
 **For more information:**
 - [USER_GUIDE.md](USER_GUIDE.md) - General IDE usage
 - [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Language syntax
-- [FAQ](../FAQ.md) - Common questions
+- [FAQ](FAQ.md) - Common questions

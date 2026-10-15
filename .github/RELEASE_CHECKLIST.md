@@ -17,7 +17,7 @@
 ### Documentation
 
 - [ ] Update `CHANGELOG.md` with new version entry
-- [ ] Refresh documentation footers (FAQ.md, docs/INDEX.md)
+- [ ] Refresh documentation footers (docs/FAQ.md, docs/INDEX.md)
 - [ ] Ensure screenshots or captions reference the new release where applicable
 - [ ] Run spell check / link validation for key documents
 

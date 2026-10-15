@@ -72,12 +72,12 @@ Deep dives into specific IDE features:
 ### Quick Reference
 
 - **[Keyboard Shortcuts](guides/07-shortcuts.md)** - All available shortcuts and their actions
-- **[FAQ](../FAQ.md)** - Frequently asked questions with answers
+- **[FAQ](FAQ.md)** - Frequently asked questions with answers
 
 ### Troubleshooting
 
 - **[Troubleshooting Guide](guides/08-troubleshooting.md)** - Solutions for common issues
-- **[Architecture Guide](../ARCHITECTURE.md)** - Project structure and design decisions
+- **[Architecture Guide](ARCHITECTURE.md)** - Project structure and design decisions
 
 ---
 
@@ -120,16 +120,16 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 1. [Classroom Mode Guide](guides/06-settings.md) - Presentation and assignment features
 2. [Lessons Guide](guides/03-lessons.md) - Built-in lessons with checkpoints
 3. [Examples Browser](guides/01-getting-started.md#examples) - 81 ready-made programs
-4. See [ARCHITECTURE.md](../ARCHITECTURE.md) for extending features
+4. See [ARCHITECTURE.md](ARCHITECTURE.md) for extending features
 
 ### For Advanced Users
 
 **Topics:**
 
 - Custom themes: [Settings & Themes](guides/06-settings.md)
-- Adding languages: [ARCHITECTURE.md](../ARCHITECTURE.md#adding-a-new-language)
+- Adding languages: [ARCHITECTURE.md](ARCHITECTURE.md#adding-a-new-language)
 - Contributing: [README.md](../README.md#contributing)
-- Development: [ARCHITECTURE.md](../ARCHITECTURE.md#development-guide)
+- Development: [ARCHITECTURE.md](ARCHITECTURE.md#development-guide)
 
 ---
 
@@ -193,9 +193,9 @@ ship with runnable examples):
 
 ## ❓ Need Help?
 
-- **Can't find answer?** Check [FAQ](../FAQ.md)
+- **Can't find answer?** Check [FAQ](FAQ.md)
 - **Having issues?** See [Troubleshooting](guides/08-troubleshooting.md)
-- **Want to extend?** Read [ARCHITECTURE.md](../ARCHITECTURE.md)
+- **Want to extend?** Read [ARCHITECTURE.md](ARCHITECTURE.md)
 - **Report bug?** Open [GitHub Issue](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues)
 
 ---
@@ -205,6 +205,10 @@ ship with runnable examples):
 ```text
 docs/
 ├── INDEX.md (you are here)
+├── ARCHITECTURE.md
+├── FAQ.md
+├── README_TESTING.md
+├── ROADMAP.md
 ├── INSTALLATION.md
 ├── DEBUGGER_GUIDE.md
 ├── LANGUAGE_GUIDE.md
@@ -263,7 +267,7 @@ Explore example programs and tutorials for the 9 active languages:
 
 ### Reference
 
-- **[FAQ](../FAQ.md)** - Frequently asked questions
+- **[FAQ](FAQ.md)** - Frequently asked questions
 - **[Installation](INSTALLATION.md)** - Detailed setup instructions
 
 ---
@@ -339,7 +343,7 @@ This documentation is maintained alongside Time Warp Studio development. If you 
 ## Need More Help?
 
 - Review the [Getting Started Guide](guides/01-getting-started.md)
-- Check the [FAQ](../FAQ.md) for common questions
+- Check the [FAQ](FAQ.md) for common questions
 - Visit the [Troubleshooting Guide](guides/08-troubleshooting.md)
 - Read the project [README](../README.md)
 
