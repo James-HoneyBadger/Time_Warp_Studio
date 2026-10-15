@@ -31,5 +31,4 @@ __all__ = [
     "ExecutionResult",
     "TurtleState",
     "ExpressionEvaluator",
-    "run",
 ]

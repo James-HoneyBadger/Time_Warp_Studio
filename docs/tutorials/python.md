@@ -5,6 +5,7 @@
 Python (1991) is a modern multi-paradigm language celebrated for its clean, readable syntax. Time Warp Studio runs Python programs in a sandboxed environment with access to the standard library and the integrated turtle graphics canvas.
 
 **Key characteristics:**
+
 - Indentation defines code blocks (no braces or `end`)
 - Dynamic typing with optional type hints
 - Batteries included — rich standard library
@@ -245,7 +246,7 @@ for i in range(36):
 ## Quick Reference
 
 | Feature | Syntax |
-|---------|--------|
+| --------- | -------- |
 | Print | `print(expr)` |
 | Input | `input("prompt")` |
 | Variable | `name = value` |

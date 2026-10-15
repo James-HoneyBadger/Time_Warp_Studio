@@ -3,7 +3,7 @@
 ## Supported Versions
 
 | Version | Supported          |
-|---------|--------------------|
+| --------- | -------------------- |
 | 14.x    | :white_check_mark: |
 | < 14.0  | :x:                |
 
@@ -19,7 +19,7 @@ If you discover a security vulnerability in Time Warp Studio, please report it r
    Use [GitHub's private vulnerability reporting](https://github.com/James-HoneyBadger/Time_Warp_Studio/security/advisories/new) to submit a confidential report directly through the repository.
 
 2. **Email:**  
-   Send details to **james@honey-badger.org** with the subject line `[SECURITY] Time Warp Studio`.
+   Send details to **<james@honey-badger.org>** with the subject line `[SECURITY] Time Warp Studio`.
 
 ### What to Include
 

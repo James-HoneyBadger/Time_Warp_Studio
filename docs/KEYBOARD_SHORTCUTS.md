@@ -9,7 +9,7 @@ inside the IDE to open the Keyboard Shortcuts dialog, which is generated from th
 ## File
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | Ctrl+N | New file |
 | F3 / Ctrl+O | Open file |
 | F2 / Ctrl+S | Save file |
@@ -25,7 +25,7 @@ inside the IDE to open the Keyboard Shortcuts dialog, which is generated from th
 ## Edit
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | Ctrl+Z | Undo |
 | Ctrl+Y | Redo |
 | Ctrl+X / Ctrl+C / Ctrl+V | Cut / Copy / Paste |
@@ -41,7 +41,7 @@ inside the IDE to open the Keyboard Shortcuts dialog, which is generated from th
 ## Run
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | F9 / Ctrl+R | Run program |
 | Ctrl+F2 | Reset program (stops a run or a debug session) |
 | Shift+F9 / Ctrl+Shift+R | Run selection |
@@ -53,7 +53,7 @@ inside the IDE to open the Keyboard Shortcuts dialog, which is generated from th
 ## Debug
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | Ctrl+F9 | Start debugging, or continue when paused |
 | Ctrl+F7 | Pause |
 | F7 | Trace into |
@@ -67,7 +67,7 @@ inside the IDE to open the Keyboard Shortcuts dialog, which is generated from th
 ## View & Workspace Decks
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | F4 | Document outline |
 | F5 | Zoom (focus mode) |
 | F6 | Next pane |
@@ -91,7 +91,7 @@ inside the IDE to open the Keyboard Shortcuts dialog, which is generated from th
 ## Help
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | F1 | Context help for the current language |
 | Ctrl+F1 | Keyword inspector |
 | Ctrl+F3 / Ctrl+Alt+L | Lessons |
@@ -103,7 +103,7 @@ inside the IDE to open the Keyboard Shortcuts dialog, which is generated from th
 ## Editor
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | Ctrl+/ | Toggle line comment |
 | Ctrl+D | Duplicate line |
 | Alt+Up / Alt+Down | Move line up / down |
@@ -118,7 +118,7 @@ The bottom Function-Key Bar follows the held modifier (**Shift** or **Ctrl**); c
 **FN** badge to cycle layers manually. Every label is the real key binding.
 
 | Key | Normal Layer | Shift Layer (`⇧`) | Ctrl Layer (`^`) |
-|-----|--------------|-------------------|------------------|
+| ----- | -------------- | ------------------- | ------------------ |
 | F1 | Help | Keyboard Shortcuts | Keyword Inspector |
 | F2 | Save | Save As… | Reset Program |
 | F3 | Open | Browse Examples | Lessons |
@@ -135,7 +135,7 @@ The bottom Function-Key Bar follows the held modifier (**Shift** or **Ctrl**); c
 ## Canvas (Turtle Graphics)
 
 | Action | Description |
-|--------|-------------|
+| -------- | ------------- |
 | Scroll wheel | Zoom in / out |
 | Click + drag | Pan the canvas |
 | 💾 button | Save canvas as PNG |

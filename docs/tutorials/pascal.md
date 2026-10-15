@@ -14,6 +14,7 @@ end.
 ```
 
 Run this:
+
 1. Select "Pascal" from the language dropdown
 2. Paste the code
 3. Click Run (Ctrl+R)
@@ -52,6 +53,7 @@ var
 ```
 
 **Data Types:**
+
 - `Integer` - Whole numbers
 - `Real` - Decimal numbers
 - `Char` - Single character
@@ -455,7 +457,7 @@ numbers[5] := 5;
 ## Pascal vs. Other Languages
 
 | Feature | Pascal | C | Python |
-|---------|--------|---|--------|
+| --------- | -------- | --- | -------- |
 | Assignment | `:=` | `=` | `=` |
 | Output | `WriteLn` | `printf` | `print` |
 | Input | `ReadLn` | `scanf` | `input` |

@@ -6,7 +6,7 @@ Brainfuck was created by Urban Müller in 1993. It is the quintessential **esote
 
 Brainfuck operates on an infinite tape of byte cells:
 
-```
+```text
 Tape (memory):  [ 0 | 0 | 0 | 0 | 0 | ... ]
                   ^
                   Data Pointer (dp)
@@ -17,7 +17,7 @@ There is also a program counter and an I/O stream.
 ## The 8 Commands
 
 | Command | Meaning |
-|---------|---------|
+| --------- | --------- |
 | `>` | Move data pointer right |
 | `<` | Move data pointer left |
 | `+` | Increment cell at dp |

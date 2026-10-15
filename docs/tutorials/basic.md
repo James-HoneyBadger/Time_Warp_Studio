@@ -27,12 +27,14 @@ PRINT "Hello, World!"
 ```
 
 **Run it:**
+
 1. Select BASIC from language dropdown
 2. Type the code above
 3. Press Ctrl+R or click Run
 
 **Output:**
-```
+
+```text
 Hello, World!
 ```
 
@@ -46,7 +48,8 @@ PRINT 20 / 4
 ```
 
 **Output:**
-```
+
+```text
 5
 6
 30
@@ -68,6 +71,7 @@ LET PRICE = 19.99
 ```
 
 **Rules:**
+
 - Variable names start with letter
 - Can contain letters, numbers, underscore
 - String variables end with `$`
@@ -82,7 +86,8 @@ PRINT AGE + 10
 ```
 
 **Output:**
-```
+
+```text
 My age is 25
 35
 ```
@@ -96,7 +101,8 @@ PRINT FIRST$; " "; LAST$
 ```
 
 **Output:**
-```
+
+```text
 John Doe
 ```
 
@@ -154,7 +160,8 @@ PRINT 10 MOD 3
 ```
 
 **Output:**
-```
+
+```text
 15
 5
 50
@@ -190,7 +197,7 @@ END IF
 ### Comparison Operators
 
 | Operator | Meaning |
-|----------|---------|
+| ---------- | --------- |
 | = | Equal to |
 | <> | Not equal to |
 | < | Less than |
@@ -224,7 +231,8 @@ NEXT I
 ```
 
 **Output:**
-```
+
+```text
 1
 2
 3
@@ -241,7 +249,8 @@ NEXT I
 ```
 
 **Output:**
-```
+
+```text
 0
 2
 4
@@ -261,7 +270,8 @@ WEND
 ```
 
 **Output:**
-```
+
+```text
 1
 2
 3
@@ -298,7 +308,8 @@ NEXT I
 ```
 
 **Output:**
-```
+
+```text
 10
 20
 30
@@ -322,6 +333,7 @@ Group code into reusable pieces:
 ```
 
 **How it works:**
+
 1. Program runs from the top (line 10)
 2. `GOSUB 100` jumps to line 100
 3. Lines 100-120 run
@@ -418,17 +430,20 @@ PRINT "Hello"
 ## Debugging Tips
 
 **Program won't run?**
+
 - Check for typos in keywords
 - Ensure all IF has THEN
 - Match all FOR with NEXT
 - Check parentheses are balanced
 
 **Wrong output?**
+
 - Use PRINT to check variable values
 - Trace through logic step by step
 - Try with simple test data first
 
 **Program seems stuck?**
+
 - Check loop conditions
 - Make sure loop variable changes
 - Look for infinite WHILE loops

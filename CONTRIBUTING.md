@@ -47,6 +47,7 @@ Documentation needs constant improvement:
 ### 5. Write Tests
 
 Help improve code quality:
+
 - Write unit tests
 - Write integration tests
 - Improve test coverage
@@ -167,6 +168,7 @@ git checkout -b fix/your-bug-name
 ```
 
 Branch naming:
+
 - Feature: `feature/description`
 - Bug: `fix/description`
 - Docs: `docs/description`
@@ -492,7 +494,7 @@ make lint
 
 Understanding the codebase:
 
-```
+```text
 Time_Warp_Studio/
 ├── Platforms/Python/
 │   ├── time_warp_ide.py          # Main entry point
@@ -518,7 +520,7 @@ See docs/ARCHITECTURE.md for detailed structure.
 
 ### Questions?
 
-- **Email**: james@honey-badger.org
+- **Email**: <james@honey-badger.org>
 - **GitHub Issues**: Report bugs
 - **GitHub Discussions**: Ask questions  
 - **Documentation**: Check docs/
@@ -534,6 +536,7 @@ See docs/ARCHITECTURE.md for detailed structure.
 ## Recognition
 
 Contributors are recognized in:
+
 - Commit history
 - GitHub contributors page
 - Project changelog
@@ -543,6 +546,7 @@ Thank you for contributing!
 ---
 
 **Resources:**
+
 - [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical design
 - [README.md](README.md) - Project overview
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) - Expected behavior

@@ -112,8 +112,6 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **Code folding** (`ui/editor.py`) — ▼/▶ gutter glyphs, `toggle_fold()`, hides/shows QTextBlock ranges
 - **Split editor** (`ui/main_window.py`) — `QSplitter`-based dual-pane editing (View → Split Editor)
 
-
-
 ### Bug Fixes
 
 - **Ruby executor** (`languages/ruby.py`) — full initial implementation with extensive bug fixes:
@@ -193,9 +191,11 @@ All notable changes to Time Warp Studio will be documented in this file.
 ## [10.0.0] - 2026-04-25
 
 ### New Languages
+
 - **Perl 5** — scalars/arrays/hashes, regex (`=~`, `s///`, `qw()`), subroutines, turtle graphics commands (`forward`, `back`, `left`, `right`, `penup`, `pendown`, `pencolor`, `setpos`, `circle`)
 
 ### Graphics Enhancements
+
 - **SVGA mode** — `set_svga_mode(width, height)` on `TurtleState` enables a fixed-resolution virtual canvas (default 800×600) rendered with full anti-aliasing inside a chrome bezel; `clear_svga_mode()` returns to unlimited coordinates
 - **Cubic Bezier curves** — `bezier_curve(cp1x, cp1y, cp2x, cp2y, end_x, end_y)` draws a smooth vector path from the current turtle position
 - **Gradient fills** — `draw_rect_gradient()` and `draw_ellipse_gradient()` fill shapes with linear or radial colour gradients using stop-based colour maps
@@ -205,23 +205,25 @@ All notable changes to Time Warp Studio will be documented in this file.
 - Canvas: added `QLinearGradient`/`QRadialGradient`/`QPainterPath`/`QPolygonF` rendering paths; gradient-fill support extended to polygons and ellipses; sprite shape type rendered with per-pixel alpha, scale, and rotation transforms
 
 ### Sound / Music Enhancements
+
 - **ADSR envelopes** — new `ADSREnvelope` dataclass with `attack_ms`, `decay_ms`, `sustain_level`, `release_ms`; automatically shapes amplitude for each note
 - **New waveforms** — `pulse` (configurable duty cycle, `@Pn` MML command) and `noise` (white noise, `@W5`)
 - **4-channel polyphony** — new `MusicChannel` dataclass; `MusicPlayer.mix_channels()` sums up to 4 independent synthesised streams into a single WAV; `parse_multichannel(dict)` convenience wrapper
 - **Extended MML syntax** — `@Wn` (waveform 0–5), `@Datk,dcy,sus,rel` (ADSR), `@Pn` (pulse duty %), `@Cn` (channel 0–3), `[CEG]` chord notation for simultaneous notes
 - 4 new built-in sound effects: `DRONE`, `BUZZ`, `STATIC`, `BEEP2`
 
-
-
 ### Language Executor Improvements
+
 - **APL**: outer product operator (`∘.fn` e.g. `A ∘.× B`), format `⍕`, execute `⍎`
 - **C**: `struct`/`union` type definitions, struct variable declarations, member access (`p.x`), `typedef` for scalar types
 
 ### UI Improvements
+
 - **Canvas**: Added "Export SVG…" (🖼) toolbar button alongside existing "Save PNG…"
 - SVG export via `PySide6.QtSvg.QSvgGenerator` with antialiasing and full turtle graphics rendering
 
 ### Examples & Documentation
+
 - Added Ruby examples: `Examples/ruby/hello.rb`, `Examples/ruby/oop_demo.rb`
 - Added Erlang examples: `Examples/erlang/hello.erl`, `Examples/erlang/pattern_match.erl`
 - Added Rust examples: `Examples/rust/hello.rs`, `Examples/rust/structs.rs`

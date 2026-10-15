@@ -7,6 +7,7 @@ This guide provides solutions to common issues encountered while using Time Warp
 ## General Issues
 
 ### Application Fails to Start
+
 - **Cause**: Missing dependencies or incompatible Python version.
 - **Solution**:
   1. Ensure Python 3.10+ is installed.
@@ -14,6 +15,7 @@ This guide provides solutions to common issues encountered while using Time Warp
   3. Check for error messages in the terminal.
 
 ### UI Elements Not Displaying Correctly
+
 - **Cause**: Missing or corrupted PySide6 installation.
 - **Solution**:
   1. Reinstall PySide6: `pip install --force-reinstall PySide6`.
@@ -24,6 +26,7 @@ This guide provides solutions to common issues encountered while using Time Warp
 ## Language-Specific Issues
 
 ### BASIC
+
 - **Issue**: Syntax errors in valid programs.
 - **Cause**: Unsupported features or incorrect line numbers.
 - **Solution**:
@@ -31,6 +34,7 @@ This guide provides solutions to common issues encountered while using Time Warp
   2. Ensure line numbers are sequential.
 
 ### Python
+
 - **Issue**: Import errors in Python scripts.
 - **Cause**: Python programs run in a sandbox that only allows a safe set of standard-library modules.
 - **Solution**:
@@ -42,12 +46,14 @@ This guide provides solutions to common issues encountered while using Time Warp
 ## Performance Issues
 
 ### Slow Turtle Graphics Rendering
+
 - **Cause**: Complex drawings or high-resolution canvas.
 - **Solution**:
   1. Simplify the drawing commands.
   2. Reduce loop counts or step sizes.
 
 ### High CPU Usage
+
 - **Cause**: Intensive computations or infinite loops.
 - **Solution**:
   1. Optimize your code.

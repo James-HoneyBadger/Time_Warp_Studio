@@ -7,7 +7,7 @@ Time Warp Studio exposes appearance and behavior options through its menus. Most
 There is no single Settings dialog. Options are in the menus listed below. **File → Preferences** (**Ctrl+,**) opens only the Auto-Save dialog.
 
 | Setting | Menu location |
-|---------|---------------|
+| --------- | --------------- |
 | Theme (33 themes) | **View → Theme** |
 | Font family and size | **View → Font** |
 | Auto-save and interval | **File → Preferences** (**Ctrl+,**) |
@@ -39,6 +39,7 @@ The IDE ships with 33 themes.
 2. Pick a theme. It applies immediately.
 
 Other commands in the same menu:
+
 - **Preview Themes…** opens a theme browser.
 - **Cycle Workstation Theme** (**Shift+F10**) rotates through the workstation themes.
 - **Edit Current Theme…** opens a colour editor. Colour schemes can be exported and imported as JSON.
@@ -47,6 +48,7 @@ Other commands in the same menu:
 ### Font
 
 **View → Font** has two submenus:
+
 - **Font Family** lists installed monospace fonts.
 - **Font Size** sets the editor font size.
 
@@ -67,7 +69,7 @@ Other commands in the same menu:
 The following are not configurable in the current build:
 
 | Behavior | Current behavior |
-|----------|------------------|
+| ---------- | ------------------ |
 | Line numbers | Always shown |
 | Indentation guides | Not available |
 | Tab width | Fixed |
@@ -99,7 +101,7 @@ The output panel text size and wrapping are fixed in the current build.
 
 - **View → Show Minimap** toggles the minimap.
 - **F4** opens the document outline.
-- **Ctrl+\** splits the editor; **Ctrl+Shift+\** closes the split.
+- **Ctrl+\** splits the editor;**Ctrl+Shift+\** closes the split.
 - **Shift+F6** toggles the telemetry HUD.
 - **Alt+1** to **Alt+4** switch workspace decks.
 - **F10** / **Ctrl+Shift+P** open the command palette.
@@ -113,7 +115,7 @@ Shortcuts cannot be remapped in this build. **Help → Keyboard Shortcuts** (**C
 IDE settings are stored with Qt `QSettings`, under the application's organization and application names. The storage location is platform-specific (on Linux, under `~/.config`). Examples of stored keys:
 
 | Key | Contents |
-|-----|----------|
+| ----- | ---------- |
 | `theme` | Selected theme |
 | `font_family`, `font_size` | Editor font |
 | `show_welcome` | Welcome tab at startup |
@@ -129,12 +131,15 @@ Breakpoints are also stored in QSettings, so they persist across restarts.
 ## Troubleshooting Settings
 
 **Problem:** A theme or font change does not persist
+
 - **Solution:** Confirm the Qt config directory (typically `~/.config`) is writable, then change the option again.
 
 **Problem:** Theme or font looks wrong
+
 - **Solution:** Reselect the theme in **View → Theme**, or the font in **View → Font**.
 
 **Problem:** Keyboard shortcuts not working
+
 - **Solution:** Check whether another application captured the key combination. See [Keyboard Shortcuts](07-shortcuts.md).
 
 ## Keyboard Shortcuts Reference

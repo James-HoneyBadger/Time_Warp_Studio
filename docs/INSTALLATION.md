@@ -24,6 +24,7 @@ IDE from a terminal **or** from **Applications ▸ Development ▸ Time Warp
 Studio** — no virtual environment activation, no `cd`, just run it.
 
 The installer:
+
 - Copies all application files to a dedicated directory
 - Creates an isolated Python virtual environment with all dependencies
 - Writes a shell launcher (`time-warp-studio`) onto your `PATH`
@@ -33,7 +34,7 @@ The installer:
 ### 1.1 Prerequisites
 
 | Requirement | Minimum | Check |
-|---|---|---|
+| --- | --- | --- |
 | Linux distro | Any modern distro with a desktop environment | — |
 | Python | 3.10+ | `python3 --version` |
 | pip | any | `python3 -m pip --version` |
@@ -65,7 +66,7 @@ sudo ./install.sh
 
 When it finishes you will see:
 
-```
+```text
 ════════════════════════════════════════════════════
   Time Warp Studio 14.1.2 — Installed!
 ════════════════════════════════════════════════════
@@ -125,7 +126,7 @@ sudo ./install.sh          # system
 
 ### 1.5 What the installer creates
 
-```
+```text
 System-wide                        Per-user
 ─────────────────────────────────  ─────────────────────────────────────────
 /opt/time-warp-studio/             ~/.local/share/time-warp-studio/
@@ -147,7 +148,7 @@ System-wide                        Per-user
 
 ### 1.6 install.sh full option reference
 
-```
+```text
 Usage: ./install.sh [OPTIONS]
 
 Options:
@@ -173,7 +174,7 @@ Examples:
 ### Minimum
 
 | Item | Requirement |
-|---|---|
+| --- | --- |
 | OS | Linux (Ubuntu 20.04+, Fedora 33+, Arch, or any modern distro) |
 | Python | 3.10 or newer |
 | RAM | 2 GB (4 GB recommended) |
@@ -267,6 +268,7 @@ sudo update-desktop-database /usr/share/applications  # system install
 - **System install**: `/usr/local/bin` should already be on `PATH`.
   Check with `echo $PATH`.
 - **Per-user install**: Add `~/.local/bin` to your PATH:
+
   ```bash
   echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
   source ~/.bashrc
@@ -333,6 +335,7 @@ sudo ./install.sh --uninstall      # removes system install
 ```
 
 This removes:
+
 - The application directory (`/opt/time-warp-studio` or `~/.local/share/time-warp-studio`)
 - The shell launcher
 - The `.desktop` menu entry
@@ -352,7 +355,7 @@ rm -rf ~/.time_warp
 ### Launching
 
 | Method | Command |
-|---|---|
+| --- | --- |
 | Terminal (system or per-user install) | `time-warp-studio` |
 | Desktop menu | Applications ▸ Development ▸ Time Warp Studio |
 | From source tree | `python3 Platforms/Python/time_warp_ide.py` |
@@ -361,7 +364,7 @@ rm -rf ~/.time_warp
 ### Installer commands
 
 | Task | Command |
-|---|---|
+| --- | --- |
 | System install | `sudo ./install.sh` |
 | Per-user install | `./install.sh --user` |
 | System upgrade | `sudo ./install.sh --upgrade` |
@@ -372,7 +375,7 @@ rm -rf ~/.time_warp
 ### File locations after install
 
 | Item | System install | Per-user install |
-|---|---|---|
+| --- | --- | --- |
 | Application | `/opt/time-warp-studio/` | `~/.local/share/time-warp-studio/` |
 | Launcher | `/usr/local/bin/time-warp-studio` | `~/.local/bin/time-warp-studio` |
 | Desktop entry | `/usr/share/applications/time-warp-studio.desktop` | `~/.local/share/applications/time-warp-studio.desktop` |
@@ -395,6 +398,5 @@ python3 test_all_examples.py
 
 *For more information see [USER_GUIDE.md](USER_GUIDE.md),
 [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md), and the guides in [docs/guides/](guides/).*
-
 
 ---

@@ -43,6 +43,7 @@ pip install PySide6 Pillow requests
 ```
 
 This installs:
+
 - **PySide6** - Qt GUI framework
 - **Pillow** - Image processing
 - **requests** - HTTP library
@@ -61,7 +62,7 @@ The IDE window should appear in 2-3 seconds.
 
 When you open Time Warp Studio, you'll see:
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │ File Edit View Help                     │
 ├─────────────────────────────────────────┤
@@ -105,7 +106,8 @@ PRINT "Hello, World!"
 Press **Ctrl+R** or click the **Run** button in the toolbar.
 
 You should see:
-```
+
+```text
 🚀 Running code...
 Hello, World!
 ✅ Execution complete
@@ -127,6 +129,7 @@ PRINT "Hello, "; NAME$; "!"
 ```
 
 When you run this:
+
 1. The IDE will prompt for your name
 2. Type your name and press Enter
 3. See a personalized greeting
@@ -154,23 +157,27 @@ This draws a square! The turtle graphics display appears in the right panel.
 ## Menu Overview
 
 ### File Menu
+
 - **New** - Create new program
 - **Open** - Load an existing program
 - **Save** - Save current program
 - **Exit** - Close IDE
 
 ### Edit Menu
+
 - **Undo/Redo** - Reverse recent changes
 - **Cut/Copy/Paste** - Edit text
 - **Find & Replace** - Search code
 
 ### View Menu
+
 - **Show/Hide Output** - Toggle output panel
 - **Show/Hide Turtle** - Toggle graphics
 - **Themes** - Change color scheme
 - **Zoom** - Adjust text size
 
 ### Help Menu
+
 - **About** - Version information
 - **User Manual** - Open this guide
 - **Keyboard Shortcuts** - See all shortcuts
@@ -182,7 +189,7 @@ This draws a square! The turtle graphics display appears in the right panel.
 Most useful shortcuts:
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | **Ctrl+R** | Run program |
 | **Ctrl+S** | Save program |
 | **Ctrl+O** | Open program |
@@ -199,7 +206,9 @@ See Help menu for complete list.
 ## What to Try Next
 
 ### Learn a Language
+
 Pick a language and explore:
+
 - [BASIC Tutorial](../tutorials/basic.md) — start here for beginners
 - [Logo Tutorial](../tutorials/logo.md) — turtle graphics
 - [Python Tutorial](../tutorials/python.md) — multi-paradigm scripting
@@ -207,12 +216,15 @@ Pick a language and explore:
 - [View all 9 active language tutorials →](../LANGUAGE_GUIDE.md)
 
 ### Run Examples
+
 Browse `Examples/` directory for sample programs in all languages.
 
 ### Explore Graphics
+
 Try turtle graphics commands in the [Turtle Graphics Guide](04-turtle-graphics.md).
 
 ### Customize
+
 Change themes and settings in [Settings Guide](06-settings.md).
 
 ---
@@ -222,24 +234,29 @@ Change themes and settings in [Settings Guide](06-settings.md).
 ### IDE Won't Start
 
 **Error: "Illegal instruction"**
+
 - Your CPU doesn't support required features
 - Try running on a newer computer or cloud VM
 
 **Error: "No module named PySide6"**
+
 - Dependencies not installed
 - Run: `pip install PySide6 Pillow requests`
 
 **Window appears but is blank**
+
 - Click in the window or wait 5 seconds
 - Check your graphics drivers
 
 ### Program Won't Run
 
 **SyntaxError message**
+
 - Check the error line number shown in output
 - Review syntax for that language
 
 **Program runs but no output**
+
 - Some programs expect input (look for prompt)
 - Check if output is redirected to graphics panel
 

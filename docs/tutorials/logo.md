@@ -31,6 +31,7 @@ FORWARD 100
 This draws two perpendicular lines forming an L shape.
 
 **Understanding:**
+
 - `FORWARD 100` - Move turtle forward 100 pixels
 - `RIGHT 90` - Turn turtle right 90 degrees
 - Turtle has a pen that draws as it moves
@@ -68,7 +69,7 @@ Same result, much cleaner code! `REPEAT n [ ... ]` runs the commands inside the 
 ### Movement
 
 | Command | Effect |
-|---------|--------|
+| --------- | -------- |
 | `FORWARD n` | Move turtle forward n pixels |
 | `BACKWARD n` | Move turtle backward n pixels |
 | `FD n` | Short for FORWARD |
@@ -77,7 +78,7 @@ Same result, much cleaner code! `REPEAT n [ ... ]` runs the commands inside the 
 ### Turning
 
 | Command | Effect |
-|---------|--------|
+| --------- | -------- |
 | `RIGHT n` | Turn right n degrees |
 | `LEFT n` | Turn left n degrees |
 | `RT n` | Short for RIGHT |
@@ -86,7 +87,7 @@ Same result, much cleaner code! `REPEAT n [ ... ]` runs the commands inside the 
 ### Pen Control
 
 | Command | Effect |
-|---------|--------|
+| --------- | -------- |
 | `PENUP` | Lift pen (stop drawing) |
 | `PENDOWN` | Lower pen (start drawing) |
 | `PU` | Short for PENUP |
@@ -408,15 +409,18 @@ REPEAT 2 [
 ## Debugging Graphics
 
 **Drawing in wrong place?**
+
 - Use HOME to reset turtle to center
 - Check SETX and SETY values
 
 **Wrong colors?**
+
 - Use color names (`"red`), hex (`"#FF0000`), or RGB lists (`[255 0 0]`)
 - Numeric codes such as `SETPENCOLOR 1` do not change the color
 - Use different colors for different shapes
 
 **Unexpected patterns?**
+
 - Check loop counts
 - Verify angle calculations
 - Use PENUP to see what's happening

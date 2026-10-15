@@ -16,6 +16,7 @@ int main() {
 ```
 
 Run this:
+
 1. Select "C" from the language dropdown
 2. Paste the code
 3. Click Run (Ctrl+R)
@@ -86,6 +87,7 @@ int main() {
 ```
 
 **Format Specifiers:**
+
 - `%d` - integer
 - `%f` - float/double
 - `%.2f` - float with 2 decimal places

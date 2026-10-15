@@ -47,7 +47,7 @@ When you launch Time Warp Studio:
 
 The IDE window is divided into sections:
 
-```
+```text
 ┌─────────────────────────────────────────────────┐
 │ File Edit Run Debug View Tools Help             │  Menu Bar
 ├─────────────────────────────────────────────────┤
@@ -77,22 +77,26 @@ The IDE window is divided into sections:
 ### Main Areas
 
 **Code Editor** (Top-Left)
+
 - Write your program
 - Syntax highlighting per language
 - Line numbers
 - Find/Replace support
 
 **Output Console** (Bottom-Left)
+
 - Program output displayed here
 - Error messages highlighted
 - Selectable and copyable text
 
 **Graphics Canvas** (Right)
+
 - Turtle graphics rendering
 - Zoom and pan controls
 - Real-time updates during execution
 
 **Panel Tabs** (Bottom-Right)
+
 - Debug (controls, call stack, timeline)
 - Variables Inspector
 - Lessons and Document Outline open as docks
@@ -103,7 +107,7 @@ The IDE window is divided into sections:
 
 ### Creating a New File
 
-```
+```text
 File → New [Ctrl+N]
 ```
 
@@ -111,7 +115,7 @@ Creates empty file with default language (BASIC).
 
 ### Opening an Existing File
 
-```
+```text
 File → Open [F3 / Ctrl+O]
 ```
 
@@ -119,15 +123,15 @@ File browser opens. Select any supported source file (`.bas`, `.pilot`, `.logo`,
 
 ### Saving Your Work
 
-```
+```text
 File → Save [F2 / Ctrl+S]
 ```
 
 Saves to current file. If new file, prompts for name.
 
-### Save As...
+### Save As
 
-```
+```text
 File → Save As [Shift+F2 / Ctrl+Shift+S]
 ```
 
@@ -135,7 +139,7 @@ Save with new filename or in different location.
 
 ### Recent Files
 
-```
+```text
 File → Recent Files
 ```
 
@@ -150,12 +154,13 @@ Programs can be written in **9 active languages**:
 ### Auto-Detection
 
 IDE automatically detects language based on:
+
 - **File extension**: `.bas` → BASIC, `.py` → Python, `.logo` → Logo, etc.
 - **Explicit dropdown**: Select language from the toolbar
 
 ### Manual Selection
 
-```
+```text
 View → Language Picker [Ctrl+Shift+L]
 ```
 
@@ -164,7 +169,7 @@ Dropdown also available in top toolbar.
 ### Supported Languages
 
 | Language | Extension | Paradigm | Era |
-|----------|-----------|----------|-----|
+| ---------- | ----------- | ---------- | ----- |
 | **BASIC** | .bas | Imperative / Educational | 1964 |
 | **Logo** | .logo | Turtle Graphics / Educational | 1967 |
 | **PILOT** | .pilot | Computer-Aided Instruction | 1969 |
@@ -182,24 +187,28 @@ Dropdown also available in top toolbar.
 ### Editor Features
 
 **Syntax Highlighting**
+
 - Keywords, strings, comments, and numbers are colored per language
 - Token colors follow the active theme (View → Theme)
 
 **Line Numbers**
+
 - Shows line number on left
 - Useful for debugging (breakpoints link to line numbers)
 
 **Code Folding**
+
 - Collapse/expand procedures and blocks
 - Click the fold area in the left margin, or use Ctrl+Shift+[ to fold and Ctrl+Shift+] to unfold the current block
 
 **Auto-Indentation**
+
 - Automatic indentation on new line
 - Tab width is fixed at 4 spaces
 
 **Find and Replace**
 
-```
+```text
 Edit → Find [Ctrl+F]
 Edit → Replace [Ctrl+H]
 ```
@@ -210,13 +219,13 @@ Use Ctrl+G to go to specific line number.
 
 Insert ready-made code snippets via:
 
-```
+```text
 Edit → Insert Snippet [Ctrl+Shift+I]
 ```
 
 Or copy from Examples:
 
-```
+```text
 Help → Browse Examples [Shift+F3]
 ```
 
@@ -228,7 +237,7 @@ Browse 81 working examples.
 
 ### Execute Code
 
-```
+```text
 Run → Run Program [F9 / Ctrl+R]
 ```
 
@@ -236,7 +245,7 @@ Executes the program in the current editor.
 
 ### Stop Execution
 
-```
+```text
 Run → Reset Program [Ctrl+F2]
 ```
 
@@ -244,7 +253,7 @@ Stops currently running program (if infinite loop or slow).
 
 ### Clear Output
 
-```
+```text
 Run → Clear Output
 ```
 
@@ -265,32 +274,38 @@ Clears the output console. Use Run → Clear Canvas to clear graphics.
 The Output Console displays:
 
 **Program Output**
+
 - Text from PRINT statements
 - Numbers and strings
 - Results of operations
 
 **Error Messages**
+
 - Syntax errors with line number
 - Runtime errors with description
 - Suggestions for fixes
 
 **Graphics Output**
+
 - Turtle graphics status
 - Canvas updates
 
 ### Console Features
 
 **Scrolling**
+
 - Auto-scrolls to show latest output
 - Manual scroll with mouse wheel
 - Keyboard scroll with Page Up/Down
 
 **Selection & Copying**
+
 - Click and drag to select text
 - Ctrl+C to copy selected text
 - Right-click context menu
 
 **Clearing**
+
 - Run → Clear Output clears the console
 - Run → Clear Canvas clears graphics
 - Or start a new program
@@ -304,10 +319,12 @@ The Canvas displays turtle graphics output in real-time.
 ### Turtle Graphics
 
 **Turtle Position**
+
 - Small triangle shows turtle
 - Angle: 0°=East, 90°=North, etc.
 
 **Drawing**
+
 - Pen can be up (not drawing) or down (drawing)
 - Pen color and width configurable
 - All lines saved and displayed
@@ -315,14 +332,17 @@ The Canvas displays turtle graphics output in real-time.
 ### Canvas Controls
 
 **Zoom**
+
 - Scroll wheel to zoom in/out
 - Range: 0.05x to 24x magnification
 
 **Pan**
+
 - Click and drag to pan
 - Use the Reset View (⊙) button to restore the default zoom and pan
 
 **Grid** (Optional)
+
 - Canvas ⋯ button toggles the coordinate grid
 - Shows coordinate grid
 - Helpful for positioning
@@ -330,9 +350,11 @@ The Canvas displays turtle graphics output in real-time.
 ### Canvas Features
 
 **Real-Time Updates**
+
 - Graphics update as program runs
 
 **Reset Canvas**
+
 - Run → Clear Canvas clears graphics
 - Each new Run clears automatically
 - Or Logo HOME command resets turtle
@@ -346,24 +368,29 @@ Panels open as tabs on the right or as dock widgets.
 ### Key Panels
 
 **Lessons** (Help → Lessons, Ctrl+F3)
+
 - 18 built-in lessons, 2 per language
 - Checkpoints with hints and automatic verification
 - Progress saved between sessions
 
 **Debugger** (🐛 Debug tab)
+
 - Step through execution
 - Set breakpoints
 - View call stack and execution timeline
 
 **Variables Inspector**
+
 - See current variable values
 - Watch variables change
 - Update during debugging
 
 **Document Outline** (F4)
+
 - Jump to procedures, functions, and labels
 
 **Examples Browser** (Shift+F3)
+
 - Browse 81 working programs
 - Copy and modify examples
 - Learn from code
@@ -375,6 +402,7 @@ Panels open as tabs on the right or as dock widgets.
 Time Warp Studio uses a Borland Turbo-style keymap. Press **Shift+F1** in the IDE for the full live list, or see [KEYBOARD_SHORTCUTS.md](KEYBOARD_SHORTCUTS.md).
 
 ### File Operations
+
 - `Ctrl+N` - New file
 - `F3` / `Ctrl+O` - Open file
 - `F2` / `Ctrl+S` - Save
@@ -383,6 +411,7 @@ Time Warp Studio uses a Borland Turbo-style keymap. Press **Shift+F1** in the ID
 - `Alt+X` / `Ctrl+Q` - Exit
 
 ### Editing
+
 - `Ctrl+Z` - Undo
 - `Ctrl+Y` - Redo
 - `Ctrl+X` - Cut
@@ -394,11 +423,13 @@ Time Warp Studio uses a Borland Turbo-style keymap. Press **Shift+F1** in the ID
 - `Ctrl+G` - Go to Line
 
 ### Execution
+
 - `F9` / `Ctrl+R` - Run program
 - `Ctrl+F2` - Reset (stop) program
 - `Shift+F9` / `Ctrl+Shift+R` - Run selection
 
 ### Debugging
+
 - `Ctrl+F9` - Start debugging / Continue
 - `F7` - Trace Into
 - `F8` - Step Over
@@ -406,12 +437,14 @@ Time Warp Studio uses a Borland Turbo-style keymap. Press **Shift+F1** in the ID
 - `Ctrl+F8` - Toggle Breakpoint
 
 ### View
+
 - `Ctrl+Plus` - Increase editor font
 - `Ctrl+Minus` - Decrease editor font
 - `F5` - Zoom (focus mode)
 - `F10` / `Ctrl+Shift+P` - Command Palette
 
 ### Navigation
+
 - `Page Up` - Scroll up
 - `Page Down` - Scroll down
 - `Home` - Go to start of line
@@ -425,7 +458,7 @@ Time Warp Studio uses a Borland Turbo-style keymap. Press **Shift+F1** in the ID
 
 ### Selecting a Theme
 
-```
+```text
 View → Theme → [Select theme]
 ```
 
@@ -563,6 +596,7 @@ Your theme choice is saved automatically (Qt QSettings) and restored on next lau
 ---
 
 **For language-specific help, see:**
+
 - [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Syntax for all 9 languages
 - [DEBUGGER_GUIDE.md](DEBUGGER_GUIDE.md) - Using the debugger
 - [Turtle Graphics](guides/04-turtle-graphics.md) - Graphics programming

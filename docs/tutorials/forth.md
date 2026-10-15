@@ -24,7 +24,7 @@ Everything in Forth revolves around a **data stack**. Numbers are pushed onto th
 ## Stack Manipulation
 
 | Word | Effect | Description |
-|------|--------|-------------|
+| ------ | -------- | ------------- |
 | `DUP` | ( n -- n n ) | Duplicate top |
 | `DROP` | ( n -- ) | Discard top |
 | `SWAP` | ( a b -- b a ) | Swap top two |

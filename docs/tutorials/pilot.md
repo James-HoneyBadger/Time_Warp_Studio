@@ -55,7 +55,7 @@ A:$AGE
 T: You are $AGE years old.
 ```
 
-The answer is stored in variable AGE. A plain `A: text` shows the text as the prompt and stores the answer in `ANSWER$`. `A:$AGE` shows `? ` as its prompt, so ask the question with a `T:` line first.
+The answer is stored in variable AGE. A plain `A: text` shows the text as the prompt and stores the answer in `ANSWER$`. `A:$AGE` shows `?` as its prompt, so ask the question with a `T:` line first.
 
 ### Variables
 
@@ -109,7 +109,7 @@ J: START
 T: Goodbye!
 ```
 
-### Subroutines: U: and E:
+### Subroutines: U: and E
 
 `U:*LABEL` calls a subroutine. `E:` returns from a subroutine. Outside a subroutine, `E:` ends the program:
 
@@ -231,6 +231,7 @@ E:
 1. **Variable Names**: Use meaningful names (NAME for a name, AGE for an age)
 
 2. **User-Friendly**: Always provide clear prompts:
+
    ```pilot
    A: Enter your answer:
    T: You answered: $ANSWER
@@ -239,6 +240,7 @@ E:
 3. **Input Validation**: Loop back with `JN:` until the answer matches (see Looping Until Valid Input below).
 
 4. **Comments**: Use `R:` (remark) for comments. Lines starting with `REM` are also ignored:
+
    ```pilot
    R: This section handles the greeting
    *GREETING
@@ -294,15 +296,19 @@ Each `M:` replaces the result of the previous match.
 ## Troubleshooting
 
 **Issue**: "Label not found" error
+
 - **Solution**: Check that labels are spelled correctly and defined on their own line with a leading `*`: `*LABEL`
 
 **Issue**: Infinite loop
+
 - **Solution**: Make sure your jumps eventually reach a break point or end
 
 **Issue**: Variables not retaining values
+
 - **Solution**: Check that the variable name is spelled the same in `A:`/`C:` and in `$NAME`. Names are not case-sensitive.
 
 **Issue**: Input not being stored
+
 - **Solution**: Use `A:$NAME` to store the answer in a named variable. A plain `A:` stores it in `ANSWER$`, so read it with `$ANSWER`.
 
 ## Advanced Techniques

@@ -5,7 +5,7 @@ The authoritative reference is [KEYBOARD_SHORTCUTS.md](../KEYBOARD_SHORTCUTS.md)
 ## File Operations
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | **Ctrl+N** | New file |
 | **Ctrl+O** | Open file |
 | **Ctrl+S** | Save file |
@@ -18,7 +18,7 @@ The authoritative reference is [KEYBOARD_SHORTCUTS.md](../KEYBOARD_SHORTCUTS.md)
 ## Editing
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | **Ctrl+Z** | Undo |
 | **Ctrl+Y** | Redo |
 | **Ctrl+X** | Cut |
@@ -34,7 +34,7 @@ The authoritative reference is [KEYBOARD_SHORTCUTS.md](../KEYBOARD_SHORTCUTS.md)
 ## Editor
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | **Tab** | Indent line |
 | **Shift+Tab** | Unindent line |
 | **Ctrl+/** | Toggle line comment |
@@ -46,7 +46,7 @@ The authoritative reference is [KEYBOARD_SHORTCUTS.md](../KEYBOARD_SHORTCUTS.md)
 ## Selection and Navigation
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | **Shift+Home** | Select to start of line |
 | **Shift+End** | Select to end of line |
 | **Shift+Ctrl+Home** | Select to start of file |
@@ -63,7 +63,7 @@ The authoritative reference is [KEYBOARD_SHORTCUTS.md](../KEYBOARD_SHORTCUTS.md)
 ## Program Execution
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | **F9** / **Ctrl+R** | Run program |
 | **Shift+F9** / **Ctrl+Shift+R** | Run selection |
 | **Ctrl+Alt+R** | Run both split panes (polyglot benchmark) |
@@ -76,7 +76,7 @@ The authoritative reference is [KEYBOARD_SHORTCUTS.md](../KEYBOARD_SHORTCUTS.md)
 ## IDE Navigation
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | **F10** / **Ctrl+Shift+P** | Command palette |
 | **Ctrl+Shift+L** | Language picker |
 | **F1** | Context help for the current language |
@@ -85,7 +85,7 @@ The authoritative reference is [KEYBOARD_SHORTCUTS.md](../KEYBOARD_SHORTCUTS.md)
 ## View and Display
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | **F5** | Zoom (focus mode) |
 | **F6** | Next pane |
 | **Ctrl+\** | Split editor right |
@@ -104,7 +104,7 @@ Use **Ctrl+Shift+L** (Language picker) to change the active language. There are 
 ## Help and Documentation
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | **Ctrl+F1** | Keyword inspector |
 | **Ctrl+F3** / **Ctrl+Alt+L** | Lessons |
 | **Shift+F3** | Browse examples |
@@ -113,13 +113,13 @@ Use **Ctrl+Shift+L** (Language picker) to change the active language. There are 
 ## Snippets
 
 | Shortcut | Action |
-|----------|--------|
+| ---------- | -------- |
 | **Ctrl+Shift+I** | Insert snippet |
 
 ## Canvas (Turtle Graphics)
 
 | Action | Description |
-|--------|-------------|
+| -------- | ------------- |
 | Scroll wheel | Zoom in / out |
 | Click and drag | Pan the canvas |
 | Save button | Save canvas as PNG |
@@ -171,11 +171,13 @@ Shortcuts cannot be customized in this build. The **Keyboard Shortcuts** dialog 
 ## Troubleshooting Shortcuts
 
 **Problem:** Shortcut not working
+
 - **Solution:** Check the menu; each menu item shows its active binding.
 - **Solution:** Another application or the desktop may capture the combination.
 - **Solution:** Use the **FN** badge on the Function-Key Bar to switch layers manually.
 
 **Problem:** Need a different binding
+
 - **Solution:** Bindings cannot be changed in this build.
 
 ## Tips for Efficiency
@@ -192,6 +194,7 @@ Shortcuts cannot be customized in this build. The **Keyboard Shortcuts** dialog 
 ## Cheat Sheet Quick Reference
 
 **Essential 5:**
+
 - Ctrl+S - Save
 - Ctrl+R - Run
 - Ctrl+Z - Undo
@@ -199,6 +202,7 @@ Shortcuts cannot be customized in this build. The **Keyboard Shortcuts** dialog 
 - Ctrl+C/V - Copy/Paste
 
 **Debugging 5:**
+
 - Ctrl+F8 - Toggle breakpoint
 - Ctrl+F9 - Start / continue
 - F7 / F8 - Trace into / step over
@@ -206,6 +210,7 @@ Shortcuts cannot be customized in this build. The **Keyboard Shortcuts** dialog 
 - Ctrl+F2 - Stop
 
 **Pro Tips:**
+
 - F1 - Context help
 - Ctrl+? - See all shortcuts
 - Ctrl+Shift+L - Language picker

@@ -21,7 +21,7 @@ Time Warp Studio includes a powerful debugger with:
 
 ### Method 1: Start Debugging
 
-```
+```text
 Debug → Start / Continue Debugging [Ctrl+F9]
 ```
 
@@ -39,7 +39,7 @@ Set a breakpoint (Ctrl+F8), then start debugging with Ctrl+F9. Execution stops a
 
 In editor, click the left margin to set/remove a breakpoint, or:
 
-```
+```text
 Ctrl+F8          on the current line
 Ctrl+Shift+F8    clear all breakpoints
 ```
@@ -70,7 +70,7 @@ Click the left margin on line 40 to set a breakpoint there.
 
 Both advance one step while the program is paused. A step covers one line or one statement, depending on the **Step** selector in the Debug toolbar. Currently the two commands perform the same action.
 
-```
+```text
 Debug → Trace Into [F7]
 Debug → Step Over [F8]
 ```
@@ -79,7 +79,7 @@ Debug → Step Over [F8]
 
 Currently resumes execution until the next breakpoint or the end of the program, the same as Continue. It does not stop when the current procedure returns.
 
-```
+```text
 Debug → Step Out [Shift+F8]
 ```
 
@@ -87,11 +87,12 @@ Debug → Step Out [Shift+F8]
 
 Resume execution until next breakpoint or program completion.
 
-```
+```text
 Debug → Start / Continue Debugging [Ctrl+F9]
 ```
 
 Use when:
+
 - Running past current section
 - Jumping to next breakpoint
 
@@ -99,7 +100,7 @@ Use when:
 
 While program is running:
 
-```
+```text
 Debug → Pause [Ctrl+F7]
 ```
 
@@ -107,7 +108,7 @@ Pauses execution mid-run so you can inspect state.
 
 ### Stop (Ctrl+F2)
 
-```
+```text
 Run → Reset Program [Ctrl+F2]
 ```
 
@@ -145,7 +146,7 @@ The **🐛 Debug** tab contains a **🧭 Timeline** list. Each entry is a record
 
 The **📚 Call Stack** section of the **🐛 Debug** tab lists active calls, newest first, as `#N: NAME (Line N)`.
 
-```
+```text
 #0: HELPER (Line 22)
 #1: CALCULATE (Line 15)
 ```
@@ -173,6 +174,7 @@ WEND
 ```
 
 To debug:
+
 1. Start debugging with a breakpoint on the loop line
 2. Use F8 to step past loop once
 3. Set breakpoint AFTER loop
@@ -198,6 +200,7 @@ GRID(5, 5) = 42
 ```
 
 To inspect array:
+
 1. Set breakpoint after array assignment
 2. Start debugging (Ctrl+F9), stops at breakpoint
 3. View Variables Inspector
@@ -229,7 +232,8 @@ Create and debug this program:
    - Line 60 (second FOR loop)
 
 2. **Start debugging**:
-   ```
+
+   ```text
    Debug → Start / Continue Debugging (Ctrl+F9)
    ```
 
@@ -237,7 +241,8 @@ Create and debug this program:
    - Press F8 to step one line at a time and watch NUMBERS fill in the Variables tab.
 
 4. **Continue to breakpoint 2**:
-   ```
+
+   ```text
    Ctrl+F9 (Continue)
    ```
 
@@ -245,16 +250,20 @@ Create and debug this program:
    - NUMBERS and SUM appear in the Variables tab
 
 6. **Step through sum loop**:
-   ```
+
+   ```text
    F8 (Step Over)
    ```
+
    - Watch SUM increase each step
    - Verify calculation is correct
 
 7. **View Timeline**:
-   ```
+
+   ```text
    🐛 Debug tab → 🧭 Timeline
    ```
+
    - Scroll through execution history
    - Confirm correct sequence
 
@@ -280,26 +289,31 @@ Timeline frames are recorded while the program runs. Long programs produce long 
 ## Tips for Effective Debugging
 
 ### Tip 1: Use Breakpoints Strategically
+
 - Set before problematic area
 - Don't set in fast loops (too many stops)
 - Use Continue (Ctrl+F9) to jump between breakpoints
 
 ### Tip 2: Inspect Variables Early
+
 - Set breakpoint at variable init
 - Watch first few steps carefully
 - Catch issues early
 
 ### Tip 3: Use Timeline for Complex Logic
+
 - Run entire program once
 - Review timeline after
 - See all state changes
 - Identify divergence from expected
 
 ### Tip 4: Skip Ahead With Breakpoints
+
 - Trace Into (F7) and Step Over (F8) currently do the same thing
 - Use Continue (Ctrl+F9) with breakpoints to skip to the next point of interest
 
 ### Tip 5: Watch Stack Trace
+
 - Helps understand procedure flow
 - Confirms recursive calls
 - Shows where you are in execution
@@ -307,6 +321,7 @@ Timeline frames are recorded while the program runs. Long programs produce long 
 ---
 
 **For more information:**
+
 - [USER_GUIDE.md](USER_GUIDE.md) - General IDE usage
 - [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Language syntax
 - [FAQ](FAQ.md) - Common questions

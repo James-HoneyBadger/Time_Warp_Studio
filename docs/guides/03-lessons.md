@@ -29,7 +29,7 @@ The Lesson System provides structured programming education with:
 
 The lesson panel shows:
 
-```
+```text
 ┌─────────────────────────────────┐
 │ Lesson: BASIC Fundamentals      │
 ├─────────────────────────────────┤
@@ -54,23 +54,27 @@ The lesson panel shows:
 ### BASIC Lessons
 
 **Fundamentals** (Beginner)
+
 - Variables and assignment
 - Basic arithmetic
 - Input and output
 - String operations
 
 **Control Flow** (Beginner)
+
 - Conditional statements (IF/THEN)
 - Loops (FOR, WHILE)
 - Comparison operators
 
 **Procedures** (Intermediate)
+
 - Function definition
 - Parameters and return values
 - Scope and variables
 - Recursion basics
 
 **Advanced** (Intermediate)
+
 - Arrays and lists
 - Working with strings
 - File operations
@@ -79,18 +83,21 @@ The lesson panel shows:
 ### Logo Lessons
 
 **Turtle Basics** (Beginner)
+
 - Drawing simple shapes
 - Movement commands
 - Turning and angles
 - Pen control
 
 **Procedures** (Intermediate)
+
 - Defining procedures with parameters
 - Recursive graphics
 - Using variables in procedures
 - Code organization
 
 **Graphics** (Intermediate)
+
 - Color and styling
 - Complex patterns
 - Mathematical designs
@@ -99,12 +106,14 @@ The lesson panel shows:
 ### PILOT Lessons
 
 **Interactive Teaching** (Beginner)
+
 - Program structure
 - Output and input
 - Branching logic
 - Interactive elements
 
 **Advanced** (Intermediate)
+
 - Complex matching
 - Nested conditionals
 - Full programs
@@ -126,7 +135,8 @@ The lesson panel shows:
 Each checkpoint starts with a clear learning objective explaining what you need to accomplish.
 
 **Example:**
-```
+
+```text
 Objective: Write a program that asks for your name and greets you.
 Expected output: "Hello, [name]!"
 Language: BASIC
@@ -153,6 +163,7 @@ PRINT "Hello, " + NAME$ + "!"
 Click **Verify** button or press **Enter** in the lesson panel.
 
 The system will:
+
 - Run your code
 - Capture the output
 - Compare with expected output
@@ -170,6 +181,7 @@ If you're stuck:
 ### Step 6: Move Forward
 
 Once verified successfully:
+
 - Click **Next Checkpoint** or press **N**
 - Move to the next learning objective
 - Track your progress
@@ -190,14 +202,16 @@ When you click **Verify**, Time Warp Studio:
 ### Understanding Results
 
 **✅ Correct**
-```
+
+```text
 Your output matches the expected result.
 Checkpoint completed!
 Progress: 4 of 5
 ```
 
 **❌ Incorrect**
-```
+
+```text
 Your output:
 Hello, Alice
 
@@ -208,7 +222,8 @@ Hint: Check for punctuation in the greeting.
 ```
 
 **⚠️ Runtime Error**
-```
+
+```text
 Error on line 3: Undefined variable 'NAME'
 Make sure to use INPUT before printing.
 ```
@@ -222,34 +237,40 @@ Make sure to use INPUT before printing.
 Each checkpoint has multiple hint levels:
 
 **Level 1: Concept Hint**
+
 - General guidance about the topic
 - No code directly given
 - Encourages thinking
 
 **Example:**
-```
+
+```text
 Hint 1: Remember that you need to get input from the user
 before you can use that value in your program.
 ```
 
 **Level 2: Strategy Hint**
+
 - More specific guidance
 - Suggests approach
 - May show syntax patterns
 
 **Example:**
-```
+
+```text
 Hint 2: Use INPUT statement to get user input.
 Try: INPUT variable_name
 ```
 
 **Level 3: Code Example**
+
 - Shows similar code
 - Not the exact solution
 - Gives you the pattern to follow
 
 **Example:**
-```
+
+```text
 Hint 3: Here's a pattern:
 INPUT X$
 PRINT "You entered: " + X$
@@ -269,7 +290,8 @@ PRINT "You entered: " + X$
 ### Progress Display
 
 The lesson panel shows:
-```
+
+```text
 Lesson: BASIC Fundamentals
 Progress: 3 of 5 checkpoints completed
 Last worked: 2 hours ago
@@ -280,6 +302,7 @@ Estimated time: 45 minutes
 ### Progress Tracking
 
 Your progress is automatically saved:
+
 - Which lessons started
 - Which checkpoints completed
 - Hints used per checkpoint
@@ -289,6 +312,7 @@ Your progress is automatically saved:
 ### Viewing Statistics
 
 Go to **File → Settings → Learning Statistics** to see:
+
 - Lessons completed
 - Total programming time
 - Topics mastered
@@ -301,16 +325,19 @@ Go to **File → Settings → Learning Statistics** to see:
 ### By Difficulty
 
 **🟢 Beginner** (1-2 stars)
+
 - Learn basic concepts
 - Simple, guided examples
 - ~30-45 min per lesson
 
 **🟡 Intermediate** (2-3 stars)
+
 - Build real projects
 - More independent work
 - ~1-2 hours per lesson
 
 **🔴 Advanced** (3+ stars)
+
 - Complex problems
 - Minimal guidance
 - 2-4+ hours per lesson
@@ -320,6 +347,7 @@ Go to **File → Settings → Learning Statistics** to see:
 Each of the 9 active languages has lessons:
 
 **Classic Languages:**
+
 - BASIC (10+ lessons)
 - Logo (8+ lessons)
 - PILOT (6+ lessons)
@@ -329,14 +357,17 @@ Each of the 9 active languages has lessons:
 - Forth (4+ lessons)
 
 **Modern:**
+
 - Python (5+ lessons)
 
 **Esoteric:**
+
 - Brainfuck (3+ lessons)
 
 ### By Topic
 
 Organized thematically:
+
 - Fundamentals
 - Control Flow
 - Data Structures
@@ -379,6 +410,7 @@ Organized thematically:
 Lesson progress and checkpoint status are saved automatically between sessions. Hints are available for each checkpoint, and the number of hints used is tracked.
 
 The lesson system has no separate preferences dialog.
+
 - Skipped checkpoints remain available
 
 ---
@@ -388,6 +420,7 @@ The lesson system has no separate preferences dialog.
 ### As a Student
 
 ✅ **Do:**
+
 - Start with fundamentals
 - Complete lessons sequentially
 - Use hints only when stuck
@@ -395,6 +428,7 @@ The lesson system has no separate preferences dialog.
 - Experiment with variations
 
 ❌ **Don't:**
+
 - Skip ahead without understanding
 - Copy hint code directly
 - Rush through checkpoints
@@ -404,6 +438,7 @@ The lesson system has no separate preferences dialog.
 ### As an Educator
 
 ✅ **Do:**
+
 - Assign appropriate lessons by level
 - Set checkpoints progressively
 - Provide context before lessons
@@ -411,6 +446,7 @@ The lesson system has no separate preferences dialog.
 - Offer additional resources
 
 ❌ **Don't:**
+
 - Force all students through same path
 - Skip prerequisites
 - Demand perfection
@@ -426,13 +462,15 @@ The lesson system has no separate preferences dialog.
 **Issue:** Your code runs but output doesn't match exactly.
 
 **Solutions:**
+
 1. Check for trailing spaces or extra lines
 2. Verify capitalization matches
 3. Ensure correct punctuation
 4. Look for number format differences
 
 **Example:**
-```
+
+```text
 Your output: "Hello, Alice !" (extra space)
 Expected:   "Hello, Alice!" (no space)
 ```
@@ -442,6 +480,7 @@ Expected:   "Hello, Alice!" (no space)
 **Issue:** Your code has syntax that works but is non-standard.
 
 **Solution:**
+
 - Check the hint for correct syntax
 - Some variations may not be recognized
 - Use exact command forms from documentation
@@ -451,6 +490,7 @@ Expected:   "Hello, Alice!" (no space)
 **Issue:** Progress not saved from previous session.
 
 **Solution:**
+
 1. Progress is auto-saved to `~/.time_warp/progress.json`
 2. Check if file was recently modified
 3. Verify write permissions on home directory
@@ -461,6 +501,7 @@ Expected:   "Hello, Alice!" (no space)
 **Issue:** Expected lesson not visible in catalog.
 
 **Solutions:**
+
 1. Check filter settings (language, difficulty)
 2. Some lessons appear only when prerequisites met
 3. Use search function (Ctrl+F)

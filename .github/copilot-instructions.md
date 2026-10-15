@@ -149,7 +149,7 @@ result = evaluator.evaluate("2 + 3 * X")  # Returns 17
 
 ## File Structure at a Glance
 
-```
+```text
 Platforms/Python/
   time_warp_ide.py          - Primary entry point (PySide6)
   time_warp/

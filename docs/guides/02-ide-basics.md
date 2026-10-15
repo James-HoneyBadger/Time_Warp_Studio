@@ -6,7 +6,7 @@ Learn your way around the Time Warp Studio interface.
 
 ## The Main Window
 
-```
+```text
 ┌─────────────────────────────────────────────────────────┐
 │ File  Edit  Run  Debug  View  Tools  Help      [_ □ ×] │
 ├──────────────────────────────────────────────────────────┤
@@ -35,6 +35,7 @@ The bottom **Function-Key Bar** shows the Borland Turbo-style F-key bindings. Ho
 ### 1. Menu Bar
 
 **File Menu**
+
 - New program (Ctrl+N)
 - Open existing program (F3 / Ctrl+O)
 - Save program (F2 / Ctrl+S)
@@ -43,6 +44,7 @@ The bottom **Function-Key Bar** shows the Borland Turbo-style F-key bindings. Ho
 - Exit IDE (Alt+X / Ctrl+Q)
 
 **Edit Menu**
+
 - Undo/Redo (Ctrl+Z / Ctrl+Y)
 - Cut/Copy/Paste (Ctrl+X / Ctrl+C / Ctrl+V)
 - Find (Ctrl+F)
@@ -51,26 +53,31 @@ The bottom **Function-Key Bar** shows the Borland Turbo-style F-key bindings. Ho
 - Go to Line (Ctrl+G)
 
 **Run Menu**
+
 - Run Program (F9 / Ctrl+R)
 - Reset Program (Ctrl+F2)
 - Run Selection (Shift+F9 / Ctrl+Shift+R)
 - Clear Output / Clear Canvas
 
 **Debug Menu**
+
 - Start / Continue Debugging (Ctrl+F9)
 - Trace Into (F7), Step Over (F8), Step Out (Shift+F8)
 - Toggle Breakpoint (Ctrl+F8)
 
 **View Menu**
+
 - Themes (Dracula, Monokai, Solarized, etc.)
 - Font family and size
 - Zoom In/Out (Ctrl++ / Ctrl+-)
 - Split editor, focus mode, command palette (F10)
 
 **Tools Menu**
+
 - Compare Languages
 
 **Help Menu**
+
 - User Manual
 - Context Help (F1)
 - Lessons (Ctrl+F3)
@@ -84,13 +91,14 @@ The bottom **Function-Key Bar** shows the Borland Turbo-style F-key bindings. Ho
 The toolbar contains quick-access tools:
 
 | Button | Function | Shortcut |
-|--------|----------|----------|
+| -------- | ---------- | ---------- |
 | Language dropdown | Select programming language | - |
 | Run | Execute current program | F9 / Ctrl+R |
 | Stop | Halt execution | Ctrl+F2 |
 | Clear | Clear output panel | - |
 
 **Language Options (9 total):**
+
 - BASIC, Logo, PILOT — educational classics
 - C, Pascal, Forth, Prolog — structured/systems
 - Python — multi-paradigm
@@ -101,6 +109,7 @@ The toolbar contains quick-access tools:
 The code editor is where you write your programs.
 
 **Features:**
+
 - **Syntax Highlighting** - Keywords, strings, numbers in color
 - **Line Numbers** - Track line numbers for errors
 - **Auto-indentation** - Automatic indenting
@@ -110,7 +119,7 @@ The code editor is where you write your programs.
 **Common Editor Actions:**
 
 | Action | Shortcut |
-|--------|----------|
+| -------- | ---------- |
 | Select All | Ctrl+A |
 | Copy | Ctrl+C |
 | Cut | Ctrl+X |
@@ -128,16 +137,19 @@ The code editor is where you write your programs.
 Shows program output and graphics:
 
 **Text Output**
+
 - Program PRINT statements appear here
 - Error messages shown in red with ❌
 - Status messages with emojis (✅ ℹ️ 🚀)
 
 **Turtle Graphics**
+
 - Drawing canvas for Logo programs
 - Turtle position and heading displayed
 - Clear button to reset graphics
 
 **Interactive Input**
+
 - Input prompts appear as dialog boxes
 - Type your response and press Enter
 - Results returned to program
@@ -190,6 +202,7 @@ Shows program output and graphics:
 The language dropdown in the toolbar lets you switch between programming languages.
 
 **Switching Languages:**
+
 1. Click the language dropdown (or press Ctrl+Shift+L for the Language Picker)
 2. Select desired language
 3. Your code editor syntax updates
@@ -204,19 +217,22 @@ The language dropdown in the toolbar lets you switch between programming languag
 When something goes wrong, the IDE shows clear error messages:
 
 **Format:**
-```
+
+```text
 ❌ Error on line 5: Unexpected token 'FOR'
   BASIC Line: FOR I = 1 TO 10
               ^
 ```
 
 **Reading Errors:**
+
 - **Line Number** - Where the error occurred
 - **Error Type** - What went wrong
 - **Context** - The offending line of code
 - **Pointer** - Exact position of error (^)
 
 **Common Errors:**
+
 - `SyntaxError` - Incorrect grammar or spelling
 - `UndefinedVariable` - Variable not declared
 - `DivisionByZero` - Can't divide by 0
@@ -243,6 +259,7 @@ When something goes wrong, the IDE shows clear error messages:
 ### Font Size
 
 **Zoom In/Out:**
+
 - **View → Zoom In** or Ctrl++ (increase)
 - **View → Zoom Out** or Ctrl+- (decrease)
 
@@ -257,16 +274,19 @@ Settings are stored with Qt QSettings. Auto-save is configured under File → Pr
 ### Printing Output
 
 **BASIC:**
+
 ```basic
 PRINT "Hello, World!"
 ```
 
 **Logo:**
+
 ```logo
 PRINT [Hello World]
 ```
 
 **Python:**
+
 ```python
 print("Hello, World!")
 ```
@@ -276,6 +296,7 @@ Output appears in right panel.
 ### Getting User Input
 
 **BASIC:**
+
 ```basic
 INPUT "Enter your name: "; NAME$
 PRINT "Hello "; NAME$
@@ -341,17 +362,20 @@ Bottom of window shows status information:
 Time Warp Studio uses Borland Turbo-style keys; press **Shift+F1** for the full live list.
 
 **Program Control**
+
 - Ctrl+N - New program
 - F3 / Ctrl+O - Open program
 - F2 / Ctrl+S - Save program
 - Alt+X / Ctrl+Q - Exit IDE
 
 **Execution**
+
 - F9 / Ctrl+R - Run program
 - Ctrl+F2 - Reset (stop) program
 - Shift+F9 / Ctrl+Shift+R - Run selection
 
 **Editor**
+
 - Ctrl+Z - Undo
 - Ctrl+Y - Redo
 - Ctrl+A - Select all
@@ -362,11 +386,13 @@ Time Warp Studio uses Borland Turbo-style keys; press **Shift+F1** for the full 
 - Ctrl+H - Find & Replace
 
 **View**
+
 - Ctrl++ - Zoom in
 - Ctrl+- - Zoom out
 - F10 / Ctrl+Shift+P - Command palette
 
 **Help**
+
 - F1 - Context help for the current language
 - Ctrl+F3 - Lessons
 

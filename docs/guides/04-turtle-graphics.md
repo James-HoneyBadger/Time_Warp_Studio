@@ -14,7 +14,7 @@ Turtle graphics provide a visual way to learn programming. A virtual "turtle" mo
 
 The output panel shows the turtle graphics canvas:
 
-```
+```text
 ┌─────────────────────────┐
 │    Turtle Canvas        │
 │                         │
@@ -25,6 +25,7 @@ The output panel shows the turtle graphics canvas:
 ```
 
 **Canvas Properties:**
+
 - **Size:** 800 × 600 pixels by default
 - **Center:** (0, 0) is the middle
 - **Coordinates:** X increases right, Y increases up
@@ -49,15 +50,19 @@ At any time, the turtle has:
 ### Movement
 
 **FORWARD n**
+
 ```logo
 FORWARD 100
 ```
+
 Move turtle forward 100 pixels (in current heading direction).
 
 **BACKWARD n**
+
 ```logo
 BACKWARD 50
 ```
+
 Move turtle backward 50 pixels.
 
 **Aliases:** FD (FORWARD), BK (BACKWARD)
@@ -65,15 +70,19 @@ Move turtle backward 50 pixels.
 ### Rotation
 
 **RIGHT n**
+
 ```logo
 RIGHT 90
 ```
+
 Turn turtle right 90 degrees.
 
 **LEFT n**
+
 ```logo
 LEFT 45
 ```
+
 Turn turtle left 45 degrees.
 
 **Aliases:** RT (RIGHT), LT (LEFT)
@@ -81,6 +90,7 @@ Turn turtle left 45 degrees.
 ### Pen Control
 
 **PENUP** / **PENDOWN**
+
 ```logo
 PENUP
 FORWARD 50    ; Move without drawing
@@ -93,17 +103,20 @@ FORWARD 50    ; Now drawing
 ### Positioning
 
 **SETX x** / **SETY y**
+
 ```logo
 SETX 100      ; Move to X = 100
 SETY 50       ; Move to Y = 50
 ```
 
 **SETHEADING angle**
+
 ```logo
 SETHEADING 45 ; Face northeast
 ```
 
 **HOME**
+
 ```logo
 HOME          ; Return to (0, 0) facing north
 ```
@@ -115,6 +128,7 @@ HOME          ; Return to (0, 0) facing north
 ### Colors
 
 Set the pen color with SETPENCOLOR. Accepted forms:
+
 - A color name: `SETPENCOLOR "red`
 - A hex value: `SETPENCOLOR "#FF0000`
 - RGB values in a list: `SETPENCOLOR [255 0 0]`
@@ -127,7 +141,8 @@ FORWARD 100
 ```
 
 **Named colors** (not case-sensitive):
-```
+
+```text
 BLACK    WHITE    RED      GREEN    BLUE     YELLOW
 CYAN     MAGENTA  PINK     ORANGE   PURPLE   BROWN
 LIME     NAVY     TEAL     MAROON   OLIVE    SILVER
@@ -154,6 +169,7 @@ FORWARD 50
 ### Clearing
 
 **CLEAR**
+
 ```logo
 CLEAR          ; Erase all drawings
 ```
@@ -193,6 +209,7 @@ REPEAT 360 [
 ```
 
 Increase step size for larger circle:
+
 ```logo
 REPEAT 360 [
   FORWARD 2      ; Larger steps = bigger circle
@@ -221,7 +238,7 @@ STAR 5 100
 
 ### Understanding Coordinates
 
-```
+```text
         N (0°)
         ↑
         |
@@ -233,6 +250,7 @@ W ← (0,0) → E
 ```
 
 **Key Points:**
+
 - **Origin** (0, 0) is center
 - **X-axis** increases to the right
 - **Y-axis** increases upward
@@ -256,6 +274,7 @@ SETHEADING 90  ; Face east (90°)
 ### Spirals
 
 **Outward spiral:**
+
 ```logo
 MAKE "D 1
 REPEAT 100 [
@@ -266,6 +285,7 @@ REPEAT 100 [
 ```
 
 **Inward spiral:**
+
 ```logo
 MAKE "D 100
 REPEAT 100 [
@@ -331,6 +351,7 @@ REPEAT 11 [
 ### Large Drawings
 
 For complex patterns:
+
 - Reduce line width
 - Use fewer steps for circles
 - Limit color changes
@@ -341,25 +362,30 @@ For complex patterns:
 ## Troubleshooting Graphics
 
 **Drawing appears upside down?**
+
 - Remember: Y increases upward
 - Use SETHEADING to face correct direction
 
 **Can't see my drawing?**
+
 - Check if PENUP is enabled
 - Verify you're within canvas bounds
 - Try CLEAR and redraw
 
 **Colors look wrong?**
+
 - Use a color name, `#RRGGBB` hex value, or RGB list
 - Numeric codes such as `SETPENCOLOR 1` are ignored
 - Check the SETPENCOLOR command
 
 **Drawing goes off-screen?**
+
 - Check coordinates are within the canvas: about -400 to 400 (X) and -300 to 300 (Y) for the default 800 × 600 canvas
 - Use SETX/SETY to reposition
 - Draw smaller shapes
 
 **Performance is slow?**
+
 - Simplify pattern
 - Reduce number of loops
 - Use larger step sizes

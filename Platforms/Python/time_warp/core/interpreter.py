@@ -1409,6 +1409,7 @@ class Interpreter:
             string_variables=self.string_variables.copy(),
         )
         # Register BASIC EOF(n) channel helper
+
         def _eof_fn(channel_num: float) -> float:
             ch_id = int(channel_num)
             fh = getattr(self, "basic_files", {}).get(ch_id)

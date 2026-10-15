@@ -36,7 +36,7 @@ student(charlie).
 
 ### Rules
 
-Rules define relationships using `:- ` (if):
+Rules define relationships using `:-` (if):
 
 ```prolog
 grandparent(X, Z) :- parent(X, Y), parent(Y, Z).

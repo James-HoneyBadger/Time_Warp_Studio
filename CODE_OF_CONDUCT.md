@@ -5,6 +5,7 @@
 We are committed to providing a welcoming and inspiring community for all. Time Warp Studio is dedicated to fostering an open, friendly, and collaborative environment that embraces diversity and inclusivity.
 
 This Code of Conduct outlines expectations for participation in our community and applies to all spaces managed by the Time Warp Studio project, including but not limited to:
+
 - GitHub repositories and discussions
 - Issue trackers and pull requests
 - Community forums and chat channels
@@ -49,6 +50,7 @@ Project maintainers are responsible for:
 ## Scope
 
 This Code of Conduct applies to all community members, including:
+
 - Contributors
 - Maintainers
 - Users
@@ -62,11 +64,12 @@ It applies in all project spaces and extends to public spaces where an individua
 
 If you witness or experience behavior that violates this Code of Conduct, please report it by:
 
-1. **Direct Contact** - Email james@honey-badger.org with details of the incident
+1. **Direct Contact** - Email <james@honey-badger.org> with details of the incident
 2. **GitHub Issues** - Create a private security advisory on GitHub
 3. **Anonymous Reports** - Use our anonymous reporting form (when available)
 
 When reporting, please include:
+
 - Description of the incident
 - Who was involved
 - When and where it occurred
@@ -76,11 +79,13 @@ When reporting, please include:
 ### Investigation and Response
 
 All reports will be:
+
 - Reviewed promptly and fairly
 - Investigated confidentially
 - Treated with respect and taken seriously
 
 Possible responses include:
+
 - **Education** - If behavior was unintentional, providing context and education
 - **Warnings** - Requesting the person change their behavior
 - **Temporary restrictions** - Temporary removal from community spaces
@@ -91,7 +96,8 @@ We will inform the reporter of the outcome where appropriate.
 ## Appeal Process
 
 If you believe enforcement action was inappropriate, you may appeal by:
-1. Submitting a written appeal to james@honey-badger.org
+
+1. Submitting a written appeal to <james@honey-badger.org>
 2. Explaining why you believe the action was unjust
 3. Requesting reconsideration
 
@@ -100,6 +106,7 @@ Appeals will be reviewed by the project leadership.
 ## Attributions and Acknowledgments
 
 This Code of Conduct is adapted from:
+
 - [Contributor Covenant](https://www.contributor-covenant.org/)
 - [Python Community Code of Conduct](https://www.python.org/psf/codeofconduct/)
 - [Django Code of Conduct](https://www.djangoproject.com/conduct/)
@@ -111,6 +118,7 @@ These are excellent resources for building inclusive communities.
 We actively welcome and encourage participation from people of all backgrounds. We believe that diversity of thought, experience, and perspective strengthens our community and makes Time Warp Studio better for everyone.
 
 We are committed to:
+
 - Creating accessible documentation
 - Supporting multiple learning styles
 - Welcoming contributions in many forms (code, documentation, art, ideas)
@@ -123,6 +131,7 @@ If you have questions about this Code of Conduct, please reach out to the projec
 ## Commitment
 
 All community members agree to:
+
 - Treat others with respect and kindness
 - Take responsibility for our own behavior
 - Help create and maintain a safe, welcoming environment
@@ -135,4 +144,4 @@ Together, we build a community where everyone can learn, grow, and contribute th
 **Last Updated:** December 25, 2025  
 **Version:** 1.0
 
-For the latest version, visit: https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/CODE_OF_CONDUCT.md
+For the latest version, visit: <https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/CODE_OF_CONDUCT.md>

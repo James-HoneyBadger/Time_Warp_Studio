@@ -10,6 +10,7 @@ test coverage in the current release.
 ## Table of Contents
 
 ### ✅ Active Languages (supported in this release)
+
 1. [BASIC](#basic)
 2. [PILOT](#pilot)
 3. [Logo](#logo)
@@ -326,7 +327,7 @@ T: Multiple T-units print sequentially
 
 ### A-Units (Answer Input)
 
-A plain `A:` stores the reply in `ANSWER$`. `A:$NAME` stores it in `NAME$` and shows a `? ` prompt. Put the question on a `T:` line before `A:$NAME`; a text prompt on `A:` followed by `A:$NAME` asks the user twice.
+A plain `A:` stores the reply in `ANSWER$`. `A:$NAME` stores it in `NAME$` and shows a `?` prompt. Put the question on a `T:` line before `A:$NAME`; a text prompt on `A:` followed by `A:$NAME` asks the user twice.
 
 ```pilot
 T: What is your name?
@@ -696,7 +697,7 @@ COUNTUP             \ Prints 0 1 2 3 4 5 6 7 8 9
 Esoteric Turing-complete language with 8 commands. Ideal for understanding computation fundamentals.
 
 | Command | Meaning |
-|---------|---------|
+| --------- | --------- |
 | `>` | Move data pointer right |
 | `<` | Move data pointer left |
 | `+` | Increment byte at pointer |
@@ -779,7 +780,7 @@ To select which language your code uses:
 1. **File Extension**: Save with correct extension
 
 | Extension | Language |
-|-----------|----------|
+| ----------- | ---------- |
 | `.bas` | BASIC |
 | `.logo` | Logo |
 | `.pilot` | PILOT |

@@ -16,7 +16,7 @@ expressions, a call stack, an execution timeline, and a turtle-state view.
 ## Starting the Debugger
 
 | Method | How |
-|--------|-----|
+| -------- | ----- |
 | Start debugging | **Debug → Start / Continue Debugging** or **Ctrl+F9** |
 | Start paused on line 1 | **F7** (Trace Into) or **F8** (Step Over) |
 
@@ -34,7 +34,7 @@ expressions, a call stack, an execution timeline, and a turtle-state view.
 ## Stepping Through Code
 
 | Action | Shortcut | Description |
-|--------|----------|-------------|
+| -------- | ---------- | ------------- |
 | Trace Into | **F7** | Execute the next statement, entering subroutines |
 | Step Over | **F8** | Execute the next statement, skipping subroutine internals |
 | Step Out | **Shift+F8** | Run until the current subroutine returns |

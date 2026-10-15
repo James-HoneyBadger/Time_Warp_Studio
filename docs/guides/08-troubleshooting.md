@@ -9,13 +9,15 @@ Solutions to common Time Warp Studio issues.
 ### "Illegal Instruction" Error
 
 **Error Message:**
-```
+
+```text
 Illegal instruction (core dumped)
 ```
 
 **Cause:** Your CPU lacks required features (SSSE3, SSE4.1, SSE4.2, POPCNT)
 
 **Solution:**
+
 - Upgrade to modern CPU (Intel/AMD from 2012+)
 - Use cloud computing (AWS, Azure, Google Cloud)
 - Use a different computer
@@ -25,13 +27,15 @@ Illegal instruction (core dumped)
 ### "ModuleNotFoundError: No module named 'PySide6'"
 
 **Error:**
-```
+
+```text
 ModuleNotFoundError: No module named 'PySide6'
 ```
 
 **Cause:** Dependencies not installed
 
 **Solution:**
+
 ```bash
 # Activate your virtual environment
 source .venv/bin/activate    # Linux/macOS
@@ -46,6 +50,7 @@ pip install PySide6 Pillow requests
 **Symptoms:** You run the command but see nothing
 
 **Solutions:**
+
 1. Wait 5-10 seconds (first run is slow)
 2. Click in the terminal window
 3. Check your display server (on headless systems, use SSH X11)
@@ -55,6 +60,7 @@ pip install PySide6 Pillow requests
 **Symptoms:** Window appears but nothing is visible
 
 **Solutions:**
+
 1. Check graphics drivers are up to date
 2. Try resizing the window
 3. Check taskbar - window might be minimized
@@ -69,11 +75,13 @@ pip install PySide6 Pillow requests
 **Symptom:** Click Run but nothing happens
 
 **Check:**
+
 1. ✓ Did you select a language from dropdown?
 2. ✓ Is there code in the editor?
 3. ✓ Any syntax errors shown in output?
 
 **Solutions:**
+
 - Copy code to a simple text file, check for special characters
 - Try a one-line program first: `PRINT "test"`
 - Check if language is selected
@@ -81,11 +89,13 @@ pip install PySide6 Pillow requests
 ### "SyntaxError" on Line X
 
 **Error Message:**
-```
+
+```text
 ❌ Error on line 5: Unexpected token 'FOR'
 ```
 
 **What to do:**
+
 1. Look at the line number shown
 2. Check syntax for that line in the tutorial
 3. Look for common mistakes:
@@ -94,6 +104,7 @@ pip install PySide6 Pillow requests
    - Missing END IF, NEXT, WEND
 
 **Example:**
+
 ```basic
 PRINT "Hello      ' Missing closing quote - ERROR!
 FOR I = 1 TO 10   ' Missing NEXT at end - ERROR!
@@ -111,6 +122,7 @@ IF X > 5 THEN     ' Missing END IF - ERROR!
 
 2. **No PRINT statements**
    - Add `PRINT` to see output
+
    ```basic
    PRINT "Result: "; RESULT
    ```
@@ -125,6 +137,7 @@ IF X > 5 THEN     ' Missing END IF - ERROR!
    - Click OK or CANCEL
 
 **Solution:**
+
 ```basic
 ' Add this to see if program runs:
 PRINT "Program started"
@@ -135,13 +148,15 @@ PRINT "Program finished"
 ### "UndefinedVariable" Error
 
 **Error:**
-```
+
+```text
 ❌ Error: Undefined variable: TOTAL
 ```
 
 **Cause:** Variable used before being declared/assigned
 
 **Fix:**
+
 ```basic
 ' WRONG:
 PRINT X     ' X doesn't exist yet
@@ -154,18 +169,21 @@ PRINT X
 ### "DivisionByZero" Error
 
 **Error:**
-```
+
+```text
 ❌ Error at line 1: Division by zero
 ```
 
 **Cause:** Program tries to divide by zero
 
 **Example:**
+
 ```basic
 LET RESULT = 10 / 0   ' ERROR!
 ```
 
 **Fix:**
+
 ```basic
 IF DIVISOR <> 0 THEN
   LET RESULT = 10 / DIVISOR
@@ -183,12 +201,14 @@ END IF
 **Symptoms:** Long execution time, frozen UI
 
 **Causes:**
+
 1. Huge loops (millions of iterations)
 2. Complex graphics with many elements
 3. Deep recursion
 4. Inefficient algorithms
 
 **Solutions:**
+
 - Reduce loop iterations
 - Simplify graphics (fewer points)
 - Limit recursion depth
@@ -199,11 +219,13 @@ END IF
 **Symptoms:** Running Logo but canvas stays blank
 
 **Checks:**
+
 1. Is PENDOWN enabled?
 2. Is turtle drawing inside canvas bounds?
 3. Is pen color visible on background?
 
 **Test Code:**
+
 ```logo
 HOME
 PENDOWN
@@ -217,6 +239,7 @@ If nothing appears, issue is more serious.
 **Symptom:** Program never finishes
 
 **Common Cause:**
+
 ```logo
 ' WRONG - Infinite loop!
 WHILE 1 = 1
@@ -241,6 +264,7 @@ NEXT I
 **Symptom:** Save button does nothing
 
 **Solutions:**
+
 1. Check disk space
 2. Verify directory exists and is writable
 3. Try saving to different location
@@ -249,11 +273,13 @@ NEXT I
 ### Can't Open File
 
 **Error:**
-```
+
+```text
 Cannot open file: Permission denied
 ```
 
 **Solutions:**
+
 1. Check file exists
 2. Verify you have read permission
 3. Check file isn't corrupted
@@ -262,6 +288,7 @@ Cannot open file: Permission denied
 ### Unsaved Changes Lost
 
 **Prevention:**
+
 1. Enable auto-save in settings
 2. Press Ctrl+S frequently
 3. Backup important files
@@ -276,6 +303,7 @@ Cannot open file: Permission denied
 **Symptom:** Select theme but colors don't update
 
 **Solution:**
+
 1. Close and reopen IDE
 2. Re-select the theme from View → Theme
 3. Check that settings can be written (Qt QSettings stores them in your per-user config location)
@@ -283,6 +311,7 @@ Cannot open file: Permission denied
 ### Text Too Small/Large
 
 **Solutions:**
+
 - Use Ctrl++ to zoom in
 - Use Ctrl+- to zoom out
 - Check your OS text size settings
@@ -292,6 +321,7 @@ Cannot open file: Permission denied
 **Cause:** Font issues
 
 **Solution:**
+
 1. Change theme (View → Theme)
 2. Restart IDE
 3. Check OS font installation
@@ -305,6 +335,7 @@ Cannot open file: Permission denied
 **Symptom:** Variable value changes unexpectedly
 
 **Common Cause:** Variable name typo
+
 ```basic
 LET TOTAL = 10
 LET TOTAL = 20      ' Same variable
@@ -321,6 +352,7 @@ PRINT TOTAL         ' Prints 20, not 30
 **Cause:** Turtle moved beyond canvas bounds (-300 to 300)
 
 **Fix:**
+
 ```logo
 HOME  ' Return to center
 ```
@@ -330,6 +362,7 @@ HOME  ' Return to center
 **Symptom:** Expected red, got different color
 
 **Check:**
+
 - Color must be 0-7
 - SETPENCOLOR 1 = Red
 - SETPENCOLOR 0 = Black (default)
@@ -348,6 +381,7 @@ HOME  ' Return to center
 ### Reporting Issues
 
 If you find a bug:
+
 1. Write clear description
 2. Include the code that causes it
 3. Include error message
