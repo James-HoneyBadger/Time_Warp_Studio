@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v14.0.0 — System Design and Implementation
+## Time Warp Studio v14.1.0 — System Design and Implementation
 
 ---
 
@@ -629,7 +629,7 @@ Lesson progress is stored separately in `~/.time_warp/progress.json`.
 - 501 pytest tests covering all 9 active language executors, lessons, keymap, GUI, and interpreter behavior
 - `conftest.py`, `conftest_lang.py` — Shared fixtures and helpers
 - `Platforms/Python/smoke_test.py` — Fast smoke test without pytest
-- `test_all_examples.py` (repo root) — Runs all 72 example programs
+- `test_all_examples.py` (repo root) — Runs all 81 example programs
 
 ### Scripts (`Scripts/`)
 

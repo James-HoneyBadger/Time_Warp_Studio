@@ -275,7 +275,7 @@ QT_QPA_PLATFORM=offscreen PYTHONPATH=Platforms/Python pytest Platforms/Python/ti
 # Specific file
 PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests/test_lang_basic.py -v
 
-# All 72 example programs
+# All 81 example programs
 python3 test_all_examples.py
 
 # With coverage
@@ -504,7 +504,7 @@ Time_Warp_Studio/
 │   │   ├── features/             # Lessons, games, etc.
 │   │   └── tests/                # pytest suite
 │   └── requirements*.txt         # Core / dev / optional dependencies
-├── Examples/                     # 72 example programs
+├── Examples/                     # 81 example programs
 ├── test_all_examples.py          # Example runner
 ├── docs/                         # User documentation
 └── [Root docs]                  # README, LICENSE, etc.

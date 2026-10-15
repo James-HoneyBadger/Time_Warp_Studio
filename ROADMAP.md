@@ -6,7 +6,7 @@ Time Warp Studio is an educational desktop IDE for learning **9 active programmi
 
 ---
 
-## Current Release: v14.0.0 (October 2026)
+## Current Release: v14.1.0 (October 15, 2026)
 
 - **9 active language executors** — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python
 - **SVGA graphics mode** — 800×600 virtual canvas with anti-aliasing, zoom/pan, and pixel-accurate rendering
@@ -18,7 +18,7 @@ Time Warp Studio is an educational desktop IDE for learning **9 active programmi
 - Lessons dock with 18 built-in lessons and automatic checkpoint verification
 - Borland Turbo-style keymap with a live Function-Key Bar
 - Prolog `\+` negation-as-failure parsing, extended built-ins (`format/2`, `split_string/4`, `string_concat/3`, etc.)
-- Example programs across all 9 active languages (72 programs, all verified by `test_all_examples.py`)
+- Example programs across all 9 active languages (81 programs, all verified by `test_all_examples.py`)
 
 ---
 

@@ -5,7 +5,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![PySide6](https://img.shields.io/badge/PySide6-Qt6-green)](https://wiki.qt.io/Qt_for_Python)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-14.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-14.1.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **9 active programming languages** into a single, modern IDE. Built with Python and PySide6 (Qt6), it provides an integrated platform for learning programming concepts, exploring vector turtle graphics, and working through structured lessons.
 
@@ -79,7 +79,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 
 - **Lessons** — 18 built-in lessons (2 per language) with checkpoints, hints, and automatic verification (Help → Lessons, Ctrl+F3)
 - **Error Hints** — Syntax error suggestions alongside interpreter error messages
-- **Examples Browser** — 72 curated example programs across all 9 active languages (Shift+F3)
+- **Examples Browser** — 81 curated example programs across all 9 active languages (Shift+F3)
 - **Classroom Mode** — Presentation-friendly tools for teaching
 
 ---
@@ -302,7 +302,7 @@ Time_Warp_Studio/
 ├── run.py                         # Smart launcher (auto-setup + launch)
 ├── run.sh                         # Shell wrapper for Linux/macOS
 ├── Makefile                       # Build automation targets
-├── test_all_examples.py           # Runs all 72 example programs
+├── test_all_examples.py           # Runs all 81 example programs
 │
 ├── README.md                      # This file
 ├── ARCHITECTURE.md                # System design document
@@ -406,7 +406,7 @@ make test
 # Fast smoke test without pytest
 python3 Platforms/Python/smoke_test.py
 
-# Run all 72 example programs (non-zero exit on failure)
+# Run all 81 example programs (non-zero exit on failure)
 python3 test_all_examples.py
 ```
 
@@ -458,7 +458,7 @@ Licensed under the **[MIT License](LICENSE)**.
 
 - **Repository:** [github.com/James-HoneyBadger/Time_Warp_Studio](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 - **Maintainer:** James Temple — <james@honey-badger.org>
-- **Version:** 14.0.0
+- **Version:** 14.1.0
 
 ---
 

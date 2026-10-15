@@ -1,0 +1,96 @@
+*start
+T:==================================================
+T: TIME WARP STUDIO | LEARNING PATHFINDER
+T: A three-stage skills diagnostic with coaching feedback
+T:==================================================
+C:SCORE = 0
+C:TOTAL = 0
+C:STREAK = 0
+J:*question1
+
+*question1
+C:TOTAL = TOTAL + 1
+T:
+T:STAGE 1 | EXPRESSIONS
+T:What is 3 plus 4?
+T:Enter a number, or type HINT.
+A:
+M:HINT
+TY:J:*hint1
+M:7
+M:seven
+TY:Correct. Expression evaluation unlocked.
+C:SCORE = SCORE + 10
+C:STREAK = STREAK + 1
+JN:*miss1
+J:*question2
+
+*hint1
+T:Hint: start at 3 and count forward four steps.
+J:*question1
+
+*miss1
+T:Coaching note: 3 + 4 = 7. Try the next checkpoint.
+C:STREAK = 0
+J:*question2
+
+*question2
+C:TOTAL = TOTAL + 1
+T:
+T:STAGE 2 | DATA
+T:How many bits are in one byte?
+A:
+M:HINT
+TY:J:*hint2
+M:8
+M:eight
+TY:Correct. Binary data basics unlocked.
+C:SCORE = SCORE + 10
+C:STREAK = STREAK + 1
+JN:*miss2
+J:*question3
+
+*hint2
+T:Hint: a byte is made from eight binary digits.
+J:*question2
+
+*miss2
+T:Coaching note: one byte contains 8 bits.
+C:STREAK = 0
+J:*question3
+
+*question3
+C:TOTAL = TOTAL + 1
+T:
+T:STAGE 3 | TURTLE GRAPHICS
+T:Which command moves the Logo turtle forward?
+A:
+M:HINT
+TY:J:*hint3
+M:FORWARD
+M:forward
+TY:Correct. You are ready to draw a path.
+C:SCORE = SCORE + 10
+C:STREAK = STREAK + 1
+JN:*miss3
+J:*summary
+
+*hint3
+T:Hint: the command is also an everyday direction.
+J:*question3
+
+*miss3
+T:Coaching note: FORWARD moves the turtle along its heading.
+C:STREAK = 0
+J:*summary
+
+*summary
+T:
+T:==================================================
+T:DIAGNOSTIC SUMMARY
+C:PERCENT = SCORE * 100 / TOTAL
+T:Score: $SCORE out of $TOTAL
+T:Progress: $PERCENT percent
+T:Current correct-answer streak: $STREAK
+T:Suggested next step: open the lesson dock and practice.
+T:==================================================

@@ -220,7 +220,7 @@ Or copy from Examples:
 Help → Browse Examples [Shift+F3]
 ```
 
-Browse 72 working examples.
+Browse 81 working examples.
 
 ---
 
@@ -364,7 +364,7 @@ Panels open as tabs on the right or as dock widgets.
 - Jump to procedures, functions, and labels
 
 **Examples Browser** (Shift+F3)
-- Browse 72 working programs
+- Browse 81 working programs
 - Copy and modify examples
 - Learn from code
 

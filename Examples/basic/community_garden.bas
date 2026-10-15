@@ -1,0 +1,87 @@
+10 REM COMMUNITY GARDEN CO-OP OPERATIONS DASHBOARD
+20 REM Forecast harvest, sales, water use, and bed productivity.
+30 DIM BED$(6)
+40 DIM CROP$(6)
+50 DIM AREA(6)
+60 DIM PLANTS(6)
+70 DIM YIELD_PER_PLANT(6)
+80 DIM PRICE_PER_LB(6)
+90 DIM WATER_PER_BED(6)
+100 BED$(1) = "NORTH"
+110 CROP$(1) = "TOMATO"
+120 AREA(1) = 120
+130 PLANTS(1) = 24
+140 YIELD_PER_PLANT(1) = 8
+150 PRICE_PER_LB(1) = 3
+160 WATER_PER_BED(1) = 210
+170 BED$(2) = "EAST"
+180 CROP$(2) = "PEPPER"
+190 AREA(2) = 80
+200 PLANTS(2) = 20
+210 YIELD_PER_PLANT(2) = 5
+220 PRICE_PER_LB(2) = 4
+230 WATER_PER_BED(2) = 150
+240 BED$(3) = "SOUTH"
+250 CROP$(3) = "ZUCCHINI"
+260 AREA(3) = 100
+270 PLANTS(3) = 10
+280 YIELD_PER_PLANT(3) = 12
+290 PRICE_PER_LB(3) = 2
+300 WATER_PER_BED(3) = 180
+310 BED$(4) = "WEST"
+320 CROP$(4) = "BEANS"
+330 AREA(4) = 96
+340 PLANTS(4) = 32
+350 YIELD_PER_PLANT(4) = 2
+360 PRICE_PER_LB(4) = 5
+370 WATER_PER_BED(4) = 120
+380 BED$(5) = "HERB"
+390 CROP$(5) = "BASIL"
+400 AREA(5) = 36
+410 PLANTS(5) = 18
+420 YIELD_PER_PLANT(5) = 1
+430 PRICE_PER_LB(5) = 12
+440 WATER_PER_BED(5) = 45
+450 BED$(6) = "ORCHARD"
+460 CROP$(6) = "STRAWBERRY"
+470 AREA(6) = 144
+480 PLANTS(6) = 30
+490 YIELD_PER_PLANT(6) = 1
+500 PRICE_PER_LB(6) = 6
+510 WATER_PER_BED(6) = 165
+520 PRINT "=================================================="
+530 PRINT " COMMUNITY GARDEN CO-OP | SEASON PLANNER"
+540 PRINT "=================================================="
+550 PRINT "Forecast uses sample planting data; values are estimates."
+560 PRINT "BED      CROP        AREA   PLANTS  HARVEST   SALES"
+570 PRINT "--------------------------------------------------"
+580 TOTAL_AREA = 0
+590 TOTAL_PLANTS = 0
+600 TOTAL_HARVEST = 0
+610 TOTAL_SALES = 0
+620 TOTAL_WATER = 0
+630 FOR I = 1 TO 6
+640   HARVEST = PLANTS(I) * YIELD_PER_PLANT(I)
+650   SALES = HARVEST * PRICE_PER_LB(I)
+660   TOTAL_AREA = TOTAL_AREA + AREA(I)
+670   TOTAL_PLANTS = TOTAL_PLANTS + PLANTS(I)
+680   TOTAL_HARVEST = TOTAL_HARVEST + HARVEST
+690   TOTAL_SALES = TOTAL_SALES + SALES
+700   TOTAL_WATER = TOTAL_WATER + WATER_PER_BED(I)
+710   PRINT BED$(I); "   "; CROP$(I); "   "; AREA(I); "   "; PLANTS(I); "   "; HARVEST; " lb   $"; SALES
+720 NEXT I
+730 GOSUB 1000
+740 PRINT "--------------------------------------------------"
+750 PRINT "Season plan complete. Update the bed data to model a new planting."
+760 END
+1000 REM REPORT SUMMARY AND RECOMMENDATIONS
+1010 PRINT "--------------------------------------------------"
+1020 PRINT "TOTALS: "; TOTAL_AREA; " sq ft, "; TOTAL_PLANTS; " plants"
+1030 PRINT "Forecast harvest: "; TOTAL_HARVEST; " lb"
+1040 PRINT "Forecast sales:   $"; TOTAL_SALES
+1050 PRINT "Weekly water plan: "; TOTAL_WATER; " gallons"
+1060 IF TOTAL_AREA > 0 THEN PRINT "Yield density: "; INT(TOTAL_HARVEST / TOTAL_AREA * 100); " lb per 100 sq ft"
+1070 IF TOTAL_WATER > 900 THEN PRINT "Action: review irrigation schedule before peak summer."
+1080 IF TOTAL_WATER <= 900 THEN PRINT "Action: current water plan is within the 900 gallon target."
+1090 IF TOTAL_HARVEST > 700 THEN PRINT "Action: reserve extra volunteers for harvest week."
+1100 RETURN

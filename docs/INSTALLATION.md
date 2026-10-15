@@ -67,7 +67,7 @@ When it finishes you will see:
 
 ```
 ════════════════════════════════════════════════════
-  Time Warp Studio 14.0.0 — Installed!
+  Time Warp Studio 14.1.0 — Installed!
 ════════════════════════════════════════════════════
 
   Start from terminal:   time-warp-studio
@@ -230,7 +230,7 @@ For contributors, install the development stack (pytest, pytest-cov, ruff):
 ```bash
 pip install -r Platforms/Python/requirements-dev.txt
 make test     # pytest suite (offscreen Qt)
-make demos    # run all 72 example programs
+make demos    # run all 81 example programs
 ```
 
 ---
@@ -372,7 +372,7 @@ PYTHONPATH=/opt/time-warp-studio/Platforms/Python \
   /opt/time-warp-studio/.venv/bin/python -c \
   "from time_warp.core.interpreter import Interpreter; print('✅ OK')"
 
-# Run all 72 example programs (from a source checkout with dependencies installed)
+# Run all 81 example programs (from a source checkout with dependencies installed)
 python3 test_all_examples.py
 ```
 

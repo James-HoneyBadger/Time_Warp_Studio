@@ -179,7 +179,7 @@ Platforms/Python/
       validators.py         - Input validation helpers
     tests/                  - 23 test files
 test_all_examples.py        - Root-level example verifier
-Examples/                   - 72 example programs across the 9 active languages
+Examples/                   - 81 example programs across the 9 active languages
 ```
 
 ## Dependencies

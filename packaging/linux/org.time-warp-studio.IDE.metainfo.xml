@@ -38,6 +38,11 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="14.1.0" date="2026-10-15">
+      <description>
+        <p>v14.1.0 — Added lessons and keyboard workflow improvements, expanded graphics, sound, and Prolog capabilities, and aligned documentation and packaging with the supported Studio release.</p>
+      </description>
+    </release>
     <release version="14.0.0" date="2026-10-01">
       <description>
         <p>v14.0.0 — Consolidated the active language set to nine, improved editor navigation and document outlines, and added session recovery.</p>

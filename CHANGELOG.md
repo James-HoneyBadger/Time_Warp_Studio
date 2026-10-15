@@ -10,6 +10,15 @@ All notable changes to Time Warp Studio will be documented in this file.
 > been removed from `time_warp/languages/` and are no longer part of the
 > product. These entries are kept as historical record only.
 
+## [14.1.0] - 2026-10-15
+
+### Studio Improvements
+
+- Added a lessons dock with built-in lessons and checkpoint verification.
+- Added a Borland Turbo-style keymap and live Function-Key Bar.
+- Expanded graphics, sound, and Prolog capabilities.
+- Removed obsolete prototypes and aligned documentation and packaging with the supported Studio.
+
 ## [14.0.0] - 2026-10-01
 
 ### Editor and Workflow Improvements

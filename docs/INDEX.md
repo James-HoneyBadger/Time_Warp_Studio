@@ -119,7 +119,7 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 
 1. [Classroom Mode Guide](guides/06-settings.md) - Presentation and assignment features
 2. [Lessons Guide](guides/03-lessons.md) - Built-in lessons with checkpoints
-3. [Examples Browser](guides/01-getting-started.md#examples) - 72 ready-made programs
+3. [Examples Browser](guides/01-getting-started.md#examples) - 81 ready-made programs
 4. See [ARCHITECTURE.md](../ARCHITECTURE.md) for extending features
 
 ### For Advanced Users
@@ -269,7 +269,7 @@ Explore example programs and tutorials for the 9 active languages:
 ---
 
 **Last Updated:** October 2026
-**Version:** 14.0.0
+**Version:** 14.1.0
 **License:** MIT
 
 ## How to Use This Documentation
@@ -333,7 +333,7 @@ This documentation is maintained alongside Time Warp Studio development. If you 
 
 ## Version Information
 
-- **Time Warp Studio** v14.0.0
+- **Time Warp Studio** v14.1.0
 - **Last Updated** October 2026
 
 ## Need More Help?

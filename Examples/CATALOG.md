@@ -22,6 +22,7 @@ It is intentionally limited to the nine active languages.
 | `basic/hello.bas` | Hello World and basic output |
 | `basic/adventure.bas` | Text adventure control flow |
 | `basic/budget_tracker.bas` | Variables and tabular calculations |
+| `basic/community_garden.bas` | Garden co-op harvest, sales, and water planning |
 | `basic/math_explorer.bas` | Interactive arithmetic exploration |
 | `basic/maze_generator.bas` | Maze generation and branching |
 | `basic/space_simulation.bas` | Simulation-style loops and state |
@@ -37,6 +38,7 @@ It is intentionally limited to the nine active languages.
 | `pilot/math_drill.pilot` | Arithmetic practice drill |
 | `pilot/number_game.pilot` | Number guessing game |
 | `pilot/science_quiz.pilot` | Science quiz with scoring |
+| `pilot/studio_pathfinder.pilot` | Branching skills diagnostic with hints and coaching |
 | `pilot/typing_tutor.pilot` | Typing practice drills |
 | `pilot/vocabulary_trainer.pilot` | Vocabulary practice and hints |
 
@@ -49,6 +51,7 @@ It is intentionally limited to the nine active languages.
 | `logo/fractal_gallery.logo` | Collection of recursive patterns |
 | `logo/galaxy.logo` | Layered radial turtle art |
 | `logo/geometric_artistry.logo` | Geometric shape studies |
+| `logo/community_campus.logo` | Turtle-drawn campus garden and plaza |
 | `logo/mandala.logo` | Repeated radial patterns |
 | `logo/spirograph.logo` | Spirograph-style curves |
 | `logo/turtle_3d.logo` | Perspective-inspired turtle drawing |
@@ -59,6 +62,7 @@ It is intentionally limited to the nine active languages.
 | --- | --- |
 | `c/hello.c` | Hello World and standard output |
 | `c/algorithms_showcase.c` | Algorithm demonstrations |
+| `c/community_library.c` | Inventory, circulation, search, and service metrics |
 | `c/game_of_life.c` | Conway's Game of Life |
 | `c/linked_list.c` | Linked-list data structures |
 | `c/matrix_calculator.c` | Matrix operations |
@@ -72,6 +76,7 @@ It is intentionally limited to the nine active languages.
 | --- | --- |
 | `pascal/hello.pas` | Structured Hello World |
 | `pascal/cipher_lab.pas` | Text transformation and ciphers |
+| `pascal/energy_monitor.pas` | Energy usage, cost forecast, and savings plan |
 | `pascal/grade_book.pas` | Structured records and calculations |
 | `pascal/hangman.pas` | Console game and control flow |
 | `pascal/inventory.pas` | Inventory data processing |
@@ -89,6 +94,7 @@ It is intentionally limited to the nine active languages.
 | `prolog/family_tree.pl` | Family and ancestor queries |
 | `prolog/family_genealogy.pl` | Multi-generation relationship inference |
 | `prolog/knowledge_engine.pl` | Knowledge-base reasoning showcase |
+| `prolog/learning_path_advisor.pl` | Prerequisite inference and learning recommendations |
 | `prolog/list_operations.pl` | List predicates and transformations |
 | `prolog/puzzle_solver.pl` | Constraint-style puzzle solving |
 | `prolog/sorting.pl` | Sorting with recursive predicates |
@@ -104,6 +110,7 @@ It is intentionally limited to the nine active languages.
 | `forth/rpn_calculator.forth` | Stack-based calculator |
 | `forth/sorting.forth` | Sorting with stack operations |
 | `forth/string_processing.forth` | String-processing words |
+| `forth/workshop_planner.forth` | Workshop inventory, budget, and capacity planning |
 | `forth/turtle_art.forth` | Turtle graphics from Forth |
 
 ## Brainfuck
@@ -115,6 +122,7 @@ It is intentionally limited to the nine active languages.
 | `brainfuck/cat.bf` | Input/output loop |
 | `brainfuck/countdown.bf` | Counter program |
 | `brainfuck/fibonacci.bf` | Fibonacci-style output |
+| `brainfuck/field_desk.bf` | Terminal status dashboard with a tape-generated progress bar |
 | `brainfuck/multiplication_table.bf` | Multiplication table experiment |
 | `brainfuck/programs.bf` | Brainfuck program collection |
 | `brainfuck/rot13.bf` | ROT13 transformation |
@@ -124,6 +132,7 @@ It is intentionally limited to the nine active languages.
 | File | Description |
 | --- | --- |
 | `python/hello.py` | Hello World and basic operations |
+| `python/learning_dashboard.py` | Learner portfolio, progress, recommendations, and weekly plan |
 | `python/algorithms.py` | Sorting, searching, and prime algorithms |
 | `python/data_structures.py` | Lists, dictionaries, sets, stacks, and queues |
 | `python/decorators.py` | Function and class decorators |
