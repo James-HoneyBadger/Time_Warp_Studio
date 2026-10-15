@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from time_warp.core.interpreter import Language
 from .conftest_lang import run, ok, has, no_errors
 
@@ -99,8 +98,6 @@ def test_jump():
 
 
 def test_subroutine():
-    # PILOT subroutine definition comes BEFORE the call in execution flow;
-    # use U: to call a named label
     out = pilot(
         "T:Main start\n"
         "U:*GREET\n"
@@ -108,11 +105,30 @@ def test_subroutine():
         "E:\n"
         "*GREET\n"
         "T:In subroutine\n"
+        "R: remarks inside a subroutine must not return early\n"
+        "T:Still in subroutine\n"
         "E:\n"
     )
-    # Check at least main flow executed
     assert no_errors(out)
-    assert has(out, "Main start", "Main end")
+    assert out == ["Main start", "In subroutine", "Still in subroutine", "Main end"]
+
+
+def test_nested_subroutines_and_sigils():
+    out = pilot(
+        "C:#X = 6 * 7\n"
+        "C:$NAME = Ada\n"
+        "U:*OUTER\n"
+        "T:Done #X\n"
+        "E:\n"
+        "*OUTER\n"
+        "S:*INNER\n"
+        "E:\n"
+        "*INNER\n"
+        "T:Hi $NAME\n"
+        "E:\n"
+    )
+    assert no_errors(out)
+    assert out == ["Hi Ada", "Done 42"]
 
 
 # ---------------------------------------------------------------------------
@@ -224,7 +240,7 @@ def test_jump_to_label():
     assert has(out, "Step A", "Step B")
 
 
-def test_match_yes():
+def test_match_yes_with_labels():
     out = pilot("*START\nT:Type yes\nA:\nM:YES\nTY:Correct\nTN:Wrong\n*END", input_val="YES")
     assert no_errors(out)
     assert has(out, "Correct")

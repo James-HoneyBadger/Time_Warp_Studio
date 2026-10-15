@@ -49,11 +49,9 @@ full tutorial below.
 - **[Brainfuck Tutorial](tutorials/brainfuck.md)** - Esoteric Turing-complete language
 
 > Earlier prototypes explored additional languages (Assembly, LISP, Haskell,
-> PostScript, JavaScript, Lua, Ruby, Perl, Tcl, REXX, Smalltalk, Erlang,
-> HyperTalk, COBOL, APL). None of these have an executor in the current
-> release and their tutorials have been removed; see
-> [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) for retained reference-only syntax
-> notes.
+> PostScript, JavaScript, Lua, Ruby, Perl, Tcl, Smalltalk, Erlang,
+> HyperTalk). None of these have an executor in the current release, so
+> they are not documented here.
 
 ---
 
@@ -62,12 +60,10 @@ full tutorial below.
 Deep dives into specific IDE features:
 
 - **[Debugger Guide](DEBUGGER_GUIDE.md)** - Step-through debugging with timeline recording and rewind
-- **Learning Hub** - Launch challenges, remix examples, and open the tutor from the toolbar
-- **Project Explorer** - Open project folders and switch between workspace files quickly
 - **[Turtle Graphics](guides/04-turtle-graphics.md)** - Master Logo turtle graphics, colors, and animations
-- **[Settings & Themes](guides/06-settings.md)** - Customize appearance with 28 themes or create your own
+- **[Settings & Themes](guides/06-settings.md)** - Customize appearance with 33 themes or create your own
 - **[Keyboard Shortcuts](guides/07-shortcuts.md)** - Speed up your workflow with essential shortcuts
-- **[Lesson System](guides/03-lessons.md)** - Use structured lessons with checkpoints and verification
+- **[Lessons](guides/03-lessons.md)** - 18 built-in lessons with checkpoints and automatic verification
 
 ---
 
@@ -76,7 +72,7 @@ Deep dives into specific IDE features:
 ### Quick Reference
 
 - **[Keyboard Shortcuts](guides/07-shortcuts.md)** - All available shortcuts and their actions
-- **[FAQ](reference/faq.md)** - 40+ frequently asked questions with answers
+- **[FAQ](../FAQ.md)** - Frequently asked questions with answers
 
 ### Troubleshooting
 
@@ -108,8 +104,8 @@ PRINT "Hello, World!"
 
 1. [Logo Tutorial](tutorials/logo.md) - Learn Logo basics
 2. [Turtle Graphics Guide](guides/04-turtle-graphics.md) - Advanced turtle techniques
-3. Open **File → Examples → logo/** to see 5 examples
-4. Try examples like `02_squares.logo`, `05_trees.logo`
+3. Open **Help → Browse Examples** (Shift+F3) and pick the **logo** examples (8 programs)
+4. Try examples like `hello.logo`, `spirograph.logo`, `fractal_forest.logo`
 
 **First Turtle Program:**
 
@@ -122,8 +118,8 @@ REPEAT 4 [FORWARD 100 RIGHT 90]
 **Recommended Resources:**
 
 1. [Classroom Mode Guide](guides/06-settings.md) - Presentation and assignment features
-2. [Lesson System Guide](guides/03-lessons.md) - Create structured lessons
-3. [Examples Browser](guides/01-getting-started.md#examples) - 140 ready-made programs
+2. [Lessons Guide](guides/03-lessons.md) - Built-in lessons with checkpoints
+3. [Examples Browser](guides/01-getting-started.md#examples) - 72 ready-made programs
 4. See [ARCHITECTURE.md](../ARCHITECTURE.md) for extending features
 
 ### For Advanced Users
@@ -156,10 +152,10 @@ ship with runnable examples):
 
 **How to use examples:**
 
-1. Press **Ctrl+E** or **File → Examples**
+1. Press **Shift+F3** or **Help → Browse Examples**
 2. Browse by language and difficulty
 3. Click **Load** to open in editor
-4. Press **Ctrl+R** to run
+4. Press **F9** (or Ctrl+R) to run
 
 ---
 
@@ -167,37 +163,37 @@ ship with runnable examples):
 
 ### Run a program
 
-1. Open file (Ctrl+O) or create new (Ctrl+N)
+1. Open file (F3 / Ctrl+O) or create new (Ctrl+N)
 2. Type or paste code
-3. Press Ctrl+R or click Run
+3. Press F9 (or Ctrl+R) or click Run
 
 ### Change language
 
 - Use Language dropdown (top right of editor)
-- Or File → New → [Language]
+- Or the Language Picker (Ctrl+Shift+L)
 
 ### Customize theme
 
-- File → Settings → Themes
-- 28 built-in themes + custom theme editor
+- View → Theme, or File → Preferences (Ctrl+,)
+- 33 built-in themes + custom theme editor
 
 ### Use autosave
 
 - Enabled by default
-- Auto-saves every 30 seconds to `~/.time_warp/`
+- Auto-saves every 2 minutes by default (adjustable under File → Preferences)
 - Keep up to 20 versions per file
 
 ### Follow a lesson
 
-- File → Lessons
-- Select lesson from catalog
-- Complete checkpoints with auto-verification
+- Help → Lessons (Ctrl+F3 or Ctrl+Alt+L)
+- Select a lesson in the Lessons dock
+- Complete checkpoints with Verify
 
 ---
 
 ## ❓ Need Help?
 
-- **Can't find answer?** Check [FAQ](reference/faq.md)
+- **Can't find answer?** Check [FAQ](../FAQ.md)
 - **Having issues?** See [Troubleshooting](guides/08-troubleshooting.md)
 - **Want to extend?** Read [ARCHITECTURE.md](../ARCHITECTURE.md)
 - **Report bug?** Open [GitHub Issue](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues)
@@ -222,13 +218,11 @@ docs/
 │   ├── 06-settings.md
 │   ├── 07-shortcuts.md
 │   └── 08-troubleshooting.md
-├── tutorials/
-│   ├── basic.md, brainfuck.md, c.md
-│   ├── forth.md, logo.md, pascal.md
-│   ├── pilot.md, prolog.md, python.md
-│   └── (9 tutorials total, one per active language)
-└── reference/
-    └── faq.md
+└── tutorials/
+    ├── basic.md, brainfuck.md, c.md
+    ├── forth.md, logo.md, pascal.md
+    ├── pilot.md, prolog.md, python.md
+    └── (9 tutorials total, one per active language)
 ```
 
 ---
@@ -269,7 +263,7 @@ Explore example programs and tutorials for the 9 active languages:
 
 ### Reference
 
-- **[FAQ](reference/faq.md)** - Frequently asked questions
+- **[FAQ](../FAQ.md)** - Frequently asked questions
 - **[Installation](INSTALLATION.md)** - Detailed setup instructions
 
 ---
@@ -308,23 +302,27 @@ This documentation is maintained alongside Time Warp Studio development. If you 
 | C | `.c` | `program.c` |
 | Pascal | `.pas` | `program.pas` |
 | Prolog | `.pl`, `.pro` | `logic.pl` |
+| Forth | `.f`, `.forth` | `stack.forth` |
+| Brainfuck | `.bf` | `hello.bf` |
 
-### Keyboard Shortcuts
+### Keyboard Shortcuts (Borland Turbo style)
 
-- **Ctrl+R** - Run program
-- **Ctrl+S** - Save file
-- **Ctrl+L** - Clear output
-- **Ctrl+T** - Open turtle graphics
-- **F1** - Show help
+- **F9** / **Ctrl+R** - Run program
+- **F2** / **Ctrl+S** - Save file
+- **F3** / **Ctrl+O** - Open file
+- **F10** / **Ctrl+Shift+P** - Command palette
+- **F1** - Context help for the current language
+- **Shift+F1** - Full keyboard shortcut list
 
 ### IDE Menu Structure
 
-- **File** - Open, save, new programs
-- **Edit** - Cut, copy, paste, undo/redo
-- **View** - Toggle panels and windows
-- **Language** - Select programming language
-- **Run** - Execute program
-- **Help** - Access documentation
+- **File** - New, open, save, export, print, preferences
+- **Edit** - Cut, copy, paste, undo/redo, find, format
+- **Run** - Run, reset, run selection
+- **Debug** - Breakpoints and stepping
+- **View** - Themes, panels, split editor, workspace decks
+- **Tools** - Compare languages
+- **Help** - Lessons, examples, documentation
 
 ## Navigation Tips
 
@@ -341,7 +339,7 @@ This documentation is maintained alongside Time Warp Studio development. If you 
 ## Need More Help?
 
 - Review the [Getting Started Guide](guides/01-getting-started.md)
-- Check the [FAQ](reference/faq.md) for common questions
+- Check the [FAQ](../FAQ.md) for common questions
 - Visit the [Troubleshooting Guide](guides/08-troubleshooting.md)
 - Read the project [README](../README.md)
 

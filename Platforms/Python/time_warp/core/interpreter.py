@@ -16,7 +16,7 @@ import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as _FuturesTimeoutError
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum, auto
 from typing import (
     TYPE_CHECKING,
@@ -43,10 +43,10 @@ from ..languages.python_lang import execute_python_lang
 
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
+from ..utils.execution_timeout import ExecutionTimeoutError
 from ..utils.expression_evaluator import ExpressionEvaluator
-
-# Hardware simulation
-from ..features.hardware_simulator import HardwareSimulator
+from ..utils.validators import WorkspaceFileService
+from .config import EXAMPLES_DIR
 from .language_registry import language_name_for_extension, metadata_for
 
 # Sandbox execution (subprocess isolation + resource limits)
@@ -154,10 +154,9 @@ class Language(Enum):
 _WHOLE_PROGRAM_EXECUTORS = _init_whole_program_executors()
 
 # Languages whose executors are safe to run in a subprocess sandbox.
-# These produce only text output and do not use the live turtle canvas.
-# Python is excluded and runs in a thread so turtle graphics continue to work.
 _SANDBOXABLE_LANGUAGES: frozenset[Language] = frozenset({
     Language.BRAINFUCK,
+    Language.PYTHON_LANG,
 })
 
 
@@ -192,7 +191,6 @@ class LanguageRegistry:
         return language in self._executors
 
 
-# Module-level singleton — available for introspection and plugin registration.
 language_registry = LanguageRegistry()
 
 
@@ -213,6 +211,47 @@ class InputRequest:
     prompt: str
     var_name: str
     is_numeric: bool
+
+
+@dataclass
+class ExecutionBudget:
+    """Shared execution budget and live telemetry counters across executors."""
+
+    start_monotonic: float = field(default_factory=time.monotonic)
+    deadline_monotonic: float = field(default_factory=lambda: time.monotonic() + 10.0)
+    max_steps: int = 250_000
+    steps_used: int = 0
+    max_output_bytes: int = 512_000
+    output_bytes: int = 0
+    max_recursion_depth: int = 128
+    recursion_depth: int = 0
+    max_include_depth: int = 16
+    include_depth: int = 0
+    cancelled: bool = False
+    brainfuck_dp: int = 0
+    brainfuck_tape_window: List[int] = field(default_factory=lambda: [0] * 16)
+    prolog_depth: int = 0
+
+    def reset(
+        self,
+        max_seconds: float = 10.0,
+        max_steps: int = 250_000,
+        max_output_bytes: int = 512_000,
+    ) -> None:
+        """Reset budget for a fresh execution run."""
+        now = time.monotonic()
+        self.start_monotonic = now
+        self.deadline_monotonic = now + max_seconds
+        self.max_steps = max_steps
+        self.steps_used = 0
+        self.max_output_bytes = max_output_bytes
+        self.output_bytes = 0
+        self.recursion_depth = 0
+        self.include_depth = 0
+        self.cancelled = False
+        self.brainfuck_dp = 0
+        self.brainfuck_tape_window = [0] * 16
+        self.prolog_depth = 0
 
 
 if TYPE_CHECKING:
@@ -248,6 +287,7 @@ class Interpreter:
     # Security limits
     MAX_ITERATIONS = 100_000
     MAX_EXECUTION_TIME = 10.0  # seconds
+    MAX_STEPS = 2_000_000  # interpreter ticks per run; the time limit is the hard stop
 
     # Variable interpolation patterns
     # *VAR* syntax (BASIC style)
@@ -283,9 +323,6 @@ class Interpreter:
         # Language mode
         self.language = language
 
-        # Hardware simulation
-        self.hardware = HardwareSimulator()
-
         # Declare all resettable attributes so the type checker sees them
         # in __init__. Actual values are set by _init_state().
         self.variables: Dict[str, Any] = {}
@@ -318,6 +355,11 @@ class Interpreter:
         self.last_input: str = ""
         self.pending_input: Optional[InputRequest] = None
         self.pending_resume_line: Optional[int] = None
+        self.budget: ExecutionBudget = ExecutionBudget()
+        self.file_service: WorkspaceFileService = WorkspaceFileService(
+            extra_read_dirs=[str(EXAMPLES_DIR)]
+        )
+        self.basic_files: Dict[int, Any] = {}
         self.last_key_pressed: Optional[str] = None
         self.screen_mode = ScreenMode.GRAPHICS
         self.screen_config = ScreenConfig()
@@ -404,14 +446,29 @@ class Interpreter:
         self.last_match_succeeded: bool = False  # For PILOT M:/Y:/N: commands
         self.stored_condition: Optional[bool] = None
         self.running: bool = True  # Program execution flag
-        self.subroutine_stack: List[int] = []  # For PILOT S:/R: commands
+        self.subroutine_stack: List[int] = []  # PILOT U:/S: return lines, popped by E:
         # Close any existing open file handles before resetting
         for fh in getattr(self, "open_files", {}).values():
             try:
                 fh.close()
             except Exception:  # pylint: disable=broad-exception-caught
                 logger.debug("Error closing file handle during reset", exc_info=True)
+        for pfile in getattr(self, "pascal_files", {}).values():
+            fh = pfile.get("handle") if isinstance(pfile, dict) else None
+            if fh is not None:
+                try:
+                    fh.close()
+                except Exception:  # pylint: disable=broad-exception-caught
+                    logger.debug("Error closing Pascal file during reset", exc_info=True)
+        for bfh in getattr(self, "basic_files", {}).values():
+            try:
+                bfh.close()
+            except Exception:  # pylint: disable=broad-exception-caught
+                logger.debug("Error closing BASIC file during reset", exc_info=True)
+        if hasattr(self, "file_service") and self.file_service is not None:
+            self.file_service.close_all()
         self.open_files: Dict[str, TextIO] = {}  # For PILOT F: commands
+        self.basic_files: Dict[int, Any] = {}  # For BASIC #n file channels
 
         # I/O state (callbacks preserved, transient state reset)
         self.last_input: str = ""
@@ -446,9 +503,9 @@ class Interpreter:
         self.data_values: List[str] = []
         self.data_pointer: int = 0
 
-        # BASIC hardware simulation state
-        self.memory: Dict[int, int] = {}  # PEEK/POKE simulated memory
-        self.ports: Dict[int, int] = {}  # IN/OUT simulated I/O ports
+        # BASIC PEEK/POKE memory and IN/OUT ports
+        self.memory: Dict[int, int] = {}
+        self.ports: Dict[int, int] = {}
         self.last_music_data: Optional[bytes] = None  # PLAY MML output
 
         # Prolog-specific state
@@ -492,6 +549,15 @@ class Interpreter:
 
         # Program source (set by load_program / run helper)
         self.program_source: str = ""
+        self.budget = ExecutionBudget()
+        self.budget.reset(
+            max_seconds=self.MAX_EXECUTION_TIME,
+            max_steps=self.MAX_STEPS,
+        )
+        if not hasattr(self, "file_service") or self.file_service is None:
+            self.file_service = WorkspaceFileService(
+                extra_read_dirs=[str(EXAMPLES_DIR)]
+            )
 
         # Default type mapping
         self._reset_type_defaults()
@@ -905,19 +971,26 @@ class Interpreter:
         """
         # Whole-program languages: run the full source, not line-by-line
         if self.language in _WHOLE_PROGRAM_EXECUTORS:
+            self.output.clear()
+            self.running = True
+            self.budget.reset(
+                max_seconds=self.MAX_EXECUTION_TIME,
+                max_steps=self.MAX_STEPS,
+            )
             source = getattr(self, "program_source", "")
             fn = _WHOLE_PROGRAM_EXECUTORS[self.language]
             if turtle is None:
                 from ..graphics.turtle_state import TurtleState as _TS
 
                 turtle = _TS()
+            self._logo_turtle = turtle
             if self.debug_mode:
                 self.log_output(
                     f"ℹ️ Debug step-through is not supported for "
                     f"{self.language.name}. Running in observation mode."
                 )
 
-            # Use subprocess sandbox for text-only languages when available
+            # Use subprocess sandbox when enabled
             _use_sandbox = (
                 self.language in _SANDBOXABLE_LANGUAGES
                 and is_sandbox_available()
@@ -929,20 +1002,25 @@ class Interpreter:
                     source,
                     timeout=self.MAX_EXECUTION_TIME,
                     variables=self.get_variables(),
+                    turtle=turtle,
                 )
                 # Merge any variable updates returned by the sandbox
                 for k, v in _vars.items():
                     self.variables[k] = v
             else:
+                _pool = ThreadPoolExecutor(max_workers=1)
+                _future = _pool.submit(fn, self, source, turtle)
                 try:
-                    with ThreadPoolExecutor(max_workers=1) as _pool:
-                        _future = _pool.submit(fn, self, source, turtle)
-                        output_text = _future.result(timeout=self.MAX_EXECUTION_TIME)
-                except _FuturesTimeoutError:
+                    output_text = _future.result(timeout=self.MAX_EXECUTION_TIME)
+                except (_FuturesTimeoutError, ExecutionTimeoutError):
+                    self.budget.cancelled = True
+                    self.running = False
                     _t = self.MAX_EXECUTION_TIME
                     output_text = f"❌ Error: Execution timeout ({_t}s exceeded)\n"
                 except Exception as _exc:  # noqa: BLE001
                     output_text = f"❌ Runtime error: {_exc}\n"
+                finally:
+                    _pool.shutdown(wait=False, cancel_futures=True)
             for line in output_text.splitlines(keepends=True):
                 self.log_output(line.rstrip("\n"))
             if self.debug_mode and self.debug_timeline:
@@ -974,6 +1052,11 @@ class Interpreter:
         """
         if self.current_line == 0:
             self.output.clear()
+        self.running = True
+        self.budget.reset(
+            max_seconds=self.MAX_EXECUTION_TIME,
+            max_steps=self.MAX_STEPS,
+        )
         return 0, time.time()
 
     def _run_and_collect(
@@ -1010,6 +1093,7 @@ class Interpreter:
 
                 self._check_timeout(start_time)
                 iterations += 1
+                self.budget.steps_used = iterations
 
                 if not statement.strip():
                     continue
@@ -1056,14 +1140,7 @@ class Interpreter:
                 condition = self.debug_timeline.breakpoint_conditions.get(line_number)
                 if condition:
                     try:
-                        variables = self.get_variables()
-                        # Reject conditions using dunder attributes to prevent
-                        # sandbox bypass via __class__.__subclasses__() chains.
-                        if "__" in condition:
-                            raise ValueError("dunder attributes not allowed in breakpoint conditions")
-                        should_pause = bool(
-                            eval(condition, {"__builtins__": {}}, variables)  # noqa: S307  # pylint: disable=eval-used
-                        )
+                        should_pause = bool(self.evaluate_expression(condition))
                     except Exception:  # noqa: BLE001
                         should_pause = True  # pause on evaluation error
                     return should_pause
@@ -1331,6 +1408,21 @@ class Interpreter:
             self.arrays.copy(),
             string_variables=self.string_variables.copy(),
         )
+        # Register BASIC EOF(n) channel helper
+        def _eof_fn(channel_num: float) -> float:
+            ch_id = int(channel_num)
+            fh = getattr(self, "basic_files", {}).get(ch_id)
+            if fh is None:
+                return -1.0
+            try:
+                pos = fh.tell()
+                ch_read = fh.read(1)
+                fh.seek(pos)
+                return -1.0 if ch_read == "" else 0.0
+            except Exception:
+                return -1.0
+
+        evaluator.FUNCTIONS["EOF"] = _eof_fn
         # Register BASIC DEF FN user-defined functions
         user_fns = getattr(self, "basic_user_fns", {})
         for fn_name, (params, body_expr) in user_fns.items():
@@ -1574,22 +1666,135 @@ class Interpreter:
         vars_dict.update(self.string_variables)
         # Also include aggregate numeric (base names)
         vars_dict.update(self.variables)
-        hardware = getattr(self, "hardware", None)
-        if hardware is not None:
-            vars_dict["__hardware__"] = {
-                "environment": hardware.get_environment(),
-                "devices": {
-                    status["device_id"]: {
-                        "type": status.get("type"),
-                        "active": status.get("is_active"),
-                        "value": status.get("current_value"),
-                        "reading_count": status.get("reading_count"),
-                    }
-                    for status in hardware.get_all_device_status()
-                },
-            }
         # Add arrays and other state if needed
         return vars_dict
+
+    def tick(self, steps: int = 1) -> None:
+        """Advance the shared execution budget and check deadline/cancellation.
+
+        Raises:
+            ExecutionTimeoutError: When stopped, timed out, or step limit exceeded.
+        """
+        budget = getattr(self, "budget", None)
+        if budget is None:
+            return
+        budget.steps_used += steps
+        if not self.running or budget.cancelled:
+            raise ExecutionTimeoutError("Execution cancelled")
+        if budget.steps_used > budget.max_steps:
+            self.running = False
+            raise ExecutionTimeoutError(
+                f"Execution step limit ({budget.max_steps} steps) exceeded"
+            )
+        if time.monotonic() > budget.deadline_monotonic:
+            self.running = False
+            raise ExecutionTimeoutError(
+                f"Execution exceeded {self.MAX_EXECUTION_TIME:.1f} second timeout"
+            )
+
+    def sleep_slices(self, seconds: float) -> None:
+        """Sleep in short slices while checking execution budget and cancellation."""
+        remaining = max(0.0, min(float(seconds), self.MAX_EXECUTION_TIME))
+        deadline = time.monotonic() + remaining
+        while True:
+            self.tick(1)
+            now = time.monotonic()
+            if now >= deadline:
+                break
+            time.sleep(min(0.025, deadline - now))
+
+    def get_telemetry_snapshot(
+        self, turtle: "TurtleState | None" = None
+    ) -> Dict[str, Any]:
+        """Return a structured runtime telemetry snapshot for the Live HUD."""
+        budget = getattr(self, "budget", ExecutionBudget())
+        elapsed_s = max(1e-6, time.monotonic() - budget.start_monotonic)
+        steps_used = budget.steps_used
+        steps_per_sec = steps_used / elapsed_s if self.running or steps_used > 0 else 0.0
+
+        active_turtle = turtle or getattr(self, "_logo_turtle", None)
+        turtle_info: Dict[str, Any] = {
+            "x": 0.0,
+            "y": 0.0,
+            "heading": 0.0,
+            "pen_down": True,
+            "lines": 0,
+            "shapes": 0,
+            "visible": True,
+        }
+        if active_turtle is not None:
+            turtle_info = {
+                "x": round(float(getattr(active_turtle, "x", 0.0)), 2),
+                "y": round(float(getattr(active_turtle, "y", 0.0)), 2),
+                "heading": round(float(getattr(active_turtle, "heading", 0.0)), 1),
+                "pen_down": bool(getattr(active_turtle, "pen_down", True)),
+                "lines": len(getattr(active_turtle, "lines", [])),
+                "shapes": len(getattr(active_turtle, "shapes", [])),
+                "visible": bool(getattr(active_turtle, "visible", True)),
+            }
+
+        forth_stack: List[Any] = []
+        forth_rstack: List[Any] = []
+        forth_memory_window: List[int] = []
+        forth_exec = getattr(self, "_forth_executor", None)
+        if forth_exec is not None:
+            forth_stack = list(getattr(forth_exec, "stack", []))[-16:]
+            forth_rstack = list(getattr(forth_exec, "rstack", []))[-16:]
+            mem = getattr(forth_exec, "memory", {})
+            if isinstance(mem, dict):
+                forth_memory_window = [int(mem.get(i, 0)) & 0xFF for i in range(16)]
+
+        lang_name = (
+            self.language.friendly_name()
+            if self.language and hasattr(self.language, "friendly_name")
+            else str(self.language or "BASIC")
+        )
+
+        audio_trace = ""
+        try:
+            from ..features.music import get_music_player
+
+            player = get_music_player()
+            if getattr(player, "last_wav", None):
+                audio_trace = player.get_oscilloscope_trace(32)
+        except Exception:
+            audio_trace = ""
+
+        basic_ram = [int(self.memory.get(i, 0)) & 0xFF for i in range(16)]
+
+        return {
+            "language": lang_name,
+            "running": self.running,
+            "current_line": self.source_line_no,
+            "steps_used": steps_used,
+            "max_steps": budget.max_steps,
+            "elapsed_ms": round(elapsed_s * 1000.0, 1),
+            "steps_per_sec": round(steps_per_sec, 1),
+            "recursion_depth": budget.recursion_depth,
+            "call_stack": self.call_stack,
+            "variables": self.get_variables(),
+            "forth_stack": forth_stack,
+            "forth_rstack": forth_rstack,
+            "forth_memory_window": forth_memory_window,
+            "brainfuck_dp": budget.brainfuck_dp,
+            "brainfuck_tape_window": list(budget.brainfuck_tape_window),
+            "basic_ram_window": basic_ram,
+            "audio_oscilloscope": audio_trace,
+            "prolog_depth": budget.prolog_depth,
+            "turtle": turtle_info,
+        }
+
+    def poke_memory_cell(self, address: int, value: int) -> None:
+        """Live-edit a byte in BASIC RAM, Forth memory, or the Brainfuck tape window."""
+        addr = max(0, int(address))
+        byte_val = int(value) & 0xFF
+        self.memory[addr] = byte_val
+        forth_exec = getattr(self, "_forth_executor", None)
+        if forth_exec is not None and isinstance(getattr(forth_exec, "memory", None), list):
+            if 0 <= addr < len(forth_exec.memory):
+                forth_exec.memory[addr] = byte_val
+        if 0 <= addr < len(self.budget.brainfuck_tape_window):
+            self.budget.brainfuck_tape_window[addr] = byte_val
 
 
 def run(source: str, language: Language, turtle: "TurtleState | None" = None) -> str:

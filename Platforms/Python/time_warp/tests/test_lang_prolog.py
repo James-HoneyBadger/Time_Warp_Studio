@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from time_warp.core.interpreter import Language
 from .conftest_lang import run, ok, has, no_errors
 
@@ -201,12 +200,6 @@ def test_write_integer():
     assert has(out, "42")
 
 
-def test_is_arithmetic():
-    out = prolog("?- X is 3 + 4, write(X), nl.")
-    assert no_errors(out)
-    assert has(out, "7")
-
-
 def test_plus_predicate():
     out = prolog("?- plus(3, 5, X), write(X), nl.")
     assert no_errors(out)
@@ -219,7 +212,7 @@ def test_max_arithmetic():
     assert has(out, "7")
 
 
-def test_atom_length():
+def test_atom_length_query():
     out = prolog("?- atom_length(hello, N), write(N), nl.")
     assert no_errors(out)
     assert has(out, "5")

@@ -1,427 +1,141 @@
-# IDE Settings and Customization
+# Settings and Customization
 
-Time Warp Studio allows extensive customization of the editor, display, and behavior to suit your preferences.
+Time Warp Studio exposes appearance and behavior options through its menus. Most editor behavior is fixed in the current build. Keyboard shortcuts cannot be remapped (see [Keyboard Shortcuts](07-shortcuts.md)).
 
 ## Accessing Settings
 
-Settings are accessed through the **View → Settings** menu or by:
-1. Click the **View** menu
-2. Select **Settings**
-3. Configure options as desired
+There is no single Settings dialog. Options are in the menus listed below. **File → Preferences** (**Ctrl+,**) opens only the Auto-Save dialog.
 
-Settings are automatically saved to `~/.time_warp/config.json`.
+| Setting | Menu location |
+|---------|---------------|
+| Theme (33 themes) | **View → Theme** |
+| Font family and size | **View → Font** |
+| Auto-save and interval | **File → Preferences** (**Ctrl+,**) |
+| Focus mode | **View → Zoom (Focus Mode)** (**F5**) |
+| CRT effects | **View → CRT Effects** |
+| Screen mode | **View → Screen Mode** |
+| Minimap, outline, split editor, decks | **View** menu |
+| Graphics speed | Speed slider on the toolbar |
+
+Settings are saved automatically with Qt `QSettings`. See [Saved Values](#saved-values).
 
 ## Display Settings
 
 ### Themes
 
-Change the IDE appearance with built-in themes:
+The IDE ships with 33 themes.
 
-**Available Themes (28):**
+**Workstation and retro themes:** Neo-90s Workstation, Borland Turbo Vision 1991, NeXTSTEP Gunmetal, Amiga Workbench 2.0, VGA Amber Lab, Amber Monochrome, Green Monochrome, IBM PC CGA, Commodore 64, Apple II, DOS Blue, ZX Spectrum
 
-**Dark Themes:**
-- **Dracula** — Purple and pink accents, excellent for night coding
-- **Monokai** — Classic bright syntax colors on dark background
-- **VS Code Dark** — Familiar dark theme from Visual Studio Code
-- **GitHub Dark** — GitHub's dark color scheme
-- **Nord** — Arctic, north-bluish color palette
-- **One Dark Pro** — Atom editor's popular dark theme
-- **Solarized Dark** — Science-backed low-contrast dark theme
-- **Ocean** — Blue-based calming dark theme
-- **Catppuccin Mocha** — Warm pastel dark theme
-- **Gruvbox Dark** — Retro groove warm dark theme
-- **Tokyo Night** — Clean dark theme inspired by Tokyo city lights
+**Dark themes:** Dracula, Monokai, VS Code Dark, GitHub Dark, Nord, One Dark Pro, Solarized Dark, Ocean, Catppuccin Mocha, Gruvbox Dark, Tokyo Night
 
-**Light Themes:**
-- **Gruvbox Light** — Retro groove warm light theme
-- **Catppuccin Latte** — Warm pastel light theme
-- **VS Code Light** — Familiar light theme from Visual Studio Code
-- **GitHub Light** — GitHub's light color scheme
-- **Solarized Light** — Science-backed low-contrast light theme
-- **Spring** — Fresh, vibrant light theme for daytime use
+**Light themes:** Gruvbox Light, Catppuccin Latte, VS Code Light, GitHub Light, Solarized Light, Spring
 
-**Accessibility Themes:**
-- **High Contrast Dark** — Maximum contrast dark theme
-- **High Contrast Light** — Maximum contrast light theme
-- **Dyslexia Friendly** — Optimized fonts and spacing for readability
-- **Accessible Dark Blue** — High-contrast blue dark theme
-
-**Retro CRT Themes:**
-- **Amber Monochrome** — Classic amber phosphor terminal look
-- **Green Monochrome** — Classic green phosphor terminal look
-- **IBM PC CGA** — 1980s IBM PC Color Graphics Adapter colors
-- **Commodore 64** — The iconic C64 blue-and-white palette
-- **Apple II** — Apple II green-screen aesthetic
-- **DOS Blue** — MS-DOS text mode blue screen
-- **ZX Spectrum** — ZX Spectrum bright color palette
+**Accessibility themes:** High Contrast Dark, High Contrast Light, Dyslexia Friendly, Accessible Dark Blue
 
 **How to Change Theme:**
 
-1. Open **View → Settings**
-2. Select **Theme**
-3. Choose from available options
-4. Theme applies immediately
+1. Open **View → Theme**.
+2. Pick a theme. It applies immediately.
 
-### Font Settings
+Other commands in the same menu:
+- **Preview Themes…** opens a theme browser.
+- **Cycle Workstation Theme** (**Shift+F10**) rotates through the workstation themes.
+- **Edit Current Theme…** opens a colour editor. Colour schemes can be exported and imported as JSON.
+- **Ctrl+Alt+H** toggles the high-contrast theme.
 
-Customize editor font appearance:
+### Font
 
-- **Font Family** - Choose between available monospace fonts
-  - Recommended: Consolas, Monaco, DejaVu Sans Mono
-- **Font Size** - Adjust text size (8pt to 20pt)
-  - Default: 12pt
-  - Larger sizes improve readability for presentations
-  - Smaller sizes show more code at once
+**View → Font** has two submenus:
+- **Font Family** lists installed monospace fonts.
+- **Font Size** sets the editor font size.
 
-**Tip:** Increase font size for teaching to students; decrease for working on large programs.
+**Ctrl++** and **Ctrl+-** also change the editor font size.
 
-### Line Spacing
+**Tip:** Use a larger font when presenting to a class.
 
-Adjust vertical spacing between lines:
+### CRT Effects
 
-- **Single Spacing** - Default, compact display
-- **1.5x Spacing** - More comfortable reading
-- **Double Spacing** - Maximum spacing for clarity
+**View → CRT Effects** toggles the retro display effects. **CRT Settings…** adjusts scanline intensity, phosphor glow, screen curvature, and vignette.
 
-### Word Wrap
+### Screen Mode
 
-Enable or disable automatic line wrapping:
+**View → Screen Mode** switches between the normal graphics display and the retro text screen modes.
 
-- **On** - Lines wrap at editor width (better for viewing)
-- **Off** - Horizontal scrolling (better for editing)
+### Fixed Editor Behavior
 
-## Editor Settings
+The following are not configurable in the current build:
 
-### Show Line Numbers
-
-Toggle line number display in the editor:
-
-- **On** - Helpful for referencing specific lines
-- **Off** - More space for code
-
-### Show Indentation Guides
-
-Display subtle guides for indentation levels:
-
-- **On** - Helps see code structure
-- **Off** - Cleaner appearance
-
-### Tab Width
-
-Set spaces per indentation level:
-
-- **2 spaces** - Compact
-- **4 spaces** - Standard (recommended)
-- **8 spaces** - Spacious
-
-### Auto-Indent
-
-Enable automatic indentation:
-
-- **On** - Matches previous line's indentation
-- **Off** - Manual indentation only
-
-### Code Formatting
-
-Auto-format code when running:
-
-- **On** - Clean, consistent formatting
-- **Off** - Preserve custom formatting
+| Behavior | Current behavior |
+|----------|------------------|
+| Line numbers | Always shown |
+| Indentation guides | Not available |
+| Tab width | Fixed |
+| Auto-indent | Built in per language |
+| Word wrap | Not configurable |
+| Line spacing | Fixed |
+| Syntax colours | Follow the active theme |
 
 ## Language Settings
 
-### Default Language
-
-Choose the default programming language:
-
-**Classic:**
-- **BASIC** - Classic line-numbered BASIC
-- **PILOT** - Interactive teaching language
-- **Logo** - Turtle graphics
-- **C** - Systems programming
-- **Pascal** - Structured programming
-- **Prolog** - Logic programming
-- **Forth** - Stack-based programming
-
-**Modern:**
-- **Python** - Multi-paradigm scripting
-
-**Esoteric:**
-- **Brainfuck** - Minimalist esoteric language
-
-The selected language is remembered between sessions.
-
-### Syntax Highlighting
-
-Each language has customizable syntax colors:
-
-- **Keywords** - Language-specific keywords
-- **Strings** - Text in quotes
-- **Comments** - Explanation text
-- **Numbers** - Numeric literals
-- **Operators** - Mathematical and logical operators
-
-**To customize:**
-
-1. Open **View → Settings**
-2. Select **Language → Syntax Colors**
-3. Choose a language
-4. Adjust colors for each element
+The default language is not configurable; blank files open as BASIC. To change the language of the current file, use **Ctrl+Shift+L** (Language picker). Language colours are part of the active theme.
 
 ## Output Settings
 
-### Output Text Size
+The output panel text size and wrapping are fixed in the current build.
 
-Adjust the text size in the output panel:
+## Canvas and Graphics
 
-- **Small** - More output visible at once
-- **Medium** - Default size
-- **Large** - Better readability
+- **Speed:** the toolbar speed slider sets the delay for graphics output (0–500 ms per output line).
+- **Size and background:** the canvas size follows the splitter layout, and the background follows the active theme. Neither is a separate setting.
+- **Grid:** the canvas grid button toggles a coordinate grid overlay.
 
-### Word Wrap in Output
+## Program Execution and Startup
 
-Enable line wrapping in output panel:
+- **Auto-save:** **File → Preferences** (**Ctrl+,**) enables or disables auto-save and sets the interval (10–3600 seconds).
+- **Welcome tab:** shown at startup unless the stored `show_welcome` value is false.
 
-- **On** - Wrap long lines
-- **Off** - Horizontal scrolling
+## Interface Panels
 
-### Clear Output on Run
+- **View → Show Minimap** toggles the minimap.
+- **F4** opens the document outline.
+- **Ctrl+\** splits the editor; **Ctrl+Shift+\** closes the split.
+- **Shift+F6** toggles the telemetry HUD.
+- **Alt+1** to **Alt+4** switch workspace decks.
+- **F10** / **Ctrl+Shift+P** open the command palette.
 
-Automatically clear previous output when running:
+## Keyboard
 
-- **On** - Fresh output each run (recommended)
-- **Off** - Accumulate all output
+Shortcuts cannot be remapped in this build. **Help → Keyboard Shortcuts** (**Ctrl+?**) shows the current bindings. See [Keyboard Shortcuts](07-shortcuts.md).
 
-### Auto-Scroll to Bottom
+## Saved Values
 
-Automatically scroll output to show new content:
+IDE settings are stored with Qt `QSettings`, under the application's organization and application names. The storage location is platform-specific (on Linux, under `~/.config`). Examples of stored keys:
 
-- **On** - Always see latest output
-- **Off** - Manual scrolling
+| Key | Contents |
+|-----|----------|
+| `theme` | Selected theme |
+| `font_family`, `font_size` | Editor font |
+| `show_welcome` | Welcome tab at startup |
 
-## Canvas Settings
+Breakpoints are also stored in QSettings, so they persist across restarts.
 
-### Canvas Size
+## Export, Import, and Reset
 
-Set the default turtle graphics canvas size:
-
-- **Width** - Default: 800 pixels
-- **Height** - Default: 600 pixels
-- **Resizable** - Allow user to resize window
-
-### Canvas Background
-
-Set the default background color:
-
-- **White** - Professional appearance
-- **Black** - Good for graphics
-- **Custom Color** - Choose any color
-
-### Turtle Starting Position
-
-Configure where the turtle begins:
-
-- **Center** - Middle of canvas
-- **Top-Left** - Upper left corner
-- **Bottom-Left** - Lower left corner
-- **Custom** - Specify coordinates
-
-### Graphics Speed
-
-Control animation speed for turtle graphics:
-
-- **Slow** (100ms) - Watch every movement
-- **Normal** (50ms) - Default speed
-- **Fast** (10ms) - Quick execution
-- **Instant** - No animation
-
-## Program Execution
-
-### Auto-Save Before Run
-
-Automatically save files before running:
-
-- **On** - Never lose unsaved work (recommended)
-- **Off** - Manual save required
-
-### Show Execution Time
-
-Display how long a program took to run:
-
-- **On** - Helpful for performance analysis
-- **Off** - Cleaner output
-
-### Run Timeout
-
-Maximum seconds to run a program:
-
-- Default: 30 seconds
-- Prevents infinite loops from crashing IDE
-
-### Input Timeout
-
-Maximum seconds to wait for user input:
-
-- Default: 60 seconds
-- Useful in interactive programs
-
-## Interface Settings
-
-### Show Toolbar
-
-Display the quick action toolbar:
-
-- **On** - Quick access to common features
-- **Off** - More vertical space
-
-### Show Status Bar
-
-Display status bar at bottom:
-
-- **On** - See file info and position
-- **Off** - Cleaner interface
-
-### Window Size
-
-Save and restore window size:
-
-- **Remember Window Size** - Restore size on startup
-- **Default Size** - Always start with default size
-
-### Panel Layout
-
-Customize which panels are visible:
-
-- **Show Editor** - Code editor (always on)
-- **Show Output** - Output panel
-- **Show Canvas** - Turtle graphics canvas
-- **Show File List** - Browse files
-
-**Tip:** Customize layout for your workflow. Teachers might hide file list; graphics programmers might show canvas by default.
-
-## Keyboard Settings
-
-### Keyboard Layout
-
-Choose keyboard layout:
-
-- **US English** - Standard
-- **DVORAK** - Alternative layout
-- **Custom** - Map keys yourself
-
-### Custom Keyboard Shortcuts
-
-Map custom shortcuts:
-
-1. Open **View → Settings**
-2. Select **Keyboard Shortcuts**
-3. Click on an action
-4. Press the keys you want
-5. Shortcuts save automatically
-
-### Disable Key Bindings
-
-Disable shortcuts you don't use:
-
-1. Open **View → Settings**
-2. Select **Keyboard Shortcuts**
-3. Click an action
-4. Press **Delete** or **Clear**
-
-## Advanced Settings
-
-### Log Level
-
-Set verbosity of internal logs:
-
-- **Error** - Only critical issues
-- **Warning** - Warnings and errors
-- **Info** - General information (default)
-- **Debug** - Detailed debugging info
-
-Logs appear in the Output panel during execution.
-
-### Script Timeout
-
-Set maximum execution time:
-
-- **10 seconds** - Short scripts
-- **30 seconds** - Default
-- **60+ seconds** - Long-running programs
-
-### Memory Limit
-
-Maximum memory for running programs:
-
-- **Default** - System dependent
-- **Restricted** - For learning (prevents resource abuse)
-- **Unlimited** - For serious programs
-
-## Saving and Restoring Settings
-
-### Export Settings
-
-Save your current settings to a file:
-
-1. Open **View → Settings**
-2. Click **Export Settings**
-3. Choose save location
-4. Settings saved as `.json` file
-
-### Import Settings
-
-Load settings from a file:
-
-1. Open **View → Settings**
-2. Click **Import Settings**
-3. Choose saved settings file
-4. Settings load immediately
-
-### Reset to Defaults
-
-Restore all settings to factory defaults:
-
-1. Open **View → Settings**
-2. Click **Reset to Defaults**
-3. Confirm the action
-4. IDE restarts with defaults
-
-**Warning:** This cannot be undone. Export settings first if you want to keep them.
-
-## Settings File Format
-
-Settings are stored in `~/.time_warp/config.json`:
-
-```json
-{
-  "theme": "dracula",
-  "font_size": 12,
-  "font_family": "Consolas",
-  "default_language": "basic",
-  "show_line_numbers": true,
-  "canvas_width": 800,
-  "canvas_height": 600,
-  "auto_clear_output": true,
-  "auto_save": true
-}
-```
-
-You can edit this file directly in a text editor.
+- **Theme colours:** **View → Theme → Edit Current Theme…** exports and imports colour schemes as JSON.
+- **Full settings export/import** and a global **Reset to Defaults** are not available in the current build.
+- The CRT settings dialog applies changes only when you confirm it.
 
 ## Troubleshooting Settings
 
-**Problem:** Settings won't save
-- **Solution:** Check that `~/.time_warp/` directory exists and is writable
-- **Solution:** Try exporting and importing settings
+**Problem:** A theme or font change does not persist
+- **Solution:** Confirm the Qt config directory (typically `~/.config`) is writable, then change the option again.
 
-**Problem:** IDE looks wrong after changing theme
-- **Solution:** Reset to defaults and try another theme
-- **Solution:** Check that your system font is installed
+**Problem:** Theme or font looks wrong
+- **Solution:** Reselect the theme in **View → Theme**, or the font in **View → Font**.
 
 **Problem:** Keyboard shortcuts not working
-- **Solution:** Check if another application captured the shortcut
-- **Solution:** Try remapping to a different key combination
-- **Solution:** Restart the IDE to apply changes
+- **Solution:** Check whether another application captured the key combination. See [Keyboard Shortcuts](07-shortcuts.md).
 
 ## Keyboard Shortcuts Reference
 
@@ -429,11 +143,10 @@ See [Keyboard Shortcuts Guide](07-shortcuts.md) for complete list.
 
 ## Tips for Optimization
 
-1. **For Learning** - Larger fonts, Show line numbers, Simple theme
-2. **For Graphics** - Show canvas by default, Instant graphics speed
-3. **For Performance** - Smaller fonts, Disable syntax highlighting
-4. **For Presentations** - Large font, Candy theme, Hide file list
-5. **For Development** - Line numbers, Auto-format, Dark theme
+1. **For learning** - Use a larger font and the Lessons panel (**Ctrl+F3**)
+2. **For graphics** - Raise the speed slider to watch drawings faster
+3. **For presentations** - Increase the font (**Ctrl++**) and use focus mode (**F5**)
+4. **For focus** - Use the Dracula or Nord theme and turn on auto-save
 
 ## Next Steps
 

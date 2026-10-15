@@ -3,7 +3,6 @@
 .. note:: Large chunks of functionality have been moved to mixin classes
    under :mod:`time_warp.ui.mixins` to keep each file focused.  See:
 
-   * :class:`~.mixins.CollaborationMixin`
    * :class:`~.mixins.ClassroomMixin`
    * :class:`~.mixins.DebugMixin`
    * :class:`~.mixins.ExportMixin`
@@ -18,7 +17,7 @@ from typing import Optional
 
 # pylint: disable=no-name-in-module
 # pylint: disable=reimported,redefined-outer-name
-from PySide6.QtCore import QSettings, QSize, Qt, QThread, QTimer
+from PySide6.QtCore import QObject, QSettings, QSize, Qt, QTimer
 from PySide6.QtCore import Signal as _Signal
 from PySide6.QtGui import (
     QAction,
@@ -33,17 +32,14 @@ from PySide6.QtWidgets import (
     QComboBox,
     QDialog,
     QDialogButtonBox,
-    QFormLayout,
+    QDockWidget,
     QHBoxLayout,
     QLabel,
-    QLineEdit,
     QListWidget,
-    QListWidgetItem,
     QMainWindow,
     QMenu,
     QMessageBox,
     QPlainTextEdit,
-    QPushButton,
     QSlider,
     QSplitter,
     QStatusBar,
@@ -60,15 +56,13 @@ from ..core.interpreter import Language
 from .tab_state import TabState
 from .canvas import TurtleCanvas
 from .coach_marks import CoachMarkManager
-from .collaboration_client import CollaborationClient
 from .command_palette import CommandPalette
 from .crt_effect import CRTEffectOverlay
 from .debug_panel import DebugPanel
+from .document_outline import DocumentOutline
 from .editor import CodeEditor
-from .feature_integration import FeatureIntegrationManager
 from .mixins import (
     ClassroomMixin,
-    CollaborationMixin,
     DebugMixin,
     ExportMixin,
     FileOperationsMixin,
@@ -82,14 +76,16 @@ from .variable_inspector import VariableInspector
 from .breakpoint_persistence import decode_breakpoints, encode_breakpoints
 from ..features.classroom_mode import ClassroomMode
 from ..features.autosave_manager import AutosaveManager
-from ..features.plugin_system import PluginManager
 from .focus_mode import FocusModeManager
 from .onboarding import OnboardingDialog, OnboardingManager
 from ..features.examples_browser import ExamplesBrowser
 from ..utils.error_hints import get_enhanced_error_message
 
 # Fix: Import CustomUILayouts for custom UI layout management
+from .accessibility_features import AccessibilityFeatures
 from .custom_layouts import CustomUILayouts
+from .function_key_bar import FunctionKeyBar
+from .telemetry_hud import TelemetryHUD
 
 # pylint: enable=no-name-in-module
 
@@ -119,29 +115,35 @@ def _version_tuple(v: str) -> tuple:
         return (0, 0, 0)
 
 
-class _UpdateCheckerThread(QThread):
-    """Checks GitHub releases API and emits a signal when a newer version exists."""
+class _UpdateNotifier(QObject):
+    """Delivers update-check results from the worker thread to the UI thread."""
 
     update_available = _Signal(str, str)  # (latest_version, release_url)
 
-    def run(self) -> None:
+
+def _check_for_update(notifier: _UpdateNotifier) -> None:
+    """Query GitHub releases; runs on a daemon thread so it never blocks exit."""
+    import json as _json
+    import urllib.error
+    import urllib.request
+
+    req = urllib.request.Request(
+        _GITHUB_RELEASES_URL,
+        headers={"User-Agent": "Time-Warp-Studio-UpdateChecker/1.0"},
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=8) as resp:  # noqa: S310
+            data = _json.loads(resp.read())
+    except (OSError, ValueError, urllib.error.URLError) as exc:
+        logger.debug("Update check skipped: %s", exc)
+        return
+    tag: str = str(data.get("tag_name", "")).lstrip("v")
+    url: str = str(data.get("html_url", _GITHUB_RELEASES_URL))
+    if tag and _version_tuple(tag) > _version_tuple(_read_local_version()):
         try:
-            import urllib.request
-            import json as _json
-            req = urllib.request.Request(
-                _GITHUB_RELEASES_URL,
-                headers={"User-Agent": "Time-Warp-Studio-UpdateChecker/1.0"},
-            )
-            with urllib.request.urlopen(req, timeout=8) as resp:  # noqa: S310
-                data = _json.loads(resp.read())
-            tag: str = data.get("tag_name", "").lstrip("v")
-            url: str = data.get("html_url", _GITHUB_RELEASES_URL)
-            local = _read_local_version()
-            if tag and _version_tuple(tag) > _version_tuple(local):
-                self.update_available.emit(tag, url)
-        except Exception:  # noqa: BLE001
-            # Network errors / missing package are silently ignored
-            pass
+            notifier.update_available.emit(tag, url)
+        except RuntimeError:
+            pass  # window already closed
 
 
 # ------------------------------------------------------------------------------
@@ -289,7 +291,6 @@ class ResizableTabWidget(QTabWidget):
 
 
 class MainWindow(
-    CollaborationMixin,
     ClassroomMixin,
     DebugMixin,
     ExportMixin,
@@ -304,7 +305,6 @@ class MainWindow(
 
     Mixins provide focused groups of functionality:
 
-    * **CollaborationMixin** – real-time collaboration server UI
     * **ClassroomMixin** – presentation mode, bundles, lesson export
     * **DebugMixin** – debugger start/stop/step, breakpoints, timeline
     * **ExportMixin** – PNG/SVG/HTML/PDF export, printing
@@ -330,12 +330,6 @@ class MainWindow(
         # Theme manager
         self.theme_manager = ThemeManager()
 
-        # Collaboration client
-        self.collaboration_client = CollaborationClient()
-        self.collab_disconnect_action = QAction("Disconnect", self)
-        self.collab_disconnect_action.setEnabled(False)
-        self.setup_collaboration_callbacks()
-
         # Classroom mode
         self.classroom_mode = ClassroomMode()
         self._classroom_lock_theme = False
@@ -346,13 +340,6 @@ class MainWindow(
         # Current file tracking — single dict of TabState per tab index.
         # Use self._ts(idx) to get-or-create a TabState for any index.
         self._tab_states: dict = {}
-
-        # Dialog UI elements (initialized in respective methods)
-        self.server_input = None
-        self.username_input = None
-        self.session_list = None
-        self.session_name_input = None
-        self.session_desc_input = None
 
         # Debugging state
         self.breakpoints = set()  # Set of (tab_index, line) tuples
@@ -400,27 +387,25 @@ class MainWindow(
         # Run history (last 10 runs: list of dicts with 'code','language','timestamp')
         self._run_history: list = []
 
-        # Feature integration manager
-        self.feature_manager = FeatureIntegrationManager(self)
-
         # Initialize custom UI layouts manager
         self.ui_layout_manager = CustomUILayouts()
+        self.telemetry_hud: Optional[TelemetryHUD] = None
+        self.function_key_bar: Optional[FunctionKeyBar] = None
+        self.document_outline: Optional[DocumentOutline] = None
+        self.outline_dock: Optional[QDockWidget] = None
+        self._lesson_panel = None
+        self._fkey_actions: dict = {}
 
         # Setup UI
         self.setup_ui()
         self.create_toolbar()
         self.create_menus()
         self.create_statusbar()
+        self.accessibility_features = AccessibilityFeatures(self)
 
-        # Setup feature panels and integration
-        self.feature_manager.setup_features()
+        # Setup lightweight Document Outline dock
+        self._setup_document_outline_dock()
         self.output.execution_complete.connect(self.on_execution_complete)
-        self._connect_lesson_signals()
-        self._connect_lesson_authoring_signals()
-        self._connect_learning_hub_signals()
-        self._connect_turtle_inspector_signals()
-        self._connect_classroom_signals()
-        self._connect_reference_signals()
 
         # Initialise coach-mark tour (shown on first launch after a delay)
         self._coach_marks = CoachMarkManager(self)
@@ -435,9 +420,6 @@ class MainWindow(
         # Show first-run onboarding after UI settles
         QTimer.singleShot(600, self._maybe_show_onboarding)
 
-        # Auto-load plugins at startup (2 s delay so UI is ready first)
-        QTimer.singleShot(2000, self._load_plugins_at_startup)
-
         # Check for updates in the background (5 s delay so startup is snappy)
         QTimer.singleShot(5000, self._start_update_check)
 
@@ -447,23 +429,13 @@ class MainWindow(
         _terminal_shortcut.triggered.connect(self._focus_terminal)
         self.addAction(_terminal_shortcut)
 
-        # Apply theme to current editor
-        current_editor = self.get_current_editor()
-        if current_editor and hasattr(current_editor, "highlighter"):
-            # Use saved theme if the user has explicitly set one; otherwise
-            # auto-detect from the OS color scheme.
-            saved_theme = self.settings.value("theme", None)
-            if saved_theme is None:
-                theme_name = self.theme_manager.detect_os_theme()
-            else:
-                theme_name = saved_theme
-            self.theme_manager.apply_theme(
-                theme_name,
-                editor=current_editor,
-                output=self.output,
-                canvas=self.canvas,
-                highlighter=current_editor.highlighter,
-            )
+        # Apply theme across all open editors, HUD, and Function-Key Bar
+        saved_theme = self.settings.value("theme", None)
+        if saved_theme is None:
+            theme_name = self.theme_manager.detect_os_theme()
+        else:
+            theme_name = str(saved_theme)
+        self._apply_theme_all(theme_name)
 
         # Ensure output starts cleared at application runtime
         try:
@@ -474,16 +446,24 @@ class MainWindow(
             pass
 
     def get_current_editor(self):
-        """Get the currently active editor (respects split-pane focus)."""
+        """Get the currently active CodeEditor (respects split-pane focus and skips Welcome tab)."""
         if getattr(self, "_active_pane", "primary") == "secondary" and hasattr(
             self, "_editor_tabs_b"
         ):
             idx = self._editor_tabs_b.currentIndex()
             if idx >= 0:
-                return self._editor_tabs_b.widget(idx)
+                w = self._editor_tabs_b.widget(idx)
+                if isinstance(w, CodeEditor):
+                    return w
         current_index = self.editor_tabs.currentIndex()
         if current_index >= 0:
-            return self.editor_tabs.widget(current_index)
+            w = self.editor_tabs.widget(current_index)
+            if isinstance(w, CodeEditor):
+                return w
+        for i in range(self.editor_tabs.count()):
+            w = self.editor_tabs.widget(i)
+            if isinstance(w, CodeEditor):
+                return w
         return None
 
     # ------------------------------------------------------------------
@@ -498,7 +478,7 @@ class MainWindow(
         """Activate split view: show secondary pane and open current file there."""
         if not hasattr(self, "_editor_tabs_b"):
             return
-        if self._editor_tabs_b.isVisible():
+        if self._editor_tabs_b.count() > 0 and not self._editor_tabs_b.isHidden():
             # Already split — just bring focus to secondary pane
             self._editor_tabs_b.setFocus()
             self._active_pane = "secondary"
@@ -511,11 +491,12 @@ class MainWindow(
         self._editor_h_splitter.setSizes([half, half])
         self._active_pane = "secondary"
 
-        # Open current file in the secondary pane (read-only mirror)
-        editor = self.editor_tabs.widget(self.editor_tabs.currentIndex())
-        if editor is not None:
-            info = self._ts(self.editor_tabs.currentIndex())
-            self._open_in_secondary(info.file, editor.toPlainText(), info.language)  # type: ignore[attr-defined]
+        # Open current code editor in the secondary pane
+        editor = self.get_current_editor()
+        if editor is not None and isinstance(editor, CodeEditor):
+            idx = self.editor_tabs.indexOf(editor)
+            info = self._ts(idx if idx >= 0 else 0)
+            self._open_in_secondary(info.file, editor.toPlainText(), info.language)
         else:
             self._open_new_in_secondary()
 
@@ -596,6 +577,9 @@ class MainWindow(
                     self._update_tab_title_indicator(current_index, modified)
             if language is not None:
                 s.language = language
+                w = self.editor_tabs.widget(current_index)
+                if isinstance(w, CodeEditor) and getattr(w, "language", None) != language:
+                    w.set_language(language)
             self.update_title()
 
     def _update_tab_title_indicator(self, index: int, modified: bool):
@@ -788,6 +772,10 @@ class MainWindow(
         interval_spin.setValue(self._autosave_manager.autosave_interval)
         form.addRow("Interval:", interval_spin)
 
+        welcome_cb = QCheckBox("Show Welcome tab on launch")
+        welcome_cb.setChecked(self._welcome_enabled())
+        form.addRow(welcome_cb)
+
         btn_box = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
@@ -800,6 +788,7 @@ class MainWindow(
             self._autosave_manager.set_autosave_interval(interval_spin.value())
             self.settings.setValue("autosave_enabled", enabled_cb.isChecked())
             self.settings.setValue("autosave_interval", interval_spin.value())
+            self.settings.setValue("show_welcome", welcome_cb.isChecked())
             if enabled_cb.isChecked():
                 self._autosave_timer.start()
             else:
@@ -815,25 +804,51 @@ class MainWindow(
         self._focus_mode_action.setChecked(self._focus_mode.is_focus_mode)
 
     def keyPressEvent(self, event):
-        """Allow Escape to exit focus mode."""
+        """Allow Escape to exit focus mode and update Function-Key Bar modifier layer."""
         # pylint: disable=import-outside-toplevel
         from PySide6.QtCore import Qt
 
         if event.key() == Qt.Key_Escape and self._focus_mode.is_focus_mode:
             self._toggle_focus_mode()
             return
+        if getattr(self, "function_key_bar", None) is not None:
+            if event.key() == Qt.Key_Shift:
+                self.function_key_bar.set_layer("shift")
+            elif event.key() == Qt.Key_Control:
+                self.function_key_bar.set_layer("ctrl")
         super().keyPressEvent(event)
+
+    def keyReleaseEvent(self, event):
+        """Restore Function-Key Bar normal layer when Shift/Ctrl is released."""
+        # pylint: disable=import-outside-toplevel
+        from PySide6.QtCore import Qt
+
+        if getattr(self, "function_key_bar", None) is not None and event.key() in (
+            Qt.Key_Shift,
+            Qt.Key_Control,
+        ):
+            self.function_key_bar.set_layer("normal")
+        super().keyReleaseEvent(event)
 
     # ---- Onboarding ----
 
     def _start_update_check(self) -> None:
-        """Spawn a background thread to check the GitHub releases API."""
-        # Skip if the user has disabled update checks
+        """Check the GitHub releases API in the background."""
+        import os
+        import threading
+
+        if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
+            return
         if self.settings.value("check_for_updates", True) in (False, "false", "0", 0):
             return
-        self._update_thread = _UpdateCheckerThread()  # pylint: disable=attribute-defined-outside-init
-        self._update_thread.update_available.connect(self._on_update_available)
-        self._update_thread.start()
+        self._update_notifier = _UpdateNotifier(self)  # pylint: disable=attribute-defined-outside-init
+        self._update_notifier.update_available.connect(self._on_update_available)
+        threading.Thread(
+            target=_check_for_update,
+            args=(self._update_notifier,),
+            name="tw-update-check",
+            daemon=True,
+        ).start()
 
     def _on_update_available(self, latest_version: str, release_url: str) -> None:
         """Show an update banner in the status bar."""
@@ -853,6 +868,10 @@ class MainWindow(
         self.statusbar.addWidget(label)
 
     def _maybe_show_onboarding(self):
+        import os
+
+        if os.environ.get("QT_QPA_PLATFORM") == "offscreen" or not self.isVisible():
+            return
         if not self._onboarding_manager.should_show_onboarding():
             return
 
@@ -869,6 +888,11 @@ class MainWindow(
 
     # ---- Welcome tab ----
 
+    def _welcome_enabled(self) -> bool:
+        """Return whether the Welcome tab should show on launch."""
+        show = self.settings.value("show_welcome", True)
+        return show not in (False, "false", "0", 0)
+
     def _maybe_show_welcome_tab(self):
         """Insert a read-only Welcome tab on first run (or when preference set).
 
@@ -878,8 +902,7 @@ class MainWindow(
         """
         # Only show when no file was opened via CLI args and
         # the user hasn't disabled the welcome screen.
-        show = self.settings.value("show_welcome", True)
-        if show in (False, "false", "0", 0):
+        if not self._welcome_enabled():
             return
 
         welcome = QTextBrowser()
@@ -903,27 +926,12 @@ class MainWindow(
             self.new_file()
         elif action == "tws:examples":
             self._show_examples_browser()
-        elif action == "tws:learning":
-            self.feature_manager.toggle_feature_panel("learning_hub", visible=True)
         elif action == "tws:shortcuts":
             self._show_keyboard_shortcuts()
 
     def _welcome_html(self) -> str:
         """Return the HTML content for the Welcome tab."""
-        langs = ", ".join(
-            [
-                "BASIC",
-                "Logo",
-                "Python",
-                "Pascal",
-                "C",
-                "Forth",
-                "PILOT",
-                "Prolog",
-                "Brainfuck",
-            ]
-        )
-        return f"""
+        return """
 <html><body style="font-family: 'Segoe UI', sans-serif; margin: 24px; line-height: 1.6;">
 <h1 style="color: #bd93f9;">&#127775; Welcome to Time Warp Studio</h1>
 <p style="font-size: 14px; color: #f8f8f2;">
@@ -937,33 +945,22 @@ class MainWindow(
     &nbsp;&nbsp;|&nbsp;&nbsp;
     <a href="tws:examples">&#128218; Browse examples</a>
     &nbsp;&nbsp;|&nbsp;&nbsp;
-    <a href="tws:learning">&#127891; Open Learning Hub</a>
+    <a href="tws:shortcuts">&#9000; Keyboard shortcuts</a>
 </p>
 
 <h2 style="color: #8be9fd;">&#128640; Quick Start</h2>
 <ul style="font-size: 13px;">
   <li><b>Ctrl+N</b> — New file &nbsp;|&nbsp; <b>Ctrl+O</b> — Open file</li>
-  <li>Pick a language from the toolbar combo, type your code, press <b>Ctrl+R</b>.</li>
-    <li>Open <b>🎓 Learning Hub</b> from the toolbar for challenges, remixing, and tutor help.</li>
-    <li>Browse ready-made examples via <b>Help → Browse Examples…</b></li>
-    <li><a href="tws:shortcuts">View keyboard shortcuts</a> or press <b>Ctrl+?</b>.</li>
-  <li>Press <b>F1</b> while editing for context-sensitive language help.</li>
-</ul>
-
-<h2 style="color: #8be9fd;">&#128187; Supported Languages</h2>
-<p style="font-size: 13px; color: #f8f8f2;">{langs}</p>
-
-<h2 style="color: #8be9fd;">&#128736; Features</h2>
-<ul style="font-size: 13px;">
-  <li>Turtle graphics canvas with zoom, pan, animation playback, and PNG export</li>
-  <li>Step-through debugger with breakpoints and variable inspection</li>
-  <li>28 editor themes, CRT retro effects, and focus mode</li>
-  <li>SQL workbench with transactions and full DDL support</li>
+  <li>Pick a language from the toolbar combo, type your code, press <b>Ctrl+R</b> (or <b>F9</b>).</li>
+  <li>Switch workstation layouts instantly with <b>Alt+1..4</b> or the bottom Function-Key Bar.</li>
+  <li>Browse ready-made examples via <b>Help → Browse Examples…</b></li>
+  <li><a href="tws:shortcuts">View keyboard shortcuts</a> or press <b>Ctrl+?</b>.</li>
+  <li>Press <b>F1</b> while editing for context-sensitive language help, or <b>Ctrl+F1</b> for the inline Keyword Inspector.</li>
 </ul>
 
 <p style="font-size: 11px; color: #6272a4; margin-top: 32px;">
   Close this tab to start coding, or press <b>Ctrl+N</b> to open a blank editor.
-  To disable this screen go to <i>Settings → Show Welcome Tab</i>.
+  This tab returns on the next launch.
 </p>
 </body></html>"""
 
@@ -1167,7 +1164,9 @@ class MainWindow(
             return
 
         current_idx = self.editor_tabs.currentIndex()
-        language = self._ts(current_idx).language
+        language = self._ts(current_idx).language if current_idx >= 0 else None
+        if language is None:
+            language = getattr(ed, "language", None)
         lang_name = language.name if hasattr(language, "name") else "BASIC"
 
         code = ed.toPlainText()
@@ -1183,78 +1182,6 @@ class MainWindow(
             ed.setTextCursor(cursor)
 
         self.statusbar.showMessage(msg, 3000)
-
-    def _load_plugins_at_startup(self) -> None:
-        """Auto-load all plugins from the plugins/ directory at startup."""
-        import os  # pylint: disable=import-outside-toplevel
-
-        plugins_dir = os.path.join(
-            os.path.dirname(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            ),
-            "plugins",
-        )
-        if not os.path.isdir(plugins_dir):
-            return
-        mgr = PluginManager(ide_instance=self)
-        plugins = mgr.discover_plugins(plugins_dir)
-        loaded = [p for p in plugins if p.loaded]
-        if loaded:
-            names = ", ".join(p.name for p in loaded)
-            self.status_bar.showMessage(f"🔌 Loaded {len(loaded)} plugin(s): {names}", 4000)
-
-    def _show_plugin_manager(self, _checked: bool = False):
-        """Show the Plugin Manager dialog listing discovered plugins."""
-        import os  # pylint: disable=import-outside-toplevel
-
-        # Resolve the plugins/ directory relative to the project root
-        plugins_dir = os.path.join(
-            os.path.dirname(
-                os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-            ),
-            "plugins",
-        )
-
-        mgr = PluginManager(ide_instance=self)
-        plugins = mgr.discover_plugins(plugins_dir)
-
-        dlg = QDialog(self)
-        dlg.setWindowTitle("🔌 Plugin Manager")
-        dlg.resize(520, 360)
-        layout = QVBoxLayout(dlg)
-
-        from PySide6.QtWidgets import QLabel as _QLabel, QListWidget as _QLW  # pylint: disable=import-outside-toplevel
-
-        if plugins:
-            header = _QLabel(
-                f"<b>{len(plugins)} plugin(s) discovered</b> in <code>{plugins_dir}</code>"
-            )
-        else:
-            header = _QLabel(
-                f"No plugins found in <code>{plugins_dir}</code>.<br>"
-                "Drop a plugin folder there to install it."
-            )
-        header.setWordWrap(True)
-        layout.addWidget(header)
-
-        if plugins:
-            lw = _QLW()
-            for p in plugins:
-                status = "✅" if p.loaded else "❌"
-                label = f"{status}  {p.name}  v{p.version}"
-                if p.description:
-                    label += f" — {p.description}"
-                if p.error:
-                    label += f"  [{p.error}]"
-                lw.addItem(label)
-            layout.addWidget(lw)
-
-        from PySide6.QtWidgets import QDialogButtonBox as _DBB  # pylint: disable=import-outside-toplevel
-
-        btns = _DBB(_DBB.StandardButton.Close)
-        btns.rejected.connect(dlg.reject)
-        layout.addWidget(btns)
-        dlg.exec()
 
     def _toggle_profiler(self, checked: bool):
         """Toggle performance profiling."""
@@ -1656,6 +1583,7 @@ class MainWindow(
         self.output_canvas_pane.addWidget(self.output_sub_tabs)
         self.output_canvas_pane.addWidget(self.canvas)
         self.output_canvas_pane.setSizes([200, 300])
+        self.right_splitter = self.output_canvas_pane
 
         # Route streamed output to the appropriate sub-tabs
         self.output.output_streamed.connect(self._route_output_to_subtabs)
@@ -1665,13 +1593,19 @@ class MainWindow(
         # Connect immediate mode to output panel and canvas
         self.immediate_mode.set_canvas(self.canvas)
         self.immediate_mode.set_output_panel(self.output)
-        self.immediate_mode.set_hardware_simulator(self.output.hardware_simulator)
         self.immediate_mode.variables_updated.connect(self.on_variables_updated)
 
         # Variable inspector
         self.variable_inspector = VariableInspector(self)
         self.variable_inspector.setAccessibleName("Variable Inspector")
         self.right_tabs.addTab(self.variable_inspector, "🔍 Variables")
+
+        # Live Telemetry & Memory/Stack HUD
+        self.telemetry_hud = TelemetryHUD(self)
+        self.telemetry_hud.setAccessibleName("Live Telemetry and Memory HUD")
+        self.right_tabs.addTab(self.telemetry_hud, "⚡ Telemetry HUD")
+        self.output.telemetry_updated.connect(self.telemetry_hud.update_from_snapshot)
+        self.telemetry_hud.memory_poked.connect(self._on_hud_memory_poked)
 
         # Debug panel
         self.debug_panel = DebugPanel(self)
@@ -1680,6 +1614,7 @@ class MainWindow(
         self._connect_debug_signals()
 
         splitter.addWidget(self.right_tabs)
+        self.main_splitter = splitter
         # Left (editor) gets 3 parts, right (output/canvas) gets 2 parts on resize
         splitter.setStretchFactor(0, 3)
         splitter.setStretchFactor(1, 2)
@@ -1687,7 +1622,13 @@ class MainWindow(
         # Set initial splitter sizes (60% editor, 40% output)
         splitter.setSizes([720, 480])
 
-        layout.addWidget(splitter)
+        layout.addWidget(splitter, 1)
+
+        # Turbo-style Function-Key Bar (F1-F10 + One-Key Workspace Decks)
+        self.function_key_bar = FunctionKeyBar(self)
+        self.function_key_bar.action_triggered.connect(self._on_fkey_action)
+        self.function_key_bar.deck_selected.connect(self.apply_workspace_deck)
+        layout.addWidget(self.function_key_bar)
 
         # CRT effect overlay (covers the entire window)
         self.crt_overlay = CRTEffectOverlay(central)
@@ -1710,26 +1651,15 @@ class MainWindow(
         new_action.triggered.connect(self.new_file)
         file_menu.addAction(new_action)
 
-        open_btn = self.toolbar.addAction("📂 Open", self.open_file)
-        open_btn.setToolTip("Open an existing file (Ctrl+O)")
-        open_btn.setStatusTip("Open a file from disk")
-
-        learn_btn = self.toolbar.addAction(
-            "🎓 Learn",
-            lambda: self.feature_manager.toggle_feature_panel(
-                "learning_hub", visible=True
-            ),
-        )
-        learn_btn.setToolTip("Open the Learning Hub")
-        learn_btn.setStatusTip("Launch lessons, challenges, and tutor tools")
+        open_action = QAction("&Open...", self)
+        open_action.setShortcut(QKeySequence.Open)
+        open_action.triggered.connect(self.open_file)
+        file_menu.addAction(open_action)
 
         save_action = QAction("&Save", self)
         save_action.setShortcut(QKeySequence.Save)
         save_action.triggered.connect(self.save_file)
         file_menu.addAction(save_action)
-
-        # Debugging UI removed entirely — this distribution exposes Run/Stop
-        # only. No debug menu is created.
 
         save_as_action = QAction("Save &As...", self)
         save_as_action.setShortcut(QKeySequence.SaveAs)
@@ -1759,6 +1689,14 @@ class MainWindow(
         export_html_action.triggered.connect(self._export_session_html)
         export_menu.addAction(export_html_action)
 
+        export_menu.addSeparator()
+        lesson_md_action = QAction("Lesson Report (&Markdown)...", self)
+        lesson_md_action.triggered.connect(lambda: self.export_lesson_session("md"))
+        export_menu.addAction(lesson_md_action)
+        lesson_pdf_action = QAction("Lesson Report (P&DF)...", self)
+        lesson_pdf_action.triggered.connect(lambda: self.export_lesson_session("pdf"))
+        export_menu.addAction(lesson_pdf_action)
+
         file_menu.addSeparator()
 
         # Print actions
@@ -1776,7 +1714,7 @@ class MainWindow(
         file_menu.addAction(export_pdf_action)
 
         version_history_action = QAction("&Version History...", self)
-        version_history_action.setShortcut("Ctrl+H")
+        version_history_action.setShortcut("Ctrl+Alt+V")
         version_history_action.triggered.connect(self._show_version_history)
         file_menu.addAction(version_history_action)
 
@@ -1791,7 +1729,7 @@ class MainWindow(
         file_menu.addSeparator()
 
         exit_action = QAction("E&xit", self)
-        exit_action.setShortcut(QKeySequence.Quit)
+        exit_action.setShortcuts([QKeySequence("Alt+X"), QKeySequence.Quit])
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
 
@@ -1838,8 +1776,24 @@ class MainWindow(
         )
         edit_menu.addAction(find_action)
 
+        replace_action = QAction("Find && &Replace...", self)
+        replace_action.setShortcut("Ctrl+H")
+        replace_action.triggered.connect(
+            lambda: (
+                self.get_current_editor().show_replace_dialog()
+                if self.get_current_editor()
+                and hasattr(self.get_current_editor(), "show_replace_dialog")
+                else (
+                    self.get_current_editor().show_find_dialog()
+                    if self.get_current_editor()
+                    else None
+                )
+            )
+        )
+        edit_menu.addAction(replace_action)
+
         find_in_files_action = QAction("Find in &Files…", self)
-        find_in_files_action.setShortcut("Ctrl+Alt+F")
+        find_in_files_action.setShortcut("Ctrl+Alt+G")
         find_in_files_action.setStatusTip("Search all open tabs and project files")
         find_in_files_action.triggered.connect(self._show_find_in_files)
         edit_menu.addAction(find_in_files_action)
@@ -1880,10 +1834,10 @@ class MainWindow(
         self.run_action.triggered.connect(self.run_program)
         run_menu.addAction(self.run_action)
 
-        self.stop_action = QAction("&Stop", self)
-        self.stop_action.setShortcut("Ctrl+Shift+F5")
+        self.stop_action = QAction("&Reset Program", self)
+        self.stop_action.setStatusTip("Stop the running program or debug session")
         self.stop_action.setEnabled(False)
-        self.stop_action.triggered.connect(self.stop_program)
+        self.stop_action.triggered.connect(self._reset_program)
         run_menu.addAction(self.stop_action)
 
         self.run_selection_action = QAction("Run &Selection", self)
@@ -1893,6 +1847,14 @@ class MainWindow(
         )
         self.run_selection_action.triggered.connect(self.run_selection)
         run_menu.addAction(self.run_selection_action)
+
+        self.run_dual_action = QAction("⚡ Run &Both Split Panes (Polyglot Benchmark)", self)
+        self.run_dual_action.setShortcut("Ctrl+Alt+R")
+        self.run_dual_action.setToolTip(
+            "Execute Primary and Secondary Split Editors on a shared Polyglot Turtle/Memory bus and compare benchmarks (Ctrl+Alt+R)"
+        )
+        self.run_dual_action.triggered.connect(self.run_dual_split_benchmark)
+        run_menu.addAction(self.run_dual_action)
 
         run_menu.addSeparator()
 
@@ -1904,16 +1866,19 @@ class MainWindow(
         clear_canvas_action.triggered.connect(self.canvas.clear)
         run_menu.addAction(clear_canvas_action)
 
+        self.errors_only_action = QAction("Show &Errors Only", self)
+        self.errors_only_action.setCheckable(True)
+        self.errors_only_action.toggled.connect(self.output._toggle_error_filter)
+        run_menu.addAction(self.errors_only_action)
+
         # Debug menu
         debug_menu = menubar.addMenu("&Debug")
 
-        self.debug_start_action = QAction("&Start Debugging", self)
-        self.debug_start_action.setShortcut("F5")
-        self.debug_start_action.triggered.connect(self.start_debug)
+        self.debug_start_action = QAction("&Start / Continue Debugging", self)
+        self.debug_start_action.triggered.connect(self._debug_start_or_continue)
         debug_menu.addAction(self.debug_start_action)
 
         self.debug_stop_action = QAction("Stop &Debugging", self)
-        self.debug_stop_action.setShortcut("Shift+F5")
         self.debug_stop_action.setEnabled(False)
         self.debug_stop_action.triggered.connect(self.stop_debug)
         debug_menu.addAction(self.debug_stop_action)
@@ -1921,33 +1886,28 @@ class MainWindow(
         debug_menu.addSeparator()
 
         self.debug_continue_action = QAction("&Continue", self)
-        self.debug_continue_action.setShortcut("Ctrl+F5")
         self.debug_continue_action.setEnabled(False)
         self.debug_continue_action.triggered.connect(self.debug_continue)
         debug_menu.addAction(self.debug_continue_action)
 
         self.debug_pause_action = QAction("&Pause", self)
-        self.debug_pause_action.setShortcut("F6")
         self.debug_pause_action.setEnabled(False)
         self.debug_pause_action.triggered.connect(self.debug_pause)
         debug_menu.addAction(self.debug_pause_action)
 
         debug_menu.addSeparator()
 
-        self.debug_step_into_action = QAction("Step &Into", self)
-        self.debug_step_into_action.setShortcut("F11")
+        self.debug_step_into_action = QAction("&Trace Into", self)
         self.debug_step_into_action.setEnabled(False)
         self.debug_step_into_action.triggered.connect(self.debug_step_into)
         debug_menu.addAction(self.debug_step_into_action)
 
         self.debug_step_over_action = QAction("Step &Over", self)
-        self.debug_step_over_action.setShortcut("F10")
         self.debug_step_over_action.setEnabled(False)
         self.debug_step_over_action.triggered.connect(self.debug_step_over)
         debug_menu.addAction(self.debug_step_over_action)
 
         self.debug_step_out_action = QAction("Step O&ut", self)
-        self.debug_step_out_action.setShortcut("Shift+F11")
         self.debug_step_out_action.setEnabled(False)
         self.debug_step_out_action.triggered.connect(self.debug_step_out)
         debug_menu.addAction(self.debug_step_out_action)
@@ -1955,12 +1915,11 @@ class MainWindow(
         debug_menu.addSeparator()
 
         toggle_bp_action = QAction("Toggle &Breakpoint", self)
-        toggle_bp_action.setShortcut("F9")
         toggle_bp_action.triggered.connect(self.toggle_breakpoint_at_cursor)
         debug_menu.addAction(toggle_bp_action)
 
         clear_bp_action = QAction("Clear &All Breakpoints", self)
-        clear_bp_action.setShortcut("Ctrl+Shift+F9")
+        clear_bp_action.setShortcut("Ctrl+Shift+F8")
         clear_bp_action.triggered.connect(self.clear_all_breakpoints)
         debug_menu.addAction(clear_bp_action)
 
@@ -1983,6 +1942,13 @@ class MainWindow(
         )
         theme_edit_action.triggered.connect(self._open_theme_editor)
         theme_menu.addAction(theme_edit_action)
+
+        self._cycle_theme_action = QAction("🔁 &Cycle Workstation Theme", self)
+        self._cycle_theme_action.setStatusTip(
+            "Rotate through the flagship Neo-90s workstation themes"
+        )
+        self._cycle_theme_action.triggered.connect(self._cycle_workstation_theme)
+        theme_menu.addAction(self._cycle_theme_action)
         theme_menu.addSeparator()
 
         theme_group = QActionGroup(self)
@@ -2155,11 +2121,20 @@ class MainWindow(
         view_menu.addSeparator()
 
         # Focus mode
-        self._focus_mode_action = QAction("🎯 &Focus Mode", self)
-        self._focus_mode_action.setShortcut("Ctrl+Shift+F11")
+        self._focus_mode_action = QAction("🎯 &Zoom (Focus Mode)", self)
         self._focus_mode_action.setCheckable(True)
         self._focus_mode_action.triggered.connect(self._toggle_focus_mode)
         view_menu.addAction(self._focus_mode_action)
+
+        next_pane_action = QAction("&Next Pane", self)
+        next_pane_action.setStatusTip("Cycle focus: editor, REPL, output, canvas")
+        next_pane_action.triggered.connect(self._cycle_focus_pane)
+        view_menu.addAction(next_pane_action)
+
+        hud_action = QAction("📟 Telemetry &HUD", self)
+        hud_action.setStatusTip("Show the Live Telemetry & Memory HUD tab")
+        hud_action.triggered.connect(self._focus_telemetry_hud)
+        view_menu.addAction(hud_action)
 
         view_menu.addSeparator()
 
@@ -2179,12 +2154,22 @@ class MainWindow(
 
         view_menu.addSeparator()
 
-        # Split editor panes
-        split_action = QAction("⬜ Split &Editor Right", self)
-        split_action.setShortcut("Ctrl+\\")
-        split_action.setStatusTip("Open a second editor pane side-by-side")
-        split_action.triggered.connect(self._split_editor_right)
-        view_menu.addAction(split_action)
+        # Workspace Decks submenu (One-Key Neo-90s layouts)
+        decks_menu = view_menu.addMenu("🖥️ &Workspace Decks")
+        for idx, (deck_id, preset) in enumerate(
+            CustomUILayouts.DECK_PRESETS.items(), 1
+        ):
+            deck_action = QAction(
+                f"Deck {idx}: &{preset['name'].replace('&', '&&')}", self
+            )
+            deck_action.setShortcut(f"Alt+{idx}")
+            deck_action.setStatusTip(
+                f"Switch to {preset['name']} workspace deck ({preset['shortcut']})"
+            )
+            deck_action.triggered.connect(
+                lambda _checked=False, did=deck_id: self.apply_workspace_deck(did)
+            )
+            decks_menu.addAction(deck_action)
 
         # Minimap toggle
         self._minimap_action = QAction("🗺 Show &Minimap", self)
@@ -2196,29 +2181,20 @@ class MainWindow(
         self._minimap_action.triggered.connect(self._toggle_minimap)
         view_menu.addAction(self._minimap_action)
 
-        # Debugging UI removed — this distribution exposes Run/Stop only.
+        # Document Outline toggle
+        self._outline_action = QAction("📋 Document &Outline", self)
+        self._outline_action.setCheckable(True)
+        self._outline_action.setChecked(False)
+        self._outline_action.setStatusTip("Toggle the Document Outline dock panel")
+        self._outline_action.triggered.connect(self.toggle_document_outline)
+        view_menu.addAction(self._outline_action)
 
         # Tools menu
         tools_menu = menubar.addMenu("&Tools")
 
-        tools_menu.addSeparator()
-
         compare_action = QAction("⚖️ &Compare Languages...", self)
         compare_action.triggered.connect(self._show_language_comparator)
         tools_menu.addAction(compare_action)
-
-        tools_menu.addSeparator()
-
-        format_tool_action = QAction("🔧 &Format Code", self)
-        format_tool_action.setShortcut("Ctrl+Alt+F")
-        format_tool_action.triggered.connect(self._format_code)
-        tools_menu.addAction(format_tool_action)
-
-        tools_menu.addSeparator()
-
-        plugin_mgr_action = QAction("🔌 &Plugin Manager...", self)
-        plugin_mgr_action.triggered.connect(self._show_plugin_manager)
-        tools_menu.addAction(plugin_mgr_action)
 
         # Help menu (last menu item)
         help_menu = menubar.addMenu("&Help")
@@ -2229,10 +2205,20 @@ class MainWindow(
         help_menu.addAction(user_manual_action)
 
         # F1 → context-sensitive language help
-        f1_action = QAction("&Context Help (F1)", self)
-        f1_action.setShortcut("F1")
+        f1_action = QAction("&Context Help", self)
         f1_action.triggered.connect(self._show_contextual_help)
         help_menu.addAction(f1_action)
+
+        inspect_action = QAction("📘 &Keyword Inspector", self)
+        inspect_action.setStatusTip("Reference card for the word under the cursor")
+        inspect_action.triggered.connect(self._show_keyword_inspector)
+        help_menu.addAction(inspect_action)
+
+        lessons_action = QAction("🎓 &Lessons", self)
+        lessons_action.setShortcut("Ctrl+Alt+L")
+        lessons_action.setStatusTip("Guided lessons with automatic checkpoint verification")
+        lessons_action.triggered.connect(self.show_lessons)
+        help_menu.addAction(lessons_action)
 
         quick_ref_action = QAction("&Quick Reference", self)
         quick_ref_action.triggered.connect(self.show_quick_reference)
@@ -2246,30 +2232,18 @@ class MainWindow(
 
         # Language-specific help
         lang_help_menu = help_menu.addMenu("&Language Help")
-
-        basic_help = QAction("BASIC Commands", self)
-        basic_help.triggered.connect(lambda: self.show_language_help("basic"))
-        lang_help_menu.addAction(basic_help)
-
-        pilot_help = QAction("PILOT Commands", self)
-        pilot_help.triggered.connect(lambda: self.show_language_help("pilot"))
-        lang_help_menu.addAction(pilot_help)
-
-        logo_help = QAction("Logo Commands", self)
-        logo_help.triggered.connect(lambda: self.show_language_help("logo"))
-        lang_help_menu.addAction(logo_help)
-
-        lang_help_menu.addSeparator()
-
-        # Active language reference entries
         for lang_name, lang_key in [
-            ("Brainfuck", "brainfuck"),
+            ("BASIC", "basic"),
+            ("PILOT", "pilot"),
+            ("Logo", "logo"),
             ("C", "c"),
-            ("Forth", "forth"),
             ("Pascal", "pascal"),
             ("Prolog", "prolog"),
+            ("Forth", "forth"),
+            ("Brainfuck", "brainfuck"),
+            ("Python", "python"),
         ]:
-            action = QAction(f"{lang_name} Reference", self)
+            action = QAction(f"{lang_name} Guide", self)
             action.triggered.connect(
                 lambda checked=False, k=lang_key: self.show_language_help(k)
             )
@@ -2304,9 +2278,44 @@ class MainWindow(
         shortcuts_action.triggered.connect(self._show_keyboard_shortcuts)
         help_menu.addAction(shortcuts_action)
 
-        # Collaboration features are disabled in this distribution. The
-        # Collaboration menu is omitted to avoid exposing disabled
-        # real-time collaboration UI.
+        self._bind_function_keys(
+            {
+                "help": f1_action,
+                "save": save_action,
+                "open": open_action,
+                "outline": self._outline_action,
+                "zoom": self._focus_mode_action,
+                "next_pane": next_pane_action,
+                "step_into": self.debug_step_into_action,
+                "step_over": self.debug_step_over_action,
+                "run": self.run_action,
+                "palette": cmd_palette_action,
+                "shortcuts": shortcuts_action,
+                "save_as": save_as_action,
+                "examples": examples_action,
+                "find_in_files": find_in_files_action,
+                "split_editor": split_action,
+                "toggle_hud": hud_action,
+                "toggle_crt": self.crt_enable_action,
+                "step_out": self.debug_step_out_action,
+                "run_selection": self.run_selection_action,
+                "cycle_theme": self._cycle_theme_action,
+                "inspect": inspect_action,
+                "reset": self.stop_action,
+                "lessons": lessons_action,
+                "filter_errors": self.errors_only_action,
+                "pause": self.debug_pause_action,
+                "breakpoint": toggle_bp_action,
+                "debug": self.debug_start_action,
+            }
+        )
+
+    def _bind_function_keys(self, actions: dict) -> None:
+        """Attach every Function-Key Bar key to its QAction (bar is the source of truth)."""
+        self._fkey_actions = actions
+        for key_seq, action_id, _caption in FunctionKeyBar.bindings():
+            action = actions[action_id]
+            action.setShortcuts([QKeySequence(key_seq), *action.shortcuts()])
 
     def create_toolbar(self):
         """Create toolbar with enhanced button styling."""
@@ -2359,11 +2368,11 @@ class MainWindow(
         new_btn.setStatusTip("Create a new editor tab")
 
         open_btn = self.toolbar.addAction("📂 Open", self.open_file)
-        open_btn.setToolTip("Open an existing file (Ctrl+O)")
+        open_btn.setToolTip("Open an existing file (F3 / Ctrl+O)")
         open_btn.setStatusTip("Open a file from disk")
 
         save_btn = self.toolbar.addAction("💾 Save", self.save_file)
-        save_btn.setToolTip("Save the current file (Ctrl+S)")
+        save_btn.setToolTip("Save the current file (F2 / Ctrl+S)")
         save_btn.setStatusTip("Save changes to disk")
 
         self.toolbar.addSeparator()
@@ -2415,7 +2424,7 @@ class MainWindow(
         self._run_tool_btn = QToolButton()
         self._run_tool_btn.setText("🚀 Run")
         self._run_tool_btn.setToolTip(
-            "Run the current program (Ctrl+R)\nClick ▼ for run history"
+            "Run the current program (F9 / Ctrl+R)\nClick ▼ for run history"
         )
         self._run_tool_btn.setStatusTip("Execute the code in the current editor")
         self._run_tool_btn.setPopupMode(QToolButton.ToolButtonPopupMode.MenuButtonPopup)
@@ -2451,21 +2460,21 @@ class MainWindow(
 
         # Debug toolbar buttons
         self.debug_btn = self.toolbar.addAction("🐛 Debug", self.start_debug)
-        self.debug_btn.setToolTip("Start debugging (F5)")
+        self.debug_btn.setToolTip("Start debugging (Ctrl+F9)")
         self.debug_btn.setStatusTip("Start debugging with breakpoints")
 
         self.continue_btn = self.toolbar.addAction("▶️ Continue", self.debug_continue)
-        self.continue_btn.setToolTip("Continue execution (F5)")
+        self.continue_btn.setToolTip("Continue execution (Ctrl+F9)")
         self.continue_btn.setStatusTip("Resume execution from breakpoint")
         self.continue_btn.setEnabled(False)
 
-        self.step_btn = self.toolbar.addAction("↓ Step", self.debug_step_into)
-        self.step_btn.setToolTip("Step into (F11)")
+        self.step_btn = self.toolbar.addAction("↓ Trace", self.debug_step_into)
+        self.step_btn.setToolTip("Trace into (F7)")
         self.step_btn.setStatusTip("Execute one line and enter functions")
         self.step_btn.setEnabled(False)
 
-        stop_btn = self.toolbar.addAction("⏹️ Stop", self.stop_program)
-        stop_btn.setToolTip("Stop the running program (Shift+F5)")
+        stop_btn = self.toolbar.addAction("⏹️ Stop", self._reset_program)
+        stop_btn.setToolTip("Stop the running program (Ctrl+F2)")
         stop_btn.setStatusTip("Interrupt execution")
 
         snippet_btn = self.toolbar.addAction("📋 Snippets", self._show_snippet_dialog)
@@ -2488,13 +2497,6 @@ class MainWindow(
         )
         clear_canvas_btn.setToolTip("Clear the graphics canvas")
         clear_canvas_btn.setStatusTip("Clear all graphics drawings")
-
-        self.toolbar.addSeparator()
-
-        # Database / SQL group
-        sql_btn = self.toolbar.addAction("🗄 SQL", self._show_sql_workbench)
-        sql_btn.setToolTip("Open SQL Workbench (Ctrl+Shift+Q)")
-        sql_btn.setStatusTip("Open the embedded SQL Server 2000 workbench")
 
         self.toolbar.addSeparator()
 
@@ -2618,21 +2620,6 @@ class MainWindow(
         """)
         self.statusbar.addWidget(self.breadcrumb_label)
 
-        self.sql_status_label = QLabel("🗄 SQL: offline")
-        self.sql_status_label.setToolTip("SQL Server 2000 — click to open workbench")
-        self.sql_status_label.setStyleSheet("""
-            QLabel {
-                background-color: palette(base);
-                color: palette(text);
-                padding: 2px 6px;
-                border-radius: 3px;
-                border: 1px solid palette(dark);
-                font-size: 11px;
-            }
-        """)
-        self.sql_status_label.mousePressEvent = lambda _: self._show_sql_workbench()
-        self.statusbar.addPermanentWidget(self.sql_status_label)
-
         self._set_execution_state("ready", "Ready")
 
     def _set_execution_state(self, state: str, message: str) -> None:
@@ -2651,6 +2638,8 @@ class MainWindow(
             "padding: 2px 8px; border-radius: 4px; font-weight: bold;"
             "}"
         )
+        if getattr(self, "function_key_bar", None) is not None:
+            self.function_key_bar.set_execution_state(state)
         self.statusbar.showMessage(message)
 
     # -- File I/O methods (new_file, open_file, load_file, save_file, etc.)
@@ -2806,44 +2795,8 @@ class MainWindow(
         # Start execution (no debug controls in this build)
         self.output.run_program(code, self.canvas, debug_mode=False)
 
-    def _validate_before_run(self, code: str, language: Language) -> bool:
-        """Validate code with the Syntax Validator panel before execution."""
-        panel = self.feature_manager.get_feature_panel("syntax_validator")
-        if panel and hasattr(panel, "validate_external"):
-            issues = panel.validate_external(code, language)
-            if issues:
-                # Build a readable list of errors for the dialog
-                details = []
-                for issue in issues[:20]:  # Cap at 20 to keep dialog manageable
-                    sev = (
-                        issue.severity.value
-                        if hasattr(issue.severity, "value")
-                        else str(issue.severity)
-                    )
-                    details.append(f"Line {issue.line} [{sev}]: {issue.message}")
-                if len(issues) > 20:
-                    details.append(f"... and {len(issues) - 20} more issues")
-                detail_text = "\n".join(details)
-
-                msg = QMessageBox(self)
-                msg.setIcon(QMessageBox.Icon.Warning)
-                msg.setWindowTitle("Syntax Issues Detected")
-                msg.setText(f"Syntax Validator found {len(issues)} issue(s):")
-                msg.setDetailedText(detail_text)
-                msg.setInformativeText("Run anyway?")
-                msg.setStandardButtons(
-                    QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
-                )
-                msg.setDefaultButton(QMessageBox.StandardButton.No)
-                choice = msg.exec()
-
-                # Show the validator panel so the user can review all issues
-                dock = self.feature_manager.dock_widgets.get("syntax_validator")
-                if dock:
-                    dock.setVisible(True)
-                    dock.raise_()
-
-                return choice == QMessageBox.StandardButton.Yes
+    def _validate_before_run(self, _code: str, _language: Language) -> bool:
+        """Hook before running code (returns True in streamlined studio)."""
         return True
 
     def on_execution_stats(self, stats: dict):
@@ -2851,18 +2804,6 @@ class MainWindow(
         language = stats.get("language")
         if isinstance(language, Language):
             stats["language"] = language.friendly_name()
-
-        profiler_panel = self.feature_manager.get_feature_panel("performance_profiler")
-        if profiler_panel and hasattr(profiler_panel, "update_from_stats"):
-            profiler_panel.update_from_stats(stats)
-
-        replay_panel = self.feature_manager.get_feature_panel("execution_replay")
-        if replay_panel and hasattr(replay_panel, "record_execution"):
-            replay_panel.record_execution(stats)
-
-        analytics_panel = self.feature_manager.get_feature_panel("learning_analytics")
-        if analytics_panel and hasattr(analytics_panel, "record_execution"):
-            analytics_panel.record_execution(stats)
 
     def on_execution_complete(self):
         """Handle completion from the output panel."""
@@ -2873,12 +2814,6 @@ class MainWindow(
 
         if "❌" in self.output.toPlainText():
             self._set_execution_state("error", "Execution failed")
-
-        lesson_panel = self.feature_manager.get_feature_panel("lesson_mode")
-        if lesson_panel and hasattr(lesson_panel, "handle_execution_output"):
-            lesson_panel.handle_execution_output(self.output.toPlainText())
-
-        self._maybe_record_example_progress()
 
     def _apply_output_error_markers(self):
         """Scan the output panel for ❌ [line N] patterns and annotate the editor."""
@@ -2908,7 +2843,7 @@ class MainWindow(
             self._underline_error_lines_in_editor(editor, error_lines)
 
     def on_execution_error(self, error: str):
-        """Handle execution errors for AI assistance and editor navigation."""
+        """Handle execution errors for editor navigation."""
         # Parse line number from error message (e.g. 'line 5', 'Line 5:', 'at line 5')
         import re as _re
 
@@ -2932,15 +2867,6 @@ class MainWindow(
         except Exception:  # pylint: disable=broad-except
             logger.debug("Error generating enhanced error hint", exc_info=True)
 
-        ai_panel = self.feature_manager.get_feature_panel("ai_assistant")
-        if ai_panel and hasattr(ai_panel, "set_error_context"):
-            ai_panel.set_error_context(error)
-
-        explainer_panel = self.feature_manager.get_feature_panel("error_explainer")
-        if explainer_panel and hasattr(explainer_panel, "set_error_context"):
-            context = self._get_current_line_context()
-            explainer_panel.set_error_context(error, context)
-
         # Show error indicator on the active tab
         current_idx = self.editor_tabs.currentIndex()
         self._set_tab_run_indicator(current_idx, "error")
@@ -2954,6 +2880,40 @@ class MainWindow(
             editor.set_error_line(line_number)
             self.editor_tabs.setFocus()
 
+    def _setup_document_outline_dock(self) -> None:
+        """Create the lightweight Document Outline dock widget."""
+        self.document_outline = DocumentOutline(self)
+        self.document_outline.item_clicked.connect(self._on_outline_item_clicked)
+        dock = QDockWidget("📋 Document Outline", self)
+        dock.setObjectName("document_outline")
+        dock.setWidget(self.document_outline)
+        dock.setAllowedAreas(
+            Qt.DockWidgetArea.RightDockWidgetArea
+            | Qt.DockWidgetArea.LeftDockWidgetArea
+        )
+        dock.setVisible(False)
+        dock.visibilityChanged.connect(
+            lambda vis: (
+                self._outline_action.setChecked(vis)
+                if hasattr(self, "_outline_action")
+                else None
+            )
+        )
+        self.outline_dock = dock
+        self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, dock)
+        self._update_document_outline()
+
+    def toggle_document_outline(self, visible: Optional[bool] = None) -> None:
+        """Show or hide the Document Outline dock."""
+        if self.outline_dock is None:
+            return
+        if visible is None:
+            visible = not self.outline_dock.isVisible()
+        self.outline_dock.setVisible(bool(visible))
+        if visible:
+            self._update_document_outline()
+            self.outline_dock.raise_()
+
     def _on_outline_item_clicked(self, line_number: int):
         """Handle click on a document outline item (procedure/function)."""
         editor = self.get_current_editor()
@@ -2963,7 +2923,7 @@ class MainWindow(
 
     def _update_document_outline(self):
         """Refresh the Document Outline panel for the current tab."""
-        panel = self.feature_manager.get_feature_panel("document_outline")
+        panel = getattr(self, "document_outline", None)
         if not panel or not hasattr(panel, "set_editor"):
             return
         editor = self.get_current_editor()
@@ -2980,191 +2940,10 @@ class MainWindow(
         cursor.select(QTextCursor.SelectionType.LineUnderCursor)
         return cursor.selectedText()
 
-    def _connect_lesson_signals(self):
-        """Connect lesson panel signals to the main window."""
-        panel = self.feature_manager.get_feature_panel("lesson_mode")
-        if not panel:
-            return
-        if hasattr(panel, "lesson_started"):
-            panel.lesson_started.connect(self._apply_lesson_code)
-        if hasattr(panel, "lesson_checkpoint_ready"):
-            panel.lesson_checkpoint_ready.connect(self._apply_lesson_code)
-        if hasattr(panel, "export_markdown_requested"):
-            panel.export_markdown_requested.connect(
-                lambda: self.export_lesson_session("markdown")
-            )
-        if hasattr(panel, "export_pdf_requested"):
-            panel.export_pdf_requested.connect(
-                lambda: self.export_lesson_session("pdf")
-            )
-
-    def _connect_lesson_authoring_signals(self):
-        """Connect custom lesson authoring into Lesson Mode."""
-        panel = self.feature_manager.get_feature_panel("lesson_authoring")
-        if not panel or not hasattr(panel, "lesson_created"):
-            return
-        panel.lesson_created.connect(self._register_custom_lesson)
-
-    def _connect_learning_hub_signals(self):
-        """Connect the central learning hub to existing IDE features."""
-        panel = self.feature_manager.get_feature_panel("learning_hub")
-        if not panel:
-            return
-        if hasattr(panel, "open_feature_requested"):
-            panel.open_feature_requested.connect(self._open_learning_resource)
-        if hasattr(panel, "challenge_requested"):
-            panel.challenge_requested.connect(self._load_challenge_from_hub)
-        if hasattr(panel, "remix_requested"):
-            panel.remix_requested.connect(self._remix_current_tab)
-        if hasattr(panel, "tutor_requested"):
-            panel.tutor_requested.connect(self._launch_ai_tutor_on_current_code)
-        if hasattr(panel, "export_markdown_requested"):
-            panel.export_markdown_requested.connect(
-                lambda: self.export_lesson_session("markdown")
-            )
-        if hasattr(panel, "export_bundle_requested"):
-            panel.export_bundle_requested.connect(self.export_classroom_bundle)
-
-    def _register_custom_lesson(self, lesson_data: dict):
-        """Register a custom-authored lesson with the lesson panel."""
-        panel = self.feature_manager.get_feature_panel("lesson_mode")
-        if not panel or not hasattr(panel, "add_custom_lesson"):
-            self.statusbar.showMessage("Lesson mode not available", 3000)
-            return
-        try:
-            lesson = panel.add_custom_lesson(lesson_data)
-        except ValueError as exc:
-            self.statusbar.showMessage(f"Could not add lesson: {exc}", 4000)
-            return
-
-        self.feature_manager.toggle_feature_panel("lesson_mode", visible=True)
-        self.statusbar.showMessage(f"Custom lesson ready: {lesson.title}", 3000)
-
-    def _open_learning_resource(self, feature_id: str):
-        """Open a hub-selected panel or built-in help view."""
-        if feature_id == "quick_reference":
-            self._show_quick_reference()  # type: ignore[attr-defined]
-            return
-        self.feature_manager.toggle_feature_panel(feature_id, visible=True)
-
-    def _load_challenge_from_hub(self, language_name: str, starter_code: str):
-        """Create a new tab from a featured learning challenge."""
-        language = getattr(Language, language_name.upper(), Language.BASIC)
-        title = f"{language_name.title()} Challenge"
-        self.create_new_tab(title=title, content=starter_code, language=language)
-        self.feature_manager.toggle_feature_panel("lesson_mode", visible=True)
-        self.statusbar.showMessage(f"Challenge loaded: {title}", 3000)
-
-    def _remix_current_tab(self):
-        """Duplicate the current tab so learners can safely experiment."""
-        editor = self.get_current_editor()
-        current_index = self.editor_tabs.currentIndex()
-        if editor is None or current_index < 0:
-            self.create_new_tab(title="Remix", content="", language=Language.BASIC)
-            self.statusbar.showMessage("Opened a blank remix tab", 3000)
-            return
-
-        language = self._ts(current_index).language
-        title = self.editor_tabs.tabText(current_index).replace(" ●", "") or "Untitled"
-        self.create_new_tab(
-            title=f"Remix - {title}",
-            content=editor.toPlainText(),
-            language=language,
-        )
-        self.set_current_tab_info(modified=True, language=language)
-        self.statusbar.showMessage("Created a remix copy of the current tab", 3000)
-
-    def _launch_ai_tutor_on_current_code(self):
-        """Open the AI tutor with the active code context."""
-        panel = self.feature_manager.get_feature_panel("ai_assistant")
-        self.feature_manager.toggle_feature_panel("ai_assistant", visible=True)
-        editor = self.get_current_editor()
-        current_index = self.editor_tabs.currentIndex()
-        language = Language.BASIC
-        code = ""
-        if current_index >= 0:
-            language = self._ts(current_index).language
-        if editor is not None:
-            code = editor.toPlainText()
-        if panel and hasattr(panel, "set_code_context"):
-            panel.set_code_context(
-                language.name if hasattr(language, "name") else "BASIC", code
-            )
-        self.statusbar.showMessage("AI tutor opened for the current tab", 3000)
-
-    def _connect_turtle_inspector_signals(self):
-        """Connect turtle inspector panel to output events."""
-        panel = self.feature_manager.get_feature_panel("turtle_inspector")
-        if not panel:
-            return
-        if hasattr(panel, "add_snapshot"):
-            self.output.turtle_state_changed.connect(panel.add_snapshot)
-        if hasattr(panel, "clear_timeline"):
-            self.output.turtle_state_reset.connect(panel.clear_timeline)
-        if hasattr(panel, "snapshot_selected"):
-            panel.snapshot_selected.connect(self._apply_turtle_snapshot)
-
-    def _connect_reference_signals(self):
-        """Connect reference search panel signals."""
-        panel = self.feature_manager.get_feature_panel("reference_search")
-        if not panel:
-            return
-        if hasattr(panel, "open_reference_requested"):
-            panel.open_reference_requested.connect(self.load_file)
-
-    def _connect_classroom_signals(self):
-        """Connect classroom mode panel signals."""
-        panel = self.feature_manager.get_feature_panel("classroom_mode")
-        if not panel:
-            return
-        if hasattr(panel, "start_presentation"):
-            panel.start_presentation.connect(self.start_presentation_mode)
-        if hasattr(panel, "stop_presentation"):
-            panel.stop_presentation.connect(self.stop_presentation_mode)
-        if hasattr(panel, "export_bundle_requested"):
-            panel.export_bundle_requested.connect(self.export_classroom_bundle)
-        if hasattr(panel, "import_bundle_requested"):
-            panel.import_bundle_requested.connect(self.import_classroom_bundle)
-        if hasattr(panel, "broadcast_code_requested"):
-            panel.broadcast_code_requested.connect(self.broadcast_sample_code)
-        if hasattr(panel, "collect_outputs_requested"):
-            panel.collect_outputs_requested.connect(self.collect_student_outputs)
-
     def _apply_turtle_snapshot(self, turtle_state):
         """Apply a turtle snapshot to the canvas for replay."""
         if turtle_state and hasattr(self, "canvas"):
             self.canvas.set_turtle_state(turtle_state)
-
-    # -- Presentation, classroom, lesson, and bundle methods live in
-    # -- ClassroomMixin --
-
-    def _maybe_record_example_progress(self):
-        """Record example progress if current file is an example."""
-        panel = self.feature_manager.get_feature_panel("achievements")
-        if not panel or not hasattr(panel, "record_example_run"):
-            return
-        current_info = self.get_current_tab_info()
-        file_path = current_info.get("file")
-        if not file_path:
-            return
-        path = Path(file_path).resolve()
-        root = self._find_repo_root()
-        if not root:
-            return
-        try:
-            rel_path = str(path.relative_to(root))
-        except ValueError:
-            return
-        if rel_path.startswith("Examples/"):
-            panel.record_example_run(rel_path)
-
-    def _find_repo_root(self) -> Path | None:
-        """Locate repository root for relative paths."""
-        start = Path(__file__).resolve()
-        for parent in [start] + list(start.parents):
-            if (parent / "Examples").exists() and (parent / "docs").exists():
-                return parent
-        return None
 
     def stop_program(self):
         """Stop running program."""
@@ -3172,7 +2951,6 @@ class MainWindow(
         self.run_action.setEnabled(True)
         self.stop_action.setEnabled(False)
         self._set_execution_state("stopped", "Execution stopped")
-        # debug pause handling removed
 
     def on_variables_updated(self, variables):
         """Handle variables update from interpreter."""
@@ -3244,26 +3022,240 @@ class MainWindow(
             # Discard: continue to next tab
         return True
 
+    def _get_all_open_editors(self) -> list:
+        """Return all CodeEditor instances across primary and secondary split panes."""
+        editors = []
+        if hasattr(self, "editor_tabs"):
+            for i in range(self.editor_tabs.count()):
+                w = self.editor_tabs.widget(i)
+                if w is not None and hasattr(w, "highlighter"):
+                    editors.append(w)
+        if hasattr(self, "_editor_tabs_b"):
+            for i in range(self._editor_tabs_b.count()):
+                w = self._editor_tabs_b.widget(i)
+                if w is not None and hasattr(w, "highlighter"):
+                    editors.append(w)
+        return editors
+
+    def _apply_theme_all(self, theme_name: str) -> None:
+        """Apply *theme_name* across all editors, output, canvas, F-key bar, and HUD."""
+        editors = self._get_all_open_editors()
+        primary_editor = self.get_current_editor() or (editors[0] if editors else None)
+        primary_hl = getattr(primary_editor, "highlighter", None)
+        self.theme_manager.apply_theme(
+            theme_name,
+            editor=primary_editor,
+            output=getattr(self, "output", None),
+            canvas=getattr(self, "canvas", None),
+            highlighter=primary_hl,
+            editors=editors,
+            extra_widgets=[
+                getattr(self, "function_key_bar", None),
+                getattr(self, "telemetry_hud", None),
+            ],
+        )
+
+    def apply_theme(self, theme_name: str) -> None:
+        """Public alias for changing the IDE theme."""
+        self.change_theme(theme_name)
+
     def change_theme(self, theme_name):
         """Change IDE theme."""
         if self._classroom_lock_theme:
             self.statusBar().showMessage("Theme locked in classroom mode")
             return
-        # Apply theme to all editors
-        for i in range(self.editor_tabs.count()):
-            editor = self.editor_tabs.widget(i)
-            if editor:
-                self.theme_manager.apply_theme(
-                    theme_name,
-                    editor=editor,
-                    output=self.output,
-                    canvas=self.canvas,
-                    highlighter=editor.highlighter,
-                )
+        self._apply_theme_all(theme_name)
 
         # Save theme preference
         self.settings.setValue("theme", theme_name)
         self.statusBar().showMessage(f"Theme changed to: {theme_name}")
+
+    def apply_workspace_deck(self, deck_id: str) -> bool:
+        """Switch the IDE layout to a named One-Key Workspace Deck."""
+        return self.ui_layout_manager.apply_deck(self, deck_id)
+
+    def _on_fkey_action(self, action_id: str) -> None:
+        """Clicking a Function-Key Bar slot fires the same QAction as its key."""
+        action = self._fkey_actions.get(action_id)
+        if action is not None:
+            action.trigger()
+
+    def _reset_program(self, _checked: bool = False) -> None:
+        """Ctrl+F2 Program Reset: end a debug session or stop a normal run."""
+        if self._is_debugging:
+            self.stop_debug()
+        else:
+            self.stop_program()
+
+    def _debug_start_or_continue(self, _checked: bool = False) -> None:
+        """Ctrl+F9: start debugging, or resume when paused at a breakpoint."""
+        if self._is_debugging:
+            if self._is_paused:
+                self.debug_continue()
+        else:
+            self.start_debug()
+
+    def _show_keyword_inspector(self, _checked: bool = False) -> None:
+        ed = self.get_current_editor()
+        if ed is not None:
+            ed.show_keyword_inspector_popup()
+
+    def show_lessons(self, _checked: bool = False) -> None:
+        """Show (creating on first use) the Lessons dock."""
+        if self._lesson_panel is None:
+            from ..features.lesson_system import LessonManager
+            from .lesson_panel import LessonPanel
+
+            ed_text = lambda: (  # noqa: E731
+                self.get_current_editor().toPlainText()
+                if self.get_current_editor()
+                else ""
+            )
+            self._lesson_panel = LessonPanel(
+                LessonManager(), ed_text, self._apply_lesson_code, self
+            )
+            self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._lesson_panel)
+        self._lesson_panel.show()
+        self._lesson_panel.raise_()
+
+    def _focus_telemetry_hud(self) -> None:
+        """Switch right pane to the Live Telemetry & Memory HUD tab."""
+        if not hasattr(self, "right_tabs") or self.telemetry_hud is None:
+            return
+        idx = self.right_tabs.indexOf(self.telemetry_hud)
+        if idx >= 0:
+            self.right_tabs.setCurrentIndex(idx)
+
+    def _cycle_focus_pane(self) -> None:
+        """Cycle keyboard focus between Editor, REPL, Output, and Canvas (F6)."""
+        ed = self.get_current_editor()
+        targets = [
+            ed,
+            getattr(self.immediate_mode, "command_input", None),
+            self.output,
+            self.canvas,
+        ]
+        targets = [t for t in targets if t is not None]
+        if not targets:
+            return
+        for idx, widget in enumerate(targets):
+            if widget.hasFocus():
+                targets[(idx + 1) % len(targets)].setFocus()
+                return
+        targets[0].setFocus()
+
+    def _cycle_workstation_theme(self) -> None:
+        """Cycle through the flagship Neo-90s workstation themes."""
+        flagships = [
+            "Neo-90s Workstation",
+            "Borland Turbo Vision 1991",
+            "NeXTSTEP Gunmetal",
+            "Amiga Workbench 2.0",
+            "VGA Amber Lab",
+            "Dracula",
+        ]
+        cur = self.theme_manager.current_theme_name
+        idx = (flagships.index(cur) + 1) % len(flagships) if cur in flagships else 0
+        self.change_theme(flagships[idx])
+
+    def _on_hud_memory_poked(self, address: int, value: int) -> None:
+        """Forward live HUD hex pokes into the active or immediate-mode interpreter."""
+        if (
+            self.output.exec_thread is not None
+            and self.output.exec_thread.interp is not None
+            and hasattr(self.output.exec_thread.interp, "poke_memory_cell")
+        ):
+            self.output.exec_thread.interp.poke_memory_cell(address, value)
+        if hasattr(self, "immediate_mode") and hasattr(
+            self.immediate_mode.interpreter, "poke_memory_cell"
+        ):
+            self.immediate_mode.interpreter.poke_memory_cell(address, value)
+        self.statusbar.showMessage(
+            f"⚡ Poked RAM/Tape[${address:04X}] = ${value & 0xFF:02X} ({value & 0xFF})",
+            3000,
+        )
+
+    def run_dual_split_benchmark(
+        self, _checked: bool = False, *, polyglot: bool = True
+    ) -> dict:
+        """Run Primary and Secondary Split Editors on a shared Polyglot Turtle/Memory bus and compare benchmarks."""
+        from ..core.interpreter import Interpreter
+        from ..graphics.turtle_state import TurtleState
+
+        primary_ed = None
+        if hasattr(self, "editor_tabs"):
+            cur_w = self.editor_tabs.currentWidget()
+            if isinstance(cur_w, CodeEditor):
+                primary_ed = cur_w
+            else:
+                for i in range(self.editor_tabs.count()):
+                    w = self.editor_tabs.widget(i)
+                    if isinstance(w, CodeEditor):
+                        primary_ed = w
+                        break
+        secondary_ed = (
+            self._editor_tabs_b.currentWidget()
+            if hasattr(self, "_editor_tabs_b") and self._editor_tabs_b.count() > 0
+            else None
+        )
+        if primary_ed is None or not hasattr(primary_ed, "toPlainText"):
+            return {}
+
+        code_a = primary_ed.toPlainText()
+        lang_a = getattr(primary_ed, "language", None) or Language.BASIC
+        if secondary_ed is not None and hasattr(secondary_ed, "toPlainText"):
+            code_b = secondary_ed.toPlainText()
+            lang_b = getattr(secondary_ed, "language", None) or Language.LOGO
+        else:
+            code_b = code_a
+            lang_b = lang_a
+
+        shared_turtle = TurtleState()
+        interp_a = Interpreter(lang_a)
+        interp_b = Interpreter(lang_b)
+
+        t0 = time.perf_counter()
+        interp_a.load_program(code_a, lang_a)
+        out_a = interp_a.execute(shared_turtle)
+        ms_a = (time.perf_counter() - t0) * 1000.0
+        snap_a = interp_a.get_telemetry_snapshot(shared_turtle)
+
+        if polyglot:
+            # Share numeric/string variables and RAM across the polyglot bus
+            interp_b.load_program(code_b, lang_b)
+            interp_b.variables.update(interp_a.variables)
+            interp_b.string_variables.update(interp_a.string_variables)
+            interp_b.memory.update(interp_a.memory)
+        else:
+            interp_b.load_program(code_b, lang_b)
+
+        t1 = time.perf_counter()
+        out_b = interp_b.execute(shared_turtle)
+        ms_b = (time.perf_counter() - t1) * 1000.0
+        snap_b = interp_b.get_telemetry_snapshot(shared_turtle)
+
+        self.canvas.set_turtle_state(shared_turtle)
+        if self.telemetry_hud is not None:
+            self.telemetry_hud.update_from_snapshot(snap_b)
+
+        name_a = lang_a.friendly_name() if hasattr(lang_a, "friendly_name") else str(lang_a)
+        name_b = lang_b.friendly_name() if hasattr(lang_b, "friendly_name") else str(lang_b)
+        summary = (
+            f"⚡ POLYGLOT SPLIT BENCHMARK\n"
+            f"  Pane A ({name_a}): {ms_a:.2f} ms | {snap_a['steps_used']} steps\n"
+            f"  Pane B ({name_b}): {ms_b:.2f} ms | {snap_b['steps_used']} steps\n"
+            f"  Shared Turtle Segments: {len(shared_turtle.lines)}\n"
+        )
+        self.output.append_colored(summary, "info")
+        if out_a:
+            self.output.append_colored("\n".join(out_a), "normal")
+        if out_b and secondary_ed is not None:
+            self.output.append_colored("\n".join(out_b), "normal")
+        return {
+            "pane_a": {"language": name_a, "ms": ms_a, "steps": snap_a["steps_used"], "output": out_a},
+            "pane_b": {"language": name_b, "ms": ms_b, "steps": snap_b["steps_used"], "output": out_b},
+            "segments": len(shared_turtle.lines),
+        }
 
     def change_font_family(self, font_family):
         """Change editor font family."""
@@ -3304,21 +3296,11 @@ class MainWindow(
         current_idx = self.tab_widget.currentIndex()
         lang = self._ts(current_idx).language
         # Map Language enum to help key used by show_language_help
-        lang_key = lang.name.lower().replace("_", "") if lang else None
-        # Some names differ from help keys; build explicit overrides
-        _overrides = {
-            "c": "c",
-            "c_lang": "c",
-            "brainfuck": "brainfuck",
-        }
-        key = _overrides.get(lang_key, lang_key) if lang_key else None
-        if key and hasattr(self, "show_language_help"):
-            try:
-                self.show_language_help(key)
-                return
-            except Exception:
-                pass
-        # Fallback to user manual
+        lang_key = lang.name.lower() if lang else None
+        key = {"python_lang": "python"}.get(lang_key, lang_key) if lang_key else None
+        if key:
+            self.show_language_help(key)
+            return
         self.show_user_manual()
 
     def restore_state(self):
@@ -3363,6 +3345,10 @@ class MainWindow(
 
     def _restore_session_tabs(self):
         """Restore tabs from the last session (offer recovery for unsaved content)."""
+        import os
+
+        if os.environ.get("QT_QPA_PLATFORM") == "offscreen":
+            return
         session_data = self.settings.value("session_tabs", [])
         if not session_data:
             return
@@ -3390,11 +3376,10 @@ class MainWindow(
                     title = Path(tab_data['file']).name if tab_data['file'] else 'untitled'
                     content = tab_data.get('content', '')
                     self.create_new_tab(title, content, lang)
-
-                    # Mark as modified if it was
-                    idx = self.editor_tabs.count() - 1
-                    if tab_data.get('modified', False):
-                        self.set_current_tab_info(file=tab_data['file'] or None, modified=True)
+                    self.set_current_tab_info(
+                        file=tab_data['file'] or None,
+                        modified=bool(tab_data.get('modified', False)),
+                    )
 
     def save_state(self):
         """Save window state to settings."""
@@ -3590,9 +3575,6 @@ class MainWindow(
         if hasattr(self, "crt_overlay") and self.crt_overlay.parent():
             self.crt_overlay.setGeometry(self.crt_overlay.parent().rect())
 
-    # -- Collaboration methods (collab_connect … on_user_left) live in
-    # -- CollaborationMixin --
-
     # ===================================================================
     # GUI Enhancement: tabbed output routing
     # ===================================================================
@@ -3686,23 +3668,6 @@ class MainWindow(
                     if self.language_combo.itemData(i) == selected:
                         self.language_combo.setCurrentIndex(i)
                         break
-
-    # ===================================================================
-    # GUI Enhancement: SQL workbench launcher
-    # ===================================================================
-
-    def _show_sql_workbench(self, _checked: bool = False):
-        """Open the SQL workbench by switching the language to SQL and focusing the editor."""
-
-        # Switch editor language to SQL so the user can write SQL immediately
-        for i in range(self.language_combo.count()):
-            if str(self.language_combo.itemData(i)).upper() == "SQL":
-                self.language_combo.setCurrentIndex(i)
-                break
-        self.get_current_editor().setFocus()  # type: ignore[union-attr]
-        self.statusbar.showMessage(
-            "🗄 SQL Workbench ready – write SQL and press F5 to run"
-        )
 
     # ===================================================================
     # GUI Enhancement: accessibility preset
@@ -4002,45 +3967,47 @@ class MainWindow(
     # GUI Enhancement: keyboard shortcut overlay (Ctrl+?)
     # ===================================================================
 
-    _SHORTCUTS_TABLE = [
-        # (Category, Shortcut, Description)
-        ("File", "Ctrl+N", "New file"),
-        ("File", "Ctrl+O", "Open file"),
-        ("File", "Ctrl+S", "Save file"),
-        ("File", "Ctrl+Shift+S", "Save As…"),
-        ("File", "Ctrl+H", "Version history"),
-        ("File", "Ctrl+P", "Print code"),
-        ("Edit", "Ctrl+Z", "Undo"),
-        ("Edit", "Ctrl+Y / Ctrl+Shift+Z", "Redo"),
-        ("Edit", "Ctrl+X", "Cut"),
-        ("Edit", "Ctrl+C", "Copy"),
-        ("Edit", "Ctrl+V", "Paste"),
-        ("Edit", "Ctrl+F", "Find…"),
-        ("Edit", "Ctrl+Shift+F", "Format code"),
-        ("Edit", "Ctrl+Shift+I", "Insert snippet…"),
-        ("Run", "Ctrl+R", "Run program"),
-        ("Run", "Ctrl+Shift+R", "Run selection"),
-        ("Run", "Ctrl+Shift+F5", "Stop execution"),
-        ("Debug", "F5", "Start debugging"),
-        ("Debug", "Shift+F5", "Stop debugging"),
-        ("Debug", "Ctrl+F5", "Continue"),
-        ("Debug", "F10", "Step over"),
-        ("Debug", "F11", "Step into"),
-        ("Debug", "Shift+F11", "Step out"),
-        ("Debug", "F9", "Toggle breakpoint"),
-        ("Debug", "Ctrl+Shift+F9", "Clear all breakpoints"),
-        ("View", "Ctrl+Shift+P", "Command palette"),
-        ("View", "Ctrl+Shift+L", "Language picker"),
-        ("View", "Ctrl+\\", "Split editor right"),
-        ("View", "Ctrl++", "Zoom in"),
-        ("View", "Ctrl+-", "Zoom out"),
-        ("View", "Ctrl+Shift+F11", "Focus / distraction-free mode"),
-        ("Tools", "Ctrl+Shift+Q", "SQL Workbench"),
-        ("Tools", "Ctrl+Shift+D", "Database Manager"),
-        ("Help", "F1", "Context-sensitive language help"),
-        ("Help", "Ctrl+?", "Show keyboard shortcuts (this dialog)"),
-        ("Help", "Ctrl+Shift+H", "Export session as HTML"),
+    # Editor-level keys handled inside CodeEditor.keyPressEvent (not QActions).
+    _EDITOR_KEYS = [
+        ("Editor", "Ctrl+/", "Toggle line comment"),
+        ("Editor", "Ctrl+D", "Duplicate line"),
+        ("Editor", "Alt+Up / Alt+Down", "Move line up / down"),
+        ("Editor", "Ctrl+Space", "Auto-complete"),
+        ("Editor", "Ctrl+Shift+[ / Ctrl+Shift+]", "Fold / unfold block"),
     ]
+
+    def shortcut_table(self) -> list[tuple[str, str, str]]:
+        """Return (category, keys, action) for every bound key, read from live actions."""
+        rows: list[tuple[str, str, str]] = []
+
+        def _harvest(menu_title: str, actions) -> None:
+            for action in actions:
+                if action.menu():
+                    _harvest(menu_title, action.menu().actions())
+                    continue
+                keys = [
+                    ks.toString(QKeySequence.SequenceFormat.NativeText)
+                    for ks in action.shortcuts()
+                    if not ks.isEmpty()
+                ]
+                if keys:
+                    name = (
+                        action.text()
+                        .replace("&&", "\0")
+                        .replace("&", "")
+                        .replace("\0", "&")
+                        .replace("…", "")
+                        .strip()
+                    )
+                    rows.append((menu_title, " / ".join(keys), name))
+
+        for top in self.menuBar().actions():
+            if top.menu():
+                _harvest(top.text().replace("&", ""), top.menu().actions())
+        _harvest("Window", self.actions())
+        rows.append(("View", "Ctrl+Alt+H", "High-contrast theme toggle"))
+        rows.extend(self._EDITOR_KEYS)
+        return rows
 
     def _show_keyboard_shortcuts(self, _checked: bool = False):
         """Open a searchable keyboard-shortcut reference dialog."""
@@ -4071,10 +4038,12 @@ class MainWindow(
         table.setSelectionBehavior(QTableWidget.SelectionBehavior.SelectRows)
         table.setAlternatingRowColors(True)
 
+        rows = self.shortcut_table()
+
         def _populate(query: str = ""):
             table.setRowCount(0)
             query_lower = query.lower()
-            for cat, shortcut, desc in self._SHORTCUTS_TABLE:
+            for cat, shortcut, desc in rows:
                 if query_lower and query_lower not in (cat + shortcut + desc).lower():
                     continue
                 row = table.rowCount()
@@ -4091,30 +4060,3 @@ class MainWindow(
         btns.rejected.connect(dlg.accept)
         layout.addWidget(btns)
         dlg.exec()
-
-    # Placeholder for live collaboration feature
-    class CollaborationManager:
-        """Manages real-time collaboration sessions."""
-
-        def __init__(self):
-            self.active_sessions = {}
-
-        def start_session(self, session_id: str, user: str):
-            self.active_sessions[session_id] = [user]
-            print(f"Collaboration session {session_id} started by {user}.")
-
-        def join_session(self, session_id: str, user: str):
-            if session_id in self.active_sessions:
-                self.active_sessions[session_id].append(user)
-                print(f"{user} joined session {session_id}.")
-            else:
-                print(f"Session {session_id} does not exist.")
-
-        def end_session(self, session_id: str):
-            if session_id in self.active_sessions:
-                del self.active_sessions[session_id]
-                print(f"Collaboration session {session_id} ended.")
-
-    # Example integration point
-    # collaboration_manager = CollaborationManager()
-    # collaboration_manager.start_session("12345", "Alice")

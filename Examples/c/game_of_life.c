@@ -4,9 +4,9 @@
 /* Time Warp Studio — C Language Demo                           */
 /* ============================================================ */
 
-#define ROWS 22
-#define COLS 60
-#define GENERATIONS 25
+#define ROWS 12
+#define COLS 30
+#define GENERATIONS 12
 
 int grid[ROWS][COLS];
 int next[ROWS][COLS];
@@ -188,9 +188,9 @@ int main() {
     set_glider(10, 40);
     alive_start = count_alive();
     print_grid(0);
-    for (g = 1; g <= 30; g++) {
+    for (g = 1; g <= 12; g++) {
         step();
-        if (g == 10 || g == 20 || g == 30) print_grid(g);
+        if (g == 4 || g == 8 || g == 12) print_grid(g);
     }
     alive_end = count_alive();
 
@@ -215,9 +215,9 @@ int main() {
     clear_grid();
     set_r_pentomino(9, 28);
     print_grid(0);
-    for (g = 1; g <= 50; g++) {
+    for (g = 1; g <= 15; g++) {
         step();
-        if (g == 10 || g == 25 || g == 50) print_grid(g);
+        if (g == 5 || g == 10 || g == 15) print_grid(g);
     }
 
     /* ---- Simulation 4: Mixed garden ---- */
@@ -231,8 +231,8 @@ int main() {
     set_glider(1, 25);
     set_toad(15, 35);
     print_grid(0);
-    for (g = 1; g <= 20; g++) step();
-    print_grid(20);
+    for (g = 1; g <= 10; g++) step();
+    print_grid(10);
 
     /* ---- Statistics Summary ---- */
     printf("\n============================================================\n");

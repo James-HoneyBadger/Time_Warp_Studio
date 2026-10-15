@@ -319,6 +319,9 @@ def _execute_single_logo_command(
         return ""
     cmd_name = words[0]
     args = words[1:] if len(words) > 1 else []
+    # Argument text with the user's original letter case (cmd/args are upper-cased)
+    raw_parts = command.strip().split(None, 1)
+    raw_args = raw_parts[1].strip() if len(raw_parts) > 1 else ""
     # Commands that require a TurtleState (graphics) to be available
     needs_turtle = {
         "FORWARD",
@@ -462,11 +465,11 @@ def _execute_single_logo_command(
     if cmd_name == "END":
         return _logo_end_procedure(interpreter)
     if cmd_name == "MAKE":
-        return _logo_make(interpreter, args)
+        return _logo_make(interpreter, args, raw_args)
     if cmd_name == "THING":
         return _logo_thing(interpreter, args)
     if cmd_name == "PRINT":
-        return _logo_print(interpreter, args)
+        return _logo_print(interpreter, args, raw_args)
     if cmd_name == "SHOW":
         return _logo_show(interpreter, args)
     if cmd_name == "TYPE":
@@ -520,9 +523,12 @@ def _execute_single_logo_command(
         if args:
             try:
                 ticks = _logo_eval_arg(interpreter, args[0])
-                import time
+                if hasattr(interpreter, "sleep_slices"):
+                    interpreter.sleep_slices(max(0.0, float(ticks) / 60.0))
+                else:
+                    import time
 
-                time.sleep(ticks / 60.0)
+                    time.sleep(max(0.0, float(ticks) / 60.0))
             except (ValueError, TypeError):
                 return "❌ WAIT requires a numeric argument\n"
         return ""
@@ -1527,6 +1533,8 @@ def _logo_repeat(
 
     output = ""
     for i in range(count):
+        if hasattr(interpreter, "tick"):
+            interpreter.tick(1)
         # Track loop counter for REPCOUNT and legacy REPCOUNTER alias
         current_count = float(i + 1)
         interpreter.variables["REPCOUNT"] = current_count
@@ -1746,13 +1754,22 @@ def _logo_call_procedure(
 
     # Map args to params
     num_params = len(params)
-    depth = interpreter.variables.get("__RECURSION_DEPTH__", 0)
+    depth = int(interpreter.variables.get("__RECURSION_DEPTH__", 0))
+    max_depth = 128
+    if hasattr(interpreter, "budget") and interpreter.budget is not None:
+        max_depth = interpreter.budget.max_recursion_depth
+        interpreter.budget.recursion_depth = depth + 1
+    if depth >= max_depth:
+        return f"❌ Procedure {proc_name} exceeded maximum recursion depth ({max_depth})\n"
+    if hasattr(interpreter, "tick"):
+        interpreter.tick(1)
     interpreter.variables["__RECURSION_DEPTH__"] = depth + 1
 
     # Use smart argument consumption
     used_args = _consume_logo_args(args, num_params)
 
     if len(used_args) < num_params:
+        interpreter.variables["__RECURSION_DEPTH__"] = depth
         return f"❌ Procedure {proc_name} requires {num_params} inputs\n"
 
     for i, param_name in enumerate(params):
@@ -1796,6 +1813,9 @@ def _logo_call_procedure(
                 output += result
         return output
     finally:
+        interpreter.variables["__RECURSION_DEPTH__"] = depth
+        if hasattr(interpreter, "budget") and interpreter.budget is not None:
+            interpreter.budget.recursion_depth = depth
         # Restore old variable values
         for var, value in old_values.items():
             if value is not None:
@@ -1804,9 +1824,30 @@ def _logo_call_procedure(
                 interpreter.variables.pop(var, None)
 
 
-def _logo_print(interpreter: "Interpreter", args: List[str]) -> str:
+def _logo_format_value(val: Any) -> str:
+    """Render a Logo value the way PRINT shows it."""
+    if isinstance(val, (list, tuple)):
+        return " ".join(
+            f"[{_logo_format_value(v)}]" if isinstance(v, (list, tuple)) else _logo_format_value(v)
+            for v in val
+        )
+    if isinstance(val, float):
+        return str(int(val)) if val.is_integer() else f"{val:g}"
+    return str(val)
+
+
+def _logo_print(interpreter: "Interpreter", args: List[str], raw: str = "") -> str:
     if not args:
         return "\n"
+    text = raw or " ".join(args)
+
+    # List literal: PRINT [hello world] shows the contents without brackets
+    if text.startswith("[") and text.endswith("]"):
+        inner = re.sub(r"\[\s+", "[", re.sub(r"\s+\]", "]", text[1:-1]))
+        return " ".join(inner.split()) + "\n"
+    # Quoted word: PRINT "hello
+    if text.startswith('"') and " " not in text:
+        return text[1:] + "\n"
 
     # Check for variable access :VAR
     if len(args) == 1 and args[0].startswith(":"):
@@ -1820,8 +1861,7 @@ def _logo_print(interpreter: "Interpreter", args: List[str]) -> str:
             val = interpreter.logo_lists[var_name]
 
         if val is not None:
-            val_str = str(val)
-            return val_str + "\n"
+            return _logo_format_value(val) + "\n"
 
     # Check if this is a function call
     func_names = [
@@ -1846,6 +1886,10 @@ def _logo_print(interpreter: "Interpreter", args: List[str]) -> str:
         # Remove the trailing newline if present
         if result.endswith("\n"):
             result = result[:-1]
+        try:
+            result = _logo_format_value(float(result))
+        except ValueError:
+            pass
         return result + "\n"
     # Check for reporter commands (POS, XCOR, YCOR, HEADING)
     if len(args) == 1 and args[0].upper() in ("POS", "XCOR", "YCOR", "HEADING"):
@@ -1863,18 +1907,23 @@ def _logo_print(interpreter: "Interpreter", args: List[str]) -> str:
             val_str = str(turtle.heading)
         return val_str + "\n"
 
-    # Otherwise treat as literal
-    output = " ".join(args)
-    return output + "\n"
+    # Arithmetic: PRINT 3 + 4, PRINT :X * 2, PRINT (2 + 3) * 4
+    try:
+        value = _logo_eval_expr_str(interpreter, text)
+    except (ValueError, TypeError, KeyError):
+        return text + "\n"
+    fval = float(value)
+    return (str(int(fval)) if fval.is_integer() else f"{fval:g}") + "\n"
 
 
 # Variable and data operations
-def _logo_make(interpreter: "Interpreter", args: List[str]) -> str:
+def _logo_make(interpreter: "Interpreter", args: List[str], raw: str = "") -> str:
     """MAKE variable value - Set a variable to a value"""
     if len(args) < 2:
         return "❌ MAKE requires variable name and value\n"
     var_name = args[0].strip('"')  # Remove quotes if present
-    value_expr = " ".join(args[1:])
+    raw_value = raw.split(None, 1)[1].strip() if raw and len(raw.split(None, 1)) > 1 else ""
+    value_expr = raw_value or " ".join(args[1:])
 
     # Try to evaluate as number first
     try:
@@ -1884,7 +1933,10 @@ def _logo_make(interpreter: "Interpreter", args: List[str]) -> str:
         return ""
     except (ValueError, TypeError):
         # If not a number, treat as string or list
-        if value_expr.startswith('"') and value_expr.endswith('"'):
+        if value_expr.startswith('"') and " " not in value_expr:
+            # Logo word: "Ada (no closing quote)
+            interpreter.string_variables[var_name.upper()] = value_expr[1:].rstrip('"')
+        elif value_expr.startswith('"') and value_expr.endswith('"'):
             # Quoted string
             interpreter.string_variables[var_name.upper()] = value_expr[1:-1]
         elif value_expr.startswith("[") and value_expr.endswith("]"):
@@ -2388,6 +2440,8 @@ def _logo_while(
     output_parts = []
     max_iters = 10000
     for _ in range(max_iters):
+        if hasattr(interpreter, "tick"):
+            interpreter.tick(1)
         if not interpreter.running:
             break
         try:
@@ -2433,6 +2487,8 @@ def _logo_until(
     output_parts = []
     max_iters = 10000
     for _ in range(max_iters):
+        if hasattr(interpreter, "tick"):
+            interpreter.tick(1)
         if not interpreter.running:
             break
         try:
@@ -2490,6 +2546,8 @@ def _logo_forever(
     max_iterations = 10000
     output_parts = []
     for i in range(max_iterations):
+        if hasattr(interpreter, "tick"):
+            interpreter.tick(1)
         if not interpreter.running:
             break
         current_count = float(i + 1)

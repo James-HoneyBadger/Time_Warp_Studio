@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from time_warp.core.interpreter import Language
 from .conftest_lang import run, ok, has, no_errors
 
@@ -19,10 +18,9 @@ def logo(source: str) -> list[str]:
 
 
 def test_hello_world():
-    # Logo outputs string words with leading " and uppercased
     out = logo('PRINT "Hello')
     assert no_errors(out)
-    assert has(out, "HELLO")
+    assert out == ["Hello"]
 
 
 def test_print_number():
@@ -57,10 +55,19 @@ def test_variable_arithmetic():
 
 
 def test_string_variable():
-    # Logo uppercases word output
     out = logo('MAKE "NAME "World\nPRINT :NAME')
     assert no_errors(out)
-    assert has(out, "WORLD")
+    assert out == ["World"]
+
+
+def test_print_evaluates_arithmetic_and_lists():
+    assert logo("PRINT 3 + 4") == ["7"]
+    assert logo('MAKE "X 5\nPRINT :X * 2') == ["10"]
+    assert logo("PRINT (2 + 3) * 4") == ["20"]
+    assert logo("PRINT [hello world]") == ["hello world"]
+    assert logo('MAKE "L [a b c]\nPRINT :L') == ["a b c"]
+    assert logo("PRINT SUM 2 3") == ["5"]
+    assert "Division by zero" in logo("PRINT 5 / 0")[0]
 
 
 # ---------------------------------------------------------------------------

@@ -54,6 +54,8 @@ class CRTEffectOverlay(QWidget):
         self.flicker_brightness = 1.0
 
         self.color_bleed_enabled = False
+        self.aperture_grille_enabled = True
+        self.trinitron_bezel_enabled = True
 
         # Overall effect enabled
         self._enabled = False
@@ -164,7 +166,7 @@ class CRTEffectOverlay(QWidget):
         self._draw_bezel(painter, rect)
 
     def _draw_scanlines(self, painter: QPainter, rect: QRectF):
-        """Draw horizontal scanlines."""
+        """Draw horizontal scanlines and subtle sub-pixel RGB aperture grille."""
         scanline_color = QColor(0, 0, 0, int(self.scanline_intensity * 255))
         pen = QPen(scanline_color, 1)
         painter.setPen(pen)
@@ -173,6 +175,14 @@ class CRTEffectOverlay(QWidget):
         while y < rect.height():
             painter.drawLine(0, y, int(rect.width()), y)
             y += self.scanline_spacing
+
+        if getattr(self, "aperture_grille_enabled", False):
+            grille_pen = QPen(QColor(0, 0, 0, 22), 1)
+            painter.setPen(grille_pen)
+            x = 0
+            while x < rect.width():
+                painter.drawLine(x, 0, x, int(rect.height()))
+                x += 3
 
     def _draw_vignette(self, painter: QPainter, rect: QRectF):
         """Draw vignette (darkening at edges)."""

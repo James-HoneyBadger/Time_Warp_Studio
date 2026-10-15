@@ -11,6 +11,17 @@ from enum import Enum, auto
 from typing import Any, Callable, Dict, List, Optional
 
 
+class DivisionByZeroError(ArithmeticError):
+    """Runtime division by zero.
+
+    Deliberately not a ValueError/ZeroDivisionError: executors use those as
+    "try another parse" signals, and this must reach the user as an error.
+    """
+
+    def __init__(self, detail: str = "") -> None:
+        super().__init__(f"Division by zero{detail}")
+
+
 class Token:  # pylint: disable=R0903
     """Expression token
 
@@ -85,8 +96,12 @@ class ExpressionEvaluator:
         "LOG10": math.log10,
         "LOG2": math.log2,
         "INT": math.floor,  # Truncates toward negative infinity
+        "TRUNC": math.trunc,
+        "FLOAT": float,
+        "INTEGER": lambda x: float(int(x)),
         "FIX": lambda x: math.floor(x) if x >= 0 else math.ceil(x),
         "SGN": lambda x: 1 if x > 0 else (-1 if x < 0 else 0),
+        "SIGN": lambda x: 1.0 if x > 0 else (-1.0 if x < 0 else 0.0),
         "RAND": random.random,
         "RND": random.random,  # Turbo BASIC alias
         "RANDOM": lambda x: float(random.randrange(int(x))) if x > 0 else 0.0,
@@ -94,6 +109,14 @@ class ExpressionEvaluator:
         "CINT": lambda x: float(round(x)),
         # VAL converts a string or number to float (string→numeric in BASIC)
         "VAL": lambda x: float(str(x).strip()) if str(x).strip() else 0.0,
+    }
+
+    CONSTANTS: Dict[str, float] = {
+        "PI": math.pi,
+        "E": math.e,
+        "TAU": math.tau,
+        "TRUE": 1.0,
+        "FALSE": 0.0,
     }
 
     def __init__(
@@ -212,11 +235,15 @@ class ExpressionEvaluator:
                     suffix = expr[i]
                     i += 1
 
-                # Keyword operators: AND, OR, NOT, MOD
-                if name_upper in ("AND", "OR", "NOT", "MOD"):
+                # Keyword operators: AND, OR, NOT, MOD, XOR, DIV, REM
+                if name_upper in ("AND", "OR", "NOT", "MOD", "XOR", "DIV", "REM"):
                     if name_upper == "NOT":
                         # NOT is a unary prefix operator
                         tokens.append(Token(Token.Type.OPERATOR, "NOT"))
+                    elif name_upper == "DIV":
+                        tokens.append(Token(Token.Type.OPERATOR, "//"))
+                    elif name_upper == "REM":
+                        tokens.append(Token(Token.Type.OPERATOR, "REM"))
                     else:
                         tokens.append(Token(Token.Type.OPERATOR, name_upper))
                     continue
@@ -229,8 +256,22 @@ class ExpressionEvaluator:
                     tokens.append(Token(Token.Type.VARIABLE, name_upper + suffix))
                 continue
 
+            # Multi-character arithmetic/bitwise operators: **, //, <<, >>, /\ , \/
+            if expr[i : i + 2] in ("**", "//", "<<", ">>", "/\\", "\\/"):
+                two = expr[i : i + 2]
+                if two == "**":
+                    tokens.append(Token(Token.Type.OPERATOR, "^"))
+                elif two == "/\\":
+                    tokens.append(Token(Token.Type.OPERATOR, "AND"))
+                elif two == "\\/":
+                    tokens.append(Token(Token.Type.OPERATOR, "OR"))
+                else:
+                    tokens.append(Token(Token.Type.OPERATOR, two))
+                i += 2
+                continue
+
             # Operators
-            if ch in "+-*/%^\\":
+            if ch in "+-*/%^\\~|&":
                 # Check if this is a unary operator
                 prev_token = tokens[-1] if tokens else None
                 is_unary = (
@@ -244,12 +285,19 @@ class ExpressionEvaluator:
                     or prev_token.type == Token.Type.COMPARISON
                 )
 
-                if is_unary and ch in "+-":
-                    # Unary plus/minus
+                if is_unary and ch in "+-~":
+                    # Unary plus/minus/bitwise-not
                     tokens.append(Token(Token.Type.OPERATOR, f"u{ch}"))
                 elif ch == "\\":
-                    # BASIC integer division
-                    tokens.append(Token(Token.Type.OPERATOR, "\\"))
+                    # BASIC integer division (or Prolog unary bitwise not if unary)
+                    if is_unary:
+                        tokens.append(Token(Token.Type.OPERATOR, "u~"))
+                    else:
+                        tokens.append(Token(Token.Type.OPERATOR, "\\"))
+                elif ch == "&":
+                    tokens.append(Token(Token.Type.OPERATOR, "AND"))
+                elif ch == "|":
+                    tokens.append(Token(Token.Type.OPERATOR, "OR"))
                 else:
                     tokens.append(Token(Token.Type.OPERATOR, ch))
                 i += 1
@@ -302,6 +350,7 @@ class ExpressionEvaluator:
 
         precedence = {
             "OR": -2,
+            "XOR": -2,
             "AND": -1,
             "<": 0,
             ">": 0,
@@ -309,20 +358,25 @@ class ExpressionEvaluator:
             ">=": 0,
             "==": 0,
             "!=": 0,
+            "<<": 1,
+            ">>": 1,
             "+": 1,
             "-": 1,
             "*": 2,
             "/": 2,
+            "//": 2,
             "\\": 2,
             "%": 2,
             "MOD": 2,
+            "REM": 2,
             "^": 3,
             "NOT": 4,  # Unary NOT
             "u+": 4,  # Unary plus
             "u-": 4,  # Unary minus
+            "u~": 4,  # Unary bitwise NOT
         }
 
-        right_associative = {"^", "u+", "u-", "NOT"}
+        right_associative = {"^", "u+", "u-", "u~", "NOT"}
 
         for token in tokens:
             if token.type == Token.Type.NUMBER:
@@ -430,6 +484,9 @@ class ExpressionEvaluator:
                     base = var_name
 
                 if base not in self.variables:
+                    if base in self.CONSTANTS:
+                        stack.append(self.CONSTANTS[base])
+                        continue
                     raise ValueError(f"Undefined variable: {var_name}")
                 stack.append(self.variables[base])
 
@@ -437,12 +494,14 @@ class ExpressionEvaluator:
                 op = token.value
 
                 # Handle unary operators
-                if op in ("u+", "u-", "NOT"):
+                if op in ("u+", "u-", "u~", "NOT"):
                     if len(stack) < 1:
                         raise ValueError("Invalid expression")
                     a = stack.pop()
                     if op == "u-":
                         result = -a
+                    elif op == "u~":
+                        result = float(~int(a))
                     elif op == "NOT":
                         result = 0.0 if a else 1.0
                     else:  # u+
@@ -463,21 +522,35 @@ class ExpressionEvaluator:
                         result = a * b
                     elif op == "/":
                         if b == 0:
-                            raise ValueError("Division by zero")
+                            raise DivisionByZeroError()
                         result = a / b
+                    elif op == "//":
+                        if b == 0:
+                            raise DivisionByZeroError(" (integer division)")
+                        result = float(int(a) // int(b))
                     elif op in ("%", "MOD"):
                         if b == 0:
-                            raise ValueError("Division by zero (MOD)")
+                            raise DivisionByZeroError(" (MOD)")
                         result = a % b
+                    elif op == "REM":
+                        if b == 0:
+                            raise DivisionByZeroError(" (REM)")
+                        result = float(int(a) - int(int(a) / int(b)) * int(b))
                     elif op == "\\":
                         if b == 0:
-                            raise ValueError("Division by zero (integer division)")
+                            raise DivisionByZeroError(" (integer division)")
                         # BASIC integer division truncates toward zero (not floor)
                         result = float(int(int(a) / int(b)))
                     elif op == "AND":
                         result = float(int(a) & int(b))
                     elif op == "OR":
                         result = float(int(a) | int(b))
+                    elif op == "XOR":
+                        result = float(int(a) ^ int(b))
+                    elif op == "<<":
+                        result = float(int(a) << max(0, min(64, int(b))))
+                    elif op == ">>":
+                        result = float(int(a) >> max(0, min(64, int(b))))
                     elif op == "^":
                         result = a**b
                     elif op == "<":

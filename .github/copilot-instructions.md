@@ -2,7 +2,7 @@
 
 **Project:** Time Warp Studio - Educational multi-language programming environment  
 **Maintainer:** James Temple <james@honey-badger.org>  
-**Last Updated:** April 2026
+**Last Updated:** October 2026
 
 ---
 
@@ -21,7 +21,7 @@ Time Warp Studio is an educational desktop programming environment built with Py
 - **Desktop Application (Python/PySide6)** — primary and only maintained version
     - Entry point: `Platforms/Python/time_warp_ide.py`
     - Core: `Platforms/Python/time_warp/core/interpreter.py`
-    - Languages: 24 executors in `Platforms/Python/time_warp/languages/`
+    - Languages: 9 executors in `Platforms/Python/time_warp/languages/`
     - UI: PySide6 (Qt6) with modern desktop interface (30+ UI modules)
     - All UI state (editor, canvas, themes) managed by main application
 
@@ -41,7 +41,7 @@ def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) 
 - **Whole-program executors** (2 active languages): Receive the entire source as a string. Registered in `_WHOLE_PROGRAM_EXECUTORS` dict in `core/interpreter.py`. These are: Brainfuck and Python.
 - **Line-by-line executors** (7 active languages: BASIC, PILOT, Logo, C, Pascal, Prolog, Forth): The interpreter iterates lines and calls the executor per statement.
 
-When adding a new whole-program language, only one dict needs updating: `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.
+Whole-program executors are dispatched through `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`; adding a language also requires the corresponding enum, extension, editor, and test updates.
 
 ## Critical Workflows
 
@@ -74,14 +74,14 @@ python3 Platforms/Python/smoke_test.py
 pytest Platforms/Python/time_warp/tests/test_basic_executor.py -v
 pytest Platforms/Python/time_warp/tests/test_logo_graphics.py -v
 
-# All demo programs (standalone, 15s timeout per file)
-python tests/test_all_demos.py
+# All example programs (run in isolated subprocesses)
+python test_all_examples.py
 ```
 
 **Test Organization:**
-- `test_*.py` = unit tests for components (24 test files in `time_warp/tests/`)
+- `test_*.py` = unit tests for components (23 test files in `time_warp/tests/`)
 - `Platforms/Python/smoke_test.py` = fast smoke test without pytest
-- `tests/test_all_demos.py` = standalone demo verifier (subprocess per file)
+- `test_all_examples.py` = root-level example verifier (subprocess per file)
 - `conftest_lang.py` = shared `run()`, `ok()`, `has()`, `no_errors()` test helpers
 
 ### Adding a New Language
@@ -130,9 +130,6 @@ evaluator = ExpressionEvaluator(variables={"X": 5})
 result = evaluator.evaluate("2 + 3 * X")  # Returns 17
 ```
 
-### Hardware/IoT Integration
-Simulation-first design in `core/hardware_simulator.py` (not yet wired into main interpreter). Future feature.
-
 ## Integration Points to Watch
 
 ### Turtle Graphics State
@@ -141,7 +138,7 @@ Simulation-first design in `core/hardware_simulator.py` (not yet wired into main
 - Canvas clearing happens in main UI, not executor
 
 ### Theme System
-`ui/themes.py` defines 28 themes (Dracula, Monokai, Catppuccin Mocha, Gruvbox Dark, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized, plus retro CRT themes). Persisted via QSettings. Apply via `ThemeManager.apply_theme()`.
+`ui/themes.py` defines 33 themes (Dracula, Monokai, Catppuccin Mocha, Gruvbox Dark, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized, plus retro CRT themes). Persisted via QSettings. Apply via `ThemeManager.apply_theme()`.
 
 ## Common Pitfalls
 
@@ -155,45 +152,41 @@ Simulation-first design in `core/hardware_simulator.py` (not yet wired into main
 ```
 Platforms/Python/
   time_warp_ide.py          - Primary entry point (PySide6)
-  test_runner.py            - Test orchestration with HTML reports
   time_warp/
     core/
       interpreter.py        - Central interpreter (~1400 lines)
-      orchestrator.py       - System integration, component registry
       debugger.py           - Execution timeline / step-through debugger
-      sql_engine.py         - SQLite-backed T-SQL compatibility layer
       config.py             - Canonical paths (~/.time_warp/)
-    features/               - Feature modules (AI, collaboration, games, etc.)
+    features/               - Feature modules (lessons, games, music, shapes, etc.)
     languages/              - 9 language executors
       base.py               - Protocol definition
       basic.py, pilot.py, logo.py, c_lang_fixed.py, pascal.py,
       prolog.py, forth.py, brainfuck.py, python_lang.py
     ui/                     - 30+ UI modules
-      main_window.py        - PySide6 main window (uses 6 mixins)
+      main_window.py        - PySide6 main window (uses 5 mixins)
       editor.py             - Code editor + minimap + line numbers
-      themes.py             - Theme manager (28 themes)
+      themes.py             - Theme manager (33 themes)
       canvas.py             - Turtle graphics canvas
       output.py             - Output panel + interpreter threads
       debug_panel.py        - Debug controls/watch/call-stack
       command_palette.py    - Ctrl+Shift+P palette
-      mixins/               - Collaboration, classroom, debug, export, file ops, help
+      mixins/               - Classroom, debug, export, file ops, help
     graphics/
       turtle_state.py       - Turtle state management
     utils/
       expression_evaluator.py - Hand-written tokenizer + recursive-descent parser
       error_hints.py        - Syntax error suggestions
       validators.py         - Input validation helpers
-    tests/                  - 24 test files
-docker/                     - Dockerfiles, nginx, supervisord configs
-tests/                      - Root-level integration tests
-Examples/                   - ~72 demo programs across the 9 active languages
+    tests/                  - 23 test files
+test_all_examples.py        - Root-level example verifier
+Examples/                   - 72 example programs across the 9 active languages
 ```
 
 ## Dependencies
 
 Core: `pillow>=10.0.0`, `PySide6` (Qt6)
-Dev: `pytest`, `pytest-cov`, `pytest-mock`, `ruff`
-Optional: `pyfirmata` (Arduino), `RPi.GPIO` (Raspberry Pi), `openai`, `librosa`
+Dev: `pytest`, `pytest-cov`, `ruff`
+Optional: `darkdetect`, `pyttsx3`, `pygame`, `inputs`
 
 ---
 
@@ -204,7 +197,7 @@ Optional: `pyfirmata` (Arduino), `RPi.GPIO` (Raspberry Pi), `openai`, `librosa`
 - **Interpreter**: Main interpreter class handling command dispatch and execution
 - **Language Executors**: 9 executor functions in `time_warp/languages/`
 - **UI Components**: Qt-based UI (`ui/main_window.py`) with editor, canvas, and turtle controls
-- **Theme System**: `ui/themes.py` with 28 themes and persistent configuration
+- **Theme System**: `ui/themes.py` with 33 themes and persistent configuration
 - **Graphics Canvas**: Unified drawing surface in `ui/canvas.py` for all turtle graphics output
 - **Debugger**: Step-through debugger with execution timeline in `core/debugger.py`
 
@@ -216,7 +209,7 @@ Optional: `pyfirmata` (Arduino), `RPi.GPIO` (Raspberry Pi), `openai`, `librosa`
 
 ### Configuration Management
 
-- User settings stored in `~/.time_warp/config.json`
+- User settings stored via Qt QSettings; lesson progress stored in `~/.time_warp/progress.json`
 - Theme preferences persist between sessions via QSettings
 - Virtual environment used for Python dependencies
 
@@ -227,74 +220,6 @@ All interpreter errors are returned as strings with emoji prefixes:
 - `ℹ️` for info messages
 - `🎨` for theme changes
 
-### Execution Guidelines
-
-PROGRESS TRACKING:
-- If any tools are available to manage the above todo list, use it to track progress through this checklist.
-- After completing each step, mark it complete and add a summary.
-- Read current todo list status before starting each new step.
-
-## Development Workflows
-
-COMMUNICATION RULES:
-- Avoid verbose explanations or printing full command outputs.
-- If a step is skipped, state that briefly (e.g. "No extensions needed").
-- Do not explain project structure unless asked.
-- Keep explanations concise and focused.
-
-### Running Time_Warp
-
-```bash
-# Primary method
-python3 Platforms/Python/time_warp_ide.py
-```
-
-DEVELOPMENT RULES:
-- Use '.' as the working directory unless user specifies otherwise.
-- Avoid adding media or external links unless explicitly requested.
-- Use placeholders only with a note that they should be replaced.
-- Use VS Code API tool only for VS Code extension projects.
-
-## Editing Guidelines
-
-- Use `replace_string_in_file` for precise edits, providing 3-5 lines of context before and after.
-- For `apply_patch`, ensure minimal diffs, preserve indentation, and do not reformat unrelated code.
-- Best practices: keep changes minimal, avoid adding external links unless requested.
-
-### Testing
-
-See `pytest --help` for testing options:
-
-```bash
-# Run comprehensive test suite
-PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
-
-# Run quick smoke tests
-python3 Platforms/Python/smoke_test.py
-```
-
-FOLDER CREATION RULES:
-- Always use the current directory as the project root.
-- Do not create a new folder unless the user explicitly requests it besides a .vscode folder for a tasks.json file.
-
-EXTENSION INSTALLATION RULES:
-- Only install extension specified by the get_project_setup_info tool. DO NOT INSTALL any other extensions.
-
-### Adding New Languages
-
-1. Create executor function in `time_warp/languages/new_language.py`
-2. Implement `execute_<lang>(interpreter, source, turtle) -> str` following existing patterns
-3. Register in `core/interpreter.py`: add import, Language enum member, and `_WHOLE_PROGRAM_EXECUTORS` entry
-4. Add file extension mapping in `Language.from_extension()`
-5. Add syntax highlighting and file extensions to `ui/editor.py`
-
-PROJECT CONTENT RULES:
-- If the user has not specified project details, assume they want a "Hello World" project as a starting point.
-- Avoid adding links of any type (URLs, files, folders, etc.) or integrations that are not explicitly required.
-- Avoid generating images, videos, or any other media files unless explicitly requested.
-- Ensure all generated components serve a clear purpose within the user's requested workflow.
-- If a feature is assumed but not confirmed, prompt the user for clarification before including it.
-
 ### Theme Development
 
 Themes defined in `ui/themes.py` with color schemes applied uniformly across:
@@ -304,21 +229,6 @@ Themes defined in `ui/themes.py` with color schemes applied uniformly across:
 - Button styles
 - Output panels
 - Retro CRT effects (Amber, Green, C64, Apple II, etc.)
-
-TASK COMPLETION RULES:
-- Your task is complete when:
-  - Code runs without errors (`python3 Platforms/Python/time_warp_ide.py`)
-  - copilot-instructions.md file in the .github directory exists in the project
-  - README.md file exists and is up to date
-  - User is provided with clear instructions to debug/launch the project
-
-### Plugin Development
-
-Not yet implemented - future extensible architecture.
-
-Before starting a new task in the above plan, update progress in the plan.
-
-- Work through each checklist item systematically.
 
 ## Critical Integration Points
 
@@ -341,12 +251,6 @@ Before starting a new task in the above plan, update progress in the plan.
 - **Text**: Text mode with configurable cols/rows via `ScreenConfig`
 - **Graphics**: Full canvas with 2D drawing using Qt painter
 - **Turtle Graphics**: Integrated with canvas
-
-### Hardware/IoT Extensions
-Future features (stubs exist in `core/hardware_simulator.py`):
-- Raspberry Pi GPIO control
-- Sensor data visualization
-- Arduino integration
 
 ## Code Style and Conventions
 

@@ -65,24 +65,34 @@ def _is_var(token: str) -> bool:
     return (token[0].isalpha() and token[0].isupper()) or token.startswith("_")
 
 
-def _parse_terms(arg_str: str) -> Tuple[str, ...]:
+def _split_top_level_commas(text: str) -> List[str]:
+    """Split on commas that are outside (), [], {} and quotes."""
     parts: List[str] = []
     buf: List[str] = []
     depth = 0
-    for ch in arg_str:
-        if ch in "([":
+    quote_char = ""
+    for ch in text:
+        if quote_char:
+            if ch == quote_char:
+                quote_char = ""
+        elif ch in ("'", '"'):
+            quote_char = ch
+        elif ch in "([{":
             depth += 1
-        elif ch in ")]":
+        elif ch in ")]}":
             depth = max(0, depth - 1)
-
-        if ch == "," and depth == 0:
+        elif ch == "," and depth == 0:
             parts.append("".join(buf).strip())
             buf = []
-        else:
-            buf.append(ch)
+            continue
+        buf.append(ch)
     if buf:
         parts.append("".join(buf).strip())
-    return tuple(p for p in parts if p)
+    return parts
+
+
+def _parse_terms(arg_str: str) -> Tuple[str, ...]:
+    return tuple(p for p in _split_top_level_commas(arg_str) if p)
 
 
 def _ensure_kb(interpreter: "Interpreter"):
@@ -233,23 +243,7 @@ def _unify(x: str, y: str, env: Dict[str, str]) -> Optional[Dict[str, str]]:
 
 
 def _parse_body_goals(body: str) -> List[Tuple[str, Tuple[str, ...]]]:
-    # Split by commas not inside parentheses (simple heuristic)
-    goals: List[Tuple[str, Tuple[str, ...]]] = []
-    buf: List[str] = []
-    depth = 0
-    for ch in body:
-        if ch == "(":
-            depth += 1
-        elif ch == ")":
-            depth = max(0, depth - 1)
-        if ch == "," and depth == 0:
-            goals.append(_parse_single_goal("".join(buf).strip()))
-            buf = []
-        else:
-            buf.append(ch)
-    if buf:
-        goals.append(_parse_single_goal("".join(buf).strip()))
-    return goals
+    return [_parse_single_goal(g) for g in _split_top_level_commas(body) if g]
 
 
 def _parse_single_goal(text: str) -> Tuple[str, Tuple[str, ...]]:
@@ -270,6 +264,10 @@ def _parse_single_goal(text: str) -> Tuple[str, Tuple[str, ...]]:
         return ("is", (is_match.group(1), is_match.group(2).strip()))
 
     # Handle infix arithmetic comparisons with arbitrary expressions
+    univ_idx = t.find("=..")
+    if univ_idx > 0:
+        return ("=..", (t[:univ_idx].strip(), t[univ_idx + 3 :].strip()))
+
     # Order matters: longer operators first (=:=, =\=, \==, >=, =<, >, <, \=, ==)
     for op_str, pred_name in [
         ("=:=", "=:="),
@@ -432,79 +430,44 @@ def _solve_goals(
 
 
 def _eval_math(expr: str, env: Dict[str, str]) -> Optional[float]:
-    """Evaluate arithmetic expression with variables - full set of functions."""
-    import math as _math
+    """Evaluate arithmetic expression with variables using safe ExpressionEvaluator."""
+    from ..utils.expression_evaluator import ExpressionEvaluator
 
     def replace_var(match):
         var_name = match.group(0)
-        if var_name in env:
-            val = env[var_name]
+        target = var_name
+        seen = set()
+        while target in env and _is_var(env[target]):
+            if target in seen:
+                break
+            seen.add(target)
+            target = env[target]
+        if target in env:
+            val = env[target]
             if re.fullmatch(r"-?\d+(?:\.\d+)?", val):
                 return val
         return var_name
 
     expr_sub = re.sub(r"\b[A-Z][a-zA-Z0-9_]*\b", replace_var, expr)
-    expr_sub = re.sub(r"\bmod\b", "%", expr_sub)
-    expr_sub = re.sub(r"\brem\b", "%", expr_sub)
-    expr_sub = re.sub(r"\bdiv\b", "//", expr_sub)
-    expr_sub = re.sub(r"\bxor\b", "^", expr_sub)
-    expr_sub = re.sub(r"\b/\\b/", "//", expr_sub)
-
-    # Map Prolog math functions to Python
-    fn_map = {
-        "abs": "abs",
-        "sign": "sign",
-        "sqrt": "_math.sqrt",
-        "sin": "_math.sin",
-        "cos": "_math.cos",
-        "tan": "_math.tan",
-        "asin": "_math.asin",
-        "acos": "_math.acos",
-        "atan": "_math.atan",
-        "atan2": "_math.atan2",
-        "exp": "_math.exp",
-        "log": "_math.log",
-        "log2": "_math.log2",
-        "ceiling": "_math.ceil",
-        "floor": "_math.floor",
-        "round": "round",
-        "truncate": "int",
-        "float": "float",
-        "float_integer_part": "float",
-        "float_fractional_part": "lambda x: x % 1",
-        "integer": "int",
-        "max": "max",
-        "min": "min",
-        "pi": str(_math.pi),
-        "e": str(_math.e),
-        "inf": "float('inf')",
-        "nan": "float('nan')",
-        "succ": "lambda x: x+1",
-        "plus": "lambda x,y: x+y",
-        "msb": "lambda x: x.bit_length()-1 if x>0 else 0",
+    # Normalize Prolog function aliases to ExpressionEvaluator functions
+    alias_map = {
+        "ceiling": "CEIL",
+        "truncate": "TRUNC",
+        "float_integer_part": "TRUNC",
     }
-    for k, v in fn_map.items():
-        if k in ("pi", "e", "inf", "nan"):
-            expr_sub = re.sub(r"\b" + k + r"\b", v, expr_sub)
-        else:
-            expr_sub = re.sub(r"\b" + k + r"\b", v, expr_sub)
+    for k, v in alias_map.items():
+        expr_sub = re.sub(r"\b" + k + r"\b", v, expr_sub, flags=re.IGNORECASE)
+
+    evaluator = ExpressionEvaluator()
+    evaluator.FUNCTIONS["FLOAT_FRACTIONAL_PART"] = lambda x: float(x) - int(float(x))
+    evaluator.FUNCTIONS["SUCC"] = lambda x: float(x) + 1.0
+    evaluator.FUNCTIONS["MSB"] = (
+        lambda x: float(int(x).bit_length() - 1) if int(x) > 0 else 0.0
+    )
 
     try:
-        if not re.match(r"^[\d\s+\-*/%().a-zA-Z_,']+$", expr_sub):
-            return None
-        allowed_names: Dict[str, Any] = {
-            "__builtins__": {},
-            "_math": _math,
-            "abs": abs,
-            "round": round,
-            "int": int,
-            "float": float,
-            "max": max,
-            "min": min,
-            "sign": lambda x: 1.0 if x > 0 else (-1.0 if x < 0 else 0.0),
-        }
-        return float(eval(expr_sub, allowed_names, {}))  # noqa: S307
-    except (ValueError, TypeError, SyntaxError, ZeroDivisionError, NameError):
+        return float(evaluator.evaluate(expr_sub))
+    except (ValueError, TypeError, ZeroDivisionError):
         return None
 
 
@@ -534,6 +497,10 @@ def _substitute_term(term: str, env: Dict[str, str]) -> str:
     return "".join(result)
 
 
+_MAX_PROLOG_DEPTH = 96
+_MAX_PROLOG_SOLUTIONS = 1024
+
+
 def _solve_goals_cut(
     kb: Dict[str, Any],
     goals: List[Tuple[str, Tuple[str, ...]]],
@@ -541,6 +508,14 @@ def _solve_goals_cut(
 ) -> List[Tuple[Dict[str, str], bool]]:
     if not goals:
         return [(env, False)]
+    interpreter = kb.get("interpreter")
+    if interpreter is not None and hasattr(interpreter, "tick"):
+        interpreter.tick(1)
+    depth = int(kb.get("_depth", 0))
+    if depth >= _MAX_PROLOG_DEPTH:
+        return []
+    if interpreter is not None and hasattr(interpreter, "budget"):
+        interpreter.budget.prolog_depth = depth
     pred, args = goals[0]
     rest = goals[1:]
     out: List[Tuple[Dict[str, str], bool]] = []
@@ -626,48 +601,17 @@ def _solve_goals_cut(
         return []
 
     # I/O Built-ins
-    interpreter = kb.get("interpreter")
-    if pred == "write" and len(args) >= 1:
-        # write(X) or write("String")
-        # Concatenate all args
-        text_parts = []
-        for arg in args:
-            sval = _substitute_term(arg, env)
-            # Strip quotes if it's a string literal
-            if sval.startswith('"') and sval.endswith('"'):
-                sval = sval[1:-1]
-            text_parts.append(str(sval))
-
-        if interpreter:
-            # We don't have a direct "write without newline" on interpreter output list
-            # But we can append to the last line if it exists?
-            # No, interpreter.output is a list of lines.
-            # We'll just append a new line for now, or maybe accumulate in a buffer?
-            # Turbo Prolog 'write' doesn't add newline. 'writeln' does.
-            # Since our UI displays lines, 'write' might be tricky.
-            # Let's assume we just append to output list for now.
-            # Or better: use a temporary buffer in kb?
-            # Let's just append to output list as a new line for simplicity,
-            # or try to merge with previous if it didn't end with newline?
-            # The interpreter output is List[str].
-            # Let's just append.
-            interpreter.output.append("".join(text_parts))
+    if pred in ("write", "print") and len(args) >= 1:
+        _emit(kb, "".join(_display_text(_substitute_term(a, env)) for a in args))
         return _solve_goals_cut(kb, rest, env)
 
     if pred == "writeln" and len(args) >= 1:
-        text_parts = []
-        for arg in args:
-            sval = _substitute_term(arg, env)
-            if sval.startswith('"') and sval.endswith('"'):
-                sval = sval[1:-1]
-            text_parts.append(str(sval))
-        if interpreter:
-            interpreter.output.append("".join(text_parts))
+        text = "".join(_display_text(_substitute_term(a, env)) for a in args)
+        _emit(kb, text + "\n")
         return _solve_goals_cut(kb, rest, env)
 
     if pred == "nl" and len(args) == 0:
-        if interpreter:
-            interpreter.output.append("")
+        _emit(kb, "\n")
         return _solve_goals_cut(kb, rest, env)
 
     if pred == "concat" and len(args) == 3:
@@ -1303,6 +1247,21 @@ def _solve_goals_cut(
         return []
 
     # ── Term inspection ────────────────────────────────────────────────────────
+    if pred == "=.." and len(args) == 2:
+        term = _substitute_term(args[0], env).strip()
+        if not _is_var(term):
+            cm = re.match(r"^([a-z][a-zA-Z0-9_]*)\((.*)\)$", term)
+            items = [cm.group(1), *_parse_terms(cm.group(2))] if cm else [term]
+            e = _unify(args[1], "[" + ", ".join(items) + "]", env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        lst = _substitute_term(args[1], env).strip()
+        if lst.startswith("[") and lst.endswith("]") and lst[1:-1].strip():
+            items = [p.strip() for p in _parse_terms(lst[1:-1])]
+            built = items[0] if len(items) == 1 else f"{items[0]}({', '.join(items[1:])})"
+            e = _unify(args[0], built, env.copy())
+            return _solve_goals_cut(kb, rest, e) if e is not None else []
+        return []
+
     if pred == "functor" and len(args) == 3:
         t_sub = _substitute_term(args[0], env)
         fm = re.match(r"^(\w+)\s*\((.+)\)$", t_sub)
@@ -1341,31 +1300,10 @@ def _solve_goals_cut(
         return _solve_goals_cut(kb, rest, e) if e is not None else []
 
     # ── format/2 ─────────────────────────────────────────────────────────────
-    if pred in ("format", "print") and len(args) >= 1:
-        fmt = _substitute_term(args[0], env).strip("\"'")
-        fmt_result = (
-            fmt.replace("~w", "{}")
-            .replace("~d", "{}")
-            .replace("~a", "{}")
-            .replace("~n", "\n")
-            .replace("~N", "\n")
-        )
-        insert_vals = [_substitute_term(a, env).strip("\"'") for a in args[1:]]
-        try:
-            output = fmt_result.format(*insert_vals)
-        except (IndexError, KeyError):
-            output = fmt_result
-        if interpreter:
-            for line in output.splitlines():
-                interpreter.output.append(line)
-        return _solve_goals_cut(kb, rest, env)
-
     if pred == "tab" and len(args) == 1:
         n_sub = _substitute_term(args[0], env)
         try:
-            n = int(float(n_sub))
-            if interpreter:
-                interpreter.output.append(" " * n)
+            _emit(kb, " " * int(float(n_sub)))
         except (ValueError, TypeError):
             pass
         return _solve_goals_cut(kb, rest, env)
@@ -1619,11 +1557,11 @@ def _solve_goals_cut(
     # ── format/2 and format/1 ─────────────────────────────────────────────────
     if pred in ("format", "writef") and args:
         fmt_str = _substitute_term(args[0], env).strip("\"'")
-        fmt_args = (
-            [_substitute_term(a, env).strip("\"'") for a in args[1:]]
-            if len(args) > 1
-            else []
-        )
+        raw_args = [_substitute_term(a, env) for a in args[1:]]
+        if len(raw_args) == 1 and raw_args[0].strip().startswith("["):
+            inner = raw_args[0].strip()[1:-1]
+            raw_args = list(_parse_terms(inner)) if inner.strip() else []
+        fmt_args = [a.strip().strip("\"'") for a in raw_args]
         # Handle ~w, ~d, ~a, ~n format directives
         idx2 = 0
         result_chars: list[str] = []
@@ -1637,11 +1575,14 @@ def _solve_goals_cut(
                     )
                     idx2 += 1
                     i2 += 2
-                elif ch == "n":
+                elif ch in ("n", "N"):
                     result_chars.append("\n")
                     i2 += 2
                 elif ch == "t":
                     result_chars.append("\t")
+                    i2 += 2
+                elif ch == "~":
+                    result_chars.append("~")
                     i2 += 2
                 else:
                     result_chars.append(fmt_str[i2])
@@ -1649,10 +1590,7 @@ def _solve_goals_cut(
             else:
                 result_chars.append(fmt_str[i2])
                 i2 += 1
-        output_text = "".join(result_chars).rstrip("\n")
-        if interpreter:
-            for line in output_text.split("\n"):
-                interpreter.output.append(line)
+        _emit(kb, "".join(result_chars))
         return _solve_goals_cut(kb, rest, env)
 
     # ── string_concat/3 ───────────────────────────────────────────────────────
@@ -1771,11 +1709,17 @@ def _solve(
     kb: Dict[str, Any], pred: str, args: Tuple[str, ...]
 ) -> List[Dict[str, str]]:
     solutions: List[Dict[str, str]] = []
+    interpreter = kb.get("interpreter")
+    if interpreter is not None and hasattr(interpreter, "tick"):
+        interpreter.tick(1)
+    depth = int(kb.get("_depth", 0))
+    if depth >= _MAX_PROLOG_DEPTH:
+        return []
     # Built-in predicates for direct queries and rule heads
     builtins = {"add", "lt", "gt", "ge", "le", "eq", "neq"}
     if pred in builtins:
         envs_with_cut = _solve_goals_cut(kb, [(pred, args)], {})
-        for e, c in envs_with_cut:
+        for e, _cut in envs_with_cut:
             if "__CUTFAIL__" in e:
                 continue
             solutions.append(e)
@@ -1791,61 +1735,165 @@ def _solve(
                 break
         if fact_env is not None:
             solutions.append(fact_env)
+            if len(solutions) >= _MAX_PROLOG_SOLUTIONS:
+                return solutions
 
     # Rules (multi-goal body)
-    for hp, hargs, body_goals in kb["rules"]:
-        if hp != pred or len(hargs) != len(args):
-            continue
+    kb["_depth"] = depth + 1
+    try:
+        for hp, hargs, body_goals in kb["rules"]:
+            if hp != pred or len(hargs) != len(args):
+                continue
 
-        # Rename variables to avoid collision in recursion
-        if "var_counter" not in kb:
-            kb["var_counter"] = 0
-        kb["var_counter"] += 1
-        suffix = str(kb["var_counter"])
-        hargs_renamed, body_goals_renamed = _rename_vars_in_rule(
-            hargs, body_goals, suffix
-        )
+            # Rename variables to avoid collision in recursion
+            if "var_counter" not in kb:
+                kb["var_counter"] = 0
+            kb["var_counter"] += 1
+            suffix = str(kb["var_counter"])
+            hargs_renamed, body_goals_renamed = _rename_vars_in_rule(
+                hargs, body_goals, suffix
+            )
 
-        rule_env: Optional[Dict[str, str]] = {}
-        for ha, qa in zip(hargs_renamed, args):
-            if rule_env is not None:
-                rule_env = _unify(ha, qa, rule_env)
-            else:
-                rule_env = None
+            rule_env: Optional[Dict[str, str]] = {}
+            for ha, qa in zip(hargs_renamed, args):
+                if rule_env is not None:
+                    rule_env = _unify(ha, qa, rule_env)
+                else:
+                    rule_env = None
+                if rule_env is None:
+                    break
             if rule_env is None:
+                continue
+            if _body_has_cut(body_goals_renamed):
+                pre, post = _split_on_cut(body_goals_renamed)
+                # Get first solution for pre-cut part only
+                first_envs = _solve_goals_first(kb, pre, rule_env)
+                if not first_envs:
+                    # Cut not reached; allow other clauses
+                    continue
+                # Cut reached: evaluate post goals; do not backtrack over pre
+                post_envs = _solve_goals(kb, post, first_envs[0])
+                for e in post_envs:
+                    solutions.append(e)
+                    if len(solutions) >= _MAX_PROLOG_SOLUTIONS:
+                        return solutions
+                # Cut commits: stop exploring other clauses
                 break
-        if rule_env is None:
-            continue
-        if _body_has_cut(body_goals_renamed):
-            pre, post = _split_on_cut(body_goals_renamed)
-            # Get first solution for pre-cut part only
-            first_envs = _solve_goals_first(kb, pre, rule_env)
-            if not first_envs:
-                # Cut not reached; allow other clauses
-                continue
-            # Cut reached: evaluate post goals; do not backtrack over pre
-            post_envs = _solve_goals(kb, post, first_envs[0])
-            for e in post_envs:
+            # Evaluate body goals sequentially without pre-binding
+            # (sequential unification)
+            envs_with_cut = _solve_goals_cut(kb, body_goals_renamed, rule_env)
+            cut_committed = any(c for (e, c) in envs_with_cut) or kb.get(
+                "cut_active", False
+            )  # type: ignore
+            for e, _cut in envs_with_cut:
+                if "__CUTFAIL__" in e:
+                    continue
                 solutions.append(e)
-            # Cut commits: stop exploring other clauses
-            break
-        # Evaluate body goals sequentially without pre-binding
-        # (sequential unification)
-        envs_with_cut = _solve_goals_cut(kb, body_goals_renamed, rule_env)
-        cut_committed = any(c for (e, c) in envs_with_cut) or kb.get(
-            "cut_active", False
-        )  # type: ignore
-        for e, c in envs_with_cut:
-            if "__CUTFAIL__" in e:
-                continue
-            solutions.append(e)
-        if cut_committed:
-            break
+                if len(solutions) >= _MAX_PROLOG_SOLUTIONS:
+                    return solutions
+            if cut_committed:
+                break
+    finally:
+        kb["_depth"] = depth
 
     return solutions
 
 
+def _display_text(term: str) -> str:
+    """How write/1 shows a term: quoted atoms and strings lose their quotes."""
+    if len(term) >= 2 and term[0] == term[-1] and term[0] in ("'", '"'):
+        return term[1:-1]
+    return term
+
+
+def _emit(kb: dict, text: str) -> None:
+    """Write text to the current output line; each newline completes a line."""
+    interp = kb.get("interpreter")
+    if interp is None:
+        return
+    *complete, tail = (kb.get("_line_buf", "") + text).split("\n")
+    interp.output.extend(complete)
+    kb["_line_buf"] = tail
+
+
+def _flush_output(kb: dict) -> None:
+    """Emit any partial line left by write/1 at the end of a statement."""
+    tail = kb.get("_line_buf", "")
+    if tail and kb.get("interpreter") is not None:
+        kb["interpreter"].output.append(tail)
+    kb["_line_buf"] = ""
+
+
+def _strip_line_comment(line: str) -> str:
+    """Remove a trailing % comment that is not inside a quoted atom/string."""
+    quote_char = ""
+    for i, ch in enumerate(line):
+        if quote_char:
+            if ch == quote_char:
+                quote_char = ""
+        elif ch in ("'", '"'):
+            quote_char = ch
+        elif ch == "%":
+            return line[:i]
+    return line
+
+
+def _split_statements(line: str) -> List[str]:
+    """Split a line at clause-ending dots (outside quotes and brackets).
+
+    Every returned piece keeps its terminating dot; a trailing piece without a
+    dot is an unfinished clause continued on the next line.
+    """
+    pieces: List[str] = []
+    depth = 0
+    quote_char = ""
+    start = 0
+    n = len(line)
+    for i, ch in enumerate(line):
+        if quote_char:
+            if ch == quote_char:
+                quote_char = ""
+            continue
+        if ch in ("'", '"'):
+            quote_char = ch
+        elif ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth = max(0, depth - 1)
+        elif ch == "." and depth == 0 and (i + 1 == n or line[i + 1].isspace()):
+            if i > 0 and line[i - 1] == ".":
+                continue
+            pieces.append(line[start : i + 1])
+            start = i + 1
+    if line[start:].strip():
+        pieces.append(line[start:])
+    return pieces
+
+
 def execute_prolog(
+    interpreter: "Interpreter", command: str, turtle: "TurtleState"
+) -> str:
+    """Execute one Prolog source line, which may hold several clauses."""
+    _ensure_kb(interpreter)
+    kb = interpreter.prolog_kb
+    stripped = command.strip()
+    if kb.get("_in_block_comment") or "/*" in stripped:
+        pieces = [stripped]
+    else:
+        pieces = _split_statements(_strip_line_comment(stripped)) or [""]
+    results: List[str] = []
+    try:
+        for piece in pieces:
+            result = _execute_prolog_statement(interpreter, piece, turtle)
+            _flush_output(kb)
+            if result:
+                results.append(result.rstrip("\n"))
+    finally:
+        _flush_output(kb)
+    return "\n".join(results)
+
+
+def _execute_prolog_statement(
     interpreter: "Interpreter", command: str, turtle: "TurtleState"
 ) -> str:
     """Execute Prolog language command."""
@@ -1855,16 +1903,17 @@ def execute_prolog(
     if raw_cmd.startswith("%"):
         return ""
 
-    # Strip inline % comments (not inside quotes)
-    pct_idx = raw_cmd.find("%")
-    if pct_idx > 0:
-        # Simple check: not inside quotes
-        in_quote = False
-        for i, ch in enumerate(raw_cmd[:pct_idx]):
-            if ch == "'":
-                in_quote = not in_quote
-        if not in_quote:
-            raw_cmd = raw_cmd[:pct_idx].strip()
+    # Strip inline % comments that are outside quoted atoms/strings
+    quote_char = ""
+    for i, ch in enumerate(raw_cmd):
+        if quote_char:
+            if ch == quote_char:
+                quote_char = ""
+        elif ch in ("'", '"'):
+            quote_char = ch
+        elif ch == "%":
+            raw_cmd = raw_cmd[:i].strip()
+            break
 
     # Strip inline /* ... */ block comments
     while "/*" in raw_cmd and "*/" in raw_cmd:

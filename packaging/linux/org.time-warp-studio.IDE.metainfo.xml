@@ -45,7 +45,7 @@
     </release>
     <release version="13.0.0" date="2026-06-01">
       <description>
-        <p>v13.0.0 — Added REXX, Smalltalk, and APL language executors plus continued graphics, audio, and IDE improvements.</p>
+        <p>v13.0.0 — Continued graphics, audio, and IDE improvements.</p>
       </description>
     </release>
   </releases>

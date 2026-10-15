@@ -34,6 +34,8 @@ import traceback
 from contextlib import redirect_stdout
 from typing import TYPE_CHECKING, Any
 
+from ..utils.execution_timeout import ExecutionTimeoutError
+
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
     from ..graphics.turtle_state import TurtleState
@@ -48,6 +50,16 @@ if TYPE_CHECKING:
 _BLOCKED_ATTRIBUTES: frozenset[str] = frozenset({
     "__subclasses__",  # object.__subclasses__() → subprocess.Popen escape
     "__globals__",     # func.__globals__ → outer-scope namespace leak
+    "__builtins__",
+    "__code__",
+    "__closure__",
+    "gi_frame",
+    "gi_code",
+    "cr_frame",
+    "f_globals",
+    "f_locals",
+    "f_back",
+    "f_builtins",
 })
 
 
@@ -61,6 +73,48 @@ class _SandboxChecker(_ast.NodeVisitor):
                 ("<sandbox_check>", node.lineno, node.col_offset, None),
             )
         self.generic_visit(node)
+
+
+class _ASTBudgetInjector(_ast.NodeTransformer):
+    """Injects calls to ``__tw_tick__()`` at loop and function headers."""
+
+    @staticmethod
+    def _make_tick(ref_node: _ast.AST) -> _ast.Expr:
+        lineno = getattr(ref_node, "lineno", 1)
+        call = _ast.Expr(
+            value=_ast.Call(
+                func=_ast.Name(id="__tw_tick__", ctx=_ast.Load()),
+                args=[_ast.Constant(value=lineno)],
+                keywords=[],
+            )
+        )
+        return _ast.copy_location(call, ref_node)
+
+    def visit_While(self, node: _ast.While) -> _ast.AST:
+        self.generic_visit(node)
+        node.body.insert(0, self._make_tick(node))
+        return node
+
+    def visit_For(self, node: _ast.For) -> _ast.AST:
+        self.generic_visit(node)
+        node.body.insert(0, self._make_tick(node))
+        return node
+
+    def visit_AsyncFor(self, node: _ast.AsyncFor) -> _ast.AST:
+        self.generic_visit(node)
+        node.body.insert(0, self._make_tick(node))
+        return node
+
+    def visit_FunctionDef(self, node: _ast.FunctionDef) -> _ast.AST:
+        self.generic_visit(node)
+        insert_idx = 1 if (
+            node.body
+            and isinstance(node.body[0], _ast.Expr)
+            and isinstance(getattr(node.body[0], "value", None), _ast.Constant)
+            and isinstance(node.body[0].value.value, str)
+        ) else 0
+        node.body.insert(insert_idx, self._make_tick(node))
+        return node
 
 
 # ---------------------------------------------------------------------------
@@ -105,6 +159,8 @@ class PythonExecutor:
         try:
             tree = _ast.parse(source, "<time_warp_python>", "exec")
             _SandboxChecker().visit(tree)
+            tree = _ASTBudgetInjector().visit(tree)
+            _ast.fix_missing_locations(tree)
             code = compile(tree, "<time_warp_python>", "exec")
         except SyntaxError as e:
             line_info = f" (line {e.lineno})" if e.lineno else ""
@@ -117,6 +173,8 @@ class PythonExecutor:
                 exec(code, sandbox)  # noqa: S102  # type: ignore[misc]  # pylint: disable=exec-used
         except SystemExit:
             pass
+        except ExecutionTimeoutError as e:
+            buf.write(f"❌ Python execution stopped: {e}\n")
         except SyntaxError as e:
             line_info = f" (line {e.lineno})" if e.lineno else ""  # type: ignore[truthy-function]  # pylint: disable=using-constant-test
             buf.write(f"❌ SyntaxError{line_info}: {e.msg}\n")
@@ -188,14 +246,45 @@ class PythonExecutor:
         def clear_canvas() -> None:
             turtle.reset()
 
-        # Safe print that writes to buf
+        max_output_bytes = 512_000
+        if hasattr(self.interpreter, "budget") and self.interpreter.budget is not None:
+            max_output_bytes = self.interpreter.budget.max_output_bytes
+
+        def _tick(line_no: int = 1) -> None:
+            if hasattr(self.interpreter, "tick"):
+                self.interpreter.tick(1)
+            if getattr(self.interpreter, "debug_mode", False):
+                timeline = getattr(self.interpreter, "debug_timeline", None)
+                if timeline is not None and len(timeline.frames) < 500:
+                    timeline.record_frame(
+                        line=int(line_no),
+                        line_content=f"python:L{int(line_no)}",
+                        variables=self.interpreter.get_variables(),
+                    )
+                if (
+                    getattr(self.interpreter, "step_mode", False)
+                    or int(line_no) in getattr(self.interpreter, "breakpoints", set())
+                ):
+                    if hasattr(self.interpreter, "_do_debug_pause"):
+                        self.interpreter._do_debug_pause(int(line_no))
+
+        # Safe print that writes to buf with output size cap
         def safe_print(*args: Any, sep: str = " ", end: str = "\n") -> None:
-            buf.write(sep.join(str(a) for a in args) + end)
+            _tick()
+            text = sep.join(str(a) for a in args) + end
+            if buf.tell() + len(text) > max_output_bytes:
+                raise ExecutionTimeoutError(
+                    f"Output limit ({max_output_bytes} bytes) exceeded"
+                )
+            buf.write(text)
 
         # Non-interactive input
         def safe_input(prompt: str = "") -> str:
+            _tick()
             if prompt:
                 buf.write(str(prompt))
+            if hasattr(self.interpreter, "request_input"):
+                return str(self.interpreter.request_input(str(prompt)) or "")
             return ""
 
         # Safe exit
@@ -255,6 +344,7 @@ class PythonExecutor:
             "NotImplementedError": NotImplementedError,
             "OverflowError": OverflowError, "MemoryError": MemoryError,
             "RecursionError": RecursionError, "AssertionError": AssertionError,
+            "__tw_tick__": _tick,
             "ArithmeticError": ArithmeticError, "OSError": OSError,
             "IOError": IOError, "FileNotFoundError": FileNotFoundError,
             "PermissionError": PermissionError, "TimeoutError": TimeoutError,

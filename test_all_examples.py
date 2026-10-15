@@ -9,6 +9,10 @@ sys.path.insert(0, str(Path(__file__).parent / "Platforms" / "Python"))
 
 from time_warp.core.interpreter import Interpreter, Language
 from time_warp.graphics.turtle_state import TurtleState
+from time_warp.utils.execution_timeout import (
+    ExecutionTimeoutError,
+    execution_timeout,
+)
 
 REPO_ROOT = Path(__file__).parent
 EXAMPLES_DIR = REPO_ROOT / "Examples"
@@ -40,13 +44,15 @@ def run_example(example_path: Path):
         source = example_path.read_text(encoding='utf-8')
         interp = Interpreter()
         turtle = TurtleState()
+        interp.input_callback = lambda prompt: "" if prompt == "bf> " else "7"
         
         interp.load_program(source, lang)
         
         # Run with timeout
         start = time.time()
         try:
-            output = interp.execute(turtle)
+            with execution_timeout(TIMEOUT_SECONDS):
+                output = interp.execute(turtle)
             elapsed = time.time() - start
             
             # Check for errors in output
@@ -55,10 +61,10 @@ def run_example(example_path: Path):
                 return "FAIL", f"Error in output: {output_text[:100]}"
             
             return "PASS", f"Executed in {elapsed:.2f}s"
+        except ExecutionTimeoutError:
+            return "TIMEOUT", f"Timeout after {TIMEOUT_SECONDS}s"
         except Exception as e:
             elapsed = time.time() - start
-            if elapsed > TIMEOUT_SECONDS:
-                return "TIMEOUT", f"Timeout after {TIMEOUT_SECONDS}s"
             return "FAIL", str(e)[:100]
     except Exception as e:
         return "ERROR", str(e)[:100]
@@ -66,15 +72,12 @@ def run_example(example_path: Path):
 def main():
     results = {"PASS": [], "FAIL": [], "TIMEOUT": [], "SKIP": [], "ERROR": []}
     
-    example_files = sorted(EXAMPLES_DIR.rglob("*.bas")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.pilot")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.logo")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.c")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.pas")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.pl")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.f")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.bf")) + \
-                    sorted(EXAMPLES_DIR.rglob("*.py"))
+    example_files = [
+        path
+        for lang_dir in LANG_MAP
+        for path in sorted((EXAMPLES_DIR / lang_dir).iterdir())
+        if path.is_file() and path.suffix != ".md"
+    ]
     
     print(f"Testing {len(example_files)} examples...")
     print()
@@ -88,7 +91,7 @@ def main():
         print(f"[{i:3d}] {symbol} {status:8s} {rel_path}: {msg}")
     
     print("\n" + "="*80)
-    print(f"SUMMARY:")
+    print("SUMMARY:")
     print(f"  PASS:    {len(results['PASS']):3d}")
     print(f"  FAIL:    {len(results['FAIL']):3d}")
     print(f"  TIMEOUT: {len(results['TIMEOUT']):3d}")
@@ -107,5 +110,8 @@ def main():
         for path, msg in results['TIMEOUT']:
             print(f"  - {path.relative_to(REPO_ROOT)}: {msg}")
 
+    return 1 if (results["FAIL"] or results["TIMEOUT"] or results["ERROR"]) else 0
+
+
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

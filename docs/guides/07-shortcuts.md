@@ -1,6 +1,6 @@
 # Keyboard Shortcuts Guide
 
-Master Time Warp Studio with these keyboard shortcuts. Use them to work faster and more efficiently.
+The authoritative reference is [KEYBOARD_SHORTCUTS.md](../KEYBOARD_SHORTCUTS.md). Press **Shift+F1** or **Ctrl+?** in the IDE to open the Keyboard Shortcuts dialog, which is generated from the live menus. Shortcuts are display-only and cannot be customized in this build.
 
 ## File Operations
 
@@ -10,10 +10,10 @@ Master Time Warp Studio with these keyboard shortcuts. Use them to work faster a
 | **Ctrl+O** | Open file |
 | **Ctrl+S** | Save file |
 | **Ctrl+Shift+S** | Save as (new name) |
-| **Ctrl+W** | Close file |
-| **Ctrl+Tab** | Switch to next file |
-| **Ctrl+Shift+Tab** | Switch to previous file |
-| **Ctrl+Q** | Quit IDE |
+| **Ctrl+P** | Print code |
+| **Ctrl+Shift+H** | Export session as HTML |
+| **Ctrl+,** | Preferences |
+| **Alt+X** / **Ctrl+Q** | Exit |
 
 ## Editing
 
@@ -25,20 +25,23 @@ Master Time Warp Studio with these keyboard shortcuts. Use them to work faster a
 | **Ctrl+C** | Copy |
 | **Ctrl+V** | Paste |
 | **Ctrl+A** | Select all |
-| **Ctrl+F** | Find in file |
+| **Ctrl+F** | Find |
 | **Ctrl+H** | Find and replace |
 | **Ctrl+G** | Go to line |
-| **Ctrl+Shift+F** | Find in all files |
+| **Shift+F4** / **Ctrl+Alt+G** | Find in files |
+| **Ctrl+Shift+F** | Format code |
 
-## Code Formatting
+## Editor
 
 | Shortcut | Action |
 |----------|--------|
 | **Tab** | Indent line |
 | **Shift+Tab** | Unindent line |
-| **Ctrl+Alt+F** | Auto-format code |
-| **Ctrl+Shift+U** | Convert to uppercase |
-| **Ctrl+Shift+L** | Convert to lowercase |
+| **Ctrl+/** | Toggle line comment |
+| **Ctrl+D** | Duplicate line |
+| **Alt+Up** / **Alt+Down** | Move line up / down |
+| **Ctrl+Space** | Trigger autocomplete |
+| **Ctrl+Shift+[** / **Ctrl+Shift+]** | Fold / unfold block |
 
 ## Selection and Navigation
 
@@ -61,78 +64,66 @@ Master Time Warp Studio with these keyboard shortcuts. Use them to work faster a
 
 | Shortcut | Action |
 |----------|--------|
-| **Ctrl+R** | Run program |
-| **Ctrl+Shift+R** | Run selection |
-| **Ctrl+Shift+F5** | Stop execution |
-| **F5** | Start debugging |
-| **Shift+F5** | Stop debugging |
-| **Ctrl+F5** | Continue debugging |
-| **Ctrl+L** | Clear output |
+| **F9** / **Ctrl+R** | Run program |
+| **Shift+F9** / **Ctrl+Shift+R** | Run selection |
+| **Ctrl+Alt+R** | Run both split panes (polyglot benchmark) |
+| **Ctrl+F2** | Reset program (stops a run or debug session) |
+| **Ctrl+F5** | Show errors only |
+| **Ctrl+F9** | Start debugging, or continue when paused |
+| **Ctrl+F7** | Pause |
+| **F7** / **F8** / **Shift+F8** | Trace into / step over / step out |
 
 ## IDE Navigation
 
 | Shortcut | Action |
 |----------|--------|
-| **Ctrl+P** | Open file palette |
-| **Ctrl+Shift+P** | Open command palette |
-| **F1** | Show help |
-| **F5** | Start debugging |
-| **F9** | Toggle breakpoint (if available) |
+| **F10** / **Ctrl+Shift+P** | Command palette |
+| **Ctrl+Shift+L** | Language picker |
+| **F1** | Context help for the current language |
+| **F4** | Document outline |
 
 ## View and Display
 
 | Shortcut | Action |
 |----------|--------|
-| **Ctrl+/** | Toggle comment (selected code) |
-| **Ctrl+B** | Toggle breakpoint |
-| **Ctrl+J** | Toggle terminal/output |
-| **Ctrl+T** | Toggle turtle canvas |
-| **Ctrl+M** | Maximize editor |
-| **Ctrl+=** | Increase font size |
-| **Ctrl+-** | Decrease font size |
-| **Ctrl+0** | Reset font size |
-| **F11** | Toggle fullscreen |
+| **F5** | Zoom (focus mode) |
+| **F6** | Next pane |
+| **Ctrl+\** | Split editor right |
+| **Ctrl+Shift+\** | Close split editor |
+| **Shift+F6** | Telemetry HUD |
+| **Shift+F7** | CRT effects |
+| **Shift+F10** | Cycle workstation theme |
+| **Ctrl+Alt+H** | Toggle high-contrast theme |
+| **Ctrl++** / **Ctrl+-** | Increase / decrease editor font size |
+| **Alt+1** to **Alt+4** | Workspace decks |
 
-## Language and Syntax
+## Language Selection
 
-| Shortcut | Action |
-|----------|--------|
-| **Alt+B** | Switch to BASIC |
-| **Alt+P** | Switch to PILOT |
-| **Alt+L** | Switch to Logo |
-| **Alt+C** | Switch to C |
-| **Alt+A** | Switch to Pascal |
-| **Alt+R** | Switch to Prolog |
-| **Alt+F** | Switch to Forth |
+Use **Ctrl+Shift+L** (Language picker) to change the active language. There are no Alt+letter language shortcuts.
 
 ## Help and Documentation
 
 | Shortcut | Action |
 |----------|--------|
-| **F1** | Open help |
-| **Ctrl+?** | Show keyboard shortcuts |
-| **F2** | Open language reference |
-| **Shift+F1** | Open IDE basics |
+| **Ctrl+F1** | Keyword inspector |
+| **Ctrl+F3** / **Ctrl+Alt+L** | Lessons |
+| **Shift+F3** | Browse examples |
+| **Shift+F1** / **Ctrl+?** | Keyboard shortcuts dialog |
 
-## Advanced Navigation
-
-| Shortcut | Action |
-|----------|--------|
-| **Ctrl+Shift+O** | Go to symbol |
-| **Ctrl+Shift+I** | Show symbol info |
-| **Alt+F12** | Go to definition |
-| **Ctrl+F2** | Find all references |
-
-## Turtle Graphics (Logo)
-
-When working with turtle graphics:
+## Snippets
 
 | Shortcut | Action |
 |----------|--------|
-| **Ctrl+T** | Open turtle canvas |
-| **Ctrl+Shift+C** | Clear canvas |
-| **Ctrl+Shift+H** | Home (reset turtle) |
-| **Space** | Pause/resume animation |
+| **Ctrl+Shift+I** | Insert snippet |
+
+## Canvas (Turtle Graphics)
+
+| Action | Description |
+|--------|-------------|
+| Scroll wheel | Zoom in / out |
+| Click and drag | Pan the canvas |
+| Save button | Save canvas as PNG |
+| Grid button | Toggle coordinate grid overlay |
 
 ## Useful Combinations
 
@@ -142,92 +133,61 @@ When working with turtle graphics:
 2. **Type code** - Write your program
 3. **Ctrl+S** - Save file
 4. **Ctrl+R** - Run program
-5. **Ctrl+L** - Clear output
-6. **Modify code** - Edit as needed
-7. **Ctrl+R** - Run again
+5. **Modify code** - Edit as needed
+6. **Ctrl+R** - Run again
 
 ### Debugging Workflow
 
-1. **Ctrl+F** - Find problematic code
-2. **Ctrl+/** - Add debug comments
-3. **Ctrl+S** - Save changes
-4. **Ctrl+R** - Run to test
+1. **Ctrl+F8** - Set a breakpoint on the current line
+2. **Ctrl+F9** - Start debugging
+3. **F8** - Step over; **F7** - trace into; **Shift+F8** - step out
+4. **Ctrl+F2** - Stop the session
 5. **Ctrl+Z** - Undo changes if needed
 
 ### Multi-File Editing
 
-1. **Ctrl+O** - Open multiple files
-2. **Ctrl+Tab** - Switch between files
-3. **Ctrl+X/C/V** - Copy code between files
-4. **Ctrl+S** - Save current file
-5. **Ctrl+Shift+S** - Save with new name
+1. **Ctrl+O** - Open a file (**F3** also works)
+2. **Ctrl+X/C/V** - Copy code between files
+3. **Ctrl+S** - Save current file
+4. **Ctrl+Shift+S** - Save with new name
+5. **Ctrl+\** - Split the editor to view two files side by side
 
 ### Teaching/Presentation
 
-1. **Ctrl+=** - Increase font size
-2. **F11** - Enter fullscreen
-3. **Ctrl+R** - Run examples
-4. **Ctrl+L** - Clear output between examples
-5. **F11** - Exit fullscreen
+1. **Ctrl++** - Increase editor font size
+2. **F9** - Run the example
+3. **F5** - Zoom (focus mode) to hide distractions
+4. **Ctrl+F2** - Reset before running the next example
 
 ## Customizing Shortcuts
 
-Want to change shortcuts? You can!
+Shortcuts cannot be customized in this build. The **Keyboard Shortcuts** dialog (**Help → Keyboard Shortcuts**, **Ctrl+?**) is a read-only, searchable list of the current bindings.
 
-1. Open **View → Settings**
-2. Select **Keyboard Shortcuts**
-3. Find the action you want to change
-4. Click in the shortcut field
-5. Press your desired key combination
-6. Shortcuts save automatically
+## Platform Notes
 
-## Platform-Specific Notes
-
-### Windows
-
-- **Alt** shortcuts work as shown
-- **Ctrl** is the main modifier key
-- **Windows key** not typically used
-
-### macOS
-
-- **Cmd** may replace **Ctrl** in some cases
-- **Option** may replace **Alt** in some cases
-- Check System Preferences → Keyboard for conflicts
-
-### Linux
-
-- Shortcuts work as documented
-- Check your desktop environment settings for conflicts
-- Some window managers may intercept shortcuts
+- Qt maps **Ctrl** to **Cmd** on macOS, and function keys may require the **Fn** key.
+- Desktop environments and window managers can capture some combinations. Check for conflicts if a shortcut does nothing.
 
 ## Troubleshooting Shortcuts
 
 **Problem:** Shortcut not working
-- **Solution:** Check if another application captured the shortcut
-- **Solution:** Restart the IDE
-- **Solution:** Check Settings → Keyboard Shortcuts to verify assignment
+- **Solution:** Check the menu; each menu item shows its active binding.
+- **Solution:** Another application or the desktop may capture the combination.
+- **Solution:** Use the **FN** badge on the Function-Key Bar to switch layers manually.
 
-**Problem:** Key combination doesn't work
-- **Solution:** On some keyboards, certain combinations are unavailable
-- **Solution:** Use Settings to reassign to a different combination
-- **Solution:** Check if your input method is interfering
-
-**Problem:** Can't input a shortcut
-- **Solution:** Clear the field and try again
-- **Solution:** Use a different key combination
-- **Solution:** Reset to defaults in Settings
+**Problem:** Need a different binding
+- **Solution:** Bindings cannot be changed in this build.
 
 ## Tips for Efficiency
 
 1. **Use Ctrl+R constantly** - Run after every few changes
 2. **Learn Ctrl+Z/Y** - Undo/redo are your safety net
 3. **Use Ctrl+F** - Find speeds up navigation
-4. **Master language switching** - Alt+letters are fast
+4. **Use the language picker** - Ctrl+Shift+L
 5. **Remember Ctrl+Home/End** - Jump to file start/end
 6. **Use Ctrl+/** for comments** - Quick documentation
-7. **Learn Ctrl+Tab** - Switch files quickly
-8. **Use Ctrl+L before running** - Start with clean output
+7. **Use Zoom (F5)** - Focus mode hides panels while you type
+8. **Use Shift+F1** - Shows the full, live shortcut list
 
 ## Cheat Sheet Quick Reference
 
@@ -238,17 +198,17 @@ Want to change shortcuts? You can!
 - Ctrl+F - Find
 - Ctrl+C/V - Copy/Paste
 
-**Next Level 5:**
-- Ctrl+Home/End - Jump in file
-- Ctrl+Tab - Switch files
-- Ctrl+L - Clear output
-- Ctrl+T - Show turtle
-- Ctrl+= - Bigger font
+**Debugging 5:**
+- Ctrl+F8 - Toggle breakpoint
+- Ctrl+F9 - Start / continue
+- F7 / F8 - Trace into / step over
+- Shift+F8 - Step out
+- Ctrl+F2 - Stop
 
 **Pro Tips:**
-- F1 - Always get help
+- F1 - Context help
 - Ctrl+? - See all shortcuts
-- Alt+Language - Quick language switch
+- Ctrl+Shift+L - Language picker
 - Ctrl+G - Go to specific line
 - Tab/Shift+Tab - Fast indentation
 

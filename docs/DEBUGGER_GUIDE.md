@@ -19,17 +19,17 @@ Time Warp Studio includes a powerful debugger with:
 
 ## Enabling the Debugger
 
-### Method 1: Debug Mode Toggle
+### Method 1: Start Debugging
 
 ```
-Run → Debug Mode [Toggle]
+Debug → Start / Continue Debugging [Ctrl+F9]
 ```
 
-Enables debugger for next execution.
+Runs the current program under the debugger. If no breakpoints are set, execution pauses at the first statement. F7 and F8 do nothing unless a session is already paused.
 
 ### Method 2: Using Breakpoints
 
-Set a breakpoint (Ctrl+B), then run. Debugger automatically activates.
+Set a breakpoint (Ctrl+F8), then start debugging with Ctrl+F9. Execution stops at the breakpoint.
 
 ---
 
@@ -37,13 +37,12 @@ Set a breakpoint (Ctrl+B), then run. Debugger automatically activates.
 
 ### Toggle Breakpoint
 
-In editor, click line number to set/remove breakpoint:
+In editor, click the left margin to set/remove a breakpoint, or:
 
 ```
-Ctrl+B          on selected line
+Ctrl+F8          on the current line
+Ctrl+Shift+F8    clear all breakpoints
 ```
-
-Or click left margin at desired line.
 
 ### Breakpoint Indicators
 
@@ -53,104 +52,76 @@ Or click left margin at desired line.
 ### Example
 
 ```basic
-' Breakpoint here (line 3)
-FOR I = 1 TO 10
-    PRINT I          ' < Click line number to set breakpoint
-    X = X + 1        ' Program stops here
-NEXT I
-PRINT "Done"
+10 X = 0
+20 FOR I = 1 TO 10
+30 PRINT I
+40 X = X + 1
+50 NEXT I
+60 PRINT "Done"
 ```
+
+Click the left margin on line 40 to set a breakpoint there.
 
 ---
 
 ## Stepping Through Code
 
-### Step Into (F11)
+### Trace Into (F7) and Step Over (F8)
 
-Execute next statement. If it's a function call, enter the function.
-
-```
-Debug → Step Into [F11]
-```
-
-Use when:
-- Entering procedures/functions
-- Debugging function behavior
-
-### Step Over (F10)
-
-Execute next statement. If it's a function call, execute entire function.
+Both advance one step while the program is paused. A step covers one line or one statement, depending on the **Step** selector in the Debug toolbar. Currently the two commands perform the same action.
 
 ```
-Debug → Step Over [F10]
+Debug → Trace Into [F7]
+Debug → Step Over [F8]
 ```
 
-Use when:
-- Function already tested
-- Want to move quickly
-- Debugging main logic
+### Step Out (Shift+F8)
 
-### Continue (F5)
+Currently resumes execution until the next breakpoint or the end of the program, the same as Continue. It does not stop when the current procedure returns.
+
+```
+Debug → Step Out [Shift+F8]
+```
+
+### Continue (Ctrl+F9)
 
 Resume execution until next breakpoint or program completion.
 
 ```
-Debug → Continue [F5]
+Debug → Start / Continue Debugging [Ctrl+F9]
 ```
 
 Use when:
 - Running past current section
 - Jumping to next breakpoint
 
-### Pause
+### Pause (Ctrl+F7)
 
 While program is running:
 
 ```
-Debug → Pause
+Debug → Pause [Ctrl+F7]
 ```
 
 Pauses execution mid-run so you can inspect state.
 
-### Stop
+### Stop (Ctrl+F2)
 
 ```
-Debug → Stop
+Run → Reset Program [Ctrl+F2]
 ```
 
-Completely stop execution (can't resume).
+Completely stop execution or the debug session (can't resume).
 
 ---
 
 ## Inspecting Variables
 
-### Variables Inspector Panel
+### Variables Panel
 
-Located in bottom-right panel tabs.
+The **🔍 Variables** tab in the right-hand panel lists the active variables in a two-column table (Variable, Value), sorted by name. It refreshes when execution pauses. The table is read-only.
 
-Shows all currently active variables with:
-- Variable name
-- Current value
-- Data type (number, string, etc.)
-- Updates after each step
-
-### Example Inspection
-
-```
-VARIABLES
-├─ I = 5 (INTEGER)
-├─ X = 25 (INTEGER)
-├─ NAME$ = "John" (STRING)
-└─ GRID(10) = [array of 10 values]
-```
-
-### Hovering Over Variables
-
-In editor, hover over variable name to see tooltip:
-
-```
-Tooltip: X = 25
-```
+Lists and arrays are shown as text in the Value column. The **Watch Expressions** list in the Debug tab accepts expressions you want to track.
 
 ---
 
@@ -158,38 +129,13 @@ Tooltip: X = 25
 
 ### View Timeline
 
-```
-Debug → Timeline
-```
-
-Opens timeline viewer showing:
-- Step number (0, 1, 2, 3...)
-- Line number executed
-- Command/statement
-- Variable state at that point
-- Output generated
-- Any errors
-
-### Timeline Example
-
-```
-Step  Line  Command              X    Y    Output
-────────────────────────────────────────────────
- 0    5     X = 10              10   -    
- 1    6     Y = 20              10   20   
- 2    7     PRINT X + Y         10   20   30
- 3    8     FOR I=1 TO 5        10   20   30
- 4    9     PRINT I             10   20   30
- 5    9     PRINT I             10   20   30, 1
- 6    9     PRINT I             10   20   30, 1, 2
- ...
-```
+The **🐛 Debug** tab contains a **🧭 Timeline** list. Each entry is a recorded frame in the form `Line N - source text`. When statement stepping is active, entries include a statement index, such as `Line N (2/3) - source text`.
 
 ### Navigating Timeline
 
-- Click on step to jump to that point
-- Use arrow buttons to move forward/backward
-- All variables shown for each step
+- Select an entry to jump to that point
+- Use **Export JSON** to save the timeline
+- Use **Export Replay** to save the session as a `.twreplay` file
 
 ---
 
@@ -197,20 +143,12 @@ Step  Line  Command              X    Y    Output
 
 ### View Call Stack
 
-```
-Debug → Stack Trace
-```
-
-Shows call stack for procedure/function calls:
+The **📚 Call Stack** section of the **🐛 Debug** tab lists active calls, newest first, as `#N: NAME (Line N)`.
 
 ```
-Stack (top to bottom):
-├─ MAIN
-│  └─ CALCULATE (line 15)
-│     └─ HELPER (line 22)
+#0: HELPER (Line 22)
+#1: CALCULATE (Line 15)
 ```
-
-Shows where each procedure was called from.
 
 ---
 
@@ -220,8 +158,8 @@ Shows where each procedure was called from.
 
 1. **Identify problem** - What's wrong?
 2. **Add breakpoint** near suspected location
-3. **Run program** - stops at breakpoint (Ctrl+R)
-4. **Step through** - use F10/F11 to execute
+3. **Start debugging** - stops at breakpoint (Ctrl+F9)
+4. **Step through** - use F8/F7 to execute
 5. **Watch variables** - are values what expected?
 6. **Check timeline** - are steps in right order?
 7. **Fix and re-run** - try solution
@@ -235,18 +173,18 @@ WEND
 ```
 
 To debug:
-1. Run with breakpoint on loop line
-2. Use F10 to step past loop once
+1. Start debugging with a breakpoint on the loop line
+2. Use F8 to step past loop once
 3. Set breakpoint AFTER loop
-4. Use Continue (F5) to skip loop
-5. Or click Stop to halt
+4. Use Continue (Ctrl+F9) to skip loop
+5. Or press Ctrl+F2 to halt
 
 ### Tracing Variable Changes
 
 1. Open Variables Inspector
 2. Set breakpoint in area of interest
-3. Run program (stops at breakpoint)
-4. Use Step Over (F10) repeatedly
+3. Start debugging (Ctrl+F9; stops at breakpoint)
+4. Use Step Over (F8) repeatedly
 5. Watch variable values change
 6. Use Timeline to see full history
 
@@ -261,10 +199,10 @@ GRID(5, 5) = 42
 
 To inspect array:
 1. Set breakpoint after array assignment
-2. Run program, stops at breakpoint
+2. Start debugging (Ctrl+F9), stops at breakpoint
 3. View Variables Inspector
-4. Click GRID to expand array contents
-5. See all values stored
+4. Check the GRID value in the Value column
+5. Compare it with the expected value
 
 ---
 
@@ -273,54 +211,49 @@ To inspect array:
 Create and debug this program:
 
 ```basic
-DIM NUMBERS(5)
-FOR I = 1 TO 5
-    NUMBERS(I) = I * I
-NEXT I
-
-SUM = 0
-FOR I = 1 TO 5
-    SUM = SUM + NUMBERS(I)
-NEXT I
-
-PRINT "Sum:", SUM
+10 DIM NUMBERS(5)
+20 FOR I = 1 TO 5
+30 NUMBERS(I) = I * I
+40 NEXT I
+50 SUM = 0
+60 FOR I = 1 TO 5
+70 SUM = SUM + NUMBERS(I)
+80 NEXT I
+90 PRINT "Sum:", SUM
 ```
 
 ### Debug Steps
 
 1. **Set breakpoints**:
-   - Line 2 (FOR loop start)
-   - Line 8 (Second FOR loop)
+   - Line 20 (first FOR loop)
+   - Line 60 (second FOR loop)
 
-2. **Run with Debug Mode**:
+2. **Start debugging**:
    ```
-   Run → Debug Mode (toggle on)
-   Ctrl+R (Run)
+   Debug → Start / Continue Debugging (Ctrl+F9)
    ```
 
-3. **Stops at breakpoint 1**:
-   - Variables Inspector shows: I=1
-   - Step Over to populate array
+3. **Stops at breakpoint 1** before the first loop runs.
+   - Press F8 to step one line at a time and watch NUMBERS fill in the Variables tab.
 
 4. **Continue to breakpoint 2**:
    ```
-   F5 (Continue)
+   Ctrl+F9 (Continue)
    ```
 
 5. **Inspect variables**:
-   - See NUMBERS array with values
-   - See SUM before accumulation
+   - NUMBERS and SUM appear in the Variables tab
 
 6. **Step through sum loop**:
    ```
-   F10 (Step Over)
+   F8 (Step Over)
    ```
    - Watch SUM increase each step
    - Verify calculation is correct
 
 7. **View Timeline**:
    ```
-   Debug → Timeline (after program ends)
+   🐛 Debug tab → 🧭 Timeline
    ```
    - Scroll through execution history
    - Confirm correct sequence
@@ -329,37 +262,18 @@ PRINT "Sum:", SUM
 
 ## Debugger Features by Language
 
-All 9 languages support:
-- Breakpoints
-- Stepping (Step Into/Over)
-- Variables inspection
-- Timeline recording
+- **Line-by-line languages** (BASIC, PILOT, Logo, C, Pascal, Prolog, Forth): breakpoints, stepping, the Variables tab, and the Timeline. The Step selector applies to BASIC only; other languages always step by line.
+- **Brainfuck and Python**: no step-through. The output panel reports that the program runs in observation mode.
 
-### Logo-Specific
+### Logo Turtle State
 
-Turtle state visible in:
-- Variables Inspector (turtle_x, turtle_y, turtle_angle)
-- Canvas shows turtle position
-- Turtle Inspector panel
-
-### PILOT-Specific
-
-- T-units are single steps
-- A-units pause for input
-- J-units show conditional jumps
+Turtle position, heading, pen, and color appear in the **🐢 Turtle State** panel of the Debug tab, not in the Variables tab.
 
 ---
 
 ## Performance Impact
 
-Debugging has minimal performance impact:
-
-- **Debugger Enabled**: ~10% slower
-- **Breakpoint Hit**: Execution pauses
-- **Stepping**: Each step takes normal execution time
-- **Timeline**: Recorded after execution completes
-
-Large programs may use more memory with timeline recording.
+Timeline frames are recorded while the program runs. Long programs produce long timelines and use more memory.
 
 ---
 
@@ -368,7 +282,7 @@ Large programs may use more memory with timeline recording.
 ### Tip 1: Use Breakpoints Strategically
 - Set before problematic area
 - Don't set in fast loops (too many stops)
-- Use Continue (F5) to jump between breakpoints
+- Use Continue (Ctrl+F9) to jump between breakpoints
 
 ### Tip 2: Inspect Variables Early
 - Set breakpoint at variable init
@@ -381,10 +295,9 @@ Large programs may use more memory with timeline recording.
 - See all state changes
 - Identify divergence from expected
 
-### Tip 4: Step Over vs Into
-- Step Over (F10) for known-good functions
-- Step Into (F11) for suspected functions
-- Speed through with F10, drill down with F11
+### Tip 4: Skip Ahead With Breakpoints
+- Trace Into (F7) and Step Over (F8) currently do the same thing
+- Use Continue (Ctrl+F9) with breakpoints to skip to the next point of interest
 
 ### Tip 5: Watch Stack Trace
 - Helps understand procedure flow
@@ -396,4 +309,4 @@ Large programs may use more memory with timeline recording.
 **For more information:**
 - [USER_GUIDE.md](USER_GUIDE.md) - General IDE usage
 - [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Language syntax
-- [FAQ.md](FAQ.md) - Common questions
+- [FAQ](../FAQ.md) - Common questions

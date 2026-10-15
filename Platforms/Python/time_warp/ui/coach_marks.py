@@ -230,8 +230,8 @@ class CoachMarkManager:
         (
             "statusbar",
             "📊 Status Bar",
-            "The status bar shows the active language, cursor position, and other "
-            "quick indicators.  Click the SQL badge to open the workbench.",
+            "The status bar shows the run state, active language, and cursor "
+            "position.  The function-key strip below it mirrors the Turbo keys.",
         ),
     ]
 

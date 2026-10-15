@@ -14,12 +14,11 @@ Time Warp Studio is an educational desktop IDE for learning **9 active programmi
 - **Sprite system** — define named pixel-art sprites via `define_sprite()`, stamp/animate with rotation and scale
 - **Enhanced MML sound engine** — ADSR envelopes per note, 4-channel polyphonic mixing, pulse waveform (duty cycle), white-noise waveform, chord notation `[CEG]`, `@W`/`@D`/`@P`/`@C` MML extensions
 - Step-through debugger with execution timeline and rewind
-- 28 built-in themes (dark, light, retro CRT, accessibility)
-- Lesson system with auto-verification
-- AI-powered code suggestions and error explanations
-- Learning Hub with guided challenges and Project Explorer
+- 33 built-in themes (dark, light, retro CRT, accessibility)
+- Lessons dock with 18 built-in lessons and automatic checkpoint verification
+- Borland Turbo-style keymap with a live Function-Key Bar
 - Prolog `\+` negation-as-failure parsing, extended built-ins (`format/2`, `split_string/4`, `string_concat/3`, etc.)
-- Example programs across all 9 active languages (0 timeouts)
+- Example programs across all 9 active languages (72 programs, all verified by `test_all_examples.py`)
 
 ---
 
@@ -31,10 +30,10 @@ Time Warp Studio is an educational desktop IDE for learning **9 active programmi
 
 ### IDE Enhancements
 
-- Code folding for all languages
-- Split editor view (side-by-side files)
-- Persistent breakpoints across sessions
-- Export turtle graphics as SVG/PNG *(SVG export added in v10.0.0)*
+- Code folding for all languages — **done** (indentation-based; Ctrl+Shift+[ / Ctrl+Shift+])
+- Split editor view (side-by-side files) — **done** (Shift+F5 / Ctrl+\\)
+- Persistent breakpoints across sessions — **done**
+- Export turtle graphics as SVG/PNG — **done** (canvas toolbar; SVG since v10.0.0)
 
 ### Quality
 
@@ -50,27 +49,10 @@ Time Warp Studio is an educational desktop IDE for learning **9 active programmi
 
 The following were built and shipped in earlier releases (v10.2.0–v13.0.0)
 but have since been removed from `time_warp/languages/` and are **not part of
-the current 9-language release**: Tcl, PostScript, LISP/Scheme, COBOL, Ruby,
-sandboxed Python variant, Perl 5, REXX, Smalltalk, APL. There is no plan to
+the current 9-language release**: Tcl, PostScript, LISP/Scheme, Ruby,
+sandboxed Python variant, Perl 5, Smalltalk. There is no plan to
 reintroduce them in this release cycle; the active scope is intentionally
 fixed at 9 languages (see Vision above).
-
-### Plugin System
-
-- Plugin API for third-party language executors
-- Custom panel registration
-- Theme marketplace
-
-### Hardware Integration
-
-- Raspberry Pi GPIO simulation and bridging
-- Arduino serial communication via `pyfirmata`
-- Sensor data visualization in canvas
-
-### Collaboration
-
-- Shared editing sessions (local network)
-- Classroom assignment distribution and collection
 
 ---
 
@@ -79,12 +61,12 @@ fixed at 9 languages (see Vision above).
 ### Platform Expansion
 
 - WebAssembly build for browser-based version (experimental)
-- Flatpak/Snap packaging for Linux distribution
+- Flatpak/Snap packaging for Linux distribution *(manifests exist in packaging/linux/)*
 
 ### Advanced Features
 
-- Multi-file project support with file tree
-- Integrated terminal emulator
+- Multi-file project support with file tree *(project manager exists in core; the file-tree panel is not yet wired into the main window)*
+- Integrated terminal emulator *(lightweight QProcess terminal tab ships; full PTY/ANSI emulation remains open)*
 - Language interop (call one language from another)
 - Recording and playback of coding sessions
 

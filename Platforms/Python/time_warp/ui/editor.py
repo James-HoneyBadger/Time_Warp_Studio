@@ -1513,8 +1513,8 @@ class CodeEditor(QPlainTextEdit):
                 display = f"{snip.name} [snip]"
                 self._snippet_completions[display] = snip.code
                 keywords.append(display)
-        except Exception:  # noqa: BLE001
-            pass
+        except (OSError, ValueError, KeyError):
+            pass  # snippet file missing or malformed: keywords still complete
 
         # Set completer model
         model = QStringListModel(keywords)
@@ -1724,7 +1724,7 @@ class CodeEditor(QPlainTextEdit):
         cursor.clearSelection()
         selection.cursor = cursor
 
-        # Keep existing non-highlight selections (e.g. other plugins).
+        # Preserve other extra selections (e.g. error underlines).
         extras = [selection]
         existing = [s for s in self.extraSelections() if s is not selection]
         extras.extend(existing)
@@ -1952,14 +1952,6 @@ class CodeEditor(QPlainTextEdit):
                 pass
         self.line_number_area.update()
 
-    def goto_line(self, line: int):
-        """Scroll to and highlight the specified line."""
-        block = self.document().findBlockByLineNumber(line - 1)
-        if block.isValid():
-            cursor = QTextCursor(block)
-            self.setTextCursor(cursor)
-            self.centerCursor()
-
     def insert_completion(self, completion):
         """Insert the selected completion (or expand a snippet)."""
         self._completing = True
@@ -2038,6 +2030,115 @@ class CodeEditor(QPlainTextEdit):
         """Return True if the minimap is currently visible."""
         return self._minimap_enabled
 
+    _KEYWORD_REFERENCE_CARDS: dict[str, dict[str, str]] = {
+        "PRINT": {
+            "syntax": 'PRINT expr [; expr2 ...]',
+            "desc": "Outputs text or numeric expressions to the console.",
+            "example": 'PRINT "Score: "; SCORE',
+        },
+        "OPEN": {
+            "syntax": 'OPEN "file" FOR INPUT|OUTPUT|APPEND AS #n',
+            "desc": "Opens a confined workspace file on channel #n.",
+            "example": 'OPEN "data.txt" FOR OUTPUT AS #1\nPRINT #1, "HELLO"\nCLOSE #1',
+        },
+        "PALETTE": {
+            "syntax": "PALETTE index, r, g, b  |  PALETTE CYCLE [start, end[, step]]",
+            "desc": "Sets or rotates VGA Mode 13h 256-color palette entries.",
+            "example": "PALETTE 1, 255, 128, 0\nPALETTE CYCLE 1, 15, 1",
+        },
+        "PLAY": {
+            "syntax": 'PLAY "MML_STRING"  (@W0..@W6 for Square..AdLib FM)',
+            "desc": "Synthesizes polyphonic chiptune or AdLib OPL2 FM audio.",
+            "example": 'PLAY "@W6 T140 O4 L8 C E G >C"',
+        },
+        "FORWARD": {
+            "syntax": "FORWARD distance  (alias: FD)",
+            "desc": "Moves the turtle forward by distance pixels along its heading.",
+            "example": "REPEAT 4 [FORWARD 80 RIGHT 90]",
+        },
+        "REPEAT": {
+            "syntax": "REPEAT count [commands]",
+            "desc": "Executes bracketed Logo commands count times.",
+            "example": "REPEAT 36 [FORWARD 50 RIGHT 170]",
+        },
+        "FINDALL": {
+            "syntax": "findall(Template, Goal, Bag)",
+            "desc": "Collects all instantiations of Template satisfying Goal into Bag.",
+            "example": "?- findall(X, member(X, [1,2,3]), L).",
+        },
+        "#DEFINE": {
+            "syntax": "#define NAME value  |  #define MACRO(a, b) ((a) + (b))",
+            "desc": "Defines a C preprocessor constant or function-like macro.",
+            "example": "#define SQR(x) ((x) * (x))",
+        },
+        "INCLUDE": {
+            "syntax": "INCLUDE filename.forth",
+            "desc": "Loads and executes a confined Forth source file with cycle protection.",
+            "example": "INCLUDE math_words.forth",
+        },
+    }
+
+    def get_keyword_card(self, word: str | None = None) -> dict[str, str]:
+        """Return a Turbo Vision-style reference card for *word* (or word under cursor)."""
+        if not word:
+            cursor = self.textCursor()
+            cursor.select(QTextCursor.SelectionType.WordUnderCursor)
+            word = cursor.selectedText().strip()
+        key = (word or "PRINT").upper().lstrip("#")
+        if f"#{key}" in self._KEYWORD_REFERENCE_CARDS:
+            key = f"#{key}"
+        card = self._KEYWORD_REFERENCE_CARDS.get(key)
+        if card is not None:
+            return {"keyword": key, **card}
+        lang_name = (
+            self._language.friendly_name()
+            if hasattr(self._language, "friendly_name")
+            else str(self._language)
+        )
+        return {
+            "keyword": key,
+            "syntax": f"{key} ...",
+            "desc": f"{lang_name} keyword or identifier in active program.",
+            "example": f"{key}",
+        }
+
+    def show_keyword_inspector_popup(self, word: str | None = None) -> dict[str, str]:
+        """Display a Turbo Vision-style context-sensitive inspector card (`Ctrl+F1`)."""
+        card = self.get_keyword_card(word)
+        dlg = QDialog(self)
+        dlg.setWindowTitle(f"📘 Turbo Help Inspector — {card['keyword']}")
+        dlg.setMinimumWidth(420)
+        layout = QVBoxLayout(dlg)
+
+        hdr = QLabel(f"<b>{card['keyword']}</b> — <code>{card['syntax']}</code>")
+        hdr.setWordWrap(True)
+        layout.addWidget(hdr)
+
+        desc = QLabel(card["desc"])
+        desc.setWordWrap(True)
+        layout.addWidget(desc)
+
+        ex_box = QPlainTextEdit(card["example"])
+        ex_box.setReadOnly(True)
+        ex_box.setMaximumHeight(80)
+        layout.addWidget(ex_box)
+
+        btn_row = QHBoxLayout()
+        insert_btn = QPushButton("Insert Example")
+        close_btn = QPushButton("Close")
+        insert_btn.clicked.connect(
+            lambda: (self.insertPlainText(card["example"]), dlg.accept())
+        )
+        close_btn.clicked.connect(dlg.reject)
+        btn_row.addStretch()
+        btn_row.addWidget(insert_btn)
+        btn_row.addWidget(close_btn)
+        layout.addLayout(btn_row)
+
+        if self.isVisible():
+            dlg.open()
+        return card
+
     def keyPressEvent(self, event):  # pylint: disable=too-many-return-statements
         """Handle key press events for auto-completion and auto-indent."""
         if self.completer.popup().isVisible():
@@ -2095,7 +2196,7 @@ class CodeEditor(QPlainTextEdit):
             self._show_completer(min_prefix=1)
             return
 
-        # Ctrl+G → Go to Line dialog
+        # Ctrl+G → Go to Line (standalone TW Editor has no menu action for it)
         if event.key() == Qt.Key.Key_G and mods == Qt.KeyboardModifier.ControlModifier:
             self.show_go_to_line_dialog()
             return

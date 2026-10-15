@@ -175,12 +175,12 @@ def test_validate_range_negative_values():
     assert result == -5
 
 
-def test_validate_numeric_integer():
+def test_validate_numeric_integer_string():
     result = validate_numeric("42")
     assert result == "42" or result == 42
 
 
-def test_validate_numeric_float():
+def test_validate_numeric_float_string():
     result = validate_numeric("3.14")
     assert str(result) == "3.14" or abs(float(result) - 3.14) < 1e-9
 

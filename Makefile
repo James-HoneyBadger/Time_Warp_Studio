@@ -1,4 +1,4 @@
-.PHONY: help install dev test test-basic test-comprehensive lint format run clean docker demos
+.PHONY: help install dev optional test smoke demos lint format typecheck run run-safe build clean version
 
 PYTHON ?= python3
 PIP    ?= pip
@@ -18,6 +18,9 @@ install: ## Install core dependencies
 dev: install ## Install dev + test dependencies
 	$(PIP) install -r $(SRC)/requirements-dev.txt
 
+optional: ## Install optional extras (speech, gamepad, OS theme detection)
+	$(PIP) install -r $(SRC)/requirements-optional.txt
+
 # ---------------------------------------------------------------------------
 # Run
 # ---------------------------------------------------------------------------
@@ -30,17 +33,14 @@ run-safe: ## Launch via smart launcher (handles venv + deps)
 # ---------------------------------------------------------------------------
 # Testing
 # ---------------------------------------------------------------------------
-test: ## Run quick smoke tests
-	$(PYTHON) Platforms/Python/test_runner.py --basic
+test: ## Run the full pytest suite (offscreen Qt)
+	QT_QPA_PLATFORM=offscreen $(PYTHON) -m pytest $(TESTS) -q --tb=short
 
-test-comprehensive: ## Run full test suite with coverage
-	$(PYTHON) Platforms/Python/test_runner.py --comprehensive
+smoke: ## Run quick smoke tests
+	$(PYTHON) $(SRC)/smoke_test.py
 
-test-unit: ## Run pytest directly
-	$(if $(wildcard .venv/bin/python),.venv/bin/python,$(PYTHON)) -m pytest $(TESTS) -v --tb=short
-
-demos: ## Verify all demo programs
-	$(PYTHON) tests/test_all_demos.py
+demos: ## Verify all example programs
+	$(PYTHON) test_all_examples.py
 
 # ---------------------------------------------------------------------------
 # Code Quality
@@ -53,18 +53,6 @@ format: ## Format code with ruff
 
 typecheck: ## Run pyright type checking
 	$(PYTHON) -m pyright $(SRC)/time_warp
-
-# ---------------------------------------------------------------------------
-# Docker
-# ---------------------------------------------------------------------------
-docker: ## Build Docker image
-	docker build -f docker/Dockerfile.main -t time-warp-studio .
-
-docker-up: ## Start Docker Compose stack
-	docker compose up -d
-
-docker-down: ## Stop Docker Compose stack
-	docker compose down
 
 # ---------------------------------------------------------------------------
 # Packaging

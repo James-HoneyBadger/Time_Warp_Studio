@@ -45,13 +45,19 @@ sibling(X, Y) :- parent(Z, X), parent(Z, Y), X \= Y.
 
 ### Queries
 
-Ask questions using `?-`:
+Ask questions using `?-`. The queries below run against this small program:
 
 ```prolog
-?- parent(tom, bob).        % Is tom a parent of bob?
-?- parent(tom, X).          % Who are tom's children?
-?- parent(X, bob).          % Who is bob's parent?
-?- grandparent(tom, X).     % Who is tom's grandchild?
+parent(tom, bob).
+parent(tom, liz).
+parent(bob, ann).
+parent(bob, pat).
+grandparent(X, Z) :- parent(X, Y), parent(Y, Z).
+
+?- parent(tom, bob).        % Is tom a parent of bob? (true)
+?- parent(tom, X).          % Who are tom's children? (bob, liz)
+?- parent(X, bob).          % Who is bob's parent? (tom)
+?- grandparent(tom, X).     % Who is tom's grandchild? (ann, pat)
 ```
 
 ## Unification and Variables
@@ -59,20 +65,19 @@ Ask questions using `?-`:
 Variables start with uppercase letters:
 
 ```prolog
-% Find all children of tom
-?- parent(tom, X).
-X = bob;
-X = alice;
-...
+parent(tom, bob).
+parent(tom, liz).
+student(bob).
+student(liz).
+
+% Find all children of tom (each answer is printed in turn)
+?- parent(tom, X).          % X=bob, then X=liz
 
 % Find all parent-child pairs
-?- parent(X, Y).
-X = tom, Y = bob;
-X = tom, Y = alice;
-...
+?- parent(X, Y).            % X=tom, Y=bob, then X=tom, Y=liz
 
 % Multiple conditions (conjunction - AND)
-?- parent(tom, X), student(X).
+?- parent(tom, X), student(X).   % X=bob, then X=liz
 ```
 
 ## Common Predicates
@@ -97,16 +102,16 @@ X >= Y          % Is X greater than or equal to Y?
 
 ```prolog
 % List matching
-[H|T] = [1, 2, 3].     % H=1, T=[2,3]
+?- [H|T] = [1, 2, 3].     % H=1, T=[2,3]
 
 % Membership
-member(X, [1, 2, 3]).  % Is X a member?
+?- member(X, [1, 2, 3]).  % X=1, then X=2, then X=3
 
 % Append
-append([1, 2], [3, 4], L).  % L = [1, 2, 3, 4]
+?- append([1, 2], [3, 4], L).  % L=[1,2,3,4]
 
 % Length
-length([1, 2, 3], N).   % N = 3
+?- length([1, 2, 3], N).   % N=3
 ```
 
 ## Complete Example Programs
@@ -154,15 +159,16 @@ fib(N, F) :- N > 1, N1 is N - 1, N2 is N - 2, fib(N1, F1), fib(N2, F2), F is F1 
 sum_list([], 0).
 sum_list([H|T], Sum) :- sum_list(T, TSum), Sum is H + TSum.
 
-% Maximum of list
-max_list([X], X).
-max_list([H|T], Max) :- max_list(T, MaxT), (H > MaxT -> Max = H ; Max = MaxT).
+% Maximum of list (if-then-else -> is not supported, so use separate clauses)
+biggest([X], X).
+biggest([H|T], Max) :- biggest(T, MaxT), H =< MaxT, Max = MaxT.
+biggest([H|T], Max) :- biggest(T, MaxT), H > MaxT, Max = H.
 
 % Queries:
 % ?- factorial(5, F).          % Calculate 5!
 % ?- fib(10, F).               % Calculate Fibonacci(10)
 % ?- sum_list([1,2,3,4,5], S). % Sum a list
-% ?- max_list([3,1,4,1,5], M). % Find maximum
+% ?- biggest([3,1,4,1,5], M). % Find maximum
 ```
 
 ### List Processing
@@ -177,9 +183,10 @@ sorted([]).
 sorted([_]).
 sorted([X, Y|T]) :- X =< Y, sorted([Y|T]).
 
-% Find minimum
-min([X], X).
-min([H|T], Min) :- min(T, MinT), (H < MinT -> Min = H ; Min = MinT).
+% Find minimum (two clauses instead of if-then-else)
+smallest([X], X).
+smallest([H|T], Min) :- smallest(T, MinT), H =< MinT, Min = H.
+smallest([H|T], Min) :- smallest(T, MinT), H > MinT, Min = MinT.
 
 % Count occurrences
 count([], _, 0).
@@ -189,7 +196,7 @@ count([_|T], X, N) :- count(T, X, N).
 % Queries:
 % ?- reverse([1,2,3], R).                 % Reverse a list
 % ?- sorted([1,2,3,4]).                   % Check if sorted
-% ?- min([5,2,8,1,9], M).                 % Find minimum
+% ?- smallest([5,2,8,1,9], M).                 % Find minimum
 % ?- count([a,b,a,c,a], a, N).            % Count 'a' occurrences
 ```
 
@@ -224,9 +231,7 @@ endangered(panda).
 endangered(tiger).
 endangered(whale).
 
-% Complex rules
-safe_pet(X) :- is_pet(X), \+ dangerous(X).
-
+% Dangerous animals (negation \+ is not supported, so these are plain facts)
 dangerous(lion).
 dangerous(snake).
 dangerous(tiger).
@@ -281,7 +286,7 @@ is/2          % Evaluate arithmetic: X is 2 + 3
 true          % Always succeeds
 fail          % Always fails
 !/0           % Cut (prevent backtracking)
-->/2 ; /2     % If-then-else: (condition -> true_part ; false_part)
+% Not supported: if-then-else (->) and negation (\+)
 ```
 
 ### List Operations
@@ -339,9 +344,6 @@ choice(c).
 ## Debugging Tips
 
 ```prolog
-% Use trace to see execution
-% ?- trace.
-
 % Use write to debug
 debug_rule(X) :- 
     write('Checking: '), write(X), nl,
@@ -369,6 +371,7 @@ tab(N)            % Write N spaces
 - **No loops**: Use recursion instead
 - **Performance**: Can be slow with deep recursion
 - **Limited I/O**: Simple read/write operations
+- **No negation or if-then-else**: `\+` and `->` are not supported; use separate clauses instead
 
 ## Common Mistakes to Avoid
 
@@ -405,8 +408,7 @@ parent(unknown, bob).
 
 ## Next Steps
 
-- Learn [Logic programming concepts](../reference/builtins.md)
-- Explore [Expert systems and knowledge bases]
+- Revisit the Family Relationships and Expert System examples above
 - Try [Python for general programming](python.md)
 - Learn [BASIC for procedural programming](basic.md)
 

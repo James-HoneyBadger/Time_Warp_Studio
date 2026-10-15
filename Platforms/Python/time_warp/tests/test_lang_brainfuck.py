@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from time_warp.core.interpreter import Language
 from .conftest_lang import run, ok, has, no_errors
 
@@ -165,7 +164,7 @@ def test_multiply_9x10():
     assert "Z" in out[0]
 
 
-def test_print_A():
+def test_print_A_repeat():
     out = bf("+" * 65 + ".")
     assert no_errors(out)
     assert has(out, "A")
@@ -197,3 +196,9 @@ def test_hello_example():
     out = bf(src)
     assert no_errors(out)
     assert ok(out)
+
+
+def test_empty_input_is_eof():
+    out = run(",[.,]", LANG, input_val="")
+    assert no_errors(out)
+    assert "\n".join(out).strip() == ""

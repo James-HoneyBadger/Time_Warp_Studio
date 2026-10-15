@@ -26,13 +26,12 @@ EXAMPLES_DIR: Path = PROJECT_ROOT / "Examples"
 
 # ---- sub-directories -----------------------------------------------------
 LOGS_DIR: Path = APP_DATA_DIR / "logs"
-DATABASES_DIR: Path = APP_DATA_DIR / "databases"
 GALLERY_DIR: Path = APP_DATA_DIR / "gallery"
 HISTORY_DIR: Path = APP_DATA_DIR / "history"
 BUNDLES_DIR: Path = APP_DATA_DIR / "bundles"
 THEMES_DIR: Path = APP_DATA_DIR / "themes"
 ASSETS_DIR: Path = APP_DATA_DIR / "assets"
-HARDWARE_LOGS_DIR: Path = APP_DATA_DIR / "hardware_logs"
+WORKSPACE_DIR: Path = APP_DATA_DIR / "workspace"
 
 # ---- well-known files ----------------------------------------------------
 CONFIG_JSON: Path = APP_DATA_DIR / "config.json"

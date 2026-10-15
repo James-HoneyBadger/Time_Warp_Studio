@@ -236,8 +236,10 @@ right(90)
 forward(100)
 
 color("blue")
-penwidth(3)
-circle(50)
+pensize(3)
+for i in range(36):
+    forward(5)
+    right(10)
 ```
 
 ## Quick Reference

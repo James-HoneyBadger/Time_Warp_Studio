@@ -52,6 +52,7 @@ def run_in_sandbox(
     source: str,
     timeout: float = 10.0,
     variables: dict[str, Any] | None = None,
+    turtle: Any | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Execute *source* for *language_name* in an isolated subprocess.
 
@@ -84,6 +85,8 @@ def run_in_sandbox(
         if proc.returncode == 0:
             try:
                 result = json.loads(proc.stdout)
+                if turtle is not None and isinstance(result.get("turtle"), dict):
+                    _apply_turtle_snapshot(turtle, result["turtle"])
                 return result.get("output", ""), result.get("variables", {})
             except json.JSONDecodeError:
                 return proc.stdout or "❌ Sandbox: malformed worker output\n", {}
@@ -96,6 +99,35 @@ def run_in_sandbox(
         return "❌ Sandbox: Python interpreter not found\n", {}
     except Exception as exc:  # noqa: BLE001
         return f"❌ Sandbox error: {exc}\n", {}
+
+
+def _apply_turtle_snapshot(turtle: Any, snapshot: dict[str, Any]) -> None:
+    """Apply serialized turtle lines and state returned by the sandbox worker."""
+    from ..graphics.turtle_state import TurtleLine
+
+    turtle.x = float(snapshot.get("x", getattr(turtle, "x", 0.0)))
+    turtle.y = float(snapshot.get("y", getattr(turtle, "y", 0.0)))
+    turtle.heading = float(snapshot.get("heading", getattr(turtle, "heading", 0.0)))
+    turtle.pen_down = bool(snapshot.get("pen_down", getattr(turtle, "pen_down", True)))
+    turtle.visible = bool(snapshot.get("visible", getattr(turtle, "visible", True)))
+    raw_lines = snapshot.get("lines", [])
+    if isinstance(raw_lines, list):
+        for seg in raw_lines:
+            if isinstance(seg, dict):
+                color = seg.get("color", [255, 255, 255])
+                rgb = (int(color[0]), int(color[1]), int(color[2]))
+                turtle.lines.append(
+                    TurtleLine(
+                        float(seg.get("start_x", 0.0)),
+                        float(seg.get("start_y", 0.0)),
+                        float(seg.get("end_x", 0.0)),
+                        float(seg.get("end_y", 0.0)),
+                        rgb,
+                        float(seg.get("width", 2.0)),
+                    )
+                )
+        if getattr(turtle, "on_change", None):
+            turtle.on_change()
 
 
 def is_sandbox_available() -> bool:

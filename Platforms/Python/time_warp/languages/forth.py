@@ -3,6 +3,8 @@ from __future__ import annotations
 import math as _fmath
 from typing import TYPE_CHECKING, Callable, Dict, List, Optional, Any
 
+from ..utils.expression_evaluator import DivisionByZeroError
+
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
     from ..graphics.turtle_state import TurtleState
@@ -374,7 +376,13 @@ class ForthExecutor:
         )
 
     def _cr(self):
-        self.interpreter.log_output(self.output_buffer)
+        if self.output_buffer:
+            self.interpreter.log_output(self.output_buffer)
+        else:
+            # log_output drops empty text, but CR CR must yield a blank line
+            self.interpreter.output.append("")
+            if self.interpreter.output_callback:
+                self.interpreter.output_callback("")
         self.output_buffer = ""
 
     def _emit(self):
@@ -438,37 +446,53 @@ class ForthExecutor:
         else:
             self.interpreter.log_output("❌ Stack underflow")
 
+    def _pop_divisor_pair(self, word: str):
+        """Pop (a, b) for a division word; None after reporting underflow."""
+        if len(self.stack) < 2:
+            self.interpreter.log_output("❌ Stack underflow")
+            return None
+        b = self.stack.pop()
+        a = self.stack.pop()
+        if b == 0:
+            raise DivisionByZeroError(f" ({word})")
+        return a, b
+
     def _div(self):
-        if len(self.stack) >= 2:
-            b = self.stack.pop()
-            a = self.stack.pop()
-            self.stack.append(0 if b == 0 else int(a / b))
+        pair = self._pop_divisor_pair("/")
+        if pair:
+            a, b = pair
+            self.stack.append(int(a / b))
 
     def _mod(self):
-        if len(self.stack) >= 2:
-            b = self.stack.pop()
-            a = self.stack.pop()
-            self.stack.append(0 if b == 0 else a % b)
+        pair = self._pop_divisor_pair("MOD")
+        if pair:
+            a, b = pair
+            self.stack.append(a % b)
 
     def _divmod(self):
-        if len(self.stack) >= 2:
-            b = self.stack.pop()
-            a = self.stack.pop()
-            if b == 0:
-                self.stack += [0, 0]
-            else:
-                self.stack += [a % b, int(a / b)]
+        pair = self._pop_divisor_pair("/MOD")
+        if pair:
+            a, b = pair
+            self.stack += [a % b, int(a / b)]
 
     def _muldiv(self):
-        if len(self.stack) >= 3:
-            c, b, a = self.stack.pop(), self.stack.pop(), self.stack.pop()
-            self.stack.append(a * b // c if c else 0)
+        if len(self.stack) < 3:
+            self.interpreter.log_output("❌ Stack underflow")
+            return
+        c, b, a = self.stack.pop(), self.stack.pop(), self.stack.pop()
+        if c == 0:
+            raise DivisionByZeroError(" (*/)")
+        self.stack.append(a * b // c)
 
     def _muldivmod(self):
-        if len(self.stack) >= 3:
-            c, b, a = self.stack.pop(), self.stack.pop(), self.stack.pop()
-            p = a * b
-            self.stack += [p % c, p // c] if c else [0, 0]
+        if len(self.stack) < 3:
+            self.interpreter.log_output("❌ Stack underflow")
+            return
+        c, b, a = self.stack.pop(), self.stack.pop(), self.stack.pop()
+        if c == 0:
+            raise DivisionByZeroError(" (*/MOD)")
+        p = a * b
+        self.stack += [p % c, p // c]
 
     def _abs(self):
         if self.stack:
@@ -899,36 +923,49 @@ class ForthExecutor:
         raise StopIteration
 
     def _load_include_file(self, filename: str) -> None:
-        """Load and execute a Forth source file (sandboxed to .forth/.f/.4th/.fth)."""
-        import os
+        """Load and execute a Forth source file (confined to workspace and .forth/.f/.4th/.fth)."""
+        from ..utils.validators import ValidationError, WorkspaceFileService
 
         safe_ext = (".forth", ".f", ".4th", ".fth")
-        basename = os.path.basename(filename)  # prevent path traversal
-        if not any(basename.lower().endswith(ext) for ext in safe_ext):
-            self.interpreter.log_output(
-                "❌ INCLUDE: only .forth/.f/.4th/.fth files supported"
+        raw_name = filename.strip().strip("\"'")
+        budget = getattr(self.interpreter, "budget", None)
+        if budget is not None:
+            if budget.include_depth >= budget.max_include_depth:
+                self.interpreter.log_output(
+                    f"❌ INCLUDE: maximum include depth ({budget.max_include_depth}) exceeded"
+                )
+                return
+        svc = getattr(self.interpreter, "file_service", None) or WorkspaceFileService()
+        try:
+            resolved = svc.resolve_path(
+                raw_name,
+                for_write=False,
+                must_exist=True,
+                allowed_extensions=safe_ext,
             )
-            return
-        paths_to_try = [
-            filename,
-            os.path.join(os.getcwd(), filename),
-            os.path.join(os.getcwd(), basename),
-        ]
-        for path in paths_to_try:
-            if os.path.isfile(path):
-                try:
-                    with open(path, "r", encoding="utf-8", errors="replace") as fh:
-                        code = fh.read()
-                    self.interpreter.log_output(f"ℹ️ Including {basename}")
-                    for line in code.splitlines():
-                        self.execute_line(line, self.turtle)
-                    return
-                except OSError as exc:
-                    self.interpreter.log_output(
-                        f"❌ INCLUDE: could not read {basename}: {exc}"
-                    )
-                    return
-        self.interpreter.log_output(f"❌ INCLUDE: file not found: {filename}")
+            include_stack = getattr(self, "_include_stack", set())
+            if str(resolved) in include_stack:
+                self.interpreter.log_output(
+                    f"❌ INCLUDE: recursive include cycle detected for {resolved.name}"
+                )
+                return
+            include_stack.add(str(resolved))
+            self._include_stack = include_stack
+            if budget is not None:
+                budget.include_depth += 1
+            try:
+                code = resolved.read_text(encoding="utf-8", errors="replace")
+                self.interpreter.log_output(f"ℹ️ Including {resolved.name}")
+                for line in code.splitlines():
+                    self.execute_line(line, self.turtle)
+            finally:
+                include_stack.discard(str(resolved))
+                if budget is not None:
+                    budget.include_depth = max(0, budget.include_depth - 1)
+        except ValidationError as exc:
+            self.interpreter.log_output(f"❌ INCLUDE: {exc}")
+        except OSError as exc:
+            self.interpreter.log_output(f"❌ INCLUDE: could not read {raw_name}: {exc}")
 
     def _include(self):
         """Fallback for INCLUDE when called without stream context."""
@@ -937,18 +974,24 @@ class ForthExecutor:
         )
 
     def _ms(self):
-        """MS — simulated millisecond delay (consumes n from stack)."""
+        """MS — millisecond delay using cancellable budget slices (consumes n from stack)."""
         if self.stack:
-            n = self.stack.pop()
-            self.interpreter.log_output(f"ℹ️ MS: {int(n)}ms delay (simulated)")
+            n = max(0, int(self.stack.pop()))
+            if hasattr(self.interpreter, "sleep_slices") and n <= 2000:
+                self.interpreter.sleep_slices(n / 1000.0)
+            self.interpreter.log_output(f"ℹ️ MS: {n}ms delay")
 
     def _here_word(self):
         self.stack.append(self.here)
 
     def _allot_word(self):
         if self.stack:
-            n = self.stack.pop()
-            self.here += int(n)
+            n = int(self.stack.pop())
+            new_here = self.here + n
+            if not (0 <= new_here <= len(self.memory)):
+                self.interpreter.log_output("❌ ALLOT: memory bounds exceeded")
+                return
+            self.here = new_here
 
     # ── String words ───────────────────────────────────────────────────
 
@@ -1012,7 +1055,24 @@ class ForthExecutor:
         pass  # handled in token loop
 
     def _plus_place(self):
-        pass
+        """+PLACE ( addr u caddr -- ) append string at addr..addr+u to counted string at caddr."""
+        if len(self.stack) < 3:
+            self.interpreter.log_output("❌ +PLACE requires ( addr u caddr -- )")
+            return
+        caddr = int(self.stack.pop())
+        u = max(0, int(self.stack.pop()))
+        src = int(self.stack.pop())
+        if not (0 <= caddr < len(self.memory)):
+            self.interpreter.log_output("❌ +PLACE: destination out of bounds")
+            return
+        cur_len = self.memory[caddr] & 0xFF
+        append_len = min(u, max(0, 255 - cur_len))
+        for idx in range(append_len):
+            s_addr = src + idx
+            d_addr = caddr + 1 + cur_len + idx
+            if 0 <= s_addr < len(self.memory) and 0 <= d_addr < len(self.memory):
+                self.memory[d_addr] = self.memory[s_addr] & 0xFF
+        self.memory[caddr] = (cur_len + append_len) & 0xFF
 
     # ── Graphics ───────────────────────────────────────────────────────
 
@@ -1177,6 +1237,8 @@ class ForthExecutor:
     def execute_tokens(self, tokens: List[str]):
         i = 0
         while i < len(tokens):
+            if hasattr(self.interpreter, "tick"):
+                self.interpreter.tick(1)
             token = tokens[i]
             token_upper = token.upper()
 
@@ -1625,6 +1687,24 @@ class ForthExecutor:
                 i += 1
                 continue
 
+            # ── C" ... " (push counted-string address) ───────────────────
+            if token_upper.startswith('C"'):
+                inner = token[2:]
+                if inner.endswith('"'):
+                    inner = inner[:-1]
+                inner = inner[:255]
+                if self.here + len(inner) + 1 > len(self.memory):
+                    self.interpreter.log_output("❌ C\": dictionary space exhausted")
+                    return
+                addr = self.here
+                self.memory[addr] = len(inner)
+                for k, c in enumerate(inner, start=1):
+                    self.memory[addr + k] = ord(c) & 0xFF
+                self.here += len(inner) + 1
+                self.stack.append(addr)
+                i += 1
+                continue
+
             # ── Floating-point literal (e.g. 3.14  -1.5e10) ──────────────
             try:
                 if "." in token or "e" in token.lower():
@@ -1712,34 +1792,55 @@ class ForthExecutor:
     # execute_line — tokenizer entry
     # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+    @staticmethod
+    def tokenize(line: str) -> List[str]:
+        """Split a source line into words, keeping string literals verbatim.
+
+        ``." text"``, ``S" text"``, ``C" text"`` and ``.( text)`` become a single
+        token ``<word>text"`` with the one delimiter space after the word removed.
+        """
+        tokens: List[str] = []
+        i, n = 0, len(line)
+        while i < n:
+            while i < n and line[i].isspace():
+                i += 1
+            if i >= n:
+                break
+            j = i
+            while j < n and not line[j].isspace():
+                j += 1
+            word = line[i:j]
+            wu = word.upper()
+            if wu in ('."', 'S"', 'C"', ".("):
+                close = ")" if wu == ".(" else '"'
+                start = min(j + 1, n)
+                end = line.find(close, start)
+                if end == -1:
+                    end = n
+                prefix = '."' if wu == ".(" else word
+                tokens.append(f'{prefix}{line[start:end]}"')
+                i = end + 1
+                continue
+            if word == "\\":
+                break
+            if word == "(":
+                # Nested parens are tolerated so stack comments like ( n -- fib(n) ) work
+                depth, k = 1, j
+                while k < n and depth:
+                    if line[k] == "(":
+                        depth += 1
+                    elif line[k] == ")":
+                        depth -= 1
+                    k += 1
+                i = k
+                continue
+            tokens.append(word)
+            i = j
+        return tokens
+
     def execute_line(self, line: str, turtle=None):
         self.turtle = turtle
-        tokens: List[str] = []
-        parts = line.split()
-        j = 0
-        while j < len(parts):
-            t = parts[j]
-            tu = t.upper()
-            if tu in ('."', 'S"', 'C"'):
-                # collect until closing "
-                s = t
-                j += 1
-                while j < len(parts):
-                    s += " " + parts[j]
-                    if parts[j].endswith('"'):
-                        break
-                    j += 1
-                tokens.append(s)
-            elif t == "\\":
-                break  # line comment
-            elif t == "(":
-                j += 1
-                while j < len(parts) and parts[j] != ")":
-                    j += 1
-            else:
-                tokens.append(t)
-            j += 1
-        self.execute_tokens(tokens)
+        self.execute_tokens(self.tokenize(line))
         if self.output_buffer:
             self.interpreter.log_output(self.output_buffer)
             self.output_buffer = ""
@@ -1760,12 +1861,17 @@ def execute_forth(
         setattr(interpreter, attr, executor)
     try:
         executor.execute_line(command, turtle)
-    except RecursionError:
-        return "❌ Forth error: Maximum recursion depth exceeded\n"
-    except MemoryError:
-        return "❌ Forth error: Out of memory\n"
-    except Exception as exc:
-        return f"❌ Forth error: {exc}\n"
+    except Exception as exc:  # noqa: BLE001 - any word failure aborts the line
+        pending = executor.output_buffer
+        executor.output_buffer = ""
+        executor.stack.clear()  # ABORT semantics: an error empties the data stack
+        if isinstance(exc, RecursionError):
+            msg = "Maximum recursion depth exceeded"
+        elif isinstance(exc, MemoryError):
+            msg = "Out of memory"
+        else:
+            msg = str(exc)
+        return (pending + "\n" if pending else "") + f"❌ Forth error: {msg}\n"
     result = executor.output_buffer
     executor.output_buffer = ""
     return result

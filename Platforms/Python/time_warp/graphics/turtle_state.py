@@ -712,7 +712,27 @@ class TurtleState:  # pylint: disable=too-many-instance-attributes
 
     def set_palette_color(self, index: int, r: int, g: int, b: int) -> None:
         """Set a palette index to an RGB value."""
-        self.palette[int(index)] = (self._clamp(r), self._clamp(g), self._clamp(b))
+        self.palette[int(index) % 256] = (
+            self._clamp(r),
+            self._clamp(g),
+            self._clamp(b),
+        )
+        self._notify_change()
+
+    def cycle_palette(
+        self, start_index: int = 1, end_index: int = 15, step: int = 1
+    ) -> None:
+        """Rotate palette entries in [start_index..end_index] by *step* (1990s VGA palette cycling)."""
+        lo = max(0, min(255, int(start_index)))
+        hi = max(lo, min(255, int(end_index)))
+        indices = list(range(lo, hi + 1))
+        if len(indices) <= 1:
+            return
+        colors = [self._palette_color(i) for i in indices]
+        shift = int(step) % len(colors)
+        rotated = colors[-shift:] + colors[:-shift]
+        for idx, rgb in zip(indices, rotated):
+            self.palette[idx] = rgb
         self._notify_change()
 
     def resolve_color(self, value, default: Optional[Tuple[int, int, int]] = None):

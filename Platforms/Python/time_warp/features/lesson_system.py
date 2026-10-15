@@ -1,276 +1,255 @@
-"""Guided lessons mode for Time Warp Studio.
+"""Guided lessons: built-in curriculum, automatic checkpoint verification, saved progress.
 
-Provides step-by-step walkthroughs with checkpoints and auto-verified outputs.
+Lessons live in ``lessons.json`` next to this module. Each checkpoint is checked
+by actually running the learner's program in a headless interpreter and
+comparing either its printed lines (``expect_lines``) or the turtle drawing
+(``expect_turtle``) with the checkpoint's specification.
 """
 
-from dataclasses import dataclass
+from __future__ import annotations
+
+import json
+import math
+from dataclasses import dataclass, field
 from enum import Enum
-from typing import Callable, List, Optional
+from pathlib import Path
+
+from ..core.config import PROGRESS_JSON
+from ..core.interpreter import Interpreter, Language
+from ..graphics.turtle_state import TurtleState
+from ..logging_config import get_logger
+
+logger = get_logger(__name__)
+
+LESSONS_FILE = Path(__file__).with_name("lessons.json")
+VERIFY_TIME_LIMIT = 3.0
+# Informational lines executors emit alongside program output.
+_STATUS_PREFIXES = ("✅", "ℹ️", "🎨", "🚀", "🐢", "📝", "💡", "📎", "⚠️")
 
 
 class LessonStatus(Enum):
-    """Lesson completion status."""
+    """Learner progress through a lesson."""
 
     NOT_STARTED = "not_started"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
-    FAILED = "failed"
 
 
 @dataclass
 class Checkpoint:
-    """A single lesson checkpoint."""
+    """One verifiable step of a lesson."""
 
     title: str
     description: str
     starter_code: str
-    expected_output: str
-    hints: List[str]
     solution: str
+    hints: list[str]
+    expect_lines: list[str] | None = None
+    expect_turtle: dict | None = None
 
 
 @dataclass
 class Lesson:
-    """A complete lesson with multiple checkpoints."""
+    """A themed sequence of checkpoints in one language."""
 
     id: str
     title: str
     description: str
-    language: str  # "basic", "pilot", "logo"
-    difficulty: str  # "beginner", "intermediate", "advanced"
-    checkpoints: List[Checkpoint]
-    status: LessonStatus = LessonStatus.NOT_STARTED
-    current_checkpoint: int = 0
+    language: Language
+    difficulty: str
+    checkpoints: list[Checkpoint]
+
+
+@dataclass
+class VerifyResult:
+    """Outcome of running a learner's program against a checkpoint."""
+
+    passed: bool
+    message: str
+    output: list[str] = field(default_factory=list)
+
+
+def run_lesson_program(source: str, language: Language) -> tuple[list[str], TurtleState]:
+    """Run *source* headlessly with a short time budget; return output and turtle."""
+    interp = Interpreter()
+    interp.MAX_EXECUTION_TIME = VERIFY_TIME_LIMIT
+    turtle = TurtleState()
+    interp.load_program(source, language=language)
+    output = list(interp.execute(turtle))
+    if interp.pending_input:
+        output.append("❌ Lesson programs must not wait for keyboard input")
+    return output, turtle
+
+
+def verify_checkpoint(
+    checkpoint: Checkpoint, source: str, language: Language
+) -> VerifyResult:
+    """Run *source* and decide whether it satisfies *checkpoint*."""
+    start_x, start_y = TurtleState().x, TurtleState().y
+    output, turtle = run_lesson_program(source, language)
+
+    errors = [line.strip() for line in output if line.lstrip().startswith("❌")]
+    if errors:
+        return VerifyResult(False, f"Your program reported an error:\n{errors[0]}", output)
+
+    if checkpoint.expect_lines is not None:
+        printed = [
+            line.strip()
+            for line in output
+            if line.strip() and not line.strip().startswith(_STATUS_PREFIXES)
+        ]
+        if printed != checkpoint.expect_lines:
+            shown = "\n".join(printed) if printed else "(nothing)"
+            wanted = "\n".join(checkpoint.expect_lines)
+            return VerifyResult(
+                False,
+                f"Not yet. Expected output:\n{wanted}\n\nYour program printed:\n{shown}",
+                output,
+            )
+
+    spec = checkpoint.expect_turtle
+    if spec:
+        drawn = len(turtle.lines)
+        wanted_segments = spec.get("segments")
+        if wanted_segments is not None and drawn != wanted_segments:
+            return VerifyResult(
+                False,
+                f"Not yet. The turtle drew {drawn} line(s); "
+                f"this checkpoint needs exactly {wanted_segments}.",
+                output,
+            )
+        if spec.get("returns_home"):
+            gap = math.hypot(turtle.x - start_x, turtle.y - start_y)
+            if gap > 0.5:
+                return VerifyResult(
+                    False,
+                    "Not yet. The shape is not closed: the turtle ended "
+                    f"{gap:.0f} steps away from where it started.",
+                    output,
+                )
+
+    return VerifyResult(True, "✅ Checkpoint passed!", output)
 
 
 class LessonManager:
-    """Manages lessons and checkpoint progression."""
+    """Loads the curriculum, verifies checkpoints, and persists progress."""
 
-    def __init__(self):
-        self.lessons: dict[str, Lesson] = {}
-        self.current_lesson: Optional[Lesson] = None
-        self.validators: dict[str, Callable] = {}
-        self._init_builtin_lessons()
+    def __init__(
+        self,
+        lessons_path: Path = LESSONS_FILE,
+        progress_path: Path = PROGRESS_JSON,
+    ) -> None:
+        self.lessons_path = Path(lessons_path)
+        self.progress_path = Path(progress_path)
+        self.lessons: dict[str, Lesson] = self._load_lessons()
+        self._progress: dict[str, dict] = self._load_progress()
 
-    def _init_builtin_lessons(self):
-        """Initialize built-in lessons."""
-        # BASIC lesson
-        self.add_lesson(
-            Lesson(
-                id="basic_hello_world",
-                title="Hello, World! in BASIC",
-                description="Learn your first BASIC program",
-                language="basic",
-                difficulty="beginner",
-                checkpoints=[
+    # ---- curriculum ---------------------------------------------------------
+
+    def _load_lessons(self) -> dict[str, Lesson]:
+        data = json.loads(self.lessons_path.read_text(encoding="utf-8"))
+        lessons: dict[str, Lesson] = {}
+        for raw in data["lessons"]:
+            checkpoints = []
+            for cp in raw["checkpoints"]:
+                if "expect_lines" not in cp and "expect_turtle" not in cp:
+                    raise ValueError(
+                        f"Lesson {raw['id']!r} checkpoint {cp['title']!r} has no expectation"
+                    )
+                checkpoints.append(
                     Checkpoint(
-                        title="Print a message",
-                        description="Use PRINT to output text",
-                        starter_code='PRINT "Hello, World!"',
-                        expected_output="Hello, World!",
-                        hints=["Use PRINT keyword", "Put text in quotes"],
-                        solution='PRINT "Hello, World!"',
-                    ),
-                    Checkpoint(
-                        title="Print multiple lines",
-                        description="Output on separate lines",
-                        starter_code='PRINT "Line 1"\nPRINT "Line 2"',
-                        expected_output="Line 1\nLine 2",
-                        hints=["Use PRINT twice", "Each PRINT on new line"],
-                        solution='PRINT "Line 1"\nPRINT "Line 2"',
-                    ),
-                ],
-            )
-        )
-
-        # Logo lesson
-        self.add_lesson(
-            Lesson(
-                id="logo_square",
-                title="Draw a Square in Logo",
-                description="Learn turtle graphics basics",
-                language="logo",
-                difficulty="beginner",
-                checkpoints=[
-                    Checkpoint(
-                        title="Draw one side",
-                        description="Move forward 100 pixels",
-                        starter_code="FORWARD 100",
-                        expected_output="[turtle moved]",
-                        hints=["Use FORWARD", "Type FORWARD 100"],
-                        solution="FORWARD 100",
-                    ),
-                    Checkpoint(
-                        title="Draw a square",
-                        description="Create a square with 4 sides",
-                        starter_code="REPEAT 4 [\n  FORWARD 100\n  RIGHT 90\n]",
-                        expected_output="[square drawn]",
-                        hints=["Use REPEAT 4", "Turn 90 degrees each time"],
-                        solution="REPEAT 4 [\n  FORWARD 100\n  RIGHT 90\n]",
-                    ),
-                ],
-            )
-        )
-
-    def add_lesson(self, lesson: Lesson) -> None:
-        """Register a lesson."""
-        self.lessons[lesson.id] = lesson
-
-    @staticmethod
-    def _slugify_lesson_id(title: str) -> str:
-        """Create a safe lesson identifier from a title."""
-        cleaned = "".join(ch.lower() if ch.isalnum() else "_" for ch in title)
-        while "__" in cleaned:
-            cleaned = cleaned.replace("__", "_")
-        return cleaned.strip("_") or "custom_lesson"
-
-    def _unique_lesson_id(self, base_id: str) -> str:
-        """Ensure the lesson identifier is unique within the manager."""
-        if base_id not in self.lessons:
-            return base_id
-
-        suffix = 2
-        candidate = f"{base_id}_{suffix}"
-        while candidate in self.lessons:
-            suffix += 1
-            candidate = f"{base_id}_{suffix}"
-        return candidate
-
-    def import_lesson_data(self, data: dict) -> Lesson:
-        """Build and register a lesson from serializable data."""
-        title = str(data.get("title", "Custom Lesson")).strip() or "Custom Lesson"
-        lesson_id = str(data.get("id") or self._slugify_lesson_id(title))
-        if lesson_id in self.lessons and self.lessons[lesson_id].title != title:
-            lesson_id = self._unique_lesson_id(lesson_id)
-
-        checkpoint_defs = data.get("checkpoints") or []
-        checkpoints: List[Checkpoint] = []
-        for item in checkpoint_defs:
-            hints = item.get("hints", [])
-            if isinstance(hints, str):
-                hints = [hint.strip() for hint in hints.split("|") if hint.strip()]
-            checkpoints.append(
-                Checkpoint(
-                    title=str(item.get("title", "Checkpoint")).strip() or "Checkpoint",
-                    description=str(item.get("description", "")).strip(),
-                    starter_code=str(item.get("starter_code", "")),
-                    expected_output=str(item.get("expected_output", "")),
-                    hints=list(hints),
-                    solution=str(item.get("solution", "")),
+                        title=cp["title"],
+                        description=cp["description"],
+                        starter_code=cp["starter_code"],
+                        solution=cp["solution"],
+                        hints=list(cp.get("hints", [])),
+                        expect_lines=cp.get("expect_lines"),
+                        expect_turtle=cp.get("expect_turtle"),
+                    )
                 )
+            lessons[raw["id"]] = Lesson(
+                id=raw["id"],
+                title=raw["title"],
+                description=raw["description"],
+                language=Language[raw["language"]],
+                difficulty=raw["difficulty"],
+                checkpoints=checkpoints,
             )
+        return lessons
 
-        if not checkpoints:
-            raise ValueError("Lesson must include at least one checkpoint")
-
-        lesson = Lesson(
-            id=lesson_id,
-            title=title,
-            description=str(data.get("description", "")).strip(),
-            language=str(data.get("language", "basic")).strip().lower() or "basic",
-            difficulty=str(data.get("difficulty", "beginner")).strip().lower()
-            or "beginner",
-            checkpoints=checkpoints,
-        )
-        self.add_lesson(lesson)
-        return lesson
-
-    def export_lesson_data(self, lesson_id: str) -> dict:
-        """Return a lesson as plain serializable data."""
-        lesson = self.lessons[lesson_id]
-        return {
-            "id": lesson.id,
-            "title": lesson.title,
-            "description": lesson.description,
-            "language": lesson.language,
-            "difficulty": lesson.difficulty,
-            "checkpoints": [
-                {
-                    "title": checkpoint.title,
-                    "description": checkpoint.description,
-                    "starter_code": checkpoint.starter_code,
-                    "expected_output": checkpoint.expected_output,
-                    "hints": list(checkpoint.hints),
-                    "solution": checkpoint.solution,
-                }
-                for checkpoint in lesson.checkpoints
-            ],
-        }
-
-    def start_lesson(self, lesson_id: str) -> bool:
-        """Start a lesson."""
-        if lesson_id not in self.lessons:
-            return False
-
-        self.current_lesson = self.lessons[lesson_id]
-        self.current_lesson.status = LessonStatus.IN_PROGRESS
-        self.current_lesson.current_checkpoint = 0
-        return True
-
-    def get_current_checkpoint(self) -> Optional[Checkpoint]:
-        """Get current checkpoint."""
-        if not self.current_lesson:
-            return None
-        if self.current_lesson.current_checkpoint >= len(
-            self.current_lesson.checkpoints
-        ):
-            return None
-        return self.current_lesson.checkpoints[self.current_lesson.current_checkpoint]
-
-    def check_output(self, output: str) -> bool:
-        """Verify checkpoint output."""
-        checkpoint = self.get_current_checkpoint()
-        if not checkpoint:
-            return False
-
-        # Simple string matching; can be enhanced with custom validators
-        expected = checkpoint.expected_output.strip()
-        actual = output.strip()
-
-        return expected in actual or actual == expected
-
-    def advance_checkpoint(self) -> bool:
-        """Move to next checkpoint."""
-        if not self.current_lesson:
-            return False
-
-        self.current_lesson.current_checkpoint += 1
-
-        if self.current_lesson.current_checkpoint >= len(
-            self.current_lesson.checkpoints
-        ):
-            self.current_lesson.status = LessonStatus.COMPLETED
-            return False  # No more checkpoints
-
-        return True
-
-    def get_hint(self) -> Optional[str]:
-        """Get next hint for current checkpoint."""
-        checkpoint = self.get_current_checkpoint()
-        if not checkpoint or not checkpoint.hints:
-            return None
-        return checkpoint.hints[0]
-
-    def get_solution(self) -> Optional[str]:
-        """Get solution for current checkpoint."""
-        checkpoint = self.get_current_checkpoint()
-        if not checkpoint:
-            return None
-        return checkpoint.solution
-
-    def list_lessons(self) -> List[Lesson]:
-        """Get all available lessons."""
+    def list_lessons(self) -> list[Lesson]:
         return list(self.lessons.values())
 
-    def get_progress(self) -> dict:
-        """Get lesson progress summary."""
-        if not self.current_lesson:
-            return {"status": "idle"}
+    # ---- progress -----------------------------------------------------------
 
-        return {
-            "lesson_id": self.current_lesson.id,
-            "lesson_title": self.current_lesson.title,
-            "checkpoint": self.current_lesson.current_checkpoint + 1,
-            "total_checkpoints": len(self.current_lesson.checkpoints),
-            "status": self.current_lesson.status.value,
-        }
+    def _load_progress(self) -> dict[str, dict]:
+        try:
+            data = json.loads(self.progress_path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return {}
+        except (OSError, json.JSONDecodeError) as exc:
+            logger.warning("Ignoring unreadable lesson progress %s: %s", self.progress_path, exc)
+            return {}
+        lessons = data.get("lessons", {}) if isinstance(data, dict) else {}
+        return {k: v for k, v in lessons.items() if k in self.lessons and isinstance(v, dict)}
+
+    def save_progress(self) -> None:
+        self.progress_path.parent.mkdir(parents=True, exist_ok=True)
+        payload = {"version": 1, "lessons": self._progress}
+        self.progress_path.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+    def _entry(self, lesson_id: str) -> dict:
+        return self._progress.setdefault(
+            lesson_id, {"checkpoint": 0, "completed": False, "hints_used": 0}
+        )
+
+    def current_index(self, lesson_id: str) -> int:
+        """Index of the first unfinished checkpoint (== count when completed)."""
+        total = len(self.lessons[lesson_id].checkpoints)
+        idx = int(self._progress.get(lesson_id, {}).get("checkpoint", 0))
+        return max(0, min(idx, total))
+
+    def status(self, lesson_id: str) -> LessonStatus:
+        entry = self._progress.get(lesson_id)
+        if not entry:
+            return LessonStatus.NOT_STARTED
+        if entry.get("completed"):
+            return LessonStatus.COMPLETED
+        return LessonStatus.IN_PROGRESS
+
+    def hints_used(self, lesson_id: str) -> int:
+        return int(self._progress.get(lesson_id, {}).get("hints_used", 0))
+
+    def start(self, lesson_id: str) -> None:
+        self._entry(lesson_id)
+        self.save_progress()
+
+    def reset(self, lesson_id: str) -> None:
+        self._progress.pop(lesson_id, None)
+        self.save_progress()
+
+    # ---- checkpoint actions -------------------------------------------------
+
+    def hint(self, lesson_id: str, index: int, hint_number: int) -> str:
+        """Return hint *hint_number* (0-based, clamped) and record that it was used."""
+        hints = self.lessons[lesson_id].checkpoints[index].hints
+        if not hints:
+            return "No hints for this checkpoint."
+        entry = self._entry(lesson_id)
+        entry["hints_used"] = entry.get("hints_used", 0) + 1
+        self.save_progress()
+        return hints[min(hint_number, len(hints) - 1)]
+
+    def verify(self, lesson_id: str, index: int, source: str) -> VerifyResult:
+        """Verify checkpoint *index*; on success unlock the next one."""
+        lesson = self.lessons[lesson_id]
+        result = verify_checkpoint(lesson.checkpoints[index], source, lesson.language)
+        if result.passed:
+            entry = self._entry(lesson_id)
+            if index >= entry.get("checkpoint", 0):
+                entry["checkpoint"] = index + 1
+            if entry["checkpoint"] >= len(lesson.checkpoints):
+                entry["completed"] = True
+                result.message = f"🏆 Lesson complete: {lesson.title}!"
+            self.save_progress()
+        return result

@@ -45,7 +45,7 @@ Time Warp Studio is a desktop IDE built with:
 **Modularity**:
 
 - 9 independent language modules (easily extensible)
-- Feature panels loaded dynamically
+- Optional dock panels (Lessons, Document Outline, Debugger) created on demand
 - Theme system completely separate from core logic
 
 ---
@@ -147,7 +147,6 @@ Features:
 - Subroutines (GOSUB/RETURN)
 - Turbo BASIC graphics
   - SCREEN, COLOR, LINE, CIRCLE, PSET, PAINT
-
 #### 2. LOGO
 
 Features:  
@@ -168,9 +167,9 @@ Turtle State Tracking:
 
 Features:
 
-- T-units: Text output
-- A-units: Answer input validation
-- J-units: Conditional jumps
+- T: text output (with $VAR / #VAR interpolation)
+- A: answer input, M: matching (wildcards, alternatives)
+- J:/U:/E: jumps, subroutine calls and returns; Y/N conditional suffixes
 - Used for CAI (Computer-Aided Instruction) lessons
 
 #### 4. C
@@ -229,16 +228,17 @@ Each receives the full source text and returns output. Registered in
 
 ```text
 MainWindow
-├── MenuBar (File, Edit, Run, Debug, View, Help)
+├── MenuBar (File, Edit, Run, Debug, View, Tools, Help)
 ├── Central Widget
-│   ├── CodeEditor
+│   ├── CodeEditor (optionally split into two panes)
 │   ├── TabbedPanels
 │   │   ├── OutputPanel
 │   │   ├── GraphicsCanvas
 │   │   ├── VariablesInspector
 │   │   └── ...
-│   └── 14 Feature Panels
+│   └── Dock widgets (Lessons, Document Outline, Debugger)
 ├── Toolbar
+├── Function-Key Bar (Normal / Shift / Ctrl layers)
 └── StatusBar
 ```
 
@@ -258,38 +258,23 @@ MainWindow
 - Renders turtle graphics in real-time
 - 800x600 logical coordinates
 
-### 14 Feature Panels
+### Dock Panels
 
-Specialized development tools accessible via dock widgets (Phase 2 of the
-feature registry in `ui/feature_integration.py`):
+- **Lessons** (`ui/lesson_panel.py`) — guided lessons with checkpoint verification, backed by `features/lesson_system.py`
+- **Document Outline** (F4) — navigate procedures and functions
+- **Debugger** (`ui/debug_panel.py`) — controls, watch list, call stack
+- **Variable Inspector** (`ui/variable_inspector.py`) — live variables
+- **Project tree** (`ui/project_tree.py`) and **Terminal** (`ui/terminal_widget.py`)
 
-1. Classroom Mode - presentation tools
-2. Reference Search - offline docs search
-3. Achievements - progress tracking
-4. Turtle Inspector - turtle timeline
-5. Document Outline - navigate procedures and functions
-6. Collaboration Tool - pair programming
-7. Performance Profiler - hotspot detection
-8. Execution Replay - algorithm visualization
-9. Hardware Simulator - device simulation
-10. AI Assistant - knowledge-based help
-11. Executable Exporter - multi-format export
-12. Learning Analytics - progress tracking
-13. Accessibility Suite - inclusive features
-14. Peer Review Tool - code feedback
+### Menu System
 
-Plus 8 additional Phase 1 panels (Learning Hub, Lesson Mode, Lesson
-Authoring, Error Explainer, Syntax Validator, Timeline Debugger, Language
-Comparator, Asset Library) for 22 feature panels in total.
-
-### Menu System (53+ Items)
-
-**File**: New, Open, Save, Export, Recent, Examples, Lessons
-**Edit**: Undo, Redo, Cut, Copy, Paste, Find, Replace
-**Run**: Execute, Continue, Stop, Clear output
-**Debug**: Step Into, Step Over, Breakpoints, Timeline
-**View**: Show/Hide panels, Themes, Zoom
-**Help**: Documentation, Shortcuts, About, Settings
+**File**: New, Open, Save, Save As, Recent Files, Export (PNG, SVG, HTML, Lesson Report), Print, Version History, Preferences, Exit
+**Edit**: Undo, Redo, Cut, Copy, Paste, Find, Replace, Find in Files, Go to Line, Insert Snippet, Format Code
+**Run**: Run Program, Reset Program, Run Selection, Run Both Split Panes, Clear Output/Canvas, Show Errors Only
+**Debug**: Start/Continue, Stop, Pause, Trace Into, Step Over, Step Out, Breakpoints
+**View**: Themes, Fonts, Zoom, Screen Mode, CRT Effects, Split Editor, Focus Mode, Telemetry HUD, Command Palette, Workspace Decks, Outline
+**Tools**: Compare Languages
+**Help**: User Manual, Context Help, Keyword Inspector, Lessons, Language Help, Browse Examples, Guided Tour, Keyboard Shortcuts, About
 
 ---
 
@@ -372,12 +357,13 @@ Each execution step stored with:
 
 ### Debug Commands
 
-- Step Into - Execute next, enter functions
-- Step Over - Execute next, skip functions  
-- Continue - Run until next breakpoint
-- Pause - Pause execution
-- Stop - Halt program
-- Toggle Breakpoint - Add/remove breakpoint
+- Start / Continue (Ctrl+F9) - Start debugging, or continue to the next breakpoint when paused
+- Trace Into (F7) - Execute next, enter functions
+- Step Over (F8) - Execute next, skip functions
+- Step Out (Shift+F8) - Run until the current routine returns
+- Pause (Ctrl+F7) - Pause execution
+- Reset Program (Ctrl+F2) - Halt program or debug session
+- Toggle Breakpoint (Ctrl+F8) - Add/remove breakpoint
 - View Timeline - Browse execution history
 
 ---
@@ -466,17 +452,17 @@ from ..languages.newlang import execute_newlang
 
 1. Create examples in `Examples/newlang/`
 
-1. Write tests in `tests/test_newlang.py`
+1. Write tests in `Platforms/Python/time_warp/tests/test_lang_newlang.py`
 
-### Adding a Feature Panel
+### Adding a Dock Panel
 
-1. Create in `ui/feature_panels/new_panel.py`
+1. Create the widget in `ui/new_panel.py`
 
-2. Register in `ui/main_window.py`:
+2. Create it on demand from `ui/main_window.py` and dock it:
 
 ```python
-self.new_panel = NewPanel()
-self.tabs.addTab(self.new_panel, "New Panel")
+self._new_panel = NewPanel(self)
+self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._new_panel)
 ```
 
 1. Add menu toggle in View menu:
@@ -556,10 +542,9 @@ Contains:
 - Editor settings (font, size)
 - Canvas settings
 - Recent files
-- Feature panel visibility
 - Color schemes
-- Keyboard shortcuts
-- Learning progress
+
+Lesson progress is stored separately in `~/.time_warp/progress.json`.
 
 ### Automatic Saving
 
@@ -570,7 +555,9 @@ Contains:
 
 ### Theme System
 
-28 built-in themes organized by category:
+33 built-in themes organized by category:
+
+**Workstation (5):** Neo-90s Workstation, Borland Turbo Vision 1991, NeXTSTEP Gunmetal, Amiga Workbench 2.0, VGA Amber Lab
 
 **Dark (11):** Dracula, Monokai, VS Code Dark, GitHub Dark, Nord, One Dark Pro, Solarized Dark, Ocean, Catppuccin Mocha, Gruvbox Dark, Tokyo Night
 
@@ -590,21 +577,16 @@ Contains:
 
 - `interpreter.py` — Main dispatcher and 9-language registry
 - `debugger.py` — Step-through debugger with execution timeline and rewind
-- `sql_engine.py` — SQLite-backed T-SQL compatibility layer
-- `orchestrator.py` — System integration and component registry
 - `config.py` — Canonical paths (`~/.time_warp/`) and settings
+- `language_registry.py`, `project_manager.py`, `sandbox.py` — Language metadata, project files, Python sandbox
 
 ### Features (`features/`)
 
-- `hardware_simulator.py` — Simulation-first IoT hardware support
-- `plugin_system.py` — Plugin architecture (future extensibility)
-- `game_support.py` — Game state, timers, and input handling
-- `accessibility.py` — Accessibility features and screen reader support
-- `ai_assistant.py` — AI-powered code suggestions
-- `ai_suggestions.py` — Contextual suggestion engine
-- `cloud_storage.py` — Cloud file storage (optional)
-- `hardware_integration.py` — Physical hardware bridging (optional)
-- Lessons, autosave, achievements, classroom mode, examples browser, etc.
+- `lesson_system.py` + `lessons.json` — 18 lessons with checkpoint verification
+- `game_support.py`, `gamepad.py` — Game state, timers, and input handling
+- `music.py`, `speech.py` — Sound and speech output
+- `shapes.py`, `particles.py`, `fractals.py` — Graphics helpers
+- `autosave_manager.py`, `classroom_mode.py`, `examples_browser.py`, `project_templates.py`, `snippets.json`
 
 ### Languages (`languages/`)
 
@@ -615,15 +597,16 @@ Contains:
 
 ### UI (`ui/`)
 
-- `main_window.py` — Main IDE window (6 mixins, 3,300+ lines)
+- `main_window.py` — Main IDE window (5 mixins, 4,000+ lines)
 - `editor.py` — Code editor with syntax highlighting and minimap
 - `canvas.py` — Turtle graphics canvas with zoom/pan
 - `output.py` — Console output with interpreter threads
 - `themes.py` — 28-theme manager (dark, light, retro CRT, accessibility)
 - `debug_panel.py` — Debugger controls, watch, and call-stack
-- `command_palette.py` — Ctrl+Shift+P command palette
-- `feature_panels.py` — 14 dynamic feature panels
-- `mixins/` — Collaboration, classroom, debug, export, file ops, help
+- `command_palette.py` — F10 / Ctrl+Shift+P command palette
+- `function_key_bar.py` — Turbo-style Function-Key Bar
+- `lesson_panel.py` — Lessons dock
+- `mixins/` — Classroom, debug, export, file ops, help (5 mixins)
 
 ### Graphics (`graphics/`)
 
@@ -631,17 +614,6 @@ Contains:
 - `art_toolkit.py` — Drawing primitives and shapes
 - `pixel_canvas.py` — Pixel-level canvas operations
 - `turtle_gallery.py` — Pre-built turtle art examples
-
-### Features (`features/`)
-
-- `lesson_system.py` — Step-by-step lessons with checkpoints
-- `examples_browser.py` — Searchable 97-program catalog
-- `turtle_preview.py` — Live Logo code preview
-- `theme_editor.py` — Custom theme creation
-- `autosave_manager.py` — Background autosave with versioning
-- `achievements.py` — Gamified progress tracking
-- `classroom_mode.py` — Teaching and presentation tools
-- `reference_search.py` — Quick documentation lookup
 
 ### Utils (`utils/`)
 
@@ -654,14 +626,15 @@ Contains:
 
 ### Tests (`tests/`)
 
-- Test files covering all 9 active language executors, graphics, GUI, and interpreter behavior
+- 501 pytest tests covering all 9 active language executors, lessons, keymap, GUI, and interpreter behavior
 - `conftest.py`, `conftest_lang.py` — Shared fixtures and helpers
 - `Platforms/Python/smoke_test.py` — Fast smoke test without pytest
+- `test_all_examples.py` (repo root) — Runs all 72 example programs
 
 ### Scripts (`Scripts/`)
 
-Build, launch, deploy, and utility scripts — including `deploy.sh`, `startup.py`,
-`build_native.sh`, `generate_icon.py`, and IDE launchers.
+Build, launch, and utility scripts — `build_native.sh`, `generate_icon.py`,
+`version_sync.py`, `audit_interpreters.py`, `launch_editor.sh`, and `launch_ide.bat`.
 
 ---
 
@@ -692,20 +665,19 @@ Build, launch, deploy, and utility scripts — including `deploy.sh`, `startup.p
 
 ### Code Style
 
-- Python: PEP 8, 100 char line limit
-- Formatter: black
-- Linter: flake8, pylint
-- Types: mypy strict mode
+- Python: PEP 8
+- Linter/formatter: ruff
+- Types: pyright (`make typecheck`)
 - Docstrings: All public functions
 
 ### Testing
 
 ```bash
-PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -v --tb=short   # Run tests
-python3 Platforms/Python/smoke_test.py                                           # Fast smoke test without pytest
-black --check .                                                                 # Check formatting
-ruff check time_warp                                                               # Fast linting
-mypy time_warp --strict                                                           # Type check
+make test        # pytest suite (offscreen Qt)
+make smoke       # Fast smoke test without pytest
+make demos       # Run all example programs
+make lint        # ruff check
+make typecheck   # pyright
 ```
 
 ### PR Process

@@ -113,7 +113,7 @@ int main() {
 }
 ```
 
-**Important**: Use `&` before variable name in scanf()
+**Important**: Use `&` before variable name in scanf() for `int`, `float`, and `char` variables. A char array (string buffer) is passed without `&`, as in `scanf("%49s", name);` (see String Arrays below).
 
 ## Operators
 

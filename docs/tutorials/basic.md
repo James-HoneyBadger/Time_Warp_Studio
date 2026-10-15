@@ -71,7 +71,7 @@ LET PRICE = 19.99
 - Variable names start with letter
 - Can contain letters, numbers, underscore
 - String variables end with `$`
-- Use `LET` keyword (optional in many BASIC versions)
+- `LET` is optional in Time Warp Studio (`X = 5` also works)
 
 ### Using Variables
 
@@ -143,12 +143,14 @@ PRINT "You were born around "; YEAR
 ## Arithmetic Operations
 
 ```basic
-PRINT 10 + 5      ' Addition
-PRINT 10 - 5      ' Subtraction
-PRINT 10 * 5      ' Multiplication
-PRINT 10 / 5      ' Division
-PRINT 10 ^ 2      ' Exponentiation (power)
-PRINT 10 MOD 3    ' Modulo (remainder)
+REM Addition, subtraction, multiplication, division
+PRINT 10 + 5
+PRINT 10 - 5
+PRINT 10 * 5
+PRINT 10 / 5
+REM Exponentiation (power) and modulo (remainder)
+PRINT 10 ^ 2
+PRINT 10 MOD 3
 ```
 
 **Output:**
@@ -199,6 +201,9 @@ END IF
 ### Logical Operators
 
 ```basic
+LET AGE = 30
+LET STATUS$ = "student"
+LET ACTIVE = 0
 IF AGE >= 18 AND AGE <= 65 THEN PRINT "Working age"
 IF STATUS$ = "student" OR STATUS$ = "teacher" THEN PRINT "School person"
 IF NOT ACTIVE THEN PRINT "Not active"
@@ -308,22 +313,22 @@ Group code into reusable pieces:
 ### Defining Subroutines
 
 ```basic
-GOSUB GreetUser
-END
-
-GreetUser:
-  PRINT "Welcome!"
-  INPUT "Your name: "; NAME$
-  PRINT "Hello, "; NAME$
-  RETURN
+10 GOSUB 100
+20 END
+100 PRINT "Welcome!"
+110 INPUT "Your name: "; NAME$
+120 PRINT "Hello, "; NAME$
+130 RETURN
 ```
 
 **How it works:**
-1. Program runs from top
-2. GOSUB calls the subroutine
-3. Code after colon (GreetUser:) runs
-4. RETURN sends control back
-5. Program continues after GOSUB
+1. Program runs from the top (line 10)
+2. `GOSUB 100` jumps to line 100
+3. Lines 100-120 run
+4. `RETURN` sends control back to the line after GOSUB (line 20)
+5. `END` on line 20 stops the program
+
+Subroutines are called by line number. Named labels such as `GreetUser:` are not supported.
 
 ---
 
@@ -344,25 +349,20 @@ NEXT I
 ```basic
 LET SECRET = 5
 INPUT "Guess a number (1-10): "; GUESS
-IF GUESS = SECRET THEN
-  PRINT "Correct!"
-ELSE IF GUESS < SECRET THEN
-  PRINT "Too low!"
-ELSE
-  PRINT "Too high!"
-END IF
+IF GUESS = SECRET THEN PRINT "Correct!" ELSE IF GUESS < SECRET THEN PRINT "Too low!" ELSE PRINT "Too high!"
 ```
 
 ### Program 3: Sum and Average
 
 ```basic
-INPUT "How many numbers? "; COUNT
-DIM NUMBERS(COUNT)
+REM Array size must be a fixed number; up to 10 values
+DIM NUMBERS(10)
+INPUT "How many numbers (1-10)? "; COUNT
 LET SUM = 0
 
 FOR I = 1 TO COUNT
-  PRINT "Enter number "; I; ": ";
-  INPUT NUMBERS(I)
+  INPUT "Enter number: "; N
+  LET NUMBERS(I) = N
   LET SUM = SUM + NUMBERS(I)
 NEXT I
 
@@ -376,12 +376,17 @@ PRINT "Average: "; AVG
 ## Common Functions
 
 ```basic
-ABS(-5)        ' Absolute value: 5
-INT(3.7)       ' Integer part: 3
-SQR(9)         ' Square root: 3
-SIN(0)         ' Sine function
-COS(0)         ' Cosine function
-RND(1)         ' Random 0-1
+REM Absolute value: 5
+PRINT ABS(-5)
+REM Integer part: 3
+PRINT INT(3.7)
+REM Square root: 3
+PRINT SQR(9)
+REM Sine and cosine of 0: 0 and 1
+PRINT SIN(0)
+PRINT COS(0)
+REM Random number
+PRINT RND(1)
 ```
 
 ---
@@ -391,11 +396,11 @@ RND(1)         ' Random 0-1
 Add notes to your code:
 
 ```basic
-' This is a comment
-PRINT "Hello"  ' End-of-line comment
+REM This is a comment
+PRINT "Hello"
 ```
 
-Comments start with apostrophe (') and go to end of line.
+`REM` starts a comment that runs to the end of the line. An apostrophe (') also starts a comment, but only at the start of a line. After code on the same line it is not stripped, so use `REM` there.
 
 ---
 

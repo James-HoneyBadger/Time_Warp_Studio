@@ -31,6 +31,7 @@ from PySide6.QtWidgets import (
     QLabel,
     QMessageBox,
     QPushButton,
+    QSlider,
     QWidget,
 )
 
@@ -163,6 +164,18 @@ class TurtleCanvas(QWidget):  # pylint: disable=invalid-name,too-many-instance-a
         self._record_btn.setCheckable(True)
         self._record_btn.setToolTip("Start/stop recording canvas as animated GIF (requires Pillow)")
         toolbar_layout.addWidget(self._record_btn)
+
+        # Time-Travel Execution Scrubber (scrub turtle history segment-by-segment)
+        self._scrubber_active = False
+        self._scrubber_slider = QSlider(Qt.Orientation.Horizontal)
+        self._scrubber_slider.setFixedWidth(90)
+        self._scrubber_slider.setRange(0, 0)
+        self._scrubber_slider.setValue(0)
+        self._scrubber_slider.setToolTip(
+            "Time-Travel Scrubber — drag to rewind/replay turtle drawing steps"
+        )
+        self._scrubber_slider.valueChanged.connect(self.scrub_to_frame)
+        toolbar_layout.addWidget(self._scrubber_slider)
 
         # Position strip below canvas
         self._pos_label = QLabel("x: 0  y: 0  ∠: 0°")
@@ -425,7 +438,6 @@ class TurtleCanvas(QWidget):  # pylint: disable=invalid-name,too-many-instance-a
                 append_images=pil_frames[1:],
                 loop=0,
                 duration=100,  # 10 fps → 100ms per frame
-                optimize=True,
             )
             self._record_frames.clear()
         except Exception as exc:  # noqa: BLE001
@@ -487,7 +499,13 @@ class TurtleCanvas(QWidget):  # pylint: disable=invalid-name,too-many-instance-a
         # Reset animation state when new turtle data arrives
         self._anim_timer.stop()
         self._anim_running = False
+        self._scrubber_active = False
         self._anim_frame = len(self.lines)  # show all by default
+        if hasattr(self, "_scrubber_slider") and self._scrubber_slider is not None:
+            self._scrubber_slider.blockSignals(True)
+            self._scrubber_slider.setRange(0, len(self.lines))
+            self._scrubber_slider.setValue(len(self.lines))
+            self._scrubber_slider.blockSignals(False)
         if self._anim_btn:
             self._anim_btn.setText("▶")
 
@@ -518,8 +536,36 @@ class TurtleCanvas(QWidget):  # pylint: disable=invalid-name,too-many-instance-a
         self.zoom = 1.0
         self.offset_x = 0.0
         self.offset_y = 0.0
+        self._scrubber_active = False
+        if hasattr(self, "_scrubber_slider") and self._scrubber_slider is not None:
+            self._scrubber_slider.blockSignals(True)
+            self._scrubber_slider.setRange(0, 0)
+            self._scrubber_slider.setValue(0)
+            self._scrubber_slider.blockSignals(False)
         # Use repaint() for immediate clearing
         self.repaint()
+
+    def scrub_to_frame(self, frame_index: int) -> None:
+        """Scrub the canvas to show the first *frame_index* turtle segments."""
+        total = len(self.lines)
+        clamped = max(0, min(int(frame_index), total))
+        self._anim_frame = clamped
+        self._scrubber_active = clamped < total
+        if hasattr(self, "_scrubber_slider") and self._scrubber_slider is not None:
+            if self._scrubber_slider.value() != clamped:
+                self._scrubber_slider.blockSignals(True)
+                self._scrubber_slider.setValue(clamped)
+                self._scrubber_slider.blockSignals(False)
+        if (
+            hasattr(self, "_pos_label")
+            and self._pos_label
+            and 0 < clamped <= total
+        ):
+            seg = self.lines[clamped - 1]
+            self._pos_label.setText(
+                f"scrub: {clamped}/{total}  x: {seg.end_x:.1f}  y: {seg.end_y:.1f}"
+            )
+        self.update()
 
     def paintEvent(self, _event):
         """Paint turtle graphics."""
@@ -572,9 +618,11 @@ class TurtleCanvas(QWidget):  # pylint: disable=invalid-name,too-many-instance-a
         if self._grid_enabled:
             self._draw_grid(painter)
 
-        # Draw turtle lines (use animation slice when player is active)
+        # Draw turtle lines (use animation or time-travel scrubber slice when active)
         visible_lines = (
-            self.lines[: self._anim_frame] if self._anim_running else self.lines
+            self.lines[: self._anim_frame]
+            if (self._anim_running or getattr(self, "_scrubber_active", False))
+            else self.lines
         )
         for line in visible_lines:
             color = QColor(line.color[0], line.color[1], line.color[2])
@@ -874,6 +922,7 @@ class TurtleCanvas(QWidget):  # pylint: disable=invalid-name,too-many-instance-a
 
     def _make_gradient_brush(self, grad, rect: QRectF) -> QBrush:
         """Build a QBrush from a TurtleGradient descriptor."""
+        qg: QRadialGradient | QLinearGradient
         if grad.kind == "radial":
             qg = QRadialGradient(
                 QPointF(grad.cx, grad.cy),

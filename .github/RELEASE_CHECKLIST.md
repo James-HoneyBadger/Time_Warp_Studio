@@ -17,7 +17,7 @@
 ### Documentation
 
 - [ ] Update `CHANGELOG.md` with new version entry
-- [ ] Refresh documentation footers (FAQ, quick reference, index)
+- [ ] Refresh documentation footers (FAQ.md, docs/INDEX.md)
 - [ ] Ensure screenshots or captions reference the new release where applicable
 - [ ] Run spell check / link validation for key documents
 
@@ -38,7 +38,6 @@
   python -m build
   ```
 
-- [ ] Collect artifacts from `Platforms/Browser` if publishing web bundle
 - [ ] Package refreshed examples (optional)
   ```bash
   tar -czf time-warp-examples-vX.Y.Z.tar.gz Examples/

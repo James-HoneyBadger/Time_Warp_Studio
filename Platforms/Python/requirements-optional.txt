@@ -1,5 +1,5 @@
-# Optional dependencies for extended features
-openai>=1.0.0
-librosa>=0.10.0
-pydub>=0.25.1
-requests>=2.31.0
+# Optional extras; each feature degrades gracefully when its package is absent.
+darkdetect>=0.8.0   # follow the OS light/dark preference
+pyttsx3>=2.90       # BASIC SAY / speech synthesis
+pygame>=2.5.0       # gamepad input
+inputs>=0.5         # gamepad input fallback

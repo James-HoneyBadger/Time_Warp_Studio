@@ -6,7 +6,7 @@ Master the turtle graphics system in Time Warp Studio.
 
 ## Overview
 
-Turtle graphics provide a visual way to learn programming. A virtual "turtle" moves around a canvas, drawing lines as it goes. Perfect for creating geometric art and learning coordinate systems.
+Turtle graphics provide a visual way to learn programming. A virtual "turtle" moves around a canvas, drawing lines as it goes. Perfect for creating geometric art and learning coordinate systems. The examples in this guide use Logo syntax.
 
 ---
 
@@ -25,7 +25,7 @@ The output panel shows the turtle graphics canvas:
 ```
 
 **Canvas Properties:**
-- **Size:** 600 × 600 pixels (approximately)
+- **Size:** 800 × 600 pixels by default
 - **Center:** (0, 0) is the middle
 - **Coordinates:** X increases right, Y increases up
 - **Heading:** 0° = North, 90° = East, 180° = South, 270° = West
@@ -39,8 +39,8 @@ At any time, the turtle has:
 1. **Position** - X, Y coordinates
 2. **Heading** - Direction facing (0-360°)
 3. **Pen State** - Up (not drawing) or Down (drawing)
-4. **Pen Color** - Current color (0-7)
-5. **Pen Width** - Line thickness
+4. **Pen Color** - Current color (a color name, `#RRGGBB` hex value, or RGB list; default white)
+5. **Pen Width** - Line thickness (default 2)
 
 ---
 
@@ -83,9 +83,9 @@ Turn turtle left 45 degrees.
 **PENUP** / **PENDOWN**
 ```logo
 PENUP
-FORWARD 50    ' Move without drawing
+FORWARD 50    ; Move without drawing
 PENDOWN
-FORWARD 50    ' Now drawing
+FORWARD 50    ; Now drawing
 ```
 
 **Aliases:** PU (PENUP), PD (PENDOWN)
@@ -94,18 +94,18 @@ FORWARD 50    ' Now drawing
 
 **SETX x** / **SETY y**
 ```logo
-SETX 100      ' Move to X = 100
-SETY 50       ' Move to Y = 50
+SETX 100      ; Move to X = 100
+SETY 50       ; Move to Y = 50
 ```
 
 **SETHEADING angle**
 ```logo
-SETHEADING 45 ' Face northeast
+SETHEADING 45 ; Face northeast
 ```
 
 **HOME**
 ```logo
-HOME          ' Return to (0, 0) facing north
+HOME          ; Return to (0, 0) facing north
 ```
 
 ---
@@ -114,35 +114,40 @@ HOME          ' Return to (0, 0) facing north
 
 ### Colors
 
-Set pen color with SETPENCOLOR:
+Set the pen color with SETPENCOLOR. Accepted forms:
+- A color name: `SETPENCOLOR "red`
+- A hex value: `SETPENCOLOR "#FF0000`
+- RGB values in a list: `SETPENCOLOR [255 0 0]`
 
 ```logo
-SETPENCOLOR 1  ' Red
+SETPENCOLOR "red
 FORWARD 100
-SETPENCOLOR 4  ' Blue
+SETPENCOLOR "blue
 FORWARD 100
 ```
 
-**Color Map:**
+**Named colors** (not case-sensitive):
 ```
-0 = Black       4 = Blue
-1 = Red         5 = Magenta
-2 = Green       6 = Cyan
-3 = Yellow      7 = White
+BLACK    WHITE    RED      GREEN    BLUE     YELLOW
+CYAN     MAGENTA  PINK     ORANGE   PURPLE   BROWN
+LIME     NAVY     TEAL     MAROON   OLIVE    SILVER
+GOLD     GRAY     GREY
 ```
+
+Numeric codes such as `SETPENCOLOR 1` are not color codes. They leave the pen color unchanged.
 
 ### Line Width
 
-Set pen thickness:
+Set pen thickness (default is 2):
 
 ```logo
-PENWIDTH 1     ' Thin (default)
+PENWIDTH 1     ; Thin
 FORWARD 50
 
-PENWIDTH 5     ' Thick
+PENWIDTH 5     ; Thick
 FORWARD 50
 
-PENWIDTH 10    ' Very thick
+PENWIDTH 10    ; Very thick
 FORWARD 50
 ```
 
@@ -150,7 +155,7 @@ FORWARD 50
 
 **CLEAR**
 ```logo
-CLEAR          ' Erase all drawings
+CLEAR          ; Erase all drawings
 ```
 
 The turtle remains at current position/heading.
@@ -161,19 +166,19 @@ The turtle remains at current position/heading.
 
 ### Regular Polygons
 
-**Function to draw any polygon:**
+**Procedure to draw any polygon:**
 
 ```logo
-PROCEDURE POLYGON SIDES SIZE
-  LET ANGLE = 360 / SIDES
-  FOR I = 1 TO SIDES
-    FORWARD SIZE
-    RIGHT ANGLE
-  NEXT I
-END PROCEDURE
+TO POLYGON :SIDES :SIZE
+  MAKE "ANGLE 360 / :SIDES
+  REPEAT :SIDES [
+    FORWARD :SIZE
+    RIGHT :ANGLE
+  ]
+END
 
-' Usage:
-POLYGON 6 100    ' Hexagon with 100-pixel sides
+; Usage:
+POLYGON 6 100    ; Hexagon with 100-unit sides
 ```
 
 ### Circles
@@ -181,32 +186,32 @@ POLYGON 6 100    ' Hexagon with 100-pixel sides
 Draw a circle by taking small steps:
 
 ```logo
-FOR I = 1 TO 360
-  FORWARD 1      ' Small step
-  RIGHT 1        ' Small turn
-NEXT I
+REPEAT 360 [
+  FORWARD 1      ; Small step
+  RIGHT 1        ; Small turn
+]
 ```
 
 Increase step size for larger circle:
 ```logo
-FOR I = 1 TO 360
-  FORWARD 2      ' Larger steps = bigger circle
+REPEAT 360 [
+  FORWARD 2      ; Larger steps = bigger circle
   RIGHT 1
-NEXT I
+]
 ```
 
 ### Stars
 
 ```logo
-PROCEDURE STAR POINTS SIZE
-  LET ANGLE = 360 / POINTS / 2
-  FOR I = 1 TO POINTS * 2
-    FORWARD SIZE
-    RIGHT ANGLE
-  NEXT I
-END PROCEDURE
+TO STAR :POINTS :SIZE
+  MAKE "ANGLE 180 - 180 / :POINTS
+  REPEAT :POINTS [
+    FORWARD :SIZE
+    RIGHT :ANGLE
+  ]
+END
 
-' Draw a 5-pointed star
+; Draw a 5-pointed star
 STAR 5 100
 ```
 
@@ -236,12 +241,12 @@ W ← (0,0) → E
 ### Positioning the Turtle
 
 ```logo
-HOME           ' Go to (0, 0), face north
+HOME           ; Go to (0, 0), face north
 
-SETX 100       ' Jump to x=100, keep y
-SETY -50       ' Jump to y=-50, keep x
+SETX 100       ; Jump to x=100, keep y
+SETY -50       ; Jump to y=-50, keep x
 
-SETHEADING 90  ' Face east (90°)
+SETHEADING 90  ; Face east (90°)
 ```
 
 ---
@@ -252,54 +257,64 @@ SETHEADING 90  ' Face east (90°)
 
 **Outward spiral:**
 ```logo
-FOR I = 1 TO 100
-  FORWARD I      ' Increase distance
+MAKE "D 1
+REPEAT 100 [
+  FORWARD :D     ; Increase distance
   RIGHT 30
-NEXT I
+  MAKE "D :D + 1
+]
 ```
 
 **Inward spiral:**
 ```logo
-FOR I = 100 TO 1 STEP -1
-  FORWARD I      ' Decrease distance
+MAKE "D 100
+REPEAT 100 [
+  FORWARD :D     ; Decrease distance
   RIGHT 30
-NEXT I
+  MAKE "D :D - 1
+]
 ```
 
 ### Nested Shapes
 
 ```logo
-FOR SIZE = 10 TO 100 STEP 10
-  FOR I = 1 TO 4
-    FORWARD SIZE
+MAKE "SIZE 10
+REPEAT 10 [
+  REPEAT 4 [
+    FORWARD :SIZE
     RIGHT 90
-  NEXT I
-  RIGHT 5        ' Rotate pattern
-NEXT SIZE
+  ]
+  RIGHT 5        ; Rotate pattern
+  MAKE "SIZE :SIZE + 10
+]
 ```
 
-This creates a rotating series of squares.
+This creates a rotating series of squares, each one larger than the last.
 
 ### Grid Drawing
 
 ```logo
-' Draw vertical lines
-FOR X = -100 TO 100 STEP 20
-  SETX X
+; Draw vertical lines
+MAKE "X -100
+REPEAT 11 [
+  SETX :X
   SETY -100
   PENDOWN
   SETY 100
   PENUP
-NEXT X
+  MAKE "X :X + 20
+]
 
-' Draw horizontal lines
-FOR Y = -100 TO 100 STEP 20
+; Draw horizontal lines
+MAKE "Y -100
+REPEAT 11 [
   SETX -100
-  SETY Y
+  SETY :Y
   PENDOWN
   SETX 100
   PENUP
-NEXT Y
+  MAKE "Y :Y + 20
+]
 ```
 
 ---
@@ -335,12 +350,12 @@ For complex patterns:
 - Try CLEAR and redraw
 
 **Colors look wrong?**
-- Remember colors are 0-7 only
-- Check SETPENCOLOR command
-- Try different color number
+- Use a color name, `#RRGGBB` hex value, or RGB list
+- Numeric codes such as `SETPENCOLOR 1` are ignored
+- Check the SETPENCOLOR command
 
 **Drawing goes off-screen?**
-- Check coordinates are within ~-300 to 300
+- Check coordinates are within the canvas: about -400 to 400 (X) and -300 to 300 (Y) for the default 800 × 600 canvas
 - Use SETX/SETY to reposition
 - Draw smaller shapes
 
@@ -356,50 +371,45 @@ For complex patterns:
 ### Concentric Circles
 
 ```logo
-FOR R = 10 TO 100 STEP 10
+MAKE "R 10
+REPEAT 10 [
   SETX 0
-  SETY R
-  FOR I = 1 TO 360
-    FORWARD R * 6.28 / 360
+  SETY :R
+  REPEAT 360 [
+    FORWARD :R * 6.28 / 360
     RIGHT 1
-  NEXT I
-NEXT R
+  ]
+  MAKE "R :R + 10
+]
 ```
 
-### Checkerboard
+### Colored Squares
 
 ```logo
 PENWIDTH 2
-SETX -100
-SETY 100
-FOR Y = 0 TO 10
-  FOR X = 0 TO 10
-    IF (X + Y) MOD 2 = 0 THEN
-      SETPENCOLOR 1  ' Red
-    ELSE
-      SETPENCOLOR 7  ' White
-    END IF
-    SETX -100 + X * 20
-    SETY 100 - Y * 20
-    FORWARD 20
-  NEXT X
-NEXT Y
+REPEAT 6 [
+  SETPENCOLOR "red
+  REPEAT 4 [FORWARD 40 RIGHT 90]
+  SETPENCOLOR "blue
+  REPEAT 4 [FORWARD 20 RIGHT 90]
+  RIGHT 60
+]
 ```
 
 ### Flower
 
 ```logo
-SETPENCOLOR 2  ' Green
+SETPENCOLOR "green
 FORWARD 50
 
-FOR P = 1 TO 6
-  SETPENCOLOR 3  ' Yellow
+REPEAT 6 [
+  SETPENCOLOR "yellow
   RIGHT 60
-  FOR I = 1 TO 4
+  REPEAT 4 [
     FORWARD 30
     RIGHT 90
-  NEXT I
-NEXT P
+  ]
+]
 ```
 
 ---

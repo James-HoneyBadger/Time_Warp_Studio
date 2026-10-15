@@ -45,6 +45,14 @@ class Theme:
     warning_color: str = "#ffc864"  # Orange — warnings
     success_color: str = "#64ff64"  # Green — success messages
     info_color: str = "#64c8ff"  # Blue — informational
+    # Neo-90s Workstation chrome tokens
+    bevel_light: str = "#4d5268"
+    bevel_dark: str = "#161821"
+    panel_header_bg: str = "#1e202b"
+    panel_header_fg: str = "#8be9fd"
+    fkey_bg: str = "#191a24"
+    fkey_badge: str = "#bd93f9"
+    hud_accent: str = "#50fa7b"
 
 
 class ThemeManager:
@@ -57,6 +65,152 @@ class ThemeManager:
         self.available_fonts = self._get_monospace_fonts()
 
         self.themes: Dict[str, Theme] = {
+            # === NEO-90S WORKSTATION FLAGSHIP THEMES ===
+            "Neo-90s Workstation": Theme(
+                name="Neo-90s Workstation",
+                background="#181a22",
+                foreground="#e6edf3",
+                editor_bg="#12141b",
+                editor_fg="#e6edf3",
+                line_number_bg="#151821",
+                line_number_fg="#6e7681",
+                keyword="#00e5ff",
+                comment="#6272a4",
+                string="#ffd166",
+                number="#bd93f9",
+                operator="#ff79c6",
+                function="#50fa7b",
+                variable="#8be9fd",
+                selection_bg="#264f78",
+                selection_fg="#ffffff",
+                canvas_bg="#0f1117",
+                menu_bg="#1d202b",
+                menu_fg="#e6edf3",
+                border_color="#303646",
+                bevel_light="#485168",
+                bevel_dark="#0d0f14",
+                panel_header_bg="#202534",
+                panel_header_fg="#00e5ff",
+                fkey_bg="#13161f",
+                fkey_badge="#00e5ff",
+                hud_accent="#50fa7b",
+            ),
+            "Borland Turbo Vision 1991": Theme(
+                name="Borland Turbo Vision 1991",
+                background="#0000aa",
+                foreground="#ffffff",
+                editor_bg="#0000aa",
+                editor_fg="#ffff55",
+                line_number_bg="#000080",
+                line_number_fg="#55ffff",
+                keyword="#ffffff",
+                comment="#aaaaaa",
+                string="#55ffff",
+                number="#55ff55",
+                operator="#ffffff",
+                function="#ffff55",
+                variable="#55ffff",
+                selection_bg="#00aaaa",
+                selection_fg="#000000",
+                canvas_bg="#000055",
+                menu_bg="#c0c0c0",
+                menu_fg="#000000",
+                border_color="#55ffff",
+                bevel_light="#ffffff",
+                bevel_dark="#000055",
+                panel_header_bg="#00aaaa",
+                panel_header_fg="#000000",
+                fkey_bg="#c0c0c0",
+                fkey_badge="#aa0000",
+                hud_accent="#55ff55",
+            ),
+            "NeXTSTEP Gunmetal": Theme(
+                name="NeXTSTEP Gunmetal",
+                background="#555555",
+                foreground="#f0f0f0",
+                editor_bg="#1c1c1c",
+                editor_fg="#e8e8e8",
+                line_number_bg="#2b2b2b",
+                line_number_fg="#999999",
+                keyword="#ffcc66",
+                comment="#888888",
+                string="#99cc99",
+                number="#f99157",
+                operator="#cccccc",
+                function="#66cccc",
+                variable="#cccccc",
+                selection_bg="#888888",
+                selection_fg="#000000",
+                canvas_bg="#141414",
+                menu_bg="#3a3a3a",
+                menu_fg="#f0f0f0",
+                border_color="#888888",
+                bevel_light="#aaaaaa",
+                bevel_dark="#111111",
+                panel_header_bg="#000000",
+                panel_header_fg="#ffcc66",
+                fkey_bg="#2b2b2b",
+                fkey_badge="#ffcc66",
+                hud_accent="#66cccc",
+            ),
+            "Amiga Workbench 2.0": Theme(
+                name="Amiga Workbench 2.0",
+                background="#959595",
+                foreground="#000000",
+                editor_bg="#102542",
+                editor_fg="#ffffff",
+                line_number_bg="#0b1a2e",
+                line_number_fg="#8eb8e5",
+                keyword="#ff8800",
+                comment="#8eb8e5",
+                string="#ffee55",
+                number="#66ff99",
+                operator="#ffffff",
+                function="#ffaa44",
+                variable="#aaddff",
+                selection_bg="#ff8800",
+                selection_fg="#000000",
+                canvas_bg="#0055aa",
+                menu_bg="#b5b5b5",
+                menu_fg="#000000",
+                border_color="#ffffff",
+                bevel_light="#ffffff",
+                bevel_dark="#333333",
+                panel_header_bg="#0055aa",
+                panel_header_fg="#ffffff",
+                fkey_bg="#777777",
+                fkey_badge="#ff8800",
+                hud_accent="#ff8800",
+            ),
+            "VGA Amber Lab": Theme(
+                name="VGA Amber Lab",
+                background="#120b00",
+                foreground="#ffb000",
+                editor_bg="#0d0800",
+                editor_fg="#ffb000",
+                line_number_bg="#180f00",
+                line_number_fg="#996600",
+                keyword="#ffd866",
+                comment="#805500",
+                string="#ffcc33",
+                number="#ffe699",
+                operator="#ffb000",
+                function="#ffd866",
+                variable="#ffb000",
+                selection_bg="#ffb000",
+                selection_fg="#120b00",
+                canvas_bg="#0a0600",
+                menu_bg="#1c1100",
+                menu_fg="#ffb000",
+                border_color="#664400",
+                bevel_light="#cc8800",
+                bevel_dark="#050300",
+                panel_header_bg="#261700",
+                panel_header_fg="#ffd866",
+                fkey_bg="#170e00",
+                fkey_badge="#ffd866",
+                hud_accent="#ffb000",
+            ),
             # === DARK THEMES ===
             "Dracula": Theme(
                 name="Dracula",
@@ -688,7 +842,7 @@ class ThemeManager:
             ),
         }
 
-        self.current_theme_name = "Dracula"
+        self.current_theme_name = "Neo-90s Workstation"
 
     def _get_monospace_fonts(self) -> List[str]:
         """Get list of available monospace fonts.
@@ -783,8 +937,8 @@ class ThemeManager:
                     return "GitHub Light"
                 if scheme == Qt.ColorScheme.Dark:
                     return "Dracula"
-        except Exception:  # noqa: BLE001
-            pass
+        except (AttributeError, RuntimeError):
+            pass  # Qt < 6.5 or no QApplication yet
 
         # Fallback: darkdetect library (optional dependency)
         try:
@@ -805,6 +959,8 @@ class ThemeManager:
         output=None,
         canvas=None,
         highlighter=None,
+        editors=None,
+        extra_widgets=None,
     ):  # pylint: disable=too-many-arguments,too-many-positional-arguments
         """Apply theme to application and widgets."""
         if name not in self.themes:
@@ -817,6 +973,8 @@ class ThemeManager:
         menu_bg = theme.menu_bg or theme.background
         menu_fg = theme.menu_fg or theme.foreground
         border_color = theme.border_color or theme.line_number_bg
+        panel_hdr_bg = theme.panel_header_bg or menu_bg
+        panel_hdr_fg = theme.panel_header_fg or theme.keyword
 
         # Apply to application palette
         app = QApplication.instance()
@@ -839,7 +997,7 @@ class ThemeManager:
         if isinstance(app, QApplication):
             app.setPalette(palette)
 
-        # Apply comprehensive stylesheet for consistent UI
+        # Apply comprehensive Neo-90s workstation stylesheet for consistent UI
         if isinstance(app, QApplication):
             app.setStyleSheet(f"""
             QMainWindow {{
@@ -849,12 +1007,13 @@ class ThemeManager:
                 background-color: {menu_bg};
                 color: {menu_fg};
                 border-bottom: 1px solid {border_color};
-                padding: 2px;
+                padding: 2px 4px;
+                font-weight: 600;
             }}
             QMenuBar::item {{
                 background-color: transparent;
                 padding: 4px 8px;
-                border-radius: 4px;
+                border-radius: 2px;
             }}
             QMenuBar::item:selected {{
                 background-color: {theme.selection_bg};
@@ -863,13 +1022,12 @@ class ThemeManager:
             QMenu {{
                 background-color: {menu_bg};
                 color: {menu_fg};
-                border: 1px solid {border_color};
-                border-radius: 4px;
+                border: 1px solid {theme.bevel_light};
                 padding: 4px;
             }}
             QMenu::item {{
-                padding: 6px 24px 6px 12px;
-                border-radius: 3px;
+                padding: 5px 24px 5px 12px;
+                border-radius: 2px;
             }}
             QMenu::item:selected {{
                 background-color: {theme.selection_bg};
@@ -883,19 +1041,21 @@ class ThemeManager:
             QToolBar {{
                 background-color: {menu_bg};
                 border-bottom: 1px solid {border_color};
-                padding: 2px;
+                padding: 3px 6px;
                 spacing: 4px;
             }}
             QToolButton {{
                 background-color: transparent;
                 color: {menu_fg};
                 border: 1px solid transparent;
-                border-radius: 4px;
+                border-radius: 2px;
                 padding: 4px 8px;
+                font-weight: 600;
             }}
             QToolButton:hover {{
                 background-color: {theme.selection_bg};
                 color: {theme.selection_fg};
+                border: 1px solid {theme.bevel_light};
             }}
             QToolButton:pressed {{
                 background-color: {border_color};
@@ -904,6 +1064,18 @@ class ThemeManager:
                 background-color: {menu_bg};
                 color: {menu_fg};
                 border-top: 1px solid {border_color};
+            }}
+            QDockWidget {{
+                color: {panel_hdr_fg};
+                font-weight: bold;
+                border: 1px solid {border_color};
+            }}
+            QDockWidget::title {{
+                background-color: {panel_hdr_bg};
+                color: {panel_hdr_fg};
+                padding: 5px 8px;
+                border-top: 1px solid {theme.bevel_light};
+                border-bottom: 1px solid {border_color};
             }}
             QTabWidget::pane {{
                 border: 1px solid {border_color};
@@ -916,24 +1088,42 @@ class ThemeManager:
                 border-bottom: none;
                 padding: 6px 12px;
                 margin-right: 2px;
-                border-top-left-radius: 4px;
-                border-top-right-radius: 4px;
+                border-top-left-radius: 2px;
+                border-top-right-radius: 2px;
             }}
             QTabBar::tab:selected {{
                 background-color: {theme.editor_bg};
                 color: {theme.editor_fg};
+                border-top: 2px solid {theme.keyword};
+                font-weight: bold;
             }}
             QTabBar::tab:hover:!selected {{
                 background-color: {theme.selection_bg};
+                color: {theme.selection_fg};
+            }}
+            QTableWidget, QTreeView, QTreeWidget, QListWidget {{
+                background-color: {theme.editor_bg};
+                color: {theme.editor_fg};
+                gridline-color: {border_color};
+                border: 1px solid {border_color};
+                selection-background-color: {theme.selection_bg};
+                selection-color: {theme.selection_fg};
+            }}
+            QHeaderView::section {{
+                background-color: {panel_hdr_bg};
+                color: {panel_hdr_fg};
+                border: 1px solid {border_color};
+                padding: 4px 6px;
+                font-weight: bold;
             }}
             QScrollBar:vertical {{
                 background-color: {theme.background};
                 width: 12px;
-                border: none;
+                border-left: 1px solid {border_color};
             }}
             QScrollBar::handle:vertical {{
                 background-color: {border_color};
-                border-radius: 6px;
+                border-radius: 2px;
                 min-height: 20px;
                 margin: 2px;
             }}
@@ -1007,26 +1197,13 @@ class ThemeManager:
                 background-color: {theme.editor_bg};
                 color: {theme.editor_fg};
                 border: 1px solid {border_color};
-                border-radius: 4px;
+                border-radius: 2px;
             }}
             QListWidget::item:selected {{
                 background-color: {theme.selection_bg};
                 color: {theme.selection_fg};
             }}
-            QTreeWidget {{
-                background-color: {theme.editor_bg};
-                color: {theme.editor_fg};
-                border: 1px solid {border_color};
-            }}
-            QTreeWidget::item:selected {{
-                background-color: {theme.selection_bg};
-                color: {theme.selection_fg};
-            }}
-            QMessageBox {{
-                background-color: {theme.background};
-                color: {theme.foreground};
-            }}
-            QDialog {{
+            QMessageBox, QDialog {{
                 background-color: {theme.background};
                 color: {theme.foreground};
             }}
@@ -1036,7 +1213,7 @@ class ThemeManager:
             QGroupBox {{
                 color: {theme.foreground};
                 border: 1px solid {border_color};
-                border-radius: 4px;
+                border-radius: 2px;
                 margin-top: 8px;
                 padding-top: 8px;
             }}
@@ -1050,10 +1227,18 @@ class ThemeManager:
         # Get current font
         font = self.get_font()
 
-        # Apply to editor
-        if editor:
-            editor.setFont(font)
-            editor.setStyleSheet(f"""
+        # Apply to all supplied editors and their highlighters
+        all_editors = []
+        if editor is not None:
+            all_editors.append(editor)
+        if editors is not None:
+            for ed in editors:
+                if ed is not None and ed not in all_editors:
+                    all_editors.append(ed)
+
+        for ed in all_editors:
+            ed.setFont(font)
+            ed.setStyleSheet(f"""
                 QPlainTextEdit {{
                     background-color: {theme.editor_bg};
                     color: {theme.editor_fg};
@@ -1062,6 +1247,16 @@ class ThemeManager:
                     border: none;
                 }}
             """)
+            ed_hl = getattr(ed, "highlighter", None)
+            if ed_hl is not None:
+                ed_hl.keyword_format.setForeground(QColor(theme.keyword))
+                ed_hl.comment_format.setForeground(QColor(theme.comment))
+                ed_hl.string_format.setForeground(QColor(theme.string))
+                ed_hl.number_format.setForeground(QColor(theme.number))
+                ed_hl.operator_format.setForeground(QColor(theme.operator))
+                ed_hl.function_format.setForeground(QColor(theme.function))
+                ed_hl.variable_format.setForeground(QColor(theme.variable))
+                ed_hl.rehighlight()
 
         # Apply to output
         if output:
@@ -1084,8 +1279,8 @@ class ThemeManager:
             canvas.bg_color = QColor(theme.canvas_bg)
             canvas.update()
 
-        # Apply to syntax highlighter
-        if highlighter:
+        # Apply to explicit syntax highlighter if not already covered
+        if highlighter and (not editor or getattr(editor, "highlighter", None) is not highlighter):
             highlighter.keyword_format.setForeground(QColor(theme.keyword))
             highlighter.comment_format.setForeground(QColor(theme.comment))
             highlighter.string_format.setForeground(QColor(theme.string))
@@ -1094,3 +1289,8 @@ class ThemeManager:
             highlighter.function_format.setForeground(QColor(theme.function))
             highlighter.variable_format.setForeground(QColor(theme.variable))
             highlighter.rehighlight()
+
+        if extra_widgets:
+            for widget in extra_widgets:
+                if widget is not None and hasattr(widget, "apply_theme"):
+                    widget.apply_theme(theme)

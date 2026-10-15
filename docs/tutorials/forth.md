@@ -124,5 +124,5 @@ By convention words are documented with stack effect comments:
 
 ## Further Reading
 
-- [Examples/forth/](../Examples/forth/) — 5 Forth example programs
-- [Language Guide: Forth](LANGUAGE_GUIDE.md#forth)
+- [Examples/forth/](../../Examples/forth/) — 8 Forth example programs
+- [Language Guide: Forth](../LANGUAGE_GUIDE.md#forth)

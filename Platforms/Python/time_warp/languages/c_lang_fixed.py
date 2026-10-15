@@ -22,7 +22,7 @@ import random
 import random as _crand
 import re
 import time as _ctime
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict, List, Optional
 
 if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
@@ -43,6 +43,7 @@ _PRINTF_RE = re.compile(r"^\s*printf\s*\((.*)\)\s*;?\s*$", re.IGNORECASE)
 _FPRINTF_RE = re.compile(r"^\s*fprintf\s*\((.*)\)\s*;?\s*$", re.IGNORECASE)
 _SCANF_RE = re.compile(r"^\s*scanf\s*\((.*)\)\s*;?\s*$", re.IGNORECASE)
 _SSCANF_RE = re.compile(r"^\s*sscanf\s*\((.*)\)\s*;?\s*$", re.IGNORECASE)
+_STRING_FMT_RE = re.compile(r"%\d*s")
 _IF_RE = re.compile(r"^\s*if\s*\((.*)\)\s*\{?\s*$", re.IGNORECASE)
 _ELSE_RE = re.compile(r"^\s*else\s*\{?\s*$", re.IGNORECASE)
 _ELSE_ON_SAME_LINE_RE = re.compile(r".*\}\s*else\b.*", re.IGNORECASE)
@@ -434,9 +435,13 @@ def _scanf(interpreter: "Interpreter", arglist: str) -> str:
         return "❌ Error: scanf requires a format and one &var"
     fmt = _unquote(args[0])
     var = args[1].strip()
-    if not var.startswith("&"):
+    if var.startswith("&"):
+        name = var[1:].strip().upper()
+    elif _STRING_FMT_RE.search(fmt) and var.isidentifier():
+        # A char array name (char buf[N]) is already an address: no '&' for %s
+        name = var.upper()
+    else:
         return "❌ Error: scanf requires &var destination"
-    name = var[1:].strip().upper()
     # Determine the correct type suffix by checking what was declared
     tcode = None
     if name + "%" in interpreter.int_variables:
@@ -455,7 +460,7 @@ def _scanf(interpreter: "Interpreter", arglist: str) -> str:
             tcode = "%"
         elif "%f" in fmt or "%g" in fmt:
             tcode = "#"
-        elif "%s" in fmt:
+        elif _STRING_FMT_RE.search(fmt):
             tcode = "$"
         else:
             tcode = "#"
@@ -563,16 +568,20 @@ def _ensure_c_stack(interpreter: "Interpreter"):
         interpreter.c_ifdef_stack = []  # #ifdef / #ifndef conditional stack
 
 
+_C_DEFINE_FN_RE = re.compile(
+    r"^#\s*define\s+([A-Za-z_][A-Za-z0-9_]*)\(([^)]*)\)\s*(.*?)\s*$"
+)
 _C_DEFINE_RE = re.compile(r"^#\s*define\s+([A-Za-z_][A-Za-z0-9_]*)\s*(.*?)\s*$")
+_C_INCLUDE_LOCAL_RE = re.compile(r'^#\s*include\s+"([^"]+)"\s*$')
 _C_IFDEF_RE = re.compile(r"^#\s*ifdef\s+([A-Za-z_][A-Za-z0-9_]*)$")
 _C_IFNDEF_RE = re.compile(r"^#\s*ifndef\s+([A-Za-z_][A-Za-z0-9_]*)$")
 _C_IF_DEFINED_RE = re.compile(r"^#\s*if\s+defined\(([A-Za-z_][A-Za-z0-9_]*)\)$")
 _C_IF_NOT_DEFINED_RE = re.compile(r"^#\s*if\s+!defined\(([A-Za-z_][A-Za-z0-9_]*)\)$")
 
 
-def _apply_c_defines(cmd: str, defines: dict) -> str:
-    """Substitute #define macro names in cmd with their values (word-boundary aware)."""
-    if not defines:
+def _apply_c_defines(cmd: str, defines: dict, fn_defines: Optional[dict] = None) -> str:
+    """Substitute #define object and function-like macros in cmd (string-safe)."""
+    if not defines and not fn_defines:
         return cmd
     # Protect string literals from substitution by replacing them temporarily
     protected: List[str] = []
@@ -582,6 +591,20 @@ def _apply_c_defines(cmd: str, defines: dict) -> str:
         return f"\x00S{len(protected) - 1}\x00"
 
     cmd_prot = re.sub(r'"[^"\\]*(?:\\.[^"\\]*)*"', _protect, cmd)
+    if fn_defines:
+        for fname, (fparams, fbody) in fn_defines.items():
+            call_re = re.compile(r"\b" + re.escape(fname) + r"\s*\(([^()]*)\)")
+            while True:
+                m_call = call_re.search(cmd_prot)
+                if not m_call:
+                    break
+                raw_args = _split_args(m_call.group(1))
+                expanded = fbody
+                for p, a in zip(fparams, raw_args):
+                    expanded = re.sub(r"\b" + re.escape(p) + r"\b", f"({a})", expanded)
+                cmd_prot = (
+                    cmd_prot[: m_call.start()] + f"({expanded})" + cmd_prot[m_call.end() :]
+                )
     for name, value in defines.items():
         cmd_prot = re.sub(r"\b" + re.escape(name) + r"\b", str(value), cmd_prot)
     # Restore string literals
@@ -611,10 +634,18 @@ def _c_call_user_func(
     arg_vals: List[Any],
     turtle: "TurtleState | None",
 ) -> Any:
-    """Execute a user-defined C function and return its return value."""
+    """Execute a user-defined C function in a scoped frame and return its value."""
     func_info = interpreter.c_user_functions.get(func_name.upper())
     if func_info is None:
         return None
+
+    budget = getattr(interpreter, "budget", None)
+    if budget is not None:
+        if budget.recursion_depth >= budget.max_recursion_depth:
+            raise RecursionError(
+                f"Maximum C recursion depth ({budget.max_recursion_depth}) exceeded"
+            )
+        budget.recursion_depth += 1
 
     # Save interpreter state
     saved_vars = dict(interpreter.variables)
@@ -630,64 +661,71 @@ def _c_call_user_func(
     saved_return = interpreter._c_return_value  # noqa: SLF001
     saved_in_func = interpreter._c_in_func_def  # noqa: SLF001
 
-    # Bind parameters
-    for param, val in zip(func_info["params"], arg_vals):
-        ptype = param["type"]
-        pname = param["name"].upper()
-        suffix = _suffix_for_type(ptype)
-        if suffix == "$":
-            interpreter.string_variables[pname + "$"] = str(val)
-        else:
-            try:
-                interpreter.variables[pname] = float(val)
-            except (ValueError, TypeError):
-                interpreter.variables[pname] = 0.0
+    return_val = None
+    try:
+        # Bind parameters
+        for param, val in zip(func_info["params"], arg_vals):
+            ptype = param["type"]
+            pname = param["name"].upper()
+            suffix = _suffix_for_type(ptype)
+            if suffix == "$":
+                interpreter.string_variables[pname + "$"] = str(val)
+            else:
+                try:
+                    interpreter.variables[pname] = float(val)
+                except (ValueError, TypeError):
+                    interpreter.variables[pname] = 0.0
 
-    # Execute body
-    body_lines = func_info["body_lines"]
-    interpreter.program_lines = [(i, ln) for i, ln in enumerate(body_lines)]
-    interpreter.current_line = 0
-    interpreter.c_block_stack = []
-    interpreter._c_return_value = None  # noqa: SLF001
-    interpreter._c_in_func_def = True  # noqa: SLF001
+        # Execute body
+        body_lines = func_info["body_lines"]
+        interpreter.program_lines = [(i, ln) for i, ln in enumerate(body_lines)]
+        interpreter.current_line = 0
+        interpreter.c_block_stack = []
+        interpreter._c_return_value = None  # noqa: SLF001
+        interpreter._c_in_func_def = True  # noqa: SLF001
 
-    max_steps = 10000
-    steps = 0
-    while (
-        interpreter.current_line < len(interpreter.program_lines) and steps < max_steps
-    ):
-        _, line = interpreter.program_lines[interpreter.current_line]
-        prev_line = interpreter.current_line
-        result = execute_c(interpreter, line, turtle)
-        # Forward any output (printf, etc.) from function body to interpreter output
-        if result:
-            interpreter.log_output(result)
-        if interpreter._c_return_value is not None:  # noqa: SLF001
-            break
-        if interpreter.current_line == prev_line:
-            interpreter.current_line += 1
-        steps += 1
+        max_steps = 10000
+        steps = 0
+        while (
+            interpreter.current_line < len(interpreter.program_lines)
+            and steps < max_steps
+        ):
+            if hasattr(interpreter, "tick"):
+                interpreter.tick(1)
+            _, line = interpreter.program_lines[interpreter.current_line]
+            prev_line = interpreter.current_line
+            result = execute_c(interpreter, line, turtle)
+            # Forward any output (printf, etc.) from function body to interpreter output
+            if result:
+                interpreter.log_output(result)
+            if interpreter._c_return_value is not None:  # noqa: SLF001
+                break
+            if interpreter.current_line == prev_line:
+                interpreter.current_line += 1
+            steps += 1
 
-    return_val = interpreter._c_return_value  # noqa: SLF001
-
-    # Restore state
-    interpreter.variables = saved_vars
-    interpreter.string_variables = saved_str
-    if hasattr(interpreter, "int_variables"):
-        interpreter.int_variables = saved_int
-    if hasattr(interpreter, "long_variables"):
-        interpreter.long_variables = saved_long
-    if hasattr(interpreter, "single_variables"):
-        interpreter.single_variables = saved_single
-    if hasattr(interpreter, "double_variables"):
-        interpreter.double_variables = saved_double
-    if hasattr(interpreter, "arrays"):
-        interpreter.arrays = saved_arrays
-    interpreter.current_line = saved_line
-    interpreter.program_lines = saved_program
-    interpreter.c_block_stack = saved_block_stack
-    interpreter._c_return_value = saved_return  # noqa: SLF001
-    interpreter._c_in_func_def = saved_in_func  # noqa: SLF001
+        return_val = interpreter._c_return_value  # noqa: SLF001
+    finally:
+        if budget is not None:
+            budget.recursion_depth = max(0, budget.recursion_depth - 1)
+        # Restore state
+        interpreter.variables = saved_vars
+        interpreter.string_variables = saved_str
+        if hasattr(interpreter, "int_variables"):
+            interpreter.int_variables = saved_int
+        if hasattr(interpreter, "long_variables"):
+            interpreter.long_variables = saved_long
+        if hasattr(interpreter, "single_variables"):
+            interpreter.single_variables = saved_single
+        if hasattr(interpreter, "double_variables"):
+            interpreter.double_variables = saved_double
+        if hasattr(interpreter, "arrays"):
+            interpreter.arrays = saved_arrays
+        interpreter.current_line = saved_line
+        interpreter.program_lines = saved_program
+        interpreter.c_block_stack = saved_block_stack
+        interpreter._c_return_value = saved_return  # noqa: SLF001
+        interpreter._c_in_func_def = saved_in_func  # noqa: SLF001
 
     return return_val
 
@@ -1145,8 +1183,8 @@ def _c_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
             c = chr(int(_c_num(c_e, interpreter)))
             n = int(_c_num(n_e, interpreter))
             interpreter.string_variables[dest + "$"] = c * n
-        except Exception:
-            pass
+        except (ValueError, TypeError, OverflowError) as exc:
+            interpreter.log_output(f"❌ memset: {exc}")
         return 1
 
     # memcpy(dest, src, n) / memmove(dest, src, n)
@@ -1262,7 +1300,7 @@ def _get_block_comment_flag(interpreter: "Interpreter") -> bool:
 def _set_block_comment_flag(interpreter: "Interpreter", value: bool) -> None:
     """Safely set the C block-comment flag on interpreter state."""
     try:
-        setattr(interpreter, "_in_c_block_comment", value)
+        interpreter._in_c_block_comment = value
     except AttributeError:
         # If interpreter forbids setting arbitrary attributes, ignore
         # gracefully
@@ -1537,6 +1575,51 @@ def execute_c(interpreter: "Interpreter", command: str, turtle: "TurtleState") -
         m_undef = re.match(r"^#\s*undef\s+([A-Za-z_][A-Za-z0-9_]*)$", cmd)
         if m_undef:
             interpreter.c_defines.pop(m_undef.group(1), None)
+            if hasattr(interpreter, "c_fn_defines"):
+                interpreter.c_fn_defines.pop(m_undef.group(1), None)
+            return ""
+        # #include "header.h" (confined local header inclusion)
+        m_inc = _C_INCLUDE_LOCAL_RE.match(cmd)
+        if m_inc:
+            from ..utils.validators import ValidationError
+
+            header_name = m_inc.group(1).strip()
+            svc = getattr(interpreter, "file_service", None)
+            budget = getattr(interpreter, "budget", None)
+            if budget is not None and budget.include_depth >= budget.max_include_depth:
+                return f"❌ C #include depth limit ({budget.max_include_depth}) exceeded\n"
+            if svc is not None:
+                try:
+                    resolved = svc.resolve_path(
+                        header_name,
+                        for_write=False,
+                        must_exist=True,
+                        allowed_extensions=(".h", ".c"),
+                    )
+                    if budget is not None:
+                        budget.include_depth += 1
+                    try:
+                        out_lines = []
+                        for hline in resolved.read_text(encoding="utf-8").splitlines():
+                            res = execute_c(interpreter, hline, turtle)
+                            if res:
+                                out_lines.append(res)
+                        return "".join(out_lines)
+                    finally:
+                        if budget is not None:
+                            budget.include_depth = max(0, budget.include_depth - 1)
+                except ValidationError as exc:
+                    return f"❌ C #include error: {exc}\n"
+            return ""
+        # Handle function-like #define NAME(a, b) body
+        m_fn_def = _C_DEFINE_FN_RE.match(cmd)
+        if m_fn_def:
+            macro_name = m_fn_def.group(1)
+            params = [p.strip() for p in m_fn_def.group(2).split(",") if p.strip()]
+            macro_val = re.sub(r"\s*//.*$", "", m_fn_def.group(3)).strip()
+            if not hasattr(interpreter, "c_fn_defines"):
+                interpreter.c_fn_defines = {}
+            interpreter.c_fn_defines[macro_name] = (params, macro_val)
             return ""
         # Handle #define to capture macro constants
         m_def = _C_DEFINE_RE.match(cmd)
@@ -1555,8 +1638,12 @@ def execute_c(interpreter: "Interpreter", command: str, turtle: "TurtleState") -
         return ""
 
     # Apply #define substitutions
-    if getattr(interpreter, "c_defines", {}):
-        cmd = _apply_c_defines(cmd, interpreter.c_defines)
+    if getattr(interpreter, "c_defines", {}) or getattr(interpreter, "c_fn_defines", {}):
+        cmd = _apply_c_defines(
+            cmd,
+            getattr(interpreter, "c_defines", {}),
+            getattr(interpreter, "c_fn_defines", None),
+        )
 
     # Function definition header: register and skip body
     m_fhdr = _FUNC_HEADER_RE.match(cmd)
@@ -1840,6 +1927,8 @@ def execute_c(interpreter: "Interpreter", command: str, turtle: "TurtleState") -
 
             # Evaluate loop iteratively
             while True:
+                if hasattr(interpreter, "tick"):
+                    interpreter.tick(1)
                 try:
                     cond_val = (
                         interpreter.evaluate_expression(cond_expr.strip())

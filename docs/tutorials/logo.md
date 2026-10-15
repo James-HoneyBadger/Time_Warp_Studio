@@ -53,13 +53,13 @@ This draws a complete square!
 ### Making it Cleaner with a Loop
 
 ```logo
-FOR I = 1 TO 4
+REPEAT 4 [
   FORWARD 100
   RIGHT 90
-NEXT I
+]
 ```
 
-Same result, much cleaner code!
+Same result, much cleaner code! `REPEAT n [ ... ]` runs the commands inside the brackets `n` times.
 
 ---
 
@@ -92,21 +92,17 @@ Same result, much cleaner code!
 | `PU` | Short for PENUP |
 | `PD` | Short for PENDOWN |
 | `PENWIDTH n` | Set pen thickness |
-| `SETPENCOLOR c` | Set pen color (0-7) |
+| `SETPENCOLOR c` | Set pen color (color name, `"#RRGGBB"` hex, or `[R G B]` list) |
 | `CLEAR` | Clear drawing canvas |
 | `HOME` | Move turtle to center |
 
 ### Pen Colors
 
-Colors 0-7:
-- 0: Black
-- 1: Red
-- 2: Green
-- 3: Yellow
-- 4: Blue
-- 5: Magenta
-- 6: Cyan
-- 7: White
+Use a quoted color name (`SETPENCOLOR "red`), a hex value (`SETPENCOLOR "#FF0000`), or an RGB list (`SETPENCOLOR [255 0 0]`).
+
+Named colors: `black`, `white`, `red`, `green`, `blue`, `yellow`, `cyan`, `magenta`, `pink`, `orange`, `purple`, `brown`, `lime`, `navy`, `teal`, `maroon`, `olive`, `silver`, `gold`, `gray`, `grey`.
+
+The default pen color is white. Numeric codes such as `SETPENCOLOR 1` do not select a color and leave the pen color unchanged.
 
 ---
 
@@ -115,37 +111,37 @@ Colors 0-7:
 ### Triangle
 
 ```logo
-FOR I = 1 TO 3
+REPEAT 3 [
   FORWARD 100
   RIGHT 120
-NEXT I
+]
 ```
 
 ### Pentagon
 
 ```logo
-FOR I = 1 TO 5
+REPEAT 5 [
   FORWARD 100
   RIGHT 72
-NEXT I
+]
 ```
 
 ### Hexagon
 
 ```logo
-FOR I = 1 TO 6
+REPEAT 6 [
   FORWARD 100
   RIGHT 60
-NEXT I
+]
 ```
 
 ### Circle
 
 ```logo
-FOR I = 1 TO 360
+REPEAT 360 [
   FORWARD 1
   RIGHT 1
-NEXT I
+]
 ```
 
 ---
@@ -155,31 +151,33 @@ NEXT I
 ### Simple Spiral
 
 ```logo
-FOR I = 1 TO 100
-  FORWARD I
+MAKE "D 1
+REPEAT 100 [
+  FORWARD :D
   RIGHT 10
-NEXT I
+  MAKE "D :D + 1
+]
 ```
 
 ### Star
 
 ```logo
-FOR I = 1 TO 5
+REPEAT 5 [
   FORWARD 100
   RIGHT 144
-NEXT I
+]
 ```
 
 ### Flower
 
 ```logo
-FOR I = 1 TO 6
-  FOR J = 1 TO 4
+REPEAT 6 [
+  REPEAT 4 [
     FORWARD 50
     RIGHT 90
-  NEXT J
+  ]
   RIGHT 60
-NEXT I
+]
 ```
 
 ---
@@ -189,22 +187,22 @@ NEXT I
 ### Moving Without Drawing
 
 ```logo
-' Draw a square
-FOR I = 1 TO 4
+; Draw a square
+REPEAT 4 [
   FORWARD 50
   RIGHT 90
-NEXT I
+]
 
-' Move without drawing
+; Move without drawing
 PENUP
 FORWARD 100
 PENDOWN
 
-' Draw another square
-FOR I = 1 TO 4
+; Draw another square
+REPEAT 4 [
   FORWARD 50
   RIGHT 90
-NEXT I
+]
 ```
 
 This draws two separate squares.
@@ -216,33 +214,33 @@ This draws two separate squares.
 ### Colored Shapes
 
 ```logo
-SETPENCOLOR 1  ' Red
-FOR I = 1 TO 4
+SETPENCOLOR "red      ; Red
+REPEAT 4 [
   FORWARD 100
   RIGHT 90
-NEXT I
+]
 
 PENUP
 FORWARD 150
 PENDOWN
 
-SETPENCOLOR 4  ' Blue
-FOR I = 1 TO 4
+SETPENCOLOR "blue     ; Blue
+REPEAT 4 [
   FORWARD 100
   RIGHT 90
-NEXT I
+]
 ```
 
 ### Thick Lines
 
 ```logo
-PENWIDTH 5     ' Thick pen
-FOR I = 1 TO 4
+PENWIDTH 5     ; Thick pen
+REPEAT 4 [
   FORWARD 100
   RIGHT 90
-NEXT I
+]
 
-PENWIDTH 1     ' Normal pen
+PENWIDTH 1     ; Normal pen
 ```
 
 ---
@@ -252,33 +250,37 @@ PENWIDTH 1     ' Normal pen
 ### Position Commands
 
 ```logo
-SETX 100       ' Move to X = 100
-SETY 50        ' Move to Y = 50
-SETHEADING 45  ' Face direction 45 degrees
-XCOR           ' Get X coordinate
-YCOR           ' Get Y coordinate
+SETX 100       ; Move to X = 100
+SETY 50        ; Move to Y = 50
+SETHEADING 45  ; Face direction 45 degrees
+PRINT XCOR     ; Print X coordinate
+PRINT YCOR     ; Print Y coordinate
 ```
 
 ### Drawing a Grid
 
 ```logo
-' Vertical lines
-FOR X = -150 TO 150 STEP 30
-  SETX X
+; Vertical lines
+MAKE "X -150
+REPEAT 11 [
+  SETX :X
   SETY -150
   PENDOWN
   SETY 150
   PENUP
-NEXT X
+  MAKE "X :X + 30
+]
 
-' Horizontal lines
-FOR Y = -150 TO 150 STEP 30
+; Horizontal lines
+MAKE "Y -150
+REPEAT 11 [
   SETX -150
-  SETY Y
+  SETY :Y
   PENDOWN
   SETX 150
   PENUP
-NEXT Y
+  MAKE "Y :Y + 30
+]
 ```
 
 ---
@@ -290,12 +292,12 @@ Recursion is when a procedure calls itself. It creates beautiful fractal pattern
 ### Recursive Square
 
 ```logo
-PROCEDURE SQUARE SIZE
-  IF SIZE < 5 THEN RETURN
-  FORWARD SIZE
+TO SQUARE :SIZE
+  IF :SIZE < 5 [STOP]
+  FORWARD :SIZE
   RIGHT 90
-  SQUARE SIZE * 0.7
-END PROCEDURE
+  SQUARE :SIZE * 0.7
+END
 
 SQUARE 100
 ```
@@ -303,16 +305,16 @@ SQUARE 100
 ### Recursive Tree
 
 ```logo
-PROCEDURE TREE SIZE
-  IF SIZE < 5 THEN RETURN
-  FORWARD SIZE
+TO TREE :SIZE
+  IF :SIZE < 5 [STOP]
+  FORWARD :SIZE
   LEFT 30
-  TREE SIZE * 0.7
+  TREE :SIZE * 0.7
   RIGHT 60
-  TREE SIZE * 0.7
+  TREE :SIZE * 0.7
   LEFT 30
-  BACKWARD SIZE
-END PROCEDURE
+  BACK :SIZE
+END
 
 TREE 50
 ```
@@ -324,67 +326,70 @@ TREE 50
 ### Program 1: Olympic Rings
 
 ```logo
-PROCEDURE RING COLOR X Y
-  SETPENCOLOR COLOR
-  SETX X
-  SETY Y
-  FOR I = 1 TO 360
+TO RING :COLOR :X :Y
+  SETPENCOLOR :COLOR
+  PENUP
+  SETXY :X :Y
+  PENDOWN
+  REPEAT 360 [
     FORWARD 2
     RIGHT 1
-  NEXT I
-END PROCEDURE
+  ]
+END
 
-' Draw Olympic rings
-RING 1 -100 50     ' Red
-RING 2 -50 50      ' Green
-RING 4 0 50        ' Blue
-RING 3 50 50       ' Yellow
-RING 5 100 50      ' Magenta
+; Draw Olympic rings
+RING "red -100 50
+RING "green -50 50
+RING "blue 0 50
+RING "yellow 50 50
+RING "magenta 100 50
 ```
 
 ### Program 2: Mandala Pattern
 
 ```logo
-PROCEDURE MANDALA SIZE SIDES
-  FOR I = 1 TO SIDES
-    FORWARD SIZE
-    RIGHT 360 / SIDES
-  NEXT I
-END PROCEDURE
+TO MANDALA :SIZE :SIDES
+  REPEAT :SIDES [
+    FORWARD :SIZE
+    RIGHT 360 / :SIDES
+  ]
+END
 
-FOR SIZE = 20 TO 200 STEP 10
-  MANDALA SIZE 8
+MAKE "SIZE 20
+REPEAT 19 [
+  MANDALA :SIZE 8
   RIGHT 5
-NEXT SIZE
+  MAKE "SIZE :SIZE + 10
+]
 ```
 
 ### Program 3: House
 
 ```logo
-' Draw square base
-FOR I = 1 TO 4
+; Draw square base
+REPEAT 4 [
   FORWARD 100
   RIGHT 90
-NEXT I
+]
 
-' Draw triangle roof
+; Draw triangle roof
 LEFT 30
 FORWARD 100
 RIGHT 120
 FORWARD 100
 
-' Draw door
+; Draw door
 PENUP
 FORWARD 30
 RIGHT 90
 FORWARD 40
 PENDOWN
-FOR I = 1 TO 2
+REPEAT 2 [
   FORWARD 50
   RIGHT 90
   FORWARD 25
   RIGHT 90
-NEXT I
+]
 ```
 
 ---
@@ -407,7 +412,8 @@ NEXT I
 - Check SETX and SETY values
 
 **Wrong colors?**
-- Remember colors are 0-7
+- Use color names (`"red`), hex (`"#FF0000`), or RGB lists (`[255 0 0]`)
+- Numeric codes such as `SETPENCOLOR 1` do not change the color
 - Use different colors for different shapes
 
 **Unexpected patterns?**

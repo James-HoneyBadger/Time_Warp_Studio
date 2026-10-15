@@ -363,7 +363,6 @@ begin
     else
     begin
       WriteLn('Correct! You guessed it in ', attempts, ' attempts!');
-      break;
     end;
   until guess = secret;
 end.

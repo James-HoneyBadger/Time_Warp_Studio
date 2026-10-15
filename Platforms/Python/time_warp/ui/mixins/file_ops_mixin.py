@@ -157,7 +157,7 @@ class FileOperationsMixin(_FileOpsMixinBase):
             try:
                 existing_content = editor.toPlainText()
                 self._autosave_manager.autosave_file(Path(filename), existing_content)
-            except Exception:  # pylint: disable=broad-except
+            except (OSError, ValueError):
                 pass  # Autosave failure must never block a real save
 
             with open(filename, "w", encoding="utf-8") as f:

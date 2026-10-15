@@ -54,16 +54,7 @@ AI/ML
 NLP
 OCR
 AR/VR
-IoT
-Arduino
-RaspberryPi
-ESP32
-MQTT
 WiFi
-Bluetooth
-GPIO
-I2C
-SPI
 UART
 PWM
 ADC

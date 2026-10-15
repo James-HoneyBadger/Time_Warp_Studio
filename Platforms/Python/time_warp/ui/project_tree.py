@@ -22,7 +22,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
 from PySide6.QtCore import Qt, Signal
-from PySide6.QtGui import QAction, QFont, QIcon
+from PySide6.QtGui import QAction, QFont
 from PySide6.QtWidgets import (
     QFileDialog,
     QHBoxLayout,
@@ -138,7 +138,7 @@ class ProjectTreePanel(QWidget):
         layout.addWidget(self._tree)
 
         # Empty-state label
-        self._empty_label = QLabel("No project open.\nUse File → Open Project…")
+        self._empty_label = QLabel("No project open.")
         self._empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._empty_label.setStyleSheet("color: palette(mid); padding: 12px; font-size: 11px;")
         self._empty_label.setWordWrap(True)

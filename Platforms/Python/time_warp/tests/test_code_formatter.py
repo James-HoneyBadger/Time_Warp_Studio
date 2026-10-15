@@ -1,6 +1,5 @@
 """Tests for time_warp.utils.code_formatter module."""
 
-import pytest
 from time_warp.utils.code_formatter import (
     BasicFormatter,
     LogoFormatter,
@@ -131,5 +130,54 @@ def test_normalize_let_lowercase():
 
 def test_format_unknown_language():
     cf = get_formatter()
-    result, msg = cf.format_code("print(42)", "python")
+    result, msg = cf.format_code("print(42)", "unknown_lang")
     assert "❌" in msg
+
+
+def test_format_and_normalize_all_active_languages():
+    from time_warp.core.interpreter import Language
+
+    cf = get_formatter()
+    samples = {
+        Language.BASIC: (
+            "10 for i = 1 to 3\n20 print i\n30 next i",
+            "10 FOR i = 1 TO 3\n20     PRINT i\n30 NEXT i",
+        ),
+        Language.PILOT: (
+            "t:Hello\na:name",
+            "T:Hello\nA:name",
+        ),
+        Language.LOGO: (
+            "TO SQ\nFORWARD 10\nEND",
+            "to SQ\n    forward 10\nend",
+        ),
+        Language.C: (
+            "int main() {\nif (1) {\nreturn 0;\n}\n}",
+            "int main() {\n    if (1) {\n        return 0;\n    }\n}",
+        ),
+        Language.PASCAL: (
+            "PROGRAM Demo;\nBEGIN\nWHILE x < 5 DO BEGIN\nx := x + 1;\nEND;\nEND.",
+            "program Demo;\nbegin\n  while x < 5 do begin\n    x := x + 1;\n  end;\nend.",
+        ),
+        Language.PROLOG: (
+            "grandparent(X, Z) :-\nparent(X, Y),\nparent(Y, Z).",
+            "grandparent(X, Z) :-\n    parent(X, Y),\n    parent(Y, Z).",
+        ),
+        Language.FORTH: (
+            ": double\ndup   +\n;",
+            ": double\n  DUP +\n;",
+        ),
+        Language.BRAINFUCK: (
+            "  +++[>+++<-]>.   \n",
+            "+++[>+++<-]>.\n",
+        ),
+        Language.PYTHON_LANG: (
+            "def f():\n\treturn 42   ",
+            "def f():\n    return 42",
+        ),
+    }
+
+    for lang, (raw, expected) in samples.items():
+        formatted, msg = cf.format_and_normalize(raw, lang.name)
+        assert "✅" in msg, f"Expected success for {lang.name}, got {msg}"
+        assert formatted == expected, f"Mismatch for {lang.name}: {formatted!r} != {expected!r}"

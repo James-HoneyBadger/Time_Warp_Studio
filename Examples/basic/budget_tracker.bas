@@ -19,7 +19,7 @@
 190 REM -- Load sample data --
 200 GOSUB 8000
 210 REM -- Main Menu Loop --
-220 DONE = 0
+220 LET DONE = 0
 230 WHILE DONE = 0
 240   PRINT ""
 250   PRINT "═══════════════════════════"
@@ -41,7 +41,7 @@
 410   IF CHOICE = 4 THEN GOSUB 4000
 420   IF CHOICE = 5 THEN GOSUB 5000
 430   IF CHOICE = 6 THEN GOSUB 6000
-440   IF CHOICE = 7 THEN DONE = 1
+440   IF CHOICE = 7 THEN LET DONE = 1
 450 WEND
 460 PRINT ""
 470 PRINT "Thank you for using Budget Tracker!"

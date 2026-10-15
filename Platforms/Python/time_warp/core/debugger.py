@@ -119,13 +119,23 @@ class ExecutionTimeline:
             should_pause = True
             if condition:
                 try:
-                    # Reject conditions using dunder attributes to prevent
-                    # sandbox bypass via __class__.__subclasses__() chains.
-                    if "__" in condition:
-                        raise ValueError("dunder attributes not allowed in breakpoint conditions")
-                    should_pause = bool(
-                        eval(condition, {"__builtins__": {}}, variables)  # noqa: S307  # type: ignore[misc]  # pylint: disable=eval-used
+                    from ..utils.expression_evaluator import ExpressionEvaluator
+
+                    num_vars = {
+                        str(k).upper(): float(v)
+                        for k, v in variables.items()
+                        if isinstance(v, (int, float))
+                    }
+                    str_vars = {
+                        str(k).upper(): str(v)
+                        for k, v in variables.items()
+                        if isinstance(v, str)
+                    }
+                    evaluator = ExpressionEvaluator(
+                        variables=num_vars,
+                        string_variables=str_vars,
                     )
+                    should_pause = bool(evaluator.evaluate(condition))
                 except Exception:  # pylint: disable=broad-exception-caught
                     should_pause = True  # pause on evaluation error
             if should_pause:

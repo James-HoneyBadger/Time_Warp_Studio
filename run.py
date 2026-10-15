@@ -13,7 +13,6 @@ Usage:
     python run.py              # Run normally
     python run.py --fresh      # Force fresh venv
     python run.py --skip-setup # Skip dependency check
-    python run.py --install-plugin /path/to/my_plugin  # Install plugin
     python run.py --help       # Show help
 """
 
@@ -142,48 +141,19 @@ CORE_DEPS = ["PySide6>=6.5.0", "Pillow>=10.0.0"]
 
 
 def install_dependencies(venv_python: Path) -> bool:
-    """Install project dependencies.
-
-    Installs core GUI deps first (always required), then attempts the full
-    requirements.txt.  If the full install fails (e.g. asyncpg compilation
-    issues on some platforms), the launcher continues with just the core deps
-    so the desktop IDE can still start.
-    """
-    # Step 1 – always install core desktop deps
-    print_info("Installing core dependencies (PySide6, Pillow)...")
+    """Install the desktop IDE dependencies from requirements.txt."""
+    print_info("Installing dependencies (PySide6, Pillow)...")
+    cmd = [str(venv_python), "-m", "pip", "install", "--upgrade"]
+    cmd += ["-r", str(REQUIREMENTS_FILE)] if REQUIREMENTS_FILE.exists() else CORE_DEPS
     try:
-        subprocess.run(
-            [str(venv_python), "-m", "pip", "install", "--upgrade"] + CORE_DEPS,
-            check=True,
-            capture_output=True,
-            timeout=180,
-        )
-        print_success("Core dependencies installed")
-    except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
-        print_error(f"Failed to install core dependencies: {e}")
+        subprocess.run(cmd, check=True, capture_output=True, timeout=300)
+    except subprocess.CalledProcessError as e:
+        print_error(f"Failed to install dependencies: {e.stderr.decode(errors='replace')}")
         return False
-
-    # Step 2 – try full requirements.txt (optional extras for collaboration etc.)
-    if not REQUIREMENTS_FILE.exists():
-        return True  # core deps are enough
-
-    print_info(f"Installing optional dependencies from {REQUIREMENTS_FILE.name}...")
-    try:
-        subprocess.run(
-            [str(venv_python), "-m", "pip", "install", "-r", str(REQUIREMENTS_FILE)],
-            check=True,
-            capture_output=True,
-            timeout=300,
-        )
-        print_success("All dependencies installed")
-    except subprocess.CalledProcessError:
-        print_warning(
-            "Some optional dependencies failed to install "
-            "(backend/collaboration features may be unavailable). "
-            "The desktop IDE will still work."
-        )
     except subprocess.TimeoutExpired:
-        print_warning("Optional dependency installation timed out — continuing.")
+        print_error("Dependency installation timed out")
+        return False
+    print_success("Dependencies installed")
     return True
 
 
@@ -288,30 +258,6 @@ def run_ide(venv_python: Path) -> bool:
         return False
 
 
-def _install_plugin(plugin_path: Path) -> None:
-    """Copy a plugin directory into the workspace plugins/ directory."""
-    if not plugin_path.exists():
-        print_error(f"Plugin path does not exist: {plugin_path}")
-        sys.exit(1)
-    if not plugin_path.is_dir():
-        print_error(f"Plugin path must be a directory: {plugin_path}")
-        sys.exit(1)
-
-    plugins_dir = PROJECT_ROOT / "plugins"
-    plugins_dir.mkdir(exist_ok=True)
-
-    dest = plugins_dir / plugin_path.name
-    if dest.exists():
-        print_warning(f"Plugin '{plugin_path.name}' already installed at {dest}")
-        print_warning("Remove it manually first if you want to reinstall.")
-        sys.exit(1)
-
-    import shutil
-    shutil.copytree(str(plugin_path), str(dest))
-    print_success(f"Plugin '{plugin_path.name}' installed to {dest}")
-    print_info("Restart Time Warp Studio to activate the plugin.")
-
-
 def main():
     """Main entry point"""
     parser = argparse.ArgumentParser(
@@ -331,18 +277,8 @@ def main():
         action="store_true",
         help="Run with system Python (not recommended)",
     )
-    parser.add_argument(
-        "--install-plugin",
-        metavar="PLUGIN_PATH",
-        help="Install a plugin by copying its directory to plugins/ and exit",
-    )
 
     args = parser.parse_args()
-
-    # Handle --install-plugin before any venv setup
-    if args.install_plugin:
-        _install_plugin(Path(args.install_plugin))
-        return
 
     print_header("⏰ Time Warp Studio Launcher")
 

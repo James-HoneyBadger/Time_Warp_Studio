@@ -113,5 +113,5 @@ Read a character; while it's not zero, print it and read next.
 
 ## Further Reading
 
-- [Examples/brainfuck/](../Examples/brainfuck/) — 5 Brainfuck example programs
-- [Language Guide: Brainfuck](LANGUAGE_GUIDE.md#brainfuck)
+- [Examples/brainfuck/](../../Examples/brainfuck/) — 8 Brainfuck example programs
+- [Language Guide: Brainfuck](../LANGUAGE_GUIDE.md#brainfuck)

@@ -64,8 +64,10 @@ class DebugMixin:
         if not editor:
             return
 
-        current_info = self.get_current_tab_info()
-        language = current_info["language"]
+        language = getattr(editor, "language", None)
+        if language is None:
+            current_info = self.get_current_tab_info()
+            language = current_info["language"]
 
         # Ensure output uses the current language
         self.output.set_language(language)
@@ -75,8 +77,14 @@ class DebugMixin:
 
         code = editor.toPlainText()
 
-        # Get breakpoints from editor
+        # Get breakpoints and conditions from editor
         breakpoints = editor.get_breakpoints()
+        bp_conditions = {
+            bp: editor.get_breakpoint_condition(bp)
+            for bp in breakpoints
+            if hasattr(editor, "get_breakpoint_condition")
+            and editor.get_breakpoint_condition(bp)
+        }
 
         # Update debug state
         self._is_debugging = True
@@ -92,6 +100,8 @@ class DebugMixin:
             debug_mode=True,
             breakpoints=breakpoints,
             debug_step_granularity=self._debug_step_granularity,
+            breakpoint_conditions=bp_conditions,
+            break_on_error=getattr(self, "_break_on_error", False),
         )
 
         # Update debug panel
@@ -208,8 +218,13 @@ class DebugMixin:
 
     def _set_break_on_error(self, enabled: bool):
         """Toggle break-on-error on the interpreter."""
-        if hasattr(self, "interpreter") and self.interpreter is not None:
-            self.interpreter.set_break_on_error(enabled)
+        self._break_on_error = bool(enabled)
+        if (
+            hasattr(self, "output")
+            and self.output.exec_thread is not None
+            and self.output.exec_thread.interp is not None
+        ):
+            self.output.exec_thread.interp.set_break_on_error(bool(enabled))
 
     def _on_debug_timeline_ready(self, timeline):
         """Capture latest debug timeline."""

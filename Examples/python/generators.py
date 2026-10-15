@@ -86,7 +86,7 @@ print(" ", list(Countdown(5)))
 print("\n=== Generator pipeline: even Fibonacci < 100 ===")
 fib2 = fibonacci()
 even_fibs = where(lambda x: x % 2 == 0, fib2)
-small_fibs = where(lambda x: x < 100, even_fibs)
+small_fibs = where(lambda x: x < 100, take(12, even_fibs))
 print(" ", list(small_fibs))
 
 print("\n=== Lazy evaluation: sum of first 100 odd squares ===")

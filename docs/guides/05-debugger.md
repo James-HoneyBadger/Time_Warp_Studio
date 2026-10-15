@@ -8,26 +8,26 @@ A guide to using the integrated debugger in Time Warp Studio.
 
 ## Overview
 
-Time Warp Studio includes a step-through debugger with breakpoints, variable
-inspection, call stack viewing, execution timeline, and rewind capabilities.
+Time Warp Studio includes a step-through debugger with breakpoints, watch
+expressions, a call stack, an execution timeline, and a turtle-state view.
 
 ---
 
-## Enabling the Debugger
+## Starting the Debugger
 
 | Method | How |
 |--------|-----|
-| Menu toggle | **Run → Debug Mode** |
-| Breakpoint | Set a breakpoint with **Ctrl+B**, then run |
-| Debug Panel | Click **Enable Debug** in the Debug panel |
+| Start debugging | **Debug → Start / Continue Debugging** or **Ctrl+F9** |
+| Start paused on line 1 | **F7** (Trace Into) or **F8** (Step Over) |
 
 ---
 
 ## Setting Breakpoints
 
-- **Ctrl+B** toggles a breakpoint on the current line.
-- Click the left margin (line-number gutter) to toggle visually.
-- A red dot indicates an active breakpoint.
+- **Ctrl+F8** toggles a breakpoint on the current line.
+- Click the line-number gutter to toggle a breakpoint.
+- **Ctrl+Shift+F8** clears all breakpoints.
+- Breakpoints are saved per file and restored when the file is reopened.
 
 ---
 
@@ -35,43 +35,42 @@ inspection, call stack viewing, execution timeline, and rewind capabilities.
 
 | Action | Shortcut | Description |
 |--------|----------|-------------|
-| Step Into | **F11** | Execute the next statement |
-| Step Over | **F10** | Execute next, skipping function internals |
-| Continue | **F5** | Resume until next breakpoint |
-| Stop | **Shift+F5** | Halt execution |
+| Trace Into | **F7** | Execute the next statement, entering subroutines |
+| Step Over | **F8** | Execute the next statement, skipping subroutine internals |
+| Step Out | **Shift+F8** | Run until the current subroutine returns |
+| Continue | **Ctrl+F9** | Resume until the next breakpoint or program end |
+| Pause | **Ctrl+F7** | Pause a running program |
+| Stop / Reset | **Ctrl+F2** | Stop the run or debug session |
 
 ---
 
 ## Inspecting State
 
-### Variables Panel
+The **Debug** tab in the right-hand panel contains:
 
-While paused, the **Variables Inspector** panel shows all current variable
-names, types, and values. Values update after every step.
-
-### Call Stack
-
-The **Stack Trace** shows the current call depth. Click any frame to jump
-to that source location.
+- **Watch Expressions**: expressions you add and re-evaluate while stepping
+- **Call Stack**: the current call frames
+- **Breakpoints**: the breakpoints set in the current file
+- **Turtle State**: turtle position, heading, and pen state
+- **Output Stream**: program output
+- **Δ Variable Changes**: variables that changed on the last step
 
 ---
 
 ## Execution Timeline
 
-The debugger records every executed statement. Use the timeline slider in the
-Debug panel to scrub forwards and backwards through the history.
-
-- **Rewind** — step backwards to any previous state.
-- **Replay** — re-execute from a chosen point.
+The **Timeline** list in the Debug tab records each executed step. Use
+**Export JSON** to save the timeline, or save a `.twreplay` file to replay the
+run later.
 
 ---
 
 ## Tips
 
-1. Set breakpoints **before** running so the debugger activates automatically.
-2. Use the timeline to understand loops — scrub through iterations.
-3. Watch specific variables by right-clicking them in the Variables panel.
-4. Breakpoints persist across runs but not across IDE restarts.
+1. Set breakpoints **before** starting so execution pauses where you expect.
+2. Use the Timeline to follow loop iterations step by step.
+3. Use **Ctrl+F9** to continue past a section and **Ctrl+F2** to end the session.
+4. Breakpoints are saved per file and persist across IDE restarts.
 
 ---
 

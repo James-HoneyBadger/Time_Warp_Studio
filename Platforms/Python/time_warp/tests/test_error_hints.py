@@ -1,6 +1,5 @@
 """Tests for time_warp.utils.error_hints module."""
 
-import pytest
 from time_warp.utils.error_hints import (
     levenshtein_distance,
     suggest_command,

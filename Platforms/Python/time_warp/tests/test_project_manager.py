@@ -10,7 +10,6 @@ import pytest
 from time_warp.core.project_manager import (
     PROJECT_EXTENSION,
     Project,
-    ProjectFile,
     ProjectManager,
 )
 from time_warp.features.project_templates import Template, TemplateCategory

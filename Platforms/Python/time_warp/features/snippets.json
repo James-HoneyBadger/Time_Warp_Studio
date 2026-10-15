@@ -53,42 +53,12 @@
     {"name": "Accept and respond",    "code": "T:What is your name?\nA:*name\nT:Hello, *name!\nEND\n"},
     {"name": "Match example",         "code": "T:Type YES or NO:\nA:\nM:YES\nTY:You said yes!\nMN:TN:You said no.\nEND\n"}
   ],
-  "Haskell": [
-    {"name": "Hello World",           "code": "main :: IO ()\nmain = putStrLn \"Hello, World!\"\n"},
-    {"name": "Map and filter",        "code": "main :: IO ()\nmain = do\n  let nums = [1..10]\n  print $ map (*2) $ filter even nums\n"},
-    {"name": "Recursive factorial",   "code": "factorial :: Int -> Int\nfactorial 0 = 1\nfactorial n = n * factorial (n - 1)\n\nmain :: IO ()\nmain = print (factorial 10)\n"},
-    {"name": "List comprehension",    "code": "main :: IO ()\nmain = print [x^2 | x <- [1..5]]\n"}
-  ],
-  "JavaScript": [
-    {"name": "Hello World",           "code": "console.log(\"Hello, World!\");\n"},
-    {"name": "Arrow function",        "code": "const square = n => n * n;\nconsole.log(square(7));\n"},
-    {"name": "Array methods",         "code": "const nums = [1,2,3,4,5];\nconst evens = nums.filter(n => n % 2 === 0);\nconsole.log(evens);\n"},
-    {"name": "Destructuring",         "code": "const [a, b, c] = [10, 20, 30];\nconsole.log(a + b + c);\n"},
-    {"name": "Template literal",      "code": "const name = \"World\";\nconsole.log(`Hello, ${name}!`);\n"}
-  ],
-  "Scheme": [
-    {"name": "Hello World",           "code": "(display \"Hello, World!\") (newline)\n"},
-    {"name": "Recursive factorial",   "code": "(define (factorial n)\n  (if (<= n 1) 1\n      (* n (factorial (- n 1)))))\n(display (factorial 10)) (newline)\n"},
-    {"name": "Map and filter",        "code": "(display (map (lambda (x) (* x x)) '(1 2 3 4 5)))\n(newline)\n"},
-    {"name": "Let binding",           "code": "(let ((x 10) (y 20))\n  (display (+ x y))\n  (newline))\n"}
-  ],
-  "Lua": [
-    {"name": "Hello World",           "code": "print(\"Hello, World!\")\n"},
-    {"name": "FOR loop",              "code": "for i = 1, 10 do\n  print(i)\nend\n"},
-    {"name": "Function",              "code": "function square(n)\n  return n * n\nend\nprint(square(7))\n"},
-    {"name": "Table (array)",         "code": "local t = {10, 20, 30, 40, 50}\nfor i, v in ipairs(t) do\n  print(i, v)\nend\n"}
-  ],
-  "Fortran": [
-    {"name": "Hello World",           "code": "PROGRAM hello\n  IMPLICIT NONE\n  PRINT *, 'Hello, World!'\nEND PROGRAM hello\n"},
-    {"name": "DO loop",               "code": "PROGRAM counting\n  IMPLICIT NONE\n  INTEGER :: i\n  DO i = 1, 10\n    PRINT *, i\n  END DO\nEND PROGRAM counting\n"},
-    {"name": "Function",              "code": "PROGRAM funcs\n  IMPLICIT NONE\n  INTEGER :: square\n  PRINT *, square(7)\nCONTAINS\n  INTEGER FUNCTION square(n)\n    INTEGER, INTENT(IN) :: n\n    square = n * n\n  END FUNCTION square\nEND PROGRAM funcs\n"}
-  ],
   "Brainfuck": [
     {"name": "Hello World",           "code": "++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>---.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.\n"},
     {"name": "Count to 10 (output as chars)", "code": "++++++++++ sets cell 0 to 10\n[\n  >+        increment cell 1\n  <-        decrement cell 0\n]\n>. output cell 1 (ASCII 10 = newline)\n"}
   ],
-  "COBOL": [
-    {"name": "Hello World",           "code": "IDENTIFICATION DIVISION.\nPROGRAM-ID. HELLO.\nPROCEDURE DIVISION.\n    DISPLAY 'Hello, World!'.\n    STOP RUN.\n"},
-    {"name": "Arithmetic",            "code": "IDENTIFICATION DIVISION.\nPROGRAM-ID. ARITH.\nDATA DIVISION.\nWORKING-STORAGE SECTION.\n  01 A PIC 9(4) VALUE 100.\n  01 B PIC 9(4) VALUE 250.\n  01 C PIC 9(4).\nPROCEDURE DIVISION.\n  COMPUTE C = A + B.\n  DISPLAY C.\n  STOP RUN.\n"}
+  "Python": [
+    {"name": "Hello World",           "code": "print(\"Hello, World!\")\n"},
+    {"name": "Turtle Square",         "code": "for _ in range(4):\n    forward(100)\n    right(90)\n"}
   ]
 }

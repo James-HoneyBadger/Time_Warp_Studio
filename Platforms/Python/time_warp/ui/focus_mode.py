@@ -7,7 +7,6 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import QObject, Signal
-from PySide6.QtWidgets import QWidget
 
 if TYPE_CHECKING:
     from PySide6.QtWidgets import QMainWindow
@@ -22,7 +21,6 @@ class FocusModeManager(QObject):
         super().__init__(main_window)
         self.main_window = main_window
         self.is_focus_mode = False
-        self.tooltips_enabled = True
 
         # Store original visibility states
         self.saved_states: dict[str, bool] = {}
@@ -136,37 +134,3 @@ class FocusModeManager(QObject):
             mw.showNormal()
 
         self.saved_states.clear()
-
-    def toggle_tooltips(self):
-        """Toggle tooltip visibility."""
-        self.tooltips_enabled = not self.tooltips_enabled
-        self._apply_tooltip_state(self.tooltips_enabled)
-
-    def _apply_tooltip_state(self, enabled: bool):
-        """Enable or disable tooltips globally."""
-        if hasattr(self.main_window, "findChildren"):
-            widgets = self.main_window.findChildren(QWidget)
-            for widget in widgets:
-                if not enabled:
-                    widget.setToolTip("")
-                # Note: Original tooltips would need to be saved/restored
-                # for full functionality
-
-    def set_noise_level(self, level: str):
-        """
-        Set UI noise level.
-
-        Args:
-            level: 'silent', 'quiet', 'normal', 'verbose'
-        """
-        # Implementation would filter status messages based on level
-        # Placeholder for future implementation
-
-    def get_focus_mode_shortcuts(self) -> dict[str, str]:
-        """Get keyboard shortcuts for focus mode."""
-        return {
-            "toggle_focus": "F11",
-            "toggle_tooltips": "Ctrl+Shift+T",
-            "toggle_menu": "Alt+M",
-            "toggle_status": "Alt+S",
-        }

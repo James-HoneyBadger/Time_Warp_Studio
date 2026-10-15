@@ -1,6 +1,6 @@
 """
 Code formatter for Time Warp Studio.
-Auto-formats BASIC, Logo, and PILOT code.
+Auto-formats BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python code.
 """
 
 import re
@@ -362,6 +362,206 @@ class PilotFormatter:
         return "\n".join(result)
 
 
+class CFormatter:
+    """Formatter for C code (`{}` block indentation)."""
+
+    def format_code(self, code: str, indent_size: int = 4) -> str:
+        lines = code.split("\n")
+        result = []
+        indent = 0
+        indent_str = " " * indent_size
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                result.append("")
+                continue
+            if stripped.startswith("#"):
+                result.append(stripped)
+                continue
+            if stripped.startswith("}"):
+                indent = max(0, indent - 1)
+            result.append(indent_str * indent + stripped)
+            open_braces = stripped.count("{")
+            close_braces = stripped.count("}")
+            if stripped.startswith("}"):
+                indent = max(0, indent + open_braces - (close_braces - 1))
+            else:
+                indent = max(0, indent + open_braces - close_braces)
+        return "\n".join(result)
+
+
+class PascalFormatter:
+    """Formatter for Pascal code (`begin`/`end` block indentation and keyword casing)."""
+
+    KEYWORDS = [
+        "program",
+        "uses",
+        "var",
+        "const",
+        "type",
+        "record",
+        "array",
+        "of",
+        "procedure",
+        "function",
+        "begin",
+        "end",
+        "if",
+        "then",
+        "else",
+        "for",
+        "to",
+        "downto",
+        "do",
+        "while",
+        "repeat",
+        "until",
+        "case",
+        "div",
+        "mod",
+        "and",
+        "or",
+        "not",
+    ]
+
+    def format_code(self, code: str, indent_size: int = 2) -> str:
+        lines = code.split("\n")
+        result = []
+        indent = 0
+        indent_str = " " * indent_size
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                result.append("")
+                continue
+            low = stripped.lower().rstrip(";.")
+            if low in ("end", "until") or low.startswith("until "):
+                indent = max(0, indent - 1)
+            result.append(indent_str * indent + stripped)
+            if (
+                low in ("begin", "repeat", "record")
+                or low.endswith(" begin")
+                or low.startswith("case ")
+            ):
+                indent += 1
+        return "\n".join(result)
+
+    def normalize_keywords(self, code: str) -> str:
+        result = code
+        for kw in self.KEYWORDS:
+            result = re.sub(r"\b" + re.escape(kw) + r"\b", kw, result, flags=re.IGNORECASE)
+        return result
+
+
+class PrologFormatter:
+    """Formatter for Prolog facts, rules, and queries."""
+
+    def format_code(self, code: str, indent_size: int = 4) -> str:
+        lines = code.split("\n")
+        result = []
+        indent_str = " " * indent_size
+        in_rule_body = False
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                result.append("")
+                in_rule_body = False
+                continue
+            if stripped.startswith("%"):
+                result.append(stripped)
+                continue
+            if in_rule_body:
+                result.append(indent_str + stripped)
+            else:
+                result.append(stripped)
+            if ":-" in stripped and not stripped.endswith("."):
+                in_rule_body = True
+            elif stripped.endswith("."):
+                in_rule_body = False
+        return "\n".join(result)
+
+
+class ForthFormatter:
+    """Formatter for Forth colon definitions and stack words."""
+
+    KEYWORDS = [
+        "DUP",
+        "DROP",
+        "SWAP",
+        "OVER",
+        "ROT",
+        "IF",
+        "ELSE",
+        "THEN",
+        "DO",
+        "LOOP",
+        "+LOOP",
+        "BEGIN",
+        "UNTIL",
+        "WHILE",
+        "REPEAT",
+        "AGAIN",
+        "VARIABLE",
+        "CONSTANT",
+        "VALUE",
+        "ALLOT",
+        "HERE",
+        "CR",
+        "EMIT",
+        "INCLUDE",
+    ]
+
+    def format_code(self, code: str, indent_size: int = 2) -> str:
+        lines = code.split("\n")
+        result = []
+        in_def = False
+        indent_str = " " * indent_size
+        for line in lines:
+            stripped = " ".join(line.strip().split())
+            if not stripped:
+                result.append("")
+                continue
+            tokens = stripped.split()
+            if tokens[0] == ":":
+                result.append(stripped)
+                in_def = not stripped.endswith(";")
+                continue
+            if tokens[0] == ";":
+                in_def = False
+                result.append(stripped)
+                continue
+            result.append((indent_str if in_def else "") + stripped)
+            if stripped.endswith(";"):
+                in_def = False
+        return "\n".join(result)
+
+    def normalize_keywords(self, code: str) -> str:
+        result = code
+        for kw in self.KEYWORDS:
+            result = re.sub(r"\b" + re.escape(kw) + r"\b", kw, result, flags=re.IGNORECASE)
+        return result
+
+
+class BrainfuckFormatter:
+    """Formatter for Brainfuck code."""
+
+    def format_code(self, code: str, indent_size: int = 2) -> str:
+        lines = [ln.rstrip() for ln in code.split("\n")]
+        return "\n".join(lines).strip() + ("\n" if code.endswith("\n") else "")
+
+
+class PythonFormatter:
+    """Formatter for Python code (normalizes indentation to 4 spaces and trims trailing whitespace)."""
+
+    def format_code(self, code: str, indent_size: int = 4) -> str:
+        lines = code.split("\n")
+        result = []
+        for line in lines:
+            expanded = line.expandtabs(indent_size).rstrip()
+            result.append(expanded)
+        return "\n".join(result)
+
+
 class CodeFormatter:
     """Unified code formatter for all supported languages."""
 
@@ -369,6 +569,12 @@ class CodeFormatter:
         self.basic = BasicFormatter()
         self.logo = LogoFormatter()
         self.pilot = PilotFormatter()
+        self.c_fmt = CFormatter()
+        self.pascal = PascalFormatter()
+        self.prolog = PrologFormatter()
+        self.forth = ForthFormatter()
+        self.brainfuck = BrainfuckFormatter()
+        self.python = PythonFormatter()
 
     def format_code(
         self, code: str, language: str, indent_size: int = 4
@@ -377,7 +583,7 @@ class CodeFormatter:
 
         Args:
             code: Source code to format
-            language: 'BASIC', 'LOGO', or 'PILOT'
+            language: Language name (e.g. 'BASIC', 'LOGO', 'PILOT', 'C', 'PASCAL', 'PROLOG', 'FORTH', 'BRAINFUCK', 'PYTHON')
             indent_size: Spaces per indent level
 
         Returns:
@@ -395,6 +601,24 @@ class CodeFormatter:
             elif lang == "PILOT":
                 formatted = self.pilot.format_code(code, indent_size)
                 return formatted, "✅ Formatted PILOT code"
+            elif lang == "C":
+                formatted = self.c_fmt.format_code(code, indent_size)
+                return formatted, "✅ Formatted C code"
+            elif lang == "PASCAL":
+                formatted = self.pascal.format_code(code, 2)
+                return formatted, "✅ Formatted Pascal code"
+            elif lang == "PROLOG":
+                formatted = self.prolog.format_code(code, indent_size)
+                return formatted, "✅ Formatted Prolog code"
+            elif lang == "FORTH":
+                formatted = self.forth.format_code(code, 2)
+                return formatted, "✅ Formatted Forth code"
+            elif lang == "BRAINFUCK":
+                formatted = self.brainfuck.format_code(code, 2)
+                return formatted, "✅ Formatted Brainfuck code"
+            elif lang in ("PYTHON", "PYTHON_LANG", "PYTHON3"):
+                formatted = self.python.format_code(code, indent_size)
+                return formatted, "✅ Formatted Python code"
             else:
                 return code, f"❌ Unknown language: {language}"
         except ValueError as e:
@@ -411,7 +635,7 @@ class CodeFormatter:
 
         Args:
             code: Source code
-            language: 'BASIC', 'LOGO', or 'PILOT'
+            language: Language name
 
         Returns:
             Tuple of (normalized_code, status_message)
@@ -428,6 +652,14 @@ class CodeFormatter:
             elif lang == "PILOT":
                 result = self.pilot.normalize_commands(code)
                 return result, "✅ Normalized PILOT commands"
+            elif lang == "PASCAL":
+                result = self.pascal.normalize_keywords(code)
+                return result, "✅ Normalized Pascal keywords"
+            elif lang == "FORTH":
+                result = self.forth.normalize_keywords(code)
+                return result, "✅ Normalized Forth keywords"
+            elif lang in ("C", "PROLOG", "BRAINFUCK", "PYTHON", "PYTHON_LANG", "PYTHON3"):
+                return code, f"✅ Normalized {lang} code"
             else:
                 return code, f"❌ Unknown language: {language}"
         except Exception as e:  # pylint: disable=broad-except
@@ -440,7 +672,7 @@ class CodeFormatter:
 
         Args:
             code: Source code
-            language: 'BASIC', 'LOGO', or 'PILOT'
+            language: Supported language name
             indent_size: Spaces per indent level
 
         Returns:

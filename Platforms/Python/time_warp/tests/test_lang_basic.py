@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from time_warp.core.interpreter import Language
 from .conftest_lang import run, ok, has, no_errors
 
@@ -177,46 +176,6 @@ def test_int_function():
     out = bas("10 PRINT INT(3.9)")
     assert no_errors(out)
     assert has(out, "3")
-
-
-# ---------------------------------------------------------------------------
-# Hardware simulator commands
-# ---------------------------------------------------------------------------
-
-
-def test_hardware_device_add():
-    out = bas("10 HARDWARE DEVICE ADD led1 LED PIN 13")
-    assert no_errors(out)
-    assert has(out, "led1")
-
-
-def test_hardware_pin_set_get():
-    out = bas(
-        "10 HARDWARE DEVICE ADD pin1 LED PIN 5\n"
-        "20 HARDWARE PIN SET pin1 1\n"
-        "30 HARDWARE PIN GET pin1"
-    )
-    assert no_errors(out)
-    assert has(out, "pin1")
-
-
-def test_hardware_sensor_read():
-    from time_warp.features.hardware_simulator import SensorType
-    out = bas(
-        "10 HARDWARE DEVICE ADD temp1 TEMPERATURE_SENSOR PIN 0\n"
-        "20 HARDWARE SENSOR READ temp1"
-    )
-    assert no_errors(out)
-    assert has(out, "temp1")
-
-
-def test_hardware_status():
-    out = bas(
-        "10 HARDWARE DEVICE ADD d1 LED PIN 1\n"
-        "20 HARDWARE STATUS"
-    )
-    assert no_errors(out)
-    assert has(out, "d1")
 
 
 def test_while_wend():

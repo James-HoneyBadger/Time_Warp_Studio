@@ -1,6 +1,5 @@
 """Tests for time_warp.utils.string_evaluator module."""
 
-import pytest
 from time_warp.utils.string_evaluator import StringExpressionEvaluator
 
 
@@ -45,6 +44,14 @@ def test_upper_function():
 
 def test_lower_function():
     assert ev('LOWER("HELLO WORLD")') == "hello world"
+
+
+def test_lcase_dollar_function():
+    assert ev('LCASE$("HELLO WORLD")') == "hello world"
+
+
+def test_ucase_dollar_function():
+    assert ev('UCASE$("hello world")') == "HELLO WORLD"
 
 
 def test_trim_function():

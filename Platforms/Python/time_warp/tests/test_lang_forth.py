@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from time_warp.core.interpreter import Language
 from .conftest_lang import run, ok, has, no_errors
 
@@ -164,19 +163,19 @@ def test_dup_stack():
     assert has(out, "5")
 
 
-def test_modulo():
+def test_modulo_lowercase():
     out = forth("10 3 mod .")
     assert no_errors(out)
     assert has(out, "1")
 
 
-def test_do_loop():
+def test_do_loop_lowercase():
     out = forth("5 0 do i . loop")
     assert no_errors(out)
     assert has(out, "0", "1", "2", "3", "4")
 
 
-def test_swap():
+def test_swap_lowercase():
     out = forth("3 5 swap . .")
     assert no_errors(out)
     assert has(out, "3", "5")

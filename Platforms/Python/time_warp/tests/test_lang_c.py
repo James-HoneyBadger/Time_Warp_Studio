@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from time_warp.core.interpreter import Language
 from .conftest_lang import run, ok, has, no_errors
 
@@ -222,7 +221,7 @@ int main() {
     assert has(out, "A")
 
 
-def test_ternary_operator():
+def test_ternary_operator_in_main():
     out = c("""
 #include <stdio.h>
 int main() {
@@ -298,6 +297,35 @@ def test_inline_division():
     out = c('printf("%d", 20 / 4);')
     assert no_errors(out)
     assert has(out, "5")
+
+
+# ---------------------------------------------------------------------------
+# scanf destinations
+# ---------------------------------------------------------------------------
+
+
+def test_scanf_char_array_without_ampersand():
+    out = run(
+        '#include <stdio.h>\n'
+        '#include <string.h>\n'
+        'int main() {\n'
+        '    char name[50];\n'
+        '    scanf("%49s", name);\n'
+        '    printf("Hello, %s!\\n", name);\n'
+        '    printf("Length: %lu\\n", strlen(name));\n'
+        '    return 0;\n'
+        '}\n',
+        LANG,
+        input_val="Ann",
+    )
+    assert no_errors(out)
+    assert has(out, "Hello, Ann!", "Length: 3")
+
+
+def test_scanf_numeric_without_ampersand_is_error():
+    out = c('int n;\nscanf("%d", n);')
+    assert not no_errors(out)
+    assert has(out, "scanf requires &var destination")
 
 
 # ---------------------------------------------------------------------------

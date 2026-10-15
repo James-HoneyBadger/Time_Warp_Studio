@@ -29,7 +29,7 @@ EXAMPLES_DIR = REPO_ROOT / "Examples"
 sys.path.insert(0, str(PYTHON_ROOT))
 
 core_mod = importlib.import_module("time_warp.core.interpreter")
-Language = getattr(core_mod, "Language")
+Language = core_mod.Language
 
 
 MODULE_LANGUAGE_ALIASES = {

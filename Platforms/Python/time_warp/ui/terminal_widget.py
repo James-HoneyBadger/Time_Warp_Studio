@@ -114,8 +114,8 @@ class TerminalWidget(QWidget):
         try:
             from ..core.config import APP_DATA_DIR
             self._input.load_history_file(APP_DATA_DIR / "terminal_history")
-        except Exception:  # noqa: BLE001 — optional feature
-            pass
+        except OSError:
+            pass  # no saved history yet
 
     # ------------------------------------------------------------------
     # UI construction

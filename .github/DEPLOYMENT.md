@@ -1,90 +1,30 @@
-# Time Warp Studio — GitHub Deployments
+# CI and Release Workflows
 
-This document explains the deployment pipeline and how to configure the required GitHub Environments.
+Time Warp Studio is a desktop application. There is no server deployment and no container image. The repository has four GitHub Actions workflows in `.github/workflows/`.
 
----
+## Workflows
 
-## Deployment Environments
+| Workflow | Trigger | What it does |
+|----------|---------|--------------|
+| `ci.yml` | Push and pull request to `main` | Runs `ruff check` on `Platforms/Python`, `pytest` on `Platforms/Python/time_warp/tests`, `Platforms/Python/smoke_test.py`, and `test_all_examples.py`. Matrix: Python 3.10, 3.12, 3.13. |
+| `build_release.yml` | Tags matching `v*`, or manual dispatch | Builds native binaries with `Scripts/build_native.sh` (PyInstaller) for Linux x86_64 and arm64. The arm64 job is `continue-on-error`. Binaries are uploaded as workflow artifacts. It does not create a GitHub Release. |
+| `docs.yml` | Push and pull request to `main` when files under `docs/` change | Checks that the core documentation files exist. |
+| `markdown-lint.yml` | Push and pull request | Markdown lint and spell check. Both steps are `continue-on-error`. |
 
-| Environment | Trigger | Purpose |
-|-------------|---------|---------|
-| `staging`   | Push to `main` | Validates Docker image in GHCR after every merge |
-| `production`| Push of a `v*` tag | Publishes a GitHub Release with binary artifacts |
-| `preview`   | Pull request opened/updated | Reports test status back to the PR |
+## Release Procedure
 
----
+The release steps are manual. The full checklist is in [RELEASE_CHECKLIST.md](RELEASE_CHECKLIST.md).
 
-## One-time Environment Setup
+1. Set `VERSION` and run `python3 Scripts/version_sync.py --write --release-date YYYY-MM-DD`.
+2. Add the release entry to `CHANGELOG.md`.
+3. Run `make test` and `python3 Platforms/Python/smoke_test.py`.
+4. Merge to `main` and confirm `ci.yml` passes.
+5. Create and push an annotated tag:
 
-Run the script below (requires the [GitHub CLI](https://cli.github.com/) and `gh auth login`):
+   ```bash
+   git tag -a vX.Y.Z -m "Time Warp Studio vX.Y.Z"
+   git push origin vX.Y.Z
+   ```
 
-```bash
-./Scripts/setup_github_environments.sh
-```
-
-Or configure manually in **Settings → Environments**:
-
-### `staging`
-- **Required reviewers:** _(none — auto-deploys on merge)_
-- **Environment secrets:** _(none required beyond `GITHUB_TOKEN`)_
-
-### `production`
-- **Required reviewers:** Add at least one maintainer
-- **Wait timer:** 0 minutes (or set a delay for safety)
-- **Environment URL:** `https://github.com/James-HoneyBadger/Time_Warp_Studio/releases`
-
-### `preview`
-- **Required reviewers:** _(none)_
-
----
-
-## Workflow: `deploy.yml`
-
-```
-Push to main ──► context ──► test ──► build-image ──► deploy-staging
-                                  └──► deploy-preview  (PRs only)
-
-Push v* tag  ──► context ──► test ──► build-image ──► deploy-production
-                                  └──► build-binaries ─┘
-```
-
-### Job descriptions
-
-| Job | Description |
-|-----|-------------|
-| `context` | Resolves environment name, version string, and release flag |
-| `test` | Runs the pytest suite as a pre-deploy gate |
-| `build-image` | Builds & pushes the Docker image to GHCR |
-| `build-binaries` | Compiles native Linux binaries (releases only) |
-| `deploy-staging` | Creates a GitHub Deployment and marks it success/failure |
-| `deploy-production` | Creates a GitHub Release, attaches binaries, marks deployment |
-| `deploy-preview` | Reports status on PRs via a bot comment |
-| `deploy-summary` | Writes a Markdown job summary for easy audit |
-
----
-
-## Creating a Release
-
-```bash
-# Tag and push — the workflow handles the rest
-git tag v1.2.0 -m "Release 1.2.0"
-git push origin v1.2.0
-```
-
-Pre-release versions (e.g. `v1.2.0-beta.1`) are automatically marked as pre-releases in GitHub Releases.
-
----
-
-## Docker Images (GHCR)
-
-| Tag | When set |
-|-----|----------|
-| `latest` | Every push to `main` |
-| `stable` | Every production (`v*`) release |
-| `<version>` | e.g. `v1.2.0` on tag push |
-| `staging-<sha>` | Every `main` branch push |
-| `pr-<N>` | Pull request builds |
-
-```bash
-docker pull ghcr.io/james-honeybadger/time_warp_studio:latest
-```
+6. `build_release.yml` runs on the tag. Download the binaries from the workflow run's artifacts.
+7. Create the GitHub Release for the tag manually and attach the binaries.

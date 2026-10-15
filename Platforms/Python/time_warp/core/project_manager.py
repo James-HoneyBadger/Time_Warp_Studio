@@ -325,7 +325,6 @@ class ProjectManager:
         Returns:
             A tuple of (project, project_file_path).
         """
-        from ..features.project_templates import Template
 
         project = self.create(name, project_dir)
         safe_name = "".join(c if c.isalnum() or c in "-_" else "_" for c in name)

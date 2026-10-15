@@ -4,8 +4,8 @@ All notable changes to Time Warp Studio will be documented in this file.
 
 > **Scope note:** The current release actively supports **9 languages**:
 > BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python. Older
-> entries below mention additional language executors (REXX, Smalltalk, APL,
-> Perl, Ruby, COBOL, Erlang, Haskell, JavaScript, Lua, HyperTalk, PostScript,
+> entries below mention additional language executors (Smalltalk,
+> Perl, Ruby, Erlang, Haskell, JavaScript, Lua, HyperTalk, PostScript,
 > LISP/Scheme, Tcl, 6502 Assembly) that were built at the time but have since
 > been removed from `time_warp/languages/` and are no longer part of the
 > product. These entries are kept as historical record only.
@@ -24,16 +24,6 @@ All notable changes to Time Warp Studio will be documented in this file.
 
 ### New Languages
 
-- **REXX executor** (`languages/rexx.py`) — full REXX interpreter (~780 lines) supporting:
-  - SAY, PULL, PUSH output/input; string concatenation with `||`
-  - IF/THEN/ELSE, DO (counted/WHILE/UNTIL/FOREVER), SELECT/WHEN/OTHERWISE
-  - LEAVE, ITERATE, EXIT; CALL/RETURN with RESULT variable
-  - PARSE VAR/VALUE WITH pattern matching; DROP, NOP, TRACE
-  - String builtins: LENGTH, SUBSTR, UPPER, LOWER, REVERSE, COPIES, STRIP, POS, CENTER, CHANGESTR, WORD, WORDS, DATATYPE
-  - Math builtins: ABS, MAX, MIN, SIGN; operators `//` (modulo), `**` (power)
-  - Turtle graphics: FORWARD, BACKWARD, LEFT, RIGHT, PENUP, PENDOWN, HOME, SETHEADING, COLOR
-  - 37/37 tests passing; 5 example programs in `Examples/rexx/`
-
 - **Smalltalk executor** (`languages/smalltalk.py`) — Smalltalk-80 interpreter (~830 lines) supporting:
   - `Transcript show:/showCr:/print:` for output; temp variable declarations `| x y |`
   - Assignment `:=`, conditional `ifTrue:/ifFalse:/ifTrue:ifFalse:`
@@ -45,19 +35,9 @@ All notable changes to Time Warp Studio will be documented in this file.
   - Turtle graphics via `Turtle forward:`, `Turtle right:`, etc.
   - 31/31 tests passing; 5 example programs in `Examples/smalltalk/`
 
-- **APL executor** (`languages/apl.py`) — APL interpreter (~680 lines) supporting:
-  - `⎕←` print, `←` assignment; `¯` high-minus for negative literals
-  - Monadic functions: `⍳` (iota), `⍴` (shape), `⌽` (reverse), `⍋`/`⍒` (grade), `~` (not), `|` (abs), `-`, `×`, `÷`, `*`, `⌈`, `⌊`, `⍟`, `○`, `!`
-  - Dyadic functions: `⍳` (index-of), `⍴` (reshape), `,` (catenate), `↑`/`↓` (take/drop), `+`, `-`, `×`, `÷`, `*`, `⌈`, `⌊`, `=`, `≠`, `<`, `≤`, `>`, `≥`, `∧`, `∨`, `∊` (member)
-  - Reduction `f/`, scan `f\`, inner product `+.×`, outer product `∘.f`
-  - `⎕IO`/`⎕PP` system variables; dfns `{⍵ + 1}`
-  - 36/36 (32 originally + 4 bonus) tests passing; 5 example programs in `Examples/apl/`
-
 ### Syntax Highlighting
 
-- **REXX** — keyword highlighting (SAY, DO, END, IF, SELECT…), `--`/`/* */` comments, strings
 - **Smalltalk** — keyword/unary/binary message highlighting, `"..."` comment style, string literals
-- **APL** — APL glyph operator highlighting, `⍝` comment style, `¯` negative number literals
 
 ## [12.0.0] - 2026-06-01
 
@@ -109,7 +89,6 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **Assembly 6502 executor** (`languages/asm6502.py`) — 2-pass assembler, 64 KB virtual machine, 40+ opcodes, all addressing modes
 - **Code folding** (`ui/editor.py`) — ▼/▶ gutter glyphs, `toggle_fold()`, hides/shows QTextBlock ranges
 - **Split editor** (`ui/main_window.py`) — `QSplitter`-based dual-pane editing (View → Split Editor)
-- **COBOL enhancements** (`languages/cobol.py`) — `PERFORM VARYING`, `EVALUATE/WHEN/END-EVALUATE`, `OCCURS` table support
 
 
 
@@ -181,7 +160,6 @@ All notable changes to Time Warp Studio will be documented in this file.
 - **Erlang** — `number_theory.erl`: Number theory library — prime sieve, factorization, GCD/LCM, Euler's totient, amicable pairs, modular arithmetic, CRT, Collatz, Catalan
 - **Smalltalk** — `ascii_patterns.st`: Pascal's triangle, number spiral, diamonds (solid and numbered), checkerboard, Sierpiński triangle, multiplication table, nested boxes
 - **HyperTalk** — `calculator.htalk`: Scientific calculator — arithmetic, powers/roots, factorials, trig (sin/cos/tan in degrees), logarithms (log2/log10/ln), unit conversion, statistics
-- **REXX** — `number_systems.rexx`: Base conversion (binary/octal/hex/base-36), Roman numeral encoder/decoder, bitwise AND/OR/XOR/NOT, palindromic numbers across bases
 - **Rust** — `game_of_life.rs`: Conway's Game of Life with `Grid` struct/impl, toroidal boundaries, 7 classic patterns, period detection, and simulation statistics
 - **Perl** — `text_analytics.pl`: Text analytics — Flesch-Kincaid readability, word frequency with bar chart, bigram/trigram n-grams, sentence statistics, KWIC concordance
 
@@ -215,7 +193,6 @@ All notable changes to Time Warp Studio will be documented in this file.
 
 ### Language Executor Improvements
 - **APL**: outer product operator (`∘.fn` e.g. `A ∘.× B`), format `⍕`, execute `⍎`
-- **Pascal**: `WITH <record> DO` statement for record field shorthand access
 - **C**: `struct`/`union` type definitions, struct variable declarations, member access (`p.x`), `typedef` for scalar types
 
 ### UI Improvements

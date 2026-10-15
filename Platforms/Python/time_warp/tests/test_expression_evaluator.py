@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import math
-import pytest
 from time_warp.utils.expression_evaluator import ExpressionEvaluator
 
 
@@ -129,12 +127,10 @@ def test_power_operator():
 
 
 def test_sin_function():
-    import math
     assert ev("sin(0)") == 0.0
 
 
 def test_cos_function():
-    import math
     assert abs(ev("cos(0)") - 1.0) < 1e-9
 
 
@@ -166,16 +162,12 @@ def test_modulo_operator():
     assert ev("10 % 3") == 1.0
 
 
-def test_power_operator():
+def test_power_operator_large():
     assert ev("2 ^ 8") == 256.0
 
 
 def test_chain_multiplication():
     assert ev("2 * 3 * 4") == 24.0
-
-
-def test_nested_parentheses():
-    assert ev("((2 + 3) * (4 - 1))") == 15.0
 
 
 def test_floor_function():

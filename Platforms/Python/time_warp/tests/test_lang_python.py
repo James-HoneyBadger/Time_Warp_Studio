@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 from time_warp.core.interpreter import Language
 from .conftest_lang import run, ok, has, no_errors
 
@@ -246,13 +245,13 @@ def test_class_definition_works():
     assert has(out, "3", "4")
 
 
-def test_list_comprehension():
+def test_list_comprehension_squares():
     out = py("x = [i ** 2 for i in range(1, 6)]\nprint(x)")
     assert no_errors(out)
     assert has(out, "1", "4", "9", "16", "25")
 
 
-def test_fstring():
+def test_fstring_function():
     out = py("def greet(name):\n    return f'Hello, {name}!'\nprint(greet('World'))")
     assert no_errors(out)
     assert has(out, "Hello, World!")
@@ -270,7 +269,7 @@ def test_lambda_expression():
     assert has(out, "49")
 
 
-def test_list_comprehension():
+def test_list_comprehension_doubles():
     out = py("print([x*2 for x in range(5)])")
     assert no_errors(out)
     assert has(out, "0", "2", "4", "6", "8")

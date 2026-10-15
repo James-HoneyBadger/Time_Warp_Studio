@@ -25,7 +25,6 @@ from PySide6.QtWidgets import (
 
 from ..core.debugger import ExecutionTimeline
 from ..core.interpreter import Interpreter, Language
-from ..features.hardware_simulator import HardwareSimulator
 from ..graphics.turtle_state import TurtleState
 
 # Set to True or use TWS_DEBUG=1 env var to enable verbose debug output
@@ -82,6 +81,7 @@ class InterpreterThread(QThread):
     debug_frame_recorded = Signal(object)
     debug_timeline_ready = Signal(object)
     variables_updated = Signal(dict)  # variables dict after execution
+    telemetry_updated = Signal(dict)  # live telemetry snapshot
     execution_stats = Signal(dict)  # execution metrics
 
     # The thread __init__ intentionally accepts several parameters for
@@ -93,10 +93,11 @@ class InterpreterThread(QThread):
         turtle,
         language=None,
         interpreter=None,
-        hardware_simulator=None,
         debug_mode=False,
         breakpoints=None,
         debug_step_granularity="line",
+        breakpoint_conditions=None,
+        break_on_error=False,
     ):
         super().__init__()
         self.code = code
@@ -104,10 +105,11 @@ class InterpreterThread(QThread):
         self.language = language
         self.should_stop = False
         self.interp = interpreter
-        self.hardware_simulator = hardware_simulator
         self.debug_mode = debug_mode
         self.breakpoints = breakpoints or set()
         self.debug_step_granularity = debug_step_granularity
+        self.breakpoint_conditions = dict(breakpoint_conditions or {})
+        self.break_on_error = bool(break_on_error)
         self._had_error = False
         self.step_delay_ms: int = 0  # 0 = no throttle
 
@@ -118,22 +120,24 @@ class InterpreterThread(QThread):
         try:
             if self.interp is None:
                 self.interp = Interpreter()
-            if self.hardware_simulator is not None:
-                self.interp.hardware = self.hardware_simulator
             self.interp.load_program(self.code, self.language)
 
             # Configure debugging
             self.interp.set_debug_mode(self.debug_mode)
+            self.interp.set_break_on_error(self.break_on_error)
             if self.debug_mode:
                 timeline = ExecutionTimeline()
                 timeline.start_recording()
+                for bp_line, cond in self.breakpoint_conditions.items():
+                    timeline.set_breakpoint(int(bp_line), cond)
                 self.interp.set_debug_timeline(timeline)
                 granularity = self.debug_step_granularity
                 if self.language != Language.BASIC:
                     granularity = "line"
                 self.interp.set_debug_step_granularity(granularity)
             if self.debug_mode:
-                self.interp.step_mode = True  # Start paused at first line
+                # Start paused at first statement when no explicit breakpoints are set
+                self.interp.step_mode = not bool(self.breakpoints)
             for bp in self.breakpoints:
                 self.interp.add_breakpoint(bp)
 
@@ -201,9 +205,13 @@ class InterpreterThread(QThread):
                 self.input_requested.emit(req.prompt, req.is_numeric)
             elif not self.should_stop:
                 self.output_ready.emit("\n✅ Execution complete", "success")
-                # Emit variables after execution
+                # Emit variables and telemetry snapshot after execution
                 variables = self.interp.get_variables()
                 self.variables_updated.emit(variables)
+                if hasattr(self.interp, "get_telemetry_snapshot"):
+                    self.telemetry_updated.emit(
+                        self.interp.get_telemetry_snapshot(self.turtle)
+                    )
                 duration_ms = (time.perf_counter() - start_time) * 1000
                 line_count = len(
                     [line for line in self.code.splitlines() if line.strip()]
@@ -259,6 +267,8 @@ class InterpreterThread(QThread):
         self.should_stop = True
         if self.interp:
             self.interp.running = False
+            if hasattr(self.interp, "budget") and self.interp.budget is not None:
+                self.interp.budget.cancelled = True
             # Unblock the thread if it is waiting in _do_debug_pause or the
             # Python settrace debug tracer.
             self.interp.debug_event.set()
@@ -274,6 +284,7 @@ class OutputPanel(QTextEdit):
     debug_frame_recorded = Signal(object)
     debug_timeline_ready = Signal(object)
     variables_updated = Signal(dict)  # variables after execution
+    telemetry_updated = Signal(dict)  # live telemetry snapshot
     execution_stats = Signal(dict)
     error_occurred = Signal(str)
     execution_complete = Signal()
@@ -287,8 +298,6 @@ class OutputPanel(QTextEdit):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-
-        self.hardware_simulator = HardwareSimulator()
 
         # Make read-only
         self.setReadOnly(True)
@@ -348,7 +357,7 @@ class OutputPanel(QTextEdit):
         # Error filtering and tracking
         self._error_filter_active = False
         self._error_lines = set()  # Line numbers with errors
-        self._filtered_document = None  # For filtering view
+        self._unfiltered_html: str | None = None
 
         # Track error locations for clickable navigation
         self._error_map = {}  # Maps block number → (line_number, error_text)
@@ -499,6 +508,8 @@ class OutputPanel(QTextEdit):
         debug_mode=False,
         breakpoints=None,
         debug_step_granularity="line",
+        breakpoint_conditions=None,
+        break_on_error=False,
     ):
         """Run program in background thread."""
         import sys
@@ -548,6 +559,8 @@ class OutputPanel(QTextEdit):
             debug_mode=debug_mode,
             breakpoints=breakpoints,
             debug_step_granularity=debug_step_granularity,
+            breakpoint_conditions=breakpoint_conditions,
+            break_on_error=break_on_error,
         )
 
     # This method coordinates starting the interpreter thread and intentionally
@@ -563,6 +576,8 @@ class OutputPanel(QTextEdit):
         debug_mode=False,
         breakpoints=None,
         debug_step_granularity="line",
+        breakpoint_conditions=None,
+        break_on_error=False,
     ):
         """Start execution thread."""
         import sys
@@ -594,10 +609,11 @@ class OutputPanel(QTextEdit):
             turtle,
             language,
             interpreter,
-            self.hardware_simulator,
             debug_mode,
             breakpoints,
             debug_step_granularity,
+            breakpoint_conditions,
+            break_on_error,
         )
         self.exec_thread.step_delay_ms = self._step_delay_ms
         self.exec_thread.output_ready.connect(self.on_output)
@@ -645,9 +661,10 @@ class OutputPanel(QTextEdit):
         except AttributeError:
             pass
 
-        # Forward variables_updated signal
+        # Forward variables_updated and telemetry_updated signals
         try:
             self.exec_thread.variables_updated.connect(self.variables_updated)
+            self.exec_thread.telemetry_updated.connect(self.telemetry_updated)
         except AttributeError:
             pass
 
@@ -694,12 +711,19 @@ class OutputPanel(QTextEdit):
             self.exec_thread.step_delay_ms = self._step_delay_ms
 
     def _poll_live_variables(self) -> None:
-        """Emit variables_updated with the current interpreter state while running."""
+        """Emit variables_updated and telemetry_updated while running."""
         if self.exec_thread and self.exec_thread.interp:
             try:
                 variables = self.exec_thread.interp.get_variables()
                 self.variables_updated.emit(variables)
-            except Exception:  # pylint: disable=broad-except
+                if hasattr(self.exec_thread.interp, "get_telemetry_snapshot"):
+                    self.telemetry_updated.emit(
+                        self.exec_thread.interp.get_telemetry_snapshot(
+                            self.exec_thread.turtle
+                        )
+                    )
+            except RuntimeError:
+                # Interpreter thread mutated its dicts mid-snapshot; next tick retries
                 pass
 
     def resume_execution(self):
@@ -866,7 +890,7 @@ class OutputPanel(QTextEdit):
         self._live_watch_timer.stop()
         try:
             self.on_complete(canvas, turtle)
-        except Exception:  # pylint: disable=broad-except
+        except (RuntimeError, AttributeError, TypeError, ValueError):
             # Never let canvas errors prevent the completion signal from firing
             pass
         finally:
@@ -884,20 +908,12 @@ class OutputPanel(QTextEdit):
         """Check if execution is running."""
         return self.exec_thread and self.exec_thread.isRunning()
 
-    def mousePressEvent(self, event):
-        """Detect clicks on line-number hyperlinks in error output."""
-        if event.button() == Qt.LeftButton:
-            anchor = self.anchorAt(event.position().toPoint())
-            if anchor.startswith("line:"):
-                try:
-                    line = int(anchor.split(":", 1)[1])
-                    self.line_clicked.emit(line)
-                except (ValueError, IndexError):
-                    pass
-        super().mousePressEvent(event)
-
     def append_colored(self, text, color_type="normal"):
         """Append colored text, with clickable line references in errors."""
+        was_filtered = self._error_filter_active
+        if was_filtered:
+            self._clear_error_filter()
+
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.End)
 
@@ -935,6 +951,9 @@ class OutputPanel(QTextEdit):
         self.setTextCursor(cursor)
         self.ensureCursorVisible()
 
+        if was_filtered:
+            self._apply_error_filter()
+
     def get_last_error(self):
         """Get the last error message for AI assistance."""
         return self.last_error
@@ -949,9 +968,10 @@ class OutputPanel(QTextEdit):
 
     def _apply_error_filter(self):
         """Show only error lines (❌)."""
-        # Get all text and filter to error lines only
-        doc = self.document()
-        all_text = doc.toPlainText()
+        if self._unfiltered_html is None:
+            self._unfiltered_html = self.toHtml()
+
+        all_text = self.toPlainText()
         error_lines = [line for line in all_text.split('\n') if line.startswith('❌')]
 
         # Display filtered text
@@ -962,8 +982,11 @@ class OutputPanel(QTextEdit):
 
     def _clear_error_filter(self):
         """Clear error filter and restore full output."""
-        # This would require storing the original full text; for now,
-        # we can only show that the filter is off
+        if self._unfiltered_html is not None:
+            self.setReadOnly(False)
+            self.setHtml(self._unfiltered_html)
+            self.setReadOnly(True)
+            self._unfiltered_html = None
         self._filter_errors_btn.setStyleSheet("")
 
     def mousePressEvent(self, event):  # type: ignore[override]
@@ -997,7 +1020,6 @@ class ImmediateModePanel(QWidget):
         super().__init__(parent)
 
         # Persistent interpreter for immediate mode
-        self.hardware_simulator = HardwareSimulator()
         self.interpreter = self._create_interpreter()
         self.turtle = TurtleState()
         self.canvas = None
@@ -1046,10 +1068,8 @@ class ImmediateModePanel(QWidget):
         self.command_input.installEventFilter(self)
 
     def _create_interpreter(self) -> Interpreter:
-        """Create an interpreter bound to the shared hardware simulator."""
-        interpreter = Interpreter()
-        interpreter.hardware = self.hardware_simulator
-        return interpreter
+        """Create an interpreter for immediate mode."""
+        return Interpreter()
 
     def eventFilter(self, obj, event):  # pylint: disable=invalid-name
         """Handle key events for command history."""
@@ -1091,11 +1111,6 @@ class ImmediateModePanel(QWidget):
     def set_output_panel(self, output_panel):
         """Set the output panel to send results to."""
         self.output_panel = output_panel
-
-    def set_hardware_simulator(self, simulator: HardwareSimulator) -> None:
-        """Adopt the shared hardware simulator used by the main output path."""
-        self.hardware_simulator = simulator
-        self.interpreter.hardware = simulator
 
     def set_language(self, language):
         """Set the current language."""

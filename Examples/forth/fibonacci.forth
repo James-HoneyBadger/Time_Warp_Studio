@@ -1,35 +1,31 @@
 \ Fibonacci sequence in Forth
-\ Demonstrates recursion via iterative stack manipulation
+\ Demonstrates loops, stack juggling and integer ratios
 
-\ Iterative Fibonacci
+\ Iterative Fibonacci: fib(0)=0 fib(1)=1 fib(2)=1 ...
 : fib ( n -- fib_n )
-  dup 1 <= if drop 1 exit then
-  0 1 rot            \ stack: prev curr n
-  1 - 0 ?do
-    over + swap drop \ sum, keep running total
+  0 1 rot            \ a b n
+  0 ?do
+    swap over +      \ b a+b
   loop
   drop
 ;
 
-\ Print first N Fibonacci numbers
+\ Print the first N Fibonacci numbers on one line
 : print-fibs ( n -- )
   ." First " dup . ." Fibonacci numbers:" cr
   0 do
-    i fib . ."  "
+    i fib .
   loop
   cr
 ;
 
-\ Golden ratio approximation via consecutive Fibonacci numbers
-: golden-ratio ( n -- )
-  ." Golden ratio via fib(n+1)/fib(n):" cr
-  5 15 do
-    i fib i 1+ fib    \ fib(i) fib(i+1)
-    swap              \ fib(i+1) fib(i)
-    ." fib(" i . .") / fib(" i . ."): "
-    100 * /           \ integer approximation * 100
-    ." ~" . ." /100" cr
+\ Golden ratio approximation: fib(i+1) * 1000 / fib(i)
+: golden-ratio ( -- )
+  ." Golden ratio x1000 via fib(i+1)/fib(i):" cr
+  16 5 do
+    ." i=" i . ." ratio=" i 1+ fib 1000 * i fib / . cr
   loop
 ;
 
 15 print-fibs
+golden-ratio

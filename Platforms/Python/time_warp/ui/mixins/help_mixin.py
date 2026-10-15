@@ -160,7 +160,7 @@ class HelpDocsMixin(_HelpMixinBase):
 
     def show_programming_guide(self):
         """Show programming guide."""
-        docs_path = self._get_docs_path() / "reference" / "faq.md"
+        docs_path = self._get_docs_path().parent / "FAQ.md"
         self._show_help_dialog("FAQ - Frequently Asked Questions", docs_path)
 
     def show_language_help(self, language: str):
@@ -169,6 +169,12 @@ class HelpDocsMixin(_HelpMixinBase):
             "basic": ("BASIC Programming Tutorial", "tutorials/basic.md"),
             "pilot": ("PILOT Language Guide", "tutorials/pilot.md"),
             "logo": ("Logo Programming & Turtle Graphics", "tutorials/logo.md"),
+            "c": ("C Language Reference", "tutorials/c.md"),
+            "pascal": ("Pascal Language Guide", "tutorials/pascal.md"),
+            "prolog": ("Prolog Logic Programming", "tutorials/prolog.md"),
+            "forth": ("Forth Stack Programming", "tutorials/forth.md"),
+            "brainfuck": ("Brainfuck Tutorial", "tutorials/brainfuck.md"),
+            "python": ("Python Tutorial", "tutorials/python.md"),
         }
 
         if language not in lang_docs:
@@ -204,7 +210,6 @@ class HelpDocsMixin(_HelpMixinBase):
             "<li>9 programming languages</li>"
             "<li>Integrated turtle graphics and canvas</li>"
             "<li>Full debugger with timeline replay</li>"
-            "<li>SQL workbench, CICS terminal emulation</li>"
             "</ul>"
             "<p><b>Author:</b> James Temple</p>"
             '<p><a href="https://github.com/James-HoneyBadger/Time_Warp_Studio">'

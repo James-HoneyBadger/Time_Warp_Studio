@@ -1,0 +1,455 @@
+{
+  "version": 1,
+  "lessons": [
+    {
+      "id": "basic_first_steps",
+      "title": "First Steps in BASIC",
+      "language": "BASIC",
+      "difficulty": "beginner",
+      "description": "Print text, store numbers in variables, and do arithmetic.",
+      "checkpoints": [
+        {
+          "title": "Say hello",
+          "description": "Use PRINT to display exactly: Hello, World!",
+          "starter_code": "10 REM Add a PRINT statement on line 20\n30 END\n",
+          "solution": "10 REM Add a PRINT statement on line 20\n20 PRINT \"Hello, World!\"\n30 END\n",
+          "hints": ["PRINT shows whatever follows it.", "Put the text inside double quotes: PRINT \"Hello, World!\""],
+          "expect_lines": ["Hello, World!"]
+        },
+        {
+          "title": "Variables and arithmetic",
+          "description": "W and H hold a rectangle's width and height. Store W * H in A and print A.",
+          "starter_code": "10 LET W = 6\n20 LET H = 7\n50 END\n",
+          "solution": "10 LET W = 6\n20 LET H = 7\n30 LET A = W * H\n40 PRINT A\n50 END\n",
+          "hints": ["Use LET A = W * H on line 30.", "Then PRINT A on line 40."],
+          "expect_lines": ["42"]
+        }
+      ]
+    },
+    {
+      "id": "basic_loops",
+      "title": "Loops and Decisions in BASIC",
+      "language": "BASIC",
+      "difficulty": "beginner",
+      "description": "Repeat work with FOR/NEXT and choose with IF/THEN.",
+      "checkpoints": [
+        {
+          "title": "Count with FOR",
+          "description": "Print the numbers 1 to 5, one per line, using a FOR loop.",
+          "starter_code": "10 FOR I = 1 TO 3\n20 PRINT I\n30 NEXT I\n",
+          "solution": "10 FOR I = 1 TO 5\n20 PRINT I\n30 NEXT I\n",
+          "hints": ["Change the loop's upper limit.", "FOR I = 1 TO 5"],
+          "expect_lines": ["1", "2", "3", "4", "5"]
+        },
+        {
+          "title": "Only the even numbers",
+          "description": "Loop from 1 to 10 but print a number only when it is even.",
+          "starter_code": "10 FOR I = 1 TO 10\n20 PRINT I\n30 NEXT I\n",
+          "solution": "10 FOR I = 1 TO 10\n20 IF I MOD 2 = 0 THEN PRINT I\n30 NEXT I\n",
+          "hints": ["I MOD 2 is 0 for even numbers.", "IF I MOD 2 = 0 THEN PRINT I"],
+          "expect_lines": ["2", "4", "6", "8", "10"]
+        }
+      ]
+    },
+    {
+      "id": "pilot_conversation",
+      "title": "Talking with PILOT",
+      "language": "PILOT",
+      "difficulty": "beginner",
+      "description": "Type text and compute values with PILOT's one-letter commands.",
+      "checkpoints": [
+        {
+          "title": "Type a line",
+          "description": "Use the T: command to type exactly: Hello, World!",
+          "starter_code": "R: T: types text on the screen\n",
+          "solution": "R: T: types text on the screen\nT:Hello, World!\n",
+          "hints": ["Text after T: is printed as-is.", "T:Hello, World!"],
+          "expect_lines": ["Hello, World!"]
+        },
+        {
+          "title": "Compute and show a value",
+          "description": "Use C: to set #X to 6 * 7, then type: The answer is 42",
+          "starter_code": "C:#X = 6\nT:The answer is #X\n",
+          "solution": "C:#X = 6 * 7\nT:The answer is #X\n",
+          "hints": ["C: evaluates an expression and stores it.", "C:#X = 6 * 7"],
+          "expect_lines": ["The answer is 42"]
+        }
+      ]
+    },
+    {
+      "id": "pilot_flow",
+      "title": "Labels, Jumps and Subroutines in PILOT",
+      "language": "PILOT",
+      "difficulty": "intermediate",
+      "description": "Control program flow with J: (jump) and U: (use a subroutine).",
+      "checkpoints": [
+        {
+          "title": "Jump over a line",
+          "description": "Make the program print Start then Finished, skipping the middle line with J:.",
+          "starter_code": "T:Start\nT:Skipped\n*DONE\nT:Finished\n",
+          "solution": "T:Start\nJ:*DONE\nT:Skipped\n*DONE\nT:Finished\n",
+          "hints": ["J:*LABEL continues execution at *LABEL.", "Add J:*DONE after T:Start."],
+          "expect_lines": ["Start", "Finished"]
+        },
+        {
+          "title": "Call a subroutine",
+          "description": "Use U:*GREET to run the subroutine, then print Back. Output: Main, Hello from GREET, Back.",
+          "starter_code": "T:Main\nT:Back\nE:\n*GREET\nT:Hello from GREET\nE:\n",
+          "solution": "T:Main\nU:*GREET\nT:Back\nE:\n*GREET\nT:Hello from GREET\nE:\n",
+          "hints": ["U:*LABEL runs the code at *LABEL until E: and then returns.", "Put U:*GREET between the two T: lines."],
+          "expect_lines": ["Main", "Hello from GREET", "Back"]
+        }
+      ]
+    },
+    {
+      "id": "logo_shapes",
+      "title": "Turtle Shapes in Logo",
+      "language": "LOGO",
+      "difficulty": "beginner",
+      "description": "Steer the turtle with FORWARD and RIGHT, and repeat moves with REPEAT.",
+      "checkpoints": [
+        {
+          "title": "Draw a square",
+          "description": "Draw a closed square with 4 sides of 100 steps using REPEAT.",
+          "starter_code": "FORWARD 100\nRIGHT 90\n",
+          "solution": "REPEAT 4 [FORWARD 100 RIGHT 90]\n",
+          "hints": ["A square has 4 equal sides and 4 right-angle turns.", "REPEAT 4 [FORWARD 100 RIGHT 90]"],
+          "expect_turtle": {"segments": 4, "returns_home": true}
+        },
+        {
+          "title": "Draw a triangle",
+          "description": "Draw a closed equilateral triangle. The turtle must turn 120 degrees at each corner.",
+          "starter_code": "REPEAT 3 [FORWARD 100 RIGHT 90]\n",
+          "solution": "REPEAT 3 [FORWARD 100 RIGHT 120]\n",
+          "hints": ["The outside turns of any closed shape add up to 360 degrees.", "360 / 3 = 120"],
+          "expect_turtle": {"segments": 3, "returns_home": true}
+        }
+      ]
+    },
+    {
+      "id": "logo_procedures",
+      "title": "Logo Procedures",
+      "language": "LOGO",
+      "difficulty": "intermediate",
+      "description": "Teach the turtle new words with TO ... END and reuse them.",
+      "checkpoints": [
+        {
+          "title": "Define SQUARE",
+          "description": "Finish the SQUARE procedure so SQUARE 50 draws a closed square of side :SIZE.",
+          "starter_code": "TO SQUARE :SIZE\n  FORWARD :SIZE\nEND\nSQUARE 50\n",
+          "solution": "TO SQUARE :SIZE\n  REPEAT 4 [FORWARD :SIZE RIGHT 90]\nEND\nSQUARE 50\n",
+          "hints": ["Inside the procedure, :SIZE is the side length.", "REPEAT 4 [FORWARD :SIZE RIGHT 90]"],
+          "expect_turtle": {"segments": 4, "returns_home": true}
+        },
+        {
+          "title": "A ring of squares",
+          "description": "Use your SQUARE procedure 4 times, turning 90 degrees between each, to draw 16 sides.",
+          "starter_code": "TO SQUARE :SIZE\n  REPEAT 4 [FORWARD :SIZE RIGHT 90]\nEND\nSQUARE 50\n",
+          "solution": "TO SQUARE :SIZE\n  REPEAT 4 [FORWARD :SIZE RIGHT 90]\nEND\nREPEAT 4 [SQUARE 50 RIGHT 90]\n",
+          "hints": ["Procedures can be called inside REPEAT.", "REPEAT 4 [SQUARE 50 RIGHT 90]"],
+          "expect_turtle": {"segments": 16, "returns_home": true}
+        }
+      ]
+    },
+    {
+      "id": "c_basics",
+      "title": "C Basics",
+      "language": "C",
+      "difficulty": "beginner",
+      "description": "Write main(), print with printf, and compute with int variables.",
+      "checkpoints": [
+        {
+          "title": "Hello from C",
+          "description": "Inside main, call printf to print exactly: Hello, World!",
+          "starter_code": "#include <stdio.h>\n\nint main() {\n    return 0;\n}\n",
+          "solution": "#include <stdio.h>\n\nint main() {\n    printf(\"Hello, World!\\n\");\n    return 0;\n}\n",
+          "hints": ["printf prints a format string.", "printf(\"Hello, World!\\n\");"],
+          "expect_lines": ["Hello, World!"]
+        },
+        {
+          "title": "Integer arithmetic",
+          "description": "Print the product of a and b with printf and %d.",
+          "starter_code": "#include <stdio.h>\n\nint main() {\n    int a = 6;\n    int b = 7;\n    return 0;\n}\n",
+          "solution": "#include <stdio.h>\n\nint main() {\n    int a = 6;\n    int b = 7;\n    printf(\"%d\\n\", a * b);\n    return 0;\n}\n",
+          "hints": ["%d is replaced by an int argument.", "printf(\"%d\\n\", a * b);"],
+          "expect_lines": ["42"]
+        }
+      ]
+    },
+    {
+      "id": "c_loops_functions",
+      "title": "C Loops and Functions",
+      "language": "C",
+      "difficulty": "intermediate",
+      "description": "Repeat with for loops and package work into functions.",
+      "checkpoints": [
+        {
+          "title": "for loop",
+          "description": "Print 1 to 5, one per line, with a for loop.",
+          "starter_code": "#include <stdio.h>\n\nint main() {\n    int i;\n    for (i = 1; i <= 2; i++) {\n        printf(\"%d\\n\", i);\n    }\n    return 0;\n}\n",
+          "solution": "#include <stdio.h>\n\nint main() {\n    int i;\n    for (i = 1; i <= 5; i++) {\n        printf(\"%d\\n\", i);\n    }\n    return 0;\n}\n",
+          "hints": ["The middle part of for() is the loop condition.", "i <= 5"],
+          "expect_lines": ["1", "2", "3", "4", "5"]
+        },
+        {
+          "title": "Write a function",
+          "description": "Complete square() so it returns n * n; main prints square(9).",
+          "starter_code": "#include <stdio.h>\n\nint square(int n) {\n    return n;\n}\n\nint main() {\n    printf(\"%d\\n\", square(9));\n    return 0;\n}\n",
+          "solution": "#include <stdio.h>\n\nint square(int n) {\n    return n * n;\n}\n\nint main() {\n    printf(\"%d\\n\", square(9));\n    return 0;\n}\n",
+          "hints": ["return sends a value back to the caller.", "return n * n;"],
+          "expect_lines": ["81"]
+        }
+      ]
+    },
+    {
+      "id": "pascal_basics",
+      "title": "Pascal Basics",
+      "language": "PASCAL",
+      "difficulty": "beginner",
+      "description": "Structure a program with begin/end, writeln, and typed variables.",
+      "checkpoints": [
+        {
+          "title": "Hello from Pascal",
+          "description": "Add a writeln statement that prints exactly: Hello, World!",
+          "starter_code": "program Hello;\nbegin\nend.\n",
+          "solution": "program Hello;\nbegin\n  writeln('Hello, World!');\nend.\n",
+          "hints": ["Pascal strings use single quotes.", "writeln('Hello, World!');"],
+          "expect_lines": ["Hello, World!"]
+        },
+        {
+          "title": "Variables",
+          "description": "Assign 6 * 7 to x with := and print x.",
+          "starter_code": "program Calc;\nvar\n  x: integer;\nbegin\n  x := 6;\nend.\n",
+          "solution": "program Calc;\nvar\n  x: integer;\nbegin\n  x := 6 * 7;\n  writeln(x);\nend.\n",
+          "hints": [":= assigns a value.", "x := 6 * 7; then writeln(x);"],
+          "expect_lines": ["42"]
+        }
+      ]
+    },
+    {
+      "id": "pascal_loops_functions",
+      "title": "Pascal Loops and Functions",
+      "language": "PASCAL",
+      "difficulty": "intermediate",
+      "description": "Use for ... do loops and declare your own functions.",
+      "checkpoints": [
+        {
+          "title": "for loop",
+          "description": "Print 1 to 5, one per line.",
+          "starter_code": "program Count;\nvar\n  i: integer;\nbegin\n  for i := 1 to 2 do\n    writeln(i);\nend.\n",
+          "solution": "program Count;\nvar\n  i: integer;\nbegin\n  for i := 1 to 5 do\n    writeln(i);\nend.\n",
+          "hints": ["Change the upper bound of the loop.", "for i := 1 to 5 do"],
+          "expect_lines": ["1", "2", "3", "4", "5"]
+        },
+        {
+          "title": "A function",
+          "description": "Make Square return n * n so the program prints 81.",
+          "starter_code": "program Sq;\nfunction Square(n: integer): integer;\nbegin\n  Square := n;\nend;\nbegin\n  writeln(Square(9));\nend.\n",
+          "solution": "program Sq;\nfunction Square(n: integer): integer;\nbegin\n  Square := n * n;\nend;\nbegin\n  writeln(Square(9));\nend.\n",
+          "hints": ["Assigning to the function name sets its result.", "Square := n * n;"],
+          "expect_lines": ["81"]
+        }
+      ]
+    },
+    {
+      "id": "prolog_facts_rules",
+      "title": "Prolog Facts and Rules",
+      "language": "PROLOG",
+      "difficulty": "beginner",
+      "description": "State facts, ask queries, and derive new knowledge with rules.",
+      "checkpoints": [
+        {
+          "title": "Ask about a fact",
+          "description": "Write a query that finds who tom is the parent of and writes the answer.",
+          "starter_code": "parent(tom, bob).\nparent(bob, ann).\n",
+          "solution": "parent(tom, bob).\nparent(bob, ann).\n?- parent(tom, X), write(X), nl.\n",
+          "hints": ["Queries start with ?-", "?- parent(tom, X), write(X), nl."],
+          "expect_lines": ["bob"]
+        },
+        {
+          "title": "Write a rule",
+          "description": "Define grandparent(X, Z) using parent twice so the query prints ann.",
+          "starter_code": "parent(tom, bob).\nparent(bob, ann).\n?- grandparent(tom, Z), write(Z), nl.\n",
+          "solution": "parent(tom, bob).\nparent(bob, ann).\ngrandparent(X, Z) :- parent(X, Y), parent(Y, Z).\n?- grandparent(tom, Z), write(Z), nl.\n",
+          "hints": ["A rule is Head :- Body.", "grandparent(X, Z) :- parent(X, Y), parent(Y, Z)."],
+          "expect_lines": ["ann"]
+        }
+      ]
+    },
+    {
+      "id": "prolog_arithmetic",
+      "title": "Prolog Arithmetic and Recursion",
+      "language": "PROLOG",
+      "difficulty": "intermediate",
+      "description": "Evaluate expressions with is/2 and define recursive predicates.",
+      "checkpoints": [
+        {
+          "title": "Evaluate with is",
+          "description": "Compute 6 * 7 with is/2 and write the result.",
+          "starter_code": "?- X = 6 * 7, write(X), nl.\n",
+          "solution": "?- X is 6 * 7, write(X), nl.\n",
+          "hints": ["= only unifies terms; is evaluates arithmetic.", "?- X is 6 * 7, write(X), nl."],
+          "expect_lines": ["42"]
+        },
+        {
+          "title": "Recursive factorial",
+          "description": "Complete the recursive clause so factorial(5, F) gives 120.",
+          "starter_code": "factorial(0, 1).\n?- factorial(5, F), write(F), nl.\n",
+          "solution": "factorial(0, 1).\nfactorial(N, F) :- N > 0, N1 is N - 1, factorial(N1, F1), F is N * F1.\n?- factorial(5, F), write(F), nl.\n",
+          "hints": ["N! = N * (N-1)!", "factorial(N, F) :- N > 0, N1 is N - 1, factorial(N1, F1), F is N * F1."],
+          "expect_lines": ["120"]
+        }
+      ]
+    },
+    {
+      "id": "forth_stack",
+      "title": "Forth and the Stack",
+      "language": "FORTH",
+      "difficulty": "beginner",
+      "description": "Push numbers, apply words, and print with dot.",
+      "checkpoints": [
+        {
+          "title": "Print a string",
+          "description": "Use .\" to print exactly: Hello, World!",
+          "starter_code": "\\ .\" prints the text up to the closing quote\nCR\n",
+          "solution": "\\ .\" prints the text up to the closing quote\n.\" Hello, World!\" CR\n",
+          "hints": ["Leave a space after .\"", ".\" Hello, World!\" CR"],
+          "expect_lines": ["Hello, World!"]
+        },
+        {
+          "title": "Stack arithmetic",
+          "description": "Multiply 6 by 7 on the stack and print the result with .",
+          "starter_code": "6 7 + . CR\n",
+          "solution": "6 7 * . CR\n",
+          "hints": ["Operators take their inputs from the stack.", "6 7 * . CR"],
+          "expect_lines": ["42"]
+        }
+      ]
+    },
+    {
+      "id": "forth_words",
+      "title": "Defining Forth Words",
+      "language": "FORTH",
+      "difficulty": "intermediate",
+      "description": "Extend the language with colon definitions and DO loops.",
+      "checkpoints": [
+        {
+          "title": "Define SQUARE",
+          "description": "Define SQUARE with : ... ; so 9 SQUARE . prints 81.",
+          "starter_code": ": SQUARE ;\n9 SQUARE . CR\n",
+          "solution": ": SQUARE DUP * ;\n9 SQUARE . CR\n",
+          "hints": ["DUP copies the top of the stack.", ": SQUARE DUP * ;"],
+          "expect_lines": ["81"]
+        },
+        {
+          "title": "Count with DO LOOP",
+          "description": "Make COUNTUP print 1 2 3 4 5 on one line.",
+          "starter_code": ": COUNTUP 3 1 DO I . LOOP ;\nCOUNTUP CR\n",
+          "solution": ": COUNTUP 6 1 DO I . LOOP ;\nCOUNTUP CR\n",
+          "hints": ["DO runs from the start up to, but not including, the limit.", ": COUNTUP 6 1 DO I . LOOP ;"],
+          "expect_lines": ["1 2 3 4 5"]
+        }
+      ]
+    },
+    {
+      "id": "brainfuck_cells",
+      "title": "Brainfuck Cells and Loops",
+      "language": "BRAINFUCK",
+      "difficulty": "intermediate",
+      "description": "Build ASCII codes in memory cells and print them with dot.",
+      "checkpoints": [
+        {
+          "title": "Print the letter A",
+          "description": "A is ASCII 65. The loop below builds 64 in cell 1. Add one more and print it.",
+          "starter_code": "++++++++[>++++++++<-]>.\n",
+          "solution": "++++++++[>++++++++<-]>+.\n",
+          "hints": ["8 * 8 = 64, and A is 65.", "Add a + before the final ."],
+          "expect_lines": ["A"]
+        },
+        {
+          "title": "Print ABC",
+          "description": "Starting from A, print the next two letters as well (B is 66, C is 67).",
+          "starter_code": "++++++++[>++++++++<-]>+.\n",
+          "solution": "++++++++[>++++++++<-]>+.+.+.\n",
+          "hints": ["Each + raises the current cell by one.", "+.+. after printing A"],
+          "expect_lines": ["ABC"]
+        }
+      ]
+    },
+    {
+      "id": "brainfuck_moving",
+      "title": "Moving Between Brainfuck Cells",
+      "language": "BRAINFUCK",
+      "difficulty": "advanced",
+      "description": "Use > and < to keep several values in different cells.",
+      "checkpoints": [
+        {
+          "title": "Digits 0 1 2",
+          "description": "The loop puts 48 (the code for 0) in cell 1. Print 012 by printing and incrementing.",
+          "starter_code": "++++++++[>++++++<-]>.\n",
+          "solution": "++++++++[>++++++<-]>.+.+.\n",
+          "hints": ["Digits follow each other in ASCII.", "After the first . add +.+."],
+          "expect_lines": ["012"]
+        },
+        {
+          "title": "Two cells: Hi",
+          "description": "Build H (72) in cell 1 and i (105) in cell 2, then print both. The first loop already makes 72.",
+          "starter_code": "++++++++[>+++++++++<-]>.\n",
+          "solution": "++++++++[>+++++++++>+++++++++++++<<-]>.>+.\n",
+          "hints": ["One loop can fill two cells: 8*9=72 and 8*13=104.", "Inside the loop use >+++++++++>+++++++++++++<< then print with >.>+."],
+          "expect_lines": ["Hi"]
+        }
+      ]
+    },
+    {
+      "id": "python_basics",
+      "title": "Python Basics",
+      "language": "PYTHON_LANG",
+      "difficulty": "beginner",
+      "description": "Print values, use variables, and loop with range().",
+      "checkpoints": [
+        {
+          "title": "Hello from Python",
+          "description": "Call print() to show exactly: Hello, World!",
+          "starter_code": "# Call print() below\n",
+          "solution": "# Call print() below\nprint(\"Hello, World!\")\n",
+          "hints": ["print() writes its argument on a new line.", "print(\"Hello, World!\")"],
+          "expect_lines": ["Hello, World!"]
+        },
+        {
+          "title": "Loop with range",
+          "description": "Print 1 to 5, one per line, with a for loop over range().",
+          "starter_code": "for i in range(1, 3):\n    print(i)\n",
+          "solution": "for i in range(1, 6):\n    print(i)\n",
+          "hints": ["range(a, b) stops before b.", "range(1, 6)"],
+          "expect_lines": ["1", "2", "3", "4", "5"]
+        }
+      ]
+    },
+    {
+      "id": "python_turtle",
+      "title": "Python Turtle Graphics",
+      "language": "PYTHON_LANG",
+      "difficulty": "intermediate",
+      "description": "Drive the turtle from Python with forward() and right().",
+      "checkpoints": [
+        {
+          "title": "Draw a square",
+          "description": "Use a for loop to draw a closed square with sides of 100.",
+          "starter_code": "forward(100)\nright(90)\n",
+          "solution": "for _ in range(4):\n    forward(100)\n    right(90)\n",
+          "hints": ["Repeat the forward/right pair 4 times.", "for _ in range(4):"],
+          "expect_turtle": {"segments": 4, "returns_home": true}
+        },
+        {
+          "title": "A function for polygons",
+          "description": "Complete polygon(sides, length) and call polygon(6, 60) to draw a closed hexagon.",
+          "starter_code": "def polygon(sides, length):\n    forward(length)\n\npolygon(6, 60)\n",
+          "solution": "def polygon(sides, length):\n    for _ in range(sides):\n        forward(length)\n        right(360 / sides)\n\npolygon(6, 60)\n",
+          "hints": ["Turn 360 / sides degrees at each corner.", "Loop sides times inside the function."],
+          "expect_turtle": {"segments": 6, "returns_home": true}
+        }
+      ]
+    }
+  ]
+}

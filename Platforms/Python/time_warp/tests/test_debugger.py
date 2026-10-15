@@ -1,9 +1,7 @@
 """Tests for time_warp.core.debugger module."""
 
-import pytest
 from time_warp.core.debugger import (
     ExecutionTimeline,
-    ExecutionFrame,
     ExecutionState,
 )
 

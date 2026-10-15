@@ -308,9 +308,17 @@ def execute_basic(
     # PRINT USING must be checked before plain PRINT
     if cmd.startswith("PRINT USING "):
         return _basic_print_using(interpreter, _strip_comment(command[12:]))
+    if cmd.startswith("PRINT #") or cmd.startswith("PRINT  #"):
+        return _basic_print_file(interpreter, _strip_comment(command[5:].lstrip()))
+    if cmd.startswith("WRITE #") or cmd.startswith("WRITE  #"):
+        return _basic_print_file(interpreter, _strip_comment(command[5:].lstrip()))
     if cmd.startswith("PRINT ") or cmd == "PRINT":
         args = command[6:] if len(command) > 6 else ""
         return _basic_print(interpreter, _strip_comment(args))
+    if cmd.startswith("LINE INPUT "):
+        return _basic_line_input(interpreter, _strip_comment(command[11:]))
+    if cmd.startswith("INPUT #") or cmd.startswith("INPUT  #"):
+        return _basic_input_file(interpreter, _strip_comment(command[5:].lstrip()))
     if cmd.startswith("INPUT "):
         return _basic_input(interpreter, _strip_comment(command[6:]))
     if cmd.startswith("IF "):
@@ -374,6 +382,8 @@ def execute_basic(
         return _basic_let(interpreter, _strip_comment(command))
     if cmd.startswith("COLOR "):
         return _basic_color(interpreter, _strip_comment(command[6:]), turtle)
+    if cmd.startswith("PALETTE "):
+        return _basic_palette(interpreter, _strip_comment(command[8:]), turtle)
     if cmd.startswith("WIDTH "):
         return _basic_width(interpreter, _strip_comment(command[6:]))
     if cmd.startswith("OPEN "):
@@ -533,16 +543,18 @@ def execute_basic(
             except (ValueError, TypeError):
                 pass
         return "ℹ️ SLEEP\n"
-    # ── HARDWARE commands ─────────────────────────────────────────────────
-    # HARDWARE DEVICE ADD <id> <type> [PIN <n>]
-    # HARDWARE SENSOR READ <id>               → prints reading
-    # HARDWARE PIN SET <id> <value>           → set device value
-    # HARDWARE PIN GET <id>                   → get device value
-    # HARDWARE STATUS                         → list all devices
-    # HARDWARE ENV SET <key> <value>          → set environment variable
-    # HARDWARE ENV GET <key>                  → print environment variable
-    if cmd.startswith("HARDWARE "):
-        return _basic_hardware(interpreter, command[9:].strip())
+    if cmd.startswith("SETXY "):
+        coordinates = command[6:].split()
+        if len(coordinates) != 2:
+            return "❌ SETXY expects 2 argument(s)\n"
+        try:
+            x = interpreter.evaluate_expression(coordinates[0])
+            y = interpreter.evaluate_expression(coordinates[1])
+            turtle.goto(float(x), float(y))
+            return ""
+        except (ValueError, TypeError, ZeroDivisionError) as exc:
+            return f"❌ SETXY error: {exc}\n"
+
     # --- Full Logo command and block blending ---
     _execute_logo: Optional[Any] = None
     try:
@@ -643,6 +655,10 @@ def execute_basic(
 # Keep local complexity for the BASIC print formatter — it's intentionally
 # complex for many formatting cases. Disable too-many-locals here.
 # pylint: disable=R0914
+def _is_division_by_zero(exc: Exception) -> bool:
+    return isinstance(exc, ZeroDivisionError) or "division by zero" in str(exc).lower()
+
+
 def _basic_print(interpreter: "Interpreter", args: str) -> str:
     if not args.strip():
         return "\n"
@@ -716,7 +732,9 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
                 try:
                     value = interpreter.evaluate_expression(item_trim)
                     out_items.append(_format_numeric(value))
-                except (ValueError, TypeError, ZeroDivisionError):
+                except (ValueError, TypeError, ZeroDivisionError) as exc:
+                    if _is_division_by_zero(exc):
+                        return "❌ Division by zero\n"
                     out_items.append(interpreter.interpolate_text(item_trim))
             continue
 
@@ -817,7 +835,9 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
                 try:
                     value = interpreter.evaluate_expression(item_trim)
                     out_items.append(_format_numeric(value))
-                except (ValueError, TypeError, ZeroDivisionError):
+                except (ValueError, TypeError, ZeroDivisionError) as exc:
+                    if _is_division_by_zero(exc):
+                        return "❌ Division by zero\n"
                     out_items.append(interpreter.interpolate_text(item_trim))
         # Handle numeric variables and expressions
         else:
@@ -841,7 +861,9 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
                 try:
                     value = interpreter.evaluate_expression(item_trim)
                     out_items.append(_format_numeric(value))
-                except (ValueError, TypeError, ZeroDivisionError):
+                except (ValueError, TypeError, ZeroDivisionError) as exc:
+                    if _is_division_by_zero(exc):
+                        return "❌ Division by zero\n"
                     # If evaluation fails, use interpolation as fallback
                     out_items.append(interpreter.interpolate_text(item_trim))
     result = " ".join(out_items)
@@ -1187,115 +1209,6 @@ def _basic_resume_next(interpreter: "Interpreter") -> str:
         if target_idx < len(interpreter.program_lines):
             interpreter.current_line = target_idx
     return ""
-
-
-def _basic_hardware(interpreter: "Interpreter", args: str) -> str:
-    """Handle HARDWARE <sub-command> from BASIC.
-
-    Supported sub-commands:
-      DEVICE ADD <id> <type> [PIN <n>]
-      SENSOR READ <id>
-      PIN SET <id> <value>
-      PIN GET <id>
-      STATUS
-      ENV SET <key> <value>
-      ENV GET <key>
-    """
-    hw = getattr(interpreter, "hardware", None)
-    if hw is None:
-        return "❌ Hardware simulator not available\n"
-
-    sub = args.upper()
-
-    # ── DEVICE ADD ────────────────────────────────────────────────────────
-    if sub.startswith("DEVICE ADD "):
-        parts = args[11:].split()
-        if len(parts) < 2:
-            return "❌ HARDWARE DEVICE ADD requires <id> <type>\n"
-        dev_id, dev_type_str = parts[0], parts[1].upper()
-
-        pin = None
-        if "PIN" in [p.upper() for p in parts]:
-            try:
-                pin_idx = [p.upper() for p in parts].index("PIN")
-                pin = int(parts[pin_idx + 1])
-            except (IndexError, ValueError):
-                return "❌ HARDWARE DEVICE ADD PIN requires a number\n"
-
-        from ..features.hardware_simulator import HardwareType
-
-        type_map = {t.name: t for t in HardwareType}
-        if dev_type_str not in type_map:
-            names = ", ".join(type_map.keys())
-            return f"❌ Unknown hardware type '{dev_type_str}'. Available: {names}\n"
-
-        hw.add_device(dev_id, type_map[dev_type_str], pin if pin is not None else 0)
-        return f"ℹ️ Hardware device '{dev_id}' ({dev_type_str}) added\n"
-
-    # ── SENSOR READ ──────────────────────────────────────────────────────
-    if sub.startswith("SENSOR READ "):
-        dev_id = args[12:].strip()
-        reading = hw.read_sensor(dev_id)
-        if reading is None:
-            return f"❌ No device '{dev_id}' or it has no sensor reading\n"
-        return f"ℹ️ {dev_id}: {reading.value} {reading.unit} (simulated={reading.is_simulated})\n"
-
-    # ── PIN SET ──────────────────────────────────────────────────────────
-    if sub.startswith("PIN SET "):
-        parts = args[8:].split()
-        if len(parts) < 2:
-            return "❌ HARDWARE PIN SET requires <id> <value>\n"
-        dev_id = parts[0]
-        try:
-            value = float(parts[1])
-        except ValueError:
-            return f"❌ HARDWARE PIN SET value must be numeric, got '{parts[1]}'\n"
-        hw.set_device_value(dev_id, value)
-        return f"ℹ️ {dev_id} set to {value}\n"
-
-    # ── PIN GET ──────────────────────────────────────────────────────────
-    if sub.startswith("PIN GET "):
-        dev_id = args[8:].strip()
-        status = hw.get_device_status(dev_id)
-        if status is None:
-            return f"❌ No device '{dev_id}'\n"
-        return f"ℹ️ {dev_id} = {status.get('current_value', 'N/A')}\n"
-
-    # ── STATUS ────────────────────────────────────────────────────────────
-    if sub.strip() == "STATUS":
-        all_status = hw.get_all_device_status()
-        if not all_status:
-            return "ℹ️ No hardware devices registered\n"
-        lines_out = ["ℹ️ Hardware devices:"]
-        for info in all_status:
-            lines_out.append(
-                f"  {info.get('device_id', '?')}: type={info.get('type', '?')} "
-                f"active={info.get('is_active', '?')} "
-                f"value={info.get('current_value', '?')}"
-            )
-        return "\n".join(lines_out) + "\n"
-
-    # ── ENV SET ──────────────────────────────────────────────────────────
-    if sub.startswith("ENV SET "):
-        parts = args[8:].split(None, 1)
-        if len(parts) < 2:
-            return "❌ HARDWARE ENV SET requires <key> <value>\n"
-        key, val_str = parts[0], parts[1]
-        try:
-            value: float | str = float(val_str)
-        except ValueError:
-            value = val_str
-        hw.set_environment(**{key.lower(): value})
-        return f"ℹ️ Environment '{key}' = {value}\n"
-
-    # ── ENV GET ──────────────────────────────────────────────────────────
-    if sub.startswith("ENV GET "):
-        key = args[8:].strip()
-        env = hw.get_environment()
-        val = env.get(key.lower(), "not set")
-        return f"ℹ️ Environment '{key}' = {val}\n"
-
-    return f"❌ Unknown HARDWARE sub-command: {args}\n"
 
 
 def _basic_for(interpreter: "Interpreter", args: str) -> str:
@@ -1884,16 +1797,25 @@ def _basic_system(_interpreter: "Interpreter", _args: str) -> str:
 
 
 def _find_matching_wend(interpreter: "Interpreter", start_idx: int) -> int:
-    """Find index of matching WEND for WHILE at start_idx."""
+    """Find index of matching WEND for WHILE at start_idx (cached per program)."""
+    cache = getattr(interpreter, "_basic_wend_cache", None)
+    prog_len = len(interpreter.program_lines)
+    if not isinstance(cache, dict) or cache.get("__len__") != prog_len:
+        cache = {"__len__": prog_len}
+        interpreter._basic_wend_cache = cache  # type: ignore[attr-defined]
+    if start_idx in cache:
+        return int(cache[start_idx])
     depth = 0
-    for i in range(start_idx + 1, len(interpreter.program_lines)):
+    for i in range(start_idx + 1, prog_len):
         cmd = interpreter.program_lines[i][1].strip().upper()
         if cmd.startswith("WHILE "):
             depth += 1
         elif cmd == "WEND":
             if depth == 0:
+                cache[start_idx] = i
                 return i
             depth -= 1
+    cache[start_idx] = -1
     return -1
 
 
@@ -2427,6 +2349,48 @@ def _basic_color(
         return f"❌ COLOR error: {e}\n"
 
 
+def _basic_palette(
+    interpreter: "Interpreter",
+    args: str,
+    turtle: Optional["TurtleState"] = None,
+) -> str:
+    """PALETTE index, r, g, b  or  PALETTE CYCLE [start, end[, step]] — VGA Mode 13h palette."""
+    if turtle is None:
+        return "❌ Graphics not available for PALETTE\n"
+    raw = args.strip()
+    if raw.upper().startswith("CYCLE"):
+        rest = raw[5:].strip()
+        if not rest:
+            turtle.cycle_palette(1, 15, 1)
+            return "🎨 Palette cycled (1..15)\n"
+        parts = [p.strip() for p in rest.split(",") if p.strip()]
+        try:
+            start_i = int(interpreter.evaluate_expression(parts[0])) if len(parts) >= 1 else 1
+            end_i = int(interpreter.evaluate_expression(parts[1])) if len(parts) >= 2 else 15
+            step_i = int(interpreter.evaluate_expression(parts[2])) if len(parts) >= 3 else 1
+            turtle.cycle_palette(start_i, end_i, step_i)
+            return f"🎨 Palette cycled ({start_i}..{end_i} step {step_i})\n"
+        except (ValueError, TypeError, ZeroDivisionError) as exc:
+            return f"❌ PALETTE CYCLE error: {exc}\n"
+
+    parts = [p.strip() for p in raw.split(",") if p.strip()]
+    if len(parts) < 2:
+        return "❌ PALETTE requires index, r, g, b (or index, hex_rgb)\n"
+    try:
+        idx = int(interpreter.evaluate_expression(parts[0]))
+        if len(parts) >= 4:
+            r = int(interpreter.evaluate_expression(parts[1]))
+            g = int(interpreter.evaluate_expression(parts[2]))
+            b = int(interpreter.evaluate_expression(parts[3]))
+        else:
+            rgb = turtle.resolve_color(parts[1], default=(255, 255, 255))
+            r, g, b = rgb[0], rgb[1], rgb[2]
+        turtle.set_palette_color(idx, r, g, b)
+        return f"🎨 Palette[{idx}] = ({r}, {g}, {b})\n"
+    except (ValueError, TypeError, ZeroDivisionError) as exc:
+        return f"❌ PALETTE error: {exc}\n"
+
+
 def _basic_width(_interpreter: "Interpreter", args: str) -> str:
     """WIDTH columns - Set screen width"""
     try:
@@ -2436,24 +2400,195 @@ def _basic_width(_interpreter: "Interpreter", args: str) -> str:
         return "❌ WIDTH requires numeric value\n"
 
 
-def _basic_open(_interpreter: "Interpreter", args: str) -> str:
-    """OPEN filename FOR mode AS #filenumber - Open file"""
-    return f"📂 Opened file: {args.strip()}\n"
+def _basic_open(interpreter: "Interpreter", args: str) -> str:
+    """OPEN filename FOR mode AS #filenumber - Open a confined workspace file."""
+    from ..utils.validators import ValidationError, WorkspaceFileService
+
+    raw = args.strip()
+    m = re.match(
+        r'^["\']?([^"\']+?)["\']?\s+FOR\s+(INPUT|OUTPUT|APPEND|RANDOM)\s+AS\s+#?(\d+)\s*$',
+        raw,
+        re.IGNORECASE,
+    )
+    if not m:
+        m2 = re.match(
+            r'^["\']?([IinOoAaRr])["\']?\s*,\s*#?(\d+)\s*,\s*["\']?([^"\']+)["\']?\s*$',
+            raw,
+        )
+        if m2:
+            short_mode = m2.group(1).upper()
+            channel = int(m2.group(2))
+            filename = m2.group(3).strip()
+            mode_word = (
+                "INPUT"
+                if short_mode == "I"
+                else ("APPEND" if short_mode == "A" else "OUTPUT")
+            )
+        else:
+            return (
+                "❌ OPEN syntax error: expected OPEN \"file\" FOR INPUT|OUTPUT|APPEND AS #n\n"
+            )
+    else:
+        filename = m.group(1).strip()
+        mode_word = m.group(2).upper()
+        channel = int(m.group(3))
+
+    py_mode = {"INPUT": "r", "OUTPUT": "w", "APPEND": "a", "RANDOM": "r+"}.get(
+        mode_word, "r"
+    )
+    svc = getattr(interpreter, "file_service", None) or WorkspaceFileService()
+    basic_files = getattr(interpreter, "basic_files", None)
+    if basic_files is None:
+        interpreter.basic_files = {}
+        basic_files = interpreter.basic_files
+
+    try:
+        if mode_word == "RANDOM":
+            resolved = svc.resolve_path(filename, for_write=True, must_exist=False)
+            if not resolved.exists():
+                resolved.write_text("", encoding="utf-8")
+        fh = svc.open_handle(f"basic:{channel}", filename, py_mode)
+        basic_files[channel] = fh
+        return f"📂 Opened file '{filename}' ({mode_word}) as #{channel}\n"
+    except (ValidationError, OSError) as exc:
+        return f"❌ OPEN error: {exc}\n"
 
 
-def _basic_close(_interpreter: "Interpreter", args: str) -> str:
-    """CLOSE [#filenumber] - Close file"""
-    return f"📂 Closed file: {args.strip()}\n"
+def _basic_close(interpreter: "Interpreter", args: str) -> str:
+    """CLOSE [#filenumber[, #filenumber2...]] - Close open BASIC file channel(s)."""
+    basic_files = getattr(interpreter, "basic_files", {})
+    svc = getattr(interpreter, "file_service", None)
+    raw = args.strip()
+    if not raw:
+        for ch in list(basic_files.keys()):
+            fh = basic_files.pop(ch, None)
+            if fh is not None:
+                try:
+                    fh.close()
+                except OSError:
+                    pass
+            if svc is not None:
+                svc.close_handle(f"basic:{ch}")
+        return "📂 Closed all files\n"
+
+    closed = []
+    for part in raw.split(","):
+        tok = part.strip().lstrip("#").strip()
+        if not tok:
+            continue
+        try:
+            ch = int(tok)
+        except ValueError:
+            return f"❌ CLOSE invalid channel: {part.strip()}\n"
+        fh = basic_files.pop(ch, None)
+        if fh is not None:
+            try:
+                fh.close()
+            except OSError:
+                pass
+        if svc is not None:
+            svc.close_handle(f"basic:{ch}")
+        closed.append(f"#{ch}")
+    return f"📂 Closed file {', '.join(closed)}\n"
 
 
-def _basic_get(_interpreter: "Interpreter", args: str) -> str:
-    """GET #filenumber, record - Read random record"""
-    return f"📖 Read record: {args.strip()}\n"
+def _basic_print_file(interpreter: "Interpreter", args: str) -> str:
+    """PRINT #n, expr / WRITE #n, expr — Write evaluated text to BASIC file channel."""
+    m = re.match(r"^#?(\d+)\s*,\s*(.*)$", args.strip())
+    if not m:
+        return "❌ PRINT # requires #channel, expression\n"
+    channel = int(m.group(1))
+    expr_part = m.group(2)
+    fh = getattr(interpreter, "basic_files", {}).get(channel)
+    if fh is None:
+        return f"❌ File #{channel} is not open\n"
+    rendered = _basic_print(interpreter, expr_part)
+    if rendered.startswith("❌"):
+        return rendered
+    try:
+        fh.write(rendered)
+        fh.flush()
+        return ""
+    except OSError as exc:
+        return f"❌ File write error on #{channel}: {exc}\n"
 
 
-def _basic_put(_interpreter: "Interpreter", args: str) -> str:
-    """PUT #filenumber, record - Write random record"""
-    return f"📝 Wrote record: {args.strip()}\n"
+def _basic_input_file(interpreter: "Interpreter", args: str) -> str:
+    """INPUT #n, var1[, var2...] — Read values from a BASIC file channel."""
+    m = re.match(r"^#?(\d+)\s*,\s*(.+)$", args.strip())
+    if not m:
+        return "❌ INPUT # requires #channel, variable\n"
+    channel = int(m.group(1))
+    var_list = [v.strip() for v in m.group(2).split(",") if v.strip()]
+    fh = getattr(interpreter, "basic_files", {}).get(channel)
+    if fh is None:
+        return f"❌ File #{channel} is not open\n"
+    try:
+        for var_name in var_list:
+            line = fh.readline()
+            if line == "":
+                return f"❌ Input past end of file on #{channel}\n"
+            val = line.rstrip("\r\n")
+            interpreter.set_typed_variable(var_name.upper(), val)
+        return ""
+    except OSError as exc:
+        return f"❌ File read error on #{channel}: {exc}\n"
+
+
+def _basic_line_input(interpreter: "Interpreter", args: str) -> str:
+    """LINE INPUT [#n,] var$ — Read an entire line from file or user input."""
+    stripped = args.strip()
+    if stripped.startswith("#"):
+        return _basic_input_file(interpreter, stripped)
+    return _basic_input(interpreter, stripped)
+
+
+def _basic_get(interpreter: "Interpreter", args: str) -> str:
+    """GET #filenumber[, record[, var$]] - Read line/record from BASIC file channel."""
+    parts = [p.strip() for p in args.split(",") if p.strip()]
+    if not parts:
+        return "❌ GET requires #channel\n"
+    try:
+        channel = int(parts[0].lstrip("#"))
+    except ValueError:
+        return "❌ GET requires numeric #channel\n"
+    fh = getattr(interpreter, "basic_files", {}).get(channel)
+    if fh is None:
+        return f"❌ File #{channel} is not open\n"
+    try:
+        line = fh.readline().rstrip("\r\n")
+        if len(parts) >= 3:
+            interpreter.set_typed_variable(parts[2].upper(), line)
+        else:
+            interpreter.string_variables["RECORD$"] = line
+        return f"📖 Read record from #{channel}\n"
+    except OSError as exc:
+        return f"❌ GET error on #{channel}: {exc}\n"
+
+
+def _basic_put(interpreter: "Interpreter", args: str) -> str:
+    """PUT #filenumber[, record[, expr]] - Write record to BASIC file channel."""
+    parts = [p.strip() for p in args.split(",") if p.strip()]
+    if not parts:
+        return "❌ PUT requires #channel\n"
+    try:
+        channel = int(parts[0].lstrip("#"))
+    except ValueError:
+        return "❌ PUT requires numeric #channel\n"
+    fh = getattr(interpreter, "basic_files", {}).get(channel)
+    if fh is None:
+        return f"❌ File #{channel} is not open\n"
+    payload = ""
+    if len(parts) >= 3:
+        payload = _basic_print(interpreter, parts[2]).rstrip("\n")
+    elif "RECORD$" in interpreter.string_variables:
+        payload = interpreter.string_variables["RECORD$"]
+    try:
+        fh.write(payload + "\n")
+        fh.flush()
+        return f"📝 Wrote record to #{channel}\n"
+    except OSError as exc:
+        return f"❌ PUT error on #{channel}: {exc}\n"
 
 
 def _basic_end(interpreter: "Interpreter") -> str:
@@ -2865,10 +3000,8 @@ def _basic_poke(interpreter: "Interpreter", args: str) -> str:
             logger.error("POKE: Value out of range: %s", value)
             return "❌ POKE value must be 0-255\n"
 
-        # Store in simulated memory via hardware simulator
-        success = interpreter.hardware.poke(address, value)
-        if not success:
-            return "❌ POKE failed\n"
+        # Store in interpreter memory
+        interpreter.memory[address] = value
         logger.debug("POKE: Wrote %s to address {address}", value)
         return ""
 
@@ -2904,8 +3037,8 @@ def _basic_peek(interpreter: "Interpreter", args: str) -> str:
             logger.error("PEEK: Address out of range: %s", address)
             return f"❌ PEEK address must be 0-65535: got {address}\n"
 
-        # Retrieve from simulated memory via hardware simulator
-        value = interpreter.hardware.peek(address)
+        # Retrieve from interpreter memory
+        value = interpreter.memory.get(address, 0)
         logger.debug("PEEK: Read %s from address {address}", value)
 
         # This is typically used in expressions like: X = PEEK(address)
@@ -2954,7 +3087,7 @@ def _basic_out(interpreter: "Interpreter", args: str) -> str:
         port = int(interpreter.evaluate_expression(port_str))
         value = int(interpreter.evaluate_expression(value_str))
 
-        # Range checks
+        # Validate ranges
         if port < 0 or port > 65535:
             logger.error("OUT: Port out of range: %s", port)
             return "❌ OUT port must be 0-65535\n"
@@ -2963,10 +3096,8 @@ def _basic_out(interpreter: "Interpreter", args: str) -> str:
             logger.error("OUT: Value out of range: %s", value)
             return "❌ OUT value must be 0-255\n"
 
-        # Store in simulated ports via hardware simulator
-        success = interpreter.hardware.out(port, value)
-        if not success:
-            return "❌ OUT failed\n"
+        # Store in interpreter I/O ports
+        interpreter.ports[port] = value
         logger.debug("OUT: Wrote %s to port {port}", value)
         return ""
 
@@ -3002,8 +3133,8 @@ def _basic_in(interpreter: "Interpreter", args: str) -> str:
             logger.error("IN: Port out of range: %s", port)
             return f"❌ IN port must be 0-65535: got {port}\n"
 
-        # Retrieve from simulated ports via hardware simulator
-        value = interpreter.hardware.inp(port)
+        # Retrieve from interpreter I/O ports
+        value = interpreter.ports.get(port, 0)
         logger.debug("IN: Read %s from port {port}", value)
 
         # This is typically used in expressions like: X = IN(port)
@@ -3122,13 +3253,12 @@ def _basic_erase(interpreter: "Interpreter", args: str) -> str:
         arr_name = name.strip().upper()
         if not arr_name:
             continue
-        if arr_name in interpreter.arrays:
+        if arr_name.endswith("$") and arr_name in interpreter.string_arrays:
+            s_arr = interpreter.string_arrays[arr_name]
+            interpreter.string_arrays[arr_name] = [""] * len(s_arr)
+        elif arr_name in interpreter.arrays:
             arr = interpreter.arrays[arr_name]
-            # Reset all elements to 0 (numeric) or "" (string)
-            if arr_name.endswith("$"):
-                interpreter.arrays[arr_name] = [""] * len(arr)
-            else:
-                interpreter.arrays[arr_name] = [0] * len(arr)
+            interpreter.arrays[arr_name] = [0.0] * len(arr)
     return ""
 
 

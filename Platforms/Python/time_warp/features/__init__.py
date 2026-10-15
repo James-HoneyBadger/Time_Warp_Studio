@@ -1,33 +1,17 @@
-"""Feature modules for Time Warp Studio.
+"""Feature modules for Time Warp Studio: lessons, examples, autosave, classroom mode.
 
-New features: lessons, examples browser, turtle preview, theme editor, autosave, classroom mode.
+``lesson_system`` is imported directly (it depends on ``core.interpreter``,
+which itself imports this package).
 """
 
 from .autosave_manager import AutosaveManager, FileHistory, FileVersion
 from .classroom_mode import ClassroomMode, PresentationMode, WorkspaceBundle
 from .examples_browser import Difficulty, Example, ExamplesBrowser
-from .lesson_system import Checkpoint, Lesson, LessonManager, LessonStatus
-from .theme_editor import Theme, ThemeColors, ThemeManager
-from .turtle_preview import (
-    TurtlePreview,
-    TurtleState,
-    TurtleStroke,
-)
 
 __all__ = [
-    "LessonManager",
-    "Lesson",
-    "Checkpoint",
-    "LessonStatus",
     "ExamplesBrowser",
     "Example",
     "Difficulty",
-    "TurtlePreview",
-    "TurtleStroke",
-    "TurtleState",
-    "ThemeManager",
-    "Theme",
-    "ThemeColors",
     "AutosaveManager",
     "FileHistory",
     "FileVersion",

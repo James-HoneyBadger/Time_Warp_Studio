@@ -269,9 +269,8 @@ For more help, see [Troubleshooting Guide](08-troubleshooting.md).
 - **Main Documentation** - [README.md](../../README.md)
 - **Language Tutorials** - [Tutorials](../tutorials/)
 - **Feature Guides** - [Guides](../guides/)
-- **API Reference** - [API Docs](../api/)
 - **Examples** - `Examples/` directory
 
 ---
 
-**Happy Programming! Questions? Check the [FAQ](../reference/faq.md) or ask for help.**
+**Happy Programming! Questions? Check the [FAQ](../../FAQ.md) or ask for help.**

@@ -6,17 +6,11 @@ Extracted from ``MainWindow`` to reduce file size.
 from __future__ import annotations
 
 import html
-import time
-import uuid
 from pathlib import Path
-from typing import TYPE_CHECKING
 
 from PySide6.QtGui import QTextDocument
 from PySide6.QtPrintSupport import QPrinter
 from PySide6.QtWidgets import QFileDialog
-
-if TYPE_CHECKING:
-    from ..collaboration_client import CollaborationOperation  # noqa: F401
 
 
 class ClassroomMixin:
@@ -137,35 +131,6 @@ class ClassroomMixin:
 
         self.statusbar.showMessage(f"Imported bundle: {bundle.name}")
 
-    def broadcast_sample_code(self):
-        """Broadcast current code to collaboration session if connected."""
-        if not self.collaboration_client.connected:
-            self.statusbar.showMessage("Collaboration not connected")
-            return
-        editor = self.get_current_editor()
-        if not editor:
-            return
-
-        from ..collaboration_client import CollaborationOperation  # noqa: F811
-
-        operation = CollaborationOperation(
-            id=uuid.uuid4().hex,
-            user_id=(
-                self.collaboration_client.user.id
-                if self.collaboration_client.user
-                else ""
-            ),
-            type="replace",
-            position=0,
-            content=editor.toPlainText(),
-            timestamp=time.time(),
-        )
-
-        if self.collaboration_client.send_operation(operation):
-            self.statusbar.showMessage("Broadcasted sample code")
-        else:
-            self.statusbar.showMessage("Broadcast failed")
-
     def collect_student_outputs(self):
         """Save current output log for classroom collection."""
         path, _ = QFileDialog.getSaveFileName(
@@ -186,10 +151,8 @@ class ClassroomMixin:
         except OSError:
             self.statusbar.showMessage("Failed to save output log")
 
-    def _apply_lesson_code(self, language_name: str, code: str):
-        """Load lesson starter code into the current editor."""
-        from ...core.interpreter import Language
-
+    def _apply_lesson_code(self, language, code: str):
+        """Load lesson code into the current editor tab and switch its language."""
         editor = self.get_current_editor()
         if not editor:
             self.new_file()
@@ -197,37 +160,20 @@ class ClassroomMixin:
         if not editor:
             return
 
-        language_map = {
-            "basic": Language.BASIC,
-            "pilot": Language.PILOT,
-            "logo": Language.LOGO,
-            "c": Language.C,
-            "pascal": Language.PASCAL,
-            "prolog": Language.PROLOG,
-            "forth": Language.FORTH,
-            "brainfuck": Language.BRAINFUCK,
-        }
-        lang = language_map.get(language_name.lower(), Language.BASIC)
-
         editor.setPlainText(code)
-        editor.set_language(lang)
-        self.set_current_tab_info(modified=True, language=lang)
-        self.output.set_language(lang)
+        self.set_current_tab_info(modified=True, language=language)
+        self.output.set_language(language)
 
         if hasattr(self, "language_combo"):
             for i in range(self.language_combo.count()):
-                if self.language_combo.itemData(i) == lang:
+                if self.language_combo.itemData(i) == language:
                     self.language_combo.setCurrentIndex(i)
                     break
 
     def export_lesson_session(self, format_name: str):
-        """Export lesson session to Markdown or PDF."""
-        panel = self.feature_manager.get_feature_panel("lesson_mode")
-        if not panel or not hasattr(panel, "get_session_snapshot"):
-            self.statusbar.showMessage("Lesson mode not available")
-            return
-
-        snapshot = panel.get_session_snapshot()
+        """Export current session to Markdown or PDF."""
+        panel = getattr(self, "_lesson_panel", None)
+        snapshot: dict = panel.snapshot() if panel is not None else {}
         editor = self.get_current_editor()
         code = editor.toPlainText() if editor else ""
         output_text = self.output.toPlainText()

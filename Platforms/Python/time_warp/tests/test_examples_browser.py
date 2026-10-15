@@ -7,7 +7,7 @@ from pathlib import Path
 import pytest
 
 from time_warp.core.interpreter import Language
-from time_warp.features.examples_browser import Difficulty, Example, ExamplesBrowser
+from time_warp.features.examples_browser import Difficulty, ExamplesBrowser
 
 
 @pytest.fixture

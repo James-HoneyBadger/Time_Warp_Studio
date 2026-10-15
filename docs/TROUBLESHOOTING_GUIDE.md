@@ -27,15 +27,15 @@ This guide provides solutions to common issues encountered while using Time Warp
 - **Issue**: Syntax errors in valid programs.
 - **Cause**: Unsupported features or incorrect line numbers.
 - **Solution**:
-  1. Check the [BASIC Language Guide](docs/LANGUAGE_GUIDE.md#basic).
+  1. Check the [BASIC Language Guide](LANGUAGE_GUIDE.md#basic).
   2. Ensure line numbers are sequential.
 
 ### Python
 - **Issue**: Import errors in Python scripts.
-- **Cause**: Missing libraries.
+- **Cause**: Python programs run in a sandbox that only allows a safe set of standard-library modules.
 - **Solution**:
-  1. Install required libraries using `pip install <library>`.
-  2. Use virtual environments to manage dependencies.
+  1. Use only the allowed standard-library modules (e.g. `math`, `random`, `collections`, `itertools`, `json`, `re`, `datetime`).
+  2. Run larger scripts that need third-party libraries outside the IDE.
 
 ---
 
@@ -44,36 +44,15 @@ This guide provides solutions to common issues encountered while using Time Warp
 ### Slow Turtle Graphics Rendering
 - **Cause**: Complex drawings or high-resolution canvas.
 - **Solution**:
-  1. Reduce the canvas resolution in settings.
-  2. Simplify the drawing commands.
+  1. Simplify the drawing commands.
+  2. Reduce loop counts or step sizes.
 
 ### High CPU Usage
 - **Cause**: Intensive computations or infinite loops.
 - **Solution**:
   1. Optimize your code.
-  2. Use the debugger to identify bottlenecks.
-
----
-
-## Collaboration Issues
-
-### Unable to Connect to Collaboration Session
-- **Cause**: Network issues or incorrect session ID.
-- **Solution**:
-  1. Verify your internet connection.
-  2. Ensure the session ID is correct.
-  3. Check firewall settings.
-
----
-
-## Cloud Storage Issues
-
-### Sync Fails
-- **Cause**: Authentication errors or network issues.
-- **Solution**:
-  1. Reauthenticate your cloud account.
-  2. Check your internet connection.
-  3. Ensure sufficient storage space is available.
+  2. Press **Ctrl+F2** (Reset Program) to stop a runaway program.
+  3. Use the debugger to identify bottlenecks.
 
 ---
 
@@ -81,8 +60,8 @@ This guide provides solutions to common issues encountered while using Time Warp
 
 - Use the built-in debugger to step through code.
 - Check the output panel for error messages.
-- Refer to the [User Guide](docs/USER_GUIDE.md) for detailed instructions.
+- Refer to the [User Guide](USER_GUIDE.md) for detailed instructions.
 
 ---
 
-For further assistance, contact support or visit the [FAQ](docs/reference/faq.md).
+For further help, see the [FAQ](../FAQ.md).

@@ -70,6 +70,10 @@ def _execute_brainfuck_inner(
     output_chars: list[str] = []
     steps = 0
     input_buffer: list[int] = []
+    budget = getattr(interpreter, "budget", None)
+    max_output_bytes = (
+        budget.max_output_bytes if budget is not None else 512_000
+    )
 
     while ip < len(code):
         steps += 1
@@ -78,6 +82,12 @@ def _execute_brainfuck_inner(
                 f"\n❌ Brainfuck: execution limit ({MAX_STEPS} steps) exceeded"
             )
             break
+        if (steps & 0xFF) == 0 and hasattr(interpreter, "tick"):
+            interpreter.tick(256)
+            if budget is not None:
+                budget.brainfuck_dp = dp
+                start = max(0, min(dp - 4, TAPE_SIZE - 16))
+                budget.brainfuck_tape_window = list(tape[start : start + 16])
 
         ch = code[ip]
 
@@ -90,13 +100,17 @@ def _execute_brainfuck_inner(
         elif ch == "-":
             tape[dp] = (tape[dp] - 1) % 256
         elif ch == ".":
+            if len(output_chars) >= max_output_bytes:
+                output_chars.append(
+                    f"\n❌ Brainfuck: output limit ({max_output_bytes} bytes) exceeded"
+                )
+                break
             output_chars.append(chr(tape[dp]))
         elif ch == ",":
             if not input_buffer:
                 raw = ""
                 if hasattr(interpreter, "request_input"):
                     raw = interpreter.request_input("bf> ") or ""
-                raw += "\n"
                 input_buffer = [ord(c) for c in raw]
             tape[dp] = input_buffer.pop(0) if input_buffer else 0
         elif ch == "[":
@@ -107,5 +121,11 @@ def _execute_brainfuck_inner(
                 ip = brackets[ip]
 
         ip += 1
+
+    if budget is not None:
+        budget.steps_used = max(budget.steps_used, steps)
+        budget.brainfuck_dp = dp
+        start = max(0, min(dp - 4, TAPE_SIZE - 16))
+        budget.brainfuck_tape_window = list(tape[start : start + 16])
 
     return "".join(output_chars)

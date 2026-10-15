@@ -102,7 +102,9 @@ def main() -> None:
     variables: dict = payload.get("variables", {})
 
     interpreter = _StubInterpreter(language_name, variables)
-    turtle = _StubTurtle()
+    from time_warp.graphics.turtle_state import TurtleState
+
+    turtle = TurtleState()
 
     try:
         from time_warp.core.interpreter import _WHOLE_PROGRAM_EXECUTORS, Language
@@ -125,8 +127,33 @@ def main() -> None:
     prefix = "".join(interpreter._output)
     full_output = prefix + (result_text or "")
 
+    turtle_snapshot = {
+        "x": turtle.x,
+        "y": turtle.y,
+        "heading": turtle.heading,
+        "pen_down": turtle.pen_down,
+        "visible": turtle.visible,
+        "lines": [
+            {
+                "start_x": line.start_x,
+                "start_y": line.start_y,
+                "end_x": line.end_x,
+                "end_y": line.end_y,
+                "color": list(line.color),
+                "width": line.width,
+            }
+            for line in turtle.lines[:10_000]
+        ],
+    }
+
     sys.stdout.write(
-        json.dumps({"output": full_output, "variables": interpreter.variables})
+        json.dumps(
+            {
+                "output": full_output,
+                "variables": interpreter.variables,
+                "turtle": turtle_snapshot,
+            }
+        )
     )
     sys.exit(0)
 

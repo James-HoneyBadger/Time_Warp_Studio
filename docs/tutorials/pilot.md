@@ -8,15 +8,17 @@ PILOT uses a simple command structure:
 
 ```pilot
 T: Welcome to PILOT!
-A: What is your name?
-A:N
-T: Hello %N$!
+T: What is your name?
+A:$NAME
+T: Hello $NAME!
 ```
 
 - `T:` = Type (output) text
 - `A:` = Accept (input) text
-- `A:N` = Accept and assign to variable N
-- `%variable$` = Insert variable value
+- `A:$NAME` = Accept and store the answer in variable NAME
+- `$NAME` = Insert the value of a variable
+- `*LABEL` = Define a label; `J:LABEL` jumps to it
+- `M:` = Match the last answer; `TY:` and `TN:` run only if it matched or did not match
 
 ## Basic Commands
 
@@ -45,94 +47,90 @@ Get user input:
 A: Enter your name
 ```
 
-Store input in a variable (single letter, A-Z):
+Store input in a named variable with `A:$NAME`:
 
 ```pilot
-A: What is your age?
-A:X
+T: What is your age?
+A:$AGE
+T: You are $AGE years old.
 ```
 
-The input is now stored in variable X.
+The answer is stored in variable AGE. A plain `A: text` shows the text as the prompt and stores the answer in `ANSWER$`. `A:$AGE` shows `? ` as its prompt, so ask the question with a `T:` line first.
 
 ### Variables
 
-Variables in PILOT are single letters (A-Z). Reference them with `%X$`:
+Store text with `A:$NAME` or `C:$NAME = text`. Store numbers with `C:X = 5`. Reference any variable with `$NAME`. Variable names are not case-sensitive.
 
 ```pilot
-A: What is your name?
-A:N
-T: Your name is %N$
+T: What is your name?
+A:$NAME
+T: Your name is $NAME
+C: N = 5 + 2
+T: N is $N
 ```
-
-Variables are case-sensitive. Each letter represents a different variable.
 
 ### Conditional Branching
 
-PILOT supports conditional statements using `*`:
+PILOT tests the last answer with `M:`. Commands with a `Y` or `N` suffix then run only if the match succeeded or failed:
 
 ```pilot
 A: Are you a student? (Y/N)
-A:S
-
-*S: Y
-T: Great! You're a student.
-
-*S: N
-T: Welcome! You're not a student.
-
-*S: *
-T: Please answer Y or N.
+M: Y,YES
+TY: Great! You're a student.
+TN: Welcome! You're not a student.
 ```
 
-The `*` operator checks if a variable equals a value:
-- `*X: value` - If X equals value, continue
-- `*X: *` - If X is anything else (wildcard)
+- `M:a,b,c` checks the answer against each alternative. The match is case-insensitive and succeeds if the answer contains the text.
+- `*` and `?` work as wildcards in `M:` patterns.
+- The `Y` and `N` suffix works with any command letter, such as `TY:`, `JY:`, and `JN:`.
 
 ### Jumps: J (Jump)
 
-Jump to a label:
+Define a label with `*` at the start of a line, then jump to it with `J:`:
 
 ```pilot
 J: ENDGAME
-```
 
-Define labels with parentheses:
-
-```pilot
-(ENDGAME)
+*ENDGAME
 T: Game Over!
 ```
 
-Jump with conditions:
+Jump only when the last match failed with `JN:` (or only when it succeeded with `JY:`):
 
 ```pilot
+*START
 A: Continue? (Y/N)
-A:C
-
-*C: Y
+M: Y,YES
+JN: END
+T: Continuing...
 J: START
 
-*C: N
-J: END
+*END
+T: Goodbye!
 ```
 
-### Loops: E (End)
+### Subroutines: U: and E:
 
-The `E:` command ends the current block. Use with conditions:
+`U:*LABEL` calls a subroutine. `E:` returns from a subroutine. Outside a subroutine, `E:` ends the program:
 
 ```pilot
-(LOOP)
-A: Enter a number or 'QUIT' to exit
-A:I
+U:*GREET
+T: Back in the main program.
+E:
 
-*I: QUIT
-J: END
+*GREET
+T: Hello from the subroutine!
+E:
+```
 
-T: You entered %I$
-J: LOOP
+Repeat a step until the answer matches by jumping back with `JN:`:
 
-(END)
-T: Goodbye!
+```pilot
+*RETRY
+A: What is 2 + 2?
+M: 4
+JN: RETRY
+T: Correct!
 ```
 
 ## Complete Example Programs
@@ -143,50 +141,32 @@ T: Goodbye!
 T: Welcome to the PILOT Quiz!
 T: 
 T: Question 1: What is 2+2?
-A:Q1
+A:
+M: 4
+TY: Correct!
+TN: Sorry, the answer is 4.
 
-*Q1: 4
-T: Correct!
-J: Q2
-
-*Q1: *
-T: Sorry, that's incorrect. The answer is 4.
-
-(Q2)
 T: Question 2: What is the capital of France?
-A:Q2
+A:
+M: PARIS
+TY: Correct!
+TN: Sorry, the answer is Paris.
 
-*Q2: Paris
-T: Correct!
-J: SCORE
-
-*Q2: *
-T: Sorry, the answer is Paris.
-
-(SCORE)
 T: Thanks for taking the quiz!
 ```
 
 ### Number Guessing Game
 
 ```pilot
-T: I'm thinking of a number between 1 and 100.
+T: I'm thinking of a number between 1 and 4.
 T: Can you guess what it is?
 
-(GUESS)
-T: 
+*GUESS
 A: Enter your guess:
-A:G
-
-*G: 42
-T: You got it! The answer was 42!
-J: END
-
-*G: *
-T: Try again. Guess another number.
-J: GUESS
-
-(END)
+M: 4
+TN: Try again.
+JN: GUESS
+T: You got it! The answer was 4.
 T: Thanks for playing!
 ```
 
@@ -195,118 +175,74 @@ T: Thanks for playing!
 ```pilot
 T: Welcome! Let's collect your information.
 T:
-A: What is your first name?
-A:F
+T: What is your first name?
+A:$FIRST
 
-A: What is your last name?
-A:L
+T: What is your last name?
+A:$LAST
 
-A: How old are you?
-A:A
+T: How old are you?
+A:$AGE
 
-A: What is your favorite color?
-A:C
+T: What is your favorite color?
+A:$COLOR
 
 T:
 T: Summary of Information:
-T: Name: %F$ %L$
-T: Age: %A$
-T: Favorite Color: %C$
+T: Name: $FIRST $LAST
+T: Age: $AGE
+T: Favorite Color: $COLOR
 
 A: Is this information correct? (Y/N)
-A:OK
+M: Y,YES
+TY: Thank you! Information saved.
+TN: Please run the program again to re-enter your information.
 
-*OK: Y
-T: Thank you! Information saved.
-J: END
-
-*OK: N
-J: WELCOME
-
-*OK: *
-T: Please answer Y or N.
-J: WELCOME
-
-(END)
-T: Goodbye, %F$!
+T: Goodbye, $FIRST!
 ```
 
 ### Menu System
 
 ```pilot
-(MENU)
+*MENU
 T: ===== Main Menu =====
 T: A) View Profile
-T: B) Change Settings
-T: C) Play Game
-T: D) Exit
+T: B) Exit
 
 A: Choose an option:
-A:M
+M: A
+JY: PROFILE
+M: B
+JY: EXIT
+T: Invalid option. Goodbye.
+E:
 
-*M: A
-J: PROFILE
+*PROFILE
+T: Your profile information.
+E:
 
-*M: B
-J: SETTINGS
-
-*M: C
-J: GAME
-
-*M: D
-J: EXIT
-
-*M: *
-T: Invalid option. Please try again.
-J: MENU
-
-(PROFILE)
-T: Your Profile Information
-A: What is your name?
-A:N
-T: Hello, %N$!
-J: MENU
-
-(SETTINGS)
-T: Settings page
-T: (Not implemented yet)
-J: MENU
-
-(GAME)
-T: Game page
-T: (Not implemented yet)
-J: MENU
-
-(EXIT)
+*EXIT
 T: Thank you for using this program!
+E:
 ```
 
 ## Tips and Best Practices
 
-1. **Variable Names**: Use meaningful letters (N for Name, A for Age, etc.)
+1. **Variable Names**: Use meaningful names (NAME for a name, AGE for an age)
 
 2. **User-Friendly**: Always provide clear prompts:
    ```pilot
-   A: Enter your answer: 
-   A:X
+   A: Enter your answer:
+   T: You answered: $ANSWER
    ```
 
-3. **Input Validation**: Check user input and prompt for retry:
-   ```pilot
-   (RETRY)
-   A: Please enter Y or N:
-   A:R
-   *R: Y
-   *R: N
-   *R: *
-   T: Invalid response. Try again.
-   J: RETRY
-   ```
+3. **Input Validation**: Loop back with `JN:` until the answer matches (see Looping Until Valid Input below).
 
-4. **Comments**: While PILOT doesn't have built-in comments, you can label sections:
+4. **Comments**: Use `R:` (remark) for comments. Lines starting with `REM` are also ignored:
    ```pilot
-   (SECTION_START)
-   T: This section handles...
+   R: This section handles the greeting
+   *GREETING
+   T: Hello!
    ```
 
 5. **Readability**: Use consistent indentation and spacing in your code
@@ -316,102 +252,79 @@ T: Thank you for using this program!
 ### Looping Until Valid Input
 
 ```pilot
-(GETINPUT)
-A: Enter Y or N:
-A:X
-
-*X: Y
-*X: N
-*X: *
-T: Invalid! Try again.
-J: GETINPUT
+*GETINPUT
+A: What is 2 + 2?
+M: 4
+TN: Invalid! Try again.
+JN: GETINPUT
+T: Correct!
 ```
 
 ### Counting
 
-Since PILOT variables are single letters, counting is limited:
+Use `C:` to keep a number and print it with `$`:
 
 ```pilot
-A: Count from 1 to 3
-A:C
-
-*C: 1
-T: One
-*C: 2
-T: Two
-*C: 3
-T: Three
-*C: *
-T: Invalid number
+C: N = 1
+T: Count: $N
+C: N = N + 1
+T: Count: $N
+C: N = N + 1
+T: Count: $N
 ```
 
-### Nested Conditions
+### Checking Several Answers
 
 ```pilot
-A: Are you a student?
-A:S
-
-*S: Y
-A: What grade are you in?
-A:G
-
-*G: 1
-T: First grade!
-
-*G: 2
-T: Second grade!
-
-*G: *
-T: Other grade.
-
-*S: N
-T: You're not a student.
+A: What grade are you in? (1 or 2)
+M: 1
+TY: First grade!
+M: 2
+TY: Second grade!
 ```
+
+Each `M:` replaces the result of the previous match.
 
 ## Limitations and Workarounds
 
-1. **Single-Letter Variables**: PILOT only supports A-Z variables (26 total)
-2. **No Arithmetic**: PILOT cannot perform math operations
-3. **No Loops with Counter**: Use jump-based loops instead
+1. **Text Matching**: `M:` matches substrings and ignores case, so use distinct answers in menus
+2. **Arithmetic**: `C:` evaluates expressions such as `N + 1`. `M:` compares text only
+3. **Loops**: Use jump-based loops (`J:`, `JN:`) instead of counted loops
 
 ## Troubleshooting
 
 **Issue**: "Label not found" error
-- **Solution**: Check that labels are spelled correctly and defined with parentheses: `(LABEL)`
+- **Solution**: Check that labels are spelled correctly and defined on their own line with a leading `*`: `*LABEL`
 
 **Issue**: Infinite loop
 - **Solution**: Make sure your jumps eventually reach a break point or end
 
 **Issue**: Variables not retaining values
-- **Solution**: Remember variable names are case-sensitive. Use the same letter consistently.
+- **Solution**: Check that the variable name is spelled the same in `A:`/`C:` and in `$NAME`. Names are not case-sensitive.
 
 **Issue**: Input not being stored
-- **Solution**: Use `A:X` format to assign input to variable X. Just `A:` won't store the value.
+- **Solution**: Use `A:$NAME` to store the answer in a named variable. A plain `A:` stores it in `ANSWER$`, so read it with `$ANSWER`.
 
 ## Advanced Techniques
 
 ### State Machine Pattern
 
 ```pilot
-(STATE_MENU)
+*STATE_MENU
 T: In menu
-A: Next?
-A:I
-*I: 1
-J: STATE_GAME
-*I: 0
-J: STATE_END
+A: Next? (1 = game, 0 = end)
+M: 1
+JY: STATE_GAME
+M: 0
+JY: STATE_END
+T: Unknown choice.
+E:
 
-(STATE_GAME)
+*STATE_GAME
 T: In game
-A: Next?
-A:I
-*I: 1
-J: STATE_MENU
-*I: 0
-J: STATE_END
+E:
 
-(STATE_END)
+*STATE_END
 T: Ending
 ```
 
@@ -434,6 +347,6 @@ T: Ending
 
 - Learn [Logo for turtle graphics](logo.md)
 - Explore [BASIC for math and algorithms](basic.md)
-- Check out [example programs](../Examples/) in the repository
+- Check out [example programs](../../Examples/) in the repository
 
 Happy PILOT programming!

@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import math
 
-from PySide6.QtCore import Property, QEasingCurve, QPropertyAnimation, Qt, QTimer
+from PySide6.QtCore import Qt, QTimer
 from PySide6.QtGui import (
     QColor,
     QFont,

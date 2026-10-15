@@ -51,11 +51,11 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Code Editor** — Syntax highlighting, line numbers, and auto-indentation per language
 - **Output Console** — Program results, error messages, and interactive input
 - **Graphics Canvas** — Real-time turtle graphics rendering with zoom and pan
-- **Theme System** — 28 built-in themes (Dracula, Monokai, Catppuccin Mocha, Gruvbox Dark, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized, retro CRT, and more)
+- **Theme System** — 33 built-in themes (Dracula, Monokai, Catppuccin Mocha, Gruvbox Dark, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized, retro CRT, and more)
 - **Find & Replace** — Advanced search with regex, case sensitivity, whole word matching, and live match highlighting
 - **Auto-Completion** — Context-aware completions from language keywords and document identifiers
-- **Learning Hub & Project Explorer** — Guided challenges, remix workflows, recent projects, and workspace browsing
-- **16+ Feature Panels** — Lessons, AI Assistant, Error Explainer, Turtle Inspector, Debugger, classroom tools, and more
+- **Dockable Panels** — Lessons, Debugger, Variable Inspector, Document Outline, project file tree, terminal, and classroom tools
+- **Borland Turbo Keymap** — F9 run, F2 save, F3 open, F7/F8 stepping, F10 command palette, with a Function-Key Bar showing the live bindings
 
 ### Turtle Graphics & Vector Graphics
 
@@ -77,11 +77,10 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 
 ### Educational Tools
 
-- **Lesson System** — Step-by-step guided instruction with auto-verification
-- **AI Assistant** — Intelligent code suggestions and explanations
-- **Error Explainer** — Human-readable explanations of programming errors
-- **Examples Browser** — curated example programs across all 9 active languages
-- **Achievements** — Gamified progress tracking
+- **Lessons** — 18 built-in lessons (2 per language) with checkpoints, hints, and automatic verification (Help → Lessons, Ctrl+F3)
+- **Error Hints** — Syntax error suggestions alongside interpreter error messages
+- **Examples Browser** — 72 curated example programs across all 9 active languages (Shift+F3)
+- **Classroom Mode** — Presentation-friendly tools for teaching
 
 ---
 
@@ -175,7 +174,7 @@ FOR I = 1 TO 5
 NEXT I
 ```
 
-1. Press **Ctrl+R** (or click **Run**)
+1. Press **F9** or **Ctrl+R** (or click **Run**)
 
 You'll see the output in the console panel below the editor.
 
@@ -247,7 +246,7 @@ GREET
 5 3 + . CR
 ```
 
-Browse more examples in the [Examples/](Examples/) directory or through **File → Examples** in the IDE.
+Browse more examples in the [Examples/](Examples/) directory or through **Help → Browse Examples** (Shift+F3) in the IDE.
 
 ---
 
@@ -290,7 +289,7 @@ Browse more examples in the [Examples/](Examples/) directory or through **File �
 
 | Document | Description |
 | --- | --- |
-| [FAQ](docs/reference/faq.md) | Frequently asked questions |
+| [FAQ](FAQ.md) | Frequently asked questions |
 | [Documentation Index](docs/INDEX.md) | Full documentation listing |
 | [Examples Catalog](Examples/CATALOG.md) | Example programs catalog |
 
@@ -303,7 +302,7 @@ Time_Warp_Studio/
 ├── run.py                         # Smart launcher (auto-setup + launch)
 ├── run.sh                         # Shell wrapper for Linux/macOS
 ├── Makefile                       # Build automation targets
-├── docker-compose.yml             # Multi-service orchestration
+├── test_all_examples.py           # Runs all 72 example programs
 │
 ├── README.md                      # This file
 ├── ARCHITECTURE.md                # System design document
@@ -320,31 +319,29 @@ Time_Warp_Studio/
 │       ├── core/                  # Interpreter engine and services
 │       │   ├── interpreter.py     # Central command dispatcher (~1,500 lines)
 │       │   ├── debugger.py        # Step-through debugger with timeline
-│       │   ├── sql_engine.py      # SQLite-backed T-SQL compatibility
-│       │   ├── orchestrator.py    # System integration / component registry
 │       │   └── config.py          # Canonical paths (~/.time_warp/)
 │       ├── languages/             # 9 language executors
 │       │   ├── base.py            # Executor protocol definition
 │       │   ├── basic.py           # BASIC with Turbo graphics
 │       │   ├── logo.py            # Logo turtle graphics
 │       │   ├── pilot.py           # PILOT CAI system
-│       │   ├── python.py          # Python sandboxed executor
+│       │   ├── python_lang.py     # Python sandboxed executor
 │       │   └── ...                # Remaining active language executors
 │       ├── ui/                    # PySide6 (Qt6) UI components
-│       │   ├── main_window.py     # Main IDE window (6 mixins)
+│       │   ├── main_window.py     # Main IDE window (5 mixins)
 │       │   ├── editor.py          # Code editor with syntax highlighting
 │       │   ├── canvas.py          # Turtle graphics canvas
 │       │   ├── themes.py          # 28-theme manager
 │       │   ├── output.py          # Output panel + interpreter threads
 │       │   ├── debug_panel.py     # Debugger controls/watch/call-stack
-│       │   ├── command_palette.py # Ctrl+Shift+P command palette
-│       │   ├── feature_panels.py  # Dynamic feature panels
-│       │   └── mixins/            # Collaboration, classroom, debug, etc.
+│       │   ├── command_palette.py # F10 / Ctrl+Shift+P command palette
+│       │   ├── lesson_panel.py    # Lessons dock
+│       │   └── mixins/            # Classroom, debug, export, file ops, help
 │       ├── graphics/              # Turtle state and rendering
 │       │   └── turtle_state.py    # Position, heading, pen state (~600 lines)
-│       ├── features/              # Lessons, autosave, achievements, games, etc.
+│       ├── features/              # Lessons, autosave, games, etc.
 │       ├── utils/                 # Expression evaluator, error hints, etc.
-│       └── tests/                 # 24 test files
+│       └── tests/                 # pytest suite (501 tests)
 │
 ├── Examples/                      # Example programs across 9 active languages
 │   ├── CATALOG.md                 # Searchable example index
@@ -352,20 +349,15 @@ Time_Warp_Studio/
 │   ├── pascal/ prolog/ forth/
 │   ├── brainfuck/ python/
 │
-├── tests/                         # Root-level integration tests
-│   ├── test_all_demos.py          # Standalone demo verifier
-│   └── test_basic_functionality.py # Quick smoke test
-│
+├── FAQ.md                         # Frequently asked questions
 ├── docs/                          # Documentation
 │   ├── INDEX.md                   # Documentation hub
 │   ├── guides/                    # 8 progressive how-to guides
 │   └── tutorials/                 # 9 language-specific tutorials
-│   └── reference/                 # FAQ and reference material
 │
-├── Scripts/                       # Build, launch, deploy, and utility scripts
-├── docker/                        # Dockerfiles, nginx, supervisord, health checks
-├── packaging/linux/               # Desktop shortcut and icon
-└── .github/                       # CI/CD workflows (10) and templates
+├── Scripts/                       # Build, launch, and utility scripts
+├── packaging/linux/               # Desktop shortcut, icon, and snap recipe
+└── .github/                       # CI workflows (ci, build_release, docs, markdown-lint)
 ```
 
 ---
@@ -388,7 +380,7 @@ python3 Platforms/Python/time_warp_ide.py
 ### What Happens on Startup
 
 1. The 9 active language executors are initialized
-2. Configuration is loaded from `~/.time_warp/config.json`
+2. Settings are restored from Qt QSettings; lesson progress is loaded from `~/.time_warp/progress.json`
 3. The main IDE window opens with editor, canvas, and output panels
 4. Your last theme and settings are restored
 
@@ -398,7 +390,7 @@ python3 Platforms/Python/time_warp_ide.py
 | --- | --- |
 | Startup time | 2–5 seconds |
 | Memory usage | 200–300 MB |
-| Codebase | 56,000+ lines across 130+ Python modules |
+| Codebase | 56,000+ lines across 120+ Python modules |
 
 ---
 
@@ -407,17 +399,18 @@ python3 Platforms/Python/time_warp_ide.py
 Run from the repository root:
 
 ```bash
-# Quick root-level test run
-pytest -q
-
-# Full package suite with integrated reporting
-PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
+# Full pytest suite (501 tests, offscreen Qt)
+make test
+# or: QT_QPA_PLATFORM=offscreen PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
 
 # Fast smoke test without pytest
 python3 Platforms/Python/smoke_test.py
+
+# Run all 72 example programs (non-zero exit on failure)
+python3 test_all_examples.py
 ```
 
-**Current status:** Tests cover all 9 active language executors, graphics, GUI, and interpreter behavior.
+**Current status:** Tests cover all 9 active language executors, graphics, GUI, lessons, keymap, and interpreter behavior. CI (`.github/workflows/ci.yml`) runs ruff, pytest, the smoke test, and the examples on Python 3.10, 3.12, and 3.13.
 
 ---
 
@@ -437,15 +430,16 @@ We welcome contributions! Here's how to get started:
    ```bash
    python -m venv .venv
    source .venv/bin/activate
-   pip install -r Platforms/Python/requirements.txt
+   pip install -r Platforms/Python/requirements.txt -r Platforms/Python/requirements-dev.txt
    ```
 
 4. **Make** your changes following [PEP 8](https://peps.python.org/pep-0008/) style
 5. **Test** that all tests pass:
 
    ```bash
-   pytest -q
-   python3 Platforms/Python/smoke_test.py
+   make test
+   make smoke
+   make demos
    ```
 
 6. **Commit** with a clear message and submit a pull request

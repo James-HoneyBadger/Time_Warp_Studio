@@ -128,7 +128,6 @@ def validate_variable_name(name: str, allow_suffix: bool = False) -> str:
         "REM",
         "LOCATE",
         "CLS",
-        "END",
         "STOP",
     }
 
@@ -249,3 +248,168 @@ def validate_range(
         raise ValidationError(f"Value {value}{name_str} exceeds maximum {max_val}")
 
     return value
+
+
+class WorkspaceFileService:
+    """Confined file service for language interpreters.
+
+    Enforces symlink-aware path confinement, file handle limits, and maximum
+    file size bounds across BASIC, PILOT, Pascal, Forth, and C.
+    """
+
+    MAX_OPEN_HANDLES = 32
+    MAX_FILE_BYTES = 1_048_576  # 1 MiB
+
+    def __init__(
+        self,
+        base_dir: Optional[str] = None,
+        extra_read_dirs: Optional[List[str]] = None,
+    ) -> None:
+        from pathlib import Path
+
+        self._base_dir = Path(base_dir).resolve() if base_dir else Path.cwd().resolve()
+        self._extra_read_dirs = [
+            Path(d).resolve() for d in (extra_read_dirs or []) if d
+        ]
+        self._handles: dict[str, Any] = {}
+
+    @property
+    def base_dir(self):
+        """Return resolved base directory."""
+        return self._base_dir
+
+    def set_base_dir(self, base_dir: str) -> None:
+        """Update the confinement base directory."""
+        from pathlib import Path
+
+        self._base_dir = Path(base_dir).resolve()
+
+    def resolve_path(
+        self,
+        filename: str,
+        *,
+        for_write: bool = False,
+        must_exist: bool = False,
+        allowed_extensions: Optional[Tuple[str, ...]] = None,
+    ):
+        """Validate and resolve *filename* within the confined workspace."""
+
+        raw = (filename or "").strip().strip("\"'")
+        validate_file_path(raw, base_dir=str(self._base_dir))
+        candidate = (self._base_dir / raw).resolve()
+
+        allowed_roots = [self._base_dir]
+        if not for_write:
+            allowed_roots.extend(self._extra_read_dirs)
+
+        if not any(self._is_within(candidate, root) for root in allowed_roots):
+            raise ValidationError(f"Path '{raw}' escapes sandbox directory")
+
+        if allowed_extensions:
+            ext = candidate.suffix.lower()
+            norm_exts = tuple(e.lower() for e in allowed_extensions)
+            if ext not in norm_exts:
+                raise ValidationError(
+                    f"File extension '{ext}' not permitted (expected {norm_exts})"
+                )
+
+        if must_exist and not candidate.is_file():
+            raise ValidationError(f"File not found: '{raw}'")
+
+        if candidate.exists() and candidate.is_file():
+            if candidate.stat().st_size > self.MAX_FILE_BYTES:
+                raise ValidationError(
+                    f"File '{raw}' exceeds maximum size ({self.MAX_FILE_BYTES} bytes)"
+                )
+
+        return candidate
+
+    @staticmethod
+    def _is_within(target, root) -> bool:
+        try:
+            target.relative_to(root)
+            return True
+        except ValueError:
+            return False
+
+    def open_handle(
+        self,
+        key: str,
+        filename: str,
+        mode: str = "r",
+        *,
+        allowed_extensions: Optional[Tuple[str, ...]] = None,
+    ):
+        """Open a confined text file and register its handle under *key*."""
+        if key in self._handles:
+            self.close_handle(key)
+        if len(self._handles) >= self.MAX_OPEN_HANDLES:
+            raise ValidationError(
+                f"Maximum open files ({self.MAX_OPEN_HANDLES}) exceeded"
+            )
+        for_write = any(ch in mode for ch in ("w", "a", "+", "x"))
+        must_exist = "r" in mode and not for_write
+        resolved = self.resolve_path(
+            filename,
+            for_write=for_write,
+            must_exist=must_exist,
+            allowed_extensions=allowed_extensions,
+        )
+        resolved.parent.mkdir(parents=True, exist_ok=True)
+        handle = open(resolved, mode, encoding="utf-8")  # noqa: SIM115
+        self._handles[key] = handle
+        return handle
+
+    def get_handle(self, key: str):
+        """Retrieve an open file handle by *key*, or None."""
+        return self._handles.get(key)
+
+    def close_handle(self, key: str) -> bool:
+        """Close and remove a registered file handle."""
+        handle = self._handles.pop(key, None)
+        if handle is None:
+            return False
+        try:
+            handle.close()
+        except OSError:
+            pass
+        return True
+
+    def close_all(self) -> None:
+        """Close all registered file handles."""
+        for key in list(self._handles.keys()):
+            self.close_handle(key)
+
+    def read_text(
+        self,
+        filename: str,
+        *,
+        allowed_extensions: Optional[Tuple[str, ...]] = None,
+    ) -> str:
+        """Read text from a confined file."""
+        resolved = self.resolve_path(
+            filename,
+            for_write=False,
+            must_exist=True,
+            allowed_extensions=allowed_extensions,
+        )
+        return resolved.read_text(encoding="utf-8")
+
+    def write_text(self, filename: str, content: str, *, append: bool = False) -> None:
+        """Write or append bounded text to a confined file."""
+        encoded = content.encode("utf-8")
+        if len(encoded) > self.MAX_FILE_BYTES:
+            raise ValidationError(
+                f"Write exceeds maximum file size ({self.MAX_FILE_BYTES} bytes)"
+            )
+        resolved = self.resolve_path(filename, for_write=True, must_exist=False)
+        resolved.parent.mkdir(parents=True, exist_ok=True)
+        if append and resolved.exists():
+            if resolved.stat().st_size + len(encoded) > self.MAX_FILE_BYTES:
+                raise ValidationError(
+                    f"Append exceeds maximum file size ({self.MAX_FILE_BYTES} bytes)"
+                )
+            with open(resolved, "a", encoding="utf-8") as fh:
+                fh.write(content)
+        else:
+            resolved.write_text(content, encoding="utf-8")

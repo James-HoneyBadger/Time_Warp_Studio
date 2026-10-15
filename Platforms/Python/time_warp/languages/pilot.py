@@ -7,19 +7,19 @@ Supported commands:
     T:  Type (print text, supports $var interpolation and \\t tabs)
     A:  Accept (input, A:$VAR or A: for ANSWER$)
     M:  Match (pattern match with *, ? wildcards; sets $LEFT/$MATCH/$RIGHT)
-    C:  Compute (assignment with expressions and string functions)
+    C:  Compute (C:X = expr, C:#X = expr, C:$NAME = text; string functions)
     J:  Jump to label
-    U:  Use variable / alias for C:
+    U:  Use subroutine (U:*LABEL; returns at the next E:)
     P:  Pause (wait for Enter)
     B:  Branch (conditional jump)
-    S:  Subroutine call
-    R:  Return from subroutine
+    S:  Subroutine call (alias of U:)
+    R:  Remark (ignored)
     G:  Graphics (turtle commands: FD, BK, LT, RT, CIRCLE, ARC, FILL,
         SETXY, HIDETURTLE, SHOWTURTLE, SETHEADING, TEXT, DOT, STAMP, ...)
     F:  File operations (OPEN, CLOSE, READ, WRITE)
     D:  Delay in seconds
     L:  Link/Load (lesson chaining)
-    E:  End program
+    E:  End subroutine (return) or, at top level, end the program
     H:  Hint (educational feedback message)
 
 Conditional suffixes:
@@ -236,6 +236,11 @@ def execute_pilot(
         var_name = parts[0].strip()
         expr = parts[1].strip()
 
+        if var_name.startswith("#"):
+            var_name = var_name[1:].strip()
+        elif var_name.startswith("$"):
+            var_name = var_name[1:].strip() + "$"
+
         if not var_name:
             return "❌ C: requires variable name\n"
 
@@ -266,17 +271,22 @@ def execute_pilot(
         if label:
             interpreter.jump_to_label(label)
         return ""
-    if cmd_type == "U":
-        if "=" in rest:
-            # Treat as Compute (alias for C:)
-            return execute_pilot(interpreter, "C:" + rest, turtle)
-
-        var_name = rest.strip()
-        if not var_name:
-            return "❌ U: requires variable name\n"
-        value = interpreter.variables.get(var_name, "")
-        text = str(value)
-        return text + "\n"
+    if cmd_type == "U" and "=" in rest:
+        # Legacy form U:var = expr behaves like C:
+        return execute_pilot(interpreter, "C:" + rest, turtle)
+    if cmd_type in ("U", "S"):
+        label = rest.strip()
+        if not label:
+            return f"❌ {cmd_type}: requires a label, e.g. {cmd_type}:*SUB\n"
+        max_depth = 128
+        if getattr(interpreter, "budget", None) is not None:
+            max_depth = interpreter.budget.max_recursion_depth
+        if len(interpreter.subroutine_stack) >= max_depth:
+            return f"❌ {cmd_type}: Maximum subroutine depth ({max_depth}) exceeded\n"
+        # Return to the line after the call
+        interpreter.subroutine_stack.append(interpreter.current_line + 1)
+        interpreter.jump_to_label(label)
+        return ""
     if cmd_type == "P":
         # P: Pause - wait for user to press Enter
         interpreter.start_input_request(
@@ -299,19 +309,7 @@ def execute_pilot(
         except (ValueError, TypeError) as e:
             return f"❌ Error in B: condition: {e}\n"
         return ""
-    if cmd_type == "S":
-        # S: Subroutine call
-        label = rest.strip()
-        if label:
-            # Push next line for return (so R: returns to the line after S:)
-            interpreter.subroutine_stack.append(interpreter.current_line + 1)
-            interpreter.jump_to_label(label)
-        return ""
     if cmd_type == "R":
-        # R: Return from subroutine
-        if interpreter.subroutine_stack:
-            return_line = interpreter.subroutine_stack.pop()
-            interpreter.current_line = return_line
         return ""
     if cmd_type == "G":
         # G: Graphics command - integrate with turtle graphics
@@ -323,17 +321,33 @@ def execute_pilot(
         # D: Delay/timer
         try:
             delay = float(rest.strip())
-
-            time.sleep(min(delay, 10.0))  # Max 10 second delay
+            if hasattr(interpreter, "sleep_slices"):
+                interpreter.sleep_slices(min(max(0.0, delay), 10.0))
+            else:
+                time.sleep(min(max(0.0, delay), 10.0))
         except ValueError:
             return "❌ D: requires numeric delay in seconds\n"
         return ""
     if cmd_type == "L":
-        # L: Link/Load — lesson chaining
-        lesson = rest.strip()
+        # L: Link/Load — lesson chaining (validates and optionally loads workspace file)
+        lesson = rest.strip().strip("\"'")
         if lesson:
-            # Store the lesson reference for the IDE to pick up
+            try:
+                validate_file_path(lesson, base_dir=".")
+            except ValidationError as e:
+                return f"❌ L: {e}\n"
             interpreter.variables["_LESSON_LINK"] = lesson
+            svc = getattr(interpreter, "file_service", None)
+            if svc is not None and any(
+                lesson.lower().endswith(ext) for ext in (".pilot", ".pil", ".txt")
+            ):
+                try:
+                    resolved = svc.resolve_path(lesson, for_write=False, must_exist=False)
+                    if resolved.is_file():
+                        content = resolved.read_text(encoding="utf-8")
+                        interpreter.string_variables["_LESSON_CONTENT$"] = content
+                except ValidationError as e:
+                    return f"❌ L: {e}\n"
             return f"📎 Lesson link: {lesson}\n"
         return ""
     if cmd_type == "H":
@@ -351,6 +365,9 @@ def execute_pilot(
             return execute_pilot(interpreter, f"T:{rest}", turtle)
         return ""
     if cmd_type == "E":
+        if interpreter.subroutine_stack:
+            interpreter.current_line = interpreter.subroutine_stack.pop()
+            return ""
         interpreter.running = False
         return ""
     # --- Full Logo command and block blending ---
@@ -653,29 +670,50 @@ def _pilot_file_command(interpreter: "Interpreter", command: str) -> str:
                 return f"❌ F: OPEN requires mode R|W|A, got: {mode}\n"
 
             try:
+                if filename in interpreter.open_files:
+                    try:
+                        interpreter.open_files[filename].close()
+                    except OSError:
+                        pass
+                svc = getattr(interpreter, "file_service", None)
                 if mode in ("READ", "R"):
-                    # pylint: disable=consider-using-with
-                    interpreter.open_files[filename] = open(
-                        filename,
-                        "r",
-                        encoding="utf-8",
-                    )
+                    if svc is not None:
+                        interpreter.open_files[filename] = svc.open_handle(
+                            f"pilot:{filename}", filename, "r"
+                        )
+                    else:
+                        # pylint: disable=consider-using-with
+                        interpreter.open_files[filename] = open(
+                            filename,
+                            "r",
+                            encoding="utf-8",
+                        )
                     logger.info("PILOT file OPEN read: %s", filename)
                 elif mode in ("WRITE", "W"):
-                    # pylint: disable=consider-using-with
-                    interpreter.open_files[filename] = open(
-                        filename,
-                        "w",
-                        encoding="utf-8",
-                    )
+                    if svc is not None:
+                        interpreter.open_files[filename] = svc.open_handle(
+                            f"pilot:{filename}", filename, "w"
+                        )
+                    else:
+                        # pylint: disable=consider-using-with
+                        interpreter.open_files[filename] = open(
+                            filename,
+                            "w",
+                            encoding="utf-8",
+                        )
                     logger.info("PILOT file OPEN write: %s", filename)
                 elif mode in ("APPEND", "A"):
-                    # pylint: disable=consider-using-with
-                    interpreter.open_files[filename] = open(
-                        filename,
-                        "a",
-                        encoding="utf-8",
-                    )
+                    if svc is not None:
+                        interpreter.open_files[filename] = svc.open_handle(
+                            f"pilot:{filename}", filename, "a"
+                        )
+                    else:
+                        # pylint: disable=consider-using-with
+                        interpreter.open_files[filename] = open(
+                            filename,
+                            "a",
+                            encoding="utf-8",
+                        )
                     logger.info("PILOT file OPEN append: %s", filename)
             except (IOError, OSError) as e:
                 logger.error("PILOT file open error: %s", e)

@@ -25,8 +25,7 @@ jobs:
           test -f docs/INDEX.md
           test -f docs/USER_GUIDE.md
           test -f docs/LANGUAGE_GUIDE.md
-          test -f docs/reference/faq.md
+          test -f FAQ.md
           test -d docs/guides
-          test -d docs/reference
           test -d docs/tutorials
           echo "Docs structure looks good."

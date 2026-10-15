@@ -243,10 +243,10 @@ info "Installing core dependencies (PySide6, Pillow)…"
 "$VENV_PYTHON" -m pip install --quiet --upgrade "PySide6>=6.5.0" "Pillow>=10.0.0"
 success "Core dependencies installed"
 
-info "Installing optional dependencies…"
+info "Installing optional extras (speech, gamepad, OS theme detection)…"
 "$VENV_PYTHON" -m pip install --quiet --upgrade \
-    "requests>=2.31.0" "websockets>=11.0.3" 2>/dev/null || \
-    warn "Some optional dependencies not installed — app will still work"
+    -r "$SCRIPT_DIR/Platforms/Python/requirements-optional.txt" 2>/dev/null || \
+    warn "Some optional extras not installed — the IDE works without them"
 
 # ── 6. Fix permissions (system-wide installs only) ────────────────────────────
 if ! $USER_INSTALL; then

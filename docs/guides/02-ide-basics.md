@@ -8,7 +8,7 @@ Learn your way around the Time Warp Studio interface.
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│ File  Edit  View  Help                          [_ □ ×] │
+│ File  Edit  Run  Debug  View  Tools  Help      [_ □ ×] │
 ├──────────────────────────────────────────────────────────┤
 │ Language: [Basic ▼]  [Run] [Stop] [Clear]              │
 ├──────────────────────┬────────────────────────────────────┤
@@ -21,8 +21,12 @@ Learn your way around the Time Warp Studio interface.
 │                      │                                    │
 ├──────────────────────┴────────────────────────────────────┤
 │ Ready                                                    │
+├──────────────────────────────────────────────────────────┤
+│ FN 1Help 2Save 3Open 4Outline ... 9Run 10Menu           │
 └──────────────────────────────────────────────────────────┘
 ```
+
+The bottom **Function-Key Bar** shows the Borland Turbo-style F-key bindings. Hold **Shift** or **Ctrl** to see those layers, or click the **FN** badge to cycle them.
 
 ---
 
@@ -32,29 +36,48 @@ Learn your way around the Time Warp Studio interface.
 
 **File Menu**
 - New program (Ctrl+N)
-- Open existing program (Ctrl+O)
-- Save program (Ctrl+S)
-- Exit IDE (Ctrl+Q)
+- Open existing program (F3 / Ctrl+O)
+- Save program (F2 / Ctrl+S)
+- Save As (Shift+F2 / Ctrl+Shift+S)
+- Export, Print, Version History, Preferences (Ctrl+,)
+- Exit IDE (Alt+X / Ctrl+Q)
 
 **Edit Menu**
 - Undo/Redo (Ctrl+Z / Ctrl+Y)
 - Cut/Copy/Paste (Ctrl+X / Ctrl+C / Ctrl+V)
 - Find (Ctrl+F)
 - Find & Replace (Ctrl+H)
-- Select All (Ctrl+A)
+- Find in Files (Shift+F4 / Ctrl+Alt+G)
+- Go to Line (Ctrl+G)
+
+**Run Menu**
+- Run Program (F9 / Ctrl+R)
+- Reset Program (Ctrl+F2)
+- Run Selection (Shift+F9 / Ctrl+Shift+R)
+- Clear Output / Clear Canvas
+
+**Debug Menu**
+- Start / Continue Debugging (Ctrl+F9)
+- Trace Into (F7), Step Over (F8), Step Out (Shift+F8)
+- Toggle Breakpoint (Ctrl+F8)
 
 **View Menu**
-- Output Panel visibility
-- Turtle Graphics visibility
 - Themes (Dracula, Monokai, Solarized, etc.)
-- Zoom In/Out (Ctrl+/-)
-- Reset Zoom (Ctrl+0)
+- Font family and size
+- Zoom In/Out (Ctrl++ / Ctrl+-)
+- Split editor, focus mode, command palette (F10)
+
+**Tools Menu**
+- Compare Languages
 
 **Help Menu**
-- About Time Warp
-- User Manual (F1)
+- User Manual
+- Context Help (F1)
+- Lessons (Ctrl+F3)
+- Browse Examples (Shift+F3)
 - Quick Reference
-- Check for Updates
+- Keyboard Shortcuts (Shift+F1)
+- About Time Warp Studio
 
 ### 2. Toolbar
 
@@ -63,9 +86,9 @@ The toolbar contains quick-access tools:
 | Button | Function | Shortcut |
 |--------|----------|----------|
 | Language dropdown | Select programming language | - |
-| Run | Execute current program | Ctrl+R |
-| Stop | Halt execution | Ctrl+Shift+R |
-| Clear | Clear output panel | Ctrl+E |
+| Run | Execute current program | F9 / Ctrl+R |
+| Stop | Halt execution | Ctrl+F2 |
+| Clear | Clear output panel | - |
 
 **Language Options (9 total):**
 - BASIC, Logo, PILOT — educational classics
@@ -132,13 +155,13 @@ Shows program output and graphics:
 
 ### Saving Your Work
 
-1. **File → Save** or press Ctrl+S
+1. **File → Save** or press F2 (Ctrl+S)
 2. Choose location and filename
 3. Programs saved as `.bas`, `.logo`, `.py`, etc.
 
 ### Opening Existing Programs
 
-1. **File → Open** or press Ctrl+O
+1. **File → Open** or press F3 (Ctrl+O)
 2. Navigate to program file
 3. Click Open
 4. Program loads in editor
@@ -146,18 +169,18 @@ Shows program output and graphics:
 ### Running Programs
 
 1. Make sure language is selected
-2. Press **Ctrl+R** or click Run button
+2. Press **F9** (or Ctrl+R) or click Run button
 3. Wait for execution
 4. See output in right panel
 
 ### Stopping Execution
 
-- Press **Ctrl+Shift+R** or click Stop button
+- Press **Ctrl+F2** (Reset Program) or click Stop button
 - Use for infinite loops or long operations
 
 ### Clearing Output
 
-- Press **Ctrl+E** or click Clear button
+- Use **Run → Clear Output** or click Clear button
 - Removes all previous output
 
 ---
@@ -167,7 +190,7 @@ Shows program output and graphics:
 The language dropdown in the toolbar lets you switch between programming languages.
 
 **Switching Languages:**
-1. Click the language dropdown
+1. Click the language dropdown (or press Ctrl+Shift+L for the Language Picker)
 2. Select desired language
 3. Your code editor syntax updates
 4. Ready to write in new language
@@ -205,35 +228,27 @@ When something goes wrong, the IDE shows clear error messages:
 
 ### Changing Themes
 
-1. **View → Themes** in menu bar
-2. Choose from available themes:
+1. **View → Theme** in menu bar
+2. Choose from 33 built-in themes, for example:
    - Dracula (dark, purple)
    - Monokai (dark, colorful)
    - Solarized Dark (dark, balanced)
    - Ocean (dark, blue)
    - Spring (light, green)
-   - Sunset (dark, warm)
-   - Candy (dark, pink)
-   - Forest (dark, green)
+   - Nord, Tokyo Night, Catppuccin Mocha
+   - Retro CRT themes (Amber, Green, Commodore 64, Apple II)
 
-3. Theme applies immediately
+3. Theme applies immediately (Shift+F10 cycles workstation themes)
 
 ### Font Size
 
 **Zoom In/Out:**
 - **View → Zoom In** or Ctrl++ (increase)
 - **View → Zoom Out** or Ctrl+- (decrease)
-- **View → Reset Zoom** or Ctrl+0 (default)
-
-**Font size range:** 8pt to 24pt
 
 ### Settings
 
-Settings stored in `~/.time_warp/config.json`:
-- Current theme preference
-- Font size setting
-- Recent files list
-- Auto-save setting
+Settings are stored with Qt QSettings. Auto-save is configured under File → Preferences (Ctrl+,). See [06-settings.md](06-settings.md) for details.
 
 ---
 
@@ -270,7 +285,7 @@ A dialog box appears for input entry.
 
 ### Clearing Output
 
-Use **Clear** button or Ctrl+E to reset output panel.
+Use **Clear** button or **Run → Clear Output** to reset output panel.
 
 ---
 
@@ -291,8 +306,8 @@ Bottom of window shows status information:
 ### Efficient Workflow
 
 1. Write your program
-2. Press Ctrl+S to save frequently
-3. Press Ctrl+R to test
+2. Press F2 to save frequently
+3. Press F9 to test
 4. Check output for errors
 5. Fix and repeat
 
@@ -323,16 +338,18 @@ Bottom of window shows status information:
 
 ## Keyboard Shortcuts Reference
 
+Time Warp Studio uses Borland Turbo-style keys; press **Shift+F1** for the full live list.
+
 **Program Control**
 - Ctrl+N - New program
-- Ctrl+O - Open program
-- Ctrl+S - Save program
-- Ctrl+Q - Quit IDE
+- F3 / Ctrl+O - Open program
+- F2 / Ctrl+S - Save program
+- Alt+X / Ctrl+Q - Exit IDE
 
 **Execution**
-- Ctrl+R - Run program
-- Ctrl+Shift+R - Stop program
-- Ctrl+E - Clear output
+- F9 / Ctrl+R - Run program
+- Ctrl+F2 - Reset (stop) program
+- Shift+F9 / Ctrl+Shift+R - Run selection
 
 **Editor**
 - Ctrl+Z - Undo
@@ -347,10 +364,11 @@ Bottom of window shows status information:
 **View**
 - Ctrl++ - Zoom in
 - Ctrl+- - Zoom out
-- Ctrl+0 - Reset zoom
+- F10 / Ctrl+Shift+P - Command palette
 
 **Help**
-- F1 - Open help
+- F1 - Context help for the current language
+- Ctrl+F3 - Lessons
 
 ---
 

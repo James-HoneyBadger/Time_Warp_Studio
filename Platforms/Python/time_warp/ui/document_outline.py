@@ -1,17 +1,19 @@
 """Document outline widget for navigating Logo procedures and BASIC subroutines."""
 
-import re
-from typing import List, Tuple, Optional
+from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal, QAbstractItemModel
+import re
+
+from PySide6.QtCore import QAbstractItemModel, QModelIndex, Qt, Signal
 from PySide6.QtWidgets import (
-    QTreeView,
-    QWidget,
-    QVBoxLayout,
-    QLineEdit,
     QLabel,
+    QLineEdit,
+    QTreeView,
+    QVBoxLayout,
+    QWidget,
 )
-from PySide6.QtGui import QIcon, QColor
+
+_INVALID_INDEX = QModelIndex()
 
 
 class OutlineItem:
@@ -21,8 +23,8 @@ class OutlineItem:
         self.name = name
         self.line_number = line_number  # 1-based
         self.item_type = item_type  # "procedure", "subroutine", "function", etc.
-        self.children: List['OutlineItem'] = []
-        self.parent: Optional['OutlineItem'] = None
+        self.children: list[OutlineItem] = []
+        self.parent: OutlineItem | None = None
 
     def __repr__(self):
         return f"OutlineItem({self.name}, line {self.line_number}, type={self.item_type})"
@@ -34,9 +36,9 @@ class OutlineModel(QAbstractItemModel):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.root = OutlineItem("root", 0)
-        self.items: List[OutlineItem] = []
+        self.items: list[OutlineItem] = []
 
-    def set_items(self, items: List[OutlineItem]):
+    def set_items(self, items: list[OutlineItem]):
         """Set the outline items."""
         self.beginResetModel()
         self.root = OutlineItem("root", 0)
@@ -45,32 +47,53 @@ class OutlineModel(QAbstractItemModel):
             item.parent = self.root
         self.endResetModel()
 
-    def rowCount(self, parent=None):
+    def rowCount(self, parent=_INVALID_INDEX):  # type: ignore[override]
         if not parent or not parent.isValid():
             return len(self.items)
         return 0
 
-    def columnCount(self, parent=None):
+    def columnCount(self, parent=_INVALID_INDEX):  # type: ignore[override]
         return 1
 
-    def data(self, index, role):
+    def parent(self, index=_INVALID_INDEX):  # type: ignore[override]
+        """Return no parent because the outline contains only top-level items."""
+        return QModelIndex()
+
+    def data(self, index, role=int(Qt.ItemDataRole.DisplayRole)):  # type: ignore[override]
         if not index.isValid():
             return None
 
-        item = self.items[index.row()]
+        item = index.internalPointer()
+        if not isinstance(item, OutlineItem):
+            return None
 
-        if role == Qt.DisplayRole:
-            return f"{item.name} (line {item.line_number})"
-        elif role == Qt.UserRole:
+        if role == Qt.ItemDataRole.DisplayRole:
+            badges = {
+                "procedure": "◆",
+                "subroutine": "▸",
+                "function": "ƒ",
+                "class": "❖",
+                "rule": "⊢",
+                "fact": "•",
+                "word": ":",
+                "label": "★",
+            }
+            badge = badges.get(item.item_type, "•")
+            return f"{badge} {item.name}  [Ln {item.line_number}]"
+        if role == Qt.ItemDataRole.UserRole:
             return item
 
         return None
 
-    def index(self, row, column, parent=None):
-        if not parent or not parent.isValid():
-            if 0 <= row < len(self.items):
-                return self.createIndex(row, column, self.items[row])
-        return self.createIndex(-1, -1)
+    def index(
+        self,
+        row: int,
+        column: int,
+        parent=_INVALID_INDEX,
+    ) -> QModelIndex:  # type: ignore[override]
+        if (not parent or not parent.isValid()) and column == 0 and 0 <= row < len(self.items):
+            return self.createIndex(row, column, self.items[row])
+        return QModelIndex()
 
 
 class DocumentOutline(QWidget):
@@ -82,6 +105,7 @@ class DocumentOutline(QWidget):
         super().__init__(parent)
         self._editor = None
         self._current_language = None
+        self._connected_editor = None
         self._setup_ui()
 
     def _setup_ui(self):
@@ -111,10 +135,21 @@ class DocumentOutline(QWidget):
 
     def set_editor(self, editor):
         """Set the editor to extract outline from."""
+        if self._connected_editor is not None:
+            try:
+                self._connected_editor.document().contentsChanged.disconnect(
+                    self.rebuild_outline
+                )
+            except (RuntimeError, TypeError):
+                pass
+
         self._editor = editor
-        # Connect text changes to rebuild outline
+        self._connected_editor = editor
         if editor:
             editor.document().contentsChanged.connect(self.rebuild_outline)
+            self.rebuild_outline()
+        else:
+            self._model.set_items([])
 
     def set_language(self, language):
         """Set the current language."""
@@ -124,6 +159,7 @@ class DocumentOutline(QWidget):
     def rebuild_outline(self):
         """Parse the document and rebuild the outline."""
         if not self._editor:
+            self._model.set_items([])
             return
 
         text = self._editor.toPlainText()
@@ -131,9 +167,9 @@ class DocumentOutline(QWidget):
         self._model.set_items(items)
         self._tree.expandAll()
 
-    def _extract_outline(self, text: str) -> List[OutlineItem]:
+    def _extract_outline(self, text: str) -> list[OutlineItem]:
         """Extract procedures/functions from document based on language."""
-        items = []
+        items: list[OutlineItem] = []
 
         if not self._current_language:
             return items
@@ -158,12 +194,38 @@ class DocumentOutline(QWidget):
             items = self._extract_forth_outline(lines)
         elif lang_name == 'C':
             items = self._extract_c_outline(lines)
+        elif lang_name in ('PYTHON', 'PYTHON_LANG'):
+            items = self._extract_python_outline(lines)
+        elif lang_name == 'PILOT':
+            items = self._extract_pilot_outline(lines)
 
         # Sort by line number
         items.sort(key=lambda x: x.line_number)
         return items
 
-    def _extract_logo_outline(self, lines: List[str]) -> List[OutlineItem]:
+    def _extract_python_outline(self, lines: list[str]) -> list[OutlineItem]:
+        """Extract Python classes and functions."""
+        items = []
+        for i, line in enumerate(lines, 1):
+            m_cls = re.match(r'^\s*class\s+([A-Za-z_][A-Za-z0-9_]*)', line)
+            if m_cls:
+                items.append(OutlineItem(m_cls.group(1), i, "class"))
+                continue
+            m_def = re.match(r'^\s*(?:async\s+)?def\s+([A-Za-z_][A-Za-z0-9_]*)', line)
+            if m_def:
+                items.append(OutlineItem(m_def.group(1), i, "function"))
+        return items
+
+    def _extract_pilot_outline(self, lines: list[str]) -> list[OutlineItem]:
+        """Extract PILOT *labels."""
+        items = []
+        for i, line in enumerate(lines, 1):
+            m_lbl = re.match(r'^\s*\*([A-Za-z_][A-Za-z0-9_]*)', line)
+            if m_lbl:
+                items.append(OutlineItem(f"*{m_lbl.group(1)}", i, "label"))
+        return items
+
+    def _extract_logo_outline(self, lines: list[str]) -> list[OutlineItem]:
         """Extract Logo procedures (TO ... END)."""
         items = []
         for i, line in enumerate(lines, 1):
@@ -173,7 +235,7 @@ class DocumentOutline(QWidget):
                 items.append(OutlineItem(proc_name, i, "procedure"))
         return items
 
-    def _extract_basic_outline(self, lines: List[str]) -> List[OutlineItem]:
+    def _extract_basic_outline(self, lines: list[str]) -> list[OutlineItem]:
         """Extract BASIC subroutines (SUB/END SUB, FUNCTION/END FUNCTION)."""
         items = []
         for i, line in enumerate(lines, 1):
@@ -192,7 +254,7 @@ class DocumentOutline(QWidget):
 
         return items
 
-    def _extract_pascal_outline(self, lines: List[str]) -> List[OutlineItem]:
+    def _extract_pascal_outline(self, lines: list[str]) -> list[OutlineItem]:
         """Extract Pascal procedures and functions."""
         items = []
         for i, line in enumerate(lines, 1):
@@ -206,7 +268,7 @@ class DocumentOutline(QWidget):
 
         return items
 
-    def _extract_prolog_outline(self, lines: List[str]) -> List[OutlineItem]:
+    def _extract_prolog_outline(self, lines: list[str]) -> list[OutlineItem]:
         """Extract Prolog clauses (facts and rules)."""
         items = []
         for i, line in enumerate(lines, 1):
@@ -220,7 +282,7 @@ class DocumentOutline(QWidget):
 
         return items
 
-    def _extract_forth_outline(self, lines: List[str]) -> List[OutlineItem]:
+    def _extract_forth_outline(self, lines: list[str]) -> list[OutlineItem]:
         """Extract Forth words (: definition ... ;)."""
         items = []
         for i, line in enumerate(lines, 1):
@@ -231,7 +293,7 @@ class DocumentOutline(QWidget):
 
         return items
 
-    def _extract_c_outline(self, lines: List[str]) -> List[OutlineItem]:
+    def _extract_c_outline(self, lines: list[str]) -> list[OutlineItem]:
         """Extract C functions."""
         items = []
         for i, line in enumerate(lines, 1):
@@ -271,6 +333,6 @@ class DocumentOutline(QWidget):
 
     def _on_item_clicked(self, index):
         """Handle outline item click."""
-        item = self._model.data(index, Qt.UserRole)
-        if item and item.line_number > 0:
+        item = index.data(Qt.UserRole)
+        if isinstance(item, OutlineItem) and item.line_number > 0:
             self.item_clicked.emit(item.line_number)

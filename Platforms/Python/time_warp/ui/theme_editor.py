@@ -4,8 +4,6 @@ The :class:`ThemeEditorDialog` allows users to pick colours for every
 configurable theme field and save the result as a new named theme in the
 :class:`~time_warp.ui.themes.ThemeManager`.  Use
 :func:`open_theme_editor` as a convenience helper from the main window.
-
-Legacy :class:`ThemeEditor` (basic QWidget) kept as a compatibility shim.
 """
 
 from __future__ import annotations
@@ -16,7 +14,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from PySide6.QtCore import Qt
-from PySide6.QtGui import QColor, QFont
+from PySide6.QtGui import QColor
 from PySide6.QtWidgets import (
     QColorDialog,
     QDialog,
@@ -347,45 +345,3 @@ def open_theme_editor(
     if dlg.exec() == QDialog.DialogCode.Accepted:
         return dlg.saved_name()
     return None
-
-
-# ---------------------------------------------------------------------------
-# Legacy shim (kept for backward compatibility)
-# ---------------------------------------------------------------------------
-
-
-class ThemeEditor(QWidget):
-    """Legacy theme editor widget (stub).  Use :class:`ThemeEditorDialog` instead."""
-
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("Theme Editor")
-        self.setGeometry(100, 100, 400, 300)
-        self.current_theme = {
-            "background_color": "#ffffff",
-            "text_color": "#000000",
-            "font": QFont("Arial", 10),
-        }
-        layout = QVBoxLayout(self)
-        layout.addWidget(
-            QLabel("Use View → Edit Current Theme… in the IDE for the full editor.")
-        )
-
-    def save_theme(self):
-        pass
-
-    def reset_to_default(self):
-        pass
-
-
-# ---------------------------------------------------------------------------
-
-if __name__ == "__main__":
-    import sys
-
-    from PySide6.QtWidgets import QApplication
-
-    _app = QApplication(sys.argv)
-    _editor = ThemeEditor()
-    _editor.show()
-    sys.exit(_app.exec())

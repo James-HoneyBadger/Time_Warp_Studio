@@ -21,7 +21,7 @@ The Lesson System provides structured programming education with:
 ### Opening the Lesson System
 
 1. Launch Time Warp Studio
-2. Go to **File → Lessons** or press **Ctrl+Shift+L**
+2. Go to **Help → Lessons** or press **Ctrl+Alt+L**
 3. Browse available lessons by category and difficulty
 4. Click **Start Lesson** to begin
 
@@ -374,30 +374,11 @@ Organized thematically:
 
 ## Customizing Your Lessons
 
-### Lesson Preferences
+### Progress
 
-Go to **File → Settings → Lessons** to adjust:
+Lesson progress and checkpoint status are saved automatically between sessions. Hints are available for each checkpoint, and the number of hints used is tracked.
 
-**Appearance:**
-- Theme (matches editor theme)
-- Font size
-- Panel position (right or bottom)
-
-**Behavior:**
-- Auto-run code on changes
-- Auto-verify checkpoints
-- Hint level (conservative, moderate, generous)
-- Progress saving (automatic, manual)
-
-**Language:**
-- Preferred lesson language
-- Source code language
-
-### Skipping Lessons
-
-You can skip checkpoints by clicking **Skip**, but:
-- Progress still counts as incomplete
-- Later lessons may require earlier knowledge
+The lesson system has no separate preferences dialog.
 - Skipped checkpoints remain available
 
 ---
@@ -470,7 +451,7 @@ Expected:   "Hello, Alice!" (no space)
 **Issue:** Progress not saved from previous session.
 
 **Solution:**
-1. Progress is auto-saved to `~/.time_warp/config.json`
+1. Progress is auto-saved to `~/.time_warp/progress.json`
 2. Check if file was recently modified
 3. Verify write permissions on home directory
 4. Restart the IDE to reload progress
@@ -489,21 +470,7 @@ Expected:   "Hello, Alice!" (no space)
 
 ## Advanced Lesson Features
 
-### Creating Custom Lessons (Advanced)
-
-Coming in future versions:
-- Create personalized lesson sequences
-- Add custom checkpoints
-- Share lessons with students
-- Track custom lesson progress
-
-### Collaborative Lessons
-
-Coming in future versions:
-- Work on lessons with peers
-- Share solutions for review
-- Compare different approaches
-- Learn from others' solutions
+Custom lesson authoring and shared or collaborative lessons are not available in the current build.
 
 ---
 
@@ -512,7 +479,7 @@ Coming in future versions:
 - **BASIC Tutorial:** [../../docs/tutorials/basic.md](../tutorials/basic.md)
 - **Logo Tutorial:** [../../docs/tutorials/logo.md](../tutorials/logo.md)
 - **IDE Basics:** [02-ide-basics.md](02-ide-basics.md)
-- **Examples:** [../../Examples/README.md](../../Examples/README.md)
+- **Examples:** [../../Examples/CATALOG.md](../../Examples/CATALOG.md)
 
 ---
 

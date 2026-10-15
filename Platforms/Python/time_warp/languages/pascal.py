@@ -49,6 +49,7 @@ _VAR_CUSTOM_TYPE_RE = re.compile(
 )
 _VAR_KEYWORD_RE = re.compile(r"^\s*var\s*$", re.IGNORECASE)
 _CONST_RE = re.compile(r"^\s*const\s*$", re.IGNORECASE)
+_INLINE_CONST_RE = re.compile(r"^\s*const\s+(.+)$", re.IGNORECASE)
 _CONST_DEF_RE = re.compile(
     r"^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.+);?\s*$", re.IGNORECASE
 )
@@ -349,9 +350,13 @@ def _call_func_inline(
                 _, line_text = interpreter.program_lines[interpreter.current_line]
                 if line_text.strip():
                     try:
-                        execute_pascal(interpreter, line_text.strip(), None)  # type: ignore[arg-type]
-                    except Exception:  # noqa: BLE001
-                        pass  # Errors are logged; continue execution
+                        body_out = execute_pascal(interpreter, line_text.strip(), None)  # type: ignore[arg-type]
+                    except Exception as exc:  # noqa: BLE001
+                        body_out = f"❌ Runtime error in function {fname}: {exc}"
+                    if body_out:
+                        interpreter.log_output(body_out.rstrip("\n"))
+                        if body_out.lstrip().startswith("❌"):
+                            break
             if interpreter.current_line == _physical:
                 # Execution did not jump — auto-advance to next line
                 interpreter.current_line += 1
@@ -789,7 +794,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
                 arr = interpreter.arrays[arr_name]
                 if 0 <= idx < len(arr):
                     return arr[idx]
-            except Exception:  # noqa: BLE001
+            except (ValueError, TypeError, KeyError, IndexError, AttributeError):
                 pass
         elif arr_name + "$" in interpreter.string_variables:
             # Pascal string character indexing: s[idx] is 1-based
@@ -798,7 +803,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
                 s_val = interpreter.string_variables[arr_name + "$"]
                 if 1 <= idx <= len(s_val):
                     return s_val[idx - 1]
-            except Exception:  # noqa: BLE001
+            except (ValueError, TypeError, KeyError, IndexError, AttributeError):
                 pass
 
     # ── SysUtils / CRT built-in functions ────────────────────────────────────
@@ -953,7 +958,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
                         if isinstance(v, float) and v == int(v):
                             return str(int(v))
                         return str(v) if not isinstance(v, str) else repr(v)
-            except Exception:
+            except (ValueError, TypeError, KeyError, IndexError, AttributeError):
                 pass
         return m_af.group(0)
 
@@ -983,7 +988,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
                         return "True" if val else "False"
                     if isinstance(val, str):
                         return repr(val)
-            except Exception:
+            except (ValueError, TypeError, KeyError, IndexError, AttributeError):
                 pass
         return m_a.group(0)
 
@@ -1050,7 +1055,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
                 sv = interpreter.string_variables[pname + "$"]
                 if 1 <= idx <= len(sv):
                     return repr(sv[idx - 1])
-            except Exception:
+            except (ValueError, TypeError, KeyError, IndexError, AttributeError):
                 pass
             return m_pi.group(0)
         if pname in interpreter.arrays:
@@ -1066,7 +1071,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
                         if isinstance(val, float) and val == int(val)
                         else str(val)
                     )
-            except Exception:
+            except (ValueError, TypeError, KeyError, IndexError, AttributeError):
                 pass
             return m_pi.group(0)
         # Check if it's a user-defined function — evaluate it and substitute inline
@@ -1078,7 +1083,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
                     if isinstance(result, float) and result == int(result):
                         return str(int(result))
                     return str(result)
-                except Exception:  # noqa: BLE001
+                except (ValueError, TypeError, KeyError, IndexError, AttributeError):
                     pass
         return m_pi.group(0)
 
@@ -1196,7 +1201,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
             fn = _op_fns.get(py_op)
             if fn is not None:
                 return "1" if fn(lv, rv) else "0"
-        except Exception:
+        except (TypeError, ValueError, ZeroDivisionError):
             pass
         return m_sc.group(0)
 
@@ -1223,7 +1228,7 @@ def _pascal_eval_expr(interpreter: "Interpreter", expr: str) -> Any:
             string_variables=dict(interpreter.string_variables),
         )
         return safe_eval.evaluate(pyexpr)
-    except Exception:
+    except (ValueError, TypeError, ZeroDivisionError, KeyError, NameError, SyntaxError, AttributeError):
         pass
 
     return interpreter.evaluate_expression(expr)
@@ -1348,7 +1353,7 @@ def _find_begin_forward(
         if _VAR_CUSTOM_TYPE_RE.match(s):
             j += 1
             continue
-        if _CONST_RE.match(s):
+        if _CONST_RE.match(s) or _INLINE_CONST_RE.match(s):
             j += 1
             continue
         if _CONST_DEF_RE.match(s):
@@ -1361,9 +1366,17 @@ def _find_begin_forward(
 
 
 def _find_end_for_begin(interpreter: "Interpreter", begin_idx: int) -> int:
+    cache = getattr(interpreter, "_pascal_end_cache", None)
+    prog_len = len(interpreter.program_lines)
+    if not isinstance(cache, dict) or cache.get("__len__") != prog_len:
+        cache = {"__len__": prog_len}
+        interpreter._pascal_end_cache = cache  # type: ignore[attr-defined]
+    key = ("b", begin_idx)
+    if key in cache:
+        return int(cache[key])
     depth = 0
     j = begin_idx
-    while j < len(interpreter.program_lines):
+    while j < prog_len:
         s = interpreter.program_lines[j][1]
         if _is_begin(s):
             depth += 1
@@ -1373,8 +1386,10 @@ def _find_end_for_begin(interpreter: "Interpreter", begin_idx: int) -> int:
         if _is_end(s):
             depth -= 1
             if depth == 0:
+                cache[key] = j
                 return j
         j += 1
+    cache[key] = begin_idx
     return begin_idx
 
 
@@ -1385,9 +1400,17 @@ def _find_end_for_inline_begin(
     (e.g. 'if x then begin' or 'for i := 0 to n do begin').
     Scans from inline_begin_idx+1, counting ALL nested begins (both standalone 'begin'
     lines and inline '... then begin' / '... do begin' / 'else begin' lines)."""
+    cache = getattr(interpreter, "_pascal_end_cache", None)
+    prog_len = len(interpreter.program_lines)
+    if not isinstance(cache, dict) or cache.get("__len__") != prog_len:
+        cache = {"__len__": prog_len}
+        interpreter._pascal_end_cache = cache  # type: ignore[attr-defined]
+    key = ("i", inline_begin_idx)
+    if key in cache:
+        return int(cache[key])
     depth = 1  # We already have one open 'begin' on the inline line
     j = inline_begin_idx + 1
-    while j < len(interpreter.program_lines):
+    while j < prog_len:
         s = interpreter.program_lines[j][1]
         # Count standalone begin OR any line ending with 'begin'
         if _is_begin(s) or _ends_with_begin(s):
@@ -1395,8 +1418,10 @@ def _find_end_for_inline_begin(
         if _is_end(s):
             depth -= 1
             if depth == 0:
+                cache[key] = j
                 return j
         j += 1
+    cache[key] = inline_begin_idx
     return inline_begin_idx
 
 
@@ -2346,6 +2371,8 @@ def _handle_for(
         results: List[str] = []
         loop_count = 0
         while ok and loop_count < 100000:
+            if hasattr(interpreter, "tick"):
+                interpreter.tick(1)
             result = execute_pascal(interpreter, stmt_text, turtle)
             if result:
                 results.append(result)
@@ -2401,6 +2428,8 @@ def _handle_for_inline(
     results: List[str] = []
     loop_count = 0
     while ok and loop_count < 100000:
+        if hasattr(interpreter, "tick"):
+            interpreter.tick(1)
         result = execute_pascal(interpreter, stmt, turtle)
         if result:
             results.append(result)
@@ -2932,6 +2961,8 @@ def execute_pascal(
         out_parts: List[str] = []
         while_line = interpreter.current_line
         for _ in range(100000):
+            if hasattr(interpreter, "tick"):
+                interpreter.tick(1)
             try:
                 cond_v = _pascal_eval_expr(interpreter, cond_expr)
             except (ValueError, TypeError, ZeroDivisionError):
@@ -2952,6 +2983,8 @@ def execute_pascal(
             ):
                 base_depth = len(interpreter.pascal_call_stack) - 1
                 for _inner in range(100000):
+                    if hasattr(interpreter, "tick"):
+                        interpreter.tick(1)
                     if len(interpreter.pascal_call_stack) <= base_depth:
                         break
                     if interpreter.current_line >= len(interpreter.program_lines):
@@ -3038,10 +3071,13 @@ def execute_pascal(
     if m:
         try:
             ms = int(interpreter.evaluate_expression(m.group(1)))
-            import time
+            if hasattr(interpreter, "sleep_slices"):
+                interpreter.sleep_slices(max(0.0, ms / 1000.0))
+            else:
+                import time
 
-            time.sleep(ms / 1000.0)
-        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
+                time.sleep(max(0.0, ms / 1000.0))
+        except (OSError, ValueError):
             pass
         return ""
 
@@ -3184,9 +3220,12 @@ def execute_pascal(
                 }
         return ""
 
-    # Const Declaration
+    # Const Declaration (block header "const" or single-line "const N = 10;")
     if _CONST_RE.match(cmd):
         return ""
+    inline_const = _INLINE_CONST_RE.match(cmd)
+    if inline_const and _CONST_DEF_RE.match(inline_const.group(1)):
+        cmd = inline_const.group(1)
 
     # Type definitions: Name = array/record/... — treated as no-op (second guard)
     if _TYPE_DEF_RE.match(cmd):
@@ -3204,8 +3243,16 @@ def execute_pascal(
             else:
                 val = float(val_str)
                 interpreter.variables[name] = val
-        except Exception:  # noqa: BLE001  # pylint: disable=broad-exception-caught
-            pass
+        except ValueError:
+            # `Name = ^T` / `Name = OtherType` inside a type block is a type alias
+            if val_str.startswith("^") or re.fullmatch(r"[A-Za-z_]\w*", val_str):
+                if val_str.upper() in interpreter.variables:
+                    interpreter.variables[name] = interpreter.variables[val_str.upper()]
+                return ""
+            try:
+                interpreter.variables[name] = float(_pascal_eval_expr(interpreter, val_str))
+            except (ValueError, TypeError):
+                return f"❌ Invalid constant value for {name}: {val_str}\n"
         return ""
 
     # Array Assignment
@@ -3330,7 +3377,7 @@ def execute_pascal(
                         val = _unquote(val_expr) if val_expr.startswith("'") else 0
                     rec[field_name] = val
                     return ""
-            except Exception:
+            except (ValueError, TypeError, KeyError, IndexError, AttributeError):
                 pass
         return ""
 
@@ -3743,39 +3790,48 @@ def execute_pascal(
     # Reset(f) / Reset(f, recsize)
     m = re.match(r"^RESET\s*\(([A-Za-z_][A-Za-z0-9_]*)[^)]*\)\s*$", upcmd_strip)
     if m:
+        from ..utils.validators import ValidationError, WorkspaceFileService
+
         fvar = m.group(1).upper()
         pf = interpreter.pascal_files.get(fvar)
         if pf:
+            svc = getattr(interpreter, "file_service", None) or WorkspaceFileService()
             try:
-                pf["handle"] = open(pf["name"], "r", encoding="utf-8")
+                pf["handle"] = svc.open_handle(f"pascal:{fvar}", pf["name"], "r")
                 pf["mode"] = "r"
-            except OSError as e:
+            except (ValidationError, OSError) as e:
                 return f"❌ {e}"
         return ""
 
     # Rewrite(f)
     m = re.match(r"^REWRITE\s*\(([A-Za-z_][A-Za-z0-9_]*)\)\s*$", upcmd_strip)
     if m:
+        from ..utils.validators import ValidationError, WorkspaceFileService
+
         fvar = m.group(1).upper()
         pf = interpreter.pascal_files.get(fvar)
         if pf:
+            svc = getattr(interpreter, "file_service", None) or WorkspaceFileService()
             try:
-                pf["handle"] = open(pf["name"], "w", encoding="utf-8")
+                pf["handle"] = svc.open_handle(f"pascal:{fvar}", pf["name"], "w")
                 pf["mode"] = "w"
-            except OSError as e:
+            except (ValidationError, OSError) as e:
                 return f"❌ {e}"
         return ""
 
     # Append(f)
     m = re.match(r"^APPEND\s*\(([A-Za-z_][A-Za-z0-9_]*)\)\s*$", upcmd_strip)
     if m:
+        from ..utils.validators import ValidationError, WorkspaceFileService
+
         fvar = m.group(1).upper()
         pf = interpreter.pascal_files.get(fvar)
         if pf:
+            svc = getattr(interpreter, "file_service", None) or WorkspaceFileService()
             try:
-                pf["handle"] = open(pf["name"], "a", encoding="utf-8")
+                pf["handle"] = svc.open_handle(f"pascal:{fvar}", pf["name"], "a")
                 pf["mode"] = "a"
-            except OSError as e:
+            except (ValidationError, OSError) as e:
                 return f"❌ {e}"
         return ""
 
@@ -3786,10 +3842,13 @@ def execute_pascal(
     if m:
         fvar = m.group(1).upper()
         pf = interpreter.pascal_files.get(fvar)
+        svc = getattr(interpreter, "file_service", None)
+        if svc is not None:
+            svc.close_handle(f"pascal:{fvar}")
         if pf and pf.get("handle"):
             try:
                 pf["handle"].close()
-            except Exception:
+            except OSError:
                 pass
             pf["handle"] = None
         return ""

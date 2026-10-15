@@ -4,8 +4,8 @@
 
 | Version | Supported          |
 |---------|--------------------|
-| 13.x    | :white_check_mark: |
-| < 13.0  | :x:                |
+| 14.x    | :white_check_mark: |
+| < 14.0  | :x:                |
 
 ## Reporting a Vulnerability
 
@@ -45,17 +45,16 @@ If you discover a security vulnerability in Time Warp Studio, please report it r
 
 Time Warp Studio is an **educational desktop application**. It is designed for local use and does not expose network services by default. Key security notes:
 
-- **Safe expression evaluation:** All math/expression evaluation uses a sandboxed evaluator (`safe_eval`) — `eval()` is never called directly on user input.
-- **No network exposure:** The application runs locally. The optional Docker/collaboration features are not enabled by default.
-- **Hardware simulation:** Arduino and Raspberry Pi integrations default to simulation mode and do not interact with real hardware unless explicitly configured.
+- **Safe expression evaluation:** All math/expression evaluation uses a hand-written parser (`ExpressionEvaluator`) — `eval()` is never called directly on user input.
+- **No network exposure:** The application runs locally and does not open network ports or ship any server components.
+- **Python sandbox:** Python programs run with restricted builtins and an import/attribute checker.
 - **Dependencies:** We use `PySide6` (Qt6) and `Pillow` as core dependencies. Keep them updated to their latest stable versions.
 
 ## Best Practices for Users
 
 - Run Time Warp Studio in a standard user account (no elevated privileges required).
 - Keep Python and all dependencies updated.
-- Only load programs and plugins from trusted sources.
-- If using Docker, review `docker-compose.yml` and network settings before deploying.
+- Only load programs from trusted sources.
 
 ## Acknowledgements
 

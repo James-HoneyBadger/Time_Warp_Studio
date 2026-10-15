@@ -132,6 +132,7 @@ class MMLParser:
         "3": "sawtooth",
         "4": "pulse",
         "5": "noise",
+        "6": "fm",  # 2-operator AdLib OPL2 FM synthesis
     }
 
     def __init__(self):
@@ -450,6 +451,11 @@ class MusicPlayer:
                 v = 1.0 if phase < duty else -1.0
             elif wf == "noise":
                 v = random.uniform(-1.0, 1.0)
+            elif wf == "fm":
+                # AdLib OPL2-style 2-operator FM synthesis (carrier + 2x harmonic modulator)
+                mod_index = 2.2 * math.exp(-3.0 * (idx / max(1, num_samples)))
+                modulator = math.sin(2 * math.pi * (freq * 2.0) * t)
+                v = math.sin(2 * math.pi * freq * t + mod_index * modulator)
             else:
                 v = 1.0 if phase < 0.5 else -1.0  # default square
 
@@ -493,6 +499,7 @@ class MusicPlayer:
                 "sawtooth",
                 "pulse",
                 "noise",
+                "fm",
             ):
                 pass  # already set
             elif not is_chord_member:
@@ -591,7 +598,31 @@ class MusicPlayer:
     def parse_and_generate(self, mml_string: str, waveform: str = "square") -> bytes:
         """Parse MML string and generate WAV data (single channel)."""
         notes = self.parser.parse(mml_string)
-        return self.generate_wave(notes, waveform)
+        self.last_notes = list(notes)
+        self.last_mml = mml_string
+        wav_bytes = self.generate_wave(notes, waveform)
+        self.last_wav = wav_bytes
+        return wav_bytes
+
+    def get_oscilloscope_trace(self, width: int = 32) -> str:
+        """Render a compact ASCII oscilloscope trace of the most recent synthesized audio."""
+        wav_bytes = getattr(self, "last_wav", None)
+        if not wav_bytes or len(wav_bytes) <= 44:
+            return "─" * width
+        pcm = wav_bytes[44:]
+        total_samples = len(pcm) // 2
+        if total_samples == 0:
+            return "─" * width
+        bars = " ▂▃▄▅▆▇█"
+        step = max(1, total_samples // width)
+        chars: List[str] = []
+        for idx in range(width):
+            offset = min(total_samples - 1, idx * step) * 2
+            sample = struct.unpack_from("<h", pcm, offset)[0]
+            norm = (sample + 32768) / 65535.0
+            bar_idx = max(0, min(len(bars) - 1, int(norm * (len(bars) - 1))))
+            chars.append(bars[bar_idx])
+        return "".join(chars)
 
     def parse_multichannel(self, channel_mml: Dict[int, str]) -> bytes:
         """Parse multiple MML strings (keyed by channel 0-3) and mix.

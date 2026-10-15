@@ -14,7 +14,7 @@ Complete guide to using the Time Warp Studio integrated development environment.
 6. [Running Programs](#running-programs)
 7. [Using the Console](#using-the-console)
 8. [Graphics Canvas](#graphics-canvas)
-9. [Feature Panels](#feature-panels)
+9. [Panels](#panels)
 10. [Keyboard Shortcuts](#keyboard-shortcuts)
 11. [Themes and Customization](#themes-and-customization)
 12. [Menu Reference](#menu-reference)
@@ -28,9 +28,9 @@ Time Warp Studio provides a unified development environment with:
 - **Code Editor** - Write code with syntax highlighting
 - **Console** - See program output and errors
 - **Graphics Canvas** - Visualize turtle graphics
-- **Feature Panels** - Specialized tools for different tasks
-- **Menu System** - 53 functions across 6 menus
-- **Keyboard Shortcuts** - Fast workflow efficiency
+- **Panels** - Lessons, Debugger, Variables, Document Outline, and more
+- **Menu System** - File, Edit, Run, Debug, View, Tools, and Help menus
+- **Keyboard Shortcuts** - Borland Turbo-style keymap with a Function-Key Bar
 
 ### First Time Setup
 
@@ -38,9 +38,8 @@ When you launch Time Warp Studio:
 
 1. IDE initializes (2-5 seconds)
 2. Config folder created at `~/.time_warp/`
-3. Default theme applied (Dracula)
-4. All 22 feature panels available
-5. IDE ready for coding
+3. Default theme applied
+4. IDE ready for coding
 
 ---
 
@@ -50,7 +49,7 @@ The IDE window is divided into sections:
 
 ```
 ┌─────────────────────────────────────────────────┐
-│ File Edit Run Debug View Help                   │  Menu Bar
+│ File Edit Run Debug View Tools Help             │  Menu Bar
 ├─────────────────────────────────────────────────┤
 │ [New] [Open] [Save] [Run] [Stop] [Theme]       │  Toolbar
 ├─────────────────────────────────────────────────┤
@@ -64,12 +63,14 @@ The IDE window is divided into sections:
 │  │  Output Console  │  └──────────────────────┘ │
 │  │                  │                          │
 │  └──────────────────┘  ┌──────────────────────┐ │
-│                        │  Feature Panels      │ │
-│                        │  (14 tools)         │ │
+│                        │  Panel Tabs          │ │
+│                        │  (Debug, Variables)  │ │
 │                        │                      │ │
 │                        └──────────────────────┘ │
 ├─────────────────────────────────────────────────┤
-│ Ready | Turtle: (0,0,0°) | Mem: 45MB          │  Status Bar
+│ 1Help 2Save 3Open ... 9Run 10Menu               │  Function-Key Bar
+├─────────────────────────────────────────────────┤
+│ BASIC | Ln 1, Col 1 | Ready                   │  Status Bar
 └─────────────────────────────────────────────────┘
 ```
 
@@ -91,11 +92,10 @@ The IDE window is divided into sections:
 - Zoom and pan controls
 - Real-time updates during execution
 
-**Feature Panels** (Bottom-Right)
-- Lesson Mode
-- AI Assistant
-- Error Explainer
-- And 11 others
+**Panel Tabs** (Bottom-Right)
+- Debug (controls, call stack, timeline)
+- Variables Inspector
+- Lessons and Document Outline open as docks
 
 ---
 
@@ -112,7 +112,7 @@ Creates empty file with default language (BASIC).
 ### Opening an Existing File
 
 ```
-File → Open [Ctrl+O]
+File → Open [F3 / Ctrl+O]
 ```
 
 File browser opens. Select any supported source file (`.bas`, `.pilot`, `.logo`, `.c`, `.pas`, `.pl` / `.pro` / `.prolog`, `.f` / `.forth` / `.fs`, `.bf`, `.py`).
@@ -120,7 +120,7 @@ File browser opens. Select any supported source file (`.bas`, `.pilot`, `.logo`,
 ### Saving Your Work
 
 ```
-File → Save [Ctrl+S]
+File → Save [F2 / Ctrl+S]
 ```
 
 Saves to current file. If new file, prompts for name.
@@ -128,7 +128,7 @@ Saves to current file. If new file, prompts for name.
 ### Save As...
 
 ```
-File → Save As [Ctrl+Shift+S]
+File → Save As [Shift+F2 / Ctrl+Shift+S]
 ```
 
 Save with new filename or in different location.
@@ -151,12 +151,12 @@ Programs can be written in **9 active languages**:
 
 IDE automatically detects language based on:
 - **File extension**: `.bas` → BASIC, `.py` → Python, `.logo` → Logo, etc.
-- **Explicit dropdown**: Select language from the toolbar or Run menu
+- **Explicit dropdown**: Select language from the toolbar
 
 ### Manual Selection
 
 ```
-Run → Set Language → [Select from list]
+View → Language Picker [Ctrl+Shift+L]
 ```
 
 Dropdown also available in top toolbar.
@@ -182,10 +182,8 @@ Dropdown also available in top toolbar.
 ### Editor Features
 
 **Syntax Highlighting**
-- Keywords in blue
-- Strings in green
-- Comments in gray
-- Numbers in purple
+- Keywords, strings, comments, and numbers are colored per language
+- Token colors follow the active theme (View → Theme)
 
 **Line Numbers**
 - Shows line number on left
@@ -193,11 +191,11 @@ Dropdown also available in top toolbar.
 
 **Code Folding**
 - Collapse/expand procedures and blocks
-- Click triangle on left margin
+- Click the fold area in the left margin, or use Ctrl+Shift+[ to fold and Ctrl+Shift+] to unfold the current block
 
 **Auto-Indentation**
 - Automatic indentation on new line
-- Tab width configurable (default 4 spaces)
+- Tab width is fixed at 4 spaces
 
 **Find and Replace**
 
@@ -210,21 +208,19 @@ Use Ctrl+G to go to specific line number.
 
 ### Code Templates
 
-Starter code for each language available via:
+Insert ready-made code snippets via:
 
 ```
-File → New [Ctrl+N]
+Edit → Insert Snippet [Ctrl+Shift+I]
 ```
-
-Select language, gets basic template.
 
 Or copy from Examples:
 
 ```
-File → Examples [Ctrl+E]
+Help → Browse Examples [Shift+F3]
 ```
 
-Browse 69 working examples.
+Browse 72 working examples.
 
 ---
 
@@ -233,15 +229,15 @@ Browse 69 working examples.
 ### Execute Code
 
 ```
-Run → Run [Ctrl+R]
+Run → Run Program [F9 / Ctrl+R]
 ```
 
-Executes program in currently editor code.
+Executes the program in the current editor.
 
 ### Stop Execution
 
 ```
-Run → Stop [Ctrl+Shift+R]
+Run → Reset Program [Ctrl+F2]
 ```
 
 Stops currently running program (if infinite loop or slow).
@@ -252,7 +248,7 @@ Stops currently running program (if infinite loop or slow).
 Run → Clear Output
 ```
 
-Clears console and canvas for clean slate.
+Clears the output console. Use Run → Clear Canvas to clear graphics.
 
 ### Execution Timing
 
@@ -260,7 +256,7 @@ Clears console and canvas for clean slate.
 - **Output**: Appears in console as generated
 - **Graphics**: Canvas updates in real-time
 - **Completion**: Result message shown
-- **Timeout**: Programs auto-stop after 30 seconds
+- **Timeout**: Programs auto-stop after 10 seconds
 
 ---
 
@@ -295,8 +291,9 @@ The Output Console displays:
 - Right-click context menu
 
 **Clearing**
-- Run → Clear Output clears all
-- Or Start new program
+- Run → Clear Output clears the console
+- Run → Clear Canvas clears graphics
+- Or start a new program
 
 ---
 
@@ -308,7 +305,6 @@ The Canvas displays turtle graphics output in real-time.
 
 **Turtle Position**
 - Small triangle shows turtle
-- Position displayed in status bar: `Turtle: (x,y,angle°)`
 - Angle: 0°=East, 90°=North, etc.
 
 **Drawing**
@@ -320,16 +316,14 @@ The Canvas displays turtle graphics output in real-time.
 
 **Zoom**
 - Scroll wheel to zoom in/out
-- Or View → Zoom In/Out
-- Range: 0.1x to 5.0x magnification
+- Range: 0.05x to 24x magnification
 
 **Pan**
-- Right-click and drag to pan
-- Or spacebar + middle mouse drag
-- Double-click to reset view
+- Click and drag to pan
+- Use the Reset View (⊙) button to restore the default zoom and pan
 
 **Grid** (Optional)
-- View → Toggle Grid
+- Canvas ⋯ button toggles the coordinate grid
 - Shows coordinate grid
 - Helpful for positioning
 
@@ -337,82 +331,60 @@ The Canvas displays turtle graphics output in real-time.
 
 **Real-Time Updates**
 - Graphics update as program runs
-- No flickering or jumping
-- Smooth animation
-
-**Inspect Lines**
-- Hover over lines to see details
-- Line number and coordinates displayed
-- Click line to select
 
 **Reset Canvas**
-- Run → Clear Output clears graphics
+- Run → Clear Canvas clears graphics
 - Each new Run clears automatically
 - Or Logo HOME command resets turtle
 
 ---
 
-## Feature Panels
+## Panels
 
-22 specialized panels accessible via tabs at bottom right.
+Panels open as tabs on the right or as dock widgets.
 
 ### Key Panels
 
-**Lesson Mode**
-- Load structured lessons
-- Complete step-by-step challenges
-- Track progress
+**Lessons** (Help → Lessons, Ctrl+F3)
+- 18 built-in lessons, 2 per language
+- Checkpoints with hints and automatic verification
+- Progress saved between sessions
 
-**AI Assistant**
-- Get code suggestions
-- Ask for debugging help
-- Request code explanations
-
-**Error Explainer**
-- Understand why errors occur
-- Get fix suggestions
-- Learn best practices
-
-**Turtle Inspector**
-- View turtle state (position, angle, pen)
-- Visual representation of turtle
-- Useful for debugging graphics
-
-**Debugger**
+**Debugger** (🐛 Debug tab)
 - Step through execution
 - Set breakpoints
-- View execution timeline
-
-**Examples Browser**
-- Browse 69 working programs
-- Copy and modify examples
-- Learn from code
+- View call stack and execution timeline
 
 **Variables Inspector**
 - See current variable values
 - Watch variables change
 - Update during debugging
 
-**Project Runner**
-- Manage multi-file projects
-- Run all files
-- Organize code
+**Document Outline** (F4)
+- Jump to procedures, functions, and labels
+
+**Examples Browser** (Shift+F3)
+- Browse 72 working programs
+- Copy and modify examples
+- Learn from code
 
 ---
 
 ## Keyboard Shortcuts
 
+Time Warp Studio uses a Borland Turbo-style keymap. Press **Shift+F1** in the IDE for the full live list, or see [KEYBOARD_SHORTCUTS.md](KEYBOARD_SHORTCUTS.md).
+
 ### File Operations
 - `Ctrl+N` - New file
-- `Ctrl+O` - Open file
-- `Ctrl+S` - Save
-- `Ctrl+Shift+S` - Save As
-- `Ctrl+E` - Open Examples
-- `Ctrl+Q` - Quit
+- `F3` / `Ctrl+O` - Open file
+- `F2` / `Ctrl+S` - Save
+- `Shift+F2` / `Ctrl+Shift+S` - Save As
+- `Shift+F3` - Browse Examples
+- `Alt+X` / `Ctrl+Q` - Exit
 
 ### Editing
 - `Ctrl+Z` - Undo
-- `Ctrl+Shift+Z` - Redo (or `Ctrl+Y`)
+- `Ctrl+Y` - Redo
 - `Ctrl+X` - Cut
 - `Ctrl+C` - Copy
 - `Ctrl+V` - Paste
@@ -422,20 +394,22 @@ The Canvas displays turtle graphics output in real-time.
 - `Ctrl+G` - Go to Line
 
 ### Execution
-- `Ctrl+R` - Run program
-- `Ctrl+Shift+R` - Stop program
+- `F9` / `Ctrl+R` - Run program
+- `Ctrl+F2` - Reset (stop) program
+- `Shift+F9` / `Ctrl+Shift+R` - Run selection
 
 ### Debugging
-- `F10` - Step Over
-- `F11` - Step Into
-- `F5` - Continue
-- `Ctrl+B` - Toggle Breakpoint
+- `Ctrl+F9` - Start debugging / Continue
+- `F7` - Trace Into
+- `F8` - Step Over
+- `Shift+F8` - Step Out
+- `Ctrl+F8` - Toggle Breakpoint
 
 ### View
-- `Ctrl+Plus` - Zoom In (Canvas)
-- `Ctrl+Minus` - Zoom Out (Canvas)
-- `Ctrl+0` - Reset Zoom
-- `F11` - Full Screen (toggle)
+- `Ctrl+Plus` - Increase editor font
+- `Ctrl+Minus` - Decrease editor font
+- `F5` - Zoom (focus mode)
+- `F10` / `Ctrl+Shift+P` - Command Palette
 
 ### Navigation
 - `Page Up` - Scroll up
@@ -455,8 +429,9 @@ The Canvas displays turtle graphics output in real-time.
 View → Theme → [Select theme]
 ```
 
-28 built-in themes:
+33 built-in themes:
 
+**Workstation**: Neo-90s Workstation, Borland Turbo Vision 1991, NeXTSTEP Gunmetal, Amiga Workbench 2.0, VGA Amber Lab
 **Dark**: Dracula, Monokai, VS Code Dark, GitHub Dark, Nord, One Dark Pro, Solarized Dark, Ocean, Catppuccin Mocha, Gruvbox Dark, Tokyo Night
 **Light**: Gruvbox Light, Catppuccin Latte, VS Code Light, GitHub Light, Solarized Light, Spring
 **High Contrast**: High Contrast Dark, High Contrast Light
@@ -465,101 +440,93 @@ View → Theme → [Select theme]
 
 ### Customizing Editor
 
-Via Edit menu or Feature Panels → Settings:
+Font family and size: **View → Font**. Font size also changes with Ctrl++ and Ctrl+-.
 
-- Font family (Monaco, Courier, etc.)
-- Font size (8-32 points)
-- Tab width (2, 4, 8 spaces)
-- Auto-indent (on/off)
-- Show line numbers (toggle)
-- Show whitespace characters (toggle)
+Tab width is fixed, auto-indent is built in, and line numbers are always shown. See [Settings](guides/06-settings.md) for the full list of fixed editor behavior.
 
 ### Theme Persistence
 
-Your theme choice automatically saved to `~/.time_warp/config.json` and restored on next launch.
+Your theme choice is saved automatically (Qt QSettings) and restored on next launch.
 
 ---
 
 ## Menu Reference
 
-### File Menu (18 items)
+### File Menu
 
 - **New** [Ctrl+N] - New file
-- **Open** [Ctrl+O] - Open file
-- **Save** [Ctrl+S] - Save current
-- **Save As** [Ctrl+Shift+S] - Save with new name
-- **Export** - Export as different format
+- **Open** [F3 / Ctrl+O] - Open file
+- **Save** [F2 / Ctrl+S] - Save current
+- **Save As** [Shift+F2 / Ctrl+Shift+S] - Save with new name
 - **Recent Files** - Quick access
-- **Examples** [Ctrl+E] - Browse examples
-- **Lessons** - Access lessons
-- **Close** - Close current file
-- **Close All** - Close all files
-- **Properties** - File info
-- **Print** - Print code
-- **Email** - Email file
-- **Preferences** - Preferences dialog
-- **Exit** [Ctrl+Q] - Quit IDE
+- **Export** - Graphics to PNG/SVG, Session as HTML [Ctrl+Shift+H], Lesson Report (Markdown/PDF)
+- **Print Code** [Ctrl+P], **Print Graphics**, **Export Code as PDF**
+- **Version History** [Ctrl+Alt+V]
+- **Preferences** [Ctrl+,] - Preferences dialog
+- **Exit** [Alt+X / Ctrl+Q] - Quit IDE
 
-### Edit Menu (10 items)
+### Edit Menu
 
 - **Undo** [Ctrl+Z]
-- **Redo** [Ctrl+Y or Ctrl+Shift+Z]
+- **Redo** [Ctrl+Y]
 - **Cut** [Ctrl+X]
 - **Copy** [Ctrl+C]
 - **Paste** [Ctrl+V]
-- **Select All** [Ctrl+A]
 - **Find** [Ctrl+F]
-- **Replace** [Ctrl+H]
+- **Find & Replace** [Ctrl+H]
+- **Find in Files** [Shift+F4 / Ctrl+Alt+G]
 - **Go to Line** [Ctrl+G]
-- **Preferences** - Editor settings
+- **Insert Snippet** [Ctrl+Shift+I]
+- **Format Code** [Ctrl+Shift+F]
 
-### Run Menu (8 items)
+### Run Menu
 
-- **Run** [Ctrl+R] - Execute program
-- **Run Selection** - Execute selected code
-- **Continue** - Resume after pause
-- **Stop** [Ctrl+Shift+R] - Stop execution
-- **Clear Output** - Clear console
-- **Debug Mode** [Toggle] - Enable debugger
-- **Set Language** - Choose language
-- **Turtle Reset** - Reset graphics
+- **Run Program** [F9 / Ctrl+R] - Execute program
+- **Reset Program** [Ctrl+F2] - Stop a run or debug session
+- **Run Selection** [Shift+F9 / Ctrl+Shift+R] - Execute selected code
+- **Run Both Split Panes** [Ctrl+Alt+R] - Polyglot benchmark
+- **Clear Output** / **Clear Canvas**
+- **Show Errors Only** [Ctrl+F5]
 
-### Debug Menu (10 items)
+### Debug Menu
 
-- **Step Into** [F11] - Enter functions
-- **Step Over** [F10] - Skip functions
-- **Step Out** [Shift+F11] - Exit function
-- **Continue** [F5] - Resume execution
-- **Pause** - Pause running program
-- **Stop** - Stop execution
-- **Breakpoint** [Ctrl+B] - Toggle breakpoint
-- **Timeline** - View execution history
-- **Watch Variable** - Add variable to watch
-- **Stack Trace** - View call stack
+- **Start / Continue Debugging** [Ctrl+F9]
+- **Stop Debugging**
+- **Pause** [Ctrl+F7] - Pause running program
+- **Trace Into** [F7] - Enter functions
+- **Step Over** [F8] - Skip functions
+- **Step Out** [Shift+F8] - Exit function
+- **Toggle Breakpoint** [Ctrl+F8]
+- **Clear All Breakpoints** [Ctrl+Shift+F8]
 
-### View Menu (10 items)
+### View Menu
 
-- **Show Editor** [Toggle]
-- **Show Console** [Toggle]
-- **Show Canvas** [Toggle]
-- **Show Panels** [Toggle]
-- **Theme** - Select theme (23 options)
-- **Zoom In** [Ctrl+Plus]
-- **Zoom Out** [Ctrl+Minus]
-- **Reset Zoom** [Ctrl+0]
-- **Full Screen** [F11]
-- **Grid** [Toggle] - Canvas grid
+- **Theme** - Select, preview, edit, or cycle themes [Shift+F10] (33 built-in)
+- **Font** - Family and size
+- **Zoom In / Zoom Out** [Ctrl+Plus / Ctrl+Minus]
+- **Screen Mode** and **CRT Effects** [Shift+F7]
+- **Split Editor Right** [Shift+F5 / Ctrl+\\], **Close Split** [Ctrl+Shift+\\]
+- **Zoom (Focus Mode)** [F5], **Next Pane** [F6]
+- **Telemetry HUD** [Shift+F6]
+- **Command Palette** [F10 / Ctrl+Shift+P], **Language Picker** [Ctrl+Shift+L]
+- **Workspace Decks** [Alt+1..Alt+4]
+- **Show Minimap**, **Document Outline** [F4]
 
-### Help Menu (8 items)
+### Tools Menu
 
-- **Documentation** - User guide
-- **Language Reference** - Language syntax
-- **Keyboard Shortcuts** - Shortcut list
-- **About Time Warp** - Version info
-- **Check for Updates** - Update check
-- **Report Issue** - Bug report
-- **Settings** - Configuration
-- **License** - License info
+- **Compare Languages**
+
+### Help Menu
+
+- **User Manual**
+- **Context Help** [F1]
+- **Keyword Inspector** [Ctrl+F1]
+- **Lessons** [Ctrl+F3 / Ctrl+Alt+L]
+- **Quick Reference**, **Documentation Index**, **Language Help**
+- **Browse Examples** [Shift+F3]
+- **Start Guided Tour**
+- **Keyboard Shortcuts** [Shift+F1 / Ctrl+?]
+- **About Time Warp Studio**
 
 ---
 
@@ -567,48 +534,37 @@ Your theme choice automatically saved to `~/.time_warp/config.json` and restored
 
 ### Quick Development Workflow
 
-1. Open Examples (`Ctrl+E`) to see working code
+1. Open Examples (`Shift+F3`) to see working code
 2. Create new file (`Ctrl+N`)
 3. Type or paste code
-4. Save (`Ctrl+S`)
-5. Run (`Ctrl+R`)
+4. Save (`F2`)
+5. Run (`F9`)
 6. View output in console and canvas
 7. Edit as needed and re-run
 
 ### Debugging Programs
 
-1. Set breakpoints with `Ctrl+B`
-2. Enable Debug Mode from Run menu
-3. Run program (`Ctrl+R`)
-4. Execute stops at breakpoint
-5. Use Step Into/Over to navigate
-6. Watch variables in Variables Inspector
-7. View Timeline to see execution history
+1. Set breakpoints with `Ctrl+F8`
+2. Start debugging with `Ctrl+F9`
+3. Execution stops at breakpoint
+4. Use Trace Into (`F7`) / Step Over (`F8`) to navigate
+5. Watch variables in Variables Inspector
+6. View the Timeline in the Debug tab to see execution history
 
 ### Learning New Languages
 
-1. Open Examples browser (`Ctrl+E`)
-2. Filter by language
+1. Open the Lessons dock (`Ctrl+F3`) and pick a lesson for the language
+2. Or open the Examples browser (`Shift+F3`) and filter by language
 3. Browse from simple to complex
-4. Copy example (`Ctrl+C`)
-5. Create new file (`Ctrl+N`)
-6. Paste code (`Ctrl+V`)
-7. Modify and experiment
-8. Run (`Ctrl+R`) to test
-
-### Managing Projects
-
-1. Create folder for project
-2. Create multiple .bas, .logo files
-3. Use Project Runner panel
-4. Add files to project
-5. Run individual files or all
+4. Load an example into the editor
+5. Modify and experiment
+6. Run (`F9`) to test
 
 ---
 
 **For language-specific help, see:**
 - [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) - Syntax for all 9 languages
 - [DEBUGGER_GUIDE.md](DEBUGGER_GUIDE.md) - Using the debugger
-- [TURTLE_GRAPHICS.md](TURTLE_GRAPHICS.md) - Graphics programming
-- [FAQ.md](FAQ.md) - Frequently asked questions
-- [TROUBLESHOOTING.md](TROUBLESHOOTING.md) - Common problems
+- [Turtle Graphics](guides/04-turtle-graphics.md) - Graphics programming
+- [FAQ](../FAQ.md) - Frequently asked questions
+- [TROUBLESHOOTING_GUIDE.md](TROUBLESHOOTING_GUIDE.md) - Common problems

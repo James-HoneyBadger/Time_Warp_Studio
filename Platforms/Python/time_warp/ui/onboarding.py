@@ -173,15 +173,15 @@ class OnboardingDialog(QDialog):
             OnboardingStep(
                 step_id="run_program",
                 title="Running Your Code",
-                description="Execute code using the Run button or F5 key.",
+                description="Execute code using the Run button or the F9 key.",
                 instructions=[
-                    "Find the Run button in the toolbar (▶ icon)",
-                    "Or press F5 on your keyboard",
+                    "Find the Run button in the toolbar (🚀 icon)",
+                    "Or press F9 on your keyboard",
                     "Output appears in the Output pane",
                 ],
                 task_description="Run the code you just typed",
                 verification_fn="verify_code_run",
-                hint="Click the green Run button or press F5",
+                hint="Click the Run button or press F9",
             ),
             OnboardingStep(
                 step_id="turtle_graphics",
@@ -194,7 +194,7 @@ class OnboardingDialog(QDialog):
                 ],
                 task_description="Draw a square: REPEAT 4 [FD 50 RT 90]",
                 verification_fn="verify_turtle_drawing",
-                hint="Type: REPEAT 4 [FD 50 RT 90] then press F5",
+                hint="Type: REPEAT 4 [FD 50 RT 90] then press F9",
             ),
             OnboardingStep(
                 step_id="languages",

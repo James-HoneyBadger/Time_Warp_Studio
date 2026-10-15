@@ -1,75 +1,118 @@
 """
-Customizable UI Layouts Module
+One-Key Workspace Decks.
 
-This module provides functionality for users to customize and save their UI layouts
-in Time Warp Studio. Users can rearrange panels, resize sections, and save/load layouts.
-
-Features:
-- Drag-and-drop panel rearrangement.
-- Resizable sections.
-- Save and load custom layouts.
+- Deck 1 (`code_focus`): Maximized editor + Document Outline + compact output
+- Deck 2 (`split_lab`): Dual side-by-side editor panes + output
+- Deck 3 (`graphics_studio`): Maximized turtle canvas + compact code strip
+- Deck 4 (`debugger_deck`): Editor + Live Telemetry & Memory HUD
 """
 
-import json
+from __future__ import annotations
+
+from typing import Any, ClassVar
 
 
 class CustomUILayouts:
-    """Class to manage customizable UI layouts."""
+    """Manages Workspace Decks and customizable UI layouts."""
 
-    def __init__(self):
-        self.current_layout = {}
-        self.saved_layouts = {}
+    DECK_PRESETS: ClassVar[dict[str, dict[str, Any]]] = {
+        "code_focus": {
+            "name": "Code Focus",
+            "shortcut": "Alt+1",
+            "main_split": [960, 440],
+            "right_split": [180, 620],
+            "split_editor": False,
+            "right_tab": "output",
+            "show_outline": True,
+        },
+        "split_lab": {
+            "name": "Split Lab",
+            "shortcut": "Alt+2",
+            "main_split": [980, 420],
+            "right_split": [240, 560],
+            "split_editor": True,
+            "right_tab": "output",
+            "show_outline": False,
+        },
+        "graphics_studio": {
+            "name": "Graphics Studio",
+            "shortcut": "Alt+3",
+            "main_split": [480, 920],
+            "right_split": [680, 160],
+            "split_editor": False,
+            "right_tab": "output",
+            "show_outline": False,
+        },
+        "debugger_deck": {
+            "name": "Debugger & Telemetry Deck",
+            "shortcut": "Alt+4",
+            "main_split": [720, 680],
+            "right_split": [280, 520],
+            "split_editor": False,
+            "right_tab": "telemetry",
+            "show_outline": True,
+        },
+    }
 
-    def save_layout(self, name: str) -> None:
-        """Save the current layout with a given name.
+    def __init__(self) -> None:
+        self.active_deck: str = "code_focus"
 
-        Args:
-            name (str): The name of the layout.
-        """
-        self.saved_layouts[name] = self.current_layout.copy()
-        print(f"✅ Layout '{name}' saved successfully.")
+    def apply_deck(self, main_window: Any, deck_id: str) -> bool:
+        """Apply one of the 4 Workspace Decks to *main_window*."""
+        preset = self.DECK_PRESETS.get(deck_id)
+        if not preset:
+            return False
 
-    def load_layout(self, name: str) -> None:
-        """Load a saved layout by name.
+        self.active_deck = deck_id
 
-        Args:
-            name (str): The name of the layout to load.
-        """
-        if name in self.saved_layouts:
-            self.current_layout = self.saved_layouts[name].copy()
-            print(f"✅ Layout '{name}' loaded successfully.")
-        else:
-            print(f"❌ Layout '{name}' not found.")
+        # 1. Split editor pane state
+        want_split = bool(preset.get("split_editor", False))
+        sec_tabs = getattr(main_window, "_editor_tabs_b", None)
+        if (
+            want_split
+            and hasattr(main_window, "open_split_editor")
+            and sec_tabs is not None
+            and sec_tabs.isHidden()
+        ):
+            main_window.open_split_editor()
+        elif (
+            not want_split
+            and hasattr(main_window, "close_split_editor")
+            and sec_tabs is not None
+            and not sec_tabs.isHidden()
+        ):
+            main_window.close_split_editor()
 
-    def export_layouts(self, file_path: str) -> None:
-        """Export all saved layouts to a JSON file.
+        # 2. Main horizontal splitter & right vertical splitter proportions
+        main_sizes = preset.get("main_split")
+        if isinstance(main_sizes, list) and hasattr(main_window, "main_splitter"):
+            main_window.main_splitter.setSizes([int(x) for x in main_sizes])
 
-        Args:
-            file_path (str): The file path to save the layouts.
-        """
-        with open(file_path, "w", encoding="utf-8") as file:
-            json.dump(self.saved_layouts, file, indent=4)
-        print(f"✅ Layouts exported to '{file_path}'.")
+        right_sizes = preset.get("right_split")
+        if isinstance(right_sizes, list) and hasattr(main_window, "right_splitter"):
+            main_window.right_splitter.setSizes([int(x) for x in right_sizes])
 
-    def import_layouts(self, file_path: str) -> None:
-        """Import layouts from a JSON file.
+        # 3. Select lower-right tab (Output, Debug, Telemetry HUD, Terminal)
+        target_tab = str(preset.get("right_tab", "output")).lower()
+        if hasattr(main_window, "right_tabs"):
+            for idx in range(main_window.right_tabs.count()):
+                tab_label = main_window.right_tabs.tabText(idx).lower()
+                if target_tab in tab_label:
+                    main_window.right_tabs.setCurrentIndex(idx)
+                    break
 
-        Args:
-            file_path (str): The file path to load the layouts from.
-        """
-        try:
-            with open(file_path, "r", encoding="utf-8") as file:
-                self.saved_layouts = json.load(file)
-            print(f"✅ Layouts imported from '{file_path}'.")
-        except FileNotFoundError:
-            print(f"❌ File '{file_path}' not found.")
+        # 4. Document Outline dock
+        outline_dock = getattr(main_window, "outline_dock", None)
+        if outline_dock is not None:
+            outline_dock.setVisible(bool(preset.get("show_outline", False)))
 
+        # 5. Sync Function-Key Bar active deck highlight
+        if hasattr(main_window, "function_key_bar") and main_window.function_key_bar is not None:
+            main_window.function_key_bar.set_active_deck(deck_id)
 
-# Example usage
-if __name__ == "__main__":
-    ui_manager = CustomUILayouts()
-    ui_manager.current_layout = {"editor": "left", "output": "bottom"}
-    ui_manager.save_layout("Default")
-    ui_manager.export_layouts("layouts.json")
-    ui_manager.import_layouts("layouts.json")
-    ui_manager.load_layout("Default")
+        if hasattr(main_window, "statusbar") and main_window.statusbar is not None:
+            deck_title = preset.get("name", deck_id)
+            main_window.statusbar.showMessage(
+                f"🖥️ Workspace Deck: {deck_title} ({preset.get('shortcut', '')})", 3000
+            )
+        return True

@@ -1,32 +1,36 @@
-# Running Tests (Docker)
+# Running Tests
 
-If your local environment is missing `pip` / `venv`, use the included Docker test runner to run the full pytest suite.
+Requirements: Python 3.10 or newer.
 
-Fast smoke test (no pytest or Docker required):
+## Set up
 
-```bash
-python Platforms/Python/smoke_test.py
-```
-
-Build and run (from project root):
+From the repository root:
 
 ```bash
-./docker/run_tests.sh
-```
-
-This builds an image that installs the project's core and dev requirements and runs:
-
-```bash
-pytest -q Platforms/Python/time_warp/tests
-```
-
-If you prefer to run tests locally, ensure your system has `python3-venv` and `pip` installed, then:
-
-```bash
-sudo apt update
-sudo apt install -y python3-venv python3-pip
 python3 -m venv .venv
-.venv/bin/python -m pip install --upgrade pip setuptools wheel
-.venv/bin/pip install -r Platforms/Python/requirements-dev.txt
-.venv/bin/pytest -q Platforms/Python/time_warp/tests
+.venv/bin/python -m pip install --upgrade pip
+.venv/bin/pip install -r Platforms/Python/requirements.txt -r Platforms/Python/requirements-dev.txt
 ```
+
+`make dev` installs the same dependencies using the Makefile's Python.
+
+## Run the tests
+
+```bash
+# Full pytest suite (sets QT_QPA_PLATFORM=offscreen)
+make test
+
+# Same suite without make
+QT_QPA_PLATFORM=offscreen .venv/bin/pytest -q Platforms/Python/time_warp/tests
+
+# Quick smoke test (no pytest required)
+python3 Platforms/Python/smoke_test.py
+
+# Run every program in Examples/ and check the results
+python3 test_all_examples.py
+
+# Lint
+.venv/bin/python -m ruff check Platforms/Python
+```
+
+Set `QT_QPA_PLATFORM=offscreen` when no display is available. The Qt tests need it on headless machines.

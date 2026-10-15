@@ -1,454 +1,79 @@
-# 🐍 Time Warp Studio - Desktop Application
+# Time Warp Studio - Python Desktop IDE
 
-**🎯 Educational Programming Platform - Python/PySide6 Implementation**
+The desktop IDE for Time Warp Studio, built with PySide6 (Qt 6). It runs nine programming languages in one editor, with turtle graphics, a step debugger, and themes.
 
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://www.python.org)
-[![PySide6](https://img.shields.io/badge/PySide6-Qt6-green.svg)](https://pypi.org/project/PySide6/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](../../LICENSE)
+Languages: BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, Python.
 
-> **🎯 Primary Implementation** — Native desktop IDE for educational multi-language programming. See [main documentation](../../docs/INDEX.md) for guides and tutorials.
+Version: see [VERSION](../../VERSION).
 
-The **desktop implementation** of Time Warp Studio provides a native application experience with PySide6 (Qt6), offering a professional IDE environment for learning programming through multiple classic and modern languages.
+## Requirements
 
-## 🎯 Why This Desktop Application?
+- Python 3.10 or newer
+- CPU with SSSE3, SSE4.1, SSE4.2, and POPCNT (required by Qt)
+- Core dependencies: PySide6 (Qt 6) and Pillow
 
-- 💻 **Native Experience**: Full-featured desktop IDE with PySide6/Qt6
-- 📦 **Easy Installation**: Simple `pip install` or run directly from source
-- 👨‍🏫 **Education-First**: Designed specifically for teaching environments
-- 🔍 **Readable Code**: Students can explore the Python implementation
-- 🐍 **Cross-Platform**: Runs on Windows, macOS, and Linux
-- 🎨 **Full Feature Set**: Complete multi-language support with turtle graphics
-- 🛠️ **Professional UI**: Modern Qt6 interface with themes and customization
+## Install and run
 
----
-
-## ✨ Features
-
-### Language Features
-
-- ✅ **Unified Environment**: Mix BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python seamlessly
-- ✅ **50+ Commands**: Complete verified command set
-- ✅ **Turtle Graphics**: Full Logo compatibility with procedures
-- ✅ **Color Support**: Named colors, hex codes, and RGB values
-- ✅ **User Procedures**: TO/END with parameters and local variables
-- ✅ **Multi-line Loops**: REPEAT blocks with proper nesting
-- ✅ **Expression Evaluation**: Safe math with operator precedence
-- ✅ **Pattern Matching**: PILOT-style wildcards and conditions
-- ✅ **Error Recovery**: Continues on non-fatal errors with hints
-
-### IDE Features
-
-- 🎨 **Modern PySide6 UI**: Professional desktop interface
-- 🐢 **Interactive Canvas**: Zoom/pan turtle graphics with coordinate axes
-- 📝 **Code Editor**: Syntax highlighting and line numbers
-- 🎨 **28 Themes**: Dark, Light, Dracula, Monokai, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized Dark/Light, Ocean, Spring, retro (CGA, C64, Apple II, DOS Blue, ZX Spectrum), High Contrast, Accessibility, and more
-- 📁 **File Management**: Open/save with recent files history
-- ▶️ **Execution Controls**: Run (F5), Stop (Shift+F5), Clear
-- 📊 **Output Panel**: Colored text with emoji indicators
-- 🔍 **Error Detection**: Syntax checking with helpful suggestions
-
-### Educational Features
-
-- 📚 **72 Example Programs**: All language styles and difficulty levels
-- 📖 **Comprehensive Docs**: Turtle graphics reference and guides
-- 💡 **Safe Execution**: Timeout protection and iteration limits
-- 🧪 **Full Test Suite**: Verified correctness of all commands
-
----
-
-## 🚀 Installation
-
----
-
-## 🚀 Installation
-
-### Prerequisites
-
-- **Python 3.10 or higher**
-- **PySide6** for GUI (or tkinter as fallback)
-- **Pillow** for image processing (optional)
-
-### Quick Install
+From the repository root:
 
 ```bash
-# Clone the repository
-git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp/Platforms/Python
-
-# Install dependencies
-pip install PySide6 pillow
-
-# Launch the IDE
-python time_warp_ide.py
+pip install -r Platforms/Python/requirements.txt
+python3 Platforms/Python/time_warp_ide.py
 ```
 
-### From Package
+Or use the launcher, which checks for a `.venv` and sets up dependencies:
 
 ```bash
-# Install from source (development mode)
-pip install -e .
-
-# Or install directly
-pip install .
+python3 run.py
 ```
 
-### Virtual Environment (Recommended)
+Optional features (speech, gamepad input, OS theme detection) need extra packages. Each feature runs without its package:
 
 ```bash
-# Create virtual environment
-python -m venv venv
-
-# Activate it
-source venv/bin/activate  # Linux/Mac
-venv\Scripts\activate     # Windows
-
-# Install dependencies
-pip install PySide6 pillow
-
-# Run IDE
-python time_warp_ide.py
+pip install -r Platforms/Python/requirements-optional.txt
 ```
 
----
+Installing the package with `pip install ./Platforms/Python` provides the commands `time-warp-ide`, `time-warp`, and `tw-editor`.
 
-## 📖 Quick Start
+## Tests
 
-### Desktop IDE (Recommended)
+See [README_TESTING.md](../../README_TESTING.md).
 
-Launch the full graphical IDE:
-
-```bash
-cd Platforms/Python
-python time_warp_ide.py
-```
-
-**IDE Features:**
-- 🎨 Syntax-aware code editor with auto-indent
-- 🐢 Interactive turtle graphics canvas with zoom/pan
-- 📊 Multi-tab output panel (Text + Graphics)
-- 💾 File operations with recent files menu
-- 🌈 28 beautiful color themes (dark, light, retro, modern with syntax highlighting for all)
-- ⚡ Run/Stop execution with real-time feedback
-- 🎯 Auto-switch to Graphics tab when drawing
-
-### Try the Examples
-
-```bash
-# Logo turtle graphics
-python time_warp_ide.py ../../Examples/logo/spiral.logo
-python time_warp_ide.py ../../Examples/logo/square.logo
-
-# BASIC programs
-python time_warp_ide.py ../../Examples/basic/guessing_game.bas
-python time_warp_ide.py ../../Examples/basic/loops.bas
-
-# PILOT interactive tutorials
-python time_warp_ide.py ../../Examples/pilot/hello.pilot
-python time_warp_ide.py ../../Examples/pilot/quiz.pilot
-```
-
-### Language Examples
-
-**PILOT-style (Interactive):**
-```pilot
-T:What is your name?
-A:NAME
-T:Hello *NAME*! Welcome to Time Warp.
-M:yes
-JY:CONTINUE
-J:START
-L:CONTINUE
-T:Let's learn some programming!
-E:
-```
-
-**BASIC-style (Imperative):**
-```basic
-10 CLS
-20 PRINT "Countdown"
-30 FOR I = 10 TO 1 STEP -1
-40   LOCATE I, 10
-45   PRINT I
-50 NEXT I
-60 PRINT "Blastoff!"
-```
-
-**Logo-style (Turtle Graphics):**
-```logo
-TO SQUARE :SIZE
-  REPEAT 4 [
-    FORWARD :SIZE
-    RIGHT 90
-  ]
-END
-
-SETCOLOR blue
-PENWIDTH 3
-SQUARE 100
-```
-
----
-
-## 🏗️ Architecture
+## Package layout
 
 ```
-time_warp/
-├── core/                      # Core interpreter engine
-│   └── interpreter.py         # Main execution engine
-├── languages/                 # Language executors
-│   ├── pilot.py               # PILOT language executor
-│   ├── basic.py               # BASIC language executor
-│   └── logo.py                # Logo language executor
-├── graphics/                  # Turtle graphics system
-│   └── turtle_state.py        # Turtle position, angle, pen state
-├── utils/                     # Utilities
-│   ├── expression_evaluator.py  # Safe math expression parser
-│   └── error_hints.py           # Typo detection & suggestions
-└── ui/                        # GUI components
-    ├── main_window.py         # PySide6 main window
-    ├── canvas.py              # Turtle graphics canvas
-    ├── code_editor.py         # Syntax-aware editor
-    └── themes.py              # Theme system (28 themes)
+Platforms/Python/
+  time_warp_ide.py      Main entry point
+  tw_editor.py          Alternate entry point (tw-editor command)
+  smoke_test.py         Quick checks without pytest
+  time_warp/
+    core/               Interpreter, language registry, config, debugger, project manager, sandbox
+    languages/          One executor module per language
+    ui/                 Main window, editor, canvas, output, debug panel, themes, mixins
+    graphics/           Turtle state
+    features/           Lessons, autosave
+    utils/              Expression evaluator, error hints, validators
+    tests/              pytest suite
 ```
 
-**Key Design:** Time Warp is a **unified environment** - BASIC, PILOT, and Logo commands work together in a single program. The `interpreter.py` engine handles all three syntaxes seamlessly.
-
----
-
-## 🧪 Testing
-
-```bash
-# Run comprehensive turtle graphics tests
-python test_all_turtle_commands.py
-
-# Test basic functionality
-python ../../tests/test_basic_functionality.py
-
-# Test IDE components
-python test_ide.py
-
-# Test graphics rendering
-python test_graphics.py
-
-# Verify all commands
-python verify_commands.py
-```
-
-**Test Coverage:**
-- ✅ 50+ turtle graphics commands verified
-- ✅ Logo procedures (TO/END) with parameters
-- ✅ Multi-line REPEAT blocks
-- ✅ Expression evaluation in commands
-- ✅ Named colors, hex colors, RGB colors
-- ✅ All pen width and movement aliases
-- ⏳ Full unit test suite in progress
-
----
-
-## 📚 API Reference
-
-### Interpreter
-
-```python
-from time_warp.core.interpreter import Interpreter
-
-interp = Interpreter()
-
-# Execute program
-output = interp.execute(source_code, turtle_state)
-
-# Legacy methods (compatibility)
-output = interp.execute_pilot(pilot_code, turtle_state)
-output = interp.execute_basic(basic_code, turtle_state)
-output = interp.execute_logo(logo_code, turtle_state)
-```
-
-### Turtle Graphics
-
-```python
-from time_warp.graphics.turtle_state import TurtleState
-
-turtle = TurtleState(width=800, height=600)
-
-# Movement
-turtle.forward(100)
-turtle.backward(50)
-turtle.left(90)
-turtle.right(45)
-
-# Position
-turtle.setxy(100, 200)
-turtle.setx(150)
-turtle.sety(250)
-turtle.home()  # Return to (0, 0)
-
-# Pen control
-turtle.penup()
-turtle.pendown()
-turtle.penwidth(5)
-
-# Colors
-turtle.setcolor("#FF5733")       # Hex
-turtle.setcolor("255,100,50")    # RGB
-turtle.setcolor("blue")          # Named color
-turtle.setbgcolor("black")
-
-# State queries
-x, y = turtle.position()
-angle = turtle.heading()
-visible = turtle.isvisible()
-```
-
-### Expression Evaluator
-
-```python
-from time_warp.utils.expression_evaluator import ExpressionEvaluator
-
-evaluator = ExpressionEvaluator({'X': 5, 'Y': 3})
-result = evaluator.evaluate('X * 2 + Y')      # 13.0
-result = evaluator.evaluate('SIN(45) + COS(30)')  # Supports trig
-result = evaluator.evaluate('360 / 6')        # 60.0
-```
-
-### Error Hints
-
-```python
-from time_warp.utils.error_hints import ErrorHints
-
-hints = ErrorHints()
-suggestion = hints.get_suggestion('FORWRD', ['FORWARD', 'BACKWARD'])
-# Returns: "Did you mean 'FORWARD'?"
-```
-
----
-
-## 🔒 Security Features
-
-- **Iteration Limit**: 100,000 max iterations prevents infinite loops
-- **Timeout Protection**: 10-second execution limit per command
-- **Safe Evaluation**: Expression evaluator uses manual parsing - no `eval()` or `exec()`
-- **Token Limit**: Complexity limits on mathematical expressions
-- **Input Validation**: All user inputs sanitized before execution
-
----
-
-## 📊 Development Status
-
-**Current Version**: 5.1.0
-
-| Component | Status | Completion |
-|-----------|--------|------------|
-| Core Interpreter | ✅ Complete | 100% |
-| Language Executors | ✅ Complete | 100% |
-| Turtle Graphics | ✅ Complete | 100% |
-| Logo Procedures | ✅ Complete | 100% |
-| Expression Evaluator | ✅ Complete | 100% |
-| Error Hints | ✅ Complete | 100% |
-| PySide6 GUI | ✅ Complete | 100% |
-| Theme System | ✅ Complete | 100% |
-| Example Programs | ✅ Complete | 69 programs |
-| Test Suite | ⏳ In Progress | 60% |
-| Documentation | ⏳ In Progress | 70% |
-
-**Recent Updates:**
-- ✅ Logo procedures (TO/END) with parameters
-- ✅ Multi-line REPEAT blocks (top-level and nested)
-- ✅ SETCOLOR with 14 named colors + hex/RGB
-- ✅ All turtle command aliases (PENWIDTH, BACKWARD, CLEAR, etc.)
-- ✅ Expression evaluation in rotation commands (e.g., RIGHT 360 / :SIDES)
-- ✅ 50+ turtle graphics commands verified working
-
----
-
-## 🖥 Platform Architecture
-
-Time Warp Studio is a native desktop application built with Python and PySide6 (Qt6).
-
-**Primary Platform:**
-- **Python (PySide6)** - `Platforms/Python/` - ✅ Official desktop IDE with full BASIC, PILOT, and Logo support
-
-**Project Focus:**
-- Native desktop experience with modern Qt6 interface
-- Cross-platform support (Windows, macOS, Linux)
-- Educational programming with integrated turtle graphics
-- Professional IDE features (syntax highlighting, themes, project management)
-
----
-
-## 🤝 Contributing
-
-Contributions welcome! Areas needing work:
-
-1. **Test Coverage** - Expand comprehensive test suite
-2. **Documentation** - Complete API docs and tutorials
-3. **Performance** - Optimize interpreter hot paths
-4. **BASIC Extensions** - Add DIM, DATA, READ commands
-5. **Examples** - More tutorial programs for beginners
-
-**Development Setup:**
-```bash
-git clone https://github.com/James-HoneyBadger/Time_Warp.git
-cd Time_Warp/Platforms/Python
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-python time_warp_ide.py
-```
-
-See the [Developer Guide](../../Docs/developer/00-developer-guide.md) for contribution guidelines.
-
----
-
-## 📜 License
-
-MIT License - see [LICENSE](../../LICENSE) file in repository root.
-
----
-
-## 🙏 Credits
-
-**Author**: James Temple ([@James-HoneyBadger](https://github.com/James-HoneyBadger))  
-**Email**: james@honey-badger.org  
-**Inspiration**: Classic educational computing (Apple II, Commodore 64, Logo, PILOT)
-
-## 📚 Learning & Documentation
-
-### 🎓 For Students & Beginners
-- **[Student Workbook](../../Docs/student/00-workbook.md)** — Progressive lessons that reinforce BASIC, PILOT, and Logo fundamentals.
-- **[User Manual](../../Docs/user/00-user-manual.md)** — Guided tour of the IDE interface and workspace.
-- **[Programming Guide](../../Docs/user/01-programming-guide.md)** — Language syntax deep dive with runnable samples.
-- **[Quick Reference](../../Docs/user/02-quick-reference.md)** — Emoji legend and command cheat sheets for classroom use.
-
-### 👨‍🏫 For Educators
-- **[Teacher Overview](../../Docs/teacher/00-overview.md)** — Curriculum framing, assessments, and classroom management tips.
-- **[FAQ](../../Docs/user/03-faq.md)** — Answers to common setup and pedagogy questions you can share with students.
-
-### 🔧 For Developers
-- **[Developer Guide](../../Docs/developer/00-developer-guide.md)** — Contribution workflow, testing expectations, and release process.
-- **[Installation Quickstart](../../Docs/installation/00-quickstart.md)** — Steps to configure the Python IDE on supported platforms.
-- **[Release Notes](../../Docs/misc/RELEASE_NOTES.md)** — Historical highlights and version-specific changes.
-
-### 📦 Assets & Examples
-- **Example Programs**: [`Examples/`](../../Examples/) — A curated set of BASIC, PILOT, and Logo samples for lessons and demos.
-
----
-
-## 🔗 Links
-
-- **Main Repository**: [Time_Warp](https://github.com/James-HoneyBadger/Time_Warp)
-- **Issue Tracker**: <https://github.com/James-HoneyBadger/Time_Warp/issues>
-- **Discussions**: <https://github.com/James-HoneyBadger/Time_Warp/discussions>
-
----
-
-<div align="center">
-
-**🐍 Time Warp Studio - Python Implementation** 
-
-*Educational programming made accessible everywhere* 
-
-🎓 **Perfect for Schools** • 📱 **Runs Anywhere** • � **Easy Setup**
-
-Made with ❤️ for educators, students, and lifelong learners
-
-</div>
+## Examples
+
+The example programs are in [Examples/](../../Examples/). Start with:
+
+- [Examples/basic/hello.bas](../../Examples/basic/hello.bas)
+- [Examples/pilot/hello.pilot](../../Examples/pilot/hello.pilot)
+- [Examples/logo/hello.logo](../../Examples/logo/hello.logo)
+- [Examples/c/hello.c](../../Examples/c/hello.c)
+- [Examples/forth/hello.f](../../Examples/forth/hello.f)
+
+The catalog is [Examples/CATALOG.md](../../Examples/CATALOG.md).
+
+## Documentation
+
+- [README.md](../../README.md): project overview
+- [docs/INDEX.md](../../docs/INDEX.md): documentation index
+- [docs/USER_GUIDE.md](../../docs/USER_GUIDE.md): using the IDE
+- [docs/LANGUAGE_GUIDE.md](../../docs/LANGUAGE_GUIDE.md): language reference
+- [FAQ.md](../../FAQ.md): common questions
+- [ARCHITECTURE.md](../../ARCHITECTURE.md): design
+- [CONTRIBUTING.md](../../CONTRIBUTING.md): how to contribute

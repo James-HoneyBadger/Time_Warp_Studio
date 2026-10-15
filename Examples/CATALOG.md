@@ -132,13 +132,6 @@ It is intentionally limited to the nine active languages.
 | `python/oop_demo.py` | Classes, inheritance, and dataclasses |
 | `python/turtle_art.py` | Turtle polygons and color cycling |
 
-## Plugins
-
-| File | Description |
-| --- | --- |
-| `plugins/hello_plugin/__init__.py` | Example plugin package entry point |
-| `plugins/hello_plugin/plugin.py` | Minimal plugin implementation |
-
 ## Validation
 
 The example verifier runs active examples in isolated subprocesses and reports

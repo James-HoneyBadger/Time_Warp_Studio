@@ -84,12 +84,17 @@ python -m venv .venv
 ### Install Dependencies
 
 ```bash
-# Core dependencies
-pip install -r requirements.txt
+# Core dependencies (PySide6, Pillow)
+pip install -r Platforms/Python/requirements.txt
 
-# Development dependencies for testing and code quality
+# Development dependencies (pytest, pytest-cov, ruff)
 pip install -r Platforms/Python/requirements-dev.txt
+
+# Optional extras (darkdetect, pyttsx3, pygame, inputs)
+pip install -r Platforms/Python/requirements-optional.txt
 ```
+
+Or use the Makefile: `make install`, `make dev`, `make optional`.
 
 ### Verify Setup
 
@@ -110,24 +115,16 @@ Both should work without errors.
 ### Python Code Standards
 
 - **Style**: PEP 8 compliance
-- **Line length**: 100 characters maximum
-- **Formatter**: Use `black`
-- **Linter**: Must pass `flake8` and `pylint`
-- **Type hints**: Use with `mypy` strict mode
+- **Linter/formatter**: Must pass `ruff check`
+- **Type hints**: Checked with `pyright` (`make typecheck`)
 - **Docstrings**: Add to all public functions/classes
 
 ### Formatter & Linting
 
 ```bash
-# Format code
-black time_warp/ --line-length 100
-
-# Check style
-flake8 time_warp/
-pylint time_warp/
-
-# Type checking
-mypy time_warp/ --strict
+make lint        # ruff check Platforms/Python
+make format      # ruff format
+make typecheck   # pyright
 ```
 
 ### Example Code Standards
@@ -192,20 +189,20 @@ git commit -m "Fixed stuff"
 ### 3. Run Tests & Validation
 
 ```bash
-# Run test suite
-PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
+# Run test suite (offscreen Qt)
+make test
 
 # Check code style
-black --check .
-flake8 .
-pylint time_warp/ --disable=all --enable=fatal
-mypy time_warp/ --strict
+make lint
+
+# Run all example programs
+make demos
 
 # Run specific component tests
-pytest Platforms/Python/time_warp/tests/test_interpreter.py -v
+QT_QPA_PLATFORM=offscreen PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests/test_interpreter_regressions.py -v
 ```
 
-All must pass before submitting PR.
+All must pass before submitting PR. CI (`.github/workflows/ci.yml`) runs the same ruff, pytest, smoke-test, and example checks on Python 3.10, 3.12, and 3.13.
 
 ### 4. Push to Your Fork
 
@@ -272,22 +269,25 @@ Requested by Issue #42 - BASIC language completeness.
 # Quick tests
 python3 Platforms/Python/smoke_test.py
 
-# Comprehensive
-PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
+# Comprehensive (501 tests)
+QT_QPA_PLATFORM=offscreen PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
 
 # Specific file
-pytest Platforms/Python/time_warp/tests/test_lang_basic.py -v
+PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests/test_lang_basic.py -v
+
+# All 72 example programs
+python3 test_all_examples.py
 
 # With coverage
-pytest --cov=time_warp tests/ --cov-report=html
+PYTHONPATH=Platforms/Python pytest --cov=time_warp Platforms/Python/time_warp/tests --cov-report=html
 ```
 
 ### Writing Tests
 
-Tests go in `tests/` directory:
+Tests go in `Platforms/Python/time_warp/tests/`:
 
 ```python
-# File: tests/test_my_feature.py
+# File: Platforms/Python/time_warp/tests/test_my_feature.py
 
 import pytest
 from time_warp.core.interpreter import Interpreter
@@ -319,7 +319,7 @@ class TestMyFeature:
 Aim for >80% coverage on new code:
 
 ```bash
-pytest --cov=time_warp --cov-report=html tests/
+PYTHONPATH=Platforms/Python pytest --cov=time_warp --cov-report=html Platforms/Python/time_warp/tests
 # Coverage report in htmlcov/index.html
 ```
 
@@ -412,7 +412,7 @@ Add to `Language.from_extension()` in `core/interpreter.py`:
 
 ### 4. Create Tests
 
-File: `Platforms/Python/time_warp/tests/test_newlang.py`
+File: `Platforms/Python/time_warp/tests/test_lang_newlang.py`
 
 ```python
 from .conftest_lang import run, ok, has, no_errors
@@ -454,12 +454,11 @@ git fetch origin
 git rebase origin/main
 
 # 2. Run full test suite
-PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
+make test
+make demos
 
 # 3. Check code style
-black --check .
-flake8 .
-mypy time_warp/ --strict
+make lint
 
 # 4. Update docs
 # - README
@@ -499,13 +498,14 @@ Time_Warp_Studio/
 │   ├── time_warp_ide.py          # Main entry point
 │   ├── time_warp/
 │   │   ├── core/                 # Interpreter, debugger
-│   │   ├── languages/            # 24 executors
+│   │   ├── languages/            # 9 language executors
 │   │   ├── ui/                   # PySide6 UI
 │   │   ├── graphics/             # Turtle graphics
-│   │   └── features/             # Extended features and utilities
-│   ├── tests/                    # Test suite
-│   └── requirements.txt          # Dependencies
-├── Examples/                     # Example programs
+│   │   ├── features/             # Lessons, games, etc.
+│   │   └── tests/                # pytest suite
+│   └── requirements*.txt         # Core / dev / optional dependencies
+├── Examples/                     # 72 example programs
+├── test_all_examples.py          # Example runner
 ├── docs/                         # User documentation
 └── [Root docs]                  # README, LICENSE, etc.
 ```

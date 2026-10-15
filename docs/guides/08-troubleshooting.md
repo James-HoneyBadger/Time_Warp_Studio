@@ -19,7 +19,6 @@ Illegal instruction (core dumped)
 - Upgrade to modern CPU (Intel/AMD from 2012+)
 - Use cloud computing (AWS, Azure, Google Cloud)
 - Use a different computer
-- Use Docker on a compatible system
 
 **Status:** This is a system limitation, not a code issue.
 
@@ -156,7 +155,7 @@ PRINT X
 
 **Error:**
 ```
-❌ Error: Division by zero
+❌ Error at line 1: Division by zero
 ```
 
 **Cause:** Program tries to divide by zero
@@ -278,15 +277,14 @@ Cannot open file: Permission denied
 
 **Solution:**
 1. Close and reopen IDE
-2. Check file ~/.time_warp/config.json exists
-3. Delete config to reset to defaults
+2. Re-select the theme from View → Theme
+3. Check that settings can be written (Qt QSettings stores them in your per-user config location)
 
 ### Text Too Small/Large
 
 **Solutions:**
 - Use Ctrl++ to zoom in
 - Use Ctrl+- to zoom out
-- Use Ctrl+0 to reset zoom
 - Check your OS text size settings
 
 ### Garbled Text
@@ -294,7 +292,7 @@ Cannot open file: Permission denied
 **Cause:** Font issues
 
 **Solution:**
-1. Change theme (View → Themes)
+1. Change theme (View → Theme)
 2. Restart IDE
 3. Check OS font installation
 
@@ -410,7 +408,7 @@ NEXT COLOR
 1. **Restart IDE** - Close and reopen
 2. **Check examples** - See working examples
 3. **Start fresh** - Create new simple program
-4. **Ask for help** - See README.md for support contacts
+4. **Ask for help** - See the [FAQ](../../FAQ.md)
 
 ---
 

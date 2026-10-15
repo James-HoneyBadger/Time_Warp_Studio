@@ -1,7 +1,7 @@
 # Installation Guide — Time Warp Studio
 
 This guide covers every way to install or run Time Warp Studio, from a
-one-command standalone installer to Docker containers and developer setups.
+one-command standalone installer to developer setups.
 
 ---
 
@@ -10,10 +10,9 @@ one-command standalone installer to Docker containers and developer setups.
 1. [Standalone Install (Recommended)](#1-standalone-install-recommended)
 2. [System Requirements](#2-system-requirements)
 3. [Developer / Portable Install](#3-developer--portable-install)
-4. [Docker Install](#4-docker-install)
-5. [Troubleshooting](#5-troubleshooting)
-6. [Updating & Uninstalling](#6-updating--uninstalling)
-7. [Quick Reference](#7-quick-reference)
+4. [Troubleshooting](#4-troubleshooting)
+5. [Updating & Uninstalling](#5-updating--uninstalling)
+6. [Quick Reference](#6-quick-reference)
 
 ---
 
@@ -155,7 +154,7 @@ Options:
   (none)         System-wide install into /opt  (requires sudo)
   --user         Per-user install into ~/.local  (no sudo needed)
   --upgrade      Wipe and recreate the Python venv, reinstall all deps
-  --uninstall    Remove Time Warp Studio completely (see §6)
+  --uninstall    Remove Time Warp Studio completely (see §5)
   --help         Show help and exit
 
 Examples:
@@ -179,7 +178,7 @@ Examples:
 | Python | 3.10 or newer |
 | RAM | 2 GB (4 GB recommended) |
 | Disk | 600 MB free |
-| CPU | 64-bit with SSE3 / SSE4.1 / SSE4.2 / POPCNT support |
+| CPU | 64-bit with SSSE3 / SSE4.1 / SSE4.2 / POPCNT support |
 | Display | Any X11 or Wayland desktop |
 
 > **Virtual machine note**: QEMU/KVM using TCG (software emulation) may
@@ -192,7 +191,7 @@ Examples:
 grep -E 'ssse3|sse4_1|sse4_2|popcnt' /proc/cpuinfo | head -1
 ```
 
-All four flags must be present.
+All four flags (`ssse3`, `sse4_1`, `sse4_2`, `popcnt`) must be present.
 
 ---
 
@@ -209,9 +208,12 @@ cd Time_Warp_Studio
 python3 -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 
-# 3. Install dependencies
+# 3. Install dependencies (PySide6, Pillow)
 pip install --upgrade pip
-pip install "PySide6>=6.5.0" "Pillow>=10.0.0"
+pip install -r Platforms/Python/requirements.txt
+
+# Optional extras: darkdetect, pyttsx3, pygame, inputs
+pip install -r Platforms/Python/requirements-optional.txt
 
 # 4. Launch
 python3 Platforms/Python/time_warp_ide.py
@@ -223,48 +225,17 @@ Or use the smart launcher which handles the venv automatically:
 python3 run.py
 ```
 
-For contributors, install the full development stack:
+For contributors, install the development stack (pytest, pytest-cov, ruff):
 
 ```bash
-pip install pytest pytest-cov pytest-mock ruff black
-PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
+pip install -r Platforms/Python/requirements-dev.txt
+make test     # pytest suite (offscreen Qt)
+make demos    # run all 72 example programs
 ```
 
 ---
 
-## 4. Docker Install
-
-Runs the IDE in a container — best compatibility for unusual hardware.
-
-### Prerequisites
-
-- Docker installed and running
-- An X11 display (Linux desktop or XQuartz on macOS)
-
-### Build and run
-
-```bash
-# Build (takes a few minutes first time)
-docker build -f docker/Dockerfile.main -t time-warp-studio .
-
-# Run on Linux (shares your X display)
-xhost +local:docker
-docker run -it --rm \
-  -e DISPLAY="$DISPLAY" \
-  -v /tmp/.X11-unix:/tmp/.X11-unix \
-  -v "$(pwd)/Examples":/app/Examples \
-  time-warp-studio
-
-# Run on macOS (requires XQuartz)
-docker run -it --rm \
-  -e DISPLAY=host.docker.internal:0 \
-  -v "$(pwd)/Examples":/app/Examples \
-  time-warp-studio
-```
-
----
-
-## 5. Troubleshooting
+## 4. Troubleshooting
 
 ### IDE doesn't appear in the Applications menu
 
@@ -321,7 +292,7 @@ sudo ./install.sh --upgrade        # system
 
 ---
 
-## 6. Updating & Uninstalling
+## 5. Updating & Uninstalling
 
 ### Update to a new version
 
@@ -361,7 +332,7 @@ rm -rf ~/.time_warp
 
 ---
 
-## 7. Quick Reference
+## 6. Quick Reference
 
 ### Launching
 
@@ -396,12 +367,13 @@ rm -rf ~/.time_warp
 ### Test the installation
 
 ```bash
-# Verify the IDE imports are working
-/opt/time-warp-studio/.venv/bin/python -c \
+# Verify the IDE imports are working (time_warp lives under Platforms/Python)
+PYTHONPATH=/opt/time-warp-studio/Platforms/Python \
+  /opt/time-warp-studio/.venv/bin/python -c \
   "from time_warp.core.interpreter import Interpreter; print('✅ OK')"
 
-# Run the full demo test suite (from the source directory)
-python tests/test_all_demos.py
+# Run all 72 example programs (from a source checkout with dependencies installed)
+python3 test_all_examples.py
 ```
 
 ---

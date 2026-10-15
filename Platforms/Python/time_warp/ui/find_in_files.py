@@ -306,7 +306,8 @@ class FindInFilesDialog(QDialog):
                     self._source_meta[rel] = (None, abs_str)
                 except OSError:
                     pass
-        except Exception:  # pylint: disable=broad-exception-caught
+        except (OSError, ValueError):
+            # Unreadable project dir or bad glob: search open tabs only
             pass
 
         return sources
