@@ -21,7 +21,7 @@ jobs:
     if: startsWith(inputs.release_tag || github.event.release.tag_name || github.ref_name, 'v')
     runs-on: ubuntu-latest
     environment:
-      name: production
+      name: pypi
       url: https://pypi.org/p/time-warp-ide
     permissions:
       contents: read
