@@ -35,13 +35,27 @@ pip install -r Platforms/Python/requirements-optional.txt
 
 Installing the package with `pip install ./Platforms/Python` provides the commands `time-warp-ide`, `time-warp`, and `tw-editor`.
 
+After the package is published to PyPI, install it with:
+
+```bash
+python3 -m pip install time-warp-ide
+time-warp-ide
+```
+
+To install the published package directly from GitHub:
+
+```bash
+python3 -m pip install "https://github.com/James-HoneyBadger/Time_Warp_Studio/releases/download/v14.1.1/time_warp_ide-14.1.1-py3-none-any.whl"
+time-warp-ide
+```
+
 ## Tests
 
 See [README_TESTING.md](../../README_TESTING.md).
 
 ## Package layout
 
-```
+```text
 Platforms/Python/
   time_warp_ide.py      Main entry point
   tw_editor.py          Alternate entry point (tw-editor command)

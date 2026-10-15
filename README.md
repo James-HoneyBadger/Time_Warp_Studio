@@ -5,7 +5,7 @@
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
 [![PySide6](https://img.shields.io/badge/PySide6-Qt6-green)](https://wiki.qt.io/Qt_for_Python)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-14.1.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-14.1.1-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **9 active programming languages** into a single, modern IDE. Built with Python and PySide6 (Qt6), it provides an integrated platform for learning programming concepts, exploring vector turtle graphics, and working through structured lessons.
 
@@ -158,6 +158,16 @@ python3 Platforms/Python/time_warp_ide.py
 ```bash
 ./run.sh
 ```
+
+### Option 4: Install the Python package from GitHub
+
+```bash
+python3 -m pip install "https://github.com/James-HoneyBadger/Time_Warp_Studio/releases/download/v14.1.1/time_warp_ide-14.1.1-py3-none-any.whl"
+time-warp-ide
+```
+
+The wheel installs PySide6 and Pillow automatically. Other release assets,
+including Linux packages, are available from the [GitHub Releases page](https://github.com/James-HoneyBadger/Time_Warp_Studio/releases).
 
 ---
 
@@ -458,7 +468,7 @@ Licensed under the **[MIT License](LICENSE)**.
 
 - **Repository:** [github.com/James-HoneyBadger/Time_Warp_Studio](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 - **Maintainer:** James Temple — <james@honey-badger.org>
-- **Version:** 14.1.0
+- **Version:** 14.1.1
 
 ---
 

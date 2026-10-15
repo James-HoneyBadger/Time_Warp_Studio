@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "time_warp_ide"
-version = "14.1.0"
+version = "14.1.1"
 description = "Educational programming environment for 9 programming languages with integrated turtle graphics"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -75,6 +75,7 @@ Changelog = "https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/CHA
 
 [tool.setuptools]
 package-dir = {"" = "."}
+py-modules = ["time_warp_ide", "tw_editor"]
 
 [tool.setuptools.packages.find]
 where = ["."]

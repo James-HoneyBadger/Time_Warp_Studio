@@ -38,6 +38,11 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="14.1.1" date="2026-10-15">
+      <description>
+        <p>v14.1.1 — Fixed the Python wheel packaging so all advertised launch commands are included; added direct installation from GitHub Releases.</p>
+      </description>
+    </release>
     <release version="14.1.0" date="2026-10-15">
       <description>
         <p>v14.1.0 — Added lessons and keyboard workflow improvements, expanded graphics, sound, and Prolog capabilities, and aligned documentation and packaging with the supported Studio release.</p>

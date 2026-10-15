@@ -1,0 +1,9 @@
+.git
+.github
+.venv
+**/__pycache__
+**/*.py[cod]
+**/tests
+Platforms/Python/time_warp_ide.egg-info
+build
+dist

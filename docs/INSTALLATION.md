@@ -67,7 +67,7 @@ When it finishes you will see:
 
 ```
 ════════════════════════════════════════════════════
-  Time Warp Studio 14.1.0 — Installed!
+  Time Warp Studio 14.1.1 — Installed!
 ════════════════════════════════════════════════════
 
   Start from terminal:   time-warp-studio
@@ -198,6 +198,21 @@ All four flags (`ssse3`, `sse4_1`, `sse4_2`, `popcnt`) must be present.
 ## 3. Developer / Portable Install
 
 Use this if you want to run directly from the source tree (no system install).
+
+### Install the Python package from GitHub
+
+The release wheel installs the command-line launchers and their core
+dependencies (PySide6 and Pillow):
+
+```bash
+python3 -m pip install "https://github.com/James-HoneyBadger/Time_Warp_Studio/releases/download/v14.1.1/time_warp_ide-14.1.1-py3-none-any.whl"
+time-warp-ide
+```
+
+Browse the [GitHub Releases page](https://github.com/James-HoneyBadger/Time_Warp_Studio/releases)
+for Linux installers, portable bundles, and other release assets.
+
+### Install from the source tree
 
 ```bash
 # 1. Clone
