@@ -67,7 +67,7 @@ When it finishes you will see:
 
 ```
 ════════════════════════════════════════════════════
-  Time Warp Studio 14.1.1 — Installed!
+  Time Warp Studio 14.1.2 — Installed!
 ════════════════════════════════════════════════════
 
   Start from terminal:   time-warp-studio
@@ -205,7 +205,7 @@ The release wheel installs the command-line launchers and their core
 dependencies (PySide6 and Pillow):
 
 ```bash
-python3 -m pip install "https://github.com/James-HoneyBadger/Time_Warp_Studio/releases/download/v14.1.1/time_warp_ide-14.1.1-py3-none-any.whl"
+python3 -m pip install "https://github.com/James-HoneyBadger/Time_Warp_Studio/releases/download/v14.1.2/timewarp_ide-14.1.2-py3-none-any.whl"
 time-warp-ide
 ```
 

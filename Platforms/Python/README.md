@@ -38,14 +38,14 @@ Installing the package with `pip install ./Platforms/Python` provides the comman
 After the package is published to PyPI, install it with:
 
 ```bash
-python3 -m pip install time-warp-ide
+python3 -m pip install timewarp-ide
 time-warp-ide
 ```
 
 To install the published package directly from GitHub:
 
 ```bash
-python3 -m pip install "https://github.com/James-HoneyBadger/Time_Warp_Studio/releases/download/v14.1.1/time_warp_ide-14.1.1-py3-none-any.whl"
+python3 -m pip install "https://github.com/James-HoneyBadger/Time_Warp_Studio/releases/download/v14.1.2/timewarp_ide-14.1.2-py3-none-any.whl"
 time-warp-ide
 ```
 

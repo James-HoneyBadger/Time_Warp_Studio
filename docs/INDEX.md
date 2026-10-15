@@ -269,7 +269,7 @@ Explore example programs and tutorials for the 9 active languages:
 ---
 
 **Last Updated:** October 2026
-**Version:** 14.1.1
+**Version:** 14.1.2
 **License:** MIT
 
 ## How to Use This Documentation
@@ -333,7 +333,7 @@ This documentation is maintained alongside Time Warp Studio development. If you 
 
 ## Version Information
 
-- **Time Warp Studio** v14.1.1
+- **Time Warp Studio** v14.1.2
 - **Last Updated** October 2026
 
 ## Need More Help?

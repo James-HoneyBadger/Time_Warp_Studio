@@ -10,6 +10,12 @@ All notable changes to Time Warp Studio will be documented in this file.
 > been removed from `time_warp/languages/` and are no longer part of the
 > product. These entries are kept as historical record only.
 
+## [14.1.2] - 2026-10-15
+
+### Packaging
+
+- Matched the Python distribution name to the existing PyPI project `timewarp-ide`.
+
 ## [14.1.1] - 2026-10-15
 
 ### Packaging

@@ -6,7 +6,7 @@ Time Warp Studio is an educational desktop IDE for learning **9 active programmi
 
 ---
 
-## Current Release: v14.1.1 (October 15, 2026)
+## Current Release: v14.1.2 (October 15, 2026)
 
 - **9 active language executors** — BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python
 - **SVGA graphics mode** — 800×600 virtual canvas with anti-aliasing, zoom/pan, and pixel-accurate rendering

@@ -36,9 +36,8 @@ The GitHub Environments `preview`, `staging`, and `production` are configured in
 
 Configure PyPI trusted publishing once; no API token secret is needed:
 
-1. On PyPI, add a trusted publisher for owner `James-HoneyBadger`, repository `Time_Warp_Studio`, workflow `publish-python.yml`, and environment `pypi`.
-2. For a package not yet created on PyPI, configure these values as a pending publisher first. For an existing project, add the publisher in its project settings.
-3. The GitHub `pypi` environment permits only `main` and `v*` tags. Each published version tag then builds and uploads both Python distributions.
+1. In the existing PyPI project `timewarp-ide`, add a trusted publisher for owner `James-HoneyBadger`, repository `Time_Warp_Studio`, workflow `publish-python.yml`, and environment `pypi`.
+2. The GitHub `pypi` environment permits only `main` and `v*` tags. Each published version tag then builds and uploads both Python distributions.
 
 ### GitHub Container Registry
 

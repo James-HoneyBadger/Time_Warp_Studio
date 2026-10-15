@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: pypi
-      url: https://pypi.org/p/time-warp-ide
+      url: https://pypi.org/p/timewarp-ide
     permissions:
       contents: read
       id-token: write
