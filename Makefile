@@ -12,7 +12,7 @@ PYTHON ?= $(shell test -x .venv/bin/python3 && echo .venv/bin/python3 || echo py
 FORWARDED := build run test test-debug asan clean distclean info test-list \
              screenshot reset-layout
 
-.PHONY: help $(FORWARDED) engine-test smoke test-all lint
+.PHONY: help $(FORWARDED) engine-test smoke test-all lint lint-md
 
 help:
 	@echo "Time Warp Studio"
@@ -31,6 +31,7 @@ help:
 	@echo "  smoke         Every example program, through the real bridge"
 	@echo "  test-all      All of the above"
 	@echo "  lint          Ruff over the bridge"
+	@echo "  lint-md       Markdownlint over every tracked Markdown file"
 	@echo ""
 	@echo "See 'make -C $(NATIVE) help' for everything the native tree offers."
 
@@ -47,3 +48,9 @@ test-all: test engine-test smoke
 
 lint:
 	@$(PYTHON) -m ruff check $(NATIVE)/bridge
+
+# Markdown lint over the repository's own Markdown. `git ls-files` is what keeps the
+# virtual environment, the build trees and node_modules out of the run without a
+# second ignore file, so this reports on the files a reviewer sees and nothing else.
+lint-md:
+	@npx --yes markdownlint-cli2 --config .markdownlint.json $$(git ls-files '*.md')

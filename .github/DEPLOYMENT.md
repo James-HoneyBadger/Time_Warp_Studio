@@ -22,16 +22,16 @@ the one being read. `docs.yml` regenerates them and fails on a diff. It also run
 starters; a solution that does not pass is a lesson nobody can finish, and a starter
 that already passes has nothing to do.
 
-**Why the markdown lint does not fail a build.** The linter is `super-linter` with
-`VALIDATE_MARKDOWN`, so it reads every `*.md` in the repository rather than the
-hand-picked set the project lints locally, and four files carry findings that predate
-this work: `native/README.md` (10 — five extra top-level headings, four fenced blocks
-with no language, one code span with a stray space), `.github/copilot-instructions.md`
-(30, list and heading spacing in a file written for an agent to read),
-`.github/RELEASE_CHECKLIST.md` (3, fenced blocks inside list items) and `SECURITY.md`
-(2, table column alignment). Making the step blocking means clearing those first; it is
-recorded here rather than fixed in passing so that the next person to touch it knows
-what they are taking on.
+**Why the markdown lint does not fail a build.** The step is one `super-linter`
+invocation, and that image runs its other validators in the same step, so making the
+step fatal would gate a pull request on tools this project has not reviewed. The
+Markdown itself is clean: `make lint-md` reports nothing across the repository's own
+Markdown files, and the 45 findings that used to sit in `native/README.md`,
+`.github/copilot-instructions.md`, `.github/RELEASE_CHECKLIST.md` and `SECURITY.md`
+are fixed. The editor is pointed at the same file set — `.vscode/settings.json` sets
+`markdownlint.appliesTo` to `markdownOnly` and skips `.venv` and the build trees — so
+the Problems panel and the command agree. The spellcheck step beside it is advisory on
+its own terms.
 
 The Python application's workflows — `ci.yml`, `build_release.yml`,
 `publish-python.yml` and `publish-container.yml` — were removed with it. They

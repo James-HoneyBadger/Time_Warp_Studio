@@ -188,6 +188,7 @@ which is why `make engine-test` is not optional here.
 
 ```bash
 make lint        # ruff check native/bridge
+make lint-md     # markdownlint over every tracked Markdown file
 make engine-test # pytest over the engine
 ```
 
@@ -346,6 +347,9 @@ make smoke
 
 # All of the above, plus lint
 make test-all && make lint
+
+# The Markdown: every tracked .md file, against .markdownlint.json
+make lint-md
 ```
 
 ### Writing Tests
@@ -542,7 +546,7 @@ git fetch origin
 git rebase origin/main
 
 # 2. Run the full test suite, all build trees, the corpus gate and lint
-make test-all && make lint
+make test-all && make lint && make lint-md
 
 # 3. Update docs
 # - README

@@ -28,7 +28,7 @@ instead of by the native stack.
 
 ## Layout
 
-```
+```text
 native/
 ├── CMakeLists.txt
 ├── include/timewarp/
@@ -324,7 +324,7 @@ throwing evaluation (so failures printed `OK ERR …`), and a cache that stored 
 empty token vector when lexing threw, turning a syntax error into
 `Invalid expression` on the *second* attempt.
 
-# Scheme evaluator (`timewarp_scheme`)
+## Scheme evaluator (`timewarp_scheme`)
 
 Ported from the reference Scheme implementation in the Python engine
 (`native/bridge/time_warp/languages/scheme.py`).
@@ -333,7 +333,7 @@ A tree-walking interpreter for the subset of Scheme used for teaching functional
 programming, rewritten as an explicit-stack state machine. **No member of
 `Machine` calls any other member recursively.**
 
-## What was actually recursive
+### What was actually recursive
 
 Reading the reference is what settles this. The Python module contains a
 trampoline — `_TAIL`, `_PENDING`, `_TAIL_FORMS` — but it is dead code: no special
@@ -356,11 +356,11 @@ every one of these was ordinary native recursion:
 | `_equal` | explicit work stack in `value.cpp` |
 | `_parse`'s `parse_expr()` | explicit frame stack in `reader.cpp` |
 
-## The machine
+### The machine
 
 Two states, one loop:
 
-```
+```text
 Eval    -- reduce the current expression, or push a frame and descend
 Deliver -- a value is ready; pop the top frame and let it consume it
 ```
@@ -380,7 +380,7 @@ out of that single rule:
 pushes nothing at all, and a sequence pops itself before evaluating its **last**
 form, so the last form of every body is a tail position.
 
-## Depth accounting
+### Depth accounting
 
 Measured by `tools/scheme_bench.cpp`:
 
@@ -395,7 +395,7 @@ Measured by `tools/scheme_bench.cpp`:
 The reference aborts at roughly 200 calls with
 `❌ Scheme error: Maximum recursion depth exceeded`.
 
-## Data model
+### Data model
 
 `Value` is a 16-byte tagged union whose heap members are *pointers into a region
 allocator*, never owned. That keeps it trivially copyable and trivially
@@ -413,7 +413,7 @@ Two structural departures from the reference, both forced by dropping Python:
 * Parsed code being pairs also means `_quote()` is the identity, and specifically
   that `case` cannot reproduce the reference's bug.
 
-## Host integration
+### Host integration
 
 The reference reached into an `Interpreter` for its step budget and into a
 `TurtleState` for drawing, which is why it could not run without booting the IDE.
@@ -421,7 +421,7 @@ Both are virtual on `Host`, so the same machine embeds in the Qt application and
 runs headless in a test. `Host::tick` is charged every 512 steps, matching the
 reference's cadence; returning `false` raises `BudgetExhausted`.
 
-## Verification
+### Verification
 
 * **169 unit checks** in `scheme_tests`, covering the reader, printer, all
   special forms, every builtin family, the host seam, and explicit proofs that
@@ -438,14 +438,14 @@ reference's cadence; returning `false` raises `BudgetExhausted`.
 expectation in the test suite and the corpus came from running it rather than
 from reading the source.
 
-## A reference bug worth calling out: `case` never worked
+### A reference bug worth calling out: `case` never worked
 
 `_sf_case` calls `_to_py_list(clause[0])`. But `clause[0]` is *parsed code* — a
 Python `list`, not a `Pair` chain — so `_to_py_list` walks nothing, finds a
 non-`NIL` value, and raises `Scheme error: expected a proper list`. Every `case`
 form fails, including the `else` branch:
 
-```
+```text
 (display (case 1 ((1) 'one) (else 'other)))   →  ❌ Scheme error: expected a proper list
 ```
 
@@ -453,7 +453,7 @@ Because this port represents code as pairs throughout, the same operation does
 the intended thing and `case` works. Reproducing this bug byte-for-byte would
 have meant shipping a dead special form, so it is fixed and documented instead.
 
-## Deliberate divergences
+### Deliberate divergences
 
 Beyond the `case` fix, the port differs from the reference in these ways. Each is
 listed with its reason, and `scheme_differential_check.py` asserts the full set.
@@ -500,7 +500,7 @@ an address. `python_str` falls back to the `write` rendering.
 **Non-ASCII case mapping.** `string-upcase`/`string-downcase` are ASCII-only;
 Python's are Unicode-aware.
 
-## Preserved quirks
+### Preserved quirks
 
 Carried over deliberately, each verified against the reference:
 
@@ -538,12 +538,12 @@ Carried over deliberately, each verified against the reference:
 * `string->number` accepts and then *ignores* a radix argument.
 * `substring` and `list-tail` clamp like Python slices, and negative indices
   count from the end.
-* `string=? ` — with a trailing space — is registered as well as the correct
-  spelling, so both are kept.
+* A `string=?` with a trailing space is registered as well as the
+  correct spelling, so both are kept.
 * `(append)` is `()`, `(append '(1 2))` is `(1 2)`, and the final argument
   becomes the tail rather than being copied.
 
-## Bugs the differential run caught
+### Bugs the differential run caught
 
 Besides the `case` discovery, two were genuine port defects that only a
 byte-for-byte comparison surfaced:
@@ -569,11 +569,11 @@ stack: `` `(a ,(let ((x 5)) `(b ,x)) c) `` evaluates a quasiquote inside an
 unquote, and a single driver would have clobbered the outer template's
 partially-built accumulator.
 
-# Canvas command queue (`timewarp_canvas`)
+## Canvas command queue (`timewarp_canvas`)
 
 Bridges an independent interpreter thread to the foreground Qt6 GUI thread.
 
-## The problem it replaces
+### The problem it replaces
 
 `ui/output.py` runs the interpreter on an `InterpreterThread(QThread)` and talks
 to the GUI with **a Qt signal per message**. For turtle graphics that means one
@@ -592,7 +592,7 @@ The queue replaces both mechanisms at once:
 * the only cross-thread interaction is the queue itself, so the shared mutable
   turtle state goes away. The GUI owns its own mirror and applies commands to it.
 
-## Design
+### Design
 
 **Single producer / single consumer.** The application runs one interpreter at a
 time, so the ring can be genuinely lock-free: `head_` is written only by the
@@ -627,12 +627,12 @@ cannot arise. The staged command is published when a non-coalescible command
 arrives, on `flush()`, or once `set_coalesce_limit()` replacements have
 accumulated, so a caller that only ever sets state still makes progress.
 
-## Coalescing semantics
+### Coalescing semantics
 
 Only `is_coalescible()` kinds collapse, and only into an **identical, adjacent**
 predecessor:
 
-```
+```text
 set_heading(90); forward(10); set_heading(45)
 ```
 
@@ -650,7 +650,7 @@ by up to one coalescible command. A paused interpreter should call `flush()` so
 trailing state is published — the `Host` adapter does this, and the Qt bridge's
 poll timer picks up the rest.
 
-## The Qt bridge
+### The Qt bridge
 
 `qt_bridge.hpp` is the only Qt-facing file in `native/`. It hands work to the GUI
 thread with `QMetaObject::invokeMethod(..., Qt::QueuedConnection)`, Qt's
@@ -670,7 +670,7 @@ Signals are emitted **per batch, never per command** — a count, not the comman
 The commands go to a plain `std::function` sink, because emitting a signal per
 command would reintroduce exactly the cost the queue exists to remove.
 
-## Measured
+### Measured
 
 `tools/canvas_queue_bench.cpp`, GCC 16.1, `-O3`:
 
@@ -687,7 +687,7 @@ coalescing figure is the payoff — **1,000,000 consecutive state changes collap
 to 977 published records**, so the Qt bridge posts ~977 event-loop wakeups rather
 than 1,000,000. Signalling per command would have cost 1,000,000 posts.
 
-## Verification
+### Verification
 
 * **6,078 checks** in `canvas_queue_tests`, covering the value type, round trips,
   payloads that wrap the ring, coalescing (including that geometry is never
@@ -700,7 +700,7 @@ than 1,000,000. Signalling per command would have cost 1,000,000 posts.
   not flaky.
 * Warning-free under the strict flag set, with `-Werror` on.
 
-## The bug the tests caught
+### The bug the tests caught
 
 `close()` originally unblocked a parked producer by calling `tail_.notify_all()`.
 It deadlocked, and the reason is easy to get wrong:
@@ -722,13 +722,13 @@ queue's: one asserted that a 200,000-command run must have blocked the producer
 two pushed more commands than the ring holds without draining, which deadlocks
 *by design* under a never-drop policy.
 
-# Background debugger runner (`timewarp_debugger`)
+## Background debugger runner (`timewarp_debugger`)
 
 Runs a Scheme program on its own thread and services pause, step, breakpoint and
 stop requests from the GUI thread. Built only when Qt6 is found; the debugging
 *logic* lives in `timewarp_scheme` and needs no Qt at all.
 
-## The problem it replaces
+### The problem it replaces
 
 The Python IDE runs programs on a worker thread and drives the debugger from the
 GUI thread. That works, but the two directions of control are asymmetric and the
@@ -737,7 +737,7 @@ through Qt signals, while pause/step/continue travel the other way through share
 mutable state that both threads read. There is no single place that says what a
 "pause request" *is*, so every new control has to reinvent the handshake.
 
-## Design
+### Design
 
 **`DebuggerRunner` subclasses `QThread`, and `run()` is the interpreter loop.**
 It is not a Qt event loop. That is the whole design, and it has one consequence
@@ -755,7 +755,7 @@ interpreter state. The reverse direction *does* use signals, because Qt signals
 emitted from a worker thread are genuinely safe and arrive queued on the GUI
 thread.
 
-### The command channel
+#### The command channel
 
 ```text
 GUI thread                          runner thread
@@ -777,7 +777,7 @@ that lands between the two cannot be slept through.
 `Stop` is sticky as well as posted, so it survives the case where the runner is
 not parked at all — including a stop requested before the thread has even started.
 
-### Breakpoints
+#### Breakpoints
 
 Replacement sets are published under a mutex with an atomic generation counter.
 The runner caches the set and only re-reads it when the generation changes, so the
@@ -792,7 +792,7 @@ line, so a breakpoint added there would silently never fire. Over-stopping is
 recoverable with one extra press of continue; a breakpoint that does nothing is
 not. This is a deliberate choice, not an oversight.
 
-## Making the machine resumable
+### Making the machine resumable
 
 The evaluator already was a state machine — `mode_` plus the frame stack fully
 describe where execution has got to — so what changed is that the loop can now
@@ -822,7 +822,7 @@ Two details make the resumption exact:
   off the step count, which is precise: the parked form keeps its count until it
   is charged, and anything after it has moved on.
 
-## Tail calls versus a visible call stack
+### Tail calls versus a visible call stack
 
 The conflict is real. A naive "one frame per call" activation marker turns a
 tail-recursive loop with a million iterations into a million markers. The
@@ -842,7 +842,7 @@ a stack shape that no longer exists — and the next tail call is silently lost.
 test recurses 300 times through a nested call followed by a tail call specifically
 to pin that down.
 
-## Source maps
+### Source maps
 
 `Value` is a 16-byte tagged union chosen for cheap copying, and `Pair` is two
 `Value`s with nothing to spare. Widening either would tax every value to serve a
@@ -856,7 +856,7 @@ position at all.
 not at the `define`. The body is a cdr node, and its recorded span is the whole
 definition, so the naive lookup points at line 1 of a multi-line `define`.
 
-## Verification
+### Verification
 
 * **192 checks** in `debug_tests` (Qt-free): line tracking through comments,
   multi-line forms and multi-line strings; form spans including nested ones; the
@@ -878,7 +878,7 @@ definition, so the naive lookup points at line 1 of a multi-line `define`.
   destructor-joins are the parts most likely to hang, so they get the repeats.
 * Warning-free under the strict flag set, with `-Werror` on.
 
-## The bugs the tests caught
+### The bugs the tests caught
 
 * **A nested call losing the tail call that followed it** — the base bookkeeping
   described above. The tail-call tests passed the whole time; only the
@@ -910,7 +910,7 @@ definition, so the naive lookup points at line 1 of a multi-line `define`.
   `~QObject` discards its pending events and the functor cannot outlive what it
   captured. This is the failure mode `make asan` exists for.
 
-## Known limits, stated plainly
+### Known limits, stated plainly
 
 * Stop granularity is a compound form. A program of nothing but literals has no
   compound forms, so nothing is checked between the first form and the end.
@@ -921,7 +921,7 @@ definition, so the naive lookup points at line 1 of a multi-line `define`.
   that line. The line reported at a stop is the one the form opens on, so the two
   are at least consistent with each other.
 
-# Desktop UI (`timewarp_ui`)
+## Desktop UI (`timewarp_ui`)
 
 The main-window layout in Qt 6 Widgets, translated from the PySide6
 implementation's `main_window.py`. That implementation has since been removed from
@@ -929,7 +929,7 @@ the repository: this is the *layout* -- the widget tree, the container structure
 and every sizing decision -- not the panels themselves, which are thousands of
 lines each and are represented by clearly labelled stand-ins.
 
-## The widget tree
+### The widget tree
 
 ```text
 QMainWindow                                   #mainWindow
@@ -961,7 +961,7 @@ Geometry that is load-bearing is transcribed rather than re-derived, and asserte
 `childrenCollapsible(false)` everywhere (a zero-width pane leaves no handle to
 drag back), the handle widths, the stretch factors, and the initial sizes.
 
-## Why a `ResizableTabWidget`
+### Why a `ResizableTabWidget`
 
 `QTabWidget::minimumSizeHint()` is the **maximum** of every page's hint. Qt hides
 pages by reparenting them out of the layout, but the hint still considers all of
@@ -972,7 +972,7 @@ page instead. That single change is what makes the right-hand column draggable a
 the window resizable on a small display, and it is asserted directly: a 1400x900
 page next to a 60x40 page must still report a 100x100 minimum.
 
-## What changed from the Python, and why
+### What changed from the Python, and why
 
 | Change | Reason |
 | --- | --- |
@@ -985,7 +985,7 @@ page next to a 60x40 page must still report a 100x100 minimum.
 | **Widgets are named** | `saveState()` silently skips an unnamed toolbar or dock, the stylesheet scopes by name, and the tests locate nodes by name. Naming is a precondition for two of those, not a nicety. |
 | **Standard key sequences** | `QKeySequence::New/Open/Save` instead of literal `Ctrl+N`, so the same code produces `Cmd+N` on macOS. The tooltip keeps the Linux spelling. |
 
-## Verification
+### Verification
 
 * **146 checks** in `ui_layout_tests`, run offscreen so they need no display and
   belong in the normal CTest set. They assert the tree shape, parent/child
@@ -1025,7 +1025,7 @@ page next to a 60x40 page must still report a 100x100 minimum.
   passed either way, and the status bar painting a message on top of the document
   path was visible in exactly one place and nowhere else.
 
-## Two findings from rendering it
+### Two findings from rendering it
 
 * **The toolbar did not fit a 1400px window.** The single flat toolbar carries
   thirteen controls, and the trailing ones (Clear Canvas, A+, the turtle speed
@@ -1039,7 +1039,7 @@ page next to a 60x40 page must still report a 100x100 minimum.
   window opens a real `CodeEditor`, and closing it goes through the same path the
   rest of the documents do.
 
-## The editor and documents
+### The editor and documents
 
 `CodeEditor` is a `QPlainTextEdit` with a line-number gutter, a current-line
 highlight and cursor tracking. On top of it the window implements the document
@@ -1063,7 +1063,7 @@ wrong name.
 * Newlines are normalised to `\n` on load, as the Python editor does; a CRLF file
   therefore round-trips as LF.
 
-## The canvas, and what runs
+### The canvas, and what runs
 
 **All ten languages run.** Scheme goes through the C++ interpreter on a background
 thread; BASIC, PILOT, Logo, COMAL and REXX go through the **Python bridge**, which
@@ -1075,7 +1075,7 @@ The bridge exists because reimplementing nine languages is the work it postpones
 Python is the oracle while each language is ported, and a language stops being
 routed to it the day its C++ interpreter lands.
 
-## The lesson panel
+### The lesson panel
 
 The right column's **Lessons** tab is the one page of the application that is a real
 port rather than a `PlaceholderPanel`. `LessonPanel` (`src/ui/panels.cpp`) is a *view*: it
@@ -1103,7 +1103,7 @@ thread and hands each command to the widget. The canvas keeps a mirror of the
 turtle state, a display list of everything drawn in world coordinates, and a
 painter.
 
-### How the bridge captures a drawing
+#### How the bridge captures a drawing
 
 `QueuedTurtleHost` translates the C++ interpreter's turtle calls one-to-one. The
 Python side cannot do that -- the reference *is* the interpreter -- so it **diffs
@@ -1122,7 +1122,7 @@ The protocol lives in `native/bridge/worker.py` and is documented at
 the top of that file. It is one JSON object per line, because a line is the only
 framing a pipe gives you for free.
 
-### The conventions are the reference's, not the obvious ones
+#### The conventions are the reference's, not the obvious ones
 
 Transcribed from `graphics/turtle_state.py`, and asserted in
 `turtle_canvas_tests`, because a canvas that draws a mirrored or quarter-turned
@@ -1139,7 +1139,7 @@ That last one matters: asking the painter for a smooth arc would be prettier and
 would not match the Python build. Matching also means the two agree on how many
 strokes a circle costs.
 
-### Design decisions worth knowing
+#### Design decisions worth knowing
 
 * **A display list, not a pixmap.** Repainting on resize, zoom and pan needs the
   geometry again; a pixmap would go blurry when zoomed and cannot be
@@ -1159,7 +1159,7 @@ strokes a circle costs.
   `commandsIgnored()` and the run's status message report them rather than leaving a
   silently missing shape.
 
-## Known gaps, stated plainly
+### Known gaps, stated plainly
 
 * The variables, telemetry HUD, debug, terminal and outline panels are still
   `PlaceholderPanel`s naming the Python module they stand for. The layout is real;
@@ -1180,7 +1180,7 @@ strokes a circle costs.
   dialog in the program -- and the one place a scripted run could block. Nothing in
   the tests or in CI reaches it.
 
-# Where this is going
+## Where this is going
 
 `docs/ROADMAP.md` is the live list. This is the part of it that belongs to the
 application rather than to the engines.

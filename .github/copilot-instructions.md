@@ -21,20 +21,20 @@ Python is a temporary engine the Qt app spawns (see "The language bridge").
 ### Implementation
 
 - **Qt application (C++20)** — the product, and the only maintained UI.
-    - Entry point: `native/tools/time_warp_ide.cpp`
-    - Build: `cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release && cmake --build native/build -j`
-    - Shell: `native/src/ui/main_window.cpp`; canvas `native/src/ui/turtle_canvas.cpp`;
-      editor `native/src/ui/code_editor.cpp`; languages `native/src/ui/language.cpp`
-    - Engines that are already native: Scheme (`timewarp_scheme`, an explicit-stack
-      CEK machine, dispatched in-process) and the expression evaluator
-      (`timewarp_expr` -- built and gated, but nothing links it yet, so expressions
-      inside a Run still come from the bridge).
+  - Entry point: `native/tools/time_warp_ide.cpp`
+  - Build: `cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release && cmake --build native/build -j`
+  - Shell: `native/src/ui/main_window.cpp`; canvas `native/src/ui/turtle_canvas.cpp`;
+    editor `native/src/ui/code_editor.cpp`; languages `native/src/ui/language.cpp`
+  - Engines that are already native: Scheme (`timewarp_scheme`, an explicit-stack
+    CEK machine, dispatched in-process) and the expression evaluator
+    (`timewarp_expr` -- built and gated, but nothing links it yet, so expressions
+    inside a Run still come from the bridge).
 - **The language bridge (Python, temporary)** — `native/bridge/`.
-    - Nine languages (everything except Scheme) are *not* ported yet, so the
-      IDE runs them through `native/bridge/worker.py`, which drives the retained
-      Python engine and streams JSON lines back (drawing, output, input, errors).
-    - Protocol: `run`/`in-reply`/`stop` in; `ready`/`out`/`canvas`/`pose`/`err`/`in`/`done` out.
-    - It exists to be deleted: each language ported to C++ removes its bridge path.
+  - Nine languages (everything except Scheme) are *not* ported yet, so the
+    IDE runs them through `native/bridge/worker.py`, which drives the retained
+    Python engine and streams JSON lines back (drawing, output, input, errors).
+  - Protocol: `run`/`in-reply`/`stop` in; `ready`/`out`/`canvas`/`pose`/`err`/`in`/`done` out.
+  - It exists to be deleted: each language ported to C++ removes its bridge path.
 
 **Critical Design Decision:** Language executors are stateless command processors returning text output. All UI state (turtle canvas, output display, themes) lives in the Qt application, not in an interpreter. Drawing crosses the bridge as commands on a `CanvasCommandQueue`, which the GUI thread drains into `TurtleCanvas`.
 
@@ -49,6 +49,7 @@ def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) 
 ```
 
 **Two execution modes:**
+
 - **Whole-program executors** (3 active languages: Scheme, CHIP-8 and Smalltalk): Receive the entire source as a string. Registered in `_WHOLE_PROGRAM_EXECUTORS` dict in `core/interpreter.py`.
 - **Line-by-line executors** (7 active languages: BASIC, APL, Logo, PILOT, FOCAL, COMAL and REXX): The interpreter iterates lines and calls the executor per statement.
 
@@ -74,6 +75,7 @@ make -C native run
 ```
 
 **System Requirements**
+
 - Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler
 - Python 3.10+ **only** for the nine bridged languages; Scheme runs in-process
   with no Python at all
@@ -99,10 +101,11 @@ cd native/tools && python3 scheme_differential_check.py
 # The documentation gates, which .github/workflows/docs.yml runs on every docs
 # change; the teach.py write-plans output is then checked with git diff --exit-code
 python3 native/tools/teach.py validate
-npx --yes markdownlint-cli2 --config .markdownlint.json docs/ README.md CHANGELOG.md CONTRIBUTING.md `.github/*.md`
+make lint-md
 ```
 
 **Test Organization:**
+
 - `native/tests/*_tests.cpp` = the 11 C++ suites (lexer, evaluator, scheme, canvas queue,
   canvas bridge, debug, debugger runner, ui layout, ui document, turtle canvas, python bridge)
 - `native/tools/example_smoke.py` = every `Examples/**` program through the bridge; the 14
@@ -114,21 +117,22 @@ npx --yes markdownlint-cli2 --config .markdownlint.json docs/ README.md CHANGELO
 
 1. Create the executor. A language with no C++ implementation runs in the bridge:
    `native/bridge/time_warp/languages/my_lang.py`:
-```python
-from __future__ import annotations
-from typing import TYPE_CHECKING
 
-if TYPE_CHECKING:
-    from ..core.interpreter import Interpreter
-    from ..graphics.turtle_state import TurtleState
+   ```python
+   from __future__ import annotations
+   from typing import TYPE_CHECKING
 
-def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) -> str:
-    """Execute MyLang source code."""
-    output_lines = []
-    # Parse and execute source
-    output_lines.append("✅ MyLang output")
-    return "\n".join(output_lines) + "\n"
-```
+   if TYPE_CHECKING:
+       from ..core.interpreter import Interpreter
+       from ..graphics.turtle_state import TurtleState
+
+   def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) -> str:
+       """Execute MyLang source code."""
+       output_lines = []
+       # Parse and execute source
+       output_lines.append("✅ MyLang output")
+       return "\n".join(output_lines) + "\n"
+   ```
 
 2. Register it in the bridge:
    - Import: `from ..languages.my_lang import execute_my_lang` in `native/bridge/time_warp/languages/__init__.py`
@@ -159,6 +163,7 @@ def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) 
 ## Project-Specific Conventions
 
 ### Emoji Prefixes (Universal Pattern)
+
 - `❌` = Errors/exceptions
 - `✅` = Success confirmations
 - `ℹ️` = Informational messages
@@ -168,7 +173,9 @@ def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) 
 - `📝` = Input prompts
 
 ### Safe Expression Evaluation
+
 **Never use `eval()` directly.** Use the `ExpressionEvaluator` class for math expressions:
+
 ```python
 from time_warp.utils.expression_evaluator import ExpressionEvaluator
 evaluator = ExpressionEvaluator(variables={"X": 5})
@@ -178,6 +185,7 @@ result = evaluator.evaluate("2 + 3 * X")  # Returns 17
 ## Integration Points to Watch
 
 ### Turtle Graphics State
+
 - Turtle state managed via `graphics/turtle_state.py` in the bridge, and by
   `TurtleCanvas` in the Qt application, which owns the display list
 - Graphics rendered with the Qt painter with zoom/pan support in `native/src/ui/turtle_canvas.cpp`
@@ -187,6 +195,7 @@ result = evaluator.evaluate("2 + 3 * X")  # Returns 17
   `x += d*sin(h), y += d*cos(h)`; `circle` is a polygon walk
 
 ### Theme System
+
 `native/src/ui/ui_style.cpp` owns the Qt styling. It does not yet carry the 33 themes
 of the removed PySide6 implementation: that is tracked as pending work in
 `docs/ROADMAP.md`. Do not describe themes as ported until they are.
@@ -280,6 +289,7 @@ The removed PySide6 application's dependencies are no longer installed or refere
 ### Error Handling Patterns
 
 All interpreter errors are returned as strings with emoji prefixes:
+
 - `❌` for errors
 - `ℹ️` for info messages
 - `🎨` for theme changes
@@ -297,18 +307,21 @@ and applied through QSS plus a palette in `native/src/ui/ui_style.cpp`. See
 - Follow development best practices.
 
 ### Interpreter-UI Communication
+
 - Commands executed through `Interpreter.execute()` method
 - Results displayed via Qt widgets and canvas
 - Error handling centralized through status messages
 - Input prompts handled through Qt input widgets
 
 ### Turtle Graphics Integration
+
 - Turtle state managed in `graphics/turtle_state.py`
 - Graphics rendered using Qt painter with zoom/pan support in `ui/canvas.py`
 - Canvas clearing and setup handled automatically per execution
 - Compatible with existing turtle graphics commands
 
 ### Screen Mode Management
+
 - **Text**: Text mode with configurable cols/rows via `ScreenConfig`
 - **Graphics**: Full canvas with 2D drawing using Qt painter
 - **Turtle Graphics**: Integrated with canvas

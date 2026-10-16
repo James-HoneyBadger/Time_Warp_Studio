@@ -36,11 +36,9 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
 - [ ] Run spell check / link validation for key documents
 - [ ] `python3 native/tools/teach.py validate` is silent, and regenerating the
       plans (`teach.py write-plans docs/lessons/plans`) leaves no diff
-- [ ] No **new** markdown lint findings — run `npx --yes markdownlint-cli2
-      --config .markdownlint.json docs/ README.md CHANGELOG.md CONTRIBUTING.md
-      SECURITY.md '.github/*.md'` and compare with the previous release. The
-      `Markdown Lint` workflow is advisory, and four files carry findings that
-      predate this release (see `DEPLOYMENT.md`)
+- [ ] Markdown lint is clean — `make lint-md` (the editor lints the same file set;
+      see `.vscode/settings.json`). The `Markdown Lint` workflow stays advisory, for
+      the reason recorded in `DEPLOYMENT.md`
 
 ## GitHub Preparation
 
@@ -54,15 +52,18 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
 ### Release Assets
 
 - [ ] Build the application
+
   ```bash
   cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
   cmake --build native/build -j
   ```
+
   > Installer packaging (Linux packages, Windows installers) is not built yet;
   > see `docs/ROADMAP.md`. Until it is, a release ships sources plus the
   > binary built above.
 
 - [ ] Package the examples (optional)
+
   ```bash
   tar -czf time-warp-examples-vX.Y.Z.tar.gz Examples/
   ```

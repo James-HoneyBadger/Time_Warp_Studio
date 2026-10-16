@@ -32,7 +32,7 @@ and what a reader of the merged history scrolls to.
 | Example corpus | `make smoke` | <!-- all 48, stroke counts unmoved --> |
 | Command coverage | `python3 native/tools/command_matrix.py` | <!-- 429 rows, 0 failed, 0 gaps --> |
 | Lesson curriculum | `python3 native/tools/teach.py validate` | <!-- clean, or "not run — no lesson changed" --> |
-| Documentation lint | `npx markdownlint-cli2 --config .markdownlint.json docs/ README.md CHANGELOG.md CONTRIBUTING.md SECURITY.md '.github/*.md'` | <!-- no *new* findings --> |
+| Documentation lint | `make lint-md` | <!-- 0 issues --> |
 
 ## Checklist
 
