@@ -1,6 +1,6 @@
 # Architecture Guide
 
-## Time Warp Studio v14.1.2 — System Design and Implementation
+## Time Warp Studio v15.0.0 — System Design and Implementation
 
 > **Accuracy note.** Parts of this page were written for the PySide6
 > implementation that has since been **removed**. Anything naming `ui/*.py`,

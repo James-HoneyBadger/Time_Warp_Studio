@@ -1,13 +1,20 @@
 # Changelog
 
-## The Qt application is now the product
+## [15.0.0] - 2026-10-16
+
+The implementation was replaced wholesale: Time Warp Studio is now a C++20 / Qt6
+desktop application, and the language lineup and packaging that went with the previous
+implementation are gone. Both changes were made after `v14.1.2` and shipped together,
+so both are recorded here.
+
+### The Qt application is now the product
 
 Time Warp Studio is a **C++20 / Qt6 desktop application** (`native/`). The PySide6
 implementation that came before it has been **removed**; what remains of Python is a
 temporary bridge the Qt application spawns for the five languages that are not ported
 yet.
 
-### Added
+#### Added
 
 - **Qt application** (`native/`) — `time_warp_ide`: documents and tabs, code editor
   with line-number gutter and current-line highlight, streaming output console with
@@ -27,13 +34,13 @@ yet.
   table for completeness.
 - **CI** (`.github/workflows/native.yml`) covering the build, the suites and the gates.
 
-### Removed
+#### Removed
 
 - The entire PySide6 application, its launchers (`run.py`, `run.sh`), its Docker and
   developer tooling, and the workflows that packaged and published it.
 - The C, Pascal, Prolog, Forth, Brainfuck and Python executors.
 
-### Fixed during the port's examination
+#### Fixed during the port's examination
 
 Examining every documented command through the real bridge turned up defects that no
 gate had been looking for:
@@ -57,14 +64,14 @@ gate had been looking for:
 - **`JOYINIT`** reported an absent *optional* backend with the error prefix, which the
   IDE presents as the program failing.
 
-## Language lineup change — six active languages
+### Language lineup change — six active languages
 
 Time Warp Studio now ships exactly **six** languages: **BASIC, PILOT, Logo,
 COMAL, REXX, and Scheme**. The C, Pascal, Prolog, Forth, Brainfuck, and Python
 executors have been removed from the product, along with their examples,
 tutorials, snippets, lessons, and tests.
 
-### Added
+#### Added
 
 - **COMAL** executor (`languages/comal.py`) — structured BASIC with
   `IF/ELIF/ELSE/ENDIF`, `FOR/NEXT`, `WHILE/ENDWHILE`, `REPEAT/UNTIL`,
@@ -83,14 +90,14 @@ tutorials, snippets, lessons, and tests.
   programs (`Examples/comal/`, `Examples/rexx/`, `Examples/scheme/`), code
   snippets, and two guided lessons per new language.
 
-### Removed
+#### Removed
 
 - Executors: `brainfuck.py`, `c_lang_fixed.py`, `forth.py`, `pascal.py`,
   `prolog.py`, `python_lang.py`, plus their tests, examples, and tutorials.
 - `Language` enum members `C`, `PASCAL`, `PROLOG`, `FORTH`, `BRAINFUCK` and
   `PYTHON_LANG`.
 
-### Changed
+#### Changed
 
 - `_WHOLE_PROGRAM_EXECUTORS` now contains Scheme only; the subprocess sandbox
   applies to Scheme.

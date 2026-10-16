@@ -1,5 +1,8 @@
 [Desktop Entry]
 Type=Application
+# The version of the Desktop Entry specification, not the product version. This stays
+# 1.0; the product version lives in the repository's VERSION file and reaches the
+# application through CMake.
 Version=1.0
 Name=Time Warp Studio
 GenericName=Educational Programming Environment

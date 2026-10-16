@@ -1,10 +1,12 @@
 """
-Time Warp Studio - Python Implementation
-Educational programming environment supporting 9 languages
-Aligned with Time Warp Studio v14.1.2 release
+Time Warp Studio - language bridge engine
+
+The temporary Python engine that the Qt application spawns for the languages that
+are not ported to C++ yet, and the reference the native engines are checked against.
+Aligned with Time Warp Studio v15.0.0 release
 """
 
-__version__ = "14.1.2"
+__version__ = "15.0.0"
 __author__ = "James-HoneyBadger"
 
 from typing import TYPE_CHECKING, Any

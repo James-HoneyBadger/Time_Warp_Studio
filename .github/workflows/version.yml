@@ -1,0 +1,40 @@
+name: Version metadata
+
+# `VERSION` is the single source of truth. The Qt application reads it at configure
+# time, so the binary, the window title and the About box cannot drift; what can drift
+# are the copies a person writes by hand. This job is deliberately tiny and separate
+# from the native build: it has to run on documentation and script changes, which the
+# C++ workflow does not watch, and it should answer in seconds rather than after a
+# five-minute build.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'VERSION'
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'docs/**'
+      - 'Scripts/**'
+      - 'native/bridge/time_warp/__init__.py'
+      - '.github/workflows/version.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'VERSION'
+      - 'README.md'
+      - 'CHANGELOG.md'
+      - 'docs/**'
+      - 'Scripts/**'
+      - 'native/bridge/time_warp/__init__.py'
+      - '.github/workflows/version.yml'
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Every hand-written copy agrees with VERSION
+        run: python3 Scripts/version_sync.py

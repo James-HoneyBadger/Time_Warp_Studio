@@ -12,6 +12,10 @@
 
 cmake_minimum_required(VERSION 3.20)
 
+# The CMake project version of this target set. It is *not* the product version: the
+# product version is read from the repository's VERSION file further down and compiled
+# into the UI as TIME_WARP_VERSION, so the window title and the packaged release cannot
+# disagree. Do not set this to the release number expecting the About box to follow.
 project(timewarp_expr
     VERSION 1.0.0
     DESCRIPTION "Time Warp Studio expression lexer and evaluator (C++20 port)"

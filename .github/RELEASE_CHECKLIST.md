@@ -4,9 +4,20 @@
 
 ### Version Updates
 
+`VERSION` is the source of truth: the Qt application reads it at configure time, so
+the binary, the window title and the About box follow on their own. Everything else is
+a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by the
+`Version metadata` workflow.
+
 - [ ] Set `VERSION` to the new release number
-- [ ] Run `python3 Scripts/version_sync.py --write --release-date YYYY-MM-DD`
-- [ ] Update versioned release text in docs that are intentionally human-authored
+- [ ] Add a `## [X.Y.Z] - YYYY-MM-DD` section to `CHANGELOG.md`. The script checks that
+      this exists but will not write it: the newest heading in that file is usually a
+      release that has already shipped, so renaming it would rewrite history
+- [ ] Run `python3 Scripts/version_sync.py --write` to update the copies it owns (the
+      bridge package metadata, the README badge, the architecture guide title)
+- [ ] Run `python3 Scripts/version_sync.py` and confirm it exits 0 before tagging
+- [ ] Check any prose that names a version by hand — the script only knows the places
+      listed above
 
 ### Testing
 
