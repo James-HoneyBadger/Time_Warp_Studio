@@ -193,3 +193,37 @@ def test_a_comment_line_produces_nothing() -> None:
 
 def test_a_good_line_produces_no_error() -> None:
     assert no_errors(run("+/⍳10", APL))
+
+
+# -- regressions -------------------------------------------------------------
+
+
+def test_format_renders_digits_rather_than_a_character_code() -> None:
+    """`⍕42` is the digits "42".
+
+    `_format` took the nested-display path, which reads a number as the character
+    with that code — chr(42) is "*" — so the digits were replaced by an asterisk.
+    """
+    assert text("⍕42").strip() == "42"
+
+
+def test_keyword_spellings_of_reduce_and_scan() -> None:
+    r"""`+REDUCE` and `+SCAN` are the keyword forms of `+/` and `+\`.
+
+    The operator split compared raw tokens, so only the glyph spelling derived a
+    function, and the keyword form complained that REDUCE had no value.
+    """
+    assert text("+REDUCE 1 2 3").strip() == "6"
+    assert text("+SCAN 1 2 3").strip() == "1 3 6"
+
+
+def test_signum_of_a_negative_is_negative_one() -> None:
+    """APL writes negative one as `¯1`, which is not where an underscore would
+    be on the keyboard."""
+    assert text("× ¯3").strip() == "¯1"
+
+
+def test_grade_down_returns_positions_in_descending_value_order() -> None:
+    """`⍒1 3 2` is `2 3 1`: position 2 holds 3, position 3 holds 2, position 1
+    holds 1."""
+    assert text("⍒ 1 3 2").strip() == "2 3 1"

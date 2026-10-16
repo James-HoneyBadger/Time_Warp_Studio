@@ -18,9 +18,17 @@ Supported commands:
         SETXY, HIDETURTLE, SHOWTURTLE, SETHEADING, TEXT, DOT, STAMP, ...)
     F:  File operations (OPEN, CLOSE, READ, WRITE)
     D:  Delay in seconds
-    L:  Link/Load (lesson chaining)
     E:  End subroutine (return) or, at top level, end the program
     H:  Hint (educational feedback message)
+
+Label declarations are their own line, either form:
+    L: NAME     the form the loader registers (see _parse_standard_program)
+    *NAME
+
+`LINK` and `LOAD` are **not** implemented. An earlier revision advertised them as
+lesson chaining, but a line beginning `L:` is a label declaration and always has
+been, so the unit could never run; it now reports that instead of returning
+nothing, which is the shape of failure that reads as success.
 
 Conditional suffixes:
     TY: / TN:  Execute only if last M: matched / didn't match
@@ -101,11 +109,15 @@ def execute_pilot(
         "GRAPHIC": "G",
         "FILE": "F",
         "DELAY": "D",
-        "LINK": "L",
         "HINT": "H",
-        "LOAD": "L",
         "NO": "N",
     }
+    # A lesson cannot be chained: `L:` is a label declaration (see the docstring),
+    # so these two long forms would recurse into that guard and return nothing.
+    # Reporting is the point -- silence here is indistinguishable from success.
+    if cmd_upper in ("LINK", "LOAD") or cmd_upper.startswith(("LINK ", "LINK:", "LOAD ", "LOAD:")):
+        return f"\u274c {cmd_upper.split(':')[0].split()[0]}: lesson chaining is not implemented\n"
+
     for keyword, letter in _LONGFORM_MAP.items():
         if (
             cmd_upper == keyword
@@ -327,28 +339,6 @@ def execute_pilot(
                 time.sleep(min(max(0.0, delay), 10.0))
         except ValueError:
             return "❌ D: requires numeric delay in seconds\n"
-        return ""
-    if cmd_type == "L":
-        # L: Link/Load — lesson chaining (validates and optionally loads workspace file)
-        lesson = rest.strip().strip("\"'")
-        if lesson:
-            try:
-                validate_file_path(lesson, base_dir=".")
-            except ValidationError as e:
-                return f"❌ L: {e}\n"
-            interpreter.variables["_LESSON_LINK"] = lesson
-            svc = getattr(interpreter, "file_service", None)
-            if svc is not None and any(
-                lesson.lower().endswith(ext) for ext in (".pilot", ".pil", ".txt")
-            ):
-                try:
-                    resolved = svc.resolve_path(lesson, for_write=False, must_exist=False)
-                    if resolved.is_file():
-                        content = resolved.read_text(encoding="utf-8")
-                        interpreter.string_variables["_LESSON_CONTENT$"] = content
-                except ValidationError as e:
-                    return f"❌ L: {e}\n"
-            return f"📎 Lesson link: {lesson}\n"
         return ""
     if cmd_type == "H":
         # H: Hint — educational feedback message

@@ -429,7 +429,9 @@ def _grade_down(right: Any) -> Any:
 
 def _format(right: Any) -> Any:
     """``⍕`` is the character form of a value, packed into a single string."""
-    return _display(right, nested=True)
+    # Not the character path: 42 is the number forty-two, and rendering it as
+    # chr(42) printed "*" where the digits belonged.
+    return _display(right, nested=False)
 
 
 def _reduce(operation: str, right: Any) -> Any:
@@ -789,11 +791,18 @@ def _apply_canonical(canonical: str, left: Any, right: Any) -> Any:
 # ---------------------------------------------------------------------------
 
 
-def _split_operator(tokens: list[str]) -> tuple[str, str] | None:
+def _split_operator(tokens: list[str]) -> tuple[str, int, str] | None:
     """Find ``f/`` or ``f\\`` — an operator with its function to the left.
 
-    Only at the top level. A ``/`` inside parentheses belongs to the expression
-    in there, and treating it as the operator for the whole line is what turned
+    Returns ``(function, index, operator)``, where *operator* is the canonical
+    ``/`` or ``\\`` and *index* is where it sits. The token is canonicalised
+    before it is compared, which is what makes the keyword spellings REDUCE and
+    SCAN work: they are aliases for those two symbols, and comparing the raw token
+    meant the aliases were documented as accepted and then reported as unknown
+    variables.
+
+    Only at the top level. A ``/`` inside parentheses belongs to the expression in
+    there, and treating it as the operator for the whole line is what turned
     ``(+/X) ÷ ⍴X`` into a fragment with an unmatched bracket.
     """
     depth = 0
@@ -804,11 +813,13 @@ def _split_operator(tokens: list[str]) -> tuple[str, str] | None:
         if token == ")":
             depth -= 1
             continue
-        if depth or token not in ("/", "\\"):
+        if depth:
+            continue
+        if _canonical(token) not in ("/", "\\"):
             continue
         if index == 0:
             raise AplError("an operator needs a function on its left, as in +/")
-        return _canonical(tokens[index - 1]), token
+        return _canonical(tokens[index - 1]), index, _canonical(token)
     return None
 
 
@@ -821,8 +832,7 @@ def _evaluate(
     operator = _split_operator(tokens)
     if operator is None:
         return _expression(tokens, variables, turtle, state)
-    glyph, kind = operator
-    index = tokens.index(kind)
+    glyph, index, kind = operator
     if glyph not in _SCALARS:
         raise AplError(f"{glyph} cannot be used with {kind}")
     # The derived function's argument is everything to the right, which may

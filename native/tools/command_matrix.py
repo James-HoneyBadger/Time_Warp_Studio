@@ -38,6 +38,7 @@ import collections
 import json
 import os
 import pathlib
+import re
 import subprocess
 import sys
 import threading
@@ -230,6 +231,11 @@ def judge(row, result: dict) -> tuple[bool, str]:
     return True, ""
 
 
+def _language_key(name: str) -> str:
+    """A language name with case and punctuation removed, for comparisons."""
+    return re.sub(r"[^a-z0-9]", "", name.lower())
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--language", help="only this language (case-insensitive)")
@@ -242,7 +248,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--json", help="write the full results to this path")
     options = parser.parse_args(argv)
 
-    rows = [r for r in ROWS if not options.language or r.language.lower() == options.language.lower()]
+    # Compared with punctuation removed, because a row labels its language the way
+    # a person writes it ("CHIP-8") while the inventory keys it by module name
+    # ("chip8"). `--language chip8` should find both.
+    wanted = _language_key(options.language) if options.language else ""
+    rows = [r for r in ROWS if not wanted or _language_key(r.language) == wanted]
     if not rows:
         print(f"no rows for {options.language!r}", file=sys.stderr)
         return 1

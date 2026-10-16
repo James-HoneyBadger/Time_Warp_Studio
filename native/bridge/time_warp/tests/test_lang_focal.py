@@ -178,3 +178,48 @@ def test_ask_requests_input() -> None:
     interp.execute(turtle)
     assert interp.pending_input is not None
     assert interp.pending_input.var_name == "N"
+
+
+# -- regressions -------------------------------------------------------------
+
+
+def test_ask_answer_reaches_the_program() -> None:
+    """The value ASK reads is visible to the statements that follow it.
+
+    ASK recorded the answer in a private dictionary, so the prompt appeared and
+    the answer went nowhere: `T N` printed 0.00 whatever was typed.
+    """
+    output = run('01.10 ASK "How many? " N\n01.20 T "You said ",N', FOCAL, input_val="42")
+    assert has(output, "You said 42.00")
+    assert no_errors(output)
+
+
+def test_fpi_and_fran_need_no_parentheses() -> None:
+    """FOCAL writes `T FPI`, not `T FPI()`.
+
+    Requiring the parentheses made the documented form fall through to the
+    variable lookup, where an unset name is 0, and print 0.00.
+    """
+    output = run("01.10 T FPI", FOCAL)
+    assert has(output, "3.14")
+    assert no_errors(output)
+
+    output = run("01.10 T FRAN", FOCAL)
+    # A fraction of [0, 1) at the default two decimals, so the integer part is
+    # a single zero rather than a value in the range.
+    assert has(output, "0.")
+    assert no_errors(output)
+
+
+def test_fpi_rejects_an_argument() -> None:
+    assert first_error(run("01.10 T FPI(1)", FOCAL)) is not None
+
+
+def test_ask_accepts_a_comma_before_the_name() -> None:
+    """Every other FOCAL statement separates its items with a comma, so
+    `ASK "How many? ", N` is the form a TYPE habit produces."""
+    spaced = run('01.10 ASK "How many? " N\n01.20 T "You said ",N', FOCAL, input_val="42")
+    comma = run('01.10 ASK "How many? ", N\n01.20 T "You said ",N', FOCAL, input_val="42")
+    assert has(comma, "You said 42.00")
+    assert no_errors(comma)
+    assert comma == spaced

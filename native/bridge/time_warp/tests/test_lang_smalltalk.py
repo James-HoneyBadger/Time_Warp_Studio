@@ -418,3 +418,16 @@ def test_unterminated_string() -> None:
 
 def test_a_good_program_reports_no_error() -> None:
     assert no_errors(run("1 + 1\n2 + 2", ST))
+
+
+# -- regressions -------------------------------------------------------------
+
+
+def test_bar_is_not_a_binary_selector() -> None:
+    """`|` groups temporaries in `| c |` and closes a block in `[:x | x]`.
+
+    Tokenising it as a binary selector swallowed both, so a block's argument list
+    turned into a message send.
+    """
+    assert text("| x |\nx := 3.\nx").strip() == "3"
+    assert text("[:x | x + 1] value: 41").strip() == "42"

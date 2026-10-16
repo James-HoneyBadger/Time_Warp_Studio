@@ -3,13 +3,12 @@
 Time Warp Studio actively implements and ships **10 programming languages**:
 BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 
-> **The reference below is complete for six of them.** BASIC, PILOT, Logo, COMAL,
-> REXX and Scheme have command sections, because they have been documented since
-> the beginning. **APL, FOCAL, CHIP-8 and Smalltalk are implemented, registered and tested** -
-> each has a test module and a worked example under `Examples/` - but their
-> reference sections have not been written yet, so they are described here by file
-> extension and example rather than by command table. `docs/ROADMAP.md` tracks the
-> gap rather than leaving it to be discovered.
+> **All ten have reference sections below.** Each language also has a test module
+> under `native/bridge/time_warp/tests/`, a worked example under `Examples/`, and
+> rows in `native/bridge/time_warp/tests/command_table.py`; running
+> `python3 native/tools/command_matrix.py` exercises every command through the
+> real bridge, so the tables here are checked against the code rather than
+> written from memory.
 
 ---
 
@@ -23,15 +22,19 @@ BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 4. [COMAL](#comal)
 5. [REXX](#rexx)
 6. [Scheme](#scheme)
+7. [APL](#apl)
+8. [FOCAL](#focal)
+9. [CHIP-8](#chip-8)
+10. [Smalltalk](#smalltalk)
 
-### Newer languages (example first, reference pending)
+Each language also has a worked example and a tutorial:
 
-| Language | Extensions | Start with |
-| --- | --- | --- |
-| **APL** | `.apl`, `.dyalog` | [`Examples/apl/arrays_and_turtle.apl`](../Examples/apl/arrays_and_turtle.apl) |
-| **FOCAL** | `.foc`, `.focal` | [`Examples/focal/square.foc`](../Examples/focal/square.foc) |
-| **CHIP-8** | `.ch8`, `.c8` | [`Examples/chip8/font_and_frames.ch8`](../Examples/chip8/font_and_frames.ch8) |
-| **Smalltalk** | `.st`, `.smalltalk` | [`Examples/smalltalk/shapes.st`](../Examples/smalltalk/shapes.st) |
+| Language | Extensions | Example | Tutorial |
+| --- | --- | --- | --- |
+| **APL** | `.apl`, `.dyalog` | [`arrays_and_turtle.apl`](../Examples/apl/arrays_and_turtle.apl) | [`docs/tutorials/apl.md`](tutorials/apl.md) |
+| **FOCAL** | `.foc`, `.focal` | [`square.foc`](../Examples/focal/square.foc) | [`docs/tutorials/focal.md`](tutorials/focal.md) |
+| **CHIP-8** | `.ch8`, `.c8` | [`font_and_frames.ch8`](../Examples/chip8/font_and_frames.ch8) | [`docs/tutorials/chip8.md`](tutorials/chip8.md) |
+| **Smalltalk** | `.st`, `.smalltalk` | [`shapes.st`](../Examples/smalltalk/shapes.st) | [`docs/tutorials/smalltalk.md`](tutorials/smalltalk.md) |
 
 ---
 
@@ -426,6 +429,7 @@ T: Quiz complete
 ```
 
 ---
+
 ## COMAL
 
 COMAL-80 adds structured programming to the BASIC family: `IF … ENDIF`,
@@ -685,6 +689,491 @@ Scheme is a small Lisp dialect. Operators come first and everything is a list.
 
 ---
 
+## APL
+
+Iverson's *A Programming Language* (1962; interactive APL\360 in 1966) is the one
+language here where the **shape** of the data is the program. Two of its
+properties surprise everyone the first time: there is **no operator precedence**,
+and most functions work on whole arrays rather than on single numbers.
+
+Executed line by line. Each line is an expression, and its value is displayed -
+which is exactly what APL's original interface did, and what makes it feel like a
+calculator you can write a program with.
+
+### Values
+
+```apl
+42             a scalar
+1 2 3          a vector (a "strand")
+2 3 ⍴ ⍳6       a 2-by-3 table
+'HELLO'        a character vector
+(1 2)(3 4)     a nested vector
+```
+
+`¯` is the negative sign, so `¯3` is minus three. `*` is **power**, not
+multiplication: APL is old enough that `*` meant exponentiation before C made it
+a multiplication sign. `×` is times.
+
+### There is no precedence
+
+A function takes the whole expression on its right. Evaluation is right to left.
+
+```apl
+2 × 3 + 4     14, not 10 - the + 4 happens first
+```
+
+### Scalar functions
+
+Scalar functions are **pervasive**: the operation reaches into arrays, which is
+why `1 2 3 + 10` and `1 2 3 + 4 5 6` both work while `1 2 3 + 4 5` is a length
+error.
+
+| Glyph | Keyword | Meaning |
+| ----- | ------- | ------- |
+| `+` `-` `×` `÷` | `PLUS` `MINUS` `TIMES` `DIVIDE` | Arithmetic |
+| `*` `⍟` | `POWER` `LOG` | Power and logarithm |
+| `⌈` `⌊` | `CEILING` / `FLOOR` | Round up or down with one argument; `MAX` / `MIN` with two |
+| `\|` | `ABS` / `RESIDUE` | Absolute value, or remainder |
+| `×` | `SIGNUM` | Sign: `× ¯3` is `¯1` |
+| `÷` | `RECIPROCAL` | Reciprocal |
+| `=` `≠` `<` `≤` `>` `≥` | `EQUAL` `NOTEQUAL` `LESS` `LESSEQ` `GREATER` `GREATEREQ` | Comparison |
+| `~` `∧` `∨` `⍲` `⍱` | `NOT` `AND` `OR` `NAND` `NOR` | Logic |
+| `?` | `ROLL` | Random integers |
+
+### Structural functions
+
+| Glyph | Keyword | Meaning |
+| ----- | ------- | ------- |
+| `⍳` | `IOTA` / `INDEXOF` | `⍳5` is `1 2 3 4 5`; `A ⍳ n` finds a position |
+| `⍴` | `RHO` / `SHAPE` / `RESHAPE` | Shape with one argument, reshape with two |
+| `⌽` | `REVERSE` / `ROTATE` | Reverse, or rotate by n |
+| `↑` `↓` | `TAKE` `DROP` | Take from the front, or drop from it |
+| `⍉` | `TRANSPOSE` | Transpose |
+| `,` | `RAVEL` / `CATENATE` | Flatten, or join |
+| `∈` | `MEMBERSHIP` | Which members of the left are in the right |
+| `⍋` `⍒` | `GRADEUP` `GRADEDOWN` | Positions that sort the data |
+| `⍕` | `FORMAT` | The character form of a value |
+
+Every function has a **keyword spelling** as well as its glyph, so a keyboard
+that cannot produce `⍳` is not a keyboard that cannot write APL.
+
+### Operators
+
+Reduce and scan take the function on their left:
+
+```apl
++/⍳100            5050
++REDUCE 1 2 3     6         the keyword spelling of +/
++SCAN 1 2 3       1 3 6
+```
+
+APL's operator *axes* (`+/[2]`) are not implemented, so reduce and scan work
+along the outermost axis.
+
+### Defined functions
+
+```apl
+∇ R ← DOUBLE X
+  R ← X × 2
+∇
+DOUBLE 21
+```
+
+### Turtle graphics
+
+A **Time Warp extension** here, as for COMAL and REXX: `FD`/`FORWARD`, `BK`,
+`RT`, `LT`, `PU`, `PD`, `HOME`, `CS`.
+
+The turtle's position is read with **`TX`**, **`TY`** and **`THETA`**. Those names
+are deliberate: `X`, `Y` and `H` are ordinary APL variables, and taking them from
+the program to report the turtle's position would break the most natural line
+anyone writes.
+
+```apl
+FD 100
+RT 90
+FD 100
+TX
+```
+
+### What is not implemented
+
+`∘.` outer product, `⍤` rank, the composition operators, the system functions
+`⎕`, and `→` branch with labels. A program that uses one is told which symbol
+stopped it rather than being given a wrong answer.
+
+**File extension:** `.apl`, `.dyalog`
+
+---
+
+## FOCAL
+
+FOCAL - **FO**rmula **CAL**culator - is DEC's line-numbered teaching language
+from 1969. It was built to be taught in an afternoon: ten commands, one number
+type, and labels of the form `NN.NN` so that a group of five lines can be named
+as a unit.
+
+Executed line by line, like BASIC and COMAL. Statements have a historic
+single-letter form and a full name; both work.
+
+| Command | Short | Does |
+| ------- | ----- | ---- |
+| `ASK` | `A` | Prompt for a value |
+| `TYPE` | `T` | Print text, formats and expressions |
+| `SET` | `S` | Assign |
+| `IF` | `I` | Three-way branch on the sign of an expression |
+| `FOR` | `F` | Loop over the rest of the line |
+| `DO` | `D` | Run a group, returning when the program runs off the end |
+| `GOTO` | `G` | Jump to a group |
+| `COMMENT` | `C` | The rest of the line is text |
+| `ERASE` | `E` | Forget variables: `ERASE ALL`, or `ERASE X,Y` |
+| `QUIT` | `Q` | Stop |
+
+### Line labels
+
+Labels are `NN.NN`: a **group** number and a **line** number, each up to two
+digits. The parts are compared as numbers, so `01.10` and `1.10` name the same
+line, and `GOTO 9.9` reaches a label written `09.09`.
+
+That two-part shape is easy to mistype. `01.30` is group 1 line **30**, so it is
+reached as `1.30` - not `1.3`, which is group 1 line 3, a different line. A
+reference to a label that does not exist is reported, which is how you find out.
+
+```focal
+01.10 T "START"
+01.20 GOTO 1.40
+01.30 T "NOT REACHED"
+01.40 T "LANDED"
+```
+
+### TYPE
+
+`T` prints text and expressions. `%n` sets the number of decimal places for the
+rest of the statement, and the default is two.
+
+```focal
+01.10 T "X=",2+3          X=5.00
+01.20 T %0,"R=",7/2       R=4
+01.30 S X=5
+01.40 T "X is ",X         X is 5.00
+```
+
+`!` suppresses the newline **within one TYPE**, so `T "A"!"B"` prints `AB`. It
+cannot join output across two statements: the engine logs each statement's output
+separately, so the newline between them is added by the logger rather than by the
+statement.
+
+### SET and ASK
+
+```focal
+01.10 SET X=2+3
+01.20 ASK "How many? " N
+01.30 TYPE "You said ",N
+```
+
+`ASK` takes a quoted prompt and the name of the variable to fill. A comma before
+the name is accepted, because every other FOCAL statement separates its items with
+one; the historic spelling has just a space.
+
+Undefined variables are **0**. FOCAL zeroes every variable at load. This is worth
+stating because BASIC does the opposite, and echoing a name back is the failure
+mode that makes a typo look like a result.
+
+### IF branches on a sign
+
+FOCAL has **no relational operators**. `IF (X) a,b,c` goes to `a` when X is
+negative, `b` when it is zero and `c` when it is positive. An omitted target falls
+through to the next line.
+
+```focal
+01.10 ASK "Number? " N
+01.20 IF (N) 1.30,1.40,1.50
+01.30 T "NEGATIVE"
+01.35 GOTO 1.60
+01.40 T "ZERO"
+01.45 GOTO 1.60
+01.50 T "POSITIVE"
+01.60 QUIT
+```
+
+`IF (N) ,,1.50` reads "if N is positive, go to 1.50".
+
+There is no ELSE and no fall-through control, so a three-way branch that prints
+three different things needs the extra `GOTO` lines above. There is also no
+statement separator: `;` separates statements **inside a FOR body only**, and
+`T "A";T "B"` is an error naming the `;`.
+
+### FOR and DO
+
+`FOR` loops over the rest of the line, and the loop variable keeps the last value
+the body saw - so after `FOR I=1,4`, I is 4 rather than the 5 that failed the
+test.
+
+```focal
+01.10 FOR I=1,3;T %0,"I=",I
+```
+
+The `;` belongs to the FOR: it separates the statements that make up the body,
+which is the rest of the line.
+
+`DO` calls a group. There is no RETURN statement in FOCAL-69: a group called with
+`DO` is expected to end where the program ends. A nested `DO` is bounded by a
+depth limit, so a cycle reports itself instead of hanging.
+
+```focal
+01.10 DO 2.10
+01.20 QUIT
+02.10 T "INSIDE"
+```
+
+### Functions
+
+`FABS`, `FSQT`, `FEXP`, `FLOG`, `FSIN`, `FCOS`, `FATN`, `FITR` (truncate),
+`FRAN` (random), `FSGN` (sign) and `FPI`.
+
+`FPI` and `FRAN` take **no parentheses, because FOCAL writes them that way**:
+`T FPI` prints 3.14. `FRAN` optionally takes a seed: `FRAN(1)`.
+
+```focal
+01.10 T %5,"pi=",FPI
+01.20 T "sq=",FSQT(16)
+```
+
+### Turtle graphics
+
+A **Time Warp extension**: 1969 FOCAL had no graphics at all. `FORWARD`/`FD`,
+`BACK`/`BK`, `RIGHT`/`RT`, `LEFT`/`LT`, `PENUP`/`PU`, `PENDOWN`/`PD`, `HOME`.
+
+```focal
+01.10 FOR I=1,4;FORWARD 100;RIGHT 90
+```
+
+### Deliberate differences
+
+- **An unrecognised command is an error, not a comment.** Some FOCAL listings are
+  annotated by writing text after the line number; here that is what
+  `C`/`COMMENT` is for, and `TIPE` reports itself instead of printing nothing.
+- **Output field widths are not a reproduction.** `%n` means "n decimal places"
+  here, which is a chosen default rather than whatever a PDP-8 printed.
+
+**File extension:** `.foc`, `.focal`
+
+---
+
+## CHIP-8
+
+CHIP-8 is Joseph Weisbecker's bytecode interpreter from 1977 - the machine the
+first home computers were taught with. It is not a text language: a program is a
+sequence of two-byte opcodes and the display is a 64x32 framebuffer of lit and
+unlit pixels. So this executor is two things in one file: a small **assembler**
+that turns mnemonics into opcodes, and the **machine** that runs them.
+
+Executed whole-program. An opcode stream cannot be interpreted a line at a time,
+so the listing is assembled in full and then run.
+
+```chip8
+; a comment
+start:  LD   V0, 0x41
+        LD   I, hexfont
+        LD   F, V0
+        DRW  V0, V1, 5
+        HALT
+hexfont: DW  0x0000
+```
+
+### Numbers
+
+Decimal unless marked, and marked either way round, because both spellings appear
+in listings: `0x41` and `41h` are both 65, and a bare `41` is decimal 41.
+
+### Directives
+
+| Directive | Does |
+| --------- | ---- |
+| `DB n` | Emit one byte |
+| `DW n` | Emit one word |
+| `HALT` | Stop the machine |
+| `; keys <digits>` | Present keypad state for the run |
+
+### The instruction set
+
+The complete original: all 35 opcodes, including the arithmetic group, the random
+and timing registers, the font and BCD conversions, and memory block load/store.
+
+| Mnemonic | Meaning |
+| -------- | ------- |
+| `CLS` | Clear the display |
+| `JP addr` / `JP V0, addr` | Jump |
+| `CALL addr` / `RET` | Subroutine call and return |
+| `SE Vx, byte` / `SNE Vx, byte` | Skip if equal / not equal |
+| `LD Vx, byte` / `LD Vx, Vy` / `LD I, addr` | Load |
+| `LD F, Vx` / `LD B, Vx` / `LD [I], Vx` | Font, BCD and memory block |
+| `ADD` `SUB` `SUBN` `OR` `AND` `XOR` | Arithmetic and logic |
+| `SHR Vx` / `SHL Vx` | Shift |
+| `RND Vx, byte` | Random, masked |
+| `DRW Vx, Vy, n` | Draw an n-byte sprite |
+| `SKP Vx` / `SKNP Vx` | Skip on key pressed / not pressed |
+| `LD Vx, K` / `LD Vx, DT` / `LD ST, Vx` | Keypad and timers |
+
+### Two places the original is ambiguous
+
+This follows the 1977 interpreter rather than a later emulator, because that is
+the machine the books describe:
+
+- **`SHR`/`SHL` shift `Vx` in place.** The later convention of shifting `Vy` into
+  `Vx` is not used. The y operand is accepted and ignored, so both spellings
+  assemble.
+- **Sprites wrap, and a collision sets `VF`.** Drawing a lit pixel onto a lit
+  pixel clears it and reports the collision.
+
+### The display
+
+The display is drawn in the canvas's own coordinates with filled rectangles, and
+its two colours come from the canvas palette. A 64x32 screen is 512x256 at the
+implementation's scale of eight.
+
+### The keypad
+
+Presented by directive, not by typing: `; keys 13` marks keys 1 and 3 as held
+down. `LD Vx, K` then reads the first held key, or 0. A program runs to completion
+inside one executor call, and the engine has no way to hand input to something
+that never yields control.
+
+### Frames
+
+Frames are simulated rather than timed: ten opcodes make a frame and the timers
+tick once per frame, with no real clock. A fixed number of frames is the limit,
+so a program that does not halt reports that it stopped rather than hanging.
+
+**File extension:** `.ch8`, `.c8`
+
+---
+
+## Smalltalk
+
+Smalltalk-80 is the language that made "everything is an object" a working
+proposal rather than a slogan. There is **no syntax for control flow at all**:
+`ifTrue:`, `whileTrue:` and `to:do:` are messages sent to objects. It fills the
+one paradigm gap the lineup had - nothing else here is object-oriented.
+
+Executed whole-program, like Scheme and CHIP-8. A file defines classes and
+methods and then runs some code, and a method body is more than one line, so the
+whole source is read before anything runs.
+
+### Objects and classes
+
+```smalltalk
+Object subclass: #Counter
+  instanceVariableNames: 'count'
+
+Counter >> initialize
+  count := 0
+
+Counter >> increment
+  count := count + 1
+
+Counter >> value
+  ^count
+
+| c |
+c := Counter new.
+c increment.
+c value
+```
+
+`Object subclass: #Counter` is not special syntax. It is the keyword message
+`subclass:instanceVariableNames:` sent to the class object `Object`, exactly as in
+a real file-in.
+
+### Method lookup
+
+A message walks the receiver's class chain looking for the selector, then stops. A
+selector that reaches the top is a `doesNotUnderstand:` error, reported with the
+selector and the receiver's class. A class has two method dictionaries - one for
+its instances and one for the class itself - so `Counter new` and `c increment`
+find their methods by the same lookup from different sides.
+
+### Precedence
+
+Unary, then binary, then keyword, left to right within a level. Parentheses group.
+
+```smalltalk
+2 + 3 * 4        20 - both are binary, so left to right
+1 max: 2 + 3     5 - binary binds tighter than keyword
+```
+
+### Variables
+
+In widening scope: method arguments and temporaries, then instance variables,
+then globals (the class names a definition introduced). Assignment to a name that
+is not one of those creates a global, which is how the workspace bar behaves.
+
+```smalltalk
+| total |
+total := 0.
+1 to: 10 do: [ :i | total := total + i ].
+total
+```
+
+### Blocks are closures
+
+A block captures the activation it was created in, so a block held in an instance
+variable and run later still reads and writes the variables where it was written.
+
+### Non-local return
+
+`^` inside a block returns from the **method that created the block**, not from
+the block. This is the part of Smalltalk that surprises people, and faking it -
+returning from the block instead - gives a wrong answer that looks right in a
+simple test.
+
+### Cascades
+
+`aStream show: 'x'; cr` sends `cr` to the object the *first* message went to, not
+to the result of `show:`. That distinction is the entire reason `;` exists.
+
+### Source layout
+
+A definition is a header - `ClassName >> selector`, or `X subclass: #Y` - followed
+by *indented* lines, and it ends at the next line that begins in column 0. Lines
+outside a definition are top-level code, and consecutive ones form a single block
+whatever their indentation. There is no `!` chunk terminator, so indentation
+carries the job it does in a file-in.
+
+### What is displayed
+
+A chunk displays its **last value, and only if that value is not nil**. This is
+the workspace's "print it" applied once per block of top-level code. Echoing every
+statement would print an object for each assignment and each `do:`, and the object
+you were talking to is not the answer you asked for. Real output belongs in
+`Transcript show:`, as it does in Smalltalk.
+
+### Turtle graphics
+
+A **Time Warp extension**, as for COMAL, REXX, FOCAL and APL:
+
+```smalltalk
+| t |
+t := Turtle new.
+1 to: 4 do: [ :i | t forward: 100. t right: 90 ]
+```
+
+### Deliberate simplifications
+
+- **No metaclass tower.** A class object holds two method dictionaries rather than
+  being an instance of a metaclass that is an instance of a metaclass.
+  `Counter class` answers the class object itself.
+- **Immediate values are represented natively** - an integer is a number, a string
+  is a string - and a send dispatches on the receiver's class, which is the
+  standard way to get Smalltalk semantics without allocating a wrapper per
+  addition.
+- **No exceptions, processes, `thisContext`, `perform:` or compiler.** There is no
+  `ensure:`, `on:do:` or semaphore.
+
+**File extension:** `.st`, `.smalltalk`
+
+---
+
 ## Language Selection
 
 To select which language your code uses:
@@ -699,3 +1188,7 @@ To select which language your code uses:
 | `.comal` / `.cml` | COMAL |
 | `.rexx` / `.rex` | REXX |
 | `.scm` / `.ss` | Scheme |
+| `.apl` / `.dyalog` | APL |
+| `.foc` / `.focal` | FOCAL |
+| `.ch8` / `.c8` | CHIP-8 |
+| `.st` / `.smalltalk` | Smalltalk |

@@ -447,7 +447,16 @@ def _call_builtin(interp: "Interpreter", name: str, args: list[Any]) -> Any:
     if name == "STRIP":
         return s(0).strip()
     if name == "SPACE":
-        return " ".join(s(0).split())
+        # REXX's SPACE(string, n, pad): n pad characters between words, one by
+        # default. The count used to be ignored, which answered
+        # SPACE('a b c', 0) with 'a b c' -- a plausible wrong answer rather than
+        # a missing one, so both the count and the pad character are honoured.
+        words = s(0).split()
+        if not words:
+            return ""
+        count = max(0, int(n(1, 1)))
+        pad = s(2) or " "
+        return (pad * count).join(words)
     if name == "WORD":
         words = s(0).split()
         idx = int(n(1, 1)) - 1

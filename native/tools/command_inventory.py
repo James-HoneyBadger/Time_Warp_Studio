@@ -65,8 +65,33 @@ NOT_COMMANDS = frozenset(
         "#F",
         "#TRUE",
         "#FALSE",
+        # Smalltalk's lexer token kinds and its three literals. `token.kind ==
+        # "ident"` and `token.text == "self"` are the parser asking about shapes,
+        # not dispatch on a selector, and a message send never looks like any of
+        # these.
+        "binary",
+        "char",
+        "hash-array",
+        "ident",
+        "keyword",
+        "number",
+        "self",
+        "super",
+        "symbol",
+        "true",
+        "false",
+        "nil",
+        # The CHIP-8 number prefix, which `_number` tests for so that 0x41 is 65.
+        "0x",
     }
 )
+
+#: NOT_COMMANDS, upper-cased once. `is_command_literal` compares against
+#: `literal.upper()`, so a lowercase entry in the set above ("nil", "false",
+#: "binary") would never match and would read as a written decision while doing
+#: nothing. Keeping both spellings apart means the set above can stay in the case
+#: the language actually writes.
+_NOT_COMMANDS_UPPER = frozenset(name.upper() for name in NOT_COMMANDS)
 
 
 def is_command_literal(literal: str) -> bool:
@@ -77,7 +102,7 @@ def is_command_literal(literal: str) -> bool:
     statement separator, so ``: REM`` is the REM command written after one.
     """
     text = literal.strip().lstrip(":").strip()
-    if not text or literal.strip().upper() in NOT_COMMANDS:
+    if not text or literal.strip().upper() in _NOT_COMMANDS_UPPER:
         return False
     return any(character.isalpha() for character in text)
 

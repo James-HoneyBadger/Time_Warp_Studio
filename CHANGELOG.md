@@ -1,5 +1,43 @@
 # Changelog
 
+## [Unreleased]
+
+Four more languages, and the defects that examining their commands turned up.
+
+### Added
+
+- **Four languages** — **APL**, **FOCAL**, **CHIP-8** and **Smalltalk**, taking the
+  lineup to ten. APL and FOCAL run line by line; CHIP-8 and Smalltalk run whole
+  program. All four draw, all four are in the example corpus, and each has a
+  command reference in `docs/LANGUAGE_GUIDE.md` and a tutorial in `docs/tutorials/`.
+- **Command coverage for every language.** `command_table.py` grew from 279 rows to
+  429, and every language now has zero commands that are neither exercised by a row
+  nor waived — the four older languages had accumulated gaps (21 in PILOT, 18 in
+  REXX) that the new rows closed.
+
+### Fixed
+
+- **FOCAL** — `ASK`'s answer never reached the program: the statement wrote to a
+  private dictionary while the engine substituted from `interpreter.variables`, so
+  the prompt appeared and the variable stayed 0. `FPI` and `FRAN` no longer require
+  the parentheses FOCAL does not write, and `ASK "prompt", N` now accepts the comma
+  every other FOCAL statement uses.
+- **APL** — `⍕` (FORMAT) printed a character code rather than digits (`⍕42` answered
+  `*`), and the keyword spellings `+REDUCE` and `+SCAN` did not work at all.
+- **CHIP-8** — `JP V0, addr` encoded the register into the address's high nibble, so
+  a jump table landed at address 6.
+- **PILOT** — `LINK` and `LOAD` could never run: a line beginning `L:` is the label
+  declaration, so the unit returned before it was reached and the long forms remapped
+  to exactly such a line. It now reports that lesson chaining is not implemented
+  instead of returning nothing.
+- **REXX** — `SPACE(string, n, pad)` ignored its count, so `SPACE('a b c', 0)`
+  answered `a b c`.
+- **`command_inventory.py`** compared its "not a command" list case-sensitively while
+  the list held lowercase entries, so those entries did nothing and the completeness
+  report asked for rows that could not exist.
+
+---
+
 ## [15.0.0] - 2026-10-16
 
 The implementation was replaced wholesale: Time Warp Studio is now a C++20 / Qt6

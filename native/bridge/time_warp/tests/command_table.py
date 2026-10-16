@@ -347,13 +347,104 @@ LOGO: list[Row] = [
 # ---------------------------------------------------------------------------
 
 PILOT: list[Row] = [
-    Row("PILOT", "T: text", "T: Hello there", "prints:Hello there"),
+    # A row is labelled with prose ("T: text"), but PILOT dispatches on the bare
+    # unit letter, so `also` carries the letter the inventory knows.
+    Row("PILOT", "T: text", "T: Hello there", "prints:Hello there", ("T",)),
     Row("PILOT", "several T: units", "T: One\nT: Two", "prints:Two"),
-    Row("PILOT", "A: then TY/TN on no match", "T: Q\nA:\nM: PARIS\nTY: Correct\nTN: Wrong", "prints:Wrong"),
-    Row("PILOT", "J: jump", "J: SKIP\nT: NOT REACHED\nE:\n*SKIP\nT: LANDED", "prints:LANDED"),
-    Row("PILOT", "U: subroutine", "U: *SUB\nT: BACK\nE:\n*SUB\nT: INSIDE\nE:", "prints:INSIDE"),
-    Row("PILOT", "E: ends the program", "T: BEFORE\nE:\nT: AFTER", "prints:BEFORE"),
-    Row("PILOT", "REMARK is ignored", "REMARK a note\nT: AFTER REMARK", "prints:AFTER REMARK"),
+    # `also` also covers the M: this row depends on, so the match unit is
+    # exercised by name rather than by accident.
+    Row(
+        "PILOT",
+        "A: accept, then TY/TN on no match",
+        "T: Q\nA:\nM: PARIS\nTY: Correct\nTN: Wrong",
+        "prints:Wrong",
+        ("A", "M"),
+    ),
+    Row("PILOT", "J: jump", "J: SKIP\nT: NOT REACHED\nE:\n*SKIP\nT: LANDED", "prints:LANDED", ("J",)),
+    Row("PILOT", "U: subroutine", "U: *SUB\nT: BACK\nE:\n*SUB\nT: INSIDE\nE:", "prints:INSIDE", ("U",)),
+    Row("PILOT", "E: ends the program", "T: BEFORE\nE:\nT: AFTER", "prints:BEFORE", ("E",)),
+    Row("PILOT", "REMARK is ignored", "REMARK a note\nT: AFTER REMARK", "prints:AFTER REMARK", ("R",)),
+    Row(
+        "PILOT",
+        "C: compute stores a string",
+        "C:$GREETING = Hello\nT: Said $GREETING",
+        "prints:Said Hello",
+        ("C",),
+    ),
+    Row(
+        "PILOT",
+        "B: branch taken on a non-zero condition",
+        "C:X = 5\nB:X=*HIT\nT: MISSED\nE:\n*HIT\nT: BRANCHED",
+        "prints:BRANCHED",
+        ("B",),
+    ),
+    Row(
+        "PILOT",
+        "Y: jumps when the match succeeded",
+        "T: Q\nA:\nM:*\nY: HIT\nT: MISSED\nE:\n*HIT\nT: HIT",
+        "prints:HIT",
+        ("Y",),
+    ),
+    Row(
+        "PILOT",
+        "N: prints when the match failed",
+        "N: NO MATCH\nT: DONE",
+        "prints:NO MATCH",
+        ("N",),
+    ),
+    Row("PILOT", "D: delay of zero seconds", "D: 0\nT: AFTER DELAY", "prints:AFTER DELAY", ("D",)),
+    Row("PILOT", "P: pause resumes on Enter", "P:\nT: AFTER PAUSE", "prints:AFTER PAUSE", ("P",)),
+    Row(
+        "PILOT",
+        "H: hint message",
+        "H: Try the other one",
+        "prints:Try the other one",
+        ("H",),
+    ),
+    Row(
+        "PILOT",
+        "S: subroutine, the alias of U:",
+        "S: *SUB\nT: BACK\nE:\n*SUB\nT: INSIDE\nE:",
+        "prints:INSIDE",
+        ("S",),
+    ),
+    Row(
+        "PILOT",
+        "TU: long-form subroutine call",
+        "TU SUB\nT: BACK\nE:\n*SUB\nT: INSIDE\nE:",
+        "prints:INSIDE",
+        ("TU",),
+    ),
+    Row("PILOT", "G: turtle move", "G: FD 50\nG: RT 90\nG: FD 50", "draws", ("G",)),
+    Row(
+        "PILOT",
+        "G: FILL uses the pen colour",
+        "G: FD 50\nG: RT 120\nG: FD 50\nG: RT 120\nG: FD 50\nG: FILL",
+        "draws",
+        ("FILL",),
+    ),
+    Row("PILOT", "G: TEXT labels the drawing", "G: TEXT A label", "prints:A label", ("TEXT",)),
+    Row(
+        "PILOT",
+        "L: declares a label that J: can reach",
+        "J: MARK\nT: NOT REACHED\nL: MARK\nT: LANDED",
+        "prints:LANDED",
+        ("L:",),
+    ),
+    Row(
+        "PILOT",
+        "LINK reports that chaining is not implemented",
+        "LINK lesson.pilot\nT: DONE",
+        "error",
+        ("LINK",),
+    ),
+    Row(
+        "PILOT",
+        "F: rejects a mode it does not know",
+        "F: OPEN notes.txt X",
+        "error",
+        ("F",),
+    ),
     Row("PILOT", "error: jump to a missing label", "J: NOWHERE\nT: NOT REACHED", "error"),
 ]
 
@@ -394,18 +485,49 @@ REXX: list[Row] = [
     Row("REXX", "SAY expression", "SAY 6 * 7", "prints:42"),
     Row("REXX", "assignment and SAY", "name = 'Ann'\nSAY name", "prints:Ann"),
     Row("REXX", "concatenation with ||", "SAY 'Hello' || ' ' || 'World'", "prints:Hello World"),
-    Row("REXX", "IF / THEN", "score = 70\nIF score > 50 THEN SAY 'pass'", "prints:pass"),
+    Row("REXX", "IF / THEN", "score = 70\nIF score > 50 THEN SAY 'pass'", "prints:pass", ("THEN",)),
     Row("REXX", "IF / THEN DO / ELSE DO", "score = 95\nIF score >= 90 THEN DO\nSAY 'Grade A'\nEND\nELSE DO\nSAY 'Keep going'\nEND", "prints:Grade A"),
     Row("REXX", "DO counted loop", "DO i = 1 TO 3\nSAY i\nEND", "prints:3"),
-    Row("REXX", "DO with BY", "DO n = 10 TO 1 BY -3\nSAY n\nEND", "prints:1"),
+    Row("REXX", "DO with BY", "DO n = 10 TO 1 BY -3\nSAY n\nEND", "prints:1", ("BY",)),
     Row("REXX", "DO WHILE", "count = 0\nDO WHILE count < 3\ncount = count + 1\nEND\nSAY count", "prints:3"),
-    Row("REXX", "DO OVER", "DO word OVER 'alpha beta gamma'\nSAY word\nEND", "prints:gamma"),
-    Row("REXX", "SELECT / WHEN / OTHERWISE", "score = 95\nSELECT\nWHEN score > 90 THEN SAY 'huge'\nOTHERWISE SAY 'small'\nEND", "prints:huge"),
+    Row("REXX", "DO OVER", "DO word OVER 'alpha beta gamma'\nSAY word\nEND", "prints:gamma", ("OVER",)),
+    Row("REXX", "SELECT / WHEN / OTHERWISE", "score = 95\nSELECT\nWHEN score > 90 THEN SAY 'huge'\nOTHERWISE SAY 'small'\nEND", "prints:huge", ("WHEN", "OTHERWISE")),
     Row("REXX", "PARSE VAR", "line = 'red green blue'\nPARSE VAR line first second third\nSAY second", "prints:green"),
-    Row("REXX", "internal subroutine and RESULT", "CALL DOUBLE 5\nSAY RESULT\nEXIT\nDOUBLE:\nRETURN ARG(1) * 2", "prints:10"),
+    Row(
+        "REXX",
+        "internal subroutine and RESULT",
+        "CALL DOUBLE 5\nSAY RESULT\nEXIT\nDOUBLE:\nRETURN ARG(1) * 2",
+        "prints:10",
+        ("ARG",),
+    ),
     Row("REXX", "LENGTH", "SAY LENGTH('HELLO')", "prints:5"),
     Row("REXX", "SUBSTR", "SAY SUBSTR('HELLO', 2, 3)", "prints:ELL"),
     Row("REXX", "WORD", "SAY WORD('alpha beta gamma', 2)", "prints:beta"),
+    # The harness answers a prompt with an empty line, so the PULL rows assert
+    # that the statement ran and the program continued rather than the value read.
+    Row(
+        "REXX",
+        "PULL reads a line",
+        "SAY 'before'\nPULL name\nSAY 'after' name",
+        "prints:after",
+    ),
+    Row(
+        "REXX",
+        "PARSE PULL splits a line",
+        "PARSE PULL first rest\nSAY 'got' first",
+        "prints:got",
+        ("PARSE PULL",),
+    ),
+    Row("REXX", "COPIES", "SAY COPIES('ab', 3)", "prints:ababab"),
+    Row("REXX", "DATATYPE", "SAY DATATYPE('12')", "prints:NUM"),
+    Row("REXX", "INDEX", "SAY INDEX('hello', 'll')", "prints:3"),
+    Row("REXX", "LOWER", "SAY LOWER('ABC')", "prints:abc"),
+    Row("REXX", "SIGN", "SAY SIGN(-7)", "prints:-1"),
+    Row("REXX", "SPACE", "SAY SPACE('a b c', 3)", "prints:a   b   c"),
+    Row("REXX", "STRIP", "SAY STRIP('  hi  ')", "prints:hi"),
+    Row("REXX", "TRUNC", "SAY TRUNC(3.7)", "prints:3"),
+    Row("REXX", "UPPER", "SAY UPPER('abc')", "prints:ABC"),
+    Row("REXX", "WORDS", "SAY WORDS('a b c')", "prints:3"),
     Row("REXX", "error: unknown statement", "@@@ nonsense @@@", "error"),
 ]
 
@@ -434,7 +556,431 @@ SCHEME: list[Row] = [
 ]
 
 
-ROWS: list[Row] = BASIC + LOGO + PILOT + COMAL + REXX + SCHEME
+FOCAL: list[Row] = [
+    Row("FOCAL", "TYPE", '01.10 T "HELLO"', "prints:HELLO"),
+    Row("FOCAL", "TYPE with a format", '01.10 T %0,"N=",7/2', "prints:N=4"),
+    Row("FOCAL", "SET", "01.10 S X=7\n01.20 T X", "prints:7.00"),
+    Row("FOCAL", "SET several at once", "01.10 S A=1,B=2\n01.20 T A+B", "prints:3.00"),
+    Row("FOCAL", "COMMENT", '01.10 C this text is ignored\n01.20 T "after"', "prints:after"),
+    Row("FOCAL", "ASK", '01.10 ASK "How many? " N\n01.20 T "asked"', "prints:asked"),
+    Row(
+        "FOCAL",
+        "IF on a sign",
+        '01.10 S X=0\n01.20 IF (X) 1.40,1.30,1.40\n01.30 T "ZERO"\n01.40 Q',
+        "prints:ZERO",
+    ),
+    Row("FOCAL", "FOR", "01.10 FOR I=1,3;T I", "prints:3.00"),
+    Row(
+        "FOCAL",
+        "DO a group",
+        '01.10 DO 2.10\n01.20 T "AFTER"\n01.30 Q\n02.10 T "GROUP"',
+        "prints:GROUP",
+    ),
+    Row("FOCAL", "GOTO", '01.10 GOTO 1.30\n01.20 T "SKIPPED"\n01.30 T "THERE"', "prints:THERE"),
+    Row("FOCAL", "ERASE", "01.10 S A=1\n01.20 E ALL\n01.30 T A", "prints:0.00"),
+    Row("FOCAL", "QUIT", '01.10 T "BEFORE"\n01.20 Q\n01.30 T "AFTER"', "prints:BEFORE"),
+    Row("FOCAL", "FPI", "01.10 T FPI", "prints:3.14"),
+    Row("FOCAL", "FRAN", "01.10 T FRAN", "prints"),
+    Row("FOCAL", "turtle: FORWARD", "01.10 FORWARD 100", "draws", also=("FD",)),
+    Row("FOCAL", "turtle: BACK", "01.10 BACK 50", "draws", also=("BK",)),
+    Row("FOCAL", "turtle: RIGHT", "01.10 RIGHT 90", "draws", also=("RT",)),
+    Row("FOCAL", "turtle: LEFT", "01.10 LEFT 90", "draws", also=("LT",)),
+    Row("FOCAL", "turtle: PENUP", "01.10 PENUP", "any"),
+    Row("FOCAL", "turtle: PENDOWN", "01.10 PENDOWN", "any"),
+    Row("FOCAL", "turtle: HOME", "01.10 HOME", "any"),
+    Row("FOCAL", "error: unknown command", "01.10 TIPE X", "error"),
+    Row("FOCAL", "error: unquoted text", "01.10 T HELLO", "error"),
+    Row("FOCAL", "error: missing label", "01.10 GOTO 9.9", "error"),
+]
+
+
+# CHIP-8 -- the assembler's mnemonics and directives. The rows read "CHIP8"
+# rather than the display name "CHIP-8", because a row's language string is the
+# key `command_matrix.py` puts on the wire and the worker resolves it as
+# `Language[key.upper()]`, whose member here is `CHIP8`. Every other language's
+# display name happens to uppercase to its enum member, so this is the only place
+# the two spellings part company.
+CHIP8: list[Row] = [
+    Row(
+        "CHIP8",
+        "CLS",
+        "start: CLS\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "LD a byte",
+        "start: LD V0, 4\n       LD V1, 4\n       LD I, dot\n       DRW V0, V1, 1\n"
+        "       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "LD one register from another",
+        "start: LD V0, 6\n       LD V1, V0\n       LD I, dot\n       DRW V0, V1, 1\n"
+        "       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "LD I",
+        "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "LD I from the font",
+        "start: LD V0, 3\n       LD F, V0\n       LD V0, 0\n       DRW V0, V1, 5\n"
+        "       HALT",
+        "draws",
+        also=("LD F",),
+    ),
+    Row(
+        "CHIP8",
+        "LD BCD of a register",
+        "start: LD V0, 205\n       LD I, buf\n       LD B, V0\n       LD V0, 0\n"
+        "       LD I, buf\n       DRW V0, V1, 1\n       HALT\nbuf: DB 0\n     DB 0\n     DB 0",
+        "draws",
+        also=("LD B",),
+    ),
+    Row(
+        "CHIP8",
+        "LD a block through I",
+        "start: LD V0, 0xFF\n       LD I, buf\n       LD [I], V0\n       LD I, buf\n"
+        "       DRW V0, V1, 1\n       HALT\nbuf: DB 0",
+        "draws",
+        also=("LD [I], V0", "LD V0, [I]"),
+    ),
+    Row(
+        "CHIP8",
+        "LD the delay timer",
+        "start: LD V0, 30\n       LD DT, V0\n       LD V0, 0\n       LD I, dot\n"
+        "       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+        also=("LD DT, V0", "LD V0, DT"),
+    ),
+    Row(
+        "CHIP8",
+        "LD from the keypad",
+        "start: LD V0, K\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+        also=("LD V0, K",),
+    ),
+    Row(
+        "CHIP8",
+        "ADD",
+        "start: LD V0, 3\n       ADD V0, 1\n       LD I, dot\n       DRW V0, V1, 1\n"
+        "       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "ADD two registers",
+        "start: LD V0, 2\n       LD V1, 3\n       ADD V0, V1\n       LD I, dot\n"
+        "       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "AND",
+        "start: LD V0, 3\n       LD V1, 1\n       AND V0, V1\n       LD I, dot\n"
+        "       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "OR",
+        "start: LD V0, 4\n       LD V1, 3\n       OR V0, V1\n       LD I, dot\n"
+        "       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "XOR",
+        "start: LD V0, 6\n       LD V1, 3\n       XOR V0, V1\n       LD I, dot\n"
+        "       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "SUB",
+        "start: LD V0, 5\n       LD V1, 2\n       SUB V0, V1\n       LD I, dot\n"
+        "       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "SUBN",
+        "start: LD V0, 2\n       LD V1, 5\n       SUBN V0, V1\n       LD I, dot\n"
+        "       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "SHR",
+        "start: LD V0, 6\n       SHR V0\n       LD I, dot\n       DRW V0, V1, 1\n"
+        "       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "SHL",
+        "start: LD V0, 3\n       SHL V0\n       LD I, dot\n       DRW V0, V1, 1\n"
+        "       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "RND",
+        "start: RND V0, 0x0F\n       LD V1, 0\n       LD I, dot\n       DRW V0, V1, 1\n"
+        "       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row("CHIP8", "DRW", "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80", "draws"),
+    Row(
+        "CHIP8",
+        "DB data for a sprite",
+        "start: LD I, spr\n       DRW V0, V1, 2\n       HALT\nspr: DB 0xFF\n     DB 0x81",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "DW data for a sprite",
+        "start: LD I, word\n       DRW V0, V1, 2\n       HALT\nword: DW 0xFF81",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "JP",
+        "start: JP draw\n       HALT\ndraw:  LD I, dot\n       DRW V0, V1, 1\n"
+        "       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "JP with an offset in V0",
+        "start: LD V0, 2\n       JP V0, draw\n       HALT\ndraw: LD I, dot\n"
+        "       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+        also=("JP V0, addr",),
+    ),
+    Row(
+        "CHIP8",
+        "CALL and RET",
+        "start: CALL draw\n       HALT\ndraw:  LD I, dot\n       DRW V0, V1, 1\n"
+        "       RET\ndot: DB 0x80",
+        "draws",
+        also=("RET",),
+    ),
+    Row(
+        "CHIP8",
+        "SE skips when equal",
+        "start: LD V0, 1\n       SE V0, 1\n       HALT\n       LD I, dot\n"
+        "       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "SNE skips when different",
+        "start: LD V0, 1\n       SNE V0, 2\n       HALT\n       LD I, dot\n"
+        "       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row(
+        "CHIP8",
+        "; keys presents a held key",
+        "; keys 3\nstart: LD V0, 3\n       SKP V0\n       HALT\n       LD I, dot\n"
+        "       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+        also=("SKP", "; keys"),
+    ),
+    Row(
+        "CHIP8",
+        "SKNP skips when the key is up",
+        "start: LD V0, 3\n       SKNP V0\n       HALT\n       LD I, dot\n"
+        "       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+    ),
+    Row("CHIP8", "HALT", "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80", "draws"),
+    Row("CHIP8", "error: unknown mnemonic", "start: FROB V0", "error"),
+    Row("CHIP8", "error: byte out of range", "start: LD V0, 999", "error"),
+    Row("CHIP8", "error: unknown opcode", "start: DW 0x0FFF", "error"),
+]
+
+
+APL: list[Row] = [
+    Row("APL", "IOTA", "IOTA 5", "prints:1 2 3 4 5"),
+    Row("APL", "RHO reshape", "2 3 RHO IOTA 6", "prints:1 2 3"),
+    Row("APL", "RHO shape", "RHO 2 3 RHO IOTA 6", "prints:2 3", also=("RHO",)),
+    Row("APL", "TIMES", "3 TIMES 4", "prints:12"),
+    Row("APL", "DIVIDE", "6 DIVIDE 2", "prints:3"),
+    Row("APL", "POWER", "2 POWER 10", "prints:1024"),
+    Row("APL", "CEILING", "CEILING 2.2", "prints:3"),
+    Row("APL", "FLOOR", "FLOOR 2.8", "prints:2"),
+    Row("APL", "MAX", "3 MAX 5", "prints:5"),
+    Row("APL", "MIN", "3 MIN 5", "prints:3"),
+    Row("APL", "ABS", "ABS -3", "prints:3", also=("BAR",)),
+    Row("APL", "RESIDUE", "3 RESIDUE 10", "prints:1"),
+    Row("APL", "SIGNUM", "SIGNUM -3", "prints:\u00af1"),
+    Row("APL", "RECIPROCAL", "RECIPROCAL 4", "prints:0.25"),
+    Row("APL", "AND", "1 AND 1", "prints:1"),
+    Row("APL", "OR", "0 OR 1", "prints:1"),
+    Row("APL", "NAND", "1 NAND 1", "prints:0"),
+    Row("APL", "NOR", "0 NOR 0", "prints:1"),
+    Row("APL", "NOT", "NOT 0", "prints:1"),
+    Row("APL", "REVERSE", "REVERSE 1 2 3", "prints:3 2 1"),
+    Row("APL", "ROTATE", "1 ROTATE 1 2 3", "prints:2 3 1"),
+    Row("APL", "TAKE", "3 TAKE 1 2", "prints:1 2 0"),
+    Row("APL", "DROP", "1 DROP 1 2 3", "prints:2 3"),
+    Row("APL", "CATENATE", "1 2 CATENATE 3", "prints:1 2 3"),
+    Row("APL", "RAVEL", "RAVEL 2 2 RHO IOTA 4", "prints:1 2 3 4"),
+    Row("APL", "TRANSPOSE", "TRANSPOSE 2 3 RHO IOTA 6", "prints:1 4"),
+    Row("APL", "GRADEUP", "GRADEUP 3 1 2", "prints:2 3 1"),
+    Row("APL", "GRADEDOWN", "GRADEDOWN 1 3 2", "prints:2 3 1"),
+    Row("APL", "MEMBERSHIP", "1 MEMBERSHIP 1 2 3", "prints:1 0 0"),
+    Row("APL", "FORMAT", "FORMAT 42", "prints:42"),
+    Row("APL", "INDEXOF", "1 2 3 INDEXOF 2", "prints:2"),
+    Row("APL", "REDUCE", "+REDUCE IOTA 5", "prints:15", also=("+/",)),
+    Row("APL", "SCAN", "+SCAN IOTA 3", "prints:1 3 6", also=("+\\",)),
+    Row("APL", "SHAPE", "RHO 1 2 3", "prints:3"),
+    Row("APL", "RESHAPE", "3 RHO 1", "prints:1 1 1"),
+    Row("APL", "a defined function", "∇ R ← DOUBLE X\n  R ← X TIMES 2\n∇\nDOUBLE 21", "prints:42"),
+    Row("APL", "turtle: FD", "FD 100", "draws", also=("FORWARD",)),
+    Row("APL", "turtle: BK", "BK 50", "draws", also=("BACK",)),
+    Row("APL", "turtle: RT", "RT 90", "draws", also=("RIGHT",)),
+    Row("APL", "turtle: LT", "LT 90", "draws", also=("LEFT",)),
+    Row("APL", "turtle: PU and PD", "PU\nPD", "any", also=("PENUP", "PENDOWN")),
+    Row("APL", "turtle: HOME", "HOME", "any"),
+    Row("APL", "error: mismatched lengths", "1 2 + 4 5 6", "error"),
+    Row("APL", "error: unknown variable", "NOSUCHNAME", "error"),
+    Row("APL", "error: unmatched parenthesis", "(IOTA 3", "error"),
+]
+
+
+SMALLTALK: list[Row] = [
+    Row(
+        "Smalltalk",
+        "subclass:instanceVariableNames: defines a class",
+        "Object subclass: #Thing\n  instanceVariableNames: ''\n\nThing >> greet\n  ^'hi'\n\nThing new greet",
+        "prints:hi",
+    ),
+    Row(
+        "Smalltalk",
+        "new",
+        "Object subclass: #Bare\n  instanceVariableNames: ''\n\nBare >> hello\n  ^'made'\n\nBare new hello",
+        "prints:made",
+    ),
+    Row(
+        "Smalltalk",
+        "initialize",
+        "Object subclass: #Seeded\n  instanceVariableNames: 'seed'\n\n"
+        "Seeded >> initialize\n  seed := 7\n\nSeeded >> seed\n  ^seed\n\nSeeded new seed",
+        "prints:7",
+    ),
+    Row(
+        "Smalltalk",
+        "an instance variable through messages",
+        "Object subclass: #Counter\n  instanceVariableNames: 'count'\n\n"
+        "Counter >> initialize\n  count := 0\n\nCounter >> bump\n  count := count + 1\n\n"
+        "Counter >> value\n  ^count\n\n| c |\nc := Counter new.\nc bump.\nc bump.\nc value",
+        "prints:2",
+    ),
+    Row(
+        "Smalltalk",
+        "a block and its closure",
+        "| total |\ntotal := 10.\n[:n | total := total + n] value: 5.\ntotal",
+        "prints:15",
+    ),
+    Row(
+        "Smalltalk",
+        "a block controls the loop",
+        "| s |\ns := 0.\n(1 to: 4) do: [:i | s := s + i].\ns",
+        "prints:10",
+    ),
+    Row(
+        "Smalltalk",
+        "show: writes through the Transcript",
+        "Transcript show: 'hello'; cr",
+        "prints:hello",
+    ),
+    Row(
+        "Smalltalk",
+        "cr ends a transcript line",
+        "Transcript show: 'a'; cr. Transcript show: 'b'; cr",
+        "prints:a",
+        also=("show:",),
+    ),
+    Row(
+        "Smalltalk",
+        "turtle: forward:",
+        "| t |\nt := Turtle new.\nt forward: 100",
+        "draws",
+        also=("forward:",),
+    ),
+    Row(
+        "Smalltalk",
+        "turtle: back:",
+        "| t |\nt := Turtle new.\nt back: 40",
+        "draws",
+        also=("back:",),
+    ),
+    Row(
+        "Smalltalk",
+        "turtle: right:",
+        "| t |\nt := Turtle new.\nt right: 90",
+        "draws",
+        also=("right:",),
+    ),
+    Row(
+        "Smalltalk",
+        "turtle: left:",
+        "| t |\nt := Turtle new.\nt left: 90",
+        "draws",
+        also=("left:",),
+    ),
+    Row(
+        "Smalltalk",
+        "turtle: penUp",
+        "| t |\nt := Turtle new.\nt forward: 50.\nt penUp.\nt forward: 50",
+        "draws",
+        also=("penDown",),
+    ),
+    Row("Smalltalk", "turtle: home", "| t |\nt := Turtle new.\nt forward: 50.\nt home", "any"),
+    Row("Smalltalk", "turtle: clear", "| t |\nt := Turtle new.\nt clear", "any"),
+    Row(
+        "Smalltalk",
+        "super sends above the defining class",
+        "Object subclass: #Base\n  instanceVariableNames: ''\n\nBase >> talk\n  ^'base'\n\n"
+        "Base subclass: #Kid\n  instanceVariableNames: ''\n\nKid >> talk\n  ^'kid and ', super talk\n\n"
+        "Kid new talk",
+        "prints:kid and base",
+        also=("super",),
+    ),
+    Row(
+        "Smalltalk",
+        "a cascade sends to the original receiver",
+        "Transcript show: 'a'; show: 'b'; cr",
+        "prints:ab",
+    ),
+    Row("Smalltalk", "error: does not understand", "3 foo", "error"),
+    Row("Smalltalk", "error: unknown variable", "noSuchThing", "error"),
+    Row("Smalltalk", "error: division by zero", "1 / 0", "error"),
+    Row("Smalltalk", "error: index out of range", "#(1 2) at: 9", "error"),
+]
+
+
+ROWS: list[Row] = (
+    BASIC
+    + LOGO
+    + PILOT
+    + COMAL
+    + REXX
+    + SCHEME
+    + FOCAL
+    + CHIP8
+    + APL
+    + SMALLTALK
+)
 
 
 #: Implemented commands that cannot be exercised by this harness.

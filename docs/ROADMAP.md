@@ -23,7 +23,7 @@ yet — please check the list below before reporting one as a regression.
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
 | Bridged engines | BASIC, PILOT, Logo, COMAL, REXX — `native/bridge/` |
 | Packaging | `make install` with the desktop entry and icon; `DESTDIR` staging |
-| Quality gates | 11 CTest suites in 4 build configurations, 2 parity gates, 425 engine tests, 279 command rows |
+| Quality gates | 11 CTest suites in 4 build configurations, 2 parity gates, 437 engine tests, 429 command rows |
 
 ---
 
@@ -84,6 +84,32 @@ unit test)
   it**, so `PRINT THING "X` became `PRINT` plus `THING "X`: PRINT lost its argument
   and THING ran on its own. Reporters cannot begin a statement, so they now never
   start a new command.
+- **FOCAL's `ASK` answer never reached the program.** The statement recorded the reply
+  in a private dictionary while the engine substituted from `interpreter.variables`, so
+  the prompt appeared and `T N` printed `0.00` whatever was typed. The statement now
+  writes to the same place the engine reads from.
+- **FOCAL's `FPI` and `FRAN` needed parentheses they should not have.** FOCAL writes
+  them bare -- `T FPI` -- and requiring `()` sent the name to the variable lookup,
+  where an unset name is 0, so the documented form printed `0.00`.
+- **APL's `⍕` printed a character code instead of digits.** `FORMAT` took the
+  nested-display path, which reads a number as the character with that code, so `⍕42`
+  answered `*`. The keyword spellings `+REDUCE` and `+SCAN` also failed: the operator
+  split compared raw tokens, so only the glyph forms derived a function.
+- **CHIP-8's `JP V0, addr` encoded the register into the address.** The high nibble of
+  the jump table's base came from `V0` rather than from the instruction, so the jump
+  landed at address 6.
+- **PILOT's `LINK`/`LOAD` could never run.** A line beginning `L:` is the *label
+  declaration* -- the loader registers it as one -- so the Link/Load unit returned
+  before it was reached, and the long forms remapped to exactly such a line. It is now
+  unreachable code no longer; the unit reports that lesson chaining is not implemented,
+  because a silent success is the failure mode this whole examination exists to catch.
+- **REXX's `SPACE` ignored its count argument.** `SPACE(string, n, pad)` puts `n` pad
+  characters between the words; the count was dropped, so `SPACE('a b c', 0)` answered
+  `a b c` -- a plausible wrong answer rather than a missing one.
+- **`command_inventory.py` compared its "not a command" list case-sensitively** while
+  the list held lowercase entries (`nil`, `false`, `binary`), so those entries did
+  nothing and were counted as unwritten work. Only the case-insensitive entries were
+  filtering, which is why the report asked for rows that could not exist.
 - The corpus gate counted every intermediate frame, and how many frames stream before
   a `CLEARSCREEN` depends on the 50 ms flush cadence — so the "strokes" figure moved by
   hundreds between identical runs and could not be compared with anything. It now
@@ -119,22 +145,28 @@ remains the detail on the C++ libraries.
 
 ---
 
-## Next: finish the four newest languages
+## The four newest languages are complete
 
-**APL, FOCAL, CHIP-8 and Smalltalk are implemented, registered, tested and in the
-example corpus.** Each has an executor, a test module, and a worked example that
-`example_smoke.py` runs and checks for ink. What none of them has yet:
+**APL, FOCAL, CHIP-8 and Smalltalk** arrived after the original six. Each now has
+everything the others have:
 
-- **A command reference** in `docs/LANGUAGE_GUIDE.md`. They are listed there by file
-  extension and example instead of by command table.
-- **A tutorial** in `docs/tutorials/`, which each of the original six has.
-- **Command-table rows** in `native/bridge/time_warp/tests/command_table.py`, so
-  `native/tools/command_matrix.py` can drive them. `command_inventory.py` already
-  sees their dispatch literals — 43 for APL, 24 for CHIP-8, 19 for FOCAL, 12 for
-  Smalltalk — so they are measured as unwritten rather than passing unnoticed.
-- **Lessons** — two per language for the original six.
+- an **executor** and a **test module** in `native/bridge/time_warp/`,
+- a **worked example** under `Examples/` that `example_smoke.py` runs and checks for
+  ink (all four draw),
+- a **command reference** in `docs/LANGUAGE_GUIDE.md` and a **tutorial** in
+  `docs/tutorials/`,
+- **command-table rows** covering every literal `command_inventory.py` finds in their
+  executors, so `command_matrix.py` drives them the way it drives BASIC.
 
-Four limits are recorded here rather than left to be discovered:
+Writing those rows is what turned the inventory's counts into the list of defects
+above: nine of them were found by a row that had no answer, not by reading the code.
+
+**Lessons are the one thing still missing.** The original six have two each; the four
+new languages have none, because the lesson panel is not ported (see "What is not
+here yet" in `docs/ARCHITECTURE.md`). Writing lessons that nothing can display would
+be inventing the appearance of a feature, so they are recorded here instead.
+
+Four limits are recorded rather than left to be discovered:
 
 - **FOCAL's `!` suppresses the newline inside one TYPE, not across statements.** The
   engine logs each statement's output separately, so a trailing newline is added by

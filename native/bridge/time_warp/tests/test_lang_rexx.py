@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from .conftest_lang import first_error, no_errors, run
+from .conftest_lang import first_error, has, no_errors, run
 
 from time_warp.core.interpreter import Language
 
@@ -130,3 +130,17 @@ def test_parse_var_splits_words():
 
 def test_unknown_statement_reports_error():
     assert first_error(rexx("FROBULATE 3\n")) is not None
+
+
+# -- regressions -------------------------------------------------------------
+
+
+def test_space_honours_its_count_and_pad() -> None:
+    """`SPACE(string, n, pad)` puts n pad characters between the words.
+
+    The count was ignored, so SPACE('a b c', 0) answered 'a b c' — a plausible
+    wrong answer rather than a missing one.
+    """
+    assert has(run("SAY SPACE('a b c', 3)", LANG), "a   b   c")
+    assert has(run("SAY SPACE('a b c', 0)", LANG), "abc")
+    assert has(run("SAY SPACE('a b c', 1, '.')", LANG), "a.b.c")

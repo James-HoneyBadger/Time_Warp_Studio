@@ -64,4 +64,4 @@ Scheme runs on a native explicit-stack machine with a background runner that sup
 
 - **48 curated example programs** across all 10 active languages, under `Examples/`
 - **Error hints** — syntax suggestions alongside interpreter error messages
-- **Six language tutorials** — one per language, under `docs/tutorials/`
+- **Ten language tutorials** — one per language, under `docs/tutorials/`

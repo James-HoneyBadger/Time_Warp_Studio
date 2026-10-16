@@ -149,6 +149,9 @@ _TOKEN_RE = re.compile(
     r")"
 )
 
+#: Functions FOCAL writes without parentheses.
+_NO_ARGUMENT_FUNCTIONS = frozenset({"FPI", "FRAN"})
+
 #: FOCAL's function set. Single argument each, except FPI and FRAN.
 _FUNCTIONS: dict[str, Any] = {
     "FABS": abs,
@@ -189,7 +192,6 @@ def _state(interp: "Interpreter") -> dict[str, Any]:
             "fmt": 2,
             "do_depth": 0,
             "steps": 0,
-            "vars": {},
         }
         interp.__dict__["_focal_state"] = state
     return state
@@ -344,18 +346,35 @@ class _Parser:
                     if not self._accept(")"):
                         raise FocalError("missing )")
                 return self._call(name, arguments)
+            if name in _NO_ARGUMENT_FUNCTIONS:
+                # FOCAL writes these without parentheses: `T FPI`, not `T FPI()`.
+                # Requiring the parentheses made the documented form print 0.00,
+                # because the name then fell through to the variable lookup.
+                return self._call(name, [])
+            if name in _FUNCTIONS:
+                raise FocalError(f"{name} needs an argument, as in {name}(X)")
             # A variable that has never been assigned is zero, as FOCAL's loader
             # leaves it. Returning the name instead would put "X" on the screen
             # where a number belongs.
-            return float(self.variables.get(name, 0.0))
+            raw = self.variables.get(name, 0.0)
+            try:
+                return float(raw)
+            except (TypeError, ValueError) as exc:
+                raise FocalError(f"{name} is not a number") from exc
         raise FocalError(f"unexpected {text!r} in expression")
 
     def _call(self, name: str, arguments: list[float]) -> float:
         handler = _FUNCTIONS.get(name)
         if handler is None:
             raise FocalError(f"unknown function {name}")
-        if name in ("FPI", "FRAN") and not arguments:
-            return float(handler())
+        if name in _NO_ARGUMENT_FUNCTIONS:
+            if not arguments:
+                return float(handler())
+            if name == "FRAN" and len(arguments) == 1:
+                # FRAN takes an optional seed, as it does in FOCAL.
+                random.seed(int(arguments[0]))
+                return float(handler())
+            raise FocalError(f"{name} takes no argument")
         if len(arguments) != 1:
             raise FocalError(f"{name} takes one argument")
         try:
@@ -521,14 +540,14 @@ def _statement(
     # A turtle word before the alias table: "FORWARD" shares a first letter with
     # FOR but is not a loop.
     if word in _TURTLE:
-        return None, _turtle_statement(turtle, _TURTLE[word], rest, state["vars"])
+        return None, _turtle_statement(turtle, _TURTLE[word], rest, interp.variables)
 
     command = _ALIASES.get(word)
     if command is None:
         raise FocalError(f"unknown command {word!r}")
 
     if command == "TYPE":
-        return None, _type_statement(rest, state["vars"], state)
+        return None, _type_statement(rest, interp.variables, state)
     if command == "COMMENT":
         return None, ""
     if command == "SET":
@@ -544,7 +563,7 @@ def _statement(
     if command == "DO":
         return None, _do_statement(interp, turtle, rest, state)
     if command == "ERASE":
-        return None, _erase_statement(rest, state)
+        return None, _erase_statement(interp, rest)
     if command == "QUIT":
         interp.running = False
         return None, ""
@@ -572,8 +591,8 @@ def _set_statement(
         key = name.strip().upper()
         if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", key):
             raise FocalError(f"bad variable name {name.strip()!r}")
-        value = _evaluate(expression, state["vars"])
-        state["vars"][key] = value
+        value = _evaluate(expression, interp.variables)
+        interp.variables[key] = value
         interp.variables[key] = value
     return ""
 
@@ -592,10 +611,16 @@ def _ask_statement(interp: "Interpreter", arguments: str, state: dict[str, Any])
             raise FocalError("unterminated prompt")
         prompt = rest[1:end]
         rest = rest[end + 1 :]
-    name = rest.strip().upper()
+    # A comma is accepted before the name because every other FOCAL statement
+    # separates its items with one, so `ASK "Number? ", N` is what the habit
+    # produces. Without this it was an error naming the comma.
+    name = rest.strip().lstrip(",").strip().upper()
     if not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*", name):
         raise FocalError(f"ASK needs a variable name, got {rest.strip()!r}")
-    state["vars"].setdefault(name, 0.0)
+    # The answer is written into interp.variables by provide_input(), which is
+    # why nothing is stored here: a private dict held the prompt's answer apart
+    # from the variable the program then read, and the program printed 0.00.
+    interp.variables.setdefault(name, 0.0)
     interp.start_input_request(prompt, name, True)
     return ""
 
@@ -606,7 +631,7 @@ def _if_statement(interp: "Interpreter", arguments: str, state: dict[str, Any]) 
     close_at = arguments.rfind(")")
     if open_at == -1 or close_at < open_at:
         raise FocalError("IF needs a parenthesised expression, e.g. IF (X) 1.1,2.1,3.1")
-    value = _evaluate(arguments[open_at + 1 : close_at], state["vars"])
+    value = _evaluate(arguments[open_at + 1 : close_at], interp.variables)
     targets = [item.strip() for item in _split_top_level(arguments[close_at + 1 :])]
     if len(targets) > 3:
         raise FocalError("IF takes at most three targets")
@@ -647,7 +672,11 @@ def _for_statement(
     body_parts = [part for part in _split_top_level(body, ";") if part.strip()]
     if not body_parts:
         raise FocalError("FOR needs a statement after its ;")
-    numbers = [_evaluate(part, state["vars"]) for part in _split_top_level(head) if part.strip()]
+    numbers = [
+        _evaluate(part, interp.variables)
+        for part in _split_top_level(head)
+        if part.strip()
+    ]
     if not numbers:
         raise FocalError("FOR needs at least one value")
 
@@ -666,7 +695,6 @@ def _for_statement(
         state["steps"] += 1
         if state["steps"] > _MAX_STEPS:
             raise FocalError("FOR loop exceeded the step limit")
-        state["vars"][variable] = value
         interp.variables[variable] = value
         for part in body_parts:
             target, text = _statement(interp, turtle, part, state)
@@ -728,16 +756,16 @@ def _run_group(
     return "".join(output)
 
 
-def _erase_statement(arguments: str, state: dict[str, Any]) -> str:
+def _erase_statement(interp: "Interpreter", arguments: str) -> str:
     """ERASE ALL, or ERASE followed by the variables to forget."""
     words = [word.strip().upper() for word in arguments.replace(",", " ").split()]
     if not words:
         raise FocalError("ERASE needs ALL or a list of variables")
     if words[0] == "ALL":
-        state["vars"].clear()
+        interp.variables.clear()
         return ""
     for word in words:
-        state["vars"].pop(word, None)
+        interp.variables.pop(word, None)
     return ""
 
 

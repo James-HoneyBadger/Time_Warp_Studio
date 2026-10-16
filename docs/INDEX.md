@@ -14,7 +14,7 @@ languages, with an integrated turtle graphics canvas. This page is the map.
 | --- | --- |
 | [INSTALLATION.md](INSTALLATION.md) | Requirements, building, running, troubleshooting a build |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How the IDE, the engines and the bridge fit together |
-| [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) | Command reference: the six original languages in full, the four newest by example |
+| [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) | Command reference for all ten languages |
 | [README_TESTING.md](README_TESTING.md) | The suites, the example gate and the parity harnesses |
 | [ROADMAP.md](ROADMAP.md) | What is built, what is next, what was deliberately deferred |
 | [FAQ.md](FAQ.md) | Short answers to common questions |
@@ -35,6 +35,10 @@ One per active language, each written to be worked through:
 | [comal.md](tutorials/comal.md) | COMAL — structured BASIC |
 | [rexx.md](tutorials/rexx.md) | REXX — string processing and scripting |
 | [scheme.md](tutorials/scheme.md) | Scheme — functional programming |
+| [apl.md](tutorials/apl.md) | APL — arrays, and no operator precedence |
+| [focal.md](tutorials/focal.md) | FOCAL — line labels and branching on a sign |
+| [chip8.md](tutorials/chip8.md) | CHIP-8 — opcodes and a 64x32 framebuffer |
+| [smalltalk.md](tutorials/smalltalk.md) | Smalltalk — objects and messages |
 
 ---
 

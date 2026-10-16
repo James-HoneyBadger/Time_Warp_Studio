@@ -259,3 +259,24 @@ def test_hello_example():
     out = pilot(src, input_val="YES")
     assert no_errors(out)
     assert ok(out)
+
+
+# -- regressions -------------------------------------------------------------
+
+
+def test_link_reports_that_chaining_is_not_implemented() -> None:
+    """The Link/Load unit cannot run, and now says so.
+
+    `L:` is a label declaration — the loader in core/interpreter.py registers it
+    as one — so a line beginning `L:` returned before the Link/Load branch could
+    be reached, and `LINK`/`LOAD` remapped to exactly such a line. It returned
+    nothing at all, which is the shape of failure that reads as success.
+    """
+    output = run("LINK lesson.pilot", LANG)
+    assert has(output, "\u274c")
+    assert has(output, "not implemented")
+
+
+def test_l_declares_a_label() -> None:
+    output = run("J: MARK\nT: NOT REACHED\nL: MARK\nT: LANDED", LANG)
+    assert has(output, "LANDED")
