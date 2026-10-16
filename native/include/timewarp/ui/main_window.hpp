@@ -77,6 +77,7 @@ namespace timewarp::ui {
 
 class CodeEditor;
 class CrtOverlay;
+class FindBar;
 class FunctionKeyBar;
 class ImmediateModePanel;
 class LessonPanel;
@@ -129,6 +130,16 @@ public:
 
     /// The lesson panel, so a test can drive it and a screenshot can show it.
     [[nodiscard]] LessonPanel* lessonPanel() const noexcept { return lesson_panel_; }
+
+    /// The find and replace bar, so a test can drive it.
+    [[nodiscard]] FindBar* findBar() const noexcept { return find_bar_; }
+    /// Shows the find bar, with the replacement row when `withReplacement`.
+    void showFindBar(bool withReplacement);
+    /// Finds the next match for the bar's term. From the menu, so it does not
+    /// depend on the term's field having focus.
+    void findNextMatch(bool backwards);
+    /// Asks for a line number and goes there.
+    void goToLinePrompt();
 
     [[nodiscard]] ImmediateModePanel* immediateMode() const noexcept {
         return immediate_mode_;
@@ -306,6 +317,7 @@ private:
     QSplitter* output_canvas_splitter_ = nullptr;
     QTabWidget* output_sub_tabs_ = nullptr;
     ImmediateModePanel* immediate_mode_ = nullptr;
+    FindBar* find_bar_ = nullptr;
     FunctionKeyBar* function_key_bar_ = nullptr;
     CrtOverlay* crt_overlay_ = nullptr;
     QDockWidget* outline_dock_ = nullptr;

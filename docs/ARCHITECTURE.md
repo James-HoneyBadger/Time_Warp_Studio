@@ -261,6 +261,12 @@ syntax at all, and PILOT's units are a letter and a colon at the start of a line
 keyword tables are the engine's own command names, so the colouring cannot teach a
 word the engine would reject.
 
+Searching is split the same way. `CodeEditor` owns it — `findNext`, `matchCount`,
+`replaceAll`, `replaceCurrent` — because the document is there, and `FindBar` is the
+row of controls that drives those four calls. That is what lets the wrapping, the
+case handling and the single-undo-step Replace All be tested against a document with
+no window in the stack.
+
 ### The turtle canvas
 
 `TurtleCanvas` is the graphics surface, and it is a **consumer**: the interpreter never
@@ -636,8 +642,8 @@ migrating.
 - **The debugger is a runner, not a UI.** `DebuggerRunner` supports pause, step and
   breakpoints, and `debug_tests` covers the machinery; the panels that would drive it are
   placeholders.
-- **No minimap, find/replace, outline or formatter.** Syntax colouring is in; the
-  rest is not.
+- **No minimap, find-in-files, outline or formatter.** Syntax colouring and
+  find/replace are in; the rest is not.
 - **No theme system** — the stylesheet is there, the 33 themes are not.
 - **Packaging stops at `make install`**: a desktop entry and an icon. No distro packages,
   no installers.

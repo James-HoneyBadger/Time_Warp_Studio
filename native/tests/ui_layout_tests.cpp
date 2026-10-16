@@ -43,10 +43,12 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QVBoxLayout>
+#include <QVBoxLayout>
 #include <QWidgetAction>
 
 #include "check.hpp"
 #include "timewarp/ui/code_editor.hpp"
+#include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
@@ -304,7 +306,19 @@ void test_editor_pane_splitter_holds_two_tab_groups() {
     TW_CHECK_EQ(panes->handleWidth(), 5);
     TW_CHECK(!panes->childrenCollapsible());
     TW_CHECK_EQ(panes->count(), 2);
-    TW_CHECK_EQ(panes->widget(0), window.editorTabs());
+    // The primary pane is a container holding the tabs *and* the find bar, so the
+    // bar sits directly under the text it searches rather than under the whole
+    // editor column (which also holds the REPL).
+    QWidget* primary = panes->widget(0);
+    TW_CHECK_EQ(primary->objectName(), QStringLiteral("editorPane"));
+    TW_CHECK_EQ(window.editorTabs()->parentWidget(), primary);
+    TW_CHECK_EQ(window.findBar()->parentWidget(), primary);
+    auto* primary_layout = qobject_cast<QVBoxLayout*>(primary->layout());
+    TW_CHECK(primary_layout != nullptr);
+    TW_CHECK_EQ(primary_layout->indexOf(window.editorTabs()), 0);
+    TW_CHECK_EQ(primary_layout->indexOf(window.findBar()), 1);
+    // Out of the way until Edit > Find asks for it.
+    TW_CHECK(window.findBar()->isHidden());
     TW_CHECK_EQ(panes->widget(1), window.secondaryEditorTabs());
     // An even split: the split editor is meant to give both panes equal room.
     TW_CHECK_EQ(horizontalStretch(panes, 0), 1);

@@ -1164,10 +1164,10 @@ strokes a circle costs.
 * The variables, telemetry HUD, debug, terminal and outline panels are still
   `PlaceholderPanel`s naming the Python module they stand for. The layout is real;
   their contents are not.
-* The editor colours source per language now, but still has no minimap,
-  find/replace, outline or formatter. The Python editor is 2,254 lines because of
-  those extras; they are worth adding one at a time against a working base, which
-  now exists.
+* The editor colours source per language and finds and replaces in it, but still
+  has no minimap, find-in-files, outline or formatter. The Python editor is 2,254
+  lines because of those extras; they are worth adding one at a time against a
+  working base, which now exists.
 * `CrtOverlay` draws scanlines only. The Python also does curvature, vignette,
   glow and flicker with sliders for each; the point of including it here was the
   geometry tracking, which is where the Python approach was fragile.

@@ -104,6 +104,97 @@ Language CodeEditor::language() const noexcept {
     return highlighter_ == nullptr ? Language::Unknown : highlighter_->language();
 }
 
+namespace {
+
+/// The flags `QTextDocument::find` takes for a plain-text search.
+[[nodiscard]] QTextDocument::FindFlags findFlags(bool caseSensitive, bool backwards) {
+    QTextDocument::FindFlags flags;
+    if (caseSensitive) {
+        flags |= QTextDocument::FindCaseSensitively;
+    }
+    if (backwards) {
+        flags |= QTextDocument::FindBackward;
+    }
+    return flags;
+}
+
+}  // namespace
+
+bool CodeEditor::findNext(const QString& text, bool caseSensitive, bool backwards) {
+    if (text.isEmpty()) {
+        return false;
+    }
+    const QTextDocument::FindFlags flags = findFlags(caseSensitive, backwards);
+
+    QTextCursor found = document()->find(text, textCursor(), flags);
+    if (found.isNull()) {
+        // Wrap. A search that stops at the end of the file is a search the user
+        // has to scroll to continue, and the Python IDE wrapped as well.
+        found = backwards ? document()->find(text, document()->characterCount(), flags)
+                          : document()->find(text, 0, flags);
+    }
+    if (found.isNull()) {
+        return false;
+    }
+    setTextCursor(found);
+    ensureCursorVisible();
+    return true;
+}
+
+int CodeEditor::matchCount(const QString& text, bool caseSensitive) const {
+    if (text.isEmpty()) {
+        return 0;
+    }
+    const QTextDocument::FindFlags flags = findFlags(caseSensitive, false);
+    int count = 0;
+    QTextCursor found = document()->find(text, 0, flags);
+    while (!found.isNull()) {
+        ++count;
+        found = document()->find(text, found, flags);
+    }
+    return count;
+}
+
+int CodeEditor::replaceAll(const QString& text, const QString& replacement,
+                           bool caseSensitive) {
+    if (text.isEmpty()) {
+        return 0;
+    }
+    const QTextDocument::FindFlags flags = findFlags(caseSensitive, false);
+
+    QTextCursor editor{document()};
+    editor.beginEditBlock();
+    int count = 0;
+    QTextCursor found = document()->find(text, 0, flags);
+    while (!found.isNull()) {
+        found.insertText(replacement);
+        ++count;
+        // Resume *after* what was just inserted, so `a` -> `aa` terminates.
+        found = document()->find(text, found, flags);
+    }
+    editor.endEditBlock();
+    return count;
+}
+
+bool CodeEditor::replaceCurrent(const QString& text, const QString& replacement,
+                                bool caseSensitive) {
+    if (text.isEmpty()) {
+        return false;
+    }
+    QTextCursor cursor = textCursor();
+    const QString selected = cursor.selectedText();
+    const Qt::CaseSensitivity sensitivity =
+        caseSensitive ? Qt::CaseSensitive : Qt::CaseInsensitive;
+    if (selected.compare(text, sensitivity) != 0) {
+        return false;
+    }
+    QTextCursor editor{document()};
+    editor.beginEditBlock();
+    cursor.insertText(replacement);
+    editor.endEditBlock();
+    return true;
+}
+
 int CodeEditor::lineNumberAreaWidth() const {
     const int digits = QString::number(std::max(1, blockCount())).size();
     return std::max(kMinimumGutterWidth,

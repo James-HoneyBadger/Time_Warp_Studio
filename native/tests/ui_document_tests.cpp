@@ -41,6 +41,7 @@
 #include "check.hpp"
 #include "timewarp/bridge/python_worker.hpp"
 #include "timewarp/ui/code_editor.hpp"
+#include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/language.hpp"
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
@@ -49,6 +50,7 @@
 namespace {
 
 using timewarp::ui::CodeEditor;
+using timewarp::ui::FindBar;
 using timewarp::ui::Language;
 using timewarp::ui::MainWindow;
 using timewarp::ui::TurtleCanvas;
@@ -706,6 +708,122 @@ void test_stop_interrupts_a_running_program() {
     TW_CHECK_EQ(canvas->strokeCount(), drawn);
 }
 
+// ---------------------------------------------------------------------------
+// Find and replace
+//
+// The searching lives on the editor rather than in the find bar, so it is
+// exercised through the editor: the bar is a view over these calls, and a
+// failure here is a failure with no window in the stack.
+// ---------------------------------------------------------------------------
+
+void test_find_next_selects_and_wraps() {
+    announce("find: select, count, wrap");
+    MainWindow window;
+    CodeEditor* editor = window.currentEditor();
+    TW_CHECK(editor != nullptr);
+    editor->setPlainText(QStringLiteral("alpha beta alpha gamma alpha"));
+
+    TW_CHECK_EQ(editor->matchCount(QStringLiteral("alpha"), true), 3);
+    TW_CHECK_EQ(editor->matchCount(QStringLiteral("ALPHA"), false), 3);
+    // Case matters when it is asked to: a search that ignored case would find
+    // `ALPHA` here and hide a real mistake in a language where case matters.
+    TW_CHECK_EQ(editor->matchCount(QStringLiteral("ALPHA"), true), 0);
+    TW_CHECK_EQ(editor->matchCount(QStringLiteral(""), true), 0);
+
+    TW_CHECK(editor->findNext(QStringLiteral("alpha"), true));
+    TW_CHECK_EQ(editor->textCursor().selectedText(), QStringLiteral("alpha"));
+    TW_CHECK_EQ(editor->textCursor().selectionStart(), 0);
+
+    TW_CHECK(editor->findNext(QStringLiteral("alpha"), true));
+    TW_CHECK_EQ(editor->textCursor().selectionStart(), 11);
+
+    TW_CHECK(editor->findNext(QStringLiteral("alpha"), true));
+    TW_CHECK_EQ(editor->textCursor().selectionStart(), 23);
+
+    // From the last match it wraps to the first, so a search never dead-ends at
+    // the bottom of the file with matches above it.
+    TW_CHECK(editor->findNext(QStringLiteral("alpha"), true));
+    TW_CHECK_EQ(editor->textCursor().selectionStart(), 0);
+
+    // Backwards from the first wraps to the last.
+    TW_CHECK(editor->findNext(QStringLiteral("alpha"), true, true));
+    TW_CHECK_EQ(editor->textCursor().selectionStart(), 23);
+
+    // A term that is not there moves nothing at all.
+    TW_CHECK(!editor->findNext(QStringLiteral("delta"), true));
+    TW_CHECK_EQ(editor->textCursor().selectionStart(), 23);
+}
+
+void test_replace_all_is_one_step() {
+    announce("replace all");
+    MainWindow window;
+    CodeEditor* editor = window.currentEditor();
+    TW_CHECK(editor != nullptr);
+    editor->setPlainText(QStringLiteral("x = 1\ny = x + x\n"));
+
+    // A replacement containing the search term terminates: each search resumes
+    // after what was just inserted.
+    TW_CHECK_EQ(editor->replaceAll(QStringLiteral("x"), QStringLiteral("xx"), true), 3);
+    TW_CHECK_EQ(editor->toPlainText(), QStringLiteral("xx = 1\ny = xx + xx\n"));
+
+    // One undo step, because replacing a document in twelve pieces means twelve
+    // undos to get back to where you were.
+    editor->undo();
+    TW_CHECK_EQ(editor->toPlainText(), QStringLiteral("x = 1\ny = x + x\n"));
+
+    TW_CHECK_EQ(editor->replaceAll(QStringLiteral("X"), QStringLiteral("z"), false), 3);
+    TW_CHECK_EQ(editor->toPlainText(), QStringLiteral("z = 1\ny = z + z\n"));
+
+    TW_CHECK_EQ(editor->replaceAll(QStringLiteral("x"), QStringLiteral("q"), true), 0);
+
+    // Replacing one at a time only replaces when the cursor is on a match.
+    TW_CHECK(!editor->replaceCurrent(QStringLiteral("q"), QStringLiteral("w"), true));
+    // Park the cursor at the top first: which `z` a single replacement hits has to
+    // be a fact about the document, not about where the undo left the cursor.
+    editor->moveCursor(QTextCursor::Start);
+    TW_CHECK(editor->findNext(QStringLiteral("z"), true));
+    TW_CHECK_EQ(editor->textCursor().selectionStart(), 0);
+    TW_CHECK(editor->replaceCurrent(QStringLiteral("z"), QStringLiteral("w"), true));
+    TW_CHECK_EQ(editor->toPlainText(), QStringLiteral("w = 1\ny = z + z\n"));
+}
+
+void test_the_find_bar_drives_the_editor() {
+    announce("the find bar");
+    MainWindow window;
+    FindBar* bar = window.findBar();
+    CodeEditor* editor = window.currentEditor();
+    TW_CHECK(bar != nullptr);
+    TW_CHECK(editor != nullptr);
+
+    // Out of the way until it is asked for, and asking for plain Find does not
+    // show a replacement row.
+    TW_CHECK(bar->isHidden());
+    window.showFindBar(false);
+    TW_CHECK(!bar->isHidden());
+    TW_CHECK(!bar->replaceRowVisible());
+
+    editor->setPlainText(QStringLiteral("one two three two"));
+    bar->setTerm(QStringLiteral("two"));
+    TW_CHECK_EQ(bar->statusText(), QStringLiteral("2 matches"));
+    bar->findAgain(false);
+    TW_CHECK_EQ(editor->textCursor().selectedText(), QStringLiteral("two"));
+
+    // The count follows the document, so it cannot say "2 matches" after one of
+    // them was deleted.
+    editor->setPlainText(QStringLiteral("one two three"));
+    bar->setTerm(QStringLiteral("two"));
+    TW_CHECK_EQ(bar->statusText(), QStringLiteral("1 match"));
+
+    bar->setTerm(QStringLiteral("seven"));
+    TW_CHECK_EQ(bar->statusText(), QStringLiteral("no matches"));
+
+    // Replace shows the second row, and Replace All reports what it did.
+    window.showFindBar(true);
+    TW_CHECK(bar->replaceRowVisible());
+    bar->setTerm(QStringLiteral("one"));
+    TW_CHECK_EQ(bar->statusText(), QStringLiteral("1 match"));
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -719,6 +837,9 @@ int main(int argc, char** argv) {
 
     test_language_mapping();
     test_editor_widget();
+    test_find_next_selects_and_wraps();
+    test_replace_all_is_one_step();
+    test_the_find_bar_drives_the_editor();
 
     test_a_fresh_window_has_one_real_document();
     test_opening_a_file();

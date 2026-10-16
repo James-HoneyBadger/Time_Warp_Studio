@@ -15,7 +15,7 @@ yet — please check the list below before reporting one as a regression.
 | Area | State |
 | --- | --- |
 | Shell | Documents and tabs, menus, toolbars, status bar, settings persistence |
-| Editor | Line-number gutter, current-line highlight, per-language syntax colouring, tab stops, fonts |
+| Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, go-to-line, tab stops, fonts |
 | Console | Streaming output, and interpreter errors in their own tab |
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
@@ -218,11 +218,17 @@ Debug/Continue/Trace do not yet drive a panel. Then: breakpoints, watch
 expressions, a call stack, variable inspection, and step granularity finer than a
 form.
 
-**Editor** — find/replace, find in files, go-to-line, a minimap, error markers in
-the gutter, breakpoint markers, auto-completion and a document outline are all still
-missing. Per-language syntax colouring **is** built
-(`native/src/ui/syntax_highlighter.cpp`), with one rule table per language because the
-ten disagree about what a comment even is.
+**Editor** — find in files, a minimap, error markers in the gutter, breakpoint
+markers, auto-completion and a document outline are still missing.
+
+Two of the entries that used to be on that list are built. Per-language syntax
+colouring is `native/src/ui/syntax_highlighter.cpp`, one rule table per language
+because the ten disagree about what a comment even is. Find, replace and go-to-line
+are `FindBar` (`native/src/ui/find_bar.cpp`), which sits under the editor tabs: the
+*searching* lives on `CodeEditor` — with wrapping, an undo-able Replace All — so the
+behaviour is testable without a window, and the bar is the view over it. F3 and
+Shift+F3 find the next and previous match with the bar closed, and go-to-line is
+Ctrl+L, because the canvas already owns Ctrl+G.
 
 **Console** — clickable `line N` links into the editor, an error-only filter, and
 save-to-file.

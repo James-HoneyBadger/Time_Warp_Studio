@@ -67,6 +67,31 @@ public:
     [[nodiscard]] int currentLine() const;
     [[nodiscard]] int currentColumn() const;
 
+    // -- search -----------------------------------------------------------
+    //
+    // Here rather than in the find bar because the document is here, and because
+    // a search is the kind of thing that has to be testable without a window
+    // around it. The bar is a view over these four calls.
+
+    /// Selects the next occurrence of `text`, wrapping at the end of the
+    /// document. Returns false, having changed nothing, when there is no match
+    /// -- an empty search term included.
+    bool findNext(const QString& text, bool caseSensitive, bool backwards = false);
+
+    /// How many occurrences of `text` the document holds.
+    [[nodiscard]] int matchCount(const QString& text, bool caseSensitive) const;
+
+    /// Replaces every occurrence, as one undo step, and returns how many were
+    /// replaced. A replacement that contains the search term does not loop:
+    /// each search resumes after the text just inserted.
+    int replaceAll(const QString& text, const QString& replacement, bool caseSensitive);
+
+    /// Replaces the occurrence at the cursor when the cursor is sitting on one,
+    /// then moves to the next. Returns false when the cursor was not on a match,
+    /// so the caller can search first rather than replace something arbitrary.
+    bool replaceCurrent(const QString& text, const QString& replacement,
+                        bool caseSensitive);
+
     /// Colours the document for `language`.
     ///
     /// Called by the window whenever a document's language changes, which is not

@@ -97,6 +97,20 @@ Four more languages, and the defects that examining their commands turned up.
   and asserts the colour at a named position. That is the only kind of check that
   works here: coloured text one token out of place still looks like a working editor.
 
+### Find, replace and go-to-line
+
+- **`FindBar`** — a bar under the editor tabs, hidden until Edit > Find asks for it.
+  Replace is the same bar with a second row. Enter finds the next match, Shift+Enter
+  the previous one, Escape closes it and F3/Shift+F3 keep finding with it closed.
+- **The searching lives on `CodeEditor`** — `findNext` (wrapping, which is what makes
+  a search that started midway through the file reach the text above it), `matchCount`
+  (re-counted whenever the document changes, so it cannot claim matches that have been
+  deleted), `replaceAll` (one undo step: replacing a document in twelve pieces means
+  twelve undos to get back) and `replaceCurrent`.
+- **Go to Line** — Ctrl+L. Not Ctrl+G, which the canvas grid already owns: two actions
+  on one key is an ambiguous shortcut that Qt resolves by guessing.
+- The About box now names all ten languages instead of the original six.
+
 ---
 
 ## [15.0.0] - 2026-10-16

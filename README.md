@@ -32,7 +32,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 
 ### Integrated IDE
 
-- **Code editor** — line-number gutter, current-line highlight, 4-space tab stops, per-language file handling, and per-language syntax colouring (comments, strings, numbers, keywords)
+- **Code editor** — line-number gutter, current-line highlight, 4-space tab stops, per-language file handling, per-language syntax colouring (comments, strings, numbers, keywords), and find/replace with go-to-line (F3 for the next match, Ctrl+L for a line number)
 - **Output console** — program output as it is produced, with interpreter errors in their own tab
 - **Turtle canvas** — the drawing appears as it is made, with zoom, pan, grid, auto-fit and a turtle marker
 - **Documents** — tabs, per-file language detection, unsaved-change prompts, new/open/save/save-as
@@ -46,8 +46,8 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 
 The Qt IDE is the product; the PySide6 application that preceded it has been removed.
 Features of that application that have **not** been ported yet — themes and the CRT
-effects, the examples browser, find/replace, auto-completion, the debugger panels, and
-the function-key bar's Shift and Ctrl layers — are tracked in
+effects, the examples browser, find-in-files, auto-completion, the debugger panels,
+and the function-key bar's Shift and Ctrl layers — are tracked in
 [docs/ROADMAP.md](docs/ROADMAP.md).
 Please read that list before reporting one of them as a regression.
 

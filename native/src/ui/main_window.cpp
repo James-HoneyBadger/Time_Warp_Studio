@@ -42,6 +42,7 @@
 #include "timewarp/canvas/qt_bridge.hpp"
 #include "timewarp/ui/app.hpp"
 #include "timewarp/ui/code_editor.hpp"
+#include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
@@ -186,13 +187,31 @@ void MainWindow::buildEditorColumn(QSplitter* parent) {
     editor_pane_splitter_->setChildrenCollapsible(false);
     editor_pane_splitter_->setHandleWidth(kEditorPaneHandleWidth);
 
-    editor_tabs_ = new ResizableTabWidget{editor_pane_splitter_};
+    // The tabs and the find bar share a container so the bar can sit directly
+    // under them. Directly, and not under the whole editor column: the column
+    // also holds the REPL, and a find bar below *that* would be nowhere near the
+    // text it searches.
+    auto* editor_pane = new QWidget{editor_pane_splitter_};
+    editor_pane->setObjectName(QStringLiteral("editorPane"));
+    auto* editor_pane_layout = new QVBoxLayout{editor_pane};
+    editor_pane_layout->setContentsMargins(0, 0, 0, 0);
+    editor_pane_layout->setSpacing(0);
+
+    editor_tabs_ = new ResizableTabWidget{editor_pane};
     editor_tabs_->setObjectName(QStringLiteral("editorTabs"));
     editor_tabs_->setTabsClosable(true);
     editor_tabs_->setAccessibleName(tr("Editor Tabs"));
     editor_tabs_->setAccessibleDescription(tr("Code editor tab group"));
     editor_tabs_->enableEnhancedTabBar();
-    editor_pane_splitter_->addWidget(editor_tabs_);
+    editor_pane_layout->addWidget(editor_tabs_, 1);
+
+    // Hidden until Edit > Find asks for it. It is part of the layout rather than
+    // a floating overlay so that it pushes the editor up instead of covering the
+    // line the user is reading.
+    find_bar_ = new FindBar{editor_pane};
+    editor_pane_layout->addWidget(find_bar_);
+
+    editor_pane_splitter_->addWidget(editor_pane);
 
     // The Python calls `new_file()` at this point so a fresh window has a document
     // to edit rather than an empty box, and so does this.
@@ -450,6 +469,21 @@ void MainWindow::buildMenuBar() {
     edit->addSeparator();
     add(edit, tr("Select &All"), QKeySequence::SelectAll,
         [this] { if (QPlainTextEdit* target = editTarget()) { target->selectAll(); } });
+    edit->addSeparator();
+    add(edit, tr("&Find..."), QKeySequence::Find, [this] { showFindBar(false); });
+    add(edit, tr("Find and &Replace..."), QKeySequence::Replace,
+        [this] { showFindBar(true); });
+    // F3 rather than Ctrl+F, so finding again works with the bar closed: Ctrl+F
+    // would only re-open and re-focus the field.
+    add(edit, tr("Find &Next"), QKeySequence{Qt::Key_F3},
+        [this] { findNextMatch(false); });
+    add(edit, tr("Find Pre&vious"), QKeySequence{Qt::SHIFT | Qt::Key_F3},
+        [this] { findNextMatch(true); });
+    edit->addSeparator();
+    // Ctrl+L, not Ctrl+G: the grid on the canvas already owns Ctrl+G, and two
+    // actions on one key is an ambiguous shortcut that Qt resolves by guessing.
+    add(edit, tr("&Go to Line..."), QKeySequence{Qt::CTRL | Qt::Key_L},
+        [this] { goToLinePrompt(); });
 
     // -- Run --------------------------------------------------------------
     QMenu* run = bar->addMenu(tr("&Run"));
@@ -516,14 +550,52 @@ void MainWindow::buildMenuBar() {
         QMessageBox::about(
             this, tr("About Time Warp Studio"),
             tr("<b>Time Warp Studio</b> %1"
-               "<p>An educational IDE for BASIC, PILOT, Logo, COMAL, REXX and "
-               "Scheme, with an integrated turtle graphics canvas."
-               "<p>Built with C++20 and Qt6. Scheme and the expression evaluator "
-               "run natively; the other five languages run through the bundled "
-               "engine in <code>share/time_warp</code>.")
+               "<p>An educational IDE for ten languages: BASIC, APL, Logo, PILOT, "
+               "FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk, with an "
+               "integrated turtle graphics canvas."
+               "<p>Built with C++20 and Qt6. Scheme runs natively; the other nine "
+               "run through the bundled engine in <code>share/time_warp</code>.")
                 .arg(timewarp::ui::version()));
     });
     add(help, tr("About &Qt"), {}, [this] { QMessageBox::aboutQt(this); });
+}
+
+void MainWindow::showFindBar(bool withReplacement) {
+    if (find_bar_ == nullptr) {
+        return;
+    }
+    find_bar_->setEditor(currentEditor());
+    find_bar_->open(withReplacement);
+}
+
+void MainWindow::findNextMatch(bool backwards) {
+    if (find_bar_ == nullptr) {
+        return;
+    }
+    if (find_bar_->term().isEmpty()) {
+        // Nothing to search for yet. Opening the bar is more useful than a
+        // silent no-op, and it is where the user was going anyway.
+        showFindBar(false);
+        return;
+    }
+    find_bar_->setEditor(currentEditor());
+    find_bar_->findAgain(backwards);
+}
+
+void MainWindow::goToLinePrompt() {
+    CodeEditor* editor = currentEditor();
+    if (editor == nullptr) {
+        return;
+    }
+    bool accepted = false;
+    const int line = QInputDialog::getInt(this, tr("Go to Line"), tr("Line number:"),
+                                          editor->currentLine(), 1,
+                                          editor->document()->blockCount(), 1, &accepted);
+    if (accepted) {
+        // `goToLine` clamps, so a number past the end is a move to the last line
+        // rather than a refusal.
+        editor->goToLine(line);
+    }
 }
 
 QPlainTextEdit* MainWindow::editTarget() const {
@@ -963,6 +1035,14 @@ void MainWindow::adoptEditor(CodeEditor* editor) {
                     refreshDocumentState();
                 }
             });
+    // The find bar's match count is a statement about the document, so it has to
+    // be stale-proof: a count that only refreshed when the term changed would
+    // still say "4 matches" after two of them were deleted.
+    connect(editor, &QPlainTextEdit::textChanged, this, [this, editor] {
+        if (find_bar_ != nullptr && editor == currentEditor()) {
+            find_bar_->refresh();
+        }
+    });
 
     updateTabLabel(editor);
     refreshDocumentState();
@@ -989,6 +1069,9 @@ void MainWindow::refreshDocumentState() {
         language_badge_->setText(QStringLiteral("\U0001F522 \u2014"));
         position_badge_->setText(QString{});
         breadcrumb_->setText(QString{});
+        if (find_bar_ != nullptr) {
+            find_bar_->setEditor(nullptr);
+        }
         return;
     }
 
@@ -1002,6 +1085,11 @@ void MainWindow::refreshDocumentState() {
     // place that already answers "what language is this document?", so a rename
     // that changes the language cannot recolour every tab but this one.
     editor->setLanguage(languageOf(editor));
+    // Same reasoning for the find bar: it searches the document the user is
+    // looking at, and switching tabs has to move it.
+    if (find_bar_ != nullptr) {
+        find_bar_->setEditor(editor);
+    }
     position_badge_->setText(
         tr("Ln %1, Col %2").arg(editor->currentLine()).arg(editor->currentColumn()));
     breadcrumb_->setText(path.isEmpty() ? nameOf(editor) : QDir::toNativeSeparators(path));

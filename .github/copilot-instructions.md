@@ -248,7 +248,8 @@ Scripts/                       - audit_interpreters.py, version_sync.py, build_n
 
 - **Qt shell**: `native/src/ui/main_window.cpp` — documents, tabs, menus, status bar
 - **TurtleCanvas**: `native/src/ui/turtle_canvas.cpp` — the display list and the painter
-- **CodeEditor**: `native/src/ui/code_editor.cpp` — gutter, current line, tab stops
+- **CodeEditor**: `native/src/ui/code_editor.cpp` — gutter, current line, tab stops,
+  syntax colouring and the search that `FindBar` drives
 - **Language table**: `native/src/ui/language.cpp` — names, settings keys, extensions
 - **The bridge**: `native/bridge/worker.py` + `native/src/bridge/python_worker.cpp` —
   runs programs *and* checks lessons, so a learner's verdict and a teacher's mark are

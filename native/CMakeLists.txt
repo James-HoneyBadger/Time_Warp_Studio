@@ -446,6 +446,7 @@ if(Qt6_FOUND)
         add_library(timewarp_ui
             src/ui/app.cpp
             src/ui/code_editor.cpp
+            src/ui/find_bar.cpp
             src/ui/language.cpp
             src/ui/main_window.cpp
             src/ui/panels.cpp
@@ -456,6 +457,7 @@ if(Qt6_FOUND)
             # Listed so AUTOMOC scans them: the Q_OBJECT classes live in headers
             # outside this target's source directory.
             include/timewarp/ui/code_editor.hpp
+            include/timewarp/ui/find_bar.hpp
             include/timewarp/ui/main_window.hpp
             include/timewarp/ui/panels.hpp
             include/timewarp/ui/resizable_tab_widget.hpp
