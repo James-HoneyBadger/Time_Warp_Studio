@@ -438,7 +438,9 @@ void test_tool_bar_configuration() {
     // The language selector has to actually offer the languages; an empty combo is
     // a control that promises a choice and gives none.
     const auto* selector = bar->findChild<QComboBox*>(QStringLiteral("languageSelector"));
-    TW_CHECK_EQ(selector->count(), 6);
+    // Compared against the table rather than a literal: this checks the wiring,
+    // and the count itself is pinned in ui_document_tests.
+    TW_CHECK_EQ(selector->count(), timewarp::ui::allLanguages().size());
     TW_CHECK_EQ(selector->itemText(0), QStringLiteral("BASIC"));
     TW_CHECK_EQ(selector->itemData(0).toString(), QStringLiteral("basic"));
 

@@ -1,0 +1,46 @@
+; CHIP-8 in Time Warp Studio.
+;
+; The machine is the 1977 one: 64x32 pixels, sixteen 8-bit registers, and a
+; display addressed by the DRW instruction. Each two hex digits of a DB line are
+; one row of a sprite, drawn with its most significant bit on the left.
+;
+; This draws three things: a glyph taken from the font the machine keeps at
+; 0x50, a checker pattern, and a filled frame.
+
+start:  CLS
+
+        ; The digit 2, straight out of the built-in font.
+        LD   V0, 0x04
+        LD   V1, 0x06
+        LD   F, V0              ; I now points at the glyph for V0
+        DRW  V0, V1, 5
+
+        ; A checkerboard, hand-written as five rows of data.
+        LD   V0, 0x18
+        LD   I, check
+        DRW  V0, V1, 5
+
+        ; A frame drawn from the middle of the screen outwards.
+        LD   V0, 0x2C
+        LD   V1, 0x06
+        LD   I, frame
+        DRW  V0, V1, 3
+
+        ; Move the frame right by one pixel and draw it again: the second pass
+        ; overlaps the first, so VF reports a collision and the shared pixels
+        ; turn off. That is how CHIP-8 erases.
+        ADD  V0, 1
+        DRW  V0, V1, 3
+
+        LD   DT, V0             ; leave a value in the delay timer
+        HALT
+
+check:  DB   0xAA
+        DB   0x55
+        DB   0xAA
+        DB   0x55
+        DB   0xAA
+
+frame:  DB   0xFF
+        DB   0x81
+        DB   0xFF

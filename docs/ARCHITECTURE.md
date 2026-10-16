@@ -28,12 +28,13 @@
 
 ## Overview
 
-Time Warp Studio is a desktop IDE for six educational languages — **BASIC, PILOT,
-Logo, COMAL, REXX and Scheme** — with an integrated turtle graphics canvas. It is a
-C++20 / Qt6 application. Its one non-C++ component is a temporary Python engine
-process that runs the five languages which have not been ported yet.
+Time Warp Studio is a desktop IDE for nine educational languages — **BASIC, APL,
+Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL and REXX** — with an integrated turtle
+graphics canvas. It is a C++20 / Qt6 application. Its one non-C++ component is a
+temporary Python engine process that runs the eight languages which have not been
+ported yet.
 
-So the product is **a GUI process plus, for five of the six languages, one child
+So the product is **a GUI process plus, for eight of the nine languages, one child
 process**. Nothing about the user's program crosses that boundary except a program
 text going in and a stream of JSON messages coming back.
 
@@ -346,7 +347,7 @@ a measurable question rather than a matter of opinion.
 
 ### Why a separate process
 
-Five of the six languages have no C++ interpreter yet. The alternative to a child
+Eight of the nine languages have no C++ interpreter yet. The alternative to a child
 process is reimplementing them, and the Python implementations are complete and tested;
 the alternative *inside* one process is embedding CPython, which turns a runaway program
 into a runaway IDE. Out of process, the worst case is a process to kill.
@@ -596,7 +597,7 @@ migrating.
 
 [ROADMAP.md](ROADMAP.md) is the authority. The architectural gaps, in one place:
 
-- **Five of the six languages run out of process.** Each port removes a bridge path and
+- **Eight of the nine languages run out of process.** Each port removes a bridge path and
   weakens the argument for the child process.
 - **`timewarp_expr` is not linked into the application**, so the expression evaluator in a
   Run is still Python's.

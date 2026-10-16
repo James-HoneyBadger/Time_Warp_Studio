@@ -150,9 +150,17 @@ void test_language_mapping() {
     for (const Language language : timewarp::ui::allLanguages()) {
         TW_CHECK(languageFromKey(settingsKey(language)) == language);
     }
-    TW_CHECK_EQ(timewarp::ui::allLanguages().size(), 6);
+    // The one place the product's language count is pinned. A language added to
+    // the table without being added here is the drift this catches.
+    TW_CHECK_EQ(timewarp::ui::allLanguages().size(), 9);
     TW_CHECK_EQ(extensions(Language::Scheme).size(), 3);
     TW_CHECK_EQ(extensions(Language::Logo).size(), 2);
+    TW_CHECK_EQ(extensions(Language::Focal).size(), 2);
+    TW_CHECK_EQ(extensions(Language::Chip8).size(), 2);
+    TW_CHECK_EQ(extensions(Language::Apl).size(), 2);
+    TW_CHECK(languageForFile(QStringLiteral("square.foc")) == Language::Focal);
+    TW_CHECK(languageForFile(QStringLiteral("font.ch8")) == Language::Chip8);
+    TW_CHECK(languageForFile(QStringLiteral("spiral.apl")) == Language::Apl);
 
     // The filter has to offer every language, or the file dialog cannot reach it.
     const QString filter = timewarp::ui::openFileFilter();

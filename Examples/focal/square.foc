@@ -1,0 +1,11 @@
+01.10 C FOCAL (DEC, 1969) - a square, a loop and a three-way branch
+01.20 T %0,"FOCAL is from DEC in ",1969,"; this draws a ",4,"-sided figure."
+01.30 S SIDE=90
+01.40 FOR I=1,4;FD SIDE;RT 90
+01.50 S SIDES=4
+01.60 IF (SIDES-4) 1.80,1.70,1.80
+01.70 T %0,"Then a ",SIDES,"-gon, decided by branching on a sign."
+01.80 S SIDE=60
+01.90 FOR I=1,SIDES;FD SIDE;RT 360/SIDES
+01.95 T "Done. The turtle is back where it started."
+01.99 Q

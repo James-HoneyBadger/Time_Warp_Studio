@@ -28,6 +28,9 @@ def test_inventory_covers_every_language_module():
         "comal",
         "rexx",
         "scheme",
+        "focal",
+        "chip8",
+        "apl",
     }
 
     assert expected_modules.issubset(modules)

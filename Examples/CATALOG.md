@@ -86,6 +86,24 @@ It is intentionally limited to the six active languages.
 | `scheme/closures.scm` | Closures and mutable local state |
 | `scheme/turtle_polygons.scm` | Turtle polygons drawn from Scheme |
 
+## FOCAL
+
+| File | Description |
+| --- | --- |
+| `focal/square.foc` | A square and a polygon, with a FOR loop and a sign branch |
+
+## CHIP-8
+
+| File | Description |
+| --- | --- |
+| `chip8/font_and_frames.ch8` | A font glyph, a checker pattern and a frame, with a collision |
+
+## APL
+
+| File | Description |
+| --- | --- |
+| `apl/arrays_and_turtle.apl` | Iota, reduce, reshape and a user-defined function, then a hexagon |
+
 ## Validation
 
 The example verifier runs active examples in isolated subprocesses and reports

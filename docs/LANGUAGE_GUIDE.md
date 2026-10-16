@@ -1,9 +1,15 @@
 # Language Guide - Time Warp Studio
 
-Time Warp Studio actively implements and ships **6 programming languages**:
-BASIC, PILOT, Logo, COMAL, REXX, and Scheme. These are the only
-languages with working executors, examples, and test
-coverage in the current release.
+Time Warp Studio actively implements and ships **9 programming languages**:
+BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, and REXX.
+
+> **The reference below is complete for six of them.** BASIC, PILOT, Logo, COMAL,
+> REXX and Scheme have command sections, because they have been documented since
+> the beginning. **APL, FOCAL and CHIP-8 are implemented, registered and tested** -
+> each has a test module and a worked example under `Examples/` - but their
+> reference sections have not been written yet, so they are described here by file
+> extension and example rather than by command table. `docs/ROADMAP.md` tracks the
+> gap rather than leaving it to be discovered.
 
 ---
 
@@ -17,6 +23,14 @@ coverage in the current release.
 4. [COMAL](#comal)
 5. [REXX](#rexx)
 6. [Scheme](#scheme)
+
+### Newer languages (example first, reference pending)
+
+| Language | Extensions | Start with |
+| --- | --- | --- |
+| **APL** | `.apl`, `.dyalog` | [`Examples/apl/arrays_and_turtle.apl`](../Examples/apl/arrays_and_turtle.apl) |
+| **FOCAL** | `.foc`, `.focal` | [`Examples/focal/square.foc`](../Examples/focal/square.foc) |
+| **CHIP-8** | `.ch8`, `.c8` | [`Examples/chip8/font_and_frames.ch8`](../Examples/chip8/font_and_frames.ch8) |
 
 ---
 

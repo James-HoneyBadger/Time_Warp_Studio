@@ -1,0 +1,700 @@
+"""CHIP-8 language executor for Time Warp Studio.
+
+CHIP-8 is Joseph Weisbecker's bytecode interpreter from 1977 — the machine the
+first home computers were taught with. It is not a text language: a program is a
+sequence of two-byte opcodes, and the display is a 64x32 framebuffer of lit and
+unlit pixels. So this executor is two things in one file: a small **assembler**
+that turns mnemonics into opcodes, and the **machine** that runs them.
+
+Executed whole-program: the listing is assembled in full and then run, because an
+opcode stream cannot be interpreted one line at a time.
+
+    ; a comment
+    start:  LD   V0, 0x41
+            LD   I, hexfont
+            LD   F, V0
+            DRW  V0, V1, 5
+            HALT
+    hexfont: DW  0x0000
+
+Directives: ``DB`` (one byte), ``DW`` (one word), ``HALT`` (stop), and
+``; keys <digits>`` to present keypad state for the run.
+
+Numbers are decimal unless marked, and marked either way round because both
+spellings appear in listings: ``0x41`` and ``41h`` are both 65, and a bare ``41``
+is decimal 41.
+
+The instruction set is the complete original: all 35 opcodes, including the
+arithmetic group, the random and timing registers, the font and BCD conversions,
+and memory block load/store.
+
+Where the original is ambiguous, this follows the 1977 interpreter rather than a
+later emulator, because that is the machine the books describe:
+
+  * **``SHR``/``SHL`` shift ``Vx`` in place.** The later convention of shifting
+    ``Vy`` and storing into ``Vx`` is not used here; the y operand is accepted and
+    ignored, so both spellings assemble.
+  * **Sprites wrap, and a collision sets ``VF``.** Drawing a lit pixel onto a lit
+    pixel clears it and reports the collision.
+
+Two limits are this implementation's, and both are reported rather than silently
+applied:
+
+  * **The hex keypad is presented by directive, not by typing.** A program runs to
+    completion inside one executor call, and the engine has no way to hand input
+    to something that never yields control. ``; keys 13`` marks keys 1 and 3 as
+    held down. ``LD Vx, K`` therefore reads the first held key, or 0.
+  * **Frames are simulated.** Ten opcodes make a frame and the timers tick once
+    per frame, with no real clock, so a program runs as fast as the budget allows
+    and a fixed number of frames is the limit.
+
+The display is drawn in the canvas's own coordinates with filled rectangles, and
+its two colours come from ``set_palette_color``. That palette call is the one
+part of the canvas's long-dormant VGA-era layer a language can actually reach:
+``set_svga_mode`` is called here because a 64x32 machine should say so, but the
+bridge does **not** forward it, so the canvas never resizes and the display is
+placed in centre-relative coordinates instead. The sprite commands the canvas
+also offers cannot be reached from a language at all — the bridge reports a turtle
+sprite as unsupported, and BASIC's ``SPRITE`` statement registers a collision box
+rather than drawing one.
+"""
+
+from __future__ import annotations
+
+import random
+import re
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from ..core.interpreter import Interpreter
+    from ..graphics.turtle_state import TurtleState
+
+
+class Chip8Error(Exception):
+    """Raised while assembling or running; reported with the ❌ prefix."""
+
+
+#: The mnemonics this assembler accepts, for the command inventory.
+CHIP8_COMMANDS = {
+    "CLS",
+    "RET",
+    "HALT",
+    "JP",
+    "CALL",
+    "SE",
+    "SNE",
+    "LD",
+    "ADD",
+    "OR",
+    "AND",
+    "XOR",
+    "SUB",
+    "SHR",
+    "SUBN",
+    "SHL",
+    "RND",
+    "DRW",
+    "SKP",
+    "SKNP",
+    "DB",
+    "DW",
+}
+
+#: Screen geometry and the scale a CHIP-8 pixel is drawn at.
+SCREEN_WIDTH = 64
+SCREEN_HEIGHT = 32
+PIXEL_SCALE = 8
+
+#: Simulation budget. Ten opcodes to a frame and the timers ticking once per
+#: frame means 600 frames is about ten seconds of 60 Hz, with no real clock
+#: involved.
+CYCLES_PER_FRAME = 10
+MAX_FRAMES = 600
+MAX_STEPS = 1_000_000
+
+#: Palette slots, so the display's colours are named rather than splashed about.
+_OFF_INDEX = 1
+_ON_INDEX = 2
+
+#: The 4x5 hex font the machine expects to find in memory at 0x50, in the order
+#: 0-F. This is the standard set every CHIP-8 program is written against.
+_FONT = (
+    0xF0, 0x90, 0x90, 0x90, 0xF0,  # 0
+    0x20, 0x60, 0x20, 0x20, 0x70,  # 1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0,  # 2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0,  # 3
+    0x90, 0x90, 0xF0, 0x10, 0x10,  # 4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0,  # 5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0,  # 6
+    0xF0, 0x10, 0x20, 0x40, 0x40,  # 7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0,  # 8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0,  # 9
+    0xF0, 0x90, 0xF0, 0x90, 0x90,  # A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0,  # B
+    0xF0, 0x80, 0x80, 0x80, 0xF0,  # C
+    0xE0, 0x90, 0x90, 0x90, 0xE0,  # D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0,  # E
+    0xF0, 0x80, 0xF0, 0x80, 0x80,  # F
+)
+
+_FONT_ADDRESS = 0x50
+_PROGRAM_ADDRESS = 0x200
+_MEMORY_SIZE = 4096
+
+_REGISTER_RE = re.compile(r"[Vv]([0-9A-Fa-f])")
+_LABEL_RE = re.compile(r"^\s*([A-Za-z_]\w*)\s*:")
+_OPERAND_RE = re.compile(r"[,\s]+")
+
+
+def _byte(text: str) -> int:
+    value = _number(text)
+    if not 0 <= value <= 0xFF:
+        raise Chip8Error(f"{text} is not a byte")
+    return value
+
+
+def _word(text: str) -> int:
+    value = _number(text)
+    if not 0 <= value <= 0xFFFF:
+        raise Chip8Error(f"{text} is not a 16-bit value")
+    return value
+
+
+def _number(text: str) -> int:
+    """A literal, decimal unless it says otherwise.
+
+    Both hex spellings are accepted because both appear in CHIP-8 listings: the
+    C one (``0x41``) and the assembler one (``41h``). A bare number is decimal,
+    so ``LD V0, 41`` is 0x29 — which is why the spellings exist.
+    """
+    stripped = text.strip()
+    body = stripped[:-1] if stripped.lower().endswith("h") else stripped
+    base = 16 if body != stripped or stripped.lower().startswith("0x") else 10
+    try:
+        return int(body, base)
+    except ValueError as exc:
+        raise Chip8Error(f"{text!r} is not a number") from exc
+
+
+def _register(text: str) -> int:
+    match = _REGISTER_RE.fullmatch(text.strip())
+    if match is None:
+        raise Chip8Error(f"{text!r} is not a register (V0-VF)")
+    return int(match.group(1), 16)
+
+
+def _code_of(line: str) -> str:
+    """Strip a comment. ``;`` starts one, as it does in the listings people read."""
+    index = line.find(";")
+    return (line if index < 0 else line[:index]).strip()
+
+
+# ---------------------------------------------------------------------------
+# Assembler
+# ---------------------------------------------------------------------------
+
+
+def assemble(source: str) -> tuple[bytearray, dict[str, int], int]:
+    """Assemble *source* into memory.
+
+    Returns ``(memory, labels, entry_address)``. Two passes, because a jump
+    forward to a label cannot be encoded until the labels are known.
+    """
+    memory = bytearray(_MEMORY_SIZE)
+    memory[_FONT_ADDRESS : _FONT_ADDRESS + len(_FONT)] = bytes(_FONT)
+
+    lines = source.splitlines()
+    labels: dict[str, int] = {}
+
+    # Pass one: find every label and where it lands.
+    address = _PROGRAM_ADDRESS
+    for number, line in enumerate(lines, start=1):
+        text = _code_of(line)
+        if not text:
+            continue
+        label = _LABEL_RE.match(text)
+        if label:
+            name = label.group(1)
+            if name in labels:
+                raise Chip8Error(f"line {number}: label {name} is defined twice")
+            labels[name] = address
+            text = text[label.end() :].strip()
+            if not text:
+                continue
+        address += _size_of(text, number)
+
+    if address > _MEMORY_SIZE:
+        raise Chip8Error(
+            f"the program needs {address - _PROGRAM_ADDRESS} bytes and memory "
+            f"ends at 0x{_MEMORY_SIZE:04X}"
+        )
+
+    # Pass two: emit.
+    address = _PROGRAM_ADDRESS
+    for number, line in enumerate(lines, start=1):
+        text = _code_of(line)
+        if not text:
+            continue
+        label = _LABEL_RE.match(text)
+        if label:
+            text = text[label.end() :].strip()
+            if not text:
+                continue
+        emitted = _encode(text, labels, number)
+        memory[address : address + len(emitted)] = bytes(emitted)
+        address += len(emitted)
+
+    return memory, labels, _PROGRAM_ADDRESS
+
+
+def _size_of(text: str, number: int) -> int:
+    """How many bytes a statement emits, without encoding it."""
+    head = text.split(maxsplit=1)[0].upper()
+    if head == "DB":
+        return 1
+    return 2
+
+
+def _encode(text: str, labels: dict[str, int], number: int) -> list[int]:
+    """One assembled statement, as bytes."""
+    head, _, rest = text.partition(" ")
+    mnemonic = head.upper()
+    operands = [part for part in _OPERAND_RE.split(rest.strip()) if part]
+
+    def target(text: str) -> int:
+        """An address operand: a label, or a number."""
+        if text in labels:
+            return labels[text]
+        return _word(text)
+
+    def fail(expectation: str) -> "Chip8Error":
+        return Chip8Error(f"line {number}: {mnemonic} {expectation}")
+
+    if mnemonic == "DB":
+        if len(operands) != 1:
+            raise fail("takes one byte")
+        return [_byte(operands[0])]
+    if mnemonic == "DW":
+        if len(operands) != 1:
+            raise fail("takes one word")
+        value = _word(operands[0])
+        return [value >> 8, value & 0xFF]
+
+    if mnemonic == "CLS":
+        return [0x00, 0xE0]
+    if mnemonic == "RET":
+        return [0x00, 0xEE]
+    if mnemonic == "HALT":
+        # 0x0000 is unused by the original set, so a program can stop instead of
+        # spinning on a jump-to-self to mark the end.
+        return [0x00, 0x00]
+
+    if mnemonic == "JP" and len(operands) == 1:
+        value = target(operands[0])
+        return [0x10 | (value >> 8), value & 0xFF]
+    if mnemonic == "JP" and len(operands) == 2:
+        # Bnnn carries the *address* in its twelve bits; V0 is added at run time
+        # rather than encoded. ORing the register number into the high nibble
+        # instead produced B006 for a target of 0x206, which jumped to 6.
+        _register(operands[0])
+        value = target(operands[1])
+        return [0xB0 | (value >> 8), value & 0xFF]
+    if mnemonic == "CALL":
+        if len(operands) != 1:
+            raise fail("takes an address")
+        value = target(operands[0])
+        return [0x20 | (value >> 8), value & 0xFF]
+
+    if mnemonic in ("SE", "SNE") and len(operands) == 2:
+        x = _register(operands[0])
+        if _REGISTER_RE.fullmatch(operands[1].strip()):
+            y = _register(operands[1])
+            base = 0x50 if mnemonic == "SE" else 0x90
+            return [(base | x), (y << 4)]
+        base = 0x30 if mnemonic == "SE" else 0x40
+        return [base | x, _byte(operands[1])]
+
+    if mnemonic == "LD" and len(operands) == 2:
+        left, right = operands[0].strip().upper(), operands[1].strip().upper()
+        if left == "I":
+            value = target(operands[1])
+            return [0xA0 | (value >> 8), value & 0xFF]
+        # The conversions and the timers name the *destination* on the left, so
+        # `LD F, V0` reads "point I at the glyph for V0" — the register is the
+        # operand on the right, not the one being loaded.
+        if left in ("DT", "ST"):
+            x = _register(operands[1])
+            return [0xF0 | x, 0x15 if left == "DT" else 0x18]
+        if left == "F":
+            x = _register(operands[1])
+            return [0xF0 | x, 0x29]
+        if left == "B":
+            x = _register(operands[1])
+            return [0xF0 | x, 0x33]
+        if left == "[I]":
+            x = _register(operands[1])
+            return [0xF0 | x, 0x55]
+        if right == "[I]":
+            x = _register(operands[0])
+            return [0xF0 | x, 0x65]
+        if right == "DT":
+            x = _register(operands[0])
+            return [0xF0 | x, 0x07]
+        if right == "K":
+            x = _register(operands[0])
+            return [0xF0 | x, 0x0A]
+        x = _register(operands[0])
+        if _REGISTER_RE.fullmatch(operands[1].strip()):
+            return [0x80 | x, (_register(operands[1]) << 4)]
+        return [0x60 | x, _byte(operands[1])]
+
+    if mnemonic == "ADD" and len(operands) == 2:
+        left, right = operands
+        if left.strip().upper() == "I":
+            x = _register(right)
+            return [0xF0 | x, 0x1E]
+        x = _register(left)
+        if _REGISTER_RE.fullmatch(right.strip()):
+            return [0x80 | x, (_register(right) << 4) | 0x4]
+        return [0x70 | x, _byte(right)]
+
+    if mnemonic in ("OR", "AND", "XOR", "SUB", "SUBN") and len(operands) == 2:
+        x, y = _register(operands[0]), _register(operands[1])
+        low = {"OR": 0x1, "AND": 0x2, "XOR": 0x3, "SUB": 0x5, "SUBN": 0x7}[mnemonic]
+        return [0x80 | x, (y << 4) | low]
+
+    if mnemonic in ("SHR", "SHL") and operands:
+        # The y operand is accepted and ignored: the 1977 machine shifts Vx in
+        # place, and a listing written for a later emulator still assembles.
+        x = _register(operands[0])
+        return [0x80 | x, 0x06 if mnemonic == "SHR" else 0x0E]
+
+    if mnemonic == "RND" and len(operands) == 2:
+        x = _register(operands[0])
+        return [0xC0 | x, _byte(operands[1])]
+
+    if mnemonic == "DRW" and len(operands) == 3:
+        x, y = _register(operands[0]), _register(operands[1])
+        rows = _byte(operands[2])
+        if rows > 15:
+            raise fail("draws at most 15 rows")
+        return [0xD0 | x, (y << 4) | rows]
+
+    if mnemonic in ("SKP", "SKNP") and len(operands) == 1:
+        x = _register(operands[0])
+        return [0xE0 | x, 0x9E if mnemonic == "SKP" else 0xA1]
+
+    raise fail("is not an instruction form this assembler knows")
+
+
+# ---------------------------------------------------------------------------
+# Machine
+# ---------------------------------------------------------------------------
+
+
+class Machine:
+    """The CHIP-8 interpreter: registers, memory, timers and framebuffer."""
+
+    def __init__(self, memory: bytearray, entry: int, keys: int = 0) -> None:
+        self.memory = memory
+        self.v = [0] * 16
+        self.i = 0
+        self.pc = entry
+        self.stack: list[int] = []
+        self.delay_timer = 0
+        self.sound_timer = 0
+        self.keys = keys
+        self.framebuffer = bytearray(SCREEN_WIDTH * SCREEN_HEIGHT)
+        self.halted = False
+        self.cycles = 0
+        self.collisions = 0
+
+    # -- helpers ---------------------------------------------------------
+    def _fetch(self) -> int:
+        if self.pc + 1 >= _MEMORY_SIZE:
+            raise Chip8Error("the program counter ran past the end of memory")
+        opcode = (self.memory[self.pc] << 8) | self.memory[self.pc + 1]
+        self.pc += 2
+        return opcode
+
+    def _skip(self) -> None:
+        self.pc += 2
+
+    def _pixel(self, x: int, y: int) -> bool:
+        return x < SCREEN_WIDTH and y < SCREEN_HEIGHT and bool(
+            self.framebuffer[y * SCREEN_WIDTH + x]
+        )
+
+    def _set_pixel(self, x: int, y: int, on: bool) -> None:
+        if x < SCREEN_WIDTH and y < SCREEN_HEIGHT:
+            self.framebuffer[y * SCREEN_WIDTH + x] = 1 if on else 0
+
+    def _first_key(self) -> int:
+        for index in range(16):
+            if self.keys & (1 << index):
+                return index
+        return 0
+
+    # -- the interpreter -------------------------------------------------
+    def step(self) -> None:
+        """Run one opcode."""
+        self.cycles += 1
+        opcode = self._fetch()
+        high = opcode >> 12
+        x = (opcode >> 8) & 0xF
+        y = (opcode >> 4) & 0xF
+        low_byte = opcode & 0xFF
+        low_nibble = opcode & 0xF
+
+        if opcode == 0x0000:
+            self.halted = True
+            return
+        if opcode == 0x00E0:
+            self.framebuffer = bytearray(SCREEN_WIDTH * SCREEN_HEIGHT)
+            return
+        if opcode == 0x00EE:
+            if not self.stack:
+                raise Chip8Error("RET with an empty call stack")
+            self.pc = self.stack.pop()
+            return
+
+        if high == 0x1:
+            self.pc = opcode & 0xFFF
+        elif high == 0x2:
+            self.stack.append(self.pc)
+            self.pc = opcode & 0xFFF
+        elif high == 0x3:
+            if self.v[x] == low_byte:
+                self._skip()
+        elif high == 0x4:
+            if self.v[x] != low_byte:
+                self._skip()
+        elif high == 0x5:
+            if self.v[x] == self.v[y]:
+                self._skip()
+        elif high == 0x6:
+            self.v[x] = low_byte
+        elif high == 0x7:
+            self.v[x] = (self.v[x] + low_byte) & 0xFF
+        elif high == 0x8:
+            self._arithmetic(x, y, low_nibble)
+        elif high == 0x9:
+            if self.v[x] != self.v[y]:
+                self._skip()
+        elif high == 0xA:
+            self.i = opcode & 0xFFF
+        elif high == 0xB:
+            self.pc = (opcode & 0xFFF) + self.v[0]
+        elif high == 0xC:
+            self.v[x] = random.randint(0, 255) & low_byte
+        elif high == 0xD:
+            self._draw(x, y, low_nibble)
+        elif high == 0xE:
+            if low_byte == 0x9E and self.keys & (1 << self.v[x]):
+                self._skip()
+            elif low_byte == 0xA1 and not self.keys & (1 << self.v[x]):
+                self._skip()
+        elif high == 0xF:
+            self._misc(x, low_byte)
+        else:
+            raise Chip8Error(
+                f"unknown opcode 0x{opcode:04X} at 0x{self.pc - 2:03X}"
+            )
+
+    def _arithmetic(self, x: int, y: int, low: int) -> None:
+        if low == 0x0:
+            self.v[x] = self.v[y]
+        elif low == 0x1:
+            self.v[x] |= self.v[y]
+        elif low == 0x2:
+            self.v[x] &= self.v[y]
+        elif low == 0x3:
+            self.v[x] ^= self.v[y]
+        elif low == 0x4:
+            total = self.v[x] + self.v[y]
+            self.v[x] = total & 0xFF
+            self.v[0xF] = 1 if total > 0xFF else 0
+        elif low == 0x5:
+            self.v[0xF] = 1 if self.v[x] >= self.v[y] else 0
+            self.v[x] = (self.v[x] - self.v[y]) & 0xFF
+        elif low == 0x6:
+            # Vx shifted in place, as the 1977 interpreter does.
+            self.v[0xF] = self.v[x] & 0x1
+            self.v[x] >>= 1
+        elif low == 0x7:
+            self.v[0xF] = 1 if self.v[y] >= self.v[x] else 0
+            self.v[x] = (self.v[y] - self.v[x]) & 0xFF
+        elif low == 0xE:
+            self.v[0xF] = 1 if self.v[x] & 0x80 else 0
+            self.v[x] = (self.v[x] << 1) & 0xFF
+        else:
+            raise Chip8Error(f"unknown arithmetic opcode 8xy{low:X}")
+
+    def _draw(self, x: int, y: int, rows: int) -> None:
+        """XOR an 8-by-rows sprite at (Vx, Vy); VF reports a collision."""
+        start_x = self.v[x] % SCREEN_WIDTH
+        start_y = self.v[y] % SCREEN_HEIGHT
+        self.v[0xF] = 0
+        for row in range(rows):
+            bits = self.memory[(self.i + row) % _MEMORY_SIZE]
+            for column in range(8):
+                if not bits & (0x80 >> column):
+                    continue
+                pixel_x = (start_x + column) % SCREEN_WIDTH
+                pixel_y = (start_y + row) % SCREEN_HEIGHT
+                if self._pixel(pixel_x, pixel_y):
+                    self.v[0xF] = 1
+                    self.collisions += 1
+                self._set_pixel(pixel_x, pixel_y, not self._pixel(pixel_x, pixel_y))
+
+    def _misc(self, x: int, low: int) -> None:
+        if low == 0x07:
+            self.v[x] = self.delay_timer
+        elif low == 0x0A:
+            # Blocking on a real key press cannot work here: see the module
+            # docstring. The first held key, or 0.
+            self.v[x] = self._first_key()
+        elif low == 0x15:
+            self.delay_timer = self.v[x]
+        elif low == 0x18:
+            self.sound_timer = self.v[x]
+        elif low == 0x1E:
+            self.i = (self.i + self.v[x]) & 0xFFF
+        elif low == 0x29:
+            self.i = _FONT_ADDRESS + (self.v[x] & 0xF) * 5
+        elif low == 0x33:
+            self.memory[self.i % _MEMORY_SIZE] = self.v[x] // 100
+            self.memory[(self.i + 1) % _MEMORY_SIZE] = (self.v[x] // 10) % 10
+            self.memory[(self.i + 2) % _MEMORY_SIZE] = self.v[x] % 10
+        elif low == 0x55:
+            for index in range(x + 1):
+                self.memory[(self.i + index) % _MEMORY_SIZE] = self.v[index]
+        elif low == 0x65:
+            for index in range(x + 1):
+                self.v[index] = self.memory[(self.i + index) % _MEMORY_SIZE]
+        else:
+            raise Chip8Error(f"unknown opcode Fx{low:02X}")
+
+    def tick_timers(self) -> None:
+        if self.delay_timer:
+            self.delay_timer -= 1
+        if self.sound_timer:
+            self.sound_timer -= 1
+
+
+# ---------------------------------------------------------------------------
+# Display
+# ---------------------------------------------------------------------------
+
+
+class _Display:
+    """Draws changed pixels onto the turtle canvas.
+
+    A diff rather than a full repaint: a CHIP-8 frame touches a handful of the
+    2048 pixels, and emitting all of them every frame would put a quarter of a
+    million rectangles into the bridge for a ten-second program.
+    """
+
+    def __init__(self, turtle: "TurtleState") -> None:
+        self.turtle = turtle
+        turtle.set_svga_mode(SCREEN_WIDTH * PIXEL_SCALE, SCREEN_HEIGHT * PIXEL_SCALE)
+        # CHIP-8 is a palette machine, so the two colours are palette entries.
+        turtle.set_palette_color(_OFF_INDEX, 16, 16, 20)
+        turtle.set_palette_color(_ON_INDEX, 140, 255, 140)
+        self.off_colour = turtle.resolve_color(_OFF_INDEX)
+        self.on_colour = turtle.resolve_color(_ON_INDEX)
+        self.previous = bytearray(SCREEN_WIDTH * SCREEN_HEIGHT)
+
+    def _rect(self, column: int, row: int, colour: Any) -> None:
+        """One CHIP-8 pixel as a filled square, in canvas coordinates.
+
+        CHIP-8 counts down from the top-left; the turtle canvas counts up from
+        the middle, which is where the sign flip on y comes from.
+        """
+        width = SCREEN_WIDTH * PIXEL_SCALE
+        height = SCREEN_HEIGHT * PIXEL_SCALE
+        left = column * PIXEL_SCALE - width / 2
+        top = height / 2 - row * PIXEL_SCALE
+        self.turtle.draw_rect(
+            left, top, left + PIXEL_SCALE, top - PIXEL_SCALE, fill_color=colour
+        )
+
+    def clear(self) -> None:
+        """Paint the whole screen in the off colour."""
+        width = SCREEN_WIDTH * PIXEL_SCALE
+        height = SCREEN_HEIGHT * PIXEL_SCALE
+        self.turtle.draw_rect(
+            -width / 2, height / 2, width / 2, -height / 2, fill_color=self.off_colour
+        )
+        self.previous = bytearray(SCREEN_WIDTH * SCREEN_HEIGHT)
+
+    def paint(self, framebuffer: bytearray) -> None:
+        """Emit only the pixels that changed since the last frame."""
+        for index, value in enumerate(framebuffer):
+            if value == self.previous[index]:
+                continue
+            self.previous[index] = value
+            colour = self.on_colour if value else self.off_colour
+            self._rect(index % SCREEN_WIDTH, index // SCREEN_WIDTH, colour)
+
+
+# ---------------------------------------------------------------------------
+# Entry point
+# ---------------------------------------------------------------------------
+
+
+def _keypad(source: str) -> int:
+    """Read the ``; keys`` directive: the keys held down for this run."""
+    keys = 0
+    for line in source.splitlines():
+        stripped = line.strip()
+        if not stripped.lower().startswith("; keys"):
+            continue
+        for character in stripped[len("; keys") :].strip():
+            if character.upper() in "0123456789ABCDEF":
+                keys |= 1 << int(character, 16)
+    return keys
+
+
+def execute_chip8(
+    interpreter: "Interpreter",
+    source: str,
+    turtle: "TurtleState",
+) -> str:
+    """Assemble and run a CHIP-8 listing."""
+    try:
+        memory, _labels, entry = assemble(source)
+    except Chip8Error as exc:
+        return f"❌ CHIP-8: {exc}\n"
+
+    machine = Machine(memory, entry, keys=_keypad(source))
+    display = _Display(turtle)
+    display.clear()
+
+    frames = 0
+    try:
+        while not machine.halted:
+            if machine.cycles >= MAX_STEPS:
+                return (
+                    "❌ CHIP-8: exceeded the cycle limit "
+                    f"({MAX_STEPS} opcodes) without reaching HALT\n"
+                )
+            for _ in range(CYCLES_PER_FRAME):
+                if machine.halted:
+                    break
+                machine.step()
+            machine.tick_timers()
+            display.paint(machine.framebuffer)
+            frames += 1
+            if frames >= MAX_FRAMES:
+                # Not an error: a loop that never halts is a legitimate CHIP-8
+                # program (an animation, or a game waiting for a key). Saying so
+                # is the difference between "it finished" and "it stopped".
+                return (
+                    f"ℹ️ CHIP-8: stopped after {MAX_FRAMES} frames "
+                    f"({machine.cycles} opcodes); the program had not halted\n"
+                )
+    except Chip8Error as exc:
+        return f"❌ CHIP-8: {exc}\n"
+
+    return ""

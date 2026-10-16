@@ -1,6 +1,6 @@
 # Roadmap
 
-Time Warp Studio is a C++20 / Qt6 IDE for six educational languages. This page is
+Time Warp Studio is a C++20 / Qt6 IDE for nine educational languages. This page is
 the honest state of it: what works, what is next, and what is deliberately not
 being built.
 
@@ -19,11 +19,11 @@ yet — please check the list below before reporting one as a regression.
 | Console | Streaming output, and interpreter errors in their own tab |
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
-| Languages | 6 languages, 44 verified example programs |
+| Languages | 9 languages, 47 verified example programs |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
 | Bridged engines | BASIC, PILOT, Logo, COMAL, REXX — `native/bridge/` |
 | Packaging | `make install` with the desktop entry and icon; `DESTDIR` staging |
-| Quality gates | 11 CTest suites in 4 build configurations, 2 parity gates, 269 engine tests, 279 command rows |
+| Quality gates | 11 CTest suites in 4 build configurations, 2 parity gates, 364 engine tests, 279 command rows |
 
 ---
 
@@ -119,9 +119,39 @@ remains the detail on the C++ libraries.
 
 ---
 
+## Next: finish the three newest languages
+
+**APL, FOCAL and CHIP-8 are implemented, registered, tested and in the example
+corpus.** Each has an executor, a test module, and a worked example that
+`example_smoke.py` runs and checks for ink. What none of them has yet:
+
+- **A command reference** in `docs/LANGUAGE_GUIDE.md`. They are listed there by file
+  extension and example instead of by command table.
+- **A tutorial** in `docs/tutorials/`, which each of the original six has.
+- **Command-table rows** in `native/bridge/time_warp/tests/command_table.py`, so
+  `native/tools/command_matrix.py` can drive them. `command_inventory.py` already
+  sees their dispatch literals — 43 for APL, 24 for CHIP-8, 19 for FOCAL — so they
+  are measured as unwritten rather than passing unnoticed.
+- **Lessons** — two per language for the original six.
+
+Three limits are recorded here rather than left to be discovered:
+
+- **FOCAL's `!` suppresses the newline inside one TYPE, not across statements.** The
+  engine logs each statement's output separately, so a trailing newline is added by
+  the logger rather than by the statement. This is an engine-level constraint, not a
+  gap in the executor.
+- **CHIP-8 has no interactive keypad.** A whole-program language runs to completion
+  inside one call and never yields control, so `LD Vx, K` reads the first key held
+  according to the listing's `; keys` directive, or 0.
+- **APL's turtle position is `TX`, `TY` and `THETA`.** Deliberately two letters:
+  `X`, `Y` and `H` are ordinary APL variables, and taking them would break the most
+  natural line anyone writes.
+
+---
+
 ## Next: port the languages, then delete the bridge
 
-The bridge exists only because five languages are not native yet. Each port
+The bridge exists only because eight languages are not native yet. Each port
 removes its path through it, and the differential gates are the contract.
 
 1. **BASIC** — then delete BASIC from the bridge.

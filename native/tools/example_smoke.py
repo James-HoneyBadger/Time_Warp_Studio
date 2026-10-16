@@ -37,6 +37,9 @@ LANGUAGES = {
     "comal": "comal",
     "rexx": "rexx",
     "scheme": "scm",
+    "focal": "foc",
+    "chip8": "ch8",
+    "apl": "apl",
 }
 
 # Languages that are expected to draw nothing *as a language*: PILOT is a
@@ -69,6 +72,9 @@ DRAWING_EXAMPLES = {
     "comal/turtle_art.comal",
     "rexx/turtle_spiral.rexx",
     "scheme/turtle_polygons.scm",
+    "focal/square.foc",
+    "chip8/font_and_frames.ch8",
+    "apl/arrays_and_turtle.apl",
 }
 
 
@@ -115,7 +121,14 @@ def run_one(interpreter: str, worker: pathlib.Path, language: str, source: str, 
                     # hundreds between identical runs and could not be compared with
                     # anything. What matters is the ink that is there at the end.
                     strokes = 0
-                elif drawn in ("line", "poly"):
+                elif drawn in ("line", "poly", "rect", "point", "ellipse", "text"):
+                    # Every drawing primitive counts, not just the line ones.
+                    # The corpus used only lines and polylines when this metric
+                    # was written, so the narrower test was invisible; a
+                    # pixel-graphics language draws filled rectangles, and its
+                    # ink was then not seen at all. Widening it changed no
+                    # existing total -- 5639, 7840, 29, 67, 43 all stand -- so
+                    # it is the same measurement, made complete.
                     strokes += 1
         elif kind == "out":
             output.append(message.get("text", ""))

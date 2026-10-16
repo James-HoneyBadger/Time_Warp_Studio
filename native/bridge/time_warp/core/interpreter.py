@@ -31,8 +31,11 @@ from typing import (
 )
 
 # Import language executors
+from ..languages.apl import execute_apl
 from ..languages.basic import execute_basic
+from ..languages.chip8 import execute_chip8
 from ..languages.comal import execute_comal
+from ..languages.focal import execute_focal
 from ..languages.logo import execute_logo
 from ..languages.pilot import execute_pilot
 from ..languages.rexx import execute_rexx
@@ -78,6 +81,7 @@ def _init_whole_program_executors() -> Dict["Language", Callable]:
     """Build the dict after the Language enum is defined (avoids forward ref)."""
     return {
         Language.SCHEME: execute_scheme,
+        Language.CHIP8: execute_chip8,
     }
 
 
@@ -132,6 +136,9 @@ class Language(Enum):
     COMAL = auto()
     REXX = auto()
     SCHEME = auto()
+    FOCAL = auto()
+    CHIP8 = auto()
+    APL = auto()
 
     @classmethod
     def from_extension(cls, ext: str) -> "Language":
@@ -693,6 +700,13 @@ class Interpreter:
         if language == Language.LOGO:
             self._parse_logo_program(lines)
             return
+        # APL lines are expressions, and an expression may begin with a number:
+        # `2 × 3` is not line 2, and letting the standard parser take the two
+        # off the front turned `2 × 3 + 4` into monadic `× 3 + 4`.
+        if language == Language.APL:
+            for idx, line in enumerate(lines):
+                self.program_lines.append((idx + 1, line))
+            return
         # Whole-program languages: store lines without line-number parsing
         if language in _WHOLE_PROGRAM_EXECUTORS:
             for idx, line in enumerate(lines):
@@ -701,7 +715,14 @@ class Interpreter:
         self._parse_standard_program(lines)
 
     def _parse_standard_program(self, lines: List[str]):
-        """Parse BASIC/PILOT/COMAL/REXX lines and build indices."""
+        """Parse numbered-line languages and build indices.
+
+        BASIC and COMAL label lines with an integer, FOCAL with `NN.NN` (which
+        the integer test leaves alone), and PILOT and REXX with a label prefix
+        rather than a number. Languages whose lines are expressions are routed
+        away from here by `_load_from_lines`, because a leading digit in an
+        expression is a value, not a line number.
+        """
         for idx, line in enumerate(lines):
             line_num, command_str = self._parse_line(line)
 
@@ -1242,6 +1263,10 @@ class Interpreter:
             output = execute_comal(self, command, turtle)
         elif self.language == Language.REXX:
             output = execute_rexx(self, command, turtle)
+        elif self.language == Language.FOCAL:
+            output = execute_focal(self, command, turtle)
+        elif self.language == Language.APL:
+            output = execute_apl(self, command, turtle)
         elif self.language in _WHOLE_PROGRAM_EXECUTORS:
             # Whole-program languages: individual lines are no-op
             output = ""

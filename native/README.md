@@ -1060,13 +1060,13 @@ wrong name.
 
 ## The canvas, and what runs
 
-**All six languages run.** Scheme goes through the C++ interpreter on a background
+**All nine languages run.** Scheme goes through the C++ interpreter on a background
 thread; BASIC, PILOT, Logo, COMAL and REXX go through the **Python bridge**, which
 runs the existing Python implementations in a child process and streams what they
 draw back as canvas commands. Every one of the 44 examples in `Examples/` executes,
 and the 14 that draw produce drawing -- checked by `tools/example_smoke.py`.
 
-The bridge exists because reimplementing five languages is the work it postpones.
+The bridge exists because reimplementing eight languages is the work it postpones.
 Python is the oracle while each language is ported, and a language stops being
 routed to it the day its C++ interpreter lands.
 

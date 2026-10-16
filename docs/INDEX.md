@@ -1,6 +1,6 @@
 # Time Warp Studio — Documentation Index
 
-Time Warp Studio is a C++20 / Qt6 desktop IDE for six educational programming
+Time Warp Studio is a C++20 / Qt6 desktop IDE for nine educational programming
 languages, with an integrated turtle graphics canvas. This page is the map.
 
 > **New here?** Build and run it from the [README](../README.md), then try
@@ -14,12 +14,12 @@ languages, with an integrated turtle graphics canvas. This page is the map.
 | --- | --- |
 | [INSTALLATION.md](INSTALLATION.md) | Requirements, building, running, troubleshooting a build |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How the IDE, the engines and the bridge fit together |
-| [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) | Command reference for all six languages |
+| [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) | Command reference: the six original languages in full, the three newest by example |
 | [README_TESTING.md](README_TESTING.md) | The suites, the example gate and the parity harnesses |
 | [ROADMAP.md](ROADMAP.md) | What is built, what is next, what was deliberately deferred |
 | [FAQ.md](FAQ.md) | Short answers to common questions |
 | [`native/README.md`](../native/README.md) | The application itself: design notes, decisions, tests |
-| [`native/bridge/`](../native/bridge/) | The temporary engine for the five languages that are not yet native |
+| [`native/bridge/`](../native/bridge/) | The temporary engine for the eight languages that are not yet native |
 
 ---
 
@@ -56,7 +56,7 @@ One per active language, each written to be worked through:
 
 Time Warp Studio was previously implemented in Python with PySide6. That
 application has been removed: the Qt application is the product, and the Python
-that remains is a temporary engine for the five languages that have not been
+that remains is a temporary engine for the eight languages that have not been
 ported to C++ yet.
 
 Documentation describing that application's interface — the user guide, the

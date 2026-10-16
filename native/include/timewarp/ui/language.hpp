@@ -29,6 +29,9 @@ enum class Language {
     Comal,
     Rexx,
     Scheme,
+    Focal,
+    Chip8,
+    Apl,
     Unknown,
 };
 
