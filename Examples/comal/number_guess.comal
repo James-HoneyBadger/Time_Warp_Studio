@@ -1,0 +1,18 @@
+10 REM Guess-the-number game (reads one value with INPUT)
+20 SECRET := 42
+30 TRIES := 0
+40 WHILE TRIES < 3
+50 INPUT "Guess the number (0-99): ": GUESS
+60 TRIES := TRIES + 1
+70 IF GUESS = SECRET THEN
+80 PRINT "Correct in ", TRIES, " tries!"
+90 EXIT
+100 ELIF GUESS < SECRET THEN
+110 PRINT "Too low"
+120 ELSE
+130 PRINT "Too high"
+140 ENDIF
+150 ENDWHILE
+160 IF TRIES >= 3 AND GUESS <> SECRET THEN
+170 PRINT "The number was ", SECRET
+180 ENDIF

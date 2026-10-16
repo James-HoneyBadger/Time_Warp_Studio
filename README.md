@@ -2,12 +2,12 @@
 
 ## Educational Multi-Language Programming Environment with Integrated IDE, Debugger, and Turtle Graphics
 
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue)](https://www.python.org/)
-[![PySide6](https://img.shields.io/badge/PySide6-Qt6-green)](https://wiki.qt.io/Qt_for_Python)
+[![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)](https://en.cppreference.com/)
+[![Qt6](https://img.shields.io/badge/Qt-6-green)](https://www.qt.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-14.1.2-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
-Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **9 active programming languages** into a single, modern IDE. Built with Python and PySide6 (Qt6), it provides an integrated platform for learning programming concepts, exploring vector turtle graphics, and working through structured lessons.
+Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **6 active programming languages** into a single, modern IDE. Built as a **native C++20 / Qt6 application**, it provides an integrated platform for learning programming concepts, exploring vector turtle graphics, and working through structured lessons.
 
 ---
 
@@ -32,142 +32,137 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 
 ### Multi-Language Support
 
-9 active languages in the current studio build:
+6 active languages in the current studio build:
 
 | Language | Paradigm | Era | Execution Mode |
 | --- | --- | --- | --- |
 | **BASIC** | Imperative / Educational | 1964 | Line-by-line |
 | **Logo** | Turtle Graphics / Educational | 1967 | Line-by-line |
 | **PILOT** | Computer-Aided Instruction | 1969 | Line-by-line |
-| **Forth** | Stack-based / Concatenative | 1970 | Line-by-line |
-| **Pascal** | Structured / Educational | 1970 | Line-by-line |
-| **C** | Systems / Procedural | 1972 | Line-by-line |
-| **Prolog** | Logic / Declarative | 1972 | Line-by-line |
-| **Brainfuck** | Esoteric / Turing | 1993 | Whole-program |
-| **Python** | Multi-paradigm / Educational | 1991 | Whole-program |
+| **COMAL** | Structured BASIC / Educational | 1979 | Line-by-line |
+| **REXX** | Scripting / String processing | 1979 | Line-by-line |
+| **Scheme** | Functional / Lisp dialect | 1975 | Whole-program |
 
 ### Integrated IDE
 
-- **Code Editor** — Syntax highlighting, line numbers, and auto-indentation per language
-- **Output Console** — Program results, error messages, and interactive input
-- **Graphics Canvas** — Real-time turtle graphics rendering with zoom and pan
-- **Theme System** — 33 built-in themes (Dracula, Monokai, Catppuccin Mocha, Gruvbox Dark, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized, retro CRT, and more)
-- **Find & Replace** — Advanced search with regex, case sensitivity, whole word matching, and live match highlighting
-- **Auto-Completion** — Context-aware completions from language keywords and document identifiers
-- **Dockable Panels** — Lessons, Debugger, Variable Inspector, Document Outline, project file tree, terminal, and classroom tools
-- **Borland Turbo Keymap** — F9 run, F2 save, F3 open, F7/F8 stepping, F10 command palette, with a Function-Key Bar showing the live bindings
+- **Code editor** — line-number gutter, current-line highlight, 4-space tab stops, per-language file handling (syntax colouring is not implemented yet: see `docs/ROADMAP.md`)
+- **Output console** — program output as it is produced, with interpreter errors in their own tab
+- **Turtle canvas** — the drawing appears as it is made, with zoom, pan, grid, auto-fit and a turtle marker
+- **Documents** — tabs, per-file language detection, unsaved-change prompts, new/open/save/save-as
+- **Run controls** — Run (F9) and Stop, with a status bar showing language, cursor position and execution state
+- **Native engines** — the shared expression evaluator and Scheme run in-process with no Python at all
 
-### Turtle Graphics & Vector Graphics
+### What is still being built
+
+The Qt IDE is the product; the PySide6 application that preceded it has been
+removed. Features of that application that have **not** been ported yet — themes,
+lessons, the examples browser, find/replace, auto-completion, the debugger panels
+and the function-key bar — are tracked in [docs/ROADMAP.md](docs/ROADMAP.md).
+Please read that list before reporting one of them as a regression.
+
+### Turtle Graphics
 
 - Native turtle support with position, heading, and pen state tracking
-- 50+ drawing commands across Logo, BASIC, Forth, and more
-- Real-time rendering with Qt painter, zoom/pan controls
-- **SVGA mode** — 800×600 (or custom) virtual canvas with crisp anti-aliased rendering
-- **Vector shapes** — cubic Bezier curves, gradient-filled rectangles and ellipses
-- **Sprite system** — define named pixel-art sprites, stamp and animate them with rotation and scaling
-- **Advanced pen styles** — dash patterns, configurable cap and join styles, Z-ordering
-- Cross-language graphics support (Logo, Turbo BASIC, and Forth)
+- 50+ drawing commands shared across every active language
+- Real-time rendering with the Qt painter, zoom/pan controls and a content-fitted view
+- Shapes, text labels, dotted and thick strokes, pen up/down, filled polygons
+- Cross-language graphics support (Logo, BASIC, COMAL, REXX, and Scheme)
+- The reference's conventions are unusual and are asserted in tests: heading 0 is
+  north and increases clockwise, and `circle` is a polygon walk
 
-### Advanced Debugger
+### Debugging
 
-- Statement-level stepping with breakpoint support
-- Timeline recording of program execution with state snapshots
-- Variable inspector with real-time value tracking
-- Rewind capability to navigate backwards through execution history
+Scheme runs on a native explicit-stack machine with a background runner that
+supports Stop today; the stepping and inspection panels are being wired up
+(tracked in the roadmap). Breakpoints and stepping remain available in the
+language runtimes themselves.
 
-### Educational Tools
+### Educational Content
 
-- **Lessons** — 18 built-in lessons (2 per language) with checkpoints, hints, and automatic verification (Help → Lessons, Ctrl+F3)
-- **Error Hints** — Syntax error suggestions alongside interpreter error messages
-- **Examples Browser** — 81 curated example programs across all 9 active languages (Shift+F3)
-- **Classroom Mode** — Presentation-friendly tools for teaching
+- **44 curated example programs** across all 6 active languages, under `Examples/`
+- **Error hints** — syntax suggestions alongside interpreter error messages
+- **Six language tutorials** — one per language, under `docs/tutorials/`
 
 ---
 
 ## 📋 Requirements
 
-| Requirement | Minimum | Recommended |
+| Requirement | Minimum | Notes |
 | --- | --- | --- |
-| **Python** | 3.10 | 3.12+ |
-| **PySide6** | Any recent | Latest |
-| **Pillow** | 10.0.0 | Latest |
-| **OS** | Windows 10, macOS 10.14, Ubuntu 20.04 | Any modern OS |
-| **RAM** | 4 GB | 8 GB |
-| **CPU** | SSSE3/SSE4 support | Any modern CPU |
+| **C++ compiler** | C++20 | GCC 13+, Clang 16+, or MSVC 19.3+ |
+| **CMake** | 3.20 | |
+| **Qt6** | 6.2 | Widgets, Core and Gui modules |
+| **Python** | 3.10 | Optional: only for the five languages that are not yet native |
+| **RAM** | 4 GB | 8 GB recommended |
+
+Scheme and the shared expression engine run natively with **no Python at all**.
+BASIC, PILOT, Logo, COMAL and REXX currently run through the bundled engine
+process; each one is being ported to C++, after which the bridge path is deleted.
 
 ---
 
 ## 🚀 Quick Start
 
-### Linux / macOS
-
 ```bash
 git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
 cd Time_Warp_Studio
-python3 run.py
+
+# Build the IDE
+cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
+cmake --build native/build -j
+
+# Run it
+./native/build/time_warp_ide
+./native/build/time_warp_ide Examples/logo/mandala.logo   # open a program
+./native/build/time_warp_ide --run Examples/logo/mandala.logo
+./native/build/time_warp_ide --help
 ```
 
-### Windows (PowerShell)
-
-```powershell
-git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
-cd Time_Warp_Studio
-python3 run.py
-```
-
-The `run.py` launcher will automatically:
-
-1. Check your Python version (3.10+ required)
-2. Create a virtual environment if one doesn't exist
-3. Install all dependencies
-4. Launch the IDE
-
-That's it — you should see the Time Warp Studio window in a few seconds.
+The build produces no output on success; the first build takes a few minutes,
+after that it is incremental. `make -C native run` builds and launches in one step.
 
 ---
 
 ## 🔧 Installation
 
-### Option 1: Smart Launcher (Recommended)
+### Linux / macOS
 
 ```bash
-python3 run.py              # Auto-setup and launch
-python3 run.py --fresh      # Force-recreate virtual environment
-python3 run.py --skip-setup # Skip dependency checks (faster startup)
-python3 run.py --no-venv    # Use system Python (not recommended)
-python3 run.py --help       # Show all options
+cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
+cmake --build native/build -j
+./native/build/time_warp_ide
 ```
 
-### Option 2: Manual Setup
+Add `-DCMAKE_BUILD_TYPE=Debug` for a debuggable build, and
+`-DTIME_WARP_EXPR_WERROR=OFF` to build without `-Werror`.
+
+### Windows
+
+```powershell
+cmake -S native -B native/build -G "Ninja" -DCMAKE_PREFIX_PATH=C:\Qt\6.6.0\msvc2019_64
+cmake --build native/build -j
+.\native\build\time_warp_ide.exe
+```
+
+Adjust `CMAKE_PREFIX_PATH` to your Qt installation.
+
+### The language bridge (already bundled)
+
+Nothing to install for the five bridged languages beyond Python 3.10+ on `PATH`.
+The worker script ships in `native/bridge/` and the IDE finds it automatically; set
+`TIME_WARP_WORKER` or `TIME_WARP_PYTHON` to override either half while debugging.
+
+### Installing it
 
 ```bash
-# Create and activate virtual environment
-python3 -m venv .venv
-source .venv/bin/activate        # Linux/macOS
-# .venv\Scripts\activate         # Windows
-
-# Install dependencies
-pip install -r Platforms/Python/requirements.txt
-
-# Launch the IDE
-python3 Platforms/Python/time_warp_ide.py
+make -C native install PREFIX=$HOME/.local   # or /usr/local with sudo
 ```
 
-### Option 3: Shell Script (Linux/macOS)
-
-```bash
-./run.sh
-```
-
-### Option 4: Install the Python package from PyPI
-
-```bash
-python3 -m pip install timewarp-ide
-time-warp-ide
-```
-
-The package installs PySide6 and Pillow automatically. Other release assets,
-including Linux packages, are available from the [GitHub Releases page](https://github.com/James-HoneyBadger/Time_Warp_Studio/releases).
+That installs the binary, the language bridge, a desktop entry and an icon;
+`make -C native install DESTDIR=/tmp/stage PREFIX=/usr` stages a package instead.
+Installing is also the easiest way to check that a relocated build still finds the
+bridge. Distro packages and installers are not built yet — see
+[docs/ROADMAP.md](docs/ROADMAP.md).
 
 ---
 
@@ -226,34 +221,38 @@ TY: Correct! Well done!
 TN: Not quite. The answer is 4.
 ```
 
-### Pascal — Structured Programming
+### COMAL — Structured Programming
 
-```pascal
-program Hello;
-var
-  i: integer;
-begin
-  writeln('Hello from Pascal!');
-  for i := 1 to 5 do
-    writeln('Count: ', i);
-end.
+```comal
+10 FOR I := 1 TO 5
+20   PRINT "Count: "; I
+30 NEXT I
+40 PROC BANNER(TITLE$)
+50   PRINT "=== "; TITLE$; " ==="
+60 ENDPROC
+70 CALL BANNER("COMAL")
 ```
 
-### Prolog — Logic Programming
+### REXX — String Scripting
 
-```prolog
-parent(tom, bob).
-parent(bob, ann).
-grandparent(X, Z) :- parent(X, Y), parent(Y, Z).
-?- grandparent(tom, ann).
+```rexx
+SAY 'Hello from REXX!'
+name = 'Time Warp'
+SAY 'Hello' || ' ' || name
+DO i = 1 TO 5
+  SAY 'Count:' i
+END
 ```
 
-### Forth — Stack Operations
+### Scheme — Functional Programming
 
-```forth
-: GREET ." Hello from Forth!" CR ;
-GREET
-5 3 + . CR
+```scheme
+(define (fact n)
+  (if (= n 0) 1 (* n (fact (- n 1)))))
+
+(display "5! = ")
+(display (fact 5))
+(newline)
 ```
 
 Browse more examples in the [Examples/](Examples/) directory or through **Help → Browse Examples** (Shift+F3) in the IDE.
@@ -270,30 +269,25 @@ Browse more examples in the [Examples/](Examples/) directory or through **Help �
 | [INSTALLATION.md](docs/INSTALLATION.md) | Detailed installation instructions |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | How to contribute |
 
-### Guides (in `docs/guides/`)
+### Reference
 
-| Guide | Description |
+| Document | Description |
 | --- | --- |
-| [Getting Started](docs/guides/01-getting-started.md) | First steps with the IDE |
-| [IDE Basics](docs/guides/02-ide-basics.md) | Editor, menus, and panels |
-| [Lessons](docs/guides/03-lessons.md) | Working through guided lessons |
-| [Turtle Graphics](docs/guides/04-turtle-graphics.md) | Drawing with the turtle |
-| [Settings](docs/guides/06-settings.md) | Customizing the IDE |
-| [Keyboard Shortcuts](docs/guides/07-shortcuts.md) | Complete shortcut reference |
-| [Troubleshooting](docs/guides/08-troubleshooting.md) | Fixing common problems |
-
-### Language Tutorials (in `docs/tutorials/`)
+| [Language Guide](docs/LANGUAGE_GUIDE.md) | Command reference for all 6 languages |
+| [Architecture](docs/ARCHITECTURE.md) | System design and technical details |
+| [FAQ](docs/FAQ.md) | Frequently asked questions |
+| [Documentation Index](docs/INDEX.md) | Full documentation listing |
+| [Roadmap](docs/ROADMAP.md) | What is built, and what is still to come |
+| [Examples Catalog](Examples/CATALOG.md) | Example programs catalog |
 
 | Tutorial | Description |
 | --- | --- |
 | [BASIC](docs/tutorials/basic.md) | BASIC programming with graphics |
 | [Logo](docs/tutorials/logo.md) | Turtle graphics programming |
 | [PILOT](docs/tutorials/pilot.md) | Interactive lesson creation |
-| [C](docs/tutorials/c.md) | C language basics |
-| [Pascal](docs/tutorials/pascal.md) | Structured programming |
-| [Prolog](docs/tutorials/prolog.md) | Logic programming |
-| [Forth](docs/tutorials/forth.md) | Stack-based programming |
-| [Brainfuck](docs/tutorials/brainfuck.md) | Esoteric Turing-complete language |
+| [COMAL](docs/tutorials/comal.md) | Structured COMAL programming |
+| [REXX](docs/tutorials/rexx.md) | String processing and scripting |
+| [Scheme](docs/tutorials/scheme.md) | Functional programming with Lisp |
 
 ### Reference
 
@@ -309,10 +303,7 @@ Browse more examples in the [Examples/](Examples/) directory or through **Help �
 
 ```text
 Time_Warp_Studio/
-├── run.py                         # Smart launcher (auto-setup + launch)
-├── run.sh                         # Shell wrapper for Linux/macOS
-├── Makefile                       # Build automation targets
-├── test_all_examples.py           # Runs all 81 example programs
+├── Makefile                       # Convenience targets (delegate to native/)
 │
 ├── README.md                      # This file
 ├── CHANGELOG.md                   # Version history and release notes
@@ -320,88 +311,71 @@ Time_Warp_Studio/
 ├── SECURITY.md                    # Vulnerability reporting policy
 ├── LICENSE                        # MIT License
 │
-├── Platforms/Python/              # Main application source
-│   ├── time_warp_ide.py           # IDE entry point
-│   ├── smoke_test.py              # Fast smoke test without pytest
-│   └── time_warp/
-│       ├── core/                  # Interpreter engine and services
-│       │   ├── interpreter.py     # Central command dispatcher (~1,500 lines)
-│       │   ├── debugger.py        # Step-through debugger with timeline
-│       │   └── config.py          # Canonical paths (~/.time_warp/)
-│       ├── languages/             # 9 language executors
-│       │   ├── base.py            # Executor protocol definition
-│       │   ├── basic.py           # BASIC with Turbo graphics
-│       │   ├── logo.py            # Logo turtle graphics
-│       │   ├── pilot.py           # PILOT CAI system
-│       │   ├── python_lang.py     # Python sandboxed executor
-│       │   └── ...                # Remaining active language executors
-│       ├── ui/                    # PySide6 (Qt6) UI components
-│       │   ├── main_window.py     # Main IDE window (5 mixins)
-│       │   ├── editor.py          # Code editor with syntax highlighting
-│       │   ├── canvas.py          # Turtle graphics canvas
-│       │   ├── themes.py          # 28-theme manager
-│       │   ├── output.py          # Output panel + interpreter threads
-│       │   ├── debug_panel.py     # Debugger controls/watch/call-stack
-│       │   ├── command_palette.py # F10 / Ctrl+Shift+P command palette
-│       │   ├── lesson_panel.py    # Lessons dock
-│       │   └── mixins/            # Classroom, debug, export, file ops, help
-│       ├── graphics/              # Turtle state and rendering
-│       │   └── turtle_state.py    # Position, heading, pen state (~600 lines)
-│       ├── features/              # Lessons, autosave, games, etc.
-│       ├── utils/                 # Expression evaluator, error hints, etc.
-│       └── tests/                 # pytest suite (501 tests)
+├── native/                        # THE APPLICATION (C++20 / Qt6)
+│   ├── CMakeLists.txt
+│   ├── include/ src/              # headers and sources
+│   │   ├── ui/                    # IDE shell, editor, canvas, styling
+│   │   ├── canvas/                # SPSC command queue + Qt bridge
+│   │   ├── scheme/                # native Scheme machine
+│   │   ├── debugger/              # background runner
+│   │   └── bridge/                # QProcess layer for the Python worker
+│   ├── tests/                     # 11 C++ suites (ctest)
+│   ├── tools/                     # time_warp_ide.cpp + Python harnesses
+│   └── bridge/                    # TEMPORARY engine for 5 unported languages
+│       ├── worker.py              #   JSON-lines worker the IDE spawns
+│       └── time_warp/             #   interpreter, 6 executors, turtle state
 │
-├── Examples/                      # Example programs across 9 active languages
+├── Examples/                      # 44 example programs across 6 languages
 │   ├── CATALOG.md                 # Searchable example index
-│   ├── basic/ logo/ pilot/ c/
-│   ├── pascal/ prolog/ forth/
-│   ├── brainfuck/ python/
+│   └── basic/ logo/ pilot/ comal/ rexx/ scheme/
 │
 ├── docs/                          # Documentation
 │   ├── ARCHITECTURE.md            # System design document
+│   ├── INSTALLATION.md            # Build and install notes
+│   ├── LANGUAGE_GUIDE.md          # Command reference for all 6 languages
 │   ├── FAQ.md                     # Frequently asked questions
 │   ├── README_TESTING.md          # Test setup and commands
 │   ├── ROADMAP.md                 # Development roadmap
 │   ├── INDEX.md                   # Documentation hub
-│   ├── guides/                    # 8 progressive how-to guides
-│   └── tutorials/                 # 9 language-specific tutorials
+│   └── tutorials/                 # One tutorial per language
 │
-├── Scripts/                       # Build, launch, and utility scripts
-├── packaging/linux/               # Desktop shortcut, icon, and snap recipe
-└── .github/                       # CI workflows (ci, build_release, docs, markdown-lint)
+├── Scripts/                       # audits, version sync, native build helper
+└── .github/workflows/             # CI: native build + test + gates, docs, markdown
 ```
 
 ---
 
 ## 🏃 Running the IDE
 
-### Launch Commands
+### Launch commands
 
 ```bash
-# Recommended: Smart launcher
-python3 run.py
+# Build and run
+make -C native run
 
-# Direct launch (requires venv activated)
-python3 Platforms/Python/time_warp_ide.py
-
-# Shell script (Linux/macOS)
-./run.sh
+# Or directly
+./native/build/time_warp_ide
+./native/build/time_warp_ide Examples/logo/mandala.logo
+./native/build/time_warp_ide --run Examples/logo/mandala.logo
+./native/build/time_warp_ide --screenshot /tmp/shot.png --size 1400x900
 ```
 
-### What Happens on Startup
+### What happens on startup
 
-1. The 9 active language executors are initialized
-2. Settings are restored from Qt QSettings; lesson progress is loaded from `~/.time_warp/progress.json`
-3. The main IDE window opens with editor, canvas, and output panels
-4. Your last theme and settings are restored
+1. Settings are restored via Qt QSettings (window layout, language per file)
+2. The turtle canvas takes the colours the program asks for; the reference pen is
+   white on a dark surface, so a blank canvas is not a blank program
+3. Files named on the command line open as tabs; `--run` starts the program once
+   the window is shown
 
 ### Performance
 
-| Metric | Typical Value |
+| Metric | Typical value |
 | --- | --- |
-| Startup time | 2–5 seconds |
-| Memory usage | 200–300 MB |
-| Codebase | 56,000+ lines across 120+ Python modules |
+| Cold configure + build | a few minutes (Release) |
+| Incremental build | seconds |
+| Startup | well under a second on a modern machine |
+| Codebase | C++20 application plus a small, temporary Python engine |
 
 ---
 
@@ -410,18 +384,35 @@ python3 Platforms/Python/time_warp_ide.py
 Run from the repository root:
 
 ```bash
-# Full pytest suite (501 tests, offscreen Qt)
+# The 11 C++ suites
 make test
-# or: QT_QPA_PLATFORM=offscreen PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
 
-# Fast smoke test without pytest
-python3 Platforms/Python/smoke_test.py
+# The same suites in a Debug build, and under the sanitizers
+make test-debug
+make asan
+make asan ASAN=undefined SAN_DIR=build-ubsan \
+  ASAN_FLAGS='-fsanitize=undefined -fno-omit-frame-pointer -g'
 
-# Run all 81 example programs (non-zero exit on failure)
-python3 test_all_examples.py
+# The bridge engine's own pytest suite
+make engine-test
+
+# Every example program, through the real bridge (non-zero exit on failure)
+make smoke
+
+# Everything
+make test-all && make lint
 ```
 
-**Current status:** Tests cover all 9 active language executors, graphics, GUI, lessons, keymap, and interpreter behavior. CI (`.github/workflows/ci.yml`) runs ruff, pytest, the smoke test, and the examples on Python 3.10, 3.12, and 3.13.
+**What the gates protect.** The suites cover the lexer, the expression evaluator,
+the Scheme machine, the canvas queue and its Qt bridge, the debug and debugger
+runner, the UI layout and documents, the turtle canvas, and the Python bridge.
+Two differential harnesses additionally compare the C++ engines against the
+Python reference on a fixed corpus and must report **0 unexpected mismatches**.
+CI runs all of this plus the 44-example gate.
+
+**Current status:** green in Release, Debug, AddressSanitizer and
+UndefinedBehaviorSanitizer builds; all 44 example programs run and the 14 that
+draw, draw.
 
 ---
 
@@ -439,18 +430,23 @@ We welcome contributions! Here's how to get started:
 3. **Set up** the development environment:
 
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate
-   pip install -r Platforms/Python/requirements.txt -r Platforms/Python/requirements-dev.txt
+   # Build (Release) and run the suites
+   cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
+   cmake --build native/build -j
+   ctest --test-dir native/build --output-on-failure
+
+   # Only if you are touching the bridged languages:
+   python -m venv .venv && . .venv/bin/activate
+   pip install pytest ruff
    ```
 
-4. **Make** your changes following [PEP 8](https://peps.python.org/pep-0008/) style
-5. **Test** that all tests pass:
+4. **Make** your changes. Match the surrounding C++ style; the build is
+   `-Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast -Wlogical-op
+   -Wnull-dereference` with `-Werror`, so warnings are failures
+5. **Test** that everything passes:
 
    ```bash
-   make test
-   make smoke
-   make demos
+   make test-all && make lint
    ```
 
 6. **Commit** with a clear message and submit a pull request
@@ -475,7 +471,7 @@ Licensed under the **[MIT License](LICENSE)**.
 
 ## 🙏 Acknowledgments
 
-Time Warp Studio honors the educational legacy of BASIC, Logo, PILOT, Forth, Prolog, and other pioneering programming languages spanning six decades of computing history, while providing a modern IDE experience for today's learners. Special thanks to the open-source communities behind Python, PySide6/Qt, and the many educators who continue to champion accessible programming education.
+Time Warp Studio honors the educational legacy of BASIC, PILOT, Logo, COMAL, REXX, and Scheme, and other pioneering programming languages spanning six decades of computing history, while providing a modern IDE experience for today's learners. Special thanks to the open-source communities behind Qt and Python, and the many educators who continue to champion accessible programming education.
 
 ---
 

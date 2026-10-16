@@ -1,0 +1,12 @@
+10 REM Procedures and functions in COMAL
+20 PROC BANNER(TITLE$)
+30 PRINT "==== ", TITLE$, " ===="
+40 ENDPROC
+50 PROC TABLE(N)
+60 FOR I := 1 TO 5
+70 PRINT N, " x ", I, " = ", N * I
+80 NEXT I
+90 ENDPROC
+100 CALL BANNER("Times table")
+110 CALL TABLE(7)
+120 CALL BANNER("Done")

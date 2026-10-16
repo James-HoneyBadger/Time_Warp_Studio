@@ -84,27 +84,33 @@ python -m venv .venv
 
 ### Install Dependencies
 
+The application itself needs no dependency step: Qt6, CMake and a C++20 compiler
+are all it takes. Configure once, then build.
+
 ```bash
-# Core dependencies (PySide6, Pillow)
-pip install -r Platforms/Python/requirements.txt
-
-# Development dependencies (pytest, pytest-cov, ruff)
-pip install -r Platforms/Python/requirements-dev.txt
-
-# Optional extras (darkdetect, pyttsx3, pygame, inputs)
-pip install -r Platforms/Python/requirements-optional.txt
+cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
+cmake --build native/build -j
 ```
 
-Or use the Makefile: `make install`, `make dev`, `make optional`.
+Contributors who touch the five bridged languages (BASIC, PILOT, Logo, COMAL,
+REXX) also need the bridge's test tooling:
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install pytest ruff
+```
+
+Optional extras for those languages are not required: `pyttsx3` (BASIC `SAY`),
+`pygame` and `inputs` (BASIC `SOUND`/`GAMEPAD`) are imported defensively.
 
 ### Verify Setup
 
 ```bash
-# Run IDE
-python3 Platforms/Python/time_warp_ide.py
+# Build and run the IDE
+make -C native run
 
-# Run tests
-python3 Platforms/Python/smoke_test.py
+# The 11 C++ suites
+make test
 ```
 
 Both should work without errors.
@@ -113,19 +119,25 @@ Both should work without errors.
 
 ## Code Style
 
-### Python Code Standards
+### C++ Code Standards
 
-- **Style**: PEP 8 compliance
-- **Linter/formatter**: Must pass `ruff check`
-- **Type hints**: Checked with `pyright` (`make typecheck`)
-- **Docstrings**: Add to all public functions/classes
+- **Standard**: C++20, matching the style of the file you are editing
+- **Warnings are errors**: the build carries `-Wall -Wextra -Wpedantic -Wshadow
+  -Wcast-qual -Wuseless-cast -Wlogical-op -Wnull-dereference` with `-Werror`
+  (disable with `-DTIME_WARP_EXPR_WERROR=OFF` while experimenting)
+- **Comments explain why.** The unusual decisions in this codebase — the turtle's
+  compass heading, the bridge protocol, the coalescing canvas queue — are
+  documented where they are made; match that
 
-### Formatter & Linting
+### Bridge engine code (Python)
+
+The Python in `native/bridge/` is the temporary engine for the five unported
+languages. It is standard-library only, `ruff` clean, and each executor is a
+stateless function.
 
 ```bash
-make lint        # ruff check Platforms/Python
-make format      # ruff format
-make typecheck   # pyright
+make lint        # ruff check native/bridge
+make engine-test # pytest over the engine
 ```
 
 ### Example Code Standards
@@ -197,14 +209,17 @@ make test
 # Check code style
 make lint
 
-# Run all example programs
-make demos
+# Every example program, through the real bridge
+make smoke
 
-# Run specific component tests
-QT_QPA_PLATFORM=offscreen PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests/test_interpreter_regressions.py -v
+# One C++ suite by name
+ctest --test-dir native/build -R turtle_canvas_tests --output-on-failure
 ```
 
-All must pass before submitting PR. CI (`.github/workflows/ci.yml`) runs the same ruff, pytest, smoke-test, and example checks on Python 3.10, 3.12, and 3.13.
+All must pass before submitting a PR. CI (`native.yml`) builds the application and
+runs the suites in Release, Debug, AddressSanitizer and UndefinedBehaviorSanitizer
+configurations, both differential gates, the example corpus, and the engine's
+own tests.
 
 ### 4. Push to Your Fork
 
@@ -268,31 +283,37 @@ Requested by Issue #42 - BASIC language completeness.
 ### Run Test Suite
 
 ```bash
-# Quick tests
-python3 Platforms/Python/smoke_test.py
+# The 11 C++ suites
+make test
 
-# Comprehensive (501 tests)
-QT_QPA_PLATFORM=offscreen PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
+# One suite, by name
+ctest --test-dir native/build -R turtle_canvas_tests --output-on-failure
 
-# Specific file
-PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests/test_lang_basic.py -v
+# The other build trees
+make test-debug
+make asan
 
-# All 81 example programs
-python3 test_all_examples.py
+# The bridge engine's own tests
+make engine-test
 
-# With coverage
-PYTHONPATH=Platforms/Python pytest --cov=time_warp Platforms/Python/time_warp/tests --cov-report=html
+# Every example program, through the real bridge
+make smoke
+
+# All of the above, plus lint
+make test-all && make lint
 ```
 
 ### Writing Tests
 
-Tests go in `Platforms/Python/time_warp/tests/`:
+C++ tests live in `native/tests/` as `*_tests.cpp`, one executable per suite, each
+registered with CTest in `native/CMakeLists.txt`. They use the tiny assertion
+helpers in `native/tests/check.hpp`.
 
-```python
-# File: Platforms/Python/time_warp/tests/test_my_feature.py
+```cpp
+// File: native/tests/my_feature_tests.cpp
 
-import pytest
-from time_warp.core.interpreter import Interpreter
+#include "check.hpp"
+#include "timewarp/canvas/command_queue.hpp"
 from time_warp.graphics.turtle_state import TurtleState
 
 class TestMyFeature:
@@ -318,10 +339,12 @@ class TestMyFeature:
 
 ### Test Coverage
 
-Aim for >80% coverage on new code:
+Aim for >80% coverage on new code. For the C++ suites, add assertions to the
+relevant `native/tests/*_tests.cpp`; for the bridge engine:
 
 ```bash
-PYTHONPATH=Platforms/Python pytest --cov=time_warp --cov-report=html Platforms/Python/time_warp/tests
+.venv/bin/python -m pytest native/bridge/time_warp/tests -q \
+  --cov=time_warp --cov-report=html
 # Coverage report in htmlcov/index.html
 ```
 
@@ -340,9 +363,10 @@ PYTHONPATH=Platforms/Python pytest --cov=time_warp --cov-report=html Platforms/P
 
 - `README.md` - If user-visible change
 - `docs/ARCHITECTURE.md` - If internal change
-- `docs/USER_GUIDE.md` - If UI change
+- `docs/INSTALLATION.md` - If build or run steps change
 - `docs/LANGUAGE_GUIDE.md` - If language syntax
-- `docs/guides/08-troubleshooting.md` - If known issue
+- `docs/ROADMAP.md` - If a planned item lands or is deferred
+- `native/README.md` - If the Qt application's design or behaviour changes
 
 ### Documentation Standard
 
@@ -364,11 +388,13 @@ Links to related docs or code.
 
 ## Adding a New Language
 
-Want to add a new language executor? Follow these steps:
+A language that is not yet native runs in the bridge, which is temporary by
+design: each language ported to C++ deletes its path through it. Registering a
+seventh language means touching the bridge and the Qt side.
 
 ### 1. Create Executor Module
 
-File: `Platforms/Python/time_warp/languages/newlang.py`
+File: `native/bridge/time_warp/languages/newlang.py`
 
 ```python
 from __future__ import annotations
@@ -396,17 +422,22 @@ def _parse_and_execute(source: str) -> str:
 
 ### 2. Register Executor
 
-File: `Platforms/Python/time_warp/core/interpreter.py`
+File: `native/bridge/time_warp/core/interpreter.py`
 
 ```python
 from ..languages.newlang import execute_newlang
 # Add Language.NEWLANG enum member
-# Add entry in _WHOLE_PROGRAM_EXECUTORS dict
+# Add entry in _WHOLE_PROGRAM_EXECUTORS dict (whole-program languages only)
 ```
+
+Also import it in `native/bridge/time_warp/languages/__init__.py` and add the
+extension in `core/language_registry.py`.
 
 ### 3. Add Auto-Detection
 
-Add to `Language.from_extension()` in `core/interpreter.py`:
+Add to `Language.from_extension()` in `core/interpreter.py`, and to the Qt-side
+language table in `native/src/ui/language.cpp` so the IDE knows the display name,
+settings key and extensions.
 
 ```python
 ".nlg": cls.NEWLANG,
@@ -414,7 +445,7 @@ Add to `Language.from_extension()` in `core/interpreter.py`:
 
 ### 4. Create Tests
 
-File: `Platforms/Python/time_warp/tests/test_lang_newlang.py`
+File: `native/bridge/time_warp/tests/test_lang_newlang.py`
 
 ```python
 from .conftest_lang import run, ok, has, no_errors
@@ -455,25 +486,21 @@ Directory: `Examples/newlang/`
 git fetch origin
 git rebase origin/main
 
-# 2. Run full test suite
-make test
-make demos
+# 2. Run the full test suite, all build trees, the corpus gate and lint
+make test-all && make lint
 
-# 3. Check code style
-make lint
-
-# 4. Update docs
+# 3. Update docs
 # - README
-# - Architecture docs
-# - API docs
+# - docs/ARCHITECTURE.md and docs/INSTALLATION.md
+# - native/README.md for design decisions
 ```
 
 ### Submission Checklist
 
 - [ ] Feature/fix complete
 - [ ] Tests written and passing
-- [ ] Code follows PEP 8
-- [ ] Type hints added
+- [ ] Build is warning-free (`-Werror`)
+- [ ] Bridge code (if touched) is ruff clean and standard-library only
 - [ ] Documentation updated
 - [ ] No breaking changes (or documented)
 - [ ] Commit messages clear
@@ -496,20 +523,19 @@ Understanding the codebase:
 
 ```text
 Time_Warp_Studio/
-├── Platforms/Python/
-│   ├── time_warp_ide.py          # Main entry point
-│   ├── time_warp/
-│   │   ├── core/                 # Interpreter, debugger
-│   │   ├── languages/            # 9 language executors
-│   │   ├── ui/                   # PySide6 UI
-│   │   ├── graphics/             # Turtle graphics
-│   │   ├── features/             # Lessons, games, etc.
-│   │   └── tests/                # pytest suite
-│   └── requirements*.txt         # Core / dev / optional dependencies
-├── Examples/                     # 81 example programs
-├── test_all_examples.py          # Example runner
-├── docs/                         # User documentation
-└── [Root docs]                  # README, LICENSE, etc.
+├── native/                       # THE APPLICATION (C++20 / Qt6)
+│   ├── CMakeLists.txt
+│   ├── include/ src/             # ui/, canvas/, scheme/, debugger/, bridge/
+│   ├── tests/                    # 11 CTest suites
+│   ├── tools/                    # time_warp_ide.cpp + Python harnesses
+│   └── bridge/                   # TEMPORARY Python engine (5 unported languages)
+│       ├── worker.py             #   the JSON-lines worker the IDE spawns
+│       └── time_warp/            #   interpreter, executors, turtle state
+├── Examples/                     # 44 example programs across 6 languages
+├── docs/                         # Language guide, tutorials, architecture
+├── Scripts/                      # audits, version sync, build helper
+├── Makefile                      # Convenience targets (delegate to native/)
+└── [Root docs]                   # README, CONTRIBUTING, LICENSE
 ```
 
 See docs/ARCHITECTURE.md for detailed structure.

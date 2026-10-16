@@ -1,9 +1,108 @@
 # Changelog
 
+## The Qt application is now the product
+
+Time Warp Studio is a **C++20 / Qt6 desktop application** (`native/`). The PySide6
+implementation that came before it has been **removed**; what remains of Python is a
+temporary bridge the Qt application spawns for the five languages that are not ported
+yet.
+
+### Added
+
+- **Qt application** (`native/`) — `time_warp_ide`: documents and tabs, code editor
+  with line-number gutter and current-line highlight, streaming output console with
+  interpreter errors in their own tab, turtle canvas with zoom, pan, grid and
+  auto-fit, menus, toolbar and status bar, and `make install` with a desktop entry
+  and icon.
+- **Native engines** — the expression evaluator (`timewarp_expr`) and Scheme
+  (`timewarp_scheme`, an explicit-stack CEK machine), each with a parity gate against
+  the Python reference (153 and 167 cases, zero unexplained divergence).
+- **Language bridge** (`native/bridge/`) — a JSON-lines worker the application spawns
+  for BASIC, PILOT, Logo, COMAL and REXX. It is scheduled for deletion one language at
+  a time as each is ported.
+- **Test and examination tooling** — 11 CTest suites, the bridge engine's own suite,
+  `example_smoke.py` (all 44 examples through the real bridge), `command_matrix.py`
+  with `command_table.py` (one row per documented command, 279 rows), and
+  `command_inventory.py`, which extracts the implemented command set to check that
+  table for completeness.
+- **CI** (`.github/workflows/native.yml`) covering the build, the suites and the gates.
+
+### Removed
+
+- The entire PySide6 application, its launchers (`run.py`, `run.sh`), its Docker and
+  developer tooling, and the workflows that packaged and published it.
+- The C, Pascal, Prolog, Forth, Brainfuck and Python executors.
+
+### Fixed during the port's examination
+
+Examining every documented command through the real bridge turned up defects that no
+gate had been looking for:
+
+- **A keyword boundary bug in BASIC.** `startswith("DO")` also matched `DOG = 42`, so
+  the `DO` statement swallowed the assignment: the variable was never set and `PRINT`
+  then echoed the name back. Any variable named `DOUBLE`, `RUNNER`, `CLOSER`, `NEXTX`
+  or similar silently lost its value. Eleven keywords were affected.
+- **`ON TIMER` could never work.** The dispatcher sliced one character too many,
+  discarding the `(`, so the handler rejected the format its own error message asked
+  for.
+- **`SHOW` and `TYPE` in Logo never evaluated their argument.** Both returned their
+  source text, so `SHOW 1 + 2` displayed `1 + 2`. `PRINT` had always worked, so the
+  two disagreed about the same expression.
+- **A reporter could not be applied to a list literal** — `FIRST [1 2 3]` received
+  just `[`, because argument consumption balanced parentheses but not brackets.
+- **An input statement stopped the program.** The worker called `execute()` once, so
+  every program that read input ended at its first prompt; resumed runs needed a loop.
+- **The worker ran a program inline**, which meant `in-reply` and cooperative stop
+  could never be delivered while a program was running. Stop now works.
+- **`JOYINIT`** reported an absent *optional* backend with the error prefix, which the
+  IDE presents as the program failing.
+
+## Language lineup change — six active languages
+
+Time Warp Studio now ships exactly **six** languages: **BASIC, PILOT, Logo,
+COMAL, REXX, and Scheme**. The C, Pascal, Prolog, Forth, Brainfuck, and Python
+executors have been removed from the product, along with their examples,
+tutorials, snippets, lessons, and tests.
+
+### Added
+
+- **COMAL** executor (`languages/comal.py`) — structured BASIC with
+  `IF/ELIF/ELSE/ENDIF`, `FOR/NEXT`, `WHILE/ENDWHILE`, `REPEAT/UNTIL`,
+  `LOOP/ENDLOOP`, `PROC/ENDPROC` + `CALL`, `DIM`, `DATA/READ`, `GOTO`/`GOSUB`,
+  and turtle `MOVE`/`TURN` commands.
+- **REXX** executor (`languages/rexx.py`) — typeless string processing with
+  `SAY`, `PULL`, `PARSE`, `IF/THEN/ELSE`, `DO` (TO/BY/WHILE/UNTIL/FOREVER/
+  OVER), `SELECT/WHEN`, labels + `CALL`/`ARG`/`RETURN`, `LEAVE`/`ITERATE`, a
+  full expression evaluator (including `||` and abuttal concatenation) and 20+
+  built-in string/number functions.
+- **Scheme** executor (`languages/scheme.py`) — whole-program Lisp interpreter
+  with lexical closures, `define`/`lambda`, `if`/`cond`/`case`/`when`/`unless`,
+  `let`/`let*`/`letrec`/named `let`, `quote`/`quasiquote`, `set!`, list and
+  vector primitives, `map`/`filter`/`foldl`/`apply`, and turtle bindings.
+- New tutorials (`docs/tutorials/comal.md`, `rexx.md`, `scheme.md`), example
+  programs (`Examples/comal/`, `Examples/rexx/`, `Examples/scheme/`), code
+  snippets, and two guided lessons per new language.
+
+### Removed
+
+- Executors: `brainfuck.py`, `c_lang_fixed.py`, `forth.py`, `pascal.py`,
+  `prolog.py`, `python_lang.py`, plus their tests, examples, and tutorials.
+- `Language` enum members `C`, `PASCAL`, `PROLOG`, `FORTH`, `BRAINFUCK` and
+  `PYTHON_LANG`.
+
+### Changed
+
+- `_WHOLE_PROGRAM_EXECUTORS` now contains Scheme only; the subprocess sandbox
+  applies to Scheme.
+- Syntax highlighting, comment toggling, keyword reference cards, document
+  outlines, code formatters, snippet library, lessons, status-bar emoji,
+  project icons, telemetry HUD, and output prompts all cover the new lineup.
+- Example verifier default language map updated (`comal`, `rexx`, `scheme`).
+
 All notable changes to Time Warp Studio will be documented in this file.
 
-> **Scope note:** The current release actively supports **9 languages**:
-> BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python. Older
+> **Scope note:** The current release actively supports **6 languages**:
+> BASIC, PILOT, Logo, COMAL, REXX, and Scheme, and Python. Older
 > entries below mention additional language executors (Smalltalk,
 > Perl, Ruby, Erlang, Haskell, JavaScript, Lua, HyperTalk, PostScript,
 > LISP/Scheme, Tcl, 6502 Assembly) that were built at the time but have since
@@ -321,7 +420,7 @@ All notable changes to Time Warp Studio will be documented in this file.
 
 ### Initial Release
 
-- 12 programming language executors: BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, JavaScript, Lua, HyperTalk, Erlang
+- 12 programming language executors: BASIC, PILOT, Logo, COMAL, REXX, and Scheme, JavaScript, Lua, HyperTalk, Erlang
 - PySide6 (Qt6) desktop IDE with editor, canvas, and output panels
 - 26 built-in themes including retro CRT and accessibility options
 - Integrated debugger with timeline recording and rewind

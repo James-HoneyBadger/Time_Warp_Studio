@@ -1,0 +1,520 @@
+#!/usr/bin/env python3
+"""Runs a Time Warp Studio program for the C++ IDE and streams what happens.
+
+Five of the six languages have no C++ interpreter yet. Rather than reimplementing
+them, the C++ IDE runs *this* against the Python implementation -- which is
+complete and tested -- and streams the result back. Python is the oracle until
+each language is ported, at which point that language stops being routed here and
+nothing else changes.
+
+It is deliberately out of process. A program that loops forever, calls
+`sys.exit`, or corrupts its own interpreter cannot take the IDE with it: the worst
+case is a process that has to be killed, which the IDE can do.
+
+#### Protocol
+
+One JSON object per line, UTF-8, no embedded newlines.
+
+Client to worker:
+
+    {"t": "run", "language": "logo", "source": "...", "name": "mandala.logo"}
+    {"t": "in-reply", "text": "Alice"}     # answer to an input request
+    {"t": "stop"}                          # cooperative stop; the client may kill
+
+Worker to client:
+
+    {"t": "ready", "version": "1"}          # once, before the first run
+    {"t": "out", "text": "..."}             # program output, one line at a time
+    {"t": "canvas", "cmds": [ ... ]}        # batched drawing commands
+    {"t": "pose", "x": .., "y": .., "h": .., "show": true}
+    {"t": "err", "text": "..."}             # reported in the IDE's error panel
+    {"t": "in", "prompt": "..."}            # the program wants input
+    {"t": "done", "ok": true, "error": "...", "unsupported": [ ... ]}
+
+#### How the drawing is captured
+
+`TurtleState` keeps append-only `lines` and `shapes` lists, so the drawing is read
+by *diffing* those lists rather than by overriding every turtle method. That
+choice matters: an override list has to be complete, and the one method somebody
+forgets is a feature that silently stops working. A diff of an append-only list
+cannot miss anything that was drawn.
+
+The one thing a diff cannot see is a `clear()` that happens and is redrawn inside
+a single polling interval, because the list is emptied and refilled before anyone
+looks. `clear` and `reset` are therefore the only overrides.
+"""
+
+from __future__ import annotations
+
+import json
+import os
+import sys
+import threading
+import time
+from typing import Any, Dict, List, Optional
+
+# Importable either as a module or as a bare script launched by path from any
+# working directory: the IDE runs this by path, so finding the package is this
+# file's job rather than the caller's.
+if __package__ in (None, ""):
+    _here = os.path.dirname(os.path.abspath(__file__))
+    if _here not in sys.path:
+        sys.path.insert(0, _here)
+
+from time_warp.core.interpreter import Interpreter, Language  # noqa: E402
+from time_warp.graphics.turtle_state import TurtleShape, TurtleState  # noqa: E402
+
+VERSION = "1"
+
+# How often the drawing is flushed to the IDE while a program runs. Short enough
+# that a drawing appears to be drawn, long enough that a fast program is not
+# sending one message per line segment.
+FLUSH_INTERVAL_SECONDS = 0.05
+
+# How many input round-trips one program may make. A quiz legitimately reads many
+# answers, so this is a runaway guard rather than a limit on the language; each
+# individual wait is bounded separately by INPUT_TIMEOUT_SECONDS.
+MAX_INPUT_ROUNDS = 1000
+
+# How long an input request waits for an answer before the program continues with
+# an empty value. A person needs longer than a machine, but not forever: a client
+# that has gone away must not leave this process wedged.
+INPUT_TIMEOUT_SECONDS = 300.0
+
+
+class Emitter:
+    """Writes protocol messages, safely from any thread.
+
+    stdout is shared by the program thread (output), the flusher (drawing) and
+    the main thread (errors), and a half-written line would desynchronise the
+    client's parser. One lock around one `write` call is the whole invariant.
+    """
+
+    def __init__(self, stream: Any = None) -> None:
+        self._stream = stream if stream is not None else sys.stdout
+        self._lock = threading.Lock()
+
+    def send(self, message: Dict[str, Any]) -> None:
+        # `separators` keeps the payload compact: a drawing is mostly numbers, and
+        # the default `", "` padding is real bytes over a pipe.
+        try:
+            line = json.dumps(message, separators=(",", ":"), ensure_ascii=False)
+        except (TypeError, ValueError) as exc:  # pragma: no cover - defensive
+            line = json.dumps({"t": "err", "text": f"bridge: unencodable message: {exc}"})
+        with self._lock:
+            try:
+                self._stream.write(line + "\n")
+                self._stream.flush()
+            except (BrokenPipeError, ValueError, OSError):
+                # The IDE has gone. Nothing can be reported to a pipe nobody is
+                # reading, so the process ends here and now: `os._exit` rather
+                # than an exception because the program thread may be inside an
+                # interpreter loop that will never look at a stop flag again, and
+                # an orphaned interpreter spinning forever is worse than an
+                # abrupt exit.
+                os._exit(0)
+
+
+def _colour(rgb: Any) -> List[int]:
+    """`[r, g, b]` from whatever the reference stored, clamped to a byte."""
+    if not isinstance(rgb, (tuple, list)) or len(rgb) < 3:
+        return [0, 0, 0]
+    return [max(0, min(255, int(channel))) for channel in rgb[:3]]
+
+
+def _shape_command(shape: TurtleShape, unsupported: List[str]) -> Optional[Dict[str, Any]]:
+    """One `TurtleShape` as a canvas command, or None when it cannot be drawn."""
+    kind = shape.shape_type
+    points = [[float(x), float(y)] for x, y in shape.points]
+    flat: List[float] = [value for pair in points for value in pair]
+    colour = _colour(shape.color)
+    fill = _colour(shape.fill_color) if shape.fill_color else None
+
+    def boxed() -> List[float]:
+        """`(x, y, w, h)` of the points' bounding box."""
+        if not points:
+            return [0.0, 0.0, 0.0, 0.0]
+        xs = [pair[0] for pair in points]
+        ys = [pair[1] for pair in points]
+        return [min(xs), min(ys), max(xs) - min(xs), max(ys) - min(ys)]
+
+    if kind in ("polyline", "line"):
+        return {"k": "poly", "pts": flat, "c": colour, "w": shape.width}
+    if kind == "polygon":
+        command: Dict[str, Any] = {
+            "k": "poly", "pts": flat, "c": colour, "w": shape.width, "closed": True,
+        }
+        if fill is not None:
+            command["fill"] = fill
+        return command
+    if kind == "point":
+        if not points:
+            return None
+        return {"k": "point", "x": points[0][0], "y": points[0][1], "c": colour}
+    if kind in ("rect", "ellipse"):
+        x, y, width, height = boxed()
+        command = {
+            "k": kind, "x": x, "y": y, "w": width, "h": height,
+            "c": colour, "lw": shape.width,
+        }
+        if fill is not None:
+            command["fill"] = fill
+        return command
+    if kind == "text":
+        if not points:
+            return None
+        return {
+            "k": "text", "x": points[0][0], "y": points[0][1], "c": colour,
+            "s": shape.text or "", "size": shape.font_size,
+        }
+    if kind == "bezier":
+        # The chord endpoints of a cubic would be visibly wrong, so this is
+        # reported as a gap instead of approximated.
+        unsupported.append("bezier curves")
+        return None
+    if kind in ("rect_gradient", "ellipse_gradient"):
+        # The C++ canvas does not blend gradients yet. The outline is still
+        # drawn, and the gap is named rather than the shape vanishing.
+        unsupported.append("gradient fills")
+        x, y, width, height = boxed()
+        return {
+            "k": "rect" if kind == "rect_gradient" else "ellipse",
+            "x": x, "y": y, "w": width, "h": height, "c": colour, "lw": shape.width,
+        }
+    if kind == "sprite":
+        unsupported.append("sprites")
+        return None
+
+    unsupported.append(kind)
+    return None
+
+
+class Tape(TurtleState):
+    """A `TurtleState` that reports what has been drawn since it was last asked.
+
+    Subclassed rather than wrapped because the interpreters receive a
+    `TurtleState` and call its methods directly; a wrapper would have to forward
+    every one of them, and the one it forgot would silently stop working.
+    """
+
+    def __init__(self, emitter: Emitter) -> None:
+        super().__init__()
+        self._emitter = emitter
+        self._sent_lines = 0
+        self._sent_shapes = 0
+        # Guards the send-ordering as well as the counters: a `clear` that overtook
+        # the batch of pre-clear lines would wipe a drawing and then draw it back.
+        self._lock = threading.RLock()
+        self.unsupported: List[str] = []
+
+    # -- the only overrides ---------------------------------------------
+
+    def clear(self) -> None:
+        # The lock is held across the base mutation as well as the counter reset,
+        # so a flush cannot read the lists halfway through a clear and emit a batch
+        # that this clear has already discarded. `drain` uses the same lock.
+        with self._lock:
+            super().clear()
+            self._report_cleared()
+
+    def reset(self) -> None:
+        with self._lock:
+            super().reset()
+            self._report_cleared()
+            # `reset` restores the default background as well as the default pen.
+            self.report_background()
+
+    def setbgcolor(self, r: int, g: int, b: int) -> None:
+        # Not a drawing operation, so the diff cannot see it -- and the default
+        # pen is white, which means a client that ignored this would draw white
+        # ink on its own white canvas and appear to draw nothing at all.
+        super().setbgcolor(r, g, b)
+        self.report_background()
+
+    def report_background(self) -> None:
+        with self._lock:
+            self._emitter.send(
+                {"t": "canvas", "cmds": [{"k": "bg", "c": _colour(self.bg_color)}]}
+            )
+
+    def _report_cleared(self) -> None:
+        with self._lock:
+            self._sent_lines = 0
+            self._sent_shapes = 0
+            # Sent here rather than discovered by the diff: a clear that is
+            # redrawn inside one polling interval leaves no trace in the lists,
+            # and the symptom would be two drawings on top of each other.
+            self._emitter.send({"t": "canvas", "cmds": [{"k": "clear"}]})
+
+    # -- the diff ---------------------------------------------------------
+
+    def drain(self) -> None:
+        """Sends everything drawn since the last drain, then the turtle's pose.
+
+        Text and drawing come from one place so their order is the program's
+        order; the client applies them in the order it receives them.
+        """
+        with self._lock:
+            commands: List[Dict[str, Any]] = []
+
+            lines = self.lines
+            if len(lines) < self._sent_lines:
+                # The list shrank without a `clear` reaching us, which should not
+                # happen; starting over is better than indexing past the end.
+                self._sent_lines = 0
+            while self._sent_lines < len(lines):
+                line = lines[self._sent_lines]
+                self._sent_lines += 1
+                commands.append(
+                    {
+                        "k": "line",
+                        "x1": float(line.start_x),
+                        "y1": float(line.start_y),
+                        "x2": float(line.end_x),
+                        "y2": float(line.end_y),
+                        "c": _colour(line.color),
+                        "w": float(line.width),
+                    }
+                )
+
+            shapes = self.shapes
+            if len(shapes) < self._sent_shapes:
+                self._sent_shapes = 0
+            while self._sent_shapes < len(shapes):
+                shape = shapes[self._sent_shapes]
+                self._sent_shapes += 1
+                command = _shape_command(shape, self.unsupported)
+                if command is not None:
+                    commands.append(command)
+
+            if commands:
+                self._emitter.send({"t": "canvas", "cmds": commands})
+            self._emitter.send(
+                {
+                    "t": "pose",
+                    "x": float(self.x),
+                    "y": float(self.y),
+                    "h": float(self.heading),
+                    "show": bool(self.visible),
+                }
+            )
+
+
+class Session:
+    """One program run: the interpreter, the tape, and the flush loop."""
+
+    def __init__(self, emitter: Emitter) -> None:
+        self._emitter = emitter
+        self._tape = Tape(emitter)
+        self._finished = threading.Event()
+        self._input_lock = threading.Lock()
+        self._input_ready = threading.Event()
+        #: Set once the client's stdin has closed, so no prompt waits for an
+        #: answer that cannot come.
+        self._client_gone = False
+        self._input_value = ""
+        self._interpreter: Optional[Interpreter] = None
+
+    # -- input ------------------------------------------------------------
+
+    def request_input(self, prompt: str) -> str:
+        """Asks the IDE for a line of input and waits for it.
+
+        Called from the program thread, so it blocks that thread only. The flush
+        loop keeps running, which is what lets the IDE redraw what has been drawn
+        so far while it waits.
+        """
+        with self._input_lock:
+            if self._client_gone:
+                # Nobody can answer, now or later: a program that reads input in a
+                # loop must not wait out the timeout once per question.
+                return ""
+            self._input_ready.clear()
+            self._input_value = ""
+        self._emitter.send({"t": "in", "prompt": prompt})
+        if not self._input_ready.wait(INPUT_TIMEOUT_SECONDS):
+            self._emitter.send(
+                {
+                    "t": "err",
+                    "text": f"No answer to {prompt!r} arrived; continuing without it.",
+                }
+            )
+            return ""
+        with self._input_lock:
+            return self._input_value
+
+    def deliver_input(self, text: str) -> None:
+        with self._input_lock:
+            self._input_value = text
+        self._input_ready.set()
+
+    def release_input(self) -> None:
+        """Answers this and every later prompt with nothing, because nobody is there.
+
+        Called when stdin has closed: the client has gone, or it is a one-shot
+        driver that sent one `run` and is reading the output (`printf
+        '{"t":"run",...}' | worker.py` is a supported way to use this). A program
+        blocked on a prompt must be allowed to finish, or that client never sees
+        its `done`; and the answer has to be *standing*, because a quiz asks more
+        than once and each later question would otherwise wait out the timeout.
+        """
+        with self._input_lock:
+            self._client_gone = True
+        self.deliver_input("")
+
+    # -- running ----------------------------------------------------------
+
+    def _flush_loop(self) -> None:
+        while not self._finished.is_set():
+            self._tape.drain()
+            time.sleep(FLUSH_INTERVAL_SECONDS)
+        # One final drain so nothing drawn in the last interval is lost.
+        self._tape.drain()
+
+    def run(self, language: str, source: str, name: str) -> None:
+        try:
+            member = Language[language.upper()]
+        except KeyError:
+            text = f"Unknown language: {language}"
+            self._emitter.send({"t": "err", "text": text})
+            self._emitter.send({"t": "done", "ok": False, "error": text, "name": name})
+            return
+
+        interpreter = Interpreter(member)
+        self._interpreter = interpreter
+        # The surface's background first, before any ink: the reference pen is
+        # white on a dark canvas, and the IDE's canvas has its own defaults.
+        self._tape.report_background()
+        # Streamed rather than collected: the Python IDE shows output as it is
+        # produced, and a program that runs for seconds without printing should
+        # not look frozen in the meantime.
+        interpreter.output_callback = lambda line: self._emitter.send(
+            {"t": "out", "text": line + "\n"}
+        )
+        interpreter.input_callback = self.request_input
+
+        self._finished.clear()
+        flusher = threading.Thread(target=self._flush_loop, name="timewarp-flush", daemon=True)
+        flusher.start()
+
+        error = ""
+        ok = True
+        try:
+            interpreter.load_program(source, member)
+            interpreter.execute(self._tape)
+
+            # The engine stops at an input statement and expects to be resumed:
+            # `provide_input()` stores the answer and advances the program counter,
+            # and the next `execute()` carries on from there. Calling it once per
+            # run means every program that reads input stops dead at its first
+            # prompt -- silently, with no error, which is exactly why nothing else
+            # caught it. (The engine's own test helper loops for the same reason.)
+            rounds = 0
+            while interpreter.pending_input is not None and rounds < MAX_INPUT_ROUNDS:
+                rounds += 1
+                value = self.request_input(interpreter.pending_input.prompt)
+                interpreter.provide_input(value)
+                interpreter.execute(self._tape)
+        except Exception as exc:  # noqa: BLE001 - the IDE has to see any failure
+            ok = False
+            error = f"{type(exc).__name__}: {exc}"
+            self._emitter.send({"t": "err", "text": error})
+        finally:
+            self._finished.set()
+            flusher.join(timeout=2.0)
+
+        self._emitter.send(
+            {
+                "t": "done",
+                "ok": ok,
+                "error": error,
+                "unsupported": sorted(set(self._tape.unsupported)),
+                "name": name,
+            }
+        )
+
+    def stop(self) -> None:
+        """Asks the interpreter to give up at its next check.
+
+        Cooperative, so it is not guaranteed: the interpreter checks its budget
+        between statements, and one statement that never returns cannot be
+        interrupted from here. The IDE's hard kill covers that case.
+        """
+        interpreter = self._interpreter
+        if interpreter is None:
+            return
+        interpreter.budget.cancelled = True
+        interpreter.running = False
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    del argv
+    emitter = Emitter(sys.stdout)
+    # The protocol owns stdout from here on. A stray `print` in the interpreter or
+    # in a library would otherwise land in the middle of a message and desynchronise
+    # the client's parser, which is a failure that looks like corruption rather
+    # than like a bug. Redirecting it to stderr keeps it visible and harmless.
+    sys.stdout = sys.stderr
+
+    emitter.send({"t": "ready", "version": VERSION})
+
+    session: Optional[Session] = None
+    program: Optional[threading.Thread] = None
+    for raw in sys.stdin:
+        raw = raw.strip()
+        if not raw:
+            continue
+        try:
+            message = json.loads(raw)
+        except ValueError as exc:
+            emitter.send({"t": "err", "text": f"bridge: malformed request: {exc}"})
+            continue
+
+        kind = message.get("t")
+        if kind == "run":
+            # One program at a time: finish the previous one before starting the
+            # next, or two interpretations interleave their drawing.
+            if program is not None:
+                program.join()
+            session = Session(emitter)
+            # The program runs on its own thread so this loop stays free to hand
+            # it the two messages it can only receive *while* it runs: `in-reply`
+            # and `stop`. Running it inline -- which is what this did -- meant a
+            # program that asked for input could never be answered, because the
+            # reply sat unread in the pipe behind the blocked loop. That is why
+            # every program using INPUT stopped dead at its first prompt, and why
+            # cooperative stop never took effect (only the client's hard kill ever
+            # worked, which hid it).
+            program = threading.Thread(
+                target=session.run,
+                args=(
+                    str(message.get("language", "")),
+                    str(message.get("source", "")),
+                    str(message.get("name", "")),
+                ),
+                name="timewarp-program",
+                daemon=True,
+            )
+            program.start()
+        elif kind == "in-reply":
+            if session is not None:
+                session.deliver_input(str(message.get("text", "")))
+        elif kind == "stop":
+            if session is not None:
+                session.stop()
+        else:
+            emitter.send({"t": "err", "text": f"bridge: unknown request {kind!r}"})
+
+    # stdin has closed, which means the client has gone or has nothing more to
+    # say. A program still waiting on a prompt gets an empty answer so it can
+    # finish and emit its `done`, then this gives it a moment to do so before
+    # leaving: a daemon thread must not be what keeps a client's orphan alive.
+    if session is not None:
+        session.release_input()
+    if program is not None:
+        program.join(timeout=5.0)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

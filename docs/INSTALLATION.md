@@ -1,402 +1,171 @@
-# Installation Guide — Time Warp Studio
+# Installing and Building Time Warp Studio
 
-This guide covers every way to install or run Time Warp Studio, from a
-one-command standalone installer to developer setups.
-
----
-
-## Table of Contents
-
-1. [Standalone Install (Recommended)](#1-standalone-install-recommended)
-2. [System Requirements](#2-system-requirements)
-3. [Developer / Portable Install](#3-developer--portable-install)
-4. [Troubleshooting](#4-troubleshooting)
-5. [Updating & Uninstalling](#5-updating--uninstalling)
-6. [Quick Reference](#6-quick-reference)
+Time Warp Studio is a **C++20 / Qt6** desktop application. Everything you need to
+run all six languages is in this repository; nothing has to be downloaded at run
+time.
 
 ---
 
-## 1. Standalone Install (Recommended)
+## 1. Requirements
 
-`install.sh` in the project root turns Time Warp Studio into a **fully
-self-contained application** on Linux. After running it you can launch the
-IDE from a terminal **or** from **Applications ▸ Development ▸ Time Warp
-Studio** — no virtual environment activation, no `cd`, just run it.
-
-The installer:
-
-- Copies all application files to a dedicated directory
-- Creates an isolated Python virtual environment with all dependencies
-- Writes a shell launcher (`time-warp-studio`) onto your `PATH`
-- Registers a `.desktop` file so the IDE appears in your applications menu
-- Re-running the installer **upgrades / overwrites** the existing version
-
-### 1.1 Prerequisites
-
-| Requirement | Minimum | Check |
+| Requirement | Minimum | Notes |
 | --- | --- | --- |
-| Linux distro | Any modern distro with a desktop environment | — |
-| Python | 3.10+ | `python3 --version` |
-| pip | any | `python3 -m pip --version` |
-| venv | any | `python3 -m venv --help` |
+| C++ compiler | C++20 | GCC 13+, Clang 16+, or MSVC 19.3+ |
+| CMake | 3.20 | |
+| Qt6 | 6.2 | Widgets, Core and Gui modules must be installed |
+| Python | 3.10 | *Optional* — only for BASIC, PILOT, Logo, COMAL and REXX |
 
-Install missing prerequisites:
+Scheme and the shared expression engine are native C++ and need **no Python at
+all**. The other five languages currently run through a small bundled engine
+process; see §6.
 
-```bash
-# Fedora / RHEL / CentOS
-sudo dnf install python3 python3-pip
-
-# Ubuntu / Debian
-sudo apt update && sudo apt install python3 python3-pip python3-venv
-```
-
-### 1.2 System-wide install (all users, recommended)
-
-Installs to `/opt/time-warp-studio` and creates `/usr/local/bin/time-warp-studio`.
-Requires sudo / root.
+### Installing the toolchain
 
 ```bash
-# Clone (or download a release archive) and enter the directory
-git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
-cd Time_Warp_Studio
-
-# Run the installer as root
-sudo ./install.sh
-```
-
-When it finishes you will see:
-
-```text
-════════════════════════════════════════════════════
-  Time Warp Studio 14.1.2 — Installed!
-════════════════════════════════════════════════════
-
-  Start from terminal:   time-warp-studio
-  Start from menu:       Applications ▸ Development ▸ Time Warp Studio
-  Installed to:          /opt/time-warp-studio
-```
-
-Launch it immediately:
-
-```bash
-time-warp-studio
-```
-
-Or open your desktop's application launcher and look under **Development**.
-
-### 1.3 Per-user install (current user only, no sudo)
-
-Installs to `~/.local/share/time-warp-studio` and creates
-`~/.local/bin/time-warp-studio`.
-
-```bash
-cd Time_Warp_Studio
-./install.sh --user
-```
-
-> **PATH note**: If `~/.local/bin` is not yet on your `PATH` the installer
-> will warn you.  Add this line to `~/.bashrc` (or `~/.profile`):
->
-> ```bash
-> export PATH="$HOME/.local/bin:$PATH"
-> ```
->
-> Then reload:  `source ~/.bashrc`
-
-### 1.4 Upgrading an existing installation
-
-Re-run the installer with `--upgrade` to wipe and recreate the Python venv
-(ensures you get the latest dependency versions).  Without `--upgrade` the
-installer still syncs all application files but reuses the existing venv.
-
-```bash
-# Upgrade a system-wide install
-sudo ./install.sh --upgrade
-
-# Upgrade a per-user install
-./install.sh --user --upgrade
-```
-
-Without the `--upgrade` flag (incremental sync, faster):
-
-```bash
-sudo ./install.sh          # system
-./install.sh --user        # per-user
-```
-
-### 1.5 What the installer creates
-
-```text
-System-wide                        Per-user
-─────────────────────────────────  ─────────────────────────────────────────
-/opt/time-warp-studio/             ~/.local/share/time-warp-studio/
-  Platforms/Python/…               (same layout)
-  Examples/…
-  .venv/                           # isolated Python environment
-  install.sh                       # re-runnable for upgrades
-
-/usr/local/bin/time-warp-studio    ~/.local/bin/time-warp-studio
-  (shell launcher script)          (shell launcher script)
-
-/usr/share/applications/           ~/.local/share/applications/
-  time-warp-studio.desktop         time-warp-studio.desktop
-
-/usr/share/icons/hicolor/          ~/.local/share/icons/hicolor/
-  256x256/apps/                    256x256/apps/
-  time-warp-studio.png             time-warp-studio.png
-```
-
-### 1.6 install.sh full option reference
-
-```text
-Usage: ./install.sh [OPTIONS]
-
-Options:
-  (none)         System-wide install into /opt  (requires sudo)
-  --user         Per-user install into ~/.local  (no sudo needed)
-  --upgrade      Wipe and recreate the Python venv, reinstall all deps
-  --uninstall    Remove Time Warp Studio completely (see §5)
-  --help         Show help and exit
-
-Examples:
-  sudo ./install.sh                   # fresh system install
-  sudo ./install.sh --upgrade         # upgrade system install
-  ./install.sh --user                 # fresh per-user install
-  ./install.sh --user --upgrade       # upgrade per-user install
-  sudo ./install.sh --uninstall       # remove system install
-  ./install.sh --user --uninstall     # remove per-user install
-```
-
----
-
-## 2. System Requirements
-
-### Minimum
-
-| Item | Requirement |
-| --- | --- |
-| OS | Linux (Ubuntu 20.04+, Fedora 33+, Arch, or any modern distro) |
-| Python | 3.10 or newer |
-| RAM | 2 GB (4 GB recommended) |
-| Disk | 600 MB free |
-| CPU | 64-bit with SSSE3 / SSE4.1 / SSE4.2 / POPCNT support |
-| Display | Any X11 or Wayland desktop |
-
-> **Virtual machine note**: QEMU/KVM using TCG (software emulation) may
-> lack the SSE4.2 instruction needed by PySide6.  Enable KVM acceleration or
-> pass `+sse4.2` to the QEMU CPU flags.
-
-### Check CPU features
-
-```bash
-grep -E 'ssse3|sse4_1|sse4_2|popcnt' /proc/cpuinfo | head -1
-```
-
-All four flags (`ssse3`, `sse4_1`, `sse4_2`, `popcnt`) must be present.
-
----
-
-## 3. Developer / Portable Install
-
-Use this if you want to run directly from the source tree (no system install).
-
-### Install the Python package from GitHub
-
-The release wheel installs the command-line launchers and their core
-dependencies (PySide6 and Pillow):
-
-```bash
-python3 -m pip install "https://github.com/James-HoneyBadger/Time_Warp_Studio/releases/download/v14.1.2/timewarp_ide-14.1.2-py3-none-any.whl"
-time-warp-ide
-```
-
-Browse the [GitHub Releases page](https://github.com/James-HoneyBadger/Time_Warp_Studio/releases)
-for Linux installers, portable bundles, and other release assets.
-
-### Install from the source tree
-
-```bash
-# 1. Clone
-git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
-cd Time_Warp_Studio
-
-# 2. Create a virtual environment
-python3 -m venv venv
-source venv/bin/activate        # Windows: venv\Scripts\activate
-
-# 3. Install dependencies (PySide6, Pillow)
-pip install --upgrade pip
-pip install -r Platforms/Python/requirements.txt
-
-# Optional extras: darkdetect, pyttsx3, pygame, inputs
-pip install -r Platforms/Python/requirements-optional.txt
-
-# 4. Launch
-python3 Platforms/Python/time_warp_ide.py
-```
-
-Or use the smart launcher which handles the venv automatically:
-
-```bash
-python3 run.py
-```
-
-For contributors, install the development stack (pytest, pytest-cov, ruff):
-
-```bash
-pip install -r Platforms/Python/requirements-dev.txt
-make test     # pytest suite (offscreen Qt)
-make demos    # run all 81 example programs
-```
-
----
-
-## 4. Troubleshooting
-
-### IDE doesn't appear in the Applications menu
-
-```bash
-# Restart the desktop database
-update-desktop-database ~/.local/share/applications   # per-user install
-sudo update-desktop-database /usr/share/applications  # system install
-
-# Or log out and log back in
-```
-
-### `time-warp-studio: command not found`
-
-- **System install**: `/usr/local/bin` should already be on `PATH`.
-  Check with `echo $PATH`.
-- **Per-user install**: Add `~/.local/bin` to your PATH:
-
-  ```bash
-  echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.bashrc
-  source ~/.bashrc
-  ```
-
-### "Illegal instruction" crash
-
-Your CPU (or VM) is missing SSE4.2.  See §2 for the check command.
-
-### `qt.qpa.plugin: Could not load "xcb"`
-
-Missing X11 runtime libraries:
-
-```bash
-# Ubuntu / Debian
-sudo apt install libxcb-cursor0 libxkbcommon-x11-0 libxcb-icccm4 \
-                 libxcb-keysyms1 libxcb-render-util0
+# Debian / Ubuntu
+sudo apt install build-essential cmake qt6-base-dev
 
 # Fedora
-sudo dnf install xcb-util-cursor libxkbcommon-x11 xcb-util-wm \
-                 xcb-util-keysyms xcb-util-renderutil
+sudo dnf install gcc-c++ cmake qt6-qtbase-devel
+
+# Arch
+sudo pacman -S base-devel cmake qt6-base
 ```
 
-### PySide6 fails to install into the venv
-
-```bash
-# Force-reinstall with a clean venv
-sudo ./install.sh --upgrade        # system install
-./install.sh --user --upgrade      # per-user install
-```
-
-### Dependencies out of date after a new release
-
-```bash
-sudo ./install.sh --upgrade        # system
-./install.sh --user --upgrade      # per-user
-```
+On macOS, `brew install cmake qt` and pass `-DCMAKE_PREFIX_PATH=$(brew --prefix qt)`.
 
 ---
 
-## 5. Updating & Uninstalling
-
-### Update to a new version
-
-Pull the latest source, then re-run the installer:
+## 2. Build
 
 ```bash
+git clone https://github.com/James-HoneyBadger/Time_Warp_Studio.git
 cd Time_Warp_Studio
-git pull
 
-sudo ./install.sh --upgrade        # system install
-# or
-./install.sh --user --upgrade      # per-user install
+cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
+cmake --build native/build -j
 ```
 
-The `--upgrade` flag forces a complete dependency reinstall.
-Without it the sync is faster (application files only; venv kept as-is).
+A successful build prints nothing alarming; the first one takes a few minutes and
+later ones are incremental. Useful options:
 
-### Uninstall completely
-
-```bash
-sudo ./install.sh --uninstall      # removes system install
-./install.sh --user --uninstall    # removes per-user install
-```
-
-This removes:
-
-- The application directory (`/opt/time-warp-studio` or `~/.local/share/time-warp-studio`)
-- The shell launcher
-- The `.desktop` menu entry
-- The icon
-
-User settings stored in `~/.time_warp/` are **not** removed.
-Delete them manually if desired:
-
-```bash
-rm -rf ~/.time_warp
-```
-
----
-
-## 6. Quick Reference
-
-### Launching
-
-| Method | Command |
+| Option | Effect |
 | --- | --- |
-| Terminal (system or per-user install) | `time-warp-studio` |
-| Desktop menu | Applications ▸ Development ▸ Time Warp Studio |
-| From source tree | `python3 Platforms/Python/time_warp_ide.py` |
-| Smart launcher (handles venv) | `python3 run.py` |
+| `-DCMAKE_BUILD_TYPE=Debug` | Unoptimised build with symbols |
+| `-DTIME_WARP_EXPR_WERROR=OFF` | Build without `-Werror` |
+| `-DCMAKE_BUILD_TYPE=RelWithDebInfo` | Optimised, with symbols |
 
-### Installer commands
+---
 
-| Task | Command |
-| --- | --- |
-| System install | `sudo ./install.sh` |
-| Per-user install | `./install.sh --user` |
-| System upgrade | `sudo ./install.sh --upgrade` |
-| Per-user upgrade | `./install.sh --user --upgrade` |
-| System uninstall | `sudo ./install.sh --uninstall` |
-| Per-user uninstall | `./install.sh --user --uninstall` |
-
-### File locations after install
-
-| Item | System install | Per-user install |
-| --- | --- | --- |
-| Application | `/opt/time-warp-studio/` | `~/.local/share/time-warp-studio/` |
-| Launcher | `/usr/local/bin/time-warp-studio` | `~/.local/bin/time-warp-studio` |
-| Desktop entry | `/usr/share/applications/time-warp-studio.desktop` | `~/.local/share/applications/time-warp-studio.desktop` |
-| Icon | `/usr/share/icons/hicolor/256x256/apps/time-warp-studio.png` | `~/.local/share/icons/hicolor/256x256/apps/time-warp-studio.png` |
-| User config | `~/.time_warp/` | `~/.time_warp/` |
-
-### Test the installation
+## 3. Run
 
 ```bash
-# Verify the IDE imports are working (time_warp lives under Platforms/Python)
-PYTHONPATH=/opt/time-warp-studio/Platforms/Python \
-  /opt/time-warp-studio/.venv/bin/python -c \
-  "from time_warp.core.interpreter import Interpreter; print('✅ OK')"
+./native/build/time_warp_ide                      # empty workspace
+./native/build/time_warp_ide Examples/logo/mandala.logo
+./native/build/time_warp_ide --run Examples/logo/mandala.logo
+./native/build/time_warp_ide --help
+```
 
-# Run all 81 example programs (from a source checkout with dependencies installed)
-python3 test_all_examples.py
+Or through the Makefile, which also forwards the testing and sanitizer targets:
+
+```bash
+make -C native run
+make help            # what the root Makefile offers
 ```
 
 ---
 
-*For more information see [USER_GUIDE.md](USER_GUIDE.md),
-[LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md), and the guides in [docs/guides/](guides/).*
+## 4. Verify the build
+
+```bash
+ctest --test-dir native/build --output-on-failure     # 11 suites
+python3 native/tools/example_smoke.py                 # all 44 examples
+```
+
+Both must pass. See [README_TESTING.md](README_TESTING.md) for the full set,
+including the sanitizer builds and the parity gates.
 
 ---
+
+## 5. Troubleshooting
+
+**`Could not find a package configuration file provided by "Qt6"`.**
+Qt is installed somewhere CMake does not look. Pass its prefix:
+`cmake -S native -B native/build -DCMAKE_PREFIX_PATH=/path/to/qt6`.
+If Qt is genuinely absent, the configure step says so and skips the widget UI
+rather than failing obscurely — read its message.
+
+**A stale build tree fails to regenerate**, usually with
+`IMPORTED_LOCATION not set for Qt6::Gui configuration Debug`. Delete the tree
+(`rm -rf native/build`) and configure again. Do **not** "fix" it with
+`-DCMAKE_MAP_IMPORTED_CONFIG_DEBUG=Release`; that breaks `OpenGL::OpenGL` and
+`OpenGL::GLX` in a way that is harder to diagnose.
+
+**A bridged language says the worker was not found.** The IDE looks for
+`native/bridge/worker.py` beside the executable, two levels up, and in the working
+directory, in that order. Set `TIME_WARP_WORKER` (full path to `worker.py`) or
+`TIME_WARP_PYTHON` (interpreter) to override either half. The error message lists
+every path it tried.
+
+**A bridged language says no interpreter was found.** Install Python 3.10+ or
+point `TIME_WARP_PYTHON` at one. Only the five bridged languages need it.
+
+**`make test` runs the wrong Python.** The bridge's pytest suite comes from
+`.venv` if it exists. Create one with `python3 -m venv .venv` and
+`pip install pytest ruff`, or override with `make engine-test PYTHON=python3`.
+
+---
+
+## 6. The language bridge (already bundled)
+
+Nothing to install. What the five unported languages need is:
+
+- `native/bridge/worker.py` — the worker the IDE spawns
+- `native/bridge/time_warp/` — the engine it drives
+
+Optional extras are imported defensively and are **not** required: `pyttsx3`
+(BASIC `SAY`), `pygame` and `inputs` (BASIC `SOUND` and `GAMEPAD`). Without them
+those commands degrade rather than fail.
+
+This engine is temporary. Each language ported to C++ removes its path through the
+bridge; `docs/ROADMAP.md` tracks the order.
+
+---
+
+## 7. Installing
+
+A build can install itself, which is also how you check that the installed layout
+finds the language bridge:
+
+```bash
+make -C native install                 # to /usr/local (may need sudo)
+make -C native install PREFIX=$HOME/.local
+make -C native uninstall               # removes what install wrote
+```
+
+`DESTDIR` is honoured for staging a package:
+
+```bash
+make -C native install DESTDIR=/tmp/stage PREFIX=/usr
+```
+
+That installs four things, and they have to stay together:
+
+| Path | What |
+| --- | --- |
+| `<prefix>/bin/time_warp_ide` | the application |
+| `<prefix>/share/time_warp/` | the language bridge — `worker.py` and the engine |
+| `<prefix>/share/applications/time-warp-studio.desktop` | the desktop entry |
+| `<prefix>/share/icons/hicolor/256x256/apps/time-warp-studio.png` | the icon |
+
+The bridge goes in `share/time_warp` because that is where the application looks
+for it (`../share/time_warp` relative to the binary), so an installed build needs
+no path configuration. It still needs `python3` on `PATH` for the five bridged
+languages.
+
+### What is not packaged yet
+
+Distro packages (`.deb`, `.rpm`, Flatpak or Snap), an AppImage and Windows/macOS
+installers do not exist: the ones in this repository packaged the removed PySide6
+application and were deleted with it. The install target above, plus the desktop
+entry and icon, is the foundation for them. See [ROADMAP.md](ROADMAP.md).

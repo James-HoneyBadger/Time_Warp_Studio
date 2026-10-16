@@ -1,9 +1,9 @@
 # Language Guide - Time Warp Studio
 
-Time Warp Studio actively implements and ships **9 programming languages**:
-BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python. These are
-the only languages with working executors, syntax highlighting, examples, and
-test coverage in the current release.
+Time Warp Studio actively implements and ships **6 programming languages**:
+BASIC, PILOT, Logo, COMAL, REXX, and Scheme. These are the only
+languages with working executors, examples, and test
+coverage in the current release.
 
 ---
 
@@ -14,12 +14,9 @@ test coverage in the current release.
 1. [BASIC](#basic)
 2. [PILOT](#pilot)
 3. [Logo](#logo)
-4. [C](#c)
-5. [Pascal](#pascal)
-6. [Prolog](#prolog)
-7. [Forth](#forth)
-8. [Brainfuck](#brainfuck)
-9. [Python](#python)
+4. [COMAL](#comal)
+5. [REXX](#rexx)
+6. [Scheme](#scheme)
 
 ---
 
@@ -414,362 +411,262 @@ T: Quiz complete
 ```
 
 ---
+## COMAL
 
-## C
-
-C language with safe subset of functions.
-
-### Variables and Types
-
-```c
-int x = 42;
-float pi = 3.14;
-char letter = 'A';
-```
-
-### Input and Output
-
-```c
-#include <stdio.h>
-
-printf("Hello, World!\n");
-printf("Value: %d\n", x);
-
-scanf("%d", &x);
-```
-
-### Control Flow
-
-```c
-if (x > 10) {
-    printf("Large\n");
-} else {
-    printf("Small\n");
-}
-
-for (int i = 0; i < 10; i++) {
-    printf("%d\n", i);
-}
-
-while (x < 100) {
-    x = x + 1;
-}
-```
-
-### Functions
-
-```c
-int square(int n) {
-    return n * n;
-}
-
-int main() {
-    int result = square(5);
-    printf("Result: %d\n", result);
-    return 0;
-}
-```
-
-### Arrays
-
-```c
-int numbers[10] = {1, 2, 3, 4, 5};
-
-for (int i = 0; i < 5; i++) {
-    printf("%d\n", numbers[i]);
-}
-```
-
----
-
-## Pascal
-
-Pascal language with structured programming.
-
-### Variables and Types
-
-```pascal
-VAR
-    x: INTEGER;
-    name: STRING;
-    pi: REAL;
-
-BEGIN
-    x := 42;
-    name := 'John';
-    pi := 3.14159;
-END.
-```
-
-### Control Flow
-
-```pascal
-IF x > 10 THEN
-    WriteLn('Large')
-ELSE
-    WriteLn('Small');
-
-FOR i := 1 TO 10 DO
-    WriteLn(i);
-
-WHILE x < 100 DO
-    x := x + 1;
-
-REPEAT
-    x := x - 1;
-UNTIL x < 0;
-```
-
-### Procedures
-
-```pascal
-PROCEDURE PrintGreeting;
-BEGIN
-    WriteLn('Hello from procedure');
-END;
-
-BEGIN
-    PrintGreeting;
-END.
-```
-
-### Complete Example
-
-```pascal
-PROGRAM Calculator;
-VAR
-    x, y, result: INTEGER;
-
-BEGIN
-    WriteLn('Enter first number: ');
-    ReadLn(x);
-    
-    WriteLn('Enter second number: ');
-    ReadLn(y);
-    
-    result := x + y;
-    WriteLn('Sum: ', result);
-END.
-```
-
----
-
-## Prolog
-
-Prolog language for logic programming.
-
-### Facts
-
-```prolog
-parent(tom, bob).
-parent(bob, ann).
-parent(ann, mary).
-
-male(tom).
-male(bob).
-female(ann).
-```
-
-### Rules
-
-```prolog
-father(X, Y) :- parent(X, Y), male(X).
-mother(X, Y) :- parent(X, Y), female(X).
-grandparent(X, Z) :- parent(X, Y), parent(Y, Z).
-grandfather(X, Z) :- grandparent(X, Z), male(X).
-```
-
-### Queries
-
-```prolog
-parent(tom, bob).
-parent(bob, ann).
-parent(ann, mary).
-male(tom).
-male(bob).
-female(ann).
-father(X, Y) :- parent(X, Y), male(X).
-grandparent(X, Z) :- parent(X, Y), parent(Y, Z).
-
-?- parent(tom, X).     % Who are tom's children?   -> X=bob
-?- grandparent(tom, X). % Who are tom's grandchildren? -> X=ann
-?- father(X, Y).       % Who is a father of whom?  -> X=tom, Y=bob; X=bob, Y=ann
-```
-
-### Lists
-
-```prolog
-member(X, [X|_]).
-member(X, [_|T]) :- member(X, T).
-
-%?- member(2, [1, 2, 3]).
-```
-
-### Complete Example
-
-```prolog
-% Family relations
-parent(tom, bob).
-parent(bob, ann).
-parent(ann, mary).
-
-male(tom).
-male(bob).
-female(ann).
-female(mary).
-
-father(X, Y) :- parent(X, Y), male(X).
-grandparent(X, Z) :- parent(X, Y), parent(Y, Z).
-```
-
----
-
-## Forth
-
-Forth stack-based language.
-
-### Stack Operations
-
-```forth
-5 DUP           \ Duplicate top of stack
-5 6 SWAP        \ Swap top two
-5 6 7 ROT       \ Rotate
-5 DROP          \ Delete top
-```
-
-### Arithmetic
-
-```forth
-5 3 +           \ Addition: 8
-10 3 -          \ Subtraction: 7
-4 5 *           \ Multiplication: 20
-20 4 /          \ Division: 5
-17 5 MOD        \ Modulo: 2
-```
-
-### Word Definitions
-
-```forth
-: SQUARE DUP * ;    \ Define word
-5 SQUARE            \ Result: 25
-
-: CUBE DUP DUP * * ;
-3 CUBE              \ Result: 27
-```
+COMAL-80 adds structured programming to the BASIC family: `IF … ENDIF`,
+`FOR … NEXT`, `WHILE … ENDWHILE`, `REPEAT … UNTIL` and named procedures.
 
 ### Output
 
-```forth
-." Hello, World!"    \ Print string
-5 .                  \ Print number (pops value)
-CR                   \ Carriage return (newline)
+```comal
+10 PRINT "Hello, World!"
+20 PRINT "Total", 6 * 7      REM comma inserts a space
+30 PRINT "Sum"; 15           REM semicolon does not
 ```
 
-### Conditionals
+### Variables
 
-```forth
-5 3 > IF ." 5 > 3" ELSE ." 5 <= 3" THEN
+```comal
+10 COUNT := 0              REM := assigns
+20 TITLE$ := "Report"      REM $ suffix means string
+30 COUNT := COUNT + 1
+```
+
+### Selection
+
+```comal
+10 SCORE := 87
+20 IF SCORE >= 90 THEN
+30   PRINT "Grade A"
+40 ELIF SCORE >= 80 THEN
+50   PRINT "Grade B"
+60 ELSE
+70   PRINT "Keep going"
+80 ENDIF
 ```
 
 ### Loops
 
-```forth
-: COUNTUP 10 0 DO I . LOOP ;
-COUNTUP             \ Prints 0 1 2 3 4 5 6 7 8 9
+```comal
+10 FOR I := 1 TO 5
+20   PRINT I
+30 NEXT I
+
+40 N := 0
+50 WHILE N < 3
+60   N := N + 1
+70 ENDWHILE
+
+80 REPEAT
+90   PRINT N
+100 UNTIL N <= 0
 ```
 
-### Complete Example
+### Procedures
 
-```forth
-: FACTORIAL
-    DUP 0 = IF DROP 1 ELSE DUP 1 - FACTORIAL * THEN
-;
-
-5 FACTORIAL .       \ Result: 120
-
-: FIBONACCI DUP 2 < IF ELSE DUP 1 - FIBONACCI SWAP 2 - FIBONACCI + THEN ;
+```comal
+10 PROC GREET(NAME$)
+20   PRINT "Hello, "; NAME$
+30 ENDPROC
+40 CALL GREET("World")
 ```
+
+### Arrays and DATA
+
+```comal
+10 DIM SCORES(5)
+20 DATA 12, 47, 31, 8, 25
+30 FOR I := 1 TO 5
+40   READ SCORES(I)
+50 NEXT I
+```
+
+### Turtle graphics
+
+```comal
+10 FOR SIDE := 1 TO 4
+20   MOVE 100
+30   TURN 90
+40 NEXT SIDE
+```
+
+**File extension:** `.comal`
 
 ---
 
-## Brainfuck
+## REXX
 
-Esoteric Turing-complete language with 8 commands. Ideal for understanding computation fundamentals.
+REXX is a typeless string-processing language: every value is a string, and
+variables never need declaring.
 
-| Command | Meaning |
-| --------- | --------- |
-| `>` | Move data pointer right |
-| `<` | Move data pointer left |
-| `+` | Increment byte at pointer |
-| `-` | Decrement byte at pointer |
-| `.` | Output byte as ASCII character |
-| `,` | Read one byte of input |
-| `[` | Jump past matching `]` if cell is 0 |
-| `]` | Jump back to matching `[` if cell is non-zero |
+### Output
 
-```brainfuck
-Hello World in Brainfuck:
-++++++++[>++++[>++>+++>+++>+<<<<-]>+>+>->>+[<]<-]>>.>
----.+++++++..+++.>>.<-.<.+++.------.--------.>>+.>++.
+```rexx
+SAY 'Hello, World!'
+SAY 6 * 7
 ```
 
-> **Tip:** Brainfuck programs are stopped after 10,000,000 steps to prevent runaway loops.
+### Variables and concatenation
 
-**File extension:** `.bf`
+```rexx
+name = 'Time Warp'
+SAY 'Hello' 'World'            /* abuttal:  HelloWorld */
+SAY 'Hello' || ' ' || 'World'  /* Hello World */
+```
+
+### Branching
+
+```rexx
+IF score > 50 THEN SAY 'pass'
+
+IF score >= 90 THEN DO
+  SAY 'Grade A'
+END
+ELSE DO
+  SAY 'Keep going'
+END
+
+SELECT
+  WHEN score > 90 THEN SAY 'huge'
+  OTHERWISE SAY 'small'
+END
+```
+
+### Loops
+
+```rexx
+DO i = 1 TO 5
+  SAY i
+END
+
+DO n = 10 TO 1 BY -3
+  SAY n
+END
+
+DO WHILE count < 3
+  count = count + 1
+END
+
+DO word OVER 'alpha beta gamma'
+  SAY word
+END
+```
+
+`LEAVE` breaks out of a loop and `ITERATE` skips to the next pass.
+
+### Input and parsing
+
+```rexx
+PULL name
+line = 'red green blue'
+PARSE VAR line first second third
+```
+
+### Subroutines
+
+```rexx
+CALL factorial 6
+SAY '6! =' RESULT
+EXIT
+
+factorial:
+  n = ARG(1)
+  result = 1
+  DO i = 2 TO n
+    result = result * i
+  END
+  RETURN result
+```
+
+### Built-in functions
+
+`LENGTH`, `SUBSTR`, `WORD`, `WORDS`, `UPPER`, `LOWER`, `STRIP`, `SPACE`,
+`LEFT`, `RIGHT`, `COPIES`, `REVERSE`, `INDEX`, `ABS`, `MAX`, `MIN`, `TRUNC`,
+`SIGN`, `ARG`.
+
+### Turtle graphics
+
+`FORWARD`/`MOVE`, `BACK`, `RIGHT`/`TURN`, `LEFT`, `PENUP`, `PENDOWN`, `HOME`.
+
+**File extension:** `.rexx`
 
 ---
 
-## Python
+## Scheme
 
-Modern multi-paradigm educational language (1991) with sandboxed stdlib access.
+Scheme is a small Lisp dialect. Operators come first and everything is a list.
 
-```python
-# Hello World
-print("Hello, World!")
+### Output
 
-# Variables and types
-x = 42
-name = "Alice"
-items = [1, 2, 3, 4, 5]
-
-# F-strings
-print(f"Hello, {name}! x = {x}")
-
-# List comprehensions
-squares = [n**2 for n in range(1, 6)]
-print(squares)  # [1, 4, 9, 16, 25]
-
-# Functions
-def factorial(n):
-    return 1 if n <= 1 else n * factorial(n - 1)
-
-print(factorial(6))  # 720
-
-# Dictionaries
-person = {"name": "Bob", "age": 30}
-print(f"{person['name']} is {person['age']}")
-
-# Classes
-class Animal:
-    def __init__(self, name):
-        self.name = name
-    def speak(self):
-        return "..."
-
-class Dog(Animal):
-    def speak(self):
-        return "Woof!"
-
-d = Dog("Rex")
-print(f"{d.name} says {d.speak()}")
-
-# Turtle graphics (built-in integration)
-forward(100)
-right(90)
-color("blue")
+```scheme
+(display "Hello, World!")
+(newline)
 ```
 
-**File extension:** `.py`
+### Definitions and arithmetic
+
+```scheme
+(define pi 3.14159)
+(define (square n) (* n n))
+
+(display (* 6 7))
+(newline)
+```
+
+### Conditionals
+
+```scheme
+(define (sign n)
+  (cond ((> n 0) "positive")
+        ((< n 0) "negative")
+        (else "zero")))
+```
+
+### Recursion
+
+```scheme
+(define (fact n)
+  (if (= n 0) 1 (* n (fact (- n 1)))))
+```
+
+### Lists and higher-order procedures
+
+```scheme
+(display (car (list 1 2 3)))
+(display (map (lambda (x) (* x x)) (list 1 2 3 4)))
+(display (filter odd? (list 1 2 3 4 5)))
+(display (apply + (list 10 20 30)))
+```
+
+### Local bindings and closures
+
+```scheme
+(display (let ((x 3) (y 4)) (+ x y)))
+
+(define (make-adder n) (lambda (x) (+ x n)))
+(define add10 (make-adder 10))
+(display (add10 5))
+```
+
+### Turtle graphics
+
+`forward`/`fd`, `backward`/`bk`, `right`/`rt`, `left`/`lt`, `goto`, `penup`,
+`pendown`, `home`, `circle`, `color`.
+
+```scheme
+(define (square size)
+  (define (loop n)
+    (when (> n 0)
+      (forward size)
+      (right 90)
+      (loop (- n 1))))
+  (loop 4))
+(square 100)
+```
+
+**File extension:** `.scm`
+
+---
 
 ---
 
@@ -781,12 +678,9 @@ To select which language your code uses:
 
 | Extension | Language |
 | ----------- | ---------- |
-| `.bas` | BASIC |
-| `.logo` | Logo |
-| `.pilot` | PILOT |
-| `.c` | C |
-| `.pas` | Pascal |
-| `.pro` / `.pl` / `.prolog` | Prolog |
-| `.f` / `.fs` / `.forth` | Forth |
-| `.bf` | Brainfuck |
-| `.py` | Python |
+| `.bas` / `.bsc` | BASIC |
+| `.pilot` / `.plt` | PILOT |
+| `.logo` / `.lg` | Logo |
+| `.comal` / `.cml` | COMAL |
+| `.rexx` / `.rex` | REXX |
+| `.scm` / `.ss` | Scheme |

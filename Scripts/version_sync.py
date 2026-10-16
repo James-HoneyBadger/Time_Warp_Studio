@@ -33,22 +33,16 @@ def _read_version() -> str:
 def _targets(version: str, release_date: str) -> list[ReplacementTarget]:
     return [
         ReplacementTarget(
-            path=REPO_ROOT / "Platforms/Python/pyproject.toml",
-            pattern=r'(?m)^version = ".*"$',
-            replacement=f'version = "{version}"',
-            description="pyproject version",
-        ),
-        ReplacementTarget(
-            path=REPO_ROOT / "Platforms/Python/time_warp/__init__.py",
+            path=REPO_ROOT / "native" / "bridge" / "time_warp" / "__init__.py",
             pattern=r"Aligned with Time Warp Studio v[0-9.]+ release",
             replacement=f"Aligned with Time Warp Studio v{version} release",
-            description="package docstring version",
+            description="bridge package docstring version",
         ),
         ReplacementTarget(
-            path=REPO_ROOT / "Platforms/Python/time_warp/__init__.py",
+            path=REPO_ROOT / "native" / "bridge" / "time_warp" / "__init__.py",
             pattern=r'(?m)^__version__ = ".*"$',
             replacement=f'__version__ = "{version}"',
-            description="package __version__",
+            description="bridge package __version__",
         ),
         ReplacementTarget(
             path=REPO_ROOT / "packaging/linux/snapcraft.yaml",

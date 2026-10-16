@@ -1,19 +1,16 @@
 # Examples Catalog
 
 This catalog lists the example programs currently shipped with Time Warp Studio.
-It is intentionally limited to the nine active languages.
+It is intentionally limited to the six active languages.
 
 ## Active Languages
 
 - BASIC
 - PILOT
 - Logo
-- C
-- Pascal
-- Prolog
-- Forth
-- Brainfuck
-- Python
+- COMAL
+- REXX
+- Scheme
 
 ## BASIC
 
@@ -56,90 +53,38 @@ It is intentionally limited to the nine active languages.
 | `logo/spirograph.logo` | Spirograph-style curves |
 | `logo/turtle_3d.logo` | Perspective-inspired turtle drawing |
 
-## C
+## COMAL
 
 | File | Description |
 | --- | --- |
-| `c/hello.c` | Hello World and standard output |
-| `c/algorithms_showcase.c` | Algorithm demonstrations |
-| `c/community_library.c` | Inventory, circulation, search, and service metrics |
-| `c/game_of_life.c` | Conway's Game of Life |
-| `c/linked_list.c` | Linked-list data structures |
-| `c/matrix_calculator.c` | Matrix operations |
-| `c/rpn_calc.c` | Reverse Polish notation calculator |
-| `c/sorting_algorithms.c` | Sorting algorithm comparisons |
-| `c/string_utils.c` | String-processing utilities |
+| `comal/hello.comal` | Hello World and PRINT formatting |
+| `comal/loops.comal` | FOR, WHILE and REPEAT loops |
+| `comal/procedures.comal` | PROC declarations and CALL |
+| `comal/data_stats.comal` | DIM, DATA/READ and accumulators |
+| `comal/number_guess.comal` | INPUT-driven guessing game |
+| `comal/turtle_art.comal` | MOVE/TURN turtle drawings |
 
-## Pascal
+## REXX
 
 | File | Description |
 | --- | --- |
-| `pascal/hello.pas` | Structured Hello World |
-| `pascal/cipher_lab.pas` | Text transformation and ciphers |
-| `pascal/energy_monitor.pas` | Energy usage, cost forecast, and savings plan |
-| `pascal/grade_book.pas` | Structured records and calculations |
-| `pascal/hangman.pas` | Console game and control flow |
-| `pascal/inventory.pas` | Inventory data processing |
-| `pascal/linked_list.pas` | Linked-list structures |
-| `pascal/number_game.pas` | Number guessing game |
-| `pascal/sorting.pas` | Sorting algorithms |
+| `rexx/hello.rexx` | SAY output and abuttal concatenation |
+| `rexx/loops.rexx` | DO TO/BY, DO WHILE and DO OVER iterations |
+| `rexx/strings.rexx` | PARSE and built-in string functions |
+| `rexx/subroutines.rexx` | CALL, ARG and RETURN with RESULT |
+| `rexx/select_menu.rexx` | SELECT/WHEN, LEAVE and ITERATE |
+| `rexx/turtle_spiral.rexx` | Turtle graphics driven by DO loops |
 
-## Prolog
+## Scheme
 
 | File | Description |
 | --- | --- |
-| `prolog/hello.pl` | Facts, queries, and output |
-| `prolog/hello.pro` | Prolog Hello World variant |
-| `prolog/expert_system.pl` | Rule-based diagnosis system |
-| `prolog/family_tree.pl` | Family and ancestor queries |
-| `prolog/family_genealogy.pl` | Multi-generation relationship inference |
-| `prolog/knowledge_engine.pl` | Knowledge-base reasoning showcase |
-| `prolog/learning_path_advisor.pl` | Prerequisite inference and learning recommendations |
-| `prolog/list_operations.pl` | List predicates and transformations |
-| `prolog/puzzle_solver.pl` | Constraint-style puzzle solving |
-| `prolog/sorting.pl` | Sorting with recursive predicates |
-
-## Forth
-
-| File | Description |
-| --- | --- |
-| `forth/hello.f` | Words, output, and stack basics |
-| `forth/cellular_automata.forth` | Cellular automata experiment |
-| `forth/fibonacci.forth` | Fibonacci calculations |
-| `forth/mathematical_wonders.forth` | Mathematical word definitions |
-| `forth/rpn_calculator.forth` | Stack-based calculator |
-| `forth/sorting.forth` | Sorting with stack operations |
-| `forth/string_processing.forth` | String-processing words |
-| `forth/workshop_planner.forth` | Workshop inventory, budget, and capacity planning |
-| `forth/turtle_art.forth` | Turtle graphics from Forth |
-
-## Brainfuck
-
-| File | Description |
-| --- | --- |
-| `brainfuck/hello.bf` | Classic Brainfuck Hello World |
-| `brainfuck/calculator.bf` | Arithmetic demonstration |
-| `brainfuck/cat.bf` | Input/output loop |
-| `brainfuck/countdown.bf` | Counter program |
-| `brainfuck/fibonacci.bf` | Fibonacci-style output |
-| `brainfuck/field_desk.bf` | Terminal status dashboard with a tape-generated progress bar |
-| `brainfuck/multiplication_table.bf` | Multiplication table experiment |
-| `brainfuck/programs.bf` | Brainfuck program collection |
-| `brainfuck/rot13.bf` | ROT13 transformation |
-
-## Python
-
-| File | Description |
-| --- | --- |
-| `python/hello.py` | Hello World and basic operations |
-| `python/learning_dashboard.py` | Learner portfolio, progress, recommendations, and weekly plan |
-| `python/algorithms.py` | Sorting, searching, and prime algorithms |
-| `python/data_structures.py` | Lists, dictionaries, sets, stacks, and queues |
-| `python/decorators.py` | Function and class decorators |
-| `python/generators.py` | Generators and itertools |
-| `python/list_comprehensions.py` | Comprehension and functional patterns |
-| `python/oop_demo.py` | Classes, inheritance, and dataclasses |
-| `python/turtle_art.py` | Turtle polygons and color cycling |
+| `scheme/hello.scm` | display and newline output |
+| `scheme/recursion.scm` | factorial, Fibonacci and countdown |
+| `scheme/lists.scm` | car/cdr, map, filter and foldl |
+| `scheme/higher_order.scm` | map/filter/foldl and procedure composition |
+| `scheme/closures.scm` | Closures and mutable local state |
+| `scheme/turtle_polygons.scm` | Turtle polygons drawn from Scheme |
 
 ## Validation
 
@@ -147,5 +92,5 @@ The example verifier runs active examples in isolated subprocesses and reports
 syntax, execution, and timeout failures. Run it from the repository root with:
 
 ```bash
-PYTHONPATH=Platforms/Python .venv/bin/python test_all_examples.py
+python3 native/tools/example_smoke.py
 ```

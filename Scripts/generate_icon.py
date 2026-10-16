@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from PIL import Image, ImageDraw
 
 
@@ -14,8 +16,15 @@ def create_icon():
     # (Skipping text for simplicity without loading fonts, just shapes)
     d.rectangle([100, 100, 156, 156], fill=(255, 200, 50))
 
-    img.save('packaging/linux/icon.png')
-    print("Icon created at packaging/linux/icon.png")
+    output = (
+        Path(__file__).resolve().parents[1]
+        / "packaging"
+        / "linux"
+        / "time-warp-studio.png"
+    )
+    output.parent.mkdir(parents=True, exist_ok=True)
+    img.save(output)
+    print(f"Icon written to {output}")
 
 
 if __name__ == "__main__":

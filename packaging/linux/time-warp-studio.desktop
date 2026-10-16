@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Time Warp Studio
+GenericName=Educational Programming Environment
+Comment=Learn BASIC, PILOT, Logo, COMAL, REXX and Scheme in one IDE
+Exec=time_warp_ide %F
+TryExec=time_warp_ide
+Icon=time-warp-studio
+Terminal=false
+Categories=Development;Education;IDE;
+Keywords=basic;logo;pilot;comal;rexx;scheme;turtle;graphics;education;teaching;
+StartupNotify=true

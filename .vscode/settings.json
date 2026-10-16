@@ -35,12 +35,6 @@
     "**/build/**": true
   },
   "python.analysis.indexing": true,
-  "python.analysis.packageIndexDepths": [
-    {
-      "name": "PySide6",
-      "depth": 1
-    }
-  ],
   "python.analysis.memory.keepLibraryLocalVariables": false,
   "pylint.args": [
     "--ignore=.venv,htmlcov,__pycache__,test_reports"
@@ -51,5 +45,6 @@
     "**/.vscode/extensions/**"
   ],
   "editor.formatOnSave": false,
-  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python"
+  "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
+  "cmake.sourceDirectory": "/home/james/Time_Warp_Studio/native"
 }

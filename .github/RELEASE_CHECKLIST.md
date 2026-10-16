@@ -10,9 +10,12 @@
 
 ### Testing
 
-- [ ] `python3 Platforms/Python/smoke_test.py`
-- [ ] `PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q`
-- [ ] Manual smoke test of Python IDE (launch, open example, run turtle program)
+- [ ] `make test` — the 11 C++ suites
+- [ ] `make test-debug` and `make asan` — the other build trees
+- [ ] `make engine-test` — the bridge engine's pytest suite
+- [ ] `make smoke` — all 44 example programs through the real bridge
+- [ ] Both differential gates report 0 unexpected mismatches
+- [ ] Manual smoke test of the IDE (launch, open an example, run a turtle program)
 
 ### Documentation
 
@@ -32,13 +35,16 @@
 
 ### Release Assets
 
-- [ ] Build Python distributions
+- [ ] Build the application
   ```bash
-  cd Platforms/Python
-  python -m build
+  cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
+  cmake --build native/build -j
   ```
+  > Installer packaging (Linux packages, Windows installers) is not built yet;
+  > see `docs/ROADMAP.md`. Until it is, a release ships sources plus the
+  > binary built above.
 
-- [ ] Package refreshed examples (optional)
+- [ ] Package the examples (optional)
   ```bash
   tar -czf time-warp-examples-vX.Y.Z.tar.gz Examples/
   ```
@@ -47,9 +53,8 @@
 
 ### GitHub Release Page
 
-- [ ] Push the annotated tag `vX.Y.Z` from `main`; confirm the production deployment workflow succeeds
+- [ ] Push the annotated tag `vX.Y.Z` from `main`; confirm the deployment workflow succeeds
 - [ ] Verify the automatically created `Time Warp Studio vX.Y.Z` release is marked latest
-- [ ] Verify the Linux amd64 package and tarball, optional arm64 assets, Python wheel and source tarball, and `SHA256SUMS.txt` are attached
 - [ ] Confirm release notes match the `CHANGELOG.md` section for `X.Y.Z`
 
 ## Post-Release Tasks

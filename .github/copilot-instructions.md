@@ -8,24 +8,33 @@
 
 ## Project Overview
 
-Time Warp Studio is an educational desktop programming environment built with Python and PySide6 (Qt6) that provides a unified IDE for learning **9 programming languages** with integrated turtle graphics.
+Time Warp Studio is an educational desktop programming environment built with **C++20 and Qt6** that provides a unified IDE for learning **6 programming languages** with integrated turtle graphics.
 
-**Supported Languages:** BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python.
+**Supported Languages:** BASIC, PILOT, Logo, COMAL, REXX, and Scheme.
 
-**Current State:** Native desktop application (Python/PySide6) - single actively maintained version.
+**Current State:** The Qt desktop application in `native/` is the product. The
+PySide6 implementation that came before it has been **removed**; what remains of
+Python is a temporary engine the Qt app spawns (see "The language bridge").
 
 ## Architecture: The Big Picture
 
 ### Implementation
 
-- **Desktop Application (Python/PySide6)** — primary and only maintained version
-    - Entry point: `Platforms/Python/time_warp_ide.py`
-    - Core: `Platforms/Python/time_warp/core/interpreter.py`
-    - Languages: 9 executors in `Platforms/Python/time_warp/languages/`
-    - UI: PySide6 (Qt6) with modern desktop interface (30+ UI modules)
-    - All UI state (editor, canvas, themes) managed by main application
+- **Qt application (C++20)** — the product, and the only maintained UI.
+    - Entry point: `native/tools/time_warp_ide.cpp`
+    - Build: `cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release && cmake --build native/build -j`
+    - Shell: `native/src/ui/main_window.cpp`; canvas `native/src/ui/turtle_canvas.cpp`;
+      editor `native/src/ui/code_editor.cpp`; languages `native/src/ui/language.cpp`
+    - Engines that are already native: the expression evaluator (`timewarp_expr`)
+      and Scheme (`timewarp_scheme`, an explicit-stack CEK machine).
+- **The language bridge (Python, temporary)** — `native/bridge/`.
+    - Five languages (BASIC, PILOT, Logo, COMAL, REXX) are *not* ported yet, so the
+      IDE runs them through `native/bridge/worker.py`, which drives the retained
+      Python engine and streams JSON lines back (drawing, output, input, errors).
+    - Protocol: `run`/`in-reply`/`stop` in; `ready`/`out`/`canvas`/`pose`/`err`/`in`/`done` out.
+    - It exists to be deleted: each language ported to C++ removes its bridge path.
 
-**Critical Design Decision:** Language executors are stateless command processors returning text output. All UI state (turtle canvas, output display, themes) lives in the main application, not the interpreter.
+**Critical Design Decision:** Language executors are stateless command processors returning text output. All UI state (turtle canvas, output display, themes) lives in the Qt application, not in an interpreter. Drawing crosses the bridge as commands on a `CanvasCommandQueue`, which the GUI thread drains into `TurtleCanvas`.
 
 ## Language Executor Pattern
 
@@ -38,8 +47,8 @@ def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) 
 ```
 
 **Two execution modes:**
-- **Whole-program executors** (2 active languages): Receive the entire source as a string. Registered in `_WHOLE_PROGRAM_EXECUTORS` dict in `core/interpreter.py`. These are: Brainfuck and Python.
-- **Line-by-line executors** (7 active languages: BASIC, PILOT, Logo, C, Pascal, Prolog, Forth): The interpreter iterates lines and calls the executor per statement.
+- **Whole-program executors** (1 active language): Receive the entire source as a string. Registered in `_WHOLE_PROGRAM_EXECUTORS` dict in `core/interpreter.py`. This is: Scheme.
+- **Line-by-line executors** (5 active languages: BASIC, PILOT, Logo, COMAL, and REXX): The interpreter iterates lines and calls the executor per statement.
 
 Whole-program executors are dispatched through `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`; adding a language also requires the corresponding enum, extension, editor, and test updates.
 
@@ -48,45 +57,56 @@ Whole-program executors are dispatched through `_WHOLE_PROGRAM_EXECUTORS` in `co
 ### Running the Desktop IDE
 
 ```bash
-# Primary method
-python3 Platforms/Python/time_warp_ide.py
+# Build once
+cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
+cmake --build native/build -j
 
-# Or use the smart launcher (handles venv + deps):
-python3 run.py
+# Run it
+./native/build/time_warp_ide                 # empty workspace
+./native/build/time_warp_ide Examples/logo/mandala.logo
+./native/build/time_warp_ide --run Examples/logo/mandala.logo
+./native/build/time_warp_ide --help          # all options
 
-# System Requirements
-# - Python 3.10+
-# - PySide6 (auto-installed if needed)
-# - CPU with SSSE3/SSE4.1/SSE4.2/POPCNT support
-# Note: Older VMs/QEMU may lack required CPU features
+# Or through the Makefile
+make -C native run
 ```
+
+**System Requirements**
+- Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler
+- Python 3.10+ **only** for the five bridged languages; Scheme and expressions
+  run in-process with no Python at all
 
 ### Testing Strategy
 
 ```bash
-# Comprehensive suite with coverage
-PYTHONPATH=Platforms/Python pytest Platforms/Python/time_warp/tests -q
+# The Qt suites (11 of them)
+ctest --test-dir native/build --output-on-failure
+make -C native test-debug     # Debug tree
+make -C native asan           # AddressSanitizer; ASAN=undefined for UBSan
 
-# Quick smoke tests
-python3 Platforms/Python/smoke_test.py
+# The whole example corpus, through the real bridge
+python3 native/tools/example_smoke.py
 
-# Component-specific
-pytest Platforms/Python/time_warp/tests/test_basic_executor.py -v
-pytest Platforms/Python/time_warp/tests/test_logo_graphics.py -v
+# The bridge engine's own tests
+PYTHONPATH=native/bridge python3 -m pytest -q
 
-# All example programs (run in isolated subprocesses)
-python test_all_examples.py
+# Parity gates against the Python reference (0 unexpected mismatches)
+python3 native/tools/differential_check.py native/build/expr_cli
+cd native/tools && python3 scheme_differential_check.py
 ```
 
 **Test Organization:**
-- `test_*.py` = unit tests for components (23 test files in `time_warp/tests/`)
-- `Platforms/Python/smoke_test.py` = fast smoke test without pytest
-- `test_all_examples.py` = root-level example verifier (subprocess per file)
-- `conftest_lang.py` = shared `run()`, `ok()`, `has()`, `no_errors()` test helpers
+- `native/tests/*_tests.cpp` = the 11 C++ suites (lexer, evaluator, scheme, canvas queue,
+  canvas bridge, debug, debugger runner, ui layout, ui document, turtle canvas, python bridge)
+- `native/tools/example_smoke.py` = every `Examples/**` program through the bridge; the 14
+  that must draw are listed in `DRAWING_EXAMPLES`
+- `native/bridge/time_warp/tests/` = the bridge engine's tests (the 6 language executors,
+  the expression evaluator, validators)
 
 ### Adding a New Language
 
-1. Create `time_warp/languages/my_lang.py`:
+1. Create the executor. A language with no C++ implementation runs in the bridge:
+   `native/bridge/time_warp/languages/my_lang.py`:
 ```python
 from __future__ import annotations
 from typing import TYPE_CHECKING
@@ -103,13 +123,17 @@ def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) 
     return "\n".join(output_lines) + "\n"
 ```
 
-2. Add to `core/interpreter.py`:
-   - Import: `from ..languages.my_lang import execute_my_lang`
-   - Add `Language.MY_LANG` enum member
-   - Add entry in `_init_whole_program_executors()` (for whole-program langs)
-   - Add `Language.MY_LANG` in `Language.from_extension()` mapping
+2. Register it in the bridge:
+   - Import: `from ..languages.my_lang import execute_my_lang` in `native/bridge/time_warp/languages/__init__.py`
+   - Add `Language.MY_LANG` in `native/bridge/time_warp/core/interpreter.py`
+   - Add the extension in `Language.from_extension()` and in `core/language_registry.py`
 
-3. Add syntax highlighting and file extensions in `ui/editor.py`
+3. Register it in the Qt side so the IDE knows the name and the extensions:
+   `native/src/ui/language.cpp` (display name, settings key, file extensions)
+
+4. Add an example under `Examples/my_lang/` and a row to
+   `native/bridge/time_warp/tests/command_table.py` so every new command is covered
+   by `native/tools/command_matrix.py`.
 
 ## Project-Specific Conventions
 
@@ -133,60 +157,54 @@ result = evaluator.evaluate("2 + 3 * X")  # Returns 17
 ## Integration Points to Watch
 
 ### Turtle Graphics State
-- Turtle state managed via `graphics/turtle_state.py` (593 lines)
-- Graphics rendered using Qt painter with zoom/pan support in `ui/canvas.py`
-- Canvas clearing happens in main UI, not executor
+- Turtle state managed via `graphics/turtle_state.py` in the bridge, and by
+  `TurtleCanvas` in the Qt application, which owns the display list
+- Graphics rendered with the Qt painter with zoom/pan support in `native/src/ui/turtle_canvas.cpp`
+- Canvas clearing happens in the Qt UI, not in an executor
+- The reference's conventions are unusual and asserted in `turtle_canvas_tests`:
+  heading 0 is **north** and increases clockwise; `forward` is
+  `x += d*sin(h), y += d*cos(h)`; `circle` is a polygon walk
 
 ### Theme System
-`ui/themes.py` defines 33 themes (Dracula, Monokai, Catppuccin Mocha, Gruvbox Dark, VS Code Dark/Light, GitHub Dark/Light, Nord, Solarized, plus retro CRT themes). Persisted via QSettings. Apply via `ThemeManager.apply_theme()`.
+`native/src/ui/ui_style.cpp` owns the Qt styling. It does not yet carry the 33 themes
+of the removed PySide6 implementation: that is tracked as pending work in
+`docs/ROADMAP.md`. Do not describe themes as ported until they are.
 
 ## Common Pitfalls
 
-1. **PySide6 CPU requirements** - "Illegal instruction" errors = missing CPU features, not code bugs.
-2. **Executor statelessness** - Don't store UI refs in executors; return strings only.
-3. **Test isolation** - Use `conftest.py` fixtures for interpreter instances; don't share state.
-4. **Whole-program language registration** - Only update `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`. No other dispatch tables need updating.
+1. **Executor statelessness** - Don't store UI refs in executors; return strings only.
+2. **Test isolation** - Use fixtures for interpreter instances; don't share state.
+3. **A program that runs and draws nothing is the bug users report.** Never assume a
+   silent success is a success: `example_smoke.py` exists because 5 languages once ran
+   "successfully" and produced no ink at all.
+4. **Bridge path discovery is explicit, not clever.** `locateWorker()` tries the paths
+   in `native/src/bridge/python_worker.cpp` in order; a moved worker that is not added
+   there fails only at run time. `TIME_WARP_WORKER` overrides it for debugging.
+5. **Deleting Python needs a dependency check that an import trace cannot give you.**
+   The engine reaches `any(Features)` through imports *inside functions* (BASIC's
+   SOUND/SAY/GAMEPAD, and the evaluator's TIMER), so a module can be invisible to a
+   real run yet still load-bearing. Scan for imports below module level before cutting.
 
 ## File Structure at a Glance
 
 ```text
-Platforms/Python/
-  time_warp_ide.py          - Primary entry point (PySide6)
-  time_warp/
-    core/
-      interpreter.py        - Central interpreter (~1400 lines)
-      debugger.py           - Execution timeline / step-through debugger
-      config.py             - Canonical paths (~/.time_warp/)
-    features/               - Feature modules (lessons, games, music, shapes, etc.)
-    languages/              - 9 language executors
-      base.py               - Protocol definition
-      basic.py, pilot.py, logo.py, c_lang_fixed.py, pascal.py,
-      prolog.py, forth.py, brainfuck.py, python_lang.py
-    ui/                     - 30+ UI modules
-      main_window.py        - PySide6 main window (uses 5 mixins)
-      editor.py             - Code editor + minimap + line numbers
-      themes.py             - Theme manager (33 themes)
-      canvas.py             - Turtle graphics canvas
-      output.py             - Output panel + interpreter threads
-      debug_panel.py        - Debug controls/watch/call-stack
-      command_palette.py    - Ctrl+Shift+P palette
-      mixins/               - Classroom, debug, export, file ops, help
-    graphics/
-      turtle_state.py       - Turtle state management
-    utils/
-      expression_evaluator.py - Hand-written tokenizer + recursive-descent parser
-      error_hints.py        - Syntax error suggestions
-      validators.py         - Input validation helpers
-    tests/                  - 23 test files
-test_all_examples.py        - Root-level example verifier
-Examples/                   - 81 example programs across the 9 active languages
+native/                        - the Qt application (the product)
+  CMakeLists.txt
+  include/ src/ tests/ tools/
+  bridge/                      - TEMPORARY Python engine (delete as languages are ported)
+    worker.py                  - the JSON-lines worker the IDE spawns
+    pyproject.toml             - ruff/mypy config for the engine
+    time_warp/
+      core/                    - interpreter.py, language_registry.py, config.py, sandbox.py
+      languages/               - the 6 executors (base.py documents the Protocol)
+      graphics/turtle_state.py - turtle state
+      features/                - language-level modules reached by name from a program
+      utils/                   - expression_evaluator.py, error_hints.py, validators.py
+      tests/                   - the engine's own tests
+Examples/                      - 44 example programs across the 6 active languages
+docs/                          - language guide + per-language tutorials
+Scripts/                       - audit_interpreters.py, version_sync.py, build_native.sh
 ```
-
-## Dependencies
-
-Core: `pillow>=10.0.0`, `PySide6` (Qt6)
-Dev: `pytest`, `pytest-cov`, `ruff`
-Optional: `darkdetect`, `pyttsx3`, `pygame`, `inputs`
 
 ---
 
@@ -194,12 +212,26 @@ Optional: `darkdetect`, `pyttsx3`, `pygame`, `inputs`
 
 ### Key Components
 
-- **Interpreter**: Main interpreter class handling command dispatch and execution
-- **Language Executors**: 9 executor functions in `time_warp/languages/`
-- **UI Components**: Qt-based UI (`ui/main_window.py`) with editor, canvas, and turtle controls
-- **Theme System**: `ui/themes.py` with 33 themes and persistent configuration
-- **Graphics Canvas**: Unified drawing surface in `ui/canvas.py` for all turtle graphics output
-- **Debugger**: Step-through debugger with execution timeline in `core/debugger.py`
+- **Qt shell**: `native/src/ui/main_window.cpp` — documents, tabs, menus, status bar
+- **TurtleCanvas**: `native/src/ui/turtle_canvas.cpp` — the display list and the painter
+- **CodeEditor**: `native/src/ui/code_editor.cpp` — gutter, current line, tab stops
+- **Language table**: `native/src/ui/language.cpp` — names, settings keys, extensions
+- **The bridge**: `native/bridge/worker.py` + `native/src/bridge/python_worker.cpp`
+- **Engine (bridge)**: `time_warp/core/interpreter.py` dispatches; the 6 executors in
+  `time_warp/languages/` are stateless functions
+- **Expression evaluator**: native C++ (`timewarp_expr`) and, in the bridge, the
+  reference in `time_warp/utils/expression_evaluator.py` that gates it
+- **Scheme**: native C++ explicit-stack machine (`timewarp_scheme`)
+
+## Dependencies
+
+The Qt application: Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler.
+
+The bridge (only the five unported languages need it): Python 3.10+, standard
+library only. Optional extras -- `pyttsx3` (BASIC `SAY`), `pygame` and `inputs`
+(BASIC `SOUND`/`GAMEPAD`) -- are imported defensively and are not required.
+
+The removed PySide6 application's dependencies are no longer installed or referenced.
 
 ### File Naming Conventions
 
@@ -222,13 +254,10 @@ All interpreter errors are returned as strings with emoji prefixes:
 
 ### Theme Development
 
-Themes defined in `ui/themes.py` with color schemes applied uniformly across:
-- Main window backgrounds
-- Editor components
-- Menu systems
-- Button styles
-- Output panels
-- Retro CRT effects (Amber, Green, C64, Apple II, etc.)
+Themes are not ported yet. The removed implementation's 33 themes (including the
+retro CRT sets: Amber, Green, C64, Apple II) are the target, to be carried as data
+and applied through QSS plus a palette in `native/src/ui/ui_style.cpp`. See
+`docs/ROADMAP.md`; do not describe a theme as available until it is.
 
 ## Critical Integration Points
 

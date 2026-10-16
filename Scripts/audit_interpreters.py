@@ -21,7 +21,7 @@ from typing import Iterable
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-PYTHON_ROOT = REPO_ROOT / "Platforms" / "Python"
+PYTHON_ROOT = REPO_ROOT / "native" / "bridge"
 LANG_DIR = PYTHON_ROOT / "time_warp" / "languages"
 TEST_DIR = PYTHON_ROOT / "time_warp" / "tests"
 EXAMPLES_DIR = REPO_ROOT / "Examples"
@@ -32,15 +32,9 @@ core_mod = importlib.import_module("time_warp.core.interpreter")
 Language = core_mod.Language
 
 
-MODULE_LANGUAGE_ALIASES = {
-    "c_lang_fixed": "C",
-    "python_lang": "PYTHON_LANG",
-}
+MODULE_LANGUAGE_ALIASES: dict[str, str] = {}
 
-MODULE_EXAMPLE_ALIASES = {
-    "c_lang_fixed": "c",
-    "python_lang": "python",
-}
+MODULE_EXAMPLE_ALIASES: dict[str, str] = {}
 
 
 @dataclass(frozen=True)

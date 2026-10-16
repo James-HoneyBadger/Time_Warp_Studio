@@ -1,0 +1,167 @@
+name: Native (C++)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'native/**'
+      - 'Examples/**'
+      - 'VERSION'
+      - '.github/workflows/native.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'native/**'
+      - 'Examples/**'
+      - 'VERSION'
+      - '.github/workflows/native.yml'
+  # Available to run by hand, because "does it build here" is a question worth
+  # being able to ask without pushing a commit.
+  workflow_dispatch:
+
+# The C++ side has no other coverage. Every one of the checks below exists because
+# it caught a real defect during the port:
+#
+#  * `-Werror` with the strict flag set -- the warnings in this project have been
+#    the outer edge of genuine mistakes, not style.
+#  * The Debug tree, because Qt's Q_ASSERT and the standard library's hardening
+#    are only live without -DNDEBUG. A use-after-free in a queued Qt connection
+#    reproduced 6 times out of 6 there and never in Release.
+#  * ASan, which is what actually named that defect: `stack-use-after-return`.
+#  * The differential harnesses, which are the only check that the ports agree
+#    with the Python reference they replace.
+#  * `--version` and `--help`, so the shipped entry point is known to start and
+#    exit rather than merely known to link.
+
+jobs:
+  native:
+    name: Build, test and sanitise
+    runs-on: ubuntu-24.04
+    env:
+      # No display anywhere in this job, and the tests set this themselves; it is
+      # set here too so a failure to set it in a new test shows up as a failure
+      # rather than as a hang waiting for a screen.
+      QT_QPA_PLATFORM: offscreen
+      # X11 rather than wayland for the offscreen plugin's font handling.
+      QT_QPA_PLATFORM_PLUGIN_PATH: ''
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt 6 and the build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake \
+            qt6-base-dev qt6-base-dev-tools \
+            libgl1-mesa-dev libxkbcommon-dev
+
+      - name: Show the toolchain
+        run: |
+          cmake --version
+          g++ --version
+          pkg-config --modversion Qt6Core || true
+
+      # A configure that cannot find Qt6 Widgets still succeeds and silently
+      # skips the whole UI section, which is exactly the shape of failure that
+      # would make this job green while testing nothing.
+      #
+      # Written as an `if` rather than `! grep -q ...`: bash's `set -e` does not
+      # abort on a command whose status is inverted with `!`, so that form would
+      # pass whether or not the pattern was found.
+      - name: Configure and build (Release)
+        run: |
+          cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release 2>&1 | tee configure.log
+          if grep -q "skipping the widget UI" configure.log; then
+            echo "::error::Qt6 Widgets was not found, so the UI was skipped. No UI test ran."
+            exit 1
+          fi
+          cmake --build native/build --parallel
+
+      # --version and --help must not need a display, a settings file, or an
+      # already-configured window layout.
+      - name: The entry point starts and exits
+        run: |
+          ./native/build/time_warp_ide --version
+          ./native/build/time_warp_ide --help
+          # A file that cannot be opened must not block on a dialog. This is a
+          # regression test for a startup path that did exactly that.
+          ./native/build/time_warp_ide --screenshot /tmp/smoke.png \
+            --size 800x600 /nonexistent/not-a-program.bas
+          test -s /tmp/smoke.png
+
+      - name: Render the window
+        run: |
+          ./native/build/time_warp_ide --reset --size 1400x900 \
+            --screenshot native/build/layout.png ../Examples/basic/hello.bas
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: native-layout-render
+          path: native/build/layout.png
+          if-no-files-found: warn
+
+      - name: Test (Release)
+        run: ctest --test-dir native/build --output-on-failure
+
+      # The three checks below run the project's own Makefile targets rather than
+      # repeating their CMake invocations here. The Makefile is what a developer
+      # runs, so a Makefile that has rotted fails this job instead of failing
+      # nobody until the next release.
+      #
+      # `make -C native test-debug` builds a second, unoptimised tree. Qt's
+      # Q_ASSERT and libstdc++'s hardening are only live without -DNDEBUG, and
+      # that tree is where a use-after-free in a queued Qt connection reproduced
+      # six times out of six after never appearing in Release.
+      - name: Test (Debug, assertions active)
+        run: make -C native test-debug
+
+      # ASan is what *named* that defect: `stack-use-after-return`. A separate
+      # tree per sanitizer, because reusing one directory across two sets of
+      # sanitizer flags is a rebuild that depends on CMake noticing the flag
+      # change.
+      - name: Test (AddressSanitizer)
+        run: make -C native asan
+
+      - name: Test (UndefinedBehaviorSanitizer)
+        run: |
+          make -C native asan ASAN=undefined SAN_DIR=build-ubsan \
+            ASAN_FLAGS='-fsanitize=undefined -fno-omit-frame-pointer -g'
+
+      # The differential gates: the C++ ports must agree with the Python
+      # implementation on the cases where agreement is expected, and must match
+      # the documented list of known divergences exactly. A new divergence fails.
+      #
+      # The greps are padded-safe on purpose: the report lines are column-aligned,
+      # so `UNEXPECTED mismatches: 0` with one space matches nothing and the guard
+      # would pass while asserting nothing at all.
+      - name: 'Differential check: expressions'
+        working-directory: native/tools
+        run: |
+          python3 differential_check.py ../build/expr_cli | tee differential-expr.log
+          grep -qE "UNEXPECTED mismatches *: *0" differential-expr.log
+        env:
+          PYTHONPATH: ${{ github.workspace }}/native/bridge
+
+      - name: 'Differential check: Scheme'
+        working-directory: native/tools
+        run: |
+          python3 scheme_differential_check.py | tee differential-scheme.log
+          grep -qE "UNEXPECTED mismatches *: *0" differential-scheme.log
+        env:
+          PYTHONPATH: ${{ github.workspace }}/native/bridge
+
+      # Every example program, in every language, through the bridge. This is the
+      # gate for the failure the unit tests cannot see: a language that runs
+      # successfully and draws nothing, which is exactly what a user reports as
+      # "the graphics don't show up". Needs only python3 -- the bridge's import
+      # chain is deliberately Qt-free, so this job does not install PySide6.
+      - name: Example programs through the bridge
+        run: python3 native/tools/example_smoke.py
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: native-differential-logs
+          path: native/tools/differential-*.log
+          if-no-files-found: ignore

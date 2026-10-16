@@ -2,6 +2,15 @@
 
 ## Time Warp Studio v14.1.2 — System Design and Implementation
 
+> **Accuracy note.** Parts of this page were written for the PySide6
+> implementation that has since been **removed**. Anything naming `ui/*.py`,
+> PySide6 signals and slots, `themes.py`, the Python threading model, or that
+> module inventory describes that deleted code — not the Qt application that ships.
+> The sections describing the interpreter engine still apply: the engine survived
+> the removal and is what `native/bridge/` drives. For the shipping user interface,
+> `native/README.md` is the accurate description. Rewriting this page is pending
+> work, tracked in `docs/ROADMAP.md`.
+
 ---
 
 ## Table of Contents
@@ -23,10 +32,17 @@
 
 Time Warp Studio is a desktop IDE built with:
 
-- **Backend**: Python 3.10+ with PySide6 (Qt6)
-- **Architecture**: Single-process, multi-threaded desktop application
-- **Core Pattern**: Central interpreter with stateless language executors
-- **UI Framework**: PySide6/Qt6 for cross-platform GUI
+- **Application**: C++20 with Qt6 — this is the product, in `native/`
+- **Architecture**: desktop application process plus, for the five unported
+  languages, one child process running the temporary Python engine
+- **Core pattern**: central interpreter with stateless language executors
+- **UI Framework**: Qt6 Widgets, styled through QSS in `native/src/ui/ui_style.cpp`
+
+> **Reading this document.** Sections that describe Python modules describe the
+> *bridge engine* in `native/bridge/`, which the Qt application drives for BASIC,
+> PILOT, Logo, COMAL and REXX. It exists to be deleted: each language ported to
+> C++ removes its path through it. Scheme and the expression evaluator are already
+> native C++ and do not go through the bridge at all.
 
 ### Design Philosophy
 
@@ -54,21 +70,21 @@ Time Warp Studio is a desktop IDE built with:
 
 ### TimeWarpInterpreter (Main Class)
 
-Location: `Platforms/Python/time_warp/core/interpreter.py`
+Location: `native/bridge/time_warp/core/interpreter.py` (bridge engine)
 
-Core dispatcher managing all 9 active language executors:
+Core dispatcher managing all 6 active language executors:
 
 ```python
 class Interpreter:
     def __init__(self):
         # Language executors are functions, not class instances.
-        # Line-by-line executors (7 languages):
+        # Line-by-line executors (5 languages):
         #   execute_basic, execute_pilot, execute_logo,
-        #   execute_c, execute_pascal, execute_prolog, execute_forth
+        #   execute_comal, execute_rexx
         #
-        # Whole-program executors (2 languages) registered in:
+        # Whole-program executors (1 language) registered in:
         #   _WHOLE_PROGRAM_EXECUTORS dict
-        #   (Brainfuck, Python)
+        #   (Scheme)
         pass
 ```
 
@@ -134,7 +150,7 @@ def execute_basic(interpreter: Interpreter, command: str, turtle: TurtleState) -
 - ✅ Return strings as output
 - ✅ Access the interpreter and turtle state objects
 
-### The 9 Supported Languages
+### The 6 Supported Languages
 
 **Line-by-line executors** (parsed per statement):
 
@@ -150,7 +166,7 @@ Features:
 
 #### 2. LOGO
 
-Features:  
+Features:
 
 - Turtle graphics (FORWARD, BACKWARD, RIGHT, LEFT)
 - Pen control (PENUP, PENDOWN)
@@ -173,50 +189,27 @@ Features:
 - J:/U:/E: jumps, subroutine calls and returns; Y/N conditional suffixes
 - Used for CAI (Computer-Aided Instruction) lessons
 
-#### 4. C
+#### 4. COMAL
 
 Features:
 
-- Basic C syntax (variables, functions)
-- stdio (printf, scanf)
-- Standard math library
-- Limited to safe subset
+- Structured blocks: IF/ELIF/ELSE/ENDIF, FOR/NEXT, WHILE/ENDWHILE,
+  REPEAT/UNTIL, LOOP/ENDLOOP
+- Procedures: PROC/ENDPROC and FUNC/ENDFUNC with CALL
+- DIM arrays, DATA/READ/RESTORE, GOTO/GOSUB
+- Turtle graphics via MOVE/TURN/PENUP/PENDOWN/HOME
 
-Status: Experimental
-
-#### 5. Pascal
-
-Features:
-
-- Structured programming
-- Type declarations, procedures, functions
-- Control structures (IF, FOR, WHILE, REPEAT)
-
-Status: Experimental
-
-#### 6. Prolog
+#### 5. REXX
 
 Features:
 
-- Facts and rules
-- Unification and backtracking
-- List operations
-- Query processing
+- SAY/PULL/PARSE typeless string handling
+- IF/THEN/ELSE, SELECT/WHEN/OTHERWISE
+- DO loops (TO/BY, WHILE, UNTIL, FOREVER, OVER)
+- Labels, CALL/ARG/RETURN, LEAVE/ITERATE
+- Full expression evaluator with `||` and abuttal concatenation
 
-Status: Experimental
-
-#### 7. Forth
-
-Features:
-
-- Stack operations (DUP, SWAP, DROP)
-- Word definitions (: WORD ... ;)
-- Control structures (IF...THEN, DO...LOOP)
-- Integer arithmetic
-
-Status: Experimental
-
-**Whole-program executors** (2 languages): Brainfuck and Python.
+**Whole-program executors** (1 language): Scheme.
 
 Each receives the full source text and returns output. Registered in
 `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.
@@ -453,7 +446,7 @@ from ..languages.newlang import execute_newlang
 
 1. Create examples in `Examples/newlang/`
 
-1. Write tests in `Platforms/Python/time_warp/tests/test_lang_newlang.py`
+1. Write tests in `native/bridge/time_warp/tests/test_lang_newlang.py`
 
 ### Adding a Dock Panel
 
@@ -583,7 +576,7 @@ Lesson progress is stored separately in `~/.time_warp/progress.json`.
 
 ### Features (`features/`)
 
-- `lesson_system.py` + `lessons.json` — 18 lessons with checkpoint verification
+- `lesson_system.py` + `lessons.json` — 12 lessons with checkpoint verification
 - `game_support.py`, `gamepad.py` — Game state, timers, and input handling
 - `music.py`, `speech.py` — Sound and speech output
 - `shapes.py`, `particles.py`, `fractals.py` — Graphics helpers
@@ -592,8 +585,8 @@ Lesson progress is stored separately in `~/.time_warp/progress.json`.
 ### Languages (`languages/`)
 
 - `base.py` — Executor protocol definition
-- **Line-by-line executors (7):** `basic.py`, `pilot.py`, `logo.py`, `c_lang_fixed.py`, `pascal.py`, `prolog.py`, `forth.py`
-- **Whole-program executors (2):** `brainfuck.py`, `python_lang.py`
+- **Line-by-line executors (5):** `basic.py`, `pilot.py`, `logo.py`, `comal.py`, `rexx.py`
+- **Whole-program executors (1):** `scheme.py`
 - `lang_utils.py`, `parser_patterns.py` — Shared parsing utilities
 
 ### UI (`ui/`)
@@ -625,12 +618,20 @@ Lesson progress is stored separately in `~/.time_warp/progress.json`.
 - `code_formatter.py` — Code formatting utilities
 - `logging_config.py` — Structured logging setup
 
-### Tests (`tests/`)
+### Tests
 
-- 501 pytest tests covering all 9 active language executors, lessons, keymap, GUI, and interpreter behavior
-- `conftest.py`, `conftest_lang.py` — Shared fixtures and helpers
-- `Platforms/Python/smoke_test.py` — Fast smoke test without pytest
-- `test_all_examples.py` (repo root) — Runs all 81 example programs
+The C++ suites are the primary gate — 11 of them, driven by CTest from
+`native/tests/`:
+
+```bash
+ctest --test-dir native/build --output-on-failure
+```
+
+The bridge engine keeps its own pytest suite in `native/bridge/time_warp/tests/`
+(the six executors, the expression evaluator, the validators), run with
+`make engine-test`. The corpus-wide gate is `native/tools/example_smoke.py`, which
+runs all 44 example programs through the real bridge and fails if one of the 14
+that must draw does not.
 
 ### Scripts (`Scripts/`)
 
@@ -698,4 +699,4 @@ make typecheck   # pyright
 - [CONTRIBUTING.md](../CONTRIBUTING.md) — Contribution guidelines
 - [CHANGELOG.md](../CHANGELOG.md) — Version history
 - [ROADMAP.md](ROADMAP.md) — Development roadmap
-- Source: `Platforms/Python/time_warp/`
+- Source: `native/bridge/time_warp/` (the bridge engine)

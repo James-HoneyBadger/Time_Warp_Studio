@@ -45,15 +45,16 @@ If you discover a security vulnerability in Time Warp Studio, please report it r
 
 Time Warp Studio is an **educational desktop application**. It is designed for local use and does not expose network services by default. Key security notes:
 
-- **Safe expression evaluation:** All math/expression evaluation uses a hand-written parser (`ExpressionEvaluator`) — `eval()` is never called directly on user input.
+- **Safe expression evaluation:** All math/expression evaluation uses a hand-written parser — native C++ (`timewarp_expr`) and, in the bridge engine, `ExpressionEvaluator`. `eval()` is never called on user input.
 - **No network exposure:** The application runs locally and does not open network ports or ship any server components.
-- **Python sandbox:** Python programs run with restricted builtins and an import/attribute checker.
-- **Dependencies:** We use `PySide6` (Qt6) and `Pillow` as core dependencies. Keep them updated to their latest stable versions.
+- **Student programs are not a security boundary.** A program you run executes with the privileges of the IDE: BASIC's file commands can read and write files the user can, and a program that never returns has to be stopped by the user. Run programs you trust.
+- **Optional subprocess sandbox:** setting `TWS_SANDBOX=1` runs whole-program executors in a separate process with CPU/memory limits and a timeout, for running untrusted student code. It is opt-in and off by default.
+- **Dependencies:** the application is C++20 with Qt6. The temporary bridge engine for the five unported languages is Python 3.10+ and standard-library only — no third-party packages are required (`pyttsx3`, `pygame` and `inputs` are optional and imported defensively). Keep Qt and Python updated to their latest stable versions.
 
 ## Best Practices for Users
 
 - Run Time Warp Studio in a standard user account (no elevated privileges required).
-- Keep Python and all dependencies updated.
+- Keep Qt, Python and all dependencies updated.
 - Only load programs from trusted sources.
 
 ## Acknowledgements

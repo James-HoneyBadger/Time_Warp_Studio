@@ -1,0 +1,4 @@
+10 REM Classic first program in COMAL
+20 REM Run with F9
+30 PRINT "Hello, World!"
+40 PRINT "Welcome to Time Warp Studio COMAL"

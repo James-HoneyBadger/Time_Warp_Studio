@@ -1,352 +1,66 @@
-# Time Warp Studio Documentation
+# Time Warp Studio — Documentation Index
 
-Welcome to the complete Time Warp Studio documentation! This is your central hub for learning to use the IDE, mastering programming languages, and building amazing projects.
+Time Warp Studio is a C++20 / Qt6 desktop IDE for six educational programming
+languages, with an integrated turtle graphics canvas. This page is the map.
 
-> **New to Time Warp Studio?** Start with the [Getting Started Guide](guides/01-getting-started.md)
-
----
-
-## 🚀 Getting Started
-
-Start here if you're new to Time Warp Studio:
-
-- **[Installation & Setup](guides/01-getting-started.md)** - Install, configure, and launch the IDE
-- **[IDE Basics](guides/02-ide-basics.md)** - Learn the interface, menus, and keyboard shortcuts
-- **[Installation](INSTALLATION.md)** - Detailed installation instructions for all platforms
+> **New here?** Build and run it from the [README](../README.md), then try
+> `Examples/logo/mandala.logo` with **Run (F9)**.
 
 ---
 
-## 📚 Programming Languages
+## The documents
 
-Time Warp Studio actively supports **9 programming languages**. Each has a
-full tutorial below.
-
-### Classic Educational
-
-- **[BASIC Tutorial](tutorials/basic.md)** - Classic BASIC with variables, loops, conditionals, and subroutines
-- **[PILOT Tutorial](tutorials/pilot.md)** - Interactive teaching language designed for computer-based instruction
-- **[Logo Tutorial](tutorials/logo.md)** - Turtle graphics and visual programming for geometric learning
-
-### Systems & Structured Languages
-
-- **[C Reference](tutorials/c.md)** - Systems programming and low-level concepts
-- **[Pascal Guide](tutorials/pascal.md)** - Structured programming with strong typing
-
-### Functional & Declarative Languages
-
-- **[Prolog Guide](tutorials/prolog.md)** - Logic programming with facts, rules, and unification
-
-### Stack & Concatenative
-
-- **[Forth Guide](tutorials/forth.md)** - Stack-based programming and low-level operations
-
-### Modern Scripting Languages
-
-- **[Python Tutorial](tutorials/python.md)** - Modern multi-paradigm scripting with turtle graphics
-
-### Esoteric Languages
-
-- **[Brainfuck Tutorial](tutorials/brainfuck.md)** - Esoteric Turing-complete language
-
-> Earlier prototypes explored additional languages (Assembly, LISP, Haskell,
-> PostScript, JavaScript, Lua, Ruby, Perl, Tcl, Smalltalk, Erlang,
-> HyperTalk). None of these have an executor in the current release, so
-> they are not documented here.
+| Document | What it covers |
+| --- | --- |
+| [INSTALLATION.md](INSTALLATION.md) | Requirements, building, running, troubleshooting a build |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | How the IDE, the engines and the bridge fit together |
+| [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) | Command reference for all six languages |
+| [README_TESTING.md](README_TESTING.md) | The suites, the example gate and the parity harnesses |
+| [ROADMAP.md](ROADMAP.md) | What is built, what is next, what was deliberately deferred |
+| [FAQ.md](FAQ.md) | Short answers to common questions |
+| [`native/README.md`](../native/README.md) | The application itself: design notes, decisions, tests |
+| [`native/bridge/`](../native/bridge/) | The temporary engine for the five languages that are not yet native |
 
 ---
 
-## 🎨 Feature Guides
+## Language tutorials
 
-Deep dives into specific IDE features:
+One per active language, each written to be worked through:
 
-- **[Debugger Guide](DEBUGGER_GUIDE.md)** - Step-through debugging with timeline recording and rewind
-- **[Turtle Graphics](guides/04-turtle-graphics.md)** - Master Logo turtle graphics, colors, and animations
-- **[Settings & Themes](guides/06-settings.md)** - Customize appearance with 33 themes or create your own
-- **[Keyboard Shortcuts](guides/07-shortcuts.md)** - Speed up your workflow with essential shortcuts
-- **[Lessons](guides/03-lessons.md)** - 18 built-in lessons with checkpoints and automatic verification
-
----
-
-## 📖 Reference & Support
-
-### Quick Reference
-
-- **[Keyboard Shortcuts](guides/07-shortcuts.md)** - All available shortcuts and their actions
-- **[FAQ](FAQ.md)** - Frequently asked questions with answers
-
-### Troubleshooting
-
-- **[Troubleshooting Guide](guides/08-troubleshooting.md)** - Solutions for common issues
-- **[Architecture Guide](ARCHITECTURE.md)** - Project structure and design decisions
+| Tutorial | Language |
+| --- | --- |
+| [basic.md](tutorials/basic.md) | BASIC — line-oriented imperative programming |
+| [logo.md](tutorials/logo.md) | Logo — turtle graphics |
+| [pilot.md](tutorials/pilot.md) | PILOT — computer-aided instruction |
+| [comal.md](tutorials/comal.md) | COMAL — structured BASIC |
+| [rexx.md](tutorials/rexx.md) | REXX — string processing and scripting |
+| [scheme.md](tutorials/scheme.md) | Scheme — functional programming |
 
 ---
 
-## 🎯 Learning Paths
+## I want to…
 
-### For Complete Beginners
-
-**Recommended Path:**
-
-1. [Getting Started Guide](guides/01-getting-started.md) - Setup and basic navigation
-2. [IDE Basics](guides/02-ide-basics.md) - Understand the interface
-3. [BASIC Tutorial](tutorials/basic.md) - Learn fundamental programming
-4. [Examples Browser](guides/01-getting-started.md#examples) - Run and modify examples
-
-**First Program to Try:**
-
-```basic
-PRINT "Hello, World!"
-```
-
-### For Learning Graphics
-
-**Recommended Path:**
-
-1. [Logo Tutorial](tutorials/logo.md) - Learn Logo basics
-2. [Turtle Graphics Guide](guides/04-turtle-graphics.md) - Advanced turtle techniques
-3. Open **Help → Browse Examples** (Shift+F3) and pick the **logo** examples (8 programs)
-4. Try examples like `hello.logo`, `spirograph.logo`, `fractal_forest.logo`
-
-**First Turtle Program:**
-
-```logo
-REPEAT 4 [FORWARD 100 RIGHT 90]
-```
-
-### For Teaching/Classroom Use
-
-**Recommended Resources:**
-
-1. [Classroom Mode Guide](guides/06-settings.md) - Presentation and assignment features
-2. [Lessons Guide](guides/03-lessons.md) - Built-in lessons with checkpoints
-3. [Examples Browser](guides/01-getting-started.md#examples) - 81 ready-made programs
-4. See [ARCHITECTURE.md](ARCHITECTURE.md) for extending features
-
-### For Advanced Users
-
-**Topics:**
-
-- Custom themes: [Settings & Themes](guides/06-settings.md)
-- Adding languages: [ARCHITECTURE.md](ARCHITECTURE.md#adding-a-new-language)
-- Contributing: [README.md](../README.md#contributing)
-- Development: [ARCHITECTURE.md](ARCHITECTURE.md#development-guide)
+| Goal | Start here |
+| --- | --- |
+| Build and run the IDE | [README](../README.md) |
+| Fix a build or Qt problem | [INSTALLATION.md](INSTALLATION.md) |
+| Learn a language's commands | [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) |
+| Understand the design | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| Add or change a language | [`native/README.md`](../native/README.md), then the bridge |
+| Contribute | [CONTRIBUTING.md](../CONTRIBUTING.md) |
+| See example programs | [`Examples/CATALOG.md`](../Examples/CATALOG.md) |
 
 ---
 
-## 📁 Examples
+## A note on removed documentation
 
-Browse example programs organized by language (only the 9 active languages
-ship with runnable examples):
+Time Warp Studio was previously implemented in Python with PySide6. That
+application has been removed: the Qt application is the product, and the Python
+that remains is a temporary engine for the five languages that have not been
+ported to C++ yet.
 
-| Directory | Count | Level | Purpose |
-| --------- | ----- | ----- | ------- |
-| `basic/` | 7 | Beginner | Learn BASIC fundamentals |
-| `brainfuck/` | 8 | Advanced | Esoteric computing |
-| `c/` | 8 | Intermediate | Systems programming |
-| `forth/` | 8 | Advanced | Stack-based programming |
-| `logo/` | 8 | Beginner-Intermediate | Turtle graphics and recursion |
-| `pascal/` | 8 | Intermediate | Structured programming |
-| `pilot/` | 8 | Beginner-Intermediate | Interactive instruction |
-| `prolog/` | 9 | Advanced | Logic programming |
-| `python/` | 8 | Beginner-Intermediate | Multi-paradigm scripting |
-
-**How to use examples:**
-
-1. Press **Shift+F3** or **Help → Browse Examples**
-2. Browse by language and difficulty
-3. Click **Load** to open in editor
-4. Press **F9** (or Ctrl+R) to run
-
----
-
-## 🔧 Common Tasks
-
-### Run a program
-
-1. Open file (F3 / Ctrl+O) or create new (Ctrl+N)
-2. Type or paste code
-3. Press F9 (or Ctrl+R) or click Run
-
-### Change language
-
-- Use Language dropdown (top right of editor)
-- Or the Language Picker (Ctrl+Shift+L)
-
-### Customize theme
-
-- View → Theme, or File → Preferences (Ctrl+,)
-- 33 built-in themes + custom theme editor
-
-### Use autosave
-
-- Enabled by default
-- Auto-saves every 2 minutes by default (adjustable under File → Preferences)
-- Keep up to 20 versions per file
-
-### Follow a lesson
-
-- Help → Lessons (Ctrl+F3 or Ctrl+Alt+L)
-- Select a lesson in the Lessons dock
-- Complete checkpoints with Verify
-
----
-
-## ❓ Need Help?
-
-- **Can't find answer?** Check [FAQ](FAQ.md)
-- **Having issues?** See [Troubleshooting](guides/08-troubleshooting.md)
-- **Want to extend?** Read [ARCHITECTURE.md](ARCHITECTURE.md)
-- **Report bug?** Open [GitHub Issue](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues)
-
----
-
-## 📚 Complete File Index
-
-```text
-docs/
-├── INDEX.md (you are here)
-├── ARCHITECTURE.md
-├── FAQ.md
-├── README_TESTING.md
-├── ROADMAP.md
-├── INSTALLATION.md
-├── DEBUGGER_GUIDE.md
-├── LANGUAGE_GUIDE.md
-├── USER_GUIDE.md
-├── guides/
-│   ├── 01-getting-started.md
-│   ├── 02-ide-basics.md
-│   ├── 03-lessons.md
-│   ├── 04-turtle-graphics.md
-│   ├── 05-debugger.md
-│   ├── 06-settings.md
-│   ├── 07-shortcuts.md
-│   └── 08-troubleshooting.md
-└── tutorials/
-    ├── basic.md, brainfuck.md, c.md
-    ├── forth.md, logo.md, pascal.md
-    ├── pilot.md, prolog.md, python.md
-    └── (9 tutorials total, one per active language)
-```
-
----
-
-## 🛠️ Examples and Tutorials Index
-
-Explore example programs and tutorials for the 9 active languages:
-
-- **[BASIC Examples](../Examples/basic/)** - Adventure games, budget trackers
-- **[Brainfuck Examples](../Examples/brainfuck/)** - Fibonacci, Hello World
-- **[C Examples](../Examples/c/)** - Sorting algorithms, RPN calculator
-- **[Forth Examples](../Examples/forth/)** - Stack-based programming
-- **[Logo Examples](../Examples/logo/)** - Turtle graphics
-- **[Pascal Examples](../Examples/pascal/)** - Structured programming
-- **[PILOT Examples](../Examples/pilot/)** - Instructional programming
-- **[Prolog Examples](../Examples/prolog/)** - Logic programming
-- **[Python Examples](../Examples/python/)** - General-purpose programs
-
----
-
-## 📖 Unified Documentation Index
-
-### Core Guides
-
-- **[Getting Started](guides/01-getting-started.md)** - Install and launch the IDE
-- **[IDE Basics](guides/02-ide-basics.md)** - Interface and shortcuts
-- **[Lessons](guides/03-lessons.md)** - Learn programming step-by-step
-- **[Turtle Graphics](guides/04-turtle-graphics.md)** - Visual programming
-- **[Debugger Guide](guides/05-debugger.md)** - Debugging tools
-- **[Settings](guides/06-settings.md)** - Customize your IDE
-- **[Shortcuts](guides/07-shortcuts.md)** - Keyboard shortcuts
-- **[Troubleshooting](guides/08-troubleshooting.md)** - Solve common issues
-
-### Tutorials and Examples
-
-- **[Examples Catalog](../Examples/CATALOG.md)** - Explore example programs
-- **[Programming Tutorials](#📚-programming-languages)** - Learn supported languages
-
-### Reference
-
-- **[FAQ](FAQ.md)** - Frequently asked questions
-- **[Installation](INSTALLATION.md)** - Detailed setup instructions
-
----
-
-**Last Updated:** October 2026
-**Version:** 14.1.2
-**License:** MIT
-
-## How to Use This Documentation
-
-1. **Read actively**: Type the examples yourself
-2. **Experiment**: Modify code to understand it better
-3. **Practice**: Create your own programs
-4. **Reference**: Come back to guides when needed
-5. **Share**: Help others learn
-
-## Updates and Contributions
-
-This documentation is maintained alongside Time Warp Studio development. If you find:
-
-- **Errors**: Report them so we can fix them
-- **Unclear sections**: Let us know what needs clarification
-- **Missing topics**: Suggest new documentation
-- **Helpful tips**: Share them with the community
-
-## Quick Reference
-
-### Common File Extensions
-
-| Language | Extension | Example |
-| -------- | --------- | ------- |
-| BASIC | `.bas` | `program.bas` |
-| PILOT | `.pilot` | `lesson.pilot` |
-| Logo | `.logo` | `graphics.logo` |
-| Python | `.py` | `script.py` |
-| C | `.c` | `program.c` |
-| Pascal | `.pas` | `program.pas` |
-| Prolog | `.pl`, `.pro` | `logic.pl` |
-| Forth | `.f`, `.forth` | `stack.forth` |
-| Brainfuck | `.bf` | `hello.bf` |
-
-### Keyboard Shortcuts (Borland Turbo style)
-
-- **F9** / **Ctrl+R** - Run program
-- **F2** / **Ctrl+S** - Save file
-- **F3** / **Ctrl+O** - Open file
-- **F10** / **Ctrl+Shift+P** - Command palette
-- **F1** - Context help for the current language
-- **Shift+F1** - Full keyboard shortcut list
-
-### IDE Menu Structure
-
-- **File** - New, open, save, export, print, preferences
-- **Edit** - Cut, copy, paste, undo/redo, find, format
-- **Run** - Run, reset, run selection
-- **Debug** - Breakpoints and stepping
-- **View** - Themes, panels, split editor, workspace decks
-- **Tools** - Compare languages
-- **Help** - Lessons, examples, documentation
-
-## Navigation Tips
-
-- Use browser search (Ctrl+F) to find topics
-- Click links to navigate between pages
-- Use breadcrumbs at the top to understand location
-- Go to [README](../README.md) for project overview
-
-## Version Information
-
-- **Time Warp Studio** v14.1.2
-- **Last Updated** October 2026
-
-## Need More Help?
-
-- Review the [Getting Started Guide](guides/01-getting-started.md)
-- Check the [FAQ](FAQ.md) for common questions
-- Visit the [Troubleshooting Guide](guides/08-troubleshooting.md)
-- Read the project [README](../README.md)
-
----
-
-**Happy learning!** Choose a language tutorial and start exploring the world of programming.
+Documentation describing that application's interface — the user guide, the
+progressive how-to guides, the keyboard-shortcut reference, the debugger guide and
+the troubleshooting guide — was removed with it rather than left to mislead.
+`native/README.md` documents the Qt interface, and
+[ROADMAP.md](ROADMAP.md) lists the features that have not been ported yet.

@@ -1,0 +1,17 @@
+10 REM COMAL structured loops: FOR, WHILE and REPEAT
+20 PRINT "FOR I := 1 TO 5"
+30 FOR I := 1 TO 5
+40 PRINT I * I
+50 NEXT I
+60 PRINT "WHILE countdown"
+70 N := 5
+80 WHILE N > 0
+90 PRINT N
+100 N := N - 1
+110 ENDWHILE
+120 PRINT "REPEAT powers of two"
+130 P := 1
+140 REPEAT
+150 PRINT P
+160 P := P * 2
+170 UNTIL P > 32

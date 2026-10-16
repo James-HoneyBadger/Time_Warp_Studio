@@ -1,73 +1,49 @@
-.PHONY: help install dev optional test smoke demos lint format typecheck run run-safe build clean version
+# Time Warp Studio -- top-level convenience targets.
+#
+# The product is the Qt application in native/. The real build, test and run
+# logic lives in native/Makefile; this file exists so that plain `make` at the
+# repository root does the obvious thing, and so the bridge's own tests and
+# checks have one obvious home.
 
-PYTHON ?= python3
-PIP    ?= pip
-SRC    := Platforms/Python
-TESTS  := $(SRC)/time_warp/tests
+NATIVE := native
+# The bridge's tooling (pytest, ruff) lives in the repository virtual
+# environment; fall back to whatever `python3` is on PATH.
+PYTHON ?= $(shell test -x .venv/bin/python3 && echo .venv/bin/python3 || echo python3)
+FORWARDED := build run test test-debug asan clean distclean info test-list \
+             screenshot reset-layout
 
-help: ## Show this help
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
-		awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
+.PHONY: help $(FORWARDED) engine-test smoke test-all lint
 
-# ---------------------------------------------------------------------------
-# Setup
-# ---------------------------------------------------------------------------
-install: ## Install core dependencies
-	$(PIP) install -r $(SRC)/requirements.txt
+help:
+	@echo "Time Warp Studio"
+	@echo ""
+	@echo "The IDE is the Qt application in $(NATIVE)/. Targets that forward to it:"
+	@echo "  build         Build the Qt IDE (Release)"
+	@echo "  run           Build it and run it"
+	@echo "  test          Run the 11 C++ suites"
+	@echo "  test-debug    Run them in the Debug tree"
+	@echo "  asan          Run them under AddressSanitizer (ASAN=undefined for UBSan)"
+	@echo "  screenshot    Capture a window screenshot"
+	@echo "  clean         Remove build output"
+	@echo ""
+	@echo "The temporary language bridge in $(NATIVE)/bridge:"
+	@echo "  engine-test   The bridge engine's own pytest suite"
+	@echo "  smoke         Every example program, through the real bridge"
+	@echo "  test-all      All of the above"
+	@echo "  lint          Ruff over the bridge"
+	@echo ""
+	@echo "See 'make -C $(NATIVE) help' for everything the native tree offers."
 
-dev: install ## Install dev + test dependencies
-	$(PIP) install -r $(SRC)/requirements-dev.txt
+$(FORWARDED):
+	@$(MAKE) --no-print-directory -C $(NATIVE) $@
 
-optional: ## Install optional extras (speech, gamepad, OS theme detection)
-	$(PIP) install -r $(SRC)/requirements-optional.txt
+engine-test:
+	@PYTHONPATH=$(NATIVE)/bridge $(PYTHON) -m pytest -q $(NATIVE)/bridge/time_warp/tests
 
-# ---------------------------------------------------------------------------
-# Run
-# ---------------------------------------------------------------------------
-run: ## Launch the IDE
-	$(PYTHON) $(SRC)/time_warp_ide.py
+smoke:
+	@$(PYTHON) $(NATIVE)/tools/example_smoke.py
 
-run-safe: ## Launch via smart launcher (handles venv + deps)
-	$(PYTHON) run.py
+test-all: test engine-test smoke
 
-# ---------------------------------------------------------------------------
-# Testing
-# ---------------------------------------------------------------------------
-test: ## Run the full pytest suite (offscreen Qt)
-	QT_QPA_PLATFORM=offscreen $(PYTHON) -m pytest $(TESTS) -q --tb=short
-
-smoke: ## Run quick smoke tests
-	$(PYTHON) $(SRC)/smoke_test.py
-
-demos: ## Verify all example programs
-	$(PYTHON) test_all_examples.py
-
-# ---------------------------------------------------------------------------
-# Code Quality
-# ---------------------------------------------------------------------------
-lint: ## Run ruff linter
-	$(PYTHON) -m ruff check $(SRC)
-
-format: ## Format code with ruff
-	$(PYTHON) -m ruff format $(SRC)
-
-typecheck: ## Run pyright type checking
-	$(PYTHON) -m pyright $(SRC)/time_warp
-
-# ---------------------------------------------------------------------------
-# Packaging
-# ---------------------------------------------------------------------------
-build: ## Build native binary via PyInstaller
-	bash Scripts/build_native.sh
-
-# ---------------------------------------------------------------------------
-# Maintenance
-# ---------------------------------------------------------------------------
-clean: ## Remove caches, build artifacts, test reports
-	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
-	rm -rf build/ dist/ *.egg-info test_reports/ htmlcov/ .coverage
-	rm -rf $(SRC)/build $(SRC)/dist $(SRC)/*.egg-info
-
-version: ## Show project version
-	@cat VERSION
+lint:
+	@$(PYTHON) -m ruff check $(NATIVE)/bridge

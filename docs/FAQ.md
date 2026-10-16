@@ -1,6 +1,8 @@
 # Time Warp Studio - Frequently Asked Questions
 
-Answers to common questions about installing, running, and learning with Time Warp Studio. For full guides, see the [User Guide](USER_GUIDE.md) and the [documentation index](INDEX.md).
+Answers to common questions about building, running and learning with Time Warp
+Studio. For the full listing, see the [documentation index](INDEX.md) and
+[INSTALLATION.md](INSTALLATION.md).
 
 ---
 
@@ -26,11 +28,14 @@ Answers to common questions about installing, running, and learning with Time Wa
 
 ### What is Time Warp Studio?
 
-Time Warp Studio is an educational desktop programming environment. It runs nine programming languages in one IDE, with an integrated turtle graphics canvas, a debugger, lessons, and export tools. It is built with Python and PySide6 (Qt6).
+Time Warp Studio is an educational desktop programming environment. It runs six
+programming languages in one IDE, with an integrated turtle graphics canvas and
+an output console. It is a C++20 / Qt6 application; the PySide6 implementation
+that preceded it has been removed.
 
 ### Which languages are supported?
 
-BASIC, PILOT, Logo, C, Pascal, Prolog, Forth, Brainfuck, and Python. Each language implements a subset of its traditional form. See the [Language Guide](LANGUAGE_GUIDE.md) for what each one supports.
+BASIC, PILOT, Logo, COMAL, REXX, and Scheme, and Python. Each language implements a subset of its traditional form. See the [Language Guide](LANGUAGE_GUIDE.md) for what each one supports.
 
 ### Is Time Warp Studio free?
 
@@ -50,29 +55,33 @@ No. The core features work offline.
 
 ### What do I need to run it?
 
-- Python 3.10 or newer
-- PySide6 (6.5 or newer) and Pillow (10 or newer), listed in `Platforms/Python/requirements.txt`
-- A CPU with SSSE3, SSE4.1, SSE4.2, and POPCNT support. Older virtual machines and QEMU setups may lack these features.
+- A C++20 compiler, CMake 3.20+, and Qt6 (Widgets, Core, Gui)
+- Python 3.10 or newer, **only** if you use BASIC, PILOT, Logo, COMAL or REXX —
+  Scheme and expressions run natively without it
 
-### How do I install the dependencies?
+### How do I build it?
 
 From the repository root:
 
 ```bash
-pip install -r Platforms/Python/requirements.txt
+cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
+cmake --build native/build -j
 ```
 
 ### How do I start the IDE?
 
 ```bash
-python3 Platforms/Python/time_warp_ide.py
+./native/build/time_warp_ide
 ```
 
-You can also run `python3 run.py`, which sets up a virtual environment and dependencies if needed.
+Or `make -C native run`, which builds first. You can open a program directly:
+`./native/build/time_warp_ide Examples/logo/mandala.logo`.
 
 ### The app crashes at startup with "Illegal instruction." What is wrong?
 
-This usually means the CPU does not support one of the instruction sets PySide6 needs. It is not a bug in your program. Try a physical machine or a VM with a newer CPU model. See [Troubleshooting](TROUBLESHOOTING_GUIDE.md).
+That message comes from a build whose Qt libraries were compiled for a newer CPU
+than the one running them. It is not a bug in your program. Use a build of Qt
+matching the machine, or run on a physical machine rather than an old VM.
 
 ### Does it run on Windows and macOS?
 
@@ -86,15 +95,12 @@ See the [Installation Guide](INSTALLATION.md) for platform-specific steps.
 
 | Language | Extensions |
 | -------- | ---------- |
-| BASIC | `.bas` |
-| PILOT | `.pilot` |
-| Logo | `.logo` |
-| C | `.c` |
-| Prolog | `.pl`, `.pro`, `.prolog` |
-| Pascal | `.pas` |
-| Forth | `.f`, `.forth`, `.fs` |
-| Brainfuck | `.bf` |
-| Python | `.py` |
+| BASIC | `.bas`, `.bsc` |
+| PILOT | `.pilot`, `.plt` |
+| Logo | `.logo`, `.lg` |
+| COMAL | `.comal`, `.cml` |
+| REXX | `.rexx`, `.rex` |
+| Scheme | `.scm`, `.ss` |
 
 Unknown extensions open as BASIC by default.
 
@@ -144,7 +150,7 @@ Use Run → Stop. A program that waits for input can also be stopped this way.
 
 ### How do I get input from the user?
 
-Use the input command of your language: `INPUT` in BASIC and `A:` (accept) in PILOT. Python's `input()` does not wait for typed text. It returns an empty string, so use BASIC or PILOT for programs that need user answers.
+Use the input command of your language: `INPUT` in BASIC, `INPUT` in COMAL, `A:` (accept) in PILOT, or `PULL` in REXX.
 
 ### Why does my program run forever?
 
@@ -174,43 +180,21 @@ Core Logo commands such as `FORWARD`, `BACK`, `RIGHT`, `LEFT`, `PENUP`, `PENDOWN
 
 Named colors, hex values, and RGB values all work with `SETPENCOLOR`. See [logo.md](tutorials/logo.md) for the syntax.
 
-### Is C a full C compiler?
+### What can I do in COMAL?
 
-No. The C executor is an interpreter for a practical subset of C: functions, variables, loops, arrays, and `printf`. It does not compile to native code. See [c.md](tutorials/c.md).
+COMAL brings structure to BASIC: `IF … ENDIF`, `FOR … NEXT`, `WHILE … ENDWHILE`, `REPEAT … UNTIL`, and procedures declared with `PROC … ENDPROC` and run with `CALL`. See [comal.md](tutorials/comal.md).
 
-### What can I do in Prolog?
+### What can I do in REXX?
 
-Facts, rules, queries, and backtracking over a small knowledge base. See [prolog.md](tutorials/prolog.md).
+REXX is a typeless string-processing language: `SAY` to display, `PULL` to read input, `DO` loops, `SELECT`/`WHEN`, `PARSE` to split text, and subroutines with labels and `CALL`. See [rexx.md](tutorials/rexx.md).
 
-### What can I do in Forth?
+### What can I do in Scheme?
 
-Stack-based arithmetic, word definitions with `:` and `;`, and loops. Forth programs can also use turtle words. See [forth.md](tutorials/forth.md).
-
-### How does Brainfuck work here?
-
-Brainfuck runs in a whole-program executor with the eight standard commands. The `,` command prompts for input. See [brainfuck.md](tutorials/brainfuck.md).
-
-### Can I use Python?
-
-Yes. Python runs in a sandboxed `exec()` environment. Most built-in functions and operators work, along with these modules:
-
-`math`, `random`, `itertools`, `functools`, `collections`, `string`, `json`, `re`, `copy`, `abc`, `typing`, `decimal`, `fractions`, `statistics`, `heapq`, `bisect`, `operator`, `datetime`, `enum`, `dataclasses`, `time`
-
-### Why can't I import `os`, `sys`, or `turtle`?
-
-For safety, the Python executor blocks system modules such as `os`, `sys`, `subprocess`, and `socket`. File access is also blocked. The `turtle` module is not available as an import, but the executor provides built-in turtle helpers:
-
-- `forward(n)`, `backward(n)`, `right(n)`, `left(n)`
-- `penup()`, `pendown()`, `goto(x, y)`, `home()`, `setheading(deg)`
-- `color(r, g, b)`, `pensize(n)`, `clear_canvas()`
-
-### Can I write a Python function and call it from the turtle helpers?
-
-Yes. Define your own functions and call the helpers from inside them, as in any normal Python program.
+Scheme is a small Lisp dialect with lexical closures. Define procedures with `define`/`lambda`, branch with `if`/`cond`, loop with recursion or named `let`, and process lists with `map`, `filter` and `foldl`. See [scheme.md](tutorials/scheme.md).
 
 ### Which language should a beginner start with?
 
-BASIC or Logo are common first choices, since their output and drawings are easy to see. Python is a good next step once you are comfortable with variables and loops.
+BASIC, Logo or COMAL are common first choices, since their output and drawings are easy to see. REXX and Scheme are good next steps once you are comfortable with variables and loops.
 
 ---
 
@@ -226,7 +210,7 @@ Use View → Zoom In and View → Zoom Out.
 
 ### How do I clear the canvas?
 
-Run a new program (the canvas clears per run), or use the clear command for your language, such as `CLEARSCREEN` in Logo or `clear_canvas()` in Python.
+Run a new program (the canvas clears per run), or use the clear command for your language, such as `CLEARSCREEN` in Logo or `HOME` in COMAL and REXX.
 
 ### Can I export a drawing?
 
@@ -234,7 +218,7 @@ Yes. Use File → Export → Export Graphics to PNG or Export Graphics to SVG. Y
 
 ### Does the turtle work in every language?
 
-Logo, Forth, and Python have turtle commands. Check each language's tutorial for its graphics commands.
+Logo, BASIC, COMAL, REXX, and Scheme have turtle commands. Check each language's tutorial for its graphics commands.
 
 ---
 
