@@ -2,701 +2,608 @@
 
 ## Time Warp Studio v15.0.0 — System Design and Implementation
 
-> **Accuracy note.** Parts of this page were written for the PySide6
-> implementation that has since been **removed**. Anything naming `ui/*.py`,
-> PySide6 signals and slots, `themes.py`, the Python threading model, or that
-> module inventory describes that deleted code — not the Qt application that ships.
-> The sections describing the interpreter engine still apply: the engine survived
-> the removal and is what `native/bridge/` drives. For the shipping user interface,
-> `native/README.md` is the accurate description. Rewriting this page is pending
-> work, tracked in `docs/ROADMAP.md`.
+> **This page describes the shipping product.** It was rewritten alongside the move
+> to C++20 / Qt6. Earlier revisions documented the PySide6 implementation, which has
+> been removed, and named modules (`ui/*.py`, `themes.py`, the Python threading
+> model) that no longer exist. Nothing here describes code that is not in the tree.
+> Where the interface carries a control whose feature is not built yet, this page
+> says so; [ROADMAP.md](ROADMAP.md) tracks the work.
 
 ---
 
 ## Table of Contents
 
 1. [Overview](#overview)
-2. [Core Interpreter Architecture](#core-interpreter-architecture)
-3. [Language Executors](#language-executors)
-4. [UI Architecture](#ui-architecture)
-5. [Graphics System](#graphics-system)
-6. [Debugger System](#debugger-system)
-7. [Data Flow](#data-flow)
-8. [Extension Points](#extension-points)
-9. [Threading Model](#threading-model)
-10. [Configuration & Persistence](#configuration--persistence)
+2. [Process and thread model](#process-and-thread-model)
+3. [The canvas command queue](#the-canvas-command-queue)
+4. [The Qt application](#the-qt-application)
+5. [The native engines](#the-native-engines)
+6. [The language bridge](#the-language-bridge)
+7. [Extension points](#extension-points)
+8. [Tests and gates](#tests-and-gates)
+9. [Configuration and persistence](#configuration-and-persistence)
+10. [What is not here yet](#what-is-not-here-yet)
 
 ---
 
 ## Overview
 
-Time Warp Studio is a desktop IDE built with:
+Time Warp Studio is a desktop IDE for six educational languages — **BASIC, PILOT,
+Logo, COMAL, REXX and Scheme** — with an integrated turtle graphics canvas. It is a
+C++20 / Qt6 application. Its one non-C++ component is a temporary Python engine
+process that runs the five languages which have not been ported yet.
 
-- **Application**: C++20 with Qt6 — this is the product, in `native/`
-- **Architecture**: desktop application process plus, for the five unported
-  languages, one child process running the temporary Python engine
-- **Core pattern**: central interpreter with stateless language executors
-- **UI Framework**: Qt6 Widgets, styled through QSS in `native/src/ui/ui_style.cpp`
+So the product is **a GUI process plus, for five of the six languages, one child
+process**. Nothing about the user's program crosses that boundary except a program
+text going in and a stream of JSON messages coming back.
 
-> **Reading this document.** Sections that describe Python modules describe the
-> *bridge engine* in `native/bridge/`, which the Qt application drives for BASIC,
-> PILOT, Logo, COMAL and REXX. It exists to be deleted: each language ported to
-> C++ removes its path through it. Scheme and the expression evaluator are already
-> native C++ and do not go through the bridge at all.
+### The moving parts
 
-### Design Philosophy
+| Part | Sources | Runs in | Role |
+| --- | --- | --- | --- |
+| `timewarp_ui` — the IDE | `native/src/ui/`, `native/include/timewarp/ui/` | GUI thread | Documents, editor, console, canvas, menus, settings |
+| `timewarp_canvas` | `native/src/canvas/` | producer: interpreter thread; consumer: GUI thread | Carries drawing across the thread boundary |
+| `timewarp_canvas_qt` | `native/src/canvas/qt_bridge.cpp` | GUI thread | Qt glue for that queue: wakeup and draining |
+| `timewarp_scheme` | `native/src/scheme/` | runner thread, in-process | Scheme, on an explicit-stack machine with no native recursion |
+| `timewarp_debugger` | `native/src/debugger/` | its own `QThread` | Runs a Scheme program and services pause / step / breakpoint requests |
+| `timewarp_bridge` | `native/src/bridge/` | GUI thread, driving a `QProcess` | The IDE's end of the Python bridge |
+| `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | *not linked into the application* | The ported expression evaluator — see the note below |
+| the bridge engine | `native/bridge/` | a separate Python process | The five unported languages |
 
-**State Management**:
+> **`timewarp_expr` is not yet part of a Run.** It builds, it has 485 checks of its
+> own, and `native/tools/differential_check.py` compares it against the Python
+> reference on a fixed corpus — but nothing under `src/ui/` includes it and
+> `timewarp_ui` does not link it. Expressions in the five bridged languages are
+> still evaluated by the Python engine. The library is the ported replacement for
+> `utils/expression_evaluator.py`, waiting for the executors that call it to be
+> ported; the parity gate is what keeps it honest in the meantime.
 
-- UI owns all state (editor content, canvas, variables)
-- Language executors are stateless command processors
-- Results returned as text strings with emoji prefixes
+### Two contracts holding the design together
 
-**Safety**:
+**Interpreters do not touch widgets.** A language engine never sees a `QWidget`. It
+turns turtle calls into `CanvasCommand` values and pushes them into a
+`CanvasCommandQueue`; the GUI thread drains that queue and paints. That is what
+makes a program drawing 100,000 segments cost 100,000 lock-free appends rather than
+100,000 Qt signal deliveries.
 
-- No use of `eval()` for expression evaluation
-- Protected math expression evaluator
-- Thread-safe queues for execution communication
-
-**Modularity**:
-
-- 9 independent language modules (easily extensible)
-- Optional dock panels (Lessons, Document Outline, Debugger) created on demand
-- Theme system completely separate from core logic
+**Executors are stateless command processors.** An engine turns a statement into
+text and nothing else. No engine holds a reference to the canvas, the console or the
+window, so the same engine is usable from a test with no GUI at all.
 
 ---
 
-## Core Interpreter Architecture
+## Process and thread model
 
-### TimeWarpInterpreter (Main Class)
+There are three places code can run, and the rules differ between them.
 
-Location: `native/bridge/time_warp/core/interpreter.py` (bridge engine)
+| Context | Owns | May touch |
+| --- | --- | --- |
+| **GUI thread** | Every widget, `QSettings`, the canvas display list | Anything |
+| **Runner thread** — `debugger::DebuggerRunner`, a `QThread` | A running Scheme program and its machine state | The canvas queue, through a host adapter. Never a widget |
+| **Worker process** — `bridge::PythonWorker` around a `QProcess` | The Python interpreter and the language state | Its own protocol on stdout; a child process cannot reach a widget anyway |
 
-Core dispatcher managing all 6 active language executors:
+```mermaid
+flowchart LR
+    subgraph GUI["GUI thread"]
+        W[MainWindow] --> C[TurtleCanvas]
+        B[CanvasBridge] --> C
+        PW[PythonWorker] --> B
+        DR[DebuggerRunner] -. queued signals .-> W
+    end
+    subgraph RT["runner thread"]
+        DR2["DebuggerRunner::run()<br/>Scheme machine"] --> H[QueuedTurtleHost]
+    end
+    subgraph PP["worker process"]
+        WK["worker.py<br/>five language executors"]
+    end
+    H -- "push() then wake()" --> Q[(CanvasCommandQueue)]
+    Q --> B
+    PW -- "run / in-reply / stop" --> WK
+    WK -- "ready / out / canvas / pose / err / in / done" --> PW
+```
+
+### Control going *in* deliberately does not use slots
+
+`DebuggerRunner` subclasses `QThread`, and its `run()` **is** the interpreter loop. A
+thread cannot spin an interpreter loop and a Qt event loop at the same time, so that
+thread has no event loop and a queued slot invocation to the runner would never be
+delivered — it would sit in a queue nobody reads.
+
+That interacts with a classic Qt trap: a `QThread` *object* lives in the thread that
+constructed it, so its slots run there rather than in `run()`. Subclassing `QThread`
+and expecting `run()`'s thread to receive slot calls is the most common Qt threading
+mistake.
+
+The consequence is deliberate. `request_stop()` and the rest are **plain thread-safe
+methods, not slots**: they publish an atomic command and bump a notification counter,
+and they never touch interpreter state. The reverse direction is ordinary Qt and is
+used freely — signals emitted from `run()` arrive queued on the GUI thread.
+
+The park/unpark word is *incremented* rather than merely notified, because
+`std::atomic::wait` re-checks the value after every notification and goes back to
+sleep if it has not changed. Calling `notify_all()` on a word nobody modified
+releases nobody. A counter also means the runner cannot miss a request, since the
+sequence number is read *before* the command is tested.
+
+### Latency
+
+The runner consults its controller at the **start of every compound form**, so a
+pause or a step lands within one expression of being requested rather than at an
+arbitrary quantum boundary. With no controller attached the cost disappears entirely.
+
+### Closing the window during a runaway program
+
+`MainWindow::closeEvent` stops every engine before it does anything else. `~QThread`
+joins and the bridge worker holds a child process, so a window closed mid-run would
+otherwise appear to hang. The join is bounded by one form, because that is how often
+the stop flag is checked.
+
+---
+
+## The canvas command queue
+
+### The problem it solves
+
+An interpreter runs on its own thread and wants to draw; Qt widgets may only be
+touched from the thread that owns them. The removed Python application bridged the
+two by emitting a Qt signal per turtle call — one queued-connection post, one heap
+allocation and one event-loop wakeup for every `forward(...)`. A turtle program in a
+tight loop emits those hundreds of thousands of times a second, so the marshalling
+cost dwarfed the drawing.
+
+The queue replaces "one signal per command" with "one buffer for all of them": the
+producer appends to a preallocated ring with no allocation and no syscall, and the
+consumer drains a whole batch under a single wakeup.
+
+### How it works
+
+- **A bounded byte ring with free-running counters.** `head` and `tail` are monotonic
+  byte offsets and are never wrapped, so both "empty" and "full" are representable and
+  the buffer index is just `offset & mask`. Capacity is a power of two, so the mask
+  replaces a modulo.
+- **Release/acquire pairing.** The producer writes a whole record and *then* publishes
+  `head` with a release store; the consumer acquires `head`, so observing
+  `tail < head` guarantees the entire record is readable. `tail` is published the same
+  way in the other direction. Each counter has exactly one writer, which is what makes
+  this lock-free without a mutex.
+- **Variable-length records.** A 72-byte `CanvasCommand` header, then an optional
+  point list and optional UTF-8 text, with the length in the header. No arbitrary
+  limit on either.
+- **Blocking without a mutex.** When the ring is full the producer parks in
+  `std::atomic::wait`: no `std::mutex`, no `condition_variable`, no kernel object
+  until the wait spins down. The waiter parks on a *dedicated* wakeup word that every
+  notifier increments — see the thread model above for why that is not a detail.
+
+### Policy: never drop
+
+A full ring **blocks the producer**; it never discards a command. A dropped turtle
+segment is a wrong picture that looks like a correct one, which is the failure mode
+this repository treats as the worst kind. `push_for()` and `wait_for_data()` are the
+bounded variants, and they poll, because C++20 has `wait` / `notify_one` /
+`notify_all` but not `wait_for` / `wait_until` — those are C++23.
+
+### Coalescing
+
+Pushes that are `is_coalescible()` and have an **identical adjacent predecessor**
+collapse into one record. It happens in a producer-private staging buffer, never by
+rewriting a published slot, because a 72-byte store is not atomic. In practice a
+million state pushes coalesce to a few hundred records, so the Qt bridge posts
+hundreds of wakeups instead of a million.
+
+### The Qt side
+
+`CanvasBridge` — in `qt_bridge.cpp`, the only Qt-facing file in the canvas library —
+drives the queue from the GUI event loop. Its wakeup is a **two-phase handshake, not
+a latch**: `drainNow()` clears the flag, drains, and then loops while the flag was set
+again. A plain latch strands commands: clearing *after* a drain lets a push landing
+mid-drain see the flag still set, skip its post, and then wait for a wakeup already
+consumed; clearing *before* a drain has the mirror-image problem. The two sides agree
+through an atomic read-modify-write on the same word, and those are totally ordered,
+so exactly one of them takes responsibility. The worst case is a redundant drain that
+applies nothing.
+
+Signals are per **batch**, never per command: the bridge drains into a plain callback
+and emits one signal carrying a count.
+
+---
+
+## The Qt application
+
+### The window
+
+`time_warp_ide` → `timewarp::ui::MainWindow`. The widget tree — editor column on the
+left, output and tooling on the right, function-key bar underneath — and every sizing
+decision that changes how the window behaves when resized were translated from the
+removed PySide6 implementation: splitter orientations and handle widths,
+`childrenCollapsible(false)` where it matters, stretch factors and the initial
+`setSizes()` values. Those numbers are load-bearing; they are what stops the REPL bar
+being dragged to nothing and what gives the editor 60% of the width. They are
+transcribed rather than re-derived, and asserted by `ui_layout_tests`.
+
+Three deliberate departures:
+
+- **Every widget is named.** Qt needs an `objectName` for `saveState()` /
+  `restoreState()` to persist dock and toolbar geometry at all, the stylesheet scopes
+  by it, and the layout tests find nodes with it.
+- **Splitter positions are persisted**, which the Python window did not do: a carefully
+  dragged editor/output divider survived no restart.
+- **Menus delegate.** The action catalogue belongs with the feature that owns it, not
+  in one 600-line method.
+
+### Documents
+
+A document's identity lives on its widget: the file path is a dynamic property on the
+editor and the language is derived from that path. A parallel table of paths keyed by
+tab index would have to be repaired on every tab close, move and reorder, and the one
+time it was not would load the wrong file's text into the wrong tab.
+
+Two rules worth knowing:
+
+- **A failed open has two modes.** `OpenFailure::ReportToUser` shows a dialog, which is
+  right for a file the user just picked. `OpenFailure::Silent` is required for files
+  named on the command line: a modal dialog at startup blocks a script or a CI run
+  forever, and a mistyped path is exactly when that must not happen.
+- **An already-open file is raised, not loaded twice**, so the same file cannot be
+  edited in two places and saved over itself.
+
+### The editor
+
+`CodeEditor` is a `QPlainTextEdit` with a line-number gutter, a highlighted current
+line and cursor tracking, because those are the three things that make a text box feel
+like an editor rather than a scratchpad. **There is no syntax highlighter** — no
+`QSyntaxHighlighter` exists anywhere in the tree — and no minimap, find/replace,
+outline or formatter either.
+
+### The turtle canvas
+
+`TurtleCanvas` is the graphics surface, and it is a **consumer**: the interpreter never
+touches it.
+
+- **A display list, not a pixmap.** Repainting on resize, on zoom and on pan needs the
+  drawing again, so the ink is kept as geometry in world coordinates. A pixmap would go
+  blurry when zoomed and could not be re-projected at all.
+- **The turtle state is mirrored here.** The host adapter translates turtle calls
+  one-to-one and statelessly — a `Forward` command carries a distance, not the heading
+  to move along or the pen colour to draw with — so something has to replay the sequence
+  and hold the state. The GUI is where it belongs; the alternative would be copying the
+  state into every command.
+- **The coordinate conventions are the reference's, transcribed rather than chosen**,
+  from `graphics/turtle_state.py`: heading 0 is **north** and increases clockwise,
+  `forward` is `x += d·sin(h), y += d·cos(h)`, and `circle` is a polygon walk. A canvas
+  that draws a mirrored or quarter-turned version of the same program is worse than no
+  canvas at all. `turtle_canvas_tests` asserts all three.
+
+### Languages
+
+`native/src/ui/language.cpp` holds the table: display name, settings key and file
+extensions for each of the six, plus `languageFromKey` and `languageForFile`. The enum
+order matches the Python registry's, and new languages are **append-only**, because
+persisted state references these by identity rather than by position.
+
+`languageForFile` answers `Unknown` for an unrecognised extension rather than falling
+back to BASIC. The Python registry does fall back; here that fallback is the *caller's*
+decision, because guessing would hide the fact that the file name says nothing about
+the language.
+
+### Styling
+
+`native/src/ui/ui_style.cpp` owns the stylesheet, as one sheet applied once to the
+window. Qt copies a widget's stylesheet to its children and re-polishes all of them on
+every `setStyleSheet()` call, so six calls mean six full passes over a window with
+hundreds of widgets; composing the sections and setting the result once removes that,
+and gives a theme manager a single string to replace. Rules are scoped by object name,
+because a bare `QTabWidget { ... }` cascades to *every* descendant tab widget —
+including the output sub-tabs nested inside a page of the widget being styled. Colour
+roles are written with Qt's `palette(...)` function, so the sheet follows the active
+palette.
+
+**The theme system is not ported.** The removed implementation's 33 themes are the
+target, to be carried as data and applied as QSS plus a palette here. Do not describe a
+theme as available until it is.
+
+---
+
+## The native engines
+
+### `timewarp_scheme` — Scheme with no native recursion
+
+The reference evaluated by recursing, so its evaluation depth *was* native call stack
+depth, and CPython's 1000-frame limit capped a Scheme program at roughly 200 calls. The
+port replaces every recursive site with an explicit, heap-backed continuation stack: **a
+tail-recursive loop of 1,000,000 calls runs with a continuation stack 4 frames deep**,
+and non-tail recursion is bounded by memory rather than by the native stack.
+
+Values are 16-byte tagged unions pointing into a region allocator, so cycles cost
+nothing; symbols are interned; frames are a `std::variant` of about eighteen
+continuation types. A frame is popped before its handler runs and pushed back only when
+there is more work, which is what yields proper tail calls.
+
+Scheme is the one language that runs in-process, through `DebuggerRunner` on its own
+thread.
+
+### `timewarp_expr` — the expression evaluator
+
+Ported from `utils/expression_evaluator.py` and gated against it. A 32-byte
+trivially-copyable token that borrows its text from the source, so lexing does not
+allocate; a token cache keyed on the expression text with node-stable keys; and a sorted
+builtin table with a switch rather than a table of `std::function`. Three phases are
+exposed separately — `tokenize`, `to_rpn`, `evaluate_rpn` — so a caller can compile once
+and execute many times, with `evaluate()` as the memoising convenience path.
+
+As noted at the top, **nothing in the application links it yet.**
+
+### Parity as the acceptance test
+
+Both engines are compared against their Python originals on a fixed corpus by
+`native/tools/differential_check.py` and `native/tools/scheme_differential_check.py`.
+Both must report **0 unexpected mismatches**; the divergences that are accepted are
+printed and listed, each with a reason. That is what makes "did the port stay faithful?"
+a measurable question rather than a matter of opinion.
+
+---
+
+## The language bridge
+
+### Why a separate process
+
+Five of the six languages have no C++ interpreter yet. The alternative to a child
+process is reimplementing them, and the Python implementations are complete and tested;
+the alternative *inside* one process is embedding CPython, which turns a runaway program
+into a runaway IDE. Out of process, the worst case is a process to kill.
+
+The bridge **exists to be deleted**. Each language ported to C++ removes its path through
+it. Scheme and the canvas queue are already out.
+
+### The protocol
+
+JSON lines, one message per line.
+
+**In** (GUI → worker):
+
+| Message | Meaning |
+| --- | --- |
+| `run` | Run a program. The source travels as a JSON string, so any program text is safe |
+| `in-reply` | Answer a pending input request |
+| `stop` | Stop the program |
+
+**Out** (worker → GUI):
+
+| Message | Meaning |
+| --- | --- |
+| `ready` | Handshake, sent once before the first run |
+| `out` | One line of program output |
+| `canvas` | A batch of drawing commands |
+| `pose` | Where the turtle ended up |
+| `err` | A failure, for the error panel |
+| `in` | The program is waiting for a line of input |
+| `done` | The run ended: `ok`, an error string, and any unsupported features |
+
+Three things the bridge is careful about:
+
+- **A worker that dies is an error, not a hang.** A process that exits without a `done`
+  message is reported as a failure, with the stderr text, rather than leaving a run that
+  never finishes.
+- **A message can be split across reads.** `QProcess::readyRead` says nothing about
+  message boundaries, so partial lines are buffered until their newline arrives.
+- **A stray `print` cannot corrupt the protocol.** The worker redirects its own stdout
+  for exactly that reason; stderr is captured separately and only ever shown as
+  diagnostics.
+
+`pose` is a signal rather than a canvas command because painting the *marker* is not
+something the command stream expresses: its commands say what to draw, not where the
+turtle ended up.
+
+### Finding the worker
+
+`locateWorker()` searches in a fixed order — `TIME_WARP_PYTHON` and `TIME_WARP_WORKER`
+first, then beside the executable and two levels up (the build-tree layout), then the
+working directory; then the interpreter from the repository's `.venv`, then `python3`
+and `python` from `PATH`. It reports **what it looked for** when it fails, because a
+missing bridge has to say which half is missing. The order is explicit rather than clever
+on purpose: for a cross-process launcher, "it works on my machine" means "the paths
+happen to line up here".
+
+### The engine
+
+`native/bridge/time_warp/` is the engine the PySide6 application used, with its UI
+removed. It is standard library only; `pyttsx3` (BASIC `SAY`) and `pygame` / `inputs`
+(BASIC `SOUND` / `GAMEPAD`) are imported defensively and are not required.
+
+| Directory | Contents |
+| --- | --- |
+| `core/` | `interpreter.py` (dispatch and program state), `language_registry.py`, `config.py`, `sandbox.py` |
+| `languages/` | The six executors, and `base.py`, which documents the protocol |
+| `graphics/` | `turtle_state.py` |
+| `features/` | Language-level modules reached *by name* from a program |
+| `utils/` | `expression_evaluator.py` — the reference `timewarp_expr` is gated against — plus error hints and validators |
+| `tests/` | The engine's own suite, plus `command_table.py` |
+
+### The executor pattern
+
+Each language is a **function**, not a class. `languages/base.py` documents the
+protocol — both execution modes have the *same* signature and differ only in what
+`source` holds:
 
 ```python
-class Interpreter:
-    def __init__(self):
-        # Language executors are functions, not class instances.
-        # Line-by-line executors (5 languages):
-        #   execute_basic, execute_pilot, execute_logo,
-        #   execute_comal, execute_rexx
-        #
-        # Whole-program executors (1 language) registered in:
-        #   _WHOLE_PROGRAM_EXECUTORS dict
-        #   (Scheme)
-        pass
+def execute_logo(interpreter: Interpreter, source: str, turtle: TurtleState) -> str:
+    """Execute the source and return the text to display."""
 ```
 
-### Core Methods
+- **Whole-program executors** receive the entire source. Scheme is the only one, and it
+  is dispatched through `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.
+- **Line-by-line executors** are called once per logical line/command: BASIC, PILOT,
+  Logo, COMAL and REXX. Logo names the parameter `command` for that reason, and splits
+  multiple commands on one line itself.
 
-#### execute(code: str, language: Language) -> ExecutionResult
+The contract:
 
-- Main entry point for code execution
-- Routes to appropriate executor based on language
-- Captures output and errors
-- Returns structured result with emoji prefix
+**Must not** store UI references, update the canvas directly, or modify the window.
 
-Output Prefixes:
+**May** read and write interpreter state — variables, turtle position — and return
+strings as output.
 
-- `❌` Execution error
-- `✅` Success
-- `ℹ️` Information message
-- `🐢` Turtle graphics command
-- `🎨` Theme change notification
+Jumping between lines is done by assigning `interpreter.current_line`, a 0-based index
+into `interpreter.program_lines`. After the executor returns, if `current_line` is not
+`physical_line - 1` the main loop re-dispatches without incrementing, so "run line X
+next" means `current_line = X`.
 
-### Execution Flow
+Errors are returned as strings prefixed with `❌` rather than raised out of the executor
+for the ordinary case.
 
-```text
-User Code
-    ↓
-UI calls: interpreter.execute(code, language)
-    ↓
-Route to language executor
-    ↓
-Executor parses and executes
-    ↓
-Returns: "✅ Output\n" or "❌ Error\n"
-    ↓
-UI updates console and canvas
-```
+### Output conventions
+
+Every message the engine produces carries an emoji prefix, and the IDE's presentation
+depends on the distinction:
+
+| Prefix | Meaning |
+| --- | --- |
+| `❌` | Error or exception |
+| `✅` | Success confirmation |
+| `ℹ️` | Information |
+| `🎨` | Theme or UI change |
+| `🚀` | Execution event |
+| `🐢` | Turtle graphics action |
+| `📝` | Input prompt |
 
 ---
 
-## Language Executors
+## Extension points
 
-### Architecture Pattern
+### Adding a language
 
-Each language follows a stateless **function** pattern:
+1. **The executor**, in `native/bridge/time_warp/languages/my_lang.py`, as a function with
+   the signature above.
+2. **Register it in the bridge**: import it in `languages/__init__.py`, add
+   `Language.MY_LANG` in `core/interpreter.py`, and add the extension in
+   `Language.from_extension()` and `core/language_registry.py`.
+3. **Register it on the Qt side** in `native/src/ui/language.cpp`: display name, settings
+   key, extensions. The IDE needs this to name the language and to pick it from a file
+   name.
+4. **Add an example** under `Examples/my_lang/`, and a row to
+   `native/bridge/time_warp/tests/command_table.py` so every new command is covered by
+   `native/tools/command_matrix.py`.
 
-```python
-def execute_basic(interpreter: Interpreter, command: str, turtle: TurtleState) -> str:
-    """Execute a single BASIC command; return output text."""
-    # Parse and execute
-    return output_with_emoji_prefix
-```
+A language ported to C++ skips the bridge entirely: it gets a library, and
+`MainWindow::runCurrentDocument` dispatches to it the way Scheme does.
 
-### Key Design Rule
+### Adding a canvas command
 
-**Language executors MUST NOT:**
+1. Add the kind to `CanvasCommandKind` in `include/timewarp/canvas/command.hpp`, with the
+   payload documented in its comment.
+2. Give it a name in `src/canvas/command.cpp`.
+3. Say whether it collapses by adding it to `is_coalescible()` — or leaving it out, which
+   is the default — in `include/timewarp/canvas/command.hpp`. That single predicate is
+   the only thing deciding whether an adjacent duplicate is merged.
+4. Handle it in `TurtleCanvas::apply()`.
+5. Emit it from `bridge/worker.py`, or from `QueuedTurtleHost` in `host_adapter.hpp` for
+   a native engine.
 
-- ❌ Store UI widget references
-- ❌ Update canvas directly
-- ❌ Modify main window
+### Replacing a placeholder panel
 
-**Language executors CAN:**
+The right column's **Variables**, **Telemetry HUD** and **Debug** tabs are
+`PlaceholderPanel`s naming the Python class they stand in for, as are the outline dock
+and the console's **Terminal** tab. They are real widgets with the right size hints and
+minimums, so the *layout* is real and testable today; what they lack is behind them.
 
-- ✅ Read/write interpreter state (variables, turtle position)
-- ✅ Return strings as output
-- ✅ Access the interpreter and turtle state objects
+Replacing one is a single construction site in `buildRightColumn()` or
+`buildOutputColumn()`, plus wiring in `runCurrentDocument()` or `adoptBridgeWorker()` for
+anything that needs interpreter data.
 
-### The 6 Supported Languages
+Three widgets are partial rather than stubs, and their headers say so:
 
-**Line-by-line executors** (parsed per statement):
+- `ImmediateModePanel` is a REPL prompt and entry line with the layout contract the Python
+  sets (a 44px floor). **The interpreter plumbing behind it is not implemented**, and
+  nothing is connected to its `commandSubmitted` signal.
+- `FunctionKeyBar` reproduces the normal modifier layer and the deck selector, because the
+  layout needs the fixed 30px height and its two signals. The other two layers are not
+  invented — inventing them would mean inventing actions that do not exist yet.
+- `CrtOverlay` implements scanlines only. It is included at all for the *geometry
+  tracking*: it installs itself as an event filter on the widget it covers, rather than
+  reaching into `parent().rect()` from a resize handler as the Python version did, which
+  silently stops working the moment the overlay is reparented.
 
-#### 1. BASIC
-
-Features:
-
-- Variables and arrays (DIM statement)
-- Control flow (IF/ELSE, FOR, WHILE, DO...LOOP)
-- Subroutines (GOSUB/RETURN)
-- Turbo BASIC graphics
-  - SCREEN, COLOR, LINE, CIRCLE, PSET, PAINT
-
-#### 2. LOGO
-
-Features:
-
-- Turtle graphics (FORWARD, BACKWARD, RIGHT, LEFT)
-- Pen control (PENUP, PENDOWN)
-- Shapes (CIRCLE, RECTANGLE, POLYGON)
-- Procedures (TO/END definitions)
-- Recursion support
-
-Turtle State Tracking:
-
-- Position: `x`, `y` (-400 to 400 logical coords)
-- Heading: `angle` (0-360 degrees)
-- Pen: `pen_down`, `pen_color`, `pen_width`
-
-#### 3. PILOT
-
-Features:
-
-- T: text output (with $VAR / #VAR interpolation)
-- A: answer input, M: matching (wildcards, alternatives)
-- J:/U:/E: jumps, subroutine calls and returns; Y/N conditional suffixes
-- Used for CAI (Computer-Aided Instruction) lessons
-
-#### 4. COMAL
-
-Features:
-
-- Structured blocks: IF/ELIF/ELSE/ENDIF, FOR/NEXT, WHILE/ENDWHILE,
-  REPEAT/UNTIL, LOOP/ENDLOOP
-- Procedures: PROC/ENDPROC and FUNC/ENDFUNC with CALL
-- DIM arrays, DATA/READ/RESTORE, GOTO/GOSUB
-- Turtle graphics via MOVE/TURN/PENUP/PENDOWN/HOME
-
-#### 5. REXX
-
-Features:
-
-- SAY/PULL/PARSE typeless string handling
-- IF/THEN/ELSE, SELECT/WHEN/OTHERWISE
-- DO loops (TO/BY, WHILE, UNTIL, FOREVER, OVER)
-- Labels, CALL/ARG/RETURN, LEAVE/ITERATE
-- Full expression evaluator with `||` and abuttal concatenation
-
-**Whole-program executors** (1 language): Scheme.
-
-Each receives the full source text and returns output. Registered in
-`_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.
+Actions whose feature is not built — **Debug**, **Continue**, **Trace**, **Snippets**,
+**A+** — are present in the menu and toolbar but **marked not-ported and disabled**, with
+the reason attached, so that a greyed control and a missing control stay
+distinguishable.
 
 ---
 
-## UI Architecture
+## Tests and gates
 
-### Main Components
+Eleven C++ suites run by `ctest`, plus the engine's own pytest suite, two corpus gates and
+a command matrix. All of them must stay green, in every build tree.
 
-```text
-MainWindow
-├── MenuBar (File, Edit, Run, Debug, View, Tools, Help)
-├── Central Widget
-│   ├── CodeEditor (optionally split into two panes)
-│   ├── TabbedPanels
-│   │   ├── OutputPanel
-│   │   ├── GraphicsCanvas
-│   │   ├── VariablesInspector
-│   │   └── ...
-│   └── Dock widgets (Lessons, Document Outline, Debugger)
-├── Toolbar
-├── Function-Key Bar (Normal / Shift / Ctrl layers)
-└── StatusBar
-```
+| Gate | Command | What it protects |
+| --- | --- | --- |
+| C++ suites (11) | `make -C native test` | Lexer, evaluator, Scheme, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, Python bridge |
+| Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
+| Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
+| Engine tests | `make engine-test` | The bridge engine: the six executors, the evaluator, the validators |
+| Example corpus | `make smoke` | Every `Examples/**` program, through the real bridge, including the 14 that must produce ink |
+| Parity gates | both `*_differential_check.py` | The ported engines against the Python reference: 0 unexpected mismatches |
+| Command matrix | `native/tools/command_matrix.py` | One row per documented command, through the real bridge |
+| Version metadata | `Scripts/version_sync.py` | That every hand-written copy of the version agrees with `VERSION` |
 
-### Editor & Canvas
+Two of these exist for a failure the others cannot see:
 
-**CodeEditor** (`ui/editor.py`):
+- **The example corpus** is the gate for a language that runs "successfully" and draws
+  nothing, which is what a user reports as "the graphics don't show up". Five languages
+  once did exactly that. It counts the ink present on the final canvas — stable across
+  runs — rather than every intermediate frame, because that earlier metric moved by
+  hundreds between identical runs and could not be compared with anything.
+- **The command matrix** drives one row per documented command through the real bridge. It
+  is what found the BASIC keyword-boundary bug that silently swallowed assignments to any
+  variable whose name began with a keyword, the `ON TIMER` off-by-one, and Logo's `SHOW`,
+  which had never evaluated anything.
 
-- Syntax highlighting per language
-- Real-time validation
-- Line numbers, code folding
-- Find/Replace functionality
+The C++ build is its own linter: `-Wall -Wextra -Wpedantic -Wshadow -Wcast-qual
+-Wuseless-cast -Wlogical-op -Wnull-dereference` with `-Werror`, so a warning fails the
+build.
 
-**Canvas** (`ui/canvas.py`):
-
-- Qt-based graphics rendering
-- Zoom (0.1x to 5.0x) and pan support
-- Renders turtle graphics in real-time
-- 800x600 logical coordinates
-
-### Dock Panels
-
-- **Lessons** (`ui/lesson_panel.py`) — guided lessons with checkpoint verification, backed by `features/lesson_system.py`
-- **Document Outline** (F4) — navigate procedures and functions
-- **Debugger** (`ui/debug_panel.py`) — controls, watch list, call stack
-- **Variable Inspector** (`ui/variable_inspector.py`) — live variables
-- **Project tree** (`ui/project_tree.py`) and **Terminal** (`ui/terminal_widget.py`)
-
-### Menu System
-
-**File**: New, Open, Save, Save As, Recent Files, Export (PNG, SVG, HTML, Lesson Report), Print, Version History, Preferences, Exit
-**Edit**: Undo, Redo, Cut, Copy, Paste, Find, Replace, Find in Files, Go to Line, Insert Snippet, Format Code
-**Run**: Run Program, Reset Program, Run Selection, Run Both Split Panes, Clear Output/Canvas, Show Errors Only
-**Debug**: Start/Continue, Stop, Pause, Trace Into, Step Over, Step Out, Breakpoints
-**View**: Themes, Fonts, Zoom, Screen Mode, CRT Effects, Split Editor, Focus Mode, Telemetry HUD, Command Palette, Workspace Decks, Outline
-**Tools**: Compare Languages
-**Help**: User Manual, Context Help, Keyword Inspector, Lessons, Language Help, Browse Examples, Guided Tour, Keyboard Shortcuts, About
+Qt6 is discovered with `find_package(Qt6 QUIET COMPONENTS Core)`, plus `Widgets` for
+`timewarp_ui`. When they are absent the Qt-facing targets are skipped and everything else
+— including the queue's own tests — still builds and runs. Nothing outside the canvas Qt
+adapter, the debugger runner and `src/ui/` includes a Qt header.
 
 ---
 
-## Graphics System
+## Configuration and persistence
 
-### TurtleShape Primitives
+| What | Where | Note |
+| --- | --- | --- |
+| Window geometry, dock and toolbar state | `QSettings` — `TimeWarpStudio/TimeWarpStudio.conf` | Keys under `layout/` |
+| Splitter positions | `QSettings`, `layout/splitters` | An array whose index is positional, so reordering it without bumping the count restores the wrong geometry |
+| User content: projects, lesson progress, exports | `~/.time_warp/` | **Shared with the removed Python IDE on purpose** |
+| A missing or malformed setting | The layout default | A settings file from an older build leaves that splitter at its default rather than producing a window with a zero-width pane and no way back |
 
-Core drawing system with 50+ commands:
+The settings identity is deliberately **not** the Python IDE's (`TimeWarp` / `IDE`). The
+two schemas are unrelated, so sharing a scope would work today only because no key happens
+to collide — the kind of coincidence that becomes silent corruption the moment somebody
+adds a matching key. Unlike a build error, that would surface as a window restoring into a
+state the user cannot drag their way out of.
 
-```python
-class TurtleState:
-    x: float              # Position X
-    y: float              # Position Y
-    angle: float          # Heading 0-360
-    pen_down: bool        # Drawing enabled
-    pen_color: tuple      # RGB color
-    pen_width: int        # Pixel width
-```
-
-### Canvas Coordinate System
-
-```text
-     -400    0    400
-  300 ┌─────┬──────┐
-      │     │      │
-    0 ├─────•(0,0) ┤
-      │     │      │
--300 └─────┴──────┘
-```
-
-Canvas: 800x600 logical coordinates
-Turtle: Center at (0, 0)
-Angle: 0°=East, 90°=North, 180°=West, 270°=South
-
-### Drawing Operations
-
-Movement:
-
-- FORWARD, BACKWARD - Move and optionally draw
-- RIGHT, LEFT - Rotate turtle
-- SETPOSITION - Absolute move
-
-Drawing:
-
-- PENUP, PENDOWN - Control drawing
-- LINE - Draw line
-- CIRCLE - Draw circle
-- POINT - Draw single pixel
-
-Style:
-
-- SETCOLOR - Change pen color
-- SETWIDTH - Change pen width
-- CLEAR - Erase canvas
-- HOME - Reset to origin
+User *content* is the opposite case and gets the opposite answer. Content belongs to the
+user rather than to an implementation, so a program written in one build must open in the
+other; only settings are private. Carrying preferences across is a *migration* — read the
+Python settings once, translate the theme name and recent files, write this build's own
+keys — and it lands with the theme system, which is the first thing with anything worth
+migrating.
 
 ---
 
-## Debugger System
-
-### Features
-
-- **Breakpoints**: Stop at specific lines
-- **Stepping**: Step into/over statements
-- **Timeline**: Full execution history
-- **Variables**: Inspect values at each step
-- **Rewind**: Navigate backwards through execution
-
-### Timeline Recording
-
-Each execution step stored with:
-
-- Step number
-- Line number
-- Command executed
-- Variable snapshot
-- Turtle state snapshot
-- Output generated
-- Any errors
-
-### Debug Commands
-
-- Start / Continue (Ctrl+F9) - Start debugging, or continue to the next breakpoint when paused
-- Trace Into (F7) - Execute next, enter functions
-- Step Over (F8) - Execute next, skip functions
-- Step Out (Shift+F8) - Run until the current routine returns
-- Pause (Ctrl+F7) - Pause execution
-- Reset Program (Ctrl+F2) - Halt program or debug session
-- Toggle Breakpoint (Ctrl+F8) - Add/remove breakpoint
-- View Timeline - Browse execution history
-
----
-
-## Data Flow
-
-### Execution Pipeline
-
-```text
-User Code in Editor
-        ↓
-[User clicks Run]
-        ↓
-MainWindow.on_run_clicked()
-        ↓
-Create ExecutionThread
-        ↓
-ExecutionThread.run()
-        ↓
-interpreter.execute(code, language)
-        ↓
-Language Executor processes code
-        ↓
-Emit signals with results
-        ↓
-Main thread receives signals
-        ↓
-Update UI (console, canvas, variables)
-```
-
-### Signal/Slot Communication
-
-Qt signal/slot pattern for thread-safe communication:
-
-```python
-# Signal definitions (PySide6)
-from PySide6.QtCore import Signal, Slot
-
-state_changed = Signal(dict)  # Full state update
-output_received = Signal(str)
-error_received = Signal(str)
-
-# Slots (received in main thread)
-@Slot(dict)
-def on_state_changed(self, state):
-    # Update all UI components
-    pass
-```
-
----
-
-## Extension Points
-
-### Adding a New Language
-
-1. Create `languages/newlang.py`:
-
-```python
-from __future__ import annotations
-from typing import TYPE_CHECKING
-
-if TYPE_CHECKING:
-    from ..core.interpreter import Interpreter
-    from ..graphics.turtle_state import TurtleState
-
-def execute_newlang(interpreter: Interpreter, source: str, turtle: TurtleState) -> str:
-    """Execute NewLang source code."""
-    output_lines = []
-    try:
-        # Parse and execute source
-        output_lines.append("✅ Result")
-    except Exception as e:
-        output_lines.append(f"❌ {e}")
-    return "\n".join(output_lines) + "\n"
-```
-
-1. Register in `core/interpreter.py`:
-
-```python
-from ..languages.newlang import execute_newlang
-# Add Language.NEWLANG enum member
-# Add entry in _init_whole_program_executors()
-```
-
-1. Add detection in `execute()` method
-
-1. Create examples in `Examples/newlang/`
-
-1. Write tests in `native/bridge/time_warp/tests/test_lang_newlang.py`
-
-### Adding a Dock Panel
-
-1. Create the widget in `ui/new_panel.py`
-
-2. Create it on demand from `ui/main_window.py` and dock it:
-
-```python
-self._new_panel = NewPanel(self)
-self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self._new_panel)
-```
-
-1. Add menu toggle in View menu:
-
-```python
-self.action_show_new = self.menu_view.addAction("New Panel")
-self.action_show_new.setCheckable(True)
-self.action_show_new.triggered.connect(self.new_panel.show)
-```
-
-### Adding a Theme
-
-1. Define in `ui/themes.py` by adding a new `Theme(...)` entry to the themes dict:
-
-```python
-"My Custom": Theme(
-    bg="#1e1e2e",
-    fg="#cdd6f4",
-    accent="#89b4fa",
-    # ... colors for all UI elements
-),
-```
-
-1. The theme is automatically available in the theme menu
-
----
-
-## Threading Model
-
-Time Warp Studio employs a multi-threaded architecture to ensure responsive UI interactions while executing potentially long-running code. Below is an overview of the threading model:
-
-### Key Threads
-
-1. **Main Thread (UI)**:
-
-   - Handles all user interactions, including editor updates, canvas rendering, and menu actions.
-   - Ensures that the application remains responsive during execution.
-
-2. **Interpreter Thread**:
-
-   - Executes user code in a separate thread to prevent blocking the UI.
-   - Communicates with the main thread via thread-safe queues.
-
-3. **Worker Threads**:
-
-   - Used for auxiliary tasks such as file I/O, syntax highlighting, and background processing.
-
-### Communication
-
-- **Thread-Safe Queues**:
-  - The `queue.Queue` module is used for passing messages between threads.
-  - Ensures safe and efficient communication without race conditions.
-
-- **Signals and Slots**:
-  - PySide6's signal-slot mechanism is used for notifying the UI of execution results or errors.
-
-### Safeguards
-
-- **Deadlock Prevention**:
-  - All long-running tasks are offloaded to worker threads.
-  - The main thread never waits indefinitely for a response.
-
-- **Error Handling**:
-  - Exceptions in worker threads are captured and reported back to the main thread.
-
----
-
-## Configuration & Persistence
-
-### Config File
-
-Location: `~/.time_warp/config.json`
-
-Contains:
-
-- Theme preference
-- Editor settings (font, size)
-- Canvas settings
-- Recent files
-- Color schemes
-
-Lesson progress is stored separately in `~/.time_warp/progress.json`.
-
-### Automatic Saving
-
-- Config auto-saved on changes
-- Windows geometry saved on close
-- Recent files list maintained
-- Theme choice persisted
-
-### Theme System
-
-33 built-in themes organized by category:
-
-**Workstation (5):** Neo-90s Workstation, Borland Turbo Vision 1991, NeXTSTEP Gunmetal, Amiga Workbench 2.0, VGA Amber Lab
-
-**Dark (11):** Dracula, Monokai, VS Code Dark, GitHub Dark, Nord, One Dark Pro, Solarized Dark, Ocean, Catppuccin Mocha, Gruvbox Dark, Tokyo Night
-
-**Light (6):** Gruvbox Light, Catppuccin Latte, VS Code Light, GitHub Light, Solarized Light, Spring
-
-**Specialty (2):** High Contrast Dark, High Contrast Light
-
-**Accessibility (2):** Dyslexia Friendly, Accessible Dark Blue
-
-**Retro CRT (7):** Amber Monochrome, Green Monochrome, IBM PC CGA, Commodore 64, Apple II, DOS Blue, ZX Spectrum
-
----
-
-## Module Overview
-
-### Core (`core/`)
-
-- `interpreter.py` — Main dispatcher and 9-language registry
-- `debugger.py` — Step-through debugger with execution timeline and rewind
-- `config.py` — Canonical paths (`~/.time_warp/`) and settings
-- `language_registry.py`, `project_manager.py`, `sandbox.py` — Language metadata, project files, Python sandbox
-
-### Features (`features/`)
-
-- `lesson_system.py` + `lessons.json` — 12 lessons with checkpoint verification
-- `game_support.py`, `gamepad.py` — Game state, timers, and input handling
-- `music.py`, `speech.py` — Sound and speech output
-- `shapes.py`, `particles.py`, `fractals.py` — Graphics helpers
-- `autosave_manager.py`, `classroom_mode.py`, `examples_browser.py`, `project_templates.py`, `snippets.json`
-
-### Languages (`languages/`)
-
-- `base.py` — Executor protocol definition
-- **Line-by-line executors (5):** `basic.py`, `pilot.py`, `logo.py`, `comal.py`, `rexx.py`
-- **Whole-program executors (1):** `scheme.py`
-- `lang_utils.py`, `parser_patterns.py` — Shared parsing utilities
-
-### UI (`ui/`)
-
-- `main_window.py` — Main IDE window (5 mixins, 4,000+ lines)
-- `editor.py` — Code editor with syntax highlighting and minimap
-- `canvas.py` — Turtle graphics canvas with zoom/pan
-- `output.py` — Console output with interpreter threads
-- `themes.py` — 28-theme manager (dark, light, retro CRT, accessibility)
-- `debug_panel.py` — Debugger controls, watch, and call-stack
-- `command_palette.py` — F10 / Ctrl+Shift+P command palette
-- `function_key_bar.py` — Turbo-style Function-Key Bar
-- `lesson_panel.py` — Lessons dock
-- `mixins/` — Classroom, debug, export, file ops, help (5 mixins)
-
-### Graphics (`graphics/`)
-
-- `turtle_state.py` — Turtle position, heading, pen state (~600 lines)
-- `art_toolkit.py` — Drawing primitives and shapes
-- `pixel_canvas.py` — Pixel-level canvas operations
-- `turtle_gallery.py` — Pre-built turtle art examples
-
-### Utils (`utils/`)
-
-- `expression_evaluator.py` — Safe math evaluation (hand-written parser, no `eval()`)
-- `string_evaluator.py` — String expression evaluation
-- `error_hints.py` — Syntax error suggestions
-- `validators.py` — Input validation helpers
-- `code_formatter.py` — Code formatting utilities
-- `logging_config.py` — Structured logging setup
-
-### Tests
-
-The C++ suites are the primary gate — 11 of them, driven by CTest from
-`native/tests/`:
-
-```bash
-ctest --test-dir native/build --output-on-failure
-```
-
-The bridge engine keeps its own pytest suite in `native/bridge/time_warp/tests/`
-(the six executors, the expression evaluator, the validators), run with
-`make engine-test`. The corpus-wide gate is `native/tools/example_smoke.py`, which
-runs all 44 example programs through the real bridge and fails if one of the 14
-that must draw does not.
-
-### Scripts (`Scripts/`)
-
-Build, launch, and utility scripts — `build_native.sh`, `generate_icon.py`,
-`version_sync.py`, `audit_interpreters.py`, `launch_editor.sh`, and `launch_ide.bat`.
-
----
-
-## Performance Characteristics
-
-### Startup
-
-- Cold start: 2-5 seconds
-- Theme loading: 0.5 seconds
-- Interpreter init: 1 second
-- UI rendering: 0.5 seconds
-
-### Execution
-
-- BASIC: ~1000 statements/second
-- Logo: 100+ turtle commands/second
-- Debugger overhead: ~10% slower
-
-### Memory
-
-- Base: 200-300 MB
-- Per file: +5-10 MB
-- Large graphics: +50-100 MB per 1000 commands
-
----
-
-## Contributing
-
-### Code Style
-
-- Python: PEP 8
-- Linter/formatter: ruff
-- Types: pyright (`make typecheck`)
-- Docstrings: All public functions
-
-### Testing
-
-```bash
-make test        # pytest suite (offscreen Qt)
-make smoke       # Fast smoke test without pytest
-make demos       # Run all example programs
-make lint        # ruff check
-make typecheck   # pyright
-```
-
-### PR Process
-
-1. Fork repository
-2. Create feature branch
-3. Make changes following style guide
-4. Write/update tests
-5. Run test suite (all pass)
-6. Submit PR with description
-
----
-
-**For more details:**
-
-- [README.md](../README.md) — Project overview and quick start
-- [CONTRIBUTING.md](../CONTRIBUTING.md) — Contribution guidelines
-- [CHANGELOG.md](../CHANGELOG.md) — Version history
-- [ROADMAP.md](ROADMAP.md) — Development roadmap
-- Source: `native/bridge/time_warp/` (the bridge engine)
+## What is not here yet
+
+[ROADMAP.md](ROADMAP.md) is the authority. The architectural gaps, in one place:
+
+- **Five of the six languages run out of process.** Each port removes a bridge path and
+  weakens the argument for the child process.
+- **`timewarp_expr` is not linked into the application**, so the expression evaluator in a
+  Run is still Python's.
+- **The debugger is a runner, not a UI.** `DebuggerRunner` supports pause, step and
+  breakpoints, and `debug_tests` covers the machinery; the panels that would drive it are
+  placeholders.
+- **No syntax highlighting, minimap, find/replace, outline or formatter.**
+- **No theme system** — the stylesheet is there, the 33 themes are not.
+- **Packaging stops at `make install`**: a desktop entry and an icon. No distro packages,
+  no installers.

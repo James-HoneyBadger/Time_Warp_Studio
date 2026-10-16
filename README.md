@@ -33,7 +33,10 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Turtle canvas** — the drawing appears as it is made, with zoom, pan, grid, auto-fit and a turtle marker
 - **Documents** — tabs, per-file language detection, unsaved-change prompts, new/open/save/save-as
 - **Run controls** — Run (F9) and Stop, with a status bar showing language, cursor position and execution state
-- **Native engines** — the shared expression evaluator and Scheme run in-process with no Python at all
+- **Native engines** — Scheme runs in-process with no Python at all; the expression
+  evaluator (`timewarp_expr`) is native C++ too, but nothing calls it yet, so
+  expressions inside a Run are still evaluated by the bridge (see
+  [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md))
 
 ### What is still being built
 

@@ -102,16 +102,20 @@ unit test)
 ## Next: documentation accuracy
 
 Documentation that overstates the product costs a newcomer the same time a bug does,
-and is harder to notice. Two claims have been corrected: the editor was described as
+and is harder to notice. Three claims have been corrected: the editor was described as
 having per-language syntax highlighting (there is no `QSyntaxHighlighter` anywhere),
-and BASIC was described as having a `SPEAK` command (the executor dispatches `SAY`;
-`SPEAK` reports "Unknown BASIC command").
+BASIC was described as having a `SPEAK` command (the executor dispatches `SAY`;
+`SPEAK` reports "Unknown BASIC command"), and the README described the shared
+expression evaluator as running in-process when `timewarp_expr` is not linked into the
+application at all — nothing under `src/ui/` includes it and `timewarp_ui` does not link
+it, so expressions in a Run are still the Python engine's.
 
-`docs/ARCHITECTURE.md` is still largely a PySide6-era document — its UI architecture,
-signal/slot, threading, theme-manager and module-inventory sections describe the
-implementation that was removed. It now carries a prominent accuracy note naming what
-is stale, but the page needs rewriting around the Qt application and the engine. Until
-it is, treat `native/README.md` as the description of the shipping product.
+`docs/ARCHITECTURE.md` has been **rewritten** around the Qt application and the engine.
+It no longer describes the removed PySide6 implementation, and it names what is not
+wired up rather than assuming it: the expression evaluator that does not participate in
+a Run, the debugger that is a runner without panels, the REPL whose plumbing is absent,
+and the placeholder tabs. It is now the system-level description; `native/README.md`
+remains the detail on the C++ libraries.
 
 ---
 

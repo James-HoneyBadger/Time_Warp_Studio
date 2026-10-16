@@ -5,7 +5,9 @@
 // Mirrors `Language` and `Language.from_extension()` in the Python
 // implementation (`core/interpreter.py`), including the file extensions, so the
 // two agree about what a `.logo` file is. The bridge that runs the unported
-// languages and the syntax highlighter both key off this.
+// languages keys off this, and so will a syntax highlighter when there is one:
+// nothing in the tree recolours source today, and `docs/ROADMAP.md` records it
+// as unported rather than merely unfinished.
 
 #pragma once
 
