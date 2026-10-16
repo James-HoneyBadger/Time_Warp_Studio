@@ -1,0 +1,42 @@
+# Who is asked to review what.
+#
+# GitHub reads this file to decide whose review a pull request requests. It only
+# has an effect if the branch requires review from code owners, so today it is
+# mostly a statement of intent: one maintainer, and everything is theirs.
+#
+# It is written out rather than left as a single `*` line because the interesting
+# part is what happens when a second pair of hands arrives. The patterns below
+# name the areas where a change is easy to make and hard to check, so that the
+# person who understands that area is asked about it. Add specific patterns above
+# the catch-all as they become true; until then they all resolve to the
+# maintainer.
+
+# Every file, unless something more specific below matches.
+*                       @James-HoneyBadger
+
+# The engine that runs the languages, and the reference the ports are checked
+# against. A mistake here is a wrong answer in a language rather than a broken
+# window, which is much harder to notice.
+/native/bridge/         @James-HoneyBadger
+
+# The curriculum. It is data, so nothing exercises it by accident -- a lesson
+# nobody can finish would sit in the tree looking correct.
+/native/bridge/time_warp/features/lessons.json  @James-HoneyBadger
+
+# The lessons and the tools that drive them: what a learner sees, and the marking
+# a teacher trusts.
+/docs/lessons/          @James-HoneyBadger
+/native/tools/learn.py  @James-HoneyBadger
+/native/tools/teach.py  @James-HoneyBadger
+
+# The gates themselves. A change to these decides what "green" means for every
+# other change, so it deserves a second look even when it looks harmless.
+/native/tests/          @James-HoneyBadger
+/.github/workflows/     @James-HoneyBadger
+
+# The documents that are read as statements about the product. Each of these has
+# claimed something untrue at least once.
+/README.md              @James-HoneyBadger
+/docs/ARCHITECTURE.md   @James-HoneyBadger
+/docs/ROADMAP.md        @James-HoneyBadger
+/CHANGELOG.md           @James-HoneyBadger

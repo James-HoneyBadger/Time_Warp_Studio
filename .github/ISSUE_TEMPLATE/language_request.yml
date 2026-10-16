@@ -1,0 +1,104 @@
+# A form of its own because a language is not a feature: it has a documented cost
+# (an executor, a test module, an example, command-table rows, a lesson, a
+# tutorial, a reference section and a row in the IDE's language table) and a
+# documented reason for existing (the studio teaches a spread of eras and
+# paradigms, and a language that duplicates a slot it already has is the one
+# request that gets refused).
+name: Language request
+description: Propose a language for the studio to support.
+title: "[Language] "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ten languages are supported today, and they were chosen to cover a spread
+        rather than a list: BASIC and COMAL for line-oriented imperative, Logo for
+        turtle graphics, PILOT for computer-aided instruction, REXX for string
+        processing, Scheme for functional, APL for array, FOCAL as the other
+        teaching language of 1969, CHIP-8 for the machine underneath, and
+        Smalltalk for objects.
+
+        What this form is really asking is: **which slot would it fill that is
+        empty, and what would a learner understand after it that they do not
+        understand now?**
+
+        See [docs/LANGUAGE_GUIDE.md](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/LANGUAGE_GUIDE.md)
+        for what each language is taught for.
+
+  - type: input
+    id: language
+    attributes:
+      label: Which language?
+      placeholder: "Snobol, Prolog, Forth, ..."
+    validations:
+      required: true
+
+  - type: input
+    id: era
+    attributes:
+      label: When was it designed, and by whom?
+      description: The studio's languages all have a date in the reference table, and it is part of how they are introduced.
+      placeholder: "1971, Ralph Griswold"
+    validations:
+      required: false
+
+  - type: textarea
+    id: paradigm
+    attributes:
+      label: What does it teach that the ten do not?
+      description: |
+        The important question. "Another BASIC" is the answer that gets a request
+        closed, and it is worth saying so plainly rather than letting somebody
+        write an executor first.
+    validations:
+      required: true
+
+  - type: textarea
+    id: sample
+    attributes:
+      label: A short program in it
+      description: Something a learner would meet in the first lesson. This becomes the example and the first checkpoint.
+      render: text
+    validations:
+      required: false
+
+  - type: textarea
+    id: reference
+    attributes:
+      label: Is there a reference implementation to work from?
+      description: |
+        A public implementation with a test suite is what makes a port verifiable.
+        The bridge runs Python implementations and the differential gates compare
+        the C++ ports against them, so a language with nothing to compare against
+        would be its own correctness argument.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: What would come with it
+      description: A language is not finished until all of these exist. Tick what you would be able to help with.
+      options:
+        - label: The executor, and a test module for it
+          required: false
+        - label: An example program under `Examples/`
+          required: false
+        - label: Command-table rows, so the command matrix covers it
+          required: false
+        - label: A lesson (two, and a plan), a tutorial, and a reference section
+          required: false
+        - label: Nothing yet — I am asking whether it is worth doing
+          required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I checked the [language list](https://github.com/James-HoneyBadger/Time_Warp_Studio#multi-language-support) and this is not already supported.
+          required: true
+        - label: I searched the existing issues for the same language.
+          required: true

@@ -1,0 +1,70 @@
+# Feature requests go through a form because the useful ones all answer the same
+# question -- what are you trying to do? -- and a bare title cannot.
+name: Feature request
+description: Suggest a change to the application, the languages, or the documentation.
+title: "[Feature] "
+labels:
+  - enhancement
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Before you file:** [docs/ROADMAP.md](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/ROADMAP.md)
+        is the list of what is already planned and what is deliberately out of scope.
+        Something on that list does not need an issue — although a comment on *why* it
+        matters to you is welcome, because it changes the order.
+
+        For a **new language**, use the language request form instead.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: |
+        The situation, not the solution. "I want to show a class how a loop runs, one
+        iteration at a time" is more useful than "add a step button", because it leaves
+        room for a better answer than the one either of us thought of.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of the project?
+      options:
+        - The IDE (window, editor, canvas, tabs, menus)
+        - A language (how it parses, evaluates or prints)
+        - The lessons and the lesson panel
+        - The teaching tools (`teach.py`) or the learner tool (`learn.py`)
+        - Documentation, tutorials or lesson plans
+        - Packaging, installing or building
+        - Something else
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What else could solve it?
+      description: Including "nothing, this is the only way" — that is a useful answer too.
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I read [docs/ROADMAP.md](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/ROADMAP.md), and this is not already planned or ruled out.
+          required: true
+        - label: I searched the existing issues for the same suggestion.
+          required: true
+        - label: I would be willing to work on this myself.
+          required: false

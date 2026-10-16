@@ -79,7 +79,7 @@ make help            # what the root Makefile offers
 
 ```bash
 ctest --test-dir native/build --output-on-failure     # 11 suites
-python3 native/tools/example_smoke.py                 # all 44 examples
+python3 native/tools/example_smoke.py                 # all 48 examples
 ```
 
 Both must pass. See [README_TESTING.md](README_TESTING.md) for the full set,
@@ -108,7 +108,7 @@ directory, in that order. Set `TIME_WARP_WORKER` (full path to `worker.py`) or
 every path it tried.
 
 **A bridged language says no interpreter was found.** Install Python 3.10+ or
-point `TIME_WARP_PYTHON` at one. Only the five bridged languages need it.
+point `TIME_WARP_PYTHON` at one. Only the nine bridged languages need it.
 
 **`make test` runs the wrong Python.** The bridge's pytest suite comes from
 `.venv` if it exists. Create one with `python3 -m venv .venv` and
@@ -118,7 +118,7 @@ point `TIME_WARP_PYTHON` at one. Only the five bridged languages need it.
 
 ## 6. The language bridge (already bundled)
 
-Nothing to install. What the five unported languages need is:
+Nothing to install. What the nine unported languages need is:
 
 - `native/bridge/worker.py` — the worker the IDE spawns
 - `native/bridge/time_warp/` — the engine it drives
@@ -160,7 +160,7 @@ That installs four things, and they have to stay together:
 
 The bridge goes in `share/time_warp` because that is where the application looks
 for it (`../share/time_warp` relative to the binary), so an installed build needs
-no path configuration. It still needs `python3` on `PATH` for the five bridged
+no path configuration. It still needs `python3` on `PATH` for the nine bridged
 languages.
 
 ### What is not packaged yet

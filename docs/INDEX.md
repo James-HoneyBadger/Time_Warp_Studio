@@ -53,6 +53,8 @@ One per active language, each written to be worked through:
 | Understand the design | [ARCHITECTURE.md](ARCHITECTURE.md) |
 | Add or change a language | [`native/README.md`](../native/README.md), then the bridge |
 | Contribute | [CONTRIBUTING.md](../CONTRIBUTING.md) |
+| Ask a question, report a bug, ask for a feature | [`.github/SUPPORT.md`](../.github/SUPPORT.md), then the issue forms |
+| Report a security problem | [SECURITY.md](../SECURITY.md) — privately |
 | See example programs | [`Examples/CATALOG.md`](../Examples/CATALOG.md) |
 
 ---

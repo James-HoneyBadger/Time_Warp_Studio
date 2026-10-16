@@ -49,12 +49,12 @@ text going in and a stream of JSON messages coming back.
 | `timewarp_debugger` | `native/src/debugger/` | its own `QThread` | Runs a Scheme program and services pause / step / breakpoint requests |
 | `timewarp_bridge` | `native/src/bridge/` | GUI thread, driving a `QProcess` | The IDE's end of the Python bridge |
 | `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | *not linked into the application* | The ported expression evaluator — see the note below |
-| the bridge engine | `native/bridge/` | a separate Python process | The five unported languages |
+| the bridge engine | `native/bridge/` | a separate Python process | The nine unported languages |
 
 > **`timewarp_expr` is not yet part of a Run.** It builds, it has 485 checks of its
 > own, and `native/tools/differential_check.py` compares it against the Python
 > reference on a fixed corpus — but nothing under `src/ui/` includes it and
-> `timewarp_ui` does not link it. Expressions in the five bridged languages are
+> `timewarp_ui` does not link it. Expressions in the nine bridged languages are
 > still evaluated by the Python engine. The library is the ported replacement for
 > `utils/expression_evaluator.py`, waiting for the executors that call it to be
 > ported; the parity gate is what keeps it honest in the meantime.
@@ -95,7 +95,7 @@ flowchart LR
         DR2["DebuggerRunner::run()<br/>Scheme machine"] --> H[QueuedTurtleHost]
     end
     subgraph PP["worker process"]
-        WK["worker.py<br/>five language executors"]
+        WK["worker.py<br/>nine language executors"]
     end
     H -- "push() then wake()" --> Q[(CanvasCommandQueue)]
     Q --> B
@@ -480,9 +480,18 @@ depends on the distinction:
 3. **Register it on the Qt side** in `native/src/ui/language.cpp`: display name, settings
    key, extensions. The IDE needs this to name the language and to pick it from a file
    name.
-4. **Add an example** under `Examples/my_lang/`, and a row to
+4. **Add an example** under `Examples/my_lang/` — adding the ones that draw to
+   `DRAWING_EXAMPLES` in `native/tools/example_smoke.py`, or a program that draws
+   nothing passes by being silent — and a row to
    `native/bridge/time_warp/tests/command_table.py` so every new command is covered by
    `native/tools/command_matrix.py`.
+5. **Add a lesson** so the curriculum can teach it: two lessons in
+   `native/bridge/time_warp/features/lessons.json`, then `native/tools/teach.py validate`
+   until it is silent. A checkpoint is checked by *running* the learner's program, so this
+   is also the only thing that proves the lesson's transcript.
+6. **Document it**: a reference section in `docs/LANGUAGE_GUIDE.md`, a tutorial in
+   `docs/tutorials/` (the docs workflow requires one per language), a row in the README's
+   language table, and a line per example in `Examples/CATALOG.md`.
 
 A language ported to C++ skips the bridge entirely: it gets a library, and
 `MainWindow::runCurrentDocument` dispatches to it the way Scheme does.

@@ -14,24 +14,32 @@ This project is committed to providing a welcoming and inclusive environment. Al
 
 ### 1. Report Bugs
 
-Found a bug? Report it on GitHub Issues:
+Found a bug? Use the
+[bug report form](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues/new?template=bug_report.yml).
+It asks for the four things needed to reproduce a problem, because a prose issue
+usually leaves one of them out:
 
-1. **Check existing issues** - Maybe already reported
-2. **Create new issue** with:
-   - Clear title and description
-   - Steps to reproduce
-   - Expected vs actual behavior
-   - System info (OS, Python version, hardware)
-   - Error messages or screenshots
+1. **Check [docs/ROADMAP.md](docs/ROADMAP.md) first.** Themes, find/replace,
+   auto-completion, the examples browser and the debugger panels are deliberately
+   not built yet, so a missing feature from that list is a feature request rather
+   than a regression.
+2. **Check existing issues** — it may already be reported.
+3. **Fill in the form.** The environment it asks for (built from source or
+   installed, and the platform) changes where to look: the two take different
+   paths to the bridge.
 
 ### 2. Suggest Features
 
-Have an idea? Open a GitHub Discussion:
+Use the [feature request form](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues/new?template=feature_request.yml).
+The question it is really asking is **what are you trying to do?** — the situation
+rather than the solution, because that leaves room for a better answer than either
+of us had in mind.
 
-1. **Describe the feature** clearly
-2. **Explain the use case** - Why is it needed?
-3. **Provide examples** - How would it work?
-4. **Discuss alternatives** - What else could solve this?
+For a **new language**, use the
+[language request form](https://github.com/James-HoneyBadger/Time_Warp_Studio/issues/new?template=language_request.yml).
+It asks what gap the language fills and what it costs, because a language is not
+one file: an executor, the enum and registry entry, the IDE's language table, an
+example, command-table rows, a tutorial, a reference section and two lessons.
 
 ### 3. Improve Documentation
 
@@ -43,6 +51,35 @@ Documentation needs constant improvement:
 - Improve README and guides
 
 ### 4. Write Code
+
+Three recipes cover most contributions:
+
+- **A language.** The procedure is in
+  [ARCHITECTURE.md § Adding a language](docs/ARCHITECTURE.md#adding-a-language) and
+  [FORMAT.md § 9](docs/lessons/FORMAT.md#9-adding-lessons-for-a-new-language). A
+  language is not finished until every item exists, and a PR that stops halfway
+  leaves a language the IDE knows but the lesson panel cannot teach: the executor,
+  the enum and `core/language_registry.py`, the IDE's table in
+  `native/src/ui/language.cpp`, an example under `Examples/`, command-table rows, a
+  tutorial, a reference section, and two lessons.
+- **A command.** Add it to the executor, add a row to
+  `native/bridge/time_warp/tests/command_table.py`, and run
+  `python3 native/tools/command_matrix.py`. The row is what proves the command
+  produces output, drawing or a reported error — silence is this project's
+  characteristic bug. If a row's label is prose, name the command the inventory
+  knows in `also=(...)`, or it is reported as untested forever.
+- **A lesson.** `python3 native/tools/teach.py new <id> --language NAME` prints a
+  skeleton the loader accepts, `--append` adds it to the curriculum, and
+  `teach.py validate` says what is still missing. It refuses a solution that does
+  not pass its own checkpoint and a starter that already passes, unless
+  `starter_is_broken` records that the failure *is* the lesson. Then regenerate
+  the plans with `teach.py write-plans docs/lessons/plans`.
+- **Documentation.** `.github/workflows/docs.yml` enforces the parts that can be
+  checked: every guide [docs/INDEX.md](docs/INDEX.md) promises exists, every
+  language has a tutorial, and the lesson plans match the curriculum.
+
+A change that alters a program's output is a documentation change too: the guides
+and the lessons contain transcripts of what programs print.
 
 ### 5. Write Tests
 
@@ -59,9 +96,15 @@ Help improve code quality:
 
 ### Prerequisites
 
-- Python 3.10 or higher
-- Git
-- Basic command-line knowledge
+The application is C++20 and Qt6. Python is needed only for the temporary bridge
+engine, which runs the nine languages that are not ported to C++ yet.
+
+| To work on | You need |
+| ---------- | -------- |
+| The IDE and the C++ suites | A C++20 compiler (GCC 11+ or Clang 14+), CMake 3.20+, Qt6 (Widgets, Core, Gui) |
+| The bridge engine | Python 3.10 or higher, standard library only |
+| The documentation gates | Python 3, and `node` for `markdownlint-cli2` |
+| Any of it | Git and a command line |
 
 ### Clone Repository
 
@@ -92,8 +135,10 @@ cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
 cmake --build native/build -j
 ```
 
-Contributors who touch the five bridged languages (BASIC, PILOT, Logo, COMAL,
-REXX) also need the bridge's test tooling:
+Contributors who touch a bridged language also need the bridge's test
+tooling. Nine of the ten languages run through it — BASIC, PILOT, Logo, COMAL,
+REXX, FOCAL, APL, CHIP-8 and Smalltalk; Scheme is the only one with a C++
+interpreter:
 
 ```bash
 python3 -m venv .venv
@@ -131,9 +176,15 @@ Both should work without errors.
 
 ### Bridge engine code (Python)
 
-The Python in `native/bridge/` is the temporary engine for the five unported
-languages. It is standard-library only, `ruff` clean, and each executor is a
-stateless function.
+The Python in `native/bridge/` is the temporary engine for the nine languages
+that are not ported to C++. It is standard-library only, `ruff` clean, and each
+executor is a stateless function returning text with an emoji prefix.
+
+Two things in there are not executors and break just as easily: the lesson
+curriculum (`features/lessons.json`) and the teacher's side
+(`features/classroom_mode.py`). A checkpoint is checked by *running* the learner's
+program, so an executor change can fail a lesson without touching the lesson —
+which is why `make engine-test` is not optional here.
 
 ```bash
 make lint        # ruff check native/bridge
@@ -233,16 +284,10 @@ On GitHub:
 
 1. Click "New Pull Request"
 2. Select your feature branch
-3. Fill in PR details:
-   - **Title**: Clear, concise description
-   - **Description**: What does this change?
-   - **Why**: Why is this change needed?
-   - **Testing**: How did you test it?
-   - **Checklist**:
-     - [ ] Tests pass
-     - [ ] Code follows style guide
-     - [ ] Documentation updated
-     - [ ] No breaking changes (or documented)
+3. Fill in the form GitHub shows you. It is
+   [.github/pull_request_template.md](.github/pull_request_template.md), and every
+   item on it is either a gate that must have been run or a decision no gate can
+   make. There is a table for the gate results; fill in what you ran.
 
 Example PR description:
 
@@ -388,11 +433,14 @@ Links to related docs or code.
 
 ## Adding a New Language
 
-A language that is not yet native runs in the bridge, which is temporary by
-design: each language ported to C++ deletes its path through it. Registering a
-seventh language means touching the bridge and the Qt side.
+The procedure is in
+[ARCHITECTURE.md § Adding a language](docs/ARCHITECTURE.md#adding-a-language); this
+is the checklist it implies. A language is a feature rather than a file: the IDE
+has to know it, the corpus has to exercise it, and the lesson panel has to be able
+to teach it. Stopping after step 2 leaves a language the tests know and the IDE
+cannot open.
 
-### 1. Create Executor Module
+### 1. Create the executor
 
 File: `native/bridge/time_warp/languages/newlang.py`
 
@@ -404,76 +452,83 @@ if TYPE_CHECKING:
     from ..core.interpreter import Interpreter
     from ..graphics.turtle_state import TurtleState
 
+
+class NewLangError(Exception):
+    """Raised while parsing or evaluating NewLang; reported with the error emoji."""
+
+
 def execute_newlang(interpreter: Interpreter, source: str, turtle: TurtleState) -> str:
-    """Executor for NewLang language."""
+    """Execute NewLang source and return output lines."""
     output_lines = []
     try:
-        # Parse and execute
-        result = _parse_and_execute(source)
-        output_lines.append(f"✅ {result}")
-    except Exception as e:
-        output_lines.append(f"❌ Error: {e}")
+        output_lines.append(f"✅ {_parse_and_execute(source)}")
+    except NewLangError as exc:
+        output_lines.append(f"❌ NewLang: {exc}")
     return "\n".join(output_lines) + "\n"
-
-def _parse_and_execute(source: str) -> str:
-    """Parse and execute."""
-    pass
 ```
 
-### 2. Register Executor
+Errors are *returned as a line beginning with the error emoji*, never raised out
+of the executor: the interpreter, the canvas and the lesson checker all read the
+returned text.
 
-File: `native/bridge/time_warp/core/interpreter.py`
+### 2. Register it
 
-```python
-from ..languages.newlang import execute_newlang
-# Add Language.NEWLANG enum member
-# Add entry in _WHOLE_PROGRAM_EXECUTORS dict (whole-program languages only)
-```
+- `languages/__init__.py` — import and export the executor
+- `core/interpreter.py` — the `Language` enum member, the import, the dispatch
+  entry, `Language.from_extension()`, and `_WHOLE_PROGRAM_EXECUTORS` if the
+  executor takes the whole source at once rather than one line at a time
+- `core/language_registry.py` — display name, folder name, extensions and
+  execution mode (`line` or `whole`)
+- `features/classroom_mode.py` — the handout file extension
+- `native/src/ui/language.cpp` — display name, settings key and extensions. CHIP-8
+  is the trap here: the enum member is `CHIP8` and the display name is `CHIP-8`
 
-Also import it in `native/bridge/time_warp/languages/__init__.py` and add the
-extension in `core/language_registry.py`.
+`test_interpreter_inventory.py` asserts the registry and the enum are the same
+set, so half an entry fails the suite rather than shipping.
 
-### 3. Add Auto-Detection
-
-Add to `Language.from_extension()` in `core/interpreter.py`, and to the Qt-side
-language table in `native/src/ui/language.cpp` so the IDE knows the display name,
-settings key and extensions.
-
-```python
-".nlg": cls.NEWLANG,
-```
-
-### 4. Create Tests
+### 3. Test it
 
 File: `native/bridge/time_warp/tests/test_lang_newlang.py`
 
 ```python
-from .conftest_lang import run, ok, has, no_errors
+from time_warp.core.interpreter import Language
+from .conftest_lang import run, has, no_errors, first_error
 
-class TestNewLang:
-    """Test NewLang executor"""
-    
-    def test_hello_world(self):
-        """Test basic output"""
-        out = run('print "Hello"', "NEWLANG")
-        assert has(out, "Hello")
-        assert no_errors(out)
+NEWLANG = Language.NEWLANG
+
+
+def test_hello_world():
+    out = run('print "Hello"', NEWLANG)
+    assert has(out, "Hello")
+    assert no_errors(out)
 ```
 
-### 5. Add Examples
+The second argument is the enum member, not its name. Then add a row per command
+to `native/bridge/time_warp/tests/command_table.py` and run
+`python3 native/tools/command_matrix.py`: it fails on a row that has no effect and
+on a command in the inventory that has no row.
 
-Directory: `Examples/newlang/`
+### 4. Add examples
 
-- `01_hello_world.ext`
-- `02_variables.ext`
-- `03_loops.ext`
-- etc.
+Directory: `Examples/newlang/`, starting with `hello`. Add any program that draws
+to `DRAWING_EXAMPLES` in `native/tools/example_smoke.py`, or a program that draws
+nothing passes by being silent.
 
-### 6. Update Documentation
+### 5. Teach it
 
-- Add to LANGUAGE_GUIDE.md
-- Update README.md "Supported Languages" section
-- Create tutorial if complex
+Two lessons in `native/bridge/time_warp/features/lessons.json`:
+`python3 native/tools/teach.py new <id> --language NEWLANG` prints a skeleton the
+loader accepts. Then run `teach.py validate`, which refuses a solution that does
+not pass its own checkpoint, a starter that already passes, and a starter that
+fails unless `starter_is_broken` says the failure is the lesson.
+
+### 6. Document it
+
+- `docs/LANGUAGE_GUIDE.md` — a reference section
+- `docs/tutorials/newlang.md` — a tutorial; `.github/workflows/docs.yml` requires
+  one per language
+- `README.md` — the row in the language table
+- `Examples/CATALOG.md` — one line per example
 
 ---
 
@@ -501,7 +556,9 @@ make test-all && make lint
 - [ ] Tests written and passing
 - [ ] Build is warning-free (`-Werror`)
 - [ ] Bridge code (if touched) is ruff clean and standard-library only
-- [ ] Documentation updated
+- [ ] `make smoke` is unchanged — every example still runs, and the 14 that must draw still draw
+- [ ] Lesson changes pass `python3 native/tools/teach.py validate`
+- [ ] Documentation updated, including anything the change made untrue
 - [ ] No breaking changes (or documented)
 - [ ] Commit messages clear
 - [ ] Branch based on latest main
@@ -527,15 +584,25 @@ Time_Warp_Studio/
 │   ├── CMakeLists.txt
 │   ├── include/ src/             # ui/, canvas/, scheme/, debugger/, bridge/
 │   ├── tests/                    # 11 CTest suites
-│   ├── tools/                    # time_warp_ide.cpp + Python harnesses
-│   └── bridge/                   # TEMPORARY Python engine (5 unported languages)
+│   ├── tools/                    # time_warp_ide.cpp and the gates:
+│   │                             #   learn.py, teach.py, command_matrix.py,
+│   │                             #   example_smoke.py, differential_check.py
+│   └── bridge/                   # TEMPORARY Python engine (9 unported languages)
 │       ├── worker.py             #   the JSON-lines worker the IDE spawns
-│       └── time_warp/            #   interpreter, executors, turtle state
-├── Examples/                     # 44 example programs across 6 languages
-├── docs/                         # Language guide, tutorials, architecture
+│       └── time_warp/            #   the engine itself
+│           ├── core/             #     interpreter.py, language_registry.py
+│           ├── languages/        #     one stateless function per language
+│           ├── features/         #     lesson_system.py + lessons.json,
+│           │                     #     classroom_mode.py (the teacher's side)
+│           ├── graphics/         #     turtle_state.py
+│           └── tests/            #     the engine's pytest suite
+├── Examples/                     # 48 example programs across the 10 languages
+├── docs/                         # the guides
+│   ├── tutorials/                #   one tutorial per language
+│   └── lessons/                  #   the curriculum, both guides and the plans
 ├── Scripts/                      # audits, version sync, build helper
 ├── Makefile                      # Convenience targets (delegate to native/)
-└── [Root docs]                   # README, CONTRIBUTING, LICENSE
+└── [Root docs]                   # README, CONTRIBUTING, SECURITY, LICENSE
 ```
 
 See docs/ARCHITECTURE.md for detailed structure.
@@ -546,16 +613,20 @@ See docs/ARCHITECTURE.md for detailed structure.
 
 ### Questions?
 
+[.github/SUPPORT.md](.github/SUPPORT.md) is the authority on where to ask and on
+what is supported. In short:
+
+- **Bugs and ideas**: the issue forms linked above
+- **Documentation**: start at [docs/INDEX.md](docs/INDEX.md)
 - **Email**: <james@honey-badger.org>
-- **GitHub Issues**: Report bugs
-- **GitHub Discussions**: Ask questions  
-- **Documentation**: Check docs/
+- **Security problems**: [SECURITY.md](SECURITY.md) — please do not open a public issue
 
 ### Still Confused?
 
 - Look at existing PRs
 - Check similar code as reference
-- Ask in GitHub issue before starting
+- Ask in an issue *before* starting something large — a new language or a new
+  panel is a lot of work to find out it is not wanted
 
 ---
 
@@ -573,6 +644,9 @@ Thank you for contributing!
 
 **Resources:**
 
-- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical design
+- [ARCHITECTURE.md](docs/ARCHITECTURE.md) - Technical design and the extension points
+- [docs/INDEX.md](docs/INDEX.md) - Every guide, and which to read when
 - [README.md](README.md) - Project overview
+- [SUPPORT.md](.github/SUPPORT.md) - Where to ask, and what is supported
+- [SECURITY.md](SECURITY.md) - How to report a vulnerability
 - [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) - Expected behavior

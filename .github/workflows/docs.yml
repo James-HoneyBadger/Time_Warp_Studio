@@ -1,31 +1,102 @@
 name: Docs
 
+# Documentation that drifts from the thing it describes is worse than no
+# documentation, because it is believed. This job is deliberately small and runs
+# with nothing but python3 from the runner image: it has to answer in seconds, on
+# every documentation change, and it must not depend on the C++ build.
+#
+# It watches `lessons.json` and `teach.py` as well as `docs/`, because the lesson
+# plans are *generated* from the curriculum and the failure that matters is
+# somebody editing the curriculum without regenerating them.
+
 on:
   push:
     branches: [ main ]
     paths:
       - 'docs/**'
+      - 'README.md'
+      - 'native/bridge/time_warp/features/lessons.json'
+      - 'native/tools/teach.py'
+      - '.github/workflows/docs.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'docs/**'
+      - 'README.md'
+      - 'native/bridge/time_warp/features/lessons.json'
+      - 'native/tools/teach.py'
+      - '.github/workflows/docs.yml'
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - name: List Markdown docs
         run: |
           echo "Listing documentation files (Markdown)"
           find docs -type f -name "*.md" | sort
-      - name: Basic docs validation
+
+      - name: Every guide the index promises exists
         run: |
-          echo "Checking docs structure against repository layout..."
-          test -f docs/INDEX.md
-          test -f docs/ARCHITECTURE.md
-          test -f docs/INSTALLATION.md
-          test -f docs/LANGUAGE_GUIDE.md
-          test -f docs/FAQ.md
-          test -d docs/tutorials
-          echo "Docs structure looks good."
+          set -euo pipefail
+          missing=0
+          for required in \
+            docs/INDEX.md \
+            docs/ARCHITECTURE.md \
+            docs/INSTALLATION.md \
+            docs/LANGUAGE_GUIDE.md \
+            docs/FAQ.md \
+            docs/ROADMAP.md \
+            docs/README_TESTING.md \
+            docs/lessons/README.md \
+            docs/lessons/student-guide.md \
+            docs/lessons/teacher-guide.md \
+            docs/lessons/FORMAT.md \
+            docs/lessons/plans/README.md
+          do
+            if [ ! -f "$required" ]; then
+              echo "::error file=$required::promised by docs/INDEX.md, and not here"
+              missing=1
+            fi
+          done
+          test "$missing" -eq 0
+          echo "Every promised guide is present."
+
+      # One tutorial per language, because docs/INDEX.md lists ten and a missing
+      # one is invisible: the table still renders, with a dead link in it.
+      - name: Every language has a tutorial
+        run: |
+          set -euo pipefail
+          missing=0
+          for language in basic pilot logo comal rexx scheme focal apl chip8 smalltalk
+          do
+            if [ ! -f "docs/tutorials/$language.md" ]; then
+              echo "::error::no tutorial for $language (docs/tutorials/$language.md)"
+              missing=1
+            fi
+          done
+          test "$missing" -eq 0
+          echo "$(find docs/tutorials -maxdepth 1 -name '*.md' | wc -l) tutorials present."
+
+      # The plans are generated from the curriculum. Regenerating them and finding
+      # a diff means somebody changed a lesson and did not update the document a
+      # teacher would then teach from: two copies of one lesson, and the copy that
+      # drifts is always the one being read.
+      - name: The lesson plans match the curriculum
+        run: |
+          set -euo pipefail
+          python3 native/tools/teach.py write-plans docs/lessons/plans
+          if ! git diff --exit-code --stat docs/lessons/plans; then
+            echo "::error::docs/lessons/plans is out of date. Run 'python3 native/tools/teach.py write-plans docs/lessons/plans' and commit the result."
+            exit 1
+          fi
+          echo "The plans are current."
+
+      # The curriculum is also checked by the engine suite in native.yml. It is
+      # repeated here so a documentation-only pull request that happens to touch a
+      # lesson still runs it, and so the failure is reported against the diff that
+      # caused it.
+      - name: The curriculum is finishable
+        run: python3 native/tools/teach.py validate --quiet

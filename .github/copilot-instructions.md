@@ -10,7 +10,7 @@
 
 Time Warp Studio is an educational desktop programming environment built with **C++20 and Qt6** that provides a unified IDE for learning **10 programming languages** with integrated turtle graphics.
 
-**Supported Languages:** BASIC, PILOT, Logo, COMAL, REXX, and Scheme.
+**Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 
 **Current State:** The Qt desktop application in `native/` is the product. The
 PySide6 implementation that came before it has been **removed**; what remains of
@@ -25,10 +25,12 @@ Python is a temporary engine the Qt app spawns (see "The language bridge").
     - Build: `cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release && cmake --build native/build -j`
     - Shell: `native/src/ui/main_window.cpp`; canvas `native/src/ui/turtle_canvas.cpp`;
       editor `native/src/ui/code_editor.cpp`; languages `native/src/ui/language.cpp`
-    - Engines that are already native: the expression evaluator (`timewarp_expr`)
-      and Scheme (`timewarp_scheme`, an explicit-stack CEK machine).
+    - Engines that are already native: Scheme (`timewarp_scheme`, an explicit-stack
+      CEK machine, dispatched in-process) and the expression evaluator
+      (`timewarp_expr` -- built and gated, but nothing links it yet, so expressions
+      inside a Run still come from the bridge).
 - **The language bridge (Python, temporary)** — `native/bridge/`.
-    - Five languages (BASIC, PILOT, Logo, COMAL, REXX) are *not* ported yet, so the
+    - Nine languages (everything except Scheme) are *not* ported yet, so the
       IDE runs them through `native/bridge/worker.py`, which drives the retained
       Python engine and streams JSON lines back (drawing, output, input, errors).
     - Protocol: `run`/`in-reply`/`stop` in; `ready`/`out`/`canvas`/`pose`/`err`/`in`/`done` out.
@@ -47,8 +49,8 @@ def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) 
 ```
 
 **Two execution modes:**
-- **Whole-program executors** (1 active language): Receive the entire source as a string. Registered in `_WHOLE_PROGRAM_EXECUTORS` dict in `core/interpreter.py`. This is: Scheme.
-- **Line-by-line executors** (5 active languages: BASIC, PILOT, Logo, COMAL, and REXX): The interpreter iterates lines and calls the executor per statement.
+- **Whole-program executors** (3 active languages: Scheme, CHIP-8 and Smalltalk): Receive the entire source as a string. Registered in `_WHOLE_PROGRAM_EXECUTORS` dict in `core/interpreter.py`.
+- **Line-by-line executors** (7 active languages: BASIC, APL, Logo, PILOT, FOCAL, COMAL and REXX): The interpreter iterates lines and calls the executor per statement.
 
 Whole-program executors are dispatched through `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`; adding a language also requires the corresponding enum, extension, editor, and test updates.
 
@@ -73,8 +75,8 @@ make -C native run
 
 **System Requirements**
 - Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler
-- Python 3.10+ **only** for the five bridged languages; Scheme and expressions
-  run in-process with no Python at all
+- Python 3.10+ **only** for the nine bridged languages; Scheme runs in-process
+  with no Python at all
 
 ### Testing Strategy
 
@@ -93,6 +95,11 @@ PYTHONPATH=native/bridge python3 -m pytest -q
 # Parity gates against the Python reference (0 unexpected mismatches)
 python3 native/tools/differential_check.py native/build/expr_cli
 cd native/tools && python3 scheme_differential_check.py
+
+# The documentation gates, which .github/workflows/docs.yml runs on every docs
+# change; the teach.py write-plans output is then checked with git diff --exit-code
+python3 native/tools/teach.py validate
+npx --yes markdownlint-cli2 --config .markdownlint.json docs/ README.md CHANGELOG.md CONTRIBUTING.md `.github/*.md`
 ```
 
 **Test Organization:**
@@ -100,7 +107,7 @@ cd native/tools && python3 scheme_differential_check.py
   canvas bridge, debug, debugger runner, ui layout, ui document, turtle canvas, python bridge)
 - `native/tools/example_smoke.py` = every `Examples/**` program through the bridge; the 14
   that must draw are listed in `DRAWING_EXAMPLES`
-- `native/bridge/time_warp/tests/` = the bridge engine's tests (the 6 language executors,
+- `native/bridge/time_warp/tests/` = the bridge engine's tests (the 10 language executors,
   the expression evaluator, validators)
 
 ### Adding a New Language
@@ -211,9 +218,11 @@ native/                        - the Qt application (the product)
     time_warp/
       core/                    - interpreter.py, language_registry.py, config.py, sandbox.py
       languages/               - the 10 executors (base.py documents the Protocol)
-      features/                - lesson_system.py + lessons.json, classroom_mode.py
+      features/                - lesson_system.py + lessons.json, classroom_mode.py,
+                                 and the language-level modules a program reaches
+                                 by name (music, speech, shapes, particles,
+                                 fractals, gamepad, game_support)
       graphics/turtle_state.py - turtle state
-      features/                - language-level modules reached by name from a program
       utils/                   - expression_evaluator.py, error_hints.py, validators.py
       tests/                   - the engine's own tests
 Examples/                      - 48 example programs across the 10 active languages
@@ -238,7 +247,7 @@ Scripts/                       - audit_interpreters.py, version_sync.py, build_n
   the verifier), `classroom_mode.py` (rosters, handouts, marking, bundles),
   `native/src/ui/panels.cpp` (`LessonPanel`, the one real page in the right column),
   `native/tools/learn.py` and `native/tools/teach.py` (the two CLIs)
-- **Engine (bridge)**: `time_warp/core/interpreter.py` dispatches; the 6 executors in
+- **Engine (bridge)**: `time_warp/core/interpreter.py` dispatches; the 10 executors in
   `time_warp/languages/` are stateless functions
 - **Expression evaluator**: native C++ (`timewarp_expr`) and, in the bridge, the
   reference in `time_warp/utils/expression_evaluator.py` that gates it
@@ -248,7 +257,7 @@ Scripts/                       - audit_interpreters.py, version_sync.py, build_n
 
 The Qt application: Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler.
 
-The bridge (only the five unported languages need it): Python 3.10+, standard
+The bridge (only the nine unported languages need it): Python 3.10+, standard
 library only. Optional extras -- `pyttsx3` (BASIC `SAY`), `pygame` and `inputs`
 (BASIC `SOUND`/`GAMEPAD`) -- are imported defensively and are not required.
 
@@ -310,3 +319,11 @@ and applied through QSS plus a palette in `native/src/ui/ui_style.cpp`. See
 - Error messages prefixed with emoji indicators (`❌`, `ℹ️`, `🎨`, `🚀`)
 - Graceful degradation for optional dependencies
 - Consistent Python formatting (PEP 8)
+
+## GitHub surfaces
+
+`.github/` is documentation as much as configuration, because GitHub renders it as
+UI: `ISSUE_TEMPLATE/{config,bug_report,feature_request,language_request}.yml`,
+`pull_request_template.md`, `SUPPORT.md`, `CODEOWNERS`, `DEPLOYMENT.md` (what each
+workflow checks, and why) and `RELEASE_CHECKLIST.md`. A change to what the project
+promises belongs in those files as much as in `docs/`.

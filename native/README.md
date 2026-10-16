@@ -1180,37 +1180,35 @@ strokes a circle costs.
   dialog in the program -- and the one place a scripted run could block. Nothing in
   the tests or in CI reaches it.
 
-# Suggested next steps
+# Where this is going
 
-1. Wire `native/` into the repository `Makefile` / CI as an independent job.
-2. Add the runner bridge: an out-of-process Python worker speaking JSON lines, so
-   the five unported languages can execute while their C++ replacements arrive.
-3. Give the output console and the turtle canvas their real implementations, the
-   canvas consuming the `CanvasCommandQueue` that already exists and is tested.
-4. Extend the same treatment to the remaining interpreter units, in dependency
-   order: `string_evaluator.py`, then the line dispatching in
-   `core/interpreter.py`, then the smaller executors (PILOT → COMAL → REXX),
-   leaving BASIC last.
-4. When the interpreter core moves, `SpecialVariableHook` (expressions) and
-   `Host` (Scheme) are the seams for engine-specific services — no further
-   engine-specific imports should reappear in either library.
-5. Consider a `CompiledExpression` handle (interned identifiers + owned RPN) and
-   a Scheme `Procedure` cache, so programs can be compiled once at load time
-   rather than re-read per call.
-6. Move the Python application onto the queue: give `TurtleCanvas` a mirror of
-   the turtle state that consumes `CanvasCommandView`s, hand
-   `QueuedTurtleHost` to the interpreter in place of the shared `TurtleState`,
-   and let `InterpreterThread` stop emitting a signal per drawing call.
-7. Repoint the Python debug panel (`ui/debug_panel.py`, `core/debugger.py`) at
-   `DebuggerRunner`: its breakpoints, step controls, call stack and watch list map
-   onto `set_breakpoints()`, `request_step_*()`, `call_stack()` and
-   `visible_variables()` respectively. The engine's line-level execution timeline
-   is the one feature with no counterpart yet.
-8. Port the panels into `timewarp_ui`, in dependency order: the text output panel
-   first (it is self-contained), then the turtle canvas on top of
-   `timewarp_canvas_qt`, then the variable inspector and telemetry HUD driven by
-   `DebuggerRunner`. Each swap replaces one `PlaceholderPanel` construction and the
-   layout tests keep passing unchanged.
-9. Split the toolbar into two rows: primary actions (file, run, debug) and
-   secondary display controls. The current single row overflows below roughly
-   1900px, which is every laptop.
+`docs/ROADMAP.md` is the live list. This is the part of it that belongs to the
+application rather than to the engines.
+
+1. Port the remaining languages, in dependency order: `string_evaluator.py`, then the
+   line dispatching in `core/interpreter.py`, then the smaller executors (PILOT →
+   COMAL → REXX), leaving BASIC last. Each port deletes one path through the bridge.
+   `SpecialVariableHook` (expressions) and `Host` (Scheme) are the seams for
+   engine-specific services — no further engine-specific import should appear in
+   either library.
+2. Link `timewarp_expr` into a Run. It builds, it has a suite of its own, and
+   `native/tools/differential_check.py` compares it against the Python reference on a
+   fixed corpus — but nothing under `src/ui/` includes it yet, so expressions are still
+   evaluated by the bridge.
+3. Finish the right column. `LessonPanel` is a real port; the variables, telemetry,
+   debug and terminal pages are still `PlaceholderPanel`s. Port them in dependency
+   order — the variables inspector and telemetry HUD driven by `DebuggerRunner`, then
+   the output panel, then the debug panel. Each swap replaces one `PlaceholderPanel`
+   construction, and the layout tests keep passing unchanged.
+4. Make Debug, Continue and Trace do something. They are laid out and inert: they need
+   the breakpoint and stepping UI, which is item 3's debug panel.
+5. Themes and the CRT effects, then screen modes, focus mode and a command palette.
+   No theme is ported yet, so treat the styling as provisional.
+6. Consider a `CompiledExpression` handle (interned identifiers + owned RPN) and a
+   Scheme `Procedure` cache, so a program is compiled once at load time rather than
+   re-read per call.
+
+Landed since this file was first written: the runner bridge (`worker.py` behind
+`bridge::PythonWorker`), the real output console and turtle canvas on top of
+`CanvasCommandQueue`, the two-row toolbar, `native/` under the repository Makefile and
+CI, the function-key row, and the lesson panel.

@@ -1,7 +1,7 @@
 # Testing Time Warp Studio
 
 The product is the Qt application in `native/`, so the primary suites are C++
-suites driven by CTest. The Python engine that the five unported languages run
+suites driven by CTest. The Python engine that the nine unported languages run
 through has its own small pytest suite.
 
 Run everything from the repository root.

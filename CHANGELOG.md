@@ -67,6 +67,22 @@ Four more languages, and the defects that examining their commands turned up.
   exists because a test recorded lesson hints into a real learner's `progress.json` —
   the hint counter being cumulative is how the leak surfaced.
 
+### For contributors, and for the repository itself
+
+- **Community files.** Issue forms for a bug, a feature and a language, a pull-request
+  template, `SUPPORT.md`, `CODEOWNERS` and a deployment guide, so the questions a
+  newcomer asks first have somewhere explicit to go. The bug form asks which
+  environment the problem happened in, because a built-from-source IDE and an
+  installed one take different paths to the bridge.
+- **`docs.yml` now checks something.** It regenerates the lesson plans and fails on a
+  diff, requires a tutorial for every language, requires a file for every guide
+  `docs/INDEX.md` promises, and runs `teach.py validate`. A curriculum that has
+  drifted from the plans a teacher would teach from is invisible in a file listing; it
+  is a red check now.
+- **Corrected counts.** Several documents still described five bridged languages and
+  44 examples, the contributing guide listed six languages, and it offered a
+  discussion board the project does not answer on.
+
 ---
 
 ## [15.0.0] - 2026-10-16

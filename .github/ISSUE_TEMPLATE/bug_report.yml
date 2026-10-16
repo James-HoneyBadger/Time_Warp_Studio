@@ -1,0 +1,142 @@
+# A bug report form rather than a blank page, because the two things this project
+# actually needs to reproduce a problem are the environment and the program, and
+# a prose issue usually omits one of them. Every question here is one that has
+# been needed to answer a real report.
+name: Bug report
+description: Something did not work — a crash, a wrong result, or a drawing that did not appear.
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this.
+
+        **Before you file:** [docs/ROADMAP.md](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/ROADMAP.md)
+        lists what is deliberately not built yet — themes, find/replace, auto-completion
+        and the debugger panels. A missing feature from that list is a feature request,
+        not a regression.
+
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What you did, and what you saw instead.
+      placeholder: |
+        I ran Examples/logo/mandala.logo and the canvas stayed empty.
+        The console printed nothing and there was no error.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect?
+      description: What should have happened instead.
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the exact program if you can. A bug that cannot be reproduced cannot be fixed.
+      placeholder: |
+        1. Build with `cmake -S native -B native/build && cmake --build native/build -j`
+        2. Run `./native/build/time_warp_ide Examples/logo/mandala.logo`
+        3. Press Run (F9)
+        4. ...
+      render: markdown
+    validations:
+      required: true
+
+  - type: textarea
+    id: program
+    attributes:
+      label: The program, if one is involved
+      description: A short program that shows the problem is worth more than a long description of it.
+      render: text
+    validations:
+      required: false
+
+  - type: dropdown
+    id: language
+    attributes:
+      label: Which language?
+      description: Pick the one the problem is in, or "not language-specific".
+      options:
+        - BASIC
+        - PILOT
+        - Logo
+        - COMAL
+        - REXX
+        - Scheme
+        - FOCAL
+        - APL
+        - CHIP-8
+        - Smalltalk
+        - Not language-specific (the window, the editor, the canvas, packaging)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: how-built
+    attributes:
+      label: How are you running it?
+      description: |
+        This decides where to look, so it is asked rather than guessed. A build tree that
+        finds the bridge and an installed tree that cannot are different problems.
+      options:
+        - Built from source, run from the build tree (`native/build/time_warp_ide`)
+        - Installed with `make -C native install`
+        - Something else (say below)
+    validations:
+      required: true
+
+  - type: input
+    id: qt-version
+    attributes:
+      label: Qt version
+      description: "`qmake --version`, or the Qt6 line from `make -C native info`."
+      placeholder: "6.6.2"
+    validations:
+      required: false
+
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+      placeholder: "Arch Linux, glibc 2.39 / macOS 15.1 / Windows 11 24H2"
+    validations:
+      required: true
+
+  - type: input
+    id: version
+    attributes:
+      label: Time Warp Studio version
+      description: "`./native/build/time_warp_ide --version`, or the contents of VERSION if you built it yourself."
+      placeholder: "15.0.0"
+    validations:
+      required: false
+
+  - type: textarea
+    id: messages
+    attributes:
+      label: Any messages?
+      description: |
+        The Contents of the **Errors** tab, or what the terminal printed. If it crashed,
+        a backtrace is worth far more than a description of the crash.
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I read [docs/ROADMAP.md](https://github.com/James-HoneyBadger/Time_Warp_Studio/blob/main/docs/ROADMAP.md), and this is not on the list of known gaps.
+          required: true
+        - label: I searched the existing issues for the same problem.
+          required: true

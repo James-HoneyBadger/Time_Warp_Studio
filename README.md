@@ -44,7 +44,11 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 
 ### What is still being built
 
-The Qt IDE is the product; the PySide6 application that preceded it has been removed. Features of that application that have **not** been ported yet — themes, the examples browser, find/replace, auto-completion, the debugger panels and the function-key bar — are tracked in [docs/ROADMAP.md](docs/ROADMAP.md).
+The Qt IDE is the product; the PySide6 application that preceded it has been removed.
+Features of that application that have **not** been ported yet — themes and the CRT
+effects, the examples browser, find/replace, auto-completion, syntax highlighting, the
+debugger panels, and the function-key bar's Shift and Ctrl layers — are tracked in
+[docs/ROADMAP.md](docs/ROADMAP.md).
 Please read that list before reporting one of them as a regression.
 
 ### Turtle Graphics
@@ -130,3 +134,21 @@ teaching-tools
 | Teaching a class | [`docs/lessons/teacher-guide.md`](docs/lessons/teacher-guide.md) |
 | Building or porting | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`native/README.md`](native/README.md) |
 | Seeing what is not done yet | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
+| Reporting a bug or asking for a feature | The issue forms in [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/) |
+
+---
+
+## Working with the project
+
+- **[CONTRIBUTING.md](CONTRIBUTING.md)** — setup, the gates, and recipes for a
+  language, a command and a lesson
+- **[.github/SUPPORT.md](.github/SUPPORT.md)** — where to ask, and what is
+  supported on which platform
+- **[.github/pull_request_template.md](.github/pull_request_template.md)** — what
+  a pull request is expected to answer
+- **[SECURITY.md](SECURITY.md)** — how to report a vulnerability privately
+- **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — the standard expected here
+- **[CHANGELOG.md](CHANGELOG.md)** — what changed, release by release
+
+There are no installers or packages yet. Building from source is the only way to
+run it, and [docs/INSTALLATION.md](docs/INSTALLATION.md) is the whole procedure.
