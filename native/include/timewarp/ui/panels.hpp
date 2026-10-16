@@ -22,10 +22,15 @@
 #include <QStringList>
 #include <QWidget>
 
+#include "timewarp/bridge/python_worker.hpp"
+
 class QComboBox;
 class QLabel;
 class QLineEdit;
+class QListWidget;
+class QProgressBar;
 class QPushButton;
+class QTextBrowser;
 class QVBoxLayout;
 
 namespace timewarp::ui {
@@ -146,6 +151,107 @@ private:
 
     QWidget* target_ = nullptr;
     int intensity_ = 15;
+};
+
+/// The lesson panel: the curriculum, the current checkpoint, and a way to check.
+///
+/// Unlike everything else in this header, this one is **not** a placeholder. The
+/// Python implementation shipped a working lesson panel, and the panel is the one
+/// part of the teaching side that has to exist in the application rather than
+/// only in a tool: a learner of eleven should not have to open a terminal.
+///
+/// The panel is a *view* and nothing more. It asks and it displays; it does not
+/// read the curriculum, run a program, or decide whether an answer is right. All
+/// of that is the engine's, reached through the bridge, so the verdict in this
+/// panel and the verdict from `native/tools/learn.py` are the same function's
+/// answer rather than two opinions that can drift apart.
+///
+/// It never edits a document either. "Open in editor" raises a request, and the
+/// window decides where the code goes, because the panel has no business knowing
+/// about tabs.
+class LessonPanel final : public QFrame {
+    Q_OBJECT
+
+public:
+    /// The narrowest the panel is useful at: a lesson title and a checkpoint.
+    static constexpr int kMinimumWidth = 240;
+
+    explicit LessonPanel(QWidget* parent = nullptr);
+
+    /// Replaces the lesson list, keeping the current selection when it survives.
+    void setLessons(const QList<timewarp::bridge::LessonSummary>& lessons);
+    /// Applies the learner's place in every lesson.
+    void setProgress(const QList<timewarp::bridge::LessonProgress>& rows, int completed,
+                     int total);
+    /// Shows a hint. `number` and `total` are 1-based, for "hint 2 of 3".
+    void setHint(const QString& text, int number, int total);
+    /// Shows the worked answer.
+    void setSolution(const QString& text);
+    /// Shows the verdict for a checkpoint.
+    void setChecked(const QString& lesson, int checkpoint, bool passed,
+                    const QString& message, bool completed, int finished, int total);
+    /// Reports a request that could not be answered.
+    void setFailure(const QString& request, const QString& error);
+    /// Sets the size the lesson text is drawn at, for teaching from the front.
+    void setPresentationFont(int pointSize);
+
+    /// The lesson the learner is looking at, or an empty string.
+    [[nodiscard]] QString currentLesson() const;
+    /// The checkpoint the learner is looking at, or -1.
+    [[nodiscard]] int currentCheckpoint() const;
+    /// The starting program for the current checkpoint, for the window to open.
+    [[nodiscard]] QString currentStarter() const;
+    /// The language key of the current lesson, e.g. "CHIP8".
+    [[nodiscard]] QString currentLanguageKey() const;
+    /// The verdict text, so a test can assert what the learner is told.
+    [[nodiscard]] QString verdictText() const;
+    /// The number of lessons the panel is showing.
+    [[nodiscard]] int lessonCount() const;
+
+signals:
+    /// The panel has just been built and wants the curriculum.
+    void curriculumNeeded();
+    /// The panel wants the learner's progress again.
+    void progressNeeded();
+    /// Put the current checkpoint's starting program in a document.
+    void openCodeRequested(const QString& languageKey, const QString& source,
+                           const QString& name);
+    /// Check the current checkpoint. The window supplies the source, because it
+    /// owns the editor and the panel does not.
+    void checkRequested(const QString& lesson, int checkpoint);
+    /// Ask for the next hint.
+    void hintRequested(const QString& lesson, int checkpoint);
+    /// Ask for the worked answer, on purpose.
+    void solutionRequested(const QString& lesson, int checkpoint);
+    /// Start the lesson again.
+    void resetRequested(const QString& lesson);
+
+private:
+    void onLessonChanged(int index);
+    void onCheckpointChanged(int row);
+    void refreshCheckpoint();
+    void showNextHint();
+
+    QComboBox* lessons_ = nullptr;
+    QListWidget* checkpoints_ = nullptr;
+    QLabel* description_ = nullptr;
+    QTextBrowser* detail_ = nullptr;
+    QPushButton* open_ = nullptr;
+    QPushButton* check_ = nullptr;
+    QPushButton* hint_ = nullptr;
+    QPushButton* solution_ = nullptr;
+    QPushButton* reset_ = nullptr;
+    QLabel* verdict_ = nullptr;
+    QProgressBar* progress_ = nullptr;
+
+    /// The curriculum as last received. Named apart from `lessons_`, which is the
+    /// combo box that shows it: one is the data and one is the widget, and a
+    /// single name for both is how a panel ends up assigning one to the other.
+    QList<timewarp::bridge::LessonSummary> curriculum_;
+    QList<timewarp::bridge::LessonProgress> rows_;
+    /// Points asked for and answered, per lesson id, so hints come out in order.
+    int hint_number_ = 0;
+    int presentation_font_ = 0;
 };
 
 }  // namespace timewarp::ui

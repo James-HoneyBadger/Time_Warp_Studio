@@ -79,6 +79,7 @@ class CodeEditor;
 class CrtOverlay;
 class FunctionKeyBar;
 class ImmediateModePanel;
+class LessonPanel;
 class PlaceholderPanel;
 class ResizableTabWidget;
 class TurtleCanvas;
@@ -118,6 +119,17 @@ public:
         return output_canvas_splitter_;
     }
     [[nodiscard]] QTabWidget* outputSubTabs() const noexcept { return output_sub_tabs_; }
+    /// Brings a right-column panel to the front by name: `output`, `variables`,
+    /// `telemetry`, `debug` or `lessons`. False when the name is not one of them.
+    ///
+    /// Named rather than numbered because the caller is a command line and a
+    /// screenshot script: "show the lessons" survives a panel being inserted
+    /// above it, and "show tab 4" does not.
+    [[nodiscard]] bool showPanel(const QString& name);
+
+    /// The lesson panel, so a test can drive it and a screenshot can show it.
+    [[nodiscard]] LessonPanel* lessonPanel() const noexcept { return lesson_panel_; }
+
     [[nodiscard]] ImmediateModePanel* immediateMode() const noexcept {
         return immediate_mode_;
     }
@@ -319,6 +331,21 @@ private:
     // -- execution --------------------------------------------------------
     TurtleCanvas* turtle_canvas_ = nullptr;
     /// Program output and errors, both read-only views. Named apart from the
+    /// Starts the bridge if it is not running. Distinct from `runInBridge`,
+    /// which also clears the console and canvas: a lesson check must not wipe the
+    /// drawing the learner is looking at while checking it.
+    [[nodiscard]] bool ensureBridge();
+    /// Opens a checkpoint's starting program in a new document.
+    void openLessonCode(const QString& languageKey, const QString& source,
+                        const QString& name);
+    /// Sends the lesson requests the panel asks for, once the bridge is up.
+    void requestLessonCurriculum();
+    void requestLessonProgress();
+    void requestLessonCheck(const QString& lesson, int checkpoint);
+    void requestLessonHint(const QString& lesson, int checkpoint);
+    void requestLessonSolution(const QString& lesson, int checkpoint);
+    void requestLessonReset(const QString& lesson);
+
     /// `outputSubTabs_` container that holds them.
     QPlainTextEdit* console_view_ = nullptr;
     QPlainTextEdit* errors_view_ = nullptr;
@@ -335,6 +362,11 @@ private:
     /// The child process that runs the five languages with no C++ interpreter.
     /// Created lazily, because most sessions never run one and starting an
     /// interpreter on launch would cost every user for the sake of some.
+    LessonPanel* lesson_panel_ = nullptr;
+    /// Set once the curriculum has been asked for, so showing the Lessons tab a
+    /// second time does not ask again. The panel keeps its own copy afterwards.
+    bool curriculum_requested_ = false;
+
     std::unique_ptr<timewarp::bridge::PythonWorker> python_worker_;
 
     /// Appends a line to the console, scrolling only if the user was already at

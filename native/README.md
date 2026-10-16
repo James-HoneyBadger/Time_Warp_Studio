@@ -109,6 +109,11 @@ python3 native/tools/scheme_differential_check.py native/build/scheme_cli
 # Every example program, in every language, through the bridge
 python3 native/tools/example_smoke.py
 
+# The lessons: the curriculum, and the two tools that drive it
+python3 native/tools/teach.py validate      # runs all 60 solutions through the engine
+python3 native/tools/teach.py outline       # the scheme of work
+python3 native/tools/learn.py list          # what a learner sees
+
 # Performance
 ./native/build/expr_bench
 ./native/build/scheme_bench
@@ -1063,12 +1068,33 @@ wrong name.
 **All ten languages run.** Scheme goes through the C++ interpreter on a background
 thread; BASIC, PILOT, Logo, COMAL and REXX go through the **Python bridge**, which
 runs the existing Python implementations in a child process and streams what they
-draw back as canvas commands. Every one of the 44 examples in `Examples/` executes,
+draw back as canvas commands. Every one of the 48 examples in `Examples/` executes,
 and the 14 that draw produce drawing -- checked by `tools/example_smoke.py`.
 
 The bridge exists because reimplementing nine languages is the work it postpones.
 Python is the oracle while each language is ported, and a language stops being
 routed to it the day its C++ interpreter lands.
+
+## The lesson panel
+
+The right column's **Lessons** tab is the one page of the application that is a real
+port rather than a `PlaceholderPanel`. `LessonPanel` (`src/ui/panels.cpp`) is a *view*: it
+holds no curriculum and runs no program. It asks the bridge for the lesson list, shows
+the current checkpoint, and sends the learner's source back to be checked.
+
+That division is the point. The check runs **in the worker's engine**, so the panel's
+green tick and `native/tools/learn.py`'s verdict are the same function's answer rather
+than two implementations that drift. The panel's program comes from whatever document is
+in front, and the curriculum is loaded when the tab is first looked at rather than at
+start-up, so a user who never opens it never starts a Python process for it.
+
+Requests and replies are documented in
+[`docs/lessons/FORMAT.md`](../docs/lessons/FORMAT.md); the C++ side is
+`LessonSummary`, `LessonCheckpoint` and `LessonProgress` in
+`include/timewarp/bridge/python_worker.hpp`, with one request method and one signal each.
+A `lesson-check` is refused while a program is running, because two interpreters in one
+process would share the engine's module state -- the refusal is the feature, and it is
+also the useful thing to be told.
 
 `TurtleCanvas` is a real graphics surface, not a stand-in. Whichever engine runs,
 the path is the same: turtle calls become `CanvasCommand`s, the producer pushes

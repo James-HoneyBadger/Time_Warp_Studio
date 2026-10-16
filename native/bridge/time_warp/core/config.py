@@ -13,11 +13,24 @@ Usage::
 
 from __future__ import annotations
 
+import os
 from pathlib import Path
 
 # ---- canonical application data directory --------------------------------
 # All user data lives under  ~/.time_warp  (lowercase, dotfile).
-APP_DATA_DIR: Path = Path.home() / ".time_warp"
+#
+# ``TIME_WARP_DATA_DIR`` overrides it, and the override exists because two
+# callers have a real need for it:
+#
+#   * **A test that writes progress must not write the learner's file.** The
+#     lesson tests record hints and completed checkpoints, and a suite that
+#     edited the real ``progress.json`` would both corrupt somebody's place in
+#     the curriculum and pass or fail depending on what a previous run left
+#     behind.
+#   * **A portable install** wants its data beside itself rather than in a home
+#     directory it may not own.
+_data_override = os.environ.get("TIME_WARP_DATA_DIR", "").strip()
+APP_DATA_DIR: Path = Path(_data_override).expanduser() if _data_override else Path.home() / ".time_warp"
 
 # ---- project root (source tree) ------------------------------------------
 # Resolved relative to this file: config.py -> core/ -> time_warp/ -> Python/ -> Platforms/ -> repo root

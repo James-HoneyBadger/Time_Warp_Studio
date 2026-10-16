@@ -211,6 +211,14 @@ WorkerPaths locateWorker(QString* reason) {
 
 PythonWorker::PythonWorker(timewarp::canvas::CanvasCommandQueue& queue, QObject* parent)
     : QObject(parent), queue_{queue} {
+    // The lesson structures cross a signal, so they are registered rather than
+    // relied on being free: a queued connection to an unregistered type fails at
+    // run time, in the one place nobody is watching for it.
+    qRegisterMetaType<timewarp::bridge::LessonSummary>();
+    qRegisterMetaType<timewarp::bridge::LessonCheckpoint>();
+    qRegisterMetaType<timewarp::bridge::LessonProgress>();
+    qRegisterMetaType<QList<timewarp::bridge::LessonSummary>>();
+    qRegisterMetaType<QList<timewarp::bridge::LessonProgress>>();
     paths_ = locateWorker();
 }
 
@@ -386,6 +394,114 @@ void PythonWorker::answerInput(const QString& text) {
     process_->write(QJsonDocument{message}.toJson(QJsonDocument::Compact) + '\n');
 }
 
+bool PythonWorker::sendRequest(const QJsonObject& message) {
+    if (!isRunning() || !saw_ready_) {
+        emit failed(tr("The language worker is not running."));
+        return false;
+    }
+    const QByteArray payload =
+        QJsonDocument{message}.toJson(QJsonDocument::Compact) + '\n';
+    if (process_->write(payload) != payload.size()) {
+        return false;
+    }
+    process_->waitForBytesWritten(2000);
+    return true;
+}
+
+bool PythonWorker::requestLessons() {
+    if (waiting_for_lesson_) {
+        return false;
+    }
+    QJsonObject message;
+    message[QStringLiteral("t")] = QStringLiteral("lessons");
+    if (!sendRequest(message)) {
+        return false;
+    }
+    waiting_for_lesson_ = true;
+    return true;
+}
+
+bool PythonWorker::requestLessonProgress() {
+    if (waiting_for_lesson_) {
+        return false;
+    }
+    QJsonObject message;
+    message[QStringLiteral("t")] = QStringLiteral("lesson-progress");
+    if (!sendRequest(message)) {
+        return false;
+    }
+    waiting_for_lesson_ = true;
+    return true;
+}
+
+bool PythonWorker::requestHint(const QString& lesson, int checkpoint) {
+    if (waiting_for_lesson_) {
+        return false;
+    }
+    QJsonObject message;
+    message[QStringLiteral("t")] = QStringLiteral("lesson-hint");
+    message[QStringLiteral("lesson")] = lesson;
+    message[QStringLiteral("checkpoint")] = checkpoint;
+    if (!sendRequest(message)) {
+        return false;
+    }
+    waiting_for_lesson_ = true;
+    return true;
+}
+
+bool PythonWorker::requestSolution(const QString& lesson, int checkpoint) {
+    if (waiting_for_lesson_) {
+        return false;
+    }
+    QJsonObject message;
+    message[QStringLiteral("t")] = QStringLiteral("lesson-solution");
+    message[QStringLiteral("lesson")] = lesson;
+    message[QStringLiteral("checkpoint")] = checkpoint;
+    if (!sendRequest(message)) {
+        return false;
+    }
+    waiting_for_lesson_ = true;
+    return true;
+}
+
+bool PythonWorker::checkLesson(const QString& lesson, int checkpoint, const QString& source) {
+    if (waiting_for_lesson_) {
+        return false;
+    }
+    // A check runs an interpreter, and so does a program. The worker refuses the
+    // race as well; refusing here too means the panel is told at once rather than
+    // after a round trip that ends in the same answer.
+    if (isRunningProgram()) {
+        emit lessonFailed(QStringLiteral("lesson-check"),
+                          tr("a program is running. Stop it before checking your work."));
+        return false;
+    }
+    QJsonObject message;
+    message[QStringLiteral("t")] = QStringLiteral("lesson-check");
+    message[QStringLiteral("lesson")] = lesson;
+    message[QStringLiteral("checkpoint")] = checkpoint;
+    message[QStringLiteral("source")] = source;
+    if (!sendRequest(message)) {
+        return false;
+    }
+    waiting_for_lesson_ = true;
+    return true;
+}
+
+bool PythonWorker::resetLesson(const QString& lesson) {
+    if (waiting_for_lesson_) {
+        return false;
+    }
+    QJsonObject message;
+    message[QStringLiteral("t")] = QStringLiteral("lesson-reset");
+    message[QStringLiteral("lesson")] = lesson;
+    if (!sendRequest(message)) {
+        return false;
+    }
+    waiting_for_lesson_ = true;
+    return true;
+}
+
 void PythonWorker::onReadyReadStandardOutput() {
     pending_stdout_ += process_->readAllStandardOutput();
     // A message can be split anywhere, including between the braces of a JSON
@@ -462,6 +578,60 @@ void PythonWorker::onProcessFinished(int exitCode, int status) {
     // stays honest and a caller can inspect the exit for itself.
 }
 
+namespace {
+
+/// A JSON array of strings as a QStringList, ignoring anything else in it.
+[[nodiscard]] QStringList stringList(const QJsonValue& value) {
+    QStringList list;
+    const QJsonArray array = value.toArray();
+    for (const QJsonValue& item : array) {
+        list.append(item.toString());
+    }
+    return list;
+}
+
+[[nodiscard]] LessonCheckpoint checkpointFrom(const QJsonObject& object) {
+    LessonCheckpoint checkpoint;
+    checkpoint.title = object.value(QStringLiteral("title")).toString();
+    checkpoint.description = object.value(QStringLiteral("description")).toString();
+    checkpoint.starter = object.value(QStringLiteral("starter")).toString();
+    checkpoint.expectation = object.value(QStringLiteral("expectation")).toString();
+    checkpoint.hints = stringList(object.value(QStringLiteral("hints")));
+    return checkpoint;
+}
+
+[[nodiscard]] LessonSummary lessonFrom(const QJsonObject& object) {
+    LessonSummary lesson;
+    lesson.id = object.value(QStringLiteral("id")).toString();
+    lesson.title = object.value(QStringLiteral("title")).toString();
+    lesson.language = object.value(QStringLiteral("language")).toString();
+    lesson.languageKey = object.value(QStringLiteral("languageKey")).toString();
+    lesson.difficulty = object.value(QStringLiteral("difficulty")).toString();
+    lesson.description = object.value(QStringLiteral("description")).toString();
+    lesson.objectives = stringList(object.value(QStringLiteral("objectives")));
+    lesson.prerequisites = stringList(object.value(QStringLiteral("prerequisites")));
+    const QJsonArray checkpoints = object.value(QStringLiteral("checkpoints")).toArray();
+    for (const QJsonValue& item : checkpoints) {
+        lesson.checkpoints.append(checkpointFrom(item.toObject()));
+    }
+    return lesson;
+}
+
+[[nodiscard]] LessonProgress progressFrom(const QJsonObject& object) {
+    LessonProgress row;
+    row.id = object.value(QStringLiteral("id")).toString();
+    row.title = object.value(QStringLiteral("title")).toString();
+    row.language = object.value(QStringLiteral("language")).toString();
+    row.difficulty = object.value(QStringLiteral("difficulty")).toString();
+    row.status = object.value(QStringLiteral("status")).toString();
+    row.checkpoint = object.value(QStringLiteral("checkpoint")).toInt();
+    row.checkpoints = object.value(QStringLiteral("checkpoints")).toInt();
+    row.hintsUsed = object.value(QStringLiteral("hints_used")).toInt();
+    return row;
+}
+
+}  // namespace
+
 void PythonWorker::handleMessage(const QByteArray& line) {
     QJsonParseError parse_error{};
     const QJsonDocument document = QJsonDocument::fromJson(line, &parse_error);
@@ -520,6 +690,100 @@ void PythonWorker::handleMessage(const QByteArray& line) {
         emit commandsQueued();
         return;
     }
+    // ---- lessons -----------------------------------------------------------
+    //
+    // Every reply clears `waiting_for_lesson_` first, whatever it says: a failed
+    // request that left the flag set would lock the panel out of every request
+    // that followed it.
+    if (kind == QLatin1String("lessons")) {
+        waiting_for_lesson_ = false;
+        if (!message.value(QStringLiteral("ok")).toBool(true)) {
+            emit lessonFailed(QStringLiteral("lessons"),
+                              message.value(QStringLiteral("error")).toString());
+            return;
+        }
+        QList<LessonSummary> lessons;
+        const QJsonArray items = message.value(QStringLiteral("items")).toArray();
+        for (const QJsonValue& item : items) {
+            lessons.append(lessonFrom(item.toObject()));
+        }
+        // A payload from an older worker has no presentation block; the panel's
+        // own default is then used, which is what the `0` means.
+        int presentation_font = 0;
+        const QJsonValue presentation = message.value(QStringLiteral("presentation"));
+        if (presentation.isObject()) {
+            presentation_font =
+                presentation.toObject().value(QStringLiteral("font_size")).toInt();
+        }
+        emit lessonsReceived(lessons, presentation_font);
+        return;
+    }
+    if (kind == QLatin1String("lesson-progress")) {
+        waiting_for_lesson_ = false;
+        if (!message.value(QStringLiteral("ok")).toBool(true)) {
+            emit lessonFailed(QStringLiteral("lesson-progress"),
+                              message.value(QStringLiteral("error")).toString());
+            return;
+        }
+        QList<LessonProgress> rows;
+        const QJsonArray items = message.value(QStringLiteral("items")).toArray();
+        for (const QJsonValue& item : items) {
+            rows.append(progressFrom(item.toObject()));
+        }
+        emit lessonProgressReceived(rows, message.value(QStringLiteral("completed")).toInt(),
+                                    message.value(QStringLiteral("total")).toInt());
+        return;
+    }
+    if (kind == QLatin1String("lesson-hint")) {
+        waiting_for_lesson_ = false;
+        if (!message.value(QStringLiteral("ok")).toBool(true)) {
+            emit lessonFailed(QStringLiteral("lesson-hint"),
+                              message.value(QStringLiteral("error")).toString());
+            return;
+        }
+        emit lessonHintReceived(message.value(QStringLiteral("text")).toString(),
+                                message.value(QStringLiteral("n")).toInt(),
+                                message.value(QStringLiteral("total")).toInt());
+        return;
+    }
+    if (kind == QLatin1String("lesson-solution")) {
+        waiting_for_lesson_ = false;
+        if (!message.value(QStringLiteral("ok")).toBool(true)) {
+            emit lessonFailed(QStringLiteral("lesson-solution"),
+                              message.value(QStringLiteral("error")).toString());
+            return;
+        }
+        emit lessonSolutionReceived(message.value(QStringLiteral("text")).toString());
+        return;
+    }
+    if (kind == QLatin1String("lesson-check")) {
+        waiting_for_lesson_ = false;
+        if (!message.value(QStringLiteral("ok")).toBool(true)) {
+            emit lessonFailed(QStringLiteral("lesson-check"),
+                              message.value(QStringLiteral("error")).toString());
+            return;
+        }
+        emit lessonChecked(
+            message.value(QStringLiteral("lesson")).toString(),
+            message.value(QStringLiteral("checkpoint")).toInt(),
+            message.value(QStringLiteral("passed")).toBool(),
+            message.value(QStringLiteral("message")).toString(),
+            message.value(QStringLiteral("completed")).toBool(),
+            message.value(QStringLiteral("finished")).toInt(),
+            message.value(QStringLiteral("total")).toInt());
+        return;
+    }
+    if (kind == QLatin1String("lesson-reset")) {
+        waiting_for_lesson_ = false;
+        if (!message.value(QStringLiteral("ok")).toBool(true)) {
+            emit lessonFailed(QStringLiteral("lesson-reset"),
+                              message.value(QStringLiteral("error")).toString());
+            return;
+        }
+        emit lessonResetDone(message.value(QStringLiteral("lesson")).toString());
+        return;
+    }
+
     if (kind == QLatin1String("done")) {
         saw_done_ = true;
         running_program_ = false;

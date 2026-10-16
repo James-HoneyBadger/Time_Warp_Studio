@@ -1,0 +1,1152 @@
+{
+  "version": 2,
+  "lessons": [
+    {
+      "id": "basic_first_steps",
+      "title": "First Steps in BASIC",
+      "language": "BASIC",
+      "difficulty": "beginner",
+      "description": "Print text, store numbers in variables, and do arithmetic.",
+      "objectives": [
+        "Write a PRINT statement that displays text",
+        "Store a value in a variable and print it",
+        "Build an expression from variables"
+      ],
+      "teacher_notes": "The first lesson in the studio. Learners who have never typed a program before should be shown how to press Run before anything else. The commonest error is a missing closing quote, which BASIC reports clearly, so let them meet it.",
+      "prerequisites": [],
+      "checkpoints": [
+        {
+          "title": "Say hello",
+          "description": "Use PRINT to display exactly: Hello, World!",
+          "starter_code": "10 REM Add a PRINT statement on line 20\n20 REM ... and END the program on line 30\n30 END",
+          "solution": "10 REM Add a PRINT statement on line 20\n20 PRINT \"Hello, World!\"\n30 END",
+          "hints": [
+            "PRINT displays whatever follows it.",
+            "Text goes inside double quotes: PRINT \"Hello, World!\""
+          ],
+          "expect_lines": [
+            "Hello, World!"
+          ]
+        },
+        {
+          "title": "Variables and arithmetic",
+          "description": "W and H hold a rectangle's width and height. Store W * H in A and print A.",
+          "starter_code": "10 LET W = 6\n20 LET H = 7\n30 REM Store W * H in A\n40 REM ... then print A\n50 END",
+          "solution": "10 LET W = 6\n20 LET H = 7\n30 LET A = W * H\n40 PRINT A\n50 END",
+          "hints": [
+            "Arithmetic uses * for multiply and / for divide.",
+            "Use LET A = W * H on line 30, then PRINT A on line 40."
+          ],
+          "expect_lines": [
+            "42"
+          ]
+        },
+        {
+          "title": "Add them up",
+          "description": "The loop visits every number from 1 to 10. Add each one into S, then print S.",
+          "starter_code": "10 LET S = 0\n20 FOR I = 1 TO 10\n30 REM Add I into S here\n40 NEXT I\n50 PRINT S\n60 END",
+          "solution": "10 LET S = 0\n20 FOR I = 1 TO 10\n30 LET S = S + I\n40 NEXT I\n50 PRINT S\n60 END",
+          "hints": [
+            "S starts at 0 and grows as the loop runs.",
+            "Inside the loop, add the current value of I: LET S = S + I"
+          ],
+          "expect_lines": [
+            "55"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "basic_loops",
+      "title": "Loops and Decisions in BASIC",
+      "language": "BASIC",
+      "difficulty": "intermediate",
+      "description": "Repeat work with FOR/NEXT and choose with IF/THEN.",
+      "objectives": [
+        "Change a loop's bounds to repeat work a different number of times",
+        "Select work inside a loop with a condition",
+        "Keep a running total across iterations"
+      ],
+      "teacher_notes": "The step from 'a program runs' to 'a program decides'. Watch for a learner who puts NEXT inside the IF: the loop then stops after one pass and the output is confusing rather than obviously wrong.",
+      "prerequisites": [
+        "basic_first_steps"
+      ],
+      "checkpoints": [
+        {
+          "title": "Count with FOR",
+          "description": "Print the numbers 1 to 5, one per line, using the loop.",
+          "starter_code": "10 FOR I = 1 TO 3\n20 PRINT I\n30 NEXT I\n40 END",
+          "solution": "10 FOR I = 1 TO 5\n20 PRINT I\n30 NEXT I\n40 END",
+          "hints": [
+            "The loop already prints. Change how far it counts.",
+            "FOR I = 1 TO 5"
+          ],
+          "expect_lines": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        },
+        {
+          "title": "Only the even numbers",
+          "description": "Loop from 1 to 10 but print a number only when it is even.",
+          "starter_code": "10 FOR I = 1 TO 10\n20 PRINT I\n30 NEXT I\n40 END",
+          "solution": "10 FOR I = 1 TO 10\n20 IF I MOD 2 = 0 THEN PRINT I\n30 NEXT I\n40 END",
+          "hints": [
+            "MOD gives the remainder, so I MOD 2 is 0 for an even number.",
+            "IF I MOD 2 = 0 THEN PRINT I"
+          ],
+          "expect_lines": [
+            "2",
+            "4",
+            "6",
+            "8",
+            "10"
+          ]
+        },
+        {
+          "title": "Make 55",
+          "description": "Total the numbers from 1 to 10 and print the total.",
+          "starter_code": "10 LET T = 0\n20 FOR I = 1 TO 10\n30 LET T = T + 1\n40 NEXT I\n50 PRINT T\n60 END",
+          "solution": "10 LET T = 0\n20 FOR I = 1 TO 10\n30 LET T = T + I\n40 NEXT I\n50 PRINT T\n60 END",
+          "hints": [
+            "The loop body adds the wrong thing to the total.",
+            "Add I, not 1: LET T = T + I"
+          ],
+          "expect_lines": [
+            "55"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pilot_talking",
+      "title": "Talking with PILOT",
+      "language": "PILOT",
+      "difficulty": "beginner",
+      "description": "Print text and compute values with PILOT's one-letter commands.",
+      "objectives": [
+        "Print a line of text with T:",
+        "Print several lines in order",
+        "Compute a value with C: and print it"
+      ],
+      "teacher_notes": "PILOT has no line numbers and no syntax beyond LETTER: text, which makes it the gentlest place to start. Every unit ends with a colon, and forgetting it is the only error a beginner tends to make here.",
+      "prerequisites": [],
+      "checkpoints": [
+        {
+          "title": "Say hello",
+          "description": "Use a T: unit to display exactly: Hello, World!",
+          "starter_code": "T: Hello",
+          "solution": "T: Hello, World!",
+          "hints": [
+            "T: prints everything after the colon.",
+            "Punctuation is printed as written, comma and all: T: Hello, World!"
+          ],
+          "expect_lines": [
+            "Hello, World!"
+          ]
+        },
+        {
+          "title": "Two lines",
+          "description": "Print One on the first line and Two on the second.",
+          "starter_code": "T: One",
+          "solution": "T: One\nT: Two",
+          "hints": [
+            "Each T: unit prints one line.",
+            "Add a second unit underneath: T: Two"
+          ],
+          "expect_lines": [
+            "One",
+            "Two"
+          ]
+        },
+        {
+          "title": "Compute, then print",
+          "description": "X is computed for you. Print its value.",
+          "starter_code": "C:X = 6 * 7\nT: The answer is",
+          "solution": "C:X = 6 * 7\nT: $X",
+          "hints": [
+            "C:X = ... stores a value in X.",
+            "A $ in a T: unit is replaced by the variable's value: T: $X"
+          ],
+          "expect_lines": [
+            "42"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "pilot_flow",
+      "title": "Labels, Jumps and Subroutines in PILOT",
+      "language": "PILOT",
+      "difficulty": "intermediate",
+      "description": "Send the program somewhere else with J: and U:, and stop it with E:.",
+      "objectives": [
+        "Skip lines with J:",
+        "Reuse a block of units with U: and return from it with E:",
+        "Stop a program early with E:"
+      ],
+      "teacher_notes": "PILOT's control flow is the whole of the language, and it is where learners first see that a program is a sequence the machine can move around in. The classic mistake is forgetting the final E: in a subroutine, which runs the rest of the program twice.",
+      "prerequisites": [
+        "pilot_talking"
+      ],
+      "checkpoints": [
+        {
+          "title": "Jump over a line",
+          "description": "The program must print Landed and never print Not reached.",
+          "starter_code": "T: Not reached\nE:\n*SKIP\nT: Landed",
+          "solution": "J: SKIP\nT: Not reached\nE:\n*SKIP\nT: Landed",
+          "hints": [
+            "J: SKIP jumps to the line labelled *SKIP.",
+            "Put J: SKIP at the top, so the line that prints Not reached is never reached."
+          ],
+          "expect_lines": [
+            "Landed"
+          ]
+        },
+        {
+          "title": "Call a subroutine",
+          "description": "Print Inside, then return and print Back.",
+          "starter_code": "U: *SUB\nT: Back\nE:\n*SUB\nT: Inside",
+          "solution": "U: *SUB\nT: Back\nE:\n*SUB\nT: Inside\nE:",
+          "hints": [
+            "U: jumps to a label and remembers where to come back to.",
+            "The subroutine must end with E: so the program returns instead of running on."
+          ],
+          "expect_lines": [
+            "Inside",
+            "Back"
+          ]
+        },
+        {
+          "title": "Stop early",
+          "description": "Print Before and stop. After must never appear.",
+          "starter_code": "T: Before\nT: After",
+          "solution": "T: Before\nE:\nT: After",
+          "hints": [
+            "E: ends the program when it is not inside a subroutine.",
+            "Put an E: unit between the two T: units."
+          ],
+          "expect_lines": [
+            "Before"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "logo_shapes",
+      "title": "Turtle Shapes in Logo",
+      "language": "LOGO",
+      "difficulty": "beginner",
+      "description": "Move the turtle, turn it, and draw closed shapes.",
+      "objectives": [
+        "Draw a single line with FORWARD",
+        "Draw a square by repeating a move and a turn",
+        "Work out the turn needed for a triangle"
+      ],
+      "teacher_notes": "Logo is the only place in the studio where the output is a drawing rather than text, so check the canvas, not the console. The turn for a regular shape is 360 divided by the number of sides; let learners discover that for the triangle after doing the square.",
+      "prerequisites": [],
+      "checkpoints": [
+        {
+          "title": "One line",
+          "description": "Draw a single straight line 100 steps long.",
+          "starter_code": "RIGHT 45",
+          "solution": "FORWARD 100",
+          "hints": [
+            "FORWARD moves the turtle and draws as it goes.",
+            "The pen starts down, so FORWARD 100 makes one line."
+          ],
+          "expect_turtle": {
+            "segments": 1
+          }
+        },
+        {
+          "title": "A square",
+          "description": "Draw a square with four equal sides, ending where you started.",
+          "starter_code": "REPEAT 4 [ FORWARD 100 ]",
+          "solution": "REPEAT 4 [ FORWARD 100 RIGHT 90 ]",
+          "hints": [
+            "A square needs a turn after each side.",
+            "The turn is 90 degrees: REPEAT 4 [ FORWARD 100 RIGHT 90 ]"
+          ],
+          "expect_turtle": {
+            "segments": 4,
+            "returns_home": true
+          }
+        },
+        {
+          "title": "A triangle",
+          "description": "Draw an equilateral triangle, ending where you started.",
+          "starter_code": "REPEAT 3 [ FORWARD 100 RIGHT 90 ]",
+          "solution": "REPEAT 3 [ FORWARD 100 RIGHT 120 ]",
+          "hints": [
+            "The outside of a triangle turns through 360 degrees in total.",
+            "360 divided by 3 sides is 120 degrees."
+          ],
+          "expect_turtle": {
+            "segments": 3,
+            "returns_home": true
+          }
+        }
+      ]
+    },
+    {
+      "id": "logo_procedures",
+      "title": "Logo Procedures",
+      "language": "LOGO",
+      "difficulty": "intermediate",
+      "description": "Name a shape once and draw it as often as you like.",
+      "objectives": [
+        "Define a procedure with TO and END",
+        "Give a procedure an input",
+        "Make a procedure call itself"
+      ],
+      "teacher_notes": "Procedures are the reason Logo is worth teaching: the learner stops writing drawing and starts writing vocabulary. A procedure that calls itself needs a condition to stop, so the spiral checkpoint is also the first brush with recursion terminating.",
+      "prerequisites": [
+        "logo_shapes"
+      ],
+      "checkpoints": [
+        {
+          "title": "Teach the turtle a square",
+          "description": "Define SQUARE, taking the side length as :SIZE, and draw one.",
+          "starter_code": "TO SQUARE :SIZE\n  REM Draw four sides here\nEND\n\nSQUARE 80",
+          "solution": "TO SQUARE :SIZE\n  REPEAT 4 [ FORWARD :SIZE RIGHT 90 ]\nEND\n\nSQUARE 80",
+          "hints": [
+            "A procedure body goes between TO and END.",
+            "The input is used like a number: FORWARD :SIZE"
+          ],
+          "expect_turtle": {
+            "segments": 4,
+            "returns_home": true
+          }
+        },
+        {
+          "title": "Any regular shape",
+          "description": "Define POLY taking :N sides and :SIZE, and draw a hexagon.",
+          "starter_code": "TO POLY :N :SIZE\n  REPEAT :N [ FORWARD :SIZE ]\nEND\n\nPOLY 6 60",
+          "solution": "TO POLY :N :SIZE\n  REPEAT :N [ FORWARD :SIZE RIGHT 360 / :N ]\nEND\n\nPOLY 6 60",
+          "hints": [
+            "One procedure should draw any shape, so the turn cannot be a fixed number.",
+            "The turn is 360 / :N - work it out inside the loop."
+          ],
+          "expect_turtle": {
+            "segments": 6,
+            "returns_home": true
+          }
+        },
+        {
+          "title": "A spiral that stops",
+          "description": "Make SPIRAL draw a growing spiral: each step is longer than the last, and it stops once the step passes 60.",
+          "starter_code": "TO SPIRAL :SIZE\n  FORWARD :SIZE\n  RIGHT 90\n  SPIRAL :SIZE + 10\nEND\n\nSPIRAL 10",
+          "solution": "TO SPIRAL :SIZE\n  IF :SIZE > 60 [ STOP ]\n  FORWARD :SIZE\n  RIGHT 90\n  SPIRAL :SIZE + 10\nEND\n\nSPIRAL 10",
+          "hints": [
+            "Without a stopping rule the procedure calls itself forever.",
+            "Stop at the top of the body: IF :SIZE > 60 [ STOP ]"
+          ],
+          "expect_turtle": {
+            "segments": 6
+          },
+          "starter_is_broken": true
+        }
+      ]
+    },
+    {
+      "id": "comal_basics",
+      "title": "COMAL Basics",
+      "language": "COMAL",
+      "difficulty": "beginner",
+      "description": "Print, calculate and repeat - COMAL's structured BASIC.",
+      "objectives": [
+        "Print text and numbers",
+        "Do arithmetic and print the result",
+        "Repeat work with a proper FOR block"
+      ],
+      "teacher_notes": "COMAL is the bridge between BASIC and a structured language: it prints the way BASIC does and loops with a proper block rather than NEXT. Use it with learners who already know BASIC to show what structure buys them.",
+      "prerequisites": [],
+      "checkpoints": [
+        {
+          "title": "Say hello",
+          "description": "Use PRINT to display exactly: Hello, World!",
+          "starter_code": "10 REM Print the greeting\n20 END",
+          "solution": "10 PRINT \"Hello, World!\"\n20 END",
+          "hints": [
+            "Text goes inside quotes.",
+            "PRINT \"Hello, World!\""
+          ],
+          "expect_lines": [
+            "Hello, World!"
+          ]
+        },
+        {
+          "title": "Arithmetic",
+          "description": "Print the product of 6 and 7.",
+          "starter_code": "10 PRINT 6 + 7",
+          "solution": "10 PRINT 6 * 7",
+          "hints": [
+            "COMAL uses * for multiply.",
+            "Change the + to a *."
+          ],
+          "expect_lines": [
+            "42"
+          ]
+        },
+        {
+          "title": "Count to five",
+          "description": "Print 1, 2, 3, 4 and 5, one per line.",
+          "starter_code": "10 FOR I = 1 TO 3\n20 PRINT I\n30 NEXT I",
+          "solution": "10 FOR I = 1 TO 5\n20 PRINT I\n30 NEXT I",
+          "hints": [
+            "The block is already complete; only the limit is wrong.",
+            "Change 3 to 5."
+          ],
+          "expect_lines": [
+            "1",
+            "2",
+            "3",
+            "4",
+            "5"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "comal_procedures",
+      "title": "COMAL Procedures and Decisions",
+      "language": "COMAL",
+      "difficulty": "intermediate",
+      "description": "Group work into a procedure and branch inside a loop.",
+      "objectives": [
+        "Define a procedure and call it",
+        "Choose between two paths with IF and ELSE",
+        "Keep a running total inside a loop"
+      ],
+      "teacher_notes": "COMAL's PROC/ENDPROC is the feature BASIC lacks entirely. The middle checkpoint is the one to linger on: COMAL requires ENDIF, which is exactly the mistake a BASIC programmer makes when they first meet a block language.",
+      "prerequisites": [
+        "comal_basics"
+      ],
+      "checkpoints": [
+        {
+          "title": "Write a procedure",
+          "description": "Define BOX so that CALL BOX prints exactly: Hello, World",
+          "starter_code": "10 PROC BOX\n20 REM Print the greeting here\n30 ENDPROC\n40 CALL BOX",
+          "solution": "10 PROC BOX\n20 PRINT \"Hello, World\"\n30 ENDPROC\n40 CALL BOX",
+          "hints": [
+            "The PRINT goes inside the procedure, between PROC and ENDPROC.",
+            "Line 20 becomes PRINT \"Hello, World\""
+          ],
+          "expect_lines": [
+            "Hello, World"
+          ]
+        },
+        {
+          "title": "Decide with IF and ELSE",
+          "description": "Grade a score of 95: print pass, not try again.",
+          "starter_code": "10 SCORE = 45\n20 IF SCORE >= 50 THEN\n30 PRINT \"pass\"\n40 ELSE\n50 PRINT \"try again\"\n60 ENDIF",
+          "solution": "10 SCORE = 95\n20 IF SCORE >= 50 THEN\n30 PRINT \"pass\"\n40 ELSE\n50 PRINT \"try again\"\n60 ENDIF",
+          "hints": [
+            "The condition is already written correctly - the value is not.",
+            "Set SCORE to a number that passes."
+          ],
+          "expect_lines": [
+            "pass"
+          ]
+        },
+        {
+          "title": "Total a loop",
+          "description": "Add the numbers from 1 to 10 into T and print T.",
+          "starter_code": "10 T = 0\n20 FOR I = 1 TO 10\n30 T = T + 1\n40 NEXT I\n50 PRINT T",
+          "solution": "10 T = 0\n20 FOR I = 1 TO 10\n30 T = T + I\n40 NEXT I\n50 PRINT T",
+          "hints": [
+            "T is being increased by the wrong amount each time.",
+            "Add I rather than 1."
+          ],
+          "expect_lines": [
+            "55"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rexx_basics",
+      "title": "REXX Basics",
+      "language": "REXX",
+      "difficulty": "beginner",
+      "description": "Say things, join strings, and store values.",
+      "objectives": [
+        "Print a line with SAY",
+        "Do arithmetic and print the answer",
+        "Join strings with ||"
+      ],
+      "teacher_notes": "REXX is typeless: everything is a string that behaves like a number when used as one. That surprises learners who expect a declaration, so the second checkpoint (printing 6 * 7) is the one that makes the point.",
+      "prerequisites": [],
+      "checkpoints": [
+        {
+          "title": "Say hello",
+          "description": "Use SAY to display exactly: Hello, World!",
+          "starter_code": "SAY 'Hello'",
+          "solution": "SAY 'Hello, World!'",
+          "hints": [
+            "SAY prints its argument and a newline.",
+            "Text goes in single or double quotes."
+          ],
+          "expect_lines": [
+            "Hello, World!"
+          ]
+        },
+        {
+          "title": "Arithmetic",
+          "description": "Print the product of 6 and 7.",
+          "starter_code": "SAY 6 + 7",
+          "solution": "SAY 6 * 7",
+          "hints": [
+            "REXX works out the arithmetic before SAY prints it.",
+            "Change + to *."
+          ],
+          "expect_lines": [
+            "42"
+          ]
+        },
+        {
+          "title": "Join two strings",
+          "description": "Print Hello World using concatenation.",
+          "starter_code": "SAY 'Hello' || 'World'",
+          "solution": "SAY 'Hello' || ' ' || 'World'",
+          "hints": [
+            "|| joins without adding anything.",
+            "Join the middle space too: 'Hello' || ' ' || 'World'"
+          ],
+          "expect_lines": [
+            "Hello World"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "rexx_loops",
+      "title": "REXX Loops and Subroutines",
+      "language": "REXX",
+      "difficulty": "intermediate",
+      "description": "Repeat work, use the built-in functions, and write a subroutine.",
+      "objectives": [
+        "Repeat a block until a condition is met",
+        "Pick a word out of a string with a built-in function",
+        "Return a value from an internal subroutine"
+      ],
+      "teacher_notes": "REXX's built-in function library is the reason to teach it: WORD, LENGTH and friends do in one line what other languages do in five. RESULT is only set by a subroutine that RETURNs a value, so a missing value is usually a bare RETURN.",
+      "prerequisites": [
+        "rexx_basics"
+      ],
+      "checkpoints": [
+        {
+          "title": "Count to five",
+          "description": "Count to 5 with a loop, then print the final count.",
+          "starter_code": "count = 0\nDO WHILE count < 3\ncount = count + 1\nEND\nSAY count",
+          "solution": "count = 0\nDO WHILE count < 5\ncount = count + 1\nEND\nSAY count",
+          "hints": [
+            "The loop stops as soon as the condition is false.",
+            "Change the 3 to a 5."
+          ],
+          "expect_lines": [
+            "5"
+          ]
+        },
+        {
+          "title": "Pick a word out",
+          "description": "Print the second word of 'alpha beta gamma'.",
+          "starter_code": "SAY WORD('alpha beta gamma', 1)",
+          "solution": "SAY WORD('alpha beta gamma', 2)",
+          "hints": [
+            "WORD takes a string and a position.",
+            "The second word is position 2, not 1."
+          ],
+          "expect_lines": [
+            "beta"
+          ]
+        },
+        {
+          "title": "Return a value",
+          "description": "CALL DOUBLE with 5 so that SAY RESULT prints 10.",
+          "starter_code": "CALL DOUBLE 5\nSAY RESULT\nEXIT\nDOUBLE:\nRETURN ARG(1)",
+          "solution": "CALL DOUBLE 5\nSAY RESULT\nEXIT\nDOUBLE:\nRETURN ARG(1) * 2",
+          "hints": [
+            "ARG(1) is the number the subroutine was given.",
+            "The subroutine has to double it before returning."
+          ],
+          "expect_lines": [
+            "10"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scheme_basics",
+      "title": "Scheme Basics",
+      "language": "SCHEME",
+      "difficulty": "beginner",
+      "description": "Everything is an expression, and parentheses group them.",
+      "objectives": [
+        "Display the value of an arithmetic expression",
+        "Define a procedure with define",
+        "Choose between two values"
+      ],
+      "teacher_notes": "Scheme is the studio's functional language and the first where the learner must count brackets. Run a program that is missing one before they write their first to show what the error looks like when it is easy to see.",
+      "prerequisites": [],
+      "checkpoints": [
+        {
+          "title": "Display 42",
+          "description": "Use display to produce exactly: 42",
+          "starter_code": "(display (+ 20 20))",
+          "solution": "(display (+ 20 22))",
+          "hints": [
+            "+ adds its arguments.",
+            "You need the total to be 42: (+ 20 22)"
+          ],
+          "expect_lines": [
+            "42"
+          ]
+        },
+        {
+          "title": "Define a procedure",
+          "description": "Define double, which returns twice its argument, and display double of 21.",
+          "starter_code": "(define (double x) (* x 1))\n(display (double 21))",
+          "solution": "(define (double x) (* x 2))\n(display (double 21))",
+          "hints": [
+            "The body of double multiplies x by the wrong number.",
+            "(* x 2)"
+          ],
+          "expect_lines": [
+            "42"
+          ]
+        },
+        {
+          "title": "Choose",
+          "description": "Display big when 5 is greater than 3, and small otherwise.",
+          "starter_code": "(display (if (> 3 5) \"big\" \"small\"))",
+          "solution": "(display (if (> 5 3) \"big\" \"small\"))",
+          "hints": [
+            "if takes a condition, then the true branch, then the false one.",
+            "The comparison is the wrong way round: (> 5 3)"
+          ],
+          "expect_lines": [
+            "big"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "scheme_recursion",
+      "title": "Recursion and Lists in Scheme",
+      "language": "SCHEME",
+      "difficulty": "intermediate",
+      "description": "A procedure that calls itself, and the lists it works on.",
+      "objectives": [
+        "Write a recursive procedure with a stopping case",
+        "Work with a list",
+        "Pass a procedure to another procedure"
+      ],
+      "teacher_notes": "Recursion lands properly here because the stopping case is visible in the source. The last checkpoint introduces higher-order procedures, which is the idea Scheme exists to teach - a learner who has done it has seen the whole paradigm.",
+      "prerequisites": [
+        "scheme_basics"
+      ],
+      "checkpoints": [
+        {
+          "title": "Factorial",
+          "description": "Make fact return 120 for 5.",
+          "starter_code": "(define (fact n) (if (= n 0) 1 (* n (fact n))))\n(display (fact 5))",
+          "solution": "(define (fact n) (if (= n 0) 1 (* n (fact (- n 1)))))\n(display (fact 5))",
+          "hints": [
+            "A recursive procedure must call itself with a smaller argument.",
+            "Multiply by (fact (- n 1)), not (fact n)."
+          ],
+          "expect_lines": [
+            "120"
+          ],
+          "starter_is_broken": true
+        },
+        {
+          "title": "How long is a list",
+          "description": "Display the number of items in the list 1 2 3.",
+          "starter_code": "(display (list 1 2 3))",
+          "solution": "(display (length (list 1 2 3)))",
+          "hints": [
+            "length counts the items in a list.",
+            "(length (list 1 2 3))"
+          ],
+          "expect_lines": [
+            "3"
+          ]
+        },
+        {
+          "title": "Give a procedure to another",
+          "description": "Square every number in 1 2 3 and display the result.",
+          "starter_code": "(define (square x) (* x x))\n(display (list 1 2 3))",
+          "solution": "(define (square x) (* x x))\n(display (map square (list 1 2 3)))",
+          "hints": [
+            "map applies a procedure to every item of a list.",
+            "(map square (list 1 2 3))"
+          ],
+          "expect_lines": [
+            "(1 4 9)"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "apl_arrays",
+      "title": "Arrays in APL",
+      "language": "APL",
+      "difficulty": "beginner",
+      "description": "Whole arrays at once, and no operator precedence.",
+      "objectives": [
+        "Generate a sequence with iota",
+        "Add a number to every item of an array",
+        "Add up an array with reduce"
+      ],
+      "teacher_notes": "Two things surprise everyone: there is no precedence (evaluation is right to left) and most functions work on the whole array. Do 2 x 3 + 4 on the board before they type it, or the first checkpoint will look like a mistake.",
+      "prerequisites": [],
+      "checkpoints": [
+        {
+          "title": "Add up 1 to 10",
+          "description": "Display the total of the numbers 1 to 10.",
+          "starter_code": "+/⍳5",
+          "solution": "+/⍳10",
+          "hints": [
+            "⍳10 makes the vector 1 2 3 4 5 6 7 8 9 10.",
+            "+/ adds up whatever is to its right."
+          ],
+          "expect_lines": [
+            "55"
+          ]
+        },
+        {
+          "title": "Add to everything",
+          "description": "Display 1 2 3 with 10 added to each item.",
+          "starter_code": "1 2 3 + 1",
+          "solution": "1 2 3 + 10",
+          "hints": [
+            "The + reaches into the whole array.",
+            "Change the 1 to 10."
+          ],
+          "expect_lines": [
+            "11 12 13"
+          ]
+        },
+        {
+          "title": "Reduce a vector",
+          "description": "Add up 1 2 3 4 with a single operator.",
+          "starter_code": "+/ 1 2 3",
+          "solution": "+/ 1 2 3 4",
+          "hints": [
+            "/ is reduce: it puts + between every pair of items.",
+            "The vector is missing its last number."
+          ],
+          "expect_lines": [
+            "10"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "apl_functions",
+      "title": "Defined Functions and Shape in APL",
+      "language": "APL",
+      "difficulty": "intermediate",
+      "description": "Name an operation and change the shape of data.",
+      "objectives": [
+        "Define a function with the nabla symbol",
+        "Write a function that uses reduce",
+        "Reshape a vector into a table"
+      ],
+      "teacher_notes": "The nabla definition is APL's answer to a procedure and reads oddly the first time: the result is whatever is assigned to the name on the left of the arrow. The average function is the payoff, and it is worth showing that it is one line where most languages need a loop.",
+      "prerequisites": [
+        "apl_arrays"
+      ],
+      "checkpoints": [
+        {
+          "title": "Define DOUBLE",
+          "description": "Define DOUBLE so that DOUBLE 21 is 42.",
+          "starter_code": "∇ R ← DOUBLE X\n  R ← X + 2\n∇\nDOUBLE 21",
+          "solution": "∇ R ← DOUBLE X\n  R ← X × 2\n∇\nDOUBLE 21",
+          "hints": [
+            "× is times in APL.",
+            "The body should be R ← X × 2."
+          ],
+          "expect_lines": [
+            "42"
+          ]
+        },
+        {
+          "title": "Average without a loop",
+          "description": "Define AVERAGE so that AVERAGE 1 2 3 4 is 2.5.",
+          "starter_code": "∇ R ← AVERAGE X\n  R ← (+/X)\n∇\nAVERAGE 1 2 3 4",
+          "solution": "∇ R ← AVERAGE X\n  R ← (+/X) ÷ ⍴X\n∇\nAVERAGE 1 2 3 4",
+          "hints": [
+            "⍴X counts the items in X.",
+            "Divide the total by the count: (+/X) ÷ ⍴X"
+          ],
+          "expect_lines": [
+            "2.5"
+          ]
+        },
+        {
+          "title": "Make a table",
+          "description": "Display 1 to 6 as a table of 2 rows and 3 columns.",
+          "starter_code": "⍳6",
+          "solution": "2 3 ⍴ ⍳6",
+          "hints": [
+            "⍴ reshapes its right argument.",
+            "The left argument is the shape: 2 3 ⍴ ⍳6"
+          ],
+          "expect_lines": [
+            "1 2 3",
+            "4 5 6"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "focal_first_steps",
+      "title": "First Steps in FOCAL",
+      "language": "FOCAL",
+      "difficulty": "beginner",
+      "description": "Line labels, printing, and the two-decimal habit.",
+      "objectives": [
+        "Print text and a value",
+        "Store a number and print it",
+        "Repeat a statement with FOR"
+      ],
+      "teacher_notes": "FOCAL labels are NN.NN - a group number and a line number, each up to two digits. Numbers print with two decimal places unless a %n format says otherwise, which is the first thing learners ask about.",
+      "prerequisites": [],
+      "checkpoints": [
+        {
+          "title": "Say hello",
+          "description": "Print exactly: Hello, World!",
+          "starter_code": "01.10 T \"Hello\"\n01.20 Q",
+          "solution": "01.10 T \"Hello, World!\"\n01.20 Q",
+          "hints": [
+            "T is TYPE: it prints what follows.",
+            "The text goes in quotes: T \"Hello, World!\""
+          ],
+          "expect_lines": [
+            "Hello, World!"
+          ]
+        },
+        {
+          "title": "Store and print",
+          "description": "Put 5 into X and print it as X=5.00.",
+          "starter_code": "01.10 S X=2\n01.20 T \"X=\",X\n01.30 Q",
+          "solution": "01.10 S X=5\n01.20 T \"X=\",X\n01.30 Q",
+          "hints": [
+            "S is SET: it stores a value in a variable.",
+            "Change the value assigned to X."
+          ],
+          "expect_lines": [
+            "X=5.00"
+          ]
+        },
+        {
+          "title": "Count with FOR",
+          "description": "Print I=1, I=2 and I=3, one per line.",
+          "starter_code": "01.10 FOR I=1,2;T %0,\"I=\",I\n01.20 Q",
+          "solution": "01.10 FOR I=1,3;T %0,\"I=\",I\n01.20 Q",
+          "hints": [
+            "FOR repeats the rest of the line.",
+            "%0 sets no decimal places, so the number prints as a whole number."
+          ],
+          "expect_lines": [
+            "I=1",
+            "I=2",
+            "I=3"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "focal_branching",
+      "title": "Branching in FOCAL",
+      "language": "FOCAL",
+      "difficulty": "intermediate",
+      "description": "FOCAL has no comparisons - it branches on a sign.",
+      "objectives": [
+        "Branch on the sign of an expression",
+        "Call a group of lines with DO",
+        "Jump to a labelled line with GOTO"
+      ],
+      "teacher_notes": "This is the lesson that makes FOCAL FOCAL. IF (X) a,b,c goes to a when X is negative, b when it is zero and c when it is positive, and there is no way to write 'if X is greater than 5' except by subtracting. Draw the three-way branch on the board first.",
+      "prerequisites": [
+        "focal_first_steps"
+      ],
+      "checkpoints": [
+        {
+          "title": "Positive, zero or negative",
+          "description": "When N is 7, print POSITIVE.",
+          "starter_code": "01.10 S N=-7\n01.20 I (N) 1.40,1.40,1.30\n01.30 T \"POSITIVE\"\n01.40 Q",
+          "solution": "01.10 S N=7\n01.20 I (N) 1.40,1.40,1.30\n01.30 T \"POSITIVE\"\n01.40 Q",
+          "hints": [
+            "The third target of an IF is taken when the expression is positive.",
+            "Set N to a positive number."
+          ],
+          "expect_lines": [
+            "POSITIVE"
+          ]
+        },
+        {
+          "title": "Call a group",
+          "description": "Use DO to run the group at 2.10 and print INSIDE.",
+          "starter_code": "01.10 T \"NOT INSIDE\"\n01.20 Q\n02.10 T \"INSIDE\"",
+          "solution": "01.10 DO 2.10\n01.20 Q\n02.10 T \"INSIDE\"",
+          "hints": [
+            "DO runs a group of lines starting at a label.",
+            "Replace the first print with DO 2.10."
+          ],
+          "expect_lines": [
+            "INSIDE"
+          ]
+        },
+        {
+          "title": "Jump to a label",
+          "description": "Print LANDED and never print NOT REACHED.",
+          "starter_code": "01.10 T \"NOT REACHED\"\n01.20 GOTO 1.30\n01.30 T \"LANDED\"\n01.40 Q",
+          "solution": "01.10 GOTO 1.30\n01.20 T \"NOT REACHED\"\n01.30 T \"LANDED\"\n01.40 Q",
+          "hints": [
+            "GOTO jumps to a line label.",
+            "The label for line 30 in group 1 is 1.30."
+          ],
+          "expect_lines": [
+            "LANDED"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chip8_drawing",
+      "title": "Drawing with CHIP-8",
+      "language": "CHIP8",
+      "difficulty": "beginner",
+      "description": "A framebuffer, a sprite, and one instruction that puts them together.",
+      "objectives": [
+        "Draw a sprite with DRW",
+        "Understand that one byte of data is one row of eight pixels",
+        "Use the machine's built-in hex font"
+      ],
+      "teacher_notes": "CHIP-8 is assembled and run whole, so a mistake is reported with an address rather than a line number. The display is 64x32 and each data byte is one row with the leftmost pixel in the highest bit, which is worth drawing on the board: 0xF0 is the left four pixels of a row.",
+      "prerequisites": [],
+      "checkpoints": [
+        {
+          "title": "Light one pixel",
+          "description": "The data is already here. Draw it and stop.",
+          "starter_code": "start: LD I, dot\n       HALT\ndot:   DB 0x80",
+          "solution": "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot:   DB 0x80",
+          "hints": [
+            "DRW takes the x register, the y register and the number of rows.",
+            "Put DRW V0, V1, 1 before HALT."
+          ],
+          "expect_turtle": {
+            "shapes": 2
+          }
+        },
+        {
+          "title": "Two rows",
+          "description": "The sprite has two bytes. Draw both rows.",
+          "starter_code": "start: LD I, spr\n       DRW V0, V1, 1\n       HALT\nspr:   DB 0xF0\n       DB 0x90",
+          "solution": "start: LD I, spr\n       DRW V0, V1, 2\n       HALT\nspr:   DB 0xF0\n       DB 0x90",
+          "hints": [
+            "The last number in DRW is how many bytes to draw.",
+            "Two rows means DRW V0, V1, 2."
+          ],
+          "expect_turtle": {
+            "shapes": 7
+          }
+        },
+        {
+          "title": "Use the built-in font",
+          "description": "Draw the whole hex glyph for 0x41 from the machine's font.",
+          "starter_code": "start: LD V0, 0x41\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot:   DB 0x80",
+          "solution": "start: LD V0, 0x41\n       LD F, V0\n       DRW V0, V1, 5\n       HALT\ndot:   DB 0x80",
+          "hints": [
+            "LD F, Vx points I at the font's drawing of the digit in Vx.",
+            "A font glyph is five bytes tall: use LD F, V0 and DRW V0, V1, 5."
+          ],
+          "expect_turtle": {
+            "shapes": 9
+          }
+        }
+      ]
+    },
+    {
+      "id": "chip8_sprites",
+      "title": "Sprites and Pixels in CHIP-8",
+      "language": "CHIP8",
+      "difficulty": "advanced",
+      "description": "Frames of data, moving the draw, and what happens when pixels overlap.",
+      "objectives": [
+        "Draw a multi-row sprite from data",
+        "Move where the next draw lands",
+        "Explain why drawing over a lit pixel turns it off"
+      ],
+      "teacher_notes": "The last checkpoint is the one worth the time: CHIP-8 has no erase instruction, and a lit pixel drawn over is turned off. That single rule is how the machine animates, and a learner who can explain it understands the display rather than just copying DRW lines.",
+      "prerequisites": [
+        "chip8_drawing"
+      ],
+      "checkpoints": [
+        {
+          "title": "A three-row frame",
+          "description": "Draw the frame data as three rows.",
+          "starter_code": "start: LD I, frame\n       DRW V0, V1, 1\n       HALT\nframe: DB 0xFF\n       DB 0x81\n       DB 0xFF",
+          "solution": "start: LD I, frame\n       DRW V0, V1, 3\n       HALT\nframe: DB 0xFF\n       DB 0x81\n       DB 0xFF",
+          "hints": [
+            "The data holds three bytes.",
+            "DRW V0, V1, 3 draws all of them."
+          ],
+          "expect_turtle": {
+            "shapes": 19
+          }
+        },
+        {
+          "title": "Draw it twice",
+          "description": "Draw the frame, move eight pixels right, and draw it again.",
+          "starter_code": "start: LD I, frame\n       DRW V0, V1, 3\n       HALT\nframe: DB 0xFF\n       DB 0x81\n       DB 0xFF",
+          "solution": "start: LD I, frame\n       DRW V0, V1, 3\n       ADD V0, 8\n       DRW V0, V1, 3\n       HALT\nframe: DB 0xFF\n       DB 0x81\n       DB 0xFF",
+          "hints": [
+            "ADD V0, 8 changes where the next DRW starts.",
+            "Draw, add 8 to V0, then draw again."
+          ],
+          "expect_turtle": {
+            "shapes": 37
+          }
+        },
+        {
+          "title": "Draw over yourself",
+          "description": "Now move only one pixel right before drawing again, and see what happens.",
+          "starter_code": "start: LD I, frame\n       DRW V0, V1, 3\n       ADD V0, 8\n       DRW V0, V1, 3\n       HALT\nframe: DB 0xFF\n       DB 0x81\n       DB 0xFF",
+          "solution": "start: LD I, frame\n       DRW V0, V1, 3\n       ADD V0, 1\n       DRW V0, V1, 3\n       HALT\nframe: DB 0xFF\n       DB 0x81\n       DB 0xFF",
+          "hints": [
+            "One pixel right means most of the second draw lands on the first.",
+            "Where the two overlap the pixels are turned off, so far fewer are left lit."
+          ],
+          "expect_turtle": {
+            "shapes": 9
+          }
+        }
+      ]
+    },
+    {
+      "id": "smalltalk_messages",
+      "title": "Objects and Messages in Smalltalk",
+      "language": "SMALLTALK",
+      "difficulty": "beginner",
+      "description": "There are no statements - everything is a message to an object.",
+      "objectives": [
+        "Send a unary message to an object",
+        "Write to the Transcript",
+        "Put several messages in a cascade"
+      ],
+      "teacher_notes": "The change of mind needed here is bigger than the syntax: 6 * 7 is not an expression that multiplies, it is the object 6 being sent the message *. Point that out before the first checkpoint or the language will feel arbitrary.",
+      "prerequisites": [],
+      "checkpoints": [
+        {
+          "title": "Send a message",
+          "description": "Make the program answer 42.",
+          "starter_code": "6 * 6",
+          "solution": "6 * 7",
+          "hints": [
+            "The last value in a block of code is shown.",
+            "6 * 7 answers 42."
+          ],
+          "expect_lines": [
+            "42"
+          ]
+        },
+        {
+          "title": "Print a line",
+          "description": "Print Hello, World! to the Transcript.",
+          "starter_code": "Transcript show: 'Hello'",
+          "solution": "Transcript show: 'Hello, World!'; cr",
+          "hints": [
+            "Transcript is the object you write to.",
+            "show: takes the text; cr finishes the line."
+          ],
+          "expect_lines": [
+            "Hello, World!"
+          ]
+        },
+        {
+          "title": "Ask a string how long it is",
+          "description": "Make the program answer 5.",
+          "starter_code": "'hello'",
+          "solution": "'hello' size",
+          "hints": [
+            "Strings answer messages about themselves.",
+            "size answers how many characters there are."
+          ],
+          "expect_lines": [
+            "5"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "smalltalk_classes",
+      "title": "Classes and Blocks in Smalltalk",
+      "language": "SMALLTALK",
+      "difficulty": "intermediate",
+      "description": "Define a class, give it a method, and use a block.",
+      "objectives": [
+        "Read a class definition as a message",
+        "Add a method to a class",
+        "Run a block with value"
+      ],
+      "teacher_notes": "A definition reports itself: the class definition answers Counter, and each method definition answers its own header, so those lines appear in the output. That is the workspace's print-it rule rather than noise, and saying so stops the first checkpoint looking broken.",
+      "prerequisites": [
+        "smalltalk_messages"
+      ],
+      "checkpoints": [
+        {
+          "title": "Add a method",
+          "description": "Counter needs a way to answer its count. Add one and use it.",
+          "starter_code": "Object subclass: #Counter\n  instanceVariableNames: 'count'\n\nCounter >> initialize\n  count := 0\n\n| c |\nc := Counter new.\nc value",
+          "solution": "Object subclass: #Counter\n  instanceVariableNames: 'count'\n\nCounter >> initialize\n  count := 0\n\nCounter >> value\n  ^count\n\n| c |\nc := Counter new.\nc value",
+          "hints": [
+            "A method is a header, then an indented body.",
+            "Answer the count with ^count."
+          ],
+          "expect_lines": [
+            "Counter",
+            "Counter >> initialize",
+            "Counter >> value",
+            "0"
+          ],
+          "starter_is_broken": true
+        },
+        {
+          "title": "Run a block",
+          "description": "Double 21 by running a block.",
+          "starter_code": "[ :x | x * 1 ] value: 21",
+          "solution": "[ :x | x * 2 ] value: 21",
+          "hints": [
+            "A block between square brackets is run with value:.",
+            "The block multiplies by the wrong number."
+          ],
+          "expect_lines": [
+            "42"
+          ]
+        },
+        {
+          "title": "Add up a range",
+          "description": "Add the numbers 1 to 5 with inject:into:.",
+          "starter_code": "(1 to: 5) inject: 0 into: [ :sum :each | sum + 1 ]",
+          "solution": "(1 to: 5) inject: 0 into: [ :sum :each | sum + each ]",
+          "hints": [
+            "inject:into: carries a running value through the block.",
+            "Add each, not 1: sum + each"
+          ],
+          "expect_lines": [
+            "15"
+          ]
+        }
+      ]
+    }
+  ]
+}

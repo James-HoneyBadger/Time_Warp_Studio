@@ -29,6 +29,7 @@
 #include <QFile>
 #include <QPointF>
 #include <QProcessEnvironment>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 #include <QTemporaryDir>
@@ -42,6 +43,9 @@
 
 namespace {
 
+using timewarp::bridge::LessonCheckpoint;
+using timewarp::bridge::LessonProgress;
+using timewarp::bridge::LessonSummary;
 using timewarp::bridge::PythonWorker;
 using timewarp::bridge::locateWorker;
 using timewarp::canvas::CanvasCommandKind;
@@ -79,6 +83,26 @@ struct Recording {
     int pose_count = 0;
 
     [[nodiscard]] bool sawTerminalEvent() const { return finished_count > 0 || failures > 0; }
+
+    // Lessons, as the panel would have received them.
+    QList<LessonSummary> lessons;
+    int presentation_font = 0;
+    QList<LessonProgress> progress_rows;
+    int progress_completed = 0;
+    int progress_total = 0;
+    QString hint_text;
+    int hint_number = 0;
+    int hint_total = 0;
+    QString solution_text;
+    bool checked = false;
+    bool check_passed = false;
+    QString check_message;
+    bool check_completed = false;
+    int check_finished = 0;
+    int check_total = 0;
+    QString reset_lesson;
+    QString lesson_failure_request;
+    QString lesson_failure_text;
 };
 
 /// Runs a worker and collects everything it says.
@@ -113,6 +137,54 @@ public:
                              ++recorded_.failures;
                              recorded_.last_failure = text;
                          });
+        QObject::connect(&worker_, &PythonWorker::lessonsReceived, &worker_,
+                         [this](const QList<LessonSummary>& lessons, int presentation_font) {
+                             recorded_.lessons = lessons;
+                             recorded_.presentation_font = presentation_font;
+                         });
+        QObject::connect(&worker_, &PythonWorker::lessonProgressReceived, &worker_,
+                         [this](const QList<LessonProgress>& rows, int completed, int total) {
+                             recorded_.progress_rows = rows;
+                             recorded_.progress_completed = completed;
+                             recorded_.progress_total = total;
+                         });
+        QObject::connect(&worker_, &PythonWorker::lessonHintReceived, &worker_,
+                         [this](const QString& text, int number, int total) {
+                             recorded_.hint_text = text;
+                             recorded_.hint_number = number;
+                             recorded_.hint_total = total;
+                         });
+        QObject::connect(&worker_, &PythonWorker::lessonSolutionReceived, &worker_,
+                         [this](const QString& text) { recorded_.solution_text = text; });
+        QObject::connect(
+            &worker_, &PythonWorker::lessonChecked, &worker_,
+            [this](const QString&, int, bool passed, const QString& message, bool completed,
+                   int finished, int total) {
+                recorded_.checked = true;
+                recorded_.check_passed = passed;
+                recorded_.check_message = message;
+                recorded_.check_completed = completed;
+                recorded_.check_finished = finished;
+                recorded_.check_total = total;
+            });
+        QObject::connect(&worker_, &PythonWorker::lessonResetDone, &worker_,
+                         [this](const QString& lesson) { recorded_.reset_lesson = lesson; });
+        QObject::connect(&worker_, &PythonWorker::lessonFailed, &worker_,
+                         [this](const QString& request, const QString& error) {
+                             recorded_.lesson_failure_request = request;
+                             recorded_.lesson_failure_text = error;
+                         });
+    }
+
+    /// Forgets the last verdict, so a second check in one test is unambiguous.
+    ///
+    /// Without this the second wait would be satisfied by the first answer still
+    /// sitting in the record, and the test would pass whether or not the second
+    /// check ever ran.
+    void clearCheck() {
+        recorded_.checked = false;
+        recorded_.check_passed = false;
+        recorded_.check_message.clear();
     }
 
     [[nodiscard]] PythonWorker& worker() { return worker_; }
@@ -213,6 +285,34 @@ private:
     return path;
 }
 
+/// Points every worker started while this object lives at a private data directory.
+///
+/// The lesson tests record hints and completed checkpoints, and those are written
+/// to `~/.time_warp/progress.json` -- the *learner's* file. A suite that wrote
+/// there would corrupt somebody's place in the curriculum, and would then pass or
+/// fail depending on what the previous run had left behind: the hint counter is
+/// cumulative, which is exactly how this was found.
+class DataDirOverride {
+public:
+    explicit DataDirOverride(const QString& directory) {
+        previous_ = QProcessEnvironment::systemEnvironment().value(
+            QString::fromLatin1("TIME_WARP_DATA_DIR"));
+        qputenv("TIME_WARP_DATA_DIR", directory.toUtf8());
+    }
+    ~DataDirOverride() {
+        if (previous_.isEmpty()) {
+            qunsetenv("TIME_WARP_DATA_DIR");
+        } else {
+            qputenv("TIME_WARP_DATA_DIR", previous_.toUtf8());
+        }
+    }
+    DataDirOverride(const DataDirOverride&) = delete;
+    DataDirOverride& operator=(const DataDirOverride&) = delete;
+
+private:
+    QString previous_;
+};
+
 /// Points the worker at `script` for the duration of the returned object's life.
 ///
 /// A guard rather than a plain `qputenv`, because a test that leaves the override
@@ -241,6 +341,256 @@ private:
 
 [[nodiscard]] bool nearly(double actual, double expected, double tolerance = 1e-6) {
     return std::abs(actual - expected) <= tolerance;
+}
+
+// ---------------------------------------------------------------------------
+// Lessons
+// ---------------------------------------------------------------------------
+
+/// A worker with the curriculum loaded, or null when the bridge is unavailable.
+///
+/// The lesson tests all need the same handshake, and the curriculum is something
+/// the worker reads from disk, so every one of them would otherwise repeat the
+/// same four lines of setup.
+[[nodiscard]] bool openLessons(Harness& harness) {
+    if (!harness.requireStart()) {
+        return false;
+    }
+    if (!harness.worker().requestLessons()) {
+        return false;
+    }
+    return harness.waitFor([&harness] { return !harness.recorded().lessons.isEmpty(); });
+}
+
+void test_the_curriculum_arrives_without_the_answers() {
+    announce("lesson curriculum");
+    // A private data directory: the lesson requests write progress, and that is
+    // the learner's file rather than the test's.
+    QTemporaryDir data_dir;
+    DataDirOverride data_override{data_dir.path()};
+    QString reason;
+    if (!locateWorker(&reason).isValid()) {
+        std::printf("SKIP: %s\n", qPrintable(reason));
+        return;
+    }
+
+    Harness harness;
+    if (!openLessons(harness)) {
+        TW_CHECK(false);
+        return;
+    }
+
+    const QList<LessonSummary>& lessons = harness.recorded().lessons;
+    TW_CHECK_EQ(lessons.size(), 20);
+
+    // Every language in the studio is reachable from the panel, which is the
+    // point of the exercise: a language with no lesson is a language the lesson
+    // panel cannot offer.
+    QSet<QString> languages;
+    for (const LessonSummary& lesson : lessons) {
+        languages.insert(lesson.language);
+        TW_CHECK_EQ(lesson.checkpointCount(), 3);
+        TW_CHECK(!lesson.title.isEmpty());
+        TW_CHECK(!lesson.description.isEmpty());
+        // The prompt a learner reads, which is what the panel is for. The *answer*
+        // is not in this payload at all -- `LessonCheckpoint` has no field for it
+        // -- and that is deliberate: it is sent to every client that opens the
+        // panel, and a lesson whose answer travels with its questions has been
+        // spoiled before it is read.
+        for (const LessonCheckpoint& checkpoint : lesson.checkpoints) {
+            TW_CHECK(!checkpoint.title.isEmpty());
+            TW_CHECK(!checkpoint.description.isEmpty());
+            TW_CHECK(!checkpoint.expectation.isEmpty());
+        }
+    }
+    TW_CHECK_EQ(languages.size(), 10);
+
+    // The size a lesson is projected at travels with the curriculum, so a teacher
+    // who set it with `teach.py present` gets the panel at that size. It is a real
+    // number rather than zero, which is what "the worker did not say" looks like.
+    TW_CHECK(harness.recorded().presentation_font > 0);
+}
+
+void test_a_correct_answer_passes_and_a_wrong_one_does_not() {
+    announce("lesson check");
+    // A private data directory: the lesson requests write progress, and that is
+    // the learner's file rather than the test's.
+    QTemporaryDir data_dir;
+    DataDirOverride data_override{data_dir.path()};
+    QString reason;
+    if (!locateWorker(&reason).isValid()) {
+        std::printf("SKIP: %s\n", qPrintable(reason));
+        return;
+    }
+
+    Harness harness;
+    if (!openLessons(harness)) {
+        TW_CHECK(false);
+        return;
+    }
+
+    // `logo_shapes` checkpoint 0 asks for one straight line, and the check is a
+    // real run of the turtle, so this proves the panel's verdict and a learner's
+    // own run come from the same engine.
+    TW_CHECK(harness.worker().checkLesson(QStringLiteral("logo_shapes"), 0,
+                                          QStringLiteral("FORWARD 100")));
+    TW_CHECK(harness.waitFor([&harness] { return harness.recorded().checked; }));
+    TW_CHECK(harness.recorded().check_passed);
+    TW_CHECK(harness.recorded().check_message.contains(QStringLiteral("passed")));
+    TW_CHECK_EQ(harness.recorded().check_total, 20);
+
+    harness.clearCheck();
+    TW_CHECK(harness.worker().checkLesson(QStringLiteral("logo_shapes"), 0,
+                                          QStringLiteral("REPEAT 3 [ FORWARD 100 RIGHT 120 ]")));
+    TW_CHECK(harness.waitFor([&harness] { return harness.recorded().checked; }));
+    TW_CHECK(!harness.recorded().check_passed);
+    // The message says what was drawn, not only that it was wrong: "you drew 3
+    // segments and this needs 1" is what a learner can act on.
+    TW_CHECK(harness.recorded().check_message.contains(QStringLiteral("3")));
+}
+
+void test_a_hint_arrives_without_the_answer() {
+    announce("lesson hint");
+    // A private data directory: the lesson requests write progress, and that is
+    // the learner's file rather than the test's.
+    QTemporaryDir data_dir;
+    DataDirOverride data_override{data_dir.path()};
+    QString reason;
+    if (!locateWorker(&reason).isValid()) {
+        std::printf("SKIP: %s\n", qPrintable(reason));
+        return;
+    }
+
+    Harness harness;
+    if (!openLessons(harness)) {
+        TW_CHECK(false);
+        return;
+    }
+
+    TW_CHECK(harness.worker().requestHint(QStringLiteral("basic_first_steps"), 0));
+    TW_CHECK(harness.waitFor([&harness] { return !harness.recorded().hint_text.isEmpty(); }));
+    TW_CHECK_EQ(harness.recorded().hint_number, 1);
+    TW_CHECK(harness.recorded().hint_total >= 1);
+
+    // Asking again gives the *next* hint rather than the same one, which is the
+    // whole reason a learner presses the button twice.
+    const QString first = harness.recorded().hint_text;
+    TW_CHECK(harness.worker().requestHint(QStringLiteral("basic_first_steps"), 0));
+    TW_CHECK(harness.waitFor([&harness] {
+        return !harness.recorded().hint_text.isEmpty() && harness.recorded().hint_number == 2;
+    }));
+    TW_CHECK(harness.recorded().hint_text != first);
+}
+
+void test_the_worked_answer_is_only_sent_when_it_is_asked_for() {
+    announce("lesson solution");
+    // A private data directory: the lesson requests write progress, and that is
+    // the learner's file rather than the test's.
+    QTemporaryDir data_dir;
+    DataDirOverride data_override{data_dir.path()};
+    QString reason;
+    if (!locateWorker(&reason).isValid()) {
+        std::printf("SKIP: %s\n", qPrintable(reason));
+        return;
+    }
+
+    Harness harness;
+    if (!openLessons(harness)) {
+        TW_CHECK(false);
+        return;
+    }
+
+    TW_CHECK(harness.recorded().solution_text.isEmpty());
+    TW_CHECK(harness.worker().requestSolution(QStringLiteral("logo_shapes"), 0));
+    TW_CHECK(harness.waitFor([&harness] { return !harness.recorded().solution_text.isEmpty(); }));
+    // And it is the answer the check would accept.
+    harness.clearCheck();
+    TW_CHECK(harness.worker().checkLesson(QStringLiteral("logo_shapes"), 0,
+                                          harness.recorded().solution_text));
+    TW_CHECK(harness.waitFor([&harness] { return harness.recorded().checked; }));
+    TW_CHECK(harness.recorded().check_passed);
+}
+
+void test_progress_covers_every_lesson() {
+    announce("lesson progress");
+    // A private data directory: the lesson requests write progress, and that is
+    // the learner's file rather than the test's.
+    QTemporaryDir data_dir;
+    DataDirOverride data_override{data_dir.path()};
+    QString reason;
+    if (!locateWorker(&reason).isValid()) {
+        std::printf("SKIP: %s\n", qPrintable(reason));
+        return;
+    }
+
+    Harness harness;
+    if (!openLessons(harness)) {
+        TW_CHECK(false);
+        return;
+    }
+    TW_CHECK(harness.worker().requestLessonProgress());
+    TW_CHECK(harness.waitFor([&harness] { return !harness.recorded().progress_rows.isEmpty(); }));
+
+    TW_CHECK_EQ(harness.recorded().progress_rows.size(), 20);
+    TW_CHECK_EQ(harness.recorded().progress_total, 20);
+    TW_CHECK(harness.recorded().progress_completed >= 0);
+    for (const LessonProgress& row : harness.recorded().progress_rows) {
+        TW_CHECK(!row.status.isEmpty());
+        TW_CHECK_EQ(row.checkpoints, 3);
+    }
+}
+
+void test_a_check_is_refused_while_a_program_is_running() {
+    announce("lesson check while busy");
+    QString reason;
+    if (!locateWorker(&reason).isValid()) {
+        std::printf("SKIP: %s\n", qPrintable(reason));
+        return;
+    }
+
+    Harness harness;
+    if (!harness.requireStart()) {
+        return;
+    }
+    // Both a program and a check run the engine, so letting them overlap would
+    // have two interpreters sharing module state. The refusal is the feature.
+    TW_CHECK(harness.worker().run(QStringLiteral("basic"),
+                                  QStringLiteral("10 PRINT \"TICK\"\n20 GOTO 10\n"),
+                                  QStringLiteral("forever.bas")));
+    TW_CHECK(harness.waitFor([&harness] { return !harness.recorded().output.isEmpty(); },
+                             10000));
+
+    TW_CHECK(!harness.worker().checkLesson(QStringLiteral("logo_shapes"), 0,
+                                           QStringLiteral("FORWARD 100")));
+    TW_CHECK(!harness.recorded().lesson_failure_text.isEmpty());
+    TW_CHECK(harness.recorded().lesson_failure_text.contains(QStringLiteral("Stop")));
+
+    harness.worker().stop();
+    TW_CHECK(harness.waitFor([&harness] { return !harness.worker().isRunning(); }, 10000));
+}
+
+void test_reset_names_the_lesson_it_reset() {
+    announce("lesson reset");
+    // A private data directory: the lesson requests write progress, and that is
+    // the learner's file rather than the test's.
+    QTemporaryDir data_dir;
+    DataDirOverride data_override{data_dir.path()};
+    QString reason;
+    if (!locateWorker(&reason).isValid()) {
+        std::printf("SKIP: %s\n", qPrintable(reason));
+        return;
+    }
+
+    Harness harness;
+    if (!openLessons(harness)) {
+        TW_CHECK(false);
+        return;
+    }
+    TW_CHECK(harness.worker().resetLesson(QStringLiteral("logo_shapes")));
+    TW_CHECK(harness.waitFor([&harness] { return !harness.recorded().reset_lesson.isEmpty(); }));
+    // Named rather than a bare "done": a panel can have a reset in flight while
+    // the learner clicks another lesson.
+    TW_CHECK_EQ(harness.recorded().reset_lesson, QStringLiteral("logo_shapes"));
 }
 
 // ---------------------------------------------------------------------------
@@ -665,6 +1015,14 @@ int main(int argc, char** argv) {
     run("malformed", test_an_unreadable_message_is_reported);
     run("unknown-command", test_an_unknown_drawing_command_is_reported);
     run("split", test_a_canvas_message_split_across_reads_is_reassembled);
+
+    run("lesson-curriculum", test_the_curriculum_arrives_without_the_answers);
+    run("lesson-check", test_a_correct_answer_passes_and_a_wrong_one_does_not);
+    run("lesson-hint", test_a_hint_arrives_without_the_answer);
+    run("lesson-solution", test_the_worked_answer_is_only_sent_when_it_is_asked_for);
+    run("lesson-progress", test_progress_covers_every_lesson);
+    run("lesson-busy", test_a_check_is_refused_while_a_program_is_running);
+    run("lesson-reset", test_reset_names_the_lesson_it_reset);
 
     return tw::test::summary("python_bridge");
 }

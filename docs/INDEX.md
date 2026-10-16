@@ -15,6 +15,7 @@ languages, with an integrated turtle graphics canvas. This page is the map.
 | [INSTALLATION.md](INSTALLATION.md) | Requirements, building, running, troubleshooting a build |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | How the IDE, the engines and the bridge fit together |
 | [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) | Command reference for all ten languages |
+| [lessons/](lessons/README.md) | The guided lessons: the curriculum, and the student and teacher guides |
 | [README_TESTING.md](README_TESTING.md) | The suites, the example gate and the parity harnesses |
 | [ROADMAP.md](ROADMAP.md) | What is built, what is next, what was deliberately deferred |
 | [FAQ.md](FAQ.md) | Short answers to common questions |

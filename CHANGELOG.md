@@ -36,6 +36,37 @@ Four more languages, and the defects that examining their commands turned up.
   the list held lowercase entries, so those entries did nothing and the completeness
   report asked for rows that could not exist.
 
+### Lessons, for students and teachers
+
+- **Twenty lessons, sixty checkpoints** — two for each of the ten languages, with a
+  plan, a worked answer and hints for every checkpoint.
+- **Checked by running the learner's program** in a headless engine, so `PRINT 6 * 7`
+  and `PRINT 42` are the same answer, and a drawing checkpoint cannot be passed by
+  printing about drawing. `expect_lines`, `expect_turtle` (pen segments, filled shapes
+  and closure) and `expect_error` are the three kinds of expectation.
+- **The 🎓 Lessons panel** in the IDE, the one page of the right column that is a real
+  port rather than a placeholder. It hosts no curriculum and runs nothing itself: it
+  drives the bridge, which is what keeps a panel's verdict and a teacher's mark the same
+  function's answer. Six new protocol messages, with the solutions deliberately *not*
+  in the curriculum payload — a lesson whose answer travels with its questions has been
+  spoiled before it is read.
+- **`native/tools/learn.py`** — list, walk, check, hint, answer, progress, reset, for a
+  learner at a terminal.
+- **`native/tools/teach.py`** — lesson plans with objectives and teacher notes, answer
+  keys, curriculum validation, a class roster, handout distribution that never
+  overwrites started work, marking that writes nobody's progress, class progress
+  reports, zip bundles a class can be moved in, a presentation size for teaching from
+  the front, and a lesson scaffold whose skeleton the loader accepts.
+- **The curriculum is checked, not trusted.** `teach.py validate` runs all sixty
+  solutions and all sixty starters through the engine: a solution that does not pass is
+  a lesson nobody can finish, and a starter that already passes has nothing to do. Both
+  are invisible in a file listing, because lessons are data and nothing else runs them.
+- **`docs/lessons/`** — a hub, a student guide, a teacher guide, a technical reference
+  for the curriculum format and protocol, and generated plans for all ten languages.
+- **`TIME_WARP_DATA_DIR`** now relocates everything the studio keeps for a user. It
+  exists because a test recorded lesson hints into a real learner's `progress.json` —
+  the hint counter being cumulative is how the leak surfaced.
+
 ---
 
 ## [15.0.0] - 2026-10-16

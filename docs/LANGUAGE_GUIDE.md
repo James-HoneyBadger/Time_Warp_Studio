@@ -9,6 +9,11 @@ BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 > `python3 native/tools/command_matrix.py` exercises every command through the
 > real bridge, so the tables here are checked against the code rather than
 > written from memory.
+>
+> This page is the *reference*. To learn a language, start with the
+> [tutorial](tutorials/) for it; to be taught it, the
+> [lessons](lessons/README.md) have two per language, each with a plan, hints and
+> a worked answer.
 
 ---
 

@@ -23,6 +23,9 @@
 #include <QDockWidget>
 #include <QLabel>
 #include <QLineEdit>
+#include <QListWidget>
+#include <QProgressBar>
+#include <QTextBrowser>
 #include <QMargins>
 #include <QMenu>
 #include <QMenuBar>
@@ -54,6 +57,7 @@ namespace {
 using timewarp::ui::CrtOverlay;
 using timewarp::ui::FunctionKeyBar;
 using timewarp::ui::ImmediateModePanel;
+using timewarp::ui::LessonPanel;
 using timewarp::ui::MainWindow;
 using timewarp::ui::ResizableTabWidget;
 
@@ -312,18 +316,62 @@ void test_editor_pane_splitter_holds_two_tab_groups() {
     TW_CHECK(window.secondaryEditorTabs()->isHidden());
 }
 
+// The lesson panel is the only page in the right column that is not a
+// placeholder, so it is the only one that gets a contract test: the placeholders
+// are asserted by their size hints, and this one has behaviour.
+void test_lesson_panel_contract() {
+    announce("lesson panel");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    LessonPanel* panel = window->lessonPanel();
+    TW_CHECK(panel != nullptr);
+    if (panel == nullptr) {
+        return;
+    }
+
+    TW_CHECK_EQ(panel->objectName(), QStringLiteral("lessonPanel"));
+
+    // The parts a learner touches, by object name: these are the names the
+    // stylesheet and any screenshot tool will use, so they are a contract rather
+    // than an implementation detail.
+    TW_CHECK(panel->findChild<QComboBox*>(QStringLiteral("lessonChooser")) != nullptr);
+    TW_CHECK(panel->findChild<QListWidget*>(QStringLiteral("lessonCheckpoints")) != nullptr);
+    TW_CHECK(panel->findChild<QLabel*>(QStringLiteral("lessonVerdict")) != nullptr);
+    TW_CHECK(panel->findChild<QProgressBar*>(QStringLiteral("lessonProgress")) != nullptr);
+    TW_CHECK(panel->findChild<QTextBrowser*>(QStringLiteral("lessonDetail")) != nullptr);
+    for (const char* name : {"lessonOpenButton", "lessonCheckButton", "lessonHintButton",
+                             "lessonSolutionButton", "lessonResetButton"}) {
+        TW_CHECK(panel->findChild<QPushButton*>(QString::fromLatin1(name)) != nullptr);
+    }
+
+    // Empty until the curriculum arrives. The panel does *not* ask for it itself:
+    // loading it at start-up would make every user pay for a Python process, and
+    // the window asks when the tab is first shown.
+    TW_CHECK_EQ(panel->lessonCount(), 0);
+    TW_CHECK(panel->currentLesson().isEmpty());
+    TW_CHECK_EQ(panel->currentCheckpoint(), -1);
+    TW_CHECK(panel->currentStarter().isEmpty());
+    TW_CHECK(panel->verdictText().isEmpty());
+
+    // It must survive being squeezed, or a splitter can reduce it to nothing and
+    // there is no way back.
+    TW_CHECK(panel->minimumSizeHint().width() >= LessonPanel::kMinimumWidth);
+
+    TW_CHECK(window->rightTabs()->widget(4) == panel);
+    TW_CHECK_EQ(window->rightTabs()->tabText(4), QString::fromUtf8("\U0001F393 Lessons"));
+}
+
 void test_right_column_tabs_and_order() {
     announce("right column tabs");
     const std::unique_ptr<MainWindow> window = shownWindow();
     ResizableTabWidget* tabs = window->rightTabs();
 
     TW_CHECK_EQ(tabs->objectName(), QStringLiteral("rightTabs"));
-    TW_CHECK_EQ(tabs->count(), 4);
+    TW_CHECK_EQ(tabs->count(), 5);
     // Order is part of the interface: users reach for Output first.
     TW_CHECK_EQ(tabTitles(tabs).toStdString(),
                 std::string{"\U0001F4DD Output  \U0001F3A8 Graphics|"
                             "\U0001F50D Variables|\u26A1 Telemetry HUD|"
-                            "\U0001F41B Debug"});
+                            "\U0001F41B Debug|\U0001F393 Lessons"});
     TW_CHECK_EQ(tabs->widget(0), window->outputCanvasSplitter());
 
     // These are fixed panes, not documents: no close buttons, no dragging them
@@ -1071,6 +1119,7 @@ int main(int argc, char** argv) {
     test_editor_column_is_editor_over_repl();
     test_editor_pane_splitter_holds_two_tab_groups();
     test_right_column_tabs_and_order();
+    test_lesson_panel_contract();
     test_output_and_graphics_share_a_persistent_split();
     test_output_sub_tabs();
     test_function_key_bar_is_fixed_height();

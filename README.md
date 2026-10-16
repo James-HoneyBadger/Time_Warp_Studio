@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-15.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
-Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **10 active programming languages** into a single, modern IDE. Built as a **native C++20 / Qt6 application**, it provides an integrated platform for learning programming concepts, exploring turtle graphics, and working through structured lessons and examples.
+Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **10 active programming languages** into a single, modern IDE. Built as a **native C++20 / Qt6 application**, it provides an integrated platform for learning programming concepts, exploring turtle graphics, and working through a **checked lesson curriculum** with tools for both learners and teachers.
 
 ---
 
@@ -44,7 +44,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 
 ### What is still being built
 
-The Qt IDE is the product; the PySide6 application that preceded it has been removed. Features of that application that have **not** been ported yet — themes, lessons, the examples browser, find/replace, auto-completion, the debugger panels and the function-key bar — are tracked in [docs/ROADMAP.md](docs/ROADMAP.md).
+The Qt IDE is the product; the PySide6 application that preceded it has been removed. Features of that application that have **not** been ported yet — themes, the examples browser, find/replace, auto-completion, the debugger panels and the function-key bar — are tracked in [docs/ROADMAP.md](docs/ROADMAP.md).
 Please read that list before reporting one of them as a regression.
 
 ### Turtle Graphics
@@ -60,8 +60,73 @@ Please read that list before reporting one of them as a regression.
 
 Scheme runs on a native explicit-stack machine with a background runner that supports Stop today; the stepping and inspection panels are being wired up (tracked in the roadmap). Breakpoints and stepping remain available in the language runtimes themselves.
 
+### Guided Lessons
+
+- **20 lessons, 60 checkpoints** — two lessons for each of the ten languages
+- **Checked by running the program**, never by comparing it with an answer, so `PRINT 6 * 7` and `PRINT 42` are the same answer and a drawing checkpoint cannot be passed by printing about drawing
+- **In the IDE** — the 🎓 **Lessons** panel: the curriculum, the current checkpoint, hints, and a Check button that runs the program in your document
+- **At a terminal** — `python3 native/tools/learn.py walk basic_first_steps`
+- **For teachers** — `python3 native/tools/teach.py`: lesson plans with objectives and teacher notes, answer keys, a class roster, handout distribution, marking, class progress reports, bundles a class can be moved in, and a presentation size for teaching from the front
+- **The curriculum checks itself** — `teach.py validate` runs all sixty solutions through the engine and refuses a starter that already works, so a lesson nobody can finish cannot sit in the tree looking correct
+- Progress is saved per lesson and hints are counted; neither a reset nor a marking pass can lose a learner's work
+
+See [docs/lessons/](docs/lessons/README.md) for the guides.
+
 ### Educational Content
 
 - **48 curated example programs** across all 10 active languages, under `Examples/`
 - **Error hints** — syntax suggestions alongside interpreter error messages
 - **Ten language tutorials** — one per language, under `docs/tutorials/`
+- **Lesson plans** — one document per language, generated from the curriculum, under `docs/lessons/plans/`
+
+---
+
+## About this repository
+
+The description and topics below are the canonical ones for this project. GitHub's
+**About** box is set in the repository settings rather than in a file, so this is the
+source to copy from when it changes — and the place to check when it looks wrong.
+
+### Description
+
+```text
+Educational multi-language programming environment: a native C++20/Qt6 IDE with ten
+languages (BASIC, Logo, PILOT, COMAL, REXX, Scheme, FOCAL, APL, CHIP-8, Smalltalk),
+turtle graphics, a checked lesson curriculum with student and teacher tools, and a
+debugger.
+```
+
+### Topics
+
+```text
+education
+programming-education
+computer-science-education
+ide
+qt6
+cpp20
+interpreters
+turtle-graphics
+basic
+logo
+pilot
+comal
+rexx
+scheme
+focal
+apl
+chip8
+smalltalk
+lesson-plans
+teaching-tools
+```
+
+### Where to start
+
+| If you are | Start here |
+| ---------- | ---------- |
+| Learning one of the languages | [`docs/tutorials/`](docs/tutorials/) |
+| Working through the lessons | [`docs/lessons/README.md`](docs/lessons/README.md) |
+| Teaching a class | [`docs/lessons/teacher-guide.md`](docs/lessons/teacher-guide.md) |
+| Building or porting | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`native/README.md`](native/README.md) |
+| Seeing what is not done yet | [`docs/ROADMAP.md`](docs/ROADMAP.md) |

@@ -269,6 +269,39 @@ void MainWindow::buildRightColumn(QSplitter* parent) {
         QSize{180, 120}, right_tabs_};
     right_tabs_->addTab(debug, tr("\U0001F41B Debug"));
 
+    // The lesson panel is the one page of the right column that is *not* a
+    // placeholder: the Python implementation had a working one, and a learner of
+    // eleven is not going to open a terminal instead.
+    lesson_panel_ = new LessonPanel{right_tabs_};
+    right_tabs_->addTab(lesson_panel_, tr("\U0001F393 Lessons"));
+    connect(lesson_panel_, &LessonPanel::curriculumNeeded, this,
+            &MainWindow::requestLessonCurriculum);
+    connect(lesson_panel_, &LessonPanel::progressNeeded, this,
+            &MainWindow::requestLessonProgress);
+    connect(lesson_panel_, &LessonPanel::openCodeRequested, this,
+            &MainWindow::openLessonCode);
+    connect(lesson_panel_, &LessonPanel::checkRequested, this,
+            &MainWindow::requestLessonCheck);
+    connect(lesson_panel_, &LessonPanel::hintRequested, this,
+            &MainWindow::requestLessonHint);
+    connect(lesson_panel_, &LessonPanel::solutionRequested, this,
+            &MainWindow::requestLessonSolution);
+    connect(lesson_panel_, &LessonPanel::resetRequested, this,
+            &MainWindow::requestLessonReset);
+    // The curriculum is loaded when the tab is first looked at, not when the
+    // window is built. Starting a Python process for a user who never opens the
+    // lesson panel would be a second of start-up spent on a feature they are not
+    // using, and this is the only place that decides to pay it.
+    connect(right_tabs_, &QTabWidget::currentChanged, this, [this](int index) {
+        if (curriculum_requested_ || lesson_panel_ == nullptr) {
+            return;
+        }
+        if (right_tabs_->widget(index) == lesson_panel_) {
+            curriculum_requested_ = true;
+            emit lesson_panel_->curriculumNeeded();
+        }
+    });
+
     parent->addWidget(right_tabs_);
 }
 
@@ -1324,9 +1357,8 @@ void MainWindow::stopRunningDocument() {
 }
 
 void MainWindow::runInBridge(CodeEditor* editor) {
-    if (python_worker_ == nullptr) {
-        python_worker_ = std::make_unique<timewarp::bridge::PythonWorker>(*canvas_queue_);
-        adoptBridgeWorker();
+    if (!ensureBridge()) {
+        return;
     }
 
     // The caller has already stopped any program in flight. The worker *process*
@@ -1341,16 +1373,111 @@ void MainWindow::runInBridge(CodeEditor* editor) {
         errors_view_->clear();
     }
 
-    QString problem;
-    if (!python_worker_->start(&problem)) {
-        reportError(problem);
-        return;
-    }
-
     setExecutionState(tr("running"), tr("Running %1…").arg(nameOf(editor)));
     if (!python_worker_->run(settingsKey(languageOf(editor)), editor->toPlainText(),
                              nameOf(editor))) {
         reportError(tr("The program could not be started."));
+    }
+}
+
+bool MainWindow::showPanel(const QString& name) {
+    struct Entry {
+        const char* key;
+        int index;
+    };
+    // The order matches `buildRightColumn`. A panel inserted in the middle has to
+    // be added here too, which is why the mapping is one visible table rather
+    // than five `if`s scattered through the file.
+    static constexpr Entry kPanels[] = {
+        {"output", 0}, {"variables", 1}, {"telemetry", 2}, {"debug", 3}, {"lessons", 4}};
+    const QString wanted = name.trimmed().toLower();
+    for (const Entry& entry : kPanels) {
+        if (wanted == QLatin1String(entry.key)) {
+            if (right_tabs_ != nullptr) {
+                right_tabs_->setCurrentIndex(entry.index);
+            }
+            return true;
+        }
+    }
+    return false;
+}
+
+bool MainWindow::ensureBridge() {
+    if (python_worker_ == nullptr) {
+        python_worker_ = std::make_unique<timewarp::bridge::PythonWorker>(*canvas_queue_);
+        adoptBridgeWorker();
+    }
+    QString problem;
+    if (!python_worker_->start(&problem)) {
+        reportError(problem);
+        if (lesson_panel_ != nullptr) {
+            lesson_panel_->setFailure(tr("the language engine"), problem);
+        }
+        return false;
+    }
+    return true;
+}
+
+void MainWindow::openLessonCode(const QString& languageKey, const QString& source,
+                                const QString& name) {
+    if (source.isEmpty()) {
+        return;
+    }
+    CodeEditor* editor = newFile();
+    editor->setPlainText(source);
+    // The language is recorded as an *override* rather than guessed from the name:
+    // a lesson document is called something like `basic_first_steps-1`, which has
+    // no extension for the language table to read.
+    editor->setProperty(kLanguageOverrideProperty, languageKey);
+    editor->setProperty(kUntitledLabelProperty,
+                        name.isEmpty() ? tr("lesson") : name);
+    updateTabLabel(editor);
+}
+
+void MainWindow::requestLessonCurriculum() {
+    if (ensureBridge()) {
+        python_worker_->requestLessons();
+    }
+}
+
+void MainWindow::requestLessonProgress() {
+    if (python_worker_ != nullptr && python_worker_->isRunning()) {
+        python_worker_->requestLessonProgress();
+    }
+}
+
+void MainWindow::requestLessonCheck(const QString& lesson, int checkpoint) {
+    CodeEditor* editor = currentEditor();
+    if (editor == nullptr) {
+        if (lesson_panel_ != nullptr) {
+            lesson_panel_->setFailure(tr("the check"),
+                                      tr("open a document with your program in it first"));
+        }
+        return;
+    }
+    if (!ensureBridge()) {
+        return;
+    }
+    // The panel has already been told why by `checkLesson` when a program is in
+    // flight; nothing here needs to repeat it.
+    python_worker_->checkLesson(lesson, checkpoint, editor->toPlainText());
+}
+
+void MainWindow::requestLessonHint(const QString& lesson, int checkpoint) {
+    if (ensureBridge()) {
+        python_worker_->requestHint(lesson, checkpoint);
+    }
+}
+
+void MainWindow::requestLessonSolution(const QString& lesson, int checkpoint) {
+    if (ensureBridge()) {
+        python_worker_->requestSolution(lesson, checkpoint);
+    }
+}
+
+void MainWindow::requestLessonReset(const QString& lesson) {
+    if (ensureBridge()) {
+        python_worker_->resetLesson(lesson);
     }
 }
 
@@ -1394,6 +1521,58 @@ void MainWindow::adoptBridgeWorker() {
                                          : tr(" — %1 not drawn").arg(unsupported.join(tr(", ")));
                 setExecutionState(ok ? tr("ready") : tr("stopped"),
                                   (ok ? tr("Finished") : tr("Stopped")) + gaps);
+            });
+    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonsReceived, this,
+            [this](const QList<timewarp::bridge::LessonSummary>& lessons,
+                   int presentation_font) {
+                if (lesson_panel_ != nullptr) {
+                    lesson_panel_->setLessons(lessons);
+                    if (presentation_font > 0) {
+                        lesson_panel_->setPresentationFont(presentation_font);
+                    }
+                }
+                requestLessonProgress();
+            });
+    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonProgressReceived,
+            this,
+            [this](const QList<timewarp::bridge::LessonProgress>& rows, int completed,
+                   int total) {
+                if (lesson_panel_ != nullptr) {
+                    lesson_panel_->setProgress(rows, completed, total);
+                }
+            });
+    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonHintReceived, this,
+            [this](const QString& text, int number, int total) {
+                if (lesson_panel_ != nullptr) {
+                    lesson_panel_->setHint(text, number, total);
+                }
+            });
+    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonSolutionReceived,
+            this, [this](const QString& text) {
+                if (lesson_panel_ != nullptr) {
+                    lesson_panel_->setSolution(text);
+                }
+            });
+    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonChecked, this,
+            [this](const QString& lesson, int checkpoint, bool passed, const QString& message,
+                   bool completed, int finished, int total) {
+                if (lesson_panel_ != nullptr) {
+                    lesson_panel_->setChecked(lesson, checkpoint, passed, message, completed,
+                                              finished, total);
+                }
+            });
+    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonResetDone, this,
+            [this](const QString& lesson) {
+                Q_UNUSED(lesson);
+                // The panel shows where the learner is, so the only thing to do
+                // after a reset is ask again.
+                requestLessonProgress();
+            });
+    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonFailed, this,
+            [this](const QString& request, const QString& error) {
+                if (lesson_panel_ != nullptr) {
+                    lesson_panel_->setFailure(request, error);
+                }
             });
     connect(python_worker_.get(), &timewarp::bridge::PythonWorker::failed, this,
             [this](const QString& text) {

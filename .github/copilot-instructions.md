@@ -131,9 +131,23 @@ def execute_my_lang(interpreter: Interpreter, source: str, turtle: TurtleState) 
 3. Register it in the Qt side so the IDE knows the name and the extensions:
    `native/src/ui/language.cpp` (display name, settings key, file extensions)
 
+   The display name is what the lesson documents and panels show, and it comes from
+   `core/language_registry.py` on the Python side and `kLanguages` on the C++ side.
+   They are two copies of one fact and must agree: the enum member spells CHIP-8 as
+   `CHIP8`, the display name is `CHIP-8`, and using one where the other belongs is a
+   wrong name in the one place it is written down.
+
 4. Add an example under `Examples/my_lang/` and a row to
    `native/bridge/time_warp/tests/command_table.py` so every new command is covered
-   by `native/tools/command_matrix.py`.
+   by `native/tools/command_matrix.py`. A row's `language` string is the protocol key
+   (`Language[key.upper()]`), so CHIP-8's rows read `CHIP8`; a row labelled with prose
+   needs `also=(...)` naming the command the inventory knows, or it is reported as
+   untested forever.
+
+5. Add at least one lesson to `native/bridge/time_warp/features/lessons.json`
+   (`native/tools/teach.py new <id> --language NAME` prints a skeleton the loader
+   accepts) and run `teach.py validate` until it is silent. The lessons panel and
+   `learn.py` both read that one file, so nothing else needs registering.
 
 ## Project-Specific Conventions
 
@@ -196,7 +210,8 @@ native/                        - the Qt application (the product)
     pyproject.toml             - ruff/mypy config for the engine
     time_warp/
       core/                    - interpreter.py, language_registry.py, config.py, sandbox.py
-      languages/               - the 6 executors (base.py documents the Protocol)
+      languages/               - the 10 executors (base.py documents the Protocol)
+      features/                - lesson_system.py + lessons.json, classroom_mode.py
       graphics/turtle_state.py - turtle state
       features/                - language-level modules reached by name from a program
       utils/                   - expression_evaluator.py, error_hints.py, validators.py
@@ -216,7 +231,13 @@ Scripts/                       - audit_interpreters.py, version_sync.py, build_n
 - **TurtleCanvas**: `native/src/ui/turtle_canvas.cpp` — the display list and the painter
 - **CodeEditor**: `native/src/ui/code_editor.cpp` — gutter, current line, tab stops
 - **Language table**: `native/src/ui/language.cpp` — names, settings keys, extensions
-- **The bridge**: `native/bridge/worker.py` + `native/src/bridge/python_worker.cpp`
+- **The bridge**: `native/bridge/worker.py` + `native/src/bridge/python_worker.cpp` —
+  runs programs *and* checks lessons, so a learner's verdict and a teacher's mark are
+  one function's answer
+- **Lessons**: `native/bridge/time_warp/features/lesson_system.py` (the curriculum and
+  the verifier), `classroom_mode.py` (rosters, handouts, marking, bundles),
+  `native/src/ui/panels.cpp` (`LessonPanel`, the one real page in the right column),
+  `native/tools/learn.py` and `native/tools/teach.py` (the two CLIs)
 - **Engine (bridge)**: `time_warp/core/interpreter.py` dispatches; the 6 executors in
   `time_warp/languages/` are stateless functions
 - **Expression evaluator**: native C++ (`timewarp_expr`) and, in the bridge, the
@@ -241,7 +262,9 @@ The removed PySide6 application's dependencies are no longer installed or refere
 
 ### Configuration Management
 
-- User settings stored via Qt QSettings; lesson progress stored in `~/.time_warp/progress.json`
+- User settings stored via Qt QSettings; lesson progress in `~/.time_warp/progress.json`
+  and a class in `~/.time_warp/classroom`. `TIME_WARP_DATA_DIR` moves all of it, which is
+  how a test avoids writing a learner's real file
 - Theme preferences persist between sessions via QSettings
 - Virtual environment used for Python dependencies
 

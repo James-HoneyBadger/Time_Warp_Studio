@@ -16,6 +16,8 @@
 //   QT_QPA_PLATFORM=offscreen time_warp_ide --screenshot build/layout.png
 
 #include <QApplication>
+#include <algorithm>
+
 #include <QCommandLineOption>
 #include <QCommandLineParser>
 #include <QPixmap>
@@ -108,6 +110,13 @@ int main(int argc, char* argv[]) {
         QStringLiteral("Forget the saved window layout and start from the defaults.")};
     parser.addOption(resetOption);
 
+    const QCommandLineOption panelOption{
+        QStringLiteral("panel"),
+        QStringLiteral("Bring this right-column panel to the front: output, "
+                       "variables, telemetry, debug or lessons."),
+        QStringLiteral("name")};
+    parser.addOption(panelOption);
+
     const QCommandLineOption runOption{
         QStringLiteral("run"),
         QStringLiteral("Run the first file as soon as the window is up.")};
@@ -145,6 +154,19 @@ int main(int argc, char* argv[]) {
         window.resize(screenshotSize);
     }
 
+    bool lessonsPanel = false;
+    if (parser.isSet(panelOption)) {
+        const QString panel = parser.value(panelOption);
+        if (!window.showPanel(panel)) {
+            std::fprintf(stderr,
+                         "time_warp_ide: --panel expects output, variables, "
+                         "telemetry, debug or lessons, got \"%s\"\n",
+                         qPrintable(panel));
+            return 2;
+        }
+        lessonsPanel = panel.trimmed().toLower() == QLatin1String("lessons");
+    }
+
     openArguments(&window, parser.positionalArguments());
     window.show();
 
@@ -161,7 +183,18 @@ int main(int argc, char* argv[]) {
         // an unlaid-out window. A longer delay when a program is running, because
         // the drawing arrives from another thread: grabbing at 0ms would capture
         // a canvas that has been cleared but not yet drawn on.
-        const int delay = parser.isSet(runOption) ? 1500 : 0;
+        //
+        // The lesson panel needs the longest wait of all: its content comes back
+        // from a Python process that has to start first, so a grab at 0ms would
+        // photograph an empty panel and look like a broken panel rather than a
+        // fast shutter.
+        int delay = 0;
+        if (parser.isSet(runOption)) {
+            delay = 1500;
+        }
+        if (lessonsPanel) {
+            delay = std::max(delay, 6000);
+        }
         QTimer::singleShot(delay, &application, [&window, screenshotPath] {
             const QPixmap shot = window.grab();
             if (!shot.save(screenshotPath)) {

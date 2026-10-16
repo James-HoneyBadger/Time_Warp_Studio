@@ -510,6 +510,19 @@ Replacing one is a single construction site in `buildRightColumn()` or
 `buildOutputColumn()`, plus wiring in `runCurrentDocument()` or `adoptBridgeWorker()` for
 anything that needs interpreter data.
 
+**The lesson panel is not a placeholder.** `LessonPanel` is fully implemented, and it is
+the one page of the right column that is. It holds no curriculum and runs no program: it
+asks the bridge for the lesson list, displays the checkpoint, and sends the learner's
+source back to be checked. That is deliberate, and it is what makes the panel's green tick
+and `native/tools/learn.py`'s verdict the same function's answer rather than two opinions
+that drift. The protocol it uses is in [docs/lessons/FORMAT.md](lessons/FORMAT.md).
+
+It also never touches a document. "Open" raises `openCodeRequested` and the *window*
+decides where the code goes, because a panel has no business knowing about tabs.
+
+The curriculum is loaded when the tab is first looked at, not when the window is built: a
+user who never opens the lesson panel should not pay for a Python process at start-up.
+
 Three widgets are partial rather than stubs, and their headers say so:
 
 - `ImmediateModePanel` is a REPL prompt and entry line with the layout contract the Python
@@ -540,10 +553,11 @@ a command matrix. All of them must stay green, in every build tree.
 | C++ suites (11) | `make -C native test` | Lexer, evaluator, Scheme, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, Python bridge |
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
-| Engine tests | `make engine-test` | The bridge engine: the six executors, the evaluator, the validators |
+| Engine tests | `make engine-test` | The bridge engine: the ten executors, the evaluator, the validators, the lesson curriculum and the classroom |
 | Example corpus | `make smoke` | Every `Examples/**` program, through the real bridge, including the 14 that must produce ink |
 | Parity gates | both `*_differential_check.py` | The ported engines against the Python reference: 0 unexpected mismatches |
 | Command matrix | `native/tools/command_matrix.py` | One row per documented command, through the real bridge |
+| Lesson curriculum | `teach.py validate` (and `test_lessons.py` on every build) | That every checkpoint's own solution passes, that no starter already passes, and that every language has a lesson |
 | Version metadata | `Scripts/version_sync.py` | That every hand-written copy of the version agrees with `VERSION` |
 
 Two of these exist for a failure the others cannot see:
@@ -576,6 +590,9 @@ adapter, the debugger runner and `src/ui/` includes a Qt header.
 | Window geometry, dock and toolbar state | `QSettings` — `TimeWarpStudio/TimeWarpStudio.conf` | Keys under `layout/` |
 | Splitter positions | `QSettings`, `layout/splitters` | An array whose index is positional, so reordering it without bumping the count restores the wrong geometry |
 | User content: projects, lesson progress, exports | `~/.time_warp/` | **Shared with the removed Python IDE on purpose** |
+| Lesson progress | `~/.time_warp/progress.json` | One entry per lesson; written on every change |
+| A class: roster, handouts, submissions | `~/.time_warp/classroom/` | One file per checkpoint, plain enough to zip and hand on |
+| Any of the above, elsewhere | `TIME_WARP_DATA_DIR` | A portable install, or a test that must not write a learner's real file |
 | A missing or malformed setting | The layout default | A settings file from an older build leaves that splitter at its default rather than producing a window with a zero-width pane and no way back |
 
 The settings identity is deliberately **not** the Python IDE's (`TimeWarp` / `IDE`). The

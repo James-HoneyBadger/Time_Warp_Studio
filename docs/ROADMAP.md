@@ -161,10 +161,15 @@ everything the others have:
 Writing those rows is what turned the inventory's counts into the list of defects
 above: nine of them were found by a row that had no answer, not by reading the code.
 
-**Lessons are the one thing still missing.** The original six have two each; the four
-new languages have none, because the lesson panel is not ported (see "What is not
-here yet" in `docs/ARCHITECTURE.md`). Writing lessons that nothing can display would
-be inventing the appearance of a feature, so they are recorded here instead.
+**Lessons now cover all ten languages.** Every language has two, three checkpoints
+each: sixty in all, with a plan, a worked answer and hints for every checkpoint, reachable
+from a terminal (`learn.py`) and from the 🎓 Lessons panel in the IDE.
+
+The curriculum is data, and `teach.py validate` **runs all sixty solutions through the
+engine** and checks that none of the sixty starters already passes. That pass is what makes
+a curriculum maintainable: without it, a lesson whose answer does not work would sit in
+the tree looking correct, because data is not exercised by anything unless something
+exercises it deliberately. See `docs/lessons/FORMAT.md`.
 
 Four limits are recorded rather than left to be discovered:
 
@@ -256,9 +261,12 @@ are now in place for a real packaging effort to build on.
 ## Deliberately out of scope for now
 
 These existed in the removed implementation and are not planned for the current
-release cycle: the lessons system with progress tracking, classroom/presentation
-mode, the examples browser, the accessibility presets, the onboarding wizard, the
-telemetry HUD, a web (WebAssembly) build, and calling one language from another.
+release cycle: the examples browser, the accessibility presets, the onboarding
+wizard, the telemetry HUD, a web (WebAssembly) build, and calling one language from
+another.
+
+The **lessons system**, with progress tracking and a classroom mode, used to be on this
+list. It is now implemented — see `docs/lessons/`.
 
 ---
 

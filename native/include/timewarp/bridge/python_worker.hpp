@@ -29,6 +29,8 @@
 #include <cstdint>
 
 #include <QByteArray>
+#include <QList>
+#include <QMetaType>
 #include <QObject>
 #include <QString>
 #include <QStringList>
@@ -49,6 +51,46 @@ struct WorkerPaths {
 
     /// True when both were located and exist.
     [[nodiscard]] bool isValid() const { return !interpreter.isEmpty() && !script.isEmpty(); }
+};
+
+/// One checkpoint of a lesson, as the lesson panel shows it.
+///
+/// Deliberately without the worked answer: this is what every client is sent when
+/// it opens the panel, and a lesson whose answer travels with its questions has
+/// been spoiled before it is read. `PythonWorker::requestSolution` asks for it.
+struct LessonCheckpoint {
+    QString title;
+    QString description;
+    QString starter;      ///< The program the learner begins from.
+    QString expectation;  ///< "lines", "turtle" or "error", for the panel's wording.
+    QStringList hints;
+};
+
+/// A lesson: the learner's view of one piece of the curriculum.
+struct LessonSummary {
+    QString id;
+    QString title;
+    QString language;     ///< Display name, e.g. "CHIP-8".
+    QString languageKey;  ///< Settings key, e.g. "chip8": what a document records.
+    QString difficulty;
+    QString description;
+    QStringList objectives;
+    QStringList prerequisites;
+    QList<LessonCheckpoint> checkpoints;
+
+    [[nodiscard]] int checkpointCount() const { return static_cast<int>(checkpoints.size()); }
+};
+
+/// Where a learner has got to in one lesson.
+struct LessonProgress {
+    QString id;
+    QString title;
+    QString language;
+    QString difficulty;
+    QString status;       ///< "not_started", "in_progress" or "completed".
+    int checkpoint = 0;   ///< The first unfinished checkpoint.
+    int checkpoints = 0;  ///< How many the lesson has.
+    int hintsUsed = 0;
 };
 
 /// Locates the Python interpreter and the worker script.
@@ -97,6 +139,37 @@ public:
     /// grace period. Safe when nothing is running.
     void stop();
 
+    /// Asks for the curriculum. Answers with `lessonsReceived`.
+    bool requestLessons();
+
+    /// Asks where the learner has got to. Answers with `lessonProgressReceived`.
+    bool requestLessonProgress();
+
+    /// Asks for the next hint for a checkpoint. Answers with `lessonHintReceived`.
+    bool requestHint(const QString& lesson, int checkpoint);
+
+    /// Asks for the worked answer to a checkpoint, on purpose.
+    ///
+    /// A separate request because the answer is not part of the curriculum the
+    /// panel is given: a learner who has decided they need it can ask, and one who
+    /// has not is not shown it.
+    bool requestSolution(const QString& lesson, int checkpoint);
+
+    /// Checks the learner's source against one checkpoint. Answers with
+    /// `lessonChecked`.
+    ///
+    /// The check runs **in the worker's engine**, which is the same engine that
+    /// would run the program, so the panel's verdict and the CLI's verdict can
+    /// never disagree. Refused while a program is running, because that would be
+    /// two interpreters at once.
+    bool checkLesson(const QString& lesson, int checkpoint, const QString& source);
+
+    /// Forgets the learner's place in one lesson. Answers with `lessonResetDone`.
+    bool resetLesson(const QString& lesson);
+
+    /// True when a lesson request has been sent and no answer has arrived.
+    [[nodiscard]] bool isWaitingForLesson() const noexcept { return waiting_for_lesson_; }
+
     /// True while the process is alive.
     [[nodiscard]] bool isRunning() const;
 
@@ -137,12 +210,39 @@ signals:
     /// because there is no program result to report.
     void failed(const QString& text);
 
+    /// The curriculum arrived, in teaching order.
+    ///
+    /// `presentationFont` is the size a lesson is projected at, which the teacher
+    /// sets through the classroom settings. It travels with the curriculum because
+    /// it is a property of how the lessons are *shown*, and a panel that opened at
+    /// its own idea of the right size would ignore the teacher who set one.
+    void lessonsReceived(const QList<timewarp::bridge::LessonSummary>& lessons,
+                         int presentationFont);
+    /// The learner's place in every lesson, plus the overall count.
+    void lessonProgressReceived(const QList<timewarp::bridge::LessonProgress>& rows,
+                                int completed, int total);
+    /// One hint. `number` is 1-based, so the panel can say which of how many.
+    void lessonHintReceived(const QString& text, int number, int total);
+    /// The worked answer to a checkpoint.
+    void lessonSolutionReceived(const QString& text);
+    /// A checkpoint was checked. `completed` is the particular lesson being
+    /// finished; `finished`/`total` are the learner's overall standing.
+    void lessonChecked(const QString& lesson, int checkpoint, bool passed,
+                       const QString& message, bool completed, int finished, int total);
+    /// A lesson's progress was forgotten.
+    void lessonResetDone(const QString& lesson);
+    /// A lesson request failed. `request` names which, because the panel may have
+    /// several in flight and one of them failing is not the others failing.
+    void lessonFailed(const QString& request, const QString& error);
+
 private slots:
     void onReadyReadStandardOutput();
     void onReadyReadStandardError();
     void onProcessFinished(int exitCode, int status);
 
 private:
+    /// Sends one request object. False when the worker is not usable.
+    bool sendRequest(const QJsonObject& message);
     /// Handles one complete protocol line.
     void handleMessage(const QByteArray& line);
     /// Applies one entry of a `canvas` batch to the queue.
@@ -165,8 +265,21 @@ private:
     /// reported as a stop rather than as a crash. Cleared when a run begins.
     bool stop_requested_ = false;
     bool running_program_ = false;
+    /// Set while a lesson request is outstanding. Lesson requests are answered one
+    /// at a time and never overlap a program run, so one flag is enough.
+    bool waiting_for_lesson_ = false;
     std::uint64_t commands_pushed_ = 0;
     std::uint64_t batches_ = 0;
 };
 
 }  // namespace timewarp::bridge
+
+// The lesson structures travel through signals, so they are declared as metatypes:
+// a direct connection would work without this, and a queued one -- which is what a
+// recorder in a test uses -- would not, and would fail at run time rather than at
+// compile time.
+Q_DECLARE_METATYPE(timewarp::bridge::LessonCheckpoint)
+Q_DECLARE_METATYPE(timewarp::bridge::LessonSummary)
+Q_DECLARE_METATYPE(timewarp::bridge::LessonProgress)
+Q_DECLARE_METATYPE(QList<timewarp::bridge::LessonSummary>)
+Q_DECLARE_METATYPE(QList<timewarp::bridge::LessonProgress>)

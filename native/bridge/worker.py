@@ -31,6 +31,34 @@ Worker to client:
     {"t": "in", "prompt": "..."}            # the program wants input
     {"t": "done", "ok": true, "error": "...", "unsupported": [ ... ]}
 
+#### Lessons
+
+The IDE's lesson panel is driven from here too, so that the *checking* of a
+learner's work happens in the same engine that would run it. A second
+implementation of "is this answer right" in C++ would be a second answer to the
+question, and the first one to drift would be the one the learner saw.
+
+    {"t": "lessons"}                        # the curriculum, without the answers
+    {"t": "lesson-progress"}                # where the learner is in each lesson
+    {"t": "lesson-hint", "lesson": "id", "checkpoint": 0}
+    {"t": "lesson-solution", "lesson": "id", "checkpoint": 0}
+    {"t": "lesson-check", "lesson": "id", "checkpoint": 0, "source": "..."}
+    {"t": "lesson-reset", "lesson": "id"}
+
+The answers:
+
+    {"t": "lessons", "items": [ ... ]}
+    {"t": "lesson-progress", "items": [ ... ], "completed": 3, "total": 20}
+    {"t": "lesson-hint", "text": "...", "n": 1, "total": 2}
+    {"t": "lesson-solution", "text": "..."}
+    {"t": "lesson-check", "passed": true, "message": "...", "completed": false}
+    {"t": "lesson-reset", "ok": true}
+
+**The solutions are not in the `lessons` payload**, and that is deliberate: it is
+sent to every client that opens the panel, and a lesson whose answer travels with
+its questions is a lesson that has been spoiled before it is read. The worked
+answer is one request away for a learner who has decided they need it.
+
 #### How the drawing is captured
 
 `TurtleState` keeps append-only `lines` and `shapes` lists, so the drawing is read
@@ -62,6 +90,7 @@ if __package__ in (None, ""):
         sys.path.insert(0, _here)
 
 from time_warp.core.interpreter import Interpreter, Language  # noqa: E402
+from time_warp.core.language_registry import metadata_for  # noqa: E402
 from time_warp.graphics.turtle_state import TurtleShape, TurtleState  # noqa: E402
 
 VERSION = "1"
@@ -447,6 +476,175 @@ class Session:
         interpreter.running = False
 
 
+class LessonService:
+    """The curriculum, progress, hints and checking, as the IDE asks for them.
+
+    The manager is built once, on first use, because loading the curriculum reads
+    a file and an IDE that never opens the lesson panel should not pay for it.
+    """
+
+    def __init__(self) -> None:
+        self._manager: Optional[Any] = None
+        self._error: Optional[str] = None
+
+    @property
+    def manager(self) -> Any:
+        if self._manager is None and self._error is None:
+            try:
+                from time_warp.features.lesson_system import LessonManager
+
+                self._manager = LessonManager()
+            except Exception as exc:  # noqa: BLE001 - reported, not raised
+                # A broken curriculum must not take the IDE down with it: the rest
+                # of the studio works, and the panel is the only thing that is
+                # unusable. It says so rather than going quiet.
+                self._error = f"the lessons could not be loaded: {exc}"
+        return self._manager
+
+    def _fail(self, emitter: "Emitter", kind: str, note: str) -> None:
+        emitter.send({"t": kind, "ok": False, "error": note})
+
+    def _payload(self, lesson: Any, index: int) -> dict:
+        """One checkpoint as the panel shows it: the prompt, never the answer."""
+        checkpoint = lesson.checkpoints[index]
+        return {
+            "index": index,
+            "title": checkpoint.title,
+            "description": checkpoint.description,
+            "starter": checkpoint.starter_code,
+            "hints": list(checkpoint.hints),
+            "expectation": checkpoint.expectation,
+        }
+
+    def _presentation(self) -> Dict[str, Any]:
+        """The size a lesson is projected at, from the classroom settings.
+
+        Read here rather than in the panel so that the size a *teacher* sets with
+        `teach.py present` is the size the panel opens at, for the same reason the
+        checking lives in one place: two answers to one question drift.
+        """
+        try:
+            from time_warp.features.classroom_mode import ClassroomMode
+
+            return ClassroomMode().presentation.to_dict()
+        except Exception:  # noqa: BLE001 - a size is not worth failing over
+            return {"font_size": 18, "fullscreen": True}
+
+    def list_lessons(self, emitter: "Emitter") -> None:
+        manager = self.manager
+        if manager is None:
+            return self._fail(emitter, "lessons", self._error or "no lessons")
+        items = []
+        for lesson in manager.list_lessons():
+            items.append(
+                {
+                    "id": lesson.id,
+                    "title": lesson.title,
+                    "language": lesson.language_name,
+                    # The *settings* key ("chip8"), not the enum member
+                    # ("CHIP8"): it is what a document records as its language
+                    # override, and converting on the C++ side would be a second
+                    # place that knows the mapping.
+                    "languageKey": metadata_for(lesson.language.name).folder_name,
+                    "difficulty": lesson.difficulty,
+                    "description": lesson.description,
+                    "objectives": list(lesson.objectives),
+                    "prerequisites": list(lesson.prerequisites),
+                    "checkpoints": [
+                        self._payload(lesson, index)
+                        for index in range(lesson.checkpoint_count)
+                    ],
+                }
+            )
+        emitter.send(
+            {"t": "lessons", "items": items, "presentation": self._presentation()}
+        )
+
+    def send_progress(self, emitter: "Emitter") -> None:
+        manager = self.manager
+        if manager is None:
+            return self._fail(emitter, "lesson-progress", self._error or "no lessons")
+        done, total = manager.completed_count()
+        emitter.send(
+            {
+                "t": "lesson-progress",
+                "items": manager.progress_report(),
+                "completed": done,
+                "total": total,
+            }
+        )
+
+    def hint(self, emitter: "Emitter", message: Dict[str, Any], solution: bool = False) -> None:
+        manager = self.manager
+        if manager is None:
+            return self._fail(emitter, "lesson-hint", self._error or "no lessons")
+        lesson_id = str(message.get("lesson", ""))
+        index = int(message.get("checkpoint", 0))
+        try:
+            lesson = manager.lesson(lesson_id)
+            if solution:
+                text = lesson.checkpoints[index].solution
+                emitter.send({"t": "lesson-solution", "ok": True, "text": text})
+                return
+            already = manager.hints_used(lesson_id)
+            text = manager.hint(lesson_id, index, already)
+        except Exception as exc:  # noqa: BLE001 - reported, not raised
+            return self._fail(
+                emitter, "lesson-solution" if solution else "lesson-hint", str(exc)
+            )
+        emitter.send(
+            {
+                "t": "lesson-hint",
+                "ok": True,
+                "text": text,
+                "n": min(already + 1, len(lesson.checkpoints[index].hints)),
+                "total": len(lesson.checkpoints[index].hints),
+            }
+        )
+
+    def check(self, emitter: "Emitter", message: Dict[str, Any]) -> None:
+        manager = self.manager
+        if manager is None:
+            return self._fail(emitter, "lesson-check", self._error or "no lessons")
+        lesson_id = str(message.get("lesson", ""))
+        index = int(message.get("checkpoint", 0))
+        source = str(message.get("source", ""))
+        try:
+            result = manager.verify(lesson_id, index, source)
+            lesson = manager.lesson(lesson_id)
+            done, total = manager.completed_count()
+        except Exception as exc:  # noqa: BLE001 - reported, not raised
+            return self._fail(emitter, "lesson-check", str(exc))
+        emitter.send(
+            {
+                "t": "lesson-check",
+                "ok": True,
+                "passed": bool(result.passed),
+                "message": result.message,
+                "lesson": lesson_id,
+                "checkpoint": index,
+                "completed": manager.status(lesson_id).value == "completed",
+                "finished": done,
+                "total": total,
+                "checkpoints": lesson.checkpoint_count,
+            }
+        )
+
+    def reset(self, emitter: "Emitter", message: Dict[str, Any]) -> None:
+        manager = self.manager
+        if manager is None:
+            return self._fail(emitter, "lesson-reset", self._error or "no lessons")
+        lesson_id = str(message.get("lesson", ""))
+        try:
+            manager.reset(lesson_id)
+        except Exception as exc:  # noqa: BLE001 - reported, not raised
+            return self._fail(emitter, "lesson-reset", str(exc))
+        # The reply names the lesson rather than saying only "done": a panel can
+        # have a reset in flight while the learner clicks another lesson, and
+        # "something was reset" would leave it guessing which.
+        emitter.send({"t": "lesson-reset", "ok": True, "lesson": lesson_id})
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     del argv
     emitter = Emitter(sys.stdout)
@@ -460,6 +658,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     session: Optional[Session] = None
     program: Optional[threading.Thread] = None
+    lessons = LessonService()
     for raw in sys.stdin:
         raw = raw.strip()
         if not raw:
@@ -502,6 +701,31 @@ def main(argv: Optional[List[str]] = None) -> int:
         elif kind == "stop":
             if session is not None:
                 session.stop()
+        elif kind == "lessons":
+            lessons.list_lessons(emitter)
+        elif kind == "lesson-progress":
+            lessons.send_progress(emitter)
+        elif kind == "lesson-hint":
+            lessons.hint(emitter, message)
+        elif kind == "lesson-solution":
+            lessons.hint(emitter, message, solution=True)
+        elif kind == "lesson-check":
+            # Checking a lesson runs an interpreter, and a program run is *also*
+            # an interpreter. Two of them at once would share the engine's module
+            # state, so this refuses rather than racing: the panel's answer is
+            # "stop the program first", which is also the useful thing to be told.
+            if program is not None and program.is_alive():
+                emitter.send(
+                    {
+                        "t": "lesson-check",
+                        "ok": False,
+                        "error": "a program is running; stop it before checking a lesson",
+                    }
+                )
+            else:
+                lessons.check(emitter, message)
+        elif kind == "lesson-reset":
+            lessons.reset(emitter, message)
         else:
             emitter.send({"t": "err", "text": f"bridge: unknown request {kind!r}"})
 
