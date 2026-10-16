@@ -32,6 +32,7 @@ enum class Language {
     Focal,
     Chip8,
     Apl,
+    Smalltalk,
     Unknown,
 };
 

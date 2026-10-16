@@ -9,6 +9,7 @@ from .logo import execute_logo
 from .pilot import execute_pilot
 from .rexx import execute_rexx
 from .scheme import execute_scheme
+from .smalltalk import execute_smalltalk
 
 __all__ = [
     "execute_apl",
@@ -20,4 +21,5 @@ __all__ = [
     "execute_pilot",
     "execute_rexx",
     "execute_scheme",
+    "execute_smalltalk",
 ]

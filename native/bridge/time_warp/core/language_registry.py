@@ -24,6 +24,9 @@ LANGUAGE_METADATA: dict[str, LanguageMetadata] = {
     "FOCAL": LanguageMetadata("FOCAL", "focal", "line", ("foc", "focal")),
     "CHIP8": LanguageMetadata("CHIP-8", "chip8", "whole", ("ch8", "c8")),
     "APL": LanguageMetadata("APL", "apl", "line", ("apl", "dyalog")),
+    "SMALLTALK": LanguageMetadata(
+        "Smalltalk", "smalltalk", "whole", ("st", "smalltalk")
+    ),
     "SCHEME": LanguageMetadata(
         "Scheme", "scheme", "whole", ("scm", "ss", "scheme")
     ),

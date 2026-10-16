@@ -40,6 +40,7 @@ LANGUAGES = {
     "focal": "foc",
     "chip8": "ch8",
     "apl": "apl",
+    "smalltalk": "st",
 }
 
 # Languages that are expected to draw nothing *as a language*: PILOT is a
@@ -75,6 +76,7 @@ DRAWING_EXAMPLES = {
     "focal/square.foc",
     "chip8/font_and_frames.ch8",
     "apl/arrays_and_turtle.apl",
+    "smalltalk/shapes.st",
 }
 
 

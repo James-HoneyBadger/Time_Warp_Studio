@@ -7,7 +7,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-15.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
-Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **9 active programming languages** into a single, modern IDE. Built as a **native C++20 / Qt6 application**, it provides an integrated platform for learning programming concepts, exploring turtle graphics, and working through structured lessons and examples.
+Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **10 active programming languages** into a single, modern IDE. Built as a **native C++20 / Qt6 application**, it provides an integrated platform for learning programming concepts, exploring turtle graphics, and working through structured lessons and examples.
 
 ---
 
@@ -15,7 +15,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 
 ### Multi-Language Support
 
-9 active languages in the current studio build:
+10 active languages in the current studio build:
 
 | Language | Paradigm | Era | Execution Mode |
 | --- | --- | --- | --- |
@@ -28,6 +28,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 | **CHIP-8** | Bytecode machine / Assembly | 1977 | Whole-program |
 | **COMAL** | Structured BASIC / Educational | 1979 | Line-by-line |
 | **REXX** | Scripting / String processing | 1979 | Line-by-line |
+| **Smalltalk** | Object-oriented / Messages all the way down | 1980 | Whole-program |
 
 ### Integrated IDE
 
@@ -61,6 +62,6 @@ Scheme runs on a native explicit-stack machine with a background runner that sup
 
 ### Educational Content
 
-- **47 curated example programs** across all 9 active languages, under `Examples/`
+- **48 curated example programs** across all 10 active languages, under `Examples/`
 - **Error hints** — syntax suggestions alongside interpreter error messages
 - **Six language tutorials** — one per language, under `docs/tutorials/`

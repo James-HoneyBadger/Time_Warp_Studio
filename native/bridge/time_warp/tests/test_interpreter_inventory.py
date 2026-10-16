@@ -31,6 +31,7 @@ def test_inventory_covers_every_language_module():
         "focal",
         "chip8",
         "apl",
+        "smalltalk",
     }
 
     assert expected_modules.issubset(modules)

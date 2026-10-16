@@ -1,7 +1,7 @@
 # Installing and Building Time Warp Studio
 
 Time Warp Studio is a **C++20 / Qt6** desktop application. Everything you need to
-run all nine languages is in this repository; nothing has to be downloaded at run
+run all ten languages is in this repository; nothing has to be downloaded at run
 time.
 
 ---
@@ -16,7 +16,7 @@ time.
 | Python | 3.10 | *Optional* — only for BASIC, PILOT, Logo, COMAL and REXX |
 
 Scheme and the shared expression engine are native C++ and need **no Python at
-all**. The other eight languages currently run through a small bundled engine
+all**. The other nine languages currently run through a small bundled engine
 process; see §6.
 
 ### Installing the toolchain

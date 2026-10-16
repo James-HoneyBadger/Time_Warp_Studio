@@ -104,6 +104,12 @@ It is intentionally limited to the six active languages.
 | --- | --- |
 | `apl/arrays_and_turtle.apl` | Iota, reduce, reshape and a user-defined function, then a hexagon |
 
+## Smalltalk
+
+| File | Description |
+| --- | --- |
+| `smalltalk/shapes.st` | A Polygon class, nested figures drawn by a block, and Transcript output |
+
 ## Validation
 
 The example verifier runs active examples in isolated subprocesses and reports

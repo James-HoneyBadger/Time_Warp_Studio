@@ -40,6 +40,7 @@ from ..languages.logo import execute_logo
 from ..languages.pilot import execute_pilot
 from ..languages.rexx import execute_rexx
 from ..languages.scheme import execute_scheme
+from ..languages.smalltalk import execute_smalltalk
 
 # Project utilities and language executors
 from ..utils.error_hints import check_syntax_mistakes, suggest_command
@@ -82,6 +83,7 @@ def _init_whole_program_executors() -> Dict["Language", Callable]:
     return {
         Language.SCHEME: execute_scheme,
         Language.CHIP8: execute_chip8,
+        Language.SMALLTALK: execute_smalltalk,
     }
 
 
@@ -139,6 +141,7 @@ class Language(Enum):
     FOCAL = auto()
     CHIP8 = auto()
     APL = auto()
+    SMALLTALK = auto()
 
     @classmethod
     def from_extension(cls, ext: str) -> "Language":

@@ -1,11 +1,11 @@
 # Language Guide - Time Warp Studio
 
-Time Warp Studio actively implements and ships **9 programming languages**:
-BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, and REXX.
+Time Warp Studio actively implements and ships **10 programming languages**:
+BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 
 > **The reference below is complete for six of them.** BASIC, PILOT, Logo, COMAL,
 > REXX and Scheme have command sections, because they have been documented since
-> the beginning. **APL, FOCAL and CHIP-8 are implemented, registered and tested** -
+> the beginning. **APL, FOCAL, CHIP-8 and Smalltalk are implemented, registered and tested** -
 > each has a test module and a worked example under `Examples/` - but their
 > reference sections have not been written yet, so they are described here by file
 > extension and example rather than by command table. `docs/ROADMAP.md` tracks the
@@ -31,6 +31,7 @@ BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, and REXX.
 | **APL** | `.apl`, `.dyalog` | [`Examples/apl/arrays_and_turtle.apl`](../Examples/apl/arrays_and_turtle.apl) |
 | **FOCAL** | `.foc`, `.focal` | [`Examples/focal/square.foc`](../Examples/focal/square.foc) |
 | **CHIP-8** | `.ch8`, `.c8` | [`Examples/chip8/font_and_frames.ch8`](../Examples/chip8/font_and_frames.ch8) |
+| **Smalltalk** | `.st`, `.smalltalk` | [`Examples/smalltalk/shapes.st`](../Examples/smalltalk/shapes.st) |
 
 ---
 

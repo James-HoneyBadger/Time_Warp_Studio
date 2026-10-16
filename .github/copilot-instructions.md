@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-Time Warp Studio is an educational desktop programming environment built with **C++20 and Qt6** that provides a unified IDE for learning **9 programming languages** with integrated turtle graphics.
+Time Warp Studio is an educational desktop programming environment built with **C++20 and Qt6** that provides a unified IDE for learning **10 programming languages** with integrated turtle graphics.
 
 **Supported Languages:** BASIC, PILOT, Logo, COMAL, REXX, and Scheme.
 
@@ -201,7 +201,7 @@ native/                        - the Qt application (the product)
       features/                - language-level modules reached by name from a program
       utils/                   - expression_evaluator.py, error_hints.py, validators.py
       tests/                   - the engine's own tests
-Examples/                      - 47 example programs across the 9 active languages
+Examples/                      - 48 example programs across the 10 active languages
 docs/                          - language guide + per-language tutorials
 Scripts/                       - audit_interpreters.py, version_sync.py, build_native.sh
 ```

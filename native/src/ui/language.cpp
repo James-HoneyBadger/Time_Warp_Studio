@@ -25,7 +25,7 @@ struct LanguageInfo {
     std::string_view extension2;  ///< empty when the language has only one
 };
 
-constexpr std::array<LanguageInfo, 9> kLanguages{{
+constexpr std::array<LanguageInfo, 10> kLanguages{{
     {Language::Basic, "BASIC", "basic", "bas", "bsc"},
     {Language::Pilot, "PILOT", "pilot", "pilot", "plt"},
     {Language::Logo, "Logo", "logo", "logo", "lg"},
@@ -35,6 +35,7 @@ constexpr std::array<LanguageInfo, 9> kLanguages{{
     {Language::Focal, "FOCAL", "focal", "foc", "focal"},
     {Language::Chip8, "CHIP-8", "chip8", "ch8", "c8"},
     {Language::Apl, "APL", "apl", "apl", "dyalog"},
+    {Language::Smalltalk, "Smalltalk", "smalltalk", "st", "smalltalk"},
 }};
 
 /// Scheme has three extensions, which the two-column table above cannot hold, so
