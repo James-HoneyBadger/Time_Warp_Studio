@@ -450,6 +450,7 @@ if(Qt6_FOUND)
             src/ui/main_window.cpp
             src/ui/panels.cpp
             src/ui/resizable_tab_widget.cpp
+            src/ui/syntax_highlighter.cpp
             src/ui/turtle_canvas.cpp
             src/ui/ui_style.cpp
             # Listed so AUTOMOC scans them: the Q_OBJECT classes live in headers
@@ -458,6 +459,7 @@ if(Qt6_FOUND)
             include/timewarp/ui/main_window.hpp
             include/timewarp/ui/panels.hpp
             include/timewarp/ui/resizable_tab_widget.hpp
+            include/timewarp/ui/syntax_highlighter.hpp
             include/timewarp/ui/turtle_canvas.hpp
             include/timewarp/ui/ui_style.hpp
         )
@@ -583,6 +585,20 @@ if(Qt6_FOUND)
                 endif()
             endif()
             add_test(NAME turtle_canvas_tests COMMAND turtle_canvas_tests)
+
+            # Syntax highlighting is a document transform, not a widget: it is
+            # tested against a bare QTextDocument so a failure names the rule
+            # that broke rather than showing up as "the colours look wrong".
+            add_executable(syntax_highlighter_tests tests/syntax_highlighter_tests.cpp)
+            target_link_libraries(syntax_highlighter_tests PRIVATE timewarp::ui)
+            target_include_directories(syntax_highlighter_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+            if(NOT MSVC)
+                target_compile_options(syntax_highlighter_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+                if(TIME_WARP_EXPR_WERROR)
+                    target_compile_options(syntax_highlighter_tests PRIVATE -Werror)
+                endif()
+            endif()
+            add_test(NAME syntax_highlighter_tests COMMAND syntax_highlighter_tests)
         endif()
     else()
         message(STATUS "Qt6 Widgets not found: skipping the widget UI")

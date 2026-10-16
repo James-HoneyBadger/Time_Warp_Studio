@@ -15,7 +15,7 @@ yet — please check the list below before reporting one as a regression.
 | Area | State |
 | --- | --- |
 | Shell | Documents and tabs, menus, toolbars, status bar, settings persistence |
-| Editor | Line-number gutter, current-line highlight, tab stops, fonts |
+| Editor | Line-number gutter, current-line highlight, per-language syntax colouring, tab stops, fonts |
 | Console | Streaming output, and interpreter errors in their own tab |
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
@@ -23,7 +23,7 @@ yet — please check the list below before reporting one as a regression.
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
 | Bridged engines | BASIC, PILOT, Logo, COMAL, REXX — `native/bridge/` |
 | Packaging | `make install` with the desktop entry and icon; `DESTDIR` staging |
-| Quality gates | 11 CTest suites in 4 build configurations, 2 parity gates, 437 engine tests, 429 command rows |
+| Quality gates | 12 CTest suites in 4 build configurations, 2 parity gates, 522 engine tests, 429 command rows |
 
 ---
 
@@ -128,13 +128,17 @@ unit test)
 ## Next: documentation accuracy
 
 Documentation that overstates the product costs a newcomer the same time a bug does,
-and is harder to notice. Three claims have been corrected: the editor was described as
-having per-language syntax highlighting (there is no `QSyntaxHighlighter` anywhere),
-BASIC was described as having a `SPEAK` command (the executor dispatches `SAY`;
-`SPEAK` reports "Unknown BASIC command"), and the README described the shared
-expression evaluator as running in-process when `timewarp_expr` is not linked into the
-application at all — nothing under `src/ui/` includes it and `timewarp_ui` does not link
-it, so expressions in a Run are still the Python engine's.
+and is harder to notice. Claims have been corrected rather than quietly dropped: BASIC
+was described as having a `SPEAK` command (the executor dispatches `SAY`; `SPEAK`
+reports "Unknown BASIC command"), and the README described the shared expression
+evaluator as running in-process when `timewarp_expr` is not linked into the application
+at all — nothing under `src/ui/` includes it and `timewarp_ui` does not link it, so
+expressions in a Run are still the Python engine's.
+
+The editor's missing syntax highlighting was the third, and it has been **built rather
+than re-documented**: `native/src/ui/syntax_highlighter.cpp` now colours each language
+with its own rules, and `syntax_highlighter_tests` asserts the colour at named
+positions.
 
 `docs/ARCHITECTURE.md` has been **rewritten** around the Qt application and the engine.
 It no longer describes the removed PySide6 implementation, and it names what is not
@@ -214,10 +218,11 @@ Debug/Continue/Trace do not yet drive a panel. Then: breakpoints, watch
 expressions, a call stack, variable inspection, and step granularity finer than a
 form.
 
-**Editor** — per-language syntax highlighting is **not** implemented: there is no
-`QSyntaxHighlighter` subclass anywhere, and the gutter and current-line highlight are
-not colouring. Also missing: find/replace, find in files, go-to-line, minimap, error
-markers in the gutter, breakpoint markers, auto-completion, document outline.
+**Editor** — find/replace, find in files, go-to-line, a minimap, error markers in
+the gutter, breakpoint markers, auto-completion and a document outline are all still
+missing. Per-language syntax colouring **is** built
+(`native/src/ui/syntax_highlighter.cpp`), with one rule table per language because the
+ten disagree about what a comment even is.
 
 **Console** — clickable `line N` links into the editor, an error-only filter, and
 save-to-file.

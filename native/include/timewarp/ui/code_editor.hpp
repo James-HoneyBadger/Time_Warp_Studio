@@ -14,12 +14,15 @@
 #include <QPlainTextEdit>
 #include <QString>
 
+#include "timewarp/ui/language.hpp"
+
 class QResizeEvent;
 class QWidget;
 
 namespace timewarp::ui {
 
 class CodeEditor;
+class SyntaxHighlighter;
 
 /// Paints the line numbers beside a `CodeEditor`.
 ///
@@ -64,6 +67,17 @@ public:
     [[nodiscard]] int currentLine() const;
     [[nodiscard]] int currentColumn() const;
 
+    /// Colours the document for `language`.
+    ///
+    /// Called by the window whenever a document's language changes, which is not
+    /// only when it is created: saving a scratch buffer as `mandala.logo` turns
+    /// BASIC source into Logo and has to recolour it.
+    void setLanguage(Language language);
+    /// The language the document is currently coloured as.
+    [[nodiscard]] Language language() const noexcept;
+    /// The highlighter itself, so a test can assert what rules it installed.
+    [[nodiscard]] SyntaxHighlighter* highlighter() const noexcept { return highlighter_; }
+
 signals:
     /// The cursor moved, either by typing, by click, or programmatically.
     ///
@@ -82,6 +96,9 @@ private:
     void highlightCurrentLine();
 
     LineNumberArea* gutter_ = nullptr;
+    /// Owned by the document, which takes it as a child: `QSyntaxHighlighter`'s
+    /// parent is the `QTextDocument`, so the document destroys it.
+    SyntaxHighlighter* highlighter_ = nullptr;
 };
 
 }  // namespace timewarp::ui

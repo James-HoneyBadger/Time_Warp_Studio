@@ -83,6 +83,20 @@ Four more languages, and the defects that examining their commands turned up.
   44 examples, the contributing guide listed six languages, and it offered a
   discussion board the project does not answer on.
 
+### Syntax colouring in the editor
+
+- **Per-language highlighting** — `native/src/ui/syntax_highlighter.cpp`, one rule
+  table per language. The ten disagree about what a comment is: REXX has `--` and
+  `/* ... */`, Smalltalk's comment is a **double**-quoted string while its string is a
+  single-quoted one, FOCAL has no comment syntax at all, and PILOT's units are a letter
+  and a colon at the start of a line. So the rules are data rather than one shared
+  approximation with a keyword list bolted on, and the keyword tables are the engine's
+  own command names — a highlighter that colours a word the engine would reject teaches
+  the wrong vocabulary.
+- **Twelve CTest suites.** `syntax_highlighter_tests` colours a bare `QTextDocument`
+  and asserts the colour at a named position. That is the only kind of check that
+  works here: coloured text one token out of place still looks like a working editor.
+
 ---
 
 ## [15.0.0] - 2026-10-16

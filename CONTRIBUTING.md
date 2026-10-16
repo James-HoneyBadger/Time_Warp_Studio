@@ -154,7 +154,7 @@ Optional extras for those languages are not required: `pyttsx3` (BASIC `SAY`),
 # Build and run the IDE
 make -C native run
 
-# The 11 C++ suites
+# The 12 C++ suites
 make test
 ```
 
@@ -329,7 +329,7 @@ Requested by Issue #42 - BASIC language completeness.
 ### Run Test Suite
 
 ```bash
-# The 11 C++ suites
+# The 12 C++ suites
 make test
 
 # One suite, by name
@@ -587,7 +587,7 @@ Time_Warp_Studio/
 ├── native/                       # THE APPLICATION (C++20 / Qt6)
 │   ├── CMakeLists.txt
 │   ├── include/ src/             # ui/, canvas/, scheme/, debugger/, bridge/
-│   ├── tests/                    # 11 CTest suites
+│   ├── tests/                    # 12 CTest suites
 │   ├── tools/                    # time_warp_ide.cpp and the gates:
 │   │                             #   learn.py, teach.py, command_matrix.py,
 │   │                             #   example_smoke.py, differential_check.py

@@ -83,7 +83,7 @@ make -C native run
 ### Testing Strategy
 
 ```bash
-# The Qt suites (11 of them)
+# The Qt suites (12 of them)
 ctest --test-dir native/build --output-on-failure
 make -C native test-debug     # Debug tree
 make -C native asan           # AddressSanitizer; ASAN=undefined for UBSan
@@ -106,8 +106,9 @@ make lint-md
 
 **Test Organization:**
 
-- `native/tests/*_tests.cpp` = the 11 C++ suites (lexer, evaluator, scheme, canvas queue,
-  canvas bridge, debug, debugger runner, ui layout, ui document, turtle canvas, python bridge)
+- `native/tests/*_tests.cpp` = the 12 C++ suites (lexer, evaluator, scheme, canvas queue,
+  canvas bridge, debug, debugger runner, ui layout, ui document, turtle canvas,
+  syntax highlighter, python bridge)
 - `native/tools/example_smoke.py` = every `Examples/**` program through the bridge; the 14
   that must draw are listed in `DRAWING_EXAMPLES`
 - `native/bridge/time_warp/tests/` = the bridge engine's tests (the 10 language executors,

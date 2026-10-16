@@ -21,7 +21,7 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
 
 ### Testing
 
-- [ ] `make test` — the 11 C++ suites
+- [ ] `make test` — the 12 C++ suites
 - [ ] `make test-debug` and `make asan` — the other build trees
 - [ ] `make engine-test` — the bridge engine's pytest suite
 - [ ] `make smoke` — all 48 example programs through the real bridge

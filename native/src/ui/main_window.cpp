@@ -998,6 +998,10 @@ void MainWindow::refreshDocumentState() {
                        : tr("%1 \u2014 %2").arg(base, nameOf(editor)));
     language_badge_->setText(
         tr("\U0001F522 %1").arg(displayName(languageOf(editor))));
+    // The highlighter follows the document's language. Done here, in the one
+    // place that already answers "what language is this document?", so a rename
+    // that changes the language cannot recolour every tab but this one.
+    editor->setLanguage(languageOf(editor));
     position_badge_->setText(
         tr("Ln %1, Col %2").arg(editor->currentLine()).arg(editor->currentColumn()));
     breadcrumb_->setText(path.isEmpty() ? nameOf(editor) : QDir::toNativeSeparators(path));

@@ -14,6 +14,8 @@
 #include <QTextCursor>
 #include <QTextDocument>
 
+#include "timewarp/ui/syntax_highlighter.hpp"
+
 namespace timewarp::ui {
 
 namespace {
@@ -63,6 +65,12 @@ CodeEditor::CodeEditor(QWidget* parent) : QPlainTextEdit(parent) {
 
     gutter_ = new LineNumberArea(this);
 
+    // Colouring belongs to the document, not the widget, so it survives a tab
+    // being dragged to the other editor pane. The window sets the real language
+    // as soon as the document is adopted; this is the default for a scratch
+    // buffer that has no name yet.
+    highlighter_ = new SyntaxHighlighter(document(), defaultLanguage());
+
     connect(this, &QPlainTextEdit::blockCountChanged, this, &CodeEditor::updateGutterWidth);
     connect(this, &QPlainTextEdit::updateRequest, this,
             [this](const QRect& rect, int dy) {
@@ -84,6 +92,16 @@ CodeEditor::CodeEditor(QWidget* parent) : QPlainTextEdit(parent) {
 
     updateGutterWidth(blockCount());
     highlightCurrentLine();
+}
+
+void CodeEditor::setLanguage(Language language) {
+    if (highlighter_ != nullptr) {
+        highlighter_->setLanguage(language);
+    }
+}
+
+Language CodeEditor::language() const noexcept {
+    return highlighter_ == nullptr ? Language::Unknown : highlighter_->language();
 }
 
 int CodeEditor::lineNumberAreaWidth() const {

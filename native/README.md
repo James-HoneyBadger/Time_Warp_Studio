@@ -126,7 +126,7 @@ compilation. That split is deliberate. Compiling these sources directly would me
 reimplementing AUTOMOC (a header that is moc'd *and* compiled gives duplicate
 symbols; one that is not fails at link time with a vtable error), Qt6 component
 discovery, the `-fPIC` and include paths, five libraries in dependency order, and
-eleven test registrations — and the copy would be the one that rots.
+twelve test registrations — and the copy would be the one that rots.
 
 Each build type gets its own tree (`build`, `build-debug`, `build-sanitised`)
 because changing `CMAKE_BUILD_TYPE` in place recompiles everything anyway, so
@@ -1164,9 +1164,10 @@ strokes a circle costs.
 * The variables, telemetry HUD, debug, terminal and outline panels are still
   `PlaceholderPanel`s naming the Python module they stand for. The layout is real;
   their contents are not.
-* The editor has no syntax highlighting, minimap, find/replace, outline or
-  formatter yet. The Python editor is 2,254 lines because of those extras; they
-  are worth adding one at a time against a working base, which now exists.
+* The editor colours source per language now, but still has no minimap,
+  find/replace, outline or formatter. The Python editor is 2,254 lines because of
+  those extras; they are worth adding one at a time against a working base, which
+  now exists.
 * `CrtOverlay` draws scanlines only. The Python also does curvature, vignette,
   glow and flicker with sliders for each; the point of including it here was the
   geometry tracking, which is where the Python approach was fragile.

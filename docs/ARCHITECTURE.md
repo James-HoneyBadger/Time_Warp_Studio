@@ -250,10 +250,16 @@ Two rules worth knowing:
 ### The editor
 
 `CodeEditor` is a `QPlainTextEdit` with a line-number gutter, a highlighted current
-line and cursor tracking, because those are the three things that make a text box feel
-like an editor rather than a scratchpad. **There is no syntax highlighter** — no
-`QSyntaxHighlighter` exists anywhere in the tree — and no minimap, find/replace,
-outline or formatter either.
+line, cursor tracking and per-language syntax colouring, because those are what make a
+text box feel like an editor rather than a scratchpad. There is no minimap,
+find/replace, outline or formatter yet.
+
+The colouring is `SyntaxHighlighter`, and its rules are per language rather than one
+shared approximation: REXX comments are `--` and `/* ... */`, Smalltalk's comment is a
+**double**-quoted string while its string is a single-quoted one, FOCAL has no comment
+syntax at all, and PILOT's units are a letter and a colon at the start of a line. The
+keyword tables are the engine's own command names, so the colouring cannot teach a
+word the engine would reject.
 
 ### The turtle canvas
 
@@ -630,7 +636,8 @@ migrating.
 - **The debugger is a runner, not a UI.** `DebuggerRunner` supports pause, step and
   breakpoints, and `debug_tests` covers the machinery; the panels that would drive it are
   placeholders.
-- **No syntax highlighting, minimap, find/replace, outline or formatter.**
+- **No minimap, find/replace, outline or formatter.** Syntax colouring is in; the
+  rest is not.
 - **No theme system** — the stylesheet is there, the 33 themes are not.
 - **Packaging stops at `make install`**: a desktop entry and an icon. No distro packages,
   no installers.
