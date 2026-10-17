@@ -10,3 +10,23 @@ repos:
         types_or: [python, pyi]
       - id: ruff-format
         types_or: [python, pyi]
+
+  # Secret scanning. A key pasted into a file must fail the commit rather than
+  # reach GitHub: once pushed it is world-readable, and removing it afterwards
+  # means rewriting every commit that contains it *and* rotating the key.
+  #
+  # The baseline is what makes this usable: it records what the tree already
+  # holds, so the hook fails only on a secret added since. Without it every
+  # historical false positive would have to be re-audited on each run, and a
+  # hook that cries wolf gets disabled.
+  #
+  # When the baseline itself needs to change (a deliberate false positive, or a
+  # key that was removed), regenerate it and review the diff:
+  #   detect-secrets scan --baseline .secrets.baseline
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ['--baseline', '.secrets.baseline']
+        # Build trees are compiled copies of the source and are never shipped.
+        exclude: ^(native/build[a-z-]*/|\.venv/|\.git/)

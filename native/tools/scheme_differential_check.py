@@ -71,7 +71,6 @@ CORPUS: list[str] = [
     "(display (* 4611686018427387904 4))",
     "(display (+ 9223372036854775807 1))",
     "(display (list #t #true #f #false))",
-
     # -- truthiness and conditionals -------------------------------------
     "(display (list (if 0 't 'f) (if '() 't 'f) (if \"\" 't 'f)))",
     "(display (list (not 0) (not #f) (not '()) (not #t)))",
@@ -83,17 +82,15 @@ CORPUS: list[str] = [
     "(display (cond (#f 1) (else 2)))",
     "(display (cond (#f 1)))",
     "(display (list (if #t 1) (if #f 1) (if #f 1 2)))",
-
     # -- equality --------------------------------------------------------
     "(display (list (equal? #t 1) (equal? #f 0) (eqv? #t 1) (eq? #t 1)))",
     "(display (list (equal? '(1 2) '(1 2)) (eq? '(1 2) '(1 2))))",
     "(display (equal? (vector 1 2) (vector 1 2)))",
-    "(display (equal? 'abc \"abc\"))",
+    '(display (equal? \'abc "abc"))',
     "(display (list (equal? 1 1.0) (eqv? 1 1.0)))",
     "(display (list (equal? '() '()) (eq? 'a 'a)))",
     "(display (list (null? '()) (null? '(1)) (pair? '(1)) (list? '(1))))",
     "(display (list (list? '()) (pair? 5) (vector? (vector 1))))",
-
     # -- binding forms ---------------------------------------------------
     "(display (let ((x 2) (y 3)) (* x y)))",
     "(display (let ((x 1)) (let ((x 2) (y x)) (list x y))))",
@@ -109,7 +106,6 @@ CORPUS: list[str] = [
     "(set! zzz 5) (display zzz)",
     "(display (define q 1))",
     "(define y) (display y)",
-
     # -- procedures ------------------------------------------------------
     "(define (f x . r) (list x r)) (display (f 1 2 3))",
     "(display ((lambda (a b) (list a b)) 1))",
@@ -122,7 +118,6 @@ CORPUS: list[str] = [
     "(define (loop n) (if (= n 0) 'done (loop (- n 1)))) (display (loop 150))",
     "(define (mk n acc) (if (= n 0) acc (mk (- n 1) (cons n acc)))) (display (length (mk 100 '())))",
     "(define (mut) (set! counter (+ counter 1)) counter) (define counter 0) (mut) (mut) (display counter)",
-
     # -- quote and quasiquote --------------------------------------------
     "(display '(1 2 3))",
     "(display '())",
@@ -140,7 +135,6 @@ CORPUS: list[str] = [
     "(display `(,(+ 1 2) ,@(map (lambda (x) (* x x)) '(2 3))))",
     "(display `(a ,(let ((x 5)) `(b ,x)) c))",
     "(display (quote (a b)))",
-
     # -- lists -----------------------------------------------------------
     "(display (list (length '(1 2 3)) (reverse '(1 2 3))))",
     "(display (list (append) (append '(1 2)) (append '(1) '(2) '(3))))",
@@ -154,7 +148,6 @@ CORPUS: list[str] = [
     "(display (list 1 2.5 'a \"b\" #t '() (list 1 2)))",
     "(display '((1 2) (3 4)))",
     "(display (length (append '(1 2) '(3 4 5))))",
-
     # -- vectors ---------------------------------------------------------
     "(display (vector 1 2 3))",
     "(display (list (vector-length (vector 1 2)) (vector-ref (vector 1 2) 1)))",
@@ -162,37 +155,34 @@ CORPUS: list[str] = [
     "(display (list (make-vector 3) (make-vector 2 9)))",
     "(display (vector 1 (vector 2 3)))",
     "(display (vector))",
-
     # -- strings and symbols ---------------------------------------------
-    "(display (list (string-length \"abc\") (substring \"hello\" 1 3)))",
-    "(display (list (substring \"hello\" 1 99) (substring \"hello\" -3 99)))",
-    "(display (list (substring \"hello\" 1) (substring \"hello\" 0 0)))",
-    "(display (list (string->number \"12\") (string->number \"1.5\") (string->number \"zz\") (string->number \"12\" 16)))",
+    '(display (list (string-length "abc") (substring "hello" 1 3)))',
+    '(display (list (substring "hello" 1 99) (substring "hello" -3 99)))',
+    '(display (list (substring "hello" 1) (substring "hello" 0 0)))',
+    '(display (list (string->number "12") (string->number "1.5") (string->number "zz") (string->number "12" 16)))',
     "(display (list (number->string 12) (number->string 1.5) (number->string -3)))",
-    "(display (list (symbol->string 'abc) (string->symbol \"x\")))",
-    "(display (list (string-upcase \"ab\") (string-downcase \"AB\")))",
-    "(display (string->list \"abc\"))",
-    "(display (list (string-ci=? \"AB\" \"ab\") (string=? \"a\" \"a\") (string<? \"a\" \"b\")))",
-    "(display (string-append \"a\" \"b\" \"c\"))",
+    '(display (list (symbol->string \'abc) (string->symbol "x")))',
+    '(display (list (string-upcase "ab") (string-downcase "AB")))',
+    '(display (string->list "abc"))',
+    '(display (list (string-ci=? "AB" "ab") (string=? "a" "a") (string<? "a" "b")))',
+    '(display (string-append "a" "b" "c"))',
     "(display (list (string? \"a\") (string? 'a) (symbol? 'a)))",
     "(display (string-length 'abc))",
-    "(display (list (string=? \"a\" \"b\") (string=?)))",
+    '(display (list (string=? "a" "b") (string=?)))',
     "(display #\\a)",
     "(display (list #\\a #\\space #\\newline #\\tab))",
     "(display '.)",
-
     # -- output modes ----------------------------------------------------
-    "(display \"hi\")",
-    "(display (list \"hi\"))",
-    "(write \"hi\")",
-    "(write '(1 \"a\"))",
+    '(display "hi")',
+    '(display (list "hi"))',
+    '(write "hi")',
+    '(write \'(1 "a"))',
     "(write 3.0)",
     "(write 'abc)",
     "(newline)",
     "(display car)",
     "(display (list 1 2)) (newline) (display 3)",
-    "(display \"a\\nb\")",
-
+    '(display "a\\nb")',
     # -- higher order ----------------------------------------------------
     "(display (map + '(1 2 3) '(10 20 30)))",
     "(display (map + '(1 2 3) '(10 20)))",
@@ -207,7 +197,6 @@ CORPUS: list[str] = [
     "(for-each display '(1 2 3))",
     "(display (map (lambda (x) (* x x)) '()))",
     "(display (map (lambda (a b) (+ a b)) '(1 2) '(3 4)))",
-
     # -- errors the reference *does* report as Scheme errors --------------
     "(display zzz)",
     "(display (car 5))",
@@ -215,14 +204,13 @@ CORPUS: list[str] = [
     "(display (5 6))",
     "(display ())",
     "(display (/ 1 0))",
-    "(display (sqrt \"x\"))",
+    '(display (sqrt "x"))',
     "(display (+ 1 'a))",
-    "(display (error 'bad \"thing\" 3))",
+    '(display (error \'bad "thing" 3))',
     "(display (length (append '(1) 2)))",
     "(display (+ 1",
-    "(display \"abc)",
+    '(display "abc)',
     "(display (list-ref '(1 2) 'a))",
-
     # -- turtle (produces no output) -------------------------------------
     "(forward 10) (right 90) (display 'ok)",
     "(penup) (home) (display 'ok)",
@@ -235,80 +223,43 @@ CORPUS: list[str] = [
 
 DIVERGENT: dict[str, str] = {
     # --- case: broken in the reference, fixed here ----------------------
-    "(display (case 1 ((1) 'one) (else 'other)))":
-        "reference: 'expected a proper list' for *every* case form",
-    "(display (case 9 ((1) 'one) (else 'other)))":
-        "same root cause -- the reference called _to_py_list() on parsed code",
-    "(display (case 'b ((a) 1) ((b c) 2) (else 3)))":
-        "same root cause",
-    "(display (case 5 ((1 2 3) 'low) ((4 5 6) 'mid) (else 'high)))":
-        "same root cause",
-    "(display (case 99 ((1) 'one)))":
-        "same root cause",
-
+    "(display (case 1 ((1) 'one) (else 'other)))": "reference: 'expected a proper list' for *every* case form",
+    "(display (case 9 ((1) 'one) (else 'other)))": "same root cause -- the reference called _to_py_list() on parsed code",
+    "(display (case 'b ((a) 1) ((b c) 2) (else 3)))": "same root cause",
+    "(display (case 5 ((1 2 3) 'low) ((4 5 6) 'mid) (else 'high)))": "same root cause",
+    "(display (case 99 ((1) 'one)))": "same root cause",
     # --- the reference's depth limit ------------------------------------
-    "(define (loop n) (if (= n 0) 'done (loop (- n 1)))) (display (loop 1000000))":
-        "reference: 'Maximum recursion depth exceeded' at ~200 calls",
-    "(define (sum n) (if (= n 0) 0 (+ n (sum (- n 1))))) (display (sum 100000))":
-        "reference: 'Maximum recursion depth exceeded'; port uses the heap",
-    "(define (mk n acc) (if (= n 0) acc (mk (- n 1) (cons n acc)))) (display (length (mk 200000 '())))":
-        "reference: 'Maximum recursion depth exceeded'",
-    "(define (nest n x) (if (= n 0) x (nest (- n 1) (list x)))) (display (nest 200000 'a))":
-        "reference: 'Maximum recursion depth exceeded'",
-    "(define (nest n x) (if (= n 0) x (nest (- n 1) (list x)))) (display (equal? (nest 100000 'a) (nest 100000 'a)))":
-        "reference: recursive _equal() exhausts the native stack",
-
+    "(define (loop n) (if (= n 0) 'done (loop (- n 1)))) (display (loop 1000000))": "reference: 'Maximum recursion depth exceeded' at ~200 calls",
+    "(define (sum n) (if (= n 0) 0 (+ n (sum (- n 1))))) (display (sum 100000))": "reference: 'Maximum recursion depth exceeded'; port uses the heap",
+    "(define (mk n acc) (if (= n 0) acc (mk (- n 1) (cons n acc)))) (display (length (mk 200000 '())))": "reference: 'Maximum recursion depth exceeded'",
+    "(define (nest n x) (if (= n 0) x (nest (- n 1) (list x)))) (display (nest 200000 'a))": "reference: 'Maximum recursion depth exceeded'",
+    "(define (nest n x) (if (= n 0) x (nest (- n 1) (list x)))) (display (equal? (nest 100000 'a) (nest 100000 'a)))": "reference: recursive _equal() exhausts the native stack",
     # --- unspecified value renders as an address ------------------------
-    "(display (if #f 1))":
-        "reference prints '<object object at 0x...>' -- a heap address, not reproducible",
-    "(display (begin))":
-        "reference prints a heap address",
-    "(define y) (display y)":
-        "reference prints a heap address",
-    "(display (cond (#f 1)))":
-        "reference prints a heap address",
-    "(display (do ((i 0 (+ i 1))) ((= i 3) 'done)))":
-        "agrees; listed only if it drifts",
-    "(display (list (when #t 1 2) (unless #f 3) (when #f 1) (unless #t 1)))":
-        "contains the address rendering of the unspecified value",
-    "(display (list-ref '(1 2) 'a))":
-        "reference let Python's ValueError (int('a')) escape the executor",
-    "(display (list (if #t 1) (if #f 1) (if #f 1 2)))":
-        "contains the address rendering of the unspecified value",
-
+    "(display (if #f 1))": "reference prints '<object object at 0x...>' -- a heap address, not reproducible",
+    "(display (begin))": "reference prints a heap address",
+    "(define y) (display y)": "reference prints a heap address",
+    "(display (cond (#f 1)))": "reference prints a heap address",
+    "(display (do ((i 0 (+ i 1))) ((= i 3) 'done)))": "agrees; listed only if it drifts",
+    "(display (list (when #t 1 2) (unless #f 3) (when #f 1) (unless #t 1)))": "contains the address rendering of the unspecified value",
+    "(display (list-ref '(1 2) 'a))": "reference let Python's ValueError (int('a')) escape the executor",
+    "(display (list (if #t 1) (if #f 1) (if #f 1 2)))": "contains the address rendering of the unspecified value",
     # --- exceptions that escaped execute_scheme() ------------------------
-    "(display (sqrt -4))":
-        "reference let math.sqrt's ValueError escape the executor entirely",
-    "(display (list-ref '(1 2) 9))":
-        "reference let Python's IndexError escape the executor",
-    "(display (vector-ref (vector 1) 9))":
-        "reference let Python's IndexError escape the executor",
-    "(display (car))":
-        "reference raised an uncaught TypeError for wrong arity",
-    "(display (/))":
-        "reference raised an uncaught IndexError for wrong arity",
-    "(display (modulo 1 0))":
-        "reference raised an uncaught ZeroDivisionError",
-    "(display (map +))":
-        "reference raised an uncaught ValueError from min()",
-    "(display (string->number))":
-        "reference raised an uncaught TypeError for wrong arity",
-
+    "(display (sqrt -4))": "reference let math.sqrt's ValueError escape the executor entirely",
+    "(display (list-ref '(1 2) 9))": "reference let Python's IndexError escape the executor",
+    "(display (vector-ref (vector 1) 9))": "reference let Python's IndexError escape the executor",
+    "(display (car))": "reference raised an uncaught TypeError for wrong arity",
+    "(display (/))": "reference raised an uncaught IndexError for wrong arity",
+    "(display (modulo 1 0))": "reference raised an uncaught ZeroDivisionError",
+    "(display (map +))": "reference raised an uncaught ValueError from min()",
+    "(display (string->number))": "reference raised an uncaught TypeError for wrong arity",
     # --- numeric range ---------------------------------------------------
-    "(display (expt 2 100))":
-        "reference returns an exact bignum; the port promotes to double",
-    "(display 1267650600228229401496703205376)":
-        "reference returns an exact bignum; the port promotes to double",
-    "(display (* 99999999999 99999999999))":
-        "reference returns an exact bignum; the port promotes to double",
-
+    "(display (expt 2 100))": "reference returns an exact bignum; the port promotes to double",
+    "(display 1267650600228229401496703205376)": "reference returns an exact bignum; the port promotes to double",
+    "(display (* 99999999999 99999999999))": "reference returns an exact bignum; the port promotes to double",
     # --- rendering of compound values via str() --------------------------
-    "(display (string-append \"x\" (list 1 2)))":
-        "reference uses Python repr for compound values",
-    "(display (expt 2 1024))":
-        "reference returns an exact bignum; the port's double overflows to inf",
-    "(display (- -9223372036854775808 1))":
-        "reference stays exact past 2^63; the port's double cannot represent it",
+    '(display (string-append "x" (list 1 2)))': "reference uses Python repr for compound values",
+    "(display (expt 2 1024))": "reference returns an exact bignum; the port's double overflows to inf",
+    "(display (- -9223372036854775808 1))": "reference stays exact past 2^63; the port's double cannot represent it",
 }
 
 # Programs whose reference run raises a non-Scheme exception: recorded so the
@@ -327,7 +278,7 @@ EXTRA_CORPUS: list[str] = [
     "(display (* 99999999999 99999999999))",
     "(display (expt 2 1024))",
     "(display (- -9223372036854775808 1))",
-    "(display (string-append \"x\" (list 1 2)))",
+    '(display (string-append "x" (list 1 2)))',
     "(define (loop n) (if (= n 0) 'done (loop (- n 1)))) (display (loop 1000000))",
     "(define (sum n) (if (= n 0) 0 (+ n (sum (- n 1))))) (display (sum 100000))",
     "(define (mk n acc) (if (= n 0) acc (mk (- n 1) (cons n acc)))) (display (length (mk 200000 '())))",
@@ -409,8 +360,12 @@ def main(argv: list[str]) -> int:
 
     if diverged:
         print("Documented divergences (expected):")
+
+        def flat(text: str) -> str:
+            """Hide the address a program was loaded at, and keep it on one line."""
+            return ADDRESS.sub("<addr>", text).replace("\n", "\\n")
+
         for program, reason, expected, actual in diverged:
-            flat = lambda s: ADDRESS.sub("<addr>", s).replace("\n", "\\n")
             print(f"  - {program.strip()}")
             print(f"      why : {reason}")
             print(f"      ref : {flat(expected).strip()}")

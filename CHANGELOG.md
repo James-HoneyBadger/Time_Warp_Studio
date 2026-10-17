@@ -82,6 +82,18 @@ Four more languages, and the defects that examining their commands turned up.
 - **Corrected counts.** Several documents still described five bridged languages and
   44 examples, the contributing guide listed six languages, and it offered a
   discussion board the project does not answer on.
+- **A credential cannot be committed.** `.pre-commit-config.yaml` now runs
+  `detect-secrets` against a committed baseline, so a key pasted into a file fails
+  the commit instead of reaching GitHub. The baseline is what keeps the hook usable:
+  it records what the tree already holds, so only a secret added *since* is reported
+  — and a hook that cries wolf gets switched off. `CONTRIBUTING.md` says how to
+  install the hooks and how to silence one false positive at a time; `SECURITY.md`
+  says what to do if a secret does reach a commit: rotate it, then rewrite the
+  history, because removing it in a later commit does not remove it from the clones.
+- **The lint hook passes over the whole tree.** `native/tools/` had never been
+  linted, and two findings surfaced when it was: a `lambda` assigned to a name in
+  `scheme_differential_check.py`, and an ambiguous `l` in `teach.py`. Both are fixed
+  rather than excluded, so `pre-commit run --all-files` is green.
 
 ### Syntax colouring in the editor
 

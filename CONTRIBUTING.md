@@ -160,6 +160,41 @@ make test
 
 Both should work without errors.
 
+### Install the Git hooks
+
+```bash
+.venv/bin/pip install pre-commit   # or: pipx install pre-commit
+pre-commit install
+```
+
+That installs three hooks. `ruff` lints and formats Python, and `detect-secrets`
+fails the commit when a file contains something shaped like a credential.
+
+`detect-secrets` compares against the committed baseline in `.secrets.baseline`,
+which records what the tree already holds. That is deliberate: without it every
+historical false positive would be re-reported on each run, and a hook that cries
+wolf gets switched off. With it, only a secret added *since* the baseline stops
+the commit — which is the case worth stopping.
+
+The reason to care is not tidiness. A key that reaches GitHub is world-readable,
+and deleting it in a later commit does not remove it: the blob stays in history
+and in every fork and clone, so recovery means rewriting history *and* rotating
+the key.
+
+When the hook flags a false positive, silence that one line rather than
+weakening the detection:
+
+```python
+EXAMPLE_TOKEN = "not-a-real-token"  # pragma: allowlist secret
+```
+
+When a real value is removed from a file, or the baseline is audited and the
+finding is intentional, regenerate it and review the diff:
+
+```bash
+.venv/bin/detect-secrets scan --baseline .secrets.baseline
+```
+
 ---
 
 ## Code Style

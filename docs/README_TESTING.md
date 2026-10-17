@@ -74,6 +74,13 @@ python3 native/tools/lang_differential_check.py   # 225 programs, 0 differences
 make lint    # ruff over the bridge engine
 ```
 
+That covers the bridge only. The commit-time hooks cover more:
+`pre-commit install` runs `ruff`, `ruff-format` and `detect-secrets` over the
+files a commit touches. `detect-secrets` is the one that stops a credential
+reaching GitHub; it compares against `.secrets.baseline`, so it reports only
+what has been added since the baseline was taken. `CONTRIBUTING.md` has the
+install commands and the way to silence a single false positive.
+
 The C++ side is its own linter: the build carries `-Wall -Wextra -Wpedantic
 -Wshadow -Wcast-qual -Wuseless-cast -Wlogical-op -Wnull-dereference` with
 `-Werror`, so a warning fails the build.

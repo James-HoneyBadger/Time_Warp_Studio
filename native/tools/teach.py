@@ -69,7 +69,11 @@ def _rule(title: str = "") -> str:
 def _expectation(checkpoint: Lesson) -> str:  # type: ignore[valid-type]
     """How a checkpoint is checked, in one line, for a printed plan."""
     if checkpoint.expect_lines is not None:
-        joined = " / ".join(checkpoint.expect_lines) if checkpoint.expect_lines else "(nothing)"
+        joined = (
+            " / ".join(checkpoint.expect_lines)
+            if checkpoint.expect_lines
+            else "(nothing)"
+        )
         return f"prints: {joined}"
     if checkpoint.expect_turtle is not None:
         parts = [f"{key}={value}" for key, value in checkpoint.expect_turtle.items()]
@@ -89,7 +93,11 @@ def cmd_validate(options: argparse.Namespace, classroom: ClassroomMode) -> int:
     executes it, so without this pass a lesson nobody can finish would sit in the
     tree looking correct.
     """
-    lessons = load_curriculum(classroom._lessons_path or None) if classroom._lessons_path else load_curriculum()
+    lessons = (
+        load_curriculum(classroom._lessons_path or None)
+        if classroom._lessons_path
+        else load_curriculum()
+    )
     problems = validate_curriculum(lessons, languages=list(Language))
     checkpoints = sum(lesson.checkpoint_count for lesson in lessons)
     print(f"lessons: {len(lessons)}   checkpoints: {checkpoints}")
@@ -123,7 +131,9 @@ def cmd_outline(options: argparse.Namespace, classroom: ClassroomMode) -> int:
                 if lesson["prerequisites"]
                 else ""
             )
-            print(f"  · {lesson['title']} — {lesson['difficulty']}, {lesson['checkpoints']} checkpoints{needs}")
+            print(
+                f"  · {lesson['title']} — {lesson['difficulty']}, {lesson['checkpoints']} checkpoints{needs}"
+            )
             print(f"    {lesson['description']}")
     print()
     print("Print a plan with: teach.py plans --lang <LANGUAGE>")
@@ -160,7 +170,9 @@ def _plan_text(lesson: Lesson) -> str:
         lines += ["", "Prerequisites: " + ", ".join(lesson.prerequisites)]
     if lesson.objectives:
         lines += ["", "Learning objectives:"]
-        lines += [f"  {index}. {text}" for index, text in enumerate(lesson.objectives, 1)]
+        lines += [
+            f"  {index}. {text}" for index, text in enumerate(lesson.objectives, 1)
+        ]
     if lesson.teacher_notes:
         lines += ["", "Teacher notes:", _wrap(lesson.teacher_notes, 72, "  ")]
     lines += ["", "Checkpoints:"]
@@ -251,7 +263,10 @@ def _plans_markdown(language: str, lessons: list[Lesson]) -> str:
     ]
     for lesson in lessons:
         if lesson.prerequisites:
-            lines += [f"> Needs: {', '.join(f'`{item}`' for item in lesson.prerequisites)}", ""]
+            lines += [
+                f"> Needs: {', '.join(f'`{item}`' for item in lesson.prerequisites)}",
+                "",
+            ]
         lines += [
             f"## {_plain(lesson.title)}",
             "",
@@ -360,11 +375,13 @@ def _plans_index(by_language: dict[str, list[Lesson]]) -> str:
     for language, lessons in by_language.items():
         checkpoints = sum(lesson.checkpoint_count for lesson in lessons)
         filename = f"{language.lower().replace('-', '')}.md"
-        lines.append(f"| {language} | {len(lessons)} | {checkpoints} | [{filename}]({filename}) |")
+        lines.append(
+            f"| {language} | {len(lessons)} | {checkpoints} | [{filename}]({filename}) |"
+        )
     lines += [
         "",
         f"**Total: {sum(len(v) for v in by_language.values())} lessons, "
-        f"{sum(sum(l.checkpoint_count for l in v) for v in by_language.values())} checkpoints.**",
+        f"{sum(sum(lesson.checkpoint_count for lesson in v) for v in by_language.values())} checkpoints.**",
         "",
     ]
     return "\n".join(lines)
@@ -388,19 +405,32 @@ def cmd_new(options: argparse.Namespace, classroom: ClassroomMode) -> int:
         return 2
 
     if not options.append:
-        print(json.dumps(_blank_lesson(lesson_id, language, options.title or lesson_id), indent=2))
+        print(
+            json.dumps(
+                _blank_lesson(lesson_id, language, options.title or lesson_id), indent=2
+            )
+        )
         print()
-        print(f"{_INFO} add `--append` to put it in the curriculum, then run `validate`.")
+        print(
+            f"{_INFO} add `--append` to put it in the curriculum, then run `validate`."
+        )
         return 0
 
     from time_warp.features.lesson_system import LESSONS_FILE
 
     data = json.loads(LESSONS_FILE.read_text(encoding="utf-8"))
     if any(item.get("id") == lesson_id for item in data["lessons"]):
-        print(f"{_CROSS} there is already a lesson with the id {lesson_id!r}", file=sys.stderr)
+        print(
+            f"{_CROSS} there is already a lesson with the id {lesson_id!r}",
+            file=sys.stderr,
+        )
         return 2
-    data["lessons"].append(_blank_lesson(lesson_id, language, options.title or lesson_id))
-    LESSONS_FILE.write_text(json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    data["lessons"].append(
+        _blank_lesson(lesson_id, language, options.title or lesson_id)
+    )
+    LESSONS_FILE.write_text(
+        json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
     print(f"{_TICK} appended {lesson_id} to {LESSONS_FILE}")
     print(f"{_INFO} it will not validate until you replace the placeholder checkpoint.")
     return 1
@@ -434,7 +464,10 @@ def _language_argument(value: str) -> Language | None:
     name = value.upper().replace("-", "_")
     if name not in {language.name for language in Language}:
         print(f"{_CROSS} {value!r} is not a language here.", file=sys.stderr)
-        print(f"   Try: {', '.join(language.name for language in Language)}", file=sys.stderr)
+        print(
+            f"   Try: {', '.join(language.name for language in Language)}",
+            file=sys.stderr,
+        )
         return None
     return Language[name]
 
@@ -451,13 +484,15 @@ def cmd_roster(options: argparse.Namespace, classroom: ClassroomMode) -> int:
     elif options.roster_command == "remove":
         removed = classroom.remove_student(options.student_id)
         print(
-            f"{_TICK} removed {options.student_id}" if removed else f"{_INFO} no such student"
+            f"{_TICK} removed {options.student_id}"
+            if removed
+            else f"{_INFO} no such student"
         )
         if removed:
             print(f"{_INFO} their files are still in {classroom.root / 'students'}")
     rows = classroom.roster.students
     if not rows:
-        print(f"{_INFO} the class list is empty. `roster add \"Ada Lovelace\"`")
+        print(f'{_INFO} the class list is empty. `roster add "Ada Lovelace"`')
         return 0
     print()
     width = max(len(student.student_id) for student in rows)
@@ -484,7 +519,9 @@ def cmd_distribute(options: argparse.Namespace, classroom: ClassroomMode) -> int
         return 0
     for path in written:
         print(f"  {path}")
-    print(f"{_TICK} handed out {len(written)} file(s) to {len(classroom.roster)} student(s)")
+    print(
+        f"{_TICK} handed out {len(written)} file(s) to {len(classroom.roster)} student(s)"
+    )
     return 0
 
 
@@ -501,7 +538,10 @@ def cmd_collect(options: argparse.Namespace, classroom: ClassroomMode) -> int:
         )
         if options.verbose:
             for item in submissions:
-                if item.student_id == row["student"] and item.lesson_id == row["lesson"]:
+                if (
+                    item.student_id == row["student"]
+                    and item.lesson_id == row["lesson"]
+                ):
                     print(f"        {item.filename:<28} {item.summary()}")
     complete = sum(1 for row in classroom.lesson_marks(submissions) if row["complete"])
     print()
@@ -521,7 +561,7 @@ def cmd_report(options: argparse.Namespace, classroom: ClassroomMode) -> int:
 
     rows = classroom.class_progress()
     if not rows:
-        print(f"{_INFO} no students. `teach.py roster add \"Ada Lovelace\"`")
+        print(f'{_INFO} no students. `teach.py roster add "Ada Lovelace"`')
         return 1
     print(_rule("Class progress"))
     print(f"{'student':<14}{'name':<22}{'started':>8}{'finished':>10}{'hints':>7}")
@@ -555,7 +595,9 @@ def _student_report(options: argparse.Namespace, classroom: ClassroomMode) -> in
             continue
         mark = _TICK if row["status"] == LessonStatus.COMPLETED.value else "…"
         hints = f"  ({row['hints_used']} hint(s))" if row["hints_used"] else ""
-        print(f"  {mark} {row['title']} — {row['checkpoint']}/{row['checkpoints']}{hints}")
+        print(
+            f"  {mark} {row['title']} — {row['checkpoint']}/{row['checkpoints']}{hints}"
+        )
     if all(row["status"] == LessonStatus.NOT_STARTED.value for row in rows):
         print("  nothing started yet")
     return 0
@@ -564,14 +606,18 @@ def _student_report(options: argparse.Namespace, classroom: ClassroomMode) -> in
 def cmd_bundle(options: argparse.Namespace, classroom: ClassroomMode) -> int:
     path = classroom.create_bundle(Path(options.output))
     print(f"{_TICK} wrote {path}")
-    print(f"{_INFO} {len(classroom.roster)} student(s), assignment, and presentation settings")
+    print(
+        f"{_INFO} {len(classroom.roster)} student(s), assignment, and presentation settings"
+    )
     return 0
 
 
 def cmd_unbundle(options: argparse.Namespace, classroom: ClassroomMode) -> int:
     roster = classroom.import_bundle(Path(options.bundle), replace=options.replace)
     print(f"{_TICK} imported {len(roster)} student(s) into {classroom.root}")
-    print(f"{_INFO} existing files were {'replaced' if options.replace else 'left alone'}")
+    print(
+        f"{_INFO} existing files were {'replaced' if options.replace else 'left alone'}"
+    )
     return 0
 
 
@@ -581,10 +627,10 @@ def cmd_present(options: argparse.Namespace, classroom: ClassroomMode) -> int:
         print(f"font size: {settings.font_size}   fullscreen: {settings.fullscreen}")
         print(f"range: {MIN_PRESENTATION_FONT}..{MAX_PRESENTATION_FONT}")
         return 0
-    settings = classroom.set_presentation(
-        options.size, fullscreen=not options.windowed
+    settings = classroom.set_presentation(options.size, fullscreen=not options.windowed)
+    print(
+        f"{_TICK} presentation size {settings.font_size}, fullscreen {settings.fullscreen}"
     )
-    print(f"{_TICK} presentation size {settings.font_size}, fullscreen {settings.fullscreen}")
     print(f"{_INFO} the lesson panel in the IDE reads this when you open it")
     return 0
 
@@ -613,7 +659,9 @@ def build_parser() -> argparse.ArgumentParser:
     subparsers = parser.add_subparsers(dest="command")
 
     validate = subparsers.add_parser("validate", help="check the whole curriculum")
-    validate.add_argument("--quiet", action="store_true", help="only say whether it is sound")
+    validate.add_argument(
+        "--quiet", action="store_true", help="only say whether it is sound"
+    )
 
     subparsers.add_parser("outline", help="the scheme of work, grouped by language")
 
@@ -624,14 +672,18 @@ def build_parser() -> argparse.ArgumentParser:
     answers.add_argument("lesson", nargs="?")
     answers.add_argument("--all", action="store_true", help="every lesson")
 
-    write_plans = subparsers.add_parser("write-plans", help="write the plans out as documents")
+    write_plans = subparsers.add_parser(
+        "write-plans", help="write the plans out as documents"
+    )
     write_plans.add_argument("directory")
 
     new = subparsers.add_parser("new", help="scaffold a new lesson")
     new.add_argument("lesson_id")
     new.add_argument("--language", required=True)
     new.add_argument("--title")
-    new.add_argument("--append", action="store_true", help="add it to the curriculum file")
+    new.add_argument(
+        "--append", action="store_true", help="add it to the curriculum file"
+    )
 
     roster = subparsers.add_parser("roster", help="the class list")
     roster_sub = roster.add_subparsers(dest="roster_command")
@@ -650,7 +702,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     collect = subparsers.add_parser("collect", help="mark what has been handed in")
     collect.add_argument("--lesson", action="append")
-    collect.add_argument("-v", "--verbose", action="store_true", help="one line per file")
+    collect.add_argument(
+        "-v", "--verbose", action="store_true", help="one line per file"
+    )
 
     report = subparsers.add_parser("report", help="where each learner has got to")
     report.add_argument("--student", help="one learner")
@@ -660,7 +714,9 @@ def build_parser() -> argparse.ArgumentParser:
 
     unbundle = subparsers.add_parser("unbundle", help="unpack a classroom bundle")
     unbundle.add_argument("bundle")
-    unbundle.add_argument("--replace", action="store_true", help="overwrite existing files")
+    unbundle.add_argument(
+        "--replace", action="store_true", help="overwrite existing files"
+    )
 
     present = subparsers.add_parser("present", help="the size a lesson is projected at")
     present.add_argument("size", nargs="?", type=int)
