@@ -267,6 +267,13 @@ row of controls that drives those four calls. That is what lets the wrapping, th
 case handling and the single-undo-step Replace All be tested against a document with
 no window in the stack.
 
+Persistence is in two halves on purpose. `saveLayout` restores the window and
+`saveSession` restores the *documents*, so `--reset-layout` can put the window back
+to its defaults without losing the list of files somebody was working on. The recent
+list is rebuilt every time the menu opens rather than once at startup, for the same
+reason the grid's tick is: a menu that remembers its own contents disagrees with
+settings the moment anything else writes them.
+
 ### The turtle canvas
 
 `TurtleCanvas` is the graphics surface, and it is a **consumer**: the interpreter never

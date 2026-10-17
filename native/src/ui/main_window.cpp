@@ -64,6 +64,12 @@ namespace {
 constexpr auto kSettingGeometry = "layout/geometry";
 constexpr auto kSettingWindowState = "layout/windowState";
 constexpr auto kSettingSplitters = "layout/splitters";
+/// The documents that were open, so the next launch can reopen them.
+constexpr auto kSettingOpenFiles = "session/openFiles";
+/// File > Open Recent. Capped, because a menu of forty paths is a menu nobody
+/// reads.
+constexpr auto kSettingRecentFiles = "session/recentFiles";
+constexpr int kRecentFileLimit = 10;
 
 constexpr int kMinimumWindowWidth = 900;
 constexpr int kMinimumWindowHeight = 600;
@@ -439,6 +445,11 @@ void MainWindow::buildMenuBar() {
     file->setObjectName(QStringLiteral("fileMenu"));
     add(file, tr("&New"), QKeySequence::New, [this] { newFile(); });
     add(file, tr("&Open..."), QKeySequence::Open, [this] { openFileDialog(); });
+    // Rebuilt every time it is opened, from settings: a list built once would be
+    // the files that were recent when the window was created.
+    recent_menu_ = file->addMenu(tr("Open &Recent"));
+    recent_menu_->setObjectName(QStringLiteral("recentMenu"));
+    connect(recent_menu_, &QMenu::aboutToShow, this, [this] { rebuildRecentMenu(); });
     file->addSeparator();
     add(file, tr("&Save"), QKeySequence::Save, [this] { saveCurrentFile(); });
     add(file, tr("Save &As..."), QKeySequence::SaveAs, [this] { saveCurrentFileAs(); });
@@ -949,7 +960,74 @@ void MainWindow::closeEvent(QCloseEvent* event) {
         }
     }
     saveLayout();
+    saveSession();
     event->accept();
+}
+
+void MainWindow::saveSession() const {
+    // Only documents with a path: an untitled buffer has no name to reopen, and a
+    // tab restored as "untitled 3" would be a document the user never had.
+    QSettings{}.setValue(kSettingOpenFiles, openFilePaths());
+}
+
+int MainWindow::restoreSession() {
+    const QStringList files = QSettings{}.value(kSettingOpenFiles).toStringList();
+    int reopened = 0;
+    for (const QString& path : files) {
+        // Silently: a file that has been moved or deleted since the last session
+        // is a missing file, not an error the user has to dismiss at startup --
+        // which is also what makes this safe to call before `show()`.
+        if (openFile(path, OpenFailure::Silent)) {
+            ++reopened;
+        }
+    }
+    return reopened;
+}
+
+QStringList MainWindow::recentFiles() const {
+    return QSettings{}.value(kSettingRecentFiles).toStringList();
+}
+
+void MainWindow::noteRecentFile(const QString& path) {
+    if (path.isEmpty()) {
+        return;
+    }
+    // Absolute, so the same file reached by two different relative paths is one
+    // entry rather than two.
+    const QString absolute = QFileInfo{path}.absoluteFilePath();
+    QStringList recent = recentFiles();
+    recent.removeAll(absolute);
+    recent.prepend(absolute);
+    while (recent.size() > kRecentFileLimit) {
+        recent.removeLast();
+    }
+    QSettings{}.setValue(kSettingRecentFiles, recent);
+}
+
+void MainWindow::rebuildRecentMenu() {
+    if (recent_menu_ == nullptr) {
+        return;
+    }
+    recent_menu_->clear();
+    const QStringList recent = recentFiles();
+    if (recent.isEmpty()) {
+        QAction* none = recent_menu_->addAction(tr("(nothing yet)"));
+        none->setEnabled(false);
+        return;
+    }
+    for (const QString& path : recent) {
+        recent_menu_->addAction(QDir::toNativeSeparators(path), this,
+                                [this, path] { openFile(path); });
+    }
+    recent_menu_->addSeparator();
+    recent_menu_->addAction(tr("Clear Menu"), this, [this] { clearRecentFiles(); });
+}
+
+void MainWindow::clearRecentFiles() {
+    // The session's document list is *not* touched: clearing the menu of paths a
+    // user has visited is not the same as saying they were never working on what
+    // is open now.
+    QSettings{}.remove(kSettingRecentFiles);
 }
 
 void MainWindow::setExecutionState(const QString& state, const QString& message) {
@@ -1132,6 +1210,10 @@ bool MainWindow::openFile(const QString& path, OpenFailure failure) {
         if (existing != nullptr && pathOf(existing) == absolute) {
             editor_tabs_->setCurrentIndex(index);
             existing->setFocus();
+            // Raising a tab is using the file, so it belongs at the top of the
+            // recent list too. Otherwise re-opening a file from the list would
+            // leave the list in the order it already had.
+            noteRecentFile(absolute);
             return true;
         }
     }
@@ -1170,6 +1252,7 @@ bool MainWindow::openFile(const QString& path, OpenFailure failure) {
     editor->document()->setModified(false);
     updateTabLabel(editor);
     editor->setFocus();
+    noteRecentFile(absolute);
 
     setExecutionState(tr("ready"), tr("Opened %1").arg(QFileInfo{absolute}.fileName()));
     return true;
@@ -1203,6 +1286,9 @@ bool MainWindow::writeDocument(CodeEditor* editor, const QString& path) {
 
     editor->setProperty(kFilePathProperty, path);
     editor->document()->setModified(false);
+    // A file that has just been saved under a name is a file the user will want
+    // back, which is what the recent list is for.
+    noteRecentFile(path);
     // The new path may name a different language -- saving `untitled` as `draw.logo`
     // has to turn it into a Logo document -- so the label, the badges and the
     // language selector are all refreshed from the path that just changed.

@@ -167,7 +167,14 @@ int main(int argc, char* argv[]) {
         lessonsPanel = panel.trimmed().toLower() == QLatin1String("lessons");
     }
 
-    openArguments(&window, parser.positionalArguments());
+    const QStringList arguments = parser.positionalArguments();
+    if (arguments.isEmpty() && screenshotPath.isEmpty()) {
+        // Only when nothing was named on the command line: a file argument is a
+        // request for that file, and a screenshot has to be reproducible from the
+        // command line rather than from somebody's last session.
+        window.restoreSession();
+    }
+    openArguments(&window, arguments);
     window.show();
 
     if (parser.isSet(runOption)) {

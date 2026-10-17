@@ -57,6 +57,7 @@ class QCloseEvent;
 class QComboBox;
 class QDockWidget;
 class QLabel;
+class QMenu;
 class QPlainTextEdit;
 class QSlider;
 class QSplitter;
@@ -239,6 +240,23 @@ public:
     /// layout at its defaults rather than producing a wedged window.
     void restoreLayout();
 
+    // -- sessions ---------------------------------------------------------
+    //
+    // `saveLayout` brings back the window; these bring back the *documents*, which
+    // is the half a user notices. Kept apart because they fail for unrelated
+    // reasons and the layout can be reset (`--reset-layout`) without losing the
+    // list of files somebody was working on.
+
+    /// Records the open documents so the next launch can reopen them.
+    void saveSession() const;
+    /// Reopens what the last session had open, skipping files that have since
+    /// been deleted or moved. Returns how many were reopened.
+    int restoreSession();
+    /// The paths File > Open Recent lists, most recent first.
+    [[nodiscard]] QStringList recentFiles() const;
+    /// Forgets them. File > Open Recent > Clear Menu.
+    void clearRecentFiles();
+
     /// Sets the persistent execution badge and the status message. The badge is a
     /// permanent widget, so it stays visible while the message is transient.
     void setExecutionState(const QString& state, const QString& message);
@@ -299,6 +317,11 @@ private:
     /// the error log, and otherwise the current document's editor.
     [[nodiscard]] QPlainTextEdit* editTarget() const;
 
+    /// Adds a path to the recent list: most recent first, no duplicates, capped.
+    void noteRecentFile(const QString& path);
+    /// Rebuilds the recent submenu from the list, every time it is opened.
+    void rebuildRecentMenu();
+
     /// `path` for an editor whose document has been saved, empty for a new one.
     [[nodiscard]] static QString pathOf(const CodeEditor* editor);
     /// The language shown for an editor: from its path, or the default when the
@@ -323,6 +346,9 @@ private:
     QDockWidget* outline_dock_ = nullptr;
     QToolBar* tool_bar_ = nullptr;
     QToolBar* tool_bar_secondary_ = nullptr;
+    /// Rebuilt on every open: a recent list that is only built once is a list of
+    /// the files that were open when the window was created.
+    QMenu* recent_menu_ = nullptr;
 
     /// Serial number for naming untitled documents, so two of them are not both
     /// called "untitled". Never decreases: reusing a name the user just closed

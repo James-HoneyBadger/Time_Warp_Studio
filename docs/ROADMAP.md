@@ -14,7 +14,7 @@ yet — please check the list below before reporting one as a regression.
 
 | Area | State |
 | --- | --- |
-| Shell | Documents and tabs, menus, toolbars, status bar, settings persistence |
+| Shell | Documents and tabs, menus, toolbars, status bar, settings persistence, the last session's files restored at launch |
 | Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, go-to-line, tab stops, fonts |
 | Console | Streaming output, and interpreter errors in their own tab |
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker |
@@ -233,8 +233,11 @@ Ctrl+L, because the canvas already owns Ctrl+G.
 **Console** — clickable `line N` links into the editor, an error-only filter, and
 save-to-file.
 
-**Files and sessions** — recent files, restore the last session on launch, crash
-recovery, autosave.
+**Files and sessions** — recent files and restoring the last session at launch are
+built: `MainWindow::saveSession` records the documents that were open,
+`restoreSession` reopens them, and File > Open Recent lists the last ten paths (with
+a Clear Menu entry). Crash recovery and autosave are still missing — the window
+prompts on close, but a process that dies does not.
 
 **Input** — the bridged languages' input round-trip (the `in`/`in-reply` protocol
 and the prompt dialog) is implemented but has no automated coverage, because the

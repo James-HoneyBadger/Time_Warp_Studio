@@ -824,11 +824,86 @@ void test_the_find_bar_drives_the_editor() {
     TW_CHECK_EQ(bar->statusText(), QStringLiteral("1 match"));
 }
 
+// ---------------------------------------------------------------------------
+// The recent list, and the session
+// ---------------------------------------------------------------------------
+
+void test_recent_files_are_remembered() {
+    announce("recent files");
+    const QTemporaryDir dir;
+    TW_CHECK(dir.isValid());
+    MainWindow window;
+    // The list lives in settings, so it starts out holding whatever earlier tests
+    // opened -- and whatever the last real session left there.
+    window.clearRecentFiles();
+    TW_CHECK(window.recentFiles().isEmpty());
+
+    const QString first = writeFile(dir, QStringLiteral("one.bas"), "PRINT 1\n");
+    const QString second = writeFile(dir, QStringLiteral("two.logo"), "FORWARD 10\n");
+    TW_CHECK(window.openFile(first));
+    TW_CHECK(window.openFile(second));
+
+    // Most recent first, and opening a file again moves it rather than adding a
+    // second entry for the same file.
+    QStringList recent = window.recentFiles();
+    TW_CHECK_EQ(recent.size(), 2);
+    TW_CHECK_EQ(recent.first(), second);
+    TW_CHECK(window.openFile(first));
+    recent = window.recentFiles();
+    TW_CHECK_EQ(recent.size(), 2);
+    TW_CHECK_EQ(recent.first(), first);
+
+    // Capped: a menu of forty paths is a menu nobody reads.
+    for (int index = 0; index < 14; ++index) {
+        const QString path = writeFile(
+            dir, QStringLiteral("f%1.bas").arg(index), "PRINT 1\n");
+        TW_CHECK(window.openFile(path));
+    }
+    TW_CHECK_EQ(window.recentFiles().size(), 10);
+}
+
+void test_the_session_comes_back() {
+    announce("session restore");
+    const QTemporaryDir dir;
+    const QString first = writeFile(dir, QStringLiteral("keep.bas"), "PRINT 1\n");
+    const QString second = writeFile(dir, QStringLiteral("keep.logo"), "FORWARD 10\n");
+    {
+        MainWindow window;
+        TW_CHECK(window.openFile(first));
+        TW_CHECK(window.openFile(second));
+        window.saveSession();
+    }
+
+    MainWindow restored;
+    TW_CHECK_EQ(restored.restoreSession(), 2);
+    // The list is bound to a name first: `openFilePaths().first()` is a reference
+    // into a temporary, which GCC's -Wdangling-reference is right to refuse.
+    const QStringList restored_paths = restored.openFilePaths();
+    TW_CHECK_EQ(restored_paths.size(), 2);
+    TW_CHECK_EQ(restored_paths.first(), first);
+
+    // An untitled buffer has no name to reopen, so it is not part of a session:
+    // a tab restored as "untitled 3" would be a document the user never had.
+    MainWindow with_untitled;
+    TW_CHECK(with_untitled.openFile(first));
+    with_untitled.newFile();
+    with_untitled.saveSession();
+    MainWindow after;
+    TW_CHECK_EQ(after.restoreSession(), 1);
+
+    // A file that has been deleted since is skipped rather than reported. A
+    // prompt at startup that cannot be dismissed is worse than a missing tab.
+    QFile::remove(second);
+    after.saveSession();
+    MainWindow again;
+    TW_CHECK_EQ(again.restoreSession(), 1);
+    TW_CHECK_EQ(again.openFilePaths().size(), 1);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
-    // Set before QApplication exists, or Qt tries to open a real display.
-    qputenv("QT_QPA_PLATFORM", "offscreen");
+    // Set before QApplication exists, or Qt tries to open a real display.    qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app{argc, argv};
     // A settings identity of its own, so a test run cannot touch the real one.
     QCoreApplication::setOrganizationName(QStringLiteral("TimeWarpTests"));
@@ -840,6 +915,8 @@ int main(int argc, char** argv) {
     test_find_next_selects_and_wraps();
     test_replace_all_is_one_step();
     test_the_find_bar_drives_the_editor();
+    test_recent_files_are_remembered();
+    test_the_session_comes_back();
 
     test_a_fresh_window_has_one_real_document();
     test_opening_a_file();

@@ -111,6 +111,20 @@ Four more languages, and the defects that examining their commands turned up.
   on one key is an ambiguous shortcut that Qt resolves by guessing.
 - The About box now names all ten languages instead of the original six.
 
+### The last session comes back
+
+- **Recent files** — File > Open Recent lists the last ten paths, most recent first,
+  with a Clear Menu entry. Opening a file that is already open bumps it to the top
+  rather than adding a second entry: raising a tab is using the file.
+- **The session is restored at launch** — the documents that were open come back,
+  unless a file was named on the command line (a file argument is a request for that
+  file) or `--screenshot` is in use (a screenshot has to be reproducible from the
+  command line, not from somebody's last session). A file that has been deleted or
+  moved since is skipped silently, because a prompt at startup that cannot be
+  dismissed is worse than a tab that is not there.
+- **`saveLayout` and `saveSession` are separate** — `--reset-layout` puts the window
+  back to its defaults without forgetting what was being edited.
+
 ---
 
 ## [15.0.0] - 2026-10-16
