@@ -42,7 +42,7 @@ Three things are being checked, and each one is a lesson nobody could learn from
   taught honestly.
 
 A language with no lesson at all is also reported, which is what stops the panel
-quietly offering nine languages.
+quietly offering a language the curriculum does not cover.
 
 ## 2. The scheme of work
 

@@ -37,18 +37,21 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Turtle canvas** — the drawing appears as it is made, with zoom, pan, grid, auto-fit and a turtle marker; export it to PNG/JPEG/BMP (Ctrl+E) or copy it to the clipboard, with or without the grid on screen
 - **Documents** — tabs, per-file language detection, unsaved-change prompts, new/open/save/save-as, a recent-files menu, and the files from the last session reopened at launch
 - **Run controls** — Run (F9) and Stop, with a status bar showing language, cursor position and execution state
-- **Native engines** — Scheme runs in-process with no Python at all; the expression
-  evaluator (`timewarp_expr`) is native C++ too, but nothing calls it yet, so
-  expressions inside a Run are still evaluated by the bridge (see
+- **Inspection** — a 🔍 **Variables** panel listing every binding with its type and value, filtered by name, and a ⚡ **Telemetry** HUD showing what the run cost and did: steps used, engine time, steps per second, last line, recursion depth, call stack, output lines, drawing commands, BASIC's memory window, and — beside the engine's own counters — the IDE's wall clock and the ink that actually reached the canvas
+- **Debugging (Scheme)** — a 🐞 **Debug** panel driving the native runner: Continue, Pause, Step In/Over/Out, Stop and breakpoints, with the call stack and the frame's bindings shown while paused. The four bridged languages run to completion in another process with no pause protocol, so the panel says so instead of offering dead buttons
+- **Native engines** — Scheme runs in-process with no Python at all, and so do
+  **FOCAL**, **PILOT**, **COMAL** and **CHIP-8**, on the shared C++ `timewarp_lang`
+  engine. FOCAL, PILOT and COMAL evaluate their arithmetic with the native
+  expression evaluator (`timewarp_expr`), so they need no Python either (see
   [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md))
 
 ### What is still being built
 
 The Qt IDE is the product; the PySide6 application that preceded it has been removed.
 Features of that application that have **not** been ported yet — themes and the CRT
-effects, the examples browser, find-in-files, auto-completion, the debugger panels,
-and the function-key bar's Shift and Ctrl layers — are tracked in
-[docs/ROADMAP.md](docs/ROADMAP.md).
+effects, the examples browser, find-in-files, auto-completion, the console's clickable
+line links, the toolbar's Debug/Continue/Trace actions, and the function-key bar's Shift
+and Ctrl layers — are tracked in [docs/ROADMAP.md](docs/ROADMAP.md).
 Please read that list before reporting one of them as a regression.
 
 ### Turtle Graphics
@@ -62,7 +65,13 @@ Please read that list before reporting one of them as a regression.
 
 ### Debugging
 
-Scheme runs on a native explicit-stack machine with a background runner that supports Stop today; the stepping and inspection panels are being wired up (tracked in the roadmap). Breakpoints and stepping remain available in the language runtimes themselves.
+Scheme runs on a native explicit-stack machine with a background runner, and the 🐞
+Debug panel drives it: Continue, Pause, Step In/Over/Out, Stop and breakpoints, with the
+call stack and that frame's bindings shown while paused. Values are typed by the machine
+rather than guessed from their printed form. Only Scheme can be stepped — every
+other language runs to completion, bridged or in-process, and has no pause protocol — so
+the panel disables itself and says why, and the toolbar's Debug/Continue/Trace actions
+are still inert (tracked in the roadmap).
 
 ### Guided Lessons
 

@@ -178,6 +178,17 @@ template <class Entry>
     return false;
 }
 
+template <class Entry>
+[[nodiscard]] bool has_kind(const std::vector<Entry>& entries,
+                            const std::string& name, const std::string& kind) {
+    for (const Entry& entry : entries) {
+        if (entry.name == name && entry.kind == kind) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // ---------------------------------------------------------------------------
 // Source maps
 // ---------------------------------------------------------------------------
@@ -682,6 +693,11 @@ void test_visible_variables_render_bindings() {
     TW_CHECK(has_entry(variables, "half", "12"));
     TW_CHECK(has_entry(variables, "w", "3"));
     TW_CHECK(has_entry(variables, "h", "4"));
+    // The kind is the machine's own `type_name`, not something the GUI infers from
+    // the printed form -- `12` and `"12"` render differently, but a pair and a
+    // symbol are easier to tell apart by kind than by eye.
+    TW_CHECK(has_kind(variables, "half", "number"));
+    TW_CHECK(has_kind(variables, "area", "procedure"));
     // The user's own global definition is useful; the ~90 builtins are not.
     TW_CHECK(has_name(variables, "area"));
     TW_CHECK(!has_name(variables, "display"));

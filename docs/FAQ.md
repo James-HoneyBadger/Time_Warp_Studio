@@ -226,27 +226,29 @@ Logo, BASIC, COMAL, REXX, and Scheme have turtle commands. Check each language's
 
 ### Does the Studio have a debugger?
 
-Yes. It supports breakpoints, stepping, a variables panel, a call stack, and an execution timeline. See the [Debugger Guide](DEBUGGER_GUIDE.md).
+For **Scheme**, yes: the 🐞 Debug tab drives a real runner with breakpoints, stepping, a call stack, the paused line and that frame's variables. The other nine languages run to completion with no pause protocol — four in the Python bridge's process, five in the native runner — so the Debug tab disables itself and says why.
+
+Not yet: watch expressions, an execution timeline, and the toolbar's Debug/Continue/Trace actions (the panel's own buttons work). Those are tracked in [ROADMAP.md](ROADMAP.md).
 
 ### How do I set a breakpoint?
 
-Click the left margin of the editor, or press `Ctrl+F8` on the current line. Press `Ctrl+Shift+F8` to clear all breakpoints.
+In the Debug tab: type a line number and press **Add**. Breakpoints are listed there and **Remove** takes the selected one off. The editor's gutter does not take breakpoint clicks yet.
 
 ### How do I start debugging?
 
-Use Debug → Start / Continue Debugging. The program pauses at the first breakpoint, or at the first statement if none are set.
+Run the program as usual (F9) and press **Pause** in the Debug tab, or set a breakpoint first: the program stops there. **Continue** resumes it.
 
 ### What do the step commands do?
 
-Use the Debug menu for Trace Into, Step Over, and Step Out. Trace Into and Step Over currently perform the same action. See the [Debugger Guide](DEBUGGER_GUIDE.md) for details.
+**Step In**, **Step Over** and **Step Out** advance the Scheme machine by one form, entering or stepping past a call. The granularity is a form rather than a line, because that is what the explicit-stack machine executes.
 
 ### Can I see variable values while debugging?
 
-Yes. The Variables tab shows each variable and its value when execution pauses. You can also add watch expressions.
+Yes, in two places. The 🔍 **Variables** tab lists every binding the engine can see with its type and value, filtered by name — after a run as well as while paused, because a run that never paused still leaves bindings behind. The Debug tab shows the bindings of the frame you are stopped in.
 
 ### Can I go back in time?
 
-The execution timeline lists each recorded step. Select an entry to jump to that point. You can export the timeline as JSON or save a replay file.
+No. The engine records nothing per step, and reverse execution is not planned.
 
 ---
 

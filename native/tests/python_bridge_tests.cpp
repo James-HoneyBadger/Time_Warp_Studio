@@ -602,7 +602,7 @@ void test_the_worker_and_its_interpreter_are_found() {
     QString reason;
     const timewarp::bridge::WorkerPaths paths = locateWorker(&reason);
     if (!paths.isValid()) {
-        // Not a failure: a machine without Python cannot run the five bridged
+        // Not a failure: a machine without Python cannot run the four bridged
         // languages, and saying so is the honest outcome. The message names every
         // path that was tried, which is what makes it fixable.
         std::printf("SKIP: %s\n", qPrintable(reason));

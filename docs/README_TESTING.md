@@ -1,7 +1,7 @@
 # Testing Time Warp Studio
 
 The product is the Qt application in `native/`, so the primary suites are C++
-suites driven by CTest. The Python engine that the nine unported languages run
+suites driven by CTest. The Python engine that the four unported languages run
 through has its own small pytest suite.
 
 Run everything from the repository root.
@@ -17,9 +17,10 @@ cmake --build native/build -j
 ctest --test-dir native/build --output-on-failure
 ```
 
-There are 11 suites: the lexer, the expression evaluator, the Scheme machine, the
-canvas command queue, the Qt canvas bridge, the debug and debugger runner, the UI
-layout, the UI documents, the turtle canvas, and the Python bridge.
+There are 13 suites: the lexer, the expression evaluator, the Scheme machine, the
+native language engine, the canvas command queue, the Qt canvas bridge, the debug and
+debugger runner, the UI layout, the UI documents, the turtle canvas, the syntax
+highlighter, and the Python bridge.
 
 Other build trees, all of which must stay green:
 
@@ -52,13 +53,19 @@ make -C native engine-test    # equivalent, from the root Makefile
 
 ## Parity gates
 
-The C++ engines are compared against the Python reference on a fixed corpus. Both
-must report **0 unexpected mismatches**; documented divergences are listed in the
-harness output and are expected.
+The C++ engines are compared against the Python reference on a fixed corpus. All
+three must report **0 unexpected mismatches**; documented divergences are listed in
+the harness output and are expected.
+
+The language gate runs every command-table row and every example for a ported
+language through both engines and compares output lines, every drawing call in
+order, and the final variables. Programs using randomness are reported and skipped:
+both sides seed from the OS, so they cannot agree by construction.
 
 ```bash
 python3 native/tools/differential_check.py native/build/expr_cli
 cd native/tools && python3 scheme_differential_check.py
+python3 native/tools/lang_differential_check.py   # 225 programs, 0 differences
 ```
 
 ## Lint

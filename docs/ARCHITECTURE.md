@@ -31,10 +31,10 @@
 Time Warp Studio is a desktop IDE for ten educational languages — **BASIC, APL,
 Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk** — with an integrated
 turtle graphics canvas. It is a C++20 / Qt6 application. Its one non-C++ component
-is a temporary Python engine process that runs the nine languages which have not
+is a temporary Python engine process that runs the four languages which have not
 been ported yet.
 
-So the product is **a GUI process plus, for nine of the ten languages, one child
+So the product is **a GUI process plus, for four of the ten languages, one child
 process**. Nothing about the user's program crosses that boundary except a program
 text going in and a stream of JSON messages coming back.
 
@@ -46,18 +46,18 @@ text going in and a stream of JSON messages coming back.
 | `timewarp_canvas` | `native/src/canvas/` | producer: interpreter thread; consumer: GUI thread | Carries drawing across the thread boundary |
 | `timewarp_canvas_qt` | `native/src/canvas/qt_bridge.cpp` | GUI thread | Qt glue for that queue: wakeup and draining |
 | `timewarp_scheme` | `native/src/scheme/` | runner thread, in-process | Scheme, on an explicit-stack machine with no native recursion |
+| `timewarp_lang` | `native/src/lang/` | runner thread, in-process | The shared interpreter loop and the executors ported so far: FOCAL, PILOT, COMAL, CHIP-8 and Logo |
 | `timewarp_debugger` | `native/src/debugger/` | its own `QThread` | Runs a Scheme program and services pause / step / breakpoint requests |
 | `timewarp_bridge` | `native/src/bridge/` | GUI thread, driving a `QProcess` | The IDE's end of the Python bridge |
-| `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | *not linked into the application* | The ported expression evaluator — see the note below |
-| the bridge engine | `native/bridge/` | a separate Python process | The nine unported languages |
+| `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | runner thread, in-process | The ported expression evaluator, linked into `timewarp_lang` — see the note below |
+| the bridge engine | `native/bridge/` | a separate Python process | The four unported languages |
 
-> **`timewarp_expr` is not yet part of a Run.** It builds, it has 485 checks of its
-> own, and `native/tools/differential_check.py` compares it against the Python
-> reference on a fixed corpus — but nothing under `src/ui/` includes it and
-> `timewarp_ui` does not link it. Expressions in the nine bridged languages are
-> still evaluated by the Python engine. The library is the ported replacement for
-> `utils/expression_evaluator.py`, waiting for the executors that call it to be
-> ported; the parity gate is what keeps it honest in the meantime.
+> **`timewarp_expr` is part of a Run now.** It builds, it has 485 checks of its
+> own, `native/tools/differential_check.py` compares it against the Python
+> reference on a fixed corpus, and `timewarp_lang` links it: FOCAL, PILOT, COMAL
+> and Logo evaluate every arithmetic expression through it. The four bridged
+> languages still evaluate in Python, because their executors have not been
+> ported. The parity gate is what keeps the native evaluator honest.
 
 ### Two contracts holding the design together
 
@@ -512,8 +512,11 @@ depends on the distinction:
    `docs/tutorials/` (the docs workflow requires one per language), a row in the README's
    language table, and a line per example in `Examples/CATALOG.md`.
 
-A language ported to C++ skips the bridge entirely: it gets a library, and
-`MainWindow::runCurrentDocument` dispatches to it the way Scheme does.
+A language ported to C++ skips the bridge entirely: it gets an executor in
+`timewarp_lang`, and `MainWindow::runCurrentDocument` dispatches to it when
+`executor_for()` returns non-null. FOCAL, PILOT, COMAL, CHIP-8 and Logo are ported; the same
+`NativeRunner` (a `QThread` feeding `CanvasCommandQueue`) runs any executor that
+appears in that table, so the window needs no change per language.
 
 ### Adding a canvas command
 
@@ -529,17 +532,38 @@ A language ported to C++ skips the bridge entirely: it gets a library, and
 
 ### Replacing a placeholder panel
 
-The right column's **Variables**, **Telemetry HUD** and **Debug** tabs are
-`PlaceholderPanel`s naming the Python class they stand in for, as are the outline dock
-and the console's **Terminal** tab. They are real widgets with the right size hints and
-minimums, so the *layout* is real and testable today; what they lack is behind them.
+The right column's **Variables**, **Telemetry HUD** and **Debug** tabs are real panels
+(`VariablesPanel`, `TelemetryPanel`, `DebugPanel` in `src/ui/panels.cpp`), driven by data
+the window gets from two places. The outline dock and the console's **Terminal** tab are
+still `PlaceholderPanel`s naming the Python class they stand in for. Those are real
+widgets with the right size hints and minimums, so the *layout* is real and testable
+today; what they lack is behind them.
 
 Replacing one is a single construction site in `buildRightColumn()` or
 `buildOutputColumn()`, plus wiring in `runCurrentDocument()` or `adoptBridgeWorker()` for
-anything that needs interpreter data.
+anything that needs interpreter data -- which is exactly how the three inspect panels
+were filled in:
 
-**The lesson panel is not a placeholder.** `LessonPanel` is fully implemented, and it is
-the one page of the right column that is. It holds no curriculum and runs no program: it
+- **Bridged languages** report two tables in their `done` message: `variables`
+  (`name`/`type`/`value`, built by `time_warp/utils/inspection.py`) and `telemetry_rows`
+  (the HUD's labelled counters, from `Interpreter.get_telemetry_snapshot`).
+  `PythonWorker` re-emits them as `variablesReported` and `telemetryReported` *before*
+  `finished`, so a slot on `finished` cannot read the previous run's table.
+- **Scheme** reports nothing over the bridge, so the window reads
+  `DebuggerRunner::snapshot()` -- including a final snapshot taken when a run ends
+  without pausing, because a finished program still has bindings and "no variables" is
+  a claim, not an absence.
+- Either way the window appends the rows only it can vouch for: wall clock, and how much
+  ink actually reached the canvas (`strokeCount`/`totalStrokeLength`). The engine's
+  counters and the IDE's are shown side by side rather than merged, so a drawing that
+  never arrived is visible as two rows that disagree.
+
+Only Scheme can be stepped: the bridged languages run to completion in another
+process, and the native executors have no pause protocol yet. `DebugPanel` therefore
+disables itself, with a sentence saying why, rather than offering buttons that do
+nothing.
+
+**The lesson panel was never a placeholder.** `LessonPanel` is fully implemented. It holds no curriculum and runs no program: it
 asks the bridge for the lesson list, displays the checkpoint, and sends the learner's
 source back to be checked. That is deliberate, and it is what makes the panel's green tick
 and `native/tools/learn.py`'s verdict the same function's answer rather than two opinions
@@ -573,17 +597,17 @@ distinguishable.
 
 ## Tests and gates
 
-Eleven C++ suites run by `ctest`, plus the engine's own pytest suite, two corpus gates and
-a command matrix. All of them must stay green, in every build tree.
+Thirteen C++ suites run by `ctest`, plus the engine's own pytest suite, three parity
+gates and a command matrix. All of them must stay green, in every build tree.
 
 | Gate | Command | What it protects |
 | --- | --- | --- |
-| C++ suites (11) | `make -C native test` | Lexer, evaluator, Scheme, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, Python bridge |
+| C++ suites (13) | `make -C native test` | Lexer, evaluator, Scheme, native languages, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, syntax highlighter, Python bridge |
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
 | Engine tests | `make engine-test` | The bridge engine: the ten executors, the evaluator, the validators, the lesson curriculum and the classroom |
 | Example corpus | `make smoke` | Every `Examples/**` program, through the real bridge, including the 14 that must produce ink |
-| Parity gates | both `*_differential_check.py` | The ported engines against the Python reference: 0 unexpected mismatches |
+| Parity gates | `differential_check.py`, `scheme_differential_check.py`, `lang_differential_check.py` | The ported engines against the Python reference: 0 unexpected mismatches |
 | Command matrix | `native/tools/command_matrix.py` | One row per documented command, through the real bridge |
 | Lesson curriculum | `teach.py validate` (and `test_lessons.py` on every build) | That every checkpoint's own solution passes, that no starter already passes, and that every language has a lesson |
 | Version metadata | `Scripts/version_sync.py` | That every hand-written copy of the version agrees with `VERSION` |
@@ -647,8 +671,9 @@ migrating.
 - **`timewarp_expr` is not linked into the application**, so the expression evaluator in a
   Run is still Python's.
 - **The debugger is a runner, not a UI.** `DebuggerRunner` supports pause, step and
-  breakpoints, and `debug_tests` covers the machinery; the panels that would drive it are
-  placeholders.
+  breakpoints, and `debug_tests` covers the machinery; `DebugPanel` now drives it for
+  Scheme, so what is missing is breadth (only Scheme can be stepped) and the toolbar's
+  Debug/Continue/Trace actions, which still say "not ported".
 - **No minimap, find-in-files, outline or formatter.** Syntax colouring and
   find/replace are in; the rest is not.
 - **No theme system** — the stylesheet is there, the 33 themes are not.

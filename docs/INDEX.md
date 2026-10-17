@@ -20,7 +20,7 @@ languages, with an integrated turtle graphics canvas. This page is the map.
 | [ROADMAP.md](ROADMAP.md) | What is built, what is next, what was deliberately deferred |
 | [FAQ.md](FAQ.md) | Short answers to common questions |
 | [`native/README.md`](../native/README.md) | The application itself: design notes, decisions, tests |
-| [`native/bridge/`](../native/bridge/) | The temporary engine for the nine languages that are not yet native |
+| [`native/bridge/`](../native/bridge/) | The temporary engine for the four languages that are not yet native |
 
 ---
 
@@ -63,7 +63,7 @@ One per active language, each written to be worked through:
 
 Time Warp Studio was previously implemented in Python with PySide6. That
 application has been removed: the Qt application is the product, and the Python
-that remains is a temporary engine for the nine languages that have not been
+that remains is a temporary engine for the four languages that have not been
 ported to C++ yet.
 
 Documentation describing that application's interface — the user guide, the

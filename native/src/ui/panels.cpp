@@ -8,6 +8,7 @@
 #include <QComboBox>
 #include <QEvent>
 #include <QHBoxLayout>
+#include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -15,6 +16,8 @@
 #include <QProgressBar>
 #include <QPushButton>
 #include <QResizeEvent>
+#include <QSpinBox>
+#include <QTableWidget>
 #include <QTextBrowser>
 #include <QVector>
 #include <QVBoxLayout>
@@ -592,5 +595,334 @@ void LessonPanel::showNextHint() {
     emit hintRequested(id, index);
     hint_number_ += 1;
 }
+
+// ---------------------------------------------------------------------------
+// VariablesPanel
+// ---------------------------------------------------------------------------
+
+VariablesPanel::VariablesPanel(QWidget* parent) : QFrame(parent) {
+    setObjectName(QStringLiteral("variablesPanel"));
+    setMinimumSize(160, 100);
+
+    auto* layout = new QVBoxLayout{this};
+    layout->setContentsMargins(6, 6, 6, 6);
+    layout->setSpacing(4);
+
+    filter_ = new QLineEdit;
+    filter_->setObjectName(QStringLiteral("variablesFilter"));
+    filter_->setPlaceholderText(tr("Filter by name"));
+    filter_->setClearButtonEnabled(true);
+    layout->addWidget(filter_);
+
+    table_ = new QTableWidget{0, 3};
+    table_->setObjectName(QStringLiteral("variablesTable"));
+    table_->setHorizontalHeaderLabels({tr("Name"), tr("Type"), tr("Value")});
+    table_->verticalHeader()->setVisible(false);
+    table_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    table_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+    table_->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+    // Without a floor, an empty table sizes the type column to its header text
+    // and clips the word "Type" -- which reads as a broken table rather than an
+    // empty one.
+    table_->horizontalHeader()->setMinimumSectionSize(56);
+    // Read-only because the engine holds the value: an edit here would have
+    // nowhere to go, and a table that looked editable and discarded the edit is
+    // worse than one that does not offer.
+    table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    table_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    layout->addWidget(table_, 1);
+
+    status_ = new QLabel;
+    status_->setObjectName(QStringLiteral("variablesStatus"));
+    layout->addWidget(status_);
+
+    connect(filter_, &QLineEdit::textChanged, this, [this](const QString&) { applyFilter(); });
+    applyFilter();
+}
+
+void VariablesPanel::setRows(const QList<timewarp::bridge::VariableRow>& rows) {
+    rows_ = rows;
+    applyFilter();
+}
+
+void VariablesPanel::setFilter(const QString& text) { filter_->setText(text); }
+
+int VariablesPanel::rowCount() const { return static_cast<int>(rows_.size()); }
+
+int VariablesPanel::visibleRowCount() const { return table_->rowCount(); }
+
+void VariablesPanel::applyFilter() {
+    const QString needle = filter_->text().trimmed();
+    table_->setRowCount(0);
+
+    int shown = 0;
+    for (const timewarp::bridge::VariableRow& row : rows_) {
+        if (!needle.isEmpty() && !row.name.contains(needle, Qt::CaseInsensitive)) {
+            continue;
+        }
+        const int index = table_->rowCount();
+        table_->insertRow(index);
+        table_->setItem(index, 0, new QTableWidgetItem{row.name});
+        table_->setItem(index, 1, new QTableWidgetItem{row.type});
+        table_->setItem(index, 2, new QTableWidgetItem{row.value});
+        ++shown;
+    }
+
+    if (rows_.isEmpty()) {
+        // "No variables" after a run is a fact about the program, so it is worth
+        // saying; "no variables" before one would be a claim nobody has earned.
+        status_->setText(tr("nothing to show yet \u2014 run a program"));
+    } else if (shown == rows_.size()) {
+        status_->setText(tr("%n variable(s)", "", shown));
+    } else {
+        status_->setText(tr("%1 of %2 variables").arg(shown).arg(rows_.size()));
+    }
+}
+
+// ---------------------------------------------------------------------------
+// TelemetryPanel
+// ---------------------------------------------------------------------------
+
+TelemetryPanel::TelemetryPanel(QWidget* parent) : QFrame(parent) {
+    setObjectName(QStringLiteral("telemetryPanel"));
+    setMinimumSize(160, 100);
+
+    auto* layout = new QVBoxLayout{this};
+    layout->setContentsMargins(6, 6, 6, 6);
+
+    table_ = new QTableWidget{0, 2};
+    table_->setObjectName(QStringLiteral("telemetryTable"));
+    table_->setHorizontalHeaderLabels({tr("Measure"), tr("Value")});
+    table_->verticalHeader()->setVisible(false);
+    table_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    table_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    table_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    layout->addWidget(table_, 1);
+
+    setRows({});
+}
+
+void TelemetryPanel::setRows(const QList<timewarp::bridge::TelemetryRow>& rows) {
+    table_->setRowCount(0);
+    if (rows.isEmpty()) {
+        // One row stating the state, rather than an empty grid that looks broken.
+        table_->insertRow(0);
+        table_->setItem(0, 0, new QTableWidgetItem{tr("Nothing yet")});
+        table_->setItem(0, 1, new QTableWidgetItem{tr("run a program")});
+        return;
+    }
+    for (const timewarp::bridge::TelemetryRow& row : rows) {
+        const int index = table_->rowCount();
+        table_->insertRow(index);
+        table_->setItem(index, 0, new QTableWidgetItem{row.label});
+        table_->setItem(index, 1, new QTableWidgetItem{row.value});
+    }
+}
+
+int TelemetryPanel::rowCount() const {
+    // The placeholder row is not a measurement.
+    if (table_->rowCount() == 1 && table_->item(0, 0) != nullptr &&
+        table_->item(0, 0)->text() == tr("Nothing yet")) {
+        return 0;
+    }
+    return table_->rowCount();
+}
+
+QString TelemetryPanel::valueOf(const QString& label) const {
+    for (int row = 0; row < table_->rowCount(); ++row) {
+        const QTableWidgetItem* name = table_->item(row, 0);
+        const QTableWidgetItem* value = table_->item(row, 1);
+        if (name != nullptr && value != nullptr && name->text() == label) {
+            return value->text();
+        }
+    }
+    return {};
+}
+
+// ---------------------------------------------------------------------------
+// DebugPanel
+// ---------------------------------------------------------------------------
+
+DebugPanel::DebugPanel(QWidget* parent) : QFrame(parent) {
+    setObjectName(QStringLiteral("debugPanel"));
+    setMinimumSize(160, 100);
+
+    auto* layout = new QVBoxLayout{this};
+    layout->setContentsMargins(6, 6, 6, 6);
+    layout->setSpacing(4);
+
+    status_ = new QLabel;
+    status_->setObjectName(QStringLiteral("debugStatus"));
+    status_->setWordWrap(true);
+    layout->addWidget(status_);
+
+    reason_ = new QLabel;
+    reason_->setObjectName(QStringLiteral("debugReason"));
+    reason_->setWordWrap(true);
+    layout->addWidget(reason_);
+
+    auto* transport = new QHBoxLayout;
+    transport->setSpacing(4);
+    const auto button = [this, transport](const QString& text, const QString& name) {
+        auto* item = new QPushButton{text};
+        item->setObjectName(name);
+        transport->addWidget(item);
+        return item;
+    };
+    continue_ = button(tr("Continue"), QStringLiteral("debugContinue"));
+    pause_ = button(tr("Pause"), QStringLiteral("debugPause"));
+    step_into_ = button(tr("Step In"), QStringLiteral("debugStepInto"));
+    step_over_ = button(tr("Step Over"), QStringLiteral("debugStepOver"));
+    step_out_ = button(tr("Step Out"), QStringLiteral("debugStepOut"));
+    stop_ = button(tr("Stop"), QStringLiteral("debugStop"));
+    layout->addLayout(transport);
+
+    connect(continue_, &QPushButton::clicked, this, &DebugPanel::continueRequested);
+    connect(pause_, &QPushButton::clicked, this, &DebugPanel::pauseRequested);
+    connect(step_into_, &QPushButton::clicked, this, &DebugPanel::stepIntoRequested);
+    connect(step_over_, &QPushButton::clicked, this, &DebugPanel::stepOverRequested);
+    connect(step_out_, &QPushButton::clicked, this, &DebugPanel::stepOutRequested);
+    connect(stop_, &QPushButton::clicked, this, &DebugPanel::stopRequested);
+
+    auto* breakpoint_row = new QHBoxLayout;
+    breakpoint_row->setSpacing(4);
+    breakpoint_row->addWidget(new QLabel{tr("Line")});
+    line_ = new QSpinBox;
+    line_->setObjectName(QStringLiteral("debugLine"));
+    line_->setRange(1, 999999);
+    breakpoint_row->addWidget(line_);
+    add_ = new QPushButton{tr("Add")};
+    add_->setObjectName(QStringLiteral("debugAddBreakpoint"));
+    breakpoint_row->addWidget(add_);
+    remove_ = new QPushButton{tr("Remove")};
+    remove_->setObjectName(QStringLiteral("debugRemoveBreakpoint"));
+    breakpoint_row->addWidget(remove_);
+    layout->addLayout(breakpoint_row);
+
+    connect(add_, &QPushButton::clicked, this, [this] { addBreakpoint(); });
+    connect(remove_, &QPushButton::clicked, this, [this] { removeBreakpoint(); });
+
+    breakpoints_ = new QListWidget;
+    breakpoints_->setObjectName(QStringLiteral("debugBreakpoints"));
+    breakpoints_->setMaximumHeight(90);
+    layout->addWidget(breakpoints_);
+
+    auto* stack_label = new QLabel{tr("Call stack")};
+    layout->addWidget(stack_label);
+    stack_ = new QListWidget;
+    stack_->setObjectName(QStringLiteral("debugStack"));
+    stack_->setMaximumHeight(110);
+    layout->addWidget(stack_);
+
+    auto* variables_label = new QLabel{tr("Variables here")};
+    layout->addWidget(variables_label);
+    variables_ = new QTableWidget{0, 2};
+    variables_->setObjectName(QStringLiteral("debugVariables"));
+    variables_->setHorizontalHeaderLabels({tr("Name"), tr("Value")});
+    variables_->verticalHeader()->setVisible(false);
+    variables_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    variables_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    variables_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    layout->addWidget(variables_, 1);
+
+    setAvailable(false, tr("Run a Scheme program to step through it."));
+}
+
+void DebugPanel::setAvailable(bool available, const QString& reason) {
+    available_ = available;
+    reason_->setText(reason);
+    reason_->setVisible(!available);
+    for (QPushButton* button : {continue_, pause_, step_into_, step_over_, step_out_, stop_}) {
+        button->setEnabled(available);
+    }
+    add_->setEnabled(available);
+    remove_->setEnabled(available);
+    line_->setEnabled(available);
+    if (!available) {
+        // The lists stay readable: what the last run left is still true even when
+        // the current document cannot be stepped.
+        status_->setText(tr("not steppable"));
+    }
+}
+
+bool DebugPanel::isAvailable() const { return available_; }
+
+void DebugPanel::setPaused(bool paused, int line, const QString& procedure) {
+    if (!available_) {
+        return;
+    }
+    // "running" would be a lie after the run has finished, and the panel cannot
+    // tell the two apart: all it knows is that nothing is paused. The status bar
+    // is where "running" and "ready" are said.
+    status_->setText(paused ? tr("paused at line %1 in %2").arg(line).arg(procedure)
+                            : tr("not paused"));
+}
+
+void DebugPanel::setStack(const QList<Frame>& frames) {
+    stack_->clear();
+    for (const Frame& frame : frames) {
+        stack_->addItem(tr("%1 (line %2)").arg(frame.procedure).arg(frame.line));
+    }
+    if (frames.isEmpty()) {
+        stack_->addItem(tr("(empty)"));
+    }
+}
+
+void DebugPanel::setVariables(const QList<timewarp::bridge::VariableRow>& rows) {
+    variables_->setRowCount(0);
+    for (const timewarp::bridge::VariableRow& row : rows) {
+        const int index = variables_->rowCount();
+        variables_->insertRow(index);
+        variables_->setItem(index, 0, new QTableWidgetItem{row.name});
+        variables_->setItem(index, 1, new QTableWidgetItem{row.value});
+    }
+}
+
+void DebugPanel::setBreakpoints(const QList<int>& lines) {
+    breakpoints_->clear();
+    for (const int line : lines) {
+        breakpoints_->addItem(tr("line %1").arg(line));
+    }
+}
+
+QList<int> DebugPanel::breakpoints() const {
+    QList<int> lines;
+    for (int row = 0; row < breakpoints_->count(); ++row) {
+        // The items read "line 12"; the number after the space is the breakpoint.
+        lines.append(breakpoints_->item(row)->text().section(QLatin1Char(' '), 1).toInt());
+    }
+    return lines;
+}
+
+void DebugPanel::setLineNumber(int line) { line_->setValue(line); }
+
+int DebugPanel::lineNumber() const { return line_->value(); }
+
+void DebugPanel::addBreakpoint() {
+    const int line = line_->value();
+    if (line <= 0) {
+        return;
+    }
+    for (int row = 0; row < breakpoints_->count(); ++row) {
+        if (breakpoints_->item(row)->text() == tr("line %1").arg(line)) {
+            return;  // Already there: a set, not a list.
+        }
+    }
+    breakpoints_->addItem(tr("line %1").arg(line));
+    emitBreakpoints();
+}
+
+void DebugPanel::removeBreakpoint() {
+    const QString wanted = tr("line %1").arg(line_->value());
+    for (int row = 0; row < breakpoints_->count(); ++row) {
+        if (breakpoints_->item(row)->text() == wanted) {
+            delete breakpoints_->takeItem(row);
+            emitBreakpoints();
+            return;
+        }
+    }
+}
+
+void DebugPanel::emitBreakpoints() { emit breakpointsChanged(breakpoints()); }
 
 }  // namespace timewarp::ui

@@ -93,6 +93,24 @@ struct LessonProgress {
     int hintsUsed = 0;
 };
 
+/// One row of the variables table.
+///
+/// The engine decides all three fields, including how the value reads: a value
+/// rendered in C++ would be a second opinion about a fact the engine already
+/// stated, and the two would disagree exactly where it mattered (a BASIC number
+/// that is stored as a float).
+struct VariableRow {
+    QString name;
+    QString type;
+    QString value;
+};
+
+/// One labelled value in the telemetry HUD.
+struct TelemetryRow {
+    QString label;
+    QString value;
+};
+
 /// Locates the Python interpreter and the worker script.
 ///
 /// The search order is explicit rather than clever, because "it works on my
@@ -235,6 +253,14 @@ signals:
     /// several in flight and one of them failing is not the others failing.
     void lessonFailed(const QString& request, const QString& error);
 
+    /// The finished run's variables, for the Variables tab.
+    ///
+    /// Emitted before `finished`, so anything reacting to "the run is over" sees
+    /// what the run left behind rather than the previous run's table.
+    void variablesReported(const QList<timewarp::bridge::VariableRow>& rows);
+    /// The finished run's telemetry, for the HUD. Same ordering as above.
+    void telemetryReported(const QList<timewarp::bridge::TelemetryRow>& rows);
+
 private slots:
     void onReadyReadStandardOutput();
     void onReadyReadStandardError();
@@ -282,4 +308,8 @@ Q_DECLARE_METATYPE(timewarp::bridge::LessonCheckpoint)
 Q_DECLARE_METATYPE(timewarp::bridge::LessonSummary)
 Q_DECLARE_METATYPE(timewarp::bridge::LessonProgress)
 Q_DECLARE_METATYPE(QList<timewarp::bridge::LessonSummary>)
+Q_DECLARE_METATYPE(timewarp::bridge::VariableRow)
+Q_DECLARE_METATYPE(timewarp::bridge::TelemetryRow)
+Q_DECLARE_METATYPE(QList<timewarp::bridge::VariableRow>)
+Q_DECLARE_METATYPE(QList<timewarp::bridge::TelemetryRow>)
 Q_DECLARE_METATYPE(QList<timewarp::bridge::LessonProgress>)

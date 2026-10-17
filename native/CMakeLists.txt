@@ -170,6 +170,74 @@ if(NOT MSVC)
 endif()
 
 # ---------------------------------------------------------------------------
+# Native language executors
+#
+# The C++ counterparts of the Python executors in `bridge/time_warp/languages`.
+# A language lives here once it is ported; until then the bridge still runs it,
+# and `executor_for()` returns null so the caller can tell the difference. This
+# is why the library is separate from `timewarp_scheme`: Scheme has its own
+# machine, while these share one interpreter loop and one executor interface.
+# ---------------------------------------------------------------------------
+
+add_library(timewarp_lang
+    src/lang/value.cpp
+    src/lang/language.cpp
+    src/lang/interpreter.cpp
+    src/lang/python_random.cpp
+    src/lang/chip8.cpp
+    src/lang/focal.cpp
+    src/lang/pilot.cpp
+    src/lang/comal.cpp
+    src/lang/logo.cpp
+)
+add_library(timewarp::lang ALIAS timewarp_lang)
+# A statement's arithmetic is the ported expression evaluator, not a second
+# parser inside every executor.
+target_link_libraries(timewarp_lang PUBLIC timewarp::expr)
+
+target_include_directories(timewarp_lang
+    PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+)
+
+target_compile_features(timewarp_lang PUBLIC cxx_std_20)
+
+if(MSVC)
+    target_compile_options(timewarp_lang PRIVATE /W4 /permissive-)
+else()
+    target_compile_options(timewarp_lang PRIVATE
+        -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast
+        -Wlogical-op -Wnull-dereference
+    )
+    if(TIME_WARP_EXPR_WERROR)
+        target_compile_options(timewarp_lang PRIVATE -Werror)
+    endif()
+endif()
+
+if(TIME_WARP_EXPR_BUILD_TESTS)
+    add_executable(lang_tests tests/lang_tests.cpp)
+    target_link_libraries(lang_tests PRIVATE timewarp::lang)
+    target_include_directories(lang_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+    if(NOT MSVC)
+        target_compile_options(lang_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+        if(TIME_WARP_EXPR_WERROR)
+            target_compile_options(lang_tests PRIVATE -Werror)
+        endif()
+    endif()
+    add_test(NAME lang_tests COMMAND lang_tests)
+endif()
+
+# One native program in, what it printed and drew out, for the differential
+# harness. See tools/lang_differential_check.py.
+add_executable(lang_cli tools/lang_cli.cpp)
+target_link_libraries(lang_cli PRIVATE timewarp::lang)
+if(NOT MSVC)
+    target_compile_options(lang_cli PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+    if(TIME_WARP_EXPR_WERROR)
+        target_compile_options(lang_cli PRIVATE -Werror)
+    endif()
+endif()
+
+# ---------------------------------------------------------------------------
 # Micro-benchmark
 # ---------------------------------------------------------------------------
 
@@ -449,6 +517,7 @@ if(Qt6_FOUND)
             src/ui/find_bar.cpp
             src/ui/language.cpp
             src/ui/main_window.cpp
+            src/ui/native_runner.cpp
             src/ui/panels.cpp
             src/ui/resizable_tab_widget.cpp
             src/ui/syntax_highlighter.cpp
@@ -459,6 +528,7 @@ if(Qt6_FOUND)
             include/timewarp/ui/code_editor.hpp
             include/timewarp/ui/find_bar.hpp
             include/timewarp/ui/main_window.hpp
+            include/timewarp/ui/native_runner.hpp
             include/timewarp/ui/panels.hpp
             include/timewarp/ui/resizable_tab_widget.hpp
             include/timewarp/ui/syntax_highlighter.hpp
@@ -483,7 +553,10 @@ if(Qt6_FOUND)
         if(TARGET timewarp::debugger)
             target_link_libraries(timewarp_ui PRIVATE timewarp::debugger)
         endif()
-        # The Python bridge, which is how the five languages without a C++
+        # The ported languages, in process. Built unconditionally: it has no
+        # dependency beyond the standard library.
+        target_link_libraries(timewarp_ui PRIVATE timewarp::lang)
+        # The Python bridge, which is how the four languages without a C++
         # interpreter run at all.
         if(TARGET timewarp::bridge)
             target_link_libraries(timewarp_ui PRIVATE timewarp::bridge)

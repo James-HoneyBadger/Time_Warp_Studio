@@ -29,7 +29,15 @@ Worker to client:
     {"t": "pose", "x": .., "y": .., "h": .., "show": true}
     {"t": "err", "text": "..."}             # reported in the IDE's error panel
     {"t": "in", "prompt": "..."}            # the program wants input
-    {"t": "done", "ok": true, "error": "...", "unsupported": [ ... ]}
+    {"t": "done", "ok": true, "error": "...", "unsupported": [ ... ],
+     "telemetry": { ... }, "variables": [ ... ]}
+
+`telemetry` is the engine's own snapshot (`Interpreter.get_telemetry_snapshot`) and
+`variables` is the engine's own variables table, both formatted for the panels by
+`utils/inspection.py`. They ride on `done` rather than answering a request of their
+own because there is exactly one moment at which they exist: the run has finished.
+The raw variable mapping is *not* in `telemetry` -- the rows are its display form,
+and sending both would be two copies of one fact that can disagree.
 
 #### Lessons
 
@@ -92,6 +100,7 @@ if __package__ in (None, ""):
 from time_warp.core.interpreter import Interpreter, Language  # noqa: E402
 from time_warp.core.language_registry import metadata_for  # noqa: E402
 from time_warp.graphics.turtle_state import TurtleShape, TurtleState  # noqa: E402
+from time_warp.utils import inspection  # noqa: E402
 
 VERSION = "1"
 
@@ -231,10 +240,18 @@ class Tape(TurtleState):
         self._emitter = emitter
         self._sent_lines = 0
         self._sent_shapes = 0
+        #: How many canvas commands have been sent, for the telemetry HUD. The
+        #: turtle knows what it drew; only this side knows what was *sent*.
+        self._sent_commands = 0
         # Guards the send-ordering as well as the counters: a `clear` that overtook
         # the batch of pre-clear lines would wipe a drawing and then draw it back.
         self._lock = threading.RLock()
         self.unsupported: List[str] = []
+
+    @property
+    def sent_commands(self) -> int:
+        """Canvas commands sent to the IDE so far."""
+        return self._sent_commands
 
     # -- the only overrides ---------------------------------------------
 
@@ -317,6 +334,7 @@ class Tape(TurtleState):
                     commands.append(command)
 
             if commands:
+                self._sent_commands += len(commands)
                 self._emitter.send({"t": "canvas", "cmds": commands})
             self._emitter.send(
                 {
@@ -343,6 +361,8 @@ class Session:
         self._client_gone = False
         self._input_value = ""
         self._interpreter: Optional[Interpreter] = None
+        #: Output lines sent this run, for the telemetry HUD.
+        self._out_lines = 0
 
     # -- input ------------------------------------------------------------
 
@@ -400,6 +420,11 @@ class Session:
         # One final drain so nothing drawn in the last interval is lost.
         self._tape.drain()
 
+    def _send_output(self, line: str) -> None:
+        """Streams one line of program output, counting it for the HUD."""
+        self._out_lines += 1
+        self._emitter.send({"t": "out", "text": line + "\n"})
+
     def run(self, language: str, source: str, name: str) -> None:
         try:
             member = Language[language.upper()]
@@ -411,15 +436,14 @@ class Session:
 
         interpreter = Interpreter(member)
         self._interpreter = interpreter
+        self._out_lines = 0
         # The surface's background first, before any ink: the reference pen is
         # white on a dark canvas, and the IDE's canvas has its own defaults.
         self._tape.report_background()
         # Streamed rather than collected: the Python IDE shows output as it is
         # produced, and a program that runs for seconds without printing should
         # not look frozen in the meantime.
-        interpreter.output_callback = lambda line: self._emitter.send(
-            {"t": "out", "text": line + "\n"}
-        )
+        interpreter.output_callback = lambda line: self._send_output(line)
         interpreter.input_callback = self.request_input
 
         self._finished.clear()
@@ -459,8 +483,47 @@ class Session:
                 "error": error,
                 "unsupported": sorted(set(self._tape.unsupported)),
                 "name": name,
+                **self._inspect(interpreter),
             }
         )
+
+    def _inspect(self, interpreter: Interpreter) -> Dict[str, Any]:
+        """The variables and telemetry tables for the panels.
+
+        Never raises. A panel is a view of a finished run, and a view that cannot
+        be built must not turn a program that ran correctly into a run that
+        reported an error -- so a failure here sends empty tables and says so in
+        the error panel, where it is visible without being fatal.
+        """
+        try:
+            snapshot = dict(interpreter.get_telemetry_snapshot(self._tape))
+            rows = inspection.variable_rows(interpreter.get_variables() or {})
+            # The rows are the display form, so the raw mapping is dropped from
+            # what is sent rather than travelling as a second copy of one fact.
+            # The oscilloscope trace is for a HUD that reads audio; this one does
+            # not.
+            sent = {
+                key: value
+                for key, value in snapshot.items()
+                if key not in {"variables", "audio_oscilloscope"}
+            }
+            return {
+                "telemetry": sent,
+                "telemetry_rows": inspection.telemetry_rows(
+                    snapshot,
+                    output_lines=self._out_lines,
+                    drawing_commands=self._tape.sent_commands,
+                ),
+                "variables": rows,
+            }
+        except Exception as exc:  # noqa: BLE001 - the IDE has to keep the run
+            self._emitter.send(
+                {
+                    "t": "err",
+                    "text": f"Could not read the run's state: {type(exc).__name__}: {exc}",
+                }
+            )
+            return {"telemetry": {}, "telemetry_rows": [], "variables": []}
 
     def stop(self) -> None:
         """Asks the interpreter to give up at its next check.

@@ -97,7 +97,7 @@ Help improve code quality:
 ### Prerequisites
 
 The application is C++20 and Qt6. Python is needed only for the temporary bridge
-engine, which runs the nine languages that are not ported to C++ yet.
+engine, which runs the four languages that are not ported to C++ yet.
 
 | To work on | You need |
 | ---------- | -------- |
@@ -176,7 +176,7 @@ Both should work without errors.
 
 ### Bridge engine code (Python)
 
-The Python in `native/bridge/` is the temporary engine for the nine languages
+The Python in `native/bridge/` is the temporary engine for the four languages
 that are not ported to C++. It is standard-library only, `ruff` clean, and each
 executor is a stateless function returning text with an emoji prefix.
 
@@ -586,12 +586,12 @@ Understanding the codebase:
 Time_Warp_Studio/
 ├── native/                       # THE APPLICATION (C++20 / Qt6)
 │   ├── CMakeLists.txt
-│   ├── include/ src/             # ui/, canvas/, scheme/, debugger/, bridge/
-│   ├── tests/                    # 12 CTest suites
+│   ├── include/ src/             # ui/, canvas/, scheme/, lang/, debugger/, bridge/
+│   ├── tests/                    # 13 CTest suites
 │   ├── tools/                    # time_warp_ide.cpp and the gates:
 │   │                             #   learn.py, teach.py, command_matrix.py,
 │   │                             #   example_smoke.py, differential_check.py
-│   └── bridge/                   # TEMPORARY Python engine (9 unported languages)
+│   └── bridge/                   # TEMPORARY Python engine (BASIC, REXX, APL, Smalltalk)
 │       ├── worker.py             #   the JSON-lines worker the IDE spawns
 │       └── time_warp/            #   the engine itself
 │           ├── core/             #     interpreter.py, language_registry.py

@@ -26,12 +26,13 @@ Python is a temporary engine the Qt app spawns (see "The language bridge").
   - Shell: `native/src/ui/main_window.cpp`; canvas `native/src/ui/turtle_canvas.cpp`;
     editor `native/src/ui/code_editor.cpp`; languages `native/src/ui/language.cpp`
   - Engines that are already native: Scheme (`timewarp_scheme`, an explicit-stack
-    CEK machine, dispatched in-process) and the expression evaluator
-    (`timewarp_expr` -- built and gated, but nothing links it yet, so expressions
-    inside a Run still come from the bridge).
+    CEK machine, dispatched in-process), FOCAL, PILOT, COMAL, CHIP-8 and Logo
+    (`timewarp_lang`, the shared interpreter loop plus one executor each), and the
+    expression evaluator (`timewarp_expr`, linked into `timewarp_lang` and used by
+    FOCAL, PILOT, COMAL and Logo; the bridged languages still evaluate in Python).
 - **The language bridge (Python, temporary)** — `native/bridge/`.
-  - Nine languages (everything except Scheme) are *not* ported yet, so the
-    IDE runs them through `native/bridge/worker.py`, which drives the retained
+  - Four languages (BASIC, REXX, APL, Smalltalk) are *not* ported yet, so
+    the IDE runs them through `native/bridge/worker.py`, which drives the retained
     Python engine and streams JSON lines back (drawing, output, input, errors).
   - Protocol: `run`/`in-reply`/`stop` in; `ready`/`out`/`canvas`/`pose`/`err`/`in`/`done` out.
   - It exists to be deleted: each language ported to C++ removes its bridge path.
@@ -78,13 +79,13 @@ make -C native run
 **System Requirements**
 
 - Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler
-- Python 3.10+ **only** for the nine bridged languages; Scheme runs in-process
-  with no Python at all
+- Python 3.10+ **only** for the four bridged languages; Scheme, FOCAL, PILOT,
+  COMAL, CHIP-8 and Logo run in-process with no Python at all
 
 ### Testing Strategy
 
 ```bash
-# The Qt suites (12 of them)
+# The Qt suites (13 of them)
 ctest --test-dir native/build --output-on-failure
 make -C native test-debug     # Debug tree
 make -C native asan           # AddressSanitizer; ASAN=undefined for UBSan
@@ -98,6 +99,7 @@ PYTHONPATH=native/bridge python3 -m pytest -q
 # Parity gates against the Python reference (0 unexpected mismatches)
 python3 native/tools/differential_check.py native/build/expr_cli
 cd native/tools && python3 scheme_differential_check.py
+python3 native/tools/lang_differential_check.py   # FOCAL/PILOT/COMAL/CHIP-8, 113 programs
 
 # The documentation gates, which .github/workflows/docs.yml runs on every docs
 # change; the teach.py write-plans output is then checked with git diff --exit-code
@@ -107,9 +109,9 @@ make lint-md
 
 **Test Organization:**
 
-- `native/tests/*_tests.cpp` = the 12 C++ suites (lexer, evaluator, scheme, canvas queue,
-  canvas bridge, debug, debugger runner, ui layout, ui document, turtle canvas,
-  syntax highlighter, python bridge)
+- `native/tests/*_tests.cpp` = the 13 C++ suites (lexer, evaluator, scheme, native
+  languages, canvas queue, canvas bridge, debug, debugger runner, ui layout, ui
+  document, turtle canvas, syntax highlighter, python bridge)
 - `native/tools/example_smoke.py` = every `Examples/**` program through the bridge; the 14
   that must draw are listed in `DRAWING_EXAMPLES`
 - `native/bridge/time_warp/tests/` = the bridge engine's tests (the 10 language executors,
@@ -257,8 +259,18 @@ Scripts/                       - audit_interpreters.py, version_sync.py, build_n
   one function's answer
 - **Lessons**: `native/bridge/time_warp/features/lesson_system.py` (the curriculum and
   the verifier), `classroom_mode.py` (rosters, handouts, marking, bundles),
-  `native/src/ui/panels.cpp` (`LessonPanel`, the one real page in the right column),
-  `native/tools/learn.py` and `native/tools/teach.py` (the two CLIs)
+  `native/src/ui/panels.cpp` (`LessonPanel`), `native/tools/learn.py` and
+  `native/tools/teach.py` (the two CLIs)
+- **Inspection panels**: `native/src/ui/panels.cpp` — `VariablesPanel`,
+  `TelemetryPanel`, `DebugPanel`. The bridge sends both tables in its `done` message
+  (`variables` and `telemetry_rows`, both built by `time_warp/utils/inspection.py`);
+  `PythonWorker` re-emits them as `variablesReported`/`telemetryReported` *before*
+  `finished`. Scheme has no bridge payload, so its tables come from
+  `DebuggerRunner::snapshot()` — including the final snapshot taken when a run ends
+  without pausing. `DebugPanel`'s buttons all forward to the current runner and are
+  disabled for the bridged languages and the native executors, neither of which has a
+  pause protocol. Only the terminal tab and the outline dock are still
+  `PlaceholderPanel`s
 - **Engine (bridge)**: `time_warp/core/interpreter.py` dispatches; the 10 executors in
   `time_warp/languages/` are stateless functions
 - **Expression evaluator**: native C++ (`timewarp_expr`) and, in the bridge, the
@@ -269,7 +281,7 @@ Scripts/                       - audit_interpreters.py, version_sync.py, build_n
 
 The Qt application: Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler.
 
-The bridge (only the nine unported languages need it): Python 3.10+, standard
+The bridge (only the four unported languages need it): Python 3.10+, standard
 library only. Optional extras -- `pyttsx3` (BASIC `SAY`), `pygame` and `inputs`
 (BASIC `SOUND`/`GAMEPAD`) -- are imported defensively and are not required.
 

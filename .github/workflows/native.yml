@@ -151,6 +151,17 @@ jobs:
         env:
           PYTHONPATH: ${{ github.workspace }}/native/bridge
 
+      # The native language gate runs every command-table row and every example
+      # for a ported language through both engines. Its exit code is the verdict;
+      # `pipefail` keeps `tee` from hiding it.
+      - name: 'Differential check: native languages'
+        working-directory: native/tools
+        run: |
+          set -euo pipefail
+          python3 lang_differential_check.py | tee differential-lang.log
+        env:
+          PYTHONPATH: ${{ github.workspace }}/native/bridge
+
       # Every example program, in every language, through the bridge. This is the
       # gate for the failure the unit tests cannot see: a language that runs
       # successfully and draws nothing, which is exactly what a user reports as

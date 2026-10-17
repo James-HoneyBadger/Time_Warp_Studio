@@ -260,8 +260,9 @@ std::vector<VariableEntry> Machine::visible_variables(
                 // program's own bindings, which is what the watch table wants.
                 continue;
             }
-            entries.push_back(
-                VariableEntry{binding.first->name, write_to_string(value)});
+            entries.push_back(VariableEntry{binding.first->name,
+                                            write_to_string(value),
+                                            std::string{type_name(value)}});
         }
     }
     return entries;

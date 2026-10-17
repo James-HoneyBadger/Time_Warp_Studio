@@ -32,6 +32,7 @@
 #include <QPlainTextEdit>
 #include <QSettings>
 #include <QStatusBar>
+#include <QTableWidget>
 #include <QTabWidget>
 #include <QTemporaryDir>
 #include <QTextCursor>
@@ -44,6 +45,7 @@
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/language.hpp"
 #include "timewarp/ui/main_window.hpp"
+#include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
@@ -53,6 +55,7 @@ using timewarp::ui::CodeEditor;
 using timewarp::ui::FindBar;
 using timewarp::ui::Language;
 using timewarp::ui::MainWindow;
+using timewarp::ui::TelemetryPanel;
 using timewarp::ui::TurtleCanvas;
 
 void announce(const char* name) {
@@ -623,13 +626,7 @@ void test_running_basic_prints_through_the_bridge() {
 }
 
 void test_running_logo_draws_on_the_canvas() {
-    announce("running logo through the bridge");
-    QString reason;
-    if (!timewarp::bridge::locateWorker(&reason).isValid()) {
-        std::printf("SKIP: %s\n", qPrintable(reason));
-        return;
-    }
-
+    announce("running logo natively");
     QTemporaryDir dir;
     // The report this test exists for: "I ran a Logo program and none of the
     // graphics showed up". A square, so the assertion can be about more than a
@@ -656,12 +653,234 @@ void test_running_logo_draws_on_the_canvas() {
     // process: north first, then east.
     TW_CHECK(std::abs(canvas->turtlePosition().x()) < 1e-6);
     TW_CHECK(std::abs(canvas->turtlePosition().y()) < 1e-6);
-    // The reference's own background came with it. This is the assertion that
-    // matters most for visibility: the reference's pen is white, so a canvas that
-    // kept its own white background would show nothing at all while reporting a
-    // successful run and four strokes drawn.
+    // The reference's own surface came with it. This is the assertion that
+    // matters most for visibility: the reference's pen is white, so a canvas
+    // that kept its own white background would show nothing at all while
+    // reporting a successful run and four strokes drawn.
     TW_CHECK_EQ(canvas->background().red(), 10);
     TW_CHECK_EQ(canvas->background().blue(), 20);
+}
+
+/// The text of one cell in a named table, or an empty string when the row or the
+/// cell is not there. Read through the widget rather than the panel on purpose:
+/// the table is what a user reads.
+[[nodiscard]] QString cellIn(const MainWindow& window, const char* table, int row,
+                             int column) {
+    QTableWidget* widget = window.findChild<QTableWidget*>(QString::fromLatin1(table));
+    if (widget == nullptr || row >= widget->rowCount() || column >= widget->columnCount()) {
+        return {};
+    }
+    const QTableWidgetItem* item = widget->item(row, column);
+    return item == nullptr ? QString{} : item->text();
+}
+
+/// The row a variables table shows for `name`, or -1.
+[[nodiscard]] int rowNamed(const MainWindow& window, const char* table, const QString& name) {
+    QTableWidget* widget = window.findChild<QTableWidget*>(QString::fromLatin1(table));
+    if (widget == nullptr) {
+        return -1;
+    }
+    for (int row = 0; row < widget->rowCount(); ++row) {
+        if (const QTableWidgetItem* item = widget->item(row, 0);
+            item != nullptr && item->text() == name) {
+            return row;
+        }
+    }
+    return -1;
+}
+
+void test_a_scheme_run_fills_the_variables_and_telemetry_panels() {
+    announce("a scheme run fills the panels");
+    QTemporaryDir dir;
+    // Two bindings the machine can describe, one number and one procedure, so the
+    // type column is exercised as well as the names.
+    const QString path = writeFile(
+        dir, QStringLiteral("bind.scm"),
+        QByteArray{"(define (area w h) (* w h))\n(define total (area 3 4))\n"
+                   "(display total)\n(newline)\n"});
+    TW_CHECK(!path.isEmpty());
+
+    MainWindow window;
+    TW_CHECK(window.openFile(path));
+    TW_CHECK(window.variablesPanel() != nullptr);
+    TW_CHECK(window.telemetryPanel() != nullptr);
+    TW_CHECK(window.debugPanel() != nullptr);
+    if (window.variablesPanel() == nullptr || window.telemetryPanel() == nullptr
+        || window.debugPanel() == nullptr) {
+        return;
+    }
+
+    // Before anything runs there is nothing to show. A previous run's numbers
+    // sitting in the HUD while a new one starts would read as this run's.
+    TW_CHECK_EQ(window.variablesPanel()->rowCount(), 0);
+    TW_CHECK_EQ(window.telemetryPanel()->rowCount(), 0);
+
+    window.runCurrentDocument();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") != QStringLiteral("running");
+    }));
+    TW_CHECK_EQ(badgeText(window, "executionBadge"), QStringLiteral("ready"));
+
+    // The variables panel: what the program left behind, with the type the
+    // machine knows it by -- `total` is 12, and `area` is a procedure. A run that
+    // never paused still gets here, which is the whole point of the final
+    // snapshot.
+    const int total = rowNamed(window, "variablesTable", QStringLiteral("total"));
+    TW_CHECK(total >= 0);
+    if (total >= 0) {
+        TW_CHECK_EQ(cellIn(window, "variablesTable", total, 1), QStringLiteral("number"));
+        TW_CHECK_EQ(cellIn(window, "variablesTable", total, 2), QStringLiteral("12"));
+    }
+    const int area = rowNamed(window, "variablesTable", QStringLiteral("area"));
+    TW_CHECK(area >= 0);
+    if (area >= 0) {
+        TW_CHECK_EQ(cellIn(window, "variablesTable", area, 1),
+                    QStringLiteral("procedure"));
+    }
+
+    // The telemetry HUD: a Scheme run reports nothing over the bridge, so every
+    // row here is one the IDE measured itself. All four must be present.
+    TelemetryPanel* hud = window.telemetryPanel();
+    TW_CHECK_EQ(hud->valueOf(QStringLiteral("Language")), QStringLiteral("Scheme"));
+    TW_CHECK(!hud->valueOf(QStringLiteral("Outcome")).isEmpty());
+    TW_CHECK(!hud->valueOf(QStringLiteral("Wall clock")).isEmpty());
+    TW_CHECK(hud->valueOf(QStringLiteral("Canvas ink")).contains(QStringLiteral("segment")));
+    TW_CHECK(!hud->valueOf(QStringLiteral("Ink length")).isEmpty());
+
+    // The debug panel is live for Scheme and idle: the run finished, so it must
+    // not claim to be paused anywhere.
+    TW_CHECK(window.debugPanel()->isAvailable());
+    auto* status = window.debugPanel()->findChild<QLabel*>(QStringLiteral("debugStatus"));
+    TW_CHECK(status != nullptr);
+    if (status != nullptr) {
+        TW_CHECK(!status->text().contains(QStringLiteral("at line")));
+        TW_CHECK(!status->text().contains(QStringLiteral("running")));
+    }
+}
+
+void test_a_native_run_fills_the_variables_and_telemetry_panels() {
+    announce("a native run fills the panels");
+    QTemporaryDir dir;
+    // A Logo program with a loop variable and a word of its own, so the engine
+    // has something to report on both counts.
+    const QString path = writeFile(
+        dir, QStringLiteral("named.logo"),
+        QByteArray{"MAKE \"NAME \"ada\nREPEAT 4 [FD 50 RT 90]\n"});
+    TW_CHECK(!path.isEmpty());
+
+    MainWindow window;
+    TW_CHECK(window.openFile(path));
+    if (window.variablesPanel() == nullptr || window.telemetryPanel() == nullptr ||
+        window.debugPanel() == nullptr) {
+        TW_CHECK(false);
+        return;
+    }
+
+    window.runCurrentDocument();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") != QStringLiteral("running");
+    }));
+    TW_CHECK_EQ(badgeText(window, "executionBadge"), QStringLiteral("ready"));
+
+    // `MAKE "NAME "ada` -- a word, which the engine reports beside the numbers.
+    const int name = rowNamed(window, "variablesTable", QStringLiteral("NAME"));
+    TW_CHECK(name >= 0);
+    if (name >= 0) {
+        TW_CHECK_EQ(cellIn(window, "variablesTable", name, 1), QStringLiteral("text"));
+        TW_CHECK_EQ(cellIn(window, "variablesTable", name, 2), QStringLiteral("ada"));
+    }
+
+    // The HUD carries both halves: the engine's counters and the IDE's own. A
+    // panel that showed only one of them would be reporting half a run.
+    TelemetryPanel* hud = window.telemetryPanel();
+    TW_CHECK_EQ(hud->valueOf(QStringLiteral("Language")), QStringLiteral("Logo"));
+    TW_CHECK(!hud->valueOf(QStringLiteral("Steps")).isEmpty());
+    TW_CHECK(hud->valueOf(QStringLiteral("Steps")).toInt() > 0);
+    TW_CHECK(!hud->valueOf(QStringLiteral("Wall clock")).isEmpty());
+    TW_CHECK(hud->valueOf(QStringLiteral("Canvas ink")).contains(QStringLiteral("4 segments")));
+
+    // A native run has no pause protocol either, so the debug panel says that
+    // rather than offering buttons that would do nothing.
+    TW_CHECK(!window.debugPanel()->isAvailable());
+}
+
+void test_a_second_run_replaces_the_panels_rather_than_appending() {
+    announce("a second run replaces the panels");
+    QTemporaryDir dir;
+    const QString path = writeFile(
+        dir, QStringLiteral("twice.scm"),
+        QByteArray{"(define (area w h) (* w h))\n(define total (area 3 4))\n(newline)\n"});
+    TW_CHECK(!path.isEmpty());
+
+    MainWindow window;
+    TW_CHECK(window.openFile(path));
+    if (window.variablesPanel() == nullptr) {
+        TW_CHECK(false);
+        return;
+    }
+
+    window.runCurrentDocument();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") != QStringLiteral("running");
+    }));
+    const int first = window.variablesPanel()->rowCount();
+    TW_CHECK(first > 0);
+
+    window.runCurrentDocument();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") != QStringLiteral("running");
+    }));
+    // The same program twice is the same table twice. Rows accumulating across
+    // runs would look like a program with more variables than it has.
+    TW_CHECK_EQ(window.variablesPanel()->rowCount(), first);
+}
+
+void test_a_native_run_fills_the_panels() {
+    announce("a native focal run fills the panels");
+    QTemporaryDir dir;
+    // A value, a loop variable and four sides of a square: both panels and the
+    // canvas have something real to report.
+    const QString path = writeFile(
+        dir, QStringLiteral("square.foc"),
+        QByteArray{"01.10 S X=7\n01.20 T \"X=\",X\n01.30 FOR I=1,4;FD 50;RT 90\n"});
+    TW_CHECK(!path.isEmpty());
+
+    MainWindow window;
+    TW_CHECK(window.openFile(path));
+    if (window.variablesPanel() == nullptr || window.telemetryPanel() == nullptr
+        || window.debugPanel() == nullptr) {
+        TW_CHECK(false);
+        return;
+    }
+
+    window.runCurrentDocument();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") != QStringLiteral("running");
+    }));
+    TW_CHECK_EQ(badgeText(window, "executionBadge"), QStringLiteral("ready"));
+
+    // FOCAL ran in this process. Its tables arrive the same way the bridge's do,
+    // which is what makes the panels agnostic about the engine.
+    const int x = rowNamed(window, "variablesTable", QStringLiteral("X"));
+    TW_CHECK(x >= 0);
+    if (x >= 0) {
+        TW_CHECK_EQ(cellIn(window, "variablesTable", x, 1), QStringLiteral("number"));
+        TW_CHECK_EQ(cellIn(window, "variablesTable", x, 2), QStringLiteral("7"));
+    }
+    const int i = rowNamed(window, "variablesTable", QStringLiteral("I"));
+    TW_CHECK(i >= 0);
+    if (i >= 0) {
+        TW_CHECK_EQ(cellIn(window, "variablesTable", i, 2), QStringLiteral("4"));
+    }
+
+    TelemetryPanel* hud = window.telemetryPanel();
+    TW_CHECK_EQ(hud->valueOf(QStringLiteral("Language")), QStringLiteral("FOCAL"));
+    TW_CHECK(!hud->valueOf(QStringLiteral("Steps")).isEmpty());
+    TW_CHECK(!hud->valueOf(QStringLiteral("Engine time")).isEmpty());
+    TW_CHECK(hud->valueOf(QStringLiteral("Canvas ink")).contains(QStringLiteral("4 segments")));
+
+    // Native as well as bridged: no pause protocol, so the panel says so.
+    TW_CHECK(!window.debugPanel()->isAvailable());
 }
 
 void test_stopping_when_nothing_runs_is_harmless() {
@@ -903,7 +1122,8 @@ void test_the_session_comes_back() {
 }  // namespace
 
 int main(int argc, char** argv) {
-    // Set before QApplication exists, or Qt tries to open a real display.    qputenv("QT_QPA_PLATFORM", "offscreen");
+    // Set before QApplication exists, or Qt tries to open a real display.
+    qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app{argc, argv};
     // A settings identity of its own, so a test run cannot touch the real one.
     QCoreApplication::setOrganizationName(QStringLiteral("TimeWarpTests"));
@@ -933,6 +1153,10 @@ int main(int argc, char** argv) {
     test_pen_up_moves_without_drawing();
     test_running_basic_prints_through_the_bridge();
     test_running_logo_draws_on_the_canvas();
+    test_a_scheme_run_fills_the_variables_and_telemetry_panels();
+    test_a_native_run_fills_the_variables_and_telemetry_panels();
+    test_a_second_run_replaces_the_panels_rather_than_appending();
+    test_a_native_run_fills_the_panels();
     test_stopping_when_nothing_runs_is_harmless();
     test_stop_interrupts_a_running_program();
 

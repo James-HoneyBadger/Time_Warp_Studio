@@ -21,9 +21,10 @@ yet — please check the list below before reporting one as a regression.
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
 | Languages | 10 languages, 48 verified example programs |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
-| Bridged engines | BASIC, PILOT, Logo, COMAL, REXX — `native/bridge/` |
+| Bridged engines | BASIC, REXX, APL and Smalltalk — `native/bridge/` |
+| Native executors | FOCAL, PILOT, COMAL, CHIP-8 and Logo — `timewarp_lang`, in process |
 | Packaging | `make install` with the desktop entry and icon; `DESTDIR` staging |
-| Quality gates | 12 CTest suites in 4 build configurations, 2 parity gates, 522 engine tests, 429 command rows |
+| Quality gates | 13 CTest suites in 4 build configurations, 3 parity gates, 536 engine tests, 429 command rows, 225 parity programs |
 
 ---
 
@@ -143,9 +144,9 @@ positions.
 `docs/ARCHITECTURE.md` has been **rewritten** around the Qt application and the engine.
 It no longer describes the removed PySide6 implementation, and it names what is not
 wired up rather than assuming it: the expression evaluator that does not participate in
-a Run, the debugger that is a runner without panels, the REPL whose plumbing is absent,
-and the placeholder tabs. It is now the system-level description; `native/README.md`
-remains the detail on the C++ libraries.
+a Run, the REPL whose plumbing is absent, the outline and terminal pages that are still
+placeholders, and the debugger's missing breadth. It is now the system-level
+description; `native/README.md` remains the detail on the C++ libraries.
 
 ---
 
@@ -197,12 +198,17 @@ Four limits are recorded rather than left to be discovered:
 
 ## Next: port the languages, then delete the bridge
 
-The bridge exists only because nine languages are not native yet. Each port
+The bridge exists only because four languages are not native yet. Each port
 removes its path through it, and the differential gates are the contract.
 
-1. **BASIC** — then delete BASIC from the bridge.
-2. **Logo** — turtle semantics are already asserted in `turtle_canvas_tests`.
-3. **PILOT**, **COMAL**, **REXX**.
+1. **BASIC** — the largest remaining port: the core language first, then the
+   extended statement set.
+2. **REXX** — strings, subroutines and the `PARSE` family.
+3. **APL** — arrays and the turtle words `TX`, `TY` and `THETA`.
+4. **Smalltalk** — whole-program, like Scheme and CHIP-8.
+
+Once the last of them lands, `native/bridge/` and the `python_worker` target are
+deleted together; nothing else may depend on them.
 
 BASIC's extended statement set (music, speech, shapes, particles, fractals,
 gamepad) is deferred until the core language is byte-compatible: those are
@@ -213,10 +219,23 @@ large rather than trivial.
 
 ## Next: finish the IDE itself
 
-**Debugging** — the `DebuggerRunner` is wired for Scheme and Stop works;
-Debug/Continue/Trace do not yet drive a panel. Then: breakpoints, watch
-expressions, a call stack, variable inspection, and step granularity finer than a
-form.
+**Debugging** — `DebuggerRunner` is wired for Scheme, and the **Debug** tab is a real
+panel driving it: Continue, Pause, Step In/Over/Out, Stop and breakpoints all reach the
+runner, which reports the line, the procedure, the call stack and the frame's bindings.
+What is still missing is *breadth and depth*: only Scheme can be stepped (the four
+bridged languages run to completion in another process, and the native executors have
+no pause protocol, so the panel says so rather than offering dead buttons), the
+toolbar's Debug/Continue/Trace actions do not drive the
+panel yet, and there are no watch expressions and no step granularity finer than a form.
+
+**Variables and the Telemetry HUD** are built too, and both answer the question a
+placeholder could not: *what did that run actually do?* The **Variables** tab lists every
+binding the engine can see, with the type it knows it by, filtered by name. The
+**Telemetry HUD** shows labelled counters — steps used, engine time, steps per second,
+last line, recursion depth, call stack, output lines, drawing commands, and BASIC's
+memory window — and puts the IDE's own rows (wall clock, ink on the canvas) beside them,
+so a drawing the engine counted but the canvas never received reads as two rows that
+disagree rather than as silence.
 
 **Editor** — find in files, a minimap, error markers in the gutter, breakpoint
 markers, auto-completion and a document outline are still missing.
@@ -285,11 +304,11 @@ are now in place for a real packaging effort to build on.
 
 These existed in the removed implementation and are not planned for the current
 release cycle: the examples browser, the accessibility presets, the onboarding
-wizard, the telemetry HUD, a web (WebAssembly) build, and calling one language from
-another.
+wizard, a web (WebAssembly) build, and calling one language from another.
 
 The **lessons system**, with progress tracking and a classroom mode, used to be on this
-list. It is now implemented — see `docs/lessons/`.
+list. It is now implemented — see `docs/lessons/`. The **telemetry HUD** was on it too
+and is now the Telemetry tab described above.
 
 ---
 

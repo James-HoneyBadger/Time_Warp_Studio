@@ -2,6 +2,9 @@
 
 #include "timewarp/ui/main_window.hpp"
 
+#include "timewarp/lang/executor.hpp"
+#include "timewarp/ui/native_runner.hpp"
+
 #include <QAction>
 #include <QApplication>
 #include <QCloseEvent>
@@ -280,21 +283,15 @@ void MainWindow::buildRightColumn(QSplitter* parent) {
     right_tabs_->addTab(output_canvas_splitter_,
                         tr("\U0001F4DD Output  \U0001F3A8 Graphics"));
 
-    auto* variables = new PlaceholderPanel{
-        tr("\U0001F50D Variables"), tr("ui/variable_inspector.py \u2014 not yet ported"),
-        QSize{160, 100}, right_tabs_};
-    right_tabs_->addTab(variables, tr("\U0001F50D Variables"));
+    variables_panel_ = new VariablesPanel{right_tabs_};
+    right_tabs_->addTab(variables_panel_, tr("\U0001F50D Variables"));
 
-    auto* telemetry = new PlaceholderPanel{
-        tr("\u26A1 Telemetry HUD"), tr("ui/telemetry_hud.py \u2014 not yet ported"),
-        QSize{160, 100}, right_tabs_};
-    right_tabs_->addTab(telemetry, tr("\u26A1 Telemetry HUD"));
+    telemetry_panel_ = new TelemetryPanel{right_tabs_};
+    right_tabs_->addTab(telemetry_panel_, tr("\u26A1 Telemetry HUD"));
 
-    auto* debug = new PlaceholderPanel{
-        tr("\U0001F41B Debug"), tr("ui/debug_panel.py \u2014 not yet ported"),
-        QSize{180, 120}, right_tabs_};
-    right_tabs_->addTab(debug, tr("\U0001F41B Debug"));
-
+    debug_panel_ = new DebugPanel{right_tabs_};
+    right_tabs_->addTab(debug_panel_, tr("\U0001F41B Debug"));
+    connectDebugPanel();
     // The lesson panel is the one page of the right column that is *not* a
     // placeholder: the Python implementation had a working one, and a learner of
     // eleven is not going to open a terminal instead.
@@ -1193,6 +1190,9 @@ void MainWindow::refreshDocumentState() {
         if (find_bar_ != nullptr) {
             find_bar_->setEditor(nullptr);
         }
+        if (debug_panel_ != nullptr) {
+            debug_panel_->setAvailable(false, tr("Open a document to debug it."));
+        }
         return;
     }
 
@@ -1210,6 +1210,15 @@ void MainWindow::refreshDocumentState() {
     // looking at, and switching tabs has to move it.
     if (find_bar_ != nullptr) {
         find_bar_->setEditor(editor);
+    }
+    if (debug_panel_ != nullptr) {
+        // Stepping needs the pause protocol, which only the in-process Scheme
+        // machine has. The panel says so instead of offering six dead buttons.
+        debug_panel_->setAvailable(
+            languageOf(editor) == Language::Scheme,
+            tr("Stepping is Scheme only \u2014 the four bridged languages run to "
+               "completion in another process."));
+        debug_panel_->setLineNumber(editor->currentLine());
     }
     position_badge_->setText(
         tr("Ln %1, Col %2").arg(editor->currentLine()).arg(editor->currentColumn()));
@@ -1425,7 +1434,12 @@ bool MainWindow::closeCurrentTab() {
 // Execution
 // ---------------------------------------------------------------------------
 
-MainWindow::~MainWindow() = default;
+MainWindow::~MainWindow() {
+    // Before any member is destroyed: a runner thread holds a reference to the
+    // canvas queue and to its own host, so letting Qt tear those down first is a
+    // write into freed memory from a thread that is still drawing.
+    stopEngines();
+}
 
 timewarp::canvas::CanvasCommandQueue& MainWindow::canvasQueue() noexcept {
     return *canvas_queue_;
@@ -1495,8 +1509,22 @@ void MainWindow::runCurrentDocument() {
     // exactly that.
     stopEngines();
 
+    // A panel showing the previous run's numbers while this one is still starting
+    // is a lie that is easy to read as this run's. Emptying them is the honest
+    // state, and the HUD has a row that says so.
+    clearRunState();
+    startRunClock();
+
+    // A ported language runs in this process. The bridge is only for the ones
+    // that have not been ported, and `executor_for` is the question that decides
+    // it -- so adding an executor is all it takes for the IDE to use it.
     if (languageOf(editor) != Language::Scheme) {
-        runInBridge(editor);
+        const std::optional<timewarp::lang::Language> native = nativeLanguage(languageOf(editor));
+        if (native.has_value() && timewarp::lang::executor_for(*native) != nullptr) {
+            runNatively(editor, *native);
+        } else {
+            runInBridge(editor);
+        }
         return;
     }
 
@@ -1539,12 +1567,48 @@ void MainWindow::runCurrentDocument() {
                 finishRun(error, completed);
             });
 
+    // The panel's buttons were already hooked up to "whatever runner exists";
+    // these two are the other direction -- the runner telling the panel it has
+    // stopped somewhere.
+    connect(runner, &timewarp::debugger::DebuggerRunner::paused, this,
+            [this, runner](int line, int, const QString& procedure) {
+                if (runner_ != runner) {
+                    return;
+                }
+                if (debug_panel_ != nullptr) {
+                    debug_panel_->setPaused(true, line, procedure);
+                }
+                showRunnerSnapshot();
+            });
+    connect(runner, &timewarp::debugger::DebuggerRunner::resumed, this,
+            [this, runner] {
+                if (runner_ != runner) {
+                    return;
+                }
+                if (debug_panel_ != nullptr) {
+                    debug_panel_->setPaused(false, 0, QString{});
+                }
+            });
+
+    // The breakpoints already in the panel are the ones this run honours, which
+    // is why the set is applied here rather than only when it changes.
+    if (debug_panel_ != nullptr) {
+        runner->set_breakpoints(debug_panel_->breakpoints());
+    }
+
     setExecutionState(tr("running"), tr("Running %1…").arg(nameOf(editor)));
     runner->load_program(editor->toPlainText(), nameOf(editor));
     runner->start();
 }
 
 void MainWindow::stopEngines() {
+    if (native_runner_ != nullptr) {
+        // Cooperative, then wait: an executor checks the flag between statements.
+        native_runner_->request_stop();
+        native_runner_->wait();
+        delete native_runner_.data();
+        native_runner_ = nullptr;
+    }
     if (runner_ != nullptr) {
         // `wait` rather than a delay: the stop flag is checked per form, so this
         // returns as soon as the interpreter reaches the next one.
@@ -1566,15 +1630,96 @@ void MainWindow::stopEngines() {
 
 void MainWindow::stopRunningDocument() {
     const bool scheme_running = runner_ != nullptr && runner_->isRunning();
+    const bool native_running = native_runner_ != nullptr && native_runner_->isRunning();
     const bool bridge_running =
         python_worker_ != nullptr && python_worker_->isRunningProgram();
-    if (!scheme_running && !bridge_running) {
+    if (!scheme_running && !native_running && !bridge_running) {
         setExecutionState(tr("ready"), tr("Nothing is running"));
         return;
     }
     setExecutionState(tr("stopping"), tr("Stopping…"));
     stopEngines();
     setExecutionState(tr("stopped"), tr("Stopped"));
+}
+
+void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language language) {
+    // The same clean surface the other engines get, in the same order.
+    canvas_bridge_->drainNow();
+    turtle_canvas_->reset();
+    if (console_view_ != nullptr) {
+        console_view_->clear();
+    }
+    if (errors_view_ != nullptr) {
+        errors_view_->clear();
+    }
+
+    auto* runner = new NativeRunner{language, *canvas_queue_, this};
+    native_runner_ = runner;
+    // The queue has no consumer of its own: a run that fills it waits until the
+    // GUI drains it, so every command has to say "look at the queue now".
+    runner->set_wakeup([this] { canvas_bridge_->wake(); });
+    runner->load_program(editor->toPlainText());
+
+    connect(runner, &NativeRunner::outputAvailable, this,
+            [this, runner](const QString& text) {
+                if (native_runner_ != runner) {
+                    return;
+                }
+                // The runner reports lines without terminators, like the engine's
+                // own buffer; the console needs the newline the logger added.
+                appendOutput(text + QLatin1Char('\n'));
+            });
+    connect(runner, &NativeRunner::inputRequested, this,
+            [this, runner](const QString& prompt) {
+                if (native_runner_ != runner) {
+                    return;
+                }
+                // A program that asked a question and stopped is waiting for an
+                // answer the IDE cannot invent.
+                bool accepted = false;
+                const QString answer = QInputDialog::getText(
+                    this, tr("The program is waiting for input"), prompt, QLineEdit::Normal,
+                    QString{}, &accepted);
+                runner->answerInput(accepted ? answer : QString{});
+            });
+    connect(runner, &NativeRunner::run_finished, this,
+            [this, runner, language](bool completed, const QString& error) {
+                if (native_runner_ != runner) {
+                    return;
+                }
+                stopRunClock();
+                canvas_bridge_->drainNow();
+                turtle_canvas_->fitToContent();
+
+                QList<timewarp::bridge::VariableRow> rows;
+                for (const NativeRunner::VariableRow& row : runner->variables()) {
+                    rows.append({row.name, row.type, row.value});
+                }
+                if (variables_panel_ != nullptr) {
+                    variables_panel_->setRows(rows);
+                }
+                if (telemetry_panel_ != nullptr) {
+                    const std::string_view name = timewarp::lang::display_name(language);
+                    QList<timewarp::bridge::TelemetryRow> hud;
+                    hud.append({tr("Language"),
+                                QString::fromLatin1(name.data(), static_cast<int>(name.size()))});
+                    hud.append({tr("Outcome"), completed ? tr("finished") : tr("stopped")});
+                    hud.append({tr("Steps"), QString::number(runner->steps())});
+                    hud.append({tr("Engine time"),
+                                tr("%1 ms").arg(runner->elapsedMs(), 0, 'f', 1)});
+                    hud.append({tr("Drawing commands"),
+                                QString::number(runner->drawingCommands())});
+                    telemetry_panel_->setRows(hud + ideTelemetryRows());
+                }
+                if (!error.isEmpty()) {
+                    reportError(error);
+                }
+                setExecutionState(completed ? tr("ready") : tr("stopped"),
+                                  completed ? tr("Finished") : tr("Stopped"));
+            });
+
+    setExecutionState(tr("running"), tr("Running %1…").arg(nameOf(editor)));
+    runner->start();
 }
 
 void MainWindow::runInBridge(CodeEditor* editor) {
@@ -1729,8 +1874,12 @@ void MainWindow::adoptBridgeWorker() {
             });
     connect(python_worker_.get(), &timewarp::bridge::PythonWorker::finished, this,
             [this](bool ok, const QString& error, const QStringList& unsupported) {
+                stopRunClock();
                 canvas_bridge_->drainNow();
                 turtle_canvas_->fitToContent();
+                if (telemetry_panel_ != nullptr) {
+                    telemetry_panel_->setRows(engine_telemetry_ + ideTelemetryRows());
+                }
                 if (!error.isEmpty()) {
                     reportError(error);
                     return;
@@ -1761,6 +1910,21 @@ void MainWindow::adoptBridgeWorker() {
                 if (lesson_panel_ != nullptr) {
                     lesson_panel_->setProgress(rows, completed, total);
                 }
+            });
+    // The run's own state, which arrives just before `finished`.
+    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::variablesReported,
+            this,
+            [this](const QList<timewarp::bridge::VariableRow>& rows) {
+                if (variables_panel_ != nullptr) {
+                    variables_panel_->setRows(rows);
+                }
+            });
+    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::telemetryReported,
+            this,
+            [this](const QList<timewarp::bridge::TelemetryRow>& rows) {
+                // Held, not shown: the wall clock is not known until `finished`,
+                // and both belong to the same table.
+                engine_telemetry_ = rows;
             });
     connect(python_worker_.get(), &timewarp::bridge::PythonWorker::lessonHintReceived, this,
             [this](const QString& text, int number, int total) {
@@ -1803,7 +1967,116 @@ void MainWindow::adoptBridgeWorker() {
             });
 }
 
+void MainWindow::connectDebugPanel() {
+    if (debug_panel_ == nullptr) {
+        return;
+    }
+    // These do not connect *to* a runner: one exists only for the length of a
+    // run, and is deleted when the run ends. They look it up when a button is
+    // pressed, so a press between runs is a no-op rather than a dangling call.
+    const auto forward = [this](void (timewarp::debugger::DebuggerRunner::*command)()) {
+        return [this, command] {
+            if (runner_ != nullptr) {
+                (runner_.data()->*command)();
+            }
+        };
+    };
+    connect(debug_panel_, &DebugPanel::continueRequested, this,
+            forward(&timewarp::debugger::DebuggerRunner::request_continue));
+    connect(debug_panel_, &DebugPanel::pauseRequested, this,
+            forward(&timewarp::debugger::DebuggerRunner::request_pause));
+    connect(debug_panel_, &DebugPanel::stepIntoRequested, this,
+            forward(&timewarp::debugger::DebuggerRunner::request_step_into));
+    connect(debug_panel_, &DebugPanel::stepOverRequested, this,
+            forward(&timewarp::debugger::DebuggerRunner::request_step_over));
+    connect(debug_panel_, &DebugPanel::stepOutRequested, this,
+            forward(&timewarp::debugger::DebuggerRunner::request_step_out));
+    connect(debug_panel_, &DebugPanel::stopRequested, this,
+            forward(&timewarp::debugger::DebuggerRunner::request_stop));
+    connect(debug_panel_, &DebugPanel::breakpointsChanged, this,
+            [this](const QList<int>& lines) {
+                if (runner_ != nullptr) {
+                    runner_->set_breakpoints(lines);
+                }
+            });
+}
+
+QList<timewarp::bridge::TelemetryRow> MainWindow::ideTelemetryRows() const {
+    QList<timewarp::bridge::TelemetryRow> rows;
+    if (last_run_ms_ >= 0) {
+        rows.append({tr("Wall clock"), tr("%1 ms").arg(last_run_ms_)});
+    }
+    if (turtle_canvas_ != nullptr) {
+        rows.append(
+            {tr("Canvas ink"), tr("%1 segments, %2 shapes")
+                                   .arg(turtle_canvas_->strokeCount())
+                                   .arg(turtle_canvas_->shapeCount())});
+        rows.append({tr("Ink length"),
+                     tr("%1 units").arg(turtle_canvas_->totalStrokeLength(), 0, 'f', 1)});
+    }
+    return rows;
+}
+
+void MainWindow::showRunnerSnapshot() {
+    if (runner_ == nullptr) {
+        return;
+    }
+    const timewarp::debugger::DebugSnapshot snapshot = runner_->snapshot();
+    // One vocabulary for both sources: the Scheme machine says "string" where the
+    // bridge's inspector says "text", and a column whose word changed with the
+    // language would read as two different types.
+    const auto kind_word = [](const QString& kind) {
+        return kind == QLatin1String("string") ? QStringLiteral("text") : kind;
+    };
+    QList<timewarp::bridge::VariableRow> rows;
+    rows.reserve(snapshot.variables.size());
+    for (const timewarp::debugger::DebugVariable& entry : snapshot.variables) {
+        rows.append({entry.name, kind_word(entry.kind), entry.rendered});
+    }
+    if (variables_panel_ != nullptr) {
+        variables_panel_->setRows(rows);
+    }
+    if (debug_panel_ != nullptr) {
+        QList<DebugPanel::Frame> frames;
+        frames.reserve(snapshot.stack.size());
+        for (const timewarp::debugger::StackFrameInfo& frame : snapshot.stack) {
+            frames.append({frame.procedure, frame.line});
+        }
+        debug_panel_->setStack(frames);
+        debug_panel_->setVariables(rows);
+    }
+}
+
+void MainWindow::clearRunState() {
+    engine_telemetry_.clear();
+    if (variables_panel_ != nullptr) {
+        variables_panel_->setRows({});
+    }
+    if (telemetry_panel_ != nullptr) {
+        telemetry_panel_->setRows({});
+    }
+    if (debug_panel_ != nullptr) {
+        debug_panel_->setPaused(false, 0, QString{});
+        debug_panel_->setStack({});
+        debug_panel_->setVariables({});
+    }
+}
+
+void MainWindow::startRunClock() {
+    last_run_ms_ = -1;
+    run_clock_.start();
+}
+
+void MainWindow::stopRunClock() {
+    if (!run_clock_.isValid()) {
+        return;
+    }
+    last_run_ms_ = run_clock_.elapsed();
+    run_clock_.invalidate();
+}
+
 void MainWindow::finishRun(const QString& error, bool completed) {
+    stopRunClock();
     // Publish the tail of the drawing: the host stages coalesced state changes,
     // so the last pen colour or width can still be sitting in the queue.
     if (turtle_host_ != nullptr) {
@@ -1815,6 +2088,23 @@ void MainWindow::finishRun(const QString& error, bool completed) {
     // continuously while it is being drawn, which reads as the canvas fighting
     // back.
     turtle_canvas_->fitToContent();
+
+    // A Scheme run reports nothing over the bridge, so its two tables come from
+    // the runner and the IDE. Publishing them here rather than leaving the HUD
+    // showing the last bridged run is the difference between a stale number and
+    // an absent one.
+    if (debug_panel_ != nullptr) {
+        debug_panel_->setPaused(false, 0, QString{});
+    }
+    showRunnerSnapshot();
+    if (telemetry_panel_ != nullptr) {
+        QList<timewarp::bridge::TelemetryRow> rows;
+        rows.append({tr("Language"), tr("Scheme")});
+        rows.append({tr("Outcome"),
+                     error.isEmpty() ? (completed ? tr("finished") : tr("stopped"))
+                                     : tr("stopped with an error")});
+        telemetry_panel_->setRows(rows + ideTelemetryRows());
+    }
 
     if (!error.isEmpty()) {
         reportError(error);

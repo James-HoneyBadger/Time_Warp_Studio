@@ -30,6 +30,8 @@ class QLineEdit;
 class QListWidget;
 class QProgressBar;
 class QPushButton;
+class QSpinBox;
+class QTableWidget;
 class QTextBrowser;
 class QVBoxLayout;
 
@@ -252,6 +254,133 @@ private:
     /// Points asked for and answered, per lesson id, so hints come out in order.
     int hint_number_ = 0;
     int presentation_font_ = 0;
+};
+
+/// The variables table.
+///
+/// Stands in for `ui/variable_inspector.py`. The rows come from whoever ran the
+/// program -- the bridge's report for the four bridged languages, the native
+/// runner's snapshot for Scheme -- so the panel is a table and nothing else. It
+/// does not ask, and it does not decide what a value is worth: the engine does.
+class VariablesPanel final : public QFrame {
+    Q_OBJECT
+
+public:
+    explicit VariablesPanel(QWidget* parent = nullptr);
+
+    /// Replaces the table. The filter is re-applied, because a filter that
+    /// survived a new set of names would show an empty table with no explanation.
+    void setRows(const QList<timewarp::bridge::VariableRow>& rows);
+
+    /// Rows given, and rows showing after the filter. Both, because a test that
+    /// only knew one of them could not tell "filtered out" from "never arrived".
+    [[nodiscard]] int rowCount() const;
+    [[nodiscard]] int visibleRowCount() const;
+    /// The filter, so a test can type into it.
+    void setFilter(const QString& text);
+
+private:
+    void applyFilter();
+
+    QLineEdit* filter_ = nullptr;
+    QTableWidget* table_ = nullptr;
+    QLabel* status_ = nullptr;
+    QList<timewarp::bridge::VariableRow> rows_;
+};
+
+/// The telemetry HUD: labelled counters for the run that just finished.
+///
+/// Stands in for `ui/telemetry_hud.py`. The window composes the rows from two
+/// sources -- the engine's own counters and the ones only the IDE knows (wall
+/// clock, how much ink reached the canvas) -- and the panel does not care which
+/// is which.
+class TelemetryPanel final : public QFrame {
+    Q_OBJECT
+
+public:
+    explicit TelemetryPanel(QWidget* parent = nullptr);
+
+    void setRows(const QList<timewarp::bridge::TelemetryRow>& rows);
+
+    [[nodiscard]] int rowCount() const;
+    /// The value shown for `label`, or an empty string. For tests: a HUD is read
+    /// by looking at it, so the assertion has to name the cell.
+    [[nodiscard]] QString valueOf(const QString& label) const;
+
+private:
+    QTableWidget* table_ = nullptr;
+};
+
+/// The debug panel: breakpoints, stepping, the call stack and the frame's
+/// variables.
+///
+/// Stands in for `ui/debug_panel.py`, and unlike the other two it is mostly
+/// *controls*: the runner already knows how to pause, step and report, and this
+/// is the surface that asks it to. It holds no debugger and no document -- every
+/// button is a signal, and the window decides what the request means.
+///
+/// Only Scheme can be stepped: the four bridged languages run to completion in
+/// another process with no pause protocol, so the panel disables itself and says
+/// why rather than offering buttons that do nothing.
+class DebugPanel final : public QFrame {
+    Q_OBJECT
+
+public:
+    /// One frame of the call stack, for the stack list.
+    struct Frame {
+        QString procedure;
+        int line = 0;
+    };
+
+    explicit DebugPanel(QWidget* parent = nullptr);
+
+    /// Whether the running language can be stepped at all. `reason` is shown when
+    /// it cannot, and is the sentence a user reads instead of a dead button.
+    void setAvailable(bool available, const QString& reason);
+    [[nodiscard]] bool isAvailable() const;
+
+    void setPaused(bool paused, int line, const QString& procedure);
+    void setStack(const QList<Frame>& frames);
+    void setVariables(const QList<timewarp::bridge::VariableRow>& rows);
+    void setBreakpoints(const QList<int>& lines);
+    [[nodiscard]] QList<int> breakpoints() const;
+
+    /// The line the "add" spinner is on, and a way to set it from the editor's
+    /// cursor without the panel knowing what an editor is.
+    void setLineNumber(int line);
+    [[nodiscard]] int lineNumber() const;
+
+signals:
+    void continueRequested();
+    void pauseRequested();
+    void stepIntoRequested();
+    void stepOverRequested();
+    void stepOutRequested();
+    void stopRequested();
+    /// The breakpoint set changed. Carries the whole set, so a receiver cannot
+    /// apply a delta to a set it thinks it has.
+    void breakpointsChanged(const QList<int>& lines);
+
+private:
+    void addBreakpoint();
+    void removeBreakpoint();
+    void emitBreakpoints();
+
+    QLabel* status_ = nullptr;
+    QLabel* reason_ = nullptr;
+    QPushButton* continue_ = nullptr;
+    QPushButton* pause_ = nullptr;
+    QPushButton* step_into_ = nullptr;
+    QPushButton* step_over_ = nullptr;
+    QPushButton* step_out_ = nullptr;
+    QPushButton* stop_ = nullptr;
+    QSpinBox* line_ = nullptr;
+    QPushButton* add_ = nullptr;
+    QPushButton* remove_ = nullptr;
+    QListWidget* breakpoints_ = nullptr;
+    QListWidget* stack_ = nullptr;
+    QTableWidget* variables_ = nullptr;
+    bool available_ = false;
 };
 
 }  // namespace timewarp::ui

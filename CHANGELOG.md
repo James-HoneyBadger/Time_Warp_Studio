@@ -141,6 +141,105 @@ Four more languages, and the defects that examining their commands turned up.
 - Exporting an empty canvas says so in the status bar rather than writing a blank
   picture.
 
+### What a run actually did: Variables, Telemetry and Debug
+
+The right column's three remaining placeholders are real panels now. Both
+inspection panels read data the engine always had and nobody had asked it for.
+
+- **🔍 Variables** lists every binding the engine can see, with the type it knows it by
+  and its value, and filters by name. The bridge grew `time_warp/utils/inspection.py`
+  to turn engine state into rows (`variable_rows`), so a learner sees `NAME = ada` and a
+  programmer sees `REPCOUNT = 4` without either of them reading a debugger.
+- **⚡ Telemetry HUD** shows what the run cost and what it did: steps used out of the
+  cap, engine time, steps per second, last line, recursion depth, call stack depth,
+  variables, turtle pose and pen, output lines and drawing commands, plus BASIC's
+  16-byte memory window. Beside them sit the rows only the IDE can vouch for — wall
+  clock, and how much ink reached the canvas — so a drawing the engine counted but the
+  canvas never received reads as two rows that disagree.
+- **🐞 Debug** drives `DebuggerRunner` from the panel: Continue, Pause, Step In, Step
+  Over, Step Out, Stop, and a breakpoint list. Pausing shows the line, the procedure,
+  the call stack and that frame's bindings. Only Scheme can be stepped — the nine
+  bridged languages run to completion in another process with no pause protocol — so
+  the panel disables itself with a sentence saying why rather than offering buttons that
+  do nothing.
+- **A run that never paused still leaves bindings.** `DebuggerRunner` now takes a final
+  snapshot when a program ends, so the Variables panel shows what the program finished
+  with instead of nothing, and `DebugVariable` carries the machine's own `type_name`
+  rather than a guess made from the printed text.
+- The three panels are emptied at the start of every run: a previous run's numbers
+  sitting in a HUD while a new one starts read as this run's.
+
+### FOCAL, PILOT, COMAL, CHIP-8 and Logo run in C++, and the engine for the rest
+
+Five languages have left the bridge. The change that matters is not the ports
+themselves but the seam they establish: an executor is now a C++ function, and the
+IDE asks `executor_for(language)` whether it can run in process.
+
+- **`timewarp_lang`** — a dependency-free C++20 library with the shared interpreter
+  loop: program storage, variables, streamed output, synchronous input, the run
+  budget and telemetry. An executor is a plain function
+  `(Interpreter&, source, TurtleHost&) -> std::string`, the same shape as the
+  Python engine's, because the reference's behaviour is what the port is checked
+  against.
+- **`TurtleHost`** — the drawing seam, deliberately Qt-free. A test records calls
+  as text; the IDE's `NativeCanvasHost` turns them into `CanvasCommand`s.
+- **FOCAL** is ported whole, including the rules a reimplementation gets wrong:
+  branching by sign, `DO` returning at the end of the program, undefined variables
+  as zero, and `!` suppressing a newline inside one `TYPE`.
+- **PILOT** is ported whole: the unit letters and their `Y`/`N` conditions,
+  labels and `U:`/`S:` subroutines with `E:` returns, `C:`'s string functions,
+  `G:` graphics, `F:` files, hints, delays, pauses and the long-form keywords.
+  Its `C:`/`B:` arithmetic runs on the native expression evaluator, so `timewarp_expr`
+  is now linked into a Run rather than merely built.
+- **COMAL** is ported whole: IF/ELIF/ELSE/ENDIF, FOR/NEXT, WHILE/ENDWHILE,
+  REPEAT/UNTIL, LOOP/EXIT/ENDLOOP, PROC/FUNC with CALL/RETURN, DIM arrays,
+  DATA/READ/RESTORE, GOTO/GOSUB, PRINT/INPUT and the turtle statements. Its loop
+  frames live on an explicit stack, so `NEXT` finds its own `FOR` through blocks
+  that have already closed.
+- **CHIP-8** is ported whole: the two-pass assembler, all 35 opcodes, the 1977
+  choices (Vx shifts in place, sprites wrap) and the frame model, with the same
+  limits reported instead of silently applied.
+- **Logo** is ported whole, and it is the one that is not a line-by-line language:
+  a `TO ... END` block *defines* a procedure rather than running, and a bracketed
+  command can span lines, so the statement boundaries are decided by a loader
+  before anything executes. Everything the reference does is reproduced, including
+  the parts that look like bugs: `LOCAL "X` really does make a variable called
+  `"X`, a list printed through `SHOW` comes out as `['1.0', '2.0']`, and the
+  splitter that starts a new statement at a procedure name once all of that
+  procedure's arguments are present (the rule that kept a second call inside a
+  `REPEAT` body from being swallowed, which is how a whole layer of
+  `Examples/logo/mandala.logo` used to vanish).
+- **The drawing seam grew the parts Logo needed** — a 3-D pose with the
+  reference's Rodrigues rotations and its `1 + z/400` projection, so
+  `turtle_3d.logo` still draws a helix instead of a flat spiral; `draw_polygon` for
+  `STAMP`, `DOT` and `FILLED`; a font size on `draw_text` for `LABEL`; and `reset`
+  for `CS`, which is not `CLEAN`: it puts the turtle, the pen and the canvas back
+  the way a run starts.
+- **A native run now starts on the reference's surface** — the dark background and
+  the white pen — because a logo-style program may draw before it names a colour,
+  and white ink on the IDE's white canvas is a run that reports four strokes and
+  shows nothing.
+- **The telemetry HUD measures whole-program runs.** An executor with its own
+  statement loop reports its steps (`Interpreter::note_step`), so a Logo run's
+  Steps row is a number rather than a standing zero.
+- **Python-compatible randomness** — `FRAN` and `RND` run on a reproduction of
+  CPython's Mersenne Twister, seeded the way `random.seed(int)` seeds it. A port
+  with `std::mt19937` would be a different generator, and the differential harness
+  could not tell a defect from a different sequence.
+- **The IDE dispatches natively.** `MainWindow` gives a ported language to
+  `NativeRunner`, a `QThread` that streams output, answers input prompts and feeds
+  the canvas queue. The Variables and Telemetry panels are filled from the same
+  run, so they do not know which engine produced the table.
+- **A parity gate** — `native/tools/lang_differential_check.py` runs every
+  command-table row and every example through both engines and compares output
+  lines, every drawing call in order, and the final variables: **225 of 228
+  programs agree, 0 differences**, the three that use a random function being
+  reported and skipped. The corpus includes the nine Logo examples, among them the
+  720- and 800-iteration fractal drawings, so the gate covers recursion, procedure
+  restoration and the statement splitter as well as the primitives.
+- BASIC, REXX, APL and Smalltalk still run through the bridge, and the bridge
+  remains the thing to delete. Each port removes one path through it.
+
 ---
 
 ## [15.0.0] - 2026-10-16

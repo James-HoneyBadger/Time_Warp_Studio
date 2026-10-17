@@ -71,6 +71,10 @@ enum class PauseCause : std::uint8_t {
     Step,
     PauseRequest,
     Error,
+    /// The run ended without pausing. The snapshot is still taken, because a
+    /// program that finished has bindings and the variables panel shows what a
+    /// run left behind -- but nothing was suspended, so the GUI shows no pause.
+    Finished,
 };
 
 /// A command the GUI thread sends to the runner thread.
@@ -93,6 +97,17 @@ struct StackFrameInfo {
     int line = 0;
 };
 
+/// One binding the machine could see when it paused.
+///
+/// The kind is the machine's own `type_name` for the value, not a guess from the
+/// printed form: `3` and `"3"` render differently but `#t` and `(#t)` are easier
+/// to tell apart by kind than by eye.
+struct DebugVariable {
+    QString name;
+    QString kind;
+    QString rendered;
+};
+
 /// Everything the GUI needs to render the paused state.
 ///
 /// Returned by value from `snapshot()`, which copies under a lock, so a caller
@@ -106,8 +121,8 @@ struct DebugSnapshot {
     QString error;
     PauseCause cause = PauseCause::PauseRequest;
     QVector<StackFrameInfo> stack;
-    /// (name, rendered value) pairs, innermost bindings first.
-    QVector<QPair<QString, QString>> variables;
+    /// Innermost bindings first.
+    QVector<DebugVariable> variables;
 };
 
 /// Executes a program on a background thread with debugger control.
@@ -218,6 +233,11 @@ private:
     void refresh_breakpoints();
     [[nodiscard]] bool breakpoint_hit(int line) const;
     void stream_output();
+
+    /// Whether this run has already published a snapshot. A pause or an error
+    /// records a more precise state than "where it ended", so the final capture
+    /// defers to it. Guarded by `snapshot_mutex_`.
+    bool captured_ = false;
 
     // -- command channel --------------------------------------------------
     std::atomic<std::uint64_t> notification_{0};

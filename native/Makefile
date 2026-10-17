@@ -2,7 +2,7 @@
 #
 #     make                 release build
 #     make debug           debug build, in its own tree so you can keep both
-#     make test            build, then run all 11 test suites
+#     make test            build, then run all 13 test suites
 #     make run             build, then launch the IDE
 #     make screenshot      render the window offscreen to a PNG (no display needed)
 #     make install         install to PREFIX (default /usr/local)
@@ -23,11 +23,13 @@
 #   * Qt6 include paths and -fPIC for Core, Gui and Widgets, discovered with
 #     find_package rather than hard-coded, so the tree builds on a machine where
 #     Qt lives somewhere else.
-#   * five libraries in dependency order (expr, scheme, canvas, debugger, ui),
-#     two of them optional depending on which Qt6 components exist.
+#   * eight libraries in dependency order (expr, scheme, lang, canvas, canvas_qt,
+#     debugger, bridge, ui), four of them optional depending on which Qt6
+#     components exist.
 #   * a compile definition generated from ../VERSION, and the re-configure that
 #     has to happen when that file changes.
-#   * eight test binaries registered with CTest, each with its own include path.
+#   * thirteen test binaries registered with CTest, each with its own include
+#     path.
 #
 # All of that lives in CMakeLists.txt and is what CI exercises. Duplicating it
 # here would create a second build system to keep in sync, and it would be the

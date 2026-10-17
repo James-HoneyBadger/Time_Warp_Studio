@@ -26,6 +26,7 @@
 namespace {
 
 using timewarp::debugger::DebugSnapshot;
+using timewarp::debugger::DebugVariable;
 using timewarp::debugger::DebuggerRunner;
 using timewarp::debugger::PauseCause;
 
@@ -144,8 +145,8 @@ void attach(DebuggerRunner& runner, Recorder& recorder) {
 
 [[nodiscard]] bool has_variable(const DebugSnapshot& snapshot,
                                 const QString& name, const QString& rendered) {
-    for (const QPair<QString, QString>& entry : snapshot.variables) {
-        if (entry.first == name && entry.second == rendered) {
+    for (const DebugVariable& entry : snapshot.variables) {
+        if (entry.name == name && entry.rendered == rendered) {
             return true;
         }
     }
@@ -155,8 +156,8 @@ void attach(DebuggerRunner& runner, Recorder& recorder) {
 /// Names only: some bindings are procedures, whose rendering is not the point.
 [[nodiscard]] bool has_variable_named(const DebugSnapshot& snapshot,
                                       const QString& name) {
-    for (const QPair<QString, QString>& entry : snapshot.variables) {
-        if (entry.first == name) {
+    for (const DebugVariable& entry : snapshot.variables) {
+        if (entry.name == name) {
             return true;
         }
     }

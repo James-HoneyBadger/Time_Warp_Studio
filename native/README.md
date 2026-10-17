@@ -7,6 +7,7 @@ Warp Studio interpreter:
 | --- | --- | --- |
 | `timewarp_expr` | `utils/expression_evaluator.py` | the expression lexer/evaluator shared by every language executor |
 | `timewarp_scheme` | `languages/scheme.py` | a tree-walking Scheme interpreter with **no native recursion** |
+| `timewarp_lang` | `languages/{focal,pilot,comal,chip8,logo}.py` | the shared interpreter loop and the executors ported so far (FOCAL, PILOT, COMAL, CHIP-8, Logo) |
 | `timewarp_canvas` | bridging `ui/output.py` and `ui/canvas.py` | a lock-free single-producer/single-consumer canvas command queue, with an optional Qt6 adapter |
 
 `timewarp_expr` came first: a self-contained, hot, allocation-sensitive unit with
@@ -88,7 +89,7 @@ native/
 ```bash
 # The short way: native/Makefile drives the CMake build below.
 make -C native                # release build
-make -C native test           # build, then all 11 suites
+make -C native test           # build, then all 13 suites
 make -C native test-debug     # unoptimised, with Q_ASSERT and hardening live
 make -C native asan           # under AddressSanitizer, in a third tree
 make -C native asan ASAN=undefined SAN_DIR=build-ubsan \
@@ -105,6 +106,7 @@ ctest --test-dir native/build --output-on-failure
 # Cross-check against the Python reference implementations
 python3 native/tools/differential_check.py native/build/expr_cli
 python3 native/tools/scheme_differential_check.py native/build/scheme_cli
+python3 native/tools/lang_differential_check.py
 
 # Every example program, in every language, through the bridge
 python3 native/tools/example_smoke.py
@@ -125,8 +127,8 @@ the defaults, the job count and the out-of-tree layout, and CMake owns the
 compilation. That split is deliberate. Compiling these sources directly would mean
 reimplementing AUTOMOC (a header that is moc'd *and* compiled gives duplicate
 symbols; one that is not fails at link time with a vtable error), Qt6 component
-discovery, the `-fPIC` and include paths, five libraries in dependency order, and
-twelve test registrations — and the copy would be the one that rots.
+discovery, the `-fPIC` and include paths, eight libraries in dependency order, and
+thirteen test registrations — and the copy would be the one that rots.
 
 Each build type gets its own tree (`build`, `build-debug`, `build-sanitised`)
 because changing `CMAKE_BUILD_TYPE` in place recompiles everything anyway, so
@@ -323,6 +325,38 @@ a `std::cout << "OK " << evaluate(...)` chain that emitted the prefix *before* a
 throwing evaluation (so failures printed `OK ERR …`), and a cache that stored an
 empty token vector when lexing threw, turning a syntax error into
 `Invalid expression` on the *second* attempt.
+
+## Native language engine (`timewarp_lang`)
+
+This is the C++ counterpart of `core/interpreter.py` plus one executor per
+language. The interpreter owns the program lines, variables, the output buffer,
+the run budget and the current line; an executor is a plain function
+`(Interpreter&, source, TurtleHost&) -> std::string`, exactly as the reference's
+executors are plain functions. `TurtleHost` is an abstract drawing surface, so the
+engine has no Qt dependency and a test can record what was drawn as text.
+
+Ported so far: **FOCAL**, **PILOT**, **COMAL** (line-by-line) and **CHIP-8**
+(whole-program, with the assembler in `chip8.cpp`). The FOCAL, PILOT and COMAL
+ports are also where the
+native expression evaluator became part of a Run: `Interpreter::evaluate_expression`
+uses `timewarp_expr`, so `C:` and `B:` are the arithmetic the expression library is
+gated against. `executor_for()` returns null for the rest, which is
+how `MainWindow` knows to keep using the bridge -- adding an executor is the
+whole change needed for the IDE to run that language in process.
+
+The port is checked against the reference, not against a description of it:
+
+```bash
+python3 native/tools/lang_differential_check.py   # 113 programs, 0 differences
+```
+
+That harness runs every command-table row and every example through both
+engines and compares output lines, every drawing call in order, and the final
+variables. Programs using randomness are reported and skipped: both sides seed
+from the OS, so agreement is not a property they can have.
+
+`tools/lang_cli.cpp` is the native half of that harness: one program in, and
+`OUT`/`DRAW`/`VAR` records out.
 
 ## Scheme evaluator (`timewarp_scheme`)
 
@@ -1068,12 +1102,13 @@ wrong name.
 ### The canvas, and what runs
 
 **All ten languages run.** Scheme goes through the C++ interpreter on a background
-thread; BASIC, PILOT, Logo, COMAL and REXX go through the **Python bridge**, which
-runs the existing Python implementations in a child process and streams what they
-draw back as canvas commands. Every one of the 48 examples in `Examples/` executes,
-and the 14 that draw produce drawing -- checked by `tools/example_smoke.py`.
+thread; FOCAL, PILOT, COMAL, CHIP-8 and Logo run in process through `timewarp_lang`;
+BASIC, REXX, APL and Smalltalk go through the **Python bridge**, which runs the
+existing Python implementations in a child process and streams what they draw back
+as canvas commands. Every one of the 48 examples in `Examples/` executes, and the 14
+that draw produce drawing -- checked by `tools/example_smoke.py`.
 
-The bridge exists because reimplementing nine languages is the work it postpones.
+The bridge exists because reimplementing four languages is the work it postpones.
 Python is the oracle while each language is ported, and a language stops being
 routed to it the day its C++ interpreter lands.
 
@@ -1163,9 +1198,12 @@ strokes a circle costs.
 
 ### Known gaps, stated plainly
 
-* The variables, telemetry HUD, debug, terminal and outline panels are still
-  `PlaceholderPanel`s naming the Python module they stand for. The layout is real;
-  their contents are not.
+* The terminal and outline panels are still `PlaceholderPanel`s naming the Python
+  module they stand for. The layout is real; their contents are not. The variables,
+  telemetry and debug pages used to be on this list and no longer are: they are
+  `VariablesPanel`, `TelemetryPanel` and `DebugPanel`, fed by the bridge's `done`
+  payload for the bridged languages and by `DebuggerRunner::snapshot()` for
+  Scheme.
 * The editor colours source per language and finds and replaces in it, but still
   has no minimap, find-in-files, outline or formatter. The Python editor is 2,254
   lines because of those extras; they are worth adding one at a time against a
@@ -1176,9 +1214,10 @@ strokes a circle costs.
 * `FunctionKeyBar` reproduces the normal F1-F10 layer and the deck selector. The
   Shift and Ctrl layers are omitted rather than invented, because their actions do
   not exist yet.
-* Debug, Continue and Trace are laid out and inert: they need the breakpoint and
-  stepping UI of the debug panel. Stop is wired, and stops a bridged program by
-  killing its process if it will not stop on its own.
+* Debug, Continue and Trace are laid out and inert: the debug *panel* works and drives
+  the Scheme runner, but these three toolbar actions are not connected to it yet. Stop
+  is wired, and stops a bridged program by killing its process if it will not stop on
+  its own.
 * A bridged program's input prompts appear as a dialog, which is the one modal
   dialog in the program -- and the one place a scripted run could block. Nothing in
   the tests or in CI reaches it.
@@ -1188,9 +1227,11 @@ strokes a circle costs.
 `docs/ROADMAP.md` is the live list. This is the part of it that belongs to the
 application rather than to the engines.
 
-1. Port the remaining languages, in dependency order: `string_evaluator.py`, then the
-   line dispatching in `core/interpreter.py`, then the smaller executors (PILOT →
-   COMAL → REXX), leaving BASIC last. Each port deletes one path through the bridge.
+1. Port the remaining languages. FOCAL and CHIP-8 are done; the shared loop and the
+   `TurtleHost` seam they established are what the rest build on. In dependency order:
+   `string_evaluator.py`, then the expression evaluator (`timewarp_expr`), then the
+   remaining line-by-line executors (PILOT → COMAL → REXX → APL → Logo), leaving BASIC
+   and Smalltalk last. Each port deletes one path through the bridge.
    `SpecialVariableHook` (expressions) and `Host` (Scheme) are the seams for
    engine-specific services — no further engine-specific import should appear in
    either library.
@@ -1198,13 +1239,15 @@ application rather than to the engines.
    `native/tools/differential_check.py` compares it against the Python reference on a
    fixed corpus — but nothing under `src/ui/` includes it yet, so expressions are still
    evaluated by the bridge.
-3. Finish the right column. `LessonPanel` is a real port; the variables, telemetry,
-   debug and terminal pages are still `PlaceholderPanel`s. Port them in dependency
-   order — the variables inspector and telemetry HUD driven by `DebuggerRunner`, then
-   the output panel, then the debug panel. Each swap replaces one `PlaceholderPanel`
-   construction, and the layout tests keep passing unchanged.
-4. Make Debug, Continue and Trace do something. They are laid out and inert: they need
-   the breakpoint and stepping UI, which is item 3's debug panel.
+3. Finish the right column. `LessonPanel`, `VariablesPanel`, `TelemetryPanel` and
+   `DebugPanel` are real ports; the terminal page is still a `PlaceholderPanel`. The two
+   inspection panels are fed by the bridge's `done` payload
+   (`time_warp/utils/inspection.py` builds both tables) and the debug panel drives
+   `DebuggerRunner` -- for Scheme only, because every other language has no pause
+   protocol. The outline dock is still a placeholder too.
+4. Make Debug, Continue and Trace do something. They are laid out and inert: the panel
+   they would drive now exists, so this is a matter of routing the three actions to the
+   same runner calls the panel already sends.
 5. Themes and the CRT effects, then screen modes, focus mode and a command palette.
    No theme is ported yet, so treat the styling as provisional.
 6. Consider a `CompiledExpression` handle (interned identifiers + owned RPN) and a

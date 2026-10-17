@@ -104,6 +104,8 @@ struct CallFrame {
 struct VariableEntry {
     std::string name;
     std::string rendered;
+    /// The value's type, as `type_name` reports it.
+    std::string kind;
 };
 
 // ---------------------------------------------------------------------------

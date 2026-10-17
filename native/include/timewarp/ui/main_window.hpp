@@ -44,6 +44,7 @@
 #include <memory>
 
 #include <QByteArray>
+#include <QElapsedTimer>
 #include <QMainWindow>
 #include <QPointer>
 #include <QString>
@@ -51,6 +52,7 @@
 
 #include "timewarp/bridge/python_worker.hpp"
 #include "timewarp/debugger/debugger_runner.hpp"
+#include "timewarp/lang/language.hpp"
 #include "timewarp/ui/language.hpp"
 
 class QCloseEvent;
@@ -78,13 +80,17 @@ namespace timewarp::ui {
 
 class CodeEditor;
 class CrtOverlay;
+class DebugPanel;
 class FindBar;
 class FunctionKeyBar;
 class ImmediateModePanel;
 class LessonPanel;
+class NativeRunner;
 class PlaceholderPanel;
 class ResizableTabWidget;
+class TelemetryPanel;
 class TurtleCanvas;
+class VariablesPanel;
 
 /// The application's top-level window.
 ///
@@ -134,6 +140,19 @@ public:
 
     /// The find and replace bar, so a test can drive it.
     [[nodiscard]] FindBar* findBar() const noexcept { return find_bar_; }
+
+    // -- the tooling panels -----------------------------------------------
+    //
+    // Exposed for the same reason the lesson panel is: a test drives them, and a
+    // screenshot shows them.
+
+    [[nodiscard]] VariablesPanel* variablesPanel() const noexcept {
+        return variables_panel_;
+    }
+    [[nodiscard]] TelemetryPanel* telemetryPanel() const noexcept {
+        return telemetry_panel_;
+    }
+    [[nodiscard]] DebugPanel* debugPanel() const noexcept { return debug_panel_; }
     /// Shows the find bar, with the replacement row when `withReplacement`.
     void showFindBar(bool withReplacement);
     /// Finds the next match for the bar's term. From the menu, so it does not
@@ -326,6 +345,25 @@ private:
     /// Rebuilds the recent submenu from the list, every time it is opened.
     void rebuildRecentMenu();
 
+    /// Connects the debug panel's buttons to the Scheme runner. Called once, at
+    /// construction; the panel's signals look the runner up when they fire,
+    /// because a runner exists only for the length of a run.
+    void connectDebugPanel();
+    /// The rows only the IDE can vouch for: wall clock, and how much ink actually
+    /// reached the canvas. Appended to whatever the engine reported.
+    [[nodiscard]] QList<timewarp::bridge::TelemetryRow> ideTelemetryRows() const;
+    /// Shows the Scheme runner's stack and variables in the variables and debug
+    /// panels. Harmless when nothing is paused: it shows the last known state.
+    void showRunnerSnapshot();
+    /// Empties three panels that would otherwise show the previous run's state as
+    /// if it were this one's.
+    void clearRunState();
+    /// Starts the wall clock the HUD reports. Called once per run, before the
+    /// engine is asked to move.
+    void startRunClock();
+    /// Stops it and records the elapsed time as the last run's.
+    void stopRunClock();
+
     /// `path` for an editor whose document has been saved, empty for a new one.
     [[nodiscard]] static QString pathOf(const CodeEditor* editor);
     /// The language shown for an editor: from its path, or the default when the
@@ -345,6 +383,17 @@ private:
     QTabWidget* output_sub_tabs_ = nullptr;
     ImmediateModePanel* immediate_mode_ = nullptr;
     FindBar* find_bar_ = nullptr;
+    VariablesPanel* variables_panel_ = nullptr;
+    TelemetryPanel* telemetry_panel_ = nullptr;
+    DebugPanel* debug_panel_ = nullptr;
+    /// The run in flight, for the HUD's wall-clock row. Invalid between runs.
+    QElapsedTimer run_clock_;
+    /// How long the last run took, in milliseconds; negative before the first.
+    qint64 last_run_ms_ = -1;
+    /// What the engine reported for the run in flight. Held rather than shown
+    /// because the wall clock is only known once the run has stopped, and the two
+    /// are one table.
+    QList<timewarp::bridge::TelemetryRow> engine_telemetry_;
     FunctionKeyBar* function_key_bar_ = nullptr;
     CrtOverlay* crt_overlay_ = nullptr;
     QDockWidget* outline_dock_ = nullptr;
@@ -401,7 +450,10 @@ private:
     /// destructor of a running `QThread` blocks: the window must be able to tell
     /// "gone" from "still running" without a dangling pointer.
     QPointer<timewarp::debugger::DebuggerRunner> runner_;
-    /// The child process that runs the five languages with no C++ interpreter.
+    /// The in-process engine for a ported language. One per run, like `runner_`,
+    /// because a finished run's variables are read from it before the next start.
+    QPointer<NativeRunner> native_runner_;
+    /// The child process that runs the languages with no C++ interpreter.
     /// Created lazily, because most sessions never run one and starting an
     /// interpreter on launch would cost every user for the sake of some.
     LessonPanel* lesson_panel_ = nullptr;
@@ -422,6 +474,8 @@ private:
     void stopEngines();
     /// Runs `editor` in the Python bridge, starting the worker if needed.
     void runInBridge(CodeEditor* editor);
+    /// Runs `editor` on the native engine for a language that has been ported.
+    void runNatively(CodeEditor* editor, timewarp::lang::Language language);
     /// Wires a freshly created bridge worker to this window.
     void adoptBridgeWorker();
     /// Tears down the current run and waits for its thread, then empties the

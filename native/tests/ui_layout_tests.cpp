@@ -34,10 +34,12 @@
 #include <QPushButton>
 #include <QSettings>
 #include <QSlider>
+#include <QSpinBox>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTabBar>
 #include <QTabWidget>
+#include <QTableWidget>
 #include <QTextCursor>
 #include <QTemporaryDir>
 #include <QToolBar>
@@ -59,9 +61,12 @@ namespace {
 using timewarp::ui::CrtOverlay;
 using timewarp::ui::FunctionKeyBar;
 using timewarp::ui::ImmediateModePanel;
+using timewarp::ui::DebugPanel;
 using timewarp::ui::LessonPanel;
 using timewarp::ui::MainWindow;
 using timewarp::ui::ResizableTabWidget;
+using timewarp::ui::TelemetryPanel;
+using timewarp::ui::VariablesPanel;
 
 void announce(const char* name) {
     std::printf("-- %s\n", name);
@@ -372,6 +377,193 @@ void test_lesson_panel_contract() {
 
     TW_CHECK(window->rightTabs()->widget(4) == panel);
     TW_CHECK_EQ(window->rightTabs()->tabText(4), QString::fromUtf8("\U0001F393 Lessons"));
+}
+
+void test_variables_panel_contract() {
+    announce("variables panel");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    VariablesPanel* panel = window->variablesPanel();
+    TW_CHECK(panel != nullptr);
+    if (panel == nullptr) {
+        return;
+    }
+    TW_CHECK_EQ(panel->objectName(), QStringLiteral("variablesPanel"));
+    TW_CHECK(window->rightTabs()->widget(1) == panel);
+
+    // The parts a user touches, by object name: the filter, the table and the
+    // sentence that explains an empty panel.
+    auto* filter = panel->findChild<QLineEdit*>(QStringLiteral("variablesFilter"));
+    auto* table = panel->findChild<QTableWidget*>(QStringLiteral("variablesTable"));
+    auto* status = panel->findChild<QLabel*>(QStringLiteral("variablesStatus"));
+    TW_CHECK(filter != nullptr);
+    TW_CHECK(table != nullptr);
+    TW_CHECK(status != nullptr);
+
+    // Before a run there is nothing to show, and the panel says so rather than
+    // presenting an empty table that reads as "this program has no variables".
+    TW_CHECK_EQ(panel->rowCount(), 0);
+    TW_CHECK_EQ(panel->visibleRowCount(), 0);
+    TW_CHECK(status != nullptr && !status->text().isEmpty());
+
+    const QList<timewarp::bridge::VariableRow> rows{
+        {QStringLiteral("name"), QStringLiteral("text"), QStringLiteral("ada")},
+        {QStringLiteral("repcount"), QStringLiteral("number"), QStringLiteral("4")},
+        {QStringLiteral("total"), QStringLiteral("number"), QStringLiteral("12.5")}};
+    panel->setRows(rows);
+    TW_CHECK_EQ(panel->rowCount(), 3);
+    TW_CHECK_EQ(panel->visibleRowCount(), 3);
+    TW_CHECK(table != nullptr && table->rowCount() == 3);
+    if (table != nullptr) {
+        TW_CHECK_EQ(table->item(0, 0)->text(), QStringLiteral("name"));
+        TW_CHECK_EQ(table->item(0, 2)->text(), QStringLiteral("ada"));
+    }
+
+    // A filter narrows what is *shown* and keeps the set, so clearing it puts the
+    // rows back. Hiding rows for good would make the filter destructive.
+    panel->setFilter(QStringLiteral("COUNT"));
+    TW_CHECK_EQ(panel->visibleRowCount(), 1);
+    TW_CHECK_EQ(panel->rowCount(), 3);
+    panel->setFilter(QString{});
+    TW_CHECK_EQ(panel->visibleRowCount(), 3);
+
+    // A filter that survives a new set of names would show an empty table with no
+    // explanation, so setting rows re-applies it rather than keeping a stale one.
+    panel->setFilter(QStringLiteral("nothing matches this"));
+    panel->setRows(rows);
+    TW_CHECK_EQ(panel->visibleRowCount(), 0);
+    TW_CHECK_EQ(panel->rowCount(), 3);
+    TW_CHECK(status != nullptr && !status->text().isEmpty());
+}
+
+void test_telemetry_panel_contract() {
+    announce("telemetry panel");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    TelemetryPanel* panel = window->telemetryPanel();
+    TW_CHECK(panel != nullptr);
+    if (panel == nullptr) {
+        return;
+    }
+    TW_CHECK_EQ(panel->objectName(), QStringLiteral("telemetryPanel"));
+    TW_CHECK(window->rightTabs()->widget(2) == panel);
+    TW_CHECK(panel->findChild<QTableWidget*>(QStringLiteral("telemetryTable")) != nullptr);
+
+    // A HUD over a run that has not happened has no counters, and no invented
+    // ones either.
+    TW_CHECK_EQ(panel->rowCount(), 0);
+    TW_CHECK(panel->valueOf(QStringLiteral("Steps")).isEmpty());
+
+    panel->setRows({{QStringLiteral("Steps"), QStringLiteral("1,180 of 250,000")},
+                    {QStringLiteral("Canvas ink"), QStringLiteral("4 segments, 0 shapes")}});
+    TW_CHECK_EQ(panel->rowCount(), 2);
+    TW_CHECK_EQ(panel->valueOf(QStringLiteral("Steps")),
+                QStringLiteral("1,180 of 250,000"));
+    TW_CHECK_EQ(panel->valueOf(QStringLiteral("Canvas ink")),
+                QStringLiteral("4 segments, 0 shapes"));
+    TW_CHECK(panel->valueOf(QStringLiteral("no such label")).isEmpty());
+}
+
+void test_debug_panel_is_scheme_only() {
+    announce("debug panel");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    DebugPanel* panel = window->debugPanel();
+    TW_CHECK(panel != nullptr);
+    if (panel == nullptr) {
+        return;
+    }
+    TW_CHECK_EQ(panel->objectName(), QStringLiteral("debugPanel"));
+    TW_CHECK(window->rightTabs()->widget(3) == panel);
+
+    // The controls a debugger needs, by object name.
+    for (const char* name : {"debugContinue", "debugPause", "debugStepInto",
+                             "debugStepOver", "debugStepOut", "debugStop",
+                             "debugAddBreakpoint", "debugRemoveBreakpoint"}) {
+        TW_CHECK(panel->findChild<QPushButton*>(QString::fromLatin1(name)) != nullptr);
+    }
+    for (const char* name : {"debugLine", "debugBreakpoints", "debugStack",
+                             "debugVariables", "debugStatus", "debugReason"}) {
+        TW_CHECK(panel->findChild<QWidget*>(QString::fromLatin1(name)) != nullptr);
+    }
+
+    // Breakpoints are a set of lines, and the panel reports the whole set rather
+    // than a delta, so nothing downstream has to keep its own copy in step.
+    auto* line = panel->findChild<QSpinBox*>(QStringLiteral("debugLine"));
+    TW_CHECK(line != nullptr);
+    if (line != nullptr) {
+        panel->setLineNumber(12);
+        TW_CHECK_EQ(panel->lineNumber(), 12);
+        TW_CHECK_EQ(line->value(), 12);
+    }
+
+    QList<int> announced;
+    QObject::connect(panel, &DebugPanel::breakpointsChanged,
+                     [&announced](const QList<int>& lines) { announced = lines; });
+    auto* add = panel->findChild<QPushButton*>(QStringLiteral("debugAddBreakpoint"));
+    auto* remove = panel->findChild<QPushButton*>(QStringLiteral("debugRemoveBreakpoint"));
+    TW_CHECK(add != nullptr && remove != nullptr);
+
+    // Whether it can step is a property of the language, and the window turns it
+    // on for Scheme and off -- with a reason -- for everything else. The controls
+    // are disabled with it, so a breakpoint cannot be set for a language that
+    // will never stop at one.
+    auto* combo = window->findChild<QComboBox*>(QStringLiteral("languageSelector"));
+    TW_CHECK(combo != nullptr);
+    if (combo != nullptr) {
+        const int scheme = combo->findData(QStringLiteral("scheme"));
+        const int basic = combo->findData(QStringLiteral("basic"));
+        TW_CHECK(scheme >= 0);
+        TW_CHECK(basic >= 0);
+        if (scheme >= 0 && basic >= 0) {
+            combo->setCurrentIndex(basic);
+            TW_CHECK(!panel->isAvailable());
+            TW_CHECK(add != nullptr && !add->isEnabled());
+            combo->setCurrentIndex(scheme);
+            TW_CHECK(panel->isAvailable());
+            TW_CHECK(add != nullptr && add->isEnabled());
+        }
+    }
+
+    if (add != nullptr && remove != nullptr) {
+        panel->setLineNumber(7);
+        add->click();
+        TW_CHECK_EQ(announced, QList<int>{7});
+        TW_CHECK_EQ(panel->breakpoints(), QList<int>{7});
+        // Adding the same line twice is a set, not two entries.
+        add->click();
+        TW_CHECK_EQ(panel->breakpoints().size(), 1);
+        remove->click();
+        TW_CHECK(panel->breakpoints().isEmpty());
+        TW_CHECK(announced.isEmpty());
+    }
+
+    // A paused run shows where, and an idle one does not claim a line.
+    auto* status = panel->findChild<QLabel*>(QStringLiteral("debugStatus"));
+    TW_CHECK(status != nullptr);
+    panel->setPaused(true, 9, QStringLiteral("area"));
+    TW_CHECK(status != nullptr && status->text().contains(QStringLiteral("9")));
+    TW_CHECK(status != nullptr && status->text().contains(QStringLiteral("area")));
+    panel->setPaused(false, 0, QString{});
+    // "not paused" rather than "running": the panel cannot tell a run in
+    // progress from one that has finished, so it says only what it knows.
+    TW_CHECK(status != nullptr && !status->text().contains(QStringLiteral("area")));
+    TW_CHECK(status != nullptr && status->text() != QStringLiteral("running"));
+
+    // The stack and the frame's variables.
+    panel->setStack({DebugPanel::Frame{QStringLiteral("<program>"), 1},
+                     DebugPanel::Frame{QStringLiteral("area"), 9}});
+    auto* stack = panel->findChild<QListWidget*>(QStringLiteral("debugStack"));
+    TW_CHECK(stack != nullptr && stack->count() == 2);
+    if (stack != nullptr && stack->count() == 2) {
+        TW_CHECK(stack->item(0)->text().contains(QStringLiteral("<program>")));
+        TW_CHECK(stack->item(1)->text().contains(QStringLiteral("area")));
+    }
+    panel->setVariables(
+        {{QStringLiteral("w"), QStringLiteral("number"), QStringLiteral("3")}});
+    auto* variables = panel->findChild<QTableWidget*>(QStringLiteral("debugVariables"));
+    TW_CHECK(variables != nullptr && variables->rowCount() == 1);
+    if (variables != nullptr && variables->rowCount() == 1) {
+        TW_CHECK_EQ(variables->item(0, 0)->text(), QStringLiteral("w"));
+        TW_CHECK_EQ(variables->item(0, 1)->text(), QStringLiteral("3"));
+    }
 }
 
 void test_right_column_tabs_and_order() {
@@ -1134,6 +1326,9 @@ int main(int argc, char** argv) {
     test_editor_pane_splitter_holds_two_tab_groups();
     test_right_column_tabs_and_order();
     test_lesson_panel_contract();
+    test_variables_panel_contract();
+    test_telemetry_panel_contract();
+    test_debug_panel_is_scheme_only();
     test_output_and_graphics_share_a_persistent_split();
     test_output_sub_tabs();
     test_function_key_bar_is_fixed_height();

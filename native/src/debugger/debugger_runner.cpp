@@ -75,6 +75,8 @@ std::string_view to_string(PauseCause cause) noexcept {
             return "pause";
         case PauseCause::Error:
             return "error";
+        case PauseCause::Finished:
+            return "finished";
     }
     return "unknown";
 }
@@ -121,6 +123,9 @@ DebuggerRunner::~DebuggerRunner() {
 void DebuggerRunner::load_program(const QString& source, const QString& name) {
     source_ = source;
     name_ = name;
+    const std::lock_guard<std::mutex> lock{snapshot_mutex_};
+    captured_ = false;
+    snapshot_ = DebugSnapshot{};
 }
 
 // ---------------------------------------------------------------------------
@@ -263,6 +268,7 @@ void DebuggerRunner::capture_snapshot(const SuspendState& state, PauseCause caus
         }
         for (const VariableEntry& entry : machine_->visible_variables()) {
             snapshot.variables.push_back({QString::fromStdString(entry.name),
+                                          QString::fromStdString(entry.kind),
                                           QString::fromStdString(entry.rendered)});
         }
     }
@@ -270,6 +276,7 @@ void DebuggerRunner::capture_snapshot(const SuspendState& state, PauseCause caus
     {
         const std::lock_guard<std::mutex> lock{snapshot_mutex_};
         snapshot_ = std::move(snapshot);
+        captured_ = true;
     }
 }
 
@@ -463,6 +470,22 @@ void DebuggerRunner::run() {
     }
 
     stream_output();
+    // A run that never paused still leaves bindings behind, and the variables
+    // panel shows what the program ended with. Taken here because the machine is
+    // released on the next line: afterwards there is nothing left to ask. A pause
+    // or an error already recorded a more precise state, so this defers to it.
+    if (machine_ != nullptr) {
+        bool already = false;
+        {
+            const std::lock_guard<std::mutex> lock{snapshot_mutex_};
+            already = captured_;
+        }
+        if (!already) {
+            capture_snapshot(machine.suspend_state(),
+                             error.isEmpty() ? PauseCause::Finished : PauseCause::Error,
+                             error);
+        }
+    }
     machine_ = nullptr;
     machine.set_suspension_controller(nullptr);
 

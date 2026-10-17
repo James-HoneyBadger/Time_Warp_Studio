@@ -791,6 +791,27 @@ void PythonWorker::handleMessage(const QByteArray& line) {
         for (const QJsonValue& value : message.value(QStringLiteral("unsupported")).toArray()) {
             unsupported << value.toString();
         }
+
+        // The tables first, then "finished": a slot on `finished` that refreshed a
+        // panel would otherwise read the *previous* run's table, because the run
+        // was over before its state arrived.
+        QList<VariableRow> variables;
+        for (const QJsonValue& value : message.value(QStringLiteral("variables")).toArray()) {
+            const QJsonObject row = value.toObject();
+            variables.append(VariableRow{row.value(QStringLiteral("name")).toString(),
+                                         row.value(QStringLiteral("type")).toString(),
+                                         row.value(QStringLiteral("value")).toString()});
+        }
+        QList<TelemetryRow> telemetry;
+        for (const QJsonValue& value :
+             message.value(QStringLiteral("telemetry_rows")).toArray()) {
+            const QJsonObject row = value.toObject();
+            telemetry.append(TelemetryRow{row.value(QStringLiteral("label")).toString(),
+                                          row.value(QStringLiteral("value")).toString()});
+        }
+        emit variablesReported(variables);
+        emit telemetryReported(telemetry);
+
         emit finished(message.value(QStringLiteral("ok")).toBool(true),
                       message.value(QStringLiteral("error")).toString(), unsupported);
         return;
