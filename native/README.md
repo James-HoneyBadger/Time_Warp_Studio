@@ -1019,7 +1019,9 @@ page next to a 60x40 page must still report a 100x100 minimum.
   geometry rather than "something happened": 100 north then 100 east has to end
   at `(100, 100)` with a heading of 90. It also proves Stop interrupts a
   runaway loop and that the window still closes afterwards.
-* `time_warp_ide` renders the window to a PNG with `--screenshot <path>`, so the
+* `time_warp_ide` exports the *drawing* with `--export <path>` — the same call
+  File > Export Drawing makes, so a script and a teacher get the same picture — and
+  renders the whole window to a PNG with `--screenshot <path>`, so the
   result can be looked at without a display -- add `--run` to execute the file
   first. That is how the findings below were caught; a structural test would have
   passed either way, and the status bar painting a message on top of the document

@@ -141,6 +141,10 @@ public:
     void findNextMatch(bool backwards);
     /// Asks for a line number and goes there.
     void goToLinePrompt();
+    /// Asks for a path and writes the drawing to it.
+    void exportDrawingDialog();
+    /// Puts the drawing on the clipboard as an image.
+    void copyDrawingToClipboard();
 
     [[nodiscard]] ImmediateModePanel* immediateMode() const noexcept {
         return immediate_mode_;

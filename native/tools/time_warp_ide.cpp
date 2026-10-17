@@ -29,6 +29,7 @@
 
 #include "timewarp/ui/app.hpp"
 #include "timewarp/ui/main_window.hpp"
+#include "timewarp/ui/turtle_canvas.hpp"
 
 namespace {
 
@@ -97,6 +98,13 @@ int main(int argc, char* argv[]) {
         QStringLiteral("path")};
     parser.addOption(screenshotOption);
 
+    const QCommandLineOption exportOption{
+        QStringLiteral("export"),
+        QStringLiteral("Write the drawing to <path> (.png, .jpg, .bmp), then exit. "
+                       "Most useful with --run."),
+        QStringLiteral("path")};
+    parser.addOption(exportOption);
+
     const QCommandLineOption sizeOption{
         QStringLiteral("size"),
         QStringLiteral("Screenshot size, as WxH. Default %1x%2.")
@@ -135,6 +143,7 @@ int main(int argc, char* argv[]) {
     }
 
     const QString screenshotPath = parser.value(screenshotOption);
+    const QString exportPath = parser.value(exportOption);
     QSize screenshotSize{kDefaultScreenshotWidth, kDefaultScreenshotHeight};
     if (parser.isSet(sizeOption) && !parseSize(parser.value(sizeOption), &screenshotSize)) {
         std::fprintf(stderr, "time_warp_ide: --size expects WxH, got \"%s\"\n",
@@ -168,7 +177,7 @@ int main(int argc, char* argv[]) {
     }
 
     const QStringList arguments = parser.positionalArguments();
-    if (arguments.isEmpty() && screenshotPath.isEmpty()) {
+    if (arguments.isEmpty() && screenshotPath.isEmpty() && exportPath.isEmpty()) {
         // Only when nothing was named on the command line: a file argument is a
         // request for that file, and a screenshot has to be reproducible from the
         // command line rather than from somebody's last session.
@@ -185,7 +194,7 @@ int main(int argc, char* argv[]) {
         window.runCurrentDocument();
     }
 
-    if (!screenshotPath.isEmpty()) {
+    if (!screenshotPath.isEmpty() || !exportPath.isEmpty()) {
         // After the event loop has drawn at least once, otherwise the grab catches
         // an unlaid-out window. A longer delay when a program is running, because
         // the drawing arrives from another thread: grabbing at 0ms would capture
@@ -202,16 +211,40 @@ int main(int argc, char* argv[]) {
         if (lessonsPanel) {
             delay = std::max(delay, 6000);
         }
-        QTimer::singleShot(delay, &application, [&window, screenshotPath] {
-            const QPixmap shot = window.grab();
-            if (!shot.save(screenshotPath)) {
-                std::fprintf(stderr, "time_warp_ide: could not write %s\n",
-                             qPrintable(screenshotPath));
-                QCoreApplication::exit(3);
-                return;
+        QTimer::singleShot(delay, &application, [&window, screenshotPath, exportPath] {
+            if (!screenshotPath.isEmpty()) {
+                const QPixmap shot = window.grab();
+                if (!shot.save(screenshotPath)) {
+                    std::fprintf(stderr, "time_warp_ide: could not write %s\n",
+                                 qPrintable(screenshotPath));
+                    QCoreApplication::exit(3);
+                    return;
+                }
+                std::fprintf(stderr, "%s: %dx%d\n", qPrintable(screenshotPath), shot.width(),
+                             shot.height());
             }
-            std::fprintf(stderr, "%s: %dx%d\n", qPrintable(screenshotPath), shot.width(),
-                         shot.height());
+            if (!exportPath.isEmpty()) {
+                // The same call the File menu makes, so what a teacher renders from
+                // a script is what a teacher would have saved by hand.
+                QString error;
+                timewarp::ui::TurtleCanvas* canvas = window.turtleCanvas();
+                if (canvas == nullptr || canvas->strokeCount() == 0) {
+                    std::fprintf(stderr,
+                                 "time_warp_ide: nothing was drawn, so there is nothing "
+                                 "to export to %s\n",
+                                 qPrintable(exportPath));
+                    QCoreApplication::exit(4);
+                    return;
+                }
+                if (!canvas->exportDrawing(exportPath, &error)) {
+                    std::fprintf(stderr, "time_warp_ide: could not write %s: %s\n",
+                                 qPrintable(exportPath), qPrintable(error));
+                    QCoreApplication::exit(3);
+                    return;
+                }
+                std::fprintf(stderr, "%s: %d strokes\n", qPrintable(exportPath),
+                             canvas->strokeCount());
+            }
             QCoreApplication::quit();
         });
     }

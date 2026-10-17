@@ -27,6 +27,7 @@
 #include <cstdint>
 
 #include <QColor>
+#include <QImage>
 #include <QLineF>
 #include <QPointF>
 #include <QRectF>
@@ -141,6 +142,22 @@ public:
     /// appear to draw nothing at all.
     [[nodiscard]] QColor background() const noexcept { return background_; }
 
+    // -- export -----------------------------------------------------------
+    //
+    // The drawing by itself: no grid, no turtle marker, because those are chrome
+    // rather than ink. Both of these go through the same `paintInk` the window
+    // paints with, so an exported picture cannot drift from what is on screen.
+
+    /// The drawing at `factor` times the on-screen size, on the canvas
+    /// background. Two by default: a picture worth saving is worth the pixels.
+    [[nodiscard]] QImage renderedDrawing(double factor = 2.0) const;
+
+    /// Writes `renderedDrawing(factor)` to `path`, the format taken from the
+    /// extension. Returns false and fills `error` when the format is unknown or
+    /// the file cannot be written.
+    bool exportDrawing(const QString& path, QString* error = nullptr,
+                       double factor = 2.0) const;
+
     // -- diagnostics ------------------------------------------------------
 
     /// Commands applied since the last `reset()`.
@@ -216,7 +233,7 @@ private:
 
     // -- painting ---------------------------------------------------------
     void paintGrid(QPainter& painter);
-    void paintInk(QPainter& painter);
+    void paintInk(QPainter& painter) const;
     void paintTurtle(QPainter& painter);
 
     // -- state ------------------------------------------------------------

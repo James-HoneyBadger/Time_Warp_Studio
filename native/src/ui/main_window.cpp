@@ -5,6 +5,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QCloseEvent>
+#include <QClipboard>
 #include <QComboBox>
 #include <QDir>
 #include <QDockWidget>
@@ -454,6 +455,9 @@ void MainWindow::buildMenuBar() {
     add(file, tr("&Save"), QKeySequence::Save, [this] { saveCurrentFile(); });
     add(file, tr("Save &As..."), QKeySequence::SaveAs, [this] { saveCurrentFileAs(); });
     file->addSeparator();
+    add(file, tr("&Export Drawing..."), QKeySequence{Qt::CTRL | Qt::Key_E},
+        [this] { exportDrawingDialog(); });
+    file->addSeparator();
     add(file, tr("&Close Tab"), QKeySequence::Close, [this] { closeCurrentTab(); });
     // Through close() rather than qApp->quit(), so a modified document still gets
     // its prompt: closeEvent is the one place that asks.
@@ -480,6 +484,11 @@ void MainWindow::buildMenuBar() {
     edit->addSeparator();
     add(edit, tr("Select &All"), QKeySequence::SelectAll,
         [this] { if (QPlainTextEdit* target = editTarget()) { target->selectAll(); } });
+    edit->addSeparator();
+    // The drawing is not text, so it has its own copy rather than borrowing
+    // Ctrl+C from the editor -- which is why it is Ctrl+Shift+C.
+    add(edit, tr("&Copy Drawing"), QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_C},
+        [this] { copyDrawingToClipboard(); });
     edit->addSeparator();
     add(edit, tr("&Find..."), QKeySequence::Find, [this] { showFindBar(false); });
     add(edit, tr("Find and &Replace..."), QKeySequence::Replace,
@@ -607,6 +616,40 @@ void MainWindow::goToLinePrompt() {
         // rather than a refusal.
         editor->goToLine(line);
     }
+}
+
+void MainWindow::exportDrawingDialog() {
+    if (turtle_canvas_ == nullptr || turtle_canvas_->strokeCount() == 0) {
+        // Nothing drawn yet. Said rather than done silently: a save dialog that
+        // produces an empty picture is worse than being told there is nothing.
+        setExecutionState(tr("ready"),
+                          tr("Nothing to export yet \u2014 run a program that draws"));
+        return;
+    }
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Export drawing"), QString{},
+        tr("PNG image (*.png);;JPEG image (*.jpg *.jpeg);;Windows bitmap (*.bmp)"));
+    if (path.isEmpty()) {
+        return;
+    }
+    QString error;
+    if (!turtle_canvas_->exportDrawing(path, &error)) {
+        QMessageBox::warning(this, tr("Export failed"),
+                             tr("Could not write %1.\n\n%2")
+                                 .arg(QDir::toNativeSeparators(path), error));
+        return;
+    }
+    setExecutionState(tr("ready"), tr("Exported %1").arg(QFileInfo{path}.fileName()));
+}
+
+void MainWindow::copyDrawingToClipboard() {
+    if (turtle_canvas_ == nullptr || turtle_canvas_->strokeCount() == 0) {
+        setExecutionState(tr("ready"),
+                          tr("Nothing to copy yet \u2014 run a program that draws"));
+        return;
+    }
+    QGuiApplication::clipboard()->setImage(turtle_canvas_->renderedDrawing());
+    setExecutionState(tr("ready"), tr("Copied the drawing"));
 }
 
 QPlainTextEdit* MainWindow::editTarget() const {

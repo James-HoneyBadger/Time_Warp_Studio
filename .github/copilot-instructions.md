@@ -68,6 +68,7 @@ cmake --build native/build -j
 ./native/build/time_warp_ide                 # empty workspace
 ./native/build/time_warp_ide Examples/logo/mandala.logo
 ./native/build/time_warp_ide --run Examples/logo/mandala.logo
+./native/build/time_warp_ide --run Examples/logo/mandala.logo --export mandala.png
 ./native/build/time_warp_ide --help          # all options
 
 # Or through the Makefile

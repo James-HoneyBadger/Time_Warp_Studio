@@ -256,8 +256,17 @@ provisional until this lands.
 function-key bar with its Shift/Ctrl layers, screen modes, focus mode, and a
 command palette.
 
-**Turtle showpiece** — animation with a speed control, export to PNG/SVG/PDF and
-copy to clipboard, a turtle-state inspector and a drawing-command log.
+**Turtle showpiece** — exporting the drawing and copying it to the clipboard are
+built: File > Export Drawing (or **Ctrl+E**), Edit > Copy Drawing, and
+`time_warp_ide --run --export drawing.png` for a script. What is exported is the
+*drawing* — the same `paintInk` the window paints with, without the grid or the
+turtle marker, twice the on-screen size — so a saved picture is a picture rather than
+a screenshot.
+
+Still missing here: animation with a speed control (the toolbar slider sets the
+bridge's speed, nothing animates the display list), **SVG and PDF** export, which need
+the QtSvg and QtPrintSupport components the build does not currently ask for, a
+turtle-state inspector and a drawing-command log.
 
 ---
 

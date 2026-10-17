@@ -29,8 +29,11 @@
 
 #include <QApplication>
 #include <QCoreApplication>
+#include <QFile>
+#include <QImage>
 #include <QPointF>
 #include <QSettings>
+#include <QTemporaryDir>
 #include <QWidget>
 
 #include "check.hpp"
@@ -392,10 +395,72 @@ void test_content_bounds_include_every_drawn_axis() {
     TW_CHECK(nearly(both.height(), 100.0));
 }
 
+// ---------------------------------------------------------------------------
+// Export
+// ---------------------------------------------------------------------------
+
+void test_the_drawing_can_be_exported() {
+    announce("export a drawing");
+    TurtleCanvas canvas;
+    canvas.resize(200, 200);
+    push_forward(canvas, 60.0);
+    push_right(canvas, 90.0);
+    push_forward(canvas, 60.0);
+    // The projection is derived from the content, and a widget that has never been
+    // shown fits itself when a program finishes -- which is the state an export
+    // happens in. Without this the scale is whatever an unlaid-out canvas has.
+    canvas.fitToContent();
+
+    const QImage image = canvas.renderedDrawing(1.0);
+    TW_CHECK_EQ(image.size(), QSize(200, 200));
+    // The grid is chrome and not ink: a corner of the picture is background, so an
+    // exported drawing is a drawing rather than a screenshot of the window.
+    TW_CHECK_EQ(image.pixelColor(0, 0), canvas.background());
+
+    int ink = 0;
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            if (image.pixelColor(x, y) != canvas.background()) {
+                ++ink;
+            }
+        }
+    }
+    TW_CHECK(ink > 100);
+
+    // Twice the on-screen size by default, and the drawing scales with it.
+    TW_CHECK_EQ(canvas.renderedDrawing().size(), QSize(400, 400));
+
+    const QTemporaryDir dir;
+    TW_CHECK(dir.isValid());
+    const QString path = dir.filePath(QStringLiteral("drawing.png"));
+    TW_CHECK(canvas.exportDrawing(path, nullptr, 1.0));
+    TW_CHECK(QFile::exists(path));
+    const QImage reloaded{path};
+    TW_CHECK_EQ(reloaded.size(), QSize(200, 200));
+
+    // The file holds the same drawing rather than a blank of the right size. A
+    // count of inked pixels says that without guessing where a one-pixel line
+    // landed, which is the kind of assertion that fails on a different Qt.
+    int reloaded_ink = 0;
+    for (int y = 0; y < reloaded.height(); ++y) {
+        for (int x = 0; x < reloaded.width(); ++x) {
+            if (reloaded.pixelColor(x, y) != canvas.background()) {
+                ++reloaded_ink;
+            }
+        }
+    }
+    TW_CHECK_EQ(reloaded_ink, ink);
+
+    // An extension nothing recognises is a failure the caller hears about rather
+    // than a file written in some default format.
+    QString error;
+    TW_CHECK(!canvas.exportDrawing(dir.filePath(QStringLiteral("drawing.what")), &error));
+    TW_CHECK(!error.isEmpty());
+}
+
 }  // namespace
 
-int main(int argc, char** argv) {
-    // Set before QApplication exists, or Qt tries to open a real display.
+int main(int argc, char** argv) {    // Set before QApplication exists, or Qt tries to open a real display.
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app{argc, argv};
     QCoreApplication::setOrganizationName(QStringLiteral("TimeWarpTests"));
@@ -415,6 +480,7 @@ int main(int argc, char** argv) {
     test_unhandled_commands_are_counted_rather_than_lost();
     test_zoom_is_clamped_and_fit_recentres();
     test_content_bounds_include_every_drawn_axis();
+    test_the_drawing_can_be_exported();
 
     return tw::test::summary("turtle_canvas");
 }

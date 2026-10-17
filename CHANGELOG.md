@@ -125,6 +125,22 @@ Four more languages, and the defects that examining their commands turned up.
 - **`saveLayout` and `saveSession` are separate** — `--reset-layout` puts the window
   back to its defaults without forgetting what was being edited.
 
+### Save the drawing
+
+- **File > Export Drawing** (Ctrl+E) writes PNG, JPEG or BMP; **Edit > Copy Drawing**
+  (Ctrl+Shift+C) puts it on the clipboard; and `time_warp_ide --run program.logo
+  --export drawing.png` does the same from a script, which is what a teacher rendering
+  a class's work needs and what the tests use.
+- **The export is the drawing, not a screenshot.** It goes through the same `paintInk`
+  the window paints with, so the picture cannot drift from what is on screen, and it
+  leaves out the grid and the turtle marker because those are chrome. It renders at
+  twice the on-screen size, because a picture worth saving is worth the pixels.
+- **SVG and PDF are not in this release.** They need the QtSvg and QtPrintSupport
+  components, which the build does not ask for; PNG/JPEG/BMP need nothing that is not
+  already linked.
+- Exporting an empty canvas says so in the status bar rather than writing a blank
+  picture.
+
 ---
 
 ## [15.0.0] - 2026-10-16

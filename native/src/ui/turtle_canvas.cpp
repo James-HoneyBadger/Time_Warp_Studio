@@ -9,6 +9,8 @@
 
 #include <QFont>
 #include <QMouseEvent>
+#include <QImage>
+#include <QImageWriter>
 #include <QPainter>
 #include <QPainterPath>
 #include <QPaintEvent>
@@ -548,6 +550,39 @@ void TurtleCanvas::paintEvent(QPaintEvent* /*event*/) {
     paintTurtle(painter);
 }
 
+QImage TurtleCanvas::renderedDrawing(double factor) const {
+    const double safe = factor > 0.0 ? factor : 1.0;
+    const QSize target{std::max(1, qRound(static_cast<double>(width()) * safe)),
+                       std::max(1, qRound(static_cast<double>(height()) * safe))};
+    QImage image{target, QImage::Format_ARGB32_Premultiplied};
+    image.fill(background_);
+
+    QPainter painter{&image};
+    // Antialiasing off for the ink, the way `paintEvent` has it. The scale goes
+    // on the painter rather than into a projection: `paintInk` maps to widget
+    // coordinates, so scaling here scales the pen widths with it and a 4-unit
+    // line stays 4 units wide in the exported picture.
+    painter.setRenderHint(QPainter::Antialiasing, false);
+    painter.scale(safe, safe);
+    paintInk(painter);
+    return image;
+}
+
+bool TurtleCanvas::exportDrawing(const QString& path, QString* error,
+                                 double factor) const {
+    // `QImageWriter` takes the format from the suffix, which is what makes
+    // `drawing.png` and `drawing.jpg` do the obvious thing. An unknown suffix is
+    // an error rather than a guess at PNG.
+    QImageWriter writer{path};
+    if (!writer.write(renderedDrawing(factor))) {
+        if (error != nullptr) {
+            *error = writer.errorString();
+        }
+        return false;
+    }
+    return true;
+}
+
 void TurtleCanvas::paintGrid(QPainter& painter) {
     const double s = scale();
     // The coarsest step that still leaves the lines readable, so a zoomed-out
@@ -599,7 +634,7 @@ void TurtleCanvas::paintGrid(QPainter& painter) {
     }
 }
 
-void TurtleCanvas::paintInk(QPainter& painter) {
+void TurtleCanvas::paintInk(QPainter& painter) const {
     // The pen is set on a style change rather than per segment. A turtle program
     // emits long runs of one colour and width, and that grouping is what keeps a
     // drawing of a hundred thousand segments repainting instantly.
