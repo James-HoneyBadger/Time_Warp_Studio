@@ -412,7 +412,7 @@ def main() -> int:
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument(
         "--language",
-        choices=["focal", "chip8", "pilot", "comal", "logo", "apl"],
+        choices=["focal", "chip8", "pilot", "comal", "logo", "apl", "rexx"],
         action="append",
         help="limit to one language (repeatable)",
     )
@@ -432,8 +432,17 @@ def main() -> int:
         "comal": Language.COMAL,
         "logo": Language.LOGO,
         "apl": Language.APL,
+        "rexx": Language.REXX,
     }
-    chosen = args.language or ["focal", "chip8", "pilot", "comal", "logo", "apl"]
+    chosen = args.language or [
+        "focal",
+        "chip8",
+        "pilot",
+        "comal",
+        "logo",
+        "apl",
+        "rexx",
+    ]
 
     agree = 0
     skipped: list[str] = []

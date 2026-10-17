@@ -20,6 +20,12 @@ Four more languages, and the defects that examining their commands turned up.
   structural functions; `∇` definitions; and the turtle words with `TX`, `TY` and
   `THETA`. The same 46 command rows and example run through both engines with **0
   differences**, and eight cases join `lang_tests`. APL is no longer bridged.
+- **REXX runs in C++.** `native/src/lang/rexx.cpp` is the port: typeless string
+  values, abuttal and `||` concatenation, the full operator set, `PARSE` and
+  `PULL`, `IF` and the `DO` forms (count, `TO`, `OVER`, `WHILE`, `UNTIL`,
+  `FOREVER`), `SELECT`, labels with `CALL`/`RETURN`, the built-in functions and
+  the turtle words. 35 programs run through both engines with **0 differences**,
+  and seven cases join `lang_tests`. REXX is no longer bridged.
 
 ### Fixed
 

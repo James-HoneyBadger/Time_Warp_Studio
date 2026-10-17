@@ -38,7 +38,7 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Documents** — tabs, per-file language detection, unsaved-change prompts, new/open/save/save-as, a recent-files menu, and the files from the last session reopened at launch
 - **Run controls** — Run (F9) and Stop, with a status bar showing language, cursor position and execution state
 - **Inspection** — a 🔍 **Variables** panel listing every binding with its type and value, filtered by name, and a ⚡ **Telemetry** HUD showing what the run cost and did: steps used, engine time, steps per second, last line, recursion depth, call stack, output lines, drawing commands, BASIC's memory window, and — beside the engine's own counters — the IDE's wall clock and the ink that actually reached the canvas
-- **Debugging (Scheme)** — a 🐞 **Debug** panel driving the native runner: Continue, Pause, Step In/Over/Out, Stop and breakpoints, with the call stack and the frame's bindings shown while paused. The three bridged languages run to completion in another process with no pause protocol, so the panel says so instead of offering dead buttons
+- **Debugging (Scheme)** — a 🐞 **Debug** panel driving the native runner: Continue, Pause, Step In/Over/Out, Stop and breakpoints, with the call stack and the frame's bindings shown while paused. The two bridged languages run to completion in another process with no pause protocol, so the panel says so instead of offering dead buttons
 - **Native engines** — Scheme runs in-process with no Python at all, and so do
   **FOCAL**, **PILOT**, **COMAL** and **CHIP-8**, on the shared C++ `timewarp_lang`
   engine. FOCAL, PILOT and COMAL evaluate their arithmetic with the native

@@ -46,16 +46,16 @@ text going in and a stream of JSON messages coming back.
 | `timewarp_canvas` | `native/src/canvas/` | producer: interpreter thread; consumer: GUI thread | Carries drawing across the thread boundary |
 | `timewarp_canvas_qt` | `native/src/canvas/qt_bridge.cpp` | GUI thread | Qt glue for that queue: wakeup and draining |
 | `timewarp_scheme` | `native/src/scheme/` | runner thread, in-process | Scheme, on an explicit-stack machine with no native recursion |
-| `timewarp_lang` | `native/src/lang/` | runner thread, in-process | The shared interpreter loop and the executors ported so far: FOCAL, PILOT, COMAL, CHIP-8, Logo and APL |
+| `timewarp_lang` | `native/src/lang/` | runner thread, in-process | The shared interpreter loop and the executors ported so far: FOCAL, PILOT, COMAL, CHIP-8, Logo, APL and REXX |
 | `timewarp_debugger` | `native/src/debugger/` | its own `QThread` | Runs a Scheme program and services pause / step / breakpoint requests |
 | `timewarp_bridge` | `native/src/bridge/` | GUI thread, driving a `QProcess` | The IDE's end of the Python bridge |
 | `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | runner thread, in-process | The ported expression evaluator, linked into `timewarp_lang` — see the note below |
-| the bridge engine | `native/bridge/` | a separate Python process | The three unported languages |
+| the bridge engine | `native/bridge/` | a separate Python process | The two unported languages |
 
 > **`timewarp_expr` is part of a Run now.** It builds, it has 485 checks of its
 > own, `native/tools/differential_check.py` compares it against the Python
 > reference on a fixed corpus, and `timewarp_lang` links it: FOCAL, PILOT, COMAL
-> and Logo evaluate every arithmetic expression through it. The three bridged
+> and Logo evaluate every arithmetic expression through it. The two bridged
 > languages still evaluate in Python, because their executors have not been
 > ported. The parity gate is what keeps the native evaluator honest.
 
@@ -514,7 +514,7 @@ depends on the distinction:
 
 A language ported to C++ skips the bridge entirely: it gets an executor in
 `timewarp_lang`, and `MainWindow::runCurrentDocument` dispatches to it when
-`executor_for()` returns non-null. FOCAL, PILOT, COMAL, CHIP-8, Logo and APL are ported; the same
+`executor_for()` returns non-null. FOCAL, PILOT, COMAL, CHIP-8, Logo, APL and REXX are ported; the same
 `NativeRunner` (a `QThread` feeding `CanvasCommandQueue`) runs any executor that
 appears in that table, so the window needs no change per language.
 

@@ -1102,8 +1102,8 @@ wrong name.
 ### The canvas, and what runs
 
 **All ten languages run.** Scheme goes through the C++ interpreter on a background
-thread; FOCAL, PILOT, COMAL, CHIP-8, Logo and APL run in process through `timewarp_lang`;
-BASIC, REXX and Smalltalk go through the **Python bridge**, which runs the
+thread; FOCAL, PILOT, COMAL, CHIP-8, Logo, APL and REXX run in process through `timewarp_lang`;
+BASIC and Smalltalk go through the **Python bridge**, which runs the
 existing Python implementations in a child process and streams what they draw back
 as canvas commands. Every one of the 48 examples in `Examples/` executes, and the 14
 that draw produce drawing -- checked by `tools/example_smoke.py`.

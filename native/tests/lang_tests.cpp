@@ -1021,6 +1021,72 @@ void test_apl_turtle_state_is_readable() {
     TW_CHECK_EQ(run.output.at(2), std::string{"0"});
 }
 
+// ---------------------------------------------------------------------------
+// REXX
+// ---------------------------------------------------------------------------
+
+struct RexxRun {
+    std::vector<std::string> output;
+    RecordingHost host;
+};
+
+RexxRun run_rexx(std::string_view source) {
+    RexxRun run;
+    Interpreter interpreter{Language::Rexx, run.host};
+    interpreter.set_input_callback([](const std::string&) { return std::string{}; });
+    interpreter.load_program(source);
+    interpreter.run();
+    run.output = interpreter.output();
+    return run;
+}
+
+void test_rexx_say_concatenates_abutting_terms() {
+    const RexxRun run = run_rexx("SAY 'hello' 'world'");
+    TW_CHECK_EQ(run.output.at(0), std::string{"helloworld"});
+}
+
+void test_rexx_arithmetic_and_comparison() {
+    const RexxRun product = run_rexx("SAY 6 * 7");
+    const RexxRun quotient = run_rexx("SAY 7 % 2");
+    const RexxRun comparison = run_rexx("SAY 1 = 2");
+    TW_CHECK_EQ(product.output.at(0), std::string{"42"});
+    TW_CHECK_EQ(quotient.output.at(0), std::string{"3"});
+    TW_CHECK_EQ(comparison.output.at(0), std::string{"0"});
+}
+
+void test_rexx_do_loop_counts() {
+    const RexxRun run = run_rexx("DO i = 1 TO 3\n  SAY i\nEND");
+    TW_CHECK_EQ(run.output.size(), std::size_t{3});
+    TW_CHECK_EQ(run.output.at(0), std::string{"1"});
+    TW_CHECK_EQ(run.output.at(2), std::string{"3"});
+}
+
+void test_rexx_if_block_skips_the_else() {
+    const RexxRun run = run_rexx(
+        "IF 1 = 1 THEN DO\n  SAY 'yes'\nEND\nELSE DO\n  SAY 'no'\nEND");
+    TW_CHECK_EQ(run.output.size(), std::size_t{1});
+    TW_CHECK_EQ(run.output.at(0), std::string{"yes"});
+}
+
+void test_rexx_builtins() {
+    const RexxRun substr = run_rexx("SAY SUBSTR('abcdef', 2, 3)");
+    const RexxRun space = run_rexx("SAY SPACE('a b c', 0)");
+    TW_CHECK_EQ(substr.output.at(0), std::string{"bcd"});
+    TW_CHECK_EQ(space.output.at(0), std::string{"abc"});
+}
+
+void test_rexx_subroutine_returns_through_result() {
+    const RexxRun run =
+        run_rexx("CALL double 21\nSAY RESULT\nEXIT\ndouble:\n  RETURN ARG(1) * 2");
+    TW_CHECK_EQ(run.output.at(0), std::string{"42"});
+}
+
+void test_rexx_turtle_words_draw() {
+    const RexxRun run = run_rexx("FD 50\nRT 90");
+    TW_CHECK_EQ(run.host.ops.at(0), std::string{"forward 50"});
+    TW_CHECK_EQ(run.host.ops.at(1), std::string{"right 90"});
+}
+
 int main() {
     test_chip8_program_starts_at_0x200();
     test_chip8_labels_resolve_forward_references();
@@ -1110,5 +1176,12 @@ int main() {
     test_apl_length_error_is_reported();
     test_apl_turtle_words_draw_and_stay_silent();
     test_apl_turtle_state_is_readable();
+    test_rexx_say_concatenates_abutting_terms();
+    test_rexx_arithmetic_and_comparison();
+    test_rexx_do_loop_counts();
+    test_rexx_if_block_skips_the_else();
+    test_rexx_builtins();
+    test_rexx_subroutine_returns_through_result();
+    test_rexx_turtle_words_draw();
     return tw::test::summary("lang_tests");
 }
