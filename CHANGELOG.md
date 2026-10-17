@@ -14,6 +14,12 @@ Four more languages, and the defects that examining their commands turned up.
   437, and every language now has zero commands that are neither exercised by a row
   nor waived — the four older languages had accumulated gaps (21 in PILOT, 18 in
   REXX) that the new rows closed.
+- **APL runs in C++.** `native/src/lang/apl.cpp` is the port: numbers, strings and
+  nested arrays; the glyphs and the keyword spellings (`IOTA`, `RHO`, `REDUCE` …);
+  pervasive scalar functions, so `1 2 3 + 10` is `11 12 13`; reduce and scan; the
+  structural functions; `∇` definitions; and the turtle words with `TX`, `TY` and
+  `THETA`. The same 46 command rows and example run through both engines with **0
+  differences**, and eight cases join `lang_tests`. APL is no longer bridged.
 
 ### Fixed
 

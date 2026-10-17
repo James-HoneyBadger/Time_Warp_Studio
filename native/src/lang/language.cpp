@@ -8,6 +8,7 @@
 #include "timewarp/lang/focal.hpp"
 #include "timewarp/lang/logo.hpp"
 #include "timewarp/lang/pilot.hpp"
+#include "timewarp/lang/apl.hpp"
 
 #include <cctype>
 #include <string>
@@ -114,12 +115,13 @@ Executor executor_for(Language language) noexcept {
             return &execute_pilot;
         case Language::Comal:
             return &execute_comal;
+        case Language::Apl:
+            return &execute_apl;
 
         // Still driven by the Python bridge. Returning null is how the caller
         // asks "is this one ported yet?" without an exception.
         case Language::Basic:
         case Language::Rexx:
-        case Language::Apl:
         case Language::Smalltalk:
         case Language::Scheme:
             return nullptr;

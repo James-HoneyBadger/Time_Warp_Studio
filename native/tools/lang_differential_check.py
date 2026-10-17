@@ -53,12 +53,12 @@ class _RecordedShapes(list):
 
     def append(self, shape) -> None:  # type: ignore[override]
         owner = self._owner
-        points = " ".join(f"{owner._number(x)} {owner._number(y)}" for x, y in shape.points)
+        points = " ".join(
+            f"{owner._number(x)} {owner._number(y)}" for x, y in shape.points
+        )
         colour = owner._colour(shape.color)
         if shape.shape_type == "text":
-            owner.ops.append(
-                f"text {points} {shape.font_size} {shape.text or ''}"
-            )
+            owner.ops.append(f"text {points} {shape.font_size} {shape.text or ''}")
         else:
             fill = owner._colour(shape.fill_color) if shape.fill_color else "-"
             owner.ops.append(
@@ -269,7 +269,9 @@ class TraceTurtle:
 _NUMBER = re.compile(r"[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?")
 
 
-def normalise_variables(values: dict[str, tuple[str, str]]) -> dict[str, tuple[str, str]]:
+def normalise_variables(
+    values: dict[str, tuple[str, str]],
+) -> dict[str, tuple[str, str]]:
     """One vocabulary for both sides.
 
     Python calls 7.0 a `float` and shows it as `7.0`; the panel calls it a
@@ -366,7 +368,9 @@ def corpus(language: Language, key: str):
     programs = [(f"row:{row.command}", row.source) for row in rows]
     for path in sorted((REPO_ROOT / "Examples" / key).glob("*")):
         if path.is_file():
-            programs.append((str(path.relative_to(REPO_ROOT)), path.read_text(encoding="utf-8")))
+            programs.append(
+                (str(path.relative_to(REPO_ROOT)), path.read_text(encoding="utf-8"))
+            )
     return programs
 
 
@@ -384,7 +388,11 @@ def compare(name: str, language: Language, key: str, source: str) -> tuple[bool,
         problems.append(f"output:\n  python: {want_output}\n  native: {got_output}")
     if got_drawing != want_drawing:
         first = next(
-            (index for index, (a, b) in enumerate(zip(got_drawing, want_drawing)) if a != b),
+            (
+                index
+                for index, (a, b) in enumerate(zip(got_drawing, want_drawing))
+                if a != b
+            ),
             min(len(got_drawing), len(want_drawing)),
         )
         problems.append(
@@ -404,14 +412,17 @@ def main() -> int:
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument(
         "--language",
-        choices=["focal", "chip8", "pilot", "comal", "logo"],
+        choices=["focal", "chip8", "pilot", "comal", "logo", "apl"],
         action="append",
         help="limit to one language (repeatable)",
     )
     args = parser.parse_args()
 
     if not CLI.exists():
-        print(f"missing {CLI}; build it with `cmake --build native/build`", file=sys.stderr)
+        print(
+            f"missing {CLI}; build it with `cmake --build native/build`",
+            file=sys.stderr,
+        )
         return 2
 
     languages = {
@@ -420,8 +431,9 @@ def main() -> int:
         "pilot": Language.PILOT,
         "comal": Language.COMAL,
         "logo": Language.LOGO,
+        "apl": Language.APL,
     }
-    chosen = args.language or ["focal", "chip8", "pilot", "comal", "logo"]
+    chosen = args.language or ["focal", "chip8", "pilot", "comal", "logo", "apl"]
 
     agree = 0
     skipped: list[str] = []

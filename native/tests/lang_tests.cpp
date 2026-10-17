@@ -948,6 +948,79 @@ void test_python_random_matches_the_reference_sequence() {
 
 }  // namespace
 
+// ---------------------------------------------------------------------------
+// APL
+// ---------------------------------------------------------------------------
+
+struct AplRun {
+    std::vector<std::string> output;
+    RecordingHost host;
+};
+
+AplRun run_apl(std::string_view source) {
+    AplRun run;
+    Interpreter interpreter{Language::Apl, run.host};
+    interpreter.set_input_callback([](const std::string&) { return std::string{}; });
+    interpreter.load_program(source);
+    interpreter.run();
+    run.output = interpreter.output();
+    return run;
+}
+
+void test_apl_iota_and_reshape() {
+    const AplRun run = run_apl("IOTA 5\n2 3 RHO IOTA 6\nRHO 2 3 RHO IOTA 6");
+    TW_CHECK_EQ(run.output.at(0), std::string{"1 2 3 4 5"});
+    // The interpreter's logger splits a multi-line result, so each row of the
+    // table is an output entry of its own.
+    TW_CHECK_EQ(run.output.at(1), std::string{"1 2 3"});
+    TW_CHECK_EQ(run.output.at(2), std::string{"4 5 6"});
+    TW_CHECK_EQ(run.output.at(3), std::string{"2 3"});
+}
+
+void test_apl_scalar_functions_are_pervasive() {
+    const AplRun run = run_apl("1 2 3 + 10\n1 2 3 TIMES 2");
+    TW_CHECK_EQ(run.output.at(0), std::string{"11 12 13"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"2 4 6"});
+}
+
+void test_apl_reduce_and_scan() {
+    const AplRun run = run_apl("+REDUCE IOTA 5\n+SCAN IOTA 3");
+    TW_CHECK_EQ(run.output.at(0), std::string{"15"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"1 3 6"});
+}
+
+void test_apl_assignment_is_silent() {
+    const AplRun run = run_apl("A ← 2 3 RHO IOTA 6\nRHO A");
+    TW_CHECK_EQ(run.output.size(), std::size_t{1});
+    TW_CHECK_EQ(run.output.at(0), std::string{"2 3"});
+}
+
+void test_apl_defined_function_returns_a_value() {
+    const AplRun run = run_apl("∇ R ← DOUBLE X\n  R ← X TIMES 2\n∇\nDOUBLE 21");
+    TW_CHECK(contains(run.output, "✅ APL: DOUBLE defined"));
+    TW_CHECK_EQ(run.output.back(), std::string{"42"});
+}
+
+void test_apl_length_error_is_reported() {
+    const AplRun run = run_apl("1 2 + 4 5 6");
+    TW_CHECK(contains(run.output, "length error: 2 and 3"));
+}
+
+void test_apl_turtle_words_draw_and_stay_silent() {
+    const AplRun run = run_apl("FD 100\nRT 90\nFD 50");
+    TW_CHECK_EQ(run.host.ops.at(0), std::string{"forward 100"});
+    TW_CHECK_EQ(run.host.ops.at(1), std::string{"right 90"});
+    TW_CHECK_EQ(run.host.ops.at(2), std::string{"forward 50"});
+    TW_CHECK(run.output.empty());
+}
+
+void test_apl_turtle_state_is_readable() {
+    const AplRun run = run_apl("FD 100\nTX\nTY\nTHETA");
+    TW_CHECK_EQ(run.output.at(0), std::string{"0"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"100"});
+    TW_CHECK_EQ(run.output.at(2), std::string{"0"});
+}
+
 int main() {
     test_chip8_program_starts_at_0x200();
     test_chip8_labels_resolve_forward_references();
@@ -1029,5 +1102,13 @@ int main() {
     test_logo_heading_starts_north_and_turns_clockwise();
     test_turtle_pose_matches_the_reference_in_three_dimensions();
     test_python_random_matches_the_reference_sequence();
+    test_apl_iota_and_reshape();
+    test_apl_scalar_functions_are_pervasive();
+    test_apl_reduce_and_scan();
+    test_apl_assignment_is_silent();
+    test_apl_defined_function_returns_a_value();
+    test_apl_length_error_is_reported();
+    test_apl_turtle_words_draw_and_stay_silent();
+    test_apl_turtle_state_is_readable();
     return tw::test::summary("lang_tests");
 }

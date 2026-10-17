@@ -188,6 +188,7 @@ add_library(timewarp_lang
     src/lang/focal.cpp
     src/lang/pilot.cpp
     src/lang/comal.cpp
+    src/lang/apl.cpp
     src/lang/logo.cpp
 )
 add_library(timewarp::lang ALIAS timewarp_lang)

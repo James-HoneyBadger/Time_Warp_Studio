@@ -21,10 +21,10 @@ yet — please check the list below before reporting one as a regression.
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
 | Languages | 10 languages, 48 verified example programs |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
-| Bridged engines | BASIC, REXX, APL and Smalltalk — `native/bridge/` |
-| Native executors | FOCAL, PILOT, COMAL, CHIP-8 and Logo — `timewarp_lang`, in process |
+| Bridged engines | BASIC, REXX and Smalltalk — `native/bridge/` |
+| Native executors | FOCAL, PILOT, COMAL, CHIP-8, Logo and APL — `timewarp_lang`, in process |
 | Packaging | `make install` with the desktop entry and icon; `DESTDIR` staging |
-| Quality gates | 13 CTest suites in 4 build configurations, 3 parity gates, 551 engine tests, 437 command rows, 227 parity programs |
+| Quality gates | 13 CTest suites in 4 build configurations, 3 parity gates, 551 engine tests, 437 command rows, 273 parity programs |
 
 ---
 
@@ -204,14 +204,19 @@ Four limits are recorded rather than left to be discovered:
 
 ## Next: port the languages, then delete the bridge
 
-The bridge exists only because four languages are not native yet. Each port
+The bridge exists only because three languages are not native yet. Each port
 removes its path through it, and the differential gates are the contract.
+
+**APL is done.** It was the smallest and the only one with no dependency on the
+interpreter: arrays, glyphs and keyword spellings, reduce and scan, the turtle
+words and `∇` definitions all live in `native/src/lang/apl.cpp`, gated by the
+same 46 rows and example the reference is. That is the shape each remaining port
+takes.
 
 1. **BASIC** — the largest remaining port: the core language first, then the
    extended statement set.
 2. **REXX** — strings, subroutines and the `PARSE` family.
-3. **APL** — arrays and the turtle words `TX`, `TY` and `THETA`.
-4. **Smalltalk** — whole-program, like Scheme and CHIP-8.
+3. **Smalltalk** — whole-program, like Scheme and CHIP-8.
 
 Once the last of them lands, `native/bridge/` and the `python_worker` target are
 deleted together; nothing else may depend on them.
