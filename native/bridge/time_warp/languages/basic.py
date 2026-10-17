@@ -247,6 +247,119 @@ def _basic_def_fn(interpreter: "Interpreter", command: str) -> str:
     return ""
 
 
+# ---------------------------------------------------------------------------
+# Functions that live inside expressions
+#
+# JOYINIT's docstring promises STICK() and STRIG(), and `X = PEEK(1000)` is the
+# form a BASIC programmer actually writes. The statement forms existed while the
+# expression forms raised "Unknown function", so the evaluator is given these
+# names -- registered for BASIC only, because they mean nothing in the other
+# nine languages.
+# ---------------------------------------------------------------------------
+
+_STICK_AXES = ("LEFT_X", "LEFT_Y", "RIGHT_X", "RIGHT_Y")
+_STRIG_BUTTONS = ("A", "B", "X", "Y", "LB", "RB", "START", "SELECT")
+
+_TYPE_NAMES = {
+    "int": "INTEGER",
+    "long": "LONG",
+    "single": "SINGLE",
+    "double": "DOUBLE",
+    "string": "STRING",
+}
+
+_ADDRESS_LIMIT = 65535
+
+
+def basic_peek(interpreter: "Interpreter", address: float) -> float:
+    """PEEK(address) in an expression: the byte stored there, or 0."""
+    addr = int(address)
+    if not 0 <= addr <= _ADDRESS_LIMIT:
+        raise ValueError(f"PEEK address must be 0-65535: got {addr}")
+    return float(interpreter.memory.get(addr, 0))
+
+
+def basic_in(interpreter: "Interpreter", port: float) -> float:
+    """IN(port) in an expression: the value last written to the port, or 0."""
+    number = int(port)
+    if not 0 <= number <= _ADDRESS_LIMIT:
+        raise ValueError(f"IN port must be 0-65535: got {number}")
+    return float(interpreter.ports.get(number, 0))
+
+
+def basic_stick(index: float) -> float:
+    """STICK(n): an axis in -1..1, as JOYINIT documents. 0 with no gamepad."""
+    number = int(index)
+    if not 0 <= number < len(_STICK_AXES):
+        raise ValueError(f"STICK index must be 0-3: got {number}")
+    # pylint: disable=import-outside-toplevel
+    from ..features.gamepad import get_gamepad_manager
+
+    return float(get_gamepad_manager().get_axis(_STICK_AXES[number]))
+
+
+def basic_strig(index: float) -> float:
+    """STRIG(n): 1 while button n is held, 0 otherwise."""
+    number = int(index)
+    if not 0 <= number < len(_STRIG_BUTTONS):
+        raise ValueError(f"STRIG index must be 0-7: got {number}")
+    # pylint: disable=import-outside-toplevel
+    from ..features.gamepad import get_gamepad_manager
+
+    return 1.0 if get_gamepad_manager().get_button(_STRIG_BUTTONS[number]) else 0.0
+
+
+def basic_type_name(interpreter: "Interpreter", argument: str) -> str:
+    """TYPE$(x): the BASIC type *argument* holds, or UNKNOWN when undefined."""
+    name = argument.strip().upper()
+    if not name:
+        return "UNKNOWN"
+    _base, type_code = interpreter.get_var_base_and_type(name)
+    if not type_code:
+        return "UNKNOWN"
+    return _TYPE_NAMES.get(type_code, type_code.upper())
+
+
+def basic_expression_functions(interpreter: "Interpreter") -> dict:
+    """The evaluator functions BASIC adds, bound to this interpreter."""
+    return {
+        "PEEK": lambda address: basic_peek(interpreter, address),
+        "IN": lambda port: basic_in(interpreter, port),
+        "STICK": basic_stick,
+        "STRIG": basic_strig,
+    }
+
+
+def _substitute_undefined(expr: str, name: str) -> str:
+    """Replace *name* with 0, the value BASIC gives an unset variable."""
+    return re.sub(rf"\b{re.escape(name)}\b", "0", expr)
+
+
+def _print_expression_failure(
+    interpreter: "Interpreter", item: str, exc: Exception
+) -> tuple[float | None, str | None]:
+    """Resolve an expression PRINT could not evaluate.
+
+    Returns ``(value, error)``. In BASIC an unset numeric variable is 0, so the
+    name is substituted and the expression retried once; an unknown function is
+    reported, because echoing the call back is how a typo is presented to a
+    learner as a result.
+    """
+    message = str(exc)
+    if message.startswith("Undefined variable: "):
+        name = message.split(": ", 1)[1].strip()
+        retry = _substitute_undefined(item, name)
+        if retry != item:
+            try:
+                return interpreter.evaluate_expression(retry), None
+            except (ValueError, TypeError, ZeroDivisionError) as inner:
+                if _is_division_by_zero(inner):
+                    return None, "❌ Division by zero\n"
+                return None, f"❌ {inner}\n"
+        return 0.0, None
+    return None, f"❌ {message}\n"
+
+
 # Function is large by design; keep pylint refactor checks disabled for it.
 # pylint: disable=R0911,R0912,R0915
 def execute_basic(
@@ -498,6 +611,10 @@ def execute_basic(
         return _basic_play(interpreter, _strip_comment(command[5:]))
     if cmd.startswith("SAY "):
         return _basic_say(interpreter, _strip_comment(command[4:]))
+    # SPEAK is the name the feature module documents; SAY is what this executor
+    # has always dispatched. Both spellings reach the same handler.
+    if cmd.startswith("SPEAK "):
+        return _basic_say(interpreter, _strip_comment(command[6:]))
     # Shape commands
     if cmd.startswith("SHAPE "):
         return _basic_shape(interpreter, _strip_comment(command[6:]), turtle)
@@ -751,9 +868,12 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
                     value = interpreter.evaluate_expression(item_trim)
                     out_items.append(_format_numeric(value))
                 except (ValueError, TypeError, ZeroDivisionError) as exc:
-                    if _is_division_by_zero(exc):
-                        return "❌ Division by zero\n"
-                    out_items.append(interpreter.interpolate_text(item_trim))
+                    value, error = _print_expression_failure(
+                        interpreter, item_trim, exc
+                    )
+                    if error:
+                        return error
+                    out_items.append(_format_numeric(value))
             continue
 
         # Handle simple string literals (no concat)
@@ -785,6 +905,10 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
             from ..features.game_support import get_game_state
 
             out_items.append(str(int(get_game_state().get_timer_value())))
+        # TYPE$(x) - the BASIC type of a variable, as a string. Checked before
+        # the "$(" test below, which otherwise reads it as a string array.
+        elif item_upper.startswith("TYPE$(") and item_trim.endswith(")"):
+            out_items.append(basic_type_name(interpreter, item_trim[6:-1]))
         # Handle string variables (end with $) or string array elements
         elif item_upper.endswith("$") or (
             item_upper.endswith(")") and "$(" in item_upper
@@ -874,16 +998,25 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
                 _base, t = interpreter.get_var_base_and_type(item_upper)
                 num_val = interpreter.variables[item_upper]
                 out_items.append(_format_numeric(float(num_val), t))
+            # A bare name the DEFSTR family typed as a string. The value lives
+            # in the string store under "A$" even though the program writes
+            # "A", so without this the name fell through to the numeric
+            # evaluator and was printed back as source text.
+            elif interpreter.get_var_base_and_type(item_upper)[1] == "string":
+                _base, _t = interpreter.get_var_base_and_type(item_upper)
+                out_items.append(interpreter.string_variables.get(_base + "$", ""))
             else:
                 # Try to evaluate as expression
                 try:
                     value = interpreter.evaluate_expression(item_trim)
                     out_items.append(_format_numeric(value))
                 except (ValueError, TypeError, ZeroDivisionError) as exc:
-                    if _is_division_by_zero(exc):
-                        return "❌ Division by zero\n"
-                    # If evaluation fails, use interpolation as fallback
-                    out_items.append(interpreter.interpolate_text(item_trim))
+                    value, error = _print_expression_failure(
+                        interpreter, item_trim, exc
+                    )
+                    if error:
+                        return error
+                    out_items.append(_format_numeric(value))
     result = " ".join(out_items)
     return result if suppress_newline else result + "\n"
 
@@ -1223,7 +1356,14 @@ def _basic_resume(interpreter: "Interpreter", args: str) -> str:
             return f"❌ RESUME {line_num}: line not found\n"
         interpreter.current_line = interpreter.line_number_map[line_num]
         return ""
-    # RESUME with no args: re-execute the error line
+    # RESUME with no args: re-execute the error line. The *index* is what the
+    # error handler records, because `basic_error_line` holds the BASIC line
+    # number and an unnumbered program has none -- which is why this used to go
+    # nowhere at all.
+    err_index = getattr(interpreter, "basic_error_index", -1)
+    if err_index >= 0:
+        interpreter.current_line = err_index
+        return ""
     err_line = getattr(interpreter, "basic_error_line", None)
     if err_line is not None and err_line in interpreter.line_number_map:
         interpreter.current_line = interpreter.line_number_map[err_line]
@@ -1232,6 +1372,12 @@ def _basic_resume(interpreter: "Interpreter", args: str) -> str:
 
 def _basic_resume_next(interpreter: "Interpreter") -> str:
     """RESUME NEXT — continue from the line after the one that errored."""
+    err_index = getattr(interpreter, "basic_error_index", -1)
+    if err_index >= 0:
+        target_idx = err_index + 1
+        if target_idx < len(interpreter.program_lines):
+            interpreter.current_line = target_idx
+        return ""
     err_line = getattr(interpreter, "basic_error_line", None)
     if err_line is not None and err_line in interpreter.line_number_map:
         target_idx = interpreter.line_number_map[err_line] + 1
@@ -2394,9 +2540,17 @@ def _basic_palette(
             return "🎨 Palette cycled (1..15)\n"
         parts = [p.strip() for p in rest.split(",") if p.strip()]
         try:
-            start_i = int(interpreter.evaluate_expression(parts[0])) if len(parts) >= 1 else 1
-            end_i = int(interpreter.evaluate_expression(parts[1])) if len(parts) >= 2 else 15
-            step_i = int(interpreter.evaluate_expression(parts[2])) if len(parts) >= 3 else 1
+            start_i = (
+                int(interpreter.evaluate_expression(parts[0])) if len(parts) >= 1 else 1
+            )
+            end_i = (
+                int(interpreter.evaluate_expression(parts[1]))
+                if len(parts) >= 2
+                else 15
+            )
+            step_i = (
+                int(interpreter.evaluate_expression(parts[2])) if len(parts) >= 3 else 1
+            )
             turtle.cycle_palette(start_i, end_i, step_i)
             return f"🎨 Palette cycled ({start_i}..{end_i} step {step_i})\n"
         except (ValueError, TypeError, ZeroDivisionError) as exc:
@@ -2454,9 +2608,7 @@ def _basic_open(interpreter: "Interpreter", args: str) -> str:
                 else ("APPEND" if short_mode == "A" else "OUTPUT")
             )
         else:
-            return (
-                "❌ OPEN syntax error: expected OPEN \"file\" FOR INPUT|OUTPUT|APPEND AS #n\n"
-            )
+            return '❌ OPEN syntax error: expected OPEN "file" FOR INPUT|OUTPUT|APPEND AS #n\n'
     else:
         filename = m.group(1).strip()
         mode_word = m.group(2).upper()

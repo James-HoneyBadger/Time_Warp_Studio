@@ -67,6 +67,18 @@ struct StringEqual {
 using SpecialVariableHook =
     std::function<std::optional<double>(std::string_view upper_name)>;
 
+/// A function a language executor adds to the evaluator, e.g. COMAL's `FUNC`.
+struct UserFunction {
+    /// How many arguments to pop from the value stack.
+    std::size_t arity = 1;
+    /// Called with ``arity`` values, in source order.
+    std::function<double(std::span<const double>)> call;
+};
+
+/// Resolves a name to a language-defined function, or ``std::nullopt``.
+using FunctionHook =
+    std::function<std::optional<UserFunction>(std::string_view upper_name)>;
+
 /// Everything the evaluator needs to resolve names at run time.
 ///
 /// All maps are keyed by *upper-case* names, matching the reference, because
@@ -88,6 +100,9 @@ struct EvalContext {
 
     /// Optional resolver for pseudo-variables (see ``SpecialVariableHook``).
     SpecialVariableHook special_variables;
+
+    /// Optional resolver for language-defined functions.
+    FunctionHook functions;
 };
 
 /// Evaluates arithmetic/logical expressions to ``double``.
@@ -118,6 +133,9 @@ public:
 
     /// Installs the pseudo-variable resolver.
     void set_special_variable_hook(SpecialVariableHook hook);
+
+    /// Installs the language-defined function resolver.
+    void set_function_hook(FunctionHook hook);
 
     [[nodiscard]] const EvalContext& context() const noexcept { return context_; }
 

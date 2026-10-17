@@ -558,6 +558,10 @@ private:
 
     std::map<std::string, std::string> procedures_;
     std::map<std::string, std::vector<std::string>> procedure_params_;
+    /// The value the most recent OUTPUT produced. The command path carries it
+    /// in the "STOP_PROCEDURE" marker, but a caller that uses a procedure as a
+    /// reporter (`PRINT DOUBLE 21`) needs the number itself.
+    std::optional<double> last_output_;
     std::map<std::string, std::string> words_;
     std::map<std::string, std::vector<std::string>> lists_;
 
@@ -2247,7 +2251,9 @@ std::string LogoMachine::do_output(const std::vector<std::string>& args) {
         expression += piece;
     }
     try {
-        return python_str(eval(expression)) + "STOP_PROCEDURE";
+        const double value = eval(expression);
+        last_output_ = value;
+        return python_str(value) + "STOP_PROCEDURE";
     } catch (const std::exception& error) {
         return std::string{"❌ Invalid OUTPUT value: "} + error.what() + "\n";
     }
@@ -2549,6 +2555,42 @@ std::string LogoMachine::do_print(const std::vector<std::string>& args,
         const auto list = lists_.find(name);
         if (list != lists_.end()) {
             return python_list_repr(list->second) + "\n";
+        }
+    }
+
+    // A user procedure that OUTPUTs a value is a reporter: `PRINT DOUBLE 21`.
+    // The built-in reporters are all the expression evaluator knows, so without
+    // this the call was printed back as if it were the answer.
+    {
+        const std::vector<std::string> tokens = split_ws(text);
+        if (!tokens.empty()) {
+            const std::string name = upper(tokens[0]);
+            const auto params = procedure_params_.find(name);
+            if (params != procedure_params_.end()) {
+                const std::vector<std::string> call_args(tokens.begin() + 1,
+                                                         tokens.end());
+                const std::vector<std::string> used =
+                    consume_args(call_args, params->second.size());
+                std::size_t consumed = 0;
+                for (const std::string& piece : used) {
+                    consumed += split_ws(piece).size();
+                }
+                // Tokens left over are not this procedure's to read, so they
+                // fall through to the ordinary expression path.
+                if (consumed == call_args.size()) {
+                    last_output_.reset();
+                    const std::string result = call_procedure(name, call_args);
+                    if (result.rfind("❌", 0) == 0) {
+                        return result;
+                    }
+                    if (!last_output_.has_value()) {
+                        return "❌ Procedure " + name +
+                               " did not OUTPUT a value\n";
+                    }
+                    const Value value{*last_output_};
+                    return format_value(value.render(), value.is_text()) + "\n";
+                }
+            }
         }
     }
 

@@ -157,9 +157,11 @@ class Language(Enum):
 _WHOLE_PROGRAM_EXECUTORS = _init_whole_program_executors()
 
 # Languages whose executors are safe to run in a subprocess sandbox.
-_SANDBOXABLE_LANGUAGES: frozenset[Language] = frozenset({
-    Language.SCHEME,
-})
+_SANDBOXABLE_LANGUAGES: frozenset[Language] = frozenset(
+    {
+        Language.SCHEME,
+    }
+)
 
 
 class LanguageRegistry:
@@ -383,6 +385,12 @@ class Interpreter:
         self.basic_types: Dict[str, Dict] = {}
         self.basic_error_handler_line: int = 0
         self.basic_error_line: int = 0
+        # Index (not line number) of the statement that raised: RESUME and
+        # RESUME NEXT need it, and an unnumbered program has no line number.
+        self.basic_error_index: int = -1
+        # Functions a language executor makes available inside expressions
+        # (COMAL's FUNC). Bind them to a callable; the evaluator merges them.
+        self.expression_functions: Dict[str, Any] = {}
         self._logo_turtle: Optional["TurtleState"] = None
         self.program_source: str = ""
         self.default_type_map: Dict[str, str] = {}
@@ -493,6 +501,8 @@ class Interpreter:
         # BASIC ON ERROR GOTO handler state
         self.basic_error_handler_line: int = 0
         self.basic_error_line: int = 0
+        self.basic_error_index: int = -1
+        self.expression_functions: Dict[str, Any] = {}
 
         # BASIC language-specific state
         self.basic_user_fns: Dict[str, Any] = {}
@@ -1184,6 +1194,7 @@ class Interpreter:
                 if handler_line in self.line_number_map:
                     # Store ERR/ERL pseudo-variables for the error handler
                     self.basic_error_line = self.current_line + 1
+                    self.basic_error_index = self.current_line
                     self.variables["ERR"] = 1  # generic error code
                     self.variables["ERL"] = float(self.current_line + 1)
                     # Store the error number from the current line's BASIC number
@@ -1404,6 +1415,18 @@ class Interpreter:
                 return _fn
 
             evaluator.FUNCTIONS[fn_name] = _make_fn(params, body_expr, evaluator)
+
+        # BASIC-only expression functions. They are registered here rather than
+        # inside the evaluator because they read this interpreter's memory,
+        # ports and gamepad; the other nine languages must not see the names.
+        if self.language is not None and self.language.name == "BASIC":
+            # pylint: disable=import-outside-toplevel
+            from ..languages.basic import basic_expression_functions
+
+            evaluator.FUNCTIONS.update(basic_expression_functions(self))
+        # Whatever the executing language registered (COMAL's FUNC, and the
+        # same hook the C++ port needs).
+        evaluator.FUNCTIONS.update(self.expression_functions)
         return evaluator.evaluate(expr)
 
     def interpolate_text(self, text: str) -> str:
@@ -1660,7 +1683,9 @@ class Interpreter:
         budget = getattr(self, "budget", ExecutionBudget())
         elapsed_s = max(1e-6, time.monotonic() - budget.start_monotonic)
         steps_used = budget.steps_used
-        steps_per_sec = steps_used / elapsed_s if self.running or steps_used > 0 else 0.0
+        steps_per_sec = (
+            steps_used / elapsed_s if self.running or steps_used > 0 else 0.0
+        )
 
         active_turtle = turtle or getattr(self, "_logo_turtle", None)
         turtle_info: Dict[str, Any] = {

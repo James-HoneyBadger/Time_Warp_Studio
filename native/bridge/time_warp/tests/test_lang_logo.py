@@ -112,10 +112,7 @@ def test_repeat():
 
 def test_to_procedure():
     out = logo(
-        "TO SQUARE :S\n"
-        "  REPEAT 4 [FORWARD :S RIGHT 90]\n"
-        "END\n"
-        "SQUARE 50"
+        "TO SQUARE :S\n" "  REPEAT 4 [FORWARD :S RIGHT 90]\n" "END\n" "SQUARE 50"
     )
     assert no_errors(out)
 
@@ -169,37 +166,37 @@ def test_repeat_accumulate():
 
 
 def test_sum_builtin():
-    out = logo('print sum 2 3')
+    out = logo("print sum 2 3")
     assert no_errors(out)
     assert has(out, "5")
 
 
 def test_product_builtin():
-    out = logo('print product 4 5')
+    out = logo("print product 4 5")
     assert no_errors(out)
     assert has(out, "20")
 
 
 def test_difference_builtin():
-    out = logo('print difference 10 3')
+    out = logo("print difference 10 3")
     assert no_errors(out)
     assert has(out, "7")
 
 
 def test_product():
-    out = logo('print product 6 7')
+    out = logo("print product 6 7")
     assert no_errors(out)
     assert has(out, "42")
 
 
 def test_quotient():
-    out = logo('print quotient 12 3')
+    out = logo("print quotient 12 3")
     assert no_errors(out)
     assert has(out, "4")
 
 
 def test_sum_large():
-    out = logo('print sum 100 200')
+    out = logo("print sum 100 200")
     assert no_errors(out)
     assert has(out, "300")
 
@@ -211,6 +208,7 @@ def test_sum_large():
 
 def test_hello_example():
     import pathlib
+
     src = (
         pathlib.Path(__file__).parents[4] / "Examples" / "logo" / "hello.logo"
     ).read_text()
@@ -259,7 +257,9 @@ def test_a_block_runs_every_call_over_several_lines():
 
 
 def test_a_call_after_a_call_in_a_procedure_body_runs():
-    source = PEN_AND_SQUARE + """TO DRAW :N
+    source = (
+        PEN_AND_SQUARE
+        + """TO DRAW :N
   REPEAT :N [
     REDPEN
     SQUARE 10
@@ -268,6 +268,7 @@ def test_a_call_after_a_call_in_a_procedure_body_runs():
 END
 DRAW 3
 """
+    )
     assert _strokes(source) == 12
 
 
@@ -286,3 +287,30 @@ def test_a_call_after_an_argumentless_command_runs():
     assert _strokes(PEN_AND_SQUARE + "CS SQUARE 10") == 4
     # HOME walks the turtle back to the origin, drawing on the way.
     assert _strokes(PEN_AND_SQUARE + "CS SQUARE 10 HOME") == 5
+
+
+# ---------------------------------------------------------------------------
+# A procedure that OUTPUTs is a reporter
+# ---------------------------------------------------------------------------
+
+
+def test_output_value_reaches_the_caller():
+    out = logo("TO DOUBLE :N\nOUTPUT :N * 2\nEND\nPRINT DOUBLE 21")
+    assert no_errors(out), out
+    assert has(out, "42")
+
+
+def test_output_value_is_usable_by_show():
+    out = logo("TO DOUBLE :N\nOUTPUT :N * 2\nEND\nSHOW DOUBLE 21")
+    assert no_errors(out), out
+    assert has(out, "42")
+
+
+def test_nested_procedure_calls_in_an_expression():
+    out = logo(
+        "TO ADD :A :B\nOUTPUT :A + :B\nEND\n"
+        "TO TWICE :N\nOUTPUT ADD :N :N\nEND\n"
+        "PRINT TWICE 6"
+    )
+    assert no_errors(out), out
+    assert has(out, "12")

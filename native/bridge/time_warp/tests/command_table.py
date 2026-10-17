@@ -71,13 +71,40 @@ BASIC: list[Row] = [
     Row("BASIC", "string variable", 'NAME$ = "Ann"\nPRINT NAME$', "prints:Ann"),
     Row("BASIC", "string concatenation", 'A$ = "X" + "Y"\nPRINT A$', "prints:XY"),
     Row("BASIC", "DIM and index", "DIM N(10)\nN(1) = 7\nPRINT N(1)", "prints:7"),
-    Row("BASIC", "IF / ELSE / END IF", 'X = 20\nIF X > 10 THEN\nPRINT "BIG"\nELSE\nPRINT "SMALL"\nEND IF', "prints:BIG"),
-    Row("BASIC", "IF false branch", 'X = 1\nIF X > 10 THEN\nPRINT "BIG"\nELSE\nPRINT "SMALL"\nEND IF', "prints:SMALL"),
+    Row(
+        "BASIC",
+        "IF / ELSE / END IF",
+        'X = 20\nIF X > 10 THEN\nPRINT "BIG"\nELSE\nPRINT "SMALL"\nEND IF',
+        "prints:BIG",
+    ),
+    Row(
+        "BASIC",
+        "IF false branch",
+        'X = 1\nIF X > 10 THEN\nPRINT "BIG"\nELSE\nPRINT "SMALL"\nEND IF',
+        "prints:SMALL",
+    ),
     Row("BASIC", "FOR / NEXT", "FOR I = 1 TO 3\nPRINT I\nNEXT I", "prints:3"),
-    Row("BASIC", "FOR with STEP", "FOR I = 0 TO 10 STEP 5\nPRINT I\nNEXT I", "prints:10"),
-    Row("BASIC", "WHILE / WEND", "X = 0\nWHILE X < 3\nX = X + 1\nWEND\nPRINT X", "prints:3"),
-    Row("BASIC", "DO / LOOP UNTIL", "X = 0\nDO\nX = X + 1\nLOOP UNTIL X >= 3\nPRINT X", "prints:3"),
-    Row("BASIC", "GOSUB and RETURN", "10 X = 4\n20 GOSUB 100\n30 PRINT RESULT\n40 END\n100 RESULT = X * 2\n110 RETURN", "prints:8"),
+    Row(
+        "BASIC", "FOR with STEP", "FOR I = 0 TO 10 STEP 5\nPRINT I\nNEXT I", "prints:10"
+    ),
+    Row(
+        "BASIC",
+        "WHILE / WEND",
+        "X = 0\nWHILE X < 3\nX = X + 1\nWEND\nPRINT X",
+        "prints:3",
+    ),
+    Row(
+        "BASIC",
+        "DO / LOOP UNTIL",
+        "X = 0\nDO\nX = X + 1\nLOOP UNTIL X >= 3\nPRINT X",
+        "prints:3",
+    ),
+    Row(
+        "BASIC",
+        "GOSUB and RETURN",
+        "10 X = 4\n20 GOSUB 100\n30 PRINT RESULT\n40 END\n100 RESULT = X * 2\n110 RETURN",
+        "prints:8",
+    ),
     Row("BASIC", "DEF FN", "DEF FNA(N) = N * N\nPRINT FNA(5)", "prints:25"),
     Row("BASIC", "LEN", 'PRINT LEN("HELLO")', "prints:5"),
     Row("BASIC", "MID$", 'PRINT MID$("HELLO", 1, 3)', "prints:HEL"),
@@ -91,61 +118,145 @@ BASIC: list[Row] = [
     Row("BASIC", "EXP", "PRINT EXP(0)", "prints:1"),
     Row("BASIC", "LOG", "PRINT LOG(1)", "prints:0"),
     Row("BASIC", "RND", "PRINT RND(1)", "prints:"),
-    Row("BASIC", "INPUT through the protocol", 'INPUT "Name: ", N\nPRINT "GOT:", N', "prints:GOT"),
+    Row(
+        "BASIC",
+        "INPUT through the protocol",
+        'INPUT "Name: ", N\nPRINT "GOT:", N',
+        "prints:GOT",
+    ),
     Row("BASIC", "CLS", "CLS", "any"),
     Row("BASIC", "SCREEN", "SCREEN 1", "any"),
     Row("BASIC", "COLOR then PSET", "SCREEN 1\nCOLOR 15, 0\nPSET (1, 1)", "draws"),
     Row("BASIC", "LINE", "SCREEN 1\nLINE (10, 10) - (100, 50)", "draws"),
     Row("BASIC", "CIRCLE", "SCREEN 1\nCIRCLE (160, 100), 40", "draws"),
     Row("BASIC", "PSET", "SCREEN 1\nPSET (5, 5)", "draws"),
-    Row("BASIC", "PAINT", "SCREEN 1\nLINE (10, 10) - (100, 50)\nPAINT (50, 30), 4", "draws"),
-    Row("BASIC", "LOCATE then PRINT", "LOCATE 5, 5\nPRINT \"X\"", "any"),
-
+    Row(
+        "BASIC",
+        "PAINT",
+        "SCREEN 1\nLINE (10, 10) - (100, 50)\nPAINT (50, 30), 4",
+        "draws",
+    ),
+    Row("BASIC", "LOCATE then PRINT", 'LOCATE 5, 5\nPRINT "X"', "any"),
     # -- Structural keywords. Each is already a piece of a program above; giving
     #    it a row of its own is what makes a break in the keyword attributable
     #    instead of showing up as a mystery failure in the row that used it.
     Row("BASIC", "NEXT", "FOR I = 1 TO 2\nNEXT I\nPRINT I", "prints:2"),
     Row("BASIC", "WEND", "X = 0\nWHILE X < 2\nX = X + 1\nWEND\nPRINT X", "prints:2"),
     Row("BASIC", "LOOP", "X = 0\nDO\nX = X + 1\nLOOP UNTIL X = 2\nPRINT X", "prints:2"),
-    Row("BASIC", "UNTIL", 'X = 0\nDO\nX = X + 1\nLOOP UNTIL X = 2\nPRINT "DONE"', "prints:DONE"),
-    Row("BASIC", "ELSE", 'IF 1 > 2 THEN\nPRINT "A"\nELSE\nPRINT "B"\nEND IF', "prints:B"),
+    Row(
+        "BASIC",
+        "UNTIL",
+        'X = 0\nDO\nX = X + 1\nLOOP UNTIL X = 2\nPRINT "DONE"',
+        "prints:DONE",
+    ),
+    Row(
+        "BASIC", "ELSE", 'IF 1 > 2 THEN\nPRINT "A"\nELSE\nPRINT "B"\nEND IF', "prints:B"
+    ),
     Row("BASIC", "END IF", 'IF 1 < 2 THEN\nPRINT "A"\nEND IF', "prints:A"),
     Row("BASIC", "ENDIF alias", 'IF 1 < 2 THEN\nPRINT "A"\nENDIF', "prints:A"),
     Row("BASIC", "END stops the program", 'PRINT "A"\nEND\nPRINT "B"', "prints:A"),
-    Row("BASIC", "RETURN", "GOSUB 100\nPRINT RESULT\nEND\n100 RESULT = 9\n110 RETURN", "prints:9"),
+    Row(
+        "BASIC",
+        "RETURN",
+        "GOSUB 100\nPRINT RESULT\nEND\n100 RESULT = 9\n110 RETURN",
+        "prints:9",
+    ),
     Row("BASIC", "REM", 'REM ignored\nPRINT "A"', "prints:A"),
-    Row("BASIC", "apostrophe comment", "'ignored\nPRINT \"A\"", "prints:A"),
+    Row("BASIC", "apostrophe comment", '\'ignored\nPRINT "A"', "prints:A"),
     Row("BASIC", "colon separates statements", 'PRINT "A": PRINT "B"', "prints:B"),
-    Row("BASIC", "SELECT / CASE / END SELECT", 'X = 2\nSELECT CASE X\nCASE 2\nPRINT "TWO"\nEND SELECT', "prints:TWO", ("CASE", "END SELECT", "SELECT")),
-    Row("BASIC", "SUB / CALL / END SUB", 'SUB DOUBLE(N)\nPRINT N * 2\nEND SUB\nCALL DOUBLE(21)', "prints:42", ("CALL", "END SUB")),
-    Row("BASIC", "FUNCTION / END FUNCTION", 'FUNCTION TWICE(N)\nTWICE = N * 2\nEND FUNCTION\nCALL TWICE(21)\nPRINT TWICE', "prints:42", ("END FUNCTION",)),
-    Row("BASIC", "TYPE / END TYPE", 'TYPE POINT\nX AS INTEGER\nY AS INTEGER\nEND TYPE\nPRINT "OK"', "prints:OK", ("END TYPE",)),
+    Row(
+        "BASIC",
+        "SELECT / CASE / END SELECT",
+        'X = 2\nSELECT CASE X\nCASE 2\nPRINT "TWO"\nEND SELECT',
+        "prints:TWO",
+        ("CASE", "END SELECT", "SELECT"),
+    ),
+    Row(
+        "BASIC",
+        "SUB / CALL / END SUB",
+        "SUB DOUBLE(N)\nPRINT N * 2\nEND SUB\nCALL DOUBLE(21)",
+        "prints:42",
+        ("CALL", "END SUB"),
+    ),
+    Row(
+        "BASIC",
+        "FUNCTION / END FUNCTION",
+        "FUNCTION TWICE(N)\nTWICE = N * 2\nEND FUNCTION\nCALL TWICE(21)\nPRINT TWICE",
+        "prints:42",
+        ("END FUNCTION",),
+    ),
+    Row(
+        "BASIC",
+        "TYPE / END TYPE",
+        'TYPE POINT\nX AS INTEGER\nY AS INTEGER\nEND TYPE\nPRINT "OK"',
+        "prints:OK",
+        ("END TYPE",),
+    ),
     Row("BASIC", "GOTO", 'GOTO 20\nPRINT "SKIPPED"\n20 PRINT "HERE"', "prints:HERE"),
-
     # A variable whose name merely *starts* with a keyword used to be swallowed by
     # that keyword's statement (DOG = 42 became a DO loop), leaving the variable
     # unset and PRINT echoing the name. These are the regressions for that.
     Row("BASIC", "variable starting with DO", "DOUBLE = 42\nPRINT DOUBLE", "prints:42"),
     Row("BASIC", "variable starting with RUN", "RUNNER = 7\nPRINT RUNNER", "prints:7"),
-    Row("BASIC", "variable starting with CLOSE", "CLOSER = 3\nPRINT CLOSER", "prints:3"),
+    Row(
+        "BASIC", "variable starting with CLOSE", "CLOSER = 3\nPRINT CLOSER", "prints:3"
+    ),
     Row("BASIC", "variable starting with NEXT", "NEXTX = 5\nPRINT NEXTX", "prints:5"),
     Row("BASIC", "variable starting with LOOP", "LOOPS = 9\nPRINT LOOPS", "prints:9"),
     Row("BASIC", "LET", "LET X = 7\nPRINT X", "prints:7"),
     Row("BASIC", "MAKE", 'MAKE "X" 7\nPRINT X', "prints:7"),
-    Row("BASIC", "SETXY then read the position", 'SETXY 10 20\nPRINT "MOVED"', "prints:MOVED"),
-
+    Row(
+        "BASIC",
+        "SETXY then read the position",
+        'SETXY 10 20\nPRINT "MOVED"',
+        "prints:MOVED",
+    ),
     # -- DATA / READ / RESTORE are one mechanism, so each row carries a program that
     #    shows the pointer moved rather than trusting the statement ran.
-    Row("BASIC", "DATA with READ", "DATA 3, 4\nREAD A\nREAD B\nPRINT A + B", "prints:7", ("DATA",)),
-    Row("BASIC", "RESTORE", "DATA 3, 4\nREAD A\nRESTORE\nREAD B\nPRINT B", "prints:3", ("DATA", "READ")),
-
+    Row(
+        "BASIC",
+        "DATA with READ",
+        "DATA 3, 4\nREAD A\nREAD B\nPRINT A + B",
+        "prints:7",
+        ("DATA",),
+    ),
+    Row(
+        "BASIC",
+        "RESTORE",
+        "DATA 3, 4\nREAD A\nRESTORE\nREAD B\nPRINT B",
+        "prints:3",
+        ("DATA", "READ"),
+    ),
     # -- Error handling. ON ERROR GOTO must actually divert, so the row proves the
     #    handler ran rather than that the statement parsed.
-    Row("BASIC", "ON ERROR GOTO diverts", "ON ERROR GOTO 100\nX = 1 / 0\nPRINT \"NO\"\nEND\n100 PRINT \"CAUGHT\"", "prints:CAUGHT", ("ON ERROR GOTO",)),
-    Row("BASIC", "ON ERROR disables the handler", 'ON ERROR GOTO 100\nON ERROR\nPRINT "OK"\nEND\n100 PRINT "CAUGHT"', "prints:OK", ("ON ERROR GOTO", "ON ERROR")),
-    Row("BASIC", "RESUME NEXT", "10 ON ERROR GOTO 100\n20 X = 1 / 0\n30 PRINT \"AFTER\"\n40 END\n100 RESUME NEXT", "prints:AFTER", ("RESUME", "ON ERROR GOTO")),
-    Row("BASIC", "RESUME", "ON ERROR GOTO 100\nX = 1 / 0\nEND\n100 RESUME 30\n30 PRINT \"RESUMED\"", "prints:RESUMED", ("ON ERROR GOTO",)),
-
+    Row(
+        "BASIC",
+        "ON ERROR GOTO diverts",
+        'ON ERROR GOTO 100\nX = 1 / 0\nPRINT "NO"\nEND\n100 PRINT "CAUGHT"',
+        "prints:CAUGHT",
+        ("ON ERROR GOTO",),
+    ),
+    Row(
+        "BASIC",
+        "ON ERROR disables the handler",
+        'ON ERROR GOTO 100\nON ERROR\nPRINT "OK"\nEND\n100 PRINT "CAUGHT"',
+        "prints:OK",
+        ("ON ERROR GOTO", "ON ERROR"),
+    ),
+    Row(
+        "BASIC",
+        "RESUME NEXT",
+        '10 ON ERROR GOTO 100\n20 X = 1 / 0\n30 PRINT "AFTER"\n40 END\n100 RESUME NEXT',
+        "prints:AFTER",
+        ("RESUME", "ON ERROR GOTO"),
+    ),
+    Row(
+        "BASIC",
+        "RESUME",
+        'ON ERROR GOTO 100\nX = 1 / 0\nEND\n100 RESUME 30\n30 PRINT "RESUMED"',
+        "prints:RESUMED",
+        ("ON ERROR GOTO",),
+    ),
     # -- Declarations. These return no text of their own, so the row carries the
     #    smallest statement that shows the declaration took effect.
     Row("BASIC", "CONST", "CONST SIZE = 5\nPRINT SIZE", "prints:5"),
@@ -155,13 +266,20 @@ BASIC: list[Row] = [
     Row("BASIC", "DEFDBL", 'DEFDBL A-Z\nPRINT "OK"', "prints:OK"),
     Row("BASIC", "DEFSTR", 'DEFSTR A-Z\nA = "HI"\nPRINT A$', "prints:HI"),
     Row("BASIC", "SWAP", "A = 1\nB = 2\nSWAP A, B\nPRINT A", "prints:2"),
-    Row("BASIC", "SWAP strings", 'A$ = "X"\nB$ = "Y"\nSWAP A$, B$\nPRINT A$', "prints:Y"),
+    Row(
+        "BASIC", "SWAP strings", 'A$ = "X"\nB$ = "Y"\nSWAP A$, B$\nPRINT A$', "prints:Y"
+    ),
     Row("BASIC", "ERASE", "DIM A(3)\nA(0) = 9\nERASE A\nPRINT A(0)", "prints:0"),
     Row("BASIC", "WIDTH", "WIDTH 80", "prints:Set width to 80"),
     Row("BASIC", "PRESET", "SCREEN 1\nPSET (5, 5), 1\nPRESET (5, 5)", "draws"),
     Row("BASIC", "PRINT USING", 'PRINT USING "##.##"; 3.14159', "prints:3.14"),
-    Row("BASIC", "PALETTE CYCLE", "SCREEN 1\nPALETTE CYCLE 1, 15, 1", "prints:Palette cycled", ("CYCLE",)),
-
+    Row(
+        "BASIC",
+        "PALETTE CYCLE",
+        "SCREEN 1\nPALETTE CYCLE 1, 15, 1",
+        "prints:Palette cycled",
+        ("CYCLE",),
+    ),
     # -- Sound, speech, animation and effects. The optional backends (pygame,
     #    pyttsx3) are absent on a bare machine, so these rows assert the command
     #    is *acknowledged* rather than that a speaker moved.
@@ -170,42 +288,120 @@ BASIC: list[Row] = [
     Row("BASIC", "SLEEP", "SLEEP 1", "prints:SLEEP"),
     Row("BASIC", "SPEED", "SPEED 5", "prints:Turtle speed set to 5"),
     Row("BASIC", "RANDOMIZE", 'RANDOMIZE 42\nPRINT "OK"', "prints:OK"),
-    Row("BASIC", "RANDOMIZE TIMER", 'RANDOMIZE TIMER\nPRINT "OK"', "prints:OK", ("TIMER",)),
+    Row(
+        "BASIC",
+        "RANDOMIZE TIMER",
+        'RANDOMIZE TIMER\nPRINT "OK"',
+        "prints:OK",
+        ("TIMER",),
+    ),
     Row("BASIC", "PLAY", 'PLAY "CDEFG"', "prints:Playing"),
     Row("BASIC", "SAY", 'SAY "HELLO"', "any"),
+    Row("BASIC", "SPEAK", 'SPEAK "HELLO"', "any"),
     Row("BASIC", "SPRITE define", "SPRITE SHIP, 10, 20, 30, 40", "prints:Sprite SHIP"),
-    Row("BASIC", "SPRITE remove", "SPRITE SHIP, 10, 20, 30, 40\nSPRITE SHIP, OFF", "prints:Removed sprite"),
+    Row(
+        "BASIC",
+        "SPRITE remove",
+        "SPRITE SHIP, 10, 20, 30, 40\nSPRITE SHIP, OFF",
+        "prints:Removed sprite",
+    ),
     Row("BASIC", "ON TIMER", "ON TIMER(2) GOSUB 100", "prints:Timer set"),
     Row("BASIC", "TIMER ON", "ON TIMER(2) GOSUB 100\nTIMER ON", "prints:Timer enabled"),
-    Row("BASIC", "TIMER OFF", "ON TIMER(2) GOSUB 100\nTIMER ON\nTIMER OFF", "prints:Timer disabled"),
+    Row(
+        "BASIC",
+        "TIMER OFF",
+        "ON TIMER(2) GOSUB 100\nTIMER ON\nTIMER OFF",
+        "prints:Timer disabled",
+    ),
     Row("BASIC", "FRACTAL lists presets", "FRACTAL", "prints:Available fractals"),
     Row("BASIC", "FRACTAL KOCH draws", "FRACTAL KOCH", "draws"),
     Row("BASIC", "SHAPE STAR", "SHAPE STAR, 40", "draws"),
     Row("BASIC", "SHAPE POLYGON with a count", "SHAPE POLYGON 6, 40", "draws"),
     Row("BASIC", "SHAPE unknown name", "SHAPE NOSUCH, 10", "error"),
-    Row("BASIC", "PARTICLE", "PARTICLE EXPLOSION, 100, 100", "prints:Created EXPLOSION effect"),
-
+    Row(
+        "BASIC",
+        "PARTICLE",
+        "PARTICLE EXPLOSION, 100, 100",
+        "prints:Created EXPLOSION effect",
+    ),
     # -- Machine-facing statements. SHELL is deliberately inert, and the port and
     #    memory commands are readable through the statement forms.
-    Row("BASIC", "SHELL is blocked", 'SHELL "echo hi"', "prints:SHELL commands are disabled"),
+    Row(
+        "BASIC",
+        "SHELL is blocked",
+        'SHELL "echo hi"',
+        "prints:SHELL commands are disabled",
+    ),
     Row("BASIC", "SYSTEM", 'PRINT "A"\nSYSTEM', "prints:A"),
     Row("BASIC", "RUN", 'PRINT "A"\nRUN', "any"),
-    Row("BASIC", "POKE then PEEK", "POKE 1000, 7\nPEEK 1000", "prints:PEEK(1000) = 7", ("PEEK",)),
+    Row(
+        "BASIC",
+        "POKE then PEEK",
+        "POKE 1000, 7\nPEEK 1000",
+        "prints:PEEK(1000) = 7",
+        ("PEEK",),
+    ),
+    Row(
+        "BASIC",
+        "PEEK as an expression",
+        "POKE 1000, 7\nX = PEEK(1000)\nPRINT X",
+        "prints:7",
+        ("POKE",),
+    ),
     Row("BASIC", "OUT then IN", "OUT 100, 5\nIN 100", "prints:IN(100) = 5", ("IN",)),
+    Row(
+        "BASIC",
+        "IN as an expression",
+        "OUT 100, 5\nPRINT IN(100)",
+        "prints:5",
+        ("OUT",),
+    ),
     Row("BASIC", "JOYINIT reports its backend", "JOYINIT", "any"),
-
+    Row(
+        "BASIC",
+        "STICK / STRIG",
+        "PRINT STICK(0)\nPRINT STRIG(0)",
+        "prints:0",
+        ("JOYINIT",),
+    ),
+    Row("BASIC", "TYPE$", "X = 5\nPRINT TYPE$(X)", "prints:DOUBLE"),
+    Row(
+        "BASIC",
+        "RESUME NEXT without line numbers",
+        'ON ERROR GOTO 100\nX = 1 / 0\nPRINT "AFTER"\nEND\n100 RESUME NEXT',
+        "prints:AFTER",
+        ("RESUME", "ON ERROR GOTO"),
+    ),
     # -- File channels, exercised as a real round trip rather than waived. The
     #    harness deletes the scratch file afterwards.
-    Row("BASIC", "WRITE # round trip", f'OPEN "{SCRATCH}" FOR OUTPUT AS #3\nWRITE #3, "BYE"\nCLOSE #3\nPRINT "WROTE"', "prints:WROTE", ("OPEN", "WRITE #", "CLOSE")),
-
+    Row(
+        "BASIC",
+        "WRITE # round trip",
+        f'OPEN "{SCRATCH}" FOR OUTPUT AS #3\nWRITE #3, "BYE"\nCLOSE #3\nPRINT "WROTE"',
+        "prints:WROTE",
+        ("OPEN", "WRITE #", "CLOSE"),
+    ),
     # -- INPUT requires the protocol to answer, so the row asserts the program
     #    resumed with the line the harness sent rather than hanging.
-    Row("BASIC", "LINE INPUT", 'LINE INPUT "Name: ", N$\nPRINT "GOT:", N$', "prints:GOT"),
-
+    Row(
+        "BASIC", "LINE INPUT", 'LINE INPUT "Name: ", N$\nPRINT "GOT:", N$', "prints:GOT"
+    ),
     # -- File channels. The workspace file service confines these to a scratch
     #    name, and the round trip is the only way to know PRINT # actually wrote.
-    Row("BASIC", "OPEN / PRINT # / CLOSE round trip", f'OPEN "{SCRATCH}" FOR OUTPUT AS #1\nPRINT #1, "HELLO"\nCLOSE #1\nPRINT "WROTE"', "prints:WROTE", ("PRINT #", "CLOSE")),
-    Row("BASIC", "INPUT # reads it back", f'OPEN "{SCRATCH}" FOR INPUT AS #1\nLINE INPUT #1, L$\nCLOSE #1\nPRINT L$', "prints:HELLO", ("INPUT #", "LINE INPUT")),
+    Row(
+        "BASIC",
+        "OPEN / PRINT # / CLOSE round trip",
+        f'OPEN "{SCRATCH}" FOR OUTPUT AS #1\nPRINT #1, "HELLO"\nCLOSE #1\nPRINT "WROTE"',
+        "prints:WROTE",
+        ("PRINT #", "CLOSE"),
+    ),
+    Row(
+        "BASIC",
+        "INPUT # reads it back",
+        f'OPEN "{SCRATCH}" FOR INPUT AS #1\nLINE INPUT #1, L$\nCLOSE #1\nPRINT L$',
+        "prints:HELLO",
+        ("INPUT #", "LINE INPUT"),
+    ),
     Row("BASIC", "PUT without an open channel", 'PUT #9, , "X"', "error"),
     Row("BASIC", "GET without an open channel", "GET #9, 1, V$", "error"),
     Row("BASIC", "CLOSE with nothing open", "CLOSE", "prints:Closed all files"),
@@ -228,7 +424,12 @@ LOGO: list[Row] = [
     Row("Logo", "RT then FD", "RT 90\nFD 50", "draws"),
     Row("Logo", "LT then FD", "LT 90\nFD 50", "draws"),
     Row("Logo", "REPEAT", "REPEAT 4 [FD 10 RT 90]", "draws"),
-    Row("Logo", "REPEAT with nested variable", 'MAKE "N 3\nREPEAT :N [FD 10 RT 120]', "draws"),
+    Row(
+        "Logo",
+        "REPEAT with nested variable",
+        'MAKE "N 3\nREPEAT :N [FD 10 RT 120]',
+        "draws",
+    ),
     Row("Logo", "PU suppresses ink", "PU\nFD 50", "any"),
     Row("Logo", "PD resumes ink", "PU\nFD 50\nPD\nFD 50", "draws"),
     Row("Logo", "SETPENCOLOR", 'SETPENCOLOR "RED\nFD 20', "draws"),
@@ -237,11 +438,20 @@ LOGO: list[Row] = [
     Row("Logo", "SETH then FD", "SETH 90\nFD 20", "draws"),
     Row("Logo", "HOME", "FD 20\nHOME", "draws"),
     Row("Logo", "CS", "FD 20\nCS", "any"),
-    Row("Logo", "procedure and call", "TO SQUARE :S\nREPEAT 4 [FD :S RT 90]\nEND\nSQUARE 20", "draws"),
+    Row(
+        "Logo",
+        "procedure and call",
+        "TO SQUARE :S\nREPEAT 4 [FD :S RT 90]\nEND\nSQUARE 20",
+        "draws",
+    ),
     Row("Logo", "IF true branch", "IF 1 = 1 [FD 10]", "draws"),
-    Row("Logo", "IF false branch falls through", "IF 1 = 2 [FD 10]\nPRINT \"DONE", "prints:DONE"),
+    Row(
+        "Logo",
+        "IF false branch falls through",
+        'IF 1 = 2 [FD 10]\nPRINT "DONE',
+        "prints:DONE",
+    ),
     Row("Logo", "WHILE", 'MAKE "I 0\nWHILE [:I < 3] [MAKE "I :I + 1 FD 10]', "draws"),
-
     # -- Turtle motion. The short forms (FD, BK, RT, LT) have rows above; these
     #    are the long names and the ones that set a position or an angle directly.
     Row("Logo", "FORWARD", "FORWARD 50", "draws"),
@@ -265,7 +475,6 @@ LOGO: list[Row] = [
     Row("Logo", "WINDOW", "WINDOW", "any"),
     Row("Logo", "WRAP", "WRAP", "any"),
     Row("Logo", "FENCE", "FENCE", "any"),
-
     # -- Pen. Each alias is exercised through the row of the command it aliases,
     #    so a break in the alias spelling is still attributable.
     Row("Logo", "PENSIZE", "PENSIZE 3\nFORWARD 20", "draws"),
@@ -282,7 +491,6 @@ LOGO: list[Row] = [
     Row("Logo", "PENMODE", "PENMODE", "any"),
     Row("Logo", "PPT", "PPT", "any"),
     Row("Logo", "PX", "PX", "any"),
-
     # -- Screen and turtle visibility.
     Row("Logo", "CLEAN", "FORWARD 20\nCLEAN", "any"),
     Row("Logo", "CLEAR", "FORWARD 20\nCLEAR", "any", ("CLEARSCREEN",)),
@@ -290,7 +498,6 @@ LOGO: list[Row] = [
     Row("Logo", "SHOWTURTLE", "HIDETURTLE\nSHOWTURTLE", "any", ("ST",)),
     Row("Logo", "STOP", "FORWARD 10\nSTOP", "any"),
     Row("Logo", "BYE", "BYE", "any"),
-
     # -- Reporters and printers. The value of a reporter is only visible through
     #    PRINT or SHOW, so each row shows it.
     Row("Logo", "SHOW", "SHOW 42", "prints:42"),
@@ -310,7 +517,6 @@ LOGO: list[Row] = [
     Row("Logo", "REDUCE", 'SHOW REDUCE "SUM [1 2 3]', "prints:"),
     Row("Logo", "ROLL", "SHOW ROLL [1 2 3]", "prints:"),
     Row("Logo", "FILLED", 'FILLED "RED [FD 20 RT 90 FD 20 RT 90 FD 20]', "draws"),
-
     # -- Control.
     Row("Logo", "IFELSE", 'IFELSE 1 = 1 [PRINT "YES"] [PRINT "NO"]', "prints:YES"),
     Row("Logo", "TO ... END", "TO PAIR\nREPEAT 2 [FD 20 RT 180]\nEND\nPAIR", "draws"),
@@ -318,12 +524,18 @@ LOGO: list[Row] = [
     Row("Logo", "FOREVER stops on STOP", "FOREVER [STOP]", "any"),
     Row("Logo", "REPCOUNT", "REPEAT 2 [SHOW REPCOUNT]", "prints:1"),
     Row("Logo", "LOCAL", 'TO P\nLOCAL "X\nMAKE "X 5\nSHOW :X\nEND\nP', "prints:5"),
-    Row("Logo", "OUTPUT", 'TO P\nOUTPUT 5\nEND\nP', "prints:5", ("OP",)),
+    Row("Logo", "OUTPUT", "TO P\nOUTPUT 5\nEND\nP", "prints:5", ("OP",)),
+    Row(
+        "Logo",
+        "OUTPUT as a value",
+        "TO DOUBLE :N\nOUTPUT :N * 2\nEND\nPRINT DOUBLE 21",
+        "prints:42",
+        ("OUTPUT",),
+    ),
     Row("Logo", "LABEL", 'LABEL "HI', "any"),
     Row("Logo", "SETLABELHEIGHT", "SETLABELHEIGHT 12", "any"),
     Row("Logo", "TEXTSIZE", "TEXTSIZE 12", "any"),
     Row("Logo", "WAIT", "WAIT 1", "any"),
-
     # -- 3D. The canvas has no depth, so these are judged on being acknowledged
     #    rather than on producing visible geometry.
     Row("Logo", "ENABLE3D", "ENABLE3D", "any"),
@@ -337,7 +549,6 @@ LOGO: list[Row] = [
     Row("Logo", "2DON", "3DON\n2DON", "any", ("3DON",)),
     Row("Logo", "3DON", "3DON", "any"),
     Row("Logo", "3DOFF", "3DON\n3DOFF", "any"),
-
     Row("Logo", "error: unknown command", "NOTACOMMAND", "error"),
     Row("Logo", "error: missing argument", "FD", "error"),
 ]
@@ -360,10 +571,34 @@ PILOT: list[Row] = [
         "prints:Wrong",
         ("A", "M"),
     ),
-    Row("PILOT", "J: jump", "J: SKIP\nT: NOT REACHED\nE:\n*SKIP\nT: LANDED", "prints:LANDED", ("J",)),
-    Row("PILOT", "U: subroutine", "U: *SUB\nT: BACK\nE:\n*SUB\nT: INSIDE\nE:", "prints:INSIDE", ("U",)),
-    Row("PILOT", "E: ends the program", "T: BEFORE\nE:\nT: AFTER", "prints:BEFORE", ("E",)),
-    Row("PILOT", "REMARK is ignored", "REMARK a note\nT: AFTER REMARK", "prints:AFTER REMARK", ("R",)),
+    Row(
+        "PILOT",
+        "J: jump",
+        "J: SKIP\nT: NOT REACHED\nE:\n*SKIP\nT: LANDED",
+        "prints:LANDED",
+        ("J",),
+    ),
+    Row(
+        "PILOT",
+        "U: subroutine",
+        "U: *SUB\nT: BACK\nE:\n*SUB\nT: INSIDE\nE:",
+        "prints:INSIDE",
+        ("U",),
+    ),
+    Row(
+        "PILOT",
+        "E: ends the program",
+        "T: BEFORE\nE:\nT: AFTER",
+        "prints:BEFORE",
+        ("E",),
+    ),
+    Row(
+        "PILOT",
+        "REMARK is ignored",
+        "REMARK a note\nT: AFTER REMARK",
+        "prints:AFTER REMARK",
+        ("R",),
+    ),
     Row(
         "PILOT",
         "C: compute stores a string",
@@ -392,8 +627,20 @@ PILOT: list[Row] = [
         "prints:NO MATCH",
         ("N",),
     ),
-    Row("PILOT", "D: delay of zero seconds", "D: 0\nT: AFTER DELAY", "prints:AFTER DELAY", ("D",)),
-    Row("PILOT", "P: pause resumes on Enter", "P:\nT: AFTER PAUSE", "prints:AFTER PAUSE", ("P",)),
+    Row(
+        "PILOT",
+        "D: delay of zero seconds",
+        "D: 0\nT: AFTER DELAY",
+        "prints:AFTER DELAY",
+        ("D",),
+    ),
+    Row(
+        "PILOT",
+        "P: pause resumes on Enter",
+        "P:\nT: AFTER PAUSE",
+        "prints:AFTER PAUSE",
+        ("P",),
+    ),
     Row(
         "PILOT",
         "H: hint message",
@@ -423,7 +670,13 @@ PILOT: list[Row] = [
         "draws",
         ("FILL",),
     ),
-    Row("PILOT", "G: TEXT labels the drawing", "G: TEXT A label", "prints:A label", ("TEXT",)),
+    Row(
+        "PILOT",
+        "G: TEXT labels the drawing",
+        "G: TEXT A label",
+        "prints:A label",
+        ("TEXT",),
+    ),
     Row(
         "PILOT",
         "L: declares a label that J: can reach",
@@ -445,7 +698,9 @@ PILOT: list[Row] = [
         "error",
         ("F",),
     ),
-    Row("PILOT", "error: jump to a missing label", "J: NOWHERE\nT: NOT REACHED", "error"),
+    Row(
+        "PILOT", "error: jump to a missing label", "J: NOWHERE\nT: NOT REACHED", "error"
+    ),
 ]
 
 # ---------------------------------------------------------------------------
@@ -455,24 +710,81 @@ PILOT: list[Row] = [
 COMAL: list[Row] = [
     Row("COMAL", "PRINT string", 'PRINT "Hello, World!"', "prints:Hello, World!"),
     Row("COMAL", "PRINT expression", "PRINT 6 * 7", "prints:42"),
-    Row("COMAL", "assignment and print", 'COUNT := 5\nPRINT COUNT', "prints:5"),
-    Row("COMAL", "string variable", 'TITLE$ := "Report"\nPRINT TITLE$', "prints:Report"),
-    Row("COMAL", "IF / ENDIF", 'SCORE := 87\nIF SCORE >= 90 THEN\nPRINT "Grade A"\nELSE\nPRINT "Keep going"\nENDIF', "prints:Keep going"),
-    Row("COMAL", "IF / ELIF / ENDIF", 'SCORE := 85\nIF SCORE >= 90 THEN\nPRINT "A"\nELIF SCORE >= 80 THEN\nPRINT "B"\nELSE\nPRINT "C"\nENDIF', "prints:B", ("ELIF",)),
+    Row("COMAL", "assignment and print", "COUNT := 5\nPRINT COUNT", "prints:5"),
+    Row(
+        "COMAL", "string variable", 'TITLE$ := "Report"\nPRINT TITLE$', "prints:Report"
+    ),
+    Row(
+        "COMAL",
+        "IF / ENDIF",
+        'SCORE := 87\nIF SCORE >= 90 THEN\nPRINT "Grade A"\nELSE\nPRINT "Keep going"\nENDIF',
+        "prints:Keep going",
+    ),
+    Row(
+        "COMAL",
+        "IF / ELIF / ENDIF",
+        'SCORE := 85\nIF SCORE >= 90 THEN\nPRINT "A"\nELIF SCORE >= 80 THEN\nPRINT "B"\nELSE\nPRINT "C"\nENDIF',
+        "prints:B",
+        ("ELIF",),
+    ),
     Row("COMAL", "FOR / NEXT", "FOR I := 1 TO 3\nPRINT I\nNEXT I", "prints:3"),
-    Row("COMAL", "WHILE / ENDWHILE", "N := 0\nWHILE N < 3\nN := N + 1\nENDWHILE\nPRINT N", "prints:3"),
-    Row("COMAL", "REPEAT / UNTIL", "N := 0\nREPEAT\nN := N + 1\nUNTIL N >= 3\nPRINT N", "prints:3"),
-    Row("COMAL", "PROC and CALL", 'PROC GREET(NAME$)\nPRINT "Hello, "; NAME$\nENDPROC\nCALL GREET("World")', "prints:Hello, World"),
-    Row("COMAL", "DIM and index", "DIM SCORES(5)\nSCORES(1) := 9\nPRINT SCORES(1)", "prints:9"),
-    Row("COMAL", "DATA and READ", "DATA 4, 5\nREAD A, B\nPRINT A + B", "prints:9", ("DATA",)),
-
+    Row(
+        "COMAL",
+        "WHILE / ENDWHILE",
+        "N := 0\nWHILE N < 3\nN := N + 1\nENDWHILE\nPRINT N",
+        "prints:3",
+    ),
+    Row(
+        "COMAL",
+        "REPEAT / UNTIL",
+        "N := 0\nREPEAT\nN := N + 1\nUNTIL N >= 3\nPRINT N",
+        "prints:3",
+    ),
+    Row(
+        "COMAL",
+        "PROC and CALL",
+        'PROC GREET(NAME$)\nPRINT "Hello, "; NAME$\nENDPROC\nCALL GREET("World")',
+        "prints:Hello, World",
+    ),
+    Row(
+        "COMAL",
+        "DIM and index",
+        "DIM SCORES(5)\nSCORES(1) := 9\nPRINT SCORES(1)",
+        "prints:9",
+    ),
+    Row(
+        "COMAL",
+        "DATA and READ",
+        "DATA 4, 5\nREAD A, B\nPRINT A + B",
+        "prints:9",
+        ("DATA",),
+    ),
     # -- Turtle graphics. MOVE draws forward and TURN rotates, so each row moves
     #    first and turns second, otherwise there is nothing on the canvas to see.
     Row("COMAL", "MOVE", "MOVE 100", "draws"),
     Row("COMAL", "TURN", "MOVE 50\nTURN 90\nMOVE 50", "draws", ("MOVE",)),
-    Row("COMAL", "PENUP / PENDOWN", "MOVE 50\nPENUP\nMOVE 50\nPENDOWN\nMOVE 50", "draws", ("PENDOWN",)),
+    Row(
+        "COMAL",
+        "PENUP / PENDOWN",
+        "MOVE 50\nPENUP\nMOVE 50\nPENDOWN\nMOVE 50",
+        "draws",
+        ("PENDOWN",),
+    ),
     Row("COMAL", "PLOT", "MOVE 20\nPLOT", "draws", ("MOVE",)),
-    Row("COMAL", "FUNC / ENDFUNC", "10 FUNC DOUBLE(N)\n20 RETURN N * 2\n30 ENDFUNC\n40 CALL DOUBLE(21)\n50 PRINT RESULT", "prints:42", ("CALL", "RETURN")),
+    Row(
+        "COMAL",
+        "FUNC / ENDFUNC",
+        "10 FUNC DOUBLE(N)\n20 RETURN N * 2\n30 ENDFUNC\n40 CALL DOUBLE(21)\n50 PRINT RESULT",
+        "prints:42",
+        ("CALL", "RETURN"),
+    ),
+    Row(
+        "COMAL",
+        "FUNC called in an expression",
+        "10 FUNC DOUBLE(N)\n20 RETURN N * 2\n30 ENDFUNC\n40 PRINT DOUBLE(21)",
+        "prints:42",
+        ("FUNC", "RETURN"),
+    ),
     Row("COMAL", "error: unknown statement", "NOSUCH", "error"),
 ]
 
@@ -484,15 +796,53 @@ REXX: list[Row] = [
     Row("REXX", "SAY string", "SAY 'Hello, World!'", "prints:Hello, World!"),
     Row("REXX", "SAY expression", "SAY 6 * 7", "prints:42"),
     Row("REXX", "assignment and SAY", "name = 'Ann'\nSAY name", "prints:Ann"),
-    Row("REXX", "concatenation with ||", "SAY 'Hello' || ' ' || 'World'", "prints:Hello World"),
-    Row("REXX", "IF / THEN", "score = 70\nIF score > 50 THEN SAY 'pass'", "prints:pass", ("THEN",)),
-    Row("REXX", "IF / THEN DO / ELSE DO", "score = 95\nIF score >= 90 THEN DO\nSAY 'Grade A'\nEND\nELSE DO\nSAY 'Keep going'\nEND", "prints:Grade A"),
+    Row(
+        "REXX",
+        "concatenation with ||",
+        "SAY 'Hello' || ' ' || 'World'",
+        "prints:Hello World",
+    ),
+    Row(
+        "REXX",
+        "IF / THEN",
+        "score = 70\nIF score > 50 THEN SAY 'pass'",
+        "prints:pass",
+        ("THEN",),
+    ),
+    Row(
+        "REXX",
+        "IF / THEN DO / ELSE DO",
+        "score = 95\nIF score >= 90 THEN DO\nSAY 'Grade A'\nEND\nELSE DO\nSAY 'Keep going'\nEND",
+        "prints:Grade A",
+    ),
     Row("REXX", "DO counted loop", "DO i = 1 TO 3\nSAY i\nEND", "prints:3"),
     Row("REXX", "DO with BY", "DO n = 10 TO 1 BY -3\nSAY n\nEND", "prints:1", ("BY",)),
-    Row("REXX", "DO WHILE", "count = 0\nDO WHILE count < 3\ncount = count + 1\nEND\nSAY count", "prints:3"),
-    Row("REXX", "DO OVER", "DO word OVER 'alpha beta gamma'\nSAY word\nEND", "prints:gamma", ("OVER",)),
-    Row("REXX", "SELECT / WHEN / OTHERWISE", "score = 95\nSELECT\nWHEN score > 90 THEN SAY 'huge'\nOTHERWISE SAY 'small'\nEND", "prints:huge", ("WHEN", "OTHERWISE")),
-    Row("REXX", "PARSE VAR", "line = 'red green blue'\nPARSE VAR line first second third\nSAY second", "prints:green"),
+    Row(
+        "REXX",
+        "DO WHILE",
+        "count = 0\nDO WHILE count < 3\ncount = count + 1\nEND\nSAY count",
+        "prints:3",
+    ),
+    Row(
+        "REXX",
+        "DO OVER",
+        "DO word OVER 'alpha beta gamma'\nSAY word\nEND",
+        "prints:gamma",
+        ("OVER",),
+    ),
+    Row(
+        "REXX",
+        "SELECT / WHEN / OTHERWISE",
+        "score = 95\nSELECT\nWHEN score > 90 THEN SAY 'huge'\nOTHERWISE SAY 'small'\nEND",
+        "prints:huge",
+        ("WHEN", "OTHERWISE"),
+    ),
+    Row(
+        "REXX",
+        "PARSE VAR",
+        "line = 'red green blue'\nPARSE VAR line first second third\nSAY second",
+        "prints:green",
+    ),
     Row(
         "REXX",
         "internal subroutine and RESULT",
@@ -540,17 +890,52 @@ SCHEME: list[Row] = [
     Row("Scheme", "display arithmetic", "(display (* 6 7))", "prints:42"),
     Row("Scheme", "newline", "(display 1)\n(newline)\n(display 2)", "prints:2"),
     Row("Scheme", "define and use", "(define pi 3.14159)\n(display pi)", "prints:3.14"),
-    Row("Scheme", "define a procedure", "(define (square n) (* n n))\n(display (square 7))", "prints:49"),
-    Row("Scheme", "cond", '(define (sign n) (cond ((> n 0) "positive") ((< n 0) "negative") (else "zero")))\n(display (sign -3))', "prints:negative"),
-    Row("Scheme", "if and recursion", "(define (fact n) (if (= n 0) 1 (* n (fact (- n 1)))))\n(display (fact 5))", "prints:120"),
+    Row(
+        "Scheme",
+        "define a procedure",
+        "(define (square n) (* n n))\n(display (square 7))",
+        "prints:49",
+    ),
+    Row(
+        "Scheme",
+        "cond",
+        '(define (sign n) (cond ((> n 0) "positive") ((< n 0) "negative") (else "zero")))\n(display (sign -3))',
+        "prints:negative",
+    ),
+    Row(
+        "Scheme",
+        "if and recursion",
+        "(define (fact n) (if (= n 0) 1 (* n (fact (- n 1)))))\n(display (fact 5))",
+        "prints:120",
+    ),
     Row("Scheme", "car of a list", "(display (car (list 1 2 3)))", "prints:1"),
-    Row("Scheme", "map with lambda", "(display (map (lambda (x) (* x x)) (list 1 2 3 4)))", "prints:"),
-    Row("Scheme", "filter with a predicate", "(display (filter odd? (list 1 2 3 4 5)))", "prints:"),
+    Row(
+        "Scheme",
+        "map with lambda",
+        "(display (map (lambda (x) (* x x)) (list 1 2 3 4)))",
+        "prints:",
+    ),
+    Row(
+        "Scheme",
+        "filter with a predicate",
+        "(display (filter odd? (list 1 2 3 4 5)))",
+        "prints:",
+    ),
     Row("Scheme", "apply", "(display (apply + (list 10 20 30)))", "prints:60"),
     Row("Scheme", "let", "(display (let ((x 3) (y 4)) (+ x y)))", "prints:7"),
-    Row("Scheme", "closure", "(define (make-adder n) (lambda (x) (+ x n)))\n(define add10 (make-adder 10))\n(display (add10 5))", "prints:15"),
+    Row(
+        "Scheme",
+        "closure",
+        "(define (make-adder n) (lambda (x) (+ x n)))\n(define add10 (make-adder 10))\n(display (add10 5))",
+        "prints:15",
+    ),
     Row("Scheme", "turtle: forward", "(forward 100)", "draws"),
-    Row("Scheme", "turtle: square procedure", "(define (square size) (define (loop n) (when (> n 0) (forward size) (right 90) (loop (- n 1)))) (loop 4))\n(square 100)", "draws"),
+    Row(
+        "Scheme",
+        "turtle: square procedure",
+        "(define (square size) (define (loop n) (when (> n 0) (forward size) (right 90) (loop (- n 1)))) (loop 4))\n(square 100)",
+        "draws",
+    ),
     Row("Scheme", "error: arity", "(car)", "error"),
     Row("Scheme", "error: unbound procedure", "(no-such-procedure 1)", "error"),
 ]
@@ -561,7 +946,12 @@ FOCAL: list[Row] = [
     Row("FOCAL", "TYPE with a format", '01.10 T %0,"N=",7/2', "prints:N=4"),
     Row("FOCAL", "SET", "01.10 S X=7\n01.20 T X", "prints:7.00"),
     Row("FOCAL", "SET several at once", "01.10 S A=1,B=2\n01.20 T A+B", "prints:3.00"),
-    Row("FOCAL", "COMMENT", '01.10 C this text is ignored\n01.20 T "after"', "prints:after"),
+    Row(
+        "FOCAL",
+        "COMMENT",
+        '01.10 C this text is ignored\n01.20 T "after"',
+        "prints:after",
+    ),
     Row("FOCAL", "ASK", '01.10 ASK "How many? " N\n01.20 T "asked"', "prints:asked"),
     Row(
         "FOCAL",
@@ -576,7 +966,12 @@ FOCAL: list[Row] = [
         '01.10 DO 2.10\n01.20 T "AFTER"\n01.30 Q\n02.10 T "GROUP"',
         "prints:GROUP",
     ),
-    Row("FOCAL", "GOTO", '01.10 GOTO 1.30\n01.20 T "SKIPPED"\n01.30 T "THERE"', "prints:THERE"),
+    Row(
+        "FOCAL",
+        "GOTO",
+        '01.10 GOTO 1.30\n01.20 T "SKIPPED"\n01.30 T "THERE"',
+        "prints:THERE",
+    ),
     Row("FOCAL", "ERASE", "01.10 S A=1\n01.20 E ALL\n01.30 T A", "prints:0.00"),
     Row("FOCAL", "QUIT", '01.10 T "BEFORE"\n01.20 Q\n01.30 T "AFTER"', "prints:BEFORE"),
     Row("FOCAL", "FPI", "01.10 T FPI", "prints:3.14"),
@@ -736,7 +1131,12 @@ CHIP8: list[Row] = [
         "       HALT\ndot: DB 0x80",
         "draws",
     ),
-    Row("CHIP8", "DRW", "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80", "draws"),
+    Row(
+        "CHIP8",
+        "DRW",
+        "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+    ),
     Row(
         "CHIP8",
         "DB data for a sprite",
@@ -801,7 +1201,12 @@ CHIP8: list[Row] = [
         "       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
         "draws",
     ),
-    Row("CHIP8", "HALT", "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80", "draws"),
+    Row(
+        "CHIP8",
+        "HALT",
+        "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+    ),
     Row("CHIP8", "error: unknown mnemonic", "start: FROB V0", "error"),
     Row("CHIP8", "error: byte out of range", "start: LD V0, 999", "error"),
     Row("CHIP8", "error: unknown opcode", "start: DW 0x0FFF", "error"),
@@ -844,7 +1249,12 @@ APL: list[Row] = [
     Row("APL", "SCAN", "+SCAN IOTA 3", "prints:1 3 6", also=("+\\",)),
     Row("APL", "SHAPE", "RHO 1 2 3", "prints:3"),
     Row("APL", "RESHAPE", "3 RHO 1", "prints:1 1 1"),
-    Row("APL", "a defined function", "∇ R ← DOUBLE X\n  R ← X TIMES 2\n∇\nDOUBLE 21", "prints:42"),
+    Row(
+        "APL",
+        "a defined function",
+        "∇ R ← DOUBLE X\n  R ← X TIMES 2\n∇\nDOUBLE 21",
+        "prints:42",
+    ),
     Row("APL", "turtle: FD", "FD 100", "draws", also=("FORWARD",)),
     Row("APL", "turtle: BK", "BK 50", "draws", also=("BACK",)),
     Row("APL", "turtle: RT", "RT 90", "draws", also=("RIGHT",)),
@@ -945,7 +1355,12 @@ SMALLTALK: list[Row] = [
         "draws",
         also=("penDown",),
     ),
-    Row("Smalltalk", "turtle: home", "| t |\nt := Turtle new.\nt forward: 50.\nt home", "any"),
+    Row(
+        "Smalltalk",
+        "turtle: home",
+        "| t |\nt := Turtle new.\nt forward: 50.\nt home",
+        "any",
+    ),
     Row("Smalltalk", "turtle: clear", "| t |\nt := Turtle new.\nt clear", "any"),
     Row(
         "Smalltalk",
@@ -970,16 +1385,7 @@ SMALLTALK: list[Row] = [
 
 
 ROWS: list[Row] = (
-    BASIC
-    + LOGO
-    + PILOT
-    + COMAL
-    + REXX
-    + SCHEME
-    + FOCAL
-    + CHIP8
-    + APL
-    + SMALLTALK
+    BASIC + LOGO + PILOT + COMAL + REXX + SCHEME + FOCAL + CHIP8 + APL + SMALLTALK
 )
 
 
@@ -987,38 +1393,8 @@ ROWS: list[Row] = (
 WAIVERS: list[Waiver] = [
     Waiver(
         "BASIC",
-        "SPEAK",
-        "does not exist: the executor dispatches SAY, and SAY is covered by a row. "
-        "The name appears in the documentation, which is a documentation error "
-        "rather than a missing command, so nothing is waived here.",
-    ),
-    Waiver(
-        "BASIC",
-        "STICK / STRIG",
-        "JOYINIT's docstring promises these gamepad readers, but the executor has no "
-        "handler for either: the expression evaluator leaves them unresolved. "
-        "Recorded here so the promise is not mistaken for coverage.",
-    ),
-    Waiver("BASIC", "INKEY$", "polls a keyboard buffer that only an interactive session fills"),
-    Waiver(
-        "Logo",
-        "OUTPUT / OP used as a value in an expression",
-        "a procedure that OUTPUTs prints its value but the value never reaches the "
-        "caller: PRINT DOUBLE 21 prints 'DOUBLE 21'. The call itself is covered by "
-        "the OUTPUT row.",
-    ),
-    Waiver(
-        "BASIC",
-        "PEEK(...) / IN(...) as expression functions",
-        "the statement forms work and have rows, but the classic expression forms "
-        "(X = PEEK(addr)) are not wired into the evaluator, which reports "
-        "'Unknown function'. The handlers' own docstrings record this.",
-    ),
-    Waiver(
-        "BASIC",
-        "RESUME NEXT on unnumbered lines",
-        "the numbered-line form has a row; with no line numbers there is no error "
-        "line to resume after, so the statement is accepted and does nothing.",
+        "INKEY$",
+        "polls a keyboard buffer that only an interactive session fills",
     ),
     Waiver(
         "Scheme",

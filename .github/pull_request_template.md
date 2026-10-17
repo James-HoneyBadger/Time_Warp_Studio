@@ -30,7 +30,7 @@ and what a reader of the merged history scrolls to.
 | Debug tree | `make -C native test-debug` | <!-- 11/11, or "not run — no C++ changed" --> |
 | Engine tests | `make engine-test` | <!-- N passed, 1 xfailed --> |
 | Example corpus | `make smoke` | <!-- all 48, stroke counts unmoved --> |
-| Command coverage | `python3 native/tools/command_matrix.py` | <!-- 429 rows, 0 failed, 0 gaps --> |
+| Command coverage | `python3 native/tools/command_matrix.py` | <!-- 437 rows, 0 failed, 0 gaps --> |
 | Lesson curriculum | `python3 native/tools/teach.py validate` | <!-- clean, or "not run — no lesson changed" --> |
 | Documentation lint | `make lint-md` | <!-- 0 issues --> |
 

@@ -11,7 +11,7 @@ Four more languages, and the defects that examining their commands turned up.
   program. All four draw, all four are in the example corpus, and each has a
   command reference in `docs/LANGUAGE_GUIDE.md` and a tutorial in `docs/tutorials/`.
 - **Command coverage for every language.** `command_table.py` grew from 279 rows to
-  429, and every language now has zero commands that are neither exercised by a row
+  437, and every language now has zero commands that are neither exercised by a row
   nor waived — the four older languages had accumulated gaps (21 in PILOT, 18 in
   REXX) that the new rows closed.
 
@@ -35,6 +35,22 @@ Four more languages, and the defects that examining their commands turned up.
 - **`command_inventory.py`** compared its "not a command" list case-sensitively while
   the list held lowercase entries, so those entries did nothing and the completeness
   report asked for rows that could not exist.
+- **Unresolved names are reported, not echoed.** `PRINT UNSET` printed `UNSET`,
+  `PRINT NOSUCHFN(3)` printed `NOSUCHFN(3)` with no error, and after `DEFSTR A-Z`
+  `PRINT A` printed `A`. An unset numeric variable is 0, as BASIC defines it; an
+  unknown function is an error. The evaluator's function table is also per-instance
+  now, so one language's `EOF` registration no longer leaks into the other nine.
+- **BASIC's expression functions.** `X = PEEK(1000)` and `PRINT IN(60)` work, and
+  `STICK(n)`/`STRIG(n)` read the gamepad `JOYINIT` starts. `TYPE$(x)` answers the
+  interpreter's type instead of printing nothing, and `SPEAK` reaches the speech
+  handler.
+- **`RESUME NEXT` without line numbers** resumes after the statement that failed; the
+  error handler now records the line index as well as the BASIC line number.
+- **COMAL `FUNC` in an expression.** `PRINT DOUBLE(21)` answers 42 in both engines
+  through a new per-interpreter function hook; a body the executor cannot read
+  reports an error rather than answering 0.
+- **Logo `OUTPUT` reaches its caller.** `PRINT DOUBLE 21` prints 42 and `SHOW P`
+  prints the value, in both engines.
 
 ### Lessons, for students and teachers
 

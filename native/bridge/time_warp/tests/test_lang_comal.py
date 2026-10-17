@@ -39,16 +39,12 @@ def test_for_loop_negative_step():
 
 
 def test_while_loop():
-    out = comal(
-        "10 I := 0\n20 WHILE I < 3\n30 I := I + 1\n40 PRINT I\n50 ENDWHILE\n"
-    )
+    out = comal("10 I := 0\n20 WHILE I < 3\n30 I := I + 1\n40 PRINT I\n50 ENDWHILE\n")
     assert out == ["1", "2", "3"]
 
 
 def test_repeat_until():
-    out = comal(
-        "10 I := 0\n20 REPEAT\n30 I := I + 1\n40 PRINT I\n50 UNTIL I >= 3\n"
-    )
+    out = comal("10 I := 0\n20 REPEAT\n30 I := I + 1\n40 PRINT I\n50 UNTIL I >= 3\n")
     assert out == ["1", "2", "3"]
 
 
@@ -104,3 +100,28 @@ def test_string_concatenation_in_print():
 
 def test_syntax_error_is_reported():
     assert first_error(comal("10 FOR\n")) is not None
+
+
+# ---------------------------------------------------------------------------
+# User functions as expressions
+# ---------------------------------------------------------------------------
+
+
+def test_func_is_callable_in_an_expression():
+    out = comal("10 FUNC DOUBLE(N)\n20 RETURN N * 2\n30 ENDFUNC\n40 PRINT DOUBLE(21)")
+    assert no_errors(out), out
+    assert has(out, "42")
+
+
+def test_func_with_two_parameters_in_an_expression():
+    out = comal("10 FUNC ADD(A,B)\n20 RETURN A + B\n30 ENDFUNC\n40 PRINT ADD(2,3)")
+    assert no_errors(out), out
+    assert has(out, "5")
+
+
+def test_func_local_variable_in_an_expression():
+    out = comal(
+        "10 FUNC TRIPLE(N)\n20 M = N * 3\n30 RETURN M\n40 ENDFUNC\n50 PRINT TRIPLE(4)"
+    )
+    assert no_errors(out), out
+    assert has(out, "12")

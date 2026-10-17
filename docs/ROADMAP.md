@@ -24,7 +24,7 @@ yet — please check the list below before reporting one as a regression.
 | Bridged engines | BASIC, REXX, APL and Smalltalk — `native/bridge/` |
 | Native executors | FOCAL, PILOT, COMAL, CHIP-8 and Logo — `timewarp_lang`, in process |
 | Packaging | `make install` with the desktop entry and icon; `DESTDIR` staging |
-| Quality gates | 13 CTest suites in 4 build configurations, 3 parity gates, 536 engine tests, 429 command rows, 225 parity programs |
+| Quality gates | 13 CTest suites in 4 build configurations, 3 parity gates, 551 engine tests, 437 command rows, 227 parity programs |
 
 ---
 
@@ -39,30 +39,38 @@ written down in `WAIVERS`.
 
 **Still open**
 
-1. **An unresolved name in an expression is echoed as literal text.** `PRINT` of an
-   unset variable prints its own name, an unknown function prints its own call, and
-   `PRINT NOSUCHFN(3)` prints `NOSUCHFN(3)` with no error at all — so a typo is
-   presented as a result. Authentic BASIC would give 0 for an unset numeric variable
-   and report an unknown function. In a teaching environment this is the most costly
-   failure mode there is; `test_lang_basic.py` carries an `xfail(strict=True)` that
-   will announce the fix.
-2. **`PEEK(address)` and `IN(port)` are not usable in expressions.** The statement
-   forms work and have rows, but `X = PEEK(1000)` reports `Unknown function: PEEK`;
-   the handlers' own docstrings record that the evaluator integration was never done.
-3. **`STICK()`/`STRIG()` do not exist.** `JOYINIT`'s docstring documents them as the
-   way to read a gamepad; there is no handler for either.
-4. **`DEFSTR A-Z` then `PRINT A` prints `A`.** The default string type is honoured on
-   assignment (`PRINT A$` reads it back) but not in the `PRINT` lookup.
-5. **`RESUME NEXT` does nothing on unnumbered lines.** The numbered form works and has
-   a row; without line numbers there is no error line to resume after.
-6. **`TYPE$` has no handler.** The literal only ever appears as a guard
-   (`not cmd.startswith("TYPE$")`), so `PRINT TYPE$(x)` quietly prints nothing.
-7. **COMAL `FUNC` cannot be called as an expression.** `PRINT DOUBLE(21)` yields 0;
-   the documented path is `CALL DOUBLE(21)` and then `RESULT`, which has a row.
-8. **`SPEAK` is documented but not implemented.** The executor dispatches `SAY`.
+None. Every defect below has a regression row in `command_table.py` and, where the
+behaviour is expressible in a unit test, a case in the language's test module. The
+section stays because the next port has to keep them fixed: a port that quietly
+restores one of these is a regression even though it is new code.
 
 **Fixed during the examination** (each has a regression row, and the first two also a
 unit test)
+
+- **An unresolved name is reported, not echoed.** `PRINT UNSET` printed `UNSET`,
+  `PRINT NOSUCHFN(3)` printed `NOSUCHFN(3)` with no error, and after `DEFSTR A-Z`
+  `PRINT A` printed `A`. An unset numeric variable is now 0, as BASIC defines it, and
+  an unknown function is `❌ Unknown function: NAME`. The `xfail(strict=True)` that
+  announced the gap now passes as an ordinary test.
+- **`PEEK(address)` and `IN(port)` work in expressions.** The names are registered on
+  the evaluator for BASIC only, so `X = PEEK(1000)` reads the same memory the
+  statement form writes. The evaluator's function table is now per-instance: the
+  reference's `EOF` registration was mutating the class dictionary and giving `EOF`
+  to every other language's evaluator too.
+- **`STICK(n)` and `STRIG(n)` exist**, reading the gamepad manager `JOYINIT` starts
+  (axis 0-3, button 0-7). With no backend they answer 0 rather than failing.
+- **`TYPE$(x)` reports the interpreter's type** (`INTEGER`, `LONG`, `SINGLE`,
+  `DOUBLE`, `STRING`) instead of printing nothing; `PRINT` was reading it as a string
+  array because the item ended in `)` with `$(` inside.
+- **`RESUME NEXT` works without line numbers.** The error handler records the line
+  *index* as well as the BASIC line number, so an unnumbered program resumes after
+  the statement that failed.
+- **`SPEAK` reaches the speech handler**, the name the feature module documents.
+- **COMAL `FUNC` is callable in an expression.** `PRINT DOUBLE(21)` answers 42 through
+  a new per-interpreter function hook, in both the reference and the native executor;
+  a body this cannot read reports an error rather than answering 0.
+- **Logo's `OUTPUT` value reaches its caller.** `PRINT DOUBLE 21` prints 42 and
+  `SHOW P` prints the value, in both the reference and `timewarp_lang`.
 
 - A keyword boundary bug: `startswith("DO")` also matched `DOG = 42`, so the `DO`
   statement swallowed the assignment. Every variable whose name began with a keyword
@@ -118,11 +126,9 @@ unit test)
   investigated as a suspected loss of drawing and was **not** one: the engine is
   deterministic and the final drawing was always complete.
 
-**Still open in Logo**
-
-- **A procedure's `OUTPUT` value never reaches its caller.** `P` prints the value, but
-  `PRINT DOUBLE 21` prints `DOUBLE 21` and `SHOW P` prints `P`. The call is covered by
-  a row; the value is waived.
+**Nothing is open in Logo.** The last gap — a procedure's `OUTPUT` value never reaching
+its caller — is fixed in both the reference and `timewarp_lang`, with a row and unit
+tests; `PRINT DOUBLE 21` now prints 42.
 
 ---
 

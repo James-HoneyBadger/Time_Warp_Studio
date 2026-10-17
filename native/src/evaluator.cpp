@@ -536,6 +536,24 @@ void apply_function(const EvalContext& context, std::string_view name,
         }
     }
 
+    // 1b. Functions the executing language registered (COMAL's FUNC). They are
+    //     consulted before the builtin table, because the reference installs
+    //     them into its function dictionary and so lets them shadow a builtin.
+    if (context.functions) {
+        if (auto function = context.functions(name)) {
+            if (stack.size() < function->arity) {
+                throw EvalError(std::string{name} + " requires " +
+                                std::to_string(function->arity) + " arguments");
+            }
+            std::vector<double> arguments(function->arity);
+            for (std::size_t index = function->arity; index-- > 0;) {
+                arguments[index] = pop_number(stack, name);
+            }
+            stack.emplace_back(function->call(arguments));
+            return;
+        }
+    }
+
     const BuiltinEntry* entry = find_builtin(name);
     if (entry == nullptr) {
         throw EvalError("Unknown function: " + std::string{name});
@@ -617,6 +635,10 @@ void ExpressionEvaluator::set_string_variable(std::string_view name,
 
 void ExpressionEvaluator::set_special_variable_hook(SpecialVariableHook hook) {
     context_.special_variables = std::move(hook);
+}
+
+void ExpressionEvaluator::set_function_hook(FunctionHook hook) {
+    context_.functions = std::move(hook);
 }
 
 void ExpressionEvaluator::set_max_tokens(std::size_t max_tokens) {

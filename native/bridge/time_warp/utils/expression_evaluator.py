@@ -131,6 +131,12 @@ class ExpressionEvaluator:
         self.token_cache: Dict[str, List[Token]] = {}
         self._TOKEN_CACHE_MAX = 1024
 
+        # A private copy, because callers register language-specific functions
+        # on the instance (EOF, PEEK, STICK, DEF FN ...). Sharing the class
+        # dictionary meant the first language to register one gave it to every
+        # other language's evaluator as well.
+        self.FUNCTIONS = dict(type(self).FUNCTIONS)
+
         # Add LEN support for strings
         self.FUNCTIONS["LEN"] = len
 
@@ -605,6 +611,17 @@ class ExpressionEvaluator:
                     raise ValueError(f"Unknown function: {func_name}")
 
                 func = self.FUNCTIONS[func_name]
+
+                # A caller-registered function declares how many arguments it
+                # takes (COMAL's FUNC), so the stack is popped accordingly
+                # instead of assuming exactly one.
+                arity = getattr(func, "arity", 1)
+                if arity != 1:
+                    if len(stack) < arity:
+                        raise ValueError(f"{func_name} requires {arity} arguments")
+                    args = [stack.pop() for _ in range(arity)][::-1]
+                    stack.append(func(*args))
+                    continue
 
                 # Handle functions with special arities
                 if func_name in ("RAND", "RND"):

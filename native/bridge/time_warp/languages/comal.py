@@ -52,7 +52,13 @@ _LOOP_KINDS = {"for", "while", "repeat", "loop"}
 def _state(interp: "Interpreter") -> dict:
     state = interp.__dict__.get("_comal_state")
     if state is None:
-        state = {"stack": [], "call_stack": [], "data": [], "data_ptr": 0}
+        state = {
+            "stack": [],
+            "call_stack": [],
+            "data": [],
+            "data_ptr": 0,
+            "functions_registered": False,
+        }
         interp.__dict__["_comal_state"] = state
     return state
 
@@ -183,6 +189,10 @@ def _eval_num(interp: "Interpreter", expr: str) -> float:
         return float(interp.variables[text.upper()])
     try:
         return interpreter_eval(interp, text)
+    except ComalError:
+        # A FUNC body this executor cannot read must reach the user as an
+        # error; swallowing it here is how it became a plausible 0.
+        raise
     except Exception:  # noqa: BLE001  # pylint: disable=broad-except
         return 0.0
 
@@ -271,14 +281,19 @@ def _truthy_str(text: str) -> bool:
 # ---------------------------------------------------------------------------
 
 
-def execute_comal(
-    interp: "Interpreter", command: str, turtle: "TurtleState"
-) -> str:
+def execute_comal(interp: "Interpreter", command: str, turtle: "TurtleState") -> str:
     """Execute one line of COMAL source."""
     raw = _strip_comment(command)
     if not raw.strip():
         return ""
     upper = raw.strip().upper()
+
+    # `PRINT DOUBLE(21)` calls a user FUNC, so its name has to be in the
+    # evaluator before the first expression is evaluated.
+    state = _state(interp)
+    if not state["functions_registered"]:
+        _register_user_functions(interp)
+        state["functions_registered"] = True
 
     if upper.startswith("REM"):
         return ""
@@ -367,14 +382,22 @@ def _exec_statement(
         r"^([A-Za-z_]\w*\$?)\s*(?:\(\s*([^)]*)\s*\))?\s*:?=\s*(.+)$", text, re.S
     )
     if assign:
-        name, index, value_expr = assign.group(1), assign.group(2), assign.group(3).strip()
+        name, index, value_expr = (
+            assign.group(1),
+            assign.group(2),
+            assign.group(3).strip(),
+        )
         if index is not None:
             position = int(_eval_num(interp, index))
             array = interp.arrays.get(name.upper())
             if array is None:
                 raise ComalError(f"array {name.upper()} not dimensioned")
             value = _eval_value(interp, value_expr)
-            number = float(value) if not isinstance(value, str) or not value.endswith("$") else 0.0
+            number = (
+                float(value)
+                if not isinstance(value, str) or not value.endswith("$")
+                else 0.0
+            )
             while len(array) <= position:
                 array.append(0)
             array[position] = number
@@ -416,7 +439,10 @@ def _handle_if(
         # Single-line IF [ELSE stmt]
         else_match = re.match(r"^(.*?)\s+ELSE\s+(.*)$", rest, re.I | re.S)
         if else_match:
-            then_stmt, else_stmt = else_match.group(1).strip(), else_match.group(2).strip()
+            then_stmt, else_stmt = (
+                else_match.group(1).strip(),
+                else_match.group(2).strip(),
+            )
         else:
             then_stmt, else_stmt = rest, None
         if _eval_condition(interp, condition):
@@ -458,7 +484,9 @@ def _handle_elif(interp: "Interpreter", text: str) -> str | None:
     if frame is None or frame["kind"] != "if":
         raise ComalError("ELIF without IF")
     if frame["taken"]:
-        end = _find_end(interp, frame["start"], _is_if_open, lambda c: c.startswith("ENDIF"))
+        end = _find_end(
+            interp, frame["start"], _is_if_open, lambda c: c.startswith("ENDIF")
+        )
         return _jump(interp, end + 1)
     match = re.match(r"^ELIF\s+(.*?)\s+THEN\s*$", text, re.I | re.S)
     if not match:
@@ -466,7 +494,9 @@ def _handle_elif(interp: "Interpreter", text: str) -> str | None:
     if _eval_condition(interp, match.group(1).strip()):
         frame["taken"] = True
         return None
-    end = _find_end(interp, frame["start"], _is_if_open, lambda c: c.startswith("ENDIF"))
+    end = _find_end(
+        interp, frame["start"], _is_if_open, lambda c: c.startswith("ENDIF")
+    )
     return _next_branch(interp, interp.current_line, end)
 
 
@@ -475,7 +505,9 @@ def _handle_else(interp: "Interpreter") -> str | None:
     if frame is None or frame["kind"] != "if":
         raise ComalError("ELSE without IF")
     if frame["taken"]:
-        end = _find_end(interp, frame["start"], _is_if_open, lambda c: c.startswith("ENDIF"))
+        end = _find_end(
+            interp, frame["start"], _is_if_open, lambda c: c.startswith("ENDIF")
+        )
         return _jump(interp, end + 1)
     frame["taken"] = True
     return None
@@ -507,7 +539,9 @@ def _handle_for(interp: "Interpreter", text: str) -> str | None:
         "step": step,
     }
     if not _for_in_range(start, limit, step):
-        end = _find_end(interp, interp.current_line, _is_for_open, lambda c: c.startswith("NEXT"))
+        end = _find_end(
+            interp, interp.current_line, _is_for_open, lambda c: c.startswith("NEXT")
+        )
         return _jump(interp, end + 1)
     _state(interp)["stack"].append(frame)
     return None
@@ -539,7 +573,10 @@ def _handle_while(interp: "Interpreter", text: str) -> str | None:
     condition = text[5:].strip()
     if not _eval_condition(interp, condition):
         end = _find_end(
-            interp, interp.current_line, lambda c: c.startswith("WHILE"), lambda c: c == "ENDWHILE"
+            interp,
+            interp.current_line,
+            lambda c: c.startswith("WHILE"),
+            lambda c: c == "ENDWHILE",
         )
         return _jump(interp, end + 1)
     _state(interp)["stack"].append(
@@ -602,9 +639,16 @@ def _loop_end(interp: "Interpreter", frame: dict) -> int:
     if kind == "for":
         return _find_end(interp, start, _is_for_open, lambda c: c.startswith("NEXT"))
     if kind == "while":
-        return _find_end(interp, start, lambda c: c.startswith("WHILE"), lambda c: c == "ENDWHILE")
+        return _find_end(
+            interp, start, lambda c: c.startswith("WHILE"), lambda c: c == "ENDWHILE"
+        )
     if kind == "repeat":
-        return _find_end(interp, start, lambda c: c.startswith("REPEAT"), lambda c: c.startswith("UNTIL"))
+        return _find_end(
+            interp,
+            start,
+            lambda c: c.startswith("REPEAT"),
+            lambda c: c.startswith("UNTIL"),
+        )
     return _find_end(interp, start, lambda c: c == "LOOP", lambda c: c == "ENDLOOP")
 
 
@@ -624,8 +668,16 @@ def _proc_body_index(interp: "Interpreter", name: str) -> int | None:
 def _handle_proc(interp: "Interpreter") -> str | None:
     """A definition encountered at top level is skipped over."""
     code = _upper_code(interp, interp.current_line)
-    closer = (lambda c: c == "ENDFUNC") if code.startswith("FUNC") else (lambda c: c == "ENDPROC")
-    opener = (lambda c: c.startswith("FUNC")) if code.startswith("FUNC") else (lambda c: c.startswith("PROC"))
+    closer = (
+        (lambda c: c == "ENDFUNC")
+        if code.startswith("FUNC")
+        else (lambda c: c == "ENDPROC")
+    )
+    opener = (
+        (lambda c: c.startswith("FUNC"))
+        if code.startswith("FUNC")
+        else (lambda c: c.startswith("PROC"))
+    )
     end = _find_end(interp, interp.current_line, opener, closer)
     return _jump(interp, end + 1)
 
@@ -668,6 +720,78 @@ def _handle_endproc(interp: "Interpreter") -> str | None:
     if stack:
         return _jump(interp, stack.pop() + 1)
     return None
+
+
+def _call_function(interp: "Interpreter", name: str, args: list[float]) -> float:
+    """Evaluate a FUNC body for an expression and return its RETURN value.
+
+    `PRINT DOUBLE(21)` is the form the language documents, but the call used to
+    reach the evaluator, which did not know the name, and `_eval_num`'s fallback
+    turned the failure into 0 -- a plausible wrong answer rather than an error.
+
+    Only the shapes a FUNC body takes in practice are supported: assignments and
+    RETURN. Anything else raises, because answering 0 for a body this cannot
+    read would reintroduce the silent failure.
+    """
+    body = _proc_body_index(interp, name)
+    if body is None:
+        raise ComalError(f"unknown procedure {name}")
+    end = _find_end(
+        interp, body, lambda c: c.startswith("FUNC"), lambda c: c == "ENDFUNC"
+    )
+    header = _code_text(interp.program_lines[body][1])
+    params_text = re.search(r"\(([^)]*)\)", header)
+    params: list[str] = []
+    if params_text and params_text.group(1).strip():
+        params = [p.strip().upper() for p in _split_top(params_text.group(1))]
+
+    saved = {p: interp.variables.get(p) for p in params}
+    try:
+        for position, param in enumerate(params):
+            _set_var(interp, param, args[position] if position < len(args) else 0.0)
+        for idx in range(body + 1, end):
+            code = _code_text(interp.program_lines[idx][1])
+            if not code:
+                continue
+            if code.upper().startswith("RETURN"):
+                expression = code[6:].strip()
+                return _eval_num(interp, expression) if expression else 0.0
+            assignment = re.match(r"^([A-Za-z_]\w*)\s*=\s*(.+)$", code)
+            if assignment:
+                _set_var(
+                    interp,
+                    assignment.group(1),
+                    _eval_num(interp, assignment.group(2)),
+                )
+                continue
+            raise ComalError(
+                f"FUNC {name}: '{code}' cannot be evaluated inside an expression"
+            )
+        return 0.0
+    finally:
+        for param, value in saved.items():
+            if value is None:
+                interp.variables.pop(param, None)
+            else:
+                interp.variables[param] = value
+
+
+def _register_user_functions(interp: "Interpreter") -> None:
+    """Make every FUNC in the program callable inside an expression."""
+    for _idx, (_, text) in enumerate(interp.program_lines):
+        match = re.match(
+            r"^FUNC\s+([A-Za-z_]\w*)\s*\(([^)]*)\)", _code_text(text), re.I
+        )
+        if not match:
+            continue
+        name = match.group(1).upper()
+        params = [p.strip().upper() for p in _split_top(match.group(2)) if p.strip()]
+
+        def _fn(*arguments: float, _name: str = name) -> float:
+            return _call_function(interp, _name, list(arguments))
+
+        _fn.arity = len(params)  # type: ignore[attr-defined]
+        interp.expression_functions[name] = _fn
 
 
 def _handle_goto(interp: "Interpreter", target: str) -> str | None:

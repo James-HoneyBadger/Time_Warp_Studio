@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from time_warp.core.interpreter import Language
 from .conftest_lang import run, ok, has, no_errors
@@ -52,10 +51,10 @@ def test_arithmetic():
     out = bas(
         "10 LET A = 10\n"
         "20 LET B = 3\n"
-        '30 PRINT A + B\n'
-        '40 PRINT A - B\n'
-        '50 PRINT A * B\n'
-        '60 PRINT A MOD B\n'
+        "30 PRINT A + B\n"
+        "40 PRINT A - B\n"
+        "50 PRINT A * B\n"
+        "60 PRINT A MOD B\n"
     )
     assert no_errors(out)
     assert has(out, "13", "7", "30", "1")
@@ -73,16 +72,13 @@ def test_string_variable():
 
 
 def test_if_then():
-    out = bas("10 LET X = 5\n20 IF X > 3 THEN PRINT \"YES\"")
+    out = bas('10 LET X = 5\n20 IF X > 3 THEN PRINT "YES"')
     assert no_errors(out)
     assert has(out, "YES")
 
 
 def test_if_else():
-    out = bas(
-        "10 LET X = 1\n"
-        "20 IF X > 5 THEN PRINT \"BIG\" ELSE PRINT \"SMALL\""
-    )
+    out = bas("10 LET X = 1\n" '20 IF X > 5 THEN PRINT "BIG" ELSE PRINT "SMALL"')
     assert no_errors(out)
     assert has(out, "SMALL")
 
@@ -101,10 +97,7 @@ def test_for_step():
 
 def test_goto():
     out = bas(
-        "10 PRINT \"START\"\n"
-        "20 GOTO 40\n"
-        "30 PRINT \"SKIPPED\"\n"
-        "40 PRINT \"END\""
+        '10 PRINT "START"\n' "20 GOTO 40\n" '30 PRINT "SKIPPED"\n' '40 PRINT "END"'
     )
     assert no_errors(out)
     assert has(out, "START", "END")
@@ -119,11 +112,11 @@ def test_goto():
 
 def test_gosub_return():
     out = bas(
-        "10 PRINT \"BEFORE\"\n"
+        '10 PRINT "BEFORE"\n'
         "20 GOSUB 100\n"
-        "30 PRINT \"AFTER\"\n"
+        '30 PRINT "AFTER"\n'
         "40 END\n"
-        "100 PRINT \"INSIDE\"\n"
+        '100 PRINT "INSIDE"\n'
         "110 RETURN"
     )
     assert no_errors(out)
@@ -182,40 +175,28 @@ def test_int_function():
 
 def test_while_wend():
     out = bas(
-        "10 LET I=1\n"
-        "20 WHILE I<=3\n"
-        "30 PRINT I\n"
-        "40 LET I=I+1\n"
-        "50 WEND"
+        "10 LET I=1\n" "20 WHILE I<=3\n" "30 PRINT I\n" "40 LET I=I+1\n" "50 WEND"
     )
     assert no_errors(out)
     assert has(out, "1", "2", "3")
 
 
 def test_read_data():
-    out = bas(
-        "10 READ X\n"
-        "20 READ Y\n"
-        "30 PRINT X+Y\n"
-        "40 DATA 5,3"
-    )
+    out = bas("10 READ X\n" "20 READ Y\n" "30 PRINT X+Y\n" "40 DATA 5,3")
     assert no_errors(out)
     assert has(out, "8")
 
 
 def test_dim_array():
     out = bas(
-        "10 DIM A(5)\n"
-        "20 LET A(1)=10\n"
-        "30 LET A(2)=20\n"
-        "40 PRINT A(1)+A(2)"
+        "10 DIM A(5)\n" "20 LET A(1)=10\n" "30 LET A(2)=20\n" "40 PRINT A(1)+A(2)"
     )
     assert no_errors(out)
     assert has(out, "30")
 
 
 def test_mid_string():
-    out = bas("10 PRINT MID$(\"HELLO\", 2, 3)\n20 END")
+    out = bas('10 PRINT MID$("HELLO", 2, 3)\n20 END')
     assert no_errors(out)
     assert has(out, "ELL")
 
@@ -261,7 +242,7 @@ def test_variable_names_starting_with_a_keyword_are_assignable():
 def test_on_timer_accepts_its_documented_format():
     # The dispatcher sliced one character too many, dropping the "(", so the
     # handler rejected the very format its own error message asks for.
-    out = bas("10 ON TIMER(2) GOSUB 100\n20 PRINT \"OK\"\n30 END\n100 RETURN")
+    out = bas('10 ON TIMER(2) GOSUB 100\n20 PRINT "OK"\n30 END\n100 RETURN')
     assert no_errors(out), out
     assert has(out, "Timer set")
 
@@ -269,7 +250,9 @@ def test_on_timer_accepts_its_documented_format():
 def test_function_block_returns_its_value_through_call():
     # A FUNCTION is callable with CALL, and its result lands in a variable named
     # after the function. Calling it as an expression is a separate, recorded gap.
-    out = bas("10 FUNCTION TWICE(N)\n20 TWICE = N * 2\n30 END FUNCTION\n40 CALL TWICE(21)\n50 PRINT TWICE")
+    out = bas(
+        "10 FUNCTION TWICE(N)\n20 TWICE = N * 2\n30 END FUNCTION\n40 CALL TWICE(21)\n50 PRINT TWICE"
+    )
     assert no_errors(out)
     assert has(out, "42")
 
@@ -282,14 +265,58 @@ def test_joyinit_absence_is_informational_not_an_error():
     assert ok(out)
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="known gap: an unresolved name is echoed as literal text instead of being "
-    "reported, so a typo looks like a result. See docs/ROADMAP.md.",
-)
 def test_unresolved_name_is_reported_rather_than_echoed():
     out = bas("10 PRINT NOSUCHFN(3)")
     assert not has(out, "NOSUCHFN(3)"), out
+
+
+def test_unset_numeric_variable_prints_zero():
+    out = bas("10 PRINT UNSET")
+    assert no_errors(out)
+    assert has(out, "0")
+
+
+def test_unset_name_inside_an_expression_is_zero():
+    out = bas("10 PRINT UNSET + 1")
+    assert no_errors(out)
+    assert has(out, "1")
+
+
+def test_peek_and_in_work_inside_expressions():
+    out = bas(
+        "10 POKE 1000, 42\n20 X = PEEK(1000)\n30 PRINT X\n40 Y = IN(60)\n50 PRINT Y"
+    )
+    assert no_errors(out)
+    assert has(out, "42")
+
+
+def test_stick_and_strig_exist_without_a_gamepad():
+    out = bas("10 PRINT STICK(0)\n20 PRINT STRIG(0)")
+    assert no_errors(out)
+    assert has(out, "0")
+
+
+def test_defstr_name_prints_its_string_value():
+    out = bas('10 DEFSTR A-Z\n20 A = "hello"\n30 PRINT A')
+    assert no_errors(out)
+    assert has(out, "hello")
+
+
+def test_type_dollar_reports_the_type():
+    out = bas("10 X = 5\n20 PRINT TYPE$(X)")
+    assert no_errors(out)
+    assert has(out, "DOUBLE")
+
+
+def test_speak_reaches_the_speech_handler():
+    out = bas('10 SPEAK "hello"')
+    assert not any("Unknown BASIC command" in line for line in out), out
+
+
+def test_resume_next_without_line_numbers():
+    out = bas('ON ERROR GOTO 100\nX = 1 / 0\nPRINT "AFTER"\nEND\n100 RESUME NEXT')
+    assert no_errors(out)
+    assert has(out, "AFTER")
 
 
 # ---------------------------------------------------------------------------
@@ -299,6 +326,7 @@ def test_unresolved_name_is_reported_rather_than_echoed():
 
 def test_hello_example():
     import pathlib
+
     src = (
         pathlib.Path(__file__).parents[4] / "Examples" / "basic" / "hello.bas"
     ).read_text()

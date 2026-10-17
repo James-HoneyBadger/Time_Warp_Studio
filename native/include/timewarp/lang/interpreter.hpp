@@ -25,6 +25,7 @@
 #include "timewarp/lang/language.hpp"
 #include "timewarp/lang/turtle_host.hpp"
 #include "timewarp/lang/value.hpp"
+#include "timewarp/expr/evaluator.hpp"
 
 #include <any>
 #include <atomic>
@@ -140,6 +141,13 @@ public:
     /// parser inside each executor. Throws `ExecutionError` on a bad
     /// expression; an executor turns that into its language's error line.
     [[nodiscard]] double evaluate_expression(std::string_view expression);
+
+    /// Functions the executing language adds to expression evaluation.
+    ///
+    /// COMAL's `FUNC` is called from inside an expression, so the executor
+    /// installs a resolver for the duration of its run and clears it after. The
+    /// hook is consulted before the evaluator's builtins.
+    expr::FunctionHook function_hook;
 
     /// Replaces `#VAR` and `*VAR*` with their values, the reference's
     /// `interpolate_text`. Unknown names are left as written.

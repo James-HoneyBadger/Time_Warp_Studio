@@ -22,6 +22,7 @@
 #include <map>
 #include <optional>
 #include <regex>
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -261,6 +262,10 @@ private:
         }
         try {
             return interpreter_.evaluate_expression(text);
+        } catch (const ComalError&) {
+            // A FUNC body this executor cannot read has to reach the user as
+            // an error; swallowing it here is how it became a plausible 0.
+            throw;
         } catch (const std::exception&) {
             return 0.0;
         }
@@ -842,6 +847,118 @@ private:
         jump(*body + 1);
     }
 
+    /// A FUNC's value, for a caller that writes it inside an expression.
+    ///
+    /// The statement form (`CALL`, then `RESULT`) jumps into the body and lets
+    /// the main loop run it; an expression cannot do that, so the body's
+    /// assignments and RETURN are read here instead. Anything else raises: a
+    /// body this cannot read must not quietly answer 0.
+    double call_function(const std::string& name,
+                         const std::vector<std::string>& parameters,
+                         std::span<const double> arguments) {
+        const std::optional<std::size_t> body = proc_body(name);
+        if (!body.has_value()) {
+            throw ComalError("unknown procedure " + name);
+        }
+        const std::size_t end = find_end(
+            interpreter_, *body,
+            [](std::string_view text) { return text.rfind("FUNC", 0) == 0; },
+            [](std::string_view text) { return text == "ENDFUNC"; });
+
+        struct SavedValue {
+            std::string name;
+            std::optional<Value> value;
+        };
+        std::vector<SavedValue> saved;
+        for (std::size_t index = 0; index < parameters.size(); ++index) {
+            const std::string& parameter = parameters[index];
+            const auto existing = interpreter_.variables().find(parameter);
+            SavedValue entry{parameter, std::nullopt};
+            if (existing != interpreter_.variables().end()) {
+                entry.value = existing->second;
+            }
+            saved.push_back(std::move(entry));
+            set_variable(parameter,
+                         Value{index < arguments.size() ? arguments[index] : 0.0});
+        }
+        const auto restore = [this, &saved]() {
+            for (const SavedValue& entry : saved) {
+                if (entry.value.has_value()) {
+                    set_variable(entry.name, *entry.value);
+                } else {
+                    interpreter_.remove_variable(entry.name);
+                }
+            }
+        };
+
+        try {
+            for (std::size_t index = *body + 1; index < end; ++index) {
+                const std::string code =
+                    code_text(interpreter_.program_lines()[index].text);
+                if (code.empty()) {
+                    continue;
+                }
+                if (upper(code).rfind("RETURN", 0) == 0) {
+                    const std::string expression =
+                        trim(std::string_view{code}.substr(6));
+                    const double value =
+                        expression.empty() ? 0.0 : eval_num(expression);
+                    restore();
+                    return value;
+                }
+                static const std::regex assignment{
+                    R"(^([A-Za-z_]\w*)\s*=\s*(.+)$)", std::regex::ECMAScript};
+                std::smatch match;
+                if (std::regex_match(code, match, assignment)) {
+                    set_variable(match[1].str(), Value{eval_num(match[2].str())});
+                    continue;
+                }
+                throw ComalError("FUNC " + name + ": '" + code +
+                                 "' cannot be evaluated inside an expression");
+            }
+            restore();
+            return 0.0;
+        } catch (...) {
+            restore();
+            throw;
+        }
+    }
+
+    // The free function below installs this as the evaluator's resolver, so it
+    // is the one member that has to be reachable from outside the class.
+public:
+    std::optional<expr::UserFunction> user_function(std::string_view upper_name) {
+        const std::string name{upper_name};
+        const std::optional<std::size_t> body = proc_body(name);
+        if (!body.has_value()) {
+            return std::nullopt;
+        }
+        const std::string header =
+            code_text(interpreter_.program_lines()[*body].text);
+        if (upper(header).rfind("FUNC", 0) != 0) {
+            return std::nullopt;  // PROC is not callable in an expression
+        }
+        std::vector<std::string> parameters;
+        const std::size_t open = header.find('(');
+        const std::size_t close = header.rfind(')');
+        if (open != std::string::npos && close != std::string::npos &&
+            close > open) {
+            for (const std::string& parameter :
+                 split_top(std::string_view{header}.substr(open + 1, close - open - 1))) {
+                if (!trim(parameter).empty()) {
+                    parameters.push_back(upper(trim(parameter)));
+                }
+            }
+        }
+        expr::UserFunction function;
+        function.arity = parameters.size();
+        function.call = [this, name, parameters](std::span<const double> arguments) {
+            return call_function(name, parameters, arguments);
+        };
+        return function;
+    }
+
+private:
     void handle_return(const std::string& expression) {
         if (!expression.empty()) {
             set_variable("RESULT", eval_value(expression));
@@ -1061,7 +1178,20 @@ private:
 std::string execute_comal(Interpreter& interpreter, std::string_view source, TurtleHost& turtle) {
     ComalState& state = interpreter.executor_state<ComalState>();
     ComalExecutor executor{interpreter, turtle, state};
-    return executor.execute(source);
+    // `PRINT DOUBLE(21)` calls a FUNC from inside an expression, so the
+    // evaluator needs a resolver while this program runs and no longer after.
+    expr::FunctionHook previous = std::move(interpreter.function_hook);
+    interpreter.function_hook = [&executor](std::string_view name) {
+        return executor.user_function(name);
+    };
+    try {
+        std::string result = executor.execute(source);
+        interpreter.function_hook = std::move(previous);
+        return result;
+    } catch (...) {
+        interpreter.function_hook = std::move(previous);
+        throw;
+    }
 }
 
 }  // namespace timewarp::lang

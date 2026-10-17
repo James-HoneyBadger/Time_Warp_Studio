@@ -432,6 +432,9 @@ double Interpreter::evaluate_expression(std::string_view expression) {
     for (const auto& [name, text] : strings) {
         evaluator.set_string_variable(name, text);
     }
+    if (function_hook) {
+        evaluator.set_function_hook(function_hook);
+    }
     try {
         return evaluator.evaluate(expression);
     } catch (const timewarp::expr::ExprError& error) {

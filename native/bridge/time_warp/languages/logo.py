@@ -345,7 +345,9 @@ def _split_logo_commands(
                 current_command.append(token)
                 continue
 
-            is_command = token.upper() in LOGO_COMMANDS and token.upper() not in LOGO_REPORTERS
+            is_command = (
+                token.upper() in LOGO_COMMANDS and token.upper() not in LOGO_REPORTERS
+            )
             if not is_command and bracket_depth == 0:
                 upper = token.upper()
                 # Check locally-defined procedures and interpreter state.
@@ -357,8 +359,7 @@ def _split_logo_commands(
                 if at_line_start and (
                     upper in local_procedures
                     or (
-                        interpreter is not None
-                        and upper in interpreter.logo_procedures
+                        interpreter is not None and upper in interpreter.logo_procedures
                     )
                 ):
                     is_command = True
@@ -1077,6 +1078,45 @@ def _handle_prefix_mult(expr: str) -> str:
     return "".join(result)
 
 
+def _user_procedure_value(interpreter: "Interpreter", expr: str) -> float | None:
+    """Evaluate ``NAME arg ...`` as a call to a user procedure that OUTPUTs.
+
+    Returns None when the expression is not such a call. A procedure used as a
+    reporter used to be printed back as its own source text -- ``PRINT DOUBLE
+    21`` printed ``DOUBLE 21``, and ``SHOW P`` printed ``P`` -- because the
+    expression evaluator only knows built-in reporters.
+
+    Only a call that is the *whole* expression is treated this way: with
+    ``DOUBLE 21 + 1`` the tokens after the procedure's parameters are not this
+    function's to interpret, and guessing would answer the wrong question.
+    """
+    head = expr.strip().split(None, 1)
+    if not head:
+        return None
+    name = head[0].upper()
+    if name not in interpreter.logo_procedures:
+        return None
+    arguments = head[1].split() if len(head) > 1 else []
+    params = interpreter.logo_procedure_params.get(name, [])
+    used = _consume_logo_args(list(arguments), len(params))
+    if sum(len(argument.split()) for argument in used) != len(arguments):
+        return None
+
+    interpreter.logo_last_output = None
+    produced = _logo_call_procedure(interpreter, name, arguments, None)
+    if produced.startswith("❌"):
+        raise ValueError(produced.strip())
+    value = getattr(interpreter, "logo_last_output", None)
+    if value is None:
+        raise ValueError(f"Procedure {name} did not OUTPUT a value")
+    try:
+        return float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(
+            f"Procedure {name} did not OUTPUT a number: {value!r}"
+        ) from exc
+
+
 def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
     """Evaluate a Logo expression string with :VAR names and spaces.
 
@@ -1090,6 +1130,12 @@ def _logo_eval_expr_str(interpreter: "Interpreter", expr: str) -> float:
     Raises:
         ValueError: If expression cannot be evaluated
     """
+    # A user procedure that OUTPUTs a value is a reporter, so it is tried
+    # before the built-in spellings are rewritten.
+    procedure_value = _user_procedure_value(interpreter, expr)
+    if procedure_value is not None:
+        return procedure_value
+
     # Pre-substitute template variables :?, :?1, :?2 (used in FOREACH/MAP/FILTER/REDUCE)
     # These must be replaced with their numeric values before the standard :VAR pattern
     # runs, because the expression evaluator tokenizer doesn't handle '?' in identifiers.
@@ -1693,6 +1739,10 @@ def _logo_output(interpreter: "Interpreter", args: List[str]) -> str:
         # We need to consume all remaining args as the expression
         expr = " ".join(args)
         val = _logo_eval_expr_str(interpreter, expr)
+        # Remember it for callers that use the procedure as a reporter
+        # (`PRINT DOUBLE 21`): the marker below carries it through the command
+        # path, but an expression needs the value itself.
+        interpreter.logo_last_output = val
         # Return value followed by STOP marker
         # The caller (_logo_call_procedure) will strip the marker
         return f"{val}STOP_PROCEDURE"
@@ -1864,7 +1914,9 @@ def _logo_call_procedure(
         max_depth = interpreter.budget.max_recursion_depth
         interpreter.budget.recursion_depth = depth + 1
     if depth >= max_depth:
-        return f"❌ Procedure {proc_name} exceeded maximum recursion depth ({max_depth})\n"
+        return (
+            f"❌ Procedure {proc_name} exceeded maximum recursion depth ({max_depth})\n"
+        )
     if hasattr(interpreter, "tick"):
         interpreter.tick(1)
     interpreter.variables["__RECURSION_DEPTH__"] = depth + 1
@@ -1932,7 +1984,9 @@ def _logo_format_value(val: Any) -> str:
     """Render a Logo value the way PRINT shows it."""
     if isinstance(val, (list, tuple)):
         return " ".join(
-            f"[{_logo_format_value(v)}]" if isinstance(v, (list, tuple)) else _logo_format_value(v)
+            f"[{_logo_format_value(v)}]"
+            if isinstance(v, (list, tuple))
+            else _logo_format_value(v)
             for v in val
         )
     if isinstance(val, float):
@@ -2026,7 +2080,9 @@ def _logo_make(interpreter: "Interpreter", args: List[str], raw: str = "") -> st
     if len(args) < 2:
         return "❌ MAKE requires variable name and value\n"
     var_name = args[0].strip('"')  # Remove quotes if present
-    raw_value = raw.split(None, 1)[1].strip() if raw and len(raw.split(None, 1)) > 1 else ""
+    raw_value = (
+        raw.split(None, 1)[1].strip() if raw and len(raw.split(None, 1)) > 1 else ""
+    )
     value_expr = raw_value or " ".join(args[1:])
 
     # Try to evaluate as number first
