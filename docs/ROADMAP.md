@@ -220,6 +220,18 @@ remaining port takes.
    extended statement set.
 2. **Smalltalk** — whole-program, like Scheme and CHIP-8.
 
+Smalltalk is a different kind of work from the other two, which were parsers with
+a value model. It is an object system: classes and methods created at run time,
+blocks that are real closures (including `^` as a non-local return), the
+message-send rules `super` and cascades depend on, and the class library the row
+corpus exercises. It is also all-or-nothing — a subset fails the same rows a
+missing port does — so it wants one pass rather than a slice per statement.
+
+The parity harness now asks the built binary which languages have an executor
+(`lang_cli --ported`), so each port is registered in exactly one place,
+`executor_for`. Adding the next one does not mean editing a second list on the
+Python side.
+
 Once the last of them lands, `native/bridge/` and the `python_worker` target are
 deleted together; nothing else may depend on them.
 

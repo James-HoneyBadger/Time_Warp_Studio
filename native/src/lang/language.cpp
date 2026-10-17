@@ -68,15 +68,18 @@ std::string_view key(Language language) noexcept {
     return "?";
 }
 
+std::vector<Language> all_languages() {
+    return {Language::Basic, Language::Pilot, Language::Logo, Language::Comal,
+            Language::Rexx,  Language::Scheme, Language::Focal, Language::Chip8,
+            Language::Apl,   Language::Smalltalk};
+}
+
 std::optional<Language> language_from_key(std::string_view name) noexcept {
     std::string lower{name};
     for (char& character : lower) {
         character = static_cast<char>(std::tolower(static_cast<unsigned char>(character)));
     }
-    for (const Language language :
-         {Language::Basic, Language::Pilot, Language::Logo, Language::Comal,
-          Language::Rexx, Language::Scheme, Language::Focal, Language::Chip8,
-          Language::Apl, Language::Smalltalk}) {
+    for (const Language language : all_languages()) {
         if (lower == key(language)) {
             return language;
         }

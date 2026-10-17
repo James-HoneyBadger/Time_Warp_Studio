@@ -6,6 +6,7 @@
 
 #include <optional>
 #include <string_view>
+#include <vector>
 
 namespace timewarp::lang {
 
@@ -32,6 +33,13 @@ enum class Language {
 
 /// The inverse of `key`, case-insensitively. Empty when the key is unknown.
 [[nodiscard]] std::optional<Language> language_from_key(std::string_view key) noexcept;
+
+/// Every language the enum defines, in display order.
+///
+/// The parity harness asks the built CLI which of these have a native
+/// executor, so a port is registered in exactly one place (`executor_for`)
+/// rather than in a list on each side.
+[[nodiscard]] std::vector<Language> all_languages();
 
 /// A whole-program language receives the complete source and runs it to
 /// completion inside one executor call. A line-by-line language is called once

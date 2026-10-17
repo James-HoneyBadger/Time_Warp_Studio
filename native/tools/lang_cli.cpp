@@ -27,6 +27,19 @@
 #include <string>
 
 int main(int argc, char** argv) {
+    if (argc == 2 && std::string{argv[1]} == "--ported") {
+        // The parity harness asks which languages have a native executor, so a
+        // port is registered in one place (`executor_for`) and not in a list on
+        // each side that can drift.
+        for (const timewarp::lang::Language language :
+             timewarp::lang::all_languages()) {
+            if (timewarp::lang::executor_for(language) != nullptr) {
+                std::printf("%s\n",
+                            std::string{timewarp::lang::key(language)}.c_str());
+            }
+        }
+        return 0;
+    }
     if (argc != 2) {
         std::fprintf(stderr, "usage: %s <language-key>  < program\n", argv[0]);
         return 2;

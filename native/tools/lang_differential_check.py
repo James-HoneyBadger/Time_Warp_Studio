@@ -412,7 +412,6 @@ def main() -> int:
     parser.add_argument("--verbose", action="store_true")
     parser.add_argument(
         "--language",
-        choices=["focal", "chip8", "pilot", "comal", "logo", "apl", "rexx"],
         action="append",
         help="limit to one language (repeatable)",
     )
@@ -425,24 +424,23 @@ def main() -> int:
         )
         return 2
 
-    languages = {
-        "focal": Language.FOCAL,
-        "chip8": Language.CHIP8,
-        "pilot": Language.PILOT,
-        "comal": Language.COMAL,
-        "logo": Language.LOGO,
-        "apl": Language.APL,
-        "rexx": Language.REXX,
-    }
-    chosen = args.language or [
-        "focal",
-        "chip8",
-        "pilot",
-        "comal",
-        "logo",
-        "apl",
-        "rexx",
-    ]
+    # The native side is the only place that knows which languages have an
+    # executor: `executor_for` returns null for the ones still on the bridge.
+    # Keeping a second list here meant a new port had to be registered twice,
+    # and forgetting the second copy looked like a language with no corpus.
+    ported = subprocess.run(
+        [str(CLI), "--ported"], capture_output=True, text=True, check=True
+    ).stdout.split()
+    languages = {key: Language[key.upper()] for key in ported}
+    chosen = args.language or ported
+    missing = [key for key in chosen if key not in languages]
+    if missing:
+        print(
+            f"no native executor for: {', '.join(missing)} "
+            f"(ported: {', '.join(ported)})",
+            file=sys.stderr,
+        )
+        return 2
 
     agree = 0
     skipped: list[str] = []
