@@ -306,6 +306,14 @@ jobs:
             cat generated-notes.md
           } > release-notes.md
 
+          # Re-dispatching a version that already has a release replaces it. The
+          # artifacts are rebuilt from the same tagged tree, so the old ones are
+          # duplicates of one version -- and two identical-looking downloads is
+          # the worst possible outcome for the table above.
+          if gh release view "$tag" >/dev/null 2>&1; then
+            gh release delete "$tag" --yes
+          fi
+
           gh release create "$tag" \
             --title "Time Warp Studio $version" \
             --notes-file release-notes.md \
