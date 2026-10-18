@@ -183,6 +183,16 @@ public:
     /// Opens Find in Files on the current document's folder, pre-filled with the
     /// selection when there is one.
     void showFindInFiles();
+    /// Runs only the selected text, in the current document's language, without
+    /// writing it to a file. Reports in the status bar when nothing is selected
+    /// rather than running the whole program.
+    void runSelection();
+    /// Clears the canvas and the output and stops anything running, keeping the
+    /// document. What "start again from the top" means.
+    void resetProgram();
+    /// The recent runs, newest first, as `path<TAB>language<TAB>epoch<TAB>title`.
+    /// Exposed the way `recentFiles()` is, so a test can check what was recorded.
+    [[nodiscard]] QStringList runHistory() const;
     /// Opens the snippet picker for the current document's language and inserts
     /// the chosen body at the cursor.
     void insertSnippet();
@@ -461,6 +471,14 @@ private:
 
     /// Adds a path to the recent list: most recent first, no duplicates, capped.
     void noteRecentFile(const QString& path);
+    /// Records a run in the history, newest first and capped.
+    void noteRun(const QString& source);
+    /// Rebuilds the Run popup from the history, every time it is opened.
+    void rebuildRunMenu();
+
+    /// The shared body of Run and Run Selection: `source` is what the engine
+    /// sees, which is the document for one and the selection for the other.
+    void runSource(CodeEditor* editor, const QString& source);
     /// Rebuilds the recent submenu from the list, every time it is opened.
     void rebuildRecentMenu();
     /// Rebuilds the examples submenu from the programs this installation
@@ -532,6 +550,11 @@ private:
     /// the application should find programs to open without knowing where the
     /// package put them.
     QMenu* examples_menu_ = nullptr;
+    /// The Run button's popup, rebuilt on every open from the run history.
+    QMenu* run_menu_ = nullptr;
+    /// Set while a selection run is in flight, so the history can say which kind
+    /// of run it was.
+    bool running_selection_ = false;
     /// Created on first use: a dialog nobody opens costs nothing, and the window
     /// that a test builds should not construct a search dialog it never shows.
     FindInFilesDialog* find_in_files_ = nullptr;
@@ -622,9 +645,10 @@ private:
     /// into the same canvas.
     void stopEngines();
     /// Runs `editor` in the Python bridge, starting the worker if needed.
-    void runInBridge(CodeEditor* editor);
+    void runInBridge(CodeEditor* editor, const QString& source);
     /// Runs `editor` on the native engine for a language that has been ported.
-    void runNatively(CodeEditor* editor, timewarp::lang::Language language);
+    void runNatively(CodeEditor* editor, timewarp::lang::Language language,
+                     const QString& source);
     /// Wires a freshly created bridge worker to this window.
     void adoptBridgeWorker();
     /// Tears down the current run and waits for its thread, then empties the

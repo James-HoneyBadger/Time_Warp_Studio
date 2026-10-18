@@ -11,6 +11,7 @@
 #include <QCloseEvent>
 #include <QClipboard>
 #include <QComboBox>
+#include <QDateTime>
 #include <QDir>
 #include <QDockWidget>
 #include <QFile>
@@ -100,6 +101,8 @@ constexpr auto kSettingEditorWordWrap = "editor/wordWrap";
 constexpr auto kSettingEditorAutoIndent = "editor/autoIndent";
 constexpr auto kSettingEditorCompletion = "editor/completion";
 constexpr auto kSettingEditorLint = "editor/lint";
+constexpr auto kSettingRunHistory = "run/history";
+constexpr auto kRunHistoryLimit = 10;
 constexpr auto kSettingEditorWhitespace = "editor/showWhitespace";
 constexpr auto kSettingEditorMinimap = "editor/minimap";
 
@@ -592,8 +595,18 @@ void MainWindow::buildMenuBar() {
     // warning about an ambiguous shortcut and firing whichever it prefers, so one
     // owner is not tidiness, it is the difference between working and not.
     add(run, tr("&Run"), QKeySequence{Qt::Key_F9}, [this] { runCurrentDocument(); });
+    add(run, tr("Run &Selection"), QKeySequence{Qt::CTRL | Qt::Key_F9},
+        [this] { runSelection(); })
+        ->setObjectName(QStringLiteral("runSelectionAction"));
     add(run, tr("&Stop"), QKeySequence{Qt::SHIFT | Qt::Key_F9},
         [this] { stopRunningDocument(); });
+    run->addSeparator();
+    // Reset is not Stop: Stop ends a program that is still running, Reset puts
+    // the screen back to how it looked before a program that has already ended
+    // -- which is the thing a learner presses after a drawing they want to redo.
+    add(run, tr("&Reset Program"), QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_F9},
+        [this] { resetProgram(); })
+        ->setObjectName(QStringLiteral("resetProgramAction"));
     run->addSeparator();
     add(run, tr("Clear &Output"), {}, [this] { clearOutput(); });
     add(run, tr("Clear &Canvas"), {}, [this] { clearCanvas(); });
@@ -895,6 +908,14 @@ void MainWindow::performAction(const QString& action) {
     // -- run ---------------------------------------------------------------
     if (id == QLatin1String("run")) {
         runCurrentDocument();
+        return;
+    }
+    if (id == QLatin1String("run_selection")) {
+        runSelection();
+        return;
+    }
+    if (id == QLatin1String("reset")) {
+        resetProgram();
         return;
     }
     if (id == QLatin1String("stop")) {
@@ -1605,15 +1626,18 @@ void MainWindow::buildToolBar() {
     // interpreter) each need a source-parameterised run path that does not exist
     // yet, and a popup that opens onto nothing is the same fault as a dead menu
     // item. What is in it now is what works.
-    auto* run_menu = new QMenu{run_button};
-    run_menu->setObjectName(QStringLiteral("runButtonMenu"));
-    QAction* popup_run = run_menu->addAction(tr("\U0001F680 Run"));
+    run_menu_ = new QMenu{run_button};
+    run_menu_->setObjectName(QStringLiteral("runButtonMenu"));
+    // Rebuilt on every open: a history menu built once is the history as it was
+    // when the window started.
+    connect(run_menu_, &QMenu::aboutToShow, this, [this] { rebuildRunMenu(); });
+    QAction* popup_run = run_menu_->addAction(tr("\U0001F680 Run"));
     // No shortcut here: F9 belongs to the Run menu's action, and two actions
     // claiming it is an ambiguous shortcut rather than a convenience.
     connect(popup_run, &QAction::triggered, this, [this] { runCurrentDocument(); });
-    QAction* popup_stop = run_menu->addAction(tr("\u23F9\uFE0F Stop"));
+    QAction* popup_stop = run_menu_->addAction(tr("\u23F9\uFE0F Stop"));
     connect(popup_stop, &QAction::triggered, this, [this] { stopRunningDocument(); });
-    run_button->setMenu(run_menu);
+    run_button->setMenu(run_menu_);
     connect(run_button, &QToolButton::clicked, this, [this] { runCurrentDocument(); });
     tool_bar_->addWidget(run_button);
 
@@ -1847,6 +1871,87 @@ void MainWindow::noteRecentFile(const QString& path) {
         recent.removeLast();
     }
     QSettings{}.setValue(kSettingRecentFiles, recent);
+}
+
+QStringList MainWindow::runHistory() const {
+    return QSettings{}.value(kSettingRunHistory).toStringList();
+}
+
+void MainWindow::noteRun(const QString& source) {
+    // One line per run: the path to reopen, the language to explain it, when it
+    // ran, and enough of the first line to recognise it. The source itself is not
+    // stored -- a settings file is not a document store, and a learner's settings
+    // growing by a program per Run is not something to discover later.
+    QString title;
+    for (const QString& line : source.split(QLatin1Char('\n'))) {
+        const QString trimmed = line.trimmed();
+        if (!trimmed.isEmpty()) {
+            title = trimmed.left(48);
+            break;
+        }
+    }
+    if (title.isEmpty()) {
+        return;  // an empty program is not a run worth remembering
+    }
+    const CodeEditor* editor = currentEditor();
+    const QString path = editor != nullptr ? pathOf(editor) : QString{};
+    const QString entry =
+        QStringList{path.isEmpty() ? QStringLiteral("-") : path,
+                    editor != nullptr ? settingsKey(languageOf(editor))
+                                      : QStringLiteral("basic"),
+                    QString::number(QDateTime::currentSecsSinceEpoch()),
+                    (running_selection_ ? tr("selection: ") : QString{}) + title}
+            .join(QLatin1Char('\t'));
+
+    QStringList history = runHistory();
+    history.removeAll(entry);
+    history.prepend(entry);
+    while (history.size() > kRunHistoryLimit) {
+        history.removeLast();
+    }
+    QSettings{}.setValue(kSettingRunHistory, history);
+}
+
+void MainWindow::rebuildRunMenu() {
+    if (run_menu_ == nullptr) {
+        return;
+    }
+    // Keep the three entries that are not history: Run, Stop, and the separator
+    // that follows them. Rebuilding the whole menu would mean rebuilding those
+    // too, and their shortcuts are already claimed.
+    while (run_menu_->actions().size() > 2) {
+        QAction* extra = run_menu_->actions().last();
+        run_menu_->removeAction(extra);
+        extra->deleteLater();
+    }
+    const QStringList history = runHistory();
+    run_menu_->addSeparator();
+    if (history.isEmpty()) {
+        QAction* none = run_menu_->addAction(tr("(no runs yet)"));
+        none->setEnabled(false);
+        return;
+    }
+    for (const QString& entry : history) {
+        const QStringList parts = entry.split(QLatin1Char('\t'));
+        if (parts.size() < 4) {
+            continue;
+        }
+        const QString path = parts.at(0);
+        const QString title = parts.at(3);
+        QAction* action = run_menu_->addAction(title);
+        if (path != QLatin1String("-") && !QFileInfo{path}.exists()) {
+            // Kept, but not runnable: the file moved. Saying so is better than
+            // offering a click that opens a dialog about a missing file.
+            action->setEnabled(false);
+            action->setToolTip(tr("%1 is no longer there").arg(path));
+            continue;
+        }
+        connect(action, &QAction::triggered, this, [this, path] {
+            if (path != QLatin1String("-") && openFile(path)) {
+                runCurrentDocument();
+            }
+        });
+    }
 }
 
 void MainWindow::rebuildRecentMenu() {
@@ -2417,6 +2522,50 @@ void MainWindow::runCurrentDocument() {
     if (editor == nullptr) {
         return;
     }
+    const QString source = editor->toPlainText();
+    running_selection_ = false;
+    noteRun(source);
+    runSource(editor, source);
+}
+
+void MainWindow::runSelection() {
+    CodeEditor* editor = currentEditor();
+    if (editor == nullptr) {
+        return;
+    }
+    // The selection as the engine sees it. Qt stores paragraph breaks as U+2029
+    // in `selectedText()`, and a program that receives those does not parse.
+    QString selection = editor->textCursor().selectedText();
+    selection.replace(QChar::ParagraphSeparator, QLatin1Char('\n'));
+    if (selection.trimmed().isEmpty()) {
+        // Refused rather than falling back to the document: running the whole
+        // program when the user asked for three lines is a worse surprise than a
+        // message saying nothing is selected.
+        setExecutionState(tr("ready"), tr("Select the lines to run first."));
+        return;
+    }
+    running_selection_ = true;
+    noteRun(selection);
+    runSource(editor, selection);
+}
+
+void MainWindow::resetProgram() {
+    // Stop first: clearing a canvas something is still drawing into is a race the
+    // user loses.
+    stopEngines();
+    canvas_bridge_->drainNow();
+    if (turtle_canvas_ != nullptr) {
+        turtle_canvas_->reset();
+    }
+    clearOutput();
+    clearRunState();
+    setExecutionState(tr("ready"), tr("Program reset"));
+}
+
+void MainWindow::runSource(CodeEditor* editor, const QString& source) {
+    if (editor == nullptr) {
+        return;
+    }
 
     // Whichever engine ran last is stopped first, whichever engine is about to
     // run. Two programs drawing into one canvas is not something a user can
@@ -2436,9 +2585,9 @@ void MainWindow::runCurrentDocument() {
     if (languageOf(editor) != Language::Scheme) {
         const std::optional<timewarp::lang::Language> native = nativeLanguage(languageOf(editor));
         if (native.has_value() && timewarp::lang::executor_for(*native) != nullptr) {
-            runNatively(editor, *native);
+            runNatively(editor, *native, source);
         } else {
-            runInBridge(editor);
+            runInBridge(editor, source);
         }
         return;
     }
@@ -2512,7 +2661,7 @@ void MainWindow::runCurrentDocument() {
     }
 
     setExecutionState(tr("running"), tr("Running %1…").arg(nameOf(editor)));
-    runner->load_program(editor->toPlainText(), nameOf(editor));
+    runner->load_program(source, nameOf(editor));
     runner->start();
 }
 
@@ -2557,7 +2706,8 @@ void MainWindow::stopRunningDocument() {
     setExecutionState(tr("stopped"), tr("Stopped"));
 }
 
-void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language language) {
+void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language language,
+                             const QString& source) {
     // The same clean surface the other engines get, in the same order.
     canvas_bridge_->drainNow();
     turtle_canvas_->reset();
@@ -2590,7 +2740,7 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
                                 static_cast<std::uint8_t>(surface.green()),
                                 static_cast<std::uint8_t>(surface.blue())});
     }
-    runner->load_program(editor->toPlainText());
+    runner->load_program(source);
 
     connect(runner, &NativeRunner::outputAvailable, this,
             [this, runner](const QString& text) {
@@ -2654,7 +2804,7 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
     runner->start();
 }
 
-void MainWindow::runInBridge(CodeEditor* editor) {
+void MainWindow::runInBridge(CodeEditor* editor, const QString& source) {
     if (!ensureBridge()) {
         return;
     }
@@ -2672,8 +2822,7 @@ void MainWindow::runInBridge(CodeEditor* editor) {
     }
 
     setExecutionState(tr("running"), tr("Running %1…").arg(nameOf(editor)));
-    if (!python_worker_->run(settingsKey(languageOf(editor)), editor->toPlainText(),
-                             nameOf(editor))) {
+    if (!python_worker_->run(settingsKey(languageOf(editor)), source, nameOf(editor))) {
         reportError(tr("The program could not be started."));
     }
 }

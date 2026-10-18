@@ -7,6 +7,14 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **Run Selection, Reset Program, and a list of what you ran.** Run >
+  Run Selection (Ctrl+F9) executes just the selected lines, in the same engine,
+  without writing them to a file; an empty selection is refused with a message
+  rather than quietly running the whole program. Run > Reset Program
+  (Ctrl+Shift+F9) stops anything running and clears the canvas and output while
+  keeping the document. The Run button's popup now lists the last ten runs —
+  path, language, and the first line of each — and clicking one reopens and runs
+  it.
 - **A minimap, and visible whitespace.** The strip at the right edge is the whole
   document sampled one row per pixel, with the current view marked; clicking or
   dragging it scrolls. It reserves its own margin, so it cannot cover the end of a

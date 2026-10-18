@@ -35,6 +35,7 @@
 #include <QTableWidget>
 #include <QTabWidget>
 #include <QTemporaryDir>
+#include <QTextBlock>
 #include <QTextCursor>
 #include <QTextDocument>
 #include <QThread>
@@ -1204,6 +1205,79 @@ void test_a_snippet_is_inserted_at_the_cursor() {
     TW_CHECK_EQ(editor->textCursor().position(), int(QStringLiteral("PRINT [HELLO]\n").size()));
 }
 
+
+/// Run Selection executes only the selected lines, and Run History records what
+/// was run. Both are the removed implementation's, restored.
+void test_run_selection_and_history() {
+    announce("run selection and run history");
+    // The suite's own settings file outlives one run of it, and the history is
+    // stored there on purpose. Starting from a known state is the test's job.
+    QSettings{}.remove(QStringLiteral("run/history"));
+    MainWindow window;
+    CodeEditor* editor = window.currentEditor();
+    TW_CHECK(editor != nullptr);
+    if (editor == nullptr) {
+        return;
+    }
+
+    editor->setPlainText(QStringLiteral("10 PRINT \"FIRST\"\n20 PRINT \"SECOND\"\n30 END\n"));
+    // Select line 2 only. `blockNumber` is zero-based; line 2 starts at block 1.
+    QTextCursor select{editor->document()->findBlockByNumber(1)};
+    select.movePosition(QTextCursor::EndOfBlock, QTextCursor::KeepAnchor);
+    editor->setTextCursor(select);
+
+    window.runSelection();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") != QStringLiteral("running");
+    }));
+    QPlainTextEdit* console = viewOf(window, "consoleOutput");
+    TW_CHECK(console != nullptr);
+    if (console != nullptr) {
+        // The selected line ran, and the lines around it did not: running the
+        // whole document when three lines were highlighted is the failure this
+        // action exists to avoid.
+        TW_CHECK(console->toPlainText().contains(QStringLiteral("SECOND")));
+        TW_CHECK(!console->toPlainText().contains(QStringLiteral("FIRST")));
+    }
+
+    // An empty selection is refused with a message rather than silently running
+    // everything.
+    editor->moveCursor(QTextCursor::End);
+    window.runSelection();
+    TW_CHECK_EQ(badgeText(window, "executionBadge"), QStringLiteral("ready"));
+
+    // History: the selection run is recorded, and the refused one is not -- a
+    // refused action did not happen, so it must not appear in the list of what
+    // did.
+    QStringList history = window.runHistory();
+    TW_CHECK_EQ(history.size(), 1);
+    if (!history.isEmpty()) {
+        TW_CHECK(history.first().contains(QStringLiteral("selection:")));
+        TW_CHECK(history.first().contains(QStringLiteral("SECOND")));
+    }
+
+    // A whole-document run goes in at the top, newest first.
+    window.runCurrentDocument();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") != QStringLiteral("running");
+    }));
+    history = window.runHistory();
+    TW_CHECK_EQ(history.size(), 2);
+    if (!history.isEmpty()) {
+        TW_CHECK(!history.first().contains(QStringLiteral("selection:")));
+        TW_CHECK(history.first().contains(QStringLiteral("FIRST")));
+    }
+
+    // Reset clears the screen and keeps the document, which is the difference
+    // between Reset and closing the tab.
+    window.resetProgram();
+    if (console != nullptr) {
+        TW_CHECK(console->toPlainText().isEmpty());
+    }
+    TW_CHECK_EQ(editor->toPlainText().toStdString(),
+                std::string{"10 PRINT \"FIRST\"\n20 PRINT \"SECOND\"\n30 END\n"});
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1235,6 +1309,7 @@ int main(int argc, char** argv) {
     test_a_byte_order_mark_is_not_part_of_the_program();
     test_user_data_lives_where_the_environment_says();
     test_a_snippet_is_inserted_at_the_cursor();
+    test_run_selection_and_history();
 
     test_running_scheme_draws_on_the_canvas();
     test_pen_up_moves_without_drawing();
