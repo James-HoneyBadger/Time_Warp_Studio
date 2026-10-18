@@ -381,12 +381,17 @@ Limits, stated rather than discovered:
 
 ## Packaging
 
-Today: `make -C native install`, a desktop entry, an icon, and `uninstall`.
+Built, from a tag, by `release.yml`: a **`.deb`**, an **`.rpm`**, an **AppImage**
+and a **tarball** for x86_64 and arm64, each with a checksum, attached to the
+GitHub Release; and a **container image** on `ghcr.io`. `cpack` produces the
+packages from the same `install()` rules the desktop entry and icon already used,
+so a package cannot contain a different set of files from a local install.
 
-Not built: `.deb`/`.rpm`, Flatpak or Snap, AppImage, a Windows installer, a macOS
-bundle, and any publishing to a package registry. The previous packaging built the
-removed Python application and was deleted with it, and the desktop entry and icon
-are now in place for a real packaging effort to build on.
+Still not built: **Flatpak or Snap** (both need a runtime and a manifest that this
+repository does not carry), a **Windows installer**, a **macOS bundle**, an
+**arm64 AppImage** (the tooling exists; the pipeline does not exercise it yet),
+**automatic publishing to a distro repository**, and a **static build** — the
+packages depend on the distribution's Qt 6.
 
 ---
 

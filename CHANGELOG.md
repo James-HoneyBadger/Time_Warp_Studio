@@ -89,6 +89,13 @@ are allow-listed, and why that is a security surface rather than a feature.
 - **`DRAW` and `WAIT`.** `DRAW "U20 R20 D20 L20"` executes GW-BASIC's path string
   through the turtle (U/D, R/L, E/H, F/G, B, N, M, C), and `WAIT ms` paces a frame
   loop.
+- **Something a non-technical user can install.** A release now ships a `.deb`, an
+  `.rpm`, an AppImage and a tarball for x86_64 and arm64, plus a container image —
+  all built from one tagged tree by `.github/workflows/release.yml`, with
+  checksums beside every file. The AppImage is the one-file answer: double-click
+  it, no root, nothing installed. The packages declare their Qt 6 and `python3`
+  dependencies and put the binary, engine, desktop entry and icon where the system
+  expects them.
 
 ### Fixed
 

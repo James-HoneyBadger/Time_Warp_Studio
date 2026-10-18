@@ -69,9 +69,26 @@ jobs:
           echo "version=$wanted" >> "$GITHUB_OUTPUT"
 
   build:
-    name: Build the Linux artifact
+    name: Build the Linux artifact (${{ matrix.arch }})
     needs: verify
-    runs-on: ubuntu-24.04
+    strategy:
+      # One architecture failing must not hide the other's result: an ARM runner
+      # image that has gone away should not stop the x86_64 release.
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-24.04
+            # The AppImage is x86_64 only: its Qt bundling tool has an ARM
+            # build, but this pipeline does not exercise it yet, and an artifact
+            # nobody has run is not one to publish.
+            appimage: true
+          # `arm64` is GitHub's hosted ARM runner, the same distribution as its
+          # x86 sibling, which is what keeps the two builds' Qt versions equal.
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+            appimage: false
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
@@ -112,7 +129,7 @@ jobs:
       - name: Package
         run: |
           version="${{ needs.verify.outputs.version }}"
-          name="time-warp-studio-${version}-linux-x86_64"
+          name="time-warp-studio-${version}-linux-${{ matrix.arch }}"
           mkdir -p "dist/$name"
           # The payload is the staged tree, minus the leading `stage/`, plus the
           # files that make it usable without the repository: the examples a
@@ -125,11 +142,65 @@ jobs:
           ( cd dist && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256" )
           ls -l dist
 
+      - name: Build the .deb and .rpm
+        run: |
+          # `rpm` is what gives CPack an `rpmbuild`; the DEB generator needs
+          # nothing that is not already here.
+          sudo apt-get install -y --no-install-recommends rpm
+          cd native/build
+          cpack -G "DEB;RPM"
+          cd ../..
+          mv native/build/time-warp-studio_*.deb native/build/time-warp-studio-*.rpm dist/ 2>/dev/null || true
+          ( cd dist && sha256sum *.deb *.rpm > PACKAGES.sha256 )
+          ls -l dist
+
+      - name: Build an AppImage
+        if: matrix.appimage
+        env:
+          # The runner has no FUSE, so the packaging tools are run extracted.
+          APPIMAGE_EXTRACT_AND_RUN: '1'
+        run: |
+          version="${{ needs.verify.outputs.version }}"
+          # FUSE is what an AppImage normally needs to *mount* itself, but the
+          # tools here are run extracted, so it is not a requirement -- and noble
+          # renamed the package to `libfuse2t64`, so asking for the old name is
+          # how this step would fail. `file` is what linuxdeploy inspects with.
+          sudo apt-get install -y --no-install-recommends file
+          # linuxdeploy bundles the Qt libraries and the platform plugins into the
+          # AppDir and writes the single-file runtime. The Qt plugin beside it is
+          # what finds them: an AppImage built without it starts on the user's
+          # machine and immediately reports a missing platform plugin.
+          curl -fsSLo linuxdeploy \
+            https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage
+          curl -fsSLo linuxdeploy-plugin-qt \
+            https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
+          chmod +x linuxdeploy linuxdeploy-plugin-qt
+          mkdir -p AppDir
+          DESTDIR="$PWD/AppDir" cmake --install native/build --prefix /usr
+          # The examples travel inside the image: an AppImage has no package
+          # manager to fetch them later, and a learner with no programs to open is
+          # the one case the Lessons panel cannot cover on its own.
+          cp -a Examples "AppDir/usr/share/time-warp-studio-examples"
+          if [ -x /usr/lib/qt6/bin/qmake ]; then
+            export QMAKE=/usr/lib/qt6/bin/qmake
+          fi
+          export OUTPUT="Time_Warp_Studio-${version}-x86_64.AppImage"
+          ./linuxdeploy --appdir AppDir --plugin qt \
+            --desktop-file AppDir/usr/share/applications/time-warp-studio.desktop \
+            --icon-file AppDir/usr/share/icons/hicolor/256x256/apps/time-warp-studio.png \
+            --output appimage
+          mv ./*.AppImage "dist/$OUTPUT"
+          ( cd dist && sha256sum "$OUTPUT" > "$OUTPUT.sha256" )
+          ls -l dist
+
       - uses: actions/upload-artifact@v4
         with:
-          name: linux-artifact
+          name: linux-artifact-${{ matrix.arch }}
           path: |
             dist/*.tar.gz
+            dist/*.deb
+            dist/*.rpm
+            dist/*.AppImage
             dist/*.sha256
           if-no-files-found: error
 
@@ -178,9 +249,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # `merge-multiple` puts both architectures' files in one directory: the
+      # release attaches a flat list, and every file name already says which
+      # architecture it is.
       - uses: actions/download-artifact@v4
         with:
-          name: linux-artifact
+          pattern: linux-artifact-*
+          merge-multiple: true
           path: dist
 
       - name: Create the release and attach the artifact
@@ -189,28 +264,52 @@ jobs:
         run: |
           version="${{ needs.verify.outputs.version }}"
           tag="v${version}"
-          # `--generate-notes` writes the notes from the commits and pull
-          # requests since the last tag; the changelog in the repository stays
-          # the long form and the release links to it.
-          gh release create "$tag" \
-            --title "Time Warp Studio $version" \
-            --generate-notes \
-            --notes-file - \
-            dist/*.tar.gz dist/*.sha256 <<EOF
+
+          # Generated notes come from the API rather than from
+          # `gh release create --generate-notes`, because they have to sit under
+          # a hand-written preamble (what to install, and how) and the flag does
+          # not combine with supplied notes. Two bodies, one file, one release.
+          gh api --method POST \
+            "repos/${GITHUB_REPOSITORY}/releases/generate-notes" \
+            -f tag_name="$tag" --jq .body > generated-notes.md
+
+          {
+            cat <<EOF
           An educational IDE for ten languages — BASIC, APL, Logo, PILOT, FOCAL,
           Scheme, CHIP-8, COMAL, REXX and Smalltalk — with integrated turtle
           graphics, all running in C++.
 
-          **Install:** unpack the tarball into \`/\` and run \`time_warp_ide\`:
+          ### Which file do I want?
 
-              tar -xzf time-warp-studio-${version}-linux-x86_64.tar.gz -C / --strip-components=1
+          Files come in two architectures: **x86_64** (Intel/AMD) and **arm64**
+          (Raspberry Pi 4/5, ARM laptops). \`uname -m\` says which yours is —
+          \`x86_64\` or \`aarch64\` — and the file name carries the same word.
 
-          **Container:** \`docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix
-          ${IMAGE_NAME}:${version}\`
+          | If you… | Download | What happens |
+          | --- | --- | --- |
+          | just want to try it, on Intel/AMD | \`Time_Warp_Studio-${version}-x86_64.AppImage\` | One file. Make it executable and double-click it. Nothing is installed and no root password is asked for. |
+          | use Ubuntu, Debian, Mint or Pop!_OS | \`time-warp-studio_${version}_<arch>.deb\` | Double-click it, or \`sudo apt install ./time-warp-studio_${version}_<arch>.deb\`. Appears in the application menu. |
+          | use Fedora, RHEL or openSUSE | \`time-warp-studio-${version}-1.<arch>.rpm\` | \`sudo dnf install ./time-warp-studio-${version}-1.<arch>.rpm\` |
+          | want no desktop integration, or you are on arm64 | \`time-warp-studio-${version}-linux-<arch>.tar.gz\` | \`tar -xzf time-warp-studio-${version}-linux-<arch>.tar.gz -C / --strip-components=1\` |
+          | want it in a container | \`${IMAGE_NAME}:${version}\` | \`docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix ${IMAGE_NAME}:${version}\` |
+
+          Checksums are beside every file (\`.sha256\`). The AppImage needs glibc
+          2.39 or newer — Ubuntu 24.04 and later, or a distribution of similar age;
+          on anything older, use the package for it.
 
           See [CHANGELOG.md](CHANGELOG.md) for what changed and
           [docs/INSTALLATION.md](docs/INSTALLATION.md) for requirements.
+
           EOF
+            echo "---"
+            echo
+            cat generated-notes.md
+          } > release-notes.md
+
+          gh release create "$tag" \
+            --title "Time Warp Studio $version" \
+            --notes-file release-notes.md \
+            dist/*.tar.gz dist/*.deb dist/*.rpm dist/*.AppImage dist/*.sha256
 
       - name: Verify the release is public and complete
         env:

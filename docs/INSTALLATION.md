@@ -177,20 +177,32 @@ application and were deleted with it. What a release *does* ship is the tarball
 
 ### 8. A release without building anything
 
-Two artifacts come out of a tag, and neither needs a compiler on your machine.
+Every release page carries five things, and none of them needs a compiler on your
+machine. `uname -m` says which architecture is yours: `x86_64` or `aarch64`
+(the file names say `x86_64` or `arm64`).
 
-**The tarball.** `time-warp-studio-<version>-linux-x86_64.tar.gz` on the release
-page is the install tree above, plus the example programs and the licence:
+| You have | Take | Then |
+| --- | --- | --- |
+| a desktop and no wish to install anything | `Time_Warp_Studio-<version>-x86_64.AppImage` | `chmod +x` it and double-click. It needs no root, no package manager and no Qt: everything is inside the file. |
+| Ubuntu, Debian, Mint or Pop!_OS | `time-warp-studio_<version>_<arch>.deb` | Double-click it, or `sudo apt install ./time-warp-studio_<version>_<arch>.deb` |
+| Fedora, RHEL or openSUSE | `time-warp-studio-<version>-1.<arch>.rpm` | `sudo dnf install ./time-warp-studio-<version>-1.<arch>.rpm` |
+| any other Linux, or arm64 | `time-warp-studio-<version>-linux-<arch>.tar.gz` | `tar -xzf … -C / --strip-components=1` |
 
-```bash
-tar -xzf time-warp-studio-16.0.0-linux-x86_64.tar.gz -C / --strip-components=1
-time_warp_ide
-```
+The **AppImage is the answer for a non-technical user**: one file, double-clicked,
+nothing installed. It is built for glibc 2.39 or newer (Ubuntu 24.04 and later, or
+a distribution of similar age); on anything older use the package for that
+distribution, which resolves the libraries properly.
 
-It needs Qt 6, a C++ runtime and `python3` for the lesson check — the same
-requirements as a local build, minus the compiler.
+The **packages** put the binary, the bridge, the desktop entry and the icon where
+the system expects them, so the application appears in the menu and can be removed
+with the package manager. They declare `python3` and the Qt 6 runtime as
+dependencies.
 
-**The container image** is `ghcr.io/james-honeybadger/time-warp-studio:<version>`
+The **tarball** is the install tree above, plus the example programs and the
+licence. It needs Qt 6, a C++ runtime and `python3` for the lesson check — the
+same requirements as a local build, minus the compiler.
+
+The container image is `ghcr.io/james-honeybadger/time-warp-studio:<version>`
 (or `:latest`), and it carries everything, including Qt and Python:
 
 ```bash

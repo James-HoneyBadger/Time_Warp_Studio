@@ -736,3 +736,62 @@ if(Qt6_FOUND)
         message(STATUS "Qt6 Widgets not found: skipping the widget UI")
     endif()
 endif()
+
+# ---------------------------------------------------------------------------
+# Packages
+# ---------------------------------------------------------------------------
+#
+# `cpack` in the build directory writes a `.deb`; `cpack -G RPM` also writes an
+# `.rpm` where `rpmbuild` is installed. `release.yml` runs both, builds an
+# AppImage beside them with `linuxdeploy` (the Qt bundling an AppImage needs is a
+# tool rather than a CPack generator), and attaches the three to the release.
+#
+# The packages install into `/usr`, not into the build's prefix: a `.deb` that
+# puts a binary in `/usr/local/bin` is a `.deb` whose files no package manager
+# owns. Everything the application needs at run time is already installed by the
+# `install()` rules above -- the binary, the bridge, the desktop entry and the
+# icon -- so the package is simply those four paths.
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../VERSION" TIME_WARP_PACKAGE_VERSION_RAW)
+string(STRIP "${TIME_WARP_PACKAGE_VERSION_RAW}" TIME_WARP_PACKAGE_VERSION)
+
+set(CPACK_PACKAGE_NAME "time-warp-studio")
+set(CPACK_PACKAGE_VENDOR "James Temple")
+set(CPACK_PACKAGE_CONTACT "James Temple <james@honey-badger.org>")
+set(CPACK_PACKAGE_VERSION "${TIME_WARP_PACKAGE_VERSION}")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
+    "Educational IDE for ten programming languages, with turtle graphics")
+set(CPACK_PACKAGE_DESCRIPTION
+    "Time Warp Studio teaches BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, \
+COMAL, REXX and Smalltalk in one window, each with an integrated turtle-graphics \
+canvas. Every language runs natively in C++; the bundled Python engine is the \
+reference the lesson check uses.")
+set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/James-HoneyBadger/Time_Warp_Studio")
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE")
+
+# `python3` is not optional: the Lessons panel runs the bundled engine, which is
+# Python. The Qt packages are the libraries the binary links against plus the
+# platform plugins it loads at run time -- without the plugins the application
+# starts and immediately reports that it cannot load a platform plugin.
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "James Temple <james@honey-badger.org>")
+set(CPACK_DEBIAN_PACKAGE_SECTION "education")
+set(CPACK_DEBIAN_PACKAGE_DEPENDS
+    "libqt6widgets6, libqt6gui6, libqt6core6, qt6-qpa-plugins, python3")
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+# Named explicitly rather than discovered: CPackDeb asks `dpkg` for the
+# architecture and falls back to i386 when it is absent, which is how a build on a
+# machine without dpkg produced a `.deb` whose name has no architecture in it.
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64")
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
+    set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "arm64")
+endif()
+
+set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+set(CPACK_RPM_PACKAGE_GROUP "Education")
+set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtbase-gui, python3")
+
+# DEB only by default: `rpmbuild` is not installed everywhere, and a generator
+# that fails makes `cpack` fail for somebody who only wanted the deb.
+set(CPACK_GENERATOR "DEB")
+
+include(CPack)
