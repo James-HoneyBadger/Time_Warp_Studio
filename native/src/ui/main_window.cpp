@@ -2515,18 +2515,33 @@ void MainWindow::runInBridge(CodeEditor* editor) {
     }
 }
 
+namespace {
+
+/// The right column's fixed pages: the key `showPanel` accepts and the index of
+/// the tab `buildRightColumn` adds. One table, because the failure it prevents is
+/// a page that exists and cannot be raised -- from the palette, a function key or
+/// a menu -- and that looks exactly like a working page until somebody tries.
+struct PanelEntry {
+    const char* key;
+    int index;
+};
+
+constexpr PanelEntry kPanelTable[] = {
+    {"output", 0}, {"variables", 1}, {"telemetry", 2}, {"debug", 3}, {"lessons", 4}};
+
+}  // namespace
+
+QStringList MainWindow::panelKeys() {
+    QStringList keys;
+    for (const PanelEntry& entry : kPanelTable) {
+        keys << QString::fromLatin1(entry.key);
+    }
+    return keys;
+}
+
 bool MainWindow::showPanel(const QString& name) {
-    struct Entry {
-        const char* key;
-        int index;
-    };
-    // The order matches `buildRightColumn`. A panel inserted in the middle has to
-    // be added here too, which is why the mapping is one visible table rather
-    // than five `if`s scattered through the file.
-    static constexpr Entry kPanels[] = {
-        {"output", 0}, {"variables", 1}, {"telemetry", 2}, {"debug", 3}, {"lessons", 4}};
     const QString wanted = name.trimmed().toLower();
-    for (const Entry& entry : kPanels) {
+    for (const PanelEntry& entry : kPanelTable) {
         if (wanted == QLatin1String(entry.key)) {
             if (right_tabs_ != nullptr) {
                 right_tabs_->setCurrentIndex(entry.index);

@@ -545,6 +545,7 @@ if(Qt6_FOUND)
 
         add_library(timewarp_ui
             src/ui/app.cpp
+            src/ui/app_paths.cpp
             src/ui/code_editor.cpp
             src/ui/command_palette.cpp
             src/ui/find_bar.cpp

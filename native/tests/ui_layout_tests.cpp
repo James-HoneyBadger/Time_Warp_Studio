@@ -1103,6 +1103,34 @@ void test_menu_structure() {
     }
 }
 
+/// Every page of the right column has a key that raises it, and every key names
+/// a page. A page added to `buildRightColumn` without one is visible and
+/// unreachable from the palette, the function keys and every menu at once, which
+/// is the fault this table exists to prevent.
+void test_every_right_column_page_has_a_key() {
+    announce("right column panel keys");
+    MainWindow window;
+    QTabWidget* tabs = window.rightTabs();
+    TW_CHECK(tabs != nullptr);
+    if (tabs == nullptr) {
+        return;
+    }
+    const QStringList keys = MainWindow::panelKeys();
+    TW_CHECK_EQ(keys.size(), tabs->count());
+
+    for (int index = 0; index < keys.size() && index < tabs->count(); ++index) {
+        // The key must raise the tab it is listed against: the order is the
+        // contract, not just membership, because the table stores indices.
+        tabs->setCurrentIndex(0);
+        TW_CHECK(window.showPanel(keys.at(index)));
+        TW_CHECK_EQ(tabs->currentIndex(), index);
+    }
+
+    // And an unknown key is refused rather than silently raising page one, which
+    // is what a caller holding a name from data needs to be able to trust.
+    TW_CHECK(!window.showPanel(QStringLiteral("no-such-panel")));
+}
+
 // ---------------------------------------------------------------------------
 // Menu behaviour
 // ---------------------------------------------------------------------------
@@ -1724,6 +1752,7 @@ int main(int argc, char** argv) {
     test_status_bar_badge_placement();
     test_outline_dock_starts_hidden();
     test_menu_structure();
+    test_every_right_column_page_has_a_key();
     test_file_menu_new_opens_a_document();
     test_file_menu_close_tab_closes_one();
     test_file_menu_lists_the_installed_examples();

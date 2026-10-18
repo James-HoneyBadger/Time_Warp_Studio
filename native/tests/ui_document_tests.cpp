@@ -40,7 +40,9 @@
 #include <QThread>
 
 #include "check.hpp"
+#include "temp_dir.hpp"
 #include "timewarp/bridge/python_worker.hpp"
+#include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/language.hpp"
@@ -1121,6 +1123,44 @@ void test_the_session_comes_back() {
     TW_CHECK_EQ(again.openFilePaths().size(), 1);
 }
 
+/// The data directory is where autosave, version history and classroom bundles
+/// will write, so the two things that matter are that the environment variable
+/// wins and that an unset one does not write into the working directory.
+void test_user_data_lives_where_the_environment_says() {
+    announce("user data directory");
+    tw::test::TempDir scratch;
+    TW_CHECK(scratch.valid());
+    if (!scratch.valid()) {
+        return;
+    }
+
+    scratch.useAsDataDir();
+    TW_CHECK_EQ(timewarp::ui::dataDir().toStdString(), scratch.path().toStdString());
+
+    // A named subdirectory is created rather than merely named: the caller is
+    // about to write a snapshot into it.
+    const QString autosave = timewarp::ui::dataDirFor(QStringLiteral("autosave"));
+    TW_CHECK(!autosave.isEmpty());
+    TW_CHECK(QFileInfo{autosave}.isDir());
+    TW_CHECK_EQ(autosave.toStdString(),
+                (scratch.path() + QStringLiteral("/autosave")).toStdString());
+
+    // A leaf that escapes the data directory is refused, because the only
+    // reason to pass one is a mistake.
+    TW_CHECK(timewarp::ui::dataDirFor(QStringLiteral("../elsewhere")).isEmpty());
+    TW_CHECK(timewarp::ui::dataDirFor(QStringLiteral("/etc")).isEmpty());
+
+    // `~` expands the way the Python engine expands it.
+    qputenv("TIME_WARP_DATA_DIR", "~/tw-probe");
+    TW_CHECK_EQ(timewarp::ui::dataDir().toStdString(),
+                (QDir::homePath() + QStringLiteral("/tw-probe")).toStdString());
+
+    // And unset it is the reference engine's directory, not the current one.
+    scratch.restoreDataDir();
+    TW_CHECK_EQ(timewarp::ui::dataDir().toStdString(),
+                (QDir::homePath() + QStringLiteral("/.time_warp")).toStdString());
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1150,6 +1190,7 @@ int main(int argc, char** argv) {
     test_saving_a_document();
     test_a_file_that_cannot_be_read_is_refused();
     test_a_byte_order_mark_is_not_part_of_the_program();
+    test_user_data_lives_where_the_environment_says();
 
     test_running_scheme_draws_on_the_canvas();
     test_pen_up_moves_without_drawing();

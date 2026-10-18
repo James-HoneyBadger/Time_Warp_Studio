@@ -136,7 +136,18 @@ public:
     /// Named rather than numbered because the caller is a command line and a
     /// screenshot script: "show the lessons" survives a panel being inserted
     /// above it, and "show tab 4" does not.
+    /// Raises a page of the right column by its key ("output", "variables",
+    /// "telemetry", "debug", "lessons"). `false` when the key is not a page,
+    /// which is what lets a caller holding a name it read from data tell the
+    /// difference between "shown" and "nothing happened".
     [[nodiscard]] bool showPanel(const QString& name);
+
+    /// The keys `showPanel` accepts, in tab order.
+    ///
+    /// Exposed for the tests: a page added to `buildRightColumn` without a key
+    /// would still be visible and could not be raised from the palette, the
+    /// function keys or a menu, and nothing else in the build would notice.
+    [[nodiscard]] static QStringList panelKeys();
 
     /// The lesson panel, so a test can drive it and a screenshot can show it.
     [[nodiscard]] LessonPanel* lessonPanel() const noexcept { return lesson_panel_; }
