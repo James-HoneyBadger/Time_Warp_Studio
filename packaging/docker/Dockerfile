@@ -68,9 +68,10 @@ RUN pacman -Syu --noconfirm --needed \
     && useradd --create-home --shell /bin/bash studio
 
 COPY --from=build /out/usr /usr
-# The example programs a learner starts from, beside the application rather than
-# mixed into /usr/share.
-COPY --from=build /src/Examples /usr/share/time-warp-studio/examples
+# The example programs are already in that tree, at
+# /usr/share/time-warp-studio/examples, because the install rules carry them --
+# which is also where File > Open Example looks. Copying /src/Examples over the
+# top as well would be a second source of truth for one set of files.
 COPY --from=build /src/LICENSE /usr/share/licenses/time-warp-studio/LICENSE
 
 # A non-root user with a home directory: QSettings, lesson progress and the
