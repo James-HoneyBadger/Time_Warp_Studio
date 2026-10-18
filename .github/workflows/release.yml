@@ -156,7 +156,10 @@ jobs:
           cpack -G "DEB;RPM"
           cd ../..
           mv native/build/time-warp-studio_*.deb native/build/time-warp-studio-*.rpm dist/ 2>/dev/null || true
-          ( cd dist && sha256sum *.deb *.rpm > PACKAGES.sha256 )
+          # One file per artifact, matching the tarball's: a single combined
+          # checksum file is one more thing to open before you can verify a
+          # download.
+          ( cd dist && for package in *.deb *.rpm; do sha256sum "$package" > "$package.sha256"; done )
           ls -l dist
 
       - name: Build an AppImage

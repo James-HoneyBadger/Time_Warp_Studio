@@ -801,6 +801,20 @@ endif()
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Education")
 set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtbase-gui, python3")
+# The same pin as the DEB's, for a sharper reason: CPackRPM asks rpmbuild for
+# `%{_target_cpu}` and, when the answer does not come back, writes the *system
+# name* instead -- which is how a release produced
+# `time-warp-studio-16.0.0-Linux.rpm`, an architecture no rpm-based system has.
+# The architecture also becomes rpmbuild's `--target`, so it is not only a file
+# name.
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64")
+    set(CPACK_RPM_PACKAGE_ARCHITECTURE "x86_64")
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64|arm64|ARM64")
+    set(CPACK_RPM_PACKAGE_ARCHITECTURE "aarch64")
+endif()
+# Named rather than left to the default, so the file name in the release notes
+# and the file on the release page cannot drift apart.
+set(CPACK_RPM_PACKAGE_RELEASE "1")
 
 # DEB only by default: `rpmbuild` is not installed everywhere, and a generator
 # that fails makes `cpack` fail for somebody who only wanted the deb.
