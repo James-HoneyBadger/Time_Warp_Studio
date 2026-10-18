@@ -11,6 +11,27 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 
 ---
 
+## Install it
+
+You do not need a compiler. Every [release](https://github.com/James-HoneyBadger/Time_Warp_Studio/releases/latest)
+carries a ready-built application for **x86_64** (Intel/AMD) and **arm64**
+(Raspberry Pi 4/5, ARM laptops).
+
+| You have | Take | Then |
+| --- | --- | --- |
+| no wish to install anything | `Time_Warp_Studio-<version>-x86_64.AppImage` | Make it executable and double-click it. No root, no package manager, no Qt to fetch. |
+| Ubuntu, Debian, Mint or Pop!_OS | `time-warp-studio_<version>_<arch>.deb` | Double-click it, or `sudo apt install ./time-warp-studio_<version>_<arch>.deb` |
+| Fedora, RHEL or openSUSE | `time-warp-studio-<version>-1.<arch>.rpm` | `sudo dnf install ./time-warp-studio-<version>-1.<arch>.rpm` |
+| any other Linux, or arm64 | `time-warp-studio-<version>-linux-<arch>.tar.gz` | `tar -xzf … -C / --strip-components=1` |
+
+`uname -m` says which architecture yours is: `x86_64` or `aarch64`. Omit the
+architecture from the file name above and the release assets fill it in. The full
+detail, including requirements and the container image, is in
+[docs/INSTALLATION.md](docs/INSTALLATION.md); building from source is still
+supported and is what `native/README.md` describes.
+
+---
+
 ## 🎯 Core Features
 
 ### Multi-Language Support
@@ -162,5 +183,7 @@ teaching-tools
 - **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — the standard expected here
 - **[CHANGELOG.md](CHANGELOG.md)** — what changed, release by release
 
-There are no installers or packages yet. Building from source is the only way to
-run it, and [docs/INSTALLATION.md](docs/INSTALLATION.md) is the whole procedure.
+Releases carry packages, an AppImage and a tarball for x86_64 and arm64 (see
+**Install it** above). Building from source is still the way to work on the
+application, and [docs/INSTALLATION.md](docs/INSTALLATION.md) is the whole
+procedure for both.
