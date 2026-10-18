@@ -265,6 +265,35 @@ CodeEditor* MainWindow::openRestoredCopy(const QString& text) {
     return restored;
 }
 
+QString MainWindow::contextHelpTopic() const {
+    const CodeEditor* editor = currentEditor();
+    return editor == nullptr ? QString{} : guideTopic(editor->language());
+}
+
+void MainWindow::showContextHelp() {
+    HelpBrowserDialog dialog{this};
+    const QString topic = contextHelpTopic();
+    if (!topic.isEmpty()) {
+        static_cast<void>(dialog.openTopic(QDir{docsRoot()}.filePath(topic)));
+    }
+    // The word under the cursor is the command being asked about. A word the
+    // guide does not contain leaves the page at the top rather than saying
+    // nothing happened: the guide itself is the answer in that case.
+    if (const CodeEditor* editor = currentEditor(); editor != nullptr) {
+        static_cast<void>(dialog.findInPage(editor->wordAtCursor()));
+    }
+    dialog.exec();
+}
+
+void MainWindow::showKeywordInspector() {
+    const CodeEditor* editor = currentEditor();
+    const Language language =
+        editor == nullptr ? defaultLanguage() : editor->language();
+    KeywordInspectorDialog dialog{language == Language::Unknown ? defaultLanguage() : language,
+                                  this};
+    dialog.exec();
+}
+
 void MainWindow::showDocumentation(const QString& topic) {
     HelpBrowserDialog dialog{this};
     // A named topic is opened after the index, so the contents tree still has a
@@ -817,14 +846,22 @@ void MainWindow::buildMenuBar() {
     // -- Help -------------------------------------------------------------
     QMenu* help = bar->addMenu(tr("&Help"));
     help->setObjectName(QStringLiteral("helpMenu"));
+    add(help, tr("&Context Help"), QKeySequence{Qt::Key_F1},
+        [this] { showContextHelp(); })
+        ->setObjectName(QStringLiteral("contextHelpAction"));
+    add(help, tr("&Keyword Inspector..."), QKeySequence{Qt::CTRL | Qt::Key_F1},
+        [this] { showKeywordInspector(); })
+        ->setObjectName(QStringLiteral("keywordInspectorAction"));
+    help->addSeparator();
     add(help, tr("&Documentation"), {}, [this] { showDocumentation(); })
         ->setObjectName(QStringLiteral("documentationAction"));
     add(help, tr("&Getting Started"), {},
         [this] { showDocumentation(QStringLiteral("lessons/student-guide.md")); })
         ->setObjectName(QStringLiteral("gettingStartedAction"));
     help->addSeparator();
-    add(help, tr("&Keyboard Shortcuts"), QKeySequence{Qt::Key_F1},
-        [this] { showShortcutHelp(); })
+    // Shift+F1 is the bar's "Keys" binding; the menu entry has no sequence of
+    // its own so the two cannot disagree about which key opens the table.
+    add(help, tr("&Keyboard Shortcuts"), {}, [this] { showShortcutHelp(); })
         ->setObjectName(QStringLiteral("shortcutsAction"));
     add(help, tr("&About Time Warp Studio"), {}, [this] {
         QMessageBox::about(
@@ -1206,8 +1243,8 @@ void MainWindow::performAction(const QString& action) {
         }
         return;
     }
-    if (id == QLatin1String("inspect")) {
-        raisePanel("variables");
+    if (id == QLatin1String("keywords")) {
+        showKeywordInspector();
         return;
     }
     if (id == QLatin1String("lessons")) {
@@ -1235,7 +1272,11 @@ void MainWindow::performAction(const QString& action) {
         showCommandPalette();
         return;
     }
-    if (id == QLatin1String("help") || id == QLatin1String("shortcuts")) {
+    if (id == QLatin1String("help")) {
+        showContextHelp();
+        return;
+    }
+    if (id == QLatin1String("shortcuts")) {
         showShortcutHelp();
         return;
     }

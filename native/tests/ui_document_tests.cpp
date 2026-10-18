@@ -1332,6 +1332,57 @@ void test_autosave_keeps_unsaved_work() {
     scratch.restoreDataDir();
 }
 
+/// The word under the caret is what F1 asks about, so it has to be the whole
+/// word even when the caret is in the middle of it.
+void test_word_at_cursor() {
+    announce("editor: the word under the cursor");
+    CodeEditor editor;
+    editor.setPlainText(QStringLiteral("PRINT FORWARD 10\n"));
+
+    const auto word_at = [&editor](int position) {
+        QTextCursor cursor = editor.textCursor();
+        cursor.setPosition(position);
+        editor.setTextCursor(cursor);
+        return editor.wordAtCursor();
+    };
+
+    TW_CHECK_EQ(word_at(8).toStdString(), std::string{"FORWARD"});  // inside
+    TW_CHECK_EQ(word_at(6).toStdString(), std::string{"FORWARD"});  // first letter
+    TW_CHECK_EQ(word_at(13).toStdString(), std::string{"FORWARD"}); // just past it
+    TW_CHECK_EQ(word_at(5).toStdString(), std::string{"PRINT"});    // on the space
+    TW_CHECK_EQ(word_at(0).toStdString(), std::string{"PRINT"});
+
+    // Nothing to ask about: a blank line, and a run of punctuation.
+    QTextCursor cursor = editor.textCursor();
+    cursor.movePosition(QTextCursor::End);
+    cursor.insertBlock();
+    editor.setTextCursor(cursor);
+    TW_CHECK(editor.wordAtCursor().isEmpty());
+    cursor.insertText(QStringLiteral("+++"));
+    editor.setTextCursor(cursor);
+    TW_CHECK(editor.wordAtCursor().isEmpty());
+}
+
+/// F1's target is the current document's language: a Logo tab asks the Logo
+/// guide, not whichever guide happened to open last.
+void test_context_help_follows_the_document_language() {
+    announce("context help: the document's language");
+    MainWindow window;
+    CodeEditor* editor = window.currentEditor();
+    TW_CHECK(editor != nullptr);
+    if (editor == nullptr) {
+        return;
+    }
+    editor->setLanguage(timewarp::ui::Language::Logo);
+    TW_CHECK_EQ(window.contextHelpTopic().toStdString(),
+                std::string{"tutorials/logo.md"});
+    editor->setLanguage(timewarp::ui::Language::Basic);
+    TW_CHECK_EQ(window.contextHelpTopic().toStdString(),
+                std::string{"tutorials/basic.md"});
+    editor->setLanguage(timewarp::ui::Language::Unknown);
+    TW_CHECK(window.contextHelpTopic().isEmpty());
+}
+
 /// A version chosen in the history becomes a new tab, marked modified, and the
 /// document it came from is untouched. The dialog is modal, so the half that
 /// matters here -- what the window does with the text -- is called directly.
@@ -1397,6 +1448,8 @@ int main(int argc, char** argv) {
     test_run_selection_and_history();
     test_autosave_keeps_unsaved_work();
     test_restoring_a_copy_opens_a_new_tab();
+    test_word_at_cursor();
+    test_context_help_follows_the_document_language();
 
     test_running_scheme_draws_on_the_canvas();
     test_pen_up_moves_without_drawing();

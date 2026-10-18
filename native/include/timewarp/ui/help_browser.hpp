@@ -19,7 +19,10 @@
 #include <QList>
 #include <QString>
 
+#include "timewarp/ui/language.hpp"
+
 class QLabel;
+class QLineEdit;
 class QTextBrowser;
 class QTreeWidget;
 
@@ -59,6 +62,31 @@ struct HelpSection {
 /// reader of the index expects.
 [[nodiscard]] QList<HelpSection> helpContents(const QString& index, const QString& root);
 
+/// The guide page for a language, relative to the docs root: `tutorials/logo.md`.
+/// Empty for `Language::Unknown`.
+[[nodiscard]] QString guideTopic(Language language);
+
+/// One row of the keyword inspector.
+struct KeywordRow {
+    /// The word as the highlighter spells it, which may contain a space
+    /// (`END FUNCTION`).
+    QString keyword;
+    /// The guide's line for the word, empty when the guide does not name it.
+    QString description;
+};
+
+/// The inspector's rows: the highlighter's own vocabulary (`keywordsOf`), each
+/// with the description the language guide gives it. There is no second keyword
+/// list here on purpose -- a word the editor colours and the inspector omits
+/// would be invisible in the one place a learner goes to ask about it.
+[[nodiscard]] QList<KeywordRow> keywordRows(Language language);
+
+/// The guide's one-line description of `keyword`, or empty when the guide does
+/// not mention it. Read from `LANGUAGE_GUIDE.md` under the language's heading;
+/// comment lines and table rows are preferred over prose, because that is where
+/// the guide states a command's meaning.
+[[nodiscard]] QString guideDescription(Language language, const QString& keyword);
+
 /// A contents tree and a page, side by side.
 class HelpBrowserDialog final : public QDialog {
     Q_OBJECT
@@ -77,6 +105,10 @@ public:
     bool openTopic(const QString& path);
     /// Shows the index, which is what the dialog opens on.
     bool showIndex();
+    /// Selects the first whole-word occurrence of `text` and scrolls it into
+    /// view. False when the page does not contain it, having left the page
+    /// where it was. F1 uses this to land on the command under the cursor.
+    bool findInPage(const QString& text);
 
 private:
     void buildContents(const QString& root);
@@ -87,6 +119,31 @@ private:
     QTreeWidget* contents_ = nullptr;
     QTextBrowser* page_ = nullptr;
     QLabel* status_ = nullptr;
+};
+
+/// Every word the editor colours for one language, filterable, with the guide's
+/// description beside it. Ctrl+F1.
+class KeywordInspectorDialog final : public QDialog {
+    Q_OBJECT
+
+public:
+    explicit KeywordInspectorDialog(Language language, QWidget* parent = nullptr);
+
+    /// Rows in total, and rows the filter leaves visible.
+    [[nodiscard]] int rowCount() const;
+    [[nodiscard]] int visibleRowCount() const;
+    /// The table, so a test can read the rows.
+    [[nodiscard]] QTreeWidget* rows() const noexcept { return rows_; }
+    /// Types into the filter, as a learner would.
+    void setFilter(const QString& text);
+
+private:
+    void applyFilter();
+
+    Language language_ = Language::Unknown;
+    QLineEdit* filter_ = nullptr;
+    QTreeWidget* rows_ = nullptr;
+    QLabel* empty_ = nullptr;
 };
 
 }  // namespace timewarp::ui

@@ -156,7 +156,7 @@ constexpr KeyBinding kShiftKeys[] = {
 
 // Control layer: tooling and the debugger.
 constexpr KeyBinding kControlKeys[] = {
-    {"Ctrl+F1", "inspect", "Inspect"},   {"Ctrl+F2", "stop", "Stop"},
+    {"Ctrl+F1", "keywords", "Keywords"}, {"Ctrl+F2", "stop", "Stop"},
     {"Ctrl+F3", "lessons", "Lessons"},   {"Ctrl+F4", "clear_output", "ClearOut"},
     {"Ctrl+F5", "filter_errors", "Errors"},
     {"Ctrl+F6", "clear_canvas", "ClearGfx"},

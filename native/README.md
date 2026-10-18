@@ -1036,7 +1036,7 @@ page next to a 60x40 page must still report a 100x100 minimum.
 
 ### Verification
 
-* **988 checks** in `ui_layout_tests`, run offscreen so they need no display and
+* **994 checks** in `ui_layout_tests`, run offscreen so they need no display and
   belong in the normal CTest set. They assert the tree shape, parent/child
   identity at every splitter index, the collapsible and handle-width flags, the
   stretch factors (read back from the child's size policy, since `QSplitter` has
@@ -1216,10 +1216,9 @@ strokes a circle costs.
   `VariablesPanel`, `TelemetryPanel` and `DebugPanel`, fed by the reference
   worker's `done` payload when a lesson check runs and by
   `DebuggerRunner::snapshot()` for Scheme.
-* The editor colours source per language and finds and replaces in it, but still
-  has no minimap, find-in-files, outline or formatter. The Python editor is 2,254
-  lines because of those extras; they are worth adding one at a time against a
-  working base, which now exists.
+* The editor colours source per language, finds and replaces, has a minimap,
+  find-in-files and a formatter; it still has no breakpoint markers in the
+  gutter or a document outline.
 * `CrtOverlay` draws scanlines only. The Python also does curvature, vignette,
   glow and flicker with sliders for each; the point of including it here was the
   geometry tracking, which is where the Python approach was fragile.

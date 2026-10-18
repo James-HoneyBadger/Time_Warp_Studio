@@ -284,6 +284,20 @@ QString CodeEditor::completionPrefix() const {
     return line.mid(start, cursor.positionInBlock() - start);
 }
 
+QString CodeEditor::wordAtCursor() const {
+    const QTextCursor cursor = textCursor();
+    const QString line = cursor.block().text();
+    int start = cursor.positionInBlock();
+    while (start > 0 && isWordCharacter(line.at(start - 1))) {
+        --start;
+    }
+    int end = cursor.positionInBlock();
+    while (end < line.size() && isWordCharacter(line.at(end))) {
+        ++end;
+    }
+    return line.mid(start, end - start);
+}
+
 void CodeEditor::rebuildCompletionModel() {
     if (completer_ == nullptr) {
         return;
@@ -360,9 +374,16 @@ void CodeEditor::insertCompletion(const QString& word) {
 }
 
 void CodeEditor::setLanguage(Language language) {
-    if (highlighter_ != nullptr) {
-        highlighter_->setLanguage(language);
+    // Nothing to do when the language has not changed. This is not just an
+    // optimisation: the window refreshes the document's state from
+    // `QTextDocument::modificationChanged`, which is emitted from inside
+    // `QTextDocumentPrivate::finishEdit`. Calling `rehighlight()` there re-enters
+    // the text document while it is still finishing an edit, and a first
+    // keystroke in a fresh buffer was enough to corrupt its internal lists.
+    if (highlighter_ == nullptr || highlighter_->language() == language) {
+        return;
     }
+    highlighter_->setLanguage(language);
     // A different language means different rules, so what was flagged under the
     // old one is stale. Re-checked at once rather than on the next keystroke: a
     // project saved as `.logo` should not keep a BASIC complaint until it is

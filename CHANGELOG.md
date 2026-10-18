@@ -7,6 +7,14 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **F1 context help and Ctrl+F1 keyword inspector.** F1 opens the current
+  document's language tutorial, scrolled to the word under the cursor; a word
+  the guide does not contain leaves the guide at the top rather than doing
+  nothing. Ctrl+F1 lists every word the editor colours for that language,
+  filterable, with the guide's own line beside it. The list is the highlighter's
+  vocabulary rather than a second table, so a word added to the colouring cannot
+  vanish from the inspector. F1 no longer opens the shortcut reference; that is
+  Help > Keyboard Shortcuts, which keeps the function-key bar's Shift+F1.
 - **Help > Documentation, and Getting Started.** A help window with a contents
   tree built from `docs/INDEX.md`'s own tables — so it cannot promise a page the
   index does not list — and a Markdown-rendered page beside it. Links between

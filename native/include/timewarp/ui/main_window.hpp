@@ -208,6 +208,14 @@ public:
     /// Opens the documentation browser, on `topic` (a path relative to the
     /// docs root) when one is named, else on the index.
     void showDocumentation(const QString& topic = {});
+    /// Opens the current language's tutorial at the word under the cursor. F1.
+    void showContextHelp();
+    /// The documentation topic F1 would open, relative to the docs root. Empty
+    /// for an unknown language, and exposed so a test can check the mapping
+    /// without a modal dialog.
+    [[nodiscard]] QString contextHelpTopic() const;
+    /// Opens the language's keywords with the guide's descriptions. Ctrl+F1.
+    void showKeywordInspector();
     /// Opens `text` in a new, unnamed tab marked modified, and returns it. The
     /// second half of `showVersionHistory`, separated because that dialog is
     /// modal: the part worth testing is what a chosen version turns into.

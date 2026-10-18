@@ -14,13 +14,16 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
+#include <QSet>
 #include <QTextBrowser>
+#include <QTextCursor>
 #include <QTreeWidget>
 #include <QTreeWidgetItem>
 
 #include "check.hpp"
 #include "temp_dir.hpp"
 #include "timewarp/ui/help_browser.hpp"
+#include "timewarp/ui/syntax_highlighter.hpp"
 
 namespace {
 
@@ -167,6 +170,97 @@ void test_the_dialog_lists_and_opens_pages() {
     TW_CHECK(!dialog.openTopic(QString{}));
 }
 
+/// F1's target: one tutorial per language, and the file exists.
+void test_guide_topics_follow_the_languages() {
+    announce("context help: a guide per language");
+    const QString root = timewarp::ui::docsRoot();
+    TW_CHECK(!root.isEmpty());
+    if (root.isEmpty()) {
+        return;
+    }
+    for (const timewarp::ui::Language language : timewarp::ui::allLanguages()) {
+        const QString topic = timewarp::ui::guideTopic(language);
+        TW_CHECK_EQ(topic.toStdString(),
+                    QStringLiteral("tutorials/%1.md")
+                        .arg(timewarp::ui::settingsKey(language))
+                        .toStdString());
+        TW_CHECK(QFileInfo{QDir{root}.filePath(topic)}.isFile());
+    }
+    TW_CHECK(timewarp::ui::guideTopic(timewarp::ui::Language::Unknown).isEmpty());
+}
+
+/// The inspector is the highlighter's vocabulary, not a second list that can
+/// drift from it, and the guide supplies a description where it states one.
+void test_every_highlighted_keyword_has_a_row() {
+    announce("keyword inspector: the highlighter's words");
+    for (const timewarp::ui::Language language : timewarp::ui::allLanguages()) {
+        const QStringList highlighted = timewarp::ui::keywordsOf(language);
+        const QList<timewarp::ui::KeywordRow> rows = timewarp::ui::keywordRows(language);
+        TW_CHECK(!highlighted.isEmpty());
+        TW_CHECK_EQ(rows.size(), highlighted.size());
+
+        QSet<QString> from_highlighter;
+        for (const QString& keyword : highlighted) {
+            from_highlighter.insert(keyword);
+        }
+        QSet<QString> from_inspector;
+        for (const timewarp::ui::KeywordRow& row : rows) {
+            from_inspector.insert(row.keyword);
+        }
+        TW_CHECK(from_inspector == from_highlighter);
+    }
+
+    // Logo's guide describes FORWARD in a comment beside its example; that is
+    // the line the inspector should show.
+    const QList<timewarp::ui::KeywordRow> logo = timewarp::ui::keywordRows(timewarp::ui::Language::Logo);
+    bool saw_forward = false;
+    for (const timewarp::ui::KeywordRow& row : logo) {
+        if (row.keyword == QLatin1String("FORWARD")) {
+            saw_forward = true;
+            TW_CHECK(!row.description.isEmpty());
+            TW_CHECK(row.description.contains(QStringLiteral("forward"), Qt::CaseInsensitive));
+        }
+    }
+    TW_CHECK(saw_forward);
+}
+
+/// Ctrl+F1's dialog: every row, and the filter narrows by either column.
+void test_the_inspector_filters() {
+    announce("keyword inspector: filtering");
+    timewarp::ui::KeywordInspectorDialog dialog{timewarp::ui::Language::Logo};
+    TW_CHECK(dialog.rowCount() > 20);
+    TW_CHECK_EQ(dialog.visibleRowCount(), dialog.rowCount());
+
+    dialog.setFilter(QStringLiteral("PEN"));
+    TW_CHECK(dialog.visibleRowCount() > 0);
+    TW_CHECK(dialog.visibleRowCount() < dialog.rowCount());
+
+    dialog.setFilter(QStringLiteral("no-such-keyword"));
+    TW_CHECK_EQ(dialog.visibleRowCount(), 0);
+
+    dialog.setFilter(QString{});
+    TW_CHECK_EQ(dialog.visibleRowCount(), dialog.rowCount());
+}
+
+/// F1 scrolls the guide to the command under the cursor, by whole word: `TO`
+/// must not land in the middle of "Turtle".
+void test_find_in_page_selects_a_whole_word() {
+    announce("context help: finding the command");
+    const QString root = timewarp::ui::docsRoot();
+    TW_CHECK(!root.isEmpty());
+    if (root.isEmpty()) {
+        return;
+    }
+    timewarp::ui::HelpBrowserDialog dialog;
+    TW_CHECK(dialog.openTopic(QDir{root}.filePath(QStringLiteral("tutorials/logo.md"))));
+    TW_CHECK(dialog.findInPage(QStringLiteral("FORWARD")));
+    // Case-insensitively, because the guide's first mention is "Move forward".
+    TW_CHECK_EQ(dialog.page()->textCursor().selectedText().toUpper().toStdString(),
+                std::string{"FORWARD"});
+    TW_CHECK(!dialog.findInPage(QStringLiteral("a phrase the guide does not contain")));
+    TW_CHECK(!dialog.findInPage(QString{}));
+}
+
 /// With nothing to show, the pane explains what is missing and where it looked;
 /// an empty white box is the failure the plan names.
 void test_a_missing_root_is_explained() {
@@ -196,6 +290,10 @@ int main(int argc, char** argv) {
     test_contents_come_from_the_index();
     test_a_broken_link_survives_parsing();
     test_the_dialog_lists_and_opens_pages();
+    test_guide_topics_follow_the_languages();
+    test_every_highlighted_keyword_has_a_row();
+    test_the_inspector_filters();
+    test_find_in_page_selects_a_whole_word();
     test_a_missing_root_is_explained();
     return tw::test::summary("help_browser");
 }

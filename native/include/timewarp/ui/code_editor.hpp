@@ -162,6 +162,10 @@ public:
     /// What would be completed at the cursor: the word being typed, or the empty
     /// string.
     [[nodiscard]] QString completionPrefix() const;
+    /// The whole word the cursor sits in or at the end of, or the empty string.
+    /// F1 and Ctrl+F1 read this to know which command the learner is asking
+    /// about; unlike `completionPrefix` it includes the part after the caret.
+    [[nodiscard]] QString wordAtCursor() const;
     /// Opens the completion popup for the word at the cursor, if there is one.
     /// Ctrl+Space, and what typing a word character does when completion is on.
     void showCompletion();

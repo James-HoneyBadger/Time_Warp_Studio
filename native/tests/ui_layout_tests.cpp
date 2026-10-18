@@ -725,7 +725,9 @@ void test_function_keys_are_wired() {
                      [&seen](const QString& action) { seen << action; });
 
     bar->setLayer(FunctionKeyBar::Layer::Control);
-    const QStringList safe{QStringLiteral("inspect"), QStringLiteral("lessons"),
+    // Not `keywords`: Ctrl+F1 is the menu's now, and opening the inspector is a
+    // modal dialog this test must not enter.
+    const QStringList safe{QStringLiteral("lessons"),
                            QStringLiteral("clear_output"),
                            QStringLiteral("filter_errors"),
                            QStringLiteral("clear_canvas"),
@@ -753,6 +755,10 @@ void test_function_keys_are_wired() {
     TW_CHECK(window.findChild<QAction*>(QStringLiteral("fkey_outline")) != nullptr);
     TW_CHECK(window.findChild<QAction*>(QStringLiteral("fkey_save")) == nullptr);
     TW_CHECK(window.findChild<QAction*>(QStringLiteral("fkey_run")) == nullptr);
+    // F1 and Ctrl+F1 belong to the Help menu now; a second action on either
+    // sequence would be the ambiguous shortcut the skip exists to avoid.
+    TW_CHECK(window.findChild<QAction*>(QStringLiteral("fkey_help")) == nullptr);
+    TW_CHECK(window.findChild<QAction*>(QStringLiteral("fkey_keywords")) == nullptr);
 
     // Decks are wired too: the debugger deck raises the Debug panel.
     window.selectDeck(QStringLiteral("debugger_deck"));
@@ -1115,9 +1121,13 @@ void test_help_menu_opens_the_documentation() {
     MainWindow window;
     auto* documentation = window.findChild<QAction*>(QStringLiteral("documentationAction"));
     auto* getting_started = window.findChild<QAction*>(QStringLiteral("gettingStartedAction"));
+    auto* context_help = window.findChild<QAction*>(QStringLiteral("contextHelpAction"));
+    auto* inspector = window.findChild<QAction*>(QStringLiteral("keywordInspectorAction"));
     auto* shortcuts = window.findChild<QAction*>(QStringLiteral("shortcutsAction"));
     TW_CHECK(documentation != nullptr);
     TW_CHECK(getting_started != nullptr);
+    TW_CHECK(context_help != nullptr);
+    TW_CHECK(inspector != nullptr);
     TW_CHECK(shortcuts != nullptr);
     if (documentation != nullptr && getting_started != nullptr) {
         TW_CHECK(documentation->text().contains(QStringLiteral("Documentation")));
@@ -1125,10 +1135,17 @@ void test_help_menu_opens_the_documentation() {
         TW_CHECK(documentation->isEnabled());
         TW_CHECK(getting_started->isEnabled());
     }
-    // The shortcut help keeps F1 until context help claims it; two actions on
-    // one key is an ambiguous shortcut, not a convenience.
+    // F1 is context help and Ctrl+F1 the inspector. The shortcut table has no
+    // sequence of its own: Shift+F1 on the function-key bar is its key, and a
+    // menu sequence as well would be two actions on one shortcut.
+    if (context_help != nullptr) {
+        TW_CHECK_EQ(context_help->shortcut().toString().toStdString(), std::string{"F1"});
+    }
+    if (inspector != nullptr) {
+        TW_CHECK_EQ(inspector->shortcut().toString().toStdString(), std::string{"Ctrl+F1"});
+    }
     if (shortcuts != nullptr) {
-        TW_CHECK_EQ(shortcuts->shortcut().toString().toStdString(), std::string{"F1"});
+        TW_CHECK(shortcuts->shortcut().isEmpty());
     }
 }
 

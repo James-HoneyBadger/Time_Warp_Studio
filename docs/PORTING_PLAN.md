@@ -61,7 +61,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 0 | Foundations | data dir, panel registration, test fixtures | S | — |
 | 1 | Editor completion | Find in Files ✅, Format Code ✅, Snippets ✅, whitespace ✅, minimap ✅, run history ✅, run selection ✅, reset ✅ | M | 0 |
 | 2 | Data safety | autosave ✅, version history ✅ | M | 0 |
-| 3 | Help and learnability | documentation browser ✅, F1, keyword inspector, guided tour | M | 0 |
+| 3 | Help and learnability | documentation browser ✅, F1 ✅, keyword inspector ✅, guided tour | M | 0 |
 | 4 | Canvas time travel | scrubber, GIF recording, SVG export | M | 4.3 needs a dependency decision |
 | 5 | Export and print | PDF, print, session HTML | M | 5.2 needs a dependency decision |
 | 6 | Debugging breadth | breakpoints everywhere, pause/step for line-by-line languages, profiler | L | 0, best after 1 |

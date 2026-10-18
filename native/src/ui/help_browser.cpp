@@ -2,6 +2,10 @@
 
 #include "timewarp/ui/help_browser.hpp"
 
+#include <algorithm>
+
+#include "timewarp/ui/syntax_highlighter.hpp"
+
 #include <QAbstractItemView>
 #include <QCoreApplication>
 #include <QDesktopServices>
@@ -9,11 +13,17 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QHBoxLayout>
+#include <QHash>
+#include <QHeaderView>
 #include <QLabel>
+#include <QLineEdit>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QTextBrowser>
+#include <QTextCursor>
+#include <QTextDocument>
 #include <QTreeWidget>
+#include <QTreeWidgetItem>
 #include <QUrl>
 #include <QVBoxLayout>
 
@@ -123,6 +133,162 @@ QList<HelpSection> helpContents(const QString& index, const QString& root) {
     }
     flush();
     return sections;
+}
+
+QString guideTopic(Language language) {
+    if (language == Language::Unknown) {
+        return {};
+    }
+    // One tutorial per language, named by the same settings key the highlighter
+    // and the bridge use.
+    return QStringLiteral("tutorials/%1.md").arg(settingsKey(language));
+}
+
+namespace {
+
+/// The guide's text, read once per documentation root. The inspector asks for a
+/// description per keyword, and re-reading a 60 KB file a hundred times to open
+/// one dialog is work nobody sees but everybody waits for.
+[[nodiscard]] QString guideText() {
+    const QString root = docsRoot();
+    if (root.isEmpty()) {
+        return {};
+    }
+    static QHash<QString, QString> cache;
+    const QString path = QDir{root}.filePath(QStringLiteral("LANGUAGE_GUIDE.md"));
+    if (const auto found = cache.constFind(path); found != cache.cend()) {
+        return *found;
+    }
+    QFile file{path};
+    const QString text = file.open(QIODevice::ReadOnly) ? QString::fromUtf8(file.readAll())
+                                                        : QString{};
+    cache.insert(path, text);
+    return text;
+}
+
+/// A keyword match that works for `eq?` and `set!` as well as `PRINT`: `\b`
+/// needs a word character on one side, which a keyword ending in punctuation
+/// never has at its end.
+[[nodiscard]] QRegularExpression wholeWord(const QString& keyword) {
+    return QRegularExpression{
+        QStringLiteral("(?<![A-Za-z0-9_])%1(?![A-Za-z0-9_])")
+            .arg(QRegularExpression::escape(keyword)),
+        QRegularExpression::CaseInsensitiveOption};
+}
+
+/// Drops the guide's markup and a leading repetition of the keyword.
+[[nodiscard]] QString cleanDescription(QString text, const QString& keyword) {
+    text = text.trimmed();
+    const QRegularExpression prefix{
+        QStringLiteral("^`?\\*{0,2}%1\\*{0,2}\\s*[-:]\\s*")
+            .arg(QRegularExpression::escape(keyword)),
+        QRegularExpression::CaseInsensitiveOption};
+    text.remove(prefix);
+    text.remove(QLatin1Char('`'));
+    text.remove(QStringLiteral("**"));
+    return text.trimmed();
+}
+
+}  // namespace
+
+QString guideDescription(Language language, const QString& keyword) {
+    if (language == Language::Unknown || keyword.trimmed().isEmpty()) {
+        return {};
+    }
+    const QString guide = guideText();
+    if (guide.isEmpty()) {
+        return {};
+    }
+
+    const QStringList lines = guide.split(QLatin1Char('\n'));
+    const QString heading = QStringLiteral("## ") + displayName(language);
+    qsizetype first = -1;
+    for (qsizetype index = 0; index < lines.size(); ++index) {
+        if (lines.at(index).trimmed() == heading) {
+            first = index + 1;
+            break;
+        }
+    }
+    if (first < 0) {
+        return {};
+    }
+
+    const QRegularExpression word = wholeWord(keyword);
+    // A line that is only a comment, in any of the ten dialects' spellings.
+    static const QRegularExpression comment{
+        QStringLiteral(R"(^\s*(?:;|'|"|--|//|#|REM(?:ARK)?\b)\s*(.*)$)"),
+        QRegularExpression::CaseInsensitiveOption};
+    // REXX and COMAL attach their comments to the end of a code line.
+    static const QRegularExpression block_comment{QStringLiteral(R"(/\*(.*?)\*/)")};
+    static const QRegularExpression trailing_rem{
+        QStringLiteral(R"(\bREM(?:ARK)?\b(.*)$)"),
+        QRegularExpression::CaseInsensitiveOption};
+
+    bool in_fence = false;
+    QString prose;
+    for (qsizetype index = first; index < lines.size(); ++index) {
+        const QString line = lines.at(index);
+        const QString trimmed = line.trimmed();
+        if (trimmed.startsWith(QLatin1String("```"))) {
+            in_fence = !in_fence;
+            continue;
+        }
+        // The next language starts at the next `## ` heading.
+        if (trimmed.startsWith(QLatin1String("## "))) {
+            break;
+        }
+
+        // A table row: any cell naming the word, with the last cell as meaning.
+        if (trimmed.startsWith(QLatin1Char('|'))) {
+            const QStringList cells = trimmed.split(QLatin1Char('|'));
+            const bool names_keyword = std::any_of(cells.cbegin(), cells.cend(),
+                                                   [&word](const QString& cell) {
+                                                       return word.match(cell).hasMatch();
+                                                   });
+            if (names_keyword) {
+                for (qsizetype cell = cells.size() - 2; cell >= 1; --cell) {
+                    QString meaning = cells.at(cell).trimmed();
+                    meaning.remove(QLatin1Char('`'));
+                    meaning.remove(QLatin1Char('*'));
+                    if (!meaning.isEmpty() && !word.match(meaning).hasMatch()) {
+                        return meaning;
+                    }
+                }
+            }
+            continue;
+        }
+
+        // A whole-line comment: where most of the guides state a meaning.
+        const QRegularExpressionMatch comment_match = comment.match(line);
+        if (comment_match.hasMatch() && word.match(comment_match.captured(1)).hasMatch()) {
+            return cleanDescription(comment_match.captured(1), keyword);
+        }
+        // A trailing block or REM comment, e.g. COMAL and REXX.
+        for (const QRegularExpression& attached : {block_comment, trailing_rem}) {
+            const QRegularExpressionMatch match = attached.match(line);
+            if (match.hasMatch() && word.match(match.captured(1)).hasMatch()) {
+                return cleanDescription(match.captured(1), keyword);
+            }
+        }
+
+        // Prose outside a fence, kept as a fallback for a command the guide
+        // describes in a sentence rather than in a comment.
+        if (!in_fence && prose.isEmpty() && !trimmed.startsWith(QLatin1Char('#')) &&
+            word.match(trimmed).hasMatch()) {
+            prose = cleanDescription(trimmed, keyword);
+        }
+    }
+    return prose;
+}
+
+QList<KeywordRow> keywordRows(Language language) {
+    QList<KeywordRow> rows;
+    const QStringList keywords = keywordsOf(language);
+    rows.reserve(keywords.size());
+    for (const QString& keyword : keywords) {
+        rows.append(KeywordRow{keyword, guideDescription(language, keyword)});
+    }
+    return rows;
 }
 
 HelpBrowserDialog::HelpBrowserDialog(QWidget* parent)
@@ -237,6 +403,21 @@ bool HelpBrowserDialog::showIndex() {
     return root_.isEmpty() ? false : openTopic(QDir{root_}.filePath(QStringLiteral("INDEX.md")));
 }
 
+bool HelpBrowserDialog::findInPage(const QString& text) {
+    if (text.trimmed().isEmpty()) {
+        return false;
+    }
+    QTextCursor from = page_->textCursor();
+    from.movePosition(QTextCursor::Start);
+    const QTextCursor found = page_->document()->find(wholeWord(text.trimmed()), from);
+    if (found.isNull()) {
+        return false;
+    }
+    page_->setTextCursor(found);
+    page_->ensureCursorVisible();
+    return true;
+}
+
 void HelpBrowserDialog::buildContents(const QString& root) {
     contents_->clear();
     QFile file{root.isEmpty() ? QString{} : QDir{root}.filePath(QStringLiteral("INDEX.md"))};
@@ -257,6 +438,104 @@ void HelpBrowserDialog::buildContents(const QString& root) {
         }
     }
     contents_->expandAll();
+}
+
+KeywordInspectorDialog::KeywordInspectorDialog(Language language, QWidget* parent)
+    : QDialog{parent}, language_(language) {
+    setObjectName(QStringLiteral("keywordInspector"));
+    setWindowTitle(tr("%1 Keywords").arg(displayName(language)));
+    resize(680, 560);
+
+    auto* heading = new QLabel{
+        tr("%1 words, as the editor colours them. Type to filter; the second "
+           "column is what the language guide says about each.")
+            .arg(displayName(language)),
+        this};
+    heading->setObjectName(QStringLiteral("keywordInspectorHeading"));
+    heading->setWordWrap(true);
+
+    filter_ = new QLineEdit{this};
+    filter_->setObjectName(QStringLiteral("keywordInspectorFilter"));
+    filter_->setPlaceholderText(tr("Filter keywords"));
+    filter_->setClearButtonEnabled(true);
+
+    rows_ = new QTreeWidget{this};
+    rows_->setObjectName(QStringLiteral("keywordInspectorList"));
+    rows_->setHeaderLabels({tr("Keyword"), tr("Guide")});
+    rows_->setRootIsDecorated(false);
+    rows_->setAlternatingRowColors(true);
+    rows_->header()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    rows_->header()->setStretchLastSection(true);
+
+    empty_ = new QLabel{this};
+    empty_->setObjectName(QStringLiteral("keywordInspectorEmpty"));
+    empty_->setVisible(false);
+
+    auto* close = new QPushButton{tr("Close"), this};
+    close->setObjectName(QStringLiteral("keywordInspectorClose"));
+    close->setDefault(true);
+
+    for (const KeywordRow& row : keywordRows(language)) {
+        auto* item = new QTreeWidgetItem{rows_, {row.keyword, row.description}};
+        // The guide line can be long; the tooltip is where the whole of it stays
+        // readable when the column is narrow.
+        item->setToolTip(1, row.description);
+    }
+
+    auto* layout = new QVBoxLayout{this};
+    layout->addWidget(heading);
+    layout->addWidget(filter_);
+    layout->addWidget(rows_, 1);
+    layout->addWidget(empty_);
+    auto* buttons = new QHBoxLayout;
+    buttons->addStretch(1);
+    buttons->addWidget(close);
+    layout->addLayout(buttons);
+
+    connect(filter_, &QLineEdit::textChanged, this, [this] { applyFilter(); });
+    connect(close, &QPushButton::clicked, this, [this] { accept(); });
+    applyFilter();
+}
+
+int KeywordInspectorDialog::rowCount() const { return rows_->topLevelItemCount(); }
+
+int KeywordInspectorDialog::visibleRowCount() const {
+    int visible = 0;
+    for (int index = 0; index < rows_->topLevelItemCount(); ++index) {
+        if (!rows_->topLevelItem(index)->isHidden()) {
+            ++visible;
+        }
+    }
+    return visible;
+}
+
+void KeywordInspectorDialog::setFilter(const QString& text) {
+    filter_->setText(text);
+    applyFilter();
+}
+
+void KeywordInspectorDialog::applyFilter() {
+    const QString term = filter_->text().trimmed();
+    int visible = 0;
+    for (int index = 0; index < rows_->topLevelItemCount(); ++index) {
+        QTreeWidgetItem* item = rows_->topLevelItem(index);
+        const bool matches = term.isEmpty() ||
+                             item->text(0).contains(term, Qt::CaseInsensitive) ||
+                             item->text(1).contains(term, Qt::CaseInsensitive);
+        item->setHidden(!matches);
+        if (matches) {
+            ++visible;
+        }
+    }
+    if (rows_->topLevelItemCount() == 0) {
+        empty_->setText(tr("This language has no keywords."));
+        empty_->setVisible(true);
+    } else if (visible == 0) {
+        empty_->setText(tr("No keyword matches that filter."));
+        empty_->setVisible(true);
+    } else {
+        empty_->setVisible(false);
+    }
 }
 
 void HelpBrowserDialog::selectTopic(const QString& path) {
