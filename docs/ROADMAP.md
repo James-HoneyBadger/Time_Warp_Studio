@@ -8,6 +8,12 @@ The PySide6 implementation that came before this one has been **removed**. Where
 this page says a feature is "not ported", it existed there and does not exist here
 yet — please check the list below before reporting one as a regression.
 
+[PORTING_PLAN.md](PORTING_PLAN.md) is the sequenced plan for those features: what
+each one becomes in this codebase, the test that proves it, and the order they are
+worth building in. That plan was written by diffing the removed tree against this
+one, so its list is longer than the paragraphs below and its categories are
+derived rather than remembered.
+
 ---
 
 ## Working today
@@ -284,8 +290,10 @@ memory window — and puts the IDE's own rows (wall clock, ink on the canvas) be
 so a drawing the engine counted but the canvas never received reads as two rows that
 disagree rather than as silence.
 
-**Editor** — find in files, a minimap, error markers in the gutter, breakpoint
-markers, auto-completion and a document outline are still missing.
+**Editor** — find in files, a minimap, breakpoint markers and a document outline
+are still missing. Error markers and auto-completion are built
+(`native/src/ui/lint.cpp`, with squiggles, gutter triangles and tooltips), and
+whitespace rendering is not.
 
 Two of the entries that used to be on that list are built. Per-language syntax
 colouring is `native/src/ui/syntax_highlighter.cpp`, one rule table per language
@@ -397,9 +405,12 @@ packages depend on the distribution's Qt 6.
 
 ## Deliberately out of scope for now
 
-These existed in the removed implementation and are not planned for the current
-release cycle: the examples browser, the accessibility presets, the onboarding
-wizard, a web (WebAssembly) build, and calling one language from another.
+A web (WebAssembly) build, and calling one language from another.
+
+The **examples browser** is now a File menu grouped by language rather than the
+old window with categories, difficulty and search; **accessibility presets** and
+the **onboarding wizard** are scheduled in [PORTING_PLAN.md](PORTING_PLAN.md)
+(phases 8 and 3) rather than dropped.
 
 The **lessons system**, with progress tracking and a classroom mode, used to be on this
 list. It is now implemented — see `docs/lessons/`. The **telemetry HUD** was on it too

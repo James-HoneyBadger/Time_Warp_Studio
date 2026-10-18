@@ -18,6 +18,7 @@ languages, with an integrated turtle graphics canvas. This page is the map.
 | [lessons/](lessons/README.md) | The guided lessons: the curriculum, and the student and teacher guides |
 | [README_TESTING.md](README_TESTING.md) | The suites, the example gate and the parity harnesses |
 | [ROADMAP.md](ROADMAP.md) | What is built, what is next, what was deliberately deferred |
+| [PORTING_PLAN.md](PORTING_PLAN.md) | The features the removed PySide6 application had, and the plan to port them |
 | [FAQ.md](FAQ.md) | Short answers to common questions |
 | [`native/README.md`](../native/README.md) | The application itself: design notes, decisions, tests |
 | [`native/bridge/`](../native/bridge/) | The Python reference engine the parity gates and the lesson check compare against |
@@ -51,6 +52,7 @@ One per active language, each written to be worked through:
 | Fix a build or Qt problem | [INSTALLATION.md](INSTALLATION.md) |
 | Learn a language's commands | [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md) |
 | Understand the design | [ARCHITECTURE.md](ARCHITECTURE.md) |
+| See what the old application had and this one does not | [PORTING_PLAN.md](PORTING_PLAN.md) |
 | Add or change a language | [`native/README.md`](../native/README.md), then the bridge |
 | Contribute | [CONTRIBUTING.md](../CONTRIBUTING.md) |
 | Ask a question, report a bug, ask for a feature | [`.github/SUPPORT.md`](../.github/SUPPORT.md), then the issue forms |
@@ -69,5 +71,6 @@ lesson check run in; every language runs in C++.
 Documentation describing that application's interface — the user guide, the
 progressive how-to guides, the keyboard-shortcut reference, the debugger guide and
 the troubleshooting guide — was removed with it rather than left to mislead.
-`native/README.md` documents the Qt interface, and
-[ROADMAP.md](ROADMAP.md) lists the features that have not been ported yet.
+`native/README.md` documents the Qt interface, [ROADMAP.md](ROADMAP.md) lists the
+features that have not been ported yet, and [PORTING_PLAN.md](PORTING_PLAN.md) is
+the plan for porting them.
