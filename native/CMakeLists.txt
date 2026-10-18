@@ -815,6 +815,14 @@ endif()
 # Named rather than left to the default, so the file name in the release notes
 # and the file on the release page cannot drift apart.
 set(CPACK_RPM_PACKAGE_RELEASE "1")
+# And *this* one is what makes the architecture appear in the name at all. Unless
+# `CPACK_RPM_FILE_NAME` is the literal string `RPM-DEFAULT`, CPackRPM falls back
+# to the old format -- `${CPACK_PACKAGE_FILE_NAME}.rpm`, and CPack builds that
+# from the *system name*, hence `time-warp-studio-16.0.0-Linux.rpm`. With
+# RPM-DEFAULT it stops pinning a name and lets rpmbuild's own
+# `<name>-<version>-<release>.<arch>.rpm` rule apply, where the architecture is
+# the one pinned above.
+set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
 
 # DEB only by default: `rpmbuild` is not installed everywhere, and a generator
 # that fails makes `cpack` fail for somebody who only wanted the deb.
