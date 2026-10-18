@@ -33,6 +33,19 @@ endif()
 option(TIME_WARP_EXPR_WERROR "Treat compiler warnings as errors" ON)
 option(TIME_WARP_EXPR_BUILD_TESTS "Build the test suites" ON)
 
+# `-Wnull-dereference` is dropped for GCC before 14: GCC 13 reports a false
+# positive inside libstdc++'s own `__shared_ptr` copy constructor for every
+# `std::vector<std::shared_ptr<T>>::insert`, which is a thing this code does
+# deliberately (the Smalltalk AST holds shared nodes). Nothing at the call site
+# can silence it, and removing the flag does not leave a real null dereference
+# unwatched: the AddressSanitizer and UndefinedBehaviorSanitizer jobs treat one as
+# a crash rather than as a warning, and they run on every push.
+if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 14)
+    set(TIME_WARP_NULL_DEREFERENCE "")
+else()
+    set(TIME_WARP_NULL_DEREFERENCE "-Wnull-dereference")
+endif()
+
 # ---------------------------------------------------------------------------
 # Library
 # ---------------------------------------------------------------------------
@@ -55,7 +68,7 @@ if(MSVC)
 else()
     target_compile_options(timewarp_expr PRIVATE
         -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast
-        -Wlogical-op -Wnull-dereference
+        -Wlogical-op ${TIME_WARP_NULL_DEREFERENCE}
     )
     if(TIME_WARP_EXPR_WERROR)
         target_compile_options(timewarp_expr PRIVATE -Werror)
@@ -127,7 +140,7 @@ if(MSVC)
 else()
     target_compile_options(timewarp_scheme PRIVATE
         -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast
-        -Wlogical-op -Wnull-dereference
+        -Wlogical-op ${TIME_WARP_NULL_DEREFERENCE}
     )
     if(TIME_WARP_EXPR_WERROR)
         target_compile_options(timewarp_scheme PRIVATE -Werror)
@@ -218,7 +231,7 @@ if(MSVC)
 else()
     target_compile_options(timewarp_lang PRIVATE
         -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast
-        -Wlogical-op -Wnull-dereference
+        -Wlogical-op ${TIME_WARP_NULL_DEREFERENCE}
         # No fused multiply-add. The reference is CPython, which rounds every
         # multiplication and addition separately; contracting `start + i*step`
         # into one fma changes the last bits of a shape's vertices, and a
@@ -296,7 +309,7 @@ if(MSVC)
 else()
     target_compile_options(timewarp_canvas PRIVATE
         -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast
-        -Wlogical-op -Wnull-dereference
+        -Wlogical-op ${TIME_WARP_NULL_DEREFERENCE}
     )
     if(TIME_WARP_EXPR_WERROR)
         target_compile_options(timewarp_canvas PRIVATE -Werror)
@@ -474,7 +487,7 @@ if(Qt6_FOUND)
     else()
         target_compile_options(timewarp_bridge PRIVATE
             -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast
-            -Wlogical-op -Wnull-dereference
+            -Wlogical-op ${TIME_WARP_NULL_DEREFERENCE}
         )
         if(TIME_WARP_EXPR_WERROR)
             target_compile_options(timewarp_bridge PRIVATE -Werror)
@@ -602,7 +615,7 @@ if(Qt6_FOUND)
         else()
             target_compile_options(timewarp_ui PRIVATE
                 -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast
-                -Wlogical-op -Wnull-dereference
+                -Wlogical-op ${TIME_WARP_NULL_DEREFERENCE}
             )
             if(TIME_WARP_EXPR_WERROR)
                 target_compile_options(timewarp_ui PRIVATE -Werror)

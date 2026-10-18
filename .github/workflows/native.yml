@@ -91,8 +91,11 @@ jobs:
 
       - name: Render the window
         run: |
+          # `Examples/...` from the repository root: `../Examples` pointed outside
+          # the checkout, so the render photographed an empty window and the step
+          # passed anyway -- a missing file is reported on stderr, not fatal.
           ./native/build/time_warp_ide --reset --size 1400x900 \
-            --screenshot native/build/layout.png ../Examples/basic/hello.bas
+            --screenshot native/build/layout.png Examples/basic/hello.bas
 
       - uses: actions/upload-artifact@v4
         if: always()
