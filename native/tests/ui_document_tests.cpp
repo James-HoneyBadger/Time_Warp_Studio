@@ -44,6 +44,7 @@
 #include "temp_dir.hpp"
 #include "timewarp/bridge/python_worker.hpp"
 #include "timewarp/ui/app_paths.hpp"
+#include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/language.hpp"
@@ -1278,6 +1279,90 @@ void test_run_selection_and_history() {
                 std::string{"10 PRINT \"FIRST\"\n20 PRINT \"SECOND\"\n30 END\n"});
 }
 
+
+/// Autosave writes a copy of a document that has unsaved changes, and only of
+/// one that has them. The store is checked directly: what matters is that the
+/// bytes are on disk under the data directory, not which widget asked for them.
+void test_autosave_keeps_unsaved_work() {
+    announce("autosave: a snapshot of unsaved work");
+    tw::test::TempDir scratch;
+    TW_CHECK(scratch.valid());
+    if (!scratch.valid()) {
+        return;
+    }
+    // Before the window exists: the store resolves its directory when it is
+    // constructed.
+    scratch.useAsDataDir();
+
+    MainWindow window;
+    CodeEditor* editor = window.currentEditor();
+    TW_CHECK(editor != nullptr);
+    if (editor == nullptr) {
+        scratch.restoreDataDir();
+        return;
+    }
+
+    // An unmodified document is not snapshotted: it is already on disk or it is
+    // an untouched buffer, and either way a copy would push the useful ones out.
+    window.autosaveNow();
+    timewarp::ui::AutosaveStore store;
+    TW_CHECK(store.all().isEmpty());
+
+    // Typed, not `setPlainText`: setting the text clears the modified flag, which
+    // is the flag autosave asks about.
+    editor->setPlainText(QString{});
+    QTextCursor typed = editor->textCursor();
+    typed.insertText(QStringLiteral("10 PRINT \"UNSAVED\"\n"));
+    TW_CHECK(editor->document()->isModified());
+    window.autosaveNow();
+
+    const QList<timewarp::ui::Snapshot> snapshots = store.all();
+    TW_CHECK_EQ(snapshots.size(), 1);
+    if (!snapshots.isEmpty()) {
+        TW_CHECK_EQ(store.read(snapshots.first()).toStdString(),
+                    std::string{"10 PRINT \"UNSAVED\"\n"});
+        // An untitled buffer is recorded as such: there is no path to name it by.
+        TW_CHECK(snapshots.first().document.startsWith(QStringLiteral("untitled:")));
+    }
+
+    // The second snapshot of the same buffer supersedes rather than accumulates
+    // inside one session's millisecond, and the store stays bounded.
+    window.autosaveNow();
+    TW_CHECK(store.all().size() <= 2);
+    scratch.restoreDataDir();
+}
+
+/// A version chosen in the history becomes a new tab, marked modified, and the
+/// document it came from is untouched. The dialog is modal, so the half that
+/// matters here -- what the window does with the text -- is called directly.
+void test_restoring_a_copy_opens_a_new_tab() {
+    announce("version history: a chosen copy opens a new tab");
+    MainWindow window;
+    CodeEditor* original = window.currentEditor();
+    TW_CHECK(original != nullptr);
+    if (original == nullptr) {
+        return;
+    }
+    original->setPlainText(QStringLiteral("10 PRINT \"ORIGINAL\"\n"));
+    const int before = window.editorTabs()->count();
+    const QString restored_text = QStringLiteral("10 PRINT \"RESTORED\"\n");
+
+    CodeEditor* restored = window.openRestoredCopy(restored_text);
+    TW_CHECK(restored != nullptr);
+    if (restored == nullptr) {
+        return;
+    }
+    TW_CHECK_EQ(window.editorTabs()->count(), before + 1);
+    TW_CHECK(window.currentEditor() == restored);
+    TW_CHECK_EQ(restored->toPlainText().toStdString(), restored_text.toStdString());
+    // Unsaved, because the text came from the store rather than a file: closing
+    // it must ask before discarding the only copy.
+    TW_CHECK(restored->document()->isModified());
+    // And the document it was restored from still holds what it held.
+    TW_CHECK_EQ(original->toPlainText().toStdString(),
+                std::string{"10 PRINT \"ORIGINAL\"\n"});
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1310,6 +1395,8 @@ int main(int argc, char** argv) {
     test_user_data_lives_where_the_environment_says();
     test_a_snippet_is_inserted_at_the_cursor();
     test_run_selection_and_history();
+    test_autosave_keeps_unsaved_work();
+    test_restoring_a_copy_opens_a_new_tab();
 
     test_running_scheme_draws_on_the_canvas();
     test_pen_up_moves_without_drawing();

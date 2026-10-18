@@ -29,12 +29,14 @@
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QSaveFile>
+#include <QSet>
 #include <QSettings>
 #include <QSignalBlocker>
 #include <QSlider>
 #include <QSplitter>
 #include <QStatusBar>
 #include <QTabWidget>
+#include <QTimer>
 #include <QTextDocument>
 #include <QToolBar>
 #include <QToolButton>
@@ -61,6 +63,7 @@
 #include "timewarp/ui/syntax_highlighter.hpp"
 #include "timewarp/ui/themes.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
+#include "timewarp/ui/version_history.hpp"
 #include "timewarp/ui/ui_style.hpp"
 
 // Supplied by CMake from the repository's VERSION file, so the window title and
@@ -104,6 +107,8 @@ constexpr auto kSettingEditorLint = "editor/lint";
 constexpr auto kSettingRunHistory = "run/history";
 constexpr auto kRunHistoryLimit = 10;
 constexpr auto kSettingEditorWhitespace = "editor/showWhitespace";
+constexpr auto kSettingEditorAutosave = "editor/autosave";
+constexpr auto kSettingEditorAutosaveSeconds = "editor/autosaveSeconds";
 constexpr auto kSettingEditorMinimap = "editor/minimap";
 
 constexpr int kMinimumWindowWidth = 900;
@@ -168,6 +173,121 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     // applied to a visible window repaints it, which shows as a flash of the
     // default colours before the user's theme arrives.
     applyTheme(QSettings{}.value(kSettingTheme, themes::defaultName()).toString());
+
+    // Autosave: a timer the settings control, and one line in the status bar if a
+    // previous session left unsaved work behind. Deliberately not a dialog --
+    // nothing modal runs on a startup path in this application, and the recovery
+    // itself lives in File > Version History where the user can find it when they
+    // want it.
+    autosave_timer_ = new QTimer{this};
+    autosave_timer_->setObjectName(QStringLiteral("autosaveTimer"));
+    connect(autosave_timer_, &QTimer::timeout, this, &MainWindow::autosaveNow);
+    applyEditorSettings(editor_settings_);
+    reportRecoveredWork();
+}
+
+void MainWindow::autosaveNow() {
+    if (!editor_settings_.autosave || editor_tabs_ == nullptr) {
+        return;
+    }
+    const qint64 now = QDateTime::currentMSecsSinceEpoch();
+    for (int index = 0; index < editor_tabs_->count(); ++index) {
+        auto* editor = qobject_cast<CodeEditor*>(editor_tabs_->widget(index));
+        // Only documents with unsaved changes. Snapshotting everything would push
+        // the useful copies out of the five kept, which is the opposite of the
+        // point.
+        if (editor == nullptr || !editor->document()->isModified()) {
+            continue;
+        }
+        QString document = pathOf(editor);
+        if (document.isEmpty()) {
+            // An untitled buffer is exactly the case this exists for: there is no
+            // file to lose, so there is nothing to recover from except this.
+            document = QStringLiteral("untitled:") + nameOf(editor);
+        }
+        // A failed snapshot means the data directory is not writable. Saying so on
+        // every interval would bury the message it is trying to deliver; the next
+        // tick tries again, and Version History shows what did get written.
+        static_cast<void>(autosave_.save(document, editor->toPlainText(), now));
+    }
+}
+
+void MainWindow::reportRecoveredWork() {
+    // One message per document, not per snapshot: three copies of one buffer is
+    // still one thing to recover. `all()` is newest first, so the first entry
+    // seen for a document is the one that decides whether the file has it.
+    QSet<QString> seen;
+    int count = 0;
+    for (const Snapshot& snapshot : autosave_.all()) {
+        if (seen.contains(snapshot.document)) {
+            continue;
+        }
+        seen.insert(snapshot.document);
+        bool newer_than_file = true;
+        if (!snapshot.document.startsWith(QLatin1String("untitled:"))) {
+            // A named document whose file is gone counts too: `on_disk` is then
+            // zero, and the snapshot is the only copy left.
+            const QFileInfo file{snapshot.document};
+            const qint64 on_disk = file.exists() ? file.lastModified().toMSecsSinceEpoch() : 0;
+            newer_than_file = snapshot.timestamp > on_disk;
+        }
+        if (newer_than_file) {
+            ++count;
+        }
+    }
+    if (count == 0) {
+        return;
+    }
+    const QString message =
+        count == 1
+            ? tr("An unsaved copy from a previous session is available \u2014 "
+                 "File > Version History")
+            : tr("%1 unsaved copies from a previous session are available \u2014 "
+                 "File > Version History")
+                  .arg(count);
+    // No timeout: this is the one startup message whose whole purpose is to be
+    // read later, and five seconds is not long enough to notice a status bar.
+    statusBar()->showMessage(message);
+}
+
+CodeEditor* MainWindow::openRestoredCopy(const QString& text) {
+    CodeEditor* restored = newFile();
+    if (restored == nullptr) {
+        return nullptr;
+    }
+    restored->setPlainText(text);
+    // Modified, so the new tab is visibly unsaved and closing it asks first: the
+    // text came from the store, not from a file, and saying otherwise would let a
+    // close discard the only copy.
+    restored->document()->setModified(true);
+    updateTabLabel(restored);
+    return restored;
+}
+
+void MainWindow::showVersionHistory() {
+    CodeEditor* editor = currentEditor();
+    if (editor == nullptr) {
+        return;
+    }
+    QString document = pathOf(editor);
+    if (document.isEmpty()) {
+        document = QStringLiteral("untitled:") + nameOf(editor);
+    }
+    VersionHistoryDialog dialog{autosave_, document, this};
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+    const QString text = dialog.chosenText();
+    if (text.isEmpty()) {
+        return;
+    }
+    // A new, unnamed tab: writing the old text back over the file would make
+    // "look at an older version" a destructive action.
+    if (openRestoredCopy(text) == nullptr) {
+        return;
+    }
+    setExecutionState(tr("ready"),
+                      tr("Opened a saved copy \u2014 save it under a new name to keep it"));
 }
 
 // ---------------------------------------------------------------------------
@@ -518,6 +638,11 @@ void MainWindow::buildMenuBar() {
     file->addSeparator();
     add(file, tr("&Save"), QKeySequence::Save, [this] { saveCurrentFile(); });
     add(file, tr("Save &As..."), QKeySequence::SaveAs, [this] { saveCurrentFileAs(); });
+    // Ctrl+Alt+V, the shortcut the removed implementation used, and one no other
+    // action here claims.
+    add(file, tr("&Version History..."), QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_V},
+        [this] { showVersionHistory(); })
+        ->setObjectName(QStringLiteral("versionHistoryAction"));
     file->addSeparator();
     add(file, tr("&Export Drawing..."), QKeySequence{Qt::CTRL | Qt::Key_E},
         [this] { exportDrawingDialog(); });
@@ -836,6 +961,8 @@ void MainWindow::loadEditorSettings() {
     loaded.lint = settings.value(kSettingEditorLint, true).toBool();
     loaded.show_whitespace = settings.value(kSettingEditorWhitespace, false).toBool();
     loaded.minimap = settings.value(kSettingEditorMinimap, true).toBool();
+    loaded.autosave = settings.value(kSettingEditorAutosave, true).toBool();
+    loaded.autosave_seconds = settings.value(kSettingEditorAutosaveSeconds, 120).toInt();
     editor_settings_ = loaded;
 }
 
@@ -852,6 +979,8 @@ void MainWindow::saveEditorSettings() const {
     settings.setValue(kSettingEditorLint, editor_settings_.lint);
     settings.setValue(kSettingEditorWhitespace, editor_settings_.show_whitespace);
     settings.setValue(kSettingEditorMinimap, editor_settings_.minimap);
+    settings.setValue(kSettingEditorAutosave, editor_settings_.autosave);
+    settings.setValue(kSettingEditorAutosaveSeconds, editor_settings_.autosave_seconds);
 }
 
 void MainWindow::applyEditorSettings(const EditorSettings& settings) {
@@ -872,6 +1001,17 @@ void MainWindow::applyEditorSettings(const EditorSettings& settings) {
     };
     apply_to(editor_tabs_);
     apply_to(editor_tabs_secondary_);
+
+    // The interval is a setting, so the timer follows it. Ten seconds is the
+    // floor: anything shorter is a disk-write loop wearing a feature's clothes.
+    if (autosave_timer_ != nullptr) {
+        autosave_timer_->setInterval(std::max(10, editor_settings_.autosave_seconds) * 1000);
+        if (editor_settings_.autosave) {
+            autosave_timer_->start();
+        } else {
+            autosave_timer_->stop();
+        }
+    }
 }
 
 void MainWindow::showPreferences() {

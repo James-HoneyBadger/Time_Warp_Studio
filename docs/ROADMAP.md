@@ -316,9 +316,11 @@ save-to-file.
 **Files and sessions** — recent files and restoring the last session at launch are
 built: `MainWindow::saveSession` records the documents that were open,
 `restoreSession` reopens them, and File > Open Recent lists the last ten paths (with
-a Clear Menu entry). Crash recovery and autosave are still missing — the window
-prompts on close, but a process that dies does not. There is no version history,
-project panel or split view either.
+a Clear Menu entry). Data safety is built too: `AutosaveStore`
+(`native/src/ui/autosave.cpp`) keeps five snapshots of each document with unsaved
+changes under the data directory, and `VersionHistoryDialog`
+(`native/src/ui/version_history.cpp`, Ctrl+Alt+V) previews them and opens one in a
+new tab without writing the file. There is no project panel or split view yet.
 
 **Also unbuilt** — printing, code/session/lesson export, font selection, the
 accessibility presets and the REPL bar's interpreter wiring (the bar is laid out

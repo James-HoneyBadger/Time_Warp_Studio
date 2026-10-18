@@ -53,6 +53,7 @@
 #include "timewarp/bridge/python_worker.hpp"
 #include "timewarp/debugger/debugger_runner.hpp"
 #include "timewarp/lang/language.hpp"
+#include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/language.hpp"
 #include "timewarp/ui/snippets.hpp"
@@ -193,6 +194,21 @@ public:
     /// The recent runs, newest first, as `path<TAB>language<TAB>epoch<TAB>title`.
     /// Exposed the way `recentFiles()` is, so a test can check what was recorded.
     [[nodiscard]] QStringList runHistory() const;
+
+    /// Writes a snapshot of every document with unsaved changes, now.
+    ///
+    /// Public because the timer is not the only caller worth having: a test that
+    /// waited two minutes for the interval would not be run.
+    void autosaveNow();
+    /// One status-bar line when a previous session left copies newer than their
+    /// files. Never a dialog: nothing modal runs at startup here.
+    void reportRecoveredWork();
+    /// Opens the version history for the current document.
+    void showVersionHistory();
+    /// Opens `text` in a new, unnamed tab marked modified, and returns it. The
+    /// second half of `showVersionHistory`, separated because that dialog is
+    /// modal: the part worth testing is what a chosen version turns into.
+    CodeEditor* openRestoredCopy(const QString& text);
     /// Opens the snippet picker for the current document's language and inserts
     /// the chosen body at the cursor.
     void insertSnippet();
@@ -555,6 +571,9 @@ private:
     /// Set while a selection run is in flight, so the history can say which kind
     /// of run it was.
     bool running_selection_ = false;
+    /// Snapshots of unsaved work, and the timer that takes them.
+    AutosaveStore autosave_;
+    QTimer* autosave_timer_ = nullptr;
     /// Created on first use: a dialog nobody opens costs nothing, and the window
     /// that a test builds should not construct a search dialog it never shows.
     FindInFilesDialog* find_in_files_ = nullptr;

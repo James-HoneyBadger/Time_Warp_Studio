@@ -7,6 +7,16 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **Autosave and Version History.** Every document with unsaved changes is
+  snapshotted under the Studio's data directory, five copies per document, at an
+  interval Settings controls (two minutes by default). Untitled buffers are
+  covered too, which is the case with nothing on disk to recover from. The
+  manifest is written through a temporary file and renamed, so a crash during a
+  snapshot cannot lose the list of the others. At startup, a copy newer than its
+  file is reported in the status bar — never a modal — and File > Version History
+  (Ctrl+Alt+V) lists a document's copies newest first with a preview. Opening one
+  puts it in a new, unsaved tab and never writes the file, so choosing the wrong
+  version costs a tab rather than today's work.
 - **Run Selection, Reset Program, and a list of what you ran.** Run >
   Run Selection (Ctrl+F9) executes just the selected lines, in the same engine,
   without writing them to a file; an empty selection is refused with a message

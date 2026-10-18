@@ -26,6 +26,7 @@
 
 #include "check.hpp"
 #include "temp_dir.hpp"
+#include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/find_in_files.hpp"
 #include "timewarp/ui/formatter.hpp"
 #include "timewarp/ui/snippets.hpp"
@@ -437,6 +438,99 @@ void test_snippet_insertion_resolves_placeholders() {
     TW_CHECK_EQ(unknown.text.toStdString(), std::string{"x $DATE$ y\n"});
 }
 
+
+// ---------------------------------------------------------------------------
+// Autosave
+// ---------------------------------------------------------------------------
+
+/// The store is the part that can lose somebody's work, so it is tested directly
+/// rather than through a window: write, list, read back, prune, and the
+/// "newer than the file" question the recovery prompt asks.
+void test_autosave_store() {
+    announce("autosave: snapshots, history and pruning");
+    tw::test::TempDir scratch;
+    TW_CHECK(scratch.valid());
+    if (!scratch.valid()) {
+        return;
+    }
+    const QString directory = scratch.path(QStringLiteral("autosave"));
+    timewarp::ui::AutosaveStore store{directory};
+    TW_CHECK_EQ(store.directory().toStdString(), directory.toStdString());
+
+    const QString document = scratch.path(QStringLiteral("program.bas"));
+    // Nothing there yet: an empty store is empty, not an error.
+    TW_CHECK(store.all().isEmpty());
+    TW_CHECK(store.versions(document).isEmpty());
+
+    const timewarp::ui::Snapshot first =
+        store.save(document, QStringLiteral("10 PRINT 1\n"), 1000);
+    TW_CHECK_EQ(first.timestamp, 1000);
+    TW_CHECK_EQ(first.bytes, 11);
+    // The snapshot is a file in the store, not a path beside the document.
+    TW_CHECK(QFileInfo{QDir{directory}.filePath(first.file)}.isFile());
+
+    // Read back through the store: the bytes are the document's.
+    const QList<timewarp::ui::Snapshot> after_one = store.versions(document);
+    TW_CHECK_EQ(after_one.size(), 1);
+    if (!after_one.isEmpty()) {
+        TW_CHECK_EQ(store.read(after_one.first()).toStdString(),
+                    std::string{"10 PRINT 1\n"});
+    }
+
+    // Two snapshots in the same millisecond are one: the timer and a test can
+    // both ask at once, and a duplicate is history with nothing added.
+    static_cast<void>(store.save(document, QStringLiteral("10 PRINT 1\n"), 1000));
+    TW_CHECK_EQ(store.versions(document).size(), 1);
+
+    // Newest first.
+    static_cast<void>(store.save(document, QStringLiteral("10 PRINT 2\n"), 2000));
+    const QList<timewarp::ui::Snapshot> after_two = store.versions(document);
+    TW_CHECK_EQ(after_two.size(), 2);
+    if (after_two.size() == 2) {
+        TW_CHECK_EQ(after_two.at(0).timestamp, 2000);
+        TW_CHECK_EQ(after_two.at(1).timestamp, 1000);
+    }
+
+    // "Newer than the file" is the recovery question: an edit after the last
+    // save is work the file does not have.
+    TW_CHECK_EQ(store.newerThan(document, 1500).size(), 1);
+    TW_CHECK(store.newerThan(document, 2500).isEmpty());
+
+    // Pruning keeps the newest five and deletes the older files, so the store has
+    // a bound rather than growing with every session.
+    for (qint64 stamp = 3000; stamp <= 9000; stamp += 1000) {
+        static_cast<void>(
+            store.save(document, QStringLiteral("10 PRINT %1\n").arg(stamp), stamp));
+    }
+    const QList<timewarp::ui::Snapshot> pruned = store.versions(document);
+    TW_CHECK_EQ(pruned.size(), timewarp::ui::AutosaveStore::kKeepPerDocument);
+    if (!pruned.isEmpty()) {
+        TW_CHECK_EQ(pruned.first().timestamp, 9000);
+    }
+    // Every listed snapshot still has its text: pruning the manifest without
+    // deleting the file, or the reverse, would leave either orphans or ghosts.
+    for (const timewarp::ui::Snapshot& snapshot : pruned) {
+        TW_CHECK(!store.read(snapshot).isEmpty());
+    }
+}
+
+void test_autosave_store_follows_the_data_directory() {
+    announce("autosave: default location");
+    tw::test::TempDir scratch;
+    TW_CHECK(scratch.valid());
+    if (!scratch.valid()) {
+        return;
+    }
+    scratch.useAsDataDir();
+    const timewarp::ui::AutosaveStore store;
+    TW_CHECK_EQ(store.directory().toStdString(),
+                (scratch.path() + QStringLiteral("/autosave")).toStdString());
+    // And an unwritten store does not create the directory: nothing to clean up
+    // for a user who never turns autosave on.
+    TW_CHECK(!QFileInfo{store.directory()}.exists());
+    scratch.restoreDataDir();
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -461,5 +555,7 @@ int main(int argc, char** argv) {
     test_find_in_files_stops_when_the_callback_says_so();
     test_the_shipped_snippet_catalogue_is_sound();
     test_snippet_insertion_resolves_placeholders();
+    test_autosave_store();
+    test_autosave_store_follows_the_data_directory();
     return tw::test::summary("editor_services");
 }

@@ -51,6 +51,7 @@
 #include <QWidgetAction>
 
 #include "check.hpp"
+#include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/command_palette.hpp"
 #include "timewarp/ui/find_bar.hpp"
@@ -61,6 +62,7 @@
 #include "timewarp/ui/standalone.hpp"
 #include "timewarp/ui/themes.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
+#include "timewarp/ui/version_history.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
 
 namespace {
@@ -1182,6 +1184,51 @@ void test_editor_minimap_and_whitespace() {
     TW_CHECK(!editor->grab().isNull());
 }
 
+/// Version History lists the store's snapshots for one document, newest first,
+/// and previews the text. Modal in use, so the dialog is constructed here rather
+/// than exec()'d.
+void test_version_history_lists_snapshots() {
+    announce("version history");
+    QTemporaryDir dir;
+    TW_CHECK(dir.isValid());
+    if (!dir.isValid()) {
+        return;
+    }
+    timewarp::ui::AutosaveStore store{dir.filePath(QStringLiteral("autosave"))};
+    const QString document = dir.filePath(QStringLiteral("program.bas"));
+    static_cast<void>(store.save(document, QStringLiteral("10 PRINT 1\n"), 1000));
+    static_cast<void>(store.save(document, QStringLiteral("10 PRINT 2\n"), 2000));
+    // A snapshot of another document must not appear in this one's history.
+    static_cast<void>(store.save(dir.filePath(QStringLiteral("other.bas")),
+                                 QStringLiteral("20 END\n"), 3000));
+
+    timewarp::ui::VersionHistoryDialog dialog{store, document};
+    TW_CHECK_EQ(dialog.versionCount(), 2);
+    // Nothing is chosen until a version is: cancelling must not hand the window
+    // text to open.
+    TW_CHECK(dialog.chosenText().isEmpty());
+
+    auto* list = dialog.findChild<QListWidget*>(QStringLiteral("versionHistoryList"));
+    auto* preview = dialog.findChild<QPlainTextEdit*>(QStringLiteral("versionHistoryPreview"));
+    auto* restore = dialog.findChild<QPushButton*>(QStringLiteral("versionHistoryRestore"));
+    TW_CHECK(list != nullptr);
+    TW_CHECK(preview != nullptr);
+    TW_CHECK(restore != nullptr);
+    if (list != nullptr && preview != nullptr) {
+        TW_CHECK_EQ(list->count(), 2);
+        // The newest is selected, and the preview is its text.
+        TW_CHECK_EQ(list->currentRow(), 0);
+        TW_CHECK(preview->toPlainText().contains(QStringLiteral("10 PRINT 2")));
+    }
+    // Choosing a version accepts the dialog and hands back exactly the text that
+    // was previewed; the window, not the dialog, decides where it goes.
+    if (restore != nullptr) {
+        restore->click();
+        TW_CHECK_EQ(dialog.result(), int(QDialog::Accepted));
+        TW_CHECK_EQ(dialog.chosenText().toStdString(), std::string{"10 PRINT 2\n"});
+    }
+}
+
 /// The picker shows the catalogue, filtered by language, and reports a choice.
 void test_snippet_picker_filters_by_language() {
     announce("snippet picker");
@@ -1891,6 +1938,7 @@ int main(int argc, char** argv) {
     test_menu_structure();
     test_edit_menu_has_find_in_files();
     test_snippet_picker_filters_by_language();
+    test_version_history_lists_snapshots();
     test_editor_minimap_and_whitespace();
     test_every_right_column_page_has_a_key();
     test_file_menu_new_opens_a_document();

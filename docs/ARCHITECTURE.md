@@ -675,15 +675,16 @@ migrating.
   drives it for Scheme. What is missing is breadth (only Scheme can be stepped),
   the toolbar's Debug/Continue/Trace actions (disabled, with a note that the
   wiring is not ported), and watch expressions.
-- **The editor** has syntax colouring, find/replace, language-specific checking
-  as you type (squiggles, gutter markers, hover text), optional completion,
-  auto-indent and a full settings dialog with a live preview. Still missing:
-  find-in-files, a minimap, breakpoint markers in the gutter, a document outline
-  and a formatter.
+- **The editor** has syntax colouring, find/replace, find-in-files, a minimap, a
+  formatter, language-specific checking as you type (squiggles, gutter markers,
+  hover text), optional completion, auto-indent and a full settings dialog with a
+  live preview. Still missing: breakpoint markers in the gutter and a document
+  outline.
 - **The console** has no clickable line links, no error-only filter and no
   save-to-file; the **Terminal** tab is a placeholder.
-- **Files and sessions** have no autosave, crash recovery, version history,
-  project panel or split view.
+- **Files and sessions** have autosave and version history — `AutosaveStore`
+  keeps bounded snapshots under the data directory and the version-history dialog
+  reopens one in a new tab — but no project panel or split view.
 - **Themes and fonts are in**: 33 schemes, applied through the palette plus a
   theme block, and the editor's font, size and tab width are user settings.
 - **No printing, and no code/session/lesson export.** The drawing exports as an

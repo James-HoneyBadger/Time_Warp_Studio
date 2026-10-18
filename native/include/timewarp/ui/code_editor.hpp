@@ -71,6 +71,12 @@ struct EditorSettings {
     bool show_whitespace = false;
     /// The strip at the right edge showing the whole document at a glance.
     bool minimap = true;
+    /// Keep a copy of a document that has unsaved changes, so a crash costs the
+    /// last few minutes rather than the whole buffer.
+    bool autosave = true;
+    /// How often, in seconds. The floor is ten: a snapshot per keystroke is a
+    /// disk-write loop, not a safety net.
+    int autosave_seconds = 120;
 };
 
 /// Paints the line numbers beside a `CodeEditor`.

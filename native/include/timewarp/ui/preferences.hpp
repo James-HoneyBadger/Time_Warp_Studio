@@ -70,6 +70,8 @@ private:
     QCheckBox* lint_ = nullptr;
     QCheckBox* whitespace_ = nullptr;
     QCheckBox* minimap_ = nullptr;
+    QCheckBox* autosave_ = nullptr;
+    QSpinBox* autosave_seconds_ = nullptr;
     CodeEditor* preview_ = nullptr;
 };
 

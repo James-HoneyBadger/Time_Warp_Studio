@@ -25,9 +25,9 @@ one I would type:
 - **[docs/INSTALLATION.md](../docs/INSTALLATION.md)** — requirements, building
   from source, and what a failure at each step usually means.
 - **[docs/ROADMAP.md](../docs/ROADMAP.md)** — what is deliberately not built
-  yet. Themes, auto-completion, find-in-files, the examples browser, printing
-  and autosave are on this list. A missing feature from it is not a bug, and
-  reporting one as a regression costs a round trip.
+  yet. Printing, session export, font selection and the accessibility presets
+  are on this list. A missing feature from it is not a bug, and reporting one as
+  a regression costs a round trip.
 - **[docs/FAQ.md](../docs/FAQ.md)** — the questions that come up most.
 - **[docs/LANGUAGE_GUIDE.md](../docs/LANGUAGE_GUIDE.md)** — the reference for all
   ten languages, including what each one is *not* able to do.

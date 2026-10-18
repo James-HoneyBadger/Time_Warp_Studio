@@ -140,8 +140,9 @@ yet.
 
 ### Are my unsaved changes lost if the app closes?
 
-The window asks before closing a modified tab, but there is no autosave or crash
-recovery yet. Save your work with `Ctrl+S`.
+The window asks before closing a modified tab, and autosave keeps a copy of any
+document with unsaved changes, so a crash costs at most the last couple of
+minutes. Save your work with `Ctrl+S` as usual.
 
 ---
 
@@ -287,13 +288,16 @@ Press `Ctrl+S` or use File → Save. Use File → Save As to save under a new na
 
 ### What does autosave do?
 
-There is no autosave yet. The window asks before closing a tab with unsaved
-changes, so work is not lost by accident, but a crash loses it. Save with
-`Ctrl+S`.
+Every two minutes it keeps a copy of each document that has unsaved changes under
+the Studio's data directory, five copies per document. Untitled buffers are
+covered too. The interval and the on/off switch are in Settings, and nothing is
+written beside your file.
 
 ### Where is my version history?
 
-There is none yet. Use Git or another tool outside the Studio.
+File → Version History (`Ctrl+Alt+V`) lists the saved copies of the current
+document, newest first, with a preview. Opening one puts it in a new tab; the
+file on disk is never overwritten.
 
 ### Does the Studio have Git integration?
 

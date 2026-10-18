@@ -101,6 +101,16 @@ void PreferencesDialog::buildUi(const EditorSettings& settings) {
                         tr("Show spaces and tabs"), settings.show_whitespace);
     minimap_ = check(QStringLiteral("minimapBox"), tr("Show the minimap"),
                      settings.minimap);
+    autosave_ = check(QStringLiteral("autosaveBox"),
+                      tr("Keep a copy of unsaved work"), settings.autosave);
+    autosave_seconds_ = new QSpinBox{editor_group};
+    autosave_seconds_->setObjectName(QStringLiteral("autosaveSecondsSpin"));
+    autosave_seconds_->setRange(10, 3600);
+    autosave_seconds_->setValue(settings.autosave_seconds);
+    autosave_seconds_->setSuffix(tr(" s"));
+    autosave_seconds_->setEnabled(settings.autosave);
+    connect(autosave_, &QCheckBox::toggled, autosave_seconds_, &QWidget::setEnabled);
+    form->addRow(tr("Autosave every:"), autosave_seconds_);
     lint_ = check(QStringLiteral("lintBox"),
                   tr("Check the program as I type and underline what is wrong"),
                   settings.lint);
@@ -142,7 +152,7 @@ void PreferencesDialog::buildUi(const EditorSettings& settings) {
     connect(font_size_, &QSpinBox::valueChanged, this, [changed] { changed(); });
     connect(tab_width_, &QSpinBox::valueChanged, this, [changed] { changed(); });
     for (QCheckBox* box : {line_numbers_, current_line_, word_wrap_, auto_indent_,
-                           completion_, lint_, whitespace_, minimap_}) {
+                           completion_, lint_, whitespace_, minimap_, autosave_}) {
         connect(box, &QCheckBox::toggled, this, [changed] { changed(); });
     }
 
@@ -185,6 +195,8 @@ void PreferencesDialog::collect() {
     settings_.completion = completion_->isChecked();
     settings_.show_whitespace = whitespace_->isChecked();
     settings_.minimap = minimap_->isChecked();
+    settings_.autosave = autosave_->isChecked();
+    settings_.autosave_seconds = autosave_seconds_->value();
     settings_.lint = lint_->isChecked();
 }
 
