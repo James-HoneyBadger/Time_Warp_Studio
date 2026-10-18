@@ -61,7 +61,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 0 | Foundations | data dir, panel registration, test fixtures | S | — |
 | 1 | Editor completion | Find in Files ✅, Format Code ✅, Snippets ✅, whitespace ✅, minimap ✅, run history ✅, run selection ✅, reset ✅ | M | 0 |
 | 2 | Data safety | autosave ✅, version history ✅ | M | 0 |
-| 3 | Help and learnability | documentation browser, F1, keyword inspector, guided tour | M | 0 |
+| 3 | Help and learnability | documentation browser ✅, F1, keyword inspector, guided tour | M | 0 |
 | 4 | Canvas time travel | scrubber, GIF recording, SVG export | M | 4.3 needs a dependency decision |
 | 5 | Export and print | PDF, print, session HTML | M | 5.2 needs a dependency decision |
 | 6 | Debugging breadth | breakpoints everywhere, pause/step for line-by-line languages, profiler | L | 0, best after 1 |
@@ -281,6 +281,12 @@ FAQ, and a guide per language, all read from `docs/`.
   a packaging change with a check: the release workflow already lists the staged
   tree, so a missing `share/doc/time-warp-studio/INDEX.md` is visible there.
 - Help menu gains "Documentation" and "Getting Started"; "About" stays.
+
+One deliberate limit: the tree offers only documents inside the installed tree.
+The index also links to the repository's README, the issue forms and the example
+catalogue, and those are not installed beside the docs; showing those rows in a
+package would offer dead links. The in-page references to `Examples/` and the
+native sources are likewise a checkout convenience.
 
 **Tests** (`help_browser_tests`): the resolver finds both layouts (env override
 for the test); every relative link in the built contents tree resolves to a file

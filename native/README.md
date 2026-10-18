@@ -89,7 +89,7 @@ native/
 ```bash
 # The short way: native/Makefile drives the CMake build below.
 make -C native                # release build
-make -C native test           # build, then all 13 suites
+make -C native test           # build, then all 16 suites
 make -C native test-debug     # unoptimised, with Q_ASSERT and hardening live
 make -C native asan           # under AddressSanitizer, in a third tree
 make -C native asan ASAN=undefined SAN_DIR=build-ubsan \
@@ -1036,7 +1036,7 @@ page next to a 60x40 page must still report a 100x100 minimum.
 
 ### Verification
 
-* **146 checks** in `ui_layout_tests`, run offscreen so they need no display and
+* **988 checks** in `ui_layout_tests`, run offscreen so they need no display and
   belong in the normal CTest set. They assert the tree shape, parent/child
   identity at every splitter index, the collapsible and handle-width flags, the
   stretch factors (read back from the child's size policy, since `QSplitter` has

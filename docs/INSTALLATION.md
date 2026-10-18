@@ -154,12 +154,13 @@ make -C native uninstall               # removes what install wrote
 make -C native install DESTDIR=/tmp/stage PREFIX=/usr
 ```
 
-That installs four things, and they have to stay together:
+That installs five things, and they have to stay together:
 
 | Path | What |
 | --- | --- |
 | `<prefix>/bin/time_warp_ide` | the application |
 | `<prefix>/share/time_warp/` | the language bridge — `worker.py` and the engine |
+| `<prefix>/share/doc/time-warp-studio/` | the documentation Help > Documentation reads |
 | `<prefix>/share/applications/time-warp-studio.desktop` | the desktop entry |
 | `<prefix>/share/icons/hicolor/256x256/apps/time-warp-studio.png` | the icon |
 

@@ -54,6 +54,7 @@
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/find_in_files.hpp"
 #include "timewarp/ui/formatter.hpp"
+#include "timewarp/ui/help_browser.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
@@ -262,6 +263,17 @@ CodeEditor* MainWindow::openRestoredCopy(const QString& text) {
     restored->document()->setModified(true);
     updateTabLabel(restored);
     return restored;
+}
+
+void MainWindow::showDocumentation(const QString& topic) {
+    HelpBrowserDialog dialog{this};
+    // A named topic is opened after the index, so the contents tree still has a
+    // selection and Home works. A missing file leaves the index on screen rather
+    // than showing an empty pane.
+    if (!topic.isEmpty()) {
+        static_cast<void>(dialog.openTopic(QDir{docsRoot()}.filePath(topic)));
+    }
+    dialog.exec();
 }
 
 void MainWindow::showVersionHistory() {
@@ -805,6 +817,12 @@ void MainWindow::buildMenuBar() {
     // -- Help -------------------------------------------------------------
     QMenu* help = bar->addMenu(tr("&Help"));
     help->setObjectName(QStringLiteral("helpMenu"));
+    add(help, tr("&Documentation"), {}, [this] { showDocumentation(); })
+        ->setObjectName(QStringLiteral("documentationAction"));
+    add(help, tr("&Getting Started"), {},
+        [this] { showDocumentation(QStringLiteral("lessons/student-guide.md")); })
+        ->setObjectName(QStringLiteral("gettingStartedAction"));
+    help->addSeparator();
     add(help, tr("&Keyboard Shortcuts"), QKeySequence{Qt::Key_F1},
         [this] { showShortcutHelp(); })
         ->setObjectName(QStringLiteral("shortcutsAction"));

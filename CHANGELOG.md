@@ -7,6 +7,15 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **Help > Documentation, and Getting Started.** A help window with a contents
+  tree built from `docs/INDEX.md`'s own tables — so it cannot promise a page the
+  index does not list — and a Markdown-rendered page beside it. Links between
+  pages open in the window and external links in the user's browser. The docs are
+  now installed to `share/doc/time-warp-studio`, and the resolver reads
+  `TIME_WARP_DOCS`, then the installed tree, then the checkout's `docs/`, so a
+  build and a package show the same pages. A missing documentation tree explains
+  itself rather than showing an empty pane. Getting Started opens the student
+  guide directly.
 - **Autosave and Version History.** Every document with unsaved changes is
   snapshotted under the Studio's data directory, five copies per document, at an
   interval Settings controls (two minutes by default). Untitled buffers are

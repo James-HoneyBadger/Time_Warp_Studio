@@ -114,6 +114,12 @@ Unknown extensions open as BASIC by default.
 
 Use the language picker in the toolbar. The file extension does not change automatically.
 
+### Where is the documentation?
+
+Help → Documentation opens a browser over the guides in this folder, with a
+contents tree on the left; Help → Getting Started opens the student guide. The
+same pages are in `docs/` in the repository.
+
 ### How do I see all keyboard shortcuts?
 
 The menus show every command's shortcut. There is no separate shortcut reference page.

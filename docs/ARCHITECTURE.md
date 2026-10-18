@@ -685,6 +685,10 @@ migrating.
 - **Files and sessions** have autosave and version history — `AutosaveStore`
   keeps bounded snapshots under the data directory and the version-history dialog
   reopens one in a new tab — but no project panel or split view.
+- **Help** is a documentation browser (`native/src/ui/help_browser.cpp`) over the
+  installed `docs/`, with its contents tree read from `INDEX.md` rather than
+  written a second time. F1 still opens the shortcut reference; context help is
+  not built.
 - **Themes and fonts are in**: 33 schemes, applied through the palette plus a
   theme block, and the editor's font, size and tab width are user settings.
 - **No printing, and no code/session/lesson export.** The drawing exports as an

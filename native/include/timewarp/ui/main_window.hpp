@@ -205,6 +205,9 @@ public:
     void reportRecoveredWork();
     /// Opens the version history for the current document.
     void showVersionHistory();
+    /// Opens the documentation browser, on `topic` (a path relative to the
+    /// docs root) when one is named, else on the index.
+    void showDocumentation(const QString& topic = {});
     /// Opens `text` in a new, unnamed tab marked modified, and returns it. The
     /// second half of `showVersionHistory`, separated because that dialog is
     /// modal: the part worth testing is what a chosen version turns into.

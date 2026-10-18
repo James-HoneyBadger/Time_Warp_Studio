@@ -61,7 +61,7 @@ change.
 
 | Artifact | Where | What it is |
 | -------- | ----- | ---------- |
-| `time-warp-studio-<version>-linux-<arch>.tar.gz` + `.sha256` | Release assets | The staged `cmake --install` tree (`/usr/bin`, `/usr/share/applications`, the icon), the example programs and the licence. Unpack into `/` and run `time_warp_ide`. |
+| `time-warp-studio-<version>-linux-<arch>.tar.gz` + `.sha256` | Release assets | The staged `cmake --install` tree (`/usr/bin`, `/usr/share/applications`, the icon, the documentation at `/usr/share/doc/time-warp-studio`), the example programs and the licence. Unpack into `/` and run `time_warp_ide`. |
 | `time-warp-studio_<version>_<arch>.deb`, `time-warp-studio-<version>-1.<arch>.rpm` | Release assets | CPack packages over the same install rules, with Qt 6 and `python3` as declared dependencies. x86_64 and arm64. |
 | `Time_Warp_Studio-<version>-x86_64.AppImage` | Release assets | One file, no root, Qt bundled by `linuxdeploy`. **x86_64 only**: the ARM build of the bundling tool is not exercised by this pipeline, and an artifact nobody has run is not one to publish. |
 | `ghcr.io/<owner>/time-warp-studio:<version>` and `:latest` | GitHub Packages (container registry) | Built by `packaging/docker/Dockerfile`: two stages, Arch base, Qt 6 and Python in the runtime layer, `alsa-utils` so `SOUND` can reach a device if one is mounted. Runs as a non-root user. |

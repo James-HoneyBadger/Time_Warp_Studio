@@ -1108,6 +1108,30 @@ void test_menu_structure() {
     }
 }
 
+/// Help carries the documentation browser and the student guide. F1 still opens
+/// the shortcut reference, so both entries have to be reachable from the menu.
+void test_help_menu_opens_the_documentation() {
+    announce("help menu: documentation");
+    MainWindow window;
+    auto* documentation = window.findChild<QAction*>(QStringLiteral("documentationAction"));
+    auto* getting_started = window.findChild<QAction*>(QStringLiteral("gettingStartedAction"));
+    auto* shortcuts = window.findChild<QAction*>(QStringLiteral("shortcutsAction"));
+    TW_CHECK(documentation != nullptr);
+    TW_CHECK(getting_started != nullptr);
+    TW_CHECK(shortcuts != nullptr);
+    if (documentation != nullptr && getting_started != nullptr) {
+        TW_CHECK(documentation->text().contains(QStringLiteral("Documentation")));
+        TW_CHECK(getting_started->text().contains(QStringLiteral("Getting Started")));
+        TW_CHECK(documentation->isEnabled());
+        TW_CHECK(getting_started->isEnabled());
+    }
+    // The shortcut help keeps F1 until context help claims it; two actions on
+    // one key is an ambiguous shortcut, not a convenience.
+    if (shortcuts != nullptr) {
+        TW_CHECK_EQ(shortcuts->shortcut().toString().toStdString(), std::string{"F1"});
+    }
+}
+
 /// The minimap reserves its space, maps a click to a scroll position and leaves
 /// the text area alone when it is switched off. Whitespace marks are a document
 /// option, so the check is that the option carries the flag.
@@ -1936,6 +1960,7 @@ int main(int argc, char** argv) {
     test_status_bar_badge_placement();
     test_outline_dock_starts_hidden();
     test_menu_structure();
+    test_help_menu_opens_the_documentation();
     test_edit_menu_has_find_in_files();
     test_snippet_picker_filters_by_language();
     test_version_history_lists_snapshots();

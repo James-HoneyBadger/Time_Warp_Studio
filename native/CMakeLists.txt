@@ -552,6 +552,7 @@ if(Qt6_FOUND)
             src/ui/find_bar.cpp
             src/ui/find_in_files.cpp
             src/ui/formatter.cpp
+            src/ui/help_browser.cpp
             src/ui/lint.cpp
             src/ui/language.cpp
             src/ui/main_window.cpp
@@ -574,6 +575,7 @@ if(Qt6_FOUND)
             include/timewarp/ui/command_palette.hpp
             include/timewarp/ui/find_bar.hpp
             include/timewarp/ui/find_in_files.hpp
+            include/timewarp/ui/help_browser.hpp
             include/timewarp/ui/lint.hpp
             include/timewarp/ui/snippet_dialog.hpp
             include/timewarp/ui/main_window.hpp
@@ -669,6 +671,14 @@ if(Qt6_FOUND)
         install(
             FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json
             DESTINATION ${CMAKE_INSTALL_DATADIR}/time-warp-studio
+        )
+        # The documentation browser reads these. `docsRoot()` looks in
+        # `share/doc/time-warp-studio` first, so a package and a checkout show the
+        # same pages; without this rule an installed help window would explain
+        # that the documentation is missing.
+        install(
+            DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../docs/
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/doc/time-warp-studio
         )
         install(
             FILES ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/time-warp-studio.desktop
@@ -774,6 +784,20 @@ if(Qt6_FOUND)
                 endif()
             endif()
             add_test(NAME editor_services_tests COMMAND editor_services_tests)
+
+            # The help browser is a data-driven document view: the resolver,
+            # the index parser and the tree are all testable without a window,
+            # and the dead-link check is the reason it has a suite at all.
+            add_executable(help_browser_tests tests/help_browser_tests.cpp)
+            target_link_libraries(help_browser_tests PRIVATE timewarp::ui)
+            target_include_directories(help_browser_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+            if(NOT MSVC)
+                target_compile_options(help_browser_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+                if(TIME_WARP_EXPR_WERROR)
+                    target_compile_options(help_browser_tests PRIVATE -Werror)
+                endif()
+            endif()
+            add_test(NAME help_browser_tests COMMAND help_browser_tests)
         endif()
     else()
         message(STATUS "Qt6 Widgets not found: skipping the widget UI")
@@ -792,8 +816,8 @@ endif()
 # The packages install into `/usr`, not into the build's prefix: a `.deb` that
 # puts a binary in `/usr/local/bin` is a `.deb` whose files no package manager
 # owns. Everything the application needs at run time is already installed by the
-# `install()` rules above -- the binary, the bridge, the desktop entry and the
-# icon -- so the package is simply those four paths.
+# `install()` rules above -- the binary, the bridge, the snippets, the docs, the
+# desktop entry and the icon -- so the package is simply those paths.
 file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../VERSION" TIME_WARP_PACKAGE_VERSION_RAW)
 string(STRIP "${TIME_WARP_PACKAGE_VERSION_RAW}" TIME_WARP_PACKAGE_VERSION)
 
