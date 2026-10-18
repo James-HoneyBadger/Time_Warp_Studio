@@ -190,6 +190,9 @@ add_library(timewarp_lang
     src/lang/comal.cpp
     src/lang/apl.cpp
     src/lang/rexx.cpp
+    src/lang/smalltalk.cpp
+    src/lang/smalltalk_library.cpp
+    src/lang/smalltalk_driver.cpp
     src/lang/logo.cpp
 )
 add_library(timewarp::lang ALIAS timewarp_lang)

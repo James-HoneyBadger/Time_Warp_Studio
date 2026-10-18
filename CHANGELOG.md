@@ -26,6 +26,15 @@ Four more languages, and the defects that examining their commands turned up.
   `FOREVER`), `SELECT`, labels with `CALL`/`RETURN`, the built-in functions and
   the turtle words. 35 programs run through both engines with **0 differences**,
   and seven cases join `lang_tests`. REXX is no longer bridged.
+- **Smalltalk runs in C++.** The object system is four files: `smalltalk.cpp`
+  (tokens, parser, sends, printing), `smalltalk_library.cpp` (classes and
+  primitives), `smalltalk_driver.cpp` (chunks and the top-level echo) and
+  `smalltalk_internal.hpp`. Classes and methods are created at run time, blocks
+  are real closures, `^` is a non-local return, cascades send to the original
+  receiver, and the class library covers the corpus — numbers, collections,
+  strings, booleans, Transcript and Turtle. 22 programs run through both engines
+  with **0 differences**, and seven cases join `lang_tests`. Smalltalk is no
+  longer bridged.
 
 ### Fixed
 

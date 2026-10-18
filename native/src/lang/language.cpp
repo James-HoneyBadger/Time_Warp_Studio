@@ -10,6 +10,7 @@
 #include "timewarp/lang/pilot.hpp"
 #include "timewarp/lang/apl.hpp"
 #include "timewarp/lang/rexx.hpp"
+#include "timewarp/lang/smalltalk.hpp"
 
 #include <cctype>
 #include <string>
@@ -112,6 +113,8 @@ Executor executor_for(Language language) noexcept {
             return &execute_chip8;
         case Language::Logo:
             return &execute_logo;
+        case Language::Smalltalk:
+            return &execute_smalltalk;
         // Line-by-line executors.
         case Language::Focal:
             return &execute_focal;
@@ -127,7 +130,6 @@ Executor executor_for(Language language) noexcept {
         // Still driven by the Python bridge. Returning null is how the caller
         // asks "is this one ported yet?" without an exception.
         case Language::Basic:
-        case Language::Smalltalk:
         case Language::Scheme:
             return nullptr;
     }

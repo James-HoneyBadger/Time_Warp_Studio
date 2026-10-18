@@ -50,12 +50,12 @@ text going in and a stream of JSON messages coming back.
 | `timewarp_debugger` | `native/src/debugger/` | its own `QThread` | Runs a Scheme program and services pause / step / breakpoint requests |
 | `timewarp_bridge` | `native/src/bridge/` | GUI thread, driving a `QProcess` | The IDE's end of the Python bridge |
 | `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | runner thread, in-process | The ported expression evaluator, linked into `timewarp_lang` — see the note below |
-| the bridge engine | `native/bridge/` | a separate Python process | The two unported languages |
+| the bridge engine | `native/bridge/` | a separate Python process | The unported language |
 
 > **`timewarp_expr` is part of a Run now.** It builds, it has 485 checks of its
 > own, `native/tools/differential_check.py` compares it against the Python
 > reference on a fixed corpus, and `timewarp_lang` links it: FOCAL, PILOT, COMAL
-> and Logo evaluate every arithmetic expression through it. The two bridged
+> and Logo evaluate every arithmetic expression through it. The bridged
 > languages still evaluate in Python, because their executors have not been
 > ported. The parity gate is what keeps the native evaluator honest.
 

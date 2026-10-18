@@ -1,7 +1,7 @@
 # Testing Time Warp Studio
 
 The product is the Qt application in `native/`, so the primary suites are C++
-suites driven by CTest. The Python engine that the two unported languages run
+suites driven by CTest. The Python engine that the unported language run
 through has its own small pytest suite.
 
 Run everything from the repository root.
@@ -65,7 +65,7 @@ both sides seed from the OS, so they cannot agree by construction.
 ```bash
 python3 native/tools/differential_check.py native/build/expr_cli
 cd native/tools && python3 scheme_differential_check.py
-python3 native/tools/lang_differential_check.py   # 308 programs, 0 differences
+python3 native/tools/lang_differential_check.py   # 330 programs, 0 differences
 ```
 
 ## Lint

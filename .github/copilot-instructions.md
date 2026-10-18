@@ -31,7 +31,7 @@ Python is a temporary engine the Qt app spawns (see "The language bridge").
     expression evaluator (`timewarp_expr`, linked into `timewarp_lang` and used by
     FOCAL, PILOT, COMAL and Logo; the bridged languages still evaluate in Python).
 - **The language bridge (Python, temporary)** — `native/bridge/`.
-  - Two languages (BASIC and Smalltalk) are *not* ported yet, so
+  - BASIC is *not* ported yet, so
     the IDE runs them through `native/bridge/worker.py`, which drives the retained
     Python engine and streams JSON lines back (drawing, output, input, errors).
   - Protocol: `run`/`in-reply`/`stop` in; `ready`/`out`/`canvas`/`pose`/`err`/`in`/`done` out.
@@ -79,7 +79,7 @@ make -C native run
 **System Requirements**
 
 - Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler
-- Python 3.10+ **only** only for the two bridged languages; Scheme, FOCAL, PILOT,
+- Python 3.10+ **only** for the bridged language; Scheme, FOCAL, PILOT,
   COMAL, CHIP-8, Logo, APL and REXX run in-process with no Python at all
 
 ### Testing Strategy
@@ -281,7 +281,7 @@ Scripts/                       - audit_interpreters.py, version_sync.py, build_n
 
 The Qt application: Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler.
 
-The bridge (only the two unported languages need it): Python 3.10+, standard
+The bridge (only the unported language need it): Python 3.10+, standard
 library only. Optional extras -- `pyttsx3` (BASIC `SAY`), `pygame` and `inputs`
 (BASIC `SOUND`/`GAMEPAD`) -- are imported defensively and are not required.
 

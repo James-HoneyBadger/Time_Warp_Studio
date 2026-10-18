@@ -13,7 +13,7 @@ time.
 | C++ compiler | C++20 | GCC 13+, Clang 16+, or MSVC 19.3+ |
 | CMake | 3.20 | |
 | Qt6 | 6.2 | Widgets, Core and Gui modules must be installed |
-| Python | 3.10 | *Optional* — only for BASIC and Smalltalk |
+| Python | 3.10 | *Optional* — only for BASIC |
 
 Scheme and the shared expression engine are native C++ and need **no Python at
 all**. FOCAL, PILOT, COMAL, CHIP-8, Logo, APL and REXX run in process through `timewarp_lang`;
@@ -108,7 +108,7 @@ directory, in that order. Set `TIME_WARP_WORKER` (full path to `worker.py`) or
 every path it tried.
 
 **A bridged language says no interpreter was found.** Install Python 3.10+ or
-point `TIME_WARP_PYTHON` at one. Only the two bridged languages need it.
+point `TIME_WARP_PYTHON` at one. Only the bridged language need it.
 
 **`make test` runs the wrong Python.** The bridge's pytest suite comes from
 `.venv` if it exists. Create one with `python3 -m venv .venv` and
@@ -118,7 +118,7 @@ point `TIME_WARP_PYTHON` at one. Only the two bridged languages need it.
 
 ## 6. The language bridge (already bundled)
 
-Nothing to install. What the two unported languages need is:
+Nothing to install. What the unported language need is:
 
 - `native/bridge/worker.py` — the worker the IDE spawns
 - `native/bridge/time_warp/` — the engine it drives
@@ -160,7 +160,7 @@ That installs four things, and they have to stay together:
 
 The bridge goes in `share/time_warp` because that is where the application looks
 for it (`../share/time_warp` relative to the binary), so an installed build needs
-no path configuration. It still needs `python3` it needs `python3` on `PATH` for the two bridged
+no path configuration. It still needs `python3` on `PATH` for the bridged
 languages.
 
 ### What is not packaged yet

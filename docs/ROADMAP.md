@@ -21,10 +21,10 @@ yet — please check the list below before reporting one as a regression.
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
 | Languages | 10 languages, 48 verified example programs |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
-| Bridged engines | BASIC and Smalltalk — `native/bridge/` |
-| Native executors | FOCAL, PILOT, COMAL, CHIP-8, Logo, APL and REXX — `timewarp_lang`, in process |
+| Bridged engines | BASIC — `native/bridge/` |
+| Native executors | FOCAL, PILOT, COMAL, CHIP-8, Logo, APL, REXX and Smalltalk — `timewarp_lang`, in process |
 | Packaging | `make install` with the desktop entry and icon; `DESTDIR` staging |
-| Quality gates | 13 CTest suites in 4 build configurations, 3 parity gates, 551 engine tests, 437 command rows, 308 parity programs |
+| Quality gates | 13 CTest suites in 4 build configurations, 3 parity gates, 551 engine tests, 437 command rows, 330 parity programs |
 
 ---
 
@@ -204,28 +204,22 @@ Four limits are recorded rather than left to be discovered:
 
 ## Next: port the languages, then delete the bridge
 
-The bridge exists only because two languages are not native yet. Each port
-removes its path through it, and the differential gates are the contract.
+The bridge exists only because BASIC is not native yet. That port removes its path
+through the bridge, and the differential gates are the contract.
 
-**APL and REXX are done.** APL was the smallest and the only one with no
-dependency on the interpreter: arrays, glyphs and keyword spellings, reduce and
+**APL, REXX and Smalltalk are done.** APL was the smallest and the only one with
+no dependency on the interpreter: arrays, glyphs and keyword spellings, reduce and
 scan, the turtle words and `∇` definitions all live in `native/src/lang/apl.cpp`.
 REXX followed its own expression grammar — typeless values, abuttal
 concatenation, `PARSE`, and the `DO`/`SELECT` block forms — into
-`native/src/lang/rexx.cpp`. Both are gated by the same rows and examples the
-reference is: 46 and 35 programs, 0 differences each. That is the shape each
-remaining port takes.
+`native/src/lang/rexx.cpp`. Smalltalk is the object system, in four files:
+`smalltalk.cpp` (tokens, parser, sends, printing), `smalltalk_library.cpp` (the
+classes and primitives), `smalltalk_driver.cpp` (chunks, method installation, the
+top-level echo) and `smalltalk_internal.hpp`. All three are gated by the same rows
+and examples the reference is: 46, 35 and 22 programs, 0 differences each.
 
 1. **BASIC** — the largest remaining port: the core language first, then the
    extended statement set.
-2. **Smalltalk** — whole-program, like Scheme and CHIP-8.
-
-Smalltalk is a different kind of work from the other two, which were parsers with
-a value model. It is an object system: classes and methods created at run time,
-blocks that are real closures (including `^` as a non-local return), the
-message-send rules `super` and cascades depend on, and the class library the row
-corpus exercises. It is also all-or-nothing — a subset fails the same rows a
-missing port does — so it wants one pass rather than a slice per statement.
 
 The parity harness now asks the built binary which languages have an executor
 (`lang_cli --ported`), so each port is registered in exactly one place,

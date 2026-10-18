@@ -1087,6 +1087,71 @@ void test_rexx_turtle_words_draw() {
     TW_CHECK_EQ(run.host.ops.at(1), std::string{"right 90"});
 }
 
+// ---------------------------------------------------------------------------
+// Smalltalk
+// ---------------------------------------------------------------------------
+
+struct SmalltalkRun {
+    std::vector<std::string> output;
+    RecordingHost host;
+};
+
+SmalltalkRun run_smalltalk(std::string_view source) {
+    SmalltalkRun run;
+    Interpreter interpreter{Language::Smalltalk, run.host};
+    interpreter.set_input_callback([](const std::string&) { return std::string{}; });
+    interpreter.load_program(source);
+    interpreter.run();
+    run.output = interpreter.output();
+    return run;
+}
+
+void test_smalltalk_class_and_instance_variable() {
+    const SmalltalkRun run = run_smalltalk(
+        "Object subclass: #Counter\n  instanceVariableNames: 'count'\n\n"
+        "Counter >> initialize\n  count := 0\n\n"
+        "Counter >> bump\n  count := count + 1\n\n"
+        "Counter >> value\n  ^count\n\n| c |\nc := Counter new.\nc bump.\nc bump.\nc value");
+    TW_CHECK_EQ(run.output.back(), std::string{"2"});
+}
+
+void test_smalltalk_block_is_a_closure() {
+    const SmalltalkRun run = run_smalltalk(
+        "| total |\ntotal := 10.\n[:n | total := total + n] value: 5.\ntotal");
+    TW_CHECK_EQ(run.output.back(), std::string{"15"});
+}
+
+void test_smalltalk_cascade_sends_to_the_original_receiver() {
+    const SmalltalkRun run = run_smalltalk("Transcript show: 'a'; cr");
+    TW_CHECK_EQ(run.output.at(0), std::string{"a"});
+}
+
+void test_smalltalk_inject_and_range() {
+    const SmalltalkRun run = run_smalltalk(
+        "| s |\ns := (1 to: 4) inject: 0 into: [:a :b | a + b].\ns");
+    TW_CHECK_EQ(run.output.back(), std::string{"10"});
+}
+
+void test_smalltalk_non_local_return_leaves_the_block() {
+    const SmalltalkRun run = run_smalltalk("| b |\nb := [:x | ^x * 2].\nb value: 21");
+    TW_CHECK_EQ(run.output.back(), std::string{"42"});
+}
+
+void test_smalltalk_method_answers_its_last_expression() {
+    const SmalltalkRun run = run_smalltalk(
+        "Object subclass: #Thing\n  instanceVariableNames: ''\n\n"
+        "Thing >> greet\n  ^'hi'\n\nThing new greet");
+    TW_CHECK_EQ(run.output.back(), std::string{"'hi'"});
+}
+
+void test_smalltalk_turtle_messages_draw() {
+    const SmalltalkRun run = run_smalltalk(
+        "| t |\nt := Turtle new.\nt forward: 100.\nt right: 90");
+    TW_CHECK(run.host.ops.size() >= 2);
+    TW_CHECK_EQ(run.host.ops.at(0), std::string{"forward 100"});
+    TW_CHECK_EQ(run.host.ops.at(1), std::string{"right 90"});
+}
+
 int main() {
     test_chip8_program_starts_at_0x200();
     test_chip8_labels_resolve_forward_references();
@@ -1183,5 +1248,12 @@ int main() {
     test_rexx_builtins();
     test_rexx_subroutine_returns_through_result();
     test_rexx_turtle_words_draw();
+    test_smalltalk_class_and_instance_variable();
+    test_smalltalk_block_is_a_closure();
+    test_smalltalk_cascade_sends_to_the_original_receiver();
+    test_smalltalk_inject_and_range();
+    test_smalltalk_non_local_return_leaves_the_block();
+    test_smalltalk_method_answers_its_last_expression();
+    test_smalltalk_turtle_messages_draw();
     return tw::test::summary("lang_tests");
 }
