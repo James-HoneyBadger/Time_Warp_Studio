@@ -549,6 +549,7 @@ if(Qt6_FOUND)
             src/ui/code_editor.cpp
             src/ui/command_palette.cpp
             src/ui/find_bar.cpp
+            src/ui/formatter.cpp
             src/ui/lint.cpp
             src/ui/language.cpp
             src/ui/main_window.cpp
@@ -744,6 +745,21 @@ if(Qt6_FOUND)
                 endif()
             endif()
             add_test(NAME syntax_highlighter_tests COMMAND syntax_highlighter_tests)
+
+            # The IDE's text services: formatting a document, and (as they land)
+            # the snippet library, find-in-files and autosave. One binary because
+            # they share a concern -- text in, text out, no program run -- and
+            # none of them needs a window.
+            add_executable(editor_services_tests tests/editor_services_tests.cpp)
+            target_link_libraries(editor_services_tests PRIVATE timewarp::ui)
+            target_include_directories(editor_services_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+            if(NOT MSVC)
+                target_compile_options(editor_services_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+                if(TIME_WARP_EXPR_WERROR)
+                    target_compile_options(editor_services_tests PRIVATE -Werror)
+                endif()
+            endif()
+            add_test(NAME editor_services_tests COMMAND editor_services_tests)
         endif()
     else()
         message(STATUS "Qt6 Widgets not found: skipping the widget UI")

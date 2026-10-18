@@ -1,5 +1,21 @@
 # Changelog
 
+## [Unreleased]
+
+Porting the features the removed PySide6 application had. The sequenced plan is
+`docs/PORTING_PLAN.md`; each entry here lands with its test.
+
+### Added
+
+- **Edit > Format Code (Ctrl+I).** Re-indents BASIC, COMAL, REXX and Logo by their
+  block structure — the loop bodies, `IF`/`END IF` arms, `ELSE` branches, Logo
+  procedures and bracketed blocks — using the editor's tab width. It changes
+  nothing but the left margin: strip both versions and the text is identical, a
+  second format does nothing, and the cursor returns to the same line and column.
+  The other six languages say they have no blocks to indent rather than
+  pretending to format. Ported from `utils/code_formatter.py`, with the bug that
+  left every `ELSE` body one level out fixed.
+
 ## [16.0.0] - 2026-10-18
 
 All ten languages now run in C++: nothing is routed to the Python engine at run

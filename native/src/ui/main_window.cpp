@@ -49,6 +49,7 @@
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/command_palette.hpp"
 #include "timewarp/ui/find_bar.hpp"
+#include "timewarp/ui/formatter.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
@@ -559,6 +560,11 @@ void MainWindow::buildMenuBar() {
     // actions on one key is an ambiguous shortcut that Qt resolves by guessing.
     add(edit, tr("&Go to Line..."), QKeySequence{Qt::CTRL | Qt::Key_L},
         [this] { goToLinePrompt(); });
+    // Ctrl+I, which no other action claims. There was no Format Code at all
+    // before this; the removed implementation had one under Edit.
+    add(edit, tr("&Format Code"), QKeySequence{Qt::CTRL | Qt::Key_I},
+        [this] { formatCurrentDocument(); })
+        ->setObjectName(QStringLiteral("formatCodeAction"));
     edit->addSeparator();
     add(edit, tr("&Preferences..."), QKeySequence{Qt::CTRL | Qt::Key_Comma},
         [this] { showPreferences(); })
@@ -943,6 +949,10 @@ void MainWindow::performAction(const QString& action) {
         findNextMatch(false);
         return;
     }
+    if (id == QLatin1String("format")) {
+        formatCurrentDocument();
+        return;
+    }
     if (id == QLatin1String("find_previous")) {
         findNextMatch(true);
         return;
@@ -1261,6 +1271,39 @@ void MainWindow::findNextMatch(bool backwards) {
     }
     find_bar_->setEditor(currentEditor());
     find_bar_->findAgain(backwards);
+}
+
+void MainWindow::formatCurrentDocument() {
+    CodeEditor* editor = currentEditor();
+    if (editor == nullptr) {
+        return;
+    }
+    const FormatOutcome outcome =
+        formatSource(editor->toPlainText(), languageOf(editor), editorSettings().tab_width);
+    if (outcome.changed()) {
+        // One edit block, so a single Ctrl+Z puts the whole reformat back: the
+        // alternative is one undo step per line, which is worse than no undo.
+        const int line = editor->textCursor().blockNumber();
+        const int column = editor->textCursor().positionInBlock();
+        QTextCursor edit = editor->textCursor();
+        edit.beginEditBlock();
+        edit.select(QTextCursor::Document);
+        edit.insertText(outcome.text);
+        edit.endEditBlock();
+
+        // Put the cursor back by *line and column within the line*. An absolute
+        // offset would land somewhere else as soon as an indent changed, which
+        // is what the removed implementation did: it clamped to the document
+        // length and dropped the caret at the end of the file.
+        QTextCursor restored = editor->textCursor();
+        restored.movePosition(QTextCursor::Start);
+        restored.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, line);
+        const int reachable = std::min(column, restored.block().length() - 1);
+        restored.movePosition(QTextCursor::StartOfBlock);
+        restored.movePosition(QTextCursor::Right, QTextCursor::MoveAnchor, reachable);
+        editor->setTextCursor(restored);
+    }
+    setExecutionState(tr("ready"), outcome.message);
 }
 
 void MainWindow::goToLinePrompt() {

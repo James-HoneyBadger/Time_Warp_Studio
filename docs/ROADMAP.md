@@ -21,7 +21,7 @@ derived rather than remembered.
 | Area | State |
 | --- | --- |
 | Shell | Documents and tabs, menus, toolbars, status bar, settings persistence, the last session's files restored at launch |
-| Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, go-to-line, tab stops, fonts |
+| Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, go-to-line, tab stops, fonts, error squiggles with gutter markers, completion, auto-indent, Format Code |
 | Console | Streaming output, and interpreter errors in their own tab |
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |

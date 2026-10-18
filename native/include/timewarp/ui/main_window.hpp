@@ -174,6 +174,10 @@ public:
     void findNextMatch(bool backwards);
     /// Asks for a line number and goes there.
     void goToLinePrompt();
+    /// Re-indents the current document. Reports in the status bar, because a
+    /// format with no visible effect and no message is indistinguishable from a
+    /// key that did nothing.
+    void formatCurrentDocument();
     /// Asks for a path and writes the drawing to it.
     void exportDrawingDialog();
     /// Puts the drawing on the clipboard as an image.
