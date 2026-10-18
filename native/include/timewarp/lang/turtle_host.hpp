@@ -18,6 +18,7 @@
 #include <array>
 #include <cmath>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 namespace timewarp::lang {
@@ -263,6 +264,31 @@ public:
     /// The colour a palette index currently means. Used where a program draws a
     /// whole frame and must name the colour, not the index.
     [[nodiscard]] virtual Rgb resolve_color(int index) const = 0;
+
+    // -- sound ------------------------------------------------------------
+    //
+    // Not pure: a host with no audio (a test recorder, a headless gate) ignores
+    // these, and the language still runs. `audio_available` is what an executor
+    // asks before promising a sound, so the answer a learner is given matches the
+    // machine they are on.
+
+    /// The system bell: `BEEP`. Short, and whatever the system uses for a bell.
+    virtual void beep(int /*milliseconds*/) {}
+    /// One tone: `SOUND frequency, duration`. A frequency of 0 is a rest, and
+    /// `waveform` is "square", "triangle", "sine" or "noise".
+    virtual void tone(double /*frequency*/, int /*milliseconds*/, const char* /*waveform*/) {}
+    /// A note sequence in `PLAY`'s mini-language, played in the background.
+    virtual void play_music(const char* /*notation*/) {}
+    /// Silence. `SOUND OFF`.
+    virtual void stop_sound() {}
+    [[nodiscard]] virtual bool audio_available() const { return false; }
+
+    // -- keyboard ---------------------------------------------------------
+
+    /// The characters typed at the drawing surface since the last call, oldest
+    /// first, and clears them. A headless run has none, which is why `INKEY$`'s
+    /// documented answer is the empty string there.
+    [[nodiscard]] virtual std::string take_keystrokes() { return {}; }
 };
 
 }  // namespace timewarp::lang

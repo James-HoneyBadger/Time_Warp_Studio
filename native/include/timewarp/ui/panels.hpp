@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <QColor>
 #include <QFrame>
 #include <QList>
 #include <QPair>
@@ -25,6 +26,7 @@
 #include "timewarp/bridge/python_worker.hpp"
 
 class QComboBox;
+class QHBoxLayout;
 class QLabel;
 class QLineEdit;
 class QListWidget;
@@ -86,18 +88,43 @@ private:
     QLineEdit* input_ = nullptr;
 };
 
-/// Stands in for `FunctionKeyBar` (`ui/function_key_bar.py`).
+/// The function-key bar: three modifier layers, a layer badge and a deck
+/// selector. Translated from `ui/function_key_bar.py`.
 ///
-/// The Python widget has three modifier layers and a deck selector. Only the
-/// normal layer and the deck selector are reproduced: the layout needs the
-/// fixed 30px height and the two signals, and inventing the remaining layers
-/// here would mean inventing actions that do not exist yet.
+/// The Python's bar was the discoverable half of its keyboard interface: ten
+/// keys per layer, each labelled with the key and the thing it does, with a
+/// badge that cycled normal -> shift -> control. The Qt port shipped only the
+/// normal layer's labels and connected the signals to nothing, so every button
+/// was inert. Both halves are fixed here: the bar emits the action's stable id,
+/// and `MainWindow` has a dispatcher that performs it.
+///
+/// The key sequences are the ones this application *actually* answers to, which
+/// is not quite the Python's table: F3 is Find Next here (the Python had Open on
+/// F3 and no find-next key at all). A bar that advertises a key the window does
+/// not answer is worse than no bar, so where the two differ the application's
+/// binding wins and the caption says so.
 class FunctionKeyBar final : public QFrame {
     Q_OBJECT
 
 public:
     /// Python: `setFixedHeight(30)`.
     static constexpr int kFixedHeight = 30;
+
+    /// The modifier layer the bar is showing.
+    enum class Layer {
+        Normal,
+        Shift,
+        Control,
+    };
+
+    /// One key as the bar draws it. `keys` is what the user presses, `action`
+    /// is the stable id the window dispatches on, `caption` is the word on the
+    /// key's face.
+    struct Binding {
+        QString keys;
+        QString action;
+        QString caption;
+    };
 
     explicit FunctionKeyBar(QWidget* parent = nullptr);
 
@@ -106,14 +133,38 @@ public:
 
     [[nodiscard]] int currentDeck() const;
 
+    /// The bindings on one layer, in key order. Static and public because the
+    /// window binds the same table to real shortcuts: one table, so a button and
+    /// the key that matches it cannot drift apart.
+    [[nodiscard]] static QList<Binding> bindingsFor(Layer layer);
+
+    /// The layer currently shown.
+    void setLayer(Layer layer);
+    [[nodiscard]] Layer layer() const noexcept { return layer_; }
+    /// Normal -> Shift -> Control -> Normal, what the badge does when clicked.
+    void cycleLayer();
+
+    /// Every key button, in row order. For a test that walks the layer's slots.
+    [[nodiscard]] QList<QPushButton*> keyButtons() const;
+    /// The badge that cycles the layer.
+    [[nodiscard]] QPushButton* layerBadge() const noexcept { return layer_badge_; }
+
 signals:
     /// Emitted with the action name of the pressed key, e.g. `"save"`.
     void actionTriggered(const QString& action);
     /// Emitted with the deck's stable id, e.g. `"debugger_deck"`.
     void deckSelected(const QString& deckId);
+    /// Emitted after the layer changes, carrying the new layer as an int.
+    void layerChanged(int layer);
 
 private:
+    void rebuildKeys();
+
     QComboBox* decks_ = nullptr;
+    QPushButton* layer_badge_ = nullptr;
+    QWidget* keys_ = nullptr;
+    QHBoxLayout* keys_layout_ = nullptr;
+    Layer layer_ = Layer::Normal;
     /// Displayed label paired with the stable id the deck is known by.
     QList<QPair<QString, QString>> deckIds_;
 };
@@ -210,6 +261,12 @@ public:
     /// The number of lessons the panel is showing.
     [[nodiscard]] int lessonCount() const;
 
+    /// The colours a pass and a failure are written in. The window sets them
+    /// from the theme: green-on-white is unreadable on the green-phosphor and
+    /// amber themes, and a verdict nobody can read is the one message that has to
+    /// be legible.
+    void setVerdictColors(const QColor& passed, const QColor& failed);
+
 signals:
     /// The panel has just been built and wants the curriculum.
     void curriculumNeeded();
@@ -245,6 +302,14 @@ private:
     QPushButton* reset_ = nullptr;
     QLabel* verdict_ = nullptr;
     QProgressBar* progress_ = nullptr;
+    /// Theme colours for the verdict. Defaults match the light-theme pair this
+    /// panel shipped with, so it is legible before a theme is applied.
+    QColor verdict_pass_{0x2e, 0x7d, 0x32};
+    QColor verdict_fail_{0xb3, 0x26, 0x1e};
+    /// What the last verdict said, so a theme change mid-session repaints it in
+    /// the new colours rather than leaving the old theme's green on screen.
+    bool verdict_passed_ = true;
+    void refreshVerdictColour();
 
     /// The curriculum as last received. Named apart from `lessons_`, which is the
     /// combo box that shows it: one is the data and one is the widget, and a
@@ -259,9 +324,10 @@ private:
 /// The variables table.
 ///
 /// Stands in for `ui/variable_inspector.py`. The rows come from whoever ran the
-/// program -- the bridge's report for the four bridged languages, the native
-/// runner's snapshot for Scheme -- so the panel is a table and nothing else. It
-/// does not ask, and it does not decide what a value is worth: the engine does.
+/// program -- the native runner's snapshot for every in-process language, or the
+/// reference worker's report for a lesson check -- so the panel is a table and
+/// nothing else. It does not ask, and it does not decide what a value is worth:
+/// the engine does.
 class VariablesPanel final : public QFrame {
     Q_OBJECT
 
@@ -319,9 +385,9 @@ private:
 /// is the surface that asks it to. It holds no debugger and no document -- every
 /// button is a signal, and the window decides what the request means.
 ///
-/// Only Scheme can be stepped: the four bridged languages run to completion in
-/// another process with no pause protocol, so the panel disables itself and says
-/// why rather than offering buttons that do nothing.
+/// Only Scheme can be stepped: every other language runs to completion with no
+/// pause protocol, so the panel disables itself and says why rather than
+/// offering buttons that do nothing.
 class DebugPanel final : public QFrame {
     Q_OBJECT
 
@@ -349,6 +415,21 @@ public:
     /// cursor without the panel knowing what an editor is.
     void setLineNumber(int line);
     [[nodiscard]] int lineNumber() const;
+
+    /// Adds `line` if it is not in the set and removes it if it is. What Ctrl+F8
+    /// does: the same edit the panel's own add/remove buttons make, applied to
+    /// the cursor's line, so the key cannot produce a set the buttons could not.
+    void toggleBreakpointAt(int line);
+
+    /// Emit the matching request, exactly as the panel's own button does. The
+    /// function-key bar and the command palette go through these so a key is not
+    /// a second implementation of a control.
+    void requestContinue();
+    void requestPause();
+    void requestStepInto();
+    void requestStepOver();
+    void requestStepOut();
+    void requestStop();
 
 signals:
     void continueRequested();

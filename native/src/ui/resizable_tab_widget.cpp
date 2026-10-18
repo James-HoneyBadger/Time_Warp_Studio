@@ -10,7 +10,17 @@
 
 namespace timewarp::ui {
 
-ResizableTabWidget::ResizableTabWidget(QWidget* parent) : QTabWidget(parent) {}
+ResizableTabWidget::ResizableTabWidget(QWidget* parent) : QTabWidget(parent) {
+    // `setTabsClosable(true)` draws an X on every tab and then emits
+    // `QTabWidget::tabCloseRequested` when it is clicked -- a signal the owner
+    // has to connect. The port connected this class's own `closeRequested`
+    // (middle-click and the context menu) and never Qt's, so the X was painted
+    // and inert: the button looked like the obvious way to close a document and
+    // did nothing at all. Forwarding here rather than in the window means every
+    // tab widget built from this class gets it, including the secondary pane.
+    connect(this, &QTabWidget::tabCloseRequested, this,
+            &ResizableTabWidget::closeRequested);
+}
 
 QSize ResizableTabWidget::minimumSizeHint() const {
     // Constant rather than derived from any page. This is the whole point of the

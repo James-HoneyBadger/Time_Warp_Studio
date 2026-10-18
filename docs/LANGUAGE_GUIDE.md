@@ -177,6 +177,125 @@ FOR I = 0 TO 360 STEP 10
 NEXT I
 ```
 
+### Sound
+
+The synth is the machine's own kind: square waves and note lists, not sampled
+audio. `SOUND` takes a frequency in hertz and a duration in ticks (1/18.2 of a
+second, the IBM PC's timer); `PLAY` takes the note notation the dialects shared.
+
+```basic
+BEEP                             ' the system bell, about 880Hz
+SOUND 440, 18                    ' A above middle C for about a second
+PLAY "T120 O4 L8 CDEFGAB"        ' a scale
+PLAY "T120 L4 C E G > C"         ' a chord's own arpeggio, an octave up
+SOUND OFF                        ' silence
+```
+
+`PLAY` reads `T` (tempo, quarter notes per minute), `L` (default note length),
+`O` (octave), `>` and `<` (octave up and down), note letters `A`–`G` with
+`#`/`+`/`-`/`b` accidentals, an optional octave digit per note, `.` for dotted,
+`P` or `R` for a rest, and the numeric form `N1`–`N84` counting from C0.
+
+Sound needs a player on the machine (`paplay`, `aplay`, `ffplay` or `play`).
+Without one the statements still run and still acknowledge — they are silent,
+not broken — because a program should not refuse to draw just because a laptop
+has no speaker.
+
+`SAY` is the exception: the build has no speech synthesiser, so it answers with
+the reference's own refusal, `Speech synthesis not available`, rather than
+acknowledging something that did not happen.
+
+### Keyboard
+
+```basic
+K$ = INKEY$
+IF K$ = "q" THEN END
+```
+
+`INKEY$` answers the next key typed at the drawing canvas, or the empty string
+when nothing has been typed. Click the canvas first: that is where a game is
+played, so that is where the keys are read. A headless run has no keyboard and
+answers empty, which is what the parity gate records.
+
+### Drawing without the turtle: `DRAW`
+
+`DRAW` takes GW-BASIC's path string. The turtle executes it, so it draws and
+leaves the turtle where the path ended.
+
+```basic
+DRAW "U20 R20 D20 L20"           ' a square, from the turtle's current spot
+DRAW "BM50,50 C4 R20 D20 L20 U20" ' move without drawing, colour 4, square
+```
+
+| Letter | Meaning |
+| --- | --- |
+| `U n`, `D n` | up (forward) and down (back) |
+| `R n`, `L n` | turn right and left |
+| `E n`, `H n` | the same, as the dialects' diagonal steps |
+| `F n`, `G n` | forward and back, the turtle spelling |
+| `B`, `N` | pen up, pen down |
+| `M x,y` | move to a point, drawing if the pen is down |
+| `C n` | pen colour, as a palette index |
+
+### Sound, pauses and frames
+
+A game loop needs pacing, and `WAIT` is the pause in milliseconds:
+
+```basic
+SCREEN 1
+FOR FRAME = 1 TO 100
+    CLS
+    CIRCLE (FRAME * 3, 100), 10
+    WAIT 16                     ' about sixty frames a second
+NEXT FRAME
+```
+
+### Ports: serial and parallel
+
+A program can talk to a board — an Arduino, a Raspberry Pi's GPIO over a USB
+adapter, a Micro:bit, or the parallel-port projects these machines were built
+around. Ports are addressed by channel, with the `#n` spelling a file already
+uses.
+
+```basic
+' A serial device at 9600 baud
+SERIAL OPEN #1, "/dev/ttyUSB0", 9600
+SERIAL WRITE #1, "PING"
+SERIAL READ #1, ANSWER$, 2000    ' wait up to two seconds for a line
+SERIAL CLOSE #1
+PRINT ANSWER$
+
+' The parallel port: eight LEDs on the data lines
+PARALLEL OPEN #1, "/dev/lp0"
+PARALLEL BYTE #1, 255
+PARALLEL WRITE #1, "hello"
+PARALLEL CLOSE #1
+```
+
+`SERIAL READ` reads one line (without its terminator) and puts it in the
+variable; the timeout is optional and defaults to 1000ms. A timeout with nothing
+arrived is not an error — a program polling a quiet sensor keeps going.
+
+**Which devices a program may open.** Only the serial and parallel device
+families: `/dev/ttyS*`, `/dev/ttyUSB*`, `/dev/ttyACM*`, `/dev/ttyAMA*`,
+`/dev/serial/…`, `/dev/pts/*`, `/dev/lp*`, `/dev/parport*` and `/dev/usb/lp*`.
+Anything else is refused with a sentence rather than attempted, because a
+program that can open any device node can also open a disk. A teacher whose
+board appears under another name can allow it:
+
+```bash
+TIME_WARP_PORTS=/dev/mydevice:/dev/ttyOTHER0 ./time_warp_ide
+```
+
+Serial ports are opened raw (no echo, no line translation) and read with
+timeouts; writes wait rather than dropping bytes when the board is slower than
+the program.
+
+> **Note** — `DRAW`, `WAIT`, `SERIAL` and `PARALLEL` are native extensions: the
+> retired reference engine never implemented them, so the parity gates do not
+> compare them and `BEEP`/`SOUND`/`PLAY` keep the reference's acknowledgement
+> text exactly.
+
 ### Math Functions
 
 ```basic
@@ -219,6 +338,28 @@ NEXT I
 
 PRINT "Graphics complete"
 ```
+
+### Turtle Movement (Logo words)
+
+A BASIC program may also drive the turtle with Logo's words. A statement BASIC
+does not recognise whose first word is a Logo command is handed to the Logo
+executor — the same blend the reference makes — which is how a program can mix
+`PRINT` with direction-and-distance drawing:
+
+```basic
+CLEARSCREEN
+FORWARD 15
+RIGHT 90
+LEFT 90
+PENUP
+PENDOWN
+SETPENCOLOR "YELLOW"
+SETPENWIDTH 2
+HOME
+```
+
+A word that is neither BASIC nor Logo is still reported as
+`❌ Unknown BASIC command`, so a typo cannot quietly do nothing.
 
 ---
 

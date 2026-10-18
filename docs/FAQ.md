@@ -28,14 +28,16 @@ Studio. For the full listing, see the [documentation index](INDEX.md) and
 
 ### What is Time Warp Studio?
 
-Time Warp Studio is an educational desktop programming environment. It runs six
+Time Warp Studio is an educational desktop programming environment. It runs ten
 programming languages in one IDE, with an integrated turtle graphics canvas and
-an output console. It is a C++20 / Qt6 application; the PySide6 implementation
-that preceded it has been removed.
+an output console. It is a C++20 / Qt6 application; every language runs in C++
+inside it, and the PySide6 implementation that preceded it has been removed.
 
 ### Which languages are supported?
 
-BASIC, PILOT, Logo, COMAL, REXX, and Scheme, and Python. Each language implements a subset of its traditional form. See the [Language Guide](LANGUAGE_GUIDE.md) for what each one supports.
+BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk. Each
+language implements a subset of its traditional form. See the
+[Language Guide](LANGUAGE_GUIDE.md) for what each one supports.
 
 ### Is Time Warp Studio free?
 
@@ -56,8 +58,8 @@ No. The core features work offline.
 ### What do I need to run it?
 
 - A C++20 compiler, CMake 3.20+, and Qt6 (Widgets, Core, Gui)
-- Python 3.10 or newer, **only** if you use BASIC, PILOT, Logo, COMAL or REXX —
-  Scheme and expressions run natively without it
+- Python 3.10 or newer **only** for the lesson-check engine (and the test
+  harnesses). Running a program needs no Python at all, whatever the language.
 
 ### How do I build it?
 
@@ -96,45 +98,50 @@ See the [Installation Guide](INSTALLATION.md) for platform-specific steps.
 | Language | Extensions |
 | -------- | ---------- |
 | BASIC | `.bas`, `.bsc` |
-| PILOT | `.pilot`, `.plt` |
+| APL | `.apl`, `.dyalog` |
 | Logo | `.logo`, `.lg` |
+| PILOT | `.pilot`, `.plt` |
+| FOCAL | `.foc`, `.focal` |
+| Scheme | `.scm`, `.ss`, `.scheme` |
+| CHIP-8 | `.ch8`, `.c8` |
 | COMAL | `.comal`, `.cml` |
 | REXX | `.rexx`, `.rex` |
-| Scheme | `.scm`, `.ss` |
+| Smalltalk | `.st`, `.smalltalk` |
 
 Unknown extensions open as BASIC by default.
 
 ### How do I switch the language of a file?
 
-Use the language picker (`Ctrl+Shift+L`). The file extension does not change automatically.
-
-### How do I open the Command Palette?
-
-Press `Ctrl+Shift+P`. It lists the commands in the Studio.
+Use the language picker in the toolbar. The file extension does not change automatically.
 
 ### How do I see all keyboard shortcuts?
 
-Press `Ctrl+?` or open the Help menu.
+The menus show every command's shortcut. There is no separate shortcut reference page.
 
 ### Can I split the editor?
 
-Yes. `Ctrl+\` splits the editor view and `Ctrl+Shift+\` closes the split. `Ctrl+Alt+R` runs the programs in both panes.
+No. The editor is one pane per tab. Splitting is on the roadmap.
 
 ### Can I find and replace text?
 
-Yes. `Ctrl+F` finds, `Ctrl+H` replaces, `Ctrl+Alt+G` searches across files, and `Ctrl+G` jumps to a line.
+Yes, in the current document. `Ctrl+F` finds, `Ctrl+H` replaces, `F3` and
+`Shift+F3` find the next and previous match with the bar closed, and `Ctrl+L`
+goes to a line. Searching across files, a minimap and auto-completion are not
+built yet — see [ROADMAP.md](ROADMAP.md).
 
 ### How do I insert a code snippet?
 
-Press `Ctrl+Shift+I` to use snippets.
+You cannot yet: the Snippets toolbar button is disabled and says why.
 
 ### Can I work with several files in one project?
 
-Yes, in part. The project panel lists the files in a project. You can add a new file, add an existing file, rename or remove files, and set the main file.
+Documents are tabs, and recent files are remembered. There is no project panel
+yet.
 
 ### Are my unsaved changes lost if the app closes?
 
-Autosave can recover them. Enable it in Preferences. See [Saving, Autosave, and Version History](#saving-autosave-and-version-history).
+The window asks before closing a modified tab, but there is no autosave or crash
+recovery yet. Save your work with `Ctrl+S`.
 
 ---
 
@@ -142,11 +149,12 @@ Autosave can recover them. Enable it in Preferences. See [Saving, Autosave, and 
 
 ### How do I run a program?
 
-Press `Ctrl+R` or use the Run menu. To run only the selected text, use `Ctrl+Shift+R`. To run both split-view programs, use `Ctrl+Alt+R`.
+Press `F9`, or use the ▶ Run button in the toolbar. To stop it, press the Stop
+button; a program waiting for input can be stopped that way too.
 
 ### How do I stop a running program?
 
-Use Run → Stop. A program that waits for input can also be stopped this way.
+Use the Stop button in the toolbar. A program that waits for input can also be stopped this way.
 
 ### How do I get input from the user?
 
@@ -154,11 +162,14 @@ Use the input command of your language: `INPUT` in BASIC, `INPUT` in COMAL, `A:`
 
 ### Why does my program run forever?
 
-It may contain an endless loop, such as a `GOTO` with no exit condition or a `while` loop whose condition never becomes false. Use Stop, check the loop logic, or step through it with the debugger.
+It may contain an endless loop, such as a `GOTO` with no exit condition or a
+`while` loop whose condition never becomes false. The engine stops a runaway
+run on its own budget (2,000,000 steps or 10 seconds, whichever comes first) and
+says so; the Stop button ends it sooner.
 
 ### Can I run a program from a lesson or example directly?
 
-Yes. Open the file from `Examples/` and press `Ctrl+R`. The [examples catalog](../Examples/CATALOG.md) lists the sample programs.
+Yes. Open the file from `Examples/` and press `F9`. The [examples catalog](../Examples/CATALOG.md) lists the sample programs.
 
 ---
 
@@ -166,7 +177,11 @@ Yes. Open the file from `Examples/` and press `Ctrl+R`. The [examples catalog](.
 
 ### What can I do in BASIC?
 
-Line-numbered programs with `PRINT`, `INPUT`, `FOR`/`NEXT`, `IF`/`THEN`, `GOTO`, `GOSUB`, and `DIM` arrays. See [basic.md](tutorials/basic.md).
+Line-numbered programs with `PRINT`, `INPUT`, `FOR`/`NEXT`, `IF`/`THEN`, `GOTO`,
+`GOSUB`, `DIM` arrays, `SUB`/`FUNCTION`, records, the file channel and the VGA
+graphics statements — plus Logo's turtle words (`FORWARD`, `RIGHT`, `PENUP`,
+`CLEARSCREEN`), which a BASIC line is forwarded to when BASIC does not recognise
+it. See [basic.md](tutorials/basic.md).
 
 ### What about PILOT?
 
@@ -192,6 +207,14 @@ REXX is a typeless string-processing language: `SAY` to display, `PULL` to read 
 
 Scheme is a small Lisp dialect with lexical closures. Define procedures with `define`/`lambda`, branch with `if`/`cond`, loop with recursion or named `let`, and process lists with `map`, `filter` and `foldl`. See [scheme.md](tutorials/scheme.md).
 
+### What about APL, FOCAL, CHIP-8 and Smalltalk?
+
+APL is array programming with its glyphs and keyword spellings; FOCAL is a
+line-numbered formula calculator; CHIP-8 is a bytecode machine with an
+integrated assembler; Smalltalk is a message-sending object system with real
+blocks and a class library. Each has a tutorial in `docs/tutorials/` and a
+reference section in [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md).
+
 ### Which language should a beginner start with?
 
 BASIC, Logo or COMAL are common first choices, since their output and drawings are easy to see. REXX and Scheme are good next steps once you are comfortable with variables and loops.
@@ -214,11 +237,15 @@ Run a new program (the canvas clears per run), or use the clear command for your
 
 ### Can I export a drawing?
 
-Yes. Use File → Export → Export Graphics to PNG or Export Graphics to SVG. You can also print graphics from File.
+Yes. **File → Export Drawing...** (`Ctrl+E`) writes PNG, JPEG or BMP, and
+**Edit → Copy Drawing** (`Ctrl+Shift+C`) puts it on the clipboard. There is no
+SVG export and no printing yet.
 
 ### Does the turtle work in every language?
 
-Logo, BASIC, COMAL, REXX, and Scheme have turtle commands. Check each language's tutorial for its graphics commands.
+Logo, BASIC, COMAL, REXX, Scheme, FOCAL, APL and Smalltalk have turtle words.
+PILOT draws through its `G:` graphics commands, and CHIP-8 paints rectangles
+directly. Check each language's tutorial for its graphics commands.
 
 ---
 
@@ -226,7 +253,7 @@ Logo, BASIC, COMAL, REXX, and Scheme have turtle commands. Check each language's
 
 ### Does the Studio have a debugger?
 
-For **Scheme**, yes: the 🐞 Debug tab drives a real runner with breakpoints, stepping, a call stack, the paused line and that frame's variables. The other nine languages run to completion with no pause protocol — four in the Python bridge's process, five in the native runner — so the Debug tab disables itself and says why.
+For **Scheme**, yes: the 🐞 Debug tab drives a real runner with breakpoints, stepping, a call stack, the paused line and that frame's variables. The other nine languages run to completion in the native runner and have no pause protocol, so the Debug tab disables itself and says why.
 
 Not yet: watch expressions, an execution timeline, and the toolbar's Debug/Continue/Trace actions (the panel's own buttons work). Those are tracked in [ROADMAP.md](ROADMAP.md).
 
@@ -260,20 +287,24 @@ Press `Ctrl+S` or use File → Save. Use File → Save As to save under a new na
 
 ### What does autosave do?
 
-Autosave saves your open work at a set interval, so changes are not lost after a crash. Turn it on or change the interval in File → Preferences (`Ctrl+,`).
+There is no autosave yet. The window asks before closing a tab with unsaved
+changes, so work is not lost by accident, but a crash loses it. Save with
+`Ctrl+S`.
 
 ### Where is my version history?
 
-Use File → Version History (`Ctrl+Alt+V`) to open the saved versions of the current file.
+There is none yet. Use Git or another tool outside the Studio.
 
 ### Does the Studio have Git integration?
 
-No. Use Git or another tool outside the Studio for full version control. The built-in Version History covers simple local recovery.
+No. Use Git or another tool outside the Studio for version control.
 
 ### Where are my settings and progress stored?
 
 - Preferences and window settings use Qt QSettings.
-- Lesson progress is stored in `~/.time_warp/progress.json`.
+- Lesson progress is stored in `~/.time_warp/progress.json`, and a class's
+  rosters and handouts in `~/.time_warp/classroom`. `TIME_WARP_DATA_DIR` moves
+  both, which is how a test avoids writing a learner's real file.
 
 ---
 
@@ -281,15 +312,12 @@ No. Use Git or another tool outside the Studio for full version control. The bui
 
 ### How do I export a program?
 
-Use File → Export. Options include:
-
-- Export Code as PDF
-- Export Session as HTML (`Ctrl+Shift+H`)
-- Export Lesson as Markdown or PDF
+You can export the drawing (see [Turtle and Graphics](#turtle-and-graphics)),
+but not the code, the session or a lesson: those exports are not built yet.
 
 ### How do I print?
 
-Use File → Print Code (`Ctrl+P`) or Print Graphics.
+Printing is not built yet. Export the drawing to an image and print that.
 
 ---
 
@@ -297,7 +325,9 @@ Use File → Print Code (`Ctrl+P`) or Print Graphics.
 
 ### Where are the lessons?
 
-Use Help → Lessons (`Ctrl+Alt+L`). Your lesson progress is saved automatically.
+The 🎓 **Lessons** tab is on the right, beside Output, Variables, Telemetry and
+Debug. It shows the curriculum and your progress. From a terminal, use
+`python3 native/tools/learn.py`.
 
 ### Do lessons save my progress?
 
@@ -305,7 +335,7 @@ Yes. Progress is stored in `~/.time_warp/progress.json`.
 
 ### Can I skip the welcome tab?
 
-Yes. Open File → Preferences and clear the Show Welcome checkbox. The tab returns on the next launch if you turn it back on.
+There is no welcome tab.
 
 ### Where can I find more examples?
 
@@ -317,11 +347,14 @@ The `Examples/` folder has sample programs for each language. The [examples cata
 
 ### How many themes are there?
 
-33, including Dracula, Monokai, Catppuccin Mocha, Gruvbox Dark, Nord, Solarized, GitHub Dark and Light, VS Code Dark and Light, and retro CRT themes. Change the theme from the View menu. The choice persists between sessions.
+One, the built-in dark surface. The 33 themes of the removed implementation —
+Dracula, Monokai, Catppuccin Mocha, Gruvbox, Nord, Solarized, the retro CRT sets
+and the rest — are on the roadmap and are not available yet.
 
 ### Can I change the font size?
 
-Yes. Use View → Font → Font Size.
+Not yet. The editor and console fonts are set by the application's style sheet;
+font selection is on the roadmap.
 
 ---
 
@@ -337,11 +370,14 @@ Check that the program actually moves the turtle with `penup` or `pendown` set c
 
 ### Where are the full troubleshooting steps?
 
-See the [Troubleshooting Guide](TROUBLESHOOTING_GUIDE.md) and [troubleshooting guide](guides/08-troubleshooting.md).
+See [INSTALLATION.md](INSTALLATION.md) for what a failure at each build step
+means, and [ROADMAP.md](ROADMAP.md) for what is deliberately not built yet.
 
 ### How do I report a bug?
 
-Open an issue on the project's GitHub repository. Include your OS, Python version, the language, a short program that reproduces the problem, and the error message.
+Open an issue on the project's GitHub repository. Include your OS, Qt version
+(`make -C native info` prints it), the language, a short program that reproduces
+the problem, and the error message.
 
 ---
 
@@ -365,7 +401,8 @@ See [CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md).
 
 ### Is there a plugin system?
 
-Plugin support is planned but not implemented. Plugin loading is not active in the current release.
+No. The IDE has no plugin loading, and no plugin API is planned in
+[ROADMAP.md](ROADMAP.md).
 
 ### What is on the roadmap?
 
@@ -373,4 +410,4 @@ See [ROADMAP.md](ROADMAP.md).
 
 ---
 
-**Still stuck?** Start with the [User Guide](USER_GUIDE.md), or open an issue on the project's GitHub repository.
+**Still stuck?** Start with [README.md](../README.md) and\n[ARCHITECTURE.md](ARCHITECTURE.md), or open an issue on the project's GitHub\nrepository.

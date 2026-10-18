@@ -2,6 +2,7 @@
 
 #include "timewarp/lang/language.hpp"
 
+#include "timewarp/lang/basic.hpp"
 #include "timewarp/lang/chip8.hpp"
 #include "timewarp/lang/comal.hpp"
 #include "timewarp/lang/executor.hpp"
@@ -116,6 +117,8 @@ Executor executor_for(Language language) noexcept {
         case Language::Smalltalk:
             return &execute_smalltalk;
         // Line-by-line executors.
+        case Language::Basic:
+            return &execute_basic;
         case Language::Focal:
             return &execute_focal;
         case Language::Pilot:
@@ -127,9 +130,8 @@ Executor executor_for(Language language) noexcept {
         case Language::Rexx:
             return &execute_rexx;
 
-        // Still driven by the Python bridge. Returning null is how the caller
-        // asks "is this one ported yet?" without an exception.
-        case Language::Basic:
+        // Still driven by the Python bridge: the Scheme machine is native but
+        // Scheme's own executor has not been wired to this table yet.
         case Language::Scheme:
             return nullptr;
     }

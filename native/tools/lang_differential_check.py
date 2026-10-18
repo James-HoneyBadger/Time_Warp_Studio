@@ -72,8 +72,13 @@ class TraceTurtle:
 
     def __init__(self) -> None:
         self.ops: list[str] = []
-        self.palette = {0: (255, 255, 255), 1: (16, 16, 20), 2: (140, 255, 140)}
+        # The engine's own starting palette, not the IDE's: an executor asks the
+        # turtle to resolve an index, and the answer has to be the engine's.
+        from time_warp.graphics.turtle_state import DEFAULT_PALETTE_16
+
+        self.palette = dict(DEFAULT_PALETTE_16)
         self.pen_color = (255, 255, 255)
+        self.bg_color = (10, 10, 20)
         self.pen_width = 2.0
         self.pen_down = True
         self.x = 0.0
@@ -82,9 +87,24 @@ class TraceTurtle:
         self.is_3d = False
         self.screen_mode = "wrap"
         self.shapes = _RecordedShapes(self)
+        # The engine records every drawn line so `end_fill` can build a polygon
+        # from them; without it a filled shape has no outline to fill.
+        self.lines: list[tuple[float, float, float, float]] = []
+        self._filling = False
+        self._fill_start = 0
+        self._last_fillable_shape_index: int | None = None
         # FILLED installs a callback here to watch the turtle move; the double
         # only has to exist.
         self.on_change = None
+
+    @property
+    def angle(self) -> float:
+        """Alias for heading, which the fractal renderer reads."""
+        return self.heading
+
+    @angle.setter
+    def angle(self, value: float) -> None:
+        self.heading = value % 360.0
 
     @staticmethod
     def _number(value: float) -> str:
@@ -108,12 +128,16 @@ class TraceTurtle:
     def forward(self, distance: float) -> None:
         self.ops.append(f"forward {self._number(distance)}")
         self._notify_change()
+        before = (self.x, self.y)
         self._walk(distance)
+        self._record_line(before, (self.x, self.y))
 
     def back(self, distance: float) -> None:
         self.ops.append(f"back {self._number(distance)}")
         self._notify_change()
+        before = (self.x, self.y)
         self._walk(-distance)
+        self._record_line(before, (self.x, self.y))
 
     def right(self, degrees: float) -> None:
         self.ops.append(f"right {self._number(degrees)}")
@@ -125,9 +149,17 @@ class TraceTurtle:
         self._notify_change()
         self.heading = (self.heading - degrees) % 360.0
 
+    def _record_line(
+        self, start: tuple[float, float], end: tuple[float, float]
+    ) -> None:
+        """The engine's `TurtleLine`: only a pen-down move draws one."""
+        if self.pen_down:
+            self.lines.append((start[0], start[1], end[0], end[1]))
+
     def goto(self, x: float, y: float) -> None:
         self.ops.append(f"goto {self._number(x)} {self._number(y)}")
         self._notify_change()
+        self._record_line((self.x, self.y), (x, y))
         self.x = x
         self.y = y
 
@@ -244,8 +276,65 @@ class TraceTurtle:
             )
         )
 
-    def fill_last_shape(self, fill_color=None) -> None:
+    def fill_last_shape(self, fill_color=None) -> bool:
         self.ops.append(f"fill {self._colour(fill_color or self.pen_color)}")
+        if self._last_fillable_shape_index is None:
+            return False
+        if self._last_fillable_shape_index >= len(self.shapes):
+            return False
+        self.shapes[self._last_fillable_shape_index].fill_color = (
+            fill_color or self.pen_color
+        )
+        return True
+
+    def draw_line(self, x1, y1, x2, y2, color=None, width=None) -> None:
+        self.shapes.append(
+            TurtleShape(
+                shape_type="line",
+                points=[(x1, y1), (x2, y2)],
+                color=color or self.pen_color,
+                width=width if width is not None else self.pen_width,
+            )
+        )
+
+    def begin_fill(self) -> None:
+        self._filling = True
+        self._fill_start = len(self.lines)
+
+    def end_fill(self) -> None:
+        if not self._filling:
+            return
+        self._filling = False
+        fill_lines = self.lines[self._fill_start :]
+        if not fill_lines:
+            return
+        points = [(fill_lines[0][0], fill_lines[0][1])]
+        points.extend((line[2], line[3]) for line in fill_lines)
+        if len(points) >= 3:
+            self.shapes.append(
+                TurtleShape(
+                    shape_type="polygon",
+                    points=points,
+                    color=self.pen_color,
+                    width=self.pen_width,
+                    fill_color=self.pen_color,
+                )
+            )
+            self._last_fillable_shape_index = len(self.shapes) - 1
+
+    def cycle_palette(
+        self, start_index: int = 1, end_index: int = 15, step: int = 1
+    ) -> None:
+        low = max(0, min(255, int(start_index)))
+        high = max(low, min(255, int(end_index)))
+        indices = list(range(low, high + 1))
+        if len(indices) <= 1:
+            return
+        colors = [self._palette_color(i) for i in indices]
+        shift = int(step) % len(colors)
+        rotated = colors[-shift:] + colors[:-shift]
+        for index, colour in zip(indices, rotated):
+            self.palette[index] = colour
 
     def showturtle(self) -> None:
         self.ops.append("show")
@@ -260,10 +349,52 @@ class TraceTurtle:
         self.palette[index] = (red, green, blue)
         self.ops.append(f"palette {index} {self._colour((red, green, blue))}")
 
+    def _palette_color(self, index: int):
+        if index in self.palette:
+            return self.palette[index]
+        if 0 <= index <= 255:
+            return (index, index, index)
+        return self.pen_color
+
     def resolve_color(self, value, default=None):
-        if isinstance(value, tuple):
-            return value
-        return self.palette.get(value, default or (0, 0, 0))
+        """The engine's resolution: name, hex, "r g b", or palette index."""
+        from time_warp.graphics.turtle_state import COLOR_NAMES
+
+        if value is None:
+            return default if default is not None else self.pen_color
+        if isinstance(value, (list, tuple)) and len(value) == 3:
+            return tuple(max(0, min(255, int(v))) for v in value)
+        if isinstance(value, str):
+            colour = value.strip()
+            if colour.startswith("#") and len(colour) == 7:
+                try:
+                    return (
+                        int(colour[1:3], 16),
+                        int(colour[3:5], 16),
+                        int(colour[5:7], 16),
+                    )
+                except ValueError:
+                    return default if default is not None else self.pen_color
+            if colour.upper() in COLOR_NAMES:
+                return COLOR_NAMES[colour.upper()]
+            parts = colour.split()
+            if len(parts) == 3:
+                try:
+                    red, green, blue = (int(part) for part in parts)
+                except ValueError:
+                    return default if default is not None else self.pen_color
+                return (
+                    max(0, min(255, red)),
+                    max(0, min(255, green)),
+                    max(0, min(255, blue)),
+                )
+            try:
+                return self._palette_color(int(colour))
+            except ValueError:
+                return default if default is not None else self.pen_color
+        if isinstance(value, (int, float)):
+            return self._palette_color(int(value))
+        return default if default is not None else self.pen_color
 
 
 _NUMBER = re.compile(r"[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?")

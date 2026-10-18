@@ -20,6 +20,7 @@
 
 #include <QCommandLineOption>
 #include <QCommandLineParser>
+#include <QCoreApplication>
 #include <QPixmap>
 #include <QSettings>
 #include <QStringList>
@@ -29,6 +30,7 @@
 
 #include "timewarp/ui/app.hpp"
 #include "timewarp/ui/main_window.hpp"
+#include "timewarp/ui/standalone.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
 namespace {
@@ -87,8 +89,9 @@ int main(int argc, char* argv[]) {
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
-        QStringLiteral("Time Warp Studio \u2014 an educational IDE for BASIC, PILOT, "
-                       "Logo, COMAL, REXX and Scheme."));
+        QStringLiteral("Time Warp Studio \u2014 an educational IDE for BASIC, APL, "
+                       "Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and "
+                       "Smalltalk."));
     parser.addHelpOption();
     parser.addVersionOption();
 
@@ -130,6 +133,25 @@ int main(int argc, char* argv[]) {
         QStringLiteral("Run the first file as soon as the window is up.")};
     parser.addOption(runOption);
 
+    const QCommandLineOption compileOption{
+        QStringLiteral("compile"),
+        QStringLiteral("Write a standalone executable for <program> to the path "
+                       "given with --output, and exit. The result runs the program "
+                       "when double-clicked."),
+        QStringLiteral("program")};
+    parser.addOption(compileOption);
+
+    const QCommandLineOption outputOption{
+        QStringLiteral("output"),
+        QStringLiteral("Where --compile writes its executable."),
+        QStringLiteral("path")};
+    parser.addOption(outputOption);
+
+    const QCommandLineOption forceOption{
+        QStringLiteral("force"),
+        QStringLiteral("With --compile, replace the output file if it exists.")};
+    parser.addOption(forceOption);
+
     // Positional arguments are files to open. Named so `--help` documents them.
     parser.addPositionalArgument(QStringLiteral("file"),
                                  QStringLiteral("Programs to open at startup."),
@@ -140,6 +162,28 @@ int main(int argc, char* argv[]) {
         // Clears this application's settings only; the default QSettings
         // constructor is scoped by the identity set above.
         QSettings{}.clear();
+    }
+
+    // --compile is a build step, not a session: it writes the artifact and exits
+    // before a window exists, so a packaging script does not have to create a GUI
+    // and close it again.
+    if (parser.isSet(compileOption)) {
+        const QString program = parser.value(compileOption);
+        const QString output = parser.value(outputOption);
+        if (output.isEmpty()) {
+            std::fprintf(stderr, "time_warp_ide: --compile needs --output <path>\n");
+            return 2;
+        }
+        QString error;
+        if (!timewarp::ui::standalone::compileFile(
+                QCoreApplication::applicationFilePath(), program, output,
+                parser.isSet(forceOption), &error)) {
+            std::fprintf(stderr, "time_warp_ide: %s\n", qPrintable(error));
+            return 5;
+        }
+        std::fprintf(stderr, "%s: compiled from %s\n", qPrintable(output),
+                     qPrintable(program));
+        return 0;
     }
 
     const QString screenshotPath = parser.value(screenshotOption);
@@ -156,6 +200,26 @@ int main(int argc, char* argv[]) {
     // geometry to the screen, so the saved position is lost on a display smaller
     // than the one it was saved on.
     window.restoreLayout();
+
+    // A standalone artifact (`--compile`) carries its program in this
+    // executable's tail. When there is one, this process *is* the program: no
+    // session restore, no authoring UI, and it runs as soon as the window is up.
+    const timewarp::ui::standalone::Embedded carried =
+        timewarp::ui::standalone::embeddedIn(QCoreApplication::applicationFilePath());
+    bool player = false;
+    if (carried.present) {
+        player = window.openStandaloneProgram(
+            carried.language, carried.source,
+            timewarp::ui::standalone::artifactName(
+                QCoreApplication::applicationFilePath()));
+        if (!player) {
+            std::fprintf(stderr,
+                         "time_warp_ide: this executable carries a program in an "
+                         "unknown language (%s)\n",
+                         qPrintable(carried.language));
+            return 2;
+        }
+    }
     if (!screenshotPath.isEmpty()) {
         // A fixed size for the picture, because a screenshot that depends on the
         // machine's saved window geometry is not reproducible and so cannot be
@@ -177,7 +241,8 @@ int main(int argc, char* argv[]) {
     }
 
     const QStringList arguments = parser.positionalArguments();
-    if (arguments.isEmpty() && screenshotPath.isEmpty() && exportPath.isEmpty()) {
+    if (arguments.isEmpty() && screenshotPath.isEmpty() && exportPath.isEmpty() &&
+        !player) {
         // Only when nothing was named on the command line: a file argument is a
         // request for that file, and a screenshot has to be reproducible from the
         // command line rather than from somebody's last session.
@@ -186,7 +251,8 @@ int main(int argc, char* argv[]) {
     openArguments(&window, arguments);
     window.show();
 
-    if (parser.isSet(runOption)) {
+    const bool autorun = parser.isSet(runOption) || player;
+    if (autorun) {
         // After `show()`, so the canvas has a real size to fit the drawing into:
         // a fit computed against a 0x0 widget would be recomputed on the first
         // resize anyway, but the run would also start before the window is
@@ -205,7 +271,7 @@ int main(int argc, char* argv[]) {
         // photograph an empty panel and look like a broken panel rather than a
         // fast shutter.
         int delay = 0;
-        if (parser.isSet(runOption)) {
+        if (autorun) {
             delay = 1500;
         }
         if (lessonsPanel) {

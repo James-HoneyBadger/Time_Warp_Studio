@@ -2,11 +2,128 @@
 
 ## [Unreleased]
 
-Four more languages, and the defects that examining their commands turned up.
+The IDE catches up with the engine, and programs can reach outside it.
 
 ### Added
 
-- **Four languages** — **APL**, **FOCAL**, **CHIP-8** and **Smalltalk**, taking the
+- **The 33 themes are back.** The removed PySide6 application shipped 33 named
+  colour schemes — the retro sets (Amber Lab, Turbo Vision, NeXTSTEP, Amiga
+  Workbench, CGA, C64, Apple II, DOS Blue, ZX Spectrum) as well as the modern
+  editor palettes (Dracula, Nord, Solarized, Catppuccin, Tokyo Night) and the
+  accessibility sets. `native/src/ui/themes.cpp` carries them as one record each,
+  generated from the Python's table rather than re-invented, so a learner who had
+  picked "Amiga Workbench 2.0" gets the same colours back. View > Theme lists all
+  33, Shift+F10 cycles them, the choice is remembered, and applying one sets the
+  palette, the window's own rules, the editor's syntax colours and the canvas
+  paper — a theme that recoloured the chrome and left the code blue would not be
+  a theme.
+- **The function keys work.** The bar under the window had been drawing ten
+  labelled keys since the port and doing nothing with them: its signal was
+  connected to a *second signal* of the same name, so a click was re-emitted to
+  nobody. It now has the Python's three layers (normal, shift, control), a badge
+  that cycles them, and one dispatcher behind every key, the matching shortcut
+  and the command palette. Thirty keys, each doing what its label says; the ones
+  whose feature is not built (split editor, find in files) say so in the status
+  bar rather than doing nothing.
+- **A command palette** (F10, Ctrl+Shift+P) over every menu entry, filtered as
+  you type and showing each command's shortcut. Built from the live menu bar, so
+  it cannot list a command that does not exist or miss one that does.
+- **Standalone executables.** `time_warp_ide --compile program.bas --output
+  hello` writes a copy of the IDE with the program inside it: double-click it and
+  it opens on the drawing, with the authoring UI hidden and the document
+  read-only. The payload is a documented trailer (`native/include/timewarp/ui/
+  standalone.hpp`), so the artifact is an ordinary executable that happens to
+  have some bytes after its segments. `--force` replaces an existing file and
+  nothing else does.
+- **Keyboard reference** (F1, Shift+F1), built from the same key table the bar
+  draws, so help and bar cannot disagree.
+- **CRT scanlines** are switchable (View > CRT Scanlines, Shift+F7). The overlay
+  has existed since the port and had no way to be turned on.
+- **The editor is a real editor.** Language-specific checking as you type
+  (`native/src/ui/lint.cpp`, one rule set per language, from the engine's own
+  command inventory): unbalanced brackets, unterminated strings and comments,
+  `FOR` without `NEXT`, `IF` without `THEN`, PILOT lines with no unit letter, and
+  a keyword one letter from a real one, with the spelling suggested. Findings are
+  a squiggle, a triangle in the gutter, and a tooltip with the sentence. Plus
+  optional word completion over the language's keywords and the document's own
+  names (Ctrl+Space asks even when the setting is off), auto-indent that follows
+  block openers, Tab/Shift+Tab over a selection, and a Preferences dialog (Ctrl+,)
+  with a live preview of a sample that is deliberately wrong in two places — so
+  changing a setting shows what checking looks like. Font, size, tab width,
+  gutter, current-line band, wrapping, indent, completion and checking are all
+  remembered per user.
+- **Sound that is actually audible.** `BEEP`, `SOUND` and `PLAY` were
+  acknowledge-only: they printed "🔊 SOUND 440Hz for 55ms" and played silence,
+  because the retired Python build made audio optional behind `pygame`. The
+  native build synthesises the period-correct waves itself
+  (`native/src/audio/music.cpp`: square, triangle, sine, noise; equal
+  temperament; envelopes so notes do not click), parses `PLAY`'s notation — tempo,
+  lengths, octaves, accidentals, dotted notes, rests, `N` note numbers — and
+  hands a WAV to the first of `paplay`, `aplay`, `ffplay` or `play` it finds. No
+  new build dependency; a machine with none of those is silent but not broken,
+  and the language's acknowledgement is still the reference's text, so the parity
+  gates are unchanged.
+- **Serial and parallel ports** (`native/src/io/ports.cpp`), so a program can talk
+  to a board: `SERIAL OPEN #1, "/dev/ttyUSB0", 9600`, `SERIAL WRITE`, `SERIAL
+  READ #1, A$, 2000`, `SERIAL CLOSE`, and `PARALLEL OPEN/WRITE/BYTE/CLOSE` for the
+  data lines. Raw POSIX `termios`, no library, timeouts on every read, writes
+  that wait rather than drop bytes. The device families a school plugs in are
+  allowed and everything else is refused with a sentence — a program that can
+  open any device node can also open a disk — with `TIME_WARP_PORTS` as the
+  teacher's escape hatch. Tested against a pseudo-terminal, which is a real
+  device with the other end in the test.
+- **`INKEY$` reads the keyboard.** It was the empty string by documented design,
+  which made every game unwinnable. The canvas forwards typed keys to the running
+  program through the host, one key per call, queued; a headless run still
+  answers empty, which is what the gates record.
+- **`DRAW` and `WAIT`.** `DRAW "U20 R20 D20 L20"` executes GW-BASIC's path string
+  through the turtle (U/D, R/L, E/H, F/G, B, N, M, C), and `WAIT ms` paces a frame
+  loop.
+
+### Fixed
+
+- **The X on a tab closed nothing.** `setTabsClosable(true)` draws the button and
+  then emits `QTabWidget::tabCloseRequested`, which nothing was connected to: the
+  port had wired only `ResizableTabWidget`'s own signal (middle-click and the
+  context menu), so the one control a user reaches for first was painted and
+  inert. Forwarded in the tab widget's constructor, so both tab groups get it, and
+  `ui_layout_tests` now clicks the real button rather than the signal.
+- A docstring on `FunctionKeyBar` and on the toolbar described ports that had not
+  happened; the disabled controls carry the reason instead.
+- F3 was bound twice (Open on the toolbar, Find Next in the Edit menu), which Qt
+  resolves by warning and firing whichever it prefers. F3 is Find Next, as in
+  every other editor; Open keeps Ctrl+O.
+- The lesson panel's verdict was hard-coded green-on-white, which is unreadable
+  on the green-phosphor and amber themes. It takes its colours from the theme.
+- A new tab opened after a theme was applied was syntax-coloured for the previous
+  one: the colours were set once, at construction.
+- `SyntaxHighlighter::setColors` updated the formats but not the rules, which hold
+  *copies* of them, so a colour change repainted nothing.
+- The turtle-speed slider was removed rather than finished: nothing animates the
+  display list, so it controlled an ability the application does not have. The
+  Settings button that replaced it opens the editor preferences.
+
+### Added: the language ports
+
+- **BASIC runs in C++.** The largest port, in five files: `basic.cpp` (variables,
+  the load-time scan, the drawing helpers), `basic_statements.cpp` (the dispatch),
+  `basic_text.cpp` (the reference's string expression evaluator),
+  `basic_features.cpp` (shapes, fractals, music, particles, speech) and
+  `basic_library.cpp` (the geometry those features draw). The core language,
+  narrowing types, `SUB`/`FUNCTION`, records, the file channel, the VGA
+  statements, `ON ERROR`/`RESUME` and the reference's Logo fallback are all
+  there: a `.bas` file's `FORWARD 15` is Logo's `FORWARD`, drawn by Logo's turtle
+  code, exactly as the reference forwards it. 137 programs run through both
+  engines with **0 differences**, and seven cases join `lang_tests`. **Every one
+  of the ten languages now runs in process**; nothing is routed to the Python
+  engine at run time.
+- **BASIC's remaining string and clock surface is covered.** `CHR$`, `FORMAT$`
+  and `REPEAT$` printed nothing because PRINT read any name containing `$(` as a
+  string array; the same defect existed in the reference and is fixed there too.
+  `FORMAT$` now understands both `%` conversions and `#` masks, and `TIME$`,
+  `DATE$` and `TIMER` read the local clock instead of answering empty/0. Seven
+  parity rows and the command matrix cover them.
+- **Four more languages** — **APL**, **FOCAL**, **CHIP-8** and **Smalltalk**, taking the
   lineup to ten. APL and FOCAL run line by line; CHIP-8 and Smalltalk run whole
   program. All four draw, all four are in the example corpus, and each has a
   command reference in `docs/LANGUAGE_GUIDE.md` and a tutorial in `docs/tutorials/`.
@@ -36,7 +153,7 @@ Four more languages, and the defects that examining their commands turned up.
   with **0 differences**, and seven cases join `lang_tests`. Smalltalk is no
   longer bridged.
 
-### Fixed
+### Fixed: the language ports
 
 - **FOCAL** — `ASK`'s answer never reached the program: the statement wrote to a
   private dictionary while the engine substituted from `interpreter.variables`, so
@@ -65,6 +182,12 @@ Four more languages, and the defects that examining their commands turned up.
   `STICK(n)`/`STRIG(n)` read the gamepad `JOYINIT` starts. `TYPE$(x)` answers the
   interpreter's type instead of printing nothing, and `SPEAK` reaches the speech
   handler.
+- **BASIC array and function reads in `PRINT`.** `MID$("HELLO", 1, 3)` printed
+  nothing because the `$(` of an array read claimed every `$`-suffixed function;
+  `BED$(I)` printed nothing because the index was read as a literal instead of
+  evaluated, which blanked two columns of `community_garden.bas`; and a `PRINT`
+  that neither evaluator could read used to answer 0, hiding a typo, where the
+  reference reports the evaluator's message.
 - **`RESUME NEXT` without line numbers** resumes after the statement that failed; the
   error handler now records the line index as well as the BASIC line number.
 - **COMAL `FUNC` in an expression.** `PRINT DOUBLE(21)` answers 42 in both engines

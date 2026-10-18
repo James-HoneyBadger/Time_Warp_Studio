@@ -36,6 +36,8 @@
 
 namespace timewarp::ui {
 
+class SoundPlayer;
+
 /// The native engine for a UI language, or empty when it still runs through
 /// the bridge. This is the one place the two enums are paired.
 [[nodiscard]] std::optional<timewarp::lang::Language> nativeLanguage(Language language);
@@ -55,6 +57,13 @@ public:
     /// white ink on the IDE's white canvas -- a run that reports four strokes
     /// and shows nothing.
     void begin_run();
+
+    /// The background a run starts on before the program names one. Set from the
+    /// theme; `{10, 10, 20}` is the reference's own surface and the default here.
+    /// A program's own `set_background` still wins for that run.
+    void set_default_background(timewarp::lang::Rgb colour) {
+        default_background_ = colour;
+    }
 
     [[nodiscard]] std::uint64_t submitted() const noexcept { return submitted_; }
 
@@ -92,6 +101,24 @@ public:
     void set_palette_color(int index, timewarp::lang::Rgb colour) override;
     [[nodiscard]] timewarp::lang::Rgb resolve_color(int index) const override;
 
+    // -- sound and keyboard -----------------------------------------------
+    //
+    // The engine synthesises and parses; this host hands the result to
+    // `SoundPlayer`, which is the Qt side. Without a player the sounds are
+    // dropped and `audio_available()` says so, so `BEEP`/`SOUND`/`PLAY` still
+    // acknowledge the way the reference does.
+
+    void set_sound_player(SoundPlayer* player) { sound_ = player; }
+    void beep(int milliseconds) override;
+    void tone(double frequency, int milliseconds, const char* waveform) override;
+    void play_music(const char* notation) override;
+    void stop_sound() override;
+    [[nodiscard]] bool audio_available() const override;
+
+    /// A character typed at the canvas, queued for `INKEY$`.
+    void push_keystroke(char key);
+    [[nodiscard]] std::string take_keystrokes() override;
+
 private:
     void submit(const timewarp::canvas::CanvasCommand& command);
     void submit_text(timewarp::canvas::CanvasCommand command, std::string_view text);
@@ -109,6 +136,8 @@ private:
     /// The reference's canvas colour, remembered so a `CS` -- which resets the
     /// canvas, background included -- can put it back.
     timewarp::lang::Rgb background_{10, 10, 20};
+    /// The background a run begins on. See `set_default_background`.
+    timewarp::lang::Rgb default_background_{10, 10, 20};
     /// Where the turtle is, for the 3-D projection. In 2-D the queue's own
     /// motion commands carry the arithmetic; in 3-D the projection has to be
     /// computed here, because the canvas is a plane.
@@ -116,6 +145,12 @@ private:
     bool pen_down_ = true;
     bool canvas_pose_dirty_ = false;
     double pen_width_ = 2.0;
+    /// Null in a headless run, which is the normal case for the gates.
+    SoundPlayer* sound_ = nullptr;
+    /// Keys typed since the last `INKEY$`. Written by the GUI thread, read by the
+    /// runner thread, so it has its own lock.
+    mutable std::mutex keys_mutex_;
+    std::string keys_;
 };
 
 class NativeRunner final : public QThread {
@@ -137,6 +172,16 @@ public:
     void request_stop();
     void answerInput(const QString& text);
 
+    /// The surface a run begins on, from the theme (`MainWindow::applyTheme`).
+    /// Set before `start()`; the host reads it on the runner thread when the run
+    /// begins. A program that names its own background still overrides it.
+    void set_surface_color(timewarp::lang::Rgb colour);
+    /// Where tones go. Null leaves `BEEP`/`SOUND`/`PLAY` silent but accepted,
+    /// which is what a headless run wants.
+    void set_sound_player(SoundPlayer* player);
+    /// A key typed at the canvas, queued for `INKEY$`. Callable from the GUI
+    /// thread while the program runs.
+    void push_key(char key);
     /// Called from the runner thread whenever a drawing command reaches the
     /// canvas queue, so the window drains it. Without this a run that produces
     /// more commands than the queue holds stalls until something else wakes the

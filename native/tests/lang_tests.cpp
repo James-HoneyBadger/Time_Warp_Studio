@@ -1152,6 +1152,91 @@ void test_smalltalk_turtle_messages_draw() {
     TW_CHECK_EQ(run.host.ops.at(1), std::string{"right 90"});
 }
 
+// ---------------------------------------------------------------------------
+// BASIC
+// ---------------------------------------------------------------------------
+
+struct BasicRun {
+    std::vector<std::string> output;
+    RecordingHost host;
+};
+
+BasicRun run_basic(std::string_view source, std::vector<std::string> inputs = {}) {
+    BasicRun run;
+    Interpreter interpreter{Language::Basic, run.host};
+    std::size_t next = 0;
+    interpreter.set_input_callback([&](const std::string&) {
+        if (next < inputs.size()) {
+            return inputs[next++];
+        }
+        return std::string{};
+    });
+    interpreter.load_program(source);
+    interpreter.run();
+    run.output = interpreter.output();
+    return run;
+}
+
+// `MID$(` contains `$(`, which an array read used to claim first: every string
+// function spelled with a `$` returned an empty field.
+void test_basic_dollar_string_functions_are_calls_not_array_reads() {
+    const BasicRun run = run_basic("PRINT MID$(\"HELLO\", 1, 3)\nPRINT LEFT$(\"HELLO\", 2)");
+    TW_CHECK_EQ(run.output.at(0), std::string{"HEL"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"HE"});
+}
+
+// The reference evaluates the index, so a string array read through a loop
+// variable is the element, not an empty field.
+void test_basic_string_array_index_is_an_expression() {
+    const BasicRun run =
+        run_basic("DIM B$(3)\nB$(1) = \"NORTH\"\nFOR I = 1 TO 1\nPRINT B$(I)\nNEXT I");
+    TW_CHECK_EQ(run.output.at(0), std::string{"NORTH"});
+}
+
+// A PRINT whose string evaluation fails falls back to the arithmetic evaluator,
+// and that evaluator's own message is the answer -- an empty line would hide a
+// typo behind a plausible result.
+void test_basic_unreadable_print_reports_the_evaluator_message() {
+    const BasicRun run = run_basic("DIM N(3)\nPRINT \"X\" + STR$(N(1))");
+    TW_CHECK(any_error(run.output));
+    TW_CHECK(contains(run.output, "Unexpected character"));
+}
+
+// The reference forwards a statement it does not recognise to the Logo
+// executor when the first word is a Logo command, so a `.bas` file can use
+// turtle words; a real typo is still reported.
+void test_basic_logo_words_draw_through_the_fallback() {
+    const BasicRun run = run_basic("CLEARSCREEN\nPENUP\nSETPENCOLOR \"YELLOW\"\n"
+                                   "PENDOWN\nFORWARD 15\nRIGHT 90");
+    TW_CHECK_EQ(run.host.ops.at(0), std::string{"reset"});
+    TW_CHECK_EQ(run.host.ops.at(1), std::string{"penup"});
+    TW_CHECK_EQ(run.host.ops.at(3), std::string{"pendown"});
+    TW_CHECK_EQ(run.host.ops.at(4), std::string{"forward 15"});
+    TW_CHECK_EQ(run.host.ops.at(5), std::string{"right 90"});
+    TW_CHECK(!any_error(run.output));
+}
+
+void test_basic_unknown_word_is_still_an_error() {
+    const BasicRun run = run_basic("FLURB 3");
+    TW_CHECK(contains(run.output, "Unknown BASIC command: FLURB 3"));
+}
+
+// SAY refuses, exactly as the reference does when its optional `pyttsx3` is
+// absent. An acknowledgement would claim a sentence was spoken by a build with
+// no speech synthesiser in it, and the parity gate compares this line.
+void test_basic_say_refuses_without_a_backend() {
+    const BasicRun run = run_basic("SAY \"HELLO\"\nA$ = \"WORLD\"\nSAY A$");
+    TW_CHECK_EQ(run.output.at(0), std::string{"❌ [line 1] Speech synthesis not available"});
+    TW_CHECK_EQ(run.output.at(1), std::string{"❌ [line 3] Speech synthesis not available"});
+}
+
+void test_basic_loops_and_subroutines_run() {
+    const BasicRun run = run_basic(
+        "10 TOTAL = 0\n20 FOR I = 1 TO 3\n30 GOSUB 100\n40 NEXT I\n50 PRINT TOTAL\n"
+        "60 END\n100 TOTAL = TOTAL + I\n110 RETURN");
+    TW_CHECK_EQ(run.output.at(0), std::string{"6"});
+}
+
 int main() {
     test_chip8_program_starts_at_0x200();
     test_chip8_labels_resolve_forward_references();
@@ -1255,5 +1340,12 @@ int main() {
     test_smalltalk_non_local_return_leaves_the_block();
     test_smalltalk_method_answers_its_last_expression();
     test_smalltalk_turtle_messages_draw();
+    test_basic_dollar_string_functions_are_calls_not_array_reads();
+    test_basic_string_array_index_is_an_expression();
+    test_basic_unreadable_print_reports_the_evaluator_message();
+    test_basic_logo_words_draw_through_the_fallback();
+    test_basic_unknown_word_is_still_an_error();
+    test_basic_say_refuses_without_a_backend();
+    test_basic_loops_and_subroutines_run();
     return tw::test::summary("lang_tests");
 }

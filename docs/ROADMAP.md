@@ -21,10 +21,10 @@ yet — please check the list below before reporting one as a regression.
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
 | Languages | 10 languages, 48 verified example programs |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
-| Bridged engines | BASIC — `native/bridge/` |
-| Native executors | FOCAL, PILOT, COMAL, CHIP-8, Logo, APL, REXX and Smalltalk — `timewarp_lang`, in process |
+| Bridged engines | None — every language runs in process. `native/bridge/` remains as the reference the parity gates and the lesson check use |
+| Native executors | All ten — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk and Scheme whole-program |
 | Packaging | `make install` with the desktop entry and icon; `DESTDIR` staging |
-| Quality gates | 13 CTest suites in 4 build configurations, 3 parity gates, 551 engine tests, 437 command rows, 330 parity programs |
+| Quality gates | 13 CTest suites in 4 build configurations, 3 parity gates, 551 engine tests, 445 command rows, 461 parity programs |
 
 ---
 
@@ -132,17 +132,18 @@ tests; `PRINT DOUBLE 21` now prints 42.
 
 ---
 
-## Next: documentation accuracy
+## Documentation accuracy
 
 Documentation that overstates the product costs a newcomer the same time a bug does,
-and is harder to notice. Claims have been corrected rather than quietly dropped: BASIC
-was described as having a `SPEAK` command (the executor dispatches `SAY`; `SPEAK`
-reports "Unknown BASIC command"), and the README described the shared expression
-evaluator as running in-process when `timewarp_expr` is not linked into the application
-at all — nothing under `src/ui/` includes it and `timewarp_ui` does not link it, so
-expressions in a Run are still the Python engine's.
+and is harder to notice. Claims are corrected rather than quietly dropped. Three that
+were wrong have been fixed: BASIC's `SPEAK` was documented before either executor
+dispatched it (both spellings work now); the README called the shared expression
+evaluator in-process before `timewarp_expr` was linked (it is linked now, and the
+README says so); and the FAQ described the removed PySide6 application's autosave,
+version history, themes and shortcuts as if they existed (it now describes this
+application, and the features it lacks are listed here).
 
-The editor's missing syntax highlighting was the third, and it has been **built rather
+The editor's missing syntax highlighting was the fourth, and it has been **built rather
 than re-documented**: `native/src/ui/syntax_highlighter.cpp` now colours each language
 with its own rules, and `syntax_highlighter_tests` asserts the colour at named
 positions.
@@ -202,37 +203,64 @@ Four limits are recorded rather than left to be discovered:
 
 ---
 
-## Next: port the languages, then delete the bridge
+## Ports complete: what remains of the bridge
 
-The bridge exists only because BASIC is not native yet. That port removes its path
-through the bridge, and the differential gates are the contract.
+Every language runs in C++ now. The Python engine in `native/bridge/` was the
+reference each port was judged against, and it keeps three jobs that the gates
+depend on:
 
-**APL, REXX and Smalltalk are done.** APL was the smallest and the only one with
-no dependency on the interpreter: arrays, glyphs and keyword spellings, reduce and
-scan, the turtle words and `∇` definitions all live in `native/src/lang/apl.cpp`.
-REXX followed its own expression grammar — typeless values, abuttal
-concatenation, `PARSE`, and the `DO`/`SELECT` block forms — into
-`native/src/lang/rexx.cpp`. Smalltalk is the object system, in four files:
-`smalltalk.cpp` (tokens, parser, sends, printing), `smalltalk_library.cpp` (the
-classes and primitives), `smalltalk_driver.cpp` (chunks, method installation, the
-top-level echo) and `smalltalk_internal.hpp`. All three are gated by the same rows
-and examples the reference is: 46, 35 and 22 programs, 0 differences each.
+1. `lang_differential_check.py` runs every program through both engines.
+2. `command_matrix.py` and `example_smoke.py` drive the reference.
+3. The Lessons panel asks the worker to check a learner's program, so the
+   panel's verdict and `teach.py`'s are one function's answer.
 
-1. **BASIC** — the largest remaining port: the core language first, then the
-   extended statement set.
+The IDE itself no longer sends a program to it: `executor_for()` answers for all
+ten languages, so `runInBridge` has no runtime case left.
 
-The parity harness now asks the built binary which languages have an executor
-(`lang_cli --ported`), so each port is registered in exactly one place,
-`executor_for`. Adding the next one does not mean editing a second list on the
-Python side.
+**BASIC was the last port.** The core language, `PRINT`/`INPUT`/`FOR`/`WHILE`,
+narrowing variable types, `SUB`/`FUNCTION`, records and the file channel, the VGA
+statements, and the reference's Logo fallback (a `.bas` file's `FORWARD` is
+Logo's `FORWARD`) are all in `native/src/lang/basic*.cpp`. It is gated by the
+same rows and examples the reference is: 137 programs, 0 differences.
 
-Once the last of them lands, `native/bridge/` and the `python_worker` target are
-deleted together; nothing else may depend on them.
+The next step is to move lesson checking into the native engine; only then can
+`native/bridge/` and the `python_worker` target be deleted together.
 
-BASIC's extended statement set (music, speech, shapes, particles, fractals,
-gamepad) is deferred until the core language is byte-compatible: those are
-language-level features reached by name, and they are what makes BASIC's port
-large rather than trivial.
+BASIC's extended statement set is ported too: shapes, particles, fractals, music,
+speech and the gamepad words are in `basic_features.cpp` and `basic_library.cpp`,
+and the command table exercises them. What is now true, and what is still limited:
+
+- **Sound is real** (`native/src/audio/music.cpp` + `native/src/ui/sound_player.cpp`).
+  `BEEP`, `SOUND` and `PLAY` synthesise square/triangle/sine/noise at equal
+  temperament, parse `PLAY`'s notation (tempo, lengths, octaves, accidentals,
+  dotted notes, rests, `N` numbers) and play through the first of `paplay`,
+  `aplay`, `ffplay` or `play` on the machine. The acknowledgement text is still
+  the reference's, so parity is unchanged. **Limits**: one sound at a time (a new
+  tone stops the previous one); no mixing; a machine with none of those players
+  is silent, and `audio_available()` says so.
+- **`SAY` refuses rather than pretending.** There is no speech synthesiser in
+  the build, and the reference's was an optional `pyttsx3` it never shipped
+  either. Both answer `Speech synthesis not available`, which the parity gate
+  compares.
+- **`INKEY$` reads the canvas's keyboard** while a program runs. A headless run
+  has no keyboard and answers empty, which is what the matrix records.
+- **`TIME$`, `DATE$` and `TIMER` read the machine's local clock**, as the
+  reference does. They are not constants, so the parity rows assert their shape
+  (`LEN(TIME$)`) rather than a value.
+- **`SHELL` stays blocked.** The reference refuses it for security and the port
+  keeps that answer.
+- **Ports are native extensions.** `SERIAL` and `PARALLEL`
+  (`native/src/io/ports.cpp`) open raw POSIX devices for the serial and parallel
+  families, with timeouts and a write that waits; `DRAW` and `WAIT` are the other
+  two. The reference engine never implemented any of them, so they are documented
+  in `docs/LANGUAGE_GUIDE.md` and **not** in `command_table.py` — the parity gates
+  cannot compare a command one side does not have.
+- **Graphics for games** is turtle-and-primitive based: `SCREEN`, `PSET`,
+  `LINE`, `CIRCLE`, `PAINT`, `DRAW`, `SPRITE` (position tracking), text at a
+  point, palette indices, plus `INKEY$` and `WAIT` for the loop. **Not built**: a
+  pixel framebuffer with `GET`/`PUT` sprite capture and a fixed screen
+  coordinate system (the canvas is a display list with fit-to-content), and a
+  sound-free `STICK`/`STRIG` gamepad backend on this platform.
 
 ---
 
@@ -241,9 +269,9 @@ large rather than trivial.
 **Debugging** — `DebuggerRunner` is wired for Scheme, and the **Debug** tab is a real
 panel driving it: Continue, Pause, Step In/Over/Out, Stop and breakpoints all reach the
 runner, which reports the line, the procedure, the call stack and the frame's bindings.
-What is still missing is *breadth and depth*: only Scheme can be stepped (the four
-bridged languages run to completion in another process, and the native executors have
-no pause protocol, so the panel says so rather than offering dead buttons), the
+What is still missing is *breadth and depth*: only Scheme can be stepped (the
+other languages run to completion and have no pause protocol, so the panel says
+so rather than offering dead buttons), the
 toolbar's Debug/Continue/Trace actions do not drive the
 panel yet, and there are no watch expressions and no step granularity finer than a form.
 
@@ -275,24 +303,46 @@ save-to-file.
 built: `MainWindow::saveSession` records the documents that were open,
 `restoreSession` reopens them, and File > Open Recent lists the last ten paths (with
 a Clear Menu entry). Crash recovery and autosave are still missing — the window
-prompts on close, but a process that dies does not.
+prompts on close, but a process that dies does not. There is no version history,
+project panel or split view either.
 
-**Input** — the bridged languages' input round-trip (the `in`/`in-reply` protocol
-and the prompt dialog) is implemented but has no automated coverage, because the
-prompt is modal. It needs a manual pass with a PILOT or BASIC program.
+**Also unbuilt** — printing, code/session/lesson export, font selection, the
+snippet library, the accessibility presets and the REPL bar's interpreter wiring
+(the bar is laid out and its signal exists; nothing is connected to it).
+
+**Input** — the input round-trip (the prompt, and the `in`/`in-reply` protocol the
+reference worker uses) is implemented,
+but it has no automated coverage, because the prompt is modal. It needs a manual
+pass with a PILOT or BASIC program.
 
 ---
 
 ## Next: the retro workstation feel
 
-**Themes** — the removed implementation had 33 (including Amber, Green, C64 and
-Apple II). They are to be carried as data and applied through QSS plus a palette
-in `native/src/ui/ui_style.cpp`. **No theme is ported yet**; treat the styling as
-provisional until this lands.
+**Themes are built.** All 33 of the removed implementation's schemes are back
+(`native/src/ui/themes.cpp`, data in `theme_table.inc`, generated from the Python's
+table): the retro sets (Amber Lab, Borland Turbo Vision, NeXTSTEP, Amiga Workbench,
+CGA, C64, Apple II, DOS Blue, ZX Spectrum), the modern editor palettes (Dracula,
+Nord, Solarized, Catppuccin, Tokyo Night, Gruvbox) and the accessibility sets (high
+contrast, dyslexia friendly, two monochromes). View > Theme lists them, Shift+F10
+cycles them, the choice is persisted, and one record reaches everything: the
+application palette, the window's own rules, the editor's syntax colours, the
+canvas paper and the lesson panel's verdict colours. `themes::paletteFor` also
+sets the `dark`/`mid`/`shadow` roles the base stylesheet reads — a palette that
+left those at the platform's values paints light-theme borders on a dark window,
+which is the failure mode that makes a "ported" theme look half finished.
 
-**Then** — CRT effects (scanlines, curvature, vignette, glow, flicker), a
-function-key bar with its Shift/Ctrl layers, screen modes, focus mode, and a
-command palette.
+**CRT effects** — the overlay (`CrtOverlay`, `native/src/ui/panels.cpp`) draws
+scanlines and is now switchable (View > CRT Scanlines, Shift+F7). Curvature,
+vignette, glow and flicker are not drawn, and there is no intensity control in the
+UI.
+
+**The function-key bar is built**, with the Python's three modifier layers, a badge
+that cycles them, and a dispatcher behind every key; **the command palette** is
+built too (F10, Ctrl+Shift+P). What remains from that list: screen modes, focus
+mode, and the workspace decks — the deck selector offers four, and
+`2:SPLIT` answers that the split workspace is not built (the second editor pane
+exists in the layout but nothing creates a tab in it).
 
 **Turtle showpiece** — exporting the drawing and copying it to the clipboard are
 built: File > Export Drawing (or **Ctrl+E**), Edit > Copy Drawing, and
@@ -301,10 +351,31 @@ built: File > Export Drawing (or **Ctrl+E**), Edit > Copy Drawing, and
 turtle marker, twice the on-screen size — so a saved picture is a picture rather than
 a screenshot.
 
-Still missing here: animation with a speed control (the toolbar slider sets the
-bridge's speed, nothing animates the display list), **SVG and PDF** export, which need
-the QtSvg and QtPrintSupport components the build does not currently ask for, a
-turtle-state inspector and a drawing-command log.
+Still missing here: animation with a speed control (the toolbar slider is disabled
+until drawings animate), **SVG and PDF** export, which need the QtSvg and
+QtPrintSupport components the build does not currently ask for, a turtle-state
+inspector and a drawing-command log.
+
+---
+
+## Distributing a program
+
+`time_warp_ide --compile program.bas --output hello` writes a standalone executable:
+a byte-for-byte copy of the IDE with the program appended as a trailer
+(`native/include/timewarp/ui/standalone.hpp` documents the format). Running it opens
+the window on the drawing, with the authoring UI hidden, the document read-only and
+the program already run — what a learner means by "send it to somebody".
+
+Limits, stated rather than discovered:
+
+- The artifact links against Qt like the IDE does, so it needs the same Qt runtime.
+  A static build is not made.
+- Each artifact carries a full copy of the IDE (about 6MB), not a minimal player.
+  A dedicated `time_warp_player` target would be smaller and is the obvious next
+  step; it is not built.
+- The payload is appended, not compiled: the program is still interpreted, at the
+  same speed. Nothing is optimised and nothing is hidden — `strings hello` finds the
+  source, which is the right answer for a teaching tool.
 
 ---
 

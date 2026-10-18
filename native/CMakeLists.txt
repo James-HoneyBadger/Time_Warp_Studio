@@ -180,10 +180,17 @@ endif()
 # ---------------------------------------------------------------------------
 
 add_library(timewarp_lang
+    src/audio/music.cpp
+    src/io/ports.cpp
     src/lang/value.cpp
     src/lang/language.cpp
     src/lang/interpreter.cpp
     src/lang/python_random.cpp
+    src/lang/basic.cpp
+    src/lang/basic_statements.cpp
+    src/lang/basic_features.cpp
+    src/lang/basic_library.cpp
+    src/lang/basic_text.cpp
     src/lang/chip8.cpp
     src/lang/focal.cpp
     src/lang/pilot.cpp
@@ -207,11 +214,18 @@ target_include_directories(timewarp_lang
 target_compile_features(timewarp_lang PUBLIC cxx_std_20)
 
 if(MSVC)
-    target_compile_options(timewarp_lang PRIVATE /W4 /permissive-)
+    target_compile_options(timewarp_lang PRIVATE /W4 /permissive- /fp:precise)
 else()
     target_compile_options(timewarp_lang PRIVATE
         -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast
         -Wlogical-op -Wnull-dereference
+        # No fused multiply-add. The reference is CPython, which rounds every
+        # multiplication and addition separately; contracting `start + i*step`
+        # into one fma changes the last bits of a shape's vertices, and a
+        # vertex that is 6e-17 away from where Python puts it is a different
+        # drawing. Compiling without contraction is what makes the comparison
+        # about behaviour rather than about rounding.
+        -ffp-contract=off
     )
     if(TIME_WARP_EXPR_WERROR)
         target_compile_options(timewarp_lang PRIVATE -Werror)
@@ -519,24 +533,36 @@ if(Qt6_FOUND)
         add_library(timewarp_ui
             src/ui/app.cpp
             src/ui/code_editor.cpp
+            src/ui/command_palette.cpp
             src/ui/find_bar.cpp
+            src/ui/lint.cpp
             src/ui/language.cpp
             src/ui/main_window.cpp
             src/ui/native_runner.cpp
             src/ui/panels.cpp
+            src/ui/preferences.cpp
             src/ui/resizable_tab_widget.cpp
+            src/ui/sound_player.cpp
+            src/ui/standalone.cpp
             src/ui/syntax_highlighter.cpp
+            src/ui/themes.cpp
             src/ui/turtle_canvas.cpp
             src/ui/ui_style.cpp
             # Listed so AUTOMOC scans them: the Q_OBJECT classes live in headers
             # outside this target's source directory.
             include/timewarp/ui/code_editor.hpp
+            include/timewarp/ui/command_palette.hpp
             include/timewarp/ui/find_bar.hpp
+            include/timewarp/ui/lint.hpp
             include/timewarp/ui/main_window.hpp
             include/timewarp/ui/native_runner.hpp
             include/timewarp/ui/panels.hpp
+            include/timewarp/ui/preferences.hpp
             include/timewarp/ui/resizable_tab_widget.hpp
+            include/timewarp/ui/sound_player.hpp
+            include/timewarp/ui/standalone.hpp
             include/timewarp/ui/syntax_highlighter.hpp
+            include/timewarp/ui/themes.hpp
             include/timewarp/ui/turtle_canvas.hpp
             include/timewarp/ui/ui_style.hpp
         )
@@ -669,6 +695,19 @@ if(Qt6_FOUND)
             # Syntax highlighting is a document transform, not a widget: it is
             # tested against a bare QTextDocument so a failure names the rule
             # that broke rather than showing up as "the colours look wrong".
+            # Sound and ports: arithmetic and a pseudo-terminal, so both halves
+            # run on a machine with no speaker and no board attached.
+            add_executable(media_tests tests/media_tests.cpp)
+            target_link_libraries(media_tests PRIVATE timewarp::lang)
+            target_include_directories(media_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+            if(NOT MSVC)
+                target_compile_options(media_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+                if(TIME_WARP_EXPR_WERROR)
+                    target_compile_options(media_tests PRIVATE -Werror)
+                endif()
+            endif()
+            add_test(NAME media_tests COMMAND media_tests)
+
             add_executable(syntax_highlighter_tests tests/syntax_highlighter_tests.cpp)
             target_link_libraries(syntax_highlighter_tests PRIVATE timewarp::ui)
             target_include_directories(syntax_highlighter_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)

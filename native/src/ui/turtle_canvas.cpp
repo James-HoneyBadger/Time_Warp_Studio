@@ -8,6 +8,7 @@
 #include <numbers>
 
 #include <QFont>
+#include <QKeyEvent>
 #include <QMouseEvent>
 #include <QImage>
 #include <QImageWriter>
@@ -361,7 +362,7 @@ void TurtleCanvas::reset() {
     turtle_visible_ = true;
     pen_color_ = QColor{0, 0, 0};
     pen_width_ = 1.0;
-    background_ = QColor{255, 255, 255};
+    background_ = surface_color_;
     applied_ = 0;
     ignored_ = 0;
     zoom_ = 1.0;
@@ -468,6 +469,18 @@ void TurtleCanvas::setGridVisible(bool visible) {
     update();
 }
 
+void TurtleCanvas::setSurfaceColor(const QColor& colour) {
+    if (!colour.isValid()) {
+        return;
+    }
+    surface_color_ = colour;
+    // Repainted immediately as well as remembered: a theme is applied while the
+    // canvas is idle, and an idle canvas showing the previous theme's paper until
+    // the next run is the whole visible half of the feature missing.
+    background_ = colour;
+    update();
+}
+
 // ---------------------------------------------------------------------------
 // Events
 // ---------------------------------------------------------------------------
@@ -498,6 +511,16 @@ void TurtleCanvas::wheelEvent(QWheelEvent* event) {
                           cursor.y() - height() / 2.0 + (anchor.y() - centre.y()) * s};
     update();
     event->accept();
+}
+
+void TurtleCanvas::keyPressEvent(QKeyEvent* event) {
+    // Printable characters only: `INKEY$` in these dialects answers text, and a
+    // cursor key would arrive as an empty string, which a program reads as
+    // "nothing was pressed".
+    if (!event->text().isEmpty()) {
+        emit keyTyped(event->text().at(0));
+    }
+    QWidget::keyPressEvent(event);
 }
 
 void TurtleCanvas::mousePressEvent(QMouseEvent* event) {

@@ -21,11 +21,11 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
 
 ### Testing
 
-- [ ] `make test` — the 12 C++ suites
+- [ ] `make test` — the 13 C++ suites
 - [ ] `make test-debug` and `make asan` — the other build trees
 - [ ] `make engine-test` — the bridge engine's pytest suite
 - [ ] `make smoke` — all 48 example programs through the real bridge
-- [ ] Both differential gates report 0 unexpected mismatches
+- [ ] All three differential gates (expression, Scheme, languages) report 0 unexpected mismatches
 - [ ] Manual smoke test of the IDE (launch, open an example, run a turtle program)
 
 ### Documentation

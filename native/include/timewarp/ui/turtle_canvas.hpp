@@ -101,6 +101,16 @@ public:
     void setGridVisible(bool visible);
     [[nodiscard]] bool gridVisible() const noexcept { return grid_visible_; }
 
+    /// The colour a *run* starts on when the program does not name one: the
+    /// theme's canvas surface. `reset()` returns to this rather than to white, so
+    /// applying a theme and starting a run does not flash a white canvas -- and so
+    /// there is one answer to "what colour is the paper" rather than two.
+    ///
+    /// A program that sets a background colour still wins: this is the default,
+    /// not an override.
+    void setSurfaceColor(const QColor& colour);
+    [[nodiscard]] QColor surfaceColor() const noexcept { return surface_color_; }
+
     // -- coordinate conversion --------------------------------------------
     //
     // Public because they are the only way to ask "where is this on screen" and
@@ -174,6 +184,9 @@ protected:
     void mousePressEvent(QMouseEvent* event) override;
     void mouseMoveEvent(QMouseEvent* event) override;
     void mouseReleaseEvent(QMouseEvent* event) override;
+    /// Forwards printable keys to `keyTyped`, so a program watching `INKEY$` can
+    /// read them.
+    void keyPressEvent(QKeyEvent* event) override;
 
 signals:
     /// The turtle moved, turned, or changed pen. The zoom/status readouts and,
@@ -182,6 +195,9 @@ signals:
     /// Something was drawn. Emitted once per applied command rather than per
     /// paint, so a listener can throttle its own repaints.
     void contentChanged();
+    /// A key was pressed while the canvas had focus. `INKEY$` is fed from this:
+    /// a game polls the canvas, so the canvas is where the keys are typed.
+    void keyTyped(QChar key);
 
 private:
     /// One straight pen stroke, in world coordinates.
@@ -244,6 +260,9 @@ private:
     QColor pen_color_{0, 0, 0};
     double pen_width_ = 1.0;
     QColor background_{255, 255, 255};
+    /// What `reset()` puts in `background_`. Set from the theme; white by
+    /// default, which is what the canvas shipped with.
+    QColor surface_color_{255, 255, 255};
 
     QVector<Stroke> strokes_;
     QVector<Shape> shapes_;

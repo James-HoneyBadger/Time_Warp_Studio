@@ -96,8 +96,8 @@ Help improve code quality:
 
 ### Prerequisites
 
-The application is C++20 and Qt6. Python is needed only for the temporary bridge
-engine, which runs the four languages that are not ported to C++ yet.
+The application is C++20 and Qt6. Python is needed only for the reference
+engine the parity gates and the lesson check use; every language runs in C++.
 
 | To work on | You need |
 | ---------- | -------- |
@@ -135,10 +135,9 @@ cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
 cmake --build native/build -j
 ```
 
-Contributors who touch a bridged language also need the bridge's test
-tooling. Nine of the ten languages run through it — BASIC, PILOT, Logo, COMAL,
-REXX, FOCAL, APL, CHIP-8 and Smalltalk; Scheme is the only one with a C++
-interpreter:
+Contributors who touch the reference engine also need its test
+tooling. Its Python executors are what the parity gates compare the native ones
+against, so they must keep running even though no program uses them at run time:
 
 ```bash
 python3 -m venv .venv
@@ -154,7 +153,7 @@ Optional extras for those languages are not required: `pyttsx3` (BASIC `SAY`),
 # Build and run the IDE
 make -C native run
 
-# The 12 C++ suites
+# The 13 C++ suites
 make test
 ```
 
@@ -211,8 +210,9 @@ finding is intentional, regenerate it and review the diff:
 
 ### Bridge engine code (Python)
 
-The Python in `native/bridge/` is the temporary engine for the four languages
-that are not ported to C++. It is standard-library only, `ruff` clean, and each
+The Python in `native/bridge/` is the reference engine the parity gates, the
+command matrix and the lesson check run in. It is standard-library only, `ruff`
+clean, and each
 executor is a stateless function returning text with an emoji prefix.
 
 Two things in there are not executors and break just as easily: the lesson
@@ -364,7 +364,7 @@ Requested by Issue #42 - BASIC language completeness.
 ### Run Test Suite
 
 ```bash
-# The 12 C++ suites
+# The 13 C++ suites
 make test
 
 # One suite, by name
@@ -595,7 +595,7 @@ make test-all && make lint && make lint-md
 - [ ] Tests written and passing
 - [ ] Build is warning-free (`-Werror`)
 - [ ] Bridge code (if touched) is ruff clean and standard-library only
-- [ ] `make smoke` is unchanged — every example still runs, and the 14 that must draw still draw
+- [ ] `make smoke` is unchanged — every example still runs, and the 18 that must draw still draw
 - [ ] Lesson changes pass `python3 native/tools/teach.py validate`
 - [ ] Documentation updated, including anything the change made untrue
 - [ ] No breaking changes (or documented)

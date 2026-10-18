@@ -1,9 +1,9 @@
 """
 Core interpreter for Time Warp Studio.
 
-Central dispatcher for the language executors (BASIC, PILOT, Logo, COMAL,
-REXX, Scheme). Manages execution state, variable storage, and turtle
-graphics coordination.
+Central dispatcher for the ten language executors (BASIC, APL, Logo, PILOT,
+FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk). Manages execution state,
+variable storage, and turtle graphics coordination.
 """
 
 # The interpreter is intentionally large and exposes many public methods

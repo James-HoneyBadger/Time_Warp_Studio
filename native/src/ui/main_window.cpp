@@ -6,6 +6,7 @@
 #include "timewarp/ui/native_runner.hpp"
 
 #include <QAction>
+#include <QActionGroup>
 #include <QApplication>
 #include <QCloseEvent>
 #include <QClipboard>
@@ -46,9 +47,14 @@
 #include "timewarp/canvas/qt_bridge.hpp"
 #include "timewarp/ui/app.hpp"
 #include "timewarp/ui/code_editor.hpp"
+#include "timewarp/ui/command_palette.hpp"
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/panels.hpp"
+#include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
+#include "timewarp/ui/sound_player.hpp"
+#include "timewarp/ui/syntax_highlighter.hpp"
+#include "timewarp/ui/themes.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 #include "timewarp/ui/ui_style.hpp"
 
@@ -74,6 +80,22 @@ constexpr auto kSettingOpenFiles = "session/openFiles";
 /// reads.
 constexpr auto kSettingRecentFiles = "session/recentFiles";
 constexpr int kRecentFileLimit = 10;
+/// The chosen theme's name. A settings value rather than a pointer, so a theme
+/// removed from a later build cannot leave a dangling index behind.
+constexpr auto kSettingTheme = "appearance/theme";
+
+// The editor's customisations. One key each rather than a serialised blob: a
+// settings file a person can read is a settings file a person can fix, and a new
+// field in a later build defaults rather than invalidating the rest.
+constexpr auto kSettingEditorFont = "editor/fontFamily";
+constexpr auto kSettingEditorFontSize = "editor/fontSize";
+constexpr auto kSettingEditorTabWidth = "editor/tabWidth";
+constexpr auto kSettingEditorLineNumbers = "editor/showLineNumbers";
+constexpr auto kSettingEditorCurrentLine = "editor/highlightCurrentLine";
+constexpr auto kSettingEditorWordWrap = "editor/wordWrap";
+constexpr auto kSettingEditorAutoIndent = "editor/autoIndent";
+constexpr auto kSettingEditorCompletion = "editor/completion";
+constexpr auto kSettingEditorLint = "editor/lint";
 
 constexpr int kMinimumWindowWidth = 900;
 constexpr int kMinimumWindowHeight = 600;
@@ -93,10 +115,9 @@ constexpr int kOutputHeight = 200;
 constexpr int kCanvasHeight = 300;
 constexpr int kToolBarMinimumHeight = 44;
 
-/// The turtle speed slider's range, from the Python toolbar.
-constexpr int kSpeedMinimum = 0;
-constexpr int kSpeedMaximum = 500;
-
+/// The size a window is forced to for `--screenshot` when none was asked for.
+constexpr int kDefaultScreenshotWidth = 1400;
+constexpr int kDefaultScreenshotHeight = 900;
 /// How long a status message stays up before the bar returns to showing the
 /// document path. Long enough to read a sentence, short enough that the path --
 /// which is the resting state of that corner -- comes back on its own.
@@ -127,10 +148,17 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     setObjectName(QStringLiteral("mainWindow"));
     setWindowTitle(tr("\U0001F3A8 Time Warp Studio v%1").arg(TIME_WARP_VERSION));
     setMinimumSize(kMinimumWindowWidth, kMinimumWindowHeight);
+    // Before the widget tree: the first document is created while the UI is being
+    // built, and it has to be born with the user's font and tab width rather than
+    // corrected afterwards.
+    loadEditorSettings();
     // Added last so the overlay sits above the central layout, so it has to be
     // created after the tree it covers exists.
     buildUi();
-    setStyleSheet(style::window());
+    // After the widget tree and before `restoreLayout()`/`show()`: a palette
+    // applied to a visible window repaints it, which shows as a flash of the
+    // default colours before the user's theme arrives.
+    applyTheme(QSettings{}.value(kSettingTheme, themes::defaultName()).toString());
 }
 
 // ---------------------------------------------------------------------------
@@ -158,6 +186,9 @@ void MainWindow::buildUi() {
     buildCentralColumn();
     buildDocks();
     buildMenuBar();
+    // Last, because it reads the menus: a key the menus already answer must not
+    // get a second action, and the check is against the actions that exist.
+    buildFunctionKeyShortcuts();
 }
 
 void MainWindow::buildCentralColumn() {
@@ -395,10 +426,31 @@ void MainWindow::buildOutputColumn() {
     canvas_bridge_->set_sink([this](timewarp::canvas::CanvasCommandView view) {
         turtle_canvas_->apply(view);
     });
+
+    // Keys typed at the canvas are what `INKEY$` reads. Routed through the
+    // runner rather than read here, because the program polls them from its own
+    // thread; a window with no run in flight drops them, which is what a learner
+    // pressing a key while nothing runs should get.
+    connect(turtle_canvas_, &TurtleCanvas::keyTyped, this, [this](QChar key) {
+        if (native_runner_ != nullptr && !key.isNull()) {
+            native_runner_->push_key(key.toLatin1());
+        }
+    });
 }
 
 void MainWindow::buildFunctionKeyRow(QVBoxLayout* column) {
     function_key_bar_ = new FunctionKeyBar{this};
+    // The bar's buttons land in the same dispatcher as the shortcuts built from
+    // its table (`buildFunctionKeyShortcuts`) and the command palette. Before
+    // this the two connections went to *signals* -- `functionKeyTriggered` and
+    // `workspaceDeckSelected` are declared under `signals:`, so connecting them
+    // re-emitted them to nobody and every button was inert.
+    connect(function_key_bar_, &FunctionKeyBar::actionTriggered, this,
+            &MainWindow::performAction);
+    connect(function_key_bar_, &FunctionKeyBar::deckSelected, this,
+            &MainWindow::selectDeck);
+    // Emitted as well as acted on: a test (or a plugin) listening for the bar's
+    // signal must still see it.
     connect(function_key_bar_, &FunctionKeyBar::actionTriggered, this,
             &MainWindow::functionKeyTriggered);
     connect(function_key_bar_, &FunctionKeyBar::deckSelected, this,
@@ -501,6 +553,10 @@ void MainWindow::buildMenuBar() {
     // actions on one key is an ambiguous shortcut that Qt resolves by guessing.
     add(edit, tr("&Go to Line..."), QKeySequence{Qt::CTRL | Qt::Key_L},
         [this] { goToLinePrompt(); });
+    edit->addSeparator();
+    add(edit, tr("&Preferences..."), QKeySequence{Qt::CTRL | Qt::Key_Comma},
+        [this] { showPreferences(); })
+        ->setObjectName(QStringLiteral("preferencesMenuAction"));
 
     // -- Run --------------------------------------------------------------
     QMenu* run = bar->addMenu(tr("&Run"));
@@ -560,9 +616,34 @@ void MainWindow::buildMenuBar() {
         }
     });
 
+    // The CRT overlay has existed since the port and had no way to be switched
+    // on: it was constructed, hidden, and never mentioned again. A checkable
+    // entry is the whole feature, because the overlay itself already paints.
+    crt_action_ = view->addAction(tr("CRT &Scanlines"));
+    crt_action_->setObjectName(QStringLiteral("crtAction"));
+    crt_action_->setCheckable(true);
+    crt_action_->setChecked(crt_overlay_ != nullptr && crt_overlay_->isVisible());
+    connect(crt_action_, &QAction::toggled, this, [this](bool on) {
+        if (crt_overlay_ != nullptr) {
+            crt_overlay_->setVisible(on);
+        }
+    });
+
+    view->addSeparator();
+    // F10 is on the function-key bar; Ctrl+Shift+P is the convention everybody
+    // already has in their fingers.
+    add(view, tr("Command &Palette..."),
+        QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_P},
+        [this] { showCommandPalette(); })
+        ->setObjectName(QStringLiteral("commandPaletteAction"));
+    buildThemeMenu(view);
+
     // -- Help -------------------------------------------------------------
     QMenu* help = bar->addMenu(tr("&Help"));
     help->setObjectName(QStringLiteral("helpMenu"));
+    add(help, tr("&Keyboard Shortcuts"), QKeySequence{Qt::Key_F1},
+        [this] { showShortcutHelp(); })
+        ->setObjectName(QStringLiteral("shortcutsAction"));
     add(help, tr("&About Time Warp Studio"), {}, [this] {
         QMessageBox::about(
             this, tr("About Time Warp Studio"),
@@ -570,11 +651,588 @@ void MainWindow::buildMenuBar() {
                "<p>An educational IDE for ten languages: BASIC, APL, Logo, PILOT, "
                "FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk, with an "
                "integrated turtle graphics canvas."
-               "<p>Built with C++20 and Qt6. Scheme runs natively; the other nine "
-               "run through the bundled engine in <code>share/time_warp</code>.")
+               "<p>Built with C++20 and Qt6. Every language runs natively; the "
+               "bundled Python engine in <code>share/time_warp</code> is the "
+               "reference the lesson check uses.")
                 .arg(timewarp::ui::version()));
     });
     add(help, tr("About &Qt"), {}, [this] { QMessageBox::aboutQt(this); });
+}
+
+// ---------------------------------------------------------------------------
+// Appearance
+// ---------------------------------------------------------------------------
+
+void MainWindow::buildThemeMenu(QMenu* view) {
+    theme_menu_ = view->addMenu(tr("&Theme"));
+    theme_menu_->setObjectName(QStringLiteral("themeMenu"));
+
+    auto* group = new QActionGroup{theme_menu_};
+    group->setExclusive(true);
+    for (const Theme& theme : themes::all()) {
+        const QString name = QString::fromUtf8(theme.name);
+        QAction* action = theme_menu_->addAction(name);
+        action->setCheckable(true);
+        // The name travels as data rather than being parsed back out of the text:
+        // a translation would break a lookup keyed on the visible string.
+        action->setData(name);
+        action->setChecked(name == theme_name_);
+        group->addAction(action);
+        connect(action, &QAction::triggered, this, [this, name] { applyTheme(name); });
+    }
+    theme_menu_->addSeparator();
+    QAction* next = theme_menu_->addAction(tr("&Next Theme"));
+    next->setObjectName(QStringLiteral("nextThemeAction"));
+    next->setShortcut(QKeySequence{Qt::SHIFT | Qt::Key_F10});
+    connect(next, &QAction::triggered, this, [this] { cycleTheme(); });
+}
+
+void MainWindow::applyTheme(const QString& name) {
+    const Theme& theme = themes::byName(name);
+    theme_name_ = QString::fromUtf8(theme.name);
+
+    // The application palette, not this window's: dialogs and message boxes are
+    // separate top-level widgets and would otherwise stay on the default system
+    // colours, which reads as a theme that half applied.
+    if (auto* app = qobject_cast<QApplication*>(QCoreApplication::instance())) {
+        app->setPalette(themes::paletteFor(theme));
+    }
+    // The base sheet reads `palette(...)`, so it follows the palette above; the
+    // theme's own block adds what a role cannot express.
+    setStyleSheet(style::window() + themes::stylesheetFor(theme));
+
+    if (theme_menu_ != nullptr) {
+        for (QAction* action : theme_menu_->actions()) {
+            if (action->isCheckable()) {
+                QSignalBlocker blocker{action};
+                action->setChecked(action->data().toString() == theme_name_);
+            }
+        }
+    }
+
+    QSettings{}.setValue(kSettingTheme, theme_name_);
+    applyThemeToWidgets();
+}
+
+void MainWindow::cycleTheme() {
+    applyTheme(QString::fromUtf8(themes::next(theme_name_).name));
+}
+
+void MainWindow::applyThemeToWidgets() {
+    const Theme& theme = themes::byName(theme_name_);
+
+    // Syntax colours. The highlighter's five roles against the theme's six: the
+    // theme's `function` is the closest thing it has to a "directive" (PILOT's
+    // unit letters, Scheme's labels), which is what that slot means here.
+    SyntaxColors colours;
+    colours.keyword = themes::colour(theme.keyword);
+    colours.comment = themes::colour(theme.comment);
+    colours.string = themes::colour(theme.string);
+    colours.number = themes::colour(theme.number);
+    colours.directive = themes::colour(theme.function);
+
+    const auto recolour = [&colours](QTabWidget* tabs) {
+        if (tabs == nullptr) {
+            return;
+        }
+        for (int index = 0; index < tabs->count(); ++index) {
+            auto* editor = qobject_cast<CodeEditor*>(tabs->widget(index));
+            if (editor != nullptr && editor->highlighter() != nullptr) {
+                editor->highlighter()->setColors(colours);
+            }
+        }
+    };
+    recolour(editor_tabs_);
+    recolour(editor_tabs_secondary_);
+
+    // The canvas surface, and the surface the next run starts on. A program that
+    // names its own background still wins for that run; this is the default.
+    const QColor surface = themes::colour(theme.canvas_bg);
+    if (turtle_canvas_ != nullptr) {
+        turtle_canvas_->setSurfaceColor(surface);
+    }
+
+    // The two verdict colours, which the theme carries for exactly this reason:
+    // the panel's shipped green and red are unreadable on the phosphor themes.
+    if (lesson_panel_ != nullptr) {
+        lesson_panel_->setVerdictColors(themes::colour(theme.success_color),
+                                        themes::colour(theme.error_color));
+    }
+
+    // The problem markers. A red squiggle on the red-phosphor or amber themes is
+    // exactly the colour of everything else, so the marker colours come from the
+    // theme too -- the error colour it carries for output, and its warning colour.
+    const auto recolour_markers = [&theme](QTabWidget* tabs) {
+        if (tabs == nullptr) {
+            return;
+        }
+        for (int index = 0; index < tabs->count(); ++index) {
+            if (auto* editor = qobject_cast<CodeEditor*>(tabs->widget(index));
+                editor != nullptr) {
+                editor->setDiagnosticColors(themes::colour(theme.error_color),
+                                            themes::colour(theme.warning_color));
+            }
+        }
+    };
+    recolour_markers(editor_tabs_);
+    recolour_markers(editor_tabs_secondary_);
+}
+
+// ---------------------------------------------------------------------------
+// Editor settings
+// ---------------------------------------------------------------------------
+
+void MainWindow::loadEditorSettings() {
+    QSettings settings;
+    EditorSettings loaded;
+    loaded.font_family = settings.value(kSettingEditorFont, QString{}).toString();
+    loaded.font_point_size = settings.value(kSettingEditorFontSize, 11).toInt();
+    loaded.tab_width = settings.value(kSettingEditorTabWidth, 4).toInt();
+    loaded.show_line_numbers = settings.value(kSettingEditorLineNumbers, true).toBool();
+    loaded.highlight_current_line =
+        settings.value(kSettingEditorCurrentLine, true).toBool();
+    loaded.word_wrap = settings.value(kSettingEditorWordWrap, false).toBool();
+    loaded.auto_indent = settings.value(kSettingEditorAutoIndent, true).toBool();
+    loaded.completion = settings.value(kSettingEditorCompletion, false).toBool();
+    loaded.lint = settings.value(kSettingEditorLint, true).toBool();
+    editor_settings_ = loaded;
+}
+
+void MainWindow::saveEditorSettings() const {
+    QSettings settings;
+    settings.setValue(kSettingEditorFont, editor_settings_.font_family);
+    settings.setValue(kSettingEditorFontSize, editor_settings_.font_point_size);
+    settings.setValue(kSettingEditorTabWidth, editor_settings_.tab_width);
+    settings.setValue(kSettingEditorLineNumbers, editor_settings_.show_line_numbers);
+    settings.setValue(kSettingEditorCurrentLine, editor_settings_.highlight_current_line);
+    settings.setValue(kSettingEditorWordWrap, editor_settings_.word_wrap);
+    settings.setValue(kSettingEditorAutoIndent, editor_settings_.auto_indent);
+    settings.setValue(kSettingEditorCompletion, editor_settings_.completion);
+    settings.setValue(kSettingEditorLint, editor_settings_.lint);
+}
+
+void MainWindow::applyEditorSettings(const EditorSettings& settings) {
+    editor_settings_ = settings;
+    const Theme& theme = themes::byName(theme_name_);
+    const auto apply_to = [this, &theme](QTabWidget* tabs) {
+        if (tabs == nullptr) {
+            return;
+        }
+        for (int index = 0; index < tabs->count(); ++index) {
+            if (auto* editor = qobject_cast<CodeEditor*>(tabs->widget(index));
+                editor != nullptr) {
+                editor->setDiagnosticColors(themes::colour(theme.error_color),
+                                            themes::colour(theme.warning_color));
+                editor->applySettings(editor_settings_);
+            }
+        }
+    };
+    apply_to(editor_tabs_);
+    apply_to(editor_tabs_secondary_);
+}
+
+void MainWindow::showPreferences() {
+    // A stack copy: the dialog edits its own record, and Cancel simply means the
+    // window never hears about it.
+    auto* dialog = new PreferencesDialog{editor_settings_, this};
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    connect(dialog, &PreferencesDialog::applied, this,
+            [this](const EditorSettings& settings) { applyEditorSettings(settings); });
+    connect(dialog, &PreferencesDialog::accepted, this,
+            [this](const EditorSettings& settings) {
+                applyEditorSettings(settings);
+                saveEditorSettings();
+                setExecutionState(tr("ready"), tr("Editor settings saved"));
+            });
+    dialog->open();
+}
+
+// ---------------------------------------------------------------------------
+// Actions: one dispatcher behind the key bar, the keys, the palette and the menu
+// ---------------------------------------------------------------------------
+
+void MainWindow::performAction(const QString& action) {
+    const QString id = action.trimmed().toLower();
+
+    // `showPanel` is [[nodiscard]] because its caller may be holding a name it
+    // read from data and has to see "no such panel". Every name below is a
+    // literal naming a panel that exists, so the answer is known and is
+    // discarded on purpose.
+    const auto raisePanel = [this](const char* name) {
+        static_cast<void>(showPanel(QString::fromLatin1(name)));
+    };
+
+    // -- run ---------------------------------------------------------------
+    if (id == QLatin1String("run")) {
+        runCurrentDocument();
+        return;
+    }
+    if (id == QLatin1String("stop")) {
+        stopRunningDocument();
+        return;
+    }
+    if (id == QLatin1String("debug")) {
+        // There is no separate "start debugging" in this build: a Scheme run
+        // pauses where its breakpoints are, so arming them and running *is*
+        // debugging. The panel is raised so the pause is visible when it happens.
+        raisePanel("debug");
+        runCurrentDocument();
+        return;
+    }
+    if (id == QLatin1String("pause")) {
+        if (debug_panel_ != nullptr && debug_panel_->isAvailable()) {
+            debug_panel_->requestPause();
+        } else {
+            setExecutionState(tr("ready"),
+                              tr("Pause needs a language with a debugger \u2014 "
+                                 "Scheme only for now"));
+        }
+        return;
+    }
+    if (id == QLatin1String("step_into") || id == QLatin1String("step_over") ||
+        id == QLatin1String("step_out")) {
+        if (debug_panel_ == nullptr || !debug_panel_->isAvailable()) {
+            setExecutionState(tr("ready"),
+                              tr("Stepping needs a paused Scheme program"));
+            return;
+        }
+        if (id == QLatin1String("step_into")) {
+            debug_panel_->requestStepInto();
+        } else if (id == QLatin1String("step_over")) {
+            debug_panel_->requestStepOver();
+        } else {
+            debug_panel_->requestStepOut();
+        }
+        return;
+    }
+    if (id == QLatin1String("breakpoint")) {
+        CodeEditor* editor = currentEditor();
+        if (editor != nullptr && debug_panel_ != nullptr) {
+            debug_panel_->toggleBreakpointAt(editor->currentLine());
+            raisePanel("debug");
+        }
+        return;
+    }
+
+    // -- files -------------------------------------------------------------
+    if (id == QLatin1String("save")) {
+        saveCurrentFile();
+        return;
+    }
+    if (id == QLatin1String("save_as")) {
+        saveCurrentFileAs();
+        return;
+    }
+    if (id == QLatin1String("open")) {
+        openFileDialog();
+        return;
+    }
+    if (id == QLatin1String("export")) {
+        exportDrawingDialog();
+        return;
+    }
+
+    // -- editing and view ---------------------------------------------------
+    if (id == QLatin1String("find")) {
+        findNextMatch(false);
+        return;
+    }
+    if (id == QLatin1String("find_previous")) {
+        findNextMatch(true);
+        return;
+    }
+    if (id == QLatin1String("fit") || id == QLatin1String("zoom")) {
+        if (turtle_canvas_ != nullptr) {
+            turtle_canvas_->fitToContent();
+        }
+        return;
+    }
+    if (id == QLatin1String("outline")) {
+        if (outline_dock_ != nullptr) {
+            outline_dock_->setVisible(!outline_dock_->isVisible());
+            // Raised as well as shown: a dock that appears behind the right-hand
+            // tabs is a keystroke that looks like it did nothing.
+            if (outline_dock_->isVisible()) {
+                outline_dock_->raise();
+            }
+        }
+        return;
+    }
+    if (id == QLatin1String("next_pane")) {
+        QWidget* panes[] = {currentEditor(), console_view_, turtle_canvas_, right_tabs_};
+        QWidget* focused = QApplication::focusWidget();
+        int current = -1;
+        for (int index = 0; index < 4; ++index) {
+            if (panes[index] != nullptr &&
+                (panes[index] == focused ||
+                 (focused != nullptr && panes[index]->isAncestorOf(focused)))) {
+                current = index;
+                break;
+            }
+        }
+        for (int step = 1; step <= 4; ++step) {
+            QWidget* next_pane = panes[(current + step + 4) % 4];
+            if (next_pane != nullptr) {
+                next_pane->setFocus(Qt::ShortcutFocusReason);
+                return;
+            }
+        }
+        return;
+    }
+    if (id == QLatin1String("toggle_hud")) {
+        raisePanel("telemetry");
+        return;
+    }
+    if (id == QLatin1String("toggle_crt")) {
+        if (crt_action_ != nullptr) {
+            crt_action_->setChecked(!crt_action_->isChecked());
+        }
+        return;
+    }
+    if (id == QLatin1String("inspect")) {
+        raisePanel("variables");
+        return;
+    }
+    if (id == QLatin1String("lessons")) {
+        raisePanel("lessons");
+        return;
+    }
+    if (id == QLatin1String("filter_errors")) {
+        raisePanel("output");
+        if (output_sub_tabs_ != nullptr) {
+            output_sub_tabs_->setCurrentWidget(errors_view_);
+        }
+        return;
+    }
+    if (id == QLatin1String("clear_output")) {
+        clearOutput();
+        return;
+    }
+    if (id == QLatin1String("clear_canvas")) {
+        clearCanvas();
+        return;
+    }
+
+    // -- the palette, the keys, the themes ---------------------------------
+    if (id == QLatin1String("palette")) {
+        showCommandPalette();
+        return;
+    }
+    if (id == QLatin1String("help") || id == QLatin1String("shortcuts")) {
+        showShortcutHelp();
+        return;
+    }
+    if (id == QLatin1String("cycle_theme")) {
+        cycleTheme();
+        return;
+    }
+
+    // -- named, and not built ----------------------------------------------
+    //
+    // These keep their places on the bar because a learner reading the old
+    // documentation should find the key where it says it is, but the key says so
+    // out loud rather than doing nothing. A dead key is the fault this replaced.
+    if (id == QLatin1String("split_editor")) {
+        setExecutionState(tr("ready"),
+                          tr("The split editor is not built yet \u2014 see "
+                             "docs/ROADMAP.md"));
+        return;
+    }
+    if (id == QLatin1String("find_in_files")) {
+        setExecutionState(tr("ready"),
+                          tr("Find in files is not built yet \u2014 use Find, or "
+                             "see docs/ROADMAP.md"));
+        return;
+    }
+
+    // Any other id is a bug in the table rather than something a user can
+    // trigger, and it is reported so the next reader of the table sees it.
+    setExecutionState(tr("ready"),
+                      tr("No action is bound to \u201C%1\u201D").arg(action));
+}
+
+void MainWindow::selectDeck(const QString& deckId) {
+    const QString id = deckId.trimmed().toLower();
+    if (id == QLatin1String("code_focus")) {
+        // The code, and only the code: focus, with nothing rearranged, because
+        // the layout the user chose is theirs.
+        if (CodeEditor* editor = currentEditor()) {
+            editor->setFocus(Qt::ShortcutFocusReason);
+        }
+        setExecutionState(tr("ready"), tr("Deck: code"));
+        return;
+    }
+    if (id == QLatin1String("graphics_studio")) {
+        if (turtle_canvas_ != nullptr) {
+            turtle_canvas_->setFocus(Qt::ShortcutFocusReason);
+            turtle_canvas_->fitToContent();
+        }
+        setExecutionState(tr("ready"), tr("Deck: graphics"));
+        return;
+    }
+    if (id == QLatin1String("debugger_deck")) {
+        static_cast<void>(showPanel(QStringLiteral("debug")));
+        setExecutionState(tr("ready"), tr("Deck: debugger"));
+        return;
+    }
+    if (id == QLatin1String("split_lab")) {
+        // Honest rather than silent: the second editor pane exists in the layout
+        // (`editor_tabs_secondary_`) but nothing creates a tab in it yet.
+        setExecutionState(tr("ready"),
+                          tr("The split workspace is not built yet \u2014 see "
+                             "docs/ROADMAP.md"));
+        return;
+    }
+    setExecutionState(tr("ready"), tr("Unknown deck \u201C%1\u201D").arg(deckId));
+}
+
+void MainWindow::buildFunctionKeyShortcuts() {
+    if (function_key_bar_ == nullptr) {
+        return;
+    }
+    const auto alreadyClaimed = [this](const QKeySequence& sequence) {
+        for (QAction* action : findChildren<QAction*>()) {
+            const QList<QKeySequence> shortcuts = action->shortcuts();
+            if (shortcuts.contains(sequence) ||
+                action->shortcut() == sequence) {
+                return true;
+            }
+        }
+        return false;
+    };
+    for (const FunctionKeyBar::Layer layer : {FunctionKeyBar::Layer::Normal,
+                                              FunctionKeyBar::Layer::Shift,
+                                              FunctionKeyBar::Layer::Control}) {
+        for (const FunctionKeyBar::Binding& binding :
+             FunctionKeyBar::bindingsFor(layer)) {
+            const QKeySequence sequence{binding.keys};
+            if (sequence.isEmpty()) {
+                continue;
+            }
+            // A key the menus already answer (F1 Help, F2 Save, F3 Find, F9 Run,
+            // Shift+F9 Stop) is left alone: two actions on one sequence is an
+            // ambiguous shortcut, and Qt resolves that by picking one and warning.
+            if (alreadyClaimed(sequence)) {
+                continue;
+            }
+            auto* action = new QAction{this};
+            action->setObjectName(QStringLiteral("fkey_%1").arg(binding.action));
+            action->setShortcut(sequence);
+            action->setShortcutContext(Qt::WindowShortcut);
+            const QString id = binding.action;
+            connect(action, &QAction::triggered, this,
+                    [this, id] { performAction(id); });
+            addAction(action);
+        }
+    }
+}
+
+void MainWindow::showCommandPalette() {
+    if (command_palette_ == nullptr) {
+        command_palette_ = new CommandPalette{this};
+    }
+    // Populated per open: the menus change (Open Recent is rebuilt, actions are
+    // enabled and disabled with the run state), and a palette built once would
+    // offer yesterday's commands.
+    command_palette_->populate(this);
+    command_palette_->exec();
+}
+
+void MainWindow::showShortcutHelp() {
+    // Built from the same table the bar draws, so the help cannot list a key the
+    // bar does not have. Three columns rather than a paragraph: this is a
+    // reference, and it is scanned rather than read.
+    const auto rows = [](FunctionKeyBar::Layer layer) {
+        QString text;
+        for (const FunctionKeyBar::Binding& binding :
+             FunctionKeyBar::bindingsFor(layer)) {
+            text += QStringLiteral("<tr><td><tt>%1</tt></td><td>%2</td></tr>")
+                        .arg(binding.keys.toHtmlEscaped(),
+                             binding.caption.toHtmlEscaped());
+        }
+        return text;
+    };
+    const auto column = [&rows](FunctionKeyBar::Layer layer, const QString& title) {
+        return QStringLiteral("<b>%1</b><table>%2</table>").arg(title, rows(layer));
+    };
+
+    auto* box = new QMessageBox{this};
+    box->setObjectName(QStringLiteral("shortcutHelp"));
+    box->setAttribute(Qt::WA_DeleteOnClose);
+    box->setWindowTitle(tr("Keyboard Shortcuts"));
+    box->setIcon(QMessageBox::Information);
+    box->setTextFormat(Qt::RichText);
+    box->setText(tr("<p><b>Time Warp Studio</b> keys. The bar along the bottom of "
+                    "the window is this table's source, and its badge cycles the "
+                    "three layers.</p>"
+                    "<table><tr><td valign=\"top\">%1</td>"
+                    "<td valign=\"top\">%2</td>"
+                    "<td valign=\"top\">%3</td></tr></table>"
+                    "<p>F10 or Ctrl+Shift+P opens the command palette, where every "
+                    "menu entry can be found by typing part of its name.</p>")
+                       .arg(column(FunctionKeyBar::Layer::Normal, tr("Normal")),
+                            column(FunctionKeyBar::Layer::Shift, tr("Shift")),
+                            column(FunctionKeyBar::Layer::Control, tr("Ctrl"))));
+    box->open();
+}
+
+bool MainWindow::openStandaloneProgram(const QString& languageKey,
+                                       const QString& source,
+                                       const QString& title) {
+    const Language language = languageFromKey(languageKey);
+    if (language == Language::Unknown) {
+        return false;
+    }
+
+    CodeEditor* editor = newFile();
+    if (editor == nullptr) {
+        return false;
+    }
+    editor->setPlainText(source);
+    // The payload's language is the truth here: the artifact's file name is
+    // whatever the author called it, and may have no extension at all.
+    editor->setProperty(kLanguageOverrideProperty, settingsKey(language));
+    editor->setReadOnly(true);
+    refreshDocumentState();
+
+    player_mode_ = true;
+    // Everything that exists to *write* a program is hidden, because there is
+    // nothing to author: this window is the program. What remains is the canvas,
+    // the output console and the status bar.
+    if (QMenuBar* bar = menuBar()) {
+        bar->setVisible(false);
+    }
+    if (tool_bar_ != nullptr) {
+        tool_bar_->setVisible(false);
+    }
+    if (tool_bar_secondary_ != nullptr) {
+        tool_bar_secondary_->setVisible(false);
+    }
+    if (function_key_bar_ != nullptr) {
+        function_key_bar_->setVisible(false);
+    }
+    if (outline_dock_ != nullptr) {
+        outline_dock_->setVisible(false);
+    }
+    if (right_tabs_ != nullptr) {
+        right_tabs_->setVisible(false);
+    }
+    if (find_bar_ != nullptr) {
+        find_bar_->setVisible(false);
+    }
+    if (immediate_mode_ != nullptr) {
+        immediate_mode_->setVisible(false);
+    }
+    // The editor column, rather than the editor alone: the tab strip and the
+    // find bar live inside it, and a hidden editor with a visible column leaves a
+    // blank panel where the code used to be.
+    if (main_splitter_ != nullptr && main_splitter_->widget(0) != nullptr) {
+        main_splitter_->widget(0)->setVisible(false);
+    }
+
+    setWindowTitle(title);
+    setExecutionState(tr("ready"), tr("Running %1").arg(title));
+    return true;
 }
 
 void MainWindow::showFindBar(bool withReplacement) {
@@ -807,11 +1465,11 @@ void MainWindow::buildToolBar() {
         return action;
     };
     notPorted(addRunAction(tr("\U0001F41B Debug"), tr("Start debugging")),
-              tr("needs the debugger panel, which is not ported yet"));
+              tr("needs the toolbar's link to the debug panel, which is not ported yet"));
     notPorted(addRunAction(tr("\u25B6\uFE0F Continue"), tr("Continue to the next breakpoint")),
-              tr("needs the debugger panel, which is not ported yet"));
+              tr("needs the toolbar's link to the debug panel, which is not ported yet"));
     notPorted(addRunAction(tr("\u2193 Trace"), tr("Step into the next statement")),
-              tr("needs the debugger panel, which is not ported yet"));
+              tr("needs the toolbar's link to the debug panel, which is not ported yet"));
     QAction* stop_action =
         addRunAction(tr("\u23F9\uFE0F Stop"), tr("Stop the running program"));
     connect(stop_action, &QAction::triggered, this, [this] { stopRunningDocument(); });
@@ -832,36 +1490,14 @@ void MainWindow::buildToolBar() {
                         "presets, which are not ported yet"));
 
     tool_bar_secondary_->addSeparator();
-
-    // -- turtle speed ------------------------------------------------------
-    // `addWidget` gives the label and slider to the toolbar, which is why no
-    // parent is passed here: the toolbar parents them and lays them out, and a
-    // parent that disagrees with the toolbar's layout would be a second owner.
-    auto* speed_label = new QLabel{tr(" \U0001F422 Speed: ")};
-    tool_bar_secondary_->addWidget(speed_label);
-    speed_slider_ = new QSlider{Qt::Horizontal};
-    speed_slider_->setObjectName(QStringLiteral("turtleSpeedSlider"));
-    speed_slider_->setRange(kSpeedMinimum, kSpeedMaximum);
-    speed_slider_->setMinimumWidth(120);
-    speed_slider_->setToolTip(tr("Delay between turtle steps - needs drawing "
-                                 "animation, which is not ported yet"));
-    tool_bar_secondary_->addWidget(speed_slider_);
-
-    speed_value_ = new QLabel{tr("0 ms")};
-    speed_value_->setObjectName(QStringLiteral("turtleSpeedValue"));
-    // A fixed width, so the row does not reflow as the number changes width.
-    speed_value_->setMinimumWidth(48);
-    // A slider that changes the program's timing needs to show the value it
-    // actually selected, not just its position on the track.
-    connect(speed_slider_, &QSlider::valueChanged, this, [this](int value) {
-        speed_value_->setText(tr("%1 ms").arg(value));
-    });
-    tool_bar_secondary_->addWidget(speed_value_);
-    // Disabled until there is animation to control. The drawing currently appears
-    // as fast as the program produces it, so a slider that changes nothing is a
-    // control that lies about what it does; the readout stays because it is the
-    // first half of the feature rather than a promise.
-    speed_slider_->setEnabled(false);
+    // Where the turtle-speed slider used to be. The slider was removed rather
+    // than finished: nothing animates the display list, so it controlled an
+    // ability the application does not have, and a disabled control that never
+    // becomes enabled is clutter in a row a learner reads as the feature list.
+    QAction* preferences = tool_bar_secondary_->addAction(tr("\u2699\uFE0F Settings"));
+    preferences->setObjectName(QStringLiteral("preferencesAction"));
+    preferences->setToolTip(tr("Editor and application settings (Ctrl+,)"));
+    connect(preferences, &QAction::triggered, this, [this] { showPreferences(); });
 }
 
 // ---------------------------------------------------------------------------
@@ -1132,6 +1768,26 @@ void MainWindow::adoptEditor(CodeEditor* editor) {
     editor_tabs_->addTab(editor, nameOf(editor));
     editor_tabs_->setCurrentIndex(editor_tabs_->indexOf(editor));
 
+    // A tab created after a theme was applied starts in that theme. Without
+    // this, every new document after the first would be syntax-coloured for the
+    // light theme while the window around it is dark.
+    if (editor->highlighter() != nullptr) {
+        const Theme& theme = themes::byName(theme_name_);
+        SyntaxColors colours;
+        colours.keyword = themes::colour(theme.keyword);
+        colours.comment = themes::colour(theme.comment);
+        colours.string = themes::colour(theme.string);
+        colours.number = themes::colour(theme.number);
+        colours.directive = themes::colour(theme.function);
+        editor->highlighter()->setColors(colours);
+        editor->setDiagnosticColors(themes::colour(theme.error_color),
+                                    themes::colour(theme.warning_color));
+    }
+    // And the editor's own customisations, for the same reason: a tab opened
+    // after Preferences was used has to look like the tabs that were already
+    // open.
+    editor->applySettings(editor_settings_);
+
     connect(editor, &CodeEditor::cursorMoved, this,
             [this, editor](int line, int column) {
                 // Only the visible editor drives the status bar. A programmatic
@@ -1216,8 +1872,8 @@ void MainWindow::refreshDocumentState() {
         // machine has. The panel says so instead of offering six dead buttons.
         debug_panel_->setAvailable(
             languageOf(editor) == Language::Scheme,
-            tr("Stepping is Scheme only \u2014 the four bridged languages run to "
-               "completion in another process."));
+            tr("Stepping is Scheme only \u2014 every other language runs to "
+               "completion with no pause protocol."));
         debug_panel_->setLineNumber(editor->currentLine());
     }
     position_badge_->setText(
@@ -1658,6 +2314,23 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
     // The queue has no consumer of its own: a run that fills it waits until the
     // GUI drains it, so every command has to say "look at the queue now".
     runner->set_wakeup([this] { canvas_bridge_->wake(); });
+    // Sound: created once, on the first run that might make one. A machine with
+    // no player still runs the program -- the language's acknowledgement is the
+    // reference's, and `audio_available()` is what tells a program the truth.
+    if (sound_ == nullptr) {
+        sound_ = new SoundPlayer{this};
+    }
+    runner->set_sound_player(sound_);
+    // The theme's surface, so a program that draws before naming a colour draws
+    // on the paper the user's theme chose rather than on the reference's.
+    if (const QColor surface =
+            turtle_canvas_ != nullptr ? turtle_canvas_->surfaceColor() : QColor{};
+        surface.isValid()) {
+        runner->set_surface_color(
+            timewarp::lang::Rgb{static_cast<std::uint8_t>(surface.red()),
+                                static_cast<std::uint8_t>(surface.green()),
+                                static_cast<std::uint8_t>(surface.blue())});
+    }
     runner->load_program(editor->toPlainText());
 
     connect(runner, &NativeRunner::outputAvailable, this,

@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """Runs a Time Warp Studio program for the C++ IDE and streams what happens.
 
-Five of the six languages have no C++ interpreter yet. Rather than reimplementing
-them, the C++ IDE runs *this* against the Python implementation -- which is
-complete and tested -- and streams the result back. Python is the oracle until
-each language is ported, at which point that language stops being routed here and
-nothing else changes.
+Every language has a C++ executor, so the IDE never sends a *run* here: the
+worker is kept for the two jobs that still need the Python engine -- the
+Lessons panel's check of a learner's program, and the tools that drive this
+implementation as the reference the ports are compared against (the command
+matrix, the example smoke and the differential gates).
 
 It is deliberately out of process. A program that loops forever, calls
 `sys.exit`, or corrupts its own interpreter cannot take the IDE with it: the worst
@@ -138,7 +138,9 @@ class Emitter:
         try:
             line = json.dumps(message, separators=(",", ":"), ensure_ascii=False)
         except (TypeError, ValueError) as exc:  # pragma: no cover - defensive
-            line = json.dumps({"t": "err", "text": f"bridge: unencodable message: {exc}"})
+            line = json.dumps(
+                {"t": "err", "text": f"bridge: unencodable message: {exc}"}
+            )
         with self._lock:
             try:
                 self._stream.write(line + "\n")
@@ -160,7 +162,9 @@ def _colour(rgb: Any) -> List[int]:
     return [max(0, min(255, int(channel))) for channel in rgb[:3]]
 
 
-def _shape_command(shape: TurtleShape, unsupported: List[str]) -> Optional[Dict[str, Any]]:
+def _shape_command(
+    shape: TurtleShape, unsupported: List[str]
+) -> Optional[Dict[str, Any]]:
     """One `TurtleShape` as a canvas command, or None when it cannot be drawn."""
     kind = shape.shape_type
     points = [[float(x), float(y)] for x, y in shape.points]
@@ -180,7 +184,11 @@ def _shape_command(shape: TurtleShape, unsupported: List[str]) -> Optional[Dict[
         return {"k": "poly", "pts": flat, "c": colour, "w": shape.width}
     if kind == "polygon":
         command: Dict[str, Any] = {
-            "k": "poly", "pts": flat, "c": colour, "w": shape.width, "closed": True,
+            "k": "poly",
+            "pts": flat,
+            "c": colour,
+            "w": shape.width,
+            "closed": True,
         }
         if fill is not None:
             command["fill"] = fill
@@ -192,8 +200,13 @@ def _shape_command(shape: TurtleShape, unsupported: List[str]) -> Optional[Dict[
     if kind in ("rect", "ellipse"):
         x, y, width, height = boxed()
         command = {
-            "k": kind, "x": x, "y": y, "w": width, "h": height,
-            "c": colour, "lw": shape.width,
+            "k": kind,
+            "x": x,
+            "y": y,
+            "w": width,
+            "h": height,
+            "c": colour,
+            "lw": shape.width,
         }
         if fill is not None:
             command["fill"] = fill
@@ -202,8 +215,12 @@ def _shape_command(shape: TurtleShape, unsupported: List[str]) -> Optional[Dict[
         if not points:
             return None
         return {
-            "k": "text", "x": points[0][0], "y": points[0][1], "c": colour,
-            "s": shape.text or "", "size": shape.font_size,
+            "k": "text",
+            "x": points[0][0],
+            "y": points[0][1],
+            "c": colour,
+            "s": shape.text or "",
+            "size": shape.font_size,
         }
     if kind == "bezier":
         # The chord endpoints of a cubic would be visibly wrong, so this is
@@ -217,7 +234,12 @@ def _shape_command(shape: TurtleShape, unsupported: List[str]) -> Optional[Dict[
         x, y, width, height = boxed()
         return {
             "k": "rect" if kind == "rect_gradient" else "ellipse",
-            "x": x, "y": y, "w": width, "h": height, "c": colour, "lw": shape.width,
+            "x": x,
+            "y": y,
+            "w": width,
+            "h": height,
+            "c": colour,
+            "lw": shape.width,
         }
     if kind == "sprite":
         unsupported.append("sprites")
@@ -447,7 +469,9 @@ class Session:
         interpreter.input_callback = self.request_input
 
         self._finished.clear()
-        flusher = threading.Thread(target=self._flush_loop, name="timewarp-flush", daemon=True)
+        flusher = threading.Thread(
+            target=self._flush_loop, name="timewarp-flush", daemon=True
+        )
         flusher.start()
 
         error = ""
@@ -637,7 +661,9 @@ class LessonService:
             }
         )
 
-    def hint(self, emitter: "Emitter", message: Dict[str, Any], solution: bool = False) -> None:
+    def hint(
+        self, emitter: "Emitter", message: Dict[str, Any], solution: bool = False
+    ) -> None:
         manager = self.manager
         if manager is None:
             return self._fail(emitter, "lesson-hint", self._error or "no lessons")

@@ -30,13 +30,14 @@
 
 Time Warp Studio is a desktop IDE for ten educational languages — **BASIC, APL,
 Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk** — with an integrated
-turtle graphics canvas. It is a C++20 / Qt6 application. Its one non-C++ component
-is a temporary Python engine process that runs the four languages which have not
-been ported yet.
+turtle graphics canvas. It is a C++20 / Qt6 application, and all ten languages
+run in C++ inside it. The Python engine ships as the **reference** the parity
+gates, the command matrix and the lesson check use; no program is sent to it.
 
-So the product is **a GUI process plus, for four of the ten languages, one child
-process**. Nothing about the user's program crosses that boundary except a program
-text going in and a stream of JSON messages coming back.
+So the product is **one GUI process**. The child process remains only for a
+lesson check, where a second interpreter must not share the document's state;
+that channel is JSON lines, one message per line — program text going in and a
+stream of JSON messages coming back.
 
 ### The moving parts
 
@@ -46,18 +47,17 @@ text going in and a stream of JSON messages coming back.
 | `timewarp_canvas` | `native/src/canvas/` | producer: interpreter thread; consumer: GUI thread | Carries drawing across the thread boundary |
 | `timewarp_canvas_qt` | `native/src/canvas/qt_bridge.cpp` | GUI thread | Qt glue for that queue: wakeup and draining |
 | `timewarp_scheme` | `native/src/scheme/` | runner thread, in-process | Scheme, on an explicit-stack machine with no native recursion |
-| `timewarp_lang` | `native/src/lang/` | runner thread, in-process | The shared interpreter loop and the executors ported so far: FOCAL, PILOT, COMAL, CHIP-8, Logo, APL and REXX |
+| `timewarp_lang` | `native/src/lang/` | runner thread, in-process | The shared interpreter loop and every line-by-line executor: BASIC, FOCAL, PILOT, COMAL, APL and REXX, plus whole-program CHIP-8, Logo and Smalltalk |
 | `timewarp_debugger` | `native/src/debugger/` | its own `QThread` | Runs a Scheme program and services pause / step / breakpoint requests |
 | `timewarp_bridge` | `native/src/bridge/` | GUI thread, driving a `QProcess` | The IDE's end of the Python bridge |
 | `timewarp_expr` | `native/src/token.cpp`, `lexer.cpp`, `evaluator.cpp` | runner thread, in-process | The ported expression evaluator, linked into `timewarp_lang` — see the note below |
-| the bridge engine | `native/bridge/` | a separate Python process | The unported language |
+| the bridge engine | `native/bridge/` | a separate Python process | The reference the parity gates, the lesson check and the command matrix compare against |
 
 > **`timewarp_expr` is part of a Run now.** It builds, it has 485 checks of its
 > own, `native/tools/differential_check.py` compares it against the Python
-> reference on a fixed corpus, and `timewarp_lang` links it: FOCAL, PILOT, COMAL
-> and Logo evaluate every arithmetic expression through it. The bridged
-> languages still evaluate in Python, because their executors have not been
-> ported. The parity gate is what keeps the native evaluator honest.
+> reference on a fixed corpus, and `timewarp_lang` links it: BASIC, FOCAL,
+> PILOT, COMAL, APL and Logo evaluate every arithmetic expression through it. The
+> parity gate is what keeps the native evaluator honest.
 
 ### Two contracts holding the design together
 
@@ -366,13 +366,17 @@ a measurable question rather than a matter of opinion.
 
 ### Why a separate process
 
-Nine of the ten languages have no C++ interpreter yet. The alternative to a child
-process is reimplementing them, and the Python implementations are complete and tested;
-the alternative *inside* one process is embedding CPython, which turns a runaway program
-into a runaway IDE. Out of process, the worst case is a process to kill.
+All ten languages now have a C++ interpreter. The Python engine is kept for a
+different job: it is the **reference** the parity gates compare each port against,
+the curriculum checker the Lessons panel calls, and the engine the command matrix
+drives. Keeping it means "did the port stay faithful?" is a question a machine
+answers instead of a matter of opinion.
 
-The bridge **exists to be deleted**. Each language ported to C++ removes its path through
-it. Scheme and the canvas queue are already out.
+The IDE itself no longer runs a program there. Each port removed its path through
+the bridge, and the last one (BASIC) removed the runtime case entirely. The child
+process remains the answer for work the IDE should not run in its own process: a
+reference implementation that is deliberately allowed to fail, and a lesson check
+that must not disturb the learner's document.
 
 ### The protocol
 
@@ -432,7 +436,7 @@ removed. It is standard library only; `pyttsx3` (BASIC `SAY`) and `pygame` / `in
 | Directory | Contents |
 | --- | --- |
 | `core/` | `interpreter.py` (dispatch and program state), `language_registry.py`, `config.py`, `sandbox.py` |
-| `languages/` | The six executors, and `base.py`, which documents the protocol |
+| `languages/` | The ten reference executors, and `base.py`, which documents the protocol |
 | `graphics/` | `turtle_state.py` |
 | `features/` | Language-level modules reached *by name* from a program |
 | `utils/` | `expression_evaluator.py` — the reference `timewarp_expr` is gated against — plus error hints and validators |
@@ -514,9 +518,10 @@ depends on the distinction:
 
 A language ported to C++ skips the bridge entirely: it gets an executor in
 `timewarp_lang`, and `MainWindow::runCurrentDocument` dispatches to it when
-`executor_for()` returns non-null. FOCAL, PILOT, COMAL, CHIP-8, Logo, APL and REXX are ported; the same
-`NativeRunner` (a `QThread` feeding `CanvasCommandQueue`) runs any executor that
-appears in that table, so the window needs no change per language.
+`executor_for()` returns non-null. Every language is now ported, so no runtime
+dispatch reaches the bridge; the same `NativeRunner` (a `QThread` feeding
+`CanvasCommandQueue`) runs any executor that appears in that table, so the window
+needs no change per language.
 
 ### Adding a canvas command
 
@@ -544,11 +549,10 @@ Replacing one is a single construction site in `buildRightColumn()` or
 anything that needs interpreter data -- which is exactly how the three inspect panels
 were filled in:
 
-- **Bridged languages** report two tables in their `done` message: `variables`
-  (`name`/`type`/`value`, built by `time_warp/utils/inspection.py`) and `telemetry_rows`
-  (the HUD's labelled counters, from `Interpreter.get_telemetry_snapshot`).
-  `PythonWorker` re-emits them as `variablesReported` and `telemetryReported` *before*
-  `finished`, so a slot on `finished` cannot read the previous run's table.
+- **The native runner** reports the variables after every run (`NativeRunner`'s
+  snapshot) and the window adds the HUD's engine counters. The bridge path is
+  still there for a language with no executor, and a lesson check uses the worker;
+  no current language takes the bridge path.
 - **Scheme** reports nothing over the bridge, so the window reads
   `DebuggerRunner::snapshot()` -- including a final snapshot taken when a run ends
   without pausing, because a finished program still has bindings and "no variables" is
@@ -558,8 +562,8 @@ were filled in:
   counters and the IDE's are shown side by side rather than merged, so a drawing that
   never arrived is visible as two rows that disagree.
 
-Only Scheme can be stepped: the bridged languages run to completion in another
-process, and the native executors have no pause protocol yet. `DebugPanel` therefore
+Only Scheme can be stepped: the native executors run to completion and have no
+pause protocol yet. `DebugPanel` therefore
 disables itself, with a sentence saying why, rather than offering buttons that do
 nothing.
 
@@ -606,7 +610,7 @@ gates and a command matrix. All of them must stay green, in every build tree.
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
 | Engine tests | `make engine-test` | The bridge engine: the ten executors, the evaluator, the validators, the lesson curriculum and the classroom |
-| Example corpus | `make smoke` | Every `Examples/**` program, through the real bridge, including the 14 that must produce ink |
+| Example corpus | `make smoke` | Every `Examples/**` program, through the reference engine, including the 18 that must produce ink |
 | Parity gates | `differential_check.py`, `scheme_differential_check.py`, `lang_differential_check.py` | The ported engines against the Python reference: 0 unexpected mismatches |
 | Command matrix | `native/tools/command_matrix.py` | One row per documented command, through the real bridge |
 | Lesson curriculum | `teach.py validate` (and `test_lessons.py` on every build) | That every checkpoint's own solution passes, that no starter already passes, and that every language has a lesson |
@@ -666,16 +670,30 @@ migrating.
 
 [ROADMAP.md](ROADMAP.md) is the authority. The architectural gaps, in one place:
 
-- **Nine of the ten languages run out of process.** Each port removes a bridge path and
-  weakens the argument for the child process.
-- **`timewarp_expr` is not linked into the application**, so the expression evaluator in a
-  Run is still Python's.
-- **The debugger is a runner, not a UI.** `DebuggerRunner` supports pause, step and
-  breakpoints, and `debug_tests` covers the machinery; `DebugPanel` now drives it for
-  Scheme, so what is missing is breadth (only Scheme can be stepped) and the toolbar's
-  Debug/Continue/Trace actions, which still say "not ported".
-- **No minimap, find-in-files, outline or formatter.** Syntax colouring and
-  find/replace are in; the rest is not.
-- **No theme system** — the stylesheet is there, the 33 themes are not.
+- **The debugger is a runner, not a full debugger.** `DebuggerRunner` supports
+  pause, step and breakpoints, and `debug_tests` covers the machinery; `DebugPanel`
+  drives it for Scheme. What is missing is breadth (only Scheme can be stepped),
+  the toolbar's Debug/Continue/Trace actions (disabled, with a note that the
+  wiring is not ported), and watch expressions.
+- **The editor** has syntax colouring, find/replace, language-specific checking
+  as you type (squiggles, gutter markers, hover text), optional completion,
+  auto-indent and a full settings dialog with a live preview. Still missing:
+  find-in-files, a minimap, breakpoint markers in the gutter, a document outline
+  and a formatter.
+- **The console** has no clickable line links, no error-only filter and no
+  save-to-file; the **Terminal** tab is a placeholder.
+- **Files and sessions** have no autosave, crash recovery, version history,
+  project panel or split view.
+- **Themes and fonts are in**: 33 schemes, applied through the palette plus a
+  theme block, and the editor's font, size and tab width are user settings.
+- **No printing, and no code/session/lesson export.** The drawing exports as an
+  image.
 - **Packaging stops at `make install`**: a desktop entry and an icon. No distro packages,
   no installers.
+- **Lesson checking still runs in the Python engine**, which is what keeps
+  `native/bridge/` and the `python_worker` target in the build.
+- **No pixel framebuffer.** Graphics are a display list of strokes and shapes
+  with fit-to-content, so there is no `GET`/`PUT` sprite capture and no fixed
+  screen coordinate system; a game draws primitives and polls `INKEY$`.
+- **Speech** (`SAY`) acknowledges without speaking: there is no speech
+  synthesiser in the build, and the reference never shipped one either.

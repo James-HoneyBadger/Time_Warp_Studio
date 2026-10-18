@@ -25,8 +25,8 @@ one I would type:
 - **[docs/INSTALLATION.md](../docs/INSTALLATION.md)** — requirements, building
   from source, and what a failure at each step usually means.
 - **[docs/ROADMAP.md](../docs/ROADMAP.md)** — what is deliberately not built
-  yet. Themes, find/replace, auto-completion, the examples browser and the
-  debugger panels are on this list. A missing feature from it is not a bug, and
+  yet. Themes, auto-completion, find-in-files, the examples browser, printing
+  and autosave are on this list. A missing feature from it is not a bug, and
   reporting one as a regression costs a round trip.
 - **[docs/FAQ.md](../docs/FAQ.md)** — the questions that come up most.
 - **[docs/LANGUAGE_GUIDE.md](../docs/LANGUAGE_GUIDE.md)** — the reference for all
@@ -46,9 +46,9 @@ that appears in only one of them is a real bug and worth reporting.
 
 **The languages.** All ten are supported, and each has an executor, a test
 module, an example, command coverage, a tutorial, a reference section and a
-lesson. The nine that are not ported to C++ run through the Python bridge, which
-is a temporary arrangement rather than a supported API: it changes whenever a
-language is ported.
+lesson. Every language runs in C++ in the application. The Python engine in
+`native/bridge/` is the reference the parity gates compare against and the
+engine a lesson check runs in; it is not a supported API.
 
 **The lessons.** Both tools are supported — `native/tools/learn.py` for a
 learner, `native/tools/teach.py` for a teacher — and so is the curriculum. A
@@ -60,8 +60,9 @@ lesson that cannot be finished, or whose starter already passes, is a bug;
 - **Packages and installers.** There are none. `make -C native install` installs
   the binary, the bridge, a desktop entry and an icon, and that is the whole of
   it. `.deb`, `.rpm`, Flatpak, AppImage and Windows installers are on the roadmap.
-- **Porting the bridge away.** Nine languages still run out of process. Each port
-  is welcome but it is not queued work I can give a date for.
+- **Moving lesson checking into C++.** The Lessons panel asks the Python engine
+  for a verdict; that is the remaining use of the bridge, and it is queued work
+  without a date.
 - **Keeping your programs working across versions.** The languages are
   reimplementations of languages older than most of the people using them, so
   their semantics are stable — but Time Warp Studio's own file formats, settings

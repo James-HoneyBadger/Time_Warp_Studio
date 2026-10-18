@@ -101,14 +101,16 @@ rather than failing obscurely — read its message.
 `-DCMAKE_MAP_IMPORTED_CONFIG_DEBUG=Release`; that breaks `OpenGL::OpenGL` and
 `OpenGL::GLX` in a way that is harder to diagnose.
 
-**A bridged language says the worker was not found.** The IDE looks for
-`native/bridge/worker.py` beside the executable, two levels up, and in the working
-directory, in that order. Set `TIME_WARP_WORKER` (full path to `worker.py`) or
-`TIME_WARP_PYTHON` (interpreter) to override either half. The error message lists
-every path it tried.
+**The Lessons panel says the worker was not found.** Checking a lesson still runs
+in the reference engine. The IDE looks for `native/bridge/worker.py` beside the
+executable, two levels up, and in the working directory, in that order. Set
+`TIME_WARP_WORKER` (full path to `worker.py`) or `TIME_WARP_PYTHON`
+(interpreter) to override either half. The error message lists every path it
+tried.
 
-**A bridged language says no interpreter was found.** Install Python 3.10+ or
-point `TIME_WARP_PYTHON` at one. Only the bridged language need it.
+**The Lessons panel says no interpreter was found.** Install Python 3.10+ or
+point `TIME_WARP_PYTHON` at one. Running a program needs no Python at all; only
+the lesson check does.
 
 **`make test` runs the wrong Python.** The bridge's pytest suite comes from
 `.venv` if it exists. Create one with `python3 -m venv .venv` and
@@ -116,19 +118,22 @@ point `TIME_WARP_PYTHON` at one. Only the bridged language need it.
 
 ---
 
-## 6. The language bridge (already bundled)
+## 6. The reference engine (already bundled)
 
-Nothing to install. What the unported language need is:
+All ten languages run in C++ inside the IDE. The Python engine is still shipped
+because it is the reference the parity gates compare against and the engine the
+Lessons panel checks a program with:
 
-- `native/bridge/worker.py` — the worker the IDE spawns
+- `native/bridge/worker.py` — the worker the IDE spawns for a lesson check
 - `native/bridge/time_warp/` — the engine it drives
 
 Optional extras are imported defensively and are **not** required: `pyttsx3`
-(BASIC `SAY`), `pygame` and `inputs` (BASIC `SOUND` and `GAMEPAD`). Without them
-those commands degrade rather than fail.
+(the reference's BASIC `SAY` backend), `pygame` and `inputs` (BASIC `SOUND` and
+`GAMEPAD`). Without them those commands degrade rather than fail. The native
+engine acknowledges `SAY` without producing audio, as it does `PLAY`.
 
-This engine is temporary. Each language ported to C++ removes its path through the
-bridge; `docs/ROADMAP.md` tracks the order.
+The engine is the part that goes away once lesson checking runs natively;
+`docs/ROADMAP.md` tracks that.
 
 ---
 

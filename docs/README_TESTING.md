@@ -1,8 +1,8 @@
 # Testing Time Warp Studio
 
 The product is the Qt application in `native/`, so the primary suites are C++
-suites driven by CTest. The Python engine that the unported language run
-through has its own small pytest suite.
+suites driven by CTest. The Python engine that the parity gates compare against,
+and that checks lessons, has its own small pytest suite.
 
 Run everything from the repository root.
 
@@ -41,7 +41,7 @@ draws nothing, which is what a user reports as "the graphics don't show up".
 python3 native/tools/example_smoke.py
 ```
 
-The 14 programs that must produce ink are listed in `DRAWING_EXAMPLES` inside that
+The 18 programs that must produce ink are listed in `DRAWING_EXAMPLES` inside that
 script; a program that is expected to draw and does not fails the run.
 
 ## The bridge engine's own tests
@@ -65,7 +65,7 @@ both sides seed from the OS, so they cannot agree by construction.
 ```bash
 python3 native/tools/differential_check.py native/build/expr_cli
 cd native/tools && python3 scheme_differential_check.py
-python3 native/tools/lang_differential_check.py   # 330 programs, 0 differences
+python3 native/tools/lang_differential_check.py   # 461 programs, 0 differences
 ```
 
 ## Lint

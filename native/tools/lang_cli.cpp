@@ -58,7 +58,20 @@ int main(int argc, char** argv) {
     timewarp::lang::Interpreter interpreter{*language, host};
     interpreter.set_output_callback(
         [](const std::string& line) { std::printf("OUT\t%s\n", line.c_str()); });
-    interpreter.set_input_callback([](const std::string&) { return std::string{}; });
+    // The harness resumes the reference at most 500 times and then stops where
+    // it stands: the five-hundredth answer is provided and never used. A
+    // program that keeps asking for input has to run out at the same point
+    // here, or the two sides describe two different programs: the menu in
+    // `budget_tracker.bas` printed 6,507 lines in Python and 56,510 with an
+    // unbounded stream of empty answers.
+    constexpr int kMaxInputRounds = 500;
+    int rounds = 0;
+    interpreter.set_input_callback([&interpreter, &rounds](const std::string&) {
+        if (++rounds >= kMaxInputRounds) {
+            interpreter.request_stop();
+        }
+        return std::string{};
+    });
     interpreter.load_program(source);
     interpreter.run();
 

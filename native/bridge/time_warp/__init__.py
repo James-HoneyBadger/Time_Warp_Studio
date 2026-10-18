@@ -1,8 +1,9 @@
 """
-Time Warp Studio - language bridge engine
+Time Warp Studio - reference language engine
 
-The temporary Python engine that the Qt application spawns for the languages that
-are not ported to C++ yet, and the reference the native engines are checked against.
+The Python engine the parity gates compare the C++ ports against, the engine the
+command matrix and example smoke drive, and the engine a lesson check runs in.
+No program is routed to it at run time: every language has a native executor.
 Aligned with Time Warp Studio v15.0.0 release
 """
 

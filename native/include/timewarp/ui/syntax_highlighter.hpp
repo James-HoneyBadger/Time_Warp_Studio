@@ -131,4 +131,28 @@ protected:
 /// engine's inventory without going through a document.
 [[nodiscard]] QStringList keywordsOf(Language language);
 
+/// Where code stops and prose starts, for a tool that has to read the *code*.
+///
+/// The lint pass (`lint.hpp`) skips comments and string bodies, so it has to
+/// agree with the highlighter about where they begin -- and the two disagreeing
+/// is how a checker reports a misspelling inside a comment. Exposed rather than
+/// copied so there is one table.
+struct LanguageSyntax {
+    /// Prefixes that comment out the rest of a line: `'`, `;`, `--`, `//`.
+    QStringList line_comments;
+    /// Words that do the same, matched at a word boundary: BASIC's `REM`.
+    QStringList comment_words;
+    /// A comment that spans lines (`/*` … `*/`, or Smalltalk's `"` twice).
+    /// Empty when the language has none.
+    QString block_open;
+    QString block_close;
+    /// String delimiters.
+    QStringList strings;
+    /// Whether the language matches keywords without regard to case.
+    bool case_insensitive = false;
+};
+
+/// The syntax of one language, from the highlighter's own table.
+[[nodiscard]] LanguageSyntax syntaxOf(Language language);
+
 }  // namespace timewarp::ui

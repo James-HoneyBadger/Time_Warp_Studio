@@ -329,6 +329,18 @@ struct LanguageRules {
 
 QStringList keywordsOf(Language language) { return rulesFor(language).keywords; }
 
+LanguageSyntax syntaxOf(Language language) {
+    const LanguageRules rules = rulesFor(language);
+    LanguageSyntax syntax;
+    syntax.line_comments = rules.line_comments;
+    syntax.comment_words = rules.comment_words;
+    syntax.block_open = rules.block_open;
+    syntax.block_close = rules.block_close;
+    syntax.strings = rules.strings;
+    syntax.case_insensitive = rules.case_insensitive;
+    return syntax;
+}
+
 SyntaxColors SyntaxColors::readableOnAnyBase() {
     SyntaxColors colors;
     // Chosen against `palette(base)`, which `ui_style.cpp` leaves to the system:
@@ -364,7 +376,11 @@ void SyntaxHighlighter::setColors(const SyntaxColors& colors) {
     string_format_.setForeground(colors.string);
     number_format_.setForeground(colors.number);
     directive_format_.setForeground(colors.directive);
-    rehighlight();
+    // The rule table holds *copies* of these formats, so replacing the formats
+    // alone leaves every rule painting the previous theme's colour. Rebuilding
+    // the rules is what actually recolours the document -- and `setLanguage`
+    // ends in `rehighlight()`.
+    setLanguage(language_);
 }
 
 void SyntaxHighlighter::setLanguage(Language language) {

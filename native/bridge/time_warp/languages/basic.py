@@ -335,6 +335,55 @@ def _substitute_undefined(expr: str, name: str) -> str:
     return re.sub(rf"\b{re.escape(name)}\b", "0", expr)
 
 
+#: Prefixes `PRINT` sends to the string evaluator. `$` is optional, so the
+#: table holds both spellings; `_is_string_function` compares the name without.
+_STRING_FUNCTIONS = (
+    "LEN(",
+    "LEFT(",
+    "RIGHT(",
+    "MID(",
+    "INSTR(",
+    "UPPER(",
+    "LOWER(",
+    "LCASE(",
+    "LCASE$(",
+    "UCASE(",
+    "UCASE$(",
+    "TRIM(",
+    "LTRIM(",
+    "RTRIM(",
+    "LPAD(",
+    "LPAD$(",
+    "RPAD(",
+    "RPAD$(",
+    "FORMAT(",
+    "FORMAT$(",
+    "ENVIRON(",
+    "ENVIRON$(",
+    "REPEAT(",
+    "REPEAT$(",
+    "SPACE(",
+    "SPACE$(",
+    "STRING$(",
+    "STR(",
+    "VAL(",
+)
+
+
+def _is_string_function(item_upper: str) -> bool:
+    """Whether *item_upper* begins with a string function the evaluator knows.
+
+    `FORMAT$(...)` contains `$(`, which the array-element test would otherwise
+    claim, so the caller has to be able to tell a function call from an
+    element read before it appends the empty string an undefined array gives.
+    """
+    open_paren = item_upper.find("(")
+    if open_paren == -1:
+        return False
+    head = item_upper[:open_paren].rstrip("$")
+    return any(prefix.rstrip("$(") == head for prefix in _STRING_FUNCTIONS)
+
+
 def _print_expression_failure(
     interpreter: "Interpreter", item: str, exc: Exception
 ) -> tuple[float | None, str | None]:
@@ -927,6 +976,13 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
                             out_items.append("")
                     except (ValueError, TypeError):
                         out_items.append("")
+                elif _is_string_function(item_upper):
+                    # A function call whose `$` made it look like an array:
+                    # `FORMAT$(...)`, `REPEAT$(...)`, `LPAD$(...)`.
+                    try:
+                        out_items.append(str(string_eval.evaluate(item_trim)))
+                    except (ValueError, TypeError):
+                        out_items.append("")
                 else:
                     out_items.append("")
             elif item_upper in interpreter.string_variables:
@@ -935,40 +991,7 @@ def _basic_print(interpreter: "Interpreter", args: str) -> str:
                 out_items.append("")  # Undefined string variable is empty
         # Handle string functions (LEN, LEFT, RIGHT, MID, INSTR, UPPER, LOWER,
         # TRIM, STR, VAL, LPAD, RPAD, FORMAT, LCASE, UCASE, ENVIRON, REPEAT)
-        elif any(
-            item_upper.startswith(func)
-            for func in [
-                "LEN(",
-                "LEFT(",
-                "RIGHT(",
-                "MID(",
-                "INSTR(",
-                "UPPER(",
-                "LOWER(",
-                "LCASE(",
-                "LCASE$(",
-                "UCASE(",
-                "UCASE$(",
-                "TRIM(",
-                "LTRIM(",
-                "RTRIM(",
-                "LPAD(",
-                "LPAD$(",
-                "RPAD(",
-                "RPAD$(",
-                "FORMAT(",
-                "FORMAT$(",
-                "ENVIRON(",
-                "ENVIRON$(",
-                "REPEAT(",
-                "REPEAT$(",
-                "SPACE(",
-                "SPACE$(",
-                "STRING$(",
-                "STR(",
-                "VAL(",
-            ]
-        ):
+        elif any(item_upper.startswith(func) for func in _STRING_FUNCTIONS):
             try:
                 result = string_eval.evaluate(item_trim)
                 out_items.append(str(result))

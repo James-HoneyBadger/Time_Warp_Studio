@@ -454,6 +454,14 @@ public:
     /// Loads *source* and runs it, streaming each statement's output.
     void run(std::string_view source);
 
+    /// Runs one command in the caller's interpreter, returning its text.
+    ///
+    /// BASIC reaches this for statements it does not know, as the reference
+    /// does. The machine is built per statement -- procedures cannot span two
+    /// BASIC lines -- but the words are folded back into the interpreter so
+    /// `MAKE` survives to the next line.
+    std::string run_one(std::string_view command);
+
 private:
     // -- loading ---------------------------------------------------------
     void load(std::string_view source);
@@ -3378,6 +3386,21 @@ void LogoMachine::run(std::string_view source) {
     }
 }
 
+std::string LogoMachine::run_one(std::string_view command) {
+    std::string output;
+    try {
+        output = run_text(command);
+    } catch (const BudgetStop&) {
+        return output;
+    } catch (const std::exception& error) {
+        output = std::string{"❌ "} + error.what() + "\n";
+    }
+    for (const auto& [name, text] : words_) {
+        interpreter_.set_text(name, text);
+    }
+    return output;
+}
+
 }  // namespace
 
 std::string execute_logo(Interpreter& interpreter, std::string_view source,
@@ -3385,6 +3408,16 @@ std::string execute_logo(Interpreter& interpreter, std::string_view source,
     LogoMachine machine{interpreter, turtle};
     machine.run(source);
     return {};
+}
+
+std::string execute_logo_command(Interpreter& interpreter, std::string_view command,
+                                 TurtleHost& turtle) {
+    LogoMachine machine{interpreter, turtle};
+    return machine.run_one(command);
+}
+
+bool is_logo_command(std::string_view word) {
+    return in_set(logo_commands(), upper(word));
 }
 
 }  // namespace timewarp::lang

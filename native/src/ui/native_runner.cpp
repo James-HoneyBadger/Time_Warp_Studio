@@ -2,7 +2,9 @@
 
 #include "timewarp/ui/native_runner.hpp"
 
+#include "timewarp/audio/music.hpp"
 #include "timewarp/lang/executor.hpp"
+#include "timewarp/ui/sound_player.hpp"
 
 #include <chrono>
 #include <utility>
@@ -255,6 +257,10 @@ void NativeCanvasHost::begin_run() {
     pen_ = Rgb{255, 255, 255};
     pen_width_ = 2.0;
     pen_down_ = true;
+    // The theme's surface, unless the run before this one had the program name a
+    // background: `background_` is mutated by `set_background`, so a fresh run
+    // must reset it from the default rather than inherit the last program's.
+    background_ = default_background_;
     pose_.home();
     canvas_pose_dirty_ = false;
     submit(make_color(CanvasCommandKind::SetPenColor, make_rgb(255, 255, 255)));
@@ -328,6 +334,66 @@ void NativeCanvasHost::set_palette_color(int index, Rgb colour) {
     submit(make_palette_color(index, make_rgb(colour.red, colour.green, colour.blue)));
 }
 
+// -- sound and keyboard -----------------------------------------------------
+
+void NativeCanvasHost::beep(int milliseconds) {
+    if (sound_ != nullptr) {
+        // The PC speaker's own bell is a square wave around 880Hz, which is also
+        // what `BEEP` means on the machines these dialects come from.
+        sound_->note(880.0, milliseconds > 0 ? milliseconds : 120);
+    }
+}
+
+void NativeCanvasHost::tone(double frequency, int milliseconds, const char* waveform) {
+    if (sound_ == nullptr) {
+        return;
+    }
+    timewarp::audio::Waveform shape = timewarp::audio::Waveform::Square;
+    const std::string name = waveform != nullptr ? waveform : "";
+    if (name == "sine") {
+        shape = timewarp::audio::Waveform::Sine;
+    } else if (name == "triangle") {
+        shape = timewarp::audio::Waveform::Triangle;
+    } else if (name == "noise") {
+        shape = timewarp::audio::Waveform::Noise;
+    }
+    sound_->note(frequency, milliseconds, shape);
+}
+
+void NativeCanvasHost::play_music(const char* notation) {
+    if (sound_ == nullptr || notation == nullptr) {
+        return;
+    }
+    timewarp::audio::ParseResult result;
+    const std::vector<timewarp::audio::Tone> tones =
+        timewarp::audio::parse_play(notation, &result);
+    // A partly-malformed tune still plays what parsed: the acknowledgement the
+    // language printed is the reference's, so the sound is a best effort.
+    sound_->play(tones);
+}
+
+void NativeCanvasHost::stop_sound() {
+    if (sound_ != nullptr) {
+        sound_->stop();
+    }
+}
+
+bool NativeCanvasHost::audio_available() const {
+    return sound_ != nullptr && sound_->available();
+}
+
+void NativeCanvasHost::push_keystroke(char key) {
+    const std::lock_guard<std::mutex> lock{keys_mutex_};
+    keys_.push_back(key);
+}
+
+std::string NativeCanvasHost::take_keystrokes() {
+    const std::lock_guard<std::mutex> lock{keys_mutex_};
+    std::string keys;
+    keys.swap(keys_);
+    return keys;
+}
+
 Rgb NativeCanvasHost::resolve_color(int index) const {
     const auto found = palette_.find(index);
     if (found != palette_.end()) {
@@ -359,6 +425,16 @@ void NativeRunner::load_program(const QString& source) {
 void NativeRunner::set_wakeup(std::function<void()> wakeup) {
     host_->set_wakeup(std::move(wakeup));
 }
+
+void NativeRunner::set_surface_color(timewarp::lang::Rgb colour) {
+    host_->set_default_background(colour);
+}
+
+void NativeRunner::set_sound_player(SoundPlayer* player) {
+    host_->set_sound_player(player);
+}
+
+void NativeRunner::push_key(char key) { host_->push_keystroke(key); }
 
 void NativeRunner::request_stop() {
     stop_requested_.store(true, std::memory_order_release);

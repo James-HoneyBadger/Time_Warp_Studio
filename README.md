@@ -38,11 +38,13 @@ Time Warp Studio is a unified desktop programming environment designed for educa
 - **Documents** — tabs, per-file language detection, unsaved-change prompts, new/open/save/save-as, a recent-files menu, and the files from the last session reopened at launch
 - **Run controls** — Run (F9) and Stop, with a status bar showing language, cursor position and execution state
 - **Inspection** — a 🔍 **Variables** panel listing every binding with its type and value, filtered by name, and a ⚡ **Telemetry** HUD showing what the run cost and did: steps used, engine time, steps per second, last line, recursion depth, call stack, output lines, drawing commands, BASIC's memory window, and — beside the engine's own counters — the IDE's wall clock and the ink that actually reached the canvas
-- **Debugging (Scheme)** — a 🐞 **Debug** panel driving the native runner: Continue, Pause, Step In/Over/Out, Stop and breakpoints, with the call stack and the frame's bindings shown while paused. The bridged language run to completion in another process with no pause protocol, so the panel says so instead of offering dead buttons
-- **Native engines** — Scheme runs in-process with no Python at all, and so do
-  **FOCAL**, **PILOT**, **COMAL** and **CHIP-8**, on the shared C++ `timewarp_lang`
-  engine. FOCAL, PILOT and COMAL evaluate their arithmetic with the native
-  expression evaluator (`timewarp_expr`), so they need no Python either (see
+- **Debugging (Scheme)** — a 🐞 **Debug** panel driving the native runner: Continue, Pause, Step In/Over/Out, Stop and breakpoints, with the call stack and the frame's bindings shown while paused. Every other language runs to completion without a pause protocol, so the panel says so instead of offering dead buttons
+- **Native engines** — every language runs in-process in C++ with no Python at
+  all. Scheme (`timewarp_scheme`) and CHIP-8, Logo and Smalltalk are
+  whole-program; BASIC, FOCAL, PILOT, COMAL, APL and REXX are line-by-line on
+  the shared `timewarp_lang` engine. The arithmetic each one evaluates goes
+  through the native expression evaluator (`timewarp_expr`), and the drawing
+  through the same canvas command queue the IDE drains (see
   [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md))
 
 ### What is still being built
@@ -60,7 +62,8 @@ Please read that list before reporting one of them as a regression.
 - 50+ drawing commands shared across every active language
 - Real-time rendering with the Qt painter, zoom/pan controls and a content-fitted view
 - Shapes, text labels, dotted and thick strokes, pen up/down, filled polygons
-- Cross-language graphics support (Logo, BASIC, COMAL, REXX, and Scheme)
+- Cross-language graphics support (Logo, BASIC, COMAL, REXX, Scheme, FOCAL, APL
+  and Smalltalk; PILOT draws with its `G:` commands and CHIP-8 paints rectangles)
 - The reference's conventions are unusual and are asserted in tests: heading 0 is north and increases clockwise, and `circle` is a polygon walk
 
 ### Debugging
@@ -69,7 +72,7 @@ Scheme runs on a native explicit-stack machine with a background runner, and the
 Debug panel drives it: Continue, Pause, Step In/Over/Out, Stop and breakpoints, with the
 call stack and that frame's bindings shown while paused. Values are typed by the machine
 rather than guessed from their printed form. Only Scheme can be stepped — every
-other language runs to completion, bridged or in-process, and has no pause protocol — so
+other language runs to completion and has no pause protocol — so
 the panel disables itself and says why, and the toolbar's Debug/Continue/Trace actions
 are still inert (tracked in the roadmap).
 

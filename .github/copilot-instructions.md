@@ -12,9 +12,11 @@ Time Warp Studio is an educational desktop programming environment built with **
 
 **Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 
-**Current State:** The Qt desktop application in `native/` is the product. The
-PySide6 implementation that came before it has been **removed**; what remains of
-Python is a temporary engine the Qt app spawns (see "The language bridge").
+**Current State:** The Qt desktop application in `native/` is the product, and all
+ten languages run in C++ inside it. The PySide6 implementation that came before
+it has been **removed**; the Python engine that remains (`native/bridge/`) is the
+reference the parity gates, the command matrix and the lesson check run in (see
+"The language bridge").
 
 ## Architecture: The Big Picture
 
@@ -25,19 +27,22 @@ Python is a temporary engine the Qt app spawns (see "The language bridge").
   - Build: `cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release && cmake --build native/build -j`
   - Shell: `native/src/ui/main_window.cpp`; canvas `native/src/ui/turtle_canvas.cpp`;
     editor `native/src/ui/code_editor.cpp`; languages `native/src/ui/language.cpp`
-  - Engines that are already native: Scheme (`timewarp_scheme`, an explicit-stack
-    CEK machine, dispatched in-process), FOCAL, PILOT, COMAL, CHIP-8, Logo, APL and REXX
-    (`timewarp_lang`, the shared interpreter loop plus one executor each), and the
-    expression evaluator (`timewarp_expr`, linked into `timewarp_lang` and used by
-    FOCAL, PILOT, COMAL and Logo; the bridged languages still evaluate in Python).
-- **The language bridge (Python, temporary)** — `native/bridge/`.
-  - BASIC is *not* ported yet, so
-    the IDE runs them through `native/bridge/worker.py`, which drives the retained
-    Python engine and streams JSON lines back (drawing, output, input, errors).
+  - Every language is native: Scheme (`timewarp_scheme`, an explicit-stack CEK
+    machine, dispatched in-process) and CHIP-8, Logo and Smalltalk
+    (whole-program) plus BASIC, FOCAL, PILOT, COMAL, APL and REXX (line-by-line)
+    on `timewarp_lang`, the shared interpreter loop plus one executor each, and
+    the expression evaluator (`timewarp_expr`, linked into `timewarp_lang` and
+    used by every arithmetic evaluator the executors share).
+- **The Python reference engine** — `native/bridge/`.
+  - No program is routed to it at run time: `executor_for()` answers for all ten.
+    It is kept because the differential gates compare each port against it, the
+    command matrix and example smoke drive it, and the Lessons panel asks
+    `native/bridge/worker.py` to check a learner's program, so the panel's
+    verdict and `teach.py`'s are one function's answer.
   - Protocol: `run`/`in-reply`/`stop` in; `ready`/`out`/`canvas`/`pose`/`err`/`in`/`done` out.
-  - It exists to be deleted: each language ported to C++ removes its bridge path.
+  - It is the part that goes away once lesson checking runs natively.
 
-**Critical Design Decision:** Language executors are stateless command processors returning text output. All UI state (turtle canvas, output display, themes) lives in the Qt application, not in an interpreter. Drawing crosses the bridge as commands on a `CanvasCommandQueue`, which the GUI thread drains into `TurtleCanvas`.
+**Critical Design Decision:** Language executors are stateless command processors returning text output. All UI state (turtle canvas, output display, themes) lives in the Qt application, not in an interpreter. Drawing crosses the thread boundary as commands on a `CanvasCommandQueue`, which the GUI thread drains into `TurtleCanvas`.
 
 ## Language Executor Pattern
 
@@ -79,8 +84,8 @@ make -C native run
 **System Requirements**
 
 - Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler
-- Python 3.10+ **only** for the bridged language; Scheme, FOCAL, PILOT,
-  COMAL, CHIP-8, Logo, APL and REXX run in-process with no Python at all
+- Python 3.10+ **only** for the reference engine the gates and the lesson check
+  use; every language runs in-process with no Python at all
 
 ### Testing Strategy
 
@@ -99,7 +104,7 @@ PYTHONPATH=native/bridge python3 -m pytest -q
 # Parity gates against the Python reference (0 unexpected mismatches)
 python3 native/tools/differential_check.py native/build/expr_cli
 cd native/tools && python3 scheme_differential_check.py
-python3 native/tools/lang_differential_check.py   # FOCAL/PILOT/COMAL/CHIP-8, 113 programs
+python3 native/tools/lang_differential_check.py   # all nine bridged-once languages, 461 programs
 
 # The documentation gates, which .github/workflows/docs.yml runs on every docs
 # change; the teach.py write-plans output is then checked with git diff --exit-code
@@ -112,15 +117,15 @@ make lint-md
 - `native/tests/*_tests.cpp` = the 13 C++ suites (lexer, evaluator, scheme, native
   languages, canvas queue, canvas bridge, debug, debugger runner, ui layout, ui
   document, turtle canvas, syntax highlighter, python bridge)
-- `native/tools/example_smoke.py` = every `Examples/**` program through the bridge; the 14
-  that must draw are listed in `DRAWING_EXAMPLES`
+- `native/tools/example_smoke.py` = every `Examples/**` program through the reference
+  engine; the 18 that must draw are listed in `DRAWING_EXAMPLES`
 - `native/bridge/time_warp/tests/` = the bridge engine's tests (the 10 language executors,
   the expression evaluator, validators)
 
 ### Adding a New Language
 
-1. Create the executor. A language with no C++ implementation runs in the bridge:
-   `native/bridge/time_warp/languages/my_lang.py`:
+1. Create the reference executor first, because the parity gate compares against
+   it: `native/bridge/time_warp/languages/my_lang.py`:
 
    ```python
    from __future__ import annotations
@@ -225,8 +230,8 @@ of the removed PySide6 implementation: that is tracked as pending work in
 native/                        - the Qt application (the product)
   CMakeLists.txt
   include/ src/ tests/ tools/
-  bridge/                      - TEMPORARY Python engine (delete as languages are ported)
-    worker.py                  - the JSON-lines worker the IDE spawns
+  bridge/                      - the Python reference engine (gates, lesson check)
+    worker.py                  - the JSON-lines worker the IDE spawns for a lesson check
     pyproject.toml             - ruff/mypy config for the engine
     time_warp/
       core/                    - interpreter.py, language_registry.py, config.py, sandbox.py
@@ -240,7 +245,8 @@ native/                        - the Qt application (the product)
       tests/                   - the engine's own tests
 Examples/                      - 48 example programs across the 10 active languages
 docs/                          - language guide + per-language tutorials
-Scripts/                       - audit_interpreters.py, version_sync.py, build_native.sh
+Scripts/                       - audit_interpreters.py, generate_icon.py,
+                                 version_sync.py
 ```
 
 ---
@@ -267,12 +273,12 @@ Scripts/                       - audit_interpreters.py, version_sync.py, build_n
   `PythonWorker` re-emits them as `variablesReported`/`telemetryReported` *before*
   `finished`. Scheme has no bridge payload, so its tables come from
   `DebuggerRunner::snapshot()` — including the final snapshot taken when a run ends
-  without pausing. `DebugPanel`'s buttons all forward to the current runner and are
-  disabled for the bridged languages and the native executors, neither of which has a
-  pause protocol. Only the terminal tab and the outline dock are still
+  without pausing. `DebugPanel`'s buttons all forward to the current runner and
+  are disabled for every language but Scheme, because no other engine has a pause
+  protocol. Only the terminal tab and the outline dock are still
   `PlaceholderPanel`s
-- **Engine (bridge)**: `time_warp/core/interpreter.py` dispatches; the 10 executors in
-  `time_warp/languages/` are stateless functions
+- **Engine (reference)**: `time_warp/core/interpreter.py` dispatches; the 10
+  executors in `time_warp/languages/` are stateless functions
 - **Expression evaluator**: native C++ (`timewarp_expr`) and, in the bridge, the
   reference in `time_warp/utils/expression_evaluator.py` that gates it
 - **Scheme**: native C++ explicit-stack machine (`timewarp_scheme`)
@@ -281,8 +287,9 @@ Scripts/                       - audit_interpreters.py, version_sync.py, build_n
 
 The Qt application: Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler.
 
-The bridge (only the unported language need it): Python 3.10+, standard
-library only. Optional extras -- `pyttsx3` (BASIC `SAY`), `pygame` and `inputs`
+The Python reference engine (needed by the parity gates, the command matrix and
+the lesson check, not by a Run): Python 3.10+, standard library only. Optional
+extras -- `pyttsx3` (the reference's BASIC `SAY` backend), `pygame` and `inputs`
 (BASIC `SOUND`/`GAMEPAD`) -- are imported defensively and are not required.
 
 The removed PySide6 application's dependencies are no longer installed or referenced.

@@ -220,6 +220,30 @@ std::string join_output(const Runtime& runtime) {
     return result;
 }
 
+/// Dismantles the frame graph when a run ends.
+///
+/// A block closure holds the frame that created it, and `| b | b := [:x | ...]`
+/// stores that closure in the same frame, so the run owns a reference cycle that
+/// `shared_ptr` cannot collect. The frames are dead once the run is over, so
+/// clearing their bindings is teardown rather than collection -- and it is a
+/// destructor because the run has five exits (two errors, a non-local return
+/// outside a method, and the normal end). Without it every program that creates
+/// a block leaks its AST under LeakSanitizer.
+struct RunTeardown {
+    Runtime& runtime;
+
+    ~RunTeardown() {
+        for (FramePtr frame = runtime.workspace; frame; frame = frame->parent) {
+            frame->temporaries.clear();
+            if (frame->activation) {
+                frame->activation->variables.clear();
+            }
+        }
+        runtime.globals.clear();
+        runtime.classes.clear();
+    }
+};
+
 }  // namespace
 
 }  // namespace smalltalk
@@ -230,6 +254,7 @@ std::string execute_smalltalk(Interpreter& interpreter, std::string_view source,
     (void)interpreter;
     Runtime runtime;
     runtime.turtle = &turtle;
+    const RunTeardown teardown{runtime};
 
     std::vector<std::string> chunks;
     try {

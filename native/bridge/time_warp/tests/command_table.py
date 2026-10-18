@@ -108,6 +108,19 @@ BASIC: list[Row] = [
     Row("BASIC", "DEF FN", "DEF FNA(N) = N * N\nPRINT FNA(5)", "prints:25"),
     Row("BASIC", "LEN", 'PRINT LEN("HELLO")', "prints:5"),
     Row("BASIC", "MID$", 'PRINT MID$("HELLO", 1, 3)', "prints:HEL"),
+    Row("BASIC", "CHR$", "PRINT CHR$(65)", "prints:A"),
+    Row("BASIC", "REPEAT$", 'PRINT REPEAT$("ab", 3)', "prints:ababab"),
+    # `FORMAT$` takes either a % conversion or a # mask; both are checked
+    # because the reference tries them in that order.
+    Row("BASIC", "FORMAT$ mask", 'PRINT FORMAT$("#.##", 3.14159)', "prints:3.14"),
+    Row("BASIC", "FORMAT$ printf", 'PRINT FORMAT$("%05.2f", 3.14159)', "prints:03.14"),
+    # The clock is not a constant, so each row asserts its shape rather than a
+    # value: HH:MM:SS is 8 characters and MM-DD-YYYY is 10. The assignment is
+    # the form both engines substitute the clock into; `LEN(TIME$)` reads the
+    # name as a string variable and answers 0.
+    Row("BASIC", "TIME$", "A$ = TIME$\nPRINT LEN(A$)", "prints:8"),
+    Row("BASIC", "DATE$", "A$ = DATE$\nPRINT LEN(A$)", "prints:10"),
+    Row("BASIC", "TIMER", "PRINT TIMER >= 0", "prints:1"),
     Row("BASIC", "ABS", "PRINT ABS(-5)", "prints:5"),
     Row("BASIC", "SQR", "PRINT SQR(16)", "prints:4"),
     Row("BASIC", "INT", "PRINT INT(3.7)", "prints:3"),
@@ -137,6 +150,18 @@ BASIC: list[Row] = [
         "draws",
     ),
     Row("BASIC", "LOCATE then PRINT", 'LOCATE 5, 5\nPRINT "X"', "any"),
+    # -- The Logo blend. A statement BASIC does not recognise, whose first word
+    #    is a Logo command, is handed to the Logo executor -- so a `.bas` file
+    #    can use turtle words. The row proves the forwarding still happens and
+    #    still draws; an unknown word must remain an error, which is the
+    #    "unknown statement" row further down.
+    Row(
+        "BASIC",
+        "Logo turtle words",
+        "CLEARSCREEN\nFORWARD 15\nRIGHT 90\nPENUP\nPENDOWN",
+        "draws",
+        ("FORWARD", "RIGHT", "PENUP", "PENDOWN"),
+    ),
     # -- Structural keywords. Each is already a piece of a program above; giving
     #    it a row of its own is what makes a break in the keyword attributable
     #    instead of showing up as a mystery failure in the row that used it.

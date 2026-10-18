@@ -21,10 +21,12 @@
 #include <QApplication>
 #include <QComboBox>
 #include <QDockWidget>
+#include <QFile>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QProgressBar>
+#include <QSet>
 #include <QTextBrowser>
 #include <QMargins>
 #include <QMenu>
@@ -45,14 +47,16 @@
 #include <QToolBar>
 #include <QToolButton>
 #include <QVBoxLayout>
-#include <QVBoxLayout>
 #include <QWidgetAction>
 
 #include "check.hpp"
 #include "timewarp/ui/code_editor.hpp"
+#include "timewarp/ui/command_palette.hpp"
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/panels.hpp"
+#include "timewarp/ui/standalone.hpp"
+#include "timewarp/ui/themes.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
 
@@ -639,8 +643,7 @@ void test_output_sub_tabs() {
     TW_CHECK(tabs->findChild<QPlainTextEdit*>(QStringLiteral("turtleLog")) != nullptr);
 }
 
-void test_function_key_bar_is_fixed_height() {
-    announce("function key bar");
+void test_function_key_bar_is_fixed_height() {    announce("function key bar");
     MainWindow window;
     FunctionKeyBar* bar = window.functionKeyBar();
 
@@ -650,10 +653,283 @@ void test_function_key_bar_is_fixed_height() {
     TW_CHECK_EQ(bar->maximumHeight(), FunctionKeyBar::kFixedHeight);
     TW_CHECK_EQ(bar->height(), FunctionKeyBar::kFixedHeight);
 
-    // F1..F10 plus the deck selector.
+    // Ten keys plus the layer badge. The badge is a button too, which is why the
+    // count is eleven rather than ten.
     const int buttons = static_cast<int>(bar->findChildren<QPushButton*>().size());
-    TW_CHECK_EQ(buttons, 10);
+    TW_CHECK_EQ(buttons, 11);
     TW_CHECK(bar->findChild<QComboBox*>(QStringLiteral("deckSelector")) != nullptr);
+    TW_CHECK(bar->layerBadge() != nullptr);
+    TW_CHECK_EQ(static_cast<int>(bar->keyButtons().size()), 10);
+}
+
+void test_function_key_layers() {
+    announce("function key layers");
+    FunctionKeyBar bar;
+
+    // Three layers of ten keys each, with actions and captions every time: a
+    // slot with no action is the dead key this bar used to be made of.
+    for (const FunctionKeyBar::Layer layer : {FunctionKeyBar::Layer::Normal,
+                                              FunctionKeyBar::Layer::Shift,
+                                              FunctionKeyBar::Layer::Control}) {
+        const QList<FunctionKeyBar::Binding> bindings =
+            FunctionKeyBar::bindingsFor(layer);
+        TW_CHECK_EQ(bindings.size(), 10);
+        QStringList ids;
+        for (const FunctionKeyBar::Binding& binding : bindings) {
+            TW_CHECK(!binding.keys.isEmpty());
+            TW_CHECK(!binding.action.isEmpty());
+            TW_CHECK(!binding.caption.isEmpty());
+            ids << binding.action;
+        }
+        // Two keys on one layer doing the same thing would be a table mistake;
+        // they are told apart by their id.
+        TW_CHECK_EQ(ids.size(), static_cast<int>(QSet<QString>(ids.begin(), ids.end()).size()));
+    }
+
+    TW_CHECK(bar.layer() == FunctionKeyBar::Layer::Normal);
+    const QString first_normal = bar.keyButtons().value(0) != nullptr
+                                     ? bar.keyButtons().at(0)->text()
+                                     : QString{};
+
+    bar.cycleLayer();
+    TW_CHECK(bar.layer() == FunctionKeyBar::Layer::Shift);
+    TW_CHECK(bar.layerBadge()->text().contains(QStringLiteral("SHIFT")));
+    // The keys are rebuilt, not merely relabelled: the actions differ per layer.
+    TW_CHECK(bar.keyButtons().at(0)->text() != first_normal);
+    TW_CHECK(bar.keyButtons().at(0)->property("action").toString() ==
+             QStringLiteral("shortcuts"));
+
+    bar.cycleLayer();
+    TW_CHECK(bar.layer() == FunctionKeyBar::Layer::Control);
+    bar.cycleLayer();
+    TW_CHECK(bar.layer() == FunctionKeyBar::Layer::Normal);
+    TW_CHECK_EQ(bar.keyButtons().at(0)->text(), first_normal);
+}
+
+void test_function_keys_are_wired() {
+    announce("function keys dispatch");
+    MainWindow window;
+    FunctionKeyBar* bar = window.functionKeyBar();
+
+    // Every key emits its action, and the window has a handler for each: the
+    // dispatcher must not answer "No action is bound" for anything on the bar.
+    // Only the keys that cannot open a dialog are actually clicked -- the point
+    // of the test is the wiring, not the save prompt.
+    QStringList seen;
+    QObject::connect(bar, &FunctionKeyBar::actionTriggered, &window,
+                     [&seen](const QString& action) { seen << action; });
+
+    bar->setLayer(FunctionKeyBar::Layer::Control);
+    const QStringList safe{QStringLiteral("inspect"), QStringLiteral("lessons"),
+                           QStringLiteral("clear_output"),
+                           QStringLiteral("filter_errors"),
+                           QStringLiteral("clear_canvas"),
+                           QStringLiteral("pause"), QStringLiteral("breakpoint")};
+    for (QPushButton* button : bar->keyButtons()) {
+        if (safe.contains(button->property("action").toString())) {
+            button->click();
+        }
+    }
+    TW_CHECK_EQ(seen.size(), static_cast<int>(safe.size()));
+
+    // A key with no handler says so rather than doing nothing at all.
+    window.performAction(QStringLiteral("definitely_not_a_real_action"));
+    const QString message = window.statusBar()->currentMessage();
+    TW_CHECK(message.contains(QStringLiteral("No action is bound")));
+
+    // The free function keys really are bound to their actions, and the ones the
+    // menus already own are not bound twice -- two actions on one sequence is an
+    // ambiguous shortcut that Qt resolves by guessing.
+    auto* fit = window.findChild<QAction*>(QStringLiteral("fkey_fit"));
+    TW_CHECK(fit != nullptr);
+    if (fit != nullptr) {
+        TW_CHECK_EQ(fit->shortcut(), QKeySequence{QStringLiteral("F5")});
+    }
+    TW_CHECK(window.findChild<QAction*>(QStringLiteral("fkey_outline")) != nullptr);
+    TW_CHECK(window.findChild<QAction*>(QStringLiteral("fkey_save")) == nullptr);
+    TW_CHECK(window.findChild<QAction*>(QStringLiteral("fkey_run")) == nullptr);
+
+    // Decks are wired too: the debugger deck raises the Debug panel.
+    window.selectDeck(QStringLiteral("debugger_deck"));
+    TW_CHECK_EQ(window.rightTabs()->currentIndex(), 3);
+    // The unbuilt one reports rather than doing nothing.
+    window.selectDeck(QStringLiteral("split_lab"));
+    TW_CHECK(window.statusBar()->currentMessage().contains(QStringLiteral("not built")));
+}
+
+void test_themes() {
+    announce("themes");
+    using timewarp::ui::themes::all;
+    using timewarp::ui::themes::byName;
+    using timewarp::ui::themes::defaultName;
+    using timewarp::ui::themes::next;
+
+    // The Python shipped 33 named schemes, and the table is transcribed from it,
+    // so the count is a fact worth pinning: a truncated generation would silently
+    // drop the retro sets.
+    TW_CHECK_EQ(all().size(), std::size_t{33});
+    QSet<QString> names;
+    for (const auto& theme : all()) {
+        const QString name = QString::fromUtf8(theme.name);
+        TW_CHECK(!name.isEmpty());
+        names.insert(name);
+        // Every colour is a valid #rrggbb, so a typo in the table cannot reach a
+        // stylesheet as an empty string.
+        for (const char* hex : {theme.background, theme.foreground, theme.editor_bg,
+                                theme.editor_fg, theme.keyword, theme.comment,
+                                theme.canvas_bg, theme.selection_bg}) {
+            TW_CHECK(timewarp::ui::themes::colour(hex).isValid());
+        }
+    }
+    TW_CHECK_EQ(names.size(), 33);
+
+    // An unknown name is a stale setting, not a crash.
+    TW_CHECK_EQ(QString::fromUtf8(byName(QStringLiteral("no such theme")).name),
+                defaultName());
+    // Cycling wraps.
+    TW_CHECK_EQ(QString::fromUtf8(next(QString::fromUtf8(all().back().name)).name),
+                defaultName());
+
+    MainWindow window;
+    const QString original = window.currentThemeName();
+    // A fresh window starts on the default -- or on whatever the settings say,
+    // which is the next assertion's job.
+    TW_CHECK_EQ(original, defaultName());
+
+    // Every theme applies: the window palette follows it, the theme's own rules
+    // reach the stylesheet, and the canvas paper changes with it.
+    for (const auto& theme : all()) {
+        const QString name = QString::fromUtf8(theme.name);
+        window.applyTheme(name);
+        TW_CHECK_EQ(window.currentThemeName(), name);
+        // Bound to named locals: `palette().color()` and `surfaceColor()` return
+        // QColor by value, and the check macro binds a reference into the
+        // temporary (GCC 16's `-Wdangling-reference` catches exactly this).
+        const QColor window_colour = QApplication::palette().color(QPalette::Window);
+        const QColor expected_window{QString::fromUtf8(theme.background)};
+        TW_CHECK_EQ(window_colour, expected_window);
+        TW_CHECK(window.styleSheet().contains(QString::fromUtf8(theme.selection_bg)));
+        const QColor paper = window.turtleCanvas()->surfaceColor();
+        const QColor expected_paper{QString::fromUtf8(theme.canvas_bg)};
+        TW_CHECK_EQ(paper, expected_paper);
+    }
+
+    // The choice is remembered, which is what makes it a setting.
+    window.applyTheme(QStringLiteral("Dracula"));
+    {
+        MainWindow second;
+        TW_CHECK_EQ(second.currentThemeName(), QStringLiteral("Dracula"));
+    }
+    // Shift+F10's action cycles rather than repeating.
+    window.cycleTheme();
+    TW_CHECK(window.currentThemeName() != QStringLiteral("Dracula"));
+
+    // Leave the developer's settings as they were for the tests after this one.
+    window.applyTheme(original);
+}
+
+void test_command_palette() {
+    announce("command palette");
+    MainWindow window;
+    timewarp::ui::CommandPalette palette{&window};
+    palette.populate(&window);
+
+    // The palette is the menu bar, so it cannot be shorter than the File menu.
+    TW_CHECK(palette.commandCount() > 15);
+    palette.setFilter(QStringLiteral("save"));
+    QList<QString> rows = palette.visibleCommands();
+    TW_CHECK(!rows.isEmpty());
+    for (const QString& row : rows) {
+        TW_CHECK(row.contains(QStringLiteral("ave"), Qt::CaseInsensitive));
+    }
+
+    // A filter that matches nothing offers nothing, rather than silently
+    // offering everything.
+    palette.setFilter(QStringLiteral("zzzz-no-such-command"));
+    TW_CHECK_EQ(palette.commandCount(), 0);
+
+    // Choosing a row really runs the command -- and closes the palette first, so
+    // an action that opens a dialog is not left underneath it.
+    window.clearOutput();
+    auto* console = window.findChild<QPlainTextEdit*>(QStringLiteral("consoleOutput"));
+    TW_CHECK(console != nullptr);
+    if (console != nullptr) {
+        console->setPlainText(QStringLiteral("something"));
+    }
+    palette.setFilter(QStringLiteral("Clear Output"));
+    TW_CHECK(palette.commandCount() >= 1);
+    TW_CHECK(palette.activate(0));
+    if (console != nullptr) {
+        TW_CHECK(console->toPlainText().isEmpty());
+    }
+}
+
+void test_standalone_payload() {
+    announce("standalone payload");
+    using timewarp::ui::standalone::Embedded;
+
+    // The format round-trips through the encoder and the decoder, which is the
+    // half of "compile" that can be tested without a second process.
+    const QByteArray bytes =
+        timewarp::ui::standalone::encode(QStringLiteral("basic"),
+                                         QStringLiteral("PRINT \"HI\"\n"));
+    Embedded decoded;
+    QString error;
+    TW_CHECK(timewarp::ui::standalone::decode(bytes, &decoded, &error));
+    TW_CHECK(decoded.present);
+    TW_CHECK_EQ(decoded.language, QStringLiteral("basic"));
+    TW_CHECK_EQ(decoded.source, QStringLiteral("PRINT \"HI\"\n"));
+
+    // Truncation and foreign files are refused with a reason, not decoded into a
+    // plausible-looking empty program.
+    TW_CHECK(!timewarp::ui::standalone::decode(bytes.left(bytes.size() - 3), &decoded,
+                                               &error));
+    TW_CHECK(!error.isEmpty());
+    TW_CHECK(!timewarp::ui::standalone::decode(QByteArray{"not a program"}, &decoded,
+                                               &error));
+
+    // End to end: build an artifact from the *test* binary (which is an
+    // executable like any other) and read the program back out of it.
+    QTemporaryDir dir;
+    TW_CHECK(dir.isValid());
+    const QString source_path = dir.filePath(QStringLiteral("hello.bas"));
+    {
+        QFile source{source_path};
+        TW_CHECK(source.open(QIODevice::WriteOnly));
+        source.write("PRINT \"HELLO\"\n");
+    }
+    const QString artifact = dir.filePath(QStringLiteral("hello"));
+    TW_CHECK(timewarp::ui::standalone::compileFile(
+        QCoreApplication::applicationFilePath(), source_path, artifact, false, &error));
+
+    const Embedded carried = timewarp::ui::standalone::embeddedIn(artifact);
+    TW_CHECK(carried.present);
+    TW_CHECK_EQ(carried.language, QStringLiteral("basic"));
+    TW_CHECK_EQ(carried.source, QStringLiteral("PRINT \"HELLO\"\n"));
+
+    // The artifact is executable, or the thing a learner is told to double-click
+    // cannot be.
+    QFile::Permissions permissions = QFile::permissions(artifact);
+    TW_CHECK(permissions.testFlag(QFile::ExeOwner));
+
+    // Overwriting needs to be asked for, and a file that is not a program is
+    // refused before anything is written.
+    TW_CHECK(!timewarp::ui::standalone::compileFile(
+        QCoreApplication::applicationFilePath(), source_path, artifact, false, &error));
+    const QString text_path = dir.filePath(QStringLiteral("notes.txt"));
+    {
+        QFile text{text_path};
+        TW_CHECK(text.open(QIODevice::WriteOnly));
+        text.write("hello");
+    }
+    TW_CHECK(!timewarp::ui::standalone::compileFile(
+        QCoreApplication::applicationFilePath(), text_path,
+        dir.filePath(QStringLiteral("notes")), true, &error));
+
+    // A plain executable carries nothing, which is the IDE's own case.
+    TW_CHECK(!timewarp::ui::standalone::embeddedIn(
+                  QCoreApplication::applicationFilePath())
+                  .present);
 }
 
 void test_tool_bar_configuration() {
@@ -683,11 +959,13 @@ void test_tool_bar_configuration() {
         TW_CHECK_EQ(run->popupMode(), QToolButton::MenuButtonPopup);
     }
     TW_CHECK(bar->findChild<QComboBox*>(QStringLiteral("languageSelector")) != nullptr);
-    // The display controls belong to the second row, and only to the second row:
-    // a slider found on the first row would mean the split had not happened.
+    // The display controls belong to the second row, and only to the second row.
+    // The turtle-speed slider was removed rather than finished: nothing animates
+    // the display list, so it controlled an ability the application does not
+    // have. The Settings button that took its place is on the second row.
+    TW_CHECK(display->findChild<QSlider*>(QStringLiteral("turtleSpeedSlider")) == nullptr);
     TW_CHECK(bar->findChild<QSlider*>(QStringLiteral("turtleSpeedSlider")) == nullptr);
-    TW_CHECK(display->findChild<QSlider*>(QStringLiteral("turtleSpeedSlider")) != nullptr);
-    TW_CHECK(display->findChild<QLabel*>(QStringLiteral("turtleSpeedValue")) != nullptr);
+    TW_CHECK(display->findChild<QAction*>(QStringLiteral("preferencesAction")) != nullptr);
 
     // The language selector has to actually offer the languages; an empty combo is
     // a control that promises a choice and gives none.
@@ -885,6 +1163,36 @@ void test_file_menu_close_tab_closes_one() {
         item->trigger();
         TW_CHECK_EQ(window.editorTabs()->count(), before - 1);
     }
+}
+
+void test_tab_close_button_closes_the_tab() {
+    announce("the tab's own X button");
+    MainWindow window;
+    window.newFile();  // so closing one leaves a document behind
+    QTabWidget* tabs = window.editorTabs();
+    const int before = tabs->count();
+    TW_CHECK(before >= 2);
+
+    // The button Qt paints for `setTabsClosable(true)`, found the way a user
+    // finds it: on the tab bar. Clicking it is the bug report -- the X was
+    // drawn and inert, because `QTabWidget::tabCloseRequested` was never
+    // connected to anything.
+    QTabBar* bar = tabs->tabBar();
+    QWidget* button = bar->tabButton(0, QTabBar::RightSide);
+    if (button == nullptr) {
+        button = bar->tabButton(0, QTabBar::LeftSide);
+    }
+    TW_CHECK(button != nullptr);
+    if (button == nullptr) {
+        return;
+    }
+    auto* close = qobject_cast<QAbstractButton*>(button);
+    TW_CHECK(close != nullptr);
+    if (close == nullptr) {
+        return;
+    }
+    close->click();
+    TW_CHECK_EQ(tabs->count(), before - 1);
 }
 
 void test_view_menu_grid_drives_the_canvas() {
@@ -1129,14 +1437,10 @@ void test_unported_controls_say_so_instead_of_doing_nothing() {
         }
     }
 
-    // The speed slider is a widget rather than an action, and it delays nothing
-    // until drawings animate.
-    auto* speed = window.findChild<QSlider*>(QStringLiteral("turtleSpeedSlider"));
-    TW_CHECK(speed != nullptr);
-    if (speed != nullptr) {
-        TW_CHECK(!speed->isEnabled());
-        TW_CHECK(speed->toolTip().contains(QStringLiteral("not ported")));
-    }
+    // The speed slider is gone rather than disabled: a control that delays nothing
+    // until drawings animate was the one entry in this row that could never be
+    // enabled, and a permanently disabled control reads as a broken feature.
+    TW_CHECK(window.findChild<QSlider*>(QStringLiteral("turtleSpeedSlider")) == nullptr);
 }
 
 void test_crt_overlay_tracks_its_target() {
@@ -1332,12 +1636,18 @@ int main(int argc, char** argv) {
     test_output_and_graphics_share_a_persistent_split();
     test_output_sub_tabs();
     test_function_key_bar_is_fixed_height();
+    test_function_key_layers();
+    test_function_keys_are_wired();
+    test_themes();
+    test_command_palette();
+    test_standalone_payload();
     test_tool_bar_configuration();
     test_status_bar_badge_placement();
     test_outline_dock_starts_hidden();
     test_menu_structure();
     test_file_menu_new_opens_a_document();
     test_file_menu_close_tab_closes_one();
+    test_tab_close_button_closes_the_tab();
     test_view_menu_grid_drives_the_canvas();
     test_view_menu_zoom_scales_the_canvas();
     test_run_menu_clear_output_empties_the_console();

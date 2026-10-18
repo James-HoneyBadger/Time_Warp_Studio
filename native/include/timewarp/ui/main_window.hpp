@@ -53,15 +53,16 @@
 #include "timewarp/bridge/python_worker.hpp"
 #include "timewarp/debugger/debugger_runner.hpp"
 #include "timewarp/lang/language.hpp"
+#include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/language.hpp"
 
+class QAction;
 class QCloseEvent;
 class QComboBox;
 class QDockWidget;
 class QLabel;
 class QMenu;
 class QPlainTextEdit;
-class QSlider;
 class QSplitter;
 class QTabWidget;
 class QToolBar;
@@ -79,6 +80,7 @@ class CanvasBridge;
 namespace timewarp::ui {
 
 class CodeEditor;
+class CommandPalette;
 class CrtOverlay;
 class DebugPanel;
 class FindBar;
@@ -88,6 +90,7 @@ class LessonPanel;
 class NativeRunner;
 class PlaceholderPanel;
 class ResizableTabWidget;
+class SoundPlayer;
 class TelemetryPanel;
 class TurtleCanvas;
 class VariablesPanel;
@@ -179,6 +182,70 @@ public:
     /// chevron, which hides the overflow rather than making it reachable.
     [[nodiscard]] QToolBar* secondaryToolBar() const noexcept { return tool_bar_secondary_; }
     [[nodiscard]] TurtleCanvas* turtleCanvas() const noexcept { return turtle_canvas_; }
+
+    // -- appearance -------------------------------------------------------
+    //
+    // A theme is one of the 33 colour records in `themes.cpp`. Applying one sets
+    // the application palette (which is what most of `ui_style.cpp` reads), the
+    // window's theme rules, every open editor's syntax colours and the canvas
+    // surface. It is persisted as `appearance/theme`, so the choice survives a
+    // restart -- which is the difference between a setting and a demonstration.
+
+    /// Applies `name` and records it. A name this build does not have falls back
+    /// to the default rather than leaving the window half themed.
+    void applyTheme(const QString& name);
+    /// The theme currently applied.
+    [[nodiscard]] QString currentThemeName() const { return theme_name_; }
+    /// The next theme in the table, wrapping. What Shift+F10 does.
+    void cycleTheme();
+
+    // -- editor settings ---------------------------------------------------
+    //
+    // One settings record, applied to every tab: the editor's font, tab width,
+    // gutter, current-line band, auto-indent, checking and completion. Persisted
+    // as `editor/*`, and edited in the Preferences dialog (Ctrl+,).
+
+    /// Applies `settings` to every open tab and to every tab opened later.
+    /// Persistence is separate, so Cancel can restore what was there.
+    void applyEditorSettings(const EditorSettings& settings);
+    [[nodiscard]] const EditorSettings& editorSettings() const noexcept {
+        return editor_settings_;
+    }
+    /// The Preferences dialog (Ctrl+,).
+    void showPreferences();
+
+    // -- keys, the palette and actions ------------------------------------
+    //
+    // One implementation per action, reached by the function-key bar's buttons,
+    // by the matching key sequence, by the command palette and by the menus.
+    // Before this, the bar's buttons emitted a signal nothing listened to; the
+    // fix is not ten new handlers but one dispatcher the bar can name.
+
+    /// Performs an action by its stable id: `"save"`, `"cycle_theme"`, `"run"`.
+    ///
+    /// An id with no implementation is reported in the status bar rather than
+    /// ignored, because a silent no-op is indistinguishable from a broken button.
+    void performAction(const QString& action);
+    /// Applies a workspace deck: `code_focus`, `split_lab`, `graphics_studio` or
+    /// `debugger_deck`.
+    void selectDeck(const QString& deckId);
+    /// The command palette (F10, Ctrl+Shift+P).
+    void showCommandPalette();
+    /// The keyboard reference (F1, Shift+F1).
+    void showShortcutHelp();
+
+    // -- standalone programs ----------------------------------------------
+    //
+    // A program compiled into a copy of this executable (`standalone.hpp`) is
+    // opened as a *program*: read-only, language taken from the payload rather
+    // than the file name, authoring UI hidden, and running before the window is
+    // shown. The same window, in a different mode.
+
+    /// Opens `source` in player mode and runs it. Returns false when the language
+    /// key is not one this build has.
+    bool openStandaloneProgram(const QString& languageKey, const QString& source,
+                               const QString& title);
+    [[nodiscard]] bool isPlayerMode() const noexcept { return player_mode_; }
 
     // -- execution --------------------------------------------------------
     //
@@ -301,9 +368,27 @@ private:
     void buildOutputColumn();
     void buildFunctionKeyRow(QVBoxLayout* column);
     void buildMenuBar();
+    /// Files the 30 function-key actions into the window as shortcuts, taking the
+    /// table from `FunctionKeyBar::bindingsFor` so a key and its button cannot
+    /// disagree. A key the application already binds is skipped, not duplicated:
+    /// two actions on one sequence is an ambiguous shortcut, and Qt then fires
+    /// whichever it prefers.
+    void buildFunctionKeyShortcuts();
     void buildToolBar();
     void buildStatusBar();
     void buildDocks();
+
+    /// The View menu's theme submenu: one checkable entry per theme.
+    void buildThemeMenu(QMenu* view);
+    /// Re-reads the current theme's colours into everything that is not a palette
+    /// role: syntax highlighting, the canvas surface, the lesson verdict colours.
+    void applyThemeToWidgets();
+
+    /// Reads the editor settings out of QSettings, defaulting anything absent.
+    void loadEditorSettings();
+    /// Writes them back. Called when the Preferences dialog is accepted, not on
+    /// every Apply: a live preview that was cancelled should not survive a restart.
+    void saveEditorSettings() const;
 
     /// Names the splitters and asks Qt for child-relative width/height. Kept in
     /// one place because the same three calls are correct for every one of them.
@@ -403,6 +488,24 @@ private:
     /// the files that were open when the window was created.
     QMenu* recent_menu_ = nullptr;
 
+    /// The theme in force, and the menu that records it. The actions live in the
+    /// View menu and are `QActionGroup`-exclusive, so the tick is the state.
+    QString theme_name_;
+    QMenu* theme_menu_ = nullptr;
+    /// Created on first use: a palette nobody opens costs nothing.
+    CommandPalette* command_palette_ = nullptr;
+    /// The View menu's checkable CRT entry, so the function key can drive the
+    /// menu's state instead of a second flag that could disagree with it.
+    QAction* crt_action_ = nullptr;
+    /// The editor's customisations, as loaded at startup and edited in Preferences.
+    EditorSettings editor_settings_;
+    /// The one sound player, shared by every run: a `SOUND` from the next program
+    /// should stop the previous one anyway, so two players would be one too many.
+    SoundPlayer* sound_ = nullptr;
+    /// Set by `openStandaloneProgram`. Hides the authoring UI and keeps the
+    /// document read-only; never cleared, because there is nothing to return to.
+    bool player_mode_ = false;
+
     /// Serial number for naming untitled documents, so two of them are not both
     /// called "untitled". Never decreases: reusing a name the user just closed
     /// reads as the old document having come back.
@@ -416,8 +519,6 @@ private:
 
     // -- toolbar ----------------------------------------------------------
     QComboBox* language_combo_ = nullptr;
-    QSlider* speed_slider_ = nullptr;
-    QLabel* speed_value_ = nullptr;
 
     // -- execution --------------------------------------------------------
     TurtleCanvas* turtle_canvas_ = nullptr;

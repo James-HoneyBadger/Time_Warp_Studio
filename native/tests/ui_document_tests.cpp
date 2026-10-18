@@ -47,6 +47,7 @@
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
+#include "timewarp/ui/themes.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
 namespace {
@@ -582,21 +583,13 @@ void test_pen_up_moves_without_drawing() {
     TW_CHECK(std::abs(canvas->turtlePosition().y() - 100.0) < 1e-6);
 }
 
-void test_running_basic_prints_through_the_bridge() {
-    announce("running basic through the bridge");
-    QString reason;
-    if (!timewarp::bridge::locateWorker(&reason).isValid()) {
-        // No Python means no bridge, which is an environment fact rather than a
-        // defect in the window. The reason names every path that was searched.
-        std::printf("SKIP: %s\n", qPrintable(reason));
-        return;
-    }
-
+void test_running_basic_prints_natively() {
+    announce("running basic natively");
     QTemporaryDir dir;
-    // BASIC has no C++ interpreter, so this only works if the window routes it to
-    // the Python bridge. That is the point: it covers the *window's* half of the
-    // wiring -- which process, which console, which badge -- rather than the bridge
-    // itself, which `python_bridge_tests` covers directly.
+    // BASIC was the last port. This covers the window's routing now that
+    // `executor_for` answers for it -- editor text -> native runner -> console
+    // and badge. (The old version skipped when no Python was found, which hid
+    // the routing on exactly the machines that needed it least.)
     const QString path = writeFile(dir, QStringLiteral("hello.bas"),
                                    QByteArray{"10 PRINT \"HELLO FROM BASIC\"\n20 END\n"});
     TW_CHECK(!path.isEmpty());
@@ -649,16 +642,24 @@ void test_running_logo_draws_on_the_canvas() {
 
     TW_CHECK_EQ(canvas->strokeCount(), 4);
     TW_CHECK(std::abs(canvas->totalStrokeLength() - 400.0) < 1e-6);
-    // The compass convention again, this time after a journey through a child
-    // process: north first, then east.
+    // The compass convention again, this time after a journey through the
+    // native runner: north first, then east.
     TW_CHECK(std::abs(canvas->turtlePosition().x()) < 1e-6);
     TW_CHECK(std::abs(canvas->turtlePosition().y()) < 1e-6);
-    // The reference's own surface came with it. This is the assertion that
-    // matters most for visibility: the reference's pen is white, so a canvas
+    // The engine's own surface came with it. This is the assertion that
+    // matters most for visibility: the engine's pen is white, so a canvas
     // that kept its own white background would show nothing at all while
     // reporting a successful run and four strokes drawn.
-    TW_CHECK_EQ(canvas->background().red(), 10);
-    TW_CHECK_EQ(canvas->background().blue(), 20);
+    //
+    // Since the themes landed, the surface a run starts on is the *theme's*
+    // canvas paper rather than the reference's fixed colour, so the assertion is
+    // that the run and the idle canvas agree with each other and with the theme
+    // -- not that they are one particular pair of numbers.
+    const QColor paper = timewarp::ui::themes::colour(
+        timewarp::ui::themes::byName(window.currentThemeName()).canvas_bg);
+    TW_CHECK_EQ(canvas->background(), paper);
+    const QColor white{255, 255, 255};
+    TW_CHECK(canvas->background() != white);
 }
 
 /// The text of one cell in a named table, or an empty string when the row or the
@@ -859,7 +860,7 @@ void test_a_native_run_fills_the_panels() {
     }));
     TW_CHECK_EQ(badgeText(window, "executionBadge"), QStringLiteral("ready"));
 
-    // FOCAL ran in this process. Its tables arrive the same way the bridge's do,
+    // FOCAL ran in this process. Its tables arrive through the native runner,
     // which is what makes the panels agnostic about the engine.
     const int x = rowNamed(window, "variablesTable", QStringLiteral("X"));
     TW_CHECK(x >= 0);
@@ -879,7 +880,8 @@ void test_a_native_run_fills_the_panels() {
     TW_CHECK(!hud->valueOf(QStringLiteral("Engine time")).isEmpty());
     TW_CHECK(hud->valueOf(QStringLiteral("Canvas ink")).contains(QStringLiteral("4 segments")));
 
-    // Native as well as bridged: no pause protocol, so the panel says so.
+    // Native, like every language but Scheme: no pause protocol, so the panel
+    // says so.
     TW_CHECK(!window.debugPanel()->isAvailable());
 }
 
@@ -1151,7 +1153,7 @@ int main(int argc, char** argv) {
 
     test_running_scheme_draws_on_the_canvas();
     test_pen_up_moves_without_drawing();
-    test_running_basic_prints_through_the_bridge();
+    test_running_basic_prints_natively();
     test_running_logo_draws_on_the_canvas();
     test_a_scheme_run_fills_the_variables_and_telemetry_panels();
     test_a_native_run_fills_the_variables_and_telemetry_panels();

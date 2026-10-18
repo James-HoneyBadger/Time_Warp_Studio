@@ -1,13 +1,13 @@
 # Time Warp Studio — native engine ports (C++20)
 
-Two dependency-free C++20 ports of Python modules from the scratch-built Time
-Warp Studio interpreter:
+The dependency-free C++20 libraries the Qt application is built from, and how
+each one replaced or absorbed its Python original:
 
 | Library | Ported from | What it is |
 | --- | --- | --- |
 | `timewarp_expr` | `utils/expression_evaluator.py` | the expression lexer/evaluator shared by every language executor |
 | `timewarp_scheme` | `languages/scheme.py` | a tree-walking Scheme interpreter with **no native recursion** |
-| `timewarp_lang` | `languages/{focal,pilot,comal,chip8,logo}.py` | the shared interpreter loop and the executors ported so far (FOCAL, PILOT, COMAL, CHIP-8, Logo) |
+| `timewarp_lang` | `languages/*.py` | the shared interpreter loop and all ten executors: BASIC, FOCAL, PILOT, COMAL, APL and REXX line by line, CHIP-8, Logo and Smalltalk whole-program |
 | `timewarp_canvas` | bridging `ui/output.py` and `ui/canvas.py` | a lock-free single-producer/single-consumer canvas command queue, with an optional Qt6 adapter |
 
 `timewarp_expr` came first: a self-contained, hot, allocation-sensitive unit with
@@ -335,19 +335,34 @@ the run budget and the current line; an executor is a plain function
 executors are plain functions. `TurtleHost` is an abstract drawing surface, so the
 engine has no Qt dependency and a test can record what was drawn as text.
 
-Ported so far: **FOCAL**, **PILOT**, **COMAL** (line-by-line) and **CHIP-8**
-(whole-program, with the assembler in `chip8.cpp`). The FOCAL, PILOT and COMAL
-ports are also where the
-native expression evaluator became part of a Run: `Interpreter::evaluate_expression`
-uses `timewarp_expr`, so `C:` and `B:` are the arithmetic the expression library is
-gated against. `executor_for()` returns null for the rest, which is
-how `MainWindow` knows to keep using the bridge -- adding an executor is the
-whole change needed for the IDE to run that language in process.
+Every language is ported: **BASIC**, **FOCAL**, **PILOT**, **COMAL**, **APL** and
+**REXX** line-by-line, and **CHIP-8**, **Logo** and **Smalltalk** whole-program
+(with the CHIP-8 assembler in `chip8.cpp`). Scheme lives in `src/scheme/` on its
+own explicit-stack machine. The ports are also where the native expression
+evaluator became part of a Run: `Interpreter::evaluate_expression` uses
+`timewarp_expr`, so `C:`, `B:` and BASIC arithmetic are the arithmetic the
+expression library is gated against. `executor_for()` answers for all ten, so
+`MainWindow` runs every language in process and `runInBridge` has no runtime case
+
+Two Qt-free libraries beside it are what a program reaches outward with:
+
+* `src/audio/music.cpp` — `PLAY`'s notation to tones, and the tones to 16-bit PCM
+  and a WAV file. Square, triangle, sine and noise; equal temperament; a short
+  attack and release so a square wave does not click. `src/ui/sound_player.cpp`
+  plays the result through the first of `paplay`, `aplay`, `ffplay` or `play` on
+  the machine, which is why no audio library is linked.
+* `src/io/ports.cpp` — serial (`termios`, raw, timeouts) and parallel
+  (write-only) device access for the `/dev/tty*`, `/dev/serial/`, `/dev/pts/`,
+  `/dev/lp*` and `/dev/parport*` families. `PortPolicy` is the allow-list that
+  refuses everything else, and `TIME_WARP_PORTS` is the teacher's escape hatch.
+  `media_tests` drives it through a pseudo-terminal: a real device with the other
+  end in the test.
+left; adding an executor is still the whole change a new language needs.
 
 The port is checked against the reference, not against a description of it:
 
 ```bash
-python3 native/tools/lang_differential_check.py   # 113 programs, 0 differences
+python3 native/tools/lang_differential_check.py   # 461 programs, 0 differences
 ```
 
 That harness runs every command-table row and every example through both
@@ -1101,16 +1116,13 @@ wrong name.
 
 ### The canvas, and what runs
 
-**All ten languages run.** Scheme goes through the C++ interpreter on a background
-thread; FOCAL, PILOT, COMAL, CHIP-8, Logo, APL and REXX run in process through `timewarp_lang`;
-BASIC goes through the **Python bridge**, which runs the
-existing Python implementations in a child process and streams what they draw back
-as canvas commands. Every one of the 48 examples in `Examples/` executes, and the 14
-that draw produce drawing -- checked by `tools/example_smoke.py`.
-
-The bridge exists because reimplementing four languages is the work it postpones.
-Python is the oracle while each language is ported, and a language stops being
-routed to it the day its C++ interpreter lands.
+**All ten languages run.** Scheme goes through the C++ interpreter on a
+background thread; the other nine run in process through `timewarp_lang`. No
+program is sent to the Python engine any more -- it stays as the reference the
+gates and the lesson check use. Every one of the 48 examples in `Examples/`
+executes, and the 18 that draw produce drawing -- checked by
+`tools/example_smoke.py` through the reference, and by
+`lang_differential_check.py` on both sides.
 
 ### The lesson panel
 
@@ -1201,9 +1213,9 @@ strokes a circle costs.
 * The terminal and outline panels are still `PlaceholderPanel`s naming the Python
   module they stand for. The layout is real; their contents are not. The variables,
   telemetry and debug pages used to be on this list and no longer are: they are
-  `VariablesPanel`, `TelemetryPanel` and `DebugPanel`, fed by the bridge's `done`
-  payload for the bridged languages and by `DebuggerRunner::snapshot()` for
-  Scheme.
+  `VariablesPanel`, `TelemetryPanel` and `DebugPanel`, fed by the reference
+  worker's `done` payload when a lesson check runs and by
+  `DebuggerRunner::snapshot()` for Scheme.
 * The editor colours source per language and finds and replaces in it, but still
   has no minimap, find-in-files, outline or formatter. The Python editor is 2,254
   lines because of those extras; they are worth adding one at a time against a

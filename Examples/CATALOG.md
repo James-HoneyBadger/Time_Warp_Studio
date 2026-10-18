@@ -1,16 +1,20 @@
 # Examples Catalog
 
 This catalog lists the example programs currently shipped with Time Warp Studio.
-It is intentionally limited to the six active languages.
+It covers all ten active languages.
 
 ## Active Languages
 
 - BASIC
-- PILOT
+- APL
 - Logo
+- PILOT
+- FOCAL
+- Scheme
+- CHIP-8
 - COMAL
 - REXX
-- Scheme
+- Smalltalk
 
 ## BASIC
 
