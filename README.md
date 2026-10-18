@@ -5,7 +5,7 @@
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)](https://en.cppreference.com/)
 [![Qt6](https://img.shields.io/badge/Qt-6-green)](https://www.qt.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-15.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-16.0.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **10 active programming languages** into a single, modern IDE. Built as a **native C++20 / Qt6 application**, it provides an integrated platform for learning programming concepts, exploring turtle graphics, and working through a **checked lesson curriculum** with tools for both learners and teachers.
 

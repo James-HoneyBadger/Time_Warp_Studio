@@ -1,8 +1,18 @@
 # Changelog
 
-## [Unreleased]
+## [16.0.0] - 2026-10-18
 
-The IDE catches up with the engine, and programs can reach outside it.
+All ten languages now run in C++: nothing is routed to the Python engine at run
+time, and it has been demoted to the reference the parity gates compare against.
+The IDE that runs them gained the features the port had been missing — themes,
+working function keys, a command palette, an editor that checks a program as it is
+typed, sound that is audible, and ports a program can talk to. Programs can also
+leave the IDE: `--compile` writes a standalone executable.
+
+Two of those change what the product *promises* rather than what it can do. The
+language lineup and the run-time dependency are the project's central claim, and
+`SERIAL`/`PARALLEL` put device nodes within a program's reach — which is why they
+are allow-listed, and why that is a security surface rather than a feature.
 
 ### Added
 

@@ -142,8 +142,18 @@ def main() -> int:
         return 2
 
     if args.write:
-        for copy, _content in updates:
-            copy.path.write_text(_updated_text(copy, _content), encoding="utf-8")
+        # Two copies can live in one file: the bridge package carries both its
+        # `__version__` and a docstring version line. Writing each copy's edit
+        # against the text read *before* the batch meant the second write undid
+        # the first, so the file came out with one of the two updated and the
+        # release failed its own check. Edits are applied in order to the file's
+        # current text instead.
+        for path in {copy.path for copy, _content in updates}:
+            content = path.read_text(encoding="utf-8")
+            for copy, _content in updates:
+                if copy.path == path:
+                    content = _updated_text(copy, content)
+            path.write_text(content, encoding="utf-8")
 
     if updates:
         # The emoji reports whether a person has something left to do. After a
@@ -152,7 +162,9 @@ def main() -> int:
         if args.write:
             print(f"✅ Brought {len(updates)} copy/copies up to VERSION ({version}).")
         else:
-            print(f"❌ Stale: {len(updates)} copy/copies disagree with VERSION ({version}).")
+            print(
+                f"❌ Stale: {len(updates)} copy/copies disagree with VERSION ({version})."
+            )
         for copy, _content in updates:
             print(f"   - {copy.description} ({copy.path.relative_to(REPO_ROOT)})")
     else:
@@ -167,7 +179,10 @@ def main() -> int:
             missing += 1
             continue
         if not re.search(requirement.pattern, content):
-            print(f"❌ Release paperwork missing: {requirement.description}", file=sys.stderr)
+            print(
+                f"❌ Release paperwork missing: {requirement.description}",
+                file=sys.stderr,
+            )
             missing += 1
 
     if missing:
