@@ -69,11 +69,11 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
 
 - [ ] Push the annotated tag `vX.Y.Z` from `main`, then watch the run:
       `gh run watch $(gh run list --workflow=release.yml --limit=1 --json databaseId --jq '.[0].databaseId')`
-- [ ] Confirm the release has, for **each** architecture, a `.tar.gz`, a `.deb`,
-      a `.rpm`, and (x86_64 only) an AppImage — nine files plus checksums — and
-      that each name carries the architecture the format uses: `amd64`/`arm64` in
-      a `.deb`, `x86_64`/`aarch64` in an `.rpm`. A `-Linux.rpm` means
-      `CPACK_RPM_PACKAGE_ARCHITECTURE` lost its pin.
+- [ ] Confirm the release has, for **each** architecture, a `.tar.gz`, a `.deb`
+      and a `.rpm`, plus one AppImage (x86_64) — seven files, each with a
+      `.sha256` beside it — and that every name carries the architecture its
+      format uses: `amd64`/`arm64` in a `.deb`, `x86_64`/`aarch64` in an `.rpm`.
+      A `-Linux.rpm` means `CPACK_RPM_FILE_NAME` is not `RPM-DEFAULT`.
 - [ ] Confirm the container image is tagged `X.Y.Z` and `latest`
 - [ ] Download the package for a distribution you have and install it before
       announcing: a release nobody installed is a release nobody knows works.
