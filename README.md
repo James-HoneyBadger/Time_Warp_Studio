@@ -20,8 +20,8 @@ carries a ready-built application for **x86_64** (Intel/AMD) and **arm64**
 | You have | Take | Then |
 | --- | --- | --- |
 | no wish to install anything | `Time_Warp_Studio-<version>-x86_64.AppImage` | Make it executable and double-click it. No root, no package manager, no Qt to fetch. |
-| Ubuntu, Debian, Mint or Pop!_OS | `time-warp-studio_<version>_<arch>.deb` | Double-click it, or `sudo apt install ./time-warp-studio_<version>_<arch>.deb` |
-| Fedora, RHEL or openSUSE | `time-warp-studio-<version>-1.<arch>.rpm` | `sudo dnf install ./time-warp-studio-<version>-1.<arch>.rpm` |
+| Ubuntu, Debian, Mint or Pop!_OS | `time-warp-studio_<version>_amd64.deb`, or `_arm64.deb` | Double-click it, or `sudo apt install ./time-warp-studio_<version>_amd64.deb` |
+| Fedora, RHEL or openSUSE | `time-warp-studio-<version>-1.x86_64.rpm`, or `.aarch64.rpm` | `sudo dnf install ./time-warp-studio-<version>-1.x86_64.rpm` |
 | any other Linux, or arm64 | `time-warp-studio-<version>-linux-<arch>.tar.gz` | `tar -xzf … -C / --strip-components=1` |
 
 `uname -m` says which architecture yours is: `x86_64` or `aarch64`. Omit the
