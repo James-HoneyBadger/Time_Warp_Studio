@@ -52,11 +52,12 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
 ### Release Assets
 
 - [ ] Nothing to build by hand: pushing the tag runs `release.yml`, which builds
-      `time-warp-studio-X.Y.Z-linux-x86_64.tar.gz` on `ubuntu-24.04`, runs the
-      suites against that exact tree, publishes
-      `ghcr.io/<owner>/time-warp-studio:X.Y.Z` and attaches the tarball (with its
-      `.sha256`) to the release. See `DEPLOYMENT.md` for what each job does and
-      what it needs from the repository settings.
+      the tarball, the `.deb`, the `.rpm` and (on x86_64) the AppImage **for both
+      architectures** — `ubuntu-24.04` for x86_64, `ubuntu-24.04-arm` for arm64 —
+      runs the suites against that exact tree, publishes
+      `ghcr.io/<owner>/time-warp-studio:X.Y.Z` and attaches every file with a
+      `.sha256` beside it. See `DEPLOYMENT.md` for what each job does and what it
+      needs from the repository settings.
 
 - [ ] If the pipeline has to be tried without spending a tag:
       `gh workflow run release.yml -f version=X.Y.Z`. It refuses a version that
@@ -68,8 +69,14 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
 
 - [ ] Push the annotated tag `vX.Y.Z` from `main`, then watch the run:
       `gh run watch $(gh run list --workflow=release.yml --limit=1 --json databaseId --jq '.[0].databaseId')`
-- [ ] Confirm the release was created with generated notes, a tarball asset and a
-      checksum, and that the container image is tagged `X.Y.Z` and `latest`
+- [ ] Confirm the release has, for **each** architecture, a `.tar.gz`, a `.deb`,
+      a `.rpm`, and (x86_64 only) an AppImage — nine files plus checksums — and
+      that each name carries the architecture the format uses: `amd64`/`arm64` in
+      a `.deb`, `x86_64`/`aarch64` in an `.rpm`. A `-Linux.rpm` means
+      `CPACK_RPM_PACKAGE_ARCHITECTURE` lost its pin.
+- [ ] Confirm the container image is tagged `X.Y.Z` and `latest`
+- [ ] Download the package for a distribution you have and install it before
+      announcing: a release nobody installed is a release nobody knows works.
 - [ ] Confirm the Deployment appears under Settings > Environments > `production`
       with the release as its URL
 - [ ] Check the image runs before announcing it:
