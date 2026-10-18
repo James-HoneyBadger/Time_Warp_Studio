@@ -66,6 +66,11 @@ struct EditorSettings {
     bool completion = false;
     /// Check the text as it changes and mark what is wrong.
     bool lint = true;
+    /// Draw a middle dot for each space and an arrow for each tab, so the
+    /// difference between indenting with one and the other is visible.
+    bool show_whitespace = false;
+    /// The strip at the right edge showing the whole document at a glance.
+    bool minimap = true;
 };
 
 /// Paints the line numbers beside a `CodeEditor`.
@@ -83,6 +88,27 @@ public:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+
+private:
+    CodeEditor* editor_;
+};
+
+/// Paints the strip at the right edge: the whole document, one row per sampled
+/// line, with the viewport marked.
+///
+/// A child widget in the right margin, like the gutter, because that is how the
+/// text area is kept out of its way: a minimap painted *over* the text would
+/// cover the end of every long line.
+class MinimapArea final : public QWidget {
+    Q_OBJECT
+
+public:
+    explicit MinimapArea(CodeEditor* editor);
+
+protected:
+    void paintEvent(QPaintEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
+    void mouseMoveEvent(QMouseEvent* event) override;
 
 private:
     CodeEditor* editor_;
@@ -141,6 +167,21 @@ public:
     /// `outdent`. With no selection, Tab inserts a level and Shift+Tab outdents
     /// the current line.
     void indentSelection(bool outdent);
+
+    // -- minimap ----------------------------------------------------------
+
+    /// The strip's width in pixels: 0 when it is switched off, which is also how
+    /// the text area reclaims the space.
+    [[nodiscard]] int minimapWidth() const;
+    [[nodiscard]] bool minimapVisible() const { return settings_.minimap; }
+    /// Turns it on or off. Part of the settings, so it persists with the rest.
+    void setMinimapVisible(bool visible);
+    /// Where a click at `y` inside the strip scrolls to, in scrollbar units.
+    /// Separate from the mouse handler so the mapping can be tested without
+    /// synthesising an event.
+    [[nodiscard]] int scrollValueForMinimapY(int y) const;
+    /// Paints the strip. Called by `MinimapArea`.
+    void paintMinimap(QPaintEvent* event);
 
     /// The width the gutter needs for the document's current line count. Exposed
     /// because `LineNumberArea` asks for it while painting.
@@ -214,6 +255,8 @@ protected:
 
 private:
     void updateGutterWidth(int blockCount);
+    /// Places the strip in the right margin after a resize or a toggle.
+    void updateMinimapGeometry();
     void highlightCurrentLine();
     /// Rebuilds the extra selections: the current-line band and the problem
     /// underlines, which share one list because a `QPlainTextEdit` has one.
@@ -232,6 +275,7 @@ private:
     [[nodiscard]] QString indentUnit() const;
 
     LineNumberArea* gutter_ = nullptr;
+    MinimapArea* minimap_ = nullptr;
     /// Owned by the document, which takes it as a child: `QSyntaxHighlighter`'s
     /// parent is the `QTextDocument`, so the document destroys it.
     SyntaxHighlighter* highlighter_ = nullptr;

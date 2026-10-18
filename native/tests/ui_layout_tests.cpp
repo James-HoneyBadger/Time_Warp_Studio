@@ -34,6 +34,7 @@
 #include <QMetaMethod>
 #include <QPlainTextEdit>
 #include <QPushButton>
+#include <QScrollBar>
 #include <QSettings>
 #include <QSlider>
 #include <QSpinBox>
@@ -1105,6 +1106,82 @@ void test_menu_structure() {
     }
 }
 
+/// The minimap reserves its space, maps a click to a scroll position and leaves
+/// the text area alone when it is switched off. Whitespace marks are a document
+/// option, so the check is that the option carries the flag.
+void test_editor_minimap_and_whitespace() {
+    announce("editor: minimap and whitespace");
+    MainWindow window;
+    QWidget* editor_widget = window.currentEditor();
+    auto* editor = qobject_cast<timewarp::ui::CodeEditor*>(editor_widget);
+    TW_CHECK(editor != nullptr);
+    if (editor == nullptr) {
+        return;
+    }
+
+    // A long document, so the strip has something to map and the scrollbar can
+    // actually move.
+    QStringList lines;
+    for (int index = 1; index <= 200; ++index) {
+        lines << QStringLiteral("PRINT \"line %1\"").arg(index);
+    }
+    editor->setPlainText(lines.join(QLatin1Char('\n')));
+    QApplication::processEvents();
+
+    editor->setMinimapVisible(true);
+    TW_CHECK(editor->minimapVisible());
+    TW_CHECK(editor->minimapWidth() > 0);
+    QWidget* strip = editor->findChild<QWidget*>(QStringLiteral("minimapArea"));
+    TW_CHECK(strip != nullptr);
+    if (strip != nullptr) {
+        // `isHidden()`, not `isVisible()`: the window is never shown in this
+        // suite, so a child of it is not *visible* whatever its own flag says.
+        // `isHidden()` answers the question the toggle controls.
+        TW_CHECK(!strip->isHidden());
+        TW_CHECK_EQ(strip->width(), editor->minimapWidth());
+        // The strip sits in the margin, not over the text: its right edge is the
+        // editor's content right edge.
+        TW_CHECK(strip->geometry().right() <= editor->contentsRect().right());
+    }
+
+    // Clicking near the bottom maps near the end of the scrollbar, and near the
+    // top maps to the start. This is the mapping the mouse handler uses.
+    const int height = strip == nullptr ? 100 : strip->height();
+    TW_CHECK(editor->scrollValueForMinimapY(0) <= editor->verticalScrollBar()->minimum());
+    TW_CHECK(editor->scrollValueForMinimapY(height) >=
+             editor->verticalScrollBar()->maximum());
+    TW_CHECK(editor->scrollValueForMinimapY(height / 2) >
+             editor->scrollValueForMinimapY(0));
+
+    // Off: the margin is given back, so a narrow window has the text it had
+    // before.
+    editor->setMinimapVisible(false);
+    TW_CHECK(!editor->minimapVisible());
+    TW_CHECK_EQ(editor->minimapWidth(), 0);
+    if (strip != nullptr) {
+        TW_CHECK(strip->isHidden());
+    }
+
+    // Whitespace marks are a `QTextOption` flag on the document.
+    timewarp::ui::EditorSettings settings = editor->settings();
+    settings.show_whitespace = true;
+    editor->applySettings(settings);
+    TW_CHECK((editor->document()->defaultTextOption().flags() &
+              QTextOption::ShowTabsAndSpaces) != 0);
+    settings.show_whitespace = false;
+    editor->applySettings(settings);
+    TW_CHECK((editor->document()->defaultTextOption().flags() &
+              QTextOption::ShowTabsAndSpaces) == 0);
+
+    // And the strip reaches the paint code without a crash: `grab()` runs the
+    // whole paint path, which is where an empty document or a zero-height strip
+    // would divide by zero.
+    editor->setMinimapVisible(true);
+    editor->setPlainText(QString{});
+    QApplication::processEvents();
+    TW_CHECK(!editor->grab().isNull());
+}
+
 /// The picker shows the catalogue, filtered by language, and reports a choice.
 void test_snippet_picker_filters_by_language() {
     announce("snippet picker");
@@ -1814,6 +1891,7 @@ int main(int argc, char** argv) {
     test_menu_structure();
     test_edit_menu_has_find_in_files();
     test_snippet_picker_filters_by_language();
+    test_editor_minimap_and_whitespace();
     test_every_right_column_page_has_a_key();
     test_file_menu_new_opens_a_document();
     test_file_menu_close_tab_closes_one();

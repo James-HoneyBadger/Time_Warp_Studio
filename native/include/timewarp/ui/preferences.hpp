@@ -68,6 +68,8 @@ private:
     QCheckBox* auto_indent_ = nullptr;
     QCheckBox* completion_ = nullptr;
     QCheckBox* lint_ = nullptr;
+    QCheckBox* whitespace_ = nullptr;
+    QCheckBox* minimap_ = nullptr;
     CodeEditor* preview_ = nullptr;
 };
 

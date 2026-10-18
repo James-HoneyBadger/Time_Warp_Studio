@@ -100,6 +100,8 @@ constexpr auto kSettingEditorWordWrap = "editor/wordWrap";
 constexpr auto kSettingEditorAutoIndent = "editor/autoIndent";
 constexpr auto kSettingEditorCompletion = "editor/completion";
 constexpr auto kSettingEditorLint = "editor/lint";
+constexpr auto kSettingEditorWhitespace = "editor/showWhitespace";
+constexpr auto kSettingEditorMinimap = "editor/minimap";
 
 constexpr int kMinimumWindowWidth = 900;
 constexpr int kMinimumWindowHeight = 600;
@@ -819,6 +821,8 @@ void MainWindow::loadEditorSettings() {
     loaded.auto_indent = settings.value(kSettingEditorAutoIndent, true).toBool();
     loaded.completion = settings.value(kSettingEditorCompletion, false).toBool();
     loaded.lint = settings.value(kSettingEditorLint, true).toBool();
+    loaded.show_whitespace = settings.value(kSettingEditorWhitespace, false).toBool();
+    loaded.minimap = settings.value(kSettingEditorMinimap, true).toBool();
     editor_settings_ = loaded;
 }
 
@@ -833,6 +837,8 @@ void MainWindow::saveEditorSettings() const {
     settings.setValue(kSettingEditorAutoIndent, editor_settings_.auto_indent);
     settings.setValue(kSettingEditorCompletion, editor_settings_.completion);
     settings.setValue(kSettingEditorLint, editor_settings_.lint);
+    settings.setValue(kSettingEditorWhitespace, editor_settings_.show_whitespace);
+    settings.setValue(kSettingEditorMinimap, editor_settings_.minimap);
 }
 
 void MainWindow::applyEditorSettings(const EditorSettings& settings) {

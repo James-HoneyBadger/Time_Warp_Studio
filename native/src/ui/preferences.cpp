@@ -97,6 +97,10 @@ void PreferencesDialog::buildUi(const EditorSettings& settings) {
     completion_ = check(QStringLiteral("completionBox"),
                         tr("Suggest words as I type (Ctrl+Space asks anyway)"),
                         settings.completion);
+    whitespace_ = check(QStringLiteral("whitespaceBox"),
+                        tr("Show spaces and tabs"), settings.show_whitespace);
+    minimap_ = check(QStringLiteral("minimapBox"), tr("Show the minimap"),
+                     settings.minimap);
     lint_ = check(QStringLiteral("lintBox"),
                   tr("Check the program as I type and underline what is wrong"),
                   settings.lint);
@@ -138,7 +142,7 @@ void PreferencesDialog::buildUi(const EditorSettings& settings) {
     connect(font_size_, &QSpinBox::valueChanged, this, [changed] { changed(); });
     connect(tab_width_, &QSpinBox::valueChanged, this, [changed] { changed(); });
     for (QCheckBox* box : {line_numbers_, current_line_, word_wrap_, auto_indent_,
-                           completion_, lint_}) {
+                           completion_, lint_, whitespace_, minimap_}) {
         connect(box, &QCheckBox::toggled, this, [changed] { changed(); });
     }
 
@@ -179,6 +183,8 @@ void PreferencesDialog::collect() {
     settings_.word_wrap = word_wrap_->isChecked();
     settings_.auto_indent = auto_indent_->isChecked();
     settings_.completion = completion_->isChecked();
+    settings_.show_whitespace = whitespace_->isChecked();
+    settings_.minimap = minimap_->isChecked();
     settings_.lint = lint_->isChecked();
 }
 

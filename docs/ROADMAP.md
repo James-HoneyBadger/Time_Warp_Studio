@@ -290,8 +290,11 @@ memory window — and puts the IDE's own rows (wall clock, ink on the canvas) be
 so a drawing the engine counted but the canvas never received reads as two rows that
 disagree rather than as silence.
 
-**Editor** — a minimap, breakpoint markers, whitespace rendering and a document
-outline are still missing. Error markers and auto-completion are built
+**Editor** — breakpoint markers and a document outline are still missing. The
+minimap and whitespace marks are built (`native/src/ui/code_editor.cpp`: a
+sampled strip in the right margin that clicks to scroll, and the document's own
+`ShowTabsAndSpaces` option so the marks follow selection and scrolling without
+per-character painting). Error markers and auto-completion are built
 (`native/src/ui/lint.cpp`, with squiggles, gutter triangles and tooltips), and so
 are Format Code (`native/src/ui/formatter.cpp`) and Find in Files
 (`native/src/ui/find_in_files.cpp`, Ctrl+Shift+F, which skips binaries, build

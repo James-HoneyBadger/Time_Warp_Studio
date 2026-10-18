@@ -59,7 +59,7 @@ nothing about that layer is missing a user-facing behaviour.
 | # | Phase | Features | Size | Depends on |
 | --- | --- | --- | --- | --- |
 | 0 | Foundations | data dir, panel registration, test fixtures | S | — |
-| 1 | Editor completion | Find in Files ✅, Format Code ✅, Snippets ✅, whitespace, minimap, run history, run selection, reset | M | 0 |
+| 1 | Editor completion | Find in Files ✅, Format Code ✅, Snippets ✅, whitespace ✅, minimap ✅, run history, run selection, reset | M | 0 |
 | 2 | Data safety | autosave, version history | M | 0 |
 | 3 | Help and learnability | documentation browser, F1, keyword inspector, guided tour | M | 0 |
 | 4 | Canvas time travel | scrubber, GIF recording, SVG export | M | 4.3 needs a dependency decision |

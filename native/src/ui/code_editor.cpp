@@ -3,6 +3,7 @@
 #include "timewarp/ui/code_editor.hpp"
 
 #include <algorithm>
+#include <cmath>
 
 #include <QCompleter>
 #include <QAbstractItemView>
@@ -12,6 +13,7 @@
 #include <QFontMetrics>
 #include <QHelpEvent>
 #include <QKeyEvent>
+#include <QMouseEvent>
 #include <QPainter>
 #include <QPaintEvent>
 #include <QPolygon>
@@ -46,6 +48,10 @@ constexpr int kMarkerWidth = 8;
 /// Number of spaces a tab inserts. Matching the Python editor's four matters more
 /// than any argument for a different number: a file re-saved by either editor
 /// should not reflow.
+/// The strip's width. Wide enough for a readable line-length profile, narrow
+/// enough that a 120-column line still fits on a laptop.
+constexpr int kMinimapWidth = 72;
+
 constexpr int kTabWidthInSpaces = 4;
 
 /// How long typing has to pause before the document is checked again. Long
@@ -108,6 +114,7 @@ CodeEditor::CodeEditor(QWidget* parent) : QPlainTextEdit(parent) {
     setFrameShape(QFrame::NoFrame);
 
     gutter_ = new LineNumberArea(this);
+    minimap_ = new MinimapArea(this);
 
     // Colouring belongs to the document, not the widget, so it survives a tab
     // being dragged to the other editor pane. The window sets the real language
@@ -164,6 +171,16 @@ void CodeEditor::applySettings(const EditorSettings& settings) {
                        std::max(1, settings_.tab_width));
     setLineWrapMode(settings_.word_wrap ? QPlainTextEdit::WidgetWidth
                                         : QPlainTextEdit::NoWrap);
+    // Whitespace marks are a `QTextOption` flag: the document paints them, so
+    // there is no per-character drawing to keep in step with selection or
+    // scrolling.
+    QTextOption option = document()->defaultTextOption();
+    if (settings_.show_whitespace) {
+        option.setFlags(option.flags() | QTextOption::ShowTabsAndSpaces);
+    } else {
+        option.setFlags(option.flags() & ~QTextOption::ShowTabsAndSpaces);
+    }
+    document()->setDefaultTextOption(option);
     updateGutterWidth(blockCount());
     highlightCurrentLine();
     if (!settings_.lint) {
@@ -545,10 +562,131 @@ void CodeEditor::resizeEvent(QResizeEvent* event) {
     const QRect contents = contentsRect();
     gutter_->setGeometry(QRect{contents.left(), contents.top(), lineNumberAreaWidth(),
                                contents.height()});
+    updateMinimapGeometry();
 }
 
 void CodeEditor::updateGutterWidth(int /*blockCount*/) {
-    setViewportMargins(lineNumberAreaWidth(), 0, 0, 0);
+    // The right margin is the minimap's space: reserving it is what stops the
+    // strip from covering the end of a long line.
+    setViewportMargins(lineNumberAreaWidth(), 0, minimapWidth(), 0);
+    updateMinimapGeometry();
+}
+
+int CodeEditor::minimapWidth() const {
+    return settings_.minimap ? kMinimapWidth : 0;
+}
+
+void CodeEditor::setMinimapVisible(bool visible) {
+    if (settings_.minimap == visible) {
+        return;
+    }
+    settings_.minimap = visible;
+    if (minimap_ != nullptr) {
+        minimap_->setVisible(visible);
+    }
+    updateGutterWidth(blockCount());
+    viewport()->update();
+}
+
+void CodeEditor::updateMinimapGeometry() {
+    if (minimap_ == nullptr) {
+        return;
+    }
+    const int width = minimapWidth();
+    minimap_->setVisible(width > 0);
+    if (width <= 0) {
+        return;
+    }
+    const QRect contents = contentsRect();
+    minimap_->setGeometry(QRect{contents.right() - width + 1, contents.top(), width,
+                                contents.height()});
+}
+
+int CodeEditor::scrollValueForMinimapY(int y) const {
+    if (minimap_ == nullptr || minimap_->height() <= 0) {
+        return verticalScrollBar()->value();
+    }
+    const int bar_maximum = verticalScrollBar()->maximum();
+    const int bar_minimum = verticalScrollBar()->minimum();
+    const double fraction =
+        std::clamp(double(y) / double(minimap_->height()), 0.0, 1.0);
+    return bar_minimum + int(std::lround(fraction * double(bar_maximum - bar_minimum)));
+}
+
+void CodeEditor::paintMinimap(QPaintEvent* /*event*/) {
+    if (minimap_ == nullptr || minimapWidth() <= 0) {
+        return;
+    }
+    QPainter painter{minimap_};
+    const QRect area = minimap_->rect();
+    // The page colour, dimmed: the strip is a map, not a second view of the text.
+    painter.fillRect(area, palette().base().color().darker(115));
+
+    const QTextDocument* doc = document();
+    const int blocks = doc->blockCount();
+    if (blocks <= 0 || area.height() <= 0) {
+        return;
+    }
+
+    // One row per pixel, and each row stands for the line (or run of lines) that
+    // falls in it. Sampling rather than scaling: a 5000-line file must cost the
+    // height of the strip, not the length of the document.
+    const double per_row = double(blocks) / double(area.height());
+    const QColor ink = palette().text().color();
+    painter.setPen(Qt::NoPen);
+    for (int row = 0; row < area.height(); ++row) {
+        const int first = int(row * per_row);
+        const int last = std::max(first, int((row + 1) * per_row) - 1);
+        int longest = 0;
+        for (int block = first; block <= last && block < blocks; ++block) {
+            longest = std::max(longest, doc->findBlockByNumber(block).length());
+        }
+        if (longest <= 1) {
+            continue;  // an empty line is a gap in the map, not a mark
+        }
+        // 80 columns fills the strip; anything longer is simply full width.
+        const int usable = std::max(1, area.width() - 8);
+        const int span = std::clamp(int((double(longest) / 80.0) * usable), 2, usable);
+        QColor row_colour = ink;
+        row_colour.setAlpha(150);
+        painter.fillRect(QRect(area.left() + 4, area.top() + row, span, 1), row_colour);
+    }
+
+    // What is on screen right now. The block cursor is enough: a range of
+    // documents scroll by lines, and the text cursor is where the reader is.
+    const QTextCursor cursor = textCursor();
+    const double at = blocks > 1 ? double(cursor.blockNumber()) / double(blocks - 1) : 0.0;
+    const int top = area.top() + int(at * (area.height() - 1));
+    const int visible = std::max(2, int(double(viewport()->height()) / double(fontMetrics().height())));
+    const int mark = std::clamp(int(double(visible) / double(blocks) * area.height()), 2,
+                                std::max(2, area.height() / 3));
+    painter.setPen(QPen{palette().highlight().color(), 1});
+    painter.setBrush(Qt::NoBrush);
+    painter.drawRect(QRect(area.left(), top, area.width() - 1, mark));
+}
+
+
+MinimapArea::MinimapArea(CodeEditor* editor) : QWidget{editor}, editor_(editor) {
+    setObjectName(QStringLiteral("minimapArea"));
+    setCursor(Qt::ArrowCursor);
+    setToolTip(tr("The whole document. Click to jump."));
+}
+
+void MinimapArea::paintEvent(QPaintEvent* event) { editor_->paintMinimap(event); }
+
+void MinimapArea::mousePressEvent(QMouseEvent* event) {
+    editor_->verticalScrollBar()->setValue(editor_->scrollValueForMinimapY(event->pos().y()));
+    editor_->setFocus(Qt::MouseFocusReason);
+    event->accept();
+}
+
+void MinimapArea::mouseMoveEvent(QMouseEvent* event) {
+    if ((event->buttons() & Qt::LeftButton) != 0) {
+        editor_->verticalScrollBar()->setValue(editor_->scrollValueForMinimapY(event->pos().y()));
+        event->accept();
+        return;
+    }
+    event->ignore();
 }
 
 void CodeEditor::highlightCurrentLine() { refreshExtraSelections(); }

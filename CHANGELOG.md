@@ -7,6 +7,13 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **A minimap, and visible whitespace.** The strip at the right edge is the whole
+  document sampled one row per pixel, with the current view marked; clicking or
+  dragging it scrolls. It reserves its own margin, so it cannot cover the end of a
+  long line, and switching it off gives the width back. `Show spaces and tabs`
+  renders a middle dot per space and an arrow per tab, which is what makes an
+  indent of four spaces and one of a tab look different. Both are in Settings and
+  persist.
 - **Edit > Insert Snippet (Ctrl+Shift+I).** A catalogue of small runnable programs
   for all ten languages — a loop, a procedure, a sprite, a turtle walk — filtered by
   language and by name, previewed, and inserted at the cursor. `$CURSOR$` marks
