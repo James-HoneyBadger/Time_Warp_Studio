@@ -7,6 +7,13 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **Edit > Find in Files (Ctrl+Shift+F).** Searches the folder of the current
+  document and opens a hit at its line. Skips binaries, files over 2 MB and build
+  or VCS directories (`.git`, `build/`, `node_modules/`, `__pycache__/`), searches
+  a selection by pre-filling the term, stops on request, and reports an invalid
+  regular expression as an error rather than as "no matches". The scan is one
+  function -- `searchInFiles` -- that both the dialog's thread and the tests call,
+  so the skipping rules exist in one place.
 - **Edit > Format Code (Ctrl+I).** Re-indents BASIC, COMAL, REXX and Logo by their
   block structure — the loop bodies, `IF`/`END IF` arms, `ELSE` branches, Logo
   procedures and bracketed blocks — using the editor's tab width. It changes

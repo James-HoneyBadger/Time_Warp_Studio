@@ -21,7 +21,7 @@ derived rather than remembered.
 | Area | State |
 | --- | --- |
 | Shell | Documents and tabs, menus, toolbars, status bar, settings persistence, the last session's files restored at launch |
-| Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, go-to-line, tab stops, fonts, error squiggles with gutter markers, completion, auto-indent, Format Code |
+| Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, find in files, go-to-line, tab stops, fonts, error squiggles with gutter markers, completion, auto-indent, Format Code |
 | Console | Streaming output, and interpreter errors in their own tab |
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
@@ -290,10 +290,13 @@ memory window — and puts the IDE's own rows (wall clock, ink on the canvas) be
 so a drawing the engine counted but the canvas never received reads as two rows that
 disagree rather than as silence.
 
-**Editor** — find in files, a minimap, breakpoint markers and a document outline
-are still missing. Error markers and auto-completion are built
-(`native/src/ui/lint.cpp`, with squiggles, gutter triangles and tooltips), and
-whitespace rendering is not.
+**Editor** — a minimap, breakpoint markers, whitespace rendering and a document
+outline are still missing. Error markers and auto-completion are built
+(`native/src/ui/lint.cpp`, with squiggles, gutter triangles and tooltips), and so
+are Format Code (`native/src/ui/formatter.cpp`) and Find in Files
+(`native/src/ui/find_in_files.cpp`, Ctrl+Shift+F, which skips binaries, build
+trees and VCS directories and reports a broken pattern as an error rather than as
+"no matches").
 
 Two of the entries that used to be on that list are built. Per-language syntax
 colouring is `native/src/ui/syntax_highlighter.cpp`, one rule table per language

@@ -81,6 +81,7 @@ namespace timewarp::ui {
 
 class CodeEditor;
 class CommandPalette;
+class FindInFilesDialog;
 class CrtOverlay;
 class DebugPanel;
 class FindBar;
@@ -178,6 +179,13 @@ public:
     /// format with no visible effect and no message is indistinguishable from a
     /// key that did nothing.
     void formatCurrentDocument();
+    /// Opens Find in Files on the current document's folder, pre-filled with the
+    /// selection when there is one.
+    void showFindInFiles();
+    /// Puts the cursor on `line` (1-based) of the current document, scrolled into
+    /// view. Out-of-range values clamp rather than failing: every caller reaches
+    /// here from a number it read somewhere.
+    void goToLine(int line);
     /// Asks for a path and writes the drawing to it.
     void exportDrawingDialog();
     /// Puts the drawing on the clipboard as an image.
@@ -513,6 +521,9 @@ private:
     /// the application should find programs to open without knowing where the
     /// package put them.
     QMenu* examples_menu_ = nullptr;
+    /// Created on first use: a dialog nobody opens costs nothing, and the window
+    /// that a test builds should not construct a search dialog it never shows.
+    FindInFilesDialog* find_in_files_ = nullptr;
 
     /// The theme in force, and the menu that records it. The actions live in the
     /// View menu and are `QActionGroup`-exclusive, so the tick is the state.

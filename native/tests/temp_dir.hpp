@@ -53,8 +53,15 @@ public:
         return full;
     }
 
-    /// Writes `text` to `relative`, creating parents. Empty on failure.
-    [[nodiscard]] QString write(const QString& relative, const QByteArray& text) const {
+    /// Writes `text` to `relative`, creating parents. Returns the path, or an
+    /// empty string on failure.
+    ///
+    /// Not `[[nodiscard]]`: the common use is a fixture that writes four files for
+    /// its side effects, and forcing a cast at each call site would make the test
+    /// harder to read than the failure it is guarding against. A test that cares
+    /// whether the write worked checks the path in the case where that is the
+    /// thing under test.
+    QString write(const QString& relative, const QByteArray& text) const {
         const QString full = path(relative);
         if (full.isEmpty()) {
             return {};

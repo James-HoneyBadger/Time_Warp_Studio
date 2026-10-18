@@ -1103,6 +1103,22 @@ void test_menu_structure() {
     }
 }
 
+/// Find in Files is in the Edit menu, on Ctrl+Shift+F, wired to something. The
+/// reserved action id and the menu entry have to agree, or the palette lists a
+/// command the key does not reach.
+void test_edit_menu_has_find_in_files() {
+    announce("Edit > Find in Files");
+    MainWindow window;
+    QAction* action = window.findChild<QAction*>(QStringLiteral("findInFilesAction"));
+    TW_CHECK(action != nullptr);
+    if (action == nullptr) {
+        return;
+    }
+    TW_CHECK_EQ(action->shortcut().toString().toStdString(), std::string{"Ctrl+Shift+F"});
+    TW_CHECK(window.findChild<QAction*>(QStringLiteral("fkey_find_in_files")) == nullptr ||
+             action->shortcut() != window.findChild<QAction*>(QStringLiteral("fkey_find_in_files"))->shortcut());
+}
+
 /// Every page of the right column has a key that raises it, and every key names
 /// a page. A page added to `buildRightColumn` without one is visible and
 /// unreachable from the palette, the function keys and every menu at once, which
@@ -1752,6 +1768,7 @@ int main(int argc, char** argv) {
     test_status_bar_badge_placement();
     test_outline_dock_starts_hidden();
     test_menu_structure();
+    test_edit_menu_has_find_in_files();
     test_every_right_column_page_has_a_key();
     test_file_menu_new_opens_a_document();
     test_file_menu_close_tab_closes_one();

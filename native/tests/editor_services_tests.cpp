@@ -22,6 +22,8 @@
 #include <QStringList>
 
 #include "check.hpp"
+#include "temp_dir.hpp"
+#include "timewarp/ui/find_in_files.hpp"
 #include "timewarp/ui/formatter.hpp"
 #include "timewarp/ui/language.hpp"
 
@@ -231,6 +233,142 @@ void test_blank_lines_stay_blank() {
                           "30 NEXT I\n"));
 }
 
+
+// ---------------------------------------------------------------------------
+// Find in Files
+// ---------------------------------------------------------------------------
+
+/// Three files and a binary, so the interesting questions are answerable: which
+/// files are searched, which lines match, and what a bad pattern does.
+void make_search_tree(const tw::test::TempDir& scratch) {
+    scratch.write(QStringLiteral("a.bas"),
+                  "10 PRINT \"needle\"\n20 REM nothing\n30 PRINT \"needle\"\n");
+    scratch.write(QStringLiteral("nested/b.logo"),
+                  "TO GO\nPRINT \"NEEDLE\"\nEND\n");
+    scratch.write(QStringLiteral("nested/deep/c.txt"), "needle at the end\n");
+    // A NUL byte in the first block: the search must skip it rather than treat a
+    // binary as a one-line file.
+    scratch.write(QStringLiteral("blob.bin"),
+                  QByteArray("needle\0\0\0binary", 17));
+    // A file in a directory the search prunes.
+    scratch.write(QStringLiteral("build/generated.bas"), "10 PRINT \"needle\"\n");
+}
+
+void test_find_in_files_matches_every_file() {
+    announce("find in files: matches, skipping and pruning");
+    tw::test::TempDir scratch;
+    TW_CHECK(scratch.valid());
+    if (!scratch.valid()) {
+        return;
+    }
+    make_search_tree(scratch);
+
+    timewarp::ui::FindQuery query;
+    query.term = QStringLiteral("needle");
+    QString error;
+    const QList<timewarp::ui::FindHit> hits =
+        timewarp::ui::searchInFiles(scratch.path(), query, &error);
+    TW_CHECK(error.isEmpty());
+
+    QStringList files;
+    for (const timewarp::ui::FindHit& hit : hits) {
+        files << QFileInfo{hit.path}.fileName();
+    }
+    files.removeDuplicates();
+    files.sort();
+    // `a.bas` has two hits, `b.logo` one (case-insensitively), `c.txt` one. The
+    // binary is skipped and `build/` is pruned.
+    TW_CHECK_EQ(hits.size(), 4);
+    TW_CHECK_EQ(files.join(QLatin1Char('|')).toStdString(),
+                std::string{"a.bas|b.logo|c.txt"});
+
+    // Line numbers are 1-based and point at the matching line.
+    for (const timewarp::ui::FindHit& hit : hits) {
+        if (QFileInfo{hit.path}.fileName() == QStringLiteral("c.txt")) {
+            TW_CHECK_EQ(hit.line, 1);
+            TW_CHECK_EQ(hit.text.toStdString(), std::string{"needle at the end"});
+        }
+    }
+}
+
+void test_find_in_files_options() {
+    announce("find in files: case, regex, bad pattern, cap");
+    tw::test::TempDir scratch;
+    TW_CHECK(scratch.valid());
+    if (!scratch.valid()) {
+        return;
+    }
+    make_search_tree(scratch);
+
+    timewarp::ui::FindQuery case_sensitive;
+    case_sensitive.term = QStringLiteral("NEEDLE");
+    case_sensitive.case_sensitive = true;
+    QString error;
+    const QList<timewarp::ui::FindHit> upper =
+        timewarp::ui::searchInFiles(scratch.path(), case_sensitive, &error);
+    // Only the Logo file spells it in capitals.
+    TW_CHECK_EQ(upper.size(), 1);
+    TW_CHECK(QFileInfo{upper.isEmpty() ? QString{} : upper.first().path}.fileName() ==
+             QStringLiteral("b.logo"));
+
+    timewarp::ui::FindQuery regex;
+    regex.term = QStringLiteral("^10 PRINT");
+    regex.regex = true;
+    const QList<timewarp::ui::FindHit> anchored =
+        timewarp::ui::searchInFiles(scratch.path(), regex, &error);
+    // One: only `a.bas` opens with `10 PRINT` on a line of its own. The second
+    // `PRINT` in that file is numbered 30, and the copy under `build/` is pruned.
+    TW_CHECK_EQ(anchored.size(), 1);
+    if (!anchored.isEmpty()) {
+        TW_CHECK_EQ(anchored.first().line, 1);
+    }
+
+    timewarp::ui::FindQuery broken;
+    broken.term = QStringLiteral("[unclosed");
+    broken.regex = true;
+    error.clear();
+    const QList<timewarp::ui::FindHit> none =
+        timewarp::ui::searchInFiles(scratch.path(), broken, &error);
+    // A broken pattern is an error, not "no matches": the two are different
+    // answers and a learner needs the one that says what is wrong.
+    TW_CHECK(none.isEmpty());
+    TW_CHECK(!error.isEmpty());
+    TW_CHECK(error.contains(QStringLiteral("regular expression")));
+
+    timewarp::ui::FindQuery capped;
+    capped.term = QStringLiteral("needle");
+    capped.max_hits = 2;
+    TW_CHECK_EQ(timewarp::ui::searchInFiles(scratch.path(), capped, &error).size(), 2);
+
+    // And an empty term is refused rather than matching every line.
+    timewarp::ui::FindQuery empty;
+    error.clear();
+    TW_CHECK(timewarp::ui::searchInFiles(scratch.path(), empty, &error).isEmpty());
+    TW_CHECK(!error.isEmpty());
+}
+
+void test_find_in_files_stops_when_the_callback_says_so() {
+    announce("find in files: streaming callback");
+    tw::test::TempDir scratch;
+    TW_CHECK(scratch.valid());
+    if (!scratch.valid()) {
+        return;
+    }
+    make_search_tree(scratch);
+
+    timewarp::ui::FindQuery query;
+    query.term = QStringLiteral("needle");
+    QString error;
+    int seen = 0;
+    const QList<timewarp::ui::FindHit> hits = timewarp::ui::searchInFiles(
+        scratch.path(), query, &error, [&seen](const timewarp::ui::FindHit&) {
+            ++seen;
+            return seen < 2;  // stop after the second hit
+        });
+    TW_CHECK_EQ(seen, 2);
+    TW_CHECK_EQ(hits.size(), 2);
+}
+
 }  // namespace
 
 int main() {
@@ -247,5 +385,8 @@ int main() {
     test_a_language_without_blocks_says_so();
     test_line_endings_survive();
     test_blank_lines_stay_blank();
+    test_find_in_files_matches_every_file();
+    test_find_in_files_options();
+    test_find_in_files_stops_when_the_callback_says_so();
     return tw::test::summary("editor_services");
 }

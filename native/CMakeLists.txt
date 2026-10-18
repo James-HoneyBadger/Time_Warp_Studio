@@ -549,6 +549,7 @@ if(Qt6_FOUND)
             src/ui/code_editor.cpp
             src/ui/command_palette.cpp
             src/ui/find_bar.cpp
+            src/ui/find_in_files.cpp
             src/ui/formatter.cpp
             src/ui/lint.cpp
             src/ui/language.cpp
@@ -568,6 +569,7 @@ if(Qt6_FOUND)
             include/timewarp/ui/code_editor.hpp
             include/timewarp/ui/command_palette.hpp
             include/timewarp/ui/find_bar.hpp
+            include/timewarp/ui/find_in_files.hpp
             include/timewarp/ui/lint.hpp
             include/timewarp/ui/main_window.hpp
             include/timewarp/ui/native_runner.hpp

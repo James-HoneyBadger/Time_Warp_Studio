@@ -59,7 +59,7 @@ nothing about that layer is missing a user-facing behaviour.
 | # | Phase | Features | Size | Depends on |
 | --- | --- | --- | --- | --- |
 | 0 | Foundations | data dir, panel registration, test fixtures | S | — |
-| 1 | Editor completion | Find in Files, Format Code, Snippets, whitespace, minimap, run history, run selection, reset | M | 0 |
+| 1 | Editor completion | Find in Files ✅, Format Code ✅, Snippets, whitespace, minimap, run history, run selection, reset | M | 0 |
 | 2 | Data safety | autosave, version history | M | 0 |
 | 3 | Help and learnability | documentation browser, F1, keyword inspector, guided tour | M | 0 |
 | 4 | Canvas time travel | scrubber, GIF recording, SVG export | M | 4.3 needs a dependency decision |
@@ -212,14 +212,18 @@ Old: `run_selection`, `_reset_program`, run history in a dropdown, persisted.
 selection and prints only its output; reset clears the canvas but keeps the text;
 history round-trips through a fresh `MainWindow` and is capped at ten.
 
-### 1.6 Errors-only filter (S)
+### 1.6 Errors-only filter — already served, so no port (decision)
 
-`filter_errors` is currently "raise the errors tab". Make it a checkable action
-that also hides non-error lines in the console, as the old
-`_toggle_error_filter` did, and keep the tab switch.
+The old `_toggle_error_filter` filtered **one** output panel that held the prints
+and the failure together. This application split them: program output goes to the
+Console, interpreter errors to the Errors tab, and `reportError` raises that tab
+when there is one. A console-only filter would therefore show *nothing* for a
+program that printed and then failed — strictly worse than the split.
 
-**Tests:** with the filter on, a run that prints and then fails shows the failure
-line and not the prints; turning it off restores both.
+The action `filter_errors` already raises the Errors tab, which is the behaviour
+the old toggle was trying to achieve. Recorded here rather than implemented:
+porting the widget-level filter would be copying a design this application
+already improved on.
 
 **Phase done when:** all six land, `ui_layout_tests` and the two new suites are
 green, and no `notPorted` button remains in `buildToolBar`.

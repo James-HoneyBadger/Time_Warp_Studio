@@ -49,6 +49,7 @@
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/command_palette.hpp"
 #include "timewarp/ui/find_bar.hpp"
+#include "timewarp/ui/find_in_files.hpp"
 #include "timewarp/ui/formatter.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/preferences.hpp"
@@ -555,6 +556,11 @@ void MainWindow::buildMenuBar() {
         [this] { findNextMatch(false); });
     add(edit, tr("Find Pre&vious"), QKeySequence{Qt::SHIFT | Qt::Key_F3},
         [this] { findNextMatch(true); });
+    // The repository-wide search the removed implementation had and this one did
+    // not. Ctrl+Shift+F, which no other action uses.
+    add(edit, tr("Find in F&iles..."), QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_F},
+        [this] { showFindInFiles(); })
+        ->setObjectName(QStringLiteral("findInFilesAction"));
     edit->addSeparator();
     // Ctrl+L, not Ctrl+G: the grid on the canvas already owns Ctrl+G, and two
     // actions on one key is an ambiguous shortcut that Qt resolves by guessing.
@@ -1055,9 +1061,7 @@ void MainWindow::performAction(const QString& action) {
         return;
     }
     if (id == QLatin1String("find_in_files")) {
-        setExecutionState(tr("ready"),
-                          tr("Find in files is not built yet \u2014 use Find, or "
-                             "see docs/ROADMAP.md"));
+        showFindInFiles();
         return;
     }
 
@@ -1271,6 +1275,57 @@ void MainWindow::findNextMatch(bool backwards) {
     }
     find_bar_->setEditor(currentEditor());
     find_bar_->findAgain(backwards);
+}
+
+void MainWindow::showFindInFiles() {
+    if (find_in_files_ == nullptr) {
+        find_in_files_ = new FindInFilesDialog{this};
+        // A result opens the file at the line, through the same path the Open
+        // dialog uses, so a hit is a document with its language, tab and recent
+        // entry -- not a read-only preview.
+        connect(find_in_files_, &FindInFilesDialog::hitActivated, this,
+                [this](const QString& path, int line) {
+                    if (openFile(path)) {
+                        goToLine(line);
+                    }
+                });
+    }
+    // The folder of the document in front, because that is what "in files" means
+    // to whoever pressed the key; a selection becomes the term, because searching
+    // for what you just highlighted is the common case.
+    QString root;
+    if (CodeEditor* editor = currentEditor()) {
+        const QString path = pathOf(editor);
+        if (!path.isEmpty()) {
+            root = QFileInfo{path}.absolutePath();
+        }
+        const QString selected = editor->textCursor().selectedText();
+        if (!selected.isEmpty() && !selected.contains(QLatin1Char('\n'))) {
+            find_in_files_->setTerm(selected);
+        }
+    }
+    if (root.isEmpty()) {
+        root = QDir::homePath();
+    }
+    find_in_files_->setRoot(root);
+    find_in_files_->show();
+    find_in_files_->raise();
+    find_in_files_->activateWindow();
+}
+
+void MainWindow::goToLine(int line) {
+    CodeEditor* editor = currentEditor();
+    if (editor == nullptr) {
+        return;
+    }
+    QTextCursor cursor = editor->textCursor();
+    cursor.movePosition(QTextCursor::Start);
+    // Zero-based blocks, one-based lines: `line - 1` steps down from the start,
+    // and Qt clamps at the last block for a number past the end.
+    cursor.movePosition(QTextCursor::Down, QTextCursor::MoveAnchor, std::max(0, line - 1));
+    editor->setTextCursor(cursor);
+    editor->centerCursor();
+    editor->setFocus(Qt::ShortcutFocusReason);
 }
 
 void MainWindow::formatCurrentDocument() {
