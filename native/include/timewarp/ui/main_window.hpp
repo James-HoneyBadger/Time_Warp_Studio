@@ -55,6 +55,7 @@
 #include "timewarp/lang/language.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/language.hpp"
+#include "timewarp/ui/snippets.hpp"
 
 class QAction;
 class QCloseEvent;
@@ -182,6 +183,16 @@ public:
     /// Opens Find in Files on the current document's folder, pre-filled with the
     /// selection when there is one.
     void showFindInFiles();
+    /// Opens the snippet picker for the current document's language and inserts
+    /// the chosen body at the cursor.
+    void insertSnippet();
+    /// Inserts `snippet` at the cursor: the selection replaces `$SELECTION$`, the
+    /// caret lands on `$CURSOR$`, and the whole insertion is one undo step.
+    ///
+    /// Public and separate from `insertSnippet` because the picker is modal: a
+    /// test that had to go through it could not run, and the part worth testing
+    /// is the insertion.
+    void applySnippet(const Snippet& snippet);
     /// Puts the cursor on `line` (1-based) of the current document, scrolled into
     /// view. Out-of-range values clamp rather than failing: every caller reaches
     /// here from a number it read somewhere.

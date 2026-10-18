@@ -558,6 +558,8 @@ if(Qt6_FOUND)
             src/ui/panels.cpp
             src/ui/preferences.cpp
             src/ui/resizable_tab_widget.cpp
+            src/ui/snippet_dialog.cpp
+            src/ui/snippets.cpp
             src/ui/sound_player.cpp
             src/ui/standalone.cpp
             src/ui/syntax_highlighter.cpp
@@ -571,6 +573,7 @@ if(Qt6_FOUND)
             include/timewarp/ui/find_bar.hpp
             include/timewarp/ui/find_in_files.hpp
             include/timewarp/ui/lint.hpp
+            include/timewarp/ui/snippet_dialog.hpp
             include/timewarp/ui/main_window.hpp
             include/timewarp/ui/native_runner.hpp
             include/timewarp/ui/panels.hpp
@@ -657,6 +660,12 @@ if(Qt6_FOUND)
             PATTERN ".mypy_cache" EXCLUDE
             PATTERN ".pytest_cache" EXCLUDE
             PATTERN "tests" EXCLUDE
+        )
+        # The snippet catalogue: `snippetRoot()` looks here first, so a package
+        # and a build tree offer the same snippets.
+        install(
+            FILES ${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/time-warp-studio
         )
         install(
             FILES ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/time-warp-studio.desktop

@@ -49,6 +49,7 @@
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
+#include "timewarp/ui/snippets.hpp"
 #include "timewarp/ui/themes.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
@@ -1161,6 +1162,48 @@ void test_user_data_lives_where_the_environment_says() {
                 (QDir::homePath() + QStringLiteral("/.time_warp")).toStdString());
 }
 
+
+/// Insertion is the half of the snippet feature that can be tested: the picker is
+/// modal, so `applySnippet` is where the behaviour lives.
+void test_a_snippet_is_inserted_at_the_cursor() {
+    announce("snippets: insertion");
+    MainWindow window;
+    CodeEditor* editor = window.currentEditor();
+    TW_CHECK(editor != nullptr);
+    if (editor == nullptr) {
+        return;
+    }
+
+    // No trailing newline: the snippet supplies the one that ends the line, and a
+    // document that already had one would put the caret on an empty third line.
+    editor->setPlainText(QStringLiteral("10 PRINT 1\n20 "));
+    editor->moveCursor(QTextCursor::End);
+    timewarp::ui::Snippet snippet;
+    snippet.name = QStringLiteral("End");
+    snippet.language = Language::Basic;
+    snippet.body = QStringLiteral("END\n");
+    window.applySnippet(snippet);
+    TW_CHECK(editor->toPlainText().endsWith(QStringLiteral("20 END\n")));
+
+    // A selection is wrapped rather than replaced blindly: `$SELECTION$` sits
+    // inside the snippet, which is the only reason to have a selection at all.
+    editor->setPlainText(QStringLiteral("HELLO"));
+    // The document holds only the word, so the snippets's own `PRINT` is not a
+    // second copy of one the document already had.
+    QTextCursor select = editor->textCursor();
+    select.setPosition(0);
+    select.setPosition(5, QTextCursor::KeepAnchor);
+    editor->setTextCursor(select);
+    timewarp::ui::Snippet wrapper;
+    wrapper.name = QStringLiteral("Bracket");
+    wrapper.language = Language::Basic;
+    wrapper.body = QStringLiteral("PRINT [$SELECTION$]\n$CURSOR$");
+    window.applySnippet(wrapper);
+    TW_CHECK_EQ(editor->toPlainText().toStdString(), std::string{"PRINT [HELLO]\n"});
+    // The caret is where `$CURSOR$` was: the end of the inserted text here.
+    TW_CHECK_EQ(editor->textCursor().position(), int(QStringLiteral("PRINT [HELLO]\n").size()));
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1191,6 +1234,7 @@ int main(int argc, char** argv) {
     test_a_file_that_cannot_be_read_is_refused();
     test_a_byte_order_mark_is_not_part_of_the_program();
     test_user_data_lives_where_the_environment_says();
+    test_a_snippet_is_inserted_at_the_cursor();
 
     test_running_scheme_draws_on_the_canvas();
     test_pen_up_moves_without_drawing();

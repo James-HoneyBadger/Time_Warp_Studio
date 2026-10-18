@@ -19,12 +19,16 @@
 #include <cstdio>
 #include <string>
 
+#include <QCoreApplication>
+#include <QHash>
+#include <QSet>
 #include <QStringList>
 
 #include "check.hpp"
 #include "temp_dir.hpp"
 #include "timewarp/ui/find_in_files.hpp"
 #include "timewarp/ui/formatter.hpp"
+#include "timewarp/ui/snippets.hpp"
 #include "timewarp/ui/language.hpp"
 
 namespace {
@@ -369,9 +373,76 @@ void test_find_in_files_stops_when_the_callback_says_so() {
     TW_CHECK_EQ(hits.size(), 2);
 }
 
+
+// ---------------------------------------------------------------------------
+// Snippets
+// ---------------------------------------------------------------------------
+
+/// The shipped catalogue, as a user gets it. This is the test that keeps the file
+/// honest: a snippet in a language this build does not know, a body that would
+/// glue onto the next line, two entries with one id, or a second `$CURSOR$` are
+/// all failures rather than surprises at insertion time.
+void test_the_shipped_snippet_catalogue_is_sound() {
+    announce("snippets: the shipped catalogue");
+    TW_CHECK(!timewarp::ui::snippetRoot().isEmpty());
+    QString error;
+    const QList<timewarp::ui::Snippet> snippets = timewarp::ui::loadSnippets(&error);
+    TW_CHECK(error.isEmpty());
+    TW_CHECK(!snippets.isEmpty());
+
+    QSet<QString> ids;
+    QHash<int, int> per_language;
+    for (const timewarp::ui::Snippet& snippet : snippets) {
+        TW_CHECK(!snippet.name.isEmpty());
+        TW_CHECK(!snippet.description.isEmpty());
+        TW_CHECK(snippet.language != Language::Unknown);
+        TW_CHECK(snippet.body.endsWith(QLatin1Char('\n')));
+        TW_CHECK_EQ(snippet.body.count(QStringLiteral("$CURSOR$")), 1);
+        TW_CHECK(!ids.contains(snippet.id()));
+        ids.insert(snippet.id());
+        ++per_language[static_cast<int>(snippet.language)];
+    }
+    // Every language has at least two, so the picker is never empty for a
+    // document the IDE can open.
+    for (const Language language : timewarp::ui::allLanguages()) {
+        TW_CHECK(per_language.value(static_cast<int>(language)) >= 2);
+    }
+}
+
+void test_snippet_insertion_resolves_placeholders() {
+    announce("snippets: placeholders and the caret");
+    // The caret lands where $CURSOR$ was, and the marker is gone from the text.
+    const timewarp::ui::SnippetInsertion plain =
+        timewarp::ui::resolveSnippet(QStringLiteral("10 PRINT 1\n20 $CURSOR$END\n"), QString{});
+    TW_CHECK_EQ(plain.text.toStdString(), std::string{"10 PRINT 1\n20 END\n"});
+    TW_CHECK_EQ(plain.caret, 14);
+
+    // A selection replaces $SELECTION$.
+    const timewarp::ui::SnippetInsertion wrapped =
+        timewarp::ui::resolveSnippet(QStringLiteral("PRINT [$SELECTION$]\n$CURSOR$"),
+                                     QStringLiteral("hello"));
+    TW_CHECK_EQ(wrapped.text.toStdString(), std::string{"PRINT [hello]\n"});
+    TW_CHECK_EQ(wrapped.caret, 14);
+
+    // No marker at all: the caret goes to the end of what was inserted.
+    const timewarp::ui::SnippetInsertion bare =
+        timewarp::ui::resolveSnippet(QStringLiteral("SAY 'hi'\n"), QString{});
+    TW_CHECK_EQ(bare.caret, int(bare.text.size()));
+
+    // A placeholder this build does not know is left exactly as written: silently
+    // dropping text somebody put in the catalogue is the one thing a substitution
+    // must not do.
+    const timewarp::ui::SnippetInsertion unknown =
+        timewarp::ui::resolveSnippet(QStringLiteral("x $DATE$ y\n"), QString{});
+    TW_CHECK_EQ(unknown.text.toStdString(), std::string{"x $DATE$ y\n"});
+}
+
 }  // namespace
 
-int main() {
+int main(int argc, char** argv) {
+    // Needed for `QCoreApplication::applicationDirPath()`, which is where the
+    // snippet and example resolvers start looking. No widget is created.
+    QCoreApplication app{argc, argv};
     test_basic_indents_a_loop_body();
     test_basic_else_body_is_indented();
     test_basic_single_line_if_opens_nothing();
@@ -388,5 +459,7 @@ int main() {
     test_find_in_files_matches_every_file();
     test_find_in_files_options();
     test_find_in_files_stops_when_the_callback_says_so();
+    test_the_shipped_snippet_catalogue_is_sound();
+    test_snippet_insertion_resolves_placeholders();
     return tw::test::summary("editor_services");
 }

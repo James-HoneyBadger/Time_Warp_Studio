@@ -318,8 +318,10 @@ prompts on close, but a process that dies does not. There is no version history,
 project panel or split view either.
 
 **Also unbuilt** — printing, code/session/lesson export, font selection, the
-snippet library, the accessibility presets and the REPL bar's interpreter wiring
-(the bar is laid out and its signal exists; nothing is connected to it).
+accessibility presets and the REPL bar's interpreter wiring (the bar is laid out
+and its signal exists; nothing is connected to it). The snippet library is built:
+Edit > Insert Snippet (Ctrl+Shift+I) reads `native/share/snippets.json`, which
+ships beside the application, and every snippet in it is syntax this build runs.
 
 **Input** — the input round-trip (the prompt, and the `in`/`in-reply` protocol the
 reference worker uses) is implemented,

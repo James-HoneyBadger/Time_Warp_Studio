@@ -7,6 +7,15 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **Edit > Insert Snippet (Ctrl+Shift+I).** A catalogue of small runnable programs
+  for all ten languages — a loop, a procedure, a sprite, a turtle walk — filtered by
+  language and by name, previewed, and inserted at the cursor. `$CURSOR$` marks
+  where the caret lands and `$SELECTION$` wraps what is selected; a whole
+  insertion is one undo step. The catalogue is `native/share/snippets.json`,
+  installed with the application, and every construct in it appears in a program
+  under `Examples/` or in the language guide — a snippet that teaches syntax the
+  engine rejects is worse than an empty library. Rewritten from the removed
+  `features/snippets.json`, three of whose six languages no longer exist.
 - **Edit > Find in Files (Ctrl+Shift+F).** Searches the folder of the current
   document and opens a hit at its line. Skips binaries, files over 2 MB and build
   or VCS directories (`.git`, `build/`, `node_modules/`, `__pycache__/`), searches

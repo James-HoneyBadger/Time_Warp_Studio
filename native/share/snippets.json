@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "note": "Code snippets for Edit > Insert Snippet. Every body here is syntax this build runs: each construct appears in a program under Examples/ or in docs/LANGUAGE_GUIDE.md. $CURSOR$ marks where the caret lands after insertion; $SELECTION$ is replaced by the selected text.",
+  "languages": {
+    "basic": [
+      {
+        "name": "Hello world",
+        "description": "The smallest program: print a line, then end.",
+        "body": "10 PRINT \"Hello, World!\"\n20 END\n$CURSOR$"
+      },
+      {
+        "name": "FOR loop",
+        "description": "Count from 1 to 10, one line each.",
+        "body": "10 FOR I = 1 TO 10\n20   PRINT I\n30 NEXT I\n$CURSOR$"
+      },
+      {
+        "name": "Ask for input",
+        "description": "Read a string into a variable and echo it.",
+        "body": "10 INPUT NAME$\n20 PRINT \"Hello, \"; NAME$\n$CURSOR$"
+      }
+    ],
+    "pilot": [
+      {
+        "name": "Text screen",
+        "description": "Three lines of text, then end the unit.",
+        "body": "T: === Title ===\nT:\nT: A line of text.\nE:\n$CURSOR$"
+      },
+      {
+        "name": "Question with a match",
+        "description": "Ask, read an answer, and continue only when it matches.",
+        "body": "T: What is 2 + 2?\nA:\nM:4\nT: Correct.\nE:\n$CURSOR$"
+      }
+    ],
+    "logo": [
+      {
+        "name": "Square procedure",
+        "description": "A procedure that draws a square of any size.",
+        "body": "TO SQUARE :SIDE\n  REPEAT 4 [ FORWARD :SIDE RIGHT 90 ]\nEND\n$CURSOR$"
+      },
+      {
+        "name": "Spiral",
+        "description": "Thirty-six turns of a little more than a right angle.",
+        "body": "REPEAT 36 [ FORWARD 100 RIGHT 170 ]\n$CURSOR$"
+      },
+      {
+        "name": "Print a word",
+        "description": "Print a word, using Logo's bracketed word syntax.",
+        "body": "PRINT [Hello from Logo]\n$CURSOR$"
+      }
+    ],
+    "comal": [
+      {
+        "name": "Hello world",
+        "description": "The smallest COMAL program.",
+        "body": "10 PRINT \"Hello, World!\"\n$CURSOR$"
+      },
+      {
+        "name": "FOR loop",
+        "description": "Count from 1 to 5 with an explicit NEXT.",
+        "body": "10 FOR I := 1 TO 5\n20   PRINT I\n30 NEXT I\n$CURSOR$"
+      },
+      {
+        "name": "Procedure",
+        "description": "A named procedure with one parameter.",
+        "body": "10 PROC GREET(NAME$)\n20   PRINT \"Hello, \", NAME$\n30 ENDPROC\n$CURSOR$"
+      }
+    ],
+    "rexx": [
+      {
+        "name": "Say",
+        "description": "Print a string.",
+        "body": "SAY 'Hello, World!'\n$CURSOR$"
+      },
+      {
+        "name": "DO loop",
+        "description": "Count from 1 to 5.",
+        "body": "DO i = 1 TO 5\n  SAY i\nEND\n$CURSOR$"
+      },
+      {
+        "name": "SELECT",
+        "description": "A multi-way branch with WHEN and OTHERWISE.",
+        "body": "SELECT\n  WHEN score >= 90 THEN SAY 'Grade A'\n  OTHERWISE SAY 'Needs work'\nEND\n$CURSOR$"
+      }
+    ],
+    "focal": [
+      {
+        "name": "Hello world",
+        "description": "Print a quoted string.",
+        "body": "01.10 T \"Hello, World!\"\n$CURSOR$"
+      },
+      {
+        "name": "Draw a square",
+        "description": "Four forward moves and four right turns, in a FOR.",
+        "body": "01.10 FOR I=1,4;FD 90;RT 90\n$CURSOR$"
+      },
+      {
+        "name": "Ask for a number",
+        "description": "Read a number, then print it with FOCAL's format code.",
+        "body": "01.10 ASK N\n01.20 T %0,\"You typed \",N,!\n$CURSOR$"
+      }
+    ],
+    "scheme": [
+      {
+        "name": "Define a function",
+        "description": "A named function, then a call and its output.",
+        "body": "(define (square n)\n  (* n n))\n\n(display (square 5))\n(newline)\n$CURSOR$"
+      },
+      {
+        "name": "Map a lambda",
+        "description": "Double every element of a list.",
+        "body": "(display (map (lambda (n) (* n 2)) '(1 2 3)))\n(newline)\n$CURSOR$"
+      },
+      {
+        "name": "A list and its parts",
+        "description": "car, cdr and length of a three-element list.",
+        "body": "(define items (list 1 2 3))\n(display (car items)) (newline)\n(display (cdr items)) (newline)\n(display (length items)) (newline)\n$CURSOR$"
+      }
+    ],
+    "chip8": [
+      {
+        "name": "Draw a digit",
+        "description": "Clear the screen and draw the font glyph for 2.",
+        "body": "start:  CLS\n        LD   V0, 0x04\n        LD   V1, 0x06\n        LD   F, V0\n        DRW  V0, V1, 5\n$CURSOR$"
+      },
+      {
+        "name": "A sprite",
+        "description": "Five rows of eight pixels, as DB lines.",
+        "body": "digit:  DB 0xF0, 0x90, 0x90, 0x90, 0xF0\n$CURSOR$"
+      }
+    ],
+    "apl": [
+      {
+        "name": "Index generator",
+        "description": "The first ten numbers, and no loop.",
+        "body": "⍳10\n$CURSOR$"
+      },
+      {
+        "name": "Sum of a range",
+        "description": "Reduce the first hundred numbers with plus.",
+        "body": "+/⍳100\n$CURSOR$"
+      },
+      {
+        "name": "Draw a square",
+        "description": "The studio's turtle words: FD, RT, LT, PU, PD, HOME, CS.",
+        "body": "FD 60\nRT 90\nFD 60\nRT 90\nFD 60\nRT 90\nFD 60\nRT 90\n$CURSOR$"
+      }
+    ],
+    "smalltalk": [
+      {
+        "name": "Transcript",
+        "description": "Write a string and a carriage return.",
+        "body": "Transcript show: 'Hello, World!'; cr.\n$CURSOR$"
+      },
+      {
+        "name": "Times loop",
+        "description": "A block evaluated five times, printing a counter.",
+        "body": "1 to: 5 do: [:i | Transcript show: i printString; cr.]\n$CURSOR$"
+      }
+    ]
+  }
+}

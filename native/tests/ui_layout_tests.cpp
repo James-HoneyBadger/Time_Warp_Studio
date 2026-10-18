@@ -55,6 +55,8 @@
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/panels.hpp"
+#include "timewarp/ui/snippet_dialog.hpp"
+#include "timewarp/ui/snippets.hpp"
 #include "timewarp/ui/standalone.hpp"
 #include "timewarp/ui/themes.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
@@ -1103,6 +1105,31 @@ void test_menu_structure() {
     }
 }
 
+/// The picker shows the catalogue, filtered by language, and reports a choice.
+void test_snippet_picker_filters_by_language() {
+    announce("snippet picker");
+    QString error;
+    const QList<timewarp::ui::Snippet> catalogue = timewarp::ui::loadSnippets(&error);
+    TW_CHECK(error.isEmpty());
+    TW_CHECK(!catalogue.isEmpty());
+    if (catalogue.isEmpty()) {
+        return;
+    }
+
+    timewarp::ui::SnippetDialog dialog;
+    dialog.setSnippets(catalogue);
+    dialog.setLanguage(timewarp::ui::Language::Logo);
+    const timewarp::ui::Snippet first = dialog.chosen();
+    TW_CHECK(first.language == timewarp::ui::Language::Logo);
+    TW_CHECK(!first.body.isEmpty());
+
+    // And a language with no entries shows everything rather than nothing: an
+    // empty list tells a user their language has no snippets, which is not the
+    // same as "the file could not be read".
+    dialog.setLanguage(timewarp::ui::Language::Unknown);
+    TW_CHECK(!dialog.chosen().body.isEmpty());
+}
+
 /// Find in Files is in the Edit menu, on Ctrl+Shift+F, wired to something. The
 /// reserved action id and the menu entry have to agree, or the palette lists a
 /// command the key does not reach.
@@ -1536,8 +1563,7 @@ void test_unported_controls_say_so_instead_of_doing_nothing() {
     // feature lands it must be visibly unavailable and say why, because a button
     // that silently does nothing is what the user reports as broken.
     const QStringList placeholders{QStringLiteral("Debug"), QStringLiteral("Continue"),
-                                   QStringLiteral("Trace"), QStringLiteral("Snippets"),
-                                   QStringLiteral("A+")};
+                                   QStringLiteral("Trace"), QStringLiteral("A+")};
     const QList<QToolBar*> bars{window.mainToolBar(), window.secondaryToolBar()};
 
     for (const QString& name : placeholders) {
@@ -1558,6 +1584,24 @@ void test_unported_controls_say_so_instead_of_doing_nothing() {
             TW_CHECK(!found->isEnabled());
             TW_CHECK(found->toolTip().contains(QStringLiteral("not ported")));
         }
+    }
+
+    // Snippets used to be in that list. It is wired now, so it is asserted the
+    // other way round: enabled, with a tooltip that describes what it does rather
+    // than excusing it.
+    QAction* snippets = nullptr;
+    for (QToolBar* bar : bars) {
+        for (QAction* action : bar->actions()) {
+            if (action->text().contains(QStringLiteral("Snippets"))) {
+                snippets = action;
+                break;
+            }
+        }
+    }
+    TW_CHECK(snippets != nullptr);
+    if (snippets != nullptr) {
+        TW_CHECK(snippets->isEnabled());
+        TW_CHECK(!snippets->toolTip().contains(QStringLiteral("not ported")));
     }
 
     // The speed slider is gone rather than disabled: a control that delays nothing
@@ -1769,6 +1813,7 @@ int main(int argc, char** argv) {
     test_outline_dock_starts_hidden();
     test_menu_structure();
     test_edit_menu_has_find_in_files();
+    test_snippet_picker_filters_by_language();
     test_every_right_column_page_has_a_key();
     test_file_menu_new_opens_a_document();
     test_file_menu_close_tab_closes_one();

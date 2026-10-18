@@ -54,6 +54,8 @@
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
+#include "timewarp/ui/snippet_dialog.hpp"
+#include "timewarp/ui/snippets.hpp"
 #include "timewarp/ui/sound_player.hpp"
 #include "timewarp/ui/syntax_highlighter.hpp"
 #include "timewarp/ui/themes.hpp"
@@ -561,6 +563,10 @@ void MainWindow::buildMenuBar() {
     add(edit, tr("Find in F&iles..."), QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_F},
         [this] { showFindInFiles(); })
         ->setObjectName(QStringLiteral("findInFilesAction"));
+    // Ctrl+Shift+I, which no other action claims.
+    add(edit, tr("Insert &Snippet..."), QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_I},
+        [this] { insertSnippet(); })
+        ->setObjectName(QStringLiteral("insertSnippetAction"));
     edit->addSeparator();
     // Ctrl+L, not Ctrl+G: the grid on the canvas already owns Ctrl+G, and two
     // actions on one key is an ambiguous shortcut that Qt resolves by guessing.
@@ -959,6 +965,10 @@ void MainWindow::performAction(const QString& action) {
         formatCurrentDocument();
         return;
     }
+    if (id == QLatin1String("snippet")) {
+        insertSnippet();
+        return;
+    }
     if (id == QLatin1String("find_previous")) {
         findNextMatch(true);
         return;
@@ -1313,6 +1323,54 @@ void MainWindow::showFindInFiles() {
     find_in_files_->activateWindow();
 }
 
+void MainWindow::insertSnippet() {
+    CodeEditor* editor = currentEditor();
+    if (editor == nullptr) {
+        return;
+    }
+    QString error;
+    const QList<Snippet> snippets = loadSnippets(&error);
+    if (snippets.isEmpty()) {
+        setExecutionState(tr("ready"),
+                          error.isEmpty() ? tr("No snippets are installed.") : error);
+        return;
+    }
+    SnippetDialog dialog{this};
+    dialog.setSnippets(snippets);
+    dialog.setLanguage(languageOf(editor));
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+    applySnippet(dialog.chosen());
+}
+
+void MainWindow::applySnippet(const Snippet& snippet) {
+    CodeEditor* editor = currentEditor();
+    if (editor == nullptr || snippet.body.isEmpty()) {
+        return;
+    }
+    // A selection becomes the insertion's starting text: `$SELECTION$` is how a
+    // snippet wraps what the user already wrote.
+    QString selection = editor->textCursor().selectedText();
+    // Qt separates paragraphs with U+2029 in `selectedText()`; a snippet expects
+    // real newlines.
+    selection.replace(QChar::ParagraphSeparator, QLatin1Char('\n'));
+    const SnippetInsertion insertion = resolveSnippet(snippet.body, selection);
+
+    const QTextCursor cursor = editor->textCursor();
+    const int start = cursor.selectionStart();
+    QTextCursor edit = cursor;
+    edit.beginEditBlock();
+    edit.insertText(insertion.text);
+    edit.endEditBlock();
+
+    QTextCursor placed = editor->textCursor();
+    placed.setPosition(start + insertion.caret);
+    editor->setTextCursor(placed);
+    editor->setFocus(Qt::ShortcutFocusReason);
+    setExecutionState(tr("ready"), tr("Inserted \u201C%1\u201D").arg(snippet.name));
+}
+
 void MainWindow::goToLine(int line) {
     CodeEditor* editor = currentEditor();
     if (editor == nullptr) {
@@ -1577,8 +1635,9 @@ void MainWindow::buildToolBar() {
     QAction* stop_action =
         addRunAction(tr("\u23F9\uFE0F Stop"), tr("Stop the running program"));
     connect(stop_action, &QAction::triggered, this, [this] { stopRunningDocument(); });
-    notPorted(addRunAction(tr("\U0001F4CB Snippets"), tr("Insert a code snippet")),
-              tr("needs the snippet library, which is not ported yet"));
+    QAction* snippets_action =
+        addRunAction(tr("\U0001F4CB Snippets"), tr("Insert a code snippet (Ctrl+Shift+I)"));
+    connect(snippets_action, &QAction::triggered, this, [this] { insertSnippet(); });
 
     QAction* clear_output = tool_bar_secondary_->addAction(tr("\U0001F9F9 Clear Output"));
     clear_output->setToolTip(tr("Clear the output panel"));
