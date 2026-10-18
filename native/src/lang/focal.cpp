@@ -91,7 +91,7 @@ std::string upper(std::string_view text) {
 }
 
 /// Python's `repr` for the strings that reach an error message.
-std::string quoted(std::string_view text) {
+std::string quoted_text(std::string_view text) {
     return "'" + std::string{text} + "'";
 }
 
@@ -224,7 +224,7 @@ std::vector<Token> tokenize(std::string_view text) {
             ++position;
             continue;
         }
-        throw FocalError("unexpected character " + quoted(std::string(1, character)));
+        throw FocalError("unexpected character " + quoted_text(std::string(1, character)));
     }
     return tokens;
 }
@@ -353,7 +353,7 @@ private:
             const auto found = variables_.find(name);
             return found == variables_.end() ? 0.0 : found->second.number();
         }
-        throw FocalError("unexpected " + quoted(token.text) + " in expression");
+        throw FocalError("unexpected " + quoted_text(token.text) + " in expression");
     }
 
     static bool is_function(std::string_view name) {
@@ -465,7 +465,7 @@ double evaluate(std::string_view text, const std::map<std::string, Value>& varia
     Parser parser{tokenize(text), variables, state};
     const double value = parser.expression();
     if (parser.position() != parser.size()) {
-        throw FocalError("trailing text in expression: " + quoted(trim(text)));
+        throw FocalError("trailing text in expression: " + quoted_text(trim(text)));
     }
     return value;
 }
@@ -613,7 +613,7 @@ public:
 
         const std::string command = alias(word);
         if (command.empty()) {
-            throw FocalError("unknown command " + quoted(head));
+            throw FocalError("unknown command " + quoted_text(head));
         }
         if (command == "TYPE") {
             return {std::nullopt, type_statement(rest)};
@@ -649,7 +649,7 @@ public:
             interpreter_.running = false;
             return {};
         }
-        throw FocalError("unhandled command " + quoted(command));
+        throw FocalError("unhandled command " + quoted_text(command));
     }
 
 private:
@@ -744,11 +744,11 @@ private:
             }
             const std::size_t equals = assignment.find('=');
             if (equals == std::string::npos) {
-                throw FocalError("SET needs NAME=value, got " + quoted(assignment));
+                throw FocalError("SET needs NAME=value, got " + quoted_text(assignment));
             }
             const std::string key = upper(trim(std::string_view{assignment}.substr(0, equals)));
             if (!is_identifier(key)) {
-                throw FocalError("bad variable name " + quoted(trim(std::string_view{assignment}.substr(0, equals))));
+                throw FocalError("bad variable name " + quoted_text(trim(std::string_view{assignment}.substr(0, equals))));
             }
             const double value = evaluate(std::string_view{assignment}.substr(equals + 1),
                                           interpreter_.variables(), state_);
@@ -775,7 +775,7 @@ private:
         }
         name = upper(name);
         if (!is_identifier(name)) {
-            throw FocalError("ASK needs a variable name, got " + quoted(trim(rest)));
+            throw FocalError("ASK needs a variable name, got " + quoted_text(trim(rest)));
         }
         // The answer is written into the variable by request_input, which is
         // why nothing is stored here.
@@ -822,7 +822,7 @@ private:
         }
         const std::string variable = upper(trim(std::string_view{arguments}.substr(0, equals)));
         if (!is_identifier(variable)) {
-            throw FocalError("bad FOR variable " + quoted(trim(std::string_view{arguments}.substr(0, equals))));
+            throw FocalError("bad FOR variable " + quoted_text(trim(std::string_view{arguments}.substr(0, equals))));
         }
         const std::string remainder{std::string_view{arguments}.substr(equals + 1)};
         const std::size_t semicolon = remainder.find(';');
@@ -998,7 +998,7 @@ private:
             }
             return std::string{text.substr(index, cursor - index)};
         }
-        throw FocalError("expected a line label (NN.NN) in " + quoted(trim(text)));
+        throw FocalError("expected a line label (NN.NN) in " + quoted_text(trim(text)));
     }
 
     std::size_t resolve(std::string_view label) {

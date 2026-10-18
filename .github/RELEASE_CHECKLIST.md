@@ -51,30 +51,33 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
 
 ### Release Assets
 
-- [ ] Build the application
+- [ ] Nothing to build by hand: pushing the tag runs `release.yml`, which builds
+      `time-warp-studio-X.Y.Z-linux-x86_64.tar.gz` on `ubuntu-24.04`, runs the
+      suites against that exact tree, publishes
+      `ghcr.io/<owner>/time-warp-studio:X.Y.Z` and attaches the tarball (with its
+      `.sha256`) to the release. See `DEPLOYMENT.md` for what each job does and
+      what it needs from the repository settings.
 
-  ```bash
-  cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
-  cmake --build native/build -j
-  ```
-
-  > Installer packaging (Linux packages, Windows installers) is not built yet;
-  > see `docs/ROADMAP.md`. Until it is, a release ships sources plus the
-  > binary built above.
-
-- [ ] Package the examples (optional)
-
-  ```bash
-  tar -czf time-warp-examples-vX.Y.Z.tar.gz Examples/
-  ```
-
-- [ ] Generate checksums for uploaded files (optional)
+- [ ] If the pipeline has to be tried without spending a tag:
+      `gh workflow run release.yml -f version=X.Y.Z`. It refuses a version that
+      disagrees with `VERSION`, and it publishes a real release, so delete that
+      release afterwards (`gh release delete vX.Y.Z`) or dispatch against a
+      throwaway version.
 
 ### GitHub Release Page
 
-- [ ] Push the annotated tag `vX.Y.Z` from `main`; confirm the deployment workflow succeeds
-- [ ] Verify the automatically created `Time Warp Studio vX.Y.Z` release is marked latest
-- [ ] Confirm release notes match the `CHANGELOG.md` section for `X.Y.Z`
+- [ ] Push the annotated tag `vX.Y.Z` from `main`, then watch the run:
+      `gh run watch $(gh run list --workflow=release.yml --limit=1 --json databaseId --jq '.[0].databaseId')`
+- [ ] Confirm the release was created with generated notes, a tarball asset and a
+      checksum, and that the container image is tagged `X.Y.Z` and `latest`
+- [ ] Confirm the Deployment appears under Settings > Environments > `production`
+      with the release as its URL
+- [ ] Check the image runs before announcing it:
+      `docker run --rm ghcr.io/<owner>/time-warp-studio:X.Y.Z --version`
+- [ ] If `X.Y.Z` is a patch release of a release that never published an artifact,
+      move the tag instead of bumping again: `git tag -f -a vX.Y.Z`, then
+      `git push --force origin vX.Y.Z` — safe only while the old tag has no
+      published release or image attached
 
 ## Post-Release Tasks
 

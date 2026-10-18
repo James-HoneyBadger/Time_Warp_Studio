@@ -12,6 +12,7 @@ that exist and what they gate.
 | `docs.yml` | Push and pull request to `main`, when anything under `docs/`, `README.md`, the lesson curriculum (`native/bridge/time_warp/features/lessons.json`) or `teach.py` changes | That every guide `docs/INDEX.md` promises exists, that all ten languages have a tutorial, that the lesson plans still match the curriculum, and that every lesson can still be finished. Runs with nothing but `python3` from the runner image, so it answers in seconds and does not depend on the C++ build. |
 | `markdown-lint.yml` | Push and pull request to `main`, when any `*.md` changes | Markdown lint against `.markdownlint.json`, and a spell check. **Both steps are `continue-on-error`**, so neither can fail a build today — see the note below. |
 | `version.yml` | Push and pull request to `main`, when `VERSION`, the README, the changelog, `docs/`, `Scripts/` or the engine's `__init__.py` changes | That every hand-written copy of the version agrees with `VERSION`. Separate from the native build because it has to run on documentation changes, which the C++ job does not watch. |
+| `release.yml` | A `v*` tag, or `workflow_dispatch` with a version | Refuses a tag that disagrees with `VERSION` (running `version_sync.py` as the same check `version.yml` makes), builds the release tree on `ubuntu-24.04` and runs the CTest suites against *that* tree, packages `time-warp-studio-<version>-linux-x86_64.tar.gz` with a `.sha256`, pushes the container image to `ghcr.io`, and creates the GitHub Release with generated notes and the tarball attached. The release job runs in the `production` environment, which is what makes GitHub record a Deployment. |
 
 Two of these exist because of a failure the others cannot see. The lesson plans in
 `docs/lessons/plans/` are **generated** from the curriculum, and the failure that
@@ -36,7 +37,58 @@ its own terms.
 The Python application's workflows — `ci.yml`, `build_release.yml`,
 `publish-python.yml` and `publish-container.yml` — were removed with it. They
 linted, tested, packaged and published the PySide6 application, and none of that
-applies to a C++ build.
+applies to a C++ build. `release.yml` is the replacement for the last two: it
+packages the C++ build and publishes it, which is a different job from the Python
+one rather than a port of it.
+
+## Deployments and packages
+
+Time Warp Studio is a desktop application with no hosted service, so there is
+nothing to roll out to a server. What a release *does* produce is a Deployment
+record and two installable artifacts, and both are wired to `release.yml`.
+
+**The Deployment.** The `release` job names `environment: production`, and its URL
+is the release page. That is the whole mechanism: GitHub records a Deployment
+whenever a job in an environment runs, keeps the history under
+Settings > Environments, and shows it on the repository's Environments page.
+Nothing is deployed anywhere by it — the record is what says "16.0.0 was published
+from this commit, by this workflow, at this time", which is the question a
+Deployment is actually asked. Add **required reviewers** to the environment in the
+web UI if a release should need a second pair of eyes; the workflow needs no
+change.
+
+**The artifacts.**
+
+| Artifact | Where | What it is |
+| -------- | ----- | ---------- |
+| `time-warp-studio-<version>-linux-x86_64.tar.gz` + `.sha256` | Release assets | The staged `cmake --install` tree (`/usr/bin`, `/usr/share/applications`, the icon), the example programs and the licence. Unpack into `/` and run `time_warp_ide`. |
+| `ghcr.io/<owner>/time-warp-studio:<version>` and `:latest` | GitHub Packages (container registry) | Built by `packaging/docker/Dockerfile`: two stages, Arch base, Qt 6 and Python in the runtime layer, `alsa-utils` so `SOUND` can reach a device if one is mounted. Runs as a non-root user. |
+
+The image is also the headless path: `-e QT_QPA_PLATFORM=offscreen` plus
+`--run --export /work/out.png /work/program.logo` renders a drawing with no
+display at all, which is what a teacher producing worksheets from a script wants.
+
+**Repository settings the pipeline depends on.** All three are one-time:
+
+1. **Settings > Actions > General > Workflow permissions** — "Read and write
+   permissions", or leave the default and rely on the `permissions:` block at the
+   top of `release.yml`. That block asks for `contents: write` (to create the
+   release) and `packages: write` (to push the image); a repository restricted to
+   read-only tokens for workflows refuses the push with a 403 on the first run.
+2. **Settings > Environments** — a `production` environment. It is created
+   automatically by the first run that uses it, so the only reason to add it by
+   hand is to attach protection rules first.
+3. **Package visibility** — a package pushed by `GITHUB_TOKEN` starts **private**
+   even when the repository is public, and the first pull then fails with
+   `unauthorized` for everybody else. Set it to public once, on the package page,
+   or with `gh api --method PATCH /user/packages/container/time-warp-studio -f
+   visibility=public`.
+
+**Trying it without spending a tag.** `gh workflow run release.yml -f
+version=X.Y.Z` runs the whole pipeline against `main`. It publishes a real release
+and a real image, so either dispatch against a throwaway version or delete both
+afterwards (`gh release delete vX.Y.Z`, and delete the image version in the
+package page).
 
 ## What GitHub shows, and where it lives
 

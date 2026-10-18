@@ -111,7 +111,13 @@ QPalette paletteFor(const Theme& theme) {
     palette.setColor(QPalette::Shadow, colour(theme.bevel_dark));
     palette.setColor(QPalette::BrightText, foreground);
     palette.setColor(QPalette::PlaceholderText, colour(theme.line_number_fg));
+#if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
+    // `Accent` arrived in Qt 6.6. Nothing in the window reads it -- the base
+    // stylesheet is built on `highlight` -- so a build against an older Qt loses
+    // one role and no behaviour. Guarded rather than dropped, because a desktop
+    // running 6.6 or later uses it for focus rings and selection chrome.
     palette.setColor(QPalette::Accent, colour(theme.hud_accent));
+#endif
 
     // Disabled widgets: the Python let the style dim them, which on a dark theme
     // produced black-on-black labels. `line_number_fg` is the theme's own "quiet"

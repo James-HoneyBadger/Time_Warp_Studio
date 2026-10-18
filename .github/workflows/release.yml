@@ -1,0 +1,220 @@
+name: Release
+
+# Cutting a release: verify the tag, build the Linux artifact, publish the
+# container image to GitHub Packages, and attach the artifact to a GitHub
+# Release. The release job runs in the `production` environment, which is what
+# makes GitHub show a Deployment for it — this project has no hosted service, so
+# "deployment" here means "a published release that users can install", and the
+# environment is the record and the approval gate for it.
+#
+# The gates that decide whether the code is *good* (the 14 suites, the parity
+# gates, the lesson validation) live in `native.yml` and `docs.yml` and run on
+# every push. This workflow re-runs the test suite once because a release is the
+# one build whose provenance matters: an artifact must be produced by a tree that
+# passed, not by a tree that was next to one that passed.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  # Available by hand, so the pipeline can be exercised without spending a tag.
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (must match VERSION), e.g. 16.0.0'
+        required: true
+
+permissions:
+  contents: write
+  packages: write
+
+# One release at a time. Never cancel: a half-pushed image and a half-written
+# release are worse than a queue.
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  QT_QPA_PLATFORM: offscreen
+  IMAGE_NAME: ghcr.io/${{ github.repository }}
+
+jobs:
+  verify:
+    name: Verify the version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Work out the version
+        id: version
+        run: |
+          file_version=$(tr -d '[:space:]' < VERSION)
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            wanted="${{ inputs.version }}"
+          else
+            # A tag is `v16.0.0`; the version is what follows.
+            wanted="${GITHUB_REF_NAME#v}"
+          fi
+          if [ "$wanted" != "$file_version" ]; then
+            echo "::error::Refusing to release $wanted: VERSION says $file_version."
+            echo "::error::Bump VERSION and the changelog first, then retag."
+            exit 1
+          fi
+          # The changelog is the other half of a release, and version_sync.py
+          # already knows how to check the paperwork. Running it here means a
+          # missing section fails before anything is built.
+          python3 Scripts/version_sync.py
+          echo "version=$wanted" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build the Linux artifact
+    needs: verify
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt 6 and the build tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential cmake qt6-base-dev qt6-base-dev-tools \
+            libgl1-mesa-dev libxkbcommon-dev
+
+      - name: Configure, requiring the widget UI
+        run: |
+          cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_INSTALL_PREFIX=/usr 2>&1 | tee configure.log
+          # A configure that cannot find Qt6 Widgets still exits 0 and skips the
+          # whole UI, which would publish an artifact that is not the product.
+          if grep -q "skipping the widget UI" configure.log; then
+            echo "::error::Qt6 Widgets was not found, so the UI was skipped."
+            exit 1
+          fi
+          cmake --build native/build --parallel
+
+      - name: Test what is about to ship
+        run: |
+          ctest --test-dir native/build --output-on-failure
+          ./native/build/time_warp_ide --version
+          ./native/build/time_warp_ide --help > /dev/null
+
+      - name: Stage the install tree
+        run: |
+          make -C native install DESTDIR="$PWD/stage" PREFIX=/usr
+          # The tarball is unpacked into /, so the tree has to carry the real
+          # paths a desktop expects: /usr/bin, /usr/share/applications, and the
+          # icon where the theme looks for it.
+          find stage -type f | sort | sed 's|^stage||' > staged-files.txt
+          cat staged-files.txt
+
+      - name: Package
+        run: |
+          version="${{ needs.verify.outputs.version }}"
+          name="time-warp-studio-${version}-linux-x86_64"
+          mkdir -p "dist/$name"
+          # The payload is the staged tree, minus the leading `stage/`, plus the
+          # files that make it usable without the repository: the examples a
+          # learner starts from and the licence.
+          cp -a stage/usr "dist/$name/"
+          cp -a Examples "dist/$name/examples"
+          cp LICENSE README.md "dist/$name/"
+          cp native/README.md "dist/$name/README-native.md"
+          tar -C dist -czf "dist/$name.tar.gz" "$name"
+          ( cd dist && sha256sum "$name.tar.gz" > "$name.tar.gz.sha256" )
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifact
+          path: |
+            dist/*.tar.gz
+            dist/*.sha256
+          if-no-files-found: error
+
+  image:
+    name: Publish the container image
+    needs: [verify, build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Log in to GitHub Packages
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: packaging/docker/Dockerfile
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:${{ needs.verify.outputs.version }}
+            ${{ env.IMAGE_NAME }}:latest
+          labels: |
+            org.opencontainers.image.title=Time Warp Studio
+            org.opencontainers.image.description=An educational IDE for ten languages, with turtle graphics
+            org.opencontainers.image.version=${{ needs.verify.outputs.version }}
+            org.opencontainers.image.licenses=MIT
+            org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
+          build-args: |
+            VERSION=${{ needs.verify.outputs.version }}
+
+  release:
+    name: Create the GitHub Release
+    needs: [verify, build, image]
+    runs-on: ubuntu-24.04
+    # The Deployment GitHub records points at the published release. Add required
+    # reviewers to this environment in Settings > Environments if a release
+    # should need a second pair of eyes; nothing else in the workflow changes.
+    environment:
+      name: production
+      url: ${{ github.server_url }}/${{ github.repository }}/releases/tag/v${{ needs.verify.outputs.version }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: linux-artifact
+          path: dist
+
+      - name: Create the release and attach the artifact
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          version="${{ needs.verify.outputs.version }}"
+          tag="v${version}"
+          # `--generate-notes` writes the notes from the commits and pull
+          # requests since the last tag; the changelog in the repository stays
+          # the long form and the release links to it.
+          gh release create "$tag" \
+            --title "Time Warp Studio $version" \
+            --generate-notes \
+            --notes-file - \
+            dist/*.tar.gz dist/*.sha256 <<EOF
+          An educational IDE for ten languages — BASIC, APL, Logo, PILOT, FOCAL,
+          Scheme, CHIP-8, COMAL, REXX and Smalltalk — with integrated turtle
+          graphics, all running in C++.
+
+          **Install:** unpack the tarball into \`/\` and run \`time_warp_ide\`:
+
+              tar -xzf time-warp-studio-${version}-linux-x86_64.tar.gz -C / --strip-components=1
+
+          **Container:** \`docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix
+          ${IMAGE_NAME}:${version}\`
+
+          See [CHANGELOG.md](CHANGELOG.md) for what changed and
+          [docs/INSTALLATION.md](docs/INSTALLATION.md) for requirements.
+          EOF
+
+      - name: Verify the release is public and complete
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "v${{ needs.verify.outputs.version }}" \
+            --json tagName,assets,url --jq '{tag: .tagName, assets: [.assets[].name], url}'

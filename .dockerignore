@@ -1,0 +1,22 @@
+# What the container build does not need to see.
+#
+# The context is the whole repository because the CMake build reads `VERSION` from
+# the parent directory and installs files from `packaging/`. These are the parts
+# that cost transfer time without contributing anything to the image.
+
+.git
+.github
+.venv
+native/build
+native/build-debug
+native/build-sanitised
+native/build-ubsan
+**/__pycache__
+**/*.pyc
+**/.pytest_cache
+**/.ruff_cache
+**/.mypy_cache
+docs
+*.png
+!packaging/linux/*.png
+tws_matrix_scratch.txt

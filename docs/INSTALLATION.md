@@ -172,5 +172,45 @@ languages.
 
 Distro packages (`.deb`, `.rpm`, Flatpak or Snap), an AppImage and Windows/macOS
 installers do not exist: the ones in this repository packaged the removed PySide6
-application and were deleted with it. The install target above, plus the desktop
-entry and icon, is the foundation for them. See [ROADMAP.md](ROADMAP.md).
+application and were deleted with it. What a release *does* ship is the tarball
+`release.yml` builds and a container image, both described next.
+
+### 8. A release without building anything
+
+Two artifacts come out of a tag, and neither needs a compiler on your machine.
+
+**The tarball.** `time-warp-studio-<version>-linux-x86_64.tar.gz` on the release
+page is the install tree above, plus the example programs and the licence:
+
+```bash
+tar -xzf time-warp-studio-16.0.0-linux-x86_64.tar.gz -C / --strip-components=1
+time_warp_ide
+```
+
+It needs Qt 6, a C++ runtime and `python3` for the lesson check — the same
+requirements as a local build, minus the compiler.
+
+**The container image** is `ghcr.io/james-honeybadger/time-warp-studio:<version>`
+(or `:latest`), and it carries everything, including Qt and Python:
+
+```bash
+# A window on your desktop
+docker run --rm -e DISPLAY \
+  -v /tmp/.X11-unix:/tmp/.X11-unix \
+  -v "$HOME/.time_warp:/home/studio/.time_warp" \
+  ghcr.io/james-honeybadger/time-warp-studio:latest
+
+# Headless: render a drawing from a program, no display at all
+docker run --rm -e QT_QPA_PLATFORM=offscreen \
+  -v "$PWD:/work" \
+  ghcr.io/james-honeybadger/time-warp-studio:latest \
+  --run --export /work/out.png /work/Examples/logo/mandala.logo
+```
+
+The bind mount for `~/.time_warp` is what keeps lesson progress between runs; the
+container runs as a non-root `studio` user, so its home directory is the only
+place it writes. Sound works if the host's device is passed through
+(`--device /dev/snd`), because `SOUND` and `PLAY` hand their WAV to `aplay`.
+
+The install target above, plus the desktop entry and icon, is the foundation for
+distro packaging. See [ROADMAP.md](ROADMAP.md).
