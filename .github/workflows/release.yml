@@ -36,7 +36,11 @@ concurrency:
 
 env:
   QT_QPA_PLATFORM: offscreen
-  IMAGE_NAME: ghcr.io/${{ github.repository }}
+  # `IMAGE_NAME` is not set here: `github.repository` keeps the case of the owner
+  # and the repository, and an OCI repository name must be lowercase, so
+  # `ghcr.io/James-HoneyBadger/Time_Warp_Studio` gets all the way to buildx and
+  # fails there ("repository name must be lowercase"). Each job that needs it
+  # lowercases it into `GITHUB_ENV` first.
 
 jobs:
   verify:
@@ -132,10 +136,11 @@ jobs:
           name="time-warp-studio-${version}-linux-${{ matrix.arch }}"
           mkdir -p "dist/$name"
           # The payload is the staged tree, minus the leading `stage/`, plus the
-          # files that make it usable without the repository: the examples a
-          # learner starts from and the licence.
+          # files that make it usable without the repository -- the licence and
+          # the two READMEs. The example programs are already in the staged tree,
+          # at /usr/share/time-warp-studio/examples, because the tarball is
+          # unpacked into `/` and the install tree is what it ships.
           cp -a stage/usr "dist/$name/"
-          cp -a Examples "dist/$name/examples"
           cp LICENSE README.md "dist/$name/"
           cp native/README.md "dist/$name/README-native.md"
           tar -C dist -czf "dist/$name.tar.gz" "$name"
@@ -176,11 +181,10 @@ jobs:
             https://github.com/linuxdeploy/linuxdeploy-plugin-qt/releases/download/continuous/linuxdeploy-plugin-qt-x86_64.AppImage
           chmod +x linuxdeploy linuxdeploy-plugin-qt
           mkdir -p AppDir
+          # The examples arrive with the install rules, inside the image, where
+          # File > Open Example finds them: an AppImage has no package manager to
+          # fetch them later.
           DESTDIR="$PWD/AppDir" cmake --install native/build --prefix /usr
-          # The examples travel inside the image: an AppImage has no package
-          # manager to fetch them later, and a learner with no programs to open is
-          # the one case the Lessons panel cannot cover on its own.
-          cp -a Examples "AppDir/usr/share/time-warp-studio-examples"
           if [ -x /usr/lib/qt6/bin/qmake ]; then
             export QMAKE=/usr/lib/qt6/bin/qmake
           fi
@@ -210,6 +214,9 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+
+      - name: Lowercase the image name
+        run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
 
       - name: Log in to GitHub Packages
         uses: docker/login-action@v3
@@ -252,6 +259,11 @@ jobs:
       # `merge-multiple` puts both architectures' files in one directory: the
       # release attaches a flat list, and every file name already says which
       # architecture it is.
+      # The notes name the image too, and the same lowercase rule applies to what
+      # is printed as to what is pushed.
+      - name: Lowercase the image name
+        run: echo "IMAGE_NAME=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
+
       - uses: actions/download-artifact@v4
         with:
           pattern: linux-artifact-*

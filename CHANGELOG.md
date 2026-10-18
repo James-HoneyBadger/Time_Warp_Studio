@@ -89,6 +89,12 @@ are allow-listed, and why that is a security surface rather than a feature.
 - **`DRAW` and `WAIT`.** `DRAW "U20 R20 D20 L20"` executes GW-BASIC's path string
   through the turtle (U/D, R/L, E/H, F/G, B, N, M, C), and `WAIT ms` paces a frame
   loop.
+- **File > Open Example.** A fresh install used to open onto an empty window with
+  nothing to run. The example programs now travel with the install tree
+  (`/usr/share/time-warp-studio/examples`) and the File menu lists them by
+  language, so the first thing a learner does after installing is one click. A
+  build tree finds them in `Examples/`; `TIME_WARP_EXAMPLES` points the menu at a
+  folder of your own.
 - **Something a non-technical user can install.** A release now ships a `.deb`, an
   `.rpm`, an AppImage and a tarball for x86_64 and arm64, plus a container image —
   all built from one tagged tree by `.github/workflows/release.yml`, with

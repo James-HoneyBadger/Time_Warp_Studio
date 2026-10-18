@@ -429,6 +429,13 @@ private:
     void noteRecentFile(const QString& path);
     /// Rebuilds the recent submenu from the list, every time it is opened.
     void rebuildRecentMenu();
+    /// Rebuilds the examples submenu from the programs this installation
+    /// shipped, every time it is opened: where they are depends on how the
+    /// application was installed, and a menu built once would be a menu of the
+    /// directories that happened to exist when the window was created.
+    void rebuildExamplesMenu();
+    /// Opens an example program as a document.
+    void openExample(const QString& path);
 
     /// Connects the debug panel's buttons to the Scheme runner. Called once, at
     /// construction; the panel's signals look the runner up when they fire,
@@ -487,6 +494,10 @@ private:
     /// Rebuilt on every open: a recent list that is only built once is a list of
     /// the files that were open when the window was created.
     QMenu* recent_menu_ = nullptr;
+    /// Likewise. The point of this one is that a learner who has just installed
+    /// the application should find programs to open without knowing where the
+    /// package put them.
+    QMenu* examples_menu_ = nullptr;
 
     /// The theme in force, and the menu that records it. The actions live in the
     /// View menu and are `QActionGroup`-exclusive, so the tick is the state.

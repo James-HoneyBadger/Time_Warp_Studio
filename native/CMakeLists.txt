@@ -662,6 +662,18 @@ if(Qt6_FOUND)
             FILES ${CMAKE_CURRENT_SOURCE_DIR}/../packaging/linux/time-warp-studio.png
             DESTINATION ${CMAKE_INSTALL_DATADIR}/icons/hicolor/256x256/apps
         )
+        # The example programs travel with the install tree rather than beside
+        # the tarball, because a package has no second place to put them and a
+        # fresh install that opens onto an empty window is a poor first
+        # impression. This is the directory File > Open Example reads.
+        # The trailing slash matters: `DIRECTORY Examples` installs the directory
+        # itself, giving `examples/Examples/logo`, while `Examples/` installs its
+        # contents and gives `examples/logo`, which is the shape the menu reads.
+        install(
+            DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/../Examples/
+            DESTINATION ${CMAKE_INSTALL_DATADIR}/time-warp-studio/examples
+            PATTERN "__pycache__" EXCLUDE
+        )
 
         if(TIME_WARP_EXPR_BUILD_TESTS)
             add_executable(ui_layout_tests tests/ui_layout_tests.cpp)

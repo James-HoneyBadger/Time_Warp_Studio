@@ -500,6 +500,12 @@ void MainWindow::buildMenuBar() {
     recent_menu_ = file->addMenu(tr("Open &Recent"));
     recent_menu_->setObjectName(QStringLiteral("recentMenu"));
     connect(recent_menu_, &QMenu::aboutToShow, this, [this] { rebuildRecentMenu(); });
+    // A fresh install opens onto an empty window, and the programs that make it
+    // worth having are on disk already: this is the shortest path from "I
+    // installed it" to "something moved on the canvas".
+    examples_menu_ = file->addMenu(tr("Open E&xample"));
+    examples_menu_->setObjectName(QStringLiteral("examplesMenu"));
+    connect(examples_menu_, &QMenu::aboutToShow, this, [this] { rebuildExamplesMenu(); });
     file->addSeparator();
     add(file, tr("&Save"), QKeySequence::Save, [this] { saveCurrentFile(); });
     add(file, tr("Save &As..."), QKeySequence::SaveAs, [this] { saveCurrentFileAs(); });
@@ -1704,6 +1710,96 @@ void MainWindow::clearRecentFiles() {
     // user has visited is not the same as saying they were never working on what
     // is open now.
     QSettings{}.remove(kSettingRecentFiles);
+}
+
+namespace {
+
+/// Where this build's example programs live, or empty when it has none.
+///
+/// Searched in the order `locateWorker()` uses, for the same reason: the
+/// installed layout first, because that is what a package ships and where it puts
+/// things, then the checkout, which is what a build tree has. The environment
+/// variable wins over both, so a teacher can point the menu at a folder of their
+/// own programs.
+QString exampleRoot() {
+    const QString from_environment = qEnvironmentVariable("TIME_WARP_EXAMPLES");
+    if (!from_environment.isEmpty() && QFileInfo{from_environment}.isDir()) {
+        return QFileInfo{from_environment}.absoluteFilePath();
+    }
+    const QString app_dir = QApplication::applicationDirPath();
+    // `bin/time_warp_ide` -> `share/time-warp-studio/examples`, which is the
+    // destination CMakeLists.txt installs them to.
+    const QString installed =
+        app_dir + QStringLiteral("/../share/time-warp-studio/examples");
+    if (QFileInfo{installed}.isDir()) {
+        return QFileInfo{installed}.absoluteFilePath();
+    }
+    // A build tree: the binary is `native/build/time_warp_ide` and the programs
+    // are beside `native/`. The second path covers a binary in `native/build/bin`.
+    for (const QString& upward :
+         {QStringLiteral("/../Examples"), QStringLiteral("/../../Examples")}) {
+        const QString candidate = app_dir + upward;
+        if (QFileInfo{candidate}.isDir()) {
+            return QFileInfo{candidate}.absoluteFilePath();
+        }
+    }
+    // Last, the working directory: someone who unpacked the tarball and ran the
+    // binary from inside it has the programs right there.
+    if (QFileInfo{QStringLiteral("Examples")}.isDir()) {
+        return QFileInfo{QStringLiteral("Examples")}.absoluteFilePath();
+    }
+    return {};
+}
+
+}  // namespace
+
+void MainWindow::rebuildExamplesMenu() {
+    if (examples_menu_ == nullptr) {
+        return;
+    }
+    examples_menu_->clear();
+    const QDir root{exampleRoot()};
+    if (root.path().isEmpty() || !root.exists()) {
+        // Not an error: a build made without the checkout has nothing to list,
+        // and an empty menu with no explanation is the thing a user cannot
+        // interpret.
+        QAction* none = examples_menu_->addAction(tr("(no examples installed)"));
+        none->setEnabled(false);
+        return;
+    }
+    const QStringList folders =
+        root.entryList(QDir::Dirs | QDir::NoDotAndDotDot, QDir::Name);
+    int listed = 0;
+    for (const QString& folder : folders) {
+        const QDir directory{root.filePath(folder)};
+        const QStringList files = directory.entryList(QDir::Files, QDir::Name);
+        if (files.isEmpty()) {
+            continue;
+        }
+        // The folder name is the settings key ("chip8"), so the display name
+        // ("CHIP-8") comes from the same table the rest of the UI uses rather
+        // than from the directory.
+        const Language language = languageFromKey(folder);
+        QMenu* submenu = examples_menu_->addMenu(
+            language == Language::Unknown ? folder : displayName(language));
+        submenu->setObjectName(QStringLiteral("examplesMenu.") + folder);
+        for (const QString& file : files) {
+            const QString path = directory.filePath(file);
+            submenu->addAction(file, this, [this, path] { openExample(path); });
+            ++listed;
+        }
+    }
+    if (listed == 0) {
+        QAction* none = examples_menu_->addAction(tr("(no examples installed)"));
+        none->setEnabled(false);
+    }
+}
+
+void MainWindow::openExample(const QString& path) {
+    // Through openFile, so an example behaves like any other document: it lands
+    // in the recent list, its language comes from the extension, and a second
+    // click raises the tab it already has.
+    openFile(path);
 }
 
 void MainWindow::setExecutionState(const QString& state, const QString& message) {

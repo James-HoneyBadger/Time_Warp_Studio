@@ -1195,6 +1195,85 @@ void test_tab_close_button_closes_the_tab() {
     TW_CHECK_EQ(tabs->count(), before - 1);
 }
 
+void test_file_menu_lists_the_installed_examples() {
+    announce("File > Open Example");
+    // Its own directory rather than the checkout's Examples: this is about the
+    // menu reading whatever this installation shipped, and a test that asserted
+    // the corpus would fail every time an example was added.
+    QTemporaryDir dir;
+    TW_CHECK(dir.isValid());
+    if (!dir.isValid()) {
+        return;
+    }
+    const QDir root{dir.path()};
+    TW_CHECK(root.mkpath(QStringLiteral("logo")));
+    TW_CHECK(root.mkpath(QStringLiteral("basic")));
+    // An empty language folder is what the menu must skip rather than render as
+    // a submenu with nothing in it.
+    TW_CHECK(root.mkpath(QStringLiteral("apl")));
+    for (const QString& file : {QStringLiteral("logo/tri.logo"), QStringLiteral("basic/hello.bas")}) {
+        QFile handle{root.filePath(file)};
+        TW_CHECK(handle.open(QIODevice::WriteOnly));
+        handle.write("FORWARD 50\n");
+    }
+
+    // The variable is how the menu is pointed at a folder, so setting it is also
+    // the assertion that the override works at all -- a packaged install has no
+    // `Examples/` beside the binary to fall back on.
+    qputenv("TIME_WARP_EXAMPLES", dir.path().toUtf8());
+    MainWindow window;
+
+    QMenu* file = menuNamed(window, QStringLiteral("&File"));
+    QAction* item = entryContaining(file, QStringLiteral("Example"));
+    TW_CHECK(item != nullptr);
+    if (item == nullptr || item->menu() == nullptr) {
+        qunsetenv("TIME_WARP_EXAMPLES");
+        return;
+    }
+    QMenu* examples = item->menu();
+
+    // The submenu is built when it opens, so nothing is listed until then: that
+    // is what keeps it honest about a directory that changed while the window
+    // was open.
+    QMetaObject::invokeMethod(examples, "aboutToShow", Qt::DirectConnection);
+    QStringList titles;
+    for (QAction* entry : examples->actions()) {
+        titles << withoutMnemonic(entry->text());
+    }
+    // Sorted by folder name and labelled with the same display names the rest of
+    // the UI uses -- "CHIP-8", not "chip8".
+    TW_CHECK_EQ(titles.join(QLatin1Char('|')).toStdString(),
+                std::string{"BASIC|Logo"});
+
+    QAction* logo_menu_action = examples->actions().value(1);
+    QMenu* logo = logo_menu_action == nullptr ? nullptr : logo_menu_action->menu();
+    TW_CHECK(logo != nullptr);
+    if (logo == nullptr) {
+        qunsetenv("TIME_WARP_EXAMPLES");
+        return;
+    }
+    QAction* tri = entryContaining(logo, QStringLiteral("tri"));
+    TW_CHECK(tri != nullptr);
+    if (tri != nullptr) {
+        const int before = window.editorTabs()->count();
+        tri->trigger();
+        TW_CHECK_EQ(window.editorTabs()->count(), before + 1);
+        timewarp::ui::CodeEditor* editor = window.currentEditor();
+        TW_CHECK(editor != nullptr);
+        if (editor != nullptr) {
+            // Opened as a document, not as text in the current one: the menu's
+            // whole job is to get a learner to a file the editor knows the
+            // language of.
+            TW_CHECK_EQ(editor->toPlainText().toStdString(), std::string{"FORWARD 50\n"});
+            TW_CHECK_EQ(editor->property("filePath").toString().toStdString(),
+                        QFileInfo{root.filePath(QStringLiteral("logo/tri.logo"))}
+                            .absoluteFilePath()
+                            .toStdString());
+        }
+    }
+    qunsetenv("TIME_WARP_EXAMPLES");
+}
+
 void test_view_menu_grid_drives_the_canvas() {
     announce("View > Show Grid");
     MainWindow window;
@@ -1647,6 +1726,7 @@ int main(int argc, char** argv) {
     test_menu_structure();
     test_file_menu_new_opens_a_document();
     test_file_menu_close_tab_closes_one();
+    test_file_menu_lists_the_installed_examples();
     test_tab_close_button_closes_the_tab();
     test_view_menu_grid_drives_the_canvas();
     test_view_menu_zoom_scales_the_canvas();
