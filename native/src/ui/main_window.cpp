@@ -2512,13 +2512,20 @@ bool MainWindow::openFile(const QString& path, OpenFailure failure) {
     file.close();
 
     const bool chip8 = languageForFile(absolute) == Language::Chip8;
-    // A .ch8 file may be a binary ROM, and `fromUtf8` replaces every byte above
-    // 0x7F with U+FFFD. Latin-1 maps all 256 byte values one-to-one, and the
-    // runner writes it back with `toLatin1`, so a ROM survives the editor.
-    if (chip8 && bytes.startsWith("\xEF\xBB\xBF")) {
-        bytes.remove(0, 3);
+    const bool binary_rom = chip8 && bytes.contains('\0');
+    QString text;
+    if (binary_rom) {
+        // A .ch8 file may be a binary ROM. A document normalises '\r' to '\n',
+        // so the bytes go through the codec in `language.hpp` rather than
+        // through `fromLatin1`: that is what keeps 0x0D a 0x0D when the file is
+        // run or saved back.
+        text = romBytesToText(bytes);
+    } else {
+        if (chip8 && bytes.startsWith("\xEF\xBB\xBF")) {
+            bytes.remove(0, 3);
+        }
+        text = chip8 ? QString::fromLatin1(bytes) : QString::fromUtf8(bytes);
     }
-    QString text = chip8 ? QString::fromLatin1(bytes) : QString::fromUtf8(bytes);
     // A byte-order mark is not part of the program. Left in place it is an
     // invisible first character, so the first token of the first line fails to
     // parse with an error pointing at a column that looks empty.
@@ -2537,7 +2544,6 @@ bool MainWindow::openFile(const QString& path, OpenFailure failure) {
     // A ROM is bytecode, not editable source. Showing it in the editor is useful
     // (it is the thing Run executes), but a keystroke in it would be a corrupted
     // program waiting to be saved.
-    const bool binary_rom = chip8 && text.contains(QChar{0});
     editor->setReadOnly(binary_rom);
     updateTabLabel(editor);
     editor->setFocus();
@@ -2570,12 +2576,13 @@ bool MainWindow::writeDocument(CodeEditor* editor, const QString& path) {
                                       file.errorString()));
         return false;
     }
-    // A binary ROM was decoded as Latin-1; writing it as UTF-8 would turn every
-    // high byte into two and the program would no longer be the one loaded.
+    // A binary ROM was decoded through the codec that preserves every byte;
+    // writing it as UTF-8 would turn every high byte into two and the program
+    // would no longer be the one loaded.
     const QString text = editor->toPlainText();
     const QByteArray bytes = languageOf(editor) == Language::Chip8 &&
                                      text.contains(QChar{0})
-                                 ? text.toLatin1()
+                                 ? romTextToBytes(text)
                                  : text.toUtf8();
     if (file.write(bytes) != bytes.size() || !file.commit()) {
         QMessageBox::warning(this, tr("Save failed"),

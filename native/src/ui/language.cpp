@@ -42,6 +42,12 @@ constexpr std::array<LanguageInfo, 10> kLanguages{{
 /// it is handled explicitly rather than by widening every row.
 constexpr std::array<std::string_view, 1> kSchemeExtraExtensions{"scheme"};
 
+/// The bytes a `QTextDocument` would rewrite: `'\r'` becomes `'\n'` and the
+/// no-break space becomes an ordinary space. The private-use range cannot come
+/// from a Latin-1 decode, so each mapping stays a bijection over 0x00-0xFF.
+constexpr char16_t kCarriageReturnCodePoint = 0xE00D;
+constexpr char16_t kNoBreakSpaceCodePoint = 0xE0A0;
+
 [[nodiscard]] const LanguageInfo* find(Language language) {
     for (const LanguageInfo& info : kLanguages) {
         if (info.language == language) {
@@ -54,6 +60,37 @@ constexpr std::array<std::string_view, 1> kSchemeExtraExtensions{"scheme"};
 }  // namespace
 
 Language defaultLanguage() { return Language::Basic; }
+
+QString romBytesToText(const QByteArray& bytes) {
+    QString text;
+    text.reserve(bytes.size());
+    for (const char raw : bytes) {
+        const auto byte = static_cast<unsigned char>(raw);
+        if (byte == 0x0D) {
+            text.append(QChar{kCarriageReturnCodePoint});
+        } else if (byte == 0xA0) {
+            text.append(QChar{kNoBreakSpaceCodePoint});
+        } else {
+            text.append(QChar{static_cast<char16_t>(byte)});
+        }
+    }
+    return text;
+}
+
+QByteArray romTextToBytes(const QString& text) {
+    QByteArray bytes;
+    bytes.reserve(text.size());
+    for (const QChar character : text) {
+        if (character.unicode() == kCarriageReturnCodePoint) {
+            bytes.append('\r');
+        } else if (character.unicode() == kNoBreakSpaceCodePoint) {
+            bytes.append(static_cast<char>(0xA0));
+        } else {
+            bytes.append(static_cast<char>(character.unicode() & 0xFF));
+        }
+    }
+    return bytes;
+}
 
 QString displayName(Language language) {
     const LanguageInfo* info = find(language);

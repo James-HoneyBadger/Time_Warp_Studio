@@ -1332,8 +1332,8 @@ void test_autosave_keeps_unsaved_work() {
     scratch.restoreDataDir();
 }
 
-/// A binary ROM and a text listing share `.ch8`. The ROM is decoded as Latin-1
-/// so its bytes survive, opened read-only so they cannot be edited into
+/// A binary ROM and a text listing share `.ch8`. The ROM is decoded through the
+/// byte-preserving codec, opened read-only so it cannot be edited into
 /// corruption, and run without the assembler seeing it.
 void test_a_binary_chip8_rom_opens_read_only() {
     announce("CHIP-8: a binary ROM opens read-only");
@@ -1342,7 +1342,10 @@ void test_a_binary_chip8_rom_opens_read_only() {
     if (!scratch.valid()) {
         return;
     }
-    const QByteArray rom{"\x60\x05\x61\x07\x00\x00", 6};
+    // LD V0, 13; LD V1, 10; HALT. The 0x0D is the byte a QTextDocument would
+    // otherwise normalise to 0x0A, so the round-trip assertion below is the one
+    // that keeps the editor from changing the program.
+    const QByteArray rom{"\x60\x0D\x61\x0A\x00\x00", 6};
     const QString path = scratch.write(QStringLiteral("demo.ch8"), rom);
     TW_CHECK(!path.isEmpty());
     if (path.isEmpty()) {
@@ -1357,7 +1360,7 @@ void test_a_binary_chip8_rom_opens_read_only() {
         return;
     }
     TW_CHECK(editor->isReadOnly());
-    TW_CHECK(editor->toPlainText().toLatin1() == rom);
+    TW_CHECK(timewarp::ui::romTextToBytes(editor->toPlainText()) == rom);
 
     // Reaching HALT means the bytes arrived intact; a corrupted high byte would
     // have assembled as a different instruction or failed to fetch. A native run

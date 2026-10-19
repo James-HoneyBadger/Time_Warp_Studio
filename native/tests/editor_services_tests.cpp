@@ -23,6 +23,7 @@
 #include <QHash>
 #include <QSet>
 #include <QStringList>
+#include <QTextDocument>
 
 #include "check.hpp"
 #include "temp_dir.hpp"
@@ -532,6 +533,29 @@ void test_autosave_store_follows_the_data_directory() {
     scratch.restoreDataDir();
 }
 
+void test_rom_bytes_survive_a_document() {
+    announce("CHIP-8: a ROM's bytes survive a document");
+    QByteArray all;
+    for (int byte = 0; byte < 256; ++byte) {
+        all.append(static_cast<char>(byte));
+    }
+    QTextDocument document;
+    document.setPlainText(timewarp::ui::romBytesToText(all));
+    TW_CHECK(timewarp::ui::romTextToBytes(document.toPlainText()) == all);
+
+    // The bytes that motivated the codec: decoded as Latin-1 and put through a
+    // document, 0x0D comes back as 0x0A and 0xA0 as 0x20 -- different programs.
+    const QByteArray carriage_return{"\x0D", 1};
+    const QByteArray line_feed{"\x0A", 1};
+    QTextDocument naive;
+    naive.setPlainText(QString::fromLatin1(carriage_return));
+    TW_CHECK(naive.toPlainText().toLatin1() == line_feed);
+    const QByteArray no_break_space{"\xA0", 1};
+    const QByteArray space{"\x20", 1};
+    naive.setPlainText(QString::fromLatin1(no_break_space));
+    TW_CHECK(naive.toPlainText().toLatin1() == space);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -558,5 +582,6 @@ int main(int argc, char** argv) {
     test_snippet_insertion_resolves_placeholders();
     test_autosave_store();
     test_autosave_store_follows_the_data_directory();
+    test_rom_bytes_survive_a_document();
     return tw::test::summary("editor_services");
 }
