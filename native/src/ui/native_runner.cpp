@@ -3,6 +3,7 @@
 #include "timewarp/ui/native_runner.hpp"
 
 #include "timewarp/audio/music.hpp"
+#include "timewarp/lang/debug.hpp"
 #include "timewarp/lang/executor.hpp"
 #include "timewarp/ui/sound_player.hpp"
 
@@ -443,12 +444,43 @@ void NativeRunner::request_stop() {
         if (interpreter_ != nullptr) {
             interpreter_->request_stop();
         }
+        // A paused run is blocked inside the session, so stopping it means telling
+        // the session too -- otherwise Stop would leave a thread asleep holding the
+        // interpreter and the window would never hear the run finish.
+        if (debug_ != nullptr) {
+            debug_->request_stop();
+        }
     }
     {
         const std::lock_guard<std::mutex> lock{input_mutex_};
         waiting_input_ = false;
     }
     input_ready_.notify_all();
+}
+
+void NativeRunner::set_breakpoints(const std::set<std::size_t>& lines) {
+    breakpoints_ = lines;
+}
+
+void NativeRunner::request_continue() {
+    const std::lock_guard<std::mutex> lock{interpreter_mutex_};
+    if (debug_ != nullptr) {
+        debug_->request_continue();
+        emit resumed();
+    }
+}
+
+void NativeRunner::request_step() {
+    const std::lock_guard<std::mutex> lock{interpreter_mutex_};
+    if (debug_ != nullptr) {
+        debug_->request_step();
+        emit resumed();
+    }
+}
+
+bool NativeRunner::isPaused() const {
+    const std::lock_guard<std::mutex> lock{interpreter_mutex_};
+    return debug_ != nullptr && debug_->paused();
 }
 
 void NativeRunner::answerInput(const QString& text) {
@@ -505,9 +537,16 @@ std::string NativeRunner::read_input(const std::string& prompt) {
 
 void NativeRunner::run() {
     auto engine = std::make_unique<timewarp::lang::Interpreter>(language_, *host_);
+    // A fresh session per run: a stop requested for the previous run must not make
+    // this one exit at its first statement.
+    auto session = std::make_unique<timewarp::lang::DebugSession>();
+    session->set_breakpoints(breakpoints_);
+    session->on_paused = [this](int line) { emit paused(line); };
     {
         const std::lock_guard<std::mutex> lock{interpreter_mutex_};
         interpreter_ = engine.get();
+        debug_ = std::move(session);
+        engine->set_debug_session(debug_.get());
     }
     engine->set_output_callback([this](const std::string& line) {
         emit outputAvailable(QString::fromStdString(line));
@@ -546,6 +585,7 @@ void NativeRunner::run() {
     {
         const std::lock_guard<std::mutex> lock{interpreter_mutex_};
         interpreter_ = nullptr;
+        debug_.reset();
     }
     emit run_finished(completed, error);
 }

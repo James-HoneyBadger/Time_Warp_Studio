@@ -25,12 +25,14 @@
 #include <QHash>
 #include <QImage>
 #include <QSet>
+#include <QSettings>
 #include <QStringList>
 #include <QTextDocument>
 
 #include "check.hpp"
 #include "temp_dir.hpp"
 #include "timewarp/ui/autosave.hpp"
+#include "timewarp/ui/breakpoints.hpp"
 #include "timewarp/ui/export.hpp"
 #include "timewarp/ui/find_in_files.hpp"
 #include "timewarp/ui/formatter.hpp"
@@ -539,6 +541,43 @@ void test_autosave_store_follows_the_data_directory() {
     scratch.restoreDataDir();
 }
 
+void test_breakpoint_store() {
+    announce("breakpoints: the store");
+    const tw::test::TempDir dir;
+    const QString path = dir.write(QStringLiteral("program.bas"), "10 PRINT 1\n");
+    TW_CHECK(!path.isEmpty());
+    QSettings settings;
+    const QString key = timewarp::ui::breakpoints::keyFor(path);
+    settings.remove(key);
+
+    // Nothing stored reads as no breakpoints rather than as an error.
+    TW_CHECK(timewarp::ui::breakpoints::load(settings, path).isEmpty());
+
+    // Written sorted and comma-separated, which is what makes the settings file
+    // readable and diffable.
+    timewarp::ui::breakpoints::save(settings, path, QSet<int>{5, 0, 2});
+    TW_CHECK_EQ(timewarp::ui::breakpoints::load(settings, path).size(), 3);
+    TW_CHECK_EQ(settings.value(key).toString().toStdString(), std::string{"0,2,5"});
+
+    // An empty set removes the key: a document with no breakpoints leaves no
+    // trace.
+    timewarp::ui::breakpoints::save(settings, path, {});
+    TW_CHECK(!settings.contains(key));
+
+    // A value somebody edited by hand is read for what it says and nothing else.
+    settings.setValue(key, QStringLiteral("x,1, -2, 3"));
+    const QSet<int> parsed = timewarp::ui::breakpoints::load(settings, path);
+    TW_CHECK_EQ(parsed.size(), 2);
+    TW_CHECK(parsed.contains(1));
+    TW_CHECK(parsed.contains(3));
+
+    // An untitled document has no key to write to.
+    const int before = settings.allKeys().size();
+    timewarp::ui::breakpoints::save(settings, QString{}, QSet<int>{1});
+    TW_CHECK_EQ(settings.allKeys().size(), before);
+    settings.remove(key);
+}
+
 void test_rom_bytes_survive_a_document() {
     announce("CHIP-8: a ROM's bytes survive a document");
     QByteArray all;
@@ -691,5 +730,6 @@ int main(int argc, char** argv) {
     test_rom_bytes_survive_a_document();
     test_code_pdf_export();
     test_session_html_export();
+    test_breakpoint_store();
     return tw::test::summary("editor_services");
 }

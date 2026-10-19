@@ -51,6 +51,7 @@
 #include "timewarp/canvas/qt_bridge.hpp"
 #include "timewarp/ui/app.hpp"
 #include "timewarp/ui/app_paths.hpp"
+#include "timewarp/ui/breakpoints.hpp"
 #include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/command_palette.hpp"
@@ -222,6 +223,12 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     autosave_timer_->setObjectName(QStringLiteral("autosaveTimer"));
     connect(autosave_timer_, &QTimer::timeout, this, &MainWindow::autosaveNow);
     applyEditorSettings(editor_settings_);
+    // Before any document is opened, so the settings file cannot keep growing a
+    // dead path per deleted program. The count is not reported: who used to have a
+    // breakpoint in a file they have since deleted is not something a learner
+    // needs a dialog about.
+    QSettings breakpoint_settings;
+    static_cast<void>(breakpoints::prune(breakpoint_settings));
     reportRecoveredWork();
 }
 
@@ -2358,22 +2365,34 @@ void MainWindow::buildToolBar() {
         action->setToolTip(tip);
         return action;
     };
-    // Actions whose feature has not landed are **disabled**, with the reason in
-    // the tooltip. A control that looks live and does nothing is the bug users
-    // report; a greyed one with a reason says what is left to build. Stop is
-    // wired, because a program that can be started and not stopped is worse than
-    // one that cannot be started at all.
-    const auto notPorted = [](QAction* action, const QString& reason) {
-        action->setEnabled(false);
-        action->setToolTip(QStringLiteral("%1 - %2").arg(action->toolTip(), reason));
-        return action;
-    };
-    notPorted(addRunAction(tr("\U0001F41B Debug"), tr("Start debugging")),
-              tr("needs the toolbar's link to the debug panel, which is not ported yet"));
-    notPorted(addRunAction(tr("\u25B6\uFE0F Continue"), tr("Continue to the next breakpoint")),
-              tr("needs the toolbar's link to the debug panel, which is not ported yet"));
-    notPorted(addRunAction(tr("\u2193 Trace"), tr("Step into the next statement")),
-              tr("needs the toolbar's link to the debug panel, which is not ported yet"));
+    // The debugging controls, live for every line-by-line language because they
+    // all run the same interpreter loop. A whole-program language (Scheme, Logo,
+    // Smalltalk, CHIP-8) has no statement boundary to stop at, so for those the
+    // run simply completes -- which is what the tooltips say.
+    QAction* debug_action =
+        addRunAction(tr("\U0001F41B Debug"), tr("Run, stopping before any breakpoint"));
+    debug_action->setObjectName(QStringLiteral("debugAction"));
+    connect(debug_action, &QAction::triggered, this, [this] { runCurrentDocument(); });
+    QAction* continue_action = addRunAction(
+        tr("\u25B6\uFE0F Continue"), tr("Resume from a pause to the next breakpoint"));
+    continue_action->setObjectName(QStringLiteral("continueAction"));
+    connect(continue_action, &QAction::triggered, this, [this] {
+        if (native_runner_ != nullptr && native_runner_->isPaused()) {
+            native_runner_->request_continue();
+            return;
+        }
+        setExecutionState(tr("ready"), tr("Nothing is paused"));
+    });
+    QAction* trace_action =
+        addRunAction(tr("\u2193 Trace"), tr("Resume and stop after one statement"));
+    trace_action->setObjectName(QStringLiteral("traceAction"));
+    connect(trace_action, &QAction::triggered, this, [this] {
+        if (native_runner_ != nullptr && native_runner_->isPaused()) {
+            native_runner_->request_step();
+            return;
+        }
+        setExecutionState(tr("ready"), tr("Nothing is paused"));
+    });
     QAction* stop_action =
         addRunAction(tr("\u23F9\uFE0F Stop"), tr("Stop the running program"));
     connect(stop_action, &QAction::triggered, this, [this] { stopRunningDocument(); });
@@ -2846,6 +2865,19 @@ void MainWindow::adoptEditor(CodeEditor* editor) {
     // open.
     editor->applySettings(editor_settings_);
 
+    // A document's breakpoints belong to its file, not to the tab: reopening a
+    // program brings back the points set in an earlier session. An untitled
+    // buffer keeps its set in memory only -- there is no path to hang it on.
+    const QString document_path = pathOf(editor);
+    if (!document_path.isEmpty()) {
+        QSettings breakpoint_settings;
+        editor->setBreakpoints(breakpoints::load(breakpoint_settings, document_path));
+    }
+    connect(editor, &CodeEditor::breakpointsChanged, this, [this, editor] {
+        QSettings breakpoint_settings;
+        breakpoints::save(breakpoint_settings, pathOf(editor), editor->breakpoints());
+    });
+
     connect(editor, &CodeEditor::cursorMoved, this,
             [this, editor](int line, int column) {
                 // Only the visible editor drives the status bar. A programmatic
@@ -3089,6 +3121,10 @@ bool MainWindow::writeDocument(CodeEditor* editor, const QString& path) {
     // language selector are all refreshed from the path that just changed.
     updateTabLabel(editor);
     refreshDocumentState();
+    // Breakpoints follow the document to its new name: they were set against this
+    // program, and Save As is the same program.
+    QSettings breakpoint_settings;
+    breakpoints::save(breakpoint_settings, path, editor->breakpoints());
     setExecutionState(tr("ready"), tr("Saved %1").arg(QFileInfo{path}.fileName()));
     return true;
 }
@@ -3464,6 +3500,15 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
                                 static_cast<std::uint8_t>(surface.blue())});
     }
     runner->load_program(source);
+    // The editor's breakpoints are zero-based lines and the loader keeps every
+    // line -- blank ones included -- so an editor line is a statement index. That
+    // is the one invariant the mapping depends on, and it is why `parse_lines`
+    // does not drop blanks.
+    std::set<std::size_t> breakpoints;
+    for (const int line : editor->breakpoints()) {
+        breakpoints.insert(static_cast<std::size_t>(line));
+    }
+    runner->set_breakpoints(breakpoints);
 
     connect(runner, &NativeRunner::outputAvailable, this,
             [this, runner](const QString& text) {
@@ -3522,6 +3567,23 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
                 setExecutionState(completed ? tr("ready") : tr("stopped"),
                                   completed ? tr("Finished") : tr("Stopped"));
             });
+
+    connect(runner, &NativeRunner::paused, this, [this, runner](int line) {
+        if (native_runner_ != runner) {
+            return;
+        }
+        // The console says where the run is, because the canvas cannot: a learner
+        // needs to know which statement has not happened yet, not that something
+        // happened somewhere.
+        setExecutionState(tr("paused"), tr("Paused before line %1").arg(line));
+        static_cast<void>(showPanel(QStringLiteral("debug")));
+    });
+    connect(runner, &NativeRunner::resumed, this, [this, runner] {
+        if (native_runner_ != runner) {
+            return;
+        }
+        setExecutionState(tr("running"), tr("Running…"));
+    });
 
     setExecutionState(tr("running"), tr("Running %1…").arg(nameOf(editor)));
     runner->start();

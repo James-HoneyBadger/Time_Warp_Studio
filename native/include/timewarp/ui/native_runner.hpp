@@ -31,6 +31,7 @@
 #include <memory>
 #include <mutex>
 #include <optional>
+#include <set>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -173,6 +174,20 @@ public:
     void request_stop();
     void answerInput(const QString& text);
 
+    // -- debugging ---------------------------------------------------------
+    //
+    // The line-by-line executors share one interpreter loop, so they share this:
+    // the session blocks the loop at a breakpoint or after a step, and these
+    // calls release it. Whole-program languages run their own loop and ignore it.
+
+    /// Zero-based statement indices this run may pause on. Set before `start()`.
+    void set_breakpoints(const std::set<std::size_t>& lines);
+    void request_continue();
+    void request_step();
+    /// True while the run is blocked inside a pause. Named apart from the
+    /// `paused` signal so `&NativeRunner::paused` is not ambiguous.
+    [[nodiscard]] bool isPaused() const;
+
     /// The surface a run begins on, from the theme (`MainWindow::applyTheme`).
     /// Set before `start()`; the host reads it on the runner thread when the run
     /// begins. A program that names its own background still overrides it.
@@ -197,6 +212,11 @@ public:
 signals:
     /// One line of program output, without a newline: the console adds it.
     void outputAvailable(const QString& text);
+    /// The program stopped before a statement, because of a breakpoint or a step.
+    /// `line` is the source line as the program numbers it.
+    void paused(int line);
+    /// The run left a pause and is executing again.
+    void resumed();
     /// The program is waiting for a line of input.
     void inputRequested(const QString& prompt);
     /// The run ended. `completed` is false when it was stopped.
@@ -228,6 +248,13 @@ private:
     QString answer_;
 
     std::atomic<bool> stop_requested_{false};
+
+    /// The breakpoints for the next run, copied into the session when it starts.
+    std::set<std::size_t> breakpoints_;
+    /// Non-null while a run is in flight, under `interpreter_mutex_` with the
+    /// interpreter it belongs to. A fresh session per run, so a stop from a
+    /// previous run cannot make the next one exit immediately.
+    std::unique_ptr<timewarp::lang::DebugSession> debug_;
 };
 
 }  // namespace timewarp::ui

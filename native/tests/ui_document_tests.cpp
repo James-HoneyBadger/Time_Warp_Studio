@@ -45,6 +45,7 @@
 #include "timewarp/bridge/python_worker.hpp"
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/autosave.hpp"
+#include "timewarp/ui/breakpoints.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/language.hpp"
@@ -1469,6 +1470,143 @@ void test_restoring_a_copy_opens_a_new_tab() {
                 std::string{"10 PRINT \"ORIGINAL\"\n"});
 }
 
+void test_a_run_pauses_at_a_breakpoint() {
+    announce("running: a breakpoint pauses the run");
+    QTemporaryDir dir;
+    const QString path = writeFile(dir, QStringLiteral("paused.bas"),
+                                   QByteArray{"10 PRINT \"ONE\"\n"
+                                              "20 PRINT \"TWO\"\n"
+                                              "30 PRINT \"THREE\"\n"
+                                              "40 END\n"});
+    TW_CHECK(!path.isEmpty());
+
+    MainWindow window;
+    window.resize(900, 600);
+    window.show();
+    QApplication::processEvents();
+    TW_CHECK(window.openFile(path, MainWindow::OpenFailure::Silent));
+    CodeEditor* editor = window.currentEditor();
+    TW_CHECK(editor != nullptr);
+    if (editor == nullptr) {
+        return;
+    }
+    // Before line 20, which is the second statement.
+    editor->setBreakpoints({1});
+    window.runCurrentDocument();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") == QStringLiteral("paused");
+    }));
+
+    QPlainTextEdit* console = viewOf(window, "consoleOutput");
+    TW_CHECK(console != nullptr);
+    if (console != nullptr) {
+        // ONE has run; TWO has not, because the pause comes before the statement.
+        TW_CHECK(console->toPlainText().contains(QStringLiteral("ONE")));
+        TW_CHECK(!console->toPlainText().contains(QStringLiteral("TWO")));
+    }
+
+    // Continue finishes the program from the pause.
+    window.findChild<QAction*>(QStringLiteral("continueAction"))->trigger();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") != QStringLiteral("paused") &&
+               badgeText(window, "executionBadge") != QStringLiteral("running");
+    }));
+    if (console != nullptr) {
+        TW_CHECK(console->toPlainText().contains(QStringLiteral("THREE")));
+    }
+}
+
+void test_breakpoints_toggle_paint_and_persist() {
+    announce("breakpoints: toggle, paint and persist");
+    tw::test::TempDir dir;
+    const QString path = dir.write(QStringLiteral("prog.bas"),
+                                   "10 PRINT 1\n20 PRINT 2\n30 PRINT 3\n40 END\n");
+    TW_CHECK(!path.isEmpty());
+    const QString key = timewarp::ui::breakpoints::keyFor(path);
+    QSettings settings;
+    settings.remove(key);
+
+    {
+        MainWindow window;
+        window.resize(900, 600);
+        window.show();
+        QApplication::processEvents();
+        TW_CHECK(window.openFile(path, MainWindow::OpenFailure::Silent));
+        CodeEditor* editor = window.currentEditor();
+        TW_CHECK(editor != nullptr);
+        if (editor == nullptr) {
+            return;
+        }
+        TW_CHECK(editor->breakpoints().isEmpty());
+
+        editor->toggleBreakpoint(0);
+        TW_CHECK_EQ(editor->breakpoints().size(), 1);
+        TW_CHECK(editor->hasBreakpoint(0));
+        // A second toggle on the same line removes exactly that one.
+        editor->toggleBreakpoint(0);
+        TW_CHECK(editor->breakpoints().isEmpty());
+        // Past the last line is refused rather than remembered for a line that
+        // does not exist: a breakpoint that can never fire is worse than none.
+        editor->toggleBreakpoint(99);
+        TW_CHECK(editor->breakpoints().isEmpty());
+
+        editor->toggleBreakpoint(1);
+        QApplication::processEvents();
+        QWidget* gutter = editor->findChild<QWidget*>(QStringLiteral("lineNumberArea"));
+        TW_CHECK(gutter != nullptr);
+        if (gutter != nullptr) {
+            // "The marker paints" compared against the same gutter with no
+            // breakpoints: a pixel count would depend on the font, and comparing an
+            // image with itself proves nothing.
+            const auto render = [gutter] {
+                QImage image{gutter->size(), QImage::Format_ARGB32_Premultiplied};
+                image.fill(Qt::transparent);
+                gutter->render(&image);
+                return image;
+            };
+            const QImage with_marker = render();
+            editor->setBreakpoints({});
+            QApplication::processEvents();
+            const QImage without_marker = render();
+            TW_CHECK(with_marker != without_marker);
+            editor->setBreakpoints({1});
+        }
+
+        // The gutter's click mapping: line 0 is at the top of the viewport.
+        TW_CHECK_EQ(editor->lineAt(2), 0);
+    }
+
+    // A new window, from the stored settings alone.
+    {
+        MainWindow second;
+        TW_CHECK(second.openFile(path, MainWindow::OpenFailure::Silent));
+        CodeEditor* editor = second.currentEditor();
+        TW_CHECK(editor != nullptr);
+        if (editor != nullptr) {
+            TW_CHECK_EQ(editor->breakpoints().size(), 1);
+            TW_CHECK(editor->hasBreakpoint(1));
+        }
+    }
+
+    // Leave the developer's settings as they were.
+    settings.remove(key);
+}
+
+void test_a_stale_breakpoint_path_is_dropped() {
+    announce("breakpoints: a deleted program takes its breakpoints with it");
+    QSettings settings;
+    const QString missing = QStringLiteral("/tmp/timewarp-breakpoints-gone-999999.bas");
+    TW_CHECK(!QFile::exists(missing));
+    const QString key = timewarp::ui::breakpoints::keyFor(missing);
+    settings.setValue(key, QStringLiteral("0,1"));
+
+    // Constructing the window is what prunes, so the assertion is about the
+    // startup path rather than about a helper nobody calls.
+    MainWindow window;
+    TW_CHECK(!settings.contains(key));
+    TW_CHECK(window.currentEditor() != nullptr);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1506,6 +1644,9 @@ int main(int argc, char** argv) {
     test_a_binary_chip8_rom_opens_read_only();
     test_word_at_cursor();
     test_context_help_follows_the_document_language();
+    test_breakpoints_toggle_paint_and_persist();
+    test_a_stale_breakpoint_path_is_dropped();
+    test_a_run_pauses_at_a_breakpoint();
 
     test_running_scheme_draws_on_the_canvas();
     test_pen_up_moves_without_drawing();

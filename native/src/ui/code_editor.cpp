@@ -44,6 +44,9 @@ constexpr int kMinimumGutterWidth = 24;
 
 /// Room at the right of the gutter for a problem marker.
 constexpr int kMarkerWidth = 8;
+/// The column on the left of the gutter where a breakpoint dot goes. Wide enough
+/// for the dot plus a click that clearly targeted it rather than the number.
+constexpr int kBreakpointWidth = 14;
 
 /// Number of spaces a tab inserts. Matching the Python editor's four matters more
 /// than any argument for a different number: a file re-saved by either editor
@@ -98,6 +101,8 @@ constexpr int kLintDelayMilliseconds = 350;
 LineNumberArea::LineNumberArea(CodeEditor* editor)
     : QWidget(editor), editor_(editor) {
     setObjectName(QStringLiteral("lineNumberArea"));
+    // The gutter is a control, not decoration: a click on it toggles a breakpoint.
+    setCursor(Qt::PointingHandCursor);
 }
 
 QSize LineNumberArea::sizeHint() const {
@@ -105,6 +110,15 @@ QSize LineNumberArea::sizeHint() const {
 }
 
 void LineNumberArea::paintEvent(QPaintEvent* event) { editor_->paintLineNumbers(event); }
+
+void LineNumberArea::mousePressEvent(QMouseEvent* event) {
+    if (event->button() == Qt::LeftButton) {
+        editor_->toggleBreakpoint(editor_->lineAt(static_cast<int>(event->position().y())));
+        event->accept();
+        return;
+    }
+    QWidget::mousePressEvent(event);
+}
 
 CodeEditor::CodeEditor(QWidget* parent) : QPlainTextEdit(parent) {
     setObjectName(QStringLiteral("codeEditor"));
@@ -489,14 +503,15 @@ bool CodeEditor::replaceCurrent(const QString& text, const QString& replacement,
 
 int CodeEditor::lineNumberAreaWidth() const {
     if (!settings_.show_line_numbers) {
-        // The gutter stays, because the problem markers live in it. Only the
-        // digits go, and with them the space they were measuring for.
-        return kMarkerWidth + 2 * kGutterPadding;
+        // The gutter stays, because the problem markers and the breakpoint dots
+        // live in it. Only the digits go, and with them the space they were
+        // measuring for.
+        return kBreakpointWidth + kMarkerWidth + 2 * kGutterPadding;
     }
     const int digits = QString::number(std::max(1, blockCount())).size();
     return std::max(kMinimumGutterWidth,
-                    kGutterPadding + QFontMetrics{font()}.horizontalAdvance(QLatin1Char('9')) *
-                                        digits +
+                    kBreakpointWidth + kGutterPadding +
+                        QFontMetrics{font()}.horizontalAdvance(QLatin1Char('9')) * digits +
                         kGutterPadding + kMarkerWidth);
 }
 
@@ -509,18 +524,32 @@ void CodeEditor::paintLineNumbers(QPaintEvent* event) {
     int top = qRound(blockBoundingGeometry(block).translated(contentOffset()).top());
     int bottom = top + qRound(blockBoundingRect(block).height());
     const int currentLineNumber = textCursor().blockNumber();
-    const int textWidth = gutter_->width() - kGutterPadding - kMarkerWidth;
+    const int textWidth = gutter_->width() - kBreakpointWidth - kGutterPadding - kMarkerWidth;
 
     while (block.isValid() && top <= event->rect().bottom()) {
         if (block.isVisible() && bottom >= event->rect().top()) {
             const int line_number = blockNumber + 1;
+            // The breakpoint dot: a filled circle in the left column, so the
+            // numbers stay numbers and the dots line up as a column a learner can
+            // scan. Zero-based in the set, one-based on screen.
+            if (breakpoints_.contains(blockNumber)) {
+                const int height = QFontMetrics{font()}.height();
+                const int diameter = std::max(6, height / 2);
+                const int centre_y = top + height / 2;
+                painter.setRenderHint(QPainter::Antialiasing, true);
+                painter.setPen(Qt::NoPen);
+                painter.setBrush(error_colour_);
+                painter.drawEllipse(QPoint{kBreakpointWidth / 2, centre_y}, diameter / 2,
+                                    diameter / 2);
+                painter.setBrush(Qt::NoBrush);
+            }
             if (settings_.show_line_numbers) {
                 const QString number = QString::number(line_number);
                 const bool isCurrent = blockNumber == currentLineNumber;
                 painter.setPen(isCurrent ? palette().color(QPalette::Text)
                                          : palette().color(QPalette::Mid));
-                painter.drawText(0, top, textWidth, QFontMetrics{font()}.height(),
-                                 Qt::AlignRight, number);
+                painter.drawText(kBreakpointWidth, top, textWidth,
+                                 QFontMetrics{font()}.height(), Qt::AlignRight, number);
             }
 
             // The problem marker: a triangle for an error, a smaller one for a
@@ -574,6 +603,43 @@ void CodeEditor::goToLine(int line) {
 }
 
 int CodeEditor::currentLine() const { return textCursor().blockNumber() + 1; }
+
+// ---------------------------------------------------------------------------
+// Breakpoints
+// ---------------------------------------------------------------------------
+
+void CodeEditor::setBreakpoints(const QSet<int>& lines) {
+    if (breakpoints_ == lines) {
+        return;
+    }
+    breakpoints_ = lines;
+    if (gutter_ != nullptr) {
+        gutter_->update();
+    }
+}
+
+void CodeEditor::toggleBreakpoint(int line) {
+    if (line < 0 || line >= blockCount()) {
+        // A click in the gutter past the last line is a no-op rather than a
+        // breakpoint on a line that does not exist yet: a stale entry that never
+        // fires is worse than one the user can see is missing.
+        return;
+    }
+    if (!breakpoints_.remove(line)) {
+        breakpoints_.insert(line);
+    }
+    if (gutter_ != nullptr) {
+        gutter_->update();
+    }
+    emit breakpointsChanged();
+}
+
+int CodeEditor::lineAt(int y) const {
+    // `cursorForPosition` answers in the text area's coordinates, and a click in
+    // the gutter is reported in the gutter's; both start at the same top edge, so
+    // only x needs a value inside the text area.
+    return cursorForPosition(QPoint(0, y)).blockNumber();
+}
 
 int CodeEditor::currentColumn() const {
     return textCursor().positionInBlock() + 1;

@@ -5,6 +5,7 @@
 #include "timewarp/expr/errors.hpp"
 #include "timewarp/expr/evaluator.hpp"
 #include "timewarp/lang/chip8.hpp"
+#include "timewarp/lang/debug.hpp"
 #include "timewarp/lang/focal.hpp"
 #include "timewarp/lang/pilot.hpp"
 
@@ -248,6 +249,17 @@ void Interpreter::run() {
 
         ++iterations;
         steps_used_ = iterations;
+        // Before the statement, not after: a pause that lands once the statement
+        // has run is an inspector, not a debugger. `note_line` blocks while the
+        // session is paused, and returning false means the user stopped the run.
+        if (debug_ != nullptr) {
+            const int source_line = program_lines_[current_line].number.value_or(
+                static_cast<int>(current_line) + 1);
+            if (!debug_->note_line(current_line, source_line)) {
+                running = false;
+                break;
+            }
+        }
         (void)execute_statement(command);
 
         if (!running) {

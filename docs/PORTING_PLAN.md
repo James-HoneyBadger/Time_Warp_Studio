@@ -64,7 +64,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 3 | Help and learnability | documentation browser ✅, F1 ✅, keyword inspector ✅, guided tour ✅ | M | 0 |
 | 4 | Canvas time travel | scrubber ✅, GIF recording, SVG export | M | 4.3 needs a dependency decision |
 | 5 | Export and print | PDF ✅, print, session HTML ✅ | M | 5.2 needs a dependency decision |
-| 6 | Debugging breadth | breakpoints everywhere, pause/step for line-by-line languages, profiler | L | 0, best after 1 |
+| 6 | Debugging breadth | breakpoints everywhere ✅, pause/step for line-by-line languages ✅, profiler | L | 0, best after 1 |
 | 7 | Workspace | document outline, terminal, split editor, run both panes | M | 7.3 needs 1.5 |
 | 8 | Accessibility and display | high contrast ✅, font scale ✅, focus mode ✅, CRT settings ✅, screen presets ✅ | S–M | 0 |
 | 9 | Classroom | roster panel, presentation mode, lesson session export, bundles | M | 9.4 needs an archive decision |
@@ -437,6 +437,16 @@ all, and the Debug/Continue/Trace buttons are disabled for that reason.
 **Tests** (`debug_tests`): a breakpoint survives a new `MainWindow`; a stale path
 is dropped; toggling the gutter sets exactly one line; the marker paints.
 
+**Done.** `CodeEditor` owns a `QSet<int>` of zero-based lines, paints a dot in a
+left gutter column, toggles on a click and reports the change.
+`ui/breakpoints.{hpp,cpp}` is the store: `breakpoints/<path>` as a
+comma-separated list, an empty set removing the key, a corrupt value read as no
+breakpoints, and a prune that walks the `breakpoints` group (a key with a `/` in
+it is a subgroup, so `childKeys()` on the top level would have pruned nothing).
+The tests live in `ui_document_tests`, where a real window is available, rather
+than in the Qt-free `debug_tests`; the store's own cases are in
+`editor_services_tests`.
+
 ### 6.2 Pause and step for line-by-line languages (L)
 
 The six line-by-line executors (BASIC, FOCAL, PILOT, COMAL, APL, REXX) share
@@ -458,6 +468,17 @@ The six line-by-line executors (BASIC, FOCAL, PILOT, COMAL, APL, REXX) share
 line 3 stops before executing line 3; step-over advances exactly one statement;
 continue runs to the next breakpoint or the end; stop unwinds and the runner
 reports a clean stop, not a crash.
+
+**Done.** `lang/debug.{hpp,cpp}` is the session: a breakpoint set, a
+`step`/`continue`/`stop` command word, and a sequence counter that makes a command
+sent between publishing a pause and waiting for one impossible to lose. The
+interpreter consults it before each statement (`set_debug_session`), so a pause
+lands *before* the statement rather than after it. `NativeRunner` builds a fresh
+session per run, forwards Continue and Trace, emits `paused(int)`/`resumed()`, and
+stops the session when Stop is pressed so a paused thread unwinds. The toolbar's
+Debug, Continue and Trace are live for every line-by-line language; the Debug
+*panel*'s own buttons still belong to the Scheme runner, which is recorded in
+`docs/ROADMAP.md`.
 
 ### 6.3 Whole-program languages (L, later)
 

@@ -26,6 +26,7 @@
 #include <QColor>
 #include <QList>
 #include <QPlainTextEdit>
+#include <QSet>
 #include <QString>
 #include <QStringList>
 
@@ -98,6 +99,7 @@ public:
 
 protected:
     void paintEvent(QPaintEvent* event) override;
+    void mousePressEvent(QMouseEvent* event) override;
 
 private:
     CodeEditor* editor_;
@@ -249,6 +251,23 @@ public:
     /// The highlighter itself, so a test can assert what rules it installed.
     [[nodiscard]] SyntaxHighlighter* highlighter() const noexcept { return highlighter_; }
 
+    // -- breakpoints ------------------------------------------------------
+    //
+    // Zero-based throughout: a runner indexes statements from zero, and the
+    // gutter adds the one only where it draws. Storing 1-based lines and
+    // subtracting in two places is how an off-by-one becomes "the debugger stops
+    // on the wrong line".
+
+    /// Replaces the set and repaints the gutter.
+    void setBreakpoints(const QSet<int>& lines);
+    [[nodiscard]] const QSet<int>& breakpoints() const noexcept { return breakpoints_; }
+    [[nodiscard]] bool hasBreakpoint(int line) const { return breakpoints_.contains(line); }
+    /// Adds or removes `line`, repaints, and reports the change.
+    void toggleBreakpoint(int line);
+    /// The 0-based line at viewport `y`. Used by the gutter's click handler, and
+    /// separate from it so the mapping can be tested without an event.
+    [[nodiscard]] int lineAt(int y) const;
+
 signals:
     /// The cursor moved, either by typing, by click, or programmatically.
     ///
@@ -258,6 +277,8 @@ signals:
     /// `connect(editor, &QPlainTextEdit::cursorPositionChanged, ...)` and
     /// `&CodeEditor::cursorPositionChanged` would mean two different things.
     void cursorMoved(int line, int column);
+    /// A breakpoint was added or removed, so the window can persist the set.
+    void breakpointsChanged();
 
 protected:
     void resizeEvent(QResizeEvent* event) override;
@@ -296,6 +317,9 @@ private:
 
     EditorSettings settings_;
     QList<Diagnostic> diagnostics_;
+    /// Zero-based lines a run may pause on. The document's own copy, so a tab
+    /// keeps its points when it moves between panes; the window persists it.
+    QSet<int> breakpoints_;
     /// Debounce for the checker: typing a word must not run the rules on every
     /// keystroke, and a red squiggle that appears mid-word is noise.
     QTimer* lint_timer_ = nullptr;

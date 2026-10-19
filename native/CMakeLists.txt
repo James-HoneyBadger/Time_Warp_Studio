@@ -201,6 +201,7 @@ add_library(timewarp_lang
     src/io/ports.cpp
     src/lang/value.cpp
     src/lang/language.cpp
+    src/lang/debug.cpp
     src/lang/interpreter.cpp
     src/lang/python_random.cpp
     src/lang/basic.cpp
@@ -573,6 +574,7 @@ if(Qt6_FOUND)
             src/ui/app.cpp
             src/ui/app_paths.cpp
             src/ui/autosave.cpp
+            src/ui/breakpoints.cpp
             src/ui/chip8_emulator.cpp
             src/ui/chip8_screen.cpp
             src/ui/chip8_window.cpp
@@ -603,6 +605,7 @@ if(Qt6_FOUND)
             src/ui/ui_style.cpp
             # Listed so AUTOMOC scans them: the Q_OBJECT classes live in headers
             # outside this target's source directory.
+            include/timewarp/ui/breakpoints.hpp
             include/timewarp/ui/code_editor.hpp
             include/timewarp/ui/chip8_emulator.hpp
             include/timewarp/ui/chip8_screen.hpp

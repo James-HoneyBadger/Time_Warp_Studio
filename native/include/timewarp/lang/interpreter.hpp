@@ -42,6 +42,8 @@
 
 namespace timewarp::lang {
 
+class DebugSession;
+
 /// One stored line: the number a numbered language gave it, and the text.
 ///
 /// `number` is empty for languages whose lines are not numbered (Logo, APL) and
@@ -102,6 +104,15 @@ public:
     /// statements (Logo) reports them here, so the telemetry HUD measures the
     /// run rather than reporting zero.
     void note_step() noexcept { ++steps_used_; }
+
+    /// The debugging session this run honours, or null for an ordinary run.
+    ///
+    /// Set before `run()`. The loop asks it before executing each statement, so a
+    /// breakpoint or a step blocks the runner thread rather than being checked
+    /// after the fact -- a pause that arrives after the statement has run is an
+    /// inspector, not a debugger.
+    void set_debug_session(DebugSession* session) noexcept { debug_ = session; }
+    [[nodiscard]] DebugSession* debug_session() const noexcept { return debug_; }
 
     // -- the surface executors use ---------------------------------------
 
@@ -236,6 +247,8 @@ private:
     std::string last_input_;
     std::vector<std::string> output_;
     std::any executor_state_;
+    /// Not owned: the runner owns the session and outlives the run.
+    DebugSession* debug_ = nullptr;
 
     OutputCallback output_callback_;
     InputCallback input_callback_;

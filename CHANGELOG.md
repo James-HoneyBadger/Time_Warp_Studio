@@ -7,6 +7,15 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **Breakpoints and pausing for the line-by-line languages.** Clicking the gutter
+  sets a breakpoint (a dot beside the line number), and the points are kept per
+  file, survive a restart and are pruned when the program is deleted. Running a
+  BASIC, FOCAL, PILOT, COMAL, APL or REXX program stops *before* a breakpointed
+  statement; the toolbar's Debug, Continue and Trace are live again, with Trace
+  running exactly one statement and Continue going to the next breakpoint or the
+  end. Stop unwinds a paused run cleanly rather than leaving a thread asleep.
+  Scheme keeps its own debugger and panel; whole-program languages still run to
+  completion, because they have no statement boundary to stop at.
 - **Accessibility and display controls.** View > High Contrast (Ctrl+Alt+H) gives
   the *current* theme a maximum-contrast variant: the surface becomes black or
   white in the direction the theme already goes and every syntax accent is lifted

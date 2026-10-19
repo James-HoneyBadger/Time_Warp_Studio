@@ -2104,33 +2104,20 @@ void test_no_enabled_control_is_inert() {
 }
 
 void test_unported_controls_say_so_instead_of_doing_nothing() {
-    announce("unported controls are disabled");
+    announce("no control is a placeholder");
     MainWindow window;
 
-    // Each of these is laid out where the finished IDE will have it. Until its
-    // feature lands it must be visibly unavailable and say why, because a button
-    // that silently does nothing is what the user reports as broken.
-    const QStringList placeholders{QStringLiteral("Debug"), QStringLiteral("Continue"),
-                                   QStringLiteral("Trace")};
+    // Nothing on either toolbar is a placeholder any more: Debug, Continue and
+    // Trace now drive a run, so like Snippets below they are asserted the other
+    // way round -- enabled, and describing what they do rather than excusing
+    // themselves.
     const QList<QToolBar*> bars{window.mainToolBar(), window.secondaryToolBar()};
-
-    for (const QString& name : placeholders) {
-        QAction* found = nullptr;
-        for (QToolBar* bar : bars) {
-            for (QAction* action : bar->actions()) {
-                if (action->text().contains(name)) {
-                    found = action;
-                    break;
-                }
-            }
-            if (found != nullptr) {
-                break;
-            }
-        }
-        TW_CHECK(found != nullptr);
-        if (found != nullptr) {
-            TW_CHECK(!found->isEnabled());
-            TW_CHECK(found->toolTip().contains(QStringLiteral("not ported")));
+    for (const char* name : {"debugAction", "continueAction", "traceAction"}) {
+        auto* action = window.findChild<QAction*>(QString::fromLatin1(name));
+        TW_CHECK(action != nullptr);
+        if (action != nullptr) {
+            TW_CHECK(action->isEnabled());
+            TW_CHECK(!action->toolTip().contains(QStringLiteral("not ported")));
         }
     }
 

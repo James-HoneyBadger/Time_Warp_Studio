@@ -276,11 +276,13 @@ and the command table exercises them. What is now true, and what is still limite
 **Debugging** — `DebuggerRunner` is wired for Scheme, and the **Debug** tab is a real
 panel driving it: Continue, Pause, Step In/Over/Out, Stop and breakpoints all reach the
 runner, which reports the line, the procedure, the call stack and the frame's bindings.
-What is still missing is *breadth and depth*: only Scheme can be stepped (the
-other languages run to completion and have no pause protocol, so the panel says
-so rather than offering dead buttons), the
-toolbar's Debug/Continue/Trace actions do not drive the
-panel yet, and there are no watch expressions and no step granularity finer than a form.
+The six line-by-line languages (BASIC, FOCAL, PILOT, COMAL, APL, REXX) can now be
+paused too: a gutter breakpoint on a document, F9/Continue/Trace on the toolbar and
+a `DebugSession` in the shared interpreter loop, with the points persisted per file
+and pruned when the file is gone. What is still missing is *depth*: the Debug
+*panel*'s buttons still talk to the Scheme runner only, whole-program languages
+(Scheme, Logo, Smalltalk, CHIP-8) have no statement boundary to stop at, and there
+are no watch expressions and no step granularity finer than a form.
 
 **Variables and the Telemetry HUD** are built too, and both answer the question a
 placeholder could not: *what did that run actually do?* The **Variables** tab lists every

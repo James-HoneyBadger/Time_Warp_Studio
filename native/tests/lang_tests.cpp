@@ -13,17 +13,22 @@
 #include <algorithm>
 #include <cctype>
 #include <charconv>
+#include <chrono>
+#include <condition_variable>
 #include <cstdint>
 #include <cstdio>
 #include <map>
+#include <mutex>
 #include <stdexcept>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <utility>
 #include <vector>
 
 #include "check.hpp"
 #include "timewarp/lang/chip8.hpp"
+#include "timewarp/lang/debug.hpp"
 #include "timewarp/lang/interpreter.hpp"
 #include "timewarp/lang/python_random.hpp"
 #include "timewarp/lang/turtle_host.hpp"
@@ -259,6 +264,90 @@ void test_chip8_db_and_dw_emit_data() {
     TW_CHECK_EQ(static_cast<int>(program.memory[data]), 0xAB);
     TW_CHECK_EQ(static_cast<int>(program.memory[data + 1]), 0x12);
     TW_CHECK_EQ(static_cast<int>(program.memory[data + 2]), 0x34);
+}
+
+void test_the_debug_session_pauses_and_resumes() {
+    std::printf("-- debug: breakpoint, step and continue\n");
+    RecordingHost host;
+    Interpreter interpreter{Language::Basic, host};
+    interpreter.load_program("10 PRINT \"one\"\n20 PRINT \"two\"\n30 PRINT \"three\"\n");
+
+    timewarp::lang::DebugSession session;
+    // Zero-based indices, blank lines included: the loader keeps every line, which
+    // is what makes an editor line usable as a statement index.
+    session.set_breakpoints({1});
+    std::mutex mutex;
+    std::condition_variable paused;
+    int paused_line = -1;
+    session.on_paused = [&](int line) {
+        {
+            const std::lock_guard<std::mutex> lock{mutex};
+            paused_line = line;
+        }
+        paused.notify_all();
+    };
+    interpreter.set_debug_session(&session);
+
+    std::thread worker{[&] { interpreter.run(); }};
+    const auto wait_for_pause = [&](int expected) {
+        std::unique_lock lock{mutex};
+        paused.wait_for(lock, std::chrono::seconds{5},
+                        [&] { return paused_line == expected; });
+        return paused_line == expected;
+    };
+
+    // Before line 20, not after it: nothing on line 20 has been printed yet.
+    TW_CHECK(wait_for_pause(20));
+    TW_CHECK_EQ(interpreter.output().size(), std::size_t{1});
+    TW_CHECK_EQ(interpreter.output().front(), std::string{"one"});
+
+    // One step runs exactly one statement.
+    {
+        const std::lock_guard<std::mutex> lock{mutex};
+        paused_line = -1;
+    }
+    session.request_step();
+    TW_CHECK(wait_for_pause(30));
+    TW_CHECK_EQ(interpreter.output().size(), std::size_t{2});
+
+    // Continue from there runs to the end, with no pause left to take.
+    session.request_continue();
+    worker.join();
+    TW_CHECK_EQ(interpreter.output().size(), std::size_t{3});
+    TW_CHECK(!session.paused());
+}
+
+void test_stopping_a_paused_run_unwinds_it() {
+    std::printf("-- debug: stop while paused\n");
+    RecordingHost host;
+    Interpreter interpreter{Language::Basic, host};
+    interpreter.load_program("10 PRINT \"one\"\n20 PRINT \"two\"\n");
+    timewarp::lang::DebugSession session;
+    session.set_breakpoints({0});
+    std::mutex mutex;
+    std::condition_variable paused;
+    bool hit = false;
+    session.on_paused = [&](int) {
+        {
+            const std::lock_guard<std::mutex> lock{mutex};
+            hit = true;
+        }
+        paused.notify_all();
+    };
+    interpreter.set_debug_session(&session);
+
+    std::thread worker{[&] { interpreter.run(); }};
+    {
+        std::unique_lock lock{mutex};
+        paused.wait_for(lock, std::chrono::seconds{5}, [&] { return hit; });
+    }
+    TW_CHECK(hit);
+    TW_CHECK(session.paused());
+    session.request_stop();
+    worker.join();
+    // The run ended cleanly and reported no error: a stop is not a crash.
+    TW_CHECK(interpreter.error().empty());
+    TW_CHECK(interpreter.output().empty());
 }
 
 void test_chip8_assembler_errors() {
@@ -1408,6 +1497,8 @@ int main() {
     test_chip8_font_is_present_in_memory();
     test_chip8_db_and_dw_emit_data();
     test_chip8_assembler_errors();
+    test_the_debug_session_pauses_and_resumes();
+    test_stopping_a_paused_run_unwinds_it();
     test_chip8_sys_is_ignored();
     test_chip8_ld_and_add_with_a_byte();
     test_chip8_add_sets_the_carry_flag();
