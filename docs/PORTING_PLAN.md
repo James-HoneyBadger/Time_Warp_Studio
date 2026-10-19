@@ -62,7 +62,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 1 | Editor completion | Find in Files ✅, Format Code ✅, Snippets ✅, whitespace ✅, minimap ✅, run history ✅, run selection ✅, reset ✅ | M | 0 |
 | 2 | Data safety | autosave ✅, version history ✅ | M | 0 |
 | 3 | Help and learnability | documentation browser ✅, F1 ✅, keyword inspector ✅, guided tour ✅ | M | 0 |
-| 4 | Canvas time travel | scrubber ✅, GIF recording ✅, SVG export | M | 4.3 needs a dependency decision |
+| 4 | Canvas time travel | scrubber ✅, GIF recording ✅, SVG export ✅ | M | — |
 | 5 | Export and print | PDF ✅, print, session HTML ✅ | M | 5.2 needs a dependency decision |
 | 6 | Debugging breadth | breakpoints everywhere ✅, pause/step for line-by-line languages ✅, profiler | L | 0, best after 1 |
 | 7 | Workspace | document outline ✅, terminal, split editor ✅, run both panes ✅ | M | 7.3 needs 1.5 |
@@ -387,12 +387,32 @@ a frame at all. Frames are captured at the size of the first one, so resizing th
 window mid-recording cannot produce a file whose frames disagree. The file is
 written through `QSaveFile`, so a failure leaves no half-written GIF.
 
-### 4.3 SVG export (S, needs a dependency decision)
+### 4.3 SVG export (S) ✅
 
 `QSvgGenerator` is in Qt6::Svg, a separate package (`libqt6svg6`). If the
 dependency is accepted, add an optional component to `CMakeLists.txt`, hide the
 menu entry when `Qt6::Svg_FOUND` is false, and add the package to the CPack
 dependency lists. Otherwise record SVG export as not ported and stop promising it.
+
+**Done.** The dependency was taken as an *optional* component, as the decision
+table below recommends. `CMakeLists.txt` asks for `Svg` only inside the
+`Qt6Widgets_FOUND` branch and, when found, links `Qt6::Svg` and defines
+`TIME_WARP_HAVE_SVG` publicly so the save filter, the `--export` help and the
+tests all agree on which formats exist. `TurtleCanvas::exportDrawing` writes
+`.svg` through `QSvgGenerator` — a `QPaintDevice`, so `paintInk` paints into it
+exactly as it paints the widget and the image and the vectors cannot drift from
+the picture — at the on-screen size with a view box that makes one user unit one
+widget pixel, through `QSaveFile` so a failed write leaves no half file. A build
+without `Svg` does not list the format in File > Export Drawing or in `--help`,
+and `.svg` fails with a reason. The `.deb` and `.rpm` name the package only when
+the binary links it.
+
+**Tests:** the file parses as SVG and holds a vector path rather than an
+embedded bitmap; it renders back to the same ink bounding box as the raster
+export and its inked-pixel count stays within an antialiasing band of it (the
+rasteriser softens edges however the painter is set); the view box is the
+on-screen size, not the doubled raster size; two exports are byte-identical; and
+in a build without `Svg` the export is refused, says why, and leaves no file.
 
 ---
 
@@ -826,7 +846,7 @@ states are in `ui_layout_tests`.
 
 | Candidate | Needed by | Recommendation |
 | --- | --- | --- |
-| Qt6::Svg (`libqt6svg6`) | 4.3 SVG export | Optional component, entry hidden without it. It is a small package and the CPack dependency lists are already maintained by hand. |
+| Qt6::Svg (`libqt6svg6`) | 4.3 SVG export | **Taken**, as an optional component; the format is hidden without it. It is a small package and the CPack dependency lists are already maintained by hand. |
 | Qt6::PrintSupport (`libqt6printsupport6`) | 5.2 printing | Optional component. Printing is the least-used item here; hide it when absent rather than take the dependency for everyone. |
 | Qt6::Network (`libqt6network6`) | 3.4 update check | **Defer.** Make the check a button that reports the latest release, or drop it. An automatic poll is a background request the learner did not ask for. |
 | giflib, or an in-tree encoder | 4.2 GIF | **In-tree encoder** (`gif_encoder`), no dependency. Qt reads GIF, so the test has an oracle. |

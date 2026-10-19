@@ -23,7 +23,7 @@ derived rather than remembered.
 | Shell | Documents and tabs, menus, toolbars, status bar, settings persistence, the last session's files restored at launch |
 | Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, find in files, go-to-line, tab stops, fonts, error squiggles with gutter markers, completion, auto-indent, Format Code |
 | Console | Streaming output, and interpreter errors in their own tab |
-| Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording |
+| Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export |
 | Display | 33 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
 | Languages | 10 languages, 49 verified example programs |
@@ -392,9 +392,11 @@ built: File > Export Drawing (or **Ctrl+E**), Edit > Copy Drawing, and
 turtle marker, twice the on-screen size — so a saved picture is a picture rather than
 a screenshot.
 
-Still missing here: **SVG** export, which needs the QtSvg component the build does
-not currently ask for, **printing**, which needs QtPrintSupport, a turtle-state
-inspector and a drawing-command log. The PDF of the *code* and the session HTML
+**SVG export is built** and needs Qt6::Svg, which the build asks for as an
+optional component: with it, the save dialog and `--export` offer `.svg` and the
+file holds vector paths painted by the same `paintInk`; without it, neither
+offers the format. Still missing here: **printing**, which needs QtPrintSupport,
+a turtle-state inspector and a drawing-command log. The PDF of the *code* and the session HTML
 are built, and neither needed a new component: `QPdfWriter` is part of Qt Gui.
 
 ---

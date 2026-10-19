@@ -666,7 +666,9 @@ build.
 
 Qt6 is discovered with `find_package(Qt6 QUIET COMPONENTS Core)`, plus `Widgets` for
 `timewarp_ui`. When they are absent the Qt-facing targets are skipped and everything else
-— including the queue's own tests — still builds and runs. Nothing outside the canvas Qt
+— including the queue's own tests — still builds and runs. `Svg` is asked for separately
+and only by `timewarp_ui`: it enables SVG drawing export, and without it that format is
+absent rather than broken. Nothing outside the canvas Qt
 adapter, the debugger runner and `src/ui/` includes a Qt header.
 
 ---

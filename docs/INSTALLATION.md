@@ -12,7 +12,7 @@ time.
 | --- | --- | --- |
 | C++ compiler | C++20 | GCC 13+, Clang 16+, or MSVC 19.3+ |
 | CMake | 3.20 | |
-| Qt6 | 6.2 | Widgets, Core and Gui modules must be installed |
+| Qt6 | 6.2 | Widgets, Core and Gui modules must be installed; the Svg module is optional and enables SVG drawing export |
 | Python | 3.10 | *Optional* — only for BASIC |
 
 Scheme and the shared expression engine are native C++ and need **no Python at
@@ -23,16 +23,19 @@ the other four run through a small bundled engine process; see §6.
 
 ```bash
 # Debian / Ubuntu
-sudo apt install build-essential cmake qt6-base-dev
+sudo apt install build-essential cmake qt6-base-dev libqt6svg6-dev
 
 # Fedora
-sudo dnf install gcc-c++ cmake qt6-qtbase-devel
+sudo dnf install gcc-c++ cmake qt6-qtbase-devel qt6-qtsvg-devel
 
 # Arch
-sudo pacman -S base-devel cmake qt6-base
+sudo pacman -S base-devel cmake qt6-base qt6-svg
 ```
 
 On macOS, `brew install cmake qt` and pass `-DCMAKE_PREFIX_PATH=$(brew --prefix qt)`.
+
+The Svg package above is optional. Without it the IDE builds and runs, and the
+only difference is that drawing export offers PNG, JPEG and BMP but not SVG.
 
 ---
 

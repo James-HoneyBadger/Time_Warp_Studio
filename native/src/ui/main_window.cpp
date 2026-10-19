@@ -2380,9 +2380,14 @@ void MainWindow::exportDrawingDialog() {
                           tr("Nothing to export yet \u2014 run a program that draws"));
         return;
     }
-    const QString path = QFileDialog::getSaveFileName(
-        this, tr("Export drawing"), QString{},
-        tr("PNG image (*.png);;JPEG image (*.jpg *.jpeg);;Windows bitmap (*.bmp)"));
+    // SVG is listed only in a build that can write it, so the dialog never
+    // offers a format whose export would fail.
+    QString filters = tr("PNG image (*.png);;JPEG image (*.jpg *.jpeg);;Windows bitmap (*.bmp)");
+#ifdef TIME_WARP_HAVE_SVG
+    filters += tr(";;SVG image (*.svg)");
+#endif
+    const QString path =
+        QFileDialog::getSaveFileName(this, tr("Export drawing"), QString{}, filters);
     if (path.isEmpty()) {
         return;
     }

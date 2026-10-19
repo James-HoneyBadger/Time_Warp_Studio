@@ -192,6 +192,11 @@ public:
     /// Writes `renderedDrawing(factor)` to `path`, the format taken from the
     /// extension. Returns false and fills `error` when the format is unknown or
     /// the file cannot be written.
+    ///
+    /// `.svg` writes vectors instead of pixels through `QSvgGenerator`, so
+    /// `factor` does not apply to it. That needs Qt6::Svg, which is optional: a
+    /// build without it still exports the raster formats and fails `.svg` with
+    /// an error that says so.
     bool exportDrawing(const QString& path, QString* error = nullptr,
                        double factor = 2.0) const;
 

@@ -32,10 +32,15 @@
 #include <QFile>
 #include <QImage>
 #include <QPointF>
+#include <QPainter>
 #include <QSettings>
 #include <QSlider>
 #include <QTemporaryDir>
 #include <QWidget>
+
+#ifdef TIME_WARP_HAVE_SVG
+#include <QSvgRenderer>
+#endif
 
 #include "check.hpp"
 #include "timewarp/canvas/command.hpp"
@@ -461,6 +466,101 @@ void test_the_drawing_can_be_exported() {
     TW_CHECK(!error.isEmpty());
 }
 
+// SVG is a second writer over the same ink, so what needs checking is that the
+// file holds the drawing rather than that it is valid XML. Rendering it back
+// with `QSvgRenderer` and counting inked pixels is the check that would fail if
+// the export painted nothing, or painted it somewhere else.
+void test_the_drawing_can_be_exported_as_svg() {
+    announce("export a drawing as SVG");
+    TurtleCanvas canvas;
+    canvas.resize(200, 200);
+    push_forward(canvas, 60.0);
+    push_right(canvas, 90.0);
+    push_forward(canvas, 60.0);
+    canvas.fitToContent();
+
+    const QTemporaryDir dir;
+    TW_CHECK(dir.isValid());
+    const QString path = dir.filePath(QStringLiteral("drawing.svg"));
+    QString error;
+    const bool written = canvas.exportDrawing(path, &error);
+#ifdef TIME_WARP_HAVE_SVG
+    TW_CHECK(written);
+    TW_CHECK(error.isEmpty());
+    TW_CHECK(QFile::exists(path));
+
+    QFile file{path};
+    TW_CHECK(file.open(QIODevice::ReadOnly));
+    const QByteArray svg = file.readAll();
+    file.close();
+    TW_CHECK(svg.contains("<svg"));
+    TW_CHECK(svg.contains("</svg>"));
+    // One user unit is one widget pixel, so the view box is the on-screen size
+    // rather than the doubled size of a raster export. (The header's physical
+    // size is in millimetres: `QSvgGenerator` states it at 72 dpi, so it is the
+    // view box, not `width=`, that carries the pixel size.)
+    TW_CHECK(svg.contains("viewBox=\"0 0 200 200\""));
+    // A vector path, not a bitmap wrapped in SVG.
+    TW_CHECK(svg.contains("<path") || svg.contains("<polyline") ||
+             svg.contains("<line"));
+
+    // The drawing is inside it: rasterise the file and compare the ink with the
+    // raster export of the same canvas.
+    QSvgRenderer renderer{svg};
+    TW_CHECK(renderer.isValid());
+    QImage rastered{200, 200, QImage::Format_ARGB32_Premultiplied};
+    rastered.fill(canvas.background());
+    {
+        QPainter painter{&rastered};
+        renderer.render(&painter);
+    }
+    const QImage expected = canvas.renderedDrawing(1.0);
+
+    struct Ink {
+        int pixels{0};
+        QRect bounds;
+    };
+    const auto measure = [&canvas](const QImage& image) {
+        Ink ink;
+        for (int y = 0; y < image.height(); ++y) {
+            for (int x = 0; x < image.width(); ++x) {
+                if (image.pixelColor(x, y) != canvas.background()) {
+                    ++ink.pixels;
+                    ink.bounds |= QRect{x, y, 1, 1};
+                }
+            }
+        }
+        return ink;
+    };
+    const Ink vector_ink = measure(rastered);
+    const Ink raster_ink = measure(expected);
+    TW_CHECK(raster_ink.pixels > 100);
+    // The box the ink occupies is exact: an export that painted nothing, or
+    // painted the same lines shifted or scaled, would move it.
+    TW_CHECK(vector_ink.bounds == raster_ink.bounds);
+    // The count is not: `QSvgRenderer` antialiases edge pixels however the
+    // painter is set, and a two-pixel line covers about a third more of them
+    // than the raster path does. A blank picture or a much thicker pen is
+    // outside this band; the same pen is inside it.
+    TW_CHECK(vector_ink.pixels >= raster_ink.pixels * 9 / 10);
+    TW_CHECK(vector_ink.pixels <= raster_ink.pixels * 3 / 2);
+
+    // A second export is byte-identical: nothing in the file is a timestamp, so a
+    // drawing can be committed without spurious diffs.
+    const QString again = dir.filePath(QStringLiteral("again.svg"));
+    TW_CHECK(canvas.exportDrawing(again, nullptr));
+    QFile second{again};
+    TW_CHECK(second.open(QIODevice::ReadOnly));
+    TW_CHECK(second.readAll() == svg);
+#else
+    // No Qt6::Svg in this build: refused and said so, rather than writing an
+    // empty file with an SVG name.
+    TW_CHECK(!written);
+    TW_CHECK(error.contains("SVG"));
+    TW_CHECK(!QFile::exists(path));
+#endif
+}
+
 // ---------------------------------------------------------------------------
 // Scrubbing
 // ---------------------------------------------------------------------------
@@ -608,6 +708,7 @@ int main(int argc, char** argv) {    // Set before QApplication exists, or Qt tr
     test_zoom_is_clamped_and_fit_recentres();
     test_content_bounds_include_every_drawn_axis();
     test_the_drawing_can_be_exported();
+    test_the_drawing_can_be_exported_as_svg();
     test_scrubbing_shows_a_prefix_without_losing_the_drawing();
     test_history_keeps_strokes_and_shapes_in_draw_order();
     test_the_scrubber_plays_a_drawing_back();

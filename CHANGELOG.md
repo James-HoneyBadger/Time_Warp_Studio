@@ -7,6 +7,15 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **SVG drawing export.** File > Export Drawing (Ctrl+E) and `--export` gain
+  `.svg` in a build that finds Qt6::Svg: `QSvgGenerator` paints the same ink the
+  screen and the raster writer paint, so the vectors cannot drift from the
+  picture, and it writes through `QSaveFile`, so a failed write leaves no half
+  file where a good drawing was. One user unit is one widget pixel, which is why
+  the export takes no scale factor, and two exports of one drawing are
+  byte-identical. A build without the component does not list the format, fails
+  `.svg` with a reason, and does not name it in `--help`; the `.deb` and `.rpm`
+  gain the Svg package only when the binary links it.
 - **CHIP-8 runs SuperChip hi-res.** The machine and the Python reference both
   implement the SuperChip 1.1 core: 00FE/00FF select 64x32 or 128x64 (clearing the
   screen), 00Cn/00FB/00FC scroll, 00FD exits, DXY0 draws a 16x16 sprite in hi-res

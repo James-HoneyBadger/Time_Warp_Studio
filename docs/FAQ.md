@@ -57,7 +57,8 @@ No. The core features work offline.
 
 ### What do I need to run it?
 
-- A C++20 compiler, CMake 3.20+, and Qt6 (Widgets, Core, Gui)
+- A C++20 compiler, CMake 3.20+, and Qt6 (Widgets, Core, Gui; Svg is optional
+  and adds SVG drawing export)
 - Python 3.10 or newer **only** for the lesson-check engine (and the test
   harnesses). Running a program needs no Python at all, whatever the language.
 
@@ -244,12 +245,13 @@ Run a new program (the canvas clears per run), or use the clear command for your
 
 ### Can I export a drawing?
 
-Yes. **File → Export Drawing...** (`Ctrl+E`) writes PNG, JPEG or BMP, and
+Yes. **File → Export Drawing...** (`Ctrl+E`) writes PNG, JPEG or BMP, and SVG
+too when the build was made with Qt's SVG component.
 **Edit → Copy Drawing** (`Ctrl+Shift+C`) puts it on the clipboard. **File →
 Export Code as PDF...** writes the program itself as a printable A4 PDF with
 line numbers, and **File → Export Session as HTML...** writes one self-contained
 page holding the program, its output and the drawing, which is the file to hand
-in or put on a projector. There is still no SVG export and no printing.
+in or put on a projector. There is still no printing.
 
 ### Does the turtle work in every language?
 

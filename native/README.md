@@ -153,6 +153,11 @@ and the widget UI are built; when absent they are skipped and everything else â€
 including the queue's own tests â€” still builds and runs. Nothing outside
 `qt_bridge.*`, `debugger_runner.*` and `ui/` includes a Qt header.
 
+`Svg` is a second, optional component that only `timewarp_ui` asks for: it makes
+`TurtleCanvas::exportDrawing` able to write `.svg` with `QSvgGenerator`. A build
+without it still exports the raster formats, and the save filter and the
+`--export` help do not name a format that would fail.
+
 The build is dependency-free: a C++20 compiler (GCC 11+, Clang 14+, MSVC 19.30+)
 and CMake 3.20+. Everything compiles clean under
 `-Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast -Wlogical-op

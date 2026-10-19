@@ -101,7 +101,7 @@ engine the parity gates and the lesson check use; every language runs in C++.
 
 | To work on | You need |
 | ---------- | -------- |
-| The IDE and the C++ suites | A C++20 compiler (GCC 11+ or Clang 14+), CMake 3.20+, Qt6 (Widgets, Core, Gui) |
+| The IDE and the C++ suites | A C++20 compiler (GCC 11+ or Clang 14+), CMake 3.20+, Qt6 (Widgets, Core, Gui; Svg optional, for SVG export) |
 | The bridge engine | Python 3.10 or higher, standard library only |
 | The documentation gates | Python 3, and `node` for `markdownlint-cli2` |
 | Any of it | Git and a command line |

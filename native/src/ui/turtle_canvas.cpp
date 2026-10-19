@@ -16,7 +16,12 @@
 #include <QPainterPath>
 #include <QPaintEvent>
 #include <QResizeEvent>
+#include <QSaveFile>
 #include <QWheelEvent>
+
+#ifdef TIME_WARP_HAVE_SVG
+#include <QSvgGenerator>
+#endif
 
 #include "timewarp/canvas/command.hpp"
 
@@ -640,6 +645,53 @@ QImage TurtleCanvas::renderedDrawing(double factor) const {
 
 bool TurtleCanvas::exportDrawing(const QString& path, QString* error,
                                  double factor) const {
+    // SVG is a different writer, not a different picture: `QSvgGenerator` is a
+    // `QPaintDevice`, so `paintInk` paints into it exactly as it paints into the
+    // widget or the image and the export cannot drift from the screen. The size
+    // is the on-screen one (a vector file has no pixels to multiply), and the
+    // view box makes one user unit one widget pixel.
+    if (path.endsWith(QStringLiteral(".svg"), Qt::CaseInsensitive)) {
+#ifdef TIME_WARP_HAVE_SVG
+        const QSize canvas{std::max(1, width()), std::max(1, height())};
+        // Through `QSaveFile` rather than a bare path: a failed write must not
+        // leave a half-written file where a good drawing used to be.
+        QSaveFile file{path};
+        if (!file.open(QIODevice::WriteOnly)) {
+            if (error != nullptr) {
+                *error = file.errorString();
+            }
+            return false;
+        }
+        {
+            QSvgGenerator generator;
+            generator.setOutputDevice(&file);
+            generator.setSize(canvas);
+            generator.setViewBox(QRect{QPoint{0, 0}, canvas});
+            generator.setTitle(tr("Time Warp Studio drawing"));
+            generator.setDescription(tr("Turtle graphics, exported as vectors"));
+
+            QPainter painter{&generator};
+            painter.setRenderHint(QPainter::Antialiasing, false);
+            painter.fillRect(QRect{QPoint{0, 0}, canvas}, background_);
+            paintInk(painter, frameCount());
+        }
+        // The generator flushes on destruction, which is why it has its own
+        // scope above and why the commit comes after it.
+        if (!file.commit()) {
+            if (error != nullptr) {
+                *error = file.errorString();
+            }
+            return false;
+        }
+        return true;
+#else
+        if (error != nullptr) {
+            *error = tr("this build has no SVG support (Qt6::Svg was not found)");
+        }
+        return false;
+#endif
+    }
+
     // `QImageWriter` takes the format from the suffix, which is what makes
     // `drawing.png` and `drawing.jpg` do the obvious thing. An unknown suffix is
     // an error rather than a guess at PNG.

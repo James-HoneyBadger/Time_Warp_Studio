@@ -535,6 +535,11 @@ if(Qt6_FOUND)
     if(Qt6Widgets_FOUND)
         message(STATUS "Qt6 ${Qt6Widgets_VERSION} found: building the widget UI")
 
+        # Vector export needs QSvgGenerator, which is its own package. It is
+        # optional on purpose: a build without it still exports PNG, JPEG and
+        # BMP, and the save dialog does not offer SVG there.
+        find_package(Qt6 QUIET COMPONENTS Svg)
+
         # Some distributions ship Qt built for one configuration only -- Arch's
         # qt6-base 6.12 provides RelWithDebInfo. An imported target with no
         # location for the requested configuration then makes CMake's generate
@@ -667,6 +672,16 @@ if(Qt6_FOUND)
         target_compile_definitions(timewarp_ui PRIVATE
             TIME_WARP_VERSION="${TIME_WARP_VERSION}"
         )
+        # Public because the save-dialog filter and the `--export` help text live
+        # in the executable and the tests, and they must not offer a format this
+        # build cannot write.
+        if(Qt6Svg_FOUND)
+            target_link_libraries(timewarp_ui PUBLIC Qt6::Svg)
+            target_compile_definitions(timewarp_ui PUBLIC TIME_WARP_HAVE_SVG=1)
+            message(STATUS "Qt6 Svg ${Qt6Svg_VERSION} found: SVG drawing export enabled")
+        else()
+            message(STATUS "Qt6 Svg not found: SVG drawing export disabled")
+        endif()
         set_target_properties(timewarp_ui PROPERTIES AUTOMOC ON)
 
         if(MSVC)
@@ -908,6 +923,12 @@ set(CPACK_DEBIAN_PACKAGE_MAINTAINER "James Temple <james@honey-badger.org>")
 set(CPACK_DEBIAN_PACKAGE_SECTION "education")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS
     "libqt6widgets6, libqt6gui6, libqt6core6, qt6-qpa-plugins, python3")
+# Only when this build was made with it: a package that names a library the
+# binary does not link is a needless install, and one that omits a library the
+# binary does link fails to start.
+if(Qt6Svg_FOUND)
+    string(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS ", libqt6svg6")
+endif()
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 # Named explicitly rather than discovered: CPackDeb asks `dpkg` for the
 # architecture and falls back to i386 when it is absent, which is how a build on a
@@ -921,6 +942,9 @@ endif()
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Education")
 set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtbase-gui, python3")
+if(Qt6Svg_FOUND)
+    string(APPEND CPACK_RPM_PACKAGE_REQUIRES ", qt6-qtsvg")
+endif()
 # The same pin as the DEB's, for a sharper reason: CPackRPM asks rpmbuild for
 # `%{_target_cpu}` and, when the answer does not come back, writes the *system
 # name* instead -- which is how a release produced

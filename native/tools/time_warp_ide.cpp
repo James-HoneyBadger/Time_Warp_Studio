@@ -101,10 +101,18 @@ int main(int argc, char* argv[]) {
         QStringLiteral("path")};
     parser.addOption(screenshotOption);
 
+    // Kept in a variable rather than written into the literal below: a
+    // preprocessor conditional cannot sit inside a macro's argument list.
+#ifdef TIME_WARP_HAVE_SVG
+    const QString exportFormats = QStringLiteral(".png, .jpg, .bmp, .svg");
+#else
+    const QString exportFormats = QStringLiteral(".png, .jpg, .bmp");
+#endif
     const QCommandLineOption exportOption{
         QStringLiteral("export"),
-        QStringLiteral("Write the drawing to <path> (.png, .jpg, .bmp), then exit. "
-                       "Most useful with --run."),
+        QStringLiteral("Write the drawing to <path> (%1), then exit. Most useful "
+                       "with --run.")
+            .arg(exportFormats),
         QStringLiteral("path")};
     parser.addOption(exportOption);
 
