@@ -65,7 +65,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 4 | Canvas time travel | scrubber ✅, GIF recording, SVG export | M | 4.3 needs a dependency decision |
 | 5 | Export and print | PDF ✅, print, session HTML ✅ | M | 5.2 needs a dependency decision |
 | 6 | Debugging breadth | breakpoints everywhere ✅, pause/step for line-by-line languages ✅, profiler | L | 0, best after 1 |
-| 7 | Workspace | document outline, terminal, split editor, run both panes | M | 7.3 needs 1.5 |
+| 7 | Workspace | document outline ✅, terminal, split editor ✅, run both panes ✅ | M | 7.3 needs 1.5 |
 | 8 | Accessibility and display | high contrast ✅, font scale ✅, focus mode ✅, CRT settings ✅, screen presets ✅ | S–M | 0 |
 | 9 | Classroom | roster panel, presentation mode, lesson session export, bundles | M | 9.4 needs an archive decision |
 
@@ -520,6 +520,14 @@ expected names and lines; an edit updates the model after the debounce; clicking
 an item puts the cursor on its line; a document with no structure shows an empty
 state rather than a blank box.
 
+**Done.** `outline.{hpp,cpp}` covers Logo `TO`, BASIC `SUB`/`FUNCTION`/labels,
+COMAL `PROC`, REXX labels at column zero, PILOT `*label`, Scheme `define` and APL
+`∇`. `OutlinePanel` replaced the placeholder in the dock and jumps through
+`goToLine`; the 350 ms timer lives in the window, restarted by an edit and
+bypassed by a tab change. The model's tests are in `editor_services_tests` rather
+than a new `outline_tests` suite: it is the text-services suite and already links
+the UI library.
+
 ### 7.2 Terminal (M, needs a decision)
 
 Old: `ui/terminal_widget.py` (277) — an embedded shell.
@@ -545,6 +553,15 @@ reserved `split_editor` branch. Persist the split state with the layout.
 **Tests** (`ui_layout_tests`): split makes the second pane visible with the
 document in it; close merges the documents back; the state survives a restart.
 
+**Done.** File > Split Editor Right (Ctrl+\), Close Split (Ctrl+Shift+\) and Move
+Tab to Other Pane (Ctrl+Alt+M), with the `split_editor` key routed to the same
+toggle. A split moves a document rather than showing a second view of it, so two
+panes cannot disagree about one buffer's contents; the primary gets a fresh
+document when splitting empties it. `currentEditor()` now answers from the pane
+holding the focus. The session stores the second pane's paths under
+`session/secondaryFiles` and `session/editorSplit`, so each document comes back
+on the side it was on.
+
 ### 7.4 Run Both Panes (M)
 
 Old: `run_dual_split_benchmark` — ran both panes and compared them, optionally
@@ -559,6 +576,15 @@ sharing a variable bus between the two languages.
 
 **Tests:** both programs run, their outputs are attributed correctly, a failing
 one does not stop the other, and the table reports real elapsed times.
+
+**Done.** `benchmark.{hpp,cpp}` runs each document headless through the same
+interpreter with a counting turtle host and reports output, engine time and ink in
+one fixed-width table, followed by each program's own output under its own name.
+Run > Run Both Panes (Ctrl+Alt+B) refuses without a split rather than running one
+program twice. It is synchronous on purpose: the interpreter's budget bounds a
+runaway program, and two live runners on one canvas could not attribute the ink.
+A program that printed an `❌` line counts as not finished even when the loop
+carried on, because that is what a reader means by the word.
 
 ---
 

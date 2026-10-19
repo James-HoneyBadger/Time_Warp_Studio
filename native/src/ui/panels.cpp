@@ -68,6 +68,69 @@ PlaceholderPanel::PlaceholderPanel(const QString& title, const QString& standsFo
 QSize PlaceholderPanel::minimumSizeHint() const { return minimum_; }
 
 // ---------------------------------------------------------------------------
+// OutlinePanel
+// ---------------------------------------------------------------------------
+
+OutlinePanel::OutlinePanel(QWidget* parent) : QFrame(parent) {
+    setObjectName(QStringLiteral("outlinePanel"));
+    setFrameShape(QFrame::StyledPanel);
+
+    auto* layout = new QVBoxLayout{this};
+    layout->setContentsMargins(2, 2, 2, 2);
+    layout->setSpacing(0);
+
+    list_ = new QListWidget{this};
+    list_->setObjectName(QStringLiteral("outlineList"));
+    list_->setAccessibleName(tr("Document outline"));
+    list_->setFrameShape(QFrame::NoFrame);
+    // One click jumps: an outline is a navigation control, and asking a user to
+    // double-click a list that looks like a list is a wasted gesture.
+    connect(list_, &QListWidget::itemClicked, this, [this](QListWidgetItem* item) {
+        if (item != nullptr) {
+            emit entryActivated(item->data(Qt::UserRole).toInt());
+        }
+    });
+    connect(list_, &QListWidget::itemActivated, this, [this](QListWidgetItem* item) {
+        if (item != nullptr) {
+            emit entryActivated(item->data(Qt::UserRole).toInt());
+        }
+    });
+    layout->addWidget(list_, 1);
+
+    empty_ = new QLabel{tr("No procedures, functions or labels in this program."), this};
+    empty_->setObjectName(QStringLiteral("outlineEmptyState"));
+    empty_->setAlignment(Qt::AlignCenter);
+    empty_->setWordWrap(true);
+    empty_->setEnabled(false);
+    layout->addWidget(empty_, 1);
+
+    setEntries({});
+}
+
+void OutlinePanel::setEntries(const QList<timewarp::ui::OutlineEntry>& entries) {
+    list_->clear();
+    for (const timewarp::ui::OutlineEntry& entry : entries) {
+        auto* item = new QListWidgetItem{entry.name, list_};
+        item->setData(Qt::UserRole, entry.line);
+        item->setToolTip(tr("%1 \u2014 line %2")
+                             .arg(timewarp::ui::outlineKindName(entry.kind))
+                             .arg(entry.line));
+    }
+    const bool empty = entries.isEmpty();
+    list_->setVisible(!empty);
+    empty_->setVisible(empty);
+}
+
+int OutlinePanel::entryCount() const { return list_->count(); }
+
+int OutlinePanel::lineAt(int index) const {
+    const QListWidgetItem* item = list_->item(index);
+    return item == nullptr ? 0 : item->data(Qt::UserRole).toInt();
+}
+
+bool OutlinePanel::emptyStateVisible() const { return !empty_->isHidden(); }
+
+// ---------------------------------------------------------------------------
 // ImmediateModePanel
 // ---------------------------------------------------------------------------
 

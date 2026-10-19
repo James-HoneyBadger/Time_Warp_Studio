@@ -230,6 +230,10 @@ public:
     [[nodiscard]] QString contextHelpTopic() const;
     /// Opens the language's keywords with the guide's descriptions. Ctrl+F1.
     void showKeywordInspector();
+    /// Rebuilds the outline dock from the current document. Public because the
+    /// debounce is not its only caller: switching tabs refreshes immediately, and
+    /// a test should not have to wait 350 ms to see the list.
+    void refreshOutline();
     /// Opens `text` in a new, unnamed tab marked modified, and returns it. The
     /// second half of `showVersionHistory`, separated because that dialog is
     /// modal: the part worth testing is what a chosen version turns into.
@@ -441,6 +445,33 @@ public:
     /// Paths of every open document that has been saved to disk, in tab order.
     [[nodiscard]] QStringList openFilePaths() const;
 
+    // -- split editor ------------------------------------------------------
+    //
+    // The second pane exists from construction and is hidden. Splitting moves a
+    // document into it rather than creating a second view: two views of one
+    // buffer would be two places to edit the same file, and the document's own
+    // dirty state would be the only thing keeping them in step.
+
+    /// File > Split Editor Right: moves the current document into the second pane
+    /// and shows it. Leaves a fresh document behind, so both halves are usable.
+    void splitEditor();
+    /// Moves every document back into the primary pane and hides the split.
+    void closeSplit();
+    /// Moves the current document to the other pane, creating the split first if
+    /// it is not open yet.
+    void moveTabToOtherPane();
+    [[nodiscard]] bool editorSplit() const noexcept { return editor_split_; }
+    /// Paths open in the second pane. Stored separately from `openFilePaths`, so a
+    /// restart puts each document back on the side it was on.
+    [[nodiscard]] QStringList secondaryFilePaths() const;
+
+    // -- comparison --------------------------------------------------------
+
+    /// Run > Run Both Panes: runs both documents headless, one after the other, and
+    /// puts a table of output, time and ink in the console. There is deliberately
+    /// no shared variable bus: see `benchmark.hpp`.
+    void runBothPanes();
+
 public slots:
     /// Writes the current document, prompting for a name the first time. Returns
     /// false if the user cancelled a dialog or the write failed.
@@ -547,6 +578,15 @@ private:
     /// forget to connect the signals.
     void adoptEditor(CodeEditor* editor);
 
+    /// Moves `editor` from whichever pane holds it to `target`, keeping its
+    /// caption. Used by the split actions and by session restore, so a document
+    /// returns to the side it was on.
+    void moveEditorToPane(CodeEditor* editor, QTabWidget* target);
+    /// The pane the focused widget is in, or the primary one when focus is
+    /// somewhere else (a menu, the console, nothing). `currentEditor` reads it, so
+    /// "the current document" means the one the user is working in.
+    [[nodiscard]] QTabWidget* activeEditorTabs() const;
+
     /// Offers to save a modified document. Returns false when the user cancels,
     /// which the caller must treat as "abandon the operation".
     [[nodiscard]] bool maybeSave(CodeEditor* editor);
@@ -652,6 +692,10 @@ private:
     FunctionKeyBar* function_key_bar_ = nullptr;
     CrtOverlay* crt_overlay_ = nullptr;
     QDockWidget* outline_dock_ = nullptr;
+    /// The outline's view. Rebuilt from the current document on a debounce, so
+    /// typing does not re-parse the program on every keystroke.
+    OutlinePanel* outline_panel_ = nullptr;
+    QTimer* outline_timer_ = nullptr;
     QToolBar* tool_bar_ = nullptr;
     QToolBar* tool_bar_secondary_ = nullptr;
     /// Rebuilt on every open: a recent list that is only built once is a list of
@@ -677,6 +721,9 @@ private:
     /// View menu and are `QActionGroup`-exclusive, so the tick is the state.
     QString theme_name_;
     QMenu* theme_menu_ = nullptr;
+    /// Whether the second editor pane is showing. Kept in step with the pane's own
+    /// visibility by the split actions, and persisted with the layout.
+    bool editor_split_ = false;
     /// Created on first use: a palette nobody opens costs nothing.
     CommandPalette* command_palette_ = nullptr;
     /// The View menu's checkable CRT entry, so the function key can drive the

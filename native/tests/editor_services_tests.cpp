@@ -36,6 +36,7 @@
 #include "timewarp/ui/export.hpp"
 #include "timewarp/ui/find_in_files.hpp"
 #include "timewarp/ui/formatter.hpp"
+#include "timewarp/ui/outline.hpp"
 #include "timewarp/ui/snippets.hpp"
 #include "timewarp/ui/language.hpp"
 
@@ -578,6 +579,85 @@ void test_breakpoint_store() {
     settings.remove(key);
 }
 
+void test_the_outline_finds_named_places() {
+    announce("outline: named places per language");
+    using timewarp::ui::outlineFor;
+    using timewarp::ui::OutlineKind;
+
+    const QList<timewarp::ui::OutlineEntry> logo =
+        outlineFor(Language::Logo, QStringLiteral("TO SQUARE\n  REPEAT 4 [ FORWARD 50 RIGHT 90 ]\n"
+                                                  "END\nTO TRI\n  REPEAT 3 [ FORWARD 50 RIGHT 120 ]\n"
+                                                  "END\n"));
+    TW_CHECK_EQ(logo.size(), 2);
+    if (logo.size() == 2) {
+        TW_CHECK_EQ(logo.at(0).name.toStdString(), std::string{"SQUARE"});
+        TW_CHECK_EQ(logo.at(0).line, 1);
+        TW_CHECK_EQ(logo.at(0).kind, OutlineKind::Procedure);
+        TW_CHECK_EQ(logo.at(1).name.toStdString(), std::string{"TRI"});
+        TW_CHECK_EQ(logo.at(1).line, 4);
+    }
+
+    // A BASIC program names its subroutines and its labels; the numbered lines
+    // that are not labels are not entries -- an outline of every statement is the
+    // file with extra steps.
+    const QList<timewarp::ui::OutlineEntry> basic =
+        outlineFor(Language::Basic, QStringLiteral("10 SUB GREET\n20   PRINT \"HI\"\n"
+                                                   "30 END SUB\n40 START:\n50 GOTO START\n"));
+    TW_CHECK_EQ(basic.size(), 2);
+    if (basic.size() == 2) {
+        TW_CHECK_EQ(basic.at(0).name.toStdString(), std::string{"GREET"});
+        TW_CHECK_EQ(basic.at(0).kind, OutlineKind::Subroutine);
+        TW_CHECK_EQ(basic.at(0).line, 1);
+        TW_CHECK_EQ(basic.at(1).name.toStdString(), std::string{"START"});
+        TW_CHECK_EQ(basic.at(1).kind, OutlineKind::Label);
+        TW_CHECK_EQ(basic.at(1).line, 4);
+    }
+
+    const QList<timewarp::ui::OutlineEntry> comal =
+        outlineFor(Language::Comal, QStringLiteral("PROC hello\nPRINT \"hi\"\nENDPROC\n"));
+    TW_CHECK_EQ(comal.size(), 1);
+    if (!comal.isEmpty()) {
+        TW_CHECK_EQ(comal.first().name.toStdString(), std::string{"hello"});
+        TW_CHECK_EQ(comal.first().kind, OutlineKind::Procedure);
+    }
+
+    // REXX labels are at column zero; an indented one is inside something else.
+    const QList<timewarp::ui::OutlineEntry> rexx =
+        outlineFor(Language::Rexx, QStringLiteral("start:\n  SAY 'HI'\n  inner:\nEXIT 0\n"));
+    TW_CHECK_EQ(rexx.size(), 1);
+    if (!rexx.isEmpty()) {
+        TW_CHECK_EQ(rexx.first().name.toStdString(), std::string{"start"});
+    }
+
+    const QList<timewarp::ui::OutlineEntry> pilot =
+        outlineFor(Language::Pilot, QStringLiteral("*BEGIN\nT: HELLO\n*END\n"));
+    TW_CHECK_EQ(pilot.size(), 2);
+
+    const QList<timewarp::ui::OutlineEntry> scheme =
+        outlineFor(Language::Scheme, QStringLiteral("(define (fact n)\n  (if (= n 0) 1 (* n (fact (- n 1)))))\n"
+                                                    "(define answer 42)\n"));
+    TW_CHECK_EQ(scheme.size(), 2);
+    if (scheme.size() == 2) {
+        TW_CHECK_EQ(scheme.at(0).name.toStdString(), std::string{"fact"});
+        TW_CHECK_EQ(scheme.at(0).kind, OutlineKind::FunctionDefinition);
+        TW_CHECK_EQ(scheme.at(1).name.toStdString(), std::string{"answer"});
+    }
+
+    // A language with no outline rules says so by returning nothing, rather than
+    // guessing at what a "name" might be.
+    TW_CHECK(outlineFor(Language::Focal, QStringLiteral("1.10 T \"HI\"\n")).isEmpty());
+    TW_CHECK(outlineFor(Language::Chip8, QStringLiteral("JP 0x200\n")).isEmpty());
+    // And an empty document is empty, not a crash.
+    TW_CHECK(outlineFor(Language::Logo, QString{}).isEmpty());
+
+    // Every kind has a word, which is what the panel's tooltip shows.
+    for (const OutlineKind kind :
+         {OutlineKind::Procedure, OutlineKind::Function, OutlineKind::Subroutine,
+          OutlineKind::Label, OutlineKind::FunctionDefinition}) {
+        TW_CHECK(!timewarp::ui::outlineKindName(kind).isEmpty());
+    }
+}
+
 void test_rom_bytes_survive_a_document() {
     announce("CHIP-8: a ROM's bytes survive a document");
     QByteArray all;
@@ -731,5 +811,6 @@ int main(int argc, char** argv) {
     test_code_pdf_export();
     test_session_html_export();
     test_breakpoint_store();
+    test_the_outline_finds_named_places();
     return tw::test::summary("editor_services");
 }

@@ -7,6 +7,18 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **A document outline, a split editor, and a two-program comparison.** The
+  **Document Outline** dock lists the named places in the current program --
+  Logo procedures, BASIC subroutines and labels, COMAL `PROC`, REXX labels,
+  PILOT `*labels`, Scheme `define`s and APL `∇` functions -- and one click jumps
+  there. File > Split Editor Right (Ctrl+\\) moves the current document into a
+  second pane, Close Split merges everything back, and Move Tab to Other Pane
+  sends one document across; the split and which side each file was on come back
+  after a restart. Run > Run Both Panes (Ctrl+Alt+B) runs both documents headless
+  and prints one table of outcome, engine time and ink, followed by each
+  program's own output under its own name. There is no shared variable bus: a
+  benchmark that lets each program write the other's variables is not
+  reproducible.
 - **Breakpoints and pausing for the line-by-line languages.** Clicking the gutter
   sets a breakpoint (a dot beside the line number), and the points are kept per
   file, survive a restart and are pruned when the program is deleted. Running a

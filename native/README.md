@@ -1218,25 +1218,23 @@ strokes a circle costs.
 
 ### Known gaps, stated plainly
 
-* The terminal and outline panels are still `PlaceholderPanel`s naming the Python
-  module they stand for. The layout is real; their contents are not. The variables,
+* The terminal panel is still a `PlaceholderPanel` naming the Python module it
+  stands for. The layout is real; its contents are not. The variables,
   telemetry and debug pages used to be on this list and no longer are: they are
   `VariablesPanel`, `TelemetryPanel` and `DebugPanel`, fed by the reference
   worker's `done` payload when a lesson check runs and by
-  `DebuggerRunner::snapshot()` for Scheme.
+  `DebuggerRunner::snapshot()` for Scheme. The **outline dock** is real too:
+  `OutlinePanel` over `outline.{hpp,cpp}`.
 * The editor colours source per language, finds and replaces, has a minimap,
-  find-in-files and a formatter; it still has no breakpoint markers in the
-  gutter or a document outline.
-* `CrtOverlay` draws scanlines only. The Python also does curvature, vignette,
-  glow and flicker with sliders for each; the point of including it here was the
-  geometry tracking, which is where the Python approach was fragile.
-* `FunctionKeyBar` reproduces the normal F1-F10 layer and the deck selector. The
-  Shift and Ctrl layers are omitted rather than invented, because their actions do
-  not exist yet.
-* Debug, Continue and Trace are laid out and inert: the debug *panel* works and drives
-  the Scheme runner, but these three toolbar actions are not connected to it yet. Stop
-  is wired, and stops a bridged program by killing its process if it will not stop on
-  its own.
+  find-in-files, a formatter, breakpoint markers in the gutter and a document
+  outline.
+* `CrtOverlay` draws scanlines, vignette, curvature, flicker and a phosphor tint;
+  View > CRT Settings sets the five and View > Screen Mode pairs them with a theme.
+* `FunctionKeyBar` reproduces the normal, Shift and Ctrl layers of F1-F10 plus the
+  deck selector; every key dispatches to an action that exists.
+* Debug, Continue and Trace are wired: a line-by-line program stops before a
+  breakpointed statement, and the three actions start a run, resume it and step one
+  statement. Scheme keeps its own debugger and panel.
 * A bridged program's input prompts appear as a dialog, which is the one modal
   dialog in the program -- and the one place a scripted run could block. Nothing in
   the tests or in CI reaches it.
@@ -1246,32 +1244,20 @@ strokes a circle costs.
 `docs/ROADMAP.md` is the live list. This is the part of it that belongs to the
 application rather than to the engines.
 
-1. Port the remaining languages. FOCAL and CHIP-8 are done; the shared loop and the
-   `TurtleHost` seam they established are what the rest build on. In dependency order:
-   `string_evaluator.py`, then the expression evaluator (`timewarp_expr`), then the
-   remaining line-by-line executors (PILOT → COMAL → REXX → APL → Logo), leaving BASIC
-   and Smalltalk last. Each port deletes one path through the bridge.
-   `SpecialVariableHook` (expressions) and `Host` (Scheme) are the seams for
-   engine-specific services — no further engine-specific import should appear in
-   either library.
-2. Link `timewarp_expr` into a Run. It builds, it has a suite of its own, and
-   `native/tools/differential_check.py` compares it against the Python reference on a
-   fixed corpus — but nothing under `src/ui/` includes it yet, so expressions are still
-   evaluated by the bridge.
-3. Finish the right column. `LessonPanel`, `VariablesPanel`, `TelemetryPanel` and
-   `DebugPanel` are real ports; the terminal page is still a `PlaceholderPanel`. The two
-   inspection panels are fed by the bridge's `done` payload
-   (`time_warp/utils/inspection.py` builds both tables) and the debug panel drives
-   `DebuggerRunner` -- for Scheme only, because every other language has no pause
-   protocol. The outline dock is still a placeholder too.
-4. Make Debug, Continue and Trace do something. They are laid out and inert: the panel
-   they would drive now exists, so this is a matter of routing the three actions to the
-   same runner calls the panel already sends.
-5. Themes and the CRT effects, then screen modes, focus mode and a command palette.
-   No theme is ported yet, so treat the styling as provisional.
-6. Consider a `CompiledExpression` handle (interned identifiers + owned RPN) and a
-   Scheme `Procedure` cache, so a program is compiled once at load time rather than
-   re-read per call.
+1. Every language runs natively, and `native/bridge/` remains as the one reference the
+   parity gates, the command matrix and the lesson check compare against. That is the
+   part that goes away once lesson checking runs natively.
+2. The right column's last placeholder is the terminal page. It needs the policy
+   decision recorded in phase 7.2 of `docs/PORTING_PLAN.md`: build it, default it off,
+   and disable it in classroom and player modes -- or delete the tab.
+3. The **Debug panel's** own buttons still drive only the Scheme runner. The toolbar's
+   Debug, Continue and Trace already drive the line-by-line engines, so what is left is
+   pointing the panel's buttons at whichever runner is active.
+4. Whole-program languages (Scheme, Logo, Smalltalk, CHIP-8) have no statement boundary
+   to pause at: phase 6.3 of the plan.
+5. A `CompiledExpression` handle (interned identifiers + owned RPN) and a Scheme
+   `Procedure` cache, so a program is compiled once at load time rather than re-read per
+   call.
 
 Landed since this file was first written: the runner bridge (`worker.py` behind
 `bridge::PythonWorker`), the real output console and turtle canvas on top of

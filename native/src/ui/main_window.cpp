@@ -51,6 +51,7 @@
 #include "timewarp/canvas/qt_bridge.hpp"
 #include "timewarp/ui/app.hpp"
 #include "timewarp/ui/app_paths.hpp"
+#include "timewarp/ui/benchmark.hpp"
 #include "timewarp/ui/breakpoints.hpp"
 #include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
@@ -92,6 +93,10 @@ constexpr auto kSettingWindowState = "layout/windowState";
 constexpr auto kSettingSplitters = "layout/splitters";
 /// The documents that were open, so the next launch can reopen them.
 constexpr auto kSettingOpenFiles = "session/openFiles";
+/// The second pane's documents, kept apart so a restart puts each one back on the
+/// side it was on.
+constexpr auto kSettingSecondaryFiles = "session/secondaryFiles";
+constexpr auto kSettingEditorSplit = "session/editorSplit";
 /// File > Open Recent. Capped, because a menu of forty paths is a menu nobody
 /// reads.
 constexpr auto kSettingRecentFiles = "session/recentFiles";
@@ -197,6 +202,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     // built, and it has to be born with the user's font and tab width rather than
     // corrected afterwards.
     loadEditorSettings();
+    // Before `buildUi`, because the first document is adopted while the tree is
+    // built and its edits have to reach a timer that already exists.
+    outline_timer_ = new QTimer{this};
+    outline_timer_->setObjectName(QStringLiteral("outlineTimer"));
+    outline_timer_->setSingleShot(true);
+    // The linter's delay: long enough that typing does not re-parse the program on
+    // every keystroke, short enough that the outline is not visibly stale.
+    outline_timer_->setInterval(350);
+    connect(outline_timer_, &QTimer::timeout, this, &MainWindow::refreshOutline);
     // Added last so the overlay sits above the central layout, so it has to be
     // created after the tree it covers exists.
     buildUi();
@@ -339,6 +353,18 @@ void MainWindow::showKeywordInspector() {
     dialog.exec();
 }
 
+void MainWindow::refreshOutline() {
+    if (outline_panel_ == nullptr) {
+        return;
+    }
+    const CodeEditor* editor = currentEditor();
+    if (editor == nullptr) {
+        outline_panel_->setEntries({});
+        return;
+    }
+    outline_panel_->setEntries(outlineFor(editor->language(), editor->toPlainText()));
+}
+
 void MainWindow::showDocumentation(const QString& topic) {
     HelpBrowserDialog dialog{this};
     // A named topic is opened after the index, so the contents tree still has a
@@ -463,6 +489,10 @@ void MainWindow::buildEditorColumn(QSplitter* parent) {
     editor_tabs_->setAccessibleDescription(tr("Code editor tab group"));
     editor_tabs_->enableEnhancedTabBar();
     editor_pane_layout->addWidget(editor_tabs_, 1);
+    // The outline describes one document at a time, so a tab change is an
+    // immediate refresh -- no debounce, because nothing was typed.
+    connect(editor_tabs_, &QTabWidget::currentChanged, this,
+            [this](int) { refreshOutline(); });
 
     // Hidden until Edit > Find asks for it. It is part of the layout rather than
     // a floating overlay so that it pushes the editor up instead of covering the
@@ -780,6 +810,17 @@ void MainWindow::buildMenuBar() {
         [this] { exportSessionHtmlDialog(); })
         ->setObjectName(QStringLiteral("exportSessionAction"));
     file->addSeparator();
+    // The split: one document each side, rather than two views of one buffer.
+    add(file, tr("Split Editor &Right"), QKeySequence{Qt::CTRL | Qt::Key_Backslash},
+        [this] { splitEditor(); })
+        ->setObjectName(QStringLiteral("splitEditorAction"));
+    add(file, tr("Close S&plit"), QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_Backslash},
+        [this] { closeSplit(); })
+        ->setObjectName(QStringLiteral("closeSplitAction"));
+    add(file, tr("&Move Tab to Other Pane"), QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_M},
+        [this] { moveTabToOtherPane(); })
+        ->setObjectName(QStringLiteral("moveTabAction"));
+    file->addSeparator();
     add(file, tr("&Close Tab"), QKeySequence::Close, [this] { closeCurrentTab(); });
     // Through close() rather than qApp->quit(), so a modified document still gets
     // its prompt: closeEvent is the one place that asks.
@@ -858,6 +899,11 @@ void MainWindow::buildMenuBar() {
         ->setObjectName(QStringLiteral("runSelectionAction"));
     add(run, tr("&Stop"), QKeySequence{Qt::SHIFT | Qt::Key_F9},
         [this] { stopRunningDocument(); });
+    // A comparison, not a race: both programs run headless, one after the other,
+    // and the table attributes every number to the program that produced it.
+    add(run, tr("Run &Both Panes"), QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_B},
+        [this] { runBothPanes(); })
+        ->setObjectName(QStringLiteral("runBothPanesAction"));
     run->addSeparator();
     // Reset is not Stop: Stop ends a program that is still running, Reset puts
     // the screen back to how it looked before a program that has already ended
@@ -1509,6 +1555,10 @@ void MainWindow::performAction(const QString& action) {
         runCurrentDocument();
         return;
     }
+    if (id == QLatin1String("run_both")) {
+        runBothPanes();
+        return;
+    }
     if (id == QLatin1String("run_selection")) {
         runSelection();
         return;
@@ -1703,9 +1753,11 @@ void MainWindow::performAction(const QString& action) {
     // documentation should find the key where it says it is, but the key says so
     // out loud rather than doing nothing. A dead key is the fault this replaced.
     if (id == QLatin1String("split_editor")) {
-        setExecutionState(tr("ready"),
-                          tr("The split editor is not built yet \u2014 see "
-                             "docs/ROADMAP.md"));
+        if (editorSplit()) {
+            closeSplit();
+        } else {
+            splitEditor();
+        }
         return;
     }
     if (id == QLatin1String("find_in_files")) {
@@ -2475,13 +2527,19 @@ void MainWindow::buildStatusBar() {
 // ---------------------------------------------------------------------------
 
 void MainWindow::buildDocks() {
-    auto* outline = new PlaceholderPanel{
-        tr("\U0001F4CB Document Outline"),
-        tr("ui/document_outline.py \u2014 not yet ported"), QSize{200, 160}, this};
+    outline_panel_ = new OutlinePanel{this};
+    // A click in the outline is a jump, through the same method Go to Line uses,
+    // so the cursor, the scroll position and the status bar all agree.
+    connect(outline_panel_, &OutlinePanel::entryActivated, this, [this](int line) {
+        if (CodeEditor* editor = currentEditor(); editor != nullptr) {
+            editor->goToLine(line);
+            editor->setFocus();
+        }
+    });
 
     outline_dock_ = new QDockWidget{tr("\U0001F4CB Document Outline"), this};
     outline_dock_->setObjectName(QStringLiteral("documentOutlineDock"));
-    outline_dock_->setWidget(outline);
+    outline_dock_->setWidget(outline_panel_);
     // Deliberately not `setAllowedAreas(AllDockWidgetAreas)`: a dock that can be
     // dropped on any edge can be dropped somewhere the user cannot find again.
     outline_dock_->setAllowedAreas(Qt::RightDockWidgetArea | Qt::LeftDockWidgetArea);
@@ -2571,11 +2629,15 @@ void MainWindow::closeEvent(QCloseEvent* event) {
 void MainWindow::saveSession() const {
     // Only documents with a path: an untitled buffer has no name to reopen, and a
     // tab restored as "untitled 3" would be a document the user never had.
-    QSettings{}.setValue(kSettingOpenFiles, openFilePaths());
+    QSettings settings;
+    settings.setValue(kSettingOpenFiles, openFilePaths());
+    settings.setValue(kSettingSecondaryFiles, secondaryFilePaths());
+    settings.setValue(kSettingEditorSplit, editor_split_);
 }
 
 int MainWindow::restoreSession() {
-    const QStringList files = QSettings{}.value(kSettingOpenFiles).toStringList();
+    QSettings settings;
+    const QStringList files = settings.value(kSettingOpenFiles).toStringList();
     int reopened = 0;
     for (const QString& path : files) {
         // Silently: a file that has been moved or deleted since the last session
@@ -2583,6 +2645,33 @@ int MainWindow::restoreSession() {
         // which is also what makes this safe to call before `show()`.
         if (openFile(path, OpenFailure::Silent)) {
             ++reopened;
+        }
+    }
+
+    // The other pane's documents, moved across after opening. Opening into the
+    // primary and moving is deliberate: `openFile` is the one path that knows how
+    // to load a document, and teaching it a target pane would give it a second
+    // reason to change.
+    const QStringList secondary = settings.value(kSettingSecondaryFiles).toStringList();
+    editor_split_ = settings.value(kSettingEditorSplit, false).toBool();
+    for (const QString& path : secondary) {
+        if (!openFile(path, OpenFailure::Silent)) {
+            continue;
+        }
+        if (CodeEditor* editor = currentEditor(); editor != nullptr) {
+            moveEditorToPane(editor, editor_tabs_secondary_);
+        }
+        ++reopened;
+    }
+    // A saved split with nothing on the right is a blank pane, which reads as a
+    // broken window. Show it only when there is a document in it.
+    if (editor_split_ && editor_tabs_secondary_ != nullptr &&
+        editor_tabs_secondary_->count() > 0) {
+        editor_tabs_secondary_->show();
+    } else {
+        editor_split_ = false;
+        if (editor_tabs_secondary_ != nullptr) {
+            editor_tabs_secondary_->hide();
         }
     }
     return reopened;
@@ -2826,8 +2915,154 @@ Language MainWindow::languageOf(const CodeEditor* editor) {
     return fromPath == Language::Unknown ? defaultLanguage() : fromPath;
 }
 
+QTabWidget* MainWindow::activeEditorTabs() const {
+    // Focus, not a stored "active pane": the user's idea of the current document
+    // is the one their cursor is in, and clicking a tab moves focus with it.
+    if (editor_tabs_secondary_ != nullptr && editor_tabs_secondary_->isVisible()) {
+        if (QWidget* focus = QApplication::focusWidget(); focus != nullptr &&
+                                                          editor_tabs_secondary_->isAncestorOf(focus)) {
+            return editor_tabs_secondary_;
+        }
+    }
+    return editor_tabs_;
+}
+
 CodeEditor* MainWindow::currentEditor() const {
-    return qobject_cast<CodeEditor*>(editor_tabs_->currentWidget());
+    return qobject_cast<CodeEditor*>(activeEditorTabs()->currentWidget());
+}
+
+void MainWindow::moveEditorToPane(CodeEditor* editor, QTabWidget* target) {
+    if (editor == nullptr || target == nullptr) {
+        return;
+    }
+    QTabWidget* source = target == editor_tabs_ ? editor_tabs_secondary_ : editor_tabs_;
+    if (source == nullptr) {
+        return;
+    }
+    const int index = source->indexOf(editor);
+    if (index < 0) {
+        // Not open at all: put it in the target rather than silently doing nothing.
+        adoptEditor(editor);
+        return;
+    }
+    const QString caption = source->tabText(index);
+    source->removeTab(index);
+    target->addTab(editor, caption);
+    target->setCurrentWidget(editor);
+}
+
+void MainWindow::splitEditor() {
+    if (editor_tabs_ == nullptr || editor_tabs_secondary_ == nullptr) {
+        return;
+    }
+    if (CodeEditor* editor = currentEditor(); editor != nullptr) {
+        moveEditorToPane(editor, editor_tabs_secondary_);
+    }
+    editor_tabs_secondary_->show();
+    editor_split_ = true;
+    // A split with an empty left half is a document and a blank rectangle. A fresh
+    // document is what makes the split usable in the next keystroke.
+    if (editor_tabs_->count() == 0) {
+        newFile();
+    }
+    refreshDocumentState();
+    setExecutionState(tr("ready"), tr("Editor split"));
+}
+
+void MainWindow::closeSplit() {
+    if (editor_tabs_secondary_ == nullptr) {
+        return;
+    }
+    // Documents first, then the pane: hiding it with tabs inside would leave them
+    // open where nothing can reach them.
+    while (editor_tabs_secondary_->count() > 0) {
+        auto* editor = qobject_cast<CodeEditor*>(editor_tabs_secondary_->widget(0));
+        const QString caption = editor_tabs_secondary_->tabText(0);
+        editor_tabs_secondary_->removeTab(0);
+        if (editor != nullptr) {
+            editor_tabs_->addTab(editor, caption);
+            editor_tabs_->setCurrentWidget(editor);
+        }
+    }
+    editor_tabs_secondary_->hide();
+    editor_split_ = false;
+    refreshDocumentState();
+    setExecutionState(tr("ready"), tr("Split closed"));
+}
+
+void MainWindow::moveTabToOtherPane() {
+    if (editor_tabs_secondary_ == nullptr) {
+        return;
+    }
+    CodeEditor* editor = currentEditor();
+    if (editor == nullptr) {
+        return;
+    }
+    if (editor_tabs_secondary_->isVisible() && editor_tabs_secondary_->count() == 1 &&
+        editor_tabs_secondary_->indexOf(editor) >= 0) {
+        // Moving the only document out of the split is closing it, which is what
+        // the user meant whether or not they said so.
+        closeSplit();
+        return;
+    }
+    if (!editor_tabs_secondary_->isVisible()) {
+        editor_tabs_secondary_->show();
+        editor_split_ = true;
+    }
+    const bool in_secondary = editor_tabs_secondary_->indexOf(editor) >= 0;
+    moveEditorToPane(editor, in_secondary ? static_cast<QTabWidget*>(editor_tabs_)
+                                          : static_cast<QTabWidget*>(editor_tabs_secondary_));
+    if (editor_tabs_secondary_->count() == 0) {
+        editor_tabs_secondary_->hide();
+        editor_split_ = false;
+    }
+    refreshDocumentState();
+}
+
+QStringList MainWindow::secondaryFilePaths() const {
+    QStringList paths;
+    if (editor_tabs_secondary_ == nullptr) {
+        return paths;
+    }
+    for (int index = 0; index < editor_tabs_secondary_->count(); ++index) {
+        const QString path = pathOf(qobject_cast<CodeEditor*>(editor_tabs_secondary_->widget(index)));
+        if (!path.isEmpty()) {
+            paths << path;
+        }
+    }
+    return paths;
+}
+
+void MainWindow::runBothPanes() {
+    auto* left = qobject_cast<CodeEditor*>(editor_tabs_->currentWidget());
+    auto* right = editor_tabs_secondary_ != nullptr
+                      ? qobject_cast<CodeEditor*>(editor_tabs_secondary_->currentWidget())
+                      : nullptr;
+    if (left == nullptr || right == nullptr || !editor_tabs_secondary_->isVisible()) {
+        setExecutionState(tr("ready"),
+                          tr("Open two documents side by side first \u2014 File > Split Editor Right"));
+        return;
+    }
+
+    // Synchronous, and the wait cursor says so: the interpreter's own budget bounds
+    // a runaway program, so the worst case is a wait rather than a hang, and two
+    // live runners on one canvas could not attribute the ink to either program.
+    QApplication::setOverrideCursor(Qt::WaitCursor);
+    QList<BenchResult> results;
+    results.append(runHeadless(languageOf(left), nameOf(left), left->toPlainText()));
+    results.append(runHeadless(languageOf(right), nameOf(right), right->toPlainText()));
+    QApplication::restoreOverrideCursor();
+
+    clearOutput();
+    appendOutput(comparisonTable(results));
+    // Each program's own output, attributed: the table says *how much*, this says
+    // *what*, and a benchmark that only gave numbers would make the two programs
+    // indistinguishable the moment they printed anything.
+    for (const BenchResult& result : results) {
+        appendOutput(tr("\n%1 (%2):\n").arg(result.name, result.language));
+        appendOutput(result.output.isEmpty() ? tr("  (no output)\n") : result.output + QLatin1Char('\n'));
+    }
+    setExecutionState(tr("ready"), tr("Compared both panes"));
 }
 
 QStringList MainWindow::openFilePaths() const {
@@ -2876,6 +3111,12 @@ void MainWindow::adoptEditor(CodeEditor* editor) {
     connect(editor, &CodeEditor::breakpointsChanged, this, [this, editor] {
         QSettings breakpoint_settings;
         breakpoints::save(breakpoint_settings, pathOf(editor), editor->breakpoints());
+    });
+    // The outline follows the text, on the same debounce as the checker.
+    connect(editor->document(), &QTextDocument::contentsChanged, this, [this, editor] {
+        if (editor == currentEditor() && outline_timer_ != nullptr) {
+            outline_timer_->start();
+        }
     });
 
     connect(editor, &CodeEditor::cursorMoved, this,

@@ -1470,6 +1470,52 @@ void test_restoring_a_copy_opens_a_new_tab() {
                 std::string{"10 PRINT \"ORIGINAL\"\n"});
 }
 
+void test_the_split_survives_a_restart() {
+    announce("session restore: the split and which side each document was on");
+    const QTemporaryDir dir;
+    const QString left = writeFile(dir, QStringLiteral("left.bas"), "PRINT 1\n");
+    const QString right = writeFile(dir, QStringLiteral("right.bas"), "PRINT 2\n");
+    {
+        MainWindow window;
+        TW_CHECK(window.openFile(left));
+        TW_CHECK(window.openFile(right));
+        // Splitting moves the current document -- `right` -- into the second pane
+        // and leaves a fresh document behind, so both halves are usable.
+        window.splitEditor();
+        TW_CHECK(window.editorSplit());
+        TW_CHECK_EQ(window.secondaryFilePaths().size(), 1);
+        window.saveSession();
+    }
+
+    MainWindow restored;
+    TW_CHECK_EQ(restored.restoreSession(), 2);
+    TW_CHECK(restored.editorSplit());
+    // `isHidden`, not `isVisible`: the window has not been shown, and a child of an
+    // unshown window is never "visible" whatever its own flag says.
+    TW_CHECK(!restored.secondaryEditorTabs()->isHidden());
+    const QStringList secondary = restored.secondaryFilePaths();
+    TW_CHECK_EQ(secondary.size(), 1);
+    if (!secondary.isEmpty()) {
+        TW_CHECK_EQ(secondary.first(), right);
+    }
+    // And the primary still has the document that was on that side.
+    const QStringList primary = restored.openFilePaths();
+    TW_CHECK_EQ(primary.size(), 1);
+    if (!primary.isEmpty()) {
+        TW_CHECK_EQ(primary.first(), left);
+    }
+
+    // A saved split whose other pane is empty is a blank rectangle, so it is not
+    // restored as one.
+    QSettings settings;
+    settings.setValue(QStringLiteral("session/editorSplit"), true);
+    settings.setValue(QStringLiteral("session/secondaryFiles"), QStringList{});
+    MainWindow empty_split;
+    TW_CHECK_EQ(empty_split.restoreSession(), 1);
+    TW_CHECK(!empty_split.editorSplit());
+    TW_CHECK(!empty_split.secondaryEditorTabs()->isVisible());
+}
+
 void test_a_run_pauses_at_a_breakpoint() {
     announce("running: a breakpoint pauses the run");
     QTemporaryDir dir;
@@ -1646,6 +1692,7 @@ int main(int argc, char** argv) {
     test_context_help_follows_the_document_language();
     test_breakpoints_toggle_paint_and_persist();
     test_a_stale_breakpoint_path_is_dropped();
+    test_the_split_survives_a_restart();
     test_a_run_pauses_at_a_breakpoint();
 
     test_running_scheme_draws_on_the_canvas();

@@ -75,10 +75,12 @@
 namespace {
 
 using timewarp::ui::CrtOverlay;
+using timewarp::ui::CodeEditor;
 using timewarp::ui::FunctionKeyBar;
 using timewarp::ui::ImmediateModePanel;
 using timewarp::ui::DebugPanel;
 using timewarp::ui::LessonPanel;
+using timewarp::ui::Language;
 using timewarp::ui::MainWindow;
 using timewarp::ui::ResizableTabWidget;
 using timewarp::ui::TelemetryPanel;
@@ -627,6 +629,161 @@ void test_output_and_graphics_share_a_persistent_split() {
     TW_CHECK(std::abs(fraction(pane, 1) - 0.6) < 0.08);
 }
 
+void test_run_both_panes_compares_them() {
+    announce("run both panes");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    // Without a split there is nothing to compare, and the window says so instead
+    // of running the same program twice.
+    window->runBothPanes();
+    TW_CHECK(!window->findChild<QPlainTextEdit*>(QStringLiteral("consoleOutput"))
+                  ->toPlainText()
+                  .contains(QStringLiteral("Both panes")));
+
+    window->splitEditor();
+    auto* left = qobject_cast<CodeEditor*>(window->editorTabs()->currentWidget());
+    auto* right = qobject_cast<CodeEditor*>(
+        window->secondaryEditorTabs()->currentWidget());
+    TW_CHECK(left != nullptr);
+    TW_CHECK(right != nullptr);
+    if (left == nullptr || right == nullptr) {
+        return;
+    }
+    // The left program fails on its second statement; the right one must still run,
+    // which is the property a comparison table is worthless without.
+    left->setPlainText(QStringLiteral("10 PRINT \"LEFT\"\n20 GOTO 999\n"));
+    right->setPlainText(QStringLiteral("10 PRINT \"RIGHT\"\n20 PRINT 2 + 2\n"));
+
+    window->runBothPanes();
+    auto* console = window->findChild<QPlainTextEdit*>(QStringLiteral("consoleOutput"));
+    TW_CHECK(console != nullptr);
+    if (console == nullptr) {
+        return;
+    }
+    const QString text = console->toPlainText();
+    TW_CHECK(text.contains(QStringLiteral("Both panes")));
+    // Both programs are named, so the numbers can be attributed.
+    TW_CHECK(text.contains(QStringLiteral("LEFT")));
+    TW_CHECK(text.contains(QStringLiteral("RIGHT")));
+    // One finished and one did not, and the table says which is which.
+    TW_CHECK(text.contains(QStringLiteral("finished")));
+    TW_CHECK(text.contains(QStringLiteral("stopped")));
+    // The right program's own output arrived even though the left one failed.
+    TW_CHECK(text.contains(QStringLiteral("4")));
+    // And real timings, not a placeholder: every row of the table has "ms" in it.
+    TW_CHECK(text.count(QStringLiteral(" ms")) >= 2);
+}
+
+void test_the_split_editor_moves_documents_between_panes() {
+    announce("split editor");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    ResizableTabWidget* primary = window->editorTabs();
+    ResizableTabWidget* secondary = window->secondaryEditorTabs();
+    TW_CHECK(primary != nullptr);
+    TW_CHECK(secondary != nullptr);
+    if (primary == nullptr || secondary == nullptr) {
+        return;
+    }
+    // The pane exists from construction and is hidden, so splitter sizes stay put.
+    TW_CHECK(!secondary->isVisible());
+    TW_CHECK(!window->editorSplit());
+    const int primary_before = primary->count();
+
+    window->splitEditor();
+    TW_CHECK(window->editorSplit());
+    TW_CHECK(secondary->isVisible());
+    TW_CHECK_EQ(secondary->count(), 1);
+    // Splitting moves the document rather than showing a second view of it, and
+    // leaves a fresh one behind so both halves are usable.
+    TW_CHECK_EQ(primary->count(), primary_before);
+    TW_CHECK(secondary->widget(0) != primary->currentWidget());
+
+    // Moving the only document out of the split closes it: a blank second pane is
+    // not a state a user can do anything with.
+    auto* moved = qobject_cast<CodeEditor*>(secondary->widget(0));
+    TW_CHECK(moved != nullptr);
+    if (moved != nullptr) {
+        moved->setFocus();
+        QApplication::processEvents();
+        window->moveTabToOtherPane();
+    }
+    TW_CHECK(!window->editorSplit());
+    TW_CHECK(!secondary->isVisible());
+    TW_CHECK_EQ(secondary->count(), 0);
+    TW_CHECK_EQ(primary->count(), primary_before + 1);
+
+    // And Close Split merges whatever is on the right back into the left.
+    window->splitEditor();
+    TW_CHECK(secondary->isVisible());
+    const int both = primary->count() + secondary->count();
+    window->closeSplit();
+    TW_CHECK(!secondary->isVisible());
+    TW_CHECK_EQ(primary->count(), both);
+    TW_CHECK_EQ(secondary->count(), 0);
+    // The document that was moved is still open, not closed and quietly lost.
+    TW_CHECK(primary->indexOf(moved) >= 0 || moved == nullptr);
+}
+
+void test_the_outline_lists_and_jumps() {
+    announce("outline panel");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    auto* panel = window->findChild<timewarp::ui::OutlinePanel*>(
+        QStringLiteral("outlinePanel"));
+    TW_CHECK(panel != nullptr);
+    if (panel == nullptr) {
+        return;
+    }
+    // The dock holds the real panel now, not the placeholder it started as.
+    TW_CHECK_EQ(window->outlineDock()->widget(), panel);
+
+    CodeEditor* editor = window->currentEditor();
+    TW_CHECK(editor != nullptr);
+    if (editor == nullptr) {
+        return;
+    }
+    // Text first, then the language: setting the text marks the document
+    // modified, and the window re-derives the language from the path (a scratch
+    // buffer is BASIC) when that happens.
+    editor->setPlainText(QStringLiteral("TO SQUARE\n  REPEAT 4 [ FORWARD 50 RIGHT 90 ]\nEND\n"
+                                        "TO TRI\n  REPEAT 3 [ FORWARD 50 RIGHT 120 ]\nEND\n"));
+    editor->setLanguage(Language::Logo);
+    // The edit restarted the debounce, which is the wiring an edit's own test
+    // cannot see; `refreshOutline` is what the timer would have called.
+    auto* timer = window->findChild<QTimer*>(QStringLiteral("outlineTimer"));
+    TW_CHECK(timer != nullptr);
+    if (timer != nullptr) {
+        TW_CHECK(timer->isActive());
+    }
+    window->refreshOutline();
+    // The ordering above is load-bearing: the edit re-derives the language, so the
+    // switch comes after it.
+    TW_CHECK_EQ(static_cast<int>(editor->language()), static_cast<int>(Language::Logo));
+    TW_CHECK_EQ(panel->entryCount(), 2);
+    TW_CHECK_EQ(panel->lineAt(0), 1);
+    TW_CHECK_EQ(panel->lineAt(1), 4);
+    TW_CHECK(!panel->emptyStateVisible());
+
+    // Activating an entry is what a click does: it puts the cursor on that line.
+    auto* list = panel->findChild<QListWidget*>(QStringLiteral("outlineList"));
+    TW_CHECK(list != nullptr);
+    if (list != nullptr) {
+        QListWidgetItem* item = list->item(1);
+        TW_CHECK(item != nullptr);
+        if (item != nullptr) {
+            TW_CHECK_EQ(item->text(), QStringLiteral("TRI"));
+            QMetaObject::invokeMethod(list, "itemActivated", Q_ARG(QListWidgetItem*, item));
+        }
+    }
+    TW_CHECK_EQ(editor->currentLine(), 4);
+
+    // A language with no named places shows the empty state rather than a blank
+    // box, and the empty state is a sentence rather than a disabled widget.
+    editor->setLanguage(Language::Focal);
+    editor->setPlainText(QStringLiteral("1.10 T \"HI\"\n"));
+    window->refreshOutline();
+    TW_CHECK_EQ(panel->entryCount(), 0);
+    TW_CHECK(panel->emptyStateVisible());
+}
+
 void test_the_scrubber_appears_only_when_there_is_ink() {
     announce("canvas scrubber");
     const std::unique_ptr<MainWindow> window = shownWindow();
@@ -849,6 +1006,10 @@ void test_themes() {
     TW_CHECK_EQ(QString::fromUtf8(next(QString::fromUtf8(all().back().name)).name),
                 defaultName());
 
+    // These tests share a settings identity between runs, and the theme is a
+    // persisted setting: start from "nothing chosen" so "a fresh window is the
+    // default" is a statement about the window rather than about the last run.
+    QSettings{}.remove(QStringLiteral("appearance/theme"));
     MainWindow window;
     const QString original = window.currentThemeName();
     // A fresh window starts on the default -- or on whatever the settings say,
@@ -885,6 +1046,7 @@ void test_themes() {
 
     // Leave the developer's settings as they were for the tests after this one.
     window.applyTheme(original);
+    QSettings{}.remove(QStringLiteral("appearance/theme"));
 }
 
 void test_high_contrast_clears_a_seven_to_one_floor() {
@@ -978,6 +1140,7 @@ void test_high_contrast_toggles_and_restores_the_palette() {
     window->setHighContrast(false);
     TW_CHECK(QApplication::palette() == light_before);
     window->applyTheme(original);
+    QSettings{}.remove(QStringLiteral("appearance/theme"));
 }
 
 void test_font_scale_ladder() {
@@ -2362,6 +2525,7 @@ void test_screen_presets_pair_a_theme_with_its_crt_values() {
 
     // Leave no saved effect behind for the tests that build a window next.
     window->applyTheme(original);
+    QSettings{}.remove(QStringLiteral("appearance/theme"));
     QSettings settings;
     for (const char* key : {"display/crt/scanlines", "display/crt/vignette",
                             "display/crt/curvature", "display/crt/flicker",
@@ -2525,6 +2689,9 @@ int main(int argc, char** argv) {
     test_telemetry_panel_contract();
     test_debug_panel_is_scheme_only();
     test_output_and_graphics_share_a_persistent_split();
+    test_run_both_panes_compares_them();
+    test_the_split_editor_moves_documents_between_panes();
+    test_the_outline_lists_and_jumps();
     test_the_scrubber_appears_only_when_there_is_ink();
     test_output_sub_tabs();
     test_function_key_bar_is_fixed_height();

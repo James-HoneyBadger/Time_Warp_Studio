@@ -293,7 +293,10 @@ memory window — and puts the IDE's own rows (wall clock, ink on the canvas) be
 so a drawing the engine counted but the canvas never received reads as two rows that
 disagree rather than as silence.
 
-**Editor** — breakpoint markers and a document outline are still missing. The
+**Editor** — the document outline is built: `outline.{hpp,cpp}` parses the named
+places out of Logo, BASIC, COMAL, REXX, PILOT, Scheme and APL sources, and the
+**Document Outline** dock (`OutlinePanel`) lists them and jumps on a click,
+refreshed on the same debounce as the checker. The
 minimap and whitespace marks are built (`native/src/ui/code_editor.cpp`: a
 sampled strip in the right margin that clicks to scroll, and the document's own
 `ShowTabsAndSpaces` option so the marks follow selection and scrolling without
@@ -323,7 +326,11 @@ a Clear Menu entry). Data safety is built too: `AutosaveStore`
 (`native/src/ui/autosave.cpp`) keeps five snapshots of each document with unsaved
 changes under the data directory, and `VersionHistoryDialog`
 (`native/src/ui/version_history.cpp`, Ctrl+Alt+V) previews them and opens one in a
-new tab without writing the file. There is no project panel or split view yet.
+new tab without writing the file. The **split editor** is built too: File > Split
+Editor Right (Ctrl+\), Close Split and Move Tab to Other Pane move documents
+between the two panes, the split is saved with the session, and Run > Run Both
+Panes compares two programs headless in one table (output, time, ink) with no
+shared variable bus. There is no project panel yet.
 
 **Also unbuilt** — printing, lesson-session export, font *family* selection, and the
 REPL bar's interpreter wiring (the bar is laid out and its signal exists; nothing is

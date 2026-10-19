@@ -25,6 +25,7 @@
 #include <QWidget>
 
 #include "timewarp/bridge/python_worker.hpp"
+#include "timewarp/ui/outline.hpp"
 
 class QComboBox;
 class QHBoxLayout;
@@ -61,6 +62,35 @@ public:
 
 private:
     QSize minimum_;
+};
+
+/// The document outline: the named places in the current program, click to jump.
+///
+/// A view over `outlineFor`, which is where the parsing lives. It never edits a
+/// document: jumping is a request the window answers with `goToLine`, for the
+/// same reason the lesson panel does not open tabs.
+class OutlinePanel final : public QFrame {
+    Q_OBJECT
+
+public:
+    explicit OutlinePanel(QWidget* parent = nullptr);
+
+    /// Replaces the list. An empty list shows the empty state rather than a blank
+    /// box, because "this program has no procedures" and "this panel is broken"
+    /// have to look different.
+    void setEntries(const QList<timewarp::ui::OutlineEntry>& entries);
+    [[nodiscard]] int entryCount() const;
+    /// The line of entry `index`, or 0 when there is none. Public so a test can
+    /// ask what a click would do without synthesising one.
+    [[nodiscard]] int lineAt(int index) const;
+    [[nodiscard]] bool emptyStateVisible() const;
+
+signals:
+    void entryActivated(int line);
+
+private:
+    QListWidget* list_ = nullptr;
+    QLabel* empty_ = nullptr;
 };
 
 /// Stands in for `ImmediateModePanel` (`ui/output.py`).
