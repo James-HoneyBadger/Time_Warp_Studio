@@ -53,6 +53,10 @@ struct EditorSettings {
     /// on a machine whose fonts are unknown.
     QString font_family;
     int font_point_size = 11;
+    /// 100, 125 or 150: the accessibility ladder's step, applied *on top of*
+    /// `font_point_size` rather than replacing it, so the size the user picked in
+    /// Preferences keeps meaning what it says.
+    int font_scale_percent = 100;
     /// Spaces a tab advances to.
     int tab_width = 4;
     bool show_line_numbers = true;

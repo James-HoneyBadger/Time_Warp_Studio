@@ -31,6 +31,7 @@
 #include <QSaveFile>
 #include <QSet>
 #include <QSettings>
+#include <QShortcut>
 #include <QSignalBlocker>
 #include <QSlider>
 #include <QSplitter>
@@ -103,6 +104,14 @@ constexpr auto kSettingTheme = "appearance/theme";
 // field in a later build defaults rather than invalidating the rest.
 constexpr auto kSettingEditorFont = "editor/fontFamily";
 constexpr auto kSettingEditorFontSize = "editor/fontSize";
+constexpr auto kSettingFontScale = "display/fontScale";
+// The CRT effects. One key each, like the editor's settings, so a value can be
+// read and corrected by hand.
+constexpr auto kSettingCrtScanlines = "display/crt/scanlines";
+constexpr auto kSettingCrtVignette = "display/crt/vignette";
+constexpr auto kSettingCrtCurvature = "display/crt/curvature";
+constexpr auto kSettingCrtFlicker = "display/crt/flicker";
+constexpr auto kSettingCrtPhosphor = "display/crt/phosphor";
 constexpr auto kSettingEditorTabWidth = "editor/tabWidth";
 constexpr auto kSettingEditorLineNumbers = "editor/showLineNumbers";
 constexpr auto kSettingEditorCurrentLine = "editor/highlightCurrentLine";
@@ -418,6 +427,9 @@ void MainWindow::buildCentralColumn() {
 
     // Created last, parented to the central widget, sized by the overlay itself.
     crt_overlay_ = new CrtOverlay{central};
+    // Loaded here rather than in `buildUi`: the overlay exists now, and a stale
+    // settings file must not leave the effect at a value the dialog cannot show.
+    setCrtSettings(loadCrtSettings());
 }
 
 void MainWindow::buildEditorColumn(QSplitter* parent) {
@@ -916,6 +928,56 @@ void MainWindow::buildMenuBar() {
             crt_overlay_->setVisible(on);
         }
     });
+    // The values behind the toggle. Until this existed the overlay had one
+    // hard-coded intensity, which made "CRT scanlines" a switch rather than a
+    // display setting.
+    add(view, tr("CRT Se&ttings..."), QKeySequence{}, [this] { showCrtSettings(); })
+        ->setObjectName(QStringLiteral("crtSettingsAction"));
+
+    // The old Monitor styles, as one action each: a theme and the CRT values that
+    // belong with it, so "Amber monitor" is one click rather than a hunt through
+    // two different menus.
+    QMenu* monitors = view->addMenu(tr("&Screen Mode"));
+    monitors->setObjectName(QStringLiteral("screenModeMenu"));
+    add(monitors, tr("&Normal Display"), QKeySequence{}, [this] {
+        applyScreenPreset(ScreenPreset::Normal);
+    })->setObjectName(QStringLiteral("screenPresetNormal"));
+    add(monitors, tr("&Amber Monitor"), QKeySequence{}, [this] {
+        applyScreenPreset(ScreenPreset::Amber);
+    })->setObjectName(QStringLiteral("screenPresetAmber"));
+    add(monitors, tr("&Green Monitor"), QKeySequence{}, [this] {
+        applyScreenPreset(ScreenPreset::Green);
+    })->setObjectName(QStringLiteral("screenPresetGreen"));
+    add(monitors, tr("&White Phosphor"), QKeySequence{}, [this] {
+        applyScreenPreset(ScreenPreset::White);
+    })->setObjectName(QStringLiteral("screenPresetWhite"));
+
+    // Not a theme of its own: every theme gets a maximum-contrast variant, so a
+    // learner who prefers the amber phosphor keeps it and can still read it. The
+    // tick is driven from the window's state through the action's own toggle.
+    high_contrast_action_ = view->addAction(tr("High &Contrast"));
+    high_contrast_action_->setObjectName(QStringLiteral("highContrastAction"));
+    high_contrast_action_->setCheckable(true);
+    high_contrast_action_->setShortcut(QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_H});
+    high_contrast_action_->setChecked(high_contrast_);
+    connect(high_contrast_action_, &QAction::toggled, this,
+            [this](bool on) { setHighContrast(on); });
+
+    // Focus mode keeps the editor and the canvas and takes the rest away: the one
+    // thing every "distraction free" mode has to get right is the way out, which
+    // is why Esc is bound while the mode is on and unbound the moment it ends.
+    focus_action_ = view->addAction(tr("&Focus Mode"));
+    focus_action_->setObjectName(QStringLiteral("focusModeAction"));
+    focus_action_->setCheckable(true);
+    focus_action_->setShortcut(QKeySequence{Qt::Key_F11});
+    connect(focus_action_, &QAction::toggled, this, [this](bool on) { setFocusMode(on); });
+    focus_shortcut_ = new QShortcut{QKeySequence{Qt::Key_Escape}, this};
+    focus_shortcut_->setObjectName(QStringLiteral("focusModeEscape"));
+    // Window-scoped, and disabled until the mode is entered: Escape has to keep
+    // whatever meaning the focused widget gives it at all other times.
+    focus_shortcut_->setContext(Qt::WindowShortcut);
+    focus_shortcut_->setEnabled(false);
+    connect(focus_shortcut_, &QShortcut::activated, this, [this] { setFocusMode(false); });
 
     view->addSeparator();
     // F10 is on the function-key bar; Ctrl+Shift+P is the convention everybody
@@ -1000,11 +1062,11 @@ void MainWindow::applyTheme(const QString& name) {
     // separate top-level widgets and would otherwise stay on the default system
     // colours, which reads as a theme that half applied.
     if (auto* app = qobject_cast<QApplication*>(QCoreApplication::instance())) {
-        app->setPalette(themes::paletteFor(theme));
+        app->setPalette(themes::paletteFor(theme, high_contrast_));
     }
     // The base sheet reads `palette(...)`, so it follows the palette above; the
     // theme's own block adds what a role cannot express.
-    setStyleSheet(style::window() + themes::stylesheetFor(theme));
+    setStyleSheet(style::window() + themes::stylesheetFor(theme, high_contrast_));
 
     if (theme_menu_ != nullptr) {
         for (QAction* action : theme_menu_->actions()) {
@@ -1023,18 +1085,234 @@ void MainWindow::cycleTheme() {
     applyTheme(QString::fromUtf8(themes::next(theme_name_).name));
 }
 
+void MainWindow::setFontScale(int percent) {
+    // Snap to the ladder rather than trusting the caller: the three steps are the
+    // ones that were laid out and looked at, and a fourth size is a settings value
+    // nobody designed.
+    int snapped = kFontScales.front();
+    for (const int step : kFontScales) {
+        if (percent >= step) {
+            snapped = step;
+        }
+    }
+    if (editor_settings_.font_scale_percent == snapped) {
+        return;
+    }
+    editor_settings_.font_scale_percent = snapped;
+    saveEditorSettings();
+    // One call applies all three surfaces: the editors through their own settings,
+    // the console and logs through the same number, and the panels through the
+    // application font that everything without an explicit font inherits.
+    applyEditorSettings(editor_settings_);
+    setExecutionState(tr("ready"), tr("Text size %1%").arg(snapped));
+}
+
+void MainWindow::cycleFontScale() {
+    const int current = editor_settings_.font_scale_percent;
+    const auto at = std::find(kFontScales.begin(), kFontScales.end(), current);
+    if (at == kFontScales.end() || std::next(at) == kFontScales.end()) {
+        setFontScale(kFontScales.front());
+        return;
+    }
+    setFontScale(*std::next(at));
+}
+
+CrtOverlay::Settings MainWindow::loadCrtSettings() const {
+    QSettings settings;
+    // Off unless the user turned an effect on: the overlay used to start hidden and
+    // a fresh install must keep looking like a modern IDE rather than a 1983
+    // terminal -- the retro look is a choice, which is what the settings are for.
+    CrtOverlay::Settings loaded;
+    loaded.scanlines = settings.value(kSettingCrtScanlines, 0).toInt();
+    loaded.vignette = settings.value(kSettingCrtVignette, 0).toInt();
+    loaded.curvature = settings.value(kSettingCrtCurvature, 0).toInt();
+    loaded.flicker = settings.value(kSettingCrtFlicker, 0).toInt();
+    loaded.phosphor = settings.value(kSettingCrtPhosphor, 0).toInt();
+    return loaded;
+}
+
+void MainWindow::saveCrtSettings() const {
+    QSettings settings;
+    settings.setValue(kSettingCrtScanlines, crt_settings_.scanlines);
+    settings.setValue(kSettingCrtVignette, crt_settings_.vignette);
+    settings.setValue(kSettingCrtCurvature, crt_settings_.curvature);
+    settings.setValue(kSettingCrtFlicker, crt_settings_.flicker);
+    settings.setValue(kSettingCrtPhosphor, crt_settings_.phosphor);
+}
+
+void MainWindow::setCrtSettings(const CrtOverlay::Settings& settings) {
+    crt_settings_ = settings;
+    if (crt_overlay_ != nullptr) {
+        crt_overlay_->setSettings(crt_settings_);
+    }
+    // Showing the overlay is part of applying settings: a preview the user cannot
+    // see is not a preview, and the menu's tick has to agree with the screen.
+    const bool on = crt_settings_.scanlines > 0 || crt_settings_.vignette > 0 ||
+                    crt_settings_.curvature > 0 || crt_settings_.flicker > 0 ||
+                    crt_settings_.phosphor > 0;
+    if (crt_overlay_ != nullptr) {
+        crt_overlay_->setVisible(on);
+    }
+    if (crt_action_ != nullptr && crt_action_->isChecked() != on) {
+        QSignalBlocker blocker{crt_action_};
+        crt_action_->setChecked(on);
+    }
+}
+
+void MainWindow::showCrtSettings() {
+    if (crt_dialog_ != nullptr) {
+        crt_dialog_->raise();
+        crt_dialog_->activateWindow();
+        return;
+    }
+    auto* dialog = new CrtSettingsDialog{crt_settings_, this};
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    crt_dialog_ = dialog;
+    crt_before_dialog_ = crt_settings_;
+    // The preview is the real overlay, not a swatch in the dialog: a settings
+    // window that shows its own mock-up can be right while the window is wrong.
+    connect(dialog, &CrtSettingsDialog::previewRequested, this,
+            [this](const CrtOverlay::Settings& preview) { setCrtSettings(preview); });
+    connect(dialog, &QDialog::accepted, this, [this, dialog] {
+        setCrtSettings(dialog->settings());
+        saveCrtSettings();
+        setExecutionState(tr("ready"), tr("CRT settings saved"));
+    });
+    connect(dialog, &QDialog::rejected, this, [this] {
+        // Back to what was in force before the dialog opened, including the
+        // overlay's visibility.
+        setCrtSettings(crt_before_dialog_);
+    });
+    connect(dialog, &QObject::destroyed, this, [this] { crt_dialog_ = nullptr; });
+    dialog->open();
+}
+
+void MainWindow::applyScreenPreset(ScreenPreset preset) {
+    // One table, so a preset cannot half-apply and a new one is a row rather than
+    // a code path. The themes are the ones the monochrome tube sets were built
+    // from, and the CRT values are what make them read as a screen rather than as
+    // a colour scheme.
+    CrtOverlay::Settings crt;
+    crt.scanlines = 0;
+    crt.vignette = 0;
+    crt.curvature = 0;
+    crt.flicker = 0;
+    crt.phosphor = 0;
+    QString theme = QStringLiteral("VS Code Dark");
+    QString label = tr("Normal display");
+
+    switch (preset) {
+        case ScreenPreset::Normal:
+            break;
+        case ScreenPreset::Amber:
+            theme = QStringLiteral("Amber Monochrome");
+            crt.scanlines = 25;
+            crt.vignette = 30;
+            crt.phosphor = 30;
+            crt.phosphor_colour = QColor{255, 176, 0};
+            label = tr("Amber monitor");
+            break;
+        case ScreenPreset::Green:
+            theme = QStringLiteral("Green Monochrome");
+            crt.scanlines = 25;
+            crt.vignette = 30;
+            crt.phosphor = 30;
+            crt.phosphor_colour = QColor{0, 255, 0};
+            label = tr("Green monitor");
+            break;
+        case ScreenPreset::White:
+            theme = QStringLiteral("High Contrast Dark");
+            crt.scanlines = 20;
+            crt.curvature = 35;
+            crt.phosphor = 20;
+            crt.phosphor_colour = QColor{235, 235, 235};
+            label = tr("White phosphor monitor");
+            break;
+    }
+
+    applyTheme(theme);
+    setCrtSettings(crt);
+    saveCrtSettings();
+    setExecutionState(tr("ready"), label);
+}
+
+void MainWindow::setFocusMode(bool on) {
+    if (focus_mode_ == on) {
+        return;
+    }
+    focus_mode_ = on;
+
+    if (on) {
+        // Only what was actually visible is recorded, so leaving does not pop up a
+        // panel the user had closed before entering the mode.
+        QList<QWidget*> chrome{tool_bar_, tool_bar_secondary_, function_key_bar_,
+                               statusBar()};
+        // Docks are the panels, and their titles are part of the chrome.
+        for (QDockWidget* dock : findChildren<QDockWidget*>()) {
+            chrome.append(dock);
+        }
+        focus_hidden_.clear();
+        for (QWidget* widget : chrome) {
+            if (widget != nullptr && widget->isVisible()) {
+                focus_hidden_.append(QPointer<QWidget>{widget});
+                widget->setVisible(false);
+            }
+        }
+    } else {
+        for (const QPointer<QWidget>& guarded : focus_hidden_) {
+            // Through a raw pointer: GCC's `-Wnull-dereference` reads
+            // `QPointer::operator->` as possibly null whatever the guard.
+            QWidget* widget = guarded.data();
+            if (widget != nullptr) {
+                widget->setVisible(true);
+            }
+        }
+        focus_hidden_.clear();
+    }
+
+    if (focus_shortcut_ != nullptr) {
+        focus_shortcut_->setEnabled(on);
+    }
+    if (focus_action_ != nullptr && focus_action_->isChecked() != on) {
+        QSignalBlocker blocker{focus_action_};
+        focus_action_->setChecked(on);
+    }
+    setExecutionState(tr("ready"), on ? tr("Focus mode \u2014 press Esc to leave")
+                                      : tr("Focus mode off"));
+}
+
+void MainWindow::setHighContrast(bool on) {
+    if (high_contrast_ == on) {
+        // Still re-applied: a caller that asks for the state the window is already
+        // in wants the state, not a no-op, and a second `applyTheme` is cheap.
+        applyTheme(theme_name_);
+        return;
+    }
+    high_contrast_ = on;
+    // Re-applying the same theme with the flag set is what makes this a *variant*
+    // rather than a theme: the colours were chosen by the user and are not
+    // replaced, only pushed until they can be read.
+    applyTheme(theme_name_);
+    if (high_contrast_action_ != nullptr && high_contrast_action_->isChecked() != on) {
+        QSignalBlocker blocker{high_contrast_action_};
+        high_contrast_action_->setChecked(on);
+    }
+    setExecutionState(tr("ready"), on ? tr("High contrast on") : tr("High contrast off"));
+}
+
 void MainWindow::applyThemeToWidgets() {
     const Theme& theme = themes::byName(theme_name_);
+    const themes::Colours resolved = themes::resolve(theme, high_contrast_);
 
     // Syntax colours. The highlighter's five roles against the theme's six: the
     // theme's `function` is the closest thing it has to a "directive" (PILOT's
     // unit letters, Scheme's labels), which is what that slot means here.
     SyntaxColors colours;
-    colours.keyword = themes::colour(theme.keyword);
-    colours.comment = themes::colour(theme.comment);
-    colours.string = themes::colour(theme.string);
-    colours.number = themes::colour(theme.number);
-    colours.directive = themes::colour(theme.function);
+    colours.keyword = resolved.keyword;
+    colours.comment = resolved.comment;
+    colours.string = resolved.string;
+    colours.number = resolved.number;
+    colours.directive = resolved.function;
 
     const auto recolour = [&colours](QTabWidget* tabs) {
         if (tabs == nullptr) {
@@ -1052,7 +1330,7 @@ void MainWindow::applyThemeToWidgets() {
 
     // The canvas surface, and the surface the next run starts on. A program that
     // names its own background still wins for that run; this is the default.
-    const QColor surface = themes::colour(theme.canvas_bg);
+    const QColor surface = resolved.canvas_bg;
     if (turtle_canvas_ != nullptr) {
         turtle_canvas_->setSurfaceColor(surface);
     }
@@ -1060,22 +1338,20 @@ void MainWindow::applyThemeToWidgets() {
     // The two verdict colours, which the theme carries for exactly this reason:
     // the panel's shipped green and red are unreadable on the phosphor themes.
     if (lesson_panel_ != nullptr) {
-        lesson_panel_->setVerdictColors(themes::colour(theme.success_color),
-                                        themes::colour(theme.error_color));
+        lesson_panel_->setVerdictColors(resolved.success_color, resolved.error_color);
     }
 
     // The problem markers. A red squiggle on the red-phosphor or amber themes is
     // exactly the colour of everything else, so the marker colours come from the
     // theme too -- the error colour it carries for output, and its warning colour.
-    const auto recolour_markers = [&theme](QTabWidget* tabs) {
+    const auto recolour_markers = [&resolved](QTabWidget* tabs) {
         if (tabs == nullptr) {
             return;
         }
         for (int index = 0; index < tabs->count(); ++index) {
             if (auto* editor = qobject_cast<CodeEditor*>(tabs->widget(index));
                 editor != nullptr) {
-                editor->setDiagnosticColors(themes::colour(theme.error_color),
-                                            themes::colour(theme.warning_color));
+                editor->setDiagnosticColors(resolved.error_color, resolved.warning_color);
             }
         }
     };
@@ -1092,6 +1368,7 @@ void MainWindow::loadEditorSettings() {
     EditorSettings loaded;
     loaded.font_family = settings.value(kSettingEditorFont, QString{}).toString();
     loaded.font_point_size = settings.value(kSettingEditorFontSize, 11).toInt();
+    loaded.font_scale_percent = settings.value(kSettingFontScale, 100).toInt();
     loaded.tab_width = settings.value(kSettingEditorTabWidth, 4).toInt();
     loaded.show_line_numbers = settings.value(kSettingEditorLineNumbers, true).toBool();
     loaded.highlight_current_line =
@@ -1111,6 +1388,7 @@ void MainWindow::saveEditorSettings() const {
     QSettings settings;
     settings.setValue(kSettingEditorFont, editor_settings_.font_family);
     settings.setValue(kSettingEditorFontSize, editor_settings_.font_point_size);
+    settings.setValue(kSettingFontScale, editor_settings_.font_scale_percent);
     settings.setValue(kSettingEditorTabWidth, editor_settings_.tab_width);
     settings.setValue(kSettingEditorLineNumbers, editor_settings_.show_line_numbers);
     settings.setValue(kSettingEditorCurrentLine, editor_settings_.highlight_current_line);
@@ -1126,22 +1404,50 @@ void MainWindow::saveEditorSettings() const {
 
 void MainWindow::applyEditorSettings(const EditorSettings& settings) {
     editor_settings_ = settings;
-    const Theme& theme = themes::byName(theme_name_);
-    const auto apply_to = [this, &theme](QTabWidget* tabs) {
+    const themes::Colours resolved =
+        themes::resolve(themes::byName(theme_name_), high_contrast_);
+    const auto apply_to = [this, &resolved](QTabWidget* tabs) {
         if (tabs == nullptr) {
             return;
         }
         for (int index = 0; index < tabs->count(); ++index) {
             if (auto* editor = qobject_cast<CodeEditor*>(tabs->widget(index));
                 editor != nullptr) {
-                editor->setDiagnosticColors(themes::colour(theme.error_color),
-                                            themes::colour(theme.warning_color));
+                editor->setDiagnosticColors(resolved.error_color, resolved.warning_color);
                 editor->applySettings(editor_settings_);
             }
         }
     };
     apply_to(editor_tabs_);
     apply_to(editor_tabs_secondary_);
+
+    // The console and the two logs are separate text views with a fixed font, so
+    // they scale with the same ladder rather than staying at ten points while the
+    // editor grows around them.
+    const int log_points =
+        std::max(6, static_cast<int>(std::lround(10.0 * editor_settings_.font_scale_percent / 100.0)));
+    for (const QString& name : {QStringLiteral("consoleOutput"), QStringLiteral("errorsLog"),
+                                QStringLiteral("turtleLog")}) {
+        const QList<QPlainTextEdit*> logs = findChildren<QPlainTextEdit*>(name);
+        for (QPlainTextEdit* log : logs) {
+            QFont log_font = log->font();
+            log_font.setPointSize(log_points);
+            log->setFont(log_font);
+        }
+    }
+
+    // Everything without a font of its own -- panels, docks, dialogs, menus --
+    // inherits the application font. Scaling from the font captured at first use
+    // rather than from the current one keeps 150% from becoming 225% the next time
+    // Preferences is applied.
+    static const QFont base_ui_font = QApplication::font();
+    QFont ui_font = base_ui_font;
+    ui_font.setPointSizeF(std::max(6.0, base_ui_font.pointSizeF() *
+                                            (std::max(1, editor_settings_.font_scale_percent) /
+                                             100.0)));
+    if (auto* app = qobject_cast<QApplication*>(QCoreApplication::instance())) {
+        app->setFont(ui_font);
+    }
 
     // The interval is a setting, so the timer follows it. Ten seconds is the
     // floor: anything shorter is a disk-write loop wearing a feature's clothes.
@@ -2083,10 +2389,14 @@ void MainWindow::buildToolBar() {
     connect(clear_canvas, &QAction::triggered, this, [this] { clearCanvas(); });
 
     tool_bar_secondary_->addSeparator();
-    notPorted(tool_bar_secondary_->addAction(tr("\u267F A+")),
-              tr("needs the accessibility presets, which are not ported yet"))
-        ->setToolTip(tr("Apply an accessibility preset - needs the accessibility "
-                        "presets, which are not ported yet"));
+    // The accessibility ladder: 100, 125, 150%. It scales the editor, the console
+    // and the panels together -- a learner who needs bigger text needs all of it,
+    // not one pane at a time -- and the chosen step is a setting.
+    QAction* font_scale = tool_bar_secondary_->addAction(tr("\u267F A+"));
+    font_scale->setObjectName(QStringLiteral("fontScaleAction"));
+    font_scale->setToolTip(tr("Bigger text: 100%, 125%, 150% (Ctrl+Alt+A)"));
+    font_scale->setShortcut(QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_A});
+    connect(font_scale, &QAction::triggered, this, [this] { cycleFontScale(); });
 
     tool_bar_secondary_->addSeparator();
     // Where the turtle-speed slider used to be. The slider was removed rather
@@ -2520,16 +2830,16 @@ void MainWindow::adoptEditor(CodeEditor* editor) {
     // this, every new document after the first would be syntax-coloured for the
     // light theme while the window around it is dark.
     if (editor->highlighter() != nullptr) {
-        const Theme& theme = themes::byName(theme_name_);
+        const themes::Colours resolved =
+            themes::resolve(themes::byName(theme_name_), high_contrast_);
         SyntaxColors colours;
-        colours.keyword = themes::colour(theme.keyword);
-        colours.comment = themes::colour(theme.comment);
-        colours.string = themes::colour(theme.string);
-        colours.number = themes::colour(theme.number);
-        colours.directive = themes::colour(theme.function);
+        colours.keyword = resolved.keyword;
+        colours.comment = resolved.comment;
+        colours.string = resolved.string;
+        colours.number = resolved.number;
+        colours.directive = resolved.function;
         editor->highlighter()->setColors(colours);
-        editor->setDiagnosticColors(themes::colour(theme.error_color),
-                                    themes::colour(theme.warning_color));
+        editor->setDiagnosticColors(resolved.error_color, resolved.warning_color);
     }
     // And the editor's own customisations, for the same reason: a tab opened
     // after Preferences was used has to look like the tabs that were already

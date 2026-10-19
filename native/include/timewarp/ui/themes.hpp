@@ -87,6 +87,40 @@ struct Theme {
 
 namespace themes {
 
+/// A theme's colours, resolved rather than raw: `resolve` is the one place that
+/// decides what a field means, including the accessibility adjustment. Every
+/// consumer below takes this, so "what colour is the keyword" has one answer.
+struct Colours {
+    QColor background;
+    QColor foreground;
+    QColor editor_bg;
+    QColor editor_fg;
+    QColor line_number_bg;
+    QColor line_number_fg;
+    QColor menu_bg;
+    QColor menu_fg;
+    QColor border;
+    QColor selection_bg;
+    QColor selection_fg;
+    QColor bevel_light;
+    QColor bevel_dark;
+    QColor keyword;
+    QColor comment;
+    QColor string;
+    QColor number;
+    QColor function;
+    QColor error_color;
+    QColor warning_color;
+    QColor success_color;
+    QColor info_color;
+    QColor canvas_bg;
+    QColor fkey_bg;
+    QColor fkey_badge;
+    QColor panel_header_bg;
+    QColor panel_header_fg;
+    QColor hud_accent;
+};
+
 /// Every theme, in the order the View menu lists them.
 [[nodiscard]] const std::vector<Theme>& all();
 
@@ -102,20 +136,34 @@ namespace themes {
 /// The theme after `name`, wrapping. What the Shift+F10 key needs.
 [[nodiscard]] const Theme& next(const QString& name);
 
+/// The colours of `theme`.
+///
+/// With *high_contrast*, the surfaces become black and white -- in the direction
+/// the theme already goes, so a dark theme stays dark -- and every accent is
+/// pushed along its own hue until it clears 7:1 against that surface. The
+/// accents keep their identity (red still reads as red); what they lose is the
+/// freedom to be too dim to read, which is the point.
+[[nodiscard]] Colours resolve(const Theme& theme, bool high_contrast = false);
+
 /// The application palette for a theme. Every role the base stylesheet reads is
 /// set, including the `dark`/`mid`/`shadow` shades -- a palette that leaves them
 /// at the default style's values paints light-theme chrome on a dark-theme
 /// window.
-[[nodiscard]] QPalette paletteFor(const Theme& theme);
+[[nodiscard]] QPalette paletteFor(const Theme& theme, bool high_contrast = false);
 
 /// The theme's own rules, appended after `style::window()`: the tokens a
 /// palette cannot express (a menu bar that is a different colour from the
 /// window, the function-key bar's badge, the editor surface).
-[[nodiscard]] QString stylesheetFor(const Theme& theme);
+[[nodiscard]] QString stylesheetFor(const Theme& theme, bool high_contrast = false);
 
 /// `#rrggbb` to a QColor. Returns an invalid QColor for anything else rather
 /// than silently producing black, so a typo in the table shows up in a test.
 [[nodiscard]] QColor colour(const char* hex);
+
+/// The WCAG 2 contrast ratio of two colours, 1.0 (identical) to 21.0
+/// (black against white). Used by the tests to hold high contrast to its
+/// promise rather than to an opinion.
+[[nodiscard]] double contrastRatio(const QColor& a, const QColor& b);
 
 }  // namespace themes
 }  // namespace timewarp::ui

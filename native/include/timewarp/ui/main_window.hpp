@@ -50,12 +50,17 @@
 #include <QString>
 #include <QStringList>
 
+#include <array>
+
 #include "timewarp/bridge/python_worker.hpp"
 #include "timewarp/debugger/debugger_runner.hpp"
 #include "timewarp/lang/language.hpp"
 #include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/language.hpp"
+// The CRT overlay's `Settings` is a nested type, so a forward declaration will not
+// do here; `panels.hpp` is where the overlay lives.
+#include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/snippets.hpp"
 
 class QAction;
@@ -65,6 +70,7 @@ class QDockWidget;
 class QLabel;
 class QMenu;
 class QPlainTextEdit;
+class QShortcut;
 class QSplitter;
 class QTabWidget;
 class QToolBar;
@@ -80,6 +86,11 @@ class CanvasBridge;
 }  // namespace timewarp::canvas
 
 namespace timewarp::ui {
+
+/// The four Monitor styles the removed implementation had. Expressed as a theme
+/// plus CRT values rather than as a parallel display system: there is exactly one
+/// mechanism, and a preset is a named point in it.
+enum class ScreenPreset { Normal, Amber, Green, White };
 
 class CodeEditor;
 class CommandPalette;
@@ -289,7 +300,54 @@ public:
     /// The next theme in the table, wrapping. What Shift+F10 does.
     void cycleTheme();
 
-    // -- editor settings ---------------------------------------------------
+    // -- accessibility -----------------------------------------------------
+
+    /// Turns the maximum-contrast variant of the current theme on or off. It is
+    /// not a theme of its own: every theme has one, so the user keeps the colours
+    /// they chose and gains legibility rather than being moved somewhere else.
+    void setHighContrast(bool on);
+    [[nodiscard]] bool highContrast() const noexcept { return high_contrast_; }
+
+    /// The text-scale ladder. Three steps rather than a slider: a scale that can
+    /// be any number invites a learner to hunt for one, and every step has to look
+    /// right on all three surfaces.
+    static constexpr std::array<int, 3> kFontScales{100, 125, 150};
+    /// Scales the editor, the console and the panels together, and persists it.
+    /// Anything off the ladder snaps to the nearest step below it (the top step
+    /// for anything larger), so a hand-edited settings file cannot produce a
+    /// fourth size nothing was designed for.
+    void setFontScale(int percent);
+    [[nodiscard]] int fontScale() const noexcept {
+        return editor_settings_.font_scale_percent;
+    }
+    /// The next step, wrapping. What the A+ button and Ctrl+Alt+A do.
+    void cycleFontScale();
+
+    /// Hides the chrome -- both toolbars, the function-key bar, the status bar and
+    /// every dock -- so the editor and the canvas get the window. Esc leaves it.
+    ///
+    /// Session state, not a setting: a window that opened in focus mode would hide
+    /// its own way out, which is a state a user cannot be expected to reason about
+    /// at launch.
+    void setFocusMode(bool on);
+    [[nodiscard]] bool focusMode() const noexcept { return focus_mode_; }
+
+    /// The CRT overlay's five effects. Applying them shows the overlay, because a
+    /// setting that is on but invisible is a setting the user cannot judge.
+    void setCrtSettings(const CrtOverlay::Settings& settings);
+    [[nodiscard]] const CrtOverlay::Settings& crtSettings() const noexcept {
+        return crt_settings_;
+    }
+    /// Applies a Monitor style: the theme it is built on plus its CRT values, in
+    /// one action. Both are persisted, because a preset the user has to reapply
+    /// after every restart is a demonstration rather than a setting.
+    void applyScreenPreset(ScreenPreset preset);
+    /// Opens the settings dialog with a live preview; Cancel puts the old values
+    /// back, and OK persists them.
+    void showCrtSettings();
+    /// The overlay's effects as stored, with everything off for a fresh profile.
+    [[nodiscard]] CrtOverlay::Settings loadCrtSettings() const;
+    void saveCrtSettings() const;    // -- editor settings ---------------------------------------------------
     //
     // One settings record, applied to every tab: the editor's font, tab width,
     // gutter, current-line band, auto-indent, checking and completion. Persisted
@@ -624,6 +682,26 @@ private:
     /// The View menu's checkable CRT entry, so the function key can drive the
     /// menu's state instead of a second flag that could disagree with it.
     QAction* crt_action_ = nullptr;
+    /// The View menu's High Contrast entry, kept so `setHighContrast` can move the
+    /// tick when something other than the menu asks for the change.
+    QAction* high_contrast_action_ = nullptr;
+    /// Session state, not a setting: the old implementation's toggle reset on
+    /// restart, and a window that opens in high contrast without the user asking
+    /// again is a window that forgot why.
+    bool high_contrast_ = false;
+    /// Focus mode: the action, the Esc shortcut and exactly the widgets this mode
+    /// hid, so leaving restores what was there rather than what a default layout
+    /// would show.
+    QAction* focus_action_ = nullptr;
+    QShortcut* focus_shortcut_ = nullptr;
+    bool focus_mode_ = false;
+    QList<QPointer<QWidget>> focus_hidden_;
+    /// The CRT effect values in force, and the dialog that edits them.
+    CrtOverlay::Settings crt_settings_;
+    /// What was in force when the dialog opened. The preview overwrites
+    /// `crt_settings_` on every slider move, so Cancel needs a copy of its own.
+    CrtOverlay::Settings crt_before_dialog_;
+    CrtSettingsDialog* crt_dialog_ = nullptr;
     /// The editor's customisations, as loaded at startup and edited in Preferences.
     EditorSettings editor_settings_;
     /// The one sound player, shared by every run: a `SOUND` from the next program

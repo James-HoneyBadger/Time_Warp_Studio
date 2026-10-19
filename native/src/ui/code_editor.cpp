@@ -71,7 +71,8 @@ constexpr int kLintDelayMilliseconds = 350;
         font = QFont{settings.font_family};
         font.setStyleHint(QFont::Monospace);
     }
-    font.setPointSize(std::max(6, settings.font_point_size));
+    font.setPointSizeF(std::max(6.0, settings.font_point_size *
+                                           (std::max(1, settings.font_scale_percent) / 100.0)));
     return font;
 }
 

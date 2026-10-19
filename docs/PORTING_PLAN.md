@@ -66,7 +66,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 5 | Export and print | PDF ✅, print, session HTML ✅ | M | 5.2 needs a dependency decision |
 | 6 | Debugging breadth | breakpoints everywhere, pause/step for line-by-line languages, profiler | L | 0, best after 1 |
 | 7 | Workspace | document outline, terminal, split editor, run both panes | M | 7.3 needs 1.5 |
-| 8 | Accessibility and display | high contrast, font scale, focus mode, CRT settings | S–M | 0 |
+| 8 | Accessibility and display | high contrast ✅, font scale ✅, focus mode ✅, CRT settings ✅, screen presets ✅ | S–M | 0 |
 | 9 | Classroom | roster panel, presentation mode, lesson session export, bundles | M | 9.4 needs an archive decision |
 
 Size: **S** ≈ a session, **M** ≈ two or three, **L** ≈ a week of part-time work.
@@ -553,6 +553,14 @@ The A+ toolbar button stops being disabled (see 8.2).
 **Tests:** contrast ratio of text against background is at least 7:1 in both dark
 and light themes; toggling twice returns the original palette exactly.
 
+**Done.** `themes::resolve(theme, high_contrast)` is the one place that decides
+what a theme's fields mean, and `paletteFor`/`stylesheetFor` now build from it
+rather than from the raw table. High contrast forces the surfaces to black or
+white *in the direction the theme already goes* and lifts every accent along its
+own hue until it clears 7:1, so a learner keeps their theme and gains legibility.
+The toggle is View > High Contrast (Ctrl+Alt+H), and it re-applies the current
+theme rather than switching to a different one.
+
 ### 8.2 Font scale presets (S)
 
 A+ cycles 100/125/150%; applies to the editor, console and panels, and persists.
@@ -562,6 +570,12 @@ panel does not need a second mechanism.
 **Tests:** each preset sets the expected point size on all three surfaces; it
 survives a restart.
 
+**Done.** `EditorSettings::font_scale_percent` scales *on top of* the chosen
+point size, so Preferences keeps meaning what it says. A+ and Ctrl+Alt+A cycle
+100 → 125 → 150 and wrap; the editor, the console and the three log views take
+the same number, and the application font is set from a captured base so applying
+settings twice cannot compound the scale.
+
 ### 8.3 Focus mode (S)
 
 Old: `focus_mode.py` (136). Hides docks, toolbars and the status bar; Esc leaves it;
@@ -569,6 +583,12 @@ state is per-session, not persisted.
 
 **Tests:** entering hides the named widgets and leaving restores exactly those that
 were visible; Esc is bound while the mode is on and unbound after.
+
+**Done.** `setFocusMode` records the widgets it hides -- both toolbars, the
+function-key bar, the status bar and every dock -- and restores exactly that list,
+so leaving cannot resurrect a panel the user had closed. F11 toggles it and Esc
+leaves it; the Escape shortcut is disabled at every other time, because Escape
+belongs to whatever has focus when the mode is off.
 
 ### 8.4 CRT settings (S)
 
@@ -579,12 +599,26 @@ with live preview and persist the values; the overlay currently reads a fixed se
 **Tests:** each slider reaches the overlay; values round-trip through `QSettings`;
 zero intensity paints no overlay.
 
+**Done.** `CrtOverlay` gained four more effects next to the scanlines -- vignette
+(a radial wash), curvature (a rounded darkened bezel rather than a fake warp),
+flicker (a slow twelve-step breath on a timer that runs only while it is on) and a
+phosphor tint. `CrtSettingsDialog` drives the real overlay for its live preview
+and Cancel restores the values captured when it opened; OK persists them under
+`display/crt/*`. All five at zero paints exactly nothing, which the tests assert
+by rendering the overlay and counting the pixels it touched.
+
 ### 8.5 Screen-mode presets (S)
 
 Map the old Monitor styles (amber, green, white phosphor, normal) onto an existing
 theme plus CRT settings in one action, rather than a parallel display system.
 
 **Tests:** each preset selects the expected theme and overlay values.
+
+**Done.** View > Screen Mode offers Normal, Amber, Green and White Phosphor. Each
+row of the one table names a theme from the 33 and the CRT values that suit it, so
+a preset is a row rather than a code path and cannot half-apply. Both halves are
+persisted, because a preset a user must reapply after every launch is a
+demonstration rather than a setting.
 
 ---
 

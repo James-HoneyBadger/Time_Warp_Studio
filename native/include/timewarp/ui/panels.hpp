@@ -15,6 +15,7 @@
 #pragma once
 
 #include <QColor>
+#include <QDialog>
 #include <QFrame>
 #include <QList>
 #include <QPair>
@@ -32,9 +33,11 @@ class QLineEdit;
 class QListWidget;
 class QProgressBar;
 class QPushButton;
+class QSlider;
 class QSpinBox;
 class QTableWidget;
 class QTextBrowser;
+class QTimer;
 class QVBoxLayout;
 
 namespace timewarp::ui {
@@ -188,7 +191,28 @@ class CrtOverlay final : public QWidget {
 public:
     explicit CrtOverlay(QWidget* target);
 
-    /// 0..100. Zero disables painting without hiding the widget.
+    /// The overlay's five effects, each 0..100. Zero everywhere paints nothing at
+    /// all, which is what makes "off" exact rather than nearly-nothing.
+    struct Settings {
+        int scanlines = 15;
+        int vignette = 0;
+        /// A rounded, darkened border suggesting a tube's curved face. Not a real
+        /// warp: distorting the pixels underneath would mean rendering the window
+        /// through a shader, and the honest version of the effect is a bezel.
+        int curvature = 0;
+        /// A slow brightness breath. Subtle by design -- a flicker a learner notices
+        /// while reading is a flicker that hurts.
+        int flicker = 0;
+        /// A tint over everything, the amber or green cast of a phosphor monitor.
+        int phosphor = 0;
+        QColor phosphor_colour{51, 255, 102};
+    };
+
+    void setSettings(const Settings& settings);
+    [[nodiscard]] const Settings& settings() const noexcept { return settings_; }
+
+    /// 0..100. Zero disables scanlines without hiding the widget. Kept as its own
+    /// accessor because the View menu toggles the overlay's visibility, not this.
     void setScanlineIntensity(int percent);
     [[nodiscard]] int scanlineIntensity() const noexcept;
 
@@ -201,9 +225,38 @@ protected:
 
 private:
     void syncToTarget();
+    void paintScanlines(QPainter& painter);
+    void paintVignette(QPainter& painter);
+    void paintCurvature(QPainter& painter);
+    void paintPhosphor(QPainter& painter);
 
     QWidget* target_ = nullptr;
-    int intensity_ = 15;
+    Settings settings_;
+    /// Flicker needs a clock; the other four are still.
+    QTimer* flicker_timer_ = nullptr;
+    int flicker_phase_ = 0;
+};
+
+/// The CRT settings dialog: five sliders and a live preview.
+///
+/// A dialog rather than panel controls because the effect is set once and then
+/// forgotten, and because the preview has to be the real overlay: a settings
+/// window that shows its own mock-up can be right while the window is wrong.
+class CrtSettingsDialog final : public QDialog {
+    Q_OBJECT
+
+public:
+    explicit CrtSettingsDialog(const CrtOverlay::Settings& start, QWidget* parent = nullptr);
+
+    [[nodiscard]] CrtOverlay::Settings settings() const noexcept { return settings_; }
+
+signals:
+    /// Emitted on every slider move, so the window can paint the change before the
+    /// user decides. `rejected` is the window's cue to put the old values back.
+    void previewRequested(const CrtOverlay::Settings& settings);
+
+private:
+    CrtOverlay::Settings settings_;
 };
 
 /// The lesson panel: the curriculum, the current checkpoint, and a way to check.

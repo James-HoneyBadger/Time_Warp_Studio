@@ -5,6 +5,7 @@
 #include <QStringList>
 
 #include <algorithm>
+#include <cmath>
 #include <iterator>
 
 namespace timewarp::ui::themes {
@@ -72,23 +73,155 @@ QColor colour(const char* hex) {
     return QColor{text};
 }
 
-QPalette paletteFor(const Theme& theme) {
+double contrastRatio(const QColor& a, const QColor& b) {
+    // The WCAG relative luminance: sRGB channels linearised, weighted by the eye's
+    // sensitivity, then the ratio of the lighter to the darker.
+    const auto channel = [](double value) {
+        return value <= 0.03928 ? value / 12.92 : std::pow((value + 0.055) / 1.055, 2.4);
+    };
+    const auto luminance = [&channel](const QColor& colour) {
+        return 0.2126 * channel(colour.redF()) + 0.7152 * channel(colour.greenF()) +
+               0.0722 * channel(colour.blueF());
+    };
+    const double first = luminance(a);
+    const double second = luminance(b);
+    const double lighter = std::max(first, second);
+    const double darker = std::min(first, second);
+    return (lighter + 0.05) / (darker + 0.05);
+}
+
+namespace {
+
+/// `colour`, pushed along its own hue until it clears `target` against
+/// `background`. The hue is what makes a keyword look like a keyword, so it is
+/// the one thing that survives; brightness is what accessibility owns.
+[[nodiscard]] QColor liftToContrast(const QColor& colour, const QColor& background,
+                                    double target = 7.0) {
+    if (!colour.isValid()) {
+        // A missing colour is not something to guess at: the foreground is the one
+        // value guaranteed to be legible on the background.
+        return background.lightness() < 128 ? QColor{Qt::white} : QColor{Qt::black};
+    }
+    if (contrastRatio(colour, background) >= target) {
+        return colour;
+    }
+    const bool towards_white = background.lightness() < 128;
+    for (int step = 1; step <= 20; ++step) {
+        const double t = step / 20.0;
+        const double red = towards_white ? colour.redF() + (1.0 - colour.redF()) * t
+                                         : colour.redF() * (1.0 - t);
+        const double green = towards_white ? colour.greenF() + (1.0 - colour.greenF()) * t
+                                           : colour.greenF() * (1.0 - t);
+        const double blue = towards_white ? colour.blueF() + (1.0 - colour.blueF()) * t
+                                          : colour.blueF() * (1.0 - t);
+        QColor mixed;
+        mixed.setRgbF(red, green, blue);
+        if (contrastRatio(mixed, background) >= target) {
+            return mixed;
+        }
+    }
+    return towards_white ? QColor{Qt::white} : QColor{Qt::black};
+}
+
+}  // namespace
+
+Colours resolve(const Theme& theme, bool high_contrast) {
+    Colours colours;
+    colours.background = colour(theme.background);
+    colours.foreground = colour(theme.foreground);
+    colours.editor_bg = colour(theme.editor_bg);
+    colours.editor_fg = colour(theme.editor_fg);
+    colours.line_number_bg = colour(theme.line_number_bg);
+    colours.line_number_fg = colour(theme.line_number_fg);
+    colours.menu_bg = colour(theme.menuBackground());
+    colours.menu_fg = colour(theme.menuForeground());
+    colours.border = colour(theme.border());
+    colours.selection_bg = colour(theme.selection_bg);
+    colours.selection_fg = colour(theme.selection_fg);
+    colours.bevel_light = colour(theme.bevel_light);
+    colours.bevel_dark = colour(theme.bevel_dark);
+    colours.keyword = colour(theme.keyword);
+    colours.comment = colour(theme.comment);
+    colours.string = colour(theme.string);
+    colours.number = colour(theme.number);
+    colours.function = colour(theme.function);
+    colours.error_color = colour(theme.error_color);
+    colours.warning_color = colour(theme.warning_color);
+    colours.success_color = colour(theme.success_color);
+    colours.info_color = colour(theme.info_color);
+    colours.canvas_bg = colour(theme.canvas_bg);
+    colours.fkey_bg = colour(theme.fkey_bg);
+    colours.fkey_badge = colour(theme.fkey_badge);
+    colours.panel_header_bg = colour(theme.panel_header_bg);
+    colours.panel_header_fg = colour(theme.panel_header_fg);
+    colours.hud_accent = colour(theme.hud_accent);
+
+    if (!high_contrast) {
+        return colours;
+    }
+
+    // Black on white or white on black, in the direction the theme already goes:
+    // a user who reads light-on-dark is not asking to be flipped to black-on-white
+    // when they ask for more contrast.
+    const bool dark = colours.background.lightness() < 128;
+    const QColor surface = dark ? QColor{Qt::black} : QColor{Qt::white};
+    const QColor ink = dark ? QColor{Qt::white} : QColor{Qt::black};
+
+    colours.background = surface;
+    colours.foreground = ink;
+    colours.editor_bg = surface;
+    colours.editor_fg = ink;
+    colours.canvas_bg = surface;
+    colours.line_number_bg = surface;
+    colours.line_number_fg = ink;
+    colours.menu_bg = surface;
+    colours.menu_fg = ink;
+    colours.border = ink;
+    colours.bevel_light = ink;
+    colours.bevel_dark = ink;
+    // Inverted, so a selection is still visibly a selection when the background is
+    // already pure white or pure black.
+    colours.selection_bg = ink;
+    colours.selection_fg = surface;
+    // The header bar and the badges carry their text *on* an accent, so both roles
+    // become the pair rather than a lifted hue: an accent lightened for a black
+    // surface would leave the surface-coloured text on it unreadable.
+    colours.panel_header_bg = ink;
+    colours.panel_header_fg = surface;
+    colours.hud_accent = ink;
+    colours.info_color = surface;
+    colours.fkey_bg = surface;
+    colours.fkey_badge = ink;
+
+    colours.keyword = liftToContrast(colours.keyword, surface);
+    colours.comment = liftToContrast(colours.comment, surface);
+    colours.string = liftToContrast(colours.string, surface);
+    colours.number = liftToContrast(colours.number, surface);
+    colours.function = liftToContrast(colours.function, surface);
+    colours.error_color = liftToContrast(colours.error_color, surface);
+    colours.warning_color = liftToContrast(colours.warning_color, surface);
+    colours.success_color = liftToContrast(colours.success_color, surface);
+    return colours;
+}
+
+QPalette paletteFor(const Theme& theme, bool high_contrast) {
+    const Colours colours = resolve(theme, high_contrast);
     QPalette palette;
-    const QColor background = colour(theme.background);
-    const QColor foreground = colour(theme.foreground);
-    const QColor base = colour(theme.editor_bg);
-    const QColor text = colour(theme.editor_fg);
-    const QColor menu_bg = colour(theme.menuBackground());
-    const QColor menu_fg = colour(theme.menuForeground());
-    const QColor border = colour(theme.border());
-    const QColor selection = colour(theme.selection_bg);
-    const QColor selected_text = colour(theme.selection_fg);
+    const QColor background = colours.background;
+    const QColor foreground = colours.foreground;
+    const QColor base = colours.editor_bg;
+    const QColor text = colours.editor_fg;
+    const QColor menu_bg = colours.menu_bg;
+    const QColor menu_fg = colours.menu_fg;
+    const QColor border = colours.border;
+    const QColor selection = colours.selection_bg;
+    const QColor selected_text = colours.selection_fg;
 
     // The roles the Python set, in the same order.
     palette.setColor(QPalette::Window, background);
     palette.setColor(QPalette::WindowText, foreground);
     palette.setColor(QPalette::Base, base);
-    palette.setColor(QPalette::AlternateBase, colour(theme.line_number_bg));
+    palette.setColor(QPalette::AlternateBase, colours.line_number_bg);
     palette.setColor(QPalette::Text, text);
     palette.setColor(QPalette::Button, menu_bg);
     palette.setColor(QPalette::ButtonText, menu_fg);
@@ -96,8 +229,8 @@ QPalette paletteFor(const Theme& theme) {
     palette.setColor(QPalette::HighlightedText, selected_text);
     palette.setColor(QPalette::ToolTipBase, menu_bg);
     palette.setColor(QPalette::ToolTipText, menu_fg);
-    palette.setColor(QPalette::Link, colour(theme.keyword));
-    palette.setColor(QPalette::LinkVisited, colour(theme.function));
+    palette.setColor(QPalette::Link, colours.keyword);
+    palette.setColor(QPalette::LinkVisited, colours.function);
 
     // The roles the Python left to the platform, and could not have left alone
     // here: `style::window()` reads `palette(dark)` for every border and
@@ -105,24 +238,24 @@ QPalette paletteFor(const Theme& theme) {
     // the *system* style's values for roles it is not given, which on a light
     // desktop paints pale grey separators across a near-black theme.
     palette.setColor(QPalette::Dark, border);
-    palette.setColor(QPalette::Mid, colour(theme.line_number_fg));
-    palette.setColor(QPalette::Midlight, colour(theme.bevel_light));
-    palette.setColor(QPalette::Light, colour(theme.bevel_light));
-    palette.setColor(QPalette::Shadow, colour(theme.bevel_dark));
+    palette.setColor(QPalette::Mid, colours.line_number_fg);
+    palette.setColor(QPalette::Midlight, colours.bevel_light);
+    palette.setColor(QPalette::Light, colours.bevel_light);
+    palette.setColor(QPalette::Shadow, colours.bevel_dark);
     palette.setColor(QPalette::BrightText, foreground);
-    palette.setColor(QPalette::PlaceholderText, colour(theme.line_number_fg));
+    palette.setColor(QPalette::PlaceholderText, colours.line_number_fg);
 #if QT_VERSION >= QT_VERSION_CHECK(6, 6, 0)
     // `Accent` arrived in Qt 6.6. Nothing in the window reads it -- the base
     // stylesheet is built on `highlight` -- so a build against an older Qt loses
     // one role and no behaviour. Guarded rather than dropped, because a desktop
     // running 6.6 or later uses it for focus rings and selection chrome.
-    palette.setColor(QPalette::Accent, colour(theme.hud_accent));
+    palette.setColor(QPalette::Accent, colours.hud_accent);
 #endif
 
     // Disabled widgets: the Python let the style dim them, which on a dark theme
     // produced black-on-black labels. `line_number_fg` is the theme's own "quiet"
     // colour, so it is the one that is legible on that theme's background.
-    const QColor quiet = colour(theme.line_number_fg);
+    const QColor quiet = colours.line_number_fg;
     palette.setColor(QPalette::Disabled, QPalette::WindowText, quiet);
     palette.setColor(QPalette::Disabled, QPalette::Text, quiet);
     palette.setColor(QPalette::Disabled, QPalette::ButtonText, quiet);
@@ -133,19 +266,21 @@ QPalette paletteFor(const Theme& theme) {
     return palette;
 }
 
-QString stylesheetFor(const Theme& theme) {
+QString stylesheetFor(const Theme& theme, bool high_contrast) {
     // Everything that is *not* a palette role. The base stylesheet reads
     // `palette(...)` for tab bars, panes, buttons and the status bar, so those
     // follow the palette above with no rules here. What cannot be a role is a
     // colour that differs by widget: a menu bar that is not the window colour, an
     // editor surface that is not `Base`, a function-key bar with its own chrome.
-    const QString menu_bg = QString::fromUtf8(theme.menuBackground());
-    const QString menu_fg = QString::fromUtf8(theme.menuForeground());
-    const QString border = QString::fromUtf8(theme.border());
-    const QString editor_bg = QString::fromUtf8(theme.editor_bg);
-    const QString editor_fg = QString::fromUtf8(theme.editor_fg);
-    const QString selection_bg = QString::fromUtf8(theme.selection_bg);
-    const QString selection_fg = QString::fromUtf8(theme.selection_fg);
+    const Colours colours = resolve(theme, high_contrast);
+    const auto hex = [](const QColor& colour) { return colour.name(QColor::HexRgb); };
+    const QString menu_bg = hex(colours.menu_bg);
+    const QString menu_fg = hex(colours.menu_fg);
+    const QString border = hex(colours.border);
+    const QString editor_bg = hex(colours.editor_bg);
+    const QString editor_fg = hex(colours.editor_fg);
+    const QString selection_bg = hex(colours.selection_bg);
+    const QString selection_fg = hex(colours.selection_fg);
 
     return QStringLiteral(R"(
 /* -- menus and toolbars: the bar is its own colour, not the window's -- */
@@ -234,14 +369,14 @@ QDockWidget::title { background-color: %12; color: %13; padding: 5px 8px; }
 QToolTip { background-color: %1; color: %2; border: 1px solid %3; }
 )")
         .arg(menu_bg, menu_fg, border, selection_bg, selection_fg, editor_bg, editor_fg)
-        .arg(QString::fromUtf8(theme.error_color))
-        .arg(QString::fromUtf8(theme.keyword))
-        .arg(QString::fromUtf8(theme.fkey_bg))
-        .arg(QString::fromUtf8(theme.fkey_badge))
-        .arg(QString::fromUtf8(theme.panel_header_bg))
-        .arg(QString::fromUtf8(theme.panel_header_fg))
-        .arg(QString::fromUtf8(theme.hud_accent))
-        .arg(QString::fromUtf8(theme.info_color));
+        .arg(hex(colours.error_color))
+        .arg(hex(colours.keyword))
+        .arg(hex(colours.fkey_bg))
+        .arg(hex(colours.fkey_badge))
+        .arg(hex(colours.panel_header_bg))
+        .arg(hex(colours.panel_header_fg))
+        .arg(hex(colours.hud_accent))
+        .arg(hex(colours.info_color));
 }
 
 }  // namespace timewarp::ui::themes

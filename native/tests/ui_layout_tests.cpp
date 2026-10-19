@@ -32,10 +32,12 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMetaMethod>
+#include <QPainter>
 #include <QPlainTextEdit>
 #include <QPushButton>
 #include <QScrollBar>
 #include <QSettings>
+#include <QShortcut>
 #include <QSlider>
 #include <QSpinBox>
 #include <QSplitter>
@@ -883,6 +885,216 @@ void test_themes() {
 
     // Leave the developer's settings as they were for the tests after this one.
     window.applyTheme(original);
+}
+
+void test_high_contrast_clears_a_seven_to_one_floor() {
+    announce("high contrast: the contrast floor");
+    using timewarp::ui::themes::contrastRatio;
+    using timewarp::ui::themes::resolve;
+
+    // A dark theme, a light one and a monochrome retro set: the three cases where
+    // an accent that happens to suit one surface would fail on another.
+    for (const char* name : {"Dracula", "GitHub Light", "VGA Amber Lab"}) {
+        // Copied, not bound by reference: `byName` takes a temporary and returns a
+        // reference to the table, which GCC's dangling-reference analysis cannot
+        // tell apart from a reference into the argument.
+        const timewarp::ui::Theme theme =
+            timewarp::ui::themes::byName(QString::fromLatin1(name));
+        const timewarp::ui::themes::Colours colours = resolve(theme, true);
+        const QColor surface = colours.editor_bg;
+
+        // 7:1 is WCAG AAA for body text; the plan uses it as the floor.
+        TW_CHECK(contrastRatio(colours.foreground, colours.background) >= 7.0);
+        TW_CHECK(contrastRatio(colours.editor_fg, surface) >= 7.0);
+        TW_CHECK(contrastRatio(colours.line_number_fg, colours.line_number_bg) >= 7.0);
+        for (const QColor& accent : {colours.keyword, colours.comment, colours.string,
+                                     colours.number, colours.function,
+                                     colours.error_color, colours.warning_color,
+                                     colours.success_color}) {
+            TW_CHECK(contrastRatio(accent, surface) >= 7.0);
+        }
+
+        // The theme's direction survives: asking for more contrast on a dark theme
+        // must not hand back a light one.
+        const bool theme_is_dark = timewarp::ui::themes::colour(theme.background).lightness() < 128;
+        TW_CHECK_EQ(colours.background.lightness() < 128, theme_is_dark);
+        const QColor expected_surface = theme_is_dark ? QColor{Qt::black} : QColor{Qt::white};
+        TW_CHECK_EQ(colours.background, expected_surface);
+
+        // A selection has to stay visible against a pure surface.
+        TW_CHECK(contrastRatio(colours.selection_fg, colours.selection_bg) >= 7.0);
+    }
+
+    // Without the flag the theme's own colours come through untouched, which is
+    // what makes this a variant rather than a replacement.
+    const timewarp::ui::Theme dracula = timewarp::ui::themes::byName(QStringLiteral("Dracula"));
+    const timewarp::ui::themes::Colours plain = resolve(dracula, false);
+    const QColor dracula_background = timewarp::ui::themes::colour(dracula.background);
+    const QColor dracula_keyword = timewarp::ui::themes::colour(dracula.keyword);
+    TW_CHECK_EQ(plain.background, dracula_background);
+    TW_CHECK_EQ(plain.keyword, dracula_keyword);
+}
+
+void test_high_contrast_toggles_and_restores_the_palette() {
+    announce("high contrast: toggle and restore");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    auto* action = window->findChild<QAction*>(QStringLiteral("highContrastAction"));
+    TW_CHECK(action != nullptr);
+    if (action == nullptr) {
+        return;
+    }
+    TW_CHECK(action->isCheckable());
+    TW_CHECK_EQ(action->shortcut(), QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_H});
+    TW_CHECK(!window->highContrast());
+
+    // This test changes the theme, and the theme is a persisted setting.
+    const QString original = window->currentThemeName();
+
+    // A dark theme first.
+    window->applyTheme(QStringLiteral("Dracula"));
+    const QPalette dark_before = QApplication::palette();
+    action->trigger();
+    TW_CHECK(window->highContrast());
+    const QColor dark_window = QApplication::palette().color(QPalette::Window);
+    TW_CHECK_EQ(dark_window, QColor{Qt::black});
+    TW_CHECK(QApplication::palette() != dark_before);
+    action->trigger();
+    TW_CHECK(!window->highContrast());
+    // Exactly: a toggle that leaves a role behind is a toggle a user has to fix by
+    // changing theme and back.
+    TW_CHECK(QApplication::palette() == dark_before);
+
+    // And a light one, where the variant is white rather than black.
+    window->applyTheme(QStringLiteral("GitHub Light"));
+    const QPalette light_before = QApplication::palette();
+    window->setHighContrast(true);
+    const QColor light_window = QApplication::palette().color(QPalette::Window);
+    TW_CHECK_EQ(light_window, QColor{Qt::white});
+    // The menu's tick follows a change made through the API rather than the menu.
+    if (auto* checked = window->findChild<QAction*>(QStringLiteral("highContrastAction"));
+        checked != nullptr) {
+        TW_CHECK(checked->isChecked());
+    }
+    window->setHighContrast(false);
+    TW_CHECK(QApplication::palette() == light_before);
+    window->applyTheme(original);
+}
+
+void test_font_scale_ladder() {
+    announce("text scale");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    auto* action = window->findChild<QAction*>(QStringLiteral("fontScaleAction"));
+    TW_CHECK(action != nullptr);
+    if (action == nullptr) {
+        return;
+    }
+    // Start from the bottom step whatever an earlier test left behind.
+    window->setFontScale(100);
+    TW_CHECK_EQ(window->fontScale(), 100);
+    TW_CHECK_EQ(action->shortcut(), QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_A});
+
+    QWidget* console = window->outputSubTabs()->findChild<QPlainTextEdit*>(
+        QStringLiteral("consoleOutput"));
+    TW_CHECK(console != nullptr);
+    auto* console_view = qobject_cast<QPlainTextEdit*>(console);
+    if (console_view == nullptr) {
+        return;
+    }
+    const double base_editor = window->currentEditor()->font().pointSizeF();
+    const int base_console = console_view->font().pointSize();
+    const double base_panel = QApplication::font().pointSizeF();
+
+    action->trigger();  // 125%
+    TW_CHECK_EQ(window->fontScale(), 125);
+    // The editor scales from the size the user chose, not by replacing it.
+    TW_CHECK(std::abs(window->currentEditor()->font().pointSizeF() - base_editor * 1.25) < 0.01);
+    // Ten points of console becomes 12.5, which rounds to 13: a log font smaller
+    // than the editor's at every step would defeat the purpose.
+    TW_CHECK_EQ(console_view->font().pointSize(), 13);
+    TW_CHECK(QApplication::font().pointSizeF() > base_panel);
+
+    // The ladder wraps rather than stopping at the top.
+    window->cycleFontScale();
+    TW_CHECK_EQ(window->fontScale(), 150);
+    window->cycleFontScale();
+    TW_CHECK_EQ(window->fontScale(), 100);
+    TW_CHECK(std::abs(window->currentEditor()->font().pointSizeF() - base_editor) < 0.01);
+    TW_CHECK_EQ(console_view->font().pointSize(), base_console);
+    TW_CHECK(std::abs(QApplication::font().pointSizeF() - base_panel) < 0.01);
+
+    // Off-ladder values snap, so a hand-edited settings file cannot produce a size
+    // nothing was laid out for.
+    window->setFontScale(140);
+    TW_CHECK_EQ(window->fontScale(), 125);
+    window->setFontScale(1000);
+    TW_CHECK_EQ(window->fontScale(), 150);
+
+    // Persisted: a second window opens at the scale the first one chose.
+    {
+        MainWindow second;
+        TW_CHECK_EQ(second.fontScale(), 150);
+    }
+    window->setFontScale(100);
+}
+
+void test_focus_mode_hides_and_restores_the_chrome() {
+    announce("focus mode");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    auto* action = window->findChild<QAction*>(QStringLiteral("focusModeAction"));
+    TW_CHECK(action != nullptr);
+    if (action == nullptr) {
+        return;
+    }
+    TW_CHECK(action->isCheckable());
+    TW_CHECK_EQ(action->shortcut(), QKeySequence{Qt::Key_F11});
+    TW_CHECK(!window->focusMode());
+
+    auto* escape = window->findChild<QShortcut*>(QStringLiteral("focusModeEscape"));
+    TW_CHECK(escape != nullptr);
+    if (escape != nullptr) {
+        // Escape has no business being bound while the mode is off.
+        TW_CHECK(!escape->isEnabled());
+    }
+
+    // What is visible before entering is what has to come back.
+    const bool bar_before = window->mainToolBar()->isVisible();
+    const bool second_before = window->secondaryToolBar()->isVisible();
+    const bool keys_before = window->functionKeyBar()->isVisible();
+    const bool status_before = window->statusBar()->isVisible();
+    TW_CHECK(bar_before);
+    TW_CHECK(keys_before);
+
+    action->trigger();
+    TW_CHECK(window->focusMode());
+    TW_CHECK(!window->mainToolBar()->isVisible());
+    TW_CHECK(!window->secondaryToolBar()->isVisible());
+    TW_CHECK(!window->functionKeyBar()->isVisible());
+    TW_CHECK(!window->statusBar()->isVisible());
+    if (escape != nullptr) {
+        TW_CHECK(escape->isEnabled());
+    }
+
+    action->trigger();
+    TW_CHECK(!window->focusMode());
+    TW_CHECK_EQ(window->mainToolBar()->isVisible(), bar_before);
+    TW_CHECK_EQ(window->secondaryToolBar()->isVisible(), second_before);
+    TW_CHECK_EQ(window->functionKeyBar()->isVisible(), keys_before);
+    TW_CHECK_EQ(window->statusBar()->isVisible(), status_before);
+    if (escape != nullptr) {
+        TW_CHECK(!escape->isEnabled());
+    }
+
+    // Esc is the way out, and it un-binds itself on the way out.
+    window->setFocusMode(true);
+    TW_CHECK(window->focusMode());
+    if (escape != nullptr) {
+        QMetaObject::invokeMethod(escape, "activated");
+    }
+    TW_CHECK(!window->focusMode());
+    TW_CHECK(window->mainToolBar()->isVisible());
+    if (escape != nullptr) {
+        TW_CHECK(!escape->isEnabled());
+    }
 }
 
 void test_command_palette() {
@@ -1899,7 +2111,7 @@ void test_unported_controls_say_so_instead_of_doing_nothing() {
     // feature lands it must be visibly unavailable and say why, because a button
     // that silently does nothing is what the user reports as broken.
     const QStringList placeholders{QStringLiteral("Debug"), QStringLiteral("Continue"),
-                                   QStringLiteral("Trace"), QStringLiteral("A+")};
+                                   QStringLiteral("Trace")};
     const QList<QToolBar*> bars{window.mainToolBar(), window.secondaryToolBar()};
 
     for (const QString& name : placeholders) {
@@ -1938,6 +2150,15 @@ void test_unported_controls_say_so_instead_of_doing_nothing() {
     if (snippets != nullptr) {
         TW_CHECK(snippets->isEnabled());
         TW_CHECK(!snippets->toolTip().contains(QStringLiteral("not ported")));
+    }
+
+    // A+ was on that list too. It is the text-size ladder now, so it is enabled
+    // and reachable by name; `test_font_scale_ladder` asserts what it does.
+    auto* font_scale = window.findChild<QAction*>(QStringLiteral("fontScaleAction"));
+    TW_CHECK(font_scale != nullptr);
+    if (font_scale != nullptr) {
+        TW_CHECK(font_scale->isEnabled());
+        TW_CHECK(!font_scale->toolTip().contains(QStringLiteral("not ported")));
     }
 
     // The speed slider is gone rather than disabled: a control that delays nothing
@@ -1980,6 +2201,186 @@ void test_crt_overlay_tracks_its_target() {
     TW_CHECK_EQ(overlay->scanlineIntensity(), 100);
     overlay->setScanlineIntensity(-5);
     TW_CHECK_EQ(overlay->scanlineIntensity(), 0);
+}
+
+/// Renders the overlay into an image and counts the pixels it touched, which is
+/// the only way to say "paints nothing" without looking at a screen.
+[[nodiscard]] int overlayInk(CrtOverlay& overlay) {
+    overlay.resize(80, 60);
+    QImage image{80, 60, QImage::Format_ARGB32_Premultiplied};
+    image.fill(Qt::transparent);
+    QPainter painter{&image};
+    overlay.render(&painter);
+    painter.end();
+    int inked = 0;
+    for (int y = 0; y < image.height(); ++y) {
+        for (int x = 0; x < image.width(); ++x) {
+            if (image.pixelColor(x, y).alpha() > 0) {
+                ++inked;
+            }
+        }
+    }
+    return inked;
+}
+
+void test_crt_settings_reach_the_overlay() {
+    announce("CRT settings");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    CrtOverlay* overlay = window->crtOverlay();
+    TW_CHECK(overlay != nullptr);
+    if (overlay == nullptr) {
+        return;
+    }
+
+    CrtOverlay::Settings off;
+    off.scanlines = 0;
+    off.vignette = 0;
+    off.curvature = 0;
+    off.flicker = 0;
+    off.phosphor = 0;
+    window->setCrtSettings(off);
+    // Zero everywhere is exactly zero: not a nearly-invisible layer that dulls the
+    // text and leaves a user wondering what changed.
+    TW_CHECK_EQ(overlayInk(*overlay), 0);
+    TW_CHECK(!overlay->isVisible());
+
+    // Each effect on its own reaches the overlay and paints something.
+    for (int CrtOverlay::Settings::*field :
+         {&CrtOverlay::Settings::scanlines, &CrtOverlay::Settings::vignette,
+          &CrtOverlay::Settings::curvature, &CrtOverlay::Settings::phosphor}) {
+        CrtOverlay::Settings one = off;
+        one.*(field) = 100;
+        window->setCrtSettings(one);
+        TW_CHECK(overlayInk(*overlay) > 0);
+        TW_CHECK(overlay->isVisible());
+    }
+
+    // The dialog drives the real overlay: a preview in a swatch can be right while
+    // the window is wrong.
+    window->setCrtSettings(off);
+    window->showCrtSettings();
+    auto* dialog = window->findChild<timewarp::ui::CrtSettingsDialog*>(
+        QStringLiteral("crtSettingsDialog"));
+    TW_CHECK(dialog != nullptr);
+    if (dialog == nullptr) {
+        return;
+    }
+    auto* scanlines = dialog->findChild<QSlider*>(QStringLiteral("crtScanlines"));
+    auto* phosphor = dialog->findChild<QSlider*>(QStringLiteral("crtPhosphor"));
+    TW_CHECK(scanlines != nullptr);
+    TW_CHECK(phosphor != nullptr);
+    if (scanlines != nullptr) {
+        scanlines->setValue(45);
+        TW_CHECK_EQ(window->crtSettings().scanlines, 45);
+        TW_CHECK_EQ(overlay->settings().scanlines, 45);
+        TW_CHECK(overlay->isVisible());
+    }
+    if (phosphor != nullptr) {
+        phosphor->setValue(15);
+        TW_CHECK_EQ(overlay->settings().phosphor, 15);
+    }
+
+    // Cancel puts back what was in force before the dialog opened, including the
+    // overlay's visibility.
+    dialog->reject();
+    QApplication::processEvents();
+    TW_CHECK_EQ(window->crtSettings().scanlines, 0);
+    TW_CHECK_EQ(window->crtSettings().phosphor, 0);
+    TW_CHECK(!overlay->isVisible());
+
+    // OK persists, and a second window opens on the same values.
+    window->showCrtSettings();
+    dialog = window->findChild<timewarp::ui::CrtSettingsDialog*>(
+        QStringLiteral("crtSettingsDialog"));
+    TW_CHECK(dialog != nullptr);
+    if (dialog != nullptr) {
+        if (auto* value = dialog->findChild<QSlider*>(QStringLiteral("crtScanlines"));
+            value != nullptr) {
+            value->setValue(35);
+        }
+        if (auto* value = dialog->findChild<QSlider*>(QStringLiteral("crtPhosphor"));
+            value != nullptr) {
+            value->setValue(25);
+        }
+        dialog->accept();
+        QApplication::processEvents();
+    }
+    TW_CHECK_EQ(window->crtSettings().scanlines, 35);
+    {
+        MainWindow second;
+        TW_CHECK_EQ(second.crtSettings().scanlines, 35);
+        TW_CHECK_EQ(second.crtSettings().phosphor, 25);
+    }
+
+    // Leave the developer's settings as they were: a saved CRT effect would make
+    // the next test's fresh window start with the overlay showing.
+    window->setCrtSettings(off);
+    QSettings settings;
+    for (const char* key : {"display/crt/scanlines", "display/crt/vignette",
+                            "display/crt/curvature", "display/crt/flicker",
+                            "display/crt/phosphor"}) {
+        settings.remove(QString::fromLatin1(key));
+    }
+}
+
+void test_screen_presets_pair_a_theme_with_its_crt_values() {
+    announce("screen presets");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    CrtOverlay* overlay = window->crtOverlay();
+    TW_CHECK(overlay != nullptr);
+    if (overlay == nullptr) {
+        return;
+    }
+    const QString original = window->currentThemeName();
+
+    auto* amber = window->findChild<QAction*>(QStringLiteral("screenPresetAmber"));
+    auto* green = window->findChild<QAction*>(QStringLiteral("screenPresetGreen"));
+    auto* white = window->findChild<QAction*>(QStringLiteral("screenPresetWhite"));
+    auto* normal = window->findChild<QAction*>(QStringLiteral("screenPresetNormal"));
+    TW_CHECK(amber != nullptr);
+    TW_CHECK(green != nullptr);
+    TW_CHECK(white != nullptr);
+    TW_CHECK(normal != nullptr);
+    if (amber == nullptr || green == nullptr || white == nullptr || normal == nullptr) {
+        return;
+    }
+
+    // A preset is a theme *and* the effect values that suit it: the theme alone
+    // would be a colour scheme, and the CRT values alone would be a wash over
+    // whatever was on screen.
+    amber->trigger();
+    TW_CHECK_EQ(window->currentThemeName(), QStringLiteral("Amber Monochrome"));
+    TW_CHECK_EQ(window->crtSettings().phosphor_colour, QColor(255, 176, 0));
+    TW_CHECK(window->crtSettings().scanlines > 0);
+    TW_CHECK_EQ(overlay->settings().scanlines, window->crtSettings().scanlines);
+    TW_CHECK(overlay->isVisible());
+
+    green->trigger();
+    TW_CHECK_EQ(window->currentThemeName(), QStringLiteral("Green Monochrome"));
+    TW_CHECK_EQ(window->crtSettings().phosphor_colour, QColor(0, 255, 0));
+
+    white->trigger();
+    TW_CHECK_EQ(window->currentThemeName(), QStringLiteral("High Contrast Dark"));
+    TW_CHECK(window->crtSettings().phosphor_colour.red() > 200);
+    TW_CHECK(window->crtSettings().curvature > 0);
+
+    // Normal is the way back: a normal theme and no effects at all.
+    normal->trigger();
+    TW_CHECK_EQ(window->currentThemeName(), QStringLiteral("VS Code Dark"));
+    TW_CHECK_EQ(window->crtSettings().scanlines, 0);
+    TW_CHECK_EQ(window->crtSettings().vignette, 0);
+    TW_CHECK_EQ(window->crtSettings().curvature, 0);
+    TW_CHECK_EQ(window->crtSettings().phosphor, 0);
+    TW_CHECK(!overlay->isVisible());
+
+    // Leave no saved effect behind for the tests that build a window next.
+    window->applyTheme(original);
+    QSettings settings;
+    for (const char* key : {"display/crt/scanlines", "display/crt/vignette",
+                            "display/crt/curvature", "display/crt/flicker",
+                            "display/crt/phosphor"}) {
+        settings.remove(QString::fromLatin1(key));
+    }
 }
 
 void test_immediate_mode_panel_contract() {
@@ -2143,6 +2544,10 @@ int main(int argc, char** argv) {
     test_function_key_layers();
     test_function_keys_are_wired();
     test_themes();
+    test_high_contrast_clears_a_seven_to_one_floor();
+    test_high_contrast_toggles_and_restores_the_palette();
+    test_font_scale_ladder();
+    test_focus_mode_hides_and_restores_the_chrome();
     test_command_palette();
     test_standalone_payload();
     test_tool_bar_configuration();
@@ -2174,6 +2579,8 @@ int main(int argc, char** argv) {
     test_no_enabled_control_is_inert();
     test_unported_controls_say_so_instead_of_doing_nothing();
     test_crt_overlay_tracks_its_target();
+    test_crt_settings_reach_the_overlay();
+    test_screen_presets_pair_a_theme_with_its_crt_values();
     test_immediate_mode_panel_contract();
 
     test_splitter_positions_survive_a_restart();

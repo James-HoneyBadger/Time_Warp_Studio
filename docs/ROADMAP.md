@@ -24,6 +24,7 @@ derived rather than remembered.
 | Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, find in files, go-to-line, tab stops, fonts, error squiggles with gutter markers, completion, auto-indent, Format Code |
 | Console | Streaming output, and interpreter errors in their own tab |
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback |
+| Display | 33 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
 | Languages | 10 languages, 49 verified example programs |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
@@ -322,9 +323,12 @@ changes under the data directory, and `VersionHistoryDialog`
 (`native/src/ui/version_history.cpp`, Ctrl+Alt+V) previews them and opens one in a
 new tab without writing the file. There is no project panel or split view yet.
 
-**Also unbuilt** — printing, code/session/lesson export, font selection, the
-accessibility presets and the REPL bar's interpreter wiring (the bar is laid out
-and its signal exists; nothing is connected to it). The snippet library is built:
+**Also unbuilt** — printing, lesson-session export, font *family* selection, and the
+REPL bar's interpreter wiring (the bar is laid out and its signal exists; nothing is
+connected to it). Code PDF export and session HTML are built, as are the
+accessibility controls: View > High Contrast (Ctrl+Alt+H), the A+ text-size ladder,
+View > Focus Mode (F11) and View > CRT Settings with the four Screen Mode presets.
+The snippet library is built:
 Edit > Insert Snippet (Ctrl+Shift+I) reads `native/share/snippets.json`, which
 ships beside the application, and every snippet in it is syntax this build runs.
 
@@ -357,8 +361,8 @@ UI.
 
 **The function-key bar is built**, with the Python's three modifier layers, a badge
 that cycles them, and a dispatcher behind every key; **the command palette** is
-built too (F10, Ctrl+Shift+P). What remains from that list: screen modes, focus
-mode, and the workspace decks — the deck selector offers four, and
+built too (F10, Ctrl+Shift+P). What remains from that list: the workspace decks —
+the deck selector offers four, and
 `2:SPLIT` answers that the split workspace is not built (the second editor pane
 exists in the layout but nothing creates a tab in it).
 
@@ -419,7 +423,9 @@ A web (WebAssembly) build, and calling one language from another.
 
 The **examples browser** is now a File menu grouped by language rather than the
 old window with categories, difficulty and search. **Accessibility presets** are
-still scheduled in [PORTING_PLAN.md](PORTING_PLAN.md) (phase 8). The guided tour
+built (phase 8 of [PORTING_PLAN.md](PORTING_PLAN.md)): high contrast, the A+ text
+ladder, focus mode, the CRT settings dialog and the four Screen Mode presets. The
+guided tour
 and its one-time coach marks (phase 3.3) are built: Help > Guided Tour, a
 first-run overlay anchored to the Run button, canvas, lessons panel and
 function-key bar, re-armable from Settings.

@@ -7,6 +7,18 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **Accessibility and display controls.** View > High Contrast (Ctrl+Alt+H) gives
+  the *current* theme a maximum-contrast variant: the surface becomes black or
+  white in the direction the theme already goes and every syntax accent is lifted
+  until it clears the WCAG 7:1 floor, so the chosen theme survives and only its
+  legibility changes. The A+ button and Ctrl+Alt+A cycle the text size through
+  100%, 125% and 150% across the editor, the console logs and the panels, and the
+  step is remembered. View > Focus Mode (F11) hides both toolbars, the
+  function-key bar, the status bar and every dock, with Esc as the way out. View >
+  CRT Settings adds vignette, curvature, flicker and a phosphor tint beside the
+  scanlines, with a live preview on the real overlay and values saved under
+  `display/crt/*`; View > Screen Mode pairs a theme with those values in one
+  action (Normal, Amber, Green, White Phosphor).
 - **Export the code as a PDF, and a whole session as one HTML page.** File >
   Export Code as PDF writes an A4 document with line numbers and the program's
   name and language in the header; `QPdfWriter` ships with Qt, so this added no
