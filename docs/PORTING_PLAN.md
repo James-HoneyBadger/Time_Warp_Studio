@@ -67,7 +67,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 6 | Debugging breadth | breakpoints everywhere ✅, pause/step for line-by-line languages ✅, profiler | L | 0, best after 1 |
 | 7 | Workspace | document outline ✅, terminal, split editor ✅, run both panes ✅ | M | 7.3 needs 1.5 |
 | 8 | Accessibility and display | high contrast ✅, font scale ✅, focus mode ✅, CRT settings ✅, screen presets ✅ | S–M | 0 |
-| 9 | Classroom | roster panel ✅, presentation mode ✅, lesson session export ✅, bundles | M | 9.4 needs an archive decision |
+| 9 | Classroom | roster panel ✅, presentation mode ✅, lesson session export ✅, bundles ✅ | M | — |
 
 Size: **S** ≈ a session, **M** ≈ two or three, **L** ≈ a week of part-time work.
 
@@ -772,13 +772,33 @@ longer than the longest run inside the program. The old implementation's PNG
 sidecar is deliberately not carried over: the plan asks for one file, and an
 export that leaves a second file behind is not one a teacher can email.
 
-### 9.4 Classroom bundles (M, needs an archive decision)
+### 9.4 Classroom bundles (M) ✅
 
 Qt has no public ZIP API. Options: a `.tar.gz` produced by invoking `tar` through
 `QProcess` (present everywhere, easy to test round-trip), a JSON bundle with the
 files inline (no compression, no dependency, gets large), or a dependency
 (libarchive). **Recommendation:** tar.gz via `QProcess`, tested by a round trip
 with the real `tar`, and documented as such.
+
+**Tests:** saving writes an archive the engine can read back, and unbundling from
+it restores a class that was removed from disk; a missing archive fails with the
+engine's reason; the panel's Save is offered only when there is a class, and Load
+is always offered because that is how a class arrives.
+
+**Done.** The archive question was settled by the engine before this panel existed:
+`classroom_mode.create_bundle` already writes a **ZIP** with `zipfile`, and
+`teach.py bundle`/`unbundle` are its two callers. A `.tar.gz` from the IDE would
+have been a second format, and the one that drifts is the one a teacher emailed, so
+the panel asks the engine through `classroom-bundle` and `classroom-unbundle`
+requests instead. No `tar` dependency, no `QProcess` around an external tool, and
+nothing to keep in step: the archive `Save Bundle...` writes is the one
+`teach.py unbundle` reads. `replace` is the one question with two right answers --
+setting up a class wants existing work left alone, refreshing one wants the archive
+to win -- so the IDE asks, defaulting to No. A successful unpack refreshes the
+roster and marks, because the class on screen is now a different class. The round
+trip is in `python_bridge_tests` against the engine's own writer (including the
+`PK\x03\x04` header and restoring a learner the engine removed) and the button
+states are in `ui_layout_tests`.
 
 ---
 
@@ -790,7 +810,7 @@ with the real `tar`, and documented as such.
 | Qt6::PrintSupport (`libqt6printsupport6`) | 5.2 printing | Optional component. Printing is the least-used item here; hide it when absent rather than take the dependency for everyone. |
 | Qt6::Network (`libqt6network6`) | 3.4 update check | **Defer.** Make the check a button that reports the latest release, or drop it. An automatic poll is a background request the learner did not ask for. |
 | giflib, or an in-tree encoder | 4.2 GIF | In-tree encoder (no dependency). Qt reads GIF, so the test has an oracle. |
-| `tar` (runtime) | 9.4 bundles | Accept, documented, with a round-trip test. Alternative is a dependency with a larger footprint. |
+| `tar` (runtime) | 9.4 bundles | **Not needed.** The engine's bundles are ZIP (`zipfile`) and the IDE asks the engine for them, so there is no external archive tool and no dependency. |
 
 ---
 

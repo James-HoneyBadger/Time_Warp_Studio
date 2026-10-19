@@ -232,6 +232,16 @@ public:
     /// entered without opening the classroom page, and it should not have to walk
     /// every learner's folder to learn a font size.
     bool requestClassroomPresentation();
+    /// Writes the whole class to the archive at *path*. Answers with
+    /// `classroomBundleWritten`.
+    ///
+    /// The format is the engine's -- `classroom_mode.create_bundle`, which
+    /// `teach.py bundle` also writes -- so the IDE asks for it rather than
+    /// writing an archive the command line could not open.
+    bool requestClassroomBundle(const QString& path);
+    /// Unpacks an archive into the classroom. `replace` decides whether files
+    /// that are already there are overwritten. Answers with `classroomUnbundled`.
+    bool requestClassroomUnbundle(const QString& path, bool replace);
 
     /// True when a lesson request has been sent and no answer has arrived.
     [[nodiscard]] bool isWaitingForLesson() const noexcept { return waiting_for_lesson_; }
@@ -311,6 +321,10 @@ signals:
     /// `presentation.json`; the last answer wins and they cannot disagree.
     void classroomPresentationReceived(
         const timewarp::bridge::ClassroomPresentation& settings);
+    /// The archive was written, at this path.
+    void classroomBundleWritten(const QString& path);
+    /// The archive was unpacked, leaving this many learners on the class list.
+    void classroomUnbundled(int students);
     /// A classroom request failed, named as above.
     void classroomFailed(const QString& request, const QString& error);
 

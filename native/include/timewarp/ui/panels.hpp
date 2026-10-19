@@ -134,6 +134,10 @@ signals:
     void refreshRequested();
     /// Open one learner's folder in the file manager.
     void openFolderRequested(const QString& path);
+    /// Write the whole class to one archive, and read one back. The dialogs are
+    /// the window's; the panel only asks, as it does for a folder.
+    void bundleRequested();
+    void unbundleRequested();
 
 private:
     void updateSummary();
@@ -143,6 +147,8 @@ private:
     QTableWidget* marks_ = nullptr;
     QPushButton* open_ = nullptr;
     QPushButton* refresh_ = nullptr;
+    QPushButton* bundle_ = nullptr;
+    QPushButton* unbundle_ = nullptr;
     QHash<QString, QString> directories_;
     /// Student id to display name. The mark rows carry ids; a teacher reads names.
     QHash<QString, QString> names_;

@@ -224,6 +224,12 @@ two cases are genuinely different: setting up a new classroom wants to be
 additive, and refreshing one wants to be authoritative. A bundle whose member
 names try to point outside the classroom is refused rather than followed.
 
+The Classroom panel has the same pair as **Save Bundle...** and **Load Bundle...**.
+They ask the engine, so the file the IDE writes is the one `teach.py unbundle`
+reads and the other way round. Loading asks whether to replace files that are
+already there, because that is the one answer it cannot take back; the panel then
+re-reads the class it has just changed.
+
 ## 6. Teaching from the front
 
 ```text

@@ -483,6 +483,35 @@ bool PythonWorker::requestClassroomPresentation() {
     return true;
 }
 
+bool PythonWorker::requestClassroomBundle(const QString& path) {
+    if (waiting_for_lesson_) {
+        return false;
+    }
+    QJsonObject message;
+    message[QStringLiteral("t")] = QStringLiteral("classroom-bundle");
+    message[QStringLiteral("path")] = path;
+    if (!sendRequest(message)) {
+        return false;
+    }
+    waiting_for_lesson_ = true;
+    return true;
+}
+
+bool PythonWorker::requestClassroomUnbundle(const QString& path, bool replace) {
+    if (waiting_for_lesson_) {
+        return false;
+    }
+    QJsonObject message;
+    message[QStringLiteral("t")] = QStringLiteral("classroom-unbundle");
+    message[QStringLiteral("path")] = path;
+    message[QStringLiteral("replace")] = replace;
+    if (!sendRequest(message)) {
+        return false;
+    }
+    waiting_for_lesson_ = true;
+    return true;
+}
+
 bool PythonWorker::requestHint(const QString& lesson, int checkpoint) {
     if (waiting_for_lesson_) {
         return false;
@@ -867,6 +896,26 @@ void PythonWorker::handleMessage(const QByteArray& line) {
         settings.fontSize = message.value(QStringLiteral("font_size")).toInt();
         settings.fullscreen = message.value(QStringLiteral("fullscreen")).toBool(true);
         emit classroomPresentationReceived(settings);
+        return;
+    }
+    if (kind == QLatin1String("classroom-bundle")) {
+        waiting_for_lesson_ = false;
+        if (!message.value(QStringLiteral("ok")).toBool(true)) {
+            emit classroomFailed(QStringLiteral("classroom-bundle"),
+                                 message.value(QStringLiteral("error")).toString());
+            return;
+        }
+        emit classroomBundleWritten(message.value(QStringLiteral("path")).toString());
+        return;
+    }
+    if (kind == QLatin1String("classroom-unbundle")) {
+        waiting_for_lesson_ = false;
+        if (!message.value(QStringLiteral("ok")).toBool(true)) {
+            emit classroomFailed(QStringLiteral("classroom-unbundle"),
+                                 message.value(QStringLiteral("error")).toString());
+            return;
+        }
+        emit classroomUnbundled(message.value(QStringLiteral("students")).toInt());
         return;
     }
     if (kind == QLatin1String("lesson-hint")) {

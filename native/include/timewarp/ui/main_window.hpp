@@ -837,10 +837,17 @@ private:
     void requestLessonHint(const QString& lesson, int checkpoint);
     void requestLessonSolution(const QString& lesson, int checkpoint);
     void requestLessonReset(const QString& lesson);
-    /// Sends both classroom requests. They are separate messages because the
-    /// roster is small and cheap and the marks are a directory walk, so the
-    /// panel can show the class list while the marking is still happening.
+    /// Asks for the class list; the marks follow when the answer arrives. They
+    /// are separate messages because the roster is small and cheap and the
+    /// marking is a directory walk, so the panel can show the class list while
+    /// the marks are still being worked out.
     void requestClassroom();
+    /// Asks for a path and has the engine write the class to it. The archive is
+    /// the engine's format, so `teach.py unbundle` can read what this writes.
+    void exportClassroomBundle();
+    /// Asks for an archive and unpacks it, after asking whether files that are
+    /// already there should be replaced.
+    void importClassroomBundle();
 
     /// `outputSubTabs_` container that holds them.
     QPlainTextEdit* console_view_ = nullptr;

@@ -1165,6 +1165,12 @@ module `teach.py` writes, so the mark the panel shows and `teach.py collect`'s a
 function's answer. The class list is a file read and answers at any time; the marks run
 the verifier and are refused while a program is running, for the reason above.
 
+**Save Bundle...** and **Load Bundle...** on that panel move the whole class: the
+archive is the engine's ZIP (`classroom_mode.create_bundle`), asked for through
+`classroom-bundle`/`classroom-unbundle` requests, so `teach.py bundle` and the
+button produce the same file and `teach.py unbundle` reads either. Loading asks
+whether to replace existing files before it writes anything.
+
 **Presentation mode** (View > Presentation Mode, Shift+F11) is focus mode for a room:
 it hides the menu bar as well as the toolbars, status bar and docks, and takes the
 lesson panel and the log views to the size the class is projected at. The size and

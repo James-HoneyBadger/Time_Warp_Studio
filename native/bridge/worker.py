@@ -76,12 +76,21 @@ The class list and its marks belong to `features/classroom_mode.py`, which
     {"t": "classroom-roster"}             # the class list and the assignment
     {"t": "classroom-marks"}              # every handed-in file, marked
     {"t": "classroom-presentation"}       # the size and window style for a lesson
+    {"t": "classroom-bundle", "path": "/tmp/class.zip"}
+    {"t": "classroom-unbundle", "path": "/tmp/class.zip", "replace": false}
 
 The answers:
 
     {"t": "classroom-roster", "ok": true, "students": [ ... ]}
     {"t": "classroom-marks", "ok": true, "rows": [ ... ]}
     {"t": "classroom-presentation", "ok": true, "font_size": 24, "fullscreen": true}
+    {"t": "classroom-bundle", "ok": true, "path": "/tmp/class.zip"}
+    {"t": "classroom-unbundle", "ok": true, "students": 12}
+
+The archive format is the engine's, not the client's: `classroom_mode.create_bundle`
+writes a ZIP and `teach.py unbundle` reads one, so the IDE asks for both through
+these requests rather than writing an archive of its own that the command line
+could not open.
 
 An empty class is `ok` with no students, not an error: a new teacher has not
 broken anything. Marks are refused while a program is running, because marking
@@ -108,6 +117,7 @@ import os
 import sys
 import threading
 import time
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 # Importable either as a module or as a bare script launched by path from any
@@ -839,6 +849,42 @@ class ClassroomService:
             }
         )
 
+    def bundle(self, emitter: "Emitter", message: Dict[str, Any]) -> None:
+        """Write the class as one archive, with the engine's own writer.
+
+        The format is `classroom_mode.create_bundle`'s, which is what
+        `teach.py bundle` produces and `teach.py unbundle` reads. A client that
+        wrote its own archive would be a second format, and the one that drifts
+        would be the one a teacher emailed.
+        """
+        mode = self._load(emitter, "classroom-bundle")
+        if mode is None:
+            return
+        path = Path(str(message.get("path", ""))).expanduser()
+        try:
+            written = mode.create_bundle(path)
+        except Exception as exc:  # noqa: BLE001 - reported, not raised
+            return self._fail(emitter, "classroom-bundle", str(exc))
+        emitter.send({"t": "classroom-bundle", "ok": True, "path": str(written)})
+
+    def unbundle(self, emitter: "Emitter", message: Dict[str, Any]) -> None:
+        """Unpack an archive into the class, additively unless `replace` is set.
+
+        As with the command line, existing files are left alone by default: the
+        two cases are different, and overwriting a learner's work is the one that
+        cannot be undone.
+        """
+        mode = self._load(emitter, "classroom-unbundle")
+        if mode is None:
+            return
+        path = Path(str(message.get("path", ""))).expanduser()
+        replace = bool(message.get("replace", False))
+        try:
+            roster = mode.import_bundle(path, replace=replace)
+        except Exception as exc:  # noqa: BLE001 - reported, not raised
+            return self._fail(emitter, "classroom-unbundle", str(exc))
+        emitter.send({"t": "classroom-unbundle", "ok": True, "students": len(roster)})
+
     def marks(self, emitter: "Emitter") -> None:
         mode = self._load(emitter, "classroom-marks")
         if mode is None:
@@ -942,6 +988,10 @@ def main(argv: Optional[List[str]] = None) -> int:
             classroom.roster(emitter)
         elif kind == "classroom-presentation":
             classroom.presentation(emitter)
+        elif kind == "classroom-bundle":
+            classroom.bundle(emitter, message)
+        elif kind == "classroom-unbundle":
+            classroom.unbundle(emitter, message)
         elif kind == "classroom-marks":
             # Marking runs the verifier, and the verifier runs an interpreter:
             # the same race `lesson-check` refuses above. The class list is a

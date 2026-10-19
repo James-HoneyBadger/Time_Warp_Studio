@@ -479,8 +479,21 @@ void test_classroom_panel_contract() {
     TW_CHECK(panel->emptyStateVisible());
     TW_CHECK(panel->findChild<QTableWidget*>(QStringLiteral("classroomMarks")) != nullptr);
     TW_CHECK(panel->findChild<QLabel*>(QStringLiteral("classroomEmptyState")) != nullptr);
-    for (const char* name : {"classroomOpenFolder", "classroomRefresh", "classroomSummary"}) {
+    for (const char* name : {"classroomOpenFolder", "classroomRefresh", "classroomSummary",
+                             "classroomBundle", "classroomUnbundle"}) {
         TW_CHECK(panel->findChild<QWidget*>(QString::fromLatin1(name)) != nullptr);
+    }
+    // Nothing to carry until there is a class; an archive to unpack is exactly how
+    // a class arrives, so that button is always there.
+    auto* save_bundle = panel->findChild<QPushButton*>(QStringLiteral("classroomBundle"));
+    auto* load_bundle = panel->findChild<QPushButton*>(QStringLiteral("classroomUnbundle"));
+    TW_CHECK(save_bundle != nullptr);
+    TW_CHECK(load_bundle != nullptr);
+    if (save_bundle != nullptr) {
+        TW_CHECK(!save_bundle->isEnabled());
+    }
+    if (load_bundle != nullptr) {
+        TW_CHECK(load_bundle->isEnabled());
     }
 
     QList<timewarp::bridge::ClassroomStudent> students;
@@ -494,6 +507,9 @@ void test_classroom_panel_contract() {
                      QStringLiteral("Chapter one"));
     TW_CHECK_EQ(panel->studentCount(), 2);
     TW_CHECK(!panel->emptyStateVisible());
+    if (save_bundle != nullptr) {
+        TW_CHECK(save_bundle->isEnabled());
+    }
     // With nothing marked yet, Open Folder still has somewhere to go: the first
     // learner's directory is the useful default for a teacher looking at an
     // unmarked class.
@@ -550,6 +566,9 @@ void test_classroom_panel_contract() {
     panel->setRoster({}, {}, {});
     TW_CHECK_EQ(panel->studentCount(), 0);
     TW_CHECK(panel->emptyStateVisible());
+    if (save_bundle != nullptr) {
+        TW_CHECK(!save_bundle->isEnabled());
+    }
 }
 
 void test_variables_panel_contract() {

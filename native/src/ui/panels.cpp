@@ -189,6 +189,23 @@ ClassroomPanel::ClassroomPanel(QWidget* parent) : QFrame(parent) {
     buttons->addWidget(refresh_);
     layout->addLayout(buttons);
 
+    // Carrying a class to another machine is two buttons rather than a menu: it is
+    // the teacher's own page, and a class is what moves. The format is the
+    // engine's, so what this writes `teach.py unbundle` can read.
+    auto* archive = new QHBoxLayout;
+    archive->setSpacing(4);
+    bundle_ = new QPushButton{tr("Save Bundle..."), this};
+    bundle_->setObjectName(QStringLiteral("classroomBundle"));
+    bundle_->setToolTip(tr("Write the class list, its work and its settings to one archive"));
+    connect(bundle_, &QPushButton::clicked, this, [this] { emit bundleRequested(); });
+    archive->addWidget(bundle_);
+    unbundle_ = new QPushButton{tr("Load Bundle..."), this};
+    unbundle_->setObjectName(QStringLiteral("classroomUnbundle"));
+    unbundle_->setToolTip(tr("Unpack a class archive, leaving existing work alone"));
+    connect(unbundle_, &QPushButton::clicked, this, [this] { emit unbundleRequested(); });
+    archive->addWidget(unbundle_);
+    layout->addLayout(archive);
+
     setRoster({}, {}, {});
     setMarks({});
 }
@@ -286,6 +303,10 @@ void ClassroomPanel::updateSummary() {
     marks_->setVisible(!empty);
     open_->setEnabled(!directories_.isEmpty());
     refresh_->setEnabled(true);
+    // An empty class is nothing to carry; an archive to unpack is exactly how a
+    // class arrives in the first place, so that button never goes away.
+    bundle_->setEnabled(!directories_.isEmpty());
+    unbundle_->setEnabled(true);
 }
 
 // ---------------------------------------------------------------------------

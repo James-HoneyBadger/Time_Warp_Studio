@@ -7,6 +7,13 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **Class bundles from the classroom page.** Save Bundle... writes the class list,
+  its work and its settings to one archive, and Load Bundle... unpacks one (asking
+  first whether files that are already there should be replaced). Both are the
+  engine's own ZIP through `classroom-bundle`/`classroom-unbundle` requests, so the
+  file the IDE writes is the one `teach.py unbundle` reads and vice versa -- there
+  is no second archive format and no runtime `tar` dependency. A successful load
+  re-reads the class on screen.
 - **Lesson session export.** File > Export Lesson Session as Markdown or PDF
   writes one file describing the lesson being worked on: what it teaches, every
   checkpoint with the verdict it was given in this session (passed, not passed,

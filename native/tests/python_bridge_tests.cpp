@@ -114,6 +114,9 @@ struct Recording {
     QList<timewarp::bridge::ClassroomMark> marks;
     bool presentation_arrived = false;
     timewarp::bridge::ClassroomPresentation presentation;
+    bool bundle_written = false;
+    QString bundle_path;
+    int unbundled_students = -1;
     QString classroom_failure_request;
     QString classroom_failure_text;
 };
@@ -205,6 +208,13 @@ public:
                              recorded_.presentation = settings;
                              recorded_.presentation_arrived = true;
                          });
+        QObject::connect(&worker_, &PythonWorker::classroomBundleWritten, &worker_,
+                         [this](const QString& path) {
+                             recorded_.bundle_path = path;
+                             recorded_.bundle_written = true;
+                         });
+        QObject::connect(&worker_, &PythonWorker::classroomUnbundled, &worker_,
+                         [this](int students) { recorded_.unbundled_students = students; });
         QObject::connect(&worker_, &PythonWorker::classroomFailed, &worker_,
                          [this](const QString& request, const QString& error) {
                              recorded_.classroom_failure_request = request;
@@ -235,6 +245,9 @@ public:
         recorded_.marks.clear();
         recorded_.presentation_arrived = false;
         recorded_.presentation = ClassroomPresentation{};
+        recorded_.bundle_written = false;
+        recorded_.bundle_path.clear();
+        recorded_.unbundled_students = -1;
         recorded_.classroom_failure_request.clear();
         recorded_.classroom_failure_text.clear();
     }
@@ -865,6 +878,83 @@ void test_the_marks_are_refused_while_a_program_is_running() {
     TW_CHECK(harness.waitFor([&harness] { return !harness.worker().isRunning(); }, 10000));
 }
 
+/// A class made by the engine bundles into the archive `teach.py unbundle` reads,
+/// and comes back through the same format -- there is one archive format, not one
+/// for the IDE and one for the command line.
+void test_a_class_bundles_and_unbundles() {
+    announce("classroom bundle");
+    QTemporaryDir data_dir;
+    DataDirOverride data_override{data_dir.path()};
+    QString reason;
+    if (!locateWorker(&reason).isValid()) {
+        std::printf("SKIP: %s\n", qPrintable(reason));
+        return;
+    }
+
+    Harness harness;
+    if (!harness.requireStart()) {
+        return;
+    }
+
+    const QString setup =
+        runEngine(harness.worker(),
+                  QStringLiteral("from time_warp.features.classroom_mode import ClassroomMode\n"
+                                 "mode = ClassroomMode()\n"
+                                 "student = mode.add_student('Ada Lovelace')\n"
+                                 "lesson = mode.lessons[0].id\n"
+                                 "mode.distribute([lesson])\n"
+                                 "print(student.student_id)\n"),
+                  data_dir.path(), &reason);
+    TW_CHECK(!setup.isEmpty());
+
+    const QString bundle = data_dir.path() + QStringLiteral("/class.zip");
+    TW_CHECK(harness.worker().requestClassroomBundle(bundle));
+    TW_CHECK(harness.waitFor([&harness] { return harness.recorded().bundle_written; }));
+    TW_CHECK_EQ(harness.recorded().bundle_path, bundle);
+
+    // A ZIP, as the engine writes it: `PK\x03\x04` is the local file header.
+    QFile archive{bundle};
+    TW_CHECK(archive.open(QIODevice::ReadOnly));
+    const QByteArray magic = archive.read(4);
+    archive.close();
+    TW_CHECK_EQ(magic, QByteArray("PK\x03\x04"));
+
+    // Remove the learner with the engine, so the archive is the only place the
+    // class still exists.
+    const QString removed =
+        runEngine(harness.worker(),
+                  QStringLiteral("from time_warp.features.classroom_mode import ClassroomMode\n"
+                                 "mode = ClassroomMode()\n"
+                                 "mode.remove_student('ada-lovelace')\n"
+                                 "print('removed')\n"),
+                  data_dir.path(), &reason);
+    TW_CHECK(!removed.isEmpty());
+
+    harness.clearClassroom();
+    // `replace` is what makes the archive authoritative: without it the file
+    // already on disk wins, which is right for setting up a class and wrong for
+    // restoring one.
+    TW_CHECK(harness.worker().requestClassroomUnbundle(bundle, true));
+    TW_CHECK(
+        harness.waitFor([&harness] { return harness.recorded().unbundled_students >= 0; }));
+    TW_CHECK_EQ(harness.recorded().unbundled_students, 1);
+
+    harness.clearClassroom();
+    TW_CHECK(harness.worker().requestClassroomRoster());
+    TW_CHECK(harness.waitFor([&harness] { return harness.recorded().roster_arrived; }));
+    TW_CHECK_EQ(harness.recorded().students.size(), 1);
+    TW_CHECK_EQ(harness.recorded().students.at(0).name, QStringLiteral("Ada Lovelace"));
+
+    // A missing archive is a failure with the engine's reason, not a silent no-op.
+    harness.clearClassroom();
+    TW_CHECK(harness.worker().requestClassroomUnbundle(
+        data_dir.path() + QStringLiteral("/missing.zip"), false));
+    TW_CHECK(harness.waitFor(
+        [&harness] { return !harness.recorded().classroom_failure_text.isEmpty(); }));
+    TW_CHECK_EQ(harness.recorded().classroom_failure_request,
+                QStringLiteral("classroom-unbundle"));
+}
+
 /// No class list is an empty class, not a failure: a fresh install has no
 /// students and the panel shows its empty state.
 void test_an_empty_class_is_not_a_failure() {
@@ -1326,6 +1416,7 @@ int main(int argc, char** argv) {
 
     run("classroom-marks", test_the_class_list_and_its_marks_arrive);
     run("classroom-empty", test_an_empty_class_is_not_a_failure);
+    run("classroom-bundle", test_a_class_bundles_and_unbundles);
     run("classroom-busy", test_the_marks_are_refused_while_a_program_is_running);
 
     return tw::test::summary("python_bridge");

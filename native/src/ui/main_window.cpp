@@ -613,6 +613,10 @@ void MainWindow::buildRightColumn(QSplitter* parent) {
     right_tabs_->addTab(classroom_panel_, tr("\U0001F3EB Classroom"));
     connect(classroom_panel_, &ClassroomPanel::refreshRequested, this,
             &MainWindow::requestClassroom);
+    connect(classroom_panel_, &ClassroomPanel::bundleRequested, this,
+            &MainWindow::exportClassroomBundle);
+    connect(classroom_panel_, &ClassroomPanel::unbundleRequested, this,
+            &MainWindow::importClassroomBundle);
     connect(classroom_panel_, &ClassroomPanel::openFolderRequested, this,
             [this](const QString& path) {
                 // A folder opened in the desktop's file manager is how a teacher
@@ -4236,6 +4240,45 @@ void MainWindow::requestClassroom() {
             : tr("the language engine is not running"));
 }
 
+void MainWindow::exportClassroomBundle() {
+    // The dialog comes first: a teacher who cancels should not have started a
+    // Python process to do it.
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Save class bundle"),
+        QDir{QDir::homePath()}.filePath(QStringLiteral("classroom.zip")),
+        tr("Class bundle (*.zip)"));
+    if (path.isEmpty() || !ensureBridge()) {
+        return;
+    }
+    if (!python_worker_->requestClassroomBundle(path)) {
+        statusBar()->showMessage(tr("Another classroom request is still being answered"), 8000);
+    }
+}
+
+void MainWindow::importClassroomBundle() {
+    const QString path = QFileDialog::getOpenFileName(this, tr("Open class bundle"),
+                                                      QDir::homePath(),
+                                                      tr("Class bundle (*.zip)"));
+    if (path.isEmpty()) {
+        return;
+    }
+    // The one question with two genuinely different answers: setting up a new
+    // class wants existing files left alone, and refreshing one wants the archive
+    // to win. Overwriting a learner's work is the answer that cannot be undone,
+    // so it is the one that has to be asked for.
+    const QMessageBox::StandardButton answer = QMessageBox::question(
+        this, tr("Unpack class bundle"),
+        tr("Replace files that are already in the classroom?\n\n"
+           "No leaves them alone, which is what setting up a new class wants."),
+        QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel, QMessageBox::No);
+    if (answer == QMessageBox::Cancel || !ensureBridge()) {
+        return;
+    }
+    if (!python_worker_->requestClassroomUnbundle(path, answer == QMessageBox::Yes)) {
+        statusBar()->showMessage(tr("Another classroom request is still being answered"), 8000);
+    }
+}
+
 void MainWindow::adoptBridgeWorker() {
     // Everything the worker produces arrives on this thread, so the canvas is
     // touched only here. There is no lock in this path because there is no second
@@ -4372,6 +4415,18 @@ void MainWindow::adoptBridgeWorker() {
             &timewarp::bridge::PythonWorker::classroomPresentationReceived, this,
             [this](const timewarp::bridge::ClassroomPresentation& settings) {
                 setPresentationSettings(settings.fontSize, settings.fullscreen);
+            });
+    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::classroomBundleWritten,
+            this, [this](const QString& path) {
+                setExecutionState(tr("ready"),
+                                  tr("Wrote %1").arg(QFileInfo{path}.fileName()));
+            });
+    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::classroomUnbundled, this,
+            [this](int students) {
+                setExecutionState(tr("ready"),
+                                  tr("Imported %1 student(s)").arg(students));
+                // The class on screen is now a different class.
+                requestClassroom();
             });
     connect(python_worker_.get(), &timewarp::bridge::PythonWorker::classroomFailed, this,
             [this](const QString& request, const QString& error) {

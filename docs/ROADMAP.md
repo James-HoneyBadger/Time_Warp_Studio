@@ -446,9 +446,10 @@ well: the right column's Classroom page shows the roster, the current assignment
 and one row of marks per learner, read through the bridge from the same files
 `teach.py` writes. Presentation mode (View > Presentation Mode) hides the chrome
 and takes the lesson panel and console to the size and window style
-`teach.py present` sets, and a lesson session can be exported as Markdown or PDF
-with its checkpoints, this session's verdicts, the program and the output. The
-**telemetry HUD** was on it too and is now the Telemetry tab described above.
+`teach.py present` sets, a lesson session can be exported as Markdown or PDF with
+its checkpoints, this session's verdicts, the program and the output, and the
+class can be bundled or unpacked from the same page. The **telemetry HUD** was on
+it too and is now the Telemetry tab described above.
 
 ---
 
