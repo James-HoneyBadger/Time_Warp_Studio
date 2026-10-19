@@ -124,7 +124,7 @@ int main(int argc, char* argv[]) {
     const QCommandLineOption panelOption{
         QStringLiteral("panel"),
         QStringLiteral("Bring this right-column panel to the front: output, "
-                       "variables, telemetry, debug or lessons."),
+                       "variables, telemetry, debug, lessons or classroom."),
         QStringLiteral("name")};
     parser.addOption(panelOption);
 
@@ -227,17 +227,20 @@ int main(int argc, char* argv[]) {
         window.resize(screenshotSize);
     }
 
-    bool lessonsPanel = false;
+    // The two panels whose content comes back from the worker process. A picture
+    // of either is only worth taking once that answer has arrived.
+    bool enginePanel = false;
     if (parser.isSet(panelOption)) {
         const QString panel = parser.value(panelOption);
         if (!window.showPanel(panel)) {
             std::fprintf(stderr,
                          "time_warp_ide: --panel expects output, variables, "
-                         "telemetry, debug or lessons, got \"%s\"\n",
+                         "telemetry, debug, lessons or classroom, got \"%s\"\n",
                          qPrintable(panel));
             return 2;
         }
-        lessonsPanel = panel.trimmed().toLower() == QLatin1String("lessons");
+        const QString chosen = panel.trimmed().toLower();
+        enginePanel = chosen == QLatin1String("lessons") || chosen == QLatin1String("classroom");
     }
 
     const QStringList arguments = parser.positionalArguments();
@@ -274,15 +277,15 @@ int main(int argc, char* argv[]) {
         // the drawing arrives from another thread: grabbing at 0ms would capture
         // a canvas that has been cleared but not yet drawn on.
         //
-        // The lesson panel needs the longest wait of all: its content comes back
-        // from a Python process that has to start first, so a grab at 0ms would
-        // photograph an empty panel and look like a broken panel rather than a
-        // fast shutter.
+        // The lesson and classroom panels need the longest wait of all: their
+        // content comes back from a Python process that has to start first, so a
+        // grab at 0ms would photograph an empty panel and look like a broken
+        // panel rather than a fast shutter.
         int delay = 0;
         if (autorun) {
             delay = 1500;
         }
-        if (lessonsPanel) {
+        if (enginePanel) {
             delay = std::max(delay, 6000);
         }
         QTimer::singleShot(delay, &application, [&window, screenshotPath, exportPath] {

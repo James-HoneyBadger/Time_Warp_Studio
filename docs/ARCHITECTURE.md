@@ -568,9 +568,10 @@ needs no change per language.
 
 ### Replacing a placeholder panel
 
-The right column's **Variables**, **Telemetry HUD** and **Debug** tabs are real panels
-(`VariablesPanel`, `TelemetryPanel`, `DebugPanel` in `src/ui/panels.cpp`), driven by data
-the window gets from two places. The outline dock and the console's **Terminal** tab are
+The right column's **Variables**, **Telemetry HUD**, **Debug**, **Lessons** and
+**Classroom** tabs are real panels (`VariablesPanel`, `TelemetryPanel`, `DebugPanel`,
+`LessonPanel`, `ClassroomPanel` in `src/ui/panels.cpp`), driven by data the window gets
+from two places. The outline dock and the console's **Terminal** tab are
 still `PlaceholderPanel`s naming the Python class they stand in for. Those are real
 widgets with the right size hints and minimums, so the *layout* is real and testable
 today; what they lack is behind them.

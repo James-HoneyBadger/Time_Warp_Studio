@@ -67,7 +67,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 6 | Debugging breadth | breakpoints everywhere ✅, pause/step for line-by-line languages ✅, profiler | L | 0, best after 1 |
 | 7 | Workspace | document outline ✅, terminal, split editor ✅, run both panes ✅ | M | 7.3 needs 1.5 |
 | 8 | Accessibility and display | high contrast ✅, font scale ✅, focus mode ✅, CRT settings ✅, screen presets ✅ | S–M | 0 |
-| 9 | Classroom | roster panel, presentation mode, lesson session export, bundles | M | 9.4 needs an archive decision |
+| 9 | Classroom | roster panel ✅, presentation mode, lesson session export, bundles | M | 9.4 needs an archive decision |
 
 Size: **S** ≈ a session, **M** ≈ two or three, **L** ≈ a week of part-time work.
 
@@ -674,7 +674,7 @@ demonstration rather than a setting.
 The engine already exists in `native/bridge/time_warp/features/classroom_mode.py`
 and is reachable from `teach.py`. This phase is the panel that uses it.
 
-### 9.1 Classroom panel (M)
+### 9.1 Classroom panel (M) ✅
 
 - New `ClassroomPanel` in `panels.cpp`: roster list, per-student progress from the
   lesson store, "open student folder".
@@ -687,6 +687,38 @@ and is reachable from `teach.py`. This phase is the panel that uses it.
 listed; progress matches the lesson store; a missing roster shows an empty state;
 the panel never writes a file the engine cannot read back (round-trip through the
 engine's own loader).
+
+**Done.** The panel is the right column's sixth page and is asked for on first
+look, like the curriculum. `worker.py` grew a `ClassroomService` with two
+requests — `classroom-roster` (students with their folders, the assignment and a
+note) and `classroom-marks` (the engine's own `collect()` rolled up by
+`lesson_marks()`) — so the panel's verdict on a learner's file and
+`teach.py collect`'s are one function's answer. Reading the class list uses
+`Student.directory()` rather than `student_directory()`, so opening the panel
+does not create folders for people. Marks are one row per learner per lesson with
+"handed in" and "passed" as `n/total`; the folder button follows the *selected
+row*, so a teacher clicking Alan's mark is not shown Ada's work. An empty class is
+`ok` with no rows, not a failure: a new teacher must not see a broken panel.
+
+Each request re-reads the class files rather than keeping a `ClassroomMode` for
+the life of the process, so a roster `teach.py` changes while the IDE is open
+appears on Refresh instead of at the next restart. The two requests are made in
+order — the marks ride on the roster's answer — because the worker answers one
+request at a time; sending both at once had the second refused. Marking runs the
+verifier and therefore an interpreter, so it is refused while a program is
+running, exactly as a lesson check is; the class list runs nothing and answers at
+any time. A refusal is shown in the panel's summary rather than blanking the
+rows, because a failed refresh that emptied the table would be indistinguishable
+from a class with nobody in it.
+
+The tests live where the machinery is rather than in a suite of their own: the
+engine round trip in `python_bridge_tests` (a class list made by `ClassroomMode`
+itself, read back through both requests, then re-read by the engine to prove
+nothing in the path writes a file it cannot parse; a second student added after
+the first read to prove Refresh re-reads; and the marks refused while a program
+runs) and the panel contract in `ui_layout_tests`. A separate binary would have
+needed a second copy of the harness that starts an interpreter and waits for a
+real answer.
 
 ### 9.2 Presentation mode (S)
 

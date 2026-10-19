@@ -92,6 +92,7 @@ namespace timewarp::ui {
 /// mechanism, and a preset is a named point in it.
 enum class ScreenPreset { Normal, Amber, Green, White };
 
+class ClassroomPanel;
 class CodeEditor;
 class CommandPalette;
 class Chip8Window;
@@ -168,6 +169,11 @@ public:
 
     /// The lesson panel, so a test can drive it and a screenshot can show it.
     [[nodiscard]] LessonPanel* lessonPanel() const noexcept { return lesson_panel_; }
+
+    /// The class list panel: the right column's teacher-facing page.
+    [[nodiscard]] ClassroomPanel* classroomPanel() const noexcept {
+        return classroom_panel_;
+    }
 
     /// The find and replace bar, so a test can drive it.
     [[nodiscard]] FindBar* findBar() const noexcept { return find_bar_; }
@@ -792,6 +798,10 @@ private:
     void requestLessonHint(const QString& lesson, int checkpoint);
     void requestLessonSolution(const QString& lesson, int checkpoint);
     void requestLessonReset(const QString& lesson);
+    /// Sends both classroom requests. They are separate messages because the
+    /// roster is small and cheap and the marks are a directory walk, so the
+    /// panel can show the class list while the marking is still happening.
+    void requestClassroom();
 
     /// `outputSubTabs_` container that holds them.
     QPlainTextEdit* console_view_ = nullptr;
@@ -816,6 +826,12 @@ private:
     /// Set once the curriculum has been asked for, so showing the Lessons tab a
     /// second time does not ask again. The panel keeps its own copy afterwards.
     bool curriculum_requested_ = false;
+
+    /// The teacher's page: the class list and a row of marks per student.
+    ClassroomPanel* classroom_panel_ = nullptr;
+    /// Set once the class list has been asked for, for the same reason
+    /// `curriculum_requested_` exists.
+    bool classroom_requested_ = false;
 
     std::unique_ptr<timewarp::bridge::PythonWorker> python_worker_;
 

@@ -397,6 +397,102 @@ void test_lesson_panel_contract() {
     TW_CHECK_EQ(window->rightTabs()->tabText(4), QString::fromUtf8("\U0001F393 Lessons"));
 }
 
+// The classroom page: a class list and a row of marks per learner. It has no
+// bridge here -- these are the panel's own setters, which is what the worker's
+// answers end up calling.
+void test_classroom_panel_contract() {
+    announce("classroom panel");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    timewarp::ui::ClassroomPanel* panel = window->classroomPanel();
+    TW_CHECK(panel != nullptr);
+    if (panel == nullptr) {
+        return;
+    }
+
+    TW_CHECK_EQ(panel->objectName(), QStringLiteral("classroomPanel"));
+    TW_CHECK(window->rightTabs()->widget(5) == panel);
+    TW_CHECK_EQ(window->rightTabs()->tabText(5), QString::fromUtf8("\U0001F3EB Classroom"));
+
+    // No class list is the state a fresh installation is in, and it has to say so
+    // rather than show an empty table that looks like a class of nobody.
+    TW_CHECK_EQ(panel->studentCount(), 0);
+    TW_CHECK_EQ(panel->markRowCount(), 0);
+    TW_CHECK(panel->emptyStateVisible());
+    TW_CHECK(panel->findChild<QTableWidget*>(QStringLiteral("classroomMarks")) != nullptr);
+    TW_CHECK(panel->findChild<QLabel*>(QStringLiteral("classroomEmptyState")) != nullptr);
+    for (const char* name : {"classroomOpenFolder", "classroomRefresh", "classroomSummary"}) {
+        TW_CHECK(panel->findChild<QWidget*>(QString::fromLatin1(name)) != nullptr);
+    }
+
+    QList<timewarp::bridge::ClassroomStudent> students;
+    students.append(timewarp::bridge::ClassroomStudent{
+        QStringLiteral("ada-lovelace"), QStringLiteral("Ada Lovelace"),
+        QStringLiteral("/tmp/class/students/ada-lovelace")});
+    students.append(timewarp::bridge::ClassroomStudent{
+        QStringLiteral("alan-turing"), QStringLiteral("Alan Turing"),
+        QStringLiteral("/tmp/class/students/alan-turing")});
+    panel->setRoster(students, {QStringLiteral("basic_first_steps")},
+                     QStringLiteral("Chapter one"));
+    TW_CHECK_EQ(panel->studentCount(), 2);
+    TW_CHECK(!panel->emptyStateVisible());
+    // With nothing marked yet, Open Folder still has somewhere to go: the first
+    // learner's directory is the useful default for a teacher looking at an
+    // unmarked class.
+    TW_CHECK_EQ(panel->directoryForRow(-1),
+                QStringLiteral("/tmp/class/students/ada-lovelace"));
+
+    QList<timewarp::bridge::ClassroomMark> rows;
+    rows.append(timewarp::bridge::ClassroomMark{
+        QStringLiteral("alan-turing"), QStringLiteral("basic_first_steps"),
+        QStringLiteral("First steps"), 3, 3, 2, false});
+    panel->setMarks(rows);
+    TW_CHECK_EQ(panel->markRowCount(), 1);
+    // The folder follows the *row*, not the class list order: a teacher clicking
+    // Alan's mark must not be shown Ada's work.
+    TW_CHECK_EQ(panel->directoryForRow(0),
+                QStringLiteral("/tmp/class/students/alan-turing"));
+    // A row is four readable cells, and "2/3" is what a teacher reads rather than
+    // two numbers in two columns to be added up mentally.
+    auto* table = panel->findChild<QTableWidget*>(QStringLiteral("classroomMarks"));
+    TW_CHECK(table != nullptr);
+    if (table != nullptr) {
+        // The name, not the id: the mark rows carry ids and the roster carries
+        // names, and a teacher reads the mark sheet.
+        TW_CHECK_EQ(table->item(0, 0)->text(), QStringLiteral("Alan Turing"));
+        TW_CHECK_EQ(table->item(0, 1)->text(), QStringLiteral("First steps"));
+        TW_CHECK_EQ(table->item(0, 2)->text(), QStringLiteral("3/3"));
+        TW_CHECK_EQ(table->item(0, 3)->text(), QStringLiteral("2/3"));
+    }
+
+    // A refresh that brings a new name updates the row rather than leaving the
+    // old one: the mark row and the roster are two answers to "who is this?".
+    students[1].name = QStringLiteral("Alan M. Turing");
+    panel->setRoster(students, {QStringLiteral("basic_first_steps")},
+                     QStringLiteral("Chapter one"));
+    if (table != nullptr) {
+        TW_CHECK_EQ(table->item(0, 0)->text(), QStringLiteral("Alan M. Turing"));
+    }
+
+    // A failure is said in the summary, and the last answer stays on screen: a
+    // refresh the engine could not answer must not look like an empty class.
+    panel->setFailure(QStringLiteral("classroom-marks"),
+                      QStringLiteral("something went wrong"));
+    auto* summary = panel->findChild<QLabel*>(QStringLiteral("classroomSummary"));
+    TW_CHECK(summary != nullptr);
+    if (summary != nullptr) {
+        TW_CHECK(summary->text().contains(QStringLiteral("classroom-marks")));
+        TW_CHECK(summary->text().contains(QStringLiteral("something went wrong")));
+    }
+    TW_CHECK_EQ(panel->studentCount(), 2);
+    TW_CHECK(!panel->emptyStateVisible());
+
+    // And a roster with nobody on it goes back to the empty state, because that
+    // is what the engine reports for an empty class.
+    panel->setRoster({}, {}, {});
+    TW_CHECK_EQ(panel->studentCount(), 0);
+    TW_CHECK(panel->emptyStateVisible());
+}
+
 void test_variables_panel_contract() {
     announce("variables panel");
     const std::unique_ptr<MainWindow> window = shownWindow();
@@ -590,12 +686,14 @@ void test_right_column_tabs_and_order() {
     ResizableTabWidget* tabs = window->rightTabs();
 
     TW_CHECK_EQ(tabs->objectName(), QStringLiteral("rightTabs"));
-    TW_CHECK_EQ(tabs->count(), 5);
-    // Order is part of the interface: users reach for Output first.
+    TW_CHECK_EQ(tabs->count(), 6);
+    // Order is part of the interface: users reach for Output first, and the
+    // classroom page is last because only a teacher opens it.
     TW_CHECK_EQ(tabTitles(tabs).toStdString(),
                 std::string{"\U0001F4DD Output  \U0001F3A8 Graphics|"
                             "\U0001F50D Variables|\u26A1 Telemetry HUD|"
-                            "\U0001F41B Debug|\U0001F393 Lessons"});
+                            "\U0001F41B Debug|\U0001F393 Lessons|"
+                            "\U0001F3EB Classroom"});
     TW_CHECK_EQ(tabs->widget(0), window->outputCanvasSplitter());
 
     // These are fixed panes, not documents: no close buttons, no dragging them
@@ -2685,6 +2783,7 @@ int main(int argc, char** argv) {
     test_editor_pane_splitter_holds_two_tab_groups();
     test_right_column_tabs_and_order();
     test_lesson_panel_contract();
+    test_classroom_panel_contract();
     test_variables_panel_contract();
     test_telemetry_panel_contract();
     test_debug_panel_is_scheme_only();

@@ -7,6 +7,17 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **A classroom page in the IDE.** The right column's sixth page is the teacher's
+  side of the curriculum: the class list, what has been assigned and the note
+  that goes with it, and one row of marks per learner per lesson with how many
+  checkpoints were handed in and how many passed. Open Student Folder takes you
+  to the selected learner's work. Everything is read through the language
+  bridge from the files `teach.py` already writes -- `ClassroomMode` is the one
+  reader of `roster.json`, so the marks the panel shows and `teach.py collect`
+  reports are one function's answer. Refresh re-reads those files, so a class
+  changed from the command line appears without restarting the IDE. An empty
+  class is an empty page with a line saying so, not a failure, and opening the
+  page does not create folders for anybody.
 - **A document outline, a split editor, and a two-program comparison.** The
   **Document Outline** dock lists the named places in the current program --
   Logo procedures, BASIC subroutines and labels, COMAL `PROC`, REXX labels,

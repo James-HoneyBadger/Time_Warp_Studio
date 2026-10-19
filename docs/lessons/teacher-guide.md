@@ -263,6 +263,17 @@ document.
 The panel deliberately cannot show the whole answer until **Answer** is pressed,
 so a projected panel does not spoil the exercise for the room.
 
+Next to it is the **🏫 Classroom** panel, which is the teacher's view: the class
+list, what has been assigned and the note that goes with it, and one row per
+learner per lesson showing how many checkpoints were handed in and how many
+passed. **Open Student Folder** jumps to the selected learner's work. It reads
+the same files `teach.py` writes — the panel's marks and `collect`'s are the same
+marking code — so a class can be set up from the command line and then watched
+from the IDE, or the other way round. **Refresh** re-reads those files, so a
+student added or a handout marked while the IDE is open appears without
+restarting it. An empty class shows a line saying how to make one rather than an
+empty table.
+
 ---
 
 **Next:** [the curriculum format](FORMAT.md) · [the generated lesson plans](plans/README.md)

@@ -12,6 +12,7 @@
 #include <QClipboard>
 #include <QComboBox>
 #include <QDateTime>
+#include <QDesktopServices>
 #include <QDir>
 #include <QDockWidget>
 #include <QFile>
@@ -41,6 +42,7 @@
 #include <QTextDocument>
 #include <QToolBar>
 #include <QToolButton>
+#include <QUrl>
 #include <QVBoxLayout>
 
 #include <functional>
@@ -601,6 +603,35 @@ void MainWindow::buildRightColumn(QSplitter* parent) {
         if (right_tabs_->widget(index) == lesson_panel_) {
             curriculum_requested_ = true;
             emit lesson_panel_->curriculumNeeded();
+        }
+    });
+
+    // The teacher's page. It is empty in a student's copy of the application and
+    // says so, because a class list is a file a teacher makes, not a setting the
+    // program guesses at.
+    classroom_panel_ = new ClassroomPanel{right_tabs_};
+    right_tabs_->addTab(classroom_panel_, tr("\U0001F3EB Classroom"));
+    connect(classroom_panel_, &ClassroomPanel::refreshRequested, this,
+            &MainWindow::requestClassroom);
+    connect(classroom_panel_, &ClassroomPanel::openFolderRequested, this,
+            [this](const QString& path) {
+                // A folder opened in the desktop's file manager is how a teacher
+                // hands back a marked file. The program does not copy or rename
+                // anything: the folder is the teacher's, and moving files in it
+                // behind their back would be worse than doing nothing.
+                if (!QDesktopServices::openUrl(QUrl::fromLocalFile(path))) {
+                    statusBar()->showMessage(
+                        tr("Could not open %1 — the folder is at that path.").arg(path), 8000);
+                }
+            });
+    // Asked for on the first look, like the curriculum, and for the same reason.
+    connect(right_tabs_, &QTabWidget::currentChanged, this, [this](int index) {
+        if (classroom_requested_ || classroom_panel_ == nullptr) {
+            return;
+        }
+        if (right_tabs_->widget(index) == classroom_panel_) {
+            classroom_requested_ = true;
+            requestClassroom();
         }
     });
 
@@ -3865,7 +3896,8 @@ struct PanelEntry {
 };
 
 constexpr PanelEntry kPanelTable[] = {
-    {"output", 0}, {"variables", 1}, {"telemetry", 2}, {"debug", 3}, {"lessons", 4}};
+    {"output", 0},   {"variables", 1}, {"telemetry", 2},
+    {"debug", 3},    {"lessons", 4},   {"classroom", 5}};
 
 }  // namespace
 
@@ -3973,6 +4005,32 @@ void MainWindow::requestLessonReset(const QString& lesson) {
     if (ensureBridge()) {
         python_worker_->resetLesson(lesson);
     }
+}
+
+void MainWindow::requestClassroom() {
+    if (!ensureBridge()) {
+        if (classroom_panel_ != nullptr) {
+            classroom_panel_->setFailure(QStringLiteral("classroom-roster"),
+                                         tr("the language engine did not start"));
+        }
+        return;
+    }
+    // The roster first, and the marks when its answer arrives: the worker takes
+    // one request at a time, so sending both at once would have the second
+    // refused and the table would stay empty forever. They are separate requests
+    // because the class list is a file read and the marking is a directory walk,
+    // so the panel can show who is in the class while the marks are worked out.
+    if (python_worker_->requestClassroomRoster() || classroom_panel_ == nullptr) {
+        return;
+    }
+    // Refused, which means another request is in flight or the worker has gone:
+    // either way the panel must say so rather than sit there looking like a
+    // school with no pupils.
+    classroom_panel_->setFailure(
+        QStringLiteral("classroom-roster"),
+        python_worker_->isRunning()
+            ? tr("another request is still being answered; try Refresh")
+            : tr("the language engine is not running"));
 }
 
 void MainWindow::adoptBridgeWorker() {
@@ -4085,6 +4143,38 @@ void MainWindow::adoptBridgeWorker() {
             [this](const QString& request, const QString& error) {
                 if (lesson_panel_ != nullptr) {
                     lesson_panel_->setFailure(request, error);
+                }
+            });
+    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::classroomRosterReceived,
+            this,
+            [this](const QList<timewarp::bridge::ClassroomStudent>& students,
+                   const QStringList& lessons, const QString& note) {
+                if (classroom_panel_ != nullptr) {
+                    classroom_panel_->setRoster(students, lessons, note);
+                }
+                // The roster's answer is what lets the marks be asked for; see
+                // `requestClassroom`. An empty class has no marks, so it is not
+                // worth a second round trip.
+                if (!students.isEmpty()) {
+                    static_cast<void>(python_worker_->requestClassroomMarks());
+                }
+            });
+    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::classroomMarksReceived,
+            this, [this](const QList<timewarp::bridge::ClassroomMark>& rows) {
+                if (classroom_panel_ != nullptr) {
+                    classroom_panel_->setMarks(rows);
+                }
+            });
+    connect(python_worker_.get(), &timewarp::bridge::PythonWorker::classroomFailed, this,
+            [this](const QString& request, const QString& error) {
+                // Said in three places on purpose: an empty class and a broken
+                // class look the same in a table, so the summary row and the
+                // status bar have to say which one this is.
+                reportError(error);
+                statusBar()->showMessage(tr("%1 could not be answered: %2").arg(request, error),
+                                         8000);
+                if (classroom_panel_ != nullptr) {
+                    classroom_panel_->setFailure(request, error);
                 }
             });
     connect(python_worker_.get(), &timewarp::bridge::PythonWorker::failed, this,

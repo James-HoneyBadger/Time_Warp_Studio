@@ -67,6 +67,25 @@ sent to every client that opens the panel, and a lesson whose answer travels wit
 its questions is a lesson that has been spoiled before it is read. The worked
 answer is one request away for a learner who has decided they need it.
 
+#### Classroom
+
+The class list and its marks belong to `features/classroom_mode.py`, which
+`teach.py` writes. The panel asks through these two requests rather than reading
+`roster.json` itself, so there is one reader of the format.
+
+    {"t": "classroom-roster"}             # the class list and the assignment
+    {"t": "classroom-marks"}              # every handed-in file, marked
+
+The answers:
+
+    {"t": "classroom-roster", "ok": true, "students": [ ... ]}
+    {"t": "classroom-marks", "ok": true, "rows": [ ... ]}
+
+An empty class is `ok` with no students, not an error: a new teacher has not
+broken anything. Marks are refused while a program is running, because marking
+runs the verifier and the verifier runs an interpreter -- the same reason a
+lesson check is refused.
+
 #### How the drawing is captured
 
 `TurtleState` keeps append-only `lines` and `shapes` lists, so the drawing is read
@@ -734,6 +753,87 @@ class LessonService:
         emitter.send({"t": "lesson-reset", "ok": True, "lesson": lesson_id})
 
 
+class ClassroomService:
+    """The class list and its marks, as the classroom panel asks for them.
+
+    The roster format belongs to `classroom_mode.py`, which `teach.py` also
+    writes. The panel therefore reads it through this service rather than
+    parsing `roster.json` itself: two readers of one file drift, and the one that
+    drifts is the one a teacher is looking at.
+
+    Marks come from the engine's own `collect()`/`lesson_marks()`, so the panel's
+    verdict on a learner's file and `teach.py collect`'s verdict are one
+    function's answer.
+    """
+
+    def _fail(self, emitter: "Emitter", kind: str, note: str) -> None:
+        emitter.send({"t": kind, "ok": False, "error": note})
+
+    def _load(self, emitter: "Emitter", kind: str) -> Any:
+        """A fresh view of the class files, or None after reporting why not.
+
+        Built per request rather than cached: `teach.py` writes these files while
+        the IDE is open, and a cached class would make Refresh show the class as
+        it was when the tab first opened. Reading two small JSON files costs less
+        than a stale mark sheet is worth.
+        """
+        try:
+            from time_warp.features.classroom_mode import ClassroomMode
+
+            return ClassroomMode()
+        except Exception as exc:  # noqa: BLE001 - reported, not raised
+            # A broken class list must not take the IDE down: the rest of the
+            # studio works, and the panel says what is wrong instead of showing
+            # an empty class as if there were one.
+            self._fail(emitter, kind, f"the class list could not be loaded: {exc}")
+            return None
+
+    def roster(self, emitter: "Emitter") -> None:
+        mode = self._load(emitter, "classroom-roster")
+        if mode is None:
+            return
+        students = []
+        for student in mode.roster:
+            # `directory()` rather than `student_directory()`: reading the class
+            # list must not create a folder for somebody, which is a side effect
+            # a teacher would see as the panel having "done" something.
+            students.append(
+                {
+                    "id": student.student_id,
+                    "name": student.name,
+                    "directory": str(student.directory(mode.root)),
+                }
+            )
+        emitter.send(
+            {
+                "t": "classroom-roster",
+                "ok": True,
+                "students": students,
+                "assignment": {
+                    "lessons": list(mode.assignment.lesson_ids),
+                    "note": mode.assignment.note,
+                },
+                "presentation": mode.presentation.to_dict(),
+            }
+        )
+
+    def marks(self, emitter: "Emitter") -> None:
+        mode = self._load(emitter, "classroom-marks")
+        if mode is None:
+            return
+        if not mode.roster.students:
+            # Not an error: an empty class has no marks, and the panel shows its
+            # empty state. Reporting it as a failure would make a new teacher
+            # think something was broken.
+            return emitter.send({"t": "classroom-marks", "ok": True, "rows": []})
+        try:
+            submissions = mode.collect()
+            rows = mode.lesson_marks(submissions)
+        except Exception as exc:  # noqa: BLE001 - reported, not raised
+            return self._fail(emitter, "classroom-marks", str(exc))
+        emitter.send({"t": "classroom-marks", "ok": True, "rows": rows})
+
+
 def main(argv: Optional[List[str]] = None) -> int:
     del argv
     emitter = Emitter(sys.stdout)
@@ -748,6 +848,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     session: Optional[Session] = None
     program: Optional[threading.Thread] = None
     lessons = LessonService()
+    classroom = ClassroomService()
     for raw in sys.stdin:
         raw = raw.strip()
         if not raw:
@@ -815,6 +916,22 @@ def main(argv: Optional[List[str]] = None) -> int:
                 lessons.check(emitter, message)
         elif kind == "lesson-reset":
             lessons.reset(emitter, message)
+        elif kind == "classroom-roster":
+            classroom.roster(emitter)
+        elif kind == "classroom-marks":
+            # Marking runs the verifier, and the verifier runs an interpreter:
+            # the same race `lesson-check` refuses above. The class list is a
+            # file read and is safe to serve at any time.
+            if program is not None and program.is_alive():
+                emitter.send(
+                    {
+                        "t": "classroom-marks",
+                        "ok": False,
+                        "error": "a program is running; stop it before collecting the marks",
+                    }
+                )
+            else:
+                classroom.marks(emitter)
         else:
             emitter.send({"t": "err", "text": f"bridge: unknown request {kind!r}"})
 

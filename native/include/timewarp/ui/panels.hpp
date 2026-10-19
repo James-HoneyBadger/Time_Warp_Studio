@@ -17,6 +17,7 @@
 #include <QColor>
 #include <QDialog>
 #include <QFrame>
+#include <QHash>
 #include <QList>
 #include <QPair>
 #include <QSize>
@@ -91,6 +92,64 @@ signals:
 private:
     QListWidget* list_ = nullptr;
     QLabel* empty_ = nullptr;
+};
+
+/// The classroom: the class list, what has been assigned, and the marks.
+///
+/// A view, like the lesson panel: the roster and the marking live in
+/// `classroom_mode.py`, which `teach.py` writes too, and the panel reaches them
+/// through the worker's `classroom-roster`/`classroom-marks` requests. Parsing
+/// `roster.json` here would be a second reader of one file, and the one that
+/// drifts is the one a teacher is looking at.
+class ClassroomPanel final : public QFrame {
+    Q_OBJECT
+
+public:
+    explicit ClassroomPanel(QWidget* parent = nullptr);
+
+    /// Replaces the class list and what it has been set.
+    void setRoster(const QList<timewarp::bridge::ClassroomStudent>& students,
+                   const QStringList& assignedLessons, const QString& note);
+    /// Replaces the mark sheet.
+    void setMarks(const QList<timewarp::bridge::ClassroomMark>& rows);
+
+    /// Reports a request the engine could not answer.
+    ///
+    /// The rows already on screen are left alone: the last answer the engine gave
+    /// is still the best one available, and blanking the class because a refresh
+    /// failed would show "nobody" as if that were the truth.
+    void setFailure(const QString& request, const QString& error);
+
+    [[nodiscard]] int studentCount() const;
+    [[nodiscard]] int markRowCount() const;
+    /// True when the empty state is the thing on screen: no students yet.
+    [[nodiscard]] bool emptyStateVisible() const;
+    /// The folder for the student on mark row `row`, or empty when there is none.
+    [[nodiscard]] QString directoryForRow(int row) const;
+
+signals:
+    /// The panel wants fresh numbers. Asking rather than polling, because a
+    /// classroom file changes when a teacher runs `teach.py`, not on a timer.
+    void refreshRequested();
+    /// Open one learner's folder in the file manager.
+    void openFolderRequested(const QString& path);
+
+private:
+    void updateSummary();
+
+    QLabel* summary_ = nullptr;
+    QLabel* empty_ = nullptr;
+    QTableWidget* marks_ = nullptr;
+    QPushButton* open_ = nullptr;
+    QPushButton* refresh_ = nullptr;
+    QHash<QString, QString> directories_;
+    /// Student id to display name. The mark rows carry ids; a teacher reads names.
+    QHash<QString, QString> names_;
+    /// The students in the order the engine sent them. `directories_` is a hash
+    /// and iterates in an arbitrary order, which would make "the first student"
+    /// mean a different person on the next process start.
+    QStringList student_order_;
+    int student_count_ = 0;
 };
 
 /// Stands in for `ImmediateModePanel` (`ui/output.py`).

@@ -999,7 +999,9 @@ QMainWindow                                   #mainWindow
 │       │       │                                 └── Canvas         #turtleCanvas
 │       │       ├── "🔍 Variables"
 │       │       ├── "⚡ Telemetry HUD"
-│       │       └── "🐛 Debug"
+│       │       ├── "🐛 Debug"
+│       │       ├── "🎓 Lessons"
+│       │       └── "🏫 Classroom"
 │       └── FunctionKeyBar                     #functionKeyBar      fixed 30px
 ├── QStatusBar                                 #mainStatusBar
 │       [message area: breadcrumb] ... [permanent: languageBadge | positionBadge | executionBadge]
@@ -1134,8 +1136,8 @@ executes, and the 18 that draw produce drawing -- checked by
 
 ### The lesson panel
 
-The right column's **Lessons** tab is the one page of the application that is a real
-port rather than a `PlaceholderPanel`. `LessonPanel` (`src/ui/panels.cpp`) is a *view*: it
+The right column's **Lessons** tab is a real port rather than a `PlaceholderPanel`
+(as is **Classroom** beside it). `LessonPanel` (`src/ui/panels.cpp`) is a *view*: it
 holds no curriculum and runs no program. It asks the bridge for the lesson list, shows
 the current checkpoint, and sends the learner's source back to be checked.
 
@@ -1152,6 +1154,13 @@ Requests and replies are documented in
 A `lesson-check` is refused while a program is running, because two interpreters in one
 process would share the engine's module state -- the refusal is the feature, and it is
 also the useful thing to be told.
+
+The **Classroom** page is the teacher's side of the same machinery. `ClassroomPanel`
+shows the roster, the assignment and one row of marks per learner per lesson, and asks
+`classroom-roster` and `classroom-marks`; both are answered by `classroom_mode.py`, the
+module `teach.py` writes, so the mark the panel shows and `teach.py collect`'s are one
+function's answer. The class list is a file read and answers at any time; the marks run
+the verifier and are refused while a program is running, for the reason above.
 
 `TurtleCanvas` is a real graphics surface, not a stand-in. Whichever engine runs,
 the path is the same: turtle calls become `CanvasCommand`s, the producer pushes
@@ -1262,4 +1271,4 @@ application rather than to the engines.
 Landed since this file was first written: the runner bridge (`worker.py` behind
 `bridge::PythonWorker`), the real output console and turtle canvas on top of
 `CanvasCommandQueue`, the two-row toolbar, `native/` under the repository Makefile and
-CI, the function-key row, and the lesson panel.
+CI, the function-key row, the lesson panel, and the classroom panel beside it.

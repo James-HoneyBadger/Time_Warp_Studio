@@ -440,7 +440,10 @@ first-run overlay anchored to the Run button, canvas, lessons panel and
 function-key bar, re-armable from Settings.
 
 The **lessons system**, with progress tracking and a classroom mode, used to be on this
-list. It is now implemented — see `docs/lessons/`. The **telemetry HUD** was on it too
+list. It is now implemented — see `docs/lessons/`. The class list is in the IDE as
+well: the right column's Classroom page shows the roster, the current assignment
+and one row of marks per learner, read through the bridge from the same files
+`teach.py` writes. The **telemetry HUD** was on it too
 and is now the Telemetry tab described above.
 
 ---

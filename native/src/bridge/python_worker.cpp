@@ -434,6 +434,42 @@ bool PythonWorker::requestLessonProgress() {
     return true;
 }
 
+bool PythonWorker::requestClassroomRoster() {
+    if (waiting_for_lesson_) {
+        return false;
+    }
+    QJsonObject message;
+    message[QStringLiteral("t")] = QStringLiteral("classroom-roster");
+    if (!sendRequest(message)) {
+        return false;
+    }
+    waiting_for_lesson_ = true;
+    return true;
+}
+
+bool PythonWorker::requestClassroomMarks() {
+    if (waiting_for_lesson_) {
+        return false;
+    }
+    // Marking runs each handed-in program through the verifier, and a program run
+    // is also an interpreter; see `checkLesson`. The worker refuses the race as
+    // well, so the panel hears at once rather than after a round trip that ends
+    // in the same answer.
+    if (isRunningProgram()) {
+        emit classroomFailed(
+            QStringLiteral("classroom-marks"),
+            tr("a program is running. Stop it before collecting the marks."));
+        return false;
+    }
+    QJsonObject message;
+    message[QStringLiteral("t")] = QStringLiteral("classroom-marks");
+    if (!sendRequest(message)) {
+        return false;
+    }
+    waiting_for_lesson_ = true;
+    return true;
+}
+
 bool PythonWorker::requestHint(const QString& lesson, int checkpoint) {
     if (waiting_for_lesson_) {
         return false;
@@ -630,6 +666,26 @@ namespace {
     return row;
 }
 
+[[nodiscard]] ClassroomStudent studentFrom(const QJsonObject& object) {
+    ClassroomStudent student;
+    student.id = object.value(QStringLiteral("id")).toString();
+    student.name = object.value(QStringLiteral("name")).toString();
+    student.directory = object.value(QStringLiteral("directory")).toString();
+    return student;
+}
+
+[[nodiscard]] ClassroomMark markFrom(const QJsonObject& object) {
+    ClassroomMark mark;
+    mark.student = object.value(QStringLiteral("student")).toString();
+    mark.lesson = object.value(QStringLiteral("lesson")).toString();
+    mark.title = object.value(QStringLiteral("title")).toString();
+    mark.handedIn = object.value(QStringLiteral("handed_in")).toInt();
+    mark.checkpoints = object.value(QStringLiteral("checkpoints")).toInt();
+    mark.passed = object.value(QStringLiteral("passed")).toInt();
+    mark.complete = object.value(QStringLiteral("complete")).toBool();
+    return mark;
+}
+
 }  // namespace
 
 void PythonWorker::handleMessage(const QByteArray& line) {
@@ -732,6 +788,41 @@ void PythonWorker::handleMessage(const QByteArray& line) {
         }
         emit lessonProgressReceived(rows, message.value(QStringLiteral("completed")).toInt(),
                                     message.value(QStringLiteral("total")).toInt());
+        return;
+    }
+    if (kind == QLatin1String("classroom-roster")) {
+        waiting_for_lesson_ = false;
+        if (!message.value(QStringLiteral("ok")).toBool(true)) {
+            emit classroomFailed(QStringLiteral("classroom-roster"),
+                                 message.value(QStringLiteral("error")).toString());
+            return;
+        }
+        QList<ClassroomStudent> students;
+        const QJsonArray items = message.value(QStringLiteral("students")).toArray();
+        for (const QJsonValue& item : items) {
+            students.append(studentFrom(item.toObject()));
+        }
+        const QJsonObject assignment = message.value(QStringLiteral("assignment")).toObject();
+        QStringList assigned;
+        for (const QJsonValue& value : assignment.value(QStringLiteral("lessons")).toArray()) {
+            assigned.append(value.toString());
+        }
+        emit classroomRosterReceived(students, assigned,
+                                     assignment.value(QStringLiteral("note")).toString());
+        return;
+    }
+    if (kind == QLatin1String("classroom-marks")) {
+        waiting_for_lesson_ = false;
+        if (!message.value(QStringLiteral("ok")).toBool(true)) {
+            emit classroomFailed(QStringLiteral("classroom-marks"),
+                                 message.value(QStringLiteral("error")).toString());
+            return;
+        }
+        QList<ClassroomMark> rows;
+        for (const QJsonValue& item : message.value(QStringLiteral("rows")).toArray()) {
+            rows.append(markFrom(item.toObject()));
+        }
+        emit classroomMarksReceived(rows);
         return;
     }
     if (kind == QLatin1String("lesson-hint")) {

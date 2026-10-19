@@ -93,6 +93,27 @@ struct LessonProgress {
     int hintsUsed = 0;
 };
 
+/// One learner on the class list, as `classroom_mode.py` records them.
+struct ClassroomStudent {
+    QString id;
+    QString name;
+    /// The folder their work is in. Reported rather than derived here: a student
+    /// with a `work_dir` outside the class root is a fact only the engine knows.
+    QString directory;
+};
+
+/// One row of the mark sheet: a learner, a lesson, and how many of its checkpoints
+/// their handed-in files passed.
+struct ClassroomMark {
+    QString student;
+    QString lesson;
+    QString title;
+    int handedIn = 0;
+    int checkpoints = 0;
+    int passed = 0;
+    bool complete = false;
+};
+
 /// One row of the variables table.
 ///
 /// The engine decides all three fields, including how the value reads: a value
@@ -185,6 +206,17 @@ public:
     /// Forgets the learner's place in one lesson. Answers with `lessonResetDone`.
     bool resetLesson(const QString& lesson);
 
+    // -- classroom ---------------------------------------------------------
+
+    /// Asks for the class list. Answers with `classroomRosterReceived`.
+    ///
+    /// The roster file belongs to `classroom_mode.py`, which `teach.py` also
+    /// writes; the panel reads it through this request rather than parsing it, so
+    /// there is one reader of the format.
+    bool requestClassroomRoster();
+    /// Asks for every handed-in file, marked. Answers with `classroomMarksReceived`.
+    bool requestClassroomMarks();
+
     /// True when a lesson request has been sent and no answer has arrived.
     [[nodiscard]] bool isWaitingForLesson() const noexcept { return waiting_for_lesson_; }
 
@@ -253,6 +285,14 @@ signals:
     /// several in flight and one of them failing is not the others failing.
     void lessonFailed(const QString& request, const QString& error);
 
+    /// The class list, its assignment, and where each learner's folder is.
+    void classroomRosterReceived(const QList<timewarp::bridge::ClassroomStudent>& students,
+                                 const QStringList& assignedLessons, const QString& note);
+    /// The mark sheet: one row per learner per lesson.
+    void classroomMarksReceived(const QList<timewarp::bridge::ClassroomMark>& rows);
+    /// A classroom request failed, named as above.
+    void classroomFailed(const QString& request, const QString& error);
+
     /// The finished run's variables, for the Variables tab.
     ///
     /// Emitted before `finished`, so anything reacting to "the run is over" sees
@@ -313,3 +353,7 @@ Q_DECLARE_METATYPE(timewarp::bridge::TelemetryRow)
 Q_DECLARE_METATYPE(QList<timewarp::bridge::VariableRow>)
 Q_DECLARE_METATYPE(QList<timewarp::bridge::TelemetryRow>)
 Q_DECLARE_METATYPE(QList<timewarp::bridge::LessonProgress>)
+Q_DECLARE_METATYPE(timewarp::bridge::ClassroomStudent)
+Q_DECLARE_METATYPE(timewarp::bridge::ClassroomMark)
+Q_DECLARE_METATYPE(QList<timewarp::bridge::ClassroomStudent>)
+Q_DECLARE_METATYPE(QList<timewarp::bridge::ClassroomMark>)

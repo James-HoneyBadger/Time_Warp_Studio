@@ -103,6 +103,16 @@ struct Recording {
     QString reset_lesson;
     QString lesson_failure_request;
     QString lesson_failure_text;
+
+    // The classroom, as the panel would have received it.
+    bool roster_arrived = false;
+    QList<timewarp::bridge::ClassroomStudent> students;
+    QStringList assigned_lessons;
+    QString assignment_note;
+    bool marks_arrived = false;
+    QList<timewarp::bridge::ClassroomMark> marks;
+    QString classroom_failure_request;
+    QString classroom_failure_text;
 };
 
 /// Runs a worker and collects everything it says.
@@ -174,6 +184,24 @@ public:
                              recorded_.lesson_failure_request = request;
                              recorded_.lesson_failure_text = error;
                          });
+        QObject::connect(&worker_, &PythonWorker::classroomRosterReceived, &worker_,
+                         [this](const QList<timewarp::bridge::ClassroomStudent>& students,
+                                const QStringList& lessons, const QString& note) {
+                             recorded_.students = students;
+                             recorded_.assigned_lessons = lessons;
+                             recorded_.assignment_note = note;
+                             recorded_.roster_arrived = true;
+                         });
+        QObject::connect(&worker_, &PythonWorker::classroomMarksReceived, &worker_,
+                         [this](const QList<timewarp::bridge::ClassroomMark>& rows) {
+                             recorded_.marks = rows;
+                             recorded_.marks_arrived = true;
+                         });
+        QObject::connect(&worker_, &PythonWorker::classroomFailed, &worker_,
+                         [this](const QString& request, const QString& error) {
+                             recorded_.classroom_failure_request = request;
+                             recorded_.classroom_failure_text = error;
+                         });
     }
 
     /// Forgets the last verdict, so a second check in one test is unambiguous.
@@ -185,6 +213,20 @@ public:
         recorded_.checked = false;
         recorded_.check_passed = false;
         recorded_.check_message.clear();
+    }
+
+    /// Forgets the last classroom answers, for the same reason `clearCheck`
+    /// exists: `roster_arrived` would already be true, and a wait on it would
+    /// return before the second answer had been parsed.
+    void clearClassroom() {
+        recorded_.roster_arrived = false;
+        recorded_.students.clear();
+        recorded_.assigned_lessons.clear();
+        recorded_.assignment_note.clear();
+        recorded_.marks_arrived = false;
+        recorded_.marks.clear();
+        recorded_.classroom_failure_request.clear();
+        recorded_.classroom_failure_text.clear();
     }
 
     [[nodiscard]] PythonWorker& worker() { return worker_; }
@@ -591,6 +633,234 @@ void test_reset_names_the_lesson_it_reset() {
     // Named rather than a bare "done": a panel can have a reset in flight while
     // the learner clicks another lesson.
     TW_CHECK_EQ(harness.recorded().reset_lesson, QStringLiteral("logo_shapes"));
+}
+
+// ---------------------------------------------------------------------------
+// The classroom
+// ---------------------------------------------------------------------------
+
+/// Runs a snippet against the reference engine's own modules and returns its
+/// output, or an empty string when it failed.
+///
+/// The classroom tests need a class list, and the *engine* is what defines one:
+/// writing `roster.json` here would test this file's idea of the format against
+/// itself and prove nothing. So the class is made the way a teacher makes one --
+/// `ClassroomMode`, which `teach.py` drives -- and then read back through the
+/// panel's request.
+[[nodiscard]] QString runEngine(const PythonWorker& worker, const QString& code,
+                               const QString& data_dir, QString* error = nullptr) {
+    QProcess process;
+    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+    env.insert(QStringLiteral("PYTHONPATH"),
+               QFileInfo{worker.paths().script}.absolutePath());
+    env.insert(QStringLiteral("TIME_WARP_DATA_DIR"), data_dir);
+    process.setProcessEnvironment(env);
+    process.start(worker.paths().interpreter, {QStringLiteral("-c"), code});
+    if (!process.waitForStarted(10000)) {
+        if (error != nullptr) {
+            *error = process.errorString();
+        }
+        return {};
+    }
+    if (!process.waitForFinished(120000)) {
+        process.kill();
+        process.waitForFinished(5000);
+        if (error != nullptr) {
+            *error = QStringLiteral("the engine did not finish");
+        }
+        return {};
+    }
+    const QString out = QString::fromUtf8(process.readAllStandardOutput());
+    const QString err = QString::fromUtf8(process.readAllStandardError());
+    if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+        if (error != nullptr) {
+            *error = err.isEmpty() ? QStringLiteral("exit %1").arg(process.exitCode()) : err;
+        }
+        return {};
+    }
+    return out;
+}
+
+/// A roster added by the engine is listed, with the assignment, and a handed-out
+/// checkpoint comes back marked.
+void test_the_class_list_and_its_marks_arrive() {
+    announce("classroom roster and marks");
+    QTemporaryDir data_dir;
+    DataDirOverride data_override{data_dir.path()};
+    QString reason;
+    if (!locateWorker(&reason).isValid()) {
+        std::printf("SKIP: %s\n", qPrintable(reason));
+        return;
+    }
+
+    Harness harness;
+    if (!harness.requireStart()) {
+        return;
+    }
+
+    // The teacher's side of the protocol, run against the test's data directory.
+    // `distribute` writes the starter code, which is what a learner actually
+    // hands in, so the marks below are of real files on disk.
+    const QString setup = runEngine(harness.worker(),
+                                    QStringLiteral(
+                                        "from time_warp.features.classroom_mode import "
+                                        "ClassroomMode\n"
+                                        "mode = ClassroomMode()\n"
+                                        "student = mode.add_student('Ada Lovelace')\n"
+                                        "lesson = mode.lessons[0].id\n"
+                                        "mode.assign([lesson], 'Chapter one')\n"
+                                        "mode.distribute([lesson])\n"
+                                        "print(student.student_id)\n"
+                                        "print(lesson)\n"),
+                                    data_dir.path(), &reason);
+    if (setup.isEmpty()) {
+        std::printf("SKIP: the engine could not make a class list: %s\n", qPrintable(reason));
+        return;
+    }
+    const QStringList lines = setup.split(QLatin1Char('\n'), Qt::SkipEmptyParts);
+    TW_CHECK_EQ(lines.size(), 2);
+    if (lines.size() != 2) {
+        return;
+    }
+    const QString student_id = lines.at(0).trimmed();
+    const QString lesson_id = lines.at(1).trimmed();
+
+    TW_CHECK(harness.worker().requestClassroomRoster());
+    TW_CHECK(harness.waitFor([&harness] { return harness.recorded().roster_arrived; }));
+    const Recording& first = harness.recorded();
+    TW_CHECK(first.classroom_failure_text.isEmpty());
+    TW_CHECK_EQ(first.students.size(), 1);
+    if (first.students.size() != 1) {
+        return;
+    }
+    TW_CHECK_EQ(first.students.at(0).id, student_id);
+    TW_CHECK_EQ(first.students.at(0).name, QStringLiteral("Ada Lovelace"));
+    // Where the handouts went, which is what the panel's Open Folder needs. The
+    // engine decides it; the panel only shows it.
+    TW_CHECK(first.students.at(0).directory.endsWith(QLatin1String("/students/") + student_id));
+    TW_CHECK(first.students.at(0).directory.startsWith(data_dir.path()));
+    TW_CHECK_EQ(first.assigned_lessons, QStringList{lesson_id});
+    TW_CHECK_EQ(first.assignment_note, QStringLiteral("Chapter one"));
+
+    TW_CHECK(harness.worker().requestClassroomMarks());
+    TW_CHECK(harness.waitFor([&harness] { return harness.recorded().marks_arrived; }));
+    const QList<timewarp::bridge::ClassroomMark>& rows = harness.recorded().marks;
+    TW_CHECK_EQ(rows.size(), 1);
+    if (rows.size() != 1) {
+        return;
+    }
+    TW_CHECK_EQ(rows.at(0).student, student_id);
+    TW_CHECK_EQ(rows.at(0).lesson, lesson_id);
+    TW_CHECK(!rows.at(0).title.isEmpty());
+    // Every checkpoint was handed out, so every one is handed in. The *passed*
+    // count is the starter code's business and is not asserted: a starter that
+    // happened to pass would be a curriculum bug, not a bridge one.
+    TW_CHECK(rows.at(0).checkpoints > 0);
+    TW_CHECK_EQ(rows.at(0).handedIn, rows.at(0).checkpoints);
+    TW_CHECK(rows.at(0).passed >= 0);
+    TW_CHECK(rows.at(0).passed <= rows.at(0).handedIn);
+    TW_CHECK(!rows.at(0).complete);
+
+    // Round trip: the engine can read back the class list that the panel was
+    // shown, so nothing in this path writes a file the engine cannot parse.
+    const QString read_back = runEngine(harness.worker(),
+                                        QStringLiteral(
+                                            "from time_warp.features.classroom_mode import "
+                                            "ClassroomMode\n"
+                                            "mode = ClassroomMode()\n"
+                                            "print(len(mode.roster.students))\n"
+                                            "print(mode.assignment.lesson_ids[0])\n"),
+                                        data_dir.path(), &reason);
+    TW_CHECK(!read_back.isEmpty());
+    TW_CHECK(read_back.startsWith(QStringLiteral("1\n")));
+
+    // A second look is a re-read, not a cached copy: `teach.py` is expected to
+    // change the class while the IDE is open, and Refresh has to show it.
+    const QString added =
+        runEngine(harness.worker(),
+                  QStringLiteral("from time_warp.features.classroom_mode import ClassroomMode\n"
+                                 "mode = ClassroomMode()\n"
+                                 "mode.add_student('Alan Turing')\n"
+                                 "print('added')\n"),
+                  data_dir.path(), &reason);
+    if (added.isEmpty()) {
+        std::printf("     adding a student failed: %s\n", qPrintable(reason));
+    }
+    TW_CHECK(!added.isEmpty());
+    harness.clearClassroom();
+    TW_CHECK(harness.worker().requestClassroomRoster());
+    TW_CHECK(harness.waitFor([&harness] { return harness.recorded().roster_arrived; }));
+    TW_CHECK_EQ(harness.recorded().students.size(), 2);
+    for (const timewarp::bridge::ClassroomStudent& student : harness.recorded().students) {
+        TW_CHECK(student.name == QStringLiteral("Ada Lovelace")
+                 || student.name == QStringLiteral("Alan Turing"));
+    }
+}
+
+/// Marking runs an interpreter, so it is refused while a program is running for
+/// the same reason a lesson check is. The class list is a file read and is not.
+void test_the_marks_are_refused_while_a_program_is_running() {
+    announce("classroom marks while busy");
+    QTemporaryDir data_dir;
+    DataDirOverride data_override{data_dir.path()};
+    QString reason;
+    if (!locateWorker(&reason).isValid()) {
+        std::printf("SKIP: %s\n", qPrintable(reason));
+        return;
+    }
+
+    Harness harness;
+    if (!harness.requireStart()) {
+        return;
+    }
+    TW_CHECK(harness.worker().run(QStringLiteral("basic"),
+                                  QStringLiteral("10 PRINT \"TICK\"\n20 GOTO 10\n"),
+                                  QStringLiteral("forever.bas")));
+    TW_CHECK(harness.waitFor([&harness] { return !harness.recorded().output.isEmpty(); },
+                             10000));
+
+    TW_CHECK(!harness.worker().requestClassroomMarks());
+    TW_CHECK_EQ(harness.recorded().classroom_failure_request,
+                QStringLiteral("classroom-marks"));
+    TW_CHECK(harness.recorded().classroom_failure_text.contains(QStringLiteral("Stop")));
+
+    // The class list reads files and runs nothing, so it answers while a program
+    // is running: a teacher can see who is in the class at any time.
+    harness.clearClassroom();
+    TW_CHECK(harness.worker().requestClassroomRoster());
+    TW_CHECK(harness.waitFor([&harness] { return harness.recorded().roster_arrived; }));
+    TW_CHECK(harness.recorded().classroom_failure_text.isEmpty());
+
+    harness.worker().stop();
+    TW_CHECK(harness.waitFor([&harness] { return !harness.worker().isRunning(); }, 10000));
+}
+
+/// No class list is an empty class, not a failure: a fresh install has no
+/// students and the panel shows its empty state.
+void test_an_empty_class_is_not_a_failure() {
+    announce("classroom empty");
+    QTemporaryDir data_dir;
+    DataDirOverride data_override{data_dir.path()};
+    QString reason;
+    if (!locateWorker(&reason).isValid()) {
+        std::printf("SKIP: %s\n", qPrintable(reason));
+        return;
+    }
+
+    Harness harness;
+    if (!harness.requireStart()) {
+        return;
+    }
+    TW_CHECK(harness.worker().requestClassroomRoster());
+    TW_CHECK(harness.waitFor([&harness] { return harness.recorded().roster_arrived; }));
+    TW_CHECK(harness.recorded().classroom_failure_text.isEmpty());
+    TW_CHECK(harness.recorded().students.isEmpty());
+    TW_CHECK(harness.recorded().assigned_lessons.isEmpty());
+
+    TW_CHECK(harness.worker().requestClassroomMarks());
+    TW_CHECK(harness.waitFor([&harness] { return harness.recorded().marks_arrived; }));
+    TW_CHECK(harness.recorded().classroom_failure_text.isEmpty());
+    TW_CHECK(harness.recorded().marks.isEmpty());
 }
 
 // ---------------------------------------------------------------------------
@@ -1023,6 +1293,10 @@ int main(int argc, char** argv) {
     run("lesson-progress", test_progress_covers_every_lesson);
     run("lesson-busy", test_a_check_is_refused_while_a_program_is_running);
     run("lesson-reset", test_reset_names_the_lesson_it_reset);
+
+    run("classroom-marks", test_the_class_list_and_its_marks_arrive);
+    run("classroom-empty", test_an_empty_class_is_not_a_failure);
+    run("classroom-busy", test_the_marks_are_refused_while_a_program_is_running);
 
     return tw::test::summary("python_bridge");
 }
