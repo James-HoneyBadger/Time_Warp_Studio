@@ -86,6 +86,10 @@ public:
     [[nodiscard]] QString name() const { return name_; }
     [[nodiscard]] QString path() const { return path_; }
     [[nodiscard]] QString error() const { return error_; }
+    /// The bytes the machine was loaded from, so the window's listing editor can
+    /// show the program that is running rather than a second copy.
+    [[nodiscard]] QByteArray source() const { return source_; }
+    [[nodiscard]] bool binary() const noexcept { return binary_; }
 
     void setKey(int key, bool down);
     void releaseAllKeys();
@@ -108,6 +112,8 @@ private:
     std::unique_ptr<timewarp::lang::Chip8Machine> machine_;
     /// Kept after `makeMachine`, because Reset must not need the file again.
     timewarp::lang::Chip8Program program_;
+    QByteArray source_;
+    bool binary_ = false;
     QString name_;
     QString path_;
     QString error_;

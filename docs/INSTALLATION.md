@@ -79,7 +79,7 @@ make help            # what the root Makefile offers
 
 ```bash
 ctest --test-dir native/build --output-on-failure     # 17 suites
-python3 native/tools/example_smoke.py                 # all 48 examples
+python3 native/tools/example_smoke.py                 # all 49 examples
 ```
 
 Both must pass. See [README_TESTING.md](README_TESTING.md) for the full set,

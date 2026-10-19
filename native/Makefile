@@ -2,7 +2,7 @@
 #
 #     make                 release build
 #     make debug           debug build, in its own tree so you can keep both
-#     make test            build, then run all 13 test suites
+#     make test            build, then run all 17 test suites
 #     make run             build, then launch the IDE
 #     make screenshot      render the window offscreen to a PNG (no display needed)
 #     make install         install to PREFIX (default /usr/local)
@@ -28,7 +28,7 @@
 #     components exist.
 #   * a compile definition generated from ../VERSION, and the re-configure that
 #     has to happen when that file changes.
-#   * thirteen test binaries registered with CTest, each with its own include
+#   * seventeen test binaries registered with CTest, each with its own include
 #     path.
 #
 # All of that lives in CMakeLists.txt and is what CI exercises. Duplicating it
@@ -101,7 +101,14 @@ CONFIGURE_FLAGS = \
 configure:
 	@printf '  configure  %s  [%s]\n' '$(BUILD_DIR)' '$(BUILD_TYPE)'
 	@o=$$($(CMAKE) -S . -B $(BUILD_DIR) $(CONFIGURE_FLAGS) 2>&1) || { \
-		printf '%s\n' "$$o" | sed 's/^/    /' >&2; exit 1; }; \
+		printf '%s\n' "$$o" | sed 's/^/    /' >&2; \
+		if printf '%s\n' "$$o" | grep -q "IMPORTED_LOCATION or IMPORTED_IMPLIB not set"; then \
+			printf '\n    The Qt6 CMake package has no location for the %s configuration.\n' '$(BUILD_TYPE)' >&2; \
+			printf '    That is a stale or half-installed Qt package, or a build tree configured\n' >&2; \
+			printf '    while it changed. Re-run once the package installation has finished, or\n' >&2; \
+			printf '    delete %s and configure again.\n' '$(BUILD_DIR)' >&2; \
+		fi; \
+		exit 1; }; \
 	 printf '%s\n' "$$o" | grep -E "not found" | sed 's/^-- /    /' || true
 
 # -- Build ------------------------------------------------------------------

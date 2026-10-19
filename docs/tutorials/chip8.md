@@ -205,11 +205,17 @@ opens the same bytes as a live machine:
 - a speed control in opcodes per 60 Hz frame -- ten is the original pace;
 - the buzzer while the sound timer is above zero, with a Mute switch;
 - registers, timers, cycles, the call stack and a memory hex dump beside the
-  screen.
+  screen;
+- a **Listing** tab: type a program and press **Assemble & Load** (Ctrl+Return)
+  to assemble and run it without leaving the window. A listing that does not
+  assemble reports the error there and leaves the running program alone.
 
-Open a `.ch8` with the toolbar or drop it on the window. `LD Vx, K` waits for a
-key here instead of reading `; keys`, and the delay and sound timers follow the
-wall clock. If the current document is a CHIP-8 program, opening the emulator
+It opens on the bundled [`paint.ch8`](../../Examples/chip8/paint.ch8): move the
+cursor with `2`, `8`, `4` and `6`, paint with `5`, and clear with `0`.
+
+Open any other `.ch8` with the toolbar or drop it on the window. `LD Vx, K` waits
+for a key here instead of reading `; keys`, and the delay and sound timers follow
+the wall clock. If the current document is a CHIP-8 program, opening the emulator
 loads it straight away.
 
 ## Quick reference

@@ -101,6 +101,7 @@ It covers all ten active languages.
 | File | Description |
 | --- | --- |
 | `chip8/font_and_frames.ch8` | A font glyph, a checker pattern and a frame, with a collision |
+| `chip8/paint.ch8` | One-pixel paint: move with 2/8/4/6, paint with 5, clear with 0 |
 
 ## APL
 

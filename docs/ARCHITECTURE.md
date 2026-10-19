@@ -622,7 +622,7 @@ gates and a command matrix. All of them must stay green, in every build tree.
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
 | Engine tests | `make engine-test` | The bridge engine: the ten executors, the evaluator, the validators, the lesson curriculum and the classroom |
-| Example corpus | `make smoke` | Every `Examples/**` program, through the reference engine, including the 18 that must produce ink |
+| Example corpus | `make smoke` | Every `Examples/**` program, through the reference engine, including the 19 that must produce ink |
 | Parity gates | `differential_check.py`, `scheme_differential_check.py`, `lang_differential_check.py` | The ported engines against the Python reference: 0 unexpected mismatches |
 | Command matrix | `native/tools/command_matrix.py` | One row per documented command, through the real bridge |
 | Lesson curriculum | `teach.py validate` (and `test_lessons.py` on every build) | That every checkpoint's own solution passes, that no starter already passes, and that every language has a lesson |

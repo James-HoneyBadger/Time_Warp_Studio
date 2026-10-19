@@ -13,6 +13,7 @@
 #include <QApplication>
 #include <QEventLoop>
 #include <QKeyEvent>
+#include <QPlainTextEdit>
 #include <QSpinBox>
 #include <QTableWidget>
 #include <QTimer>
@@ -222,11 +223,83 @@ void test_the_window_opens_a_file() {
     TW_CHECK_EQ(static_cast<int>(window.emulator()->snapshot().v[0]), 11);
 }
 
+void test_the_window_starts_with_the_bundled_program() {
+    announce("window: the bundled program");
+    Chip8Window window;
+    TW_CHECK(window.loadBundledProgram());
+    TW_CHECK(window.emulator()->loaded());
+    TW_CHECK(window.emulator()->name().endsWith(QStringLiteral("paint.ch8")));
+    // The bundled demo starts itself: opening the tool shows a live cursor
+    // waiting for a key, not a blank screen behind a Run button.
+    TW_CHECK(window.emulator()->snapshot().running);
+
+    auto* listing = window.findChild<QPlainTextEdit*>(QStringLiteral("chip8Listing"));
+    TW_CHECK(listing != nullptr);
+    if (listing != nullptr) {
+        // The tab shows the program that is loaded, not a second copy.
+        TW_CHECK(listing->toPlainText().contains(QStringLiteral("paint.ch8")));
+    }
+    TW_CHECK(window.findChild<QAction*>(QStringLiteral("chip8AssembleAction")) != nullptr);
+
+    // One frame reaches `LD V0, K`: the bundled program is waiting for a key,
+    // which is what makes it immediately interactive.
+    window.emulator()->advanceFrame();
+    TW_CHECK(window.emulator()->snapshot().waiting_for_key);
+    window.emulator()->setKey(5, true);
+    window.emulator()->advanceFrame();
+    TW_CHECK(!window.emulator()->snapshot().waiting_for_key);
+}
+
+void test_the_listing_tab_assembles_and_runs() {
+    announce("window: assemble from the listing tab");
+    Chip8Window window;
+    auto* listing = window.findChild<QPlainTextEdit*>(QStringLiteral("chip8Listing"));
+    TW_CHECK(listing != nullptr);
+    if (listing == nullptr) {
+        return;
+    }
+    listing->setPlainText(QStringLiteral(
+        "; typed into the emulator\n"
+        "start: LD V0, 4\n"
+        "       ADD V0, 3\n"
+        "       HALT\n"));
+    window.assembleListing();
+    TW_CHECK(window.emulator()->loaded());
+    TW_CHECK(window.emulator()->error().isEmpty());
+    TW_CHECK(window.emulator()->snapshot().running);
+
+    window.emulator()->advanceFrame();
+    const Chip8Snapshot snapshot = window.emulator()->snapshot();
+    TW_CHECK_EQ(static_cast<int>(snapshot.v[0]), 7);
+    TW_CHECK(snapshot.halted);
+
+    // A listing that does not assemble must not unload what is running.
+    listing->setPlainText(QStringLiteral("start: FROB V0\n"));
+    window.assembleListing();
+    TW_CHECK(!window.emulator()->error().isEmpty());
+    const Chip8Snapshot kept = window.emulator()->snapshot();
+    TW_CHECK(kept.loaded);
+    TW_CHECK_EQ(static_cast<int>(kept.v[0]), 7);
+    TW_CHECK(kept.halted);
+
+    // A later good listing clears the error again.
+    listing->setPlainText(QStringLiteral("start: LD V0, 9\n       HALT\n"));
+    window.assembleListing();
+    TW_CHECK(window.emulator()->error().isEmpty());
+    TW_CHECK(window.emulator()->snapshot().running);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
     // Before QApplication exists, or Qt tries to open a real display.
     qputenv("QT_QPA_PLATFORM", "offscreen");
+    // The bundled-program test must find the checkout's Examples/ even when the
+    // build tree lives somewhere else.
+#ifndef TIME_WARP_TEST_EXAMPLES
+#define TIME_WARP_TEST_EXAMPLES ""
+#endif
+    qputenv("TIME_WARP_EXAMPLES", TIME_WARP_TEST_EXAMPLES);
     QApplication app{argc, argv};
 
     test_a_listing_runs_and_steps();
@@ -239,5 +312,7 @@ int main(int argc, char** argv) {
     test_ld_key_waits_for_a_press();
     test_the_window_wires_the_screen_and_controls();
     test_the_window_opens_a_file();
+    test_the_window_starts_with_the_bundled_program();
+    test_the_listing_tab_assembles_and_runs();
     return tw::test::summary("chip8_emulator");
 }

@@ -49,6 +49,7 @@
 #include "timewarp/canvas/host_adapter.hpp"
 #include "timewarp/canvas/qt_bridge.hpp"
 #include "timewarp/ui/app.hpp"
+#include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/command_palette.hpp"
@@ -1609,7 +1610,8 @@ void MainWindow::applySnippet(const Snippet& snippet) {
 }
 
 void MainWindow::openChip8Emulator() {
-    if (chip8_window_ == nullptr) {
+    const bool created = chip8_window_ == nullptr;
+    if (created) {
         auto* window = new Chip8Window{this};
         // Closing the emulator alone must end it; the QPointer then goes null,
         // so the next invocation builds a fresh one rather than using a dead
@@ -1621,20 +1623,24 @@ void MainWindow::openChip8Emulator() {
     chip8_window_->raise();
     chip8_window_->activateWindow();
 
-    // Opening the tool on a CHIP-8 document is the obvious next step, but a
-    // program already loaded is not replaced: the learner may have run it to a
-    // state worth keeping.
-    CodeEditor* editor = currentEditor();
-    if (editor == nullptr || languageOf(editor) != Language::Chip8 ||
-        chip8_window_->emulator()->loaded()) {
+    // An emulator that already has a program is not overwritten: the learner may
+    // have typed into the listing tab or run the game to a state worth keeping.
+    // Opening the tool the first time loads the current document, or the bundled
+    // paint program so the window is ready to run rather than blank.
+    if (!created && chip8_window_->emulator()->loaded()) {
         return;
     }
-    const QString path = pathOf(editor);
-    if (path.isEmpty()) {
-        chip8_window_->loadSource(editor->toPlainText());
-    } else {
-        chip8_window_->openFile(path);
+    CodeEditor* editor = currentEditor();
+    if (editor != nullptr && languageOf(editor) == Language::Chip8) {
+        const QString path = pathOf(editor);
+        if (path.isEmpty()) {
+            chip8_window_->loadSource(editor->toPlainText());
+        } else {
+            chip8_window_->openFile(path);
+        }
+        return;
     }
+    chip8_window_->loadBundledProgram();
 }
 
 void MainWindow::goToLine(int line) {
@@ -2227,42 +2233,9 @@ void MainWindow::clearRecentFiles() {
 
 namespace {
 
-/// Where this build's example programs live, or empty when it has none.
-///
-/// Searched in the order `locateWorker()` uses, for the same reason: the
-/// installed layout first, because that is what a package ships and where it puts
-/// things, then the checkout, which is what a build tree has. The environment
-/// variable wins over both, so a teacher can point the menu at a folder of their
-/// own programs.
-QString exampleRoot() {
-    const QString from_environment = qEnvironmentVariable("TIME_WARP_EXAMPLES");
-    if (!from_environment.isEmpty() && QFileInfo{from_environment}.isDir()) {
-        return QFileInfo{from_environment}.absoluteFilePath();
-    }
-    const QString app_dir = QApplication::applicationDirPath();
-    // `bin/time_warp_ide` -> `share/time-warp-studio/examples`, which is the
-    // destination CMakeLists.txt installs them to.
-    const QString installed =
-        app_dir + QStringLiteral("/../share/time-warp-studio/examples");
-    if (QFileInfo{installed}.isDir()) {
-        return QFileInfo{installed}.absoluteFilePath();
-    }
-    // A build tree: the binary is `native/build/time_warp_ide` and the programs
-    // are beside `native/`. The second path covers a binary in `native/build/bin`.
-    for (const QString& upward :
-         {QStringLiteral("/../Examples"), QStringLiteral("/../../Examples")}) {
-        const QString candidate = app_dir + upward;
-        if (QFileInfo{candidate}.isDir()) {
-            return QFileInfo{candidate}.absoluteFilePath();
-        }
-    }
-    // Last, the working directory: someone who unpacked the tarball and ran the
-    // binary from inside it has the programs right there.
-    if (QFileInfo{QStringLiteral("Examples")}.isDir()) {
-        return QFileInfo{QStringLiteral("Examples")}.absoluteFilePath();
-    }
-    return {};
-}
+/// The examples resolver used to live here. It is in `app_paths.cpp` now because
+/// the CHIP-8 emulator starts on a bundled program and must find it the same way
+/// File > Open Example does.
 
 }  // namespace
 
@@ -2271,7 +2244,7 @@ void MainWindow::rebuildExamplesMenu() {
         return;
     }
     examples_menu_->clear();
-    const QDir root{exampleRoot()};
+    const QDir root{examplesDir()};
     if (root.path().isEmpty() || !root.exists()) {
         // Not an error: a build made without the checkout has nothing to list,
         // and an empty menu with no explanation is the thing a user cannot

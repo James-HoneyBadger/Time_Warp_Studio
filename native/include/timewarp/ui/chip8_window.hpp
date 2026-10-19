@@ -19,6 +19,7 @@ class QLabel;
 class QPlainTextEdit;
 class QSpinBox;
 class QTableWidget;
+class QTabWidget;
 class QVBoxLayout;
 
 namespace timewarp::ui {
@@ -40,12 +41,19 @@ public:
     /// Loads the current editor document. A binary document goes through the
     /// editor's byte-preserving codec.
     bool loadSource(const QString& source);
+    /// Loads the bundled paint program (or another CHIP-8 example) when one is
+    /// installed. False when the installation ships no CHIP-8 example, which
+    /// leaves the window with an empty listing editor rather than an error.
+    bool loadBundledProgram();
 
     [[nodiscard]] Chip8Emulator* emulator() const;
     [[nodiscard]] Chip8Screen* screen() const;
 
 public slots:
     void openRomDialog();
+    /// Assembles the text in the Listing tab and runs it. A listing that does not
+    /// assemble leaves the running program alone and prints the error in the tab.
+    void assembleListing();
 
 protected:
     void dragEnterEvent(QDragEnterEvent* event) override;
@@ -60,6 +68,7 @@ private:
     void updateControls();
     void updateInspector(const Chip8Snapshot& snapshot);
     void updateSound(const Chip8Snapshot& snapshot);
+    void setListing(const QString& text, const QString& status);
     [[nodiscard]] static bool isRomFile(const QString& path);
 
     Chip8Emulator* emulator_ = nullptr;
@@ -69,10 +78,15 @@ private:
     QAction* run_action_ = nullptr;
     QAction* step_action_ = nullptr;
     QAction* reset_action_ = nullptr;
+    QAction* assemble_action_ = nullptr;
     QSpinBox* speed_ = nullptr;
     QCheckBox* mute_ = nullptr;
     QTableWidget* registers_ = nullptr;
     QPlainTextEdit* memory_ = nullptr;
+    QPlainTextEdit* listing_ = nullptr;
+    QLabel* listing_status_ = nullptr;
+    QTabWidget* inspector_tabs_ = nullptr;
+    QWidget* listing_page_ = nullptr;
     QLabel* state_label_ = nullptr;
     QLabel* detail_label_ = nullptr;
     bool buzzer_on_ = false;

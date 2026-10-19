@@ -530,6 +530,28 @@ if(Qt6_FOUND)
     if(Qt6Widgets_FOUND)
         message(STATUS "Qt6 ${Qt6Widgets_VERSION} found: building the widget UI")
 
+        # Some distributions ship Qt built for one configuration only -- Arch's
+        # qt6-base 6.12 provides RelWithDebInfo. An imported target with no
+        # location for the requested configuration then makes CMake's generate
+        # step fail with "IMPORTED_LOCATION or IMPORTED_IMPLIB not set" before
+        # anything is compiled. Map the requested configuration to one the
+        # package provides rather than making the user change build type.
+        get_target_property(_qt_imported_configs Qt6::Gui IMPORTED_CONFIGURATIONS)
+        if(_qt_imported_configs AND CMAKE_BUILD_TYPE)
+            string(TOUPPER "${CMAKE_BUILD_TYPE}" _qt_wanted_config)
+            if(NOT _qt_wanted_config IN_LIST _qt_imported_configs)
+                list(GET _qt_imported_configs 0 _qt_fallback_config)
+                foreach(_qt_target Qt6::Core Qt6::Gui Qt6::Widgets)
+                    if(TARGET ${_qt_target})
+                        set_property(TARGET ${_qt_target} PROPERTY
+                            MAP_IMPORTED_CONFIG_${_qt_wanted_config} ${_qt_fallback_config})
+                    endif()
+                endforeach()
+                message(STATUS
+                    "Qt6 has no ${CMAKE_BUILD_TYPE} configuration; using ${_qt_fallback_config}")
+            endif()
+        endif()
+
         # The window title carries the version, and it has to be the same string
         # the packaging scripts use -- so it is read from the repository's VERSION
         # file at configure time rather than duplicated in the source.
@@ -797,6 +819,10 @@ if(Qt6_FOUND)
             add_executable(chip8_emulator_tests tests/chip8_emulator_tests.cpp)
             target_link_libraries(chip8_emulator_tests PRIVATE timewarp::ui)
             target_include_directories(chip8_emulator_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+            # The bundled-program test reads the checkout's Examples/ whatever
+            # directory CMake put the build in.
+            target_compile_definitions(chip8_emulator_tests PRIVATE
+                TIME_WARP_TEST_EXAMPLES="${CMAKE_CURRENT_SOURCE_DIR}/../Examples")
             if(NOT MSVC)
                 target_compile_options(chip8_emulator_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
                 if(TIME_WARP_EXPR_WERROR)

@@ -1125,9 +1125,11 @@ would be a corrupted program waiting to be saved.
 **Tools > CHIP-8 Emulator** (Ctrl+Shift+M) runs the same bytes as a live
 machine: the 64x32 screen, a keypad that can be pressed while the program runs,
 Run/Pause/Step/Reset, a speed control, the sound timer's buzzer, and registers,
-stack and memory beside the screen. The Run button keeps the whole-program model
-described below, because a lesson, a gate and an animation want different
-answers from the same file.
+stack and memory beside the screen. It opens on the bundled `paint.ch8` when the
+current document is not a CHIP-8 program, and its **Listing** tab assembles and
+runs typed source (`Ctrl+Return`) without using the main editor. The Run button
+keeps the whole-program model described below, because a lesson, a gate and an
+animation want different answers from the same file.
 
 ```chip8
 ; a comment

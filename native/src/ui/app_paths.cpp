@@ -2,6 +2,7 @@
 
 #include "timewarp/ui/app_paths.hpp"
 
+#include <QApplication>
 #include <QDir>
 #include <QFileInfo>
 
@@ -39,6 +40,36 @@ QString dataDirFor(const QString& leaf) {
         return {};
     }
     return directory.filePath(leaf);
+}
+
+QString examplesDir() {
+    const QString from_environment = qEnvironmentVariable("TIME_WARP_EXAMPLES");
+    if (!from_environment.isEmpty() && QFileInfo{from_environment}.isDir()) {
+        return QFileInfo{from_environment}.absoluteFilePath();
+    }
+    const QString app_dir = QApplication::applicationDirPath();
+    // `bin/time_warp_ide` -> `share/time-warp-studio/examples`, which is the
+    // destination CMakeLists.txt installs them to.
+    const QString installed =
+        app_dir + QStringLiteral("/../share/time-warp-studio/examples");
+    if (QFileInfo{installed}.isDir()) {
+        return QFileInfo{installed}.absoluteFilePath();
+    }
+    // A build tree: the binary is `native/build/time_warp_ide` and the programs
+    // are beside `native/`. The second path covers a binary in `native/build/bin`.
+    for (const QString& upward :
+         {QStringLiteral("/../Examples"), QStringLiteral("/../../Examples")}) {
+        const QString candidate = app_dir + upward;
+        if (QFileInfo{candidate}.isDir()) {
+            return QFileInfo{candidate}.absoluteFilePath();
+        }
+    }
+    // Last, the working directory: someone who unpacked the tarball and ran the
+    // binary from inside it has the programs right there.
+    if (QFileInfo{QStringLiteral("Examples")}.isDir()) {
+        return QFileInfo{QStringLiteral("Examples")}.absoluteFilePath();
+    }
+    return {};
 }
 
 }  // namespace timewarp::ui

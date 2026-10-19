@@ -362,7 +362,7 @@ left; adding an executor is still the whole change a new language needs.
 The port is checked against the reference, not against a description of it:
 
 ```bash
-python3 native/tools/lang_differential_check.py   # 461 programs, 0 differences
+python3 native/tools/lang_differential_check.py   # 472 programs, 0 differences
 ```
 
 That harness runs every command-table row and every example through both
@@ -1119,7 +1119,7 @@ wrong name.
 **All ten languages run.** Scheme goes through the C++ interpreter on a
 background thread; the other nine run in process through `timewarp_lang`. No
 program is sent to the Python engine any more -- it stays as the reference the
-gates and the lesson check use. Every one of the 48 examples in `Examples/`
+gates and the lesson check use. Every one of the 49 examples in `Examples/`
 executes, and the 18 that draw produce drawing -- checked by
 `tools/example_smoke.py` through the reference, and by
 `lang_differential_check.py` on both sides.

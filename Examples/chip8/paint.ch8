@@ -1,0 +1,52 @@
+; paint.ch8 -- a one-pixel paint program.
+;
+;   2 / 8 / 4 / 6   move the cursor up / down / left / right
+;   5               paint the pixel under the cursor
+;   0               clear the canvas
+;
+; The cursor is drawn before the wait and erased after it, so what changes in
+; between is the key. Coordinates wrap at the edges with a mask rather than a
+; comparison, which is also why moving up from 0 lands on 31.
+start:  CLS
+        LD V0, 32           ; x
+        LD V1, 16           ; y
+loop:   LD I, cursor
+        DRW V0, V1, 1       ; show the cursor
+        LD V2, K            ; wait for a key
+        LD I, cursor
+        DRW V0, V1, 1       ; erase it again
+        SE V2, 0
+        JP not_clear
+        CLS
+        JP loop
+not_clear:
+        SE V2, 2
+        JP not_up
+        ADD V1, 0xFF        ; add 255 is subtract 1
+        JP wrap
+not_up: SE V2, 8
+        JP not_down
+        ADD V1, 1
+        JP wrap
+not_down:
+        SE V2, 4
+        JP not_left
+        ADD V0, 0xFF
+        JP wrap
+not_left:
+        SE V2, 6
+        JP not_right
+        ADD V0, 1
+        JP wrap
+not_right:
+        SE V2, 5
+        JP wrap
+        LD I, cursor        ; paint: leave the pixel lit
+        DRW V0, V1, 1
+        JP loop
+wrap:   LD V3, 63
+        AND V0, V3
+        LD V3, 31
+        AND V1, V3
+        JP loop
+cursor: DB 0x80

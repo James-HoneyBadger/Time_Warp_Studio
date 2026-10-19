@@ -3,6 +3,7 @@
 #include "timewarp/ui/chip8_window.hpp"
 
 #include "timewarp/ui/chip8_screen.hpp"
+#include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/language.hpp"
 #include "timewarp/ui/sound_player.hpp"
 
@@ -21,6 +22,7 @@
 #include <QMessageBox>
 #include <QMimeData>
 #include <QPlainTextEdit>
+#include <QPushButton>
 #include <QScrollBar>
 #include <QSignalBlocker>
 #include <QSpinBox>
@@ -28,6 +30,7 @@
 #include <QStringList>
 #include <QTabWidget>
 #include <QTableWidget>
+#include <QTextCursor>
 #include <QToolBar>
 #include <QUrl>
 #include <QVBoxLayout>
@@ -141,6 +144,13 @@ void Chip8Window::buildToolbar() {
     reset_action_->setObjectName(QStringLiteral("chip8ResetAction"));
     reset_action_->setShortcut(QKeySequence{Qt::Key_F7});
 
+    // The listing editor is the "enter code" path; Ctrl+Return assembles and
+    // runs without leaving the keyboard.
+    assemble_action_ = toolbar->addAction(tr("Assemble && Load"), this,
+                                          &Chip8Window::assembleListing);
+    assemble_action_->setObjectName(QStringLiteral("chip8AssembleAction"));
+    assemble_action_->setShortcut(QKeySequence{Qt::CTRL | Qt::Key_Return});
+
     toolbar->addSeparator();
     toolbar->addAction(tr("&Open ROM..."), this, &Chip8Window::openRomDialog);
     toolbar->addSeparator();
@@ -171,6 +181,7 @@ void Chip8Window::buildInspector(QVBoxLayout* column) {
     // No parent here: the layout takes ownership and reparents it. Passing the
     // layout itself would be a type error, not a parent.
     auto* tabs = new QTabWidget{};
+    inspector_tabs_ = tabs;
 
     registers_ = new QTableWidget{22, 3, tabs};
     registers_->setObjectName(QStringLiteral("chip8Registers"));
@@ -210,6 +221,31 @@ void Chip8Window::buildInspector(QVBoxLayout* column) {
     memory_->setFont(mono);
     tabs->addTab(memory_, tr("Memory"));
 
+    // A listing can be typed here and assembled without touching the main
+    // editor: the emulator is useful as a scratchpad as well as a viewer.
+    auto* listing_page = new QWidget{tabs};
+    listing_page_ = listing_page;
+    auto* listing_layout = new QVBoxLayout{listing_page};
+    listing_layout->setContentsMargins(0, 0, 0, 0);
+    listing_ = new QPlainTextEdit{listing_page};
+    listing_->setObjectName(QStringLiteral("chip8Listing"));
+    listing_->setPlaceholderText(
+        tr("Type a CHIP-8 listing here, then Assemble & Load (Ctrl+Return)."));
+    listing_->setLineWrapMode(QPlainTextEdit::NoWrap);
+    listing_->setFont(mono);
+    listing_layout->addWidget(listing_, 1);
+    auto* listing_row = new QHBoxLayout;
+    listing_status_ = new QLabel{listing_page};
+    listing_status_->setObjectName(QStringLiteral("chip8ListingStatus"));
+    listing_status_->setWordWrap(true);
+    auto* assemble = new QPushButton{tr("Assemble && Load"), listing_page};
+    assemble->setObjectName(QStringLiteral("chip8AssembleButton"));
+    connect(assemble, &QPushButton::clicked, this, &Chip8Window::assembleListing);
+    listing_row->addWidget(listing_status_, 1);
+    listing_row->addWidget(assemble);
+    listing_layout->addLayout(listing_row);
+    tabs->addTab(listing_page, tr("Listing"));
+
     column->addWidget(tabs, 1);
 }
 
@@ -224,7 +260,13 @@ bool Chip8Window::openFile(const QString& path) {
         QMessageBox::warning(this, tr("Could not load the program"), error);
         return false;
     }
-    setWindowTitle(tr("CHIP-8 Emulator \u2014 %1").arg(QFileInfo{path}.fileName()));
+    const QString file_name = QFileInfo{path}.fileName();
+    setWindowTitle(tr("CHIP-8 Emulator \u2014 %1").arg(file_name));
+    if (emulator_->binary()) {
+        setListing(QString{}, tr("Binary ROM loaded. Type a listing to replace it."));
+    } else {
+        setListing(QString::fromUtf8(emulator_->source()), tr("Loaded %1.").arg(file_name));
+    }
     screen_->setFocus(Qt::OtherFocusReason);
     return true;
 }
@@ -240,8 +282,74 @@ bool Chip8Window::loadSource(const QString& source) {
         return false;
     }
     setWindowTitle(tr("CHIP-8 Emulator \u2014 current document"));
+    if (emulator_->binary()) {
+        setListing(QString{}, tr("Binary document loaded. Type a listing to replace it."));
+    } else {
+        setListing(source, tr("Loaded the current document."));
+    }
     screen_->setFocus(Qt::OtherFocusReason);
     return true;
+}
+
+bool Chip8Window::loadBundledProgram() {
+    const QString root = examplesDir();
+    if (root.isEmpty()) {
+        return false;
+    }
+    // The paint program is the introduced example because it uses the keypad;
+    // the older font demo is the fallback for an installation that lacks it.
+    for (const QString& name : {QStringLiteral("chip8/paint.ch8"),
+                                QStringLiteral("chip8/font_and_frames.ch8")}) {
+        const QString path = root + QLatin1Char('/') + name;
+        if (QFileInfo::exists(path)) {
+            if (!openFile(path)) {
+                return false;
+            }
+            // The point of the bundled program is that the window is alive when
+            // it opens: the paint cursor waits for a key immediately.
+            emulator_->start();
+            return true;
+        }
+    }
+    return false;
+}
+
+void Chip8Window::assembleListing() {
+    if (listing_ == nullptr || emulator_ == nullptr) {
+        return;
+    }
+    const QString source = listing_->toPlainText();
+    if (source.trimmed().isEmpty()) {
+        listing_status_->setText(tr("Type a listing first."));
+        return;
+    }
+    QString error;
+    if (!emulator_->loadSource(source, &error)) {
+        // The old program is still loaded and the running game was not stopped;
+        // the error belongs beside the text that caused it.
+        listing_status_->setText(
+            tr("\u274C %1").arg(error.section(QLatin1Char('\n'), 0, 0)));
+        return;
+    }
+    setListing(emulator_->binary() ? QString{} : source, tr("Assembled and running."));
+    setWindowTitle(tr("CHIP-8 Emulator \u2014 assembled listing"));
+    emulator_->start();
+    screen_->setFocus(Qt::OtherFocusReason);
+}
+
+void Chip8Window::setListing(const QString& text, const QString& status) {
+    if (listing_ != nullptr) {
+        listing_->setPlainText(text);
+        listing_->moveCursor(QTextCursor::Start);
+    }
+    if (listing_status_ != nullptr) {
+        listing_status_->setText(status);
+    }
+    // A listing is the thing a learner wants to read; a binary ROM has nothing to
+    // show, so it stays on the register view.
+    if (inspector_tabs_ != nullptr && listing_page_ != nullptr && !text.isEmpty()) {
+        inspector_tabs_->setCurrentWidget(listing_page_);
+    }
 }
 
 void Chip8Window::openRomDialog() {
@@ -308,16 +416,16 @@ void Chip8Window::refresh() {
     }
 
     const QString error = emulator_->error();
-    if (!error.isEmpty()) {
+    if (snapshot.loaded && snapshot.waiting_for_key) {
+        state_label_->setText(tr("\u23F3 waiting for a key"));
+    } else if (snapshot.running) {
+        state_label_->setText(tr("\u25B6 running"));
+    } else if (!error.isEmpty()) {
         state_label_->setText(tr("\u274C %1").arg(error));
     } else if (!snapshot.loaded) {
         state_label_->setText(tr("Open a .ch8 listing or ROM"));
-    } else if (snapshot.waiting_for_key) {
-        state_label_->setText(tr("\u23F3 waiting for a key"));
     } else if (snapshot.halted) {
         state_label_->setText(tr("\u25A0 halted"));
-    } else if (snapshot.running) {
-        state_label_->setText(tr("\u25B6 running"));
     } else {
         state_label_->setText(tr("\u23F8 paused"));
     }
@@ -345,8 +453,11 @@ void Chip8Window::updateControls() {
     }
     if (run_action_ != nullptr) {
         run_action_->setText(snapshot.running ? tr("&Pause") : tr("&Run"));
-        run_action_->setEnabled(snapshot.loaded && !snapshot.halted &&
-                                emulator_->error().isEmpty());
+        // A failed assemble does not stop the running program, so it must not
+        // take Pause away; the error is shown beside the listing instead.
+        run_action_->setEnabled(
+            snapshot.running ||
+            (snapshot.loaded && !snapshot.halted && emulator_->error().isEmpty()));
     }
     if (step_action_ != nullptr) {
         step_action_->setEnabled(snapshot.loaded && !snapshot.running && !snapshot.halted);

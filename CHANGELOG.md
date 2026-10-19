@@ -16,7 +16,10 @@ Porting the features the removed PySide6 application had. The sequenced plan is
   a Mute switch, and registers, timers, cycles, call stack and a memory hex dump
   beside the screen. `LD Vx, K` waits for a press here instead of reading the
   `; keys` directive. Run in the editor keeps its whole-program model, so the
-  lessons and the parity gates still have one deterministic answer.
+  lessons and the parity gates still have one deterministic answer. The window
+  opens on the bundled `Examples/chip8/paint.ch8`, and a **Listing** tab
+  assembles typed source with Ctrl+Return; a listing that does not assemble
+  reports the error there and leaves the running program untouched.
 - **Binary CHIP-8 ROMs are runnable, and the opcode set is complete.** A `.ch8`
   file containing a NUL byte is a ROM rather than a listing: its bytes copy to
   `0x200` unchanged, up to the 3584 that fit before the end of memory, and the

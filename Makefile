@@ -20,7 +20,7 @@ help:
 	@echo "The IDE is the Qt application in $(NATIVE)/. Targets that forward to it:"
 	@echo "  build         Build the Qt IDE (Release)"
 	@echo "  run           Build it and run it"
-	@echo "  test          Run the 12 C++ suites"
+	@echo "  test          Run the 17 C++ suites"
 	@echo "  test-debug    Run them in the Debug tree"
 	@echo "  asan          Run them under AddressSanitizer (ASAN=undefined for UBSan)"
 	@echo "  screenshot    Capture a window screenshot"

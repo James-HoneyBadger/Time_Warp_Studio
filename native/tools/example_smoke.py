@@ -75,6 +75,7 @@ DRAWING_EXAMPLES = {
     "scheme/turtle_polygons.scm",
     "focal/square.foc",
     "chip8/font_and_frames.ch8",
+    "chip8/paint.ch8",
     "apl/arrays_and_turtle.apl",
     "smalltalk/shapes.st",
 }
@@ -84,10 +85,18 @@ def repository_root() -> pathlib.Path:
     return pathlib.Path(__file__).resolve().parents[2]
 
 
-def run_one(interpreter: str, worker: pathlib.Path, language: str, source: str, name: str,
-            timeout: float) -> dict:
+def run_one(
+    interpreter: str,
+    worker: pathlib.Path,
+    language: str,
+    source: str,
+    name: str,
+    timeout: float,
+) -> dict:
     """Runs one program and returns what came back."""
-    request = json.dumps({"t": "run", "language": language, "source": source, "name": name})
+    request = json.dumps(
+        {"t": "run", "language": language, "source": source, "name": name}
+    )
     try:
         completed = subprocess.run(
             [interpreter, str(worker)],
@@ -98,7 +107,12 @@ def run_one(interpreter: str, worker: pathlib.Path, language: str, source: str, 
             check=False,
         )
     except subprocess.TimeoutExpired:
-        return {"ok": False, "strokes": 0, "error": f"timed out after {timeout:.0f}s", "output": ""}
+        return {
+            "ok": False,
+            "strokes": 0,
+            "error": f"timed out after {timeout:.0f}s",
+            "output": "",
+        }
 
     strokes = 0
     output = []
@@ -159,9 +173,15 @@ def run_one(interpreter: str, worker: pathlib.Path, language: str, source: str, 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--verbose", action="store_true", help="print every program, not just failures")
-    parser.add_argument("--timeout", type=float, default=90.0,
-                        help="seconds allowed per program (the interpreter has its own 10s budget)")
+    parser.add_argument(
+        "--verbose", action="store_true", help="print every program, not just failures"
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=90.0,
+        help="seconds allowed per program (the interpreter has its own 10s budget)",
+    )
     options = parser.parse_args(argv)
 
     root = repository_root()
@@ -184,8 +204,14 @@ def main(argv: list[str] | None = None) -> int:
     for language, extension in LANGUAGES.items():
         for path in sorted((root / "Examples").glob(f"**/*.{extension}")):
             ran += 1
-            result = run_one(interpreter, worker, language, path.read_text(encoding="utf-8"),
-                             path.name, options.timeout)
+            result = run_one(
+                interpreter,
+                worker,
+                language,
+                path.read_text(encoding="utf-8"),
+                path.name,
+                options.timeout,
+            )
             counts[language]["strokes"] += result["strokes"]
 
             # A program that did not run at all is the first thing to report, and
@@ -218,7 +244,9 @@ def main(argv: list[str] | None = None) -> int:
     print(f"{'language':10s} {'passed':>6s} {'failed':>6s} {'strokes':>8s}")
     for language in LANGUAGES:
         entry = counts[language]
-        print(f"{language:10s} {entry['passed']:6d} {entry['failed']:6d} {entry['strokes']:8d}")
+        print(
+            f"{language:10s} {entry['passed']:6d} {entry['failed']:6d} {entry['strokes']:8d}"
+        )
 
     if failures:
         print(f"\n{len(failures)} failure(s):", file=sys.stderr)

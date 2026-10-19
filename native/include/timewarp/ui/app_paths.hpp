@@ -35,4 +35,11 @@ namespace timewarp::ui {
 /// rather than after it has lost one.
 [[nodiscard]] QString dataDirFor(const QString& leaf);
 
+/// Where this build's example programs live, or empty when it has none.
+///
+/// The installed layout is searched first, then the checkout beside the binary,
+/// then the working directory. `TIME_WARP_EXAMPLES` overrides all three, so a
+/// teacher can point the application at a folder of their own programs.
+[[nodiscard]] QString examplesDir();
+
 }  // namespace timewarp::ui

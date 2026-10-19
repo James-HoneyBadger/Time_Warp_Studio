@@ -37,14 +37,7 @@ bool Chip8Emulator::loadFile(const QString& path, QString* error) {
         if (error != nullptr) {
             *error = message;
         }
-        pause();
-        machine_.reset();
-        program_ = {};
-        name_.clear();
-        path_.clear();
         emit errorOccurred(message);
-        emit stateChanged();
-        emit frameReady();
         return false;
     }
     const QByteArray bytes = file.readAll();
@@ -69,20 +62,17 @@ bool Chip8Emulator::loadBytes(const QByteArray& bytes, const QString& name, QStr
         if (error != nullptr) {
             *error = message;
         }
-        pause();
-        machine_.reset();
-        program_ = {};
-        name_.clear();
-        path_.clear();
+        // A typo in the listing editor must not unload the game that is running;
+        // the error is reported and the old program stays exactly as it was.
         emit errorOccurred(message);
-        emit stateChanged();
-        emit frameReady();
         return false;
     }
 
     pause();
     clock_.stop();
     program_ = std::move(program);
+    source_ = bytes;
+    binary_ = bytes.contains('\0');
     name_ = name;
     path_.clear();
     error_.clear();
