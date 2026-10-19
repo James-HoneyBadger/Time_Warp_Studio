@@ -578,6 +578,7 @@ if(Qt6_FOUND)
             src/ui/chip8_window.cpp
             src/ui/code_editor.cpp
             src/ui/command_palette.cpp
+            src/ui/export.cpp
             src/ui/find_bar.cpp
             src/ui/find_in_files.cpp
             src/ui/formatter.cpp
@@ -607,6 +608,7 @@ if(Qt6_FOUND)
             include/timewarp/ui/chip8_screen.hpp
             include/timewarp/ui/chip8_window.hpp
             include/timewarp/ui/command_palette.hpp
+            include/timewarp/ui/export.hpp
             include/timewarp/ui/find_bar.hpp
             include/timewarp/ui/find_in_files.hpp
             include/timewarp/ui/help_browser.hpp

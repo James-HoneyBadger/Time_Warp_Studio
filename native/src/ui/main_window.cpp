@@ -53,6 +53,7 @@
 #include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/command_palette.hpp"
+#include "timewarp/ui/export.hpp"
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/find_in_files.hpp"
 #include "timewarp/ui/formatter.hpp"
@@ -156,6 +157,21 @@ constexpr auto kUntitledLabelProperty = "untitledLabel";
 /// A language the user picked by hand, as a settings key. Absent means "work it
 /// out from the file name", which is the case that has to keep working.
 constexpr auto kLanguageOverrideProperty = "languageOverride";
+
+/// A save-dialog suggestion built from a document's name: the extension is
+/// replaced rather than appended, so exporting `hello.bas` as a PDF offers
+/// `hello.pdf` and not `hello.bas.pdf`.
+[[nodiscard]] QString suggestedExportPath(const QString& documentName, const QString& suffix) {
+    QString name = documentName;
+    const int dot = name.lastIndexOf(QLatin1Char('.'));
+    if (dot > 0) {
+        name.truncate(dot);
+    }
+    if (name.isEmpty()) {
+        name = QStringLiteral("program");
+    }
+    return name + QLatin1Char('.') + suffix;
+}
 
 }  // namespace
 
@@ -736,6 +752,14 @@ void MainWindow::buildMenuBar() {
     file->addSeparator();
     add(file, tr("&Export Drawing..."), QKeySequence{Qt::CTRL | Qt::Key_E},
         [this] { exportDrawingDialog(); });
+    // Qt Gui carries QPdfWriter, so the PDF needs no component beyond the ones
+    // this application already requires.
+    add(file, tr("Export Code as &PDF..."), QKeySequence{},
+        [this] { exportCodePdfDialog(); })
+        ->setObjectName(QStringLiteral("exportPdfAction"));
+    add(file, tr("Export &Session as HTML..."), QKeySequence{},
+        [this] { exportSessionHtmlDialog(); })
+        ->setObjectName(QStringLiteral("exportSessionAction"));
     file->addSeparator();
     add(file, tr("&Close Tab"), QKeySequence::Close, [this] { closeCurrentTab(); });
     // Through close() rather than qApp->quit(), so a modified document still gets
@@ -1242,6 +1266,14 @@ void MainWindow::performAction(const QString& action) {
     }
     if (id == QLatin1String("export")) {
         exportDrawingDialog();
+        return;
+    }
+    if (id == QLatin1String("export_pdf")) {
+        exportCodePdfDialog();
+        return;
+    }
+    if (id == QLatin1String("export_session")) {
+        exportSessionHtmlDialog();
         return;
     }
 
@@ -1796,6 +1828,62 @@ void MainWindow::exportDrawingDialog() {
     }
     QString error;
     if (!turtle_canvas_->exportDrawing(path, &error)) {
+        QMessageBox::warning(this, tr("Export failed"),
+                             tr("Could not write %1.\n\n%2")
+                                 .arg(QDir::toNativeSeparators(path), error));
+        return;
+    }
+    setExecutionState(tr("ready"), tr("Exported %1").arg(QFileInfo{path}.fileName()));
+}
+
+void MainWindow::exportCodePdfDialog() {
+    CodeEditor* editor = currentEditor();
+    if (editor == nullptr) {
+        setExecutionState(tr("ready"), tr("Open a document before exporting it"));
+        return;
+    }
+    const QString title = nameOf(editor);
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Export code as PDF"), suggestedExportPath(title, QStringLiteral("pdf")),
+        tr("PDF document (*.pdf)"));
+    if (path.isEmpty()) {
+        return;
+    }
+    QString error;
+    if (!timewarp::ui::exporter::writeCodePdf(path, title, displayName(languageOf(editor)),
+                                              editor->toPlainText(), &error)) {
+        QMessageBox::warning(this, tr("Export failed"),
+                             tr("Could not write %1.\n\n%2")
+                                 .arg(QDir::toNativeSeparators(path), error));
+        return;
+    }
+    setExecutionState(tr("ready"), tr("Exported %1").arg(QFileInfo{path}.fileName()));
+}
+
+void MainWindow::exportSessionHtmlDialog() {
+    CodeEditor* editor = currentEditor();
+    if (editor == nullptr) {
+        setExecutionState(tr("ready"), tr("Open a document before exporting it"));
+        return;
+    }
+    const QString title = nameOf(editor);
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Export session as HTML"), suggestedExportPath(title, QStringLiteral("html")),
+        tr("HTML page (*.html *.htm)"));
+    if (path.isEmpty()) {
+        return;
+    }
+    // The drawing at export size, or nothing at all: a blank canvas should say
+    // so in the page rather than shipping an empty rectangle.
+    const QImage drawing =
+        (turtle_canvas_ != nullptr && turtle_canvas_->strokeCount() > 0)
+            ? turtle_canvas_->renderedDrawing()
+            : QImage{};
+    QString error;
+    if (!timewarp::ui::exporter::writeSessionHtml(
+            path, title, displayName(languageOf(editor)), editor->toPlainText(),
+            console_view_ != nullptr ? console_view_->toPlainText() : QString{}, drawing,
+            &error)) {
         QMessageBox::warning(this, tr("Export failed"),
                              tr("Could not write %1.\n\n%2")
                                  .arg(QDir::toNativeSeparators(path), error));

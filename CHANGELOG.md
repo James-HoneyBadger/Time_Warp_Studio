@@ -7,6 +7,14 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **Export the code as a PDF, and a whole session as one HTML page.** File >
+  Export Code as PDF writes an A4 document with line numbers and the program's
+  name and language in the header; `QPdfWriter` ships with Qt, so this added no
+  dependency. File > Export Session as HTML writes a single self-contained page —
+  the program, its output, and the drawing embedded as a PNG data URI — which is
+  the file to hand in or project. Exports are deterministic: the PDF writer's
+  creation dates and document UUID are normalised, so exporting one program twice
+  produces the same bytes.
 - **Scrubbing the drawing.** A playback strip under the canvas — play/pause and
   a frame slider — appears as soon as a run has left ink. The canvas keeps the
   primitives in draw order (strokes and shapes interleaved as they were drawn),

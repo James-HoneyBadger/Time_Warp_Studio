@@ -63,7 +63,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 2 | Data safety | autosave ✅, version history ✅ | M | 0 |
 | 3 | Help and learnability | documentation browser ✅, F1 ✅, keyword inspector ✅, guided tour ✅ | M | 0 |
 | 4 | Canvas time travel | scrubber ✅, GIF recording, SVG export | M | 4.3 needs a dependency decision |
-| 5 | Export and print | PDF, print, session HTML | M | 5.2 needs a dependency decision |
+| 5 | Export and print | PDF ✅, print, session HTML ✅ | M | 5.2 needs a dependency decision |
 | 6 | Debugging breadth | breakpoints everywhere, pause/step for line-by-line languages, profiler | L | 0, best after 1 |
 | 7 | Workspace | document outline, terminal, split editor, run both panes | M | 7.3 needs 1.5 |
 | 8 | Accessibility and display | high contrast, font scale, focus mode, CRT settings | S–M | 0 |
@@ -387,6 +387,15 @@ Code as PDF.
 **Tests:** the file starts with `%PDF`, has more than one page for a 200-line
 document, and is byte-identical across two runs (no timestamps in the content).
 
+**Done.** `export.{hpp,cpp}` writes A4 with a monospace `<pre>` carrying
+right-aligned line numbers, a header naming the program and its language, and a
+title in the document properties. `QPdfWriter` is Qt Gui, so nothing was added to
+the dependency list. The determinism the test asserts needed one non-obvious
+step: Qt stamps `/CreationDate`, an XMP block with three ISO dates and a fresh
+document UUID into every file, so `normalisePdfMetadata` rewrites those to fixed
+values before the bytes are saved. Without it two exports of one program differ,
+and the difference is invisible until you compare them.
+
 ### 5.2 Print Code and Print Graphics (S, needs PrintSupport)
 
 Dialogs and printers are Qt6::PrintSupport (`libqt6printsupport6`). Optional
@@ -400,6 +409,12 @@ a projector.
 
 **Tests:** the output parses as HTML (a token check, not a parser), embeds one
 `data:image/png;base64,`, and contains the program text escaped once.
+
+**Done.** One page with the program, the drawing as a base64 PNG data URI and the
+console in a `<pre>`. The program's markup comes from `QTextDocument::toHtml`, and
+only its body is spliced in — a `toHtml()` result is a whole document, and nesting
+one inside another is invalid HTML that browsers silently repair. A session with
+no drawing says so in words rather than emitting a broken `<img>`.
 
 ---
 

@@ -369,10 +369,10 @@ built: File > Export Drawing (or **Ctrl+E**), Edit > Copy Drawing, and
 turtle marker, twice the on-screen size — so a saved picture is a picture rather than
 a screenshot.
 
-Still missing here: animation with a speed control (the toolbar slider is disabled
-until drawings animate), **SVG and PDF** export, which need the QtSvg and
-QtPrintSupport components the build does not currently ask for, a turtle-state
-inspector and a drawing-command log.
+Still missing here: **SVG** export, which needs the QtSvg component the build does
+not currently ask for, **printing**, which needs QtPrintSupport, a turtle-state
+inspector and a drawing-command log. The PDF of the *code* and the session HTML
+are built, and neither needed a new component: `QPdfWriter` is part of Qt Gui.
 
 ---
 

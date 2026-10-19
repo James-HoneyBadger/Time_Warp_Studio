@@ -245,8 +245,11 @@ Run a new program (the canvas clears per run), or use the clear command for your
 ### Can I export a drawing?
 
 Yes. **File → Export Drawing...** (`Ctrl+E`) writes PNG, JPEG or BMP, and
-**Edit → Copy Drawing** (`Ctrl+Shift+C`) puts it on the clipboard. There is no
-SVG export and no printing yet.
+**Edit → Copy Drawing** (`Ctrl+Shift+C`) puts it on the clipboard. **File →
+Export Code as PDF...** writes the program itself as a printable A4 PDF with
+line numbers, and **File → Export Session as HTML...** writes one self-contained
+page holding the program, its output and the drawing, which is the file to hand
+in or put on a projector. There is still no SVG export and no printing.
 
 ### Does the turtle work in every language?
 

@@ -20,7 +20,10 @@
 #include <string>
 
 #include <QCoreApplication>
+#include <QFile>
+#include <QGuiApplication>
 #include <QHash>
+#include <QImage>
 #include <QSet>
 #include <QStringList>
 #include <QTextDocument>
@@ -28,6 +31,7 @@
 #include "check.hpp"
 #include "temp_dir.hpp"
 #include "timewarp/ui/autosave.hpp"
+#include "timewarp/ui/export.hpp"
 #include "timewarp/ui/find_in_files.hpp"
 #include "timewarp/ui/formatter.hpp"
 #include "timewarp/ui/snippets.hpp"
@@ -35,6 +39,8 @@
 
 namespace {
 
+using timewarp::ui::exporter::writeCodePdf;
+using timewarp::ui::exporter::writeSessionHtml;
 using timewarp::ui::formatSource;
 using timewarp::ui::FormatOutcome;
 using timewarp::ui::Language;
@@ -556,12 +562,112 @@ void test_rom_bytes_survive_a_document() {
     TW_CHECK(naive.toPlainText().toLatin1() == space);
 }
 
+// ---------------------------------------------------------------------------
+// Export
+// ---------------------------------------------------------------------------
+
+/// 200 numbered lines, which is more than one A4 page at nine points.
+[[nodiscard]] QString longProgram(int lines = 200) {
+    QStringList program;
+    program.reserve(lines);
+    for (int line = 1; line <= lines; ++line) {
+        program.append(QStringLiteral("PRINT %1").arg(line));
+    }
+    return program.join(QLatin1Char('\n')) + QLatin1Char('\n');
+}
+
+[[nodiscard]] QByteArray readAll(const QString& path) {
+    QFile file{path};
+    if (!file.open(QIODevice::ReadOnly)) {
+        return {};
+    }
+    return file.readAll();
+}
+
+void test_code_pdf_export() {
+    announce("export: PDF of the code");
+    const tw::test::TempDir dir;
+    TW_CHECK(dir.valid());
+
+    const QString first = dir.path(QStringLiteral("first.pdf"));
+    const QString second = dir.path(QStringLiteral("second.pdf"));
+    QString error;
+    TW_CHECK(writeCodePdf(first, QStringLiteral("count.bas"), QStringLiteral("BASIC"),
+                          longProgram(), &error));
+    TW_CHECK(error.isEmpty());
+
+    const QByteArray pdf = readAll(first);
+    TW_CHECK(pdf.startsWith("%PDF"));
+    // `/Type /Page` is one page object each; `/Type /Pages` is the tree node and
+    // is not a page.
+    TW_CHECK(pdf.count("/Type /Page") - pdf.count("/Type /Pages") > 1);
+
+    // No timestamps or random ids: exporting the same program twice is the same
+    // file, which is what makes an export comparable between runs.
+    TW_CHECK(writeCodePdf(second, QStringLiteral("count.bas"), QStringLiteral("BASIC"),
+                          longProgram(), &error));
+    TW_CHECK(readAll(second) == pdf);
+
+    // A path in a directory that does not exist fails with a reason instead of
+    // silently writing somewhere else.
+    TW_CHECK(!writeCodePdf(dir.path() + QStringLiteral("/missing/first.pdf"),
+                           QStringLiteral("count.bas"), QStringLiteral("BASIC"),
+                           longProgram(), &error));
+    TW_CHECK(!error.isEmpty());
+}
+
+void test_session_html_export() {
+    announce("export: session HTML");
+    const tw::test::TempDir dir;
+    TW_CHECK(dir.valid());
+
+    QImage drawing{120, 80, QImage::Format_ARGB32};
+    drawing.fill(Qt::white);
+    drawing.setPixelColor(10, 10, Qt::black);
+
+    const QString path = dir.path(QStringLiteral("session.html"));
+    QString error;
+    TW_CHECK(writeSessionHtml(path, QStringLiteral("Test <doc>"), QStringLiteral("BASIC"),
+                              QStringLiteral("a < b\nPRINT \"hi & bye\""),
+                              QStringLiteral("1 < 2"), drawing, &error));
+    TW_CHECK(error.isEmpty());
+    const QString html = QString::fromUtf8(readAll(path));
+    TW_CHECK(html.startsWith(QStringLiteral("<!DOCTYPE html>")));
+    // One page, one body: the program's markup is the body of the text document
+    // rather than a whole document nested inside this one.
+    TW_CHECK_EQ(html.count(QStringLiteral("<body")), 1);
+    TW_CHECK_EQ(html.count(QStringLiteral("</html>")), 1);
+
+    TW_CHECK_EQ(html.count(QStringLiteral("data:image/png;base64,")), 1);
+    TW_CHECK_EQ(html.count(QStringLiteral("a &lt; b")), 1);
+    TW_CHECK_EQ(html.count(QStringLiteral("1 &lt; 2")), 1);
+    TW_CHECK(html.contains(QStringLiteral("Test &lt;doc&gt;")));
+
+    // The data URI is a real PNG of the drawing, not a placeholder.
+    const int marker = html.indexOf(QStringLiteral("base64,")) + 7;
+    const int end = html.indexOf(QLatin1Char('"'), marker);
+    const QByteArray png =
+        QByteArray::fromBase64(html.mid(marker, end - marker).toLatin1());
+    const QImage decoded = QImage::fromData(png, "PNG");
+    TW_CHECK(!decoded.isNull());
+    TW_CHECK_EQ(decoded.size(), drawing.size());
+
+    // A session with no drawing says so rather than shipping a broken image.
+    TW_CHECK(writeSessionHtml(path, QStringLiteral("Empty"), QStringLiteral("LOGO"),
+                              QStringLiteral("print \"hi\""), QString{}, QImage{}, &error));
+    const QString empty = QString::fromUtf8(readAll(path));
+    TW_CHECK_EQ(empty.count(QStringLiteral("data:image/png;base64,")), 0);
+    TW_CHECK(empty.contains(QStringLiteral("no drawing")));
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
-    // Needed for `QCoreApplication::applicationDirPath()`, which is where the
-    // snippet and example resolvers start looking. No widget is created.
-    QCoreApplication app{argc, argv};
+    // A GUI application rather than a core one: the PDF writer lays out text, and
+    // laying out text needs a font database. Nothing is shown -- the platform is
+    // offscreen -- so this stays a test with no window.
+    qputenv("QT_QPA_PLATFORM", "offscreen");
+    QGuiApplication app{argc, argv};
     test_basic_indents_a_loop_body();
     test_basic_else_body_is_indented();
     test_basic_single_line_if_opens_nothing();
@@ -583,5 +689,7 @@ int main(int argc, char** argv) {
     test_autosave_store();
     test_autosave_store_follows_the_data_directory();
     test_rom_bytes_survive_a_document();
+    test_code_pdf_export();
+    test_session_html_export();
     return tw::test::summary("editor_services");
 }

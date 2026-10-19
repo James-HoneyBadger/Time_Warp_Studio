@@ -1056,8 +1056,8 @@ page next to a 60x40 page must still report a 100x100 minimum.
   cancelled-save paths are **not** tested, deliberately: both end in a modal dialog,
   so a test that triggered one would hang rather than fail. Both failures now go
   through a silent mode that returns a value, and that path is tested.
-* **80 checks** in `turtle_canvas_tests` cover the state mirror and the
-  projection, with no window involved. The projection gets the most attention
+* **130 checks** in `turtle_canvas_tests` cover the state mirror, the projection
+  and scrubbing, with no window involved. The projection gets the most attention
   because it is the one part a picture cannot verify: a canvas that draws a
   mirrored or quarter-turned version of a program produces something that looks
   like a perfectly good drawing. Each convention the reference uses -- north at
@@ -1075,6 +1075,14 @@ page next to a 60x40 page must still report a 100x100 minimum.
   first. That is how the findings below were caught; a structural test would have
   passed either way, and the status bar painting a message on top of the document
   path was visible in exactly one place and nowhere else.
+
+`export.{hpp,cpp}` holds the two file exports a learner hands to somebody else:
+File > Export Code as PDF (`QPdfWriter`, A4, line numbers) and File > Export
+Session as HTML (program, output and drawing in one page). Both take plain
+arguments and return a bool with a reason, so `editor_services_tests` can check
+them without opening a window — including that the PDF is byte-identical between
+two runs, which required normalising the creation dates and document UUID that Qt
+writes into every file it produces.
 
 ### Two findings from rendering it
 
