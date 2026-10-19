@@ -83,6 +83,7 @@ namespace timewarp::ui {
 
 class CodeEditor;
 class CommandPalette;
+class Chip8Window;
 class FindInFilesDialog;
 class CrtOverlay;
 class DebugPanel;
@@ -223,6 +224,10 @@ public:
     /// Opens the snippet picker for the current document's language and inserts
     /// the chosen body at the cursor.
     void insertSnippet();
+    /// Opens the interactive CHIP-8 window, loading the current document when it
+    /// is a CHIP-8 program. One window is reused, so a second invocation raises
+    /// the running emulator rather than starting a second one.
+    void openChip8Emulator();
     /// Inserts `snippet` at the cursor: the selection replaces `$SELECTION$`, the
     /// caret lands on `$CURSOR$`, and the whole insertion is one undo step.
     ///
@@ -557,6 +562,10 @@ private:
     VariablesPanel* variables_panel_ = nullptr;
     TelemetryPanel* telemetry_panel_ = nullptr;
     DebugPanel* debug_panel_ = nullptr;
+    /// The CHIP-8 window is a top-level window parented to this one, so closing
+    /// the IDE closes it too; `WA_DeleteOnClose` makes the pointer go null when
+    /// the learner closes it alone.
+    QPointer<Chip8Window> chip8_window_;
     /// The run in flight, for the HUD's wall-clock row. Invalid between runs.
     QElapsedTimer run_clock_;
     /// How long the last run took, in milliseconds; negative before the first.

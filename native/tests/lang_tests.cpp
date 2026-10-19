@@ -350,6 +350,51 @@ void test_chip8_index_arithmetic() {
     TW_CHECK_EQ(machine.i, 0x305);
 }
 
+void test_chip8_keypad_is_live() {
+    const auto run_with_key = [](bool down) {
+        const Chip8Program program = assemble(
+            "start: LD V0, 3\n       SKP V0\n       LD V1, 1\n       HALT");
+        Chip8Machine machine{program.memory, program.entry};
+        machine.set_interactive(true);
+        machine.set_key(3, true);
+        if (!down) {
+            machine.set_key(3, false);
+        }
+        while (!machine.halted()) {
+            machine.step();
+        }
+        return machine;
+    };
+    TW_CHECK_EQ(static_cast<int>(run_with_key(true).v[1]), 0);   // skipped
+    TW_CHECK_EQ(static_cast<int>(run_with_key(false).v[1]), 1);  // not skipped
+}
+
+void test_chip8_ld_key_waits_for_a_press() {
+    const Chip8Program program =
+        assemble("start: LD V0, K\n       LD V1, 9\n       HALT");
+    Chip8Machine machine{program.memory, program.entry};
+    machine.set_interactive(true);
+    machine.step();  // LD V0, K: no key held yet
+    TW_CHECK(machine.waiting_for_key());
+    TW_CHECK_EQ(static_cast<int>(machine.v[0]), 0);
+    const int waiting_pc = machine.pc;
+    machine.step();
+    TW_CHECK(machine.waiting_for_key());
+    TW_CHECK_EQ(machine.pc, waiting_pc);
+    machine.set_key(7, true);
+    machine.step();  // the wait completes, V0 gets the key
+    TW_CHECK(!machine.waiting_for_key());
+    TW_CHECK_EQ(static_cast<int>(machine.v[0]), 7);
+    machine.step();
+    TW_CHECK_EQ(static_cast<int>(machine.v[1]), 9);
+
+    // A whole-program run keeps the reference's one-shot read: no key is 0.
+    Chip8Machine legacy{program.memory, program.entry};
+    legacy.step();
+    TW_CHECK(!legacy.waiting_for_key());
+    TW_CHECK_EQ(static_cast<int>(legacy.v[0]), 0);
+}
+
 void test_chip8_bcd_conversion_writes_three_digits() {
     const Chip8Program program = assemble(
         "start: LD V0, 205\n       LD I, data\n       LD B, V0\n       HALT\n"
@@ -1375,6 +1420,8 @@ int main() {
     test_chip8_store_and_load_through_i();
     test_chip8_block_transfer_advances_i();
     test_chip8_skips();
+    test_chip8_keypad_is_live();
+    test_chip8_ld_key_waits_for_a_press();
     test_chip8_call_and_return();
     test_chip8_ret_without_call_is_reported();
     test_chip8_draw_lights_the_expected_pixels();

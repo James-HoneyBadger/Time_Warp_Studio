@@ -638,10 +638,23 @@ int Chip8Machine::first_key() const {
             return index;
         }
     }
-    return 0;
+    return -1;
 }
 
 void Chip8Machine::step() {
+    // A waiting `LD Vx, K` is not re-fetched: its PC already points at the next
+    // instruction. Completing it here, when a key is held, is what makes the
+    // wait interruptible by the GUI without rewinding anything.
+    if (waiting_for_key_) {
+        const int key = first_key();
+        if (key < 0) {
+            return;
+        }
+        v[static_cast<std::size_t>(waiting_register_)] = static_cast<std::uint8_t>(key);
+        waiting_for_key_ = false;
+        ++cycles_;
+        return;
+    }
     ++cycles_;
     const int opcode = fetch();
     const int high = opcode >> 12;
@@ -813,11 +826,21 @@ void Chip8Machine::misc(int x, int low) {
         case 0x07:
             vx = static_cast<std::uint8_t>(delay_timer);
             break;
-        case 0x0A:
-            // Blocking on a real key press cannot work here: the keypad is
-            // presented by directive. The first held key, or 0.
-            vx = static_cast<std::uint8_t>(first_key());
+        case 0x0A: {
+            // A whole-program run has no way to deliver a later press, so it
+            // reads the mask once. An interactive machine waits, which is what
+            // the instruction means on the real keypad.
+            const int key = first_key();
+            if (!interactive_) {
+                vx = static_cast<std::uint8_t>(key < 0 ? 0 : key);
+            } else if (key < 0) {
+                waiting_for_key_ = true;
+                waiting_register_ = x;
+            } else {
+                vx = static_cast<std::uint8_t>(key);
+            }
             break;
+        }
         case 0x15:
             delay_timer = vx;
             break;

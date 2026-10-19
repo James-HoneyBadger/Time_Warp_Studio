@@ -1122,6 +1122,13 @@ its bytes are copied to `0x200` unchanged, up to the 3584 that fit before the en
 of memory. The editor opens such a file read-only, because a keystroke in it
 would be a corrupted program waiting to be saved.
 
+**Tools > CHIP-8 Emulator** (Ctrl+Shift+M) runs the same bytes as a live
+machine: the 64x32 screen, a keypad that can be pressed while the program runs,
+Run/Pause/Step/Reset, a speed control, the sound timer's buzzer, and registers,
+stack and memory beside the screen. The Run button keeps the whole-program model
+described below, because a lesson, a gate and an animation want different
+answers from the same file.
+
 ```chip8
 ; a comment
 start:  LD   V0, 0x41
@@ -1203,9 +1210,13 @@ that never yields control.
 
 ### Frames
 
-Frames are simulated rather than timed: ten opcodes make a frame and the timers
-tick once per frame, with no real clock. A fixed number of frames is the limit,
-so a program that does not halt reports that it stopped rather than hanging.
+A Run simulates frames rather than timing them: ten opcodes make a frame and the
+timers tick once per frame, with no real clock. A fixed number of frames is the
+limit, so a program that does not halt reports that it stopped rather than
+hanging. The interactive emulator uses the same ten opcodes per frame by
+default, but a 60 Hz clock and its speed control change how many opcodes each
+frame executes; it also lets `LD Vx, K` wait for a press, where a Run can only
+read the `; keys` directive.
 
 **File extension:** `.ch8`, `.c8`
 

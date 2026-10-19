@@ -17,11 +17,12 @@ cmake --build native/build -j
 ctest --test-dir native/build --output-on-failure
 ```
 
-There are 16 suites: the lexer, the expression evaluator, the Scheme machine, the
+There are 17 suites: the lexer, the expression evaluator, the Scheme machine, the
 native language engine, the canvas command queue, the Qt canvas bridge, the debug and
 debugger runner, the UI layout, the UI documents, the turtle canvas, the syntax
 highlighter, the Python bridge, sound and ports, the editor's text services
-(formatting, snippets, find-in-files, autosave), and the help browser.
+(formatting, snippets, find-in-files, autosave), the help browser, and the live
+CHIP-8 machine with its window.
 
 Other build trees, all of which must stay green:
 

@@ -49,6 +49,7 @@
 #include "timewarp/canvas/host_adapter.hpp"
 #include "timewarp/canvas/qt_bridge.hpp"
 #include "timewarp/ui/app.hpp"
+#include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/command_palette.hpp"
 #include "timewarp/ui/find_bar.hpp"
@@ -776,6 +777,16 @@ void MainWindow::buildMenuBar() {
     run->addSeparator();
     add(run, tr("Clear &Output"), {}, [this] { clearOutput(); });
     add(run, tr("Clear &Canvas"), {}, [this] { clearCanvas(); });
+
+    // -- Tools ------------------------------------------------------------
+    // A CHIP-8 program is the one document that wants a live machine rather
+    // than a run-to-completion executor, and a window is where its keypad and
+    // inspector fit. Ctrl+Shift+M is unclaimed.
+    QMenu* tools = bar->addMenu(tr("&Tools"));
+    tools->setObjectName(QStringLiteral("toolsMenu"));
+    add(tools, tr("CHIP-8 &Emulator..."),
+        QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_M}, [this] { openChip8Emulator(); })
+        ->setObjectName(QStringLiteral("chip8EmulatorAction"));
 
     // -- View -------------------------------------------------------------
     QMenu* view = bar->addMenu(tr("&View"));
@@ -1595,6 +1606,35 @@ void MainWindow::applySnippet(const Snippet& snippet) {
     editor->setTextCursor(placed);
     editor->setFocus(Qt::ShortcutFocusReason);
     setExecutionState(tr("ready"), tr("Inserted \u201C%1\u201D").arg(snippet.name));
+}
+
+void MainWindow::openChip8Emulator() {
+    if (chip8_window_ == nullptr) {
+        auto* window = new Chip8Window{this};
+        // Closing the emulator alone must end it; the QPointer then goes null,
+        // so the next invocation builds a fresh one rather than using a dead
+        // window.
+        window->setAttribute(Qt::WA_DeleteOnClose);
+        chip8_window_ = window;
+    }
+    chip8_window_->show();
+    chip8_window_->raise();
+    chip8_window_->activateWindow();
+
+    // Opening the tool on a CHIP-8 document is the obvious next step, but a
+    // program already loaded is not replaced: the learner may have run it to a
+    // state worth keeping.
+    CodeEditor* editor = currentEditor();
+    if (editor == nullptr || languageOf(editor) != Language::Chip8 ||
+        chip8_window_->emulator()->loaded()) {
+        return;
+    }
+    const QString path = pathOf(editor);
+    if (path.isEmpty()) {
+        chip8_window_->loadSource(editor->toPlainText());
+    } else {
+        chip8_window_->openFile(path);
+    }
 }
 
 void MainWindow::goToLine(int line) {

@@ -69,6 +69,27 @@ public:
     void step();
     void tick_timers();
 
+    /// Makes `LD Vx, K` wait for a key instead of reading the mask once.
+    /// The whole-program executor leaves this off, because it has no way to
+    /// deliver a later press and the reference reads 0 there.
+    void set_interactive(bool interactive) noexcept { interactive_ = interactive; }
+    [[nodiscard]] bool interactive() const noexcept { return interactive_; }
+
+    /// The keypad, as the bit set the skip instructions test. A live emulator
+    /// calls this on every press and release.
+    void set_keys(unsigned keys) noexcept { keys_ = keys; }
+    void set_key(int key, bool down) noexcept {
+        if (key < 0 || key > 15) {
+            return;
+        }
+        const unsigned bit = 1U << static_cast<unsigned>(key);
+        keys_ = down ? (keys_ | bit) : (keys_ & ~bit);
+    }
+    [[nodiscard]] unsigned keys() const noexcept { return keys_; }
+    /// True while `LD Vx, K` is waiting for a press. `step()` completes the
+    /// instruction when a key is held.
+    [[nodiscard]] bool waiting_for_key() const noexcept { return waiting_for_key_; }
+
     [[nodiscard]] bool halted() const noexcept { return halted_; }
     [[nodiscard]] std::uint64_t cycles() const noexcept { return cycles_; }
     [[nodiscard]] std::uint64_t collisions() const noexcept { return collisions_; }
@@ -90,6 +111,7 @@ private:
     void skip();
     [[nodiscard]] bool pixel(int x, int y) const;
     void set_pixel(int x, int y, bool on);
+    /// The lowest held key, or -1 when none is held.
     [[nodiscard]] int first_key() const;
     void arithmetic(int x, int y, int low);
     void draw(int x, int y, int rows);
@@ -101,6 +123,9 @@ private:
     /// do.
     PythonRandom random_;
     unsigned keys_ = 0;
+    bool interactive_ = false;
+    bool waiting_for_key_ = false;
+    int waiting_register_ = 0;
     std::vector<std::uint8_t> framebuffer_;
     bool halted_ = false;
     std::uint64_t cycles_ = 0;

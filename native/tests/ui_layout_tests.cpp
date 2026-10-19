@@ -52,6 +52,7 @@
 
 #include "check.hpp"
 #include "timewarp/ui/autosave.hpp"
+#include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
 #include "timewarp/ui/command_palette.hpp"
 #include "timewarp/ui/find_bar.hpp"
@@ -1088,11 +1089,10 @@ void test_menu_structure() {
     for (const QAction* action : menus) {
         titles << action->text();
     }
-    // Debug and Tools are absent on purpose: a menu with nothing to put in it is
-    // a promise the window cannot keep. They come back with the debugger panel
-    // and the snippet library.
+    // Debug is absent on purpose: a menu with nothing to put in it is a promise
+    // the window cannot keep. Tools carries the CHIP-8 emulator.
     TW_CHECK_EQ(titles.join(QLatin1Char('|')).toStdString(),
-                std::string{"&File|&Edit|&Run|&View|&Help"});
+                std::string{"&File|&Edit|&Run|&Tools|&View|&Help"});
 
     // That the titles exist is not the interesting part. This test used to check
     // only the titles, which is how seven menus with no entries in them passed
@@ -1399,6 +1399,24 @@ void test_file_menu_close_tab_closes_one() {
         item->trigger();
         TW_CHECK_EQ(window.editorTabs()->count(), before - 1);
     }
+}
+
+void test_tools_menu_opens_one_emulator() {
+    announce("Tools > CHIP-8 Emulator");
+    MainWindow window;
+    QAction* item = entryContaining(menuNamed(window, QStringLiteral("&Tools")),
+                                    QStringLiteral("CHIP-8"));
+    TW_CHECK(item != nullptr);
+    if (item == nullptr) {
+        return;
+    }
+    TW_CHECK(item->isEnabled());
+    item->trigger();
+    TW_CHECK_EQ(window.findChildren<timewarp::ui::Chip8Window*>().size(), 1);
+    // A second invocation raises the running emulator rather than starting a
+    // second machine on the same program.
+    item->trigger();
+    TW_CHECK_EQ(window.findChildren<timewarp::ui::Chip8Window*>().size(), 1);
 }
 
 void test_tab_close_button_closes_the_tab() {
@@ -1984,6 +2002,7 @@ int main(int argc, char** argv) {
     test_editor_minimap_and_whitespace();
     test_every_right_column_page_has_a_key();
     test_file_menu_new_opens_a_document();
+    test_tools_menu_opens_one_emulator();
     test_file_menu_close_tab_closes_one();
     test_file_menu_lists_the_installed_examples();
     test_tab_close_button_closes_the_tab();

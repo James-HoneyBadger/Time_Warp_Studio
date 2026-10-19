@@ -547,6 +547,9 @@ if(Qt6_FOUND)
             src/ui/app.cpp
             src/ui/app_paths.cpp
             src/ui/autosave.cpp
+            src/ui/chip8_emulator.cpp
+            src/ui/chip8_screen.cpp
+            src/ui/chip8_window.cpp
             src/ui/code_editor.cpp
             src/ui/command_palette.cpp
             src/ui/find_bar.cpp
@@ -572,6 +575,9 @@ if(Qt6_FOUND)
             # Listed so AUTOMOC scans them: the Q_OBJECT classes live in headers
             # outside this target's source directory.
             include/timewarp/ui/code_editor.hpp
+            include/timewarp/ui/chip8_emulator.hpp
+            include/timewarp/ui/chip8_screen.hpp
+            include/timewarp/ui/chip8_window.hpp
             include/timewarp/ui/command_palette.hpp
             include/timewarp/ui/find_bar.hpp
             include/timewarp/ui/find_in_files.hpp
@@ -784,6 +790,20 @@ if(Qt6_FOUND)
                 endif()
             endif()
             add_test(NAME editor_services_tests COMMAND editor_services_tests)
+
+            # The live CHIP-8 machine and its window: frames, timers, the
+            # keypad that changes while a program runs, pause/step and the
+            # controls. The instruction semantics stay in lang_tests.
+            add_executable(chip8_emulator_tests tests/chip8_emulator_tests.cpp)
+            target_link_libraries(chip8_emulator_tests PRIVATE timewarp::ui)
+            target_include_directories(chip8_emulator_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+            if(NOT MSVC)
+                target_compile_options(chip8_emulator_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+                if(TIME_WARP_EXPR_WERROR)
+                    target_compile_options(chip8_emulator_tests PRIVATE -Werror)
+                endif()
+            endif()
+            add_test(NAME chip8_emulator_tests COMMAND chip8_emulator_tests)
 
             # The help browser is a data-driven document view: the resolver,
             # the index parser and the tree are all testable without a window,

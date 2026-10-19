@@ -293,6 +293,18 @@ touches it.
   that draws a mirrored or quarter-turned version of the same program is worse than no
   canvas at all. `turtle_canvas_tests` asserts all three.
 
+### The CHIP-8 emulator window
+
+`Chip8Window` is a second top-level window, not a mode of the main one: the
+editor's Run keeps the whole-program executor, while `Chip8Emulator` owns a
+`QTimer` at about 60 Hz, executes a configurable number of opcodes per frame,
+ticks the delay and sound timers once a frame, and applies key presses as they
+arrive. `Chip8Screen` paints the 64x32 framebuffer with an integer scale,
+`Chip8Keypad` mirrors the same key state, and the inspector reads a
+`Chip8Snapshot` copied after each frame. The window is parented to `MainWindow`
+and reused; closing it alone ends the run, and the next invocation builds a
+fresh machine rather than touching a dead one.
+
 ### Languages
 
 `native/src/ui/language.cpp` holds the table: display name, settings key and file
@@ -601,12 +613,12 @@ distinguishable.
 
 ## Tests and gates
 
-Thirteen C++ suites run by `ctest`, plus the engine's own pytest suite, three parity
+Seventeen C++ suites run by `ctest`, plus the engine's own pytest suite, three parity
 gates and a command matrix. All of them must stay green, in every build tree.
 
 | Gate | Command | What it protects |
 | --- | --- | --- |
-| C++ suites (13) | `make -C native test` | Lexer, evaluator, Scheme, native languages, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, syntax highlighter, Python bridge |
+| C++ suites (17) | `make -C native test` | Lexer, evaluator, Scheme, native languages, canvas queue, canvas bridge, debug, debugger runner, UI layout, UI documents, turtle canvas, syntax highlighter, Python bridge, media, editor services, help browser, CHIP-8 emulator |
 | Debug tree | `make -C native test-debug` | Keeps `Q_ASSERT` and standard-library hardening live; a suite green in Release can crash here |
 | Sanitisers | `make -C native asan` | Reads and writes of memory that is no longer valid, which no assertion can see. `ASAN=undefined` for UBSan |
 | Engine tests | `make engine-test` | The bridge engine: the ten executors, the evaluator, the validators, the lesson curriculum and the classroom |

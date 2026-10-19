@@ -193,6 +193,25 @@ A ROM opens **read-only** in the editor. Its bytes are decoded one-to-one so tha
 saving it writes back the same program, and a keystroke in it would be a corrupt
 ROM waiting to be saved. A listing is still editable source.
 
+## 11. The interactive emulator
+
+A Run executes a program to completion in a simulated 600 frames, which is right
+for a lesson but wrong for a game. **Tools > CHIP-8 Emulator** (Ctrl+Shift+M)
+opens the same bytes as a live machine:
+
+- the 64x32 screen, scaled with square pixels;
+- the 16-key pad, clickable, and the PC keys `1-4`, `Q-R`, `A-F`, `Z-V`;
+- **Run/Pause** (F5), **Step** (F6) and **Reset** (F7);
+- a speed control in opcodes per 60 Hz frame -- ten is the original pace;
+- the buzzer while the sound timer is above zero, with a Mute switch;
+- registers, timers, cycles, the call stack and a memory hex dump beside the
+  screen.
+
+Open a `.ch8` with the toolbar or drop it on the window. `LD Vx, K` waits for a
+key here instead of reading `; keys`, and the delay and sound timers follow the
+wall clock. If the current document is a CHIP-8 program, opening the emulator
+loads it straight away.
+
 ## Quick reference
 
 | Mnemonic | Meaning |

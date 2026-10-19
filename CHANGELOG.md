@@ -7,6 +7,16 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **A live CHIP-8 emulator.** Tools > CHIP-8 Emulator (Ctrl+Shift+M) opens the
+  current `.ch8` program, or one chosen from the toolbar or dropped on the
+  window, as an interactive machine rather than a run to completion. It has a
+  60 Hz clock with a speed control in opcodes per frame, real delay and sound
+  timers, a clickable 4x4 keypad plus the `1-4`/`Q-R`/`A-F`/`Z-V` keys, Run/
+  Pause/Step/Reset (F5/F6/F7), a buzzer while the sound timer is above zero with
+  a Mute switch, and registers, timers, cycles, call stack and a memory hex dump
+  beside the screen. `LD Vx, K` waits for a press here instead of reading the
+  `; keys` directive. Run in the editor keeps its whole-program model, so the
+  lessons and the parity gates still have one deterministic answer.
 - **Binary CHIP-8 ROMs are runnable, and the opcode set is complete.** A `.ch8`
   file containing a NUL byte is a ROM rather than a listing: its bytes copy to
   `0x200` unchanged, up to the 3584 that fit before the end of memory, and the

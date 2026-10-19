@@ -78,7 +78,7 @@ make help            # what the root Makefile offers
 ## 4. Verify the build
 
 ```bash
-ctest --test-dir native/build --output-on-failure     # 13 suites
+ctest --test-dir native/build --output-on-failure     # 17 suites
 python3 native/tools/example_smoke.py                 # all 48 examples
 ```
 
