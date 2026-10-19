@@ -75,6 +75,7 @@ DRAWING_EXAMPLES = {
     "scheme/turtle_polygons.scm",
     "focal/square.foc",
     "chip8/font_and_frames.ch8",
+    "chip8/hires.ch8",
     "chip8/paint.ch8",
     "apl/arrays_and_turtle.apl",
     "smalltalk/shapes.st",

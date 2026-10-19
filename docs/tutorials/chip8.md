@@ -189,6 +189,13 @@ Its bytes are copied to `0x200` unchanged, up to the 3584 bytes that fit before
 the end of memory, and assembled at all only if no NUL is present. That means the
 same extension covers both the listings in this tutorial and ROMs from elsewhere.
 
+The emulator's **ROM Library...** browses a folder of programs you supply: it scans
+subfolders for `.ch8`, `.c8`, `.rom` and `.bin` and remembers the folder after you
+open something. Time Warp Studio ships no third-party ROMs -- most that circulate
+are somebody else's copyright, and several are unlicensed ports of games that still
+are -- so point the library at a folder you have the right to use. The folder is
+never copied into the application or its settings beyond its path.
+
 A ROM opens **read-only** in the editor. Its bytes are decoded one-to-one so that
 saving it writes back the same program, and a keystroke in it would be a corrupt
 ROM waiting to be saved. A listing is still editable source.
@@ -199,7 +206,8 @@ A Run executes a program to completion in a simulated 600 frames, which is right
 for a lesson but wrong for a game. **Tools > CHIP-8 Emulator** (Ctrl+Shift+M)
 opens the same bytes as a live machine:
 
-- the 64x32 screen, scaled with square pixels;
+- the screen, scaled with square pixels: 64x32, or 128x64 when a SuperChip ROM
+  selects hi-res;
 - the 16-key pad, clickable, and the PC keys `1-4`, `Q-R`, `A-F`, `Z-V`;
 - **Run/Pause** (F5), **Step** (F6) and **Reset** (F7);
 - a speed control in opcodes per 60 Hz frame -- ten is the original pace;
@@ -213,10 +221,43 @@ opens the same bytes as a live machine:
 It opens on the bundled [`paint.ch8`](../../Examples/chip8/paint.ch8): move the
 cursor with `2`, `8`, `4` and `6`, paint with `5`, and clear with `0`.
 
-Open any other `.ch8` with the toolbar or drop it on the window. `LD Vx, K` waits
-for a key here instead of reading `; keys`, and the delay and sound timers follow
-the wall clock. If the current document is a CHIP-8 program, opening the emulator
-loads it straight away.
+Open any other `.ch8` with the toolbar, browse a folder with **ROM Library...**,
+or drop a file on the window. `LD Vx, K` waits for a key here instead of reading
+`; keys`, and the delay and sound timers follow the wall clock. If the current
+document is a CHIP-8 program, opening the emulator loads it straight away.
+
+## 12. SuperChip hi-res
+
+The original machine is 64x32. SuperChip 1.1 adds a 128x64 mode -- the same 2:1
+shape with every pixel half the size -- and the instructions a ROM needs to use
+it. These have no mnemonics in this assembler, so write them with `DW` and a
+comment:
+
+| Opcode | Meaning |
+| ------ | ------- |
+| `00FE` | 64x32 mode; clears the screen |
+| `00FF` | 128x64 mode; clears the screen |
+| `00Cn` | Scroll the drawing down `n` pixels, blanking the top |
+| `00FB` / `00FC` | Scroll right / left four pixels, blanking the gap |
+| `00FD` | Exit the interpreter (`HALT` in one opcode) |
+| `DXY0` | A 16x16 sprite in hi-res (two bytes a row); in 64x32 mode it is 8x16 with doubled columns |
+| `Fx30` | Point `I` at the 8x10 glyph for `Vx`; draw it with `DRW Vx, Vy, 10` |
+| `Fx75` / `Fx85` | Store registers to / load them from the RPL flags |
+
+```text
+        DW   0x00FF             ; hires: 128x64
+        LD   I, ring
+        DRW  V0, V1, 0          ; 16 rows of 16 bits
+        DW   0x00C2             ; scroll down 2
+        DW   0x00FC             ; scroll left 4
+```
+
+[`Examples/chip8/hires.ch8`](../../Examples/chip8/hires.ch8) draws a ring,
+scrolls it and prints a large digit. The whole-program Run and the live emulator
+both implement this set, and the reference the parity gates compare against does
+too. MegaChip's drawing planes and audio extensions are **not** implemented: a ROM
+that uses `Fx01` or the MegaChip sound opcodes is reported as an unknown opcode
+rather than half-drawn.
 
 ## Quick reference
 
@@ -238,8 +279,12 @@ loads it straight away.
 | `SKP Vx` / `SKNP Vx` | Skip on key held / not held |
 | `LD Vx, K` | Read the first held key |
 | `LD Vx, DT` / `LD ST, Vx` | Read the delay timer / set the sound timer |
+| `00FE` / `00FF` / `00Cn` / `00FB` / `00FC` / `00FD` | SuperChip mode, scrolls and exit (written with `DW`) |
+| `DXY0` | 16x16 sprite in hi-res |
+| `Fx30` / `Fx75` / `Fx85` | Large font and RPL flags (written with `DW`) |
 | `DB` `DW` `HALT` `; keys` | Directives |
 
 See also
 [`Examples/chip8/font_and_frames.ch8`](../../Examples/chip8/font_and_frames.ch8),
-and the [CHIP-8 reference](../LANGUAGE_GUIDE.md#chip-8).
+[`Examples/chip8/hires.ch8`](../../Examples/chip8/hires.ch8), and the
+[CHIP-8 reference](../LANGUAGE_GUIDE.md#chip-8).

@@ -46,6 +46,9 @@ struct Chip8Snapshot {
     bool halted = false;
     bool waiting_for_key = false;
     int speed = kChip8DefaultSpeed;
+    /// The grid the framebuffer is on: 64x32, or 128x64 in SuperChip hi-res.
+    int screen_width = timewarp::lang::kChip8ScreenWidth;
+    int screen_height = timewarp::lang::kChip8ScreenHeight;
     std::vector<std::uint8_t> framebuffer;
     /// The whole 4 KiB, for the memory view. A copy per frame is 240 KiB/s,
     /// which is cheaper than keeping a second machine around to read from.

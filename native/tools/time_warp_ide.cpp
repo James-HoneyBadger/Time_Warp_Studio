@@ -305,7 +305,10 @@ int main(int argc, char* argv[]) {
                 // a script is what a teacher would have saved by hand.
                 QString error;
                 timewarp::ui::TurtleCanvas* canvas = window.turtleCanvas();
-                if (canvas == nullptr || canvas->strokeCount() == 0) {
+                // `frameCount` counts shapes as well as strokes: a CHIP-8 screen
+                // is all rectangles, and "nothing was drawn" about it would be a
+                // lie.
+                if (canvas == nullptr || canvas->frameCount() == 0) {
                     std::fprintf(stderr,
                                  "time_warp_ide: nothing was drawn, so there is nothing "
                                  "to export to %s\n",
@@ -319,8 +322,8 @@ int main(int argc, char* argv[]) {
                     QCoreApplication::exit(3);
                     return;
                 }
-                std::fprintf(stderr, "%s: %d strokes\n", qPrintable(exportPath),
-                             canvas->strokeCount());
+                std::fprintf(stderr, "%s: %d primitives\n", qPrintable(exportPath),
+                             canvas->frameCount());
             }
             QCoreApplication::quit();
         });

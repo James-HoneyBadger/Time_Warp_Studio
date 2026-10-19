@@ -41,12 +41,18 @@ public:
 
 inline constexpr int kChip8ScreenWidth = 64;
 inline constexpr int kChip8ScreenHeight = 32;
+/// SuperChip hi-res: exactly twice the original in each direction, so the drawn
+/// canvas keeps its 2:1 shape and a hi-res pixel is half the size.
+inline constexpr int kChip8HiResWidth = 128;
+inline constexpr int kChip8HiResHeight = 64;
 inline constexpr int kChip8PixelScale = 8;
 inline constexpr int kChip8CyclesPerFrame = 10;
 inline constexpr int kChip8MaxFrames = 600;
 inline constexpr int kChip8MaxSteps = 1'000'000;
 inline constexpr int kChip8MemorySize = 4096;
 inline constexpr int kChip8FontAddress = 0x50;
+/// Ten bytes per digit: the 8x10 face FX30 points at, right after the 4x5 set.
+inline constexpr int kChip8LargeFontAddress = kChip8FontAddress + 16 * 5;
 inline constexpr int kChip8ProgramAddress = 0x200;
 /// How many bytes a binary ROM may occupy: memory from 0x200 to 0xFFF.
 inline constexpr int kChip8RomLimit = kChip8MemorySize - kChip8ProgramAddress;
@@ -96,6 +102,18 @@ public:
     [[nodiscard]] const std::vector<std::uint8_t>& framebuffer() const noexcept {
         return framebuffer_;
     }
+    /// The current grid: 64x32 in the original mode, 128x64 in hi-res.
+    [[nodiscard]] int screen_width() const noexcept {
+        return hi_res_ ? kChip8HiResWidth : kChip8ScreenWidth;
+    }
+    [[nodiscard]] int screen_height() const noexcept {
+        return hi_res_ ? kChip8HiResHeight : kChip8ScreenHeight;
+    }
+    [[nodiscard]] bool hi_res() const noexcept { return hi_res_; }
+    /// SuperChip's RPL flags: FX75 stores registers here and FX85 loads them.
+    [[nodiscard]] const std::array<std::uint8_t, 16>& rpl_flags() const noexcept {
+        return rpl_;
+    }
     /// Registers and memory, for tests that assert what the machine holds. The
     /// reference exposes these directly; so does this.
     std::array<std::uint8_t, 16> v{};
@@ -116,6 +134,11 @@ private:
     void arithmetic(int x, int y, int low);
     void draw(int x, int y, int rows);
     void misc(int x, int low);
+    void set_mode(bool hi_res);
+    /// Positive rows scroll the display down; the top is cleared.
+    void scroll_down(int rows);
+    /// Positive columns scroll left, negative right; the gap is cleared.
+    void scroll_columns(int columns);
 
     /// One generator for the whole run, as Python's module-level `random` is:
     /// a fresh seed-0 generator per RND opcode would return the same byte
@@ -126,6 +149,8 @@ private:
     bool interactive_ = false;
     bool waiting_for_key_ = false;
     int waiting_register_ = 0;
+    bool hi_res_ = false;
+    std::array<std::uint8_t, 16> rpl_{};
     std::vector<std::uint8_t> framebuffer_;
     bool halted_ = false;
     std::uint64_t cycles_ = 0;

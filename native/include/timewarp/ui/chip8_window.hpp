@@ -51,6 +51,9 @@ public:
 
 public slots:
     void openRomDialog();
+    /// Browses the folder the user pointed the ROM library at, and remembers the
+    /// folder after a successful open.
+    void openRomLibraryDialog();
     /// Assembles the text in the Listing tab and runs it. A listing that does not
     /// assemble leaves the running program alone and prints the error in the tab.
     void assembleListing();

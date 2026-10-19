@@ -59,10 +59,13 @@ QSize Chip8Screen::sizeHint() const {
 
 QSize Chip8Screen::minimumSizeHint() const { return {128, 64}; }
 
-void Chip8Screen::setPixels(const std::vector<std::uint8_t>& pixels) {
-    if (pixels.size() !=
-        static_cast<std::size_t>(image_.width()) * static_cast<std::size_t>(image_.height())) {
+void Chip8Screen::setPixels(const std::vector<std::uint8_t>& pixels, int width, int height) {
+    if (width <= 0 || height <= 0 ||
+        pixels.size() != static_cast<std::size_t>(width) * static_cast<std::size_t>(height)) {
         return;
+    }
+    if (image_.width() != width || image_.height() != height) {
+        image_ = QImage{width, height, QImage::Format_RGB32};
     }
     image_.fill(off_);
     for (int y = 0; y < image_.height(); ++y) {
@@ -75,6 +78,8 @@ void Chip8Screen::setPixels(const std::vector<std::uint8_t>& pixels) {
     }
     update();
 }
+
+QSize Chip8Screen::pixelSize() const { return image_.size(); }
 
 void Chip8Screen::setColors(const QColor& on, const QColor& off) {
     on_ = on;

@@ -13,6 +13,8 @@
 #include <QApplication>
 #include <QEventLoop>
 #include <QKeyEvent>
+#include <QLineEdit>
+#include <QListWidget>
 #include <QPlainTextEdit>
 #include <QSpinBox>
 #include <QTableWidget>
@@ -21,12 +23,14 @@
 #include "check.hpp"
 #include "temp_dir.hpp"
 #include "timewarp/ui/chip8_emulator.hpp"
+#include "timewarp/ui/chip8_library.hpp"
 #include "timewarp/ui/chip8_screen.hpp"
 #include "timewarp/ui/chip8_window.hpp"
 
 namespace {
 
 using timewarp::ui::Chip8Emulator;
+using timewarp::ui::Chip8LibraryDialog;
 using timewarp::ui::Chip8Snapshot;
 using timewarp::ui::Chip8Window;
 
@@ -180,6 +184,56 @@ void test_ld_key_waits_for_a_press() {
     TW_CHECK(done.halted);
 }
 
+void test_the_window_offers_the_rom_library() {
+    announce("window: the ROM library");
+    Chip8Window window;
+    TW_CHECK(window.findChild<QAction*>(QStringLiteral("chip8LibraryAction")) != nullptr);
+
+    const tw::test::TempDir dir;
+    TW_CHECK(dir.valid());
+    dir.write("games/one.ch8", QByteArray{"\0"});
+    dir.write("hires/two.ch8", QByteArray{"\0"});
+    dir.write("notes.txt", "not a program");
+
+    Chip8LibraryDialog dialog{dir.path()};
+    TW_CHECK_EQ(dialog.romCount(), 2);
+    // The first program is selected, so Open is one click away.
+    TW_CHECK_EQ(dialog.selectedPath(), dir.path(QStringLiteral("games/one.ch8")));
+    TW_CHECK_EQ(dialog.folder(), dir.path());
+
+    // The filter hides what does not match without rebuilding the list.
+    auto* filter = dialog.findChild<QLineEdit*>(QStringLiteral("chip8LibraryFilter"));
+    auto* list = dialog.findChild<QListWidget*>(QStringLiteral("chip8LibraryList"));
+    TW_CHECK(filter != nullptr);
+    TW_CHECK(list != nullptr);
+    if (filter != nullptr && list != nullptr) {
+        filter->setText(QStringLiteral("two"));
+        int visible = 0;
+        for (int row = 0; row < list->count(); ++row) {
+            visible += list->item(row)->isHidden() ? 0 : 1;
+        }
+        TW_CHECK_EQ(visible, 1);
+    }
+}
+
+void test_a_hires_program_reaches_the_screen() {
+    announce("window: hi-res reaches the screen");
+    Chip8Window window;
+    TW_CHECK(window.loadSource(
+        "start: DW 0x00FF\n"
+        "       LD I, dot\n"
+        "       DRW V0, V1, 1\n"
+        "       HALT\n"
+        "dot:   DB 0xFF"));
+    // Ten opcodes a frame covers the whole program, and the frame emits the
+    // signal the window repaints from.
+    window.emulator()->advanceFrame();
+    const Chip8Snapshot snapshot = window.emulator()->snapshot();
+    TW_CHECK_EQ(snapshot.screen_width, 128);
+    TW_CHECK_EQ(snapshot.screen_height, 64);
+    TW_CHECK_EQ(window.screen()->pixelSize(), QSize(128, 64));
+}
+
 void test_the_window_wires_the_screen_and_controls() {
     announce("window: the screen and controls");
     Chip8Window window;
@@ -310,6 +364,8 @@ int main(int argc, char** argv) {
     test_speed_is_bounded();
     test_the_clock_runs_without_manual_frames();
     test_ld_key_waits_for_a_press();
+    test_the_window_offers_the_rom_library();
+    test_a_hires_program_reaches_the_screen();
     test_the_window_wires_the_screen_and_controls();
     test_the_window_opens_a_file();
     test_the_window_starts_with_the_bundled_program();

@@ -23,7 +23,7 @@ derived rather than remembered.
 | Shell | Documents and tabs, menus, toolbars, status bar, settings persistence, the last session's files restored at launch |
 | Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, find in files, go-to-line, tab stops, fonts, error squiggles with gutter markers, completion, auto-indent, Format Code |
 | Console | Streaming output, and interpreter errors in their own tab |
-| Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback |
+| Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording |
 | Display | 33 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
 | Languages | 10 languages, 49 verified example programs |
@@ -189,6 +189,15 @@ engine** and checks that none of the sixty starters already passes. That pass is
 a curriculum maintainable: without it, a lesson whose answer does not work would sit in
 the tree looking correct, because data is not exercised by anything unless something
 exercises it deliberately. See `docs/lessons/FORMAT.md`.
+
+**CHIP-8 runs SuperChip hi-res.** Both the C++ machine and the Python reference
+implement the 1.1 core -- 64x32 and 128x64 modes, 00Cn/00FB/00FC scrolls, 00FD
+exit, DXY0's 16x16 sprite, FX30's 8x10 font and the FX75/FX85 flags -- so the
+hi-res and SuperChip ROMs a collection brings can run. MegaChip's planes and audio
+are not implemented and are reported as unknown opcodes rather than half-drawn.
+The emulator's **ROM Library...** browses a folder the user supplies; the studio
+ships no ROMs, because most circulating CHIP-8 programs are somebody else's
+copyright and several are unlicensed ports of games that still are.
 
 Four limits are recorded rather than left to be discovered:
 

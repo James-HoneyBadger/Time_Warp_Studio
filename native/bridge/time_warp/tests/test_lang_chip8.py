@@ -10,6 +10,10 @@ from __future__ import annotations
 from time_warp.core.interpreter import Language
 from time_warp.languages.chip8 import (
     _FONT_ADDRESS,
+    _LARGE_FONT,
+    _LARGE_FONT_ADDRESS,
+    HIRES_HEIGHT,
+    HIRES_WIDTH,
     SCREEN_HEIGHT,
     SCREEN_WIDTH,
     Chip8Error,
@@ -369,6 +373,132 @@ def test_cycle_limit_is_reported() -> None:
     assert has(output, "ℹ️", "600 frames")
 
 
+# -- SuperChip hi-res --------------------------------------------------------
+
+
+def test_hires_mode_changes_the_grid_and_starts_blank() -> None:
+    machine = _run_to_halt("start: DW 0x00FF\n       HALT")
+    assert (machine.width, machine.height) == (HIRES_WIDTH, HIRES_HEIGHT)
+    assert len(machine.framebuffer) == HIRES_WIDTH * HIRES_HEIGHT
+
+    machine = _run_to_halt(
+        "start: LD I, dot\n"
+        "       DRW V0, V1, 1\n"
+        "       DW 0x00FF\n"
+        "       DW 0x00FE\n"
+        "       HALT\n"
+        "dot:   DB 0xFF"
+    )
+    assert (machine.width, machine.height) == (SCREEN_WIDTH, SCREEN_HEIGHT)
+    assert len(machine.framebuffer) == SCREEN_WIDTH * SCREEN_HEIGHT
+    # A mode switch does not keep the old drawing: the grid changed under it.
+    assert sum(machine.framebuffer) == 0
+
+
+def test_the_large_sprite_is_sixteen_by_sixteen_in_hires() -> None:
+    rows = "".join("       DW 0xFFFF\n" for _ in range(16))
+    machine = _run_to_halt(
+        "start: DW 0x00FF\n"
+        "       LD I, sprite\n"
+        "       DRW V0, V1, 0\n"
+        "       HALT\n"
+        "sprite:\n" + rows
+    )
+    assert sum(machine.framebuffer) == 16 * 16
+    assert machine.framebuffer[0] == 1
+    assert machine.framebuffer[15] == 1
+    assert machine.framebuffer[15 * HIRES_WIDTH + 15] == 1
+
+
+def test_the_large_sprite_doubles_columns_in_lores() -> None:
+    rows = "".join("       DB 0x80\n" for _ in range(16))
+    machine = _run_to_halt(
+        "start: LD I, sprite\n"
+        "       DRW V0, V1, 0\n"
+        "       HALT\n"
+        "sprite:\n" + rows
+    )
+    # Each row's top bit becomes two pixels, so 16 rows of 2.
+    assert sum(machine.framebuffer) == 32
+    assert machine.framebuffer[0] == 1
+    assert machine.framebuffer[1] == 1
+    assert machine.framebuffer[2] == 0
+    assert machine.framebuffer[SCREEN_WIDTH] == 1
+
+
+def test_scroll_down_moves_the_drawing_and_clears_the_top() -> None:
+    machine = _run_to_halt(
+        "start: LD I, dot\n"
+        "       DRW V0, V1, 1\n"
+        "       DW 0x00C2\n"
+        "       HALT\n"
+        "dot:   DB 0x80"
+    )
+    assert machine.framebuffer[2 * SCREEN_WIDTH] == 1
+    assert machine.framebuffer[0] == 0
+    assert machine.framebuffer[SCREEN_WIDTH] == 0
+
+
+def test_scroll_left_moves_the_drawing_four_pixels() -> None:
+    machine = _run_to_halt(
+        "start: LD V0, 8\n"
+        "       LD I, dot\n"
+        "       DRW V0, V1, 1\n"
+        "       DW 0x00FC\n"
+        "       HALT\n"
+        "dot:   DB 0x80"
+    )
+    assert machine.framebuffer[4] == 1
+    assert machine.framebuffer[8] == 0
+
+
+def test_scroll_right_moves_the_drawing_four_pixels() -> None:
+    machine = _run_to_halt(
+        "start: LD V0, 8\n"
+        "       LD I, dot\n"
+        "       DRW V0, V1, 1\n"
+        "       DW 0x00FB\n"
+        "       HALT\n"
+        "dot:   DB 0x80"
+    )
+    assert machine.framebuffer[12] == 1
+    assert machine.framebuffer[8] == 0
+
+
+def test_exit_opcode_halts_without_running_the_next_instruction() -> None:
+    machine = _run_to_halt("start: DW 0x00FD\n       LD V0, 9\n       HALT")
+    assert machine.halted
+    assert machine.v[0] == 0
+
+
+def test_fx30_points_at_the_large_font() -> None:
+    machine = _run_to_halt("start: LD V0, 3\n       DW 0xF030\n       HALT")
+    assert machine.i == _LARGE_FONT_ADDRESS + 30
+
+
+def test_the_large_font_is_in_memory() -> None:
+    memory, _labels = _assemble("start: HALT")
+    # The small glyph for 0 is 0xF0, so the doubled first row is 0xFF twice.
+    assert memory[_LARGE_FONT_ADDRESS] == 0xFF
+    assert (
+        bytes(memory[_LARGE_FONT_ADDRESS : _LARGE_FONT_ADDRESS + 10])
+        == _LARGE_FONT[:10]
+    )
+
+
+def test_rpl_flags_round_trip() -> None:
+    machine = _run_to_halt(
+        "start: LD V0, 1\n"
+        "       LD V1, 2\n"
+        "       DW 0xF175\n"
+        "       LD V0, 0\n"
+        "       LD V1, 0\n"
+        "       DW 0xF185\n"
+        "       HALT"
+    )
+    assert (machine.v[0], machine.v[1]) == (1, 2)
+
+
 # -- drawing -----------------------------------------------------------------
 
 
@@ -389,6 +519,26 @@ def test_the_display_uses_the_palette() -> None:
     ]
     assert len(lit) == 8, "0xFF is eight pixels"
     assert no_errors([])
+
+
+def test_the_display_halves_the_pixel_size_in_hires() -> None:
+    from time_warp.graphics.turtle_state import TurtleState
+
+    turtle = TurtleState()
+    execute_chip8(
+        None,
+        "start: DW 0x00FF\n       LD I, dot\n       DRW V0, V1, 1\n"
+        "       HALT\ndot: DB 0xFF",
+        turtle,
+    )
+    lit = [
+        shape
+        for shape in turtle.shapes
+        if shape.shape_type == "rect" and shape.fill_color == (140, 255, 140)
+    ]
+    assert len(lit) == 8
+    corner, right = lit[0].points[0], lit[0].points[1]
+    assert abs((right[0] - corner[0]) - 4.0) < 1e-9, "a hi-res pixel is four units"
 
 
 def test_the_display_is_cleared_before_the_first_frame() -> None:

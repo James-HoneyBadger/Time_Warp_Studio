@@ -28,7 +28,13 @@ class Chip8Screen final : public QWidget {
 public:
     explicit Chip8Screen(QWidget* parent = nullptr);
 
-    void setPixels(const std::vector<std::uint8_t>& pixels);
+    /// Replaces the picture. The caller passes the grid the machine is on, so a
+    /// mode switch from 64x32 to 128x64 replaces the image rather than being
+    /// rejected for the wrong pixel count.
+    void setPixels(const std::vector<std::uint8_t>& pixels, int width, int height);
+    /// The framebuffer size of the last frame, for a test that a mode switch
+    /// reached the widget rather than being rejected for the wrong pixel count.
+    [[nodiscard]] QSize pixelSize() const;
     void setColors(const QColor& on, const QColor& off);
 
     [[nodiscard]] QSize sizeHint() const override;

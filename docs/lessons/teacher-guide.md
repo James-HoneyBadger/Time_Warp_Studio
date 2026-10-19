@@ -252,6 +252,11 @@ chose. Escape leaves the mode and puts the chrome back.
 
 `present` with no number reports the current setting.
 
+**File > Record Canvas as GIF...** records the drawing appearing, for a handout
+or a class page: it samples the canvas ten times a second and stops asking where
+to save when you switch it off. A turtle drawing is usually a few seconds; a long
+one is a large file, because every changed frame is a picture.
+
 At the end of a session, **File > Export Lesson Session as Markdown** (or **as
 PDF**) writes one file: the lesson and what it teaches, every checkpoint with the
 verdict it was given this session, the program in the editor and the console

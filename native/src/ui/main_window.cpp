@@ -238,6 +238,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     autosave_timer_ = new QTimer{this};
     autosave_timer_->setObjectName(QStringLiteral("autosaveTimer"));
     connect(autosave_timer_, &QTimer::timeout, this, &MainWindow::autosaveNow);
+
+    // The canvas recorder. A fixed sample rate rather than a signal per segment:
+    // a fast turtle can draw thousands of segments a second, and a GIF with a
+    // frame per segment is a file nobody can open. Ten frames a second is the
+    // rate the removed implementation used and is enough for a drawing.
+    gif_timer_ = new QTimer{this};
+    gif_timer_->setObjectName(QStringLiteral("gifRecordTimer"));
+    gif_timer_->setInterval(100);
+    connect(gif_timer_, &QTimer::timeout, this, &MainWindow::captureGifFrame);
     applyEditorSettings(editor_settings_);
     // Before any document is opened, so the settings file cannot keep growing a
     // dead path per deleted program. The count is not reported: who used to have a
@@ -844,6 +853,14 @@ void MainWindow::buildMenuBar() {
     add(file, tr("Export &Session as HTML..."), QKeySequence{},
         [this] { exportSessionHtmlDialog(); })
         ->setObjectName(QStringLiteral("exportSessionAction"));
+    // A toggle rather than a dialog: recording is a state the canvas is in, and a
+    // menu that has to be opened again to stop is not one a demonstration can
+    // use. Qt reads GIF but does not write it, so `gif_encoder` is in tree.
+    record_gif_action_ = file->addAction(tr("Record Canvas as &GIF..."));
+    record_gif_action_->setObjectName(QStringLiteral("recordGifAction"));
+    record_gif_action_->setCheckable(true);
+    connect(record_gif_action_, &QAction::toggled, this,
+            [this](bool on) { setGifRecording(on); });
     add(file, tr("Export Lesson Session as &Markdown..."), QKeySequence{},
         [this] { exportLessonSessionMarkdownDialog(); })
         ->setObjectName(QStringLiteral("exportLessonMarkdownAction"));
@@ -2354,7 +2371,9 @@ void MainWindow::goToLinePrompt() {
 }
 
 void MainWindow::exportDrawingDialog() {
-    if (turtle_canvas_ == nullptr || turtle_canvas_->strokeCount() == 0) {
+    // `frameCount`, not `strokeCount`: CHIP-8 draws rectangles, so a screen full of
+    // pixels has no strokes at all and would otherwise be "nothing to export".
+    if (turtle_canvas_ == nullptr || turtle_canvas_->frameCount() == 0) {
         // Nothing drawn yet. Said rather than done silently: a save dialog that
         // produces an empty picture is worse than being told there is nothing.
         setExecutionState(tr("ready"),
@@ -2417,7 +2436,7 @@ void MainWindow::exportSessionHtmlDialog() {
     // The drawing at export size, or nothing at all: a blank canvas should say
     // so in the page rather than shipping an empty rectangle.
     const QImage drawing =
-        (turtle_canvas_ != nullptr && turtle_canvas_->strokeCount() > 0)
+        (turtle_canvas_ != nullptr && turtle_canvas_->frameCount() > 0)
             ? turtle_canvas_->renderedDrawing()
             : QImage{};
     QString error;
@@ -2431,6 +2450,71 @@ void MainWindow::exportSessionHtmlDialog() {
         return;
     }
     setExecutionState(tr("ready"), tr("Exported %1").arg(QFileInfo{path}.fileName()));
+}
+
+void MainWindow::setGifRecording(bool on) {
+    if (on) {
+        gif_frames_.clear();
+        gif_size_ = turtle_canvas_ != nullptr ? turtle_canvas_->size() : QSize{};
+        gif_timer_->start();
+        setExecutionState(tr("ready"),
+                          tr("Recording the canvas \u2014 run a program, then stop to save"));
+    } else {
+        gif_timer_->stop();
+        if (gif_frames_.isEmpty()) {
+            setExecutionState(tr("ready"), tr("Nothing was drawn while recording"));
+        } else {
+            QString target = QFileDialog::getSaveFileName(
+                this, tr("Save animated GIF"),
+                QDir{QDir::homePath()}.filePath(QStringLiteral("turtle_recording.gif")),
+                tr("Animated GIF (*.gif)"));
+            if (target.isEmpty()) {
+                setExecutionState(tr("ready"), tr("Recording discarded"));
+            } else {
+                // The dialog's filter is a suggestion on some platforms, and a GIF
+                // without the suffix is a file the desktop will not preview.
+                if (!target.endsWith(QStringLiteral(".gif"), Qt::CaseInsensitive)) {
+                    target += QStringLiteral(".gif");
+                }
+                QString error;
+                if (!timewarp::ui::gif::writeGif(target, gif_frames_, &error)) {
+                    QMessageBox::warning(this, tr("Export failed"),
+                                         tr("Could not write %1.\n\n%2")
+                                             .arg(QDir::toNativeSeparators(target), error));
+                } else {
+                    setExecutionState(tr("ready"),
+                                      tr("Wrote %1").arg(QFileInfo{target}.fileName()));
+                }
+            }
+        }
+        gif_frames_.clear();
+    }
+    if (record_gif_action_ != nullptr && record_gif_action_->isChecked() != on) {
+        QSignalBlocker blocker{record_gif_action_};
+        record_gif_action_->setChecked(on);
+    }
+}
+
+void MainWindow::captureGifFrame() {
+    if (turtle_canvas_ == nullptr) {
+        return;
+    }
+    // A blank canvas is not a frame. Recording usually starts before Run, and a
+    // stretch of empty paper at the front of the GIF is not what was recorded.
+    if (gif_frames_.isEmpty() && turtle_canvas_->frameCount() <= 0) {
+        return;
+    }
+    QImage frame = turtle_canvas_->renderedDrawing(1.0);
+    if (gif_size_.isEmpty()) {
+        gif_size_ = frame.size();
+    } else if (frame.size() != gif_size_) {
+        // A window resized mid-recording: scale rather than write frames whose
+        // sizes disagree, which is a GIF no reader will play.
+        frame = frame.scaled(gif_size_, Qt::IgnoreAspectRatio, Qt::SmoothTransformation);
+    }
+    // `appendFrame` merges a picture that did not change into the frame before
+    // it: nothing moved, but the time still passed.
+    timewarp::ui::gif::appendFrame(gif_frames_, frame, gif_timer_->interval());
 }
 
 timewarp::ui::exporter::LessonSession MainWindow::currentLessonSession() const {
@@ -2496,7 +2580,7 @@ void MainWindow::exportLessonSessionPdfDialog() {
 }
 
 void MainWindow::copyDrawingToClipboard() {
-    if (turtle_canvas_ == nullptr || turtle_canvas_->strokeCount() == 0) {
+    if (turtle_canvas_ == nullptr || turtle_canvas_->frameCount() == 0) {
         setExecutionState(tr("ready"),
                           tr("Nothing to copy yet \u2014 run a program that draws"));
         return;

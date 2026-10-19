@@ -2,9 +2,10 @@
 
 CHIP-8 is Joseph Weisbecker's bytecode interpreter from 1977 — the machine the
 first home computers were taught with. It is not a text language: a program is a
-sequence of two-byte opcodes, and the display is a 64x32 framebuffer of lit and
-unlit pixels. So this executor is two things in one file: a small **assembler**
-that turns mnemonics into opcodes, and the **machine** that runs them.
+sequence of two-byte opcodes, and the display is a framebuffer of lit and unlit
+pixels -- 64x32 in the original mode and 128x64 in SuperChip hi-res. So this
+executor is two things in one file: a small **assembler** that turns mnemonics
+into opcodes, and the **machine** that runs them.
 
 Executed whole-program: the listing is assembled in full and then run, because an
 opcode stream cannot be interpreted one line at a time.
@@ -24,9 +25,12 @@ Numbers are decimal unless marked, and marked either way round because both
 spellings appear in listings: ``0x41`` and ``41h`` are both 65, and a bare ``41``
 is decimal 41.
 
-The instruction set is the complete original: all 35 opcodes, including the
+The instruction set is the complete original -- all 35 opcodes, including the
 arithmetic group, the random and timing registers, the font and BCD conversions,
-and memory block load/store.
+and memory block load/store -- plus the SuperChip 1.1 extensions a hi-res ROM
+needs: 00FE/00FF for the screen mode, 00Cn/00FB/00FC to scroll, 00FD to exit,
+DXY0's 16x16 sprite, FX30's large font and the FX75/FX85 flag registers. The
+MegaChip plane and audio extensions are not implemented.
 
 Where the original is ambiguous, this follows the 1977 interpreter rather than a
 later emulator, because that is the machine the books describe:
@@ -106,9 +110,13 @@ CHIP8_COMMANDS = {
     "DW",
 }
 
-#: Screen geometry and the scale a CHIP-8 pixel is drawn at.
+#: Screen geometry and the scale a CHIP-8 pixel is drawn at. Hi-res is exactly
+#: twice the original in each direction, so the canvas keeps its 2:1 shape and a
+#: hi-res pixel is half the size.
 SCREEN_WIDTH = 64
 SCREEN_HEIGHT = 32
+HIRES_WIDTH = 128
+HIRES_HEIGHT = 64
 PIXEL_SCALE = 8
 
 #: Simulation budget. Ten opcodes to a frame and the timers ticking once per
@@ -208,8 +216,32 @@ _FONT = (
 )
 
 _FONT_ADDRESS = 0x50
+_LARGE_FONT_ADDRESS = _FONT_ADDRESS + 16 * 5
 _PROGRAM_ADDRESS = 0x200
 _MEMORY_SIZE = 4096
+
+
+def _large_font() -> bytes:
+    """The 8x10 digits FX30 points at, made by doubling the 4x5 set.
+
+    SuperChip's large font is ten bytes per digit: each source row becomes two
+    rows and each source column two columns. Deriving it from the small font
+    rather than embedding a second table is what keeps the two from disagreeing
+    about what a digit looks like.
+    """
+    out = bytearray()
+    for digit in range(10):
+        for row in _FONT[digit * 5 : (digit + 1) * 5]:
+            doubled = 0
+            for column in range(4):
+                if row & (0x80 >> column):
+                    doubled |= 0xC0 >> (column * 2)
+            out.append(doubled)
+            out.append(doubled)
+    return bytes(out)
+
+
+_LARGE_FONT = _large_font()
 
 _REGISTER_RE = re.compile(r"[Vv]([0-9A-Fa-f])")
 _LABEL_RE = re.compile(r"^\s*([A-Za-z_]\w*)\s*:")
@@ -272,6 +304,7 @@ def assemble(source: str) -> tuple[bytearray, dict[str, int], int]:
     """
     memory = bytearray(_MEMORY_SIZE)
     memory[_FONT_ADDRESS : _FONT_ADDRESS + len(_FONT)] = bytes(_FONT)
+    memory[_LARGE_FONT_ADDRESS : _LARGE_FONT_ADDRESS + len(_LARGE_FONT)] = _LARGE_FONT
 
     # A NUL byte is not a thing a listing contains and is in every real ROM, so
     # it decides which of the two loaders runs.
@@ -495,10 +528,21 @@ class Machine:
         self.delay_timer = 0
         self.sound_timer = 0
         self.keys = keys
-        self.framebuffer = bytearray(SCREEN_WIDTH * SCREEN_HEIGHT)
+        self.hi_res = False
+        #: The eight (sixteen here) RPL flags FX75 stores and FX85 loads.
+        self.rpl = bytearray(16)
+        self.framebuffer = bytearray(self.width * self.height)
         self.halted = False
         self.cycles = 0
         self.collisions = 0
+
+    @property
+    def width(self) -> int:
+        return HIRES_WIDTH if self.hi_res else SCREEN_WIDTH
+
+    @property
+    def height(self) -> int:
+        return HIRES_HEIGHT if self.hi_res else SCREEN_HEIGHT
 
     # -- helpers ---------------------------------------------------------
     def _fetch(self) -> int:
@@ -513,14 +557,14 @@ class Machine:
 
     def _pixel(self, x: int, y: int) -> bool:
         return (
-            x < SCREEN_WIDTH
-            and y < SCREEN_HEIGHT
-            and bool(self.framebuffer[y * SCREEN_WIDTH + x])
+            x < self.width
+            and y < self.height
+            and bool(self.framebuffer[y * self.width + x])
         )
 
     def _set_pixel(self, x: int, y: int, on: bool) -> None:
-        if x < SCREEN_WIDTH and y < SCREEN_HEIGHT:
-            self.framebuffer[y * SCREEN_WIDTH + x] = 1 if on else 0
+        if x < self.width and y < self.height:
+            self.framebuffer[y * self.width + x] = 1 if on else 0
 
     def _first_key(self) -> int:
         for index in range(16):
@@ -543,12 +587,28 @@ class Machine:
             self.halted = True
             return
         if opcode == 0x00E0:
-            self.framebuffer = bytearray(SCREEN_WIDTH * SCREEN_HEIGHT)
+            self.framebuffer = bytearray(self.width * self.height)
             return
         if opcode == 0x00EE:
             if not self.stack:
                 raise Chip8Error("RET with an empty call stack")
             self.pc = self.stack.pop()
+            return
+        if opcode == 0x00FD:
+            # SuperChip's "exit interpreter": HALT in one opcode.
+            self.halted = True
+            return
+        if opcode == 0x00FE or opcode == 0x00FF:
+            self._set_mode(opcode == 0x00FF)
+            return
+        if (opcode & 0xFFF0) == 0x00C0:
+            self._scroll_down(opcode & 0xF)
+            return
+        if opcode == 0x00FB:
+            self._scroll_left(-4)
+            return
+        if opcode == 0x00FC:
+            self._scroll_left(4)
             return
         if high == 0x0:
             # SYS: an RCA 1802 routine, which this machine cannot execute. Every
@@ -596,6 +656,47 @@ class Machine:
         else:
             raise Chip8Error(f"unknown opcode 0x{opcode:04X} at 0x{self.pc - 2:03X}")
 
+    def _set_mode(self, hi_res: bool) -> None:
+        """Switch screen mode and clear: the two modes share no pixels.
+
+        The original machine has no instruction for this; SuperChip's 00FE and
+        00FF do, and a ROM that changes mode expects a blank screen rather than
+        the old drawing stretched or cropped.
+        """
+        self.hi_res = hi_res
+        self.framebuffer = bytearray(self.width * self.height)
+
+    def _scroll_down(self, rows: int) -> None:
+        rows = min(rows, self.height)
+        if rows <= 0:
+            return
+        width = self.width
+        for y in range(self.height - 1, rows - 1, -1):
+            source = (y - rows) * width
+            target = y * width
+            self.framebuffer[target : target + width] = self.framebuffer[
+                source : source + width
+            ]
+        self.framebuffer[: rows * width] = bytes(rows * width)
+
+    def _scroll_left(self, amount: int) -> None:
+        """Shift every row by *amount*: positive is left, negative is right."""
+        width = self.width
+        shift = min(abs(amount), width)
+        blank = bytes(shift)
+        for y in range(self.height):
+            row = y * width
+            if amount > 0:
+                self.framebuffer[row : row + width - shift] = self.framebuffer[
+                    row + shift : row + width
+                ]
+                self.framebuffer[row + width - shift : row + width] = blank
+            else:
+                self.framebuffer[row + shift : row + width] = self.framebuffer[
+                    row : row + width - shift
+                ]
+                self.framebuffer[row : row + shift] = blank
+
     def _arithmetic(self, x: int, y: int, low: int) -> None:
         if low == 0x0:
             self.v[x] = self.v[y]
@@ -626,21 +727,42 @@ class Machine:
             raise Chip8Error(f"unknown arithmetic opcode 8xy{low:X}")
 
     def _draw(self, x: int, y: int, rows: int) -> None:
-        """XOR an 8-by-rows sprite at (Vx, Vy); VF reports a collision."""
-        start_x = self.v[x] % SCREEN_WIDTH
-        start_y = self.v[y] % SCREEN_HEIGHT
+        """XOR a sprite at (Vx, Vy); VF reports a collision.
+
+        ``rows == 0`` is SuperChip's large sprite: 16 rows of 16 bits in hi-res.
+        In the original mode the same opcode is an 8x16 sprite with each column
+        doubled, which is what SCHIP draws there and what a lores ROM expects.
+        """
+        start_x = self.v[x] % self.width
+        start_y = self.v[y] % self.height
+        wide = 8
+        doubled = False
+        if rows == 0:
+            rows = 16
+            if self.hi_res:
+                wide = 16
+            else:
+                doubled = True
         self.v[0xF] = 0
         for row in range(rows):
-            bits = self.memory[(self.i + row) % _MEMORY_SIZE]
-            for column in range(8):
-                if not bits & (0x80 >> column):
+            if wide == 16:
+                high_byte = self.memory[(self.i + row * 2) % _MEMORY_SIZE]
+                low_byte_ = self.memory[(self.i + row * 2 + 1) % _MEMORY_SIZE]
+                bits = (high_byte << 8) | low_byte_
+            else:
+                bits = self.memory[(self.i + row) % _MEMORY_SIZE]
+            for source_column in range(wide):
+                mask = 0x8000 >> source_column if wide == 16 else 0x80 >> source_column
+                if not bits & mask:
                     continue
-                pixel_x = (start_x + column) % SCREEN_WIDTH
-                pixel_y = (start_y + row) % SCREEN_HEIGHT
-                if self._pixel(pixel_x, pixel_y):
-                    self.v[0xF] = 1
-                    self.collisions += 1
-                self._set_pixel(pixel_x, pixel_y, not self._pixel(pixel_x, pixel_y))
+                for repeat in range(2 if doubled else 1):
+                    column = source_column * (2 if doubled else 1) + repeat
+                    pixel_x = (start_x + column) % self.width
+                    pixel_y = (start_y + row) % self.height
+                    if self._pixel(pixel_x, pixel_y):
+                        self.v[0xF] = 1
+                        self.collisions += 1
+                    self._set_pixel(pixel_x, pixel_y, not self._pixel(pixel_x, pixel_y))
 
     def _misc(self, x: int, low: int) -> None:
         if low == 0x07:
@@ -657,6 +779,8 @@ class Machine:
             self.i = (self.i + self.v[x]) & 0xFFF
         elif low == 0x29:
             self.i = _FONT_ADDRESS + (self.v[x] & 0xF) * 5
+        elif low == 0x30:
+            self.i = _LARGE_FONT_ADDRESS + (self.v[x] & 0xF) * 10
         elif low == 0x33:
             self.memory[self.i % _MEMORY_SIZE] = self.v[x] // 100
             self.memory[(self.i + 1) % _MEMORY_SIZE] = (self.v[x] // 10) % 10
@@ -670,6 +794,12 @@ class Machine:
             for index in range(x + 1):
                 self.v[index] = self.memory[(self.i + index) % _MEMORY_SIZE]
             self.i = (self.i + x + 1) & 0xFFF
+        elif low == 0x75:
+            for index in range(min(x + 1, len(self.rpl))):
+                self.rpl[index] = self.v[index]
+        elif low == 0x85:
+            for index in range(min(x + 1, len(self.rpl))):
+                self.v[index] = self.rpl[index]
         else:
             raise Chip8Error(f"unknown opcode Fx{low:02X}")
 
@@ -701,7 +831,9 @@ class _Display:
         turtle.set_palette_color(_ON_INDEX, 140, 255, 140)
         self.off_colour = turtle.resolve_color(_OFF_INDEX)
         self.on_colour = turtle.resolve_color(_ON_INDEX)
-        self.previous = bytearray(SCREEN_WIDTH * SCREEN_HEIGHT)
+        self.width = SCREEN_WIDTH
+        self.height = SCREEN_HEIGHT
+        self.previous = bytearray(self.width * self.height)
 
     def _rect(self, column: int, row: int, colour: Any) -> None:
         """One CHIP-8 pixel as a filled square, in canvas coordinates.
@@ -711,11 +843,11 @@ class _Display:
         """
         width = SCREEN_WIDTH * PIXEL_SCALE
         height = SCREEN_HEIGHT * PIXEL_SCALE
-        left = column * PIXEL_SCALE - width / 2
-        top = height / 2 - row * PIXEL_SCALE
-        self.turtle.draw_rect(
-            left, top, left + PIXEL_SCALE, top - PIXEL_SCALE, fill_color=colour
-        )
+        # A hi-res pixel is half the size: both modes fill the same canvas.
+        scale = (SCREEN_WIDTH * PIXEL_SCALE) // self.width
+        left = column * scale - width / 2
+        top = height / 2 - row * scale
+        self.turtle.draw_rect(left, top, left + scale, top - scale, fill_color=colour)
 
     def clear(self) -> None:
         """Paint the whole screen in the off colour."""
@@ -724,16 +856,25 @@ class _Display:
         self.turtle.draw_rect(
             -width / 2, height / 2, width / 2, -height / 2, fill_color=self.off_colour
         )
-        self.previous = bytearray(SCREEN_WIDTH * SCREEN_HEIGHT)
+        self.previous = bytearray(self.width * self.height)
 
-    def paint(self, framebuffer: bytearray) -> None:
-        """Emit only the pixels that changed since the last frame."""
+    def paint(self, framebuffer: bytearray, width: int, height: int) -> None:
+        """Emit only the pixels that changed since the last frame.
+
+        A mode change repaints the whole screen: the previous frame's pixels are
+        not comparable with the new grid even when the byte count matches.
+        """
+        if (width, height) != (self.width, self.height):
+            self.width = width
+            self.height = height
+            self.previous = bytearray(width * height)
+            self.clear()
         for index, value in enumerate(framebuffer):
             if value == self.previous[index]:
                 continue
             self.previous[index] = value
             colour = self.on_colour if value else self.off_colour
-            self._rect(index % SCREEN_WIDTH, index // SCREEN_WIDTH, colour)
+            self._rect(index % self.width, index // self.width, colour)
 
 
 # ---------------------------------------------------------------------------
@@ -782,7 +923,7 @@ def execute_chip8(
                     break
                 machine.step()
             machine.tick_timers()
-            display.paint(machine.framebuffer)
+            display.paint(machine.framebuffer, machine.width, machine.height)
             frames += 1
             if frames >= MAX_FRAMES:
                 # Not an error: a loop that never halts is a legitimate CHIP-8

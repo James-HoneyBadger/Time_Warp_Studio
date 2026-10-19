@@ -24,6 +24,7 @@
 #include <QGuiApplication>
 #include <QHash>
 #include <QImage>
+#include <QImageReader>
 #include <QSet>
 #include <QSettings>
 #include <QStringList>
@@ -33,9 +34,11 @@
 #include "temp_dir.hpp"
 #include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/breakpoints.hpp"
+#include "timewarp/ui/chip8_library.hpp"
 #include "timewarp/ui/export.hpp"
 #include "timewarp/ui/find_in_files.hpp"
 #include "timewarp/ui/formatter.hpp"
+#include "timewarp/ui/gif_encoder.hpp"
 #include "timewarp/ui/outline.hpp"
 #include "timewarp/ui/snippets.hpp"
 #include "timewarp/ui/language.hpp"
@@ -48,6 +51,8 @@ using timewarp::ui::exporter::writeCodePdf;
 using timewarp::ui::exporter::writeLessonSessionMarkdown;
 using timewarp::ui::exporter::writeLessonSessionPdf;
 using timewarp::ui::exporter::writeSessionHtml;
+using timewarp::ui::gif::Frame;
+using timewarp::ui::gif::writeGif;
 using timewarp::ui::formatSource;
 using timewarp::ui::FormatOutcome;
 using timewarp::ui::Language;
@@ -546,6 +551,44 @@ void test_autosave_store_follows_the_data_directory() {
     scratch.restoreDataDir();
 }
 
+void test_the_rom_library_scans_nested_folders() {
+    announce("CHIP-8 ROM library: the scan");
+    const tw::test::TempDir dir;
+    TW_CHECK(dir.valid());
+    dir.write("top.ch8", QByteArray{"\0"});
+    // Uppercase suffixes are found on every filesystem: the scan looks at the
+    // suffix lowercased rather than leaving it to a name filter's case rules.
+    dir.write("games/nested.CH8", QByteArray{"\0"});
+    dir.write("demos/demo.c8", QByteArray{"\0"});
+    dir.write("hires/game.rom", QByteArray{"\0"});
+    dir.write("notes.txt", "not a program");
+    dir.write("games/readme.md", "not a program");
+
+    const QList<timewarp::ui::Chip8Rom> roms = timewarp::ui::chip8RomsIn(dir.path());
+    TW_CHECK_EQ(roms.size(), 4);
+    if (roms.size() == 4) {
+        // Sorted by the path inside the folder, which is the games/ and hires/
+        // grouping a downloaded pack already has.
+        TW_CHECK_EQ(roms.at(0).relative, QStringLiteral("demos/demo.c8"));
+        TW_CHECK_EQ(roms.at(1).relative, QStringLiteral("games/nested.CH8"));
+        TW_CHECK_EQ(roms.at(2).relative, QStringLiteral("hires/game.rom"));
+        TW_CHECK_EQ(roms.at(3).relative, QStringLiteral("top.ch8"));
+        TW_CHECK(roms.at(1).path.endsWith(QStringLiteral("games/nested.CH8")));
+    }
+
+    // A folder that has been moved is empty, not an error.
+    TW_CHECK(timewarp::ui::chip8RomsIn(dir.path() + QStringLiteral("/missing")).isEmpty());
+    TW_CHECK(timewarp::ui::chip8RomsIn(QString{}).isEmpty());
+
+    // The remembered folder round-trips, and an empty string clears it.
+    const QString previous = timewarp::ui::storedChip8RomFolder();
+    timewarp::ui::storeChip8RomFolder(dir.path());
+    TW_CHECK_EQ(timewarp::ui::storedChip8RomFolder(), dir.path());
+    timewarp::ui::storeChip8RomFolder(QString{});
+    TW_CHECK(timewarp::ui::storedChip8RomFolder().isEmpty());
+    timewarp::ui::storeChip8RomFolder(previous);
+}
+
 void test_breakpoint_store() {
     announce("breakpoints: the store");
     const tw::test::TempDir dir;
@@ -799,6 +842,124 @@ void test_lesson_session_pdf_export() {
     TW_CHECK(!error.isEmpty());
 }
 
+void test_gif_encoder_writes_a_decodable_animation() {
+    announce("export: animated GIF");
+    const tw::test::TempDir dir;
+    TW_CHECK(dir.valid());
+
+    // Colours the 6x6x6 cube contains exactly, so the round trip is an equality
+    // rather than a tolerance that could hide a wrong palette.
+    const auto solid = [](QColor colour) {
+        QImage image{8, 8, QImage::Format_ARGB32};
+        image.fill(colour);
+        return image;
+    };
+    QVector<Frame> frames;
+    frames.append(Frame{solid(QColor(255, 0, 0)), 100});
+    frames.append(Frame{solid(QColor(0, 153, 0)), 100});
+    frames.append(Frame{solid(QColor(0, 0, 204)), 200});
+
+    const QString path = dir.path(QStringLiteral("animation.gif"));
+    QString error;
+    TW_CHECK(writeGif(path, frames, &error));
+    TW_CHECK(error.isEmpty());
+
+    const QByteArray bytes = readAll(path);
+    TW_CHECK(bytes.startsWith(QByteArrayLiteral("GIF89a")));
+    TW_CHECK_EQ(bytes.at(bytes.size() - 1), ';');
+    // 768 bytes of global colour table plus three tiny LZW frames. A file much
+    // larger than this would mean the pixels went out uncompressed.
+    TW_CHECK(bytes.size() < 1200);
+
+    // Qt reads GIF, so it is the oracle: a file it cannot decode is not a GIF,
+    // whatever the header says. Some distributions ship the format plugins
+    // separately; without the reader, the header checks above are still real.
+    if (!QImageReader::supportedImageFormats().contains("gif")) {
+        std::printf("     (no GIF reader installed: skipping the decode check)\n");
+        return;
+    }
+    QImageReader reader{path};
+    TW_CHECK(reader.supportsAnimation());
+    TW_CHECK_EQ(reader.imageCount(), 3);
+    TW_CHECK_EQ(reader.size(), QSize(8, 8));
+
+    const QImage first = reader.read();
+    TW_CHECK(!first.isNull());
+    TW_CHECK_EQ(first.size(), QSize(8, 8));
+    TW_CHECK_EQ(first.pixelColor(4, 4), QColor(255, 0, 0));
+    // Stored in hundredths of a second, so 100 ms reads back exactly.
+    TW_CHECK_EQ(reader.nextImageDelay(), 100);
+
+    const QImage second = reader.read();
+    TW_CHECK(!second.isNull());
+    TW_CHECK_EQ(second.pixelColor(4, 4), QColor(0, 153, 0));
+    TW_CHECK_EQ(reader.nextImageDelay(), 100);
+
+    const QImage third = reader.read();
+    TW_CHECK(!third.isNull());
+    TW_CHECK_EQ(third.pixelColor(4, 4), QColor(0, 0, 204));
+    TW_CHECK_EQ(reader.nextImageDelay(), 200);
+
+    // Merging: a still canvas is time passing, not a new frame, and the report
+    // of how long it was still has to survive into the file.
+    QVector<Frame> merged;
+    timewarp::ui::gif::appendFrame(merged, solid(QColor(255, 0, 0)), 100);
+    timewarp::ui::gif::appendFrame(merged, solid(QColor(255, 0, 0)), 100);
+    TW_CHECK_EQ(merged.size(), 1);
+    TW_CHECK_EQ(merged.first().delayMs, 200);
+    timewarp::ui::gif::appendFrame(merged, solid(QColor(0, 0, 204)), 100);
+    TW_CHECK_EQ(merged.size(), 2);
+    TW_CHECK_EQ(merged.last().delayMs, 100);
+
+    // A frame with all 216 palette colours in it grows the LZW dictionary past
+    // its first clear code, which is the part of the format a flat test never
+    // reaches. Every pixel is a colour the cube holds exactly, so the decoded
+    // image has to be the source image pixel for pixel.
+    QImage pattern{128, 128, QImage::Format_RGB32};
+    for (int y = 0; y < pattern.height(); ++y) {
+        for (int x = 0; x < pattern.width(); ++x) {
+            // A per-pixel pattern rather than blocks: the dictionary fills at
+            // 4096 codes and has to clear, which is the branch a run of one
+            // colour never reaches.
+            const int red = ((x * 7 + y * 13) % 6) * 51;
+            const int green = ((x * 5 + y * 11) % 6) * 51;
+            const int blue = ((x * 3 + y * 17) % 6) * 51;
+            pattern.setPixelColor(x, y, QColor{red, green, blue});
+        }
+    }
+    QVector<Frame> busy;
+    busy.append(Frame{pattern, 100});
+    const QString busy_path = dir.path(QStringLiteral("busy.gif"));
+    error.clear();
+    TW_CHECK(writeGif(busy_path, busy, &error));
+    TW_CHECK(error.isEmpty());
+    QImageReader busy_reader{busy_path};
+    const QImage decoded = busy_reader.read();
+    TW_CHECK(!decoded.isNull());
+    TW_CHECK_EQ(decoded.size(), pattern.size());
+    const bool identical =
+        decoded.convertToFormat(QImage::Format_RGB32)
+        == pattern.convertToFormat(QImage::Format_RGB32);
+    TW_CHECK(identical);
+
+    // Refusals rather than a broken file: no frames, mismatched sizes, and a
+    // directory that is not there.
+    error.clear();
+    TW_CHECK(!writeGif(path, {}, &error));
+    TW_CHECK(!error.isEmpty());
+
+    QVector<Frame> mismatched;
+    mismatched.append(Frame{solid(QColor(255, 0, 0)), 100});
+    mismatched.append(Frame{QImage{4, 4, QImage::Format_ARGB32}, 100});
+    error.clear();
+    TW_CHECK(!writeGif(path, mismatched, &error));
+    TW_CHECK(!error.isEmpty());
+
+    error.clear();
+    TW_CHECK(!writeGif(dir.path() + QStringLiteral("/missing/x.gif"), frames, &error));
+    TW_CHECK(!error.isEmpty());
+}
+
 void test_code_pdf_export() {
     announce("export: PDF of the code");
     const tw::test::TempDir dir;
@@ -904,8 +1065,10 @@ int main(int argc, char** argv) {
     test_autosave_store();
     test_autosave_store_follows_the_data_directory();
     test_rom_bytes_survive_a_document();
+    test_the_rom_library_scans_nested_folders();
     test_code_pdf_export();
     test_session_html_export();
+    test_gif_encoder_writes_a_decodable_animation();
     test_lesson_session_markdown_export();
     test_lesson_session_pdf_export();
     test_breakpoint_store();

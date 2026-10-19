@@ -18,6 +18,7 @@
 #include <string>
 
 #include <QAction>
+#include <QTimer>
 #include <QApplication>
 #include <QComboBox>
 #include <QDockWidget>
@@ -1544,6 +1545,42 @@ void test_presentation_mode_is_focus_mode_for_a_room() {
     TW_CHECK(window->mainToolBar()->isVisible());
 }
 
+// Recording is a state, not a dialog: the menu entry toggles it and the timer
+// samples the canvas. An empty canvas records nothing, so stopping asks for no
+// path -- which is why this test can stop it without a modal dialog.
+void test_gif_recording_toggles_and_samples_the_canvas() {
+    announce("record canvas as GIF");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    auto* action = window->findChild<QAction*>(QStringLiteral("recordGifAction"));
+    TW_CHECK(action != nullptr);
+    if (action == nullptr) {
+        return;
+    }
+    TW_CHECK(action->isCheckable());
+    TW_CHECK(!action->isChecked());
+
+    auto* timer = window->findChild<QTimer*>(QStringLiteral("gifRecordTimer"));
+    TW_CHECK(timer != nullptr);
+    if (timer != nullptr) {
+        TW_CHECK(!timer->isActive());
+    }
+
+    action->trigger();
+    TW_CHECK(action->isChecked());
+    if (timer != nullptr) {
+        TW_CHECK(timer->isActive());
+        // Ten frames a second: the removed implementation's rate, and enough for
+        // a turtle drawing without producing a file nobody can open.
+        TW_CHECK_EQ(timer->interval(), 100);
+    }
+
+    action->trigger();
+    TW_CHECK(!action->isChecked());
+    if (timer != nullptr) {
+        TW_CHECK(!timer->isActive());
+    }
+}
+
 void test_command_palette() {
     announce("command palette");
     MainWindow window;
@@ -2989,6 +3026,7 @@ int main(int argc, char** argv) {
     test_font_scale_ladder();
     test_focus_mode_hides_and_restores_the_chrome();
     test_presentation_mode_is_focus_mode_for_a_room();
+    test_gif_recording_toggles_and_samples_the_canvas();
     test_command_palette();
     test_standalone_payload();
     test_tool_bar_configuration();

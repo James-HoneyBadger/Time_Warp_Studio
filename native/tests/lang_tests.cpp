@@ -14,11 +14,13 @@
 #include <cctype>
 #include <charconv>
 #include <chrono>
+#include <cmath>
 #include <condition_variable>
 #include <cstdint>
 #include <cstdio>
 #include <map>
 #include <mutex>
+#include <sstream>
 #include <stdexcept>
 #include <string>
 #include <string_view>
@@ -587,6 +589,158 @@ void test_chip8_pixels_wrap_around_the_screen() {
         "       DRW V0, V1, 1\n       HALT\npair:  DB 0xC0");
     TW_CHECK_EQ(static_cast<int>(machine.framebuffer()[0]), 1);
     TW_CHECK_EQ(static_cast<int>(machine.framebuffer()[63]), 1);
+}
+
+void test_chip8_hires_mode_changes_the_grid_and_starts_blank() {
+    const Chip8Machine hires = run_to_halt("start: DW 0x00FF\n       HALT");
+    TW_CHECK(hires.hi_res());
+    TW_CHECK_EQ(hires.screen_width(), timewarp::lang::kChip8HiResWidth);
+    TW_CHECK_EQ(hires.screen_height(), timewarp::lang::kChip8HiResHeight);
+    TW_CHECK_EQ(hires.framebuffer().size(),
+                static_cast<std::size_t>(timewarp::lang::kChip8HiResWidth) *
+                    timewarp::lang::kChip8HiResHeight);
+
+    const Chip8Machine lores = run_to_halt(
+        "start: LD I, dot\n"
+        "       DRW V0, V1, 1\n"
+        "       DW 0x00FF\n"
+        "       DW 0x00FE\n"
+        "       HALT\n"
+        "dot:   DB 0xFF");
+    TW_CHECK(!lores.hi_res());
+    TW_CHECK_EQ(lores.framebuffer().size(),
+                static_cast<std::size_t>(timewarp::lang::kChip8ScreenWidth) *
+                    timewarp::lang::kChip8ScreenHeight);
+    // A mode switch does not keep the old drawing: the grid changed under it.
+    TW_CHECK_EQ(lit_pixels(lores), std::size_t{0});
+}
+
+void test_chip8_large_sprite_is_sixteen_by_sixteen_in_hires() {
+    std::string rows;
+    for (int index = 0; index < 16; ++index) {
+        rows += "       DW 0xFFFF\n";
+    }
+    const Chip8Machine machine = run_to_halt(
+        "start: DW 0x00FF\n"
+        "       LD I, sprite\n"
+        "       DRW V0, V1, 0\n"
+        "       HALT\n"
+        "sprite:\n" +
+        rows);
+    TW_CHECK_EQ(lit_pixels(machine), std::size_t{16 * 16});
+    TW_CHECK_EQ(static_cast<int>(machine.framebuffer()[0]), 1);
+    TW_CHECK_EQ(static_cast<int>(machine.framebuffer()[15]), 1);
+    TW_CHECK_EQ(
+        static_cast<int>(machine.framebuffer()[15 * timewarp::lang::kChip8HiResWidth + 15]), 1);
+}
+
+void test_chip8_large_sprite_doubles_columns_in_lores() {
+    std::string rows;
+    for (int index = 0; index < 16; ++index) {
+        rows += "       DB 0x80\n";
+    }
+    const Chip8Machine machine = run_to_halt(
+        "start: LD I, sprite\n"
+        "       DRW V0, V1, 0\n"
+        "       HALT\n"
+        "sprite:\n" +
+        rows);
+    // Each row's top bit becomes two pixels: 16 rows of two.
+    TW_CHECK_EQ(lit_pixels(machine), std::size_t{32});
+    TW_CHECK_EQ(static_cast<int>(machine.framebuffer()[0]), 1);
+    TW_CHECK_EQ(static_cast<int>(machine.framebuffer()[1]), 1);
+    TW_CHECK_EQ(static_cast<int>(machine.framebuffer()[2]), 0);
+    TW_CHECK_EQ(static_cast<int>(machine.framebuffer()[timewarp::lang::kChip8ScreenWidth]), 1);
+}
+
+void test_chip8_scroll_down_moves_the_drawing_and_clears_the_top() {
+    const Chip8Machine machine = run_to_halt(
+        "start: LD I, dot\n"
+        "       DRW V0, V1, 1\n"
+        "       DW 0x00C2\n"
+        "       HALT\n"
+        "dot:   DB 0x80");
+    TW_CHECK_EQ(static_cast<int>(machine.framebuffer()[2 * timewarp::lang::kChip8ScreenWidth]), 1);
+    TW_CHECK_EQ(static_cast<int>(machine.framebuffer()[0]), 0);
+    TW_CHECK_EQ(static_cast<int>(machine.framebuffer()[timewarp::lang::kChip8ScreenWidth]), 0);
+}
+
+void test_chip8_scroll_left_and_right_move_four_pixels() {
+    const std::string base =
+        "start: LD V0, 8\n"
+        "       LD I, dot\n"
+        "       DRW V0, V1, 1\n"
+        "       DW 0x00FC\n"
+        "       HALT\n"
+        "dot:   DB 0x80";
+    const Chip8Machine left = run_to_halt(base);
+    TW_CHECK_EQ(static_cast<int>(left.framebuffer()[4]), 1);
+    TW_CHECK_EQ(static_cast<int>(left.framebuffer()[8]), 0);
+
+    std::string right_source = base;
+    right_source.replace(right_source.find("0x00FC"), 6, "0x00FB");
+    const Chip8Machine right = run_to_halt(right_source);
+    TW_CHECK_EQ(static_cast<int>(right.framebuffer()[12]), 1);
+    TW_CHECK_EQ(static_cast<int>(right.framebuffer()[8]), 0);
+}
+
+void test_chip8_exit_opcode_halts() {
+    const Chip8Machine machine = run_to_halt("start: DW 0x00FD\n       LD V0, 9\n       HALT");
+    TW_CHECK(machine.halted());
+    TW_CHECK_EQ(static_cast<int>(machine.v[0]), 0);
+}
+
+void test_chip8_fx30_points_at_the_large_font() {
+    const Chip8Machine machine = run_to_halt("start: LD V0, 3\n       DW 0xF030\n       HALT");
+    TW_CHECK_EQ(machine.i, timewarp::lang::kChip8LargeFontAddress + 30);
+}
+
+void test_chip8_large_font_is_in_memory() {
+    const Chip8Program program = assemble("start: HALT");
+    // The small glyph for 0 is 0xF0, so the doubled first row is 0xFF twice.
+    TW_CHECK_EQ(static_cast<int>(program.memory[timewarp::lang::kChip8LargeFontAddress]), 0xFF);
+    TW_CHECK_EQ(static_cast<int>(program.memory[timewarp::lang::kChip8LargeFontAddress + 1]),
+                0xFF);
+}
+
+void test_chip8_rpl_flags_round_trip() {
+    const Chip8Machine machine = run_to_halt(
+        "start: LD V0, 1\n"
+        "       LD V1, 2\n"
+        "       DW 0xF175\n"
+        "       LD V0, 0\n"
+        "       LD V1, 0\n"
+        "       DW 0xF185\n"
+        "       HALT");
+    TW_CHECK_EQ(static_cast<int>(machine.v[0]), 1);
+    TW_CHECK_EQ(static_cast<int>(machine.v[1]), 2);
+}
+
+void test_chip8_hires_display_halves_the_pixel_size() {
+    RecordingHost host;
+    Interpreter interpreter{Language::Chip8, host};
+    interpreter.load_program(
+        "start: DW 0x00FF\n       LD I, dot\n       DRW V0, V1, 1\n"
+        "       HALT\ndot: DB 0xFF");
+    interpreter.run();
+    std::string lit;
+    for (const std::string& op : host.ops) {
+        if (op.rfind("rect ", 0) == 0 && op.find("#8CFF8C") != std::string::npos) {
+            lit = op;
+            break;
+        }
+    }
+    TW_CHECK(!lit.empty());
+    if (!lit.empty()) {
+        std::istringstream stream{lit.substr(5)};
+        double x0 = 0.0;
+        double y0 = 0.0;
+        double x1 = 0.0;
+        double y1 = 0.0;
+        std::string colour;
+        stream >> x0 >> y0 >> x1 >> y1 >> colour;
+        TW_CHECK(std::abs((x1 - x0) - 4.0) < 1e-9);
+    }
 }
 
 void test_chip8_keys() {
@@ -1518,6 +1672,16 @@ int main() {
     test_chip8_draw_lights_the_expected_pixels();
     test_chip8_drawing_twice_erases_and_reports_the_collision();
     test_chip8_pixels_wrap_around_the_screen();
+    test_chip8_hires_mode_changes_the_grid_and_starts_blank();
+    test_chip8_large_sprite_is_sixteen_by_sixteen_in_hires();
+    test_chip8_large_sprite_doubles_columns_in_lores();
+    test_chip8_scroll_down_moves_the_drawing_and_clears_the_top();
+    test_chip8_scroll_left_and_right_move_four_pixels();
+    test_chip8_exit_opcode_halts();
+    test_chip8_fx30_points_at_the_large_font();
+    test_chip8_large_font_is_in_memory();
+    test_chip8_rpl_flags_round_trip();
+    test_chip8_hires_display_halves_the_pixel_size();
     test_chip8_keys();
     test_chip8_jump_with_offset_uses_v0();
     test_chip8_timers();

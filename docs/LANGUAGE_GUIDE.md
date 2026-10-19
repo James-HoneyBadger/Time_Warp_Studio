@@ -1110,9 +1110,10 @@ A **Time Warp extension**: 1969 FOCAL had no graphics at all. `FORWARD`/`FD`,
 
 CHIP-8 is Joseph Weisbecker's bytecode interpreter from 1977 - the machine the
 first home computers were taught with. It is not a text language: a program is a
-sequence of two-byte opcodes and the display is a 64x32 framebuffer of lit and
-unlit pixels. So this executor is two things in one file: a small **assembler**
-that turns mnemonics into opcodes, and the **machine** that runs them.
+sequence of two-byte opcodes and the display is a framebuffer of lit and unlit
+pixels: 64x32 in the original mode, 128x64 in SuperChip hi-res. So this executor
+is two things in one file: a small **assembler** that turns mnemonics into
+opcodes, and the **machine** that runs them.
 
 Executed whole-program. An opcode stream cannot be interpreted a line at a time,
 so the listing is assembled in full and then run.
@@ -1123,13 +1124,18 @@ of memory. The editor opens such a file read-only, because a keystroke in it
 would be a corrupted program waiting to be saved.
 
 **Tools > CHIP-8 Emulator** (Ctrl+Shift+M) runs the same bytes as a live
-machine: the 64x32 screen, a keypad that can be pressed while the program runs,
+machine: the screen in either mode, a keypad that can be pressed while the program runs,
 Run/Pause/Step/Reset, a speed control, the sound timer's buzzer, and registers,
 stack and memory beside the screen. It opens on the bundled `paint.ch8` when the
 current document is not a CHIP-8 program, and its **Listing** tab assembles and
 runs typed source (`Ctrl+Return`) without using the main editor. The Run button
 keeps the whole-program model described below, because a lesson, a gate and an
 animation want different answers from the same file.
+
+**ROM Library...** in that window browses a folder of programs the user supplies,
+recursively, remembering the folder after a successful open. The studio ships no
+ROMs: most CHIP-8 programs in circulation are somebody else's copyright, so the
+library reads a folder the user has the right to use rather than bundling one.
 
 ```chip8
 ; a comment
@@ -1157,8 +1163,10 @@ in listings: `0x41` and `41h` are both 65, and a bare `41` is decimal 41.
 
 ### The instruction set
 
-The complete original: all 35 opcodes, including the arithmetic group, the random
-and timing registers, the font and BCD conversions, and memory block load/store.
+The complete original -- all 35 opcodes, including the arithmetic group, the
+random and timing registers, the font and BCD conversions, and memory block
+load/store -- plus the SuperChip 1.1 set a hi-res ROM needs. Those extensions
+have no mnemonics in this assembler; write them with `DW` and a comment.
 
 | Mnemonic | Meaning |
 | -------- | ------- |
@@ -1175,6 +1183,10 @@ and timing registers, the font and BCD conversions, and memory block load/store.
 | `DRW Vx, Vy, n` | Draw an n-byte sprite |
 | `SKP Vx` / `SKNP Vx` | Skip on key pressed / not pressed |
 | `LD Vx, K` / `LD Vx, DT` / `LD ST, Vx` | Keypad and timers |
+| `00FE` / `00FF` (`DW`) | Select 64x32 / 128x64; clears the screen |
+| `00Cn` / `00FB` / `00FC` / `00FD` (`DW`) | Scroll down `n`, right 4, left 4; exit |
+| `DXY0` | 16x16 sprite in hi-res; 8x16 with doubled columns in 64x32 |
+| `Fx30` / `Fx75` / `Fx85` (`DW`) | 8x10 font address, store/load RPL flags |
 
 ### Where the original decides
 
@@ -1200,8 +1212,10 @@ instruction that silently ignores it.
 ### The display
 
 The display is drawn in the canvas's own coordinates with filled rectangles, and
-its two colours come from the canvas palette. A 64x32 screen is 512x256 at the
-implementation's scale of eight.
+its two colours come from the canvas palette. Both modes fill a 512x256 canvas: a
+64x32 screen at a scale of eight, or 128x64 at four. MegaChip's drawing planes and
+audio extensions are not implemented, so `Fx01` and the MegaChip sound opcodes are
+reported as unknown rather than half-drawn.
 
 ### The keypad
 

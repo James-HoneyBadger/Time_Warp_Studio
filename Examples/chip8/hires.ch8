@@ -1,0 +1,51 @@
+; SuperChip hi-res in Time Warp Studio.
+;
+; The original machine is 64x32. SuperChip's 00FF opcode doubles that to 128x64
+; -- the same 2:1 shape with every pixel half the size -- and 00FE puts it back.
+; Those opcodes have no mnemonic in this assembler, so they are written as DW
+; (define word) with the meaning beside them.
+;
+; In hi-res a DXY0 sprite is 16x16: two bytes per row. This draws a ring,
+; scrolls it, and then puts a large digit on the screen from the 8x10 face that
+; FX30 points at.
+
+start:  CLS
+        DW    0x00FF            ; hires: 128x64
+
+        LD    V0, 0x08          ; x
+        LD    V1, 0x04          ; y
+        LD    I, ring
+        DRW   V0, V1, 0         ; N=0: the 16x16 sprite, two bytes a row
+
+        ; Scrolls move the lit pixels and blank the gap they leave behind.
+        DW    0x00C2            ; scroll down 2
+        DW    0x00FC            ; scroll left 4
+
+        ; A large digit. FX30 points I at its ten bytes, and it is drawn as an
+        ; ordinary 8x10 sprite -- N=10, not N=0, because the glyph is half a
+        ; 16x16 cell wide.
+        LD    V0, 0x07
+        DW    0xF030            ; I = the large glyph for V0
+        LD    V0, 0x40
+        LD    V1, 0x24
+        DRW   V0, V1, 10
+
+        LD    DT, V0            ; leave a value in the delay timer
+        HALT
+
+ring:   DW    0xFFFF
+        DW    0x8001
+        DW    0x8001
+        DW    0x8001
+        DW    0x8001
+        DW    0x8001
+        DW    0x8001
+        DW    0x8001
+        DW    0x8001
+        DW    0x8001
+        DW    0x8001
+        DW    0x8001
+        DW    0x8001
+        DW    0x8001
+        DW    0x8001
+        DW    0xFFFF

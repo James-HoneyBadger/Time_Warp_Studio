@@ -186,6 +186,8 @@ Chip8Snapshot Chip8Emulator::snapshot() const {
     snapshot.running = running_;
     snapshot.halted = machine_->halted();
     snapshot.waiting_for_key = machine_->waiting_for_key();
+    snapshot.screen_width = machine_->screen_width();
+    snapshot.screen_height = machine_->screen_height();
     snapshot.framebuffer = machine_->framebuffer();
     snapshot.memory = machine_->memory;
     return snapshot;

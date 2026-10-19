@@ -2,6 +2,7 @@
 
 #include "timewarp/ui/chip8_window.hpp"
 
+#include "timewarp/ui/chip8_library.hpp"
 #include "timewarp/ui/chip8_screen.hpp"
 #include "timewarp/ui/app_paths.hpp"
 #include "timewarp/ui/language.hpp"
@@ -153,6 +154,9 @@ void Chip8Window::buildToolbar() {
 
     toolbar->addSeparator();
     toolbar->addAction(tr("&Open ROM..."), this, &Chip8Window::openRomDialog);
+    QAction* library = toolbar->addAction(tr("ROM &Library..."), this,
+                                          &Chip8Window::openRomLibraryDialog);
+    library->setObjectName(QStringLiteral("chip8LibraryAction"));
     toolbar->addSeparator();
     toolbar->addWidget(new QLabel{tr("Speed "), toolbar});
 
@@ -361,6 +365,21 @@ void Chip8Window::openRomDialog() {
     }
 }
 
+void Chip8Window::openRomLibraryDialog() {
+    Chip8LibraryDialog dialog{storedChip8RomFolder(), this};
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+    const QString path = dialog.selectedPath();
+    if (path.isEmpty()) {
+        return;
+    }
+    // Remembered only after a program was actually opened: a folder the user
+    // looked at and dismissed is not one the next window should start in.
+    storeChip8RomFolder(dialog.folder());
+    openFile(path);
+}
+
 void Chip8Window::dragEnterEvent(QDragEnterEvent* event) {
     if (!event->mimeData()->hasUrls()) {
         return;
@@ -397,7 +416,7 @@ void Chip8Window::closeEvent(QCloseEvent* event) {
 
 void Chip8Window::refresh() {
     const Chip8Snapshot snapshot = emulator_->snapshot();
-    screen_->setPixels(snapshot.framebuffer);
+    screen_->setPixels(snapshot.framebuffer, snapshot.screen_width, snapshot.screen_height);
 
     const unsigned keys = emulator_->keys();
     for (int key = 0; key < 16; ++key) {

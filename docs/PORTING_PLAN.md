@@ -62,7 +62,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 1 | Editor completion | Find in Files ✅, Format Code ✅, Snippets ✅, whitespace ✅, minimap ✅, run history ✅, run selection ✅, reset ✅ | M | 0 |
 | 2 | Data safety | autosave ✅, version history ✅ | M | 0 |
 | 3 | Help and learnability | documentation browser ✅, F1 ✅, keyword inspector ✅, guided tour ✅ | M | 0 |
-| 4 | Canvas time travel | scrubber ✅, GIF recording, SVG export | M | 4.3 needs a dependency decision |
+| 4 | Canvas time travel | scrubber ✅, GIF recording ✅, SVG export | M | 4.3 needs a dependency decision |
 | 5 | Export and print | PDF ✅, print, session HTML ✅ | M | 5.2 needs a dependency decision |
 | 6 | Debugging breadth | breakpoints everywhere ✅, pause/step for line-by-line languages ✅, profiler | L | 0, best after 1 |
 | 7 | Workspace | document outline ✅, terminal, split editor ✅, run both panes ✅ | M | 7.3 needs 1.5 |
@@ -356,7 +356,7 @@ is what keeps a scrub from being mistaken for new ink. Tests cover the prefix
 count, both ink counters, the export invariant by comparing rendered images, the
 interleaved order, clamping, and playback from the end.
 
-### 4.2 GIF recording (S–M, needs a decision)
+### 4.2 GIF recording (S–M) ✅
 
 Old: `_start_gif_recording`, `_capture_record_frame`, `_save_gif`.
 
@@ -366,6 +366,26 @@ GIF89a header, a global palette quantised to 6×6×6, LZW compression — about 
 lines with no dependency, tested against a known 8×8 frame's byte length and a
 decoded round trip through `QImageReader` (Qt reads GIF natively, which gives the
 test its oracle).
+
+**Tests:** the file is a GIF89a that Qt *reads back* (header, trailer, three
+frames, sizes and delays); a frame containing all 216 palette colours decodes
+pixel-for-pixel, which is the dictionary growth and clear path a flat frame never
+reaches; a still canvas merges into one frame with the summed delay; an empty
+list, mismatched frame sizes and an unwritable path are refusals with a reason.
+The menu entry toggles the recorder, and the timer starts and stops with it.
+
+**Done.** `ui/gif_encoder.{hpp,cpp}` is the in-tree writer the plan recommended:
+GIF89a, a fixed 6×6×6 global palette (216 cube colours padded to 256), the
+NETSCAPE2.0 loop extension and standard LZW with dictionary growth to 12 bits and
+a clear when it fills. File > Record Canvas as GIF (a checkable entry) samples the
+canvas at 10 fps through `TurtleCanvas::renderedDrawing`, the same renderer the
+export uses, so what is recorded is what an export would contain. A frame
+identical to the previous one is merged into it as extra delay rather than stored
+again, which keeps a recording of a mostly-idle canvas small and makes the frame
+count track *change* rather than time; a blank canvas before the first ink is not
+a frame at all. Frames are captured at the size of the first one, so resizing the
+window mid-recording cannot produce a file whose frames disagree. The file is
+written through `QSaveFile`, so a failure leaves no half-written GIF.
 
 ### 4.3 SVG export (S, needs a dependency decision)
 
@@ -809,7 +829,7 @@ states are in `ui_layout_tests`.
 | Qt6::Svg (`libqt6svg6`) | 4.3 SVG export | Optional component, entry hidden without it. It is a small package and the CPack dependency lists are already maintained by hand. |
 | Qt6::PrintSupport (`libqt6printsupport6`) | 5.2 printing | Optional component. Printing is the least-used item here; hide it when absent rather than take the dependency for everyone. |
 | Qt6::Network (`libqt6network6`) | 3.4 update check | **Defer.** Make the check a button that reports the latest release, or drop it. An automatic poll is a background request the learner did not ask for. |
-| giflib, or an in-tree encoder | 4.2 GIF | In-tree encoder (no dependency). Qt reads GIF, so the test has an oracle. |
+| giflib, or an in-tree encoder | 4.2 GIF | **In-tree encoder** (`gif_encoder`), no dependency. Qt reads GIF, so the test has an oracle. |
 | `tar` (runtime) | 9.4 bundles | **Not needed.** The engine's bundles are ZIP (`zipfile`) and the IDE asks the engine for them, so there is no external archive tool and no dependency. |
 
 ---

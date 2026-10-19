@@ -57,6 +57,7 @@
 #include "timewarp/lang/language.hpp"
 #include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/code_editor.hpp"
+#include "timewarp/ui/gif_encoder.hpp"
 #include "timewarp/ui/language.hpp"
 // The CRT overlay's `Settings` is a nested type, so a forward declaration will not
 // do here; `panels.hpp` is where the overlay lives.
@@ -73,6 +74,7 @@ class QPlainTextEdit;
 class QShortcut;
 class QSplitter;
 class QTabWidget;
+class QTimer;
 class QToolBar;
 class QToolButton;
 class QVBoxLayout;
@@ -276,6 +278,12 @@ public:
     /// Asks for a path and writes the program, its output and its drawing as one
     /// self-contained HTML page.
     void exportSessionHtmlDialog();
+    /// Starts or stops sampling the canvas. Stopping with frames asks for a path
+    /// and writes them; stopping with none says so and writes nothing.
+    void setGifRecording(bool on);
+    /// One sample of the canvas. Skips a blank canvas and merges a frame that did
+    /// not change into the delay of the one before it.
+    void captureGifFrame();
     /// Asks for a path and writes the current lesson as a Markdown report: the
     /// lesson, its checkpoints with this session's verdicts, the program and the
     /// console.
@@ -822,6 +830,14 @@ private:
     /// The playback strip under the canvas. Hidden until there is ink to
     /// scrub, so an empty window keeps its full canvas height.
     Scrubber* scrubber_ = nullptr;
+    /// GIF recording: a 10 fps sample of the canvas. A frame that is identical to
+    /// the one before it is merged into it as extra delay, which is what keeps a
+    /// recording of a mostly-idle canvas small. `gif_size_` is fixed at the first
+    /// kept frame so a window resized mid-recording cannot make frames disagree.
+    QTimer* gif_timer_ = nullptr;
+    QAction* record_gif_action_ = nullptr;
+    QVector<timewarp::ui::gif::Frame> gif_frames_;
+    QSize gif_size_;
     /// Program output and errors, both read-only views. Named apart from the
     /// Starts the bridge if it is not running. Distinct from `runInBridge`,
     /// which also clears the console and canvas: a lesson check must not wipe the

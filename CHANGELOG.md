@@ -7,6 +7,27 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **CHIP-8 runs SuperChip hi-res.** The machine and the Python reference both
+  implement the SuperChip 1.1 core: 00FE/00FF select 64x32 or 128x64 (clearing the
+  screen), 00Cn/00FB/00FC scroll, 00FD exits, DXY0 draws a 16x16 sprite in hi-res
+  (8x16 with doubled columns in the original mode), FX30 points at an 8x10 font
+  derived from the 4x5 set, and FX75/FX85 round-trip the RPL flags. The emulator
+  screen follows the mode, both modes filling the same 2:1 canvas. MegaChip's
+  planes and audio are not implemented and are reported as unknown opcodes. A new
+  [`hires.ch8`](Examples/chip8/hires.ch8) example draws and scrolls in the mode.
+- **A CHIP-8 ROM library.** The emulator's ROM Library... browses a folder of
+  programs recursively (.ch8, .c8, .rom, .bin), filters by name, and remembers the
+  folder after a program is opened. Time Warp Studio ships no ROMs: most CHIP-8
+  programs in circulation are somebody else's copyright, so the library reads a
+  folder the user has the right to use rather than bundling one.
+- **Record the canvas as an animated GIF.** File > Record Canvas as GIF starts
+  sampling the canvas ten times a second; running a program records the drawing
+  appearing, and stopping asks where to save it. The GIF writer is in tree
+  (`ui/gif_encoder.{hpp,cpp}`: GIF89a, a fixed 6×6×6 palette and LZW), so this
+  needs no Pillow and no extra package, and Qt reads GIF so the test decodes what
+  the encoder wrote, pixel for pixel. A frame that did not change becomes extra
+  time on the frame before it, and frames are taken at one size so resizing the
+  window mid-recording cannot break the file.
 - **Class bundles from the classroom page.** Save Bundle... writes the class list,
   its work and its settings to one archive, and Load Bundle... unpacks one (asking
   first whether files that are already there should be replaced). Both are the

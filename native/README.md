@@ -338,7 +338,13 @@ engine has no Qt dependency and a test can record what was drawn as text.
 Every language is ported: **BASIC**, **FOCAL**, **PILOT**, **COMAL**, **APL** and
 **REXX** line-by-line, and **CHIP-8**, **Logo** and **Smalltalk** whole-program
 (with the CHIP-8 assembler in `chip8.cpp`). Scheme lives in `src/scheme/` on its
-own explicit-stack machine. The ports are also where the native expression
+own explicit-stack machine. `Chip8Machine` implements the original machine plus the
+SuperChip 1.1 extensions -- 64x32 and 128x64 modes, the scrolls, DXY0's 16x16
+sprite, FX30's 8x10 font and the FX75/FX85 RPL flags -- and the reference in
+`chip8.py` implements the same set, because the parity gate compares the two.
+MegaChip's planes and audio are deliberately out of scope. The emulator window
+browses a user-supplied ROM folder (`chip8_library.{hpp,cpp}`); the studio ships no
+ROMs, because most circulating CHIP-8 programs are somebody else's copyright. The ports are also where the native expression
 evaluator became part of a Run: `Interpreter::evaluate_expression` uses
 `timewarp_expr`, so `C:`, `B:` and BASIC arithmetic are the arithmetic the
 expression library is gated against. `executor_for()` answers for all ten, so
@@ -1077,6 +1083,12 @@ page next to a 60x40 page must still report a 100x100 minimum.
   first. That is how the findings below were caught; a structural test would have
   passed either way, and the status bar painting a message on top of the document
   path was visible in exactly one place and nowhere else.
+
+`gif_encoder.{hpp,cpp}` is the animated-GIF writer Qt does not provide: a
+GIF89a header, a fixed 6x6x6 palette and LZW, with no dependency. Qt reads GIF,
+so the test decodes what the encoder wrote and compares it pixel for pixel. File
+> Record Canvas as GIF samples the canvas at ten frames a second and merges a
+frame that did not change into extra delay on the one before it.
 
 `export.{hpp,cpp}` holds the file exports a learner hands to somebody else:
 File > Export Code as PDF (`QPdfWriter`, A4, line numbers), File > Export

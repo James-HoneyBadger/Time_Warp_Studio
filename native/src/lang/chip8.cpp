@@ -6,7 +6,10 @@
 // forward to a label cannot be encoded until every label's address is known.
 // The machine is byte-for-byte the 1977 one the reference implements, down to
 // the choices a later emulator would make differently (Vx shifts in place,
-// sprites wrap).
+// sprites wrap), plus the SuperChip 1.1 extensions a hi-res ROM needs: the
+// screen modes and scrolls, DXY0's 16x16 sprite, FX30's large font and the
+// FX75/FX85 flag registers. The MegaChip plane and audio extensions are not
+// implemented.
 
 #include "timewarp/lang/chip8.hpp"
 
@@ -17,6 +20,7 @@
 #include <cctype>
 #include <charconv>
 #include <cstdint>
+#include <cstdlib>
 #include <optional>
 #include <random>
 #include <string>
@@ -45,6 +49,30 @@ constexpr std::uint8_t kFont[] = {
     0xF0, 0x80, 0xF0, 0x80, 0xF0,  // E
     0xF0, 0x80, 0xF0, 0x80, 0x80,  // F
 };
+
+/// The 8x10 digits SuperChip's FX30 points at, made by doubling the 4x5 set:
+/// each source row becomes two rows and each source column two columns. Derived
+/// rather than embedded, so the two faces cannot disagree about a digit.
+constexpr std::array<std::uint8_t, 100> make_large_font() {
+    std::array<std::uint8_t, 100> font{};
+    std::size_t at = 0;
+    for (int digit = 0; digit < 10; ++digit) {
+        for (int row = 0; row < 5; ++row) {
+            const std::uint8_t bits = kFont[static_cast<std::size_t>(digit * 5 + row)];
+            std::uint8_t doubled = 0;
+            for (int column = 0; column < 4; ++column) {
+                if ((bits & static_cast<std::uint8_t>(0x80U >> column)) != 0U) {
+                    doubled |= static_cast<std::uint8_t>(0xC0U >> (column * 2));
+                }
+            }
+            font[at++] = doubled;
+            font[at++] = doubled;
+        }
+    }
+    return font;
+}
+
+inline constexpr auto kLargeFont = make_large_font();
 
 bool is_space(char character) {
     return std::isspace(static_cast<unsigned char>(character)) != 0;
@@ -466,25 +494,31 @@ public:
         turtle_.set_palette_color(kOnIndex, Rgb{140, 255, 140});
         off_ = turtle_.resolve_color(kOffIndex);
         on_ = turtle_.resolve_color(kOnIndex);
-        previous_.assign(static_cast<std::size_t>(kChip8ScreenWidth) * kChip8ScreenHeight, 0);
+        previous_.assign(static_cast<std::size_t>(width_) * static_cast<std::size_t>(height_), 0);
     }
 
     void clear() {
         const double width = kChip8ScreenWidth * kChip8PixelScale;
         const double height = kChip8ScreenHeight * kChip8PixelScale;
         turtle_.draw_rect(-width / 2, height / 2, width / 2, -height / 2, off_);
-        previous_.assign(static_cast<std::size_t>(kChip8ScreenWidth) * kChip8ScreenHeight, 0);
+        previous_.assign(static_cast<std::size_t>(width_) * static_cast<std::size_t>(height_), 0);
     }
 
-    void paint(const std::vector<std::uint8_t>& framebuffer) {
+    void paint(const std::vector<std::uint8_t>& framebuffer, int width, int height) {
+        if (width != width_ || height != height_) {
+            // A mode change repaints the whole screen: the old frame is not
+            // comparable with the new grid even when the byte count matches.
+            width_ = width;
+            height_ = height;
+            clear();
+        }
         for (std::size_t index = 0; index < framebuffer.size(); ++index) {
             if (framebuffer[index] == previous_[index]) {
                 continue;
             }
             previous_[index] = framebuffer[index];
             const Rgb colour = framebuffer[index] != 0 ? on_ : off_;
-            rect(static_cast<int>(index) % kChip8ScreenWidth,
-                 static_cast<int>(index) / kChip8ScreenWidth, colour);
+            rect(static_cast<int>(index) % width_, static_cast<int>(index) / width_, colour);
         }
     }
 
@@ -492,20 +526,28 @@ private:
     static constexpr int kOffIndex = 1;
     static constexpr int kOnIndex = 2;
 
+    /// A hi-res pixel is half the size: both modes fill the same canvas.
+    [[nodiscard]] double scale() const {
+        return static_cast<double>(kChip8ScreenWidth * kChip8PixelScale) / width_;
+    }
+
     /// One CHIP-8 pixel as a filled square. CHIP-8 counts down from the
     /// top-left; the turtle canvas counts up from the middle, which is where
     /// the sign flip on y comes from.
     void rect(int column, int row, Rgb colour) {
         const double width = kChip8ScreenWidth * kChip8PixelScale;
         const double height = kChip8ScreenHeight * kChip8PixelScale;
-        const double left = column * kChip8PixelScale - width / 2;
-        const double top = height / 2 - row * kChip8PixelScale;
-        turtle_.draw_rect(left, top, left + kChip8PixelScale, top - kChip8PixelScale, colour);
+        const double pixel = scale();
+        const double left = column * pixel - width / 2;
+        const double top = height / 2 - row * pixel;
+        turtle_.draw_rect(left, top, left + pixel, top - pixel, colour);
     }
 
     TurtleHost& turtle_;
     Rgb off_{};
     Rgb on_{};
+    int width_ = kChip8ScreenWidth;
+    int height_ = kChip8ScreenHeight;
     std::vector<std::uint8_t> previous_;
 };
 
@@ -516,6 +558,8 @@ Chip8Program assemble_chip8(std::string_view source) {
     program.memory.assign(kChip8MemorySize, 0);
     std::copy(std::begin(kFont), std::end(kFont),
               program.memory.begin() + kChip8FontAddress);
+    std::copy(kLargeFont.begin(), kLargeFont.end(),
+              program.memory.begin() + kChip8LargeFontAddress);
 
     // A NUL byte is not a thing a listing contains and is in every real ROM, so
     // it is the marker that decides which of the two loaders runs. (The editor and
@@ -599,7 +643,7 @@ Chip8Machine::Chip8Machine(std::vector<std::uint8_t> program_memory, int entry, 
     : memory{std::move(program_memory)},
       pc{entry},
       keys_{keys},
-      framebuffer_(static_cast<std::size_t>(kChip8ScreenWidth) * kChip8ScreenHeight, 0) {
+      framebuffer_(static_cast<std::size_t>(screen_width()) * screen_height(), 0) {
     // Python's `random` module seeds from the OS on import, so this does too;
     // a fixed seed would make every run of an RND program identical.
     std::random_device device;
@@ -622,13 +666,13 @@ void Chip8Machine::skip() {
 }
 
 bool Chip8Machine::pixel(int x, int y) const {
-    return x >= 0 && x < kChip8ScreenWidth && y >= 0 && y < kChip8ScreenHeight &&
-           framebuffer_[static_cast<std::size_t>(y * kChip8ScreenWidth + x)] != 0;
+    return x >= 0 && x < screen_width() && y >= 0 && y < screen_height() &&
+           framebuffer_[static_cast<std::size_t>(y * screen_width() + x)] != 0;
 }
 
 void Chip8Machine::set_pixel(int x, int y, bool on) {
-    if (x >= 0 && x < kChip8ScreenWidth && y >= 0 && y < kChip8ScreenHeight) {
-        framebuffer_[static_cast<std::size_t>(y * kChip8ScreenWidth + x)] = on ? 1 : 0;
+    if (x >= 0 && x < screen_width() && y >= 0 && y < screen_height()) {
+        framebuffer_[static_cast<std::size_t>(y * screen_width() + x)] = on ? 1 : 0;
     }
 }
 
@@ -677,6 +721,27 @@ void Chip8Machine::step() {
         }
         pc = stack.back();
         stack.pop_back();
+        return;
+    }
+    if (opcode == 0x00FD) {
+        // SuperChip's "exit interpreter": HALT in one opcode.
+        halted_ = true;
+        return;
+    }
+    if (opcode == 0x00FE || opcode == 0x00FF) {
+        set_mode(opcode == 0x00FF);
+        return;
+    }
+    if ((opcode & 0xFFF0) == 0x00C0) {
+        scroll_down(opcode & 0xF);
+        return;
+    }
+    if (opcode == 0x00FB) {
+        scroll_columns(-4);
+        return;
+    }
+    if (opcode == 0x00FC) {
+        scroll_columns(4);
         return;
     }
     if (high == 0x0) {
@@ -800,22 +865,103 @@ void Chip8Machine::arithmetic(int x, int y, int low) {
 }
 
 void Chip8Machine::draw(int x, int y, int rows) {
-    const int start_x = v[static_cast<std::size_t>(x)] % kChip8ScreenWidth;
-    const int start_y = v[static_cast<std::size_t>(y)] % kChip8ScreenHeight;
+    const int width = screen_width();
+    const int height = screen_height();
+    const int start_x = v[static_cast<std::size_t>(x)] % width;
+    const int start_y = v[static_cast<std::size_t>(y)] % height;
+
+    // `rows == 0` is SuperChip's large sprite: 16 rows of 16 bits in hi-res. In
+    // the original mode the same opcode is an 8x16 sprite with each column
+    // doubled, which is what SCHIP draws there and what a lores ROM expects.
+    int wide = 8;
+    bool doubled = false;
+    if (rows == 0) {
+        rows = 16;
+        if (hi_res_) {
+            wide = 16;
+        } else {
+            doubled = true;
+        }
+    }
+
     v[0xF] = 0;
     for (int row = 0; row < rows; ++row) {
-        const std::uint8_t bits = memory[static_cast<std::size_t>((i + row) % kChip8MemorySize)];
-        for (int column = 0; column < 8; ++column) {
-            if ((bits & (0x80 >> column)) == 0) {
+        int bits = 0;
+        if (wide == 16) {
+            const int high_byte =
+                memory[static_cast<std::size_t>((i + row * 2) % kChip8MemorySize)];
+            const int low_byte =
+                memory[static_cast<std::size_t>((i + row * 2 + 1) % kChip8MemorySize)];
+            bits = (high_byte << 8) | low_byte;
+        } else {
+            bits = memory[static_cast<std::size_t>((i + row) % kChip8MemorySize)];
+        }
+        for (int source_column = 0; source_column < wide; ++source_column) {
+            const int mask = wide == 16 ? (0x8000 >> source_column) : (0x80 >> source_column);
+            if ((bits & mask) == 0) {
                 continue;
             }
-            const int pixel_x = (start_x + column) % kChip8ScreenWidth;
-            const int pixel_y = (start_y + row) % kChip8ScreenHeight;
-            if (pixel(pixel_x, pixel_y)) {
-                v[0xF] = 1;
-                ++collisions_;
+            for (int repeat = 0; repeat < (doubled ? 2 : 1); ++repeat) {
+                const int column = source_column * (doubled ? 2 : 1) + repeat;
+                const int pixel_x = (start_x + column) % width;
+                const int pixel_y = (start_y + row) % height;
+                if (pixel(pixel_x, pixel_y)) {
+                    v[0xF] = 1;
+                    ++collisions_;
+                }
+                set_pixel(pixel_x, pixel_y, !pixel(pixel_x, pixel_y));
             }
-            set_pixel(pixel_x, pixel_y, !pixel(pixel_x, pixel_y));
+        }
+    }
+}
+
+void Chip8Machine::set_mode(bool hi_res) {
+    if (hi_res_ == hi_res) {
+        // The opcode still clears: a ROM that selects the mode it is already in
+        // expects the same blank screen as one that switches.
+        framebuffer_.assign(static_cast<std::size_t>(screen_width()) * screen_height(), 0);
+        return;
+    }
+    hi_res_ = hi_res;
+    framebuffer_.assign(static_cast<std::size_t>(screen_width()) * screen_height(), 0);
+}
+
+void Chip8Machine::scroll_down(int rows) {
+    if (rows <= 0) {
+        return;
+    }
+    const int width = screen_width();
+    const int height = screen_height();
+    const int shift = std::min(rows, height);
+    for (int y = height - 1; y >= shift; --y) {
+        const std::size_t source = static_cast<std::size_t>((y - shift) * width);
+        const std::size_t target = static_cast<std::size_t>(y * width);
+        std::copy_n(framebuffer_.begin() + static_cast<std::ptrdiff_t>(source), width,
+                    framebuffer_.begin() + static_cast<std::ptrdiff_t>(target));
+    }
+    std::fill_n(framebuffer_.begin(), static_cast<std::size_t>(shift) * width, 0);
+}
+
+void Chip8Machine::scroll_columns(int columns) {
+    const int width = screen_width();
+    const int height = screen_height();
+    const int shift = std::min(std::abs(columns), width);
+    if (shift == 0) {
+        return;
+    }
+    for (int y = 0; y < height; ++y) {
+        const std::size_t row = static_cast<std::size_t>(y * width);
+        if (columns > 0) {
+            std::copy_n(framebuffer_.begin() + static_cast<std::ptrdiff_t>(row + shift),
+                        width - shift,
+                        framebuffer_.begin() + static_cast<std::ptrdiff_t>(row));
+            std::fill_n(framebuffer_.begin() + static_cast<std::ptrdiff_t>(row + width - shift),
+                        shift, 0);
+        } else {
+            std::copy_backward(framebuffer_.begin() + static_cast<std::ptrdiff_t>(row),
+                               framebuffer_.begin() + static_cast<std::ptrdiff_t>(row + width - shift),
+                               framebuffer_.begin() + static_cast<std::ptrdiff_t>(row + width));
+            std::fill_n(framebuffer_.begin() + static_cast<std::ptrdiff_t>(row), shift, 0);
         }
     }
 }
@@ -853,6 +999,9 @@ void Chip8Machine::misc(int x, int low) {
         case 0x29:
             i = kChip8FontAddress + (vx & 0xF) * 5;
             break;
+        case 0x30:
+            i = kChip8LargeFontAddress + (vx & 0xF) * 10;
+            break;
         case 0x33:
             memory[static_cast<std::size_t>(i % kChip8MemorySize)] =
                 static_cast<std::uint8_t>(vx / 100);
@@ -877,6 +1026,16 @@ void Chip8Machine::misc(int x, int low) {
                     memory[static_cast<std::size_t>((i + index) % kChip8MemorySize)];
             }
             i = (i + x + 1) & 0xFFF;
+            break;
+        case 0x75:
+            for (int index = 0; index <= x && index < 16; ++index) {
+                rpl_[static_cast<std::size_t>(index)] = v[static_cast<std::size_t>(index)];
+            }
+            break;
+        case 0x85:
+            for (int index = 0; index <= x && index < 16; ++index) {
+                v[static_cast<std::size_t>(index)] = rpl_[static_cast<std::size_t>(index)];
+            }
             break;
         default:
             throw Chip8Error("unknown opcode Fx" + hex_upper(low, 2));
@@ -919,7 +1078,8 @@ std::string execute_chip8(Interpreter& interpreter, std::string_view source, Tur
                 machine.step();
             }
             machine.tick_timers();
-            display.paint(machine.framebuffer());
+            display.paint(machine.framebuffer(), machine.screen_width(),
+                          machine.screen_height());
             ++frames;
             if (frames >= kChip8MaxFrames) {
                 // Not an error: a loop that never halts is a legitimate CHIP-8

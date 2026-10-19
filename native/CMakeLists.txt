@@ -577,6 +577,7 @@ if(Qt6_FOUND)
             src/ui/autosave.cpp
             src/ui/breakpoints.cpp
             src/ui/chip8_emulator.cpp
+            src/ui/chip8_library.cpp
             src/ui/chip8_screen.cpp
             src/ui/chip8_window.cpp
             src/ui/code_editor.cpp
@@ -585,6 +586,7 @@ if(Qt6_FOUND)
             src/ui/find_bar.cpp
             src/ui/find_in_files.cpp
             src/ui/formatter.cpp
+            src/ui/gif_encoder.cpp
             src/ui/help_browser.cpp
             src/ui/lint.cpp
             src/ui/language.cpp
@@ -611,6 +613,7 @@ if(Qt6_FOUND)
             include/timewarp/ui/breakpoints.hpp
             include/timewarp/ui/code_editor.hpp
             include/timewarp/ui/chip8_emulator.hpp
+            include/timewarp/ui/chip8_library.hpp
             include/timewarp/ui/chip8_screen.hpp
             include/timewarp/ui/chip8_window.hpp
             include/timewarp/ui/command_palette.hpp
