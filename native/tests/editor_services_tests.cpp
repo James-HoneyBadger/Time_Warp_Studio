@@ -252,9 +252,10 @@ void make_search_tree(const tw::test::TempDir& scratch) {
                   "TO GO\nPRINT \"NEEDLE\"\nEND\n");
     scratch.write(QStringLiteral("nested/deep/c.txt"), "needle at the end\n");
     // A NUL byte in the first block: the search must skip it rather than treat a
-    // binary as a one-line file.
+    // binary as a one-line file. The payload is 15 bytes; asking for 17 would read
+    // the literal's own terminator and one byte past it.
     scratch.write(QStringLiteral("blob.bin"),
-                  QByteArray("needle\0\0\0binary", 17));
+                  QByteArray("needle\0\0\0binary", 15));
     // A file in a directory the search prunes.
     scratch.write(QStringLiteral("build/generated.bas"), "10 PRINT \"needle\"\n");
 }
