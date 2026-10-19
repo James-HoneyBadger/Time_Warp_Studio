@@ -12,9 +12,10 @@ __pycache__/
 .pytype/
 .ruff_cache/
 
-# VS Code (keep settings.json for workspace config, exclude user-specific files)
+# VS Code (keep the shared workspace configuration, exclude user-specific files)
 .vscode/*
 !.vscode/settings.json
+!/.vscode/c_cpp_properties.json
 
 # macOS
 .DS_Store

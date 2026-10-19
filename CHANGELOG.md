@@ -7,6 +7,13 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **A guided tour and one-time coach marks.** A first run opens a four-step tour
+  anchored to the real controls — Run, the canvas, the Lessons panel and the
+  function-key bar — each step dimming the rest of the window and naming what the
+  control is for. `tour/seen` in `QSettings` means a second window or launch does
+  not repeat it; Help > Guided Tour (F12) shows it on demand, and Settings > Help
+  re-arms it. Two hints use the same anchors once each: the Lessons panel and the
+  history arrow on Run.
 - **A live CHIP-8 emulator.** Tools > CHIP-8 Emulator (Ctrl+Shift+M) opens the
   current `.ch8` program, or one chosen from the toolbar or dropped on the
   window, as an interactive machine rather than a run to completion. It has a

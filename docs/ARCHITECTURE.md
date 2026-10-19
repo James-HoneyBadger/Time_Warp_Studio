@@ -305,6 +305,18 @@ arrive. `Chip8Screen` paints the 64x32 framebuffer with an integer scale,
 and reused; closing it alone ends the run, and the next invocation builds a
 fresh machine rather than touching a dead one.
 
+### The guided tour
+
+`tour.cpp` owns a first-run overlay and the one-time hints built on the same
+anchors. A step names a widget's `objectName` rather than a coordinate, so the
+card cannot drift away from the control it describes; `ui_layout_tests` asserts
+that every name in the catalogue still resolves, which turns a rename into a
+test failure. "Seen" lives in `QSettings` under `tour/seen`, and each hint under
+`tour/coach/<key>`, so a second window in the same installation does not repeat
+them. The overlay dims the window around the anchor and swallows clicks; its card
+is centred when the anchor is hidden. Settings re-arms the tour, and the Help
+menu can show it on demand.
+
 ### Languages
 
 `native/src/ui/language.cpp` holds the table: display name, settings key and file

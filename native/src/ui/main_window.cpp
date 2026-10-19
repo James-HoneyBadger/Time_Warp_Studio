@@ -63,6 +63,7 @@
 #include "timewarp/ui/snippet_dialog.hpp"
 #include "timewarp/ui/snippets.hpp"
 #include "timewarp/ui/sound_player.hpp"
+#include "timewarp/ui/tour.hpp"
 #include "timewarp/ui/syntax_highlighter.hpp"
 #include "timewarp/ui/themes.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
@@ -172,6 +173,15 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     // Added last so the overlay sits above the central layout, so it has to be
     // created after the tree it covers exists.
     buildUi();
+    // The tour points at widgets built above; the overlay is a child of this
+    // window and is created after the tree it dims. Step 2 is the lessons panel,
+    // which has to be raised before the overlay can measure a visible anchor.
+    tour_ = new TourGuide{this, this};
+    connect(tour_, &TourGuide::stepShown, this, [this](int index) {
+        if (index == 2) {
+            static_cast<void>(showPanel(QStringLiteral("lessons")));
+        }
+    });
     // After the widget tree and before `restoreLayout()`/`show()`: a palette
     // applied to a visible window repaints it, which shows as a flash of the
     // default colours before the user's theme arrives.
@@ -870,6 +880,9 @@ void MainWindow::buildMenuBar() {
     add(help, tr("&Getting Started"), {},
         [this] { showDocumentation(QStringLiteral("lessons/student-guide.md")); })
         ->setObjectName(QStringLiteral("gettingStartedAction"));
+    add(help, tr("&Guided Tour"), QKeySequence{Qt::Key_F12},
+        [this] { showGuidedTour(); })
+        ->setObjectName(QStringLiteral("guidedTourAction"));
     help->addSeparator();
     // Shift+F1 is the bar's "Keys" binding; the menu entry has no sequence of
     // its own so the two cannot disagree about which key opens the table.
@@ -1094,6 +1107,11 @@ void MainWindow::showPreferences() {
                 saveEditorSettings();
                 setExecutionState(tr("ready"), tr("Editor settings saved"));
             });
+    connect(dialog, &PreferencesDialog::tourRequested, this, [this] {
+        rearmGuidedTour();
+        setExecutionState(tr("ready"),
+                          tr("The guided tour will show the next time the window opens."));
+    });
     dialog->open();
 }
 
@@ -1607,6 +1625,24 @@ void MainWindow::applySnippet(const Snippet& snippet) {
     editor->setTextCursor(placed);
     editor->setFocus(Qt::ShortcutFocusReason);
     setExecutionState(tr("ready"), tr("Inserted \u201C%1\u201D").arg(snippet.name));
+}
+
+void MainWindow::showGuidedTourIfUnseen() {
+    if (tour_ != nullptr) {
+        tour_->start();
+    }
+}
+
+void MainWindow::showGuidedTour() {
+    if (tour_ != nullptr) {
+        tour_->show();
+    }
+}
+
+void MainWindow::rearmGuidedTour() {
+    if (tour_ != nullptr) {
+        tour_->rearm();
+    }
 }
 
 void MainWindow::openChip8Emulator() {
@@ -2161,6 +2197,11 @@ void MainWindow::noteRun(const QString& source) {
         history.removeLast();
     }
     QSettings{}.setValue(kSettingRunHistory, history);
+    // The arrow on the Run button is easy to miss and there is no other place
+    // that says the list exists. Once per installation is enough.
+    if (tour_ != nullptr) {
+        tour_->hint(QStringLiteral("run-history"));
+    }
 }
 
 void MainWindow::rebuildRunMenu() {
@@ -3104,6 +3145,12 @@ bool MainWindow::showPanel(const QString& name) {
         if (wanted == QLatin1String(entry.key)) {
             if (right_tabs_ != nullptr) {
                 right_tabs_->setCurrentIndex(entry.index);
+            }
+            // A one-time hint the first time the lessons page is raised. It
+            // refuses while the guided tour is running, which is the one case
+            // where two overlays would compete for the same panel.
+            if (wanted == QLatin1String("lessons") && tour_ != nullptr) {
+                tour_->hint(QStringLiteral("lessons"));
             }
             return true;
         }

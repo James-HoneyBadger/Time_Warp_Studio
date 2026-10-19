@@ -418,9 +418,11 @@ packages depend on the distribution's Qt 6.
 A web (WebAssembly) build, and calling one language from another.
 
 The **examples browser** is now a File menu grouped by language rather than the
-old window with categories, difficulty and search; **accessibility presets** and
-the **onboarding wizard** are scheduled in [PORTING_PLAN.md](PORTING_PLAN.md)
-(phases 8 and 3) rather than dropped.
+old window with categories, difficulty and search. **Accessibility presets** are
+still scheduled in [PORTING_PLAN.md](PORTING_PLAN.md) (phase 8). The guided tour
+and its one-time coach marks (phase 3.3) are built: Help > Guided Tour, a
+first-run overlay anchored to the Run button, canvas, lessons panel and
+function-key bar, re-armable from Settings.
 
 The **lessons system**, with progress tracking and a classroom mode, used to be on this
 list. It is now implemented — see `docs/lessons/`. The **telemetry HUD** was on it too

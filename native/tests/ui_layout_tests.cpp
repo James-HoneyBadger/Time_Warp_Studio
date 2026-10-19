@@ -58,10 +58,12 @@
 #include "timewarp/ui/find_bar.hpp"
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/panels.hpp"
+#include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/snippet_dialog.hpp"
 #include "timewarp/ui/snippets.hpp"
 #include "timewarp/ui/standalone.hpp"
 #include "timewarp/ui/themes.hpp"
+#include "timewarp/ui/tour.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 #include "timewarp/ui/version_history.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
@@ -1419,6 +1421,114 @@ void test_tools_menu_opens_one_emulator() {
     TW_CHECK_EQ(window.findChildren<timewarp::ui::Chip8Window*>().size(), 1);
 }
 
+void test_the_guided_tour_points_at_real_widgets() {
+    announce("guided tour: every anchor resolves");
+    MainWindow window;
+    const QList<timewarp::ui::TourStep> steps = timewarp::ui::TourGuide::steps();
+    TW_CHECK_EQ(steps.size(), 4);
+    for (const timewarp::ui::TourStep& step : steps) {
+        QWidget* anchor = window.findChild<QWidget*>(step.objectName);
+        TW_CHECK(anchor != nullptr);
+    }
+}
+
+void test_the_guided_tour_is_seen_once_and_rearmable() {
+    announce("guided tour: seen once, re-armable");
+    QSettings settings;
+    settings.remove(QStringLiteral("tour/seen"));
+
+    MainWindow window;
+    timewarp::ui::TourGuide guide{&window};
+    TW_CHECK(!guide.seen());
+    guide.start();
+    TW_CHECK(guide.active());
+    TW_CHECK_EQ(guide.overlay()->step(), 0);
+    guide.overlay()->dismiss();
+    TW_CHECK(!guide.active());
+    TW_CHECK(guide.seen());
+
+    // A second window in the same installation does not show it again.
+    timewarp::ui::TourGuide second{&window};
+    second.start();
+    TW_CHECK(!second.active());
+
+    guide.rearm();
+    TW_CHECK(!guide.seen());
+    guide.start();
+    TW_CHECK(guide.active());
+    guide.overlay()->dismiss();
+}
+
+void test_the_guided_tour_walks_its_steps() {
+    announce("guided tour: next, back and done");
+    QSettings{}.remove(QStringLiteral("tour/seen"));
+    MainWindow window;
+    timewarp::ui::TourGuide guide{&window};
+    guide.show();
+    timewarp::ui::TourOverlay* overlay = guide.overlay();
+    TW_CHECK(overlay != nullptr);
+    if (overlay == nullptr) {
+        return;
+    }
+    TW_CHECK_EQ(overlay->step(), 0);
+    overlay->next();
+    TW_CHECK_EQ(overlay->step(), 1);
+    overlay->back();
+    TW_CHECK_EQ(overlay->step(), 0);
+    for (int index = 1; index < overlay->stepCount(); ++index) {
+        overlay->next();
+    }
+    TW_CHECK(overlay->active());
+    overlay->next();  // Done on the last step
+    TW_CHECK(!overlay->active());
+    TW_CHECK(guide.seen());
+}
+
+void test_coach_marks_appear_once() {
+    announce("coach marks: once and dismissible");
+    QSettings{}.remove(QStringLiteral("tour/coach/run-history"));
+    MainWindow window;
+    timewarp::ui::TourGuide guide{&window};
+    TW_CHECK(!guide.coachSeen(QStringLiteral("run-history")));
+    TW_CHECK(guide.hint(QStringLiteral("run-history")));
+    TW_CHECK(guide.active());
+    guide.overlay()->dismiss();
+    TW_CHECK(!guide.active());
+    TW_CHECK(guide.coachSeen(QStringLiteral("run-history")));
+    TW_CHECK(!guide.hint(QStringLiteral("run-history")));
+    // An unknown key is not a hint and does not open an empty card.
+    TW_CHECK(!guide.hint(QStringLiteral("no-such-hint")));
+}
+
+void test_help_menu_opens_the_tour() {
+    announce("Help > Guided Tour");
+    MainWindow window;
+    QAction* item = entryContaining(menuNamed(window, QStringLiteral("&Help")),
+                                    QStringLiteral("Guided Tour"));
+    TW_CHECK(item != nullptr);
+    if (item != nullptr) {
+        item->trigger();
+        auto* overlay = window.findChild<timewarp::ui::TourOverlay*>(
+            QStringLiteral("tourOverlay"));
+        TW_CHECK(overlay != nullptr);
+        TW_CHECK(overlay != nullptr && overlay->active());
+    }
+}
+
+void test_settings_rearms_the_tour() {
+    announce("Settings: re-arm the guided tour");
+    timewarp::ui::PreferencesDialog dialog{timewarp::ui::EditorSettings{}};
+    bool requested = false;
+    QObject::connect(&dialog, &timewarp::ui::PreferencesDialog::tourRequested, &dialog,
+                     [&requested] { requested = true; });
+    auto* button = dialog.findChild<QPushButton*>(QStringLiteral("tourButton"));
+    TW_CHECK(button != nullptr);
+    if (button != nullptr) {
+        button->click();
+    }
+    TW_CHECK(requested);
+}
+
 void test_tab_close_button_closes_the_tab() {
     announce("the tab's own X button");
     MainWindow window;
@@ -2003,6 +2113,12 @@ int main(int argc, char** argv) {
     test_every_right_column_page_has_a_key();
     test_file_menu_new_opens_a_document();
     test_tools_menu_opens_one_emulator();
+    test_the_guided_tour_points_at_real_widgets();
+    test_the_guided_tour_is_seen_once_and_rearmable();
+    test_the_guided_tour_walks_its_steps();
+    test_coach_marks_appear_once();
+    test_help_menu_opens_the_tour();
+    test_settings_rearms_the_tour();
     test_file_menu_close_tab_closes_one();
     test_file_menu_lists_the_installed_examples();
     test_tab_close_button_closes_the_tab();

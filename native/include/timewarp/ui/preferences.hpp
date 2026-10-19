@@ -47,6 +47,9 @@ signals:
     void applied(const EditorSettings& settings);
     /// OK specifically: the caller should also remember them.
     void accepted(const EditorSettings& settings);
+    /// The user asked to see the guided tour again. A separate signal because
+    /// it is not an editor setting and must not wait for OK.
+    void tourRequested();
 
 private:
     void buildUi(const EditorSettings& settings);

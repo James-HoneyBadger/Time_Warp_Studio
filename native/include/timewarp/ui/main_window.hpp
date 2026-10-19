@@ -96,6 +96,7 @@ class PlaceholderPanel;
 class ResizableTabWidget;
 class SoundPlayer;
 class TelemetryPanel;
+class TourGuide;
 class TurtleCanvas;
 class VariablesPanel;
 
@@ -228,6 +229,13 @@ public:
     /// is a CHIP-8 program. One window is reused, so a second invocation raises
     /// the running emulator rather than starting a second one.
     void openChip8Emulator();
+    /// Shows the guided tour if this installation has not seen it. Called once
+    /// from the application's startup path, never from a test's construction.
+    void showGuidedTourIfUnseen();
+    /// Shows the tour now, even when it has been seen. Help > Guided Tour.
+    void showGuidedTour();
+    /// Forgets that the tour and its hints were seen. Settings > Help.
+    void rearmGuidedTour();
     /// Inserts `snippet` at the cursor: the selection replaces `$SELECTION$`, the
     /// caret lands on `$CURSOR$`, and the whole insertion is one undo step.
     ///
@@ -566,6 +574,9 @@ private:
     /// the IDE closes it too; `WA_DeleteOnClose` makes the pointer go null when
     /// the learner closes it alone.
     QPointer<Chip8Window> chip8_window_;
+    /// The tour is a child widget through its overlay; the guide itself persists
+    /// "seen" in QSettings.
+    TourGuide* tour_ = nullptr;
     /// The run in flight, for the HUD's wall-clock row. Invalid between runs.
     QElapsedTimer run_clock_;
     /// How long the last run took, in milliseconds; negative before the first.

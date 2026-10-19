@@ -1,0 +1,19 @@
+{
+  "configurations": [
+    {
+      "name": "Linux",
+      "compileCommands": "${workspaceFolder}/native/build/compile_commands.json",
+      "includePath": [
+        "${workspaceFolder}/native/include",
+        "${workspaceFolder}/native/bridge",
+        "/usr/include/qt6",
+        "/usr/include/qt6/QtCore",
+        "/usr/include/qt6/QtGui",
+        "/usr/include/qt6/QtWidgets"
+      ],
+      "cStandard": "c17",
+      "cppStandard": "c++20"
+    }
+  ],
+  "version": 4
+}

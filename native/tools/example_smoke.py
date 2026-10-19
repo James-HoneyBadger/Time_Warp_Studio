@@ -2,7 +2,7 @@
 """Runs every example program through the language bridge and reports the result.
 
 The C++ suite (`python_bridge_tests`) covers the protocol and the drawing for one
-program per language. This covers the *corpus*: all 44 examples, in all six
+program per language. This covers the *corpus*: all 49 examples, in all ten
 languages, checking that each one runs and that the ones that draw actually draw.
 
 That distinction matters because the two failures look alike from a unit test and
@@ -82,6 +82,7 @@ DRAWING_EXAMPLES = {
 
 
 def repository_root() -> pathlib.Path:
+    """The checkout this script lives in, so paths do not depend on the cwd."""
     return pathlib.Path(__file__).resolve().parents[2]
 
 
@@ -155,10 +156,11 @@ def run_one(
 
     if done is None:
         detail = completed.stderr.strip().splitlines()
+        reason = detail[-1] if detail else "no diagnostics"
         return {
             "ok": False,
             "strokes": strokes,
-            "error": f"the worker produced no result ({detail[-1] if detail else 'no diagnostics'})",
+            "error": f"the worker produced no result ({reason})",
             "output": "".join(output),
         }
     if not done.get("ok", False) or errors:
@@ -172,6 +174,7 @@ def run_one(
 
 
 def main(argv: list[str] | None = None) -> int:
+    """Runs every example and returns 0 only when all of them behaved."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--verbose", action="store_true", help="print every program, not just failures"
@@ -191,9 +194,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     # The repository's virtual environment first, because that is where this
-    # project's dependencies live; `python3` otherwise.
-    interpreter = root / ".venv/bin/python3"
-    interpreter = str(interpreter) if interpreter.is_file() else "python3"
+    # project's dependencies live; `python3` otherwise. The two names are kept
+    # apart so the type is a `str` at every use, not a Path that sometimes turns
+    # into one.
+    interpreter_path = root / ".venv/bin/python3"
+    interpreter = str(interpreter_path) if interpreter_path.is_file() else "python3"
 
     counts: dict[str, dict[str, int]] = collections.defaultdict(
         lambda: {"passed": 0, "failed": 0, "strokes": 0}

@@ -35,7 +35,7 @@ PreferencesDialog::PreferencesDialog(const EditorSettings& settings, QWidget* pa
     setObjectName(QStringLiteral("preferencesDialog"));
     setWindowTitle(tr("Settings"));
     setModal(true);
-    resize(560, 560);
+    resize(560, 640);
     buildUi(settings);
 }
 
@@ -115,6 +115,15 @@ void PreferencesDialog::buildUi(const EditorSettings& settings) {
                   tr("Check the program as I type and underline what is wrong"),
                   settings.lint);
     layout->addWidget(behaviour);
+
+    auto* help_group = new QGroupBox{tr("Help"), this};
+    auto* help_layout = new QVBoxLayout{help_group};
+    auto* tour_button = new QPushButton{tr("Show the guided tour again"), help_group};
+    tour_button->setObjectName(QStringLiteral("tourButton"));
+    connect(tour_button, &QPushButton::clicked, this,
+            &PreferencesDialog::tourRequested);
+    help_layout->addWidget(tour_button);
+    layout->addWidget(help_group);
 
     auto* preview_group = new QGroupBox{tr("Preview"), this};
     auto* preview_layout = new QVBoxLayout{preview_group};

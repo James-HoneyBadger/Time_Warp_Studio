@@ -251,6 +251,14 @@ int main(int argc, char* argv[]) {
     openArguments(&window, arguments);
     window.show();
 
+    // A first run only: the guide stores "seen" in QSettings and refuses a second
+    // time. A file argument, a screenshot, an export, a named panel or a player
+    // artifact is not somebody starting from scratch, so none of them show it.
+    if (arguments.isEmpty() && screenshotPath.isEmpty() && exportPath.isEmpty() &&
+        !player && !parser.isSet(panelOption)) {
+        window.showGuidedTourIfUnseen();
+    }
+
     const bool autorun = parser.isSet(runOption) || player;
     if (autorun) {
         // After `show()`, so the canvas has a real size to fit the drawing into:

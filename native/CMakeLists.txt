@@ -30,6 +30,10 @@ if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
+# A compilation database: clangd and the C/C++ extension resolve the Qt include
+# paths from it instead of reporting every QWidget include as missing.
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 option(TIME_WARP_EXPR_WERROR "Treat compiler warnings as errors" ON)
 option(TIME_WARP_EXPR_BUILD_TESTS "Build the test suites" ON)
 
@@ -591,6 +595,7 @@ if(Qt6_FOUND)
             src/ui/standalone.cpp
             src/ui/syntax_highlighter.cpp
             src/ui/themes.cpp
+            src/ui/tour.cpp
             src/ui/turtle_canvas.cpp
             src/ui/version_history.cpp
             src/ui/ui_style.cpp
@@ -615,6 +620,7 @@ if(Qt6_FOUND)
             include/timewarp/ui/standalone.hpp
             include/timewarp/ui/syntax_highlighter.hpp
             include/timewarp/ui/themes.hpp
+            include/timewarp/ui/tour.hpp
             include/timewarp/ui/turtle_canvas.hpp
             include/timewarp/ui/version_history.hpp
             include/timewarp/ui/ui_style.hpp
