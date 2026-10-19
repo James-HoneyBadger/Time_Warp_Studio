@@ -332,10 +332,10 @@ between the two panes, the split is saved with the session, and Run > Run Both
 Panes compares two programs headless in one table (output, time, ink) with no
 shared variable bus. There is no project panel yet.
 
-**Also unbuilt** — printing, lesson-session export, font *family* selection, and the
-REPL bar's interpreter wiring (the bar is laid out and its signal exists; nothing is
-connected to it). Code PDF export and session HTML are built, as are the
-accessibility controls: View > High Contrast (Ctrl+Alt+H), the A+ text-size ladder,
+**Also unbuilt** — printing, font *family* selection, and the REPL bar's
+interpreter wiring (the bar is laid out and its signal exists; nothing is
+connected to it). Code PDF export, session HTML and lesson-session export as
+Markdown or PDF are built, as are the accessibility controls: View > High Contrast (Ctrl+Alt+H), the A+ text-size ladder,
 View > Focus Mode (F11), View > Presentation Mode (Shift+F11) and View > CRT
 Settings with the four Screen Mode presets.
 The snippet library is built:
@@ -446,8 +446,9 @@ well: the right column's Classroom page shows the roster, the current assignment
 and one row of marks per learner, read through the bridge from the same files
 `teach.py` writes. Presentation mode (View > Presentation Mode) hides the chrome
 and takes the lesson panel and console to the size and window style
-`teach.py present` sets. The **telemetry HUD** was on it too
-and is now the Telemetry tab described above.
+`teach.py present` sets, and a lesson session can be exported as Markdown or PDF
+with its checkpoints, this session's verdicts, the program and the output. The
+**telemetry HUD** was on it too and is now the Telemetry tab described above.
 
 ---
 

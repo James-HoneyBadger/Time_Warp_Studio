@@ -109,8 +109,9 @@ void normalisePdfMetadata(QByteArray& pdf) {
     return document_html.mid(start + 1, end - start - 1);
 }
 
-[[nodiscard]] QString codePageHtml(const QString& title, const QString& language,
-                                   const QString& source) {
+/// *source* with line numbers, as the text of a `<pre>`. Shared by the code PDF
+/// and the lesson-session report so a line number means the same thing in both.
+[[nodiscard]] QString numberedCode(const QString& source) {
     QStringList lines = source.split(QLatin1Char('\n'));
     // A trailing newline is the end of the last line, not an extra blank one.
     if (!lines.isEmpty() && lines.constLast().isEmpty()) {
@@ -131,7 +132,13 @@ void normalisePdfMetadata(QByteArray& pdf) {
         text += line;
         text += QLatin1Char('\n');
     }
+    return text;
+}
 
+[[nodiscard]] QString codePageHtml(const QString& title, const QString& language,
+                                   const QString& source) {
+    const QString code = numberedCode(source);
+    const int line_count = code.count(QLatin1Char('\n'));
     return QStringLiteral(
                "<p style=\"font-family:'Helvetica',sans-serif;font-size:15pt;"
                "font-weight:600;margin:0 0 2pt 0\">%1</p>"
@@ -139,9 +146,8 @@ void normalisePdfMetadata(QByteArray& pdf) {
                "color:#666666;margin:0 0 12pt 0\">%2 &middot; %3 line%4</p>"
                "<pre style=\"font-family:'Courier New',monospace;font-size:9pt;"
                "margin:0\">%5</pre>")
-        .arg(title.toHtmlEscaped(), language.toHtmlEscaped(),
-             QString::number(lines.size()), lines.size() == 1 ? QString{} : QStringLiteral("s"),
-             text.toHtmlEscaped());
+        .arg(title.toHtmlEscaped(), language.toHtmlEscaped(), QString::number(line_count),
+             line_count == 1 ? QString{} : QStringLiteral("s"), code.toHtmlEscaped());
 }
 
 [[nodiscard]] bool writeBytes(const QString& path, const QByteArray& bytes, QString* error) {
@@ -161,10 +167,10 @@ void normalisePdfMetadata(QByteArray& pdf) {
     return true;
 }
 
-}  // namespace
-
-bool writeCodePdf(const QString& path, const QString& title, const QString& language,
-                  const QString& source, QString* error) {
+/// One A4 document, built from *html*, with the deterministic metadata. Both PDF
+/// exports go through here so neither can forget the normalisation.
+[[nodiscard]] bool writePdfDocument(const QString& path, const QString& title,
+                                    const QString& html, QString* error) {
     QByteArray bytes;
     QBuffer buffer{&bytes};
     if (!buffer.open(QIODevice::WriteOnly)) {
@@ -186,13 +192,192 @@ bool writeCodePdf(const QString& path, const QString& title, const QString& lang
 
         QTextDocument document;
         document.setDefaultFont(codeFont(9));
-        document.setHtml(codePageHtml(title, language, source));
+        document.setHtml(html);
         document.print(&writer);
     }
     buffer.close();
 
     normalisePdfMetadata(bytes);
     return writeBytes(path, bytes, error);
+}
+
+/// The status the engine reports, as a sentence: "in_progress" is a settings value,
+/// not something to put in a report handed to a person.
+[[nodiscard]] QString humanStatus(const QString& status) {
+    if (status.isEmpty()) {
+        return QStringLiteral("not started");
+    }
+    QString text = status;
+    text.replace(QLatin1Char('_'), QLatin1Char(' '));
+    return text;
+}
+
+/// The two words a verdict is made of, in one place so the Markdown and the PDF
+/// cannot say different things about the same outcome.
+[[nodiscard]] QString verdictWord(bool passed) {
+    return passed ? QStringLiteral("Passed.") : QStringLiteral("Not passed.");
+}
+
+[[nodiscard]] QString verdictSentence(const LessonSessionCheckpoint& checkpoint) {
+    if (!checkpoint.checked) {
+        return QStringLiteral("Not checked in this session.");
+    }
+    QString sentence = verdictWord(checkpoint.passed);
+    if (!checkpoint.message.isEmpty()) {
+        sentence += QLatin1Char(' ') + checkpoint.message;
+    }
+    return sentence;
+}
+
+/// A fence long enough for *text*: a program that itself contains ``` must not
+/// close the block it is wrapped in, or the rest of the report becomes code.
+[[nodiscard]] QString fencedCode(const QString& text, const QString& info) {
+    int longest = 2;
+    int run = 0;
+    for (const QChar character : text) {
+        if (character == QLatin1Char('`')) {
+            ++run;
+            longest = qMax(longest, run);
+        } else {
+            run = 0;
+        }
+    }
+    const QString fence(longest + 1, QLatin1Char('`'));
+    QString body = text;
+    if (!body.endsWith(QLatin1Char('\n'))) {
+        body += QLatin1Char('\n');
+    }
+    return fence + info + QLatin1Char('\n') + body + fence;
+}
+
+[[nodiscard]] QString lessonMarkdown(const LessonSession& session) {
+    QStringList lines;
+    lines << QStringLiteral("# Lesson session: %1")
+                 .arg(session.lessonTitle.isEmpty() ? QStringLiteral("Time Warp Studio")
+                                                    : session.lessonTitle);
+    if (!session.lessonDescription.isEmpty()) {
+        lines << QString{} << session.lessonDescription;
+    }
+    lines << QString{};
+    lines << QStringLiteral("- Language: %1").arg(session.language);
+    lines << QStringLiteral("- Status: %1").arg(humanStatus(session.status));
+    if (session.current >= 0 && session.current < session.checkpoints.size()) {
+        lines << QStringLiteral("- Checkpoint: %1 of %2 \u2014 %3")
+                     .arg(session.current + 1)
+                     .arg(session.checkpoints.size())
+                     .arg(session.checkpoints.at(session.current).title);
+    }
+
+    if (!session.objectives.isEmpty()) {
+        lines << QString{} << QStringLiteral("## What this lesson teaches") << QString{};
+        for (const QString& objective : session.objectives) {
+            lines << QStringLiteral("- %1").arg(objective);
+        }
+    }
+
+    if (!session.checkpoints.isEmpty()) {
+        lines << QString{} << QStringLiteral("## Checkpoints");
+        for (int index = 0; index < session.checkpoints.size(); ++index) {
+            const LessonSessionCheckpoint& checkpoint = session.checkpoints.at(index);
+            lines << QString{};
+            lines << QStringLiteral("### %1. %2").arg(index + 1).arg(checkpoint.title);
+            if (!checkpoint.description.isEmpty()) {
+                lines << QString{} << checkpoint.description;
+            }
+            lines << QString{};
+            if (checkpoint.checked) {
+                QString sentence =
+                    QStringLiteral("**%1**").arg(verdictWord(checkpoint.passed));
+                if (!checkpoint.message.isEmpty()) {
+                    sentence += QLatin1Char(' ') + checkpoint.message;
+                }
+                lines << sentence;
+            } else {
+                lines << verdictSentence(checkpoint);
+            }
+        }
+    }
+
+    lines << QString{} << QStringLiteral("## The learner's program") << QString{};
+    lines << fencedCode(session.source, session.language.toLower());
+
+    lines << QString{} << QStringLiteral("## Output") << QString{};
+    if (session.consoleOutput.trimmed().isEmpty()) {
+        lines << QStringLiteral("*The program produced no output.*");
+    } else {
+        lines << fencedCode(session.consoleOutput, QString{});
+    }
+
+    lines << QString{};
+    return lines.join(QLatin1Char('\n'));
+}
+
+[[nodiscard]] QString lessonPageHtml(const LessonSession& session) {
+    QString html;
+    html += QStringLiteral(
+                "<p style=\"font-family:'Helvetica',sans-serif;font-size:16pt;"
+                "font-weight:600;margin-bottom:2pt\">%1</p>"
+                "<p style=\"font-family:'Helvetica',sans-serif;font-size:9pt;"
+                "color:#666666;margin-bottom:12pt\">%2 &middot; %3 &middot; "
+                "checkpoint %4 of %5</p>")
+                .arg((session.lessonTitle.isEmpty() ? QStringLiteral("Time Warp Studio")
+                                                    : session.lessonTitle)
+                         .toHtmlEscaped(),
+                     session.language.toHtmlEscaped(), humanStatus(session.status).toHtmlEscaped(),
+                     QString::number(session.current + 1),
+                     QString::number(session.checkpoints.size()));
+    if (!session.lessonDescription.isEmpty()) {
+        html += QStringLiteral("<p style=\"font-family:'Helvetica',sans-serif;"
+                               "font-size:10pt;margin-bottom:12pt\">%1</p>")
+                    .arg(session.lessonDescription.toHtmlEscaped());
+    }
+    if (!session.objectives.isEmpty()) {
+        html += QStringLiteral("<p style=\"font-family:'Helvetica',sans-serif;"
+                               "font-size:11pt;font-weight:600;margin-top:12pt;"
+                               "margin-bottom:4pt\">What this lesson teaches</p>");
+        for (const QString& objective : session.objectives) {
+            html += QStringLiteral("<li>%1</li>").arg(objective.toHtmlEscaped());
+        }
+        html += QStringLiteral("</ul>");
+    }
+    if (!session.checkpoints.isEmpty()) {
+        html += QStringLiteral("<p style=\"font-family:'Helvetica',sans-serif;"
+                               "font-size:11pt;font-weight:600;margin-top:12pt;"
+                               "margin-bottom:4pt\">Checkpoints</p>");
+        for (int index = 0; index < session.checkpoints.size(); ++index) {
+            const LessonSessionCheckpoint& checkpoint = session.checkpoints.at(index);
+            html += QStringLiteral(
+                        "<p style=\"margin-bottom:2pt\"><b>%1. %2</b></p>"
+                        "<p style=\"margin-bottom:2pt\">%3</p>"
+                        "<p style=\"margin-bottom:12pt;color:%4\">%5</p>")
+                        .arg(QString::number(index + 1), checkpoint.title.toHtmlEscaped(),
+                             checkpoint.description.toHtmlEscaped(),
+                             checkpoint.checked && checkpoint.passed
+                                 ? QStringLiteral("#2e7d32")
+                                 : QStringLiteral("#666666"),
+                             verdictSentence(checkpoint).toHtmlEscaped());
+        }
+    }
+
+    html += QStringLiteral("<p style=\"font-family:'Helvetica',sans-serif;font-size:11pt;"
+                           "font-weight:600;margin-top:12pt;margin-bottom:4pt\">"
+                           "The learner's program</p>"
+                           "<pre style=\"font-family:'Courier New',monospace;font-size:9pt;"
+                           "margin:0\">%1</pre>")
+                .arg(numberedCode(session.source).toHtmlEscaped());
+    html += QStringLiteral("<p style=\"font-family:'Helvetica',sans-serif;font-size:11pt;"
+                           "font-weight:600;margin-top:12pt;margin-bottom:4pt\">Output</p>"
+                           "<pre style=\"font-family:'Courier New',monospace;font-size:9pt;"
+                           "margin:0\">%1</pre>")
+                .arg(session.consoleOutput.toHtmlEscaped());
+    return html;
+}
+
+}  // namespace
+
+bool writeCodePdf(const QString& path, const QString& title, const QString& language,
+                  const QString& source, QString* error) {
+    return writePdfDocument(path, title, codePageHtml(title, language, source), error);
 }
 
 bool writeSessionHtml(const QString& path, const QString& title, const QString& language,
@@ -243,6 +428,19 @@ bool writeSessionHtml(const QString& path, const QString& title, const QString& 
                  drawing_markup, console_output.toHtmlEscaped());
 
     return writeBytes(path, page.toUtf8(), error);
+}
+
+bool writeLessonSessionMarkdown(const QString& path, const LessonSession& session,
+                                QString* error) {
+    return writeBytes(path, lessonMarkdown(session).toUtf8(), error);
+}
+
+bool writeLessonSessionPdf(const QString& path, const LessonSession& session,
+                           QString* error) {
+    return writePdfDocument(
+        path,
+        session.lessonTitle.isEmpty() ? QStringLiteral("Lesson session") : session.lessonTitle,
+        lessonPageHtml(session), error);
 }
 
 }  // namespace timewarp::ui::exporter

@@ -246,6 +246,14 @@ chose. Escape leaves the mode and puts the chrome back.
 
 `present` with no number reports the current setting.
 
+At the end of a session, **File > Export Lesson Session as Markdown** (or **as
+PDF**) writes one file: the lesson and what it teaches, every checkpoint with the
+verdict it was given this session, the program in the editor and the console
+output. Passed, tried-and-not-passed and never-tried are three different things in
+the report, because they are three different things to a teacher; Restart clears
+that lesson's verdicts. The Markdown is plain enough to paste into a report or a
+class hand-in, and the PDF is the same content on A4.
+
 ## 7. Writing a new lesson
 
 ```text

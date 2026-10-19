@@ -900,6 +900,9 @@ LessonPanel::LessonPanel(QWidget* parent) : QFrame(parent) {
     });
     connect(reset_, &QPushButton::clicked, this, [this] {
         if (!currentLesson().isEmpty()) {
+            // A restart forgets the verdicts for that lesson, because they are
+            // about programs the learner has just chosen to begin again.
+            verdicts_.remove(currentLesson());
             emit resetRequested(currentLesson());
         }
     });
@@ -913,6 +916,9 @@ LessonPanel::LessonPanel(QWidget* parent) : QFrame(parent) {
 void LessonPanel::setLessons(const QList<timewarp::bridge::LessonSummary>& lessons) {
     const QString previous = currentLesson();
     curriculum_ = lessons;
+    // A new curriculum is a new session: a verdict against an id that may no
+    // longer exist is not worth carrying into a report.
+    verdicts_.clear();
 
     const QSignalBlocker blocker{lessons_};
     lessons_->clear();
@@ -955,6 +961,11 @@ void LessonPanel::setSolution(const QString& text) {
 
 void LessonPanel::setChecked(const QString& lesson, int checkpoint, bool passed,
                              const QString& message, bool completed, int finished, int total) {
+    // Recorded before the staleness check below: the display only shows the
+    // checkpoint on screen, but a report lists every one that was tried, and a
+    // verdict that arrives after the panel has moved on is still a verdict.
+    verdicts_[lesson][checkpoint] = SessionVerdict{passed, message};
+
     // A verdict for a different checkpoint than the one on screen is stale, and
     // showing it would tell a learner their answer was wrong when they have
     // already moved on.
@@ -1053,6 +1064,53 @@ QString LessonPanel::currentLanguageKey() const {
 QString LessonPanel::verdictText() const { return verdict_->text(); }
 
 int LessonPanel::lessonCount() const { return static_cast<int>(curriculum_.size()); }
+
+timewarp::ui::exporter::LessonSession LessonPanel::session() const {
+    using timewarp::ui::exporter::LessonSession;
+    using timewarp::ui::exporter::LessonSessionCheckpoint;
+
+    LessonSession session;
+    session.current = currentCheckpoint();
+    const QString id = currentLesson();
+    if (id.isEmpty()) {
+        return session;
+    }
+
+    const QHash<int, SessionVerdict> no_verdicts;
+    const auto found = verdicts_.constFind(id);
+    const QHash<int, SessionVerdict>& lesson_verdicts =
+        found == verdicts_.constEnd() ? no_verdicts : found.value();
+
+    for (const timewarp::bridge::LessonSummary& lesson : curriculum_) {
+        if (lesson.id != id) {
+            continue;
+        }
+        session.lessonTitle = lesson.title;
+        session.lessonDescription = lesson.description;
+        session.language = lesson.language;
+        session.objectives = lesson.objectives;
+        for (int index = 0; index < lesson.checkpointCount(); ++index) {
+            LessonSessionCheckpoint checkpoint;
+            checkpoint.title = lesson.checkpoints.at(index).title;
+            checkpoint.description = lesson.checkpoints.at(index).description;
+            const auto verdict = lesson_verdicts.constFind(index);
+            if (verdict != lesson_verdicts.constEnd()) {
+                checkpoint.checked = true;
+                checkpoint.passed = verdict.value().passed;
+                checkpoint.message = verdict.value().message;
+            }
+            session.checkpoints.append(checkpoint);
+        }
+        break;
+    }
+    for (const timewarp::bridge::LessonProgress& row : rows_) {
+        if (row.id == id) {
+            session.status = row.status;
+            break;
+        }
+    }
+    return session;
+}
 
 void LessonPanel::onLessonChanged(int index) {
     if (index < 0 || index >= curriculum_.size()) {

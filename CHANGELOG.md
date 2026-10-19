@@ -7,6 +7,14 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **Lesson session export.** File > Export Lesson Session as Markdown or PDF
+  writes one file describing the lesson being worked on: what it teaches, every
+  checkpoint with the verdict it was given in this session (passed, not passed,
+  and never tried are kept apart), the program in the editor and the console
+  output. The panel now remembers every verdict it sees rather than only the one
+  on screen, and Restart clears them. The Markdown fence outlasts any backtick run
+  in the program, and the PDF goes through the same writer and metadata
+  normalisation as Export Code as PDF, so two exports of one session are one file.
 - **Presentation mode, for teaching from the front.** View > Presentation Mode
   (Shift+F11) is focus mode with an audience: the menu bar, both toolbars, the
   function-key row, the status bar and every dock go away, and the lesson panel

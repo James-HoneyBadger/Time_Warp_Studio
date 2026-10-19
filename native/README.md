@@ -1078,13 +1078,16 @@ page next to a 60x40 page must still report a 100x100 minimum.
   passed either way, and the status bar painting a message on top of the document
   path was visible in exactly one place and nowhere else.
 
-`export.{hpp,cpp}` holds the two file exports a learner hands to somebody else:
-File > Export Code as PDF (`QPdfWriter`, A4, line numbers) and File > Export
-Session as HTML (program, output and drawing in one page). Both take plain
-arguments and return a bool with a reason, so `editor_services_tests` can check
-them without opening a window — including that the PDF is byte-identical between
-two runs, which required normalising the creation dates and document UUID that Qt
-writes into every file it produces.
+`export.{hpp,cpp}` holds the file exports a learner hands to somebody else:
+File > Export Code as PDF (`QPdfWriter`, A4, line numbers), File > Export
+Session as HTML (program, output and drawing in one page), and File > Export
+Lesson Session as Markdown or PDF (the lesson, its checkpoints with the session's
+verdicts, the program and the console). All take plain arguments and return a bool
+with a reason, so `editor_services_tests` can check them without opening a window
+— including that the PDFs are byte-identical between two runs, which required
+normalising the creation dates and document UUID that Qt writes into every file it
+produces. The Markdown fence grows to outlast any run of backticks in the program,
+so a program that contains them cannot close the block it is wrapped in.
 
 ### Two findings from rendering it
 

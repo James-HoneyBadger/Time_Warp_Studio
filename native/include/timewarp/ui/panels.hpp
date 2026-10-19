@@ -26,6 +26,7 @@
 #include <QWidget>
 
 #include "timewarp/bridge/python_worker.hpp"
+#include "timewarp/ui/export.hpp"
 #include "timewarp/ui/outline.hpp"
 
 class QComboBox;
@@ -403,6 +404,12 @@ public:
     /// The number of lessons the panel is showing.
     [[nodiscard]] int lessonCount() const;
 
+    /// The current lesson as a session report sees it: the lesson, every
+    /// checkpoint, and the verdict each was given in this session. The program and
+    /// the console are the window's to add; they belong to the document and the
+    /// run, not to the lesson.
+    [[nodiscard]] timewarp::ui::exporter::LessonSession session() const;
+
     /// The colours a pass and a failure are written in. The window sets them
     /// from the theme: green-on-white is unreadable on the green-phosphor and
     /// amber themes, and a verdict nobody can read is the one message that has to
@@ -458,6 +465,16 @@ private:
     /// single name for both is how a panel ends up assigning one to the other.
     QList<timewarp::bridge::LessonSummary> curriculum_;
     QList<timewarp::bridge::LessonProgress> rows_;
+    /// What each checkpoint was given this session. The panel shows one verdict at
+    /// a time, which is right while a learner is working; a session report is the
+    /// one place where all of them matter, and only the panel sees them arrive.
+    struct SessionVerdict {
+        bool passed = false;
+        QString message;
+    };
+    /// Lesson id to checkpoint index to verdict, so a report can list every
+    /// checkpoint that was tried rather than only the one on screen.
+    QHash<QString, QHash<int, SessionVerdict>> verdicts_;
     /// Points asked for and answered, per lesson id, so hints come out in order.
     int hint_number_ = 0;
     int presentation_font_ = 0;

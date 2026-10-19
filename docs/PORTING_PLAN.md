@@ -67,7 +67,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 6 | Debugging breadth | breakpoints everywhere ✅, pause/step for line-by-line languages ✅, profiler | L | 0, best after 1 |
 | 7 | Workspace | document outline ✅, terminal, split editor ✅, run both panes ✅ | M | 7.3 needs 1.5 |
 | 8 | Accessibility and display | high contrast ✅, font scale ✅, focus mode ✅, CRT settings ✅, screen presets ✅ | S–M | 0 |
-| 9 | Classroom | roster panel ✅, presentation mode ✅, lesson session export, bundles | M | 9.4 needs an archive decision |
+| 9 | Classroom | roster panel ✅, presentation mode ✅, lesson session export ✅, bundles | M | 9.4 needs an archive decision |
 
 Size: **S** ≈ a session, **M** ≈ two or three, **L** ≈ a week of part-time work.
 
@@ -748,10 +748,29 @@ focus mode, because both own Escape and two owners make it ambiguous; leaving it
 returns the window to the shape it had, unless the user had already made it full
 screen.
 
-### 9.3 Lesson session export (S)
+### 9.3 Lesson session export (S) ✅
 
 Markdown (no dependency) and PDF (5.1's writer). One file per lesson session: the
 lesson, the checkpoints, the learner's code, the verdicts.
+
+**Tests:** the Markdown names the lesson, the language, the status and every
+checkpoint; a passed, a failed and an untried checkpoint stay three different
+things; a program containing a backtick fence does not break the report's own
+fence; the PDF is a real PDF and is byte-identical between two exports of one
+session; both fail with a reason when the path cannot be written.
+
+**Done.** `export.{hpp,cpp}` grew `LessonSession` and its two writers.
+`LessonPanel` keeps every verdict it is given, keyed by lesson and checkpoint and
+recorded *before* the staleness check that decides what to display, because a
+verdict that arrives after the panel has auto-advanced is still a verdict; a
+reset forgets the lesson's verdicts. `MainWindow::currentLessonSession()` adds the
+document and the console, which belong to the window rather than the lesson, and
+File > Export Lesson Session as Markdown/PDF writes the one file. The PDF shares
+`writeCodePdf`'s writer and metadata normalisation, so the determinism guarantee
+and the A4 layout are one implementation; the Markdown fence is one backtick
+longer than the longest run inside the program. The old implementation's PNG
+sidecar is deliberately not carried over: the plan asks for one file, and an
+export that leaves a second file behind is not one a teacher can email.
 
 ### 9.4 Classroom bundles (M, needs an archive decision)
 

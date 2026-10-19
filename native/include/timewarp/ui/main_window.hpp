@@ -276,6 +276,14 @@ public:
     /// Asks for a path and writes the program, its output and its drawing as one
     /// self-contained HTML page.
     void exportSessionHtmlDialog();
+    /// Asks for a path and writes the current lesson as a Markdown report: the
+    /// lesson, its checkpoints with this session's verdicts, the program and the
+    /// console.
+    void exportLessonSessionMarkdownDialog();
+    /// The same report as a PDF.
+    void exportLessonSessionPdfDialog();
+    /// The current lesson plus the document and console it is being worked in.
+    [[nodiscard]] timewarp::ui::exporter::LessonSession currentLessonSession() const;
     /// Puts the drawing on the clipboard as an image.
     void copyDrawingToClipboard();
 

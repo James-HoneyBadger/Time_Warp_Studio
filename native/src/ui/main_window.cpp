@@ -840,6 +840,12 @@ void MainWindow::buildMenuBar() {
     add(file, tr("Export &Session as HTML..."), QKeySequence{},
         [this] { exportSessionHtmlDialog(); })
         ->setObjectName(QStringLiteral("exportSessionAction"));
+    add(file, tr("Export Lesson Session as &Markdown..."), QKeySequence{},
+        [this] { exportLessonSessionMarkdownDialog(); })
+        ->setObjectName(QStringLiteral("exportLessonMarkdownAction"));
+    add(file, tr("Export Lesson Session as P&DF..."), QKeySequence{},
+        [this] { exportLessonSessionPdfDialog(); })
+        ->setObjectName(QStringLiteral("exportLessonPdfAction"));
     file->addSeparator();
     // The split: one document each side, rather than two views of one buffer.
     add(file, tr("Split Editor &Right"), QKeySequence{Qt::CTRL | Qt::Key_Backslash},
@@ -2415,6 +2421,68 @@ void MainWindow::exportSessionHtmlDialog() {
             path, title, displayName(languageOf(editor)), editor->toPlainText(),
             console_view_ != nullptr ? console_view_->toPlainText() : QString{}, drawing,
             &error)) {
+        QMessageBox::warning(this, tr("Export failed"),
+                             tr("Could not write %1.\n\n%2")
+                                 .arg(QDir::toNativeSeparators(path), error));
+        return;
+    }
+    setExecutionState(tr("ready"), tr("Exported %1").arg(QFileInfo{path}.fileName()));
+}
+
+timewarp::ui::exporter::LessonSession MainWindow::currentLessonSession() const {
+    timewarp::ui::exporter::LessonSession session;
+    if (lesson_panel_ != nullptr) {
+        session = lesson_panel_->session();
+    }
+    // The program and the console are the window's, not the lesson's: the lesson
+    // knows what was asked, and only the document knows what was written.
+    if (const CodeEditor* editor = currentEditor(); editor != nullptr) {
+        session.source = editor->toPlainText();
+    }
+    if (console_view_ != nullptr) {
+        session.consoleOutput = console_view_->toPlainText();
+    }
+    return session;
+}
+
+void MainWindow::exportLessonSessionMarkdownDialog() {
+    const timewarp::ui::exporter::LessonSession session = currentLessonSession();
+    if (session.lessonTitle.isEmpty()) {
+        setExecutionState(tr("ready"), tr("Open a lesson before exporting a session"));
+        return;
+    }
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Export lesson session as Markdown"),
+        suggestedExportPath(session.lessonTitle, QStringLiteral("md")),
+        tr("Markdown file (*.md)"));
+    if (path.isEmpty()) {
+        return;
+    }
+    QString error;
+    if (!timewarp::ui::exporter::writeLessonSessionMarkdown(path, session, &error)) {
+        QMessageBox::warning(this, tr("Export failed"),
+                             tr("Could not write %1.\n\n%2")
+                                 .arg(QDir::toNativeSeparators(path), error));
+        return;
+    }
+    setExecutionState(tr("ready"), tr("Exported %1").arg(QFileInfo{path}.fileName()));
+}
+
+void MainWindow::exportLessonSessionPdfDialog() {
+    const timewarp::ui::exporter::LessonSession session = currentLessonSession();
+    if (session.lessonTitle.isEmpty()) {
+        setExecutionState(tr("ready"), tr("Open a lesson before exporting a session"));
+        return;
+    }
+    const QString path = QFileDialog::getSaveFileName(
+        this, tr("Export lesson session as PDF"),
+        suggestedExportPath(session.lessonTitle, QStringLiteral("pdf")),
+        tr("PDF document (*.pdf)"));
+    if (path.isEmpty()) {
+        return;
+    }
+    QString error;
+    if (!timewarp::ui::exporter::writeLessonSessionPdf(path, session, &error)) {
         QMessageBox::warning(this, tr("Export failed"),
                              tr("Could not write %1.\n\n%2")
                                  .arg(QDir::toNativeSeparators(path), error));

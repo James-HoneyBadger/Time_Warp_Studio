@@ -397,6 +397,65 @@ void test_lesson_panel_contract() {
     TW_CHECK_EQ(window->rightTabs()->tabText(4), QString::fromUtf8("\U0001F393 Lessons"));
 }
 
+// The panel keeps every verdict this session, not only the one on screen: a
+// session report lists what was tried, and the panel is the one place a verdict
+// arrives. It has no bridge here -- these are the setters the worker's answers
+// call.
+void test_lesson_panel_records_the_session() {
+    announce("lesson session record");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    LessonPanel* panel = window->lessonPanel();
+    TW_CHECK(panel != nullptr);
+    if (panel == nullptr) {
+        return;
+    }
+
+    timewarp::bridge::LessonSummary lesson;
+    lesson.id = QStringLiteral("basic_first_steps");
+    lesson.title = QStringLiteral("First Steps in BASIC");
+    lesson.language = QStringLiteral("BASIC");
+    lesson.description = QStringLiteral("Print something.");
+    lesson.objectives = {QStringLiteral("Use PRINT")};
+    for (int index = 0; index < 3; ++index) {
+        timewarp::bridge::LessonCheckpoint checkpoint;
+        checkpoint.title = QStringLiteral("Checkpoint %1").arg(index + 1);
+        checkpoint.description = QStringLiteral("Do the thing.");
+        lesson.checkpoints.append(checkpoint);
+    }
+    timewarp::bridge::LessonProgress row;
+    row.id = lesson.id;
+    row.status = QStringLiteral("in_progress");
+    row.checkpoint = 0;
+    row.checkpoints = 3;
+    panel->setLessons({lesson});
+    panel->setProgress({row}, 0, 1);
+
+    const auto before = panel->session();
+    TW_CHECK_EQ(before.lessonTitle, lesson.title);
+    TW_CHECK_EQ(before.language, lesson.language);
+    TW_CHECK_EQ(before.status, QStringLiteral("in_progress"));
+    TW_CHECK_EQ(before.objectives, lesson.objectives);
+    TW_CHECK_EQ(before.checkpoints.size(), 3);
+    for (const auto& checkpoint : before.checkpoints) {
+        TW_CHECK(!checkpoint.checked);
+    }
+
+    // A pass advances the panel to the next checkpoint. The record of that pass
+    // survives the move, and a verdict for a checkpoint that is no longer on
+    // screen is still recorded -- it is a verdict, not a display.
+    panel->setChecked(lesson.id, 0, true, QStringLiteral("Well done."), false, 0, 1);
+    panel->setChecked(lesson.id, 2, false, QStringLiteral("Try again."), false, 0, 1);
+    const auto recorded = panel->session();
+    TW_CHECK_EQ(recorded.current, 1);
+    TW_CHECK(recorded.checkpoints.at(0).checked);
+    TW_CHECK(recorded.checkpoints.at(0).passed);
+    TW_CHECK_EQ(recorded.checkpoints.at(0).message, QStringLiteral("Well done."));
+    TW_CHECK(!recorded.checkpoints.at(1).checked);
+    TW_CHECK(recorded.checkpoints.at(2).checked);
+    TW_CHECK(!recorded.checkpoints.at(2).passed);
+    TW_CHECK_EQ(recorded.checkpoints.at(2).message, QStringLiteral("Try again."));
+}
+
 // The classroom page: a class list and a row of marks per learner. It has no
 // bridge here -- these are the panel's own setters, which is what the worker's
 // answers end up calling.
@@ -2891,6 +2950,7 @@ int main(int argc, char** argv) {
     test_editor_pane_splitter_holds_two_tab_groups();
     test_right_column_tabs_and_order();
     test_lesson_panel_contract();
+    test_lesson_panel_records_the_session();
     test_classroom_panel_contract();
     test_variables_panel_contract();
     test_telemetry_panel_contract();

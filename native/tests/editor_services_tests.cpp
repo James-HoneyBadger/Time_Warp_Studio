@@ -42,7 +42,11 @@
 
 namespace {
 
+using timewarp::ui::exporter::LessonSession;
+using timewarp::ui::exporter::LessonSessionCheckpoint;
 using timewarp::ui::exporter::writeCodePdf;
+using timewarp::ui::exporter::writeLessonSessionMarkdown;
+using timewarp::ui::exporter::writeLessonSessionPdf;
 using timewarp::ui::exporter::writeSessionHtml;
 using timewarp::ui::formatSource;
 using timewarp::ui::FormatOutcome;
@@ -703,6 +707,98 @@ void test_rom_bytes_survive_a_document() {
     return file.readAll();
 }
 
+/// One session with all three checkpoint states in it: passed, failed, and never
+/// tried. The three must not collapse into two in a report.
+[[nodiscard]] LessonSession lessonSessionFixture() {
+    LessonSession session;
+    session.lessonTitle = QStringLiteral("First Steps in BASIC");
+    session.lessonDescription = QStringLiteral("Print something and be seen.");
+    session.language = QStringLiteral("BASIC");
+    session.status = QStringLiteral("in_progress");
+    session.current = 1;
+    session.objectives = {QStringLiteral("Use PRINT"), QStringLiteral("Run a program")};
+    session.checkpoints = {
+        LessonSessionCheckpoint{QStringLiteral("Say hello"), QStringLiteral("Print one line."),
+                                true, true, QStringLiteral("You printed the line.")},
+        LessonSessionCheckpoint{QStringLiteral("Two lines"), QStringLiteral("Print two lines."),
+                                true, false, QStringLiteral("Only one line arrived.")},
+        LessonSessionCheckpoint{QStringLiteral("A loop"), QStringLiteral("Use FOR."), false,
+                                false, QString{}},
+    };
+    // A program that contains a fence of its own: a report that wraps it in ``` is
+    // broken by it, and the rest of the page becomes code.
+    session.source = QStringLiteral("10 PRINT \"hi\"\nREM ```\n");
+    session.consoleOutput = QStringLiteral("hi\n");
+    return session;
+}
+
+void test_lesson_session_markdown_export() {
+    announce("export: lesson session Markdown");
+    const tw::test::TempDir dir;
+    TW_CHECK(dir.valid());
+
+    const LessonSession session = lessonSessionFixture();
+    const QString path = dir.path(QStringLiteral("session.md"));
+    QString error;
+    TW_CHECK(writeLessonSessionMarkdown(path, session, &error));
+    TW_CHECK(error.isEmpty());
+    const QString markdown = QString::fromUtf8(readAll(path));
+
+    TW_CHECK(markdown.startsWith(QStringLiteral("# Lesson session: First Steps in BASIC")));
+    TW_CHECK(markdown.contains(QStringLiteral("- Language: BASIC")));
+    TW_CHECK(markdown.contains(QStringLiteral("- Status: in progress")));
+    TW_CHECK(markdown.contains(QStringLiteral("- Checkpoint: 2 of 3 \u2014 Two lines")));
+    TW_CHECK(markdown.contains(QStringLiteral("- Use PRINT")));
+
+    // Every checkpoint, each with its own verdict: tried and passed, tried and
+    // failed, and never tried are three different things to a teacher.
+    TW_CHECK(markdown.contains(QStringLiteral("### 1. Say hello")));
+    TW_CHECK(markdown.contains(QStringLiteral("**Passed.** You printed the line.")));
+    TW_CHECK(markdown.contains(QStringLiteral("**Not passed.** Only one line arrived.")));
+    TW_CHECK(markdown.contains(QStringLiteral("### 3. A loop")));
+    TW_CHECK(markdown.contains(QStringLiteral("Not checked in this session.")));
+
+    // The fence around the program is longer than the longest run inside it, so a
+    // program that contains ``` cannot close its own block.
+    TW_CHECK(markdown.contains(QStringLiteral("````basic\n")));
+    TW_CHECK(markdown.contains(QStringLiteral("REM ```\n````")));
+
+    TW_CHECK_EQ(markdown.count(QStringLiteral("## Output")), 1);
+    TW_CHECK(markdown.contains(QStringLiteral("```\nhi\n```")));
+
+    // A path in a directory that does not exist fails with a reason rather than
+    // writing somewhere else.
+    TW_CHECK(!writeLessonSessionMarkdown(dir.path() + QStringLiteral("/missing/x.md"), session,
+                                         &error));
+    TW_CHECK(!error.isEmpty());
+}
+
+void test_lesson_session_pdf_export() {
+    announce("export: lesson session PDF");
+    const tw::test::TempDir dir;
+    TW_CHECK(dir.valid());
+
+    const LessonSession session = lessonSessionFixture();
+    const QString first = dir.path(QStringLiteral("first.pdf"));
+    const QString second = dir.path(QStringLiteral("second.pdf"));
+    QString error;
+    TW_CHECK(writeLessonSessionPdf(first, session, &error));
+    TW_CHECK(error.isEmpty());
+
+    const QByteArray pdf = readAll(first);
+    TW_CHECK(pdf.startsWith("%PDF"));
+    TW_CHECK(pdf.count("/Type /Page") - pdf.count("/Type /Pages") >= 1);
+
+    // The same deterministic bytes as the code PDF: two exports of one session
+    // are one file.
+    TW_CHECK(writeLessonSessionPdf(second, session, &error));
+    TW_CHECK(readAll(second) == pdf);
+
+    TW_CHECK(!writeLessonSessionPdf(dir.path() + QStringLiteral("/missing/first.pdf"), session,
+                                    &error));
+    TW_CHECK(!error.isEmpty());
+}
+
 void test_code_pdf_export() {
     announce("export: PDF of the code");
     const tw::test::TempDir dir;
@@ -810,6 +906,8 @@ int main(int argc, char** argv) {
     test_rom_bytes_survive_a_document();
     test_code_pdf_export();
     test_session_html_export();
+    test_lesson_session_markdown_export();
+    test_lesson_session_pdf_export();
     test_breakpoint_store();
     test_the_outline_finds_named_places();
     return tw::test::summary("editor_services");
