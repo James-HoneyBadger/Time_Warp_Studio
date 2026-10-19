@@ -67,7 +67,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 6 | Debugging breadth | breakpoints everywhere ✅, pause/step for line-by-line languages ✅, profiler | L | 0, best after 1 |
 | 7 | Workspace | document outline ✅, terminal, split editor ✅, run both panes ✅ | M | 7.3 needs 1.5 |
 | 8 | Accessibility and display | high contrast ✅, font scale ✅, focus mode ✅, CRT settings ✅, screen presets ✅ | S–M | 0 |
-| 9 | Classroom | roster panel ✅, presentation mode, lesson session export, bundles | M | 9.4 needs an archive decision |
+| 9 | Classroom | roster panel ✅, presentation mode ✅, lesson session export, bundles | M | 9.4 needs an archive decision |
 
 Size: **S** ≈ a session, **M** ≈ two or three, **L** ≈ a week of part-time work.
 
@@ -720,11 +720,33 @@ runs) and the panel contract in `ui_layout_tests`. A separate binary would have
 needed a second copy of the harness that starts an interpreter and waits for a
 real answer.
 
-### 9.2 Presentation mode (S)
+### 9.2 Presentation mode (S) ✅
 
 Full screen, large font (reuse `setPresentationFont`), chrome hidden. Distinct from
 8.3 focus mode in one respect: it is for an audience, so it also scales the lesson
 panel and the console.
+
+**Tests:** entering hides the named widgets and leaving restores exactly those that
+were visible; Esc is bound while the mode is on and unbound after; the lesson panel
+and console take the classroom's size and the console returns to the learner's
+scale; a windowed class does not take the screen, and a full-screen one gives it
+back on the way out.
+
+**Done.** View > Presentation Mode (Shift+F11) records and hides the menu bar, both
+toolbars, the function-key row, the status bar and every dock, and restores exactly
+that list -- the same mechanism focus mode uses, with the menu bar added because a
+room does not need File and Edit above the lesson. The lesson panel and the three
+log views take the classroom's font size; leaving puts the logs back through
+`applyEditorSettings`, which owns them, rather than a guessed default. The size and
+whether to take the whole screen belong to the class, because `teach.py present`
+writes them: a new `classroom-presentation` request answers from
+`presentation.json` without walking anybody's folder, and the same block is parsed
+out of the curriculum and class-list answers so the two cannot disagree. A teacher
+who never opened a panel gets the size as soon as the answer arrives; entering the
+mode also asks for it when it is not known yet. Entering presentation mode ends
+focus mode, because both own Escape and two owners make it ambiguous; leaving it
+returns the window to the shape it had, unless the user had already made it full
+screen.
 
 ### 9.3 Lesson session export (S)
 

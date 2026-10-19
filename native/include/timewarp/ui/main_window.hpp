@@ -342,6 +342,21 @@ public:
     void setFocusMode(bool on);
     [[nodiscard]] bool focusMode() const noexcept { return focus_mode_; }
 
+    /// Teaching from the front: the chrome goes away as it does in focus mode,
+    /// and the lesson panel and the console grow to the size the class is
+    /// projected at. It is a mode rather than a setting for the same reason focus
+    /// mode is; Esc leaves it.
+    ///
+    /// Distinct from focus mode in what it is for: focus mode is for the person at
+    /// the keyboard, so it leaves the fonts alone. This one is for a room.
+    void setPresentationMode(bool on);
+    [[nodiscard]] bool presentationMode() const noexcept { return presentation_mode_; }
+    /// The size and window style the class is taught at, as `teach.py present`
+    /// wrote them. Kept even while the mode is off, so entering it needs no round
+    /// trip; a size of zero means the worker has not answered yet, and the fonts
+    /// are then left as the teacher configured them.
+    void setPresentationSettings(int fontPoints, bool fullscreen);
+
     /// The CRT overlay's five effects. Applying them shows the overlay, because a
     /// setting that is on but invisible is a setting the user cannot judge.
     void setCrtSettings(const CrtOverlay::Settings& settings);
@@ -749,6 +764,22 @@ private:
     QShortcut* focus_shortcut_ = nullptr;
     bool focus_mode_ = false;
     QList<QPointer<QWidget>> focus_hidden_;
+    /// Presentation mode: the same recorded-chrome idea, plus the class's font
+    /// size and the window style `teach.py present` asked for. The geometry is
+    /// restored only when this mode changed it, so a window the user had already
+    /// made full screen stays that way.
+    QAction* presentation_action_ = nullptr;
+    QShortcut* presentation_shortcut_ = nullptr;
+    bool presentation_mode_ = false;
+    QList<QPointer<QWidget>> presentation_hidden_;
+    int presentation_font_ = 0;
+    bool presentation_fullscreen_ = true;
+    bool presentation_was_maximized_ = false;
+    bool presentation_restore_geometry_ = false;
+    /// Puts the settings on screen if the mode is on. Called on entering and when
+    /// an answer from the worker brings new values, so the size a teacher set is
+    /// what the mode uses whether it was read before or after the mode began.
+    void applyPresentationSettings();
     /// The CRT effect values in force, and the dialog that edits them.
     CrtOverlay::Settings crt_settings_;
     /// What was in force when the dialog opened. The preview overwrites

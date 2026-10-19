@@ -336,7 +336,8 @@ shared variable bus. There is no project panel yet.
 REPL bar's interpreter wiring (the bar is laid out and its signal exists; nothing is
 connected to it). Code PDF export and session HTML are built, as are the
 accessibility controls: View > High Contrast (Ctrl+Alt+H), the A+ text-size ladder,
-View > Focus Mode (F11) and View > CRT Settings with the four Screen Mode presets.
+View > Focus Mode (F11), View > Presentation Mode (Shift+F11) and View > CRT
+Settings with the four Screen Mode presets.
 The snippet library is built:
 Edit > Insert Snippet (Ctrl+Shift+I) reads `native/share/snippets.json`, which
 ships beside the application, and every snippet in it is syntax this build runs.
@@ -443,7 +444,9 @@ The **lessons system**, with progress tracking and a classroom mode, used to be 
 list. It is now implemented — see `docs/lessons/`. The class list is in the IDE as
 well: the right column's Classroom page shows the roster, the current assignment
 and one row of marks per learner, read through the bridge from the same files
-`teach.py` writes. The **telemetry HUD** was on it too
+`teach.py` writes. Presentation mode (View > Presentation Mode) hides the chrome
+and takes the lesson panel and console to the size and window style
+`teach.py present` sets. The **telemetry HUD** was on it too
 and is now the Telemetry tab described above.
 
 ---

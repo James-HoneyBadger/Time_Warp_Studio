@@ -1063,6 +1063,22 @@ void MainWindow::buildMenuBar() {
     focus_shortcut_->setEnabled(false);
     connect(focus_shortcut_, &QShortcut::activated, this, [this] { setFocusMode(false); });
 
+    // The classroom's mode: focus mode for an audience. The size and whether it
+    // takes the whole screen belong to the class, because `teach.py present`
+    // writes them, so the menu entry is only the switch.
+    presentation_action_ = view->addAction(tr("&Presentation Mode"));
+    presentation_action_->setObjectName(QStringLiteral("presentationModeAction"));
+    presentation_action_->setCheckable(true);
+    presentation_action_->setShortcut(QKeySequence{Qt::SHIFT | Qt::Key_F11});
+    connect(presentation_action_, &QAction::toggled, this,
+            [this](bool on) { setPresentationMode(on); });
+    presentation_shortcut_ = new QShortcut{QKeySequence{Qt::Key_Escape}, this};
+    presentation_shortcut_->setObjectName(QStringLiteral("presentationModeEscape"));
+    presentation_shortcut_->setContext(Qt::WindowShortcut);
+    presentation_shortcut_->setEnabled(false);
+    connect(presentation_shortcut_, &QShortcut::activated, this,
+            [this] { setPresentationMode(false); });
+
     view->addSeparator();
     // F10 is on the function-key bar; Ctrl+Shift+P is the convention everybody
     // already has in their fingers.
@@ -1324,6 +1340,12 @@ void MainWindow::setFocusMode(bool on) {
     if (focus_mode_ == on) {
         return;
     }
+    // Both modes own Escape, so the last one asked for wins rather than both
+    // being on and the key being ambiguous. This is the other half of the same
+    // rule in `setPresentationMode`.
+    if (on && presentation_mode_) {
+        setPresentationMode(false);
+    }
     focus_mode_ = on;
 
     if (on) {
@@ -1363,6 +1385,119 @@ void MainWindow::setFocusMode(bool on) {
     }
     setExecutionState(tr("ready"), on ? tr("Focus mode \u2014 press Esc to leave")
                                       : tr("Focus mode off"));
+}
+
+void MainWindow::setPresentationSettings(int fontPoints, bool fullscreen) {
+    presentation_font_ = fontPoints;
+    presentation_fullscreen_ = fullscreen;
+    applyPresentationSettings();
+}
+
+void MainWindow::applyPresentationSettings() {
+    if (!presentation_mode_) {
+        return;
+    }
+    if (presentation_font_ > 0) {
+        if (lesson_panel_ != nullptr) {
+            lesson_panel_->setPresentationFont(presentation_font_);
+        }
+        // The console and the two logs, at the projection size rather than the
+        // learner's ladder. Leaving the mode puts them back through
+        // `applyEditorSettings`, which is what owns them.
+        for (const QString& name : {QStringLiteral("consoleOutput"),
+                                    QStringLiteral("errorsLog"),
+                                    QStringLiteral("turtleLog")}) {
+            const QList<QPlainTextEdit*> logs = findChildren<QPlainTextEdit*>(name);
+            for (QPlainTextEdit* log : logs) {
+                QFont font = log->font();
+                font.setPointSize(presentation_font_);
+                log->setFont(font);
+            }
+        }
+    }
+    if (presentation_fullscreen_) {
+        if (!isFullScreen()) {
+            showFullScreen();
+            // Only a change this mode made is undone by leaving it; a window the
+            // user had already made full screen is their choice.
+            presentation_restore_geometry_ = true;
+        }
+    } else if (presentation_restore_geometry_ && isFullScreen()) {
+        // The class says windowed and this mode made it full screen: put it back
+        // but stay in the mode, which is what `teach.py present --windowed` means.
+        presentation_restore_geometry_ = false;
+        if (presentation_was_maximized_) {
+            showMaximized();
+        } else {
+            showNormal();
+        }
+    }
+}
+
+void MainWindow::setPresentationMode(bool on) {
+    if (presentation_mode_ == on) {
+        return;
+    }
+    // Both modes own Escape, and two owners make it ambiguous. Presentation is the
+    // stronger of the two -- it is the one with an audience -- so entering it ends
+    // focus mode; leaving it returns to the plain window.
+    if (on && focus_mode_) {
+        setFocusMode(false);
+    }
+    presentation_mode_ = on;
+    if (on) {
+        // The menu bar goes too: focus mode keeps it for the person at the
+        // keyboard, but a room does not need File and Edit above the lesson.
+        QList<QWidget*> chrome{menuBar(),         tool_bar_, tool_bar_secondary_,
+                               function_key_bar_, statusBar()};
+        for (QDockWidget* dock : findChildren<QDockWidget*>()) {
+            chrome.append(dock);
+        }
+        presentation_hidden_.clear();
+        for (QWidget* widget : chrome) {
+            if (widget != nullptr && widget->isVisible()) {
+                presentation_hidden_.append(QPointer<QWidget>{widget});
+                widget->setVisible(false);
+            }
+        }
+        presentation_was_maximized_ = isMaximized();
+        presentation_restore_geometry_ = false;
+        // The class's size may not have been read yet, and presentation mode is
+        // reachable without opening a panel first. One request settles it; the
+        // answer applies to the mode already on screen.
+        if (presentation_font_ <= 0 && ensureBridge()) {
+            static_cast<void>(python_worker_->requestClassroomPresentation());
+        }
+        applyPresentationSettings();
+    } else {
+        for (const QPointer<QWidget>& guarded : presentation_hidden_) {
+            QWidget* widget = guarded.data();
+            if (widget != nullptr) {
+                widget->setVisible(true);
+            }
+        }
+        presentation_hidden_.clear();
+        if (presentation_restore_geometry_) {
+            presentation_restore_geometry_ = false;
+            if (presentation_was_maximized_) {
+                showMaximized();
+            } else {
+                showNormal();
+            }
+        }
+        // The console goes back through the settings that own it, so the learner's
+        // scale is what returns rather than a guessed default.
+        applyEditorSettings(editor_settings_);
+    }
+    if (presentation_shortcut_ != nullptr) {
+        presentation_shortcut_->setEnabled(on);
+    }
+    if (presentation_action_ != nullptr && presentation_action_->isChecked() != on) {
+        QSignalBlocker blocker{presentation_action_};
+        presentation_action_->setChecked(on);
+    }
+    setExecutionState(tr("ready"), on ? tr("Presentation mode \u2014 press Esc to leave")
+                                      : tr("Presentation mode off"));
 }
 
 void MainWindow::setHighContrast(bool on) {
@@ -4164,6 +4299,11 @@ void MainWindow::adoptBridgeWorker() {
                 if (classroom_panel_ != nullptr) {
                     classroom_panel_->setMarks(rows);
                 }
+            });
+    connect(python_worker_.get(),
+            &timewarp::bridge::PythonWorker::classroomPresentationReceived, this,
+            [this](const timewarp::bridge::ClassroomPresentation& settings) {
+                setPresentationSettings(settings.fontSize, settings.fullscreen);
             });
     connect(python_worker_.get(), &timewarp::bridge::PythonWorker::classroomFailed, this,
             [this](const QString& request, const QString& error) {

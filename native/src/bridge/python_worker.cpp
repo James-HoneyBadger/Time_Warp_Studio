@@ -470,6 +470,19 @@ bool PythonWorker::requestClassroomMarks() {
     return true;
 }
 
+bool PythonWorker::requestClassroomPresentation() {
+    if (waiting_for_lesson_) {
+        return false;
+    }
+    QJsonObject message;
+    message[QStringLiteral("t")] = QStringLiteral("classroom-presentation");
+    if (!sendRequest(message)) {
+        return false;
+    }
+    waiting_for_lesson_ = true;
+    return true;
+}
+
 bool PythonWorker::requestHint(const QString& lesson, int checkpoint) {
     if (waiting_for_lesson_) {
         return false;
@@ -674,6 +687,21 @@ namespace {
     return student;
 }
 
+/// The `presentation` block, which both the curriculum and the class list carry.
+/// A payload from an older worker has none: `fontSize` stays zero, which is what
+/// "the worker did not say" looks like.
+[[nodiscard]] ClassroomPresentation presentationFrom(const QJsonObject& message) {
+    ClassroomPresentation settings;
+    const QJsonValue block = message.value(QStringLiteral("presentation"));
+    if (!block.isObject()) {
+        return settings;
+    }
+    const QJsonObject object = block.toObject();
+    settings.fontSize = object.value(QStringLiteral("font_size")).toInt();
+    settings.fullscreen = object.value(QStringLiteral("fullscreen")).toBool(true);
+    return settings;
+}
+
 [[nodiscard]] ClassroomMark markFrom(const QJsonObject& object) {
     ClassroomMark mark;
     mark.student = object.value(QStringLiteral("student")).toString();
@@ -765,13 +793,11 @@ void PythonWorker::handleMessage(const QByteArray& line) {
         }
         // A payload from an older worker has no presentation block; the panel's
         // own default is then used, which is what the `0` means.
-        int presentation_font = 0;
-        const QJsonValue presentation = message.value(QStringLiteral("presentation"));
-        if (presentation.isObject()) {
-            presentation_font =
-                presentation.toObject().value(QStringLiteral("font_size")).toInt();
+        const ClassroomPresentation presentation = presentationFrom(message);
+        if (message.value(QStringLiteral("presentation")).isObject()) {
+            emit classroomPresentationReceived(presentation);
         }
-        emit lessonsReceived(lessons, presentation_font);
+        emit lessonsReceived(lessons, presentation.fontSize);
         return;
     }
     if (kind == QLatin1String("lesson-progress")) {
@@ -807,6 +833,11 @@ void PythonWorker::handleMessage(const QByteArray& line) {
         for (const QJsonValue& value : assignment.value(QStringLiteral("lessons")).toArray()) {
             assigned.append(value.toString());
         }
+        // Before the roster, so a window reacting to a new class has the size it
+        // is taught at by the time it hears who is in it.
+        if (message.value(QStringLiteral("presentation")).isObject()) {
+            emit classroomPresentationReceived(presentationFrom(message));
+        }
         emit classroomRosterReceived(students, assigned,
                                      assignment.value(QStringLiteral("note")).toString());
         return;
@@ -823,6 +854,19 @@ void PythonWorker::handleMessage(const QByteArray& line) {
             rows.append(markFrom(item.toObject()));
         }
         emit classroomMarksReceived(rows);
+        return;
+    }
+    if (kind == QLatin1String("classroom-presentation")) {
+        waiting_for_lesson_ = false;
+        if (!message.value(QStringLiteral("ok")).toBool(true)) {
+            emit classroomFailed(QStringLiteral("classroom-presentation"),
+                                 message.value(QStringLiteral("error")).toString());
+            return;
+        }
+        ClassroomPresentation settings;
+        settings.fontSize = message.value(QStringLiteral("font_size")).toInt();
+        settings.fullscreen = message.value(QStringLiteral("fullscreen")).toBool(true);
+        emit classroomPresentationReceived(settings);
         return;
     }
     if (kind == QLatin1String("lesson-hint")) {

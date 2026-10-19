@@ -43,6 +43,7 @@
 
 namespace {
 
+using timewarp::bridge::ClassroomPresentation;
 using timewarp::bridge::LessonCheckpoint;
 using timewarp::bridge::LessonProgress;
 using timewarp::bridge::LessonSummary;
@@ -111,6 +112,8 @@ struct Recording {
     QString assignment_note;
     bool marks_arrived = false;
     QList<timewarp::bridge::ClassroomMark> marks;
+    bool presentation_arrived = false;
+    timewarp::bridge::ClassroomPresentation presentation;
     QString classroom_failure_request;
     QString classroom_failure_text;
 };
@@ -197,6 +200,11 @@ public:
                              recorded_.marks = rows;
                              recorded_.marks_arrived = true;
                          });
+        QObject::connect(&worker_, &PythonWorker::classroomPresentationReceived, &worker_,
+                         [this](const ClassroomPresentation& settings) {
+                             recorded_.presentation = settings;
+                             recorded_.presentation_arrived = true;
+                         });
         QObject::connect(&worker_, &PythonWorker::classroomFailed, &worker_,
                          [this](const QString& request, const QString& error) {
                              recorded_.classroom_failure_request = request;
@@ -225,6 +233,8 @@ public:
         recorded_.assignment_note.clear();
         recorded_.marks_arrived = false;
         recorded_.marks.clear();
+        recorded_.presentation_arrived = false;
+        recorded_.presentation = ClassroomPresentation{};
         recorded_.classroom_failure_request.clear();
         recorded_.classroom_failure_text.clear();
     }
@@ -451,6 +461,11 @@ void test_the_curriculum_arrives_without_the_answers() {
     // who set it with `teach.py present` gets the panel at that size. It is a real
     // number rather than zero, which is what "the worker did not say" looks like.
     TW_CHECK(harness.recorded().presentation_font > 0);
+    // And the block is parsed once for both signals, so the window style arrives
+    // with the size rather than as a second answer that could disagree.
+    TW_CHECK(harness.recorded().presentation_arrived);
+    TW_CHECK_EQ(harness.recorded().presentation.fontSize,
+                harness.recorded().presentation_font);
 }
 
 void test_a_correct_answer_passes_and_a_wrong_one_does_not() {
@@ -710,6 +725,7 @@ void test_the_class_list_and_its_marks_arrive() {
                                         "lesson = mode.lessons[0].id\n"
                                         "mode.assign([lesson], 'Chapter one')\n"
                                         "mode.distribute([lesson])\n"
+                                        "mode.set_presentation(26, fullscreen=False)\n"
                                         "print(student.student_id)\n"
                                         "print(lesson)\n"),
                                     data_dir.path(), &reason);
@@ -741,6 +757,11 @@ void test_the_class_list_and_its_marks_arrive() {
     TW_CHECK(first.students.at(0).directory.startsWith(data_dir.path()));
     TW_CHECK_EQ(first.assigned_lessons, QStringList{lesson_id});
     TW_CHECK_EQ(first.assignment_note, QStringLiteral("Chapter one"));
+    // The size the class is taught at rides on the class list, so a teacher who
+    // opened this page can enter presentation mode without another round trip.
+    TW_CHECK(first.presentation_arrived);
+    TW_CHECK_EQ(first.presentation.fontSize, 26);
+    TW_CHECK(!first.presentation.fullscreen);
 
     TW_CHECK(harness.worker().requestClassroomMarks());
     TW_CHECK(harness.waitFor([&harness] { return harness.recorded().marks_arrived; }));
@@ -795,6 +816,15 @@ void test_the_class_list_and_its_marks_arrive() {
         TW_CHECK(student.name == QStringLiteral("Ada Lovelace")
                  || student.name == QStringLiteral("Alan Turing"));
     }
+
+    // The dedicated request answers the same question without a roster or a
+    // marking walk: presentation mode is entered without opening a panel, and
+    // learning a font size must not cost a directory of programs being run.
+    harness.clearClassroom();
+    TW_CHECK(harness.worker().requestClassroomPresentation());
+    TW_CHECK(harness.waitFor([&harness] { return harness.recorded().presentation_arrived; }));
+    TW_CHECK_EQ(harness.recorded().presentation.fontSize, 26);
+    TW_CHECK(!harness.recorded().presentation.fullscreen);
 }
 
 /// Marking runs an interpreter, so it is refused while a program is running for

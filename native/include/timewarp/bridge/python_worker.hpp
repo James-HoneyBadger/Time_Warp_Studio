@@ -102,6 +102,15 @@ struct ClassroomStudent {
     QString directory;
 };
 
+/// How a class is shown when it is being taught from the front.
+///
+/// Read from `presentation.json`, which `teach.py present` writes. `fontSize` is
+/// zero when the worker did not say, which is what an older worker looks like.
+struct ClassroomPresentation {
+    int fontSize = 0;
+    bool fullscreen = true;
+};
+
 /// One row of the mark sheet: a learner, a lesson, and how many of its checkpoints
 /// their handed-in files passed.
 struct ClassroomMark {
@@ -216,6 +225,13 @@ public:
     bool requestClassroomRoster();
     /// Asks for every handed-in file, marked. Answers with `classroomMarksReceived`.
     bool requestClassroomMarks();
+    /// Asks for the size and window style a class is taught at. Answers with
+    /// `classroomPresentationReceived`.
+    ///
+    /// Its own request rather than a field on the roster: presentation mode is
+    /// entered without opening the classroom page, and it should not have to walk
+    /// every learner's folder to learn a font size.
+    bool requestClassroomPresentation();
 
     /// True when a lesson request has been sent and no answer has arrived.
     [[nodiscard]] bool isWaitingForLesson() const noexcept { return waiting_for_lesson_; }
@@ -290,6 +306,11 @@ signals:
                                  const QStringList& assignedLessons, const QString& note);
     /// The mark sheet: one row per learner per lesson.
     void classroomMarksReceived(const QList<timewarp::bridge::ClassroomMark>& rows);
+    /// The size and window style a class is taught at. It rides on both the
+    /// curriculum and the class list, because both are read from
+    /// `presentation.json`; the last answer wins and they cannot disagree.
+    void classroomPresentationReceived(
+        const timewarp::bridge::ClassroomPresentation& settings);
     /// A classroom request failed, named as above.
     void classroomFailed(const QString& request, const QString& error);
 
@@ -355,5 +376,6 @@ Q_DECLARE_METATYPE(QList<timewarp::bridge::TelemetryRow>)
 Q_DECLARE_METATYPE(QList<timewarp::bridge::LessonProgress>)
 Q_DECLARE_METATYPE(timewarp::bridge::ClassroomStudent)
 Q_DECLARE_METATYPE(timewarp::bridge::ClassroomMark)
+Q_DECLARE_METATYPE(timewarp::bridge::ClassroomPresentation)
 Q_DECLARE_METATYPE(QList<timewarp::bridge::ClassroomStudent>)
 Q_DECLARE_METATYPE(QList<timewarp::bridge::ClassroomMark>)

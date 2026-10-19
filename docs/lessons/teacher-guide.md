@@ -235,6 +235,15 @@ Sets the size a lesson is projected at, from 12 to 48. The IDE's lesson panel
 reads it when it loads the curriculum, so the panel a teacher opens is at the size
 they chose rather than at whatever the panel thought was sensible.
 
+`present 24 --windowed` keeps the IDE a window instead of taking the whole screen,
+for a machine driving a projector from a desktop that is also in use.
+
+In the IDE, **View > Presentation Mode** (Shift+F11) is the rest of it: the menu,
+the toolbars, the function-key row, the status bar and the docks go away, and the
+lesson panel and the console take this size. It reads the setting when the mode is
+entered, so a teacher who has not opened a panel yet still gets the size they
+chose. Escape leaves the mode and puts the chrome back.
+
 `present` with no number reports the current setting.
 
 ## 7. Writing a new lesson

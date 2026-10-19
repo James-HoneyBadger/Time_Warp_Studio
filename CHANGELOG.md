@@ -7,6 +7,14 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **Presentation mode, for teaching from the front.** View > Presentation Mode
+  (Shift+F11) is focus mode with an audience: the menu bar, both toolbars, the
+  function-key row, the status bar and every dock go away, and the lesson panel
+  and console grow to the size the class is projected at. The size and whether
+  the window takes the whole screen come from `teach.py present`, so a teacher
+  who ran `present 30 --windowed` on a shared desktop is not overruled by a
+  button. It asks the bridge for the setting when it is not already known, and
+  Escape leaves the mode, restoring exactly the chrome that was there.
 - **A classroom page in the IDE.** The right column's sixth page is the teacher's
   side of the curriculum: the class list, what has been assigned and the note
   that goes with it, and one row of marks per learner per lesson with how many

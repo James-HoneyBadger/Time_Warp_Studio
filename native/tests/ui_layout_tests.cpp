@@ -1358,6 +1358,114 @@ void test_focus_mode_hides_and_restores_the_chrome() {
     }
 }
 
+void test_presentation_mode_is_focus_mode_for_a_room() {
+    announce("presentation mode");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    auto* action = window->findChild<QAction*>(QStringLiteral("presentationModeAction"));
+    TW_CHECK(action != nullptr);
+    if (action == nullptr) {
+        return;
+    }
+    TW_CHECK(action->isCheckable());
+    // Next to F11, which already means "give the editor the window": this one is
+    // the same idea with an audience.
+    TW_CHECK_EQ(action->shortcut(), QKeySequence{Qt::SHIFT | Qt::Key_F11});
+    TW_CHECK(!window->presentationMode());
+
+    auto* escape = window->findChild<QShortcut*>(QStringLiteral("presentationModeEscape"));
+    TW_CHECK(escape != nullptr);
+    if (escape != nullptr) {
+        TW_CHECK(!escape->isEnabled());
+    }
+
+    // A windowed class, so this test says nothing about the machine's screen.
+    window->setPresentationSettings(28, false);
+
+    const bool bar_before = window->mainToolBar()->isVisible();
+    const bool second_before = window->secondaryToolBar()->isVisible();
+    const bool keys_before = window->functionKeyBar()->isVisible();
+    const bool status_before = window->statusBar()->isVisible();
+    const bool menu_before = window->menuBar()->isVisible();
+    TW_CHECK(bar_before);
+    TW_CHECK(keys_before);
+
+    auto* console = window->findChild<QPlainTextEdit*>(QStringLiteral("consoleOutput"));
+    auto* description = window->findChild<QLabel*>(QStringLiteral("lessonDescription"));
+    TW_CHECK(console != nullptr);
+    TW_CHECK(description != nullptr);
+    const int console_before = console == nullptr ? 0 : console->font().pointSize();
+
+    action->trigger();
+    TW_CHECK(window->presentationMode());
+    // The menu bar goes too: focus mode keeps it for the person at the keyboard,
+    // but a room does not need File and Edit above the lesson.
+    TW_CHECK(!window->menuBar()->isVisible());
+    TW_CHECK(!window->mainToolBar()->isVisible());
+    TW_CHECK(!window->secondaryToolBar()->isVisible());
+    TW_CHECK(!window->functionKeyBar()->isVisible());
+    TW_CHECK(!window->statusBar()->isVisible());
+    TW_CHECK(!window->isFullScreen());
+    if (escape != nullptr) {
+        TW_CHECK(escape->isEnabled());
+    }
+    // The two surfaces that have to be readable from the back of the room.
+    if (console != nullptr) {
+        TW_CHECK_EQ(console->font().pointSize(), 28);
+    }
+    if (description != nullptr) {
+        TW_CHECK_EQ(description->font().pointSize(), 28);
+    }
+
+    // A size set while presenting lands without leaving the mode, which is what
+    // Refresh after `teach.py present` does.
+    window->setPresentationSettings(32, false);
+    if (console != nullptr) {
+        TW_CHECK_EQ(console->font().pointSize(), 32);
+    }
+
+    action->trigger();
+    TW_CHECK(!window->presentationMode());
+    TW_CHECK_EQ(window->menuBar()->isVisible(), menu_before);
+    TW_CHECK_EQ(window->mainToolBar()->isVisible(), bar_before);
+    TW_CHECK_EQ(window->secondaryToolBar()->isVisible(), second_before);
+    TW_CHECK_EQ(window->functionKeyBar()->isVisible(), keys_before);
+    TW_CHECK_EQ(window->statusBar()->isVisible(), status_before);
+    if (escape != nullptr) {
+        TW_CHECK(!escape->isEnabled());
+    }
+    // The console goes back through the settings that own it, not a guessed size.
+    if (console != nullptr) {
+        TW_CHECK_EQ(console->font().pointSize(), console_before);
+    }
+
+    // Esc is the way out, and it un-binds itself on the way out.
+    window->setPresentationMode(true);
+    TW_CHECK(window->presentationMode());
+    if (escape != nullptr) {
+        QMetaObject::invokeMethod(escape, "activated");
+    }
+    TW_CHECK(!window->presentationMode());
+    TW_CHECK(window->mainToolBar()->isVisible());
+
+    // Both modes own Escape, so asking for one while the other is on hands over
+    // rather than leaving two Escape shortcuts competing for the key.
+    window->setPresentationMode(true);
+    window->setFocusMode(true);
+    TW_CHECK(!window->presentationMode());
+    TW_CHECK(window->focusMode());
+    window->setFocusMode(false);
+
+    // A class that asks for the whole screen gets it, and gets its window back.
+    window->setPresentationSettings(24, true);
+    window->setPresentationMode(true);
+    TW_CHECK(window->presentationMode());
+    TW_CHECK(window->isFullScreen());
+    window->setPresentationMode(false);
+    TW_CHECK(!window->presentationMode());
+    TW_CHECK(!window->isFullScreen());
+    TW_CHECK(window->mainToolBar()->isVisible());
+}
+
 void test_command_palette() {
     announce("command palette");
     MainWindow window;
@@ -2801,6 +2909,7 @@ int main(int argc, char** argv) {
     test_high_contrast_toggles_and_restores_the_palette();
     test_font_scale_ladder();
     test_focus_mode_hides_and_restores_the_chrome();
+    test_presentation_mode_is_focus_mode_for_a_room();
     test_command_palette();
     test_standalone_payload();
     test_tool_bar_configuration();

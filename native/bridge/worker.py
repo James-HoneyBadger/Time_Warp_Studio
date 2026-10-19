@@ -75,11 +75,13 @@ The class list and its marks belong to `features/classroom_mode.py`, which
 
     {"t": "classroom-roster"}             # the class list and the assignment
     {"t": "classroom-marks"}              # every handed-in file, marked
+    {"t": "classroom-presentation"}       # the size and window style for a lesson
 
 The answers:
 
     {"t": "classroom-roster", "ok": true, "students": [ ... ]}
     {"t": "classroom-marks", "ok": true, "rows": [ ... ]}
+    {"t": "classroom-presentation", "ok": true, "font_size": 24, "fullscreen": true}
 
 An empty class is `ok` with no students, not an error: a new teacher has not
 broken anything. Marks are refused while a program is running, because marking
@@ -817,6 +819,26 @@ class ClassroomService:
             }
         )
 
+    def presentation(self, emitter: "Emitter") -> None:
+        """The size and window style a lesson is taught at.
+
+        A request of its own because presentation mode is entered without opening
+        the classroom page: learning a font size must not cost a walk over every
+        learner's folder, which is what asking for the marks would do.
+        """
+        mode = self._load(emitter, "classroom-presentation")
+        if mode is None:
+            return
+        settings = mode.presentation.to_dict()
+        emitter.send(
+            {
+                "t": "classroom-presentation",
+                "ok": True,
+                "font_size": settings["font_size"],
+                "fullscreen": settings["fullscreen"],
+            }
+        )
+
     def marks(self, emitter: "Emitter") -> None:
         mode = self._load(emitter, "classroom-marks")
         if mode is None:
@@ -918,6 +940,8 @@ def main(argv: Optional[List[str]] = None) -> int:
             lessons.reset(emitter, message)
         elif kind == "classroom-roster":
             classroom.roster(emitter)
+        elif kind == "classroom-presentation":
+            classroom.presentation(emitter)
         elif kind == "classroom-marks":
             # Marking runs the verifier, and the verifier runs an interpreter:
             # the same race `lesson-check` refuses above. The class list is a

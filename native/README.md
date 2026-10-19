@@ -1162,6 +1162,13 @@ module `teach.py` writes, so the mark the panel shows and `teach.py collect`'s a
 function's answer. The class list is a file read and answers at any time; the marks run
 the verifier and are refused while a program is running, for the reason above.
 
+**Presentation mode** (View > Presentation Mode, Shift+F11) is focus mode for a room:
+it hides the menu bar as well as the toolbars, status bar and docks, and takes the
+lesson panel and the log views to the size the class is projected at. The size and
+the full-screen choice come from `presentation.json` through a
+`classroom-presentation` request, so `teach.py present --windowed` is obeyed; the
+same block rides on the curriculum and class-list answers and is parsed once.
+
 `TurtleCanvas` is a real graphics surface, not a stand-in. Whichever engine runs,
 the path is the same: turtle calls become `CanvasCommand`s, the producer pushes
 them into a `CanvasCommandQueue`, and `CanvasBridge` drains that queue on the GUI
