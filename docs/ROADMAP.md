@@ -23,14 +23,14 @@ derived rather than remembered.
 | Shell | Documents and tabs, menus, toolbars, status bar, settings persistence, the last session's files restored at launch |
 | Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, find in files, go-to-line, tab stops, fonts, error squiggles with gutter markers, completion, auto-indent, Format Code |
 | Console | Streaming output, and interpreter errors in their own tab |
-| Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker |
+| Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
-| Languages | 10 languages, 48 verified example programs |
+| Languages | 10 languages, 49 verified example programs |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
 | Bridged engines | None — every language runs in process. `native/bridge/` remains as the reference the parity gates and the lesson check use |
 | Native executors | All ten — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk and Scheme whole-program |
 | Packaging | `make install` with the desktop entry and icon; `DESTDIR` staging |
-| Quality gates | 13 CTest suites in 4 build configurations, 3 parity gates, 551 engine tests, 445 command rows, 461 parity programs |
+| Quality gates | 17 CTest suites in 4 build configurations, 3 parity gates, 560 engine tests, 446 command rows, 472 parity programs |
 
 ---
 

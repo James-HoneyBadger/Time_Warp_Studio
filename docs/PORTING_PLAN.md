@@ -62,7 +62,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 1 | Editor completion | Find in Files ✅, Format Code ✅, Snippets ✅, whitespace ✅, minimap ✅, run history ✅, run selection ✅, reset ✅ | M | 0 |
 | 2 | Data safety | autosave ✅, version history ✅ | M | 0 |
 | 3 | Help and learnability | documentation browser ✅, F1 ✅, keyword inspector ✅, guided tour ✅ | M | 0 |
-| 4 | Canvas time travel | scrubber, GIF recording, SVG export | M | 4.3 needs a dependency decision |
+| 4 | Canvas time travel | scrubber ✅, GIF recording, SVG export | M | 4.3 needs a dependency decision |
 | 5 | Export and print | PDF, print, session HTML | M | 5.2 needs a dependency decision |
 | 6 | Debugging breadth | breakpoints everywhere, pause/step for line-by-line languages, profiler | L | 0, best after 1 |
 | 7 | Workspace | document outline, terminal, split editor, run both panes | M | 7.3 needs 1.5 |
@@ -345,6 +345,16 @@ Old: `canvas.py:168` — a slider that replays the drawing after a run
 **Tests** (`turtle_canvas_tests`): drawing 100 segments and scrubbing to 40 paints
 40; playback reaches the full count; export after scrubbing produces the same PNG
 hash as export without it.
+
+**Done.** `TurtleCanvas` now keeps a `history()` of typed entries alongside the two
+primitive lists, and `paintInk(painter, frames)` walks it in draw order — the old
+paint loop drew every stroke and then every shape, which put a rectangle painted
+between two lines underneath both. `scrubber.{hpp,cpp}` is the strip, mounted with
+the canvas in one pane under the output splitter and hidden until `frameCount()`
+is positive. `setVisibleFrame` is deliberately silent (no `contentChanged`), which
+is what keeps a scrub from being mistaken for new ink. Tests cover the prefix
+count, both ink counters, the export invariant by comparing rendered images, the
+interleaved order, clamping, and playback from the end.
 
 ### 4.2 GIF recording (S–M, needs a decision)
 

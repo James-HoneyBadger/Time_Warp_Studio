@@ -589,6 +589,7 @@ if(Qt6_FOUND)
             src/ui/panels.cpp
             src/ui/preferences.cpp
             src/ui/resizable_tab_widget.cpp
+            src/ui/scrubber.cpp
             src/ui/snippet_dialog.cpp
             src/ui/snippets.cpp
             src/ui/sound_player.cpp
@@ -616,6 +617,7 @@ if(Qt6_FOUND)
             include/timewarp/ui/panels.hpp
             include/timewarp/ui/preferences.hpp
             include/timewarp/ui/resizable_tab_widget.hpp
+            include/timewarp/ui/scrubber.hpp
             include/timewarp/ui/sound_player.hpp
             include/timewarp/ui/standalone.hpp
             include/timewarp/ui/syntax_highlighter.hpp

@@ -292,6 +292,13 @@ touches it.
   `forward` is `x += d·sin(h), y += d·cos(h)`, and `circle` is a polygon walk. A canvas
   that draws a mirrored or quarter-turned version of the same program is worse than no
   canvas at all. `turtle_canvas_tests` asserts all three.
+- **History is in draw order, and scrubbing only limits the view.** A third list
+  records whether each primitive is a stroke or a shape and its index, so a
+  rectangle painted between two lines comes back between them. `paintEvent`
+  paints the first `visibleFrameCount()` entries; `renderedDrawing`, export and
+  `fitToContent` use the whole list. Keeping the two ideas apart is what lets the
+  scrubber be a view control rather than a mode the rest of the window has to
+  know about.
 
 ### The CHIP-8 emulator window
 

@@ -60,6 +60,7 @@
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
+#include "timewarp/ui/scrubber.hpp"
 #include "timewarp/ui/snippet_dialog.hpp"
 #include "timewarp/ui/snippets.hpp"
 #include "timewarp/ui/sound_player.hpp"
@@ -595,9 +596,45 @@ void MainWindow::buildOutputColumn() {
 
     // The real canvas, not a stand-in. It consumes the command queue through
     // the bridge below, so a turtle program's output has somewhere to land.
-    turtle_canvas_ = new TurtleCanvas{output_canvas_splitter_};
-    output_canvas_splitter_->addWidget(turtle_canvas_);
+    //
+    // Canvas and scrubber share a pane so the playback strip is part of the
+    // drawing surface: collapsing the canvas takes them together, and the
+    // splitter still moves one thing.
+    auto* canvas_pane = new QWidget{output_canvas_splitter_};
+    canvas_pane->setObjectName(QStringLiteral("canvasPane"));
+    auto* canvas_column = new QVBoxLayout{canvas_pane};
+    canvas_column->setContentsMargins(0, 0, 0, 0);
+    canvas_column->setSpacing(0);
+
+    turtle_canvas_ = new TurtleCanvas{canvas_pane};
+    canvas_column->addWidget(turtle_canvas_, 1);
+
+    scrubber_ = new Scrubber{canvas_pane};
+    // Hidden until there is ink: an empty window should not offer to replay a
+    // drawing that does not exist, and the canvas gets the height instead.
+    scrubber_->setVisible(false);
+    canvas_column->addWidget(scrubber_);
+
+    output_canvas_splitter_->addWidget(canvas_pane);
     output_canvas_splitter_->setSizes({kOutputHeight, kCanvasHeight});
+
+    connect(scrubber_, &Scrubber::frameRequested, this, [this](int frame) {
+        if (turtle_canvas_ != nullptr) {
+            turtle_canvas_->setVisibleFrame(frame);
+        }
+    });
+    connect(turtle_canvas_, &TurtleCanvas::contentChanged, this, [this] {
+        if (turtle_canvas_ == nullptr || scrubber_ == nullptr) {
+            return;
+        }
+        const int frames = turtle_canvas_->frameCount();
+        if (frames != scrubber_->frames()) {
+            scrubber_->setFrames(frames);
+            scrubber_->setVisibleFrame(turtle_canvas_->visibleFrameCount());
+        }
+        // A `clear` empties the history, so this also hides the strip again.
+        scrubber_->setVisible(frames > 0);
+    });
 
     // The queue takes no ownership and does not start a thread: the producer
     // pushes from whichever thread runs the interpreter, and the bridge drains

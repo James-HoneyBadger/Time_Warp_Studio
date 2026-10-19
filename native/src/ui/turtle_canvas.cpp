@@ -165,6 +165,8 @@ void TurtleCanvas::apply(const timewarp::canvas::CanvasCommandView& view) {
             // `clear` means "wipe the paper", not "start the program over".
             strokes_.clear();
             shapes_.clear();
+            history_.clear();
+            visible_frames_ = 0;
             content_bounds_ = QRectF{};
             has_bounds_ = false;
             recomputeFit();
@@ -186,7 +188,7 @@ void TurtleCanvas::apply(const timewarp::canvas::CanvasCommandView& view) {
             shape.at = QPointF{command.x, command.y};
             shape.color = QColor{command.red(), command.green(), command.blue()};
             shape.width = command.w > 0.0 ? command.w : pen_width_;
-            shapes_.append(shape);
+            appendShape(shape);
             growBounds(QRectF{shape.at, shape.at});
             break;
         }
@@ -221,7 +223,7 @@ void TurtleCanvas::apply(const timewarp::canvas::CanvasCommandView& view) {
             shape.color = QColor{command.red(), command.green(), command.blue()};
             shape.width = pen_width_;
             shape.filled = command.is_filled();
-            shapes_.append(shape);
+            appendShape(shape);
             growBounds(shape.rect);
             break;
         }
@@ -234,7 +236,7 @@ void TurtleCanvas::apply(const timewarp::canvas::CanvasCommandView& view) {
             shape.b = command.b;
             shape.color = QColor{command.red(), command.green(), command.blue()};
             shape.width = pen_width_;
-            shapes_.append(shape);
+            appendShape(shape);
             growBounds(shape.rect);
             break;
         }
@@ -246,7 +248,7 @@ void TurtleCanvas::apply(const timewarp::canvas::CanvasCommandView& view) {
             shape.color = QColor{command.red(), command.green(), command.blue()};
             shape.text = QString::fromUtf8(view.text.data(),
                                            static_cast<qsizetype>(view.text.size()));
-            shapes_.append(shape);
+            appendShape(shape);
             // A text box is not known until it is laid out, so the bounds take a
             // nominal extent. Over-tight bounds only change how much margin the
             // fit leaves, never whether the ink is drawn.
@@ -348,12 +350,55 @@ void TurtleCanvas::appendStyledStroke(const QPointF& from, const QPointF& to,
         return;
     }
     strokes_.append(Stroke{QLineF{from, to}, color, width});
+    history_.append(HistoryEntry{HistoryEntry::Kind::Stroke,
+                                 static_cast<int>(strokes_.size()) - 1});
+    // New ink follows the live view: a program streaming while the user has
+    // scrubbed back should not leave them looking at the past.
+    visible_frames_ = static_cast<int>(history_.size());
     growBounds(QRectF{from, to}.normalized());
+}
+
+void TurtleCanvas::appendShape(const Shape& shape) {
+    shapes_.append(shape);
+    history_.append(HistoryEntry{HistoryEntry::Kind::Shape,
+                                 static_cast<int>(shapes_.size()) - 1});
+    visible_frames_ = static_cast<int>(history_.size());
+}
+
+void TurtleCanvas::setVisibleFrame(int frame) {
+    const int clamped = std::clamp(frame, 0, frameCount());
+    if (clamped == visible_frames_) {
+        return;
+    }
+    visible_frames_ = clamped;
+    update();
+}
+
+int TurtleCanvas::visibleStrokeCount() const noexcept {
+    int count = 0;
+    for (int index = 0; index < visible_frames_ && index < history_.size(); ++index) {
+        if (history_[index].kind == HistoryEntry::Kind::Stroke) {
+            ++count;
+        }
+    }
+    return count;
+}
+
+int TurtleCanvas::visibleShapeCount() const noexcept {
+    int count = 0;
+    for (int index = 0; index < visible_frames_ && index < history_.size(); ++index) {
+        if (history_[index].kind == HistoryEntry::Kind::Shape) {
+            ++count;
+        }
+    }
+    return count;
 }
 
 void TurtleCanvas::reset() {
     strokes_.clear();
     shapes_.clear();
+    history_.clear();
+    visible_frames_ = 0;
     content_bounds_ = QRectF{};
     has_bounds_ = false;
     position_ = QPointF{0.0, 0.0};
@@ -568,7 +613,7 @@ void TurtleCanvas::paintEvent(QPaintEvent* /*event*/) {
     // Antialiasing off for the ink and on for the marker: a drawn line wants to
     // be crisp, and a nine-pixel arrow wants to look like an arrow.
     painter.setRenderHint(QPainter::Antialiasing, false);
-    paintInk(painter);
+    paintInk(painter, visible_frames_);
     painter.setRenderHint(QPainter::Antialiasing, true);
     paintTurtle(painter);
 }
@@ -587,7 +632,9 @@ QImage TurtleCanvas::renderedDrawing(double factor) const {
     // line stays 4 units wide in the exported picture.
     painter.setRenderHint(QPainter::Antialiasing, false);
     painter.scale(safe, safe);
-    paintInk(painter);
+    // The whole list, never the visible count: scrubbing is a view, and an
+    // export after a scrub has to be the same picture as an export without one.
+    paintInk(painter, frameCount());
     return image;
 }
 
@@ -657,29 +704,37 @@ void TurtleCanvas::paintGrid(QPainter& painter) {
     }
 }
 
-void TurtleCanvas::paintInk(QPainter& painter) const {
+void TurtleCanvas::paintInk(QPainter& painter, int frames) const {
     // The pen is set on a style change rather than per segment. A turtle program
     // emits long runs of one colour and width, and that grouping is what keeps a
     // drawing of a hundred thousand segments repainting instantly.
     QColor current_color;
     double current_width = -1.0;
-    for (const Stroke& stroke : strokes_) {
-        if (stroke.color != current_color || stroke.width != current_width) {
-            current_color = stroke.color;
-            current_width = stroke.width;
-            QPen pen{current_color};
-            // Scaled by the view: a pen width is a world-space figure, so
-            // otherwise a 4-unit line and a 400-unit line would look identical,
-            // which defeats the point of setting a width at all.
-            pen.setWidthF(std::max(0.5, stroke.width * scale()));
-            pen.setCapStyle(Qt::RoundCap);
-            pen.setJoinStyle(Qt::RoundJoin);
-            painter.setPen(pen);
+    const int count = std::min(frames, static_cast<int>(history_.size()));
+    for (int entry_index = 0; entry_index < count; ++entry_index) {
+        const HistoryEntry& entry = history_[entry_index];
+        if (entry.kind == HistoryEntry::Kind::Stroke) {
+            const Stroke& stroke = strokes_[entry.index];
+            if (stroke.color != current_color || stroke.width != current_width) {
+                current_color = stroke.color;
+                current_width = stroke.width;
+                QPen pen{current_color};
+                // Scaled by the view: a pen width is a world-space figure, so
+                // otherwise a 4-unit line and a 400-unit line would look identical,
+                // which defeats the point of setting a width at all.
+                pen.setWidthF(std::max(0.5, stroke.width * scale()));
+                pen.setCapStyle(Qt::RoundCap);
+                pen.setJoinStyle(Qt::RoundJoin);
+                painter.setPen(pen);
+            }
+            painter.drawLine(toScreen(stroke.line.p1()), toScreen(stroke.line.p2()));
+            continue;
         }
-        painter.drawLine(toScreen(stroke.line.p1()), toScreen(stroke.line.p2()));
-    }
 
-    for (const Shape& shape : shapes_) {
+        const Shape& shape = shapes_[entry.index];
+        // A shape sets its own pen and brush; the next stroke must not inherit
+        // either, so the cached style is invalidated.
+        current_width = -1.0;
         QPen pen{shape.color};
         pen.setWidthF(std::max(0.5, shape.width * scale()));
         pen.setCapStyle(Qt::RoundCap);

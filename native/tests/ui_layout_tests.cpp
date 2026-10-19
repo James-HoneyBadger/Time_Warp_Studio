@@ -51,6 +51,7 @@
 #include <QWidgetAction>
 
 #include "check.hpp"
+#include "timewarp/canvas/command.hpp"
 #include "timewarp/ui/autosave.hpp"
 #include "timewarp/ui/chip8_window.hpp"
 #include "timewarp/ui/code_editor.hpp"
@@ -59,6 +60,7 @@
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/preferences.hpp"
+#include "timewarp/ui/scrubber.hpp"
 #include "timewarp/ui/snippet_dialog.hpp"
 #include "timewarp/ui/snippets.hpp"
 #include "timewarp/ui/standalone.hpp"
@@ -615,10 +617,51 @@ void test_output_and_graphics_share_a_persistent_split() {
     TW_CHECK_EQ(pane->handleWidth(), 5);
     TW_CHECK_EQ(pane->count(), 2);
     TW_CHECK_EQ(pane->widget(0), window->outputSubTabs());
-    TW_CHECK_EQ(pane->widget(1)->objectName(), QStringLiteral("turtleCanvas"));
+    // Canvas and playback strip travel together in one pane.
+    TW_CHECK_EQ(pane->widget(1)->objectName(), QStringLiteral("canvasPane"));
+    TW_CHECK(pane->widget(1)->findChild<timewarp::ui::TurtleCanvas*>() != nullptr);
     // 200:300 -- the canvas gets the larger share of the right column, which is
     // the point of showing both at once rather than flipping between them.
     TW_CHECK(std::abs(fraction(pane, 1) - 0.6) < 0.08);
+}
+
+void test_the_scrubber_appears_only_when_there_is_ink() {
+    announce("canvas scrubber");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    auto* scrubber = window->findChild<timewarp::ui::Scrubber*>(QStringLiteral("scrubber"));
+    TW_CHECK(scrubber != nullptr);
+    if (scrubber == nullptr) {
+        return;
+    }
+    // An empty canvas has nothing to replay, so the strip keeps out of the way
+    // and gives the drawing its height.
+    TW_CHECK(!scrubber->isVisible());
+    TW_CHECK_EQ(scrubber->frames(), 0);
+
+    auto forward = timewarp::canvas::make_motion(
+        timewarp::canvas::CanvasCommandKind::Forward, 20.0);
+    window->turtleCanvas()->apply(timewarp::canvas::CanvasCommandView{forward, {}, {}});
+    TW_CHECK_EQ(scrubber->frames(), 1);
+    TW_CHECK(scrubber->isVisible());
+    TW_CHECK_EQ(scrubber->visibleFrame(), 1);
+
+    // The slider is what a user drags, and it drives the canvas's view without
+    // deleting the ink behind it.
+    auto* slider = scrubber->findChild<QSlider*>(QStringLiteral("scrubberSlider"));
+    TW_CHECK(slider != nullptr);
+    if (slider != nullptr) {
+        slider->setValue(0);
+        TW_CHECK_EQ(window->turtleCanvas()->visibleFrameCount(), 0);
+        TW_CHECK_EQ(window->turtleCanvas()->strokeCount(), 1);
+        slider->setValue(1);
+        TW_CHECK_EQ(window->turtleCanvas()->visibleFrameCount(), 1);
+    }
+
+    // `clear` empties the history, which hides the strip again.
+    auto clear = timewarp::canvas::make_command(timewarp::canvas::CanvasCommandKind::Clear);
+    window->turtleCanvas()->apply(timewarp::canvas::CanvasCommandView{clear, {}, {}});
+    TW_CHECK_EQ(scrubber->frames(), 0);
+    TW_CHECK(!scrubber->isVisible());
 }
 
 void test_output_sub_tabs() {
@@ -2094,6 +2137,7 @@ int main(int argc, char** argv) {
     test_telemetry_panel_contract();
     test_debug_panel_is_scheme_only();
     test_output_and_graphics_share_a_persistent_split();
+    test_the_scrubber_appears_only_when_there_is_ink();
     test_output_sub_tabs();
     test_function_key_bar_is_fixed_height();
     test_function_key_layers();

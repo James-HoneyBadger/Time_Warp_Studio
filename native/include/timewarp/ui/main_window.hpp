@@ -94,6 +94,7 @@ class LessonPanel;
 class NativeRunner;
 class PlaceholderPanel;
 class ResizableTabWidget;
+class Scrubber;
 class SoundPlayer;
 class TelemetryPanel;
 class TourGuide;
@@ -643,6 +644,9 @@ private:
 
     // -- execution --------------------------------------------------------
     TurtleCanvas* turtle_canvas_ = nullptr;
+    /// The playback strip under the canvas. Hidden until there is ink to
+    /// scrub, so an empty window keeps its full canvas height.
+    Scrubber* scrubber_ = nullptr;
     /// Program output and errors, both read-only views. Named apart from the
     /// Starts the bridge if it is not running. Distinct from `runInBridge`,
     /// which also clears the console and canvas: a lesson check must not wipe the

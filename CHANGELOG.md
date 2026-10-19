@@ -7,6 +7,13 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **Scrubbing the drawing.** A playback strip under the canvas — play/pause and
+  a frame slider — appears as soon as a run has left ink. The canvas keeps the
+  primitives in draw order (strokes and shapes interleaved as they were drawn),
+  and the strip only changes how many of them are *shown*: export, fit-to-content
+  and the ink counters still use the whole drawing, so scrubbing cannot lose a
+  picture. Playback advances at 60 Hz, with the step chosen so a long drawing
+  still finishes in about ten seconds, and new ink rejoins the live view.
 - **A guided tour and one-time coach marks.** A first run opens a four-step tour
   anchored to the real controls — Run, the canvas, the Lessons panel and the
   function-key bar — each step dimming the rest of the window and naming what the

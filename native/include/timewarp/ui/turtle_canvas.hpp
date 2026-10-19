@@ -132,6 +132,33 @@ public:
     }
     /// Shape primitives (points, rectangles, ellipses, arcs, text, circles).
     [[nodiscard]] int shapeCount() const noexcept { return static_cast<int>(shapes_.size()); }
+
+    // -- scrubbing --------------------------------------------------------
+    //
+    // The ink in draw order, not the two lists separately: a rectangle painted
+    // between two lines has to come back between them. A frame is one primitive,
+    // which is the unit the old scrubber counted and what a drawing of 100
+    // segments makes mean "show the first 40".
+
+    struct HistoryEntry {
+        enum class Kind { Stroke, Shape };
+        Kind kind = Kind::Stroke;
+        int index = 0;  ///< Index into `strokes_` or `shapes_`.
+    };
+
+    [[nodiscard]] const QVector<HistoryEntry>& history() const noexcept {
+        return history_;
+    }
+    /// Total primitives, which is the scrubber's maximum.
+    [[nodiscard]] int frameCount() const noexcept { return static_cast<int>(history_.size()); }
+    /// How many of them the view is showing. Equal to `frameCount` until a
+    /// scrub moves it back.
+    [[nodiscard]] int visibleFrameCount() const noexcept { return visible_frames_; }
+    /// Shows the first *frame* primitives. A view only: export, fit and the ink
+    /// counts still use the whole list.
+    void setVisibleFrame(int frame);
+    [[nodiscard]] int visibleStrokeCount() const noexcept;
+    [[nodiscard]] int visibleShapeCount() const noexcept;
     /// Total world-space length of every stroke. A drawing that "appeared" but
     /// came out the wrong size shows up here and nowhere in a pixel comparison.
     [[nodiscard]] double totalStrokeLength() const;
@@ -236,6 +263,9 @@ private:
     void appendStroke(const QPointF& from, const QPointF& to);
     void appendStyledStroke(const QPointF& from, const QPointF& to,
                             const QColor& color, double width);
+    /// Appends a shape and its history entry, so no draw path can add one
+    /// without the other.
+    void appendShape(const Shape& shape);
 
     /// Unit vector the turtle is facing, in world coordinates.
     [[nodiscard]] QPointF headingVector() const;
@@ -249,7 +279,10 @@ private:
 
     // -- painting ---------------------------------------------------------
     void paintGrid(QPainter& painter);
-    void paintInk(QPainter& painter) const;
+    /// Paints the first *frames* history entries. `paintEvent` passes the
+    /// visible count; export passes the whole list, which is what makes
+    /// scrubbing a view rather than a state change.
+    void paintInk(QPainter& painter, int frames) const;
     void paintTurtle(QPainter& painter);
 
     // -- state ------------------------------------------------------------
@@ -266,6 +299,8 @@ private:
 
     QVector<Stroke> strokes_;
     QVector<Shape> shapes_;
+    QVector<HistoryEntry> history_;
+    int visible_frames_ = 0;
     QRectF content_bounds_;
     /// Whether `content_bounds_` means anything. A separate flag rather than
     /// `content_bounds_.isNull()`, because a single point and a horizontal line

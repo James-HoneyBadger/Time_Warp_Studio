@@ -33,11 +33,13 @@
 #include <QImage>
 #include <QPointF>
 #include <QSettings>
+#include <QSlider>
 #include <QTemporaryDir>
 #include <QWidget>
 
 #include "check.hpp"
 #include "timewarp/canvas/command.hpp"
+#include "timewarp/ui/scrubber.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
 namespace {
@@ -45,6 +47,7 @@ namespace {
 using timewarp::canvas::CanvasCommand;
 using timewarp::canvas::CanvasCommandKind;
 using timewarp::canvas::CanvasCommandView;
+using timewarp::ui::Scrubber;
 using timewarp::ui::TurtleCanvas;
 
 void announce(const char* name) {
@@ -458,6 +461,130 @@ void test_the_drawing_can_be_exported() {
     TW_CHECK(!error.isEmpty());
 }
 
+// ---------------------------------------------------------------------------
+// Scrubbing
+// ---------------------------------------------------------------------------
+
+void test_scrubbing_shows_a_prefix_without_losing_the_drawing() {
+    announce("scrub the drawing");
+    TurtleCanvas canvas;
+    canvas.resize(400, 400);
+    for (int segment = 0; segment < 100; ++segment) {
+        push_forward(canvas, 2.0);
+        push_right(canvas, 3.6);
+    }
+    canvas.fitToContent();
+    TW_CHECK_EQ(canvas.frameCount(), 100);
+    TW_CHECK_EQ(canvas.visibleFrameCount(), 100);
+    TW_CHECK_EQ(canvas.visibleStrokeCount(), 100);
+
+    const QImage before = canvas.renderedDrawing(1.0);
+
+    canvas.setVisibleFrame(40);
+    TW_CHECK_EQ(canvas.visibleFrameCount(), 40);
+    TW_CHECK_EQ(canvas.visibleStrokeCount(), 40);
+    // Hidden, not deleted: the slider must be able to come back.
+    TW_CHECK_EQ(canvas.strokeCount(), 100);
+    TW_CHECK_EQ(canvas.frameCount(), 100);
+
+    // Scrubbing is a view. An export of a half-drawn picture would be a
+    // surprise, so the whole drawing is always written.
+    TW_CHECK(canvas.renderedDrawing(1.0) == before);
+
+    canvas.setVisibleFrame(-5);
+    TW_CHECK_EQ(canvas.visibleFrameCount(), 0);
+    canvas.setVisibleFrame(1000);
+    TW_CHECK_EQ(canvas.visibleFrameCount(), 100);
+
+    // New ink rejoins the live view rather than leaving the user in the past.
+    canvas.setVisibleFrame(40);
+    push_forward(canvas, 2.0);
+    TW_CHECK_EQ(canvas.frameCount(), 101);
+    TW_CHECK_EQ(canvas.visibleFrameCount(), 101);
+
+    auto clear = timewarp::canvas::make_command(CanvasCommandKind::Clear);
+    push(canvas, clear);
+    TW_CHECK_EQ(canvas.frameCount(), 0);
+    TW_CHECK_EQ(canvas.visibleFrameCount(), 0);
+}
+
+void test_history_keeps_strokes_and_shapes_in_draw_order() {
+    announce("history order");
+    const std::unique_ptr<TurtleCanvas> canvas{sizedCanvas()};
+
+    push_forward(*canvas, 10.0);
+    auto rect = timewarp::canvas::make_draw_rect(0.0, 0.0, 20.0, 10.0);
+    push(*canvas, rect);
+    push_forward(*canvas, 10.0);
+
+    TW_CHECK_EQ(canvas->frameCount(), 3);
+    TW_CHECK_EQ(canvas->history()[0].kind, TurtleCanvas::HistoryEntry::Kind::Stroke);
+    TW_CHECK_EQ(canvas->history()[1].kind, TurtleCanvas::HistoryEntry::Kind::Shape);
+    TW_CHECK_EQ(canvas->history()[2].kind, TurtleCanvas::HistoryEntry::Kind::Stroke);
+
+    // The counts are of what is shown, so a rectangle inside the prefix counts
+    // there and not in the strokes it sits between.
+    canvas->setVisibleFrame(1);
+    TW_CHECK_EQ(canvas->visibleStrokeCount(), 1);
+    TW_CHECK_EQ(canvas->visibleShapeCount(), 0);
+    canvas->setVisibleFrame(2);
+    TW_CHECK_EQ(canvas->visibleStrokeCount(), 1);
+    TW_CHECK_EQ(canvas->visibleShapeCount(), 1);
+}
+
+void test_the_scrubber_plays_a_drawing_back() {
+    announce("scrubber");
+    // One frame per tick for a short drawing, ten for a long one, and never zero
+    // -- a step of zero is a play button that does nothing.
+    TW_CHECK_EQ(Scrubber::stepForFrames(600), 1);
+    TW_CHECK_EQ(Scrubber::stepForFrames(6000), 10);
+    TW_CHECK_EQ(Scrubber::stepForFrames(0), 1);
+
+    Scrubber scrubber;
+    int last = -1;
+    int calls = 0;
+    QObject::connect(&scrubber, &Scrubber::frameRequested, &scrubber, [&](int frame) {
+        last = frame;
+        ++calls;
+    });
+
+    scrubber.setFrames(6000);
+    TW_CHECK_EQ(scrubber.frames(), 6000);
+    TW_CHECK_EQ(scrubber.visibleFrame(), 6000);
+
+    // Playing from the end restarts, which is the only useful meaning of pressing
+    // play on a finished drawing.
+    scrubber.togglePlay();
+    TW_CHECK(scrubber.playing());
+    TW_CHECK_EQ(last, 0);
+    scrubber.advance();
+    TW_CHECK_EQ(last, 10);
+
+    for (int tick = 0; tick < 1000 && scrubber.playing(); ++tick) {
+        scrubber.advance();
+    }
+    TW_CHECK(!scrubber.playing());
+    TW_CHECK_EQ(last, 6000);
+
+    // A programmatic move is not a user request: the window would otherwise echo
+    // every frame back to the canvas.
+    const int seen = calls;
+    scrubber.setVisibleFrame(30);
+    TW_CHECK_EQ(calls, seen);
+    TW_CHECK_EQ(scrubber.visibleFrame(), 30);
+
+    // The slider is the user's control, so its motion does ask for a frame.
+    auto* slider = scrubber.findChild<QSlider*>(QStringLiteral("scrubberSlider"));
+    TW_CHECK(slider != nullptr);
+    slider->setValue(60);
+    TW_CHECK_EQ(last, 60);
+    TW_CHECK_EQ(scrubber.visibleFrame(), 60);
+
+    scrubber.setFrames(0);
+    TW_CHECK(!scrubber.isEnabled());
+    TW_CHECK_EQ(scrubber.visibleFrame(), 0);
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {    // Set before QApplication exists, or Qt tries to open a real display.
@@ -481,6 +608,9 @@ int main(int argc, char** argv) {    // Set before QApplication exists, or Qt tr
     test_zoom_is_clamped_and_fit_recentres();
     test_content_bounds_include_every_drawn_axis();
     test_the_drawing_can_be_exported();
+    test_scrubbing_shows_a_prefix_without_losing_the_drawing();
+    test_history_keeps_strokes_and_shapes_in_draw_order();
+    test_the_scrubber_plays_a_drawing_back();
 
     return tw::test::summary("turtle_canvas");
 }
