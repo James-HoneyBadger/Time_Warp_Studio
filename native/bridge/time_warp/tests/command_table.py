@@ -1232,9 +1232,16 @@ CHIP8: list[Row] = [
         "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
         "draws",
     ),
+    Row(
+        "CHIP8",
+        "SYS is ignored",
+        "start: SYS 0x123\n       LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0x80",
+        "draws",
+        also=("SYS",),
+    ),
     Row("CHIP8", "error: unknown mnemonic", "start: FROB V0", "error"),
     Row("CHIP8", "error: byte out of range", "start: LD V0, 999", "error"),
-    Row("CHIP8", "error: unknown opcode", "start: DW 0x0FFF", "error"),
+    Row("CHIP8", "error: unknown opcode", "start: DW 0xF0FF", "error"),
 ]
 
 

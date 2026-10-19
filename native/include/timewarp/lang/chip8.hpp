@@ -5,9 +5,14 @@
 //
 // The reference implementation is `time_warp/languages/chip8.py`, and the
 // behaviour here is that file's: the same mnemonics, the same 1977 choices
-// (Vx shifts in place, sprites wrap), the same frame model (ten opcodes to a
-// frame, timers tick once per frame) and the same limits, reported rather than
-// silently applied.
+// (Vx shifts in place, sprites wrap, FX55/FX65 leave I one past the block), the
+// same frame model (ten opcodes to a frame, timers tick once per frame) and the
+// same limits, reported rather than silently applied.
+//
+// A source that contains a NUL byte is a binary ROM rather than a listing: it is
+// copied to 0x200 unchanged, up to the 3584 bytes that fit before the end of
+// memory. The assembler and the loader share `assemble_chip8` because both produce
+// the same `Chip8Program`, and a test that runs one should not care which.
 //
 // Exposed as an assembler and a machine as well as an entry point, because an
 // assembled wrong opcode and a wrongly executed right opcode are different
@@ -43,6 +48,8 @@ inline constexpr int kChip8MaxSteps = 1'000'000;
 inline constexpr int kChip8MemorySize = 4096;
 inline constexpr int kChip8FontAddress = 0x50;
 inline constexpr int kChip8ProgramAddress = 0x200;
+/// How many bytes a binary ROM may occupy: memory from 0x200 to 0xFFF.
+inline constexpr int kChip8RomLimit = kChip8MemorySize - kChip8ProgramAddress;
 
 struct Chip8Program {
     std::vector<std::uint8_t> memory;
@@ -50,7 +57,8 @@ struct Chip8Program {
     int entry = kChip8ProgramAddress;
 };
 
-/// Assembles *source*. Throws Chip8Error on a malformed listing.
+/// Assembles *source*, or loads it as a binary ROM when it contains a NUL byte.
+/// Throws Chip8Error on a malformed listing or a ROM larger than memory.
 [[nodiscard]] Chip8Program assemble_chip8(std::string_view source);
 
 /// The machine: registers, memory, timers and framebuffer.

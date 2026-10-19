@@ -1117,6 +1117,11 @@ that turns mnemonics into opcodes, and the **machine** that runs them.
 Executed whole-program. An opcode stream cannot be interpreted a line at a time,
 so the listing is assembled in full and then run.
 
+A `.ch8` file containing a **NUL byte** is a binary ROM rather than a listing:
+its bytes are copied to `0x200` unchanged, up to the 3584 that fit before the end
+of memory. The editor opens such a file read-only, because a keystroke in it
+would be a corrupted program waiting to be saved.
+
 ```chip8
 ; a comment
 start:  LD   V0, 0x41
@@ -1149,6 +1154,7 @@ and timing registers, the font and BCD conversions, and memory block load/store.
 | Mnemonic | Meaning |
 | -------- | ------- |
 | `CLS` | Clear the display |
+| `SYS addr` | Ignored; the original's RCA 1802 call |
 | `JP addr` / `JP V0, addr` | Jump |
 | `CALL addr` / `RET` | Subroutine call and return |
 | `SE Vx, byte` / `SNE Vx, byte` | Skip if equal / not equal |
@@ -1161,7 +1167,7 @@ and timing registers, the font and BCD conversions, and memory block load/store.
 | `SKP Vx` / `SKNP Vx` | Skip on key pressed / not pressed |
 | `LD Vx, K` / `LD Vx, DT` / `LD ST, Vx` | Keypad and timers |
 
-### Two places the original is ambiguous
+### Where the original decides
 
 This follows the 1977 interpreter rather than a later emulator, because that is
 the machine the books describe:
@@ -1171,6 +1177,16 @@ the machine the books describe:
   assemble.
 - **Sprites wrap, and a collision sets `VF`.** Drawing a lit pixel onto a lit
   pixel clears it and reports the collision.
+- **`LD [I], Vx` and `LD Vx, [I]` leave `I` one past the block.** CHIP-48 and
+  SCHIP leave it where it was; this machine increments it. A program that needs
+  the old value sets `I` again after the transfer.
+- **`SYS` (`0NNN`) is ignored.** It calls a routine on the RCA 1802 that hosted
+  the original interpreter, which this machine cannot run. Ignoring it keeps a
+  ROM that contains one runnable, and the assembler still accepts the mnemonic.
+
+`JP V0, addr` is the jump-table form: `Bnnn` always adds `V0`, so naming any
+other register is refused by the assembler rather than assembling to an
+instruction that silently ignores it.
 
 ### The display
 

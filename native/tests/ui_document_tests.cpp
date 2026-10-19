@@ -1332,6 +1332,58 @@ void test_autosave_keeps_unsaved_work() {
     scratch.restoreDataDir();
 }
 
+/// A binary ROM and a text listing share `.ch8`. The ROM is decoded as Latin-1
+/// so its bytes survive, opened read-only so they cannot be edited into
+/// corruption, and run without the assembler seeing it.
+void test_a_binary_chip8_rom_opens_read_only() {
+    announce("CHIP-8: a binary ROM opens read-only");
+    tw::test::TempDir scratch;
+    TW_CHECK(scratch.valid());
+    if (!scratch.valid()) {
+        return;
+    }
+    const QByteArray rom{"\x60\x05\x61\x07\x00\x00", 6};
+    const QString path = scratch.write(QStringLiteral("demo.ch8"), rom);
+    TW_CHECK(!path.isEmpty());
+    if (path.isEmpty()) {
+        return;
+    }
+
+    MainWindow window;
+    TW_CHECK(window.openFile(path));
+    CodeEditor* editor = window.currentEditor();
+    TW_CHECK(editor != nullptr);
+    if (editor == nullptr) {
+        return;
+    }
+    TW_CHECK(editor->isReadOnly());
+    TW_CHECK(editor->toPlainText().toLatin1() == rom);
+
+    // Reaching HALT means the bytes arrived intact; a corrupted high byte would
+    // have assembled as a different instruction or failed to fetch. A native run
+    // that finishes leaves the badge at "ready"; only an error or a stop changes
+    // it to anything else.
+    window.runCurrentDocument();
+    TW_CHECK(waitFor(
+        [&window] {
+            const QString state = badgeText(window, "executionBadge");
+            return state != QStringLiteral("running") &&
+                   state != QStringLiteral("stopping");
+        },
+        5000));
+    TW_CHECK_EQ(badgeText(window, "executionBadge"), QStringLiteral("ready"));
+
+    // A text listing with the same extension is still editable source.
+    const QString listing = scratch.write(QStringLiteral("listing.ch8"),
+                                          QByteArray{"start: CLS\n       HALT\n"});
+    MainWindow text_window;
+    TW_CHECK(text_window.openFile(listing));
+    if (CodeEditor* text_editor = text_window.currentEditor(); text_editor != nullptr) {
+        TW_CHECK(!text_editor->isReadOnly());
+        TW_CHECK(text_editor->toPlainText().contains(QStringLiteral("CLS")));
+    }
+}
+
 /// The word under the caret is what F1 asks about, so it has to be the whole
 /// word even when the caret is in the middle of it.
 void test_word_at_cursor() {
@@ -1448,6 +1500,7 @@ int main(int argc, char** argv) {
     test_run_selection_and_history();
     test_autosave_keeps_unsaved_work();
     test_restoring_a_copy_opens_a_new_tab();
+    test_a_binary_chip8_rom_opens_read_only();
     test_word_at_cursor();
     test_context_help_follows_the_document_language();
 

@@ -252,6 +252,18 @@ std::vector<std::uint8_t> encode(std::string_view text,
     if (mnemonic == "RET") {
         return {0x00, 0xEE};
     }
+    if (mnemonic == "SYS") {
+        // 0NNN calls a routine on the RCA 1802 that hosted the original
+        // interpreter. Nothing here can run it, so the machine ignores it, as
+        // every interpreter since the original has; the assembler can still
+        // spell it so a listing that contains one assembles.
+        if (operands.size() != 1) {
+            throw fail("takes an address");
+        }
+        const int value = target(operands[0]);
+        return {static_cast<std::uint8_t>(value >> 8),
+                static_cast<std::uint8_t>(value & 0xFF)};
+    }
     if (mnemonic == "HALT") {
         // 0x0000 is unused by the original set, so a program can stop instead
         // of spinning on a jump-to-self to mark the end.
@@ -265,8 +277,11 @@ std::vector<std::uint8_t> encode(std::string_view text,
     }
     if (mnemonic == "JP" && operands.size() == 2) {
         // Bnnn carries the address in its twelve bits; V0 is added at run time
-        // rather than encoded.
-        (void)parse_register(operands[0]);
+        // rather than encoded. Naming another register would assemble to an
+        // instruction that ignores it, so that is refused rather than accepted.
+        if (parse_register(operands[0]) != 0) {
+            throw fail("uses V0 only; Bnnn adds V0");
+        }
         const int value = target(operands[1]);
         return {static_cast<std::uint8_t>(0xB0 | (value >> 8)),
                 static_cast<std::uint8_t>(value & 0xFF)};
@@ -502,6 +517,20 @@ Chip8Program assemble_chip8(std::string_view source) {
     std::copy(std::begin(kFont), std::end(kFont),
               program.memory.begin() + kChip8FontAddress);
 
+    // A NUL byte is not a thing a listing contains and is in every real ROM, so
+    // it is the marker that decides which of the two loaders runs. (The editor and
+    // the runner preserve the bytes: see `MainWindow::openFile`.)
+    if (source.find('\0') != std::string_view::npos) {
+        if (source.size() > static_cast<std::size_t>(kChip8RomLimit)) {
+            throw Chip8Error("the ROM is " + std::to_string(source.size()) +
+                             " bytes; memory from 0x200 holds " +
+                             std::to_string(kChip8RomLimit));
+        }
+        std::copy(source.begin(), source.end(),
+                  program.memory.begin() + kChip8ProgramAddress);
+        return program;
+    }
+
     std::vector<std::string> lines;
     std::size_t start = 0;
     while (start <= source.size()) {
@@ -635,6 +664,12 @@ void Chip8Machine::step() {
         }
         pc = stack.back();
         stack.pop_back();
+        return;
+    }
+    if (high == 0x0) {
+        // 0NNN (SYS): an RCA 1802 routine, which this machine cannot execute.
+        // Ignoring it is what every interpreter since the original does, and it
+        // keeps a ROM that contains one runnable.
         return;
     }
 
@@ -808,12 +843,17 @@ void Chip8Machine::misc(int x, int low) {
                 memory[static_cast<std::size_t>((i + index) % kChip8MemorySize)] =
                     v[static_cast<std::size_t>(index)];
             }
+            // The 1977 interpreter leaves I one past the block; CHIP-48 and
+            // SCHIP leave it where it was. This machine is the 1977 one, as the
+            // shifts and the sprite wrap are.
+            i = (i + x + 1) & 0xFFF;
             break;
         case 0x65:
             for (int index = 0; index <= x; ++index) {
                 v[static_cast<std::size_t>(index)] =
                     memory[static_cast<std::size_t>((i + index) % kChip8MemorySize)];
             }
+            i = (i + x + 1) & 0xFFF;
             break;
         default:
             throw Chip8Error("unknown opcode Fx" + hex_upper(low, 2));

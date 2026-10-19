@@ -18,6 +18,7 @@
 #include "timewarp/lang/turtle_host.hpp"
 #include "timewarp/ui/language.hpp"
 
+#include <QChar>
 #include <QPointer>
 #include <QString>
 #include <QThread>

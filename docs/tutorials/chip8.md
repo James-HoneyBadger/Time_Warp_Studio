@@ -108,6 +108,13 @@ SKNP V0             skip if it is not held
 Testing a register is a *skip*, not a branch: you put the jump straight after the
 instruction you want to skip.
 
+The jump-table form is `Bnnn`, which always adds `V0` to the address. Naming any
+other register is an assembler error rather than an instruction that silently
+ignores it.
+
+`SYS addr` assembles but is ignored: it calls a routine on the RCA 1802 that
+hosted the original interpreter, which this machine cannot run.
+
 ## 7. Drawing
 
 ```chip8
@@ -135,7 +142,9 @@ registers. Two behaviours are worth knowing:
 in memory at `0x50`. Every CHIP-8 program is written against it.
 
 `LD B, Vx` writes the decimal digits of `Vx` into memory, and `LD [I], Vx` /
-`LD Vx, [I]` move a block of memory.
+`LD Vx, [I]` move a block of memory. Both leave `I` **one past the block**, as
+the 1977 interpreter does; CHIP-48 and SCHIP leave `I` alone. Set `I` again if
+the next instruction needs the start of the block.
 
 ## 8. The keypad
 
@@ -173,11 +182,23 @@ halts reports that it stopped rather than hanging:
 ℹ️ CHIP-8: stopped after 600 frames
 ```
 
+## 10. Loading a binary ROM
+
+A `.ch8` file that contains a **NUL byte** is a binary ROM rather than a listing.
+Its bytes are copied to `0x200` unchanged, up to the 3584 bytes that fit before
+the end of memory, and assembled at all only if no NUL is present. That means the
+same extension covers both the listings in this tutorial and ROMs from elsewhere.
+
+A ROM opens **read-only** in the editor. Its bytes are decoded one-to-one so that
+saving it writes back the same program, and a keystroke in it would be a corrupt
+ROM waiting to be saved. A listing is still editable source.
+
 ## Quick reference
 
 | Mnemonic | Meaning |
 | -------- | ------- |
 | `CLS` | Clear the display |
+| `SYS addr` | Ignored; the original's RCA 1802 call |
 | `JP addr` / `JP V0, addr` | Jump |
 | `CALL addr` / `RET` | Subroutine call and return |
 | `SE` / `SNE` | Skip if equal / not equal |

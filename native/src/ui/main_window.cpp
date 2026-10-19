@@ -2082,11 +2082,17 @@ void MainWindow::noteRun(const QString& source) {
     // stored -- a settings file is not a document store, and a learner's settings
     // growing by a program per Run is not something to discover later.
     QString title;
-    for (const QString& line : source.split(QLatin1Char('\n'))) {
-        const QString trimmed = line.trimmed();
-        if (!trimmed.isEmpty()) {
-            title = trimmed.left(48);
-            break;
+    if (source.contains(QChar{0})) {
+        // A binary ROM has no lines to quote, and half an opcode in the history
+        // list is not a title.
+        title = tr("binary ROM");
+    } else {
+        for (const QString& line : source.split(QLatin1Char('\n'))) {
+            const QString trimmed = line.trimmed();
+            if (!trimmed.isEmpty()) {
+                title = trimmed.left(48);
+                break;
+            }
         }
     }
     if (title.isEmpty()) {
@@ -2502,10 +2508,17 @@ bool MainWindow::openFile(const QString& path, OpenFailure failure) {
                               .arg(QFileInfo{absolute}.fileName(), reason));
         return false;
     }
-    const QByteArray bytes = file.readAll();
+    QByteArray bytes = file.readAll();
     file.close();
 
-    QString text = QString::fromUtf8(bytes);
+    const bool chip8 = languageForFile(absolute) == Language::Chip8;
+    // A .ch8 file may be a binary ROM, and `fromUtf8` replaces every byte above
+    // 0x7F with U+FFFD. Latin-1 maps all 256 byte values one-to-one, and the
+    // runner writes it back with `toLatin1`, so a ROM survives the editor.
+    if (chip8 && bytes.startsWith("\xEF\xBB\xBF")) {
+        bytes.remove(0, 3);
+    }
+    QString text = chip8 ? QString::fromLatin1(bytes) : QString::fromUtf8(bytes);
     // A byte-order mark is not part of the program. Left in place it is an
     // invisible first character, so the first token of the first line fails to
     // parse with an error pointing at a column that looks empty.
@@ -2521,11 +2534,20 @@ bool MainWindow::openFile(const QString& path, OpenFailure failure) {
     // future change to how the text is loaded cannot make a just-opened file look
     // dirty and prompt for a save it does not need.
     editor->document()->setModified(false);
+    // A ROM is bytecode, not editable source. Showing it in the editor is useful
+    // (it is the thing Run executes), but a keystroke in it would be a corrupted
+    // program waiting to be saved.
+    const bool binary_rom = chip8 && text.contains(QChar{0});
+    editor->setReadOnly(binary_rom);
     updateTabLabel(editor);
     editor->setFocus();
     noteRecentFile(absolute);
 
-    setExecutionState(tr("ready"), tr("Opened %1").arg(QFileInfo{absolute}.fileName()));
+    setExecutionState(tr("ready"),
+                      binary_rom
+                          ? tr("Opened %1 as a binary ROM (read-only)")
+                                .arg(QFileInfo{absolute}.fileName())
+                          : tr("Opened %1").arg(QFileInfo{absolute}.fileName()));
     return true;
 }
 
@@ -2548,7 +2570,13 @@ bool MainWindow::writeDocument(CodeEditor* editor, const QString& path) {
                                       file.errorString()));
         return false;
     }
-    const QByteArray bytes = editor->toPlainText().toUtf8();
+    // A binary ROM was decoded as Latin-1; writing it as UTF-8 would turn every
+    // high byte into two and the program would no longer be the one loaded.
+    const QString text = editor->toPlainText();
+    const QByteArray bytes = languageOf(editor) == Language::Chip8 &&
+                                     text.contains(QChar{0})
+                                 ? text.toLatin1()
+                                 : text.toUtf8();
     if (file.write(bytes) != bytes.size() || !file.commit()) {
         QMessageBox::warning(this, tr("Save failed"),
                              tr("Could not write %1.").arg(QDir::toNativeSeparators(path)));

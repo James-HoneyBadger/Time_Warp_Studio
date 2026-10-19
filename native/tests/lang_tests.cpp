@@ -268,6 +268,24 @@ void test_chip8_assembler_errors() {
     TW_CHECK(contains(run_chip8("start: DRW V0, V1, 20"), "at most 15 rows"));
     TW_CHECK(contains(run_chip8("start: LD VG, 1"), "not a register"));
     TW_CHECK(contains(run_chip8("start: CLS\n       NOPE V0"), "line 2"));
+    // Bnnn always adds V0; accepting another register would assemble an
+    // instruction that silently ignores it.
+    TW_CHECK(contains(run_chip8("start: JP V5, target\ntarget: HALT"), "V0 only"));
+}
+
+void test_chip8_sys_is_ignored() {
+    // The 0NNN SYS call is an RCA 1802 routine this machine cannot run, and
+    // every interpreter since the original ignores it rather than refusing a ROM
+    // that contains one.
+    const Chip8Machine assembled = run_to_halt(
+        "start: SYS 0x123\n       LD V0, 7\n       HALT");
+    TW_CHECK_EQ(static_cast<int>(assembled.v[0]), 7);
+    const Chip8Machine raw = run_to_halt("start: DW 0x0123\n       LD V0, 9\n       HALT");
+    TW_CHECK_EQ(static_cast<int>(raw.v[0]), 9);
+
+    const Chip8Program program = assemble("start: SYS 0x123");
+    TW_CHECK_EQ(static_cast<int>(program.memory[0x200]), 0x01);
+    TW_CHECK_EQ(static_cast<int>(program.memory[0x201]), 0x23);
 }
 
 // ---------------------------------------------------------------------------
@@ -298,6 +316,38 @@ void test_chip8_shr_shifts_the_named_register_in_place() {
         run_to_halt("start: LD V0, 8\n       LD V1, 1\n       SHR V0\n       HALT");
     TW_CHECK_EQ(static_cast<int>(machine.v[0]), 4);
     TW_CHECK_EQ(static_cast<int>(machine.v[1]), 1);
+    TW_CHECK_EQ(static_cast<int>(machine.v[0xF]), 0);
+}
+
+void test_chip8_logic_and_shl() {
+    const Chip8Machine machine = run_to_halt(
+        "start: LD V0, 0x0C\n       LD V1, 0x0A\n"
+        "       LD V2, 0x0C\n       OR V2, V1\n"       // 0x0E
+        "       LD V3, 0x0C\n       AND V3, V1\n"      // 0x08
+        "       LD V4, 0x0C\n       XOR V4, V1\n"      // 0x06
+        "       LD V5, 3\n       LD V6, 10\n       SUBN V5, V6\n"  // 7
+        "       LD V7, 0x81\n       SHL V7\n"          // 0x02, VF=1
+        "       HALT");
+    TW_CHECK_EQ(static_cast<int>(machine.v[2]), 0x0E);
+    TW_CHECK_EQ(static_cast<int>(machine.v[3]), 0x08);
+    TW_CHECK_EQ(static_cast<int>(machine.v[4]), 0x06);
+    TW_CHECK_EQ(static_cast<int>(machine.v[5]), 7);
+    TW_CHECK_EQ(static_cast<int>(machine.v[7]), 2);
+    TW_CHECK_EQ(static_cast<int>(machine.v[0xF]), 1);
+}
+
+void test_chip8_add_byte_wraps_without_carry() {
+    const Chip8Machine machine =
+        run_to_halt("start: LD V0, 250\n       ADD V0, 10\n       HALT");
+    TW_CHECK_EQ(static_cast<int>(machine.v[0]), 4);
+    // 7XNN does not touch VF; only the arithmetic group does.
+    TW_CHECK_EQ(static_cast<int>(machine.v[0xF]), 0);
+}
+
+void test_chip8_index_arithmetic() {
+    const Chip8Machine machine = run_to_halt(
+        "start: LD I, 0x300\n       LD V0, 5\n       ADD I, V0\n       HALT");
+    TW_CHECK_EQ(machine.i, 0x305);
 }
 
 void test_chip8_bcd_conversion_writes_three_digits() {
@@ -317,9 +367,34 @@ void test_chip8_bcd_conversion_writes_three_digits() {
 void test_chip8_store_and_load_through_i() {
     const Chip8Machine machine = run_to_halt(
         "start: LD V0, 1\n       LD V1, 2\n       LD I, buf\n       LD [I], V1\n"
-        "       LD V0, 0\n       LD V1, 0\n       LD V2, [I]\n       HALT\n"
+        "       LD I, buf\n       LD V3, [I]\n       HALT\n"
         "buf:   DB 0\n       DB 0");
+    TW_CHECK_EQ(static_cast<int>(machine.v[0]), 1);
     TW_CHECK_EQ(static_cast<int>(machine.v[1]), 2);
+    TW_CHECK_EQ(static_cast<int>(machine.v[3]), 0);
+}
+
+void test_chip8_block_transfer_advances_i() {
+    // The 1977 interpreter leaves I one past the block; CHIP-48 and SCHIP leave
+    // it where it was.
+    const Chip8Program program = assemble(
+        "start: LD V0, 1\n       LD V1, 2\n       LD I, buf\n"
+        "       LD [I], V1\n       HALT\nbuf: DB 0\n     DB 0");
+    Chip8Machine machine{program.memory, program.entry};
+    while (!machine.halted()) {
+        machine.step();
+    }
+    TW_CHECK_EQ(machine.i, program.labels.at("buf") + 2);
+
+    const Chip8Program load = assemble(
+        "start: LD I, buf\n       LD V1, [I]\n       HALT\nbuf: DB 7\n     DB 9");
+    Chip8Machine loaded{load.memory, load.entry};
+    while (!loaded.halted()) {
+        loaded.step();
+    }
+    TW_CHECK_EQ(static_cast<int>(loaded.v[0]), 7);
+    TW_CHECK_EQ(static_cast<int>(loaded.v[1]), 9);
+    TW_CHECK_EQ(loaded.i, load.labels.at("buf") + 2);
 }
 
 void test_chip8_skips() {
@@ -330,6 +405,17 @@ void test_chip8_skips() {
     TW_CHECK_EQ(
         static_cast<int>(run_to_halt("start: LD V0, 5\n       SNE V0, 5\n       LD V1, 1\n       HALT")
                              .v[1]),
+        1);
+    // 5XY0 and 9XY0 are the register forms; the low nibble is not a value.
+    TW_CHECK_EQ(
+        static_cast<int>(run_to_halt("start: LD V0, 5\n       LD V1, 5\n"
+                                     "       SE V0, V1\n       LD V2, 1\n       HALT")
+                             .v[2]),
+        0);
+    TW_CHECK_EQ(
+        static_cast<int>(run_to_halt("start: LD V0, 5\n       LD V1, 5\n"
+                                     "       SNE V0, V1\n       LD V2, 1\n       HALT")
+                             .v[2]),
         1);
 }
 
@@ -399,19 +485,52 @@ void test_chip8_jump_with_offset_uses_v0() {
 }
 
 void test_chip8_timers() {
-    const Chip8Machine machine =
-        run_to_halt("start: LD V0, 30\n       LD DT, V0\n       LD V1, DT\n       HALT");
-    TW_CHECK_EQ(static_cast<int>(machine.v[1]), 30);
+    const Chip8Program program = assemble(
+        "start: LD V0, 2\n       LD DT, V0\n       LD ST, V0\n       LD V1, DT\n       HALT");
+    Chip8Machine machine{program.memory, program.entry};
+    while (!machine.halted()) {
+        machine.step();
+    }
+    TW_CHECK_EQ(static_cast<int>(machine.v[1]), 2);
+    TW_CHECK_EQ(machine.delay_timer, 2);
+    TW_CHECK_EQ(machine.sound_timer, 2);
+    // One tick per frame, never below zero.
+    machine.tick_timers();
+    TW_CHECK_EQ(machine.delay_timer, 1);
+    TW_CHECK_EQ(machine.sound_timer, 1);
+    machine.tick_timers();
+    machine.tick_timers();
+    TW_CHECK_EQ(machine.delay_timer, 0);
+    TW_CHECK_EQ(machine.sound_timer, 0);
 }
 
 void test_chip8_frame_limit_is_information() {
     TW_CHECK(contains(run_chip8("start: JP start"), "600 frames"));
 }
 
-void test_chip8_unknown_opcode_names_its_address() {
-    const std::vector<std::string> output = run_chip8("start: DW 0x0FFF");
+void test_chip8_unknown_opcode_is_reported() {
+    // 0NNN is SYS and is ignored; Fx0FF is not an instruction.
+    const std::vector<std::string> output = run_chip8("start: DW 0xF0FF");
     TW_CHECK(contains(output, "unknown opcode"));
-    TW_CHECK(contains(output, "0x200"));
+    TW_CHECK(contains(output, "FxFF"));
+}
+
+void test_chip8_binary_rom_loads_at_0x200() {
+    // LD V0, 5; LD V1, 7; HALT. The NUL in the HALT opcode is what marks this
+    // as a ROM rather than a listing.
+    const std::string rom{"\x60\x05\x61\x07\x00\x00", 6};
+    const Chip8Machine machine = run_to_halt(rom);
+    TW_CHECK_EQ(static_cast<int>(machine.v[0]), 5);
+    TW_CHECK_EQ(static_cast<int>(machine.v[1]), 7);
+    // The font is still where Fx29 points.
+    TW_CHECK_EQ(static_cast<int>(machine.memory[0x50]), 0xF0);
+}
+
+void test_chip8_binary_rom_respects_memory() {
+    std::string rom(static_cast<std::size_t>(timewarp::lang::kChip8RomLimit) + 1, '\0');
+    rom[0] = '\x60';
+    const std::vector<std::string> output = run_chip8(rom);
+    TW_CHECK(contains(output, "memory from 0x200 holds 3584"));
 }
 
 // ---------------------------------------------------------------------------
@@ -1244,12 +1363,17 @@ int main() {
     test_chip8_font_is_present_in_memory();
     test_chip8_db_and_dw_emit_data();
     test_chip8_assembler_errors();
+    test_chip8_sys_is_ignored();
     test_chip8_ld_and_add_with_a_byte();
     test_chip8_add_sets_the_carry_flag();
     test_chip8_subtract_sets_the_borrow_flag();
+    test_chip8_add_byte_wraps_without_carry();
+    test_chip8_index_arithmetic();
     test_chip8_shr_shifts_the_named_register_in_place();
+    test_chip8_logic_and_shl();
     test_chip8_bcd_conversion_writes_three_digits();
     test_chip8_store_and_load_through_i();
+    test_chip8_block_transfer_advances_i();
     test_chip8_skips();
     test_chip8_call_and_return();
     test_chip8_ret_without_call_is_reported();
@@ -1260,7 +1384,9 @@ int main() {
     test_chip8_jump_with_offset_uses_v0();
     test_chip8_timers();
     test_chip8_frame_limit_is_information();
-    test_chip8_unknown_opcode_names_its_address();
+    test_chip8_unknown_opcode_is_reported();
+    test_chip8_binary_rom_loads_at_0x200();
+    test_chip8_binary_rom_respects_memory();
     test_chip8_display_uses_the_palette();
     test_chip8_display_is_cleared_before_the_first_frame();
     test_focal_type_prints_text_and_expressions();

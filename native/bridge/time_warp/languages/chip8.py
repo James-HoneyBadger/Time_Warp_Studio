@@ -36,6 +36,12 @@ later emulator, because that is the machine the books describe:
     ignored, so both spellings assemble.
   * **Sprites wrap, and a collision sets ``VF``.** Drawing a lit pixel onto a lit
     pixel clears it and reports the collision.
+  * **``LD [I], Vx`` and ``LD Vx, [I]`` leave ``I`` one past the block.** The
+    1977 interpreter increments I; CHIP-48 and SCHIP leave it where it was. This
+    machine is the 1977 one, as it is for the shifts and the sprite wrap.
+  * **``SYS`` (``0NNN``) is ignored.** It addresses an RCA 1802 routine the
+    interpreter cannot run; refusing the opcode would make a ROM that contains
+    one unrunnable, so every interpreter since the original ignores it.
 
 Two limits are this implementation's, and both are reported rather than silently
 applied:
@@ -49,14 +55,13 @@ applied:
     and a fixed number of frames is the limit.
 
 The display is drawn in the canvas's own coordinates with filled rectangles, and
-its two colours come from ``set_palette_color``. That palette call is the one
-part of the canvas's long-dormant VGA-era layer a language can actually reach:
-``set_svga_mode`` is called here because a 64x32 machine should say so, but the
-bridge does **not** forward it, so the canvas never resizes and the display is
-placed in centre-relative coordinates instead. The sprite commands the canvas
-also offers cannot be reached from a language at all — the bridge reports a turtle
-sprite as unsupported, and BASIC's ``SPRITE`` statement registers a collision box
-rather than drawing one.
+its two colours come from ``set_palette_color``. ``set_svga_mode`` says the
+machine's resolution; the native canvas honours it.
+
+A source containing a NUL byte is a **binary ROM** rather than a listing: it is
+copied to 0x200 unchanged, up to the 3584 bytes that fit before the end of
+memory. The reference engine and the C++ IDE agree on that rule because they share
+the same assembly entry point's contract.
 """
 
 from __future__ import annotations
@@ -79,6 +84,7 @@ CHIP8_COMMANDS = {
     "CLS",
     "RET",
     "HALT",
+    "SYS",
     "JP",
     "CALL",
     "SE",
@@ -119,22 +125,86 @@ _ON_INDEX = 2
 #: The 4x5 hex font the machine expects to find in memory at 0x50, in the order
 #: 0-F. This is the standard set every CHIP-8 program is written against.
 _FONT = (
-    0xF0, 0x90, 0x90, 0x90, 0xF0,  # 0
-    0x20, 0x60, 0x20, 0x20, 0x70,  # 1
-    0xF0, 0x10, 0xF0, 0x80, 0xF0,  # 2
-    0xF0, 0x10, 0xF0, 0x10, 0xF0,  # 3
-    0x90, 0x90, 0xF0, 0x10, 0x10,  # 4
-    0xF0, 0x80, 0xF0, 0x10, 0xF0,  # 5
-    0xF0, 0x80, 0xF0, 0x90, 0xF0,  # 6
-    0xF0, 0x10, 0x20, 0x40, 0x40,  # 7
-    0xF0, 0x90, 0xF0, 0x90, 0xF0,  # 8
-    0xF0, 0x90, 0xF0, 0x10, 0xF0,  # 9
-    0xF0, 0x90, 0xF0, 0x90, 0x90,  # A
-    0xE0, 0x90, 0xE0, 0x90, 0xE0,  # B
-    0xF0, 0x80, 0x80, 0x80, 0xF0,  # C
-    0xE0, 0x90, 0x90, 0x90, 0xE0,  # D
-    0xF0, 0x80, 0xF0, 0x80, 0xF0,  # E
-    0xF0, 0x80, 0xF0, 0x80, 0x80,  # F
+    0xF0,
+    0x90,
+    0x90,
+    0x90,
+    0xF0,  # 0
+    0x20,
+    0x60,
+    0x20,
+    0x20,
+    0x70,  # 1
+    0xF0,
+    0x10,
+    0xF0,
+    0x80,
+    0xF0,  # 2
+    0xF0,
+    0x10,
+    0xF0,
+    0x10,
+    0xF0,  # 3
+    0x90,
+    0x90,
+    0xF0,
+    0x10,
+    0x10,  # 4
+    0xF0,
+    0x80,
+    0xF0,
+    0x10,
+    0xF0,  # 5
+    0xF0,
+    0x80,
+    0xF0,
+    0x90,
+    0xF0,  # 6
+    0xF0,
+    0x10,
+    0x20,
+    0x40,
+    0x40,  # 7
+    0xF0,
+    0x90,
+    0xF0,
+    0x90,
+    0xF0,  # 8
+    0xF0,
+    0x90,
+    0xF0,
+    0x10,
+    0xF0,  # 9
+    0xF0,
+    0x90,
+    0xF0,
+    0x90,
+    0x90,  # A
+    0xE0,
+    0x90,
+    0xE0,
+    0x90,
+    0xE0,  # B
+    0xF0,
+    0x80,
+    0x80,
+    0x80,
+    0xF0,  # C
+    0xE0,
+    0x90,
+    0x90,
+    0x90,
+    0xE0,  # D
+    0xF0,
+    0x80,
+    0xF0,
+    0x80,
+    0xF0,  # E
+    0xF0,
+    0x80,
+    0xF0,
+    0x80,
+    0x80,  # F
 )
 
 _FONT_ADDRESS = 0x50
@@ -202,6 +272,19 @@ def assemble(source: str) -> tuple[bytearray, dict[str, int], int]:
     """
     memory = bytearray(_MEMORY_SIZE)
     memory[_FONT_ADDRESS : _FONT_ADDRESS + len(_FONT)] = bytes(_FONT)
+
+    # A NUL byte is not a thing a listing contains and is in every real ROM, so
+    # it decides which of the two loaders runs.
+    if "\x00" in source:
+        if len(source) > _MEMORY_SIZE - _PROGRAM_ADDRESS:
+            raise Chip8Error(
+                f"the ROM is {len(source)} bytes; memory from 0x200 holds "
+                f"{_MEMORY_SIZE - _PROGRAM_ADDRESS}"
+            )
+        memory[_PROGRAM_ADDRESS : _PROGRAM_ADDRESS + len(source)] = bytes(
+            ord(character) & 0xFF for character in source
+        )
+        return memory, {}, _PROGRAM_ADDRESS
 
     lines = source.splitlines()
     labels: dict[str, int] = {}
@@ -284,6 +367,13 @@ def _encode(text: str, labels: dict[str, int], number: int) -> list[int]:
         return [0x00, 0xE0]
     if mnemonic == "RET":
         return [0x00, 0xEE]
+    if mnemonic == "SYS":
+        # 0NNN calls an RCA 1802 routine. The machine ignores it; the assembler
+        # can still spell it so a listing that contains one assembles.
+        if len(operands) != 1:
+            raise fail("takes an address")
+        value = target(operands[0])
+        return [value >> 8, value & 0xFF]
     if mnemonic == "HALT":
         # 0x0000 is unused by the original set, so a program can stop instead of
         # spinning on a jump-to-self to mark the end.
@@ -296,7 +386,8 @@ def _encode(text: str, labels: dict[str, int], number: int) -> list[int]:
         # Bnnn carries the *address* in its twelve bits; V0 is added at run time
         # rather than encoded. ORing the register number into the high nibble
         # instead produced B006 for a target of 0x206, which jumped to 6.
-        _register(operands[0])
+        if _register(operands[0]) != 0:
+            raise fail("uses V0 only; Bnnn adds V0")
         value = target(operands[1])
         return [0xB0 | (value >> 8), value & 0xFF]
     if mnemonic == "CALL":
@@ -421,8 +512,10 @@ class Machine:
         self.pc += 2
 
     def _pixel(self, x: int, y: int) -> bool:
-        return x < SCREEN_WIDTH and y < SCREEN_HEIGHT and bool(
-            self.framebuffer[y * SCREEN_WIDTH + x]
+        return (
+            x < SCREEN_WIDTH
+            and y < SCREEN_HEIGHT
+            and bool(self.framebuffer[y * SCREEN_WIDTH + x])
         )
 
     def _set_pixel(self, x: int, y: int, on: bool) -> None:
@@ -456,6 +549,10 @@ class Machine:
             if not self.stack:
                 raise Chip8Error("RET with an empty call stack")
             self.pc = self.stack.pop()
+            return
+        if high == 0x0:
+            # SYS: an RCA 1802 routine, which this machine cannot execute. Every
+            # interpreter since the original ignores it.
             return
 
         if high == 0x1:
@@ -497,9 +594,7 @@ class Machine:
         elif high == 0xF:
             self._misc(x, low_byte)
         else:
-            raise Chip8Error(
-                f"unknown opcode 0x{opcode:04X} at 0x{self.pc - 2:03X}"
-            )
+            raise Chip8Error(f"unknown opcode 0x{opcode:04X} at 0x{self.pc - 2:03X}")
 
     def _arithmetic(self, x: int, y: int, low: int) -> None:
         if low == 0x0:
@@ -569,9 +664,12 @@ class Machine:
         elif low == 0x55:
             for index in range(x + 1):
                 self.memory[(self.i + index) % _MEMORY_SIZE] = self.v[index]
+            # The 1977 interpreter leaves I one past the block.
+            self.i = (self.i + x + 1) & 0xFFF
         elif low == 0x65:
             for index in range(x + 1):
                 self.v[index] = self.memory[(self.i + index) % _MEMORY_SIZE]
+            self.i = (self.i + x + 1) & 0xFFF
         else:
             raise Chip8Error(f"unknown opcode Fx{low:02X}")
 

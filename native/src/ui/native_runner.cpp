@@ -515,7 +515,12 @@ void NativeRunner::run() {
     engine->set_input_callback(
         [this](const std::string& prompt) { return read_input(prompt); });
 
-    engine->load_program(source_.toStdString());
+    // A binary ROM was decoded as Latin-1 so its bytes survive the editor; a
+    // listing is UTF-8 like every other document.
+    const bool binary_rom = language_ == timewarp::lang::Language::Chip8 &&
+                            source_.contains(QChar{0});
+    engine->load_program(binary_rom ? source_.toLatin1().toStdString()
+                                    : source_.toStdString());
     host_->begin_run();
     engine->run();
     host_->flush();

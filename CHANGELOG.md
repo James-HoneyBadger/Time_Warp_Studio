@@ -7,6 +7,17 @@ Porting the features the removed PySide6 application had. The sequenced plan is
 
 ### Added
 
+- **Binary CHIP-8 ROMs are runnable, and the opcode set is complete.** A `.ch8`
+  file containing a NUL byte is a ROM rather than a listing: its bytes copy to
+  `0x200` unchanged, up to the 3584 that fit before the end of memory, and the
+  editor opens it read-only because a keystroke in a binary would be a corrupted
+  program waiting to be saved. It is copied one-to-one, so saving writes back the
+  program that was loaded. `SYS` (`0NNN`) now assembles and is ignored, as every
+  interpreter since the original does; `JP V0, addr` refuses a register other
+  than `V0` rather than encoding it into the address; and `LD [I], Vx` /
+  `LD Vx, [I]` leave `I` one past the block, as the 1977 interpreter does. The
+  reference engine and the port share all of these rules, and the parity gate
+  covers them.
 - **F1 context help and Ctrl+F1 keyword inspector.** F1 opens the current
   document's language tutorial, scrolled to the word under the cursor; a word
   the guide does not contain leaves the guide at the top rather than doing

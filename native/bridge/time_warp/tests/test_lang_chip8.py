@@ -95,6 +95,12 @@ def test_assembler_rejects_a_duplicate_label() -> None:
     assert has(output, "❌", "defined twice")
 
 
+def test_assembler_rejects_a_non_v0_jump_offset() -> None:
+    """Bnnn always adds V0; another register would assemble to a lie."""
+    output = run("start: JP V5, target\ntarget: HALT", CHIP8)
+    assert has(output, "❌", "V0 only")
+
+
 def test_assembler_rejects_a_row_count_over_fifteen() -> None:
     output = run("start: DRW V0, V1, 20", CHIP8)
     assert has(output, "❌", "at most 15 rows")
@@ -108,32 +114,79 @@ def test_two_digit_register_names_are_not_accepted() -> None:
 # -- machine -----------------------------------------------------------------
 
 
+def test_sys_is_ignored() -> None:
+    """0NNN is an RCA 1802 call, which every interpreter since ignores."""
+    machine = _run_to_halt("start: SYS 0x123\n       LD V0, 7\n       HALT")
+    assert machine.v[0] == 7
+    raw = _run_to_halt("start: DW 0x0123\n       LD V0, 9\n       HALT")
+    assert raw.v[0] == 9
+    memory, _labels = _assemble("start: SYS 0x123")
+    assert memory[0x200:0x202] == bytearray([0x01, 0x23])
+
+
 def test_ld_and_add_with_a_byte() -> None:
     machine = _run_to_halt("start: LD V0, 5\n       ADD V0, 3\n       HALT")
     assert machine.v[0] == 8
 
 
+def test_add_byte_wraps_without_carry() -> None:
+    machine = _run_to_halt("start: LD V0, 250\n       ADD V0, 10\n       HALT")
+    assert machine.v[0] == 4
+    assert machine.v[0xF] == 0
+
+
+def test_logic_and_shift_left() -> None:
+    machine = _run_to_halt(
+        "start: LD V0, 0x0C\n       LD V1, 0x0A\n"
+        "       LD V2, 0x0C\n       OR V2, V1\n"
+        "       LD V3, 0x0C\n       AND V3, V1\n"
+        "       LD V4, 0x0C\n       XOR V4, V1\n"
+        "       LD V5, 3\n       LD V6, 10\n       SUBN V5, V6\n"
+        "       LD V7, 0x81\n       SHL V7\n"
+        "       HALT"
+    )
+    assert (machine.v[2], machine.v[3], machine.v[4]) == (0x0E, 0x08, 0x06)
+    assert machine.v[5] == 7
+    assert machine.v[7] == 2
+    assert machine.v[0xF] == 1
+
+
+def test_index_arithmetic() -> None:
+    machine = _run_to_halt(
+        "start: LD I, 0x300\n       LD V0, 5\n       ADD I, V0\n       HALT"
+    )
+    assert machine.i == 0x305
+
+
 def test_add_sets_the_carry_flag() -> None:
-    machine = _run_to_halt("start: LD V0, 200\n       LD V1, 100\n       ADD V0, V1\n       HALT")
+    machine = _run_to_halt(
+        "start: LD V0, 200\n       LD V1, 100\n       ADD V0, V1\n       HALT"
+    )
     assert machine.v[0] == 44
     assert machine.v[0xF] == 1
 
 
 def test_subtract_sets_the_borrow_flag() -> None:
-    machine = _run_to_halt("start: LD V0, 5\n       LD V1, 9\n       SUB V0, V1\n       HALT")
+    machine = _run_to_halt(
+        "start: LD V0, 5\n       LD V1, 9\n       SUB V0, V1\n       HALT"
+    )
     assert machine.v[0] == 252
     assert machine.v[0xF] == 0
 
 
 def test_shr_shifts_the_named_register_in_place() -> None:
     """The 1977 machine ignores the y operand; a later emulator would not."""
-    machine = _run_to_halt("start: LD V0, 8\n       LD V1, 1\n       SHR V0\n       HALT")
+    machine = _run_to_halt(
+        "start: LD V0, 8\n       LD V1, 1\n       SHR V0\n       HALT"
+    )
     assert machine.v[0] == 4
     assert machine.v[1] == 1
 
 
 def test_bcd_conversion_writes_three_digits() -> None:
-    memory, labels, _entry = assemble("start: LD V0, 205\n       LD I, data\n       LD B, V0\n       HALT\ndata: DB 0\n      DB 0\n      DB 0")
+    memory, labels, _entry = assemble(
+        "start: LD V0, 205\n       LD I, data\n       LD B, V0\n       HALT\ndata: DB 0\n      DB 0\n      DB 0"
+    )
     machine = Machine(memory, 0x200)
     while not machine.halted:
         machine.step()
@@ -144,19 +197,46 @@ def test_bcd_conversion_writes_three_digits() -> None:
 def test_store_and_load_through_i() -> None:
     machine = _run_to_halt(
         "start: LD V0, 1\n       LD V1, 2\n       LD I, buf\n       LD [I], V1\n"
-        "       LD V0, 0\n       LD V1, 0\n       LD V2, [I]\n       HALT\n"
+        "       LD I, buf\n       LD V3, [I]\n       HALT\n"
         "buf:   DB 0\n       DB 0"
     )
+    assert machine.v[0] == 1
     assert machine.v[1] == 2
+    assert machine.v[3] == 0
+
+
+def test_block_transfer_advances_i() -> None:
+    """The 1977 interpreter leaves I one past the block."""
+    memory, labels, entry = assemble(
+        "start: LD V0, 1\n       LD V1, 2\n       LD I, buf\n"
+        "       LD [I], V1\n       HALT\nbuf: DB 0\n     DB 0"
+    )
+    machine = Machine(memory, entry)
+    while not machine.halted:
+        machine.step()
+    assert machine.i == labels["buf"] + 2
+
+    memory, labels, entry = assemble(
+        "start: LD I, buf\n       LD V1, [I]\n       HALT\nbuf: DB 7\n     DB 9"
+    )
+    loaded = Machine(memory, entry)
+    while not loaded.halted:
+        loaded.step()
+    assert (loaded.v[0], loaded.v[1]) == (7, 9)
+    assert loaded.i == labels["buf"] + 2
 
 
 def test_skip_when_equal_skips_one_instruction() -> None:
-    machine = _run_to_halt("start: LD V0, 5\n       SE V0, 5\n       LD V1, 1\n       HALT")
+    machine = _run_to_halt(
+        "start: LD V0, 5\n       SE V0, 5\n       LD V1, 1\n       HALT"
+    )
     assert machine.v[1] == 0
 
 
 def test_skip_when_not_equal_does_not_skip_when_equal() -> None:
-    machine = _run_to_halt("start: LD V0, 5\n       SNE V0, 5\n       LD V1, 1\n       HALT")
+    machine = _run_to_halt(
+        "start: LD V0, 5\n       SNE V0, 5\n       LD V1, 1\n       HALT"
+    )
     assert machine.v[1] == 1
 
 
@@ -209,6 +289,13 @@ def test_pixels_wrap_around_the_screen() -> None:
     assert machine.framebuffer[63] == 1
 
 
+def test_register_skips() -> None:
+    source = "start: LD V0, 5\n       LD V1, 5\n       SE V0, V1\n       LD V2, 1\n       HALT"
+    assert _run_to_halt(source).v[2] == 0
+    source = "start: LD V0, 5\n       LD V1, 5\n       SNE V0, V1\n       LD V2, 1\n       HALT"
+    assert _run_to_halt(source).v[2] == 1
+
+
 def test_skp_skips_when_the_key_is_held() -> None:
     source = "start: LD V0, 3\n       SKP V0\n       LD V1, 1\n       HALT"
     assert _run_to_halt(source, keys=1 << 3).v[1] == 0
@@ -248,8 +335,32 @@ def test_jump_with_offset_uses_v0() -> None:
 
 
 def test_timers_are_written_and_read() -> None:
-    machine = _run_to_halt("start: LD V0, 30\n       LD DT, V0\n       LD V1, DT\n       HALT")
-    assert machine.v[1] == 30
+    memory, _labels, entry = assemble(
+        "start: LD V0, 2\n       LD DT, V0\n       LD ST, V0\n       LD V1, DT\n       HALT"
+    )
+    machine = Machine(memory, entry)
+    while not machine.halted:
+        machine.step()
+    assert machine.v[1] == 2
+    assert machine.delay_timer == 2
+    assert machine.sound_timer == 2
+    machine.tick_timers()
+    assert (machine.delay_timer, machine.sound_timer) == (1, 1)
+    machine.tick_timers()
+    machine.tick_timers()
+    assert (machine.delay_timer, machine.sound_timer) == (0, 0)
+
+
+def test_a_binary_rom_loads_at_0x200() -> None:
+    rom = "\x60\x05\x61\x07\x00\x00"
+    machine = _run_to_halt(rom)
+    assert (machine.v[0], machine.v[1]) == (5, 7)
+    assert machine.memory[_FONT_ADDRESS] == 0xF0
+
+
+def test_a_binary_rom_must_fit_memory() -> None:
+    output = run("\x60" + "\x00" * 3584, CHIP8)
+    assert has(output, "❌", "holds 3584")
 
 
 def test_cycle_limit_is_reported() -> None:
@@ -265,7 +376,11 @@ def test_the_display_uses_the_palette() -> None:
     from time_warp.graphics.turtle_state import TurtleState
 
     turtle = TurtleState()
-    execute_chip8(None, "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0xFF", turtle)
+    execute_chip8(
+        None,
+        "start: LD I, dot\n       DRW V0, V1, 1\n       HALT\ndot: DB 0xFF",
+        turtle,
+    )
 
     lit = [
         shape
@@ -284,10 +399,11 @@ def test_the_display_is_cleared_before_the_first_frame() -> None:
     assert turtle.shapes, "the screen is painted even by a program that draws nothing"
 
 
-def test_an_unknown_opcode_is_reported_with_its_address() -> None:
-    """0x0FFF is not in the set, so the machine must refuse it by name."""
-    output = run("start: DW 0x0FFF", CHIP8)
+def test_an_unknown_opcode_is_reported() -> None:
+    """0NNN is SYS and is ignored; Fx0FF is not an instruction."""
+    output = run("start: DW 0xF0FF", CHIP8)
     assert has(output, "❌", "unknown opcode")
+    assert has(output, "FxFF")
 
 
 def test_screen_constants_are_the_original_geometry() -> None:
