@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [16.3.0] - 2026-10-20
+
+The HB-1 arrives: a bespoke 1982 home computer inside the Studio, with a
+ten-language ROM socket, its own CONFIG screen and HB DOS on a 512-sector volume.
+The machines get their own manual set, the README is reframed for retro-computing
+hobbyists, and CHIP-8 clears its hi-res screen correctly.
+
 ### Added
 
 - **The HB-1.** Tools > HB-1 Computer… (`Ctrl+Alt+W`, or
@@ -34,7 +41,7 @@
 ### Documentation
 
 - **The machines have books.** [docs/MACHINES.md](docs/MACHINES.md) states the
-  premise — a system from a parallel universe —, what the HB-1 and the CHIP-8
+  premise — a system from a parallel universe — what the HB-1 and the CHIP-8
   share, and the deliberate anachronisms item by item. `docs/hb1/` is the Owner's
   Manual, the ROM library, the HB DOS 1.0 reference, the CONFIG reference and an
   engineering companion; `docs/chip8/` is the machine manual, the assembler and
@@ -65,12 +72,11 @@
   past it and nothing below the sixteenth row could be painted. Clearing now uses
   the current grid, and `lang_tests` pins both the buffer size and a pixel on the
   bottom row.
-- The command and REPL matrices accept the documented “not available” refusal
-  from an optional backend (BASIC `SAY`/`SPEAK`), so the gates pass on a machine
-  with no speech engine instead of failing on an optional dependency. The refusal
-  is only accepted for rows marked `optional`; any other error still fails. A new
-  `--python` option lets the command matrix choose the worker interpreter, which
-  is how both the backed and unbacked paths are exercised.
+- **Build: the SQLite target.** CMake 4.3 renamed `FindSQLite3`'s imported
+  target from `SQLite::SQLite3` to `SQLite3::SQLite3` and deprecated the old
+  spelling, so every configure on a newer CMake warned against the link line.
+  The build now uses whichever name the module provides, keeping the CMake 3.20
+  floor working without the warning.
 
 ## [16.2.0] - 2026-10-20
 
@@ -129,6 +135,15 @@ lesson ids are unchanged.
   compiles a program into a standalone executable for every language, embedding
   the source, linking the engine, writing a drawing as SVG and taking `--db FILE`
   for a program that uses SQL.
+
+### Fixed
+
+- The command and REPL matrices accept the documented “not available” refusal
+  from an optional backend (BASIC `SAY`/`SPEAK`), so the gates pass on a machine
+  with no speech engine instead of failing on an optional dependency. The refusal
+  is only accepted for rows marked `optional`; any other error still fails. A new
+  `--python` option lets the command matrix choose the worker interpreter, which
+  is how both the backed and unbacked paths are exercised.
 
 ## [16.1.0] - 2026-10-19
 

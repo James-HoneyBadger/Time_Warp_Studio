@@ -602,6 +602,11 @@ if(Qt6_FOUND AND TARGET timewarp::sql)
     endif()
     # The version file is read later in this block for the window title, so the
     # API target reads it here rather than depending on the order of the file.
+    # Declared as a configure dependency too: `file(READ)` alone does not make CMake
+    # re-run when the file changes, so `make` after a release bump would quietly
+    # keep compiling the old number into the binary.
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+                 "${CMAKE_CURRENT_SOURCE_DIR}/../VERSION")
     file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../VERSION" TIME_WARP_API_VERSION_RAW)
     string(STRIP "${TIME_WARP_API_VERSION_RAW}" TIME_WARP_API_VERSION)
     target_compile_definitions(timewarp_api PRIVATE
