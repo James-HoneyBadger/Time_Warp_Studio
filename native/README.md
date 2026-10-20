@@ -112,6 +112,10 @@ cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
 cmake --build native/build -j
 ctest --test-dir native/build --output-on-failure
 
+# The Windows 7 configuration: Qt 5.15, and the Windows 7 API level
+cmake -S native -B native/build5 -DCMAKE_BUILD_TYPE=Release \
+    -DTIME_WARP_QT5=ON -DTIME_WARP_WIN7=ON
+
 # Cross-check against the Python reference implementations
 python3 native/tools/differential_check.py native/build/expr_cli
 python3 native/tools/scheme_differential_check.py native/build/scheme_cli
@@ -165,11 +169,22 @@ the job greps its own configure log and fails if the UI was skipped. Before the
 suites it runs the shipped entry point (`--version`, `--help`, and a screenshot of
 a file that does not exist), because "links" and "starts" are different claims.
 
-Qt6 is discovered with `find_package(Qt6 QUIET COMPONENTS Core)`, plus `Widgets`
-for `timewarp_ui`. When they are present the canvas bridge, the debugger runner
-and the widget UI are built; when absent they are skipped and everything else —
-including the queue's own tests — still builds and runs. Nothing outside
+Qt is discovered with `find_package(${TIME_WARP_QT} QUIET COMPONENTS Core)`, plus
+`Widgets` for `timewarp_ui`. When they are present the canvas bridge, the debugger
+runner and the widget UI are built; when absent they are skipped and everything
+else — including the queue's own tests — still builds and runs. Nothing outside
 `qt_bridge.*`, `debugger_runner.*` and `ui/` includes a Qt header.
+
+`TIME_WARP_QT` is `Qt6`, or `Qt5` when the build is configured with
+`-DTIME_WARP_QT5=ON`. That option exists for the Windows 7 artifact: Qt 6 requires
+Windows 10, and Qt 5.15 is the last release that runs on 7 SP1. The two versions
+differ in a handful of names and in whether `QList` and `QVector` are one type;
+those differences live in `include/timewarp/core/qt_compat.hpp` and
+`qt_gui_compat.hpp` rather than in an `#if` at each call site. `-DTIME_WARP_WIN7=ON`
+sets `WINVER` and `_WIN32_WINNT` to 6.01, so a call into a newer Windows API is a
+compile error rather than a missing entry point on the target machine. Both are off
+by default, and `native.yml` builds and tests the Qt 5 configuration on every push
+so it cannot quietly rot.
 
 `Svg` is a second, optional component that only `timewarp_ui` asks for: it makes
 `TurtleCanvas::exportDrawing` able to write `.svg` with `QSvgGenerator`. A build

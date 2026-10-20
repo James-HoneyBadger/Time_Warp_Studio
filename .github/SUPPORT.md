@@ -39,11 +39,17 @@ one I would type:
 ## What is supported
 
 **Platforms.** Linux, Windows and macOS are all built and tested on every change:
-the 21 suites run under GCC on Ubuntu 24.04, under MSVC on Windows and under
-Apple's Clang on macOS, and a tagged release ships a Windows installer and a
+the 21 suites run under GCC on Ubuntu 24.04, under MSVC on Windows, under MSVC
+with Qt 5.15 for the Windows 7 artifact and under Apple's Clang on macOS, and a
+tagged release ships a Windows installer, a second installer for Windows 7 and a
 universal macOS disk image beside the Linux packages. Say which platform you are
 on when you report; the three differ in their file dialogs, their fonts and their
 packaging, and a report that names the platform is one I can reproduce.
+
+**Windows 7** is built and released, and tested on Windows 11 — no CI runner is
+older than Windows Server 2019. It is expected to work; it is not verified on
+Windows 7 hardware, and a report from a real 7 machine is the most useful one
+anybody could send.
 
 **Configurations.** Every build configuration is expected to be green: Release,
 Debug, AddressSanitizer and UndefinedBehaviorSanitizer. A crash or a diagnostic
@@ -67,8 +73,8 @@ build and launch from a checkout.
 ## What is not
 
 - **Every package format.** A tagged release builds a Windows installer and ZIP,
-  a universal macOS disk image, a `.deb`, an `.rpm`, a tarball, an AppImage
-  (x86_64) and a container image, and `make -C native install` produces the same
+  a Windows 7 installer and ZIP, a universal macOS disk image, a `.deb`, an
+  `.rpm`, a tarball, an AppImage (x86_64) and a container image, and `make -C native install` produces the same
   tree locally, with Qt deployed into it. Flatpak, Snap, an arm64 AppImage and
   code-signed (Developer ID / Authenticode) builds are not made.
 - **Moving lesson checking into C++.** The Lessons panel asks the Python engine

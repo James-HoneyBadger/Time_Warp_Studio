@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-Time Warp Studio is an old-school desktop programming environment built with **C++20 and Qt6**: a unified IDE for ten interpreters from 1964–1980, with turtle graphics, a debugger in every language, and two complete machines — the HB-1 home computer and a live CHIP-8. A checked lesson curriculum ships for teaching, but the product is framed for retro-computing hobbyists first.
+Time Warp Studio is an old-school desktop programming environment built with **C++20 and Qt6** (Qt 5.15 for the Windows 7 build): a unified IDE for ten interpreters from 1964–1980, with turtle graphics, a debugger in every language, and two complete machines — the HB-1 home computer and a live CHIP-8. A checked lesson curriculum ships for teaching, but the product is framed for retro-computing hobbyists first.
 
 **Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 
@@ -90,6 +90,10 @@ make -C native run
 **System Requirements**
 
 - Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler
+- Qt 5.15 as well if you are building the Windows 7 artifact, which is the only
+  reason the second Qt exists: `-DTIME_WARP_QT5=ON` selects it and
+  `-DTIME_WARP_WIN7=ON` states the Windows 7 API level. Never `#if` on the Qt
+  version at a call site — the two compatibility headers below are the seam.
 - Python 3.10+ **only** for the reference engine the gates and the lesson check
   use; every language runs in-process with no Python at all
 
@@ -329,6 +333,14 @@ Scripts/                       - audit_interpreters.py, generate_icon.py,
 The Qt application: Qt6 (Widgets, Core, Gui), CMake 3.20+, a C++20 compiler.
 `Svg` and `PrintSupport` are optional components: they enable SVG drawing export and
 the two Print entries, and the build hides those features when they are absent.
+
+Qt 5.15 is the second Qt, and it is not optional in the sense the others are: it
+builds the Windows 7 artifact, because Qt 6 requires Windows 10 and 5.15 is the last
+Qt that runs on 7 SP1. One tree serves both — every `Qt6::` reference in
+`native/CMakeLists.txt` is `${TIME_WARP_QT}::` — and the names that moved between the
+versions live in `native/include/timewarp/core/qt_compat.hpp` (`intLength`,
+`fromUtf8`) and `qt_gui_compat.hpp` (`eventPosition`, `keySequence`). `native.yml`
+builds and tests that configuration on every push.
 
 The Python reference engine (needed by the parity gates, the command matrix and
 the lesson check, not by a Run): Python 3.10+, standard library only. Optional

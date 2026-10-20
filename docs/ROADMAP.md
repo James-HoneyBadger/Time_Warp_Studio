@@ -40,8 +40,8 @@ derived rather than remembered.
 | Debugging | Breakpoints, Pause, Continue and Trace in all ten languages; Scheme adds a stack and frame bindings; watch expressions and data breakpoints in the Debug panel |
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
-| Packaging | `make install`; tagged releases build a Windows installer and portable ZIP, a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
-| Quality gates | 21 CTest suites in 4 build configurations, 3 parity gates, 571 engine tests, 447 command rows, 474 parity programs |
+| Packaging | `make install`; tagged releases build a Windows installer and portable ZIP (Qt 6), a second Windows installer for Windows 7 (Qt 5.15), a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
+| Quality gates | 21 CTest suites in 4 build configurations and on four platforms (Linux, Windows, Windows with Qt 5.15, macOS), 3 parity gates, 575 engine tests, 447 command rows, 474 parity programs |
 
 ---
 

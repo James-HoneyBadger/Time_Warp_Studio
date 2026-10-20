@@ -1,6 +1,14 @@
 # Changelog
 
-## [Unreleased]
+## [16.4.0] - 2026-10-20
+
+The Studio leaves Linux: a release now carries a native Windows installer and a
+universal macOS disk image beside the Linux packages, built and tested on all
+three desktops. Two new schemes name the machines it runs on -- Windows 2000 and
+Windows 7 -- and the Windows 7 one is a real build as well as a look, because Qt 6
+requires Windows 10 and Qt 5.15 does not. Getting there meant compiling the same
+sources against both Qt versions, which is now a configure option rather than a
+fork.
 
 ### Added
 
@@ -52,6 +60,31 @@
   sound layer looks for, so a sound on a Mac is heard rather than reported as
   unavailable. Windows has no equivalent command-line player, so sound there stays
   silent, as the reference engine's optional backends already are.
+- **The bridge died at its first non-ASCII reply on Windows.** Its streams were
+  whatever the locale made them, which on Windows is cp1252, while the protocol is
+  UTF-8 and the messages are written as real characters. The first lesson title or
+  emoji therefore raised `UnicodeEncodeError`, which is a `ValueError`, which the
+  emitter reads as a client that has gone away -- so the worker said `ready`,
+  exited, and every bridge test reported a bare timeout. The worker now sets its
+  streams to UTF-8 before it says anything, and a stream that still cannot encode
+  is an error rather than a silent exit. A regression test drives the real worker
+  under `PYTHONIOENCODING=cp1252` and `ascii`, which is how the bug was proved to
+  exist rather than merely assumed fixed.
+- **A hung run could deadlock the window.** Stopping a program waited for its
+  thread to notice the stop flag, but a thread blocked on a full canvas queue can
+  only notice it once the GUI drains the queue -- and the GUI was parked in the
+  wait. The wait now drains the queue between slices, so Stop always returns.
+- **A Mac's serial ports were refused.** The port policy allows the device
+  families a school plugs in, and the list was Linux's: `/dev/pts/` for a
+  pseudo-terminal and nothing for the `/dev/ttys#` macOS uses instead, nor the
+  `/dev/cu.*` and `/dev/tty.*` a USB serial adapter appears as. A Mac user with a
+  board plugged in was told the path was not a port they may open; now it is.
+- **Floating-point `std::to_chars` and `std::from_chars` are not everywhere.**
+  Apple's standard library gained them late, so the dependency-free formatting the
+  expression evaluator uses now has a `snprintf`/`strtod` fallback. It is not a
+  last resort left untested: `TIME_WARP_FORCE_CHARCONV_FALLBACK=1` builds the
+  fallback on a machine that has the real thing, and every differential gate passes
+  through it.
 
 ### Changed
 
@@ -63,6 +96,15 @@
   between the versions are two small headers -- `timewarp/core/qt_compat.hpp` and
   `timewarp/core/qt_gui_compat.hpp` -- rather than a conditional at every call
   site, so a fix in either build is a fix in both.
+- The macOS build targets **macOS 14.4**, which is Qt 6.12's own floor, and the
+  Windows builds target the 64-bit Windows 10/11 desktop. The Windows 7 artifact is
+  built against Qt 5.15.2 and states the Windows 7 API level; it is built and
+  tested on Windows 11, because no CI runner is older, and that caveat is in
+  `docs/INSTALLATION.md` rather than left for the user to discover.
+- Every continuous-integration job runs its suites with a per-test timeout, so a
+  test that hangs is a named failure with the output it had produced instead of a
+  job that sits there until the runner tires of it. That is how the deadlock above
+  was found.
 
 ## [16.3.0] - 2026-10-20
 

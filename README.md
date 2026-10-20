@@ -5,7 +5,7 @@
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)](https://en.cppreference.com/)
 [![Qt6](https://img.shields.io/badge/Qt-6-green)](https://www.qt.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/Version-16.3.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
+[![Version](https://img.shields.io/badge/Version-16.4.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
 Time Warp Studio is a native C++20/Qt6 workbench for people who like old
 computers. It is the programming environment the 1980s promised and never quite
@@ -353,8 +353,9 @@ smalltalk
 - **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — the standard expected here
 - **[CHANGELOG.md](CHANGELOG.md)** — what changed, release by release
 
-Releases carry a Windows installer and portable ZIP, a universal macOS disk image,
-and `.deb`, `.rpm`, tarball and (x86_64) AppImage packages for Linux (see **Install
-it** above). Building from source is still the way to work on the application, and
+Releases carry a Windows installer and portable ZIP, a Windows 7 installer built
+against Qt 5.15, a universal macOS disk image, and `.deb`, `.rpm`, tarball and
+(x86_64) AppImage packages for Linux (see **Install it** above). Building from
+source is still the way to work on the application, and
 [docs/INSTALLATION.md](docs/INSTALLATION.md) is the whole procedure for every
 platform.
