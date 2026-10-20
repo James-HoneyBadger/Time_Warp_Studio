@@ -5146,18 +5146,38 @@ void MainWindow::runSource(CodeEditor* editor, const QString& source) {
 }
 
 void MainWindow::stopEngines() {
+    // Wait in slices, draining the canvas in between.
+    //
+    // A runner that is blocked in `CanvasCommandQueue::push` -- the ring is full
+    // because nothing has emptied it -- cannot look at the stop flag until it can
+    // write again, and the only thing that empties the ring is this thread, which
+    // would be parked in `wait()`. That is a deadlock, and whether it is reached
+    // is a matter of which thread gets there first: a program that draws fast
+    // enough to fill the ring before Stop is pressed deadlocks, and one that does
+    // not, stops tidily. Linux never reached it; Windows and macOS did.
+    const auto wait_draining = [this](QThread* thread) {
+        while (thread != nullptr && thread->isRunning()) {
+            if (thread->wait(50)) {
+                return;
+            }
+            if (canvas_bridge_ != nullptr) {
+                canvas_bridge_->drainNow();
+            }
+        }
+    };
+
     if (repl_runner_ != nullptr) {
         // A REPL command is a small run, and running a document while one is in
         // flight would put two engines on one canvas.
         repl_runner_->requestStop();
-        repl_runner_->wait();
+        wait_draining(repl_runner_);
         delete repl_runner_;
         repl_runner_ = nullptr;
     }
     if (native_runner_ != nullptr) {
         // Cooperative, then wait: an executor checks the flag between statements.
         native_runner_->request_stop();
-        native_runner_->wait();
+        wait_draining(native_runner_.data());
         delete native_runner_.data();
         native_runner_ = nullptr;
     }
@@ -5165,7 +5185,7 @@ void MainWindow::stopEngines() {
         // `wait` rather than a delay: the stop flag is checked per form, so this
         // returns as soon as the interpreter reaches the next one.
         runner_->request_stop();
-        runner_->wait();
+        wait_draining(runner_.data());
         delete runner_.data();
     }
     // Only when a program is actually in flight. The worker process stays alive

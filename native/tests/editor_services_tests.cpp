@@ -1140,6 +1140,11 @@ int main(int argc, char** argv) {
     // offscreen -- so this stays a test with no window.
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QGuiApplication app{argc, argv};
+    // QSettings is the Windows registry here, and a registry path needs an
+    // organization: without one every write is dropped, so the breakpoint and
+    // CHIP-8 folder stores round-tripped to nothing. The other suites already do
+    // this; this one never had a setting to keep before.
+    QCoreApplication::setOrganizationName(QStringLiteral("TimeWarpTests"));
     test_basic_indents_a_loop_body();
     test_basic_else_body_is_indented();
     test_basic_single_line_if_opens_nothing();
