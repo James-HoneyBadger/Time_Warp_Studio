@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //
-// The 33 themes.
+// The 35 themes.
 //
 // The removed PySide6 implementation shipped a theme manager with 33 named
 // colour schemes -- the retro sets (Amber, Green, C64, Apple II, CGA, ZX
@@ -9,7 +9,9 @@
 // "themes are not ported yet" since the Qt port landed. This module is that
 // work: one record per theme, transcribed from the Python's table rather than
 // re-invented, so a learner who set "Amiga Workbench 2.0" before the port gets
-// the same colours afterwards.
+// the same colours afterwards. Two schemes are newer than the Python's table:
+// Windows 2000 and Windows 7, which name the machines this application also
+// builds for.
 //
 // #### Why a struct of `const char*`
 //

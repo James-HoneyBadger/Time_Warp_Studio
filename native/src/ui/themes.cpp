@@ -20,7 +20,7 @@ namespace {
 // The whole point of a table like this is that it is complete; the asserts are
 // compile-time so a truncated generation is a build error rather than a theme
 // that silently resolves to the fallback.
-static_assert(std::size(kThemes) == 34, "the theme table is 34 themes");
+static_assert(std::size(kThemes) == 35, "the theme table is 35 themes");
 static_assert(std::size(kThemes) > 0, "the theme table is not empty");
 
 constexpr std::size_t kThemeCount = std::size(kThemes);

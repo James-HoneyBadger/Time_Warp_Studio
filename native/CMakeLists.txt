@@ -54,6 +54,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 option(TIME_WARP_EXPR_WERROR "Treat compiler warnings as errors" ON)
 option(TIME_WARP_QT5 "Build against Qt 5.15 (the Windows 7 build) rather than Qt 6" OFF)
+option(TIME_WARP_WIN7 "Compile against the Windows 7 API level" OFF)
 option(TIME_WARP_EXPR_BUILD_TESTS "Build the test suites" ON)
 
 # ---------------------------------------------------------------------------
@@ -120,6 +121,16 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     endif()
 else()
     set(TIME_WARP_GNU_WARNING_FLAGS "")
+endif()
+
+# The Windows 7 build states its own API level. `WINVER` and `_WIN32_WINNT` are
+# what the SDK headers test, so a call to anything newer than Windows 7 becomes a
+# compile error here instead of a missing entry point on the user's machine --
+# which is the only way to be sure without a Windows 7 machine to try it on. The
+# subsystem version the linker writes (6.00 by default) is already below the 6.1
+# Windows 7 accepts, so nothing has to be forced there.
+if(TIME_WARP_WIN7)
+    add_compile_definitions(WINVER=0x0601 _WIN32_WINNT=0x0601)
 endif()
 
 # ---------------------------------------------------------------------------
@@ -1454,6 +1465,11 @@ if(WIN32)
         set(_time_warp_platform_tag "win64")
     else()
         set(_time_warp_platform_tag "win32")
+    endif()
+    # Two installers can exist for one architecture, so which Windows they want
+    # is in the name rather than only in the release notes.
+    if(TIME_WARP_WIN7)
+        string(APPEND _time_warp_platform_tag "-win7")
     endif()
     set(CPACK_PACKAGE_FILE_NAME
         "time-warp-studio-${TIME_WARP_PACKAGE_VERSION}-${_time_warp_platform_tag}")

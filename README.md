@@ -97,6 +97,7 @@ inside it.
 | You have | Take | Then |
 | --- | --- | --- |
 | Windows 10 or 11 | `time-warp-studio-<version>-win64.exe` | Run it. Installs into Program Files with Start Menu and desktop shortcuts; the `.zip` beside it is the same application without an installer. |
+| Windows 7 | `time-warp-studio-<version>-win64-win7.exe` | The same application against Qt 5.15, the last Qt that runs on Windows 7 (Qt 6 needs Windows 10). A `.zip` sits beside it. |
 | macOS 14.4 or later, Intel or Apple silicon | `Time_Warp_Studio-<version>-macOS-universal.dmg` | Open it and drag **Time Warp Studio** to Applications. One image, both architectures. |
 | a Linux desktop, no wish to install anything | `Time_Warp_Studio-<version>-x86_64.AppImage` | Make it executable and double-click it. No root, no package manager, no Qt to fetch. |
 | Ubuntu, Debian, Mint or Pop!_OS | `time-warp-studio_<version>_amd64.deb`, or `_arm64.deb` | Double-click it, or `sudo apt install ./time-warp-studio_<version>_amd64.deb` |
@@ -146,7 +147,7 @@ The full inventory, feature by feature:
 | **Projects** | `.twproject` groups that organise programs without moving them on disk | [USER_GUIDE](docs/USER_GUIDE.md#2-projects-and-groups) |
 | **SQL** | A SQLite Database tab, plus `SQL` statements in nine languages and through the API | [USER_GUIDE](docs/USER_GUIDE.md#6-sql-and-the-database-tab) |
 | **Automation** | JSON-RPC over stdin/stdout, a standalone `twc` compiler, and scriptable screenshots and exports | [API](docs/API.md), [USER_GUIDE](docs/USER_GUIDE.md#7-terminal-tools) |
-| **Appearance and display** | 34 themes, high contrast, 100/125/150% text, focus mode, CRT settings and four monitor presets, presentation mode | [USER_GUIDE](docs/USER_GUIDE.md#9-lessons-classroom-and-appearance) |
+| **Appearance and display** | 35 themes, high contrast, 100/125/150% text, focus mode, CRT settings and four monitor presets, presentation mode | [USER_GUIDE](docs/USER_GUIDE.md#9-lessons-classroom-and-appearance) |
 | **Help that covers the whole thing** | `F1` context help, `Ctrl+F1` keyword inspector, the documentation browser, a guided tour and a shortcut reference | [Help](#help-from-inside-the-studio) |
 | **Lessons, if you teach** | 20 lessons and 60 checkpoints checked by running the program, plus rosters, handouts and marking | [lessons/](docs/lessons/README.md) |
 
@@ -187,7 +188,7 @@ command matrix.
 - **Autosave and version history** — snapshots on a timer you set, and **File > Version History…** (`Ctrl+Alt+V`) to read or restore any of them, including buffers that were never saved
 - **Two panes** — **Split Editor Right** (`Ctrl+\`) shows two documents side by side; **Run Both Panes** (`Ctrl+Alt+B`) runs both headless and reports time, turtle calls and each program's own output in one table — a comparison, not a race
 - **Run controls** — Run (F9) and Stop, with a status bar showing language, cursor position and execution state
-- **Presentation and access** — 34 themes including the retro CRT sets and a Windows 2000 scheme, a High Contrast variant of whichever is active, 100/125/150% text sizes, focus mode, CRT settings with four monitor presets, and **Presentation Mode** (`Shift+F11`, `Esc` to leave) for showing the screen to a room
+- **Presentation and access** — 35 themes including the retro CRT sets and Windows 2000 and Windows 7 schemes, a High Contrast variant of whichever is active, 100/125/150% text sizes, focus mode, CRT settings with four monitor presets, and **Presentation Mode** (`Shift+F11`, `Esc` to leave) for showing the screen to a room
 - **Inspection** — a 🔍 **Variables** panel listing every binding with its type and value, filtered by name, and a ⚡ **Telemetry** HUD showing what the run cost and did: steps used, engine time, steps per second, last line, recursion depth, call stack, output lines, drawing commands, BASIC's memory window, and — beside the engine's own counters — the IDE's wall clock and the ink that actually reached the canvas
 - **Debugging** — gutter breakpoints and a 🐞 **Debug** panel (Continue, Pause, Step In/Over/Out, Stop) plus Debug/Continue/Trace on the toolbar, working in all ten languages: at a statement, a Logo top-level statement, a Smalltalk message send or a CHIP-8 instruction. Scheme additionally shows the call stack and the paused frame's bindings; for a native run the Variables panel shows the bindings the pause stopped in. **Watch expressions** evaluate arithmetic over the paused bindings, and **data breakpoints** stop when a named variable changes value
 - **Projects** — a 🗂 **Projects** dock groups programs into named groups without moving them on disk. Create or open a `.twproject`, add files, a whole folder (its programs are grouped by subfolder), and groups, drag a file between groups, and the project reopens with the session; missing files are marked rather than forgotten

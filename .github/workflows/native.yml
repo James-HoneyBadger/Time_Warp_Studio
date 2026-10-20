@@ -347,3 +347,94 @@ jobs:
           "$app" --help > /dev/null
           "$app" --screenshot "${RUNNER_TEMP:-/tmp}/smoke.png" --size 800x600
           test -s "${RUNNER_TEMP:-/tmp}/smoke.png"
+
+  # The Windows 7 build, which is a real build rather than a look: Qt 6 requires
+  # Windows 10, so this one is Qt 5.15.2 -- the last Qt that runs on 7 SP1 -- and
+  # `-DTIME_WARP_QT5=ON` compiles the same sources against it. `TIME_WARP_WIN7`
+  # states the API level, so a call into anything newer fails here rather than on
+  # the target machine.
+  #
+  # What this cannot prove is that the result runs on Windows 7: no runner image
+  # is older than Windows Server 2019. It proves the build is possible, the whole
+  # suite passes against Qt 5, and no newer API is used.
+  windows-7:
+    name: Build and test for Windows 7 (Qt 5.15)
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      # 5.15.2 is the newest Qt 5.15 with an MSVC binary package, and it is built
+      # for the 2019 toolset. Its DLLs declare Windows 7 as their floor.
+      - name: Install Qt 5.15
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '5.15.2'
+          arch: win64_msvc2019_64
+          cache: true
+
+      - name: Install SQLite (Windows)
+        run: |
+          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install sqlite3:x64-windows-static-md --clean-after-build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      # The 2019 toolset when the image still carries it, which is the one this Qt
+      # was built with and the one whose runtime is documented to run on Windows 7.
+      # The image's own toolset when it does not: MSVC 2015-2022 are binary
+      # compatible, so the mix links, but the note in the release says which one
+      # built the artifact.
+      - name: Set up MSVC 2019
+        id: msvc2019
+        continue-on-error: true
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          toolset: 14.29
+
+      - name: Set up MSVC (default toolset)
+        if: steps.msvc2019.outcome != 'success'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure
+        run: |
+          if ("${{ steps.msvc2019.outcome }}" -ne "success") {
+            Write-Host "::warning::the v142 toolset is not on this image; using the default one"
+          }
+          $toolchain = Join-Path $env:VCPKG_INSTALLATION_ROOT "scripts/buildsystems/vcpkg.cmake"
+          cmake -S native -B native/build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DTIME_WARP_QT5=ON `
+            -DTIME_WARP_WIN7=ON `
+            -DCMAKE_TOOLCHAIN_FILE="$toolchain" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md 2>&1 | Tee-Object -FilePath configure.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (Select-String -Path configure.log -Pattern "skipping the widget UI" -Quiet) {
+            Write-Error "Qt5 Widgets was not found, so the UI was skipped."
+            exit 1
+          }
+          # The point of the job: prove Qt 5 was the one it built against.
+          if (-not (Select-String -Path configure.log -Pattern "Qt5 .* found: building the widget UI" -Quiet)) {
+            Write-Error "the configure did not report a Qt5 widget UI"
+            exit 1
+          }
+
+      - name: Build
+        run: cmake --build native/build --parallel
+
+      - name: Test
+        timeout-minutes: 30
+        run: ctest --test-dir native/build --timeout 180 --output-on-failure
+
+      - name: The entry point starts and exits
+        run: |
+          $app = (Resolve-Path "native/build/time_warp_ide.exe").Path
+          $version = Start-Process -FilePath $app -ArgumentList "--version" -NoNewWindow -Wait -PassThru
+          if ($version.ExitCode -ne 0) { exit $version.ExitCode }
+          $shot = Join-Path $env:RUNNER_TEMP "win7.png"
+          $render = Start-Process -FilePath $app -ArgumentList "--screenshot", $shot -NoNewWindow -Wait -PassThru
+          if ($render.ExitCode -ne 0) { exit $render.ExitCode }
+          if (-not (Test-Path $shot)) { Write-Error "no screenshot"; exit 1 }

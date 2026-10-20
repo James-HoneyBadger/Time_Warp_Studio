@@ -1211,10 +1211,10 @@ void test_themes() {
     using timewarp::ui::themes::defaultName;
     using timewarp::ui::themes::next;
 
-    // The table ships 34 named schemes -- the Python's 33 plus Windows 2000 --
-    // so the count is a fact worth pinning: a truncated table would silently drop
-    // the retro sets.
-    TW_CHECK_EQ(all().size(), std::size_t{34});
+    // The table ships 35 named schemes -- the Python's 33 plus the two Windows
+    // schemes, 2000 and 7 -- so the count is a fact worth pinning: a truncated
+    // table would silently drop the retro sets.
+    TW_CHECK_EQ(all().size(), std::size_t{35});
     QSet<QString> names;
     for (const auto& theme : all()) {
         const QString name = QString::fromUtf8(theme.name);
@@ -1228,7 +1228,7 @@ void test_themes() {
             TW_CHECK(timewarp::ui::themes::colour(hex).isValid());
         }
     }
-    TW_CHECK_EQ(names.size(), 34);
+    TW_CHECK_EQ(names.size(), 35);
 
     // An unknown name is a stale setting, not a crash.
     TW_CHECK_EQ(QString::fromUtf8(byName(QStringLiteral("no such theme")).name),

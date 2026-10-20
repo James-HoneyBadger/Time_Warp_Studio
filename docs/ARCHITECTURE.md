@@ -31,9 +31,10 @@
 Time Warp Studio is a desktop workbench for old-school programming: ten
 interpreters from 1964–1980 — **BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8,
 COMAL, REXX and Smalltalk** — with an integrated turtle graphics canvas, and two
-complete machines. It is a C++20 / Qt6 application, and all ten languages
-run in C++ inside it. The Python engine ships as the **reference** the parity
-gates, the command matrix and the lesson check use; no program is sent to it.
+complete machines. It is a C++20 / Qt application — Qt 6 for the release, Qt 5.15
+for the Windows 7 build — and all ten languages run in C++ inside it. The Python
+engine ships as the **reference** the parity gates, the command matrix and the
+lesson check use; no program is sent to it.
 
 So the product is **one GUI process**. The child process remains only for a
 lesson check, where a second interpreter must not share the document's state;
@@ -806,12 +807,20 @@ The C++ build is its own linter: `-Wall -Wextra -Wpedantic -Wshadow -Wcast-qual
 -Wuseless-cast -Wlogical-op -Wnull-dereference` with `-Werror`, so a warning fails the
 build.
 
-Qt6 is discovered with `find_package(Qt6 QUIET COMPONENTS Core)`, plus `Widgets` for
-`timewarp_ui`. When they are absent the Qt-facing targets are skipped and everything else
-— including the queue's own tests — still builds and runs. `Svg` is asked for separately
-and only by `timewarp_ui`: it enables SVG drawing export, and without it that format is
-absent rather than broken. Nothing outside the canvas Qt
-adapter, the debugger runner and `src/ui/` includes a Qt header.
+Qt is discovered with `find_package(${TIME_WARP_QT} QUIET COMPONENTS Core)`, plus
+`Widgets` for `timewarp_ui`. When they are absent the Qt-facing targets are skipped and
+everything else — including the queue's own tests — still builds and runs. `Svg` is asked
+for separately and only by `timewarp_ui`: it enables SVG drawing export, and without it
+that format is absent rather than broken. Nothing outside the canvas Qt adapter, the
+debugger runner and `src/ui/` includes a Qt header.
+
+`TIME_WARP_QT` is `Qt6` or `Qt5`, and `-DTIME_WARP_QT5=ON` is what chooses the second.
+It exists for one reason: Qt 6 requires Windows 10, so a Windows 7 build cannot use it and
+Qt 5.15 — the last Qt that runs on 7 SP1 — must. The two versions differ in a handful of
+names and in whether `QList` and `QVector` are one type, and those differences live in two
+small headers, `timewarp/core/qt_compat.hpp` and `timewarp/core/qt_gui_compat.hpp`, rather
+than in a conditional at each call site. Every `Qt6::` reference in `native/CMakeLists.txt`
+is `${TIME_WARP_QT}::`, so a target linked in one build is linked in the other.
 
 ---
 

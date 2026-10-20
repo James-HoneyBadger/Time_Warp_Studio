@@ -1173,5 +1173,47 @@ const Theme kThemes[] = {
         .fkey_badge = "#000080",
         .hud_accent = "#000080",
     },
+    // Windows 7
+    //
+    // Aero's own palette: the glass frame's pale grey-blue chrome, the Aero
+    // selection blue, and Visual Studio 2010's syntax colours -- which are the
+    // ones a Windows 7 user of the period actually typed in. Distinct from the
+    // Windows 2000 scheme above on every count that matters: Aero's chrome is
+    // lighter and cooler than 3D-face grey, its selection is a saturated blue
+    // rather than navy, and the bevel pair is a soft blue-grey instead of the
+    // classic white/grey.
+    Theme{
+        .name = "Windows 7",
+        .background = "#f0f0f0",
+        .foreground = "#1a1a1a",
+        .editor_bg = "#ffffff",
+        .editor_fg = "#1a1a1a",
+        .line_number_bg = "#f0f0f0",
+        .line_number_fg = "#909090",
+        .keyword = "#0000ff",
+        .comment = "#008000",
+        .string = "#a31515",
+        .number = "#098658",
+        .selection_bg = "#3399ff",
+        .selection_fg = "#ffffff",
+        .canvas_bg = "#ffffff",
+        .operator_colour = "#1a1a1a",
+        .function = "#74531f",
+        .variable = "#1a1a1a",
+        .menu_bg = "#f0f0f0",
+        .menu_fg = "#1a1a1a",
+        .border_color = "#a8c6de",
+        .error_color = "#c00000",
+        .warning_color = "#8a6d00",
+        .success_color = "#107c10",
+        .info_color = "#1f5fa9",
+        .bevel_light = "#ffffff",
+        .bevel_dark = "#a8c6de",
+        .panel_header_bg = "#dfeaf4",
+        .panel_header_fg = "#14406b",
+        .fkey_bg = "#e8f1f9",
+        .fkey_badge = "#2a6fb0",
+        .hud_accent = "#3399ff",
+    },
 };
 // clang-format on

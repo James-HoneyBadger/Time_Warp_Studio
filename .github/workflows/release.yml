@@ -332,6 +332,129 @@ jobs:
             dist/*.sha256
           if-no-files-found: error
 
+  build-windows-7:
+    name: Build the Windows 7 installer
+    needs: verify
+    # Windows Server 2022 still carries the v142 toolset, which is the one Qt
+    # 5.15.2's MSVC package was built with.
+    runs-on: windows-2022
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      # Qt 6 requires Windows 10. 5.15.2 is the last Qt that runs on 7 SP1, and
+      # the last with an MSVC binary package, so it is what this artifact is
+      # built against.
+      - name: Install Qt 5.15
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '5.15.2'
+          arch: win64_msvc2019_64
+          cache: true
+
+      - name: Install SQLite
+        run: |
+          $vcpkg = Join-Path $env:VCPKG_INSTALLATION_ROOT "vcpkg.exe"
+          if (-not (Test-Path $vcpkg)) {
+            Write-Host "vcpkg is not bootstrapped; doing that first"
+            & (Join-Path $env:VCPKG_INSTALLATION_ROOT "bootstrap-vcpkg.bat")
+          }
+          & $vcpkg install sqlite3:x64-windows-static-md --clean-after-build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Set up MSVC 2019
+        id: msvc2019
+        continue-on-error: true
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+          toolset: 14.29
+
+      - name: Set up MSVC (default toolset)
+        if: steps.msvc2019.outcome != 'success'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Configure
+        run: |
+          if ("${{ steps.msvc2019.outcome }}" -ne "success") {
+            Write-Host "::warning::the v142 toolset is not on this image; using the default one"
+          }
+          $toolchain = Join-Path $env:VCPKG_INSTALLATION_ROOT "scripts/buildsystems/vcpkg.cmake"
+          cmake -S native -B native/build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DTIME_WARP_QT5=ON `
+            -DTIME_WARP_WIN7=ON `
+            -DCMAKE_TOOLCHAIN_FILE="$toolchain" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md 2>&1 | Tee-Object -FilePath configure.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (Select-String -Path configure.log -Pattern "skipping the widget UI" -Quiet) {
+            Write-Error "Qt5 Widgets was not found, so the UI was skipped."
+            exit 1
+          }
+          if (-not (Select-String -Path configure.log -Pattern "Qt5 .* found: building the widget UI" -Quiet)) {
+            Write-Error "the configure did not report a Qt5 widget UI"
+            exit 1
+          }
+
+      - name: Build
+        run: cmake --build native/build --parallel
+
+      - name: Test what is about to ship
+        run: |
+          ctest --test-dir native/build --timeout 180 --output-on-failure
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $app = (Resolve-Path "native/build/time_warp_ide.exe").Path
+          $version = Start-Process -FilePath $app -ArgumentList "--version" -NoNewWindow -Wait -PassThru
+          if ($version.ExitCode -ne 0) { exit $version.ExitCode }
+          $shot = Join-Path $env:RUNNER_TEMP "window.png"
+          $render = Start-Process -FilePath $app -ArgumentList "--screenshot", $shot -NoNewWindow -Wait -PassThru
+          if ($render.ExitCode -ne 0) { exit $render.ExitCode }
+          if (-not (Test-Path $shot) -or (Get-Item $shot).Length -eq 0) {
+            Write-Error "the offscreen screenshot was not written"
+            exit 1
+          }
+
+      # The installer is the same NSIS script; only the name differs, which is
+      # what keeps `time-warp-studio-<v>-win64.exe` and this one from overwriting
+      # each other in the release.
+      - name: Package
+        run: |
+          choco install nsis --no-progress -y
+          $env:PATH = "C:\Program Files (x86)\NSIS;$env:PATH"
+          if (-not (Get-Command makensis.exe -ErrorAction SilentlyContinue)) {
+            Write-Error "makensis was not found, so no installer can be built."
+            exit 1
+          }
+          Push-Location native/build
+          cpack -G "NSIS;ZIP"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Pop-Location
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Get-ChildItem native/build -Filter *.exe | Where-Object { $_.Name -like "time-warp-studio-*" } | Move-Item -Destination dist
+          Get-ChildItem native/build -Filter *.zip | Where-Object { $_.Name -like "time-warp-studio-*" } | Move-Item -Destination dist
+          if (-not (Get-ChildItem dist | Where-Object { $_.Name -like "*-win7.exe" })) {
+            Write-Error "the installer is not named for Windows 7"
+            exit 1
+          }
+          Get-ChildItem dist | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)" | Set-Content -Encoding ascii "$($_.FullName).sha256"
+          }
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows7-artifact-x64
+          path: |
+            dist/*.exe
+            dist/*.zip
+            dist/*.sha256
+          if-no-files-found: error
+
   build-macos:
     name: Build the macOS disk image
     needs: verify
@@ -448,7 +571,7 @@ jobs:
 
   release:
     name: Create the GitHub Release
-    needs: [verify, build, build-windows, build-macos, image]
+    needs: [verify, build, build-windows, build-windows-7, build-macos, image]
     runs-on: ubuntu-24.04
     # The Deployment GitHub records points at the published release. Add required
     # reviewers to this environment in Settings > Environments if a release
@@ -510,6 +633,7 @@ jobs:
           | If you… | Download | What happens |
           | --- | --- | --- |
           | use Windows 10 or 11 | \`time-warp-studio-${version}-win64.exe\` | Run it. It installs into Program Files with Start Menu and desktop shortcuts, and Qt travels inside it. The \`.zip\` beside it is the same application without an installer. |
+          | use Windows 7 | \`time-warp-studio-${version}-win64-win7.exe\` | The same application built against Qt 5.15, the last Qt that runs on Windows 7 (Qt 6 needs Windows 10). Tested on Windows 11, not on Windows 7 hardware; the \`.zip\` beside it is the same build without an installer. |
           | use macOS 14.4 or later, Intel or Apple silicon | \`Time_Warp_Studio-${version}-macOS-universal.dmg\` | Open it, drag **Time Warp Studio** to Applications. One image, both architectures. |
           | just want to try it, on Linux Intel/AMD | \`Time_Warp_Studio-${version}-x86_64.AppImage\` | One file. Make it executable and double-click it. Nothing is installed and no root password is asked for. |
           | use Ubuntu, Debian, Mint or Pop!_OS | \`time-warp-studio_${version}_amd64.deb\` (or \`_arm64.deb\`) | Double-click it, or \`sudo apt install ./time-warp-studio_${version}_amd64.deb\`. Appears in the application menu. |

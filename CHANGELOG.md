@@ -26,6 +26,14 @@
 - **A Windows 2000 theme.** The 2000 "Windows Classic" scheme -- 3D-face grey
   chrome, white document surfaces, the navy selection -- joins the theme table as
   the thirty-fourth scheme, beside the C64, Apple II and CRT sets.
+- **A Windows 7 build, and a Windows 7 theme.** Qt 6 requires Windows 10, so the
+  release now also carries `time-warp-studio-<version>-win64-win7.exe`: the same
+  application built against Qt 5.15, the last Qt that runs on Windows 7 SP1. The
+  build system takes `-DTIME_WARP_QT5=ON` to compile against Qt 5 and
+  `-DTIME_WARP_WIN7=ON` to state the Windows 7 API level, so a call into anything
+  newer is a compile error rather than a missing entry point. The Aero scheme
+  joins the theme table as the thirty-fifth: the glass frame's pale chrome, the
+  Aero selection blue, and Visual Studio 2010's syntax colours.
 
 ### Fixed
 
@@ -51,6 +59,10 @@
   Windows, `DragNDrop` on macOS, `DEB` on Linux. Both new generators package the
   same `install()` rules the Linux packages use, so a local install and a package
   cannot contain different files.
+- The sources build against Qt 6 or Qt 5.15 from one tree. The names that moved
+  between the versions are two small headers -- `timewarp/core/qt_compat.hpp` and
+  `timewarp/core/qt_gui_compat.hpp` -- rather than a conditional at every call
+  site, so a fix in either build is a fix in both.
 
 ## [16.3.0] - 2026-10-20
 

@@ -13,6 +13,7 @@ time.
 | C++ compiler | C++20 | GCC 11+, Clang 14+, or MSVC 19.30+ |
 | CMake | 3.20 | |
 | Qt6 | 6.2 | Widgets, Core and Gui modules must be installed; the Svg and PrintSupport modules are optional and enable SVG drawing export and printing |
+| or Qt5 | 5.15 | Only for the Windows 7 build (`-DTIME_WARP_QT5=ON`); same modules, same role |
 | SQLite3 | 3.35 | The database manager and the languages' `SQL` statement; the development package (`libsqlite3-dev`) is required to build |
 | Python | 3.10 | *Optional* — only for the reference engine (parity gates, command matrix and lesson checks); running a language needs no Python |
 
@@ -273,6 +274,33 @@ there those commands report that playback is unavailable rather than pretending 
 make a sound. Everything else -- the ten languages, the debugger, the canvas, both
 machines, the SQL tab and the automation surface -- is the same code on all three.
 
+### Windows 7
+
+Qt 6 requires Windows 10, so the Windows 7 artifact is the same application built
+against **Qt 5.15** — the last Qt that runs on Windows 7 SP1 — from the same tree:
+
+```bash
+cmake -S native -B native/build -DTIME_WARP_QT5=ON -DTIME_WARP_WIN7=ON
+cmake --build native/build --parallel
+cpack --config native/build/CPackConfig.cmake -G NSIS
+```
+
+`-DTIME_WARP_QT5=ON` selects Qt 5 and `-DTIME_WARP_WIN7=ON` states the API level
+(`WINVER` and `_WIN32_WINNT` at 6.01), so a call into anything newer than Windows 7
+fails to compile here rather than failing to launch on the target machine. Both are
+off by default; the release build is Qt 6.
+
+What the pipeline checks is that this configuration builds, that all 21 suites pass
+against Qt 5.15, and that the executable starts and renders a window -- on Windows
+11, because that is what the runner is. What has **not** been verified is Windows 7
+itself: no continuous-integration image is older than Windows Server 2019, and the
+project has no Windows 7 machine to try it on. If it does not start there, the
+likely causes are the Visual C++ runtime and a Qt 5.15 DLL that wants a newer API;
+both are worth reporting rather than working around.
+
+The version of Qt 5 the artifact is built with, and the `windeployqt` that deploys
+it, come from `jurplel/install-qt-action`'s `win64_msvc2019_64` package of 5.15.2.
+
 ### 8. A release without building anything
 
 Every release page carries a ready-built application, and none of it needs a
@@ -284,6 +312,7 @@ an `.rpm` says `x86_64`/`aarch64`, and the tarball and the AppImage say
 | You have | Take | Then |
 | --- | --- | --- |
 | Windows 10 or 11 | `time-warp-studio-<version>-win64.exe` | Run it: it installs into Program Files, adds Start Menu and desktop shortcuts, and carries Qt and the SQLite library inside it. `time-warp-studio-<version>-win64.zip` is the same tree without the installer. |
+| Windows 7 | `time-warp-studio-<version>-win64-win7.exe` | The same application built against Qt 5.15, the last Qt that runs on Windows 7 SP1 (Qt 6 requires Windows 10). It is built and tested on Windows 11 — see [the Windows 7 section](#windows-7) — and `time-warp-studio-<version>-win64-win7.zip` is the same tree without the installer. |
 | macOS 14.4 or later, Intel or Apple silicon | `Time_Warp_Studio-<version>-macOS-universal.dmg` | Open it, drag **Time Warp Studio** to Applications. The image is universal, so one file covers both architectures. |
 | a Linux desktop and no wish to install anything | `Time_Warp_Studio-<version>-x86_64.AppImage` | `chmod +x` it and double-click. It needs no root, no package manager and no Qt: everything is inside the file. |
 | Ubuntu, Debian, Mint or Pop!_OS | `time-warp-studio_<version>_amd64.deb`, or `_arm64.deb` | Double-click it, or `sudo apt install ./time-warp-studio_<version>_amd64.deb` |

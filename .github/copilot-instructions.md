@@ -223,7 +223,7 @@ result = evaluator.evaluate("2 + 3 * X")  # Returns 17
 ### Theme System
 
 `native/src/ui/ui_style.cpp` owns the Qt styling and `native/src/ui/themes.cpp` applies
-the 34 themes carried as data in `native/src/ui/theme_table.inc` — the same schemes the
+the 35 themes carried as data in `native/src/ui/theme_table.inc` — the same schemes the
 removed PySide6 implementation had. View > Theme selects one, View > Next Theme
 (`Shift+F10`) cycles, and the choice persists in QSettings. High Contrast derives a
 maximum-contrast variant of the active theme; it does not replace it.
@@ -361,7 +361,7 @@ All interpreter errors are returned as strings with emoji prefixes:
 
 ### Theme Development
 
-The 34 themes — including the retro CRT sets (Amber, Green, C64, Apple II) — are
+The 35 themes — including the retro CRT sets (Amber, Green, C64, Apple II) — are
 carried as data in `native/src/ui/theme_table.inc` and applied through
 `native/src/ui/themes.cpp` plus the QSS in `native/src/ui/ui_style.cpp`. Add a theme
 by adding its record to the table and, if it needs one, a high-contrast variant;
