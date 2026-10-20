@@ -2,6 +2,43 @@
 
 ## [Unreleased]
 
+### Added
+
+- **Windows and macOS packages.** A release now carries a native Windows installer
+  (`time-warp-studio-<version>-win64.exe`) and a portable ZIP, and a universal macOS
+  disk image (`Time_Warp_Studio-<version>-macOS-universal.dmg`), beside the Linux
+  packages and the AppImage. A release is built and tested on all three desktops,
+  and each artifact carries a `.sha256`.
+- **The Windows build is a desktop application, not a console one.** The
+  executable has an icon and a version resource, links as a GUI-subsystem binary so
+  no console window sits behind the IDE, and attaches to the prompt that started it
+  when run as `time_warp_ide --version` or `--compile`. The NSIS installer puts
+  `bin\time_warp_ide.exe` and `share\` under `Program Files\Time Warp Studio`,
+  adds Start Menu and desktop shortcuts, and carries the Qt runtime that
+  `windeployqt` deploys during the install.
+- **The macOS build is a `.app` bundle inside a disk image.** `Time Warp Studio.app`
+  holds the bridge, the examples, the snippet catalogue and the documentation in
+  `Contents/Resources`, deploys its Qt frameworks with `macdeployqt`, and is
+  ad-hoc signed so it starts on Apple silicon. The image is universal: one file for
+  Intel and Apple silicon.
+- **Path discovery understands a bundle.** The bridge, examples, snippets and help
+  pages are looked for under `Contents/Resources/share` as well as beside `bin/`. A
+  Finder-launched bundle finds python.org's and Homebrew's Python, which `PATH`
+  would not contain, and the Windows build skips the Store's `python.exe`
+  app-execution alias instead of opening the Store when no interpreter is
+  installed.
+- **`PLAY` and the machines' beeps on macOS.** `afplay` joins the players the
+  sound layer looks for, so a sound on a Mac is heard rather than reported as
+  unavailable. Windows has no equivalent command-line player, so sound there stays
+  silent, as the reference engine's optional backends already are.
+
+### Changed
+
+- `cpack` now produces the platform's native artifact: `NSIS` and `ZIP` on
+  Windows, `DragNDrop` on macOS, `DEB` on Linux. Both new generators package the
+  same `install()` rules the Linux packages use, so a local install and a package
+  cannot contain different files.
+
 ## [16.3.0] - 2026-10-20
 
 The HB-1 arrives: a bespoke 1982 home computer inside the Studio, with a

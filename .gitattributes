@@ -5,3 +5,9 @@ docs/** linguist-generated=false
 
 # Normalize shell scripts
 *.sh text eol=lf
+
+# The icon assets are binary: the packaging writes the same bytes on every
+# platform, and a line-ending rewrite would corrupt them.
+*.png binary
+*.ico binary
+*.icns binary

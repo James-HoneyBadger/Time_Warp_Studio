@@ -271,7 +271,7 @@ bool TourOverlay::eventFilter(QObject* watched, QEvent* event) {
 TourGuide::TourGuide(QWidget* window, QObject* parent)
     : QObject(parent), window_(window), overlay_(new TourOverlay{window}) {
     connect(overlay_, &TourOverlay::stepShown, this, &TourGuide::stepShown);
-    connect(overlay_, &TourOverlay::tourFinished, this, [this] {
+    connect(overlay_, &TourOverlay::tourFinished, this, [] {
         QSettings{}.setValue(kSeenKey, true);
     });
 }

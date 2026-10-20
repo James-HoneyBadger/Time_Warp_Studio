@@ -188,9 +188,6 @@ constexpr int kOutputHeight = 200;
 constexpr int kCanvasHeight = 300;
 constexpr int kToolBarMinimumHeight = 44;
 
-/// The size a window is forced to for `--screenshot` when none was asked for.
-constexpr int kDefaultScreenshotWidth = 1400;
-constexpr int kDefaultScreenshotHeight = 900;
 /// How long a status message stays up before the bar returns to showing the
 /// document path. Long enough to read a sentence, short enough that the path --
 /// which is the resting state of that corner -- comes back on its own.
@@ -4436,7 +4433,7 @@ void MainWindow::adoptEditor(CodeEditor* editor) {
         QSettings breakpoint_settings;
         editor->setBreakpoints(breakpoints::load(breakpoint_settings, document_path));
     }
-    connect(editor, &CodeEditor::breakpointsChanged, this, [this, editor] {
+    connect(editor, &CodeEditor::breakpointsChanged, this, [editor] {
         QSettings breakpoint_settings;
         breakpoints::save(breakpoint_settings, pathOf(editor), editor->breakpoints());
     });

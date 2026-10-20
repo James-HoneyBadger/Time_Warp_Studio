@@ -65,7 +65,13 @@ constexpr auto kWorkerFileName = "worker.py";
         directories << application + QStringLiteral("/../..");        // native/build -> repo
         directories << application + QStringLiteral("/../bridge");    // native/build -> native/bridge
         directories << application + QStringLiteral("/../../native/bridge");
+        // The package layout: `bin/time_warp_ide` beside `share/time_warp`, which
+        // is what the Linux and Windows install rules produce.
         directories << application + QStringLiteral("/../share/time_warp");
+        // The macOS bundle layout: Contents/MacOS/time_warp_ide beside
+        // Contents/Resources/share/time_warp. A bundle keeps everything it owns
+        // under Contents, so the package layout above cannot reach it.
+        directories << application + QStringLiteral("/../Resources/share/time_warp");
     }
     // The working directory, which is how a test or a launcher finds the tree
     // without knowing where the binary is.
@@ -86,7 +92,10 @@ constexpr auto kWorkerFileName = "worker.py";
 ///
 /// The repository's `.venv` comes first because that is where this project's
 /// dependencies are installed; falling back to `python3` from `PATH` keeps a
-/// system-installed Qt build usable without a virtual environment.
+/// system-installed Qt build usable without a virtual environment. On macOS the
+/// framework and Homebrew locations come before PATH, because a bundle started
+/// from the Finder inherits launchd's PATH rather than the shell's; on Windows
+/// the Store's app-execution alias is skipped, because it is not an interpreter.
 [[nodiscard]] QStringList interpreterCandidates(const QString& script) {
     QStringList candidates;
     if (!script.isEmpty()) {
@@ -96,12 +105,47 @@ constexpr auto kWorkerFileName = "worker.py";
         candidates << repository + QStringLiteral("/.venv/bin/python3");
         candidates << repository + QStringLiteral("/.venv/bin/python");
     }
+#ifdef Q_OS_MACOS
+    // An application launched from the Finder inherits launchd's PATH, not the
+    // shell's, so Homebrew's `python3` is not on it. These are the two places
+    // python.org's installer and Homebrew put it; the framework path is first
+    // because it is the one a learner who followed python.org's page has.
+    for (const char* known : {
+             "/Library/Frameworks/Python.framework/Versions/Current/bin/python3",
+             "/opt/homebrew/bin/python3",
+             "/usr/local/bin/python3",
+         }) {
+        if (QFileInfo{QString::fromLatin1(known)}.isExecutable()) {
+            candidates << QString::fromLatin1(known);
+        }
+    }
+#endif
     for (const char* name : {"python3", "python"}) {
         const QString found = QStandardPaths::findExecutable(QString::fromLatin1(name));
         if (!found.isEmpty()) {
+#ifdef Q_OS_WIN
+            // Windows 10 and 11 ship a zero-byte "app execution alias" at
+            // %LOCALAPPDATA%\Microsoft\WindowsApps\python.exe when no Python is
+            // installed. Running it opens the Store; it is not an interpreter,
+            // so it is skipped rather than offered as one.
+            if (!found.contains(QStringLiteral("WindowsApps"), Qt::CaseInsensitive)) {
+                candidates << found;
+            }
+#else
             candidates << found;
+#endif
         }
     }
+#ifdef Q_OS_WIN
+    // The `py` launcher is installed by every python.org build, for all users,
+    // into C:\Windows -- which is on the system PATH even when the Python
+    // directory is not. It is the last resort because it may be present with no
+    // interpreter registered to it.
+    const QString launcher = QStandardPaths::findExecutable(QStringLiteral("py"));
+    if (!launcher.isEmpty()) {
+        candidates << launcher;
+    }
+#endif
     return candidates;
 }
 

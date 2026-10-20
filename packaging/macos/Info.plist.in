@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The Info.plist of Time Warp Studio.app.
+
+  Configured by native/CMakeLists.txt, which fills the @...@ fields from the
+  repository's VERSION file. Unlike CMake's stock template this one names the
+  minimum macOS (Qt 6.8 needs 12), says the bundle is high-resolution capable,
+  and gives the category Finder uses, which are the three keys the stock
+  template does not carry.
+-->
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>@TIME_WARP_BUNDLE_EXECUTABLE@</string>
+	<key>CFBundleGetInfoString</key>
+	<string>Time Warp Studio @TIME_WARP_VERSION@ — an old-school programming environment</string>
+	<key>CFBundleIconFile</key>
+	<string>time-warp-studio.icns</string>
+	<key>CFBundleIdentifier</key>
+	<string>org.honey-badger.timewarpstudio</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>@TIME_WARP_BUNDLE_EXECUTABLE@</string>
+	<key>CFBundleDisplayName</key>
+	<string>Time Warp Studio</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>@TIME_WARP_VERSION@</string>
+	<key>CFBundleVersion</key>
+	<string>@TIME_WARP_VERSION@</string>
+	<key>LSApplicationCategoryType</key>
+	<string>public.app-category.developer-tools</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>12.0</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+	<key>NSSupportsAutomaticGraphicsSwitching</key>
+	<true/>
+	<key>NSHumanReadableCopyright</key>
+	<string>MIT licensed. James Temple.</string>
+</dict>
+</plist>

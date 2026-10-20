@@ -54,9 +54,11 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
 ### Release Assets
 
 - [ ] Nothing to build by hand: pushing the tag runs `release.yml`, which builds
-      the tarball, the `.deb`, the `.rpm` and (on x86_64) the AppImage **for both
-      architectures** — `ubuntu-24.04` for x86_64, `ubuntu-24.04-arm` for arm64 —
-      runs the suites against that exact tree, publishes
+      the Linux tarball, the `.deb`, the `.rpm` and (on x86_64) the AppImage **for
+      both architectures** — `ubuntu-24.04` for x86_64, `ubuntu-24.04-arm` for
+      arm64 — plus the **Windows installer and ZIP** on `windows-latest` and the
+      **universal macOS disk image** on `macos-latest`. Each job runs the suites
+      and an offscreen screenshot against the exact tree it packages, publishes
       `ghcr.io/<owner>/time-warp-studio:X.Y.Z` and attaches every file with a
       `.sha256` beside it. See `DEPLOYMENT.md` for what each job does and what it
       needs from the repository settings.
@@ -71,11 +73,17 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
 
 - [ ] Push the annotated tag `vX.Y.Z` from `main`, then watch the run:
       `gh run watch $(gh run list --workflow=release.yml --limit=1 --json databaseId --jq '.[0].databaseId')`
-- [ ] Confirm the release has, for **each** architecture, a `.tar.gz`, a `.deb`
-      and a `.rpm`, plus one AppImage (x86_64) — seven files, each with a
-      `.sha256` beside it — and that every name carries the architecture its
+- [ ] Confirm the release has, for **each** Linux architecture, a `.tar.gz`, a
+      `.deb` and a `.rpm`, plus one AppImage (x86_64) — seven files — and, for the
+      other two desktops, `time-warp-studio-<version>-win64.exe`,
+      `…-win64.zip` and `Time_Warp_Studio-<version>-macOS-universal.dmg`; each with
+      a `.sha256` beside it. Every Linux name must carry the architecture its
       format uses: `amd64`/`arm64` in a `.deb`, `x86_64`/`aarch64` in an `.rpm`.
       A `-Linux.rpm` means `CPACK_RPM_FILE_NAME` is not `RPM-DEFAULT`.
+- [ ] Run the Windows installer and the macOS disk image once each: the installer
+      should put **Time Warp Studio** in the Start Menu and start, and the dragged
+      application should open, show the examples (File > Open Example) and the
+      documentation (Help > Documentation) from inside the bundle.
 - [ ] Confirm the container image is tagged `X.Y.Z` and `latest`
 - [ ] Download the package for a distribution you have and install it before
       announcing: a release nobody installed is a release nobody knows works.

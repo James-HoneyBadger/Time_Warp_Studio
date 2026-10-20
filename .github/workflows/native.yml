@@ -189,3 +189,104 @@ jobs:
           name: native-differential-logs
           path: native/tools/differential-*.log
           if-no-files-found: ignore
+
+  # The two desktops the release also builds for. Everything above runs on
+  # Linux with GCC, which is one of the three compilers this project ships
+  # under; MSVC and Apple's Clang each reject things GCC accepts (two warning
+  # options that do not exist, an unused lambda capture, the system code page
+  # for UTF-8 sources). Catching that here costs a build; catching it at release
+  # time costs a tag.
+  cross-platform:
+    name: Build and test on ${{ matrix.name }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows
+            runner: windows-latest
+            shell: pwsh
+          - name: macOS
+            runner: macos-latest
+            shell: bash
+    runs-on: ${{ matrix.runner }}
+    defaults:
+      run:
+        shell: ${{ matrix.shell }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.*'
+          cache: true
+
+      # Qt ships SQLite's plugin, not the library the application links, and the
+      # Windows image has no system copy. The static-marked triplet is the one
+      # that matches Qt's dynamic C runtime, so no DLL is left undeployed.
+      - name: Install SQLite (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install sqlite3:x64-windows-static-md --clean-after-build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          $toolchain = Join-Path $env:VCPKG_INSTALLATION_ROOT "scripts/buildsystems/vcpkg.cmake"
+          cmake -S native -B native/build -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_TOOLCHAIN_FILE="$toolchain" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md | Tee-Object -FilePath configure.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          if (Select-String -Path configure.log -Pattern "skipping the widget UI" -Quiet) {
+            Write-Error "Qt6 Widgets was not found, so the UI was skipped."
+            exit 1
+          }
+
+      - name: Configure (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release 2>&1 | tee configure.log
+          if grep -q "skipping the widget UI" configure.log; then
+            echo "::error::Qt6 Widgets was not found, so the UI was skipped."
+            exit 1
+          fi
+
+      - name: Build (Windows)
+        if: runner.os == 'Windows'
+        run: cmake --build native/build --config Release --parallel
+
+      - name: Build (macOS)
+        if: runner.os == 'macOS'
+        run: cmake --build native/build --parallel
+
+      - name: Test (Windows)
+        if: runner.os == 'Windows'
+        run: ctest --test-dir native/build -C Release --output-on-failure
+
+      - name: Test (macOS)
+        if: runner.os == 'macOS'
+        run: ctest --test-dir native/build --output-on-failure
+
+      - name: The entry point starts and exits (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          $app = (Resolve-Path "native/build/Release/time_warp_ide.exe").Path
+          $version = Start-Process -FilePath $app -ArgumentList "--version" -NoNewWindow -Wait -PassThru
+          if ($version.ExitCode -ne 0) { exit $version.ExitCode }
+          $shot = Join-Path $env:RUNNER_TEMP "smoke.png"
+          $render = Start-Process -FilePath $app -ArgumentList "--screenshot", $shot -NoNewWindow -Wait -PassThru
+          if ($render.ExitCode -ne 0) { exit $render.ExitCode }
+          if (-not (Test-Path $shot)) { Write-Error "no screenshot"; exit 1 }
+
+      - name: The entry point starts and exits (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          bundle=$(find native/build -maxdepth 1 -name '*.app' -type d | head -1)
+          test -n "$bundle"
+          app=$(find "$bundle/Contents/MacOS" -maxdepth 1 -type f | head -1)
+          test -x "$app"
+          "$app" --version
+          "$app" --help > /dev/null
+          "$app" --screenshot "${RUNNER_TEMP:-/tmp}/smoke.png" --size 800x600
+          test -s "${RUNNER_TEMP:-/tmp}/smoke.png"

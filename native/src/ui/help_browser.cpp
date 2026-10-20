@@ -63,6 +63,9 @@ QString docsRoot() {
     // tree, and an empty pane would not say which path was wrong.
     for (const QString& candidate :
          {app_dir + QStringLiteral("/../share/doc/time-warp-studio"),
+          // A macOS bundle: Contents/MacOS/Time Warp Studio beside
+          // Contents/Resources/share/doc/time-warp-studio.
+          app_dir + QStringLiteral("/../Resources/share/doc/time-warp-studio"),
           app_dir + QStringLiteral("/../../docs"),
           app_dir + QStringLiteral("/../../../docs")}) {
         if (QFileInfo{candidate + QStringLiteral("/INDEX.md")}.isFile()) {

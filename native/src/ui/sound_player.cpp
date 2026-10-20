@@ -24,6 +24,7 @@ struct Candidate {
 constexpr Candidate kCandidates[] = {
     {"paplay", ""},
     {"aplay", "-q"},
+    {"afplay", ""},  // macOS's own player; the three above are the Linux ones
     {"ffplay", "-nodisp -autoexit -loglevel quiet"},
     {"play", "-q"},
 };

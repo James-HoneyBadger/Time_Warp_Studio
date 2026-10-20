@@ -35,6 +35,18 @@ sudo pacman -S base-devel cmake qt6-base qt6-svg sqlite
 ```
 
 On macOS, `brew install cmake qt` and pass `-DCMAKE_PREFIX_PATH=$(brew --prefix qt)`.
+SQLite is part of the macOS SDK, so it needs no separate install.
+
+On Windows, use the Qt online installer (or `aqtinstall`) for Qt 6 and either
+`vcpkg install sqlite3:x64-windows-static-md` or a prebuilt SQLite to satisfy
+SQLite3. The application builds with MSVC 2022 in a "x64 Native Tools" prompt:
+
+```powershell
+cmake -S native -B native/build -G "Visual Studio 17 2022" -A x64 `
+  -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_INSTALLATION_ROOT/scripts/buildsystems/vcpkg.cmake" `
+  -DVCPKG_TARGET_TRIPLET=x64-windows-static-md
+cmake --build native/build --config Release --parallel
+```
 
 The Svg package above is optional. Without it the IDE builds and runs, and the
 only difference is that drawing export offers PNG, JPEG and BMP but not SVG.
@@ -56,6 +68,12 @@ cd Time_Warp_Studio
 cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release
 cmake --build native/build -j
 ```
+
+On macOS the same two commands produce `native/build/Time Warp Studio.app` -- a
+bundle, because that is what the Finder runs and what the disk image ships. Run it
+with `open "native/build/Time Warp Studio.app"`, or point at the executable inside
+it (`.../Contents/MacOS/Time Warp Studio --help`). On Windows the executable is
+`native\build\Release\time_warp_ide.exe`.
 
 A successful build prints nothing alarming; the first one takes a few minutes and
 later ones are incremental. Useful options:
@@ -158,7 +176,10 @@ tried.
 
 **The Lessons panel says no interpreter was found.** Install Python 3.10+ or
 point `TIME_WARP_PYTHON` at one. Running a program needs no Python at all; only
-the lesson check does.
+the lesson check does. The packaged application looks in the python.org framework
+and Homebrew locations on macOS before `PATH` (a bundle opened from the Finder does
+not inherit the shell's `PATH`), and on Windows it uses `python` on `PATH` and then
+the `py` launcher, skipping the Store's app-execution alias.
 
 **`make test` runs the wrong Python.** The bridge's pytest suite comes from
 `.venv` if it exists. Create one with `python3 -m venv .venv` and
@@ -220,12 +241,34 @@ for it (`../share/time_warp` relative to the binary), so an installed build need
 no path configuration. It still needs `python3` on `PATH` for lesson checks; no
 language's Run uses it.
 
-### What is not packaged yet
+### Installing on Windows and macOS
 
-Flatpak, Snap, a Windows installer and a macOS bundle are not built: `release.yml`
-produces Linux artifacts only. What a release *does* ship is described next — a
-`.deb` and an `.rpm` for x86_64 and arm64, an AppImage for x86_64, a tarball for both
-architectures, and a container image.
+`cmake --install` produces the package layout on every platform, and each one adds
+the Qt runtime the application needs at run time; the Qt deployment tool runs as
+part of the install, so an installed tree runs on a machine that has no Qt.
+
+| Platform | `<prefix>` gets | Qt | To install |
+| --- | --- | --- | --- |
+| Linux | `bin/`, `share/` and the desktop entry, as in the table above | the distribution's | `cmake --install native/build --prefix /usr` |
+| Windows | `bin\time_warp_ide.exe`, `share\…`, with `windeployqt`'s Qt DLLs and plugins beside it | copied in | `cmake --install native/build --config Release --prefix "C:/Program Files/Time Warp Studio"` |
+| macOS | `Time Warp Studio.app`, with the bridge, examples, snippets, docs and `macdeployqt`'s frameworks inside `Contents` | copied in and ad-hoc signed | `cmake --install native/build --prefix /Applications` |
+
+On macOS, the bundle layout is what the path lookup understands: the payload lives
+in `Contents/Resources/share`, which is where the application looks for the bridge,
+the examples, the snippets and the help pages when it is inside a bundle. Signing
+is ad-hoc (`codesign --sign -`), which is enough for the application to start,
+including on Apple silicon; it is not a Developer ID signature, so a copy that has
+travelled over the network still needs the right-click > Open once.
+
+The Windows installer and the macOS disk image are built from this same install
+tree by CPack (`cpack -G NSIS` and `cpack -G DragNDrop`); see §8.
+
+One feature differs by platform. `PLAY`, `SOUND` and the two machines' beeps write
+a WAV and hand it to a command-line player: `afplay` on macOS, `paplay` or `aplay`
+(or `ffplay`/`play`) on Linux. Windows has no equivalent command-line player, so
+there those commands report that playback is unavailable rather than pretending to
+make a sound. Everything else -- the ten languages, the debugger, the canvas, both
+machines, the SQL tab and the automation surface -- is the same code on all three.
 
 ### 8. A release without building anything
 
@@ -237,12 +280,22 @@ an `.rpm` says `x86_64`/`aarch64`, and the tarball and the AppImage say
 
 | You have | Take | Then |
 | --- | --- | --- |
-| a desktop and no wish to install anything | `Time_Warp_Studio-<version>-x86_64.AppImage` | `chmod +x` it and double-click. It needs no root, no package manager and no Qt: everything is inside the file. |
+| Windows 10 or 11 | `time-warp-studio-<version>-win64.exe` | Run it: it installs into Program Files, adds Start Menu and desktop shortcuts, and carries Qt and the SQLite library inside it. `time-warp-studio-<version>-win64.zip` is the same tree without the installer. |
+| macOS 12 or later, Intel or Apple silicon | `Time_Warp_Studio-<version>-macOS-universal.dmg` | Open it, drag **Time Warp Studio** to Applications. The image is universal, so one file covers both architectures. |
+| a Linux desktop and no wish to install anything | `Time_Warp_Studio-<version>-x86_64.AppImage` | `chmod +x` it and double-click. It needs no root, no package manager and no Qt: everything is inside the file. |
 | Ubuntu, Debian, Mint or Pop!_OS | `time-warp-studio_<version>_amd64.deb`, or `_arm64.deb` | Double-click it, or `sudo apt install ./time-warp-studio_<version>_amd64.deb` |
 | Fedora, RHEL or openSUSE | `time-warp-studio-<version>-1.x86_64.rpm`, or `.aarch64.rpm` | `sudo dnf install ./time-warp-studio-<version>-1.x86_64.rpm` |
 | any other Linux, or arm64 | `time-warp-studio-<version>-linux-x86_64.tar.gz`, or `-arm64` | `tar -xzf … -C / --strip-components=1` |
 
-The **AppImage is the answer for a non-technical user**: one file, double-clicked,
+The **Windows installer** is a NSIS package: it puts the application and its Qt
+runtime in `Program Files\Time Warp Studio`, with `bin\time_warp_ide.exe` and
+`share\` beside it — the same layout the other packages use — and it uninstalls
+from Settings > Apps. Neither it nor the disk image is signed with a paid
+certificate, so SmartScreen may ask the first time ("More info", then "Run
+anyway") and Gatekeeper will ask once on macOS (right-click the application and
+choose Open).
+
+The **AppImage is the answer for a non-technical Linux user**: one file, double-clicked,
 nothing installed. It is built for glibc 2.39 or newer (Ubuntu 24.04 and later, or
 a distribution of similar age); on anything older use the package for that
 distribution, which resolves the libraries properly.

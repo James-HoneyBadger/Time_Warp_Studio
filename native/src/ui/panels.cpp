@@ -1381,7 +1381,7 @@ DebugPanel::DebugPanel(QWidget* parent) : QFrame(parent) {
 
     auto* transport = new QHBoxLayout;
     transport->setSpacing(4);
-    const auto button = [this, transport](const QString& text, const QString& name) {
+    const auto button = [transport](const QString& text, const QString& name) {
         auto* item = new QPushButton{text};
         item->setObjectName(name);
         transport->addWidget(item);

@@ -25,9 +25,9 @@ one I would type:
 - **[docs/INSTALLATION.md](../docs/INSTALLATION.md)** — requirements, building
   from source, and what a failure at each step usually means.
 - **[docs/ROADMAP.md](../docs/ROADMAP.md)** — what is deliberately not built
-  yet. A dedicated player target, an automatic update check and Flatpak/Snap or
-  Windows/macOS packaging are on this list. A missing feature from it is not a
-  bug, and reporting one as a regression costs a round trip.
+  yet. A dedicated player target, an automatic update check, code-signed Windows
+  and macOS builds and Flatpak/Snap are on this list. A missing feature from it is
+  not a bug, and reporting one as a regression costs a round trip.
 - **[docs/USER_GUIDE.md](../docs/USER_GUIDE.md)** — the IDE manual: projects, the
   REPL, debugging, SQL, terminal tools and the API.
 - **[docs/FAQ.md](../docs/FAQ.md)** — the questions that come up most.
@@ -38,11 +38,12 @@ one I would type:
 
 ## What is supported
 
-**Platforms.** Linux is what the application is developed and tested on, and what
-CI builds and runs on every change (Ubuntu 24.04, Qt6, GCC). macOS and Windows
-should build — it is Qt6 and C++20 with no platform-specific code — but they are
-not covered by CI, so a platform-specific problem there may be something I cannot
-reproduce. Say which platform you are on when you report.
+**Platforms.** Linux, Windows and macOS are all built and tested on every change:
+the 21 suites run under GCC on Ubuntu 24.04, under MSVC on Windows and under
+Apple's Clang on macOS, and a tagged release ships a Windows installer and a
+universal macOS disk image beside the Linux packages. Say which platform you are
+on when you report; the three differ in their file dialogs, their fonts and their
+packaging, and a report that names the platform is one I can reproduce.
 
 **Configurations.** Every build configuration is expected to be green: Release,
 Debug, AddressSanitizer and UndefinedBehaviorSanitizer. A crash or a diagnostic
@@ -65,10 +66,11 @@ build and launch from a checkout.
 
 ## What is not
 
-- **Packages and installers for every platform.** A tagged release builds a
-  `.deb`, an `.rpm`, a tarball, an AppImage (x86_64) and a container image, and
-  `make -C native install` installs the binary, the bridge, a desktop entry and
-  an icon. Flatpak, Snap, a Windows installer and a macOS bundle are not built.
+- **Every package format.** A tagged release builds a Windows installer and ZIP,
+  a universal macOS disk image, a `.deb`, an `.rpm`, a tarball, an AppImage
+  (x86_64) and a container image, and `make -C native install` produces the same
+  tree locally, with Qt deployed into it. Flatpak, Snap, an arm64 AppImage and
+  code-signed (Developer ID / Authenticode) builds are not made.
 - **Moving lesson checking into C++.** The Lessons panel asks the Python engine
   for a verdict; that is the remaining use of the bridge, and it is queued work
   without a date.

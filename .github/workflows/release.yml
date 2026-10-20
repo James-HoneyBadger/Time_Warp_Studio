@@ -1,11 +1,13 @@
 name: Release
 
-# Cutting a release: verify the tag, build the Linux artifact, publish the
-# container image to GitHub Packages, and attach the artifact to a GitHub
-# Release. The release job runs in the `production` environment, which is what
-# makes GitHub show a Deployment for it — this project has no hosted service, so
-# "deployment" here means "a published release that users can install", and the
-# environment is the record and the approval gate for it.
+# Cutting a release: verify the tag, build the artifact for each desktop the
+# application runs on (Linux packages and AppImage, a Windows installer and ZIP,
+# a universal macOS disk image), publish the container image to GitHub Packages,
+# and attach every artifact to a GitHub Release. The release job runs in the
+# `production` environment, which is what makes GitHub show a Deployment for it —
+# this project has no hosted service, so "deployment" here means "a published
+# release that users can install", and the environment is the record and the
+# approval gate for it.
 #
 # The gates that decide whether the code is *good* (the 14 suites, the parity
 # gates, the lesson validation) live in `native.yml` and `docs.yml` and run on
@@ -211,6 +213,189 @@ jobs:
             dist/*.sha256
           if-no-files-found: error
 
+  build-windows:
+    name: Build the Windows installer
+    needs: verify
+    runs-on: windows-latest
+    # PowerShell is the shell the runner images use; `defaults` makes the
+    # multi-line commands below read as one command rather than as cmd.exe's
+    # line continuation rules.
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.*'
+          cache: true
+
+      # Qt ships its own SQLite plugin but not the library the application links
+      # against, so the C library comes from vcpkg. It is one small package and
+      # the runner already has vcpkg bootstrapped.
+      - name: Install SQLite
+        run: |
+          $vcpkg = Join-Path $env:VCPKG_INSTALLATION_ROOT "vcpkg.exe"
+          if (-not (Test-Path $vcpkg)) {
+            Write-Host "vcpkg is not bootstrapped; doing that first"
+            & (Join-Path $env:VCPKG_INSTALLATION_ROOT "bootstrap-vcpkg.bat")
+          }
+          # The static library, with the dynamic C runtime Qt also uses: a
+          # DLL would have to be deployed beside the executable and would be
+          # the one file windeployqt does not know about.
+          & $vcpkg install sqlite3:x64-windows-static-md --clean-after-build
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Configure
+        run: |
+          $toolchain = Join-Path $env:VCPKG_INSTALLATION_ROOT "scripts/buildsystems/vcpkg.cmake"
+          cmake -S native -B native/build -G "Visual Studio 17 2022" -A x64 `
+            -DCMAKE_TOOLCHAIN_FILE="$toolchain" `
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md | Tee-Object -FilePath configure.log
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # A configure that cannot find Qt6 Widgets still exits 0 and skips the
+          # whole UI, which would publish an installer with no application in it.
+          if (Select-String -Path configure.log -Pattern "skipping the widget UI" -Quiet) {
+            Write-Error "Qt6 Widgets was not found, so the UI was skipped."
+            exit 1
+          }
+
+      - name: Build
+        run: cmake --build native/build --config Release --parallel
+
+      - name: Test what is about to ship
+        run: |
+          ctest --test-dir native/build -C Release --output-on-failure
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # `Start-Process -Wait` rather than `&`, which for a GUI-subsystem
+          # executable may return before the application has exited and leave
+          # $LASTEXITCODE describing something else.
+          $app = (Resolve-Path "native/build/Release/time_warp_ide.exe").Path
+          $version = Start-Process -FilePath $app -ArgumentList "--version" -NoNewWindow -Wait -PassThru
+          if ($version.ExitCode -ne 0) { exit $version.ExitCode }
+          # The window actually paints: the same offscreen screenshot the Linux
+          # job takes, and the one check that proves the UI is not merely linked.
+          $shot = Join-Path $env:RUNNER_TEMP "window.png"
+          $render = Start-Process -FilePath $app -ArgumentList "--screenshot", $shot -NoNewWindow -Wait -PassThru
+          if ($render.ExitCode -ne 0) { exit $render.ExitCode }
+          if (-not (Test-Path $shot) -or (Get-Item $shot).Length -eq 0) {
+            Write-Error "the offscreen screenshot was not written"
+            exit 1
+          }
+
+      - name: Package
+        run: |
+          # NSIS is the installer generator; the runner image has it, and asking
+          # Chocolatey for it again is a no-op when it does. Its directory is
+          # added to this process's PATH explicitly, because a Chocolatey install
+          # updates the machine's PATH and not the one this step started with.
+          choco install nsis --no-progress -y
+          $env:PATH = "C:\Program Files (x86)\NSIS;$env:PATH"
+          if (-not (Get-Command makensis.exe -ErrorAction SilentlyContinue)) {
+            Write-Error "makensis was not found, so no installer can be built."
+            exit 1
+          }
+          # windeployqt runs from an install() rule, so CPack -- which installs
+          # into its own staging directory -- produces a tree that carries Qt.
+          Push-Location native/build
+          cpack -G "NSIS;ZIP" -C Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Pop-Location
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          Get-ChildItem native/build -Filter *.exe | Where-Object { $_.Name -like "time-warp-studio-*" } | Move-Item -Destination dist
+          Get-ChildItem native/build -Filter *.zip | Where-Object { $_.Name -like "time-warp-studio-*" } | Move-Item -Destination dist
+          Get-ChildItem dist | ForEach-Object {
+            $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash.ToLower()
+            "$hash  $($_.Name)" | Set-Content -Encoding ascii "$($_.FullName).sha256"
+          }
+          Get-ChildItem dist | Format-Table Name, Length
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows-artifact-x64
+          path: |
+            dist/*.exe
+            dist/*.zip
+            dist/*.sha256
+          if-no-files-found: error
+
+  build-macos:
+    name: Build the macOS disk image
+    needs: verify
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.*'
+          cache: true
+
+      - name: Configure, as a universal bundle
+        run: |
+          # One disk image runs on Intel and on Apple silicon: Qt's macOS
+          # package is a universal binary, and so is everything else the
+          # bundle links, so the application can be built for both at once.
+          cmake -S native -B native/build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 2>&1 | tee configure.log
+          if grep -q "skipping the widget UI" configure.log; then
+            echo "::error::Qt6 Widgets was not found, so the UI was skipped."
+            exit 1
+          fi
+          cmake --build native/build --parallel
+
+      - name: Test what is about to ship
+        run: |
+          ctest --test-dir native/build --output-on-failure
+          # Located rather than spelled out, so a rename of the bundle is a green
+          # run with a different path in it instead of a broken release job.
+          bundle=$(find native/build -maxdepth 1 -name '*.app' -type d | head -1)
+          test -n "$bundle"
+          app=$(find "$bundle/Contents/MacOS" -maxdepth 1 -type f | head -1)
+          test -x "$app"
+          "$app" --version
+          "$app" --help > /dev/null
+          # The window actually paints, offscreen: the same check the Linux and
+          # Windows jobs make.
+          "$app" --screenshot "${RUNNER_TEMP:-/tmp}/window.png"
+          test -s "${RUNNER_TEMP:-/tmp}/window.png"
+          # The bundle is only useful if what it needs is inside it: the icon,
+          # the bridge, the examples, the snippets and the help pages.
+          test -f "$bundle/Contents/Resources/time-warp-studio.icns"
+          test -f "$bundle/Contents/Resources/share/time_warp/worker.py"
+          test -d "$bundle/Contents/Resources/share/time-warp-studio/examples"
+          test -f "$bundle/Contents/Resources/share/doc/time-warp-studio/INDEX.md"
+          test -f "$bundle/Contents/Resources/share/time-warp-studio/snippets.json"
+
+      - name: Package
+        run: |
+          # macdeployqt and the ad-hoc signature are install() rules as well, so
+          # the disk image is built from a staged install rather than from the
+          # build tree: what CPack packages is exactly what `cmake --install`
+          # produces.
+          cd native/build
+          cpack -G DragNDrop
+          # CPack signs nothing; the bundle it staged is the one install(CODE)
+          # already signed, and the image is the copy that leaves the machine.
+          cd ../..
+          mkdir -p dist
+          mv "native/build/Time_Warp_Studio-$(cat VERSION)-macOS-universal.dmg" dist/
+          ( cd dist && shasum -a 256 *.dmg > "$(ls *.dmg | head -1).sha256" )
+          ls -l dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-artifact-universal
+          path: |
+            dist/*.dmg
+            dist/*.sha256
+          if-no-files-found: error
+
   image:
     name: Publish the container image
     needs: [verify, build]
@@ -248,7 +433,7 @@ jobs:
 
   release:
     name: Create the GitHub Release
-    needs: [verify, build, image]
+    needs: [verify, build, build-windows, build-macos, image]
     runs-on: ubuntu-24.04
     # The Deployment GitHub records points at the published release. Add required
     # reviewers to this environment in Settings > Environments if a release
@@ -269,7 +454,7 @@ jobs:
 
       - uses: actions/download-artifact@v4
         with:
-          pattern: linux-artifact-*
+          pattern: '*-artifact-*'
           merge-multiple: true
           path: dist
 
@@ -299,23 +484,30 @@ jobs:
 
           ### Which file do I want?
 
-          Files come in two architectures: **x86_64** (Intel/AMD) and **arm64**
-          (Raspberry Pi 4/5, ARM laptops). \`uname -m\` says which yours is:
-          \`x86_64\` or \`aarch64\`. Each format spells it its own way — a \`.deb\`
-          says \`amd64\`/\`arm64\`, an \`.rpm\` says \`x86_64\`/\`aarch64\`, and the
+          Windows gets an installer and a portable ZIP, macOS one universal disk
+          image, and Linux the packages below. On Linux, files come in two
+          architectures: **x86_64** (Intel/AMD) and **arm64** (Raspberry Pi 4/5,
+          ARM laptops). \`uname -m\` says which yours is: \`x86_64\` or
+          \`aarch64\`. Each format spells it its own way — a \`.deb\` says
+          \`amd64\`/\`arm64\`, an \`.rpm\` says \`x86_64\`/\`aarch64\`, and the
           tarball says \`x86_64\`/\`arm64\`.
 
           | If you… | Download | What happens |
           | --- | --- | --- |
-          | just want to try it, on Intel/AMD | \`Time_Warp_Studio-${version}-x86_64.AppImage\` | One file. Make it executable and double-click it. Nothing is installed and no root password is asked for. |
+          | use Windows 10 or 11 | \`time-warp-studio-${version}-win64.exe\` | Run it. It installs into Program Files with Start Menu and desktop shortcuts, and Qt travels inside it. The \`.zip\` beside it is the same application without an installer. |
+          | use macOS 12 or later, Intel or Apple silicon | \`Time_Warp_Studio-${version}-macOS-universal.dmg\` | Open it, drag **Time Warp Studio** to Applications. One image, both architectures. |
+          | just want to try it, on Linux Intel/AMD | \`Time_Warp_Studio-${version}-x86_64.AppImage\` | One file. Make it executable and double-click it. Nothing is installed and no root password is asked for. |
           | use Ubuntu, Debian, Mint or Pop!_OS | \`time-warp-studio_${version}_amd64.deb\` (or \`_arm64.deb\`) | Double-click it, or \`sudo apt install ./time-warp-studio_${version}_amd64.deb\`. Appears in the application menu. |
           | use Fedora, RHEL or openSUSE | \`time-warp-studio-${version}-1.x86_64.rpm\` (or \`.aarch64.rpm\`) | \`sudo dnf install ./time-warp-studio-${version}-1.x86_64.rpm\` |
-          | want no desktop integration, or you are on arm64 | \`time-warp-studio-${version}-linux-<arch>.tar.gz\` | \`tar -xzf time-warp-studio-${version}-linux-<arch>.tar.gz -C / --strip-components=1\` |
+          | want no desktop integration, or you are on Linux arm64 | \`time-warp-studio-${version}-linux-<arch>.tar.gz\` | \`tar -xzf time-warp-studio-${version}-linux-<arch>.tar.gz -C / --strip-components=1\` |
           | want it in a container | \`${IMAGE_NAME}:${version}\` | \`docker run --rm -e DISPLAY -v /tmp/.X11-unix:/tmp/.X11-unix ${IMAGE_NAME}:${version}\` |
 
           Checksums are beside every file (\`.sha256\`). The AppImage needs glibc
           2.39 or newer — Ubuntu 24.04 and later, or a distribution of similar age;
-          on anything older, use the package for it.
+          on anything older, use the package for it. The macOS and Windows builds
+          are not signed with a paid certificate: on macOS, right-click the
+          application and choose Open the first time, and on Windows, choose
+          "More info" then "Run anyway" in SmartScreen.
 
           See [CHANGELOG.md](CHANGELOG.md) for what changed and
           [docs/INSTALLATION.md](docs/INSTALLATION.md) for requirements.
@@ -337,7 +529,8 @@ jobs:
           gh release create "$tag" \
             --title "Time Warp Studio $version" \
             --notes-file release-notes.md \
-            dist/*.tar.gz dist/*.deb dist/*.rpm dist/*.AppImage dist/*.sha256
+            dist/*.tar.gz dist/*.deb dist/*.rpm dist/*.AppImage \
+            dist/*.exe dist/*.zip dist/*.dmg dist/*.sha256
 
       - name: Verify the release is public and complete
         env:

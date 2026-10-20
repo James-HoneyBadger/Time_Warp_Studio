@@ -40,7 +40,7 @@ derived rather than remembered.
 | Debugging | Breakpoints, Pause, Continue and Trace in all ten languages; Scheme adds a stack and frame bindings; watch expressions and data breakpoints in the Debug panel |
 | Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
 | Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
-| Packaging | `make install`; tagged releases build `.deb`, `.rpm`, AppImage, tarball and container artifacts |
+| Packaging | `make install`; tagged releases build a Windows installer and portable ZIP, a universal macOS disk image, `.deb`, `.rpm`, AppImage, tarball and container artifacts |
 | Quality gates | 21 CTest suites in 4 build configurations, 3 parity gates, 571 engine tests, 447 command rows, 474 parity programs |
 
 ---
@@ -482,17 +482,27 @@ Limits, stated rather than discovered:
 
 ## Packaging
 
-Built, from a tag, by `release.yml`: a **`.deb`**, an **`.rpm`** and a **tarball**
-for x86_64 and arm64, plus an **AppImage** for x86_64, each with a checksum,
-attached to the GitHub Release; and a **container image** on `ghcr.io`. `cpack` produces the
-packages from the same `install()` rules the desktop entry and icon already used,
-so a package cannot contain a different set of files from a local install.
+Built, from a tag, by `release.yml`, for every desktop the application runs on:
+
+- **Windows** — a NSIS **installer** (`.exe`) and a portable **ZIP**, x64, with Qt
+  and the SQLite library inside them.
+- **macOS** — a **universal disk image** (`.dmg`) that runs on Intel and on Apple
+  silicon, with the frameworks inside the bundle and an ad-hoc signature.
+- **Linux** — a **`.deb`**, an **`.rpm`** and a **tarball** for x86_64 and arm64,
+  plus an **AppImage** for x86_64.
+- a **container image** on `ghcr.io`.
+
+Every file has a checksum beside it. `cpack` produces all of them from the same
+`install()` rules the desktop entry and icon already used, and the Qt deployment
+tools run as part of that install, so no package can contain a different set of
+files from a local install.
 
 Still not built: **Flatpak or Snap** (both need a runtime and a manifest that this
-repository does not carry), a **Windows installer**, a **macOS bundle**, an
-**arm64 AppImage** (the tooling exists; the pipeline does not exercise it yet),
-**automatic publishing to a distro repository**, and a **static build** — the
-packages depend on the distribution's Qt 6.
+repository does not carry), an **arm64 AppImage** (the tooling exists; the pipeline
+does not exercise it yet), **code-signed and notarised** Windows and macOS builds
+(the pipeline signs macOS ad-hoc, which starts but still asks once), **automatic
+publishing to a distro repository**, and a **static build** — the Linux packages
+depend on the distribution's Qt 6.
 
 ---
 

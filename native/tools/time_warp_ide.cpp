@@ -28,6 +28,16 @@
 
 #include <cstdio>
 
+#ifdef _WIN32
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
+
 #include "timewarp/ui/app.hpp"
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/retro_computer.hpp"
@@ -35,6 +45,35 @@
 #include "timewarp/ui/turtle_canvas.hpp"
 
 namespace {
+
+#ifdef _WIN32
+/// Gives a GUI-subsystem process the console a prompt started it in.
+///
+/// The executable is linked as a Windows GUI application, so double-clicking it
+/// does not leave a console window behind the IDE -- but the same build is what
+/// `time_warp_ide --version`, `--help` and `--compile` are run as, and those
+/// answer on stdout/stderr. A redirected stream is left alone, which is what
+/// keeps `--version > version.txt` writing the file.
+void attachParentConsole() {
+    const HANDLE output = GetStdHandle(STD_OUTPUT_HANDLE);
+    const DWORD type = output == nullptr ? FILE_TYPE_UNKNOWN : GetFileType(output);
+    if (type == FILE_TYPE_DISK || type == FILE_TYPE_PIPE) {
+        return;
+    }
+    if (!AttachConsole(ATTACH_PARENT_PROCESS)) {
+        return;
+    }
+#ifdef _MSC_VER
+    FILE* stream = nullptr;
+    static_cast<void>(freopen_s(&stream, "CONOUT$", "w", stdout));
+    static_cast<void>(freopen_s(&stream, "CONOUT$", "w", stderr));
+#else
+    // MinGW's C library has no freopen_s, but the plain call does the same job.
+    static_cast<void>(freopen("CONOUT$", "w", stdout));
+    static_cast<void>(freopen("CONOUT$", "w", stderr));
+#endif
+}
+#endif
 
 /// The size a window is forced to for `--screenshot` when none was asked for.
 constexpr int kDefaultScreenshotWidth = 1400;
@@ -82,6 +121,9 @@ void openArguments(timewarp::ui::MainWindow* window, const QStringList& files) {
 }  // namespace
 
 int main(int argc, char* argv[]) {
+#ifdef _WIN32
+    attachParentConsole();
+#endif
     QApplication application{argc, argv};
     // Before anything constructs a QSettings, so every setting in the program --
     // layout, theme, recent files -- lands in one known place. See app.cpp for why

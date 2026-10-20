@@ -91,19 +91,23 @@ you had:
 ## Install it
 
 You do not need a compiler. Every [release](https://github.com/James-HoneyBadger/Time_Warp_Studio/releases/latest)
-carries a ready-built application for **x86_64** (Intel/AMD) and **arm64**
-(Raspberry Pi 4/5, ARM laptops).
+carries a ready-built application for Windows, macOS and Linux, with the Qt runtime
+inside it.
 
 | You have | Take | Then |
 | --- | --- | --- |
-| no wish to install anything | `Time_Warp_Studio-<version>-x86_64.AppImage` | Make it executable and double-click it. No root, no package manager, no Qt to fetch. |
+| Windows 10 or 11 | `time-warp-studio-<version>-win64.exe` | Run it. Installs into Program Files with Start Menu and desktop shortcuts; the `.zip` beside it is the same application without an installer. |
+| macOS 12 or later, Intel or Apple silicon | `Time_Warp_Studio-<version>-macOS-universal.dmg` | Open it and drag **Time Warp Studio** to Applications. One image, both architectures. |
+| a Linux desktop, no wish to install anything | `Time_Warp_Studio-<version>-x86_64.AppImage` | Make it executable and double-click it. No root, no package manager, no Qt to fetch. |
 | Ubuntu, Debian, Mint or Pop!_OS | `time-warp-studio_<version>_amd64.deb`, or `_arm64.deb` | Double-click it, or `sudo apt install ./time-warp-studio_<version>_amd64.deb` |
 | Fedora, RHEL or openSUSE | `time-warp-studio-<version>-1.x86_64.rpm`, or `.aarch64.rpm` | `sudo dnf install ./time-warp-studio-<version>-1.x86_64.rpm` |
 | any other Linux, or arm64 | `time-warp-studio-<version>-linux-<arch>.tar.gz` | `tar -xzf … -C / --strip-components=1` |
 
-`uname -m` says which architecture yours is: `x86_64` or `aarch64`. Omit the
-architecture from the file name above and the release assets fill it in. The full
-detail, including requirements and the container image, is in
+On Linux, `uname -m` says which architecture yours is: `x86_64` or `aarch64`. Omit
+the architecture from the file name above and the release assets fill it in. Neither
+the Windows installer nor the disk image is signed with a paid certificate, so each
+asks once — SmartScreen's "More info"/"Run anyway" on Windows, right-click > Open on
+macOS. The full detail, including requirements and the container image, is in
 [docs/INSTALLATION.md](docs/INSTALLATION.md); building from source is still
 supported and is what `native/README.md` describes.
 
@@ -207,7 +211,7 @@ The Qt IDE is the product; the PySide6 application that preceded it has been rem
 and the port is complete: every phase of
 [PORTING_PLAN.md](docs/PORTING_PLAN.md) is implemented and has a test. What remains
 unbuilt is a shorter list — a dedicated player target, an automatic update check,
-and Flatpak/Snap or Windows/macOS packaging. It is tracked in
+code-signed Windows and macOS builds, and Flatpak or Snap. It is tracked in
 [docs/ROADMAP.md](docs/ROADMAP.md); please read that list before reporting a missing
 feature as a regression.
 
@@ -348,7 +352,8 @@ smalltalk
 - **[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)** — the standard expected here
 - **[CHANGELOG.md](CHANGELOG.md)** — what changed, release by release
 
-Releases carry `.deb`, `.rpm` and tarball packages for x86_64 and arm64, and an
-AppImage for x86_64 (see **Install it** above). Building from source is still the way to work on the
-application, and [docs/INSTALLATION.md](docs/INSTALLATION.md) is the whole
-procedure for both.
+Releases carry a Windows installer and portable ZIP, a universal macOS disk image,
+and `.deb`, `.rpm`, tarball and (x86_64) AppImage packages for Linux (see **Install
+it** above). Building from source is still the way to work on the application, and
+[docs/INSTALLATION.md](docs/INSTALLATION.md) is the whole procedure for every
+platform.

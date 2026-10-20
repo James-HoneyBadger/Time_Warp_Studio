@@ -38,6 +38,9 @@ QString snippetRoot() {
     for (const QString& candidate :
          {app_dir + QStringLiteral("/../share/time-warp-studio/snippets.json"),
           app_dir + QStringLiteral("/../share/snippets.json"),
+          // A macOS bundle: Contents/MacOS/Time Warp Studio beside
+          // Contents/Resources/share/time-warp-studio.
+          app_dir + QStringLiteral("/../Resources/share/time-warp-studio/snippets.json"),
           app_dir + QStringLiteral("/../../native/share/snippets.json")}) {
         if (QFileInfo{candidate}.isFile()) {
             return QFileInfo{candidate}.absoluteFilePath();
