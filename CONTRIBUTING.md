@@ -595,7 +595,7 @@ make test-all && make lint && make lint-md
 - [ ] Tests written and passing
 - [ ] Build is warning-free (`-Werror`)
 - [ ] Bridge code (if touched) is ruff clean and standard-library only
-- [ ] `make smoke` is unchanged — every example still runs, and the 18 that must draw still draw
+- [ ] `make smoke` is unchanged — every example still runs, and the 30 that must draw still draw
 - [ ] Lesson changes pass `python3 native/tools/teach.py validate`
 - [ ] Documentation updated, including anything the change made untrue
 - [ ] No breaking changes (or documented)

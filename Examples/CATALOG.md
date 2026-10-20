@@ -39,7 +39,7 @@ smaller examples beside them each teach one idea; the showcases are the tour.
 
 | File | Description |
 | --- | --- |
-| `pilot/showcase.pilot` | The night sky: every unit, matching, compute, branches, subroutines and turtle graphics |
+| `pilot/showcase.pilot` | The night sky: text, answers, matching, compute, branches, subroutines, hints and turtle graphics |
 | `pilot/hello.pilot` | Hello World and text output |
 | `pilot/brain_trainer.pilot` | Quiz with scoring and branching |
 | `pilot/history_quiz.pilot` | Multiple-choice history quiz |
@@ -69,7 +69,7 @@ smaller examples beside them each teach one idea; the showcases are the tour.
 
 | File | Description |
 | --- | --- |
-| `comal/showcase.comal` | The marks board: output, selection, four loops, procedures, functions, arrays and turtle graphics |
+| `comal/showcase.comal` | The marks board: output, selection, FOR (with STEP), WHILE and REPEAT loops, procedures, functions, arrays and turtle graphics |
 | `comal/hello.comal` | Hello World and PRINT formatting |
 | `comal/loops.comal` | FOR, WHILE and REPEAT loops |
 | `comal/procedures.comal` | PROC declarations and CALL |
@@ -81,7 +81,7 @@ smaller examples beside them each teach one idea; the showcases are the tour.
 
 | File | Description |
 | --- | --- |
-| `rexx/showcase.rexx` | The text analyst: typeless values, PARSE, every DO form, functions, subroutines and turtle graphics |
+| `rexx/showcase.rexx` | The text analyst: typeless values, PARSE, DO TO/BY, DO OVER and DO WHILE, functions, subroutines and turtle graphics |
 | `rexx/hello.rexx` | SAY output and abuttal concatenation |
 | `rexx/loops.rexx` | DO TO/BY, DO WHILE and DO OVER iterations |
 | `rexx/strings.rexx` | PARSE and built-in string functions |

@@ -27,8 +27,8 @@ Hello, World!
 X=5.00
 ```
 
-The default is **two decimal places** for every number. `%n` changes it for the
-rest of that statement:
+The default is **two decimal places** for every number. `%n` changes it and holds
+until the next `%n`, so each line below sets the format it wants:
 
 ```focal
 01.10 T %0,"R=",7/2         R=4

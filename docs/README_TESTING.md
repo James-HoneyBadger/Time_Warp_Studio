@@ -43,7 +43,7 @@ draws nothing, which is what a user reports as "the graphics don't show up".
 python3 native/tools/example_smoke.py
 ```
 
-The 20 programs that must produce ink are listed in `DRAWING_EXAMPLES` inside that
+The 30 programs that must produce ink are listed in `DRAWING_EXAMPLES` inside that
 script; a program that is expected to draw and does not fails the run.
 
 ## The bridge engine's own tests

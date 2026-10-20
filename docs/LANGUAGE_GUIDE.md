@@ -41,7 +41,7 @@ Each language also has a worked example and a tutorial:
 | **Logo** | `.logo`, `.lg` | [`hello.logo`](../Examples/logo/hello.logo) | [`showcase.logo`](../Examples/logo/showcase.logo) | [`docs/tutorials/logo.md`](tutorials/logo.md) |
 | **COMAL** | `.comal`, `.cml` | [`hello.comal`](../Examples/comal/hello.comal) | [`showcase.comal`](../Examples/comal/showcase.comal) | [`docs/tutorials/comal.md`](tutorials/comal.md) |
 | **REXX** | `.rexx`, `.rex` | [`hello.rexx`](../Examples/rexx/hello.rexx) | [`showcase.rexx`](../Examples/rexx/showcase.rexx) | [`docs/tutorials/rexx.md`](tutorials/rexx.md) |
-| **Scheme** | `.scm`, `.ss` | [`hello.scm`](../Examples/scheme/hello.scm) | [`showcase.scm`](../Examples/scheme/showcase.scm) | [`docs/tutorials/scheme.md`](tutorials/scheme.md) |
+| **Scheme** | `.scm`, `.ss`, `.scheme` | [`hello.scm`](../Examples/scheme/hello.scm) | [`showcase.scm`](../Examples/scheme/showcase.scm) | [`docs/tutorials/scheme.md`](tutorials/scheme.md) |
 | **APL** | `.apl`, `.dyalog` | [`arrays_and_turtle.apl`](../Examples/apl/arrays_and_turtle.apl) | [`showcase.apl`](../Examples/apl/showcase.apl) | [`docs/tutorials/apl.md`](tutorials/apl.md) |
 | **FOCAL** | `.foc`, `.focal` | [`square.foc`](../Examples/focal/square.foc) | [`showcase.foc`](../Examples/focal/showcase.foc) | [`docs/tutorials/focal.md`](tutorials/focal.md) |
 | **CHIP-8** | `.ch8`, `.c8` | [`font_and_frames.ch8`](../Examples/chip8/font_and_frames.ch8) | [`showcase.ch8`](../Examples/chip8/showcase.ch8) | [`docs/tutorials/chip8.md`](tutorials/chip8.md) |
@@ -822,7 +822,8 @@ Scheme is a small Lisp dialect. Operators come first and everything is a list.
 ### Turtle graphics
 
 `forward`/`fd`, `backward`/`bk`, `right`/`rt`, `left`/`lt`, `goto`, `penup`,
-`pendown`, `home`, `circle`, `color`.
+`pendown`, `home`, `circle`, and `color`, which takes three numbers (red, green
+and blue, 0–255).
 
 ```scheme
 (define (square size)
@@ -1000,14 +1001,15 @@ reference to a label that does not exist is reported, which is how you find out.
 
 ### TYPE
 
-`T` prints text and expressions. `%n` sets the number of decimal places for the
-rest of the statement, and the default is two.
+`T` prints text and expressions. `%n` sets the number of decimal places and holds
+until the next `%n`; the default is two. The format belongs to the session rather
+than to one statement, which is why the last line below sets it again.
 
 ```focal
 01.10 T "X=",2+3          X=5.00
 01.20 T %0,"R=",7/2       R=4
 01.30 S X=5
-01.40 T "X is ",X         X is 5.00
+01.40 T %2,"X is ",X      X is 5.00
 ```
 
 `!` suppresses the newline **within one TYPE**, so `T "A"!"B"` prints `AB`. It
@@ -1382,7 +1384,7 @@ To select which language your code uses:
 | `.logo` / `.lg` | Logo |
 | `.comal` / `.cml` | COMAL |
 | `.rexx` / `.rex` | REXX |
-| `.scm` / `.ss` | Scheme |
+| `.scm` / `.ss` / `.scheme` | Scheme |
 | `.apl` / `.dyalog` | APL |
 | `.foc` / `.focal` | FOCAL |
 | `.ch8` / `.c8` | CHIP-8 |

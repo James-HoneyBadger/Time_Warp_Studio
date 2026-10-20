@@ -117,7 +117,9 @@ See [docs/lessons/](docs/lessons/README.md) for the guides.
 
 ### Educational Content
 
-- **50 curated example programs** across all 10 active languages, under `Examples/`
+- **60 curated example programs** across all 10 active languages, under
+  `Examples/`, including a **showcase** for each language that walks its whole
+  surface and ends in a drawing
 - **Error hints** — syntax suggestions alongside interpreter error messages
 - **Ten language tutorials** — one per language, under `docs/tutorials/`
 - **Lesson plans** — one document per language, generated from the curriculum, under `docs/lessons/plans/`

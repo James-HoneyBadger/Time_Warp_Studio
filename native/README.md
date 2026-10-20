@@ -1055,7 +1055,7 @@ page next to a 60x40 page must still report a 100x100 minimum.
 
 ### Verification
 
-* **1371 checks** in `ui_layout_tests`, run offscreen so they need no display and
+* **1372 checks** in `ui_layout_tests`, run offscreen so they need no display and
   belong in the normal CTest set. They assert the tree shape, parent/child
   identity at every splitter index, the collapsible and handle-width flags, the
   stretch factors (read back from the child's size policy, since `QSplitter` has
@@ -1156,7 +1156,7 @@ wrong name.
 background thread; the other nine run in process through `timewarp_lang`. No
 program is sent to the Python engine any more -- it stays as the reference the
 gates and the lesson check use. Every one of the 60 examples in `Examples/`
-executes, and the 18 that draw produce drawing -- checked by
+executes, and the 30 that draw produce drawing -- checked by
 `tools/example_smoke.py` through the reference, and by
 `lang_differential_check.py` on both sides.
 

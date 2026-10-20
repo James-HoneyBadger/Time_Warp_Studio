@@ -242,7 +242,7 @@ ten languages, so `runInBridge` has no runtime case left.
 narrowing variable types, `SUB`/`FUNCTION`, records and the file channel, the VGA
 statements, and the reference's Logo fallback (a `.bas` file's `FORWARD` is
 Logo's `FORWARD`) are all in `native/src/lang/basic*.cpp`. It is gated by the
-same rows and examples the reference is: 137 programs, 0 differences.
+same rows and examples the reference is: 138 programs, 0 differences.
 
 The next step is to move lesson checking into the native engine; only then can
 `native/bridge/` and the `python_worker` target be deleted together.
