@@ -67,7 +67,7 @@ both sides seed from the OS, so they cannot agree by construction.
 ```bash
 python3 native/tools/differential_check.py native/build/expr_cli
 cd native/tools && python3 scheme_differential_check.py
-python3 native/tools/lang_differential_check.py   # 473 programs, 0 differences
+python3 native/tools/lang_differential_check.py   # 482 programs, 0 differences
 ```
 
 ## Lint

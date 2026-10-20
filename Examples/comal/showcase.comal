@@ -1,0 +1,90 @@
+10 REM ============================================================
+20 REM THE MARKS BOARD
+30 REM A COMAL showcase: assignment, selection, all four loops,
+40 REM procedures, functions, arrays, DATA and turtle graphics.
+50 REM ============================================================
+60 PRINT "M A R K S   B O A R D"
+70 PRINT "----------------------------------------"
+80 PRINT ""
+90 REM --- 1. Variables and output --------------------------------
+100 SUBJECT$ := "Science"
+110 SCORE := 87
+120 PRINT "Subject: "; SUBJECT$
+130 PRINT "Score:   "; SCORE
+140 PRINT "Comma inserts a space", "and semicolon does not"
+150 PRINT "joined"; "together"
+160 PRINT ""
+170 REM --- 2. Selection -------------------------------------------
+180 IF SCORE >= 90 THEN
+190   PRINT "Grade: A"
+200 ELIF SCORE >= 80 THEN
+210   PRINT "Grade: B"
+220 ELSE
+230   PRINT "Grade: C"
+240 ENDIF
+250 PRINT ""
+260 REM --- 3. FOR, WHILE and REPEAT -------------------------------
+270 TOTAL := 0
+280 FOR DAY := 1 TO 5
+290   TOTAL := TOTAL + DAY
+300 NEXT DAY
+310 PRINT "FOR totalled ", TOTAL
+320 N := 0
+330 WHILE N < 4
+340   N := N + 1
+350 ENDWHILE
+360 PRINT "WHILE stopped at ", N
+370 REPEAT
+380   N := N - 1
+390 UNTIL N = 0
+400 PRINT "REPEAT stopped at ", N
+410 STEPPED := 0
+420 FOR EVEN := 2 TO 10 STEP 2
+430   STEPPED := STEPPED + EVEN
+440 NEXT EVEN
+450 PRINT "FOR STEP totalled ", STEPPED
+460 PRINT ""
+470 REM --- 4. Procedures and functions ----------------------------
+480 PROC HEADING(TITLE$)
+490   PRINT "== "; TITLE$; " =="
+500 ENDPROC
+510 CALL HEADING("RESULTS")
+520 FUNC DOUBLE(N)
+530   RETURN N * 2
+540 ENDFUNC
+550 PRINT "DOUBLE(21) is ", DOUBLE(21)
+560 PRINT ""
+570 REM --- 5. Arrays and DATA -------------------------------------
+580 DIM SCORES(5)
+590 DATA 72, 88, 91, 65, 80
+600 READ S1, S2, S3, S4, S5
+610 SCORES(1) := S1
+620 SCORES(2) := S2
+630 SCORES(3) := S3
+640 SCORES(4) := S4
+650 SCORES(5) := S5
+660 SUM := 0
+670 FOR PAPER := 1 TO 5
+680   PRINT "paper ", PAPER, ": ", SCORES(PAPER)
+690   SUM := SUM + SCORES(PAPER)
+700 NEXT PAPER
+710 PRINT "class total: ", SUM
+720 PRINT "class mean:  ", SUM / 5
+730 PRINT ""
+740 REM --- 6. Turtle graphics -------------------------------------
+750 PRINT "Drawing a rising spiral and a star."
+760 MOVE 10
+770 FOR SIDE := 1 TO 12
+780   MOVE SIDE * 5
+790   TURN 90
+800 NEXT SIDE
+810 PENUP
+820 MOVE 80
+830 PENDOWN
+840 FOR POINT := 1 TO 5
+850   MOVE 40
+860   TURN 144
+870 NEXT POINT
+880 HOME
+890 PLOT
+900 PRINT "Drawing complete."

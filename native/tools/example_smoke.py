@@ -2,7 +2,7 @@
 """Runs every example program through the language bridge and reports the result.
 
 The C++ suite (`python_bridge_tests`) covers the protocol and the drawing for one
-program per language. This covers the *corpus*: all 49 examples, in all ten
+program per language. This covers the *corpus*: all 60 examples, in all ten
 languages, checking that each one runs and that the ones that draw actually draw.
 
 That distinction matters because the two failures look alike from a unit test and
@@ -79,6 +79,18 @@ DRAWING_EXAMPLES = {
     "chip8/paint.ch8",
     "apl/arrays_and_turtle.apl",
     "smalltalk/shapes.st",
+    # The ten showcases added with the 16.1.0 example collection: each one
+    # draws as well as prints, so a silent run is a broken run for all of them.
+    "apl/showcase.apl",
+    "basic/showcase.bas",
+    "chip8/showcase.ch8",
+    "comal/showcase.comal",
+    "focal/showcase.foc",
+    "logo/showcase.logo",
+    "pilot/showcase.pilot",
+    "rexx/showcase.rexx",
+    "scheme/showcase.scm",
+    "smalltalk/showcase.st",
 }
 
 

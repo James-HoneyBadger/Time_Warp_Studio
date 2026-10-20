@@ -292,6 +292,15 @@ EXTRA_CORPUS: list[str] = [
 ]
 
 
+# The shipped Scheme showcase is part of the corpus by path rather than by copy:
+# it is the largest Scheme program in the tree, and a port that agrees with the
+# snippets above but not with the example the IDE opens is still a port that
+# disagrees with what a user runs.
+_SHOWCASE = Path(__file__).resolve().parents[2] / "Examples" / "scheme" / "showcase.scm"
+if _SHOWCASE.is_file():
+    CORPUS.append(_SHOWCASE.read_text(encoding="utf-8"))
+
+
 def run_port(cli: Path, program: str) -> str:
     """Runs a program through the C++ CLI, returning its stdout."""
     result = subprocess.run(

@@ -1,0 +1,112 @@
+; ============================================================
+; THE CARTOGRAPHER'S TURTLE
+; A Logo showcase: words and numbers, lists, procedures,
+; recursion, conditionals, pen control and turtle geometry.
+; ============================================================
+
+PRINT [THE CARTOGRAPHER'S TURTLE]
+PRINT [--------------------------------------------]
+PRINT []
+
+; --- 1. Words, numbers and arithmetic ------------------------
+MAKE "SIDES 4
+MAKE "SIDE 60
+PRINT [Sides in the figure:]
+PRINT :SIDES
+PRINT [Length of each side:]
+PRINT :SIDE
+PRINT [The turning angle is 360 / sides:]
+PRINT 360 / :SIDES
+PRINT [The six sides cover this much ground:]
+PRINT :SIDE * 6
+PRINT [Logo's own reporters work on numbers directly:]
+PRINT SUM 3 4
+PRINT DIFFERENCE 10 4
+PRINT PRODUCT 6 7
+PRINT QUOTIENT 84 2
+PRINT []
+
+; --- 2. Lists ------------------------------------------------
+MAKE "PALETTE [RED GREEN BLUE]
+PRINT [The palette list holds three words:]
+PRINT [Its first, last and second words:]
+PRINT FIRST :PALETTE
+PRINT LAST :PALETTE
+PRINT ITEM 2 :PALETTE
+PRINT []
+
+; --- 3. Procedures with inputs -------------------------------
+TO SQUARE :LENGTH
+  REPEAT 4 [FD :LENGTH RT 90]
+END
+
+TO POLYGON :COUNT :LENGTH
+  REPEAT :COUNT [FD :LENGTH RT 360 / :COUNT]
+END
+
+PRINT [A square is a polygon with four sides.]
+SQUARE :SIDE
+PRINT [A hexagon of the same side length.]
+POLYGON 6 :SIDE
+PRINT []
+
+; --- 4. A procedure that reports a value ---------------------
+TO DISTANCE :LENGTH :COUNT
+  OUTPUT :LENGTH * :COUNT
+END
+
+PRINT [Walking every side of the hexagon covers:]
+PRINT DISTANCE :SIDE 6
+PRINT []
+
+; --- 5. Recursion, and a condition that stops it -------------
+TO TREE :SIZE
+  IF :SIZE < 6 [STOP]
+  FD :SIZE
+  RT 30
+  TREE :SIZE / 2
+  LT 60
+  TREE :SIZE / 2
+  RT 30
+  BK :SIZE
+END
+
+PRINT [A recursive tree, drawn then walked back.]
+TREE 40
+PRINT []
+
+; --- 6. Conditionals and a counted loop ----------------------
+MAKE "TURN 0
+PRINT [WHILE draws a fan of eight spokes:]
+WHILE [:TURN < 8] [FD 50 BK 50 RT 45 MAKE "TURN :TURN + 1]
+PRINT :TURN
+IFELSE :SIDES = 4 [PRINT "SQUARE] [PRINT "NOT-SQUARE]
+PRINT []
+
+; --- 7. Pen control and the drawing's composition ------------
+CLEAN
+CS
+SETBG "NAVY
+SETPENCOLOR "YELLOW
+SETPENWIDTH 3
+HOME
+REPEAT 4 [FD 90 RT 90]
+PU
+SETPOS [120 -120]
+PD
+SETPENCOLOR "LIME
+POLYGON 6 30
+PU
+SETPOS [-140 -120]
+PD
+SETPENCOLOR "TOMATO
+FILLED "RED [REPEAT 3 [FD 50 RT 120]]
+PU
+SETPOS [0 0]
+PD
+SETPENCOLOR "CYAN
+ARC 180 60
+SETPENCOLOR "WHITE
+REPEAT 12 [PU FD 70 PD FD 8 PU BK 78 RT 30]
+HIDETURTLE
+PRINT [The map is drawn, and the turtle is hidden.]

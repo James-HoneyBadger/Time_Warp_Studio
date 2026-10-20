@@ -1,0 +1,79 @@
+R: ============================================================
+R: THE NIGHT SKY - a PILOT showcase
+R: Text, answers, matching, jumps, compute, subroutines and
+R: turtle graphics, in the order a lesson would use them.
+R: ============================================================
+
+T: T H E   N I G H T   S K Y
+T: ----------------------------------------
+T: A short lesson in reading the stars.
+T: Name any constellation you know.
+A:
+M: *
+TY: Good - the wildcard accepts any answer.
+TN: That cannot happen with a wildcard.
+T: Your answer was: $ANSWER
+T: Before the match: $LEFT
+T: The match itself: $MATCH
+T: After it: $RIGHT
+T:
+
+T: --- 1. Compute: text and numbers -------------------------
+C:$STAR = SIRIUS
+C:MAG = -1
+C:COUNT = 3
+C:COUNT = COUNT * 2
+T: The brightest star is $STAR.
+T: Its magnitude is $MAG, and the counter now reads $COUNT.
+T:
+
+T: --- 2. Branching -----------------------------------------
+C:FLAG = 1
+B:FLAG=*DRAW
+T: Not reached: the branch was taken.
+E:
+*DRAW
+T: The branch jumped here.
+T:
+
+T: --- 3. A subroutine that draws ---------------------------
+T: Calling a subroutine to draw the constellation.
+U: *CONSTELLATION
+T: Back from the drawing.
+J: FINISH
+
+*CONSTELLATION
+T: Drawing seven stars and the lines between them.
+G: FD 40
+G: RT 60
+G: FD 40
+G: RT 120
+G: FD 40
+G: RT 120
+G: FD 40
+G: RT 60
+G: FD 40
+G: RT 90
+G: FD 30
+G: RT 120
+G: FD 30
+G: FILL
+G: TEXT A CONSTELLATION
+H: The line ends where it began - a closed figure.
+D: 0
+E:
+
+*FINISH
+T:
+T: --- 4. The same match, with a jump ----------------------
+M: *IRIUS
+JY: IRIUS
+T: The answer was not in the Sirius family.
+J: DONE
+
+*IRIUS
+T: The answer was in the Sirius family.
+
+*DONE
+T: Lesson complete. Look up tonight.
+E:

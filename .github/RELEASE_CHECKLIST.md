@@ -24,7 +24,7 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
 - [ ] `make test` — the 17 C++ suites
 - [ ] `make test-debug` and `make asan` — the other build trees
 - [ ] `make engine-test` — the bridge engine's pytest suite
-- [ ] `make smoke` — all 50 example programs through the reference engine
+- [ ] `make smoke` — all 60 example programs through the reference engine
 - [ ] All three differential gates (expression, Scheme, languages) report 0 unexpected mismatches
 - [ ] Manual smoke test of the IDE (launch, open an example, run a turtle program)
 

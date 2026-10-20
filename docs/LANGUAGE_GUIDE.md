@@ -4,8 +4,8 @@ Time Warp Studio actively implements and ships **10 programming languages**:
 BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 
 > **All ten have reference sections below.** Each language also has a test module
-> under `native/bridge/time_warp/tests/`, a worked example under `Examples/`, and
-> rows in `native/bridge/time_warp/tests/command_table.py`; running
+> under `native/bridge/time_warp/tests/`, a worked example and a showcase under
+> `Examples/`, and rows in `native/bridge/time_warp/tests/command_table.py`; running
 > `python3 native/tools/command_matrix.py` exercises every command through the
 > real bridge, so the tables here are checked against the code rather than
 > written from memory.
@@ -34,12 +34,18 @@ BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 
 Each language also has a worked example and a tutorial:
 
-| Language | Extensions | Example | Tutorial |
-| --- | --- | --- | --- |
-| **APL** | `.apl`, `.dyalog` | [`arrays_and_turtle.apl`](../Examples/apl/arrays_and_turtle.apl) | [`docs/tutorials/apl.md`](tutorials/apl.md) |
-| **FOCAL** | `.foc`, `.focal` | [`square.foc`](../Examples/focal/square.foc) | [`docs/tutorials/focal.md`](tutorials/focal.md) |
-| **CHIP-8** | `.ch8`, `.c8` | [`font_and_frames.ch8`](../Examples/chip8/font_and_frames.ch8) | [`docs/tutorials/chip8.md`](tutorials/chip8.md) |
-| **Smalltalk** | `.st`, `.smalltalk` | [`shapes.st`](../Examples/smalltalk/shapes.st) | [`docs/tutorials/smalltalk.md`](tutorials/smalltalk.md) |
+| Language | Extensions | Example | Showcase | Tutorial |
+| --- | --- | --- | --- | --- |
+| **BASIC** | `.bas`, `.bsc` | [`hello.bas`](../Examples/basic/hello.bas) | [`showcase.bas`](../Examples/basic/showcase.bas) | [`docs/tutorials/basic.md`](tutorials/basic.md) |
+| **PILOT** | `.pilot`, `.plt` | [`hello.pilot`](../Examples/pilot/hello.pilot) | [`showcase.pilot`](../Examples/pilot/showcase.pilot) | [`docs/tutorials/pilot.md`](tutorials/pilot.md) |
+| **Logo** | `.logo`, `.lg` | [`hello.logo`](../Examples/logo/hello.logo) | [`showcase.logo`](../Examples/logo/showcase.logo) | [`docs/tutorials/logo.md`](tutorials/logo.md) |
+| **COMAL** | `.comal`, `.cml` | [`hello.comal`](../Examples/comal/hello.comal) | [`showcase.comal`](../Examples/comal/showcase.comal) | [`docs/tutorials/comal.md`](tutorials/comal.md) |
+| **REXX** | `.rexx`, `.rex` | [`hello.rexx`](../Examples/rexx/hello.rexx) | [`showcase.rexx`](../Examples/rexx/showcase.rexx) | [`docs/tutorials/rexx.md`](tutorials/rexx.md) |
+| **Scheme** | `.scm`, `.ss` | [`hello.scm`](../Examples/scheme/hello.scm) | [`showcase.scm`](../Examples/scheme/showcase.scm) | [`docs/tutorials/scheme.md`](tutorials/scheme.md) |
+| **APL** | `.apl`, `.dyalog` | [`arrays_and_turtle.apl`](../Examples/apl/arrays_and_turtle.apl) | [`showcase.apl`](../Examples/apl/showcase.apl) | [`docs/tutorials/apl.md`](tutorials/apl.md) |
+| **FOCAL** | `.foc`, `.focal` | [`square.foc`](../Examples/focal/square.foc) | [`showcase.foc`](../Examples/focal/showcase.foc) | [`docs/tutorials/focal.md`](tutorials/focal.md) |
+| **CHIP-8** | `.ch8`, `.c8` | [`font_and_frames.ch8`](../Examples/chip8/font_and_frames.ch8) | [`showcase.ch8`](../Examples/chip8/showcase.ch8) | [`docs/tutorials/chip8.md`](tutorials/chip8.md) |
+| **Smalltalk** | `.st`, `.smalltalk` | [`shapes.st`](../Examples/smalltalk/shapes.st) | [`showcase.st`](../Examples/smalltalk/showcase.st) | [`docs/tutorials/smalltalk.md`](tutorials/smalltalk.md) |
 
 ---
 

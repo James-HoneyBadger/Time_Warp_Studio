@@ -1,0 +1,62 @@
+01.10 C ============================================================
+01.20 C THE NUMBERS DESK
+01.30 C A FOCAL showcase: formatting, the function library,
+01.40 C SET and ERASE, the three-way sign branch, FOR, DO groups
+01.50 C and turtle graphics.
+01.60 C ============================================================
+01.70 T "T H E   N U M B E R S   D E S K"
+01.80 T "----------------------------------------"
+
+02.10 C --- 1. Constants, arithmetic and formatting ----------------
+02.20 T %3,"PI = ",FPI
+02.30 T "e = ",FEXP(1)
+02.40 T %2,"Square root of 2 = ",FSQT(2)
+02.50 T "2 + 3 * 4 = ",2+3*4
+02.60 T "2 + 3 * 4 is not (2 + 3) * 4 = ",(2+3)*4
+02.70 T %0,"7 / 2 = ",7/2
+02.80 T "integer part of 3.7 = ",FITR(3.7)
+02.90 T "sign of -2 = ",FSGN(-2)
+03.10 T "sin 0 = ",FSIN(0),"  cos 0 = ",FCOS(0),"  atan 1 = ",FATN(1)
+03.20 C The %n format persists, so each section sets its own.
+
+04.10 C --- 2. SET several variables at once, then ERASE ------------
+04.20 T %2,"Before: X = ",X,"  Y = ",Y
+04.30 S X=5,Y=7
+04.40 T "After SET: X = ",X,"  Y = ",Y
+04.50 E X
+04.60 T "After ERASE X: X = ",X,"  Y = ",Y
+
+05.10 C --- 3. A three-way branch on a sign -------------------------
+05.20 S N=-4
+05.30 IF (N) 5.40,5.60,5.80
+05.40 T "N is negative."
+05.50 GOTO 6.10
+05.60 T "N is zero."
+05.70 GOTO 6.10
+05.80 T "N is positive."
+
+06.10 C --- 4. FOR loops --------------------------------------------
+06.20 T "Counting with FOR:"
+06.30 FOR I=1,5;T %0,"  I = ",I
+06.40 S TOTAL=0
+06.50 FOR J=1,4;S TOTAL=TOTAL+J
+06.60 T "Sum of 1 to 4 = ",TOTAL
+
+07.10 C --- 5. A group called with DO -------------------------------
+07.20 T "Calling a group:"
+07.30 DO 9.10
+07.40 T "Back in the main program."
+
+08.10 C --- 6. Turtle graphics ---------------------------------------
+08.20 T "Drawing a square and a star."
+08.30 FOR S=1,4;FORWARD 50;RIGHT 90
+08.40 PENUP
+08.50 HOME
+08.60 FORWARD 40
+08.70 PENDOWN
+08.80 FOR K=1,5;FORWARD 40;RIGHT 144
+08.90 HOME
+09.00 Q
+
+09.10 T "  Inside the group: FABS(-9) = ",FABS(-9)
+09.20 T "  The group ends at the end of the program."

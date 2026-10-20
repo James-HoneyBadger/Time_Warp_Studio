@@ -26,7 +26,7 @@ derived rather than remembered.
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export |
 | Display | 33 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
 | Execution | Run (F9) and Stop; one program at a time; unsaved-change prompts |
-| Languages | 10 languages, 50 verified example programs |
+| Languages | 10 languages, 60 verified example programs |
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
 | Bridged engines | None — every language runs in process. `native/bridge/` remains as the reference the parity gates and the lesson check use |
 | Native executors | All ten — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk and Scheme whole-program |
@@ -35,7 +35,7 @@ derived rather than remembered.
 | Terminal | Opt-in in Settings > Workspace: an embedded shell in the document's folder, absent in presentation and player modes |
 | Debugging | Breakpoints, Pause, Continue and Trace in all ten languages; Scheme adds a stack and frame bindings |
 | Packaging | `make install`; tagged releases build `.deb`, `.rpm`, AppImage, tarball and container artifacts |
-| Quality gates | 17 CTest suites in 4 build configurations, 3 parity gates, 571 engine tests, 446 command rows, 473 parity programs |
+| Quality gates | 17 CTest suites in 4 build configurations, 3 parity gates, 571 engine tests, 446 command rows, 482 parity programs |
 
 ---
 

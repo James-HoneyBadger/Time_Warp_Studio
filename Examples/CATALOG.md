@@ -3,6 +3,11 @@
 This catalog lists the example programs currently shipped with Time Warp Studio.
 It covers all ten active languages.
 
+Each language has a **showcase** program — the first row in each section below —
+that walks through that language's whole surface: its statements, its data types,
+its control flow, the features unique to it, and a drawing at the end. The
+smaller examples beside them each teach one idea; the showcases are the tour.
+
 ## Active Languages
 
 - BASIC
@@ -20,6 +25,7 @@ It covers all ten active languages.
 
 | File | Description |
 | --- | --- |
+| `basic/showcase.bas` | The weather station: strings, arrays, all three loops, procedures, error handling, turtle graphics and sound |
 | `basic/hello.bas` | Hello World and basic output |
 | `basic/adventure.bas` | Text adventure control flow |
 | `basic/budget_tracker.bas` | Variables and tabular calculations |
@@ -33,6 +39,7 @@ It covers all ten active languages.
 
 | File | Description |
 | --- | --- |
+| `pilot/showcase.pilot` | The night sky: every unit, matching, compute, branches, subroutines and turtle graphics |
 | `pilot/hello.pilot` | Hello World and text output |
 | `pilot/brain_trainer.pilot` | Quiz with scoring and branching |
 | `pilot/history_quiz.pilot` | Multiple-choice history quiz |
@@ -47,6 +54,7 @@ It covers all ten active languages.
 
 | File | Description |
 | --- | --- |
+| `logo/showcase.logo` | The cartographer's turtle: words, lists, procedures, recursion, conditionals and pen control |
 | `logo/hello.logo` | Introductory turtle drawing |
 | `logo/fractal_forest.logo` | Recursive turtle composition |
 | `logo/fractal_gallery.logo` | Collection of recursive patterns |
@@ -61,6 +69,7 @@ It covers all ten active languages.
 
 | File | Description |
 | --- | --- |
+| `comal/showcase.comal` | The marks board: output, selection, four loops, procedures, functions, arrays and turtle graphics |
 | `comal/hello.comal` | Hello World and PRINT formatting |
 | `comal/loops.comal` | FOR, WHILE and REPEAT loops |
 | `comal/procedures.comal` | PROC declarations and CALL |
@@ -72,6 +81,7 @@ It covers all ten active languages.
 
 | File | Description |
 | --- | --- |
+| `rexx/showcase.rexx` | The text analyst: typeless values, PARSE, every DO form, functions, subroutines and turtle graphics |
 | `rexx/hello.rexx` | SAY output and abuttal concatenation |
 | `rexx/loops.rexx` | DO TO/BY, DO WHILE and DO OVER iterations |
 | `rexx/strings.rexx` | PARSE and built-in string functions |
@@ -83,6 +93,7 @@ It covers all ten active languages.
 
 | File | Description |
 | --- | --- |
+| `scheme/showcase.scm` | The expression machine: numbers, strings, recursion, lists, closures and turtle graphics |
 | `scheme/hello.scm` | display and newline output |
 | `scheme/recursion.scm` | factorial, Fibonacci and countdown |
 | `scheme/lists.scm` | car/cdr, map, filter and foldl |
@@ -94,12 +105,14 @@ It covers all ten active languages.
 
 | File | Description |
 | --- | --- |
+| `focal/showcase.foc` | The numbers desk: formatting, the function library, sign branches, FOR, DO groups and turtle graphics |
 | `focal/square.foc` | A square and a polygon, with a FOR loop and a sign branch |
 
 ## CHIP-8
 
 | File | Description |
 | --- | --- |
+| `chip8/showcase.ch8` | A montage: hi-res mode, the font, sprites, collision, BCD, arithmetic and the keypad |
 | `chip8/font_and_frames.ch8` | A font glyph, a checker pattern and a frame, with a collision |
 | `chip8/hires.ch8` | SuperChip hi-res (128x64): a 16x16 ring, two scrolls and the large FX30 font |
 | `chip8/paint.ch8` | One-pixel paint: move with 2/8/4/6, paint with 5, clear with 0 |
@@ -108,12 +121,14 @@ It covers all ten active languages.
 
 | File | Description |
 | --- | --- |
+| `apl/showcase.apl` | The array workshop: every function family, right-to-left evaluation, a defined function and turtle geometry |
 | `apl/arrays_and_turtle.apl` | Iota, reduce, reshape and a user-defined function, then a hexagon |
 
 ## Smalltalk
 
 | File | Description |
 | --- | --- |
+| `smalltalk/showcase.st` | The shape factory: classes, inheritance and super, blocks, collections and turtle graphics |
 | `smalltalk/shapes.st` | A Polygon class, nested figures drawn by a block, and Transcript output |
 
 ## Validation

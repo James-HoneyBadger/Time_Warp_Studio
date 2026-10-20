@@ -104,7 +104,7 @@ PYTHONPATH=native/bridge python3 -m pytest -q
 # Parity gates against the Python reference (0 unexpected mismatches)
 python3 native/tools/differential_check.py native/build/expr_cli
 cd native/tools && python3 scheme_differential_check.py
-python3 native/tools/lang_differential_check.py   # all nine bridged-once languages, 473 programs
+python3 native/tools/lang_differential_check.py   # all nine bridged-once languages, 482 programs
 
 # The documentation gates, which .github/workflows/docs.yml runs on every docs
 # change; the teach.py write-plans output is then checked with git diff --exit-code
@@ -119,7 +119,7 @@ make lint-md
   document, turtle canvas, syntax highlighter, python bridge, media, editor
   services, help browser, chip8 emulator)
 - `native/tools/example_smoke.py` = every `Examples/**` program through the reference
-  engine; the 20 that must draw are listed in `DRAWING_EXAMPLES`
+  engine; the 30 that must draw are listed in `DRAWING_EXAMPLES`
 - `native/bridge/time_warp/tests/` = the bridge engine's tests (the 10 language executors,
   the expression evaluator, validators)
 
@@ -251,7 +251,7 @@ native/                        - the Qt application (the product)
       graphics/turtle_state.py - turtle state
       utils/                   - expression_evaluator.py, error_hints.py, validators.py
       tests/                   - the engine's own tests
-Examples/                      - 50 example programs across the 10 active languages
+Examples/                      - 60 example programs across the 10 active languages
 docs/                          - language guide + per-language tutorials
 Scripts/                       - audit_interpreters.py, generate_icon.py,
                                  version_sync.py

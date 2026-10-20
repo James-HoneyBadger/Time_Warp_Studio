@@ -1,5 +1,24 @@
 # Changelog
 
+## [Unreleased]
+
+### Added
+
+- **A showcase program for every language.** `Examples/<language>/showcase.<ext>`
+  is one program per language that walks through that language's whole surface —
+  its statements, its data, its control flow, the idioms that are its own, and a
+  drawing at the end — so a reader can see what the language does before opening
+  a manual. BASIC mixes PRINT, arrays, all three loops, SUB/FUNCTION, error
+  handling, graphics and sound; Logo uses lists, procedures, recursion and the
+  pen; PILOT uses every unit including compute, branches and subroutines; COMAL
+  and REXX show structured control flow and their string machinery; Scheme shows
+  higher-order procedures and closures; APL shows each function family and the
+  right-to-left rule; FOCAL shows its sign branch and function library; CHIP-8
+  draws a montage with the font, BCD, collision and hi-res; Smalltalk defines two
+  classes and queries a collection three ways. All ten draw, so all ten are in
+  `DRAWING_EXAMPLES`, and the parity gates cover them: 482 programs, 0
+  differences.
+
 ## [16.1.0] - 2026-10-19
 
 The port is finished: every feature the removed PySide6 application had is back,

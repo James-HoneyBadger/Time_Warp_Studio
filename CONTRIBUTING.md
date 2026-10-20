@@ -636,7 +636,7 @@ Time_Warp_Studio/
 │           │                     #     classroom_mode.py (the teacher's side)
 │           ├── graphics/         #     turtle_state.py
 │           └── tests/            #     the engine's pytest suite
-├── Examples/                     # 50 example programs across the 10 languages
+├── Examples/                     # 60 example programs across the 10 languages
 ├── docs/                         # the guides
 │   ├── tutorials/                #   one tutorial per language
 │   └── lessons/                  #   the curriculum, both guides and the plans
