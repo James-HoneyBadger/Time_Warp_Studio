@@ -286,6 +286,24 @@ jobs:
         if: runner.os == 'macOS'
         run: ctest --test-dir native/build --output-on-failure
 
+      # The bridge is the only part of the product that runs Python, and it is what
+      # a lesson check uses. This drives it directly -- one run request on stdin,
+      # the JSON lines back -- so a platform where it cannot answer shows its
+      # traceback here instead of as a row of test timeouts that say only "no
+      # reply". Closing stdin is the documented one-shot use.
+      - name: The bridge worker answers a run (Windows)
+        if: runner.os == 'Windows'
+        timeout-minutes: 3
+        run: |
+          $env:PYTHONPATH = Join-Path $PWD "native/bridge"
+          $request = '{"t":"run","language":"basic","source":"10 PRINT ""HI""\n20 END\n","name":"hello.bas"}'
+          $output = $request | & python native/bridge/worker.py 2>&1 | Out-String
+          Write-Host $output
+          if ($output -notmatch '"t":"done"') {
+            Write-Error "the worker did not answer a run on Windows"
+            exit 1
+          }
+
       - name: The entry point starts and exits (Windows)
         if: runner.os == 'Windows'
         run: |

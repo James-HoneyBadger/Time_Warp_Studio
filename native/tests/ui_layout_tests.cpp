@@ -1736,9 +1736,13 @@ void test_standalone_payload() {
     TW_CHECK_EQ(carried.source, QStringLiteral("PRINT \"HELLO\"\n"));
 
     // The artifact is executable, or the thing a learner is told to double-click
-    // cannot be.
+    // cannot be. Windows has no execute bit -- a file runs because of its
+    // extension, and setPermissions there can only toggle read-only -- so the
+    // promise is checkable on the POSIX builds, which is where it is made.
+#ifndef Q_OS_WIN
     QFile::Permissions permissions = QFile::permissions(artifact);
     TW_CHECK(permissions.testFlag(QFile::ExeOwner));
+#endif
 
     // Overwriting needs to be asked for, and a file that is not a program is
     // refused before anything is written.

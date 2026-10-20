@@ -5,6 +5,7 @@
 #include <QFileInfo>
 #include <QSettings>
 #include <QStringList>
+#include <QUrl>
 
 #include <algorithm>
 
@@ -14,9 +15,31 @@ namespace {
 
 constexpr auto kRoot = "breakpoints";
 
+/// The path as one settings-key component.
+///
+/// A key is a path of groups, and a filesystem path is not one: on POSIX it
+/// starts with '/', which reads as an empty group, and on Windows it starts with
+/// a drive colon, which QSettings will not take in a group name at all -- the key
+/// came out as "breakpointsC:/…", and `prune` then rebuilt "/C:/…", which never
+/// exists, so every breakpoint on Windows was deleted on the next prune.
+/// Percent-encoding makes the key the same shape on every platform, and one key
+/// for one file.
+[[nodiscard]] QString encode(const QString& path) {
+    return QString::fromLatin1(QUrl::toPercentEncoding(path));
+}
+
+[[nodiscard]] QString decode(const QString& key) {
+    return QUrl::fromPercentEncoding(key.toUtf8());
+}
+
 }  // namespace
 
-QString keyFor(const QString& path) { return QString::fromLatin1(kRoot) + path; }
+QString keyFor(const QString& path) {
+    if (path.isEmpty()) {
+        return {};
+    }
+    return QString::fromLatin1(kRoot) + QLatin1Char('/') + encode(path);
+}
 
 QSet<int> load(QSettings& settings, const QString& path) {
     QSet<int> lines;
@@ -62,12 +85,11 @@ int prune(QSettings& settings) {
     settings.beginGroup(QLatin1String(kRoot));
     const QStringList keys = settings.allKeys();
     for (const QString& key : keys) {
-        // The stored key had the leading separator of an absolute path stripped by
-        // the group, so it is put back before asking the filesystem. A relative
-        // path cannot be resolved from here and is dropped -- the alternative is
-        // breakpoints that reappear on whatever file happens to match.
-        const QString path = QLatin1Char('/') + key;
-        if (!QFileInfo::exists(path)) {
+        // The key is the encoded path (see `keyFor`). A relative path cannot be
+        // resolved from here and is dropped -- the alternative is breakpoints that
+        // reappear on whatever file happens to match.
+        const QString path = decode(key);
+        if (path.isEmpty() || !QFileInfo::exists(path)) {
             settings.remove(key);
             ++dropped;
         }

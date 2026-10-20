@@ -26,6 +26,11 @@ std::string show(const T& value) {
         return std::to_string(value);
     } else if constexpr (std::is_convertible_v<T, std::string_view>) {
         return "\"" + std::string{std::string_view{value}} + "\"";
+    } else if constexpr (requires { value.toStdString(); }) {
+        // QString, QByteArray and anything else that renders itself. A requires-
+        // expression rather than a Qt include: this header is shared with the
+        // suites that link no Qt at all.
+        return "\"" + value.toStdString() + "\"";
     } else {
         return "<value>";
     }

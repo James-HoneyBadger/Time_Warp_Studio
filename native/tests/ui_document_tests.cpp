@@ -929,11 +929,17 @@ void test_the_terminal_runs_commands_when_enabled() {
         TW_CHECK(waitFor([terminal] { return terminal->output().contains(QStringLiteral("hi")); }));
 
         // The shell follows the document, so a build command names the right
-        // folder without the user typing a path.
-        terminal->runCommand(QStringLiteral("pwd"));
+        // folder without the user typing a path. `pwd` is the POSIX way to ask
+        // and `cd` is cmd.exe's; Windows also folds a path's case, so the
+        // comparison ignores it there and everywhere below.
         const QString folder = QFileInfo{dir.path()}.canonicalFilePath();
+#ifdef Q_OS_WIN
+        terminal->runCommand(QStringLiteral("cd"));
+#else
+        terminal->runCommand(QStringLiteral("pwd"));
+#endif
         TW_CHECK(waitFor([terminal, folder] {
-            return terminal->output().contains(folder);
+            return terminal->output().contains(folder, Qt::CaseInsensitive);
         }));
         TW_CHECK(terminal->isRunning());
 

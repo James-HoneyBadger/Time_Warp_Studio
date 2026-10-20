@@ -766,8 +766,12 @@ void test_the_class_list_and_its_marks_arrive() {
     TW_CHECK_EQ(first.students.at(0).name, QStringLiteral("Ada Lovelace"));
     // Where the handouts went, which is what the panel's Open Folder needs. The
     // engine decides it; the panel only shows it.
-    TW_CHECK(first.students.at(0).directory.endsWith(QLatin1String("/students/") + student_id));
-    TW_CHECK(first.students.at(0).directory.startsWith(data_dir.path()));
+    // The engine builds the directory with the platform's separator, so it is
+    // compared on a normalised one: a Windows backslash is not a failure.
+    const QString student_directory =
+        QDir::fromNativeSeparators(first.students.at(0).directory);
+    TW_CHECK(student_directory.endsWith(QLatin1String("/students/") + student_id));
+    TW_CHECK(student_directory.startsWith(QDir::fromNativeSeparators(data_dir.path())));
     TW_CHECK_EQ(first.assigned_lessons, QStringList{lesson_id});
     TW_CHECK_EQ(first.assignment_note, QStringLiteral("Chapter one"));
     // The size the class is taught at rides on the class list, so a teacher who
@@ -806,7 +810,10 @@ void test_the_class_list_and_its_marks_arrive() {
                                             "print(mode.assignment.lesson_ids[0])\n"),
                                         data_dir.path(), &reason);
     TW_CHECK(!read_back.isEmpty());
-    TW_CHECK(read_back.startsWith(QStringLiteral("1\n")));
+    // The first line of the engine's stdout, whatever line ending this platform's
+    // pipe used.
+    TW_CHECK_EQ(read_back.section(QLatin1Char('\n'), 0, 0).trimmed(),
+                QStringLiteral("1"));
 
     // A second look is a re-read, not a cached copy: `teach.py` is expected to
     // change the class while the IDE is open, and Refresh has to show it.
