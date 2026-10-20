@@ -251,7 +251,8 @@ too when the build was made with Qt's SVG component.
 Export Code as PDF...** writes the program itself as a printable A4 PDF with
 line numbers, and **File → Export Session as HTML...** writes one self-contained
 page holding the program, its output and the drawing, which is the file to hand
-in or put on a projector. There is still no printing.
+in or put on a projector. **File → Print Code...** and **File → Print
+Drawing...** print directly; see [How do I print?](#how-do-i-print).
 
 ### Does the turtle work in every language?
 
@@ -327,12 +328,20 @@ No. Use Git or another tool outside the Studio for version control.
 
 ### How do I export a program?
 
-You can export the drawing (see [Turtle and Graphics](#turtle-and-graphics)),
-but not the code, the session or a lesson: those exports are not built yet.
+**File → Export Code as PDF...** writes the program as an A4 PDF with line
+numbers, and **File → Export Session as HTML...** writes the program, its output
+and the drawing as one self-contained page. A lesson session exports as Markdown
+or PDF from the same menu. The drawing itself exports from
+[Turtle and Graphics](#turtle-and-graphics).
 
 ### How do I print?
 
-Printing is not built yet. Export the drawing to an image and print that.
+**File → Print Code...** (`Ctrl+P`) prints the current program as the same A4
+page the PDF export writes, and **File → Print Drawing...** prints the drawing
+scaled to fit the page. Both open the system print dialog, so the printer, paper
+size and page range are chosen there. The two entries are present only when the
+build was made with Qt's PrintSupport module; a build without it does not show
+them, and the PDF and HTML exports still work.
 
 ---
 

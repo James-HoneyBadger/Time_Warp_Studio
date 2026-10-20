@@ -30,6 +30,7 @@ derived rather than remembered.
 | Native engines | Expression evaluator (`timewarp_expr`) and Scheme (`timewarp_scheme`) |
 | Bridged engines | None — every language runs in process. `native/bridge/` remains as the reference the parity gates and the lesson check use |
 | Native executors | All ten — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk and Scheme whole-program |
+| Printing | File > Print Code (Ctrl+P) and Print Drawing, through the optional Qt6 PrintSupport |
 | Packaging | `make install` with the desktop entry and icon; `DESTDIR` staging |
 | Quality gates | 17 CTest suites in 4 build configurations, 3 parity gates, 560 engine tests, 446 command rows, 472 parity programs |
 
@@ -341,10 +342,11 @@ between the two panes, the split is saved with the session, and Run > Run Both
 Panes compares two programs headless in one table (output, time, ink) with no
 shared variable bus. There is no project panel yet.
 
-**Also unbuilt** — printing, font *family* selection, and the REPL bar's
-interpreter wiring (the bar is laid out and its signal exists; nothing is
-connected to it). Code PDF export, session HTML and lesson-session export as
-Markdown or PDF are built, as are the accessibility controls: View > High Contrast (Ctrl+Alt+H), the A+ text-size ladder,
+**Also unbuilt** — font *family* selection and the REPL bar's interpreter wiring
+(the bar is laid out and its signal exists; nothing is connected to it). Printing
+(File > Print Code, Ctrl+P, and File > Print Drawing), code PDF export, session
+HTML and lesson-session export as Markdown or PDF are built, as are the
+accessibility controls: View > High Contrast (Ctrl+Alt+H), the A+ text-size ladder,
 View > Focus Mode (F11), View > Presentation Mode (Shift+F11) and View > CRT
 Settings with the four Screen Mode presets.
 The snippet library is built:
@@ -395,9 +397,13 @@ a screenshot.
 **SVG export is built** and needs Qt6::Svg, which the build asks for as an
 optional component: with it, the save dialog and `--export` offer `.svg` and the
 file holds vector paths painted by the same `paintInk`; without it, neither
-offers the format. Still missing here: **printing**, which needs QtPrintSupport,
-a turtle-state inspector and a drawing-command log. The PDF of the *code* and the session HTML
-are built, and neither needed a new component: `QPdfWriter` is part of Qt Gui.
+offers the format. **Printing is built** the same way, through Qt6::PrintSupport:
+File > Print Code (Ctrl+P) lays out the program as the A4 document the PDF export
+writes, and File > Print Drawing renders the canvas at the printer's resolution
+and scales it to the page. Without the component neither entry appears. Still
+missing here: a turtle-state inspector and a drawing-command log. The PDF of the
+*code* and the session HTML are built, and neither needed a new component:
+`QPdfWriter` is part of Qt Gui.
 
 ---
 

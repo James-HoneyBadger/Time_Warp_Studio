@@ -63,7 +63,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 2 | Data safety | autosave ✅, version history ✅ | M | 0 |
 | 3 | Help and learnability | documentation browser ✅, F1 ✅, keyword inspector ✅, guided tour ✅ | M | 0 |
 | 4 | Canvas time travel | scrubber ✅, GIF recording ✅, SVG export ✅ | M | — |
-| 5 | Export and print | PDF ✅, print, session HTML ✅ | M | 5.2 needs a dependency decision |
+| 5 | Export and print | PDF ✅, print ✅, session HTML ✅ | M | — |
 | 6 | Debugging breadth | breakpoints everywhere ✅, pause/step for line-by-line languages ✅, profiler | L | 0, best after 1 |
 | 7 | Workspace | document outline ✅, terminal, split editor ✅, run both panes ✅ | M | 7.3 needs 1.5 |
 | 8 | Accessibility and display | high contrast ✅, font scale ✅, focus mode ✅, CRT settings ✅, screen presets ✅ | S–M | 0 |
@@ -436,10 +436,42 @@ document UUID into every file, so `normalisePdfMetadata` rewrites those to fixed
 values before the bytes are saved. Without it two exports of one program differ,
 and the difference is invisible until you compare them.
 
-### 5.2 Print Code and Print Graphics (S, needs PrintSupport)
+### 5.2 Print Code and Print Graphics (S) ✅
 
 Dialogs and printers are Qt6::PrintSupport (`libqt6printsupport6`). Optional
 component, hidden without it, dependency added to the packages if taken.
+
+**Done.** The dependency was taken as an optional component, the same decision as
+4.3. `CMakeLists.txt` asks for `PrintSupport` beside `Svg`, and links
+`Qt6::PrintSupport` and defines `TIME_WARP_HAVE_PRINT` publicly only when it is
+found, so the menu and the tests agree on whether printing exists. A build
+without it simply does not add the two entries; nothing is shown dead.
+
+The page composition lives in `export.{hpp,cpp}` and takes a
+`QPagedPaintDevice`, not a printer: `printCode` lays out the same HTML as
+`writeCodePdf`, so a printed program and an exported one are one document with a
+different device underneath, and `printDrawing` scales the canvas image into the
+device's printable area, centred, keeping its aspect ratio. The tests hand those
+functions a `QPdfWriter` and a real `QPrinter` writing PDF, which covers both
+without a print system or a modal dialog.
+
+The window adds File > Print Code (Ctrl+P) and File > Print Drawing. Print Code
+opens `QPrintDialog` on a high-resolution `QPrinter` named after the document;
+Print Drawing first asks how big the printable area is and renders the canvas for
+that many pixels (capped at eight times its screen size) rather than printing a
+screen-resolution raster. Both report `Wrote <file>` when the printer was a PDF
+file and `Printed <document>` otherwise. A blank canvas is refused with a reason
+instead of printing an empty page.
+
+`printCode` deliberately returns no error: `QTextDocument::print` reports a
+device it cannot paint on only by printing nothing, and probing it with a
+painter first costs a blank page -- a test asserts the printed page count equals
+the exported one.
+
+**Tests:** the printed program is a PDF with the same page count as the PDF
+export; the drawing reaches the page as an image; a null drawing is refused with
+a reason; a real `QPrinter` accepts both; and the File menu carries the two
+entries, with Ctrl+P on Print Code, exactly when the build has the component.
 
 ### 5.3 Session as HTML (S)
 
@@ -847,7 +879,7 @@ states are in `ui_layout_tests`.
 | Candidate | Needed by | Recommendation |
 | --- | --- | --- |
 | Qt6::Svg (`libqt6svg6`) | 4.3 SVG export | **Taken**, as an optional component; the format is hidden without it. It is a small package and the CPack dependency lists are already maintained by hand. |
-| Qt6::PrintSupport (`libqt6printsupport6`) | 5.2 printing | Optional component. Printing is the least-used item here; hide it when absent rather than take the dependency for everyone. |
+| Qt6::PrintSupport (`libqt6printsupport6`) | 5.2 printing | **Taken**, as an optional component; the entries are hidden without it. Printing is the least-used item here, so a build that cannot print is not made to install it. |
 | Qt6::Network (`libqt6network6`) | 3.4 update check | **Defer.** Make the check a button that reports the latest release, or drop it. An automatic poll is a background request the learner did not ask for. |
 | giflib, or an in-tree encoder | 4.2 GIF | **In-tree encoder** (`gif_encoder`), no dependency. Qt reads GIF, so the test has an oracle. |
 | `tar` (runtime) | 9.4 bundles | **Not needed.** The engine's bundles are ZIP (`zipfile`) and the IDE asks the engine for them, so there is no external archive tool and no dependency. |

@@ -16,6 +16,17 @@ Porting the features the removed PySide6 application had. The sequenced plan is
   byte-identical. A build without the component does not list the format, fails
   `.svg` with a reason, and does not name it in `--help`; the `.deb` and `.rpm`
   gain the Svg package only when the binary links it.
+- **Printing.** File > Print Code (Ctrl+P) sends the program to a printer as the
+  same A4 document the PDF export writes — one HTML source, so a printed program
+  and an exported one cannot disagree — and File > Print Drawing renders the
+  canvas for the printer's own resolution and scales it to fit the page, keeping
+  its aspect ratio. Both need Qt6::PrintSupport, which the build asks for as an
+  optional component: without it neither entry is added, rather than one being
+  shown dead, and the PDF and HTML exports still work. The page layout takes a
+  `QPagedPaintDevice`, so the tests drive it with a `QPdfWriter` and with a real
+  `QPrinter` writing PDF, with no print system or dialog. `printCode` has no
+  error result on purpose: `QTextDocument::print` reports an unusable device only
+  by printing nothing, and probing it first costs a blank page.
 - **CHIP-8 runs SuperChip hi-res.** The machine and the Python reference both
   implement the SuperChip 1.1 core: 00FE/00FF select 64x32 or 128x64 (clearing the
   screen), 00Cn/00FB/00FC scroll, 00FD exits, DXY0 draws a 16x16 sprite in hi-res

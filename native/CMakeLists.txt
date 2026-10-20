@@ -535,10 +535,12 @@ if(Qt6_FOUND)
     if(Qt6Widgets_FOUND)
         message(STATUS "Qt6 ${Qt6Widgets_VERSION} found: building the widget UI")
 
-        # Vector export needs QSvgGenerator, which is its own package. It is
-        # optional on purpose: a build without it still exports PNG, JPEG and
-        # BMP, and the save dialog does not offer SVG there.
-        find_package(Qt6 QUIET COMPONENTS Svg)
+        # Two components are wanted but not required. `Svg` is QSvgGenerator, for
+        # vector export; `PrintSupport` is QPrinter and QPrintDialog, for the two
+        # Print entries. A build without either still runs: the format and the
+        # entries are absent rather than broken, and the save dialog and the
+        # `--export` help do not name what the build cannot do.
+        find_package(Qt6 QUIET COMPONENTS Svg PrintSupport)
 
         # Some distributions ship Qt built for one configuration only -- Arch's
         # qt6-base 6.12 provides RelWithDebInfo. An imported target with no
@@ -681,6 +683,15 @@ if(Qt6_FOUND)
             message(STATUS "Qt6 Svg ${Qt6Svg_VERSION} found: SVG drawing export enabled")
         else()
             message(STATUS "Qt6 Svg not found: SVG drawing export disabled")
+        endif()
+        # Public for the same reason as Svg: the menu entries and the tests both
+        # have to know whether this build can print.
+        if(Qt6PrintSupport_FOUND)
+            target_link_libraries(timewarp_ui PUBLIC Qt6::PrintSupport)
+            target_compile_definitions(timewarp_ui PUBLIC TIME_WARP_HAVE_PRINT=1)
+            message(STATUS "Qt6 PrintSupport ${Qt6PrintSupport_VERSION} found: printing enabled")
+        else()
+            message(STATUS "Qt6 PrintSupport not found: printing disabled")
         endif()
         set_target_properties(timewarp_ui PROPERTIES AUTOMOC ON)
 
@@ -928,6 +939,11 @@ set(CPACK_DEBIAN_PACKAGE_DEPENDS
 # binary does link fails to start.
 if(Qt6Svg_FOUND)
     string(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS ", libqt6svg6")
+endif()
+if(Qt6PrintSupport_FOUND)
+    string(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS ", libqt6printsupport6")
+    # The RPM needs nothing extra: Fedora ships libQt6PrintSupport in
+    # qt6-qtbase-gui, which CPACK_RPM_PACKAGE_REQUIRES already names.
 endif()
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 # Named explicitly rather than discovered: CPackDeb asks `dpkg` for the

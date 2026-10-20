@@ -5,6 +5,8 @@
 #include <QBuffer>
 #include <QPageLayout>
 #include <QPageSize>
+#include <QPagedPaintDevice>
+#include <QPainter>
 #include <QPdfWriter>
 #include <QSaveFile>
 #include <QStringList>
@@ -199,6 +201,13 @@ void normalisePdfMetadata(QByteArray& pdf) {
 
     normalisePdfMetadata(bytes);
     return writeBytes(path, bytes, error);
+}
+
+/// The device's printable area in device pixels: the page minus its margins, in
+/// the units a painter on that device uses. A drawing scaled into this lands on
+/// the paper rather than at the page edge.
+[[nodiscard]] QRect paintArea(const QPagedPaintDevice& device) {
+    return device.pageLayout().paintRectPixels(device.logicalDpiX());
 }
 
 /// The status the engine reports, as a sentence: "in_progress" is a settings value,
@@ -441,6 +450,52 @@ bool writeLessonSessionPdf(const QString& path, const LessonSession& session,
         path,
         session.lessonTitle.isEmpty() ? QStringLiteral("Lesson session") : session.lessonTitle,
         lessonPageHtml(session), error);
+}
+
+void printCode(QPagedPaintDevice& device, const QString& title, const QString& language,
+               const QString& source) {
+    // The same HTML as the PDF, so a printed program and an exported one are the
+    // same document with a different device underneath.
+    QTextDocument document;
+    document.setDefaultFont(codeFont(9));
+    document.setHtml(codePageHtml(title, language, source));
+    document.print(&device);
+}
+
+bool printDrawing(QPagedPaintDevice& device, const QImage& drawing, QString* error) {
+    if (drawing.isNull()) {
+        if (error != nullptr) {
+            *error = QStringLiteral("there is no drawing to print");
+        }
+        return false;
+    }
+
+    QPainter painter{&device};
+    if (!painter.isActive()) {
+        if (error != nullptr) {
+            *error = QStringLiteral("the printer could not be started");
+        }
+        return false;
+    }
+    const QRect area = paintArea(device);
+    if (area.isEmpty()) {
+        if (error != nullptr) {
+            *error = QStringLiteral("the page has no printable area");
+        }
+        return false;
+    }
+
+    // Scaled to fit rather than stretched: the drawing's aspect ratio is part of
+    // the picture, and a page is not the shape of a canvas.
+    const QSize scaled = drawing.size().scaled(area.size(), Qt::KeepAspectRatio);
+    const QRect target{
+        area.topLeft() +
+            QPoint{(area.width() - scaled.width()) / 2, (area.height() - scaled.height()) / 2},
+        scaled};
+    painter.fillRect(area, Qt::white);
+    painter.setRenderHint(QPainter::SmoothPixmapTransform, true);
+    painter.drawImage(target, drawing);
+    return true;
 }
 
 }  // namespace timewarp::ui::exporter

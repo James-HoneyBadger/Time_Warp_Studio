@@ -12,7 +12,7 @@ time.
 | --- | --- | --- |
 | C++ compiler | C++20 | GCC 13+, Clang 16+, or MSVC 19.3+ |
 | CMake | 3.20 | |
-| Qt6 | 6.2 | Widgets, Core and Gui modules must be installed; the Svg module is optional and enables SVG drawing export |
+| Qt6 | 6.2 | Widgets, Core and Gui modules must be installed; the Svg and PrintSupport modules are optional and enable SVG drawing export and printing |
 | Python | 3.10 | *Optional* — only for BASIC |
 
 Scheme and the shared expression engine are native C++ and need **no Python at
@@ -36,6 +36,12 @@ On macOS, `brew install cmake qt` and pass `-DCMAKE_PREFIX_PATH=$(brew --prefix 
 
 The Svg package above is optional. Without it the IDE builds and runs, and the
 only difference is that drawing export offers PNG, JPEG and BMP but not SVG.
+
+Printing needs Qt6's PrintSupport module, which ships with these Qt base
+development packages already (`qt6-base-dev`, `qt6-qtbase-devel`, `qt6-base`), so
+it adds nothing to the install line; the runtime library is `libqt6printsupport6`
+on Debian, and part of `qt6-qtbase-gui` on Fedora. A build without it hides File
+> Print Code and File > Print Drawing rather than showing dead entries.
 
 ---
 

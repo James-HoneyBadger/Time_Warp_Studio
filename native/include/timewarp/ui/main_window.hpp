@@ -278,6 +278,11 @@ public:
     /// Asks for a path and writes the program, its output and its drawing as one
     /// self-contained HTML page.
     void exportSessionHtmlDialog();
+    /// Asks for a printer and sends the current program to it. Present only in a
+    /// build with Qt6::PrintSupport; the menu entry is absent otherwise.
+    void printCode();
+    /// Asks for a printer and sends the drawing to it.
+    void printDrawing();
     /// Starts or stops sampling the canvas. Stopping with frames asks for a path
     /// and writes them; stopping with none says so and writes nothing.
     void setGifRecording(bool on);

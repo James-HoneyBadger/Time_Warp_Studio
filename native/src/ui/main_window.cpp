@@ -27,7 +27,12 @@
 #include <QMenu>
 #include <QMenuBar>
 #include <QMessageBox>
+#include <QPageLayout>
 #include <QPlainTextEdit>
+#ifdef TIME_WARP_HAVE_PRINT
+#include <QPrintDialog>
+#include <QPrinter>
+#endif
 #include <QPushButton>
 #include <QSaveFile>
 #include <QSet>
@@ -45,6 +50,7 @@
 #include <QUrl>
 #include <QVBoxLayout>
 
+#include <algorithm>
 #include <functional>
 #include <memory>
 
@@ -853,6 +859,15 @@ void MainWindow::buildMenuBar() {
     add(file, tr("Export &Session as HTML..."), QKeySequence{},
         [this] { exportSessionHtmlDialog(); })
         ->setObjectName(QStringLiteral("exportSessionAction"));
+    // Printing is the one entry here that needs a component of its own, so a
+    // build without Qt6::PrintSupport does not show a dead entry.
+#ifdef TIME_WARP_HAVE_PRINT
+    add(file, tr("&Print Code..."), QKeySequence::Print, [this] { printCode(); })
+        ->setObjectName(QStringLiteral("printCodeAction"));
+    add(file, tr("Print &Drawing..."), QKeySequence{},
+        [this] { printDrawing(); })
+        ->setObjectName(QStringLiteral("printDrawingAction"));
+#endif
     // A toggle rather than a dialog: recording is a state the canvas is in, and a
     // menu that has to be opened again to stop is not one a demonstration can
     // use. Qt reads GIF but does not write it, so `gif_encoder` is in tree.
@@ -2455,6 +2470,70 @@ void MainWindow::exportSessionHtmlDialog() {
         return;
     }
     setExecutionState(tr("ready"), tr("Exported %1").arg(QFileInfo{path}.fileName()));
+}
+
+void MainWindow::printCode() {
+#ifdef TIME_WARP_HAVE_PRINT
+    CodeEditor* editor = currentEditor();
+    if (editor == nullptr) {
+        setExecutionState(tr("ready"), tr("Open a document before printing it"));
+        return;
+    }
+    QPrinter printer{QPrinter::HighResolution};
+    printer.setDocName(nameOf(editor));
+    QPrintDialog dialog{&printer, this};
+    dialog.setWindowTitle(tr("Print code"));
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+    timewarp::ui::exporter::printCode(printer, nameOf(editor),
+                                      displayName(languageOf(editor)),
+                                      editor->toPlainText());
+    if (printer.outputFormat() == QPrinter::PdfFormat) {
+        setExecutionState(tr("ready"), tr("Wrote %1")
+                                            .arg(QFileInfo{printer.outputFileName()}.fileName()));
+    } else {
+        setExecutionState(tr("ready"), tr("Printed %1").arg(nameOf(editor)));
+    }
+#endif
+}
+
+void MainWindow::printDrawing() {
+#ifdef TIME_WARP_HAVE_PRINT
+    if (turtle_canvas_ == nullptr || turtle_canvas_->frameCount() == 0) {
+        setExecutionState(tr("ready"),
+                          tr("Nothing to print yet \u2014 run a program that draws"));
+        return;
+    }
+    QPrinter printer{QPrinter::HighResolution};
+    printer.setDocName(tr("Time Warp Studio drawing"));
+    QPrintDialog dialog{&printer, this};
+    dialog.setWindowTitle(tr("Print drawing"));
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
+    // Rendered for the paper rather than for the screen: a screen-sized raster
+    // scaled up to a page is soft, so ask the canvas for enough pixels to fill
+    // the printable area. The cap keeps a very large printer from asking for an
+    // image no one needs.
+    const QRect area = printer.pageLayout().paintRectPixels(printer.resolution());
+    const double factor =
+        std::clamp(area.width() / static_cast<double>(std::max(1, turtle_canvas_->width())),
+                   1.0, 8.0);
+    QString error;
+    if (!timewarp::ui::exporter::printDrawing(printer,
+                                              turtle_canvas_->renderedDrawing(factor), &error)) {
+        QMessageBox::warning(this, tr("Print failed"),
+                             tr("Could not print the drawing.\n\n%1").arg(error));
+        return;
+    }
+    if (printer.outputFormat() == QPrinter::PdfFormat) {
+        setExecutionState(tr("ready"), tr("Wrote %1")
+                                            .arg(QFileInfo{printer.outputFileName()}.fileName()));
+    } else {
+        setExecutionState(tr("ready"), tr("Printed the drawing"));
+    }
+#endif
 }
 
 void MainWindow::setGifRecording(bool on) {

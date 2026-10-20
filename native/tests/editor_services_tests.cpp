@@ -19,12 +19,20 @@
 #include <cstdio>
 #include <string>
 
+#include <QBuffer>
 #include <QCoreApplication>
 #include <QFile>
 #include <QGuiApplication>
 #include <QHash>
 #include <QImage>
 #include <QImageReader>
+#include <QPageLayout>
+#include <QPageSize>
+#include <QPainter>
+#include <QPdfWriter>
+#ifdef TIME_WARP_HAVE_PRINT
+#include <QPrinter>
+#endif
 #include <QSet>
 #include <QSettings>
 #include <QStringList>
@@ -47,6 +55,8 @@ namespace {
 
 using timewarp::ui::exporter::LessonSession;
 using timewarp::ui::exporter::LessonSessionCheckpoint;
+using timewarp::ui::exporter::printCode;
+using timewarp::ui::exporter::printDrawing;
 using timewarp::ui::exporter::writeCodePdf;
 using timewarp::ui::exporter::writeLessonSessionMarkdown;
 using timewarp::ui::exporter::writeLessonSessionPdf;
@@ -992,6 +1002,92 @@ void test_code_pdf_export() {
     TW_CHECK(!error.isEmpty());
 }
 
+/// Printing takes a `QPagedPaintDevice` rather than a `QPrinter`, so the test
+/// can hand the same functions a PDF writer and read the pages back: no printer,
+/// no dialog and no platform print system in the way.
+void test_printing_reaches_a_paged_device() {
+    announce("print: code and drawing");
+
+    QByteArray code_pdf;
+    {
+        QBuffer buffer{&code_pdf};
+        TW_CHECK(buffer.open(QIODevice::WriteOnly));
+        QPdfWriter writer{&buffer};
+        writer.setPageSize(QPageSize{QPageSize::A4});
+        writer.setPageMargins(QMarginsF{15.0, 15.0, 15.0, 15.0}, QPageLayout::Millimeter);
+        writer.setResolution(150);
+        printCode(writer, QStringLiteral("count.bas"), QStringLiteral("BASIC"),
+                  longProgram());
+    }
+    TW_CHECK(code_pdf.startsWith("%PDF"));
+    // The same pagination as the exported PDF: a 200-line program does not fit
+    // on one A4 page, and the painter that probes the device must not leave a
+    // blank one behind.
+    TW_CHECK(code_pdf.count("/Type /Page") - code_pdf.count("/Type /Pages") > 1);
+    {
+        const tw::test::TempDir dir;
+        QString error;
+        TW_CHECK(writeCodePdf(dir.path(QStringLiteral("reference.pdf")),
+                              QStringLiteral("count.bas"), QStringLiteral("BASIC"),
+                              longProgram(), &error));
+        const QByteArray reference = readAll(dir.path(QStringLiteral("reference.pdf")));
+        TW_CHECK_EQ(code_pdf.count("/Type /Page"), reference.count("/Type /Page"));
+    }
+
+    QImage drawing{200, 100, QImage::Format_ARGB32};
+    drawing.fill(Qt::white);
+    {
+        QPainter painter{&drawing};
+        painter.setPen(Qt::black);
+        painter.drawLine(0, 0, drawing.width() - 1, drawing.height() - 1);
+    }
+    QByteArray drawing_pdf;
+    {
+        QBuffer buffer{&drawing_pdf};
+        TW_CHECK(buffer.open(QIODevice::WriteOnly));
+        QPdfWriter writer{&buffer};
+        writer.setPageSize(QPageSize{QPageSize::A4});
+        writer.setPageMargins(QMarginsF{15.0, 15.0, 15.0, 15.0}, QPageLayout::Millimeter);
+        writer.setResolution(150);
+        QString error;
+        TW_CHECK(printDrawing(writer, drawing, &error));
+        TW_CHECK(error.isEmpty());
+    }
+    TW_CHECK(drawing_pdf.startsWith("%PDF"));
+    // The drawing reached the page as an image rather than as nothing at all.
+    TW_CHECK(drawing_pdf.contains("/Subtype /Image"));
+
+    // A blank canvas is refused with a reason instead of printing an empty page.
+    QByteArray empty_pdf;
+    {
+        QBuffer buffer{&empty_pdf};
+        TW_CHECK(buffer.open(QIODevice::WriteOnly));
+        QPdfWriter writer{&buffer};
+        writer.setPageSize(QPageSize{QPageSize::A4});
+        writer.setResolution(150);
+        QString error;
+        TW_CHECK(!printDrawing(writer, QImage{}, &error));
+        TW_CHECK(!error.isEmpty());
+    }
+
+#ifdef TIME_WARP_HAVE_PRINT
+    // A real `QPrinter`, not only a `QPdfWriter`: that is what the dialog hands
+    // these functions, and it is the device whose page metrics the drawing is
+    // scaled into. Printing to a file keeps the test out of the print system.
+    const tw::test::TempDir dir;
+    QPrinter printer{QPrinter::HighResolution};
+    printer.setOutputFormat(QPrinter::PdfFormat);
+    printer.setOutputFileName(dir.path(QStringLiteral("printed.pdf")));
+    printCode(printer, QStringLiteral("count.bas"), QStringLiteral("BASIC"), longProgram());
+    QString error;
+    TW_CHECK(printDrawing(printer, drawing, &error));
+    TW_CHECK(error.isEmpty());
+    const QByteArray printed = readAll(dir.path(QStringLiteral("printed.pdf")));
+    TW_CHECK(printed.startsWith("%PDF"));
+    TW_CHECK(printed.count("/Type /Page") > 1);
+#endif
+}
+
 void test_session_html_export() {
     announce("export: session HTML");
     const tw::test::TempDir dir;
@@ -1067,6 +1163,7 @@ int main(int argc, char** argv) {
     test_rom_bytes_survive_a_document();
     test_the_rom_library_scans_nested_folders();
     test_code_pdf_export();
+    test_printing_reaches_a_paged_device();
     test_session_html_export();
     test_gif_encoder_writes_a_decodable_animation();
     test_lesson_session_markdown_export();

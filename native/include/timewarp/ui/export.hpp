@@ -14,6 +14,8 @@
 #include <QString>
 #include <QStringList>
 
+class QPagedPaintDevice;
+
 namespace timewarp::ui::exporter {
 
 /// Writes *source* as an A4 PDF with line numbers and a header naming the
@@ -23,6 +25,24 @@ namespace timewarp::ui::exporter {
 /// deterministic: two calls with the same arguments produce the same file.
 [[nodiscard]] bool writeCodePdf(const QString& path, const QString& title,
                                 const QString& language, const QString& source,
+                                QString* error);
+
+/// Sends the program to *device* as the same A4 page `writeCodePdf` writes: the
+/// same header, line numbers and font. The device is a printer in the IDE and a
+/// `QPdfWriter` in the tests, which is what keeps the two from drifting.
+///
+/// There is deliberately no error result: `QTextDocument::print` reports a device
+/// it cannot paint on only by printing nothing, and probing the device first
+/// costs a blank page, which is worse than the silence.
+void printCode(QPagedPaintDevice& device, const QString& title, const QString& language,
+               const QString& source);
+
+/// Sends *drawing* to *device*, scaled to fit the printable area and centred on
+/// the page. A null image is refused rather than printed as a blank page.
+///
+/// Returns false and fills *error* when there is nothing to print or the device
+/// will not accept a painter.
+[[nodiscard]] bool printDrawing(QPagedPaintDevice& device, const QImage& drawing,
                                 QString* error);
 
 /// Writes one self-contained HTML page: the program (marked up by

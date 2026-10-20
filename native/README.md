@@ -158,6 +158,12 @@ including the queue's own tests — still builds and runs. Nothing outside
 without it still exports the raster formats, and the save filter and the
 `--export` help do not name a format that would fail.
 
+`PrintSupport` is a third, optional component: it supplies `QPrinter` and
+`QPrintDialog` for File > Print Code and Print Drawing. A build without it does
+not add those entries. The page composition itself is in `export.cpp` and takes a
+`QPagedPaintDevice`, so it needs no printing header and the tests drive it with a
+`QPdfWriter`.
+
 The build is dependency-free: a C++20 compiler (GCC 11+, Clang 14+, MSVC 19.30+)
 and CMake 3.20+. Everything compiles clean under
 `-Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast -Wlogical-op

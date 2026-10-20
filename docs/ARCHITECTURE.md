@@ -726,8 +726,11 @@ migrating.
   function-key reference. The guided tour is not built.
 - **Themes and fonts are in**: 33 schemes, applied through the palette plus a
   theme block, and the editor's font, size and tab width are user settings.
-- **No printing, and no code/session/lesson export.** The drawing exports as an
-  image.
+- **Printing and the code/session/lesson exports are in.** File > Print Code and
+  File > Print Drawing go through Qt6::PrintSupport, which is optional: a build
+  without it hides both entries rather than showing dead ones. The program and
+  the lesson session export as PDF, the session as HTML and the lesson session as
+  Markdown; the drawing exports as an image or, with Qt6::Svg, as vectors.
 - **Packaging stops at `make install`**: a desktop entry and an icon. No distro packages,
   no installers.
 - **Lesson checking still runs in the Python engine**, which is what keeps

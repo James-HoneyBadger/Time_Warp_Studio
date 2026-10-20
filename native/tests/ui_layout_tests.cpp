@@ -29,6 +29,7 @@
 #include <QProgressBar>
 #include <QSet>
 #include <QTextBrowser>
+#include <QKeySequence>
 #include <QMargins>
 #include <QMenu>
 #include <QMenuBar>
@@ -1855,6 +1856,42 @@ void test_menu_structure() {
     }
 }
 
+/// Printing needs Qt6::PrintSupport and is optional, so File offers the two
+/// entries exactly when the build has it. A dead entry is worse than an absent
+/// one, which is why the absent branch is asserted too.
+void test_print_entries_follow_the_component() {
+    announce("File menu printing follows PrintSupport");
+    MainWindow window;
+    QAction* code = window.findChild<QAction*>(QStringLiteral("printCodeAction"));
+    QAction* drawing = window.findChild<QAction*>(QStringLiteral("printDrawingAction"));
+#ifdef TIME_WARP_HAVE_PRINT
+    TW_CHECK(code != nullptr);
+    TW_CHECK(drawing != nullptr);
+    if (code != nullptr) {
+        TW_CHECK(code->isEnabled());
+        TW_CHECK(code->shortcut() == QKeySequence{QKeySequence::Print});
+    }
+    if (drawing != nullptr) {
+        TW_CHECK(drawing->isEnabled());
+    }
+    // Owned by the File menu, not merely present in the window: an orphaned
+    // action is invisible and therefore useless.
+    for (QAction* action : {code, drawing}) {
+        if (action == nullptr) {
+            continue;
+        }
+        auto* menu = qobject_cast<QMenu*>(action->parent());
+        TW_CHECK(menu != nullptr);
+        if (menu != nullptr) {
+            TW_CHECK_EQ(menu->objectName(), QStringLiteral("fileMenu"));
+        }
+    }
+#else
+    TW_CHECK(code == nullptr);
+    TW_CHECK(drawing == nullptr);
+#endif
+}
+
 /// Help carries the documentation browser and the student guide. F1 still opens
 /// the shortcut reference, so both entries have to be reachable from the menu.
 void test_help_menu_opens_the_documentation() {
@@ -3033,6 +3070,7 @@ int main(int argc, char** argv) {
     test_status_bar_badge_placement();
     test_outline_dock_starts_hidden();
     test_menu_structure();
+    test_print_entries_follow_the_component();
     test_help_menu_opens_the_documentation();
     test_edit_menu_has_find_in_files();
     test_snippet_picker_filters_by_language();
