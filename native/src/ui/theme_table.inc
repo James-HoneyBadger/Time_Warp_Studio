@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 //
-// GENERATED DATA -- do not edit by hand.
+// The theme set, as data.
 //
-// Transcribed from the removed PySide6 implementation's `ThemeManager.themes`
-// (`Platforms/Python/time_warp/ui/themes.py`, last seen in commit f3b236b^).
-// One record per theme, in the order the menu lists them. `nullptr` in an
-// optional slot means the field falls back to another colour in `themes.cpp`,
-// exactly as the Python's Optional fields did.
+// The first thirty-three are transcribed from the removed PySide6
+// implementation's `ThemeManager.themes` (`Platforms/Python/time_warp/ui/
+// themes.py`, last seen in commit f3b236b^); themes added since are appended
+// here, because the table is now the source rather than a copy of one. One
+// record per theme, in the order the menu lists them. `nullptr` in an optional
+// slot means the field falls back to another colour in `themes.cpp`, exactly as
+// the Python's Optional fields did.
 
 // clang-format off
 const Theme kThemes[] = {
@@ -1131,6 +1133,45 @@ const Theme kThemes[] = {
         .fkey_bg = "#191a24",
         .fkey_badge = "#bd93f9",
         .hud_accent = "#50fa7b",
+    },
+    // Windows 2000
+    //
+    // The default "Windows Classic" scheme of Windows 2000: 3D-face grey chrome,
+    // white document surfaces, the navy selection, and the six-colour syntax
+    // palette an editor of the period offered. The bevel pair is the classic
+    // white/grey one rather than the dark pair the schemes above inherited.
+    Theme{
+        .name = "Windows 2000",
+        .background = "#d4d0c8",
+        .foreground = "#000000",
+        .editor_bg = "#ffffff",
+        .editor_fg = "#000000",
+        .line_number_bg = "#d4d0c8",
+        .line_number_fg = "#808080",
+        .keyword = "#0000ff",
+        .comment = "#008000",
+        .string = "#800000",
+        .number = "#000080",
+        .selection_bg = "#0a246a",
+        .selection_fg = "#ffffff",
+        .canvas_bg = "#ffffff",
+        .operator_colour = "#000000",
+        .function = "#800080",
+        .variable = "#000000",
+        .menu_bg = "#d4d0c8",
+        .menu_fg = "#000000",
+        .border_color = "#808080",
+        .error_color = "#c00000",
+        .warning_color = "#808000",
+        .success_color = "#008000",
+        .info_color = "#000080",
+        .bevel_light = "#ffffff",
+        .bevel_dark = "#808080",
+        .panel_header_bg = "#d4d0c8",
+        .panel_header_fg = "#000000",
+        .fkey_bg = "#d4d0c8",
+        .fkey_badge = "#000080",
+        .hud_accent = "#000080",
     },
 };
 // clang-format on

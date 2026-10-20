@@ -188,6 +188,24 @@ constexpr int kOutputHeight = 200;
 constexpr int kCanvasHeight = 300;
 constexpr int kToolBarMinimumHeight = 44;
 
+/// The ink a program draws with before it names a colour.
+///
+/// The reference's pen is white: right on its own dark surface, and invisible on a
+/// light theme's paper -- Windows 2000 and High Contrast Light both drew white on
+/// white and reported strokes that showed nothing. The paper decides: white ink on
+/// a dark surface, the theme's text colour on a light one. A program that names a
+/// colour still wins for that run; so does one that names a background, which is
+/// why this is only the starting pen rather than a rule about every stroke.
+[[nodiscard]] timewarp::lang::Rgb default_ink_for(const QColor& surface) {
+    if (!surface.isValid() || surface.lightness() < 128) {
+        return timewarp::lang::Rgb{255, 255, 255};
+    }
+    const QColor ink = QApplication::palette().color(QPalette::Text);
+    return timewarp::lang::Rgb{static_cast<std::uint8_t>(ink.red()),
+                               static_cast<std::uint8_t>(ink.green()),
+                               static_cast<std::uint8_t>(ink.blue())};
+}
+
 /// How long a status message stays up before the bar returns to showing the
 /// document path. Long enough to read a sentence, short enough that the path --
 /// which is the resting state of that corner -- comes back on its own.
@@ -4961,6 +4979,7 @@ void MainWindow::submitReplCommand(const QString& command) {
                 timewarp::lang::Rgb{static_cast<std::uint8_t>(surface.red()),
                                     static_cast<std::uint8_t>(surface.green()),
                                     static_cast<std::uint8_t>(surface.blue())});
+            repl_runner_->setInkColor(default_ink_for(surface));
         }
         if (sql_database_ != nullptr) {
             const std::shared_ptr<timewarp::sql::Database> database = sql_database_;
@@ -5253,6 +5272,7 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
             timewarp::lang::Rgb{static_cast<std::uint8_t>(surface.red()),
                                 static_cast<std::uint8_t>(surface.green()),
                                 static_cast<std::uint8_t>(surface.blue())});
+        runner->set_ink_color(default_ink_for(surface));
     }
     // Profiling is a per-run choice: the flag travels with this runner, and the
     // report is built from this run's own numbers.

@@ -426,12 +426,13 @@ including the output sub-tabs nested inside a page of the widget being styled. C
 roles are written with Qt's `palette(...)` function, so the sheet follows the active
 palette.
 
-**The theme system is built.** `native/src/ui/theme_table.inc` carries the removed
-implementation's 33 themes as data — name, background, foreground, editor colours and
-the `dark`/`mid`/`shadow` roles this sheet reads — and `themes.cpp` resolves the
-optional fields, applies the palette and composes the QSS. View > Theme selects one,
-View > Next Theme cycles, and View > High Contrast derives a maximum-contrast variant
-of the active theme rather than replacing it.
+**The theme system is built.** `native/src/ui/theme_table.inc` carries the 34 schemes
+— the removed implementation's 33 plus the Windows 2000 one added since — as data:
+name, background, foreground, editor colours and the `dark`/`mid`/`shadow` roles this
+sheet reads. `themes.cpp` resolves the optional fields, applies the palette and
+composes the QSS. View > Theme selects one, View > Next Theme cycles, and View >
+High Contrast derives a maximum-contrast variant of the active theme rather than
+replacing it.
 
 ---
 

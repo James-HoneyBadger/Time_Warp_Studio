@@ -23,6 +23,17 @@
   Intel and Apple silicon, built with Qt 6.12 and declaring macOS 14.4 -- that
   release's own floor -- as its minimum. Source builds on macOS 26 need Qt 6.10 or
   newer, because 6.8 and 6.9 link a framework the newest SDK no longer ships.
+- **A Windows 2000 theme.** The 2000 "Windows Classic" scheme -- 3D-face grey
+  chrome, white document surfaces, the navy selection -- joins the theme table as
+  the thirty-fourth scheme, beside the C64, Apple II and CRT sets.
+
+### Fixed
+
+- **A light theme drew white ink on white paper.** The pen a program starts with
+  was the reference's white whatever the theme, so Windows 2000 -- and High
+  Contrast Light before it -- ran a Logo square, reported four strokes, and showed
+  nothing. The starting ink now comes from the paper: white on a dark surface, the
+  theme's text colour on a light one. A program that names a colour still wins.
 - **Path discovery understands a bundle.** The bridge, examples, snippets and help
   pages are looked for under `Contents/Resources/share` as well as beside `bin/`. A
   Finder-launched bundle finds python.org's and Homebrew's Python, which `PATH`

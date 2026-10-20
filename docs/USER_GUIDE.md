@@ -472,7 +472,7 @@ an `ostream`, which is how the tests drive it without a process.
 - **Classroom** — the 🏫 Classroom tab shows a roster, assignments and marks, and
   moves a whole class as a ZIP bundle. `native/tools/teach.py` is the teacher's CLI
   over the same files; see [lessons/teacher-guide.md](lessons/teacher-guide.md).
-- **Themes** — View → Theme chooses one of the 33 themes; View → Next Theme
+- **Themes** — View → Theme chooses one of the 34 themes; View → Next Theme
   (`Shift+F10`) cycles them. High Contrast derives a maximum-contrast variant of
   the current theme.
 - **Presentation** — View → Presentation Mode (`Shift+F11`) hides the authoring

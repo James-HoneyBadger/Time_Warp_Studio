@@ -117,6 +117,12 @@ void ReplRunner::setSurfaceColor(timewarp::lang::Rgb colour) {
     }
 }
 
+void ReplRunner::setInkColor(timewarp::lang::Rgb colour) {
+    if (lang_host_ != nullptr) {
+        lang_host_->set_default_pen(colour);
+    }
+}
+
 void ReplRunner::run() {
     for (;;) {
         QString command;

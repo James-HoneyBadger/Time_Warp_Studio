@@ -46,7 +46,7 @@ a turtle canvas with zoom, pan, scrubber playback, GIF recording and raster, SVG
 PDF and HTML export; a debugger that works in all ten languages, with watches,
 data breakpoints, a Variables panel and telemetry; projects; SQLite; 20 lessons
 and 60 checkpoints with classroom tools; a JSON-RPC API and a standalone `twc`
-compiler; 33 themes with high contrast and text sizes; the two machines; and help
+compiler; 34 themes with high contrast and text sizes; the two machines; and help
 inside the application. The full list, with links, is in the
 [README](../README.md#what-else-is-in-the-workbench).
 

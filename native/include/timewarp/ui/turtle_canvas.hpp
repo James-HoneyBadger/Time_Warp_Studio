@@ -133,6 +133,17 @@ public:
     /// Shape primitives (points, rectangles, ellipses, arcs, text, circles).
     [[nodiscard]] int shapeCount() const noexcept { return static_cast<int>(shapes_.size()); }
 
+    /// The colour of the `index`th stroke, or an invalid colour when there is no
+    /// such stroke. What a theme's default ink is checked with: a light theme
+    /// that drew white on white has the right number of strokes and nothing to
+    /// look at.
+    [[nodiscard]] QColor strokeColor(int index) const {
+        if (index < 0 || index >= static_cast<int>(strokes_.size())) {
+            return QColor{};
+        }
+        return strokes_.at(index).color;
+    }
+
     // -- scrubbing --------------------------------------------------------
     //
     // The ink in draw order, not the two lists separately: a rectangle painted

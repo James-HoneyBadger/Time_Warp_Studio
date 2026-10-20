@@ -196,7 +196,7 @@ void NativeCanvasHost::clear() { submit(make_command(CanvasCommandKind::Clear));
 
 void NativeCanvasHost::reset() {
     pose_.home();
-    pen_ = Rgb{255, 255, 255};
+    pen_ = default_pen_;
     pen_width_ = 2.0;
     pen_down_ = true;
     canvas_pose_dirty_ = false;
@@ -255,7 +255,7 @@ void NativeCanvasHost::set_background(Rgb colour) {
 }
 
 void NativeCanvasHost::begin_run() {
-    pen_ = Rgb{255, 255, 255};
+    pen_ = default_pen_;
     pen_width_ = 2.0;
     pen_down_ = true;
     // The theme's surface, unless the run before this one had the program name a
@@ -264,7 +264,8 @@ void NativeCanvasHost::begin_run() {
     background_ = default_background_;
     pose_.home();
     canvas_pose_dirty_ = false;
-    submit(make_color(CanvasCommandKind::SetPenColor, make_rgb(255, 255, 255)));
+    submit(make_color(CanvasCommandKind::SetPenColor,
+                      make_rgb(pen_.red, pen_.green, pen_.blue)));
     submit(make_motion(CanvasCommandKind::SetPenWidth, 2.0));
     submit(make_color(CanvasCommandKind::SetBackgroundColor,
                       make_rgb(background_.red, background_.green, background_.blue)));
@@ -429,6 +430,10 @@ void NativeRunner::set_wakeup(std::function<void()> wakeup) {
 
 void NativeRunner::set_surface_color(timewarp::lang::Rgb colour) {
     host_->set_default_background(colour);
+}
+
+void NativeRunner::set_ink_color(timewarp::lang::Rgb colour) {
+    host_->set_default_pen(colour);
 }
 
 void NativeRunner::set_sound_player(SoundPlayer* player) {

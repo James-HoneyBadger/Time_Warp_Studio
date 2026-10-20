@@ -68,6 +68,12 @@ public:
         default_background_ = colour;
     }
 
+    /// The ink a run starts with before the program names a colour. The
+    /// reference's pen is white; on a light theme's paper that is white on white,
+    /// so the window answers with the theme's text colour instead. A program's
+    /// own `set_pen_color` still wins for that run.
+    void set_default_pen(timewarp::lang::Rgb colour) { default_pen_ = colour; }
+
     [[nodiscard]] std::uint64_t submitted() const noexcept { return submitted_; }
 
     void forward(double distance) override;
@@ -141,6 +147,7 @@ private:
     timewarp::lang::Rgb background_{10, 10, 20};
     /// The background a run begins on. See `set_default_background`.
     timewarp::lang::Rgb default_background_{10, 10, 20};
+    timewarp::lang::Rgb default_pen_{255, 255, 255};
     /// Where the turtle is, for the 3-D projection. In 2-D the queue's own
     /// motion commands carry the arithmetic; in 3-D the projection has to be
     /// computed here, because the canvas is a plane.
@@ -202,6 +209,9 @@ public:
     /// Set before `start()`; the host reads it on the runner thread when the run
     /// begins. A program that names its own background still overrides it.
     void set_surface_color(timewarp::lang::Rgb colour);
+
+    /// The ink the next run starts with; see `set_default_pen` above.
+    void set_ink_color(timewarp::lang::Rgb colour);
     /// Where tones go. Null leaves `BEEP`/`SOUND`/`PLAY` silent but accepted,
     /// which is what a headless run wants.
     void set_sound_player(SoundPlayer* player);

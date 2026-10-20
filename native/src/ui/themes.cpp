@@ -12,15 +12,15 @@ namespace timewarp::ui::themes {
 
 namespace {
 
-// The table itself: 33 `Theme` records, generated from the removed PySide6
-// implementation's `ThemeManager.themes` so the colours are the ones the
-// application used to show rather than a fresh approximation of them.
+// The table itself: 34 `Theme` records -- the removed PySide6 implementation's 33,
+// so the colours are the ones the application used to show rather than a fresh
+// approximation of them, plus the ones added since.
 #include "theme_table.inc"
 
 // The whole point of a table like this is that it is complete; the asserts are
 // compile-time so a truncated generation is a build error rather than a theme
 // that silently resolves to the fallback.
-static_assert(std::size(kThemes) == 33, "the theme table is 33 themes");
+static_assert(std::size(kThemes) == 34, "the theme table is 34 themes");
 static_assert(std::size(kThemes) > 0, "the theme table is not empty");
 
 constexpr std::size_t kThemeCount = std::size(kThemes);

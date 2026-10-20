@@ -956,6 +956,44 @@ void test_stopping_when_nothing_runs_is_harmless() {
     TW_CHECK_EQ(badgeText(window, "executionBadge"), QStringLiteral("ready"));
 }
 
+/// A light theme must not draw white on white.
+///
+/// The reference's pen is white, which is what its dark surface wants. A theme
+/// whose paper is light -- Windows 2000, High Contrast Light -- inherits that pen
+/// and produces a run that reports four strokes and shows nothing, which is the
+/// exact complaint the canvas tests exist to catch. The paper decides the
+/// starting ink, so the same program draws black lines on white paper.
+void test_a_light_theme_draws_dark_ink() {
+    announce("a light theme draws dark ink");
+    QTemporaryDir dir;
+    const QString path = writeFile(dir, QStringLiteral("square.logo"),
+                                   QByteArray{"REPEAT 4 [FD 100 RT 90]\n"});
+    TW_CHECK(!path.isEmpty());
+
+    MainWindow window;
+    const QString previous = window.currentThemeName();
+    window.applyTheme(QStringLiteral("Windows 2000"));
+    TW_CHECK(window.openFile(path));
+    TurtleCanvas* canvas = window.turtleCanvas();
+    TW_CHECK(canvas != nullptr);
+    if (canvas == nullptr) {
+        return;
+    }
+    window.runCurrentDocument();
+    TW_CHECK(waitFor([&window] {
+        return badgeText(window, "executionBadge") != QStringLiteral("running");
+    }));
+
+    TW_CHECK_EQ(canvas->strokeCount(), 4);
+    const QColor ink = canvas->strokeColor(0);
+    TW_CHECK(ink.isValid());
+    TW_CHECK(ink.lightness() < 128);
+    window.close();
+    // The theme is a persisted setting; the tests after this one expect the one
+    // the suite started with.
+    window.applyTheme(previous);
+}
+
 void test_stop_interrupts_a_running_program() {
     announce("stopping a run");
     QTemporaryDir dir;
@@ -1813,6 +1851,7 @@ int main(int argc, char** argv) {
     test_a_second_run_replaces_the_panels_rather_than_appending();
     test_a_native_run_fills_the_panels();
     test_stopping_when_nothing_runs_is_harmless();
+    test_a_light_theme_draws_dark_ink();
     test_stop_interrupts_a_running_program();
     test_the_terminal_is_off_by_default();
     test_the_terminal_runs_commands_when_enabled();

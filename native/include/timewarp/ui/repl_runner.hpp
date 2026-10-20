@@ -71,6 +71,10 @@ public:
     /// naming a background.
     void setSurfaceColor(timewarp::lang::Rgb colour);
 
+    /// The ink a REPL run starts with, for the same reason `setSurfaceColor`
+    /// exists: a theme with light paper needs dark ink.
+    void setInkColor(timewarp::lang::Rgb colour);
+
     [[nodiscard]] timewarp::lang::Language language() const noexcept { return language_; }
 
 signals:
