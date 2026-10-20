@@ -610,6 +610,7 @@ if(Qt6_FOUND)
             src/ui/sound_player.cpp
             src/ui/standalone.cpp
             src/ui/syntax_highlighter.cpp
+            src/ui/terminal_widget.cpp
             src/ui/themes.cpp
             src/ui/tour.cpp
             src/ui/turtle_canvas.cpp
@@ -641,6 +642,7 @@ if(Qt6_FOUND)
             include/timewarp/ui/sound_player.hpp
             include/timewarp/ui/standalone.hpp
             include/timewarp/ui/syntax_highlighter.hpp
+            include/timewarp/ui/terminal_widget.hpp
             include/timewarp/ui/themes.hpp
             include/timewarp/ui/tour.hpp
             include/timewarp/ui/turtle_canvas.hpp

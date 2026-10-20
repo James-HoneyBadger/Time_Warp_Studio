@@ -32,6 +32,7 @@ derived rather than remembered.
 | Native executors | All ten — BASIC, FOCAL, PILOT, COMAL, APL and REXX line-by-line; CHIP-8, Logo, Smalltalk and Scheme whole-program |
 | Printing | File > Print Code (Ctrl+P) and Print Drawing, through the optional Qt6 PrintSupport |
 | Profiling | View > Profile Run times every statement in the line-by-line languages and ends with a per-line report, longest first |
+| Terminal | Opt-in in Settings > Workspace: an embedded shell in the document's folder, absent in presentation and player modes |
 | Packaging | `make install` with the desktop entry and icon; `DESTDIR` staging |
 | Quality gates | 17 CTest suites in 4 build configurations, 3 parity gates, 560 engine tests, 446 command rows, 472 parity programs |
 
@@ -160,8 +161,8 @@ positions.
 `docs/ARCHITECTURE.md` has been **rewritten** around the Qt application and the engine.
 It no longer describes the removed PySide6 implementation, and it names what is not
 wired up rather than assuming it: the expression evaluator that does not participate in
-a Run, the REPL whose plumbing is absent, the outline and terminal pages that are still
-placeholders, and the debugger's missing breadth. It is now the system-level
+a Run, the REPL whose plumbing is absent, and the debugger's missing breadth. It is
+now the system-level
 description; `native/README.md` remains the detail on the C++ libraries.
 
 ---
@@ -341,7 +342,9 @@ new tab without writing the file. The **split editor** is built too: File > Spli
 Editor Right (Ctrl+\), Close Split and Move Tab to Other Pane move documents
 between the two panes, the split is saved with the session, and Run > Run Both
 Panes compares two programs headless in one table (output, time, ink) with no
-shared variable bus. There is no project panel yet.
+shared variable bus. The **terminal** is built as an opt-in: Settings > Workspace
+turns on a shell in the document's folder, and presentation and player modes remove
+it. There is no project panel yet.
 
 **Also unbuilt** — font *family* selection and the REPL bar's interpreter wiring
 (the bar is laid out and its signal exists; nothing is connected to it). Printing

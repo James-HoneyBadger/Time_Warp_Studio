@@ -79,6 +79,7 @@
 #include "timewarp/ui/sound_player.hpp"
 #include "timewarp/ui/tour.hpp"
 #include "timewarp/ui/syntax_highlighter.hpp"
+#include "timewarp/ui/terminal_widget.hpp"
 #include "timewarp/ui/themes.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 #include "timewarp/ui/version_history.hpp"
@@ -140,6 +141,9 @@ constexpr auto kSettingEditorWhitespace = "editor/showWhitespace";
 constexpr auto kSettingEditorAutosave = "editor/autosave";
 constexpr auto kSettingEditorAutosaveSeconds = "editor/autosaveSeconds";
 constexpr auto kSettingEditorMinimap = "editor/minimap";
+/// Off unless the user asked for it: a shell in a teaching IDE runs whatever is
+/// typed in it, with the user's permissions.
+constexpr auto kSettingTerminalEnabled = "terminal/enabled";
 
 constexpr int kMinimumWindowWidth = 900;
 constexpr int kMinimumWindowHeight = 600;
@@ -262,6 +266,11 @@ MainWindow::MainWindow(QWidget* parent) : QMainWindow(parent) {
     QSettings breakpoint_settings;
     static_cast<void>(breakpoints::prune(breakpoint_settings));
     reportRecoveredWork();
+
+    // Last: the tab is added to the output column built above, and only when a
+    // previous session asked for it.
+    terminal_enabled_ = QSettings{}.value(kSettingTerminalEnabled, false).toBool();
+    refreshTerminalTab();
 }
 
 void MainWindow::autosaveNow() {
@@ -703,10 +712,9 @@ void MainWindow::buildOutputColumn() {
     turtle_log->setPlaceholderText(tr("Turtle \U0001F422 commands appear here\u2026"));
     output_sub_tabs_->addTab(turtle_log, tr("\U0001F422 Turtle Log"));
 
-    auto* terminal = new PlaceholderPanel{
-        tr("\U0001F4BB Terminal"), tr("ui/terminal_widget.py \u2014 not yet ported"),
-        QSize{200, 80}, output_sub_tabs_};
-    output_sub_tabs_->addTab(terminal, tr("\U0001F4BB Terminal"));
+    // The terminal tab is added by `refreshTerminalTab()`, which the constructor
+    // and the Preferences checkbox drive: a build where nobody asked for a shell
+    // should not have a tab that invites one.
 
     output_canvas_splitter_->addWidget(output_sub_tabs_);
 
@@ -1551,6 +1559,9 @@ void MainWindow::setPresentationMode(bool on) {
         QSignalBlocker blocker{presentation_action_};
         presentation_action_->setChecked(on);
     }
+    // No shell in front of a room: the tab leaves the window, and a shell that
+    // was running is stopped rather than left as an invisible process.
+    refreshTerminalTab();
     setExecutionState(tr("ready"), on ? tr("Presentation mode \u2014 press Esc to leave")
                                       : tr("Presentation mode off"));
 }
@@ -1735,10 +1746,57 @@ void MainWindow::applyEditorSettings(const EditorSettings& settings) {
     }
 }
 
+void MainWindow::setTerminalEnabled(bool on) {
+    terminal_enabled_ = on;
+    QSettings{}.setValue(kSettingTerminalEnabled, on);
+    refreshTerminalTab();
+}
+
+void MainWindow::refreshTerminalTab() {
+    if (output_sub_tabs_ == nullptr) {
+        return;
+    }
+    // Presentation mode is a room watching a program, and a player window is a
+    // program its reader did not start: neither is a place for a prompt that
+    // runs arbitrary commands. Both remove the tab rather than merely hiding it.
+    const bool allowed = terminal_enabled_ && !presentation_mode_ && !player_mode_;
+    if (!allowed) {
+        if (terminal_widget_ != nullptr) {
+            const int index = output_sub_tabs_->indexOf(terminal_widget_);
+            if (index >= 0) {
+                output_sub_tabs_->removeTab(index);
+            }
+            // A shell nobody can see is a process nobody can stop.
+            terminal_widget_->stop();
+        }
+        return;
+    }
+    if (terminal_widget_ == nullptr) {
+        terminal_widget_ = new TerminalWidget{terminalDirectory(), output_sub_tabs_};
+    }
+    if (output_sub_tabs_->indexOf(terminal_widget_) < 0) {
+        const int index =
+            output_sub_tabs_->addTab(terminal_widget_, tr("\U0001F4BB Terminal"));
+        output_sub_tabs_->setTabToolTip(
+            index, tr("Commands run through your shell in this document's folder. "
+                      "Nothing here is sandboxed."));
+    }
+    terminal_widget_->setWorkingDirectory(terminalDirectory());
+}
+
+QString MainWindow::terminalDirectory() const {
+    const CodeEditor* editor = currentEditor();
+    const QString path = editor != nullptr ? pathOf(editor) : QString{};
+    if (!path.isEmpty()) {
+        return QFileInfo{path}.absolutePath();
+    }
+    return QDir::homePath();
+}
+
 void MainWindow::showPreferences() {
     // A stack copy: the dialog edits its own record, and Cancel simply means the
     // window never hears about it.
-    auto* dialog = new PreferencesDialog{editor_settings_, this};
+    auto* dialog = new PreferencesDialog{editor_settings_, terminal_enabled_, this};
     dialog->setAttribute(Qt::WA_DeleteOnClose);
     connect(dialog, &PreferencesDialog::applied, this,
             [this](const EditorSettings& settings) { applyEditorSettings(settings); });
@@ -1752,6 +1810,14 @@ void MainWindow::showPreferences() {
         rearmGuidedTour();
         setExecutionState(tr("ready"),
                           tr("The guided tour will show the next time the window opens."));
+    });
+    // Immediate, like the tour: the tab is either on screen or not, and Apply is
+    // not required for a control whose whole effect is visible behind the dialog.
+    connect(dialog, &PreferencesDialog::terminalToggled, this, [this](bool on) {
+        setTerminalEnabled(on);
+        setExecutionState(tr("ready"),
+                          on ? tr("The terminal is on")
+                             : tr("The terminal is off"));
     });
     dialog->open();
 }
@@ -2137,6 +2203,9 @@ bool MainWindow::openStandaloneProgram(const QString& languageKey,
     refreshDocumentState();
 
     player_mode_ = true;
+    // A player window belongs to the program, not its reader: no prompt that
+    // runs commands.
+    refreshTerminalTab();
     // Everything that exists to *write* a program is hidden, because there is
     // nothing to author: this window is the program. What remains is the canvas,
     // the output console and the status bar.
@@ -3040,6 +3109,12 @@ void MainWindow::closeEvent(QCloseEvent* event) {
             return;
         }
     }
+    // A child process is not a QThread: without this the shell outlives the
+    // window that started it. After the save prompts, so cancelling a close
+    // leaves a running shell running.
+    if (terminal_widget_ != nullptr) {
+        terminal_widget_->stop();
+    }
     saveLayout();
     saveSession();
     event->accept();
@@ -3599,10 +3674,19 @@ void MainWindow::refreshDocumentState() {
         if (debug_panel_ != nullptr) {
             debug_panel_->setAvailable(false, tr("Open a document to debug it."));
         }
+        if (terminal_widget_ != nullptr) {
+            terminal_widget_->setWorkingDirectory(QDir::homePath());
+        }
         return;
     }
 
     const QString path = pathOf(editor);
+    // The terminal follows the document, the way a build command should: the
+    // shell is already there when the user switches to its tab.
+    if (terminal_widget_ != nullptr) {
+        terminal_widget_->setWorkingDirectory(path.isEmpty() ? QDir::homePath()
+                                                             : QFileInfo{path}.absolutePath());
+    }
     setWindowTitle(editor->document()->isModified()
                        ? tr("%1 \u2014 %2*").arg(base, nameOf(editor))
                        : tr("%1 \u2014 %2").arg(base, nameOf(editor)));

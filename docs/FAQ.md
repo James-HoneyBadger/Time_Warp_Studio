@@ -129,6 +129,19 @@ The menus show every command's shortcut. There is no separate shortcut reference
 
 No. The editor is one pane per tab. Splitting is on the roadmap.
 
+### Is there a terminal?
+
+Yes, if you switch it on: **Settings → Workspace → Enable the embedded
+terminal**. A 💻 Terminal tab then appears beside Console, Errors and Turtle Log.
+Commands are written to your own `$SHELL`, which starts in the current document's
+folder and follows a tab change with a `cd`. It is off by default because it runs
+whatever you type with your permissions — nothing there is sandboxed — and it is
+removed entirely in presentation and player modes, with the shell stopped.
+
+It is a command line, not a terminal emulator: there is no PTY, so there are no
+prompts, no job control and no full-screen programs. `echo`, a compiler or a
+script work; `vim` and `top` do not.
+
 ### Can I find and replace text?
 
 Yes, in the current document. `Ctrl+F` finds, `Ctrl+H` replaces, `F3` and

@@ -65,7 +65,7 @@ nothing about that layer is missing a user-facing behaviour.
 | 4 | Canvas time travel | scrubber ✅, GIF recording ✅, SVG export ✅ | M | — |
 | 5 | Export and print | PDF ✅, print ✅, session HTML ✅ | M | — |
 | 6 | Debugging breadth | breakpoints everywhere ✅, pause/step for line-by-line languages ✅, profiler ✅ | L | 0, best after 1 |
-| 7 | Workspace | document outline ✅, terminal, split editor ✅, run both panes ✅ | M | 7.3 needs 1.5 |
+| 7 | Workspace | document outline ✅, terminal ✅, split editor ✅, run both panes ✅ | M | 7.3 needs 1.5 |
 | 8 | Accessibility and display | high contrast ✅, font scale ✅, focus mode ✅, CRT settings ✅, screen presets ✅ | S–M | 0 |
 | 9 | Classroom | roster panel ✅, presentation mode ✅, lesson session export ✅, bundles ✅ | M | — |
 
@@ -624,7 +624,7 @@ bypassed by a tab change. The model's tests are in `editor_services_tests` rathe
 than a new `outline_tests` suite: it is the text-services suite and already links
 the UI library.
 
-### 7.2 Terminal (M, needs a decision)
+### 7.2 Terminal (M) ✅
 
 Old: `ui/terminal_widget.py` (277) — an embedded shell.
 
@@ -639,6 +639,30 @@ absence.
 
 **Tests:** with the setting on, `echo hi` prints `hi`; the process is killed on
 window close; with the setting off the tab is absent.
+
+**Done**, with the policy above. `ui/terminal_widget.{hpp,cpp}` is a `QProcess`
+on `$SHELL` (falling back to `/bin/sh`; `%COMSPEC%` on Windows) with the two
+streams merged, its working directory set to the current document's folder and
+following a tab change with a silent `cd`. Each line typed is echoed as `> …`
+and written to the shell's standard input, because the tab has to show what
+produced the output beneath it. There is **no PTY**: a command that wants a
+terminal (`vim`, `top`) fails instead of taking the IDE over, and there are no
+prompts or job control.
+
+It is off unless Settings > Workspace ticks it, and the setting is remembered.
+`refreshTerminalTab()` owns the one rule: the tab exists when the setting is on
+and neither presentation mode nor player mode is active. Leaving either mode
+brings the tab back; entering one removes it and **stops the shell**, because a
+process the user cannot see is a process the user cannot stop. Closing the
+window stops it too. The tab's tooltip says what it runs and that it is not
+sandboxed.
+
+**Tests** (`ui_document_tests`): the window has no terminal widget by default;
+with the setting on, `echo hi` appears in the output, `pwd` reports the opened
+document's folder, and `window.close()` leaves `isRunning()` false.
+`ui_layout_tests` asserts the tab is absent from a default window, appears last
+when enabled and goes again when disabled, and that the Settings checkbox emits
+its immediate signal.
 
 ### 7.3 Split editor actions (S)
 

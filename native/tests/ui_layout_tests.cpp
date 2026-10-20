@@ -21,6 +21,7 @@
 #include <QAction>
 #include <QTimer>
 #include <QApplication>
+#include <QCheckBox>
 #include <QComboBox>
 #include <QDockWidget>
 #include <QFile>
@@ -71,6 +72,7 @@
 #include "timewarp/ui/snippet_dialog.hpp"
 #include "timewarp/ui/snippets.hpp"
 #include "timewarp/ui/standalone.hpp"
+#include "timewarp/ui/terminal_widget.hpp"
 #include "timewarp/ui/themes.hpp"
 #include "timewarp/ui/tour.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
@@ -1014,10 +1016,9 @@ void test_output_sub_tabs() {
     // the canvas visually contiguous.
     TW_CHECK_EQ(tabs->tabPosition(), QTabWidget::South);
     TW_CHECK(tabs->documentMode());
-    TW_CHECK_EQ(tabs->count(), 4);
+    TW_CHECK_EQ(tabs->count(), 3);
     TW_CHECK_EQ(tabTitles(tabs).toStdString(),
-                std::string{"\U0001F4DD Console|\u274C Errors|\U0001F422 Turtle Log|"
-                            "\U0001F4BB Terminal"});
+                std::string{"\U0001F4DD Console|\u274C Errors|\U0001F422 Turtle Log"});
 
     // The error and turtle logs are plain text edits with the fixed-width font
     // the Python sets, so log columns line up.
@@ -1032,6 +1033,25 @@ void test_output_sub_tabs() {
         TW_CHECK_EQ(logFont.family(), QStringLiteral("Courier New"));
     }
     TW_CHECK(tabs->findChild<QPlainTextEdit*>(QStringLiteral("turtleLog")) != nullptr);
+
+    // The terminal is not part of a default window: it runs commands, so it is
+    // opted into in Settings. Turning it on adds one tab, last; off removes it.
+    TW_CHECK(window.findChild<timewarp::ui::TerminalWidget*>() == nullptr);
+    window.setTerminalEnabled(true);
+    TW_CHECK_EQ(tabs->count(), 4);
+    TW_CHECK_EQ(tabTitles(tabs).toStdString(),
+                std::string{"\U0001F4DD Console|\u274C Errors|\U0001F422 Turtle Log|"
+                            "\U0001F4BB Terminal"});
+    // Presentation mode is a room, not a workspace: the tab goes and comes back.
+    window.setPresentationMode(true);
+    TW_CHECK_EQ(tabs->count(), 3);
+    window.setPresentationMode(false);
+    TW_CHECK_EQ(tabs->count(), 4);
+
+    window.setTerminalEnabled(false);
+    TW_CHECK_EQ(tabs->count(), 3);
+    // Leave the persisted setting as the default for the tests that follow.
+    QSettings{}.remove(QStringLiteral("terminal/enabled"));
 }
 
 void test_function_key_bar_is_fixed_height() {    announce("function key bar");
@@ -2308,6 +2328,24 @@ void test_settings_rearms_the_tour() {
     TW_CHECK(requested);
 }
 
+/// The terminal is a workspace preference, not an editor setting, and its
+/// checkbox drives the tab immediately rather than waiting for OK.
+void test_settings_toggle_the_terminal() {
+    announce("Settings: terminal toggle");
+    timewarp::ui::PreferencesDialog dialog{timewarp::ui::EditorSettings{}, false};
+    bool enabled = false;
+    QObject::connect(&dialog, &timewarp::ui::PreferencesDialog::terminalToggled, &dialog,
+                     [&enabled](bool on) { enabled = on; });
+    auto* box = dialog.findChild<QCheckBox*>(QStringLiteral("terminalEnabledBox"));
+    TW_CHECK(box != nullptr);
+    if (box != nullptr) {
+        TW_CHECK(!box->isChecked());
+        box->setChecked(true);
+    }
+    TW_CHECK(enabled);
+    TW_CHECK(dialog.terminalEnabled());
+}
+
 void test_tab_close_button_closes_the_tab() {
     announce("the tab's own X button");
     MainWindow window;
@@ -3121,6 +3159,7 @@ int main(int argc, char** argv) {
     test_coach_marks_appear_once();
     test_help_menu_opens_the_tour();
     test_settings_rearms_the_tour();
+    test_settings_toggle_the_terminal();
     test_file_menu_close_tab_closes_one();
     test_file_menu_lists_the_installed_examples();
     test_tab_close_button_closes_the_tab();

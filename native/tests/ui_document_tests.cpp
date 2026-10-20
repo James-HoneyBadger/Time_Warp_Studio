@@ -28,6 +28,7 @@
 #include <QCoreApplication>
 #include <QElapsedTimer>
 #include <QFile>
+#include <QFileInfo>
 #include <QLabel>
 #include <QPlainTextEdit>
 #include <QSettings>
@@ -53,6 +54,7 @@
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
 #include "timewarp/ui/snippets.hpp"
+#include "timewarp/ui/terminal_widget.hpp"
 #include "timewarp/ui/themes.hpp"
 #include "timewarp/ui/turtle_canvas.hpp"
 
@@ -891,6 +893,56 @@ void test_a_native_run_fills_the_panels() {
     TW_CHECK(!window.debugPanel()->isAvailable());
 }
 
+/// The terminal is opt-in: a build nobody configured has no shell tab at all.
+void test_the_terminal_is_off_by_default() {
+    announce("terminal: off unless enabled");
+    QSettings{}.remove(QStringLiteral("terminal/enabled"));
+    MainWindow window;
+    TW_CHECK(window.findChild<timewarp::ui::TerminalWidget*>() == nullptr);
+    TW_CHECK(!window.terminalEnabled());
+}
+
+/// With the setting on, the tab exists, a command runs in the shell, the shell
+/// starts in the document's folder, and closing the window ends the process.
+void test_the_terminal_runs_commands_when_enabled() {
+    announce("terminal: echo hi, then close");
+    QSettings{}.setValue(QStringLiteral("terminal/enabled"), true);
+    {
+        QTemporaryDir dir;
+        TW_CHECK(dir.isValid());
+        const QString path = writeFile(dir, QStringLiteral("program.bas"),
+                                       QByteArray{"10 PRINT 1\n"});
+        TW_CHECK(!path.isEmpty());
+
+        MainWindow window;
+        TW_CHECK(window.terminalEnabled());
+        auto* terminal = window.findChild<timewarp::ui::TerminalWidget*>();
+        TW_CHECK(terminal != nullptr);
+        if (terminal == nullptr) {
+            return;
+        }
+        QTabWidget* tabs = window.findChild<QTabWidget*>(QStringLiteral("outputSubTabs"));
+        TW_CHECK(tabs != nullptr && tabs->indexOf(terminal) >= 0);
+
+        TW_CHECK(window.openFile(path));
+        terminal->runCommand(QStringLiteral("echo hi"));
+        TW_CHECK(waitFor([terminal] { return terminal->output().contains(QStringLiteral("hi")); }));
+
+        // The shell follows the document, so a build command names the right
+        // folder without the user typing a path.
+        terminal->runCommand(QStringLiteral("pwd"));
+        const QString folder = QFileInfo{dir.path()}.canonicalFilePath();
+        TW_CHECK(waitFor([terminal, folder] {
+            return terminal->output().contains(folder);
+        }));
+        TW_CHECK(terminal->isRunning());
+
+        window.close();
+        TW_CHECK(!terminal->isRunning());
+    }
+    QSettings{}.remove(QStringLiteral("terminal/enabled"));
+}
+
 void test_stopping_when_nothing_runs_is_harmless() {
     announce("stop with no run");
     MainWindow window;
@@ -1705,6 +1757,8 @@ int main(int argc, char** argv) {
     test_a_native_run_fills_the_panels();
     test_stopping_when_nothing_runs_is_harmless();
     test_stop_interrupts_a_running_program();
+    test_the_terminal_is_off_by_default();
+    test_the_terminal_runs_commands_when_enabled();
 
     return tw::test::summary("ui_documents");
 }

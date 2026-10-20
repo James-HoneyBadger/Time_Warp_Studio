@@ -34,10 +34,16 @@ class PreferencesDialog final : public QDialog {
     Q_OBJECT
 
 public:
-    explicit PreferencesDialog(const EditorSettings& settings, QWidget* parent = nullptr);
+    /// `terminal_enabled` is not an editor setting: it belongs to the workspace,
+    /// and toggling it takes effect at once (the tab appears or goes) rather
+    /// than waiting for OK.
+    explicit PreferencesDialog(const EditorSettings& settings, bool terminal_enabled = false,
+                               QWidget* parent = nullptr);
 
     /// The settings as currently edited.
     [[nodiscard]] EditorSettings settings() const;
+    /// Whether the embedded terminal is ticked.
+    [[nodiscard]] bool terminalEnabled() const;
 
     /// The preview editor, so a test can assert that a change reaches it.
     [[nodiscard]] CodeEditor* preview() const noexcept { return preview_; }
@@ -50,6 +56,10 @@ signals:
     /// The user asked to see the guided tour again. A separate signal because
     /// it is not an editor setting and must not wait for OK.
     void tourRequested();
+    /// The embedded terminal was switched on or off. Also immediate, for the
+    /// same reason: the tab is either there or not, and Cancel should not leave
+    /// a tab the dialog says is off.
+    void terminalToggled(bool on);
 
 private:
     void buildUi(const EditorSettings& settings);
@@ -74,6 +84,7 @@ private:
     QCheckBox* whitespace_ = nullptr;
     QCheckBox* minimap_ = nullptr;
     QCheckBox* autosave_ = nullptr;
+    QCheckBox* terminal_ = nullptr;
     QSpinBox* autosave_seconds_ = nullptr;
     CodeEditor* preview_ = nullptr;
 };

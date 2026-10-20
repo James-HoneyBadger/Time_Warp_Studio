@@ -30,13 +30,17 @@ NEXT I
 
 }  // namespace
 
-PreferencesDialog::PreferencesDialog(const EditorSettings& settings, QWidget* parent)
+PreferencesDialog::PreferencesDialog(const EditorSettings& settings, bool terminal_enabled,
+                                     QWidget* parent)
     : QDialog(parent) {
     setObjectName(QStringLiteral("preferencesDialog"));
     setWindowTitle(tr("Settings"));
     setModal(true);
-    resize(560, 640);
+    resize(560, 700);
     buildUi(settings);
+    if (terminal_ != nullptr) {
+        terminal_->setChecked(terminal_enabled);
+    }
 }
 
 void PreferencesDialog::buildUi(const EditorSettings& settings) {
@@ -115,6 +119,20 @@ void PreferencesDialog::buildUi(const EditorSettings& settings) {
                   tr("Check the program as I type and underline what is wrong"),
                   settings.lint);
     layout->addWidget(behaviour);
+
+    // Workspace, not editor: these are about what the window offers rather than
+    // how the text is drawn.
+    auto* workspace = new QGroupBox{tr("Workspace"), this};
+    auto* workspace_layout = new QVBoxLayout{workspace};
+    terminal_ = new QCheckBox{
+        tr("Enable the embedded terminal (runs commands in your shell)"), workspace};
+    terminal_->setObjectName(QStringLiteral("terminalEnabledBox"));
+    terminal_->setToolTip(
+        tr("Off by default. The terminal runs whatever you type through $SHELL, "
+           "in this folder, with your permissions. It is not sandboxed."));
+    connect(terminal_, &QCheckBox::toggled, this, &PreferencesDialog::terminalToggled);
+    workspace_layout->addWidget(terminal_);
+    layout->addWidget(workspace);
 
     auto* help_group = new QGroupBox{tr("Help"), this};
     auto* help_layout = new QVBoxLayout{help_group};
@@ -210,5 +228,9 @@ void PreferencesDialog::collect() {
 }
 
 EditorSettings PreferencesDialog::settings() const { return settings_; }
+
+bool PreferencesDialog::terminalEnabled() const {
+    return terminal_ != nullptr && terminal_->isChecked();
+}
 
 }  // namespace timewarp::ui

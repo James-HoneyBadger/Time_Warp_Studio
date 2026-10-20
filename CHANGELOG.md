@@ -37,6 +37,14 @@ Porting the features the removed PySide6 application had. The sequenced plan is
   CHIP-8) has no statement loop to time, and the console says so rather than
   showing an empty table. A profiled run takes the same steps and prints the
   same output as an unprofiled one.
+- **An opt-in embedded terminal.** Settings > Workspace adds a 💻 Terminal tab
+  that writes each line to `$SHELL` (with the current document's folder as its
+  working directory, and a silent `cd` when the tab changes) and appends what the
+  shell prints. It is off by default because it runs whatever is typed with the
+  user's permissions, and presentation and player modes remove the tab and stop
+  the shell — a process nobody can see is a process nobody can stop. Closing the
+  window stops it too. There is no PTY on purpose: prompts, job control and
+  full-screen programs are absent, so `vim` fails rather than taking the IDE over.
 - **CHIP-8 runs SuperChip hi-res.** The machine and the Python reference both
   implement the SuperChip 1.1 core: 00FE/00FF select 64x32 or 128x64 (clearing the
   screen), 00Cn/00FB/00FC scroll, 00FD exits, DXY0 draws a 16x16 sprite in hi-res

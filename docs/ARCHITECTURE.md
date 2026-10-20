@@ -571,10 +571,11 @@ needs no change per language.
 The right column's **Variables**, **Telemetry HUD**, **Debug**, **Lessons** and
 **Classroom** tabs are real panels (`VariablesPanel`, `TelemetryPanel`, `DebugPanel`,
 `LessonPanel`, `ClassroomPanel` in `src/ui/panels.cpp`), driven by data the window gets
-from two places. The outline dock and the console's **Terminal** tab are
-still `PlaceholderPanel`s naming the Python class they stand in for. Those are real
-widgets with the right size hints and minimums, so the *layout* is real and testable
-today; what they lack is behind them.
+from two places. The outline dock was the last `PlaceholderPanel`; the console's
+**Terminal** tab is a real shell (`TerminalWidget`), added only when the user enables
+it. Nothing ships a placeholder now, and `PlaceholderPanel` remains in `panels.hpp` as
+the documented way to stand in for a panel that does not exist yet -- a real widget
+with honest size hints, so the layout can be built and tested before the feature is.
 
 Replacing one is a single construction site in `buildRightColumn()` or
 `buildOutputColumn()`, plus wiring in `runCurrentDocument()` or `adoptBridgeWorker()` for
@@ -722,7 +723,8 @@ migrating.
   live preview. Still missing: breakpoint markers in the gutter and a document
   outline.
 - **The console** has no clickable line links, no error-only filter and no
-  save-to-file; the **Terminal** tab is a placeholder.
+  save-to-file. The **Terminal** is a real shell but no terminal emulator: without a
+  PTY there are no prompts, job control or full-screen programs, which is deliberate.
 - **Files and sessions** have autosave and version history — `AutosaveStore`
   keeps bounded snapshots under the data directory and the version-history dialog
   reopens one in a new tab — but no project panel or split view.

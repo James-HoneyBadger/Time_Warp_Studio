@@ -89,6 +89,8 @@ class CanvasBridge;
 
 namespace timewarp::ui {
 
+class TerminalWidget;
+
 /// The four Monitor styles the removed implementation had. Expressed as a theme
 /// plus CRT values rather than as a parallel display system: there is exactly one
 /// mechanism, and a preset is a named point in it.
@@ -407,6 +409,11 @@ public:
     }
     /// The Preferences dialog (Ctrl+,).
     void showPreferences();
+    /// Turns the embedded terminal on or off, remembers the choice, and adds or
+    /// removes its tab. Public because the setting is also a test seam: a
+    /// second window must agree with the first about whether it exists.
+    void setTerminalEnabled(bool on);
+    [[nodiscard]] bool terminalEnabled() const noexcept { return terminal_enabled_; }
 
     // -- keys, the palette and actions ------------------------------------
     //
@@ -694,6 +701,13 @@ private:
     /// Stops it and records the elapsed time as the last run's.
     void stopRunClock();
 
+    /// Adds or removes the terminal tab to match `terminal_enabled_`, the mode
+    /// that is active, and whether this window may run commands at all.
+    void refreshTerminalTab();
+    /// The folder the terminal should be in: the current document's, or home
+    /// when the document has no path yet.
+    [[nodiscard]] QString terminalDirectory() const;
+
     /// `path` for an editor whose document has been saved, empty for a new one.
     [[nodiscard]] static QString pathOf(const CodeEditor* editor);
     /// The language shown for an editor: from its path, or the default when the
@@ -711,6 +725,11 @@ private:
     QSplitter* editor_pane_splitter_ = nullptr;
     QSplitter* output_canvas_splitter_ = nullptr;
     QTabWidget* output_sub_tabs_ = nullptr;
+    /// Created the first time the terminal is enabled, and kept while it is off
+    /// so its scrollback survives a presentation or a trip into Settings. The
+    /// shell itself is stopped when the tab is not offered.
+    TerminalWidget* terminal_widget_ = nullptr;
+    bool terminal_enabled_ = false;
     ImmediateModePanel* immediate_mode_ = nullptr;
     FindBar* find_bar_ = nullptr;
     VariablesPanel* variables_panel_ = nullptr;
