@@ -1,8 +1,9 @@
 # Time Warp Studio — Documentation Index
 
-Time Warp Studio is a C++20 / Qt6 desktop IDE for ten educational programming
-languages, with an integrated turtle graphics canvas — and two complete machines
-inside it, the [HB-1](hb1/README.md) home computer and the [CHIP-8](chip8/README.md).
+Time Warp Studio is a C++20 / Qt6 desktop workbench for old-school programming:
+ten interpreters from 1964–1980, a full IDE and turtle canvas — and two complete
+machines inside it, the [HB-1](hb1/README.md) home computer from a parallel 1982
+and the [CHIP-8](chip8/README.md) virtual machine.
 This page is the map.
 
 > **New here?** Build and run it from the [README](../README.md), then try

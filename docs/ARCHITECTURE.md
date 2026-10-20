@@ -28,9 +28,10 @@
 
 ## Overview
 
-Time Warp Studio is a desktop IDE for ten educational languages — **BASIC, APL,
-Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk** — with an integrated
-turtle graphics canvas. It is a C++20 / Qt6 application, and all ten languages
+Time Warp Studio is a desktop workbench for old-school programming: ten
+interpreters from 1964–1980 — **BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8,
+COMAL, REXX and Smalltalk** — with an integrated turtle graphics canvas, and two
+complete machines. It is a C++20 / Qt6 application, and all ten languages
 run in C++ inside it. The Python engine ships as the **reference** the parity
 gates, the command matrix and the lesson check use; no program is sent to it.
 

@@ -1129,12 +1129,15 @@ set(CPACK_PACKAGE_VENDOR "James Temple")
 set(CPACK_PACKAGE_CONTACT "James Temple <james@honey-badger.org>")
 set(CPACK_PACKAGE_VERSION "${TIME_WARP_PACKAGE_VERSION}")
 set(CPACK_PACKAGE_DESCRIPTION_SUMMARY
-    "Educational IDE for ten programming languages, with turtle graphics")
+    "Old-school programming environment: ten languages, an IDE, and two complete machines")
 set(CPACK_PACKAGE_DESCRIPTION
-    "Time Warp Studio teaches BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, \
-COMAL, REXX and Smalltalk in one window, each with an integrated turtle-graphics \
-canvas. Every language runs natively in C++; the bundled Python engine is the \
-reference the lesson check uses.")
+    "Time Warp Studio is a workbench for old-school programming: BASIC, APL, Logo, \
+PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk in one window, each with an \
+integrated turtle-graphics canvas and a debugger. Inside it are two complete \
+machines: the HB-1, a bespoke 1982 home computer from a parallel universe with a \
+ten-language ROM socket, a CRT and its own disk operating system, and a live \
+CHIP-8 with an assembler, keypad and register inspector. Every language runs \
+natively in C++; the bundled Python engine is the reference the lesson check uses.")
 set(CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/James-HoneyBadger/Time_Warp_Studio")
 set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE")
 

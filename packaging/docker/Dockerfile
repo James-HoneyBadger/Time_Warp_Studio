@@ -53,7 +53,7 @@ FROM archlinux:base
 ARG VERSION=0.0.0
 
 LABEL org.opencontainers.image.title="Time Warp Studio" \
-      org.opencontainers.image.description="An educational IDE for ten languages, with turtle graphics" \
+      org.opencontainers.image.description="An old-school programming environment: ten languages, an IDE, an HB-1 home computer and a live CHIP-8" \
       org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.version="${VERSION}"
 

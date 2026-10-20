@@ -45,6 +45,14 @@
   appearance, the help system and both machines — to the book that owns it. The
   IDE guide, FAQ, language guide, architecture notes, roadmap and the in-tree
   agent instructions follow the same map.
+- **The README is framed for retro-computing hobbyists.** It leads with the
+  Studio as a complete old-school programming environment — a full IDE, ten
+  interpreters from 1964–1980, and the two machines — with the lesson curriculum
+  reduced to a short "If you teach" section. A new "For the retro-computing mind"
+  section states the kept quirks, the JSON disk image, the user-owned ROM policy,
+  the theme and phosphor work, and the native/offline stance. The same framing
+  follows the About box, `--help`, the package descriptions, the desktop entry,
+  the container label and the release notes.
 - **The guides are gated.** `make doc-links` — and the Docs workflow — checks
   every relative link and `#anchor` across `docs/`, `README.md` and
   `Examples/CATALOG.md`; the workflow now also requires the machine books to

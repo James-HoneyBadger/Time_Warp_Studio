@@ -90,9 +90,10 @@ int main(int argc, char* argv[]) {
 
     QCommandLineParser parser;
     parser.setApplicationDescription(
-        QStringLiteral("Time Warp Studio \u2014 an educational IDE for BASIC, APL, "
-                       "Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and "
-                       "Smalltalk."));
+        QStringLiteral("Time Warp Studio \u2014 an old-school programming "
+                       "environment for BASIC, APL, Logo, PILOT, FOCAL, Scheme, "
+                       "CHIP-8, COMAL, REXX and Smalltalk, with the HB-1 home "
+                       "computer and a live CHIP-8 inside it."));
     parser.addHelpOption();
     parser.addVersionOption();
 

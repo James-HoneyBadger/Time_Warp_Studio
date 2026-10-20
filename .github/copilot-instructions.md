@@ -1,6 +1,6 @@
 # Time Warp Studio - AI Coding Agent Instructions
 
-**Project:** Time Warp Studio - Educational multi-language programming environment  
+**Project:** Time Warp Studio - an old-school programming environment: ten languages, an IDE, and two complete machines  
 **Maintainer:** James Temple <james@honey-badger.org>  
 **Last Updated:** October 2026
 
@@ -8,7 +8,7 @@
 
 ## Project Overview
 
-Time Warp Studio is an educational desktop programming environment built with **C++20 and Qt6** that provides a unified IDE for learning **10 programming languages** with integrated turtle graphics.
+Time Warp Studio is an old-school desktop programming environment built with **C++20 and Qt6**: a unified IDE for ten interpreters from 1964–1980, with turtle graphics, a debugger in every language, and two complete machines — the HB-1 home computer and a live CHIP-8. A checked lesson curriculum ships for teaching, but the product is framed for retro-computing hobbyists first.
 
 **Supported Languages:** BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 

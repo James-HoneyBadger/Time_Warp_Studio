@@ -1,15 +1,32 @@
 # Time Warp Studio
 
-## Educational Multi-Language Programming Environment with Integrated IDE, Debugger, and Turtle Graphics
+## A complete old-school programming environment — ten languages, a full IDE, and a 1982 home computer that never existed
 
 [![C++20](https://img.shields.io/badge/C%2B%2B-20-blue)](https://en.cppreference.com/)
 [![Qt6](https://img.shields.io/badge/Qt-6-green)](https://www.qt.io/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/Version-16.2.0-orange)](https://github.com/James-HoneyBadger/Time_Warp_Studio)
 
-Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **10 active programming languages** into a single, modern IDE. Built as a **native C++20 / Qt6 application**, it provides an integrated platform for learning programming concepts, exploring turtle graphics, and working through a **checked lesson curriculum** with tools for both learners and teachers.
+Time Warp Studio is a native C++20/Qt6 workbench for people who like old
+computers. It is the programming environment the 1980s promised and never quite
+delivered: a full IDE, ten interpreters spanning 1964 to 1980, a turtle canvas, a
+debugger that works in every one of them — and, inside it, two complete machines.
 
-And it is a time machine. Inside it are two complete machines — the **HB-1**, a 1982 home computer from a parallel universe, and the **CHIP-8**, the 1977 virtual machine that made a computer out of four kilobytes. They are not themes or demonstrations: you can boot them, type at them, debug them, save programs to their disks and meet them again tomorrow.
+The **HB-1** is a bespoke 1982 home computer from a parallel universe: one CRT, a
+prompt, a ROM socket that accepts any of the ten languages, and **HB DOS 1.0** on
+a 512-sector disk. The **CHIP-8** is the 1977 virtual machine that made a computer
+out of four kilobytes — live at 60 Hz, with a keypad, an assembler and a register
+inspector. Neither is a theme or a video. You can boot them, type at them, break
+them, save programs to their disks and meet them again tomorrow.
+
+The premise is a system from a parallel universe, where the design sense of the
+next forty years arrived in time for the 8-bit boom. The constraints are period —
+a prompt, a sector-counted disk, 64K, a CRT with phosphor — and the engines
+behind them are modern, native and inspectable. Nothing about the machines is
+decorative: every switch, word and opcode does something you can watch.
+
+A checked lesson curriculum and classroom tools ship with it for anyone teaching
+from the Studio. The Studio does not assume a classroom.
 
 ---
 
@@ -23,15 +40,51 @@ And it is a time machine. Inside it are two complete machines — the **HB-1**, 
 | Run it | Tools > **HB-1 Computer…** (`Ctrl+Alt+W`) or `./run.sh --computer` | Tools > **CHIP-8 Emulator…** (`Ctrl+Shift+M`) |
 | Read it | [Owner's Manual](docs/hb1/README.md) · [ROMs](docs/hb1/roms.md) · [HB DOS](docs/hb1/hb-dos.md) · [CONFIG](docs/hb1/config.md) · [Inside](docs/hb1/inside.md) | [Machine Manual](docs/chip8/README.md) · [Assembler](docs/chip8/assembly.md) · [Instruction set](docs/chip8/instruction-set.md) |
 
-The premise is a single sentence: a system from a parallel universe, where the
-design sense of the next forty years arrived in time for the 8-bit boom. The
-constraints are period — a prompt, a sector-counted disk, 64K, a CRT with
-phosphor — and the engines behind them are modern, in-process and kind. Nothing
-about the machines is decorative: every switch, word and opcode in their manuals
-does something you can watch.
+What you can do with them:
 
-Start with [the machines](docs/MACHINES.md): why two, what they share, and the
-timey-wimey parts listed one by one.
+- **Boot a computer that never existed.** `Ctrl+Alt+W` brings the HB-1 up in
+  BASIC — banner, prompt, `READY.`. Move the ROM socket to any of the ten
+  languages; each keeps its own memory when you switch away and back.
+- **Save to a period disk.** `SAVE "HELLO"` writes to a 512-sector volume with a
+  catalogue, 30-character names, a per-file lock bit and a two-step `INIT`. The
+  image is one JSON file under `~/.time_warp/disks`, so you can read it, copy it,
+  put it in git, or give a friend the same disk.
+- **Write CHIP-8 the way it was written.** Assemble a listing in the editor or in
+  the CHIP-8 window, load your own ROMs from a folder you point it at, single-step
+  one instruction and watch `V0`–`VF` change.
+- **Make it look like your memory of 1982.** Four machine phosphors, five glass
+  effects, and 33 IDE themes including Commodore 64, Apple II, ZX Spectrum, IBM
+  PC CGA, DOS Blue, Amiga Workbench 2.0, NeXTSTEP Gunmetal and Borland Turbo
+  Vision 1991.
+- **Read the machine, not a changelog.** Each has its own book set: [the
+  machines](docs/MACHINES.md), the [HB-1 manuals](docs/hb1/README.md), the
+  [CHIP-8 manuals](docs/chip8/README.md).
+
+---
+
+## For the retro-computing mind
+
+The details that matter if you have ever owned one of these machines, or wished
+you had:
+
+- **The quirks are kept, and written down.** CHIP-8 shifts `Vx` in place, sprites
+  wrap at the edges, `FX55`/`FX65` leave `I` one past the block, `Bnnn` adds `V0`,
+  and there are no quirk switches: one machine, one manual, every divergence from
+  other emulators stated in
+  [the instruction set](docs/chip8/instruction-set.md).
+- **The disk is a file.** HB DOS images are JSON under `~/.time_warp/disks` — read
+  them, diff them, put them in a repository. The sector arithmetic is real: a
+  program that will not fit is refused, never truncated.
+- **Your ROMs, not ours.** The Studio ships no third-party CHIP-8 ROMs, because
+  most circulating ones are somebody's copyright. The ROM library browses a folder
+  you own, and the four bundled programs are listings you can read and edit.
+- **The whole look, not a filter.** 33 IDE themes — C64, Apple II, ZX Spectrum,
+  CGA, Amiga, NeXTSTEP, Borland — four machine phosphors and CRT glass tunable
+  from off to heavy. Choosing amber recolours the header, editor,
+  canvas and glass together, because the palette is one table.
+- **Native, offline, inspectable.** Every interpreter is C++ in process. There is
+  no Python at run time, no network call and no telemetry. MIT-licensed, with the
+  tests and the manuals in the tree.
 
 ---
 
@@ -73,29 +126,32 @@ terminal compiler and the automation service; see [docs/USER_GUIDE.md](docs/USER
 
 ---
 
-## What the Studio can do
+## What else is in the workbench
 
-Everything in this section is implemented, tested and documented; the links are
-manuals, not promises. The full inventory, feature by feature:
+Everything below is implemented, tested and documented; the links are manuals,
+not promises. The two machines are above; this is the rest of the environment.
+The full inventory, feature by feature:
 
 | Capability | What it is | Read |
 | --- | --- | --- |
-| **Ten languages, one editor** | BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk, each running on a native engine in process | [LANGUAGE_GUIDE](docs/LANGUAGE_GUIDE.md), [tutorials](docs/tutorials/) |
+| **Ten languages, one editor** | BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk, each running on a native engine in process — no Python at run time | [LANGUAGE_GUIDE](docs/LANGUAGE_GUIDE.md), [tutorials](docs/tutorials/) |
 | **Editor and console** | Gutter, current line, syntax colouring, find and replace, **find in files**, **go to line**, **snippets**, **outline**, **format code**, **live lint**, **autosave**, **version history**, two panes | [USER_GUIDE](docs/USER_GUIDE.md#1-start-and-stop) |
 | **Turtle canvas** | Live drawing while a program runs, zoom, pan, grid, auto-fit, turtle marker, **scrubber playback**, **animated GIF recording**, PNG/JPEG/BMP/SVG export | [USER_GUIDE](docs/USER_GUIDE.md#1-start-and-stop) |
 | **Debugging, in all ten** | Gutter breakpoints, Continue/Pause/Step In/Over/Out, **watch expressions**, **data breakpoints**, a Variables panel and a Telemetry HUD | [USER_GUIDE](docs/USER_GUIDE.md#5-debugging) |
-| **The HB-1** | A 1982 home computer in a parallel universe: ten-language ROM socket, CRT, prompt, HB DOS disk, CONFIG with four phosphors | [HB-1 manuals](docs/hb1/README.md) |
-| **The CHIP-8** | The 1977 virtual machine: live 60 Hz machine, assembler, keypad, register inspector, ROM library | [CHIP-8 manuals](docs/chip8/README.md) |
+| **REPL bar** | A persistent session in the current language; eight of the ten keep bindings between entries, BASIC has `?`, numbered lines and `RUN`/`LIST`/`NEW` direct mode | [USER_GUIDE](docs/USER_GUIDE.md#3-the-repl-bar) |
 | **Projects** | `.twproject` groups that organise programs without moving them on disk | [USER_GUIDE](docs/USER_GUIDE.md#2-projects-and-groups) |
 | **SQL** | A SQLite Database tab, plus `SQL` statements in nine languages and through the API | [USER_GUIDE](docs/USER_GUIDE.md#6-sql-and-the-database-tab) |
-| **Lessons and classroom** | 20 lessons, 60 checkpoints, checked by running the program; rosters, handouts, marking, reports | [lessons/](docs/lessons/README.md) |
 | **Automation** | JSON-RPC over stdin/stdout, a standalone `twc` compiler, and scriptable screenshots and exports | [API](docs/API.md), [USER_GUIDE](docs/USER_GUIDE.md#7-terminal-tools) |
-| **Presentation and access** | 33 themes, high contrast, 100/125/150% text, focus mode, CRT settings and four monitor presets, presentation mode | [USER_GUIDE](docs/USER_GUIDE.md#9-lessons-classroom-and-appearance) |
+| **Appearance and display** | 33 themes, high contrast, 100/125/150% text, focus mode, CRT settings and four monitor presets, presentation mode | [USER_GUIDE](docs/USER_GUIDE.md#9-lessons-classroom-and-appearance) |
 | **Help that covers the whole thing** | `F1` context help, `Ctrl+F1` keyword inspector, the documentation browser, a guided tour and a shortcut reference | [Help](#help-from-inside-the-studio) |
+| **Lessons, if you teach** | 20 lessons and 60 checkpoints checked by running the program, plus rosters, handouts and marking | [lessons/](docs/lessons/README.md) |
 
-### Multi-Language Support
+### Ten interpreters, one per era
 
-10 active languages in the current studio build:
+Each is a working implementation of its language's own shape — not a made-up
+dialect. The [Language Guide](docs/LANGUAGE_GUIDE.md) records exactly what each
+supports, command by command, and every row of that reference is exercised by the
+command matrix.
 
 | Language | Paradigm | Era | Execution Mode |
 | --- | --- | --- | --- |
@@ -127,7 +183,7 @@ manuals, not promises. The full inventory, feature by feature:
 - **Autosave and version history** — snapshots on a timer you set, and **File > Version History…** (`Ctrl+Alt+V`) to read or restore any of them, including buffers that were never saved
 - **Two panes** — **Split Editor Right** (`Ctrl+\`) shows two documents side by side; **Run Both Panes** (`Ctrl+Alt+B`) runs both headless and reports time, turtle calls and each program's own output in one table — a comparison, not a race
 - **Run controls** — Run (F9) and Stop, with a status bar showing language, cursor position and execution state
-- **Presentation and access** — 33 themes including the retro CRT sets, a High Contrast variant of whichever is active, 100/125/150% text sizes, focus mode, CRT settings with four monitor presets, and **Presentation Mode** (`Shift+F11`, `Esc` to leave) for teaching from the front
+- **Presentation and access** — 33 themes including the retro CRT sets, a High Contrast variant of whichever is active, 100/125/150% text sizes, focus mode, CRT settings with four monitor presets, and **Presentation Mode** (`Shift+F11`, `Esc` to leave) for showing the screen to a room
 - **Inspection** — a 🔍 **Variables** panel listing every binding with its type and value, filtered by name, and a ⚡ **Telemetry** HUD showing what the run cost and did: steps used, engine time, steps per second, last line, recursion depth, call stack, output lines, drawing commands, BASIC's memory window, and — beside the engine's own counters — the IDE's wall clock and the ink that actually reached the canvas
 - **Debugging** — gutter breakpoints and a 🐞 **Debug** panel (Continue, Pause, Step In/Over/Out, Stop) plus Debug/Continue/Trace on the toolbar, working in all ten languages: at a statement, a Logo top-level statement, a Smalltalk message send or a CHIP-8 instruction. Scheme additionally shows the call stack and the paused frame's bindings; for a native run the Variables panel shows the bindings the pause stopped in. **Watch expressions** evaluate arithmetic over the paused bindings, and **data breakpoints** stop when a named variable changes value
 - **Projects** — a 🗂 **Projects** dock groups programs into named groups without moving them on disk. Create or open a `.twproject`, add files, a whole folder (its programs are grouped by subfolder), and groups, drag a file between groups, and the project reopens with the session; missing files are marked rather than forgotten
@@ -176,18 +232,6 @@ and CHIP-8 before an instruction, with gutter breakpoints and Continue/Trace on 
 toolbar. The call stack and frame bindings are Scheme's own; for a native run the
 Variables panel shows the bindings the pause stopped in.
 
-### Guided Lessons
-
-- **20 lessons, 60 checkpoints** — two lessons for each of the ten languages
-- **Checked by running the program**, never by comparing it with an answer, so `PRINT 6 * 7` and `PRINT 42` are the same answer and a drawing checkpoint cannot be passed by printing about drawing
-- **In the IDE** — the 🎓 **Lessons** panel: the curriculum, the current checkpoint, hints, and a Check button that runs the program in your document
-- **At a terminal** — `python3 native/tools/learn.py walk basic_first_steps`
-- **For teachers** — `python3 native/tools/teach.py`: lesson plans with objectives and teacher notes, answer keys, a class roster, handout distribution, marking, class progress reports, bundles a class can be moved in, and a presentation size for teaching from the front
-- **The curriculum checks itself** — `teach.py validate` runs all sixty solutions through the engine and refuses a starter that already works, so a lesson nobody can finish cannot sit in the tree looking correct
-- Progress is saved per lesson and hints are counted; neither a reset nor a marking pass can lose a learner's work
-
-See [docs/lessons/](docs/lessons/README.md) for the guides.
-
 ### Help from inside the Studio
 
 The application documents itself, from the thing you are looking at:
@@ -202,17 +246,36 @@ The application documents itself, from the thing you are looking at:
 | Help > **Keyboard Shortcuts** | Every shortcut, in one dialog, generated from the actions themselves |
 | `Ctrl+Shift+P` or `F10` | The **Command Palette** — every action by name, whether or not it is in a menu |
 
-The browser reads the same Markdown files this repository ships, so a teacher's
-copy of the manuals and the application's own help are one set of documents.
+The browser reads the same Markdown files this repository ships, so the installed
+help and the manuals in the tree are one set of documents.
 
-### Educational Content
+### If you teach
 
-- **60 curated example programs** across all 10 active languages, under
-  `Examples/`, including a **showcase** for each language that walks its whole
-  surface and ends in a drawing
-- **Error hints** — syntax suggestions alongside interpreter error messages
+The Studio carries a checked curriculum, but it does not require one:
+
+- **20 lessons, 60 checkpoints**, two per language, checked by *running* the
+  program rather than comparing it with an answer — `PRINT 6 * 7` and `PRINT 42`
+  are the same answer, and a drawing checkpoint cannot be passed by printing
+  about drawing.
+- **In the IDE** — the 🎓 **Lessons** panel: the curriculum, the current
+  checkpoint, hints and a Check button.
+- **At a terminal** — `learn.py` walks a lesson; `teach.py` writes lesson plans,
+  answer keys, a class roster, handouts, marking and progress reports.
+- **Self-checking** — `teach.py validate` runs all sixty solutions and refuses a
+  starter that already works.
+
+See [docs/lessons/](docs/lessons/README.md) for the guides.
+
+### What ships with it
+
+- **60 example programs** across the ten languages, including a **showcase** for
+  each one that walks its whole surface and ends in a drawing — useful as
+  reference material as much as as examples, and all of them run in the test
+  gates
+- **Error hints** — syntax suggestions beside interpreter error messages
 - **Ten language tutorials** — one per language, under `docs/tutorials/`
-- **Lesson plans** — one document per language, generated from the curriculum, under `docs/lessons/plans/`
+- **The machine manuals** — the HB-1's five books and the CHIP-8's three, plus
+  [the machines](docs/MACHINES.md) that introduces them
 
 ---
 
@@ -225,19 +288,22 @@ source to copy from when it changes — and the place to check when it looks wro
 ### Description
 
 ```text
-Educational multi-language programming environment: a native C++20/Qt6 IDE with ten
-languages (BASIC, Logo, PILOT, COMAL, REXX, Scheme, FOCAL, APL, CHIP-8, Smalltalk),
-turtle graphics, projects, an HB-1 home-computer screen, a SQLite-backed SQL workspace, a checked lesson
-curriculum with student and teacher tools, a debugger, and a JSON-RPC automation
-API.
+Old-school programming environment: a native C++20/Qt6 workbench with ten
+interpreters from 1964-1980, a full IDE, a debugger in every language, and turtle
+graphics -- plus two complete machines inside it: the HB-1, a bespoke 1982 home
+computer from a parallel universe with a ten-language ROM socket, a CRT, a prompt
+and its own disk operating system, and a live CHIP-8 with an assembler, keypad and
+register inspector.
 ```
 
 ### Topics
 
 ```text
-education
-programming-education
-computer-science-education
+retro-computing
+emulators
+home-computer
+chip8
+virtual-machine
 ide
 qt6
 cpp20
@@ -245,8 +311,8 @@ interpreters
 turtle-graphics
 sqlite
 json-rpc
-projects
 debugger
+projects
 basic
 logo
 pilot
@@ -255,24 +321,22 @@ rexx
 scheme
 focal
 apl
-chip8
 smalltalk
-lesson-plans
-teaching-tools
+education
 ```
 
 ### Where to start
 
-| If you are | Start here |
-| ---------- | ---------- |
-| Meeting the machines | [the HB-1](docs/hb1/README.md) and [the CHIP-8](docs/chip8/README.md), introduced in [MACHINES.md](docs/MACHINES.md) |
-| Learning one of the languages | [`docs/tutorials/`](docs/tutorials/) |
-| Use projects, the REPL, SQL, debugging or the API | [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) |
-| Working through the lessons | [`docs/lessons/README.md`](docs/lessons/README.md) |
-| Teaching a class | [`docs/lessons/teacher-guide.md`](docs/lessons/teacher-guide.md) |
-| Building or porting | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`native/README.md`](native/README.md) |
-| Seeing what is not done yet | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
-| Reporting a bug or asking for a feature | The issue forms in [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/) |
+| Goal | Start here |
+| ---- | ---------- |
+| Type at a 1982 computer that never existed | [the HB-1 Owner's Manual](docs/hb1/README.md), [HB DOS](docs/hb1/hb-dos.md), and the premise in [MACHINES.md](docs/MACHINES.md) |
+| Write or run CHIP-8 | [the CHIP-8 manuals](docs/chip8/README.md), [the assembler](docs/chip8/assembly.md), [the instruction set](docs/chip8/instruction-set.md) |
+| Explore the ten languages | [`docs/LANGUAGE_GUIDE.md`](docs/LANGUAGE_GUIDE.md) and [`docs/tutorials/`](docs/tutorials/) |
+| Use the editor, debugger, projects, SQL or the API | [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) |
+| Build from source or port it | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`native/README.md`](native/README.md) |
+| Teach with it | [`docs/lessons/README.md`](docs/lessons/README.md) |
+| See what is not done yet | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
+| Report a bug or ask for a feature | The issue forms in [`.github/ISSUE_TEMPLATE/`](.github/ISSUE_TEMPLATE/) |
 
 ---
 

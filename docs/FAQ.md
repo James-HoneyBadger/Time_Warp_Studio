@@ -1,6 +1,6 @@
 # Time Warp Studio - Frequently Asked Questions
 
-Answers to common questions about building, running and learning with Time Warp
+Answers to common questions about building, running and using Time Warp
 Studio. For the full listing, see the [documentation index](INDEX.md) and
 [INSTALLATION.md](INSTALLATION.md).
 
@@ -28,9 +28,9 @@ Studio. For the full listing, see the [documentation index](INDEX.md) and
 
 ### What is Time Warp Studio?
 
-Time Warp Studio is an educational desktop programming environment. It runs ten
-programming languages in one IDE, with an integrated turtle graphics canvas and
-an output console. It is a C++20 / Qt6 application; every language runs in C++
+Time Warp Studio is an old-school desktop programming environment. It runs ten
+interpreters from 1964–1980 in one IDE, with an integrated turtle graphics canvas
+and an output console. It is a C++20 / Qt6 application; every language runs in C++
 inside it, and the PySide6 implementation that preceded it has been removed.
 
 It also carries two complete machines: the **HB-1**, a 1982 home computer from a
@@ -48,7 +48,7 @@ data breakpoints, a Variables panel and telemetry; projects; SQLite; 20 lessons
 and 60 checkpoints with classroom tools; a JSON-RPC API and a standalone `twc`
 compiler; 33 themes with high contrast and text sizes; the two machines; and help
 inside the application. The full list, with links, is in the
-[README](../README.md#what-the-studio-can-do).
+[README](../README.md#what-else-is-in-the-workbench).
 
 ### Why is there a home computer from 1982 in my IDE?
 
@@ -70,7 +70,12 @@ Yes. It is released under the MIT License. See [LICENSE](../LICENSE).
 
 ### Who is it for?
 
-Students, teachers, and anyone who wants to learn programming or compare languages. It is designed for learning first, so error messages and output use plain language and emoji prefixes.
+People who like old computers: retro-computing hobbyists, language collectors and
+anyone who wants to type at a 1982 machine that never existed, or write and run
+CHIP-8. The Studio is also a complete teaching environment — checked lessons,
+rosters and marking — for anyone who wants that, but it does not assume a
+classroom. Output and errors are in plain language with emoji prefixes, so the
+first session is readable either way.
 
 ### Does it need an internet connection?
 

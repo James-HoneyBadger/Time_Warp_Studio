@@ -1406,9 +1406,10 @@ void MainWindow::buildMenuBar() {
         QMessageBox::about(
             this, tr("About Time Warp Studio"),
             tr("<b>Time Warp Studio</b> %1"
-               "<p>An educational IDE for ten languages: BASIC, APL, Logo, PILOT, "
-               "FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk, with an "
-               "integrated turtle graphics canvas."
+               "<p>An old-school programming environment for ten languages: BASIC, "
+               "APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk, "
+               "with an integrated turtle graphics canvas — and two complete "
+               "machines inside it: the HB-1 home computer and a live CHIP-8."
                "<p>Built with C++20 and Qt6. Every language runs natively; the "
                "bundled Python engine in <code>share/time_warp</code> is the "
                "reference the lesson check uses.")

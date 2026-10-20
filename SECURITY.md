@@ -43,7 +43,7 @@ If you discover a security vulnerability in Time Warp Studio, please report it r
 
 ## Security Considerations
 
-Time Warp Studio is an **educational desktop application**. It is designed for local use and does not expose network services by default. Key security notes:
+Time Warp Studio is an **offline desktop application**. It is designed for local use and does not expose network services by default. Key security notes:
 
 - **Safe expression evaluation:** All math/expression evaluation uses a hand-written parser — native C++ (`timewarp_expr`) and, in the bridge engine, `ExpressionEvaluator`. `eval()` is never called on user input.
 - **No network exposure:** The application runs locally and does not open network ports or ship any server components.

@@ -1,6 +1,6 @@
 # Roadmap
 
-Time Warp Studio is a C++20 / Qt6 IDE for ten educational languages. This page is
+Time Warp Studio is a C++20 / Qt6 workbench for ten old-school languages and two machines. This page is
 the honest state of it: what works, what is next, and what is deliberately not
 being built.
 

@@ -5,12 +5,12 @@ Type=Application
 # application through CMake.
 Version=1.0
 Name=Time Warp Studio
-GenericName=Educational Programming Environment
-Comment=Learn BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk in one IDE
+GenericName=Old-School Programming Environment
+Comment=Ten languages from 1964-1980, a 1982 home computer and a live CHIP-8, in one IDE
 Exec=time_warp_ide %F
 TryExec=time_warp_ide
 Icon=time-warp-studio
 Terminal=false
 Categories=Development;Education;IDE;
-Keywords=basic;apl;logo;pilot;focal;scheme;chip8;comal;rexx;smalltalk;turtle;graphics;education;teaching;
+Keywords=basic;apl;logo;pilot;focal;scheme;chip8;comal;rexx;smalltalk;turtle;graphics;retro;retro-computing;emulator;home-computer;virtual-machine;education;
 StartupNotify=true

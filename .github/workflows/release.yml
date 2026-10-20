@@ -239,7 +239,7 @@ jobs:
             ${{ env.IMAGE_NAME }}:latest
           labels: |
             org.opencontainers.image.title=Time Warp Studio
-            org.opencontainers.image.description=An educational IDE for ten languages, with turtle graphics
+            org.opencontainers.image.description=An old-school programming environment: ten languages, an IDE, an HB-1 home computer and a live CHIP-8
             org.opencontainers.image.version=${{ needs.verify.outputs.version }}
             org.opencontainers.image.licenses=MIT
             org.opencontainers.image.source=${{ github.server_url }}/${{ github.repository }}
@@ -290,9 +290,12 @@ jobs:
 
           {
             cat <<EOF
-          An educational IDE for ten languages — BASIC, APL, Logo, PILOT, FOCAL,
-          Scheme, CHIP-8, COMAL, REXX and Smalltalk — with integrated turtle
-          graphics, all running in C++.
+          An old-school programming environment for ten languages — BASIC, APL, Logo,
+          PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk — with integrated
+          turtle graphics, all running in C++. Inside it are two complete machines:
+          the HB-1, a bespoke 1982 home computer from a parallel universe with a
+          ten-language ROM socket and its own disk operating system, and a live
+          CHIP-8 with an assembler, keypad and register inspector.
 
           ### Which file do I want?
 
