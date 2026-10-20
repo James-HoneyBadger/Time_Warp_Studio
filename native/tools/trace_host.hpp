@@ -8,9 +8,9 @@
 
 #pragma once
 
+#include "timewarp/core/charconv.hpp"
 #include "timewarp/lang/turtle_host.hpp"
 
-#include <charconv>
 #include <cstdio>
 #include <map>
 #include <string>
@@ -109,9 +109,9 @@ private:
                 std::printf(" %lld", static_cast<long long>(value));
                 return;
             }
-            const auto result = std::to_chars(buffer, buffer + sizeof buffer,
-                                              static_cast<double>(value));
-            std::printf(" %.*s", static_cast<int>(result.ptr - buffer), buffer);
+            const std::size_t length = timewarp::core::format_double(
+                buffer, buffer + sizeof buffer, static_cast<double>(value));
+            std::printf(" %.*s", static_cast<int>(length), buffer);
         } else {
             std::printf(" %lld", static_cast<long long>(value));
         }
@@ -124,8 +124,9 @@ private:
             std::printf("DRAW\t%s %lld\n", name, static_cast<long long>(value));
             return;
         }
-        const auto result = std::to_chars(buffer, buffer + sizeof buffer, value);
-        std::printf("DRAW\t%s %.*s\n", name, static_cast<int>(result.ptr - buffer), buffer);
+        const std::size_t length =
+            timewarp::core::format_double(buffer, buffer + sizeof buffer, value);
+        std::printf("DRAW\t%s %.*s\n", name, static_cast<int>(length), buffer);
     }
 
     std::map<int, Rgb> palette_{{0, {255, 255, 255}}, {1, {16, 16, 20}}, {2, {140, 255, 140}}};

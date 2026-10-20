@@ -12,7 +12,6 @@
 
 #include <algorithm>
 #include <cctype>
-#include <charconv>
 #include <chrono>
 #include <cmath>
 #include <condition_variable>
@@ -29,6 +28,7 @@
 #include <vector>
 
 #include "check.hpp"
+#include "timewarp/core/charconv.hpp"
 #include "timewarp/lang/chip8.hpp"
 #include "timewarp/lang/debug.hpp"
 #include "timewarp/lang/interpreter.hpp"
@@ -50,8 +50,9 @@ using timewarp::lang::TurtleHost;
 
 std::string number_text(double value) {
     char buffer[64];
-    const auto result = std::to_chars(buffer, buffer + sizeof buffer, value);
-    return std::string{buffer, result.ptr};
+    const std::size_t length =
+        timewarp::core::format_double(buffer, buffer + sizeof buffer, value);
+    return std::string{buffer, length};
 }
 
 std::string colour_text(Rgb colour) {
