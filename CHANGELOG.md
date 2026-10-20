@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- The command and REPL matrices accept the documented “not available” refusal
+  from an optional backend (BASIC `SAY`/`SPEAK`), so the gates pass on a machine
+  with no speech engine instead of failing on an optional dependency. The refusal
+  is only accepted for rows marked `optional`; any other error still fails. A new
+  `--python` option lets the command matrix choose the worker interpreter, which
+  is how both the backed and unbacked paths are exercised.
+
 ## [16.2.0] - 2026-10-20
 
 Projects, a persistent REPL with BASIC direct mode, SQL, watch expressions and

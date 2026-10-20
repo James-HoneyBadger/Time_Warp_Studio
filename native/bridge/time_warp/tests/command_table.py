@@ -36,7 +36,11 @@ class Row:
     language: str
     command: str
     source: str
-    #: any | prints:TEXT | draws | error
+    #: any | prints:TEXT | draws | error | optional
+    #:
+    #: `optional` is for a command whose real backend is an optional dependency
+    #: (speech synthesis, for instance). It must produce output, drawing, or the
+    #: documented "not available" refusal; any other error is still a failure.
     expect: str
     #: Other commands this same source also exercises. A round trip through a file
     #: channel is one program but four commands, and the completeness check should
@@ -322,8 +326,8 @@ BASIC: list[Row] = [
         ("TIMER",),
     ),
     Row("BASIC", "PLAY", 'PLAY "CDEFG"', "prints:Playing"),
-    Row("BASIC", "SAY", 'SAY "HELLO"', "any"),
-    Row("BASIC", "SPEAK", 'SPEAK "HELLO"', "any"),
+    Row("BASIC", "SAY", 'SAY "HELLO"', "optional"),
+    Row("BASIC", "SPEAK", 'SPEAK "HELLO"', "optional"),
     Row("BASIC", "SPRITE define", "SPRITE SHIP, 10, 20, 30, 40", "prints:Sprite SHIP"),
     Row(
         "BASIC",

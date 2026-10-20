@@ -9,7 +9,8 @@ that works in a program but not in the bar is still a bug a user sees.
 
 This tool drives the native API's `repl.*` methods, one fresh session per row, so
 one row cannot hide another through leftover state. It judges rows with the same
-expectations as `command_matrix.py` (`any`, `prints:TEXT`, `draws`, `error`).
+expectations as `command_matrix.py` (`any`, `prints:TEXT`, `draws`, `error`,
+`optional`).
 
 Usage:
     python3 native/tools/repl_matrix.py
@@ -23,6 +24,7 @@ import argparse
 import collections
 import json
 import pathlib
+import re
 import select
 import subprocess
 import sys
@@ -37,6 +39,12 @@ from time_warp.tests.command_table import (  # noqa: E402  # pylint: disable=wro
 )
 
 ERROR_MARKER = "\u274c"
+#: A refusal from an optional backend is an acknowledgement, not a silent
+#: failure. Keep this in step with `command_matrix.py`.
+OPTIONAL_REFUSAL = re.compile(
+    r"speech synthesis (?:is )?not available|not installed|no .{0,20}backend available",
+    re.IGNORECASE,
+)
 ROW_TIMEOUT_SECONDS = 30.0
 
 
@@ -147,6 +155,21 @@ def judge(row, result: dict) -> tuple[bool, str]:
                 False,
                 "the command produced nothing: no output, no drawing, no error",
             )
+        return True, ""
+
+    if expect == "optional":
+        if silent:
+            return (
+                False,
+                "the command produced nothing: no output, no drawing, no error",
+            )
+        if reported:
+            detail = error.strip() or next(
+                (line for line in output.splitlines() if ERROR_MARKER in line), ""
+            )
+            if OPTIONAL_REFUSAL.search(detail):
+                return True, ""
+            return False, f"optional backend failed unexpectedly: {detail[:120]}"
         return True, ""
 
     if reported:

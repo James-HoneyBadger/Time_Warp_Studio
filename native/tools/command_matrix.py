@@ -17,6 +17,10 @@ expected:
     prints  output appears (optionally naming the text that must be in it)
     draws    at least one drawing command reaches the canvas
     error   the engine *reports* the problem rather than ignoring it
+    optional
+            the command needs a backend that is an optional dependency. Output,
+            drawing, or the documented "not available" refusal all count; any
+            other error (or silence) is still a failure.
 
 Rows marked ``error`` are the adversarial half: a command given nothing, or the
 wrong thing, must say so.
@@ -106,13 +110,17 @@ class Worker:
                 if message.get("t") == "ready":
                     return
                 if message.get("t") == "malformed":
-                    raise RuntimeError(f"worker emitted a non-JSON line: {message['raw']}")
+                    raise RuntimeError(
+                        f"worker emitted a non-JSON line: {message['raw']}"
+                    )
             if self._process.poll() is not None:
                 raise RuntimeError("the worker exited during handshake")
 
     def run(self, language: str, source: str, name: str) -> dict:
         """Runs one source and returns what came back."""
-        payload = json.dumps({"t": "run", "language": language, "source": source, "name": name})
+        payload = json.dumps(
+            {"t": "run", "language": language, "source": source, "name": name}
+        )
         assert self._process.stdin is not None
         self._process.stdin.write(payload + "\n")
         self._process.stdin.flush()
@@ -138,7 +146,9 @@ class Worker:
                     # Nothing here answers prompts; unblock the worker so one bad
                     # row cannot hang the whole run.
                     prompts += 1
-                    self._process.stdin.write(json.dumps({"t": "in-reply", "text": ""}) + "\n")
+                    self._process.stdin.write(
+                        json.dumps({"t": "in-reply", "text": ""}) + "\n"
+                    )
                     self._process.stdin.flush()
                 elif kind == "done":
                     done = message
@@ -169,6 +179,14 @@ class Worker:
 #: watched 'err' would call every reported error a silent failure.
 ERROR_MARKER = "\u274c"
 
+#: What an optional backend says when it is not installed. A row expecting
+#: `optional` accepts this refusal as an acknowledgement: the command ran and
+#: reported the truth, rather than pretending a speaker moved when there is none.
+OPTIONAL_REFUSAL = re.compile(
+    r"speech synthesis (?:is )?not available|not installed|no .{0,20}backend available",
+    re.IGNORECASE,
+)
+
 
 def _normalise(literal: str) -> str:
     """Compares command spellings that differ only in whitespace or a colon.
@@ -188,7 +206,11 @@ def judge(row, result: dict) -> tuple[bool, str]:
     if done is None:
         return False, "no 'done' message: the run did not finish"
 
-    reported = bool(result["errors"]) or bool(done.get("error")) or ERROR_MARKER in result["output"]
+    reported = (
+        bool(result["errors"])
+        or bool(done.get("error"))
+        or ERROR_MARKER in result["output"]
+    )
     silent = not result["output"].strip() and result["drawings"] == 0 and not reported
     expect = row.expect
 
@@ -199,6 +221,36 @@ def judge(row, result: dict) -> tuple[bool, str]:
             return False, "expected a reported error, got silence"
         return True, ""
 
+    if expect == "optional":
+        if reported:
+            detail = next(
+                (
+                    line
+                    for line in (
+                        [*result["errors"]]
+                        + [
+                            text
+                            for text in result["output"].splitlines()
+                            if ERROR_MARKER in text
+                        ]
+                    )
+                    if line.strip()
+                ),
+                "",
+            )
+            if OPTIONAL_REFUSAL.search(detail):
+                return True, ""
+            return (
+                False,
+                f"optional backend failed unexpectedly: {detail.strip()[:120]}",
+            )
+        if silent:
+            return (
+                False,
+                "the command produced nothing: no output, no drawing, no error",
+            )
+        return True, ""
+
     if reported:
         # A row that expects the command to work cannot pass while the engine
         # reported an error alongside it: JOYINIT's row used to pass on the
@@ -206,10 +258,17 @@ def judge(row, result: dict) -> tuple[bool, str]:
         detail = (result["errors"] or [str(done.get("error", ""))])[0]
         if not detail:
             detail = next(
-                (line for line in result["output"].splitlines() if ERROR_MARKER in line),
+                (
+                    line
+                    for line in result["output"].splitlines()
+                    if ERROR_MARKER in line
+                ),
                 "",
             )
-        return False, f"reported an error while expected to work: {detail.strip()[:120]}"
+        return (
+            False,
+            f"reported an error while expected to work: {detail.strip()[:120]}",
+        )
 
     if done.get("ok") is False:
         detail = (result["errors"] or [str(done.get("error", ""))])[0]
@@ -224,7 +283,10 @@ def judge(row, result: dict) -> tuple[bool, str]:
     if expect.startswith("prints"):
         wanted = expect.partition(":")[2]
         if wanted and wanted not in result["output"]:
-            return False, f"expected output containing {wanted!r}, got {result['output'][:80]!r}"
+            return (
+                False,
+                f"expected output containing {wanted!r}, got {result['output'][:80]!r}",
+            )
         if not result["output"].strip():
             return False, "expected output, got none"
 
@@ -239,13 +301,23 @@ def _language_key(name: str) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--language", help="only this language (case-insensitive)")
-    parser.add_argument("--verbose", action="store_true", help="print every row, not just failures")
+    parser.add_argument(
+        "--verbose", action="store_true", help="print every row, not just failures"
+    )
     parser.add_argument(
         "--explain",
         action="store_true",
         help="print what each row actually did, for authoring new rows from evidence",
     )
     parser.add_argument("--json", help="write the full results to this path")
+    parser.add_argument(
+        "--python",
+        help=(
+            "interpreter for the language worker (default: .venv/bin/python3 when "
+            "present, else python3). Point this at an interpreter without the "
+            "optional backends to exercise their refusal paths."
+        ),
+    )
     options = parser.parse_args(argv)
 
     # Compared with punctuation removed, because a row labels its language the way
@@ -264,6 +336,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     interpreter = root / ".venv/bin/python3"
     interpreter = str(interpreter) if interpreter.is_file() else "python3"
+    if options.python:
+        interpreter = options.python
 
     by_language: dict[str, dict[str, int]] = collections.defaultdict(
         lambda: {"passed": 0, "failed": 0}
@@ -347,8 +421,12 @@ def main(argv: list[str] | None = None) -> int:
                 effective.add(_normalise(row.command))
                 effective.update(_normalise(extra) for extra in row.also)
             effective.update(_normalise(w.command) for w in WAIVERS)
-            missing = {name for name in implemented if _normalise(name) not in effective}
-            print(f"  {language}: {len(missing)} candidate(s) neither tested nor waived")
+            missing = {
+                name for name in implemented if _normalise(name) not in effective
+            }
+            print(
+                f"  {language}: {len(missing)} candidate(s) neither tested nor waived"
+            )
             if options.verbose:
                 for name in sorted(missing):
                     print(f"      {name}")
