@@ -1,0 +1,259 @@
+# HB-1 Owner's Manual
+
+```text
+*** HB-1 ***
+BASIC V2.0 ROM  ·  64K RAM SYSTEM
+(C) 1982 HB SYSTEMS  ·  BASIC INTERPRETER
+HB DOS 1.0  ·  VOLUME HBWARP
+SYSTEM READY
+READY.
+```
+
+This is the manual for the machine the Studio carries: a home computer from a
+1982 that never happened, where one socket accepted ten language ROMs and the
+disk was measured in sectors because disks were still physical things. The
+machine is real software — everything in this book happens when you type it.
+
+- **Open it:** Tools > **HB-1 Computer…** (`Ctrl+Alt+W`), or `./run.sh --computer`.
+- **The surrounding story:** [the machines](../MACHINES.md).
+- **The rest of this book:** [ROMs](roms.md) · [HB DOS](hb-dos.md) ·
+  [CONFIG](config.md) · [Inside](inside.md).
+
+---
+
+## Specifications
+
+| | |
+| --- | --- |
+| Model | HB-1 Personal Computer System |
+| ROM socket | Ten language ROMs: BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, Smalltalk |
+| Program memory | 64K, one buffer per ROM, kept when you switch away |
+| Display | One CRT, three modes: TEXT, SPLIT (the default), GRAPHICS |
+| Text side | PROGRAM (a real code editor) and OUTPUT (the machine's screen) |
+| Graphics side | The turtle canvas: the same drawing surface the IDE uses |
+| Keyboard | The prompt line, with history; function keys below |
+| Disk | HB DOS 1.0: one volume, 512 sectors of 256 bytes, 30-character names |
+| Monitor | Green, amber, white or ice phosphor; scanlines, vignette, curvature, flicker, glow |
+| Power | The lamp in the header. Plugging in is not modelled |
+
+The machine is described as 64K because that is what the status line says and
+what the period wanted. What it actually is, is a window onto the Studio's native
+engines with a very good costume on: see [Inside the HB-1](inside.md).
+
+---
+
+## First boot
+
+When the machine opens it cold-boots into a ROM — BASIC, unless CONFIG says
+otherwise — and prints the banner above. Then:
+
+1. **Type a program.** In the BASIC ROM, `10 PRINT "HELLO, TIME TRAVELLER"` at the
+   prompt stores line 10 on the PROGRAM page. `20 GOTO 10` stores another.
+2. **Press Return.** Nothing runs yet; a numbered line is a program line, and
+   storing it is the whole action.
+3. **Press F9**, or type `RUN`. The program runs. Its output appears on OUTPUT;
+   its drawing appears on the right of the screen.
+4. **Switch ROMs.** Choose **Logo** in the ROM selector. The machine cold-boots:
+   the screen clears, the banner names Logo, and the prompt becomes `?`. The
+   BASIC program is still in BASIC's memory; switch back and it is there.
+5. **Save your work.** `SAVE "HELLO"` writes the current program to the disk.
+   `CATALOG` shows it. Close the machine, reopen it, `CATALOG` again: it is still
+   there. That is [HB DOS](hb-dos.md) doing its job.
+
+Nothing above needs a file on disk, a project, or the IDE behind the window. The
+machine is complete on its own — which is the point of a home computer.
+
+---
+
+## The front panel
+
+From left to right across the top:
+
+| Control | What it does |
+| --- | --- |
+| **HB-1** and the tagline | Identity. The tagline reads `PERSONAL COMPUTER SYSTEM · 64K RAM` |
+| **ROM** | The language socket. Selecting a ROM cold-boots into it |
+| **SCREEN** | `TEXT`, `SPLIT` or `GRAPHICS` |
+| **CONFIG** | The machine's settings screen — [all of them](config.md) |
+| **POWER** | The lamp. It is lit while the machine is on |
+
+Under the screen:
+
+| Control | What it does |
+| --- | --- |
+| The prompt | Everything typed here is remembered in history and echoed in the ROM's voice |
+| **RUN** | Runs the program on the PROGRAM page (F9) |
+| **STOP** | Stops a running program (Shift+F9) |
+| **CLS** | Clears OUTPUT and the drawing (Ctrl+L) |
+
+The status line along the bottom is a machine readout, not decoration:
+
+```text
+ROM BASIC V2.0   MEM 64K   MODE SPLIT   LINE 1:1   HB DOS 0F   READY
+```
+
+It names the ROM and its version, the screen mode, the cursor position on the
+PROGRAM page, how many files the disk holds, and whether a program is `RUNNING`
+or the machine is `READY`.
+
+### The screen
+
+**TEXT** shows only the text side. **GRAPHICS** shows only the canvas.
+**SPLIT** — the default, and the machine's natural state — shows both, with the
+text on the left.
+
+The text side has two pages:
+
+- **PROGRAM** — a `CodeEditor`, the same widget the IDE uses: gutter, current
+  line, syntax colouring, undo, selection, search. A listing is not pasted into
+  a text box here.
+- **OUTPUT** — the machine's screen: the banner, prompt echoes, program output
+  and errors.
+
+A program that draws while the machine is in TEXT switches to SPLIT once, so the
+ink cannot land somewhere it cannot be seen. CONFIG can turn that off for a
+learner who wants to watch the drawing arrive deliberately.
+
+### Keys
+
+| Key | Action |
+| --- | --- |
+| `F9` | Run the program |
+| `Shift+F9` | Stop |
+| `Ctrl+L` | Clear the screen and the canvas |
+| `Ctrl+,` | CONFIG |
+| `Up` / `Down` | Previous and next prompt line, up to the history depth CONFIG sets |
+| `Ctrl+Alt+W` | Open or raise the machine, from the IDE |
+
+---
+
+## The prompt
+
+The prompt is the machine's own command line. It understands two vocabularies,
+in this order:
+
+1. **The machine's own words** (below). These never reach a language.
+2. **The selected ROM's language.** Everything else is submitted to a persistent
+   session for that ROM, so `LET X = 5` then `PRINT X` works, and so does
+   `(define (square n) (* n n))` in Scheme.
+
+In the BASIC ROM there is a third case: a line that starts with a number and then
+a keyword is a program line, not a command — see [direct mode](roms.md#basic).
+
+### Machine words
+
+| Word | What it does |
+| --- | --- |
+| `RUN` | Run the program on the PROGRAM page. With a name, `RUN "NAME"`, load that file and run it |
+| `LIST` | Print the program to OUTPUT |
+| `NEW` | Erase the program and end the prompt session |
+| `EDIT` | Move to the PROGRAM page |
+| `TEXT`, `GFX`/`GRAPHICS`, `SPLIT` | Change the screen mode |
+| `CLS`/`CLEAR` | Clear OUTPUT and the drawing |
+| `ROMS` | List the language ROMs, marking the one in the socket |
+| `CONFIG`/`SETUP` | Open the settings screen |
+| `HELP`, or a bare `?` | Print the machine's vocabulary |
+| `CATALOG`, `SAVE`, `LOAD`, `DELETE`, `RENAME`, `LOCK`, `UNLOCK`, `VERIFY`, `TYPE`, `STATUS`, `INIT` | [HB DOS](hb-dos.md) |
+
+### Two ways to run
+
+There are two execution paths behind the machine, and the difference matters:
+
+- **The prompt session** is a `ReplRunner`: it keeps bindings between lines and
+  is where curiosity happens.
+- **`RUN`** is a `NativeRunner`: the whole program, once, to completion, on the
+  same engine the IDE's Run uses.
+
+`RUN` ends the prompt session first. A program therefore never starts inside
+variables left by an earlier command — the machine's version of "put your toys
+away before you start". Selecting a different ROM ends the session too. The
+next line after either starts a fresh one.
+
+---
+
+## What the machine remembers
+
+The machine writes two different things to two different places, and the
+distinction is worth knowing because it is the difference between "my settings"
+and "my session".
+
+### Session state — `retroComputer`
+
+| Key | Holds |
+| --- | --- |
+| `geometry` | The window's size and position |
+| `language` | The ROM you were left in |
+| `mode` | The screen mode you were left in |
+| `programs/<rom>` | Each ROM's program, when CONFIG's *Remember each ROM's program* is on |
+
+With program memory switched off, the machine erases what it already kept, so
+the next start cannot show programs the setting says are not remembered.
+
+### Configuration — `retroComputer/config`
+
+Boot ROM, boot screen, start-up message, prompt-history depth, program memory,
+switch-to-SPLIT, phosphor, the two text sizes and the five glass strengths. Every
+key is listed in [CONFIG](config.md#where-it-is-stored).
+
+### What is *not* remembered
+
+- **Prompt history.** Up and Down recall this session's lines; closing the
+  machine forgets them. The history depth CONFIG sets is a budget, not a file.
+- **A running program.** Programs do not survive a restart. `SAVE` is how a
+  program outlives the afternoon; that is the lesson.
+
+The disk is separate from both, because it is: one image file,
+`~/.time_warp/disks/HBWARP.dsk`, moved with the rest of the Studio's data by
+`TIME_WARP_DATA_DIR`. See [HB DOS](hb-dos.md#the-image).
+
+---
+
+## Running the machine from a terminal
+
+```bash
+./run.sh --computer                                  # open the machine
+./run.sh --computer Examples/basic/hello.bas --run    # boot its language and run it
+./run.sh --computer --screenshot hb1.png             # photograph the machine
+./run.sh --computer Examples/logo/mandala.logo --run --export mandala.png
+```
+
+With `--computer`, `--run`, `--screenshot` and `--export` act on the machine
+rather than the editor: the screenshot is of the machine's window, and the export
+is the ink on the machine's canvas. A script that demonstrates the boot screen
+therefore captures the boot screen, not the IDE with a small window on top of it.
+
+The binary takes the same options directly:
+
+```bash
+./native/build/time_warp_ide --computer --help
+```
+
+---
+
+## The limits, stated plainly
+
+A machine is defined by what it will not do.
+
+| Limit | Value | What happens at the edge |
+| --- | --- | --- |
+| ROMs | Ten, one at a time | Nothing else exists to select |
+| Program memory | One buffer per ROM | Switching keeps it; closing the machine keeps it only if *Remember each ROM's program* is on |
+| Screen | TEXT, SPLIT, GRAPHICS | A whole-program run cannot show more |
+| Disk volume | One, named `HBWARP` | There are no directories and no second volume |
+| Disk size | 512 sectors of 256 bytes | A file that will not fit is refused (`?DISK FULL`), never truncated |
+| File name | 30 characters, upper-cased | `SAVE Hello` and `SAVE "HELLO"` are the same request |
+| Lock | Per file | A locked file refuses `SAVE` over it and `DELETE`; it can still be `TYPE`d, `LOAD`ed and renamed, and the lock travels with the name |
+| `INIT` | Must be said twice | Any other line in between is a change of mind |
+
+The machine will not crash, corrupt a save, or leave a key stuck. Those are not
+period features; they are the parallel-universe part.
+
+---
+
+## Where next
+
+- Learn the ten ROMs: [the ROM library](roms.md).
+- Keep a program: [HB DOS 1.0](hb-dos.md).
+- Make it yours: [CONFIG](config.md).
+- Change the machine's mind: [Inside the HB-1](inside.md).
+- Meet its sibling: [the CHIP-8](../chip8/README.md).

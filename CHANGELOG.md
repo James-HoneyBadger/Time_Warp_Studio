@@ -31,8 +31,32 @@
   rather than the editor, so a script captures the boot screen and the drawing the
   program made on the machine's canvas.
 
+### Documentation
+
+- **The machines have books.** [docs/MACHINES.md](docs/MACHINES.md) states the
+  premise — a system from a parallel universe —, what the HB-1 and the CHIP-8
+  share, and the deliberate anachronisms item by item. `docs/hb1/` is the Owner's
+  Manual, the ROM library, the HB DOS 1.0 reference, the CONFIG reference and an
+  engineering companion; `docs/chip8/` is the machine manual, the assembler and
+  the complete instruction set with its 1977 quirks. Both sets are installed with
+  the application and listed in Help > Documentation.
+- **The README leads with capability.** A capability inventory links every part of
+  the Studio — editor, canvas, debugger, projects, SQL, lessons, automation,
+  appearance, the help system and both machines — to the book that owns it. The
+  IDE guide, FAQ, language guide, architecture notes, roadmap and the in-tree
+  agent instructions follow the same map.
+- **The guides are gated.** `make doc-links` — and the Docs workflow — checks
+  every relative link and `#anchor` across `docs/`, `README.md` and
+  `Examples/CATALOG.md`; the workflow now also requires the machine books to
+  exist and runs when the checker changes.
+
 ### Fixed
 
+- **CHIP-8 `CLS` in hi-res.** Clearing the screen used the lores buffer size, so a
+  `00E0` after `00FF` truncated the 128x64 framebuffer; the next `DRW` could write
+  past it and nothing below the sixteenth row could be painted. Clearing now uses
+  the current grid, and `lang_tests` pins both the buffer size and a pixel on the
+  bottom row.
 - The command and REPL matrices accept the documented “not available” refusal
   from an optional backend (BASIC `SAY`/`SPEAK`), so the gates pass on a machine
   with no speech engine instead of failing on an optional dependency. The refusal

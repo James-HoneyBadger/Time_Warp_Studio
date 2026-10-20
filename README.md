@@ -9,6 +9,30 @@
 
 Time Warp Studio is a unified desktop programming environment designed for educators and students. It brings together **10 active programming languages** into a single, modern IDE. Built as a **native C++20 / Qt6 application**, it provides an integrated platform for learning programming concepts, exploring turtle graphics, and working through a **checked lesson curriculum** with tools for both learners and teachers.
 
+And it is a time machine. Inside it are two complete machines — the **HB-1**, a 1982 home computer from a parallel universe, and the **CHIP-8**, the 1977 virtual machine that made a computer out of four kilobytes. They are not themes or demonstrations: you can boot them, type at them, debug them, save programs to their disks and meet them again tomorrow.
+
+---
+
+## Two machines, one Studio
+
+| | **HB-1** | **CHIP-8** |
+| --- | --- | --- |
+| What it is | A complete home computer: CRT, prompt, ten-language ROM socket, real editor, turtle canvas, disk | A complete virtual machine: 4 KB of memory, sixteen registers, a 64×32 screen, sixteen keys |
+| Its universe | 1982, where one machine shipped ten language ROMs | 1977, where the machine was written in software and ran everywhere |
+| Storage | **HB DOS 1.0** — 512 sectors of 256 bytes, a catalogue, lock bits, a two-step `INIT` | Your own folder of listings and ROMs, browsed by a library dialog |
+| Run it | Tools > **HB-1 Computer…** (`Ctrl+Alt+W`) or `./run.sh --computer` | Tools > **CHIP-8 Emulator…** (`Ctrl+Shift+M`) |
+| Read it | [Owner's Manual](docs/hb1/README.md) · [ROMs](docs/hb1/roms.md) · [HB DOS](docs/hb1/hb-dos.md) · [CONFIG](docs/hb1/config.md) · [Inside](docs/hb1/inside.md) | [Machine Manual](docs/chip8/README.md) · [Assembler](docs/chip8/assembly.md) · [Instruction set](docs/chip8/instruction-set.md) |
+
+The premise is a single sentence: a system from a parallel universe, where the
+design sense of the next forty years arrived in time for the 8-bit boom. The
+constraints are period — a prompt, a sector-counted disk, 64K, a CRT with
+phosphor — and the engines behind them are modern, in-process and kind. Nothing
+about the machines is decorative: every switch, word and opcode in their manuals
+does something you can watch.
+
+Start with [the machines](docs/MACHINES.md): why two, what they share, and the
+timey-wimey parts listed one by one.
+
 ---
 
 ## Install it
@@ -49,7 +73,25 @@ terminal compiler and the automation service; see [docs/USER_GUIDE.md](docs/USER
 
 ---
 
-## 🎯 Core Features
+## What the Studio can do
+
+Everything in this section is implemented, tested and documented; the links are
+manuals, not promises. The full inventory, feature by feature:
+
+| Capability | What it is | Read |
+| --- | --- | --- |
+| **Ten languages, one editor** | BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk, each running on a native engine in process | [LANGUAGE_GUIDE](docs/LANGUAGE_GUIDE.md), [tutorials](docs/tutorials/) |
+| **Editor and console** | Gutter, current line, syntax colouring, find and replace, **find in files**, **go to line**, **snippets**, **outline**, **format code**, **live lint**, **autosave**, **version history**, two panes | [USER_GUIDE](docs/USER_GUIDE.md#1-start-and-stop) |
+| **Turtle canvas** | Live drawing while a program runs, zoom, pan, grid, auto-fit, turtle marker, **scrubber playback**, **animated GIF recording**, PNG/JPEG/BMP/SVG export | [USER_GUIDE](docs/USER_GUIDE.md#1-start-and-stop) |
+| **Debugging, in all ten** | Gutter breakpoints, Continue/Pause/Step In/Over/Out, **watch expressions**, **data breakpoints**, a Variables panel and a Telemetry HUD | [USER_GUIDE](docs/USER_GUIDE.md#5-debugging) |
+| **The HB-1** | A 1982 home computer in a parallel universe: ten-language ROM socket, CRT, prompt, HB DOS disk, CONFIG with four phosphors | [HB-1 manuals](docs/hb1/README.md) |
+| **The CHIP-8** | The 1977 virtual machine: live 60 Hz machine, assembler, keypad, register inspector, ROM library | [CHIP-8 manuals](docs/chip8/README.md) |
+| **Projects** | `.twproject` groups that organise programs without moving them on disk | [USER_GUIDE](docs/USER_GUIDE.md#2-projects-and-groups) |
+| **SQL** | A SQLite Database tab, plus `SQL` statements in nine languages and through the API | [USER_GUIDE](docs/USER_GUIDE.md#6-sql-and-the-database-tab) |
+| **Lessons and classroom** | 20 lessons, 60 checkpoints, checked by running the program; rosters, handouts, marking, reports | [lessons/](docs/lessons/README.md) |
+| **Automation** | JSON-RPC over stdin/stdout, a standalone `twc` compiler, and scriptable screenshots and exports | [API](docs/API.md), [USER_GUIDE](docs/USER_GUIDE.md#7-terminal-tools) |
+| **Presentation and access** | 33 themes, high contrast, 100/125/150% text, focus mode, CRT settings and four monitor presets, presentation mode | [USER_GUIDE](docs/USER_GUIDE.md#9-lessons-classroom-and-appearance) |
+| **Help that covers the whole thing** | `F1` context help, `Ctrl+F1` keyword inspector, the documentation browser, a guided tour and a shortcut reference | [Help](#help-from-inside-the-studio) |
 
 ### Multi-Language Support
 
@@ -72,16 +114,25 @@ terminal compiler and the automation service; see [docs/USER_GUIDE.md](docs/USER
 
 - **Code editor** — line-number gutter, current-line highlight, 4-space tab stops, per-language file handling, per-language syntax colouring (comments, strings, numbers, keywords), and find/replace with go-to-line (F3 for the next match, Ctrl+L for a line number)
 - **Output console** — program output as it is produced, with interpreter errors in their own tab
-- **Turtle canvas** — the drawing appears as it is made, with zoom, pan, grid, auto-fit and a turtle marker; export it to PNG/JPEG/BMP (or SVG when the build has Qt6 Svg) with Ctrl+E, or copy it to the clipboard, with or without the grid on screen
-- **Printing and export** — File > Print Code (Ctrl+P) sends the program to a printer as the same A4 page the PDF export writes, and File > Print Drawing sends the drawing scaled to fit the page; both entries appear only in a build with Qt6 PrintSupport. The program also exports as PDF, and the program, output and drawing as one HTML page
+- **Turtle canvas** — the drawing appears as it is made, with zoom, pan, grid, auto-fit and a turtle marker; export it to PNG/JPEG/BMP (or SVG when the build has Qt6 Svg) with Ctrl+E, or copy it to the clipboard, with or without the grid on screen. A **scrubber** replays the drawing stroke by stroke, and **Record Canvas as GIF…** captures it while it happens (still frames merge into one, so an idle minute is a pause, not a hundred pictures)
+- **Printing and export** — File > Print Code (Ctrl+P) sends the program to a printer as the same A4 page the PDF export writes, and File > Print Drawing sends the drawing scaled to fit the page; both entries appear only in a build with Qt6 PrintSupport. The program also exports as PDF, and the program, output and drawing as one HTML page; a lesson session exports as Markdown or PDF
 - **Profiling** — View > Profile Run times every statement of a line-by-line program and ends with a report of line, hits, time and share, longest first. It is off at every launch because timing costs
 - **Terminal (opt-in)** — Settings > Workspace adds a 💻 Terminal tab that runs commands through your own shell, starting in the current document's folder. It is off by default, stopped and removed in presentation and player modes, and is a command line rather than a terminal emulator: no prompts, no job control, no full-screen programs
 - **Documents** — tabs, per-file language detection, unsaved-change prompts, new/open/save/save-as, a recent-files menu, and the files from the last session reopened at launch
+- **Find and navigate** — find, find and replace (`Ctrl+F`, `Ctrl+H`), next/previous (`F3`, `Shift+F3`), go to line (`Ctrl+L`), and **Find in Files** (`Ctrl+Shift+F`) across a folder or project
+- **Command palette** — `Ctrl+Shift+P` or `F10` lists every action in the window, so a feature you cannot find in a menu is three letters away
+- **Snippets** — `Ctrl+Shift+I` inserts a language-aware example from a catalogue the build installs (`share/time-warp-studio/snippets.json`; `TIME_WARP_SNIPPETS` points at your own)
+- **Outline** — a dock listing every named place in the current program — procedures, labels, functions, methods — as a jump list
+- **Format and lint** — `Ctrl+I` re-indents the document for its language, preserving line endings and blank lines, and the editor's lint runs as you type (Settings > Editor turns either off)
+- **Autosave and version history** — snapshots on a timer you set, and **File > Version History…** (`Ctrl+Alt+V`) to read or restore any of them, including buffers that were never saved
+- **Two panes** — **Split Editor Right** (`Ctrl+\`) shows two documents side by side; **Run Both Panes** (`Ctrl+Alt+B`) runs both headless and reports time, turtle calls and each program's own output in one table — a comparison, not a race
 - **Run controls** — Run (F9) and Stop, with a status bar showing language, cursor position and execution state
+- **Presentation and access** — 33 themes including the retro CRT sets, a High Contrast variant of whichever is active, 100/125/150% text sizes, focus mode, CRT settings with four monitor presets, and **Presentation Mode** (`Shift+F11`, `Esc` to leave) for teaching from the front
 - **Inspection** — a 🔍 **Variables** panel listing every binding with its type and value, filtered by name, and a ⚡ **Telemetry** HUD showing what the run cost and did: steps used, engine time, steps per second, last line, recursion depth, call stack, output lines, drawing commands, BASIC's memory window, and — beside the engine's own counters — the IDE's wall clock and the ink that actually reached the canvas
 - **Debugging** — gutter breakpoints and a 🐞 **Debug** panel (Continue, Pause, Step In/Over/Out, Stop) plus Debug/Continue/Trace on the toolbar, working in all ten languages: at a statement, a Logo top-level statement, a Smalltalk message send or a CHIP-8 instruction. Scheme additionally shows the call stack and the paused frame's bindings; for a native run the Variables panel shows the bindings the pause stopped in. **Watch expressions** evaluate arithmetic over the paused bindings, and **data breakpoints** stop when a named variable changes value
 - **Projects** — a 🗂 **Projects** dock groups programs into named groups without moving them on disk. Create or open a `.twproject`, add files, a whole folder (its programs are grouped by subfolder), and groups, drag a file between groups, and the project reopens with the session; missing files are marked rather than forgotten
 - **HB-1 computer** — Tools > **HB-1 Computer…** opens a self-contained home computer: a boot intro and prompt, a selectable language ROM for all ten languages, TEXT/SPLIT/GRAPHICS modes sharing one CRT, and a PROGRAM editor beside the turtle canvas. Each ROM keeps its own program, and the machine persists its ROM, mode and memory between sessions. **CONFIG** changes its boot ROM and screen, start-up message, phosphor (green, amber, white or ice), text sizes and CRT glass, and **HB DOS** gives it a disk of named programs with `CATALOG`, `SAVE`, `LOAD`, `RUN "name"`, `DELETE`, `RENAME`, `LOCK`, `VERIFY` and `INIT`, catalogued in the manner of Apple DOS 3.3. It is also `./run.sh --computer`
+- **CHIP-8 machine** — Tools > **CHIP-8 Emulator…** (`Ctrl+Shift+M`) is the other machine: a live 60 Hz CHIP-8 with a 64×32 screen (128×64 in SuperChip hi-res), a clickable keypad mirrored on the PC keyboard, a register/memory/listing inspector, single-step, adjustable speed, sound and a ROM library that browses a folder you own. It assembles listings as well as running binary ROMs, and the same programs run in the editor's whole-program mode — see [the CHIP-8 manuals](docs/chip8/README.md)
 - **REPL bar** — the line under the editor runs a command in the current document's language. BASIC, FOCAL, PILOT, COMAL, REXX, APL, Logo and Scheme keep bindings between commands (`LET X = 5` then `PRINT X`); Scheme also keeps definitions and echoes expression values. In BASIC, `?` is shorthand for `PRINT`, a numbered line is stored in the editor as a program line, and `RUN`, `LIST` and `NEW` work as direct-mode commands. Smalltalk and CHIP-8 run each submission as a whole program, so their state resets
 - **SQL database** — a 🗄 **Database** tab opens or creates a SQLite file, lists its tables, runs scripts and shows the result grid. A program reaches the same connection with `SQL SELECT ...` (BASIC, FOCAL, PILOT, COMAL, REXX and APL), `SQL ...` in Logo, `(sql "...")` in Scheme, and `SQL run: '...'` in Smalltalk
 - **Automation** — `./api` speaks the JSON-RPC API on stdin/stdout: run a program, keep a REPL session, start and step a debug session, query SQL, edit a project including folder import, and evaluate watches. See [docs/API.md](docs/API.md)
@@ -136,6 +187,23 @@ Variables panel shows the bindings the pause stopped in.
 - Progress is saved per lesson and hints are counted; neither a reset nor a marking pass can lose a learner's work
 
 See [docs/lessons/](docs/lessons/README.md) for the guides.
+
+### Help from inside the Studio
+
+The application documents itself, from the thing you are looking at:
+
+| Key / menu | What it does |
+| --- | --- |
+| `F1` | **Context Help** — the manual section for the panel, language or control with focus |
+| `Ctrl+F1` | **Keyword Inspector** — the command reference entry for a word under the cursor |
+| Help > **Documentation** | The documentation browser: every guide in `docs/`, indexed from [INDEX.md](docs/INDEX.md), including the [HB-1](docs/hb1/README.md) and [CHIP-8](docs/chip8/README.md) manuals |
+| Help > **Getting Started** | The first-run path through the Studio |
+| `F12` | The **Guided Tour**, a one-time walk through the window with a card on each part |
+| Help > **Keyboard Shortcuts** | Every shortcut, in one dialog, generated from the actions themselves |
+| `Ctrl+Shift+P` or `F10` | The **Command Palette** — every action by name, whether or not it is in a menu |
+
+The browser reads the same Markdown files this repository ships, so a teacher's
+copy of the manuals and the application's own help are one set of documents.
 
 ### Educational Content
 
@@ -197,8 +265,9 @@ teaching-tools
 
 | If you are | Start here |
 | ---------- | ---------- |
+| Meeting the machines | [the HB-1](docs/hb1/README.md) and [the CHIP-8](docs/chip8/README.md), introduced in [MACHINES.md](docs/MACHINES.md) |
 | Learning one of the languages | [`docs/tutorials/`](docs/tutorials/) |
-| Use projects, the REPL, the HB-1 computer, SQL, debugging or the API | [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) |
+| Use projects, the REPL, SQL, debugging or the API | [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) |
 | Working through the lessons | [`docs/lessons/README.md`](docs/lessons/README.md) |
 | Teaching a class | [`docs/lessons/teacher-guide.md`](docs/lessons/teacher-guide.md) |
 | Building or porting | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`native/README.md`](native/README.md) |

@@ -716,7 +716,9 @@ void Chip8Machine::step() {
         return;
     }
     if (opcode == 0x00E0) {
-        framebuffer_.assign(static_cast<std::size_t>(kChip8ScreenWidth) * kChip8ScreenHeight, 0);
+        // The grid's own size, not the original one: clearing in hi-res must not
+        // shrink the framebuffer the next DRAW indexes.
+        framebuffer_.assign(static_cast<std::size_t>(screen_width()) * screen_height(), 0);
         return;
     }
     if (opcode == 0x00EE) {

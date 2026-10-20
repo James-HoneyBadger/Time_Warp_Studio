@@ -12,7 +12,7 @@ PYTHON ?= $(shell test -x .venv/bin/python3 && echo .venv/bin/python3 || echo py
 FORWARDED := build run test test-debug asan clean distclean info test-list \
              screenshot reset-layout
 
-.PHONY: help $(FORWARDED) engine-test smoke command-matrix repl-matrix test-all lint lint-md
+.PHONY: help $(FORWARDED) engine-test smoke command-matrix repl-matrix test-all lint lint-md doc-links
 
 help:
 	@echo "Time Warp Studio"
@@ -20,7 +20,7 @@ help:
 	@echo "The IDE is the Qt application in $(NATIVE)/. Targets that forward to it:"
 	@echo "  build         Build the Qt IDE (Release)"
 	@echo "  run           Build it and run it"
-	@echo "  test          Run the 20 C++ suites"
+	@echo "  test          Run the 21 C++ suites"
 	@echo "  test-debug    Run them in the Debug tree"
 	@echo "  asan          Run them under AddressSanitizer (ASAN=undefined for UBSan)"
 	@echo "  screenshot    Capture a window screenshot"
@@ -31,7 +31,8 @@ help:
 	@echo "  smoke         Every example program, through the real bridge"
 	@echo "  test-all      All of the above"
 	@echo "  lint          Ruff over the bridge"
-	@echo "  lint-md       Markdownlint over every tracked Markdown file"
+	@echo "  lint-md       Markdownlint over every tracked Markdown file
+	@echo "  doc-links     Every relative link and #anchor in the guides resolves""
 	@echo ""
 	@echo "See 'make -C $(NATIVE) help' for everything the native tree offers."
 
@@ -50,10 +51,15 @@ command-matrix:
 repl-matrix:
 	@$(PYTHON) $(NATIVE)/tools/repl_matrix.py
 
-test-all: test engine-test smoke command-matrix repl-matrix
+test-all: test engine-test smoke command-matrix repl-matrix doc-links
 
 lint:
 	@$(PYTHON) -m ruff check $(NATIVE)/bridge
+
+# The guides link to each other; a dead link is how a reader learns the map is wrong.
+# Python only, because the documentation job must not need the C++ build.
+doc-links:
+	@$(PYTHON) $(NATIVE)/tools/check_doc_links.py
 
 # Markdown lint over the repository's own Markdown. `git ls-files` is what keeps the
 # virtual environment, the build trees and node_modules out of the run without a

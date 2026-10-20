@@ -2,6 +2,10 @@
 //
 // The HB-1: a self-contained home computer with a selectable ROM.
 //
+// It is one of the Studio's two machines, and it has its own books:
+// `docs/MACHINES.md` for why it exists, `docs/hb1/README.md` for the
+// machine, and `docs/hb1/inside.md` for the code below.
+//
 // The rest of the IDE is a modern tool -- tabs, docks, inspectors -- and this is
 // the machine a 1980s learner would have sat in front of. One screen holds the
 // text and the graphics, an intro sits above it, and a prompt waits below. The

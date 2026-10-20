@@ -3,6 +3,8 @@
 // The HB-1's configuration: what the machine powers up into, what its
 // screen looks like, and how its prompt behaves.
 //
+// The user-facing reference for every field below is `docs/hb1/config.md`.
+//
 // This is separate from the editor's Preferences for the same reason the machine
 // is a separate window: a 1980s computer had a monitor, a boot ROM and a keyboard,
 // and none of those are editor settings. Keeping them in one struct means the

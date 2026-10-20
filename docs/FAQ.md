@@ -33,6 +33,31 @@ programming languages in one IDE, with an integrated turtle graphics canvas and
 an output console. It is a C++20 / Qt6 application; every language runs in C++
 inside it, and the PySide6 implementation that preceded it has been removed.
 
+It also carries two complete machines: the **HB-1**, a 1982 home computer from a
+parallel universe, and the **CHIP-8**, the 1977 virtual machine. Both are real
+programs you can type at, debug and save to — see
+[the machines](MACHINES.md).
+
+### What can the Studio do?
+
+The short inventory: ten languages on native engines; an editor with find in
+files, snippets, an outline, formatting, live lint, autosave and version history;
+a turtle canvas with zoom, pan, scrubber playback, GIF recording and raster, SVG,
+PDF and HTML export; a debugger that works in all ten languages, with watches,
+data breakpoints, a Variables panel and telemetry; projects; SQLite; 20 lessons
+and 60 checkpoints with classroom tools; a JSON-RPC API and a standalone `twc`
+compiler; 33 themes with high contrast and text sizes; the two machines; and help
+inside the application. The full list, with links, is in the
+[README](../README.md#what-the-studio-can-do).
+
+### Why is there a home computer from 1982 in my IDE?
+
+Because a constraint is the best teacher. The HB-1 is a machine from a parallel
+universe where the design sense of the next forty years arrived in time for the
+8-bit boom: a prompt, a sector-counted disk and 64K of memory, with modern engines
+behind them. Nothing about it is decorative — every word and switch does something
+you can watch. [The machines](MACHINES.md) explains the premise item by item.
+
 ### Which languages are supported?
 
 BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX and Smalltalk. Each
@@ -125,6 +150,17 @@ contents tree on the left; Help → Getting Started opens the student guide. The
 same pages are in `docs/` in the repository. Start with the
 [user guide](USER_GUIDE.md) for the IDE and the
 [language guide](LANGUAGE_GUIDE.md) for commands.
+
+### Where are the HB-1 and CHIP-8 manuals?
+
+The machine books are in this folder, and Help → Documentation lists them:
+
+- [the machines](MACHINES.md) — why there are two, and what they share;
+- [HB-1 Owner's Manual](hb1/README.md), [ROMs](hb1/roms.md),
+  [HB DOS](hb1/hb-dos.md), [CONFIG](hb1/config.md),
+  [Inside the HB-1](hb1/inside.md);
+- [CHIP-8 Machine Manual](chip8/README.md), [the assembler](chip8/assembly.md),
+  [the instruction set](chip8/instruction-set.md).
 
 ### How do I see all keyboard shortcuts?
 
@@ -235,8 +271,20 @@ between sessions. **CONFIG** (or `Ctrl+,`) sets what the machine boots into, the
 start-up message, the phosphor — green, amber, white or ice — the text sizes and
 the CRT glass, and **HB DOS** saves programs to a disk with `SAVE "NAME"`,
 `LOAD "NAME"`, `CATALOG` and the rest of a 1980s DOS.
-[The user guide](USER_GUIDE.md#4-the-hb-1-computer) has the prompt commands,
-the DOS commands, the per-ROM prompts and every setting.
+[The user guide](USER_GUIDE.md#4-the-hb-1-computer) has the prompt commands;
+the **[Owner's Manual](hb1/README.md)** has everything else, and the
+**[HB DOS reference](hb1/hb-dos.md)** every disk word and refusal.
+
+### Is there a CHIP-8 machine?
+
+Yes, two views of one. The editor's CHIP-8 language runs a listing as a whole
+program for lessons and parity checks; **Tools → CHIP-8 Emulator** (`Ctrl+Shift+M`)
+runs it live at 60 frames a second with a keypad, single-step, an inspector and
+adjustable speed. It assembles listings and loads binary ROMs, and the ROM library
+browses a folder you own — the Studio ships no third-party ROMs.
+Start with [the CHIP-8 machine manual](chip8/README.md), then
+[the assembler](chip8/assembly.md) and
+[the instruction set](chip8/instruction-set.md).
 
 ### Why does my program run forever?
 
@@ -350,7 +398,7 @@ can run a program, keep a REPL session, start/step/stop a debug session, run SQL
 against the open database, create and edit a project (including recursive folder
 import), and evaluate watch expressions. It also supports batches, notifications
 and standard JSON-RPC error codes. `docs/API.md` lists every method; the
-[user guide](USER_GUIDE.md#7-automation) shows a worked session. The C++ libraries
+[user guide](USER_GUIDE.md#8-automation) shows a worked session. The C++ libraries
 behind it (`timewarp::lang`, `timewarp::scheme`, `timewarp::sql`,
 `timewarp::project`) are linkable by another program.
 
@@ -516,7 +564,7 @@ the problem, and the error message.
 
 ### How can I contribute?
 
-Read [CONTRIBUTING.md](../CONTRIBUTING.md) and the [architecture guide](ARCHITECTURE.md). For a new language, see [Adding a New Language](ARCHITECTURE.md#adding-a-new-language).
+Read [CONTRIBUTING.md](../CONTRIBUTING.md) and the [architecture guide](ARCHITECTURE.md). For a new language, see [Adding a New Language](ARCHITECTURE.md#adding-a-language).
 
 ### Where do I report a security issue?
 

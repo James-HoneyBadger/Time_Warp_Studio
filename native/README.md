@@ -1312,6 +1312,14 @@ strokes a circle costs.
   `Machine`), with drawing on the same canvas queue as a normal run. BASIC has a
   direct mode on top: numbered lines are stored in the editor in numeric order,
   `LIST`/`RUN`/`NEW` operate on the document, and `?` is PRINT.
+* **The CHIP-8 machine** is the assembler and `Chip8Machine` in `src/lang/chip8.cpp`
+  — the editor's whole-program executor — plus `Chip8Window` and `Chip8Emulator`
+  for the live path: a 60 Hz `QTimer`, 1–2000 opcodes a frame, the delay and sound
+  timers, a keypad mirrored on the PC keyboard, a snapshot inspector (registers,
+  memory, listing), a file loader that accepts a listing or a binary ROM, and
+  `Chip8LibraryDialog`, which browses a folder the user owns. No ROMs are bundled:
+  most circulating CHIP-8 programs are somebody else's copyright. Manuals:
+  `docs/chip8/README.md`, `docs/chip8/assembly.md`, `docs/chip8/instruction-set.md`.
 * **The HB-1** is `RetroComputerWindow`: one CRT with a boot intro, a
   prompt, a ROM selector for all ten languages, TEXT/SPLIT/GRAPHICS modes, a real
   `CodeEditor` on its PROGRAM page and a `TurtleCanvas` beside it. It owns its own
@@ -1323,7 +1331,9 @@ strokes a circle costs.
   command. `hb_dos.{hpp,cpp}` is **HB DOS 1.0**, the machine's disk: one volume of
   named programs in the style of Apple DOS 3.3, with `CATALOG`/`SAVE`/`LOAD`/`RUN`/
   `DELETE`/`RENAME`/`LOCK`/`UNLOCK`/`VERIFY`/`TYPE`/`STATUS`/`INIT`, sizes in
-  256-byte sectors and a JSON image under `~/.time_warp/disks`.
+  256-byte sectors and a JSON image under `~/.time_warp/disks`. Its manuals are
+  `docs/hb1/README.md` and the rest of `docs/hb1/`; the premise behind both
+  machines is `docs/MACHINES.md`.
 * **The Database tab** is `SqlPanel` over `timewarp_sql`, sharing its connection with
   every program's `SQL` statement.
 * **Automation** is `time_warp_api` (`api::Server`) and the linkable libraries behind

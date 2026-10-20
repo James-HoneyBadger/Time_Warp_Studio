@@ -2,6 +2,9 @@
 //
 // A live CHIP-8 machine: wall-clock frames, key state and pause/step.
 //
+// The manual is `docs/chip8/README.md`; the machine it drives is documented in
+// `docs/chip8/instruction-set.md`.
+//
 // The engine's `execute_chip8` runs a program to completion, which is what the
 // parity gates and the lesson checks need. A learner pressing Run on a game needs
 // the other model: a fixed number of opcodes per 60 Hz frame, timers that follow

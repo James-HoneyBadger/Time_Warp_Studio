@@ -9,7 +9,7 @@ The Studio exposes two API surfaces:
   another program. `timewarp::lang`, `timewarp::scheme`, `timewarp::sql`,
   `timewarp::project` and `timewarp::api`.
 
-The [user guide](USER_GUIDE.md#7-automation) has a worked introduction; this page is
+The [user guide](USER_GUIDE.md#8-automation) has a worked introduction; this page is
 the method and payload reference.
 
 Both are local. The automation API has no socket, no port and no network

@@ -110,6 +110,12 @@ smaller examples beside them each teach one idea; the showcases are the tour.
 
 ## CHIP-8
 
+Every `.ch8` here is a **listing** — readable assembler source, not a binary ROM —
+so it can be opened, edited and re-assembled. The language is documented in
+[the CHIP-8 manuals](../docs/chip8/README.md): the
+[machine](../docs/chip8/README.md), the [assembler](../docs/chip8/assembly.md) and
+[the instruction set](../docs/chip8/instruction-set.md).
+
 | File | Description |
 | --- | --- |
 | `chip8/showcase.ch8` | A montage: hi-res mode, the font, sprites, collision, BCD, arithmetic and the keypad |

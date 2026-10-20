@@ -18,7 +18,11 @@ BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 **Tools > HB-1 Computer** (`Ctrl+Alt+W`) boots all ten languages in one
 home-computer screen: a ROM selector, a prompt, and the same turtle canvas. It is
 the shortest way to try a command from these tables without opening a file — see
-[the user guide](USER_GUIDE.md#4-the-hb-1-computer).
+[the HB-1 Owner's Manual](hb1/README.md) and, for each language's prompt and
+direct mode, [the ROM library](hb1/roms.md). The CHIP-8 section below is joined by
+[the CHIP-8 machine manual](chip8/README.md),
+[the assembler](chip8/assembly.md) and
+[the instruction set](chip8/instruction-set.md).
 
 ---
 
@@ -1202,7 +1206,10 @@ is two things in one file: a small **assembler** that turns mnemonics into
 opcodes, and the **machine** that runs them.
 
 Executed whole-program. An opcode stream cannot be interpreted a line at a time,
-so the listing is assembled in full and then run.
+so the listing is assembled in full and then run. For the live machine — a clock,
+a keypad, an inspector and SuperChip — see
+[the CHIP-8 machine manual](chip8/README.md); for every opcode and quirk, see
+[the instruction set](chip8/instruction-set.md).
 
 A `.ch8` file containing a **NUL byte** is a binary ROM rather than a listing:
 its bytes are copied to `0x200` unchanged, up to the 3584 that fit before the end

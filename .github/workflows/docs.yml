@@ -15,16 +15,20 @@ on:
     paths:
       - 'docs/**'
       - 'README.md'
+      - 'Examples/CATALOG.md'
       - 'native/bridge/time_warp/features/lessons.json'
       - 'native/tools/teach.py'
+      - 'native/tools/check_doc_links.py'
       - '.github/workflows/docs.yml'
   pull_request:
     branches: [ main ]
     paths:
       - 'docs/**'
       - 'README.md'
+      - 'Examples/CATALOG.md'
       - 'native/bridge/time_warp/features/lessons.json'
       - 'native/tools/teach.py'
+      - 'native/tools/check_doc_links.py'
       - '.github/workflows/docs.yml'
 
 jobs:
@@ -56,7 +60,16 @@ jobs:
             docs/lessons/student-guide.md \
             docs/lessons/teacher-guide.md \
             docs/lessons/FORMAT.md \
-            docs/lessons/plans/README.md
+            docs/lessons/plans/README.md \
+            docs/MACHINES.md \
+            docs/hb1/README.md \
+            docs/hb1/roms.md \
+            docs/hb1/hb-dos.md \
+            docs/hb1/config.md \
+            docs/hb1/inside.md \
+            docs/chip8/README.md \
+            docs/chip8/assembly.md \
+            docs/chip8/instruction-set.md
           do
             if [ ! -f "$required" ]; then
               echo "::error file=$required::promised by docs/INDEX.md, and not here"
@@ -81,6 +94,12 @@ jobs:
           done
           test "$missing" -eq 0
           echo "$(find docs/tutorials -maxdepth 1 -name '*.md' | wc -l) tutorials present."
+
+      # The guides are a set of books that link to each other, and a dead link is
+      # how a reader discovers the map is wrong. Checked with python3 alone, so a
+      # documentation pull request does not depend on the C++ build.
+      - name: Every relative link and anchor resolves
+        run: python3 native/tools/check_doc_links.py
 
       # The plans are generated from the curriculum. Regenerating them and finding
       # a diff means somebody changed a lesson and did not update the document a

@@ -2,6 +2,8 @@
 //
 // The interactive CHIP-8 window: screen, keypad, controls and inspector.
 //
+// The manual is `docs/chip8/README.md`.
+//
 // It is a separate window rather than a mode of the main editor because a game
 // and a lesson want different things from the same document: the editor keeps
 // its whole-program Run, and this window runs the same bytes at sixty frames a

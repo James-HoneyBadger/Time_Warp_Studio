@@ -753,6 +753,35 @@ void test_chip8_hires_mode_changes_the_grid_and_starts_blank() {
     TW_CHECK_EQ(lit_pixels(lores), std::size_t{0});
 }
 
+void test_chip8_cls_in_hires_keeps_the_hi_res_grid() {
+    // CLS is 00E0. In hi-res the grid is 128x64, and clearing has to keep it:
+    // a 64x32 buffer here would let the next DRAW write outside the frame and
+    // paint nothing below the sixteenth row.
+    const Chip8Machine cleared = run_to_halt(
+        "start: DW 0x00FF\n"
+        "       CLS\n"
+        "       HALT");
+    TW_CHECK(cleared.hi_res());
+    TW_CHECK_EQ(cleared.framebuffer().size(),
+                static_cast<std::size_t>(timewarp::lang::kChip8HiResWidth) *
+                    timewarp::lang::kChip8HiResHeight);
+
+    const Chip8Machine bottom = run_to_halt(
+        "start: DW 0x00FF\n"
+        "       CLS\n"
+        "       LD V0, 0\n"
+        "       LD V1, 63\n"
+        "       LD I, dot\n"
+        "       DRW V0, V1, 1\n"
+        "       HALT\n"
+        "dot:   DB 0x80");
+    TW_CHECK_EQ(bottom.framebuffer().size(),
+                static_cast<std::size_t>(timewarp::lang::kChip8HiResWidth) *
+                    timewarp::lang::kChip8HiResHeight);
+    TW_CHECK_EQ(static_cast<int>(bottom.framebuffer()[63 * timewarp::lang::kChip8HiResWidth]),
+                1);
+}
+
 void test_chip8_large_sprite_is_sixteen_by_sixteen_in_hires() {
     std::string rows;
     for (int index = 0; index < 16; ++index) {
@@ -2120,6 +2149,7 @@ int main() {
     test_chip8_drawing_twice_erases_and_reports_the_collision();
     test_chip8_pixels_wrap_around_the_screen();
     test_chip8_hires_mode_changes_the_grid_and_starts_blank();
+    test_chip8_cls_in_hires_keeps_the_hi_res_grid();
     test_chip8_large_sprite_is_sixteen_by_sixteen_in_hires();
     test_chip8_large_sprite_doubles_columns_in_lores();
     test_chip8_scroll_down_moves_the_drawing_and_clears_the_top();

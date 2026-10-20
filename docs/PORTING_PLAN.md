@@ -990,7 +990,7 @@ Every phase must leave all of these green, in this order:
 cmake --build native/build -j
 ctest --test-dir native/build --output-on-failure        # 21 suites
 python3 native/tools/differential_check.py native/build/expr_cli
-python3 native/tools/lang_differential_check.py          # 464/0/9
+python3 native/tools/lang_differential_check.py          # 474/0/9
 python3 native/tools/example_smoke.py                   # 60 programs
 python3 native/tools/command_matrix.py                   # no new untested rows
 PYTHONPATH=native/bridge python3 -m pytest -q

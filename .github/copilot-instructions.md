@@ -294,7 +294,12 @@ Scripts/                       - audit_interpreters.py, generate_icon.py,
   bit and 256-byte sector accounting, persisted as a JSON image under
   `~/.time_warp/disks`; the window's `CATALOG`/`SAVE`/`LOAD`/`RUN "name"`/`DELETE`/
   `RENAME`/`LOCK`/`UNLOCK`/`VERIFY`/`TYPE`/`STATUS`/`INIT` words are thin calls
-  into it, and `INIT` must be said twice
+  into it, and `INIT` must be said twice. Its manuals are `docs/hb1/`.
+- **CHIP-8 machine**: `native/src/lang/chip8.cpp` (assembler + `Chip8Machine`,
+  also the editor's whole-program executor) and `native/src/ui/chip8_*.cpp`
+  (`Chip8Window`, the 60 Hz `Chip8Emulator`, the screen, the ROM library). Manuals:
+  `docs/chip8/`. Both machines are introduced, and the design premise stated, in
+  `docs/MACHINES.md` — the two machines are a centrepiece, not a demo.
 - **The bridge**: `native/bridge/worker.py` + `native/src/bridge/python_worker.cpp` —
   runs programs *and* checks lessons, so a learner's verdict and a teacher's mark are
   one function's answer
@@ -393,6 +398,26 @@ by adding its record to the table and, if it needs one, a high-contrast variant;
 - Error messages prefixed with emoji indicators (`❌`, `ℹ️`, `🎨`, `🚀`)
 - Graceful degradation for optional dependencies
 - Consistent Python formatting (PEP 8)
+
+## Documentation map
+
+Each fact has one home; the other guides link to it rather than restating it.
+
+| Book | Owns |
+| --- | --- |
+| `docs/MACHINES.md` | The two machines as a set, and the parallel-universe premise item by item |
+| `docs/hb1/` | The HB-1: owner's manual, ROM library, HB DOS reference, CONFIG reference, engineering companion |
+| `docs/chip8/` | The CHIP-8: machine manual, assembler, instruction set |
+| `docs/USER_GUIDE.md` | The IDE: projects, the REPL bar, debugging, SQL, terminal, automation, appearance |
+| `docs/LANGUAGE_GUIDE.md`, `docs/tutorials/` | Every command, and how to learn each language |
+| `docs/lessons/` | The curriculum, and the student and teacher guides |
+| `docs/ARCHITECTURE.md`, `native/README.md` | How it is built and why |
+| `docs/API.md` | The JSON-RPC automation surface |
+
+`README.md` is the front door and carries the capability inventory that links into
+all of the above. `.github/workflows/docs.yml` gates the set: every promised file
+must exist, every lesson plan must match the curriculum, and (with
+`native/tools/check_doc_links.py`) every relative link and anchor must resolve.
 
 ## GitHub surfaces
 

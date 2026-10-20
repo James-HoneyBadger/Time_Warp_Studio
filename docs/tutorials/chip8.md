@@ -13,6 +13,12 @@ So Time Warp Studio's CHIP-8 is two things at once:
 It runs whole-program, because an opcode stream cannot be interpreted a line at a
 time: the listing is assembled in full and then run.
 
+This tutorial teaches the language by building programs. The complete references
+are beside it: [the assembler](../chip8/assembly.md) for the listing syntax and
+[the instruction set](../chip8/instruction-set.md) for every opcode and quirk. To
+run a program live — a clock, a keypad, single-step and an inspector — open
+[the CHIP-8 machine](../chip8/README.md).
+
 ---
 
 ## 1. A program

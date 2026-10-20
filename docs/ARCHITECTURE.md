@@ -302,26 +302,52 @@ touches it.
   scrubber be a view control rather than a mode the rest of the window has to
   know about.
 
-### The CHIP-8 emulator window
+### The two machines
+
+Both machines are documented as machines, not as features: [MACHINES.md](MACHINES.md)
+is the premise, the [HB-1 books](hb1/README.md) and the
+[CHIP-8 books](chip8/README.md) are the manuals, and
+[Inside the HB-1](hb1/inside.md) is the engineer's companion to this section. The
+short version: they are not skins. Each owns its clock, its input and its
+storage, and both draw through the same queue as the editor.
+
+### The CHIP-8 machine
+
+CHIP-8 is two things in this tree, and the split is deliberate: `assemble_chip8`
+turns a listing into bytes, and `Chip8Machine` executes bytes. An assembled wrong
+opcode and a wrongly executed right opcode are different bugs, so they have
+different tests. `execute_chip8` binds them into the editor's whole-program
+executor.
 
 `Chip8Window` is a second top-level window, not a mode of the main one: the
 editor's Run keeps the whole-program executor, while `Chip8Emulator` owns a
 `QTimer` at about 60 Hz, executes a configurable number of opcodes per frame,
 ticks the delay and sound timers once a frame, and applies key presses as they
-arrive. `Chip8Screen` paints the 64x32 framebuffer with an integer scale,
-`Chip8Keypad` mirrors the same key state, and the inspector reads a
-`Chip8Snapshot` copied after each frame. The window is parented to `MainWindow`
-and reused; closing it alone ends the run, and the next invocation builds a
-fresh machine rather than touching a dead one.
+arrive. The clock and the keypad are the only things the window adds — the
+assembler, the machine, the fonts and the quirks are the same code the editor
+runs. `Chip8Screen` paints the 64x32 framebuffer (128x64 in SuperChip hi-res)
+with an integer scale, `Chip8Keypad` mirrors the same key state, and the inspector
+reads a `Chip8Snapshot` copied after each frame, so it can never read a
+half-executed instruction. The window is parented to `MainWindow` and reused;
+closing it alone ends the run, and the next invocation builds a fresh machine
+rather than touching a dead one. The API and the quirks are in
+[the instruction set](chip8/instruction-set.md).
 
 ### The HB-1
 
-`RetroComputerWindow` is the second top-level machine window, alongside the
-CHIP-8 emulator. It is deliberately self-contained: its own `CanvasCommandQueue`
-and `CanvasBridge`, its own persistent `ReplRunner`, and its own `NativeRunner`
-for a whole-program `RUN`. Nothing in it shares state with the editor's REPL bar,
-so a program started from the computer cannot inherit a binding from a command
-typed in the IDE.
+`RetroComputerWindow` is the third top-level machine window, alongside the CHIP-8
+emulator. It is deliberately self-contained: its own `CanvasCommandQueue` and
+`CanvasBridge`, its own persistent `ReplRunner`, and its own `NativeRunner` for a
+whole-program `RUN`. Nothing in it shares state with the editor's REPL bar, so a
+program started from the computer cannot inherit a binding from a command typed in
+the IDE.
+
+The fiction is the design brief, not a coat of paint. The constraints are period —
+one ROM socket, 512 sectors of 256 bytes, a prompt, four phosphors — and every
+modern capability behind them is there to remove the cruelty, not the character.
+[Inside the HB-1](hb1/inside.md) is the long version; the four comments it cites
+(`hb_dos.hpp`, `retro_settings.hpp`, `retro_computer.hpp`, `panels.hpp`) are the
+short one.
 
 The ROM selector is a `Language`; `romFor()` supplies the version, prompt and boot
 note, and `setLanguage()` performs a cold boot -- stop both engines, swap the

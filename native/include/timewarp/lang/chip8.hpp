@@ -3,6 +3,9 @@
 // CHIP-8: a two-pass assembler and the 1977 machine, as one whole-program
 // executor.
 //
+// The manuals are `docs/chip8/assembly.md` (how to write a listing) and
+// `docs/chip8/instruction-set.md` (what each opcode does, quirks included).
+//
 // The reference implementation is `time_warp/languages/chip8.py`, and the
 // behaviour here is that file's: the same mnemonics, the same 1977 choices
 // (Vx shifts in place, sprites wrap, FX55/FX65 leave I one past the block), the

@@ -76,7 +76,10 @@ Three recipes cover most contributions:
   the plans with `teach.py write-plans docs/lessons/plans`.
 - **Documentation.** `.github/workflows/docs.yml` enforces the parts that can be
   checked: every guide [docs/INDEX.md](docs/INDEX.md) promises exists, every
-  language has a tutorial, and the lesson plans match the curriculum.
+  relative link and `#anchor` resolves (`make doc-links`), every language has a
+  tutorial, and the lesson plans match the curriculum. Each fact has one home —
+  the [HB-1](docs/hb1/README.md) and [CHIP-8](docs/chip8/README.md) books own their
+  machines, and the IDE guide links to them rather than restating them.
 
 A change that alters a program's output is a documentation change too: the guides
 and the lessons contain transcripts of what programs print.
@@ -449,6 +452,9 @@ relevant `native/tests/*_tests.cpp`; for the bridge engine:
 - `docs/ARCHITECTURE.md` - If internal change
 - `docs/INSTALLATION.md` - If build or run steps change
 - `docs/LANGUAGE_GUIDE.md` - If language syntax
+- `docs/hb1/` - If the HB-1's words, disk, settings or screen change
+- `docs/chip8/` - If the assembler, an opcode or the emulator window changes
+- `docs/MACHINES.md` - If either machine, or what they share, changes
 - `docs/ROADMAP.md` - If a planned item lands or is deferred
 - `native/README.md` - If the Qt application's design or behaviour changes
 

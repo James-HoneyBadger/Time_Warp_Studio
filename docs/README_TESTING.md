@@ -86,7 +86,7 @@ both sides seed from the OS, so they cannot agree by construction.
 ```bash
 python3 native/tools/differential_check.py native/build/expr_cli
 cd native/tools && python3 scheme_differential_check.py
-python3 native/tools/lang_differential_check.py   # 483 programs, 0 differences
+python3 native/tools/lang_differential_check.py   # 474 programs, 0 differences, 9 skipped
 ```
 
 ## Curriculum and documentation gates
@@ -95,12 +95,16 @@ python3 native/tools/lang_differential_check.py   # 483 programs, 0 differences
 python3 native/tools/teach.py validate                 # lessons, checkpoints and solutions
 python3 native/tools/teach.py write-plans docs/lessons/plans
 git diff --exit-code --stat docs/lessons/plans         # generated plans match
-make lint-md                                           # Markdown links and style
+make lint-md                                           # Markdown style
+make doc-links                                         # every link and anchor resolves
 ```
 
 `validate` runs every lesson solution through its checkpoint and refuses a starter
 that already passes. `write-plans` regenerates the teacher-facing plans from the
 curriculum; CI fails if the regenerated files differ from the committed ones.
+`doc-links` walks `docs/**/*.md` and `README.md`, resolves every relative link and
+checks every `#anchor` against the headings GitHub would slug it from, so the two
+machine manuals and the guides that point at them cannot drift apart silently.
 
 ## The API and terminal tools
 

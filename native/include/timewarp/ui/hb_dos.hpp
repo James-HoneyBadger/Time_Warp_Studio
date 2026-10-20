@@ -2,6 +2,9 @@
 //
 // HB DOS: the HB-1's disk operating system.
 //
+// The user-facing reference -- every word, every refusal, the image format --
+// is `docs/hb1/hb-dos.md`.
+//
 // The machine's memory (the PROGRAM page, one buffer per ROM) is volatile; a
 // learner who has typed a program wants it back tomorrow. HB DOS is that, modelled
 // on the DOS a 1980s home computer shipped with: a volume, a catalogue of named

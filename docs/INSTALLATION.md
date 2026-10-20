@@ -128,6 +128,11 @@ python3 native/tools/teach.py validate                # every lesson solution
 All must pass. See [README_TESTING.md](README_TESTING.md) for the full set,
 including the sanitizer builds and the parity gates.
 
+With it built, meet the two machines the Studio carries: `Ctrl+Alt+W` for the
+[HB-1](hb1/README.md) and `Ctrl+Shift+M` for the [CHIP-8](chip8/README.md), or
+`./run.sh --computer` for the HB-1 from a terminal. [MACHINES.md](MACHINES.md)
+explains why they are there.
+
 ---
 
 ## 5. Troubleshooting

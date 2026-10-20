@@ -154,7 +154,22 @@ Practical notes:
 Tools > **HB-1 Computer…** (`Ctrl+Alt+W`, or `./run.sh --computer`)
 opens a self-contained home computer: one CRT with text and graphics, a boot
 message at the top, and a prompt underneath. It is the machine the ten languages
-share, presented the way a 1980s learner would have met them.
+share, presented the way a 1980s learner would have met them — a 1982 machine from
+a parallel universe, with the last forty years of design sense behind its engines.
+
+This section is the IDE-side tour. The machine has its own books, and they are
+the complete reference:
+
+- **[Owner's Manual](hb1/README.md)** — specifications, first boot, front
+  panel, keys, what the machine remembers, the limits.
+- **[The ROM library](hb1/roms.md)** — all ten languages as cartridges.
+- **[HB DOS 1.0](hb1/hb-dos.md)** — every disk word, the catalogue, the
+  errors, the image format.
+- **[CONFIG](hb1/config.md)** — every setting and default, the phosphors, the
+  glass.
+- **[Inside the HB-1](hb1/inside.md)** — how it is built.
+- **[The machines](MACHINES.md)** — why the HB-1 and the CHIP-8 are the shape
+  they are.
 
 **The ROM socket.** The **ROM** selector cold-boots the machine into any of the ten
 languages. The machine name, prompt and boot message change with it:
@@ -213,25 +228,23 @@ replaces it, and a bare number deletes it. `?` is shorthand for `PRINT`, so
 `HBWARP`, in the manner of the DOS a 1980s learner met. It is where a program goes
 when it has to outlive the afternoon; the PROGRAM page itself is only memory.
 
-| Command | What it does | Apple DOS 3.3's word |
-| --- | --- | --- |
-| `CATALOG` (or `CAT`) | List the disk: lock marker, ROM, sectors, name | `CATALOG` |
-| `SAVE "NAME"` | Save the program on the PROGRAM page | `SAVE` |
-| `LOAD "NAME"` | Load a file into memory | `LOAD` |
-| `RUN "NAME"` | Load a file and run it | `RUN` |
-| `DELETE "NAME"` (or `ERA`) | Erase a file; a locked file refuses | `DELETE` |
-| `RENAME "OLD","NEW"` | Rename a file | `RENAME` |
-| `LOCK`/`UNLOCK "NAME"` | Write-protect a file: the disk's version of the tab | `LOCK`/`UNLOCK` |
-| `VERIFY "NAME"` | Compare the file with the program in memory | `VERIFY` |
-| `TYPE "NAME"` | Print a file to OUTPUT | — |
-| `STATUS` | Volume, sectors used and free, the image's path | — |
-| `INIT` | Erase the whole disk; it says so again before it does | `INIT` |
+| Word | What it does |
+| --- | --- |
+| `CATALOG` (`CAT`) | List the disk: lock marker, ROM, sectors, name |
+| `SAVE "NAME"` | Save the program on the PROGRAM page |
+| `LOAD "NAME"` / `RUN "NAME"` | Load a file into memory, or load and run it |
+| `DELETE "NAME"` (`ERA`) | Erase a file; a locked file refuses |
+| `RENAME "OLD","NEW"` | Rename a file |
+| `LOCK`/`UNLOCK "NAME"` | Write-protect a file, or release it |
+| `VERIFY "NAME"` | Compare a file with the program in memory |
+| `TYPE "NAME"` | Print a file to OUTPUT |
+| `STATUS` | Volume, sectors used and free, the image's path |
+| `INIT` | Erase the whole disk; it asks a second time |
 
 Names are upper-cased and last 30 characters; `SAVE HELLO` and `SAVE "HELLO"` are
 the same request. A program is measured in the 256-byte sectors the catalogue
 counts in, and a file that would not fit is refused rather than truncated
-(`?DISK FULL`). `SAVE` over an unlocked file replaces it. A catalogue looks like
-this:
+(`?DISK FULL`). A catalogue looks like this:
 
 ```text
 DISK VOLUME 254   HBWARP   512 SECTORS
@@ -248,39 +261,55 @@ image file, `~/.time_warp/disks/HBWARP.dsk` (`TIME_WARP_DATA_DIR` moves it), so 
 program saved in one lesson is there in the next, and a teacher can copy the image
 to another machine. The status line shows how many files the disk holds.
 
+Every word's exact refusals, the image format and a worked session are in the
+**[HB DOS reference](hb1/hb-dos.md)**.
+
 The computer's REPL sessions are its own: they do not share bindings with the
 REPL bar in the editor. Running a program stops the prompt session, exactly as
 Run does in the main window, so a program never starts inside a previous
 command's variables.
 
 **Settings.** **CONFIG** in the header, `Ctrl+,`, or `CONFIG` at the prompt
-opens the machine's configuration screen. It has three pages, and everything on
-it except the boot settings takes effect at once and is remembered:
+opens the machine's configuration screen: three pages covering the boot ROM and
+boot screen, the start-up message, prompt history, program memory, the SPLIT
+courtesy, four phosphor palettes, two text sizes and the five glass strengths.
+Everything except the boot settings takes effect at once; **Apply**/**OK** keeps
+it, **Cancel** puts the machine back as it was. The boot ROM and boot screen
+apply at the next power-on rather than switching the machine immediately, so a
+settings change never discards the program being typed.
 
-| Page | Setting | Effect |
-| --- | --- | --- |
-| Machine | Boot ROM | The ROM to power on into, or `Last used ROM` |
-| Machine | Boot screen | TEXT, SPLIT, GRAPHICS, or `Last used screen` |
-| Machine | Start-up message | Full (name, ROM, copyright, `SYSTEM READY`), Short (name and ROM), or none |
-| Machine | Prompt history | How many lines Up and Down recall: Off, 25, 50, 100, 250 or 500 |
-| Machine | Remember each ROM's program | Keep all ten program buffers between sessions |
-| Machine | Switch to SPLIT when a program draws | Turn off to let a program draw unseen in TEXT mode |
-| Screen | Monitor | Green, Amber, White or Ice phosphor; the whole machine recolours |
-| Screen | Screen text size | Point size of OUTPUT and the prompt line |
-| Screen | Program text size | Point size of the PROGRAM page, independent of the screen |
-| Glass | Scanlines, Vignette, Curvature, Flicker, Phosphor glow | The CRT glass over the screen, 0–100 % each; zero is off |
-
-**Apply**/**OK** keeps the settings; **Cancel** puts the machine back as it was.
-The boot ROM and boot screen apply at the next power-on rather than switching the
-machine immediately, so a settings change never discards the program being typed.
-The phosphor is a palette rather than a filter: the header, the screen, the
-program editor, the drawing surface and the glass all change colour together.
+Every control, its default and its stored key is in the
+**[CONFIG reference](hb1/config.md)**.
 
 **From a terminal.** `./run.sh --computer` opens the machine, booted into the
 first file's language if one is named; `--run` then runs its program.
 `--screenshot` photographs the machine and `--export` saves the drawing on its
 canvas rather than the editor's, so a lesson handout or an automation script sees
 the machine.
+
+### The CHIP-8 machine
+
+The Studio's other machine is the **[CHIP-8](chip8/README.md)** — the 1977
+virtual machine, and the program format the editor's CHIP-8 language runs. Tools >
+**CHIP-8 Emulator…** (`Ctrl+Shift+M`) opens it live:
+
+- a 64×32 screen (128×64 in SuperChip hi-res), sixty frames a second;
+- a clickable keypad mirrored on the PC keyboard (`1`–`4`, `Q`–`R`, `A`–`F`,
+  `Z`–`V`);
+- **Run/Pause**, single **Step**, **Reset**, and a speed from 1 to 2000 opcodes
+  per frame;
+- an inspector with **Registers**, **Memory** and the **Listing**, plus a
+  **ROM Library** that browses a folder you own;
+- sound while the sound timer is non-zero, and a mute.
+
+It assembles listings as well as loading binary ROMs, and drag-and-drop works for
+`.ch8` and `.c8` files. The editor's Run still handles CHIP-8 as a whole program
+for lessons and parity checks; the window is the machine with a clock and a
+keypad. The complete reference is in
+[the CHIP-8 manuals](chip8/README.md): the
+[machine manual](chip8/README.md), the
+[assembler](chip8/assembly.md) and the
+[instruction set](chip8/instruction-set.md).
 
 ---
 
