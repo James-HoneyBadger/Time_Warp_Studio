@@ -20,7 +20,9 @@
   holds the bridge, the examples, the snippet catalogue and the documentation in
   `Contents/Resources`, deploys its Qt frameworks with `macdeployqt`, and is
   ad-hoc signed so it starts on Apple silicon. The image is universal: one file for
-  Intel and Apple silicon.
+  Intel and Apple silicon, built with Qt 6.12 and declaring macOS 14.4 -- that
+  release's own floor -- as its minimum. Source builds on macOS 26 need Qt 6.10 or
+  newer, because 6.8 and 6.9 link a framework the newest SDK no longer ships.
 - **Path discovery understands a bundle.** The bridge, examples, snippets and help
   pages are looked for under `Contents/Resources/share` as well as beside `bin/`. A
   Finder-launched bundle finds python.org's and Homebrew's Python, which `PATH`

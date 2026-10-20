@@ -97,7 +97,7 @@ inside it.
 | You have | Take | Then |
 | --- | --- | --- |
 | Windows 10 or 11 | `time-warp-studio-<version>-win64.exe` | Run it. Installs into Program Files with Start Menu and desktop shortcuts; the `.zip` beside it is the same application without an installer. |
-| macOS 12 or later, Intel or Apple silicon | `Time_Warp_Studio-<version>-macOS-universal.dmg` | Open it and drag **Time Warp Studio** to Applications. One image, both architectures. |
+| macOS 14.4 or later, Intel or Apple silicon | `Time_Warp_Studio-<version>-macOS-universal.dmg` | Open it and drag **Time Warp Studio** to Applications. One image, both architectures. |
 | a Linux desktop, no wish to install anything | `Time_Warp_Studio-<version>-x86_64.AppImage` | Make it executable and double-click it. No root, no package manager, no Qt to fetch. |
 | Ubuntu, Debian, Mint or Pop!_OS | `time-warp-studio_<version>_amd64.deb`, or `_arm64.deb` | Double-click it, or `sudo apt install ./time-warp-studio_<version>_amd64.deb` |
 | Fedora, RHEL or openSUSE | `time-warp-studio-<version>-1.x86_64.rpm`, or `.aarch64.rpm` | `sudo dnf install ./time-warp-studio-<version>-1.x86_64.rpm` |

@@ -215,10 +215,17 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # macOS takes the newest Qt: 6.8 and 6.9 link `-framework AGL`, a framework
+      # macOS 26's SDK no longer ships, and 6.10 stopped. Qt 6.12 is universal
+      # (arm64 and x86_64) and declares macOS 14.4 as its floor, which is what
+      # the bundle says too.
+      #
+      # Windows is pinned to 6.8.3 because that is the Qt the suite has been run
+      # against there; bumping it is its own change, not a side effect of this one.
       - name: Install Qt 6
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.8.*'
+          version: ${{ startsWith(matrix.runner, 'macos') && '6.12.*' || '6.8.3' }}
           cache: true
 
       # Qt ships SQLite's plugin, not the library the application links, and the
@@ -255,16 +262,16 @@ jobs:
             exit 1
           }
 
-      # The deployment target is the one the released bundle declares (macOS 12),
-      # not the runner's own SDK default. That is the difference that matters:
-      # an API that is missing below 12 must fail here and not only at release
-      # time -- which is exactly how the floating-point <charconv> overloads were
-      # found to be unavailable.
+      # The deployment target is the one the released bundle declares (macOS 14.4,
+      # Qt 6.12's floor), not the runner's own SDK default. That is the difference
+      # that matters: an API that is missing below the floor must fail here and
+      # not only at release time -- which is how the floating-point <charconv>
+      # overloads were found to be unavailable below 13.3.
       - name: Configure (macOS)
         if: runner.os == 'macOS'
         run: |
           cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 2>&1 | tee configure.log
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=14.4 2>&1 | tee configure.log
           if grep -q "skipping the widget UI" configure.log; then
             echo "::error::Qt6 Widgets was not found, so the UI was skipped."
             exit 1

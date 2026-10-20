@@ -226,10 +226,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Pinned: 6.8.3 is the Qt the suite is validated against on Windows.
       - name: Install Qt 6
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.8.*'
+          version: '6.8.3'
           cache: true
 
       # Qt ships its own SQLite plugin but not the library the application links
@@ -338,21 +339,24 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # The newest Qt: 6.8 and 6.9 link `-framework AGL`, which macOS 26's SDK no
+      # longer has. Qt 6.12 is universal and declares macOS 14.4 as its floor.
       - name: Install Qt 6
         uses: jurplel/install-qt-action@v4
         with:
-          version: '6.8.*'
+          version: '6.12.*'
           cache: true
 
       - name: Configure, as a universal bundle
         run: |
-          # One disk image runs on Intel and on Apple silicon: Qt's macOS
-          # package is a universal binary, and so is everything else the
-          # bundle links, so the application can be built for both at once.
+          # One disk image runs on Intel and on Apple silicon: Qt 6.12's macOS
+          # package is universal, and so is everything else the bundle links, so
+          # the application can be built for both at once. 14.4 is Qt 6.12's own
+          # floor, which is what the bundle declares.
           cmake -S native -B native/build \
             -DCMAKE_BUILD_TYPE=Release \
             -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
-            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 2>&1 | tee configure.log
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=14.4 2>&1 | tee configure.log
           if grep -q "skipping the widget UI" configure.log; then
             echo "::error::Qt6 Widgets was not found, so the UI was skipped."
             exit 1
@@ -505,7 +509,7 @@ jobs:
           | If you… | Download | What happens |
           | --- | --- | --- |
           | use Windows 10 or 11 | \`time-warp-studio-${version}-win64.exe\` | Run it. It installs into Program Files with Start Menu and desktop shortcuts, and Qt travels inside it. The \`.zip\` beside it is the same application without an installer. |
-          | use macOS 12 or later, Intel or Apple silicon | \`Time_Warp_Studio-${version}-macOS-universal.dmg\` | Open it, drag **Time Warp Studio** to Applications. One image, both architectures. |
+          | use macOS 14.4 or later, Intel or Apple silicon | \`Time_Warp_Studio-${version}-macOS-universal.dmg\` | Open it, drag **Time Warp Studio** to Applications. One image, both architectures. |
           | just want to try it, on Linux Intel/AMD | \`Time_Warp_Studio-${version}-x86_64.AppImage\` | One file. Make it executable and double-click it. Nothing is installed and no root password is asked for. |
           | use Ubuntu, Debian, Mint or Pop!_OS | \`time-warp-studio_${version}_amd64.deb\` (or \`_arm64.deb\`) | Double-click it, or \`sudo apt install ./time-warp-studio_${version}_amd64.deb\`. Appears in the application menu. |
           | use Fedora, RHEL or openSUSE | \`time-warp-studio-${version}-1.x86_64.rpm\` (or \`.aarch64.rpm\`) | \`sudo dnf install ./time-warp-studio-${version}-1.x86_64.rpm\` |

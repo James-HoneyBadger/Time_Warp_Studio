@@ -35,7 +35,10 @@ sudo pacman -S base-devel cmake qt6-base qt6-svg sqlite
 ```
 
 On macOS, `brew install cmake qt` and pass `-DCMAKE_PREFIX_PATH=$(brew --prefix qt)`.
-SQLite is part of the macOS SDK, so it needs no separate install.
+SQLite is part of the macOS SDK, so it needs no separate install. On macOS 26 and
+later, use Qt 6.10 or newer: Qt 6.8 and 6.9 link `-framework AGL`, a framework the
+newest SDK no longer ships, and the link fails on every executable. The released
+disk image is built with Qt 6.12, which is universal and needs macOS 14.4.
 
 On Windows, use the Qt online installer (or `aqtinstall`) for Qt 6 and either
 `vcpkg install sqlite3:x64-windows-static-md` or a prebuilt SQLite to satisfy
@@ -281,7 +284,7 @@ an `.rpm` says `x86_64`/`aarch64`, and the tarball and the AppImage say
 | You have | Take | Then |
 | --- | --- | --- |
 | Windows 10 or 11 | `time-warp-studio-<version>-win64.exe` | Run it: it installs into Program Files, adds Start Menu and desktop shortcuts, and carries Qt and the SQLite library inside it. `time-warp-studio-<version>-win64.zip` is the same tree without the installer. |
-| macOS 12 or later, Intel or Apple silicon | `Time_Warp_Studio-<version>-macOS-universal.dmg` | Open it, drag **Time Warp Studio** to Applications. The image is universal, so one file covers both architectures. |
+| macOS 14.4 or later, Intel or Apple silicon | `Time_Warp_Studio-<version>-macOS-universal.dmg` | Open it, drag **Time Warp Studio** to Applications. The image is universal, so one file covers both architectures. |
 | a Linux desktop and no wish to install anything | `Time_Warp_Studio-<version>-x86_64.AppImage` | `chmod +x` it and double-click. It needs no root, no package manager and no Qt: everything is inside the file. |
 | Ubuntu, Debian, Mint or Pop!_OS | `time-warp-studio_<version>_amd64.deb`, or `_arm64.deb` | Double-click it, or `sudo apt install ./time-warp-studio_<version>_amd64.deb` |
 | Fedora, RHEL or openSUSE | `time-warp-studio-<version>-1.x86_64.rpm`, or `.aarch64.rpm` | `sudo dnf install ./time-warp-studio-<version>-1.x86_64.rpm` |

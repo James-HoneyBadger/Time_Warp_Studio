@@ -33,27 +33,6 @@ if(WIN32)
     enable_language(RC)
 endif()
 
-if(APPLE)
-    # Qt 6.8 and 6.9 link `-framework AGL` on every Apple build: their shipped
-    # lib/cmake/Qt6/FindWrapOpenGL.cmake asks find_library for AGL and, when the
-    # SDK has none, falls back to the literal flag. macOS 26's SDK has none, so
-    # every executable fails to link -- "ld: framework 'AGL' not found" -- before
-    # any of this project's code is involved. Qt 6.10 stopped doing it.
-    #
-    # Answering that lookup with OpenGL.framework keeps the link line valid and
-    # costs nothing: AGL was OpenGL's legacy entry point, Qt 6 never calls it, and
-    # the answer is only given when the SDK genuinely has no AGL -- on a macOS 12
-    # to 15 SDK the real framework is found and Qt links exactly what it shipped.
-    find_library(TIME_WARP_AGL_FRAMEWORK NAMES AGL)
-    if(NOT TIME_WARP_AGL_FRAMEWORK)
-        find_library(TIME_WARP_OPENGL_FRAMEWORK NAMES OpenGL)
-        if(TIME_WARP_OPENGL_FRAMEWORK)
-            set(WrapOpenGL_AGL "${TIME_WARP_OPENGL_FRAMEWORK}" CACHE FILEPATH
-                "Stand-in for the AGL framework macOS 26 removed")
-        endif()
-    endif()
-endif()
-
 if(MSVC)
     # The sources are UTF-8: the output prefixes are emoji and several messages
     # use typographic punctuation. Without /utf-8 MSVC reads the files in the
@@ -803,20 +782,6 @@ if(Qt6_FOUND)
 
     if(Qt6Widgets_FOUND)
         message(STATUS "Qt6 ${Qt6Widgets_VERSION} found: building the widget UI")
-
-        # AGL: where the flag actually lives. Qt 6.8/6.9 link AGL on Apple and
-        # macOS 26's SDK has none, so the link fails; these lines say which target
-        # carries it, which the failure line cannot.
-        if(APPLE)
-            foreach(_agl_target WrapOpenGL::WrapOpenGL Qt6::Gui Qt6::Widgets Qt6::Svg)
-                if(TARGET ${_agl_target})
-                    get_target_property(_agl_links ${_agl_target} INTERFACE_LINK_LIBRARIES)
-                    message(STATUS "AGL check: ${_agl_target} -> ${_agl_links}")
-                else()
-                    message(STATUS "AGL check: ${_agl_target} -> (no such target)")
-                endif()
-            endforeach()
-        endif()
 
         # Two components are wanted but not required. `Svg` is QSvgGenerator, for
         # vector export; `PrintSupport` is QPrinter and QPrintDialog, for the two
