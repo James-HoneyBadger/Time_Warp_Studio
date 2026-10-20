@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //
-// The Time Warp: the ROM socket, the boot screen, the combined text and
+// The HB-1: the ROM socket, the boot screen, the combined text and
 // graphics display, the prompt, the two execution paths behind it, and HB DOS.
 //
 // These tests are deliberately about behaviour a user can see: the banner names
@@ -105,10 +105,10 @@ void test_boots_into_basic() {
     TW_CHECK(machine.consoleView() != nullptr);
     TW_CHECK(machine.graphicsCanvas() != nullptr);
     TW_CHECK_EQ(machine.promptLabel()->text(), QStringLiteral("READY."));
-    TW_CHECK(machine.windowTitle().contains(QStringLiteral("Time Warp")));
+    TW_CHECK(machine.windowTitle().contains(QStringLiteral("HB-1")));
 
     const QString boot = machine.consoleView()->toPlainText();
-    TW_CHECK(boot.contains(QStringLiteral("*** TIME WARP ***")));
+    TW_CHECK(boot.contains(QStringLiteral("*** HB-1 ***")));
     TW_CHECK(boot.contains(QStringLiteral("BASIC V2.0")));
     TW_CHECK(boot.contains(QStringLiteral("64K RAM")));
     TW_CHECK(boot.contains(QStringLiteral("HB DOS 1.0")));
@@ -307,6 +307,8 @@ void test_main_window_owns_the_machine_action() {
     if (action == nullptr) {
         return;
     }
+    // The menu names the machine, not the studio it lives in.
+    TW_CHECK(action->text().contains(QStringLiteral("HB-1")));
     action->trigger();
     auto* machine = window.findChild<RetroComputerWindow*>();
     TW_CHECK(machine != nullptr);
@@ -348,6 +350,7 @@ void test_config_button_opens_the_settings_screen() {
         return;
     }
     TW_CHECK(dialog->isVisible());
+    TW_CHECK(dialog->windowTitle().contains(QStringLiteral("HB-1")));
     const auto* pages = dialog->findChild<QTabWidget*>(QStringLiteral("retroSettingsPages"));
     TW_CHECK(pages != nullptr);
     if (pages != nullptr) {
@@ -467,7 +470,7 @@ void test_boot_settings_decide_the_next_power_on() {
         TW_CHECK_EQ(machine.language(), Language::Logo);
         TW_CHECK_EQ(machine.screenMode(), ScreenMode::Text);
         const QString boot = machine.consoleView()->toPlainText();
-        TW_CHECK(boot.contains(QStringLiteral("*** TIME WARP ***")));
+        TW_CHECK(boot.contains(QStringLiteral("*** HB-1 ***")));
         TW_CHECK(boot.contains(QStringLiteral("Logo")));
         TW_CHECK(!boot.contains(QStringLiteral("1982")));
         TW_CHECK(boot.contains(QStringLiteral("READY.")));

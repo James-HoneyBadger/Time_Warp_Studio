@@ -314,7 +314,7 @@ arrive. `Chip8Screen` paints the 64x32 framebuffer with an integer scale,
 and reused; closing it alone ends the run, and the next invocation builds a
 fresh machine rather than touching a dead one.
 
-### The Time Warp
+### The HB-1
 
 `RetroComputerWindow` is the second top-level machine window, alongside the
 CHIP-8 emulator. It is deliberately self-contained: its own `CanvasCommandQueue`

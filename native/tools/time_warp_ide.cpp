@@ -144,7 +144,7 @@ int main(int argc, char* argv[]) {
 
     const QCommandLineOption computerOption{
         QStringLiteral("computer"),
-        QStringLiteral("Open the Time Warp computer, booted into the first "
+        QStringLiteral("Open the HB-1 computer, booted into the first "
                        "file's language (or BASIC), and raise it. With --run, "
                        "run the computer's program.")};
     parser.addOption(computerOption);

@@ -145,7 +145,7 @@ RetroComputerSettingsDialog::RetroComputerSettingsDialog(const RetroComputerSett
                                                          QWidget* parent)
     : QDialog(parent), settings_(start) {
     setObjectName(QStringLiteral("retroSettingsDialog"));
-    setWindowTitle(tr("Time Warp Settings"));
+    setWindowTitle(tr("HB-1 Settings"));
     setModal(true);
     buildUi();
     applyToControls();

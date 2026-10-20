@@ -1077,7 +1077,7 @@ if(Qt6_FOUND)
             endif()
             add_test(NAME help_browser_tests COMMAND help_browser_tests)
 
-            # The Time Warp is a whole little machine: ROM socket, screen
+            # The HB-1 is a whole little machine: ROM socket, screen
             # modes, the prompt's direct mode and the same native engines the
             # editor runs. It gets its own binary because a failure should name
             # the machine, not the IDE layout around it.

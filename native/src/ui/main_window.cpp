@@ -1215,8 +1215,9 @@ void MainWindow::buildMenuBar() {
         QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_M}, [this] { openChip8Emulator(); })
         ->setObjectName(QStringLiteral("chip8EmulatorAction"));
     // The machine the languages share. Ctrl+Alt+W is unclaimed and is the
-    // machine's initial.
-    add(tools, tr("Time &Warp Computer..."),
+    // chord the machine has always been documented with, so renaming it to the
+    // HB-1 does not move it out from under anyone's fingers.
+    add(tools, tr("&HB-1 Computer..."),
         QKeySequence{Qt::CTRL | Qt::ALT | Qt::Key_W}, [this] { openRetroComputer(); })
         ->setObjectName(QStringLiteral("retroComputerAction"));
 

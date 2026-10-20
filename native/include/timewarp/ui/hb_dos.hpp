@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //
-// HB DOS: the Time Warp's disk operating system.
+// HB DOS: the HB-1's disk operating system.
 //
 // The machine's memory (the PROGRAM page, one buffer per ROM) is volatile; a
 // learner who has typed a program wants it back tomorrow. HB DOS is that, modelled

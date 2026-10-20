@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //
-// The Time Warp: a self-contained home computer with a selectable ROM.
+// The HB-1: a self-contained home computer with a selectable ROM.
 //
 // The rest of the IDE is a modern tool -- tabs, docks, inspectors -- and this is
 // the machine a 1980s learner would have sat in front of. One screen holds the

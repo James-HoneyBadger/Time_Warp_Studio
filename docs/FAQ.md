@@ -225,7 +225,7 @@ language; API clients can also call `repl.reset`.
 
 ### Is there a retro home-computer interface?
 
-Yes. **Tools → Time Warp Computer** (`Ctrl+Alt+W`, or `./run.sh --computer`)
+Yes. **Tools → HB-1 Computer** (`Ctrl+Alt+W`, or `./run.sh --computer`)
 opens a self-contained machine: one CRT with a boot intro, a prompt underneath, a
 language ROM socket for all ten languages, and TEXT/SPLIT/GRAPHICS screen modes.
 Type at the prompt — in the BASIC ROM, `10 PRINT "HELLO"` stores a program line and
@@ -235,7 +235,7 @@ between sessions. **CONFIG** (or `Ctrl+,`) sets what the machine boots into, the
 start-up message, the phosphor — green, amber, white or ice — the text sizes and
 the CRT glass, and **HB DOS** saves programs to a disk with `SAVE "NAME"`,
 `LOAD "NAME"`, `CATALOG` and the rest of a 1980s DOS.
-[The user guide](USER_GUIDE.md#4-the-time-warp-computer) has the prompt commands,
+[The user guide](USER_GUIDE.md#4-the-hb-1-computer) has the prompt commands,
 the DOS commands, the per-ROM prompts and every setting.
 
 ### Why does my program run forever?

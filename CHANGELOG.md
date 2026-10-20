@@ -4,7 +4,7 @@
 
 ### Added
 
-- **The Time Warp.** Tools > Time Warp Computer… (`Ctrl+Alt+W`, or
+- **The HB-1.** Tools > HB-1 Computer… (`Ctrl+Alt+W`, or
   `./run.sh --computer`) opens a self-contained home computer: a boot intro at the
   top of one CRT, a prompt below it, a selectable language ROM for all ten
   languages, and TEXT/SPLIT/GRAPHICS screen modes. The text side is a real code

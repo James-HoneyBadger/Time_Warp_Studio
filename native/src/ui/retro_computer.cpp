@@ -44,7 +44,7 @@ namespace {
 constexpr int kScreenTextStretch = 1;
 constexpr int kScreenGraphicsStretch = 1;
 constexpr int kConsoleBlockLimit = 4000;
-constexpr auto kBootCopyright = "(C) 1982 TIME WARP SYSTEMS";
+constexpr auto kBootCopyright = "(C) 1982 HB SYSTEMS";
 
 /// The part of a ROM a user sees and types at.
 struct RomInfo {
@@ -281,7 +281,7 @@ struct RomInfo {
 
 RetroComputerWindow::RetroComputerWindow(QWidget* parent) : QMainWindow(parent) {
     setObjectName(QStringLiteral("retroComputerWindow"));
-    setWindowTitle(tr("Time Warp"));
+    setWindowTitle(tr("HB-1"));
     setMinimumSize(720, 520);
     resize(1040, 760);
     buildUi();
@@ -355,7 +355,7 @@ void RetroComputerWindow::buildHeader(QVBoxLayout* column) {
 
     auto* identity = new QVBoxLayout;
     identity->setSpacing(0);
-    machine_label_ = new QLabel{QStringLiteral("TIME WARP"), header};
+    machine_label_ = new QLabel{QStringLiteral("HB-1"), header};
     machine_label_->setObjectName(QStringLiteral("retroMachineLabel"));
     identity->addWidget(machine_label_);
     tagline_label_ = new QLabel{QStringLiteral("PERSONAL COMPUTER SYSTEM  \u00b7  64K RAM"),
@@ -646,7 +646,7 @@ void RetroComputerWindow::appendBootBanner() {
         return;
     }
     const RomInfo rom = romFor(language_);
-    appendConsole(QStringLiteral("*** TIME WARP ***"));
+    appendConsole(QStringLiteral("*** HB-1 ***"));
     appendConsole(QStringLiteral("%1 %2 ROM  \u00b7  64K RAM SYSTEM")
                       .arg(displayName(language_), QString::fromUtf8(rom.version)));
     if (settings_.banner == BootBanner::Full) {
@@ -1399,7 +1399,7 @@ void RetroComputerWindow::setLanguage(Language language) {
     prepared_ = true;
     updateModeControls();
     updateStatus();
-    setWindowTitle(tr("Time Warp \u2014 %1").arg(displayName(language_)));
+    setWindowTitle(tr("HB-1 \u2014 %1").arg(displayName(language_)));
 }
 
 void RetroComputerWindow::setScreenMode(ScreenMode mode) {

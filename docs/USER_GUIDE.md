@@ -1,7 +1,7 @@
 # Time Warp Studio — User Guide
 
 This is the manual for the Qt application: how to open it, organise work, meet the
-Time Warp home computer, try commands without writing a program, debug, use SQL,
+HB-1 home computer, try commands without writing a program, debug, use SQL,
 and drive the Studio from a script or a terminal. The per-language command
 reference is
 [LANGUAGE_GUIDE.md](LANGUAGE_GUIDE.md), and the tutorials start at
@@ -20,7 +20,7 @@ reference is
 ./run.sh --run Examples/basic/hello.bas       # open and run it
 ./run.sh --screenshot window.png --run file   # render the window and exit
 ./run.sh --compile program.bas --output hello # build a standalone artifact
-./run.sh --computer                           # open the Time Warp
+./run.sh --computer                           # open the HB-1
 ```
 
 `run.sh` builds incrementally with CMake and then replaces itself with the IDE, so
@@ -149,9 +149,9 @@ Practical notes:
 
 ---
 
-## 4. The Time Warp computer
+## 4. The HB-1 computer
 
-Tools > **Time Warp Computer…** (`Ctrl+Alt+W`, or `./run.sh --computer`)
+Tools > **HB-1 Computer…** (`Ctrl+Alt+W`, or `./run.sh --computer`)
 opens a self-contained home computer: one CRT with text and graphics, a boot
 message at the top, and a prompt underneath. It is the machine the ten languages
 share, presented the way a 1980s learner would have met them.

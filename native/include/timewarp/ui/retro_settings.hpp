@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 //
-// The Time Warp's configuration: what the machine powers up into, what its
+// The HB-1's configuration: what the machine powers up into, what its
 // screen looks like, and how its prompt behaves.
 //
 // This is separate from the editor's Preferences for the same reason the machine

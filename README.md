@@ -38,7 +38,7 @@ supported and is what `native/README.md` describes.
 ./run.sh                                          # build if needed, then launch
 ./run.sh Examples/logo/mandala.logo
 ./run.sh --compile Examples/basic/hello.bas --output hello
-./run.sh --computer                              # Time Warp home computer
+./run.sh --computer                              # HB-1 home computer
 ./twc Examples/scheme/hello.scm -o hello-scheme   # small standalone executable
 ./api                                             # JSON-RPC on stdin/stdout
 ```
@@ -81,7 +81,7 @@ terminal compiler and the automation service; see [docs/USER_GUIDE.md](docs/USER
 - **Inspection** — a 🔍 **Variables** panel listing every binding with its type and value, filtered by name, and a ⚡ **Telemetry** HUD showing what the run cost and did: steps used, engine time, steps per second, last line, recursion depth, call stack, output lines, drawing commands, BASIC's memory window, and — beside the engine's own counters — the IDE's wall clock and the ink that actually reached the canvas
 - **Debugging** — gutter breakpoints and a 🐞 **Debug** panel (Continue, Pause, Step In/Over/Out, Stop) plus Debug/Continue/Trace on the toolbar, working in all ten languages: at a statement, a Logo top-level statement, a Smalltalk message send or a CHIP-8 instruction. Scheme additionally shows the call stack and the paused frame's bindings; for a native run the Variables panel shows the bindings the pause stopped in. **Watch expressions** evaluate arithmetic over the paused bindings, and **data breakpoints** stop when a named variable changes value
 - **Projects** — a 🗂 **Projects** dock groups programs into named groups without moving them on disk. Create or open a `.twproject`, add files, a whole folder (its programs are grouped by subfolder), and groups, drag a file between groups, and the project reopens with the session; missing files are marked rather than forgotten
-- **Time Warp computer** — Tools > **Time Warp Computer…** opens a self-contained home computer: a boot intro and prompt, a selectable language ROM for all ten languages, TEXT/SPLIT/GRAPHICS modes sharing one CRT, and a PROGRAM editor beside the turtle canvas. Each ROM keeps its own program, and the machine persists its ROM, mode and memory between sessions. **CONFIG** changes its boot ROM and screen, start-up message, phosphor (green, amber, white or ice), text sizes and CRT glass, and **HB DOS** gives it a disk of named programs with `CATALOG`, `SAVE`, `LOAD`, `RUN "name"`, `DELETE`, `RENAME`, `LOCK`, `VERIFY` and `INIT`, catalogued in the manner of Apple DOS 3.3. It is also `./run.sh --computer`
+- **HB-1 computer** — Tools > **HB-1 Computer…** opens a self-contained home computer: a boot intro and prompt, a selectable language ROM for all ten languages, TEXT/SPLIT/GRAPHICS modes sharing one CRT, and a PROGRAM editor beside the turtle canvas. Each ROM keeps its own program, and the machine persists its ROM, mode and memory between sessions. **CONFIG** changes its boot ROM and screen, start-up message, phosphor (green, amber, white or ice), text sizes and CRT glass, and **HB DOS** gives it a disk of named programs with `CATALOG`, `SAVE`, `LOAD`, `RUN "name"`, `DELETE`, `RENAME`, `LOCK`, `VERIFY` and `INIT`, catalogued in the manner of Apple DOS 3.3. It is also `./run.sh --computer`
 - **REPL bar** — the line under the editor runs a command in the current document's language. BASIC, FOCAL, PILOT, COMAL, REXX, APL, Logo and Scheme keep bindings between commands (`LET X = 5` then `PRINT X`); Scheme also keeps definitions and echoes expression values. In BASIC, `?` is shorthand for `PRINT`, a numbered line is stored in the editor as a program line, and `RUN`, `LIST` and `NEW` work as direct-mode commands. Smalltalk and CHIP-8 run each submission as a whole program, so their state resets
 - **SQL database** — a 🗄 **Database** tab opens or creates a SQLite file, lists its tables, runs scripts and shows the result grid. A program reaches the same connection with `SQL SELECT ...` (BASIC, FOCAL, PILOT, COMAL, REXX and APL), `SQL ...` in Logo, `(sql "...")` in Scheme, and `SQL run: '...'` in Smalltalk
 - **Automation** — `./api` speaks the JSON-RPC API on stdin/stdout: run a program, keep a REPL session, start and step a debug session, query SQL, edit a project including folder import, and evaluate watches. See [docs/API.md](docs/API.md)
@@ -159,7 +159,7 @@ source to copy from when it changes — and the place to check when it looks wro
 ```text
 Educational multi-language programming environment: a native C++20/Qt6 IDE with ten
 languages (BASIC, Logo, PILOT, COMAL, REXX, Scheme, FOCAL, APL, CHIP-8, Smalltalk),
-turtle graphics, projects, a Time Warp home-computer screen, a SQLite-backed SQL workspace, a checked lesson
+turtle graphics, projects, an HB-1 home-computer screen, a SQLite-backed SQL workspace, a checked lesson
 curriculum with student and teacher tools, a debugger, and a JSON-RPC automation
 API.
 ```
@@ -198,7 +198,7 @@ teaching-tools
 | If you are | Start here |
 | ---------- | ---------- |
 | Learning one of the languages | [`docs/tutorials/`](docs/tutorials/) |
-| Use projects, the REPL, the Time Warp computer, SQL, debugging or the API | [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) |
+| Use projects, the REPL, the HB-1 computer, SQL, debugging or the API | [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) |
 | Working through the lessons | [`docs/lessons/README.md`](docs/lessons/README.md) |
 | Teaching a class | [`docs/lessons/teacher-guide.md`](docs/lessons/teacher-guide.md) |
 | Building or porting | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`native/README.md`](native/README.md) |
