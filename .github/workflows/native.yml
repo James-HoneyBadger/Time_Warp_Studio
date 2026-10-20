@@ -311,10 +311,16 @@ jobs:
           $env:PYTHONPATH = Join-Path $PWD "native/bridge"
           # Both requests the failed tests wait on: the curriculum, which is a
           # file read, and a run, which starts an interpreter.
-          $requests = @(
-            '{"t":"lessons"}',
-            '{"t":"run","language":"basic","source":"10 PRINT ""HI""\n20 END\n","name":"hello.bas"}'
-          )
+          # Built with ConvertTo-Json rather than written out: the program text
+          # has quotes and newlines in it, and hand-escaped JSON here once sent a
+          # malformed request that the worker -- correctly -- rejected.
+          $run = @{
+            t = "run"
+            language = "basic"
+            source = "10 PRINT `"HI`"`n20 END`n"
+            name = "hello.bas"
+          } | ConvertTo-Json -Compress
+          $requests = @('{"t":"lessons"}', $run)
           $output = $requests | & python native/bridge/worker.py 2>&1 | Out-String
           Write-Host $output
           $missing = @()

@@ -917,7 +917,11 @@ void test_a_class_bundles_and_unbundles() {
     const QString bundle = data_dir.path() + QStringLiteral("/class.zip");
     TW_CHECK(harness.worker().requestClassroomBundle(bundle));
     TW_CHECK(harness.waitFor([&harness] { return harness.recorded().bundle_written; }));
-    TW_CHECK_EQ(harness.recorded().bundle_path, bundle);
+    // The engine answers with the path it made the file at, in the platform's
+    // separator, so the two are compared normalised: a Windows backslash is not
+    // a failure.
+    TW_CHECK_EQ(QDir::fromNativeSeparators(harness.recorded().bundle_path),
+                QDir::fromNativeSeparators(bundle));
 
     // A ZIP, as the engine writes it: `PK\x03\x04` is the local file header.
     QFile archive{bundle};
