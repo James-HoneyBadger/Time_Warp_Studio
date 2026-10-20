@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 #include "timewarp/expr/token.hpp"
 
-#include <charconv>
+#include "timewarp/core/charconv.hpp"
 
 namespace timewarp::expr {
 
@@ -14,9 +14,9 @@ std::string Token::describe() const {
             // rendering so diagnostics are unambiguous.
             {
                 char buffer[32] = {};
-                const auto result =
-                    std::to_chars(buffer, buffer + sizeof(buffer), number);
-                out.append(buffer, result.ptr);
+                const std::size_t length =
+                    timewarp::core::format_double(buffer, buffer + sizeof(buffer), number);
+                out.append(buffer, length);
             }
             break;
         default:

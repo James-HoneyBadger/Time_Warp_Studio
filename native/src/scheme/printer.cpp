@@ -2,7 +2,8 @@
 
 #include "timewarp/scheme/printer.hpp"
 
-#include <charconv>
+#include "timewarp/core/charconv.hpp"
+
 #include <cmath>
 #include <cstdint>
 #include <string_view>
@@ -64,18 +65,18 @@ void append_real(std::string& out, double number) {
         // Zero fractional digits with a fixed format expands the value exactly;
         // 512 bytes covers the widest double (about 310 digits).
         char buffer[512];
-        const auto fixed =
-            std::to_chars(buffer, buffer + sizeof(buffer), number,
-                          std::chars_format::fixed, 0);
-        if (fixed.ec == std::errc{}) {
-            out.append(buffer, fixed.ptr);
+        const std::size_t digits =
+            timewarp::core::format_fixed_integer(buffer, buffer + sizeof(buffer), number);
+        if (digits != 0) {
+            out.append(buffer, digits);
             return;
         }
     }
 
     char buffer[64];
-    const auto result = std::to_chars(buffer, buffer + sizeof(buffer), number);
-    out.append(buffer, result.ptr);
+    const std::size_t length =
+        timewarp::core::format_double(buffer, buffer + sizeof(buffer), number);
+    out.append(buffer, length);
 }
 
 void write_value(std::string& out, const Value& value) {

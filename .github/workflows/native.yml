@@ -230,23 +230,41 @@ jobs:
           & "$env:VCPKG_INSTALLATION_ROOT/vcpkg.exe" install sqlite3:x64-windows-static-md --clean-after-build
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # The compiler environment, rather than a generator name. `windows-latest`
+      # moved to Visual Studio 2026, and a pinned `-G "Visual Studio 17 2022"`
+      # then finds no instance at all; `vcvars` asks the installed Visual Studio
+      # who it is, whatever version that is. Ninja is preinstalled and does not
+      # care either.
+      - name: Set up MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - name: Configure (Windows)
         if: runner.os == 'Windows'
         run: |
           $toolchain = Join-Path $env:VCPKG_INSTALLATION_ROOT "scripts/buildsystems/vcpkg.cmake"
-          cmake -S native -B native/build -G "Visual Studio 17 2022" -A x64 `
+          cmake -S native -B native/build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_TOOLCHAIN_FILE="$toolchain" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md | Tee-Object -FilePath configure.log
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md 2>&1 | Tee-Object -FilePath configure.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           if (Select-String -Path configure.log -Pattern "skipping the widget UI" -Quiet) {
             Write-Error "Qt6 Widgets was not found, so the UI was skipped."
             exit 1
           }
 
+      # The deployment target is the one the released bundle declares (macOS 12),
+      # not the runner's own SDK default. That is the difference that matters:
+      # an API that is missing below 12 must fail here and not only at release
+      # time -- which is exactly how the floating-point <charconv> overloads were
+      # found to be unavailable.
       - name: Configure (macOS)
         if: runner.os == 'macOS'
         run: |
-          cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release 2>&1 | tee configure.log
+          cmake -S native -B native/build -DCMAKE_BUILD_TYPE=Release \
+            -DCMAKE_OSX_DEPLOYMENT_TARGET=12.0 2>&1 | tee configure.log
           if grep -q "skipping the widget UI" configure.log; then
             echo "::error::Qt6 Widgets was not found, so the UI was skipped."
             exit 1
@@ -254,7 +272,7 @@ jobs:
 
       - name: Build (Windows)
         if: runner.os == 'Windows'
-        run: cmake --build native/build --config Release --parallel
+        run: cmake --build native/build --parallel
 
       - name: Build (macOS)
         if: runner.os == 'macOS'
@@ -262,7 +280,7 @@ jobs:
 
       - name: Test (Windows)
         if: runner.os == 'Windows'
-        run: ctest --test-dir native/build -C Release --output-on-failure
+        run: ctest --test-dir native/build --output-on-failure
 
       - name: Test (macOS)
         if: runner.os == 'macOS'
@@ -271,7 +289,7 @@ jobs:
       - name: The entry point starts and exits (Windows)
         if: runner.os == 'Windows'
         run: |
-          $app = (Resolve-Path "native/build/Release/time_warp_ide.exe").Path
+          $app = (Resolve-Path "native/build/time_warp_ide.exe").Path
           $version = Start-Process -FilePath $app -ArgumentList "--version" -NoNewWindow -Wait -PassThru
           if ($version.ExitCode -ne 0) { exit $version.ExitCode }
           $shot = Join-Path $env:RUNNER_TEMP "smoke.png"

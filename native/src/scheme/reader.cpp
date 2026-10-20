@@ -2,7 +2,8 @@
 
 #include "timewarp/scheme/reader.hpp"
 
-#include <charconv>
+#include "timewarp/core/charconv.hpp"
+
 #include <cstdint>
 #include <limits>
 #include <string>
@@ -89,9 +90,9 @@ struct Frame {
         return false;
     }
     double value = 0.0;
-    auto result = std::from_chars(text.data(), text.data() + text.size(), value,
-                                  std::chars_format::general);
-    if (result.ec == std::errc{} && result.ptr == text.data() + text.size()) {
+    const char* end = timewarp::core::parse_double(
+        text.data(), text.data() + text.size(), value);
+    if (end == text.data() + text.size()) {
         out = value;
         return true;
     }

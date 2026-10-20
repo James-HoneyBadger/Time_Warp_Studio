@@ -2,11 +2,11 @@
 #include "timewarp/expr/lexer.hpp"
 
 #include <algorithm>
-#include <charconv>
 #include <cstdint>
 #include <limits>
 #include <string>
 
+#include "timewarp/core/charconv.hpp"
 #include "timewarp/expr/detail/ascii.hpp"
 #include "timewarp/expr/errors.hpp"
 
@@ -90,13 +90,12 @@ enum class KeywordOp : std::uint8_t { None, And, Or, Not, Mod, Xor, Div, Rem };
     double value = 0.0;
     const char* first = text.data();
     const char* last = text.data() + text.size();
-    // std::from_chars is locale-independent and non-allocating, unlike strtod.
-    const auto result =
-        std::from_chars(first, last, value, std::chars_format::general);
+    // Locale-independent, unlike `strtod` -- see timewarp/core/charconv.hpp.
+    const char* end = timewarp::core::parse_double(first, last, value);
     // ``1.2.3`` must be rejected exactly like Python's float("1.2.3"); the
     // scanner stops at the second '.', so requiring full consumption is the
     // faithful check.
-    if (result.ec != std::errc{} || result.ptr != last) {
+    if (end != last) {
         throw LexError("Invalid number literal: " + std::string{text});
     }
     return value;

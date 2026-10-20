@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 #include "timewarp/expr/evaluator.hpp"
 
+#include "timewarp/core/charconv.hpp"
+
 #include <algorithm>
-#include <charconv>
 #include <cmath>
 #include <limits>
 #include <random>
@@ -382,9 +383,8 @@ static_assert(std::is_sorted(std::begin(kBuiltins), std::end(kBuiltins),
     double value = 0.0;
     const char* first = text.data();
     const char* last = text.data() + text.size();
-    const auto result =
-        std::from_chars(first, last, value, std::chars_format::general);
-    if (result.ec != std::errc{} || result.ptr != last) {
+    const char* end = timewarp::core::parse_double(first, last, value);
+    if (end != last) {
         throw EvalError("cannot convert '" + std::string{text} + "' to a number");
     }
     return value;

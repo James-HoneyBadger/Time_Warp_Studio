@@ -248,12 +248,22 @@ jobs:
           & $vcpkg install sqlite3:x64-windows-static-md --clean-after-build
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+      # The compiler environment rather than a generator name: `windows-latest`
+      # now carries Visual Studio 2026, and a pinned `-G "Visual Studio 17 2022"`
+      # finds no instance of it. `vcvars` asks whatever is installed; Ninja is
+      # preinstalled and takes the compiler it finds on the PATH.
+      - name: Set up MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - name: Configure
         run: |
           $toolchain = Join-Path $env:VCPKG_INSTALLATION_ROOT "scripts/buildsystems/vcpkg.cmake"
-          cmake -S native -B native/build -G "Visual Studio 17 2022" -A x64 `
+          cmake -S native -B native/build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
             -DCMAKE_TOOLCHAIN_FILE="$toolchain" `
-            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md | Tee-Object -FilePath configure.log
+            -DVCPKG_TARGET_TRIPLET=x64-windows-static-md 2>&1 | Tee-Object -FilePath configure.log
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           # A configure that cannot find Qt6 Widgets still exits 0 and skips the
           # whole UI, which would publish an installer with no application in it.
@@ -263,16 +273,16 @@ jobs:
           }
 
       - name: Build
-        run: cmake --build native/build --config Release --parallel
+        run: cmake --build native/build --parallel
 
       - name: Test what is about to ship
         run: |
-          ctest --test-dir native/build -C Release --output-on-failure
+          ctest --test-dir native/build --output-on-failure
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           # `Start-Process -Wait` rather than `&`, which for a GUI-subsystem
           # executable may return before the application has exited and leave
           # $LASTEXITCODE describing something else.
-          $app = (Resolve-Path "native/build/Release/time_warp_ide.exe").Path
+          $app = (Resolve-Path "native/build/time_warp_ide.exe").Path
           $version = Start-Process -FilePath $app -ArgumentList "--version" -NoNewWindow -Wait -PassThru
           if ($version.ExitCode -ne 0) { exit $version.ExitCode }
           # The window actually paints: the same offscreen screenshot the Linux
@@ -300,7 +310,7 @@ jobs:
           # windeployqt runs from an install() rule, so CPack -- which installs
           # into its own staging directory -- produces a tree that carries Qt.
           Push-Location native/build
-          cpack -G "NSIS;ZIP" -C Release
+          cpack -G "NSIS;ZIP"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           Pop-Location
           New-Item -ItemType Directory -Force -Path dist | Out-Null
