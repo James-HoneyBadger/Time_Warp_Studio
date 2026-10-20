@@ -278,7 +278,7 @@ jobs:
 
       - name: Test what is about to ship
         run: |
-          ctest --test-dir native/build --output-on-failure
+          ctest --test-dir native/build --timeout 180 --output-on-failure
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           # `Start-Process -Wait` rather than `&`, which for a GUI-subsystem
           # executable may return before the application has exited and leave
@@ -364,8 +364,9 @@ jobs:
           cmake --build native/build --parallel
 
       - name: Test what is about to ship
+        timeout-minutes: 30
         run: |
-          ctest --test-dir native/build --output-on-failure
+          ctest --test-dir native/build --timeout 180 --output-on-failure
           # Located rather than spelled out, so a rename of the bundle is a green
           # run with a different path in it instead of a broken release job.
           bundle=$(find native/build -maxdepth 1 -name '*.app' -type d | head -1)

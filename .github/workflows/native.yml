@@ -285,13 +285,18 @@ jobs:
         if: runner.os == 'macOS'
         run: cmake --build native/build --parallel
 
+      # `--timeout` turns a hung test into a named failure with the output it had
+      # produced: a blocking modal dialog or a process that never exits would
+      # otherwise hold the job open until the runner tires of it.
       - name: Test (Windows)
         if: runner.os == 'Windows'
-        run: ctest --test-dir native/build --output-on-failure
+        timeout-minutes: 30
+        run: ctest --test-dir native/build --timeout 180 --output-on-failure
 
       - name: Test (macOS)
         if: runner.os == 'macOS'
-        run: ctest --test-dir native/build --output-on-failure
+        timeout-minutes: 30
+        run: ctest --test-dir native/build --timeout 180 --output-on-failure
 
       # The bridge is the only part of the product that runs Python, and it is what
       # a lesson check uses. This drives it directly -- one run request on stdin,
