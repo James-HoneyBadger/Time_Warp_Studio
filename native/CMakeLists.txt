@@ -1229,6 +1229,13 @@ if(TIME_WARP_QT_FOUND)
             add_executable(ui_layout_tests tests/ui_layout_tests.cpp)
             target_link_libraries(ui_layout_tests PRIVATE timewarp::ui)
             target_include_directories(ui_layout_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+            # The snippet picker's suite reads the checkout's catalogue. The
+            # resolver walks up from the executable, which reaches the checkout
+            # from `native/build` but from no other build directory, so the path
+            # is recorded here -- the arrangement chip8_emulator_tests uses for
+            # its Examples. An installed tree still finds its own copy first.
+            target_compile_definitions(ui_layout_tests PRIVATE
+                TIME_WARP_TEST_SNIPPETS="${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json")
             if(NOT MSVC)
                 target_compile_options(ui_layout_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
                 if(TIME_WARP_EXPR_WERROR)
@@ -1301,6 +1308,9 @@ if(TIME_WARP_QT_FOUND)
             add_executable(editor_services_tests tests/editor_services_tests.cpp)
             target_link_libraries(editor_services_tests PRIVATE timewarp::ui)
             target_include_directories(editor_services_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+            # The shipped catalogue, from the checkout: see ui_layout_tests.
+            target_compile_definitions(editor_services_tests PRIVATE
+                TIME_WARP_TEST_SNIPPETS="${CMAKE_CURRENT_SOURCE_DIR}/share/snippets.json")
             if(NOT MSVC)
                 target_compile_options(editor_services_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
                 if(TIME_WARP_EXPR_WERROR)
@@ -1333,6 +1343,10 @@ if(TIME_WARP_QT_FOUND)
             add_executable(help_browser_tests tests/help_browser_tests.cpp)
             target_link_libraries(help_browser_tests PRIVATE timewarp::ui)
             target_include_directories(help_browser_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+            # The guides, from the checkout, for the same reason: the dead-link
+            # check has to point at a real docs tree wherever the build is.
+            target_compile_definitions(help_browser_tests PRIVATE
+                TIME_WARP_TEST_DOCS="${CMAKE_CURRENT_SOURCE_DIR}/../docs")
             if(NOT MSVC)
                 target_compile_options(help_browser_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
                 if(TIME_WARP_EXPR_WERROR)

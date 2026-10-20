@@ -1145,6 +1145,13 @@ int main(int argc, char** argv) {
     // CHIP-8 folder stores round-tripped to nothing. The other suites already do
     // this; this one never had a setting to keep before.
     QCoreApplication::setOrganizationName(QStringLiteral("TimeWarpTests"));
+
+    // See ui_layout_tests: the catalogue comes from the checkout unless the
+    // resolver found a copy beside the executable.
+    if (timewarp::ui::snippetRoot().isEmpty()) {
+        qputenv("TIME_WARP_SNIPPETS", QStringLiteral(TIME_WARP_TEST_SNIPPETS).toUtf8());
+    }
+
     test_basic_indents_a_loop_body();
     test_basic_else_body_is_indented();
     test_basic_single_line_if_opens_nothing();

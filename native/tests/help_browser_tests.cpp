@@ -49,12 +49,21 @@ void test_docs_root_follows_the_override() {
     }
     const QString root = scratch.path(QStringLiteral("docs"));
     scratch.write(QStringLiteral("docs/INDEX.md"), "# Index\n");
+    const QByteArray inherited = qgetenv("TIME_WARP_DOCS");
     qputenv("TIME_WARP_DOCS", root.toUtf8());
     TW_CHECK_EQ(timewarp::ui::docsRoot().toStdString(), root.toStdString());
-    qunsetenv("TIME_WARP_DOCS");
+    // Restored rather than cleared. Without an override the resolver walks up
+    // from the executable to the checkout's `docs/`, which works from
+    // `native/build`; from any other build directory `main()` has pointed the
+    // override at that same checkout, and clearing it would take the tree away
+    // from every test that follows.
+    if (inherited.isEmpty()) {
+        qunsetenv("TIME_WARP_DOCS");
+    } else {
+        qputenv("TIME_WARP_DOCS", inherited);
+    }
 
-    // With no override the test binary is in `native/build`, so the resolver
-    // walks up to the checkout's `docs/`.
+    // Either the walk-up or the inherited path must name a browsable tree.
     const QString checkout = timewarp::ui::docsRoot();
     TW_CHECK(!checkout.isEmpty());
     TW_CHECK(QFileInfo{checkout + QStringLiteral("/INDEX.md")}.isFile());
@@ -271,12 +280,17 @@ void test_a_missing_root_is_explained() {
         return;
     }
     // The directory exists but has no INDEX.md: the override is authoritative.
+    const QByteArray inherited = qgetenv("TIME_WARP_DOCS");
     qputenv("TIME_WARP_DOCS", scratch.path().toUtf8());
     timewarp::ui::HelpBrowserDialog dialog;
     TW_CHECK_EQ(dialog.topicCount(), 0);
     TW_CHECK(dialog.page()->toPlainText().contains(
         QStringLiteral("Documentation is not installed")));
-    qunsetenv("TIME_WARP_DOCS");
+    if (inherited.isEmpty()) {
+        qunsetenv("TIME_WARP_DOCS");
+    } else {
+        qputenv("TIME_WARP_DOCS", inherited);
+    }
 }
 
 }  // namespace
@@ -285,6 +299,14 @@ int main(int argc, char** argv) {
     // Set before QApplication exists, or Qt tries to open a real display.
     qputenv("QT_QPA_PLATFORM", "offscreen");
     QApplication app{argc, argv};
+
+    // The guides are read through the resolver's walk-up, which finds the
+    // checkout from `native/build` only. From any other build directory the
+    // path CMake recorded is supplied through the resolver's own override, so
+    // the dead-link check still runs against a real docs tree.
+    if (timewarp::ui::docsRoot().isEmpty()) {
+        qputenv("TIME_WARP_DOCS", QStringLiteral(TIME_WARP_TEST_DOCS).toUtf8());
+    }
 
     test_docs_root_follows_the_override();
     test_contents_come_from_the_index();

@@ -3491,6 +3491,14 @@ int main(int argc, char** argv) {
     QCoreApplication::setApplicationName(QStringLiteral("UiLayoutTests"));
     QSettings::setDefaultFormat(QSettings::IniFormat);
 
+    // The snippet catalogue is read through the resolver, which walks up from
+    // the executable: that reaches the checkout from `native/build` and from
+    // nowhere else. Where the walk finds nothing, the path CMake recorded is
+    // supplied through the resolver's own override.
+    if (timewarp::ui::snippetRoot().isEmpty()) {
+        qputenv("TIME_WARP_SNIPPETS", QStringLiteral(TIME_WARP_TEST_SNIPPETS).toUtf8());
+    }
+
     test_editor_tabs_refuse_to_be_sized_by_their_largest_page();
     test_enhanced_tab_bar_is_idempotent();
 
