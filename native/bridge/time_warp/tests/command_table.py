@@ -67,6 +67,7 @@ BASIC: list[Row] = [
     Row("BASIC", "PRINT string", 'PRINT "HELLO WORLD"', "prints:HELLO WORLD"),
     Row("BASIC", "PRINT numeric", "PRINT 6 * 7", "prints:42"),
     Row("BASIC", "PRINT trailing separator", 'PRINT "A", "B"', "prints:A"),
+    Row("BASIC", "? shorthand for PRINT", "? 6 * 7", "prints:42"),
     Row("BASIC", "assignment", "X = 42\nPRINT X", "prints:42"),
     Row("BASIC", "string variable", 'NAME$ = "Ann"\nPRINT NAME$', "prints:Ann"),
     Row("BASIC", "string concatenation", 'A$ = "X" + "Y"\nPRINT A$', "prints:XY"),
@@ -515,7 +516,7 @@ LOGO: list[Row] = [
     Row("Logo", "PENREVERSE", "PENREVERSE\nFORWARD 20", "any"),
     Row("Logo", "PENMODE", "PENMODE", "any"),
     Row("Logo", "PPT", "PPT", "any"),
-    Row("Logo", "PX", "PX", "any"),
+    Row("Logo", "PX", "PX\nPENMODE", "prints:reverse", ("PENMODE",)),
     # -- Screen and turtle visibility.
     Row("Logo", "CLEAN", "FORWARD 20\nCLEAN", "any"),
     Row("Logo", "CLEAR", "FORWARD 20\nCLEAR", "any", ("CLEARSCREEN",)),
@@ -558,9 +559,9 @@ LOGO: list[Row] = [
         ("OUTPUT",),
     ),
     Row("Logo", "LABEL", 'LABEL "HI', "any"),
-    Row("Logo", "SETLABELHEIGHT", "SETLABELHEIGHT 12", "any"),
-    Row("Logo", "TEXTSIZE", "TEXTSIZE 12", "any"),
-    Row("Logo", "WAIT", "WAIT 1", "any"),
+    Row("Logo", "SETLABELHEIGHT", 'SETLABELHEIGHT 12\nLABEL "HI', "draws"),
+    Row("Logo", "TEXTSIZE", 'TEXTSIZE 12\nLABEL "HI', "draws"),
+    Row("Logo", "WAIT", 'WAIT 1\nPRINT "DONE"', "prints:DONE"),
     # -- 3D. The canvas has no depth, so these are judged on being acknowledged
     #    rather than on producing visible geometry.
     Row("Logo", "ENABLE3D", "ENABLE3D", "any"),
@@ -1421,18 +1422,14 @@ ROWS: list[Row] = (
 )
 
 
-#: Implemented commands that cannot be exercised by this harness.
+#: Implemented commands that cannot be exercised by this harness. Shape kinds the
+#: bridge may report as unsupported are not listed here: Scheme exposes only the
+#: basic turtle primitives, so bezier/gradient/sprite support is not a Scheme
+#: command waiting to be tested.
 WAIVERS: list[Waiver] = [
     Waiver(
         "BASIC",
         "INKEY$",
         "polls a keyboard buffer that only an interactive session fills",
-    ),
-    Waiver(
-        "Scheme",
-        "turtle shapes that the bridge reports as unsupported",
-        "bezier curves, gradient fills and sprites have no CanvasCommand; the bridge "
-        "reports them in 'unsupported' rather than dropping them, which "
-        "python_bridge_tests asserts",
     ),
 ]

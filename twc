@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+# Compile a Time Warp Studio program into a standalone executable.
+# The work lives in native/tools/twc.py; this wrapper keeps `./twc` at the root
+# the way `./run.sh` is, so neither has to be found inside the tree.
+set -euo pipefail
+root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+exec python3 "$root/native/tools/twc.py" "$@"

@@ -55,10 +55,12 @@
 #include <string>
 #include <vector>
 
+#include <QHash>
 #include <QPair>
 #include <QString>
 #include <QThread>
 #include <QVector>
+#include <QStringList>
 
 #include "timewarp/scheme/host.hpp"
 #include "timewarp/scheme/machine.hpp"
@@ -70,6 +72,8 @@ enum class PauseCause : std::uint8_t {
     Breakpoint = 0,
     Step,
     PauseRequest,
+    /// A watched variable changed value.
+    DataBreakpoint,
     Error,
     /// The run ended without pausing. The snapshot is still taken, because a
     /// program that finished has bindings and the variables panel shows what a
@@ -123,6 +127,8 @@ struct DebugSnapshot {
     QVector<StackFrameInfo> stack;
     /// Innermost bindings first.
     QVector<DebugVariable> variables;
+    /// The variable whose change caused a `DataBreakpoint` pause, else empty.
+    QString changed_variable;
 };
 
 /// Executes a program on a background thread with debugger control.
@@ -178,6 +184,12 @@ public:
     /// a breakpoint that does nothing is not.
     void set_breakpoints(QVector<int> lines);
 
+    /// Variable names whose change pauses the run. The machine's visible
+    /// bindings are compared at each form; the first form that changes one of
+    /// these stops. Empty disables the comparison, which is what keeps a normal
+    /// debug run from allocating a binding table per form.
+    void set_data_breakpoints(const QStringList& names);
+
     /// When true, a runtime error pauses instead of ending the run.
     void set_break_on_error(bool enabled) noexcept { break_on_error_ = enabled; }
 
@@ -185,6 +197,10 @@ public:
 
     /// Valid once `paused` has been emitted.  Copies under a lock.
     [[nodiscard]] DebugSnapshot snapshot() const;
+    /// Everything the program has printed so far. Updated as output streams, so a
+    /// caller that is not connected to the signal (the API polls the runner) can
+    /// still read it while the run is paused or finished.
+    [[nodiscard]] QString output() const;
     [[nodiscard]] bool is_paused() const noexcept {
         return paused_.load(std::memory_order_acquire);
     }
@@ -222,16 +238,22 @@ private:
 
     /// Runner thread only.
     void capture_snapshot(const timewarp::scheme::SuspendState& state,
-                          PauseCause cause, const QString& error = {});
+                          PauseCause cause, const QString& error = {},
+                          QString changed = {});
     /// Publishes the pause, waits for the user's next command, and applies it.
     /// Always returns false so the machine yields at this exact form.  Runner
     /// thread only.
     [[nodiscard]] bool suspend(const timewarp::scheme::SuspendState& state,
-                               PauseCause cause);
+                               PauseCause cause, QString changed = {});
     /// Arms the stepping state for a step command.  Runner thread only.
     void apply_step(DebugCommand command, std::uint32_t depth);
     void refresh_breakpoints();
     [[nodiscard]] bool breakpoint_hit(int line) const;
+    /// Copies the data-breakpoint set when the GUI changed it. Runner thread only.
+    void refresh_data_breakpoints();
+    /// The first watched binding that changed since the previous form, or empty.
+    /// Primes the comparison on the first call and reports nothing then.
+    [[nodiscard]] QString data_changed();
     void stream_output();
 
     /// Whether this run has already published a snapshot. A pause or an error
@@ -255,6 +277,17 @@ private:
     QVector<int> breakpoint_cache_;
     std::uint64_t breakpoint_generation_seen_ = 0;
 
+    // -- data breakpoints -------------------------------------------------
+    mutable std::mutex data_breakpoint_mutex_;
+    QStringList data_breakpoints_;
+    std::atomic<std::uint64_t> data_breakpoint_generation_{1};
+    QStringList data_breakpoint_cache_;
+    std::uint64_t data_breakpoint_generation_seen_ = 0;
+    /// The bindings as of the previous form, name to rendered value. Runner
+    /// thread only.
+    QHash<QString, QString> last_bindings_;
+    bool bindings_primed_ = false;
+
     // -- stepping ---------------------------------------------------------
     enum class StepMode : std::uint8_t { Into, Over, Out };
 
@@ -270,6 +303,8 @@ private:
     // -- published state --------------------------------------------------
     mutable std::mutex snapshot_mutex_;
     DebugSnapshot snapshot_;
+    mutable std::mutex output_mutex_;
+    QString output_text_;
 
     // -- runner-thread state ----------------------------------------------
     timewarp::scheme::Machine* machine_ = nullptr;

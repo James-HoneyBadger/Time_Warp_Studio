@@ -17,12 +17,12 @@ cmake --build native/build -j
 ctest --test-dir native/build --output-on-failure
 ```
 
-There are 17 suites: the lexer, the expression evaluator, the Scheme machine, the
+There are 20 suites: the lexer, the expression evaluator, the Scheme machine, the
 native language engine, the canvas command queue, the Qt canvas bridge, the debug and
 debugger runner, the UI layout, the UI documents, the turtle canvas, the syntax
 highlighter, the Python bridge, sound and ports, the editor's text services
-(formatting, snippets, find-in-files, autosave), the help browser, and the live
-CHIP-8 machine with its window.
+(formatting, snippets, find-in-files, autosave), the help browser, the live CHIP-8
+machine with its window, the project file, the SQL database, and the JSON-RPC API.
 
 Other build trees, all of which must stay green:
 
@@ -46,6 +46,24 @@ python3 native/tools/example_smoke.py
 The 30 programs that must produce ink are listed in `DRAWING_EXAMPLES` inside that
 script; a program that is expected to draw and does not fails the run.
 
+The command matrix is the other half of that gate: every row in
+`native/bridge/time_warp/tests/command_table.py` is executed and must produce output,
+drawing or a reported error. It reports commands that no test or example exercises.
+
+```bash
+python3 native/tools/command_matrix.py
+```
+
+The REPL is a separate path: each row is submitted through a fresh native
+`repl.*` session, so commands that depend on bindings, drawing or whole-program
+entry semantics are exercised there too.
+
+```bash
+python3 native/tools/repl_matrix.py
+```
+
+Both are also `make command-matrix` and `make repl-matrix`.
+
 ## The bridge engine's own tests
 
 ```bash
@@ -67,8 +85,34 @@ both sides seed from the OS, so they cannot agree by construction.
 ```bash
 python3 native/tools/differential_check.py native/build/expr_cli
 cd native/tools && python3 scheme_differential_check.py
-python3 native/tools/lang_differential_check.py   # 482 programs, 0 differences
+python3 native/tools/lang_differential_check.py   # 483 programs, 0 differences
 ```
+
+## Curriculum and documentation gates
+
+```bash
+python3 native/tools/teach.py validate                 # lessons, checkpoints and solutions
+python3 native/tools/teach.py write-plans docs/lessons/plans
+git diff --exit-code --stat docs/lessons/plans         # generated plans match
+make lint-md                                           # Markdown links and style
+```
+
+`validate` runs every lesson solution through its checkpoint and refuses a starter
+that already passes. `write-plans` regenerates the teacher-facing plans from the
+curriculum; CI fails if the regenerated files differ from the committed ones.
+
+## The API and terminal tools
+
+The JSON-RPC server is covered by `api_tests` and can be smoke-tested as a process:
+
+```bash
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"studio.info"}' | ./api
+TIME_WARP_SKIP_BUILD=1 ./twc Examples/basic/hello.bas -o /tmp/hello
+/tmp/hello --no-svg
+```
+
+The generated executable is a real artifact, so the smoke test proves the compiler
+and the link step as well as the program.
 
 ## Lint
 

@@ -19,10 +19,10 @@ Found a bug? Use the
 It asks for the four things needed to reproduce a problem, because a prose issue
 usually leaves one of them out:
 
-1. **Check [docs/ROADMAP.md](docs/ROADMAP.md) first.** The REPL bar's interpreter
-   wiring, a project panel, watch expressions, an automatic update check and
-   Flatpak/Snap or Windows/macOS packaging are deliberately not built yet, so a
-   missing feature from that list is a feature request rather than a regression.
+1. **Check [docs/ROADMAP.md](docs/ROADMAP.md) first.** A dedicated player target,
+   an automatic update check and Flatpak/Snap or Windows/macOS packaging are
+   deliberately not built yet, so a missing feature from that list is a feature
+   request rather than a regression.
 2. **Check existing issues** — it may already be reported.
 3. **Fill in the form.** The environment it asks for (built from source or
    installed, and the platform) changes where to look: the two take different
@@ -101,7 +101,7 @@ engine the parity gates and the lesson check use; every language runs in C++.
 
 | To work on | You need |
 | ---------- | -------- |
-| The IDE and the C++ suites | A C++20 compiler (GCC 11+ or Clang 14+), CMake 3.20+, Qt6 (Widgets, Core, Gui; Svg optional for SVG export, PrintSupport optional for printing) |
+| The IDE and the C++ suites | A C++20 compiler (GCC 11+ or Clang 14+), CMake 3.20+, Qt6 (Widgets, Core, Gui; Svg optional for SVG export, PrintSupport optional for printing) and the SQLite 3 development package |
 | The bridge engine | Python 3.10 or higher, standard library only |
 | The documentation gates | Python 3, and `node` for `markdownlint-cli2` |
 | Any of it | Git and a command line |
@@ -153,7 +153,7 @@ Optional extras for those languages are not required: `pyttsx3` (BASIC `SAY`),
 # Build and run the IDE
 make -C native run
 
-# The 17 C++ suites
+# The 20 C++ suites
 make test
 ```
 
@@ -364,7 +364,7 @@ Requested by Issue #42 - BASIC language completeness.
 ### Run Test Suite
 
 ```bash
-# The 17 C++ suites
+# The 20 C++ suites
 make test
 
 # One suite, by name
@@ -621,10 +621,12 @@ Understanding the codebase:
 Time_Warp_Studio/
 ├── native/                       # THE APPLICATION (C++20 / Qt6)
 │   ├── CMakeLists.txt
-│   ├── include/ src/             # ui/, canvas/, scheme/, lang/, debugger/, bridge/
-│   ├── tests/                    # 17 CTest suites
-│   ├── tools/                    # time_warp_ide.cpp and the gates:
-│   │                             #   learn.py, teach.py, command_matrix.py,
+│   ├── include/ src/             # ui/, canvas/, scheme/, lang/, debugger/,
+│   │                             #   bridge/, project/, sql/, api/
+│   ├── tests/                    # 20 CTest suites
+│   ├── tools/                    # time_warp_ide.cpp, time_warp_api.cpp, twc.py
+│   │                             #   and the gates: learn.py, teach.py,
+│   │                             #   command_matrix.py, repl_matrix.py,
 │   │                             #   example_smoke.py, differential_check.py
 │   └── bridge/                   # The Python reference engine: parity gates, command
 │       │                         #   matrix and lesson checks; no language runs in it
@@ -638,9 +640,14 @@ Time_Warp_Studio/
 │           └── tests/            #     the engine's pytest suite
 ├── Examples/                     # 60 example programs across the 10 languages
 ├── docs/                         # the guides
+│   ├── USER_GUIDE.md             #   the IDE manual (projects, REPL, SQL, API)
+│   ├── API.md                    #   JSON-RPC methods and libraries
 │   ├── tutorials/                #   one tutorial per language
 │   └── lessons/                  #   the curriculum, both guides and the plans
 ├── Scripts/                      # audits, version sync, build helper
+├── run.sh                        # build (if needed) and launch the IDE
+├── twc                           # compile one program to an executable
+├── api                           # JSON-RPC on stdin/stdout
 ├── Makefile                      # Convenience targets (delegate to native/)
 └── [Root docs]                   # README, CONTRIBUTING, SECURITY, LICENSE
 ```

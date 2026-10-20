@@ -32,6 +32,10 @@ BASIC, APL, Logo, PILOT, FOCAL, Scheme, CHIP-8, COMAL, REXX, and Smalltalk.
 9. [CHIP-8](#chip-8)
 10. [Smalltalk](#smalltalk)
 
+[The REPL in each language](#the-repl-in-each-language) explains which bindings
+survive between commands, and [SQL in nine languages](#sql-in-nine-languages) is a
+Studio extension available from every language except CHIP-8.
+
 Each language also has a worked example and a tutorial:
 
 | Language | Extensions | Example | Showcase | Tutorial |
@@ -49,9 +53,74 @@ Each language also has a worked example and a tutorial:
 
 ---
 
+## The REPL in each language
+
+The REPL line under the editor submits one entry to the current document's
+language. It runs the same native engine as **Run**, and its drawing goes through
+the same canvas queue.
+
+| Language | What survives between entries |
+| --- | --- |
+| BASIC, FOCAL, PILOT, COMAL, REXX | Variables and evaluator state. `LET X = 5` then `PRINT X` gives `5`. |
+| APL | Variables and `∇` function definitions. |
+| Logo | `MAKE` variables; `TO ... END` definitions do not survive because each entry is re-run as a whole program. |
+| Scheme | The persistent machine: `define`/`set!` and closures; expression values are echoed. |
+| Smalltalk | Nothing from the previous entry; each entry is a complete program. |
+| CHIP-8 | Nothing; each entry is an assembly listing that runs and resets the machine. |
+
+In BASIC, `NEW` clears the session's bindings and prints `✅ BASIC workspace
+cleared`. Running a document stops and replaces the REPL session. The API's
+`repl.reset` forgets every binding in a session; `repl.close` releases it. See the
+[user guide](USER_GUIDE.md#3-the-repl-bar) for the controls.
+
+---
+
+## SQL in nine languages
+
+The Studio embeds SQLite. Open or create a database in the 🗄 **Database** tab,
+then a program can use the same connection with a `SQL` statement:
+
+```basic
+10 SQL CREATE TABLE scores (name TEXT, score INTEGER)
+20 SQL INSERT INTO scores VALUES ('Ada', 42)
+30 SQL SELECT name, score FROM scores
+```
+
+The line-by-line languages — BASIC, FOCAL, PILOT, COMAL, REXX and APL — get this
+from the shared interpreter loop. Logo writes the same statement as a command:
+
+```logo
+SQL SELECT * FROM scores
+```
+
+Scheme uses a primitive:
+
+```scheme
+(sql "SELECT * FROM scores")
+```
+
+and Smalltalk asks its `SQL` class:
+
+```smalltalk
+Transcript show: (SQL run: 'SELECT * FROM scores').
+```
+
+A query prints its columns, rows and row count; an insert or update prints how
+many rows changed; an error prints the database's own message. The database
+manager and the running program share one connection, so a table created at the
+prompt is visible to the next `SQL` statement without reopening anything.
+CHIP-8 is the one language without a `SQL` form: a bytecode program has no
+strings to carry a statement.
+
+---
+
 ## BASIC
 
 Classic BASIC language with Turbo BASIC graphics extensions.
+
+In the REPL, a line beginning with a number is stored in the editor as a
+numbered program line rather than executed; `RUN`, `LIST` and `NEW` are the
+classic direct-mode commands. `?` is accepted as shorthand for `PRINT`.
 
 ### Variables and Types
 
@@ -75,6 +144,9 @@ NUMBERS(1) = 100
 ' PRINT outputs to console
 PRINT "Hello, World!"
 PRINT "Value:", X
+
+' ? is the classic shorthand for PRINT
+? "Hello again"
 
 ' INPUT reads from user
 INPUT "Enter name: ", NAME$
@@ -221,7 +293,8 @@ IF K$ = "q" THEN END
 `INKEY$` answers the next key typed at the drawing canvas, or the empty string
 when nothing has been typed. Click the canvas first: that is where a game is
 played, so that is where the keys are read. A headless run has no keyboard and
-answers empty, which is what the parity gate records.
+answers empty, which is what the parity gate records. It is therefore not a
+useful REPL command: the REPL has no running program for the buffer to feed.
 
 ### Drawing without the turtle: `DRAW`
 

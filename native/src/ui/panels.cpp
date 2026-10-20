@@ -1442,11 +1442,81 @@ DebugPanel::DebugPanel(QWidget* parent) : QFrame(parent) {
     variables_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
     variables_->setEditTriggers(QAbstractItemView::NoEditTriggers);
     layout->addWidget(variables_, 1);
+    // Double-clicking a binding is how a user who does not know a variable's
+    // spelling asks to watch it change.
+    connect(variables_, &QTableWidget::cellDoubleClicked, this,
+            [this](int row, int) {
+                if (QTableWidgetItem* item = variables_->item(row, 0); item != nullptr) {
+                    addDataBreakpoint(item->text());
+                }
+            });
+
+    pause_reason_ = new QLabel;
+    pause_reason_->setObjectName(QStringLiteral("debugPauseReason"));
+    pause_reason_->setWordWrap(true);
+    layout->addWidget(pause_reason_);
+
+    auto* watch_label = new QLabel{tr("Watch expressions")};
+    layout->addWidget(watch_label);
+    auto* watch_row = new QHBoxLayout;
+    watch_row->setSpacing(4);
+    watch_input_ = new QLineEdit;
+    watch_input_->setObjectName(QStringLiteral("debugWatchInput"));
+    watch_input_->setPlaceholderText(tr("X * 2"));
+    watch_row->addWidget(watch_input_, 1);
+    watch_add_ = new QPushButton{tr("Add")};
+    watch_add_->setObjectName(QStringLiteral("debugAddWatch"));
+    watch_row->addWidget(watch_add_);
+    watch_remove_ = new QPushButton{tr("Remove")};
+    watch_remove_->setObjectName(QStringLiteral("debugRemoveWatch"));
+    watch_row->addWidget(watch_remove_);
+    layout->addLayout(watch_row);
+    watches_ = new QTableWidget{0, 2};
+    watches_->setObjectName(QStringLiteral("debugWatches"));
+    watches_->setHorizontalHeaderLabels({tr("Expression"), tr("Value")});
+    watches_->verticalHeader()->setVisible(false);
+    watches_->horizontalHeader()->setSectionResizeMode(0, QHeaderView::ResizeToContents);
+    watches_->horizontalHeader()->setSectionResizeMode(1, QHeaderView::Stretch);
+    watches_->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    watches_->setSelectionBehavior(QAbstractItemView::SelectRows);
+    watches_->setMaximumHeight(100);
+    layout->addWidget(watches_);
+
+    connect(watch_add_, &QPushButton::clicked, this, [this] { addWatch(); });
+    connect(watch_remove_, &QPushButton::clicked, this, [this] { removeWatch(); });
+    connect(watch_input_, &QLineEdit::returnPressed, this, [this] { addWatch(); });
+
+    auto* data_label = new QLabel{tr("Break when a variable changes")};
+    layout->addWidget(data_label);
+    auto* data_row = new QHBoxLayout;
+    data_row->setSpacing(4);
+    data_input_ = new QLineEdit;
+    data_input_->setObjectName(QStringLiteral("debugDataBreakpointInput"));
+    data_input_->setPlaceholderText(tr("name"));
+    data_row->addWidget(data_input_, 1);
+    data_add_ = new QPushButton{tr("Add")};
+    data_add_->setObjectName(QStringLiteral("debugAddDataBreakpoint"));
+    data_row->addWidget(data_add_);
+    data_remove_ = new QPushButton{tr("Remove")};
+    data_remove_->setObjectName(QStringLiteral("debugRemoveDataBreakpoint"));
+    data_row->addWidget(data_remove_);
+    layout->addLayout(data_row);
+    data_breakpoints_ = new QListWidget;
+    data_breakpoints_->setObjectName(QStringLiteral("debugDataBreakpoints"));
+    data_breakpoints_->setMaximumHeight(70);
+    layout->addWidget(data_breakpoints_);
+    connect(data_add_, &QPushButton::clicked, this,
+            [this] { addDataBreakpoint(data_input_->text()); });
+    connect(data_remove_, &QPushButton::clicked, this,
+            [this] { removeDataBreakpoint(); });
+    connect(data_input_, &QLineEdit::returnPressed, this,
+            [this] { addDataBreakpoint(data_input_->text()); });
 
     setAvailable(false, tr("Run a Scheme program to step through it."));
 }
 
 void DebugPanel::setAvailable(bool available, const QString& reason) {
+    const bool was_available = available_;
     available_ = available;
     reason_->setText(reason);
     reason_->setVisible(!available);
@@ -1456,11 +1526,20 @@ void DebugPanel::setAvailable(bool available, const QString& reason) {
     add_->setEnabled(available);
     remove_->setEnabled(available);
     line_->setEnabled(available);
+    watch_input_->setEnabled(available);
+    watch_add_->setEnabled(available);
+    watch_remove_->setEnabled(available);
+    data_input_->setEnabled(available);
+    data_add_->setEnabled(available);
+    data_remove_->setEnabled(available);
     if (!available) {
         // The lists stay readable: what the last run left is still true even when
         // the current document cannot be stepped.
         status_->setText(tr("not steppable"));
-    } else {
+    } else if (!was_available) {
+        // Only when capability returns, not on every document refresh: a tab
+        // switch while a run is paused must not erase "paused at line 20" or the
+        // reason a data breakpoint stopped it.
         setPaused(false, 0, QString{});
     }
 }
@@ -1476,6 +1555,7 @@ void DebugPanel::setPaused(bool paused, int line, const QString& procedure) {
     // is where "running" and "ready" are said.
     if (!paused) {
         status_->setText(tr("not paused"));
+        setPauseReason(QString{});
         return;
     }
     // Line 0 means the program has no source line for the next unit (a binary
@@ -1484,6 +1564,126 @@ void DebugPanel::setPaused(bool paused, int line, const QString& procedure) {
         procedure.isEmpty() ? tr("paused at line %1").arg(line)
                             : tr("paused at line %1 in %2").arg(line).arg(procedure);
     status_->setText(line > 0 ? where : tr("paused before the next instruction"));
+}
+
+void DebugPanel::setPauseReason(const QString& reason) {
+    pause_reason_->setText(reason);
+    pause_reason_->setVisible(!reason.isEmpty());
+}
+
+void DebugPanel::setWatches(const QStringList& expressions) {
+    watches_->setRowCount(0);
+    for (const QString& expression : expressions) {
+        const QString trimmed = expression.trimmed();
+        if (trimmed.isEmpty()) {
+            continue;
+        }
+        const int row = watches_->rowCount();
+        watches_->insertRow(row);
+        watches_->setItem(row, 0, new QTableWidgetItem{trimmed});
+        watches_->setItem(row, 1, new QTableWidgetItem{QStringLiteral("\u2014")});
+    }
+}
+
+QStringList DebugPanel::watches() const {
+    QStringList expressions;
+    for (int row = 0; row < watches_->rowCount(); ++row) {
+        if (QTableWidgetItem* item = watches_->item(row, 0); item != nullptr) {
+            expressions.append(item->text());
+        }
+    }
+    return expressions;
+}
+
+void DebugPanel::setWatchValues(const QList<WatchRow>& values) {
+    // The expressions are the contract; values are matched by row and a value for
+    // an expression that is no longer listed is ignored rather than appended.
+    watches_->setRowCount(values.size());
+    for (int row = 0; row < values.size(); ++row) {
+        const WatchRow& entry = values.at(row);
+        watches_->setItem(row, 0, new QTableWidgetItem{entry.expression});
+        auto* value = new QTableWidgetItem{entry.value};
+        if (!entry.ok) {
+            value->setToolTip(entry.error);
+            value->setForeground(palette().brush(QPalette::Disabled, QPalette::Text));
+        }
+        watches_->setItem(row, 1, value);
+    }
+}
+
+void DebugPanel::setDataBreakpoints(const QStringList& names) {
+    data_breakpoints_->clear();
+    for (const QString& name : names) {
+        if (!name.trimmed().isEmpty()) {
+            data_breakpoints_->addItem(name.trimmed());
+        }
+    }
+}
+
+QStringList DebugPanel::dataBreakpoints() const {
+    QStringList names;
+    for (int row = 0; row < data_breakpoints_->count(); ++row) {
+        names.append(data_breakpoints_->item(row)->text());
+    }
+    return names;
+}
+
+void DebugPanel::addWatch() {
+    const QString expression = watch_input_->text().trimmed();
+    if (expression.isEmpty()) {
+        return;
+    }
+    for (int row = 0; row < watches_->rowCount(); ++row) {
+        if (watches_->item(row, 0) != nullptr &&
+            watches_->item(row, 0)->text() == expression) {
+            watch_input_->clear();
+            return;
+        }
+    }
+    const int row = watches_->rowCount();
+    watches_->insertRow(row);
+    watches_->setItem(row, 0, new QTableWidgetItem{expression});
+    watches_->setItem(row, 1, new QTableWidgetItem{QStringLiteral("\u2014")});
+    watch_input_->clear();
+    emitWatches();
+}
+
+void DebugPanel::removeWatch() {
+    const int row = watches_->currentRow();
+    if (row < 0) {
+        return;
+    }
+    watches_->removeRow(row);
+    emitWatches();
+}
+
+void DebugPanel::addDataBreakpoint(const QString& name) {
+    const QString trimmed = name.trimmed();
+    if (trimmed.isEmpty()) {
+        return;
+    }
+    const QList<QListWidgetItem*> existing =
+        data_breakpoints_->findItems(trimmed, Qt::MatchFixedString | Qt::MatchCaseSensitive);
+    if (!existing.isEmpty()) {
+        data_input_->clear();
+        return;
+    }
+    data_breakpoints_->addItem(trimmed);
+    data_input_->clear();
+    emitDataBreakpoints();
+}
+
+void DebugPanel::removeDataBreakpoint() {
+    if (QListWidgetItem* item = data_breakpoints_->currentItem(); item != nullptr) {
+        delete data_breakpoints_->takeItem(data_breakpoints_->row(item));
+        emitDataBreakpoints();
+    }
+}
+
+void DebugPanel::emitWatches() { emit watchesChanged(watches()); }
+
+void DebugPanel::emitDataBreakpoints() {
+    emit dataBreakpointsChanged(dataBreakpoints());
 }
 
 void DebugPanel::setStack(const QList<Frame>& frames) {

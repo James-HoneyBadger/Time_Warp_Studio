@@ -12,7 +12,7 @@ PYTHON ?= $(shell test -x .venv/bin/python3 && echo .venv/bin/python3 || echo py
 FORWARDED := build run test test-debug asan clean distclean info test-list \
              screenshot reset-layout
 
-.PHONY: help $(FORWARDED) engine-test smoke test-all lint lint-md
+.PHONY: help $(FORWARDED) engine-test smoke command-matrix repl-matrix test-all lint lint-md
 
 help:
 	@echo "Time Warp Studio"
@@ -20,7 +20,7 @@ help:
 	@echo "The IDE is the Qt application in $(NATIVE)/. Targets that forward to it:"
 	@echo "  build         Build the Qt IDE (Release)"
 	@echo "  run           Build it and run it"
-	@echo "  test          Run the 17 C++ suites"
+	@echo "  test          Run the 20 C++ suites"
 	@echo "  test-debug    Run them in the Debug tree"
 	@echo "  asan          Run them under AddressSanitizer (ASAN=undefined for UBSan)"
 	@echo "  screenshot    Capture a window screenshot"
@@ -44,7 +44,13 @@ engine-test:
 smoke:
 	@$(PYTHON) $(NATIVE)/tools/example_smoke.py
 
-test-all: test engine-test smoke
+command-matrix:
+	@$(PYTHON) $(NATIVE)/tools/command_matrix.py
+
+repl-matrix:
+	@$(PYTHON) $(NATIVE)/tools/repl_matrix.py
+
+test-all: test engine-test smoke command-matrix repl-matrix
 
 lint:
 	@$(PYTHON) -m ruff check $(NATIVE)/bridge

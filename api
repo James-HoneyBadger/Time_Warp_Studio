@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Start the Studio's JSON-RPC API on stdin/stdout.
+# The implementation is native/tools/time_warp_api.cpp; this keeps the command
+# at the repository root, beside ./run.sh and ./twc.
+set -euo pipefail
+root="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+build_dir="${TIME_WARP_BUILD_DIR:-$root/native/build}"
+# An override is relative to the checkout, not to wherever the caller
+# happened to be: `./run.sh` and a script in another directory should
+# build in the same place.
+if [[ "$build_dir" != /* ]]; then
+    build_dir="$root/$build_dir"
+fi
+binary="$build_dir/time_warp_api"
+
+if [[ "${TIME_WARP_SKIP_BUILD:-0}" != "1" ]]; then
+    if [[ ! -f "$build_dir/CMakeCache.txt" ]]; then
+        cmake -S "$root/native" -B "$build_dir" -DCMAKE_BUILD_TYPE=Release >/dev/null
+    fi
+    cmake --build "$build_dir" --target time_warp_api -j "$(nproc 2>/dev/null || printf '4')" >/dev/null
+fi
+exec "$binary" "$@"

@@ -250,9 +250,11 @@ Two rules worth knowing:
 ### The editor
 
 `CodeEditor` is a `QPlainTextEdit` with a line-number gutter, a highlighted current
-line, cursor tracking and per-language syntax colouring, because those are what make a
-text box feel like an editor rather than a scratchpad. There is no minimap,
-find/replace, outline or formatter yet.
+line, cursor tracking, per-language syntax colouring, breakpoint markers and an
+optional minimap. Find/replace is `FindBar` over the editor's own search; the
+outline dock is `OutlinePanel` over the document's language structure; Format Code
+is the formatter service. They are separate widgets and services because each has
+to work without a window and each has its own test.
 
 The colouring is `SyntaxHighlighter`, and its rules are per language rather than one
 shared approximation: REXX comments are `--` and `/* ... */`, Smalltalk's comment is a
@@ -401,6 +403,43 @@ a measurable question rather than a matter of opinion.
 
 ---
 
+### Projects, SQL and the automation API
+
+Three libraries sit beside the engines, each with one job and a test suite:
+
+- **`timewarp_project`** (`native/include/timewarp/project/project.hpp`) is a JSON
+  view over programs that already exist. A project is the file (`<name>.twproject`),
+  a root, an ordered list of groups and a list of files with the group each belongs
+  to. Paths inside the root are stored relatively, so a copied folder keeps working;
+  the save goes through `QSaveFile`; a load validates every field before replacing
+  the open project, so a broken file cannot destroy the one already open. Adding a folder
+  walks it for recognised programs and files each under its subfolder's group.
+  The panel is a tree over this model and never edits it directly — every gesture is a signal
+  the window applies to the model and then saves, which is why a drag and a context
+  menu cannot disagree about where a file lives.
+- **`timewarp_sql`** wraps one SQLite connection in `sql::Database`. It is the
+  connection both the 🗄 Database tab and a program's `SQL` statement use, guarded by
+  a mutex because one may run on a runner thread while the other is on the GUI
+  thread. Results carry columns, rows, the change count and an error; the row cap
+  (1000) is part of the type, not a thing the panel decides. Table and schema
+  lookups bind their names rather than pasting them into SQL.
+- **`timewarp_api`** is JSON-RPC 2.0 over newline-delimited JSON, with no transport
+  of its own. `api::Server` takes an `istream` and an `ostream`, which is how it can
+  be driven by a process (`time_warp_api`), a test (string streams) or an embedding
+  application. It owns a `sql::Database` and a `project::Project` and delegates
+  program execution to the same `Interpreter` and `Machine` the IDE uses; the REPL
+  sessions it keeps are that same `ReplSession` the bar drives, and its debug
+  sessions wrap `lang::DebugSession` and `DebuggerRunner` rather than growing a
+  third stepping loop. That sharing is the
+  design rule: an API that grew its own interpreter would be a second answer to
+  "what does this program do".
+
+`native/tools/twc.py` generates a small C++ launcher for a program, embeds the
+source as bytes (a CHIP-8 ROM is binary), links `timewarp_lang` or
+`timewarp_scheme`, and uses `graphics::RecordingHost` — the same recorder the API
+returns — to write the drawing as SVG. The result needs neither Qt nor the Studio
+at run time.
+
 ## The language bridge
 
 ### Why a separate process
@@ -492,8 +531,9 @@ def execute_logo(interpreter: Interpreter, source: str, turtle: TurtleState) -> 
     """Execute the source and return the text to display."""
 ```
 
-- **Whole-program executors** receive the entire source. Scheme, CHIP-8 and Smalltalk
-  are dispatched through `_WHOLE_PROGRAM_EXECUTORS` in `core/interpreter.py`.
+- **Whole-program executors** receive the entire source. Scheme, CHIP-8, Logo and
+  Smalltalk are dispatched through `_WHOLE_PROGRAM_EXECUTORS` in
+  `core/interpreter.py`.
 - **Line-by-line executors** are called once per logical line/command: BASIC, PILOT,
   Logo, COMAL, REXX, FOCAL and APL. Logo names the parameter `command` for that
   reason, and splits multiple commands on one line itself.
@@ -628,13 +668,20 @@ decides where the code goes, because a panel has no business knowing about tabs.
 The curriculum is loaded when the tab is first looked at, not when the window is built: a
 user who never opens the lesson panel should not pay for a Python process at start-up.
 
-One widget is deliberately partial, and its header says so; two more are worth
-knowing about because what they cover is easy to underestimate:
+Three widgets are worth knowing about because what they cover is easy to
+underestimate:
 
 - `ImmediateModePanel` is a REPL prompt and entry line with the layout contract the Python
-  sets (a 44px floor). **The interpreter plumbing behind it is not implemented**, and
-  nothing is connected to its `commandSubmitted` signal. It is the one control in the
-  window that is deliberately inert.
+  sets (a 44px floor). `commandSubmitted` drives `ReplRunner`, a `QThread` that keeps
+  one `ReplSession` per language (and a persistent Scheme `Machine`) alive between
+  entries. `Interpreter::run_snippet` replaces the program text while preserving
+  variables, arrays and per-executor state, so a command sees the previous command's
+  bindings. Whole-program languages run each submission as a complete program; the
+  guide says which bindings survive for each language. In BASIC,
+  `handleBasicDirectCommand` intercepts numbered lines and stores them in the
+  editor in numeric order, and handles `LIST`, `RUN` and `NEW` before the engine
+  sees them. The same `?`-for-`PRINT` rule lives in the BASIC executor, so it works
+  in the bar and in a program.
 - `FunctionKeyBar` reproduces all three modifier layers (normal, Shift, Ctrl) over F1-F10,
   plus the deck selector, and every key dispatches to an action that exists.
 - `CrtOverlay` draws scanlines, vignette, curvature, flicker and a phosphor tint; View >
@@ -726,9 +773,11 @@ coming from the Python application starts from this build's defaults.
   pause, step and breakpoints, and `debug_tests` covers the machinery; `DebugPanel`
   drives it for Scheme. Every other language stops through the shared
   `DebugSession`: a statement for the line-loop languages, a top-level statement
-  for Logo, a message send for Smalltalk and an instruction for CHIP-8. What is
-  missing is depth: watch expressions, data breakpoints, and a call stack for
-  languages that do not keep one.
+  for Logo, a message send for Smalltalk and an instruction for CHIP-8. Watch
+  expressions are evaluated over the paused bindings by `timewarp::lang`'s watch
+  evaluator; data breakpoints compare the bindings after each statement (or at a
+  whole-program pause point) and stop when a watched name changes. What is missing
+  is a call stack for languages that do not keep one.
 - **The editor** has syntax colouring, find/replace, find-in-files, a minimap, a
   formatter, language-specific checking as you type (squiggles, gutter markers,
   hover text), optional completion, auto-indent, breakpoint markers in the gutter,
@@ -740,7 +789,9 @@ coming from the Python application starts from this build's defaults.
 - **Files and sessions** have autosave and version history — `AutosaveStore`
   keeps bounded snapshots under the data directory and the version-history dialog
   reopens one in a new tab — and the split editor: two panes that each hold their
-  own documents, persisted with the session. There is no project tree.
+  own documents, persisted with the session. The 🗂 **Projects** dock is a tree
+  over a `.twproject` (`timewarp_project`): named groups, files that stay where
+  they are on disk, and a project that reopens with the session.
 - **Help** is a documentation browser (`native/src/ui/help_browser.cpp`) over the
   installed `docs/`, with its contents tree read from `INDEX.md` rather than
   written a second time. F1 opens the current language's tutorial at the word

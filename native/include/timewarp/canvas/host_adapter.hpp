@@ -17,6 +17,8 @@
 
 #include <cstdint>
 #include <functional>
+#include <string>
+#include <string_view>
 #include <utility>
 
 #include "timewarp/canvas/command.hpp"
@@ -36,11 +38,14 @@ public:
     using Wakeup = std::function<void()>;
     /// Forwarded to `scheme::Host::tick`; returns false to abort the program.
     using Budget = std::function<bool(std::uint64_t)>;
+    /// The IDE's database, called from the interpreter thread.
+    using SqlRunner = std::function<std::string(std::string_view)>;
 
     explicit QueuedTurtleHost(CanvasCommandQueue& queue) : queue_{queue} {}
 
     void set_wakeup(Wakeup wakeup) { wakeup_ = std::move(wakeup); }
     void set_budget(Budget budget) { budget_ = std::move(budget); }
+    void set_sql_runner(SqlRunner runner) { sql_runner_ = std::move(runner); }
 
     /// Publishes any coalesced state change.  Call whenever the interpreter
     /// pauses -- end of the run, a debugger break, a pause request -- so the
@@ -62,6 +67,13 @@ public:
 
     [[nodiscard]] bool tick(std::uint64_t steps) override {
         return budget_ ? budget_(steps) : true;
+    }
+
+    [[nodiscard]] std::string sql(std::string_view statement) override {
+        if (!sql_runner_) {
+            return "\u274C SQL: no database is open.\n";
+        }
+        return sql_runner_(statement);
     }
 
     void forward(double distance) override {
@@ -122,6 +134,7 @@ private:
     CanvasCommandQueue& queue_;
     Wakeup wakeup_;
     Budget budget_;
+    SqlRunner sql_runner_;
     std::uint64_t submitted_ = 0;
     std::uint64_t rejected_ = 0;
 };

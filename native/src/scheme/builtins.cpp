@@ -81,6 +81,9 @@ constexpr BuiltinEntry kBuiltins[] = {
     {"vector->list", PrimitiveId::VectorToList},
     {"list->vector", PrimitiveId::ListToVector},
     // output
+    // The database is a host service, like the turtle: the language asks and the
+    // embedding application answers.
+    {"sql", PrimitiveId::Sql},
     {"display", PrimitiveId::Display}, {"write", PrimitiveId::Write},
     {"newline", PrimitiveId::Newline},
     // strings and symbols
@@ -927,6 +930,15 @@ void Machine::apply_primitive(PrimitiveId id, const std::vector<Value>& args) {
         }
 
         // ------------------------------------------------------------ output
+        case PrimitiveId::Sql: {
+            require_exactly(args, 1, "sql");
+            if (args[0].type != ValueType::String) {
+                throw SchemeError{"sql: expected a string statement"};
+            }
+            append_output(host_.sql(args[0].string->text));
+            deliver_value(unspecified_value());
+            return;
+        }
         case PrimitiveId::Display: {
             require_exactly(args, 1, "display");
             append_output(display_to_string(args[0]));

@@ -576,6 +576,30 @@ public:
     void setBreakpoints(const QList<int>& lines);
     [[nodiscard]] QList<int> breakpoints() const;
 
+    /// One evaluated watch, as the window computed it. The panel does not
+    /// evaluate: the engine that owns the bindings does, so `X * 2` means what it
+    /// means in the program.
+    struct WatchRow {
+        QString expression;
+        QString value;
+        bool ok = true;
+        QString error;
+    };
+
+    /// Replaces the watch list. Each row's value is left as "—" until the window
+    /// has bindings to evaluate against.
+    void setWatches(const QStringList& expressions);
+    [[nodiscard]] QStringList watches() const;
+    void setWatchValues(const QList<WatchRow>& values);
+
+    /// Replaces the set of variables whose change pauses the run.
+    void setDataBreakpoints(const QStringList& names);
+    [[nodiscard]] QStringList dataBreakpoints() const;
+
+    /// The line under the status that says *why* a pause happened, e.g. "X
+    /// changed". Empty for an ordinary breakpoint.
+    void setPauseReason(const QString& reason);
+
     /// The line the "add" spinner is on, and a way to set it from the editor's
     /// cursor without the panel knowing what an editor is.
     void setLineNumber(int line);
@@ -606,11 +630,21 @@ signals:
     /// The breakpoint set changed. Carries the whole set, so a receiver cannot
     /// apply a delta to a set it thinks it has.
     void breakpointsChanged(const QList<int>& lines);
+    /// The watch list changed. Carries the whole list, like the breakpoints.
+    void watchesChanged(const QStringList& expressions);
+    /// A watched variable was added or removed.
+    void dataBreakpointsChanged(const QStringList& names);
 
 private:
     void addBreakpoint();
     void removeBreakpoint();
     void emitBreakpoints();
+    void addWatch();
+    void removeWatch();
+    void addDataBreakpoint(const QString& name = {});
+    void removeDataBreakpoint();
+    void emitWatches();
+    void emitDataBreakpoints();
 
     QLabel* status_ = nullptr;
     QLabel* reason_ = nullptr;
@@ -626,6 +660,15 @@ private:
     QListWidget* breakpoints_ = nullptr;
     QListWidget* stack_ = nullptr;
     QTableWidget* variables_ = nullptr;
+    QLabel* pause_reason_ = nullptr;
+    QLineEdit* watch_input_ = nullptr;
+    QTableWidget* watches_ = nullptr;
+    QPushButton* watch_add_ = nullptr;
+    QPushButton* watch_remove_ = nullptr;
+    QLineEdit* data_input_ = nullptr;
+    QListWidget* data_breakpoints_ = nullptr;
+    QPushButton* data_add_ = nullptr;
+    QPushButton* data_remove_ = nullptr;
     bool available_ = false;
 };
 

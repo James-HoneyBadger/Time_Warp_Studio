@@ -19,10 +19,13 @@
 #include <string>
 
 #include <QAction>
+#include <QElapsedTimer>
+#include <QThread>
 #include <QTimer>
 #include <QApplication>
 #include <QCheckBox>
 #include <QComboBox>
+#include <QDir>
 #include <QDockWidget>
 #include <QFile>
 #include <QLabel>
@@ -53,6 +56,7 @@
 #include <QTemporaryDir>
 #include <QToolBar>
 #include <QToolButton>
+#include <QTreeWidget>
 #include <QVBoxLayout>
 #include <QWidgetAction>
 
@@ -66,7 +70,11 @@
 #include "timewarp/ui/main_window.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/preferences.hpp"
+#include "timewarp/project/project.hpp"
+#include "timewarp/sql/database.hpp"
 #include "timewarp/ui/profile_report.hpp"
+#include "timewarp/ui/project_panel.hpp"
+#include "timewarp/ui/sql_panel.hpp"
 #include "timewarp/ui/scrubber.hpp"
 
 #include "timewarp/ui/snippet_dialog.hpp"
@@ -79,6 +87,23 @@
 #include "timewarp/ui/version_history.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
 
+
+/// Pumps the event loop until `done()`, so a signal from a runner thread has
+/// somewhere to arrive.
+template <typename Predicate>
+bool spin_until(Predicate done, int timeout_ms = 10000) {
+    QElapsedTimer timer;
+    timer.start();
+    while (!done()) {
+        QApplication::processEvents();
+        if (timer.elapsed() > timeout_ms) {
+            return false;
+        }
+        QThread::msleep(2);
+    }
+    return true;
+}
+
 namespace {
 
 using timewarp::ui::CrtOverlay;
@@ -87,6 +112,8 @@ using timewarp::ui::FunctionKeyBar;
 using timewarp::ui::ImmediateModePanel;
 using timewarp::ui::DebugPanel;
 using timewarp::ui::LessonPanel;
+using timewarp::ui::ProjectPanel;
+using timewarp::ui::SqlPanel;
 using timewarp::ui::Language;
 using timewarp::ui::MainWindow;
 using timewarp::ui::ResizableTabWidget;
@@ -771,14 +798,14 @@ void test_right_column_tabs_and_order() {
     ResizableTabWidget* tabs = window->rightTabs();
 
     TW_CHECK_EQ(tabs->objectName(), QStringLiteral("rightTabs"));
-    TW_CHECK_EQ(tabs->count(), 6);
+    TW_CHECK_EQ(tabs->count(), 7);
     // Order is part of the interface: users reach for Output first, and the
     // classroom page is last because only a teacher opens it.
     TW_CHECK_EQ(tabTitles(tabs).toStdString(),
                 std::string{"\U0001F4DD Output  \U0001F3A8 Graphics|"
                             "\U0001F50D Variables|\u26A1 Telemetry HUD|"
                             "\U0001F41B Debug|\U0001F393 Lessons|"
-                            "\U0001F3EB Classroom"});
+                            "\U0001F3EB Classroom|\U0001F5C4 Database"});
     TW_CHECK_EQ(tabs->widget(0), window->outputCanvasSplitter());
 
     // These are fixed panes, not documents: no close buttons, no dragging them
@@ -1643,6 +1670,28 @@ void test_command_palette() {
     }
 }
 
+void test_standalone_player_layout() {
+    announce("standalone player layout");
+    MainWindow window;
+    TW_CHECK(window.openStandaloneProgram(QStringLiteral("basic"),
+                                          QStringLiteral("10 PRINT 1\n"),
+                                          QStringLiteral("Player")));
+    TW_CHECK(window.isPlayerMode());
+    const auto* tabs = window.findChild<QTabWidget*>(QStringLiteral("rightTabs"));
+    TW_CHECK(tabs != nullptr);
+    if (tabs != nullptr) {
+        // The program's output and drawing remain; the inspector panels and their
+        // tab strip do not.
+        TW_CHECK_EQ(tabs->count(), 1);
+        TW_CHECK(tabs->widget(0) != nullptr &&
+                 tabs->widget(0)->objectName() == QStringLiteral("outputCanvasSplitter"));
+        TW_CHECK(!tabs->isHidden());
+        TW_CHECK(tabs->tabBar()->isHidden());
+    }
+    const auto* project = window.findChild<QDockWidget*>(QStringLiteral("projectDock"));
+    TW_CHECK(project != nullptr && project->isHidden());
+}
+
 void test_standalone_payload() {
     announce("standalone payload");
     using timewarp::ui::standalone::Embedded;
@@ -1859,7 +1908,7 @@ void test_menu_structure() {
     // Debug is absent on purpose: a menu with nothing to put in it is a promise
     // the window cannot keep. Tools carries the CHIP-8 emulator.
     TW_CHECK_EQ(titles.join(QLatin1Char('|')).toStdString(),
-                std::string{"&File|&Edit|&Run|&Tools|&View|&Help"});
+                std::string{"&File|&Project|&Edit|&Run|&Tools|&View|&Help"});
 
     // That the titles exist is not the interesting part. This test used to check
     // only the titles, which is how seven menus with no entries in them passed
@@ -2988,7 +3037,10 @@ void test_immediate_mode_panel_contract() {
         input->setText(QStringLiteral("PRINT 2 + 2"));
         emit input->returnPressed();
         TW_CHECK_EQ(received, QStringLiteral("PRINT 2 + 2"));
-        TW_CHECK_EQ(panel->command(), QStringLiteral("PRINT 2 + 2"));
+        // The panel itself does not clear; the window does once it has handed the
+        // command to the REPL. Both behaviours are asserted here because both are
+        // part of who owns the input.
+        TW_CHECK(panel->command().isEmpty());
 
         // An empty command is not a command.
         received.clear();
@@ -3100,6 +3152,320 @@ void test_left_column_gets_the_larger_share_on_growth() {
 
 }  // namespace
 
+
+void test_project_panel_shows_groups_and_files() {
+    announce("project panel");
+    QTemporaryDir dir;
+    TW_CHECK(dir.isValid());
+    MainWindow window;
+    ProjectPanel* panel = window.projectPanel();
+    TW_CHECK(panel != nullptr);
+    if (panel == nullptr) {
+        return;
+    }
+    TW_CHECK_EQ(panel->objectName(), QStringLiteral("projectPanel"));
+    QDockWidget* dock = window.findChild<QDockWidget*>(QStringLiteral("projectDock"));
+    TW_CHECK(dock != nullptr);
+    if (dock != nullptr) {
+        TW_CHECK(dock->widget() == panel);
+        TW_CHECK_EQ(window.dockWidgetArea(dock), Qt::LeftDockWidgetArea);
+    }
+
+    // The model is the source of truth; the panel is its view.
+    const QString root = dir.path();
+    const QString first = QDir{root}.filePath(QStringLiteral("one.bas"));
+    const QString second = QDir{root}.filePath(QStringLiteral("two.logo"));
+    {
+        QFile file{first};
+        static_cast<void>(file.open(QIODevice::WriteOnly));
+    }
+    {
+        QFile file{second};
+        static_cast<void>(file.open(QIODevice::WriteOnly));
+    }
+    timewarp::project::Project project =
+        timewarp::project::Project::create(QStringLiteral("Class"), root);
+    project.addGroup(QStringLiteral("Art"));
+    project.addFile(first, QStringLiteral("Art"));
+    project.addFile(second);
+    panel->setProject(project);
+
+    TW_CHECK_EQ(panel->projectName(), QStringLiteral("Class"));
+    TW_CHECK_EQ(panel->fileCount(), 2);
+    TW_CHECK_EQ(panel->groupNames(), QStringList({QStringLiteral("Art")}));
+    TW_CHECK(panel->hasFile(first));
+    TW_CHECK_EQ(panel->groupOf(first), QStringLiteral("Art"));
+    TW_CHECK_EQ(panel->groupOf(second), QString{});
+    TW_CHECK(panel->tree()->topLevelItemCount() >= 2);
+    panel->selectFile(first);
+    TW_CHECK(panel->tree()->currentItem() != nullptr);
+
+    panel->clearProject();
+    TW_CHECK_EQ(panel->fileCount(), 0);
+    TW_CHECK_EQ(panel->projectName(), QString{});
+}
+
+void test_watch_and_data_breakpoint_controls() {
+    announce("watch and data breakpoint controls");
+    // The panel restores the session-wide lists; a value written by an earlier
+    // test would otherwise make "the list I just created" wrong.
+    QSettings{}.remove(QStringLiteral("debug/watches"));
+    QSettings{}.remove(QStringLiteral("debug/dataBreakpoints"));
+    MainWindow window;
+    DebugPanel* panel = window.debugPanel();
+    TW_CHECK(panel != nullptr);
+    if (panel == nullptr) {
+        return;
+    }
+    for (const char* name : {"debugWatchInput", "debugAddWatch", "debugRemoveWatch",
+                             "debugWatches", "debugDataBreakpointInput",
+                             "debugAddDataBreakpoint", "debugRemoveDataBreakpoint",
+                             "debugDataBreakpoints", "debugPauseReason"}) {
+        TW_CHECK(panel->findChild<QWidget*>(QString::fromLatin1(name)) != nullptr);
+    }
+
+    QStringList announced;
+    QObject::connect(panel, &DebugPanel::watchesChanged,
+                     [&announced](const QStringList& expressions) {
+                         announced = expressions;
+                     });
+    auto* watch_input = panel->findChild<QLineEdit*>(QStringLiteral("debugWatchInput"));
+    auto* watch_add = panel->findChild<QPushButton*>(QStringLiteral("debugAddWatch"));
+    TW_CHECK(watch_input != nullptr);
+    TW_CHECK(watch_add != nullptr);
+    if (watch_input != nullptr && watch_add != nullptr) {
+        watch_input->setText(QStringLiteral("X * 2"));
+        watch_add->click();
+        TW_CHECK_EQ(panel->watches(), QStringList({QStringLiteral("X * 2")}));
+        TW_CHECK_EQ(announced, QStringList({QStringLiteral("X * 2")}));
+    }
+    panel->setWatchValues({DebugPanel::WatchRow{QStringLiteral("X * 2"),
+                                                QStringLiteral("10"), true, QString{}}});
+    auto* table = panel->findChild<QTableWidget*>(QStringLiteral("debugWatches"));
+    TW_CHECK(table != nullptr);
+    if (table != nullptr) {
+        TW_CHECK_EQ(table->rowCount(), 1);
+        TW_CHECK_EQ(table->item(0, 1)->text(), QStringLiteral("10"));
+    }
+
+    QStringList watched;
+    QObject::connect(panel, &DebugPanel::dataBreakpointsChanged,
+                     [&watched](const QStringList& names) { watched = names; });
+    auto* data_input =
+        panel->findChild<QLineEdit*>(QStringLiteral("debugDataBreakpointInput"));
+    auto* data_add =
+        panel->findChild<QPushButton*>(QStringLiteral("debugAddDataBreakpoint"));
+    TW_CHECK(data_input != nullptr);
+    TW_CHECK(data_add != nullptr);
+    if (data_input != nullptr && data_add != nullptr) {
+        data_input->setText(QStringLiteral("TOTAL"));
+        data_add->click();
+        TW_CHECK_EQ(panel->dataBreakpoints(), QStringList({QStringLiteral("TOTAL")}));
+        TW_CHECK_EQ(watched, QStringList({QStringLiteral("TOTAL")}));
+    }
+    panel->setDataBreakpoints({QStringLiteral("X")});
+    TW_CHECK_EQ(panel->dataBreakpoints(), QStringList({QStringLiteral("X")}));
+    panel->setPauseReason(QStringLiteral("X changed"));
+    auto* reason = panel->findChild<QLabel*>(QStringLiteral("debugPauseReason"));
+    TW_CHECK(reason != nullptr);
+    if (reason != nullptr) {
+        TW_CHECK_EQ(reason->text(), QStringLiteral("X changed"));
+    }
+}
+
+void test_sql_panel_runs_and_shows_results() {
+    announce("SQL panel");
+    MainWindow window;
+    SqlPanel* panel = window.sqlPanel();
+    TW_CHECK(panel != nullptr);
+    if (panel == nullptr) {
+        return;
+    }
+    TW_CHECK_EQ(panel->objectName(), QStringLiteral("sqlPanel"));
+    TW_CHECK(window.showPanel(QStringLiteral("sql")));
+    TW_CHECK(window.rightTabs()->widget(6) == panel);
+
+    panel->setDatabase(QStringLiteral(":memory:"), {QStringLiteral("scores")});
+    TW_CHECK_EQ(panel->tableCount(), 1);
+    panel->setQuery(QStringLiteral("SELECT * FROM scores;"));
+    TW_CHECK_EQ(panel->query(), QStringLiteral("SELECT * FROM scores;"));
+
+    QString submitted;
+    QObject::connect(panel, &SqlPanel::runRequested,
+                     [&submitted](const QString& sql) { submitted = sql; });
+    auto* run = panel->findChild<QPushButton*>(QStringLiteral("sqlRun"));
+    TW_CHECK(run != nullptr);
+    if (run != nullptr) {
+        run->click();
+        TW_CHECK_EQ(submitted, QStringLiteral("SELECT * FROM scores;"));
+    }
+
+    timewarp::sql::QueryResult result;
+    result.columns = {QStringLiteral("name"), QStringLiteral("score")};
+    result.rows = {{QStringLiteral("Ada"), QStringLiteral("42")}};
+    panel->setResult(result);
+    TW_CHECK_EQ(panel->resultRowCount(), 1);
+    TW_CHECK_EQ(panel->resultColumnCount(), 2);
+    TW_CHECK(panel->statusText().contains(QStringLiteral("1 row")));
+
+    timewarp::sql::QueryResult failure;
+    failure.error = QStringLiteral("no such table: nope");
+    panel->setResult(failure);
+    TW_CHECK(panel->statusText().contains(QStringLiteral("no such table")));
+}
+
+void test_repl_bar_runs_and_keeps_bindings() {
+    announce("REPL bar");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    ImmediateModePanel* panel = window->immediateMode();
+    auto* console = window->findChild<QPlainTextEdit*>(QStringLiteral("consoleOutput"));
+    TW_CHECK(panel != nullptr);
+    TW_CHECK(console != nullptr);
+    if (panel == nullptr || console == nullptr) {
+        return;
+    }
+
+    emit panel->commandSubmitted(QStringLiteral("PRINT 2 + 2"));
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("4"));
+    }));
+    TW_CHECK(console->toPlainText().contains(QStringLiteral("REPL")));
+    // The bar is cleared as soon as the command is handed over, so the next
+    // command starts from an empty field rather than appending to the last one.
+    TW_CHECK(panel->command().isEmpty());
+
+    emit panel->commandSubmitted(QStringLiteral("LET X = 7"));
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("REPL \u203A LET X = 7"));
+    }));
+    emit panel->commandSubmitted(QStringLiteral("PRINT X"));
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().count(QStringLiteral("7")) >= 2;
+    }));
+
+    // BASIC's NEW clears the workspace rather than being an unknown command.
+    emit panel->commandSubmitted(QStringLiteral("new"));
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("workspace cleared"));
+    }));
+    const QString before = console->toPlainText();
+    emit panel->commandSubmitted(QStringLiteral("PRINT X"));
+    TW_CHECK(spin_until([console, before] {
+        return console->toPlainText().mid(before.size()).contains(QStringLiteral("0"));
+    }));
+}
+
+void test_repl_basic_direct_mode() {
+    announce("REPL bar: BASIC direct mode");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    ImmediateModePanel* panel = window->immediateMode();
+    auto* console = window->findChild<QPlainTextEdit*>(QStringLiteral("consoleOutput"));
+    CodeEditor* editor = window->currentEditor();
+    TW_CHECK(panel != nullptr && console != nullptr && editor != nullptr);
+    if (panel == nullptr || console == nullptr || editor == nullptr) {
+        return;
+    }
+    editor->setPlainText(QString{});
+    editor->setLanguage(Language::Basic);
+
+    emit panel->commandSubmitted(QStringLiteral("20 PRINT \"TWO\""));
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("Line 20 stored"));
+    }));
+    emit panel->commandSubmitted(QStringLiteral("10 PRINT \"ONE\""));
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("Line 10 stored"));
+    }));
+    emit panel->commandSubmitted(QStringLiteral("15 ? 6 * 7"));
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("Line 15 stored"));
+    }));
+    TW_CHECK_EQ(editor->toPlainText(),
+                QStringLiteral("10 PRINT \"ONE\"\n15 PRINT 6 * 7\n20 PRINT \"TWO\"\n"));
+
+    // The same number replaces the line instead of duplicating it.
+    emit panel->commandSubmitted(QStringLiteral("10 PRINT \"REPLACED\""));
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("Line 10 stored"));
+    }));
+    TW_CHECK_EQ(editor->toPlainText(),
+                QStringLiteral("10 PRINT \"REPLACED\"\n15 PRINT 6 * 7\n20 PRINT \"TWO\"\n"));
+
+    // `?` is PRINT in immediate mode too.
+    emit panel->commandSubmitted(QStringLiteral("? 6 * 7"));
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("42"));
+    }));
+
+    const QString before_list = console->toPlainText();
+    emit panel->commandSubmitted(QStringLiteral("LIST"));
+    TW_CHECK(spin_until([console, before_list] {
+        return console->toPlainText().mid(before_list.size()).contains(
+            QStringLiteral("10 PRINT \"REPLACED\""));
+    }));
+
+    // RUN executes the program that the numbered entries built.
+    emit panel->commandSubmitted(QStringLiteral("RUN"));
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("REPLACED")) &&
+               console->toPlainText().contains(QStringLiteral("TWO"));
+    }));
+
+    // NEW clears both the document and the REPL bindings.
+    emit panel->commandSubmitted(QStringLiteral("NEW"));
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("workspace cleared"));
+    }));
+    TW_CHECK(editor->toPlainText().isEmpty());
+}
+
+void test_repl_bar_scheme_errors_and_language_switch() {
+    announce("REPL bar: Scheme, errors and language switch");
+    const std::unique_ptr<MainWindow> window = shownWindow();
+    ImmediateModePanel* panel = window->immediateMode();
+    auto* console = window->findChild<QPlainTextEdit*>(QStringLiteral("consoleOutput"));
+    CodeEditor* editor = window->currentEditor();
+    auto* selector = window->findChild<QComboBox*>(QStringLiteral("languageSelector"));
+    TW_CHECK(panel != nullptr && console != nullptr && editor != nullptr &&
+             selector != nullptr);
+    if (panel == nullptr || console == nullptr || editor == nullptr ||
+        selector == nullptr) {
+        return;
+    }
+    const auto choose = [selector](const QString& key) {
+        const int index = selector->findData(key);
+        TW_CHECK(index >= 0);
+        selector->setCurrentIndex(index);
+    };
+
+    choose(QStringLiteral("scheme"));
+    emit panel->commandSubmitted(QStringLiteral("(define y 4)"));
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("REPL \u203A (define y 4)"));
+    }));
+    emit panel->commandSubmitted(QStringLiteral("(* y 5)"));
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("20"));
+    }));
+
+    // A reader error is shown, not swallowed.
+    emit panel->commandSubmitted(QStringLiteral("("));
+    TW_CHECK(spin_until([console] {
+        return console->toPlainText().contains(QStringLiteral("\u274C"));
+    }));
+
+    // Switching the document's language swaps the REPL engine rather than
+    // sending Logo a Scheme form.
+    choose(QStringLiteral("logo"));
+    const QString before = console->toPlainText();
+    emit panel->commandSubmitted(QStringLiteral("PRINT 2 + 2"));
+    TW_CHECK(spin_until([console, before] {
+        return console->toPlainText().mid(before.size()).contains(QStringLiteral("4"));
+    }));
+    TW_CHECK(console->toPlainText().mid(before.size()).contains(
+        QStringLiteral("REPL \u203A PRINT 2 + 2")));
+}
+
 int main(int argc, char** argv) {
     // Set before QApplication exists, or Qt tries to open a real display.
     qputenv("QT_QPA_PLATFORM", "offscreen");
@@ -3127,6 +3493,12 @@ int main(int argc, char** argv) {
     test_output_and_graphics_share_a_persistent_split();
     test_run_both_panes_compares_them();
     test_the_split_editor_moves_documents_between_panes();
+    test_project_panel_shows_groups_and_files();
+    test_watch_and_data_breakpoint_controls();
+    test_sql_panel_runs_and_shows_results();
+    test_repl_bar_runs_and_keeps_bindings();
+    test_repl_bar_scheme_errors_and_language_switch();
+    test_repl_basic_direct_mode();
     test_the_outline_lists_and_jumps();
     test_the_scrubber_appears_only_when_there_is_ink();
     test_output_sub_tabs();
@@ -3142,6 +3514,7 @@ int main(int argc, char** argv) {
     test_gif_recording_toggles_and_samples_the_canvas();
     test_command_palette();
     test_standalone_payload();
+    test_standalone_player_layout();
     test_tool_bar_configuration();
     test_status_bar_badge_placement();
     test_outline_dock_starts_hidden();

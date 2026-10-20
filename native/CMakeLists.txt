@@ -202,6 +202,8 @@ add_library(timewarp_lang
     src/lang/value.cpp
     src/lang/language.cpp
     src/lang/debug.cpp
+    src/lang/watch.cpp
+    src/lang/repl.cpp
     src/lang/interpreter.cpp
     src/lang/python_random.cpp
     src/lang/basic.cpp
@@ -463,6 +465,171 @@ else()
 endif()
 
 # ---------------------------------------------------------------------------
+# SQL (Qt Core + SQLite)
+#
+# SQLite is embedded, so a learner's database is a file rather than a server.
+# The library is required: the Database tab and every language's `SQL` statement
+# are part of the product now, and a build without them is a build missing a
+# documented feature.
+# ---------------------------------------------------------------------------
+
+if(Qt6_FOUND)
+    find_package(SQLite3 REQUIRED)
+    add_library(timewarp_sql
+        src/sql/database.cpp
+        include/timewarp/sql/database.hpp
+    )
+    add_library(timewarp::sql ALIAS timewarp_sql)
+
+    target_include_directories(timewarp_sql
+        PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    )
+    target_compile_features(timewarp_sql PUBLIC cxx_std_20)
+    target_link_libraries(timewarp_sql PUBLIC Qt6::Core SQLite::SQLite3)
+
+    if(MSVC)
+        target_compile_options(timewarp_sql PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(timewarp_sql PRIVATE
+            -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast
+            -Wlogical-op ${TIME_WARP_NULL_DEREFERENCE}
+        )
+        if(TIME_WARP_EXPR_WERROR)
+            target_compile_options(timewarp_sql PRIVATE -Werror)
+        endif()
+    endif()
+
+    if(TIME_WARP_EXPR_BUILD_TESTS)
+        add_executable(sql_tests tests/sql_tests.cpp)
+        target_link_libraries(sql_tests PRIVATE timewarp::sql)
+        target_include_directories(sql_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+        if(NOT MSVC)
+            target_compile_options(sql_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+            if(TIME_WARP_EXPR_WERROR)
+                target_compile_options(sql_tests PRIVATE -Werror)
+            endif()
+        endif()
+        add_test(NAME sql_tests COMMAND sql_tests)
+    endif()
+endif()
+
+# ---------------------------------------------------------------------------
+# Projects (Qt Core)
+#
+# A project is a JSON view over programs that already exist, so it needs no
+# widget and no engine: Qt Core's JSON and file classes are the whole
+# dependency. The panel that draws one lives in timewarp_ui.
+# ---------------------------------------------------------------------------
+
+if(Qt6_FOUND)
+    add_library(timewarp_project
+        src/project/project.cpp
+        include/timewarp/project/project.hpp
+    )
+    add_library(timewarp::project ALIAS timewarp_project)
+
+    target_include_directories(timewarp_project
+        PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    )
+    target_compile_features(timewarp_project PUBLIC cxx_std_20)
+    target_link_libraries(timewarp_project PUBLIC Qt6::Core)
+
+    if(MSVC)
+        target_compile_options(timewarp_project PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(timewarp_project PRIVATE
+            -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast
+            -Wlogical-op ${TIME_WARP_NULL_DEREFERENCE}
+        )
+        if(TIME_WARP_EXPR_WERROR)
+            target_compile_options(timewarp_project PRIVATE -Werror)
+        endif()
+    endif()
+
+    if(TIME_WARP_EXPR_BUILD_TESTS)
+        add_executable(project_tests tests/project_tests.cpp)
+        target_link_libraries(project_tests PRIVATE timewarp::project)
+        target_include_directories(project_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+        if(NOT MSVC)
+            target_compile_options(project_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+            if(TIME_WARP_EXPR_WERROR)
+                target_compile_options(project_tests PRIVATE -Werror)
+            endif()
+        endif()
+        add_test(NAME project_tests COMMAND project_tests)
+    endif()
+else()
+    message(STATUS "Qt6 not found: skipping the project model")
+endif()
+
+# ---------------------------------------------------------------------------
+# Automation API (Qt Core)
+#
+# JSON-RPC over newline-delimited JSON. The library has no transport of its own:
+# `time_warp_api` supplies stdin/stdout, and a test supplies string streams. That
+# is what lets the IDE, a plugin and a test share one implementation.
+# ---------------------------------------------------------------------------
+
+if(Qt6_FOUND AND TARGET timewarp::sql)
+    add_library(timewarp_api
+        src/api/server.cpp
+        src/api/debug.cpp
+        include/timewarp/api/server.hpp
+        include/timewarp/api/debug.hpp
+        include/timewarp/graphics/recording_host.hpp
+    )
+    add_library(timewarp::api ALIAS timewarp_api)
+    target_include_directories(timewarp_api
+        PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+    )
+    target_compile_features(timewarp_api PUBLIC cxx_std_20)
+    target_link_libraries(timewarp_api PUBLIC
+        Qt6::Core timewarp::lang timewarp::scheme timewarp::sql timewarp::project
+    )
+    # The debugger API drives the same Scheme runner the IDE's Debug panel does.
+    if(TARGET timewarp::debugger)
+        target_link_libraries(timewarp_api PRIVATE timewarp::debugger)
+    endif()
+    # The version file is read later in this block for the window title, so the
+    # API target reads it here rather than depending on the order of the file.
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../VERSION" TIME_WARP_API_VERSION_RAW)
+    string(STRIP "${TIME_WARP_API_VERSION_RAW}" TIME_WARP_API_VERSION)
+    target_compile_definitions(timewarp_api PRIVATE
+        TIME_WARP_VERSION="${TIME_WARP_API_VERSION}"
+    )
+    if(MSVC)
+        target_compile_options(timewarp_api PRIVATE /W4 /permissive-)
+    else()
+        target_compile_options(timewarp_api PRIVATE
+            -Wall -Wextra -Wpedantic -Wshadow -Wcast-qual -Wuseless-cast
+            -Wlogical-op ${TIME_WARP_NULL_DEREFERENCE}
+        )
+        if(TIME_WARP_EXPR_WERROR)
+            target_compile_options(timewarp_api PRIVATE -Werror)
+        endif()
+    endif()
+
+    add_executable(time_warp_api tools/time_warp_api.cpp)
+    target_link_libraries(time_warp_api PRIVATE timewarp::api)
+    if(NOT MSVC)
+        target_compile_options(time_warp_api PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+    endif()
+
+    if(TIME_WARP_EXPR_BUILD_TESTS)
+        add_executable(api_tests tests/api_tests.cpp)
+        target_link_libraries(api_tests PRIVATE timewarp::api)
+        target_include_directories(api_tests PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tests)
+        if(NOT MSVC)
+            target_compile_options(api_tests PRIVATE -Wall -Wextra -Wpedantic -Wshadow)
+            if(TIME_WARP_EXPR_WERROR)
+                target_compile_options(api_tests PRIVATE -Werror)
+            endif()
+        endif()
+        add_test(NAME api_tests COMMAND api_tests)
+    endif()
+endif()
+
+# ---------------------------------------------------------------------------
 # Python bridge (Qt)
 #
 # Runs the Python implementations of the languages that have no C++ interpreter
@@ -603,11 +770,14 @@ if(Qt6_FOUND)
             src/ui/panels.cpp
             src/ui/preferences.cpp
             src/ui/profile_report.cpp
+            src/ui/project_panel.cpp
+            src/ui/repl_runner.cpp
             src/ui/resizable_tab_widget.cpp
             src/ui/scrubber.cpp
             src/ui/snippet_dialog.cpp
             src/ui/snippets.cpp
             src/ui/sound_player.cpp
+            src/ui/sql_panel.cpp
             src/ui/standalone.cpp
             src/ui/syntax_highlighter.cpp
             src/ui/terminal_widget.cpp
@@ -637,9 +807,12 @@ if(Qt6_FOUND)
             include/timewarp/ui/panels.hpp
             include/timewarp/ui/preferences.hpp
             include/timewarp/ui/profile_report.hpp
+            include/timewarp/ui/project_panel.hpp
+            include/timewarp/ui/repl_runner.hpp
             include/timewarp/ui/resizable_tab_widget.hpp
             include/timewarp/ui/scrubber.hpp
             include/timewarp/ui/sound_player.hpp
+            include/timewarp/ui/sql_panel.hpp
             include/timewarp/ui/standalone.hpp
             include/timewarp/ui/syntax_highlighter.hpp
             include/timewarp/ui/terminal_widget.hpp
@@ -670,6 +843,9 @@ if(Qt6_FOUND)
         # The ported languages, in process. Built unconditionally: it has no
         # dependency beyond the standard library.
         target_link_libraries(timewarp_ui PRIVATE timewarp::lang)
+        # Projects: a JSON model over files, no widget and no engine.
+        target_link_libraries(timewarp_ui PRIVATE timewarp::project)
+        target_link_libraries(timewarp_ui PRIVATE timewarp::sql)
         # The Python bridge, which is how the four languages without a C++
         # interpreter run at all.
         if(TARGET timewarp::bridge)
@@ -732,7 +908,8 @@ if(Qt6_FOUND)
         #                                     needs no path configuration
         #   share/applications + share/icons  the desktop entry
         include(GNUInstallDirs)
-        install(TARGETS time_warp_ide RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
+        install(TARGETS time_warp_ide time_warp_api
+                RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
         install(
             DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bridge/
             DESTINATION ${CMAKE_INSTALL_DATADIR}/time_warp
@@ -937,7 +1114,7 @@ set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE")
 set(CPACK_DEBIAN_PACKAGE_MAINTAINER "James Temple <james@honey-badger.org>")
 set(CPACK_DEBIAN_PACKAGE_SECTION "education")
 set(CPACK_DEBIAN_PACKAGE_DEPENDS
-    "libqt6widgets6, libqt6gui6, libqt6core6, qt6-qpa-plugins, python3")
+    "libqt6widgets6, libqt6gui6, libqt6core6, qt6-qpa-plugins, python3, libsqlite3-0")
 # Only when this build was made with it: a package that names a library the
 # binary does not link is a needless install, and one that omits a library the
 # binary does link fails to start.
@@ -961,7 +1138,7 @@ endif()
 
 set(CPACK_RPM_PACKAGE_LICENSE "MIT")
 set(CPACK_RPM_PACKAGE_GROUP "Education")
-set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtbase-gui, python3")
+set(CPACK_RPM_PACKAGE_REQUIRES "qt6-qtbase-gui, python3, sqlite-libs")
 if(Qt6Svg_FOUND)
     string(APPEND CPACK_RPM_PACKAGE_REQUIRES ", qt6-qtsvg")
 endif()

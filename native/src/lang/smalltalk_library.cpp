@@ -281,6 +281,7 @@ const Library& library() {
         result.block_closure = make_class("BlockClosure", result.object);
         result.transcript = make_class("Transcript", result.object);
         result.turtle = make_class("Turtle", result.object);
+        result.sql = make_class("SQL", result.object);
 
         // -- Object --------------------------------------------------------
         add(result.object, "doesNotUnderstand:", {"aSelector"},
@@ -1088,6 +1089,17 @@ const Library& library() {
             },
             true);
 
+        // -- SQL -------------------------------------------------------------
+        add(result.sql, "run:", {"aString"},
+            [](Ptr, std::vector<Ptr> arguments, FramePtr frame) -> Ptr {
+                Runtime& runtime = runtime_of(frame);
+                if (!runtime.sql) {
+                    throw StError("no database is open");
+                }
+                return Value::text_value(runtime.sql(display_string(arguments.at(0))));
+            },
+            true);
+
         result.globals = {
             {"Object", Value::class_value(result.object)},
             {"Class", Value::class_value(result.class_class)},
@@ -1109,6 +1121,7 @@ const Library& library() {
             {"BlockClosure", Value::class_value(result.block_closure)},
             {"Transcript", Value::instance(result.transcript)},
             {"Turtle", Value::class_value(result.turtle)},
+            {"SQL", Value::class_value(result.sql)},
         };
         return result;
     }();

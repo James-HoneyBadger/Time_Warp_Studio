@@ -2,7 +2,7 @@
 #
 #     make                 release build
 #     make debug           debug build, in its own tree so you can keep both
-#     make test            build, then run all 17 test suites
+#     make test            build, then run all 20 test suites
 #     make run             build, then launch the IDE
 #     make screenshot      render the window offscreen to a PNG (no display needed)
 #     make install         install to PREFIX (default /usr/local)

@@ -84,12 +84,21 @@ native/
     └── canvas_queue_bench.cpp        queue throughput and coalescing ratio
 ```
 
+The rest of the tree is the application around those engines:
+`include/timewarp/{lang,ui,project,sql,api}/` and their matching `src/`
+directories hold the shared interpreter loop and executors, the Qt window and
+panels, the `.twproject` model, SQLite access and the JSON-RPC server.
+`tools/time_warp_ide.cpp` is the product's entry point and
+`tools/time_warp_api.cpp` the automation service; `tools/twc.py` generates the
+small standalone executables, with its C++ support files beside it in
+`tools/twc/`.
+
 ## Build, test, benchmark
 
 ```bash
 # The short way: native/Makefile drives the CMake build below.
 make -C native                # release build
-make -C native test           # build, then all 17 suites
+make -C native test           # build, then all 20 suites
 make -C native test-debug     # unoptimised, with Q_ASSERT and hardening live
 make -C native asan           # under AddressSanitizer, in a third tree
 make -C native asan ASAN=undefined SAN_DIR=build-ubsan \
@@ -111,10 +120,19 @@ python3 native/tools/lang_differential_check.py
 # Every example program, in every language, through the bridge
 python3 native/tools/example_smoke.py
 
+# Every command row: as a program through the bridge, and through a native REPL
+python3 native/tools/command_matrix.py
+python3 native/tools/repl_matrix.py
+
 # The lessons: the curriculum, and the two tools that drive it
 python3 native/tools/teach.py validate      # runs all 60 solutions through the engine
 python3 native/tools/teach.py outline       # the scheme of work
 python3 native/tools/learn.py list          # what a learner sees
+
+# The automation API and the terminal compiler (as processes)
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"ping"}' | ./api
+TIME_WARP_SKIP_BUILD=1 ./twc Examples/basic/hello.bas -o /tmp/hello
+/tmp/hello --no-svg
 
 # Performance
 ./native/build/expr_bench
@@ -379,7 +397,7 @@ left; adding an executor is still the whole change a new language needs.
 The port is checked against the reference, not against a description of it:
 
 ```bash
-python3 native/tools/lang_differential_check.py   # 482 programs, 0 differences
+python3 native/tools/lang_differential_check.py   # 483 programs, 0 differences
 ```
 
 That harness runs every command-table row and every example through both
@@ -989,11 +1007,10 @@ definition, so the naive lookup points at line 1 of a multi-line `define`.
 
 ## Desktop UI (`timewarp_ui`)
 
-The main-window layout in Qt 6 Widgets, translated from the PySide6
-implementation's `main_window.py`. That implementation has since been removed from
-the repository: this is the *layout* -- the widget tree, the container structure
-and every sizing decision -- not the panels themselves, which are thousands of
-lines each and are represented by clearly labelled stand-ins.
+The main window in Qt 6 Widgets. The PySide6 implementation that supplied the
+original layout has been removed; this section records the widget tree, the
+container structure and every sizing decision, while the panels themselves have
+their own sections below. Nothing in the window is a stand-in any more.
 
 ### The widget tree
 
@@ -1055,7 +1072,7 @@ page next to a 60x40 page must still report a 100x100 minimum.
 
 ### Verification
 
-* **1372 checks** in `ui_layout_tests`, run offscreen so they need no display and
+* **1444 checks** in `ui_layout_tests`, run offscreen so they need no display and
   belong in the normal CTest set. They assert the tree shape, parent/child
   identity at every splitter index, the collapsible and handle-width flags, the
   stretch factors (read back from the child's size policy, since `QSplitter` has
@@ -1284,7 +1301,17 @@ strokes a circle costs.
   breakpoint and the three actions start a run, resume it and step one unit. The unit
   is a statement for the line-loop languages, a top-level statement for Logo, a
   message send for Smalltalk and an instruction for CHIP-8. Scheme keeps its own
-  debugger and panel.
+  debugger and panel. Watch expressions and data breakpoints are part of the same
+  Debug panel.
+* **Projects** are the `timewarp_project` model plus the Projects dock: named groups,
+  files added individually or by folder, drag-and-drop moves, missing-file reporting,
+  recent projects and session restoration.
+* **The REPL bar** is `ReplRunner` over a persistent `ReplSession` (or a Scheme
+  `Machine`), with drawing on the same canvas queue as a normal run.
+* **The Database tab** is `SqlPanel` over `timewarp_sql`, sharing its connection with
+  every program's `SQL` statement.
+* **Automation** is `time_warp_api` (`api::Server`) and the linkable libraries behind
+  it; `twc` is the small terminal compiler.
 * A bridged program's input prompts appear as a dialog. No language takes the bridge
   path today, so this is dormant machinery rather than a live modal step; nothing in
   the tests or in CI reaches it.
@@ -1304,4 +1331,5 @@ application rather than to the engines.
 Landed since this file was first written: the runner bridge (`worker.py` behind
 `bridge::PythonWorker`), the real output console and turtle canvas on top of
 `CanvasCommandQueue`, the two-row toolbar, `native/` under the repository Makefile and
-CI, the function-key row, the lesson panel, and the classroom panel beside it.
+CI, the function-key row, the lesson and classroom panels, projects, the REPL bar,
+watch expressions and data breakpoints, SQL, the JSON-RPC API and the `twc` compiler.

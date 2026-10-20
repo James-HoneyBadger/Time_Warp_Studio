@@ -73,6 +73,8 @@ std::string_view to_string(PauseCause cause) noexcept {
             return "step";
         case PauseCause::PauseRequest:
             return "pause";
+        case PauseCause::DataBreakpoint:
+            return "data";
         case PauseCause::Error:
             return "error";
         case PauseCause::Finished:
@@ -203,6 +205,11 @@ DebugSnapshot DebuggerRunner::snapshot() const {
     return snapshot_;
 }
 
+QString DebuggerRunner::output() const {
+    const std::lock_guard<std::mutex> lock{output_mutex_};
+    return output_text_;
+}
+
 // ---------------------------------------------------------------------------
 // Runner-thread helpers
 // ---------------------------------------------------------------------------
@@ -226,6 +233,96 @@ bool DebuggerRunner::breakpoint_hit(int line) const {
     return breakpoint_cache_.contains(line);
 }
 
+void DebuggerRunner::set_data_breakpoints(const QStringList& names) {
+    QStringList trimmed;
+    for (const QString& name : names) {
+        const QString value = name.trimmed();
+        if (!value.isEmpty() && !trimmed.contains(value)) {
+            trimmed.append(value);
+        }
+    }
+    {
+        const std::lock_guard<std::mutex> lock{data_breakpoint_mutex_};
+        data_breakpoints_ = std::move(trimmed);
+    }
+    data_breakpoint_generation_.fetch_add(1, std::memory_order_release);
+}
+
+void DebuggerRunner::refresh_data_breakpoints() {
+    const std::uint64_t generation =
+        data_breakpoint_generation_.load(std::memory_order_acquire);
+    if (generation == data_breakpoint_generation_seen_) {
+        return;
+    }
+    {
+        const std::lock_guard<std::mutex> lock{data_breakpoint_mutex_};
+        data_breakpoint_cache_ = data_breakpoints_;
+    }
+    data_breakpoint_generation_seen_ = generation;
+    // A new set is a new comparison: the previous form's bindings are not a
+    // baseline for a watch the user has only just added, or the first form after
+    // it would report a change that happened before the watch existed.
+    bindings_primed_ = false;
+    last_bindings_.clear();
+}
+
+QString DebuggerRunner::data_changed() {
+    if (machine_ == nullptr || data_breakpoint_cache_.isEmpty()) {
+        return {};
+    }
+    QHash<QString, QString> current;
+    // The display's four-frame window is not enough for a change: a watched local
+    // in a deeper recursion is still the variable the user asked about. `max` is
+    // deliberate and only paid when data breakpoints are armed.
+    for (const VariableEntry& entry :
+         machine_->visible_variables(std::numeric_limits<std::uint32_t>::max())) {
+        // Innermost frame first: a shadowed name must keep the inner binding, or
+        // a recursive local would be compared against its caller's copy and the
+        // change the user is watching would be invisible.
+        const QString name = QString::fromStdString(entry.name);
+        if (!current.contains(name)) {
+            current.insert(name, QString::fromStdString(entry.rendered));
+        }
+    }
+    if (!bindings_primed_) {
+        last_bindings_ = std::move(current);
+        bindings_primed_ = true;
+        return {};
+    }
+
+    QString changed;
+    for (auto it = current.cbegin(); it != current.cend() && changed.isEmpty(); ++it) {
+        const auto previous = last_bindings_.constFind(it.key());
+        if (previous == last_bindings_.cend() || previous.value() != it.value()) {
+            // Only a watched name matters. Checking the watch set here rather
+            // than the whole set keeps an unrelated assignment from allocating a
+            // snapshot and calling it a pause.
+            for (const QString& watched : data_breakpoint_cache_) {
+                if (watched.compare(it.key(), Qt::CaseInsensitive) == 0) {
+                    changed = it.key();
+                    break;
+                }
+            }
+        }
+    }
+    if (changed.isEmpty()) {
+        for (auto it = last_bindings_.cbegin(); it != last_bindings_.cend() && changed.isEmpty();
+             ++it) {
+            if (current.contains(it.key())) {
+                continue;
+            }
+            for (const QString& watched : data_breakpoint_cache_) {
+                if (watched.compare(it.key(), Qt::CaseInsensitive) == 0) {
+                    changed = it.key();
+                    break;
+                }
+            }
+        }
+    }
+    last_bindings_ = std::move(current);
+    return changed;
+}
+
 void DebuggerRunner::stream_output() {
     if (machine_ == nullptr) {
         return;
@@ -241,12 +338,17 @@ void DebuggerRunner::stream_output() {
         return;  // a partial character is all that is new so far
     }
     emitted_output_ = safe;
-    emit output_available(QString::fromUtf8(text.data() + pending,
-                                           static_cast<int>(safe - pending)));
+    const QString piece =
+        QString::fromUtf8(text.data() + pending, static_cast<int>(safe - pending));
+    {
+        const std::lock_guard<std::mutex> lock{output_mutex_};
+        output_text_ += piece;
+    }
+    emit output_available(piece);
 }
 
 void DebuggerRunner::capture_snapshot(const SuspendState& state, PauseCause cause,
-                                      const QString& error) {
+                                      const QString& error, QString changed) {
     DebugSnapshot snapshot;
     snapshot.line = static_cast<int>(state.span.first_line);
     snapshot.last_line = static_cast<int>(state.span.last_line);
@@ -256,6 +358,7 @@ void DebuggerRunner::capture_snapshot(const SuspendState& state, PauseCause caus
                                           static_cast<int>(state.procedure.size()));
     snapshot.error = error;
     snapshot.cause = cause;
+    snapshot.changed_variable = std::move(changed);
 
     if (machine_ != nullptr) {
         // Both of these read a state that is consistent here: on_form is called
@@ -352,16 +455,33 @@ bool DebuggerRunner::on_form(const SuspendState& state) {
         return true;
     }
 
+    // A data breakpoint is checked after stepping, so a Step command stops for
+    // the step the user asked for rather than being reported as a variable hit.
+    // The comparison only runs when a set is armed; an ordinary debug run pays a
+    // generation load per form.
+    refresh_data_breakpoints();
+    QString changed;
+    if (!data_breakpoint_cache_.isEmpty()) {
+        changed = data_changed();
+    }
+
+    // A line breakpoint the user set explicitly wins when both fire at the same
+    // form, which is what a debugger that stops at the line first does. The data
+    // comparison has already run, so its baseline is current either way.
     if (breakpoint) {
         return suspend(state, PauseCause::Breakpoint);
+    }
+    if (!changed.isEmpty()) {
+        return suspend(state, PauseCause::DataBreakpoint, changed);
     }
 
     stream_output();
     return true;
 }
 
-bool DebuggerRunner::suspend(const SuspendState& state, PauseCause cause) {
-    capture_snapshot(state, cause);
+bool DebuggerRunner::suspend(const SuspendState& state, PauseCause cause,
+                             QString changed) {
+    capture_snapshot(state, cause, QString{}, std::move(changed));
     paused_.store(true, std::memory_order_release);
     emit paused(static_cast<int>(state.span.first_line), static_cast<int>(state.depth),
                 QString::fromUtf8(state.procedure.data(),
@@ -418,10 +538,22 @@ void DebuggerRunner::run() {
 
     machine_ = &machine;
     emitted_output_ = 0;
+    {
+        const std::lock_guard<std::mutex> lock{output_mutex_};
+        output_text_.clear();
+    }
     stepping_ = false;
     skip_until_steps_ = ~std::uint64_t{0};
     breakpoint_generation_seen_ = 0;
     breakpoint_cache_.clear();
+    // A runner can be reused for a second program. The data-breakpoint cache is
+    // per-run state: carrying the previous program's final bindings into the new
+    // one would either report a change that never happened or hide the first real
+    // one behind a stale baseline.
+    data_breakpoint_generation_seen_ = 0;
+    data_breakpoint_cache_.clear();
+    last_bindings_.clear();
+    bindings_primed_ = false;
     machine.set_suspension_controller(this);
 
     bool completed = false;

@@ -186,6 +186,11 @@ public:
 
     /// Zero-based statement indices this run may pause on. Set before `start()`.
     void set_breakpoints(const std::set<std::size_t>& lines);
+    /// Variable names whose change pauses this run. Set before `start()`.
+    void setDataBreakpoints(const QStringList& names);
+    /// The IDE's SQL connection, called from the runner thread. The callback owns
+    /// whatever locking the connection needs.
+    void setSqlCallback(std::function<std::string(std::string_view)> callback);
     void request_continue();
     void request_step();
     /// True while the run is blocked inside a pause. Named apart from the
@@ -222,6 +227,10 @@ signals:
     /// The program stopped before a statement, because of a breakpoint or a step.
     /// `line` is the source line as the program numbers it.
     void paused(int line);
+    /// The program stopped because `name` changed. Separate from `paused` so the
+    /// window can say which variable, rather than presenting a data breakpoint as
+    /// an unexplained pause.
+    void dataBreakpointHit(const QString& name, int line);
     /// The run left a pause and is executing again.
     void resumed();
     /// The program is waiting for a line of input.
@@ -264,6 +273,10 @@ private:
 
     /// The breakpoints for the next run, copied into the session when it starts.
     std::set<std::size_t> breakpoints_;
+    mutable std::mutex breakpoints_mutex_;
+    std::set<std::string> data_breakpoints_;
+    mutable std::mutex data_breakpoints_mutex_;
+    std::function<std::string(std::string_view)> sql_callback_;
     /// Non-null while a run is in flight, under `interpreter_mutex_` with the
     /// interpreter it belongs to. A fresh session per run, so a stop from a
     /// previous run cannot make the next one exit immediately.

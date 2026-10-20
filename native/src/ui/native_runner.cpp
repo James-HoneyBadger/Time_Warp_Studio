@@ -459,7 +459,38 @@ void NativeRunner::request_stop() {
 }
 
 void NativeRunner::set_breakpoints(const std::set<std::size_t>& lines) {
-    breakpoints_ = lines;
+    {
+        const std::lock_guard<std::mutex> lock{breakpoints_mutex_};
+        breakpoints_ = lines;
+    }
+    // A breakpoint added while the program is paused takes effect now, not on the
+    // next run: the session is the live copy.
+    const std::lock_guard<std::mutex> lock{interpreter_mutex_};
+    if (debug_ != nullptr) {
+        debug_->set_breakpoints(lines);
+    }
+}
+
+void NativeRunner::setDataBreakpoints(const QStringList& names) {
+    std::set<std::string> wanted;
+    for (const QString& name : names) {
+        const QString trimmed = name.trimmed();
+        if (!trimmed.isEmpty()) {
+            wanted.insert(trimmed.toStdString());
+        }
+    }
+    {
+        const std::lock_guard<std::mutex> lock{data_breakpoints_mutex_};
+        data_breakpoints_ = wanted;
+    }
+    const std::lock_guard<std::mutex> lock{interpreter_mutex_};
+    if (debug_ != nullptr) {
+        debug_->set_data_breakpoints(wanted);
+    }
+}
+
+void NativeRunner::setSqlCallback(std::function<std::string(std::string_view)> callback) {
+    sql_callback_ = std::move(callback);
 }
 
 void NativeRunner::request_continue() {
@@ -556,13 +587,24 @@ void NativeRunner::run() {
     // A fresh session per run: a stop requested for the previous run must not make
     // this one exit at its first statement.
     auto session = std::make_unique<timewarp::lang::DebugSession>();
-    session->set_breakpoints(breakpoints_);
+    {
+        const std::lock_guard<std::mutex> lock{breakpoints_mutex_};
+        session->set_breakpoints(breakpoints_);
+    }
+    {
+        const std::lock_guard<std::mutex> lock{data_breakpoints_mutex_};
+        session->set_data_breakpoints(data_breakpoints_);
+    }
     timewarp::lang::Interpreter* engine_ptr = engine.get();
     session->on_paused = [this, engine_ptr](int line) {
         // While the run is stopped, the Variables panel has to show the state it
         // is stopped in rather than the state it will end in.
         publishVariables(*engine_ptr);
         emit paused(line);
+    };
+    session->on_data_changed = [this, engine_ptr](int line, const std::string& name) {
+        publishVariables(*engine_ptr);
+        emit dataBreakpointHit(QString::fromStdString(name), line);
     };
     {
         const std::lock_guard<std::mutex> lock{interpreter_mutex_};
@@ -575,6 +617,7 @@ void NativeRunner::run() {
     });
     engine->set_input_callback(
         [this](const std::string& prompt) { return read_input(prompt); });
+    engine->set_sql_callback(sql_callback_);
     engine->set_profiling(profiling_);
 
     // A binary ROM was decoded through the codec that preserves every byte

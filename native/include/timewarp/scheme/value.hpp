@@ -85,6 +85,9 @@ enum class PrimitiveId : std::uint16_t {
     // control and higher-order
     Error, Apply, Map, ForEach, Filter, Foldl,
 
+    // database
+    Sql,
+
     // turtle graphics
     Forward, Backward, Right, Left, Goto, SetHeading, PenSize, Color,
     PenUp, PenDown, Home, ClearCanvas, Circle, ShowTurtle, HideTurtle,

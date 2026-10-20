@@ -422,6 +422,10 @@ def execute_basic(
     # Strip leading/trailing whitespace from the command line
     command = command.strip()
 
+    # Classic BASIC lets `?` stand in for PRINT at the start of a statement.
+    if command.startswith("?"):
+        command = "PRINT" + command[1:]
+
     # Ignore label-only lines (commands ending in colon not followed by commands)
     if command.endswith(":") and " " not in command:
         return ""

@@ -28,7 +28,9 @@ import json
 import pathlib
 import sys
 
-LANGUAGES = pathlib.Path(__file__).resolve().parents[1] / "bridge" / "time_warp" / "languages"
+LANGUAGES = (
+    pathlib.Path(__file__).resolve().parents[1] / "bridge" / "time_warp" / "languages"
+)
 
 #: Names that hold "the thing being dispatched on" in the executors.
 COMMAND_VARIABLES = {
@@ -61,6 +63,8 @@ NOT_COMMANDS = frozenset(
         "\u274c",  # the error prefix every executor returns
         "ENDTYPE",  # no-space spelling of END TYPE, which has its own row
         "TYPE$",  # only ever a guard ("not cmd.startswith('TYPE$')"), never a dispatch
+        "TYPE$(",  # the same guard, with its call parenthesis attached
+        "Undefined variable:",  # an error message compared against, not a command
         "#T",  # Scheme booleans: values with a reader syntax, not commands
         "#F",
         "#TRUE",
@@ -155,7 +159,9 @@ class _Finder(ast.NodeVisitor):
                 continue
             if not any(hint in target.id.upper() for hint in TABLE_HINTS):
                 continue
-            values = [v for v in (_text(e) for e in getattr(node.value, "elts", [])) if v]
+            values = [
+                v for v in (_text(e) for e in getattr(node.value, "elts", [])) if v
+            ]
             if values:
                 self.tables[target.id] = sorted(values)
         self.generic_visit(node)
@@ -197,7 +203,9 @@ def collect(languages: pathlib.Path = LANGUAGES) -> dict[str, dict[str, object]]
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--language", help="print this language's candidates")
-    parser.add_argument("--json", action="store_true", help="emit JSON instead of a summary")
+    parser.add_argument(
+        "--json", action="store_true", help="emit JSON instead of a summary"
+    )
     options = parser.parse_args(argv)
 
     inventory = collect()

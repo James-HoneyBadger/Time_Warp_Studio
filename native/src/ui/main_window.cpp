@@ -3,6 +3,7 @@
 #include "timewarp/ui/main_window.hpp"
 
 #include "timewarp/lang/executor.hpp"
+#include "timewarp/lang/watch.hpp"
 #include "timewarp/ui/native_runner.hpp"
 
 #include <QAction>
@@ -14,6 +15,7 @@
 #include <QDateTime>
 #include <QDesktopServices>
 #include <QDir>
+#include <QDirIterator>
 #include <QDockWidget>
 #include <QFile>
 #include <QFileDialog>
@@ -52,7 +54,10 @@
 
 #include <algorithm>
 #include <functional>
+#include <map>
 #include <memory>
+#include <string>
+#include <vector>
 
 #include "timewarp/canvas/command_queue.hpp"
 #include "timewarp/canvas/host_adapter.hpp"
@@ -72,6 +77,10 @@
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/preferences.hpp"
 #include "timewarp/ui/profile_report.hpp"
+#include "timewarp/ui/project_panel.hpp"
+#include "timewarp/ui/repl_runner.hpp"
+#include "timewarp/ui/sql_panel.hpp"
+#include "timewarp/sql/database.hpp"
 #include "timewarp/ui/resizable_tab_widget.hpp"
 #include "timewarp/ui/scrubber.hpp"
 #include "timewarp/ui/snippet_dialog.hpp"
@@ -144,6 +153,21 @@ constexpr auto kSettingEditorMinimap = "editor/minimap";
 /// Off unless the user asked for it: a shell in a teaching IDE runs whatever is
 /// typed in it, with the user's permissions.
 constexpr auto kSettingTerminalEnabled = "terminal/enabled";
+/// The project that was open last session, so a class's work comes back as one
+/// thing rather than as a pile of tabs. The recent list is separate: the active
+/// project must survive a Clear Menu.
+constexpr auto kSettingActiveProject = "project/active";
+constexpr auto kSettingRecentProjects = "project/recentProjects";
+constexpr int kRecentProjectLimit = 10;
+/// The database the SQL page has open, and the databases it has opened before.
+constexpr auto kSettingSqlDatabase = "sql/database";
+constexpr auto kSettingRecentDatabases = "sql/recentDatabases";
+/// The debugger's watch expressions and data breakpoints. Session-wide rather
+/// than per document: "watch X" is a question about a run, and the same question
+/// is usually asked of the next run too.
+constexpr auto kSettingWatches = "debug/watches";
+constexpr auto kSettingDataBreakpoints = "debug/dataBreakpoints";
+constexpr int kRecentDatabaseLimit = 8;
 
 constexpr int kMinimumWindowWidth = 900;
 constexpr int kMinimumWindowHeight = 600;
@@ -199,6 +223,102 @@ constexpr auto kLanguageOverrideProperty = "languageOverride";
         name = QStringLiteral("program");
     }
     return name + QLatin1Char('.') + suffix;
+}
+
+/// The number and body of a BASIC source line, for direct-mode entry.
+struct BasicProgramLine {
+    int number = 0;
+    QString body;
+};
+
+/// Reads `10 PRINT "HI"` or `10` (a deletion). Returns nullopt when the text is
+/// not a numbered BASIC line: the body must begin with a letter, `?`, or a
+/// comment mark, so `2 + 2` stays an immediate expression rather than becoming
+/// line 2.
+[[nodiscard]] std::optional<BasicProgramLine> parseBasicProgramLine(const QString& text) {
+    int index = 0;
+    while (index < text.size() && text.at(index).isSpace()) {
+        ++index;
+    }
+    const int digits_begin = index;
+    while (index < text.size() && text.at(index).isDigit()) {
+        ++index;
+    }
+    if (index == digits_begin) {
+        return std::nullopt;
+    }
+    bool ok = false;
+    const int number = text.mid(digits_begin, index - digits_begin).toInt(&ok);
+    if (!ok || number < 0) {
+        return std::nullopt;
+    }
+    while (index < text.size() && text.at(index).isSpace()) {
+        ++index;
+    }
+    const QString body = text.mid(index);
+    const QString first = body.trimmed();
+    if (!first.isEmpty() && !first.front().isLetter() && first.front() != QLatin1Char('?') &&
+        first.front() != QLatin1Char('\'')) {
+        return std::nullopt;
+    }
+    return BasicProgramLine{number, body};
+}
+
+/// The BASIC shorthand `?` means PRINT, including after a line number.
+[[nodiscard]] QString withPrintShorthand(QString body) {
+    const QString trimmed = body.trimmed();
+    if (!trimmed.startsWith(QLatin1Char('?'))) {
+        return body;
+    }
+    QString rest = trimmed.mid(1).trimmed();
+    return rest.isEmpty() ? QStringLiteral("PRINT")
+                          : QStringLiteral("PRINT ") + rest;
+}
+
+/// Splits a document into source lines without the trailing empty one.
+[[nodiscard]] QStringList programLines(const QString& text) {
+    QStringList lines = text.split(QLatin1Char('\n'));
+    if (!lines.isEmpty() && lines.last().isEmpty()) {
+        lines.removeLast();
+    }
+    return lines;
+}
+
+/// The document text with `body` stored at `number`, replacing an existing line
+/// or inserting in numeric order.
+[[nodiscard]] QString withBasicProgramLine(const QString& text, int number,
+                                           const QString& body) {
+    QStringList lines = programLines(text);
+    int insert_at = lines.size();
+    for (int index = 0; index < lines.size(); ++index) {
+        const std::optional<BasicProgramLine> existing = parseBasicProgramLine(lines.at(index));
+        if (!existing.has_value()) {
+            continue;
+        }
+        if (existing->number == number) {
+            lines[index] = QStringLiteral("%1 %2").arg(number).arg(body.trimmed());
+            return lines.join(QLatin1Char('\n')) + QLatin1Char('\n');
+        }
+        if (existing->number > number) {
+            insert_at = index;
+            break;
+        }
+    }
+    lines.insert(insert_at, QStringLiteral("%1 %2").arg(number).arg(body.trimmed()));
+    return lines.join(QLatin1Char('\n')) + QLatin1Char('\n');
+}
+
+/// The document text with `number` removed. No change when the line is absent.
+[[nodiscard]] QString withoutBasicProgramLine(const QString& text, int number) {
+    QStringList lines = programLines(text);
+    for (int index = 0; index < lines.size(); ++index) {
+        const std::optional<BasicProgramLine> existing = parseBasicProgramLine(lines.at(index));
+        if (existing.has_value() && existing->number == number) {
+            lines.removeAt(index);
+            break;
+        }
+    }
+    return lines.isEmpty() ? QString{} : lines.join(QLatin1Char('\n')) + QLatin1Char('\n');
 }
 
 }  // namespace
@@ -457,6 +577,12 @@ void MainWindow::buildUi() {
     // Last, because it reads the menus: a key the menus already answer must not
     // get a second action, and the check is against the actions that exist.
     buildFunctionKeyShortcuts();
+    // The REPL bar is laid out with the editor but its engine only exists once
+    // somebody types into it.
+    if (immediate_mode_ != nullptr) {
+        connect(immediate_mode_, &ImmediateModePanel::commandSubmitted, this,
+                &MainWindow::submitReplCommand);
+    }
     // The first document is created while the right column is still being built,
     // so its first refresh could not reach the debug panel. One refresh after
     // the tree exists puts every badge and panel in step with it.
@@ -640,6 +766,7 @@ void MainWindow::buildRightColumn(QSplitter* parent) {
     // program guesses at.
     classroom_panel_ = new ClassroomPanel{right_tabs_};
     right_tabs_->addTab(classroom_panel_, tr("\U0001F3EB Classroom"));
+    buildSqlPanel();
     connect(classroom_panel_, &ClassroomPanel::refreshRequested, this,
             &MainWindow::requestClassroom);
     connect(classroom_panel_, &ClassroomPanel::bundleRequested, this,
@@ -912,6 +1039,82 @@ void MainWindow::buildMenuBar() {
     // its prompt: closeEvent is the one place that asks.
     add(file, tr("&Quit"), QKeySequence::Quit, [this] { close(); });
 
+    // -- Project ----------------------------------------------------------
+    //
+    // Its own menu rather than more entries under File: a project is a workspace
+    // with its own open/close lifecycle, and burying Close Project between Export
+    // and Quit is how a user ends up with two projects in one window.
+    QMenu* project_menu = bar->addMenu(tr("&Project"));
+    project_menu->setObjectName(QStringLiteral("projectMenu"));
+    add(project_menu, tr("&New Project..."),
+        QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_N}, [this] { newProjectDialog(); })
+        ->setObjectName(QStringLiteral("newProjectAction"));
+    add(project_menu, tr("&Open Project..."),
+        QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_O}, [this] { openProjectDialog(); })
+        ->setObjectName(QStringLiteral("openProjectAction"));
+    recent_projects_menu_ = project_menu->addMenu(tr("Open &Recent Project"));
+    recent_projects_menu_->setObjectName(QStringLiteral("recentProjectsMenu"));
+    connect(recent_projects_menu_, &QMenu::aboutToShow, this, [this] {
+        recent_projects_menu_->clear();
+        const QStringList paths =
+            QSettings{}.value(QLatin1String(kSettingRecentProjects)).toStringList();
+        for (const QString& path : paths) {
+            QAction* action = recent_projects_menu_->addAction(
+                QFileInfo{path}.fileName() + QStringLiteral("  \u2014  ") +
+                QDir::toNativeSeparators(QFileInfo{path}.absolutePath()));
+            connect(action, &QAction::triggered, this,
+                    [this, path] { static_cast<void>(openProject(path)); });
+        }
+        if (paths.isEmpty()) {
+            recent_projects_menu_->addAction(tr("(none)"))->setEnabled(false);
+        }
+    });
+    project_menu->addSeparator();
+    add(project_menu, tr("Add Current File to Project"), QKeySequence{},
+        [this] {
+            CodeEditor* editor = currentEditor();
+            const QString path = editor != nullptr ? pathOf(editor) : QString{};
+            if (!project_.isValid()) {
+                setExecutionState(tr("ready"), tr("Open or create a project first."));
+                return;
+            }
+            if (path.isEmpty()) {
+                setExecutionState(tr("ready"), tr("Save the document before adding it."));
+                return;
+            }
+            if (project_.contains(path)) {
+                setExecutionState(tr("ready"), tr("That file is already in the project."));
+                return;
+            }
+            project_.addFile(path);
+            if (saveProject()) {
+                refreshProjectPanel();
+                project_panel_->selectFile(path);
+                setExecutionState(tr("ready"), tr("Added %1 to %2").arg(nameOf(editor),
+                                                                         project_.name()));
+            }
+        })
+        ->setObjectName(QStringLiteral("addCurrentFileToProjectAction"));
+    add(project_menu, tr("Add &Files to Project..."), QKeySequence{},
+        [this] { addFilesToProject(QString{}); })
+        ->setObjectName(QStringLiteral("addFilesToProjectAction"));
+    add(project_menu, tr("Add F&older to Project..."), QKeySequence{},
+        [this] { addFolderToProject(); })
+        ->setObjectName(QStringLiteral("addFolderToProjectAction"));
+    project_menu->addSeparator();
+    add(project_menu, tr("New &Group..."), QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_G},
+        [this] { addGroupToProject(); })
+        ->setObjectName(QStringLiteral("newProjectGroupAction"));
+    add(project_menu, tr("Rename Project..."), QKeySequence{},
+        [this] { renameProject(); })
+        ->setObjectName(QStringLiteral("renameProjectAction"));
+    add(project_menu, tr("Reveal Project &Folder"), QKeySequence{},
+        [this] { revealProjectFolder(); })
+        ->setObjectName(QStringLiteral("revealProjectAction"));
+    add(project_menu, tr("&Close Project"), QKeySequence{},
+        [this] { closeProject(); })
+        ->setObjectName(QStringLiteral("closeProjectAction"));
+
     // -- Edit -------------------------------------------------------------
     QMenu* edit = bar->addMenu(tr("&Edit"));
     edit->setObjectName(QStringLiteral("editMenu"));
@@ -1147,6 +1350,20 @@ void MainWindow::buildMenuBar() {
             [this] { setPresentationMode(false); });
 
     view->addSeparator();
+    // Ctrl+Shift+E, the key every editor's file explorer answers to. The dock
+    // starts visible, so this is the way back after it is closed.
+    add(view, tr("&Project Panel"),
+        QKeySequence{Qt::CTRL | Qt::SHIFT | Qt::Key_E},
+        [this] {
+            if (project_dock_ == nullptr) {
+                return;
+            }
+            project_dock_->setVisible(!project_dock_->isVisible());
+            if (project_dock_->isVisible()) {
+                project_dock_->raise();
+            }
+        })
+        ->setObjectName(QStringLiteral("projectPanelAction"));
     // F10 is on the function-key bar; Ctrl+Shift+P is the convention everybody
     // already has in their fingers.
     add(view, tr("Command &Palette..."),
@@ -2230,8 +2447,23 @@ bool MainWindow::openStandaloneProgram(const QString& languageKey,
     if (outline_dock_ != nullptr) {
         outline_dock_->setVisible(false);
     }
+    if (project_dock_ != nullptr) {
+        project_dock_->setVisible(false);
+    }
     if (right_tabs_ != nullptr) {
-        right_tabs_->setVisible(false);
+        // The output/canvas column is the program, so it stays. The panels that
+        // exist to inspect or author one do not, and neither does the tab strip
+        // for a column with one page.
+        QWidget* const output = output_canvas_splitter_;
+        for (int index = right_tabs_->count() - 1; index >= 0; --index) {
+            if (right_tabs_->widget(index) != output) {
+                right_tabs_->removeTab(index);
+            }
+        }
+        right_tabs_->setCurrentWidget(output);
+        if (QTabBar* tabs = right_tabs_->tabBar()) {
+            tabs->setVisible(false);
+        }
     }
     if (find_bar_ != nullptr) {
         find_bar_->setVisible(false);
@@ -3022,6 +3254,65 @@ void MainWindow::buildStatusBar() {
 // ---------------------------------------------------------------------------
 
 void MainWindow::buildDocks() {
+    project_panel_ = new ProjectPanel{this};
+    connect(project_panel_, &ProjectPanel::newProjectRequested, this,
+            &MainWindow::newProjectDialog);
+    connect(project_panel_, &ProjectPanel::openProjectRequested, this,
+            &MainWindow::openProjectDialog);
+    connect(project_panel_, &ProjectPanel::addFilesRequested, this,
+            &MainWindow::addFilesToProject);
+    connect(project_panel_, &ProjectPanel::addFolderRequested, this,
+            &MainWindow::addFolderToProject);
+    connect(project_panel_, &ProjectPanel::addGroupRequested, this,
+            &MainWindow::addGroupToProject);
+    connect(project_panel_, &ProjectPanel::fileToNewGroupRequested, this,
+            &MainWindow::addNewGroupForFile);
+    connect(project_panel_, &ProjectPanel::renameGroupRequested, this,
+            &MainWindow::renameProjectGroup);
+    connect(project_panel_, &ProjectPanel::removeGroupRequested, this,
+            &MainWindow::removeProjectGroup);
+    connect(project_panel_, &ProjectPanel::renameProjectRequested, this,
+            &MainWindow::renameProject);
+    connect(project_panel_, &ProjectPanel::closeProjectRequested, this,
+            &MainWindow::closeProject);
+    connect(project_panel_, &ProjectPanel::revealRequested, this,
+            &MainWindow::revealProjectFolder);
+    connect(project_panel_, &ProjectPanel::removeFileRequested, this,
+            [this](const QString& path) {
+                if (project_.removeFile(path) && saveProject()) {
+                    refreshProjectPanel();
+                }
+            });
+    connect(project_panel_, &ProjectPanel::fileActivated, this, [this](const QString& path) {
+        if (openFile(path)) {
+            project_panel_->selectFile(path);
+        }
+    });
+    connect(project_panel_, &ProjectPanel::fileMovedToGroup, this,
+            &MainWindow::moveProjectFile);
+    connect(project_panel_, &ProjectPanel::filesDropped, this,
+            [this](const QStringList& paths, const QString& group) {
+                if (!project_.isValid() || paths.isEmpty()) {
+                    return;
+                }
+                // Dropped files are programs the user chose; nothing else in the
+                // folder is dragged in, so a folder full of build output does not
+                // become a project entry.
+                project_.addFiles(paths, group);
+                if (saveProject()) {
+                    refreshProjectPanel();
+                }
+            });
+
+    project_dock_ = new QDockWidget{tr("\U0001F5C2 Projects"), this};
+    project_dock_->setObjectName(QStringLiteral("projectDock"));
+    project_dock_->setWidget(project_panel_);
+    project_dock_->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    // Visible from the start: a project explorer nobody can see is a feature
+    // nobody can find, and this one explains itself with an empty state.
+    project_dock_->setVisible(true);
+    addDockWidget(Qt::LeftDockWidgetArea, project_dock_);
+
     outline_panel_ = new OutlinePanel{this};
     // A click in the outline is a jump, through the same method Go to Line uses,
     // so the cursor, the scroll position and the status bar all agree.
@@ -3041,6 +3332,503 @@ void MainWindow::buildDocks() {
     // Hidden at startup; `restoreState()` re-shows it if it was open last session.
     outline_dock_->setVisible(false);
     addDockWidget(Qt::RightDockWidgetArea, outline_dock_);
+}
+
+// ---------------------------------------------------------------------------
+// SQL
+// ---------------------------------------------------------------------------
+
+namespace {
+
+constexpr auto kSqlFileFilter =
+    "SQLite databases (*.db *.sqlite *.sqlite3);;All files (*)";
+
+}  // namespace
+
+void MainWindow::buildSqlPanel() {
+    if (sql_database_ == nullptr) {
+        sql_database_ = std::make_shared<timewarp::sql::Database>();
+    }
+    sql_panel_ = new SqlPanel{right_tabs_};
+    right_tabs_->addTab(sql_panel_, tr("\U0001F5C4 Database"));
+    connect(sql_panel_, &SqlPanel::openDatabaseRequested, this,
+            &MainWindow::openSqlDatabaseDialog);
+    connect(sql_panel_, &SqlPanel::newDatabaseRequested, this,
+            &MainWindow::newSqlDatabaseDialog);
+    connect(sql_panel_, &SqlPanel::runRequested, this, &MainWindow::runSqlQuery);
+    connect(sql_panel_, &SqlPanel::refreshRequested, this, &MainWindow::refreshSqlTables);
+    connect(sql_panel_, &SqlPanel::schemaRequested, this, &MainWindow::showSqlSchema);
+    connect(sql_panel_, &SqlPanel::recentDatabaseRequested, this, [this](const QString& path) {
+        static_cast<void>(openSqlDatabase(path));
+    });
+    sql_panel_->setRecentDatabases(
+        QSettings{}.value(QLatin1String(kSettingRecentDatabases)).toStringList());
+}
+
+void MainWindow::noteRecentDatabase(const QString& path) {
+    if (path.isEmpty()) {
+        return;
+    }
+    QSettings settings;
+    QStringList paths =
+        settings.value(QLatin1String(kSettingRecentDatabases)).toStringList();
+    paths.removeAll(path);
+    paths.prepend(path);
+    while (paths.size() > kRecentDatabaseLimit) {
+        paths.removeLast();
+    }
+    settings.setValue(QLatin1String(kSettingRecentDatabases), paths);
+    settings.setValue(QLatin1String(kSettingSqlDatabase), path);
+    if (sql_panel_ != nullptr) {
+        sql_panel_->setRecentDatabases(paths);
+    }
+}
+
+bool MainWindow::openSqlDatabase(const QString& path, bool silent) {
+    if (path.trimmed().isEmpty()) {
+        return false;
+    }
+    if (sql_database_ == nullptr) {
+        sql_database_ = std::make_shared<timewarp::sql::Database>();
+    }
+    QString error;
+    if (!sql_database_->open(path, &error)) {
+        if (!silent) {
+            reportError(tr("The database could not be opened: %1").arg(error));
+            if (sql_panel_ != nullptr) {
+                sql_panel_->setStatus(error, true);
+            }
+        }
+        return false;
+    }
+    noteRecentDatabase(path);
+    const QString displayed = path == QLatin1String(":memory:")
+                                  ? tr("(in memory)")
+                                  : QDir::toNativeSeparators(path);
+    if (sql_panel_ != nullptr) {
+        sql_panel_->setDatabase(displayed, sql_database_->tables());
+    }
+    if (repl_runner_ != nullptr) {
+        const std::shared_ptr<timewarp::sql::Database> database = sql_database_;
+        repl_runner_->setSqlCallback([database](std::string_view sql) {
+            return database->executeForOutput(sql);
+        });
+    }
+    setExecutionState(tr("ready"), tr("Database %1 open").arg(displayed));
+    return true;
+}
+
+void MainWindow::openSqlDatabaseDialog() {
+    const QString start =
+        QSettings{}.value(QLatin1String(kSettingSqlDatabase)).toString();
+    const QString path = QFileDialog::getOpenFileName(
+        this, tr("Open SQLite Database"),
+        start.isEmpty() ? QDir::homePath() : QFileInfo{start}.absolutePath(),
+        QLatin1String(kSqlFileFilter));
+    if (!path.isEmpty()) {
+        static_cast<void>(openSqlDatabase(path));
+    }
+}
+
+void MainWindow::newSqlDatabaseDialog() {
+    const QString suggestion =
+        QDir{QDir::homePath()}.filePath(QStringLiteral("studio.db"));
+    QString path = QFileDialog::getSaveFileName(this, tr("New SQLite Database"),
+                                                suggestion,
+                                                QLatin1String(kSqlFileFilter));
+    if (path.isEmpty()) {
+        return;
+    }
+    if (QFileInfo{path}.suffix().isEmpty()) {
+        path += QStringLiteral(".db");
+    }
+    if (QFileInfo::exists(path)) {
+        const auto answer = QMessageBox::question(
+            this, tr("Database already exists"),
+            tr("%1 already exists. Open it instead?")
+                .arg(QDir::toNativeSeparators(path)));
+        if (answer == QMessageBox::Yes) {
+            static_cast<void>(openSqlDatabase(path));
+        }
+        return;
+    }
+    static_cast<void>(openSqlDatabase(path));
+}
+
+void MainWindow::restoreSqlDatabase() {
+    const QString path =
+        QSettings{}.value(QLatin1String(kSettingSqlDatabase)).toString();
+    if (path.isEmpty()) {
+        return;
+    }
+    if (path != QLatin1String(":memory:") && !QFileInfo::exists(path)) {
+        QSettings{}.remove(QLatin1String(kSettingSqlDatabase));
+        return;
+    }
+    if (!openSqlDatabase(path, true)) {
+        QSettings{}.remove(QLatin1String(kSettingSqlDatabase));
+    }
+}
+
+void MainWindow::runSqlQuery(const QString& sql) {
+    if (sql_database_ == nullptr || !sql_database_->isOpen()) {
+        if (sql_panel_ != nullptr) {
+            sql_panel_->setStatus(tr("Open or create a database first."), true);
+        }
+        return;
+    }
+    const timewarp::sql::QueryResult result = sql_database_->execute(sql);
+    if (sql_panel_ != nullptr) {
+        sql_panel_->setResult(result);
+    }
+    // A script may have created or dropped a table; the list is cheap to rebuild
+    // and a stale one is a table the user can see but cannot open.
+    refreshSqlTables();
+    setExecutionState(result.ok() ? tr("ready") : tr("error"),
+                      result.ok() ? tr("SQL: done") : tr("SQL: %1").arg(result.error));
+}
+
+void MainWindow::refreshSqlTables() {
+    if (sql_panel_ == nullptr) {
+        return;
+    }
+    sql_panel_->setTables(sql_database_ != nullptr && sql_database_->isOpen()
+                              ? sql_database_->tables()
+                              : QStringList{});
+}
+
+void MainWindow::showSqlSchema(const QString& table) {
+    if (sql_database_ == nullptr || !sql_database_->isOpen() || sql_panel_ == nullptr) {
+        return;
+    }
+    const QString schema = sql_database_->schema(table);
+    sql_panel_->setQuery(schema + QLatin1Char('\n'));
+    sql_panel_->focusQuery();
+    sql_panel_->setStatus(schema.startsWith(QChar{0x274C})
+                              ? QStringLiteral("\u274C Table not found")
+                              : QStringLiteral("\u2139\uFE0F Schema shown in the editor"));
+}
+
+// ---------------------------------------------------------------------------
+// Projects
+// ---------------------------------------------------------------------------
+
+QString MainWindow::activeProjectPath() const {
+    return project_.isValid() ? project_.filePath() : QString{};
+}
+
+void MainWindow::refreshProjectPanel() {
+    if (project_panel_ == nullptr) {
+        return;
+    }
+    project_panel_->setProject(project_);
+    if (project_dock_ != nullptr) {
+        project_dock_->setWindowTitle(
+            project_.isValid()
+                ? tr("\U0001F5C2 %1").arg(project_.name())
+                : tr("\U0001F5C2 Projects"));
+    }
+}
+
+bool MainWindow::saveProject() {
+    if (!project_.isValid()) {
+        return false;
+    }
+    QString error;
+    if (!project_.save(&error)) {
+        reportError(tr("The project could not be saved: %1").arg(error));
+        QMessageBox::warning(this, tr("Project not saved"), error);
+        return false;
+    }
+    // The active path lives in settings only once the file it names exists.
+    QSettings{}.setValue(QLatin1String(kSettingActiveProject), project_.filePath());
+    return true;
+}
+
+void MainWindow::noteRecentProject(const QString& path) {
+    if (path.isEmpty()) {
+        return;
+    }
+    QSettings settings;
+    QStringList paths = settings.value(QLatin1String(kSettingRecentProjects)).toStringList();
+    paths.removeAll(path);
+    paths.prepend(path);
+    while (paths.size() > kRecentProjectLimit) {
+        paths.removeLast();
+    }
+    settings.setValue(QLatin1String(kSettingRecentProjects), paths);
+    settings.setValue(QLatin1String(kSettingActiveProject), path);
+}
+
+void MainWindow::newProjectDialog() {
+    const QString start =
+        project_.isValid() ? project_.root() : QDir::homePath();
+    const QString folder = QFileDialog::getExistingDirectory(
+        this, tr("Choose the folder for the new project"), start);
+    if (folder.isEmpty()) {
+        return;
+    }
+    bool accepted = false;
+    const QString suggested =
+        QFileInfo{folder}.fileName().isEmpty() ? tr("New Project")
+                                              : QFileInfo{folder}.fileName();
+    const QString name = QInputDialog::getText(
+        this, tr("New Project"), tr("Project name:"), QLineEdit::Normal, suggested,
+        &accepted);
+    if (!accepted || name.trimmed().isEmpty()) {
+        return;
+    }
+    timewarp::project::Project created =
+        timewarp::project::Project::create(name.trimmed(), folder);
+    if (QFileInfo::exists(created.filePath())) {
+        const auto answer = QMessageBox::question(
+            this, tr("Project already exists"),
+            tr("%1 already exists. Open that project instead?")
+                .arg(QDir::toNativeSeparators(created.filePath())));
+        if (answer == QMessageBox::Yes) {
+            static_cast<void>(openProject(created.filePath()));
+        }
+        return;
+    }
+    project_ = created;
+    if (!saveProject()) {
+        project_ = timewarp::project::Project{};
+        refreshProjectPanel();
+        return;
+    }
+    noteRecentProject(project_.filePath());
+    refreshProjectPanel();
+    setExecutionState(tr("ready"), tr("Project %1 created").arg(project_.name()));
+}
+
+void MainWindow::openProjectDialog() {
+    const QString start = project_.isValid() ? project_.root() : QDir::homePath();
+    const QString path = QFileDialog::getOpenFileName(
+        this, tr("Open Project"), start, timewarp::project::openFileFilter());
+    if (!path.isEmpty()) {
+        static_cast<void>(openProject(path));
+    }
+}
+
+bool MainWindow::openProject(const QString& path, bool silent) {
+    timewarp::project::Project loaded;
+    QString error;
+    if (!loaded.load(path, &error)) {
+        if (!silent) {
+            reportError(tr("The project could not be opened: %1").arg(error));
+            QMessageBox::warning(this, tr("Project not opened"), error);
+        }
+        return false;
+    }
+    project_ = loaded;
+    noteRecentProject(project_.filePath());
+    refreshProjectPanel();
+    setExecutionState(tr("ready"), tr("Project %1 opened").arg(project_.name()));
+    return true;
+}
+
+void MainWindow::closeProject() {
+    if (!project_.isValid()) {
+        return;
+    }
+    const QString name = project_.name();
+    project_ = timewarp::project::Project{};
+    QSettings settings;
+    settings.remove(QLatin1String(kSettingActiveProject));
+    refreshProjectPanel();
+    setExecutionState(tr("ready"), tr("Project %1 closed").arg(name));
+}
+
+void MainWindow::restoreProject() {
+    const QString path =
+        QSettings{}.value(QLatin1String(kSettingActiveProject)).toString();
+    if (path.isEmpty()) {
+        return;
+    }
+    if (!QFileInfo::exists(path)) {
+        // A project that has been moved or deleted is not a startup error. It is
+        // also not silently reopened as an empty project: the recent menu still
+        // names it, so the user can find it again.
+        QSettings{}.remove(QLatin1String(kSettingActiveProject));
+        return;
+    }
+    if (!openProject(path, true)) {
+        QSettings{}.remove(QLatin1String(kSettingActiveProject));
+    }
+}
+
+void MainWindow::addFilesToProject(const QString& group) {
+    if (!project_.isValid()) {
+        setExecutionState(tr("ready"), tr("Create or open a project first."));
+        return;
+    }
+    QString start = project_.root();
+    if (CodeEditor* editor = currentEditor(); editor != nullptr) {
+        const QString path = pathOf(editor);
+        if (!path.isEmpty()) {
+            start = QFileInfo{path}.absolutePath();
+        }
+    }
+    const QStringList paths = QFileDialog::getOpenFileNames(
+        this, group.isEmpty() ? tr("Add programs to %1").arg(project_.name())
+                              : tr("Add programs to %1").arg(group),
+        start, openFileFilter());
+    if (paths.isEmpty()) {
+        return;
+    }
+    const int added = project_.addFiles(paths, group);
+    if (added > 0 && saveProject()) {
+        refreshProjectPanel();
+        setExecutionState(tr("ready"),
+                          added == 1 ? tr("Added 1 program to the project")
+                                     : tr("Added %1 programs to the project").arg(added));
+    }
+}
+
+void MainWindow::addFolderToProject() {
+    if (!project_.isValid()) {
+        setExecutionState(tr("ready"), tr("Create or open a project first."));
+        return;
+    }
+    const QString folder = QFileDialog::getExistingDirectory(
+        this, tr("Add every program under a folder"), project_.root());
+    if (folder.isEmpty()) {
+        return;
+    }
+
+    const QString base = QDir::cleanPath(folder);
+    const QString folder_name = QFileInfo{base}.fileName();
+    QStringList added;
+    QDirIterator iterator{base, QDir::Files, QDirIterator::Subdirectories};
+    while (iterator.hasNext()) {
+        const QString path = iterator.next();
+        if (languageForFile(path) == Language::Unknown) {
+            continue;
+        }
+        const QString relative = QDir{base}.relativeFilePath(path);
+        QString group = QFileInfo{relative}.path();
+        if (group == QLatin1String(".")) {
+            group.clear();
+        }
+        if (base != QDir::cleanPath(project_.root()) && !folder_name.isEmpty()) {
+            group = group.isEmpty() ? folder_name : folder_name + QLatin1Char('/') + group;
+        }
+        if (project_.addFile(path, group)) {
+            added.append(path);
+        }
+    }
+    if (added.isEmpty()) {
+        setExecutionState(tr("ready"), tr("No programs were found in that folder."));
+        return;
+    }
+    if (saveProject()) {
+        refreshProjectPanel();
+        setExecutionState(tr("ready"),
+                          added.size() == 1
+                              ? tr("Added 1 program from the folder")
+                              : tr("Added %1 programs from the folder").arg(added.size()));
+    }
+}
+
+void MainWindow::addGroupToProject() {
+    if (!project_.isValid()) {
+        setExecutionState(tr("ready"), tr("Create or open a project first."));
+        return;
+    }
+    bool accepted = false;
+    const QString name = QInputDialog::getText(
+        this, tr("New Group"), tr("Group name:"), QLineEdit::Normal, QString{}, &accepted);
+    if (!accepted || !project_.addGroup(name)) {
+        return;
+    }
+    if (saveProject()) {
+        refreshProjectPanel();
+    }
+}
+
+void MainWindow::addNewGroupForFile(const QString& path) {
+    if (!project_.isValid()) {
+        return;
+    }
+    bool accepted = false;
+    const QString name = QInputDialog::getText(
+        this, tr("New Group"), tr("Group name:"), QLineEdit::Normal, QString{}, &accepted);
+    if (!accepted || !project_.addGroup(name)) {
+        return;
+    }
+    project_.setGroup(path, name);
+    if (saveProject()) {
+        refreshProjectPanel();
+        project_panel_->selectFile(path);
+    }
+}
+
+void MainWindow::renameProjectGroup(const QString& group) {
+    if (!project_.isValid()) {
+        return;
+    }
+    bool accepted = false;
+    const QString name = QInputDialog::getText(
+        this, tr("Rename Group"), tr("New name:"), QLineEdit::Normal, group, &accepted);
+    if (!accepted || !project_.renameGroup(group, name)) {
+        return;
+    }
+    if (saveProject()) {
+        refreshProjectPanel();
+    }
+}
+
+void MainWindow::removeProjectGroup(const QString& group) {
+    if (!project_.isValid()) {
+        return;
+    }
+    const auto answer = QMessageBox::question(
+        this, tr("Remove Group"),
+        tr("Remove the group \"%1\"?\n\nIts programs stay in the project, ungrouped.")
+            .arg(group));
+    if (answer != QMessageBox::Yes || !project_.removeGroup(group)) {
+        return;
+    }
+    if (saveProject()) {
+        refreshProjectPanel();
+    }
+}
+
+void MainWindow::moveProjectFile(const QString& path, const QString& group) {
+    if (!project_.isValid()) {
+        return;
+    }
+    if (!project_.setGroup(path, group)) {
+        return;
+    }
+    if (saveProject()) {
+        refreshProjectPanel();
+        project_panel_->selectFile(path);
+    }
+}
+
+void MainWindow::renameProject() {
+    if (!project_.isValid()) {
+        return;
+    }
+    bool accepted = false;
+    const QString name = QInputDialog::getText(
+        this, tr("Rename Project"), tr("Project name:"), QLineEdit::Normal,
+        project_.name(), &accepted);
+    if (!accepted || name.trimmed().isEmpty()) {
+        return;
+    }
+    project_.setName(name);
+    if (saveProject()) {
+        refreshProjectPanel();
+    }
+}
+
+void MainWindow::revealProjectFolder() {
+    if (!project_.isValid()) {
+        return;
+    }
+    QDesktopServices::openUrl(QUrl::fromLocalFile(project_.root()));
 }
 
 // ---------------------------------------------------------------------------
@@ -3175,6 +3963,10 @@ int MainWindow::restoreSession() {
             editor_tabs_secondary_->hide();
         }
     }
+    // The project and the database are session state: the files and tables a
+    // learner was working with come back with their documents.
+    restoreProject();
+    restoreSqlDatabase();
     return reopened;
 }
 
@@ -4025,6 +4817,147 @@ void MainWindow::clearCanvas() {
     setExecutionState(tr("ready"), tr("Canvas cleared"));
 }
 
+bool MainWindow::handleBasicDirectCommand(const QString& command, CodeEditor* editor) {
+    if (editor == nullptr) {
+        return false;
+    }
+    const QString trimmed = command.trimmed();
+    if (const std::optional<BasicProgramLine> line = parseBasicProgramLine(trimmed);
+        line.has_value()) {
+        appendOutput(tr("REPL \u203A %1\n").arg(trimmed));
+        const QString before = editor->toPlainText();
+        QString after;
+        if (line->body.trimmed().isEmpty()) {
+            after = withoutBasicProgramLine(before, line->number);
+            appendOutput(after == before
+                             ? tr("\u2139\uFE0F No line %1 to delete\n").arg(line->number)
+                             : tr("\u2139\uFE0F Deleted line %1\n").arg(line->number));
+        } else {
+            after = withBasicProgramLine(before, line->number,
+                                         withPrintShorthand(line->body));
+            appendOutput(tr("\u2139\uFE0F Line %1 stored in the program\n")
+                             .arg(line->number));
+        }
+        if (after != before) {
+            QTextCursor edit{editor->document()};
+            edit.beginEditBlock();
+            edit.select(QTextCursor::Document);
+            edit.insertText(after);
+            edit.endEditBlock();
+            editor->document()->setModified(true);
+            refreshDocumentState();
+        }
+        setExecutionState(tr("ready"), tr("Line %1 stored").arg(line->number));
+        return true;
+    }
+
+    if (trimmed.compare(QStringLiteral("LIST"), Qt::CaseInsensitive) == 0) {
+        appendOutput(tr("REPL \u203A %1\n").arg(trimmed));
+        const QString program = editor->toPlainText();
+        if (program.trimmed().isEmpty()) {
+            appendOutput(tr("\u2139\uFE0F The program is empty.\n"));
+        } else {
+            appendOutput(program.endsWith(QLatin1Char('\n')) ? program : program + QLatin1Char('\n'));
+        }
+        setExecutionState(tr("ready"), tr("Program listed"));
+        return true;
+    }
+
+    if (trimmed.compare(QStringLiteral("RUN"), Qt::CaseInsensitive) == 0) {
+        appendOutput(tr("REPL \u203A %1\n").arg(trimmed));
+        if (editor->toPlainText().trimmed().isEmpty()) {
+            appendOutput(tr("\u2139\uFE0F The program is empty.\n"));
+            setExecutionState(tr("ready"), tr("Program is empty"));
+            return true;
+        }
+        runCurrentDocument();
+        return true;
+    }
+
+    // NEW clears the program as well as the REPL bindings. The bindings are reset
+    // by ReplSession when the command reaches it, so only the document is handled
+    // here.
+    if (trimmed.compare(QStringLiteral("NEW"), Qt::CaseInsensitive) == 0) {
+        stopEngines();
+        QTextCursor edit{editor->document()};
+        edit.beginEditBlock();
+        edit.select(QTextCursor::Document);
+        edit.removeSelectedText();
+        edit.endEditBlock();
+        editor->document()->setModified(true);
+        refreshDocumentState();
+    }
+    return false;
+}
+
+void MainWindow::submitReplCommand(const QString& command) {
+    const QString trimmed = command.trimmed();
+    if (trimmed.isEmpty()) {
+        return;
+    }
+    if (immediate_mode_ == nullptr || canvas_queue_ == nullptr ||
+        canvas_bridge_ == nullptr) {
+        return;
+    }
+
+    CodeEditor* editor = currentEditor();
+    const Language ui_language = editor != nullptr ? languageOf(editor) : defaultLanguage();
+    const std::optional<timewarp::lang::Language> native = nativeLanguage(ui_language);
+    if (!native.has_value()) {
+        setExecutionState(tr("ready"), tr("This language has no REPL."));
+        return;
+    }
+
+    if (ui_language == Language::Basic && handleBasicDirectCommand(trimmed, editor)) {
+        return;
+    }
+
+    if (repl_runner_ == nullptr || repl_language_ != *native) {
+        if (repl_runner_ != nullptr) {
+            repl_runner_->requestStop();
+            repl_runner_->wait();
+            delete repl_runner_;
+            repl_runner_ = nullptr;
+        }
+        repl_runner_ = new ReplRunner{*native, *canvas_queue_, this};
+        repl_language_ = *native;
+        repl_runner_->setWakeup([this] { canvas_bridge_->wake(); });
+        if (const QColor surface = turtle_canvas_ != nullptr ? turtle_canvas_->surfaceColor()
+                                                             : QColor{};
+            surface.isValid()) {
+            repl_runner_->setSurfaceColor(
+                timewarp::lang::Rgb{static_cast<std::uint8_t>(surface.red()),
+                                    static_cast<std::uint8_t>(surface.green()),
+                                    static_cast<std::uint8_t>(surface.blue())});
+        }
+        if (sql_database_ != nullptr) {
+            const std::shared_ptr<timewarp::sql::Database> database = sql_database_;
+            repl_runner_->setSqlCallback([database](std::string_view sql) {
+                return database->executeForOutput(sql);
+            });
+        }
+        connect(repl_runner_, &ReplRunner::outputAvailable, this,
+                [this](const QString& text) { appendOutput(text); });
+        connect(repl_runner_, &ReplRunner::commandFinished, this,
+                [this](bool ok, const QString& error) {
+                    if (canvas_bridge_ != nullptr) {
+                        canvas_bridge_->drainNow();
+                    }
+                    if (!error.isEmpty()) {
+                        reportError(error);
+                    }
+                    setExecutionState(ok ? tr("ready") : tr("error"),
+                                      ok ? tr("REPL ready") : tr("REPL error"));
+                });
+    }
+
+    appendOutput(tr("REPL \u203A %1\n").arg(trimmed));
+    immediate_mode_->setCommand(QString{});
+    immediate_mode_->focusInput();
+    setExecutionState(tr("running"), tr("REPL: running"));
+    repl_runner_->submit(trimmed);
+}
+
 void MainWindow::runCurrentDocument() {
     CodeEditor* editor = currentEditor();
     if (editor == nullptr) {
@@ -4118,6 +5051,12 @@ void MainWindow::runSource(CodeEditor* editor, const QString& source) {
     // writes into outlives it.
     turtle_host_ = std::make_unique<timewarp::canvas::QueuedTurtleHost>(*canvas_queue_);
     turtle_host_->set_wakeup([this] { canvas_bridge_->wake(); });
+    if (sql_database_ != nullptr && sql_database_->isOpen()) {
+        const std::shared_ptr<timewarp::sql::Database> database = sql_database_;
+        turtle_host_->set_sql_runner([database](std::string_view sql) {
+            return database->executeForOutput(sql);
+        });
+    }
     runner->set_host(turtle_host_.get());
 
     connect(runner, &timewarp::debugger::DebuggerRunner::output_available, this,
@@ -4166,6 +5105,7 @@ void MainWindow::runSource(CodeEditor* editor, const QString& source) {
     // is why the set is applied here rather than only when it changes.
     if (debug_panel_ != nullptr) {
         runner->set_breakpoints(debug_panel_->breakpoints());
+        runner->set_data_breakpoints(debug_panel_->dataBreakpoints());
     }
 
     setExecutionState(tr("running"), tr("Running %1…").arg(nameOf(editor)));
@@ -4174,6 +5114,14 @@ void MainWindow::runSource(CodeEditor* editor, const QString& source) {
 }
 
 void MainWindow::stopEngines() {
+    if (repl_runner_ != nullptr) {
+        // A REPL command is a small run, and running a document while one is in
+        // flight would put two engines on one canvas.
+        repl_runner_->requestStop();
+        repl_runner_->wait();
+        delete repl_runner_;
+        repl_runner_ = nullptr;
+    }
     if (native_runner_ != nullptr) {
         // Cooperative, then wait: an executor checks the flag between statements.
         native_runner_->request_stop();
@@ -4238,6 +5186,12 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
         sound_ = new SoundPlayer{this};
     }
     runner->set_sound_player(sound_);
+    if (sql_database_ != nullptr && sql_database_->isOpen()) {
+        const std::shared_ptr<timewarp::sql::Database> database = sql_database_;
+        runner->setSqlCallback([database](std::string_view sql) {
+            return database->executeForOutput(sql);
+        });
+    }
     // The theme's surface, so a program that draws before naming a colour draws
     // on the paper the user's theme chose rather than on the reference's.
     if (const QColor surface =
@@ -4269,6 +5223,11 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
         breakpoints.insert(static_cast<std::size_t>(line));
     }
     runner->set_breakpoints(breakpoints);
+    if (debug_panel_ != nullptr) {
+        // The panel's set applies to every run, whichever engine drives it. The
+        // editor's gutter holds line breakpoints; a data breakpoint has no gutter.
+        runner->setDataBreakpoints(debug_panel_->dataBreakpoints());
+    }
 
     connect(runner, &NativeRunner::outputAvailable, this,
             [this, runner](const QString& text) {
@@ -4306,9 +5265,11 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
                 for (const NativeRunner::VariableRow& row : runner->variables()) {
                     rows.append({row.name, row.type, row.value});
                 }
+                last_variables_ = rows;
                 if (variables_panel_ != nullptr) {
                     variables_panel_->setRows(rows);
                 }
+                refreshWatches();
                 // A run stopped while paused ends here rather than through
                 // `resumed`, so the panel is told the pause is over.
                 if (debug_panel_ != nullptr) {
@@ -4381,6 +5342,7 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
         for (const NativeRunner::VariableRow& row : runner->variables()) {
             rows.append({row.name, row.type, row.value});
         }
+        last_variables_ = rows;
         if (variables_panel_ != nullptr) {
             variables_panel_->setRows(rows);
         }
@@ -4390,8 +5352,33 @@ void MainWindow::runNatively(CodeEditor* editor, timewarp::lang::Language langua
             // answer, and it is better than an empty table while stopped.
             debug_panel_->setVariables(rows);
         }
+        refreshWatches();
         static_cast<void>(showPanel(QStringLiteral("debug")));
     });
+    connect(runner, &NativeRunner::dataBreakpointHit, this,
+            [this, runner](const QString& name, int line) {
+                if (native_runner_ != runner) {
+                    return;
+                }
+                setExecutionState(tr("paused"), tr("Paused: %1 changed").arg(name));
+                if (debug_panel_ != nullptr) {
+                    debug_panel_->setPaused(true, line, QString{});
+                    debug_panel_->setPauseReason(tr("%1 changed").arg(name));
+                }
+                QList<timewarp::bridge::VariableRow> rows;
+                for (const NativeRunner::VariableRow& row : runner->variables()) {
+                    rows.append({row.name, row.type, row.value});
+                }
+                last_variables_ = rows;
+                if (variables_panel_ != nullptr) {
+                    variables_panel_->setRows(rows);
+                }
+                if (debug_panel_ != nullptr) {
+                    debug_panel_->setVariables(rows);
+                }
+                refreshWatches();
+                static_cast<void>(showPanel(QStringLiteral("debug")));
+            });
     connect(runner, &NativeRunner::resumed, this, [this, runner] {
         if (native_runner_ != runner) {
             return;
@@ -4442,7 +5429,8 @@ struct PanelEntry {
 
 constexpr PanelEntry kPanelTable[] = {
     {"output", 0},   {"variables", 1}, {"telemetry", 2},
-    {"debug", 3},    {"lessons", 4},   {"classroom", 5}};
+    {"debug", 3},    {"lessons", 4},   {"classroom", 5},
+    {"sql", 6}};
 
 }  // namespace
 
@@ -4850,6 +5838,29 @@ void MainWindow::connectDebugPanel() {
                     native_runner_->set_breakpoints(zero_based);
                 }
             });
+
+    // Watches are a session-wide question, so they come back with the next
+    // launch. The values do not: a binding from last night's run would be shown
+    // as if it were this run's.
+    const QSettings settings;
+    debug_panel_->setWatches(settings.value(QLatin1String(kSettingWatches)).toStringList());
+    debug_panel_->setDataBreakpoints(
+        settings.value(QLatin1String(kSettingDataBreakpoints)).toStringList());
+    connect(debug_panel_, &DebugPanel::watchesChanged, this,
+            [this](const QStringList& expressions) {
+                QSettings{}.setValue(QLatin1String(kSettingWatches), expressions);
+                refreshWatches();
+            });
+    connect(debug_panel_, &DebugPanel::dataBreakpointsChanged, this,
+            [this](const QStringList& names) {
+                QSettings{}.setValue(QLatin1String(kSettingDataBreakpoints), names);
+                if (runner_ != nullptr) {
+                    runner_->set_data_breakpoints(names);
+                }
+                if (native_runner_ != nullptr) {
+                    native_runner_->setDataBreakpoints(names);
+                }
+            });
 }
 
 QList<timewarp::bridge::TelemetryRow> MainWindow::ideTelemetryRows() const {
@@ -4868,6 +5879,50 @@ QList<timewarp::bridge::TelemetryRow> MainWindow::ideTelemetryRows() const {
     return rows;
 }
 
+void MainWindow::refreshWatches() {
+    if (debug_panel_ == nullptr) {
+        return;
+    }
+    const QStringList expressions = debug_panel_->watches();
+    if (expressions.isEmpty()) {
+        debug_panel_->setWatchValues({});
+        return;
+    }
+
+    std::map<std::string, timewarp::lang::Value> bindings;
+    for (const timewarp::bridge::VariableRow& row : last_variables_) {
+        if (row.type == QLatin1String("text")) {
+            bindings[row.name.toStdString()] = timewarp::lang::Value{row.value.toStdString()};
+        } else if (row.value == QLatin1String("#t") || row.value == QLatin1String("#f")) {
+            // Scheme booleans, which the machine renders this way. A watch of
+            // `FLAG AND 1` should mean the same thing as in the program.
+            bindings[row.name.toStdString()] =
+                timewarp::lang::Value{row.value == QLatin1String("#t") ? 1.0 : 0.0};
+        } else {
+            bool ok = false;
+            const double number = row.value.toDouble(&ok);
+            bindings[row.name.toStdString()] = timewarp::lang::Value{ok ? number : 0.0};
+        }
+    }
+
+    std::vector<std::string> wanted;
+    wanted.reserve(static_cast<std::size_t>(expressions.size()));
+    for (const QString& expression : expressions) {
+        wanted.push_back(expression.toStdString());
+    }
+    const std::vector<timewarp::lang::WatchResult> results =
+        timewarp::lang::evaluate_watches(wanted, bindings);
+
+    QList<DebugPanel::WatchRow> rows;
+    rows.reserve(static_cast<int>(results.size()));
+    for (const timewarp::lang::WatchResult& result : results) {
+        rows.append({QString::fromStdString(result.expression),
+                     QString::fromStdString(result.value), result.ok,
+                     QString::fromStdString(result.error)});
+    }
+    debug_panel_->setWatchValues(rows);
+}
+
 void MainWindow::showRunnerSnapshot() {
     if (runner_ == nullptr) {
         return;
@@ -4884,6 +5939,7 @@ void MainWindow::showRunnerSnapshot() {
     for (const timewarp::debugger::DebugVariable& entry : snapshot.variables) {
         rows.append({entry.name, kind_word(entry.kind), entry.rendered});
     }
+    last_variables_ = rows;
     if (variables_panel_ != nullptr) {
         variables_panel_->setRows(rows);
     }
@@ -4895,11 +5951,17 @@ void MainWindow::showRunnerSnapshot() {
         }
         debug_panel_->setStack(frames);
         debug_panel_->setVariables(rows);
+        if (snapshot.cause == timewarp::debugger::PauseCause::DataBreakpoint) {
+            debug_panel_->setPauseReason(
+                tr("%1 changed").arg(snapshot.changed_variable));
+        }
     }
+    refreshWatches();
 }
 
 void MainWindow::clearRunState() {
     engine_telemetry_.clear();
+    last_variables_.clear();
     if (variables_panel_ != nullptr) {
         variables_panel_->setRows({});
     }
@@ -4911,6 +5973,7 @@ void MainWindow::clearRunState() {
         debug_panel_->setStack({});
         debug_panel_->setVariables({});
     }
+    refreshWatches();
 }
 
 void MainWindow::startRunClock() {

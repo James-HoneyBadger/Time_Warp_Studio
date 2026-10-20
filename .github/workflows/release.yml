@@ -100,7 +100,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            build-essential cmake qt6-base-dev qt6-base-dev-tools \
+            build-essential cmake qt6-base-dev qt6-base-dev-tools libsqlite3-dev \
             libgl1-mesa-dev libxkbcommon-dev
 
       - name: Configure, requiring the widget UI

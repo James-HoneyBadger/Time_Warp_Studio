@@ -33,6 +33,11 @@ reference the parity gates, the command matrix and the lesson check run in (see
     on `timewarp_lang`, the shared interpreter loop plus one executor each, and
     the expression evaluator (`timewarp_expr`, linked into `timewarp_lang` and
     used by every arithmetic evaluator the executors share).
+- **The workspace libraries** — `timewarp_project` (`.twproject` groups),
+  `timewarp_sql` (one SQLite connection) and `timewarp_api` (JSON-RPC with no
+  transport of its own). The IDE's Projects dock, Database tab and `./api` are
+  views over these; `./twc` links the language engines into a standalone
+  executable.
 - **The Python reference engine** — `native/bridge/`.
   - No program is routed to it at run time: `executor_for()` answers for all ten.
     It is kept because the differential gates compare each port against it, the
@@ -90,13 +95,16 @@ make -C native run
 ### Testing Strategy
 
 ```bash
-# The Qt suites (17 of them)
+# The Qt suites (20 of them)
 ctest --test-dir native/build --output-on-failure
 make -C native test-debug     # Debug tree
 make -C native asan           # AddressSanitizer; ASAN=undefined for UBSan
 
 # The whole example corpus, through the real bridge
 python3 native/tools/example_smoke.py
+./run.sh --help                       # build if needed, then launch the IDE
+./twc Examples/basic/hello.bas -o hello
+./api                                 # JSON-RPC on stdin/stdout; docs/API.md
 
 # The bridge engine's own tests
 PYTHONPATH=native/bridge python3 -m pytest -q
@@ -104,7 +112,7 @@ PYTHONPATH=native/bridge python3 -m pytest -q
 # Parity gates against the Python reference (0 unexpected mismatches)
 python3 native/tools/differential_check.py native/build/expr_cli
 cd native/tools && python3 scheme_differential_check.py
-python3 native/tools/lang_differential_check.py   # all nine bridged-once languages, 482 programs
+python3 native/tools/lang_differential_check.py   # all nine bridged-once languages, 483 programs
 
 # The documentation gates, which .github/workflows/docs.yml runs on every docs
 # change; the teach.py write-plans output is then checked with git diff --exit-code
@@ -114,10 +122,10 @@ make lint-md
 
 **Test Organization:**
 
-- `native/tests/*_tests.cpp` = the 17 C++ suites (lexer, evaluator, scheme, native
+- `native/tests/*_tests.cpp` = the 20 C++ suites (lexer, evaluator, scheme, native
   languages, canvas queue, canvas bridge, debug, debugger runner, ui layout, ui
   document, turtle canvas, syntax highlighter, python bridge, media, editor
-  services, help browser, chip8 emulator)
+  services, help browser, chip8 emulator, project, sql, api)
 - `native/tools/example_smoke.py` = every `Examples/**` program through the reference
   engine; the 30 that must draw are listed in `DRAWING_EXAMPLES`
 - `native/bridge/time_warp/tests/` = the bridge engine's tests (the 10 language executors,
@@ -238,6 +246,9 @@ maximum-contrast variant of the active theme; it does not replace it.
 native/                        - the Qt application (the product)
   CMakeLists.txt
   include/ src/ tests/ tools/
+    project/                   - .twproject model (groups, relative paths)
+    sql/                       - SQLite connection and result type
+    api/                       - JSON-RPC 2.0 dispatcher (server.cpp)
   bridge/                      - the Python reference engine (gates, lesson check)
     worker.py                  - the JSON-lines worker the IDE spawns for a lesson check
     pyproject.toml             - ruff/mypy config for the engine
@@ -252,7 +263,7 @@ native/                        - the Qt application (the product)
       utils/                   - expression_evaluator.py, error_hints.py, validators.py
       tests/                   - the engine's own tests
 Examples/                      - 60 example programs across the 10 active languages
-docs/                          - language guide + per-language tutorials
+docs/                          - USER_GUIDE, API, language guide and tutorials
 Scripts/                       - audit_interpreters.py, generate_icon.py,
                                  version_sync.py
 ```

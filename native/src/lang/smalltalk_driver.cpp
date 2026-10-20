@@ -273,6 +273,9 @@ std::string execute_smalltalk(Interpreter& interpreter, std::string_view source,
     runtime.pause = [&interpreter](int line) {
         return interpreter.pause_if_requested(line);
     };
+    runtime.sql = [&interpreter](std::string_view sql) {
+        return interpreter.run_sql(sql);
+    };
     const RunTeardown teardown{runtime};
 
     std::vector<Chunk> chunks;

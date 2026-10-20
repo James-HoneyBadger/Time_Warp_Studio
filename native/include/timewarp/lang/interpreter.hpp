@@ -77,6 +77,10 @@ public:
 class Interpreter {
 public:
     using OutputCallback = std::function<void(const std::string& line)>;
+    /// Runs one SQL statement and returns what the database should say. Supplied
+    /// by the IDE, which owns the connection; a headless run leaves it unset and
+    /// SQL lines report that no database is open.
+    using SqlCallback = std::function<std::string(std::string_view)>;
     /// Returns the answer to a prompt. Called on the interpreter's thread; the
     /// IDE's adapter blocks until the user replies.
     using InputCallback = std::function<std::string(const std::string& prompt)>;
@@ -129,6 +133,10 @@ public:
     /// A pause point for a whole-program executor, which runs its own loop and
     /// therefore calls this itself. `line` is 1-based, or 0 when the program has
     /// no source lines (a binary CHIP-8 ROM).
+    ///
+    /// This also checks the data breakpoints: a whole-program language has no
+    /// statement loop to compare bindings after, so its own pause points are the
+    /// only place the check can happen.
     ///
     /// Returns false when the session asked for the run to stop; the executor
     /// returns its output and the run ends cleanly.
@@ -234,6 +242,20 @@ public:
 
     void set_output_callback(OutputCallback callback) { output_callback_ = std::move(callback); }
     void set_input_callback(InputCallback callback) { input_callback_ = std::move(callback); }
+    void set_sql_callback(SqlCallback callback) { sql_callback_ = std::move(callback); }
+    [[nodiscard]] bool sql_available() const noexcept { return static_cast<bool>(sql_callback_); }
+
+    /// Runs SQL on the IDE's connection and returns what it says. Executors that
+    /// own their statement loop call this rather than reaching the IDE directly.
+    [[nodiscard]] std::string run_sql(std::string_view sql);
+
+    /// Executes *source* on top of the current bindings, without clearing them.
+    ///
+    /// This is the REPL's run: `load_program` resets a run, which is right for a
+    /// program and wrong for the second line someone types. The program text and
+    /// position are replaced; variables, arrays and executor state survive.
+    /// Returns the output produced, joined with newlines.
+    [[nodiscard]] std::string run_snippet(std::string_view source);
 
     // -- results and telemetry -------------------------------------------
 
@@ -273,6 +295,11 @@ public:
 private:
     void reset();
     void parse_lines(std::string_view source);
+    /// Pauses when a watched variable changed since the last statement. Returns
+    /// false when the user stopped the run instead of continuing.
+    [[nodiscard]] bool check_data_breakpoints(int line);
+    /// Recognises and runs a `SQL ...` statement. False when `text` is not one.
+    [[nodiscard]] bool run_sql_statement(std::string_view text);
     [[nodiscard]] bool execute_statement(std::string_view text);
     void inject_line_number(std::string& text) const;
 
@@ -288,6 +315,10 @@ private:
     std::any executor_state_;
     /// Not owned: the runner owns the session and outlives the run.
     DebugSession* debug_ = nullptr;
+    /// Bindings as of the previous statement, for data breakpoints. Only updated
+    /// when a session has data breakpoints armed, so an ordinary run pays nothing.
+    std::map<std::string, Value> data_snapshot_;
+    SqlCallback sql_callback_;
 
     OutputCallback output_callback_;
     InputCallback input_callback_;

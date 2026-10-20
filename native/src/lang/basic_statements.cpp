@@ -263,7 +263,11 @@ std::string Machine::execute(std::string_view command) {
     scan_program();
     install_functions();
 
-    const std::string text = trim(command);
+    std::string text = trim(command);
+    // Classic BASIC lets `?` stand in for PRINT at the start of a statement.
+    if (!text.empty() && text.front() == '?') {
+        text = "PRINT" + text.substr(1);
+    }
     if (text.empty()) {
         return "❌ Unknown BASIC command: " + text + "\n";
     }

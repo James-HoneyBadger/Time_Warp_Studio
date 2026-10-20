@@ -132,7 +132,7 @@ int main(int argc, char* argv[]) {
     const QCommandLineOption panelOption{
         QStringLiteral("panel"),
         QStringLiteral("Bring this right-column panel to the front: output, "
-                       "variables, telemetry, debug, lessons or classroom."),
+                       "variables, telemetry, debug, lessons, classroom or sql."),
         QStringLiteral("name")};
     parser.addOption(panelOption);
 
@@ -243,7 +243,7 @@ int main(int argc, char* argv[]) {
         if (!window.showPanel(panel)) {
             std::fprintf(stderr,
                          "time_warp_ide: --panel expects output, variables, "
-                         "telemetry, debug, lessons or classroom, got \"%s\"\n",
+                         "telemetry, debug, lessons, classroom or sql, got \"%s\"\n",
                          qPrintable(panel));
             return 2;
         }

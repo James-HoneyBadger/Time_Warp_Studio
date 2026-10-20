@@ -75,11 +75,13 @@ cmake --build native/build -j
 ### How do I start the IDE?
 
 ```bash
-./native/build/time_warp_ide
+./run.sh
 ```
 
-Or `make -C native run`, which builds first. You can open a program directly:
-`./native/build/time_warp_ide Examples/logo/mandala.logo`.
+`run.sh` builds only if the binary is missing or out of date, then launches it and
+forwards its arguments, so `./run.sh Examples/logo/mandala.logo` opens a program
+directly. `make -C native run` and `./native/build/time_warp_ide` are equivalent
+once the tree is built. The full manual is [USER_GUIDE.md](USER_GUIDE.md).
 
 ### The app crashes at startup with "Illegal instruction." What is wrong?
 
@@ -120,7 +122,9 @@ Use the language picker in the toolbar. The file extension does not change autom
 
 Help → Documentation opens a browser over the guides in this folder, with a
 contents tree on the left; Help → Getting Started opens the student guide. The
-same pages are in `docs/` in the repository.
+same pages are in `docs/` in the repository. Start with the
+[user guide](USER_GUIDE.md) for the IDE and the
+[language guide](LANGUAGE_GUIDE.md) for commands.
 
 ### How do I see all keyboard shortcuts?
 
@@ -163,8 +167,25 @@ single undo step, resolving `$CURSOR$` and `$SELECTION$`.
 
 ### Can I work with several files in one project?
 
-Documents are tabs, and recent files are remembered. There is no project panel
-yet.
+Yes. **View → Project Panel** (`Ctrl+Shift+E`) shows the 🗂 Projects dock: **Project
+→ New Project...** creates a `.twproject` beside the programs, and **Project → Add
+Files to Project...** or a file's context menu adds them; **Add Folder to Project...**
+adds every program under a folder and groups them by its subfolders. **New Group** gives a
+project the groupings you want (for example "Turtle art", "Loops", "Friday's
+class"); a group is a name in the project, so moving a program between groups
+never moves the file on disk. The project remembers its files, groups and missing
+entries, and reopens with the session. Drag files onto a group, or onto the
+project, to add or move them.
+
+### Can my programs use a database?
+
+Yes. The 🗄 **Database** tab opens or creates a SQLite file, lists its tables,
+runs one statement or a whole script, and shows the result grid. A program uses
+the same connection with a `SQL` statement — `SQL SELECT * FROM scores` — in the
+line-by-line languages (BASIC, FOCAL, PILOT, COMAL, REXX and APL), `SQL SELECT ...
+FROM scores` in Logo, `(sql "SELECT * FROM scores")` in Scheme, and
+`Transcript show: (SQL run: 'SELECT * FROM scores')` in Smalltalk. Results are
+printed as a table; an error is printed with the database's own message.
 
 ### Are my unsaved changes lost if the app closes?
 
@@ -188,6 +209,19 @@ Use the Stop button in the toolbar. A program that waits for input can also be s
 ### How do I get input from the user?
 
 Use the input command of your language: `INPUT` in BASIC, `INPUT` in COMAL, `A:` (accept) in PILOT, or `PULL` in REXX.
+
+### Can I try commands without writing a whole program?
+
+Yes. The **REPL** line under the editor runs one entry at a time. BASIC, FOCAL,
+PILOT, COMAL, REXX, APL, Logo and Scheme keep state between entries, so
+`LET X = 5` followed by `PRINT X` prints 5; Scheme also keeps `define`s and echoes
+expression values. Logo keeps `MAKE` variables but not `TO` definitions. Smalltalk
+and CHIP-8 run each submission as a separate whole program, so assignments and
+registers do not carry over. In BASIC, `?` means `PRINT`; a line beginning with
+a number is stored in the editor as a program line, and `LIST`, `RUN` and `NEW`
+work as direct-mode commands. `NEW` clears the program and the session's
+bindings. Switching the document's language starts a REPL session for that
+language; API clients can also call `repl.reset`.
 
 ### Why does my program run forever?
 
@@ -290,7 +324,29 @@ directly. Check each language's tutorial for its graphics commands.
 
 Yes, for every language. The 🐞 Debug tab, the toolbar's Debug/Continue/Trace actions and gutter breakpoints stop the run at the language's natural boundary: a statement for BASIC, FOCAL, PILOT, COMAL, APL and REXX; a top-level statement for Logo; a message send for Smalltalk; an instruction before CHIP-8 executes it (the tab shows the listing line, or "the next instruction" for a binary ROM). **Continue** runs to the next breakpoint and **Trace** stops at the next boundary.
 
-Scheme additionally reports the call stack and the paused frame's bindings. For the other languages the 🔍 Variables tab shows the bindings the run is stopped in. Not yet: watch expressions and data breakpoints, tracked in [ROADMAP.md](ROADMAP.md).
+Scheme additionally reports the call stack and the paused frame's bindings. For the other languages the 🔍 Variables tab shows the bindings the run is stopped in.
+
+The Debug tab also has **watch expressions** — `X * 2` is evaluated over the paused bindings, with a typo reported as `?` rather than silently read as zero — and **data breakpoints**: type a variable name, or double-click it in the Variables table, and the run stops when its value changes. The pause says which variable changed.
+
+### Is there an API?
+
+Yes. `./api` starts a JSON-RPC 2.0 API on stdin/stdout: one request per line. It
+can run a program, keep a REPL session, start/step/stop a debug session, run SQL
+against the open database, create and edit a project (including recursive folder
+import), and evaluate watch expressions. It also supports batches, notifications
+and standard JSON-RPC error codes. `docs/API.md` lists every method; the
+[user guide](USER_GUIDE.md#7-automation) shows a worked session. The C++ libraries
+behind it (`timewarp::lang`, `timewarp::scheme`, `timewarp::sql`,
+`timewarp::project`) are linkable by another program.
+
+### How do I turn a program into an executable?
+
+From a terminal, `./twc program.bas -o program` builds a standalone executable
+that embeds the program and links the interpreter; `--svg FILE` (or the default
+`program.svg`) saves a drawing, and `--db FILE` gives a `SQL` program its
+database. The IDE's `File → Export` and the
+`time_warp_ide --compile` option produce the larger artifact that carries the IDE
+with it. `./run.sh` builds and launches the Studio itself.
 
 ### How do I set a breakpoint?
 

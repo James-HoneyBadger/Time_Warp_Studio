@@ -656,6 +656,72 @@ void test_command_storm_from_another_thread() {
     TW_CHECK(!runner.is_paused());
 }
 
+
+void test_data_breakpoint_reports_the_changed_variable() {
+    announce("data breakpoint");
+    QCoreApplication& app = *QCoreApplication::instance();
+    DebuggerRunner runner;
+    Recorder recorder;
+    attach(runner, recorder);
+
+    runner.set_data_breakpoints(QStringList{QStringLiteral("x")});
+    runner.load_program(QStringLiteral("(define x 1)\n(set! x 2)\n(display x)\n"));
+    runner.start();
+    TW_CHECK(wait_for_pause(app, recorder, 0));
+
+    // `define` is itself a change: x goes from unbound to 1. Then `set!` makes
+    // it 2. Both are changes of a watched variable, so both pause.
+    const DebugSnapshot defined = runner.snapshot();
+    TW_CHECK(defined.cause == PauseCause::DataBreakpoint);
+    TW_CHECK_EQ(defined.changed_variable, QStringLiteral("x"));
+    TW_CHECK(has_variable(defined, QStringLiteral("x"), QStringLiteral("1")));
+    TW_CHECK(recorder.output.isEmpty());
+
+    runner.request_continue();
+    TW_CHECK(wait_for_pause(app, recorder, 1));
+    const DebugSnapshot assigned = runner.snapshot();
+    TW_CHECK(assigned.cause == PauseCause::DataBreakpoint);
+    TW_CHECK_EQ(assigned.changed_variable, QStringLiteral("x"));
+    TW_CHECK(has_variable(assigned, QStringLiteral("x"), QStringLiteral("2")));
+
+    runner.request_continue();
+    TW_CHECK(spin_until(app, [&recorder] { return recorder.finished > 0; }));
+    TW_CHECK(runner.wait(5000));
+    TW_CHECK(recorder.completed);
+    TW_CHECK_EQ(recorder.output, QStringLiteral("2"));
+}
+
+
+void test_data_breakpoints_do_not_leak_between_runs() {
+    announce("data breakpoint cache is per run");
+    QCoreApplication& app = *QCoreApplication::instance();
+    DebuggerRunner runner;
+    Recorder recorder;
+    attach(runner, recorder);
+    runner.set_data_breakpoints(QStringList{QStringLiteral("x")});
+
+    runner.load_program(QStringLiteral("(define x 1)\n(set! x 2)\n(display x)\n"));
+    runner.start();
+    TW_CHECK(wait_for_pause(app, recorder, 0));
+    runner.request_continue();
+    TW_CHECK(wait_for_pause(app, recorder, 1));
+    runner.request_continue();
+    TW_CHECK(spin_until(app, [&recorder] { return recorder.finished == 1; }));
+    TW_CHECK(runner.wait(5000));
+    const int first_run_pauses = static_cast<int>(recorder.pause_lines.size());
+    TW_CHECK(first_run_pauses >= 2);
+
+    // The second program has no `x` at all. If the previous run's final bindings
+    // survived as the baseline, the missing `x` would look like a change and
+    // pause the new program at its first form.
+    runner.load_program(QStringLiteral("(display 7)\n"));
+    runner.start();
+    TW_CHECK(spin_until(app, [&recorder] { return recorder.finished == 2; }));
+    TW_CHECK(runner.wait(5000));
+    TW_CHECK_EQ(static_cast<int>(recorder.pause_lines.size()), first_run_pauses);
+    TW_CHECK(recorder.output.endsWith(QStringLiteral("7")));
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -678,5 +744,7 @@ int main(int argc, char** argv) {
     test_destroying_a_running_runner_joins();
 
     test_command_storm_from_another_thread();
+    test_data_breakpoint_reports_the_changed_variable();
+    test_data_breakpoints_do_not_leak_between_runs();
     return tw::test::summary("debugger_runner");
 }

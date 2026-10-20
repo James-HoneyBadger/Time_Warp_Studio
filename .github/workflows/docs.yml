@@ -46,6 +46,8 @@ jobs:
             docs/INDEX.md \
             docs/ARCHITECTURE.md \
             docs/INSTALLATION.md \
+            docs/USER_GUIDE.md \
+            docs/API.md \
             docs/LANGUAGE_GUIDE.md \
             docs/FAQ.md \
             docs/ROADMAP.md \

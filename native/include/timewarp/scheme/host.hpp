@@ -10,6 +10,8 @@
 #pragma once
 
 #include <cstdint>
+#include <string>
+#include <string_view>
 
 namespace timewarp::scheme {
 
@@ -26,6 +28,15 @@ public:
     virtual bool tick(std::uint64_t steps) {
         (void)steps;
         return true;
+    }
+
+    /// Runs one SQL statement through the embedding application's database.
+    ///
+    /// The default answers with an error rather than silently doing nothing: a
+    /// program that asked the database a question and got `()` back could not
+    /// tell "no rows" from "no database", and only one of those is fixable.
+    virtual std::string sql(std::string_view /*statement*/) {
+        return "\u274C SQL: no database is open.\n";
     }
 
     // -- turtle graphics -------------------------------------------------

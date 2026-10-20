@@ -13,6 +13,7 @@ time.
 | C++ compiler | C++20 | GCC 11+, Clang 14+, or MSVC 19.30+ |
 | CMake | 3.20 | |
 | Qt6 | 6.2 | Widgets, Core and Gui modules must be installed; the Svg and PrintSupport modules are optional and enable SVG drawing export and printing |
+| SQLite3 | 3.35 | The database manager and the languages' `SQL` statement; the development package (`libsqlite3-dev`) is required to build |
 | Python | 3.10 | *Optional* — only for the reference engine (parity gates, command matrix and lesson checks); running a language needs no Python |
 
 All ten languages run in C++ inside the application, so running a program needs
@@ -24,13 +25,13 @@ lesson check runs in; see §6.
 
 ```bash
 # Debian / Ubuntu
-sudo apt install build-essential cmake qt6-base-dev libqt6svg6-dev
+sudo apt install build-essential cmake qt6-base-dev libqt6svg6-dev libsqlite3-dev
 
 # Fedora
-sudo dnf install gcc-c++ cmake qt6-qtbase-devel qt6-qtsvg-devel
+sudo dnf install gcc-c++ cmake qt6-qtbase-devel qt6-qtsvg-devel sqlite-devel
 
 # Arch
-sudo pacman -S base-devel cmake qt6-base qt6-svg
+sudo pacman -S base-devel cmake qt6-base qt6-svg sqlite
 ```
 
 On macOS, `brew install cmake qt` and pass `-DCMAKE_PREFIX_PATH=$(brew --prefix qt)`.
@@ -69,6 +70,20 @@ later ones are incremental. Useful options:
 
 ## 3. Run
 
+The short way builds only if the binary is missing or out of date, then launches:
+
+```bash
+./run.sh                                          # empty workspace
+./run.sh Examples/logo/mandala.logo
+```
+
+`run.sh` builds incrementally, then replaces itself with the IDE, so arguments and
+the exit status are the application's. `TIME_WARP_BUILD_DIR` selects another build
+tree (a relative path is resolved from the repository root), and
+`TIME_WARP_SKIP_BUILD=1` launches an existing build without invoking CMake.
+
+The binary directly:
+
 ```bash
 ./native/build/time_warp_ide                      # empty workspace
 ./native/build/time_warp_ide Examples/logo/mandala.logo
@@ -83,16 +98,34 @@ make -C native run
 make help            # what the root Makefile offers
 ```
 
+### The companion commands
+
+All three are executable scripts at the repository root:
+
+```bash
+./twc Examples/basic/hello.bas -o hello   # small standalone executable
+./twc Examples/basic/hello.bas -o hello --db school.db
+./api                                     # JSON-RPC on stdin/stdout
+```
+
+`twc` links the language engine and, when the program uses it, SQLite; the result
+runs without Qt. `api` builds and starts the automation service. `run.sh` also
+forwards `--compile` to the IDE, which produces the larger artifact that carries
+the IDE and opens in player mode. The full guide is [USER_GUIDE.md](USER_GUIDE.md).
+
 ---
 
 ## 4. Verify the build
 
 ```bash
-ctest --test-dir native/build --output-on-failure     # 17 suites
+ctest --test-dir native/build --output-on-failure     # 20 suites
 python3 native/tools/example_smoke.py                 # all 60 examples
+python3 native/tools/command_matrix.py                # every command-table row
+python3 native/tools/repl_matrix.py                   # every row through the REPL
+python3 native/tools/teach.py validate                # every lesson solution
 ```
 
-Both must pass. See [README_TESTING.md](README_TESTING.md) for the full set,
+All must pass. See [README_TESTING.md](README_TESTING.md) for the full set,
 including the sanitizer builds and the parity gates.
 
 ---
@@ -210,13 +243,13 @@ distribution, which resolves the libraries properly.
 
 The **packages** put the binary, the bridge, the desktop entry and the icon where
 the system expects them, so the application appears in the menu and can be removed
-with the package manager. They declare `python3` and the Qt 6 runtime as
+with the package manager. They declare `python3`, the Qt 6 runtime and SQLite as
 dependencies, and they carry the example programs — **File > Open Example** lists
 them, so a new install has something to run.
 
 The **tarball** is the install tree above, plus the licence and the two READMEs.
-It needs Qt 6, a C++ runtime and `python3` for the lesson check — the same
-requirements as a local build, minus the compiler.
+It needs Qt 6, SQLite, a C++ runtime and `python3` for the lesson check — the
+same requirements as a local build, minus the compiler.
 
 The container image is `ghcr.io/james-honeybadger/time-warp-studio:<version>`
 (or `:latest`), and it carries everything, including Qt and Python:

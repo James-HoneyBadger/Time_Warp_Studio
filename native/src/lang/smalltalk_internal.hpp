@@ -151,6 +151,8 @@ struct Runtime {
     /// line the send was written on (0 when unknown). Returns false when the run
     /// should stop; `evaluate` then throws `DebugStop`.
     std::function<bool(int)> pause;
+    /// The IDE's database, called by `SQL run:`; empty when no database is open.
+    std::function<std::string(std::string_view)> sql;
 
     void emit(std::string text) { output.push_back(std::move(text)); }
     FramePtr workspace_frame();
@@ -237,6 +239,7 @@ struct Library {
     ClassPtr block_closure;
     ClassPtr transcript;
     ClassPtr turtle;
+    ClassPtr sql;
     std::map<std::string, Ptr> globals;
 };
 

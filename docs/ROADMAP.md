@@ -21,7 +21,9 @@ derived rather than remembered.
 | Area | State |
 | --- | --- |
 | Shell | Documents and tabs, menus, toolbars, status bar, settings persistence, the last session's files restored at launch |
-| Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, find in files, go-to-line, tab stops, fonts, error squiggles with gutter markers, completion, auto-indent, Format Code |
+| Editor | Line-number gutter, current-line highlight, per-language syntax colouring, find/replace, find in files, go-to-line, tab stops, fonts, error squiggles with gutter markers, completion, auto-indent, Format Code, minimap, outline |
+| Projects | `.twproject` files, named groups, files and folders added to a project, drag-and-drop grouping, missing-file reporting, recent projects and session restore |
+| REPL | A persistent session per language under the editor; Scheme keeps definitions and echoes values, the line-loop languages and Logo keep bindings, while Smalltalk and CHIP-8 run each entry as a whole program |
 | Console | Streaming output, and interpreter errors in their own tab |
 | Canvas | Live drawing, zoom, pan, grid, auto-fit, turtle marker, scrubber playback, animated GIF recording, raster and SVG export |
 | Display | 33 themes, high contrast, A+ text sizes (100/125/150%), focus mode, CRT settings, four Monitor presets |
@@ -33,9 +35,11 @@ derived rather than remembered.
 | Printing | File > Print Code (Ctrl+P) and Print Drawing, through the optional Qt6 PrintSupport |
 | Profiling | View > Profile Run times every statement in the line-by-line languages and ends with a per-line report, longest first |
 | Terminal | Opt-in in Settings > Workspace: an embedded shell in the document's folder, absent in presentation and player modes |
-| Debugging | Breakpoints, Pause, Continue and Trace in all ten languages; Scheme adds a stack and frame bindings |
+| Debugging | Breakpoints, Pause, Continue and Trace in all ten languages; Scheme adds a stack and frame bindings; watch expressions and data breakpoints in the Debug panel |
+| Database | A SQLite-backed Database tab, the shared `SQL` statement in nine languages, scripts, tables and schema; compiled programs link SQLite |
+| Automation | JSON-RPC over stdin/stdout (`language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*`, `watch.evaluate`) and the `twc` terminal compiler |
 | Packaging | `make install`; tagged releases build `.deb`, `.rpm`, AppImage, tarball and container artifacts |
-| Quality gates | 17 CTest suites in 4 build configurations, 3 parity gates, 571 engine tests, 446 command rows, 482 parity programs |
+| Quality gates | 20 CTest suites in 4 build configurations, 3 parity gates, 571 engine tests, 447 command rows, 483 parity programs |
 
 ---
 
@@ -160,10 +164,11 @@ with its own rules, and `syntax_highlighter_tests` asserts the colour at named
 positions.
 
 `docs/ARCHITECTURE.md` has been **rewritten** around the Qt application and the engine.
-It no longer describes the removed PySide6 implementation, and it names what is not
-wired up rather than assuming it: the REPL whose plumbing is absent, and the debugger's
-missing depth (watch expressions). It is now the system-level
-description; `native/README.md` remains the detail on the C++ libraries.
+It no longer describes the removed PySide6 implementation. The gaps it recorded at
+that point — the REPL whose plumbing was absent, and the debugger's missing depth
+(watch expressions) — have since been built and the sections now describe them. It
+is the system-level description; `native/README.md` remains the detail on the C++
+libraries.
 
 ---
 
@@ -295,9 +300,14 @@ statement through a `DebugSession` in the shared interpreter loop; the whole-pro
 languages stop at their own natural boundary — Logo at a top-level statement,
 Smalltalk at a message send, CHIP-8 before an instruction (the listing line is kept
 per opcode address). Gutter breakpoints are persisted per file and pruned when the
-file is gone, and the panel's buttons drive whichever runner is paused. What is
-still missing is *depth*: no watch expressions, no data breakpoints, and a
-Smalltalk Program Counter is shown as a line rather than a stack frame.
+file is gone, and the panel's buttons drive whichever runner is paused. **Watch
+expressions** are evaluated by the same expression engine a program uses, over the
+bindings the pause reported, and **data breakpoints** stop a run when a named
+variable changes — after the statement that changed it for the line-loop
+languages, at the next form for Scheme, and at the next natural boundary for a
+whole-program language. What is still missing is a call stack for the languages
+that do not keep one: a Smalltalk Program Counter is shown as a line rather than a
+frame.
 
 **Variables and the Telemetry HUD** are built too, and both answer the question a
 placeholder could not: *what did that run actually do?* The **Variables** tab lists every
@@ -347,12 +357,45 @@ between the two panes, the split is saved with the session, and Run > Run Both
 Panes compares two programs headless in one table (output, time, ink) with no
 shared variable bus. The **terminal** is built as an opt-in: Settings > Workspace
 turns on a shell in the document's folder, and presentation and player modes remove
-it. There is no project panel yet.
+it.
 
-**Also unbuilt** — the REPL bar's interpreter wiring (the bar is laid out and its
-signal exists; nothing is connected to it). Printing
-(File > Print Code, Ctrl+P, and File > Print Drawing), code PDF export, session
-HTML and lesson-session export as Markdown or PDF are built, as are the
+**Projects are built.** The 🗂 **Projects** dock is a tree of the project's groups
+and programs: Project > New Project (Ctrl+Shift+N) creates a `.twproject` beside
+the programs, Open Project (Ctrl+Shift+O) reopens one, and the panel adds files or a
+whole folder (grouped by subfolder), creates groups, moves a file between groups by drag-and-drop or its context menu,
+and marks a file that has gone missing instead of silently forgetting it. A group
+is a name in the project, never a directory, so reorganising a project never moves
+a program on disk. The model (`native/src/project/project.cpp`) stores paths inside
+the project root relatively, saves through `QSaveFile`, refuses a newer format
+rather than half-reading it, and is covered by `project_tests`. The active project
+and the recent list are session state.
+
+**The REPL bar is wired.** `ReplRunner` owns one interpreter per language session
+on its own thread, so `LET X = 5` followed by `PRINT X` works, and Scheme keeps its
+machine so `(define x 5)` is still there on the next line. The bar clears when the
+command is handed over, running a document starts a fresh session, and drawing goes
+through the same canvas queue as a normal run.
+
+**SQL is built.** `timewarp_sql` wraps one SQLite connection, and the 🗄
+**Database** tab opens or creates a file, lists tables, runs one statement or a
+script and shows the result grid (1000 rows, then `truncated`). A program uses the
+same connection with `SQL ...`: the shared interpreter loop provides it for BASIC,
+FOCAL, PILOT, COMAL, REXX and APL, Logo's command loop calls it directly,
+Smalltalk exposes it as `SQL run:`, and Scheme has the `(sql "...")`
+primitive. SQLite is a required dependency of the Qt
+application; `docs/API.md` documents the API surface that includes the same
+connection.
+
+**Automation is built.** `time_warp_api` speaks JSON-RPC 2.0 over
+newline-delimited JSON on stdin/stdout: `language.run`, `repl.*`, `debug.*`,
+`sql.*`, `project.*` and `watch.evaluate`, with batches, notifications and the
+standard error codes. `debug.*` starts a session, pauses at line or data
+breakpoints, steps and returns the bindings, drawing and output at each stop. The launcher is `./api`. `./twc` compiles a program into a standalone
+executable for every language (embedding the source, linking the engine, and
+writing a drawing as SVG), and `./run.sh` builds and launches the IDE.
+
+**Also built** — printing (File > Print Code, Ctrl+P, and File > Print Drawing),
+code PDF export, session HTML and lesson-session export as Markdown or PDF, and the
 accessibility controls: View > High Contrast (Ctrl+Alt+H), the A+ text-size ladder,
 View > Focus Mode (F11), View > Presentation Mode (Shift+F11) and View > CRT
 Settings with the four Screen Mode presets.
@@ -426,8 +469,9 @@ Limits, stated rather than discovered:
 - The artifact links against Qt like the IDE does, so it needs the same Qt runtime.
   A static build is not made.
 - Each artifact carries a full copy of the IDE (about 6MB), not a minimal player.
-  A dedicated `time_warp_player` target would be smaller and is the obvious next
-  step; it is not built.
+  `./twc` is the minimal alternative for a program that does not need the
+  authoring UI: it links the interpreter and the drawing recorder into a small
+  executable. A single packaged `time_warp_player` is still not built.
 - The payload is appended, not compiled: the program is still interpreted, at the
   same speed. Nothing is optimised and nothing is hidden — `strings hello` finds the
   source, which is the right answer for a teaching tool.

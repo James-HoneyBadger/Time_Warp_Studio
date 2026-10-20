@@ -32,6 +32,22 @@ supported and is what `native/README.md` describes.
 
 ---
 
+## Run from a checkout
+
+```bash
+./run.sh                                          # build if needed, then launch
+./run.sh Examples/logo/mandala.logo
+./run.sh --compile Examples/basic/hello.bas --output hello
+./twc Examples/scheme/hello.scm -o hello-scheme   # small standalone executable
+./api                                             # JSON-RPC on stdin/stdout
+```
+
+`run.sh` builds incrementally and forwards every argument to the IDE, including
+`--run`, `--screenshot`, `--export` and `--compile`. `twc` and `api` are the
+terminal compiler and the automation service; see [docs/USER_GUIDE.md](docs/USER_GUIDE.md).
+
+---
+
 ## 🎯 Core Features
 
 ### Multi-Language Support
@@ -42,7 +58,7 @@ supported and is what `native/README.md` describes.
 | --- | --- | --- | --- |
 | **BASIC** | Imperative / Educational | 1964 | Line-by-line |
 | **APL** | Array / Notation as tool | 1966 | Line-by-line |
-| **Logo** | Turtle Graphics / Educational | 1967 | Line-by-line |
+| **Logo** | Turtle Graphics / Educational | 1967 | Whole-program |
 | **PILOT** | Computer-Aided Instruction | 1969 | Line-by-line |
 | **FOCAL** | Formula calculator / Teaching | 1969 | Line-by-line |
 | **Scheme** | Functional / Lisp dialect | 1975 | Whole-program |
@@ -62,7 +78,12 @@ supported and is what `native/README.md` describes.
 - **Documents** — tabs, per-file language detection, unsaved-change prompts, new/open/save/save-as, a recent-files menu, and the files from the last session reopened at launch
 - **Run controls** — Run (F9) and Stop, with a status bar showing language, cursor position and execution state
 - **Inspection** — a 🔍 **Variables** panel listing every binding with its type and value, filtered by name, and a ⚡ **Telemetry** HUD showing what the run cost and did: steps used, engine time, steps per second, last line, recursion depth, call stack, output lines, drawing commands, BASIC's memory window, and — beside the engine's own counters — the IDE's wall clock and the ink that actually reached the canvas
-- **Debugging** — gutter breakpoints and a 🐞 **Debug** panel (Continue, Pause, Step In/Over/Out, Stop) plus Debug/Continue/Trace on the toolbar, working in all ten languages: at a statement, a Logo top-level statement, a Smalltalk message send or a CHIP-8 instruction. Scheme additionally shows the call stack and the paused frame's bindings; for a native run the Variables panel shows the bindings the pause stopped in
+- **Debugging** — gutter breakpoints and a 🐞 **Debug** panel (Continue, Pause, Step In/Over/Out, Stop) plus Debug/Continue/Trace on the toolbar, working in all ten languages: at a statement, a Logo top-level statement, a Smalltalk message send or a CHIP-8 instruction. Scheme additionally shows the call stack and the paused frame's bindings; for a native run the Variables panel shows the bindings the pause stopped in. **Watch expressions** evaluate arithmetic over the paused bindings, and **data breakpoints** stop when a named variable changes value
+- **Projects** — a 🗂 **Projects** dock groups programs into named groups without moving them on disk. Create or open a `.twproject`, add files, a whole folder (its programs are grouped by subfolder), and groups, drag a file between groups, and the project reopens with the session; missing files are marked rather than forgotten
+- **REPL bar** — the line under the editor runs a command in the current document's language. BASIC, FOCAL, PILOT, COMAL, REXX, APL, Logo and Scheme keep bindings between commands (`LET X = 5` then `PRINT X`); Scheme also keeps definitions and echoes expression values. In BASIC, `?` is shorthand for `PRINT`, a numbered line is stored in the editor as a program line, and `RUN`, `LIST` and `NEW` work as direct-mode commands. Smalltalk and CHIP-8 run each submission as a whole program, so their state resets
+- **SQL database** — a 🗄 **Database** tab opens or creates a SQLite file, lists its tables, runs scripts and shows the result grid. A program reaches the same connection with `SQL SELECT ...` (BASIC, FOCAL, PILOT, COMAL, REXX and APL), `SQL ...` in Logo, `(sql "...")` in Scheme, and `SQL run: '...'` in Smalltalk
+- **Automation** — `./api` speaks the JSON-RPC API on stdin/stdout: run a program, keep a REPL session, start and step a debug session, query SQL, edit a project including folder import, and evaluate watches. See [docs/API.md](docs/API.md)
+- **Terminal tools** — `./run.sh` builds if needed and launches the IDE; `./twc program.bas -o program` compiles a program into a standalone executable that embeds the interpreter, writes its drawing as SVG, and takes `--db FILE` when the program uses SQL
 - **Native engines** — every language runs in-process in C++ with no Python at
   all. Scheme (`timewarp_scheme`) and CHIP-8, Logo and Smalltalk are
   whole-program; BASIC, FOCAL, PILOT, COMAL, APL and REXX are line-by-line on
@@ -76,8 +97,7 @@ supported and is what `native/README.md` describes.
 The Qt IDE is the product; the PySide6 application that preceded it has been removed,
 and the port is complete: every phase of
 [PORTING_PLAN.md](docs/PORTING_PLAN.md) is implemented and has a test. What remains
-unbuilt is a shorter list — the REPL bar's interpreter wiring, a project panel, watch
-expressions and data breakpoints, a dedicated player target, an automatic update check,
+unbuilt is a shorter list — a dedicated player target, an automatic update check,
 and Flatpak/Snap or Windows/macOS packaging. It is tracked in
 [docs/ROADMAP.md](docs/ROADMAP.md); please read that list before reporting a missing
 feature as a regression.
@@ -171,6 +191,7 @@ teaching-tools
 | If you are | Start here |
 | ---------- | ---------- |
 | Learning one of the languages | [`docs/tutorials/`](docs/tutorials/) |
+| Use projects, the REPL, SQL, debugging or the API | [`docs/USER_GUIDE.md`](docs/USER_GUIDE.md) |
 | Working through the lessons | [`docs/lessons/README.md`](docs/lessons/README.md) |
 | Teaching a class | [`docs/lessons/teacher-guide.md`](docs/lessons/teacher-guide.md) |
 | Building or porting | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) and [`native/README.md`](native/README.md) |

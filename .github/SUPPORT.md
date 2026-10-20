@@ -25,13 +25,16 @@ one I would type:
 - **[docs/INSTALLATION.md](../docs/INSTALLATION.md)** — requirements, building
   from source, and what a failure at each step usually means.
 - **[docs/ROADMAP.md](../docs/ROADMAP.md)** — what is deliberately not built
-  yet. The REPL bar's interpreter wiring, a project panel, watch expressions, an
-  automatic update check and Flatpak/Snap or Windows/macOS packaging are on this
-  list. A missing feature from it is not a bug, and reporting one as a regression
-  costs a round trip.
+  yet. A dedicated player target, an automatic update check and Flatpak/Snap or
+  Windows/macOS packaging are on this list. A missing feature from it is not a
+  bug, and reporting one as a regression costs a round trip.
+- **[docs/USER_GUIDE.md](../docs/USER_GUIDE.md)** — the IDE manual: projects, the
+  REPL, debugging, SQL, terminal tools and the API.
 - **[docs/FAQ.md](../docs/FAQ.md)** — the questions that come up most.
 - **[docs/LANGUAGE_GUIDE.md](../docs/LANGUAGE_GUIDE.md)** — the reference for all
   ten languages, including what each one is *not* able to do.
+- **[docs/API.md](../docs/API.md)** — the JSON-RPC methods and the linkable C++
+  libraries.
 
 ## What is supported
 
@@ -55,6 +58,10 @@ engine a lesson check runs in; it is not a supported API.
 learner, `native/tools/teach.py` for a teacher — and so is the curriculum. A
 lesson that cannot be finished, or whose starter already passes, is a bug;
 `teach.py validate` is what proves it either way.
+
+**The automation surface.** `./api` and its JSON-RPC methods are a supported
+surface, as is the `./twc` terminal compiler. `./run.sh` is the supported way to
+build and launch from a checkout.
 
 ## What is not
 

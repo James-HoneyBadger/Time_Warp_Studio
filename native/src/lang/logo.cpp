@@ -1461,6 +1461,11 @@ std::string LogoMachine::run_command(std::string_view command_text) {
         if (name == "PRINT") {
             return do_print(args, raw_args);
         }
+        if (name == "SQL") {
+            // The rest of the line is the statement: SQL is not a Logo reporter,
+            // so it must not be split into Logo words or evaluated.
+            return interpreter_.run_sql(raw_args);
+        }
         if (name == "SHOW") {
             return do_show(args);
         }

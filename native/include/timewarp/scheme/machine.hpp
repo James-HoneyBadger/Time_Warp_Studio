@@ -390,6 +390,12 @@ public:
     /// Output emitted so far, so a background runner can stream it.
     [[nodiscard]] const std::string& output() const noexcept { return out_; }
 
+    /// The value the last top-level form delivered. `Unspecified` for a form
+    /// that returned nothing (`define`, `set!`, `display`), which is what lets a
+    /// REPL echo expressions without printing `#<unspecified>` after every
+    /// definition.
+    [[nodiscard]] Value last_value() const noexcept { return value_; }
+
 private:
     enum class Mode : std::uint8_t { Eval, Deliver, Halt };
 

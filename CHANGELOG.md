@@ -17,7 +17,41 @@
   library; CHIP-8 draws a montage with the font, BCD, collision and hi-res;
   Smalltalk defines two classes and queries a collection three ways. All ten
   draw, so all ten are in `DRAWING_EXAMPLES`, and the parity gates cover them:
-  482 programs, 0 differences.
+  483 programs, 0 differences.
+
+- **Projects.** A 🗂 Projects dock and a `.twproject` model group programs into
+  named groups without moving them on disk: create, open, add files, add a whole
+  folder (its programs are grouped by subfolder), add and rename groups, drag
+  between groups, and see a missing file rather than losing it silently. The model
+  stores relative paths inside the root, saves atomically and refuses a newer
+  format; the active project and recent list are session state. `project.addFolder`
+  exposes the folder import to the API.
+- **The REPL bar is wired.** A persistent session per language runs commands off
+  the GUI thread and draws through the same canvas queue. BASIC, FOCAL, PILOT,
+  COMAL, REXX, APL, Logo and Scheme keep state between entries; Scheme keeps its
+  machine and echoes expression values, while Smalltalk and CHIP-8 run each entry
+  as a whole program. BASIC's `NEW` clears the session's bindings; in the IDE it
+  also clears the editor. A numbered BASIC line typed at the REPL is stored in
+  the editor as a program line, `LIST` and `RUN` are direct-mode commands, and
+  `?` is accepted as shorthand for `PRINT`.
+- **Watch expressions and data breakpoints.** The Debug panel evaluates
+  arithmetic over the paused bindings and stops a run when a named variable
+  changes, for the line-loop languages, Scheme and the whole-program languages.
+- **SQL.** A SQLite-backed 🗄 Database tab opens or creates a database, browses
+  tables and schemas, runs scripts and shows results. Programs reach the same
+  connection with `SQL ...` in the line-by-line languages and Logo, `(sql "...")`
+  in Scheme and `SQL run: '...'` in Smalltalk; CHIP-8 has no SQL form.
+- **Automation API.** `./api` speaks JSON-RPC 2.0 over newline-delimited JSON:
+  `language.run`, `repl.*`, `debug.*`, `sql.*`, `project.*` and
+  `watch.evaluate`, with batches, notifications and standard error codes. The
+  API's drawing object now reports turtle `actions` (including turns and pen
+  changes) beside ink `commands`.
+  `docs/API.md` documents it and the linkable C++ libraries behind it; the new
+  [user guide](docs/USER_GUIDE.md) covers the IDE itself.
+- **Terminal tools.** `./run.sh` builds if needed and launches the IDE; `./twc`
+  compiles a program into a standalone executable for every language, embedding
+  the source, linking the engine, writing a drawing as SVG and taking `--db FILE`
+  for a program that uses SQL.
 
 ## [16.1.0] - 2026-10-19
 

@@ -2,6 +2,8 @@
 
 #include "timewarp/lang/interpreter.hpp"
 
+#include <cctype>
+
 #include "timewarp/expr/errors.hpp"
 #include "timewarp/expr/evaluator.hpp"
 #include "timewarp/lang/chip8.hpp"
@@ -164,6 +166,120 @@ void Interpreter::load_program(std::string_view source) {
     parse_lines(source);
 }
 
+std::string Interpreter::run_snippet(std::string_view source) {
+    // Everything a program owns except its bindings: the text, the labels, the
+    // position and the last run's output. Variables, arrays and per-executor
+    // state stay, which is the whole point of a REPL.
+    program_source_ = std::string{source};
+    program_lines_.clear();
+    labels_.clear();
+    line_number_map.clear();
+    subroutine_stack.clear();
+    last_match_succeeded = false;
+    current_line = 0;
+    output_.clear();
+    error_.clear();
+    parse_lines(source);
+    run();
+
+    std::string joined;
+    for (const std::string& line : output_) {
+        if (!joined.empty()) {
+            joined.push_back('\n');
+        }
+        joined += line;
+    }
+    if (!joined.empty()) {
+        joined.push_back('\n');
+    }
+    return joined;
+}
+
+std::string Interpreter::run_sql(std::string_view sql) {
+    if (!sql_callback_) {
+        return "\u274C SQL: no database is open. Open one in the \U0001F5C4 Database tab.\n";
+    }
+    std::string statement{sql};
+    return sql_callback_(statement);
+}
+
+bool Interpreter::run_sql_statement(std::string_view text) {
+    std::size_t begin = 0;
+    // FOCAL numbers its lines in the text itself (`01.10 SQL ...`), unlike the
+    // languages whose loader strips the number first. Skipping the numeric prefix
+    // here is what makes one spelling of the statement work everywhere.
+    while (begin < text.size()) {
+        const char character = text[begin];
+        if (std::isspace(static_cast<unsigned char>(character)) != 0 ||
+            std::isdigit(static_cast<unsigned char>(character)) != 0 ||
+            character == '.') {
+            ++begin;
+            continue;
+        }
+        break;
+    }
+    std::size_t end = begin;
+    while (end < text.size()) {
+        const char character = text[end];
+        if (!std::isalpha(static_cast<unsigned char>(character)) &&
+            character != '_') {
+            break;
+        }
+        ++end;
+    }
+    if (end - begin != 3) {
+        return false;
+    }
+    std::string word;
+    for (std::size_t index = begin; index < end; ++index) {
+        word.push_back(static_cast<char>(
+            std::toupper(static_cast<unsigned char>(text[index]))));
+    }
+    if (word != "SQL") {
+        return false;
+    }
+    std::string_view rest = text.substr(end);
+    while (!rest.empty() && std::isspace(static_cast<unsigned char>(rest.front())) != 0) {
+        rest.remove_prefix(1);
+    }
+    if (rest.empty()) {
+        log_output("\u274C SQL: put a statement after SQL, e.g. SQL SELECT * FROM scores\n");
+        return true;
+    }
+    log_output(run_sql(rest));
+    return true;
+}
+
+bool Interpreter::check_data_breakpoints(int line) {
+    if (debug_ == nullptr || !debug_->data_breakpoints_active()) {
+        return true;
+    }
+    std::string matched;
+    for (const auto& [name, value] : variables_) {
+        const auto previous = data_snapshot_.find(name);
+        const bool changed =
+            previous == data_snapshot_.end() || previous->second.render() != value.render();
+        if (changed && debug_->data_breakpoint_matches(name)) {
+            matched = name;
+            break;
+        }
+    }
+    if (matched.empty()) {
+        for (const auto& [name, value] : data_snapshot_) {
+            if (variables_.find(name) == variables_.end() &&
+                debug_->data_breakpoint_matches(name)) {
+                matched = name;
+                break;
+            }
+        }
+    }
+    data_snapshot_ = variables_;
+    if (matched.empty()) {
+        return true;
+    }
+    return debug_->note_data_change(line, matched);
+}
+
 void Interpreter::parse_lines(std::string_view source) {
     const std::vector<std::string> lines = split_lines(source);
     const bool verbatim = is_whole_program(language_) || language_ == Language::Apl;
@@ -218,6 +334,11 @@ void Interpreter::run() {
         return;
     }
 
+    // The baseline every data breakpoint compares against. Taken before the
+    // program can touch anything, so a variable that was already set when the
+    // run began is not reported as having changed on its first statement.
+    data_snapshot_ = variables_;
+
     if (is_whole_program(language_)) {
         std::string text;
         try {
@@ -267,6 +388,10 @@ void Interpreter::run() {
                                            ? std::chrono::steady_clock::now()
                                            : std::chrono::steady_clock::time_point{};
         (void)execute_statement(command);
+        if (!check_data_breakpoints(source_line(physical_index))) {
+            running = false;
+            break;
+        }
         if (profiling_) {
             LineProfile& row = profile_[physical_index];
             row.index = physical_index;
@@ -299,6 +424,12 @@ void Interpreter::run() {
 }
 
 bool Interpreter::execute_statement(std::string_view text) {
+    // `SQL ...` is the Studio's extension, not a language's statement: every
+    // line-by-line language gets it from this one place, so BASIC, COMAL, REXX
+    // and the rest cannot drift into four spellings of the same idea.
+    if (run_sql_statement(text)) {
+        return true;
+    }
     const Executor executor = executor_for(language_);
     if (executor == nullptr) {
         return false;
@@ -569,7 +700,13 @@ double Interpreter::elapsed_ms() const noexcept {
 }
 
 bool Interpreter::pause_if_requested(int line) {
-    return debug_ == nullptr || debug_->note_source_line(line);
+    if (debug_ == nullptr) {
+        return true;
+    }
+    if (!check_data_breakpoints(line)) {
+        return false;
+    }
+    return debug_->note_source_line(line);
 }
 
 std::vector<LineProfile> Interpreter::line_profiles() const {

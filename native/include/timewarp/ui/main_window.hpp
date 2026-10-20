@@ -61,6 +61,7 @@
 #include "timewarp/ui/language.hpp"
 // The CRT overlay's `Settings` is a nested type, so a forward declaration will not
 // do here; `panels.hpp` is where the overlay lives.
+#include "timewarp/project/project.hpp"
 #include "timewarp/ui/panels.hpp"
 #include "timewarp/ui/snippets.hpp"
 
@@ -87,6 +88,10 @@ class CanvasBridge;
 }
 }  // namespace timewarp::canvas
 
+namespace timewarp::sql {
+class Database;
+}
+
 namespace timewarp::ui {
 
 class TerminalWidget;
@@ -109,9 +114,12 @@ class ImmediateModePanel;
 class LessonPanel;
 class NativeRunner;
 class PlaceholderPanel;
+class ProjectPanel;
+class ReplRunner;
 class ResizableTabWidget;
 class Scrubber;
 class SoundPlayer;
+class SqlPanel;
 class TelemetryPanel;
 class TourGuide;
 class TurtleCanvas;
@@ -194,6 +202,13 @@ public:
         return telemetry_panel_;
     }
     [[nodiscard]] DebugPanel* debugPanel() const noexcept { return debug_panel_; }
+    /// The project explorer, so a test can drive it and a screenshot can show it.
+    [[nodiscard]] ProjectPanel* projectPanel() const noexcept { return project_panel_; }
+    /// The database manager page. Null only when Qt itself is unavailable, which
+    /// is the case in which there is no window either.
+    [[nodiscard]] SqlPanel* sqlPanel() const noexcept { return sql_panel_; }
+    /// The open project's file path, or empty when none is open.
+    [[nodiscard]] QString activeProjectPath() const;
     /// Shows the find bar, with the replacement row when `withReplacement`.
     void showFindBar(bool withReplacement);
     /// Finds the next match for the bar's term. From the menu, so it does not
@@ -686,12 +701,62 @@ private:
     /// construction; the panel's signals look the runner up when they fire,
     /// because a runner exists only for the length of a run.
     void connectDebugPanel();
+
+    /// Runs one line from the REPL bar in the current document's language,
+    /// creating or resetting the session when the language changes.
+    void submitReplCommand(const QString& command);
+    /// Handles the BASIC direct-mode commands that edit or run the document:
+    /// numbered lines, LIST, RUN and NEW's document-clearing half. Returns true
+    /// when the command was consumed.
+    bool handleBasicDirectCommand(const QString& command, CodeEditor* editor);
+
+    // -- projects ---------------------------------------------------------
+    //
+    // One path through `project::Project`: every panel signal calls one of these,
+    // and each one saves the file before telling the panel to redraw. A project
+    // edit that is only in a widget is a project edit the next launch loses.
+
+    void newProjectDialog();
+    void openProjectDialog();
+    /// Opens `path`, reporting a broken file unless `silent` (the session restore
+    /// path, where a project that has been moved is not a startup error).
+    [[nodiscard]] bool openProject(const QString& path, bool silent = false);
+    void closeProject();
+    [[nodiscard]] bool saveProject();
+    void addFilesToProject(const QString& group);
+    void addFolderToProject();
+    void addGroupToProject();
+    void addNewGroupForFile(const QString& path);
+    void renameProjectGroup(const QString& group);
+    void removeProjectGroup(const QString& group);
+    void moveProjectFile(const QString& path, const QString& group);
+    void renameProject();
+    void revealProjectFolder();
+    /// Rebuilds the panel from the model and keeps the dock's title current.
+    void refreshProjectPanel();
+    void restoreProject();
+    void noteRecentProject(const QString& path);
+
+    // -- SQL --------------------------------------------------------------
+    void buildSqlPanel();
+    void openSqlDatabaseDialog();
+    void newSqlDatabaseDialog();
+    /// Opens (creating when absent) `path`. Reports a failure unless `silent`.
+    [[nodiscard]] bool openSqlDatabase(const QString& path, bool silent = false);
+    void restoreSqlDatabase();
+    void runSqlQuery(const QString& sql);
+    void refreshSqlTables();
+    void showSqlSchema(const QString& table);
+    void noteRecentDatabase(const QString& path);
     /// The rows only the IDE can vouch for: wall clock, and how much ink actually
     /// reached the canvas. Appended to whatever the engine reported.
     [[nodiscard]] QList<timewarp::bridge::TelemetryRow> ideTelemetryRows() const;
     /// Shows the Scheme runner's stack and variables in the variables and debug
     /// panels. Harmless when nothing is paused: it shows the last known state.
     void showRunnerSnapshot();
+    /// Re-evaluates every watch against the last bindings published. Called at
+    /// each pause, at the end of a run, and when the watch list changes.
+    void refreshWatches();
     /// Empties three panels that would otherwise show the previous run's state as
     /// if it were this one's.
     void clearRunState();
@@ -731,6 +796,11 @@ private:
     TerminalWidget* terminal_widget_ = nullptr;
     bool terminal_enabled_ = false;
     ImmediateModePanel* immediate_mode_ = nullptr;
+    /// The REPL bar's engine. One per language session, discarded when the user
+    /// runs a document or switches language: a REPL that kept BASIC's variables
+    /// after the editor became Logo would be lying about what it can see.
+    ReplRunner* repl_runner_ = nullptr;
+    timewarp::lang::Language repl_language_ = timewarp::lang::Language::Basic;
     FindBar* find_bar_ = nullptr;
     VariablesPanel* variables_panel_ = nullptr;
     TelemetryPanel* telemetry_panel_ = nullptr;
@@ -750,6 +820,10 @@ private:
     /// because the wall clock is only known once the run has stopped, and the two
     /// are one table.
     QList<timewarp::bridge::TelemetryRow> engine_telemetry_;
+    /// The bindings last shown in the Variables tab. Watch expressions are
+    /// evaluated against these rather than against a live engine, so a watch
+    /// cannot race a runner thread that is already executing again.
+    QList<timewarp::bridge::VariableRow> last_variables_;
     FunctionKeyBar* function_key_bar_ = nullptr;
     CrtOverlay* crt_overlay_ = nullptr;
     QDockWidget* outline_dock_ = nullptr;
@@ -757,6 +831,18 @@ private:
     /// typing does not re-parse the program on every keystroke.
     OutlinePanel* outline_panel_ = nullptr;
     QTimer* outline_timer_ = nullptr;
+    /// The Projects dock and its view.
+    QDockWidget* project_dock_ = nullptr;
+    ProjectPanel* project_panel_ = nullptr;
+    /// The open project. Invalid when none is; the panel shows the empty state.
+    timewarp::project::Project project_;
+    /// Rebuilt on every open, like the recent-files menu.
+    QMenu* recent_projects_menu_ = nullptr;
+    /// The database manager page, and the one connection it manages. A shared
+    /// pointer because the interpreter's SQL callback runs on a runner thread and
+    /// must keep the connection alive even if the panel's tab is rebuilt.
+    SqlPanel* sql_panel_ = nullptr;
+    std::shared_ptr<timewarp::sql::Database> sql_database_;
     QToolBar* tool_bar_ = nullptr;
     QToolBar* tool_bar_secondary_ = nullptr;
     /// Rebuilt on every open: a recent list that is only built once is a list of
