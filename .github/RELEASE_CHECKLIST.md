@@ -25,6 +25,8 @@ a hand-written copy, kept in step by `Scripts/version_sync.py` and checked by th
 - [ ] `make test-debug` and `make asan` — the other build trees
 - [ ] `make engine-test` — the bridge engine's pytest suite
 - [ ] `make smoke` — all 60 example programs through the reference engine
+- [ ] `make command-matrix` — every command row as a program
+- [ ] `make repl-matrix` — every command row through the native REPL
 - [ ] All three differential gates (expression, Scheme, languages) report 0 unexpected mismatches
 - [ ] Manual smoke test of the IDE (launch, open an example, run a turtle program)
 

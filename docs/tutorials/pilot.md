@@ -339,7 +339,7 @@ T: Ending
 1. Create a `.pilot` file with your program
 2. Select PILOT from the language dropdown
 3. Paste your code or load the file
-4. Click Run or press Ctrl+R
+4. Click Run or press F9
 5. Interact with the program in the Output panel
 
 ## Learning Resources

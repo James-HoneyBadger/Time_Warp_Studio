@@ -30,7 +30,7 @@ PRINT "Hello, World!"
 
 1. Select BASIC from language dropdown
 2. Type the code above
-3. Press Ctrl+R or click Run
+3. Press F9 or click Run
 
 **Output:**
 

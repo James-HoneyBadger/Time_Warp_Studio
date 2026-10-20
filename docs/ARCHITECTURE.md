@@ -814,5 +814,5 @@ coming from the Python application starts from this build's defaults.
 - **No pixel framebuffer.** Graphics are a display list of strokes and shapes
   with fit-to-content, so there is no `GET`/`PUT` sprite capture and no fixed
   screen coordinate system; a game draws primitives and polls `INKEY$`.
-- **Speech** (`SAY`) acknowledges without speaking: there is no speech
-  synthesiser in the build, and the reference never shipped one either.
+- **Speech** (`SAY`) reports that speech synthesis is unavailable: there is no
+  speech synthesiser in the build, and the reference never shipped one either.

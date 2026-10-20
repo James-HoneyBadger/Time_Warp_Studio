@@ -105,9 +105,9 @@ feature as a regression.
 ### Turtle Graphics
 
 - Native turtle support with position, heading, and pen state tracking
-- 50+ drawing commands shared across every active language
+- 50+ turtle and drawing commands across the active languages
 - Real-time rendering with the Qt painter, zoom/pan controls and a content-fitted view
-- Shapes, text labels, dotted and thick strokes, pen up/down, filled polygons
+- Shapes, text labels, thick strokes, pen up/down and filled polygons
 - Cross-language graphics support (Logo, BASIC, COMAL, REXX, Scheme, FOCAL, APL
   and Smalltalk; PILOT draws with its `G:` commands and CHIP-8 paints rectangles)
 - The reference's conventions are unusual and are asserted in tests: heading 0 is north and increases clockwise, and `circle` is a polygon walk
@@ -157,8 +157,9 @@ source to copy from when it changes — and the place to check when it looks wro
 ```text
 Educational multi-language programming environment: a native C++20/Qt6 IDE with ten
 languages (BASIC, Logo, PILOT, COMAL, REXX, Scheme, FOCAL, APL, CHIP-8, Smalltalk),
-turtle graphics, a checked lesson curriculum with student and teacher tools, and a
-debugger.
+turtle graphics, projects, a SQLite-backed SQL workspace, a checked lesson
+curriculum with student and teacher tools, a debugger, and a JSON-RPC automation
+API.
 ```
 
 ### Topics
@@ -172,6 +173,10 @@ qt6
 cpp20
 interpreters
 turtle-graphics
+sqlite
+json-rpc
+projects
+debugger
 basic
 logo
 pilot

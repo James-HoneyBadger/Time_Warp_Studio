@@ -108,8 +108,9 @@ A REPL session keeps its bindings between calls, exactly like the bar in the IDE
 ```
 
 Scheme sessions echo the value of an expression (`(+ 20 22)` answers `42\n`),
-and `define`/`set!` echo nothing. `repl.reset` forgets every binding;
-`repl.close` releases the session. Sessions are per-process.
+and `define`/`set!` echo nothing. In a BASIC session, `NEW` clears the bindings and
+answers `✅ BASIC workspace cleared`; `repl.reset` does the same without needing a
+BASIC statement. `repl.close` releases the session. Sessions are per-process.
 
 #### `sql.open`, `sql.close`, `sql.query`, `sql.tables`, `sql.schema`
 
@@ -118,9 +119,10 @@ when it does not exist. It returns the path and the table list:
 
 ```json
 {"path": ":memory:", "tables": []}
-``` The connection is the one a
-run uses, so a database opened here is visible to a `SQL` statement in a program
-run through `language.run`.
+```
+
+The connection is the one a run uses, so a database opened here is visible to a
+`SQL` statement in a program run through `language.run`.
 
 `sql.query` takes `sql` — one statement or a script — and returns:
 

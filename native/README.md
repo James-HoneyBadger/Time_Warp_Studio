@@ -950,7 +950,7 @@ definition, so the naive lookup points at line 1 of a multi-line `define`.
   repeated suspension not growing the frame stack; call-stack naming; tail calls
   staying flat while non-tail recursion nests; the tail-call-after-nested-call
   regression; and variable inspection with and without a frame limit.
-* **191 checks** in `debugger_runner_tests`: a real `QCoreApplication` and a real
+* **213 checks** in `debugger_runner_tests`: a real `QCoreApplication` and a real
   second thread, covering breakpoint pauses and full snapshot contents, breakpoints
   added and removed mid-run, step-into/over/out (asserting that a step always wins
   over a breakpoint set on the same line), a runtime error held open when
@@ -1072,7 +1072,7 @@ page next to a 60x40 page must still report a 100x100 minimum.
 
 ### Verification
 
-* **1444 checks** in `ui_layout_tests`, run offscreen so they need no display and
+* **1466 checks** in `ui_layout_tests`, run offscreen so they need no display and
   belong in the normal CTest set. They assert the tree shape, parent/child
   identity at every splitter index, the collapsible and handle-width flags, the
   stretch factors (read back from the child's size policy, since `QSplitter` has
@@ -1307,7 +1307,9 @@ strokes a circle costs.
   files added individually or by folder, drag-and-drop moves, missing-file reporting,
   recent projects and session restoration.
 * **The REPL bar** is `ReplRunner` over a persistent `ReplSession` (or a Scheme
-  `Machine`), with drawing on the same canvas queue as a normal run.
+  `Machine`), with drawing on the same canvas queue as a normal run. BASIC has a
+  direct mode on top: numbered lines are stored in the editor in numeric order,
+  `LIST`/`RUN`/`NEW` operate on the document, and `?` is PRINT.
 * **The Database tab** is `SqlPanel` over `timewarp_sql`, sharing its connection with
   every program's `SQL` statement.
 * **Automation** is `time_warp_api` (`api::Server`) and the linkable libraries behind

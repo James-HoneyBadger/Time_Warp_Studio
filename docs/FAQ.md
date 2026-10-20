@@ -57,9 +57,9 @@ No. The core features work offline.
 
 ### What do I need to run it?
 
-- A C++20 compiler, CMake 3.20+, and Qt6 (Widgets, Core, Gui; Svg is optional
-  and adds SVG drawing export, PrintSupport is optional and adds the two Print
-  entries)
+- A C++20 compiler, CMake 3.20+, Qt6 (Widgets, Core, Gui; Svg is optional and
+  adds SVG drawing export, PrintSupport is optional and adds the two Print
+  entries), and SQLite 3 (the development package is needed for a source build)
 - Python 3.10 or newer **only** for the lesson-check engine (and the test
   harnesses). Running a program needs no Python at all, whatever the language.
 

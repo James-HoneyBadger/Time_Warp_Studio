@@ -124,7 +124,9 @@ drawing through the same canvas queue.
 Practical notes:
 
 - The line clears as soon as a command is handed to the engine.
-BASIC also has the classic direct-mode behaviour:
+
+**BASIC direct mode.** BASIC also has the classic direct-mode behaviour:
+
 - A line that starts with a number is **stored in the editor** as a program line
   instead of being executed. `10 PRINT "HI"` adds line 10; a later line with the
   same number replaces it; a bare `10` deletes it. Lines are kept in numeric

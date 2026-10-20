@@ -31,6 +31,7 @@ and what a reader of the merged history scrolls to.
 | Engine tests | `make engine-test` | <!-- N passed, 1 xfailed --> |
 | Example corpus | `make smoke` | <!-- all 60, stroke counts unmoved --> |
 | Command coverage | `python3 native/tools/command_matrix.py` | <!-- 447 rows, 0 failed, 0 gaps --> |
+| REPL coverage | `python3 native/tools/repl_matrix.py` | <!-- 447 rows, 0 failed --> |
 | Lesson curriculum | `python3 native/tools/teach.py validate` | <!-- clean, or "not run — no lesson changed" --> |
 | Documentation lint | `make lint-md` | <!-- 0 issues --> |
 

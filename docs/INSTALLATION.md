@@ -173,7 +173,8 @@ Lessons panel checks a program with:
 Optional extras are imported defensively and are **not** required: `pyttsx3`
 (the reference's BASIC `SAY` backend), `pygame` and `inputs` (BASIC `SOUND` and
 `GAMEPAD`). Without them those commands degrade rather than fail. The native
-engine acknowledges `SAY` without producing audio, as it does `PLAY`.
+engine reports `Speech synthesis not available` for `SAY`; `PLAY` and the sound
+commands still produce their acknowledgement.
 
 The engine is the part that goes away once lesson checking runs natively;
 `docs/ROADMAP.md` tracks that.

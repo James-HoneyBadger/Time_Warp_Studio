@@ -102,6 +102,8 @@ make -C native asan           # AddressSanitizer; ASAN=undefined for UBSan
 
 # The whole example corpus, through the real bridge
 python3 native/tools/example_smoke.py
+python3 native/tools/command_matrix.py   # every command row as a program
+python3 native/tools/repl_matrix.py      # every command row through the REPL
 ./run.sh --help                       # build if needed, then launch the IDE
 ./twc Examples/basic/hello.bas -o hello
 ./api                                 # JSON-RPC on stdin/stdout; docs/API.md
