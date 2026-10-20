@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [16.2.0] - 2026-10-20
+
+Projects, a persistent REPL with BASIC direct mode, SQL, watch expressions and
+data breakpoints, a JSON-RPC automation API, and terminal compilation join the
+IDE. These are additive changes; existing languages, programs, settings and
+lesson ids are unchanged.
+
 ### Added
 
 - **A showcase program for every language.** `Examples/<language>/showcase.<ext>`
