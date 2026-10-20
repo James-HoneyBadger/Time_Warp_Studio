@@ -300,19 +300,16 @@ register inspector.
 
 ```text
 retro-computing
-emulators
+emulator
 home-computer
-chip8
 virtual-machine
+chip8
 ide
 qt6
-cpp20
-interpreters
-turtle-graphics
-sqlite
-json-rpc
+cpp
+interpreter
 debugger
-projects
+turtle-graphics
 basic
 logo
 pilot
@@ -322,7 +319,6 @@ scheme
 focal
 apl
 smalltalk
-education
 ```
 
 ### Where to start
