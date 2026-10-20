@@ -1,8 +1,12 @@
 # What the container build does not need to see.
 #
 # The context is the whole repository because the CMake build reads `VERSION` from
-# the parent directory and installs files from `packaging/`. These are the parts
-# that cost transfer time without contributing anything to the image.
+# the parent directory and installs files from `packaging/`, and because the
+# install rules carry `docs/` into the image for the documentation browser.
+# `docs` is therefore not excluded: without it `cmake --install` fails with
+# "file INSTALL cannot find .../docs" rather than shipping a smaller image. These
+# are the parts that cost transfer time without contributing anything to the
+# image.
 
 .git
 .github
@@ -16,7 +20,6 @@ native/build-ubsan
 **/.pytest_cache
 **/.ruff_cache
 **/.mypy_cache
-docs
 *.png
 !packaging/linux/*.png
 tws_matrix_scratch.txt
