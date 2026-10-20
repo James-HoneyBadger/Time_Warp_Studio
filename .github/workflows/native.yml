@@ -291,6 +291,19 @@ jobs:
       # the JSON lines back -- so a platform where it cannot answer shows its
       # traceback here instead of as a row of test timeouts that say only "no
       # reply". Closing stdin is the documented one-shot use.
+      # On failure only: the link line as CMake actually wrote it, which says
+      # whether the AGL flag is the literal Qt's FindWrapOpenGL emits or a path
+      # baked into an imported target.
+      - name: Show the link line (macOS)
+        if: failure() && runner.os == 'macOS'
+        run: |
+          for f in native/build/CMakeFiles/*.dir/link.txt; do
+            if grep -q AGL "$f"; then
+              echo "=== $f ==="
+              tr ' ' '\n' < "$f" | grep -n -B2 -A2 AGL | head -20
+            fi
+          done
+
       - name: The bridge worker answers a run (Windows)
         if: runner.os == 'Windows'
         timeout-minutes: 3

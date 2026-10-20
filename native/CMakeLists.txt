@@ -804,6 +804,20 @@ if(Qt6_FOUND)
     if(Qt6Widgets_FOUND)
         message(STATUS "Qt6 ${Qt6Widgets_VERSION} found: building the widget UI")
 
+        # AGL: where the flag actually lives. Qt 6.8/6.9 link AGL on Apple and
+        # macOS 26's SDK has none, so the link fails; these lines say which target
+        # carries it, which the failure line cannot.
+        if(APPLE)
+            foreach(_agl_target WrapOpenGL::WrapOpenGL Qt6::Gui Qt6::Widgets Qt6::Svg)
+                if(TARGET ${_agl_target})
+                    get_target_property(_agl_links ${_agl_target} INTERFACE_LINK_LIBRARIES)
+                    message(STATUS "AGL check: ${_agl_target} -> ${_agl_links}")
+                else()
+                    message(STATUS "AGL check: ${_agl_target} -> (no such target)")
+                endif()
+            endforeach()
+        endif()
+
         # Two components are wanted but not required. `Svg` is QSvgGenerator, for
         # vector export; `PrintSupport` is QPrinter and QPrintDialog, for the two
         # Print entries. A build without either still runs: the format and the
