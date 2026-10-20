@@ -783,6 +783,30 @@ if(Qt6_FOUND)
     if(Qt6Widgets_FOUND)
         message(STATUS "Qt6 ${Qt6Widgets_VERSION} found: building the widget UI")
 
+        # Qt 6.8 and 6.9 link `-framework AGL` on every Apple build (see their
+        # lib/cmake/Qt6/FindWrapOpenGL.cmake), and macOS 26's SDK no longer ships
+        # AGL.framework: the linker stops with "ld: framework 'AGL' not found"
+        # before any of this project's code is involved. Qt 6.10 dropped the
+        # entry. Nothing in Qt 6 calls AGL -- the Cocoa GL context is CGL -- so it
+        # is dropped here too, but only when the SDK has no AGL to link, which
+        # leaves a build against an older SDK exactly as Qt shipped it.
+        if(APPLE)
+            find_library(TIME_WARP_AGL_FRAMEWORK NAMES AGL)
+            if(NOT TIME_WARP_AGL_FRAMEWORK)
+                foreach(_wrap_target WrapOpenGL::WrapOpenGL Qt6::Gui Qt6::Widgets)
+                    if(TARGET ${_wrap_target})
+                        get_target_property(_wrap_libs ${_wrap_target}
+                            INTERFACE_LINK_LIBRARIES)
+                        if(_wrap_libs)
+                            list(REMOVE_ITEM _wrap_libs "-framework AGL")
+                            set_target_properties(${_wrap_target} PROPERTIES
+                                INTERFACE_LINK_LIBRARIES "${_wrap_libs}")
+                        endif()
+                    endif()
+                endforeach()
+            endif()
+        endif()
+
         # Two components are wanted but not required. `Svg` is QSvgGenerator, for
         # vector export; `PrintSupport` is QPrinter and QPrintDialog, for the two
         # Print entries. A build without either still runs: the format and the
